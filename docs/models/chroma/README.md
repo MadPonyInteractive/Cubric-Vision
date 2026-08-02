@@ -99,9 +99,20 @@ weight in the app (flux-1-dev-non-commercial) and is linked from HuggingFace, ne
 R2. Full reasoning and consequences: `docs/playbooks/add-model/02-dependencies-r2.md`
 § "may we host it at all?".
 
-`imageSizedOps` is **detail + upscale only** — Chroma's depth still reads
-`Input_Width`/`Input_Height` through `MpiCrop` and generates at the size you pick,
-unlike Klein's image-derived depth.
+`imageSizedOps` is **depth + detail + upscale**. Depth was wrongly excluded until
+2026-08-02 on the belief that it read `Input_Width`/`Input_Height` through `MpiCrop`.
+Traced in the graph, that is false: `MpiCrop` (2682) feeds the **i2i** latent
+(`VAEEncode` 2616), while depth's latent is `VAEEncode` 2762 ←
+`ImageScaleToTotalPixels(megapixels: 1)` ← `Input_Image`. Only t2i's
+`EmptyLatentImage` reads the width/height pair, so **depth inherits the input
+image's shape**, exactly like Klein's and Krea 2's.
+
+That single wrong entry produced three symptoms that all read as separate bugs: the
+ratio picker offered a shape the user would not get (8:5 picked → 1280×768
+produced), the `ratio` control injected `Width`/`Height` nothing consumed, and the
+gallery placeholder — sized `injectionParams.Width || 0` — reserved a cell of the
+*requested* shape, padding the real image inside it. Hiding the picker fixes all
+three at once, because an unmounted control contributes no injection.
 
 ## Style rack
 

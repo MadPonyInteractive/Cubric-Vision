@@ -1001,6 +1001,29 @@ export function modelShowsRatio(model, operation) {
     return !imageSized.includes(operation);
 }
 
+/**
+ * May `model` show the batch control on `operation`? (MPI-365)
+ *
+ * `Input_Batch_Size` feeds ONE node in every graph we ship: `EmptyLatentImage`. So a
+ * batch > 1 multiplies the latent only on ops that START from an empty latent — t2i,
+ * and SDXL's depth (which switches the conditioning pipe and keeps sampling the empty
+ * latent). Any op whose latent is VAE-encoded from an input image — i2i everywhere,
+ * Chroma's depth, the detail/upscale branches — ignores it completely and returns one
+ * image while the control claims N.
+ *
+ * That is the same class of lie as the ratio picker on an image-sized op, so it gets
+ * the same shape of fix: a model names the ops where batch is REAL, and the default is
+ * "every op", i.e. exactly today's behaviour for anything that stays silent. Kept
+ * separate from `capabilities.batch` (a model-WIDE off switch, which is all Krea2 /
+ * Klein / Qwen need) because Chroma and SDXL have batch working on some ops and dead
+ * on others — a model-wide flag would have to kill the working ones too.
+ */
+export function modelShowsBatch(model, operation) {
+    if (model?.capabilities?.batch === false) return false;
+    const batchOps = Array.isArray(model?.batchOps) ? model.batchOps : null;
+    return batchOps === null || batchOps.includes(operation);
+}
+
 // ── Queries ───────────────────────────────────────────────────────────────────
 
 /**

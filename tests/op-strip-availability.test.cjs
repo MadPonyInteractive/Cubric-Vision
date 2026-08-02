@@ -225,8 +225,11 @@ test('the ratio picker is hidden only on a model\'s declared image-sized ops', a
     assert.strictEqual(modelShowsRatio(klein, 'i2i'), true, 'Klein i2i still takes a ratio');
 
     // The negative control that matters: a model with no declaration keeps every picker.
+    // NOTE the KREA2 fixture (line 28) declares no imageSizedOps, so this pins the
+    // DEFAULT, not Krea2's real behaviour — the shipped Krea2 has had depth in
+    // imageSizedOps since MPI-365. Do not read this line as a claim about that model.
     assert.strictEqual(modelShowsRatio(KREA2, 'depth'), true,
-        'Krea2 depth generates at our dimensions — it must keep the ratio picker');
+        'a model declaring no imageSizedOps keeps the ratio picker on every op');
     assert.strictEqual(modelShowsRatio(null, 'depth'), true, 'no model = no gate');
 });
 
@@ -238,4 +241,72 @@ test('Klein declares exactly the two ops that derive their own size', async () =
     for (const op of klein.imageSizedOps) {
         assert.ok(klein.supportedOps.includes(op), `${op} must be in supportedOps`);
     }
+});
+
+// ── MPI-365: Chroma depth is image-sized, and batch is op-gated ────────────────
+// Both bugs below shipped and were user-reported on 2026-08-02. Neither raised an
+// error — a wrong ratio padded the gallery card, and a dead batch quietly returned
+// one image — which is exactly why they need pinning rather than eyeballing.
+
+test('Chroma depth inherits the input shape, so it must not offer a ratio', async () => {
+    const { modelShowsRatio } = await import('../js/data/commandRegistry.js');
+    const { getModelById } = await import('../js/data/modelRegistry.js');
+
+    for (const id of ['chroma-flash', 'chroma-hyper']) {
+        const m = getModelById(id);
+        // Traced in chroma_t2i.json: depth's latent is VAEEncode 2762 <-
+        // ImageScaleToTotalPixels(megapixels: 1) <- Input_Image. MpiCrop (2682), which
+        // DOES read Input_Width/Height, feeds the i2i latent (VAEEncode 2616) instead —
+        // that mix-up is what left depth out of imageSizedOps in the first place.
+        assert.strictEqual(modelShowsRatio(m, 'depth'), false, `${id} depth must hide the ratio picker`);
+        assert.strictEqual(modelShowsRatio(m, 'detail'), false, `${id} detail is image-sized`);
+        assert.strictEqual(modelShowsRatio(m, 'upscale'), false, `${id} upscale is image-sized`);
+        // The control: only t2i samples EmptyLatentImage(Input_Width, Input_Height).
+        assert.strictEqual(modelShowsRatio(m, 't2i'), true, `${id} t2i still takes a ratio`);
+    }
+
+    // SDXL is the cross-model negative control: its depth switches the CONDITIONING
+    // pipe and keeps sampling the empty latent, so it genuinely honours the picker.
+    assert.strictEqual(modelShowsRatio(getModelById('sdxl-realistic'), 'depth'), true,
+        'SDXL depth generates at our dimensions — it must keep the ratio picker');
+});
+
+test('batch is hidden on ops whose latent is VAE-encoded', async () => {
+    const { modelShowsBatch } = await import('../js/data/commandRegistry.js');
+    const { getModelById } = await import('../js/data/modelRegistry.js');
+
+    // Input_Batch_Size reaches only EmptyLatentImage, and on Chroma only t2i samples it.
+    const chroma = getModelById('chroma-flash');
+    assert.strictEqual(modelShowsBatch(chroma, 't2i'), true, 'Chroma t2i batches for real');
+    for (const op of ['i2i', 'depth', 'detail', 'upscale']) {
+        assert.strictEqual(modelShowsBatch(chroma, op), false, `Chroma ${op} must not offer batch`);
+    }
+
+    // SDXL keeps depth — different graph shape, same field. If these two models ever
+    // agree on this list, one of them is wrong.
+    const sdxl = getModelById('sdxl-realistic');
+    assert.strictEqual(modelShowsBatch(sdxl, 't2i'), true, 'SDXL t2i batches');
+    assert.strictEqual(modelShowsBatch(sdxl, 'depth'), true, 'SDXL depth samples the empty latent, so it batches');
+    assert.strictEqual(modelShowsBatch(sdxl, 'i2i'), false, 'SDXL i2i is VAE-encoded — no batch');
+
+    // Defaults: silence means "every op", so no undeclared model changed behaviour.
+    assert.strictEqual(modelShowsBatch({ supportedOps: ['t2i'] }, 't2i'), true, 'no batchOps = batch everywhere');
+    assert.strictEqual(modelShowsBatch(null, 't2i'), true, 'no model = no gate');
+    // The model-wide switch still wins over the per-op list.
+    assert.strictEqual(modelShowsBatch({ capabilities: { batch: false }, batchOps: ['t2i'] }, 't2i'), false,
+        'capabilities.batch false overrides batchOps');
+});
+
+test('every declared batchOp is an op the model actually runs', async () => {
+    const { MODELS } = await import('../js/data/modelConstants/models.js');
+    let declared = 0;
+    for (const m of MODELS) {
+        if (!Array.isArray(m.batchOps)) continue;
+        declared++;
+        for (const op of m.batchOps) {
+            assert.ok(m.supportedOps.includes(op), `${m.id}: batchOps names ${op}, which it does not support`);
+        }
+    }
+    // Guards against the field being silently dropped in a refactor: 2 Chroma + 5 SDXL.
+    assert.strictEqual(declared, 7, 'exactly the 7 models with partial batch support declare batchOps');
 });

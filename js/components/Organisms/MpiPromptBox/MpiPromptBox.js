@@ -6,7 +6,7 @@ import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, getOpHelp, isTextOnlyOp, pickTextOnlyOp } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, modelShowsBatch, getOpHelp, isTextOnlyOp, pickTextOnlyOp } from '../../../data/commandRegistry.js';
 import { MpiOpHelpDialog } from '../../Compounds/MpiOpHelpDialog/MpiOpHelpDialog.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { usesQualityTier } from '../../../utils/ratios.js';
@@ -1408,7 +1408,12 @@ export const MpiPromptBox = ComponentFactory.create({
                 // unless it opts out), like negativePrompt. Krea2-Turbo opts out:
                 // its two-pass sampler graph has no Input_Batch_Size node, so a
                 // batch>1 request is a dead injection — hide the control.
-                if (componentId === 'batch' && model?.capabilities?.batch === false) continue;
+                // Batch is model-AND-op gated (MPI-365). `capabilities.batch: false` is
+                // the model-wide off switch; `batchOps` names the ops where a batch > 1
+                // actually multiplies anything. Both live in modelShowsBatch, because
+                // Input_Batch_Size only ever reaches EmptyLatentImage — an op sampling a
+                // VAE-encoded latent silently returns one image while the control says N.
+                if (componentId === 'batch' && !modelShowsBatch(model, activeOperation)) continue;
 
                 const ctrlEl = document.createElement('div');
                 ctrlEl.style.display = 'contents';

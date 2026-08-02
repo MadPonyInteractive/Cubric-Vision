@@ -17,7 +17,8 @@
  * @property {string[]} [qualityTiers] - Ordered quality-tier ids for a NEW `type` (MPI-174), e.g. ['low','medium','high']. Presence ⇒ quality UI mode (tier radio); absent + `ratios` present ⇒ orientation mode. Consumed via qualityTiersFor() in js/utils/ratios.js and the v3 project migration.
  * @property {Record<string, Object>} [opInject] - Per-OP constant workflow params THIS model always injects, keyed by operation id then node title (MPI-354). For a model whose ops are branches of ONE master graph selected by a value private to that model — FLUX.2 Klein maps each op to an `Input_wf_type` int, a numbering no shared op could own. Merged in commandExecutor._buildParams AFTER the op's own `injectParams` and BEFORE the user's controls. A model that declares this MUST cover every op in `supportedOps`: a missing entry does not error, it runs the graph's default branch and returns the wrong operation's output, so the executor warns on a gap. Prefer the op's `injectParams` when the constant is a property of the OP rather than of this model.
  * @property {string[]} [styleOps] - Operations where this model's style rack is live (MPI-354). Defaults to DEFAULT_STYLE_OPS in commandRegistry.js — the set that mounted the rack before this field existed, so every pre-Klein model is unaffected. Declare it when the rack's reach differs: a one-master-template model carries the rack on detail/upscale too, while a model with separate rack-less detailer/upscaler files must not offer it there. Only consulted when `capabilities.styleLoras` is true; the op's `components` still decides whether the control exists at all.
- * @property {string[]} [imageSizedOps] - Operations whose OUTPUT SHAPE comes from the input image rather than from `Input_Width`/`Input_Height` (MPI-354) — typically because the graph scales the input to a megapixel target. The ratio picker is hidden on these ops (see modelShowsRatio in commandRegistry.js); everything else about them is unchanged. Defaults to none, so every model that does not declare it keeps the picker on every op exactly as before. This is a property of the MODEL's graph, not of the op: Klein's depth derives its size while Krea2's depth generates at our dimensions, and they share one op.
+ * @property {string[]} [imageSizedOps] - Operations whose OUTPUT SHAPE comes from the input image rather than from `Input_Width`/`Input_Height` (MPI-354) — typically because the graph scales the input to a megapixel target. The ratio picker is hidden on these ops (see modelShowsRatio in commandRegistry.js); everything else about them is unchanged. Defaults to none, so every model that does not declare it keeps the picker on every op exactly as before. This is a property of the MODEL's graph, not of the op: Klein/Krea2/Chroma depth all derive their size from the input, while SDXL's depth still generates at our dimensions, and they all share one op. VERIFY IN THE GRAPH, never from the op name — Chroma's depth was mis-declared for exactly that reason until 2026-08-02, and the symptom was a padded gallery card, not an error.
+ * @property {string[]} [batchOps] - Operations where the batch control is REAL (MPI-365). `Input_Batch_Size` reaches only `EmptyLatentImage` in every graph we ship, so an op sampling a VAE-encoded latent silently returns one image while the control claims N. Defaults to every op, so a model that stays silent behaves exactly as before. Distinct from `capabilities.batch: false`, which is the model-WIDE off switch — use that when batch works nowhere (Krea2/Klein/Qwen), and this when it works on some ops and not others (Chroma `['t2i']`, SDXL `['t2i','depth']`). See modelShowsBatch in commandRegistry.js.
  * @property {string}   [image]      - Preview still filename in comfy_workflows/display/ (image models)
  * @property {string}   [video]      - Preview clip filename in comfy_workflows/display/; card plays it muted+looping on hover (video models)
  * @property {string}   [defaultUpscale]  - Dep id of the default upscale model for this model (image models only)
@@ -41,6 +42,12 @@ export const MODELS = [
         image: 'sdxl-real-01.webp',
         type: 'sdxl',
         supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
+        // Batch multiplies EmptyLatentImage only, and this graph keeps sampling that
+        // empty latent on depth (Input_depth_reference switches the CONDITIONING pipe,
+        // not the latent) - so batch is real on t2i AND depth here, unlike Chroma. It is
+        // dead on i2i (VAEEncode latent) and on upscale/detail, whose separate files have
+        // no Input_Batch_Size node at all. MPI-365.
+        batchOps: ['t2i', 'depth'],
         gen_speed: 'fast',
         description: 'This image generator uses the famous Juggernaut XL model as its base. It can create different styles but is best suited for realistic images.',
         workflows: {
@@ -70,6 +77,12 @@ export const MODELS = [
         image: 'sdxl-real-05.webp',
         type: 'sdxl',
         supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
+        // Batch multiplies EmptyLatentImage only, and this graph keeps sampling that
+        // empty latent on depth (Input_depth_reference switches the CONDITIONING pipe,
+        // not the latent) - so batch is real on t2i AND depth here, unlike Chroma. It is
+        // dead on i2i (VAEEncode latent) and on upscale/detail, whose separate files have
+        // no Input_Batch_Size node at all. MPI-365.
+        batchOps: ['t2i', 'depth'],
         gen_speed: 'fast',
         description: 'This spicy image generator uses one of the best NSFW models available for SDXL, the famous Lustify model by Coyotte.',
         workflows: {
@@ -99,6 +112,12 @@ export const MODELS = [
         image: 'sdxl-anime-08.webp',
         type: 'sdxl',
         supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
+        // Batch multiplies EmptyLatentImage only, and this graph keeps sampling that
+        // empty latent on depth (Input_depth_reference switches the CONDITIONING pipe,
+        // not the latent) - so batch is real on t2i AND depth here, unlike Chroma. It is
+        // dead on i2i (VAEEncode latent) and on upscale/detail, whose separate files have
+        // no Input_Batch_Size node at all. MPI-365.
+        batchOps: ['t2i', 'depth'],
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images with an extra shine using AlchemyMix V176.',
         workflows: {
@@ -128,6 +147,12 @@ export const MODELS = [
         image: 'sdxl-anime-06.webp',
         type: 'sdxl',
         supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
+        // Batch multiplies EmptyLatentImage only, and this graph keeps sampling that
+        // empty latent on depth (Input_depth_reference switches the CONDITIONING pipe,
+        // not the latent) - so batch is real on t2i AND depth here, unlike Chroma. It is
+        // dead on i2i (VAEEncode latent) and on upscale/detail, whose separate files have
+        // no Input_Batch_Size node at all. MPI-365.
+        batchOps: ['t2i', 'depth'],
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images using AnimeMix V8.',
         workflows: {
@@ -157,6 +182,12 @@ export const MODELS = [
         image: 'sdxl-pony-13.webp',
         type: 'sdxl',
         supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
+        // Batch multiplies EmptyLatentImage only, and this graph keeps sampling that
+        // empty latent on depth (Input_depth_reference switches the CONDITIONING pipe,
+        // not the latent) - so batch is real on t2i AND depth here, unlike Chroma. It is
+        // dead on i2i (VAEEncode latent) and on upscale/detail, whose separate files have
+        // no Input_Batch_Size node at all. MPI-365.
+        batchOps: ['t2i', 'depth'],
         gen_speed: 'fast',
         description: 'This image generator uses the AnimerJei V3 PONY model. It is a stylized model that can create different animation styles.',
         workflows: {
@@ -211,11 +242,25 @@ export const MODELS = [
         },
         // One master graph ⇒ the rack reaches every op, detail and upscale included.
         styleOps: ['t2i', 'i2i', 'depth', 'detail', 'upscale'],
-        // detail/upscale inherit their shape from the input image, so the ratio picker
-        // would be misleading there. depth is NOT listed: Chroma's depth branch still
-        // reads Input_Width/Input_Height through MpiCrop and generates at our dimensions
-        // (the same split Krea2 has, and the opposite of Klein's image-derived depth).
-        imageSizedOps: ['detail', 'upscale'],
+        // depth/detail/upscale inherit their shape from the input image, so the ratio
+        // picker is hidden there. depth was WRONGLY excluded until 2026-08-02 on the
+        // belief that it read Input_Width/Input_Height through MpiCrop. Traced in the
+        // graph: MpiCrop feeds the *i2i* latent (VAEEncode 2616); depth's latent is
+        // VAEEncode 2762 <- ImageScaleToTotalPixels(megapixels: 1) <- Input_Image, so
+        // depth never reads them. Only t2i's EmptyLatentImage does.
+        //
+        // That one omission caused THREE user-visible symptoms, all one bug: the picker
+        // claimed a shape the user would not get (8:5 picked, 1280x768 produced), the
+        // `ratio` control injected Width/Height it had no right to, and the gallery
+        // placeholder — sized `injectionParams.Width || 0` — reserved a cell of the
+        // requested shape and padded the real image inside it. Hiding the picker fixes
+        // all three, because a control that is not mounted contributes no injection.
+        imageSizedOps: ['depth', 'detail', 'upscale'],
+        // Batch reaches ONLY EmptyLatentImage, which only t2i samples from here — depth
+        // and i2i both start from a VAE-encoded latent, so a batch > 1 there returned one
+        // image while the control claimed N. Narrower than SDXL's list, which keeps depth
+        // because its depth switches the conditioning pipe rather than the latent.
+        batchOps: ['t2i'],
         // Op → the `Input_wf_type` value that selects its branch. MUST cover every entry
         // in supportedOps; commandExecutor warns loudly if one is missing, because the
         // failure mode is a plausible image from the WRONG op rather than an error.
@@ -292,7 +337,10 @@ export const MODELS = [
             depthStrength: true,
         },
         styleOps: ['t2i', 'i2i', 'depth', 'detail', 'upscale'],
-        imageSizedOps: ['detail', 'upscale'],
+        // Shares Flash's master graph, so it shares the depth-is-image-sized fix too —
+        // and the same batch reality: only t2i samples an EmptyLatentImage.
+        imageSizedOps: ['depth', 'detail', 'upscale'],
+        batchOps: ['t2i'],
         opInject: {
             t2i:     { Input_wf_type: 1 },
             i2i:     { Input_wf_type: 2 },

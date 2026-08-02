@@ -70,6 +70,20 @@ export const PROGRESS_STAGES = Object.freeze({
     // turbo 8 steps then the same 3-step pass. The prompt enhancer does NOT emit its own
     // bar, it fills ~10-20% of one; user-confirmed 2026-07-20.)
     'krea2_t2i.json':            Object.freeze({ postTile: 1 }),
+    // Chroma — NO ENTRY, deliberately, and unlike Krea2 there is not even a `postTile`
+    // to justify a key. Same one-master-template problem: t2i/i2i/depth each emit ONE
+    // bar (a single ClownsharKSampler pass — Chroma has no accelerator second pass, so
+    // it is 1 where Krea2 is 2), while detail (MaskDetailerPipe) varies with how many
+    // separate masks were painted and upscale (UltimateSDUpscale) varies with the tile
+    // grid. `{ single: 1 }` would therefore render "Stage 3/1" on those two, which reads
+    // as broken; no total merely reads as unknown. Counts are the user's, 2026-08-02.
+    //
+    // No `postTile`: Chroma's UltimateSDUpscale output goes straight to the upscale
+    // reroute with no refiner pass after it, so MPI-350's post-tile counter has nothing
+    // to count here. An empty object would be identical to no entry at all (see the
+    // header: "No entry → the stage counter still ticks up, just without a total"), so
+    // this comment IS the record. Restoring real totals needs the per-model + per-op
+    // table on MPI-365's GC list.
     // Boogu-Image-Edit (MPI-257) — one graph per tier, ONE SamplerCustom pass (the
     // MpiAnySwitch selects the tier's chain; only that chain runs). Live-confirmed 1 bar
     // (sampler only; no separate model-load bar surfaces, same as PiD) — MPI-266 fixed the
