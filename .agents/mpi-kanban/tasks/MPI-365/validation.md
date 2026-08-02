@@ -96,6 +96,35 @@ Krea2 (six ops, both cards), Qwen (edit/depth/pose) and Klein all run through th
 its own engine — user-confirmed 2026-08-02 with a create-and-climb pass. Krea2 and Klein
 masked edit included.
 
+## Chroma: VERIFIED IN THE APP, 2026-08-02
+
+Ran through the app on its own engine, user-confirmed ("it works fine now") after the
+three defects below were fixed. The migration itself (one template, two tier bakes) had
+already passed; these were found by USING it, which is why they are recorded here rather
+than in the migration section.
+
+- **depth offered a ratio picker and its gallery card came out padded.** One cause:
+  `imageSizedOps` omitted `depth`. Evidence it was real — picker set to 8:5, output
+  `depth_013` at 1280×768, i.e. the input's shape. Traced in the graph rather than
+  inferred: depth's latent is `VAEEncode` 2762 ← `ImageScaleToTotalPixels(1MP)` ←
+  `Input_Image`; `MpiCrop` (which does read `Input_Width`/`Height`) feeds the **i2i**
+  latent. Fixed in `f7fd3026`; the padding went with it, because the `ratio` control is
+  what injects `Width` and the placeholder is sized `injectionParams.Width || 0`.
+- **The batch control was dead on half the ops.** `Input_Batch_Size` reaches only
+  `EmptyLatentImage` in every graph in the repo, so any op sampling a VAE-encoded latent
+  returned one image while the control claimed N. New per-op `ModelDef.batchOps`; swept
+  across Chroma **and** the SDXL family in one pass rather than fixing the reported model.
+- **Style strength started at the global 1.0.** Both checkpoints are distilled enough
+  that 0.8/1.0 artefact instead of styling. New `ModelDef.controlDefaults` sets 0.6,
+  matching what the graph already baked into `Input_Style_Selector.strength_model`.
+
+Licence gate also closed: four style LoRAs verified and on R2, `chroma-style-cinema`
+dropped on a licence call. See `docs/models/chroma/licences.md` and `b5fcc373`.
+
+Not verified by this session: Chroma `progressStages` bar counts remain unmeasured in
+code (the per-FILE table cannot express "1 on t2i/i2i/depth, variable on detail/upscale"
+— deferred by user decision to the per-op table).
+
 ## Remaining scope — the card stays in `doing`
 
 **SDXL has not been migrated.** The user confirmed 2026-08-02 that the SDXL models are
