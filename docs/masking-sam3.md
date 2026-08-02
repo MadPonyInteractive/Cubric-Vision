@@ -97,11 +97,21 @@ widget — which is also why no `MpiText` relay is needed here: the encoder is n
 
 ### Behaviour you must not "fix"
 
-- **`name:N` is MANDATORY.** `_parse_prompts` (`comfy/text_encoders/sam3_clip.py`) reads
-  `:N` as that category's detection cap; a BARE category silently returns exactly **one**
-  object. The count input IS that N, stamped per comma-separated category by
-  `js/utils/maskTextPrompt.js`. Measured on one image, MPI-384: `horn:2` → 2 chips,
-  bare `horn` → **1**, `horn:2, eye:2` → 4, and `horn:2` with `individual_masks` off → 1.
+- **`name:N` is MANDATORY for N ≥ 2 — and FORBIDDEN for N = 1.** `_parse_prompts`
+  (`comfy/text_encoders/sam3_clip.py`) reads `:N` as that category's detection cap; a BARE
+  category returns exactly **one** object. The count input IS that N, stamped per
+  comma-separated category by `js/utils/maskTextPrompt.js`. Measured on one image, MPI-384:
+  `horn:2` → 2 chips, bare `horn` → **1**, `horn:2, eye:2` → 4, and `horn:2` with
+  `individual_masks` off → 1.
+- **`:1` detects NOTHING — never stamp it.** `SAM3TokenizerWrapper.tokenize_with_weights`
+  early-outs on "one category, cap 1" (`sam3_clip.py:53`) and hands `super()` the **raw**
+  string, `:1` included, so the suffix is tokenized as literal text and the match falls
+  under `threshold`. Bare already means `:1` to the parser, so `maskTextPrompt.js` emits
+  bare below 2 — the fix is app-side because we do not own the engine tree. Measured
+  2026-08-02 on `depth_008.png` @ threshold 0.5: `hair:1` → **0 masks**, `shirt:1` → **0**,
+  bare `hair` / `shirt` → 1 each, `hair:2` → 2, `hair:1, shirt:1` → 2 (two categories miss
+  the early-out), `hair:1` @ threshold 0.1 → 1. MPI-384 only ever measured N ≥ 2, so this
+  shipped broken for the default count of 1 and read as "text detect finds nothing".
 - **Text and box are mutually exclusive.** `SAM3_Detect.execute` gates the box branch on
   `not has_text`. Never wire bboxes into the text node — and never hang conditioning on the
   POINTS node, which would make every points run `has_text`. Hence two `SAM3_Detect` nodes.

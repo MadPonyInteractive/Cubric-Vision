@@ -20,7 +20,17 @@ test('a user-typed :N never survives — the count input is the only source', as
     const { stampDetectionCount } = await import('../js/utils/maskTextPrompt.js');
     // 'horn:3:2' would parse as the category 'horn:3' capped at 2.
     assert.strictEqual(stampDetectionCount('horn:3', 2), 'horn:2');
-    assert.strictEqual(stampDetectionCount('horn:3, eye', 1), 'horn:1, eye:1');
+    assert.strictEqual(stampDetectionCount('horn:3, eye', 1), 'horn, eye');
+});
+
+// A count of 1 must reach the graph BARE. sam3_clip.py's tokenizer early-outs on
+// "one category, cap 1" and hands super() the raw string, so ':1' is tokenized as
+// literal text and the match falls under threshold. Measured 2026-08-02 on
+// depth_008.png @ threshold 0.5: 'hair:1' -> 0 masks, 'hair' -> 1, 'hair:2' -> 2.
+test('a count of 1 is never stamped — :1 poisons the SAM3 tokenizer', async () => {
+    const { stampDetectionCount } = await import('../js/utils/maskTextPrompt.js');
+    assert.strictEqual(stampDetectionCount('hair', 1), 'hair');
+    assert.strictEqual(stampDetectionCount('hair, shirt', 1), 'hair, shirt');
 });
 
 test('empty input yields empty, so the viewer gate can refuse the run', async () => {
@@ -32,8 +42,8 @@ test('empty input yields empty, so the viewer gate can refuse the run', async ()
 
 test('a nonsense count still produces a legal cap', async () => {
     const { stampDetectionCount } = await import('../js/utils/maskTextPrompt.js');
-    assert.strictEqual(stampDetectionCount('horn', 0), 'horn:1');
-    assert.strictEqual(stampDetectionCount('horn', -5), 'horn:1');
-    assert.strictEqual(stampDetectionCount('horn', NaN), 'horn:1');
+    assert.strictEqual(stampDetectionCount('horn', 0), 'horn');
+    assert.strictEqual(stampDetectionCount('horn', -5), 'horn');
+    assert.strictEqual(stampDetectionCount('horn', NaN), 'horn');
     assert.strictEqual(stampDetectionCount('horn', 2.6), 'horn:3');
 });
