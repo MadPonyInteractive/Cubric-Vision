@@ -34,25 +34,21 @@
       `UNRELEASED.md` folded + cleared; `release:check` passed; notes approved
       (`.approved-1.3.1.json`).
 
-## NOT done — why this card is not closed
+## Moved off this card — now MPI-429
 
-- [ ] **No second origin exists.** `_MODEL_MIRRORS` ships EMPTY, so the failover it
-      contains cannot fire for anyone. Enabling it is an approval-gated Cloudflare change
-      only Fabio can make (`MadPony-Identity/capabilities/cloudflare-r2/README.md`
-      § Approval Gates) — add the custom domain to the `cubric-models` bucket, then add
-      the origin to the constant. Free: one bucket, no duplicate storage, R2 egress is
-      free, custom domains carry no per-domain charge.
-- [ ] **A same-provider mirror is UNPROVEN against this user's failure mode.** He
-      confirmed by test that a plain DNS switch is not enough and that only a tunnel
-      works, and the stream died at ~20% rather than at handshake — deep-packet
-      interference, not hostname blocking. A second `cubric.studio` hostname defeats the
-      hostname-keyed class for certain; whether it survives DPI is unknown until tested.
-      If it does not, the fallback is an off-Cloudflare origin (GitHub Releases — proven
-      to reach this exact user, 2 GB per-asset cap forces splitting the big transformers;
-      Hugging Face; Backblaze B2).
-- [ ] **1.3.1 is not released.** `mpi-release` owns build + tag + publish.
-- [ ] **The mirror failover has still never executed.** `_MODEL_MIRRORS` is empty, so
-      that specific mechanism remains code-read only.
+- [x] **1.3.1 IS released** (2026-08-02). Built from branch `1.3.1` @ `5328c033` via mpi-ci
+      run 30755518372, published at
+      <https://github.com/MadPonyInteractive/Cubric-Vision/releases/tag/v1.3.1> with the
+      full builds and all three delta bundles (`1.3.0 -> 1.3.1`, 21 changed / 0 deleted).
+      `git rev-parse 'v1.3.1^{}'` == the SHA CI built. Baselines restamped post-publish.
+      Evidence: `validation.md`.
+- [→] **The mirror is MPI-429.** `_MODEL_MIRRORS` still ships EMPTY and that mechanism has
+      still never executed — by design. The second origin is an approval-gated Cloudflare
+      change, and whether a same-provider mirror survives this user's DPI is still unknown
+      (he proved a plain DNS switch was not enough; his stream died at ~20%, not at
+      handshake). All of that, plus the off-Cloudflare fallbacks, moved to
+      `tasks/MPI-429/brief.md`. The whole point of round 2 is that the app-side fix
+      unblocks him WITHOUT it, so it no longer holds this card open.
 
 ## Round 2 — why he still could not GENERATE (2026-08-02, master `0a1d2325`)
 
@@ -105,8 +101,7 @@ Note: `ComfyUI-MpiNodes` in the local dev engine is a **symlink** to
 `C:\AI\Mpi\ComfyUi-MpiNodes`. Never delete that folder to force a repair — it would
 destroy the live node source repo. The harness above exists precisely to avoid it.
 
-### Open, and worth splitting off this card
+### Split off — done
 
-The mirror is the only thing left here, and it is infra rather than an app bug. It should
-become its own card so MPI-427 can close on the release: the app-side fix no longer
-depends on it.
+The mirror was the only thing left here, and it is infra rather than an app bug. It became
+**MPI-429** on 2026-08-02 and this card closed on the v1.3.1 release.
