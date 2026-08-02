@@ -73,7 +73,7 @@ NOT mechanically split these):
 | Topic | Doc |
 |---|---|
 | **Playbook routing** (add-model, add-app, shared invariants) | [playbooks/README.md](playbooks/README.md) |
-| **Per-model research** (LTX, Wan, Krea2, PiD) — authoring, tuning, measured data | [models/README.md](models/README.md) |
+| **Per-model research** (Krea2, Klein, Chroma, SDXL, LTX, Wan, PiD) — authoring, tuning, measured data | [models/README.md](models/README.md) |
 | Builder operational loop | [builder/README.md](builder/README.md) |
 | Environments (ComfyUI portable, cu130) | [builder/01-environments.md](builder/01-environments.md) |
 | Pod image / mpi-ci / version-lock / rebuild | [builder/02-image-and-rebuild.md](builder/02-image-and-rebuild.md) |

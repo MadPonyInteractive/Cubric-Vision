@@ -8,9 +8,13 @@
 >
 > **Still accumulating.** The one-master-template migration is not finished — SDXL
 > follows with more. When it lands, EXTEND the model lists in the bullets below
-> (localised edit, Depth Strength); do not add a second near-duplicate bullet per
-> model. Boogu Image Edit's localised edit has landed (MPI-428) and is folded into
-> the bullet already.
+> (localised edit, Depth Strength, styles reaching Detail/Upscale, source
+> dimensions); do not add a second near-duplicate bullet per model. Already folded
+> in: Boogu Image Edit's localised edit (MPI-428), and Chroma's migration
+> (MPI-365 — depth, styles, Detail/Upscale reach, source dimensions).
+>
+> **Chroma's notes describe features that do not work until its five style LoRAs
+> are uploaded to R2.** Do not ship a version carrying them before that lands.
 
 ## whatIsNew
 
@@ -26,21 +30,27 @@
   Qwen Image Edit and Boogu Image Edit.
 - **Pose and Depth on Qwen Image Edit.** Copy the pose of one image, or its depth
   and composition, and paint your prompt into it.
-- **Depth Strength.** Krea 2 and FLUX.2 Klein's Depth op gained a slider for how
-  hard the depth map pulls. At full strength the composition is locked to the
-  source; easing it off lets the model reinterpret the framing while keeping the
-  pose. Klein bites softer than Krea 2, so it wants a lower setting.
+- **Depth on Chroma.** Both Chroma models can now follow the depth and composition
+  of an input image and paint your prompt into that shape.
+- **Five styles on Chroma.** Chroma gains a style rack — B&W Sketch, Lenovo,
+  Cinema, Brushwork and Anime — available on every operation, Detail and Upscale
+  included.
+- **Depth Strength.** Krea 2, FLUX.2 Klein and Chroma's Depth op gained a slider
+  for how hard the depth map pulls. At full strength the composition is locked to
+  the source; easing it off lets the model reinterpret the framing while keeping
+  the pose. Klein bites softer than Krea 2, so it wants a lower setting.
 
 ## importantChanges
 
-- **Krea 2 styles now reach Detail and Upscale.** Every Krea 2 operation runs one
-  workflow, so the style you picked stays applied through the finishing passes
-  instead of being dropped by them.
+- **Krea 2 and Chroma styles now reach Detail and Upscale.** Every operation on
+  these models runs one workflow, so the style you picked stays applied through
+  the finishing passes instead of being dropped by them.
 - **Krea 2 Depth takes a second image.** Image 1 supplies the pose and
   composition, image 2 supplies who is posed into it.
-- **Krea 2 keeps your source dimensions.** Every operation except Text to Image
-  and Image to Image now follows the input image's shape instead of the ratio
-  picker.
+- **Krea 2 and Chroma keep your source dimensions.** On Krea 2, every operation
+  except Text to Image and Image to Image now follows the input image's shape
+  instead of the ratio picker. On Chroma this applies to Detail and Upscale;
+  its Depth op still generates at the size you pick.
 
 ## fixes
 

@@ -49,6 +49,11 @@ load-bearing, plus the 2-reference face wall and its ruled-out list.
 |---|---|
 | [upscaler.md](pid/upscaler.md) | Source-verified compat/tier/knobs; `degrade_sigma` is the only tuning knob; image-only. Read before building/testing PiD. |
 
+### [chroma/](chroma/) — Chroma (pruned FLUX.1-schnell, Apache-2.0, T5-only)
+| File | Holds |
+|---|---|
+| [README.md](chroma/README.md) | Hub: Flash and Hyper are SEPARATE checkpoints (why the tier is a per-file bake, not a runtime inject), the ONE-master-template `Input_wf_type` map, the RES4LYF `ClownModelLoader`, the FLUX-ControlNet depth op and its measured 0.5 strength ceiling, the style rack, and the ruled-out list (no editing route, no Chroma-native ControlNet, Radiance incompatible). |
+
 ### [sdxl/](sdxl/) — SDXL family (sdxl-realistic, sdxl-nsfw, ill-anime-beauty, ill-anime, pony-mix)
 | File | Holds |
 |---|---|

@@ -77,6 +77,55 @@ image-resident on remote. See `.claude/rules/comfy_engine.md` § 2.5c.
 > Files **under 20 GB need no action** — they stay on the volume, no disk/cost impact. This gate
 > is ONLY about the ≥20GB ones.
 
+### FIRST — may we host it at all? (licence gate, MPI-365)
+
+R2 is the default and nearly every weight belongs there. But **uploading a weight
+to R2 is redistribution**, and not every licence permits it. Check BEFORE you
+upload — an upload is the act the licence governs, so "upload now, check later" is
+already the violation.
+
+The two shapes you will meet:
+
+| licence | what to do |
+|---|---|
+| Apache-2.0 / MIT / permissive, or a CivitAI weight whose `allowCommercialUse` includes `Image` | R2 as normal (rest of this doc) |
+| Forbids redistribution — **FLUX.1-dev is the live example** | **Link the ORIGIN repo. Never mirror it.** |
+
+**The non-mirrored pattern.** Point `url` straight at the upstream host and let the
+user pull from it — which is exactly what ComfyUI, Invoke and Fooocus do. We ship
+software that references a weight; we do not hand over the bytes. The downloader is
+host-agnostic (`new DownloaderHelper(this.depJob.url, …)`) and the on-disk name comes
+from the dep's `filename`, not the URL, so a generically-named upstream file
+(`diffusion_pytorch_model.safetensors`) still lands correctly. Nothing else changes.
+
+Worked example — `controlnet-union-flux` in `assetDeps.js`:
+
+```js
+url: 'https://huggingface.co/Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro-2.0/resolve/main/diffusion_pytorch_model.safetensors',
+```
+
+**Do not assume a paid licence solves it.** BFL sells a self-serve commercial
+licence for FLUX, and it *still* says you are "expressly prohibited from …
+distributing … to third parties via any means". No price unblocks rehosting, and
+FLUX.1-dev is not even in the self-serve tiers. Quantising does not launder it
+either — a GGUF/fp8 conversion is a derivative and carries the same terms.
+
+**Three consequences to accept when you link an origin:**
+
+1. **No mirror failover.** `_mirrorUrlsFor` swaps the origin but PRESERVES the
+   pathname, so it can only fail over between hosts with identical layouts. An
+   upstream path has no R2 twin, so that dep is single-homed.
+2. **The `sha256` is the only integrity guard.** R2 objects are ours; an upstream
+   repo can be re-uploaded under us. Pin the hash — never ship `sha256: null` on a
+   non-mirrored dep.
+3. **Check the repo is not gated.** A gated HF repo needs a per-account token, which
+   we cannot ship. If the weight you want is gated, find an ungated re-host with a
+   compatible licence or pick a different weight.
+
+Surface the licence to the user through the existing `credit` block (MPI-358) —
+`MpiAbout` renders a Credits list from every dep that carries one, so the obligation
+is discharged by the data rather than by someone remembering.
+
 ### R2 upload (cubric-models bucket)
 
 Access via `C:\Users\Fabio\.secrets\rclone-r2.conf`, remote `cubric-r2:`, bucket

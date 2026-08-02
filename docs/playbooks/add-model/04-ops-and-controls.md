@@ -166,3 +166,60 @@ controls. `upscale` uses 0.20, `detail` 0.30, `pid` 0.0 — pick the value your 
 workspace switch silently reverts the user's chosen op to the first entry in `supportedOps`
 that matches the current media state (image chip present → `i2i`; no chip → `t2i`).
 Adding ops makes it more visible. Tracked as **MPI-247** — do not "fix" it inside a model card.
+
+## Wiring a `depth` op — FOUR different mechanisms ship today (MPI-365)
+
+`depth` is one op id, but how a model reaches it differs per family, and the routes are
+not interchangeable. **Find out which one your model needs before you wire anything** —
+picking wrong costs a hosted weight or a dead slider.
+
+| model | mechanism | costs |
+|---|---|---|
+| SDXL family, **Chroma** | real **ControlNet checkpoint** | a hosted weight + `comfyui_controlnet_aux` |
+| Krea 2 | **control-LoRA** via `Krea2ControlLoRALoader` / `…ImageEncode` / `…Apply` | a hosted LoRA + the `ComfyUI-Krea2-ControlNet` node pack |
+| FLUX.2 Klein | **reference-control LoRA** on a plain `LoraLoaderModelOnly` + a trigger phrase concatenated into the prompt | a hosted LoRA |
+| Qwen Image Edit | preprocessor output feeds the model's **own image conditioning** | the node pack only — **no checkpoint** |
+
+The last two do NOT generalise. Klein's `flux2_klein_4b_refcontrol_depth` and Krea 2's
+depth control-LoRA are trained per-model, and Krea 2's additionally **expands `img_in`**
+to take a concatenated control latent, which locks it to that model's input dimension.
+Do not try to port either to a new model — the same reasoning rules out Black Forest
+Labs' `FLUX.1-Depth-dev-lora` for anything whose `in_channels` is not Depth-dev's.
+
+### Is a ControlNet compatible with my model? Verify from the weights, not from a forum
+
+For a FLUX-family model, three checks settle it — all cheap, all decisive:
+
+1. **Does the forward pass apply control residuals at all?** Grep the model's
+   `comfy/ldm/<arch>/model.py` for `if control is not None`. If the block-residual lines
+   are absent, no ControlNet can work regardless of what any post claims. (Chroma has
+   them, matching FLUX.)
+2. **Same latent format?** `comfy/supported_models.py` — Chroma is `latent_formats.Flux`,
+   i.e. the 16-channel FLUX latent, which is why FLUX ControlNets fit.
+3. **Do the input dims match?** Read the ControlNet's safetensors header and compare its
+   `x_embedder.weight` shape to the model's `in_channels` (in `comfy/model_detection.py`).
+   Chroma is hardcoded to 64; Union Pro 2.0's is `[3072, 64]`. A mismatch here is the
+   pixel-space trap — Chroma **Radiance** is 3-channel, so every FLUX ControlNet breaks
+   on it even though plain Chroma is fine.
+
+### TRAP — `SetUnionControlNetType` is SDXL-ordered, and may do nothing
+
+`UNION_CONTROLNET_TYPES` (`comfy/cldm/control_types.py`) is a single global map using
+**SDXL's** ordering (`depth: 1`). A union ControlNet from another family may number its
+modes differently, so selecting "depth" can silently apply the wrong mode.
+
+Worse, the node can be a **no-op**: `comfy/ldm/flux/controlnet.py` only reads `control_type`
+when the checkpoint carries a `controlnet_mode_embedder`, and Shakker-Labs Union Pro 2.0
+removed it. Check the safetensors header for that key. If absent, **leave the node out** —
+keeping it reads as "depth mode is selected" to the next person when nothing is.
+
+### Strength is per-model and must be measured
+
+Model-card recommendations are for the model the ControlNet was trained on. Measured on
+Chroma: past ~0.5 the image degrades, so the graph normalises the 0–1 `Input_depth_strength`
+slider to 0–0.5 via `MpiNormalizeValue` and runs `end_percent` 0.570 — the ceiling is
+structural rather than a number someone has to remember. The Union Pro 2.0 card recommends
+0.8; that figure is for FLUX.1-dev and will fall apart on Chroma.
+
+**Licence gate:** every FLUX ControlNet is a FLUX.1-dev derivative and may NOT be mirrored
+to R2 — see `02-dependencies-r2.md` § "may we host it at all?".
