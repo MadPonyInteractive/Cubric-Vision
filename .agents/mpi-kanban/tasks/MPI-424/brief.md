@@ -67,11 +67,13 @@ Grow, shrink and an edge band are one primitive: an edge band is
 ## A fresh session starts HERE
 
 1. Read this file — it is the whole design; the chat it came from is gone.
-2. `mpi-continue MPI-425`. That card is next, it already has a compact plan at
-   `tasks/MPI-425/plan.md`, and `mpi-continue` moves it To do -> Doing and
-   derives the checklist before touching a file.
-3. The other four have settled designs on their own cards but NO plan file yet —
-   run `mpi-create-plan` against each as it comes up, not before.
+2. **MPI-425 SHIPPED 2026-08-02** (verified in the app). The frame exists: groups
+   render, and a group member may now carry `collapse` + `sub[]` to open its modes
+   in a floating `MpiPopup` strip instead of stacking them. **MPI-382 (Adjust) is
+   next.** Read `tasks/MPI-425/plan.md` § Completed before adding a button — it
+   records the shape you mount into and the traps already paid for.
+3. The remaining four have settled designs on their own cards but NO plan file
+   yet — run `mpi-create-plan` against each as it comes up, not before.
 
 Nothing about this design lives outside these cards. The rejected MPI-379 is the
 record of what was ruled out and why.

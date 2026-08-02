@@ -9,6 +9,12 @@
  * directly under the group label — no popup, no portal. New tools added to a
  * group automatically stack inline; the layout scales without changes here.
  *
+ * A group member may instead be a COLLAPSE entry (`{ collapse, icon, info, sub }`,
+ * MPI-425): one rail button that owns several modes and opens them in a floating
+ * strip beside the rail instead of stacking them all in the column. It activates
+ * nothing itself — the modes underneath stay ordinary modes, only their
+ * presentation changes.
+ *
  * Usage:
  *   const tools = MpiHistoryTools.mount(leftSlot, { mode: 'image' });
  *   tools.on('activate', ({ mode }) => mountOptions(mode));
@@ -33,11 +39,17 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
+import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { qs, on } from '../../../utils/dom.js';
+
+/** How long the collapse strip survives once the pointer leaves it (ms). */
+const STRIP_DISMISS_MS = 1500;
 
 // ── Built-in tool lists ─────────────────────────────────────────────────────
 // Groups: each group gets a label strip + separator. group[] items render as
 // stacked flat buttons under the label; multi-item groups stack vertically.
+// A member carrying `collapse` + `sub[]` renders as ONE button that opens its
+// sub-modes in a floating strip instead (MPI-425).
 
 const IMAGE_TOOLS = [
     {
@@ -67,13 +79,26 @@ const IMAGE_TOOLS = [
     {
         mode: 'mask',
         label: 'Mask',
-        // One icon per masking method (MPI-371), one job each (MPI-381). Shapes
-        // (MPI-368) joins this group; it does not become a switcher.
+        // One job per button (MPI-371, MPI-381) — but the three DETECTION methods
+        // are one job with three engines, so MPI-425 collapses them behind a single
+        // rail button and gives the column back to the methods that differ. This
+        // supersedes the older note that Shapes (MPI-368) "does not become a
+        // switcher": that was written when the family was four hand-picked methods.
+        // Now Mask, Paint and Composite are groups, Shapes mounts once per group
+        // off ONE gizmo, and only same-job siblings collapse. Shapes still gets its
+        // own button here — it is not a detection method.
         group: [
-            { mode: 'maskBrush',  icon: 'brush',  info: 'Brush'  },
-            { mode: 'maskPoints', icon: 'circle', info: 'Points' },
-            { mode: 'maskText',   icon: 'text',   info: 'Text'   },
-            { mode: 'maskDetect', icon: 'search', info: 'Detect' },
+            { mode: 'maskBrush', icon: 'brush', info: 'Brush' },
+            {
+                collapse: 'detect',
+                icon: 'search',
+                info: 'Detect',
+                sub: [
+                    { mode: 'maskPoints', icon: 'circle',  info: 'Points', label: 'Points' },
+                    { mode: 'maskText',   icon: 'text',    info: 'Text',   label: 'Text'   },
+                    { mode: 'maskDetect', icon: 'sparkle', info: 'Auto',   label: 'Auto'   },
+                ],
+            },
         ],
     },
 ];
@@ -137,13 +162,31 @@ export const MpiHistoryTools = ComponentFactory.create({
 
         /** Current tool defs indexed by mode for cheap lookup on remount. */
         const _defsByMode = new Map();
+
+        /** Collapse entries indexed by their `collapse` key (MPI-425). */
+        const _collapseByKey = new Map();
+
         toolDefs.forEach(def => {
             _defsByMode.set(def.mode, def);
             if (def.group) def.group.forEach(sub => {
+                // A collapse entry owns modes instead of being one. Its sub-modes
+                // still map back to the outer group so setMode / setDisabled work
+                // on them exactly as they did when they were rail buttons.
+                if (sub.collapse) {
+                    _collapseByKey.set(sub.collapse, sub);
+                    (sub.sub || []).forEach(leaf => {
+                        _defsByMode.set(leaf.mode, leaf);
+                        _subToGroup.set(leaf.mode, def.mode);
+                    });
+                    return;
+                }
                 _defsByMode.set(sub.mode, sub);
                 _subToGroup.set(sub.mode, def.mode);
             });
         });
+
+        /** True when a collapse entry owns the currently active mode. */
+        const _collapseOwnsActive = (def) => (def.sub || []).some(s => s.mode === _activeMode);
 
         /** Cleanup registry. */
         const _unsubs = [];
@@ -155,12 +198,13 @@ export const MpiHistoryTools = ComponentFactory.create({
          * container so MpiButton.mount's innerHTML overwrite doesn't clobber siblings.
          */
         const _appendFlatButton = (def, slot) => {
-            const prev = _buttons.get(def.mode);
+            const key = def.mode || def.collapse;
+            const prev = _buttons.get(key);
             if (prev) prev.destroy?.();
 
-            const dstate = _disabledState.get(def.mode);
+            const dstate = _disabledState.get(key);
             const isDisabled = !!dstate?.disabled;
-            const tooltip = isDisabled && dstate?.reason ? dstate.reason : (def.info || def.mode);
+            const tooltip = isDisabled && dstate?.reason ? dstate.reason : (def.info || key);
 
             const wrap = document.createElement('div');
             wrap.className = 'mpi-history-tools__btn';
@@ -173,18 +217,29 @@ export const MpiHistoryTools = ComponentFactory.create({
                 variant: 'ghost',
                 info: tooltip,
                 toggleable: false,
-                active: _activeMode === def.mode,
+                // A collapse button shows active while any mode it owns is active,
+                // but keeps its OWN fixed icon — it never takes on the identity of
+                // the last-used method (MPI-425 decision 1).
+                active: def.collapse ? _collapseOwnsActive(def) : _activeMode === def.mode,
                 disabled: isDisabled,
+                // Strip entries carry a text label; rail buttons stay icon-only and
+                // name themselves through the hover tooltip.
+                label: def.label || '',
                 extraClasses: 'mpi-ibtn--rail',
             });
 
             const off = btn.on('click', () => {
                 if (isDisabled) return;
+                if (def.collapse) { _toggleStrip(def, wrap); return; }
+                // Picking a method dismisses the strip it was picked from. Safe to
+                // destroy this button inside its own handler: MpiButton's listener
+                // ends on emit('click') and touches nothing afterwards.
+                _closeStrip();
                 _activate(def.mode);
             });
             _unsubs.push(off);
 
-            _buttons.set(def.mode, btn);
+            _buttons.set(key, btn);
         };
 
         /** Render every sub-tool of a group as a stacked flat button into one slot. */
@@ -219,6 +274,12 @@ export const MpiHistoryTools = ComponentFactory.create({
 
         /** Re-render only the group containing the tool whose disabled state changed. */
         const _remountTool = (toolMode) => {
+            // A mode living inside an OPEN collapse strip has its button there, not
+            // in the rail column — re-render the strip instead of (only) the group.
+            if (_stripDef && (_stripDef.sub || []).some(s => s.mode === toolMode)) {
+                _renderStripSlot();
+                return;
+            }
             const outer = _subToGroup.get(toolMode) || toolMode;
             const def = _defsByMode.get(outer);
             if (!def) return;
@@ -234,6 +295,9 @@ export const MpiHistoryTools = ComponentFactory.create({
          * Updates button visual states and emits 'activate { mode }'.
          */
         const _activate = (newMode) => {
+            // Any tool activation dismisses an open collapse strip, including the
+            // no-op re-activation of the mode that is already live.
+            _closeStrip();
             if (_activeMode === newMode) return;
             const prev = _activeMode;
             _activeMode = newMode;
@@ -244,8 +308,100 @@ export const MpiHistoryTools = ComponentFactory.create({
             if (_buttons.has(newMode)) {
                 _buttons.get(newMode)?.el.setActive?.(true);
             }
+            // A collapse button is active whenever one of ITS modes is.
+            _collapseByKey.forEach((cdef, key) => {
+                _buttons.get(key)?.el.setActive?.(_collapseOwnsActive(cdef));
+            });
 
             emit('activate', { mode: newMode });
+        };
+
+        // ── Collapse strip (MPI-425) ─────────────────────────────────────────
+        // A collapse button opens its sub-modes in a floating strip beside the rail
+        // rather than stacking them in the column. Reuses MpiPopup exactly as the
+        // hover tooltip below does (portals to body, position 'right', triggerEl) —
+        // no new positioning code. Kept in its OWN variables: `_tip` is destroyed on
+        // every hover and would take the strip with it.
+
+        /** @type {object|null} live MpiPopup instance holding the strip. */
+        let _strip = null;
+        /** @type {object|null} the collapse def the open strip belongs to. */
+        let _stripDef = null;
+        /** The rail button wrapper the strip is anchored to. */
+        let _stripAnchor = null;
+        let _stripTimer = null;
+        let _stripUnbindEsc = null;
+
+        const _clearStripTimer = () => {
+            if (_stripTimer) { clearTimeout(_stripTimer); _stripTimer = null; }
+        };
+
+        /** Start (or restart) the unhovered auto-dismiss countdown. */
+        const _armStripTimer = () => {
+            _clearStripTimer();
+            if (!_strip) return;
+            _stripTimer = setTimeout(() => _closeStrip(), STRIP_DISMISS_MS);
+        };
+
+        const _closeStrip = () => {
+            _clearStripTimer();
+            _stripUnbindEsc?.();
+            _stripUnbindEsc = null;
+            // The strip's buttons are registered in _buttons like any other; drop
+            // them so a later setActive never reaches a detached instance.
+            (_stripDef?.sub || []).forEach(s => {
+                _buttons.get(s.mode)?.destroy?.();
+                _buttons.delete(s.mode);
+            });
+            _strip?.destroy?.();
+            _strip = null;
+            _stripDef = null;
+            _stripAnchor = null;
+        };
+
+        /** (Re)fill the open strip with one flat button per sub-mode. */
+        const _renderStripSlot = () => {
+            const slot = _strip && qs('.mpi-history-tools__strip', _strip.el);
+            if (!slot) return;
+            slot.innerHTML = '';
+            (_stripDef.sub || []).forEach(sub => _appendFlatButton(sub, slot));
+        };
+
+        const _openStrip = (def, anchorEl) => {
+            _closeStrip();
+            _hideTip();
+
+            const wrap = document.createElement('div');
+            _strip = MpiPopup.mount(wrap, {
+                active: true,
+                position: 'right',
+                variant: 'glass',
+                triggerEl: anchorEl,
+            }, `<div class="mpi-history-tools__strip"></div>`);
+            _stripDef = def;
+            _stripAnchor = anchorEl;
+            _strip.el?.classList.add('mpi-popup--tool-strip');
+
+            _renderStripSlot();
+
+            // Hovering the strip holds it open; leaving it restarts the countdown.
+            _strip.on('mouseenter', _clearStripTimer);
+            _strip.on('mouseleave', _armStripTimer);
+
+            // Bound only while open, so Escape keeps its normal meaning otherwise.
+            // The workspace's own Escape handler already stands down while an
+            // `.mpi-popup.is-active` is on screen (hotkeyManager escape context).
+            _stripUnbindEsc = Hotkeys.bind('historyTools.collapseStrip.close', () => _closeStrip());
+
+            // The countdown is NOT armed here. The pointer is still on the button
+            // that was just clicked, and arming now would dismiss the strip out
+            // from under a stationary cursor. `mouseout` on the anchor arms it —
+            // the timer measures unhovered time, which is what it is for.
+        };
+
+        const _toggleStrip = (def, anchorEl) => {
+            if (_stripDef === def) { _closeStrip(); return; }
+            _openStrip(def, anchorEl);
         };
 
         // ── Public API (on el) ───────────────────────────────────────────────
@@ -286,6 +442,10 @@ export const MpiHistoryTools = ComponentFactory.create({
         _unsubs.push(on(el, 'mouseover', (e) => {
             const btn = e.target.closest('.mpi-history-tools__btn');
             if (!btn || btn === _tip?._anchor) return;
+            // The open strip anchors position:'right' off this same button — a
+            // tooltip there would sit on top of it. Hovering the button also holds
+            // the strip open, same as hovering the strip itself.
+            if (btn === _stripAnchor) { _clearStripTimer(); _hideTip(); return; }
             _hideTip();
             const name = btn.getAttribute('data-info');
             if (!name) return;
@@ -318,6 +478,7 @@ export const MpiHistoryTools = ComponentFactory.create({
             if (!btn) return;
             // Ignore moves that stay inside the same button (icon <-> wrapper).
             if (e.relatedTarget && e.relatedTarget.closest('.mpi-history-tools__btn') === btn) return;
+            if (btn === _stripAnchor) _armStripTimer();
             _hideTip();
         }));
 
@@ -329,10 +490,12 @@ export const MpiHistoryTools = ComponentFactory.create({
 
         el.destroy = () => {
             _hideTip();
+            _closeStrip();
             _unsubs.forEach(fn => fn?.());
             _buttons.forEach(btn => btn?.destroy?.());
             _buttons.clear();
             _subToGroup.clear();
+            _collapseByKey.clear();
             _disabledState.clear();
         };
     },

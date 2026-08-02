@@ -128,6 +128,21 @@ export const HOTKEY_REGISTRY = [
         description:      'Select eraser tool',
         allowWhileTyping: false,
     },
+    // MPI-425. Bound by MpiHistoryTools only while a collapse strip is open, so
+    // Escape keeps its normal meaning the rest of the time. Deliberately NOT on
+    // the hotkeys page: dismissing a transient popup is not a shortcut anyone
+    // looks up. The workspace's own Escape handler stands down on its own while
+    // the strip is up — `.mpi-popup.is-active` is already an ESCAPE_DISMISSABLE
+    // selector, so `escapeCtx.activeDismissableUi` blocks the return-to-gallery.
+    {
+        id:               'historyTools.collapseStrip.close',
+        key:              'escape',
+        type:             KEY_TYPE.DOWN,
+        category:         'mask',
+        scopeLabel:       'Mask Toolbar',
+        description:      'Close the open tool strip',
+        allowWhileTyping: true,
+    },
 
     // ── Mask — Canvas scope ───────────────────────────────────────────────────
     {

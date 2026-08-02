@@ -21,6 +21,10 @@ Project mode: scalable-foundation.
   `TOOL_OPTIONS_REGISTRY`. A nested collapse def keeps matching as long as the
   key stays `mode:`.
 - Architecture agreed 2026-08-01, recorded in `tasks/MPI-424/brief.md`.
+- **2026-08-02: code + docs + guard are DONE** (see `## Completed`). Only the
+  `user-ux` pass is left. Files touched: `MpiHistoryTools.js` / `.css`,
+  `js/managers/hotkeyRegistry.js`, `tests/mask-tool-registry.test.cjs`,
+  `docs/masking.md`.
 
 Decisions settled with the user before planning, so implementation stops for
 nothing:
@@ -39,14 +43,14 @@ nothing:
 
 ## Implementation
 
-- [ ] Add a collapse entry to the tool-def shape and use it for Detect: a group
+- [x] Add a collapse entry to the tool-def shape and use it for Detect: a group
       member that owns sub-modes instead of activating one, rendered as a single
       button that opens an `MpiPopup` anchored right of itself holding
       `points` / `text` / `auto`. Mask group becomes `maskBrush` + that entry.
       **Verify:** `npm run lint:components` clean, and
       `node --test tests/mask-tool-registry.test.cjs` still resolves all three
       detect modes through the nested shape.
-- [ ] Dismissal and conflict rules: the strip closes on pick, on Escape, on any
+- [x] Dismissal and conflict rules: the strip closes on pick, on Escape, on any
       tool activation, and on an unhovered timer (ONE tunable constant, start at
       1500ms) that cancels when the pointer re-enters either the strip or its
       button. Suppress the rail hover tooltip for the collapse button while its
@@ -55,13 +59,13 @@ nothing:
       destroyed on every hover.
       **Verify:** all four dismissal paths by hand in the running app; after
       `destroy()` no popup remains in the DOM and no timer is live.
-- [ ] Teardown and guard: every listener and the timer collected in `_unsubs`
+- [x] Teardown and guard: every listener and the timer collected in `_unsubs`
       and cleared in `destroy()` per the component contract. Extend
       `tests/mask-tool-registry.test.cjs` so a sub-mode declared in the collapse
       def but missing from `_MASK_TOOLS` or `TOOL_OPTIONS_REGISTRY` fails.
       **Verify:** negative control both directions — drop one entry, test fails;
       restore, test passes.
-- [ ] Docs and the stale comment: record the taxonomy in `docs/masking.md`
+- [x] Docs and the stale comment: record the taxonomy in `docs/masking.md`
       (artifact per group, method per button, engine shared across groups) plus
       the PromptBox rule for the future Paint/Composite groups. Update the
       MpiHistoryTools comment that still says Shapes "does not become a
@@ -71,13 +75,55 @@ nothing:
 
 ## Completed
 
-- [ ] Nothing yet.
+All four implementation items, 2026-08-02. What actually shipped:
+
+- **Tool-def shape** — a group member may carry `collapse` + `sub[]` instead of
+  `mode`. Detect is `{ collapse: 'detect', icon: 'search', sub: [points, text,
+  auto] }`; the Mask group is now `maskBrush` + that entry. `_defsByMode` /
+  `_subToGroup` index the leaves against the outer group, so `setMode` and
+  `setDisabled` reach a collapsed mode exactly as before.
+- **Strip** — `MpiPopup`, `position: 'right'`, `triggerEl` = the button wrapper,
+  held in `_strip` / `_stripDef` / `_stripAnchor`, never `_tip`. Opening
+  activates nothing; the button shows active while it owns the active mode but
+  keeps its own icon.
+- **Dismissal** — pick, Escape, any `_activate()`, and `STRIP_DISMISS_MS` (1500)
+  once unhovered. Hovering the strip or its anchor cancels; the rail tooltip is
+  suppressed for the anchor while open.
+- **Escape** — new registry id `historyTools.collapseStrip.close`, bound only
+  while the strip is open. The workspace's return-to-gallery Escape already
+  stands down against an `.mpi-popup.is-active` (`ESCAPE_DISMISSABLE_SELECTORS`),
+  so the two do not fight.
+- **Guard** — `mask-tool-registry.test.cjs` gains two tests: collapsed modes must
+  be in `_MASK_TOOLS` + `TOOL_OPTIONS_REGISTRY`, and a collapse entry must not
+  declare a `mode:` of its own (which would demand registry entries that must not
+  exist). Negative-controlled both directions.
+- **Docs** — `docs/masking.md` gains `## Canvas tool taxonomy (MPI-425)` with the
+  group/artifact/engine/PromptBox table; trimmed back to exactly 200 lines. The
+  MpiHistoryTools "does not become a switcher" comment now carries the new
+  reasoning.
 
 ## Remaining Work
 
-- All four items above.
+- The `user-ux` pass in the running app (see `## Verification`), including tuning
+  `STRIP_DISMISS_MS`.
 
 ## Plan Drift
+
+- **2026-08-02 — the dismiss timer is NOT armed when the strip opens.** The plan
+  said "an unhovered timer ... that cancels when the pointer re-enters"; arming at
+  open would have dismissed the strip out from under a cursor that never moved
+  after the click. `mouseout` on the anchor arms it instead, so the constant
+  measures unhovered time, which is what it was for.
+- **2026-08-02 — `MPI-425/brief.md` corrected.** It said new modes "may ship
+  disabled-with-a-reason"; decision 3 (later, and on the card) says only working
+  tools ship. Brief now states the correction and labels its toolbar diagram as
+  the end state of the whole MPI-424 set, not of this card.
+- **2026-08-02 — Escape is not on the hotkeys cheat-sheet page.**
+  `hotkeyRegistry.js` asks that `mpi-hotkeys.js` HTML be updated alongside; a
+  transient popup dismiss is not a shortcut anyone looks up, so it was
+  deliberately left off. Reverse it if the user disagrees.
+- **2026-08-02 — `docs/masking.md` roadmap healed.** It still listed MPI-379 as
+  pending; that card is closed `rejected`.
 
 - None yet.
 

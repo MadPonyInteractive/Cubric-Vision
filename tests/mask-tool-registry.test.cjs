@@ -17,11 +17,60 @@ const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 const RAIL = read('js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js');
 const BLOCK = read('js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js');
 
-/** Every `mode: 'maskXxx'` the image rail offers. */
+/** Every `mode: 'maskXxx'` the image rail offers. Since MPI-425 some of these are
+ *  nested inside a collapse entry's `sub: []` rather than sitting directly in the
+ *  group — the key stays `mode:`, so a collapsed method is still caught here. That
+ *  is the point: presentation moved, the registration duty did not. */
 const railMaskTools = [...RAIL.matchAll(/mode:\s*'(mask[A-Za-z]+)'/g)].map(m => m[1]);
+
+/** Mask modes that live inside a collapse entry rather than the rail column. */
+const collapsedMaskTools = [...RAIL.matchAll(/collapse:\s*'[A-Za-z]+'[\s\S]*?sub:\s*\[([\s\S]*?)\]/g)]
+    .flatMap(m => [...m[1].matchAll(/mode:\s*'(mask[A-Za-z]+)'/g)].map(s => s[1]));
 
 test('the rail actually offers mask tools', () => {
     assert.ok(railMaskTools.length >= 3, `expected the split mask family, got ${railMaskTools.join(', ')}`);
+});
+
+// MPI-425. A collapse entry is the easy place to add a mode and forget the two
+// registries — the button renders and the strip opens, so it LOOKS wired. Assert
+// the nested modes explicitly rather than trusting the flat scrape above to keep
+// matching if the def shape changes again.
+test('collapsed mask modes are still real registered modes', () => {
+    assert.ok(collapsedMaskTools.length >= 3,
+        `expected the detect methods behind a collapse entry, got ${collapsedMaskTools.join(', ') || 'none'}`);
+
+    const set = BLOCK.match(/const _MASK_TOOLS = new Set\(\[([^\]]*)\]\)/);
+    const registry = BLOCK.match(/const TOOL_OPTIONS_REGISTRY = \{([\s\S]*?)\n\};/);
+    assert.ok(set, '_MASK_TOOLS set literal not found in MpiGroupHistoryBlock');
+    assert.ok(registry, 'TOOL_OPTIONS_REGISTRY not found in MpiGroupHistoryBlock');
+
+    for (const mode of collapsedMaskTools) {
+        assert.ok(
+            railMaskTools.includes(mode),
+            `${mode} is inside a collapse entry but the rail scrape missed it — the def shape changed and this guard went blind`,
+        );
+        assert.ok(
+            set[1].includes(`'${mode}'`),
+            `${mode} is in a collapse strip but missing from _MASK_TOOLS — the viewer would never enter mask mode for it`,
+        );
+        assert.match(
+            registry[1],
+            new RegExp(`\\b${mode}\\s*:`),
+            `${mode} is in a collapse strip but has no TOOL_OPTIONS_REGISTRY entry — its strip button would mount nothing`,
+        );
+    }
+});
+
+// The collapse button itself owns modes, it is not one. If it ever carried a
+// `mode:` key it would be scraped as a mask tool above and demand registry
+// entries that must not exist.
+test('a collapse entry declares no mode of its own', () => {
+    const collapseBlocks = [...RAIL.matchAll(/\{\s*collapse:[\s\S]*?\n(\s*)\},/g)].map(m => m[0]);
+    assert.ok(collapseBlocks.length >= 1, 'no collapse entry found in the rail');
+    for (const block of collapseBlocks) {
+        const head = block.slice(0, block.indexOf('sub:'));
+        assert.ok(!/\bmode:/.test(head), `a collapse entry declares its own mode:\n${head}`);
+    }
 });
 
 test('every rail mask tool is registered in _isMaskTool()', () => {

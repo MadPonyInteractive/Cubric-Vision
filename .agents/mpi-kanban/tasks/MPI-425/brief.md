@@ -2,7 +2,7 @@
 
 Agreed with the user 2026-08-01 in the MPI-424 brainstorm. Lands FIRST.
 
-## Toolbar after this card
+## Toolbar after the WHOLE MPI-424 set (not after this card)
 
 ```
   Mask
@@ -35,7 +35,13 @@ This card declares the groups, the modes and the strip. It does NOT build:
 - the paint layer or the brush-engine extraction (MPI-375),
 - the composite slots (MPI-373).
 
-New modes may ship disabled-with-a-reason until their panel lands. Never dead.
+**CORRECTED 2026-08-02.** This paragraph used to read "new modes may ship
+disabled-with-a-reason until their panel lands". That was written before the plan
+and is now WRONG. Decision 3, settled with the user and recorded in `task.json` and
+`plan.md`: **only working tools ship.** This card delivers the Mask group as
+`maskBrush` plus the Detect strip, nothing else. No greyed placeholders advertising
+unbuilt features. Adjust / Shapes / Paint / Composite buttons arrive on their own
+cards. The diagram above is the END state of the whole MPI-424 set.
 
 ## Why first
 

@@ -41,6 +41,31 @@
     height: 18px;
 }
 
+/* ── Collapse tool strip (MPI-425) ────────────────────────────────────────────
+   The floating strip a collapse button opens beside the rail. Same MpiPopup
+   primitive as the tooltip below, so it also portals to <body> and needs a
+   top-level selector. Buttons are icon + label, unlike the icon-only rail. */
+.mpi-popup.mpi-popup--tool-strip {
+    padding: 0.35rem;
+}
+
+.mpi-history-tools__strip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.mpi-history-tools__strip .mpi-history-tools__btn .mpi-btn {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 0.5rem;
+}
+
+.mpi-history-tools__strip .mpi-ibtn--rail .mpi-icon {
+    width: 18px;
+    height: 18px;
+}
+
 /* ── Rail tool tooltip (MPI-264) ──────────────────────────────────────────────
    Compact skin for the MpiPopup used as a hover tooltip on rail buttons. The
    popup portals to <body>, so this is a top-level selector, not nested under
