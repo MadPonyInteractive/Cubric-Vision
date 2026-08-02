@@ -973,11 +973,16 @@ export const PROMPT_BOX_CONTROLS = {
      * int into the "Input_Tier" MpiInt, which drives the graph's MpiAnySwitch model
      * path + step-count switch: 1=Quality (raw ~20-step, no accelerator LoRA),
      * 2=Turbo (8-step Lightning LoRA), 3=Hyper (4-step Lightning LoRA). One int8
-     * transformer for all three — only the accelerator LoRA changes. Persists per-op.
+     * transformer for all three — only the accelerator LoRA changes.
+     *
+     * scope `perModel`, NOT `perOp` — tier is a speed/quality MODE the user works in,
+     * exactly like krea2Turbo. It was perOp until MPI-365 and that was invisible while
+     * Qwen had a single op; the moment it gained depth + pose, switching op silently
+     * switched tier with it.
      */
     qwenTier: {
         nodeTitle: 'Input_Tier',
-        scope: 'perOp',
+        scope: 'perModel',
         defaultValue: PROMPT_CONTROL_DEFAULTS.qwenTier,
         mount(hostEl, opts = {}) {
             const saved = _readSaved(this, opts);

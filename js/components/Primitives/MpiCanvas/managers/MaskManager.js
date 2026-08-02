@@ -510,12 +510,21 @@ export class MaskManager {
     }
 
     /**
-     * Flatten composite display to B/W PNG.
+     * Flatten composite display to B/W PNG, AT THE SOURCE IMAGE'S RESOLUTION.
+     *
+     * The working layers are MASK_MAX_EDGE-capped, but the export is not allowed to
+     * be: `InpaintCropImproved` (every master template's masked-edit branch —
+     * klein/krea2/qwen) ASSERTS `mask.shape == image.shape` and dies on a mismatch,
+     * so a >1536px source produced a 2/3-size mask and a hard AssertionError. The
+     * older mask consumers (SetLatentNoiseMask & co) resized silently, which is why
+     * the cap went unnoticed until MPI-365 wired masks into the crop branch.
+     * Upscaling here keeps the cap where it belongs — on the paint loop, not on the
+     * contract with the graph.
      */
     getURL(bg = null, fg = null) {
         if (!this.maskCanvas) return null;
         if (!bg && !fg) {
-            return this.maskCanvas.toDataURL('image/png');
+            return this._toSourceScale(this.maskCanvas);
         }
 
         const w = this.maskCanvas.width;
@@ -549,6 +558,23 @@ export class MaskManager {
         }
 
         tempCtx.putImageData(out, 0, 0);
-        return tempCanvas.toDataURL('image/png');
+        return this._toSourceScale(tempCanvas);
+    }
+
+    /**
+     * PNG data URL of `canvas` at the SOURCE image's pixel size. No-op (and no
+     * extra canvas) when the working layers were never capped.
+     * @param {HTMLCanvasElement} canvas
+     * @returns {string}
+     */
+    _toSourceScale(canvas) {
+        const w = this._srcWidth  || canvas.width;
+        const h = this._srcHeight || canvas.height;
+        if (w === canvas.width && h === canvas.height) return canvas.toDataURL('image/png');
+        const scaled = document.createElement('canvas');
+        scaled.width = w;
+        scaled.height = h;
+        scaled.getContext('2d').drawImage(canvas, 0, 0, w, h);
+        return scaled.toDataURL('image/png');
     }
 }

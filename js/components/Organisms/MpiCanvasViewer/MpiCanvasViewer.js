@@ -163,7 +163,20 @@ export const MpiCanvasViewer = ComponentFactory.create({
                     outData.data[i + 3] = 255;
                 }
                 octx.putImageData(outData, 0, 0);
-                return out.toDataURL('image/png');
+                // Same contract as MaskManager.getURL(): the TEMP layers were written
+                // at the MASK_MAX_EDGE-capped working size, but InpaintCropImproved
+                // asserts mask dims == image dims, and this composite reaches the graph
+                // through _previewMaskCache → getCurrentMaskDataURL(). Scale back to the
+                // entry's own pixels; fall through unscaled if the item never recorded
+                // them (nothing to scale TO is not a reason to fail the mask).
+                const tw = item.pixelDimensions?.w;
+                const th = item.pixelDimensions?.h;
+                if (!tw || !th || (tw === w && th === h)) return out.toDataURL('image/png');
+                const scaled = document.createElement('canvas');
+                scaled.width = tw;
+                scaled.height = th;
+                scaled.getContext('2d').drawImage(out, 0, 0, tw, th);
+                return scaled.toDataURL('image/png');
             } catch (err) {
                 console.warn('[MpiCanvasViewer] composite build failed:', err);
                 return null;
