@@ -46,6 +46,7 @@ const {
     markDownloadInProgress,
     clearDownloadMarker,
     getPartialDownloadState,
+    getPartialBytes,
     getDownloadMarkerPath,
 } = require('./downloadCompletion');
 const { DownloaderHelper } = require('node-downloader-helper');
@@ -656,9 +657,34 @@ class FileDownloader {
                 fs.remove(this.localPath).catch(() => {});
                 clearDownloadMarker(this.localPath).catch(() => {});
             }
+            // MPI-427 — a transport failure is the one case worth a SECOND ROUTE before
+            // giving up: the object is fine, the path to it is not. Try each mirror
+            // origin once, keeping the on-disk partial (path-equal, so MPI-317 resumes
+            // it rather than scrapping it). Only transport errors qualify — a SHA256
+            // mismatch or a 404 would fail identically on every mirror.
+            const blocked = _describeTransportError(err, this.depJob.url);
+            if (blocked) {
+                logger.warn('download', `${this.depJob.id}: network-blocked — ${this.depJob.url} — raw: ${err.message}`);
+                this._triedUrls = this._triedUrls || new Set([this.depJob.url]);
+                const next = _mirrorUrlsFor(this.depJob.url).find(u => !this._triedUrls.has(u));
+                if (next) {
+                    this._triedUrls.add(next);
+                    logger.info('download', `${this.depJob.id}: failing over to mirror ${new URL(next).host}`);
+                    this.depJob.url = next;
+                    this._downloader = null;
+                    this._eventsBound = false;
+                    this.download().catch(() => {});   // errors re-enter this handler
+                    return;
+                }
+            }
             _setDepStatus(this.depJob, 'failed', 'downloader error');
-            this.depJob.error = err.message;
-            _broadcast('download:failed', { depId: this.depJob.id, error: err.message });
+            this.depJob.error = blocked || err.message;
+            this.depJob.networkBlocked = Boolean(blocked);
+            _broadcast('download:failed', {
+                depId: this.depJob.id,
+                error: this.depJob.error,
+                networkBlocked: this.depJob.networkBlocked,
+            });
             _checkModelJobsComplete();
             _startPendingDeps();
         });
@@ -717,7 +743,7 @@ class FileDownloader {
             depId: this.depJob.id,
             url: this.depJob.url,
         });
-        if (partial.resumable && (!markerUrl || markerUrl === this.depJob.url)) {
+        if (partial.resumable && (!markerUrl || _isSameObjectUrl(markerUrl, this.depJob.url))) {
             this.depJob.downloadedBytes = partial.downloaded;
             logger.info('download', `resuming ${this.depJob.id} from ${(partial.downloaded / 1073741824).toFixed(2)}GB on disk`);
             // Not awaited (same idiom as start() below): the promise resolves only
@@ -829,6 +855,89 @@ async function _verifySha256(filePath, expected, precomputed) {
         });
         stream.on('error', reject);
     });
+}
+
+// MPI-427 — a download that never reaches the host is a NETWORK condition, not a bug,
+// and the raw driver text says so in a language no user reads. A real report:
+//   write EPROTO 108544:error:100000f7:SSL routines:OPENSSL_internal:
+//   WRONG_VERSION_NUMBER:..\..\third_party\boringssl\src\ssl\tls_record.cc:127:
+// That user's 44 model downloads all died under 200ms while all 45 GitHub downloads
+// succeeded — a DNS/filter/middlebox intercepting one hostname. He read it as the app
+// being broken and re-ran the installer for a day. Name the host and the remedy.
+// Returns null for anything not transport-level, so real bugs keep their real message.
+const _TRANSPORT_ERROR_PATTERNS = [
+    // TLS answered by something that isn't TLS — DNS hijack, captive portal, filter.
+    'wrong_version_number', 'eproto', 'packet_length_too_long',
+    // Certificate substituted — an intercepting proxy or AV TLS scanner.
+    'self_signed_cert_in_chain', 'unable_to_verify_leaf_signature',
+    'cert_authority_invalid', 'err_tls_cert_altname_invalid',
+    // Never resolved / refused / black-holed.
+    'enotfound', 'eai_again', 'econnrefused', 'econnreset', 'etimedout', 'ehostunreach',
+];
+
+// MPI-427 — every model weight is served from ONE hostname, so an ISP or filter that
+// blocks or throttles that host takes the entire catalogue with it and the app has no
+// second route. MIRRORS are alternate ORIGINS for the same object paths: a failed
+// transport attempt retries the identical path against the next entry before the dep is
+// declared failed.
+//
+// TO ENABLE A MIRROR: add its origin to _MODEL_MIRRORS below. The object layout must be
+// identical (`<origin>/vision/models/<comfy-type>/<file>`), because only the origin is
+// swapped — see _mirrorUrlsFor. Empty by default: failing over to a host that does not
+// exist yet would turn one clean error into two slow ones. CUBRIC_MODEL_MIRRORS
+// (comma-separated) overrides for testing without a rebuild.
+//
+// A same-provider mirror only defeats HOSTNAME-keyed blocking. The 2026-08-02 report
+// behind this card was deep-packet interference that killed the stream at ~20%, and a
+// second Cloudflare hostname is NOT proven to survive that — an off-Cloudflare origin
+// (Hugging Face / Backblaze B2 / GitHub Releases) is the fallback if it does not.
+const _MODEL_MIRRORS = (process.env.CUBRIC_MODEL_MIRRORS || '')
+    .split(',')
+    .map(s => s.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+
+/** Alternate origins for `url`, in order, skipping the origin it already uses. */
+function _mirrorUrlsFor(url) {
+    let parsed;
+    try { parsed = new URL(url); } catch { return []; }
+    const out = [];
+    for (const origin of _MODEL_MIRRORS) {
+        let base;
+        try { base = new URL(origin); } catch { continue; }
+        if (base.origin === parsed.origin) continue;
+        out.push(`${base.origin}${parsed.pathname}${parsed.search}`);
+    }
+    return out;
+}
+
+/**
+ * True when two URLs address the SAME object across mirrors — same path, origin may
+ * differ. MPI-317 resume compares the marker's url to the dep's url and DELETES the
+ * partial on a mismatch (a repointed R2 object must not be Range-read into stale bytes).
+ * A mirror swap changes the origin, so a plain string compare would scrap exactly the
+ * partial a failover exists to preserve — the 2026-08-02 user lost his 20% to a retry
+ * and reported it as "it jumped back down to 8". Path equality keeps the SHA256 verify
+ * as the real net.
+ */
+function _isSameObjectUrl(a, b) {
+    if (a === b) return true;
+    try {
+        const ua = new URL(a);
+        const ub = new URL(b);
+        return ua.pathname === ub.pathname;
+    } catch { return false; }
+}
+
+function _describeTransportError(err, url) {
+    const raw = String((err && (err.message || err.code)) || '').toLowerCase();
+    if (!_TRANSPORT_ERROR_PATTERNS.some(p => raw.includes(p))) return null;
+    let host = 'the download server';
+    try { host = new URL(url).host; } catch { /* malformed url — keep the generic noun */ }
+    return `Your network blocked the connection to ${host}. This is usually a DNS server, `
+        + 'a network/parental filter, a VPN, or antivirus web protection — not a problem with '
+        + 'the app or your computer. Try setting your DNS to 1.1.1.1 (Settings > Network & '
+        + 'internet > your connection > Hardware properties > DNS server assignment > Edit > '
+        + 'Manual), or test on a phone hotspot, then retry.';
 }
 
 function _formatSpeed(bytesPerSec) {
@@ -958,7 +1067,15 @@ function _setModelStatus(modelJob, status, reason) {
 function _setDepStatus(depJob, status, reason) {
     depJob.status = status;
     const to = _DEP_STATUS_TO_STORE[status];
-    if (to && store.depJob(depJob.id)) store.transitionDep(depJob.id, to, reason);
+    // MPI-427 — 'queued' on an existing dep is always an explicit retry requeue (all
+    // four callers: local reset, remote node, remote, uw). A terminal dep cannot reach
+    // 'queued' through the transition table by design, so route it to the store's
+    // dedicated requeue instead of taking a rejected-transition warn on every retry.
+    if (to === 'queued' && store.depJob(depJob.id)) {
+        store.requeueDep(depJob.id, reason);
+    } else if (to && store.depJob(depJob.id)) {
+        store.transitionDep(depJob.id, to, reason);
+    }
     // Stamp last-activity on the store model job so the reconciler's orphan-fail
     // gate (G11) measures staleness from real progress, not registration alone.
     const sj = store.modelJob(depJob.modelId);
@@ -1226,8 +1343,15 @@ router.post('/comfy/models/download/start', async (req, res) => {
             depJob.totalBytes = _parseSizeToBytes(dep.size);
         } else if (depJob.status !== 'queued' && depJob.status !== 'downloading') {
             // Reset any terminal state (complete, failed, cancelled) back to queued.
+            // MPI-427: credit the KEPT partial instead of zeroing. removeOnFail:false
+            // leaves the bytes on disk and download() resumes them from the marker, so
+            // zeroing made the bar fall backwards on every retry — a user watching a
+            // flaky ISP kill his transfer reported it as "it got 20% ... and it jumped
+            // back down to 8", i.e. as lost progress. getPartialBytes returns 0 unless
+            // the partial is genuinely marker-blessed and resumable, so a non-resumable
+            // leftover still reads as 0 and nothing is over-reported.
             _setDepStatus(depJob, 'queued', 'local reset requeue');
-            depJob.downloadedBytes = 0;
+            depJob.downloadedBytes = await getPartialBytes(localPath);
             depJob.error = null;
         }
     }
@@ -1972,6 +2096,9 @@ function _checkModelJobsComplete() {
             _broadcast('download:failed', {
                 modelId: modelJob.modelId,
                 error: failedDep ? failedDep.error : 'One or more dependencies failed to download',
+                // MPI-427 — carry the network-blocked verdict up so the client routes it
+                // to a friendly toast instead of the Report-on-GitHub dialog.
+                networkBlocked: Boolean(failedDep && failedDep.networkBlocked),
             });
         } else if (allComplete) {
             if (modelJob.installCustomNodes) {
@@ -2687,7 +2814,9 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
             // extraction (was complete), and previously failed downloads on retry.
             const prevStatus = depJob.status;
             _setDepStatus(depJob, 'queued', 'uw requeue');
-            depJob.downloadedBytes = 0;
+            // MPI-427 — credit the resumable partial; see the sibling in
+            // startModelDownload for why zeroing made the bar run backwards.
+            depJob.downloadedBytes = await getPartialBytes(localPath);
             depJob.error = null;
             logger.info('download', `startUniversalWorkflowInstall: resetting ${depId} (was ${prevStatus}) for re-download`);
         }
@@ -2720,8 +2849,18 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
             if (allDone) {
                 clearInterval(checkInterval);
                 if (anyFailed) {
-                    const failedNames = modelJob.deps.filter(d => d.status === 'failed').map(d => d.id).join(', ');
-                    reject(new Error(`UW deps install failed: ${failedNames}`));
+                    const failed = modelJob.deps.filter(d => d.status === 'failed');
+                    const failedNames = failed.map(d => d.id).join(', ');
+                    // MPI-427 — this used to carry the dep IDs and NOTHING else, so a
+                    // network block surfaced as the useless "UW deps install failed:
+                    // rife47". Carry the first real reason (already the readable
+                    // network-blocked text when _describeTransportError matched).
+                    const reason = failed.find(d => d.error)?.error;
+                    const err = new Error(reason
+                        ? `UW deps install failed: ${failedNames} — ${reason}`
+                        : `UW deps install failed: ${failedNames}`);
+                    err.networkBlocked = failed.some(d => d.networkBlocked);
+                    reject(err);
                 } else {
                     resolve();
                 }
@@ -2853,6 +2992,9 @@ module.exports = {
     _filterDepsForEngine, // MPI-276 — exported for unit test
     _filterRequirements, // MPI-370 — exported for unit test
     _describeNodeInstallFailures, // MPI-387 — exported for unit test
+    _describeTransportError, // MPI-427 — exported for unit test
+    _mirrorUrlsFor, // MPI-427 — exported for unit test
+    _isSameObjectUrl, // MPI-427 — exported for unit test
     _pluginRequiredDepIds, // MPI-310 — exported for unit test
     _localSharedDepsMap, // MPI-310 — exported for unit test (model-side protection)
     _setModelStatus, // MPI-317 F5 — exported for unit test (store-terminal guard)

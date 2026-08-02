@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 427,
+  "next_id": 428,
   "columns": {
     "todo": [
       "MPI-426",
@@ -35,6 +35,7 @@
       "MPI-403"
     ],
     "doing": [
+      "MPI-427",
       "MPI-365",
       "MPI-424",
       "MPI-367",
@@ -118,7 +119,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-08-02T08:15:43Z",
+  "updated_at": "2026-08-02T15:05:00Z",
   "events": [
     {
       "at": "2026-08-01T23:30:00Z",
@@ -1507,6 +1508,32 @@
       "actor": "opus",
       "column": "todo",
       "summary": "Found during MPI-365 live verification: a SAM3 detection is auto-selected and unioned into maskCanvas, so an un-Added pick is injected as Input_Mask. The green overlay must stay a preview - the user may want to Subtract it, not Add it. Reverses the MPI-372/MPI-384 contract, so the op strip has to be re-gated on baked content instead."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "type": "task.created",
+      "id": "MPI-427",
+      "at": "2026-08-02T13:30:00Z",
+      "actor": "opus",
+      "column": "todo",
+      "summary": "Blocked model host must be a readable error, not an error loop. User micha: 44/44 models.cubric.studio downloads failed with TLS WRONG_VERSION_NUMBER in <200ms while 45/45 github.com downloads succeeded - network-side interception, install and D: layout both fine. Fix three defects for 1.3.1: raw BoringSSL error surfaced with no host or remedy plus an unhandled rejection; installStore FAILED is terminal so the failed->queued retry requeue is rejected and the UI read path sticks on failed for every user; app.getPath('documents') throwing hard-exits at boot despite an existing shared.js fallback. Mirror-host failover is approval-gated, see brief."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "type": "task.moved",
+      "id": "MPI-427",
+      "at": "2026-08-02T13:40:00Z",
+      "actor": "opus",
+      "column": "doing",
+      "summary": "Todo -> Doing. User approved all three fixes for a 1.3.1 release: actionable transport-failure error, failed->queued retry transition, and the app.getPath('documents') boot guard. Mirror-host failover stays out of scope pending a separate go-ahead."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "type": "task.progress",
+      "id": "MPI-427",
+      "at": "2026-08-02T15:05:00Z",
+      "actor": "opus",
+      "summary": "Code complete for 1.3.1, staying in DOING - not closed. Landed: transport-error classification with host + remedy routed to a warning toast instead of the Report-on-GitHub dialog; UW failures now carry their reason instead of bare dep ids; store.requeueDep as an explicit retry door that does NOT widen the transition table (reconciler still cannot resurrect); retry now credits the resumable partial so the bar stops running backwards; app.getPath('documents') boot guard; and a mirror-failover mechanism whose marker comparison is path-equal so a host swap resumes the partial rather than scrapping it. 71/71 suites green (transport-error-message 8 new, install-store 29). Version stamped 1.3.1 and notes approved. OPEN: _MODEL_MIRRORS ships EMPTY so failover cannot fire for anyone - enabling it is an approval-gated Cloudflare change; a same-provider mirror is unproven against this user's failure mode (he verified DNS alone is insufficient and only a tunnel works, stream died at 20 percent = deep-packet, not hostname blocking); 1.3.1 not released; nothing verified in a running app."
     }
   ]
 }

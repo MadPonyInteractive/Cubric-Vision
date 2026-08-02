@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-427",
+  "title": "A blocked model host must be a readable error, not an error loop (1.3.1)",
+  "description": "User 'micha' (Win11, v1.3.0 portable on D:) hit 100% failure on every models.cubric.studio download (44 attempts, 0 successes, each dead in <200ms with TLS WRONG_VERSION_NUMBER) while all 45 github.com downloads succeeded - his network is intercepting our model host. The install and the D: portable layout are fine. Three app defects turned that recoverable condition into an unrecoverable error loop: (1) the raw BoringSSL string is surfaced verbatim with no hostname or remedy, and the same failure also escapes as an unhandled promise rejection; (2) installStore makes FAILED terminal so the deliberate failed->queued retry requeue is rejected, leaving the UI read path stuck on failed while downloads actually run - this breaks retry for EVERY user after any transient failure; (3) app.getPath('documents') throwing at main.js:637 hard-exits the app at boot even though routes/shared.js already has a fallback. Target 1.3.1. A fallback mirror hostname is the durable fix but is an approval-gated Cloudflare change - see brief.md.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-08-02T13:30:00Z",
+  "updated_at": "2026-08-02T15:05:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "reference": "docs/download-manager.md",
+    "checklist": "checklist.md"
+  },
+  "tags": [
+    "downloads",
+    "install",
+    "error-handling",
+    "networking",
+    "release-1.3.1"
+  ],
+  "priority": "high",
+  "attention": true
+}

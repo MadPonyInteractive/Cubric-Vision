@@ -299,4 +299,62 @@ test('clear wipes everything and bumps version', () => {
     assert.ok(store.version() > v);
 });
 
+// ── Explicit retry requeue (MPI-427) ────────────────────────────────────────────
+
+test('requeueDep clears a FAILED dep back to queued without a warn', () => {
+    const { store, warnings } = makeStore();
+    registerBasic(store);
+    store.transitionDep('base.safetensors', DEP_STATES.FAILED, 'network blocked');
+    assert.equal(store.depJob('base.safetensors').status, DEP_STATES.FAILED);
+
+    const v = store.version();
+    assert.equal(store.requeueDep('base.safetensors', 'user retry'), true);
+    const dep = store.depJob('base.safetensors');
+    assert.equal(dep.status, DEP_STATES.QUEUED);
+    assert.equal(dep.terminalAt, null, 'terminal stamp cleared');
+    assert.ok(store.version() > v, 'requeue bumps the snapshot version');
+    assert.equal(warnings.length, 0, 'an explicit retry must not log an illegal-transition warn');
+});
+
+test('requeueDep also rescues complete + cancelled, and is idempotent on queued', () => {
+    for (const from of [DEP_STATES.COMPLETE, DEP_STATES.CANCELLED]) {
+        const { store } = makeStore();
+        registerBasic(store);
+        store.transitionDep('vae.safetensors', from, 'setup');
+        assert.equal(store.requeueDep('vae.safetensors', 'retry'), true, `rescues ${from}`);
+        assert.equal(store.depJob('vae.safetensors').status, DEP_STATES.QUEUED);
+    }
+    const { store } = makeStore();
+    registerBasic(store);
+    const v = store.version();
+    assert.equal(store.requeueDep('vae.safetensors', 'retry'), true, 'already queued is a no-op success');
+    assert.equal(store.version(), v, 'idempotent requeue must not bump the version');
+    assert.equal(store.requeueDep('no-such-dep', 'retry'), false, 'unknown dep returns false');
+});
+
+test('requeueDep leaves downloadedBytes alone so a resumable partial keeps its credit', () => {
+    // MPI-427 — zeroing here flashed the progress bar backwards on every retry while the
+    // partial was still on disk and about to resume. syncProgress owns the numbers.
+    const { store } = makeStore();
+    registerBasic(store);
+    store.syncProgress('ill-anime', {
+        deps: [{ id: 'base.safetensors', downloadedBytes: 1_400_000_000, totalBytes: 6_900_000_000 }],
+    });
+    store.transitionDep('base.safetensors', DEP_STATES.FAILED, 'network blocked mid-stream');
+    store.requeueDep('base.safetensors', 'user retry');
+    assert.equal(store.depJob('base.safetensors').downloadedBytes, 1_400_000_000,
+        'the bytes already on disk must survive the requeue');
+});
+
+test('the transition TABLE still refuses failed -> queued (reconciler cannot resurrect)', () => {
+    // The requeue is a deliberate side door for user-driven retry only. If this ever
+    // starts passing, DEP_TRANSITIONS was widened and invariant #3 is gone.
+    const { store, warnings } = makeStore();
+    registerBasic(store);
+    store.transitionDep('base.safetensors', DEP_STATES.FAILED, 'fail');
+    assert.equal(store.transitionDep('base.safetensors', DEP_STATES.QUEUED, 'reconcile'), false);
+    assert.equal(store.depJob('base.safetensors').status, DEP_STATES.FAILED);
+    assert.ok(warnings.some(m => m.includes('Illegal transition')), 'table path still warns');
+});
+
 console.log(`\ninstall-store: ${passed} passed`);
