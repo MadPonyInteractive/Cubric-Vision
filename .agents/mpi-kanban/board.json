@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 426,
+  "next_id": 427,
   "columns": {
     "todo": [
+      "MPI-426",
       "MPI-382",
       "MPI-422",
       "MPI-421",
@@ -117,7 +118,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-08-01T23:30:00Z",
+  "updated_at": "2026-08-02T08:15:43Z",
   "events": [
     {
       "at": "2026-08-01T23:30:00Z",
@@ -1497,6 +1498,15 @@
       "actor": "opus",
       "column": "todo",
       "summary": "1.3.0 tells users to \"hit Remove\" for object removal, but there is no Remove command or button - commandRegistry.js has no remove key, models.js lists remove as deprecated/never wired, and the only Remove labels in js/ are Remove Background (a different BiRefNet tool a user will find and misuse). The real path is inpaint with an EMPTY prompt, which inpaint.help already states correctly - so the ? guide and the model tile contradict each other. Three sites; models.js:529 is the urgent one because it is the Model Library detail panel, not a changelog."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-426",
+      "type": "task.created",
+      "at": "2026-08-02T08:15:43Z",
+      "actor": "opus",
+      "column": "todo",
+      "summary": "Found during MPI-365 live verification: a SAM3 detection is auto-selected and unioned into maskCanvas, so an un-Added pick is injected as Input_Mask. The green overlay must stay a preview - the user may want to Subtract it, not Add it. Reverses the MPI-372/MPI-384 contract, so the op strip has to be re-gated on baked content instead."
     }
   ]
 }

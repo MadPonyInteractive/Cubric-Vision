@@ -22,6 +22,7 @@
  "links": {
   "depends_on": "MPI-354",
   "reference": "docs/models/klein/README.md",
-  "brief": "brief.md"
+  "brief": "brief.md",
+  "validation": "validation.md"
  }
 }
