@@ -1,0 +1,148 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "00400ba5-8b22-477b-8fdb-241366a355fd",
+  "generated_at": "2026-08-02T06:30:00Z",
+  "from_session": null,
+  "to_role": "verifier",
+  "status": "open",
+  "session": {
+    "name": "MPI-365 - migrate Krea2 + Qwen to the one-master-template shape (code complete, unverified)",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Migrate the image workflows onto one template per model containing all their operations including detailer and upscaler, after the user re-authored Klein/Krea2/Qwen in the ComfyUI node graph.",
+    "status": "in_progress",
+    "summary": "All code, generators, runtime workflows, tests and docs are done and committed in 3 commits. 302/302 node tests and npm run release:check pass. NOTHING HAS ACTUALLY GENERATED - no op has been run in the app, so the entire migration is unverified at runtime. The card sits in doing at maturity validating for exactly that reason."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Converted all 3 re-exported raw templates to API and passed validate-injection-rules.mjs (2 rounds - first round found 4 dangling injection nodes, user bypassed them and re-exported)",
+      "operationRegistry.js + operation_registry.json: added depth + pose at appVersionIntroduced 1.4.0, marked poseReference deprecated:true so pre-1.4.0 history items still validate",
+      "commandRegistry.js: renamed poseReference -> depth, added the new pose op, added pose to OP_ORDER, removed krea2Edit's dead injectParams",
+      "models.js: rename across 8 entries; Krea2 gained opInject/styleOps/imageSizedOps/depthSubject and all 6 ops point at krea2_t2i_<sfw|nsfw>.json; Qwen gained depth+pose ops, opInject, depthSubject3 and the comfyui_controlnet_aux dependency",
+      "krea2Turbo control retargeted Input_Tier (int) -> Input_is_Turbo (boolean) in PromptBoxControls.js",
+      "progressStages.js: removed Krea2's single:2 (would render 'Stage 3/2' on detail/upscale), kept postTile:1 on the krea2_t2i.json key",
+      "generate_krea2.py + generate_qwen.py: _bake_wf_type + _bake_turbo, both raise if the node is missing",
+      "Baked runtime files via scripts/sync-raw-workflows.mjs; deleted the 8 dead krea2 detailer/upscaler files",
+      "Updated docs/models/krea2/{README,injection,upscaling}.md and docs/models/qwen-edit/README.md",
+      "Moved MPI-365 todo -> doing, maturity validating, with task.moved logged in both event logs"
+    ],
+    "pending": [
+      "LIVE VERIFICATION - run every op in the app: Krea2 t2i/i2i/depth/edit/detail/upscale (x SFW and NSFW), Qwen edit/depth/pose, and a Klein regression pass",
+      "Confirm the OpenPose annotator weights download on first Qwen pose run (never fetched on this machine)",
+      "Approve or reject the 2 pending mpi-end proposals (UNRELEASED.md entries, CLAUDE.md router row)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-365",
+    "title": "Migrate all models to the one-master-template shape, then GC the dead scaffolding",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-365/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-365/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "verify",
+    "continue",
+    "fix defects found during verification"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-365 brief.md written from the actual exported graphs - holds the per-model wf_type maps, the full injection-surface delta, and a correction to the card's own original trap text (image loads are NOT all block_if_empty:false; the primary Input_Image is true, only the 3 optional loads are false)",
+      "docs/models/krea2/injection.md - new 'One master template' section with the wf_type table and the retired-title list; the deleted detailer/upscaler injection surfaces removed",
+      "docs/models/krea2/upscaling.md - reframed as branch 7 of the master template; warns node ids in that doc are from the old standalone file and will not match",
+      "docs/models/krea2/README.md - added Workflows + Ops rows, Input_Tier -> Input_is_Turbo corrected in 2 places",
+      "docs/models/qwen-edit/README.md - MPI-365 block covering the 3 ops, the controlnet_aux dependency, the baked-3 trap and the deliberate absence of a prompt enhancer"
+    ],
+    "pending": [
+      "docs/releases/UNRELEASED.md - PROPOSED, NOT YET APPROVED. v1.3.0 shipped 2026-08-01 so RELEASE_NOTES['1.3.0'] is frozen and must not be written to. Proposed entries: New = Pose and Depth ops on Qwen Image Edit; Changed = Krea2/Klein edits accept a mask for localized edits, Krea2 styles reach Detail and Upscale, Krea2 Depth takes a second reference image, Krea2 ops other than t2i/i2i keep the source image dimensions",
+      "CLAUDE.md - PROPOSED, NOT YET APPROVED. Add one Context Router row for running tests -> docs/DEVELOPMENT.md (the glob form; node --test tests/ breaks on Node v24)",
+      "NOT OURS, FLAG ONLY: docs/releases/2026-07-30-v1.3.0.md is modified and uncommitted in the working tree. That is the archival file for an already-shipped release and belongs to a peer session - check before it is committed"
+    ]
+  },
+  "next_action": {
+    "description": "Live-verify the migration in the Electron app. Start with Qwen pose (wf_type 3) because its OpenPose annotator weights have never downloaded on this machine, so a missing-weight stall shows up there first. Then Qwen depth and edit, then all six Krea2 ops on BOTH the SFW and NSFW cards, then a Klein regression pass (Klein's injection surface was unchanged, so it should be untouched - prove it). For each op confirm the OUTPUT MATCHES THE OPERATION, not merely that it produced an image: a wrong Input_wf_type does not error, it silently returns a plausible image from a different op. Also confirm the turbo toggle still changes speed (it now sends Input_is_Turbo boolean, not the old Input_Tier int) and that Krea2 edit honours a painted mask.",
+    "command": "mpi-continue MPI-365"
+  },
+  "context": {
+    "key_decisions": [
+      "poseReference renamed to depth, and a real pose op added. The old name always drove a DEPTH map and became actively wrong once Qwen gained real pose. User explicitly chose this over the smaller-diff alternative. poseReference stays in operationRegistry.js as deprecated:true - the established pattern used by change/remove - so history items written by <=1.3.0 still validate and stay viewable. Nothing may WRITE that key again.",
+      "New ops stamped appVersionIntroduced 1.4.0. v1.3.0 is tagged and published, new ops are a 2nd-digit bump. Safe because nothing gates on the field at runtime - isOperationAvailableIn has no callers in js/; only the release-notes lister getOperationsIntroducedIn reads it. depth is a RENAME not a feature, so keep it out of user-facing release notes.",
+      "Masks on the edit ops needed ZERO code. maskDataUrl is attached whenever the canvas has a mask (MpiGroupHistoryBlock, op-agnostic) and commandExecutor sets Input_Mask unconditionally, so the graph carrying the node is the whole feature. Deliberately NOT requiresMask - that flag would FORCE a mask and break whole-image edits.",
+      "Krea2 lost its progressStages total on purpose. The table is keyed by FILE and all six ops now share one file; detail (MaskDetailerPipe) and upscale (UltimateSDUpscale, one bar per tile) emit more bars than t2i's two, so a single number would render 'Stage 3/2'. Krea2 now shows '. 2' like Klein. postTile:1 survives on the krea2_t2i.json key because phaseProgress only reads it once tile mode is entered, so it is inert on the other five ops.",
+      "Input_depth_strength is deliberately NOT injected and NOT scrubbed - the app never sends it, so the graph's authored value is the intended one and scrubbing would zero a real setting."
+    ],
+    "constraints": [
+      "THE FAILURE MODE IS SILENT. A missing or wrong Input_wf_type does not error - it runs the graph's default branch and returns a plausible image from the WRONG operation. Verification must check that the output matches the op, not just that an image appeared.",
+      "Qwen's authoring template bakes Input_wf_type: 3 (pose). generate_qwen.py rebakes it to 1 and raises if the node did not survive the prune - this actually fired during the bake. If anyone re-exports Qwen, that rebake is what stands between them and 'every op runs pose'.",
+      "Agents NEVER hand-edit workflow JSON. Dangling injection nodes get fixed in the ComfyUI graph editor and re-exported. For a SOURCE node with no matching input (an MpiString like Input_Image_3), MUTE (Ctrl+M) is cleaner than BYPASS (Ctrl+B) - bypass tries to rewire an upstream that does not exist. Both are dropped by the converter.",
+      "scripts/sync-raw-workflows.mjs REFUSES to run while generated-workflow files are uncommitted, because orchestrate.py rebuilds all templates and would overwrite them. Commit the generators first. It also commits raw/ itself as step 2 and leaves generated files staged but uncommitted.",
+      "SHARED WORKING TREE. A peer session's work is live in the same tree (MPI-425, js/components/Compounds/MpiHistoryTools/*, js/managers/hotkeyRegistry.js, docs/masking.md, tests/mask-tool-registry.test.cjs, docs/releases/2026-07-30-v1.3.0.md). Commit by explicit pathspec with git commit --only, NEVER git add -A.",
+      "board.json FAILS a JSON round-trip guard (CRLF plus formatting), so never rewrite it with JSON.stringify - it would reformat the whole file and clobber the peer's in-flight edits. Use surgical string edits. Also note .agents/mpi-kanban/events.jsonl has 2 pre-existing blank lines at HEAD - not corruption, do not 'fix' them.",
+      "Tests run as: node --test \"tests/*.test.cjs\" (glob, quoted). node --test tests/ BREAKS on Node v24. Documented at docs/DEVELOPMENT.md:36.",
+      "release-baselines/*.json still name the deleted krea2 detailer/upscaler files. That is CORRECT - they are manifests of the shipped 1.3.0 artifact, not references to the current tree. Do not 'fix' them (see MPI-409).",
+      "Qwen has NO prompt enhancer (no TextGenerate node, no Input_enhance_prompt) and that is deliberate, user-confirmed 2026-08-02. capabilities.promptEnhance stays false. Do not 'add the missing enhancer'.",
+      "Klein required NO app-side change - its injection surface was byte-identical across the re-export (23 titles, 0 added, 0 removed). Its 21 new nodes are internal rewiring. Treat any Klein breakage as a regression, not as expected migration fallout.",
+      "The Krea2 Chroma-dataset style LoRA was TESTED AND DROPPED 2026-08-02 (difference too small to justify the extra node). The LoRAs were deleted. Do not resurrect it."
+    ],
+    "files_modified": [
+      "js/core/operationRegistry.js",
+      "operation_registry.json",
+      "js/data/commandRegistry.js",
+      "js/data/modelConstants/models.js",
+      "js/data/modelConstants/assetDeps.js",
+      "js/data/progressStages.js",
+      "js/data/promptControlDefaults.js",
+      "js/components/Organisms/MpiPromptBox/PromptBoxControls.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+      "comfy_workflows/scripts/workflow_generation/generate_krea2.py",
+      "comfy_workflows/scripts/workflow_generation/generate_qwen.py",
+      "comfy_workflows/raw/{klein_t2i,krea2_t2i,qwen_edit}_template.json",
+      "comfy_workflows/{klein_t2i,krea2_t2i_sfw,krea2_t2i_nsfw,qwen_edit}.json",
+      "tests/{op-strip-availability,gallery-entry-text-op,inject-params-titles,output-prompt-capture}.test.cjs",
+      "docs/models/krea2/{README,injection,upscaling}.md",
+      "docs/models/qwen-edit/README.md",
+      "DELETED: comfy_workflows/krea2_{detailer,upscaler}_{sfw,nsfw}.json + raw/ and workflow_generation/ twins of both templates"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-365/brief.md",
+      "js/data/modelConstants/models.js",
+      "js/data/commandRegistry.js",
+      "docs/models/krea2/injection.md",
+      "docs/models/qwen-edit/README.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "workflow authoring and the injection seam",
+      "model registry and supported operations",
+      "generation lifecycle"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/versioning.md",
+    ".claude/rules/git.md",
+    "docs/workflow-authoring/README.md",
+    "docs/models/krea2/injection.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-02T06:30:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are picking up MPI-365 in the Cubric Vision repo on branch master. Read .agents/mpi-kanban/state/handoffs/00400ba5-8b22-477b-8fdb-241366a355fd.json and .agents/mpi-kanban/tasks/MPI-365/brief.md first, then use mpi-continue. The previous session migrated Krea2 and Qwen onto the one-master-template shape that FLUX.2 Klein proved in MPI-354: every operation is now a branch of a single graph selected by an injected Input_wf_type. Krea2's six ops (t2i/i2i/depth/edit/detail/upscale) all run krea2_t2i_<sfw|nsfw>.json and the separate detailer/upscaler files were deleted; Qwen gained depth and a brand-new pose op; the op formerly called poseReference is now called depth, with poseReference kept as a deprecated registry key so old history items still load. All of it is code-complete and committed across 3 commits, with 302/302 node tests and npm run release:check passing - but NOTHING HAS ACTUALLY GENERATED, so the card sits in doing at maturity validating. Your job is live verification in the Electron app. Start with Qwen pose, because its OpenPose annotator weights have never downloaded on this machine and a missing-weight stall will surface there first; then Qwen depth and edit, then all six Krea2 ops on both the SFW and NSFW cards, then a Klein regression pass. The critical point: a wrong Input_wf_type does NOT throw - it silently runs a different operation and returns a plausible image - so for every op you must confirm the output matches the operation requested, not merely that an image came back. Also confirm the Krea2 turbo toggle still changes speed (it now sends the Input_is_Turbo boolean, not the old Input_Tier int) and that Krea2 edit honours a painted mask. Note the working tree is SHARED with a peer session working on MPI-425, so commit only by explicit pathspec with git commit --only and never git add -A. Two documentation edits are proposed but unapproved and are listed under knowledge_preservation.pending - ask the user before making them."
+}
