@@ -33,8 +33,9 @@ structured file (`board.json`: adjacent `doing`/`done` arrays) your edit and the
 ONE hunk, so no hunk-level filter separates them. Reconstruct the file you want to commit from
 `HEAD` and stage it directly, bypassing the working tree entirely:
 `git show HEAD:<file> > tmp` → apply ONLY your changes to `tmp` as **textual** replacements
-(never `JSON.parse`/`stringify` — it reformats the whole file: `board.json` is 1-space, `task.json`
-2-space, and Windows flips LF→CRLF) → assert their markers are absent (`next_id` unbumped, their
+(never `JSON.parse`/`stringify` — it reformats the whole file: `board.json` is 2-space with CRLF
+in the working tree, `task.json` VARIES per card — measure both, and see `kanban.md` § "Detect
+INDENT as well as line endings") → assert their markers are absent (`next_id` unbumped, their
 ids not in your columns) → `git hash-object -w tmp` → `git update-index --cacheinfo 100644,<sha>,<file>`
 → bare `git commit -n`. `git status` then shows the file as `MM`: your version staged, theirs still
 in the tree. Note the node/bash `/tmp` split on Windows — bash writes `/tmp`, node reads `C:\tmp`;
