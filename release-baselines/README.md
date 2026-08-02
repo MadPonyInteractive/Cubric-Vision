@@ -57,17 +57,17 @@ Local Windows builds do the same by hand:
 
 ## Current baselines
 
-- All three hold the **v1.3.0 FULL (portable-stage)** manifests (2026-08-01,
-  MPI-409) from the shipped 1.3.0 build, so 1.4.0 deltas against 1.3.0.
-  `toVersion: 1.3.0`, `fromVersion: null`, `kind: portable-stage`:
-  - `darwin-arm64.json` — 6563 files
-  - `linux-x64.json` — 6383 files
-  - `win32-x64.json` — 6418 files
+- All three hold the **v1.3.1 FULL (portable-stage)** manifests (2026-08-02,
+  MPI-427) from the shipped 1.3.1 build, so the next release deltas against
+  1.3.1. `toVersion: 1.3.1`, `fromVersion: null`, `kind: portable-stage`:
+  - `darwin-arm64.json` — 6565 files
+  - `linux-x64.json` — 6385 files
+  - `win32-x64.json` — 6420 files
 
-  Restamped from the published build-#5 artifacts (mpi-ci run 30674488835,
-  SHA `baefe4c3`) **after** v1.3.0 went live on the GitHub release, per the
-  timing rule in **Contract**. The previous v1.2.0 values were 6505 / 6325 /
-  6362.
+  Restamped from the published artifacts (mpi-ci run 30755518372, SHA
+  `5328c033`, branch `1.3.1`) **after** v1.3.1 went live on the GitHub release,
+  per the timing rule in **Contract**. The previous v1.3.0 values were 6563 /
+  6383 / 6418; v1.2.0 were 6505 / 6325 / 6362.
 - They had been left at 1.0.0 through 1.0.1, 1.1.0 and 1.2.0, so every "delta"
   since was computed against 1.0.0 — correct, but far larger than needed (the
   1.2.0 Windows update bundle reads `from 1.0.0 -> 1.2.0`, 1226 files, 90 MB).
@@ -92,9 +92,11 @@ Local Windows builds do the same by hand:
 > unaffected; their layout did not move, which is why their deltas stayed tiny in
 > the same build.
 >
-> **It is a one-off.** Once `win32-x64.json` is restamped to the post-move 1.3.0
-> layout (post-publish), the 1.4.0 Windows delta should be normal and small. If it
-> is not, the cause is a NEW layout change — do not re-blame MPI-387.
+> **RESOLVED 2026-08-02 — it was the one-off it claimed to be.** With
+> `win32-x64.json` restamped to the post-move 1.3.0 layout, the 1.3.1 Windows
+> delta came out **21 changed / 0 deleted, 1.17 MB** — the same shape as linux
+> (21 / 1.17 MB) and darwin (21 / 1.67 MB). A fat Windows bundle from here on is
+> a NEW layout change; do not re-blame MPI-387.
 
 ### Extracting a baseline from a shipped artifact
 

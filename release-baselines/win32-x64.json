@@ -5,7 +5,7 @@
   "platform": "win32",
   "arch": "x64",
   "fromVersion": null,
-  "toVersion": "1.3.0",
+  "toVersion": "1.3.1",
   "protocolVersion": "0.1.0",
   "connectorManifestPath": "resources/cubric/connector-manifest.json",
   "connectorManifestHash": "140a57c8b6dd7e21cf28dfaafb2ce8d877a46dc51d64d36dc43f6e0dce867275",
@@ -4251,6 +4251,11 @@
       "sha256": "f1069a59c916fdaf125367e05992a09ab4e19846d93cb25b9393017c1c8190ec"
     },
     {
+      "path": "resources/app/docs/releases/.approved-1.3.1.json",
+      "size": 152,
+      "sha256": "cbc6d1408f56cde711aaa4fb50e8e9bcad4903f822c7646968f90d0d673d5c5f"
+    },
+    {
       "path": "resources/app/docs/releases/2026-06-08-v0.0.1.md",
       "size": 1365,
       "sha256": "fec02bcd437a7d2cf8d3438e1a530ad7e93657e20d23d01c649c8e83c35bf99d"
@@ -4329,6 +4334,11 @@
       "path": "resources/app/docs/releases/2026-07-30-v1.3.0.md",
       "size": 24605,
       "sha256": "0572fce241720d5766a4f590f20f7dd58d911e2d471d603230c89ae9d780dea2"
+    },
+    {
+      "path": "resources/app/docs/releases/2026-08-02-v1.3.1.md",
+      "size": 6956,
+      "sha256": "c58ba34b9dcc574f1068444a97bea3f61f6d6583978aa07277050d9dd942e45d"
     },
     {
       "path": "resources/app/docs/releases/build-experience-log.md",
@@ -4602,13 +4612,13 @@
     },
     {
       "path": "resources/app/js/components/Compounds/MpiEngineInstall/MpiEngineInstall.css",
-      "size": 6946,
-      "sha256": "6e4d1008519dce6066a2e68bda586ba15f63724729e65145dc290386df583d25"
+      "size": 6973,
+      "sha256": "4922227a5ff7acfaaebad8f2f278a47e9fb1fdfd0d164eb080b7eb936533e5ba"
     },
     {
       "path": "resources/app/js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js",
-      "size": 30719,
-      "sha256": "080aaa08345e5c6b8830bc1b0e7a7285d87a434b61146a374efb48c0a97b0eef"
+      "size": 33220,
+      "sha256": "9c1b1b88701a2e619951ae352559a7aae2d1791dec3e7a8a2711cb85efcaf35d"
     },
     {
       "path": "resources/app/js/components/Compounds/MpiErrorDialog/MpiErrorDialog.css",
@@ -5343,12 +5353,12 @@
     {
       "path": "resources/app/js/core/appVersion.js",
       "size": 804,
-      "sha256": "abb158f09b2609dd82b87a4dff95fc3782f7e4f3d640827dd6efc7f9dcce8ecb"
+      "sha256": "35eee4ec28ff263041f7a406371478a8180790a1a6b5cd8aeaa92035bd1131ab"
     },
     {
       "path": "resources/app/js/core/buildInfo.js",
       "size": 176,
-      "sha256": "e18ebb041caac35432e74a414b9e3b273c323f86c3b06a73cac4e71129513d62"
+      "sha256": "c1a10b7b69c50cc1bfa548ff1ff64847442bb100ccea7000d5781a22cd55af0f"
     },
     {
       "path": "resources/app/js/core/operationRegistry.js",
@@ -5457,13 +5467,13 @@
     },
     {
       "path": "resources/app/js/data/releaseNotes.js",
-      "size": 52664,
-      "sha256": "7c67af69be79a8264b96b687dbc7f4d857a3802597d452b83e3fa88cfde5279a"
+      "size": 55798,
+      "sha256": "8984d2be6f3462e0934b94516bb2be42b90fef48066e99bed3647422cdba14a2"
     },
     {
       "path": "resources/app/js/events.js",
-      "size": 11462,
-      "sha256": "6f656458794f73f0113c411cab41b6bc56c30025e28b7aff20dd3929230a1d61"
+      "size": 11791,
+      "sha256": "b08beb11ddaa1ac2e817ab233165f0b7bbf85e44500d32d79e8d0589e0a18f53"
     },
     {
       "path": "resources/app/js/init.js",
@@ -5552,8 +5562,8 @@
     },
     {
       "path": "resources/app/js/services/downloadService.js",
-      "size": 44764,
-      "sha256": "02acd2d8f27b1f07fa743aea1aed7c02014cb3d1234e17149b9024839e57ff39"
+      "size": 45382,
+      "sha256": "376cf6ad31fd26bcde4e3a6e0e74c4f7e6548489f1824f46b25cd786e9407235"
     },
     {
       "path": "resources/app/js/services/engineGate.js",
@@ -5642,8 +5652,8 @@
     },
     {
       "path": "resources/app/js/shell.js",
-      "size": 87345,
-      "sha256": "dab6c36fe90abba3dd3c4ef63a808d4bfece974cd678056289d9ae301bbc24ac"
+      "size": 87760,
+      "sha256": "1cc8948db9f19a818441c7d66dc8a189d36b89eb1fb9a8e04f5ccde7336f9412"
     },
     {
       "path": "resources/app/js/shell/connectorOps.js",
@@ -5837,8 +5847,8 @@
     },
     {
       "path": "resources/app/main.js",
-      "size": 53003,
-      "sha256": "f42bea2720609fa55129a7492a6f2602c50e517ac9cd8c119211a9d73a9a9f8b"
+      "size": 53866,
+      "sha256": "aefb373335433f184485cc35167dcd5ab124f59c2ae9bb59f614207cd2b4ec0c"
     },
     {
       "path": "resources/app/main/float-latent.html",
@@ -6083,7 +6093,7 @@
     {
       "path": "resources/app/node_modules/.package-lock.json",
       "size": 163677,
-      "sha256": "b466a65e480c51462dc55c1bc606229a8a739a4381a28bc5aa0fed9f0b5f5337"
+      "sha256": "7144f83ba0839960cc4691bd8276c5488e09f2b8a0782f1f6b6da9e1f401ea94"
     },
     {
       "path": "resources/app/node_modules/@derhuerst/http-basic/lib/cache-control-utils.d.ts",
@@ -31683,12 +31693,12 @@
     {
       "path": "resources/app/package-lock.json",
       "size": 180480,
-      "sha256": "4434c6eefaab9e4cf70c09a485c592863596e29d650b825270fb06deedf669b9"
+      "sha256": "f9aae658f7c901593e1b435cc4fce28ce51463246922ff90294b259d4ed00a74"
     },
     {
       "path": "resources/app/package.json",
       "size": 2408,
-      "sha256": "23cc8fa389856839e25362c38124c7ec49f032e353c49f5e18c03a057b7139ed"
+      "sha256": "8a22c08894c7032b13c9d9c4cffa313ab35149b6dd10edd42161273fdb0a2085"
     },
     {
       "path": "resources/app/PRODUCT.md",
@@ -31702,23 +31712,23 @@
     },
     {
       "path": "resources/app/release-baselines/darwin-arm64.json",
-      "size": 1249977,
-      "sha256": "717b5fcd7d8cdf86b9bd955e44a347e786cc1d9f882ea45e8b9aabf461c27349"
+      "size": 1260903,
+      "sha256": "dbfae0596669c9cbced5561f151eb7c243f7ce93ac4b564080b3ca8053807e33"
     },
     {
       "path": "resources/app/release-baselines/linux-x64.json",
-      "size": 1193919,
-      "sha256": "ad3668e6d5b4e1536f5c02306bcbf702cd135b57d2efbf4758b1ecb24632ee21"
+      "size": 1204845,
+      "sha256": "401b6253da01e97af5d9ded24a87ba969f88cce6c30c09f7305352d8b169f4ac"
     },
     {
       "path": "resources/app/release-baselines/README.md",
-      "size": 6151,
-      "sha256": "e6e462a0ebb8d620484850001044a278c16a3b0504a1a379133b289da505df91"
+      "size": 7294,
+      "sha256": "dc28394dec68b07eca1e974402d46ba3df211f13fdfbacd6d184d8378955d6ee"
     },
     {
       "path": "resources/app/release-baselines/win32-x64.json",
-      "size": 1200009,
-      "sha256": "b92c874119d599947809076eaacf13fa22cecd57fbf1758e055eb796b3039fdb"
+      "size": 1271533,
+      "sha256": "05bfce8d765a7ce98891ff3f6bd8beb103c2485c28704e438765c53ace6c8609"
     },
     {
       "path": "resources/app/resources/cubric/connector-manifest.json",
@@ -31752,13 +31762,13 @@
     },
     {
       "path": "resources/app/routes/downloadManager.js",
-      "size": 157119,
-      "sha256": "5a36cdbfd4ff64832e18a48e52e0fd81646b212393b44987995d7aba1f58e28e"
+      "size": 168220,
+      "sha256": "aae72c9d8510a360bd63ef707de424cefb0c7a18375f7ff724dbc9dec3c003c3"
     },
     {
       "path": "resources/app/routes/engine.js",
-      "size": 44473,
-      "sha256": "161dc9dfeb8edcd607b4882d98e9f15cb22483a0f9b2d94b1f473369b1e73d4c"
+      "size": 46675,
+      "sha256": "e7d468da8d85765400d46700eaafff4e6690bb1a49e400def1b05a88c3808e22"
     },
     {
       "path": "resources/app/routes/gitProvision.js",
@@ -31772,8 +31782,8 @@
     },
     {
       "path": "resources/app/routes/install/installStore.js",
-      "size": 17324,
-      "sha256": "2d79df2eb7912c87abf9a830daf8d396fc6da717b6214fe0fe0d59b1c67097e3"
+      "size": 18867,
+      "sha256": "f4803e9a7e9e70716e43df74ff8bb9dc58301b41461643e204bd8d25813bac2c"
     },
     {
       "path": "resources/app/routes/install/reconciler.js",
@@ -32109,14 +32119,14 @@
     "<documents>/Cubric Vision/project-paths.json"
   ],
   "delete": [],
-  "createdAt": "2026-08-01T00:03:46.465Z",
+  "createdAt": "2026-08-02T15:58:37.300Z",
   "artifact": {
     "kind": "portable-stage",
-    "rootName": "CubricVision-windows-x64-v1.3.0",
+    "rootName": "CubricVision-windows-x64-v1.3.1",
     "launchers": [
       "update.bat",
       "update-from-zip.bat"
     ],
-    "buildHash": "baefe4c30701"
+    "buildHash": "5328c03309a1"
   }
 }

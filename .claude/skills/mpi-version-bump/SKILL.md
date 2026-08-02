@@ -313,6 +313,14 @@ Release notes live in **two** places that must stay aligned:
    instructions; ship only the user-facing sentence. Fold `docs/releases/UNRELEASED.md`
    scratchpad items into these arrays and clear it back to its header.
 
+   **Every "used to / previously / no longer" claim must be checked against the
+   PREVIOUS RELEASED TAG before you write it** — `git show v<prev>:<path> | grep`,
+   per bullet, not per release. Code that changed two or three times inside this
+   unreleased version reads like user-visible history but never shipped, and the
+   entry is then simply false. The full gate, the two commands and the measured
+   1.3.1 case are in `.claude/skills/mpi-release/references/copy-review.md` § Gate 0
+   — read it before drafting either changelog surface.
+
    **Section order shown to the user is fixed by the overlay** (`MpiChangelogDialog`),
    not by your array order: Breaking changes → Important → What's new → Fixes →
    Engine. A "**Breaking — …**" item parked in the scratchpad's `importantChanges`

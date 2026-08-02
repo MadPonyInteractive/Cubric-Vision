@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-429",
+  "title": "Give blocked users a second download origin (mirror failover)",
+  "description": "Enable the shipped-but-inert mirror: add a second origin and prove it against DPI.",
+  "column": "todo",
+  "maturity": "needs-decision",
+  "status": "active",
+  "created_at": "2026-08-02T16:12:00Z",
+  "updated_at": "2026-08-02T16:12:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": null,
+    "checklist": null,
+    "validation": null,
+    "files": null,
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": null
+  }
+}

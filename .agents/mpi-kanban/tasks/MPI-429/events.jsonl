@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-429","type":"task.created","at":"2026-08-02T16:12:00Z","actor":"claude","summary":"Split off MPI-427: the mirror is infra (an approval-gated Cloudflare change), not an app bug."}

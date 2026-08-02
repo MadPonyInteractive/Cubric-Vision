@@ -5,7 +5,7 @@
   "platform": "darwin",
   "arch": "arm64",
   "fromVersion": null,
-  "toVersion": "1.3.0",
+  "toVersion": "1.3.1",
   "protocolVersion": "0.1.0",
   "connectorManifestPath": "resources/cubric/connector-manifest.json",
   "connectorManifestHash": "57a43c7198f2adb84a9b29b9fba73984d45ff4a644efbafb049db088ee330fc5",
@@ -3906,6 +3906,11 @@
       "sha256": "7268beddbafc965a893f71c7cc8d318e7aa94adbc3de886227d2ae3257dcc404"
     },
     {
+      "path": "app/docs/releases/.approved-1.3.1.json",
+      "size": 147,
+      "sha256": "d331abb6776fde081cf4a728f5ef5aa4cad8f0c1bc1b3a2d666c3479e00bf246"
+    },
+    {
       "path": "app/docs/releases/2026-06-08-v0.0.1.md",
       "size": 1325,
       "sha256": "5000bd888713bdd6743fef9d06bd88b5cabf3e966db6bbe4c627b00f6006326b"
@@ -3984,6 +3989,11 @@
       "path": "app/docs/releases/2026-07-30-v1.3.0.md",
       "size": 24226,
       "sha256": "d99e8375de28267d104c6a0f8f8280cc6b341ce4364efa76c365de8cd1818f65"
+    },
+    {
+      "path": "app/docs/releases/2026-08-02-v1.3.1.md",
+      "size": 6846,
+      "sha256": "094dc1ac4ecdbec556bd8b253d9e0d6f7ee0e889f477524095685c0c36ad0f2a"
     },
     {
       "path": "app/docs/releases/build-experience-log.md",
@@ -4257,13 +4267,13 @@
     },
     {
       "path": "app/js/components/Compounds/MpiEngineInstall/MpiEngineInstall.css",
-      "size": 6716,
-      "sha256": "1efea75c55749e86d4f2809d48b6e0dc65e445373205eba66f701716427f65ef"
+      "size": 6742,
+      "sha256": "25d83bf3223586433b0f025469f5e213099edb081962e446cb55328fce655625"
     },
     {
       "path": "app/js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js",
-      "size": 30113,
-      "sha256": "3a06e8a50c56eb3df02dc0c8248a2e0a4902366925336aafd947cd70c09e903b"
+      "size": 32580,
+      "sha256": "ca81402e935597fc14654e36145a55900134f619d1e79d031b594ba89686475f"
     },
     {
       "path": "app/js/components/Compounds/MpiErrorDialog/MpiErrorDialog.css",
@@ -4998,12 +5008,12 @@
     {
       "path": "app/js/core/appVersion.js",
       "size": 786,
-      "sha256": "8dfd18fec843438afd3a97ae0cc663558f66c2f3972314b9cf9ef24d4bb79fea"
+      "sha256": "236d40818690e768f247ebeb31f58e67db1a00b9e0436ad671c5313601435be7"
     },
     {
       "path": "app/js/core/buildInfo.js",
       "size": 176,
-      "sha256": "e18ebb041caac35432e74a414b9e3b273c323f86c3b06a73cac4e71129513d62"
+      "sha256": "c1a10b7b69c50cc1bfa548ff1ff64847442bb100ccea7000d5781a22cd55af0f"
     },
     {
       "path": "app/js/core/operationRegistry.js",
@@ -5112,13 +5122,13 @@
     },
     {
       "path": "app/js/data/releaseNotes.js",
-      "size": 52256,
-      "sha256": "a98e76a60de2acd7bd223538176553543332d4423ac818d5b9b7325e48b88c8a"
+      "size": 55372,
+      "sha256": "a71848d122548e356432d1bceb947552dabfa17c5dcd5bedb336bfcffb7ebee0"
     },
     {
       "path": "app/js/events.js",
-      "size": 11269,
-      "sha256": "a2a7d2f925c3d1bd57245773e1aede4f2e6c47b715b258c4255bdad812f79b9b"
+      "size": 11597,
+      "sha256": "fe044245640a6a524dab1f5c260a8f5c07ff950430a40a36bff8faa8b97f0e75"
     },
     {
       "path": "app/js/init.js",
@@ -5207,8 +5217,8 @@
     },
     {
       "path": "app/js/services/downloadService.js",
-      "size": 44008,
-      "sha256": "4427c0d1a1409e502e298f5a46e6fc69a3dba101b686308a0cead0a14af023ef"
+      "size": 44618,
+      "sha256": "1bc23d8024afcc034989b0b3a590a84f3faf0c261a690103d8485bc84133a6d6"
     },
     {
       "path": "app/js/services/engineGate.js",
@@ -5297,8 +5307,8 @@
     },
     {
       "path": "app/js/shell.js",
-      "size": 85784,
-      "sha256": "0d689d9041f8fa32cf7c0750f820523b727b5c4b46c21b00836b80cc84703499"
+      "size": 86194,
+      "sha256": "6aefe2af3e6674070d6ffab71d4469e456af6c99c51658b8e7388d606f454ab1"
     },
     {
       "path": "app/js/shell/connectorOps.js",
@@ -5492,8 +5502,8 @@
     },
     {
       "path": "app/main.js",
-      "size": 51689,
-      "sha256": "7efc1b182c950d1027d731a0f904e3f521313b3e22d140a3ccf69ba0a00433f6"
+      "size": 52539,
+      "sha256": "2740a4a218d73f7ab5e604157c64bc9710c5072f9c7016ae8e2b07b7e66a740f"
     },
     {
       "path": "app/main/float-latent.html",
@@ -5528,7 +5538,7 @@
     {
       "path": "app/node_modules/.package-lock.json",
       "size": 160349,
-      "sha256": "1a1dbbc1eb215a709bb5123dfa816f259a9d4ea467de2be0f3703c8ecd062ba7"
+      "sha256": "65df0c5d3846924134e2ec575a1533fc7be7df1013a8cc4908ebefa4361cbda8"
     },
     {
       "path": "app/node_modules/@derhuerst/http-basic/lib/cache-control-utils.d.ts",
@@ -32433,12 +32443,12 @@
     {
       "path": "app/package-lock.json",
       "size": 175546,
-      "sha256": "8fbeaa7cbe60fbcc7660d05956e77638b3f382bedab630c5e15a1bc5801fc865"
+      "sha256": "4540f47bbf939ec0db5ec5a943168ca25a3fa2b060aeecd8b1e8392907940385"
     },
     {
       "path": "app/package.json",
       "size": 2347,
-      "sha256": "c27528b3e34064a196f2c7502e2679d2f97e61ac5971e263c4c78398cfbd9ddf"
+      "sha256": "997f259cea4946664c3f2280a783183725e9e7e93f77503d67f6728e075f9195"
     },
     {
       "path": "app/PRODUCT.md",
@@ -32452,23 +32462,23 @@
     },
     {
       "path": "app/release-baselines/darwin-arm64.json",
-      "size": 1217419,
-      "sha256": "274b02bcc89495b20f8e1928a8a1eac1a913e78324c0fbc7e2e32d48a4eea6f4"
+      "size": 1228055,
+      "sha256": "70e4d5487de820dc43751fcdbe8b4b4d01ab9d21658ba4757f69a31423269069"
     },
     {
       "path": "app/release-baselines/linux-x64.json",
-      "size": 1162260,
-      "sha256": "44e1fb2bfb2ec0fa456a25341a1c863690191717780f6f8134ffccf6acf35f96"
+      "size": 1172896,
+      "sha256": "817a086cc994040211fad893e3a05a21a1e4c3faf00cd125e7a0b1624ee50d3e"
     },
     {
       "path": "app/release-baselines/README.md",
-      "size": 6043,
-      "sha256": "39f2907765a731cc389f5709ba7820d5039437efdbfe56b60c9dd545dd5918cc"
+      "size": 7168,
+      "sha256": "67792561c0d946b33494a69ec4c44a6826a02bd0eb05548558e7bafa8d5ac52d"
     },
     {
       "path": "app/release-baselines/win32-x64.json",
-      "size": 1168165,
-      "sha256": "673e646f2918c91667a0f99d8e195f8ee6cf7a90b0f7d18cf1fc57b0bb6063e7"
+      "size": 1239411,
+      "sha256": "f1d31d139d305ae5bdd60be412df26b30868d20189dbcaf386aa5845edd879ca"
     },
     {
       "path": "app/resources/cubric/connector-manifest.json",
@@ -32502,13 +32512,13 @@
     },
     {
       "path": "app/routes/downloadManager.js",
-      "size": 154259,
-      "sha256": "90837fc09a363018847bd4ca57d67307b029252ded5bd94759ab94203ad36d3a"
+      "size": 165185,
+      "sha256": "635cde8414ea3fea146c613eafbd6632c72f5d4b6ef110438e68ea5810bdb5cc"
     },
     {
       "path": "app/routes/engine.js",
-      "size": 43649,
-      "sha256": "1bae6a3cf5c715f6f9a1fca6a5238ba32d4a62ad0157632e8ac422ac012c1d24"
+      "size": 45821,
+      "sha256": "a5b8d1c132f7d6debd35f0aa1c8ef9867c8cfef1693343fd1f962fed52704324"
     },
     {
       "path": "app/routes/gitProvision.js",
@@ -32522,8 +32532,8 @@
     },
     {
       "path": "app/routes/install/installStore.js",
-      "size": 16941,
-      "sha256": "53dd3216d3c7eca30f4cd5d2f333b07d275f5d6553ad0b4cc76d4401ee0b644d"
+      "size": 18456,
+      "sha256": "09ab6ea889cff22adee7427050dd8a8300bf8e200d453b9d4cbc27b748616078"
     },
     {
       "path": "app/routes/install/reconciler.js",
@@ -32834,15 +32844,15 @@
     "<documents>/Cubric Vision/project-paths.json"
   ],
   "delete": [],
-  "createdAt": "2026-08-01T00:03:27.479Z",
+  "createdAt": "2026-08-02T15:58:24.508Z",
   "artifact": {
     "kind": "portable-stage",
-    "rootName": "CubricVision-macos-arm64-v1.3.0",
+    "rootName": "CubricVision-macos-arm64-v1.3.1",
     "launchers": [
       "start.command",
       "update.command",
       "update-from-zip.command"
     ],
-    "buildHash": "baefe4c30701"
+    "buildHash": "5328c03309a1"
   }
 }
