@@ -347,4 +347,34 @@ export const assetDeps = {
         size: '2.34GB',
         sha256: '9fae2e50cb431bfcbe05822b59ec2228df545ef27f711dea8949e9f4ed9f7cdc',
     },
+    // Chroma's depth op (MPI-365). Chroma is a pruned FLUX.1-schnell derivative, so a
+    // FLUX ControlNet applies to it directly: its forward pass adds control residuals the
+    // same way FLUX's does (comfy/ldm/chroma/model.py), it shares the FLUX 16-channel
+    // latent format, and this checkpoint's x_embedder is [3072, 64] — exactly Chroma's
+    // hardcoded in_channels. There is NO Chroma-native ControlNet or depth LoRA; Klein's
+    // refcontrol LoRA and Krea2's control-LoRA are both model-specific and do not port.
+    //
+    // *** THE ONLY NON-PERMISSIVE WEIGHT IN THE APP — DO NOT MIRROR IT TO R2. ***
+    // Licence is flux-1-dev-non-commercial, and BFL's own commercial terms still forbid
+    // "distributing ... to third parties via any means", so rehosting is barred at any
+    // price. We therefore link the ORIGIN repo and let the user pull from it, which is
+    // what ComfyUI/Invoke/Fooocus do — we never redistribute. Consequences: this dep has
+    // NO mirror fallback (_mirrorUrlsFor swaps origin but preserves pathname, and the HF
+    // path has no R2 twin), and the sha256 below is the ONLY guard against an upstream
+    // re-upload, since the bytes are not ours. Every FLUX ControlNet inherits these
+    // terms — there is no permissive alternative, as no ControlNet exists for the
+    // Apache-2.0 FLUX.1-schnell.
+    //
+    // No SetUnionControlNetType needed: Union Pro 2.0 dropped the mode embedding, so the
+    // node is a silent no-op (comfy/ldm/flux/controlnet.py gates on that embedder).
+    // Measured ceiling on Chroma: strength past ~0.5 produces artefacts.
+    'controlnet-union-flux': {
+        id: 'controlnet-union-flux',
+        name: 'ControlNet Union Pro 2.0 (FLUX)',
+        origin: 'Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro-2.0',
+        filename: 'controlnet/FLUX.1-dev-ControlNet-Union-Pro-2.0.safetensors',
+        url: 'https://huggingface.co/Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro-2.0/resolve/main/diffusion_pytorch_model.safetensors',
+        size: '3.99GB',
+        sha256: '9d03f63f36206bab2f36aed5cfedc8693c2881397534e9d5f9ae9a0a41362517',
+    },
 };

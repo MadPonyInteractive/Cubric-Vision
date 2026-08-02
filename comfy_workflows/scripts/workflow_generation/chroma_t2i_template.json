@@ -6,7 +6,7 @@
         0
       ],
       "text": [
-        "2594",
+        "2665",
         0
       ]
     },
@@ -22,7 +22,7 @@
         0
       ],
       "text": [
-        "2595",
+        "2668",
         0
       ]
     },
@@ -33,7 +33,7 @@
   },
   "823": {
     "inputs": {
-      "model_name": "Chroma1-HD-Flash.safetensors",
+      "model_name": "Chroma1-HD-DanrisiMix-Hyper-Flash-Turbo-int8-convrot-simple.safetensors",
       "weight_dtype": "default",
       "clip_name1_opt": "t5xxl_fp16.safetensors",
       "clip_name2_opt": ".none",
@@ -50,8 +50,8 @@
   "847": {
     "inputs": {
       "model": [
-        "2599",
-        0
+        "2671",
+        1
       ],
       "clip": [
         "1870",
@@ -62,11 +62,11 @@
         2
       ],
       "positive": [
-        "792",
+        "2688",
         0
       ],
       "negative": [
-        "797",
+        "2689",
         0
       ]
     },
@@ -103,26 +103,14 @@
       "title": "VAE Decode"
     }
   },
-  "1647": {
-    "inputs": {
-      "images": [
-        "1646",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Output_Image"
-    }
-  },
   "1739": {
     "inputs": {
       "width": [
-        "2603",
+        "2643",
         0
       ],
       "height": [
-        "2604",
+        "2644",
         0
       ],
       "batch_size": [
@@ -154,7 +142,6 @@
       "eta": 0.5,
       "sampler_name": "exponential/res_2s",
       "scheduler": "bong_tangent",
-      "steps": 8,
       "steps_to_run": -1,
       "cfg": 1,
       "sampler_mode": "standard",
@@ -175,12 +162,16 @@
         "2611",
         0
       ],
+      "steps": [
+        "2640",
+        0
+      ],
       "denoise": [
         "2613",
         0
       ],
       "seed": [
-        "2605",
+        "2631",
         0
       ]
     },
@@ -212,24 +203,6 @@
     "class_type": "Mahiro",
     "_meta": {
       "title": "patch"
-    }
-  },
-  "2594": {
-    "inputs": {
-      "string": "Selfie shot from above off A beautiful redhead with green eyes and wavy long hair lying on a towel at a beach, wearing a bikini, sweaty, sun hitting your skin. Amateur photo taken on the phone. Candid moment. "
-    },
-    "class_type": "MpiText",
-    "_meta": {
-      "title": "Input_Positive"
-    }
-  },
-  "2595": {
-    "inputs": {
-      "string": "anime, bad hands, pixelated, drawing, CGI, ai, stable diffusion, action figure, 2d, cartoon, sketch, render, 3d, anime, painting, drawing, digital art, fan art, 2d art, wax, doll-like, perfect skin, 2.5d, smooth skin, jewelry, hyperrealistic, ultrarealistic, ugly, extra fingers, extra limbs, femboy, trans, child, toddler, watermark"
-    },
-    "class_type": "MpiText",
-    "_meta": {
-      "title": "Input_Negative"
     }
   },
   "2596": {
@@ -316,33 +289,6 @@
       "title": "Input_Lora_3"
     }
   },
-  "2603": {
-    "inputs": {
-      "int": 896
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Input_Width"
-    }
-  },
-  "2604": {
-    "inputs": {
-      "int": 1088
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Input_Height"
-    }
-  },
-  "2605": {
-    "inputs": {
-      "int": 891976866874163
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Input_Seed"
-    }
-  },
   "2608": {
     "inputs": {
       "int": 1
@@ -359,11 +305,11 @@
         0
       ],
       "false": [
-        "1739",
+        "2758",
         0
       ],
       "boolean": [
-        "2612",
+        "2691",
         0
       ]
     },
@@ -372,19 +318,10 @@
       "title": "i2i"
     }
   },
-  "2612": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Input_Is_i2i"
-    }
-  },
   "2613": {
     "inputs": {
       "true": [
-        "2614",
+        "2630",
         0
       ],
       "false": [
@@ -392,22 +329,13 @@
         0
       ],
       "boolean": [
-        "2612",
+        "2691",
         0
       ]
     },
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "i2i"
-    }
-  },
-  "2614": {
-    "inputs": {
-      "float": 0.3
-    },
-    "class_type": "MpiFloat",
-    "_meta": {
-      "title": "Input_denoise"
     }
   },
   "2615": {
@@ -422,7 +350,7 @@
   "2616": {
     "inputs": {
       "pixels": [
-        "2619",
+        "2682",
         0
       ],
       "vae": [
@@ -435,41 +363,870 @@
       "title": "VAE Encode"
     }
   },
-  "2617": {
+  "2623": {
+    "inputs": {
+      "int": 3
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Tier"
+    }
+  },
+  "2627": {
+    "inputs": {
+      "passthrough": [
+        "2637",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "2630": {
+    "inputs": {
+      "float": 0.6
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_denoise"
+    }
+  },
+  "2631": {
+    "inputs": {
+      "int": 976866873951
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "2632": {
+    "inputs": {
+      "images": [
+        "2627",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "2635": {
+    "inputs": {
+      "operator": "==",
+      "b_value": 3,
+      "a": [
+        "2638",
+        0
+      ]
+    },
+    "class_type": "MpiCompare",
+    "_meta": {
+      "title": "Mpi Compare"
+    }
+  },
+  "2637": {
+    "inputs": {
+      "any_1": [
+        "1646",
+        0
+      ],
+      "any_2": [
+        "1646",
+        0
+      ],
+      "any_3": [
+        "1646",
+        0
+      ],
+      "any_4": [
+        "1646",
+        0
+      ],
+      "any_5": [
+        "1646",
+        0
+      ],
+      "any_6": [
+        "2727",
+        0
+      ],
+      "any_7": [
+        "2757",
+        0
+      ],
+      "select": [
+        "2638",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch10",
+    "_meta": {
+      "title": "Mpi Any Switch 10"
+    }
+  },
+  "2638": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_wf_type"
+    }
+  },
+  "2640": {
+    "inputs": {
+      "math_expression": "8 if a == 2 else 12",
+      "a": [
+        "2623",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "2643": {
+    "inputs": {
+      "int": 896
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Width"
+    }
+  },
+  "2644": {
+    "inputs": {
+      "int": 1088
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Height"
+    }
+  },
+  "2645": {
     "inputs": {
       "string": "",
       "channel": "alpha",
-      "block_if_empty": true
+      "block_if_empty": false
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
       "title": "Input_Image"
     }
   },
-  "2619": {
+  "2654": {
     "inputs": {
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 16,
-      "device": "cpu",
-      "image": [
-        "2617",
-        0
-      ],
-      "width": [
-        "2603",
-        0
-      ],
-      "height": [
-        "2604",
+      "selector": 0,
+      "triggers": "black and white sketch\ntaken on a phone\nabsolute cinema\nFine Tactile Brushwork\nanime style",
+      "strength_model": 0.6,
+      "strength_clip": 0,
+      "model": [
+        "2599",
         0
       ]
     },
-    "class_type": "ImageResizeKJv2",
+    "class_type": "MpiStyleSelector",
     "_meta": {
-      "title": "Resize Image v2"
+      "title": "Input_Style_Selector"
+    }
+  },
+  "2664": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Negative"
+    }
+  },
+  "2665": {
+    "inputs": {
+      "delimiter": "",
+      "string_a": [
+        "2667",
+        0
+      ],
+      "string_b": [
+        "2671",
+        3
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "2667": {
+    "inputs": {
+      "string": "Two women sitting on chairs, having a coffee in the outside area of a coffee shop during daylight"
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "2668": {
+    "inputs": {
+      "string_b": "bad hands, pixelated, drawing, CGI, ai, stable diffusion, action figure, 2d, cartoon, sketch, render, 3d, anime, painting, drawing, digital art, fan art, 2d art, wax, doll-like, perfect skin, 2.5d, smooth skin, jewelry, hyperrealistic, ultrarealistic, ugly, extra fingers, extra limbs, femboy, trans, child, toddler, watermark",
+      "delimiter": ",",
+      "string_a": [
+        "2664",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "2671": {
+    "inputs": {
+      "lora_1": "chroma\\styles\\Complex_Chaotic_BW_Stuff.safetensors",
+      "lora_2": "chroma\\styles\\lenovo_chroma.safetensors",
+      "lora_3": "chroma\\styles\\CHROMA_Absolute_Cinema.safetensors",
+      "lora_4": "chroma\\styles\\Fine_Tactile_Brushwork.safetensors",
+      "lora_5": "chroma\\styles\\Chroma-Anime-v3.safetensors",
+      "style": [
+        "2654",
+        0
+      ]
+    },
+    "class_type": "MpiStyleLoras",
+    "_meta": {
+      "title": "Mpi Style Loras"
+    }
+  },
+  "2677": {
+    "inputs": {
+      "control_net_name": "FLUX.1-dev-ControlNet-Union-Pro-2.0.safetensors"
+    },
+    "class_type": "ControlNetLoader",
+    "_meta": {
+      "title": "Load ControlNet Model"
+    }
+  },
+  "2678": {
+    "inputs": {
+      "type": "depth",
+      "control_net": [
+        "2677",
+        0
+      ]
+    },
+    "class_type": "SetUnionControlNetType",
+    "_meta": {
+      "title": "Set Union ControlNet Type"
+    }
+  },
+  "2679": {
+    "inputs": {
+      "start_percent": 0,
+      "end_percent": 0.57,
+      "positive": [
+        "792",
+        0
+      ],
+      "negative": [
+        "797",
+        0
+      ],
+      "control_net": [
+        "2678",
+        0
+      ],
+      "image": [
+        "2694",
+        0
+      ],
+      "vae": [
+        "823",
+        2
+      ],
+      "strength": [
+        "2699",
+        0
+      ]
+    },
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": {
+      "title": "Apply ControlNet"
+    }
+  },
+  "2682": {
+    "inputs": {
+      "divisible_by": 16,
+      "position": "center",
+      "image": [
+        "2645",
+        0
+      ],
+      "width": [
+        "2643",
+        0
+      ],
+      "height": [
+        "2644",
+        0
+      ]
+    },
+    "class_type": "MpiCrop",
+    "_meta": {
+      "title": "Mpi Crop"
+    }
+  },
+  "2688": {
+    "inputs": {
+      "true": [
+        "2679",
+        0
+      ],
+      "false": [
+        "792",
+        0
+      ],
+      "boolean": [
+        "2635",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "2689": {
+    "inputs": {
+      "true": [
+        "2679",
+        1
+      ],
+      "false": [
+        "797",
+        0
+      ],
+      "boolean": [
+        "2635",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "2691": {
+    "inputs": {
+      "operator": "==",
+      "b_value": 2,
+      "a": [
+        "2638",
+        0
+      ]
+    },
+    "class_type": "MpiCompare",
+    "_meta": {
+      "title": "Mpi Compare"
+    }
+  },
+  "2694": {
+    "inputs": {
+      "ckpt_name": "depth_anything_v2_vits.pth",
+      "resolution": 512,
+      "image": [
+        "2645",
+        0
+      ]
+    },
+    "class_type": "DepthAnythingV2Preprocessor",
+    "_meta": {
+      "title": "Depth Anything V2 - Relative"
+    }
+  },
+  "2699": {
+    "inputs": {
+      "input_min": 0,
+      "input_max": 1,
+      "output_min": 0,
+      "output_max": 0.5,
+      "clamp": true,
+      "mode": "linear",
+      "value": [
+        "2702",
+        0
+      ]
+    },
+    "class_type": "MpiNormalizeValue",
+    "_meta": {
+      "title": "Mpi Normalize Value"
+    }
+  },
+  "2702": {
+    "inputs": {
+      "float": 1
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_depth_strength"
+    }
+  },
+  "2705": {
+    "inputs": {
+      "any": [
+        "2706",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "2706": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Mask"
+    }
+  },
+  "2707": {
+    "inputs": {
+      "channel": "red",
+      "block_if_empty": false,
+      "string": [
+        "2705",
+        0
+      ]
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "mask"
+    }
+  },
+  "2716": {
+    "inputs": {
+      "any": [
+        "2725",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "detailer"
+    }
+  },
+  "2717": {
+    "inputs": {
+      "model": [
+        "2671",
+        1
+      ],
+      "clip": [
+        "823",
+        1
+      ],
+      "vae": [
+        "823",
+        2
+      ],
+      "positive": [
+        "2722",
+        0
+      ],
+      "negative": [
+        "2724",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "ToBasicPipe"
+    }
+  },
+  "2722": {
+    "inputs": {
+      "clip": [
+        "823",
+        1
+      ],
+      "text": [
+        "2665",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "2724": {
+    "inputs": {
+      "clip": [
+        "823",
+        1
+      ],
+      "text": [
+        "2668",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "2725": {
+    "inputs": {
+      "guide_size": 512,
+      "guide_size_for": true,
+      "max_size": 1024,
+      "mask_mode": true,
+      "cfg": 1,
+      "sampler_name": "heun",
+      "scheduler": "beta",
+      "feather": 5,
+      "crop_factor": 1.8,
+      "drop_size": 10,
+      "refiner_ratio": 0.2,
+      "batch_size": 1,
+      "cycle": 1,
+      "inpaint_model": false,
+      "noise_mask_feather": 20,
+      "bbox_fill": false,
+      "contour_fill": true,
+      "image": [
+        "2645",
+        0
+      ],
+      "mask": [
+        "2707",
+        1
+      ],
+      "basic_pipe": [
+        "2717",
+        0
+      ],
+      "seed": [
+        "2631",
+        0
+      ],
+      "steps": [
+        "2726",
+        0
+      ],
+      "denoise": [
+        "2630",
+        0
+      ]
+    },
+    "class_type": "MaskDetailerPipe",
+    "_meta": {
+      "title": "MaskDetailer"
+    }
+  },
+  "2726": {
+    "inputs": {
+      "math_expression": "6 if a==3 else 4",
+      "a": [
+        "2623",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "2727": {
+    "inputs": {
+      "any": [
+        "2716",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "detailer"
+    }
+  },
+  "2730": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_V"
+    }
+  },
+  "2731": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_H"
+    }
+  },
+  "2734": {
+    "inputs": {
+      "clip": [
+        "823",
+        1
+      ],
+      "text": [
+        "2665",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "2735": {
+    "inputs": {
+      "conditioning": [
+        "2734",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "2737": {
+    "inputs": {
+      "float": 1.5
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Upscale_Factor"
+    }
+  },
+  "2738": {
+    "inputs": {
+      "model_name": "4x_NMKD-Siax_200k.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Input_Upscale_Model"
+    }
+  },
+  "2742": {
+    "inputs": {
+      "resize_type": "scale to multiple",
+      "resize_type.multiple": 16,
+      "scale_method": "lanczos",
+      "input": [
+        "2645",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "2744": {
+    "inputs": {
+      "image": [
+        "2742",
+        0
+      ],
+      "horizontal_split": [
+        "2731",
+        0
+      ],
+      "vertical_split": [
+        "2730",
+        0
+      ],
+      "upscale_factor": [
+        "2737",
+        0
+      ],
+      "auto": [
+        "2754",
+        0
+      ]
+    },
+    "class_type": "MpiGridDimensions",
+    "_meta": {
+      "title": "Mpi Grid Dimensions"
+    }
+  },
+  "2748": {
+    "inputs": {
+      "any": [
+        "2753",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "upscale"
+    }
+  },
+  "2753": {
+    "inputs": {
+      "cfg": 1,
+      "sampler_name": "res_multistep",
+      "scheduler": "bong_tangent",
+      "mode_type": "Linear",
+      "mask_blur": 8,
+      "tile_padding": 32,
+      "seam_fix_mode": "None",
+      "seam_fix_denoise": 0.6,
+      "seam_fix_width": 64,
+      "seam_fix_mask_blur": 8,
+      "seam_fix_padding": 16,
+      "force_uniform_tiles": false,
+      "tiled_decode": false,
+      "batch_size": 1,
+      "image": [
+        "2742",
+        0
+      ],
+      "model": [
+        "2671",
+        1
+      ],
+      "positive": [
+        "2734",
+        0
+      ],
+      "negative": [
+        "2735",
+        0
+      ],
+      "vae": [
+        "823",
+        2
+      ],
+      "upscale_model": [
+        "2738",
+        0
+      ],
+      "upscale_by": [
+        "2737",
+        0
+      ],
+      "seed": [
+        "2631",
+        0
+      ],
+      "steps": [
+        "2755",
+        0
+      ],
+      "denoise": [
+        "2630",
+        0
+      ],
+      "tile_width": [
+        "2744",
+        0
+      ],
+      "tile_height": [
+        "2744",
+        1
+      ]
+    },
+    "class_type": "UltimateSDUpscale",
+    "_meta": {
+      "title": "Upscaling..."
+    }
+  },
+  "2754": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Auto_Grid"
+    }
+  },
+  "2755": {
+    "inputs": {
+      "math_expression": "6 if a==3 else 4",
+      "a": [
+        "2623",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "2757": {
+    "inputs": {
+      "any": [
+        "2748",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "upscale"
+    }
+  },
+  "2758": {
+    "inputs": {
+      "true": [
+        "2762",
+        0
+      ],
+      "false": [
+        "1739",
+        0
+      ],
+      "boolean": [
+        "2635",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "depth"
+    }
+  },
+  "2761": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 16,
+      "image": [
+        "2645",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "2762": {
+    "inputs": {
+      "pixels": [
+        "2761",
+        0
+      ],
+      "vae": [
+        "1129",
+        2
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
     }
   }
 }

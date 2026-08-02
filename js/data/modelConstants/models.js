@@ -177,12 +177,15 @@ export const MODELS = [
         ],
     },
     {
-        // Chroma (Flash) — Flux-family image model, balanced tier. Same op shape as
-        // SDXL (t2i / upscale / detail); upscaler + detailer mirror the SDXL wiring.
-        // Extra vs SDXL: RES4LYF custom node (ClownShark sampler + ReChromaPatcher),
-        // and its LoRAs take MODEL strength only (loraStrengths: ['model']) — the
-        // MpiLoraModel node has no clip input. t2i is a single-step distilled gen.
-        // MPI-217.
+        // Chroma (Flash) — Flux-family image model, balanced tier. Extra vs SDXL:
+        // RES4LYF custom node (ClownShark sampler + ReChromaPatcher), and its LoRAs take
+        // MODEL strength only (loraStrengths: ['model']) — the MpiLoraModel node has no
+        // clip input. MPI-217.
+        //
+        // MPI-365: collapsed from three runtime files to ONE master graph; the branch is
+        // the injected `Input_wf_type` (see opInject). The Flash/Hyper split is NOT a
+        // runtime tier — they are two separate checkpoints, so generate_chroma.py bakes
+        // one file per tier and each card names its own.
         id: 'chroma-flash',
         sizeTier: 'balanced',
         modelFamily: 'Chroma',
@@ -192,24 +195,71 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'chroma-flash-01.webp',
         type: 'chroma',
-        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
         loraStrengths: ['model'],
         gen_speed: 'fast',
+        capabilities: {
+            // Five style LoRAs on one MpiStyleLoras bank (MPI-365).
+            styleLoras: true,
+            // Chroma reaches depth through a FLUX ControlNet, so the Depth Strength
+            // slider has something to drive: Input_depth_strength → MpiNormalizeValue
+            // → ControlNetApplyAdvanced.strength. The normalize node remaps the slider's
+            // 0-1 to 0-0.5 in-graph, because measured on this model anything past ~0.5
+            // starts producing artefacts. No promptEnhance — Chroma has no enhancer node
+            // and no Output_prompt capture.
+            depthStrength: true,
+        },
+        // One master graph ⇒ the rack reaches every op, detail and upscale included.
+        styleOps: ['t2i', 'i2i', 'depth', 'detail', 'upscale'],
+        // detail/upscale inherit their shape from the input image, so the ratio picker
+        // would be misleading there. depth is NOT listed: Chroma's depth branch still
+        // reads Input_Width/Input_Height through MpiCrop and generates at our dimensions
+        // (the same split Krea2 has, and the opposite of Klein's image-derived depth).
+        imageSizedOps: ['detail', 'upscale'],
+        // Op → the `Input_wf_type` value that selects its branch. MUST cover every entry
+        // in supportedOps; commandExecutor warns loudly if one is missing, because the
+        // failure mode is a plausible image from the WRONG op rather than an error.
+        // 4 and 5 are dead slots, kept so the numbering matches Klein and Krea2.
+        opInject: {
+            t2i:     { Input_wf_type: 1 },
+            i2i:     { Input_wf_type: 2 },
+            depth:   { Input_wf_type: 3 },
+            detail:  { Input_wf_type: 6 },
+            upscale: { Input_wf_type: 7 },
+        },
+        styleLoraLabels: ['None', 'B&W Sketch', 'Lenovo', 'Cinema', 'Brushwork', 'Anime'],
+        // Index-aligned with styleLoraLabels; index 0 is the no-style baseline. Both
+        // Chroma cards share the rack, so the same set applies to Hyper.
+        styleLoraImages: [
+            'chroma-style-none.webp', 'chroma-style-bwsketch.webp', 'chroma-style-lenovo.webp',
+            'chroma-style-cinema.webp', 'chroma-style-brushwork.webp', 'chroma-style-anime.webp',
+        ],
         description: 'Chroma is a high-detail Flux-family image generator. It can produce some really hardcore high quality NSFW but can sometimes struggle with hands.',
         workflows: {
+            // MPI-365: ONE file for all five ops — the branch is chosen by opInject's
+            // Input_wf_type and lazy evaluation prunes the rest at run time.
             t2i: 'chroma_t2i.json',
-            i2i: 'chroma_t2i.json',   // same graph; Input_Is_i2i flips the latent source
-            upscale: 'chroma_upscaler.json',
-            detail: 'chroma_detailer.json',
+            i2i: 'chroma_t2i.json',
+            depth: 'chroma_t2i.json',
+            upscale: 'chroma_t2i.json',
+            detail: 'chroma_t2i.json',
         },
         dependencies: [
             'chroma1-hd-flash',
             't5xxl-fp16',
             'vae-flux-ae',
             '4x-NMKD-Siax',
+            'controlnet-union-flux',         // depth op — the only FLUX.1-dev-licensed weight
+            'chroma-style-bwsketch',
+            'chroma-style-lenovo',
+            'chroma-style-cinema',
+            'chroma-style-brushwork',
+            'chroma-style-anime',
             'RES4LYF',
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
+            'ComfyUI-Impact-Pack',           // MaskDetailerPipe (detail op)
+            'comfyui_controlnet_aux',        // DepthAnythingV2Preprocessor (+ its own weight)
         ],
     },
     {
@@ -218,9 +268,13 @@ export const MODELS = [
         // the diffusion weight differs (int8 Danrisi mix + Hyper/Turbo distill → faster,
         // ~9.2GB vs Flash's 17GB). Clustered with Flash via modelFamily:'Chroma'; the L/B
         // badge disambiguates. Separately installable alongside Flash (NOT mutually
-        // exclusive). Own t2i/upscaler/detailer runtime files (chroma_hyper_* — the
-        // upscaler/detailer keys are lowercase, matching the generated filenames on a
-        // case-sensitive Pod FS).
+        // exclusive).
+        //
+        // MPI-365: shares Flash's master graph — same template, different bake. Hyper is
+        // tier 3 and Flash is tier 2, and generate_chroma.py stamps ClownModelLoader plus
+        // Input_Tier into each output file. Two loaders in ONE graph would force BOTH
+        // downloads (ComfyUI validates every combo widget at submit time, even on a
+        // lazily-skipped branch), which is exactly what the per-tier bake avoids.
         id: 'chroma-hyper',
         sizeTier: 'low',
         modelFamily: 'Chroma',
@@ -230,24 +284,52 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'chroma-hyper-01.webp',
         type: 'chroma',
-        supportedOps: ['t2i', 'i2i', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
         loraStrengths: ['model'],
         gen_speed: 'fast',
+        // Identical rack + branch shape to Flash — see that card for the reasoning.
+        capabilities: {
+            styleLoras: true,
+            depthStrength: true,
+        },
+        styleOps: ['t2i', 'i2i', 'depth', 'detail', 'upscale'],
+        imageSizedOps: ['detail', 'upscale'],
+        opInject: {
+            t2i:     { Input_wf_type: 1 },
+            i2i:     { Input_wf_type: 2 },
+            depth:   { Input_wf_type: 3 },
+            detail:  { Input_wf_type: 6 },
+            upscale: { Input_wf_type: 7 },
+        },
+        styleLoraLabels: ['None', 'B&W Sketch', 'Lenovo', 'Cinema', 'Brushwork', 'Anime'],
+        styleLoraImages: [
+            'chroma-style-none.webp', 'chroma-style-bwsketch.webp', 'chroma-style-lenovo.webp',
+            'chroma-style-cinema.webp', 'chroma-style-brushwork.webp', 'chroma-style-anime.webp',
+        ],
         description: 'A faster, lighter Chroma — the same high-detail Flux-family image generator distilled to run quicker at low VRAM. Great for realistic, hardcore NSFW; hands can still struggle.',
         workflows: {
             t2i: 'chroma_hyper_t2i.json',
-            i2i: 'chroma_hyper_t2i.json',   // same graph; Input_Is_i2i flips the latent source
-            upscale: 'chroma_hyper_upscaler.json',
-            detail: 'chroma_hyper_detailer.json',
+            i2i: 'chroma_hyper_t2i.json',
+            depth: 'chroma_hyper_t2i.json',
+            upscale: 'chroma_hyper_t2i.json',
+            detail: 'chroma_hyper_t2i.json',
         },
         dependencies: [
             'chroma1-hd-hyper',
             't5xxl-fp16',
             'vae-flux-ae',
             '4x-NMKD-Siax',
+            'controlnet-union-flux',         // depth op — the only FLUX.1-dev-licensed weight
+            'chroma-style-bwsketch',
+            'chroma-style-lenovo',
+            'chroma-style-cinema',
+            'chroma-style-brushwork',
+            'chroma-style-anime',
             'RES4LYF',
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
+            'ComfyUI-Impact-Pack',           // MaskDetailerPipe (detail op)
+            'comfyui_controlnet_aux',        // DepthAnythingV2Preprocessor (+ its own weight)
         ],
     },
     {
