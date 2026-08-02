@@ -199,7 +199,7 @@ Non-blocking download router using `node-downloader-helper`. **Resume contract (
 
 **FileDownloader class** (`routes/downloadManager.js`; renamed from `ResumableDownloader` in MPI-276, resumable again since MPI-317):
 A single-stream `node-downloader-helper` wrapper: start/resume, cancel (stop + remove), stop-keep (shutdown), SHA256 verify, SSE progress broadcast.
-- `.download()`: a marker-blessed partial (file AND `.cubricdl` survived a failure/stall/quit) resumes via `resumeFromFile` with an explicit Range request — lenient url guard (legacy markers without a url still resume; a url MISMATCH discards the partial and starts clean). No marker-blessed partial → scrub any stale file, one clean stream. 30s socket-inactivity `timeout` so a black-hole route emits `error` instead of hanging (MPI-120).
+- `.download()`: a marker-blessed partial (file AND `.cubricdl` survived a failure/stall/quit) resumes via `resumeFromFile` with an explicit Range request — lenient url guard — legacy markers without a url still resume, and the comparison is **path-equal, not string-equal** (`_isSameObjectUrl`): the SAME object path served from a different ORIGIN counts as the same object and resumes, so a mirror host-swap keeps the bytes instead of scrapping them. Only a genuinely DIFFERENT object discards the partial and starts clean. This had to change before mirror failover could be safe — MPI-317's string compare would have deleted exactly the partial failover exists to preserve; the SHA256 verify remains the net (MPI-427). No marker-blessed partial → scrub any stale file, one clean stream. 30s socket-inactivity `timeout` so a black-hole route emits `error` instead of hanging (MPI-120).
 - `.cancel()`: user intent — `stop()` + delete partial + marker. `.stopKeep()`: shutdown/teardown — stream closed, partial + marker KEPT for next-boot resume (used by `cancelAllDownloads` on SIGTERM/SIGINT, never by the user-cancel route).
 - On completion: verifies `sha256Expected` against the digest computed **incrementally while the file streamed in** (MPI-296 — a `Transform` hash-sink `.pipe()`d ahead of the file write, finalized on `end` into `_streamHashHex`), skipping a whole-file re-read that cost ~35s on a 6.6GB weight (34814ms→1ms). RESUMED streams skip the fast path (the pipe saw only the tail — a tail-only digest is garbage) and `_verifySha256` falls back to the full disk re-read, so a bad resume costs one failed verify, never a corrupt install. Then clears `<file>.cubricdl`, marks dep `complete`.
 - On SHA256 mismatch: deletes the file, clears the marker, marks dep `failed`.
@@ -310,6 +310,47 @@ spaces and `spawn`s directly — no shell. No `&&`, and no `python -c "multi wor
 
 **Remote is unaffected** — the Pod bakes this node into a CUDA Linux image, so the wrapper
 never runs this install.
+
+## The universal dep set spans TWO HOSTS — install it half-by-half (MPI-427)
+
+`getUniversalWorkflowDepIds()` (`routes/shared.js`) selects `type === 'custom_nodes' ||
+engineAsset === true`. Those two halves do **not** come from the same place:
+
+| Half | Source | Built by |
+|---|---|---|
+| every `custom_nodes` dep | **github.com** commit-archive zips | `lockUrl()` in `nodesDeps.js`, from `dev_configs/node_lock.json` |
+| every `engineAsset` weight | **models.cubric.studio** (R2) | hardcoded `url` in `assetDeps.js` |
+
+**So one blocked host does not mean nothing can be installed** — it means roughly half of
+the set still downloads perfectly. Any code that treats this set as all-or-nothing is
+wrong, and was: `startUniversalWorkflowInstall` used to reject the moment any dep failed,
+with the reject sitting ABOVE the custom-node extract/pip/marker step. A user whose ISP
+intercepted the model host (44/44 model-host downloads dead, 45/45 github.com fine) had
+his fully-downloaded node zips discarded unextracted, and because the drift check below
+reads "no folder" as missing, boot re-ran the same repair and discarded them again on
+every launch — an engine that could never install one node, so generation failed on
+unknown `class_type` no matter which weights were present.
+
+The contract now:
+
+- The wait **resolves with** the failure; the custom nodes that reached `complete` are
+  installed; only then does it throw. The error carries `err.modelJob`, because both
+  engine-provision callers catch it and would otherwise leave `uwModelJob` null and skip
+  `finishCustomNodeInstall` entirely — the same lost-nodes bug one layer up. Both were
+  swept (`_provisionWindowsEngine` archive, `_provisionUvEngine` uv-bootstrap); a
+  one-platform fix here is a false done.
+- `/engine/repair-deps` distinguishes an outstanding **node** from an outstanding
+  **weight**. It runs behind the boot gate, which releases on `engine:ready` /
+  `engine:gate-release` and NOT on `engine:error` — so reporting an error when every node
+  is installed locked the user out of the app entirely, behind a Retry that failed
+  identically every time. Nodes all present → `engine:complete` (ComfyUI can run, let them
+  in). Nodes genuinely missing → the error, which now carries a "Continue without them"
+  escape emitting `engine:gate-release` (deliberately NOT `engine:install-skipped` — that
+  means "I will use RunPod instead" and `MpiRunpodSettings` syncs its switch to it).
+
+Guard: `tests/uw-partial-install.test.cjs` checks the ordering and the both-platform sweep
+lockstep against the source; a mirrored copy of the logic would pass while the shipped
+file regressed.
 
 ## Node commit-drift + `.mpi_node_commit` marker (MPI-222)
 

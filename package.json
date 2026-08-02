@@ -16,6 +16,7 @@
     "release:check": "node scripts/release-health-check.mjs",
     "release:approve": "node scripts/release-notes-approval.mjs approve",
     "release:notes": "node scripts/release-notes-approval.mjs show",
+    "test": "node --test \"tests/**/*.test.cjs\"",
     "test:desktop": "playwright test --config=playwright.desktop.config.js",
     "lint": "eslint js/ --max-warnings=9999",
     "lint:components": "eslint js/components/ --max-warnings=9999",
