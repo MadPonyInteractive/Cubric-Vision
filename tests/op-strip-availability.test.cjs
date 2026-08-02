@@ -310,3 +310,38 @@ test('every declared batchOp is an op the model actually runs', async () => {
     // Guards against the field being silently dropped in a refactor: 2 Chroma + 5 SDXL.
     assert.strictEqual(declared, 7, 'exactly the 7 models with partial batch support declare batchOps');
 });
+
+test('style strength defaults per model, without disturbing op defaults', async () => {
+    const { getCommandDefault } = await import('../js/data/commandRegistry.js');
+    const { getModelById } = await import('../js/data/modelRegistry.js');
+    const { PROMPT_CONTROL_DEFAULTS } = await import('../js/data/promptControlDefaults.js');
+
+    // Mirror of PromptBoxControls._resolveDefault (importing it pulls the app graph).
+    // Three layers, most specific first: OP, then MODEL, then the global constant.
+    const resolve = (controlId, model, opName) => {
+        if (opName) {
+            const opDefault = getCommandDefault(opName, controlId);
+            if (opDefault !== undefined) return opDefault;
+        }
+        const modelDefault = model?.controlDefaults?.[controlId];
+        if (modelDefault !== undefined) return modelDefault;
+        return PROMPT_CONTROL_DEFAULTS[controlId];
+    };
+
+    // Both Chroma checkpoints are heavily distilled — the rack artefacts at 0.8/1.0 —
+    // and 0.6 is what the graph's Input_Style_Selector.strength_model is baked to.
+    for (const id of ['chroma-flash', 'chroma-hyper']) {
+        const m = getModelById(id);
+        assert.strictEqual(m.controlDefaults.stylization, 0.6, `${id} declares 0.6`);
+        for (const op of m.styleOps) {
+            assert.strictEqual(resolve('stylization', m, op), 0.6,
+                `${id} ${op} must start at 0.6, not the global ${PROMPT_CONTROL_DEFAULTS.stylization}`);
+        }
+    }
+
+    // The two negative controls that stop this becoming a global change.
+    assert.strictEqual(resolve('stylization', getModelById('krea2'), 't2i'),
+        PROMPT_CONTROL_DEFAULTS.stylization, 'a model declaring nothing keeps the global default');
+    assert.strictEqual(resolve('stylization', getModelById('qwen-edit'), 'qwenEdit'), 0.8,
+        'an OP default still outranks a model default — qwenEdit stays 0.8');
+});

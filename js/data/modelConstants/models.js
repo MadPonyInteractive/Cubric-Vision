@@ -18,6 +18,7 @@
  * @property {Record<string, Object>} [opInject] - Per-OP constant workflow params THIS model always injects, keyed by operation id then node title (MPI-354). For a model whose ops are branches of ONE master graph selected by a value private to that model — FLUX.2 Klein maps each op to an `Input_wf_type` int, a numbering no shared op could own. Merged in commandExecutor._buildParams AFTER the op's own `injectParams` and BEFORE the user's controls. A model that declares this MUST cover every op in `supportedOps`: a missing entry does not error, it runs the graph's default branch and returns the wrong operation's output, so the executor warns on a gap. Prefer the op's `injectParams` when the constant is a property of the OP rather than of this model.
  * @property {string[]} [styleOps] - Operations where this model's style rack is live (MPI-354). Defaults to DEFAULT_STYLE_OPS in commandRegistry.js — the set that mounted the rack before this field existed, so every pre-Klein model is unaffected. Declare it when the rack's reach differs: a one-master-template model carries the rack on detail/upscale too, while a model with separate rack-less detailer/upscaler files must not offer it there. Only consulted when `capabilities.styleLoras` is true; the op's `components` still decides whether the control exists at all.
  * @property {string[]} [imageSizedOps] - Operations whose OUTPUT SHAPE comes from the input image rather than from `Input_Width`/`Input_Height` (MPI-354) — typically because the graph scales the input to a megapixel target. The ratio picker is hidden on these ops (see modelShowsRatio in commandRegistry.js); everything else about them is unchanged. Defaults to none, so every model that does not declare it keeps the picker on every op exactly as before. This is a property of the MODEL's graph, not of the op: Klein/Krea2/Chroma depth all derive their size from the input, while SDXL's depth still generates at our dimensions, and they all share one op. VERIFY IN THE GRAPH, never from the op name — Chroma's depth was mis-declared for exactly that reason until 2026-08-02, and the symptom was a padded gallery card, not an error.
+ * @property {Record<string, *>} [controlDefaults] - Per-MODEL starting values for PromptBox controls, keyed by control id (MPI-365) — e.g. `{ stylization: 0.6 }`. Resolved in PromptBoxControls._resolveDefault AFTER an op default and BEFORE the global PROMPT_CONTROL_DEFAULTS, so an op-specific default still wins and every undeclared model is unaffected. Use this when the right starting value is a property of the MODEL's weights rather than of the op: a heavily distilled checkpoint whose style LoRAs artefact at full strength wants one number across its whole rack, which an op default (shared by every model running that op) cannot express. This sets only the STARTING value; where an edited value is stored is still the control's `scope`.
  * @property {string[]} [batchOps] - Operations where the batch control is REAL (MPI-365). `Input_Batch_Size` reaches only `EmptyLatentImage` in every graph we ship, so an op sampling a VAE-encoded latent silently returns one image while the control claims N. Defaults to every op, so a model that stays silent behaves exactly as before. Distinct from `capabilities.batch: false`, which is the model-WIDE off switch — use that when batch works nowhere (Krea2/Klein/Qwen), and this when it works on some ops and not others (Chroma `['t2i']`, SDXL `['t2i','depth']`). See modelShowsBatch in commandRegistry.js.
  * @property {string}   [image]      - Preview still filename in comfy_workflows/display/ (image models)
  * @property {string}   [video]      - Preview clip filename in comfy_workflows/display/; card plays it muted+looping on hover (video models)
@@ -261,6 +262,13 @@ export const MODELS = [
         // image while the control claimed N. Narrower than SDXL's list, which keeps depth
         // because its depth switches the conditioning pipe rather than the latent.
         batchOps: ['t2i'],
+        // Style strength starts at 0.6, not the global 1.0. BOTH Chroma checkpoints are
+        // heavily distilled, and at 0.8 or 1.0 the style LoRAs stop styling and start
+        // producing artefacts (user-measured). 0.6 is also what the graph's
+        // Input_Style_Selector.strength_model is baked to, so the UI now agrees with the
+        // template instead of overriding it on every fresh prompt. Applies across the
+        // whole rack (styleOps) — which is why it is a MODEL default and not an op one.
+        controlDefaults: { stylization: 0.6 },
         // Op → the `Input_wf_type` value that selects its branch. MUST cover every entry
         // in supportedOps; commandExecutor warns loudly if one is missing, because the
         // failure mode is a plausible image from the WRONG op rather than an error.
@@ -338,9 +346,11 @@ export const MODELS = [
         },
         styleOps: ['t2i', 'i2i', 'depth', 'detail', 'upscale'],
         // Shares Flash's master graph, so it shares the depth-is-image-sized fix too —
-        // and the same batch reality: only t2i samples an EmptyLatentImage.
+        // and the same batch reality: only t2i samples an EmptyLatentImage. Hyper is the
+        // MORE distilled of the two, so the 0.6 style strength matters at least as much.
         imageSizedOps: ['depth', 'detail', 'upscale'],
         batchOps: ['t2i'],
+        controlDefaults: { stylization: 0.6 },
         opInject: {
             t2i:     { Input_wf_type: 1 },
             i2i:     { Input_wf_type: 2 },

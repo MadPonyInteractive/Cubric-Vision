@@ -55,10 +55,22 @@ function _resolveDefault(ctrl, controlId, opts) {
     // default of a perModel/shared control too — qwenEdit starts `stylization` at 0.8
     // (Qwen's style LoRAs overpower the edit at 1.0) while Krea2's ops keep the global
     // 1.0, with both still storing per model.
+    //
+    // Three layers, most specific first: OP, then MODEL, then the global constant.
+    // The model layer (MPI-365) exists because a strength that suits one model's LoRAs
+    // suits none of the others — Chroma's rack is trained to sit at 0.6 and washes the
+    // image out at the global 1.0 — and the op layer could not express that: an op
+    // default applies to EVERY model running that op, and Chroma wants 0.6 across its
+    // whole rack (t2i/i2i/depth/detail/upscale), not on one op.
+    //
+    // Op BEFORE model is deliberate: it keeps every existing default exactly where it
+    // was, so adding this layer changed nothing for qwenEdit or anything else.
     if (opts.opName) {
         const opDefault = getCommandDefault(opts.opName, controlId);
         if (opDefault !== undefined) return opDefault;
     }
+    const modelDefault = opts.model?.controlDefaults?.[controlId];
+    if (modelDefault !== undefined) return modelDefault;
     return ctrl.defaultValue;
 }
 

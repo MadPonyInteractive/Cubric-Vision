@@ -134,8 +134,20 @@ re-exported rather than left with a dead slot: a `lora_N` pointing at a file no 
 downloads fails **every** Chroma prompt, because ComfyUI validates each combo widget
 at submit time. Do not re-add it.
 
-Default stylization 0.6. Model-strength only (`loraStrengths: ['model']`) — the
-`MpiLoraModel` node has no clip input.
+**Default stylization 0.6, and it is enforced in code** —
+`controlDefaults: { stylization: 0.6 }` on both cards. Both checkpoints are heavily
+distilled, and at 0.8 or 1.0 the style LoRAs stop styling and start producing
+artefacts (user-measured). 0.6 is also the value baked into the graph's
+`Input_Style_Selector.strength_model`, so the UI now agrees with the template rather
+than overriding it to the global 1.0 on every fresh prompt.
+
+It is a MODEL default rather than an op one because it applies across the whole rack;
+an op default would push 0.6 onto every other model running that op. Resolution order
+is op → model → global (`PromptBoxControls._resolveDefault`), so Qwen's op-specific
+0.8 is untouched.
+
+Model-strength only (`loraStrengths: ['model']`) — the `MpiLoraModel` node has no
+clip input.
 
 ## What does NOT exist (checked 2026-08-02 — do not re-research)
 
