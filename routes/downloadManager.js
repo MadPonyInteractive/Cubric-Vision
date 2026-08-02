@@ -933,11 +933,18 @@ function _describeTransportError(err, url) {
     if (!_TRANSPORT_ERROR_PATTERNS.some(p => raw.includes(p))) return null;
     let host = 'the download server';
     try { host = new URL(url).host; } catch { /* malformed url — keep the generic noun */ }
-    return `Your network blocked the connection to ${host}. This is usually a DNS server, `
-        + 'a network/parental filter, a VPN, or antivirus web protection — not a problem with '
-        + 'the app or your computer. Try setting your DNS to 1.1.1.1 (Settings > Network & '
-        + 'internet > your connection > Hardware properties > DNS server assignment > Edit > '
-        + 'Manual), or test on a phone hotspot, then retry.';
+    // The remedy order here is MEASURED, not guessed. The user who reported this tested
+    // a DNS switch on its own with the app restarted: the download still died partway
+    // (~20%), and one dep died as a 30s stall — so the interference is on the sustained
+    // stream, not just on name resolution. A tunnel was the only thing that worked for
+    // him. Lead with it. Do NOT restore "set your DNS to 1.1.1.1" as the first remedy;
+    // that advice was disproven against the exact network this message exists for.
+    return `Your network blocked the connection to ${host}. This is a network condition — `
+        + 'an ISP filter, a DNS server, a parental/network filter, or antivirus web protection '
+        + '— not a problem with the app or your computer. The fix that usually works is to turn '
+        + 'on a VPN for the whole download (Cloudflare WARP is free), then retry. Changing your '
+        + 'DNS alone is often not enough. A phone hotspot will confirm whether your network is '
+        + 'the cause.';
 }
 
 function _formatSpeed(bytesPerSec) {
@@ -2837,8 +2844,19 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
 
     _startPendingDeps();
 
-    // Wait for all UW deps to reach a terminal state (with 30-minute timeout to prevent infinite hangs)
-    await new Promise((resolve, reject) => {
+    // Wait for all UW deps to reach a terminal state (with 30-minute timeout to prevent infinite hangs).
+    //
+    // MPI-427: this RESOLVES WITH the failure instead of rejecting, and the throw moved
+    // below the custom-node install. The two halves of this set live on different hosts —
+    // every custom_node is a github.com zip, every engineAsset weight is on the model
+    // host — so a user whose network blocks ONE of those hosts still downloads the other
+    // half perfectly. Rejecting here discarded those good nodes unextracted, and since
+    // the drift check reads "no folder" as missing, boot re-ran the same repair and threw
+    // them away again on every launch. Reported by a user whose ISP intercepts the model
+    // host: 44/44 model-host downloads dead, 45/45 github.com downloads fine, and an
+    // engine that could never get a single node installed. Install what landed; report
+    // what did not.
+    const depFailure = await new Promise((resolve) => {
         const startTime = Date.now();
         const maxWaitMs = 30 * 60 * 1000; // 30 minutes max for slower connections
         const checkInterval = setInterval(() => {
@@ -2848,27 +2866,24 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
 
             if (allDone) {
                 clearInterval(checkInterval);
-                if (anyFailed) {
-                    const failed = modelJob.deps.filter(d => d.status === 'failed');
-                    const failedNames = failed.map(d => d.id).join(', ');
-                    // MPI-427 — this used to carry the dep IDs and NOTHING else, so a
-                    // network block surfaced as the useless "UW deps install failed:
-                    // rife47". Carry the first real reason (already the readable
-                    // network-blocked text when _describeTransportError matched).
-                    const reason = failed.find(d => d.error)?.error;
-                    const err = new Error(reason
-                        ? `UW deps install failed: ${failedNames} — ${reason}`
-                        : `UW deps install failed: ${failedNames}`);
-                    err.networkBlocked = failed.some(d => d.networkBlocked);
-                    reject(err);
-                } else {
-                    resolve();
-                }
+                if (!anyFailed) return resolve(null);
+                const failed = modelJob.deps.filter(d => d.status === 'failed');
+                const failedNames = failed.map(d => d.id).join(', ');
+                // MPI-427 — this used to carry the dep IDs and NOTHING else, so a
+                // network block surfaced as the useless "UW deps install failed:
+                // rife47". Carry the first real reason (already the readable
+                // network-blocked text when _describeTransportError matched).
+                const reason = failed.find(d => d.error)?.error;
+                const err = new Error(reason
+                    ? `UW deps install failed: ${failedNames} — ${reason}`
+                    : `UW deps install failed: ${failedNames}`);
+                err.networkBlocked = failed.some(d => d.networkBlocked);
+                resolve(err);
             } else if (elapsedMs > maxWaitMs) {
                 clearInterval(checkInterval);
                 const stillPending = modelJob.deps.filter(d => !['complete', 'failed', 'cancelled'].includes(d.status)).map(d => d.id).join(', ');
                 logger.error('download', `UW deps install timeout after 30 minutes. Still pending: ${stillPending}`);
-                reject(new Error(`UW deps install timeout — still waiting for: ${stillPending}`));
+                resolve(new Error(`UW deps install timeout — still waiting for: ${stillPending}`));
             }
         }, 500);
     });
@@ -2890,7 +2905,7 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
             });
         }
 
-        if (broadcastProgress) {
+        if (broadcastProgress && !depFailure) {
             broadcastEngineEvent('engine:uw-installing', { status: 'Universal workflow dependencies ready' });
         }
     } else {
@@ -2898,6 +2913,16 @@ async function startUniversalWorkflowInstall(depIds, broadcastProgress = true, s
         if (broadcastProgress) {
             broadcastEngineEvent('engine:uw-installing', { status: 'Dependencies downloaded, waiting for engine...' });
         }
+    }
+
+    // MPI-427: report the failure only now, with every node that DID download already
+    // installed above. The job rides on the error because the two engine-provision
+    // callers pass skipCustomNodeInstall=true and finish the nodes themselves — without
+    // it they catch, leave uwModelJob null, and skip finishCustomNodeInstall entirely,
+    // which is the same lost-nodes bug one layer up.
+    if (depFailure) {
+        depFailure.modelJob = modelJob;
+        throw depFailure;
     }
 
     return modelJob;

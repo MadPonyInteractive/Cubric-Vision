@@ -287,6 +287,11 @@ async function _bootApp() {
       // purpose: the engine is not ready, so engine:ready consumers (comfy
       // controller, status bar) must not be told that it is.
       _gateUnsubs.push(Events.on('engine:install-skipped', _releaseGate));
+      // MPI-427: the same escape for the OTHER way this gate traps a user — a
+      // dependency repair that fails identically on every Retry. Separate event from
+      // install-skipped because that one means "I will use RunPod instead" and the
+      // RunPod settings switch follows it; this one means only "let me into the app".
+      _gateUnsubs.push(Events.on('engine:gate-release', _releaseGate));
 
       // If engine already current, check if UW deps need installing
       if (!versionData.needsInstall && !versionData.needsUpgrade) {
