@@ -1,0 +1,36 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-428",
+  "title": "Boogu Image Edit: localised (masked) edit",
+  "description": "Wire the mask through to Boogu Image Edit so a mask painted in the history workspace crops the edit to that area at full source resolution, exactly as Krea 2, FLUX.2 Klein and Qwen Image Edit already do. The user re-authored boogu_edit_template.json in the bench and exported it: it now carries InpaintCropImproved/InpaintStitchImproved, MpiMaskSquareBbox, an MpiString titled Input_Mask feeding an MpiLoadImageFromPath titled mask, and MpiIfElse branches gated on has_mask. App side is deliberately small - injection is title-driven and maskDataUrl is already attached whenever the canvas has a mask - so the work is the raw->API->runtime sync plus the one new node dependency (comfyui-inpaint-cropandstitch) on both Boogu cards. Carved out of MPI-365, which named this as a separate card.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-02T15:10:00Z",
+  "updated_at": "2026-08-02T15:17:00Z",
+  "labels": [
+    "workflow",
+    "masking",
+    "models"
+  ],
+  "acceptance": [
+    "boogu_edit_high.json and boogu_edit_balanced.json carry Input_Mask + the crop/stitch branch, and the injection-rules gate passes",
+    "Both Boogu ModelDefs declare comfyui-inpaint-cropandstitch",
+    "A masked edit on Boogu regenerates only the masked area and keeps the source resolution; an unmasked edit still runs whole-image",
+    "The mask is exported at the source image's pixels (MPI-365 fix 2) so InpaintCropImproved's dimension assert cannot fire on a large source",
+    "docs/releases/UNRELEASED.md localised-edit bullet EXTENDED with Boogu, not duplicated"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "events": "events.jsonl",
+    "reference": "docs/masking.md",
+    "depends_on": "MPI-365"
+  },
+  "tags": [
+    "boogu",
+    "masking",
+    "workflow-sync"
+  ],
+  "priority": "medium"
+}

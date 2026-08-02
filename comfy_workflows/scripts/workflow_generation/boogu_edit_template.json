@@ -1,19 +1,4 @@
 {
-  "49": {
-    "inputs": {
-      "resize_type": "scale total pixels",
-      "resize_type.megapixels": 1,
-      "scale_method": "lanczos",
-      "input": [
-        "190",
-        0
-      ]
-    },
-    "class_type": "ResizeImageMaskNode",
-    "_meta": {
-      "title": "Resize Image/Mask"
-    }
-  },
   "55": {
     "inputs": {
       "unet_name": "boogu_image_edit_turbo_int8_convrot.safetensors",
@@ -71,34 +56,6 @@
     "class_type": "VAEDecode",
     "_meta": {
       "title": "VAE Decode"
-    }
-  },
-  "61": {
-    "inputs": {
-      "clip": [
-        "59",
-        0
-      ],
-      "vae": [
-        "56",
-        0
-      ],
-      "images.image_1": [
-        "190",
-        0
-      ],
-      "prompt": [
-        "179",
-        0
-      ],
-      "negative_prompt": [
-        "186",
-        0
-      ]
-    },
-    "class_type": "TextEncodeBooguEdit",
-    "_meta": {
-      "title": "TextEncodeBooguEdit"
     }
   },
   "62": {
@@ -178,11 +135,11 @@
         0
       ],
       "positive": [
-        "61",
+        "198",
         0
       ],
       "negative": [
-        "61",
+        "198",
         1
       ]
     },
@@ -283,7 +240,7 @@
   },
   "133": {
     "inputs": {
-      "int": 891976866874162
+      "int": 891976866874163
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -293,12 +250,12 @@
   "143": {
     "inputs": {
       "width": [
-        "191",
-        1
+        "232",
+        0
       ],
       "height": [
-        "191",
-        2
+        "232",
+        1
       ],
       "batch_size": [
         "149",
@@ -353,23 +310,11 @@
   },
   "169": {
     "inputs": {
-      "int": 1
+      "int": 2
     },
     "class_type": "MpiInt",
     "_meta": {
       "title": "Input_Tier"
-    }
-  },
-  "172": {
-    "inputs": {
-      "images": [
-        "168",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Output_Image"
     }
   },
   "173": {
@@ -458,7 +403,7 @@
   },
   "179": {
     "inputs": {
-      "string": "Add King Kong climbing up the Eiffel Tower"
+      "string": "give her a red dress with a tube top"
     },
     "class_type": "MpiText",
     "_meta": {
@@ -485,20 +430,243 @@
       "title": "Input_Image"
     }
   },
-  "191": {
+  "196": {
     "inputs": {
-      "width": 0,
-      "height": 0,
-      "divisible_by": 16,
-      "position": "center",
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 16,
       "image": [
-        "49",
+        "226",
         0
       ]
     },
-    "class_type": "MpiCrop",
+    "class_type": "ImageScaleToTotalPixels",
     "_meta": {
-      "title": "Mpi Crop"
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "198": {
+    "inputs": {
+      "clip": [
+        "59",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ],
+      "images.image_1": [
+        "196",
+        0
+      ],
+      "prompt": [
+        "179",
+        0
+      ],
+      "negative_prompt": [
+        "186",
+        0
+      ]
+    },
+    "class_type": "TextEncodeBooguEdit",
+    "_meta": {
+      "title": "TextEncodeBooguEdit"
+    }
+  },
+  "203": {
+    "inputs": {
+      "passthrough": [
+        "208",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "204": {
+    "inputs": {
+      "images": [
+        "203",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "208": {
+    "inputs": {
+      "true": [
+        "217",
+        0
+      ],
+      "false": [
+        "168",
+        0
+      ],
+      "boolean": [
+        "229",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "210": {
+    "inputs": {
+      "stitcher": [
+        "221",
+        0
+      ],
+      "inpainted_image": [
+        "168",
+        0
+      ]
+    },
+    "class_type": "InpaintStitchImproved",
+    "_meta": {
+      "title": "✂️ Inpaint Stitch"
+    }
+  },
+  "211": {
+    "inputs": {
+      "padding": 64,
+      "mask": [
+        "231",
+        1
+      ]
+    },
+    "class_type": "MpiMaskSquareBbox",
+    "_meta": {
+      "title": "Mpi Mask Square Bbox"
+    }
+  },
+  "217": {
+    "inputs": {
+      "any": [
+        "210",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "masked edit"
+    }
+  },
+  "221": {
+    "inputs": {
+      "downscale_algorithm": "bilinear",
+      "upscale_algorithm": "bicubic",
+      "preresize": false,
+      "preresize_mode": "ensure minimum resolution",
+      "preresize_min_width": 1024,
+      "preresize_min_height": 1024,
+      "preresize_max_width": 16384,
+      "preresize_max_height": 16384,
+      "mask_fill_holes": true,
+      "mask_expand_pixels": 6,
+      "mask_invert": false,
+      "mask_blend_pixels": 32,
+      "mask_hipass_filter": 0.1,
+      "extend_for_outpainting": false,
+      "extend_up_factor": 1,
+      "extend_down_factor": 1,
+      "extend_left_factor": 1,
+      "extend_right_factor": 1,
+      "context_from_mask_extend_factor": 1,
+      "output_resize_to_target_size": true,
+      "output_target_width": 1024,
+      "output_target_height": 1024,
+      "output_padding": "32",
+      "device_mode": "gpu (much faster)",
+      "image": [
+        "190",
+        0
+      ],
+      "mask": [
+        "231",
+        1
+      ],
+      "optional_context_mask": [
+        "211",
+        0
+      ]
+    },
+    "class_type": "InpaintCropImproved",
+    "_meta": {
+      "title": "✂️ Inpaint Crop"
+    }
+  },
+  "226": {
+    "inputs": {
+      "true": [
+        "221",
+        1
+      ],
+      "false": [
+        "190",
+        0
+      ],
+      "boolean": [
+        "229",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "229": {
+    "inputs": {
+      "any": [
+        "230",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "230": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Mask"
+    }
+  },
+  "231": {
+    "inputs": {
+      "channel": "red",
+      "block_if_empty": true,
+      "string": [
+        "229",
+        0
+      ]
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "mask"
+    }
+  },
+  "232": {
+    "inputs": {
+      "image": [
+        "196",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
     }
   }
 }

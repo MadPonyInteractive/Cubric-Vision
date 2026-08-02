@@ -691,8 +691,9 @@ export const MODELS = [
             'boogu-qwen3vl-8b-clip',
             'vae-flux-ae',            // shared — already on R2, zero upload
             'ComfyUI-MpiNodes',
-            'comfyui-kjnodes',        // ResizeImageMaskNode
+            'comfyui-kjnodes',        // SetNode/GetNode
             'ComfyUI-Impact-Pack',    // To/FromBasicPipe
+            'comfyui-inpaint-cropandstitch', // InpaintCropImproved/StitchImproved (localised edit)
         ],
     },
     // Balanced = turbo int8_convrot (promoted from 'low'). fp8_scaled Balanced tier DROPPED
@@ -724,6 +725,7 @@ export const MODELS = [
             'ComfyUI-MpiNodes',
             'comfyui-kjnodes',
             'ComfyUI-Impact-Pack',
+            'comfyui-inpaint-cropandstitch', // localised edit — MPI-428
         ],
     },
     // ── Video Models ───────────────────────────────────────────────────
