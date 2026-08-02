@@ -40,9 +40,10 @@
 export const RELEASE_NOTES = {
   '1.3.1': {
     version: '1.3.1',
-    whatIsNew: [
-      'MASK TOOLBAR: ONE DETECT BUTTON — the three detection methods (Points, Text, Auto) now live in a small strip that opens beside the Detect button instead of taking three slots in the toolbar. Same tools, same behaviour — less column.',
-    ],
+    // Bug-fix release cut directly off 1.3.0. In-flight work (the masking system, the
+    // workflows still being verified) stays in docs/releases/UNRELEASED.md until it
+    // actually ships — do not fold that scratchpad in here.
+    whatIsNew: [],
     fixes: [
       'A download blocked by your network now tells you so, in plain English. If your internet provider, router, DNS or antivirus blocks the connection to our model server, the app used to show a wall of raw technical text and offer to file a bug report — so it read like the app was broken, when nothing was wrong with it or your computer. It now names the server that could not be reached, explains that it is a network restriction rather than a fault, and suggests what to try. It also no longer nudges you to report it as a bug, because it is not one.',
       'Retrying a download no longer looks like it lost your progress. A download that failed part-way through kept its file on disk and picked up from where it stopped — but the progress bar reset that part to zero first, so a retry could visibly jump backwards, from twenty percent down to eight, as though the work had been thrown away. Nothing was ever lost; the bar was simply not counting what was already downloaded. It now does.',
