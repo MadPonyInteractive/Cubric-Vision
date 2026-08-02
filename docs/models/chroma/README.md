@@ -105,7 +105,7 @@ unlike Klein's image-derived depth.
 
 ## Style rack
 
-Five LoRAs on ONE `MpiStyleLoras` bank, live on every op (`styleOps` full reach).
+Four LoRAs on ONE `MpiStyleLoras` bank, live on every op (`styleOps` full reach).
 Index 0 is No Style. Both cards share the rack — it lives in the master template
 both tiers are baked from, so neither card may carry a subset.
 
@@ -113,9 +113,15 @@ both tiers are baked from, so neither card may carry a subset.
 |---|---|---|
 | 1 | B&W Sketch | `black and white sketch` |
 | 2 | Lenovo | `taken on a phone` |
-| 3 | Cinema | `absolute cinema` |
-| 4 | Brushwork | `Fine Tactile Brushwork` |
-| 5 | Anime | `anime style` |
+| 3 | Brushwork | `Fine Tactile Brushwork` |
+| 4 | Anime | `anime style` |
+
+A fifth style (**Absolute CINEMA**) was wired and then dropped on a licence call —
+its creator withheld `Image`, so a user could not sell what they generated with it
+([licences.md](licences.md)). The rack was renumbered in the master template and
+re-exported rather than left with a dead slot: a `lora_N` pointing at a file no user
+downloads fails **every** Chroma prompt, because ComfyUI validates each combo widget
+at submit time. Do not re-add it.
 
 Default stylization 0.6. Model-strength only (`loraStrengths: ['model']`) — the
 `MpiLoraModel` node has no clip input.
@@ -138,6 +144,6 @@ Default stylization 0.6. Model-strength only (`loraStrengths: ['model']`) — th
 
 - **No `progressStages.js` entries.** Bar counts have never been measured for Chroma
   (pre-existing, not a regression from the migration).
-- **Style-LoRA licences unverified.** The five weights are community LoRAs pending
-  the SHA256 → CivitAI check; method in [../klein/licences.md](../klein/licences.md).
-  Until that and the R2 upload land, Chroma is un-installable.
+- **R2 upload outstanding.** The four style-LoRA URLs 404 until it lands, so Chroma
+  is un-installable. This is the last gate; the licence gate closed 2026-08-02
+  ([licences.md](licences.md)).

@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-430","type":"task.created","at":"2026-08-02T20:58:00Z","actor":"opus","summary":"Split off MPI-365: the CivitAI v1 API has no licence field, so every flags-only verdict was reached without the field that governs. Also opens the ToS through-the-Service question for our R2 mirror. Fabio can DM creators for explicit permission."}

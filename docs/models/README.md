@@ -53,6 +53,7 @@ load-bearing, plus the 2-reference face wall and its ruled-out list.
 | File | Holds |
 |---|---|
 | [README.md](chroma/README.md) | Hub: Flash and Hyper are SEPARATE checkpoints (why the tier is a per-file bake, not a runtime inject), the ONE-master-template `Input_wf_type` map, the RES4LYF `ClownModelLoader`, the FLUX-ControlNet depth op and its measured 0.5 strength ceiling, the style rack, and the ruled-out list (no editing route, no Chroma-native ControlNet, Radiance incompatible). |
+| [licences.md](chroma/licences.md) | Style-LoRA licence table **and the corrected method** — the CivitAI API is blind to the page licence badge, which outranks the permission flags. Read this before checking ANY community weight, Chroma or not. |
 
 ### [sdxl/](sdxl/) — SDXL family (sdxl-realistic, sdxl-nsfw, ill-anime-beauty, ill-anime, pony-mix)
 | File | Holds |

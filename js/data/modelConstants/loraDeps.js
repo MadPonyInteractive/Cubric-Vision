@@ -494,61 +494,75 @@ export const loraDeps = {
         sha256: '7243d2664fa35beff2cc43e3e4073d98dfaef1ed16f8a462f3a7a6547c8cf98b',
     },
     // ── Chroma style LoRAs (MPI-365) ───────────────────────────────────────────
-    // Five styles on ONE MpiStyleLoras bank, index-aligned with the graph's trigger
+    // Four styles on ONE MpiStyleLoras bank, index-aligned with the graph's trigger
     // lines and with styleLoraLabels/styleLoraImages on both Chroma cards. Model-only
     // (loraStrengths: ['model']) — the MpiLoraModel node has no clip input. Shared by
     // Chroma Flash and Chroma Hyper: the rack lives in the master template both tiers
     // are baked from, so neither card may carry a subset.
     //
-    // *** TWO GATES BEFORE THIS SHIPS — the sha256 values below are of the LOCAL files
-    // on the authoring bench, so they are correct but the URLs 404 until upload: ***
-    //   1. R2 upload (1.02GB total) — nothing downloads until then.
-    //   2. Licence check. These are community weights of UNVERIFIED provenance; resolve
-    //      each by SHA256 against the CivitAI API and confirm `allowCommercialUse`
-    //      includes `Image` before shipping — method + traps in
-    //      docs/models/klein/licences.md. Needs the VPN (CivitAI region-blocks us), and
-    //      any creator with `allowNoCredit: false` needs a `credit` block like
-    //      klein-style-anime carries.
+    // Licences verified 2026-08-02 — table, method and reasoning in
+    // docs/models/chroma/licences.md. A FIFTH style (Absolute CINEMA) was wired and then
+    // DROPPED: its creator withheld `Image`, so a user could not sell what they generated
+    // with it. It is gone from the graph too (rack renumbered) — do not re-add it.
+    //
+    // REMAINING GATE: the R2 upload (~955MB). The sha256 values below are of the LOCAL
+    // files on the authoring bench — correct, but every URL 404s until that upload lands,
+    // which is why Chroma is un-installable right now.
     'chroma-style-bwsketch': {
         id: 'chroma-style-bwsketch',
         name: 'Chroma Style — B&W Sketch',
-        origin: 'community (provenance pending SHA256 lookup)',
+        // Apache-2.0 on the model page, which is what licenses this and not the
+        // RentCivit-only permission flags — see docs/models/chroma/licences.md.
+        // Apache-2.0 §4 requires attribution, so the credit block is obligatory here.
+        origin: 'CivitAI (Chroma - Complex Chaotic B&W Stuff v2.0, Apache-2.0)',
         filename: 'loras/chroma/styles/Complex_Chaotic_BW_Stuff.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/chroma/styles/Complex_Chaotic_BW_Stuff.safetensors',
         size: '214MB',
         sha256: '69b5226e7ce7f31b11db8a2279edbd26f6623fe7ce7b49050f5a2159f037cb91',
+        credit: {
+            author: 'TijuanaSlumlord',
+            work: 'Chroma - Complex Chaotic B&W Stuff',
+            url: 'https://civitai.com/models/1978782',
+        },
     },
     'chroma-style-lenovo': {
         id: 'chroma-style-lenovo',
         name: 'Chroma Style — Lenovo',
-        origin: 'community (provenance pending SHA256 lookup)',
+        // No licence on the model page, so the permission flags ARE the terms here —
+        // and they grant Image/Rent/Sell. `allowDerivatives: false`: we ship it as-is
+        // and never merge it, so that costs us nothing.
+        origin: 'CivitAI (Lenovo UltraReal, v1.0 Chroma)',
         filename: 'loras/chroma/styles/lenovo_chroma.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/chroma/styles/lenovo_chroma.safetensors',
         size: '107MB',
         sha256: 'df934b1a366206daa3b5dcfef7c84efd9e75ca19d00867d7fe24fa2bb233fdc9',
-    },
-    'chroma-style-cinema': {
-        id: 'chroma-style-cinema',
-        name: 'Chroma Style — Cinema',
-        origin: 'community (provenance pending SHA256 lookup)',
-        filename: 'loras/chroma/styles/CHROMA_Absolute_Cinema.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/chroma/styles/CHROMA_Absolute_Cinema.safetensors',
-        size: '68MB',
-        sha256: 'd725af79c044e881a0d810b561248f07475e52a529b30d5763849f5191ab6ffa',
+        credit: {
+            author: 'Danrisi',
+            work: 'Lenovo UltraReal',
+            url: 'https://civitai.com/models/1662740',
+        },
     },
     'chroma-style-brushwork': {
         id: 'chroma-style-brushwork',
         name: 'Chroma Style — Brushwork',
-        origin: 'community (provenance pending SHA256 lookup)',
+        // Apache-2.0 on the model page, same creator and same reasoning as bwsketch.
+        origin: 'CivitAI (Chroma - Fine Tactile Brushwork v2.0, Apache-2.0)',
         filename: 'loras/chroma/styles/Fine_Tactile_Brushwork.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/chroma/styles/Fine_Tactile_Brushwork.safetensors',
         size: '214MB',
         sha256: '7b594e78fb929a6dc6cc6a3dd94f87ba1489ae2774afd38d6514bf3476be307e',
+        credit: {
+            author: 'TijuanaSlumlord',
+            work: 'Chroma - Fine Tactile Brushwork',
+            url: 'https://civitai.com/models/1916402',
+        },
     },
     'chroma-style-anime': {
         id: 'chroma-style-anime',
+        // The one Chroma style whose creator waived attribution (`allowNoCredit: true`),
+        // so it carries no `credit` block — that absence is verified, not an oversight.
         name: 'Chroma Style — Anime',
-        origin: 'community (provenance pending SHA256 lookup)',
+        origin: 'CivitAI (Illustrious Anime Collection, Chroma-Anime V3)',
         filename: 'loras/chroma/styles/Chroma-Anime-v3.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/chroma/styles/Chroma-Anime-v3.safetensors',
         size: '428MB',

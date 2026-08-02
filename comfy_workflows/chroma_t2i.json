@@ -522,7 +522,7 @@
   "2654": {
     "inputs": {
       "selector": 0,
-      "triggers": "black and white sketch\ntaken on a phone\nabsolute cinema\nFine Tactile Brushwork\nanime style",
+      "triggers": "black and white sketch\ntaken on a phone\nFine Tactile Brushwork\nanime style",
       "strength_model": 0.6,
       "strength_clip": 0,
       "model": [
@@ -588,9 +588,9 @@
     "inputs": {
       "lora_1": "chroma\\styles\\Complex_Chaotic_BW_Stuff.safetensors",
       "lora_2": "chroma\\styles\\lenovo_chroma.safetensors",
-      "lora_3": "chroma\\styles\\CHROMA_Absolute_Cinema.safetensors",
-      "lora_4": "chroma\\styles\\Fine_Tactile_Brushwork.safetensors",
-      "lora_5": "chroma\\styles\\Chroma-Anime-v3.safetensors",
+      "lora_3": "chroma\\styles\\Fine_Tactile_Brushwork.safetensors",
+      "lora_4": "chroma\\styles\\Chroma-Anime-v3.safetensors",
+      "lora_5": "None",
       "style": [
         "2654",
         0

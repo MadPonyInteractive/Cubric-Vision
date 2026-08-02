@@ -11,11 +11,21 @@ GET https://civitai.com/api/v1/model-versions/by-hash/<sha256>   ->  modelId
 GET https://civitai.com/api/v1/models/<modelId>                  ->  permission flags
 ```
 
-Two traps, both hit for real:
+Three traps, all hit for real:
 
 1. **The by-hash endpoint returns a STUB `model` object** whose `allowCommercialUse`,
    `allowNoCredit` and `allowDerivatives` are all `null`. Those are not permissive
    defaults — they are absent. You MUST follow `modelId` to `/models/<id>`.
+1b. **The API is BLIND to the licence badge — the two steps above are NOT the whole
+   method.** `/models/<id>` carries no licence field at all, while the model *page* can
+   render `License: Apache 2.0`, which outranks every permission flag below it. Measured
+   on five Chroma LoRAs, 2026-08-02: two read as `RentCivit`-only by flags and are
+   Apache-2.0 in fact. Fetch the page and grep the badge —
+   `curl -sL -A "<browser UA>" https://civitai.com/models/<id>` (the `-L` matters; bare
+   `/models/<id>` 308s to the slug URL) then
+   `grep -o 'choosealicense/licenses/blob/main/markdown/[a-z0-9.-]*'`. Full reasoning,
+   including why CivitAI's ToS default grant is scoped *through the Service*:
+   [../chroma/licences.md](../chroma/licences.md).
 2. **The API region-blocks some countries** — `{"error": "Access to this service is not
    available in your region due to legal restrictions.", "code": "REGION_BLOCKED"}`.
    It needed a VPN on 2026-07-27, having worked bare the day before. If this file's
@@ -29,6 +39,11 @@ be run by a paid generation service; `Sell` = the weight itself may be sold;
 a local app whose users own their output.
 
 ## The table (checked 2026-07-26, fully re-verified 2026-07-27)
+
+> **This table predates trap 1b and was built from flags alone — no row's licence badge
+> has been read.** Re-verification is **MPI-430**, which also decides what authorises our
+> R2 mirror for badge-less weights. Treat the three "no `Image`" rows below as unsettled
+> rather than as precedent.
 
 | dep | CivitAI | creator | `allowCommercialUse` | verdict |
 |---|---|---|---|---|

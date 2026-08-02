@@ -13,8 +13,9 @@
 > in: Boogu Image Edit's localised edit (MPI-428), and Chroma's migration
 > (MPI-365 — depth, styles, Detail/Upscale reach, source dimensions).
 >
-> **Chroma's notes describe features that do not work until its five style LoRAs
-> are uploaded to R2.** Do not ship a version carrying them before that lands.
+> **Chroma's four style LoRAs were uploaded to R2 on 2026-08-02, so this block is
+> clear.** A fifth style (Cinema) was cut on a licence call before release — if you
+> are reading an older draft that lists it, the rack is four.
 
 ## whatIsNew
 
@@ -32,8 +33,8 @@
   and composition, and paint your prompt into it.
 - **Depth on Chroma.** Both Chroma models can now follow the depth and composition
   of an input image and paint your prompt into that shape.
-- **Five styles on Chroma.** Chroma gains a style rack — B&W Sketch, Lenovo,
-  Cinema, Brushwork and Anime — available on every operation, Detail and Upscale
+- **Four styles on Chroma.** Chroma gains a style rack — B&W Sketch, Lenovo,
+  Brushwork and Anime — available on every operation, Detail and Upscale
   included.
 - **Depth Strength.** Krea 2, FLUX.2 Klein and Chroma's Depth op gained a slider
   for how hard the depth map pulls. At full strength the composition is locked to

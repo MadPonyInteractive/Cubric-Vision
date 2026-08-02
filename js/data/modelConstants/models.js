@@ -227,12 +227,12 @@ export const MODELS = [
             detail:  { Input_wf_type: 6 },
             upscale: { Input_wf_type: 7 },
         },
-        styleLoraLabels: ['None', 'B&W Sketch', 'Lenovo', 'Cinema', 'Brushwork', 'Anime'],
+        styleLoraLabels: ['None', 'B&W Sketch', 'Lenovo', 'Brushwork', 'Anime'],
         // Index-aligned with styleLoraLabels; index 0 is the no-style baseline. Both
         // Chroma cards share the rack, so the same set applies to Hyper.
         styleLoraImages: [
             'chroma-style-none.webp', 'chroma-style-bwsketch.webp', 'chroma-style-lenovo.webp',
-            'chroma-style-cinema.webp', 'chroma-style-brushwork.webp', 'chroma-style-anime.webp',
+            'chroma-style-brushwork.webp', 'chroma-style-anime.webp',
         ],
         description: 'Chroma is a high-detail Flux-family image generator. It can produce some really hardcore high quality NSFW but can sometimes struggle with hands.',
         workflows: {
@@ -252,7 +252,6 @@ export const MODELS = [
             'controlnet-union-flux',         // depth op — the only FLUX.1-dev-licensed weight
             'chroma-style-bwsketch',
             'chroma-style-lenovo',
-            'chroma-style-cinema',
             'chroma-style-brushwork',
             'chroma-style-anime',
             'RES4LYF',
@@ -301,10 +300,10 @@ export const MODELS = [
             detail:  { Input_wf_type: 6 },
             upscale: { Input_wf_type: 7 },
         },
-        styleLoraLabels: ['None', 'B&W Sketch', 'Lenovo', 'Cinema', 'Brushwork', 'Anime'],
+        styleLoraLabels: ['None', 'B&W Sketch', 'Lenovo', 'Brushwork', 'Anime'],
         styleLoraImages: [
             'chroma-style-none.webp', 'chroma-style-bwsketch.webp', 'chroma-style-lenovo.webp',
-            'chroma-style-cinema.webp', 'chroma-style-brushwork.webp', 'chroma-style-anime.webp',
+            'chroma-style-brushwork.webp', 'chroma-style-anime.webp',
         ],
         description: 'A faster, lighter Chroma — the same high-detail Flux-family image generator distilled to run quicker at low VRAM. Great for realistic, hardcore NSFW; hands can still struggle.',
         workflows: {
@@ -322,7 +321,6 @@ export const MODELS = [
             'controlnet-union-flux',         // depth op — the only FLUX.1-dev-licensed weight
             'chroma-style-bwsketch',
             'chroma-style-lenovo',
-            'chroma-style-cinema',
             'chroma-style-brushwork',
             'chroma-style-anime',
             'RES4LYF',

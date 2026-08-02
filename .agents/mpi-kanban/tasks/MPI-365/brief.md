@@ -222,15 +222,31 @@ Klein's image-derived depth.
 
 ### Two gates before Chroma can ship
 
-1. **R2 upload of the 5 style LoRAs** (1.02GB). Hashes + sizes are recorded in
-   `loraDeps.js`; the URLs 404 until upload, so Chroma is un-installable today.
-2. **CivitAI SHA256 licence check** on all 5 — unverified community weights. Method +
-   traps: `docs/models/klein/licences.md`. Needs the VPN (CivitAI region-blocks us);
-   any `allowNoCredit: false` creator needs a `credit` block like `klein-style-anime`.
+1. **R2 upload of the style LoRAs** — DONE 2026-08-02, four weights, ~962 MiB. The URLs
+   404'd until then, which is what made Chroma un-installable.
+2. **CivitAI SHA256 licence check** — DONE 2026-08-02. Table, method and reasoning now in
+   `docs/models/chroma/licences.md`.
+
+**The licence check changed the product, so read that file before touching the rack.**
+Two findings:
+
+- **The documented method was incomplete.** `docs/models/klein/licences.md` read only the
+  permission flags off the v1 API, and that payload has **no licence field at all** — the
+  `License: Apache 2.0` badge lives in the server-rendered model page. Two weights that
+  read as `RentCivit`-only by flags are Apache-2.0 in fact, and Apache-2.0 outranks a
+  hosting-site checkbox. Klein's doc gained the trap; re-verifying its own table (and
+  deciding what authorises our R2 mirror for badge-less weights) is **MPI-430**.
+- **The rack is FOUR styles, not five.** `chroma-style-cinema` (Absolute CINEMA) was
+  dropped: no badge, and its creator withheld `Image`, so a user could not sell what they
+  generated with it. Removed from the deps, both ModelDefs, the display cards **and the
+  master template** — the graph was re-exported from ComfyUI and re-synced so `lora_3` is
+  Brushwork, `lora_4` Anime, `lora_5` `None`. A dead slot would have been worse than
+  useless: ComfyUI validates every combo widget at submit time, so a `lora_N` naming a
+  file nobody downloads fails EVERY Chroma prompt. Three creators require attribution and
+  carry `credit` blocks; `chroma-style-anime` waived it and its absence is deliberate.
 
 Also missing (pre-existing, not regressions): Chroma has no `progressStages` entries
-(bar counts never measured) and no `docs/models/chroma/` doc — the only image family
-without one.
+(bar counts never measured). `docs/models/chroma/` now exists — README + licences.
 
 ## Traps (carried from MPI-354 — still bite)
 
