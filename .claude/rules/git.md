@@ -33,8 +33,10 @@ structured file (`board.json`: adjacent `doing`/`done` arrays) your edit and the
 ONE hunk, so no hunk-level filter separates them. Reconstruct the file you want to commit from
 `HEAD` and stage it directly, bypassing the working tree entirely:
 `git show HEAD:<file> > tmp` → apply ONLY your changes to `tmp` as **textual** replacements
-(never `JSON.parse`/`stringify` — it reformats the whole file: `board.json` is 2-space with CRLF
-in the working tree, `task.json` VARIES per card — measure both, and see `kanban.md` § "Detect
+(never `JSON.parse`/`stringify` — it reformats the whole file: `board.json` is 2-space, but its
+LINE ENDINGS vary with who wrote it last — `core.autocrlf=true` gives CRLF to a file git checked
+out, while an agent's own rewrite lands LF and stays LF (measured 2026-08-02: LF in both the tree
+and the HEAD blob). `task.json` VARIES per card — measure both, and see `kanban.md` § "Detect
 INDENT as well as line endings") → assert their markers are absent (`next_id` unbumped, their
 ids not in your columns) → `git hash-object -w tmp` → `git update-index --cacheinfo 100644,<sha>,<file>`
 → bare `git commit -n`. `git status` then shows the file as `MM`: your version staged, theirs still

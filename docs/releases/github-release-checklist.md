@@ -21,6 +21,33 @@ online `update.*` script; GitHub is the only update source):
 
 Do not publish Vision assets with legacy `CubricStudio` artifact names.
 
+## Draft first — the tag is not created until you publish
+
+`gh release create <tag> --draft` does **not** create or push the tag. The whole
+release can be staged — all six assets uploaded, body written, target SHA
+pinned — and reviewed before anything exists publicly and before
+`.github/workflows/build-portable.yml` (`push: tags: v*`) fires its redundant
+mpi-ci build. Publish with `gh release edit <id> --draft=false`; the tag is
+created at that moment, on the `--target` SHA.
+
+```sh
+gh release create v<ver> -R MadPonyInteractive/Cubric-Vision \
+  --target <sha> --draft --title "Cubric Vision <ver>" \
+  --notes-file <body.md> <6 assets>
+gh release edit <id> --draft=false          # publishes; creates the tag
+git fetch origin --tags && git rev-parse "v<ver>^{}"   # must equal <sha>
+```
+
+**A draft's id changes every time you edit it.** An unpublished release is
+addressed as `untagged-<hash>`, not by its tag — and `gh release edit` mints a
+NEW hash, so the id you just used returns `release not found` on the very next
+call. Re-read it from the edit command's output URL before verifying. (Cost a
+false "verification failed" on 1.3.1.)
+
+Publishing is outward-facing and hard to undo — the tag, the watcher
+notifications, and the in-app update offer all land at once. Get the copy signed
+off while it is still a draft (`copy-review.md` § Gate 2).
+
 ## Platform Disclosure
 
 Include this disclosure, adjusted only when validation evidence has been

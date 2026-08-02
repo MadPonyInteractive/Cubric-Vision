@@ -10,7 +10,13 @@ that schema doc doesn't.
 When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):
 
 1. `status` is NOT free-form — canonical values are `active`/`accepted`; put blocking info in `description` or `brief.md`. **A `done` move must ALSO set `status: "done"`** — `validate.md` § and `validate_board.py` reject a `done` card still reading `status: "active"`, but `mutate.md`'s `moveTask` recipe only names `column`/`maturity`/`updated_at`, so following it literally hand-authors a validator violation. Upstream pack defect — file it there, never patch `~/.claude/skills/`.
-2. `links` must be the full 8-key set for the board's TASK WORKSPACE panel to render.
+2. `links`: **OMIT a key you have no file for — never write `null`.** `validate_board.py`
+   rejects every null with *"link '<key>' must be a relative path inside the task folder"*
+   (one violation per key; a new card with five nulls adds five). The full 8-key set is for
+   the board's TASK WORKSPACE panel, but it is only correct when the files exist — healthy
+   cards carry what they have (`MPI-426`: `brief`/`events`/`reference`/`depends_on`) and add
+   keys as files appear. `reference` and `depends_on` are legal extra keys. Bit MPI-429's
+   creation, 2026-08-02.
 3. `description` is a SHORT one-line card summary — long-form goes in `brief.md`.
 4. The `schema` VALUE is validated, not just JSON syntax — copy it VERBATIM from the templates: `task.json` → `mpi-kanban/task-card/v1` (NOT `mpi-kanban/task/v1` — a hand-authored MPI-256 dropped the `-card` and the whole board view wedged while every file still parsed), `board.json` → `mpi-kanban/board/v1`, every `events.jsonl` line → `mpi-kanban/event/v1` keyed `at` (not `ts`). "Valid JSON" ≠ "valid card"; board-blank-after-a-new-card → suspect a wrong `schema` value FIRST, before reading any reader code.
 5. `maturity` is a fixed enum owned by the skill pack, NOT this file — read `<mpi-lib>/task-board-ops/_schema.md` § Canonical `maturity` values before any card write, and derive it from the destination column. It grew from 5 values to 10 on 2026-07-31 (`todo` gained `research`/`needs-decision`/`blocked`/`deferred`, `done` gained `rejected`); never trust a cached list, here or in memory.
