@@ -634,7 +634,20 @@ function buildServerEnv(userDataPath, documentsPath) {
 
 function startServer() {
   const userDataPath = app.getPath('userData');
-  const documentsPath = app.getPath('documents');
+  // MPI-427: app.getPath('documents') THROWS when the Documents known folder can't be
+  // resolved (redirected, OneDrive-managed, shell not ready). Unguarded that reached the
+  // MPI-369 fatal handler and killed the app before any window — a user's first two
+  // launches died here with "Failed to get 'documents' path" and the third worked, which
+  // reads as the app being randomly broken. routes/shared.js getProjectsRoot() and
+  // getProjectPathsRegistryFile() already branch on APP_DOCUMENTS being falsy and fall
+  // back to the app-relative projects dir, so '' is a supported input — a degraded
+  // projects location beats a process that never opens a window.
+  let documentsPath = '';
+  try {
+    documentsPath = app.getPath('documents');
+  } catch (err) {
+    logger.warn('main', `Documents path unavailable (${err.message}) — projects fall back to the app-relative root`);
+  }
   const serverEnv = buildServerEnv(userDataPath, documentsPath);
   logger.info('main', `APP_USER_DATA set to: ${userDataPath}`);
   logger.info('main', `APP_DOCUMENTS set to: ${documentsPath}`);

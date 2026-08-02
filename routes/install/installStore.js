@@ -127,6 +127,33 @@ function createInstallStore({ broadcast, logger, now } = {}) {
         return _transition(job, DEP_TRANSITIONS, DEP_TERMINAL, to, reason);
     }
 
+    /**
+     * MPI-427 — an EXPLICIT user-driven retry, the one legitimate way out of a dep's
+     * terminal state. Deliberately NOT a table entry: widening DEP_TRANSITIONS with
+     * failed→queued would also license the reconciler to resurrect a settled job,
+     * which invariant #3 forbids. Only the requeue loops in downloadManager call this.
+     *
+     * Before this, those loops pushed 'queued' through transitionDep and were rejected
+     * with an "Illegal transition … rejected" warn on every retry. The store did end up
+     * correct — registerModelJob replaces the dep record a few lines later — so it was
+     * never a stuck UI, but the warn reads exactly like a live state-machine bug and
+     * cost a real investigation. Make the intent explicit instead of relying on the
+     * later replace to paper over it.
+     */
+    function requeueDep(depId, reason) {
+        const job = _depJobs.get(depId);
+        if (!job) return false;
+        if (job.status === DEP_STATES.QUEUED) return true;   // idempotent
+        job.status = DEP_STATES.QUEUED;
+        job.terminalAt = null;
+        // Deliberately does NOT touch downloadedBytes — this is a status function, and
+        // syncProgress owns the numbers. Zeroing here would flash the bar down to 0
+        // before the caller credits the resumable partial a line later (MPI-427).
+        _bump();
+        _logger.info('installStore', `Requeued ${depId} (${reason || 'retry'})`);
+        return true;
+    }
+
     // ── Registration ─────────────────────────────────────────────────────────────
 
     /**
@@ -357,6 +384,7 @@ function createInstallStore({ broadcast, logger, now } = {}) {
         registerModelJob,
         transitionModel,
         transitionDep,
+        requeueDep,
         syncProgress,
         pruneTerminal,
         dropModel,

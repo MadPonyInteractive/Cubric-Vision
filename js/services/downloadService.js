@@ -580,6 +580,12 @@ const downloadService = {
                     Events.emit('ui:warning', {
                         message: `Not enough disk space to install ${modelName}. Free up space and try again.`
                     });
+                } else if (data.networkBlocked) {
+                    // MPI-427 — the network refused our download host. Expected + fully
+                    // user-actionable, and the server already wrote the remedy into
+                    // data.error, so show it as-is. Same reasoning as disk-full above:
+                    // never nudge a GitHub report for a condition we can't fix in code.
+                    Events.emit('ui:warning', { message: data.error });
                 } else {
                     Events.emit('ui:error', {
                         title: 'Download Failed',
@@ -591,6 +597,8 @@ const downloadService = {
                     Events.emit('ui:warning', {
                         message: 'Not enough disk space to install this model. Free up space and try again.'
                     });
+                } else if (data.networkBlocked) {
+                    Events.emit('ui:warning', { message: data.error });   // MPI-427
                 } else {
                     Events.emit('ui:error', {
                         title: 'Download Failed',
