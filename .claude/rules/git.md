@@ -8,6 +8,7 @@ unless asked.
 
 - NEVER `git add -A` / `git add .`. Commit by explicit pathspec (`git commit --only <paths>`) — EXCEPT in the co-owned-file case below, where `--only` itself is the trap.
 - **`--only` rejects an UNTRACKED path** — `error: pathspec '<file>' did not match any file(s) known to git`, and the whole commit aborts, including the tracked paths. A NEW file must be `git add <exact paths>` first (still never `-A`/`.`), then included in the same `--only` list. Reads like a typo or a wrong working directory; it is neither.
+- **A DIRECTORY pathspec hides that same trap SILENTLY** (MPI-425, 2026-08-02). `--only <dir>/` matches the directory's TRACKED files, skips the untracked ones, prints no error and exits 0 — so a card move that creates `checklist.md` / `validation.md` / `files.json` commits *without* them, and the CLAUDE.md rule "a card move must create the files its links declare" is satisfied on disk but not in the commit. The loud form above at least stops you. **Check `git status --short` AFTER every commit, not just before** — leftover `??` lines under a path you just committed are this bug.
 - Agents MAY commit without asking.
 - The Docs-website push block in CLAUDE.md § Sibling repos always applies.
 
