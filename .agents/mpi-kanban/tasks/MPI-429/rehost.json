@@ -1,0 +1,319 @@
+[
+  {
+    "id": "krea2-raw-transformer-nsfw",
+    "size": "13.15GB",
+    "origin": "coyotte/LUSTIFY (CivitAI 573152)",
+    "sha256": "f165d4db2a4c9a8ce67f88851216ec41ee64ed508f0755de9d4dcd03175bc865",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/lustify-v10-krea-raw-int8_convrot.safetensors",
+    "filename": "diffusion_models/lustify-v10-krea-raw-int8_convrot.safetensors",
+    "name": "Krea2 Raw Transformer NSFW (int8_convrot)",
+    "up": null
+  },
+  {
+    "id": "chroma1-hd-hyper",
+    "size": "9.2GB",
+    "origin": "lodestone-rock/Chroma (HD DanrisiMix Hyper-Flash-Turbo int8)",
+    "sha256": "fbc7172b2fc9e483832d5781ef5cfe75a432c5de832b42e7fa53b24fb22547dc",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/Chroma1-HD-DanrisiMix-Hyper-Flash-Turbo-int8-convrot-simple.safetensors",
+    "filename": "diffusion_models/Chroma1-HD-DanrisiMix-Hyper-Flash-Turbo-int8-convrot-simple.safetensors",
+    "name": "Chroma1-HD-Hyper",
+    "up": null
+  },
+  {
+    "id": "qwen3vl-abliterated-clip",
+    "size": "5.24GB",
+    "origin": "huihui-ai/Huihui-Qwen3-VL-4B-Instruct-abliterated",
+    "sha256": "45fe15d359fbc6fe8773f24cebc34acedf5696d96d41a0c9a3039611ece3b866",
+    "url": "https://models.cubric.studio/vision/models/text_encoders/qwen3vl_4b_abliterated_fp8_scaled.safetensors",
+    "filename": "text_encoders/qwen3vl_4b_abliterated_fp8_scaled.safetensors",
+    "name": "Image Describer Encoder (Qwen3-VL-4B abliterated fp8_scaled)",
+    "up": null
+  },
+  {
+    "id": "ltx23-lora-merged",
+    "size": "3.87GB",
+    "origin": "Mad-Pony-Interactive/cubric-studio",
+    "sha256": "3c5f9a7ffb75db2f32f26a9636c24695c8a8b926fa83d73a45f069ff65399444",
+    "url": "https://models.cubric.studio/vision/models/loras/ltx-2.3/LTX23_softenhance_abliterated_detailer_merged.safetensors",
+    "filename": "loras/ltx-2.3/LTX23_softenhance_abliterated_detailer_merged.safetensors",
+    "name": "LTX-2.3 Soft+Abliterated+Detailer Merged LoRA (baked)",
+    "up": null
+  },
+  {
+    "id": "qwen-lora-headswap",
+    "size": "1.2GB",
+    "sha256": "0a137e61245781412421f5dee5db4ccac28b6c9952c042d1123a84609107cd10",
+    "url": "https://models.cubric.studio/vision/models/loras/qwen/bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors",
+    "filename": "loras/qwen/bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors",
+    "name": "Qwen Edit — Head Swap",
+    "up": null
+  },
+  {
+    "id": "qwen-edit-style-illustration",
+    "size": "590MB",
+    "origin": "CivArchive/2235007",
+    "sha256": "7b64be03fd3bf0a4aa7465b3942fb4bb68c252d1a514c2047094f9f2df3e58cd",
+    "url": "https://models.cubric.studio/vision/models/loras/qwen/styles/Illustration_style.safetensors",
+    "filename": "loras/qwen/styles/Illustration_style.safetensors",
+    "name": "Qwen Edit Style — Illustration",
+    "up": null
+  },
+  {
+    "id": "qwen-edit-style-caricature",
+    "size": "590MB",
+    "origin": "CivArchive/2427075",
+    "sha256": "60db309510817bfc86e23b570589b9b3d6aedc626e35632b32f54d2cc5b9cf3d",
+    "url": "https://models.cubric.studio/vision/models/loras/qwen/styles/qwen-edit-2509-caricature_v1.1.safetensors",
+    "filename": "loras/qwen/styles/qwen-edit-2509-caricature_v1.1.safetensors",
+    "name": "Qwen Edit Style — Caricature",
+    "up": null
+  },
+  {
+    "id": "chroma-style-anime",
+    "size": "428MB",
+    "origin": "CivitAI (Illustrious Anime Collection, Chroma-Anime V3)",
+    "sha256": "d1c5756064bdbc6738bf24e6152c011b8ddaf0b93585963c381c3216318900fb",
+    "url": "https://models.cubric.studio/vision/models/loras/chroma/styles/Chroma-Anime-v3.safetensors",
+    "filename": "loras/chroma/styles/Chroma-Anime-v3.safetensors",
+    "name": "Chroma Style — Anime",
+    "up": null
+  },
+  {
+    "id": "qwen-edit-style-anime3d",
+    "size": "425MB",
+    "origin": "CivArchive/2373282",
+    "sha256": "4c4cf33fc51d2f94c7e7d878a2989be3d69a321efd770d54ac42d9b49e23a799",
+    "url": "https://models.cubric.studio/vision/models/loras/qwen/styles/Qwen-Anime-V2.safetensors",
+    "filename": "loras/qwen/styles/Qwen-Anime-V2.safetensors",
+    "name": "Qwen Edit Style — Anime 3D",
+    "up": null
+  },
+  {
+    "id": "ltx23-lora-transition",
+    "size": "372MB",
+    "origin": "Mad-Pony-Interactive/cubric-studio",
+    "sha256": "ba420d6fefafced8e317e2d6ff951b312b52f534377d016b491877a00b830d33",
+    "url": "https://models.cubric.studio/vision/models/loras/ltx-2.3/ltx2.3-transition.safetensors",
+    "filename": "loras/ltx-2.3/ltx2.3-transition.safetensors",
+    "name": "LTX-2.3 Transition LoRA (baked — i2v motion/lipsync enabler)",
+    "up": null
+  },
+  {
+    "id": "qwen-edit-style-3d",
+    "size": "354MB",
+    "origin": "CivArchive/2483967",
+    "sha256": "87cee29c91abe22a657fd958d98d0dbd9fe0a43941bea1fec3aa6be0535ed5bb",
+    "url": "https://models.cubric.studio/vision/models/loras/qwen/styles/style_3d.safetensors",
+    "filename": "loras/qwen/styles/style_3d.safetensors",
+    "name": "Qwen Edit Style — 3D",
+    "up": null
+  },
+  {
+    "id": "qwen-edit-style-anime2d",
+    "size": "236MB",
+    "origin": "CivArchive/2483865",
+    "sha256": "1d25fdcff7cd2da1a8daafa5ab9dc077d15ff56b9f029ab332b1b4e13d753b03",
+    "url": "https://models.cubric.studio/vision/models/loras/qwen/styles/animal_style.safetensors",
+    "filename": "loras/qwen/styles/animal_style.safetensors",
+    "name": "Qwen Edit Style — Anime 2D",
+    "up": null
+  },
+  {
+    "id": "qwen-edit-style-zankuro",
+    "size": "236MB",
+    "origin": "CivArchive/2132600",
+    "sha256": "a3580f7af2c11d2c9a8867c32807b13284e7c84dde66fddcb29daef0fbdf1fc2",
+    "url": "https://models.cubric.studio/vision/models/loras/qwen/styles/zankuro-style-v1.safetensors",
+    "filename": "loras/qwen/styles/zankuro-style-v1.safetensors",
+    "name": "Qwen Edit Style — Anime Zankuro",
+    "up": null
+  },
+  {
+    "id": "krea2-style-midjourney",
+    "size": "218MB",
+    "origin": "Comfy-Org/Krea-2",
+    "sha256": "ad4a9f0b4d61ba77c5783b51fe3a2b637f8245144c1ce5e6a3fcd8225fd7df8a",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/style/KREA_MIDJ_1.safetensors",
+    "filename": "loras/krea-2/style/KREA_MIDJ_1.safetensors",
+    "name": "Krea2 Style — MidJourney",
+    "up": null
+  },
+  {
+    "id": "chroma-style-bwsketch",
+    "size": "214MB",
+    "origin": "CivitAI (Chroma - Complex Chaotic B&W Stuff v2.0, Apache-2.0)",
+    "sha256": "69b5226e7ce7f31b11db8a2279edbd26f6623fe7ce7b49050f5a2159f037cb91",
+    "url": "https://models.cubric.studio/vision/models/loras/chroma/styles/Complex_Chaotic_BW_Stuff.safetensors",
+    "filename": "loras/chroma/styles/Complex_Chaotic_BW_Stuff.safetensors",
+    "name": "Chroma Style — B&W Sketch",
+    "up": null
+  },
+  {
+    "id": "chroma-style-brushwork",
+    "size": "214MB",
+    "origin": "CivitAI (Chroma - Fine Tactile Brushwork v2.0, Apache-2.0)",
+    "sha256": "7b594e78fb929a6dc6cc6a3dd94f87ba1489ae2774afd38d6514bf3476be307e",
+    "url": "https://models.cubric.studio/vision/models/loras/chroma/styles/Fine_Tactile_Brushwork.safetensors",
+    "filename": "loras/chroma/styles/Fine_Tactile_Brushwork.safetensors",
+    "name": "Chroma Style — Brushwork",
+    "up": null
+  },
+  {
+    "id": "klein-style-aesthetic",
+    "size": "184MB",
+    "origin": "CivitAI (Flux Klein 4B Art)",
+    "sha256": "7243d2664fa35beff2cc43e3e4073d98dfaef1ed16f8a462f3a7a6547c8cf98b",
+    "url": "https://models.cubric.studio/vision/models/loras/flux2-klein/styles/Flux-Klein-4B-Art_10.safetensors",
+    "filename": "loras/flux2-klein/styles/Flux-Klein-4B-Art_10.safetensors",
+    "name": "Klein Style — Aesthetic",
+    "up": null
+  },
+  {
+    "id": "klein-lora-nsfw",
+    "size": "180MB",
+    "origin": "CivitAI 2458332 (Party Time, v2.0_klein4B)",
+    "sha256": "0c4aea1ba041985d2d7e6ce655b865e0fe22ea37575b3310c4619ad57dc80a00",
+    "url": "https://models.cubric.studio/vision/models/loras/flux2-klein/NSFW_party_time_v2.0_klein4b.safetensors",
+    "filename": "loras/flux2-klein/NSFW_party_time_v2.0_klein4b.safetensors",
+    "name": "FLUX.2 Klein 4B NSFW LoRA (prompt-gated)",
+    "up": null
+  },
+  {
+    "id": "qwen-edit-style-snapshot",
+    "size": "148MB",
+    "origin": "CivArchive/2681332",
+    "sha256": "1590201e0a45305c1fa00deb6ebdf33dbb4df5a9de388283911eb0c5b2c35cb5",
+    "url": "https://models.cubric.studio/vision/models/loras/qwen/styles/Amateur_snapshot.safetensors",
+    "filename": "loras/qwen/styles/Amateur_snapshot.safetensors",
+    "name": "Qwen Edit Style — SnapShot",
+    "up": null
+  },
+  {
+    "id": "chroma-style-lenovo",
+    "size": "107MB",
+    "origin": "CivitAI (Lenovo UltraReal, v1.0 Chroma)",
+    "sha256": "df934b1a366206daa3b5dcfef7c84efd9e75ca19d00867d7fe24fa2bb233fdc9",
+    "url": "https://models.cubric.studio/vision/models/loras/chroma/styles/lenovo_chroma.safetensors",
+    "filename": "loras/chroma/styles/lenovo_chroma.safetensors",
+    "name": "Chroma Style — Lenovo",
+    "up": null
+  },
+  {
+    "id": "klein-lora-refcontrol-depth",
+    "size": "92MB",
+    "origin": "FLUX.2 Klein refcontrol (depth)",
+    "sha256": "65ec4c71fa7538b2201481928609a5836773f0dc06a4041b2d28abd05826c401",
+    "url": "https://models.cubric.studio/vision/models/loras/flux2-klein/flux2_klein_4b_refcontrol_depth.safetensors",
+    "filename": "loras/flux2-klein/flux2_klein_4b_refcontrol_depth.safetensors",
+    "name": "FLUX.2 Klein 4B Depth RefControl LoRA (baked)",
+    "up": null
+  },
+  {
+    "id": "klein-style-muppets",
+    "size": "88MB",
+    "origin": "CivitAI (FLUX.2 Klein 4B Muppet Show style)",
+    "sha256": "d75818b477b4e852eeb862d03e92bcf61ef72326f8e7f0de1bebda38596fab7a",
+    "url": "https://models.cubric.studio/vision/models/loras/flux2-klein/styles/flux2-klein-4b-lora-muppetshow-style.safetensors",
+    "filename": "loras/flux2-klein/styles/flux2-klein-4b-lora-muppetshow-style.safetensors",
+    "name": "Klein Style — Muppets",
+    "up": null
+  },
+  {
+    "id": "klein-style-cartoon",
+    "size": "88MB",
+    "origin": "CivitAI (FLUX.2 Klein 4B Fluxtoon style)",
+    "sha256": "fd308c80f8801626bc0eb53f778ded7f5ae162c7c6b334f82a263ac5033d1354",
+    "url": "https://models.cubric.studio/vision/models/loras/flux2-klein/styles/flux2-klein-4b-lora-Fluxtoon-Style.safetensors",
+    "filename": "loras/flux2-klein/styles/flux2-klein-4b-lora-Fluxtoon-Style.safetensors",
+    "name": "Klein Style — Cartoon",
+    "up": null
+  },
+  {
+    "id": "klein-style-jojo",
+    "size": "88MB",
+    "origin": "CivitAI (FLUX.2 Klein 4B Jojoso style)",
+    "sha256": "dd021028b403a3760776b04e2e9c3e23551cc9fdce939e2d49c6e31d5f3d860d",
+    "url": "https://models.cubric.studio/vision/models/loras/flux2-klein/styles/flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors",
+    "filename": "loras/flux2-klein/styles/flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors",
+    "name": "Klein Style — Jojo",
+    "up": null
+  },
+  {
+    "id": "klein-style-anime",
+    "size": "88MB",
+    "origin": "CivitAI (Anime new mecha, klein4b)",
+    "sha256": "2ca647f74ca265fa3e1c22084b78006662bf0c38cf70418b1e798b25971147a0",
+    "url": "https://models.cubric.studio/vision/models/loras/flux2-klein/styles/Anime_new_mecha_klein4b.safetensors",
+    "filename": "loras/flux2-klein/styles/Anime_new_mecha_klein4b.safetensors",
+    "name": "Klein Style — Anime",
+    "up": null
+  },
+  {
+    "id": "klein-style-chibi",
+    "size": "88MB",
+    "origin": "CivitAI (Roblox chibi doll, klein4b)",
+    "sha256": "e809c8257a5f58eee14d3ab55a0f8f8b81a41f33eb1f5a3eb79f964cdcc6b7de",
+    "url": "https://models.cubric.studio/vision/models/loras/flux2-klein/styles/robloxchibidoll_lora_klein4b_000002200.safetensors",
+    "filename": "loras/flux2-klein/styles/robloxchibidoll_lora_klein4b_000002200.safetensors",
+    "name": "Klein Style — Chibi",
+    "up": null
+  },
+  {
+    "id": "klein-style-vintage",
+    "size": "88MB",
+    "origin": "CivitAI (vintage photo, klein4b)",
+    "sha256": "727ade732ac509d6cd2de73b21458973878bd8057851c70bd3aec0b337934c1b",
+    "url": "https://models.cubric.studio/vision/models/loras/flux2-klein/styles/vintage_photo.safetensors",
+    "filename": "loras/flux2-klein/styles/vintage_photo.safetensors",
+    "name": "Klein Style — Vintage",
+    "up": null
+  },
+  {
+    "id": "klein-lora-outpaint",
+    "size": "76MB",
+    "origin": "fal (FLUX.2 Klein outpaint, comfy-converted)",
+    "sha256": "b8a5142b40f2e24aa1f5cfd0710323188836f49ea70b15b5f85b1e364316bc5b",
+    "url": "https://models.cubric.studio/vision/models/loras/flux2-klein/flux2-klein-4b-outpaint.safetensors",
+    "filename": "loras/flux2-klein/flux2-klein-4b-outpaint.safetensors",
+    "name": "FLUX.2 Klein Outpaint LoRA (baked)",
+    "up": null
+  },
+  {
+    "id": "4x-AnimeSharp",
+    "size": "65MB",
+    "sha256": "e7a7de2dafd7331c1992862bbbcd9e9712a9f9f8e6303f0aaa59b4341d359bab",
+    "url": "https://models.cubric.studio/vision/models/upscale_models/4x-AnimeSharp.pth",
+    "filename": "upscale_models/4x-AnimeSharp.pth",
+    "name": "4x-AnimeSharp",
+    "up": null
+  },
+  {
+    "id": "klein-style-doodle",
+    "size": "22MB",
+    "origin": "CivitAI (klein4b doodle v1)",
+    "sha256": "5ad2d907fcaee23ae2f7b2a9bb125774cb3013d57b0a966fd050271825bdba67",
+    "url": "https://models.cubric.studio/vision/models/loras/flux2-klein/styles/klein4b-doodle_v1.safetensors",
+    "filename": "loras/flux2-klein/styles/klein4b-doodle_v1.safetensors",
+    "name": "Klein Style — Doodle",
+    "up": null
+  },
+  {
+    "id": "rife47",
+    "size": "20.4MB",
+    "sha256": "6a8a825ab2750558bdd20dcced386fd82b7222c7ba58c11d3b611d9c44f1be63",
+    "url": "https://models.cubric.studio/vision/models/frame_interpolation/rife/rife47.pth",
+    "filename": "rife47.pth",
+    "name": "RIFE 4.7",
+    "up": null
+  },
+  {
+    "id": "krea2-lora-filterbypass",
+    "size": "160B",
+    "origin": "S1LV3RC01N/Krea2FilterBypass (CivitAI 2728234)",
+    "sha256": "ec5901a2d0b8f4e4e1e7e62fe4567566f0837799f7a413b03a06f72f47934dda",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/extra/krea2filterbypass3.safetensors",
+    "filename": "loras/krea-2/extra/krea2filterbypass3.safetensors",
+    "name": "Krea2 Filter Bypass LoRA",
+    "up": null
+  }
+]

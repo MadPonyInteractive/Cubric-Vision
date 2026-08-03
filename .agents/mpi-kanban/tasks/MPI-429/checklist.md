@@ -65,13 +65,15 @@ Near-certain re-host, ~127 GB before the 1.2 sweep trims or grows it:
       228.7 GB estimate, but the authenticated sweep put the upload at 37.8 GB and
       the account footprint at 124.2 GB — and the account already carries 86.4 GB on
       free. See § Phase 1 FINAL. Revisit only if HF actually pushes back.
-- [ ] 2.2 ADD the R2 layout (`vision/models/<comfy-type>/<file>`) to the repo.
+- [x] 2.2 ADD the R2 layout (`vision/models/<comfy-type>/<file>`) to the repo.
       **Do NOT relocate the 9 v1.0.1 files at root** — shipped v1.0.1 hardcodes those
       flat resolve URLs, so moving them breaks it in the wild exactly as deleting
       would. See § Phase 1 FINAL, "PHASE 2 TRAP". The new files go in the new layout;
       the 9 stay put and are already externally located anyway.
-- [ ] 2.3 Upload the re-host set. HF structural limits are all clear at our scale
+- [x] 2.3 Upload the re-host set. HF structural limits are all clear at our scale
       (file <200 GB, <100k files/repo, <10k per folder; our max file is 41 GB).
+      **DONE 2026-08-03 12:39** — 31 of 32 up, oids verified, 0 failures.
+      `qwen-lora-headswap` HOLD (source unidentified). See § Phase 2 RUN below.
 
 ## Phase 3 — wire the mirror
 
@@ -227,3 +229,59 @@ shipped v1.0.1 has those HF resolve URLs hardcoded in its bundled `dependencies.
 **Moving** them into `vision/models/<type>/` breaks v1.0.1 in the wild exactly as deleting
 would. Phase 2.2 must ADD the new layout alongside and leave the 9 at root. Amends the
 earlier "v1 files are droppable" note, which was taken from chat before this doc was read.
+
+---
+
+# Phase 2 RUN (2026-08-03)
+
+`push.py` on this card. Detached process, resumable — a re-run skips anything whose
+HF LFS oid already matches the dep sha256, so it can be killed and restarted freely.
+
+**Bandwidth is capped by request** — Fabio needs ~1 MB/s of the link left for the
+machine to work while this runs all day. HF upload is paced to **3 MiB/s**, the R2
+pull to **6 MiB/s** (`UP_MB` / `DOWN_MB` env override both). Two traps that would
+have silently uploaded at full speed: **`hf_xet` is installed**, and the Xet client
+uploads through its own Rust transport that never touches our file object — set
+`HF_HUB_DISABLE_XET=1` to force the classic LFS path. Same for `hf_transfer`.
+The pacing wrapper is a `io.BufferedIOBase` subclass (huggingface_hub type-checks
+`path_or_fileobj`) and is **off during the local hash pass**, on for the upload.
+
+**No R2 -> HF server-side copy exists.** HF has no fetch-from-URL ingest; every
+upload is a client PUT, so the bytes transit this machine either way.
+
+**The download half is mostly skippable.** `G:/CubricModels` is the app's shared
+model store (it is the `cubric_models` root in the bench `extra_model_paths.yaml`),
+so most of the set is already on disk — including the two biggest, `krea2-raw-
+transformer-nsfw` 13.15 GB and `chroma1-hd-hyper` 9.20 GB, i.e. 22 of 37.8 GB.
+push.py prefers the local copy and only rclones from R2 when it is absent or its
+sha256 does not match.
+
+**The sha256 gate is free.** `CommitOperationAdd` hashes the file to build the LFS
+pointer, so `op.upload_info.sha256` IS the check — compare it to the dep's recorded
+sha256 before committing, then read the oid back off the hub as independent proof.
+
+- `rehost.json` — the 32-dep upload set (id, url, sha256, size, filename).
+- `located.json` — the 65 deps found byte-identical elsewhere, each with its
+  `{repo, path}`. **This is phase 3.2's input** — do not regenerate it, the sweep
+  is ~1000 HF API calls against a 1k/5-min limit. Script: scratchpad `sweep6.mjs`.
+
+HF path == R2 path (`vision/models/<comfy-type>/<file>`), so phase 3's mirror is a
+host swap for the re-hosted set. The 9 v1.0.1 files at repo root are untouched.
+
+## Phase 2 RESULT — 2026-08-03 08:57 -> 12:39 (3h42m)
+
+`uploaded=28 skipped=4 failed=0` (the 4 = 3 from the smoke test already on the hub
++ the HOLD). Independent re-check against the hub tree: **31/32 present, 31/31 oids
+match the recorded sha256, 0 mismatched.** The 9 v1.0.1 root files are all still at
+root, untouched. HTTP proof on the largest: `resolve/main/vision/models/
+diffusion_models/lustify-v10-krea-raw-int8_convrot.safetensors` -> 302 -> 200,
+`X-Linked-Size: 13148974712` = the R2 object byte for byte, `X-Linked-ETag` = the
+dep sha256.
+
+Only 2 of 31 needed an R2 pull (`ltx23-lora-transition`, `ltx23-lora-merged`) —
+everything else was already on `G:/CubricModels`. The cap held exactly: 13.15 GB in
+4592s = 2.86 MiB/s against a 3 MiB/s target.
+
+**Still open:** `qwen-lora-headswap` (1.20 GB). No `origin` recorded, sha256 404s on
+CivitAI by-hash, absent from all 968 repos swept. Source it before re-hosting — it is
+the one dep with no mirror and no provenance.

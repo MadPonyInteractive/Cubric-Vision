@@ -1,0 +1,837 @@
+[
+  {
+    "id": "ltx23-transformer-bf16",
+    "size": "41GB",
+    "origin": "Kijai/LTX2.3_comfy",
+    "sha256": "cf9c5aafda70d495ff7c9bd3d591899b3cefe679a1a2458feee4c5b6ff9db249",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors",
+    "filename": "diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors",
+    "name": "LTX-2.3 22B Distilled Transformer (bf16)",
+    "up": {
+      "repo": "Kijai/LTX2.3_comfy",
+      "path": "diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors"
+    }
+  },
+  {
+    "id": "ltx23-transformer-fp8",
+    "size": "25.2GB",
+    "origin": "Kijai/LTX2.3_comfy",
+    "sha256": "0a1d7aac2b338e8ec7e832149f1dcf11c9323272482b1cca0673d229702370f0",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors",
+    "filename": "diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors",
+    "name": "LTX-2.3 22B Distilled Transformer (fp8_scaled)",
+    "up": {
+      "repo": "Kijai/LTX2.3_comfy",
+      "path": "diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors"
+    }
+  },
+  {
+    "id": "ltx23-transformer-mxfp8",
+    "size": "24.1GB",
+    "origin": "Kijai/LTX2.3_comfy",
+    "sha256": "b7a945ff24d65ad22c6977787c2e594e74df226e35f1f9dedb64be8fdbd6ffd8",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors",
+    "filename": "diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors",
+    "name": "LTX-2.3 22B Distilled Transformer (mxfp8_block32)",
+    "up": {
+      "repo": "Kijai/LTX2.3_comfy",
+      "path": "diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors"
+    }
+  },
+  {
+    "id": "boogu-edit-transformer-high",
+    "size": "20.59GB",
+    "origin": "Boogu/Boogu-Image-0.1-Edit",
+    "sha256": "6374c9d1f4faa17d0204df6d20f777ed348bc1ac22f778e46ac79d554c67e3b1",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/boogu_image_edit_bf16.safetensors",
+    "filename": "diffusion_models/boogu_image_edit_bf16.safetensors",
+    "name": "Boogu Image Edit Transformer (bf16, High)",
+    "up": {
+      "repo": "Comfy-Org/Boogu-Image",
+      "path": "diffusion_models/boogu_image_edit_bf16.safetensors"
+    }
+  },
+  {
+    "id": "qwen-edit-transformer",
+    "size": "19GB",
+    "origin": "Comfy-Org/Qwen-Image-Edit-2511",
+    "sha256": "11b5af5ac601821d73930c84846c9a158e67177356daf927ce1c8d10f3963829",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/qwen_image_edit_2511_int8_convrot.safetensors",
+    "filename": "diffusion_models/qwen_image_edit_2511_int8_convrot.safetensors",
+    "name": "Qwen Image Edit 2511 Transformer (int8_convrot)",
+    "up": {
+      "repo": "Comfy-Org/Qwen-Image-Edit_ComfyUI",
+      "path": "split_files/diffusion_models/qwen_image_edit_2511_int8_convrot.safetensors"
+    }
+  },
+  {
+    "id": "chroma1-hd-flash",
+    "size": "17GB",
+    "origin": "lodestone-rock/Chroma (HD Flash)",
+    "sha256": "2c0c7d908d04418a48b453c293237a9826d54472cf0ba76e28697d1309d1021b",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/Chroma1-HD-Flash.safetensors",
+    "filename": "diffusion_models/Chroma1-HD-Flash.safetensors",
+    "name": "Chroma1-HD-Flash",
+    "up": {
+      "repo": "lodestones/Chroma1-Flash",
+      "path": "Chroma1-HD-Flash.safetensors"
+    }
+  },
+  {
+    "id": "wan-22-t2v-high",
+    "size": "13.55GB",
+    "origin": "smoothMixWan2214BI2V_t2vHighV30",
+    "sha256": "8032b4906fb1b4dffa407d5a5f5d663b9e0c403caed5bd3a02705b7577f2c870",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/Wan_22_t2v_High.safetensors",
+    "filename": "diffusion_models/Wan_22_t2v_High.safetensors",
+    "name": "Wan 2.2 t2v",
+    "up": {
+      "repo": "Mad-Pony-Interactive/cubric-studio",
+      "path": "Wan_22_t2v_High.safetensors"
+    }
+  },
+  {
+    "id": "wan-22-t2v-low",
+    "size": "13.55GB",
+    "origin": "smoothMixWan2214BI2V_t2vLowV30",
+    "sha256": "e7bd6fc48159f57476d7a9d98f6fada2fd52c7070f4ba496c10610f5e399e38f",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/Wan_22_t2v_Low.safetensors",
+    "filename": "diffusion_models/Wan_22_t2v_Low.safetensors",
+    "name": "Wan 2.2 t2v",
+    "up": {
+      "repo": "Mad-Pony-Interactive/cubric-studio",
+      "path": "Wan_22_t2v_Low.safetensors"
+    }
+  },
+  {
+    "id": "krea2-raw-transformer",
+    "size": "13.49GB",
+    "origin": "Comfy-Org/Krea-2",
+    "sha256": "5585a4a38c4bcfb6fde2d480a4aa6edf7f665721ebde56d30662c35a45f5fa5c",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/krea2_raw_int8_convrot.safetensors",
+    "filename": "diffusion_models/krea2_raw_int8_convrot.safetensors",
+    "name": "Krea2 Raw Transformer (int8_convrot)",
+    "up": {
+      "repo": "Comfy-Org/Krea-2",
+      "path": "diffusion_models/krea2_raw_int8_convrot.safetensors"
+    }
+  },
+  {
+    "id": "wan-22-i2v-high",
+    "size": "13.32GB",
+    "origin": "smoothMixWan2214BI2V_i2vV20High",
+    "sha256": "9620a680d91c88b4d3416f15013b37a1ff7bb96f71480d606c77aa8c6c2748b0",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/Wan_22_i2v_High.safetensors",
+    "filename": "diffusion_models/Wan_22_i2v_High.safetensors",
+    "name": "Wan 2.2 i2v",
+    "up": {
+      "repo": "Mad-Pony-Interactive/cubric-studio",
+      "path": "Wan_22_i2v_High.safetensors"
+    }
+  },
+  {
+    "id": "wan-22-i2v-low",
+    "size": "13.32GB",
+    "origin": "smoothMixWan2214BI2V_i2vV20Low",
+    "sha256": "51036c7ca9616b93eb3e990aa14686338f52f6a1da80acd6769d200a31e0068f",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/Wan_22_i2v_Low.safetensors",
+    "filename": "diffusion_models/Wan_22_i2v_Low.safetensors",
+    "name": "Wan 2.2 i2v",
+    "up": {
+      "repo": "Mad-Pony-Interactive/cubric-studio",
+      "path": "Wan_22_i2v_Low.safetensors"
+    }
+  },
+  {
+    "id": "boogu-edit-transformer-balanced",
+    "size": "11.37GB",
+    "origin": "Boogu/Boogu-Image-0.1-Edit-Turbo",
+    "sha256": "c242eca52f1388102e1fd8644945875a09ea3e85f5e944c42114c6a72328e440",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/boogu_image_edit_turbo_int8_convrot.safetensors",
+    "filename": "diffusion_models/boogu_image_edit_turbo_int8_convrot.safetensors",
+    "name": "Boogu Image Edit Transformer (turbo int8_convrot, Balanced)",
+    "up": {
+      "repo": "Comfy-Org/Boogu-Image",
+      "path": "diffusion_models/boogu_image_edit_turbo_int8_convrot.safetensors"
+    }
+  },
+  {
+    "id": "boogu-qwen3vl-8b-clip",
+    "size": "10.59GB",
+    "origin": "Boogu/Boogu-Image-0.1-Edit",
+    "sha256": "4ba424cf62e51392e4d1a39933e803706f4e823c1065f36aaf149c6453f66bcd",
+    "url": "https://models.cubric.studio/vision/models/text_encoders/qwen3vl_8b_fp8_scaled.safetensors",
+    "filename": "text_encoders/qwen3vl_8b_fp8_scaled.safetensors",
+    "name": "Boogu Text Encoder (Qwen3-VL-8B fp8_scaled)",
+    "up": {
+      "repo": "Comfy-Org/Ideogram-4",
+      "path": "text_encoders/qwen3vl_8b_fp8_scaled.safetensors"
+    }
+  },
+  {
+    "id": "ltx23-gemma-clip",
+    "size": "9.45GB",
+    "origin": "Mad-Pony-Interactive/cubric-studio",
+    "sha256": "aaca463d11e6d8d2a4bdb0d6299214c15ef78a3f73e0ef8113d5a9d0219b3f6d",
+    "url": "https://models.cubric.studio/vision/models/text_encoders/gemma_3_12B_it_fp4_mixed.safetensors",
+    "filename": "text_encoders/gemma_3_12B_it_fp4_mixed.safetensors",
+    "name": "Gemma 3 12B fp4_mixed (LTX CLIP)",
+    "up": {
+      "repo": "Comfy-Org/ltx-2",
+      "path": "split_files/text_encoders/gemma_3_12B_it_fp4_mixed.safetensors"
+    }
+  },
+  {
+    "id": "wan22-5b-model",
+    "size": "9.31GB",
+    "origin": "Wan-AI/Wan2.2-TI2V-5B",
+    "sha256": "456f901338bd9eadbded3828b819109a9b68e8a525ca5cf8d0049a69fcfeca1e",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors",
+    "filename": "diffusion_models/wan2.2_ti2v_5B_fp16.safetensors",
+    "name": "Wan 2.2 5B",
+    "up": {
+      "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+      "path": "split_files/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors"
+    }
+  },
+  {
+    "id": "t5xxl-fp16",
+    "size": "9.2GB",
+    "sha256": "6e480b09fae049a72d2a8c5fbccb8d3e92febeb233bbe9dfe7256958a9167635",
+    "url": "https://models.cubric.studio/vision/models/text_encoders/t5xxl_fp16.safetensors",
+    "filename": "text_encoders/t5xxl_fp16.safetensors",
+    "name": "t5xxl_fp16",
+    "up": {
+      "repo": "lodestones/stable-diffusion-3-medium",
+      "path": "text_encoders/t5xxl_fp16.safetensors"
+    }
+  },
+  {
+    "id": "qwen-edit-qwen25vl-7b-clip",
+    "size": "8.74GB",
+    "origin": "Comfy-Org/Qwen-Image_ComfyUI",
+    "sha256": "cb5636d852a0ea6a9075ab1bef496c0db7aef13c02350571e388aea959c5c0b4",
+    "url": "https://models.cubric.studio/vision/models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
+    "filename": "text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
+    "name": "Qwen Image Edit Text Encoder (Qwen2.5-VL-7B fp8_scaled)",
+    "up": {
+      "repo": "Comfy-Org/Qwen-Image_ComfyUI",
+      "path": "split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors"
+    }
+  },
+  {
+    "id": "qwen3-4b-clip",
+    "size": "8.04GB",
+    "origin": "FLUX.2 stack (qwen_3_4b)",
+    "sha256": "6c671498573ac2f7a5501502ccce8d2b08ea6ca2f661c458e708f36b36edfc5a",
+    "url": "https://models.cubric.studio/vision/models/text_encoders/qwen_3_4b.safetensors",
+    "filename": "text_encoders/qwen_3_4b.safetensors",
+    "name": "FLUX.2 Text Encoder (Qwen3-4B)",
+    "up": {
+      "repo": "Comfy-Org/z_image_turbo",
+      "path": "split_files/text_encoders/qwen_3_4b.safetensors"
+    }
+  },
+  {
+    "id": "sdxl-realistic",
+    "size": "6.62GB",
+    "origin": "Juggernaut_XL",
+    "sha256": "4bb646ca44e460bfc121fbcd8b7a65ae2b7a85f89c9e9ffe4d078db6e488d5ff",
+    "url": "https://models.cubric.studio/vision/models/checkpoints/SDXL_Realistic.safetensors",
+    "filename": "checkpoints/SDXL_Realistic.safetensors",
+    "name": "SDXL Realistic",
+    "up": {
+      "repo": "Mad-Pony-Interactive/cubric-studio",
+      "path": "SDXL_Realistic.safetensors"
+    }
+  },
+  {
+    "id": "pony-mix",
+    "size": "6.62GB",
+    "origin": "animergemeij_v30VAE",
+    "sha256": "455ea6628d79546bb63147758522706f8a6592ade65f847da0aec8968bf29a4b",
+    "url": "https://models.cubric.studio/vision/models/checkpoints/PONY_Mix.safetensors",
+    "filename": "checkpoints/PONY_Mix.safetensors",
+    "name": "PONY Mix",
+    "up": {
+      "repo": "Mad-Pony-Interactive/cubric-studio",
+      "path": "PONY_Mix.safetensors"
+    }
+  },
+  {
+    "id": "sdxl-nsfw",
+    "size": "6.46GB",
+    "origin": "lustify_7",
+    "sha256": "4073cbe470446d0f1806e82d560d14af5b813ec1091b26ad7a69f8162f4a7ac1",
+    "url": "https://models.cubric.studio/vision/models/checkpoints/SDXL_NSFW.safetensors",
+    "filename": "checkpoints/SDXL_NSFW.safetensors",
+    "name": "SDXL NSFW",
+    "up": {
+      "repo": "Mad-Pony-Interactive/cubric-studio",
+      "path": "SDXL_NSFW.safetensors"
+    }
+  },
+  {
+    "id": "ill-anime",
+    "size": "6.46GB",
+    "origin": "animemix_v80",
+    "sha256": "f548b5b4953c3ba71f9769c98005b95a41a7f8e0b666a509bb938cedf70347fd",
+    "url": "https://models.cubric.studio/vision/models/checkpoints/ILL_Anime.safetensors",
+    "filename": "checkpoints/ILL_Anime.safetensors",
+    "name": "ILL Anime",
+    "up": {
+      "repo": "Mad-Pony-Interactive/cubric-studio",
+      "path": "ILL_Anime.safetensors"
+    }
+  },
+  {
+    "id": "ill-anime-beauty",
+    "size": "6.46GB",
+    "origin": "ramthrustsNSFWPINK_alchemyMix176",
+    "sha256": "bbebe76d8fcc488b630d6dd74d111bb170b5d5c82a43fca0d99cd8e263766318",
+    "url": "https://models.cubric.studio/vision/models/checkpoints/ILL_Anime_Beauty.safetensors",
+    "filename": "checkpoints/ILL_Anime_Beauty.safetensors",
+    "name": "ILL Anime Beauty",
+    "up": {
+      "repo": "Mad-Pony-Interactive/cubric-studio",
+      "path": "ILL_Anime_Beauty.safetensors"
+    }
+  },
+  {
+    "id": "umt5_xxl_fp8_e4m3fn_scaled",
+    "size": "6.27GB",
+    "sha256": "c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68",
+    "url": "https://models.cubric.studio/vision/models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+    "filename": "text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+    "name": "umt5_xxl_fp8_e4m3fn_scaled",
+    "up": {
+      "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+      "path": "split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
+    }
+  },
+  {
+    "id": "pid-gemma",
+    "size": "5.23GB",
+    "origin": "Comfy-Org/PixelDiT",
+    "sha256": "e7ae59c203c392db4aa4e27783e924ec3225eb563392260cf747e1130ffcdb88",
+    "url": "https://models.cubric.studio/vision/models/text_encoders/gemma_2_2b_it_elm_bf16.safetensors",
+    "filename": "text_encoders/gemma_2_2b_it_elm_bf16.safetensors",
+    "name": "PiD Gemma text encoder",
+    "up": {
+      "repo": "Comfy-Org/PixelDiT",
+      "path": "text_encoders/gemma_2_2b_it_elm_bf16.safetensors"
+    }
+  },
+  {
+    "id": "klein-4b-transformer",
+    "size": "4.07GB",
+    "origin": "wraps/FLUX.2-klein-4B-INT8-ConvRot-ComfyUI (distilled, int8_convrot quant)",
+    "sha256": "ac629fa69e0700ae689bce6b694ac0fc90ba5c24de15bd6c47195ad0c16fe90e",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/flux-2-klein-4b-int8-convrot.safetensors",
+    "filename": "diffusion_models/flux-2-klein-4b-int8-convrot.safetensors",
+    "name": "FLUX.2 Klein 4B Transformer (distilled, int8_convrot)",
+    "up": {
+      "repo": "wraps/FLUX.2-klein-4B-INT8-ConvRot-ComfyUI",
+      "path": "flux-2-klein-4b-int8-convrot.safetensors"
+    }
+  },
+  {
+    "id": "pid-flux1",
+    "size": "2.72GB",
+    "origin": "Comfy-Org/PixelDiT",
+    "sha256": "17c282ed387edad7bfdd3189c5a17363d73e3d60b5e841dfded81c3b76e211ee",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/pid_flux1_1024_to_4096_4step_bf16.safetensors",
+    "filename": "diffusion_models/pid_flux1_1024_to_4096_4step_bf16.safetensors",
+    "name": "PiD Flux1 (1024→4096)",
+    "up": {
+      "repo": "Comfy-Org/PixelDiT",
+      "path": "diffusion_models/pid_flux1_1024_to_4096_4step_bf16.safetensors"
+    }
+  },
+  {
+    "id": "pid-sdxl",
+    "size": "2.72GB",
+    "origin": "Comfy-Org/PixelDiT",
+    "sha256": "c8dd35d7d548a312f61f298d79c6f6a7731fc71031400533f91dbfb2c8a9cb02",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/pid_sdxl_1024_to_4096_4step_bf16.safetensors",
+    "filename": "diffusion_models/pid_sdxl_1024_to_4096_4step_bf16.safetensors",
+    "name": "PiD SDXL (1024→4096)",
+    "up": {
+      "repo": "Comfy-Org/PixelDiT",
+      "path": "diffusion_models/pid_sdxl_1024_to_4096_4step_bf16.safetensors"
+    }
+  },
+  {
+    "id": "pid-sd3",
+    "size": "2.72GB",
+    "origin": "Comfy-Org/PixelDiT",
+    "sha256": "f544e4b7cd414b0e3cae6c506f8b04560c2118fb9b9fcc39302b81c56377e271",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/pid_sd3_1024_to_4096_4step_bf16.safetensors",
+    "filename": "diffusion_models/pid_sd3_1024_to_4096_4step_bf16.safetensors",
+    "name": "PiD SD3 (1024→4096)",
+    "up": {
+      "repo": "Comfy-Org/PixelDiT",
+      "path": "diffusion_models/pid_sd3_1024_to_4096_4step_bf16.safetensors"
+    }
+  },
+  {
+    "id": "pid-qwenimage",
+    "size": "2.72GB",
+    "origin": "Comfy-Org/PixelDiT",
+    "sha256": "efa24eada8c414251410e786de96001b26d09701c3fe799a9f2eb0d7d3b8cf2d",
+    "url": "https://models.cubric.studio/vision/models/diffusion_models/pid_qwenimage_1024_to_4096_4step_bf16.safetensors",
+    "filename": "diffusion_models/pid_qwenimage_1024_to_4096_4step_bf16.safetensors",
+    "name": "PiD Qwen-Image (1024→4096)",
+    "up": {
+      "repo": "Comfy-Org/PixelDiT",
+      "path": "diffusion_models/pid_qwenimage_1024_to_4096_4step_bf16.safetensors"
+    }
+  },
+  {
+    "id": "controlnet-union-sdxl",
+    "size": "2.34GB",
+    "sha256": "9fae2e50cb431bfcbe05822b59ec2228df545ef27f711dea8949e9f4ed9f7cdc",
+    "url": "https://models.cubric.studio/vision/models/controlnet/ControlNet-Union-ProMax-SDXL.safetensors",
+    "filename": "controlnet/ControlNet-Union-ProMax-SDXL.safetensors",
+    "name": "ControlNet Union ProMax SDXL",
+    "up": {
+      "repo": "xinsir/controlnet-union-sdxl-1.0",
+      "path": "diffusion_pytorch_model_promax.safetensors"
+    }
+  },
+  {
+    "id": "ltx23-text-projection",
+    "size": "2.31GB",
+    "origin": "Kijai/LTX2.3_comfy",
+    "sha256": "911d59bb4cb7708179c9a0045ea0fe41212ecfb77aed3a02702b7c0a8274911f",
+    "url": "https://models.cubric.studio/vision/models/text_encoders/ltx-2.3_text_projection_bf16.safetensors",
+    "filename": "text_encoders/ltx-2.3_text_projection_bf16.safetensors",
+    "name": "LTX-2.3 Text Projection (bf16)",
+    "up": {
+      "repo": "Kijai/LTX2.3_comfy",
+      "path": "text_encoders/ltx-2.3_text_projection_bf16.safetensors"
+    }
+  },
+  {
+    "id": "sam3-multiplex",
+    "size": "1.75GB",
+    "sha256": "9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03",
+    "url": "https://models.cubric.studio/vision/models/checkpoints/sam3.1_multiplex_fp16.safetensors",
+    "filename": "checkpoints/sam3.1_multiplex_fp16.safetensors",
+    "name": "SAM 3.1 Multiplex",
+    "up": {
+      "repo": "Comfy-Org/sam3.1",
+      "path": "checkpoints/sam3.1_multiplex_fp16.safetensors"
+    }
+  },
+  {
+    "id": "ltx23-spatial-upscaler",
+    "size": "1.5GB",
+    "origin": "Lightricks/LTX-2.3",
+    "sha256": "5f416311fa8172b65af67530758964708d29a317b830d689a51143b7f91913ed",
+    "url": "https://models.cubric.studio/vision/models/latent_upscale_models/ltx-2.3-spatial-upscaler-x2-1.1.safetensors",
+    "filename": "latent_upscale_models/ltx-2.3-spatial-upscaler-x2-1.1.safetensors",
+    "name": "LTX-2.3 Spatial Upscaler x2 (stage-2)",
+    "up": {
+      "repo": "Lightricks/LTX-2.3",
+      "path": "ltx-2.3-spatial-upscaler-x2-1.1.safetensors"
+    }
+  },
+  {
+    "id": "ltx23-video-vae",
+    "size": "1.45GB",
+    "origin": "Kijai/LTX2.3_comfy",
+    "sha256": "01ea62d09bc139f95c5dee7b5c062ad6a3e6cd8be910a1983ac02e7eb5b8ee3b",
+    "url": "https://models.cubric.studio/vision/models/vae/LTX23_video_vae_bf16.safetensors",
+    "filename": "vae/LTX23_video_vae_bf16.safetensors",
+    "name": "LTX-2.3 Video VAE (bf16)",
+    "up": {
+      "repo": "Kijai/LTX2.3_comfy",
+      "path": "vae/LTX23_video_vae_bf16.safetensors"
+    }
+  },
+  {
+    "id": "wan2.2_vae",
+    "size": "1.31GB",
+    "origin": "Wan-AI/Wan2.2-TI2V-5B",
+    "sha256": "e40321bd36b9709991dae2530eb4ac303dd168276980d3e9bc4b6e2b75fed156",
+    "url": "https://models.cubric.studio/vision/models/vae/wan2.2_vae.safetensors",
+    "filename": "vae/wan2.2_vae.safetensors",
+    "name": "wan2.2_vae",
+    "up": {
+      "repo": "Comfy-Org/Wan_2.2_ComfyUI_Repackaged",
+      "path": "split_files/vae/wan2.2_vae.safetensors"
+    }
+  },
+  {
+    "id": "ltx23-lora-talkvid",
+    "size": "1.1GB",
+    "origin": "Mad-Pony-Interactive/cubric-studio",
+    "sha256": "e5af73441743b4852f228b03e444888dff3da80d2666033af2367ab7bda6d8b9",
+    "url": "https://models.cubric.studio/vision/models/loras/ltx-2.3/id-lora-talkvid/ltx-2.3-id-lora-talkvid-3k.safetensors",
+    "filename": "loras/ltx-2.3/id-lora-talkvid/ltx-2.3-id-lora-talkvid-3k.safetensors",
+    "name": "LTX-2.3 ID LoRA TalkVid-3K (baked — voice-ID)",
+    "up": {
+      "repo": "Comfy-Org/ltx-2.3",
+      "path": "split_files/loras/ltx-2.3-id-lora-talkvid-3k.safetensors"
+    }
+  },
+  {
+    "id": "krea2-lora-identity-edit",
+    "size": "0.91GB",
+    "origin": "conradlocke/krea2-identity-edit",
+    "sha256": "f53db0bb4b081d638f196865cbc9f055379704fafb788336784fc1ccde18d825",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/edit/krea2_identity_edit_v1_2_r128.safetensors",
+    "filename": "loras/krea-2/edit/krea2_identity_edit_v1_2_r128.safetensors",
+    "name": "Krea2 Identity Edit LoRA (v1.2 r128)",
+    "up": {
+      "repo": "conradlocke/krea2-identity-edit",
+      "path": "krea2_identity_edit_v1_2_r128.safetensors"
+    }
+  },
+  {
+    "id": "krea2-lora-accelerator",
+    "size": "0.87GB",
+    "origin": "TheDivergentAI/krea2-turbo-distill-lora",
+    "sha256": "0cd8b6a756456229b340d2382f30f91bd8540f9cdee4fb95edb897daf08f8c6f",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/extra/krea2_turbo_distill_r128.safetensors",
+    "filename": "loras/krea-2/extra/krea2_turbo_distill_r128.safetensors",
+    "name": "Krea2 Accelerator LoRA (Turbo distill r128)",
+    "up": {
+      "repo": "TheDivergentAI/krea2-turbo-distill-lora",
+      "path": "krea2_turbo_distill_r128.safetensors"
+    }
+  },
+  {
+    "id": "krea2-lora-depth-control",
+    "size": "822MB",
+    "origin": "Patil/Krea-2-depth-controlnet",
+    "sha256": "fb80547ed79b47c1e3fea7bb9d36297e3917b2115fab6700ca1501350f9f483c",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/control/depth-control-lora.safetensors",
+    "filename": "loras/krea-2/control/depth-control-lora.safetensors",
+    "name": "Krea2 Depth ControlNet LoRA",
+    "up": {
+      "repo": "Patil/Krea-2-depth-controlnet",
+      "path": "depth-control-lora.safetensors"
+    }
+  },
+  {
+    "id": "qwen-edit-lightning-4step",
+    "size": "810MB",
+    "origin": "lightx2v/Qwen-Image-Edit-2511-Lightning",
+    "sha256": "22226e8d05d354bb356627d428809f5afd7819399b077238a2b70a82883a904f",
+    "url": "https://models.cubric.studio/vision/models/loras/qwen/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+    "filename": "loras/qwen/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors",
+    "name": "Qwen Image Edit 2511 Lightning 4-step (Hyper)",
+    "up": {
+      "repo": "lightx2v/Qwen-Image-Edit-2511-Lightning",
+      "path": "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors"
+    }
+  },
+  {
+    "id": "qwen-edit-lightning-8step",
+    "size": "810MB",
+    "origin": "lightx2v/Qwen-Image-Edit-2511-Lightning",
+    "sha256": "a9e81a58a78f260f67b337a6f615e8fa4cd3bc79847c77b7d61a581b789b1ba8",
+    "url": "https://models.cubric.studio/vision/models/loras/qwen/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors",
+    "filename": "loras/qwen/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors",
+    "name": "Qwen Image Edit 2511 Lightning 8-step (Turbo)",
+    "up": {
+      "repo": "lightx2v/Qwen-Image-Edit-2511-Lightning",
+      "path": "Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors"
+    }
+  },
+  {
+    "id": "krea2-style-darkbrush",
+    "size": "448MB",
+    "origin": "Comfy-Org/Krea-2",
+    "sha256": "f47c4316dd93af66e0518c93b582f459571d4925b519133770c73a52cd5db7c6",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_darkbrush.safetensors",
+    "filename": "loras/krea-2/style/krea2_darkbrush.safetensors",
+    "name": "Krea2 Style — Dark Brush",
+    "up": {
+      "repo": "Comfy-Org/Krea-2",
+      "path": "loras/krea2_darkbrush.safetensors"
+    }
+  },
+  {
+    "id": "krea2-style-dotmatrix",
+    "size": "448MB",
+    "origin": "Comfy-Org/Krea-2",
+    "sha256": "805aa30d863347222485b9d3ce81642dbc70a73cebc95ab57219d98b878fceec",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_dotmatrix.safetensors",
+    "filename": "loras/krea-2/style/krea2_dotmatrix.safetensors",
+    "name": "Krea2 Style — Dot Matrix",
+    "up": {
+      "repo": "Comfy-Org/Krea-2",
+      "path": "loras/krea2_dotmatrix.safetensors"
+    }
+  },
+  {
+    "id": "krea2-style-kidsdrawing",
+    "size": "448MB",
+    "origin": "Comfy-Org/Krea-2",
+    "sha256": "8c1d45d204aeb4e34a7d9e16a7d473917592ba0048b03f4e03e037e3578ca500",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_kidsdrawing.safetensors",
+    "filename": "loras/krea-2/style/krea2_kidsdrawing.safetensors",
+    "name": "Krea2 Style — Kids Drawing",
+    "up": {
+      "repo": "Comfy-Org/Krea-2",
+      "path": "loras/krea2_kidsdrawing.safetensors"
+    }
+  },
+  {
+    "id": "krea2-style-neondrip",
+    "size": "448MB",
+    "origin": "Comfy-Org/Krea-2",
+    "sha256": "a779c14435949eabae9ce0bface4320cad6672ef3547e8489107e3498d65e871",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_neondrip.safetensors",
+    "filename": "loras/krea-2/style/krea2_neondrip.safetensors",
+    "name": "Krea2 Style — Neon Drip",
+    "up": {
+      "repo": "Comfy-Org/Krea-2",
+      "path": "loras/krea2_neondrip.safetensors"
+    }
+  },
+  {
+    "id": "krea2-style-rainywindow",
+    "size": "448MB",
+    "origin": "Comfy-Org/Krea-2",
+    "sha256": "7063a6f15ec6112ad3c06d79097b2a30a3ea7d9072821cb36021010d55989fe5",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_rainywindow.safetensors",
+    "filename": "loras/krea-2/style/krea2_rainywindow.safetensors",
+    "name": "Krea2 Style — Rainy Window",
+    "up": {
+      "repo": "Comfy-Org/Krea-2",
+      "path": "loras/krea2_rainywindow.safetensors"
+    }
+  },
+  {
+    "id": "krea2-style-retroanime",
+    "size": "448MB",
+    "origin": "Comfy-Org/Krea-2",
+    "sha256": "ca42107783d9e517c5d62cb9a9db9ab2ba4887d90e9dad97a9d1a7fe6ff14c56",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_retroanime.safetensors",
+    "filename": "loras/krea-2/style/krea2_retroanime.safetensors",
+    "name": "Krea2 Style — Retro Anime",
+    "up": {
+      "repo": "Comfy-Org/Krea-2",
+      "path": "loras/krea2_retroanime.safetensors"
+    }
+  },
+  {
+    "id": "krea2-style-softwatercolor",
+    "size": "448MB",
+    "origin": "Comfy-Org/Krea-2",
+    "sha256": "3805e8655f19fbcac116542685e3f78f3a642e8fbfb857b5352bb32a4b3d445a",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_softwatercolor.safetensors",
+    "filename": "loras/krea-2/style/krea2_softwatercolor.safetensors",
+    "name": "Krea2 Style — Soft Water Color",
+    "up": {
+      "repo": "Comfy-Org/Krea-2",
+      "path": "loras/krea2_softwatercolor.safetensors"
+    }
+  },
+  {
+    "id": "krea2-style-sunsetblur",
+    "size": "448MB",
+    "origin": "Comfy-Org/Krea-2",
+    "sha256": "194abdd531ca190d32799f26ab5bab634aa5ba3f07b7a60ffb282657db8bf3a0",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_sunsetblur.safetensors",
+    "filename": "loras/krea-2/style/krea2_sunsetblur.safetensors",
+    "name": "Krea2 Style — Sunset Blur",
+    "up": {
+      "repo": "Comfy-Org/Krea-2",
+      "path": "loras/krea2_sunsetblur.safetensors"
+    }
+  },
+  {
+    "id": "krea2-style-vintagetarot",
+    "size": "448MB",
+    "origin": "Comfy-Org/Krea-2",
+    "sha256": "8cca96c56658fb3ac5269f9ef2245bd07cbf1b7a189f517c8763470bb1385f9f",
+    "url": "https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_vintagetarot.safetensors",
+    "filename": "loras/krea-2/style/krea2_vintagetarot.safetensors",
+    "name": "Krea2 Style — Vintage Tarot",
+    "up": {
+      "repo": "Comfy-Org/Krea-2",
+      "path": "loras/krea2_vintagetarot.safetensors"
+    }
+  },
+  {
+    "id": "birefnet",
+    "size": "444MB",
+    "origin": "Comfy-Org/BiRefNet",
+    "sha256": "9ab37426bf4de0567af6b5d21b16151357149139362e6e8992021b8ce356a154",
+    "url": "https://models.cubric.studio/vision/models/background_removal/birefnet.safetensors",
+    "filename": "background_removal/birefnet.safetensors",
+    "name": "BiRefNet Background Removal",
+    "up": {
+      "repo": "Comfy-Org/BiRefNet",
+      "path": "background_removal/birefnet.safetensors"
+    }
+  },
+  {
+    "id": "ltx23-audio-vae",
+    "size": "370MB",
+    "origin": "Kijai/LTX2.3_comfy",
+    "sha256": "5bc10fa4adecf99dda132d916e23048cbd56797702c5fa50eb5d2079048a38c3",
+    "url": "https://models.cubric.studio/vision/models/vae/LTX23_audio_vae_bf16.safetensors",
+    "filename": "vae/LTX23_audio_vae_bf16.safetensors",
+    "name": "LTX-2.3 Audio VAE (bf16)",
+    "up": {
+      "repo": "Kijai/LTX2.3_comfy",
+      "path": "vae/LTX23_audio_vae_bf16.safetensors"
+    }
+  },
+  {
+    "id": "sam-vit-b",
+    "size": "367MB",
+    "sha256": "ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912",
+    "url": "https://models.cubric.studio/vision/models/sams/sam_vit_b_01ec64.pth",
+    "filename": "sams/sam_vit_b_01ec64.pth",
+    "name": "SAM ViT-B",
+    "up": {
+      "repo": "ybelkada/segment-anything",
+      "path": "checkpoints/sam_vit_b_01ec64.pth"
+    }
+  },
+  {
+    "id": "vae-flux2",
+    "size": "336MB",
+    "origin": "FLUX.2 stack (flux2-vae)",
+    "sha256": "d64f3a68e1cc4f9f4e29b6e0da38a0204fe9a49f2d4053f0ec1fa1ca02f9c4b5",
+    "url": "https://models.cubric.studio/vision/models/vae/flux2-vae.safetensors",
+    "filename": "vae/flux2-vae.safetensors",
+    "name": "FLUX.2 VAE",
+    "up": {
+      "repo": "Comfy-Org/flux2-dev",
+      "path": "split_files/vae/flux2-vae.safetensors"
+    }
+  },
+  {
+    "id": "vae-flux-ae",
+    "size": "335MB",
+    "origin": "Comfy-Org (flux ae)",
+    "sha256": "afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38",
+    "url": "https://models.cubric.studio/vision/models/vae/ae.safetensors",
+    "filename": "vae/ae.safetensors",
+    "name": "Flux VAE (ae)",
+    "up": {
+      "repo": "lodestones/Chroma",
+      "path": "ae.safetensors"
+    }
+  },
+  {
+    "id": "vae-sdxl",
+    "size": "335MB",
+    "origin": "stabilityai/sdxl-vae",
+    "sha256": "63aeecb90ff7bc1c115395962d3e803571385b61938377bc7089b36e81e92e2e",
+    "url": "https://models.cubric.studio/vision/models/vae/sdxl_vae.safetensors",
+    "filename": "vae/sdxl_vae.safetensors",
+    "name": "SDXL VAE",
+    "up": {
+      "repo": "stabilityai/sdxl-vae",
+      "path": "sdxl_vae.safetensors"
+    }
+  },
+  {
+    "id": "wan22-5b-turbo-lora",
+    "size": "317MB",
+    "origin": "Kijai/WanVideo_comfy — LoRAs/Wan22-Turbo (quanhaol distill)",
+    "sha256": "0ace5244e3d1256f884662c261b017249796cf5b95f05d5ed93cc02a478967b8",
+    "url": "https://models.cubric.studio/vision/models/loras/wan-2.2-5b/Wan22_TI2V_5B_Turbo_lora_rank_64_fp16.safetensors",
+    "filename": "loras/wan-2.2-5b/Wan22_TI2V_5B_Turbo_lora_rank_64_fp16.safetensors",
+    "name": "Wan 2.2 5B Turbo (4-step)",
+    "up": {
+      "repo": "Kijai/WanVideo_comfy",
+      "path": "LoRAs/Wan22-Turbo/Wan22_TI2V_5B_Turbo_lora_rank_64_fp16.safetensors"
+    }
+  },
+  {
+    "id": "wan_2.1_vae",
+    "size": "254MB",
+    "sha256": "2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b",
+    "url": "https://models.cubric.studio/vision/models/vae/wan_2.1_vae.safetensors",
+    "filename": "vae/wan_2.1_vae.safetensors",
+    "name": "wan_2.1_vae",
+    "up": {
+      "repo": "Comfy-Org/Wan_2.1_ComfyUI_repackaged",
+      "path": "split_files/vae/wan_2.1_vae.safetensors"
+    }
+  },
+  {
+    "id": "vae-qwen-image",
+    "size": "254MB",
+    "origin": "Comfy-Org/Qwen-Image_ComfyUI",
+    "sha256": "a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f",
+    "url": "https://models.cubric.studio/vision/models/vae/qwen_image_vae.safetensors",
+    "filename": "vae/qwen_image_vae.safetensors",
+    "name": "Qwen-Image VAE",
+    "up": {
+      "repo": "Comfy-Org/Krea-2",
+      "path": "vae/qwen_image_vae.safetensors"
+    }
+  },
+  {
+    "id": "vae-sd3",
+    "size": "168MB",
+    "origin": "nvidia/PiD (sd3_vae)",
+    "sha256": "f9b67a279283625caee39d61eacb5324243848477b4eb535355eaaa8423d4e09",
+    "url": "https://models.cubric.studio/vision/models/vae/sd3_vae.safetensors",
+    "filename": "vae/sd3_vae.safetensors",
+    "name": "SD3 VAE",
+    "up": {
+      "repo": "silveroxides/SD3-PonyCLIP-forfun",
+      "path": "vae/diffusion_pytorch_model.safetensors"
+    }
+  },
+  {
+    "id": "4x-NMKD-Siax",
+    "size": "67MB",
+    "sha256": "560424d9f68625713fc47e9e7289a98aabe1d744e1cd6a9ae5a35e9957fd127e",
+    "url": "https://models.cubric.studio/vision/models/upscale_models/4x_NMKD-Siax_200k.pth",
+    "filename": "upscale_models/4x_NMKD-Siax_200k.pth",
+    "name": "4x NMKD-Siax 200k",
+    "up": {
+      "repo": "uwg/upscaler",
+      "path": "ESRGAN/4x_NMKD-Siax_200k.pth"
+    }
+  },
+  {
+    "id": "person-yolov8n-seg",
+    "size": "6.9MB",
+    "sha256": "38fc8aaae97cb6e70be4ec44770005b26ed473471362afcda62a0037d7ccf432",
+    "url": "https://models.cubric.studio/vision/models/ultralytics/bbox/person_yolov8n-seg.pt",
+    "filename": "ultralytics/bbox/person_yolov8n-seg.pt",
+    "name": "person_yolov8n-seg.pt",
+    "up": {
+      "repo": "Bingsu/adetailer",
+      "path": "person_yolov8n-seg.pt"
+    }
+  },
+  {
+    "id": "face-yolov8n",
+    "size": "5.9MB",
+    "sha256": "70b640f8f60b1cf0dcc72f30caf3da9495eb2fb6509da48c53374ad6806e6a9c",
+    "url": "https://models.cubric.studio/vision/models/ultralytics/bbox/face_yolov8n.pt",
+    "filename": "ultralytics/bbox/face_yolov8n.pt",
+    "name": "face_yolov8n.pt",
+    "up": {
+      "repo": "Bingsu/adetailer",
+      "path": "face_yolov8n.pt"
+    }
+  },
+  {
+    "id": "hand-yolov8n",
+    "size": "5.9MB",
+    "sha256": "3991202eb69e9ddcb3b9ba80cdeb41e734ffaf844403d6c9f47d515cd88c6f29",
+    "url": "https://models.cubric.studio/vision/models/ultralytics/bbox/hand_yolov8n.pt",
+    "filename": "ultralytics/bbox/hand_yolov8n.pt",
+    "name": "hand_yolov8n.pt",
+    "up": {
+      "repo": "Bingsu/adetailer",
+      "path": "hand_yolov8n.pt"
+    }
+  }
+]
