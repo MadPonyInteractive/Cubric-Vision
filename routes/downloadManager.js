@@ -517,6 +517,12 @@ class FileDownloader {
     constructor(depJob, localPath) {
         this.depJob = depJob;
         this.localPath = localPath;
+        // MPI-429 — depJob.url is MUTATED by a mirror failover, so the url at failure time
+        // is whichever mirror died last. The user-facing error must keep naming the origin
+        // they recognise (models.cubric.studio) — a hostname they have never seen sends
+        // them straight back to the GitHub bug report MPI-427 exists to prevent. Which
+        // mirrors were tried is a log concern, not an error-message one.
+        this._originUrl = depJob.url;
         this._downloader = null;
         this.onProgress = null;
         this._eventsBound = false;
@@ -662,7 +668,7 @@ class FileDownloader {
             // origin once, keeping the on-disk partial (path-equal, so MPI-317 resumes
             // it rather than scrapping it). Only transport errors qualify — a SHA256
             // mismatch or a 404 would fail identically on every mirror.
-            const blocked = _describeTransportError(err, this.depJob.url);
+            const blocked = _describeTransportError(err, this._originUrl || this.depJob.url);
             if (blocked) {
                 logger.warn('download', `${this.depJob.id}: network-blocked — ${this.depJob.url} — raw: ${err.message}`);
                 this._triedUrls = this._triedUrls || new Set([this.depJob.url]);

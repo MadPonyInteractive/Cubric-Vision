@@ -5,6 +5,7 @@
 // Run: node tests/transport-error-message.test.cjs
 
 const assert = require('node:assert/strict');
+const { EventEmitter } = require('node:events');
 const { _describeTransportError, _mirrorUrlsFor, _isSameObjectUrl } = require('../routes/downloadManager.js');
 
 let passed = 0;
@@ -113,6 +114,49 @@ test('a mirrored url counts as the SAME object so the partial is resumed, not sc
         _isSameObjectUrl(R2_URL, 'https://models.cubric.studio/vision/models/vae/SOMETHING_ELSE.safetensors'),
         false, 'a genuinely different object still invalidates the partial');
     assert.equal(_isSameObjectUrl(R2_URL, 'garbage'), false, 'unparseable is never a match');
+});
+
+// MPI-429 — the three tests above check the URL MATH. They do not touch the retry that
+// consumes it, which has never executed for anyone: _MODEL_MIRRORS ships empty, so the
+// first time this code runs will be on a real blocked user the day a second origin lands.
+// Drive the 'error' handler directly with a synthetic transport failure — no network, no
+// second host, works against whatever origin the mirror turns out to be.
+test('a transport error walks EVERY mirror once, then fails — and never revisits an origin', () => {
+    delete require.cache[require.resolve('../routes/downloadManager.js')];
+    process.env.CUBRIC_MODEL_MIRRORS = 'https://m1.example.net, https://m2.example.net';
+    const fresh = require('../routes/downloadManager.js');
+
+    const depJob = { id: 'test-dep', url: R2_URL, status: 'downloading' };
+    const inst = new fresh.FileDownloader(depJob, 'C:/nowhere/LTX23_audio_vae_bf16.safetensors');
+
+    // The handler re-enters via this.download(); stub it so nothing touches disk or net.
+    const attempts = [];
+    inst.download = async () => { attempts.push(depJob.url); };
+
+    const blocked = () => Object.assign(new Error('connect ECONNREFUSED 104.21.0.1:443'), { code: 'ECONNREFUSED' });
+    const fail = () => {
+        // The handler nulls _downloader and clears _eventsBound before re-entering, so
+        // each round needs a fresh emitter — exactly what a real retry constructs.
+        inst._downloader = new EventEmitter();
+        inst._eventsBound = false;
+        inst._bindEvents();
+        inst._downloader.emit('error', blocked());
+    };
+
+    fail();
+    assert.equal(depJob.url, 'https://m1.example.net/vision/models/vae/LTX23_audio_vae_bf16.safetensors',
+        'first failure swaps to mirror 1, object path intact');
+    fail();
+    assert.equal(depJob.url, 'https://m2.example.net/vision/models/vae/LTX23_audio_vae_bf16.safetensors',
+        'second failure moves ON to mirror 2 — not back to the origin it already tried');
+    fail();
+    assert.equal(depJob.status, 'failed', 'mirrors exhausted → the dep fails instead of looping forever');
+    assert.equal(depJob.networkBlocked, true, 'still flagged network-blocked, so the UI keeps the readable remedy');
+    assert.ok(/models\.cubric\.studio/.test(depJob.error), 'the error names the ORIGINAL host the user recognises');
+    assert.equal(attempts.length, 2, 'exactly one retry per mirror — no re-attempt after exhaustion');
+
+    delete process.env.CUBRIC_MODEL_MIRRORS;
+    delete require.cache[require.resolve('../routes/downloadManager.js')];
 });
 
 console.log(`\ntransport-error-message: ${passed} passed`);
