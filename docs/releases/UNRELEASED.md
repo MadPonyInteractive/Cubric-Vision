@@ -83,3 +83,9 @@
   why on the next launch instead of vanishing silently. Because the updater that
   runs is the one already installed, this takes effect when updating FROM this
   version — updating TO it still needs you to reopen the app yourself.
+- **Pinching on a Mac trackpad no longer resizes the whole interface.** macOS
+  sends a two-finger pinch as a Ctrl+scroll, and the app was treating that as the
+  shortcut for changing UI size — so trying to zoom into an image blew up the
+  entire interface instead. Ctrl+scroll no longer changes UI size on any
+  platform; use **Ctrl** (or **Cmd**) with **+** / **-**, which always did the
+  same job.

@@ -3,7 +3,9 @@
 Rules for editing the MPI Kanban board (`.agents/mpi-kanban/`) and agent-to-agent messages.
 Board mutation mechanics live in `<mpi-lib>/task-board-ops/` (`_schema.md`, `mutate.md`,
 `validate.md`) — read the schema FIRST for any card/board write. This file holds the traps
-that schema doc doesn't.
+that schema doc doesn't. **`<mpi-lib>` resolves to
+`C:\Users\Fabio\.agents\skills\mpi-lib\` — NOT `~/.claude/skills/` and NOT the plugins
+cache**; both are the obvious first guesses and both come up empty.
 
 ## Card shape rules
 
