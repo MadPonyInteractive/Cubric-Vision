@@ -166,3 +166,28 @@ interface DownloadJob {
 The **engine** archive download (distinct from model downloads) is managed via `registerEngineDownload()` / `clearEngineDownload()` and `_activeEngineDownloader` in `routes/downloadManager.js`. `/engine/pause` + `/engine/resume` were DELETED (MPI-258 B2) — do not reintroduce them.
 
 `GET /comfy/downloads/active` reports active model downloads separately from the engine download for Electron quit warnings. On cancel both scrub the partial; on interruption MODEL downloads resume (MPI-317) — whether the engine-archive path also resumes has NOT been verified since that change; confirm before relying on it.
+
+---
+
+## Every model weight has TWO origins (MPI-429)
+
+R2 (`models.cubric.studio`) is primary; **Hugging Face is the failover**. A *transport*
+failure — and only that, never a 404 or a hash mismatch — retries the same object against
+the second origin before the dep fails. Full contract:
+`docs/download-manager.md` § "The second origin". Read it before touching mirror code.
+
+What this means when you add or edit a dep:
+
+- **`origin` is load-bearing, not a comment.** Record `<owner>/<repo>` + the upstream
+  filename. It is the input to the classification sweep that assigns second origins.
+- **Every dep needs a second route**: a per-dep `mirrorUrl` (a byte-identical copy
+  published elsewhere) or a re-host to `Mad-Pony-Interactive/cubric-studio` under the same
+  `vision/models/<comfy-type>/<file>` path (no per-dep field needed) — otherwise
+  `noMirror: true`, or the rewrite hands it a URL that 404s.
+- **The gate is the hash.** A mirror serving different bytes fails the post-download
+  SHA256 verify and the file is deleted, so "same filename upstream" proves nothing.
+- **Never decide "same object" from a URL.** The resume guard keys on the dep sha256
+  (`_shouldResumePartial`); a mirror changes the path prefix AND sometimes the filename,
+  so a URL test deletes the partial the failover exists to preserve.
+- **Local-only by construction.** The Pod wrapper's aria2c downloader never consults
+  `_mirrorUrlsFor`, so this cannot regress remote-engine speed. No engine-split sweep.

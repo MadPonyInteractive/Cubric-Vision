@@ -89,3 +89,14 @@
   entire interface instead. Ctrl+scroll no longer changes UI size on any
   platform; use **Ctrl** (or **Cmd**) with **+** / **-**, which always did the
   same job.
+- **Model downloads now have a second route when your network blocks the first.**
+  Every model file was served from one address, so an ISP filter, a school or
+  office network, or antivirus web protection sitting on that one address stopped
+  the whole catalogue — nothing would install, and the app looked broken when the
+  network was the problem. If the connection to the usual host fails, the download
+  now retries the same file from Hugging Face automatically, and anything already
+  downloaded is kept rather than started over. It also no longer loses the
+  explanation: if both routes fail you still get the "your network blocked this,
+  try a VPN" message instead of a bare error code. This helps when a network
+  blocks the address; a network that interferes with the transfer itself can still
+  break a download.
