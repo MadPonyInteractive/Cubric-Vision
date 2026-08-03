@@ -26,6 +26,13 @@ Three traps, all hit for real:
    `grep -o 'choosealicense/licenses/blob/main/markdown/[a-z0-9.-]*'`. Full reasoning,
    including why CivitAI's ToS default grant is scoped *through the Service*:
    [../chroma/licences.md](../chroma/licences.md).
+1c. **`Model not found` from by-hash does NOT mean "not on CivitAI".** Measured 2026-08-03
+   on the nine community-merge checkpoints (MPI-430): **seven of nine** returned it, while
+   the models were plainly there — same filename, same size, different sha256. Fall back to
+   `GET /api/v1/models?query=<name>` and match on the upstream FILENAME in the version's
+   `files[]`, then say in the doc that provenance is filename+creator rather than implying a
+   hash match. Table and reasoning:
+   [../community-merges-licences.md](../community-merges-licences.md).
 2. **The API region-blocks some countries** — `{"error": "Access to this service is not
    available in your region due to legal restrictions.", "code": "REGION_BLOCKED"}`.
    It needed a VPN on 2026-07-27, having worked bare the day before. If this file's

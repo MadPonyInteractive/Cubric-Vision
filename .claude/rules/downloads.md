@@ -184,10 +184,6 @@ What this means when you add or edit a dep:
   published elsewhere) or a re-host to `Mad-Pony-Interactive/cubric-studio` under the same
   `vision/models/<comfy-type>/<file>` path (no per-dep field needed) — otherwise
   `noMirror: true`, or the rewrite hands it a URL that 404s.
-- **A LICENCE can force `noMirror`, not just a missing copy.** `krea2-raw-transformer-nsfw`
-  is R2-only until 2026-08-10 because the weight is in a paid early-access window and a
-  public HF copy would redistribute it; the R2 route (app-gated) stays. Deleting an HF
-  object without setting `noMirror` leaves a 404 second route.
 - **The gate is the hash.** A mirror serving different bytes fails the post-download
   SHA256 verify and the file is deleted, so "same filename upstream" proves nothing.
 - **Never decide "same object" from a URL.** The resume guard keys on the dep sha256
