@@ -141,7 +141,13 @@ New doc: **`docs/models/community-merges-licences.md`** (routed from
 | `ill-anime` | 933065 animemix | koronen | **NO** | **yes** |
 | `ill-anime-beauty` | 2578175 NSFW-PINK | RAMTHRUST | yes | **yes** |
 | `pony-mix` | 734527 ANImergeMEij | reijlita | **NO** | **yes** |
-| `wan-22-*` (×4) | 1995784 Smooth Mix Wan 2.2 | DigitalPastel | yes | **yes** |
+| `wan-22-t2v-high/low` | 1995784 Smooth Mix Wan 2.2 | DigitalPastel | yes | **yes** |
+| `wan-22-i2v-high/low` | — | **ours** (custom merge) | n/a | n/a |
+
+Correction, same day: the two **i2v** weights are **our own merges** (user), which is the
+real reason their sha256 matched nothing — the `smoothMixWan2214BI2V_i2vV20*` filename is a
+merge input's name. Credit dropped, `origin` now says so. The **t2v** pair is *not* ours —
+it equals DigitalPastel's v3.0 files byte-for-byte, so it keeps the required credit.
 
 Shipped: all nine `origin` values rewritten to `<creator>/<model> (CivitAI <id>)`, and
 `credit` blocks on eight of nine — credited authors went **5 → 10**, verified through the

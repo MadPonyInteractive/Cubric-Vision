@@ -45,8 +45,18 @@ Badges read from the model page, flags from `/api/v1/models/<id>`, both 2026-08-
 | `pony-mix` | 734527 | ANImergeMEij | reijlita | none | **RentCivit only** | **false** | true |
 | `wan-22-t2v-high` | 1995784 | Smooth Mix Wan 2.2 14B | DigitalPastel | none | Image, RentCivit | **false** | true |
 | `wan-22-t2v-low` | 1995784 | ″ | DigitalPastel | none | Image, RentCivit | **false** | true |
-| `wan-22-i2v-high` | 1995784 | ″ | DigitalPastel | none | Image, RentCivit | **false** | true |
-| `wan-22-i2v-low` | 1995784 | ″ | DigitalPastel | none | Image, RentCivit | **false** | true |
+| `wan-22-i2v-high` | — | **our own merge** | Mad Pony Interactive | n/a | n/a | n/a | n/a |
+| `wan-22-i2v-low` | — | **our own merge** | Mad Pony Interactive | n/a | n/a | n/a | n/a |
+
+**The two i2v weights are OURS** (user, 2026-08-03), which is the actual reason their
+sha256 matches nothing on CivitAI — the `smoothMixWan2214BI2V_i2vV20*` filename they
+shipped under is a merge INPUT's name, not their provenance. So `origin` now reads
+`Mad Pony Interactive (custom i2v merge)` and they carry no `credit` block.
+
+The t2v pair is **not** ours: `8032b490…` and `e7bd6fc4…` equal DigitalPastel's v3.0 files
+byte-for-byte, so those two keep the credit — which `allowNoCredit: false` makes required
+regardless. If SmoothMix turns out to be an ingredient of the i2v merge, that same flag
+would reach the derivative; not investigated, and the user owns the call.
 
 **No badge on any of the six source models.** So every one rests on CivitAI's
 Service-scoped default grant, which does not plainly authorise our own R2/HF mirror — the

@@ -108,9 +108,10 @@ export const modelDeps = {
     'wan-22-i2v-high': {
         id: 'wan-22-i2v-high',
         name: 'Wan 2.2 i2v',
-        // upstream file: smoothMixWan2214BI2V_i2vV20High (I2V v2.0 High) — hash does NOT match upstream 1f40184e
-        origin: 'DigitalPastel/Smooth Mix Wan 2.2 14B (CivitAI 1995784)',
-        credit: { author: 'DigitalPastel', work: 'Smooth Mix Wan 2.2 14B', url: 'https://civitai.com/models/1995784' },
+        // OUR OWN MERGE (user, 2026-08-03) — which is why the sha256 does not match any
+        // CivitAI file. The `smoothMixWan2214BI2V_i2vV20High` filename it shipped under is
+        // the merge INPUT's name, not this file's provenance (upstream 1f40184e ≠ ours).
+        origin: 'Mad Pony Interactive (custom i2v merge)',
         filename: 'diffusion_models/Wan_22_i2v_High.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/Wan_22_i2v_High.safetensors',
         mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_i2v_High.safetensors',
@@ -120,9 +121,8 @@ export const modelDeps = {
     'wan-22-i2v-low': {
         id: 'wan-22-i2v-low',
         name: 'Wan 2.2 i2v',
-        // upstream file: smoothMixWan2214BI2V_i2vV20Low (I2V v2.0 Low) — hash does NOT match upstream 5de2d526
-        origin: 'DigitalPastel/Smooth Mix Wan 2.2 14B (CivitAI 1995784)',
-        credit: { author: 'DigitalPastel', work: 'Smooth Mix Wan 2.2 14B', url: 'https://civitai.com/models/1995784' },
+        // OUR OWN MERGE (user, 2026-08-03) — see wan-22-i2v-high. Upstream 5de2d526 ≠ ours.
+        origin: 'Mad Pony Interactive (custom i2v merge)',
         filename: 'diffusion_models/Wan_22_i2v_Low.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/Wan_22_i2v_Low.safetensors',
         mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_i2v_Low.safetensors',
