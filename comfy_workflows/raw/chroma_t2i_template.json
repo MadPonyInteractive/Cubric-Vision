@@ -4045,153 +4045,6 @@
       ]
     },
     {
-      "id": 2725,
-      "type": "MaskDetailerPipe",
-      "pos": [
-        2047.1997147450027,
-        310.45409237456107
-      ],
-      "size": [
-        318.24609375,
-        924.2848510742186
-      ],
-      "flags": {
-        "collapsed": false
-      },
-      "order": 105,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 5588
-        },
-        {
-          "name": "mask",
-          "type": "MASK",
-          "link": 5589
-        },
-        {
-          "name": "basic_pipe",
-          "type": "BASIC_PIPE",
-          "link": 5590
-        },
-        {
-          "name": "refiner_basic_pipe_opt",
-          "shape": 7,
-          "type": "BASIC_PIPE",
-          "link": null
-        },
-        {
-          "name": "detailer_hook",
-          "shape": 7,
-          "type": "DETAILER_HOOK",
-          "link": null
-        },
-        {
-          "name": "scheduler_func_opt",
-          "shape": 7,
-          "type": "SCHEDULER_FUNC",
-          "link": null
-        },
-        {
-          "name": "seed",
-          "type": "INT",
-          "widget": {
-            "name": "seed"
-          },
-          "link": 5591
-        },
-        {
-          "name": "steps",
-          "type": "INT",
-          "widget": {
-            "name": "steps"
-          },
-          "link": 5592
-        },
-        {
-          "name": "denoise",
-          "type": "FLOAT",
-          "widget": {
-            "name": "denoise"
-          },
-          "link": 5594
-        }
-      ],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            5578
-          ]
-        },
-        {
-          "name": "cropped_refined",
-          "shape": 6,
-          "type": "IMAGE",
-          "links": null
-        },
-        {
-          "name": "cropped_enhanced_alpha",
-          "shape": 6,
-          "type": "IMAGE",
-          "links": null
-        },
-        {
-          "name": "basic_pipe",
-          "type": "BASIC_PIPE",
-          "links": null
-        },
-        {
-          "name": "refiner_basic_pipe_opt",
-          "type": "BASIC_PIPE",
-          "links": null
-        }
-      ],
-      "title": "MaskDetailer",
-      "properties": {
-        "Node name for S&R": "MaskDetailerPipe",
-        "cnr_id": "comfyui-impact-pack",
-        "ver": "8.22.2",
-        "ue_properties": {
-          "widget_ue_connectable": {
-            "seed": true,
-            "steps": true,
-            "denoise": true
-          },
-          "version": "7.1",
-          "input_ue_unconnectable": {}
-        }
-      },
-      "widgets_values": [
-        512,
-        true,
-        1024,
-        true,
-        0,
-        "fixed",
-        20,
-        1,
-        "heun",
-        "beta",
-        0.5,
-        5,
-        1.8,
-        10,
-        0.2,
-        1,
-        1,
-        false,
-        20,
-        false,
-        true
-      ],
-      "color": "#232",
-      "bgcolor": "#353"
-    },
-    {
       "id": 2713,
       "type": "GetNode",
       "pos": [
@@ -6516,6 +6369,153 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 2725,
+      "type": "MaskDetailerPipe",
+      "pos": [
+        2047.1997147450027,
+        310.45409237456107
+      ],
+      "size": [
+        318.24609375,
+        924.2848510742186
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 105,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 5588
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 5589
+        },
+        {
+          "name": "basic_pipe",
+          "type": "BASIC_PIPE",
+          "link": 5590
+        },
+        {
+          "name": "refiner_basic_pipe_opt",
+          "shape": 7,
+          "type": "BASIC_PIPE",
+          "link": null
+        },
+        {
+          "name": "detailer_hook",
+          "shape": 7,
+          "type": "DETAILER_HOOK",
+          "link": null
+        },
+        {
+          "name": "scheduler_func_opt",
+          "shape": 7,
+          "type": "SCHEDULER_FUNC",
+          "link": null
+        },
+        {
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": 5591
+        },
+        {
+          "name": "steps",
+          "type": "INT",
+          "widget": {
+            "name": "steps"
+          },
+          "link": 5592
+        },
+        {
+          "name": "denoise",
+          "type": "FLOAT",
+          "widget": {
+            "name": "denoise"
+          },
+          "link": 5594
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            5578
+          ]
+        },
+        {
+          "name": "cropped_refined",
+          "shape": 6,
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "cropped_enhanced_alpha",
+          "shape": 6,
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "basic_pipe",
+          "type": "BASIC_PIPE",
+          "links": null
+        },
+        {
+          "name": "refiner_basic_pipe_opt",
+          "type": "BASIC_PIPE",
+          "links": null
+        }
+      ],
+      "title": "MaskDetailer",
+      "properties": {
+        "Node name for S&R": "MaskDetailerPipe",
+        "cnr_id": "comfyui-impact-pack",
+        "ver": "8.22.2",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "seed": true,
+            "steps": true,
+            "denoise": true
+          },
+          "version": "7.1",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        512,
+        true,
+        1024,
+        true,
+        0,
+        "fixed",
+        20,
+        1,
+        "heun",
+        "beta",
+        0.5,
+        5,
+        1.8,
+        10,
+        0.2,
+        1,
+        1,
+        false,
+        20,
+        false,
+        false
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
     }
   ],
   "links": [
@@ -7864,10 +7864,10 @@
     "VHS_KeepIntermediate": true,
     "links_added_by_ue": [],
     "ds": {
-      "scale": 1.3109994191500054,
+      "scale": 0.21435888100000208,
       "offset": [
-        2317.0186310485774,
-        1853.6608242139444
+        4369.694492461755,
+        3193.1558133349613
       ]
     },
     "workflowRendererVersion": "LG"
