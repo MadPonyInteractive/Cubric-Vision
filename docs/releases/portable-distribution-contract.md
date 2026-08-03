@@ -432,6 +432,26 @@ reopen"*. Both are fixed; the contract each updater now honours:
   `updateChecker.js` raises `showError`; that boot skips the update prompt so the
   user gets one message, not two stacked dialogs.
 
+**Testing the updater without cutting a release.** Both halves that look like they
+need a newer GitHub release do not — neither needs an upload (proved 2026-08-03):
+
+- *A genuinely newer release.* `check-for-update` reads
+  `require('./package.json').version`, so editing a test install's
+  `resources/app/package.json` (plus `appVersion.js` for the header) back one
+  version makes the CURRENT live release genuinely newer. Everything downstream
+  is then real — semver compare, prompt, click, fetch, apply, relaunch.
+- *A bundle with arbitrary contents, e.g. to hit `evictBusyFile`.*
+  `apply-update.cjs` accepts an already-extracted DIRECTORY as `--bundle` (the
+  MPI-62 Safari path), so a folder holding the files you want plus
+  `resources/cubric/update-manifest.json` naming them is a complete bundle — no
+  zip, no upload. `files[]` entries only need `path`; size/sha are not verified on
+  apply. Put `CubricVision.exe` in it and run through `CubricVision.exe` as node
+  and the target is genuinely busy.
+- *A failure path.* `CUBRIC_GITHUB_REPO=<owner>/<nonexistent>` makes
+  `fetch-release.cjs` fail for real.
+
+Restore the install afterwards and hash-check it against the shipped files.
+
 > **A fix to the updater only helps the release AFTER next.** The updater that
 > runs is the one already on disk, so 1.3.1 → 1.4.0 still executes 1.3.1's silent,
 > non-relaunching `win-update.cjs`. These fixes first take effect 1.4.0 → 1.5.0.
