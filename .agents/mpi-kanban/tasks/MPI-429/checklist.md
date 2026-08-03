@@ -61,12 +61,15 @@ Near-certain re-host, ~127 GB before the 1.2 sweep trims or grows it:
 
 ## Phase 2 — HF account + repo (needs Fabio)
 
-- [ ] 2.1 Pick the tier from 1.4. Free public storage is **"best-effort"** with an
-      explicit usefulness/abuse clause — not a quota to plan against. PRO includes
-      up to 10 TB public.
-- [ ] 2.2 Restructure the existing v1 repo to mirror the R2 layout
-      (`vision/models/<comfy-type>/<file>`) so the mirror stays a path rewrite,
-      not a per-dep map. v1 files are droppable — user confirmed.
+- [x] 2.1 **Stay on FREE.** Reversed the same day: an earlier pass said PRO off a
+      228.7 GB estimate, but the authenticated sweep put the upload at 37.8 GB and
+      the account footprint at 124.2 GB — and the account already carries 86.4 GB on
+      free. See § Phase 1 FINAL. Revisit only if HF actually pushes back.
+- [ ] 2.2 ADD the R2 layout (`vision/models/<comfy-type>/<file>`) to the repo.
+      **Do NOT relocate the 9 v1.0.1 files at root** — shipped v1.0.1 hardcodes those
+      flat resolve URLs, so moving them breaks it in the wild exactly as deleting
+      would. See § Phase 1 FINAL, "PHASE 2 TRAP". The new files go in the new layout;
+      the 9 stay put and are already externally located anyway.
 - [ ] 2.3 Upload the re-host set. HF structural limits are all clear at our scale
       (file <200 GB, <100k files/repo, <10k per folder; our max file is 41 GB).
 
@@ -161,3 +164,66 @@ licences; if they match, the upload drops from 142.3 GB to ~93 GB.
 PRO (up to 10 TB public) covers it with room. Even the optimistic ~93 GB upload still
 leaves 180 GB total on the account, so PRO is the answer either way unless the gated-repo
 recheck plus a prune changes the picture a lot.
+
+---
+
+# Phase 1 FINAL (2026-08-03, authenticated sweep)
+
+**Supersedes every earlier number on this card.** The declared-origin sweep was the wrong
+instrument: `origin` records where a weight CAME FROM, not where a copy SITS. Widening to
+"every repo these authors publish", authenticated with the HF token, moved the re-host
+total 142.3 -> 55.4 -> **37.8 GB**. Same method throughout (match by LFS oid = sha256);
+only the candidate set grew.
+
+| Class | Deps | GB |
+| --- | --- | --- |
+| Hosted by others, sha256 VERIFIED identical | 56 | 276.5 |
+| Already on `Mad-Pony-Interactive/cubric-studio` (the 9 v1.0.1 files) | 9 | 86.4 |
+| **NEW upload** | **32** | **37.8** |
+
+968 repos treed across 20 authors, 1 error. Script: scratchpad `sweep5.mjs`.
+
+## Tier — PRO NOT needed. 2.1 REVERSED.
+
+Account footprint after upload = 86.4 (already stored) + 37.8 = **124.2 GB**. The account
+sits at 86.4 GB on free today with no issue, so +38 GB is not a "best-effort" cliff.
+`whoami` confirms `isPro: False` and that is fine. Revisit only if HF pushes back.
+
+## The re-host 32 — 83% is four files
+
+`krea2-raw-transformer-nsfw` 13.15 (our NSFW bake), `chroma1-hd-hyper` 9.20 (our int8
+convrot), `qwen3vl-abliterated-clip` 5.24 (our repack), `ltx23-lora-merged` 3.87 (our
+merge) = 31.5 GB. Remainder: 20 CivitAI/CivArchive LoRAs 4.4 GB, `qwen-lora-headswap` 1.20,
+`ltx23-lora-transition` 0.36, `krea2-style-midjourney` 0.21, `klein-lora-refcontrol-depth`
+0.09, `klein-lora-outpaint` 0.07, `4x-AnimeSharp` 0.06, `rife47` 0.02,
+`krea2-lora-filterbypass` ~0.
+
+## Finds that overturned the earlier list
+
+`chroma1-hd-flash` 17.0 -> `lodestones/Chroma1-Flash` (the author is **`lodestones`**, not
+`lodestone-rock` — that misname is why it 401'd every earlier pass);
+`boogu-edit-transformer-high` 20.59 + `-balanced` 11.37 -> `Comfy-Org/Boogu-Image`;
+`qwen-edit-transformer` 19.0 -> `Comfy-Org/Qwen-Image-Edit_ComfyUI`;
+`boogu-qwen3vl-8b-clip` 10.59 -> `Comfy-Org/Ideogram-4`; `ltx23-gemma-clip` 9.45 ->
+`Comfy-Org/ltx-2`; `t5xxl-fp16` 9.20 -> `lodestones/stable-diffusion-3-medium`;
+`qwen3-4b-clip` 8.04 -> `Comfy-Org/z_image_turbo`; `klein-4b-transformer` 4.07 ->
+`wraps/FLUX.2-klein-4B-INT8-ConvRot-ComfyUI`; `sam3-multiplex` 1.75 -> `Comfy-Org/sam3.1`;
+`ltx23-lora-talkvid` 1.10 -> `Comfy-Org/ltx-2.3`; `sam-vit-b` 0.36 ->
+`ybelkada/segment-anything`; `vae-flux2` 0.33 -> `Comfy-Org/flux2-dev`; `vae-flux-ae` 0.33
+-> `lodestones/Chroma`; `wan22-5b-turbo-lora` 0.31 -> `Kijai/WanVideo_comfy`; `vae-sd3`
+0.16 -> `silveroxides/SD3-PonyCLIP-forfun`.
+
+## HF access — already documented, do not re-derive
+
+Token: `C:\Users\Fabio\.secrets\hf.txt`, account `Mad-Pony-Interactive`. Full contract in
+`c:/AI/Mpi/MadPony-Identity/capabilities/huggingface/README.md` (token-type trap, R2->HF
+per-file streaming recipe). CivitAI key is at `.secrets\civit.txt` for the licence pass,
+though the block is network-level so it still needs the VPN.
+
+## PHASE 2 TRAP — do NOT relocate the 9 v1.0.1 files
+
+The capability README is explicit: those 9 sit at repo **root** (flat filenames) because
+shipped v1.0.1 has those HF resolve URLs hardcoded in its bundled `dependencies.js`.
+**Moving** them into `vision/models/<type>/` breaks v1.0.1 in the wild exactly as deleting
+would. Phase 2.2 must ADD the new layout alongside and leave the 9 at root. Amends the
+earlier "v1 files are droppable" note, which was taken from chat before this doc was read.
