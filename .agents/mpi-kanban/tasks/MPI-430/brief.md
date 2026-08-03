@@ -69,3 +69,63 @@ The five Chroma weights are fully resolved. Four ship (`bwsketch`, `lenovo`, `br
 `anime`), `chroma-style-cinema` was dropped for withholding `Image`, and the rack was
 renumbered in the master template to match. Table, evidence and reasoning:
 `docs/models/chroma/licences.md`.
+
+---
+
+# Status after the MPI-429 sweep (2026-08-03) — read this before re-planning
+
+MPI-429's phase 1.5 swept the badge method across its 32-dep re-host set, which turned out
+to contain **every dep whose `origin` names CivitAI or CivArchive (22 of 22)**. So most of
+this card is already discharged. Evidence lives in the licence docs, not here.
+
+| Scope item | State |
+| --- | --- |
+| 1. badge re-check of CivitAI weights | **DONE for the 22 that declare CivitAI** — but see the gap below |
+| 2. Klein's three "no `Image`" weights | **PARTLY** — `klein-style-anime` came back **Apache-2.0** and is SETTLED CLEAR; `klein-style-chibi` and `klein-style-doodle` are still badge-less and still rest on the bundle argument |
+| 3. the redistribution decision | **DECIDED** by the user 2026-08-03 |
+| 4. make the badge step mandatory in the method | **DONE** — `docs/models/klein/licences.md` § Method, step 1b |
+| 5. `credit` blocks for `allowNoCredit: false` | **DONE** for the two found (coyotte, S1LV3RC01N); verified rendering via `MpiAbout._credits()`. Older weights remain MPI-358 |
+
+10 weights came back **Apache-2.0** that the flags-only method had looking restrictive.
+New docs: `docs/models/krea2/licences.md`, `docs/models/qwen-edit/licences.md`;
+`docs/models/klein/licences.md` table corrected.
+
+## Item 3 — DECIDED 2026-08-03
+
+Badge-less CivitAI weights (`krea2-raw-transformer-nsfw`, `krea2-lora-filterbypass`,
+`krea2-style-midjourney`, `klein-style-chibi`, `klein-style-doodle`) are governed only by
+CivitAI's Service-scoped default grant, which does not plainly authorise our own R2/HF
+mirror. **The user judged this low practical risk and elected to ship as-is. It is a
+decision, not an oversight.** Recorded in `docs/models/krea2/licences.md`. The DM-the-
+creator route stays available if a specific weight ever needs to become evidence.
+
+## The Krea 2 NSFW weight — SETTLED, do not re-litigate
+
+`krea2-raw-transformer-nsfw` is **coyotte's LUSTIFY! V10 (Krea 2), CivitAI 573152** — the
+dep had recorded `origin: 'Comfy-Org/Krea-2'` since 2026-07-16 (`b972df5b`, MPI-282), which
+was wrong and hid whose work it is. Corrected, and a `credit` block added so coyotte
+appears on the About page (attribution is **not** required here — `allowNoCredit: true` —
+the credit is deliberate).
+
+The date overlap that looks bad and is not: V10 released 2026-07-10 into paid early access
+with an open date of 2026-08-10, and we added it 2026-07-16, inside that window. **It was
+acquired legitimately** — Fabio subscribed to coyotte's paid channel and deliberately
+bought **three months** rather than the one it cost, to over-remunerate the creator, and
+the two have discussed it directly. **Decision 2026-08-03: no outreach, ship as-is, credit
+on the About page.** A later reader who spots the dates should stop here.
+
+## NEW SCOPE — 9 weights the sweep could not see (found 2026-08-03)
+
+The sweep selected on `origin` matching CivitAI/CivArchive. **Nine deps carry a bare
+community-merge FILENAME as their `origin`**, so they matched nothing and were never
+checked — and they are the highest-exposure set, because we host them AND five of them
+ship inside released v1.0.1:
+
+`sdxl-realistic` (`Juggernaut_XL`), `sdxl-nsfw` (`lustify_7`), `ill-anime`
+(`animemix_v80`), `ill-anime-beauty` (`ramthrustsNSFWPINK_alchemyMix176`), `pony-mix`
+(`animergemeij_v30VAE`), and the four `wan-22-*` (`smoothMixWan2214BI2V_*`).
+
+Juggernaut XL, LUSTIFY and SmoothMix are CivitAI names, so these are near-certainly
+CivitAI-sourced and simply undeclared. Resolve each by **SHA256**, not by that filename —
+the same root cause as MPI-429's `qwen-lora-headswap` gap: a weak `origin` field makes a
+weight invisible to any sweep. Fix the `origin` values while you are there.
