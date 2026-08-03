@@ -4,7 +4,7 @@
   "generated_at": "2026-08-02T17:30:00Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-424 masking umbrella - MPI-382 step 1, the preview contract",
     "branch": "master"
@@ -12,7 +12,7 @@
   "goal": {
     "original": "Continue the MPI-424 canvas tool family umbrella. MPI-425 (taxonomy) had shipped, so the next card in the recorded order was MPI-382 (Adjust). Plan it, then implement it.",
     "status": "in_progress",
-    "summary": "MPI-382 was planned, moved to doing, and its STEP 1 - the preview contract - is shipped and user-verified in the app. Step 2, the Adjust tool itself, has not been started. The user asked to stop here, hand off, and run MPI-END rather than continue to step 2."
+    "summary": "RESOLVED 2026-08-03. Step 2, the Adjust tool, is built: MpiToolOptionsMaskAdjust, one dilate/erode primitive read three ways, one pristine snapshot per tool entry, Apply as a layer-wide undo entry, and the Adjust branch added to the shared discardPreview seam. 318 tests pass, lint clean, five negative controls fired, the mechanism calibrated against a known circle at 8.7 ms per pass. The card stays doing/in-progress for the user-ux pass in the app."
   },
   "plan": {
     "file": ".agents/mpi-kanban/tasks/MPI-382/plan.md",

@@ -1,0 +1,31 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-431",
+  "title": "Masked edit always refills the mask - an edge band cannot survive the graph",
+  "description": "Every masked-edit branch refills the mask before it is used, so a mask with a deliberate HOLE cannot survive the graph. Found by the user 2026-08-03, immediately after MPI-382 shipped the Adjust tool: an edge band is exactly the mask you want for fixing edge errors around a subject, and the graph turns it straight back into a solid blob.\n\nMEASURED, not assumed. Every master template feeds the user mask into InpaintCropImproved with mask_fill_holes: true AND mask_expand_pixels: 6:\n  comfy_workflows/qwen_edit.json          node 243\n  comfy_workflows/klein_t2i.json          nodes 276 and 581 (node 286 already runs fill_holes false - a precedent on the same graph)\n  comfy_workflows/boogu_edit_balanced.json node 221 (and _high)\n  comfy_workflows/krea2_t2i_sfw.json      node 589 (and _nsfw)\nmask_expand_pixels: 6 is the second half of the problem - it silently grows every mask by 6px, which directly fights an Adjust shrink the user just dialled in by eye.\n\nWHAT IS UNDECIDED (this is why the card is needs-decision, not planned). The user named two candidate homes and did not pick one:\n  A. A fill toggle in the app that drives mask_fill_holes (and probably mask_expand_pixels) as injected controls. Correct if the user wants the CHOICE per run; costs an injectable control on every masked-edit template and its raw + workflow_generation twins.\n  B. A Fill button in the Adjust panel that closes the holes app-side, before the mask is ever exported, leaving the graph alone. Cheaper, and it composes with Adjust; but then the graph still expands by 6px and still fills whatever the user did not fill.\nThese are not exclusive - B without A still leaves fill_holes true in the graph, so an edge band is still destroyed. A is the one that actually unblocks the reported use case.\n\nSCOPE NOTE: this is a workflow-authoring change across every masked-edit template, so it obeys the template/runtime dual-file discipline (docs/workflow-authoring/) - raw/, scripts/workflow_generation/ and the runtime JSON all move together, and the injectable control has to be declared, not hand-edited into one file.\n\nPart of the MPI-424 canvas-tool umbrella: MPI-382 created the mask shape that exposed this, and MPI-368 (shapes) will create more of them.\n\n--- DECIDED 2026-08-03 by the user, on the same day the card was raised ---\nBOTH halves, not one: fill the holes IN THE APP, and turn mask_fill_holes OFF in the workflows. The app is where the user can see what he is filling; the graph must stop making that choice for him.\n\nklein_t2i node 286 is NOT a bug and must not be \"made consistent\" - the user wrote that branch and its mask is created INSIDE the workflow, where the fill is intended. Only the nodes fed by the USER mask change. That is the whole reason the audit had to name nodes rather than say \"every InpaintCropImproved\".\n\nSTILL OPEN - mask_expand_pixels: 6. The user: \"I think that is a necessary feature, but now that we have this system, it is probably a good idea to remove it.\" A lean, not a decision. Settle it in planning: the 6px grow exists because a tight mask stitches badly, and Adjust now lets the user add exactly the margin he wants and SEE it - which is the argument for dropping it. Whatever is chosen, an Adjust shrink must not be silently undone by the graph.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-03T05:40:00Z",
+  "updated_at": "2026-08-03T15:52:00Z",
+  "labels": [
+    "masking",
+    "workflows",
+    "comfy"
+  ],
+  "acceptance": [
+    "A mask with a deliberate hole - an Adjust edge band is the reference case - reaches the sampler with that hole intact, verified by a real run and not by reading the graph",
+    "mask_fill_holes goes FALSE on every node fed by the USER mask: qwen_edit 243, klein_t2i 276 and 581, boogu_edit balanced + high 221, krea2_t2i sfw + nsfw 589 - through the declared-control path, with raw/ and scripts/workflow_generation/ moving with the runtime JSON",
+    "klein_t2i node 286 is LEFT ALONE - its mask is built inside the workflow and the fill there is intended (user, 2026-08-03). Any sweep that \"fixes\" it has broken something",
+    "A Fill button in the Adjust panel closes holes app-side, records an UndoStack entry like Apply does, and is discarded with the rest of the preview if not applied",
+    "mask_expand_pixels: 6 is settled in the same pass - either it becomes a control or the card records why 6 stays. An Adjust shrink must not be silently undone by the graph",
+    "docs/masking-tools.md or the workflow-authoring docs record what the graph does to a user mask, so the next tool that makes an unusual mask shape does not rediscover this"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md"
+  }
+}

@@ -65,7 +65,14 @@ Close the bench BEFORE any verification round.
   `evaluateMask()`), and `maskCanvas` = manual ∪ selected picks, so `hasMask()` is true
   and the pick reaches `Input_Mask` without the user pressing Add. That is the
   MPI-372 / MPI-384 contract (the op strip must unlock on a detection), and it now
-  reads as wrong to the user. Product decision pending.
+  reads as wrong to the user. ~~Product decision pending.~~ **DECIDED and HANDED OFF
+  2026-08-03 — no longer MPI-365's item.** The user's ruling ("if a preview stops being
+  a preview, it is no longer a preview") is recorded verbatim on **MPI-426**, which owns
+  the fix and the MPI-372 replacement it owes. MPI-382's preview contract closed the
+  *leave-the-tool* half only (`mountOptions()` → `el.discardPreview()` →
+  `_exitAutoMaskMode(false)`); dispatching while STILL in Detect continues to inject the
+  un-Added pick, because `_recomposite()` still unions selected picks into `maskCanvas`
+  and `getURL()` still reads `maskCanvas`. Verified in source 2026-08-03. Track on MPI-426.
 
 ## Klein re-export, 2026-08-02 (user-authored, synced in `c7e353eb`)
 

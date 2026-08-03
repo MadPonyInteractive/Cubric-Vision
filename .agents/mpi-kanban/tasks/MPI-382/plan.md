@@ -121,10 +121,44 @@ option: a round trip per drag frame is not live.
   pre-existing and none in the touched files.
 - User check in the app: no flicker, brush strokes survive a switch, undo still correct.
 
+**Step 2 — the Adjust tool. Code, tests and docs landed 2026-08-03; the `user-ux` pass is the
+only thing left.**
+
+- `MpiToolOptionsMaskAdjust` in the Mask group, second button after Brush. Shrink/Grow slider
+  (±50 mask-px), Edge button swapping that ONE row for Outward + Inward, Apply + Reset,
+  `MpiMaskStrip{brush:false}`. New `mask_adjust_stroke` icon. Registered in `_MASK_TOOLS`,
+  `TOOL_OPTIONS_REGISTRY`, `TOOL_LABELS`, the rail group, `preloadStyles.js` and `types.js`.
+- **One pristine snapshot, not two.** The preview contract guarantees no auto picks survive into
+  this tool, so at entry `maskCanvas === manual AND NOT subtract` — `beginAdjust()` copies that
+  one canvas and every frame recomputes from it. Anti-compounding falls out of the design rather
+  than needing `pendingLayer()`.
+- **`_morph(src, r)` written once, read three ways.** Blur by |r| then threshold alpha at
+  Φ(-1) to dilate / Φ(+1) to erode; a band is `dilate(out)` minus `erode(in)`.
+- **MEASURED, not assumed** (Chromium, 1536², 300px circle): r of 1/2/3/5/8/12 land the edge
+  EXACTLY r px both directions; r=20 → 19/21 and r=50 → 47/54, which is curvature, not the
+  threshold. **8.7 ms** per pass, 17.2 ms for a band ⇒ live at the working size, so the plain
+  `getImageData` threshold beat needing the SVG `feComponentTransfer` fallback. The textbook
+  constants earned the job — no fudge table.
+- **Apply** = `_recordUndo()` after the no-op guard → manual ← preview → **subtract cleared**
+  (the preview already has the erases in it) → `_recomposite()` → re-snapshot → publish through
+  `onMaskStrokeEnd`, so shrink-to-empty relocks the op strip.
+- `el.discardPreview()` gained the Adjust branch — the first tool to extend the seam instead of
+  the call site, exactly as the contract said 368/373 would.
+- `tests/mask-adjust.test.cjs` (3) + a 4th preview-contract test. Suite **318 pass / 0 fail**
+  (was 310). Lint + lint:components: 0 errors, warnings all pre-existing and none in the touched
+  files. **Five negative controls fired**, each asserted to have applied before the run.
+
+**User-verified in the app 2026-08-03** ("it works freaking awesome"), plus one UX round the
+same day: the Edge toggle became a **Grow / Edge radio that gates the sliders** (all three rows
+were showing — a class `display: flex` outranks the UA `[hidden]` rule — so the user dragged an
+inert Outward slider first), and **Adjust moved below Detect** in the rail. Details:
+`validation.md`.
+
 ## Remaining Work
 
-- **Step 2 — the Adjust tool.** Not started. The `## Implementation` item above stands as written;
-  step 1 removed its layer-order problem, so Adjust now only ever sees `manual − subtract`.
+- Nothing on this card. The graph refilling a user mask (`mask_fill_holes: true` and
+  `mask_expand_pixels: 6` on every `InpaintCropImproved`) is **MPI-431**, raised by the user
+  from this card's edge band and carded onto the MPI-424 umbrella.
 
 ## Plan Drift
 
@@ -141,6 +175,19 @@ option: a round trip per drag frame is not live.
   split after `masking-sam3.md` and `masking-undo.md`, with routing updated in `docs/README.md`
   and the CLAUDE.md context router. MPI-368 / 375 / 373 all add to that half, so it now has
   headroom instead of needing a trim per card.
+
+- **2026-08-03 — the SVG `feComponentTransfer` was never needed.** The plan named an inline SVG
+  filter as the leading threshold mechanism, with `contrast()` ruled out. A plain `getImageData`
+  alpha pass measured **8.7 ms** at 1536², so the filter node — a document-level global to
+  install and tear down — bought nothing. Circular-offset stamping was not reached either.
+- **2026-08-03 — the mechanism is recorded in `docs/masking-tools.md`, not `docs/masking.md`.**
+  Step 1 split that file; the tool-family half is where Adjust belongs, and it has the headroom
+  the split was for (159 / 200 lines after the section landed).
+- **2026-08-03 — ONE pristine snapshot, not two layers.** The plan implied snapshotting the
+  source layers. Because the preview contract guarantees no picks survive into the tool,
+  `maskCanvas` at entry already IS `manual − subtract`, so one copy is the whole pristine state
+  and Apply writes it straight back as the new manual layer. This is also why Apply must clear
+  `subtractCanvas`: the erases are already baked into what it wrote.
 
 ## Verification
 
@@ -168,12 +215,13 @@ Then in the running app:
 
 ## Preservation Notes
 
-- `docs/masking.md` is capped at 200 lines — trim before recording the chosen mechanism and
-  the compounding rule (acceptance 9).
-- Record the discard rule in `docs/masking.md` too, and close MPI-365's "detected-but-not-
-  applied mask is still injected" open item on that card when it ships.
-- Heal `acceptance[0]` and `acceptance[4]` on this card to the 2026-08-01 re-scope.
-- `docs/masking-undo.md` names MPI-382 as a coming consumer of `pendingLayer()`; the
-  re-scope retired that. Correct the line when the mechanism is final.
+- ~~`docs/masking.md` cap / record the mechanism~~ — DONE 2026-08-03 in
+  `docs/masking-tools.md` § Adjust (measured table + the two traps).
+- ~~Heal `acceptance[0]` / `acceptance[4]`~~ — DONE 2026-08-02.
+- ~~`docs/masking-undo.md` names MPI-382 as a coming `pendingLayer()` consumer~~ — corrected
+  2026-08-03: that function now has NO consumer and says so, and `applyAdjust()` joined the
+  enumerated mutation set.
+- **STILL OPEN:** close MPI-365's "detected-but-not-applied mask is still injected — product
+  decision pending" item; step 1 resolved it and that card has not been edited.
 - MPI-368 / 375 / 373 mount into the same groups — do not re-decide the PromptBox rule,
   it is written down in `tasks/MPI-425/plan.md`.
