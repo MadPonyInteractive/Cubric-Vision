@@ -14,7 +14,9 @@ empty.
         becoming a mask tool. **USER-VERIFIED 2026-08-03** — plus the
         `_enterMode` half-wire the user caught, fixed at the cause with two new
         guards (`validation.md` § Round 1).
-  - [ ] Persist per entry (temp PNG) and Apply through a sibling server route.
-        **NEXT.** `applyPaint` does not exist; the Apply button renders disabled.
+  - [x] Persist per entry (temp PNG) and Apply through a sibling server route.
+        **USER-VERIFIED 2026-08-03** — plus Apply now bakes at the opacity slider,
+        on the user's request. The first run failed on a STALE build, not on code
+        (`main.js` needs a restart, not a reload) — `validation.md` § Round 3.
   - [ ] `docs/painting.md`, the `docs/masking-undo.md` mutation set, routing,
         UNRELEASED.md.

@@ -234,6 +234,67 @@ test('the shared strip declares a paint destination', () => {
     );
 });
 
+// MPI-375 item 4. The Apply button asks `typeof viewer.el.applyPaint === 'function'`
+// and renders DISABLED when it is missing — deliberately, so a click is never
+// swallowed. The cost of that honesty is that a lost method reads as a shipped-but-
+// inert button rather than as an error, so the method itself gets a guard.
+test('the viewer exposes the Apply the paint tool gates on', () => {
+    const panel = read('js/components/Organisms/MpiToolOptionsPaint/MpiToolOptionsPaint.js');
+    assert.match(panel, /typeof viewer\.el\.applyPaint === 'function'/,
+        'MpiToolOptionsPaint stopped gating Apply on applyPaint — a missing method would now click into silence');
+    assert.match(
+        read('js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js'),
+        /el\.applyPaint\s*=/,
+        'MpiCanvasViewer does not define el.applyPaint, so the Apply button renders permanently disabled',
+    );
+});
+
+// Apply bakes at the slider, so the new entry matches the screen. Both halves of
+// that are silent when broken: a dropped body field bakes at 100%, and a getter
+// missing from the _methods ALLOWLIST is `undefined` on el, which the optional call
+// swallows into the same wrong 100% — no error either way, just a stronger colour
+// than the user chose.
+test('Apply carries the opacity slider, and its getter is allowlisted', () => {
+    assert.match(
+        read('js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js'),
+        /opacity:\s*canvas\.getPaintOpacity\?\.\(\)/,
+        'applyPaint stopped sending the opacity — the bake would ignore the slider',
+    );
+    const methods = read('js/components/Primitives/MpiCanvas/MpiCanvas.js').match(/const _methods = \[([\s\S]*?)\n {8}\];/);
+    assert.ok(methods, '_methods allowlist not found in MpiCanvas');
+    assert.match(methods[1], /'getPaintOpacity'/,
+        'getPaintOpacity is missing from the _methods allowlist, so el.getPaintOpacity is undefined '
+        + 'and the optional call falls back to a silent 100% bake');
+});
+
+// Per-entry paint persistence is two halves and BOTH are silent when missing:
+// no write and the strokes vanish on the next entry switch; no read and they never
+// come back. The third guard is the one that bit hardest to reason about — the mask
+// TEMP delete used to remove the whole item dir, which would make Clear mask wipe a
+// paint layer that has nothing to do with it.
+test('paint persists per entry, and Clear mask cannot take it with it', () => {
+    const viewer = read('js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js');
+
+    const persist = viewer.match(/async function _persistLayers\([\s\S]*?\n {8}\}/);
+    assert.ok(persist, '_persistLayers not found in MpiCanvasViewer');
+    assert.match(persist[0], /maskTempStore\.writePaint\(/,
+        '_persistLayers never writes the paint layer — it would be lost on every entry switch');
+    assert.match(persist[0], /maskTempStore\.deletePaint\(/,
+        '_persistLayers never deletes the paint layer, so a cleared layer resurrects on the next visit');
+
+    const restore = viewer.match(/async function _restoreLayers\([\s\S]*?\n {8}\}/);
+    assert.ok(restore, '_restoreLayers not found in MpiCanvasViewer');
+    // Lookahead, not a bare substring: `setPaintFromDataURLTypo` contains the name
+    // and would satisfy a loose match — the negative control caught exactly that.
+    assert.match(restore[0], /setPaintFromDataURL(?![A-Za-z0-9_])/,
+        '_restoreLayers never reads the paint layer back — paint would persist and never return');
+
+    const del = read('main.js').match(/ipcMain\.handle\('mask-temp:delete',[\s\S]*?\n {2}\}\);/);
+    assert.ok(del, "mask-temp:delete handler not found in main.js");
+    assert.doesNotMatch(del[0], /rmSync\(dir,/,
+        'mask-temp:delete removes the whole item dir again — paint.png lives there and Clear mask would wipe it');
+});
+
 // Only the Brush tool paints. A brushless tool that still armed the brush would
 // let a drag paint with no visible brush control — the incoherence MPI-381 removed.
 test('only the brush tool mounts the strip with its brush pair', () => {

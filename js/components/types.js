@@ -1270,8 +1270,9 @@
  * Instance methods (on instance.el):
  *   loadEntry(item, idx)           — save current mask, load item's image, restore idx's mask
  *   loadCompare(itemA, itemB)     — load two images in compare mode
- *   enterMode(mode)               — enter 'crop'|'mask'|'automask' (or 'none' to exit all)
+ *   enterMode(mode)               — enter 'crop'|'mask'|'paint'|'automask' (or 'none' to exit all)
  *   exitMode()                    — exit any active tool mode
+ *   applyPaint()                  — flatten the paint layer into a new history entry
  *   getCurrentMaskDataURL()        — returns current mask as data URL, or null
  *   getMaskDataURLForEntry(item)   — returns one entry's mask data URL, or null
  *   hasMaskForEntry(item)          — resolves true when one entry has a mask
@@ -1281,6 +1282,7 @@
  * Emits:
  *   'mode-changed'  { mode }      — tool mode changed (from any source)
  *   'crop-applied'  { item }      — crop completed; item is the new HistoryItem
+ *   'paint-applied' { item }      — paint flattened; item is the new HistoryItem
  *   'mask-ready'    { hasMask }   — mask painted or cleared
  *   'entry-loaded'  { idx, hasMask } — image loaded for index
  */

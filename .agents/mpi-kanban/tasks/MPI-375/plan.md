@@ -100,18 +100,6 @@ Two things this plan decides on technical grounds and states as assumptions:
       `MpiMaskedImagePreview` (that surface belongs to `prompt` mode and destroys the canvas
       mid-stroke).
 
-- [ ] **Persist per entry, and Apply server-side.** Paint saves to a temp PNG keyed by
-      (project, group, item), loading and clearing on the same `MpiCanvasViewer` paths masks
-      use. Apply posts the layer as a data URL plus the source path to a **sibling route** in
-      `routes/projects.js` — `composite-media` wants two file paths and a mask, which paint has
-      neither of; the reusable half is the surrounding machinery (`nextSequence`, `.meta`,
-      thumbnail, response shape), and destabilising MPI-362's shipped blend to save a route is
-      the wrong trade. Sharp composites the RGBA over the base by its own alpha and appends
-      **one** history entry. All `project.json` writes go through `updateProjectJson()`.
-      **Verify:** Apply on a 4K entry — no base64 round-trip of the source, exactly one new
-      entry, and the output opened and compared against the on-screen paint. Switch entries and
-      come back: the paint is still there. Reload the app: still there.
-
 - [ ] **Document and close the loop.** New `docs/painting.md` (`docs/masking.md` is at its
       200-line cap): the layer model, the native-resolution decision, per-entry persistence,
       why paint is not a preview, and the shared-dab seam MPI-435 will parameterise. Add the
@@ -139,9 +127,21 @@ eraser, clear, opacity all confirmed by hand). Evidence: `validation.md`.
   `_isCanvasTool`, so paint keeps the PromptBox without pretending to be a mask.
 - **A pre-existing mask-brush bug fixed on the way through** — see Plan Drift.
 
+**Item 4, shipped and USER-VERIFIED 2026-08-03** ("all tests passed"). Evidence:
+`validation.md` § Round 3.
+
+- **Per-entry persistence** — `paint.png` beside the mask layers in the same TEMP
+  item dir, written when the layer has pixels and DELETED when it does not, so a
+  cleared layer cannot resurrect. Rides the existing three persist points and two
+  restore points, so no new lifecycle.
+- **`POST /project/apply-paint`** — a sibling of `composite-media`, sharing only its
+  `nextSequence` / `.meta` / thumbnail machinery. `compositeOverlay()` flattens the
+  RGBA by its own alpha; the source never round-trips as base64.
+- **`mask-temp:delete` narrowed** so Clear mask cannot take the paint layer with it.
+- **Apply honours the opacity slider**, added on the user's request at verification.
+
 ## Remaining Work
 
-- Item 4: per-entry persistence + Apply through a sibling server route.
 - Item 5: `docs/painting.md`, the `docs/masking-undo.md` mutation set, routing,
   UNRELEASED.md.
 
@@ -164,6 +164,27 @@ eraser, clear, opacity all confirmed by hand). Evidence: `validation.md`.
   drop-stale-mode triple DUPLICATED across both `modechange` subscriptions, now
   `_syncModeFromCanvas()`. Two guards added, both negative-controlled; the important
   one ties `_viewerModeFor`'s outputs to the viewer's accepted modes.
+- **2026-08-03 — item 4's "Reload the app: still there" was WRONG, and matching the
+  mask is the decision.** The mask TEMP store is **session-scoped**: `main.js`
+  deletes `MASK_TEMP_ROOT` on quit and prunes stale dirs at boot. Paint inherits
+  that, so it survives an entry switch, a tool switch and a renderer reload (Ctrl+R),
+  but **not** a quit and relaunch. Masks have always behaved this way; a paint layer
+  that outlived the session would be the odd one out, and per-project durable storage
+  is a different feature nobody asked for.
+- **2026-08-03 — `mask-temp:delete` had to stop being a directory nuke.** Not in the
+  plan's blast radius. It `rm -rf`'d the item dir, and `paint.png` now lives in that
+  dir, so **Clear mask** and **paste-mask-to-entry** would both have silently wiped
+  the paint layer — breaking the card's own acceptance criterion that the two layers
+  are independent. It now removes the three mask files by name. Both call sites mean
+  "clear the mask", so the narrowing is correct at each; a guard fails if anyone
+  restores the `rmSync(dir, …)`.
+- **2026-08-03 — Apply now HONOURS the opacity slider (user asked, at item 4's
+  verification).** The layer's own pixels stay fully opaque; the server scales the
+  FLATTENED layer's alpha once, which is the same maths as the canvas drawing it at
+  `globalAlpha`, so the new entry matches the screen. Measured exactly: 0.75 → 191,
+  0.5 → 128, 0.7 → 179 on a white-on-black probe. This does NOT reopen the
+  per-stroke-alpha decision below — a layer-wide scale has no dab build-up, which was
+  the whole reason that was refused.
 - **2026-08-03 — opacity is DISPLAY opacity, not paint alpha.** Marked with a
   `ponytail:` comment naming the ceiling: true alpha painting needs a per-stroke
   scratch buffer, because dabs overlap 75% and would build to solid within one

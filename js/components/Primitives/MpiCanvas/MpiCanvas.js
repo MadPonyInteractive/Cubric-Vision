@@ -1062,6 +1062,8 @@ class _CanvasCore {
     setPaintBrushType(type)  { this.paint.brushType = type; this.draw(); }
     setPaintColor(color)     { this.paint.color = color; this.draw(); }
     setPaintOpacity(o)       { this.paint.opacity = o; this.draw(); }
+    /** Apply bakes at this, so what the slider shows is what the new entry gets. */
+    getPaintOpacity()        { return this.paint.opacity; }
     setPaintEnabled(on)      { this.paint.paintEnabled = on !== false; this.input.updateCursor(); }
     getPaintURL()            { return this.paint.getURL(); }
     hasPaint()               { return !this.paint.isEmpty(); }
@@ -1234,7 +1236,7 @@ export const MpiCanvas = ComponentFactory.create({
             // ALLOWLIST — a core method missing here is `undefined` on el, and the
             // caller dies with "not a function" nowhere near this file.
             'setCropRatio','setCropSize','getCropRect',
-            'setPaintBrushSize','setPaintBrushType','setPaintColor','setPaintOpacity',
+            'setPaintBrushSize','setPaintBrushType','setPaintColor','setPaintOpacity','getPaintOpacity',
             'setPaintEnabled','getPaintURL','hasPaint','clearPaint','setPaintFromDataURL',
             'setProcessedImage','clearProcessedImage'
         ];

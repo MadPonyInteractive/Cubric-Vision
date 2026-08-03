@@ -2225,14 +2225,18 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // ── Canvas-viewer-only events (image groups) ─────────────────────────
 
         if (!isVideo) {
-            viewer.on('crop-applied', ({ item }) => {
+            // Crop and paint both hand back a finished file the server already
+            // wrote — same append, same selection, same reload.
+            const _appendViewerEntry = (item) => {
                 _group = appendToHistory(_group, item);
                 _currentIdx = _group.selectedIndex;
                 _persistGroup();
                 historyList.el.appendEntry(item);
                 viewer.el.loadEntry?.(item, _currentIdx);
                 viewer.el.setMaskHidden?.(false);
-            });
+            };
+            viewer.on('crop-applied',  ({ item }) => _appendViewerEntry(item));
+            viewer.on('paint-applied', ({ item }) => _appendViewerEntry(item));
 
             viewer.on('entry-loaded', ({ idx, hasMask }) => {
                 _currentIdx = idx;

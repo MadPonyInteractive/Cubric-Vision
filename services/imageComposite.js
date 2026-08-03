@@ -7,7 +7,9 @@
  * semantics the mask copy/paste path already has, so a 2x-upscaled entry and its
  * source compose without the caller pre-resizing anything.
  *
- * Used by POST /project/composite-media (MPI-362).
+ * Used by POST /project/composite-media (MPI-362). Its sibling below,
+ * compositeOverlay, flattens an RGBA layer that carries its own alpha and needs
+ * no mask at all — POST /project/apply-paint (MPI-375).
  */
 
 const sharp = require('sharp');
@@ -120,4 +122,51 @@ async function compositeThroughMask({ basePath, overlayPath, maskBuffer, outPath
     return { width, height };
 }
 
-module.exports = { compositeThroughMask, defaultFeather, fillMaskHoles };
+/**
+ * Flatten an RGBA overlay onto a base image by the overlay's OWN alpha (MPI-375).
+ *
+ * The paint layer carries its alpha with it, so there is no mask, no feather and
+ * no hole fill here — that is why this is a sibling of compositeThroughMask
+ * rather than a flag on it. The overlay is stretched to the base's pixel size,
+ * matching the stretch semantics the mask path already has.
+ *
+ * @param {Object} o
+ * @param {string} o.basePath      — image painted onto
+ * @param {Buffer} o.overlayBuffer — RGBA image; transparent pixels keep the base
+ * @param {string} o.outPath       — file to write; format follows its extension
+ * @param {number} [o.opacity=1]   — 0..1 scale applied to the overlay's alpha
+ * @returns {Promise<{width: number, height: number}>} the written image's dimensions
+ */
+async function compositeOverlay({ basePath, overlayBuffer, outPath, opacity = 1 }) {
+    const { width, height } = await sharp(basePath).metadata();
+    if (!width || !height) throw new Error('Could not read base image dimensions');
+
+    let overlay = await sharp(overlayBuffer)
+        .resize(width, height, { fit: 'fill' })
+        .ensureAlpha()
+        .png()
+        .toBuffer();
+
+    // Scale the whole layer's alpha to match what the canvas DISPLAYS (MPI-375).
+    // `dest-in` against a uniform tile multiplies the destination's alpha, which is
+    // the same maths as the canvas drawing the layer at globalAlpha — so a slider at
+    // 75% bakes at 75%. It is applied to the flattened LAYER, not per dab, so
+    // overlapping dabs inside one stroke cannot build up darker than the rest.
+    const a = Math.max(0, Math.min(1, Number(opacity)));
+    if (a < 1) {
+        overlay = await sharp(overlay)
+            .composite([{
+                input: Buffer.from([255, 255, 255, Math.round(a * 255)]),
+                raw: { width: 1, height: 1, channels: 4 },
+                tile: true,
+                blend: 'dest-in',
+            }])
+            .png()
+            .toBuffer();
+    }
+
+    await sharp(basePath).composite([{ input: overlay }]).toFile(outPath);
+    return { width, height };
+}
+
+module.exports = { compositeThroughMask, compositeOverlay, defaultFeather, fillMaskHoles };

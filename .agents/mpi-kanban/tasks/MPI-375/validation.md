@@ -78,10 +78,90 @@ back through a stroke leaving the layers underneath intact, and the mask brush's
 That closes the `user-ux` gate for items 1-3. Items 4 and 5 are not built, so the
 card stays `in-progress` rather than moving to `validating`.
 
+## Plan item 4 — automated evidence (2026-08-03), awaiting the user's check
+
+**Suite 336 → 340, 0 fail** (`node --test "tests/*.test.cjs"`). `npm run
+lint:components` clean — the 3 warnings left in the repo are pre-existing in
+`MpiAppLibrary` and `MpiPromptBox`, none in a touched file.
+
+**The route ran for real, not from a test file.** A temp harness at the repo root
+mounted ONLY `routes/projects.js` on `:3999` (no app, no port 3000, no Electron),
+POSTed a 64×64 blue base with an RGBA overlay, then read the OUTPUT PIXELS back
+through Sharp. Deleted afterwards. What it proved:
+
+- painted px(10,10) = `255,0,0`, untouched px(50,50) = `0,0,255` — the layer
+  composites by **its own alpha**, with no mask anywhere in the path;
+- the edge is exact at px(31,31) red / px(32,32) blue — no smear from a needless
+  resample;
+- a **half-size** layer (the >4096 source case, where `PAINT_MAX_EDGE` caps the
+  layer below the image) stretches back to the base and lands `0,255,0` — and the
+  output is the BASE's 64×64, never the layer's;
+- `nextSequence` gave `paint_001.png` then `paint_002.png`, the `.meta/<uuid>.json`
+  sidecar was written, and the thumbnail was generated;
+- all three validation legs 400: `folderPath required`, `paintDataUrl required`,
+  `Source file not found`.
+
+**Six negative controls, every one restored byte-identical.** Anchors were literal
+substrings, not `\n`-anchored regexes, because the tree is CRLF.
+- Renaming `el.applyPaint` → the Apply-button guard fails (the button would render
+  permanently disabled and look shipped).
+- Dropping `writePaint` from `_persistLayers` → fails (strokes lost on entry switch).
+- Dropping `deletePaint` → fails (a cleared layer resurrects on the next visit).
+- Breaking `setPaintFromDataURL` in `_restoreLayers` → fails.
+- Reverting `mask-temp:delete` to `rmSync(dir, …)` → fails (Clear mask would wipe
+  the paint layer).
+- Removing the `typeof viewer.el.applyPaint === 'function'` gate → fails.
+
+**One control escaped first, and that is why it was run.** The restore guard matched
+the bare substring `setPaintFromDataURL`, which `setPaintFromDataURLZZ` also
+contains — the sabotage passed. Tightened to a `(?![A-Za-z0-9_])` lookahead, re-run,
+now fails as required.
+
+**A shared primitive changed, so both consumers were swept.** `mask-temp:delete`
+used to `rm -rf` the item dir. `paint.png` now lives in that dir, and BOTH callers
+of that IPC — `el.clearMask()` and `pasteMaskLayersToEntry()` — would therefore have
+silently wiped a paint layer that has nothing to do with either. It now removes
+`manual.png`, `subtract.png`, `auto.json` by name; the dir still dies with the
+session. The three desktop specs that touch it only assert the mask layers read back
+null, so they are unaffected.
+
+**Not run: the desktop suite.** `npm run test:desktop` needs port 3000 free and the
+user's app is listening on it. The paint TEMP round-trip through the real Electron
+main process is therefore proven only by source-text guards plus handlers that
+mirror `write-manual`/`write-subtract` line for line — the user's hands-on check
+below is what closes it.
+
+## Round 3 in the app — plan item 4 USER-VERIFIED (2026-08-03)
+
+**"All tests passed."** Per-entry persistence, Clear-mask-keeps-paint, no
+resurrection after a clear, Apply producing `paint_001`, and the source entry
+keeping its own layer — all confirmed by hand on a real entry.
+
+**The first attempt looked like three failures and was one cause: a stale build.**
+`No handler registered for 'mask-temp:write-paint'`, the same for `delete-paint`,
+and `POST /project/apply-paint 404` — plus a crop that "errored but still applied"
+(the crop landed, then `loadEntry` → `_persistLayers` hit the missing handler and
+logged; caught, not thrown). Ctrl+R had reloaded the RENDERER, which is why the new
+calls were being made at all, while `main.js` and the Express server still ran the
+old code. Proved rather than asserted, before asking for anything: the running
+server answered **404** for `/project/apply-paint` and **400** for
+`/project/composite-media`, a route that shipped earlier. A full quit and relaunch
+cleared all of it. `main.js` changes need a restart, never a reload.
+
+**Opacity now bakes (user request, same session).** Measured on a white-on-black
+probe through the live route: 1 → 255, 0.75 → **191**, 0.5 → **128**, 0.7 → **179**,
+absent → 255, non-numeric → 255. Two guards added, both negative-controlled: one
+fails if `applyPaint` stops sending the field, one fails if `getPaintOpacity` is
+missing from `MpiCanvas._methods` — that allowlist trap would silently bake at 100%
+through the optional call, with no error anywhere. Suite 340 → **342**.
+
+**Undo not surviving an entry switch is the documented contract, not a paint bug.**
+`docs/masking-undo.md` § lifetime: the stack is cleared on any LOAD — `mask.init()`,
+i.e. every `loadImage`, i.e. every entry switch — and again in `_restoreLayers()`.
+The mask brush has always behaved this way; paint shares the one stack by design.
+
 ## Still to do before this card can be validated
 
-- Plan item 4: per-entry persistence and Apply. **`applyPaint` does not exist yet**,
-  so the Apply button renders disabled rather than swallowing its click.
 - Plan item 5: `docs/painting.md`, the `docs/masking-undo.md` mutation set, routing.
 
 ## The user's check (verify mode: user-ux)

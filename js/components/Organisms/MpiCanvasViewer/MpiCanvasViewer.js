@@ -1,7 +1,7 @@
 /**
  * MpiCanvasViewer — Organism: canvas display with tool mode state machine.
  *
- * Manages crop, mask, and auto-mask modes. Owns the mask store (Map<idx, dataUrl>).
+ * Manages crop, mask, paint, and auto-mask modes. Owns the mask store (Map<idx, dataUrl>).
  *
  * @param {string} [initialImageUrl=''] - URL of the first image to load
  * @param {number} [initialIdx=0]        - History index of the initial image
@@ -19,10 +19,12 @@
  *   el.setMaskPointsMode(bool)         — click-point (SAM3) detector branch
  *   el.clearMaskPoints() / el.getMaskPointCount()
  *   el.bakeAutoPicks('manual'|'subtract') — Add / Subtract the detected mask
+ *   el.applyPaint()                   — flatten the paint layer into a new entry
  *
  * Emits:
  *   'mode-changed'    { mode }        — tool mode changed (from any source)
  *   'crop-applied'    { item }        — crop completed; item is the new HistoryItem
+ *   'paint-applied'   { item }        — paint flattened; item is the new HistoryItem
  *   'mask-ready'      { hasMask }     — mask painted or cleared
  *   'entry-loaded'    { idx, hasMask } — image loaded for index
  *   'compare-clicked'               — user clicked the Compare overlay button
@@ -104,6 +106,13 @@ export const MpiCanvasViewer = ComponentFactory.create({
             const subtractUrl = _cv.el?.getSubtractURL?.() || null;
             if (manualUrl) await maskTempStore.writeManual(k.projectId, k.groupId, k.itemId, manualUrl);
             if (subtractUrl) await maskTempStore.writeSubtract(k.projectId, k.groupId, k.itemId, subtractUrl);
+            // Paint (MPI-375) is written OR deleted, never just written: the mask
+            // layers get their stale copy dropped by clearMask()'s TEMP delete,
+            // and paint has no such twin — a write-only persist would resurrect a
+            // cleared layer on the next visit to this entry.
+            const paintUrl = _cv.el?.getPaintURL?.() || null;
+            if (paintUrl) await maskTempStore.writePaint(k.projectId, k.groupId, k.itemId, paintUrl);
+            else          await maskTempStore.deletePaint(k.projectId, k.groupId, k.itemId);
         }
 
         async function _loadImg(dataUrl) {
@@ -212,9 +221,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
         async function _restoreLayers(item) {
             const k = _maskKey(item);
             if (!k) { _hasMask = false; return; }
-            const { manual, subtract } = await maskTempStore.read(k.projectId, k.groupId, k.itemId);
+            const { manual, subtract, paint } = await maskTempStore.read(k.projectId, k.groupId, k.itemId);
             if (manual)   await _cv.el.setManualFromDataURL(manual);
             if (subtract) await _cv.el.setSubtractFromDataURL(subtract);
+            if (paint)    await _cv.el.setPaintFromDataURL?.(paint);
             // A restore REPLACES the layers, so any history in front of it now
             // describes pixels that no longer exist. Most callers arrive via
             // loadImage (mask.init already cleared it), but the re-seed path
@@ -914,8 +924,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
             // through would _showEntry + _restoreLayers from a TEMP that predates
             // those strokes and silently wipe them. Mount still needs the load path
             // — there the fresh canvas is empty, so it does not match here.
-            if (sameEntry && !_previewInst && _cv.el?.maskCanvas
-                && hasMaskContent(_cv.el.maskCanvas)) {
+            // Both layer families count (MPI-375): a paint-only entry has an empty
+            // maskCanvas, so a mask-only test would fall through and restore an
+            // empty TEMP over the strokes.
+            const hasLiveWork = !!(_cv.el?.maskCanvas && hasMaskContent(_cv.el.maskCanvas))
+                || !!_cv.el?.hasPaint?.();
+            if (sameEntry && !_previewInst && hasLiveWork) {
                 return;
             }
 
@@ -1258,6 +1272,58 @@ export const MpiCanvasViewer = ComponentFactory.create({
         /** Wipe the paint layer as ONE undo entry. @returns {boolean} true if it had pixels */
         el.clearPaint        = () => !!canvas.clearPaint?.();
         el.setPaintFromDataURL = (url) => canvas.setPaintFromDataURL?.(url);
+
+        /**
+         * Flatten the paint layer onto the current entry as ONE new history entry.
+         *
+         * Sharp does the pixels server-side (`/project/apply-paint`), so a 4K source
+         * never round-trips as base64 — only the paint LAYER travels, because it
+         * exists nowhere but this canvas. The source entry is untouched and keeps its
+         * own paint, so Apply is undone by deleting the new entry.
+         *
+         * The opacity slider RIDES ALONG, so the new entry looks like what was on
+         * screen. It stays display opacity everywhere else — the layer's own pixels
+         * are untouched, and the scale is applied once to the flattened layer
+         * server-side, so overlapping dabs in one stroke cannot bake darker than
+         * the rest of it.
+         */
+        el.applyPaint = async () => {
+            const paintDataUrl = canvas.getPaintURL?.();
+            if (!paintDataUrl) { StatusBar.notify('Nothing painted yet', 'warning'); return; }
+            if (!_currentItem?.filePath || !state.currentProject?.folderPath) return;
+
+            StatusBar.progress.start('Applying paint...');
+            try {
+                const res = await fetch('/project/apply-paint', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        folderPath:     state.currentProject.folderPath,
+                        itemId:         crypto.randomUUID(),
+                        sourceFilePath: _resolveUrl(_currentItem.filePath),
+                        paintDataUrl,
+                        opacity:        canvas.getPaintOpacity?.() ?? 1,
+                    }),
+                });
+                const data = await res.json().catch(() => null);
+                if (!res.ok || !data?.success) throw new Error(data?.error || `apply-paint ${res.status}`);
+
+                const newItem = createImageItem({
+                    id:              data.itemId,
+                    filePath:        `/project-file?path=${encodeURIComponent(data.filePath)}`,
+                    operation:       'paint',
+                    displayName:     data.displayName || data.filename.replace(/\.[^.]+$/, ''),
+                    pixelDimensions: data.pixelDimensions || { w: 0, h: 0 },
+                    ...(data.thumbPath ? { thumbPath: data.thumbPath } : {}),
+                });
+
+                emit('paint-applied', { item: newItem });
+                StatusBar.progress.complete('Paint applied!');
+            } catch (err) {
+                clientLogger.warn('MpiCanvasViewer', `apply paint failed: ${err?.message || err}`);
+                StatusBar.progress.cancel();
+            }
+        };
 
         /**
          * Commit the manual mask: exits mask mode, emits 'mask-ready' if paint

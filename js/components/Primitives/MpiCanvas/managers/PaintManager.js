@@ -62,11 +62,15 @@ export class PaintManager {
         /**
          * DISPLAY opacity, not paint alpha — the same meaning the slider already has
          * for the mask, so the shared strip does not change behaviour between tools.
-         * ponytail: strokes are laid down fully opaque. True alpha painting needs a
-         * per-stroke scratch buffer composited on mouseup, because dabs overlap 75%
-         * and would otherwise build to solid within one stroke, making a slow drag
-         * darker than a fast one. Add that if someone actually wants translucent
-         * paint; a shape reference for a model does not.
+         * Apply DOES honour it: the server scales the flattened layer's alpha by this
+         * once, which is the same maths as drawing the layer at globalAlpha, so the
+         * new entry matches the screen.
+         * ponytail: strokes are still laid down fully opaque in the layer itself.
+         * True PER-STROKE alpha needs a scratch buffer composited on mouseup, because
+         * dabs overlap 75% and would otherwise build to solid within one stroke,
+         * making a slow drag darker than a fast one. The layer-wide scale above has
+         * no such build-up. Add the scratch buffer only if someone wants two strokes
+         * at different strengths in one layer.
          */
         this.opacity = 0.7;
 

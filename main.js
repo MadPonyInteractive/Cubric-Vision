@@ -1174,15 +1174,19 @@ app.on('ready', () => {
   ipcMain.handle('mask-temp:read', async (_evt, projectId, groupId, itemId) => {
     try {
       const dir = resolveMaskItemDir(projectId, groupId, itemId);
-      const out = { manual: null, subtract: null, auto: null };
+      const out = { manual: null, subtract: null, auto: null, paint: null };
       const manualPath = path.join(dir, 'manual.png');
       const subtractPath = path.join(dir, 'subtract.png');
       const autoPath = path.join(dir, 'auto.json');
+      const paintPath = path.join(dir, 'paint.png');
       if (fs.existsSync(manualPath)) {
         out.manual = bufferToPngDataUrl(fs.readFileSync(manualPath));
       }
       if (fs.existsSync(subtractPath)) {
         out.subtract = bufferToPngDataUrl(fs.readFileSync(subtractPath));
+      }
+      if (fs.existsSync(paintPath)) {
+        out.paint = bufferToPngDataUrl(fs.readFileSync(paintPath));
       }
       if (fs.existsSync(autoPath)) {
         try {
@@ -1235,6 +1239,31 @@ app.on('ready', () => {
     }
   });
 
+  // Paint layer (MPI-375). Same item dir as the mask layers — same key, same
+  // session lifetime, same prune — but it is NOT a mask layer: it is real colour
+  // that Apply flattens into a new history entry, and it must survive Clear mask.
+  ipcMain.handle('mask-temp:write-paint', async (_evt, projectId, groupId, itemId, dataUrl) => {
+    try {
+      const dir = resolveMaskItemDir(projectId, groupId, itemId);
+      atomicWritePng(path.join(dir, 'paint.png'), dataUrl);
+      return { ok: true };
+    } catch (err) {
+      logger.error('mask-temp', 'write-paint failed', err);
+      return { ok: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('mask-temp:delete-paint', async (_evt, projectId, groupId, itemId) => {
+    try {
+      const dir = resolveMaskItemDir(projectId, groupId, itemId);
+      fs.rmSync(path.join(dir, 'paint.png'), { force: true });
+      return { ok: true };
+    } catch (err) {
+      logger.error('mask-temp', 'delete-paint failed', err);
+      return { ok: false, error: err.message };
+    }
+  });
+
   ipcMain.handle('mask-temp:delete-auto', async (_evt, projectId, groupId, itemId) => {
     try {
       const dir = resolveMaskItemDir(projectId, groupId, itemId);
@@ -1246,10 +1275,16 @@ app.on('ready', () => {
     }
   });
 
+  // Drops the item's MASK layers. Deliberately file-by-file rather than removing
+  // the item dir: paint.png lives here too (MPI-375) and is not a mask, so a
+  // dir-wide rm would make Clear mask silently wipe the paint layer — the two are
+  // independent by design. The dir itself dies with the session.
   ipcMain.handle('mask-temp:delete', async (_evt, projectId, groupId, itemId) => {
     try {
       const dir = resolveMaskItemDir(projectId, groupId, itemId);
-      fs.rmSync(dir, { recursive: true, force: true });
+      for (const f of ['manual.png', 'subtract.png', 'auto.json']) {
+        fs.rmSync(path.join(dir, f), { force: true });
+      }
       return { ok: true };
     } catch (err) {
       logger.error('mask-temp', 'delete failed', err);

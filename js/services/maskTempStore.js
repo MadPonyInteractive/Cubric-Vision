@@ -1,10 +1,10 @@
 /**
  * maskTempStore.js — Frontend wrapper for mask-temp:* IPC handlers.
  *
- * Persists per-(project, group, item) manual + subtract + auto mask layers in a
- * session-scoped Electron TEMP folder. Cleared on app quit, stale dirs
- * pruned at boot. See main.js mask-temp:* handlers and
- * docs/plans/2026-04-29-layered-mask-persistence.md.
+ * Persists per-(project, group, item) manual + subtract + auto mask layers, and
+ * the RGBA paint layer (MPI-375), in a session-scoped Electron TEMP folder.
+ * Cleared on app quit, stale dirs pruned at boot. See main.js mask-temp:*
+ * handlers and docs/plans/2026-04-29-layered-mask-persistence.md.
  *
  * Browser fallback: writes/delete are no-ops, reads return null fields.
  * A single warn is logged on first call so the dev knows persistence is off.
@@ -35,7 +35,7 @@ function _warnBrowserOnce() {
   clientLogger.warn('mask-temp', 'Electron IPC unavailable — mask persistence disabled (browser dev mode).');
 }
 
-const NULL_READ = { manual: null, subtract: null, auto: null };
+const NULL_READ = { manual: null, subtract: null, auto: null, paint: null };
 
 export const maskTempStore = {
   async read(projectId, groupId, itemId) {
@@ -53,6 +53,7 @@ export const maskTempStore = {
         manual:   resp.manual   ?? null,
         subtract: resp.subtract ?? null,
         auto:     resp.auto     ?? null,
+        paint:    resp.paint    ?? null,
       };
     } catch (err) {
       clientLogger.error('mask-temp', 'read invoke threw', err);
@@ -90,6 +91,37 @@ export const maskTempStore = {
     }
   },
 
+  /** RGBA paint layer (MPI-375) — same key path as the mask layers, NOT a mask. */
+  async writePaint(projectId, groupId, itemId, dataURL) {
+    if (!ipcRenderer) { _warnBrowserOnce(); return { ok: false, error: 'no-ipc' }; }
+    try {
+      const resp = await ipcRenderer.invoke('mask-temp:write-paint', projectId, groupId, itemId, dataURL);
+      if (!resp || resp.ok !== true) {
+        clientLogger.warn('mask-temp', `writePaint failed: ${resp && resp.error}`);
+        return { ok: false, error: (resp && resp.error) || 'unknown' };
+      }
+      return { ok: true };
+    } catch (err) {
+      clientLogger.error('mask-temp', 'writePaint invoke threw', err);
+      return { ok: false, error: err.message };
+    }
+  },
+
+  async deletePaint(projectId, groupId, itemId) {
+    if (!ipcRenderer) { _warnBrowserOnce(); return { ok: false, error: 'no-ipc' }; }
+    try {
+      const resp = await ipcRenderer.invoke('mask-temp:delete-paint', projectId, groupId, itemId);
+      if (!resp || resp.ok !== true) {
+        clientLogger.warn('mask-temp', `deletePaint failed: ${resp && resp.error}`);
+        return { ok: false, error: (resp && resp.error) || 'unknown' };
+      }
+      return { ok: true };
+    } catch (err) {
+      clientLogger.error('mask-temp', 'deletePaint invoke threw', err);
+      return { ok: false, error: err.message };
+    }
+  },
+
   async writeAuto(projectId, groupId, itemId, autoState) {
     if (!ipcRenderer) { _warnBrowserOnce(); return { ok: false, error: 'no-ipc' }; }
     try {
@@ -120,6 +152,7 @@ export const maskTempStore = {
     }
   },
 
+  /** Drops the item's MASK layers only — paint.png survives (see main.js). */
   async delete(projectId, groupId, itemId) {
     if (!ipcRenderer) { _warnBrowserOnce(); return { ok: false, error: 'no-ipc' }; }
     try {
