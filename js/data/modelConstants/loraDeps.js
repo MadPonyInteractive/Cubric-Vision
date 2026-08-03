@@ -21,11 +21,20 @@ export const loraDeps = {
     'krea2-lora-filterbypass': {
         id: 'krea2-lora-filterbypass',
         name: 'Krea2 Filter Bypass LoRA',
-        origin: 'Krea-2 filter bypass',
+        // S1LV3RC01N / CivitAI 2728234, resolved by SHA256 2026-08-03 (MPI-429 sweep).
+        // allowNoCredit is FALSE — attribution is a licence obligation here, not a
+        // courtesy, and this dep shipped without it from v1.1.0. MpiAbout builds its
+        // Credits list from every dep carrying a `credit` block, so this is the fix.
+        origin: 'S1LV3RC01N/Krea2FilterBypass (CivitAI 2728234)',
         filename: 'loras/krea-2/extra/krea2filterbypass3.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/extra/krea2filterbypass3.safetensors',
         size: '160B',
         sha256: 'ec5901a2d0b8f4e4e1e7e62fe4567566f0837799f7a413b03a06f72f47934dda',
+        credit: {
+            author: 'S1LV3RC01N',
+            work: 'Krea2FilterBypass',
+            url: 'https://civitai.com/models/2728234',
+        },
     },
     // Identity-edit LoRA (MPI-282) — the instruct-edit path for Krea2. Baked into the
     // edit workflow (dual conditioning: in-context VAE source tokens + Qwen3-VL grounding

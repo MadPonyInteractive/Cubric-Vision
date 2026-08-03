@@ -1,0 +1,100 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "a2ec6609-b7cd-42f7-8978-92d9050df2e5",
+  "generated_at": "2026-08-03T07:42:00Z",
+  "from_session": "MPI-429 mirror failover -> Hugging Face pivot + phase 1/1.5",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-429 second download origin",
+    "branch": "master"
+  },
+  "goal": "Give network-blocked users a second download origin for model weights. R2 stays primary; Hugging Face becomes the failover. Phases 1 (classify) and 1.5 (licences) are DONE. Next session starts at phase 2: upload the 32-dep re-host set to HF.",
+  "plan": ".agents/mpi-kanban/tasks/MPI-429/checklist.md",
+  "task_card": "MPI-429",
+  "kanban_entry": "MPI-429 (doing / in-progress)",
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement phase 2",
+    "implement phase 3",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "94b13361 - fixed a real defect in the mirror failover, which had NEVER executed for anyone (_MODEL_MIRRORS ships empty). The error handler read this.depJob.url, which the failover MUTATES, so after exhausting mirrors the user-facing error named the last mirror tried instead of models.cubric.studio. Captured the url at construction as this._originUrl. Test added to tests/transport-error-message.test.cjs covering the retry end to end. Suite 318/318.",
+      "Phase 1 COMPLETE. Classified all 97 R2-hosted deps (400.8 GB) by matching our recorded sha256 against HF LFS oids (HF tree API exposes lfs.oid, which IS the sha256, so matching is by HASH not by path). Result: 56 deps / 276.5 GB already hosted byte-identical by third parties, 9 deps / 86.4 GB already on our own HF repo, 32 deps / 37.8 GB must be uploaded.",
+      "Phase 1.5 COMPLETE. CivitAI licence sweep over the 32-dep re-host set using the badge method (the v1 API is BLIND to the licence badge - it must be grepped from the server-rendered page). 10 weights came back Apache-2.0 that the flags-only method had looking restrictive. Written up in docs/models/krea2/licences.md (new), docs/models/qwen-edit/licences.md (new), and docs/models/klein/licences.md (table corrected).",
+      "Credit blocks added for coyotte (LUSTIFY V10, CivitAI 573152) and S1LV3RC01N (Krea2FilterBypass, 2728234). The S1LV3RC01N one was a genuine gap - allowNoCredit is FALSE and it shipped without attribution since v1.1.0. Verified both now render via the MpiAbout _credits() helper.",
+      "Corrected the krea2-raw-transformer-nsfw origin field from the wrong Comfy-Org/Krea-2 to coyotte/LUSTIFY (CivitAI 573152)."
+    ],
+    "pending": [
+      "Phase 2 - upload the 32-dep re-host set (37.8 GB) to Mad-Pony-Interactive/cubric-studio under a vision/models/<comfy-type>/<file> layout.",
+      "Phase 3 - wire the mirror: per-dep mirrorUrl, fix _isSameObjectUrl, populate _MODEL_MIRRORS, update the test that pins it to empty.",
+      "Phase 4 - prove it via CUBRIC_MODEL_MIRRORS; confirm the Pod path is untouched.",
+      "qwen-lora-headswap (1.2 GB) is UNRESOLVED - no origin recorded, sha256 404s on CivitAI by-hash, not found in any HF repo swept. Source it before re-hosting.",
+      "MPI-430 still owns the redistribution question for badge-less CivitAI weights. Judged low practical risk by the user 2026-08-03; it is a decision, not an oversight."
+    ]
+  },
+  "context": {
+    "key_decisions": [
+      "ORIGIN = Hugging Face, NOT a second Cloudflare hostname. A second cubric.studio subdomain only dodges an FQDN-keyed filter, and MPI-427 names the likely trigger as cubric.studio being a young uncategorised domain - category filters block the REGISTRABLE DOMAIN. madponyinteractive.com fails the same test (also young). HF beats FQDN, domain and provider keying.",
+      "R2 STAYS PRIMARY on both engines. The HF/Xet throttling that the R2 migration (MPI-129/140) fixed is MULTI-CONNECTION: aria2c lives only in the Pod wrapper, and the local path uses single-stream DownloaderHelper. So HF is fine for local. _mirrorUrlsFor lives in the downloadManager.js FileDownloader and the Pod never consults it - the mirror is LOCAL-ONLY BY CONSTRUCTION and cannot regress Pod speed. No engine-split sweep needed.",
+      "STAY ON THE FREE HF TIER. An earlier pass in this session said PRO off a 228.7 GB estimate and was WRONG. The billing page shows free already carries a real 8.7 TB public quota (0.09 TB used), not the vague best-effort the docs imply. 37.8 GB is noise. Do not buy PRO.",
+      "Custom nodes and the engine archive need NO mirror. All 14 nodesDeps entries resolve to github.com, and the engine archive comes from github.com/Comfy-Org/ComfyUI/releases/download (routes/platformEngine.js:20). MPI-427 log: github 45/45 succeeded, models.cubric.studio 0/44. Only model weights are affected.",
+      "DEPS NOW NEED A SECOND URL. The MPI-427 brief said explicitly NOT to add a per-dep url field, but that held only while a mirror mirrored OUR layout. 56 deps live at third-party repos with different paths AND filenames, so an origin swap cannot reach them. Generate a per-dep mirrorUrl from the sweep data - do not hand-write it.",
+      "coyotte / LUSTIFY acquisition is SETTLED, do not re-open. The dep landed 2026-07-16 inside the paid early-access window (released 2026-07-10, open date 2026-08-10), which LOOKS like giving away a paid release. It was acquired legitimately: Fabio subscribed to the creator paid channel and deliberately bought THREE months rather than one to over-remunerate him, and they have discussed it directly. Decision: ship as-is, credit on the About page, no outreach. Recorded in docs/models/krea2/licences.md."
+    ],
+    "constraints": [
+      "THE SHA256 GATE: every dep is sha256-verified after download. A mirror serving different bytes fails the verify and the file is DELETED. So an upstream copy qualifies only if byte-identical. This is why the classification matched by hash.",
+      "_isSameObjectUrl compares PATHNAMES to decide partial-resume. HF paths will not match R2 paths, so as written it would scrap the partial - the exact MPI-317 data loss it was added to prevent. It must key on dep id or sha256 before phase 3 ships.",
+      "DO NOT RELOCATE the 9 v1.0.1 files at the root of Mad-Pony-Interactive/cubric-studio. Shipped v1.0.1 hardcodes those flat HF resolve URLs in its bundled dependencies.js, so MOVING them breaks it in the wild exactly as deleting would. ADD the new layout alongside. Source: MadPony-Identity/capabilities/huggingface/README.md.",
+      "HF Hub API rate limit is 1k requests per 5-minute interval. An unauthenticated wide sweep over ~3700 repos blew through it and made every call 429 for a while. Use the token at C:/Users/Fabio/.secrets/hf.txt and keep concurrency modest.",
+      "HF token type matters: use a plain Write token, not fine-grained. See the capability README - a fine-grained token created before a repo existed has no write to it and fails with 403 pass create_pr=1.",
+      "CivitAI region-blocks the UK and agent WebFetch can NEVER reach it. The licence sweep needed the Fabio VPN, which was on for it and can be off now. CivitAI key is at .secrets/civit.txt.",
+      "The CivitAI v1 API is BLIND to the licence badge. Flags alone are not the method - grep choosealicense/licenses/blob/main/markdown/ from the page with -L and a browser UA.",
+      "CivArchive ids in the origin field are NOT CivitAI model ids - a lookup by that number 404s. Resolve by SHA256."
+    ],
+    "files_modified": [
+      "routes/downloadManager.js - _originUrl capture + use at the transport-error site (94b13361)",
+      "tests/transport-error-message.test.cjs - failover retry test (94b13361)",
+      "js/data/modelConstants/modelDeps.js - krea2-raw-transformer-nsfw origin corrected + credit block",
+      "js/data/modelConstants/loraDeps.js - krea2-lora-filterbypass origin + credit block",
+      "docs/models/klein/licences.md - badge column added, klein-style-anime settled clear",
+      "docs/models/krea2/licences.md - NEW",
+      "docs/models/qwen-edit/licences.md - NEW",
+      ".agents/mpi-kanban/tasks/MPI-429/ - card moved to doing, brief rewritten, checklist.md is the plan"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-429/checklist.md - THE PLAN. Read the 'Phase 1 FINAL' section for the real numbers; earlier sections carry superseded estimates (400.8 -> 142.3 -> 55.4 -> 37.8 GB).",
+      ".agents/mpi-kanban/tasks/MPI-429/brief.md - why HF over Cloudflare, why R2 stays primary, the sha256 gate.",
+      "c:/AI/Mpi/MadPony-Identity/capabilities/huggingface/README.md - token location, token-type trap, and the R2->HF per-file streaming recipe (rclone down, hf upload, delete local; peak disk = 1 file).",
+      "routes/downloadManager.js around _MODEL_MIRRORS / _mirrorUrlsFor / _isSameObjectUrl - the mirror machinery.",
+      "docs/models/klein/licences.md Method section - the CivitAI badge method, including trap 1b."
+    ]
+  },
+  "next_action": {
+    "description": "Phase 2. Upload the 32-dep re-host set (37.8 GB) to Mad-Pony-Interactive/cubric-studio under vision/models/<comfy-type>/<file>, ADDING that layout without moving the 9 v1.0.1 files at root. Use the R2->HF per-file streaming recipe in the huggingface capability README so peak local disk stays at one file. The full 32-dep list with sizes is in the MPI-429 checklist. HOLD qwen-lora-headswap (1.2 GB) until its source is identified. Free tier is correct - do not buy PRO. Then phase 3: generate a per-dep mirrorUrl from the sweep data, fix _isSameObjectUrl to key on dep id/sha256 rather than pathname, populate _MODEL_MIRRORS, and update the test that pins it to empty."
+  },
+  "project_knowledge": {
+    "board": ".agents/mpi-kanban/board.json",
+    "related_cards": [
+      "MPI-427 (done - the app-side fix)",
+      "MPI-430 (todo - CivitAI redistribution question)",
+      "MPI-358 (credit-block sweep)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/downloads.md",
+    ".claude/rules/kanban.md",
+    "docs/download-manager.md"
+  ],
+  "recent_events": [
+    "94b13361 fix(downloads): keep the origin host in a mirror-failover error",
+    "2033f720 kanban: MPI-429 -> doing, pivot to Hugging Face + phase 1 complete",
+    "1e7546d0 kanban: add the MPI-429 plan file itself",
+    "70968d88 kanban: MPI-429 phase 1 final - re-host drops to 37.8 GB, free tier holds"
+  ],
+  "resume_prompt": "Continue MPI-429 at phase 2. Read .agents/mpi-kanban/tasks/MPI-429/checklist.md first, and note that the 'Phase 1 FINAL' section supersedes every earlier number on the card. Phases 1 and 1.5 are done: 32 deps / 37.8 GB need uploading to Hugging Face, licences are cleared, and the free tier is correct (8.7 TB quota - do NOT buy PRO)."
+}

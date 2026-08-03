@@ -38,25 +38,35 @@ be run by a paid generation service; `Sell` = the weight itself may be sold;
 `RentCivit` = may be run on CivitAI. The decisive one for us is **`Image`** — Vision is
 a local app whose users own their output.
 
-## The table (checked 2026-07-26, fully re-verified 2026-07-27)
+## The table (flags 2026-07-26/27 — **badges read 2026-08-03**, MPI-429 sweep)
 
-> **This table predates trap 1b and was built from flags alone — no row's licence badge
-> has been read.** Re-verification is **MPI-430**, which also decides what authorises our
-> R2 mirror for badge-less weights. Treat the three "no `Image`" rows below as unsettled
-> rather than as precedent.
+The badge column is the one that governs; the flags are the creator's preferences beneath
+it. Six of the ten carry **Apache-2.0**, which was invisible to the flags-only method.
 
-| dep | CivitAI | creator | `allowCommercialUse` | verdict |
-|---|---|---|---|---|
-| `klein-style-aesthetic` | 2381858 | bunny123 | Image, RentCivit, Rent, Sell | clear |
-| `klein-lora-nsfw` | 2458332 | whoforscuba | Image, RentCivit, Rent, Sell | clear |
-| `klein-lora-refcontrol-depth` | 2657241 | thedeoxen | Image, RentCivit, Rent, Sell | clear |
-| `klein-style-muppets` | 2615392 | norod78 | Image, RentCivit, Rent | clear |
-| `klein-style-cartoon` | 2633419 | norod78 | Image, RentCivit, Rent | clear |
-| `klein-style-jojo` | 2622565 | norod78 | Image, RentCivit, Rent | clear |
-| `klein-style-vintage` | 2520520 | KimHose | Image, RentCivit, Rent | clear (no derivatives — we don't merge) |
-| `klein-style-chibi` | 400063 | monkpostor | RentCivit, Rent | no `Image` — see caveat |
-| `klein-style-doodle` | 2593550 | reverentelusarca | RentCivit, Rent | no `Image` — see caveat |
-| `klein-style-anime` | 2227157 | n_Arno | RentCivit | no `Image`, **credit required**, no derivatives |
+| dep | CivitAI | creator | licence badge | `allowCommercialUse` | verdict |
+|---|---|---|---|---|---|
+| `klein-style-aesthetic` | 2381858 | bunny123 | **Apache-2.0** | Image, RentCivit, Rent, Sell | clear |
+| `klein-lora-nsfw` | 2458332 | whoforscuba | none | Image, RentCivit, Rent, Sell | clear on flags |
+| `klein-lora-refcontrol-depth` | 2657241 | thedeoxen | **Apache-2.0** | Image, RentCivit, Rent, Sell | clear |
+| `klein-style-muppets` | 2615392 | norod78 | **Apache-2.0** | Image, RentCivit, Rent | clear |
+| `klein-style-cartoon` | 2633419 | norod78 | **Apache-2.0** | Image, RentCivit, Rent | clear |
+| `klein-style-jojo` | 2622565 | norod78 | **Apache-2.0** | Image, RentCivit, Rent | clear |
+| `klein-style-vintage` | 2520520 | KimHose | none | Image, RentCivit, Rent | clear on flags (no derivatives — we don't merge) |
+| `klein-style-chibi` | 400063 | monkpostor | none | RentCivit, Rent | **still unsettled** — no `Image`, bundle argument only |
+| `klein-style-doodle` | 2593550 | reverentelusarca | none | RentCivit, Rent | **still unsettled** — no `Image`, bundle argument only |
+| `klein-style-anime` | 2227157 | n_Arno | **Apache-2.0** | RentCivit | **SETTLED CLEAR** — see below |
+
+### `klein-style-anime` — the badge overturned the flags
+
+This row previously read "no `Image`, credit required, no derivatives" and shipped only on
+the bundle argument. Its page carries **Apache-2.0**, which grants commercial use,
+redistribution and derivatives outright; a hosting-site checkbox cannot claw back rights
+granted under it in the same upload (full reasoning: [../chroma/licences.md](../chroma/licences.md)).
+Attribution still applies under Apache §4, and its `credit` block already satisfies that.
+
+**chibi and doodle remain badge-less**, so for those two the bundle argument is still the
+only thing holding them up, and the redistribution question below still applies. They are
+the residue of **MPI-430** item 2, not the whole of it.
 
 `klein-lora-outpaint` is **not a CivitAI weight** — the by-hash lookup 404s. It is
 fal's, **Apache-2.0**, like every fal Klein LoRA (see `removal.md`). A 404 here means

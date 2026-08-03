@@ -188,14 +188,23 @@ export const modelDeps = {
         sha256: '5585a4a38c4bcfb6fde2d480a4aa6edf7f665721ebde56d30662c35a45f5fa5c',
     },
     // NSFW variant — Lustify v10 KREA-Raw, int8_convrot quant.
+    // NOT a Comfy-Org weight: it is coyotte's LUSTIFY (CivitAI 573152), resolved by
+    // SHA256 2026-08-03 (MPI-429 licence sweep). The old `origin: Comfy-Org/Krea-2`
+    // was wrong and hid whose work this is. Flags: Image + RentCivit, no licence
+    // badge, allowNoCredit true (attribution not required — we credit anyway).
     'krea2-raw-transformer-nsfw': {
         id: 'krea2-raw-transformer-nsfw',
         name: 'Krea2 Raw Transformer NSFW (int8_convrot)',
-        origin: 'Comfy-Org/Krea-2',
+        origin: 'coyotte/LUSTIFY (CivitAI 573152)',
         filename: 'diffusion_models/lustify-v10-krea-raw-int8_convrot.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/lustify-v10-krea-raw-int8_convrot.safetensors',
         size: '13.15GB',
         sha256: 'f165d4db2a4c9a8ce67f88851216ec41ee64ed508f0755de9d4dcd03175bc865',
+        credit: {
+            author: 'coyotte',
+            work: 'LUSTIFY! V10 (Krea 2)',
+            url: 'https://civitai.com/models/573152',
+        },
     },
     // ── Boogu-Image-Edit transformers (MPI-257) ────────────────────────────────
     // Unified 10B image edit, Apache-2.0. Native ComfyUI (comfy_extras/nodes_boogu.py
