@@ -60,6 +60,12 @@ load-bearing, plus the 2-reference face wall and its ruled-out list.
 |---|---|
 | [depth-control.md](sdxl/depth-control.md) | The Depth op — reuses Krea2's `poseReference` key, but the mechanism is a real **ControlNet weight** (the app's first non-LoRA controlnet dep), the graph path, and why the yaml needs zero edits. |
 
+### [community-merges-licences.md](community-merges-licences.md) — the nine picked community checkpoints
+Licence table + creators for `sdxl-realistic`, `sdxl-nsfw`, `ill-anime`, `ill-anime-beauty`,
+`pony-mix` and the four `wan-22-*`. No folder of their own — they are picked merges, not
+researched models. Read it before touching their deps: eight of the nine now carry a
+**required** `credit` block, only two resolved by hash, and two withhold the `Image` flag.
+
 ## Pod/infra research (NOT per-model) → `docs/builder/research/`
 
 Pod-perf + cold-start investigations live in

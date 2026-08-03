@@ -7,10 +7,22 @@
 
 export const modelDeps = {
     // Image checkpoints
+    // MPI-430 — these nine shipped with a bare community-merge FILENAME as their `origin`,
+    // which made them invisible to MPI-429's CivitAI sweep (it selected on origin naming
+    // CivitAI). Resolved 2026-08-03 and rewritten as `<creator>/<model> (CivitAI <id>)`;
+    // the upstream filename stays in the comment because it is what identified them.
+    // NONE of the six source models carries a licence badge, so all rest on CivitAI's
+    // Service-scoped default grant — the redistribution decision in MPI-430 item 3.
+    // Only `wan-22-t2v-*` matched upstream BY HASH; the other seven share the upstream
+    // filename and size but not the sha256, so our copies are not byte-identical and the
+    // provenance below is by filename + creator, not by hash. Terms per model:
+    // docs/models/community-merges-licences.md.
     'sdxl-realistic': {
         id: 'sdxl-realistic',
         name: 'SDXL Realistic',
-        origin: 'Juggernaut_XL',
+        // upstream file: Juggernaut_XL
+        origin: 'KandooAI/Juggernaut XL (CivitAI 133005)',
+        credit: { author: 'KandooAI', work: 'Juggernaut XL', url: 'https://civitai.com/models/133005' },
         filename: 'checkpoints/SDXL_Realistic.safetensors',
         url: 'https://models.cubric.studio/vision/models/checkpoints/SDXL_Realistic.safetensors',
         mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/SDXL_Realistic.safetensors',
@@ -20,7 +32,11 @@ export const modelDeps = {
     'sdxl-nsfw': {
         id: 'sdxl-nsfw',
         name: 'SDXL NSFW',
-        origin: 'lustify_7',
+        // upstream file: lustify_7 — same creator as krea2-raw-transformer-nsfw
+        origin: 'coyotte/LUSTIFY! [NSFW checkpoint] (CivitAI 573152)',
+        // allowNoCredit is TRUE here, so this block is deliberate, not required — same
+        // choice as the Krea 2 weight from the same creator.
+        credit: { author: 'coyotte', work: 'LUSTIFY! (SDXL)', url: 'https://civitai.com/models/573152' },
         filename: 'checkpoints/SDXL_NSFW.safetensors',
         url: 'https://models.cubric.studio/vision/models/checkpoints/SDXL_NSFW.safetensors',
         mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/SDXL_NSFW.safetensors',
@@ -30,7 +46,9 @@ export const modelDeps = {
     'ill-anime': {
         id: 'ill-anime',
         name: 'ILL Anime',
-        origin: 'animemix_v80',
+        // upstream file: animemix_v80. WITHHOLDS the `Image` flag — see the licence doc.
+        origin: 'koronen/animemix (CivitAI 933065)',
+        credit: { author: 'koronen', work: 'animemix', url: 'https://civitai.com/models/933065' },
         filename: 'checkpoints/ILL_Anime.safetensors',
         url: 'https://models.cubric.studio/vision/models/checkpoints/ILL_Anime.safetensors',
         mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/ILL_Anime.safetensors',
@@ -40,7 +58,10 @@ export const modelDeps = {
     'ill-anime-beauty': {
         id: 'ill-anime-beauty',
         name: 'ILL Anime Beauty',
-        origin: 'ramthrustsNSFWPINK_alchemyMix176',
+        // upstream file: ramthrustsNSFWPINK_alchemyMix176 — that version is no longer
+        // listed on the model page (the surviving ones are 3.9GB; ours is 6.46GB).
+        origin: "RAMTHRUST/RAMTHRUST'S-NSFW-PINK-ALCHEMY-ANIMA (CivitAI 2578175)",
+        credit: { author: 'RAMTHRUST', work: "RAMTHRUST'S-NSFW-PINK", url: 'https://civitai.com/models/2578175' },
         filename: 'checkpoints/ILL_Anime_Beauty.safetensors',
         url: 'https://models.cubric.studio/vision/models/checkpoints/ILL_Anime_Beauty.safetensors',
         mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/ILL_Anime_Beauty.safetensors',
@@ -50,7 +71,9 @@ export const modelDeps = {
     'pony-mix': {
         id: 'pony-mix',
         name: 'PONY Mix',
-        origin: 'animergemeij_v30VAE',
+        // upstream file: animergemeij_v30VAE. WITHHOLDS the `Image` flag — see the licence doc.
+        origin: 'reijlita/ANImergeMEij (CivitAI 734527)',
+        credit: { author: 'reijlita', work: 'ANImergeMEij', url: 'https://civitai.com/models/734527' },
         filename: 'checkpoints/PONY_Mix.safetensors',
         url: 'https://models.cubric.studio/vision/models/checkpoints/PONY_Mix.safetensors',
         mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/PONY_Mix.safetensors',
@@ -61,7 +84,9 @@ export const modelDeps = {
     'wan-22-t2v-high': {
         id: 'wan-22-t2v-high',
         name: 'Wan 2.2 t2v',
-        origin: 'smoothMixWan2214BI2V_t2vHighV30',
+        // upstream file: smoothMixWan2214BI2V_t2vHighV30 (T2V High v3.0) — matched upstream BY HASH
+        origin: 'DigitalPastel/Smooth Mix Wan 2.2 14B (CivitAI 1995784)',
+        credit: { author: 'DigitalPastel', work: 'Smooth Mix Wan 2.2 14B', url: 'https://civitai.com/models/1995784' },
         filename: 'diffusion_models/Wan_22_t2v_High.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/Wan_22_t2v_High.safetensors',
         mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_t2v_High.safetensors',
@@ -71,7 +96,9 @@ export const modelDeps = {
     'wan-22-t2v-low': {
         id: 'wan-22-t2v-low',
         name: 'Wan 2.2 t2v',
-        origin: 'smoothMixWan2214BI2V_t2vLowV30',
+        // upstream file: smoothMixWan2214BI2V_t2vLowV30 (T2V Low v3.0) — matched upstream BY HASH
+        origin: 'DigitalPastel/Smooth Mix Wan 2.2 14B (CivitAI 1995784)',
+        credit: { author: 'DigitalPastel', work: 'Smooth Mix Wan 2.2 14B', url: 'https://civitai.com/models/1995784' },
         filename: 'diffusion_models/Wan_22_t2v_Low.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/Wan_22_t2v_Low.safetensors',
         mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_t2v_Low.safetensors',
@@ -81,7 +108,9 @@ export const modelDeps = {
     'wan-22-i2v-high': {
         id: 'wan-22-i2v-high',
         name: 'Wan 2.2 i2v',
-        origin: 'smoothMixWan2214BI2V_i2vV20High',
+        // upstream file: smoothMixWan2214BI2V_i2vV20High (I2V v2.0 High) — hash does NOT match upstream 1f40184e
+        origin: 'DigitalPastel/Smooth Mix Wan 2.2 14B (CivitAI 1995784)',
+        credit: { author: 'DigitalPastel', work: 'Smooth Mix Wan 2.2 14B', url: 'https://civitai.com/models/1995784' },
         filename: 'diffusion_models/Wan_22_i2v_High.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/Wan_22_i2v_High.safetensors',
         mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_i2v_High.safetensors',
@@ -91,7 +120,9 @@ export const modelDeps = {
     'wan-22-i2v-low': {
         id: 'wan-22-i2v-low',
         name: 'Wan 2.2 i2v',
-        origin: 'smoothMixWan2214BI2V_i2vV20Low',
+        // upstream file: smoothMixWan2214BI2V_i2vV20Low (I2V v2.0 Low) — hash does NOT match upstream 5de2d526
+        origin: 'DigitalPastel/Smooth Mix Wan 2.2 14B (CivitAI 1995784)',
+        credit: { author: 'DigitalPastel', work: 'Smooth Mix Wan 2.2 14B', url: 'https://civitai.com/models/1995784' },
         filename: 'diffusion_models/Wan_22_i2v_Low.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/Wan_22_i2v_Low.safetensors',
         mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/Wan_22_i2v_Low.safetensors',
