@@ -384,3 +384,38 @@ Full suite **338/338 green** (2 new tests), `release-health-check` passed,
 `validate-injection-rules` clean on all five API templates,
 `operation_registry.json` re-synced. **Not yet run in the app** — every claim above is from
 the graphs, the registries and the suite, not from a live generation.
+
+## CLOSED 2026-08-03 — and why the video models did NOT block it
+
+The last status note said this card could not close until the video models migrated.
+That was wrong, and the correction is worth keeping because the same reasoning will come
+up for any future "migrate everything" card.
+
+**LTX is ALREADY a one-master-template model.** `ltx_i2v_t2v_template.json` serves both
+t2v and i2v from one graph, selected by `Input_Text_to_video` — a boolean, not an
+`Input_wf_type` int, because two ops do not need an int. It arrived at the shape before
+this card existed.
+
+**The video file count is not an op split.** Three axes, none of which one graph can
+absorb:
+
+- **`_stage2` is a SECOND ComfyUI SUBMISSION**, not a branch. `commandExecutor` resolves
+  it by filename swap (`payload.isStage2`, ~L1357) and dispatches it as its own job.
+  Lazy evaluation prunes *within* one submission; it cannot span two. So a multi-stage
+  model can never collapse its stages into one file, no matter how the ops are wired.
+- **`_fp8` / `_mxfp8` are quantisation variants** chosen per GPU via `variantTokens`.
+  Same constraint that keeps Chroma's Flash and Hyper in separate files: ComfyUI
+  validates every combo widget at submit, so two loaders in one graph force BOTH weight
+  downloads.
+- **`t2v` / `i2v`** is the only real op axis, and LTX already collapsed it.
+
+**No video model uses anything on the GC list** — no `injectParams`, no `styleOps`, none
+of the shared-op booleans. That is why every GC acceptance item unblocked and shipped
+without a single video file being touched.
+
+### Left undone on purpose, NOT carded
+
+`wan-22` and `wan22-5b` still keep separate `t2v` / `i2v` templates where LTX proved one
+file works. Merging them saves two files and changes no behaviour — not worth a card.
+`ltx_i2v_t2v_template.json` is the worked example if it is ever wanted. Raise it as a
+by-the-way if those templates are open for another reason.
