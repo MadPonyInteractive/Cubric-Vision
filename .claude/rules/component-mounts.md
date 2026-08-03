@@ -143,7 +143,7 @@ Pan/zoom transform targets the actual `.mpi-video-surface__video` element, not `
 
 > **MpiSettings is NOT mounted directly anymore.** It is a *content component* of `MpiSlideOver` — its body element is mounted inside `.mpi-slide-over__body` via `props.component.mount(bodyEl)` from inside `MpiSlideOver.setup()`. The legacy `el.show()/el.hide()` methods are gone. Field initialisation runs via `el.onOpen()`, which `MpiSlideOver` calls once on every open. Internal mounts inside `MpiSettings._initFields()` are unchanged:
 > - `MpiCheckbox`   props: `{ checked: Storage.getAutoStartComfy(), label:'Auto-start ComfyUI on Launch' }`   slot: `#mpiSettingsAutoStartSlot`
-> - `MpiInput` (ComfyUI URL)   props: `{ label:'ComfyUI API URL', placeholder:'http://localhost:8188', value }`   slot: `#mpiSettingsComfyUrlSlot`
+> - ~~`MpiInput` (ComfyUI URL) — slot `#mpiSettingsComfyUrlSlot`~~ **REMOVED.** No such slot, label or value exists anywhere in `js/` (verified 2026-08-03). Settings has no user-editable ComfyUI address: the local engine's port is owned by `COMFYUI_PORT` in `routes/shared.js` (48188 since MPI-434 — NOT ComfyUI's 8188 default, see the comment there), and the remote address comes from `MpiRunpodSettings`. Do not re-add this row from an old draft.
 > - `MpiInput` (ComfyUI path)   props: `{ label:'ComfyUI Models Path', placeholder:'Default (internal engine)', value }`   slot: `#mpiSettingsComfyRootPathSlot`
 > - `MpiButton` (Browse)   props: `{ text:'Browse', variant:'secondary', size:'md', extraClasses:'mpi-settings__browse-btn' }`   slot: `#mpiSettingsBrowseBtnSlot`
 >

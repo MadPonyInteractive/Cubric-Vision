@@ -46,10 +46,16 @@ Because it DELEGATES (does not copy) the end-session logic, a pack update to
    `read.md` and `mutate.md` before any card write — never skippable.
 
    `active_handoffs` is deliberately NOT part of the condition: it is a *resume*
-   signal, not a coordination-reference signal, and this repo's handoff index
-   entries carry only `id`/`path`/`task`/`created_at` — no `status` field to judge
-   them by, so gating on one would disable this gate permanently. Still reread the
-   handoff records step 0 asks for.
+   signal, not a coordination-reference signal. A handoff left open just means the
+   last session ended mid-thread — it says nothing about whether a PEER is active,
+   which is what the coordination references exist for. Those five counters above
+   already answer that. Still reread the handoff records step 0 asks for.
+
+   (This paragraph until 2026-08-03 justified the exclusion by claiming the index
+   entries "carry only `id`/`path`/`task`/`created_at` — no `status` field to judge
+   them by". That is FALSE — they do carry `status`; a close-out that day read four
+   entries, three `resolved` and one `open`. The exclusion is still right, for the
+   reason above. Do not reinstate the false claim.)
 
    Say in ONE line what was skipped, e.g. `Coordination reads skipped: solo
    session, file mode.` If ANY counter is non-clear, read all of step 0 as written.

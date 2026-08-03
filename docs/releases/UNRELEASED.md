@@ -111,3 +111,11 @@
   try a VPN" message instead of a bare error code. This helps when a network
   blocks the address; a network that interferes with the transfer itself can still
   break a download.
+- **Running your own ComfyUI no longer breaks the app's.** If you already had
+  ComfyUI open, the app quietly used *your* install instead of its own, because
+  both were on the same port. Yours does not have the app's custom nodes, so every
+  generation stopped with "Node 'Input_Seed' not found. The custom node may not be
+  installed." — which read as a broken install, when nothing was wrong with it. The
+  app's engine now runs on its own port and stays out of the way of yours, so you
+  no longer need to close ComfyUI before opening Cubric Vision. If something else
+  is using that port, the app now tells you instead of silently generating on it.
