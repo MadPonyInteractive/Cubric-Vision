@@ -20,6 +20,7 @@ import { MpiToolOptionsMaskAdjust } from '../../Organisms/MpiToolOptionsMaskAdju
 import { MpiToolOptionsMaskDetect } from '../../Organisms/MpiToolOptionsMaskDetect/MpiToolOptionsMaskDetect.js';
 import { MpiToolOptionsMaskPoints } from '../../Organisms/MpiToolOptionsMaskPoints/MpiToolOptionsMaskPoints.js';
 import { MpiToolOptionsMaskText } from '../../Organisms/MpiToolOptionsMaskText/MpiToolOptionsMaskText.js';
+import { MpiToolOptionsPaint } from '../../Organisms/MpiToolOptionsPaint/MpiToolOptionsPaint.js';
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
 import { MpiToolOptionsRemoveBg } from '../../Organisms/MpiToolOptionsRemoveBg/MpiToolOptionsRemoveBg.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
@@ -85,6 +86,7 @@ const TOOL_OPTIONS_REGISTRY = {
     maskDetect:   MpiToolOptionsMaskDetect,
     maskPoints:   MpiToolOptionsMaskPoints,
     maskText:     MpiToolOptionsMaskText,
+    paint:        MpiToolOptionsPaint,
     videoUpscale: MpiToolOptionsUpscale,
     imageUpscale: MpiToolOptionsUpscale,
     removeBackground: MpiToolOptionsRemoveBg,
@@ -100,17 +102,35 @@ const TOOL_OPTIONS_REGISTRY = {
 const _MASK_TOOLS = new Set(['maskBrush', 'maskAdjust', 'maskDetect', 'maskPoints', 'maskText']);
 const _isMaskTool = (mode) => _MASK_TOOLS.has(mode);
 
-/** Modes that keep the PromptBox up: prompt, plus the whole mask family — a mask
- *  and a prompt are ONE operation (MPI-372). Any path that re-shows the box after
- *  hiding it (delete, model switch) MUST use this, not a bare `=== 'prompt'`. */
-const _modeKeepsPromptBox = (mode) => mode === 'prompt' || _isMaskTool(mode);
+/** Any tool in the PAINT family (MPI-375) — the RGBA layer's group. Deliberately
+ *  NOT part of `_MASK_TOOLS`: paint's artifact is real colour that Apply flattens
+ *  into a new entry, not a mask. MPI-368's Paint Shapes joins this set. */
+const _PAINT_TOOLS = new Set(['paint']);
+const _isPaintTool = (mode) => _PAINT_TOOLS.has(mode);
+
+/** Any canvas-resident tool, mask family or paint family. Teardown and the
+ *  PromptBox gate care about "is a canvas tool open", not which family — splitting
+ *  `_isMaskTool`'s three jobs is what let paint keep the box without pretending to
+ *  be a mask tool (MPI-375). */
+const _isCanvasTool = (mode) => _isMaskTool(mode) || _isPaintTool(mode);
+
+/** Modes that keep the PromptBox up: prompt, the whole mask family — a mask and a
+ *  prompt are ONE operation (MPI-372) — and paint, because paint → mask → detail is
+ *  one operation too (MPI-424 taxonomy; Composite is the group that does NOT keep
+ *  it). Any path that re-shows the box after hiding it (delete, model switch) MUST
+ *  use this, not a bare `=== 'prompt'`. */
+const _modeKeepsPromptBox = (mode) => mode === 'prompt' || _isCanvasTool(mode);
 
 /**
- * Rail tool mode → canvas viewer mode. The viewer knows two canvas modes,
- * 'crop' and 'mask'; the rail has one entry per masking method, so every mask
- * tool maps onto the same viewer mode.
+ * Rail tool mode → canvas viewer mode. The viewer knows three canvas modes now:
+ * 'crop', 'mask' and 'paint'. The rail has one entry per masking method, so every
+ * mask tool maps onto the single 'mask' mode; the paint family maps onto 'paint',
+ * which is what decides whose brush owns the pointer.
  */
-const _viewerModeFor = (mode) => (mode === 'crop' ? 'crop' : (_isMaskTool(mode) ? 'mask' : null));
+const _viewerModeFor = (mode) => (mode === 'crop' ? 'crop'
+    : _isMaskTool(mode) ? 'mask'
+    : _isPaintTool(mode) ? 'paint'
+    : null);
 
 export const MpiGroupHistoryBlock = ComponentFactory.create({
     name: 'MpiGroupHistoryBlock',
@@ -448,7 +468,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // canvas' GPU backing when NO canvas tool is active. Force-mount so
             // the box is there before the first stroke unlocks a mask-only op;
             // _mountPromptBoxIfNeeded still no-ops without an active model.
-            if (_isMaskTool(mode)) {
+            // Paint keeps it for the same reason (MPI-375): paint → mask → detail is
+            // one operation, so the box must be up before the first stroke.
+            if (_isCanvasTool(mode)) {
                 _mountPromptBoxIfNeeded({ force: true });
                 _pb?.el?.show();
             } else {
@@ -481,9 +503,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 if (payload.kind === 'video-save')       return _handleCropSaveVideo();
                 return;
             }
-            // Mask compounds have no apply button — they only create a mask.
-            // PromptBox runs the operation; this branch should never fire.
-            if (_isMaskTool(mode)) return;
+            // Mask compounds have no apply button — they only create a mask, and
+            // PromptBox runs the operation. Paint HAS an Apply, but it calls the
+            // viewer directly (a server-side flatten, not a generation), so it never
+            // reaches here either. Guarding both families means a future canvas tool
+            // that starts emitting 'apply' fails loudly rather than falling through
+            // into the generation branches below.
+            if (_isCanvasTool(mode)) return;
             if (mode === 'videoUpscale' || mode === 'imageUpscale') {
                 const injectionParams = {
                     Upscale_Factor: payload.factor ?? 2,
@@ -517,6 +543,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             prompt: 'Prompt', crop: 'Crop',
             maskBrush: 'Mask Brush', maskAdjust: 'Mask Adjust', maskDetect: 'Mask Detect',
             maskPoints: 'Mask Points', maskText: 'Mask Text',
+            paint: 'Paint',
             videoUpscale: 'Upscale', imageUpscale: 'Upscale',
             removeBackground: 'Remove Background',
             interpolate: 'Interpolate',

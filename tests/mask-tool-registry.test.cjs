@@ -112,6 +112,128 @@ test('PromptBox re-show paths do not gate on prompt mode alone', () => {
     }
 });
 
+// MPI-375. Paint is the SECOND family. It is deliberately NOT in _MASK_TOOLS —
+// its artifact is real colour, not a mask — but it still has to reach the PromptBox
+// gate and the viewer-mode bridge, which used to be one predicate doing three jobs.
+// Every failure here is silent in the app: the tool mounts and paints, and only the
+// PromptBox quietly never appears.
+const railPaintTools = [...RAIL.matchAll(/mode:\s*'(paint[A-Za-z]*)'/g)].map(m => m[1]);
+
+test('every rail paint tool is registered in _PAINT_TOOLS', () => {
+    const set = BLOCK.match(/const _PAINT_TOOLS = new Set\(\[([^\]]*)\]\)/);
+    assert.ok(set, '_PAINT_TOOLS set literal not found in MpiGroupHistoryBlock');
+    assert.ok(railPaintTools.length >= 1, 'the rail offers no paint tool at all');
+    for (const mode of new Set(railPaintTools)) {
+        assert.ok(
+            set[1].includes(`'${mode}'`),
+            `${mode} is in the rail but missing from _PAINT_TOOLS — the viewer would never enter paint mode for it`,
+        );
+    }
+});
+
+test('every rail paint tool has an options compound', () => {
+    const registry = BLOCK.match(/const TOOL_OPTIONS_REGISTRY = \{([\s\S]*?)\n\};/);
+    assert.ok(registry, 'TOOL_OPTIONS_REGISTRY not found in MpiGroupHistoryBlock');
+    for (const mode of new Set(railPaintTools)) {
+        assert.match(
+            registry[1],
+            new RegExp(`\\b${mode}\\s*:`),
+            `${mode} is in the rail but has no TOOL_OPTIONS_REGISTRY entry — its button would mount nothing`,
+        );
+    }
+});
+
+// The exact bug the predicate split exists to prevent: paint keeping the PromptBox.
+// _modeKeepsPromptBox must reach the paint family, and _viewerModeFor must map it to
+// the 'paint' canvas mode rather than falling through to null (which would leave the
+// pointer belonging to nobody and a drag panning instead of painting).
+test('the PromptBox gate covers the paint family, not just masks', () => {
+    const gate = BLOCK.match(/const _modeKeepsPromptBox = [^\n]*/);
+    assert.ok(gate, '_modeKeepsPromptBox not found in MpiGroupHistoryBlock');
+    assert.match(
+        gate[0],
+        /_isCanvasTool\(mode\)|_isPaintTool\(mode\)/,
+        'paint → mask → detail is ONE operation, so paint must keep the PromptBox — '
+        + `the gate only reaches the mask family: ${gate[0]}`,
+    );
+});
+
+test('the viewer-mode bridge maps the paint family to paint mode', () => {
+    // `;\r?\n`, not `;\n` — the working tree is CRLF and a bare \n anchor silently
+    // matches nothing, which reads as "the constant was renamed" rather than as a
+    // line-ending bug. It cost a red test here before it could cost a wrong fix.
+    const bridge = BLOCK.match(/const _viewerModeFor = [\s\S]*?;\r?\n/);
+    assert.ok(bridge, '_viewerModeFor not found in MpiGroupHistoryBlock');
+    assert.match(
+        bridge[0],
+        /_isPaintTool\(mode\)\s*\?\s*'paint'/,
+        `_viewerModeFor never returns 'paint', so a paint tool would enter no canvas mode:\n${bridge[0]}`,
+    );
+});
+
+// THE HALF-WIRE THIS TEST EXISTS FOR (MPI-375, caught by the user in the app).
+// `paint` was added to MpiCanvas.activeMode, to the rail, to TOOL_OPTIONS_REGISTRY
+// and to _viewerModeFor — and MpiCanvasViewer's own _enterMode still had a hardcoded
+// chain that only knew 'crop' and 'mask', so 'paint' fell through to
+// `activeMode = 'none'`. NOTHING FAILED: the button worked, the panel mounted, and
+// the canvas simply panned on drag and zoomed on wheel. A dead tool that looks alive.
+//
+// The two ends must agree: every mode _viewerModeFor can RETURN, the viewer must
+// ACCEPT.
+test('the viewer accepts every canvas mode the block can send it', () => {
+    const viewer = read('js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js');
+    const bridge = BLOCK.match(/const _viewerModeFor = [\s\S]*?;\r?\n/);
+    assert.ok(bridge, '_viewerModeFor not found in MpiGroupHistoryBlock');
+
+    // Every string literal the bridge can return, minus the null fallback.
+    const emitted = [...bridge[0].matchAll(/\?\s*'([a-z]+)'/g)].map(m => m[1]);
+    assert.ok(emitted.includes('crop') && emitted.includes('mask'),
+        `the bridge scrape went blind — got ${emitted.join(', ') || 'nothing'}`);
+
+    const accepted = viewer.match(/const CANVAS_MODES = new Set\(\[([^\]]*)\]\)/);
+    assert.ok(accepted, 'CANVAS_MODES set not found in MpiCanvasViewer — _enterMode went back to a hardcoded chain');
+
+    for (const mode of emitted) {
+        // 'crop' is handled by its own branch above the set, since it also restores
+        // the crop rect.
+        if (mode === 'crop') continue;
+        assert.ok(
+            accepted[1].includes(`'${mode}'`),
+            `_viewerModeFor can return '${mode}' but MpiCanvasViewer's CANVAS_MODES does not accept it — `
+            + `_enterMode would fall through to activeMode = 'none' and the tool would silently do nothing`,
+        );
+    }
+});
+
+// The two `modechange` subscriptions used to hold identical copies of the
+// drop-stale-mode triple, so a mode added to one was forgotten in the other.
+test('canvas modechange sync is written once', () => {
+    const viewer = read('js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js');
+    const inlined = [...viewer.matchAll(/if \(mode !== 'crop' && _currentMode === 'crop'\)/g)];
+    assert.strictEqual(inlined.length, 0,
+        'the modechange sync is inlined again — it must stay in _syncModeFromCanvas, '
+        + 'or the second subscription will drift from the first');
+    assert.match(viewer, /function _syncModeFromCanvas\(mode\)/,
+        '_syncModeFromCanvas not found in MpiCanvasViewer');
+});
+
+// The strip is shared by both families now, so its destination table is the thing
+// that must not silently lose a row — a missing one falls back to 'mask' and the
+// paint tool would drive the MASK layer while looking correct.
+test('the shared strip declares a paint destination', () => {
+    const strip = read('js/components/Compounds/MpiMaskStrip/MpiMaskStrip.js');
+    const table = strip.match(/const DESTINATIONS = \{([\s\S]*?)\n\};/);
+    assert.ok(table, 'DESTINATIONS table not found in MpiMaskStrip');
+    for (const key of ['mask', 'paint']) {
+        assert.match(table[1], new RegExp(`\\b${key}\\s*:\\s*\\{`), `DESTINATIONS is missing the ${key} row`);
+    }
+    assert.match(
+        read('js/components/Organisms/MpiToolOptionsPaint/MpiToolOptionsPaint.js'),
+        /MpiMaskStrip\.mount\([\s\S]{0,200}?dest:\s*'paint'/s,
+        'MpiToolOptionsPaint mounts the strip without dest: paint — it would drive the MASK layer',
+    );
+});
+
 // Only the Brush tool paints. A brushless tool that still armed the brush would
 // let a drag paint with no visible brush control — the incoherence MPI-381 removed.
 test('only the brush tool mounts the strip with its brush pair', () => {

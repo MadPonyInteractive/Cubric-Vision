@@ -1,0 +1,226 @@
+/**
+ * PaintManager.js — the RGBA paint layer (MPI-375).
+ *
+ * ONE layer, and deliberately nothing else: no sub-layers, no blend modes, no
+ * pressure curves. Paint is an INPUT to the models, not decoration — the user
+ * roughs in a shape with colour, masks it, and runs detail over it, so the prompt
+ * says *what* while the paint says *where, what size, what colour*. That is the
+ * whole feature, and it is why this file is a fraction of MaskManager's size.
+ *
+ * STRICTLY INDEPENDENT OF THE MASK LAYERS. `MaskManager`'s canvases are binary
+ * alpha and are consumed as a mask; this one is real colour that gets flattened
+ * into a new history entry. The headline flow is painting first and MASKING the
+ * paint afterwards, so a shared layer would defeat the feature outright.
+ *
+ * The brush geometry is NOT here — `brushDab.js` owns the dab and the spacing, and
+ * `MaskManager` stamps the same ones into its two binary layers. Textures (MPI-435)
+ * land there once and both brushes get them.
+ *
+ * UNDO: the same `UndoStack` the mask uses, injected by MpiCanvas. The stack is
+ * layer-agnostic on purpose (an entry is rect patches over arbitrary 2D contexts)
+ * and was built before paint precisely so this layer would not need a second one.
+ * Every mutation here records an entry — see `docs/masking-undo.md`, whose
+ * enumerated set is load-bearing: an unlisted mutation is a silent hole in Ctrl+Z.
+ */
+
+import { stampDab, strokeDabs } from './brushDab.js';
+
+/**
+ * Paint is capped far higher than the mask's 1536 because it becomes REAL PIXELS
+ * in a new history entry rather than being consumed as a mask — downscaling and
+ * then upscaling on flatten would visibly soften every stroke. 4096 bounds the
+ * worst case at ~64MB for a square layer; a source larger than that is resampled
+ * up by Sharp on Apply, which is a soft edge on a vanishingly rare input rather
+ * than a quarter of a gigabyte on a common one.
+ */
+const PAINT_MAX_EDGE = 4096;
+
+/** Accent-adjacent, so a fresh stroke never reads as the white mask overlay. */
+// eslint-disable-next-line mpi/no-hardcoded-hex-color -- color picker default value
+const DEFAULT_COLOR = '#e0446b';
+
+export class PaintManager {
+    constructor() {
+        this.paintCanvas = document.createElement('canvas');
+        this.paintCtx = this.paintCanvas.getContext('2d', { willReadFrequently: true });
+
+        /** @type {import('./UndoStack.js').UndoStack|null} injected by MpiCanvas */
+        this.undo = null;
+
+        this.isPaintingMode = false;
+        this.isDrawing = false;
+        /** Mirrors MaskManager.paintEnabled — a paint-family tool that offers no
+         *  brush (Shapes, MPI-368) disarms this so a drag pans instead of painting. */
+        this.paintEnabled = true;
+
+        // Brush settings are in IMAGE px, exactly like the mask brush, so the two
+        // read the same at the same slider value.
+        this.brushSize = 40;
+        this.brushType = 'brush';
+        this.color = DEFAULT_COLOR;
+
+        /**
+         * DISPLAY opacity, not paint alpha — the same meaning the slider already has
+         * for the mask, so the shared strip does not change behaviour between tools.
+         * ponytail: strokes are laid down fully opaque. True alpha painting needs a
+         * per-stroke scratch buffer composited on mouseup, because dabs overlap 75%
+         * and would otherwise build to solid within one stroke, making a slow drag
+         * darker than a fast one. Add that if someone actually wants translucent
+         * paint; a shape reference for a model does not.
+         */
+        this.opacity = 0.7;
+
+        /** paint-px per image-px. Set in init(). */
+        this._scale = 1;
+        this._srcWidth = 0;
+        this._srcHeight = 0;
+
+        /** Dirty box of the stroke in flight, in paint-px. Null between strokes. */
+        this._strokeBox = null;
+        /** Previous dab of the stroke in flight, in paint-px. Reset in takeStrokeBox(). */
+        this._lastDab = null;
+    }
+
+    /**
+     * Size the layer to a newly loaded image. A new image means a new layer AND a
+     * new history — the same contract MaskManager.init() follows, and for the same
+     * reason: undo must never reach across two entries.
+     * @param {number} width - source image px
+     * @param {number} height
+     */
+    init(width, height) {
+        this._srcWidth = width;
+        this._srcHeight = height;
+        this._scale = Math.min(1, PAINT_MAX_EDGE / Math.max(width, height));
+        this.paintCanvas.width = Math.max(1, Math.round(width * this._scale));
+        this.paintCanvas.height = Math.max(1, Math.round(height * this._scale));
+        // Setting width/height already blanks the canvas; clear(false) is about the
+        // stroke state, and records nothing because a load is not an undoable edit.
+        this.clear(false);
+    }
+
+    /** @returns {Array<{canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D}>} */
+    undoLayers() {
+        if (!this.paintCtx) return [];
+        return [{ canvas: this.paintCanvas, ctx: this.paintCtx }];
+    }
+
+    /** Snapshot the layer before a layer-wide mutation. */
+    _recordUndo() {
+        const layers = this.undoLayers();
+        if (layers.length) this.undo?.record(layers);
+    }
+
+    /**
+     * Take the dirty box the stroke in flight accumulated and reset it. Padded by
+     * 1px because the dab arc is antialiased past its own radius.
+     * @returns {{x:number,y:number,w:number,h:number}|null} null when nothing was painted
+     */
+    takeStrokeBox() {
+        const b = this._strokeBox;
+        this._strokeBox = null;
+        // Stroke boundary, so the interpolator's previous sample dies here too —
+        // carrying it across strokes would draw a line from the end of one to the
+        // start of the next.
+        this._lastDab = null;
+        if (!b) return null;
+        return { x: b.x0 - 1, y: b.y0 - 1, w: (b.x1 - b.x0) + 2, h: (b.y1 - b.y0) + 2 };
+    }
+
+    /** Grow the in-flight stroke box to cover a dab of radius r at (x, y), all paint-px. */
+    _growStrokeBox(x, y, r) {
+        const b = this._strokeBox;
+        if (!b) {
+            this._strokeBox = { x0: x - r, y0: y - r, x1: x + r, y1: y + r };
+            return;
+        }
+        b.x0 = Math.min(b.x0, x - r);
+        b.y0 = Math.min(b.y0, y - r);
+        b.x1 = Math.max(b.x1, x + r);
+        b.y1 = Math.max(b.y1, y + r);
+    }
+
+    /**
+     * Lay down (or erase) one sample of a stroke. Coords arrive in image-px and are
+     * mapped to the layer's own px here, exactly as MaskManager.paint() does.
+     * @param {number} imgX
+     * @param {number} imgY
+     */
+    paint(imgX, imgY) {
+        const s = this._scale;
+        const to = { x: imgX * s, y: imgY * s };
+        const r = (this.brushSize * s) / 2;
+        // One layer, so an eraser is a straight destination-out — there is no
+        // subtract twin to keep in step the way the binary mask needs.
+        const op = this.brushType === 'eraser' ? 'destination-out' : 'source-over';
+
+        strokeDabs(this._lastDab, to, r, (x, y) => {
+            this._growStrokeBox(x, y, r);
+            stampDab(this.paintCtx, x, y, r, op, this.color);
+        });
+        this._lastDab = to;
+    }
+
+    /**
+     * Wipe the layer.
+     * @param {boolean} [record] false skips the undo snapshot — for a LOAD (init),
+     *   where blanking the layer is not an edit the user could have undone.
+     * @returns {boolean} true when there was something to clear
+     */
+    clear(record = true) {
+        this._strokeBox = null;
+        this._lastDab = null;
+        if (!this.paintCtx) return false;
+        if (record) {
+            if (this.isEmpty()) return false;
+            this._recordUndo();
+        }
+        this.paintCtx.clearRect(0, 0, this.paintCanvas.width, this.paintCanvas.height);
+        return true;
+    }
+
+    /**
+     * True when no pixel carries alpha. Scanned rather than tracked with a flag: a
+     * flag goes stale the moment an undo restores the layer to empty, and the two
+     * callers that care — Apply and the per-entry save — are the two places where
+     * being wrong actually costs something. Rare enough that a full pass is cheaper
+     * than the bug.
+     */
+    isEmpty() {
+        const { width: w, height: h } = this.paintCanvas;
+        if (!w || !h || !this.paintCtx) return true;
+        const { data } = this.paintCtx.getImageData(0, 0, w, h);
+        for (let i = 3; i < data.length; i += 4) {
+            if (data[i] !== 0) return false;
+        }
+        return true;
+    }
+
+    /** @returns {string|null} PNG data URL of the layer, or null when nothing is painted */
+    getURL() {
+        if (this.isEmpty()) return null;
+        return this.paintCanvas.toDataURL('image/png');
+    }
+
+    /**
+     * Restore a layer from a saved PNG (per-entry reload). A LOAD, so it records no
+     * undo entry and drops any in-flight stroke state.
+     * @param {string} dataURL
+     * @returns {Promise<void>}
+     */
+    setFromDataURL(dataURL) {
+        return new Promise((resolve) => {
+            if (!dataURL || !this.paintCtx) { resolve(); return; }
+            const img = new Image();
+            img.onload = () => {
+                this.paintCtx.clearRect(0, 0, this.paintCanvas.width, this.paintCanvas.height);
+                this.paintCtx.drawImage(img, 0, 0, this.paintCanvas.width, this.paintCanvas.height);
+                this._strokeBox = null;
+                this._lastDab = null;
+                resolve();
+            };
+            img.onerror = () => resolve();
+            img.src = dataURL;
+        });
+    }
+}

@@ -1,0 +1,21 @@
+.mpi-tool-options-paint {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+
+.mpi-tool-options-paint__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    align-items: center;
+    justify-content: center;
+}
+
+/* A class carrying `display` OUTRANKS the UA sheet's `[hidden] { display: none }` —
+   the trap that put three inert slider rows on screen in MPI-382. Nothing in this
+   panel hides by attribute today; the rule is here so that adding one cannot
+   reintroduce it. */
+.mpi-tool-options-paint__row[hidden] {
+    display: none;
+}

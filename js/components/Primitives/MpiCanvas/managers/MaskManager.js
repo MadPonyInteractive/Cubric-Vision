@@ -35,6 +35,9 @@
  * mask content themselves. Nothing composites them — `getPointsJSON()` serialises
  * them on demand for `Input_Points_Positive` / `Input_Points_Negative`.
  */
+
+import { stampDab, strokeDabs } from './brushDab.js';
+
 const MASK_MAX_EDGE = 1536;
 
 /**
@@ -120,6 +123,9 @@ export class MaskManager {
         this.undo = null;
         /** Dirty box of the stroke in flight, in mask-px. Null between strokes. */
         this._strokeBox = null;
+        /** Previous dab of the stroke in flight, in mask-px. Null between strokes —
+         *  reset in takeStrokeBox(), which is the stroke boundary (MPI-375). */
+        this._lastDab = null;
 
         // mask-px per image-px. Set in init(); paint() multiplies incoming
         // image-px coords + brush radius by this to hit the downscaled canvas.
@@ -208,6 +214,12 @@ export class MaskManager {
     takeStrokeBox() {
         const b = this._strokeBox;
         this._strokeBox = null;
+        // This is the stroke BOUNDARY — InputController calls it at mousedown and
+        // again at mouseup/interrupt, and nowhere else. So it is also where the
+        // interpolator's previous sample dies: carrying `_lastDab` across strokes
+        // would draw a line from wherever the last one ended to wherever the next
+        // one starts (MPI-375).
+        this._lastDab = null;
         if (!b) return null;
         return { x: b.x0 - 1, y: b.y0 - 1, w: (b.x1 - b.x0) + 2, h: (b.y1 - b.y0) + 2 };
     }
@@ -287,45 +299,29 @@ export class MaskManager {
     paint(imgX, imgY) {
         // Incoming coords + brush are in image-px; map to downscaled mask-px.
         const s = this._scale;
-        imgX *= s;
-        imgY *= s;
+        const to = { x: imgX * s, y: imgY * s };
         const r = (this.brushSize * s) / 2;
-        this._growStrokeBox(imgX, imgY, r);
-        if (this.brushType === 'eraser') {
-            // Manual: clear painted pixels at P
-            this.manualCtx.save();
-            this.manualCtx.globalCompositeOperation = 'destination-out';
-            this.manualCtx.beginPath();
-            this.manualCtx.arc(imgX, imgY, r, 0, Math.PI * 2);
-            this.manualCtx.fill();
-            this.manualCtx.restore();
+        const erasing = this.brushType === 'eraser';
 
-            // Subtract: paint white at P
-            this.subtractCtx.save();
-            this.subtractCtx.globalCompositeOperation = 'source-over';
-            this.subtractCtx.fillStyle = 'rgba(255, 255, 255, 1)';
-            this.subtractCtx.beginPath();
-            this.subtractCtx.arc(imgX, imgY, r, 0, Math.PI * 2);
-            this.subtractCtx.fill();
-            this.subtractCtx.restore();
-        } else {
-            // Manual: paint at P
-            this.manualCtx.save();
-            this.manualCtx.globalCompositeOperation = 'source-over';
-            this.manualCtx.fillStyle = this.maskColor;
-            this.manualCtx.beginPath();
-            this.manualCtx.arc(imgX, imgY, r, 0, Math.PI * 2);
-            this.manualCtx.fill();
-            this.manualCtx.restore();
+        // Every dab writes BOTH layers, and they are exact mirrors: paint lays down
+        // in manual and un-erases in subtract, erase does the reverse. That symmetry
+        // is what makes `manual AND NOT subtract` reconstructible after either.
+        const stamp = (x, y) => {
+            this._growStrokeBox(x, y, r);
+            if (erasing) {
+                stampDab(this.manualCtx,   x, y, r, 'destination-out');
+                stampDab(this.subtractCtx, x, y, r, 'source-over', 'rgba(255, 255, 255, 1)');
+            } else {
+                stampDab(this.manualCtx,   x, y, r, 'source-over', this.maskColor);
+                stampDab(this.subtractCtx, x, y, r, 'destination-out');
+            }
+        };
 
-            // Subtract: clear at P (un-erase)
-            this.subtractCtx.save();
-            this.subtractCtx.globalCompositeOperation = 'destination-out';
-            this.subtractCtx.beginPath();
-            this.subtractCtx.arc(imgX, imgY, r, 0, Math.PI * 2);
-            this.subtractCtx.fill();
-            this.subtractCtx.restore();
-        }
+        // Interpolate from the previous sample (MPI-375). One dab per mousemove left
+        // holes in any drag faster than the brush is wide; the shared spacing closes
+        // them for the paint layer and the mask brush alike.
+        strokeDabs(this._lastDab, to, r, stamp);
+        this._lastDab = to;
         this._recomposite();
     }
 

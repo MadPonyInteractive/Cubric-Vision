@@ -243,17 +243,43 @@
  * @typedef {Object} MpiMaskStripProps (Compound — js/components/Compounds/MpiMaskStrip)
  * @property {Object}  viewer      - MpiCanvasViewer instance
  * @property {boolean} [brush=true] - Show the paint / erase pair and bind the B / E hotkeys.
+ * @property {'mask'|'paint'} [dest='mask'] - Which layer the controls drive (MPI-375).
  *
  * The shared bottom strip of EVERY mask tool (MPI-371): paint / erase · invert ·
  * B/W view · clear · opacity. Tools where a brush makes no sense (Points,
  * Detect) pass `brush: false` and get the rest alone — and that same prop
  * disarms canvas painting for the tool (MPI-381). Opacity, invert and the B/W
- * view persist under the `mask` tool key, shared by the whole family.
+ * view persist under the tool key of the active destination.
  *
- * Requires viewer.el: setMaskBrushMode('brush'|'eraser'), setMaskInverted(),
- *   isMaskInverted(), setMaskBwView(), isMaskBwView(), setMaskPaintEnabled(),
- *   clearMask(), setMaskOpacity()
+ * MPI-375 made it destination-driven: `dest: 'paint'` points the same controls at
+ * the RGBA paint layer, drops invert and B/W view (display toggles that only mean
+ * something for a binary mask) and persists under the `paint` key. Destinations are
+ * ROWS in the module's `DESTINATIONS` table, never branches in setup().
+ *
+ * Requires viewer.el, per destination:
+ *   mask  — setMaskBrushMode('brush'|'eraser'), setMaskInverted(), isMaskInverted(),
+ *           setMaskBwView(), isMaskBwView(), setMaskPaintEnabled(), clearMask(),
+ *           setMaskOpacity()
+ *   paint — setPaintBrushMode('brush'|'eraser'), setPaintEnabled(), clearPaint(),
+ *           setPaintOpacity()
  * Emits nothing.
+ */
+
+/**
+ * @typedef {Object} MpiToolOptionsPaintProps (Organism — js/components/Organisms/MpiToolOptionsPaint)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ *
+ * The Paint tool (MPI-375) — the whole Paint GROUP for now. A colour picker, Apply,
+ * and MpiMaskStrip with `dest: 'paint'`. Paint is an INPUT to the models, not
+ * decoration: rough in a shape, mask it, run detail over it.
+ *
+ * NOT a mask tool (it is in `_PAINT_TOOLS`, not `_MASK_TOOLS`) but it DOES keep the
+ * PromptBox, because paint → mask → detail is one operation. NOT a preview either,
+ * so it does not extend discardPreview() — paint strokes are committed pixels.
+ *
+ * Requires viewer.el: enterMode('paint'), exitMode(), setPaintColor(), applyPaint(),
+ *   plus the paint destination surface MpiMaskStrip drives
+ * No 'apply' emitted — Apply calls the viewer directly (a server-side flatten).
  */
 
 /**

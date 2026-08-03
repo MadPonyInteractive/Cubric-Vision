@@ -70,6 +70,12 @@
 
 ## fixes
 
+- **The mask brush no longer skips on a fast stroke.** The brush placed a dab at
+  each position the mouse reported and nothing joined them up, so a quick drag
+  left a dotted trail of gaps instead of a solid stroke — worst on a large image
+  zoomed out, where the same hand movement covers far more of the picture between
+  readings. Strokes are now continuous at any speed.
+
 - **Masked edits no longer fail on large images.** The mask was being sent at a
   smaller size than the picture it belonged to, and any source over roughly 1500
   pixels on its long edge stopped with a dimensions error. Affected FLUX.2

@@ -12,14 +12,22 @@
  * Settings live under the `mask` tool key — shared by the whole family, so
  * opacity, invert and the B/W view survive a swap between mask tools.
  *
- * Props:
- * @param {object}  viewer          - MpiCanvasViewer instance
- * @param {boolean} [brush=true]    - show the paint / erase pair, bind B / E, arm painting
+ * MPI-375: the strip drives a DESTINATION. `dest: 'mask'` (default) is everything
+ * above; `dest: 'paint'` points the same controls at the RGBA paint layer and drops
+ * the two mask-only display toggles. See `DESTINATIONS` — a new destination is a new
+ * row there, never a new branch in `setup()`.
  *
- * Requires on viewer.el:
- *   setMaskBrushMode('brush'|'eraser'), setMaskInverted(), isMaskInverted(),
- *   setMaskBwView(), isMaskBwView(), setMaskPaintEnabled(),
- *   clearMask(), setMaskOpacity()
+ * Props:
+ * @param {object}  viewer            - MpiCanvasViewer instance
+ * @param {boolean} [brush=true]      - show the paint / erase pair, bind B / E, arm painting
+ * @param {'mask'|'paint'} [dest='mask'] - which layer the controls drive
+ *
+ * Requires on viewer.el, per destination:
+ *   mask  — setMaskBrushMode('brush'|'eraser'), setMaskInverted(), isMaskInverted(),
+ *           setMaskBwView(), isMaskBwView(), setMaskPaintEnabled(),
+ *           clearMask(), setMaskOpacity()
+ *   paint — setPaintBrushMode('brush'|'eraser'), setPaintEnabled(),
+ *           clearPaint(), setPaintOpacity()
  */
 
 import { ComponentFactory } from '../../factory.js';
@@ -32,6 +40,49 @@ import { state }           from '../../../state.js';
 import { getToolSettings } from '../../../data/projectModel.js';
 
 const DEFAULTS = { opacity: 0.7, inverted: false, bwView: false };
+
+/**
+ * The strip drives one DESTINATION (MPI-375). Mask and paint share the brush pair,
+ * the opacity slider and the settings persistence; they differ only in which viewer
+ * methods those controls call and whether the mask-only display toggles exist.
+ *
+ * A name table rather than `if (isPaint)` scattered through setup(): the strip must
+ * not grow a branch per destination, or MPI-368's shape mounts turn it into a
+ * switch statement. Adding a destination is adding a row here.
+ *
+ * `invert` and `bwView` are display toggles for a BINARY mask — "show the mask
+ * inverted", "show it opaque in black and white". Neither has a meaning for real
+ * colour, so paint declares `maskDisplayToggles: false` and they are not rendered.
+ * Hiding them with `[hidden]` would not be enough anyway: a class carrying `display`
+ * outranks the UA sheet's `[hidden] { display: none }`, which is exactly how three
+ * inert slider rows once reached the screen (MPI-382).
+ */
+const DESTINATIONS = {
+    mask: {
+        settingsKey: 'mask',
+        setEnabled: 'setMaskPaintEnabled',
+        setBrushMode: 'setMaskBrushMode',
+        setOpacity: 'setMaskOpacity',
+        clear: 'clearMask',
+        paintInfo: 'Paint mask (B)',
+        eraseInfo: 'Erase mask (E)',
+        clearInfo: 'Clear mask',
+        radioName: 'mask-brush-mode',
+        maskDisplayToggles: true,
+    },
+    paint: {
+        settingsKey: 'paint',
+        setEnabled: 'setPaintEnabled',
+        setBrushMode: 'setPaintBrushMode',
+        setOpacity: 'setPaintOpacity',
+        clear: 'clearPaint',
+        paintInfo: 'Paint colour (B)',
+        eraseInfo: 'Erase paint (E)',
+        clearInfo: 'Clear paint',
+        radioName: 'paint-brush-mode',
+        maskDisplayToggles: false,
+    },
+};
 
 export const MpiMaskStrip = ComponentFactory.create({
     name: 'MpiMaskStrip',
@@ -56,30 +107,31 @@ export const MpiMaskStrip = ComponentFactory.create({
     setup: (el, props) => {
         const { viewer } = props;
         const showBrush = props.brush !== false;
+        const dest = DESTINATIONS[props.dest] || DESTINATIONS.mask;
         const _children = [];
         const _unbinds  = [];
 
-        const settings = { ...DEFAULTS, ...getToolSettings(state.currentProject || {}, 'mask', DEFAULTS) };
+        const settings = { ...DEFAULTS, ...getToolSettings(state.currentProject || {}, dest.settingsKey, DEFAULTS) };
         const row = qs('#strip-row', el);
 
         // Whether this tool paints at all is the same question as whether it
         // shows the pair (MPI-381) — declare it once, here, so a brushless tool
         // cannot paint by dragging on the canvas.
-        viewer.el.setMaskPaintEnabled?.(showBrush);
+        viewer.el[dest.setEnabled]?.(showBrush);
 
         // ── Paint / erase — optional pair ────────────────────────────────────
 
         if (showBrush) {
             const brushRadio = MpiRadioGroup.mount(document.createElement('div'), {
                 options: [
-                    { label: 'Paint', value: 'brush',  icon: 'brush',  info: 'Paint mask (B)' },
-                    { label: 'Erase', value: 'eraser', icon: 'eraser', info: 'Erase mask (E)' },
+                    { label: 'Paint', value: 'brush',  icon: 'brush',  info: dest.paintInfo },
+                    { label: 'Erase', value: 'eraser', icon: 'eraser', info: dest.eraseInfo },
                 ],
                 value: 'brush',
-                name: 'mask-brush-mode',
+                name: dest.radioName,
                 iconOnly: true,
             });
-            brushRadio.on('select', ({ value }) => viewer.el.setMaskBrushMode?.(value));
+            brushRadio.on('select', ({ value }) => viewer.el[dest.setBrushMode]?.(value));
             row.appendChild(brushRadio.el);
             _children.push(brushRadio);
 
@@ -87,36 +139,39 @@ export const MpiMaskStrip = ComponentFactory.create({
             _unbinds.push(Hotkeys.bind('mask.eraser.toolbar', () => brushRadio.el.setValue('eraser')));
         }
 
-        // ── Invert / clear — on every tool ───────────────────────────────────
+        // ── Invert / B-W (mask only) + clear — on every tool ─────────────────
 
-        const invertBtn = MpiButton.mount(document.createElement('div'), {
+        const invertBtn = dest.maskDisplayToggles ? MpiButton.mount(document.createElement('div'), {
             icon: 'invert', size: 'sm', variant: 'secondary', info: 'Invert mask display',
-        });
-        const bwBtn = MpiButton.mount(document.createElement('div'), {
+        }) : null;
+        const bwBtn = dest.maskDisplayToggles ? MpiButton.mount(document.createElement('div'), {
             icon: 'mask_bw', size: 'sm', variant: 'secondary',
             info: 'Show the mask in black and white — find and erase stray specks',
-        });
+        }) : null;
         const clearBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'trash', size: 'sm', variant: 'secondary', info: 'Clear mask',
+            icon: 'trash', size: 'sm', variant: 'secondary', info: dest.clearInfo,
         });
-        invertBtn.el.classList.add('mpi-mask-strip__invert');
-        row.appendChild(invertBtn.el);
-        row.appendChild(bwBtn.el);
+        if (invertBtn) {
+            invertBtn.el.classList.add('mpi-mask-strip__invert');
+            row.appendChild(invertBtn.el);
+        }
+        if (bwBtn) row.appendChild(bwBtn.el);
         row.appendChild(clearBtn.el);
 
         const _applyInvert = (v) => {
+            if (!invertBtn) return;
             viewer.el.setMaskInverted?.(v);
             invertBtn.el.classList.toggle('is-active', v);
             invertBtn.el.classList.toggle('mpi-mask-strip__invert--on', v);
         };
         _applyInvert(!!settings.inverted);
 
-        invertBtn.on('click', () => {
+        invertBtn?.on('click', () => {
             const next = !viewer.el.isMaskInverted?.();
             _applyInvert(next);
-            Events.emit('settings:tool:update', { toolKey: 'mask', key: 'inverted', value: next });
+            Events.emit('settings:tool:update', { toolKey: dest.settingsKey, key: 'inverted', value: next });
         });
-        clearBtn.on('click', () => viewer.el.clearMask?.());
+        clearBtn.on('click', () => viewer.el[dest.clear]?.());
         _children.push(invertBtn, bwBtn, clearBtn);
 
         // ── Opacity ──────────────────────────────────────────────────────────
@@ -125,7 +180,7 @@ export const MpiMaskStrip = ComponentFactory.create({
         const opacityVal   = qs('#opacity-val', el);
         const initialOpacity = typeof settings.opacity === 'number' ? settings.opacity : DEFAULTS.opacity;
         const _applyOpacity = (pct) => {
-            viewer.el.setMaskOpacity?.(Math.max(0, Math.min(1, pct / 100)));
+            viewer.el[dest.setOpacity]?.(Math.max(0, Math.min(1, pct / 100)));
             opacityVal.textContent = `${Math.round(pct)}%`;
         };
         opacityInput.value = String(Math.round(initialOpacity * 100));
@@ -133,7 +188,7 @@ export const MpiMaskStrip = ComponentFactory.create({
         const _offOpacity = on(opacityInput, 'input', () => {
             const pct = Number(opacityInput.value);
             _applyOpacity(pct);
-            Events.emit('settings:tool:update', { toolKey: 'mask', key: 'opacity', value: pct / 100 });
+            Events.emit('settings:tool:update', { toolKey: dest.settingsKey, key: 'opacity', value: pct / 100 });
         });
 
         // ── Black-and-white mask view (MPI-381) ──────────────────────────────
@@ -142,6 +197,7 @@ export const MpiMaskStrip = ComponentFactory.create({
         // doing nothing.
 
         const _applyBw = (v) => {
+            if (!bwBtn) return;
             viewer.el.setMaskBwView?.(v);
             bwBtn.el.classList.toggle('is-active', v);
             bwBtn.el.classList.toggle('mpi-mask-strip__bw--on', v);
@@ -150,10 +206,10 @@ export const MpiMaskStrip = ComponentFactory.create({
         };
         _applyBw(!!settings.bwView);
 
-        bwBtn.on('click', () => {
+        bwBtn?.on('click', () => {
             const next = !viewer.el.isMaskBwView?.();
             _applyBw(next);
-            Events.emit('settings:tool:update', { toolKey: 'mask', key: 'bwView', value: next });
+            Events.emit('settings:tool:update', { toolKey: dest.settingsKey, key: 'bwView', value: next });
         });
 
         // ── Lifecycle ────────────────────────────────────────────────────────
@@ -161,7 +217,10 @@ export const MpiMaskStrip = ComponentFactory.create({
         el.destroy = () => {
             _unbinds.forEach(fn => fn?.());
             _offOpacity();
-            _children.forEach(c => c.destroy?.());
+            // filter(Boolean): the mask-only toggles are null on the paint
+            // destination, and `null.destroy?.()` throws — the optional chain is on
+            // `destroy`, not on the child.
+            _children.filter(Boolean).forEach(c => c.destroy?.());
         };
     },
 });

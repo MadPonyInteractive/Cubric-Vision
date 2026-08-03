@@ -11,7 +11,7 @@
  * Instance API (on el):
  *   el.loadEntry(item, idx)            — save current mask, load item's image, restore idx's mask
  *   el.loadCompare(itemA, itemB)       — load two images in compare mode
- *   el.enterMode(mode)                — enter 'crop'|'mask'|'automask' (or 'none' to exit all)
+ *   el.enterMode(mode)                — enter 'crop'|'mask'|'paint'|'automask' (or 'none' to exit all)
  *   el.exitMode()                     — exit any active tool mode
  *   el.getCurrentMaskDataURL()         — returns current mask as data URL, or null
  *   el.hasMask()                      — returns boolean
@@ -747,6 +747,32 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         // ── Tool mode state machine ───────────────────────────────────────────
 
+        /**
+         * Tool modes that map 1:1 onto an MpiCanvas `activeMode` of the same name.
+         * `crop` is handled separately above because it also restores its rect.
+         *
+         * A SET, not a chain of `else if` (MPI-375): `paint` was added to MpiCanvas,
+         * to the rail and to `_viewerModeFor()`, and the old chain silently sent it
+         * down the fallback to `activeMode = 'none'`. Nothing failed — the tool
+         * mounted, the panel rendered, and the canvas just panned on drag, which
+         * reads as a dead tool rather than as a missing branch. Adding a canvas mode
+         * means adding it HERE and to `_syncModeFromCanvas` below, and nowhere else.
+         */
+        const CANVAS_MODES = new Set(['mask', 'paint']);
+
+        /**
+         * Canvas told us its mode changed; drop any tool mode that no longer matches.
+         * Written once because the two `modechange` subscriptions (initial mount and
+         * the post-preview remount) had identical copies, and a mode added to one
+         * would have been forgotten in the other.
+         * @param {string} mode - the canvas' new activeMode
+         */
+        function _syncModeFromCanvas(mode) {
+            for (const m of [...CANVAS_MODES, 'crop', 'automask']) {
+                if (mode !== m && _currentMode === m) _currentMode = 'none';
+            }
+        }
+
         /** Single _currentMode replaces _isCropMode, _isMaskMode, _isAutoMaskMode */
         function _enterMode(mode) {
             if (_currentMode === mode) return;
@@ -756,8 +782,8 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 canvas.activeMode = 'crop';
                 if (_activeCropSize) canvas.setCropSize(_activeCropSize.w, _activeCropSize.h);
                 else                 canvas.setCropRatio(_activeCropRatio);
-            } else if (mode === 'mask') {
-                canvas.activeMode = 'mask';
+            } else if (CANVAS_MODES.has(mode)) {
+                canvas.activeMode = mode;
             } else if (mode !== 'automask') {
                 canvas.activeMode = 'none';
             }
@@ -781,9 +807,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
             // restored mode (crop/mask/future tools).
             if (_loadingEntry) return;
 
-            if (mode !== 'crop' && _currentMode === 'crop')        _currentMode = 'none';
-            if (mode !== 'mask' && _currentMode === 'mask')        _currentMode = 'none';
-            if (mode !== 'automask' && _currentMode === 'automask') _currentMode = 'none';
+            _syncModeFromCanvas(mode);
             if (mode !== 'compare' && _comparingActive && !_loadingComparison) {
                 _comparingActive = false;
                 _compareNameA = '';
@@ -1216,6 +1240,25 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.setMaskOpacity    = (v) => canvas.setMaskOpacity(v);
         el.getMaskOpacity    = () => canvas.maskOpacity;
 
+        // ── Paint layer (MPI-375) ────────────────────────────────────────────
+        // Same surface shape as the mask block above, so `MpiMaskStrip` can drive
+        // either destination by name. The paint layer is NOT a mask: it is real
+        // colour that Apply flattens into a new history entry, and it stays visible
+        // while the user switches to a mask tool — that is the whole paint → mask →
+        // detail flow the card exists for.
+        el.setPaintBrushMode = (mode) => {
+            if (mode === 'brush' || mode === 'eraser') canvas.setPaintBrushType?.(mode);
+        };
+        el.setPaintEnabled   = (v) => canvas.setPaintEnabled?.(v);
+        el.setPaintOpacity   = (v) => canvas.setPaintOpacity?.(v);
+        el.setPaintColor     = (c) => canvas.setPaintColor?.(c);
+        el.setPaintBrushSize = (s) => canvas.setPaintBrushSize?.(s);
+        el.getPaintURL       = () => canvas.getPaintURL?.() ?? null;
+        el.hasPaint          = () => !!canvas.hasPaint?.();
+        /** Wipe the paint layer as ONE undo entry. @returns {boolean} true if it had pixels */
+        el.clearPaint        = () => !!canvas.clearPaint?.();
+        el.setPaintFromDataURL = (url) => canvas.setPaintFromDataURL?.(url);
+
         /**
          * Commit the manual mask: exits mask mode, emits 'mask-ready' if paint
          * strokes exist, otherwise 'mask-clear'. Mirrors the old apply handler.
@@ -1505,9 +1548,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
                 _cv.inst = MpiCanvas.mount(wrap, _canvasProps);
                 _cv.inst.on('modechange', ({ mode }) => {
-                    if (mode !== 'crop' && _currentMode === 'crop')         _currentMode = 'none';
-                    if (mode !== 'mask' && _currentMode === 'mask')         _currentMode = 'none';
-                    if (mode !== 'automask' && _currentMode === 'automask') _currentMode = 'none';
+                    _syncModeFromCanvas(mode);
                     if (mode !== 'compare' && _comparingActive && !_loadingComparison) {
                         _comparingActive = false;
                         _compareNameA = '';

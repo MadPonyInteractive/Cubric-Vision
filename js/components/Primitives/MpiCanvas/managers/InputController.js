@@ -90,6 +90,23 @@ export class InputController {
         this.options.onMaskStrokeEnd?.();
     }
 
+    /**
+     * The paint twin of `_endMaskStroke` (MPI-375). Same gesture contract on the
+     * same shared UndoStack — begin at mousedown, commit the box here, abort when
+     * the stroke put nothing down. Kept separate rather than generalised because
+     * the two announce different things: a mask stroke publishes mask state to the
+     * op strip, a paint stroke does not.
+     */
+    _endPaintStroke() {
+        const paint = this.managers.paint;
+        if (!paint?.isDrawing) return;
+        paint.isDrawing = false;
+        const box = paint.takeStrokeBox();
+        if (box) this.managers.undo?.commit(box);
+        else     this.managers.undo?.abort();
+        this.options.onPaintStrokeEnd?.();
+    }
+
     _initEvents() {
         const { view, mask, comparison } = this.managers;
 
@@ -98,11 +115,15 @@ export class InputController {
             e.preventDefault();
             view.isManagedView = false;
 
-            if (mask.isMaskingMode && mask.paintEnabled && !this.isSpacePressed) {
+            // Whichever brush owns the pointer resizes on the wheel (MPI-375).
+            const wheelBrush = (mask.isMaskingMode && mask.paintEnabled) ? mask
+                : (this.managers.paint?.isPaintingMode && this.managers.paint.paintEnabled) ? this.managers.paint
+                : null;
+            if (wheelBrush && !this.isSpacePressed) {
                 const delta = -e.deltaY;
-                mask.brushSize = Math.max(1, mask.brushSize + (delta > 0 ? 5 : -5));
+                wheelBrush.brushSize = Math.max(1, wheelBrush.brushSize + (delta > 0 ? 5 : -5));
                 if (this.options.onBrushSizeChange) {
-                    this.options.onBrushSizeChange(mask.brushSize);
+                    this.options.onBrushSizeChange(wheelBrush.brushSize);
                 }
             } else {
                 const zoomSpeed = 0.001;
@@ -139,7 +160,7 @@ export class InputController {
 
             const c = this._getContainerCoords(e);
             const i = this._getImageCoords(e);
-            const { view, mask, comparison, crop } = this.managers;
+            const { view, mask, comparison, crop, paint } = this.managers;
             const containerW = this.container.getBoundingClientRect().width || 1;
 
             if (pointsClick) {
@@ -175,6 +196,13 @@ export class InputController {
                 this.managers.undo?.begin(mask.undoLayers());
                 mask.takeStrokeBox();
                 mask.paint(i.x, i.y);
+            } else if (paint?.isPaintingMode && paint.paintEnabled && !this.isSpacePressed) {
+                paint.isDrawing = true;
+                // Same ordering as the mask brush above: snapshot, reset the stroke
+                // state, then the first dab.
+                this.managers.undo?.begin(paint.undoLayers());
+                paint.takeStrokeBox();
+                paint.paint(i.x, i.y);
             } else {
                 this.isPanning = true;
                 view.isManagedView = false;
@@ -202,7 +230,7 @@ export class InputController {
             const c = this._getContainerCoords(e);
             this.currentMouseX = c.x;   // container px (used by brush indicator + slider)
             this.currentMouseY = c.y;
-            const { view, mask, comparison, crop } = this.managers;
+            const { view, mask, comparison, crop, paint } = this.managers;
 
             if (comparison.isDraggingSlider) {
                 const containerW = this.container.getBoundingClientRect().width || 1;
@@ -214,6 +242,9 @@ export class InputController {
             } else if (mask.isDrawingMask) {
                 const i = this._getImageCoords(e);
                 mask.paint(i.x, i.y);
+            } else if (paint?.isDrawing) {
+                const i = this._getImageCoords(e);
+                paint.paint(i.x, i.y);
             } else if (this.isPanning) {
                 view.offsetX = e.clientX - this.startPanX;
                 view.offsetY = e.clientY - this.startPanY;
@@ -227,6 +258,7 @@ export class InputController {
         // MouseUp: Global listener
         this._boundHandlers.mouseup = () => {
             this._endMaskStroke();
+            this._endPaintStroke();
             this.managers.crop.endDrag();
             this.isPanning = false;
             this.managers.comparison.isDraggingSlider = false;
@@ -246,33 +278,47 @@ export class InputController {
             // Whatever was already painted counts as a finished stroke — publish it,
             // or the mask that Space interrupted never reaches the op strip.
             this._endMaskStroke();
+            // Same for paint, or Space mid-stroke leaves an undo capture open and the
+            // NEXT stroke's commit would swallow both.
+            this._endPaintStroke();
             this.updateCursor();
             this.options.onDraw();
         });
 
+        // B / E reach whichever brush owns the pointer — the mask brush or the paint
+        // brush (MPI-375). One engine, two destinations, so one pair of keys.
+        const _brushOwner = () => {
+            if (mask.isMaskingMode) return mask;
+            if (this.managers.paint?.isPaintingMode) return this.managers.paint;
+            return null;
+        };
+
         this._boundHandlers.brushKeyUnsub = Hotkeys.bind('mask.brush.canvas', () => {
-            if (!mask.isMaskingMode) return;
-            mask.brushType = 'brush';
+            const owner = _brushOwner();
+            if (!owner) return;
+            owner.brushType = 'brush';
             if (this.options.onBrushTypeChange) this.options.onBrushTypeChange('brush');
             this.options.onDraw();
         });
 
         this._boundHandlers.eraserKeyUnsub = Hotkeys.bind('mask.eraser.canvas', () => {
-            if (!mask.isMaskingMode) return;
-            mask.brushType = 'eraser';
+            const owner = _brushOwner();
+            if (!owner) return;
+            owner.brushType = 'eraser';
             if (this.options.onBrushTypeChange) this.options.onBrushTypeChange('eraser');
             this.options.onDraw();
         });
 
-        // Undo / redo (MPI-376). Gated on mask mode like the brush keys — outside
-        // a mask tool there is nothing to undo and Ctrl+Z must stay the OS default.
+        // Undo / redo (MPI-376). Gated on a canvas tool being active, like the brush
+        // keys — outside one there is nothing to undo and Ctrl+Z must stay the OS
+        // default. Paint shares the SAME stack, so the same keys serve both.
         this._boundHandlers.undoKeyUnsub = Hotkeys.bind('mask.undo.canvas', () => {
-            if (!mask.isMaskingMode) return;
+            if (!_brushOwner()) return;
             this.options.onUndo?.();
         });
 
         this._boundHandlers.redoKeyUnsub = Hotkeys.bind('mask.redo.canvas', () => {
-            if (!mask.isMaskingMode) return;
+            if (!_brushOwner()) return;
             this.options.onRedo?.();
         });
 
@@ -309,11 +355,11 @@ export class InputController {
     }
 
     updateCursor() {
-        const { mask, comparison, crop, view } = this.managers;
+        const { mask, comparison, crop, view, paint } = this.managers;
         const x = this.currentMouseX;
         const y = this.currentMouseY;
         const target = this.container;
-        if (this.isSpacePressed || (this.isPanning && !mask.isMaskingMode)) {
+        if (this.isSpacePressed || (this.isPanning && !mask.isMaskingMode && !paint?.isPaintingMode)) {
             target.style.cursor = 'move';
         } else if (crop.isCroppingMode && !this.isSpacePressed) {
             // Convert container-px cursor → image-px for crop hit-test.
@@ -329,6 +375,10 @@ export class InputController {
             if (mask.pointsMode)        target.style.cursor = 'crosshair';
             else if (mask.paintEnabled) target.style.cursor = 'none';
             else                        target.style.cursor = 'default';
+        } else if (paint?.isPaintingMode) {
+            // Same rule as the mask brush: the ring indicator replaces the cursor,
+            // and a brushless paint tool (Shapes, MPI-368) keeps a real one.
+            target.style.cursor = paint.paintEnabled ? 'none' : 'default';
         } else if (x !== undefined) {
             const containerW = this.container.getBoundingClientRect().width || 1;
             target.style.cursor = comparison.isOverSlider(x, containerW)

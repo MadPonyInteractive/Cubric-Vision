@@ -7,6 +7,11 @@ MPI-368 by the user 2026-08-03, because the shape gizmo's second destination is 
 this card builds). Read `tasks/MPI-424/brief.md` for the architecture and
 `docs/masking-tools.md` for the contracts every canvas tool obeys.
 
+**2026-08-03: items 1-3 are DONE and user-verified — see `## Completed`. The paint
+layer, the shared dab and the Paint tool all exist and work. Items 4 (persistence +
+Apply) and 5 (docs) remain, and `applyPaint` does not exist yet, so the Apply button
+deliberately renders disabled rather than swallowing its own click.**
+
 Measured in source 2026-08-03, before planning:
 
 - **There is no paint layer of any kind.** No `paintCanvas`, no `paintLayer`, no `'paint'`
@@ -118,15 +123,52 @@ Two things this plan decides on technical grounds and states as assumptions:
 
 ## Completed
 
-- [ ] Nothing yet.
+**Items 1-3, shipped and USER-VERIFIED in the app 2026-08-03** (colour, undo, brush,
+eraser, clear, opacity all confirmed by hand). Evidence: `validation.md`.
+
+- **The shared dab.** `brushDab.js` — `stampDab()` plus `strokeDabs()`, which
+  interpolates between mouse samples at a quarter-radius spacing. `MaskManager`
+  stamps it twice (manual + subtract), `PaintManager` once. MPI-435 parameterises
+  that one function and both brushes get textures.
+- **`PaintManager`.** One RGBA layer at image-native size capped at 4096, on the
+  SHARED `UndoStack`. `isEmpty()` scans alpha rather than tracking a flag, because a
+  flag goes stale the moment an undo empties the layer.
+- **`MpiToolOptionsPaint` + the Paint rail group**, with `MpiMaskStrip` made
+  destination-driven by a `DESTINATIONS` table rather than branches in `setup()`.
+- **`_isMaskTool()`'s three jobs split** into `_isMaskTool` / `_isPaintTool` /
+  `_isCanvasTool`, so paint keeps the PromptBox without pretending to be a mask.
+- **A pre-existing mask-brush bug fixed on the way through** — see Plan Drift.
 
 ## Remaining Work
 
-- All five implementation items.
+- Item 4: per-entry persistence + Apply through a sibling server route.
+- Item 5: `docs/painting.md`, the `docs/masking-undo.md` mutation set, routing,
+  UNRELEASED.md.
 
 ## Plan Drift
 
-- None yet.
+- **2026-08-03 — the mask brush was ALREADY dropping dabs, and this card fixed it.**
+  The plan said to confirm whether fast drags gap before adding interpolation. They
+  did, by construction: `paint()` stamped one arc per `mousemove` with nothing
+  joining them, so any drag wider than the brush (40 image-px at the default) left
+  holes. It read as a skipping brush, not a missing feature. The shared spacing
+  closes it for both brushes. **This is a user-visible change to a shipped tool** and
+  needs its own release-note line, not a fold into "paint added". User confirmed:
+  *"no skip whatsoever."*
+- **2026-08-03 — `MpiCanvasViewer._enterMode()` was a hardcoded mode chain, and the
+  first build of the Paint tool was DEAD because of it.** Not in the plan's blast
+  radius: `paint` was added to `MpiCanvas.activeMode`, the rail, the registry and
+  `_viewerModeFor`, and fell through the viewer's final `else` to
+  `activeMode = 'none'`. Nothing errored — the tool mounted and the canvas just
+  panned. Fixed at the cause (`CANVAS_MODES` set), and the sweep found the
+  drop-stale-mode triple DUPLICATED across both `modechange` subscriptions, now
+  `_syncModeFromCanvas()`. Two guards added, both negative-controlled; the important
+  one ties `_viewerModeFor`'s outputs to the viewer's accepted modes.
+- **2026-08-03 — opacity is DISPLAY opacity, not paint alpha.** Marked with a
+  `ponytail:` comment naming the ceiling: true alpha painting needs a per-stroke
+  scratch buffer, because dabs overlap 75% and would build to solid within one
+  stroke, making a slow drag darker than a fast one. A shape reference for a model
+  does not need it.
 
 ## Verification
 

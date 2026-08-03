@@ -84,6 +84,7 @@ import { ViewManager }       from './managers/ViewManager.js';
 import { MaskManager }       from './managers/MaskManager.js';
 import { ComparisonManager } from './managers/ComparisonManager.js';
 import { CropManager }       from './managers/CropManager.js';
+import { PaintManager }      from './managers/PaintManager.js';
 import { UndoStack }         from './managers/UndoStack.js';
 import { InputController }   from './managers/InputController.js';
 
@@ -176,10 +177,14 @@ class _CanvasCore {
         this.mask       = new MaskManager();
         this.comparison = new ComparisonManager();
         this.crop       = new CropManager();
-        // MPI-376: ONE stack for the whole canvas, not one per tool — masking uses
-        // it now, MPI-375's paint layer plugs into the same entries later.
+        this.paint      = new PaintManager();
+        // MPI-376: ONE stack for the whole canvas, not one per tool. Mask and paint
+        // share it, chronologically — one canvas, one history. The consequence is
+        // deliberate and documented: Ctrl+Z inside the Paint tool can walk back into
+        // a mask stroke. A second stack was ruled out before undo was even built.
         this.undoStack  = new UndoStack();
         this.mask.undo  = this.undoStack;
+        this.paint.undo = this.undoStack;
         this._activeMode = 'none';
         this._onModeChange = onModeChange;
         this._maskHidden = false;
@@ -197,7 +202,7 @@ class _CanvasCore {
         this.input = new InputController(
             this.canvas,
             this.container,
-            { view: this.view, mask: this.mask, comparison: this.comparison, crop: this.crop, undo: this.undoStack },
+            { view: this.view, mask: this.mask, comparison: this.comparison, crop: this.crop, paint: this.paint, undo: this.undoStack },
             {
                 onDraw: () => { this._applyTransform(); this.draw(); },
                 onResetView: () => this.resetView(),
@@ -218,7 +223,7 @@ class _CanvasCore {
     }
 
     // ── Active Mode (mutual exclusion) ────────────────────────────────────────
-    // Valid values: 'none' | 'mask' | 'crop' | 'compare'
+    // Valid values: 'none' | 'mask' | 'crop' | 'compare' | 'paint'
     get activeMode() { return this._activeMode; }
     set activeMode(v) {
         if (this._activeMode === v) return;
@@ -226,6 +231,10 @@ class _CanvasCore {
         this.mask.isMaskingMode          = v === 'mask';
         this.crop.isCroppingMode         = v === 'crop';
         this.comparison.isComparisonMode = v === 'compare';
+        // MPI-375: paint is its own mode, NOT a mask mode. The paint layer stays
+        // visible in every mode (it is image content, not an annotation) — this
+        // flag only says whose brush the pointer belongs to.
+        this.paint.isPaintingMode        = v === 'paint';
         this.input.updateCursor();
         this.draw();
         if (this._onModeChange) this._onModeChange(v);
@@ -371,7 +380,11 @@ class _CanvasCore {
             this._sizeImageCanvases(clampedW, clampedH);
 
             this.mask.init(this.img.width, this.img.height);
+            this.paint.init(this.img.width, this.img.height);
             this.crop.init(this.img.width, this.img.height);
+            // mask.init() already cleared the shared stack; paint.init() must NOT
+            // clear it again or it would wipe history the mask just re-established.
+            // Both are loads, and a load is never an undoable edit.
             await this.resetView();
         } catch (err) {
             clientLogger.error('canvas', 'Failed to load image', err);
@@ -796,6 +809,16 @@ class _CanvasCore {
             this._drawComparisonLayer();
         }
 
+        // 1b. Paint (MPI-375) — UNDER the mask, because it is image content and the
+        // mask is an annotation over it. Drawn in every mode, not just the Paint
+        // tool: the whole point is painting first and masking the paint afterwards,
+        // so it has to still be there when the user switches to a mask tool.
+        if (this.paint.paintCanvas.width) {
+            ctx.globalAlpha = this.paint.opacity;
+            ctx.drawImage(this.paint.paintCanvas, 0, 0, W, H);
+            ctx.globalAlpha = 1;
+        }
+
         // 2. Mask
         if (!this._maskHidden) {
             // B/W view (MPI-381): the mask ALONE, opaque, on a flat background —
@@ -990,10 +1013,14 @@ class _CanvasCore {
         const scale = this.view.scale || 1;
         const { x, y } = this.input.getMousePosition();
         if (this.mask.pointsMode) return;    // dots, not a brush — nothing to indicate
-        if (!this.mask.paintEnabled) return; // brushless mask tool (MPI-381)
-        if (this.mask.isMaskingMode && x !== undefined && !this.input.isSpacePressed) {
-            const r = (this.mask.brushSize * scale) / 2;
-            const accent = this.mask.brushType === 'eraser' ? BRUSH_ERASER : BRUSH_CURSOR;
+        // Whichever brush owns the pointer draws the ring (MPI-375). Both keep the
+        // MPI-381 rule that a brushless tool in the family shows no indicator.
+        const brush = this.mask.isMaskingMode ? this.mask
+            : (this.paint.isPaintingMode ? this.paint : null);
+        if (!brush || !brush.paintEnabled) return;
+        if (x !== undefined && !this.input.isSpacePressed) {
+            const r = (brush.brushSize * scale) / 2;
+            const accent = brush.brushType === 'eraser' ? BRUSH_ERASER : BRUSH_CURSOR;
             ctx.save();
             // Two-tone ring, same trick as _drawGridOverlay(): one accent pass, one
             // dark pass offset half a period, so the dashes interleave. A single
@@ -1023,6 +1050,33 @@ class _CanvasCore {
             ctx.stroke();
             ctx.restore();
         }
+    }
+
+    // ── Paint layer API (MPI-375) ─────────────────────────────────────────────
+    // Deliberately mirrors the mask brush's surface so the shared strip can drive
+    // either one. Every name added here MUST also go in the `_methods` allowlist
+    // below, or it is `undefined` on `el` and the panels' optional-call idiom
+    // swallows the failure without a word.
+
+    setPaintBrushSize(size)  { this.paint.brushSize = Math.max(1, size); this.draw(); }
+    setPaintBrushType(type)  { this.paint.brushType = type; this.draw(); }
+    setPaintColor(color)     { this.paint.color = color; this.draw(); }
+    setPaintOpacity(o)       { this.paint.opacity = o; this.draw(); }
+    setPaintEnabled(on)      { this.paint.paintEnabled = on !== false; this.input.updateCursor(); }
+    getPaintURL()            { return this.paint.getURL(); }
+    hasPaint()               { return !this.paint.isEmpty(); }
+
+    /** Wipe the paint layer as ONE undo entry. @returns {boolean} true when it had pixels */
+    clearPaint() {
+        const did = this.paint.clear(true);
+        if (did) this.draw();
+        return did;
+    }
+
+    /** Restore a saved paint layer (per-entry reload). A LOAD — records no undo. */
+    async setPaintFromDataURL(dataURL) {
+        await this.paint.setFromDataURL(dataURL);
+        this.draw();
     }
 
     // ── Processed bitmap API (forward-compat hook for raw tool re-add) ────────
@@ -1180,6 +1234,8 @@ export const MpiCanvas = ComponentFactory.create({
             // ALLOWLIST — a core method missing here is `undefined` on el, and the
             // caller dies with "not a function" nowhere near this file.
             'setCropRatio','setCropSize','getCropRect',
+            'setPaintBrushSize','setPaintBrushType','setPaintColor','setPaintOpacity',
+            'setPaintEnabled','getPaintURL','hasPaint','clearPaint','setPaintFromDataURL',
             'setProcessedImage','clearProcessedImage'
         ];
         _methods.forEach(name => { el[name] = core[name].bind(core); });

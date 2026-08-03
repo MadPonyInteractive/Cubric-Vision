@@ -105,6 +105,18 @@ const IMAGE_TOOLS = [
             { mode: 'maskAdjust', icon: 'mask_adjust_stroke', info: 'Adjust' },
         ],
     },
+    {
+        mode: 'paint',
+        label: 'Paint',
+        // The second GROUP of the MPI-424 taxonomy: same engines, different
+        // artifact. Groups are by artifact, never by feature — Paint Brush is the
+        // Mask Brush with the RGBA layer as its destination, which is why the rail
+        // gains a group here rather than another button under Mask.
+        // Shapes (MPI-368) joins this group and the Mask one off ONE gizmo.
+        group: [
+            { mode: 'paint', icon: 'brush', info: 'Paint' },
+        ],
+    },
 ];
 
 const VIDEO_TOOLS = [
