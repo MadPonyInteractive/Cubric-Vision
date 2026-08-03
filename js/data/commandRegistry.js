@@ -256,7 +256,11 @@ export const commands = {
         help: {
             body: [
                 'Copies the STRUCTURE of the input image — where things are and what shape they hold — then paints your prompt into it. The input is a skeleton: none of its colour, style or identity comes across.',
-                'WHICH structure is the Control Type pick. Depth carries volume and framing, so the result sits at the same distance in the same space. Pose carries only the body skeleton, leaving build and framing free. Scribble and Canny carry outlines, Canny being the harder and more literal of the two.',
+                // The paragraph naming WHICH structures is DERIVED from the model, and is
+                // spliced in here by getOpHelp — see controlTypesParagraph(). Do not write
+                // it into this list: a static one names all four types, which is true of
+                // SDXL and a lie on every other model. It shipped that way on 2026-08-03
+                // and the Krea2 popup promised a Scribble the graph cannot run.
                 'Describe the subject and the scene. Do NOT describe what the control map already gives you — words spent on the pose are words not spent on the subject.',
             ],
             examples: [
@@ -951,7 +955,7 @@ export const CONTROL_TYPES = Object.freeze({
     pose:     Object.freeze({ index: 1, label: 'Pose',     info: 'Body skeleton only — limbs, stance, head angle. Build and framing stay free.' }),
     depth:    Object.freeze({ index: 2, label: 'Depth',    info: 'Volume and framing — the result sits at the same distance in the same space.' }),
     scribble: Object.freeze({ index: 3, label: 'Scribble', info: 'Loose outlines — the shapes are kept, the detail inside them is not.' }),
-    canny:    Object.freeze({ index: 4, label: 'Canny',    info: 'Hard edges — the most literal of the four; the result traces the original closely.' }),
+    canny:    Object.freeze({ index: 4, label: 'Canny',    info: 'Hard edges — the most literal of them; the result traces the original closely.' }),
 });
 
 /**
@@ -964,6 +968,32 @@ export const CONTROL_TYPES = Object.freeze({
 export function modelControlTypes(model) {
     const ids = Array.isArray(model?.controlTypes) ? model.controlTypes : [];
     return ids.filter((id) => Object.hasOwn(CONTROL_TYPES, id));
+}
+
+/**
+ * The "which structure does this copy" paragraph of the `control` op's guide, built from
+ * the MODEL rather than authored.
+ *
+ * It has to be derived. A written-out paragraph names all four types, which is true of
+ * SDXL and false of every other model — that shipped on 2026-08-03 and told a Krea2 user
+ * about a Scribble its graph cannot run. Deriving it also means a model gaining a type
+ * needs no copy edit, and cannot silently gain a stale one.
+ *
+ * Two shapes, because a one-type model has no picker to explain: it just states what its
+ * single control does. Returns null with no model, so the base guide (no model context,
+ * e.g. the dev gallery) stays type-agnostic rather than guessing.
+ */
+export function controlTypesParagraph(model) {
+    const ids = modelControlTypes(model);
+    if (!ids.length) return null;
+    // Colon, not a dash: every `info` already carries an em-dash of its own, and two in
+    // one clause reads as a typo.
+    const say = (id) => `${CONTROL_TYPES[id].label}: ${CONTROL_TYPES[id].info.replace(/^[A-Z]/, (c) => c.toLowerCase())}`;
+    if (ids.length === 1) {
+        const only = CONTROL_TYPES[ids[0]];
+        return `${only.label} is this model's only control: ${only.info.replace(/^[A-Z]/, (c) => c.toLowerCase())} There is no Control Type to pick.`;
+    }
+    return `WHICH structure is the Control Type pick. ${ids.map(say).join(' ')}`;
 }
 
 /**
@@ -1335,13 +1365,23 @@ export function getOpHelp(key, model = null) {
         : undefined;
     const help = override ? { ...base, ...override } : base;
 
+    // No authored body → the one-liner already shown on hover. Strip the
+    // "Label — " prefix the info strings carry; the title says it already.
+    let body = help.body?.length
+        ? help.body
+        : (cmd.info ? [String(cmd.info).replace(/^[^—]+—\s*/, '')] : []);
+
+    // MPI-365: the control guide's second paragraph is built from the model's own
+    // controlTypes, because an authored one is right for exactly one model. Skipped when
+    // a byModel override is in play (Klein's two-image copy already names its one type).
+    if (key === 'control' && !override && body.length) {
+        const para = controlTypesParagraph(model);
+        if (para) body = [body[0], para, ...body.slice(1)];
+    }
+
     return {
         title: help.title || cmd.label || key,
-        // No authored body → the one-liner already shown on hover. Strip the
-        // "Label — " prefix the info strings carry; the title says it already.
-        body: help.body?.length
-            ? help.body
-            : (cmd.info ? [String(cmd.info).replace(/^[^—]+—\s*/, '')] : []),
+        body,
         examples: help.examples || [],
         media: help.media || [],
     };

@@ -415,3 +415,32 @@ test('controlTypes name real types, and the picker hides for a single-type model
     assert.deepStrictEqual(modelControlTypes({ controlTypes: ['depth', 'nope'] }), ['depth']);
     assert.deepStrictEqual(modelControlTypes({}), []);
 });
+
+test('the control guide names the types the MODEL can run, not all four', async () => {
+    const { getOpHelp, controlTypesParagraph } = await import('../js/data/commandRegistry.js');
+    const { getModelById } = await import('../js/data/modelRegistry.js');
+
+    // Shipped wrong on 2026-08-03: an authored paragraph listed Depth/Pose/Scribble/Canny
+    // for every model, so the Krea2 popup promised a Scribble its graph cannot run. The
+    // paragraph is derived now — this pins that it stays derived.
+    const para = (id) => getOpHelp('control', getModelById(id)).body.join(' ');
+
+    assert.match(para('sdxl-realistic'), /Scribble/, 'SDXL runs scribble, so its guide says so');
+    assert.doesNotMatch(para('krea2'), /Scribble|Canny|Pose:/,
+        'Krea2 runs depth only — naming another type is a promise its graph cannot keep');
+    assert.doesNotMatch(para('chroma-flash'), /Scribble|Canny|Pose:/, 'same for Chroma');
+    assert.doesNotMatch(para('qwen-edit'), /Scribble|Canny/,
+        'Qwen runs pose + depth only');
+    assert.match(para('qwen-edit'), /Pose/, 'but it does run pose');
+
+    // A one-type model says so instead of describing a picker it never renders.
+    assert.match(para('krea2'), /no Control Type to pick/);
+    assert.doesNotMatch(para('sdxl-realistic'), /no Control Type to pick/);
+
+    // Klein keeps its byModel override (the two-image meaning), un-spliced.
+    assert.match(para('klein-4b'), /A SECOND image is optional/);
+
+    // No model = no guess: the base guide stays type-agnostic.
+    assert.strictEqual(controlTypesParagraph(null), null);
+    assert.doesNotMatch(getOpHelp('control').body.join(' '), /Control Type pick/);
+});

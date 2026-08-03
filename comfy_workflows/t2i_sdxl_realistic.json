@@ -912,7 +912,7 @@
     "inputs": {
       "string": "",
       "channel": "alpha",
-      "block_if_empty": false
+      "block_if_empty": true
     },
     "class_type": "MpiLoadImageFromPath",
     "_meta": {
@@ -1229,6 +1229,10 @@
       "force_uniform_tiles": true,
       "tiled_decode": false,
       "batch_size": 1,
+      "image": [
+        "1640",
+        0
+      ],
       "model": [
         "1704",
         0
