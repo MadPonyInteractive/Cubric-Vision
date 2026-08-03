@@ -1368,26 +1368,60 @@ export const MpiCanvasViewer = ComponentFactory.create({
         /** Commit current auto-mask selection and exit auto-mask mode. */
         el.commitAutoMask = () => _exitAutoMaskMode(true);
 
+        // ── Adjust — grow / shrink / edge band (MPI-382) ──────────────────────
+
+        /** Enter Adjust: snapshot the mask so every frame derives from tool-entry state. */
+        el.beginMaskAdjust   = () => canvas.beginMaskAdjust?.();
+        /** @param {{grow?:number, outward?:number, inward?:number, edge?:boolean}} opts */
+        el.previewMaskAdjust = (opts) => canvas.previewMaskAdjust?.(opts) ?? false;
+        /** Bake the preview into the layers (one undo entry) and re-publish mask state. */
+        el.applyMaskAdjust   = () => {
+            const ok = canvas.applyMaskAdjust?.();
+            if (ok) el.evaluateMask?.();
+            return !!ok;
+        };
+        el.endMaskAdjust     = () => !!canvas.endMaskAdjust?.();
+        /**
+         * Close enclosed holes (MPI-431). One undo entry, and it bakes any live preview
+         * with it — the graphs no longer fill holes, so this is the only place it happens
+         * and the only place the user can see it happen.
+         */
+        el.fillMaskHoles     = () => {
+            const ok = canvas.fillMaskHoles?.();
+            if (ok) el.evaluateMask?.();
+            return !!ok;
+        };
+
         /**
          * THE PREVIEW CONTRACT (MPI-382) — the ONE seam every canvas tool drops its
          * uncommitted preview through. `MpiGroupHistoryBlock.mountOptions()` calls it
          * on every rail switch; the guard here decides whether there is anything to
          * drop, so that call site never grows a per-tool branch. MPI-368 (shapes) and
          * MPI-373 (composite) extend THIS, they do not teach mountOptions about
-         * themselves.
+         * themselves — Adjust is the first one to have done so.
          *
-         * Detection is the only producer today. Manual and subtract are untouched —
-         * they are committed pixels.
+         * Manual and subtract are untouched by either branch — they are committed
+         * pixels, and a discard is not an edit (it records no undo entry and, for
+         * Adjust, changes no exported pixel, so it re-publishes nothing).
          *
          * @returns {boolean} true if a preview was discarded.
          */
         el.discardPreview = () => {
-            const hasPreview = _autoMaskPicks.size > 0
+            let dropped = false;
+
+            if (canvas.hasMaskAdjustPreview?.()) {
+                canvas.endMaskAdjust?.();
+                dropped = true;
+            }
+
+            const hasDetectPreview = _autoMaskPicks.size > 0
                 || !!canvas.mask?.hasAutoLayer
                 || _lastDetectThumbUrls.length > 0;
-            if (!hasPreview) return false;
-            _exitAutoMaskMode(false);
-            return true;
+            if (hasDetectPreview) {
+                _exitAutoMaskMode(false);
+                dropped = true;
+            }
+            return dropped;
         };
 
         /**

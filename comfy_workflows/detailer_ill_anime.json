@@ -86,7 +86,7 @@
       "inpaint_model": false,
       "noise_mask_feather": 20,
       "bbox_fill": false,
-      "contour_fill": true,
+      "contour_fill": false,
       "image": [
         "1641",
         0

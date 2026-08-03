@@ -16,6 +16,7 @@ import { MpiVideoControlBar } from '../../Compounds/MpiVideoControlBar/MpiVideoC
 import { MpiHistoryList } from '../../Compounds/MpiHistoryList/MpiHistoryList.js';
 import { MpiToolOptionsCrop } from '../../Organisms/MpiToolOptionsCrop/MpiToolOptionsCrop.js';
 import { MpiToolOptionsMaskBrush } from '../../Organisms/MpiToolOptionsMaskBrush/MpiToolOptionsMaskBrush.js';
+import { MpiToolOptionsMaskAdjust } from '../../Organisms/MpiToolOptionsMaskAdjust/MpiToolOptionsMaskAdjust.js';
 import { MpiToolOptionsMaskDetect } from '../../Organisms/MpiToolOptionsMaskDetect/MpiToolOptionsMaskDetect.js';
 import { MpiToolOptionsMaskPoints } from '../../Organisms/MpiToolOptionsMaskPoints/MpiToolOptionsMaskPoints.js';
 import { MpiToolOptionsMaskText } from '../../Organisms/MpiToolOptionsMaskText/MpiToolOptionsMaskText.js';
@@ -80,6 +81,7 @@ import { MpiReusePromptDialog } from '../../Compounds/MpiReusePromptDialog/MpiRe
 const TOOL_OPTIONS_REGISTRY = {
     crop:         MpiToolOptionsCrop,
     maskBrush:    MpiToolOptionsMaskBrush,
+    maskAdjust:   MpiToolOptionsMaskAdjust,
     maskDetect:   MpiToolOptionsMaskDetect,
     maskPoints:   MpiToolOptionsMaskPoints,
     maskText:     MpiToolOptionsMaskText,
@@ -95,7 +97,7 @@ const TOOL_OPTIONS_REGISTRY = {
 /** Any tool in the mask family. One rail icon per masking method (MPI-371),
  *  one job each (MPI-381). EVERY new mask tool must be added here — teardown,
  *  the PromptBox gate and the viewer-mode bridge all hang off this. */
-const _MASK_TOOLS = new Set(['maskBrush', 'maskDetect', 'maskPoints', 'maskText']);
+const _MASK_TOOLS = new Set(['maskBrush', 'maskAdjust', 'maskDetect', 'maskPoints', 'maskText']);
 const _isMaskTool = (mode) => _MASK_TOOLS.has(mode);
 
 /** Modes that keep the PromptBox up: prompt, plus the whole mask family — a mask
@@ -513,8 +515,8 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         const TOOL_LABELS = {
             prompt: 'Prompt', crop: 'Crop',
-            maskBrush: 'Mask Brush', maskDetect: 'Mask Detect', maskPoints: 'Mask Points',
-            maskText: 'Mask Text',
+            maskBrush: 'Mask Brush', maskAdjust: 'Mask Adjust', maskDetect: 'Mask Detect',
+            maskPoints: 'Mask Points', maskText: 'Mask Text',
             videoUpscale: 'Upscale', imageUpscale: 'Upscale',
             removeBackground: 'Remove Background',
             interpolate: 'Interpolate',

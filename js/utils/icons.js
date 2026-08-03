@@ -93,6 +93,12 @@ export const ICONS = {
     'flipX_stroke': '<path d="M12 3v18"/><path d="M8 7H3v10h5"/><path d="M16 7h5v10h-5"/><path d="M8 12H3"/><path d="M16 12h5"/>',
     'flipY_stroke': '<path d="M3 12h18"/><path d="M7 8V3h10v5"/><path d="M7 16v5h10v-5"/><path d="M12 8V3"/><path d="M12 16v5"/>',
     'resize_stroke': '<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M9 9l6 6"/><path d="M9 9h4"/><path d="M9 9v4"/><path d="M15 15h-4"/><path d="M15 15v-4"/>',
+    // Mask Adjust (MPI-382): a shape and the band around it — grow, shrink and an
+    // edge band are the same dilate/erode read three ways, so one icon covers all.
+    'mask_adjust_stroke': '<circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="9"/><path d="M12 1.2v2M12 20.8v2M1.2 12h2M20.8 12h2"/>',
+    // Fill Holes (MPI-431): a blob with an enclosed hole, and the hole being closed
+    // from the inside out. Dashed inner ring = the hole boundary about to go away.
+    'mask_fill_holes_stroke': '<path d="M4.2 9.6a8 8 0 0 1 15.6 1.2 8 8 0 0 1-13.4 7A8 8 0 0 1 4.2 9.6z"/><circle cx="12" cy="12" r="4" stroke-dasharray="2.2 2"/><path d="M12 9.6v4.8M9.6 12h4.8"/>',
     // Film/video frame with a centered play triangle → "export animated clip".
     // Stroke-only (fill="none"); fills the 24×24 grid like sibling rail icons
     // (x3 y3 w18 h18) so it doesn't render visually smaller.

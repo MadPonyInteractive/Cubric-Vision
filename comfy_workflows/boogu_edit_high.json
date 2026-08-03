@@ -568,7 +568,7 @@
       "preresize_min_height": 1024,
       "preresize_max_width": 16384,
       "preresize_max_height": 16384,
-      "mask_fill_holes": true,
+      "mask_fill_holes": false,
       "mask_expand_pixels": 6,
       "mask_invert": false,
       "mask_blend_pixels": 32,

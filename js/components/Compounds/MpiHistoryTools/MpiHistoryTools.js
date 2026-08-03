@@ -99,6 +99,10 @@ const IMAGE_TOOLS = [
                     { mode: 'maskDetect', icon: 'sparkle', info: 'Auto',   label: 'Auto'   },
                 ],
             },
+            // Below Detect on purpose (user, 2026-08-03): Adjust operates on a mask
+            // that already exists, so it reads in the order the work happens —
+            // make it by hand or by detection, then adjust it.
+            { mode: 'maskAdjust', icon: 'mask_adjust_stroke', info: 'Adjust' },
         ],
     },
 ];

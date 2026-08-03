@@ -25,9 +25,9 @@ detect run (re-runnable) and points are individually removable by clicking a dot
 is restored — undoing a bake brings the pixels back, not the thumbs.
 
 The undoable units are the **complete mutation set** of those two layers, enumerated from
-the code rather than guessed: `paint()`, `clear()`, `bakeAutoPicksInto()`, plus
-`setManual/SubtractFromDataURL()` and `init()` — the last two are **loads**, deliberately
-not recorded.
+the code rather than guessed: `paint()`, `clear()`, `bakeAutoPicksInto()`, `applyAdjust()`,
+`fillHoles()`, plus `setManual/SubtractFromDataURL()` and `init()` — the last two are **loads**,
+deliberately not recorded.
 
 ---
 
@@ -49,8 +49,7 @@ Then make sure the change reaches the UI: an undo must end up firing `onMaskStro
 undo at all — the user learns to trust it and then loses work at the first unwired path.
 A new mutation that skips the stack is a silent hole, and nothing will fail loudly.
 
-Cards that will hit this next: **MPI-382** (grow/shrink — layer-wide, and it also needs
-`pendingLayer()` for its pristine drag-start copy), **MPI-368** (shapes — Add/Subtract bakes),
+Cards that will hit this next: **MPI-368** (shapes — Add/Subtract bakes),
 **MPI-375** (paint — plugs its RGBA layer into this same stack, does not build a second one).
 
 ---
@@ -103,8 +102,11 @@ about five of those, or thousands of strokes.
   `mask.isMaskingMode` in `InputController`.
 - **Survives a mask-tool swap** (the canvas is not destroyed), but dies on the swap to prompt
   mode, which tears `MpiCanvas` down — matching how the mask itself reloads from TEMP there.
-- **`pendingLayer(i)`** exposes the pristine pointerdown capture for MPI-382's grow/shrink,
-  which must derive every drag frame from drag-start state or the effect compounds.
+- **`pendingLayer(i)`** exposes the pristine pointerdown capture of a gesture in flight. It has
+  **no consumer** — MPI-382's grow/shrink was the intended one until the 2026-08-01 re-scope made
+  Apply a layer-wide one shot instead of a drag bake, so Adjust holds its own pristine copy and
+  records with `_recordUndo()`. Left in place for the next real gesture; see
+  `docs/masking-tools.md` § Adjust.
 
 `tests/undo-stack.test.cjs` covers the arithmetic (clamping, swap ordering, budget eviction,
 redo invalidation, byte credit). The wiring above was verified live — see the MPI-376 card.

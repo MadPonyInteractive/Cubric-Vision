@@ -1791,7 +1791,7 @@
       "preresize_min_height": 1024,
       "preresize_max_width": 16384,
       "preresize_max_height": 16384,
-      "mask_fill_holes": true,
+      "mask_fill_holes": false,
       "mask_expand_pixels": 6,
       "mask_invert": false,
       "mask_blend_pixels": 32,
@@ -2046,7 +2046,7 @@
       "blur_radius": 16,
       "lerp_alpha": 1,
       "decay_factor": 1,
-      "fill_holes": true,
+      "fill_holes": false,
       "mask": [
         "296",
         1
@@ -2717,7 +2717,7 @@
       "inpaint_model": false,
       "noise_mask_feather": 20,
       "bbox_fill": false,
-      "contour_fill": true,
+      "contour_fill": false,
       "image": [
         "474",
         0
@@ -3019,7 +3019,7 @@
       "preresize_min_height": 1024,
       "preresize_max_width": 16384,
       "preresize_max_height": 16384,
-      "mask_fill_holes": true,
+      "mask_fill_holes": false,
       "mask_expand_pixels": 6,
       "mask_invert": false,
       "mask_blend_pixels": 32,

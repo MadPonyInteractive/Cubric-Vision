@@ -5,6 +5,7 @@
  *   subtractCanvas  — eraser strokes (white where erased)
  *   maskCanvas      — derived composite display layer = (manual AND NOT subtract) ∪ ⋃autoPickMasks[selected]
  *   autoCanvas      — derived DISPLAY-ONLY subset = ⋃autoPickMasks[selected]
+ *   adjustCanvas    — the Adjust PREVIEW (MPI-382), display-only and transient
  *
  * autoPickMasks is RAM-only Map<pickIndex, ImageBitmap|HTMLCanvasElement>.
  * selectedAutoPicks is Set<number>.
@@ -44,6 +45,33 @@ const MASK_MAX_EDGE = 1536;
  */
 const POINT_HIT_R = 12;
 
+/**
+ * Alpha thresholds for the dilate / erode primitive (MPI-382), as 0-255.
+ *
+ * A blurred step edge is a symmetric ramp: with `blur(rpx)` the alpha at signed
+ * distance d from the original edge is Φ(d / r). Thresholding the ramp at Φ(-1)
+ * puts the new edge one sigma OUTSIDE (a dilate by r), at Φ(+1) one sigma INSIDE
+ * (an erode by r). So one blur plus one threshold gives both directions, and the
+ * radius is the blur amount — nothing else to calibrate.
+ *
+ * MEASURED against a known circle in Chromium rather than assumed — its blur is a
+ * three-box approximation, not a true Gaussian, so the textbook levels had to earn
+ * the job. They did: r of 1, 2, 3, 5, 8 and 12 all move the edge EXACTLY r px, in
+ * both directions. Past that, curvature (not the threshold) costs a little — at
+ * r=50 on a 300px circle a dilate lands at 47 and an erode at 54. Nobody eyeballing
+ * a mask edge is counting those 3px, so the slider stays in real pixels rather than
+ * gaining a fudge table. Full numbers: docs/masking-tools.md.
+ */
+const ADJUST_DILATE_T = 0.1587 * 255;
+const ADJUST_ERODE_T  = 0.8413 * 255;
+
+/**
+ * Alpha at or above this counts as MASK for `fillHoles()`, below it as background.
+ * Half-open deliberately: mask edges are antialiased, so a strict `> 0` test would
+ * treat the feathered rim as solid and wall the flood out of a hole it should enter.
+ */
+const FILL_HOLES_T = 128;
+
 export class MaskManager {
     constructor() {
         this.manualCanvas = document.createElement('canvas');
@@ -63,6 +91,24 @@ export class MaskManager {
 
         this.autoPickMasks = new Map();
         this.selectedAutoPicks = new Set();
+
+        /**
+         * Adjust preview (MPI-382). A PREVIEW, not a layer: it is drawn in the
+         * pending green instead of the mask and never exported, so leaving the
+         * tool without pressing Apply loses it — the preview contract
+         * (docs/masking-tools.md). Allocated on beginAdjust(), freed on
+         * endAdjust(), so no other tool pays for it.
+         * @type {HTMLCanvasElement|null}
+         */
+        this.adjustCanvas = null;
+        this.adjustCtx = null;
+        this.hasAdjustPreview = false;
+        /** The composed mask as it was when Adjust was entered. EVERY frame is
+         *  recomputed from this, never from the frame before it, or grow-3 three
+         *  times eats detail exactly like the MPI-351 double-scale bug. */
+        this._adjustPristine = null;
+        /** Scratch buffer for _morph(), reused across frames. */
+        this._morphBuf = null;
 
         /**
          * UndoStack, injected by MpiCanvas (MPI-376). Only manualCanvas and
@@ -124,6 +170,8 @@ export class MaskManager {
         // A new image means a new history. Undo must never reach across two
         // entries, and the wipe below is a load, not an edit the user can undo.
         this.undo?.clear();
+        // A preview must not outlive the pixels it previewed either.
+        this.endAdjust();
         this.clear(false);
     }
 
@@ -462,6 +510,279 @@ export class MaskManager {
         return true;
     }
 
+    // ── Adjust — grow / shrink / edge band (MPI-382) ─────────────────────────
+
+    /**
+     * Enter the Adjust tool: snapshot the composed mask so every preview frame
+     * derives from drag-start state.
+     *
+     * ONE snapshot is enough, and it is the DERIVED maskCanvas rather than the two
+     * source layers: the preview contract guarantees no auto picks survive into
+     * this tool, so `maskCanvas === manual AND NOT subtract` here and Apply writes
+     * the result straight back as the new manual layer.
+     */
+    beginAdjust() {
+        if (!this.maskCanvas) return;
+        const w = this.maskCanvas.width;
+        const h = this.maskCanvas.height;
+        if (!w || !h) return;
+
+        if (!this._adjustPristine) this._adjustPristine = document.createElement('canvas');
+        this._adjustPristine.width = w;
+        this._adjustPristine.height = h;
+        this._adjustPristine.getContext('2d').drawImage(this.maskCanvas, 0, 0);
+
+        if (!this.adjustCanvas) {
+            this.adjustCanvas = document.createElement('canvas');
+            this.adjustCtx = this.adjustCanvas.getContext('2d', { willReadFrequently: true });
+        }
+        this.adjustCanvas.width = w;
+        this.adjustCanvas.height = h;
+        this.hasAdjustPreview = false;
+    }
+
+    /**
+     * Recompute the preview from the pristine copy — never from the last frame.
+     * Zero on every slider tears the preview down, so the centre position is the
+     * untouched mask rather than a green copy of it.
+     * @param {{grow?:number, outward?:number, inward?:number, edge?:boolean}} opts
+     *   grow: >0 dilates, <0 erodes. edge: an outward/inward band instead.
+     * @returns {boolean} true when a preview is up
+     */
+    previewAdjust({ grow = 0, outward = 0, inward = 0, edge = false } = {}) {
+        const src = this._adjustPristine;
+        if (!src || !this.adjustCtx) return false;
+        const w = src.width;
+        const h = src.height;
+        this.adjustCtx.clearRect(0, 0, w, h);
+
+        if (edge) {
+            if (outward <= 0 && inward <= 0) {
+                this.hasAdjustPreview = false;
+                return false;
+            }
+            // An edge band IS the same primitive twice: dilate(outward) − erode(inward).
+            // _morph returns a shared buffer, so the first result must be drawn before
+            // the second call overwrites it — drawImage copies synchronously.
+            this.adjustCtx.drawImage(this._morph(src, outward), 0, 0);
+            this.adjustCtx.save();
+            this.adjustCtx.globalCompositeOperation = 'destination-out';
+            this.adjustCtx.drawImage(this._morph(src, -inward), 0, 0);
+            this.adjustCtx.restore();
+        } else {
+            if (!grow) {
+                this.hasAdjustPreview = false;
+                return false;
+            }
+            this.adjustCtx.drawImage(this._morph(src, grow), 0, 0);
+        }
+
+        this.hasAdjustPreview = true;
+        return true;
+    }
+
+    /**
+     * Bake the preview into the permanent layers. Layer-wide ONE SHOT, so it takes
+     * a single `_recordUndo()` after the no-op guard — not a begin()/commit()
+     * gesture. The result replaces manual outright and clears subtract, because the
+     * preview was computed from `manual AND NOT subtract` and already has the
+     * erases in it; leaving subtract behind would punch them a second time.
+     * @returns {boolean} false when there was nothing to apply
+     */
+    applyAdjust() {
+        if (!this.hasAdjustPreview || !this.adjustCanvas || !this.manualCtx || !this.subtractCtx) return false;
+
+        this._recordUndo();
+
+        this.manualCtx.clearRect(0, 0, this.manualCanvas.width, this.manualCanvas.height);
+        this.manualCtx.drawImage(this.adjustCanvas, 0, 0, this.manualCanvas.width, this.manualCanvas.height);
+        this.subtractCtx.clearRect(0, 0, this.subtractCanvas.width, this.subtractCanvas.height);
+        this._recomposite();
+
+        // Still inside the tool: re-snapshot so the next adjustment starts from
+        // what was just baked instead of from the pre-Apply mask.
+        this.beginAdjust();
+        return true;
+    }
+
+    /**
+     * Close every ENCLOSED hole in the mask. Layer-wide one shot, same shape as
+     * `applyAdjust()` — `_recordUndo()` after the no-op guard, result replaces manual,
+     * subtract cleared, pristine re-snapshotted.
+     *
+     * This exists because MPI-431 turned `mask_fill_holes` OFF in the graphs: the app
+     * is now the ONLY place a hole gets closed, and the only place the user can see
+     * what is being closed before committing it.
+     *
+     * Fills what is ON SCREEN — the live preview when one is up, the composite
+     * otherwise — so pressing Fill mid-adjustment bakes both as ONE undo entry. The
+     * alternative was silently dropping the user's preview, which is worse.
+     *
+     * NOT `_morph(+r)` then `_morph(-r)`. That morphological close would reuse the
+     * primitive above for free, but it only closes holes smaller than r and it rounds
+     * the outline; "fill holes" means every enclosed hole, outline untouched.
+     *
+     * @returns {boolean} false when there was no hole to fill
+     */
+    fillHoles() {
+        if (!this.manualCtx || !this.subtractCtx) return false;
+        const src = (this.hasAdjustPreview && this.adjustCanvas) ? this.adjustCanvas : this.maskCanvas;
+        if (!src?.width || !src?.height) return false;
+
+        const w = src.width;
+        const h = src.height;
+        const ctx = src.getContext('2d', { willReadFrequently: true });
+        const img = ctx.getImageData(0, 0, w, h);
+        const d = img.data;
+
+        // Flood the BACKGROUND inward from the border. Whatever the flood never
+        // reaches is enclosed — that is the definition of a hole, and it needs no
+        // contour tracing. Iterative on an explicit stack: 1536² would blow recursion.
+        const n = w * h;
+        const outside = new Uint8Array(n);
+        const stack = new Int32Array(n);
+        let sp = 0;
+        const push = (i) => {
+            if (outside[i] || d[i * 4 + 3] >= FILL_HOLES_T) return;
+            outside[i] = 1;
+            stack[sp++] = i;
+        };
+        for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
+        for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
+        while (sp > 0) {
+            const i = stack[--sp];
+            const x = i % w;
+            if (x > 0)     push(i - 1);
+            if (x < w - 1) push(i + 1);
+            if (i >= w)    push(i - w);
+            if (i < n - w) push(i + w);
+        }
+
+        // Pass 2 — the hole and ITS ANTIALIASED RIM. Punching a hole leaves alpha
+        // ramping 255→0 across a pixel or two; pass 1 classified the ramp's inner half
+        // as mask, so writing only the interior leaves a semi-transparent ring exactly
+        // where the hole used to be. At 70% overlay opacity that ring is plainly
+        // visible — it is the same seam ComfyUI's mask editor leaves, and the reason
+        // the fill has to be defined over the ramp rather than over a threshold.
+        //
+        // Seed from the hole interiors, then expand into any neighbour that is neither
+        // `outside` nor already fully opaque. Solid mask (alpha 255) is the wall, so
+        // the flood cannot escape a hole and reach the mask's OUTER rim — that edge
+        // keeps its antialiasing, which is why Fill does not harden the outline.
+        const fill = new Uint8Array(n);
+        sp = 0;
+        for (let i = 0; i < n; i++) {
+            if (!outside[i] && d[i * 4 + 3] < FILL_HOLES_T) { fill[i] = 1; stack[sp++] = i; }
+        }
+        const spread = (i) => {
+            if (fill[i] || outside[i] || d[i * 4 + 3] === 255) return;
+            fill[i] = 1;
+            stack[sp++] = i;
+        };
+        while (sp > 0) {
+            const i = stack[--sp];
+            const x = i % w;
+            if (x > 0)     spread(i - 1);
+            if (x < w - 1) spread(i + 1);
+            if (i >= w)    spread(i - w);
+            if (i < n - w) spread(i + w);
+        }
+
+        let filled = 0;
+        for (let i = 0; i < n; i++) {
+            if (!fill[i]) continue;
+            const p = i * 4;
+            if (d[p + 3] === 255) continue;
+            d[p] = 255; d[p + 1] = 255; d[p + 2] = 255; d[p + 3] = 255;
+            filled++;
+        }
+        if (!filled) return false;   // no-op must not push an empty undo entry
+
+        this._recordUndo();
+
+        // Write through a scratch canvas: `src` may be maskCanvas, which _recomposite()
+        // is about to rebuild from the source layers.
+        const buf = document.createElement('canvas');
+        buf.width = w;
+        buf.height = h;
+        buf.getContext('2d').putImageData(img, 0, 0);
+
+        this.manualCtx.clearRect(0, 0, this.manualCanvas.width, this.manualCanvas.height);
+        this.manualCtx.drawImage(buf, 0, 0, this.manualCanvas.width, this.manualCanvas.height);
+        this.subtractCtx.clearRect(0, 0, this.subtractCanvas.width, this.subtractCanvas.height);
+        this._recomposite();
+
+        // The preview (if any) is now baked, so drop it and re-snapshot — otherwise the
+        // next slider move would recompute from a pristine copy that predates the fill.
+        this.hasAdjustPreview = false;
+        if (this._adjustPristine) this.beginAdjust();
+        return true;
+    }
+
+    /**
+     * Drop the preview and its buffers. Called by Reset, by leaving the tool
+     * (through the shared discardPreview seam) and by a new image load.
+     * @returns {boolean} true when a preview was discarded
+     */
+    endAdjust() {
+        const had = this.hasAdjustPreview;
+        this.hasAdjustPreview = false;
+        for (const c of [this.adjustCanvas, this._adjustPristine, this._morphBuf]) {
+            if (c) { c.width = 0; c.height = 0; }
+        }
+        this.adjustCanvas = null;
+        this.adjustCtx = null;
+        this._adjustPristine = null;
+        this._morphBuf = null;
+        return had;
+    }
+
+    /**
+     * Dilate (r > 0) or erode (r < 0) a white-on-transparent layer by |r| mask-px.
+     * Grow, shrink and both halves of an edge band are all THIS function.
+     *
+     * Blur once, threshold once — see ADJUST_DILATE_T. The threshold is a plain
+     * alpha pass over the pixels rather than an SVG `feComponentTransfer`: it is
+     * one readback per frame instead of a document-level filter node, and it
+     * measured live at the working size (docs/masking-tools.md).
+     *
+     * @param {HTMLCanvasElement} src
+     * @param {number} r radius in mask-px
+     * @returns {HTMLCanvasElement} a SHARED buffer — draw from it before calling again
+     */
+    _morph(src, r) {
+        const w = src.width;
+        const h = src.height;
+        const buf = this._morphBuf || (this._morphBuf = document.createElement('canvas'));
+        if (buf.width !== w || buf.height !== h) { buf.width = w; buf.height = h; }
+        const ctx = buf.getContext('2d', { willReadFrequently: true });
+        ctx.filter = 'none';
+        ctx.clearRect(0, 0, w, h);
+
+        const rr = Math.round(Math.abs(r));
+        if (!rr) { ctx.drawImage(src, 0, 0); return buf; }
+
+        ctx.filter = `blur(${rr}px)`;
+        ctx.drawImage(src, 0, 0);
+        ctx.filter = 'none';
+
+        const t = r > 0 ? ADJUST_DILATE_T : ADJUST_ERODE_T;
+        const img = ctx.getImageData(0, 0, w, h);
+        const d = img.data;
+        for (let i = 3; i < d.length; i += 4) {
+            if (d[i] >= t) {
+                d[i - 3] = 255;
+                d[i - 2] = 255;
+                d[i - 1] = 255;
+                d[i] = 255;
+            } else {
+                d[i] = 0;
+            }
+        }
+        ctx.putImageData(img, 0, 0);
+        return buf;
+    }
+
     getManualURL() {
         return this._layerToURL(this.manualCanvas, this.manualCtx);
     }
@@ -485,6 +806,7 @@ export class MaskManager {
     }
 
     destroy() {
+        this.endAdjust();
         for (const c of [this.manualCanvas, this.subtractCanvas, this.maskCanvas, this.autoCanvas]) {
             if (c) {
                 c.width = 0;

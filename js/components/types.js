@@ -84,6 +84,23 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsMaskAdjustProps (Organism — js/components/Organisms/MpiToolOptionsMaskAdjust)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ *
+ * A method OVER an existing mask (MPI-382), not another way of making one. One
+ * bidirectional Shrink / Grow slider, an Edge button that swaps that ONE row for
+ * Outward + Inward, plus Apply, Fill and Reset; mounts MpiMaskStrip WITHOUT the
+ * brush pair. Live preview in the pending green — an unapplied adjustment is
+ * DISCARDED on leaving the tool, through the shared discardPreview seam.
+ * Fill (MPI-431) closes enclosed holes — the graphs no longer do it — and bakes
+ * any live preview with it as ONE undo entry.
+ * Requires viewer.el: enterMode('mask'), exitMode(), evaluateMask(),
+ *   setMaskPointsMode(), beginMaskAdjust(), previewMaskAdjust(),
+ *   applyMaskAdjust(), endMaskAdjust(), fillMaskHoles()
+ * No 'apply' emitted — mask is canvas-resident; PromptBox drives operations.
+ */
+
+/**
  * @typedef {Object} MpiToolOptionsMaskDetectProps (Organism — js/components/Organisms/MpiToolOptionsMaskDetect)
  * @property {Object} viewer - MpiCanvasViewer instance
  *

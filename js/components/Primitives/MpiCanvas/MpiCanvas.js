@@ -810,7 +810,13 @@ class _CanvasCore {
             } else {
                 ctx.globalAlpha = this.mask.maskOpacity;
             }
-            if (this.mask.displayInverted) {
+            if (this.mask.hasAdjustPreview) {
+                // Adjust (MPI-382) draws its preview in the pending green INSTEAD of
+                // the mask, never on top of it: showing both would have the user
+                // judging the old shape and the proposed one at once. The real
+                // layers are untouched until Apply — this is the whole preview.
+                ctx.drawImage(this._recolorMaskLayer(this.mask.adjustCanvas, MASK_AUTO_FILL, W, H), 0, 0);
+            } else if (this.mask.displayInverted) {
                 ctx.drawImage(this._recolorMaskLayer(this.mask.maskCanvas, MASK_INVERT_FILL, W, H), 0, 0);
             } else {
                 ctx.drawImage(this.mask.maskCanvas, 0, 0, W, H);
@@ -1042,6 +1048,28 @@ class _CanvasCore {
     setMaskOpacity(opacity) { this.mask.maskOpacity = opacity; this.draw(); }
     clearMask()             { this.mask.clear(); this.draw(); }
 
+    // ── Adjust preview API (MPI-382) ──────────────────────────────────────────
+    beginMaskAdjust()       { this.mask.beginAdjust(); this.draw(); }
+    previewMaskAdjust(opts) { const up = this.mask.previewAdjust(opts); this.draw(); return up; }
+    /**
+     * Bake the preview. `onMaskStrokeEnd` is reused for the same reason undo does:
+     * an Apply IS a mask change, and that callback is the viewer's one publish
+     * path, so shrinking a mask to nothing relocks the op strip through it.
+     */
+    applyMaskAdjust()       {
+        const ok = this.mask.applyAdjust();
+        if (ok) { this.draw(); this.options.onMaskStrokeEnd?.(); }
+        return ok;
+    }
+    endMaskAdjust()         { const had = this.mask.endAdjust(); this.draw(); return had; }
+    hasMaskAdjustPreview()  { return !!this.mask.hasAdjustPreview; }
+    /** Close enclosed holes (MPI-431). Same publish path as Apply — it IS a mask change. */
+    fillMaskHoles()         {
+        const ok = this.mask.fillHoles();
+        if (ok) { this.draw(); this.options.onMaskStrokeEnd?.(); }
+        return ok;
+    }
+
     // ── Undo API (MPI-376) ────────────────────────────────────────────────────
 
     /**
@@ -1146,6 +1174,7 @@ export const MpiCanvas = ComponentFactory.create({
             'setMaskOpacity','clearMask','getMaskDataURL',
             'getManualURL','getSubtractURL','setManualFromDataURL','setSubtractFromDataURL',
             'setAutoPickMasks','setSelectedAutoPicks','clearAutoPicks','bakeAutoPicksInto',
+            'beginMaskAdjust','previewMaskAdjust','applyMaskAdjust','endMaskAdjust','hasMaskAdjustPreview','fillMaskHoles',
             'undoMask','redoMask','clearMaskUndo','canUndoMask','canRedoMask','getUndoStats',
             'setPointsMode','isPointsMode','clearMaskPoints','getMaskPointCount','getPointsJSON',
             // ALLOWLIST — a core method missing here is `undefined` on el, and the

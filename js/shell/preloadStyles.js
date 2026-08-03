@@ -77,6 +77,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.css',
   'js/components/Organisms/MpiVideoViewer/MpiVideoViewer.css',
   'js/components/Organisms/MpiToolOptionsCrop/MpiToolOptionsCrop.css',
+  'js/components/Organisms/MpiToolOptionsMaskAdjust/MpiToolOptionsMaskAdjust.css',
   'js/components/Organisms/MpiToolOptionsMaskDetect/MpiToolOptionsMaskDetect.css',
   'js/components/Organisms/MpiToolOptionsMaskPoints/MpiToolOptionsMaskPoints.css',
   'js/components/Organisms/MpiToolOptionsMaskText/MpiToolOptionsMaskText.css',

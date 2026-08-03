@@ -56,20 +56,45 @@ test('mountOptions discards the outgoing preview on every tool switch', () => {
     );
 });
 
-test('the discard seam is exposed by the viewer and routes to the no-apply exit', () => {
+/** The body of `el.discardPreview`. */
+const discardSeam = (() => {
     const m = VIEWER.match(/el\.discardPreview\s*=\s*\(\)\s*=>\s*\{([\s\S]*?)\n        \};/);
     assert.ok(m, 'el.discardPreview is not defined on MpiCanvasViewer — mountOptions calls into nothing');
+    return m[1];
+})();
+
+test('the discard seam is exposed by the viewer and routes to the no-apply exit', () => {
     assert.match(
-        m[1],
+        discardSeam,
         /_exitAutoMaskMode\(false\)/,
         'discardPreview does not call _exitAutoMaskMode(false) — a hand-rolled second discard '
         + 'path is how the two fall out of sync',
     );
     assert.match(
-        m[1],
-        /return false/,
-        'discardPreview has no cheap-exit guard, so every rail switch churns the mask state '
-        + 'and re-emits mask-ready/mask-clear for nothing',
+        discardSeam,
+        /if \([^)]*\)\s*\{[^}]*_exitAutoMaskMode\(false\)/,
+        'the detect discard is unguarded, so every rail switch churns the mask state and '
+        + 're-emits mask-ready/mask-clear for nothing',
+    );
+});
+
+test('every preview producer drops through the ONE seam, not through mountOptions', () => {
+    // MPI-382's Adjust is the first tool to extend discardPreview; MPI-368 (shapes)
+    // and MPI-373 (composite) do the same. The moment a producer is discarded at the
+    // call site instead, mountOptions starts growing a per-tool branch and the
+    // "visited, previewed, applied — or gone" rule stops being one rule.
+    assert.match(
+        discardSeam,
+        /hasMaskAdjustPreview[\s\S]*endMaskAdjust/,
+        'discardPreview does not drop the Adjust preview — an unapplied grow/shrink would '
+        + 'outlive its tool',
+    );
+    const mount = BLOCK.match(/async function mountOptions\(mode\)\s*\{([\s\S]*?)_options\?\.destroy/);
+    assert.doesNotMatch(
+        mount[1],
+        /endMaskAdjust|hasMaskAdjustPreview|_exitAutoMaskMode/,
+        'mountOptions names a specific preview producer — the call site must stay one '
+        + 'unconditional discardPreview() call',
     );
 });
 
