@@ -55,3 +55,28 @@ A Cubric workflow is a normal ComfyUI **API-format** graph (id-keyed
 
 Everything else — which control injects which title, whether a node is one of ours
 or upstream, how many runtime files a template yields — hangs off those two.
+
+## Changing an EXISTING workflow — edit `raw/`, then sync
+
+**`comfy_workflows/raw/*.json` is the only thing anyone edits.** Both other copies are
+GENERATED and a hand-edit to either is thrown away by the next sync:
+
+| Path | What it is |
+|---|---|
+| `comfy_workflows/raw/` | **authoring source — LiteGraph**, params in positional `widgets_values` arrays |
+| `comfy_workflows/scripts/workflow_generation/` | generated API template (named keys) |
+| `comfy_workflows/*.json` | generated runtime, what the app fetches |
+
+Then `node scripts/sync-raw-workflows.mjs` — it converts the git-changed raw files,
+gates on `validate-injection-rules.mjs`, bakes the runtime files via `orchestrate.py`,
+commits `raw/` and leaves the generated files staged. Needs a running ComfyUI (widget
+names come from `/object_info`). Full procedure and its traps:
+[../playbooks/add-model/01-workflow-split.md](../playbooks/add-model/01-workflow-split.md)
+— it applies to editing an existing workflow, not just onboarding a new model.
+
+**Two consequences worth knowing before you go looking for a node.** A named-key search
+(`"contour_fill"`) hits the API template and returns **zero** in `raw/`, so quote raw
+params by widget INDEX and cross-check the index against the API twin. And **one raw node
+fans out** — `sdxl_detailer_template` → 5 runtime detailers, `chroma`/`krea2`/`boogu` → 2
+each — so a runtime-shaped list is both wrong to edit and needlessly long. Verify a change
+against the **runtime** graphs afterwards; that is what proves the sync propagated.

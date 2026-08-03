@@ -61,6 +61,22 @@ read, plus whatever gates the op strip.
 - `docs/masking-sam3.md` and `docs/masking.md` record the current contract; both need the
   reversal written down
 
+## NOT resolved by MPI-382's preview contract — verified in source 2026-08-03
+
+Two consecutive handoffs flagged this card as possibly closeable rather than
+implementable, on the grounds that MPI-382's preview contract had covered it. **It had
+not.** Checked against the code before acting:
+
+- MPI-382 closed the **leave-the-tool** half only: `mountOptions()` → `el.discardPreview()`
+  → `_exitAutoMaskMode(false)` drops the picks on a rail switch.
+- Dispatching **while still in Detect** is untouched. `MaskManager._recomposite()` still
+  unions the selected picks into `maskCanvas`, and `getURL()` / `hasMask()` still read
+  `maskCanvas`. So an un-Added pick still reaches `Input_Mask`.
+
+The card is fully open and everything in "Shape of the fix" still applies. The only thing
+that changed is that MPI-365 no longer carries a duplicate of it — that item now points
+here.
+
 ## Related
 
 Masking umbrella MPI-424 / MPI-425. Reverses MPI-372 + MPI-384.

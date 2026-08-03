@@ -36,6 +36,12 @@
 - **Four styles on Chroma.** Chroma gains a style rack — B&W Sketch, Lenovo,
   Brushwork and Anime — available on every operation, Detail and Upscale
   included.
+- **Adjust a mask you already have.** A new Adjust tool in the Mask group grows or
+  shrinks the whole mask, or reduces it to a band around its edge — so you can fix
+  the edge of a subject without regenerating the middle of it. Drag the slider and
+  watch the mask change live, then press Apply. Undoable like any other mask edit.
+- **Fill.** Closes enclosed holes in a mask in one press, in the app where you can
+  see what is being filled before you commit to it.
 - **Depth Strength.** Krea 2, FLUX.2 Klein and Chroma's Depth op gained a slider
   for how hard the depth map pulls. At full strength the composition is locked to
   the source; easing it off lets the model reinterpret the framing while keeping
@@ -43,6 +49,11 @@
 
 ## importantChanges
 
+- **Your mask reaches the model the way you drew it.** A masked edit used to close
+  every hole in your mask and grow it slightly before generating, so a mask drawn as
+  a ring around a subject arrived at the model as a solid blob — the shape you wanted
+  was impossible to ask for. That no longer happens on any model. If you do want a
+  hole closed, the new **Fill** button does it where you can see it.
 - **A detection you don't add is a preview.** Detect, Points and Text show their
   result in green as a preview. Leaving the tool now discards it — press **Add**
   to keep it. Previously an un-added detection followed you to other tools and
