@@ -29,6 +29,13 @@
    "task": "MPI-382",
    "status": "resolved",
    "created_at": "2026-08-03T14:10:00Z"
+  },
+  {
+   "id": "9c4f1e7a-3d52-4b18-a6c0-51f2e8d94b73",
+   "path": ".agents/mpi-kanban/state/handoffs/9c4f1e7a-3d52-4b18-a6c0-51f2e8d94b73.json",
+   "task": "MPI-368",
+   "created_at": "2026-08-03T16:05:00Z",
+   "status": "open"
   }
  ]
 }
