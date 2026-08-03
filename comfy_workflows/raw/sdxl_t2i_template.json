@@ -1,8 +1,8 @@
 {
   "id": "6292445b-5b89-4f2f-b57a-67373270c1d5",
   "revision": 0,
-  "last_node_id": 1705,
-  "last_link_id": 420,
+  "last_node_id": 1706,
+  "last_link_id": 423,
   "nodes": [
     {
       "id": 1541,
@@ -1604,13 +1604,13 @@
         58
       ],
       "flags": {},
-      "order": 86,
+      "order": 87,
       "mode": 0,
       "inputs": [
         {
           "name": "IMAGE",
           "type": "IMAGE",
-          "link": 420
+          "link": 422
         }
       ],
       "outputs": [
@@ -2628,7 +2628,7 @@
         178
       ],
       "flags": {},
-      "order": 87,
+      "order": 85,
       "mode": 0,
       "inputs": [
         {
@@ -5418,41 +5418,6 @@
       ]
     },
     {
-      "id": 1696,
-      "type": "GetNode",
-      "pos": [
-        4933.314727897926,
-        3667.3287996696554
-      ],
-      "size": [
-        210,
-        58
-      ],
-      "flags": {},
-      "order": 44,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            403
-          ]
-        }
-      ],
-      "title": "Get_img1",
-      "properties": {
-        "Node name for S&R": "GetNode",
-        "aux_id": "kijai/ComfyUI-KJNodes"
-      },
-      "widgets_values": [
-        "img1"
-      ],
-      "color": "#2a363b",
-      "bgcolor": "#3f5159"
-    },
-    {
       "id": 1700,
       "type": "UpscaleModelLoader",
       "pos": [
@@ -5464,7 +5429,7 @@
         58
       ],
       "flags": {},
-      "order": 45,
+      "order": 44,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5507,7 +5472,7 @@
         58
       ],
       "flags": {},
-      "order": 46,
+      "order": 45,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5542,7 +5507,7 @@
         58
       ],
       "flags": {},
-      "order": 47,
+      "order": 46,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5673,7 +5638,7 @@
         106
       ],
       "flags": {},
-      "order": 85,
+      "order": 84,
       "mode": 0,
       "inputs": [
         {
@@ -5734,7 +5699,7 @@
         58
       ],
       "flags": {},
-      "order": 48,
+      "order": 47,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5767,7 +5732,7 @@
         58
       ],
       "flags": {},
-      "order": 49,
+      "order": 48,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5806,7 +5771,7 @@
         58
       ],
       "flags": {},
-      "order": 50,
+      "order": 49,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5846,7 +5811,7 @@
         106
       ],
       "flags": {},
-      "order": 84,
+      "order": 86,
       "mode": 0,
       "inputs": [
         {
@@ -5892,7 +5857,7 @@
         58
       ],
       "flags": {},
-      "order": 51,
+      "order": 50,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5939,7 +5904,7 @@
         {
           "name": "image",
           "type": "IMAGE",
-          "link": null
+          "link": 423
         },
         {
           "name": "model",
@@ -6081,59 +6046,6 @@
       "widgets_values": []
     },
     {
-      "id": 1640,
-      "type": "MpiLoadImageFromPath",
-      "pos": [
-        -291.45501100998615,
-        2045.2501524376235
-      ],
-      "size": [
-        343.2701598165311,
-        383.46562779932174
-      ],
-      "flags": {},
-      "order": 52,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            420
-          ]
-        },
-        {
-          "name": "mask",
-          "type": "MASK",
-          "links": null
-        },
-        {
-          "name": "width",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "links": null
-        }
-      ],
-      "title": "Input_Image",
-      "properties": {
-        "Node name for S&R": "MpiLoadImageFromPath",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec"
-      },
-      "widgets_values": [
-        "",
-        "alpha",
-        false
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 1545,
       "type": "StringConcatenate",
       "pos": [
@@ -6194,7 +6106,7 @@
         88
       ],
       "flags": {},
-      "order": 53,
+      "order": 51,
       "mode": 0,
       "inputs": [],
       "outputs": [],
@@ -6218,7 +6130,7 @@
         58
       ],
       "flags": {},
-      "order": 54,
+      "order": 52,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6238,6 +6150,95 @@
       },
       "widgets_values": [
         1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1696,
+      "type": "GetNode",
+      "pos": [
+        4933.314727897926,
+        3667.3287996696554
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 53,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            403,
+            423
+          ]
+        }
+      ],
+      "title": "Get_img1",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
+      },
+      "widgets_values": [
+        "img1"
+      ],
+      "color": "#2a363b",
+      "bgcolor": "#3f5159"
+    },
+    {
+      "id": 1640,
+      "type": "MpiLoadImageFromPath",
+      "pos": [
+        -291.45501100998615,
+        2045.2501524376235
+      ],
+      "size": [
+        343.2701598165311,
+        383.46562779932174
+      ],
+      "flags": {},
+      "order": 54,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            422
+          ]
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "Input_Image",
+      "properties": {
+        "Node name for S&R": "MpiLoadImageFromPath",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec"
+      },
+      "widgets_values": [
+        "",
+        "alpha",
+        true
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -7485,10 +7486,18 @@
       "IMAGE"
     ],
     [
-      420,
+      422,
       1640,
       0,
       1632,
+      0,
+      "IMAGE"
+    ],
+    [
+      423,
+      1696,
+      0,
+      1702,
       0,
       "IMAGE"
     ]
@@ -7582,10 +7591,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.41772481694156616,
+      "scale": 0.1948717100000001,
       "offset": [
-        1152.368331595749,
-        -1535.5317970034564
+        1675.49436695936,
+        -227.9655247635512
       ]
     },
     "frontendVersion": "1.47.11",
