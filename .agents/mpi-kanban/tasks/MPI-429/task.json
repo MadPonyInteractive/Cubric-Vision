@@ -2,15 +2,16 @@
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-429",
   "title": "Give blocked users a second download origin (mirror failover)",
-  "description": "Enable the shipped-but-inert mirror: add a second origin and prove it against DPI.",
-  "column": "todo",
-  "maturity": "needs-decision",
+  "description": "Enable the shipped-but-inert mirror. Origin pivoted 2026-08-03 from a second Cloudflare hostname (dropped - a young uncategorised domain, so a second subdomain does not dodge domain-level filtering) to Hugging Face. R2 stays primary on both engines; the mirror is local-only by construction, so Pod speed cannot regress. Phase 1 classifies all 97 R2-hosted deps (400.8 GB) by SHA256 against their upstream - only byte-identical blobs can be mirrored externally - and its re-host total picks the HF tier. Plan in checklist.md.",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-02T16:12:00Z",
-  "updated_at": "2026-08-02T16:12:00Z",
+  "updated_at": "2026-08-03T05:35:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
-    "handoffs": "handoffs/"
+    "handoffs": "handoffs/",
+    "checklist": "checklist.md"
   }
 }
