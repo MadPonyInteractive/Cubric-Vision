@@ -137,6 +137,19 @@ reputation clock, it does not skip it.
 Smart App Control blocks the update scripts too. They must download the full zip.
 This must be stated in any release that carries a Windows fix.
 
+**1.4.0 ONLY — tell users to reopen the app manually after updating.** The updater
+that runs is the one already on their disk, so a 1.3.1 user pressing Update gets
+1.3.1's updater, which is silent and never relaunches: the app closes, the update
+applies perfectly, and nothing comes back. That reads as a crash and is the exact
+complaint MPI-422 was raised for. The fix ships IN 1.4.0 and first takes effect
+1.4.0 → 1.5.0, so 1.4.0's body needs:
+
+> After clicking Update the app will close and stay closed while it updates.
+> Reopen it yourself after about a minute. From this version on it reopens itself.
+
+Delete this note once 1.4.0 is out; from 1.5.0 the relaunch is real. Detail:
+`portable-distribution-contract.md` § The updater logs and relaunches.
+
 **macOS.** Any downloaded build is quarantined. Give the clear command and the
 launch target:
 

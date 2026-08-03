@@ -411,12 +411,20 @@ reopen"*. Both are fixed; the contract each updater now honours:
   double-clicked run keeps its live terminal output and its exit status (never
   pipe to `tee` — the status becomes `tee`'s).
 - **Relaunch on BOTH outcomes.** Success or failure, the app comes back. Windows
-  targets `<root>/CubricVision.exe`, **not `process.execPath`** — `evictBusyFile`
-  may have renamed the running image to `<exe>.old`, so execPath can be the
-  retired binary — and strips `ELECTRON_RUN_AS_NODE` or the app boots as node and
-  exits. Linux calls `start.sh` **unbackgrounded** (it double-forks itself out of
-  the process group); macOS uses `nohup … &` because `start.command` runs Electron
-  in the foreground.
+  targets `<root>/CubricVision.exe` — by construction the freshly written image,
+  whatever `evictBusyFile` did — and strips `ELECTRON_RUN_AS_NODE` or the app
+  boots as node and exits. Linux calls `start.sh` **unbackgrounded** (it
+  double-forks itself out of the process group); macOS uses `nohup … &` because
+  `start.command` runs Electron in the foreground.
+
+  > `process.execPath` would in fact also have worked, contrary to what MPI-422's
+  > brief assumed. Measured 2026-08-03: with the running image renamed aside
+  > mid-flight, a live electron-as-node process still reported
+  > `D:\…\CubricVision.exe` — Node captures execPath once at bootstrap and never
+  > re-queries, so it keeps naming the original path, which eviction leaves
+  > holding the NEW binary. The root path is preferred for being explicit rather
+  > than dependent on that timing. Do not "fix" the relaunch back to execPath on
+  > the strength of this note — there is no reason to.
 - **A failure reaches the user.** The updater writes
   `<root>/update/update-result.json` (`{ok:false, error, at}`) carrying the last
   helper *stderr* line, not the useless `"<script> exited with code 1"`. Main's
