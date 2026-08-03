@@ -560,8 +560,9 @@ export const HOTKEY_REGISTRY = [
         description:      'Toggle fullscreen',
         allowWhileTyping: true,
     },
-    // UI size (global webFrame zoom) — keyboard equivalents of Ctrl+wheel.
-    // Two enlarge keys: numpad/main-row '+' and the shiftless '=' (browser
+    // UI size (global webFrame zoom) — the only UI-size control; Ctrl+wheel was
+    // removed because macOS delivers a trackpad pinch as ctrl+wheel and it
+    // hijacked image zoom. Two enlarge keys: numpad/main-row '+' and '=' (browser
     // zoom-in convention). Distinct mapKeys from the gallery's bare '+'/'-'.
     {
         id:               'system.uiZoom.in.plus',

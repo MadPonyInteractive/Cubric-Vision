@@ -1,9 +1,9 @@
 /**
  * uiZoom.js — global UI size control via Electron webFrame zoom factor.
  *
- * Single source of truth for the zoom bounds/step shared by the Ctrl+wheel
- * handler (init.js) and the Ctrl+ / Ctrl- hotkeys (hotkeyManager.js). No-ops
- * in Browser Mode where webFrame is unavailable.
+ * Single source of truth for the zoom bounds/step behind the Ctrl+ / Ctrl-
+ * hotkeys (hotkeyManager.js) — the only way to change UI size. No-ops in
+ * Browser Mode where webFrame is unavailable.
  */
 'use strict';
 

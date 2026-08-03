@@ -14,8 +14,9 @@ export function applyUiZoom(dir) { … webFrame.setZoomFactor(…) }
 It reads `getZoomFactor()` live from webFrame on every step and writes nothing, so the
 value is window-lifetime only. Callers:
 
-- `js/init.js` — the Ctrl+wheel handler
-- `js/managers/hotkeyManager.js` ~90 — Ctrl+plus / Ctrl+minus
+- `js/managers/hotkeyManager.js` ~90 — Ctrl+plus / Ctrl+minus (the ONLY caller; the
+  Ctrl+wheel handler in `js/init.js` was removed — macOS delivers a trackpad pinch as
+  ctrl+wheel, so it hijacked image zoom into a whole-interface zoom)
 - `js/managers/hotkeyRegistry.js` ~520 — the registry ids for those two
 
 ## Fix

@@ -3,7 +3,6 @@
  */
 import { initShell } from './shell.js';
 import { initPaths } from './data/modelRegistry.js';
-import { applyUiZoom } from './utils/uiZoom.js';
 import { checkForUpdate } from './services/updateChecker.js';
 
 // Capture native dialogs before any override to prevent mutual recursion.
@@ -29,15 +28,10 @@ document.addEventListener('wheel', (e) => {
     }
 }, { passive: false });
 
-// Ctrl+wheel — global UI zoom (Electron webFrame). Ctrl+ / Ctrl- keyboard
-// equivalents are bound as built-ins in hotkeyManager.init(). Shared step/bounds
-// live in utils/uiZoom.js.
-document.addEventListener('wheel', (e) => {
-    if (!e.ctrlKey) return;
-    e.preventDefault();
-    applyUiZoom(e.deltaY < 0 ? 1 : -1);
-}, { passive: false });
-
+// NOTE: there is deliberately NO Ctrl+wheel UI-zoom handler here. macOS delivers
+// a trackpad pinch as a wheel event with ctrlKey:true, so such a handler hijacked
+// every pinch into a whole-interface zoom instead of letting the canvas zoom the
+// image. UI size is keyboard-only: Ctrl+ / Ctrl- (bound in hotkeyManager.init()).
 async function init() {
     await initPaths();
     await initShell();

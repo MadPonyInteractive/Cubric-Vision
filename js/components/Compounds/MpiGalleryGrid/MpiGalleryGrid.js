@@ -1682,7 +1682,6 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // Native scroll already covers cards; this catches gaps/below-last-row
         // areas where Electron sometimes drops wheel-to-scroll on flex parents.
         _unsubs.push(on(grid, 'wheel', (e) => {
-            if (e.ctrlKey) return;
             if (e.target?.closest?.('.mpi-group-card')) return;
             e.preventDefault();
             grid.scrollTop += e.deltaY;

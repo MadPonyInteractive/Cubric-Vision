@@ -88,7 +88,7 @@ class HotkeyManager {
         this.bind('system.contextMenu.shiftF10', () => this._openContextMenuAtPointer());
 
         // Built-in: global UI size (webFrame zoom) — Ctrl+ / Ctrl- equivalents
-        // of the Ctrl+wheel handler in init.js.
+        // the ONLY UI-size control (Ctrl+wheel removed — macOS pinch collides).
         this.bind('system.uiZoom.in.plus',  () => applyUiZoom(1));
         this.bind('system.uiZoom.in.equal', () => applyUiZoom(1));
         this.bind('system.uiZoom.out',      () => applyUiZoom(-1));
