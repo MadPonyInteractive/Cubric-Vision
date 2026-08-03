@@ -114,6 +114,21 @@ bought **three months** rather than the one it cost, to over-remunerate the crea
 the two have discussed it directly. **Decision 2026-08-03: no outreach, ship as-is, credit
 on the About page.** A later reader who spots the dates should stop here.
 
+## DONE 2026-08-03 — the NSFW weight is R2-only until 2026-08-10
+
+Consequence of the settlement above, decided by the user: LUSTIFY V10 is inside coyotte's
+paid early-access window until **2026-08-10**, so the HF copy MPI-429's sweep made was
+**deleted**. R2 is app-gated, a public HF repo is not — different act, and only one of them
+needs the window to be over. HF upload is deferred, not cancelled.
+
+Shipped: `noMirror: true` on `krea2-raw-transformer-nsfw` (without it the generic prefix
+rewrite hands a blocked user a 404 second route — measured, it was the only 404 of the 31
+re-hosted deps). Recorded in `docs/models/krea2/licences.md`, `docs/download-manager.md`
+§ The second origin, and `.claude/rules/downloads.md`.
+
+**On/after 2026-08-10: re-upload to `Mad-Pony-Interactive/cubric-studio` under
+`vision/models/diffusion_models/` and delete the flag.**
+
 ## NEW SCOPE — 9 weights the sweep could not see (found 2026-08-03)
 
 The sweep selected on `origin` matching CivitAI/CivArchive. **Nine deps carry a bare

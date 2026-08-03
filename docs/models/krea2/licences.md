@@ -42,6 +42,20 @@ over-remunerate the creator, and the two have discussed it directly. Decision 20
 no further outreach, ship as-is, credit on the About page. A later reader finding the date
 overlap should stop here rather than re-opening it.
 
+## R2-ONLY until 2026-08-10 — the HF mirror is deleted on purpose
+
+MPI-429 re-hosted this weight to `Mad-Pony-Interactive/cubric-studio` as its failover
+origin. **The user deleted it from Hugging Face on 2026-08-03 and it must not go back until
+2026-08-10**, the date coyotte opens LUSTIFY V10 to the public. Our R2 copy is reached only
+through the app's download manager; a public HF repo is a public redistribution of a weight
+still inside its paid early-access window, and those are not the same act.
+
+Mechanically that means `noMirror: true` on the dep — the generic prefix rewrite would
+otherwise hand a blocked user an HF URL that 404s (measured 2026-08-03: 30 of the 31
+re-hosted deps return 302, this one 404). **On/after 2026-08-10: re-upload and delete the
+flag**, so it regains a second route. Contract: `docs/download-manager.md` § The second
+origin.
+
 ## The redistribution question still applies
 
 `krea2-raw-transformer-nsfw`, `krea2-lora-filterbypass` and `krea2-style-midjourney` carry

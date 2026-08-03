@@ -104,7 +104,7 @@ test('a per-dep mirrorUrl WINS and suppresses the generic rewrite', () => {
 });
 
 test('noMirror means NO mirror — not a 404 to spend a retry on', () => {
-    // qwen-lora-headswap: on R2, absent from HF, no provenance to re-host it with.
+    // krea2-raw-transformer-nsfw: on R2, deliberately absent from HF until 2026-08-10.
     assert.deepEqual(_mirrorUrlsFor(R2_URL, { noMirror: true }), []);
 });
 

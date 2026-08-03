@@ -452,11 +452,19 @@ classified by matching our recorded `sha256` against HF LFS oids (the tree API e
 
 | Set | Deps | Mirror |
 |---|---|---|
-| our own bakes, re-hosted to `Mad-Pony-Interactive/cubric-studio` | 31 | generic prefix rewrite, no per-dep data |
+| our own bakes, re-hosted to `Mad-Pony-Interactive/cubric-studio` | 30 | generic prefix rewrite, no per-dep data |
 | byte-identical copies already published by third parties | 66 | explicit per-dep `mirrorUrl` |
-| a dep with neither | 0 today | `noMirror: true` |
+| a dep with neither | 1 today | `noMirror: true` |
 
-**Every dep in the catalogue has two routes as of 2026-08-03.** `qwen-lora-headswap` was
+**One dep is deliberately single-route until 2026-08-10.** `krea2-raw-transformer-nsfw`
+(coyotte's LUSTIFY V10) was re-hosted by the sweep and then **deleted from HF by the user**
+— V10 is in a paid early-access window that opens 2026-08-10, and a public HF copy
+redistributes it in a way our own app-gated R2 does not. It carries `noMirror: true` for
+exactly as long as that holds; re-upload and remove the flag after 2026-08-10. Verified
+2026-08-03 by HEAD-ing all 31 generic-rewrite mirrors: 30 × 302, this one 404. Reasoning:
+`docs/models/krea2/licences.md`.
+
+`qwen-lora-headswap` was
 the lone exception and it is instructive: it shipped with an empty `origin`, so the
 968-repo sweep could not place it and it carried `noMirror: true` until Fabio named the
 repo (`Alissonerdx/BFS-Best-Face-Swap`, MIT) by hand — confirmed by hash, byte-identical
