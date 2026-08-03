@@ -763,7 +763,7 @@
         58
       ],
       "flags": {},
-      "order": 87,
+      "order": 86,
       "mode": 0,
       "inputs": [
         {
@@ -843,7 +843,7 @@
         58
       ],
       "flags": {},
-      "order": 89,
+      "order": 88,
       "mode": 0,
       "inputs": [
         {
@@ -1252,7 +1252,7 @@
         58
       ],
       "flags": {},
-      "order": 86,
+      "order": 85,
       "mode": 0,
       "inputs": [
         {
@@ -1452,7 +1452,7 @@
         58
       ],
       "flags": {},
-      "order": 88,
+      "order": 87,
       "mode": 0,
       "inputs": [
         {
@@ -3019,7 +3019,7 @@
         178
       ],
       "flags": {},
-      "order": 77,
+      "order": 89,
       "mode": 0,
       "inputs": [
         {
@@ -3085,42 +3085,6 @@
       "widgets_values": [
         "depth"
       ]
-    },
-    {
-      "id": 2702,
-      "type": "MpiFloat",
-      "pos": [
-        -579.7422299002299,
-        -3200.4300111031107
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 25,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "float",
-          "type": "FLOAT",
-          "links": [
-            5572
-          ]
-        }
-      ],
-      "title": "Input_depth_strength",
-      "properties": {
-        "Node name for S&R": "MpiFloat",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
-      },
-      "widgets_values": [
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
     },
     {
       "id": 1129,
@@ -3350,7 +3314,7 @@
         46
       ],
       "flags": {},
-      "order": 78,
+      "order": 77,
       "mode": 0,
       "inputs": [
         {
@@ -3394,7 +3358,7 @@
         58
       ],
       "flags": {},
-      "order": 26,
+      "order": 25,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3599,7 +3563,7 @@
         58
       ],
       "flags": {},
-      "order": 27,
+      "order": 26,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3634,7 +3598,7 @@
         58
       ],
       "flags": {},
-      "order": 28,
+      "order": 27,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3669,7 +3633,7 @@
         58
       ],
       "flags": {},
-      "order": 29,
+      "order": 28,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3761,7 +3725,7 @@
         58
       ],
       "flags": {},
-      "order": 30,
+      "order": 29,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3796,7 +3760,7 @@
         58
       ],
       "flags": {},
-      "order": 31,
+      "order": 30,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3833,7 +3797,7 @@
         58
       ],
       "flags": {},
-      "order": 32,
+      "order": 31,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3870,7 +3834,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 79,
+      "order": 78,
       "mode": 0,
       "inputs": [
         {
@@ -3919,7 +3883,7 @@
         58
       ],
       "flags": {},
-      "order": 33,
+      "order": 32,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3956,7 +3920,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 80,
+      "order": 79,
       "mode": 0,
       "inputs": [
         {
@@ -4005,7 +3969,7 @@
         128
       ],
       "flags": {},
-      "order": 81,
+      "order": 80,
       "mode": 0,
       "inputs": [
         {
@@ -4056,7 +4020,7 @@
         58
       ],
       "flags": {},
-      "order": 34,
+      "order": 33,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4091,7 +4055,7 @@
         58
       ],
       "flags": {},
-      "order": 35,
+      "order": 34,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4126,7 +4090,7 @@
         58
       ],
       "flags": {},
-      "order": 36,
+      "order": 35,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4276,7 +4240,7 @@
         128.0048956160033
       ],
       "flags": {},
-      "order": 37,
+      "order": 36,
       "mode": 4,
       "inputs": [],
       "outputs": [],
@@ -4300,7 +4264,7 @@
         58
       ],
       "flags": {},
-      "order": 38,
+      "order": 37,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4339,7 +4303,7 @@
         58
       ],
       "flags": {},
-      "order": 39,
+      "order": 38,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4378,7 +4342,7 @@
         58
       ],
       "flags": {},
-      "order": 40,
+      "order": 39,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4415,7 +4379,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 82,
+      "order": 81,
       "mode": 0,
       "inputs": [
         {
@@ -4508,7 +4472,7 @@
         58
       ],
       "flags": {},
-      "order": 41,
+      "order": 40,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4543,7 +4507,7 @@
         58
       ],
       "flags": {},
-      "order": 42,
+      "order": 41,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4584,7 +4548,7 @@
         58
       ],
       "flags": {},
-      "order": 43,
+      "order": 42,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4627,7 +4591,7 @@
         58
       ],
       "flags": {},
-      "order": 44,
+      "order": 43,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4663,7 +4627,7 @@
         106
       ],
       "flags": {},
-      "order": 83,
+      "order": 82,
       "mode": 0,
       "inputs": [
         {
@@ -4710,7 +4674,7 @@
         58
       ],
       "flags": {},
-      "order": 45,
+      "order": 44,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4841,7 +4805,7 @@
         58
       ],
       "flags": {},
-      "order": 46,
+      "order": 45,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4877,7 +4841,7 @@
         58
       ],
       "flags": {},
-      "order": 47,
+      "order": 46,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4913,7 +4877,7 @@
         58
       ],
       "flags": {},
-      "order": 48,
+      "order": 47,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -5144,7 +5108,7 @@
         58
       ],
       "flags": {},
-      "order": 49,
+      "order": 48,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5185,7 +5149,7 @@
         58
       ],
       "flags": {},
-      "order": 50,
+      "order": 49,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5368,7 +5332,7 @@
         128
       ],
       "flags": {},
-      "order": 84,
+      "order": 83,
       "mode": 0,
       "inputs": [
         {
@@ -5419,7 +5383,7 @@
         58
       ],
       "flags": {},
-      "order": 51,
+      "order": 50,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5656,7 +5620,7 @@
         58
       ],
       "flags": {},
-      "order": 52,
+      "order": 51,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5691,7 +5655,7 @@
         58
       ],
       "flags": {},
-      "order": 53,
+      "order": 52,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5810,7 +5774,7 @@
         106
       ],
       "flags": {},
-      "order": 85,
+      "order": 84,
       "mode": 0,
       "inputs": [
         {
@@ -5905,7 +5869,7 @@
         383.46562779932174
       ],
       "flags": {},
-      "order": 54,
+      "order": 53,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5958,7 +5922,7 @@
         58.91996868586102
       ],
       "flags": {},
-      "order": 55,
+      "order": 54,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5995,7 +5959,7 @@
         200
       ],
       "flags": {},
-      "order": 56,
+      "order": 55,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6037,7 +6001,7 @@
         58.91996868586102
       ],
       "flags": {},
-      "order": 57,
+      "order": 56,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6074,7 +6038,7 @@
         314
       ],
       "flags": {},
-      "order": 58,
+      "order": 57,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -6358,7 +6322,7 @@
         129.1017434078916
       ],
       "flags": {},
-      "order": 59,
+      "order": 58,
       "mode": 4,
       "inputs": [],
       "outputs": [],
@@ -6516,6 +6480,42 @@
       ],
       "color": "#232",
       "bgcolor": "#353"
+    },
+    {
+      "id": 2702,
+      "type": "MpiFloat",
+      "pos": [
+        -579.7422299002299,
+        -3200.4300111031107
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 59,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            5572
+          ]
+        }
+      ],
+      "title": "Input_Control_strength",
+      "properties": {
+        "Node name for S&R": "MpiFloat",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
+      },
+      "widgets_values": [
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -7864,10 +7864,10 @@
     "VHS_KeepIntermediate": true,
     "links_added_by_ue": [],
     "ds": {
-      "scale": 0.21435888100000208,
+      "scale": 1.3109994191500105,
       "offset": [
-        4369.694492461755,
-        3193.1558133349613
+        1190.099453733828,
+        3365.0987419656108
       ]
     },
     "workflowRendererVersion": "LG"

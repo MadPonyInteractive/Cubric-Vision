@@ -3762,42 +3762,6 @@
       ]
     },
     {
-      "id": 538,
-      "type": "MpiFloat",
-      "pos": [
-        -788.935017508919,
-        4057.8042979378874
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 15,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "float",
-          "type": "FLOAT",
-          "links": [
-            1173
-          ]
-        }
-      ],
-      "title": "Input_depth_strength",
-      "properties": {
-        "Node name for S&R": "MpiFloat",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
-      },
-      "widgets_values": [
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 543,
       "type": "MpiAnyChecker",
       "pos": [
@@ -4175,7 +4139,7 @@
         58
       ],
       "flags": {},
-      "order": 16,
+      "order": 15,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -4342,7 +4306,7 @@
         58
       ],
       "flags": {},
-      "order": 17,
+      "order": 16,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4485,7 +4449,7 @@
         58
       ],
       "flags": {},
-      "order": 18,
+      "order": 17,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4521,7 +4485,7 @@
         58
       ],
       "flags": {},
-      "order": 19,
+      "order": 18,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4683,7 +4647,7 @@
         60
       ],
       "flags": {},
-      "order": 20,
+      "order": 19,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4860,7 +4824,7 @@
         58
       ],
       "flags": {},
-      "order": 21,
+      "order": 20,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5231,7 +5195,7 @@
         60
       ],
       "flags": {},
-      "order": 22,
+      "order": 21,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5271,7 +5235,7 @@
         58
       ],
       "flags": {},
-      "order": 23,
+      "order": 22,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5500,7 +5464,7 @@
         58
       ],
       "flags": {},
-      "order": 24,
+      "order": 23,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5536,7 +5500,7 @@
         58
       ],
       "flags": {},
-      "order": 25,
+      "order": 24,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5572,7 +5536,7 @@
         58
       ],
       "flags": {},
-      "order": 26,
+      "order": 25,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5690,7 +5654,7 @@
         58
       ],
       "flags": {},
-      "order": 27,
+      "order": 26,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5863,7 +5827,7 @@
         58
       ],
       "flags": {},
-      "order": 28,
+      "order": 27,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5975,7 +5939,7 @@
         58
       ],
       "flags": {},
-      "order": 29,
+      "order": 28,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6044,7 +6008,7 @@
         58
       ],
       "flags": {},
-      "order": 30,
+      "order": 29,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6224,7 +6188,7 @@
         58
       ],
       "flags": {},
-      "order": 31,
+      "order": 30,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6259,7 +6223,7 @@
         58
       ],
       "flags": {},
-      "order": 32,
+      "order": 31,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6401,7 +6365,7 @@
         58
       ],
       "flags": {},
-      "order": 33,
+      "order": 32,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6436,7 +6400,7 @@
         58
       ],
       "flags": {},
-      "order": 34,
+      "order": 33,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6522,7 +6486,7 @@
         58
       ],
       "flags": {},
-      "order": 35,
+      "order": 34,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6557,7 +6521,7 @@
         58
       ],
       "flags": {},
-      "order": 36,
+      "order": 35,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6592,7 +6556,7 @@
         58
       ],
       "flags": {},
-      "order": 37,
+      "order": 36,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6627,7 +6591,7 @@
         58
       ],
       "flags": {},
-      "order": 38,
+      "order": 37,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6660,7 +6624,7 @@
         58
       ],
       "flags": {},
-      "order": 39,
+      "order": 38,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6697,7 +6661,7 @@
         58
       ],
       "flags": {},
-      "order": 40,
+      "order": 39,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6894,7 +6858,7 @@
         58
       ],
       "flags": {},
-      "order": 41,
+      "order": 40,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7020,7 +6984,7 @@
         58
       ],
       "flags": {},
-      "order": 42,
+      "order": 41,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7107,7 +7071,7 @@
         58
       ],
       "flags": {},
-      "order": 43,
+      "order": 42,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7231,7 +7195,7 @@
         58
       ],
       "flags": {},
-      "order": 44,
+      "order": 43,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7562,7 +7526,7 @@
         58
       ],
       "flags": {},
-      "order": 45,
+      "order": 44,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7601,7 +7565,7 @@
         58
       ],
       "flags": {},
-      "order": 46,
+      "order": 45,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7640,7 +7604,7 @@
         58
       ],
       "flags": {},
-      "order": 47,
+      "order": 46,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7770,7 +7734,7 @@
         58
       ],
       "flags": {},
-      "order": 48,
+      "order": 47,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7803,7 +7767,7 @@
         58
       ],
       "flags": {},
-      "order": 49,
+      "order": 48,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7844,7 +7808,7 @@
         58
       ],
       "flags": {},
-      "order": 50,
+      "order": 49,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7938,7 +7902,7 @@
         58
       ],
       "flags": {},
-      "order": 51,
+      "order": 50,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7974,7 +7938,7 @@
         58
       ],
       "flags": {},
-      "order": 52,
+      "order": 51,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -8056,7 +8020,7 @@
         58
       ],
       "flags": {},
-      "order": 53,
+      "order": 52,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -8187,7 +8151,7 @@
         58
       ],
       "flags": {},
-      "order": 54,
+      "order": 53,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -8223,7 +8187,7 @@
         58
       ],
       "flags": {},
-      "order": 55,
+      "order": 54,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -8610,7 +8574,7 @@
         58
       ],
       "flags": {},
-      "order": 56,
+      "order": 55,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -8740,7 +8704,7 @@
         58
       ],
       "flags": {},
-      "order": 57,
+      "order": 56,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -8833,7 +8797,7 @@
         58
       ],
       "flags": {},
-      "order": 58,
+      "order": 57,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9014,7 +8978,7 @@
         58
       ],
       "flags": {},
-      "order": 59,
+      "order": 58,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9047,7 +9011,7 @@
         128.74933532727096
       ],
       "flags": {},
-      "order": 60,
+      "order": 59,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9088,7 +9052,7 @@
         58
       ],
       "flags": {},
-      "order": 61,
+      "order": 60,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9197,7 +9161,7 @@
         58
       ],
       "flags": {},
-      "order": 62,
+      "order": 61,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9283,7 +9247,7 @@
         60
       ],
       "flags": {},
-      "order": 63,
+      "order": 62,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9318,7 +9282,7 @@
         58
       ],
       "flags": {},
-      "order": 64,
+      "order": 63,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9351,7 +9315,7 @@
         58
       ],
       "flags": {},
-      "order": 65,
+      "order": 64,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9388,7 +9352,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 66,
+      "order": 65,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9492,7 +9456,7 @@
         314.00000000000045
       ],
       "flags": {},
-      "order": 67,
+      "order": 66,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -9530,7 +9494,7 @@
         58
       ],
       "flags": {},
-      "order": 68,
+      "order": 67,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9566,7 +9530,7 @@
         58
       ],
       "flags": {},
-      "order": 69,
+      "order": 68,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9664,7 +9628,7 @@
         383.46562779932174
       ],
       "flags": {},
-      "order": 70,
+      "order": 69,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9717,7 +9681,7 @@
         58.91996868586102
       ],
       "flags": {},
-      "order": 71,
+      "order": 70,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9754,7 +9718,7 @@
         128.0048956160033
       ],
       "flags": {},
-      "order": 72,
+      "order": 71,
       "mode": 4,
       "inputs": [],
       "outputs": [],
@@ -9778,7 +9742,7 @@
         58.91996868586102
       ],
       "flags": {},
-      "order": 73,
+      "order": 72,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9815,7 +9779,7 @@
         58
       ],
       "flags": {},
-      "order": 74,
+      "order": 73,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9848,7 +9812,7 @@
         82.44518722905514
       ],
       "flags": {},
-      "order": 75,
+      "order": 74,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9891,7 +9855,7 @@
         196.90800028317108
       ],
       "flags": {},
-      "order": 76,
+      "order": 75,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -10099,7 +10063,7 @@
         180.70844348092885
       ],
       "flags": {},
-      "order": 77,
+      "order": 76,
       "mode": 4,
       "inputs": [],
       "outputs": [],
@@ -10394,6 +10358,42 @@
         "32",
         "gpu (much faster)"
       ]
+    },
+    {
+      "id": 538,
+      "type": "MpiFloat",
+      "pos": [
+        -788.935017508919,
+        4057.8042979378874
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 77,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            1173
+          ]
+        }
+      ],
+      "title": "Input_Control_strength",
+      "properties": {
+        "Node name for S&R": "MpiFloat",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
+      },
+      "widgets_values": [
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -12736,10 +12736,10 @@
     "VHS_MetadataImage": true,
     "VHS_KeepIntermediate": true,
     "ds": {
-      "scale": 0.21435888100000047,
+      "scale": 0.9849732675807649,
       "offset": [
-        4106.129483757208,
-        484.1553146501914
+        1356.1208022313567,
+        -3448.533238335509
       ]
     },
     "reroutes": [

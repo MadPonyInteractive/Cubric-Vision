@@ -5536,7 +5536,7 @@
         60
       ],
       "flags": {},
-      "order": 181,
+      "order": 180,
       "mode": 0,
       "inputs": [
         {
@@ -5969,7 +5969,7 @@
         82
       ],
       "flags": {},
-      "order": 180,
+      "order": 181,
       "mode": 0,
       "inputs": [
         {
@@ -14684,42 +14684,6 @@
       "bgcolor": "#653"
     },
     {
-      "id": 644,
-      "type": "MpiFloat",
-      "pos": [
-        3125.1381875172087,
-        -853.2417198106201
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 123,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "float",
-          "type": "FLOAT",
-          "links": [
-            1008
-          ]
-        }
-      ],
-      "title": "Input_depth_strength",
-      "properties": {
-        "Node name for S&R": "MpiFloat",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
-      },
-      "widgets_values": [
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 474,
       "type": "MpiLoadImageFromPath",
       "pos": [
@@ -14731,7 +14695,7 @@
         383.46562779932174
       ],
       "flags": {},
-      "order": 124,
+      "order": 123,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -14784,7 +14748,7 @@
         314.0000000000001
       ],
       "flags": {},
-      "order": 125,
+      "order": 124,
       "mode": 4,
       "inputs": [],
       "outputs": [
@@ -15213,6 +15177,42 @@
         "32",
         "gpu (much faster)"
       ]
+    },
+    {
+      "id": 644,
+      "type": "MpiFloat",
+      "pos": [
+        3125.1381875172087,
+        -853.2417198106201
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 125,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            1008
+          ]
+        }
+      ],
+      "title": "Input_Control_strength",
+      "properties": {
+        "Node name for S&R": "MpiFloat",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
+      },
+      "widgets_values": [
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -18462,10 +18462,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.19487171000000086,
+      "scale": 1.442099361065002,
       "offset": [
-        82.68616346361341,
-        1665.8997814498184
+        -2672.716402775865,
+        1251.8818928741284
       ]
     },
     "reroutes": [
