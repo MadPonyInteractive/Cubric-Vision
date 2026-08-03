@@ -136,6 +136,14 @@ The scaling case it exists for: Head Swap needs a 1.2GB LoRA on top of `qwen-edi
 that into the model would push it onto every Qwen user, and an app taking 30 style LoRAs would
 tax all users ~15GB.
 
+**An app-only dep is still a dep — it needs `origin` and a second download origin.** Same
+rule as a model weight, same reason: record `<owner>/<repo>` + the upstream filename, then
+give it a `mirrorUrl` (byte-identical upstream) or re-host it, else `noMirror: true`. Head
+Swap's own LoRA is the cautionary tale — it shipped with an empty `origin` and became the
+only dep in the catalogue with a single route. Full rule:
+[add-model/02-dependencies-r2.md](../add-model/02-dependencies-r2.md) § `origin` is
+LOAD-BEARING.
+
 **The entry still lives in the file for its KIND** — `loraDeps.js` for a LoRA, `assetDeps.js`
 for a weight, `nodesDeps.js` for a node pack. Deps are filed by *what they are*, never by who
 requires them; ownership is a list of ids, not a file. When a kind-file gets fat, split it

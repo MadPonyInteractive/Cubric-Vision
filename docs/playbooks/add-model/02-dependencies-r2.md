@@ -11,13 +11,31 @@ Weight dep shape (see `dependencies.js` for live examples):
 'my-model-weight': {
     id: 'my-model-weight',
     name: 'Display Name',
-    origin: 'HF-org/repo',                 // informational
+    origin: 'HF-org/repo',                 // NOT informational — see below
     filename: 'diffusion_models/file.safetensors',   // relative to models root == R2 tail
     url: 'https://models.cubric.studio/vision/models/diffusion_models/file.safetensors',
     size: '9.31GB',                        // footprint.js reads this for the VRAM/RAM table
     sha256: null                           // fill via /mpic-compute-dep-hashes AFTER upload
 }
 ```
+
+**`origin` is LOAD-BEARING — record `<owner>/<repo>` plus the upstream filename, never
+prose (MPI-429).** It is the input to the mirror sweep, which resolves every dep's second
+download origin. R2 is one host, and one ISP filter on it takes the whole catalogue
+(MPI-427 measured 44/44 dead). A dep whose `origin` says "HuggingFace" or nothing at all
+cannot be placed: `qwen-lora-headswap` shipped with an empty `origin`, went unfound across
+a 968-repo sweep, and had to be flagged `noMirror: true` — the ONE dep in the catalogue
+with a single route — until Fabio named the repo by hand. The bytes were byte-identical
+upstream the whole time.
+
+After the upload, give the dep its second route (`docs/download-manager.md` § "The second
+origin"): a byte-identical upstream copy gets an explicit `mirrorUrl`; anything we baked
+ourselves gets re-hosted to `Mad-Pony-Interactive/cubric-studio` under the same
+`vision/models/<comfy-type>/<file>` path and needs no per-dep field. **A dep with neither
+must carry `noMirror: true`**, or the generic rewrite hands it a URL that 404s. The gate is
+the hash: a mirror serving different bytes fails the SHA256 verify and the file is deleted,
+so "same filename upstream" is not evidence — match `sha256` against the HF tree API's
+`lfs.oid`, which IS the sha256.
 
 **Reuse shared deps — do not re-host.** The 5B reuses `umt5_xxl_fp8_e4m3fn_scaled`
 (same clip as the 14B, already on HF/R2) — just list the existing dep id. Only

@@ -88,13 +88,28 @@ Also depends on the `comfyui-inpaint-cropandstitch` node pack (Inpaint Crop / In
 
 ## Dependency — the app-only LoRA
 
-`bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors` — **1.2GB** (1,206,402,600 bytes),
-currently local-only at `G:\CubricModels\loras\qwen\`. Origin: HuggingFace; needs an R2 upload
-before it can be a dep entry.
+`bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors` — **1.2GB** (1,206,402,600 bytes).
+Live on R2 and wired as `qwen-lora-headswap` in `loraDeps.js`.
 
-**An fp16 variant exists** and is being A/B'd against fp32 — roughly half the size at
-negligible quality cost for a rank-32 merge. Decide precision BEFORE uploading; only the
-winner goes to R2.
+**Source: `Alissonerdx/BFS-Best-Face-Swap`, licence MIT** (recorded 2026-08-03, MPI-429).
+Confirmed BY HASH, not by memory — that repo's blob carries oid
+`0a137e61…07cd10`, identical to the dep's recorded `sha256`, under the same filename.
+
+**The lesson this dep taught, at real cost.** It shipped with **no `origin` at all**, and
+`origin` is the input to the MPI-429 mirror sweep. So when every weight got a second
+download origin (R2 is one host; one ISP filter on it kills the whole catalogue), a
+968-repo sweep could not place this one — its author was never a candidate — and it became
+the ONLY dep in the catalogue with a single route, flagged `noMirror: true`, until Fabio
+named the repo by hand. The upstream copy had been byte-identical the entire time. **Record
+`<owner>/<repo>` + the upstream filename on every dep you add**;
+[add-model/02-dependencies-r2.md](../../add-model/02-dependencies-r2.md) § `origin` is
+LOAD-BEARING is the rule.
+
+**fp32 vs fp16 — SETTLED 2026-07-18, do not re-run.** The rank-16/fp16 build (307MB) LOST
+in two generations. Note what was NOT tested: that file is a quarter the size and only half
+of that is precision — the other half is RANK. A rank-32 fp16 (~600MB) would be the real
+precision-only comparison, but no such file exists officially. So the finding is "rank-16
+fp16 lost", NOT "fp16 lost".
 
 **It must NOT become a `qwen-edit` dependency.** That would push 1.2GB onto every Qwen user
 for one dev-gated app. The scaling case that settles it: an app wanting 30 style LoRAs would

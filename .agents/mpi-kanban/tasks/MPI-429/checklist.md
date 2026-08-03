@@ -332,6 +332,14 @@ mirror that changes the prefix AND the filename.
 **4.3, stated plainly:** this defeats FQDN-, domain- and provider-keyed blocking. It is
 **NOT proven against the original reporter's transfer-stage DPI** — he is unreachable.
 
-**Still open — needs Fabio:** `qwen-lora-headswap` (1.20 GB) carries `noMirror: true` and
-is the one dep with a single route. Where did it come from? Identify the source, re-host
-it, drop the flag.
+**CLOSED same day.** Fabio named the repo: `Alissonerdx/BFS-Best-Face-Swap`, licence MIT.
+Confirmed BY HASH — that blob's oid is `0a137e61…07cd10`, identical to the dep's recorded
+sha256, same filename. So no re-host was needed at all; it took a `mirrorUrl` and dropped
+`noMirror`. **All 97 R2 deps now have a second route, 97/97 HEAD-verified byte-identical.**
+
+The sweep missed it for one reason: the dep had **no `origin` recorded**, so its author was
+never a sweep candidate. That is now written up as a rule where deps get authored —
+`docs/playbooks/add-model/02-dependencies-r2.md` § `origin` is LOAD-BEARING (its template
+used to call the field "informational"), with pointers from `add-app/01-descriptor-and-ops.md`
+and the `head-swap.md` app doc, whose Dependency section was also stale (it still said the
+LoRA was local-only awaiting an R2 upload, and that the fp16 A/B was live — both settled).

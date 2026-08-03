@@ -453,8 +453,16 @@ classified by matching our recorded `sha256` against HF LFS oids (the tree API e
 | Set | Deps | Mirror |
 |---|---|---|
 | our own bakes, re-hosted to `Mad-Pony-Interactive/cubric-studio` | 31 | generic prefix rewrite, no per-dep data |
-| byte-identical copies already published by third parties | 65 | explicit per-dep `mirrorUrl` |
-| `qwen-lora-headswap` — no provenance, never re-hosted | 1 | `noMirror: true` |
+| byte-identical copies already published by third parties | 66 | explicit per-dep `mirrorUrl` |
+| a dep with neither | 0 today | `noMirror: true` |
+
+**Every dep in the catalogue has two routes as of 2026-08-03.** `qwen-lora-headswap` was
+the lone exception and it is instructive: it shipped with an empty `origin`, so the
+968-repo sweep could not place it and it carried `noMirror: true` until Fabio named the
+repo (`Alissonerdx/BFS-Best-Face-Swap`, MIT) by hand — confirmed by hash, byte-identical
+upstream all along. `origin` is the sweep's input, which is why
+`docs/playbooks/add-model/02-dependencies-r2.md` now treats it as load-bearing rather than
+informational.
 
 - **The base carries a PATH PREFIX, not just an origin.** HF serves at
   `huggingface.co/<repo>/resolve/main/<path>`; an origin-only swap emits

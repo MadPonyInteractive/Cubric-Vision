@@ -276,6 +276,7 @@ export const loraDeps = {
     'qwen-lora-headswap': {
         id: 'qwen-lora-headswap',
         name: 'Qwen Edit — Head Swap',
+        origin: 'Alissonerdx/BFS-Best-Face-Swap (MIT) — bfs_head_v5_2511_merged_version_rank_32_fp32',
         // rank 32 / fp32, 1.2GB. SETTLED 2026-07-18 — do not re-run this A/B.
         // The rank-16/fp16 build (307MB, the only smaller one HuggingFace publishes)
         // LOST in two generations. Note what was NOT tested: that file is a quarter
@@ -290,13 +291,13 @@ export const loraDeps = {
         // the served bytes (1,206,402,600 B, identical to local). This field verifies
         // the DOWNLOAD, so hashing the local file alone would not have earned it.
         sha256: '0a137e61245781412421f5dee5db4ccac28b6c9952c042d1123a84609107cd10',
-        // MPI-429 — the ONLY R2 dep with no second origin. No `origin` was ever recorded,
-        // the sha256 404s on CivitAI's by-hash lookup, and it is absent from all 968 HF
-        // repos swept, so it could not be classified as third-party-hosted and was not
-        // re-hosted either — redistributing bytes with no provenance is the one thing
-        // that pass would not do. Without this flag the generic prefix rewrite hands it a
-        // Hugging Face URL that 404s. IDENTIFY THE SOURCE, re-host it, drop the flag.
-        noMirror: true,
+        // MPI-429 — provenance recovered 2026-08-03 and CONFIRMED BY HASH: the blob at
+        // Alissonerdx/BFS-Best-Face-Swap carries oid 0a137e61…, identical to the sha256
+        // above, under the same filename. Licence MIT. It was the only dep in the
+        // catalogue with no `origin`, which is exactly why the 968-repo sweep could not
+        // place it — that author was never a candidate. Byte-identical upstream, so it
+        // needs no re-host, only this second route.
+        mirrorUrl: 'https://huggingface.co/Alissonerdx/BFS-Best-Face-Swap/resolve/main/bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors',
     },
     'qwen-edit-style-3d': {
         id: 'qwen-edit-style-3d',
