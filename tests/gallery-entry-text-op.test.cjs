@@ -22,7 +22,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const KREA2 = { mediaType: 'image', supportedOps: ['t2i', 'i2i', 'depth', 'krea2Edit', 'upscale', 'detail'] };
+const KREA2 = { mediaType: 'image', supportedOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'upscale', 'detail'] };
 const WAN = { mediaType: 'video', supportedOps: ['i2v_ms', 't2v_ms'] };
 // Gallery has no canvas, so it never claims a mask tool. Empty box on entry.
 const GALLERY_ENTRY = { imageCount: 0, videoCount: 0, canMask: false };

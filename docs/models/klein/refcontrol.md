@@ -1,11 +1,11 @@
 # FLUX.2 Klein 4B — depth refcontrol op
 
-The depth op (`Input_wf_type = 3`). Mirrors `removal.md`: what was measured, what cost
+The `control` op (`Input_wf_type = 3`; Klein's only control type is depth). Mirrors `removal.md`: what was measured, what cost
 time, and what must not be "tidied away" later.
 
 Weight: `klein-lora-refcontrol-depth` (`flux2_klein_4b_refcontrol_depth.safetensors`,
 92 MB), baked on the depth branch via `LoraLoaderModelOnly` → `CFGGuider`. It is what
-makes the depth op a depth op — without it the depth map is just an ordinary reference
+makes the control op a depth op — without it the depth map is just an ordinary reference
 image. Depth maps come from `DepthAnythingV2Preprocessor` on `depth_anything_v2_vits.pth`,
 auto-downloaded by the `comfyui_controlnet_aux` node dep (no file dep of ours).
 
@@ -22,7 +22,7 @@ With one image the subject comes from the prompt, as on every other model's dept
 two, it comes from the picture, and the prompt should describe the setting instead.
 
 The app gated depth to one image until 2026-07-28 and lost this entirely. Ungating it
-did NOT touch Krea2/SDXL depth, which share the one `poseReference` op def and have no
+did NOT touch Krea2/SDXL control, which share the one op def (`poseReference` then, `control` since MPI-365) and have no
 such input: the slot declares `requiresCapability: 'depthSubject'` and
 `filterMediaInputsForModel()` drops it for any model that does not declare the
 capability. Klein alone does. The trap worth remembering is that op-FIT is a separate
@@ -35,7 +35,7 @@ because two is what the op means.
 
 **No ratio picker on depth or edit.** Both branches scale the input image to a megapixel
 target and inherit its shape — `Input_Width`/`Input_Height` are never read there — so
-Klein declares `imageSizedOps: ['poseReference', 'kleinEdit']` and the picker is hidden
+Klein declares `imageSizedOps: ['control', 'kleinEdit']` and the picker is hidden
 (`modelShowsRatio`). Do not "restore" it: a landscape choice on a portrait input produced
 a portrait image, which is correct behaviour wearing a misleading control.
 

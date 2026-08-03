@@ -519,10 +519,6 @@
         "177",
         0
       ],
-      "any_3": [
-        "177",
-        0
-      ],
       "select": [
         "185",
         0
@@ -547,7 +543,7 @@
   },
   "185": {
     "inputs": {
-      "int": 3
+      "int": 1
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -946,20 +942,6 @@
       "title": "AIO Aux Preprocessor"
     }
   },
-  "295": {
-    "inputs": {
-      "operator": "==",
-      "b_value": 2,
-      "a": [
-        "185",
-        0
-      ]
-    },
-    "class_type": "MpiCompare",
-    "_meta": {
-      "title": "Mpi Compare"
-    }
-  },
   "301": {
     "inputs": {
       "any_1": [
@@ -967,15 +949,40 @@
         0
       ],
       "any_2": [
-        "293",
-        0
-      ],
-      "any_3": [
-        "292",
+        "305",
         0
       ],
       "select": [
         "185",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Mpi Any Switch"
+    }
+  },
+  "302": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Control_Net"
+    }
+  },
+  "305": {
+    "inputs": {
+      "any_1": [
+        "292",
+        0
+      ],
+      "any_2": [
+        "293",
+        0
+      ],
+      "select": [
+        "302",
         0
       ]
     },

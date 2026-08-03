@@ -25,7 +25,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 
-const KREA2 = { mediaType: 'image', supportedOps: ['t2i', 'i2i', 'depth', 'krea2Edit', 'upscale', 'detail'] };
+const KREA2 = { mediaType: 'image', supportedOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'upscale', 'detail'] };
 const keys = list => list.map(c => c.key);
 
 test('every strip-eligible op has a short, and every short is a known verb', async () => {
@@ -51,7 +51,7 @@ test('results come back in canonical order, not registry or supportedOps order',
     const { getAvailableCommands } = await import('../js/data/commandRegistry.js');
     assert.deepStrictEqual(
         keys(getAvailableCommands('image', KREA2, { imageCount: 1 })),
-        ['t2i', 'i2i', 'depth', 'krea2Edit', 'upscale', 'detail']);
+        ['t2i', 'i2i', 'control', 'krea2Edit', 'upscale', 'detail']);
 
     const WAN = { mediaType: 'video', supportedOps: ['i2v_ms', 't2v_ms'] };
     assert.deepStrictEqual(keys(getAvailableCommands('video', WAN, {})), ['t2v_ms', 'i2v_ms'],
@@ -167,17 +167,17 @@ test('the inpaint guide teaches the empty prompt and warns off delete instructio
  */
 const KLEIN = {
     id: 'klein-4b', type: 'klein', mediaType: 'image',
-    supportedOps: ['t2i', 'i2i', 'depth', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
+    supportedOps: ['t2i', 'i2i', 'control', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
     capabilities: { depthSubject: true },
 };
 
-test('depth exposes its optional subject slot on Klein and hides it everywhere else', async () => {
+test('control exposes its optional subject slot on Klein and hides it everywhere else', async () => {
     const { getCommandMediaInputs, filterMediaInputsForModel } = await import('../js/data/commandRegistry.js');
-    const raw = getCommandMediaInputs('depth');
+    const raw = getCommandMediaInputs('control');
 
     const klein = filterMediaInputsForModel(raw, KLEIN);
     assert.deepStrictEqual(klein.map(s => s.title), ['Input_Image', 'Input_Image_2']);
-    assert.strictEqual(klein[1].required, false, 'the subject image must stay optional — depth alone still runs');
+    assert.strictEqual(klein[1].required, false, 'the subject image must stay optional — the control map alone still runs');
 
     const krea2 = filterMediaInputsForModel(raw, KREA2);
     assert.deepStrictEqual(krea2.map(s => s.title), ['Input_Image'],
@@ -186,24 +186,24 @@ test('depth exposes its optional subject slot on Klein and hides it everywhere e
 
 test('the gated slot widens op-fit for Klein only', async () => {
     const { getAvailableCommands } = await import('../js/data/commandRegistry.js');
-    const depthOf = (model, imageCount) =>
-        getAvailableCommands('image', model, { imageCount, canMask: true }).find(c => c.key === 'depth');
+    const controlOf = (model, imageCount) =>
+        getAvailableCommands('image', model, { imageCount, canMask: true }).find(c => c.key === 'control');
 
-    assert.strictEqual(depthOf(KLEIN, 2)?.available, true, 'Klein depth accepts two images');
-    assert.strictEqual(depthOf(KLEIN, 1)?.available, true, 'and still accepts one');
-    assert.strictEqual(depthOf(KREA2, 2)?.available, false, 'Krea2 depth must NOT light up on two chips');
-    assert.strictEqual(depthOf(KREA2, 1)?.available, true, 'Krea2 depth unchanged on one');
+    assert.strictEqual(controlOf(KLEIN, 2)?.available, true, 'Klein control accepts two images');
+    assert.strictEqual(controlOf(KLEIN, 1)?.available, true, 'and still accepts one');
+    assert.strictEqual(controlOf(KREA2, 2)?.available, false, 'Krea2 control must NOT light up on two chips');
+    assert.strictEqual(controlOf(KREA2, 1)?.available, true, 'Krea2 control unchanged on one');
 });
 
-test('the depth guide teaches the two-image meaning on Klein only', async () => {
+test('the control guide teaches the two-image meaning on Klein only', async () => {
     const { getOpHelp } = await import('../js/data/commandRegistry.js');
-    const base = getOpHelp('depth');
-    const klein = getOpHelp('depth', KLEIN);
+    const base = getOpHelp('control');
+    const klein = getOpHelp('control', KLEIN);
 
-    assert.notDeepStrictEqual(klein.body, base.body, 'Klein depth has its own guide');
+    assert.notDeepStrictEqual(klein.body, base.body, 'Klein control has its own guide');
     assert.ok(klein.body.some(p => /second image/i.test(p)),
         'the Klein guide must explain what the second image does — it changes the op');
-    assert.deepStrictEqual(getOpHelp('depth', KREA2).body, base.body,
+    assert.deepStrictEqual(getOpHelp('control', KREA2).body, base.body,
         'every other model keeps the one-image guide');
 });
 
@@ -217,26 +217,26 @@ test('the depth guide teaches the two-image meaning on Klein only', async () => 
  */
 test('the ratio picker is hidden only on a model\'s declared image-sized ops', async () => {
     const { modelShowsRatio } = await import('../js/data/commandRegistry.js');
-    const klein = { ...KLEIN, imageSizedOps: ['depth', 'kleinEdit'] };
+    const klein = { ...KLEIN, imageSizedOps: ['control', 'kleinEdit'] };
 
-    assert.strictEqual(modelShowsRatio(klein, 'depth'), false, 'Klein depth inherits the input shape');
+    assert.strictEqual(modelShowsRatio(klein, 'control'), false, 'Klein control inherits the input shape');
     assert.strictEqual(modelShowsRatio(klein, 'kleinEdit'), false, 'Klein edit inherits the input shape');
     assert.strictEqual(modelShowsRatio(klein, 't2i'), true, 'Klein t2i still takes a ratio');
     assert.strictEqual(modelShowsRatio(klein, 'i2i'), true, 'Klein i2i still takes a ratio');
 
     // The negative control that matters: a model with no declaration keeps every picker.
     // NOTE the KREA2 fixture (line 28) declares no imageSizedOps, so this pins the
-    // DEFAULT, not Krea2's real behaviour — the shipped Krea2 has had depth in
+    // DEFAULT, not Krea2's real behaviour — the shipped Krea2 has had control in
     // imageSizedOps since MPI-365. Do not read this line as a claim about that model.
-    assert.strictEqual(modelShowsRatio(KREA2, 'depth'), true,
+    assert.strictEqual(modelShowsRatio(KREA2, 'control'), true,
         'a model declaring no imageSizedOps keeps the ratio picker on every op');
-    assert.strictEqual(modelShowsRatio(null, 'depth'), true, 'no model = no gate');
+    assert.strictEqual(modelShowsRatio(null, 'control'), true, 'no model = no gate');
 });
 
 test('Klein declares exactly the two ops that derive their own size', async () => {
     const { getModelById } = await import('../js/data/modelRegistry.js');
     const klein = getModelById('klein-4b');
-    assert.deepStrictEqual(klein.imageSizedOps, ['depth', 'kleinEdit']);
+    assert.deepStrictEqual(klein.imageSizedOps, ['control', 'kleinEdit']);
     // Every declared op must be one this model actually runs, or the entry is dead.
     for (const op of klein.imageSizedOps) {
         assert.ok(klein.supportedOps.includes(op), `${op} must be in supportedOps`);
@@ -248,7 +248,7 @@ test('Klein declares exactly the two ops that derive their own size', async () =
 // error — a wrong ratio padded the gallery card, and a dead batch quietly returned
 // one image — which is exactly why they need pinning rather than eyeballing.
 
-test('Chroma depth inherits the input shape, so it must not offer a ratio', async () => {
+test('control inherits the input shape everywhere, so it must not offer a ratio', async () => {
     const { modelShowsRatio } = await import('../js/data/commandRegistry.js');
     const { getModelById } = await import('../js/data/modelRegistry.js');
 
@@ -258,17 +258,24 @@ test('Chroma depth inherits the input shape, so it must not offer a ratio', asyn
         // ImageScaleToTotalPixels(megapixels: 1) <- Input_Image. MpiCrop (2682), which
         // DOES read Input_Width/Height, feeds the i2i latent (VAEEncode 2616) instead —
         // that mix-up is what left depth out of imageSizedOps in the first place.
-        assert.strictEqual(modelShowsRatio(m, 'depth'), false, `${id} depth must hide the ratio picker`);
+        assert.strictEqual(modelShowsRatio(m, 'control'), false, `${id} control must hide the ratio picker`);
         assert.strictEqual(modelShowsRatio(m, 'detail'), false, `${id} detail is image-sized`);
         assert.strictEqual(modelShowsRatio(m, 'upscale'), false, `${id} upscale is image-sized`);
         // The control: only t2i samples EmptyLatentImage(Input_Width, Input_Height).
         assert.strictEqual(modelShowsRatio(m, 't2i'), true, `${id} t2i still takes a ratio`);
     }
 
-    // SDXL is the cross-model negative control: its depth switches the CONDITIONING
-    // pipe and keeps sampling the empty latent, so it genuinely honours the picker.
-    assert.strictEqual(modelShowsRatio(getModelById('sdxl-realistic'), 'depth'), true,
-        'SDXL depth generates at our dimensions — it must keep the ratio picker');
+    // SDXL used to be the cross-model negative control here: its depth switched the
+    // CONDITIONING pipe and kept sampling the empty latent, so it honoured the picker.
+    // The MPI-365 master template CHANGED that — control now VAE-encodes
+    // ImageScaleToTotalPixels(Input_Image), so SDXL joined the image-sized side and the
+    // negative control had to move to an op, not a model.
+    const sdxl = getModelById('sdxl-realistic');
+    assert.strictEqual(modelShowsRatio(sdxl, 'control'), false,
+        'SDXL control derives its size from the input image since the master template');
+    assert.strictEqual(modelShowsRatio(sdxl, 't2i'), true, 'SDXL t2i still takes a ratio');
+    assert.strictEqual(modelShowsRatio(sdxl, 'i2i'), true,
+        'SDXL i2i resizes to Input_Width/Height (ImageResizeKJv2) — it keeps the picker');
 });
 
 test('batch is hidden on ops whose latent is VAE-encoded', async () => {
@@ -278,15 +285,18 @@ test('batch is hidden on ops whose latent is VAE-encoded', async () => {
     // Input_Batch_Size reaches only EmptyLatentImage, and on Chroma only t2i samples it.
     const chroma = getModelById('chroma-flash');
     assert.strictEqual(modelShowsBatch(chroma, 't2i'), true, 'Chroma t2i batches for real');
-    for (const op of ['i2i', 'depth', 'detail', 'upscale']) {
+    for (const op of ['i2i', 'control', 'detail', 'upscale']) {
         assert.strictEqual(modelShowsBatch(chroma, op), false, `Chroma ${op} must not offer batch`);
     }
 
-    // SDXL keeps depth — different graph shape, same field. If these two models ever
-    // agree on this list, one of them is wrong.
+    // SDXL used to keep batch on depth — its old graph switched the conditioning and
+    // kept the empty latent. The MPI-365 master template moved control onto a VAEEncode
+    // (KSampler.latent_image <- MpiAnySwitch on wf_type, any_3), so SDXL now matches
+    // Chroma exactly. Two models agreeing here is no longer the smell it was.
     const sdxl = getModelById('sdxl-realistic');
     assert.strictEqual(modelShowsBatch(sdxl, 't2i'), true, 'SDXL t2i batches');
-    assert.strictEqual(modelShowsBatch(sdxl, 'depth'), true, 'SDXL depth samples the empty latent, so it batches');
+    assert.strictEqual(modelShowsBatch(sdxl, 'control'), false,
+        'SDXL control VAE-encodes its latent since the master template — no batch');
     assert.strictEqual(modelShowsBatch(sdxl, 'i2i'), false, 'SDXL i2i is VAE-encoded — no batch');
 
     // Defaults: silence means "every op", so no undeclared model changed behaviour.
@@ -344,4 +354,64 @@ test('style strength defaults per model, without disturbing op defaults', async 
         PROMPT_CONTROL_DEFAULTS.stylization, 'a model declaring nothing keeps the global default');
     assert.strictEqual(resolve('stylization', getModelById('qwen-edit'), 'qwenEdit'), 0.8,
         'an OP default still outranks a model default — qwenEdit stays 0.8');
+});
+
+// ── MPI-365: the control op, its type picker, and the deleted style-rack default ──
+
+test('every style-LoRA model declares styleOps — the default was deleted', async () => {
+    const { modelShowsStyleRack } = await import('../js/data/commandRegistry.js');
+    const { MODELS } = await import('../js/data/modelRegistry.js');
+
+    // DEFAULT_STYLE_OPS is gone (MPI-365): an undeclared style model now shows NO rack,
+    // which is only safe while every shipped one declares its own list. This is the
+    // assertion that keeps that true — a new style model without styleOps fails here
+    // rather than shipping a silently rack-less prompt box.
+    for (const m of MODELS.filter(m => m.capabilities?.styleLoras === true)) {
+        assert.ok(Array.isArray(m.styleOps) && m.styleOps.length,
+            `${m.id} ships style LoRAs but declares no styleOps — the rack would never mount`);
+        for (const op of m.styleOps) {
+            assert.ok(m.supportedOps.includes(op), `${m.id} styleOps names ${op}, which it cannot run`);
+            assert.strictEqual(modelShowsStyleRack(m, op), true, `${m.id} ${op} must show the rack`);
+        }
+    }
+
+    // The negative control: silence means no rack, not a guessed default.
+    assert.strictEqual(
+        modelShowsStyleRack({ capabilities: { styleLoras: true } }, 't2i'), false,
+        'a style model that declares no styleOps must show the rack nowhere');
+});
+
+test('controlTypes name real types, and the picker hides for a single-type model', async () => {
+    const { CONTROL_TYPES, modelControlTypes } = await import('../js/data/commandRegistry.js');
+    const { MODELS, getModelById } = await import('../js/data/modelRegistry.js');
+
+    // A type the graph cannot run fails SILENTLY — Input_Control_Net falls through to the
+    // baked branch and returns a plausible image made the wrong way. Pin the ids.
+    for (const m of MODELS.filter(m => m.controlTypes)) {
+        assert.ok(m.supportedOps.includes('control'), `${m.id} declares controlTypes but no control op`);
+        assert.deepStrictEqual(modelControlTypes(m), m.controlTypes,
+            `${m.id} names a control type that is not in CONTROL_TYPES`);
+    }
+
+    // SDXL is the only model with a picker; the other four are depth-only.
+    assert.deepStrictEqual(getModelById('sdxl-realistic').controlTypes,
+        ['depth', 'pose', 'scribble', 'canny']);
+    assert.deepStrictEqual(getModelById('qwen-edit').controlTypes, ['depth', 'pose']);
+    for (const id of ['klein-4b', 'krea2', 'chroma-flash']) {
+        assert.strictEqual(getModelById(id).controlTypes.length, 1,
+            `${id} runs depth only — a picker there would be a lie about what it can switch to`);
+    }
+
+    // Display order is free, but the injected index is NOT: it is the graph's switch
+    // number, identical in the SDXL and Qwen templates (1 Pose, 2 Depth, 3 Scribble,
+    // 4 Canny). If these drift from the authored Control notes, every control run picks
+    // the wrong annotator without erroring.
+    assert.deepStrictEqual(
+        Object.fromEntries(Object.entries(CONTROL_TYPES).map(([k, v]) => [k, v.index])),
+        { pose: 1, depth: 2, scribble: 3, canny: 4 });
+
+    // An unknown id is dropped rather than thrown on, so a ModelDef typo cannot reach
+    // the graph as a bad switch index.
+    assert.deepStrictEqual(modelControlTypes({ controlTypes: ['depth', 'nope'] }), ['depth']);
+    assert.deepStrictEqual(modelControlTypes({}), []);
 });

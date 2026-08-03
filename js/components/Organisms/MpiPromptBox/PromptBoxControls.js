@@ -20,7 +20,7 @@ import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { qsa } from '../../../utils/dom.js';
 import { state } from '../../../state.js';
 import { getOpSettings, getSharedSettings, getModelSettings } from '../../../data/projectModel.js';
-import { getCommandDefault } from '../../../data/commandRegistry.js';
+import { getCommandDefault, CONTROL_TYPES, modelControlTypes } from '../../../data/commandRegistry.js';
 import { PROMPT_CONTROL_DEFAULTS } from '../../../data/promptControlDefaults.js';
 import { Events } from '../../../events.js';
 import { getModelRatios, usesQualityTier } from '../../../utils/ratios.js';
@@ -1303,33 +1303,107 @@ export const PROMPT_BOX_CONTROLS = {
     },
 
     /**
-     * depthStrength — how hard the depth map pulls (`Input_depth_strength`, an MpiFloat
-     * feeding the `Krea2ControlLoRALoader`'s `strength`).
+     * controlType — WHICH structure the `control` op copies (MPI-365). Injects the
+     * 1-indexed switch value into `Input_Control_Net`, the same way pidVariant drives
+     * `Input_Type`.
      *
-     * WHY IT EXISTS: at the authored 1.0 the depth map is too strict — it pins the
-     * composition so hard the prompt cannot move anything. 0.6–0.8 is the working band,
-     * where the pose still reads but the model is allowed to reinterpret the framing.
-     * This control is a LOOSENING knob; that is the whole point of it.
+     * The options are the MODEL's `controlTypes`, in its declared display order; the
+     * injected index comes from CONTROL_TYPES, so display order and graph order are
+     * independent. MpiPromptBox never mounts this for a model offering one type, so a
+     * single-type model (Klein, Krea2, Chroma) shows no picker and injects nothing —
+     * correct, since its graph has no `Input_Control_Net` node to switch.
      *
-     * A control-LoRA patch strength passed straight through — the slider value IS the
-     * strength, no mapping. 1.0 is "the LoRA as authored" (the graph's own bake) and is
-     * the TOP of the range: the node itself allows ±100, but a 1.5 test came back with
-     * the subject's clothing dissolved into ribbons, so overdrive is capped out rather
-     * than offered. At 0 the loader returns the model unpatched and the op quietly stops
-     * being a depth op.
-     *
-     * `perOp`: this is per-operation latitude like `denoise`, not a mode. Only the depth
-     * op lists it and only Krea2 has the node (`capabilities.depthStrength`).
+     * `perOp`: only `control` lists it, and the choice is that op's parameter, not a
+     * mode that should follow the user onto t2i.
      */
-    depthStrength: {
-        nodeTitle: 'Input_depth_strength',
+    controlType: {
+        nodeTitle: 'Input_Control_Net',
         scope: 'perOp',
-        defaultValue: PROMPT_CONTROL_DEFAULTS.depthStrength,
+        defaultValue: PROMPT_CONTROL_DEFAULTS.controlType,
+        mount(hostEl, opts = {}) {
+            // Filtered through modelControlTypes so an unknown id in a ModelDef can never
+            // reach the graph as a bad switch index. Empty is impossible here (the mount
+            // gate requires >1), but fall back rather than render a picker with no rows.
+            const ids = modelControlTypes(opts.model);
+            if (ids.length === 0) return;
+
+            const saved = _readSaved(this, opts);
+            const fallback = _resolveDefault(this, 'controlType', opts);
+            const wanted = saved.controlType ?? fallback;
+            const initial = ids.includes(wanted) ? wanted : ids[0];
+            this.value = initial;
+
+            hostEl.className = 'mpi-prompt-box__slider-control';
+            hostEl.style.display = 'flex';
+
+            const lblRow = document.createElement('div');
+            lblRow.className = 'mpi-prompt-box__slider-lbl';
+            const nameEl = document.createElement('span');
+            nameEl.className = 'mpi-prompt-box__slider-name';
+            nameEl.textContent = 'Control Type';
+            lblRow.appendChild(nameEl);
+            hostEl.appendChild(lblRow);
+
+            const radioHost = document.createElement('div');
+            hostEl.appendChild(radioHost);
+
+            this._instance = MpiRadioGroup.mount(radioHost, {
+                options: ids.map((id) => ({ label: CONTROL_TYPES[id].label, value: id })),
+                value: initial,
+                name: 'controlType',
+                size: 'sm',
+                columns: Math.min(ids.length, 4),
+                info: ids.map((id) => `${CONTROL_TYPES[id].label}: ${CONTROL_TYPES[id].info}`).join(' '),
+            });
+
+            this._instance.on('select', ({ value }) => {
+                if (!ids.includes(value)) return;
+                this.value = value;
+                _emitUpdate(this, opts, 'controlType', value);
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            const id = this.value ?? this.defaultValue;
+            const entry = CONTROL_TYPES[id] ?? CONTROL_TYPES[this.defaultValue];
+            return { Input_Control_Net: entry.index };
+        },
+    },
+
+    /**
+     * controlStrength — how hard the control map pulls (`Input_Control_strength`, an
+     * MpiFloat). WHAT it lands on differs by model — the `Krea2ControlLoRALoader`'s
+     * `strength` on Krea2, a refcontrol LoRA's on Klein, `ControlNetApplyAdvanced`'s on
+     * Chroma and SDXL (both through an in-graph MpiNormalizeValue that remaps 0-1 to
+     * 0-0.5, because past ~0.5 those ControlNets artefact) — but the knob means the same
+     * thing everywhere, so it is ONE control.
+     *
+     * WHY IT EXISTS: at the authored 1.0 the control map is too strict — it pins the
+     * composition so hard the prompt cannot move anything. 0.6–0.8 is the working band on
+     * Krea2, 0.2–0.3 on Klein, where the structure still reads but the model is allowed
+     * to reinterpret the framing. This control is a LOOSENING knob; that is the point.
+     *
+     * The value passes straight through — no mapping on this side. 1.0 is "as authored"
+     * (each graph's own bake) and is the TOP of the range: the nodes allow ±100, but a
+     * 1.5 test came back with the subject's clothing dissolved into ribbons, so overdrive
+     * is capped out rather than offered. At 0 the patch is inert and the op quietly stops
+     * being a control op.
+     *
+     * `perOp`: per-operation latitude like `denoise`, not a mode. Only the `control` op
+     * lists it, and only a model with the node declares `capabilities.controlStrength` —
+     * Qwen conditions on the control IMAGE and has nothing to scale.
+     */
+    controlStrength: {
+        nodeTitle: 'Input_Control_strength',
+        scope: 'perOp',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.controlStrength,
         mount(hostEl, opts = {}) {
             const clamp = (v) => Math.min(1, Math.max(0, Number(v) || 0));
             const saved = _readSaved(this, opts);
-            const fallback = _resolveDefault(this, 'depthStrength', opts);
-            const savedNum = Number(saved.depthStrength ?? fallback);
+            const fallback = _resolveDefault(this, 'controlStrength', opts);
+            const savedNum = Number(saved.controlStrength ?? fallback);
             const initial = Number.isFinite(savedNum) ? clamp(savedNum) : fallback;
             this.value = initial;
 
@@ -1342,7 +1416,7 @@ export const PROMPT_BOX_CONTROLS = {
             lblRow.className = 'mpi-prompt-box__slider-lbl';
             const nameEl = document.createElement('span');
             nameEl.className = 'mpi-prompt-box__slider-name';
-            nameEl.textContent = 'Depth Strength';
+            nameEl.textContent = 'Control Strength';
             const valEl = document.createElement('span');
             valEl.className = 'mpi-prompt-box__slider-val';
             valEl.textContent = _fmt(initial);
@@ -1363,7 +1437,7 @@ export const PROMPT_BOX_CONTROLS = {
                 wheel: true,
                 handle: true,
                 variant: 'primary',
-                info: 'Depth strength — how strictly the output follows the depth map. 1.00 is full; 0 turns depth off.',
+                info: 'Control strength — how strictly the output follows the control map. 1.00 is full; 0 turns the control off.',
             });
 
             this._instance.on('input', ({ value }) => { valEl.textContent = _fmt(clamp(value)); });
@@ -1372,7 +1446,7 @@ export const PROMPT_BOX_CONTROLS = {
                 const v = clamp(value);
                 this.value = v;
                 valEl.textContent = _fmt(v);
-                _emitUpdate(this, opts, 'depthStrength', v);
+                _emitUpdate(this, opts, 'controlStrength', v);
             });
         },
         getValue() {
@@ -1380,7 +1454,7 @@ export const PROMPT_BOX_CONTROLS = {
         },
         getInjectionParams() {
             const v = Math.min(1, Math.max(0, Number(this.value ?? this.defaultValue)));
-            return { Input_depth_strength: Number.isFinite(v) ? v : this.defaultValue };
+            return { Input_Control_strength: Number.isFinite(v) ? v : this.defaultValue };
         },
     },
 

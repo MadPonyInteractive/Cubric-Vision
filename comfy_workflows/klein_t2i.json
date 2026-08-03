@@ -3166,7 +3166,7 @@
     },
     "class_type": "MpiFloat",
     "_meta": {
-      "title": "Input_depth_strength"
+      "title": "Input_Control_strength"
     }
   }
 }

@@ -16,10 +16,11 @@
  * @property {Record<string, Array<{label:string,w:number,h:number,icon:string}>>} [ratios] - Per-type ratio table (MPI-174), keyed by quality tier (quality-mode models) or 'portrait'/'landscape' (orientation-mode). First model declaring it for a NEW `type` wins; existing types (flux/sdxl/wan/wan5b/ltx) keep their built-in tables in js/utils/ratios.js — do not redeclare them here.
  * @property {string[]} [qualityTiers] - Ordered quality-tier ids for a NEW `type` (MPI-174), e.g. ['low','medium','high']. Presence ⇒ quality UI mode (tier radio); absent + `ratios` present ⇒ orientation mode. Consumed via qualityTiersFor() in js/utils/ratios.js and the v3 project migration.
  * @property {Record<string, Object>} [opInject] - Per-OP constant workflow params THIS model always injects, keyed by operation id then node title (MPI-354). For a model whose ops are branches of ONE master graph selected by a value private to that model — FLUX.2 Klein maps each op to an `Input_wf_type` int, a numbering no shared op could own. Merged in commandExecutor._buildParams AFTER the op's own `injectParams` and BEFORE the user's controls. A model that declares this MUST cover every op in `supportedOps`: a missing entry does not error, it runs the graph's default branch and returns the wrong operation's output, so the executor warns on a gap. Prefer the op's `injectParams` when the constant is a property of the OP rather than of this model.
- * @property {string[]} [styleOps] - Operations where this model's style rack is live (MPI-354). Defaults to DEFAULT_STYLE_OPS in commandRegistry.js — the set that mounted the rack before this field existed, so every pre-Klein model is unaffected. Declare it when the rack's reach differs: a one-master-template model carries the rack on detail/upscale too, while a model with separate rack-less detailer/upscaler files must not offer it there. Only consulted when `capabilities.styleLoras` is true; the op's `components` still decides whether the control exists at all.
- * @property {string[]} [imageSizedOps] - Operations whose OUTPUT SHAPE comes from the input image rather than from `Input_Width`/`Input_Height` (MPI-354) — typically because the graph scales the input to a megapixel target. The ratio picker is hidden on these ops (see modelShowsRatio in commandRegistry.js); everything else about them is unchanged. Defaults to none, so every model that does not declare it keeps the picker on every op exactly as before. This is a property of the MODEL's graph, not of the op: Klein/Krea2/Chroma depth all derive their size from the input, while SDXL's depth still generates at our dimensions, and they all share one op. VERIFY IN THE GRAPH, never from the op name — Chroma's depth was mis-declared for exactly that reason until 2026-08-02, and the symptom was a padded gallery card, not an error.
+ * @property {string[]} [styleOps] - Operations where this model's style rack is live (MPI-354). REQUIRED for any model with `capabilities.styleLoras` — the old DEFAULT_STYLE_OPS fallback was deleted in MPI-365 once all six style models declared their own, so an undeclared model now shows no rack anywhere (loud and one line to fix, rather than silently inheriting a reach wrong for its graph). Only consulted when `capabilities.styleLoras` is true; the op's `components` still decides whether the control exists at all.
+ * @property {string[]} [imageSizedOps] - Operations whose OUTPUT SHAPE comes from the input image rather than from `Input_Width`/`Input_Height` (MPI-354) — typically because the graph scales the input to a megapixel target. The ratio picker is hidden on these ops (see modelShowsRatio in commandRegistry.js); everything else about them is unchanged. Defaults to none, so every model that does not declare it keeps the picker on every op exactly as before. This is a property of the MODEL's graph, not of the op: every model's `control` now derives its size from the input, but each does so through a different node and SDXL's did NOT until the MPI-365 master template swapped its ControlNet branch onto ImageScaleToTotalPixels. VERIFY IN THE GRAPH, never from the op name — Chroma's depth was mis-declared for exactly that reason until 2026-08-02, and the symptom was a padded gallery card, not an error.
  * @property {Record<string, *>} [controlDefaults] - Per-MODEL starting values for PromptBox controls, keyed by control id (MPI-365) — e.g. `{ stylization: 0.6 }`. Resolved in PromptBoxControls._resolveDefault AFTER an op default and BEFORE the global PROMPT_CONTROL_DEFAULTS, so an op-specific default still wins and every undeclared model is unaffected. Use this when the right starting value is a property of the MODEL's weights rather than of the op: a heavily distilled checkpoint whose style LoRAs artefact at full strength wants one number across its whole rack, which an op default (shared by every model running that op) cannot express. This sets only the STARTING value; where an edited value is stored is still the control's `scope`.
- * @property {string[]} [batchOps] - Operations where the batch control is REAL (MPI-365). `Input_Batch_Size` reaches only `EmptyLatentImage` in every graph we ship, so an op sampling a VAE-encoded latent silently returns one image while the control claims N. Defaults to every op, so a model that stays silent behaves exactly as before. Distinct from `capabilities.batch: false`, which is the model-WIDE off switch — use that when batch works nowhere (Krea2/Klein/Qwen), and this when it works on some ops and not others (Chroma `['t2i']`, SDXL `['t2i','depth']`). See modelShowsBatch in commandRegistry.js.
+ * @property {string[]} [controlTypes] - Which structures this model's `control` op can copy, as CONTROL_TYPES ids, in PICKER ORDER (MPI-365). The value injected into `Input_Control_Net` comes from CONTROL_TYPES in commandRegistry.js, NOT from this list's order, so display order is free — SDXL lists depth first while its graph numbers pose first. A list of ONE (Klein/Krea2/Chroma, depth-only) hides the picker entirely, which is correct: those graphs have no `Input_Control_Net` node to switch. Declaring a type the graph cannot run is the silent failure this field exists to prevent — the switch falls through to its baked branch and returns a plausible image made the wrong way, so VERIFY against the graph's own Control note before adding one.
+ * @property {string[]} [batchOps] - Operations where the batch control is REAL (MPI-365). `Input_Batch_Size` reaches only `EmptyLatentImage` in every graph we ship, so an op sampling a VAE-encoded latent silently returns one image while the control claims N. Defaults to every op, so a model that stays silent behaves exactly as before. Distinct from `capabilities.batch: false`, which is the model-WIDE off switch — use that when batch works nowhere (Krea2/Klein/Qwen), and this when it works on some ops and not others (Chroma `['t2i']`, SDXL `['t2i']` since the master template). See modelShowsBatch in commandRegistry.js.
  * @property {string}   [image]      - Preview still filename in comfy_workflows/display/ (image models)
  * @property {string}   [video]      - Preview clip filename in comfy_workflows/display/; card plays it muted+looping on hover (video models)
  * @property {string}   [defaultUpscale]  - Dep id of the default upscale model for this model (image models only)
@@ -42,30 +43,62 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'sdxl-real-01.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
-        // Batch multiplies EmptyLatentImage only, and this graph keeps sampling that
-        // empty latent on depth (Input_depth_reference switches the CONDITIONING pipe,
-        // not the latent) - so batch is real on t2i AND depth here, unlike Chroma. It is
-        // dead on i2i (VAEEncode latent) and on upscale/detail, whose separate files have
-        // no Input_Batch_Size node at all. MPI-365.
-        batchOps: ['t2i', 'depth'],
+        supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
+        // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
+        // samples it. This CHANGED with the master template (MPI-365): the old graph
+        // gated depth with Input_depth_reference and kept the empty latent; control now
+        // VAE-encodes the input (KSampler.latent_image <- MpiAnySwitch on wf_type,
+        // any_3 = VAEEncode), so a batch > 1 there would claim N and return one.
+        batchOps: ['t2i'],
+        // Same graph change, same class of lie on the other axis: control scales the
+        // INPUT image to a megapixel target (ImageScaleToTotalPixels) instead of reading
+        // Input_Width/Height, so the ratio picker cannot describe its output. i2i still
+        // resizes to our dimensions (ImageResizeKJv2) and keeps the picker.
+        imageSizedOps: ['control', 'detail', 'upscale'],
+        // SDXL is the only model whose control switch offers more than depth: ONE
+        // ControlNet-Union checkpoint behind four SetUnionControlNetType nodes and four
+        // AIO_Preprocessor annotators, both switched by Input_Control_Net.
+        controlTypes: ['depth', 'pose', 'scribble', 'canny'],
+        // Input_Control_strength -> MpiNormalizeValue -> ControlNetApplyAdvanced.strength.
+        capabilities: { controlStrength: true },
+        // Op -> the Input_wf_type value selecting its branch. MUST cover every entry in
+        // supportedOps: a gap does not error, it runs the graph default and returns a
+        // plausible image from the WRONG op. 4 and 5 are dead slots, numbered to match
+        // Klein/Krea2/Chroma.
+        opInject: {
+            t2i:     { Input_wf_type: 1 },
+            i2i:     { Input_wf_type: 2 },
+            control: { Input_wf_type: 3 },
+            detail:  { Input_wf_type: 6 },
+            upscale: { Input_wf_type: 7 },
+        },
         gen_speed: 'fast',
         description: 'This image generator uses the famous Juggernaut XL model as its base. It can create different styles but is best suited for realistic images.',
         workflows: {
-            t2i: 't2i_sdxl_realistic.json',
-            i2i: 't2i_sdxl_realistic.json',   // same graph; Input_Is_i2i flips the latent source
-            depth: 't2i_sdxl_realistic.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
-            upscale: 'upscaler_sdxl_realistic.json',
-            detail: 'detailer_sdxl_realistic.json',
+            // MPI-365: ONE file for all five ops — the branch is chosen by opInject's
+            // Input_wf_type and lazy evaluation prunes the rest at run time. The old
+            // upscaler_sdxl_realistic.json / detailer_sdxl_realistic.json are deleted.
+            t2i:     't2i_sdxl_realistic.json',
+            i2i:     't2i_sdxl_realistic.json',
+            control: 't2i_sdxl_realistic.json',
+            upscale: 't2i_sdxl_realistic.json',
+            detail:  't2i_sdxl_realistic.json',
         },
         dependencies: [
             'sdxl-realistic',
             '4x-NMKD-Siax',
-            'controlnet-union-sdxl',   // depth ControlNet (depth op)
+            'controlnet-union-sdxl',   // the ONE ControlNet behind all four control types
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
-            'comfyui-kjnodes',          // ImageResizeKJv2 — depth-path resize
-            'comfyui_controlnet_aux',   // AIO_Preprocessor (DepthAnythingV2) — depth map
+            // MPI-365: MaskDetailerPipe/To-FromBasicPipe were always needed by the detail
+            // op and were never declared — latent until the master template made every
+            // node submit-validated on EVERY run, which turns the gap fatal.
+            'ComfyUI-Impact-Pack',
+            'comfyui-kjnodes',          // ImageResizeKJv2 — the i2i resize
+            // AIO_Preprocessor x4: DepthAnythingV2 / Openpose / Scribble / CannyEdge.
+            // Canny and Scribble are weightless filters; OpenPose auto-downloads its
+            // body/hand/face annotators on first use, DepthAnythingV2 its own.
+            'comfyui_controlnet_aux',
         ],
     },
     {
@@ -77,30 +110,62 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'sdxl-real-05.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
-        // Batch multiplies EmptyLatentImage only, and this graph keeps sampling that
-        // empty latent on depth (Input_depth_reference switches the CONDITIONING pipe,
-        // not the latent) - so batch is real on t2i AND depth here, unlike Chroma. It is
-        // dead on i2i (VAEEncode latent) and on upscale/detail, whose separate files have
-        // no Input_Batch_Size node at all. MPI-365.
-        batchOps: ['t2i', 'depth'],
+        supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
+        // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
+        // samples it. This CHANGED with the master template (MPI-365): the old graph
+        // gated depth with Input_depth_reference and kept the empty latent; control now
+        // VAE-encodes the input (KSampler.latent_image <- MpiAnySwitch on wf_type,
+        // any_3 = VAEEncode), so a batch > 1 there would claim N and return one.
+        batchOps: ['t2i'],
+        // Same graph change, same class of lie on the other axis: control scales the
+        // INPUT image to a megapixel target (ImageScaleToTotalPixels) instead of reading
+        // Input_Width/Height, so the ratio picker cannot describe its output. i2i still
+        // resizes to our dimensions (ImageResizeKJv2) and keeps the picker.
+        imageSizedOps: ['control', 'detail', 'upscale'],
+        // SDXL is the only model whose control switch offers more than depth: ONE
+        // ControlNet-Union checkpoint behind four SetUnionControlNetType nodes and four
+        // AIO_Preprocessor annotators, both switched by Input_Control_Net.
+        controlTypes: ['depth', 'pose', 'scribble', 'canny'],
+        // Input_Control_strength -> MpiNormalizeValue -> ControlNetApplyAdvanced.strength.
+        capabilities: { controlStrength: true },
+        // Op -> the Input_wf_type value selecting its branch. MUST cover every entry in
+        // supportedOps: a gap does not error, it runs the graph default and returns a
+        // plausible image from the WRONG op. 4 and 5 are dead slots, numbered to match
+        // Klein/Krea2/Chroma.
+        opInject: {
+            t2i:     { Input_wf_type: 1 },
+            i2i:     { Input_wf_type: 2 },
+            control: { Input_wf_type: 3 },
+            detail:  { Input_wf_type: 6 },
+            upscale: { Input_wf_type: 7 },
+        },
         gen_speed: 'fast',
         description: 'This spicy image generator uses one of the best NSFW models available for SDXL, the famous Lustify model by Coyotte.',
         workflows: {
-            t2i: 't2i_sdxl_nsfw.json',
-            i2i: 't2i_sdxl_nsfw.json',   // same graph; Input_Is_i2i flips the latent source
-            depth: 't2i_sdxl_nsfw.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
-            upscale: 'upscaler_sdxl_nsfw.json',
-            detail: 'detailer_sdxl_nsfw.json',
+            // MPI-365: ONE file for all five ops — the branch is chosen by opInject's
+            // Input_wf_type and lazy evaluation prunes the rest at run time. The old
+            // upscaler_sdxl_nsfw.json / detailer_sdxl_nsfw.json are deleted.
+            t2i:     't2i_sdxl_nsfw.json',
+            i2i:     't2i_sdxl_nsfw.json',
+            control: 't2i_sdxl_nsfw.json',
+            upscale: 't2i_sdxl_nsfw.json',
+            detail:  't2i_sdxl_nsfw.json',
         },
         dependencies: [
             'sdxl-nsfw',
             '4x-NMKD-Siax',
-            'controlnet-union-sdxl',   // depth ControlNet (depth op)
+            'controlnet-union-sdxl',   // the ONE ControlNet behind all four control types
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
-            'comfyui-kjnodes',          // ImageResizeKJv2 — depth-path resize
-            'comfyui_controlnet_aux',   // AIO_Preprocessor (DepthAnythingV2) — depth map
+            // MPI-365: MaskDetailerPipe/To-FromBasicPipe were always needed by the detail
+            // op and were never declared — latent until the master template made every
+            // node submit-validated on EVERY run, which turns the gap fatal.
+            'ComfyUI-Impact-Pack',
+            'comfyui-kjnodes',          // ImageResizeKJv2 — the i2i resize
+            // AIO_Preprocessor x4: DepthAnythingV2 / Openpose / Scribble / CannyEdge.
+            // Canny and Scribble are weightless filters; OpenPose auto-downloads its
+            // body/hand/face annotators on first use, DepthAnythingV2 its own.
+            'comfyui_controlnet_aux',
         ],
     },
     {
@@ -112,30 +177,62 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-anime-08.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
-        // Batch multiplies EmptyLatentImage only, and this graph keeps sampling that
-        // empty latent on depth (Input_depth_reference switches the CONDITIONING pipe,
-        // not the latent) - so batch is real on t2i AND depth here, unlike Chroma. It is
-        // dead on i2i (VAEEncode latent) and on upscale/detail, whose separate files have
-        // no Input_Batch_Size node at all. MPI-365.
-        batchOps: ['t2i', 'depth'],
+        supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
+        // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
+        // samples it. This CHANGED with the master template (MPI-365): the old graph
+        // gated depth with Input_depth_reference and kept the empty latent; control now
+        // VAE-encodes the input (KSampler.latent_image <- MpiAnySwitch on wf_type,
+        // any_3 = VAEEncode), so a batch > 1 there would claim N and return one.
+        batchOps: ['t2i'],
+        // Same graph change, same class of lie on the other axis: control scales the
+        // INPUT image to a megapixel target (ImageScaleToTotalPixels) instead of reading
+        // Input_Width/Height, so the ratio picker cannot describe its output. i2i still
+        // resizes to our dimensions (ImageResizeKJv2) and keeps the picker.
+        imageSizedOps: ['control', 'detail', 'upscale'],
+        // SDXL is the only model whose control switch offers more than depth: ONE
+        // ControlNet-Union checkpoint behind four SetUnionControlNetType nodes and four
+        // AIO_Preprocessor annotators, both switched by Input_Control_Net.
+        controlTypes: ['depth', 'pose', 'scribble', 'canny'],
+        // Input_Control_strength -> MpiNormalizeValue -> ControlNetApplyAdvanced.strength.
+        capabilities: { controlStrength: true },
+        // Op -> the Input_wf_type value selecting its branch. MUST cover every entry in
+        // supportedOps: a gap does not error, it runs the graph default and returns a
+        // plausible image from the WRONG op. 4 and 5 are dead slots, numbered to match
+        // Klein/Krea2/Chroma.
+        opInject: {
+            t2i:     { Input_wf_type: 1 },
+            i2i:     { Input_wf_type: 2 },
+            control: { Input_wf_type: 3 },
+            detail:  { Input_wf_type: 6 },
+            upscale: { Input_wf_type: 7 },
+        },
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images with an extra shine using AlchemyMix V176.',
         workflows: {
-            t2i: 't2i_ill_anime_beauty.json',
-            i2i: 't2i_ill_anime_beauty.json',   // same graph; Input_Is_i2i flips the latent source
-            depth: 't2i_ill_anime_beauty.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
-            upscale: 'upscaler_ill_anime_beauty.json',
-            detail: 'detailer_ill_anime_beauty.json',
+            // MPI-365: ONE file for all five ops — the branch is chosen by opInject's
+            // Input_wf_type and lazy evaluation prunes the rest at run time. The old
+            // upscaler_ill_anime_beauty.json / detailer_ill_anime_beauty.json are deleted.
+            t2i:     't2i_ill_anime_beauty.json',
+            i2i:     't2i_ill_anime_beauty.json',
+            control: 't2i_ill_anime_beauty.json',
+            upscale: 't2i_ill_anime_beauty.json',
+            detail:  't2i_ill_anime_beauty.json',
         },
         dependencies: [
             'ill-anime-beauty',
             '4x-AnimeSharp',
-            'controlnet-union-sdxl',   // depth ControlNet (depth op)
+            'controlnet-union-sdxl',   // the ONE ControlNet behind all four control types
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
-            'comfyui-kjnodes',          // ImageResizeKJv2 — depth-path resize
-            'comfyui_controlnet_aux',   // AIO_Preprocessor (DepthAnythingV2) — depth map
+            // MPI-365: MaskDetailerPipe/To-FromBasicPipe were always needed by the detail
+            // op and were never declared — latent until the master template made every
+            // node submit-validated on EVERY run, which turns the gap fatal.
+            'ComfyUI-Impact-Pack',
+            'comfyui-kjnodes',          // ImageResizeKJv2 — the i2i resize
+            // AIO_Preprocessor x4: DepthAnythingV2 / Openpose / Scribble / CannyEdge.
+            // Canny and Scribble are weightless filters; OpenPose auto-downloads its
+            // body/hand/face annotators on first use, DepthAnythingV2 its own.
+            'comfyui_controlnet_aux',
         ],
     },
     {
@@ -147,30 +244,62 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-anime-06.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
-        // Batch multiplies EmptyLatentImage only, and this graph keeps sampling that
-        // empty latent on depth (Input_depth_reference switches the CONDITIONING pipe,
-        // not the latent) - so batch is real on t2i AND depth here, unlike Chroma. It is
-        // dead on i2i (VAEEncode latent) and on upscale/detail, whose separate files have
-        // no Input_Batch_Size node at all. MPI-365.
-        batchOps: ['t2i', 'depth'],
+        supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
+        // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
+        // samples it. This CHANGED with the master template (MPI-365): the old graph
+        // gated depth with Input_depth_reference and kept the empty latent; control now
+        // VAE-encodes the input (KSampler.latent_image <- MpiAnySwitch on wf_type,
+        // any_3 = VAEEncode), so a batch > 1 there would claim N and return one.
+        batchOps: ['t2i'],
+        // Same graph change, same class of lie on the other axis: control scales the
+        // INPUT image to a megapixel target (ImageScaleToTotalPixels) instead of reading
+        // Input_Width/Height, so the ratio picker cannot describe its output. i2i still
+        // resizes to our dimensions (ImageResizeKJv2) and keeps the picker.
+        imageSizedOps: ['control', 'detail', 'upscale'],
+        // SDXL is the only model whose control switch offers more than depth: ONE
+        // ControlNet-Union checkpoint behind four SetUnionControlNetType nodes and four
+        // AIO_Preprocessor annotators, both switched by Input_Control_Net.
+        controlTypes: ['depth', 'pose', 'scribble', 'canny'],
+        // Input_Control_strength -> MpiNormalizeValue -> ControlNetApplyAdvanced.strength.
+        capabilities: { controlStrength: true },
+        // Op -> the Input_wf_type value selecting its branch. MUST cover every entry in
+        // supportedOps: a gap does not error, it runs the graph default and returns a
+        // plausible image from the WRONG op. 4 and 5 are dead slots, numbered to match
+        // Klein/Krea2/Chroma.
+        opInject: {
+            t2i:     { Input_wf_type: 1 },
+            i2i:     { Input_wf_type: 2 },
+            control: { Input_wf_type: 3 },
+            detail:  { Input_wf_type: 6 },
+            upscale: { Input_wf_type: 7 },
+        },
         gen_speed: 'fast',
         description: 'Illustrous workflows for Anime style images using AnimeMix V8.',
         workflows: {
-            t2i: 't2i_ill_anime.json',
-            i2i: 't2i_ill_anime.json',   // same graph; Input_Is_i2i flips the latent source
-            depth: 't2i_ill_anime.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
-            upscale: 'upscaler_ill_anime.json',
-            detail: 'detailer_ill_anime.json',
+            // MPI-365: ONE file for all five ops — the branch is chosen by opInject's
+            // Input_wf_type and lazy evaluation prunes the rest at run time. The old
+            // upscaler_ill_anime.json / detailer_ill_anime.json are deleted.
+            t2i:     't2i_ill_anime.json',
+            i2i:     't2i_ill_anime.json',
+            control: 't2i_ill_anime.json',
+            upscale: 't2i_ill_anime.json',
+            detail:  't2i_ill_anime.json',
         },
         dependencies: [
             'ill-anime',
             '4x-AnimeSharp',
-            'controlnet-union-sdxl',   // depth ControlNet (depth op)
+            'controlnet-union-sdxl',   // the ONE ControlNet behind all four control types
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
-            'comfyui-kjnodes',          // ImageResizeKJv2 — depth-path resize
-            'comfyui_controlnet_aux',   // AIO_Preprocessor (DepthAnythingV2) — depth map
+            // MPI-365: MaskDetailerPipe/To-FromBasicPipe were always needed by the detail
+            // op and were never declared — latent until the master template made every
+            // node submit-validated on EVERY run, which turns the gap fatal.
+            'ComfyUI-Impact-Pack',
+            'comfyui-kjnodes',          // ImageResizeKJv2 — the i2i resize
+            // AIO_Preprocessor x4: DepthAnythingV2 / Openpose / Scribble / CannyEdge.
+            // Canny and Scribble are weightless filters; OpenPose auto-downloads its
+            // body/hand/face annotators on first use, DepthAnythingV2 its own.
+            'comfyui_controlnet_aux',
         ],
     },
     {
@@ -182,30 +311,62 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-pony-13.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
-        // Batch multiplies EmptyLatentImage only, and this graph keeps sampling that
-        // empty latent on depth (Input_depth_reference switches the CONDITIONING pipe,
-        // not the latent) - so batch is real on t2i AND depth here, unlike Chroma. It is
-        // dead on i2i (VAEEncode latent) and on upscale/detail, whose separate files have
-        // no Input_Batch_Size node at all. MPI-365.
-        batchOps: ['t2i', 'depth'],
+        supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
+        // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
+        // samples it. This CHANGED with the master template (MPI-365): the old graph
+        // gated depth with Input_depth_reference and kept the empty latent; control now
+        // VAE-encodes the input (KSampler.latent_image <- MpiAnySwitch on wf_type,
+        // any_3 = VAEEncode), so a batch > 1 there would claim N and return one.
+        batchOps: ['t2i'],
+        // Same graph change, same class of lie on the other axis: control scales the
+        // INPUT image to a megapixel target (ImageScaleToTotalPixels) instead of reading
+        // Input_Width/Height, so the ratio picker cannot describe its output. i2i still
+        // resizes to our dimensions (ImageResizeKJv2) and keeps the picker.
+        imageSizedOps: ['control', 'detail', 'upscale'],
+        // SDXL is the only model whose control switch offers more than depth: ONE
+        // ControlNet-Union checkpoint behind four SetUnionControlNetType nodes and four
+        // AIO_Preprocessor annotators, both switched by Input_Control_Net.
+        controlTypes: ['depth', 'pose', 'scribble', 'canny'],
+        // Input_Control_strength -> MpiNormalizeValue -> ControlNetApplyAdvanced.strength.
+        capabilities: { controlStrength: true },
+        // Op -> the Input_wf_type value selecting its branch. MUST cover every entry in
+        // supportedOps: a gap does not error, it runs the graph default and returns a
+        // plausible image from the WRONG op. 4 and 5 are dead slots, numbered to match
+        // Klein/Krea2/Chroma.
+        opInject: {
+            t2i:     { Input_wf_type: 1 },
+            i2i:     { Input_wf_type: 2 },
+            control: { Input_wf_type: 3 },
+            detail:  { Input_wf_type: 6 },
+            upscale: { Input_wf_type: 7 },
+        },
         gen_speed: 'fast',
         description: 'This image generator uses the AnimerJei V3 PONY model. It is a stylized model that can create different animation styles.',
         workflows: {
-            t2i: 't2i_pony_mix.json',
-            i2i: 't2i_pony_mix.json',   // same graph; Input_Is_i2i flips the latent source
-            depth: 't2i_pony_mix.json',   // same graph; Input_depth_reference gates the ControlNet-Union depth path
-            upscale: 'upscaler_pony_mix.json',
-            detail: 'detailer_pony_mix.json',
+            // MPI-365: ONE file for all five ops — the branch is chosen by opInject's
+            // Input_wf_type and lazy evaluation prunes the rest at run time. The old
+            // upscaler_pony_mix.json / detailer_pony_mix.json are deleted.
+            t2i:     't2i_pony_mix.json',
+            i2i:     't2i_pony_mix.json',
+            control: 't2i_pony_mix.json',
+            upscale: 't2i_pony_mix.json',
+            detail:  't2i_pony_mix.json',
         },
         dependencies: [
             'pony-mix',
             '4x-AnimeSharp',
-            'controlnet-union-sdxl',   // depth ControlNet (depth op)
+            'controlnet-union-sdxl',   // the ONE ControlNet behind all four control types
             'ComfyUI-MpiNodes',
             'ComfyUI-UltimateSDUpscale',
-            'comfyui-kjnodes',          // ImageResizeKJv2 — depth-path resize
-            'comfyui_controlnet_aux',   // AIO_Preprocessor (DepthAnythingV2) — depth map
+            // MPI-365: MaskDetailerPipe/To-FromBasicPipe were always needed by the detail
+            // op and were never declared — latent until the master template made every
+            // node submit-validated on EVERY run, which turns the gap fatal.
+            'ComfyUI-Impact-Pack',
+            'comfyui-kjnodes',          // ImageResizeKJv2 — the i2i resize
+            // AIO_Preprocessor x4: DepthAnythingV2 / Openpose / Scribble / CannyEdge.
+            // Canny and Scribble are weightless filters; OpenPose auto-downloads its
+            // body/hand/face annotators on first use, DepthAnythingV2 its own.
+            'comfyui_controlnet_aux',
         ],
     },
     {
@@ -227,22 +388,25 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'chroma-flash-01.webp',
         type: 'chroma',
-        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
         loraStrengths: ['model'],
         gen_speed: 'fast',
         capabilities: {
             // Five style LoRAs on one MpiStyleLoras bank (MPI-365).
             styleLoras: true,
-            // Chroma reaches depth through a FLUX ControlNet, so the Depth Strength
-            // slider has something to drive: Input_depth_strength → MpiNormalizeValue
+            // Chroma reaches control through a FLUX ControlNet (depth is its only type),
+            // so it has a strength to expose: Input_Control_strength → MpiNormalizeValue
             // → ControlNetApplyAdvanced.strength. The normalize node remaps the slider's
             // 0-1 to 0-0.5 in-graph, because measured on this model anything past ~0.5
             // starts producing artefacts. No promptEnhance — Chroma has no enhancer node
             // and no Output_prompt capture.
-            depthStrength: true,
+            controlStrength: true,
         },
         // One master graph ⇒ the rack reaches every op, detail and upscale included.
-        styleOps: ['t2i', 'i2i', 'depth', 'detail', 'upscale'],
+        // Depth is the only structure this graph can copy, so the type picker stays
+        // hidden and the op reads exactly as the old single-purpose one did.
+        controlTypes: ['depth'],
+        styleOps: ['t2i', 'i2i', 'control', 'detail', 'upscale'],
         // depth/detail/upscale inherit their shape from the input image, so the ratio
         // picker is hidden there. depth was WRONGLY excluded until 2026-08-02 on the
         // belief that it read Input_Width/Input_Height through MpiCrop. Traced in the
@@ -256,7 +420,7 @@ export const MODELS = [
         // placeholder — sized `injectionParams.Width || 0` — reserved a cell of the
         // requested shape and padded the real image inside it. Hiding the picker fixes
         // all three, because a control that is not mounted contributes no injection.
-        imageSizedOps: ['depth', 'detail', 'upscale'],
+        imageSizedOps: ['control', 'detail', 'upscale'],
         // Batch reaches ONLY EmptyLatentImage, which only t2i samples from here — depth
         // and i2i both start from a VAE-encoded latent, so a batch > 1 there returned one
         // image while the control claimed N. Narrower than SDXL's list, which keeps depth
@@ -276,7 +440,7 @@ export const MODELS = [
         opInject: {
             t2i:     { Input_wf_type: 1 },
             i2i:     { Input_wf_type: 2 },
-            depth:   { Input_wf_type: 3 },
+            control: { Input_wf_type: 3 },
             detail:  { Input_wf_type: 6 },
             upscale: { Input_wf_type: 7 },
         },
@@ -293,7 +457,7 @@ export const MODELS = [
             // Input_wf_type and lazy evaluation prunes the rest at run time.
             t2i: 'chroma_t2i.json',
             i2i: 'chroma_t2i.json',
-            depth: 'chroma_t2i.json',
+            control: 'chroma_t2i.json',
             upscale: 'chroma_t2i.json',
             detail: 'chroma_t2i.json',
         },
@@ -336,25 +500,28 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'chroma-hyper-01.webp',
         type: 'chroma',
-        supportedOps: ['t2i', 'i2i', 'depth', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
         loraStrengths: ['model'],
         gen_speed: 'fast',
         // Identical rack + branch shape to Flash — see that card for the reasoning.
         capabilities: {
             styleLoras: true,
-            depthStrength: true,
+            controlStrength: true,
         },
-        styleOps: ['t2i', 'i2i', 'depth', 'detail', 'upscale'],
+        // Depth is the only structure this graph can copy, so the type picker stays
+        // hidden and the op reads exactly as the old single-purpose one did.
+        controlTypes: ['depth'],
+        styleOps: ['t2i', 'i2i', 'control', 'detail', 'upscale'],
         // Shares Flash's master graph, so it shares the depth-is-image-sized fix too —
         // and the same batch reality: only t2i samples an EmptyLatentImage. Hyper is the
         // MORE distilled of the two, so the 0.6 style strength matters at least as much.
-        imageSizedOps: ['depth', 'detail', 'upscale'],
+        imageSizedOps: ['control', 'detail', 'upscale'],
         batchOps: ['t2i'],
         controlDefaults: { stylization: 0.6 },
         opInject: {
             t2i:     { Input_wf_type: 1 },
             i2i:     { Input_wf_type: 2 },
-            depth:   { Input_wf_type: 3 },
+            control: { Input_wf_type: 3 },
             detail:  { Input_wf_type: 6 },
             upscale: { Input_wf_type: 7 },
         },
@@ -367,7 +534,7 @@ export const MODELS = [
         workflows: {
             t2i: 'chroma_hyper_t2i.json',
             i2i: 'chroma_hyper_t2i.json',
-            depth: 'chroma_hyper_t2i.json',
+            control: 'chroma_hyper_t2i.json',
             upscale: 'chroma_hyper_t2i.json',
             detail: 'chroma_hyper_t2i.json',
         },
@@ -423,7 +590,7 @@ export const MODELS = [
         enhanceRecipe: 'krea-2',   // Prompt's own Krea 2 recipe (MPI-16). Note the id is
                                    // 'krea-2', NOT 'krea2' — Prompt matches on its exact
                                    // modelId and silently falls back to the FLUX recipe on a miss.
-        supportedOps: ['t2i', 'i2i', 'depth', 'krea2Edit', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'upscale', 'detail'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
         capabilities: {
             multiStage: false, audio: false, negativePrompt: true, styleLoras: true,
@@ -432,11 +599,11 @@ export const MODELS = [
             // the subject posed into it. Krea2 stops at TWO: its Input_Image_3 was
             // bypassed out of the graph, so it does NOT declare `depthSubject3`.
             depthSubject: true,
-            // Krea2 alone reaches depth through a control-LoRA (Krea2ControlLoRALoader),
-            // so it alone has a strength to expose — the `depthStrength` slider drives
-            // its Input_depth_strength. Klein and Qwen condition on the depth image
-            // directly and have no equivalent knob.
-            depthStrength: true,
+            // Krea2 reaches control through a control-LoRA (Krea2ControlLoRALoader), so it
+            // has a strength to expose — the `controlStrength` slider drives its
+            // Input_Control_strength. Qwen conditions on the control image directly and
+            // has no equivalent knob.
+            controlStrength: true,
         },
         // Op → the `Input_wf_type` value that selects its branch in the ONE master graph
         // (MPI-365). MUST cover every entry in supportedOps — a gap does not error, it
@@ -447,12 +614,13 @@ export const MODELS = [
         // separate inpaint branch.
         //
         // Declaring opInject makes commandExecutor REPLACE the op's own injectParams
-        // rather than merge them, which is what drops the now-deleted Input_Is_i2i /
-        // Input_Is_Edit / Input_depth_reference booleans for this model.
+        // rather than merge them. That mattered while the shared ops still carried
+        // Input_Is_i2i / Input_Is_Edit / Input_depth_reference; all three are gone now,
+        // so REPLACE and merge would agree — the branch is dead weight (MPI-365 GC).
         opInject: {
             t2i:       { Input_wf_type: 1 },
             i2i:       { Input_wf_type: 2 },
-            depth:     { Input_wf_type: 3 },
+            control:   { Input_wf_type: 3 },
             krea2Edit: { Input_wf_type: 4 },
             detail:    { Input_wf_type: 6 },
             upscale:   { Input_wf_type: 7 },
@@ -460,11 +628,14 @@ export const MODELS = [
         // The rack lives in the ONE graph, so it reaches every op — including detail and
         // upscale, which the pre-migration default (DEFAULT_STYLE_OPS) excludes and which
         // the old rack-less krea2_detailer/upscaler files could not offer.
-        styleOps: ['t2i', 'i2i', 'depth', 'krea2Edit', 'detail', 'upscale'],
+        // Depth is the only structure this graph can copy, so the type picker stays
+        // hidden and the op reads exactly as the old single-purpose one did.
+        controlTypes: ['depth'],
+        styleOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'detail', 'upscale'],
         // MPI-365: every op EXCEPT t2i/i2i now derives its output shape from the input
         // image (ImageScaleToTotalPixels replaced ImageResizeKJv2), so the ratio picker
         // is hidden there. t2i/i2i still generate at our Input_Width/Height.
-        imageSizedOps: ['depth', 'krea2Edit', 'detail', 'upscale'],
+        imageSizedOps: ['control', 'krea2Edit', 'detail', 'upscale'],
         styleLoraLabels: [
             'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
             'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',
@@ -490,7 +661,7 @@ export const MODELS = [
             // Input_is_Turbo to pick the sampler chain at runtime.
             t2i:       'krea2_t2i_sfw.json',
             i2i:       'krea2_t2i_sfw.json',
-            depth:     'krea2_t2i_sfw.json',
+            control:   'krea2_t2i_sfw.json',
             krea2Edit: 'krea2_t2i_sfw.json',
             upscale:   'krea2_t2i_sfw.json',
             detail:    'krea2_t2i_sfw.json',
@@ -540,7 +711,7 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
         enhanceRecipe: 'krea-2',   // see the SFW card
-        supportedOps: ['t2i', 'i2i', 'depth', 'krea2Edit', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'upscale', 'detail'],
         loraStrengths: ['model'],
         capabilities: {
             multiStage: false, audio: false, negativePrompt: true, styleLoras: true,
@@ -549,11 +720,11 @@ export const MODELS = [
             // the subject posed into it. Krea2 stops at TWO: its Input_Image_3 was
             // bypassed out of the graph, so it does NOT declare `depthSubject3`.
             depthSubject: true,
-            // Krea2 alone reaches depth through a control-LoRA (Krea2ControlLoRALoader),
-            // so it alone has a strength to expose — the `depthStrength` slider drives
-            // its Input_depth_strength. Klein and Qwen condition on the depth image
-            // directly and have no equivalent knob.
-            depthStrength: true,
+            // Krea2 reaches control through a control-LoRA (Krea2ControlLoRALoader), so it
+            // has a strength to expose — the `controlStrength` slider drives its
+            // Input_Control_strength. Qwen conditions on the control image directly and
+            // has no equivalent knob.
+            controlStrength: true,
         },
         // Op → the `Input_wf_type` value that selects its branch in the ONE master graph
         // (MPI-365). MUST cover every entry in supportedOps — a gap does not error, it
@@ -564,12 +735,13 @@ export const MODELS = [
         // separate inpaint branch.
         //
         // Declaring opInject makes commandExecutor REPLACE the op's own injectParams
-        // rather than merge them, which is what drops the now-deleted Input_Is_i2i /
-        // Input_Is_Edit / Input_depth_reference booleans for this model.
+        // rather than merge them. That mattered while the shared ops still carried
+        // Input_Is_i2i / Input_Is_Edit / Input_depth_reference; all three are gone now,
+        // so REPLACE and merge would agree — the branch is dead weight (MPI-365 GC).
         opInject: {
             t2i:       { Input_wf_type: 1 },
             i2i:       { Input_wf_type: 2 },
-            depth:     { Input_wf_type: 3 },
+            control:   { Input_wf_type: 3 },
             krea2Edit: { Input_wf_type: 4 },
             detail:    { Input_wf_type: 6 },
             upscale:   { Input_wf_type: 7 },
@@ -577,11 +749,14 @@ export const MODELS = [
         // The rack lives in the ONE graph, so it reaches every op — including detail and
         // upscale, which the pre-migration default (DEFAULT_STYLE_OPS) excludes and which
         // the old rack-less krea2_detailer/upscaler files could not offer.
-        styleOps: ['t2i', 'i2i', 'depth', 'krea2Edit', 'detail', 'upscale'],
+        // Depth is the only structure this graph can copy, so the type picker stays
+        // hidden and the op reads exactly as the old single-purpose one did.
+        controlTypes: ['depth'],
+        styleOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'detail', 'upscale'],
         // MPI-365: every op EXCEPT t2i/i2i now derives its output shape from the input
         // image (ImageScaleToTotalPixels replaced ImageResizeKJv2), so the ratio picker
         // is hidden there. t2i/i2i still generate at our Input_Width/Height.
-        imageSizedOps: ['depth', 'krea2Edit', 'detail', 'upscale'],
+        imageSizedOps: ['control', 'krea2Edit', 'detail', 'upscale'],
         styleLoraLabels: [
             'None', 'Dark Brush', 'Dot Matrix', 'Kids Drawing', 'Neon Drip',
             'Rainy Window', 'Retro Anime', 'Soft Water Color', 'Sunset Blur', 'Vintage Tarot',
@@ -602,7 +777,7 @@ export const MODELS = [
             // ONE file for all six ops (MPI-365) — see the SFW card above.
             t2i:       'krea2_t2i_nsfw.json',
             i2i:       'krea2_t2i_nsfw.json',
-            depth:     'krea2_t2i_nsfw.json',
+            control:   'krea2_t2i_nsfw.json',
             krea2Edit: 'krea2_t2i_nsfw.json',
             upscale:   'krea2_t2i_nsfw.json',
             detail:    'krea2_t2i_nsfw.json',
@@ -703,7 +878,7 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         type: 'klein',
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'klein' recipe
-        supportedOps: ['t2i', 'i2i', 'depth', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
+        supportedOps: ['t2i', 'i2i', 'control', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
         loraStrengths: ['model'],   // MpiLoraModel is model-only; no CLIP side
         capabilities: {
             multiStage: false, audio: false, negativePrompt: false, styleLoras: true,
@@ -716,13 +891,11 @@ export const MODELS = [
             // Input_Image_2/_3. SDXL/Chroma declare neither and stay 1-image.
             depthSubject: true,
             depthSubject3: true,
-            // Klein reaches depth through `flux2_klein_4b_refcontrol_depth` on a
-            // LoraLoaderModelOnly, so it has the same strength Krea2 does and the same
-            // Depth Strength slider drives it (Input_depth_strength → node 143's
-            // strength_model). Klein's LoRA bites SOFTER than Krea2's: usable around
-            // 0.2-0.3 where Krea2 wants 0.6-0.8. Qwen has no equivalent — it conditions
-            // on the depth image directly, with no patch to scale.
-            depthStrength: true,
+            // Klein reaches control through `flux2_klein_4b_refcontrol_depth` on a
+            // LoraLoaderModelOnly, so the same Control Strength slider drives it
+            // (Input_Control_strength → node 143's strength_model). Klein's LoRA bites
+            // SOFTER than Krea2's: usable around 0.2-0.3 where Krea2 wants 0.6-0.8.
+            controlStrength: true,
         },
         // Op → the `Input_wf_type` value that selects its branch. MUST cover every entry
         // in supportedOps; commandExecutor warns loudly if one is missing, because the
@@ -731,7 +904,7 @@ export const MODELS = [
         opInject: {
             t2i:           { Input_wf_type: 1 },
             i2i:           { Input_wf_type: 2 },
-            depth:         { Input_wf_type: 3 },
+            control:       { Input_wf_type: 3 },
             kleinEdit:     { Input_wf_type: 4 },
             inpaint:       { Input_wf_type: 5 },
             detail:        { Input_wf_type: 6 },
@@ -739,11 +912,14 @@ export const MODELS = [
         },
         // The rack is in the ONE graph, so it is live on every op — including detail and
         // upscale, which the pre-Klein default (DEFAULT_STYLE_OPS) excludes.
-        styleOps: ['t2i', 'i2i', 'depth', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
+        // Depth is the only structure this graph can copy, so the type picker stays
+        // hidden and the op reads exactly as the old single-purpose one did.
+        controlTypes: ['depth'],
+        styleOps: ['t2i', 'i2i', 'control', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
         // Ops whose output shape comes from the INPUT image (scaled to a megapixel
         // target), not from Input_Width/Height — so the ratio picker is hidden there.
         // Klein's depth and edit branches both do this; t2i/i2i still take our ratio.
-        imageSizedOps: ['depth', 'kleinEdit'],
+        imageSizedOps: ['control', 'kleinEdit'],
         // Index-aligned with the MpiStyleSelector's trigger lines and its MpiStyleLoras
         // banks (verified against the baked graph: bank 1 = muppets/cartoon/jojo/anime/
         // chibi, bank 2 = doodle/vintage/aesthetic). Index 0 = no style, selector 0.
@@ -762,7 +938,7 @@ export const MODELS = [
             // ONE file for all seven ops — the branch is chosen by opInject above.
             t2i:           'klein_t2i.json',
             i2i:           'klein_t2i.json',
-            depth: 'klein_t2i.json',
+            control: 'klein_t2i.json',
             kleinEdit:     'klein_t2i.json',
             inpaint:       'klein_t2i.json',
             detail:        'klein_t2i.json',
@@ -1111,8 +1287,9 @@ export const MODELS = [
         image: 'qwen-edit.webp',
         type: 'qwen',
         enhanceRecipe: 'flux',   // Cubric Prompt has no 'qwen' recipe; keep 'qwen' out of the sweep
-        // MPI-365: THREE ops now, all branches of the one master graph.
-        supportedOps: ['qwenEdit', 'depth', 'pose'],
+        // MPI-365: TWO ops now, both branches of the one master graph. Pose and depth
+        // are not separate ops — they are the two `controlTypes` below.
+        supportedOps: ['qwenEdit', 'control'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
         // tierSelect gates the qwenTier radio in MpiPromptBox._refreshOpSlot(). No prompt
         // enhancer in this graph (no TextGenerate node) ⇒ promptEnhance stays default
@@ -1120,31 +1297,38 @@ export const MODELS = [
         capabilities: {
             multiStage: false, audio: false, negativePrompt: true, styleLoras: true,
             tierSelect: true, batch: false,
-            // Qwen takes three images natively, so the depth/pose LINE runs to two
-            // references: image 1 is the depth map or pose skeleton, images 2-3 the
-            // subject(s). Same slots the edit op already used.
+            // Qwen takes three images natively, so the control LINE runs to two
+            // references: image 1 is the control map, images 2-3 the subject(s). Same
+            // slots the edit op already used.
             depthSubject: true,
             depthSubject3: true,
+            // NO controlStrength: Qwen conditions on the control IMAGE directly — there
+            // is no ControlNet and no control LoRA, so nothing has a strength to scale.
+            // Its graph has no Input_Control_strength node; the slider stays hidden.
         },
         // Op → the `Input_wf_type` value selecting its branch. Qwen's numbering is its
-        // OWN (1 edit · 2 depth · 3 pose) — it shares nothing with Klein's or Krea2's,
-        // which is exactly why the value is model-private and lives here rather than on
-        // the shared op. MUST cover every entry in supportedOps.
+        // OWN (1 edit · 2 control) — it shares nothing with Klein's or Krea2's, which is
+        // exactly why the value is model-private and lives here rather than on the
+        // shared op. MUST cover every entry in supportedOps.
         //
-        // NOTE the graph's baked Input_wf_type default is 3 (pose), so a missing entry
-        // here would silently run POSE and return a plausible wrong image — the reason
+        // NOTE the graph's baked Input_wf_type default is 2, so a missing entry here
+        // would silently run CONTROL and return a plausible wrong image — the reason
         // commandExecutor warns on a gap and generate_qwen.py asserts the node exists.
         opInject: {
             qwenEdit: { Input_wf_type: 1 },
-            depth:    { Input_wf_type: 2 },
-            pose:     { Input_wf_type: 3 },
+            control:  { Input_wf_type: 2 },
         },
-        // One graph ⇒ the rack reaches all three ops.
-        styleOps: ['qwenEdit', 'depth', 'pose'],
+        // Which structures this graph can copy, in picker order. Index into the control
+        // switch comes from CONTROL_TYPES, not from this list — see commandRegistry.js.
+        // Depth first because it is the one users reach for; the graph's own numbering
+        // (1 = pose) is unaffected by the display order.
+        controlTypes: ['depth', 'pose'],
+        // One graph ⇒ the rack reaches both ops.
+        styleOps: ['qwenEdit', 'control'],
         // Every Qwen op keeps the SOURCE image dimensions (ImageScaleToTotalPixels off
         // the input; Input_Width/Height were bypassed out of the graph), so the ratio
         // picker is hidden on all of them.
-        imageSizedOps: ['qwenEdit', 'depth', 'pose'],
+        imageSizedOps: ['qwenEdit', 'control'],
         // INDEX-ALIGNED with the workflow's seven MpiMath gates (`b if a == N`) and its
         // MpiPromptList trigger lines; index 0 = no style (every gate zeroed). NOTE the
         // two anime entries: slot 2 is Qwen-Anime-V2 (3D) and slot 3 is animal_style.
@@ -1166,8 +1350,7 @@ export const MODELS = [
         workflows: {
             // ONE file for all three ops — branch chosen by opInject above (MPI-365).
             qwenEdit: 'qwen_edit.json',
-            depth:    'qwen_edit.json',
-            pose:     'qwen_edit.json',
+            control:  'qwen_edit.json',
         },
         dependencies: [
             'qwen-edit-transformer',

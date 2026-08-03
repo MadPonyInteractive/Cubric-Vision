@@ -6,7 +6,7 @@ import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, modelShowsBatch, getOpHelp, isTextOnlyOp, pickTextOnlyOp } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, modelShowsBatch, modelControlTypes, getOpHelp, isTextOnlyOp, pickTextOnlyOp } from '../../../data/commandRegistry.js';
 import { MpiOpHelpDialog } from '../../Compounds/MpiOpHelpDialog/MpiOpHelpDialog.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { usesQualityTier } from '../../../utils/ratios.js';
@@ -1392,11 +1392,19 @@ export const MpiPromptBox = ComponentFactory.create({
                 // it never appears on other edit models (Boogu bakes its tier per file).
                 if (componentId === 'qwenTier' && model?.capabilities?.tierSelect !== true) continue;
 
-                // Depth-adherence slider. Krea2 alone carries the control-LoRA loader it
-                // drives (Input_depth_strength); Klein and Qwen reach depth through their
-                // own conditioning with no strength knob, so the slider would be dead UI
+                // Control-adherence slider. Every model but Qwen carries something the
+                // strength scales — a control LoRA (Krea2/Klein) or a ControlNet
+                // (Chroma/SDXL), both behind Input_Control_strength. Qwen conditions on
+                // the control IMAGE with nothing to patch, so the slider would be dead UI
                 // there. Capability-gated, never inferred from the op.
-                if (componentId === 'depthStrength' && model?.capabilities?.depthStrength !== true) continue;
+                if (componentId === 'controlStrength' && model?.capabilities?.controlStrength !== true) continue;
+
+                // Control-type picker. Gated on the MODEL offering more than one type
+                // rather than on a capability flag: `controlTypes` already states it, and
+                // a second source would drift. A one-type model (Klein/Krea2/Chroma —
+                // depth only) has no Input_Control_Net node in its graph, so the picker
+                // would be dead UI AND a lie about what it could switch to.
+                if (componentId === 'controlType' && modelControlTypes(model).length < 2) continue;
 
                 // Krea2 turbo toggle (MPI-316) — two speeds, so a toggle rather than a
                 // radio, and since MPI-365 a different node entirely: Input_is_Turbo

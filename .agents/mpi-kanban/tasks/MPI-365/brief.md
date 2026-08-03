@@ -301,3 +301,86 @@ Also missing (pre-existing, not regressions): Chroma has no `progressStages` ent
   new depth/reference/mask slot — or the one-file template breaks.
 - Only ONE node may carry a given `Input_*` title. `validate-injection-rules.mjs`
   catches duplicates; run it on each exported template.
+
+## SDXL MIGRATED + the control-type merge — 2026-08-03
+
+The user re-exported five raw templates in one pass (klein, krea2, chroma, qwen, sdxl) and
+this session wired the repo side. **SDXL was the last un-migrated image family**, so the
+whole GC half of the acceptance list is now reachable and done.
+
+### The product change: `depth` + `pose` collapse into ONE `control` op
+
+The user's call, from the exports: instead of a separate op per control kind, ONE op with a
+**Control Type** picker whose entries come from the model. SDXL's master graph carries four
+types off one ControlNet-Union checkpoint; Qwen carries two; everything else carries one and
+shows no picker.
+
+    controlTypes: ['depth','pose','scribble','canny']   sdxl x5
+    controlTypes: ['depth','pose']                      qwen-edit
+    controlTypes: ['depth']                             klein, krea2 x2, chroma x2
+
+`CONTROL_TYPES` (`commandRegistry.js`) maps id → the `Input_Control_Net` switch index. The
+index is **fixed by the authored graphs** — SDXL and Qwen independently number their switch
+`1 Pose · 2 Depth · 3 Scribble · 4 Canny`, so ONE shared map serves both and `controlTypes`
+is free to be display-ordered (both list depth first; the graphs still start at pose).
+
+`pose` was deleted before it ever shipped, and `depth` with it — both were 1.4.0-only keys,
+so no history migration. `poseReference` remains the only deprecated entry.
+
+### The two SDXL behaviours that INVERTED, silently
+
+Traced in the baked graph, not assumed — both are the lie-classes this card already fixed
+once for Chroma, and neither raises an error:
+
+- **batch died on control.** The old graph gated depth with `Input_depth_reference` and kept
+  sampling `EmptyLatentImage`. The master template routes control through `VAEEncode`
+  (`KSampler.latent_image <- MpiAnySwitch on wf_type, any_3`). `batchOps: ['t2i','depth']`
+  → `['t2i']`. SDXL and Chroma now agree, which the old test comment said would mean one of
+  them was wrong — that comment was rewritten, not worked around.
+- **the ratio picker became a lie on control.** Control scales the input with
+  `ImageScaleToTotalPixels`; only i2i still resizes to `Input_Width`/`Input_Height`
+  (`ImageResizeKJv2`). `imageSizedOps: ['control','detail','upscale']` added.
+
+### One strength title for every model
+
+The user renamed `Input_depth_strength` → **`Input_Control_strength`** across all five
+templates, so the control carries ONE `nodeTitle` instead of a per-model map. The control is
+`controlStrength` (was `depthStrength`), gated on `capabilities.controlStrength` — every
+model but Qwen, which conditions on the control IMAGE and has nothing to patch.
+
+### GC actually done
+
+- `injectParams` is now EMPTY across the whole registry: `control` lost
+  `Input_depth_reference` and `i2i` lost `Input_Is_i2i` (SDXL was the last holder of both).
+- `DEFAULT_STYLE_OPS` **deleted** — all six style models declare `styleOps`. The fallback is
+  now `[]` on purpose: a future style model that forgets the field shows no rack at all
+  rather than inheriting a wrong reach. A new test pins that every shipped style model
+  declares it.
+- **14 files deleted:** `upscaler_*` + `detailer_*` x5 runtime, `sdxl_upscaler_template` +
+  `sdxl_detailer_template` in both `raw/` and `scripts/workflow_generation/`.
+- `generate_sdxl.py` collapsed to the one master template and gained Klein-style asserts —
+  `Input_wf_type` and `Input_Control_Net` must exist as plain widgets, then bake to 1 (t2i)
+  and 2 (depth). The `Input_Control_Net` assert fired on the first run: the export was baked
+  to 1 (pose).
+
+### NOT done — the one deliberate hold
+
+`commandExecutor._buildParams` keeps its REPLACE-not-merge branch. With zero `injectParams`
+left it is unreachable, and the card's acceptance line says to delete it with them — but
+`injectParams` is still a documented, supported op-level field, and removing the branch
+while keeping the field would make a future declaration merge instead of replace. **User's
+call**; flagged rather than silently skipped.
+
+### Latent bug found on the way
+
+**`ComfyUI-Impact-Pack` was never in any SDXL model's `dependencies`**, though `detail` has
+always needed `MaskDetailerPipe`. Survivable while detail lived in its own file; the master
+template makes ComfyUI submit-validate every node on EVERY run, so the gap would have failed
+plain t2i on a fresh install. Added to all five.
+
+### State
+
+Full suite **338/338 green** (2 new tests), `release-health-check` passed,
+`validate-injection-rules` clean on all five API templates,
+`operation_registry.json` re-synced. **Not yet run in the app** — every claim above is from
+the graphs, the registries and the suite, not from a live generation.

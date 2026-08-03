@@ -83,7 +83,15 @@ test('every injectParams title exists in the workflows its op runs', () => {
     const declared = injectParamsByOp(fs.readFileSync(COMMANDS, 'utf8'));
     const wfByOp = workflowsByOp(fs.readFileSync(REGISTRY, 'utf8'));
 
-    assert.ok(declared.size > 0, 'parsed zero injectParams — the regex has drifted');
+    // MPI-365 emptied this set: every image model became a one-master-template model, so
+    // every op's branch is picked by `opInject` and the last `injectParams` (`i2i`'s
+    // `Input_Is_i2i`) lost its node. Zero is therefore a legitimate state — but "zero"
+    // and "the regex stopped matching" look identical from here, which is exactly the
+    // silent-skip class this file exists to catch. So compare against the raw count of
+    // `injectParams:` occurrences in the source instead of asserting a non-empty parse.
+    const rawCount = (fs.readFileSync(COMMANDS, 'utf8').match(/^\s+injectParams:/gm) || []).length;
+    assert.strictEqual(declared.size, rawCount,
+        `parsed ${declared.size} injectParams but the source declares ${rawCount} — the regex has drifted`);
 
     const problems = [];
     for (const [op, titles] of declared) {

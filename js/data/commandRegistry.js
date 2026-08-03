@@ -216,50 +216,57 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: true,
-        // i2i shares the t2i graph (Input_Is_i2i flips the latent source), so it has
-        // the same style rack + enhancer nodes. Capability-gated per model as above.
-        // The boolean is baked FALSE in the graph and nothing else sets it, so without
-        // this the op silently runs as t2i and ignores the input image.
-        injectParams: { Input_Is_i2i: true },
-        // denoise (`Input_denoise`, MpiFloat node 228) reaches the sampler ONLY through
-        // the Input_Is_i2i gate (MpiIfElse 230), so it is live here and inert on t2i /
-        // depth. Default matches the graph's baked 0.3. The bare `Denoise` key's
-        // tier-2 alias `Input_Denoise` matches the node case-insensitively.
+        // NO injectParams (MPI-365). i2i shares the model's master graph and is selected
+        // by `opInject`'s Input_wf_type like every other branch. The op used to carry
+        // `Input_Is_i2i: true` for the pre-migration SDXL/Chroma graphs, whose t2i file
+        // flipped its latent source on that boolean; SDXL was the last holder and its
+        // master template retired the node, leaving the entry with no consumer and no
+        // node to land on. It is the last `injectParams` in the registry — the field
+        // itself stays documented and supported, but nothing declares it now.
+        //
+        // denoise (`Input_denoise`) reaches the sampler on the branches that VAE-encode
+        // a latent, so it is live here and inert on t2i. Default matches the graph's
+        // baked 0.3. The bare `Denoise` key's tier-2 alias `Input_Denoise` matches the
+        // node case-insensitively.
         components: ['qualityTier', 'styleSelect', 'stylization', 'denoise', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
         defaults: { denoise: 0.30 },
     },
-    // Depth-map transfer: Input_Image → a depth preprocessor → the model's control path.
+    // Structure transfer: Input_Image → a preprocessor → the model's control path.
     //
-    // RENAMED from `poseReference` in MPI-365. It always produced a DEPTH map; the old
-    // name was leftover from before a real pose op existed and became actively wrong once
-    // Qwen gained one. `poseReference` survives in operationRegistry.js as a deprecated
-    // key so pre-1.4.0 history items still validate — nothing may WRITE it again.
+    // ONE op for every KIND of structure a model can copy; WHICH kind is the user's own
+    // pick, injected as `Input_Control_Net` (see CONTROL_TYPES below). Supersedes BOTH
+    // `depth` (itself the rename of `poseReference`) and the short-lived `pose` op. Both
+    // were 1.4.0-only keys that never shipped, so there is no history to migrate;
+    // `poseReference` stays deprecated in operationRegistry.js for <=1.3.0 items.
     //
-    // How the branch is selected differs by model, and that is deliberate:
-    //   * one-master-template models (Klein, Krea2, Qwen) pick it with `opInject`'s
-    //     `Input_wf_type` and never see `injectParams` at all — commandExecutor REPLACES
-    //     rather than merges when a model declares opInject.
-    //   * un-migrated models (SDXL, Chroma) still route through the `Input_depth_reference`
-    //     MpiIfElse below. That inject stays until those models migrate too, at which
-    //     point it comes off this op entirely (MPI-365 GC list).
-    // Composes with Input_Is_i2i (left false here: depth conditions the MODEL, i2i swaps
-    // the LATENT source).
-    depth: {
-        label: 'Depth',
-        short: 'depth',
-        info: 'Depth Reference — copy the pose/composition of an input image',
+    // WHY ONE OP AND NOT ONE PER TYPE: the type is a preprocessor choice inside a single
+    // graph branch, not a different operation. SDXL alone offers four, and four
+    // near-identical strip buttons whose only difference is which annotator ran is worse
+    // UI than one button with a picker. A model declares what its graph can actually run
+    // (`ModelDef.controlTypes`); a model with one type hides the picker and behaves
+    // exactly as the old single-purpose op did.
+    //
+    // The branch is selected by `opInject`'s `Input_wf_type` — EVERY image model is now a
+    // one-master-template model, which is what retired the `Input_depth_reference`
+    // MpiIfElse this op used to carry in `injectParams` (MPI-365 GC list).
+    control: {
+        label: 'Control',
+        short: 'control',
+        info: 'Control — copy the structure of an input image',
         help: {
             body: [
-                'Copies the pose and composition of the input image, then paints your prompt into that shape. The input is a skeleton — none of its colour, style or identity comes across.',
-                'Describe the subject and the scene. Do NOT describe the pose: the depth map already carries it, and words spent on it are words not spent on the subject.',
+                'Copies the STRUCTURE of the input image — where things are and what shape they hold — then paints your prompt into it. The input is a skeleton: none of its colour, style or identity comes across.',
+                'WHICH structure is the Control Type pick. Depth carries volume and framing, so the result sits at the same distance in the same space. Pose carries only the body skeleton, leaving build and framing free. Scribble and Canny carry outlines, Canny being the harder and more literal of the two.',
+                'Describe the subject and the scene. Do NOT describe what the control map already gives you — words spent on the pose are words not spent on the subject.',
             ],
             examples: [
-                { prompt: 'a knight in tarnished silver armour, castle courtyard, overcast light', note: 'Subject and scene; the pose arrives from the image.' },
-                { prompt: 'standing with both arms raised', bad: true, note: 'Re-states what the depth map already provides.' },
+                { prompt: 'a knight in tarnished silver armour, castle courtyard, overcast light', note: 'Subject and scene; the structure arrives from the image.' },
+                { prompt: 'standing with both arms raised', bad: true, note: 'Re-states what the control map already provides.' },
             ],
             // MPI-354: Klein alone accepts a second image here (capabilities.depthSubject).
             // Keyed on `type` so it applies to Klein models only — every other model keeps
-            // the one-image copy above.
+            // the one-image copy above. Klein's only control type is depth, so this copy
+            // names it outright rather than talking about the picker it never shows.
             byModel: {
                 klein: {
                     body: [
@@ -280,9 +287,9 @@ export const commands = {
         requiresImages: 1,
         mediaInputs: [
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
-            // MPI-354/MPI-365: OPTIONAL subject slots — image 1 supplies the depth, the
-            // rest supply WHO is posed into it. Gated on `capabilities.depthSubject`, so
-            // un-migrated models (SDXL, Chroma) keep depth at exactly one image.
+            // MPI-354/MPI-365: OPTIONAL subject slots — image 1 supplies the control map,
+            // the rest supply WHO is posed into it. Gated on `capabilities.depthSubject`,
+            // so SDXL and Chroma keep this op at exactly one image.
             // Slot 3 additionally needs `depthSubject3`: Qwen takes three images
             // natively, while Krea2's third slot was bypassed out of the graph.
             {
@@ -295,54 +302,15 @@ export const commands = {
             },
         ],
         promptRequired: true,
-        injectParams: { Input_depth_reference: true },
-        // `qwenTier` joins the list for Qwen (MPI-365) — capability-gated on
-        // `tierSelect`, so no other model renders it. `ratio` is suppressed per model by
+        // No injectParams: every model reaching this op is a one-master-template model
+        // selecting the branch through opInject's `Input_wf_type`.
+        //
+        // `controlType` is gated on the model offering more than one type; `qwenTier` on
+        // `capabilities.tierSelect`; `controlStrength` on `capabilities.controlStrength`
+        // (Qwen alone has no strength node). `ratio` is suppressed per model by
         // `imageSizedOps`/modelShowsRatio, which is how Klein/Krea2/Qwen hide it here
-        // while SDXL and Chroma keep it. `depthStrength` is Krea2-only for the same
-        // reason — only its graph carries the control-LoRA the slider drives.
-        components: ['qualityTier', 'qwenTier', 'styleSelect', 'stylization', 'depthStrength', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
-    },
-    // Pose transfer via OpenPose (MPI-365). NEW in 1.4.0 — Qwen-Image-Edit first, SDXL
-    // next. Despite the name there is NO ControlNet checkpoint: `OpenposePreprocessor`
-    // renders a skeleton and that image feeds the model's own image conditioning, which
-    // is why this costs a node dependency (`comfyui_controlnet_aux`) and its annotator
-    // weights, but no hosted model weight.
-    pose: {
-        label: 'Pose',
-        short: 'pose',
-        info: 'Pose — copy the body pose of an input image',
-        help: {
-            body: [
-                'Copies the BODY POSE of the input image — limbs, stance, head angle — and paints your prompt into it. Unlike Depth it carries no depth, volume or framing, only the skeleton, so the subject is free to differ in build and distance.',
-                'Describe the subject and the scene. Do NOT describe the pose: the skeleton already carries it.',
-                'A second image supplies WHO holds the pose. With one image the subject comes from your words; with two it comes from the picture.',
-            ],
-            examples: [
-                { prompt: 'a ballet dancer mid-leap, empty theatre stage, single spotlight', note: 'Subject and scene; the pose arrives from the image.' },
-                { prompt: 'him on a rooftop at night, city lights behind', note: 'Two images: pose from image 1, the person from image 2.' },
-                { prompt: 'one arm extended, leaning forward', bad: true, note: 'Re-states what the skeleton already provides.' },
-            ],
-        },
-        progressLabel: 'Generating',
-        mediaType: MEDIA_TYPE.IMAGE,
-        requiresImages: 1,
-        mediaInputs: [
-            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
-            {
-                key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2',
-                required: false, ordinal: true, requiresCapability: 'depthSubject',
-            },
-            {
-                key: 'inputImage3', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_3',
-                required: false, ordinal: true, requiresCapability: 'depthSubject3',
-            },
-        ],
-        promptRequired: true,
-        // No injectParams: every model that declares `pose` is a one-master-template
-        // model selecting the branch through opInject's Input_wf_type. When SDXL gains
-        // pose it will need either its own opInject or a boolean added here.
-        components: ['qualityTier', 'qwenTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
+        // while SDXL and Chroma keep it.
+        components: ['qualityTier', 'qwenTier', 'controlType', 'styleSelect', 'stylization', 'controlStrength', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
     },
     // FLUX.2 Klein's instruction edit (MPI-354). A separate op from `edit` and
     // `krea2Edit` for one reason: THREE reference images. `ReferenceLatent` sets
@@ -951,34 +919,63 @@ export const commands = {
 export const COMMANDS = commands;
 
 /**
- * Ops where a style-LoRA model shows the style rack WHEN IT DOES NOT SAY OTHERWISE.
+ * DELETED in MPI-365 — `DEFAULT_STYLE_OPS` used to sit here.
  *
- * Historically the rack's reach was implied by which ops happened to list
- * `styleSelect` in `components`. That stopped working once a model shipped ONE master
- * graph for every op (FLUX.2 Klein, MPI-354): its detail and upscale branches carry the
- * same rack as t2i, but Krea2's detailer/upscaler are SEPARATE files with no rack at
- * all. So `detail`/`upscale` must offer the control to one model and not the other,
- * which a per-op `components` list cannot express.
+ * It was a compatibility shim: the set of ops that mounted the rack before `styleOps`
+ * existed, so that pre-Klein models kept behaving identically without declaring
+ * anything. Every style-LoRA model is now a one-master-template model and declares its
+ * own `styleOps` (chroma x2, krea2 x2, klein, qwen — all six, verified 2026-08-03), so
+ * the shim had no consumers left.
  *
- * The op's `components` still decides whether the control EXISTS for that op; this
- * decides whether a given MODEL may show it. A model opts out of the default by
- * declaring `styleOps` (see ModelDef) — Klein declares all seven.
- *
- * This list is exactly the set that mounted the rack before the mechanism existed, so
- * every pre-Klein model behaves identically. Do NOT add to it: a new model that wants
- * the rack somewhere else declares `styleOps`.
+ * The fallback is now an EMPTY list, and that is the point: a future style model that
+ * forgets `styleOps` shows no rack at all — visible on the first run and one line to
+ * fix — instead of silently inheriting a reach that happens to be wrong for its graph.
+ * Do not reintroduce a default; declare the field.
  */
-export const DEFAULT_STYLE_OPS = Object.freeze(['t2i', 'i2i', 'depth', 'krea2Edit', 'qwenEdit']);
+
+/**
+ * The kinds of structure the `control` op can copy (MPI-365).
+ *
+ * `index` is the value injected into `Input_Control_Net`, and it is FIXED BY THE
+ * AUTHORED GRAPHS — SDXL and Qwen independently number their control switch
+ * 1=Pose 2=Depth 3=Scribble 4=Canny, so one shared map serves both. A model exposes a
+ * SUBSET by listing ids in `ModelDef.controlTypes`; that list is display order and is
+ * free to differ from the index order. Adding a fifth type means authoring it in the
+ * graph at a matching index FIRST — the switch, not this map, is the source of truth.
+ *
+ * A model whose graph has no `Input_Control_Net` node (Klein, Krea2, Chroma — depth is
+ * their only branch) lists exactly one id. The injector then silently skips the param,
+ * which is correct: there is nothing to switch.
+ */
+export const CONTROL_TYPES = Object.freeze({
+    pose:     Object.freeze({ index: 1, label: 'Pose',     info: 'Body skeleton only — limbs, stance, head angle. Build and framing stay free.' }),
+    depth:    Object.freeze({ index: 2, label: 'Depth',    info: 'Volume and framing — the result sits at the same distance in the same space.' }),
+    scribble: Object.freeze({ index: 3, label: 'Scribble', info: 'Loose outlines — the shapes are kept, the detail inside them is not.' }),
+    canny:    Object.freeze({ index: 4, label: 'Canny',    info: 'Hard edges — the most literal of the four; the result traces the original closely.' }),
+});
+
+/**
+ * The control types `model` can actually run, in the model's declared display order.
+ *
+ * Unknown ids are dropped rather than thrown on: a typo in a ModelDef must not take the
+ * whole picker down, and the filtered list is what both the UI and the injector read, so
+ * a dropped id can never reach the graph as a bad switch index.
+ */
+export function modelControlTypes(model) {
+    const ids = Array.isArray(model?.controlTypes) ? model.controlTypes : [];
+    return ids.filter((id) => Object.hasOwn(CONTROL_TYPES, id));
+}
 
 /**
  * May `model` show the style rack on `operation`?
  *
- * Returns false for a model with no style LoRAs at all. Otherwise honours the model's
- * own `styleOps` when declared, else `DEFAULT_STYLE_OPS`.
+ * Returns false for a model with no style LoRAs at all, and for one that ships them
+ * without declaring `styleOps` — see the DEFAULT_STYLE_OPS note above for why the
+ * undeclared case is deliberately empty rather than a guessed default.
  */
 export function modelShowsStyleRack(model, operation) {
     if (model?.capabilities?.styleLoras !== true) return false;
-    const allowed = Array.isArray(model?.styleOps) ? model.styleOps : DEFAULT_STYLE_OPS;
+    const allowed = Array.isArray(model?.styleOps) ? model.styleOps : [];
     return allowed.includes(operation);
 }
 
@@ -1067,7 +1064,7 @@ function _maxMediaSlots(cmd, mediaType, minFallback, model = null) {
  * order — Array.prototype.sort is stable.
  */
 export const OP_ORDER = Object.freeze([
-    't2i', 'i2i', 'depth', 'pose', 'edit', 'upscale', 'detail', 'inpaint',
+    't2i', 'i2i', 'control', 'edit', 'upscale', 'detail', 'inpaint',
     't2v', 'i2v', 'extend',
 ]);
 

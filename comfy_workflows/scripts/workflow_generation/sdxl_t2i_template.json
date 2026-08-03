@@ -2,11 +2,11 @@
   "1455": {
     "inputs": {
       "width": [
-        "1520",
+        "1633",
         0
       ],
       "height": [
-        "1521",
+        "1634",
         0
       ],
       "batch_size": [
@@ -28,21 +28,9 @@
       "title": "Checkpoint"
     }
   },
-  "1463": {
-    "inputs": {
-      "images": [
-        "1551",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Output_image"
-    }
-  },
   "1472": {
     "inputs": {
-      "value": ""
+      "value": "A woman wearing a red dress and smiling"
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -90,24 +78,6 @@
       "title": "CLIP Text Encode (Prompt)"
     }
   },
-  "1520": {
-    "inputs": {
-      "int": 768
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Input_Width"
-    }
-  },
-  "1521": {
-    "inputs": {
-      "int": 1024
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Input_Height"
-    }
-  },
   "1523": {
     "inputs": {
       "int": 1
@@ -136,30 +106,21 @@
         4
       ],
       "latent_image": [
-        "1564",
+        "1667",
         0
       ],
       "seed": [
-        "1534",
+        "1599",
         0
       ],
       "denoise": [
-        "1566",
+        "1666",
         0
       ]
     },
     "class_type": "KSampler",
     "_meta": {
       "title": "KSampler"
-    }
-  },
-  "1534": {
-    "inputs": {
-      "int": 1059
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Input_Seed"
     }
   },
   "1535": {
@@ -314,7 +275,7 @@
         0
       ],
       "seed": [
-        "1534",
+        "1599",
         0
       ]
     },
@@ -363,12 +324,12 @@
         0
       ],
       "resize_type.width": [
-        "1520",
+        "1682",
         0
       ],
       "resize_type.height": [
-        "1521",
-        0
+        "1682",
+        1
       ]
     },
     "class_type": "ResizeImageMaskNode",
@@ -391,30 +352,10 @@
       "title": "Normalized Attention Guidance"
     }
   },
-  "1564": {
-    "inputs": {
-      "true": [
-        "1565",
-        0
-      ],
-      "false": [
-        "1455",
-        0
-      ],
-      "boolean": [
-        "1567",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "i2i"
-    }
-  },
   "1565": {
     "inputs": {
       "pixels": [
-        "1575",
+        "1609",
         0
       ],
       "vae": [
@@ -427,64 +368,6 @@
       "title": "VAE Encode"
     }
   },
-  "1566": {
-    "inputs": {
-      "true": [
-        "1568",
-        0
-      ],
-      "false": [
-        "1569",
-        0
-      ],
-      "boolean": [
-        "1567",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "i2i"
-    }
-  },
-  "1567": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Input_Is_i2i"
-    }
-  },
-  "1568": {
-    "inputs": {
-      "float": 0.3
-    },
-    "class_type": "MpiFloat",
-    "_meta": {
-      "title": "Input_denoise"
-    }
-  },
-  "1569": {
-    "inputs": {
-      "float": 1
-    },
-    "class_type": "MpiFloat",
-    "_meta": {
-      "title": "dummy"
-    }
-  },
-  "1573": {
-    "inputs": {
-      "string": "",
-      "channel": "alpha",
-      "block_if_empty": true
-    },
-    "class_type": "MpiLoadImageFromPath",
-    "_meta": {
-      "title": "Input_Image"
-    }
-  },
   "1575": {
     "inputs": {
       "upscale_method": "lanczos",
@@ -494,15 +377,15 @@
       "divisible_by": 16,
       "device": "cpu",
       "image": [
-        "1573",
+        "1640",
         0
       ],
       "width": [
-        "1520",
+        "1633",
         0
       ],
       "height": [
-        "1521",
+        "1634",
         0
       ]
     },
@@ -513,7 +396,7 @@
   },
   "1576": {
     "inputs": {
-      "type": "depth",
+      "type": "openpose",
       "control_net": [
         "1579",
         0
@@ -524,23 +407,8 @@
       "title": "Set Union ControlNet Type"
     }
   },
-  "1577": {
-    "inputs": {
-      "preprocessor": "DepthAnythingV2Preprocessor",
-      "resolution": 512,
-      "image": [
-        "1575",
-        0
-      ]
-    },
-    "class_type": "AIO_Preprocessor",
-    "_meta": {
-      "title": "AIO Aux Preprocessor"
-    }
-  },
   "1578": {
     "inputs": {
-      "strength": 0.31,
       "start_percent": 0,
       "end_percent": 0.569,
       "positive": [
@@ -552,16 +420,20 @@
         0
       ],
       "control_net": [
-        "1576",
+        "1623",
         0
       ],
       "image": [
-        "1577",
+        "1629",
         0
       ],
       "vae": [
         "1462",
         2
+      ],
+      "strength": [
+        "1621",
+        0
       ]
     },
     "class_type": "ControlNetApplyAdvanced",
@@ -576,18 +448,6 @@
     "class_type": "ControlNetLoader",
     "_meta": {
       "title": "Load ControlNet Model"
-    }
-  },
-  "1580": {
-    "inputs": {
-      "images": [
-        "1577",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
     }
   },
   "1582": {
@@ -648,7 +508,6 @@
   },
   "1584": {
     "inputs": {
-      "boolean": false,
       "true": [
         "1583",
         0
@@ -656,14 +515,763 @@
       "false": [
         "1582",
         0
+      ],
+      "boolean": [
+        "1650",
+        0
       ]
     },
     "class_type": "MpiIfElse",
     "_meta": {
-      "title": "Input_depth_reference"
+      "title": "if else"
     }
   },
   "1585": {
+    "inputs": {
+      "basic_pipe": [
+        "1584",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
+    }
+  },
+  "1588": {
+    "inputs": {
+      "images": [
+        "1592",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "1592": {
+    "inputs": {
+      "passthrough": [
+        "1593",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "1593": {
+    "inputs": {
+      "any_1": [
+        "1551",
+        0
+      ],
+      "any_2": [
+        "1551",
+        0
+      ],
+      "any_3": [
+        "1551",
+        0
+      ],
+      "any_4": [
+        "1551",
+        0
+      ],
+      "any_5": [
+        "1551",
+        0
+      ],
+      "any_6": [
+        "1594",
+        0
+      ],
+      "any_7": [
+        "1595",
+        0
+      ],
+      "select": [
+        "1597",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch10",
+    "_meta": {
+      "title": "Mpi Any Switch 10"
+    }
+  },
+  "1594": {
+    "inputs": {
+      "any": [
+        "1687",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "detailer"
+    }
+  },
+  "1595": {
+    "inputs": {
+      "any": [
+        "1702",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "upscale"
+    }
+  },
+  "1596": {
+    "inputs": {
+      "float": 0.3
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_denoise"
+    }
+  },
+  "1597": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_wf_type"
+    }
+  },
+  "1599": {
+    "inputs": {
+      "int": 976866873951
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "1602": {
+    "inputs": {
+      "preprocessor": "DepthAnythingV2Preprocessor",
+      "resolution": 512,
+      "image": [
+        "1640",
+        0
+      ]
+    },
+    "class_type": "AIO_Preprocessor",
+    "_meta": {
+      "title": "AIO Aux Preprocessor"
+    }
+  },
+  "1609": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 16,
+      "image": [
+        "1640",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "1615": {
+    "inputs": {
+      "preprocessor": "CannyEdgePreprocessor",
+      "resolution": 512,
+      "image": [
+        "1640",
+        0
+      ]
+    },
+    "class_type": "AIO_Preprocessor",
+    "_meta": {
+      "title": "AIO Aux Preprocessor"
+    }
+  },
+  "1617": {
+    "inputs": {
+      "preprocessor": "ScribblePreprocessor",
+      "resolution": 512,
+      "image": [
+        "1640",
+        0
+      ]
+    },
+    "class_type": "AIO_Preprocessor",
+    "_meta": {
+      "title": "AIO Aux Preprocessor"
+    }
+  },
+  "1620": {
+    "inputs": {
+      "preprocessor": "OpenposePreprocessor",
+      "resolution": 512,
+      "image": [
+        "1640",
+        0
+      ]
+    },
+    "class_type": "AIO_Preprocessor",
+    "_meta": {
+      "title": "AIO Aux Preprocessor"
+    }
+  },
+  "1621": {
+    "inputs": {
+      "input_min": 0,
+      "input_max": 1,
+      "output_min": 0,
+      "output_max": 0.5,
+      "clamp": true,
+      "mode": "linear",
+      "value": [
+        "1622",
+        0
+      ]
+    },
+    "class_type": "MpiNormalizeValue",
+    "_meta": {
+      "title": "Mpi Normalize Value"
+    }
+  },
+  "1622": {
+    "inputs": {
+      "float": 1
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Control_strength"
+    }
+  },
+  "1623": {
+    "inputs": {
+      "any_1": [
+        "1576",
+        0
+      ],
+      "any_2": [
+        "1625",
+        0
+      ],
+      "any_3": [
+        "1626",
+        0
+      ],
+      "any_4": [
+        "1627",
+        0
+      ],
+      "select": [
+        "1624",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Mpi Any Switch"
+    }
+  },
+  "1624": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Control_Net"
+    }
+  },
+  "1625": {
+    "inputs": {
+      "type": "depth",
+      "control_net": [
+        "1579",
+        0
+      ]
+    },
+    "class_type": "SetUnionControlNetType",
+    "_meta": {
+      "title": "Set Union ControlNet Type"
+    }
+  },
+  "1626": {
+    "inputs": {
+      "type": "hed/pidi/scribble/ted",
+      "control_net": [
+        "1579",
+        0
+      ]
+    },
+    "class_type": "SetUnionControlNetType",
+    "_meta": {
+      "title": "Set Union ControlNet Type"
+    }
+  },
+  "1627": {
+    "inputs": {
+      "type": "canny/lineart/anime_lineart/mlsd",
+      "control_net": [
+        "1579",
+        0
+      ]
+    },
+    "class_type": "SetUnionControlNetType",
+    "_meta": {
+      "title": "Set Union ControlNet Type"
+    }
+  },
+  "1629": {
+    "inputs": {
+      "any_1": [
+        "1620",
+        0
+      ],
+      "any_2": [
+        "1602",
+        0
+      ],
+      "any_3": [
+        "1617",
+        0
+      ],
+      "any_4": [
+        "1615",
+        0
+      ],
+      "select": [
+        "1624",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Mpi Any Switch"
+    }
+  },
+  "1633": {
+    "inputs": {
+      "int": 768
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Width"
+    }
+  },
+  "1634": {
+    "inputs": {
+      "int": 1024
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Height"
+    }
+  },
+  "1637": {
+    "inputs": {
+      "any": [
+        "1638",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "1638": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Mask"
+    }
+  },
+  "1639": {
+    "inputs": {
+      "channel": "red",
+      "block_if_empty": false,
+      "string": [
+        "1637",
+        0
+      ]
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "mask"
+    }
+  },
+  "1640": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1650": {
+    "inputs": {
+      "operator": "==",
+      "b_value": 3,
+      "a": [
+        "1597",
+        0
+      ]
+    },
+    "class_type": "MpiCompare",
+    "_meta": {
+      "title": "Mpi Compare"
+    }
+  },
+  "1652": {
+    "inputs": {
+      "operator": "==",
+      "b_value": 2,
+      "a": [
+        "1597",
+        0
+      ]
+    },
+    "class_type": "MpiCompare",
+    "_meta": {
+      "title": "Mpi Compare"
+    }
+  },
+  "1666": {
+    "inputs": {
+      "math_expression": "b if a else 1.0",
+      "a": [
+        "1652",
+        0
+      ],
+      "b": [
+        "1596",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "1667": {
+    "inputs": {
+      "any_1": [
+        "1455",
+        0
+      ],
+      "any_2": [
+        "1669",
+        0
+      ],
+      "any_3": [
+        "1565",
+        0
+      ],
+      "select": [
+        "1597",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Mpi Any Switch"
+    }
+  },
+  "1669": {
+    "inputs": {
+      "pixels": [
+        "1575",
+        0
+      ],
+      "vae": [
+        "1462",
+        2
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "1676": {
+    "inputs": {
+      "any_1": [
+        "1633",
+        0
+      ],
+      "any_2": [
+        "1634",
+        0
+      ]
+    },
+    "class_type": "MpiPacker",
+    "_meta": {
+      "title": "Mpi Packer"
+    }
+  },
+  "1677": {
+    "inputs": {
+      "image": [
+        "1609",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Get Image Size"
+    }
+  },
+  "1680": {
+    "inputs": {
+      "any_1": [
+        "1677",
+        0
+      ],
+      "any_2": [
+        "1677",
+        1
+      ]
+    },
+    "class_type": "MpiPacker",
+    "_meta": {
+      "title": "Mpi Packer"
+    }
+  },
+  "1681": {
+    "inputs": {
+      "true": [
+        "1680",
+        0
+      ],
+      "false": [
+        "1676",
+        0
+      ],
+      "boolean": [
+        "1650",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "1682": {
+    "inputs": {
+      "pack": [
+        "1681",
+        0
+      ]
+    },
+    "class_type": "MpiUnpacker",
+    "_meta": {
+      "title": "Mpi Unpacker"
+    }
+  },
+  "1687": {
+    "inputs": {
+      "guide_size": 512,
+      "guide_size_for": true,
+      "max_size": 1024,
+      "mask_mode": true,
+      "seed": 0,
+      "steps": 8,
+      "cfg": 1.4,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
+      "feather": 5,
+      "crop_factor": 1.8,
+      "drop_size": 10,
+      "refiner_ratio": 0.2,
+      "batch_size": 1,
+      "cycle": 1,
+      "inpaint_model": false,
+      "noise_mask_feather": 20,
+      "bbox_fill": false,
+      "contour_fill": false,
+      "image": [
+        "1640",
+        0
+      ],
+      "mask": [
+        "1639",
+        1
+      ],
+      "basic_pipe": [
+        "1584",
+        0
+      ],
+      "denoise": [
+        "1596",
+        0
+      ]
+    },
+    "class_type": "MaskDetailerPipe",
+    "_meta": {
+      "title": "MaskDetailer (SDXL)"
+    }
+  },
+  "1692": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_V"
+    }
+  },
+  "1693": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Grid_H"
+    }
+  },
+  "1694": {
+    "inputs": {
+      "float": 1.5
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Upscale_Factor"
+    }
+  },
+  "1695": {
+    "inputs": {
+      "resize_type": "scale to multiple",
+      "resize_type.multiple": 16,
+      "scale_method": "lanczos",
+      "input": [
+        "1640",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "1697": {
+    "inputs": {
+      "image": [
+        "1695",
+        0
+      ],
+      "horizontal_split": [
+        "1693",
+        0
+      ],
+      "vertical_split": [
+        "1692",
+        0
+      ],
+      "upscale_factor": [
+        "1694",
+        0
+      ],
+      "auto": [
+        "1698",
+        0
+      ]
+    },
+    "class_type": "MpiGridDimensions",
+    "_meta": {
+      "title": "Mpi Grid Dimensions"
+    }
+  },
+  "1698": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Auto_Grid"
+    }
+  },
+  "1700": {
+    "inputs": {
+      "model_name": "4x_NMKD-Siax_200k.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Input_Upscale_Model"
+    }
+  },
+  "1702": {
+    "inputs": {
+      "upscale_by": 2,
+      "steps": 8,
+      "cfg": 1.4,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
+      "mode_type": "Linear",
+      "mask_blur": 8,
+      "tile_padding": 32,
+      "seam_fix_mode": "None",
+      "seam_fix_denoise": 1,
+      "seam_fix_width": 64,
+      "seam_fix_mask_blur": 8,
+      "seam_fix_padding": 16,
+      "force_uniform_tiles": true,
+      "tiled_decode": false,
+      "batch_size": 1,
+      "model": [
+        "1704",
+        0
+      ],
+      "positive": [
+        "1704",
+        3
+      ],
+      "negative": [
+        "1704",
+        4
+      ],
+      "vae": [
+        "1704",
+        2
+      ],
+      "upscale_model": [
+        "1700",
+        0
+      ],
+      "seed": [
+        "1599",
+        0
+      ],
+      "denoise": [
+        "1596",
+        0
+      ],
+      "tile_width": [
+        "1697",
+        0
+      ],
+      "tile_height": [
+        "1697",
+        1
+      ]
+    },
+    "class_type": "UltimateSDUpscale",
+    "_meta": {
+      "title": "Ultimate SD Upscale"
+    }
+  },
+  "1704": {
     "inputs": {
       "basic_pipe": [
         "1584",

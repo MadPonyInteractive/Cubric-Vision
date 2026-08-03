@@ -165,7 +165,7 @@ REPLACES rather than merges when a model declares `opInject`:
 |---|---|
 | 1 | `t2i` |
 | 2 | `i2i` |
-| 3 | `depth` |
+| 3 | `control` |
 | 4 | `krea2Edit` |
 | 5 | *(unused — edit takes an optional mask, so there is no separate inpaint branch)* |
 | 6 | `detail` |
@@ -188,14 +188,14 @@ whole-image edit), `Input_Image_2` (the depth line's subject reference),
 
 `Input_depth_strength` was authored-only through the migration and became a control
 afterwards: the **Depth Strength** slider (`depthStrength` in `PromptBoxControls.js`,
-`scope: 'perOp'`, on the `depth` op only). The slider value IS the
+`scope: 'perOp'`, on the `control` op only, as `controlStrength` → `Input_Control_strength`). The slider value IS the
 `Krea2ControlLoRALoader` `strength` — no mapping, no scaling.
 
 Range **0–1.00, step 0.05, default 1.00** (the graph's own bake). It is a LOOSENING knob and
 that is why it was added: at 1.00 the depth map is too strict — it pins the composition so
 hard the prompt cannot move anything. **0.6–0.8 is the working band**, where the pose still
 reads but the model may reinterpret the framing. At 0 the loader early-returns the unpatched
-model and the op stops being a depth op. **1.00 is the deliberate ceiling** — the node
+model and the op stops being a control op. **1.00 is the deliberate ceiling** — the node
 accepts ±100, but a 1.5 test returned the subject's clothing dissolved into ribbons, so
 overdrive is capped out rather than offered. Krea2-only, gated on `capabilities.depthStrength`, because Klein and Qwen
 condition on the depth image directly and have no equivalent strength.

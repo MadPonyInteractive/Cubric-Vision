@@ -17,7 +17,7 @@ is by `_meta.title` (the app's MPI-116 naming law).
 
 # (filename prefix, handler name). First matching prefix wins.
 HANDLERS = [
-    ("sdxl_",     "sdxl"),   # sdxl_t2i_template.json, sdxl_upscaler_template.json, ...
+    ("sdxl_",     "sdxl"),   # sdxl_t2i_template.json — the ONE master template (MPI-365)
     ("wan22_5b_", "wan5b"),  # wan22_5b_ti2v_template.json — MUST precede wan22_ (first match wins)
     ("wan22_",    "wan"),    # wan22_i2v_template.json, wan22_t2v_template.json
     ("ltx_",      "ltx"),    # source = ltx_i2v_t2v_template.json (output lowercased by sync)

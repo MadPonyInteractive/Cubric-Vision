@@ -14,16 +14,17 @@ export const OPERATION_REGISTRY = {
     // Image operations
     t2i:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     i2i:          { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
-    // `depth` is the RENAME of `poseReference` (MPI-365). The op always drove a depth
-    // map — `poseReference` was leftover naming from before a real pose op existed, and
-    // it had to go once Qwen gained one. The KEY is new in 1.4.0 even though the
-    // capability shipped in 1.1.0, so `getOperationsIntroducedIn` will list it: it is a
-    // rename, NOT a new feature — keep it out of the user-facing release notes.
-    depth:        { latestVersion: '1.0', appVersionIntroduced: '1.4.0' },
-    // Genuinely new in 1.4.0 — OpenposePreprocessor feeding the model's own image
-    // conditioning (no ControlNet checkpoint). Qwen-Image-Edit first; SDXL next.
-    pose:         { latestVersion: '1.0', appVersionIntroduced: '1.4.0' },
-    // Superseded by `depth` (1.4.0). Kept ONLY so history items written by <=1.3.0 —
+    // `control` absorbs the whole structure-transfer family (MPI-365): the user picks
+    // WHICH structure (pose / depth / scribble / canny) and the graph switches its
+    // preprocessor. It replaced two keys that existed only inside 1.4.0 and never
+    // shipped — `depth` (itself a rename of `poseReference`) and a short-lived `pose` —
+    // so no history item can carry either and neither needs a deprecated entry.
+    //
+    // The KEY is new in 1.4.0 even though depth transfer shipped in 1.1.0, so
+    // `getOperationsIntroducedIn` lists it. What is genuinely new for users is the
+    // TYPE PICKER on SDXL and Qwen, not the op — write the note that way.
+    control:      { latestVersion: '1.0', appVersionIntroduced: '1.4.0' },
+    // Superseded by `control` (1.4.0). Kept ONLY so history items written by <=1.3.0 —
     // which stamped `poseReference` as the operation — still validate and stay viewable.
     // Nothing may WRITE this key again.
     poseReference: { latestVersion: '1.0', appVersionIntroduced: '1.1.0', deprecated: true },

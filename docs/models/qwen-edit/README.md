@@ -8,9 +8,9 @@
 > Blocks **MPI-299** (Head Swap app), which requires this model wired.
 >
 > **MPI-365 (2026-08-02): THREE ops now, one master graph.** `qwen_edit.json` is a
-> one-master-template model — `qwenEdit`, `depth` and `pose` are branches selected by
+> one-master-template model — `qwenEdit` and `control` are branches selected by
 > `Input_wf_type` (**1 edit · 2 depth · 3 pose**) from the ModelDef's `opInject`.
-> **`pose` is new to the whole app** and uses `OpenposePreprocessor`; `depth` uses
+> **Pose is new to the whole app** and uses `OpenposePreprocessor`; depth uses
 > `AIO_Preprocessor` (DepthAnythingV2). There is **NO ControlNet checkpoint** — both maps
 > feed Qwen's own image conditioning — so the cost is the `comfyui_controlnet_aux` NODE
 > dependency plus its self-downloaded annotator weights (DepthAnythingV2's are already
