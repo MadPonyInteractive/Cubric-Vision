@@ -447,6 +447,12 @@ function _createDepJob(dep) {
         seedBytes: _parseSizeToBytes(dep.size),
         error: null,
         sha256Expected: dep.sha256 || null,
+        // MPI-429 — explicit second origin for deps whose byte-identical copy lives in a
+        // third-party repo under a different path AND filename, so no rewrite can reach
+        // it. Generated from the classification sweep; absent for everything the generic
+        // prefix rewrite already covers. See _mirrorUrlsFor.
+        mirrorUrl: dep.mirrorUrl || null,
+        noMirror: dep.noMirror || false,
         // MPI-149 — carry the install-enforcement fields through to the runtime depJob.
         // finishCustomNodeInstall iterates modelJob.deps (these depJobs); the install
         // loop reads dep.pipPins (force known-good pins AFTER requirements, e.g.
@@ -669,10 +675,23 @@ class FileDownloader {
             // it rather than scrapping it). Only transport errors qualify — a SHA256
             // mismatch or a 404 would fail identically on every mirror.
             const blocked = _describeTransportError(err, this._originUrl || this.depJob.url);
+            // MPI-429 — remember it, because the RETRY may die for an unrelated reason.
+            // A mirror that 404s (a dep we could not re-host, a repo edit) is not a
+            // transport error, so without this the user who is genuinely network-blocked
+            // gets "downloader error" instead of the VPN remedy — the failover would
+            // have COST him the readable message. The original diagnosis still stands:
+            // the first route was blocked, and a tunnel is still what fixes it.
+            if (blocked) this._blockedMsg = blocked;
             if (blocked) {
                 logger.warn('download', `${this.depJob.id}: network-blocked — ${this.depJob.url} — raw: ${err.message}`);
                 this._triedUrls = this._triedUrls || new Set([this.depJob.url]);
-                const next = _mirrorUrlsFor(this.depJob.url).find(u => !this._triedUrls.has(u));
+                // MPI-429 — ALWAYS derive from the ORIGIN url, never from the mutated
+                // depJob.url. Two bugs otherwise: the origin gate would reject the second
+                // hop (the url is a mirror by then, not an R2 object), and a mirror
+                // pathname already carries the previous base's PREFIX, so the next
+                // rewrite would double it. _triedUrls is what stops the walk repeating.
+                const next = _mirrorUrlsFor(this._originUrl || this.depJob.url, this.depJob)
+                    .find(u => !this._triedUrls.has(u));
                 if (next) {
                     this._triedUrls.add(next);
                     logger.info('download', `${this.depJob.id}: failing over to mirror ${new URL(next).host}`);
@@ -684,8 +703,8 @@ class FileDownloader {
                 }
             }
             _setDepStatus(this.depJob, 'failed', 'downloader error');
-            this.depJob.error = blocked || err.message;
-            this.depJob.networkBlocked = Boolean(blocked);
+            this.depJob.error = blocked || this._blockedMsg || err.message;
+            this.depJob.networkBlocked = Boolean(blocked || this._blockedMsg);
             _broadcast('download:failed', {
                 depId: this.depJob.id,
                 error: this.depJob.error,
@@ -741,15 +760,23 @@ class FileDownloader {
         // truncates in place, never a " (1)" duplicate.
         const partial = await getPartialDownloadState(this.localPath);
         let markerUrl = null;
+        let markerSha = null;
         if (partial.resumable) {
             const marker = await fs.readJson(getDownloadMarkerPath(this.localPath)).catch(() => ({}));
             markerUrl = marker.url || null;
+            markerSha = marker.sha256 || null;
         }
         await markDownloadInProgress(this.localPath, {
             depId: this.depJob.id,
             url: this.depJob.url,
+            // MPI-429 — the object's real identity. A mirror URL may carry a path prefix
+            // (our HF re-host) or a different repo AND filename entirely (a third-party
+            // byte-identical copy), so NO url comparison can decide "same object" once a
+            // failover has happened — and getting it wrong deletes the partial the
+            // failover exists to preserve. The hash can decide it, and does.
+            sha256: this.depJob.sha256Expected || null,
         });
-        if (partial.resumable && (!markerUrl || _isSameObjectUrl(markerUrl, this.depJob.url))) {
+        if (partial.resumable && _shouldResumePartial({ sha256: markerSha, url: markerUrl }, this.depJob)) {
             this.depJob.downloadedBytes = partial.downloaded;
             logger.info('download', `resuming ${this.depJob.id} from ${(partial.downloaded / 1073741824).toFixed(2)}GB on disk`);
             // Not awaited (same idiom as start() below): the promise resolves only
@@ -895,31 +922,71 @@ const _TRANSPORT_ERROR_PATTERNS = [
 // transport attempt retries the identical path against the next entry before the dep is
 // declared failed.
 //
-// TO ENABLE A MIRROR: add its origin to _MODEL_MIRRORS below. The object layout must be
-// identical (`<origin>/vision/models/<comfy-type>/<file>`), because only the origin is
-// swapped — see _mirrorUrlsFor. Empty by default: failing over to a host that does not
-// exist yet would turn one clean error into two slow ones. CUBRIC_MODEL_MIRRORS
-// (comma-separated) overrides for testing without a rebuild.
+// TO ENABLE A MIRROR: add its base to _DEFAULT_MODEL_MIRRORS below. A base is an origin
+// OPTIONALLY followed by a path prefix, and the dep's object path is appended to it —
+// see _mirrorUrlsFor. CUBRIC_MODEL_MIRRORS (comma-separated) REPLACES the default for
+// testing without a rebuild.
 //
 // A same-provider mirror only defeats HOSTNAME-keyed blocking. The 2026-08-02 report
 // behind this card was deep-packet interference that killed the stream at ~20%, and a
-// second Cloudflare hostname is NOT proven to survive that — an off-Cloudflare origin
-// (Hugging Face / Backblaze B2 / GitHub Releases) is the fallback if it does not.
-const _MODEL_MIRRORS = (process.env.CUBRIC_MODEL_MIRRORS || '')
-    .split(',')
+// second Cloudflare hostname is NOT proven to survive that — MPI-429 therefore picked an
+// off-Cloudflare origin: Hugging Face, which defeats FQDN-, domain- AND provider-keyed
+// filtering. It is NOT proven against that reporter's transfer-stage DPI.
+//
+// MPI-429 — the prefix is why the base is not just an origin: HF serves at
+// `huggingface.co/<repo>/resolve/main/<path>`, so an origin-only swap would produce
+// `huggingface.co/vision/models/…` and 404 on every dep. Our 31 re-hosted weights sit at
+// the SAME object path under that prefix, so this one base covers all of them with no
+// per-dep data. The other 65 deps are byte-identical copies in THIRD-PARTY repos under
+// different paths and different filenames — no rewrite can reach those, so they carry an
+// explicit `mirrorUrl` (generated from the sweep, never hand-written) which takes
+// precedence and suppresses the prefix rewrite for that dep.
+// MPI-429 — the generic rewrite is only valid for objects whose PATH we re-hosted. The
+// other two things FileDownloader pulls come from github.com: the engine archive
+// (engine.js) and the custom-node zips. MPI-427 measured github at 45/45 succeeded
+// against models.cubric.studio 0/44, so they neither need a mirror nor have one — and
+// rewriting a github release path onto our HF repo would spend a retry on a certain 404.
+// Keyed on the path, not the host, because the host is the thing a failover CHANGES.
+const _MIRRORED_PATH_PREFIX = '/vision/models/';
+const _DEFAULT_MODEL_MIRRORS = ['https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main'];
+const _MODEL_MIRRORS = (process.env.CUBRIC_MODEL_MIRRORS
+    ? process.env.CUBRIC_MODEL_MIRRORS.split(',')
+    : _DEFAULT_MODEL_MIRRORS)
     .map(s => s.trim().replace(/\/+$/, ''))
     .filter(Boolean);
 
-/** Alternate origins for `url`, in order, skipping the origin it already uses. */
-function _mirrorUrlsFor(url) {
+/**
+ * Alternate URLs for `url`, in order, skipping the origin it already uses.
+ * `dep` is optional; when it carries a `mirrorUrl` that URL is the ONLY alternate —
+ * the object does not exist at our own path, so the generic rewrite would only spend
+ * a second attempt on a guaranteed 404.
+ *
+ * URL pathnames only. `new URL().pathname` is `/`-separated by spec on every platform,
+ * so nothing here is affected by `path.sep` — the filesystem side (localPath) is built
+ * separately with path.join and is untouched by a mirror swap.
+ */
+function _mirrorUrlsFor(url, dep) {
     let parsed;
     try { parsed = new URL(url); } catch { return []; }
+    // MPI-429 — a dep on R2 with no HF copy. The prefix rewrite would hand it a URL that
+    // 404s, spending a retry to reach the same failure. Any dep added to R2 without being
+    // re-hosted must carry this; the sweep script is what proves which ones those are.
+    if (dep && dep.noMirror) return [];
     const out = [];
-    for (const origin of _MODEL_MIRRORS) {
-        let base;
-        try { base = new URL(origin); } catch { continue; }
-        if (base.origin === parsed.origin) continue;
-        out.push(`${base.origin}${parsed.pathname}${parsed.search}`);
+    const push = (u) => {
+        try { if (new URL(u).origin !== parsed.origin && !out.includes(u)) out.push(u); } catch { /* skip */ }
+    };
+    if (dep && dep.mirrorUrl) {
+        push(dep.mirrorUrl);
+        return out;
+    }
+    if (!parsed.pathname.startsWith(_MIRRORED_PATH_PREFIX)) return out;
+    for (const base of _MODEL_MIRRORS) {
+        let parsedBase;
+        try { parsedBase = new URL(base); } catch { continue; }
+        if (parsedBase.origin === parsed.origin) continue;
+        const prefix = parsedBase.pathname.replace(/\/+$/, '');
+        push(`${parsedBase.origin}${prefix}${parsed.pathname}${parsed.search}`);
     }
     return out;
 }
@@ -932,14 +999,41 @@ function _mirrorUrlsFor(url) {
  * partial a failover exists to preserve — the 2026-08-02 user lost his 20% to a retry
  * and reported it as "it jumped back down to 8". Path equality keeps the SHA256 verify
  * as the real net.
+ *
+ * MPI-429 — this is now only the FALLBACK for legacy markers. The marker records the
+ * dep's sha256, and that is the real object identity (see the resume site); URL shape
+ * cannot be, because a mirror may carry a path prefix or a different filename entirely.
+ * The suffix test covers the prefix case (`/vision/models/x` under
+ * `/<repo>/resolve/main/vision/models/x`), which a strict equality check would scrap.
  */
 function _isSameObjectUrl(a, b) {
     if (a === b) return true;
     try {
-        const ua = new URL(a);
-        const ub = new URL(b);
-        return ua.pathname === ub.pathname;
+        const pa = new URL(a).pathname;
+        const pb = new URL(b).pathname;
+        return pa === pb || pa.endsWith(pb) || pb.endsWith(pa);
     } catch { return false; }
+}
+
+/**
+ * MPI-429 — may an existing partial be Range-resumed for this dep?
+ *
+ * The marker's sha256 IS the object's identity: same hash, same bytes, safe to resume
+ * from whatever origin is now in play. This replaced a URL comparison, which cannot
+ * answer the question once a mirror is in the picture — our HF re-host serves the same
+ * object under a path PREFIX, and a third-party copy under a different repo AND
+ * filename, so a URL-shaped test would scrap exactly the partial the failover exists to
+ * preserve (MPI-317's data loss, re-armed).
+ *
+ * URL comparison survives only as the fallback for markers written before the sha256
+ * field existed and for deps that carry no sha256 at all (custom-node zips).
+ */
+function _shouldResumePartial(marker, depJob) {
+    const markerSha = marker && marker.sha256;
+    const want = depJob && depJob.sha256Expected;
+    if (markerSha && want) return String(markerSha).toLowerCase() === String(want).toLowerCase();
+    const markerUrl = (marker && marker.url) || null;
+    return !markerUrl || _isSameObjectUrl(markerUrl, depJob.url);
 }
 
 function _describeTransportError(err, url) {
@@ -3034,6 +3128,7 @@ module.exports = {
     _describeTransportError, // MPI-427 — exported for unit test
     _mirrorUrlsFor, // MPI-427 — exported for unit test
     _isSameObjectUrl, // MPI-427 — exported for unit test
+    _shouldResumePartial, // MPI-429 — exported for unit test
     _pluginRequiredDepIds, // MPI-310 — exported for unit test
     _localSharedDepsMap, // MPI-310 — exported for unit test (model-side protection)
     _setModelStatus, // MPI-317 F5 — exported for unit test (store-terminal guard)

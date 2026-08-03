@@ -199,7 +199,7 @@ Non-blocking download router using `node-downloader-helper`. **Resume contract (
 
 **FileDownloader class** (`routes/downloadManager.js`; renamed from `ResumableDownloader` in MPI-276, resumable again since MPI-317):
 A single-stream `node-downloader-helper` wrapper: start/resume, cancel (stop + remove), stop-keep (shutdown), SHA256 verify, SSE progress broadcast.
-- `.download()`: a marker-blessed partial (file AND `.cubricdl` survived a failure/stall/quit) resumes via `resumeFromFile` with an explicit Range request — lenient url guard — legacy markers without a url still resume, and the comparison is **path-equal, not string-equal** (`_isSameObjectUrl`): the SAME object path served from a different ORIGIN counts as the same object and resumes, so a mirror host-swap keeps the bytes instead of scrapping them. Only a genuinely DIFFERENT object discards the partial and starts clean. This had to change before mirror failover could be safe — MPI-317's string compare would have deleted exactly the partial failover exists to preserve; the SHA256 verify remains the net (MPI-427). No marker-blessed partial → scrub any stale file, one clean stream. 30s socket-inactivity `timeout` so a black-hole route emits `error` instead of hanging (MPI-120).
+- `.download()`: a marker-blessed partial (file AND `.cubricdl` survived a failure/stall/quit) resumes via `resumeFromFile` with an explicit Range request. **The resume key is the marker's `sha256`, not its url** (`_shouldResumePartial`, MPI-429): same hash = same bytes = safe to resume from whatever origin is now in play. No url comparison can answer this once a mirror exists — our HF re-host serves the same object under a path PREFIX, and a third-party copy under a different repo AND filename. `_isSameObjectUrl` survives only as the fallback for pre-MPI-429 markers and for deps with no `sha256` (custom-node zips); it is suffix-tolerant so the prefix case still matches. Getting this wrong re-arms MPI-317's data loss — deleting exactly the partial failover exists to preserve. The SHA256 verify remains the net (MPI-427). No marker-blessed partial → scrub any stale file, one clean stream. 30s socket-inactivity `timeout` so a black-hole route emits `error` instead of hanging (MPI-120).
 - `.cancel()`: user intent — `stop()` + delete partial + marker. `.stopKeep()`: shutdown/teardown — stream closed, partial + marker KEPT for next-boot resume (used by `cancelAllDownloads` on SIGTERM/SIGINT, never by the user-cancel route).
 - On completion: verifies `sha256Expected` against the digest computed **incrementally while the file streamed in** (MPI-296 — a `Transform` hash-sink `.pipe()`d ahead of the file write, finalized on `end` into `_streamHashHex`), skipping a whole-file re-read that cost ~35s on a 6.6GB weight (34814ms→1ms). RESUMED streams skip the fast path (the pipe saw only the tail — a tail-only digest is garbage) and `_verifySha256` falls back to the full disk re-read, so a bad resume costs one failed verify, never a corrupt install. Then clears `<file>.cubricdl`, marks dep `complete`.
 - On SHA256 mismatch: deletes the file, clears the marker, marks dep `failed`.
@@ -432,3 +432,60 @@ never starting the doomed download. `wrapper.py` (≥0.2.31) also fast-fails a
 genuine mid-write `ENOSPC` (no pointless retry) and gives the httpx fallback
 path resume+retry so a transient CDN drop doesn't restart a multi-GB file from
 byte 0.
+
+## The second origin — Hugging Face mirror failover (MPI-429)
+
+Every model weight ships with one primary URL on `models.cubric.studio` (R2). One ISP
+filter on that host takes the whole catalogue with it, so a **transport** failure — and
+only a transport failure — retries the same object against a second origin before the dep
+is declared failed. A 404 or a SHA256 mismatch would fail identically everywhere, so those
+do not qualify.
+
+**The mirror is Hugging Face, not a second Cloudflare hostname.** A second `cubric.studio`
+subdomain only defeats an FQDN-keyed filter, and MPI-427 named the likely trigger as
+`cubric.studio` being a young uncategorised domain — category filters key on the
+REGISTRABLE DOMAIN. HF beats FQDN, domain and provider keying at once.
+
+Two shapes, because the copies do not all live in one place. All 97 R2 deps were
+classified by matching our recorded `sha256` against HF LFS oids (the tree API exposes
+`lfs.oid`, which IS the sha256 — so the match is by HASH, not by path):
+
+| Set | Deps | Mirror |
+|---|---|---|
+| our own bakes, re-hosted to `Mad-Pony-Interactive/cubric-studio` | 31 | generic prefix rewrite, no per-dep data |
+| byte-identical copies already published by third parties | 65 | explicit per-dep `mirrorUrl` |
+| `qwen-lora-headswap` — no provenance, never re-hosted | 1 | `noMirror: true` |
+
+- **The base carries a PATH PREFIX, not just an origin.** HF serves at
+  `huggingface.co/<repo>/resolve/main/<path>`; an origin-only swap emits
+  `huggingface.co/vision/models/…` and 404s on every dep.
+- **`mirrorUrl` wins and suppresses the rewrite.** Those 65 sit under a different repo AND
+  a different filename, so no rewrite reaches them, and emitting our path too would spend
+  a retry on a certain 404. Generate it from the sweep — never hand-write it.
+- **`noMirror: true` for any R2 dep with no HF copy.** Without it the rewrite hands it a
+  URL that 404s. Adding a dep to R2 without re-hosting it means setting this.
+- **Only `/vision/models/` paths are rewritten.** `FileDownloader` also pulls the engine
+  archive (`engine.js`) and the custom-node zips, both from github.com — MPI-427 measured
+  github 45/45 against models.cubric.studio 0/44. Keyed on the PATH, not the host, because
+  the host is the thing a failover changes.
+- **Mirrors are always derived from `_originUrl`, never from the mutated `depJob.url`.** A
+  mirror pathname already carries the previous base's prefix, so rewriting from it would
+  double the prefix; `_triedUrls` is what stops the walk repeating.
+- **A mirror that fails does not cost the user his diagnosis.** The blocked message is
+  remembered (`_blockedMsg`): if R2 was blocked and the mirror then 404s, the failure still
+  reports the VPN remedy and `networkBlocked`, not a bare "status code 404".
+
+**Local-only by construction.** `_mirrorUrlsFor` lives in the `downloadManager.js`
+`FileDownloader`; the Pod wrapper's aria2c downloader never consults it, so R2 stays
+primary on the remote engine and the HF/Xet multi-connection throttling that the R2
+migration (MPI-129/140) fixed cannot come back. No engine-split sweep applies here.
+
+Proven 2026-08-03: all 96 mirrors HEAD-checked live, `X-Linked-ETag` (the LFS oid) equal
+to the dep's recorded sha256 on every one; and an end-to-end run against a dead origin
+completed off huggingface.co and passed the SHA256 verify with the shipped default and no
+env override. **NOT proven against the original reporter's transfer-stage DPI** — he is
+unreachable. This defeats host-, domain- and provider-keyed blocking; it is not a proven
+fix for deep-packet interference.
+
+`CUBRIC_MODEL_MIRRORS` (comma-separated) REPLACES the default at runtime for testing
+without a rebuild. Guard: `tests/transport-error-message.test.cjs`.
