@@ -143,3 +143,40 @@ title ("migrate all models…") is not yet satisfied. Card stays in `doing` at
 migrating. Its upcoming localised-edit work is a separate card in a separate session.
 When it lands, the localised-edit bullet in `docs/releases/UNRELEASED.md` gets EXTENDED,
 not duplicated.
+
+## Live verification — 2026-08-03, the control merge + SDXL migration
+
+**User-confirmed working.** After a hard reload, the control op, its type picker and the
+migrated SDXL family behave correctly in the app. One issue was raised during the pass
+and then withdrawn by the user as a dud — nothing outstanding from it.
+
+Two defects were found and fixed DURING the pass, both worth keeping:
+
+1. **`UltimateSDUpscale.image` was unconnected in the re-exported SDXL template**, and it
+   failed EVERY control run, not just upscale:
+
+       Failed to validate prompt for output 1592:
+       * UltimateSDUpscale 1702:
+         - Required input is missing: image
+
+   This is the master-template trap read from the other side. ComfyUI validates every
+   node at submit even on a branch lazy evaluation will never reach, so one malformed
+   branch takes the whole file down with it. When a migrated model fails on an op that
+   does not touch the broken nodes, suspect a sibling branch before suspecting injection.
+   Fixed by re-export + `sync-raw-workflows.mjs`.
+
+2. **The control guide named all four types on every model.** The Krea2 popup promised a
+   Scribble its graph cannot run. The "which structure" paragraph is now DERIVED from
+   `ModelDef.controlTypes` (`controlTypesParagraph`, spliced by `getOpHelp`) instead of
+   authored, so it cannot go stale again; a one-type model says it has one control rather
+   than describing a picker it never renders. Klein's `byModel` override is untouched.
+   Pinned by a test that asserts Krea2/Chroma/Qwen never mention a type they cannot run.
+
+### Still unverified
+
+- **SDXL detail and upscale from the master template.** They now run out of
+  `t2i_<model>.json` instead of the ten deleted `detailer_*`/`upscaler_*` files. The
+  upscale branch is the one that was broken above, so it has had the least exercise of
+  any path in this change.
+- **The video models are not migrated** (wan-22, ltx-23 x2, wan22-5b). They are the only
+  reason this card is not closeable on the image work alone.
