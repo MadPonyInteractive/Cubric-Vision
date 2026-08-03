@@ -43,6 +43,10 @@
 
 ## importantChanges
 
+- **A detection you don't add is a preview.** Detect, Points and Text show their
+  result in green as a preview. Leaving the tool now discards it — press **Add**
+  to keep it. Previously an un-added detection followed you to other tools and
+  was silently used in the next generation.
 - **Krea 2 and Chroma styles now reach Detail and Upscale.** Every operation on
   these models runs one workflow, so the style you picked stays applied through
   the finishing passes instead of being dropped by them.
