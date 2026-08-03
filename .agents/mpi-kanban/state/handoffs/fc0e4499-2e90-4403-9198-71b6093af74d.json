@@ -4,7 +4,7 @@
   "generated_at": "2026-08-03T18:05:00Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-424 umbrella reordered (Paint before Shapes); MPI-375 Paint items 1-3 shipped and user-verified",
     "branch": "master"

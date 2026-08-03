@@ -1,0 +1,142 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "04521b6e-ebc5-4258-9d69-357a62fda75a",
+  "generated_at": "2026-08-03T23:35:00Z",
+  "from_session": null,
+  "to_role": "docs",
+  "status": "open",
+  "session": {
+    "name": "MPI-375 item 4 shipped and user-verified — per-entry paint persistence, Apply through a new sibling route, and the opacity bake",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue the MPI-424 canvas tool family umbrella; implement MPI-375 (Paint) plan item 4 — per-entry paint persistence and Apply through a NEW SIBLING route in routes/projects.js.",
+    "status": "in_progress",
+    "summary": "Item 4 is DONE, user-verified in the app ('all tests passed') and committed as 7e0ee5aa. Only item 5 remains, and it is pure documentation — no code. After it, MPI-368 (Shapes) is next in the umbrella."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-375/plan.md",
+    "completed": [
+      "Items 1-3 (shared dab, PaintManager, the Paint tool and the predicate split) — shipped and user-verified 2026-08-03, commit 7303d60e.",
+      "Item 4 PERSISTENCE: paint.png joins the mask layers in the same session TEMP item dir, written when the layer has pixels and DELETED when it does not, so a cleared layer cannot resurrect. New IPC mask-temp:write-paint / delete-paint; read returns paint.",
+      "Item 4 APPLY: POST /project/apply-paint, a sibling of composite-media sharing only nextSequence / .meta / thumbnail / response shape. services/imageComposite.js gained compositeOverlay(). viewer.el.applyPaint emits 'paint-applied'; the Block appends it through the same path as 'crop-applied'.",
+      "mask-temp:delete NARROWED from a directory nuke to the three mask files — paint.png lives in that dir and both callers (Clear mask, paste-mask-to-entry) would otherwise have wiped it silently.",
+      "Apply HONOURS the opacity slider (user asked at verification). Measured through the live route: 0.75 -> 191, 0.7 -> 179, 0.5 -> 128, absent/garbage -> 255.",
+      "Suite 336 -> 342, 0 fail. Eight negative controls, each restored byte-identical. Committed as 7e0ee5aa."
+    ],
+    "pending": [
+      "MPI-375 item 5 — THE ONLY THING LEFT ON THIS CARD, and it is docs-only: new docs/painting.md, the docs/masking-undo.md enumerated mutation set, routing from docs/README.md AND the CLAUDE.md Context Router, and UNRELEASED.md.",
+      "UNRELEASED.md owes TWO lines, not one: the Paint tool, AND separately that the mask brush no longer drops dabs on a fast drag — a user-visible change to a shipped tool that must not be folded into 'paint added'.",
+      "Then MPI-368 (Shapes), which needs the RGBA layer's rasterise target. Then MPI-373 (Composite).",
+      "MPI-426 remains fully open and NOT closeable — verified in source 2026-08-03, note is on the card."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-375",
+    "title": "Paint - RGBA layer, shared brush engine, alpha brush pack",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-375/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-375/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-375/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-375/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-375/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement MPI-375 item 5 (docs)"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-375/plan.md: item 4 moved to ## Completed with its four sub-results; three new Plan Drift entries (the session-scoped TEMP correction, the mask-temp:delete narrowing, and the opacity bake).",
+      "MPI-375/validation.md: § Round 3 holds the full automated evidence, the 6+2 negative controls, the live-route pixel measurements, the opacity table, the stale-build diagnosis, and the undo-lifetime answer.",
+      "MPI-375/checklist.md: item 4 ticked USER-VERIFIED.",
+      "Memory tool_main_process_no_hot_reload.md gained the Express-server case and the 404-vs-400 differential probe; the MEMORY.md hook was extended to match.",
+      "Committed as 7e0ee5aa (15 files). The shared .agents/mpi-kanban/events.jsonl was staged via the build-the-blob recipe so a PEER AGENT's two uncommitted MPI-365 lines were left in the tree untouched."
+    ],
+    "pending": [
+      "docs/painting.md does NOT exist yet — until it lands the paint layer is undocumented outside the card. It must be ROUTED from docs/README.md and the CLAUDE.md Context Router or it is invisible to the next session.",
+      "docs/masking-undo.md's ENUMERATED mutation set does not yet list the paint mutations. That list is load-bearing: an unlisted mutation is a silent hole in Ctrl+Z. PaintManager mutates in paint(), clear(), and setFromDataURL() (a LOAD — records nothing).",
+      "docs/masking-tools.md § taxonomy: the Paint row is still a forward reference.",
+      "UNRELEASED.md has NOT been touched. TWO lines owed (see plan.pending).",
+      "The v1.3.0 doc (docs/releases/2026-07-30-v1.3.0.md) still carries uncommitted cross-post ticks in the working tree. NOT from this session or the two before it — left deliberately, it belongs to whoever made it. Do not sweep it into a commit.",
+      "MPI-435 (alpha brush pack) is unblocked the moment the shared dab exists — which it does. Clear its blocked maturity and point it at brushDab.js stampDab()."
+    ]
+  },
+  "next_action": {
+    "description": "Implement MPI-375 plan item 5, which is documentation only — no code should change. Write docs/painting.md (docs/masking.md is at its 200-line cap): the one-RGBA-layer model, the image-native resolution decision and PAINT_MAX_EDGE 4096, per-entry TEMP persistence including that mask-temp:delete deliberately spares paint.png, why paint is NOT a preview and does not extend discardPreview(), how Apply flattens server-side through POST /project/apply-paint with the opacity bake, and the shared-dab seam MPI-435 will parameterise plus the rasterise target MPI-368 needs. Add the paint mutations to docs/masking-undo.md's enumerated set. Route the new doc from docs/README.md AND the CLAUDE.md Context Router. Add TWO separate UNRELEASED.md lines. Verify every named file, function and flag exists in source before writing it down.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "PAINT PERSISTS PER ENTRY, and the TEMP store is SESSION-SCOPED. main.js deletes MASK_TEMP_ROOT on quit and prunes stale dirs at boot, so paint survives an entry switch, a tool switch and a renderer reload — but NOT a quit and relaunch. Masks have always behaved this way. The plan's original 'Reload the app: still there' line was wrong and is corrected in Plan Drift.",
+      "PERSIST WRITES OR DELETES, never just writes. The mask layers get their stale copy dropped by clearMask()'s TEMP delete; paint has no such twin, so a write-only persist would resurrect a cleared layer on the next visit to that entry.",
+      "mask-temp:delete IS NO LONGER A DIRECTORY NUKE. It removes manual.png, subtract.png and auto.json by name. paint.png shares that dir and is not a mask, so a dir-wide rm would have made Clear mask wipe the paint layer. A test guard fails if anyone restores rmSync(dir, ...).",
+      "APPLY IS A SIBLING ROUTE, NOT A MODE OF composite-media. That route blends two project FILES through a mask; paint has neither — one file plus an RGBA layer carrying its own alpha. Only the surrounding machinery is shared. Destabilising MPI-362's shipped blend to save a route was the wrong trade.",
+      "APPLY HONOURS THE OPACITY SLIDER (changed on the user's request, 2026-08-03). The server scales the FLATTENED layer's alpha once, which is the same maths as the canvas drawing at globalAlpha. Applied layer-wide, not per dab, so overlapping dabs in one stroke cannot bake darker than the rest — which is why this does NOT reopen the refused per-stroke-alpha decision.",
+      "UNDO DOES NOT SURVIVE AN ENTRY SWITCH, and the user accepted this as correct. docs/masking-undo.md: the stack is cleared on any LOAD — mask.init(), i.e. every loadImage, i.e. every entry switch — and again in _restoreLayers(). The mask brush has always done this; paint shares the one stack. The user's reasoning: consistent with the mask, and the less VRAM the better. Do NOT card it.",
+      "ONE UndoStack, chronological, shared by mask and paint. Ctrl+Z inside Paint can walk back into a mask stroke. Documented, deliberate, ruled on before undo was built.",
+      "AGENTS DO NOT EDIT WORKFLOW JSON (unchanged). The user edits comfy_workflows/raw/ by hand; the agent produces the LIST (raw file, node id, widget INDEX) and runs scripts/sync-raw-workflows.mjs."
+    ],
+    "constraints": [
+      "A STALE BUILD COST A WHOLE TEST ROUND, and it does not look like one. After Ctrl+R the app showed 'No handler registered for mask-temp:write-paint', the same for delete-paint, a POST /project/apply-paint 404, and a crop that errored while still applying — four symptoms, one cause: the RENDERER had the new code while main.js and the routes/*.js server did not. An edit to main.js OR routes/ means say RESTART. Settle it in one command: curl the new route AND a route that shipped earlier; 404 vs 400 proves the server never loaded your file. Now in memory tool_main_process_no_hot_reload.md.",
+      "A PEER AGENT IS ACTIVE ON THIS TREE (actor 'opus', MPI-365). It landed four commits during this session and still has two uncommitted lines in the shared .agents/mpi-kanban/events.jsonl. That file was committed with the build-the-blob recipe from .claude/rules/git.md — HEAD blob plus only my line, guarded on their markers being absent — because their lines and mine are adjacent at the tail and no hunk filter can split them. Expect the same next session.",
+      "THE HEAD BLOB OF events.jsonl IS PURE LF while the working tree is mixed (2015 CRLF / 47 LF), so a byte-prefix comparison against HEAD is INVALID and throws a misleading JSON parse error. Compare LINE-WISE, and hash the rebuilt blob with git hash-object -w --no-filters so no CRLF conversion sneaks in.",
+      "MpiCanvas._methods is an ALLOWLIST and it bit again this session. getPaintOpacity had to be added there; without it el.getPaintOpacity is undefined and the optional call falls back to a silent 100% bake with no error anywhere. A guard now covers it.",
+      "SOURCE-TEXT GUARDS NEED TIGHT ANCHORS. One negative control ESCAPED because the guard matched the bare substring setPaintFromDataURL, which setPaintFromDataURLZZ also contains. Fixed with a (?![A-Za-z0-9_]) lookahead. Always assert a sabotage APPLIED, and prefer literal-substring anchors over \\n-anchored regexes — the tree is CRLF.",
+      "Tests run as node --test with the QUOTED glob \"tests/*.test.cjs\". The directory form dies on Node v24. Suite is at 342/0.",
+      "validate_board.py's resting state is 416 violations — judge the DELTA, never the exit code. This session's delta was 0. MPI-375's own violation (links.related is not a legal link key) is pre-existing.",
+      "The route was proven by mounting ONLY routes/projects.js on :3999 from a repo-root harness and asserting OUTPUT PIXELS — the user owns :3000, so npm run test:desktop cannot run here and the mask-temp desktop specs were NOT re-run. Delete the harness afterwards."
+    ],
+    "files_modified": [
+      "main.js (mask-temp:write-paint + delete-paint handlers; read returns paint; mask-temp:delete narrowed to the three mask files)",
+      "js/services/maskTempStore.js (writePaint / deletePaint, paint in the read shape)",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js (paint in _persistLayers/_restoreLayers, the sameEntry guard now counts paint, new el.applyPaint, 'paint-applied')",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js (_appendViewerEntry shared by 'crop-applied' and 'paint-applied')",
+      "routes/projects.js (POST /project/apply-paint)",
+      "services/imageComposite.js (compositeOverlay, with the dest-in alpha scale)",
+      "js/components/Primitives/MpiCanvas/MpiCanvas.js (getPaintOpacity + the _methods allowlist)",
+      "js/components/Primitives/MpiCanvas/managers/PaintManager.js (the opacity comment now states that Apply honours it)",
+      "js/components/types.js, tests/mask-tool-registry.test.cjs (+3 guards)",
+      ".agents/mpi-kanban/ (MPI-375 plan/checklist/validation + both event logs)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-375/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-375/validation.md",
+      "js/components/Primitives/MpiCanvas/managers/PaintManager.js",
+      "js/components/Primitives/MpiCanvas/managers/brushDab.js",
+      "docs/masking-undo.md",
+      "docs/masking-tools.md",
+      "docs/README.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "Components & UI",
+      "Masking",
+      "Project data"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/git.md",
+    "docs/masking.md",
+    "docs/masking-tools.md",
+    "docs/masking-undo.md",
+    "docs/README.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-03T23:35:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are picking up Cubric Vision work on branch master, card MPI-375 (Paint), which is in `doing`. Read .agents/mpi-kanban/state/handoffs/04521b6e-ebc5-4258-9d69-357a62fda75a.json and use mpi-continue. Plan items 1-4 are SHIPPED and USER-VERIFIED and committed (7303d60e, then 7e0ee5aa): the shared dab, PaintManager as an image-native RGBA layer on the shared UndoStack, the Paint tool, per-entry TEMP persistence, and Apply through POST /project/apply-paint with the opacity slider baked in. Your job is item 5, which is DOCUMENTATION ONLY — do not change code. Write docs/painting.md (docs/masking.md is at its 200-line cap) covering the one-layer model, image-native resolution at PAINT_MAX_EDGE 4096, per-entry session-scoped persistence including that mask-temp:delete deliberately spares paint.png, why paint is not a preview, how Apply flattens server-side, and the shared-dab seam MPI-435 parameterises plus the rasterise target MPI-368 needs; add the paint mutations to docs/masking-undo.md's enumerated set; route the new doc from docs/README.md AND the CLAUDE.md Context Router or it is invisible; and add TWO separate UNRELEASED.md lines — the Paint tool, and separately that the mask brush no longer drops dabs on a fast drag, which is a user-visible change to a shipped tool. Verify every file, function and flag you name still exists in source before writing it down. Four things to carry. FIRST, a PEER AGENT (actor 'opus', MPI-365) is active on this tree and has uncommitted lines in the shared .agents/mpi-kanban/events.jsonl — commit that file with the build-the-blob recipe in .claude/rules/git.md, never a plain pathspec, and note its HEAD blob is pure LF while the working tree is mixed, so compare LINE-WISE not by byte prefix. SECOND, docs/releases/2026-07-30-v1.3.0.md carries someone else's uncommitted ticks; leave it alone. THIRD, undo not surviving an entry switch is the DOCUMENTED contract and the user explicitly accepted it — do not card it or 'fix' it. FOURTH, the suite is 342/0, run as node --test \"tests/*.test.cjs\" with the quoted glob, and validate_board.py's resting state is 416 violations so judge the delta, never the exit code."
+}
