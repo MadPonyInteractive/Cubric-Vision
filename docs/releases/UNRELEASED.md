@@ -76,3 +76,10 @@
   Image, asking for several images only ever returned one — the setting reached a
   part of the workflow that operation does not use. The control is now hidden
   there rather than lying about it. Text to Image and Depth are unaffected.
+- **Updating from inside the app reopens it again.** Pressing Update closed the
+  app and left it closed, even when the update had applied perfectly — which
+  read as a crash. The updater now reopens the app when it finishes, writes a
+  log next to the app (update/update.log), and if an update fails it tells you
+  why on the next launch instead of vanishing silently. Because the updater that
+  runs is the one already installed, this takes effect when updating FROM this
+  version — updating TO it still needs you to reopen the app yourself.
