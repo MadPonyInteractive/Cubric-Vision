@@ -6,12 +6,13 @@
 > archival `docs/releases/YYYY-MM-DD-v<newVersion>.md`, then clear this file
 > back to the header.
 >
-> **Still accumulating.** The one-master-template migration is not finished — SDXL
-> follows with more. When it lands, EXTEND the model lists in the bullets below
-> (localised edit, Depth Strength, styles reaching Detail/Upscale, source
-> dimensions); do not add a second near-duplicate bullet per model. Already folded
-> in: Boogu Image Edit's localised edit (MPI-428), and Chroma's migration
-> (MPI-365 — depth, styles, Detail/Upscale reach, source dimensions).
+> **The one-master-template migration is DONE** (MPI-365, closed 2026-08-03) — every
+> image model, SDXL last. The video models were never part of it: LTX already had the
+> shape, and multi-stage/quantisation files are separate for reasons one graph cannot
+> absorb. Folded in below: Boogu's localised edit (MPI-428), Chroma's migration, and
+> SDXL's. If another model ever joins, EXTEND the model lists in the existing bullets
+> (localised edit, Control Strength, styles reaching Detail/Upscale, source
+> dimensions); do not add a near-duplicate bullet per model.
 >
 > **Chroma's four style LoRAs were uploaded to R2 on 2026-08-02, so this block is
 > clear.** A fifth style (Cinema) was cut on a licence call before release — if you
@@ -29,9 +30,14 @@
   untouched. It rewards a precise mask — for broad changes like a new pose, leave
   the mask off and let the model rework the whole image. On Krea 2, FLUX.2 Klein,
   Qwen Image Edit and Boogu Image Edit.
-- **Pose and Depth on Qwen Image Edit.** Copy the pose of one image, or its depth
-  and composition, and paint your prompt into it.
-- **Depth on Chroma.** Both Chroma models can now follow the depth and composition
+- **Control — copy the structure of an image.** One operation that takes a picture,
+  reads the structure out of it and paints your prompt into that shape. A Control Type
+  picker chooses WHICH structure: Depth keeps volume and framing, Pose keeps only the
+  body skeleton, Scribble and Canny keep outlines. SDXL Realistic, SDXL NSFW, ILL Anime
+  Beauty, ILL Anime and PONY Mix offer all four; Qwen Image Edit offers Depth and Pose.
+  It replaces the old Depth operation everywhere: Krea 2 and FLUX.2 Klein still do depth,
+  they just do it under the new name and show no picker, having only the one.
+- **Control on Chroma.** Both Chroma models can now follow the depth and composition
   of an input image and paint your prompt into that shape.
 - **Four styles on Chroma.** Chroma gains a style rack — B&W Sketch, Lenovo,
   Brushwork and Anime — available on every operation, Detail and Upscale
@@ -42,9 +48,10 @@
   watch the mask change live, then press Apply. Undoable like any other mask edit.
 - **Fill.** Closes enclosed holes in a mask in one press, in the app where you can
   see what is being filled before you commit to it.
-- **Depth Strength.** Krea 2, FLUX.2 Klein and Chroma's Depth op gained a slider
-  for how hard the depth map pulls. At full strength the composition is locked to
-  the source; easing it off lets the model reinterpret the framing while keeping
+- **Control Strength.** Krea 2, FLUX.2 Klein, Chroma and the SDXL family gained a
+  slider on Control for how hard the control map pulls. At full strength the
+  composition is locked to the source; easing it off lets the model reinterpret the
+  framing while keeping
   the pose. Klein bites softer than Krea 2, so it wants a lower setting.
 
 ## importantChanges
@@ -61,12 +68,12 @@
 - **Krea 2 and Chroma styles now reach Detail and Upscale.** Every operation on
   these models runs one workflow, so the style you picked stays applied through
   the finishing passes instead of being dropped by them.
-- **Krea 2 Depth takes a second image.** Image 1 supplies the pose and
+- **Krea 2 Control takes a second image.** Image 1 supplies the pose and
   composition, image 2 supplies who is posed into it.
 - **Krea 2 and Chroma keep your source dimensions.** On Krea 2, every operation
   except Text to Image and Image to Image now follows the input image's shape
   instead of the ratio picker. On Chroma this applies to Detail and Upscale;
-  its Depth op still generates at the size you pick.
+  its Control operation still generates at the size you pick.
 
 ## fixes
 
@@ -87,12 +94,12 @@
   Raising the count to 2 or naming two objects had been dodging it by accident.
   Affected Text detect since 1.3.0.
 - **The Qwen Image Edit tier stays put.** Quality/Turbo/Hyper was being remembered
-  per operation, so switching between Edit, Depth and Pose silently changed the
+  per operation, so switching between Edit and Control silently changed the
   tier underneath you. It is now one setting for the model.
 - **The batch count no longer appears where it did nothing.** On SDXL's Image to
-  Image, asking for several images only ever returned one — the setting reached a
-  part of the workflow that operation does not use. The control is now hidden
-  there rather than lying about it. Text to Image and Depth are unaffected.
+  Image and Control, asking for several images only ever returned one — the setting
+  reached a part of the workflow those operations do not use. The control is now hidden
+  there rather than lying about it. Text to Image is unaffected.
 - **Updating from inside the app reopens it again.** Pressing Update closed the
   app and left it closed, even when the update had applied perfectly — which
   read as a crash. The updater now reopens the app when it finishes, writes a
