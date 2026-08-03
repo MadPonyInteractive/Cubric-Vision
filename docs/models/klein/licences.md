@@ -52,8 +52,8 @@ it. Six of the ten carry **Apache-2.0**, which was invisible to the flags-only m
 | `klein-style-cartoon` | 2633419 | norod78 | **Apache-2.0** | Image, RentCivit, Rent | clear |
 | `klein-style-jojo` | 2622565 | norod78 | **Apache-2.0** | Image, RentCivit, Rent | clear |
 | `klein-style-vintage` | 2520520 | KimHose | none | Image, RentCivit, Rent | clear on flags (no derivatives — we don't merge) |
-| `klein-style-chibi` | 400063 | monkpostor | none | RentCivit, Rent | **still unsettled** — no `Image`, bundle argument only |
-| `klein-style-doodle` | 2593550 | reverentelusarca | none | RentCivit, Rent | **still unsettled** — no `Image`, bundle argument only |
+| `klein-style-chibi` | 400063 | monkpostor | none | RentCivit, Rent | **ships by DECISION** — no `Image`, see below |
+| `klein-style-doodle` | 2593550 | reverentelusarca | none | RentCivit, Rent | **ships by DECISION** — no `Image`, see below |
 | `klein-style-anime` | 2227157 | n_Arno | **Apache-2.0** | RentCivit | **SETTLED CLEAR** — see below |
 
 ### `klein-style-anime` — the badge overturned the flags
@@ -64,9 +64,19 @@ redistribution and derivatives outright; a hosting-site checkbox cannot claw bac
 granted under it in the same upload (full reasoning: [../chroma/licences.md](../chroma/licences.md)).
 Attribution still applies under Apache §4, and its `credit` block already satisfies that.
 
-**chibi and doodle remain badge-less**, so for those two the bundle argument is still the
-only thing holding them up, and the redistribution question below still applies. They are
-the residue of **MPI-430** item 2, not the whole of it.
+### `klein-style-chibi` + `klein-style-doodle` — SETTLED 2026-08-03 by decision
+
+Re-checked 2026-08-03 (MPI-430): both are **still badge-less** and still grant
+`RentCivit, Rent` only — no `Image`. Neither requires credit (`allowNoCredit: true`) and
+both allow derivatives.
+
+**The user elected to keep and ship them as-is**, in the same call that kept `ill-anime`
+and `pony-mix`, which withhold the same flag
+([../community-merges-licences.md](../community-merges-licences.md)). Badge-less means
+CivitAI's Service-scoped default grant is what governs, and the practical risk was judged
+low. The bundle argument is no longer what holds them up — a decision is. **Do not
+re-open** on the strength of the missing `Image` flag; that is the known fact behind the
+decision, not new evidence.
 
 `klein-lora-outpaint` is **not a CivitAI weight** — the by-hash lookup 404s. It is
 fal's, **Apache-2.0**, like every fal Klein LoRA (see `removal.md`). A 404 here means
@@ -75,7 +85,10 @@ fal's, **Apache-2.0**, like every fal Klein LoRA (see `removal.md`). A 404 here 
 `klein-lora-turbo` (2324315, `Image` only, no `Rent`) was checked and then **dropped**
 — we ship the distilled checkpoint, so there is no base leg to accelerate.
 
-## Why the three without `Image` still ship (user call 2026-07-26)
+## The bundle reasoning (user call 2026-07-26 — no longer load-bearing)
+
+Superseded as a *verdict*: anime is Apache-2.0 and chibi/doodle ship by the 2026-08-03
+decision above. Kept because the underlying rule is general and still catches people out.
 
 CivitAI's permission flags and its License badge are **MODEL-level, never
 version-level**. chibi (400063) is a Klein4b/9b + Illustrious + PonyXL *bundle* whose

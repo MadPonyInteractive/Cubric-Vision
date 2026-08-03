@@ -64,15 +64,20 @@ DigitalPastel, koronen, reijlita).
 `sdxl-nsfw` is coyotte's and sets `allowNoCredit: true` — its block is **deliberate**, the
 same choice already made for the Krea 2 weight from the same creator.
 
-## OPEN — two weights withhold the `Image` flag
+## The `Image` flag — DECIDED 2026-08-03, do not re-open
 
 `ill-anime` (koronen) and `pony-mix` (reijlita) grant **`RentCivit` only**: no `Image`,
 which is the flag that lets a user sell what they generate. Vision is a local app whose
-users own their output, so `Image` is the decisive flag for us — that reasoning is in
-[klein/licences.md](klein/licences.md), and `chroma-style-cinema` was **dropped from the
+users own their output, so `Image` is normally the decisive flag for us — that reasoning is
+in [klein/licences.md](klein/licences.md), and `chroma-style-cinema` was **dropped from the
 product** for exactly this ([chroma/licences.md](chroma/licences.md)).
 
-Difference from the Chroma case: those were style LoRAs in a rack, and these are **base
-checkpoints shipping in released v1.0.1**. Dropping them removes two of the app's picked
-models from users who already have them. Awaiting the user's call — it is a product
-decision, not a research one.
+**The user elected to KEEP them and ship as-is**, together with klein's `chibi` and
+`doodle`, which withhold the same flag. That is the same judgement already made for the
+redistribution question: these weights are badge-less, so what governs is CivitAI's
+Service-scoped default grant, and the practical risk was judged low. **It is a decision,
+not an oversight** — a later reader who spots the missing `Image` flag should stop here.
+
+Why the Chroma precedent did not decide it: `chroma-style-cinema` was one style LoRA in a
+rack that could be renumbered at no cost to anyone. These are **base checkpoints already in
+users' hands in released v1.0.1**. Different cost, different call.

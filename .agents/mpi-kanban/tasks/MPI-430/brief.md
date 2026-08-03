@@ -129,7 +129,42 @@ re-hosted deps). Recorded in `docs/models/krea2/licences.md`, `docs/download-man
 **On/after 2026-08-10: re-upload to `Mad-Pony-Interactive/cubric-studio` under
 `vision/models/diffusion_models/` and delete the flag.**
 
-## NEW SCOPE — 9 weights the sweep could not see (found 2026-08-03)
+## CLOSED 2026-08-03 — the 9 are resolved and the last decision is made
+
+New doc: **`docs/models/community-merges-licences.md`** (routed from
+`docs/models/README.md`). Six source models, **none with a licence badge**:
+
+| dep | CivitAI | creator | `Image` | credit required |
+|---|---|---|---|---|
+| `sdxl-realistic` | 133005 Juggernaut XL | KandooAI | yes | **yes** |
+| `sdxl-nsfw` | 573152 LUSTIFY! | coyotte | yes | no (added anyway) |
+| `ill-anime` | 933065 animemix | koronen | **NO** | **yes** |
+| `ill-anime-beauty` | 2578175 NSFW-PINK | RAMTHRUST | yes | **yes** |
+| `pony-mix` | 734527 ANImergeMEij | reijlita | **NO** | **yes** |
+| `wan-22-*` (×4) | 1995784 Smooth Mix Wan 2.2 | DigitalPastel | yes | **yes** |
+
+Shipped: all nine `origin` values rewritten to `<creator>/<model> (CivitAI <id>)`, and
+`credit` blocks on eight of nine — credited authors went **5 → 10**, verified through the
+same `_credits()` path.
+
+**Decision (user, 2026-08-03): keep all four `Image`-less weights and ship as-is** —
+`ill-anime`, `pony-mix`, and klein's `chibi` + `doodle` (re-checked the same day, still
+badge-less, unchanged). Same judgement as item 3: badge-less means the Service-scoped
+default grant governs, risk judged low. The `chroma-style-cinema` precedent did not decide
+it — that was one LoRA in a renumberable rack; these are base checkpoints already in users'
+hands in v1.0.1.
+
+**Method caveat worth keeping:** only `wan-22-t2v-high`/`-low` resolved by SHA256. The
+other seven match upstream on filename and size but **not** hash, so our copies are not
+byte-identical to what CivitAI serves today — provenance there is filename + creator, which
+is weaker than the klein/chroma tables. Not actioned, and deliberately not carded: the
+exposure is unchanged by it and no action follows from it.
+
+Scope items 1–5 are now all discharged. Residue that belongs to OTHER cards: the
+cross-model credit sweep for older weights is **MPI-358**; re-uploading the Krea 2 NSFW
+weight to HF after 2026-08-10 is **MPI-433**.
+
+## NEW SCOPE — 9 weights the sweep could not see (found 2026-08-03) — RESOLVED, see above
 
 The sweep selected on `origin` matching CivitAI/CivArchive. **Nine deps carry a bare
 community-merge FILENAME as their `origin`**, so they matched nothing and were never
