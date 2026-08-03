@@ -1466,7 +1466,7 @@
  *
  * Preferred usage — call the shell singleton instead of mounting directly:
  *   import { showError } from '../../shell.js';
- *   showError('ComfyUI failed to start', 'Connection refused on port 8188');
+ *   showError('ComfyUI failed to start', 'Connection refused on port 48188');
  *
  * Emits:
  * 'dismiss'     {} — Dismiss button clicked

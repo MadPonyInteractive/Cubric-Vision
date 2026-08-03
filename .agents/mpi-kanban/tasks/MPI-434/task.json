@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-434",
+  "title": "Our ComfyUI must not share port 8188 with the user's own ComfyUI",
+  "description": "A user running his own ComfyUI on the default 8188 had every generation die with \"Node 'Input_Seed' not found\" - the app dispatched into HIS ComfyUI, which has no MpiNodes. Move our engine to 48188 and refuse to dispatch at an engine we did not start.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-03T16:16:00Z",
+  "updated_at": "2026-08-03T16:45:00Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "events": "events.jsonl"
+  }
+}

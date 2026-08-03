@@ -935,7 +935,7 @@ function mountAll() {
 
         const dialog = MpiErrorDialog.mount(document.createElement('div'), {
             title: 'ComfyUI failed to start',
-            message: 'Connection refused on port 8188. Ensure the engine is installed and try again.',
+            message: 'Connection refused on port 48188. Ensure the engine is installed and try again.',
         });
 
         btn.on('click', () => dialog.el.show());

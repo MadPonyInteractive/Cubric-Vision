@@ -131,7 +131,18 @@ async function removeProjectPathFromRegistry(parentDir) {
     return writeProjectPathsRegistry(current.filter(p => p !== norm));
 }
 const SYS_DEPS_PATH = path.join(__dirname, '..', 'dev_configs', 'system_dependencies.json');
-const COMFYUI_PORT = 8188;
+// NOT 8188 (MPI-434). 8188 is ComfyUI's own default, so any user with their own
+// ComfyUI install is already sitting on it — and our readiness check only asks
+// whether ANYTHING answers on this port, so we adopted the stranger and dispatched
+// into an engine with none of our custom nodes. Every generation then died with
+// "Node 'Input_Seed' not found" (MpiInt, from ComfyUI-MpiNodes), which reads as a
+// broken install. 48188 is below the Windows ephemeral floor (49152) and is not
+// where a hand-run second ComfyUI lands (8189/8190/8288 all are). Do not "tidy"
+// this back to the default. THREE other files carry this port as a literal and must
+// change with it — js/services/comfyController.js (serverAddress), js/shell/memoryOps.js,
+// and main.js (the Origin spoof; missing that one 403s every ComfyUI call).
+// tests/comfy-port-lockstep.test.cjs enforces the agreement.
+const COMFYUI_PORT = 48188;
 
 // ── Process State ─────────────────────────────────────────────────────────────
 // Mutable shared state — all route modules reference the same object.

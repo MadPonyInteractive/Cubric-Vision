@@ -321,9 +321,12 @@ function createWindow() {
   session.defaultSession.webRequest.onBeforeSendHeaders(
     { urls: ['*://127.0.0.1/*', '*://localhost/*', 'ws://127.0.0.1/*', 'ws://localhost/*', 'wss://127.0.0.1/*', 'wss://localhost/*'] },
     (details, callback) => {
-      if (details.url.includes(':8188')) {
+      // Port MUST match `COMFYUI_PORT` in routes/shared.js (MPI-434) — if this
+      // literal drifts, the spoof stops matching and ComfyUI rejects every call
+      // with "request with non matching host and origin".
+      if (details.url.includes(':48188')) {
         // Satisfy ComfyUI's CSRF check by matching Host and Origin
-        details.requestHeaders['Origin'] = 'http://127.0.0.1:8188';
+        details.requestHeaders['Origin'] = 'http://127.0.0.1:48188';
       }
       callback({ requestHeaders: details.requestHeaders });
     }
@@ -332,7 +335,8 @@ function createWindow() {
   session.defaultSession.webRequest.onHeadersReceived(
     { urls: ['*://127.0.0.1/*', '*://localhost/*', 'ws://127.0.0.1/*', 'ws://localhost/*', 'wss://127.0.0.1/*', 'wss://localhost/*'] },
     (details, callback) => {
-      if (details.url.includes(':8188')) {
+      // Port MUST match `COMFYUI_PORT` in routes/shared.js (MPI-434).
+      if (details.url.includes(':48188')) {
         // Force CORS headers to satisfy the browser security model
         details.responseHeaders['Access-Control-Allow-Origin'] = ['*'];
         details.responseHeaders['Access-Control-Allow-Methods'] = ['GET, POST, OPTIONS, PUT, DELETE'];

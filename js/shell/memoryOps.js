@@ -24,7 +24,8 @@ export async function triggerMemoryRelease(isDeep = false, monitorEl) {
 
     // Fallback to direct ComfyUI API if the internal proxy fails
     if (comfyRes && !comfyRes.ok) {
-      await fetch('http://127.0.0.1:8188/extra/unload_models', { method: 'POST' }).catch(() => null);
+      // Port MUST match `COMFYUI_PORT` in routes/shared.js (MPI-434).
+      await fetch('http://127.0.0.1:48188/extra/unload_models', { method: 'POST' }).catch(() => null);
     }
 
     if (monitorEl?.showStatus) {

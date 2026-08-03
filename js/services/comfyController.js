@@ -160,8 +160,8 @@ function createEngine({ engine, alwaysLocal }) {
     /** @type {boolean} When true this engine ALWAYS targets local ComfyUI (httpBase/WS/uploads/skip-remote), regardless of remote-connection state. */
     _alwaysLocal: alwaysLocal,
 
-    /** @type {string} Target ComfyUI WS/HTTP server address (local mode). */
-    serverAddress: "127.0.0.1:8188",
+    /** @type {string} Target ComfyUI WS/HTTP server address (local mode). Port MUST match `COMFYUI_PORT` in routes/shared.js — see the comment there for why it is not ComfyUI's 8188 default (MPI-434). */
+    serverAddress: "127.0.0.1:48188",
 
     /**
      * HTTP base for all ComfyUI-shaped calls. Local-pinned engine: the ComfyUI
@@ -238,7 +238,7 @@ function createEngine({ engine, alwaysLocal }) {
         // Load the remote WS base + token BEFORE connecting. The boot/Settings flow
         // calls ensureWsConnected directly (not via ensureServerRunning), so without
         // this refresh `remoteEngineClient.wsUrl()` is null and connect() falls back
-        // to the LOCAL ws://127.0.0.1:8188 — which never opens in remote mode, so the
+        // to the LOCAL ws://127.0.0.1:48188 — which never opens in remote mode, so the
         // handshake times out and the caller shows a false "almost ready" with the
         // hero stuck on local·offline even though the Pod is up (MPI-73). A
         // local-pinned engine skips the refresh (it always wants the local socket).

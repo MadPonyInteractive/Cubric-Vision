@@ -346,6 +346,26 @@ router.post('/comfy/start', async (req, res) => {
         // so the restart is still pending. The gen gate will stop+start it.
         if (processState.activeComfyProcess) return res.json({ success: true, message: 'Already running' });
 
+        // MPI-434: we have no child of our own, so ANYTHING answering on our port is
+        // a stranger — another ComfyUI, or an orphan whose node scan predates our
+        // custom nodes. Adopting one is silent and total: `/comfy/status` reports
+        // ready as soon as something answers /history, so every generation goes to an
+        // engine without MpiNodes and dies as "Node 'Input_Seed' not found", which
+        // reads to the user as a broken install. Moving off 8188 makes this rare;
+        // refusing here makes it legible when it still happens. Do NOT downgrade this
+        // to a warning that proceeds — proceeding is the bug.
+        const probeAx = getAxios();
+        if (probeAx) {
+            const occupied = await probeAx.get(`http://127.0.0.1:${COMFYUI_PORT}/history`, { timeout: 1000 })
+                .then(() => true).catch(() => false);
+            if (occupied) {
+                const msg = `Something else is already using port ${COMFYUI_PORT} — most likely another ComfyUI. `
+                    + 'Close it, then start the engine again.';
+                logger.error('comfy', `Refusing to start: port ${COMFYUI_PORT} answered but we did not start it`);
+                return res.status(409).json({ error: msg });
+            }
+        }
+
         // We are about to SPAWN a fresh process → its node scan will pick up any
         // newly-installed custom node, satisfying the restart need. Clear the flag.
         processState.comfyNeedsRestart = false;

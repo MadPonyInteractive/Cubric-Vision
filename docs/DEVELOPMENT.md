@@ -63,17 +63,38 @@ All 9 formerly-standing failures were **stale tests, not code defects** (MPI-389
 The Electron app uses an Express server on `127.0.0.1:3000`. Desktop tests use
 an isolated Electron user-data directory so they do not modify normal app data.
 
-### Close the standalone bench before verifying anything in the app (MPI-346)
+### The app engine is on 48188, NOT ComfyUI's 8188 default (MPI-434)
 
-`COMFYUI_PORT = 8188` is hardcoded (`routes/shared.js`) and `startComfyUI` is
-**idempotent** — it probes `/history` and reports success if anything already answers
-(`routes/comfy.js`). A standalone authoring bench (e.g. `G:\ComfyUi`) binds the same
-port, so with one running the app **silently dispatches into the bench**: different
-install, different `extra_model_paths.yaml`, different node commits. Nothing warns you
-and the run proves the wrong thing. Check `netstat -ano | grep -E ":8188.*LISTENING"`
-first, and identify the PID before killing it — it is usually the user's. The engine
-also starts **on demand**, not at app boot, so `/comfy/status` reading `running:false`
-before the first dispatch is normal.
+`COMFYUI_PORT = 48188` (`routes/shared.js`). It was 8188 until 2026-08-03, and the
+move is a product fix, not a preference: 8188 is ComfyUI's own default, so every user
+with their own ComfyUI already owns it. `/comfy/status` calls the engine ready as soon
+as **anything** answers `/history`, and `processState.activeComfyProcess` is truthy from
+the moment we spawn — so the app adopted the stranger and dispatched into an install with
+none of our custom nodes. Every generation then died as
+`Node 'Input_Seed' not found` (`MpiInt`, from ComfyUI-MpiNodes), which reads to a user as
+a broken install. It cost one user his whole 1.3.1 install before we found it.
+
+Two things follow for local work:
+
+- **The standalone authoring bench (`G:\ComfyUi`) no longer collides.** It stays on 8188;
+  the app is on 48188. The MPI-346 hazard — the app silently dispatching into the bench,
+  with its different `extra_model_paths.yaml` and node commits, proving the wrong thing —
+  is gone. `scripts/workflow-to-api.mjs` and friends still default to `8188` (the bench)
+  and honour `COMFY_URL`, so "am I probing the bench or the app?" is now answered by the
+  port alone.
+- **`/comfy/start` refuses a port it did not open.** If something already answers on 48188
+  and we have no live child, it returns 409 with a plain message instead of adopting it.
+  Do not downgrade that to a warning that proceeds — proceeding is the bug.
+
+To see what is listening: `netstat -ano | grep -E ":48188.*LISTENING"` (and `:8188` for the
+bench). Identify the PID before killing anything — 8188 is usually the user's. The port
+lives as four separate literals across three module systems (`routes/shared.js`,
+`js/services/comfyController.js`, `js/shell/memoryOps.js`, `main.js`'s Origin spoof —
+miss that last one and ComfyUI 403s every call); `tests/comfy-port-lockstep.test.cjs`
+holds them in lockstep.
+
+The engine starts **on demand**, not at app boot, so `/comfy/status` reading
+`running:false` before the first dispatch is normal.
 
 Boot opens TWO windows: a frameless splash (`splash/splash.html`, loaded instantly
 by `main.js`) and then the shell on `127.0.0.1:3000`; the splash is destroyed on the
