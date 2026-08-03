@@ -147,7 +147,7 @@ export const modelDeps = {
         origin: 'lodestone-rock/Chroma (HD Flash)',
         // Chroma is Apache-2.0, so attribution is not a licence gate — this credit is
         // deliberate (user, 2026-08-03). MpiAbout renders every dep with a credit block.
-        credit: { author: 'lodestones', work: 'Chroma', url: 'https://huggingface.co/lodestones/Chroma' },
+        credit: { author: 'Lodestone Rock', work: 'Chroma', url: 'https://huggingface.co/lodestones/Chroma' },
         filename: 'diffusion_models/Chroma1-HD-Flash.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/Chroma1-HD-Flash.safetensors',
         mirrorUrl: 'https://huggingface.co/lodestones/Chroma1-Flash/resolve/main/Chroma1-HD-Flash.safetensors',
@@ -162,7 +162,7 @@ export const modelDeps = {
         origin: 'lodestone-rock/Chroma (HD DanrisiMix Hyper-Flash-Turbo int8)',
         // Same deliberate credit as Flash. Danrisi (the mix) already renders via
         // chroma-style-lenovo — one credit block per dep, and the author list is deduped.
-        credit: { author: 'lodestones', work: 'Chroma', url: 'https://huggingface.co/lodestones/Chroma' },
+        credit: { author: 'Lodestone Rock', work: 'Chroma', url: 'https://huggingface.co/lodestones/Chroma' },
         filename: 'diffusion_models/Chroma1-HD-DanrisiMix-Hyper-Flash-Turbo-int8-convrot-simple.safetensors',
         url: 'https://models.cubric.studio/vision/models/diffusion_models/Chroma1-HD-DanrisiMix-Hyper-Flash-Turbo-int8-convrot-simple.safetensors',
         size: '9.2GB',
