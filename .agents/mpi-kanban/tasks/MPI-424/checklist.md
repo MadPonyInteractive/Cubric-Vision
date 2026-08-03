@@ -16,12 +16,17 @@ This card holds no implementation of its own. It is done when all five ship.
       entry, Apply as a layer-wide undo entry. It is also the FIRST card to extend
       `discardPreview` rather than the call site - 368 and 373 do the same.
       `tasks/MPI-382/plan.md`.
-- [ ] **MPI-368** Shape gizmo - one gizmo, two mounts (mask + paint).
 - [ ] **MPI-375** Paint - RGBA layer, brush-engine extraction, alpha brushes.
+      **NOW THIRD** (was fourth), swapped with MPI-368 by the user 2026-08-03.
+- [ ] **MPI-368** Shape gizmo - one gizmo, two mounts (mask + paint).
+      **NOW FOURTH.** It cannot ship its Paint mount until MPI-375 exists: grepped
+      `js/` 2026-08-03 and there is no paint layer of any kind. Shapes-first would
+      have shipped one mount and promised the other, or dragged a half-designed
+      paint canvas into this card. Rationale on `brief.md` under the Order table.
 - [ ] **MPI-373** Composite group - Mask Comp + Paint Comp, pasted slots,
       retires the MPI-362 modal.
-- [ ] Re-read the order after MPI-425 ships. It is allowed to change what the
-      later cards need.
+- [x] Re-read the order after MPI-425 ships. It is allowed to change what the
+      later cards need. **Done 2026-08-03 - and it DID change: 3 and 4 swapped.**
 
 - [x] **MPI-431** The graph refills the user's mask. **SHIPPED 2026-08-03, both halves.**
       Raised by the user while verifying MPI-382, which is what made the mask shape that
@@ -33,6 +38,11 @@ This card holds no implementation of its own. It is done when all five ship.
       **Fill** button in the Adjust panel (`MaskManager.fillHoles()`), user-verified.
       `mask_expand_pixels: 6` deliberately kept. **The gate on MPI-368 is now lifted:
       an unusual mask shape survives to the sampler.**
+      **OUTPUT-verified 2026-08-03** by the user: detailing was run against a mask WITH
+      a hole and a mask WITHOUT one, and both behaved. That closes the one thing the
+      shipping evidence did not cover - until then MPI-431 was only proven at the
+      GRAPH level (18 destroying nodes to 0), and nobody had looked at whether a
+      surviving hole actually produced a better edit. It does.
 
 **MPI-421** (auto-mask run cost) is in this family but independent of the order -
 it can land at any point.

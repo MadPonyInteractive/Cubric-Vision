@@ -59,19 +59,30 @@ Grow, shrink and an edge band are one primitive: an edge band is
 |---|------|----------------------------|
 | 1 | **MPI-425** taxonomy | The three groups, the floating Detect strip, the new modes. The frame everything mounts into. |
 | 2 | **MPI-382** Adjust | Grow/shrink + edge band, live preview, Apply/Reset. Alpha brushes moved OUT to MPI-375. |
-| 3 | **MPI-368** Shapes | One gizmo, TWO mounts - mask and paint. |
-| 4 | **MPI-375** Paint | RGBA layer + brush-engine extraction (both mounts) + the alpha brush pack. |
+| 3 | **MPI-375** Paint | RGBA layer + brush-engine extraction (both mounts) + the alpha brush pack. |
+| 4 | **MPI-368** Shapes | One gizmo, TWO mounts - mask and paint. |
 | 5 | **MPI-373** Composite | Both comps, pasted slots, replaces the MPI-362 modal. |
 | - | **MPI-421** run cost | Independent of the rest; now scoped to ONE Detect panel instead of three. |
+
+**3 and 4 SWAPPED 2026-08-03 (user).** Shapes was third and Paint fourth, which is
+backwards: the gizmo's whole point is ONE geometry with TWO destinations, and the
+second destination — the RGBA paint layer — is built by MPI-375. Grepped `js/` on
+2026-08-03: no `paintCanvas`, no paint layer, nothing. Shapes-first would therefore
+have shipped one mount and left the other as an unbuildable promise, or forced a
+half-designed paint canvas into MPI-368 that MPI-375 owns. Paint first means MPI-368
+lands both mounts at once, which is what its card actually says. The checklist's
+"re-read the order after MPI-425 ships" line is what licensed this.
 
 ## A fresh session starts HERE
 
 1. Read this file — it is the whole design; the chat it came from is gone.
-2. **MPI-425 SHIPPED 2026-08-02** (verified in the app). The frame exists: groups
-   render, and a group member may now carry `collapse` + `sub[]` to open its modes
-   in a floating `MpiPopup` strip instead of stacking them. **MPI-382 (Adjust) is
-   next.** Read `tasks/MPI-425/plan.md` § Completed before adding a button — it
-   records the shape you mount into and the traps already paid for.
+2. **MPI-425 and MPI-382 both SHIPPED** (2026-08-02 / 2026-08-03, verified in the
+   app), and so has MPI-431. The frame exists: groups render, and a group member may
+   carry `collapse` + `sub[]` to open its modes in a floating `MpiPopup` strip
+   instead of stacking them. **MPI-375 (Paint) is next** — see the swap note under
+   the Order table. Read `tasks/MPI-425/plan.md` § Completed before adding a button
+   (the shape you mount into, and the traps already paid for) and
+   `docs/masking-tools.md` § The preview contract before adding a preview.
 3. The remaining four have settled designs on their own cards but NO plan file
    yet — run `mpi-create-plan` against each as it comes up, not before.
 

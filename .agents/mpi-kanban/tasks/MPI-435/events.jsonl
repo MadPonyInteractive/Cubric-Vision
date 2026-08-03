@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-435","type":"task.created","at":"2026-08-03T16:45:55Z","actor":"claude","summary":"Alpha brush pack split out of MPI-375 so an asset-sourcing problem cannot stall the MPI-424 umbrella. Blocked on MPI-375 (owns the shared dab helper)."}

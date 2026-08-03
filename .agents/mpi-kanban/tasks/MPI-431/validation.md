@@ -102,10 +102,16 @@ a hole. That is the `openC` probe case, seen for real.
 
 - `mask_expand_pixels: 6` on all six `InpaintCropImproved` — left at 6 by the user's decision.
   Revisit only if an Adjust shrink reads as swallowed.
-- Nobody has run a masked edit with a deliberate edge band and looked at the OUTPUT. The
-  graphs stopped reshaping the mask and the app can close a hole on demand; whether a ring
-  produces a better edit is a separate, unasked question.
+- `mask_expand_pixels: 6` — see above. Still the only genuinely open item.
 
-**Also not covered by anything here:** whether a ring mask now produces a BETTER edit. The
-graphs stopped reshaping the mask and the app can close a hole on demand — nobody has yet
-run a masked edit with a deliberate edge band and looked at the output.
+## OUTPUT verified 2026-08-03 — this card's last gap is closed
+
+Everything above proves the graphs stopped *reshaping* the mask (18 destroying nodes → 0,
+checked against the runtime graphs) and that the app can close a hole on demand. It did
+**not** prove the thing the whole card was for: that a mask with a hole now yields a
+different, better edit than one without.
+
+The user ran that comparison directly — **detailing against a mask WITH a hole and a mask
+WITHOUT one, both behaved**. The hole survives to the sampler and is honoured. Do not
+re-open this as an unknown; it was the standing "unasked question" in two consecutive
+handoffs and it now has an answer.
