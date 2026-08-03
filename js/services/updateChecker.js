@@ -31,6 +31,10 @@ function getIpc() {
 export async function checkForUpdate() {
     const ipc = getIpc();
 
+    // A failed run means the newer version is still out there, so the prompt below
+    // would fire straight after the failure dialog. One message per boot.
+    if (await reportFailedUpdate(ipc)) return;
+
     let current, latest;
 
     // ponytail: dev-only escape hatch to exercise the real dialog + mute in a build
@@ -70,6 +74,35 @@ export async function checkForUpdate() {
 
     clientLogger.info('update', `update available: v${current} -> v${latest}, prompting`);
     promptUpdate(current, latest, ipc);
+}
+
+// MPI-422: an update runs with the app closed, so a failure has no window to land in.
+// The updater relaunches us either way and leaves update/update-result.json behind on
+// failure; main reads-and-deletes it. Without this the user presses Update, waits, and
+// gets a silent no-op with nothing to report.
+async function reportFailedUpdate(ipc) {
+    if (!ipc) return;
+    let result;
+    try {
+        result = await ipc.invoke('update-last-result');
+    } catch (err) {
+        clientLogger.warn('update', `update-last-result IPC failed: ${err.message}`);
+        return;
+    }
+    if (!result || result.ok) return false;
+
+    clientLogger.warn('update', `previous update failed: ${result.error || 'unknown'}`);
+    // shell.js is imported lazily: it pulls in the whole component tree, and this
+    // module is loaded from init.js before the shell is up.
+    const { showError } = await import('../shell.js');
+    showError(
+        'Update failed',
+        `The last update did not complete, so you are still on v${APP_VERSION}.\n\n`
+        + `${result.error || 'No reason was recorded.'}\n\n`
+        + `Full details are in update/update.log next to the app. You can try again from `
+        + `the update prompt, or download the latest build manually.`,
+    );
+    return true;
 }
 
 function promptUpdate(current, latest, ipc) {

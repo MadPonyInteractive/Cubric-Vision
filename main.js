@@ -1095,9 +1095,31 @@ app.on('ready', () => {
     }
   });
 
+  // update-last-result: the updater cannot show UI (it runs as node, with the app
+  // gone), so a failed run drops <root>/update/update-result.json and relaunches us.
+  // The renderer reads it once on boot and turns it into a dialog — otherwise a
+  // failure is invisible to the user and there is nothing to put in a bug report
+  // (MPI-422). Read-and-delete: one report per failure.
+  ipcMain.handle('update-last-result', async () => {
+    const portableRoot = resolveMainPortableRoot();
+    if (!portableRoot) return null;
+    const marker = path.join(portableRoot, 'update', 'update-result.json');
+    try {
+      if (!fs.existsSync(marker)) return null;
+      const result = JSON.parse(fs.readFileSync(marker, 'utf8'));
+      fs.rmSync(marker, { force: true });
+      logger.warn('update', `previous update run failed: ${result?.error || 'unknown'}`);
+      return result;
+    } catch (err) {
+      logger.warn('update', `could not read update result marker: ${err.message}`);
+      return null;
+    }
+  });
+
   // run-update: launch the portable updater script detached, then quit so it can
-  // overwrite app files. The script (update.bat/.sh/.command) already fetches +
-  // downloads + applies + relaunches — hardware-validated. We only launch it.
+  // overwrite app files. The script fetches + downloads + applies, then relaunches
+  // the app on either outcome (MPI-422) — a failure leaves update/update.log plus
+  // the marker above. We only launch it.
   ipcMain.handle('run-update', async () => {
     const portableRoot = resolveMainPortableRoot();
     if (!portableRoot) return { ok: false, error: 'not-portable' };

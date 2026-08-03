@@ -20,10 +20,74 @@
 
 const fs = require('fs');
 const path = require('path');
-const { spawnSync } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 
 const DEFAULT_REPO = 'MadPonyInteractive/Cubric-Vision';
 const ASSET_PATTERN = '^CubricVision-windows-x64-update-v.*\\.zip$';
+
+// MPI-422 gap 1: the in-app button spawns us detached with stdio:'ignore', so there
+// is no console at all and every console.error went to NUL. A failed update quit the
+// app and left nothing to read. Everything we say is teed to <root>/update/update.log,
+// truncated per run (one update's worth is all anyone needs).
+let LOG_FILE = null;
+// A helper failure throws "<script> exited with code 1", which tells the user nothing.
+// The actual reason ("no published release found…", "disk full", …) is on the helper's
+// stderr, so keep the last line of it to put in the failure marker.
+let LAST_HELPER_ERROR = '';
+
+function log(msg) {
+  const line = `[${new Date().toISOString()}] ${msg}`;
+  console.error(line);
+  if (!LOG_FILE) return;
+  try {
+    fs.appendFileSync(LOG_FILE, `${line}\n`);
+  } catch { /* a log we cannot write must never fail the update */ }
+}
+
+function openLog(root) {
+  LOG_FILE = path.join(root, 'update', 'update.log');
+  try {
+    fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
+    fs.writeFileSync(LOG_FILE, '');
+  } catch {
+    LOG_FILE = null;
+  }
+}
+
+// MPI-422 gap 2: the update prompt promises "the app will close, update, and reopen"
+// and nothing ever reopened it. Relaunch on BOTH outcomes — on failure the user gets a
+// window back and a reason instead of a machine that looks crashed. Target the exe in
+// the root, NOT process.execPath: apply-update.cjs may have renamed the running image
+// aside as <exe>.old and written the new one in its place, so execPath can be the
+// retired binary. ELECTRON_RUN_AS_NODE must go or the app boots as plain node and exits.
+function relaunch(root) {
+  const exe = path.join(root, 'CubricVision.exe');
+  if (!fs.existsSync(exe)) {
+    log(`Relaunch skipped: ${exe} not found.`);
+    return;
+  }
+  const env = { ...process.env };
+  delete env.ELECTRON_RUN_AS_NODE;
+  try {
+    const child = spawn(exe, [], { cwd: root, detached: true, stdio: 'ignore', env });
+    child.unref();
+    log('Relaunched Cubric Vision.');
+  } catch (err) {
+    log(`Relaunch failed: ${err.message}`);
+  }
+}
+
+// A failure marker the app reads on its next boot, so the reason reaches the user as a
+// dialog rather than only as a log line nobody knows to open. Written before relaunch;
+// the app deletes it once shown.
+function writeResult(root, error) {
+  try {
+    fs.writeFileSync(
+      path.join(root, 'update', 'update-result.json'),
+      JSON.stringify({ ok: false, error, at: new Date().toISOString() }, null, 2),
+    );
+  } catch { /* non-fatal */ }
+}
 
 function parseArgs(argv) {
   const opts = { root: '' };
@@ -32,7 +96,9 @@ function parseArgs(argv) {
     if (arg === '--') continue;
     if (arg === '--root') opts.root = argv[++i];
     else if (arg.startsWith('--root=')) opts.root = arg.slice('--root='.length);
-    else throw new Error(`Unknown argument: ${arg}`);
+    // Noted, not fatal: this runs before the log is open, and a throw here would
+    // skip both the log and the relaunch — the failure mode MPI-422 exists to kill.
+    else log(`Ignoring unknown argument: ${arg}`);
   }
   return opts;
 }
@@ -48,8 +114,20 @@ function runHelper(script, args, capture) {
   const result = spawnSync(process.execPath, [script, ...args], {
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
     encoding: 'utf8',
-    stdio: capture ? ['ignore', 'pipe', 'inherit'] : 'inherit',
+    // Both streams are piped so the helpers' own diagnostics land in our log. They
+    // used to be 'inherit'ed from a NUL parent, which threw them away (MPI-422).
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
+  const name = path.basename(script);
+  const relay = (text, isError) => {
+    for (const line of String(text || '').split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      log(`  [${name}] ${line}`);
+      if (isError) LAST_HELPER_ERROR = line.trim();
+    }
+  };
+  relay(result.stderr, true);
+  if (!capture) relay(result.stdout);
   if (result.error) throw result.error;
   if (result.status !== 0) {
     throw new Error(`${path.basename(script)} exited with code ${result.status}`);
@@ -57,10 +135,7 @@ function runHelper(script, args, capture) {
   return capture ? String(result.stdout || '').trim() : '';
 }
 
-function main() {
-  const opts = parseArgs(getCliArgs());
-  // This file is staged at <portable-root>/update/win-update.cjs.
-  const root = path.resolve(opts.root || path.join(__dirname, '..'));
+function main(root) {
   const fetchScript = path.join(root, 'update', 'fetch-release.cjs');
   const applyScript = path.join(root, 'update', 'apply-update.cjs');
   for (const script of [fetchScript, applyScript]) {
@@ -73,7 +148,7 @@ function main() {
   const downloadDir = path.join(root, 'update', 'downloads');
   fs.mkdirSync(downloadDir, { recursive: true });
 
-  console.error(`Checking for updates (${repo})...`);
+  log(`Checking for updates (${repo})...`);
   // fetch-release.cjs prints the downloaded zip path on stdout; diagnostics go to
   // stderr, so only stdout is captured.
   const bundle = runHelper(
@@ -85,14 +160,19 @@ function main() {
     throw new Error('the downloaded update file was not found.');
   }
 
-  console.error('Applying update...');
+  log('Applying update...');
   runHelper(applyScript, ['--root', root, '--bundle', bundle], false);
-  console.error('Update applied successfully.');
+  log('Update applied successfully.');
 }
 
+// This file is staged at <portable-root>/update/win-update.cjs.
+const ROOT = path.resolve(parseArgs(getCliArgs()).root || path.join(__dirname, '..'));
+openLog(ROOT);
 try {
-  main();
+  main(ROOT);
 } catch (err) {
-  console.error(`Update failed: ${err.message}`);
+  log(`Update failed: ${err.message}`);
+  writeResult(ROOT, LAST_HELPER_ERROR || err.message);
   process.exitCode = 1;
 }
+relaunch(ROOT);

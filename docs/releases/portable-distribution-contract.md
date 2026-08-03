@@ -398,6 +398,39 @@ build. Note: the prompt only fires once a GitHub release exists to compare again
 > resume at 1.4.0. macOS and Linux use `curl`-based updaters on a different code
 > path and kept their bundles.
 
+#### The updater logs and relaunches (MPI-422)
+
+Because `run-update` spawns detached with `stdio: 'ignore'`, the updater has no
+console on ANY platform — every diagnostic went to NUL, and nothing ever
+relaunched the app despite the prompt promising *"the app will close, update, and
+reopen"*. Both are fixed; the contract each updater now honours:
+
+- **Log.** `win-update.cjs` tees everything (its own lines PLUS both helpers'
+  stdout and stderr) to `<root>/update/update.log`, truncated per run. The shell
+  updaters `exec >>"$LOG" 2>&1` only when stdout is not a tty, so a
+  double-clicked run keeps its live terminal output and its exit status (never
+  pipe to `tee` — the status becomes `tee`'s).
+- **Relaunch on BOTH outcomes.** Success or failure, the app comes back. Windows
+  targets `<root>/CubricVision.exe`, **not `process.execPath`** — `evictBusyFile`
+  may have renamed the running image to `<exe>.old`, so execPath can be the
+  retired binary — and strips `ELECTRON_RUN_AS_NODE` or the app boots as node and
+  exits. Linux calls `start.sh` **unbackgrounded** (it double-forks itself out of
+  the process group); macOS uses `nohup … &` because `start.command` runs Electron
+  in the foreground.
+- **A failure reaches the user.** The updater writes
+  `<root>/update/update-result.json` (`{ok:false, error, at}`) carrying the last
+  helper *stderr* line, not the useless `"<script> exited with code 1"`. Main's
+  `update-last-result` IPC reads-and-deletes it on the next boot and
+  `updateChecker.js` raises `showError`; that boot skips the update prompt so the
+  user gets one message, not two stacked dialogs.
+
+> **A fix to the updater only helps the release AFTER next.** The updater that
+> runs is the one already on disk, so 1.3.1 → 1.4.0 still executes 1.3.1's silent,
+> non-relaunching `win-update.cjs`. These fixes first take effect 1.4.0 → 1.5.0.
+> Same structural reason the pre-1.3.0 batch could not be repaired by shipping
+> code. **1.4.0's release notes must tell users to reopen the app manually after
+> updating.**
+
 ## Portable Environment
 
 Launchers must set portable environment variables before starting Electron or
