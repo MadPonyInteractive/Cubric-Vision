@@ -508,7 +508,14 @@ async function _normalizeExtraFolderPath(folderPath, validateExists) {
             throw new Error(`Extra model folder does not exist: ${folderPath}`);
         }
     }
-    return fs.realpath(resolved).catch(() => resolved);
+    // .native, NOT plain realpath (MPI-444). `fs` here is fs-extra, whose realpath
+    // comes from graceful-fs's JS reimplementation — it resolves symlinks but leaves
+    // an 8.3 short name untouched (measured: C:/PROGRA~1 -> C:\PROGRA~1, where
+    // realpath.native and node:fs/promises both give C:\Program Files). A canonicaliser
+    // that returns two spellings of one folder defeats the lowercase dedupe below, so
+    // the same folder can be added twice. Short names reach here whenever a path comes
+    // from %TEMP% under a >8-char username — which is every Windows CI runner.
+    return fs.realpath.native(resolved).catch(() => resolved);
 }
 
 async function normalizeExtraModelFolders(input = {}, { validateExists = false } = {}) {
