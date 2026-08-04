@@ -22,13 +22,6 @@
     "Local and remote engines behave the same"
   ],
   "links": {
-    "brief": null,
-    "plan": null,
-    "checklist": null,
-    "validation": null,
-    "files": null,
-    "events": "events.jsonl",
-    "handoffs": null,
-    "research": null
+    "events": "events.jsonl"
   }
 }

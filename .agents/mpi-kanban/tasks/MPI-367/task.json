@@ -22,13 +22,7 @@
   "OUT OF SCOPE: the dialog component, the ? placement, the resolver. Those shipped and were accepted in MPI-360"
  ],
  "links": {
-  "brief": "brief.md",
-  "plan": "plan.md",
   "checklist": "checklist.md",
-  "validation": "validation.md",
-  "files": "files.json",
-  "events": "events.jsonl",
-  "handoffs": "handoffs/",
-  "research": "research/"
+  "events": "events.jsonl"
  }
 }

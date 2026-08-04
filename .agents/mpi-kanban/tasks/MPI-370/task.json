@@ -24,9 +24,6 @@
  "links": {
   "brief": "brief.md",
   "events": "events.jsonl",
-  "related": [
-   "MPI-369"
-  ],
   "validation": "validation.md"
  },
  "attention": {

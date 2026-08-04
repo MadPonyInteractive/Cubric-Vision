@@ -18,11 +18,5 @@
   "Measured before/after time on at least two models",
   "No seam regression - check the stitch gradient, not just wall-clock"
  ],
- "links": {
-  "related": [
-   "MPI-347",
-   "MPI-354",
-   "MPI-353"
-  ]
- }
+ "links": {}
 }

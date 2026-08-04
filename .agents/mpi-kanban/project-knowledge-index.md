@@ -1,8 +1,8 @@
 ---
 schema: mpi-kanban/project-knowledge-index/v1
 profile: .agents/mpi-kanban/project-profile.md
-last_refresh: 2026-07-02
-last_refresh_notes: memory pointers pruned to the consolidated ~/.claude memory set (33 actual files); removed ~55 stale references that no longer exist in the memory dir.
+last_refresh: 2026-08-04
+last_refresh_notes: Five memory pointers deleted in the 2026-07-29 prune (MPI-399) replaced with the docs that absorbed them. Downloads retargeted at its own doc. Six topics added for docs that were never indexed (gallery, model library, apps, playbooks, workflow authoring, dev/testing/media).
 ---
 
 # Project Knowledge Index
@@ -36,6 +36,41 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - **Also:** `docs/component-contracts.md` (PromptBox op memory, MpiRadioGroup `aria-disabled`, MpiTileSheet, MpiModelSettings), `docs/generation-lifecycle.md` (what happens after the pick)
 - **Memory:** none (lives in docs/)
 
+### Gallery
+
+- **Read first:** `docs/gallery.md` (cards, thumbnails, selection, drag-drop, hover media)
+- **Rules:** `.claude/rules/component-mounts.md`, `.claude/rules/component-events.md`
+- **Memory:** none
+
+### Media playback
+
+- **Read first:** `docs/video-player.md` (the player component and its controls)
+- **Also:** `docs/preview-bus.md` (how a preview frame reaches whatever is showing it)
+- **Memory:** none
+
+### Model Library
+
+- **Read first:** `docs/model-library.md` (install-state display, tile patching, featured)
+- **Also:** `docs/download-manager.md` (what the tiles are actually reporting)
+- **Memory:** none
+
+### Apps (App Library)
+
+- **Read first:** `docs/apps.md` (the dev-gated outcome apps and how a descriptor becomes one)
+- **Playbook:** `docs/playbooks/add-app/` — enforced by the `/mpi-add-app` skill
+- **Memory:** none
+
+### Adding a model or an App
+
+- **Read first:** `docs/playbooks/add-model/` (README hub + `01`–`06`) — every known trap; enforced by `/mpi-add-model`. Models are NOT version-bumped.
+- **For an App instead:** `docs/playbooks/add-app/` (README hub + `01`–`05`), enforced by `/mpi-add-app`
+- **Notes:** a handoff or a `docs/models/<model>/` doc ASSUMES the playbook — read both. `node scripts/compile-node-deps.mjs` is mandatory when a new custom node declares requirements.
+
+### Workflow authoring
+
+- **Read first:** `docs/workflow-authoring/README.md` (injectable nodes, controls, MpiNodes, tier selectors) — append what you learn there
+- **Memory:** `tool_litegraph_to_api_converter.md` (browser→API conversion + batch sync), `tool_comfy_schema_gate_before_workflow_sync.md` (probe `/object_info` FIRST; 8188 = hand-maintained bench, 48188 = the app's engine)
+
 ### Events & cross-component communication
 
 - **Read first:** `docs/events.md`
@@ -46,7 +81,8 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/toasts.md` (full call-site map, sound model, `ui:*`/`StatusBar.notify`/`notificationService`)
 - **Also:** `docs/generation-lifecycle.md` § "Completion notifications COALESCE"
-- **Memory:** `project_toast_completion_coalesce_os_sound.md`, `project_toast_sound_burst_chime.md`, `project_completion_notif_dual_path.md`, `feedback_error_dialog_vs_toast.md`, `feedback_no_toast_user_stop.md`
+- **Memory:** `feedback_error_dialog_vs_toast.md`, `feedback_no_toast_user_stop.md`
+- **Note:** the coalesce / burst-chime / dual-path memories were deleted in the 2026-07-29 prune (MPI-399) after each claim was verified into `docs/toasts.md`. Read the doc.
 
 ### Application state
 
@@ -74,9 +110,10 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 ### Downloads
 
-- **Read first:** `docs/comfy.md#download-manager`
+- **Read first:** `docs/download-manager.md` (resumable downloads, IPC/SSE events, the EXCLUSIVE-vs-shared dependency model)
 - **Rules:** `.claude/rules/downloads.md`
-- **Memory:** none (topic files consolidated into docs/)
+- **Memory:** `tool_read_download_state_without_console.md` — the download system is drivable from the shell in BOTH directions (status/active GETs, install/uninstall POSTs), so a download bug does not need the app open
+- **Also:** `docs/models-path.md` (where weights land and how the path is resolved)
 
 ### Project data & integrity
 
@@ -95,7 +132,8 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/runpod-remote-engine.md`
 - **Rules:** `.claude/rules/comfy_engine.md` (engine routing), `.claude/rules/comfy_injection.md` (remote upload path)
-- **Memory:** `project_reconnect_deletes_warm_pod.md`, `project_stale_pod_reconnect_toast.md`
+- **Also:** `docs/runpod-troubleshooting.md` (symptom-first triage for a Pod that will not connect, stalls, or loses its volume)
+- **Memory:** none — the reconnect-deletes-warm-pod and stale-reconnect-toast files were deleted in the 2026-07-29 prune (MPI-399); both behaviours are in `docs/runpod-remote-engine.md`
 - **Notes:** second-provider (Vast.ai) evaluation PARKED → `docs/vast-ai-research/` (MPI-344).
 
 ### Pod image / mpi-ci
@@ -159,14 +197,14 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 ### Desktop and browser testing
 
-- **Read first:** `playwright.desktop.config.js`, `tests/desktop/`
+- **Read first:** `docs/DEVELOPMENT.md` § Tests, then `playwright.desktop.config.js` and `tests/desktop/`
 - **Rules:** `CLAUDE.md` desktop automation section
-- **Notes:** `npm run test:desktop` launches Electron through Playwright with isolated `CUBRIC_E2E_USER_DATA`; keep tests focused unless downloads/generation are explicitly required.
+- **Notes:** `npm run test:desktop` launches Electron through Playwright with isolated `CUBRIC_E2E_USER_DATA`; keep tests focused unless downloads/generation are explicitly required. The node suite is `node --test "tests/*.test.cjs"` with the glob QUOTED — the directory form dies on Node v24.
 
 ### Debugging runtime issues
 
-- **Read first:** `logs/app.log` (last 50–100 lines via `Read` offset only — never full)
-- **Notes:** server crashes, python engine, generation failures.
+- **Read first:** `docs/DEVELOPMENT.md` § Reading `logs/app.log` — filter by `[category]`, never read the file whole
+- **Notes:** server crashes, python engine, generation failures. **Any Electron run, dev included, logs to `%APPDATA%\Cubric Vision\logs\app.log`** (MPI-418). The repo's own `logs/` only collects processes started without `APP_USER_DATA` — i.e. test harnesses — so reading it while chasing a live app bug shows you nothing.
 
 ### Sibling website / docs
 
@@ -192,6 +230,20 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - `.claude/rules/dos_and_donts.md` — universal baseline
 - **Memory:** `project_product_scope.md` (Vision = image/video only; audio + prompt-gen are sibling apps)
 
+## Board archive layout
+
+Two archives exist and they are not duplicates:
+
+- `.agents/mpi-kanban/tasks/_archived/<id>/` — **current.** Where `mpi-archive` puts a
+  finished card's whole workspace. 302 cards as of 2026-08-04.
+- `docs/archive/mpi-kanban/` — **older**, from before the JSON board: 99 task folders plus
+  `plans/`, `handoffs/`, `investigations/`, and (since 2026-08-04) `legacy/`, the retired
+  Markdown board snapshots.
+
+Look in the first; fall back to the second for anything older than the 2026-06-01 migration.
+Neither is read for current work — a card's real record is its commit and its subsystem doc.
+
 ## Topic Gaps
 
-- None tracked.
+- `docs/README.md` is the authoritative doc map; this index is the task-to-topic layer over
+  it. When they disagree, `docs/README.md` wins and this file is the one that drifted.
