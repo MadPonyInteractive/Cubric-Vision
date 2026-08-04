@@ -9,10 +9,11 @@ The command stack behind Ctrl+Z / Ctrl+Shift+Z. Split out of
 
 ## What it stores, and why that is the whole trick
 
-`MpiCanvas` owns **one** stack for the whole canvas — not one per tool — so MPI-375's paint
-layer plugs into the same entries instead of growing a second stack. Nothing in `UndoStack`
+`MpiCanvas` owns **one** stack for the whole canvas — not one per tool — which is how MPI-375's
+paint layer plugs into the same entries instead of growing a second stack. Nothing in `UndoStack`
 knows what a mask is: an entry is a list of rectangular pixel patches over arbitrary 2D
-contexts.
+contexts. The consequence is deliberate: **Ctrl+Z inside the Paint tool can walk back into a mask
+stroke.** One canvas, one chronological history.
 
 **Only `manualCanvas` + `subtractCanvas` are stored.** `maskCanvas` and `autoCanvas` are
 derived, so an undo restores those two and calls `_recomposite()`. That is why **the
@@ -24,23 +25,37 @@ Scope is deliberately **pixels only**. `autoPickMasks` / `selectedAutoPicks` are
 detect run (re-runnable) and points are individually removable by clicking a dot, so neither
 is restored — undoing a bake brings the pixels back, not the thumbs.
 
-The undoable units are the **complete mutation set** of those two layers, enumerated from
-the code rather than guessed: `paint()`, `clear()`, `bakeAutoPicksInto()`, `applyAdjust()`,
-`fillHoles()`, plus `setManual/SubtractFromDataURL()` and `init()` — the last two are **loads**,
-deliberately not recorded.
+The undoable units are the **complete mutation set** of the recorded layers, enumerated from the
+code rather than guessed:
+
+| Layer | Records an entry | Deliberately records NOTHING |
+|---|---|---|
+| `MaskManager` — `manualCanvas` + `subtractCanvas` | `paint()`, `clear()`, `bakeAutoPicksInto()`, `applyAdjust()`, `fillHoles()` | `setManual/SubtractFromDataURL()`, `init()` — **loads** |
+| `PaintManager` — `paintCanvas` (MPI-375) | `paint()`, `clear(true)` | `setFromDataURL()`, `init()` (which calls `clear(false)`) — **loads** |
+
+`PaintManager.init()` must **not** clear the stack a second time: `MpiCanvas.loadImage()` already
+cleared it through `mask.init()`, and clearing again would wipe the history the mask just
+re-established. Both are loads, and a load is never an undoable edit. The paint layer's model,
+persistence and Apply live in **[painting.md](painting.md)**.
 
 ---
 
 ## 🔴 The contract — read this before adding ANY layer mutation
 
-If you write code that mutates `manualCanvas` or `subtractCanvas` (or, later, a paint
-layer), **you must record an undo entry**. There are exactly three shapes:
+If you write code that mutates `manualCanvas`, `subtractCanvas` or the RGBA `paintCanvas`,
+**you must record an undo entry**. There are exactly three shapes:
 
 | Your mutation | What to call |
 |---|---|
 | **Layer-wide, one shot** — a bake, a Clear, a grow/shrink release | `this._recordUndo()` **before** mutating, and **after** any early-return guard so a no-op cannot push an empty entry |
-| **A gesture** — a stroke, a drag with a start and an end | `undo.begin(mask.undoLayers())` at the start · accumulate the dirty box · `undo.commit(mask.takeStrokeBox())` at the end · `undo.abort()` if it produced nothing |
-| **A LOAD that replaces the layers** — `setManual/SubtractFromDataURL`, `init` | record **nothing**, and clear the stack. A load is not an edit the user could have undone |
+| **A gesture** — a stroke, a drag with a start and an end | `undo.begin(mgr.undoLayers())` at the start · accumulate the dirty box · `undo.commit(mgr.takeStrokeBox())` at the end · `undo.abort()` if it produced nothing |
+| **A LOAD that replaces the layers** — `setManual/Subtract/PaintFromDataURL`, `init` | record **nothing**, and clear the stack. A load is not an edit the user could have undone |
+
+`mgr` is whichever manager owns the destination — `MaskManager` or `PaintManager`; both expose
+`undoLayers()` / `takeStrokeBox()` / `_recordUndo()` with the same meanings, which is what lets
+the one stack serve both. The paint brush's gesture is closed by `InputController._endPaintStroke()`,
+the mask brush's by `_endMaskStroke()`; they are separate only because a mask stroke publishes
+mask state to the op strip and a paint stroke does not.
 
 Then make sure the change reaches the UI: an undo must end up firing `onMaskStrokeEnd`
 (`MpiCanvas._applyUndo()` already does) or the op strip never re-evaluates.
@@ -49,8 +64,9 @@ Then make sure the change reaches the UI: an undo must end up firing `onMaskStro
 undo at all — the user learns to trust it and then loses work at the first unwired path.
 A new mutation that skips the stack is a silent hole, and nothing will fail loudly.
 
-Cards that will hit this next: **MPI-368** (shapes — Add/Subtract bakes),
-**MPI-375** (paint — plugs its RGBA layer into this same stack, does not build a second one).
+**MPI-375 (paint) has landed** and did exactly this — one RGBA layer, the same stack, no second
+one ([painting.md](painting.md)). The next card to hit it is **MPI-368** (shapes), whose commit is
+a layer-wide one shot into either destination.
 
 ---
 

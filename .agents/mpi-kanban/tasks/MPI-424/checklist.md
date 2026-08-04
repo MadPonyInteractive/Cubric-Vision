@@ -16,13 +16,22 @@ This card holds no implementation of its own. It is done when all five ship.
       entry, Apply as a layer-wide undo entry. It is also the FIRST card to extend
       `discardPreview` rather than the call site - 368 and 373 do the same.
       `tasks/MPI-382/plan.md`.
-- [ ] **MPI-375** Paint - RGBA layer, brush-engine extraction, alpha brushes.
-      **NOW THIRD** (was fourth), swapped with MPI-368 by the user 2026-08-03.
+- [x] **MPI-375** Paint - RGBA layer, brush-engine extraction, alpha brushes.
+      **SHIPPED 2026-08-03**, user-verified in the app across three rounds
+      (`7303d60e`, `7e0ee5aa`). `PaintManager` = ONE RGBA layer at image-native size
+      capped at 4096, on the SHARED `UndoStack`; `brushDab.js` = the extracted
+      `stampDab` + `strokeDabs` both brushes now stamp; `MpiToolOptionsPaint` + the
+      Paint rail group, with `MpiMaskStrip` made destination-driven; per-entry
+      `paint.png` in the mask TEMP dir; Apply flattens server-side through
+      `POST /project/apply-paint` at the opacity slider. **The alpha brush pack was
+      split OUT to MPI-435** at planning (no source textures exist) - it is now
+      unblocked and parameterises `stampDab` alone. Docs: **`docs/painting.md`**.
+      `tasks/MPI-375/plan.md`.
 - [ ] **MPI-368** Shape gizmo - one gizmo, two mounts (mask + paint).
-      **NOW FOURTH.** It cannot ship its Paint mount until MPI-375 exists: grepped
-      `js/` 2026-08-03 and there is no paint layer of any kind. Shapes-first would
-      have shipped one mount and promised the other, or dragged a half-designed
-      paint canvas into this card. Rationale on `brief.md` under the Order table.
+      **NOW FOURTH, and NOW UNBLOCKED** - the paint layer it needs exists as of
+      2026-08-03. Its rasterise target and the exact recording shape are written down
+      in `docs/painting.md` § Seams the next cards land on; do not rediscover them.
+      Rationale for the swap is on `brief.md` under the Order table.
 - [ ] **MPI-373** Composite group - Mask Comp + Paint Comp, pasted slots,
       retires the MPI-362 modal.
 - [x] Re-read the order after MPI-425 ships. It is allowed to change what the

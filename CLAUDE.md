@@ -91,6 +91,7 @@ it turned off before staging weights to R2.
 | Canvas tool family (adding/changing a canvas tool, **the preview contract**, Add/Subtract, PromptBox contract) | `docs/masking-tools.md` |
 | SAM3 masking (click-point + open-vocabulary text tools, their graph branches, the `name:N` trap) | `docs/masking-sam3.md` |
 | Canvas undo / redo (the shared command stack — any code that MUTATES a mask or paint layer) | `docs/masking-undo.md` |
+| Painting (the RGBA paint layer, the shared brush dab, per-entry paint persistence, Apply's server-side flatten) | `docs/painting.md` |
 | Crop (resolution types, cropping past the image edge, snapping, pad-then-extract) | `docs/crop.md` |
 | Model Library UI (install-state display, tile patching, featured) | `docs/model-library.md` |
 | Events & cross-component communication | `.claude/rules/events.md` |

@@ -76,15 +76,23 @@ lands both mounts at once, which is what its card actually says. The checklist's
 ## A fresh session starts HERE
 
 1. Read this file — it is the whole design; the chat it came from is gone.
-2. **MPI-425 and MPI-382 both SHIPPED** (2026-08-02 / 2026-08-03, verified in the
-   app), and so has MPI-431. The frame exists: groups render, and a group member may
-   carry `collapse` + `sub[]` to open its modes in a floating `MpiPopup` strip
-   instead of stacking them. **MPI-375 (Paint) is next** — see the swap note under
-   the Order table. Read `tasks/MPI-425/plan.md` § Completed before adding a button
-   (the shape you mount into, and the traps already paid for) and
-   `docs/masking-tools.md` § The preview contract before adding a preview.
-3. The remaining four have settled designs on their own cards but NO plan file
-   yet — run `mpi-create-plan` against each as it comes up, not before.
+2. **MPI-425, MPI-382, MPI-431 and MPI-375 have all SHIPPED** (2026-08-02 →
+   2026-08-03, each verified in the app). The frame exists: groups render, and a
+   group member may carry `collapse` + `sub[]` to open its modes in a floating
+   `MpiPopup` strip instead of stacking them. **Both engines now exist too** — the
+   brush was extracted to `brushDab.js` and the RGBA paint layer is real.
+   **MPI-368 (Shapes) is next**, and it is the card the whole taxonomy was
+   sequenced for: one gizmo, both destinations, in one pass.
+3. Before writing any of MPI-368: read `tasks/MPI-425/plan.md` § Completed (the
+   shape you mount a button into, and the traps already paid for),
+   `docs/masking-tools.md` § The preview contract (a gizmo in flight IS a preview —
+   extend `discardPreview`, never the call site), **`docs/painting.md` § Seams the
+   next cards land on** (the paint rasterise target, spelled out so this card does
+   not rediscover it), and `docs/masking-undo.md` (a shape commit is a layer-wide
+   one shot → `_recordUndo()` after the no-op guard).
+4. MPI-368 and MPI-373 have settled designs on their own cards but NO plan file
+   yet — run `mpi-create-plan` against each as it comes up, not before. MPI-435
+   (alpha brush pack) is unblocked and parameterises `stampDab` alone.
 
 Nothing about this design lives outside these cards. The rejected MPI-379 is the
 record of what was ruled out and why.
@@ -106,4 +114,7 @@ record of what was ruled out and why.
   manual may resurrect an erased region.
 - Every new tool registers in `_MASK_TOOLS` (where it is mask family) and in
   `TOOL_OPTIONS_REGISTRY` - the MPI-381 guard test fails if one is missing.
-- `docs/masking.md` is capped at 200 lines: trim before adding.
+- Docs are capped at 200 lines each. The canvas knowledge is already split across
+  `masking.md` (129), `masking-tools.md` (**211 — over, trim before adding**),
+  `masking-sam3.md`, `masking-undo.md` and `painting.md` (170). Write to the one the
+  fact belongs to; never to a catch-all.

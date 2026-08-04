@@ -46,6 +46,7 @@ NOT mechanically split these):
 | **Canvas tool family** (Mask/Paint/Composite taxonomy, the preview contract, Add/Subtract, who owns which panel, the PromptBox contract) | [masking-tools.md](masking-tools.md) |
 | **SAM3 masking** (click-point + open-vocabulary text tools, their graph branches, the `name:N` trap) | [masking-sam3.md](masking-sam3.md) |
 | **Canvas undo** (the shared command stack, what it stores and why, dirty rects, the Ctrl+Z typing trap) | [masking-undo.md](masking-undo.md) |
+| **Painting** (the RGBA layer, the shared dab, image-native resolution, per-entry persistence, the server-side Apply) | [painting.md](painting.md) |
 | **Crop** (ratio/free/exact-resolution, cropping PAST the image edge + fill colour, edge snapping, pad-then-extract) | [crop.md](crop.md) |
 | **Model Library UI** (usable-vs-installed, featured, install-button gates, tile patching) | [model-library.md](model-library.md) |
 | **Per-component behavioral contracts** (PromptBox, MpiToast, MpiPopup, MpiInput, …) | [component-contracts.md](component-contracts.md) |

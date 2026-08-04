@@ -100,12 +100,12 @@ Two things this plan decides on technical grounds and states as assumptions:
       `MpiMaskedImagePreview` (that surface belongs to `prompt` mode and destroys the canvas
       mid-stroke).
 
-- [ ] **Document and close the loop.** New `docs/painting.md` (`docs/masking.md` is at its
-      200-line cap): the layer model, the native-resolution decision, per-entry persistence,
-      why paint is not a preview, and the shared-dab seam MPI-435 will parameterise. Add the
-      paint mutations to `docs/masking-undo.md`'s **enumerated complete set** — that list is
-      load-bearing, an unlisted mutation is a silent hole in Ctrl+Z. Route it from
-      `docs/README.md` and the Context Router. Note in `docs/releases/UNRELEASED.md`.
+- [x] **Document and close the loop.** New `docs/painting.md`: the layer model, the
+      native-resolution decision, per-entry persistence, why paint is not a preview, and the
+      shared-dab seam MPI-435 will parameterise. Add the paint mutations to
+      `docs/masking-undo.md`'s **enumerated complete set** — that list is load-bearing, an
+      unlisted mutation is a silent hole in Ctrl+Z. Route it from `docs/README.md` and the
+      Context Router. Note in `docs/releases/UNRELEASED.md`.
       **Verify:** every named file, function and flag in the new doc exists in source; the
       undo set matches what `PaintManager` actually mutates.
 
@@ -140,13 +140,27 @@ eraser, clear, opacity all confirmed by hand). Evidence: `validation.md`.
 - **`mask-temp:delete` narrowed** so Clear mask cannot take the paint layer with it.
 - **Apply honours the opacity slider**, added on the user's request at verification.
 
+**Item 5, shipped 2026-08-03** — docs only, no code touched. `docs/painting.md` (170
+lines) written from source-verified facts and routed from BOTH `docs/README.md` and
+CLAUDE.md's Context Router; `docs/masking-undo.md`'s enumerated mutation set is now a
+two-layer table with the paint entries and the `init()`-must-not-clear-twice rule;
+`docs/masking-tools.md` § taxonomy's Paint row stops being a forward reference; ONE
+`## whatIsNew` line in UNRELEASED.md. Every identifier named in the new doc grepped
+back out of source; suite unchanged at 342/0.
+
 ## Remaining Work
 
-- Item 5: `docs/painting.md`, the `docs/masking-undo.md` mutation set, routing,
-  UNRELEASED.md.
+None. All five items are done — the card is complete pending the user's close.
 
 ## Plan Drift
 
+- **2026-08-03 (late) — `docs/masking.md` was NOT at its 200-line cap, and item 5's stated
+  reason for a separate doc was therefore wrong.** Measured: 129 lines. The split is
+  still correct on the other ground — masking.md plus ~90 lines of paint crosses the
+  cap, and paint is its own subsystem with its own layer model, persistence and Apply
+  route — so `docs/painting.md` was written as planned, with the false premise dropped
+  rather than repeated into the new doc. `docs/masking-tools.md` is the file actually
+  over the line (211), which is why item 5's edits there were kept length-neutral.
 - **2026-08-03 — the mask brush was ALREADY dropping dabs, and this card fixed it.**
   The plan said to confirm whether fast drags gap before adding interpolation. They
   did, by construction: `paint()` stamped one arc per `mousemove` with nothing

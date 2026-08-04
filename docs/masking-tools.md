@@ -133,13 +133,14 @@ destination never means a new engine. Order + cards: `tasks/MPI-424/brief.md`.
 | Group | Artifact | Buttons | Engine | PromptBox |
 |---|---|---|---|---|
 | `Mask` | binary mask layers | brush · detect · adjust · shapes (368) | brush, gizmo | keeps it |
-| `Paint` | RGBA paint layer (375) | brush · shapes | the SAME two | keeps it |
+| `Paint` | RGBA paint layer — **[painting.md](painting.md)** | brush (375) · shapes (368) | the SAME two | keeps it |
 | `Composite` | blended image (373) | mask comp · paint comp | one op, two front ends | **no** |
 
 `Paint` keeps the box because paint → mask → detail is one operation; `Composite` ends at its own
-Apply and needs the column for its slots. Recorded so MPI-375 / MPI-373 do not re-decide it —
-neither branch exists yet and neither may be stubbed in early. **Only working tools ship**: a
-method with no panel gets no button, never a greyed placeholder.
+Apply and needs the column for its slots. **MPI-375 shipped the Paint brush on that ruling** — it
+is not in `_MASK_TOOLS`, it has its own `_PAINT_TOOLS` family, and it keeps the PromptBox through
+`_isCanvasTool`. MPI-373 may not re-decide the Composite row or stub it in early. **Only working
+tools ship**: a method with no panel gets no button, never a greyed placeholder.
 
 **Same job, different engine → one COLLAPSE button.** `Detect` is one rail button that opens
 `points` / `text` / `auto` in a floating strip (`MpiPopup`, `position: 'right'`, auto-dismiss on an

@@ -160,10 +160,47 @@ through the optional call, with no error anywhere. Suite 340 → **342**.
 i.e. every `loadImage`, i.e. every entry switch — and again in `_restoreLayers()`.
 The mask brush has always behaved this way; paint shares the one stack by design.
 
-## Still to do before this card can be validated
+## Plan item 5 — docs only, self-verified (2026-08-03)
 
-- Plan item 5: `docs/painting.md`, the `docs/masking-undo.md` mutation set, routing.
+No code changed. `git status` shows only doc files plus the card workspace, and the
+suite is **342/0** — the same number Round 3 left it at, which is the evidence that
+nothing executable was touched.
+
+**Written:** `docs/painting.md`, **170 lines** (under the 200 cap). Covers the one-layer
+model, `PAINT_MAX_EDGE` 4096 vs the mask's 1536 and why, the shared dab plus the
+skipping-brush bug it fixed, the two "not a mask / not a preview" contracts, display
+opacity vs the layer-wide Apply bake, session-scoped per-entry persistence including
+the write-OR-delete rule and the `mask-temp:delete` narrowing, the sibling Apply route,
+the shared undo stack, and the two seams (MPI-435's `stampDab`, MPI-368's rasterise
+target with its `_recordUndo`-then-draw shape and the image-px → layer-px scale it must
+do itself).
+
+**Routed BOTH ways**, which was the item's own failure mode: a map row in
+`docs/README.md` and a Context Router row in `CLAUDE.md`.
+
+**`docs/masking-undo.md`:** the enumerated mutation set is now a two-layer table —
+`PaintManager.paint()` and `clear(true)` record, `setFromDataURL()` and `init()` are
+loads that record nothing — plus the rule that `paint.init()` must not clear the stack
+a second time, the gesture row generalised to `mgr` (either manager), and the "cards
+that will hit this" line updated (MPI-375 landed; MPI-368 is next).
+
+**`docs/masking-tools.md`:** the taxonomy's Paint row now links `painting.md` and names
+which card owns each button; the ruling paragraph records that MPI-375 shipped on it.
+Kept length-neutral — that file is at **211** lines, already over the cap.
+
+**Every identifier in the new doc was grepped back out of source before it was written
+down** (18 names: `discardPreview`, `MASK_TEMP_ROOT`, `_endPaintStroke`, `_endMaskStroke`,
+`_appendViewerEntry`, `_isCanvasTool`, `_PAINT_TOOLS`, `PAINT_MAX_EDGE`, `DAB_SPACING`,
+`strokeDabs`, `stampDab`, `compositeOverlay`, `getPaintOpacity`, `paintEnabled`,
+`takeStrokeBox`, `undoLayers`, `_recordUndo`, `nextSequence`) — all present.
+
+**One plan premise was false and is corrected, not repeated.** Item 5 said to write a
+separate doc because `docs/masking.md` was at its 200-line cap; it is at **129**. The
+split still stands on the other ground (masking.md + ~90 lines of paint would cross the
+cap, and paint is its own subsystem), so the doc was written as planned with the wrong
+reason dropped. Drift note on the plan.
 
 ## The user's check (verify mode: user-ux)
 
-Nothing above proves the tool FEELS right, and no test can. Outstanding.
+Items 1–4 were verified by hand in the app across Rounds 2 and 3. Item 5 has no UI
+surface — there is nothing to click. The card is complete pending the user's close.

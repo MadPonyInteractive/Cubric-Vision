@@ -53,6 +53,15 @@
   composition is locked to the source; easing it off lets the model reinterpret the
   framing while keeping
   the pose. Klein bites softer than Krea 2, so it wants a lower setting.
+- **Paint — draw on your image and let the model take it from there.** A new Paint
+  tool with a brush, an eraser and a colour picker. A rough scribble tells the model
+  *where*, *how big* and *what colour* — something a prompt alone cannot say. Paint a
+  shape, then mask it and run Detail over it, and the model works from your sketch
+  instead of guessing. The paint stays on your image while you switch to the mask
+  tools, and it keeps itself per image until you close the app, so nothing is lost
+  while you work. Undo works on it like anything else on the canvas. Press **Apply**
+  to bake it in as a new entry — your original is untouched, so deleting the new
+  entry undoes it.
 
 ## importantChanges
 
