@@ -123,3 +123,72 @@ on a real install — deliberately NOT started the night before a release.
 Root cause disproven → the CUDA-on-CPU symptom is owned by MPI-411 (fixed). The
 surviving code change belongs to the MPI-217 drift class. CPU-specific concerns
 dropped per the user's 2026-07-31 call that CPU inference is a fallback nobody uses.
+
+---
+
+# Phase 2 validation — the curated pip file (2026-08-04)
+
+Phase 2 shipped ahead of Phase 1 at the user's call. **Local engine only** — the Pod twin
+is unchanged and still owns `install_command` / `pip_pins`.
+
+## What shipped
+
+| file | what |
+|---|---|
+| `dev_configs/python_deps.in` | hand-curated input — the union of 7 nodes' requirements with our decisions (drops, pins, markers), each with its reason |
+| `dev_configs/python_deps.txt` | generated lock — 124 packages, `uv pip compile --universal` |
+| `scripts/compile-node-deps.mjs` | generator AND drift check in one command |
+| `routes/downloadManager.js` | installs the lock once behind a hash marker; per-node requirements/command/pipPins step DELETED from the local path |
+| `tests/curated-python-deps.test.cjs` | guards the two invariants + that the deleted step stays deleted |
+| `docs/playbooks/add-model/02-dependencies-r2.md`, `.claude/rules/comfy_engine.md`, `docs/download-manager.md` | the mandatory pass, so the file cannot drift when a node is added |
+
+## Verified
+
+- `compile-node-deps.mjs --check` → **0 uncovered** across 65 declared requirements in 7
+  nodes; `sam2` correctly reported as a deliberate drop.
+- `uv pip compile --universal` resolves clean.
+- Throwaway venvs on **both** interpreters the engine ships (uv venv 3.12, Windows
+  portable 3.13): `Resolved 124 packages`, **124/124 would install**, no errors, no
+  warnings, no source builds. Real one-pass install on 3.13 → exit 0.
+- Post-install in that venv: `cv2 5.0.0` with contrib present (`ximgproc` → True) and
+  **exactly one** opencv dist-info on disk; `numpy 2.5.1`, `scipy 1.18.0`, `PIL 12.3.0`,
+  `transformers 5.13.0` — every curated pin landed exactly. The only `nvidia*` entry is
+  `nvidia_ml_py` (the deliberate keep; pure-Python NVML, no CUDA runtime).
+- `node --test "tests/*.test.cjs"` → **343 pass, 0 fail**. ESLint clean.
+- Negative control on the new guard: removing `--no-deps` from the installer makes it fail
+  with `the curated install MUST use --no-deps`. Restored and re-verified.
+
+## The bug the guard caught during the build
+
+The first compile emitted pinned `triton`, 16 `nvidia-*` wheels and — on Linux —
+`cuda-toolkit`, `cuda-bindings`, `cuda-pathfinder`, all `# via torch`. `--no-emit-package
+torch` drops torch itself but **not its transitive closure**, and torch is legitimately in
+that closure via diffusers/ultralytics/kornia/albumentations/mediapipe. That is this card's
+Evidence A stack reproduced by our own generator. Fixed by filtering the whole engine-owned
+family post-compile and re-checking; `nvidia-ml-py` is exempted deliberately.
+
+Same pass exposed a second one: three transitive opencv variants (mediapipe →
+`opencv-contrib-python`, ultralytics → `opencv-python`, albumentations →
+`opencv-python-headless`) defeated the unification, and `pipPins` was forcing **two of
+them at once** — so `import cv2` was last-writer-wins on every engine today. Unified to
+`opencv-contrib-python-headless`, which is why `--no-deps` is load-bearing rather than an
+optimisation: with deps, pip re-derives all three.
+
+## NOT verified — deliberately not claimed
+
+- **No real-engine install.** The card's own verify (`grep -icE "downloading
+  (triton|nvidia)"` = 0, a `+cpu` torch tag, "Requirement already satisfied" far below
+  400, zero `IMPORT FAILED`) needs the Linux/CPU box. Nothing here proves it.
+- **ComfyUI has not booted against the curated set.** The venv proves the packages
+  install and import; it does not prove all 15 universal nodes import inside ComfyUI. The
+  Pod build's `IMPORT FAILED` grep (MPI-341) is that gate, and the Pod has not converged.
+
+## Still open on this card
+
+1. **Phase 1's `PIP_CONSTRAINT` file** for the local engine. Note that `--no-deps` makes
+   it unnecessary for *this* install — the file cannot move torch because torch is not in
+   it — so Phase 1's remaining value is narrower than when it was written.
+2. **Pod convergence.** `mpi-ci/cubric-vision-pod` still bakes per-node deps and the
+   wrapper still installs volume-node requirements. Needs a user-authorized image build.
+   `requirementsDrop` + `_filterRequirements` are dead on the local path now and should be
+   removed together with that step, not before.

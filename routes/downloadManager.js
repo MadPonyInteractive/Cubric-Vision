@@ -37,7 +37,9 @@ const nodeStream = require('stream'); // MPI-296 — Writable hash-sink for stre
 const { createRequire } = require('module');
 const logger = require('./logger');
 const { checkOnline } = require('./netCheck');
-const { runPipCommand, runCustomCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot, processState, writeNodeCommitMarker } = require('./shared');
+// runCustomCommand dropped here with the per-node requirements step (MPI-413); it is
+// still exported from shared.js and used by the remote path's Pod wrapper contract.
+const { runPipCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot, processState, writeNodeCommitMarker } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const {
     isCompleteOnDisk,
@@ -2232,6 +2234,53 @@ function _checkModelJobsComplete() {
     }
 }
 
+// ── Curated Python dependency set (MPI-413) ───────────────────────────────────
+// The engine installs the set WE chose, in ONE pass, instead of letting each custom
+// node resolve its own requirements.txt on the user's machine. That old shape meant 13
+// separate pip resolves re-deriving the same shared graph (measured on a warm-cache
+// macOS install: 400 "Requirement already satisfied" lines, numpy re-resolved 18x,
+// torch 10x, and 4 packages installed then uninstalled and replaced), with whichever
+// node ran last deciding the version of every shared library.
+//
+// `--no-deps` is load-bearing, not an optimisation. python_deps.txt is the complete
+// resolved closure MINUS the engine-owned torch stack and the duplicate cv2 builds, so:
+//   - torch, triton, the nvidia-* wheels and cuda-toolkit CANNOT be touched by this
+//     install. They are not in the file, and without --deps pip would re-derive them
+//     from diffusers/ultralytics/kornia and stomp the +cpu or +cu130 build the engine
+//     deliberately placed (MPI-413 Evidence A: several GB of CUDA wheels on a CPU-only
+//     Linux box with no NVIDIA driver).
+//   - the three transitive opencv variants stay out, so `import cv2` is not decided by
+//     whichever pip ran last.
+// Regenerate the file with `node scripts/compile-node-deps.mjs`; see dev_configs/python_deps.in.
+const PYTHON_DEPS_PATH = path.join(__dirname, '..', 'dev_configs', 'python_deps.txt');
+
+/**
+ * Install the curated set once per engine, gated on a content-hash marker so an engine
+ * that already has it is a no-op and one that predates it (or drifted) self-heals.
+ * Throws on failure: a node whose deps are missing fails to import, and this is the
+ * only step that installs them.
+ */
+async function _ensureCuratedPythonDeps() {
+    if (!(await fs.pathExists(PYTHON_DEPS_PATH))) {
+        throw new Error(`curated python deps missing at ${PYTHON_DEPS_PATH} — the build is incomplete`);
+    }
+    const contents = await fs.readFile(PYTHON_DEPS_PATH);
+    const hash = crypto.createHash('sha256').update(contents).digest('hex').slice(0, 16);
+    const markerPath = path.join(ENGINE_ROOT, '.cubric_python_deps');
+
+    try {
+        if ((await fs.readFile(markerPath, 'utf8')).trim() === hash) {
+            logger.info('download', `curated python deps already installed (${hash})`);
+            return;
+        }
+    } catch { /* no marker, or unreadable — install */ }
+
+    logger.info('download', `installing curated python deps (${hash}) in one pass`);
+    await runPipCommand(['install', '-r', PYTHON_DEPS_PATH, '--no-deps', '--no-warn-script-location']);
+    await fs.writeFile(markerPath, `${hash}\n`);
+    logger.info('download', `curated python deps installed, marker stamped (${hash})`);
+}
+
 async function _runCustomNodeInstall(modelJob) {
     const customDeps = modelJob.deps.filter(d =>
         d.status === 'complete' && d.localPath != null && d.type === 'custom_nodes'
@@ -2252,6 +2301,17 @@ async function _runCustomNodeInstall(modelJob) {
     // and the phase so the log and the toast point at the real step.
     const extractFailures = [];
     const installFailures = [];
+
+    // One pip pass for every node's dependencies, before any of them extract (MPI-413).
+    // All custom_nodes are universal (MPI-222) — they install with the engine and are
+    // never GC'd with a model — so the whole curated set is always the right set, and
+    // the marker makes a second model's install a no-op.
+    try {
+        await _ensureCuratedPythonDeps();
+    } catch (err) {
+        logger.error('download', `curated python deps FAILED: ${err.message}`);
+        installFailures.push(`curated python dependency set (${err.message})`);
+    }
 
     for (const dep of customDeps) {
         // Guard: skip deps without a valid localPath string
@@ -2387,81 +2447,28 @@ async function _runCustomNodeInstall(modelJob) {
             }
         }
 
-        // Install requirements: custom command or pip. ALWAYS runs (even when the
-        // folder was already present) — idempotent, the self-heal for missing deps.
-        // MPI-243: a single dep's requirements step must NOT abort the whole batch.
-        // Previously a `throw err` here unwound the entire for-loop, so when
-        // comfyui-frame-interpolation's `python install.py` hit a transient error
-        // (Errno 2 — the parallel install raced its own extraction), every LATER
-        // dep (Impact-Subpack, RES4LYF) was left un-installed and the user had to
-        // Retry. Treat a reqs failure like an extraction failure: mark anyFailure,
-        // skip the rest of THIS dep, keep going. The failed dep has no commit
-        // marker stamped (below), so repair-deps re-installs just it next boot.
-        // Some pinned nodes list a requirement that cannot resolve on every platform,
-        // and pip fails the WHOLE file over one unresolvable name — so a single
-        // CUDA-only line bricks install for an entire OS (MPI-370:
-        // comfyui_controlnet_aux ships an unmarked `onnxruntime-gpu`, which has no
-        // macOS wheel at any version). Strip those lines from the file on disk before
-        // EITHER install path below reads it. Rewriting only on a real change keeps
-        // unaffected platforms byte-identical and makes a re-run a no-op.
-        const dropNames = dep.requirementsDrop && dep.requirementsDrop[process.platform];
-        if (Array.isArray(dropNames) && dropNames.length) {
-            const reqPath = path.join(targetDir, 'requirements.txt');
-            try {
-                if (await fs.pathExists(reqPath)) {
-                    const filtered = _filterRequirements(await fs.readFile(reqPath, 'utf8'), dropNames);
-                    if (filtered !== null) {
-                        await fs.writeFile(reqPath, filtered);
-                        logger.info('download', `requirements filtered for ${dep.id} on ${process.platform}: dropped ${dropNames.join(', ')}`);
-                    }
-                }
-            } catch (err) {
-                logger.warn('download', `requirements filter failed for ${dep.id}: ${err.message}`);
-            }
-        }
+        // No per-node requirements step here any more — MPI-413. The engine installs
+        // ONE curated set (`_ensureCuratedPythonDeps`, before this loop) instead of
+        // asking each node to resolve its own requirements.txt on the user's machine.
+        // What that step used to be, and why it is gone:
+        //   - `requirementsDrop` + `_filterRequirements` rewrote a node's file on disk to
+        //     strip a line that cannot resolve on this platform (MPI-370's unmarked
+        //     `onnxruntime-gpu`; MPI-387's `git+…/sam2`). The curated file carries a PEP
+        //     508 marker and omits sam2, so there is nothing left to strip.
+        //   - `installRequirementsCommand` ran a per-pack command. Frame-Interpolation's
+        //     `python install.py` looped its requirements one `os.system` pip per line and
+        //     then tried to build `cupy-wheel`, which fails on every platform on every
+        //     fresh install and reported SUCCESS anyway (os.system ignores the exit code).
+        //   - `pipPins` forced known-good versions AFTER requirements had already drifted
+        //     the engine — a repair for damage the curated file prevents. Its versions
+        //     ARE the curated pins now.
+        // Both fields stay on the dep objects: `routes/remoteModels.js` still sends
+        // `install_command` / `pip_pins` to the Pod wrapper, which has not converged yet.
 
-        if (dep.installRequirementsCommand) {
-            try {
-                await runCustomCommand(dep.installRequirementsCommand, targetDir);
-                logger.info('download', `Custom install command succeeded for ${dep.id}`);
-            } catch (err) {
-                logger.error('download', `Custom install command FAILED for ${dep.id}: ${err.message} — continuing with remaining deps`);
-                installFailures.push(`${dep.id} (${err.message})`);
-                continue;
-            }
-        } else {
-            const reqPath = path.join(targetDir, 'requirements.txt');
-            if (await fs.pathExists(reqPath)) {
-                try {
-                    await runPipCommand(['install', '-r', reqPath, '--no-warn-script-location']);
-                    logger.info('download', `pip requirements installed for ${dep.id}`);
-                } catch (err) {
-                    logger.error('download', `pip install FAILED for ${dep.id}: ${err.message} — continuing with remaining deps`);
-                    installFailures.push(`${dep.id} (requirements: ${err.message})`);
-                    continue;
-                }
-            }
-        }
-
-        // Version pins (MPI-127): some nodes have UNPINNED requirements that pull a
-        // package version which breaks the node import (e.g. ComfyUI-LTXVideo's
-        // unpinned `kornia` resolves to 0.8.3, which removed `pad` →
-        // `ImportError: cannot import name 'pad'` → the whole node fails to load).
-        // Force the known-good pins AFTER requirements so they win.
-        if (Array.isArray(dep.pipPins) && dep.pipPins.length) {
-            try {
-                await runPipCommand(['install', ...dep.pipPins, '--no-warn-script-location']);
-                logger.info('download', `pip pins installed for ${dep.id}: ${dep.pipPins.join(', ')}`);
-            } catch (err) {
-                logger.error('download', `pip pin install FAILED for ${dep.id}: ${err.message} — continuing with remaining deps`);
-                installFailures.push(`${dep.id} (version pins: ${err.message})`);
-                continue;
-            }
-        }
-
-        // Stamp the pinned-commit marker LAST, so it only lands on a fully-installed
-        // node (extract + reqs + pins all succeeded). A missing/mismatched marker =
-        // drift → targeted reinstall on next boot (MPI-222). No-op for unpinned nodes.
+        // Stamp the pinned-commit marker LAST, so it only lands on a fully-extracted
+        // node. A missing/mismatched marker = drift → targeted reinstall on next boot
+        // (MPI-222). No-op for unpinned nodes. Its pip deps are covered by the curated
+        // set installed before this loop, which has its own marker (MPI-413).
         try {
             const stamped = await writeNodeCommitMarker(targetDir, dep.id);
             if (stamped) logger.info('download', `node commit marker stamped for ${dep.id}`);

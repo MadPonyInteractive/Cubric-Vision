@@ -1,0 +1,131 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "51f94f9f-4459-45c7-b8a4-7405a6334a59",
+  "generated_at": "2026-08-04T00:40:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-413 Phase 2 — one curated pip file for the local engine",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Install the dependency set WE chose: one curated pip file, not 13 unconstrained per-node resolves.",
+    "status": "in_progress",
+    "summary": "Phase 2 shipped and is verified for the LOCAL engine: the app now installs one curated, generated lock (dev_configs/python_deps.txt) in a single --no-deps pass, and no node requirements.txt / installRequirementsCommand / pipPins runs locally any more. The REMOTE (Pod) twin is unchanged, so the two engines currently install DIFFERENT dependency sets — that split is the next session's work, chosen by the user."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-413/plan.md",
+    "completed": [
+      "Phase 2a — dev_configs/python_deps.in (hand-curated input) + dev_configs/python_deps.txt (generated lock, 124 packages)",
+      "Phase 2b — scripts/compile-node-deps.mjs: generator AND drift check in one command, fetching node requirements from GitHub at the exact node_lock commit (no engine needed)",
+      "Phase 2c — routes/downloadManager.js installs the lock once behind a content-hash marker at <ENGINE_ROOT>/.cubric_python_deps; per-node requirements/command/pipPins step DELETED from the local path",
+      "Phase 2d — anti-drift pass documented in docs/playbooks/add-model/02-dependencies-r2.md, .claude/rules/comfy_engine.md (bullet AND Sub-Agent Briefing) and docs/download-manager.md",
+      "Open questions Q1–Q4 settled from the files on disk and recorded in plan.md"
+    ],
+    "pending": [
+      "Pod convergence — point mpi-ci/cubric-vision-pod (Dockerfile bake + wrapper.py _install_node_requirements) at python_deps.txt so both engines install the same set. USER-AUTHORIZED IMAGE BUILD REQUIRED.",
+      "Real-engine verification of Phase 2 on the Linux box (never done — see constraints).",
+      "Phase 1 residual — PIP_CONSTRAINT file for the local engine. Probably close as superseded; see key_decisions."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-413",
+    "title": "Install the dependency set WE chose: one curated pip file, not 13 unconstrained per-node resolves",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-413/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-413/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-413/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-413/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-413/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "plan.md written with Q1–Q4 answered from measured evidence (it corrects brief.md, which wrongly claimed Frame-Interpolation hides its deps inside install.py logic — it ships requirements-no-cupy.txt).",
+      "validation.md has a full Phase 2 section: what shipped, what was verified, the two bugs the guard caught mid-build, and an explicit NOT-verified list.",
+      "docs/playbooks/add-model/02-dependencies-r2.md, .claude/rules/comfy_engine.md and docs/download-manager.md all updated (user explicitly asked for the anti-drift pass, so the rule edit was authorized)."
+    ],
+    "pending": [
+      "docs/runpod-remote-engine.md and c:/AI/Mpi/mpi-ci/cubric-vision-pod/README.md will need the Pod half documented once it converges.",
+      "When the Pod converges, DELETE together: requirementsDrop + _filterRequirements (routes/downloadManager.js), their entries in nodesDeps.js, tests/requirements-filter.test.cjs, and the remote-only pipPins/installRequirementsCommand passthrough in routes/remoteModels.js:412-417. They are dead on the local path already but are still the Pod wrapper contract."
+    ]
+  },
+  "next_action": {
+    "description": "Converge the RunPod Pod onto dev_configs/python_deps.txt so both engines install the identical dependency set. Two places: (1) the image bake in c:/AI/Mpi/mpi-ci/cubric-vision-pod/Dockerfile, which today pip-installs each installRequirements:true node pack behind ENV PIP_CONSTRAINT=/opt/constraints.txt; (2) wrapper/wrapper.py _install_node_requirements (~line 2215), which runs a volume node's requirements.txt / install_command / pip_pins at connect. Read the plan and validation first, then brief the user with the proposed shape BEFORE touching mpi-ci — an image build is user-authorized. The Linux box is available this session, so ALSO run the real-engine verification of Phase 2 that has never been done.",
+    "command": "mpi-continue MPI-413"
+  },
+  "context": {
+    "key_decisions": [
+      "--no-deps on the curated install is LOAD-BEARING, not an optimisation. python_deps.txt is the complete closure MINUS the engine-owned torch stack and MINUS the duplicate cv2 builds; with deps, pip re-derives all of them from diffusers/ultralytics/albumentations and undoes both removals.",
+      "The torch family is excluded from the RESOLVE, not just the emit. `uv pip compile --no-emit-package torch` still emitted pinned triton, 16 nvidia-* wheels and (Linux) cuda-toolkit/cuda-bindings/cuda-pathfinder, all `# via torch` — this card's own Evidence A stack, reproduced by our generator. scripts/compile-node-deps.mjs filters the whole family post-compile. nvidia-ml-py is deliberately KEPT (pure-Python NVML, ultralytics needs it, no CUDA runtime).",
+      "opencv unified to opencv-contrib-python-headless. Three nodes declared three distributions into the same cv2 namespace and pipPins forced TWO at once, so `import cv2` is last-writer-wins on every engine shipped so far. mediapipe/ultralytics/albumentations pull the other three TRANSITIVELY, which is the second reason --no-deps is required.",
+      "cupy dropped entirely, zero behaviour change: measured cupy ABSENT and taichi ABSENT in the live engine with Frame-Interpolation loading fine; it is reachable only via vfi_models/ops, which no eagerly-imported model __init__ touches, and we ship only RIFE VFI. cupy-wheel is a 2.9kB source shim whose setup.py imports pkg_resources — it fails to build on every platform on every fresh install and reports success anyway (os.system ignores the exit code).",
+      "pipPins and installRequirementsCommand were KEPT on the dep entries even though the local path no longer reads them: routes/remoteModels.js:412-417 still sends install_command/pip_pins to the Pod wrapper. Deleting them before the Pod converges would break remote.",
+      "Phase 1 (PIP_CONSTRAINT for the local engine) is now nearly a no-op and is a close-as-superseded candidate. runPipCommand has exactly ONE call site left in the whole local engine and it runs --no-deps against a file with no torch in it, so it structurally cannot move torch. What remains unconstrained is comfy-cli's own pip during `comfy install` — already guarded on macOS (pinned torch first + --skip-torch-or-directml) and moot on Windows (prebuilt archive, no pip). A Linux-only sliver."
+    ],
+    "constraints": [
+      "NOT VERIFIED: no real-engine install has ever run against the curated set, and ComfyUI has never booted against it. Evidence so far is throwaway venvs only. The card's own verify needs a CPU/Linux box: grep -icE \"downloading (triton|nvidia)\" = 0, torch reports a +cpu tag, \"Requirement already satisfied\" count far below 400, zero IMPORT FAILED. The user HAS a Linux box available next session — run it.",
+      "A Pod IMAGE BUILD is USER-AUTHORIZED, and live Pod ops are USER-ONLY. Do not build or start anything on mpi-ci without asking. Use the build-pod-image skill when the user approves.",
+      "mpi-ci is a SEPARATE git repo at c:/AI/Mpi/mpi-ci/. Use `git -C` or cd; never run git from Cubric-Vision against it. Absolute paths in all tool calls.",
+      "Pod runtime edits (wrapper.py / start.sh) are NOT an image rebuild — they are R2-floated on two channels: ./publish-runtime.sh dev → restart Pod → test → ./publish-runtime.sh promote. NEVER publish-runtime.sh stable for day-to-day work. So the wrapper half of this convergence may not need a rebuild at all; only the Dockerfile bake half does.",
+      "The Pod already sets ENV PIP_CONSTRAINT=/opt/constraints.txt (cu130 trio) AND ENV PIP_EXTRA_INDEX_URL=.../whl/cu130 — the latter because the constraint pins a LOCAL version (+cu130) that exists only on the pytorch index, so isolated build envs would otherwise hit ResolutionImpossible (MPI-342). Keep both when converging.",
+      "The Pod build already greps for IMPORT FAILED (MPI-341) — that is the safety net that makes a hand-curated set safe. It is the gate that will catch an under-specified python_deps.txt, so converging the Pod is also what finally proves Phase 2.",
+      "Regenerating the lock needs network (fetches node requirements + core requirements from GitHub) and `uv` on PATH. uv 0.6.0 is what is installed here."
+    ],
+    "files_modified": [
+      "dev_configs/python_deps.in",
+      "dev_configs/python_deps.txt",
+      "scripts/compile-node-deps.mjs",
+      "routes/downloadManager.js",
+      "tests/curated-python-deps.test.cjs",
+      "docs/playbooks/add-model/02-dependencies-r2.md",
+      ".claude/rules/comfy_engine.md",
+      "docs/download-manager.md",
+      ".agents/mpi-kanban/tasks/MPI-413/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-413/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-413/validation.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-413/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-413/validation.md",
+      "dev_configs/python_deps.in",
+      "scripts/compile-node-deps.mjs",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/Dockerfile",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "ComfyUI engine / backend / models",
+      "Downloads",
+      "RunPod / remote engine",
+      "Pod image / mpi-ci"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    "docs/download-manager.md",
+    "docs/runpod-remote-engine.md",
+    "docs/playbooks/add-model/02-dependencies-r2.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-04T00:40:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are picking up MPI-413 in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/51f94f9f-4459-45c7-b8a4-7405a6334a59.json, then .agents/mpi-kanban/tasks/MPI-413/plan.md and validation.md, and run mpi-continue MPI-413. Phase 2 already shipped and is verified for the LOCAL engine: the app installs one curated generated lock, dev_configs/python_deps.txt, in a single --no-deps pass, and no custom node requirements.txt, installRequirementsCommand or pipPins runs locally any more. The REMOTE RunPod twin is untouched, so the two engines currently install different dependency sets, and closing that split is this session's job: converge c:/AI/Mpi/mpi-ci/cubric-vision-pod (the Dockerfile node bake, and wrapper/wrapper.py _install_node_requirements around line 2215) onto the same python_deps.txt. mpi-ci is a separate git repo, a Pod image build is user-authorized, and live Pod ops are user-only, so brief the user on the proposed shape before touching it. The user has a Linux box available this session — also run the real-engine verification of Phase 2 that has never been done: a full engine install, then grep -icE \"downloading (triton|nvidia)\" = 0, torch reporting a +cpu tag, the \"Requirement already satisfied\" count far below 400, and zero IMPORT FAILED. One more open item: Phase 1 (a PIP_CONSTRAINT file for the local engine) is now nearly a no-op because runPipCommand has exactly one call site left and it runs --no-deps against a file containing no torch — treat it as a close-as-superseded candidate rather than work to build."
+}

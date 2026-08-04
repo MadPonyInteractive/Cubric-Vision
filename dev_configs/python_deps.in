@@ -1,0 +1,103 @@
+# Cubric Vision — curated Python dependency INPUT for ComfyUI custom nodes (MPI-413).
+#
+# This is the set WE chose. It replaces asking each custom node to resolve its own
+# requirements.txt on the user's machine — 13 separate pip resolves that re-derived the
+# same shared graph, installed 4 packages only to uninstall and replace them, and let
+# whichever node ran last decide the version of every shared library.
+#
+# THIS FILE IS HAND-CURATED. The lock next to it is not:
+#
+#   dev_configs/python_deps.in   <- this file, edited by a human, reviewed in the diff
+#   dev_configs/python_deps.txt  <- GENERATED, do not hand-edit
+#
+# Regenerate + drift-check:
+#   node scripts/compile-node-deps.mjs --check   # is every node requirement covered here?
+#   node scripts/compile-node-deps.mjs           # rewrite python_deps.txt
+#
+# ADDING OR BUMPING A NODE WITH REQUIREMENTS: run --check, add anything it reports to
+# this file, regenerate, review the diff, commit both files. See
+# docs/playbooks/add-model/ and .claude/rules/comfy_engine.md.
+#
+# ── What is deliberately NOT here ───────────────────────────────────────────────
+#
+# torch / torchvision / torchaudio — engine-owned, never ours to move. The local
+#   engine installs them via comfy-cli's vendor branch (or the pinned macOS trio in
+#   routes/engine.js step 2b, or the Windows portable archive); the Pod image pins the
+#   cu130 trio and enforces it with PIP_CONSTRAINT. The compile excludes them with
+#   --no-emit-package so this file can never move a user's torch.
+#
+# git+https://github.com/facebookresearch/sam2 — declared by ComfyUI-Impact-Pack.
+#   Dropped on every platform since MPI-387: pip shells out to `git clone` for it, no
+#   portable engine ships git, and it failed 100% of clean installs. It backs Impact-Pack
+#   sampling nodes we never exercise; we ship SAM 1 (`sam-vit-b`) as the Impact segment
+#   refiner (MPI-380).
+#
+# cupy / cupy-wheel — declared by ComfyUI-Frame-Interpolation's install.py. Dropped.
+#   Measured 2026-08-04: cupy is ABSENT from the live engine, taichi too, and the node
+#   loads fine — it is reachable only through vfi_models/ops, which none of the eagerly
+#   imported model __init__ files touch. We ship exactly one FI node, `RIFE VFI`
+#   (comfy_workflows/video_interpolate.json), and RIFE never uses ops. `cupy-wheel` in
+#   particular is a 2.9 kB source shim whose setup.py imports pkg_resources, which modern
+#   setuptools no longer ships — so it fails to build on EVERY platform on EVERY fresh
+#   install, silently (MPI-413 Evidence C). Its only job is runtime CUDA detection, which
+#   is exactly what this file replaces.
+
+# ── Pinned shared set ───────────────────────────────────────────────────────────
+# These were `pipPins` in js/data/modelConstants/nodesDeps.js — a per-node, hand-
+# maintained repair applied AFTER each node's requirements had already drifted the
+# engine. Here they are simply the requirement, so nothing drifts in the first place.
+# Versions are the live proven-good set (MPI-222), unchanged.
+numpy==2.5.1
+scipy==1.18.0
+scikit-image==0.26.0
+matplotlib==3.11.0
+pillow==12.3.0
+kornia==0.8.2
+einops==0.8.2
+transformers[timm]==5.13.0
+ultralytics==8.4.78
+dill==0.4.1
+color-matcher==0.6.0
+mss==10.2.0
+
+# opencv — ONE variant, deliberately.
+# Three nodes declared three different distributions that all install into the same
+# `cv2` namespace: opencv-python (comfyui_controlnet_aux, RES4LYF),
+# opencv-python-headless (Impact-Pack, Impact-Subpack, kjnodes) and
+# opencv-contrib-python (Frame-Interpolation). pipPins forced TWO of them at once, so
+# which cv2 an engine ended up with was last-writer-wins. The contrib+headless build is
+# a superset of all three and is the right choice for a non-GUI engine.
+opencv-contrib-python-headless==5.0.0.93
+
+# ── The rest ────────────────────────────────────────────────────────────────────
+# Unpinned here on purpose: python_deps.txt pins them transitively, so the engine still
+# gets one chosen set, and a node bump can move them without a hand edit.
+addict
+albumentations
+diffusers
+filelock
+ftfy
+fvcore
+huggingface_hub>=0.25.2
+importlib_metadata
+mediapipe>=0.8.0
+ninja~=1.11.1.4
+omegaconf
+piexif
+python-dateutil
+pywavelets
+pyyaml
+scikit-learn
+segment-anything
+tqdm
+trimesh[easy]
+yacs
+yapf
+
+# ── Platform-variant ────────────────────────────────────────────────────────────
+# onnxruntime-gpu has never published a macOS wheel, for any arch, at any version, so
+# an unmarked line makes pip exit 1 and fail the WHOLE install — a Mac user could never
+# get past first install of any depth model (MPI-370). Marker instead of a per-platform
+# file. NOT swapped for CPU `onnxruntime`: DepthAnythingV2 runs through AIO_Preprocessor,
+# which is torch-based. Add it if an ONNX-dependent preprocessor is ever wired.
+onnxruntime-gpu; platform_system != "Darwin"

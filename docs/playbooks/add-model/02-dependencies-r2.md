@@ -70,6 +70,36 @@ commit on both engines. **Rebuild the Pod image ONLY if the bumped node is baked
 baked-node bump also needs `POD_IMAGE_VERSION` bumped + an app restart; the app warns
 "Pod image is stale" if it detects a baked node adrift.
 
+> **🛑 MANDATORY PASS — `installRequirements: true`? Regenerate the curated pip set (MPI-413).**
+> The local engine no longer runs any node's `requirements.txt`. It installs ONE curated
+> file, `dev_configs/python_deps.txt`, in a single `--no-deps` pass. A new or bumped node
+> whose requirements are not represented there ships with **missing** dependencies and
+> fails to import — silently, on the user's machine. So whenever you add a node with
+> `installRequirements: true`, or bump the commit of one:
+>
+> ```sh
+> node scripts/compile-node-deps.mjs --check   # what does the node declare that we don't cover?
+> # add anything it reports to dev_configs/python_deps.in (with a comment saying why)
+> node scripts/compile-node-deps.mjs           # regenerate dev_configs/python_deps.txt
+> node --test "tests/curated-python-deps.test.cjs"
+> ```
+>
+> Commit **both** `python_deps.in` and `python_deps.txt`. `.in` is hand-curated and is
+> where a decision lives (a drop, a pin, a PEP 508 marker); `.txt` is generated — never
+> hand-edit it. The check fetches each node's requirements from GitHub at the exact
+> `node_lock.json` commit, so it needs no engine and gives the same answer on any machine.
+>
+> Two things the curated file must never contain, both enforced by the test: the
+> engine-owned torch stack (`torch`/`torchvision`/`torchaudio`/`triton`/`nvidia-*`/`cuda-*`
+> — engine provisioning owns those, and a naive compile pulls them in as real transitives
+> of diffusers/ultralytics/kornia), and more than one opencv distribution (they share the
+> `cv2` namespace, so two means `import cv2` is decided by whichever pip ran last).
+>
+> `pipPins` and `installRequirementsCommand` on the dep entry are now **remote-only** —
+> `routes/remoteModels.js` still sends them to the Pod wrapper, which has not converged
+> onto the curated file yet. Keep them accurate for that path; they no longer affect a
+> local install.
+
 **In-folder weights — `targetPath`.** A weight whose node hard-codes its scan dir
 (RIFE reads only `custom_nodes/comfyui-frame-interpolation/ckpts/rife/`) can't live in
 `mpi_models/`. Give its dep `engineAsset: true` + `targetPath:
