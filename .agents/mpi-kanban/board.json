@@ -33,7 +33,6 @@
       "MPI-442"
     ],
     "doing": [
-      "MPI-443",
       "MPI-440",
       "MPI-436",
       "MPI-367",
@@ -41,14 +40,24 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-443",
       "MPI-441",
       "MPI-379",
       "MPI-370",
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-04T20:45:00Z",
+  "updated_at": "2026-08-04T21:05:00Z",
   "events": [
+    {
+      "at": "2026-08-04T21:05:00Z",
+      "type": "task.moved",
+      "task": "MPI-443",
+      "from": "doing",
+      "to": "done",
+      "actor": "opus",
+      "note": "Shipped in 7104a24a. Three desktop specs on a shared launch helper, and npm test + npm run test:desktop are now a mandatory step in mpi-version-bump step 6 with a do-not-approve-on-red note in mpi-release gate 1. Suites 417/0 unit and 17/17 desktop. Every assertion proven able to fail by sabotage-and-revert: the eager mount-time portal restored in MpiDropdown and MpiTreePicker each fail popup-contract independently, a throw in MpiGalleryBlock.setup fails only the gallery sweep test. The open()-count assertion had to be REWRITTEN to be non-vacuous - the MPI-356 subscription is gated on _isOpen, which open() sets last, so a first open can never re-enter and the assertion passed with the guard deleted; it now changes state.availableLoras under an already-open overlay, where removing _rescanning gives 3 and also removing assetService _same() gives 7792. Testing docs split out of DEVELOPMENT.md (over the 200-line rule) into docs/testing.md. CI deliberately deferred to MPI-444 - npm ci cannot resolve the @cubric/connector file: dependency on a lone checkout."
+    },
     {
       "at": "2026-08-04T20:45:00Z",
       "type": "task.created",
