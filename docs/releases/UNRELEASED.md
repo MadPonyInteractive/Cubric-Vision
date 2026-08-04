@@ -18,18 +18,10 @@
 > clear.** A fifth style (Cinema) was cut on a licence call before release — if you
 > are reading an older draft that lists it, the rack is four.
 >
-> **COMPOSITE (MPI-373) IS DELIBERATELY NOT LISTED BELOW.** The redesign has now LANDED
-> in the tree (2026-08-04): no pasted-mask slot — `maskComp` reads the mask already on
-> the selected entry — and the image slot is filled by a right-click **Send to
-> Composite** on the canvas instead of Copy image. What is still missing is the only
-> thing that ever gated these lines: the user has not seen the redesigned flow WORKING.
-> Draft entries for the older paste-two-slots flow were written and REMOVED, because a
-> changelog line for a flow that will not ship is worse than no line — hold to that.
-> Once he has run it: one `whatIsNew` for the group (right-click **Send to Composite**,
-> then Mask Comp or Paint Comp, and the blend is visible while you decide it), one
-> `importantChanges` for the retired right-click **Mask composite** modal (that half is
-> certain — the dialog is deleted) and for mismatched-size images now being cropped to
-> fill rather than stretched. Card: MPI-373.
+> **Composite (MPI-373) is now listed below** — user-tested in the app 2026-08-04, which
+> was the only thing gating these lines. Earlier drafts describing a paste-two-slots flow
+> were written and REMOVED before it shipped, because a changelog line for a flow that
+> will not ship is worse than no line; the entries below describe what he actually ran.
 
 ## whatIsNew
 
@@ -75,6 +67,15 @@
   it after each press, so stamping the same ellipse in three places is three drags.
   No model runs and nothing downloads: it is instant, and undoable like every other
   canvas edit.
+- **Composite — blend two of your images and watch it happen.** Two new tools in a
+  Composite group. Right-click the image you want *underneath* and choose **Send to
+  Composite**, then open **Paint Comp** on another image and erase — the picture
+  underneath shows through live where you erase, and the brush paints the top one back.
+  **Mask Comp** does the same cut in one step using the mask already on the image, so
+  everything the mask tools can select — brush, detect, points, text, shapes, adjust —
+  can drive a blend. Press **Apply** to keep it as a new entry at full resolution; your
+  originals are untouched. The old blend asked you to decide before you could see
+  anything, which meant running it three or four times to get one result.
 - **Paint — draw on your image and let the model take it from there.** A new Paint
   tool with a brush, an eraser and a colour picker. A rough scribble tells the model
   *where*, *how big* and *what colour* — something a prompt alone cannot say. Paint a
@@ -97,6 +98,12 @@
   came through instead of just the band you selected — the same thing that used to
   happen inside the generator and was fixed there in this version. It now uses the
   mask as drawn. Use **Fill** if you want a hole closed.
+- **The Add / Subtract composite dialog is gone.** Blending two images used to mean
+  selecting both, having one of them already carry a mask, and answering Add or Subtract
+  in a dialog — with nothing on screen to judge it by. The Composite tools replace it
+  entirely: the selected image is always the one on top, and you see the blend while you
+  make it. **Two images of different sizes are now cropped to fill rather than stretched**,
+  and the preview on the canvas matches the file that gets written.
 - **A detection you don't add is a preview.** Detect, Points and Text show their
   result in green as a preview. Leaving the tool now discards it — press **Add**
   to keep it. Previously an un-added detection followed you to other tools and
