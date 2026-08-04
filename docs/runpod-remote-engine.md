@@ -350,6 +350,26 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   nodes, which are baked and never volume-installed. Copy `python_deps.txt` into the build
   context WITH `node_lock.json` — a node bump changes both. The build's `IMPORT FAILED` grep
   (MPI-341) is the gate proving the curated set is not under-specified.
+- **`start.sh` has a SECOND pip path, and it needs the same guard (MPI-413).** Independent of
+  the image and the wrapper, `start.sh` loops every VOLUME custom node at EVERY boot and runs
+  `pip install -r requirements.txt` (it exists because a volume node's FOLDER persists across
+  Pods while its pip deps live in the container's fresh site-packages). On a curated image that
+  loop is not merely redundant, it is HARMFUL: of the code-only volume packs exactly one ships
+  a `requirements.txt` — VideoHelperSuite, declaring `opencv-python` — which lands a SECOND cv2
+  on top of the curated `opencv-contrib-python-headless` and makes `import cv2`
+  last-writer-wins again, the exact bug the curated set exists to kill. The `IMPORT FAILED`
+  grep can NEVER catch it, because both builds import fine. The guard is
+  `if [ -f /opt/python_deps.txt ]` → skip, keyed on the curated file's PRESENCE rather than a
+  version, so a pre-curated image (`v0.17.0`, `v0.18.0-dev`) has no such file and runs the loop
+  exactly as before — which is why this `start.sh` is safe to promote to `stable` independently
+  of the image it boots on. VHS's other line, `imageio-ffmpeg`, is optional upstream (its
+  `utils.py` falls back to `shutil.which("ffmpeg")`, which the image apt-installs).
+  **Verifying the guard: the boot line is UNREACHABLE** — the app has no pod-log route and the
+  RunPod console retains only from ComfyUI's boot onward, so a console search returns "No logs
+  found" and reads as a false negative. Prove it by EFFECT instead: a missing
+  `imageio_ffmpeg` import in ComfyUI's log means VHS's requirements were never installed, which
+  also proves `opencv-python` was not. Note the FIRST boot after a fix may not exercise the
+  loop at all if the pack only arrived post-boot.
 - **Node commit-drift (MPI-222).** Each node carries a `.mpi_node_commit` marker (stamped by
   the wrapper's `_run_node_install`, read at boot into the schema-2 manifest `nodes[]`). The
   app's `remoteModelsCheck` compares each pinned commit to the manifest: a **volume** node at

@@ -139,6 +139,27 @@ Because it DELEGATES (does not copy) the end-session logic, a pack update to
      `/mpi-version-bump` or a full `mpi-release` (the one GitHub-only release
      flow) pass is needed, naming the specific surfaces that drifted.
 
+   - **Curated pip-set drift (MPI-413) — ONLY when this session touched
+     `dev_configs/node_lock.json` or `js/data/modelConstants/nodesDeps.js`.** Run
+     `node scripts/compile-node-deps.mjs --check`. It reports what an
+     `installRequirements: true` node declares that `dev_configs/python_deps.in`
+     does not cover; anything reported means the node ships with MISSING
+     dependencies, because neither engine runs a node's `requirements.txt` any
+     more — both install the one curated file. Fix by adding the reported
+     packages to `python_deps.in`, regenerating with
+     `node scripts/compile-node-deps.mjs`, and committing BOTH files (never
+     hand-edit the `.txt`).
+     **Why this lives here and not in a hook or the suite:** `--check` FETCHES
+     each node's `requirements.txt` from `raw.githubusercontent.com` at its
+     pinned commit, so it cannot go in `node --test` (offline runs would flake)
+     and is too slow for a pre-commit hook. `tests/curated-python-deps.test.cjs`
+     already guards the INVARIANTS automatically (no engine-owned torch stack,
+     exactly one opencv distribution) but it does NOT guard COVERAGE — a newly
+     added node's deps going missing is invisible to it. The Pod image build's
+     `IMPORT FAILED` grep catches it, but only when someone builds an image.
+     This bullet is the gap between those two. The `/mpi-add-model` playbook has
+     the same step; this catches the hand-edit path that bypasses the skill.
+
    These are POINTERS, not auto-edits: surface a one-line proposal per affected
    file and wait for explicit per-file approval — same discipline as the
    end-session rule/doc pass. If nothing drifted, say so in one line.

@@ -67,7 +67,7 @@ shipped tag or the in-flight one.
 
 ```
 docker system df                       # see reclaimable before
-SHIPPED=$(node -e "console.log(require('./routes/remotePodLifecycle.js.POD_IMAGE_VERSION')||'')" 2>/dev/null || grep -oE "POD_IMAGE_VERSION\s*=\s*'v[0-9.]+'" routes/remotePodLifecycle.js | grep -oE "v[0-9.]+")  # <- the tag the app currently points at; read it live so this never drifts (e.g. v0.14.0). keep it
+SHIPPED=$(grep -oE "^const POD_IMAGE_VERSION\s*=\s*'v[0-9.]+'" routes/remotePodLifecycle.js | grep -oE "v[0-9.]+")  # <- the tag the app currently points at; read it live so this never drifts (e.g. v0.14.0). keep it
 BUILDING=v<ver>  # <- the one you're about to build; keep it
 R=docker.io/madponyinteractive/cubric-vision-pod   # GPU image is on Docker Hub now (MPI-189)
 B=ghcr.io/madponyinteractive/cubric-vision-builder
