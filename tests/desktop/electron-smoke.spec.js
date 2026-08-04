@@ -20,7 +20,8 @@ test('desktop app launches and loads the local shell', async ({}, testInfo) => {
     const window = await shellWindow(app);
 
     await expect(window).toHaveURL(/127\.0\.0\.1:3000/);
-    await expect(window).toHaveTitle(/Cubric/i);
+    // MPI-444 RED PROOF - deliberately wrong, do NOT merge.
+    await expect(window).toHaveTitle(/ThisTitleDoesNotExist/);
 
     const bodyText = await window.locator('body').innerText({ timeout: 10000 });
     expect(bodyText.trim().length).toBeGreaterThan(0);
