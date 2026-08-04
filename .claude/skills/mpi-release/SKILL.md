@@ -76,6 +76,11 @@ Fixes → Engine; each item plain text). Apply the user's edits to `releaseNotes
 AND the archival md so they stay aligned (`references/copy-review.md` Gate 1). Then
 `npm run release:approve` + `npm run release:check`.
 
+> **Do not approve on a red suite.** `mpi-version-bump` step 6 runs `npm test` +
+> `npm run test:desktop`; confirm both came back green before approving. Good copy
+> on a broken build is still a broken build — 1.3.0 shipped with the LoRA and
+> upscale pickers dead and every static check passed (MPI-443).
+
 > ⚠️ **`release:approve` must be the LAST thing you touch before building.** The
 > build step hashes `releaseNotes.js` against the committed approval stamp
 > (`.approved-<ver>.json`); ANY edit after approving (even a one-word copy fix)

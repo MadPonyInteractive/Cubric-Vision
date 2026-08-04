@@ -30,35 +30,10 @@ npm run test:desktop
 npm run build:portable:dry-run
 ```
 
-**The unit suite has no npm script — run it by glob:**
-
-```sh
-node --test tests/*.test.cjs
-```
-
-`node --test tests/` (the directory form) does NOT work: Node treats the path as a
-module and dies with `Cannot find module '...\tests'`. Only `npm run test:desktop`
-above is scripted, and that is the Playwright/Electron suite, not this one.
-
-**The suite is GREEN — there is no known-failing baseline any more.** Measured
-2026-07-29: **298 pass / 0 fail**. Any red is a real regression; do not go looking
-for it on an "expected failures" list, because that list no longer exists. The
-total moves as tests are added, so judge on the failure LIST (empty), not the count.
-
-All 9 formerly-standing failures were **stale tests, not code defects** (MPI-389,
-2026-07-29):
-
-- `permodel-key-allowlist` ×3 — **deleted.** They asserted the hand-maintained
-  `_MODEL_WIDE_KEYS` allowlist that MPI-336 deliberately replaced with a `modelWide`
-  flag derived from the control's own scope (see `js/services/projectService.js` for
-  where that write is routed). **Never make a permodel-key failure pass by re-adding
-  keys to the Set** — that reinstates the list MPI-336 removed.
-- `optional-media-placeholder` — MPI-272 un-staged `placeholder.png` / `ltx_silence.wav`.
-- `resolve-model-deps` — asserted `LTX_t2v.json` against the lowercase on-disk `ltx_t2v.json`.
-- `remoteProxy` ×4 — MPI-175's module split left the `remotePodState` singleton leaking
-  between tests; the harness now drops the whole barrel family.
-
-→ `.agents/mpi-kanban/tasks/MPI-389/validation.md`
+**Tests: `npm test` (unit) + `npm run test:desktop` (Playwright/Electron).** Both
+are a release gate, and the desktop suite needs port 3000 free — the full suite
+contract, the green baseline and the spec-authoring traps live in
+[testing.md](testing.md).
 
 The Electron app uses an Express server on `127.0.0.1:3000`. Desktop tests use
 an isolated Electron user-data directory so they do not modify normal app data.
@@ -98,9 +73,8 @@ The engine starts **on demand**, not at app boot, so `/comfy/status` reading
 
 Boot opens TWO windows: a frameless splash (`splash/splash.html`, loaded instantly
 by `main.js`) and then the shell on `127.0.0.1:3000`; the splash is destroyed on the
-shell's `ready-to-show`. So a desktop spec must NOT use `app.firstWindow()` — it
-returns the splash, which then closes underneath the test. Use the
-`tests/desktop/shellWindow.js` helper (`const window = await shellWindow(app)`).
+shell's `ready-to-show`. What that means for a desktop spec (never `app.firstWindow()`)
+is in [testing.md](testing.md).
 
 ## Project Shape
 

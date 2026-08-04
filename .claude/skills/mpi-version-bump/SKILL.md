@@ -420,6 +420,27 @@ npm run release:check
 If it fails, I stop and fix the release drift before building, tagging, pushing,
 or running pre-release generation tests.
 
+Then I run the automated suites — **both must exit 0 before anything is built,
+tagged or approved**:
+
+```bash
+npm test               # unit suite (node --test, ~9s)
+npm run test:desktop   # Playwright/Electron UI smoke suite (~1.2 min, needs port 3000 FREE)
+```
+
+`release:check` only compares files to each other; it never runs the app. These
+two are the only gate that executes real code, and the desktop suite is what
+covers the class of bug that shipped in 1.3.0 — the LoRA and upscale pickers
+opening into hidden DOM, invisible to every static check (MPI-443).
+
+If either suite fails, STOP. A red test at this point means a regression landed
+since the last green commit — fix it, re-run `npm run release:check` (a code fix
+can drift the registry), and only continue once both suites are green again.
+
+Note: `npm run test:desktop` launches its own Electron and its own server on port
+3000. If the app is already running, the spec silently drives the ALREADY-RUNNING
+server instead of its own — close the app first.
+
 Then ask:
 ```
 Release gate passed. Would you like to run scripts/pre_release_test.py now? [y/n]

@@ -1,0 +1,37 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-444",
+  "title": "Run both test suites in CI on a Windows runner - blocked on the @cubric/connector file: dependency",
+  "description": "MPI-443 made npm test + npm run test:desktop a release gate, but the gate is a human step in mpi-version-bump - nothing runs the suites on push. A windows-latest runner can run BOTH today: Electron needs no xvfb on Windows, and Playwright drives it through the electron npm binary, so no npx playwright install step is needed. The one blocker is real and must be decided first: package.json line 28 pins \"@cubric/connector\": \"file:../Cubric-Studio/packages/connector\", a sibling path that does not exist on a lone checkout, so npm ci fails before any test runs. Three ways out, all needing a call from the user: (a) a second actions/checkout of the private MadPonyInteractive/Cubric-Studio repo with a PAT secret, (b) publish @cubric/connector to a registry, (c) vendor it into this repo. Note the existing .github/workflows/build-portable.yml runs NO tests - it only dispatches the private mpi-ci build on a v* tag, so a red suite currently cannot stop a build.",
+  "column": "todo",
+  "maturity": "needs-decision",
+  "status": "active",
+  "created_at": "2026-08-04T20:45:00Z",
+  "updated_at": "2026-08-04T20:45:00Z",
+  "labels": [
+    "ci",
+    "testing",
+    "release",
+    "infra"
+  ],
+  "acceptance": [
+    "The @cubric/connector resolution is DECIDED with the user (private checkout + PAT, published package, or vendored) and npm ci completes on a lone checkout of this repo",
+    "A .github/workflows/tests.yml runs npm test and npm run test:desktop on windows-latest, on push and pull_request to master plus workflow_dispatch",
+    "Playwright artifacts (test-results/) upload on failure so a red desktop run is diagnosable without reproducing locally",
+    "A red suite is proven to fail the workflow - verified by pushing a branch with a deliberately broken assertion, not assumed",
+    "Decided and written down whether a red suite should also block the v* tag build in build-portable.yml, which today dispatches with no tests at all"
+  ],
+  "links": {
+    "events": "events.jsonl",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "handoffs": "handoffs/"
+  },
+  "tags": [
+    "ci",
+    "MPI-443"
+  ],
+  "priority": "normal",
+  "attention": false
+}

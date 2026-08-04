@@ -30,6 +30,7 @@ NOT mechanically split these):
 |---|---|
 | Orientation hub (architecture, invariants) | [PROJECT.md](PROJECT.md) |
 | Dev setup / commands / reading `logs/app.log` | [DEVELOPMENT.md](DEVELOPMENT.md) |
+| Tests — both suites, the release gate, writing a desktop spec | [testing.md](testing.md) |
 | Workspaces / routing | [workspaces.md](workspaces.md) |
 | Data layer (registries, projectModel, resolver, persist whitelist, reuse/sidecar) | [data.md](data.md) |
 | Project data model (.meta sidecars, reconciliation) | [project-integrity.md](project-integrity.md) |
