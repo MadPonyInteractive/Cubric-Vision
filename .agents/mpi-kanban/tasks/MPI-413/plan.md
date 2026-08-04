@@ -98,12 +98,28 @@ file cannot drift when nodes are added.
 - **No CI compile job.** The script plus the playbook step is the gate; the Pod build's
   `IMPORT FAILED` grep already fails a bad set in CI. Add a job if the step is ever
   actually skipped.
-- **Pod Dockerfile consuming the same file.** `mpi-ci/cubric-vision-pod` bakes deps at
-  image-build time and installs volume nodes on connect via
-  `wrapper.py _install_node_requirements`. Converging it onto `python_deps.txt` needs a
-  user-authorized image build, so the remote twin stays on its current path until then.
-  Flagged, not silently skipped.
-- **Phase 1's constraint file.** Still open, still on this card.
+- ~~**Pod Dockerfile consuming the same file.**~~ **DONE 2026-08-04** — see
+  `validation.md` § Pod convergence. The Dockerfile installs `python_deps.txt` in one
+  `--no-deps` pass and the wrapper runs no pip at all. Shipping it (wrapper to R2 `dev` →
+  promote, then the image build) is user-authorized and still pending.
+- ~~**Phase 1's constraint file.**~~ **CLOSED AS SUPERSEDED 2026-08-04** — `--no-deps`
+  against a file containing no torch makes the constraint structurally unable to matter.
+  Full disposition in `validation.md` § Phase 1.
+
+## Plan drift
+
+- **2026-08-04 — the Pod's wrapper half was smaller than this plan assumed.** The plan
+  described `wrapper.py _install_node_requirements` as installing "a volume node's
+  requirements.txt / install_command / pip_pins at connect". Measured: `install_command`
+  and `pip_pins` exist only on `installRequirements: true` deps, which are BAKED and never
+  volume-installed — both branches were already unreachable. Only the `requirements.txt`
+  branch was live, and only for VideoHelperSuite.
+- **2026-08-04 — Phase 2's self-heal claim is narrower than stated.**
+  `POST /engine/repair-deps` returns early when nothing is missing or drifted, so the
+  curated pass never runs on an engine whose node folders are all present. Not a Phase 2
+  regression (a full install still runs it, and a pre-Phase-2 engine already has working
+  deps), but the marker does not self-heal every engine "already on disk". Follow-up
+  belongs to `repair-deps` gating, not to the curated file.
 
 ## Verification
 

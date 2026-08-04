@@ -192,3 +192,146 @@ optimisation: with deps, pip re-derives all three.
    wrapper still installs volume-node requirements. Needs a user-authorized image build.
    `requirementsDrop` + `_filterRequirements` are dead on the local path now and should be
    removed together with that step, not before.
+
+*(Both resolved below on 2026-08-04.)*
+
+---
+
+# Phase 2 real-engine verification — DONE (2026-08-04, Linux box)
+
+The verification the card had never had. Run on the Ubuntu test laptop against a REAL
+engine (`~/Downloads/CubricVision-linux-x64-v1.3.0/engine`, uv-provisioned Python 3.12.13,
+`torch 2.13.0+cpu`), driving the app's **own exported entry point** —
+`startUniversalWorkflowInstall(<14 custom_nodes ids>, false, false)` under
+`ELECTRON_RUN_AS_NODE=1` with the real `CUBRIC_*` env. No fabricated job, no hand-typed pip,
+no port 3000. Only node ids were passed, so nothing downloaded and the sole remaining work
+was the curated pass itself.
+
+**Deployed to the box:** master's `routes/downloadManager.js` + `dev_configs/python_deps.txt`
+(md5-matched both ends). The single-file swap was proven safe first — master's file requires a
+strict SUBSET of the box's `shared.js` exports (it drops `runCustomCommand`, adds nothing).
+Original saved at `app/routes/downloadManager.js.pre413`.
+
+**Starting state (the honest baseline):** the engine was left half-provisioned by the
+2026-07-31 MPI-411 session — 60 packages, ComfyUI core itself unable to boot
+(`ModuleNotFoundError: No module named 'sqlalchemy'`). Core's `requirements.txt` was
+installed first to repair that; it is the *precondition*, not the code under test. Notably it
+resolved `kornia 0.8.3` and `transformers 5.14.1` — the exact drifted versions the curated
+set exists to correct.
+
+## The card's four metrics
+
+| metric | target | measured |
+|---|---|---|
+| `grep -icE "downloading (triton\|nvidia)"` | 0 | **0** |
+| torch carries a `+cpu` tag after | yes | **`2.13.0+cpu` / `0.28.0+cpu` / `2.11.0+cpu`** — byte-identical to before |
+| "Requirement already satisfied" lines | far below 400 | **47** |
+| zero `IMPORT FAILED` | 0 | **NOT OBTAINABLE ON THIS HARDWARE — see below** |
+
+Plus, from the same run:
+
+- **1 pip invocation**, not 13. Exact command logged:
+  `python -m pip install -r <app>/dev_configs/python_deps.txt --no-deps --no-warn-script-location`
+- The only `nvidia*` artefact anywhere in the log is `nvidia_ml_py-13.610.43` — the
+  deliberate keep (pure-Python NVML, no CUDA runtime).
+- Every curated pin landed: `kornia 0.8.3 → 0.8.2` (uninstall + install logged),
+  `transformers 5.14.1 → 5.13.0`, `ultralytics 8.4.78`, `matplotlib 3.11.0`.
+- **Exactly one opencv on disk** — `opencv_contrib_python_headless-5.0.0.93.dist-info`,
+  `cv2.__version__ == 5.0.0`, `hasattr(cv2, 'ximgproc') == True`. Before the pass there was
+  none; the three-variant race cannot occur.
+- Marker stamped `a76364ad228dd931`. **Idempotence proven by a second run**: `curated python
+  deps already installed (a76364ad228dd931)`, **0** pip invocations, returned in **0.6s**.
+- 60 → 110 (core) → **183** packages.
+
+## Why `IMPORT FAILED` could not be measured here — and it is NOT our bug
+
+The box is an **Intel Core i3-2367M (Sandy Bridge, 2011) with no AVX2**. `import kornia_rs`
+dies with `Illegal instruction (core dumped)`, so ComfyUI cannot finish booting on this
+machine at all. Established as pre-existing and unrelated:
+
+- The **BEFORE** run crashed identically, at `kornia/__init__.py:28`, on kornia **0.8.3**,
+  before any curated package was installed.
+- Isolated per-module check after the curated install: `kornia_rs` is the **only** failure.
+  `torch`, `numpy`, `cv2`, `transformers`, `mediapipe`, `onnxruntime`, `ultralytics`,
+  `albumentations`, `diffusers` all import clean.
+- `kornia_rs` is pulled by **ComfyUI core's own** `kornia` requirement — it is in core's
+  freeze, not an MPI-413 choice.
+
+So the fourth metric stays with the gate the plan always named for it: the **Pod image
+build's `IMPORT FAILED` grep** (MPI-341), which boots ComfyUI and imports every baked node on
+a modern CI runner. That gate now covers the curated set directly, because the Pod installs
+the same file.
+
+## A real gap this run exposed (self-heal is narrower than claimed)
+
+`_ensureCuratedPythonDeps` self-heals only when `_runCustomNodeInstall` runs, and
+`POST /engine/repair-deps` **returns early** when `missingDeps + driftedDeps` is empty
+(`routes/engine.js`) — before `startUniversalWorkflowInstall` is ever called. So on an engine
+where every node folder is already present and un-drifted, repair-deps is a no-op and the
+curated set never lands. That is exactly the box's state, and it is why the probe had to call
+`startUniversalWorkflowInstall` directly.
+
+Impact is bounded, not broken: a full engine install DOES run the curated pass (`engine.js`
+→ `finishCustomNodeInstall`), and an engine provisioned by a pre-Phase-2 app already has the
+old per-node deps, so nothing fails — it simply never converges onto the curated set. Worth a
+follow-up; deliberately not fixed here (it is a `repair-deps` gating question, not a Phase 2
+regression).
+
+---
+
+# Pod convergence — code DONE, ship pending (2026-08-04)
+
+Both engines now install the same file. Written and self-verified; **not yet shipped** —
+publishing the wrapper and building the image are user-authorized live ops.
+
+## What the investigation changed vs the handoff's assumption
+
+The handoff expected a wrapper rewrite. Measured instead:
+
+- `install_command` / `pip_pins` are set **only** on `installRequirements: true` deps, and
+  those are BAKED (`remoteModels._isImageResident`) and never volume-installed. Both branches
+  of `_install_node_requirements` were **already unreachable** on the remote path.
+- Of the 7 code-only volume nodes, fetched at their pinned commits, **exactly one ships a
+  `requirements.txt`**: VideoHelperSuite → `opencv-python`, `imageio-ffmpeg`. So the live Pod
+  was installing a SECOND cv2 build at connect — the precise last-writer-wins bug Phase 2
+  removed locally.
+- Dropping it is safe: VHS wraps the `imageio_ffmpeg` import in `try/except` and falls back to
+  `shutil.which("ffmpeg")` (`videohelpersuite/utils.py:64-92`), and the image apt-installs
+  ffmpeg. The local engine has never installed VHS's requirements either.
+
+## The changes
+
+| file | change |
+|---|---|
+| `mpi-ci/.../wrapper/wrapper.py` | `_install_node_requirements` DELETED; `_run_node_install` runs no pip; `_run_node_requirements_only` settles the job (nothing left to heal) and keeps the same complete SSE; `install_command`/`pip_pins` accepted-and-ignored so a released app keeps working. Version → `0.2.41`. |
+| `mpi-ci/.../Dockerfile` | per-pack requirements loop REPLACED by `COPY python_deps.txt` + `pip install --no-cache-dir --no-deps -r /opt/python_deps.txt`; standalone MPI-131 kornia pin deleted (now a curated pin) with its `pad` assert kept and a `cv2`/`ximgproc` assert added. `PIP_CONSTRAINT`, `PIP_EXTRA_INDEX_URL`, the MPI-244 `+cu130` re-assert and the `IMPORT FAILED` grep all KEPT. |
+| `mpi-ci/.../python_deps.txt` | new — the curated file in the build context, md5-identical to `dev_configs/python_deps.txt` |
+| `.claude/commands/build-pod-image.md` | step 3a now copies BOTH generated files, with why they must move together |
+| `mpi-ci/.../README.md`, `docs/runpod-remote-engine.md` § 6 | the Pod half documented |
+
+Self-verified: `wrapper.py` parses (`ast.parse`), no dangling `_install_node_requirements` /
+`install_command` / `pip_pins` references remain outside comments.
+
+**SHIP ORDER IS LOAD-BEARING — wrapper first.** A new curated image running the OLD stable
+wrapper would re-add `opencv-python` at connect and partially undo the unification. The
+reverse is safe: the new wrapper on the current image finds opencv already baked, and ffmpeg
+on PATH. So: `publish-runtime.sh dev` → restart Pod → test → `promote`, and only then build
+the image.
+
+Also spotted, not actioned: `Dockerfile:89` still defaults `COMFYUI_REF=v0.19.3` while the
+lock says `v0.29.2` (harmless — CI passes the arg), and `remotePodLifecycle.js` pins
+`WRAPPER_VERSION = '0.2.36'` while the wrapper file now self-reports `0.2.41`; that app-side
+const gets synced at publish time (build-pod-image step 2).
+
+---
+
+# Phase 1 — CLOSED AS SUPERSEDED (2026-08-04)
+
+A `PIP_CONSTRAINT` file for the local engine is no longer worth building. `runPipCommand` has
+exactly ONE call site left in the local engine, and it runs `--no-deps` against a file with no
+torch in it — so it is *structurally* incapable of moving torch, which is the only thing the
+constraint existed to prevent. What stays unconstrained is comfy-cli's own pip during
+`comfy install`, already guarded on macOS (pinned trio + `--skip-torch-or-directml`) and moot
+on Windows (prebuilt archive, no pip) — a Linux-only sliver with no observed failure. Phase
+1's first half (`--upgrade` removed from both call sites, commit `1b884a59`) shipped and
+stands.

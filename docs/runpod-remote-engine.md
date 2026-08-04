@@ -328,15 +328,28 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   per-arch volume sage compile are GONE — see the comment block in `remotePodLifecycle.js`.)*
 - **Custom-node lifecycle split = `installRequirements` (MPI-222, replaced the old
   `installOnEngine` bake list).** A node BAKES into the image iff `installRequirements: true`
-  in `node_lock.json` (the pip-req nodes: Impact-Pack, KJNodes, Frame-Interpolation,
-  Impact-Subpack — pip cost paid at build). Code-only nodes (`installRequirements: false`:
-  MpiNodes, VideoHelperSuite, UltimateSDUpscale, PainterI2V, LTXVideo, RES4LYF) install onto
-  the **volume** via the wrapper at connect/model-install — so bumping ANY of their commits
-  (a `node_lock.json` edit) NEVER forces an image rebuild; only a baked node's bump does.
+  in `node_lock.json` (the pip-req nodes: LTXVideo, Impact-Pack, KJNodes,
+  Frame-Interpolation, Impact-Subpack, RES4LYF, controlnet_aux — pip cost paid at build).
+  Code-only nodes (`installRequirements: false`: MpiNodes, VideoHelperSuite,
+  UltimateSDUpscale, PainterI2V, Krea2-ControlNet, krea2edit, inpaint-cropandstitch) install
+  onto the **volume** via the wrapper at connect/model-install — so bumping ANY of their
+  commits (a `node_lock.json` edit) NEVER forces an image rebuild; only a baked node's does.
   ComfyUI loads both via `--extra-model-paths-config` (`start.sh` writes
   `/workspace/cubric/extra_model_paths.yaml`, mapping each model type → `mpi_models/<type>`
   plus the volume `custom_nodes:` key). Volume node install reports `needs_comfy_restart`
   (ComfyUI scans `custom_nodes` only at boot) → the app warm-cycles the Pod.
+- **Python deps = ONE curated set, identical on both engines (MPI-413).** Neither the image
+  nor the wrapper resolves a node's `requirements.txt` any more. The image installs
+  `dev_configs/python_deps.txt` — the same file `routes/downloadManager.js` installs locally —
+  in a single `--no-deps` pass, and the wrapper runs **no pip at all**. `--no-deps` is
+  load-bearing: the file is the complete closure minus the engine-owned torch stack and minus
+  the duplicate cv2 builds, so without it pip re-derives `torch`/`triton`/`nvidia-*` from
+  diffusers/ultralytics/kornia and restores all three opencv distributions. `install_command` /
+  `pip_pins` are still SENT by `remoteModels.js` (a released app must keep working) and are
+  accepted-and-ignored by the wrapper; they only ever applied to `installRequirements: true`
+  nodes, which are baked and never volume-installed. Copy `python_deps.txt` into the build
+  context WITH `node_lock.json` — a node bump changes both. The build's `IMPORT FAILED` grep
+  (MPI-341) is the gate proving the curated set is not under-specified.
 - **Node commit-drift (MPI-222).** Each node carries a `.mpi_node_commit` marker (stamped by
   the wrapper's `_run_node_install`, read at boot into the schema-2 manifest `nodes[]`). The
   app's `remoteModelsCheck` compares each pinned commit to the manifest: a **volume** node at

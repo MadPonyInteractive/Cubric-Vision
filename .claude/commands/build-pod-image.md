@@ -111,18 +111,25 @@ Note: `POD_IMAGE_VERSION` is the GPU (cu130) tag; `POD_IMAGE_VERSION_CPU` is the
 ### 3. Commit + push mpi-ci FIRST (CI gotcha)
 `gh workflow run` builds the **pushed** ref, not the local tree. Stage only your files.
 
-**3a. Sync the node lock into the build context (MPI-117).** The Dockerfile `COPY`s
-`node_lock.json` from the `cubric-vision-pod/` build context; CI builds the pushed
-mpi-ci tree, so the lock must be committed there, freshly copied from the canonical
-Cubric-Vision lock every build:
+**3a. Sync BOTH generated files into the build context (MPI-117, MPI-413).** The
+Dockerfile `COPY`s `node_lock.json` AND `python_deps.txt` from the
+`cubric-vision-pod/` build context; CI builds the pushed mpi-ci tree, so both must
+be committed there, freshly copied from the canonical Cubric-Vision copies every
+build:
 ```
-cp c:/AI/Mpi/Cubric-Vision/dev_configs/node_lock.json c:/AI/Mpi/mpi-ci/cubric-vision-pod/node_lock.json
+cp c:/AI/Mpi/Cubric-Vision/dev_configs/node_lock.json  c:/AI/Mpi/mpi-ci/cubric-vision-pod/node_lock.json
+cp c:/AI/Mpi/Cubric-Vision/dev_configs/python_deps.txt c:/AI/Mpi/mpi-ci/cubric-vision-pod/python_deps.txt
 ```
-Then stage it alongside your other mpi-ci changes (it's the source of node/core/frontend pins).
+Stage both alongside your other mpi-ci changes. `node_lock.json` is the source of
+node/core/frontend pins; `python_deps.txt` is the ONE curated Python dependency set
+both engines install (MPI-413) — the image installs it in a single `--no-deps` pass
+instead of resolving each baked pack's `requirements.txt`. **They must be copied
+together**: a node bump changes the lock AND (via `node scripts/compile-node-deps.mjs`)
+the curated set, so shipping one without the other bakes a mismatched engine.
 
 **3b. Commit + push:**
 ```
-git -C c:/AI/Mpi/mpi-ci add cubric-vision-pod/node_lock.json <other paths>
+git -C c:/AI/Mpi/mpi-ci add cubric-vision-pod/node_lock.json cubric-vision-pod/python_deps.txt <other paths>
 git -C c:/AI/Mpi/mpi-ci commit -m "..."
 git -C c:/AI/Mpi/mpi-ci push
 ```
