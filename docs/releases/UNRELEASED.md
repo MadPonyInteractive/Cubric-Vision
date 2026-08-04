@@ -53,6 +53,15 @@
   composition is locked to the source; easing it off lets the model reinterpret the
   framing while keeping
   the pose. Klein bites softer than Krea 2, so it wants a lower setting.
+- **Shapes — drop a rectangle, triangle or ellipse straight onto the canvas.** A
+  Shapes tool in BOTH the Mask and Paint groups. Drag the shape or its handles to
+  size it, hold **Shift** to resize it without squashing it, **Alt** over a handle
+  to spin it around that point, then press
+  **Add** or **Subtract** to commit it to the mask — or **Fill** / **Erase** to
+  commit it to your paint, in the colour you picked. The shape stays where you put
+  it after each press, so stamping the same ellipse in three places is three drags.
+  No model runs and nothing downloads: it is instant, and undoable like every other
+  canvas edit.
 - **Paint — draw on your image and let the model take it from there.** A new Paint
   tool with a brush, an eraser and a colour picker. A rough scribble tells the model
   *where*, *how big* and *what colour* — something a prompt alone cannot say. Paint a
@@ -70,6 +79,11 @@
   a ring around a subject arrived at the model as a solid blob — the shape you wanted
   was impossible to ask for. That no longer happens on any model. If you do want a
   hole closed, the new **Fill** button does it where you can see it.
+- **Mask composite follows the mask you drew.** Compositing through a ring or an
+  edge-band mask filled in the middle before blending, so the whole enclosed area
+  came through instead of just the band you selected — the same thing that used to
+  happen inside the generator and was fixed there in this version. It now uses the
+  mask as drawn. Use **Fill** if you want a hole closed.
 - **A detection you don't add is a preview.** Detect, Points and Text show their
   result in green as a preview. Leaving the tool now discards it — press **Add**
   to keep it. Previously an un-added detection followed you to other tools and
@@ -133,6 +147,18 @@
   try a VPN" message instead of a bare error code. This helps when a network
   blocks the address; a network that interferes with the transfer itself can still
   break a download.
+- **Setting up the engine downloads less, and stops hiding a step that always
+  failed.** The generation engine is built from a set of add-ons, and each one used
+  to install its own list of supporting libraries — over a dozen separate passes that
+  re-checked the same libraries again and again, sometimes installed a package only
+  to replace it moments later, and on some machines pulled in graphics-card libraries
+  a computer without that card can never use. The app now installs one list, decided
+  and tested in advance, in a single pass: less to download, less to unpack, and the
+  same libraries on every machine instead of whichever add-on happened to go last.
+  One of those add-ons also had a piece that failed to install on every computer, on
+  every platform, on every fresh setup — and reported success anyway. It was never
+  used by anything in the app, so it is gone.
+
 - **Running your own ComfyUI no longer breaks the app's.** If you already had
   ComfyUI open, the app quietly used *your* install instead of its own, because
   both were on the same port. Yours does not have the app's custom nodes, so every
