@@ -113,6 +113,13 @@
 
 ## fixes
 
+- **Resize Video works on a cloud GPU whatever you have installed.** It stopped with
+  a missing-node error unless that cloud volume happened to have Wan 2.2 on it —
+  the video node it needs only ever arrived as a side effect of installing that
+  model, so a volume built up from any other model never got it. The nodes every
+  tool relies on are now put in place when you connect, the way they already were
+  on your own machine.
+
 - **The mask brush no longer skips on a fast stroke.** The brush placed a dab at
   each position the mouse reported and nothing joined them up, so a quick drag
   left a dotted trail of gaps instead of a solid stroke — worst on a large image
