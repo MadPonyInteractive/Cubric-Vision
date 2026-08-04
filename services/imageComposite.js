@@ -20,11 +20,16 @@ function defaultFeather(width, height) {
 }
 
 /**
- * Fill enclosed holes in a binary-ish mask, in place.
+ * Fill enclosed holes in a binary-ish mask, in place. **OPT-IN since MPI-437.**
  *
- * The app's mask consumers already do this — MaskDetailerPipe runs with
- * `contour_fill: true` — so a user who paints a ring around a subject expects
- * the inside to be masked. Without it a composite would swap the outline only.
+ * It used to run by default here, justified by the app's mask consumers doing the
+ * same — `MaskDetailerPipe` with `contour_fill: true`. **MPI-431 removed that
+ * justification**: it turned `mask_fill_holes` OFF in every raw template and
+ * `contour_fill` with it, because the graph was silently refilling an edge band
+ * into a disc before the sampler saw it, and ruled that the APP is now the only
+ * thing that closes a hole — through the Fill button, where the user can see it.
+ * This route kept a private copy of the old behaviour and no caller ever passed
+ * the flag, so a ring mask composited as a disc (user-reported 2026-08-04).
  *
  * Flood-fills the BACKGROUND inwards from the borders; any dark pixel the flood
  * never reaches is enclosed by paint, so it becomes mask.
@@ -70,7 +75,9 @@ function fillMaskHoles(data, width, height, threshold = 128) {
  * @param {Buffer}  o.maskBuffer   — mask image (white = overlay, black = base)
  * @param {string}  o.outPath      — file to write; format follows its extension
  * @param {number}  [o.feather]    — blur sigma in px; 0 disables, omit for the default
- * @param {boolean} [o.fillHoles=true] — fill areas enclosed by paint (see fillMaskHoles)
+ * @param {boolean} [o.fillHoles=false] — OPT IN to filling areas enclosed by paint.
+ *   Off by default since MPI-437: the route composites the mask it was handed, and
+ *   closing a hole is the app's job (the Fill button). See fillMaskHoles.
  * @returns {Promise<{width: number, height: number}>} the written image's dimensions
  */
 async function compositeThroughMask({ basePath, overlayPath, maskBuffer, outPath, feather, fillHoles }) {
@@ -91,8 +98,11 @@ async function compositeThroughMask({ basePath, overlayPath, maskBuffer, outPath
         .toBuffer();
 
     // Fill BEFORE feathering, so the blur softens the real edge instead of both
-    // sides of a painted outline.
-    if (fillHoles !== false) fillMaskHoles(maskRaw, width, height);
+    // sides of a painted outline. OPT-IN (MPI-437): `!== false` meant "on unless
+    // someone says otherwise", and no caller ever said otherwise — so an edge-band
+    // mask composited as a solid disc, which is the same defect MPI-431 removed
+    // from the graph. An explicit `true` is now required.
+    if (fillHoles === true) fillMaskHoles(maskRaw, width, height);
 
     // Sharp rejects sigma < 0.3; anything at or below that is "no feather".
     // toColourspace('b-w') on the way OUT as well: sharp reads a 1-channel raw

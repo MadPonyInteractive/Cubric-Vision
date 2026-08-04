@@ -63,10 +63,19 @@ test('mask composite takes the masked region from the overlay, the rest from the
     assert.deepStrictEqual(await pixel(inv, 90, 50), RED);
 });
 
-// A painted RING is the normal way to mark a subject — the app's own consumers
-// fill it (MaskDetailerPipe runs contour_fill: true), so a composite that only
-// swapped the outline would contradict every other mask surface in the app.
-test('an outline mask is filled, so the enclosed area composites too', async (t) => {
+// MPI-437 INVERTED THIS TEST, and the inversion is the point.
+//
+// It used to assert that an outline mask gets FILLED, justified by "the app's own
+// consumers fill it — MaskDetailerPipe runs contour_fill: true". MPI-431 turned
+// contour_fill off in every template precisely because that silently refilled an
+// edge band into a disc, and ruled that the app is the only thing that closes a
+// hole (the Fill button). This route kept the old behaviour on by default and NO
+// caller ever passed the flag, so a user compositing an edge-band mask got the
+// whole disc — reported with a live repro 2026-08-04.
+//
+// The guard now runs both ways: the default respects the mask it was handed, and
+// filling is still available to a caller that explicitly asks.
+test('an outline mask composites as an OUTLINE — filling is opt-in', async (t) => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mpi-composite-fill-'));
     t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
@@ -83,16 +92,24 @@ test('an outline mask is filled, so the enclosed area composites too', async (t)
         .png()
         .toBuffer();
 
-    const out = path.join(dir, 'filled.png');
+    // DEFAULT: the hollow centre keeps the base — only the painted ring composites.
+    const out = path.join(dir, 'outline.png');
     await compositeThroughMask({ basePath, overlayPath, maskBuffer: ring, outPath: out, feather: 0 });
-    assert.deepStrictEqual(await pixel(out, 50, 50), BLUE, 'inside the outline must be treated as masked');
+    assert.deepStrictEqual(await pixel(out, 50, 50), RED,
+        'the enclosed centre was filled — an edge-band mask must composite as a band');
+    assert.deepStrictEqual(await pixel(out, 31, 50), BLUE, 'the painted ring itself still composites');
     assert.deepStrictEqual(await pixel(out, 5, 5), RED, 'outside the outline must stay the base');
 
-    // Opt out and the hollow centre stays the base — the ring alone composites.
-    const hollow = path.join(dir, 'hollow.png');
-    await compositeThroughMask({ basePath, overlayPath, maskBuffer: ring, outPath: hollow, feather: 0, fillHoles: false });
-    assert.deepStrictEqual(await pixel(hollow, 50, 50), RED);
-    assert.deepStrictEqual(await pixel(hollow, 31, 50), BLUE, 'the painted ring itself still composites');
+    // `false` is the same as omitting it — no caller should have to say it.
+    const explicitOff = path.join(dir, 'off.png');
+    await compositeThroughMask({ basePath, overlayPath, maskBuffer: ring, outPath: explicitOff, feather: 0, fillHoles: false });
+    assert.deepStrictEqual(await pixel(explicitOff, 50, 50), RED);
+
+    // OPT IN and the enclosed area composites too — fillMaskHoles still works.
+    const filled = path.join(dir, 'filled.png');
+    await compositeThroughMask({ basePath, overlayPath, maskBuffer: ring, outPath: filled, feather: 0, fillHoles: true });
+    assert.deepStrictEqual(await pixel(filled, 50, 50), BLUE, 'opting in must still fill the enclosed area');
+    assert.deepStrictEqual(await pixel(filled, 5, 5), RED);
 });
 
 test('feather softens the seam and only the seam', async (t) => {

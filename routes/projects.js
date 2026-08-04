@@ -2314,8 +2314,12 @@ router.post('/project/crop-media', async (req, res) => {
  *   overlayPath  {string} — source taken INSIDE the mask
  *   maskDataUrl  {string} — data:image/png;base64,... white-on-black mask
  *   feather      {number} — optional blur sigma in px (0 = hard edge)
- *   fillHoles    {boolean} — optional, default true: areas enclosed by paint count as
- *                            masked, matching MaskDetailerPipe's contour_fill
+ *   fillHoles    {boolean} — optional, default FALSE (MPI-437): pass true to make
+ *                            areas enclosed by paint count as masked. It used to
+ *                            default on, matching MaskDetailerPipe's contour_fill —
+ *                            which MPI-431 turned off everywhere, because a ring
+ *                            mask silently became a disc. Closing a hole is now the
+ *                            app's job, through the Fill button.
  *
  * Response:
  *   { success, itemId, filename, filePath, displayName, pixelDimensions, thumbPath }
