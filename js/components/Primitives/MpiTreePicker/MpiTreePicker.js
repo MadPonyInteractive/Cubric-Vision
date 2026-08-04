@@ -117,7 +117,11 @@ export const MpiTreePicker = ComponentFactory.create({
         const expanded = new Set();
         let query = '';
 
-        // Portalled box lives in document.body (immune to ancestor overflow/transform).
+        // Portalled box lives in document.body (immune to ancestor overflow/transform),
+        // appended on FIRST open — see positionBox. A body-mounted MpiOverlay stashes
+        // every body child (display:none) when it shows, so a box appended at mount
+        // time by a component built into the overlay before show() got stashed and
+        // never appeared.
         const box = document.createElement('div');
         box.className = `mpi-tree-picker__box ${props.extraClasses || ''}`.trim();
         box.innerHTML = `
@@ -127,7 +131,6 @@ export const MpiTreePicker = ComponentFactory.create({
             </div>
             <div class="mpi-tree-picker__tree" role="listbox"></div>
         `;
-        document.body.appendChild(box);
         const treeEl   = qs('.mpi-tree-picker__tree', box);
         const searchEl = qs('.mpi-tree-picker__search-input', box);
 
@@ -223,6 +226,7 @@ export const MpiTreePicker = ComponentFactory.create({
 
         // ── Positioning (lifted from MpiDropdown) ────────────────────────────
         const positionBox = () => {
+            if (!box.parentNode) document.body.appendChild(box);
             const rect = trigger.getBoundingClientRect();
             box.style.minWidth = `${rect.width}px`;
             box.style.left = `${rect.left + window.scrollX}px`;

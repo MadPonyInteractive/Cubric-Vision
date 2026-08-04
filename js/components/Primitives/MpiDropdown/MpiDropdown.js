@@ -109,11 +109,16 @@ export const MpiDropdown = ComponentFactory.create({
 
         // Portal: move list to document.body so no ancestor transform or
         // overflow:hidden can affect it. The list is always hidden until opened.
+        // Detached at mount, body-appended on FIRST open: a body-mounted
+        // MpiOverlay stashes every body child (display:none) when it shows, so a
+        // list portalled at mount time — i.e. by a component built into the
+        // overlay before show() — got stashed and the list never appeared.
         list.dataset.direction = props.direction || 'down';
-        document.body.appendChild(list);
+        list.remove();
 
         /** Aligns the portalled list to the trigger using viewport coordinates. */
         const positionList = () => {
+            if (!list.parentNode) document.body.appendChild(list);
             const rect      = trigger.getBoundingClientRect();
             const direction = props.direction || 'down';
 
