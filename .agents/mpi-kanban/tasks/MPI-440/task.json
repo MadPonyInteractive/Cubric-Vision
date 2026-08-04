@@ -7,7 +7,7 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-04T12:55:00Z",
-  "updated_at": "2026-08-04T15:35:00Z",
+  "updated_at": "2026-08-04T22:05:00Z",
   "labels": [
     "ui",
     "ux",
@@ -19,13 +19,14 @@
   ],
   "acceptance": [
     "MPI-424 stays done - this card does not reopen it, and its five members are confirmed shipped (425, 382, 368, 375, 373 all in done as of 2026-08-04)",
-    "The members are MPI-426, MPI-421, MPI-441, MPI-436, MPI-439 and MPI-435, and each carries this umbrella id (MPI-441 added 2026-08-04 from the user's Grow screenshots)",
+    "The members are MPI-426, MPI-421, MPI-441, MPI-436, MPI-439, MPI-445 and MPI-435, and each carries this umbrella id (MPI-441 added 2026-08-04 from the user's Grow screenshots; MPI-445 added 2026-08-04 from the user's own MPI-436 in-app pass)",
     "MPI-426 ships first and MPI-421 immediately after it - they share the auto-mask result path in MpiCanvasViewer exec.onMasks, so the two cards that call themselves independent are sequenced as a pair here",
     "MPI-441 precedes MPI-436: both read MaskManager._morph, and 436 points that primitive at the paint layer - building the outline tool on a blur-and-threshold dilation inherits the rounding bug this card exists to kill",
     "MPI-426 precedes MPI-439: 426 changes what hasMask() means (auto picks stop counting until Add) and 439 gates its new menu item on hasMask(), so the reverse order reintroduces the same bug through the context menu",
     "The alpha-vs-luminance question is answered ONCE, in whichever of MPI-436 / MPI-439 is picked up first, and recorded in this brief for the other to inherit",
     "The standing constraints in brief.md - preview contract, undo recipe, MPI-371 layer order, the _MASK_TOOLS / TOOL_OPTIONS_REGISTRY guard test, the 200-line doc cap - are re-read before each member, not assumed to have expired with MPI-424",
-    "This card holds no implementation of its own and closes when all five members are done, or a member is explicitly rejected and the decision is recorded here"
+    "This card holds no implementation of its own and closes when all its members are done, or a member is explicitly rejected and the decision is recorded here",
+    "MPI-445 is NOT a tidy-up and must not be treated as one: the fix MPI-436 named trades away the exact radius precision MPI-441 was written to buy, so it carries a decision, and a fix that only defers the 1563 ms first frame leaves the drag at ~15fps and does not close it"
   ],
   "links": {
     "brief": "brief.md",

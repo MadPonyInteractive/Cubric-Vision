@@ -59,18 +59,24 @@ card's SHAPE OF THE WORK section survived contact.
       1536². The second row is a real ceiling and is written down in the code
       (`ponytail:` comment), `docs/masking-adjust.md` and below.
 
-## The one judgment call, and one ceiling — both for the user
+## The one judgment call, and one ceiling — both answered by the user, 2026-08-04
 
-1. **Edge REPLACES the scribble with its outline**, because that is what the card specified
-   ("dilate(outward) minus erode(inward), filled in the current colour") and what mask Edge already
-   does. If "outline my scribble" was meant to mean *keep the scribble AND add an outline*, that is
-   a different fill — one extra `drawImage`, not a redesign.
-2. **A source over 4096 px freezes for ~1.5 s on the first slider move.** Not fixed: the fix caps
-   the field at 1536 and upscales the region mask, which pays back the exact radius precision
-   MPI-441 was written to buy. Deliberately deferred until someone reports it.
+1. **Edge REPLACES the scribble with its outline** — the card's own wording, and what mask Edge
+   already does. **SETTLED AS SHIPPED**: *"my outline scribble is fine as it is."* The alternative
+   (keep the scribble AND add an outline) is not wanted; do not revisit it.
+2. **A source over 4096 px freezes ~1.5 s on the first slider move.** **CONFIRMED by the user in the
+   app** — *"8K images are a bit too much lag on the sliders"* — and **carded as MPI-445**, in the
+   same MPI-440 umbrella. Not fixed here: the fix trades away the exact radius precision MPI-441 was
+   written to buy, so it gets its own card and its own decision.
+
+## User pass (in the app), 2026-08-04
+
+- [x] **"I just tested everything, and it's good."** The rail button, the panel, the colour picker
+      and all three modes exercised on real scribbles.
+- [x] Edge reads as an outline on a real scribble — see the judgement call above.
+- [x] The 4K lag was the only defect found, and it is a known cost rather than a bug → MPI-445.
 
 ## Not covered here
 
-No in-app pass yet — every reading above is from the real `PaintManager` in Chromium, not from the
-rail. The user's pass is the outstanding half: mount **Paint → Adjust**, check the colour picker
-drives the ring, and confirm the band reads as an outline on a real scribble.
+The **shrink** direction and the **inward** half of the band were proven by measurement (the 28/28
+probe table above) rather than named by the user, who exercised the tool as a whole.

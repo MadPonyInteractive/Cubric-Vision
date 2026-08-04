@@ -1,9 +1,10 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 445,
+  "next_id": 446,
   "columns": {
     "todo": [
       "MPI-444",
+      "MPI-445",
       "MPI-439",
       "MPI-433",
       "MPI-432",
@@ -34,12 +35,12 @@
     ],
     "doing": [
       "MPI-440",
-      "MPI-436",
       "MPI-367",
       "MPI-259",
       "MPI-4"
     ],
     "done": [
+      "MPI-436",
       "MPI-443",
       "MPI-441",
       "MPI-379",
@@ -47,8 +48,24 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-04T21:40:00Z",
+  "updated_at": "2026-08-04T21:55:00Z",
   "events": [
+    {
+      "at": "2026-08-04T21:55:00Z",
+      "type": "task.created",
+      "task": "MPI-445",
+      "actor": "opus",
+      "note": "User-reported while validating MPI-436: 8K sources lag the Adjust sliders. The measured ceiling MPI-436 shipped with a ponytail: comment - 1563 ms first move and 64 ms per frame at 4096, against 247/7 at 2048. Filed under MPI-440. The card's own trap is written into it: a fix that only defers the 1563 ms leaves the drag at 15fps."
+    },
+    {
+      "at": "2026-08-04T21:55:00Z",
+      "type": "task.moved",
+      "task": "MPI-436",
+      "from": "doing",
+      "to": "done",
+      "actor": "opus",
+      "note": "User validated in the app 2026-08-04: the three fills read right and the Edge band replacing the scribble is the wanted behaviour, confirmed explicitly. Shipped in e3cab0f5. Answers MPI-440's alpha question for MPI-439. The 4K slider cost the user also reported is carded as MPI-445, not left in this card."
+    },
     {
       "at": "2026-08-04T21:40:00Z",
       "type": "task.updated",

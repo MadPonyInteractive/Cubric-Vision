@@ -1,0 +1,31 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-445",
+  "title": "Paint Adjust stalls ~1.5s on the first slider move at 4096 - the distance field is built at full layer resolution",
+  "description": "USER-REPORTED 2026-08-04, validating MPI-436: on an 8K source the Adjust sliders lag badly on the first move. Confirmed, measured, and NOT a mystery - it is the cost ceiling MPI-436 shipped with a ponytail: comment naming this exact fix.\n\nWHAT HAPPENS. PaintManager._ensureAdjustField() builds signedSquaredDistanceField() at the paint layer's OWN resolution, and the layer is capped at PAINT_MAX_EDGE 4096 - so any source 8192px or wider lands on a 4096 layer, which is 16.7M pixels. Measured in Chromium: first slider move 1563 ms, each later frame 64 ms. At 2048 the same code is 247 ms then 7 ms and nobody notices. The mask never sees this because MASK_MAX_EDGE is 1536 (125 ms / 3.5 ms).\n\nIT IS ONLY THE FIRST MOVE, and that is the trap in this card: 64 ms/frame afterwards is ~15fps on a drag, which is also not good. A fix that only defers the 1563 ms - a spinner, a worker, preview-on-release - leaves the drag at 15fps. Fix the pixel count, not the moment it is paid.\n\nTHE FIX MPI-436 NAMED (do not invent a different one without saying why): cap the FIELD at the mask's 1536 working size, run the range test there, and upscale the resulting region mask to layer resolution before the fill composites. Both costs fall by (4096/1536)^2 = 7.1x, which puts the first move near 220 ms and the drag near 9 ms.\n\nWHAT IT COSTS, and this is the decision the card owes the user: radius precision. MPI-441 replaced a blur-and-threshold with an EXACT field specifically to stop grow/shrink rounding a mask off, and the probe proved edges landing on the exact pixel (481 not 480). A field at 1536 driving a 4096 layer quantises the region boundary to ~2.7 layer px and re-softens it on the upscale. For a mask that was unacceptable. For PAINT it may be fine - the artifact is a colour ring, not a sampler input - but that is a judgement to make deliberately, with a real screenshot of a 20px outline at both settings, NOT by assuming paint is more forgiving.\n\nALTERNATIVES TO WEIGH FIRST (cheapest first, and one of them may make the cap unnecessary):\n- BOUND THE FIELD TO THE CONTENT. The field is built over the whole canvas, but a scribble   usually covers a fraction of it. Building over the painted bounding box padded by max radius   is exact, loses nothing, and on a typical scribble is a bigger win than the cap. It changes   the border-is-background convention at the box edge, which must be handled (pad the box, do   not clamp to it) - see distanceField.js's border clamp.\n- Lower PAINT_MAX_EDGE. Rejected on sight: 4096 exists because paint becomes REAL PIXELS   (docs/painting.md) and downscaling would soften every stroke on flatten.\n- Cache the field across previews. Already done - it is built once per snapshot; the 1563 ms IS   the once.\n\nREAD FIRST: docs/masking-adjust.md (both the mask section and the paint one - the measured numbers and the ponytail ceiling), managers/distanceField.js (the border clamp and why everything is squared integers), tasks/MPI-441/validation.md (the precision the exact field bought, i.e. what a cap spends).\n\nUMBRELLA: MPI-440 (canvas tool family #2). Blocks nothing - MPI-439 and MPI-435 do not touch this path.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-04T21:55:00Z",
+  "updated_at": "2026-08-04T21:55:00Z",
+  "labels": [
+    "painting",
+    "canvas",
+    "performance",
+    "ux",
+    "canvas-tool-family"
+  ],
+  "acceptance": [
+    "The first slider move on a 4096 paint layer is under ~300 ms, and each later frame under ~15 ms - measured in Chromium the same way MPI-436 measured 1563/64, not estimated from pixel counts",
+    "BOTH numbers improve. A fix that only moves WHEN the 1563 ms is paid (spinner, worker, preview-on-release) leaves the drag at ~15fps and does not close this card",
+    "The content-bounding-box option is evaluated BEFORE the resolution cap, because it is exact and costs no precision; if it is rejected, the reason is written in the brief",
+    "If the field is capped, the precision cost is shown to the user on a real 20px outline at both settings and accepted explicitly - MPI-441 bought that exactness on purpose",
+    "The mask's Adjust is UNCHANGED - it runs at 1536 and has no problem to fix; a shared change to distanceField.js sweeps both call sites or it is not shared",
+    "tests/paint-adjust.test.cjs and tests/mask-distance-field.test.cjs still pass, and the geometry test gains a case for whatever new path is taken",
+    "docs/masking-adjust.md's measured table and the ponytail: comment in PaintManager._ensureAdjustField() are both corrected - the ceiling they name is what this card removes"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}

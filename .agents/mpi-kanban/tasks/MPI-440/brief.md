@@ -19,7 +19,8 @@ detection preview still violates the preview contract MPI-382 built the seam for
 |---|---|---|
 | ~~MPI-426~~ | A detection preview must stay a preview — stop auto-adding SAM3 picks to the live mask | **DONE 2026-08-04**, user-validated in the app. Commit `f64fc75e`; see `tasks/MPI-426/validation.md`. Two things every later member inherits: `hasMask()` now means *baked content only*, and the op strip gates on it |
 | MPI-435 | Alpha brush pack — ten procedural brushes for the mask AND paint brush | Lands on the shared brush engine, so both mounts get it at once |
-| ~~MPI-436~~ | Adjust for the paint layer — grow / shrink / edge band over RGBA (the outline tool) | **BUILT 2026-08-04**, awaiting the user's in-app pass (`tasks/MPI-436/validation.md`). Reuses `distanceField.js`, not the `_morph` the card names — MPI-441 had already deleted that. **It answers the alpha question below** |
+| ~~MPI-436~~ | Adjust for the paint layer — grow / shrink / edge band over RGBA (the outline tool) | **DONE 2026-08-04**, user-validated in the app. Commit `e3cab0f5`; see `tasks/MPI-436/validation.md`. Reuses `distanceField.js`, not the `_morph` the card names — MPI-441 had already deleted that. **It answers the alpha question below**, and its 4K cost became MPI-445 |
+| MPI-445 | Paint Adjust stalls ~1.5 s on the first slider move at 4096 | New, 2026-08-04, from the user's own MPI-436 pass. The ceiling MPI-436 shipped with a `ponytail:` comment naming the fix — and the fix spends the exact radius precision MPI-441 bought, so it is a decision, not a tidy-up |
 | MPI-439 | Convert mask to paint / paint to mask, from the canvas context menu | New, 2026-08-04 |
 | ~~MPI-421~~ | Auto-mask run cost + feedback — cache per-object masks, then queue what is left | **BUILT 2026-08-04**, commit `1028b958`, awaiting the user's in-app pass (`tasks/MPI-421/validation.md`). The graph's `ImpactSEGSPicker` was the whole of MPI-402: it trimmed the masks to the chips selected at dispatch, so the fix was deleting it. Detect now shows an indeterminate bar and a Stop |
 | ~~MPI-441~~ | **Grow, Shrink and Edge all round the mask off** — `_morph` is a blur+threshold, i.e. an average where a dilation needs a maximum | **DONE 2026-08-04**, user-validated in the app. `_morph` and both `ADJUST_*` thresholds are deleted; the primitive is now an exact distance field in `managers/distanceField.js`. See `tasks/MPI-441/validation.md`. **MPI-436 is unblocked** |
@@ -54,10 +55,11 @@ detection preview still violates the preview contract MPI-382 built the seam for
      rebuilds the field per frame throws the entire benefit away — build on `beginAdjust()`.
    - **Outside the canvas counts as background**, so a layer running off the frame still erodes
      from that border. Paint must not silently pick the opposite convention.
-4. ~~**MPI-436**~~ — **SHIPPED 2026-08-04**, in-app pass outstanding. Its three fills were right as
+4. ~~**MPI-436**~~ — **SHIPPED AND USER-VALIDATED 2026-08-04.** Its three fills were right as
    written; what was wrong was the primitive it named (`_morph`, deleted by MPI-441 the day before —
-   **check a card's named function still exists before starting it**). **Decisions recorded for the
-   rest of the set:**
+   **check a card's named function still exists before starting it**). The user settled its open
+   judgement call by name: **Edge REPLACING the scribble with its outline is wanted** — do not
+   revisit it. **Decisions recorded for the rest of the set:**
    - **THE ALPHA QUESTION IS ANSWERED — see below.**
    - **One panel, two destinations.** `MpiToolOptionsMaskAdjust` is registered under BOTH
      `maskAdjust` and `paintAdjust` and picks a `DEST` row off `props.mode`, the MPI-368 / MPI-373
@@ -68,10 +70,13 @@ detection preview still violates the preview contract MPI-382 built the seam for
    - **An unapplied paint ADJUSTMENT is a preview and extends `discardPreview()`** — even though the
      paint LAYER never did. A stroke is committed pixels; a proposed one is not.
    - **Cost is quadratic in the source.** 2048² → 247 ms first frame then 7 ms; 4096² → 1563 ms then
-     64 ms. The 4K row is a known, deliberately unfixed ceiling (`ponytail:` comment names the
-     upgrade path). MPI-435 should not assume the paint layer is cheap to scan whole.
+     64 ms. **The user hit the 4K row immediately** and it is now **MPI-445**. MPI-435 should not
+     assume the paint layer is cheap to scan whole.
 5. **MPI-439 — START HERE.** Inherits 436's alpha answer for free, and is small.
-6. **MPI-435** — last. Ten procedural brush presets is polish, it blocks nothing, and the
+6. **MPI-445** — the 4K stall. Independent of 439 and 435 (they do not touch that path), so it can
+   go before or after them; it is the only member that spends a decision rather than adding a
+   feature, because the obvious fix gives back MPI-441's exactness.
+7. **MPI-435** — last. Ten procedural brush presets is polish, it blocks nothing, and the
    `brushDab.js` helper it needs already shipped with MPI-375, so it keeps.
 
 ### Why 426 must precede 439 specifically
