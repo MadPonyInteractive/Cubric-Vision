@@ -74,6 +74,30 @@ The recurring hazard around **Stop** and **cloud+local concurrency (MPI-74 P6)**
 
 Rule of thumb when adding ANY new per-gen UI/state: if two gens (or a Stopped gen's late echo) can touch it, tag the signal with the gen id and reject foreign ids — don't key on `tool` alone. And if a control is *rendered* from one source of truth, it must *act* on that same source — a button drawn from `_lanes` but wired to `activeGenerations` is a dead button waiting to happen.
 
+## Mask detects are a UTILITY LANE — never a queue job (MPI-421)
+
+An auto-mask detect (Detect / Points / Text) is a real ComfyUI workflow, but it does **not**
+enter `_cueQueue` or `generationStore`. Three reasons, and the first is the one that bites:
+
+1. **It would gate itself off.** A store job raises `state.generationQueueCount`, and both
+   `MpiCanvasViewer._isCueBusy()` and `MpiMaskDetectRow._syncGate` disable the detect row while
+   that count is non-zero — a detect occupying the queue disables its own Stop button.
+2. **It cannot queue behind a generation anyway.** That same gate already makes detects and the
+   cue queue mutually exclusive, so the "stuck behind a long gen" risk never existed.
+3. **The queue's completion machinery is media-shaped.** `generationService` reads a zero-media
+   completion as a cancel, and `notificationService` folds every `generation:complete` into the
+   coalesced "N generations finished". A mask detect returns no media and deserves neither.
+
+So it drives `StatusBar.progress.*` **directly** (`prepare` + `setIndeterminate` + `startClock`,
+`complete()`/`cancel()` on settle) instead of emitting `tool:*`. That is not laziness: `tool:*`
+would `_latch(id)` an owner the store can never confirm, and the MPI-208 self-heal above force-
+idles exactly that. A null owner leaves the self-heal inert. Indeterminate is honest — SAM3
+emits no tqdm, so there is no percentage to show. A gen starting mid-detect simply re-latches
+the bar to itself, and the detect's terminal is ignored because it no longer owns it.
+
+Rule this generalises to: **a non-generation ComfyUI run gets the bar, not a lane.** If it has
+no media output and no gen id, keep it out of the store and drive the display directly.
+
 ## Post-cancel UI writes must reconcile — loop re-fire is SYNCHRONOUS (MPI-234)
 
 An armed-loop re-fire runs **synchronously inside any cancel call** (`activeGenerations.cancel` / `cancelRunningCueJob`): store cancel → lane drain → loop callback → `enqueueGeneration` → `startGeneration` all complete BEFORE the cancel call returns — a NEW gen is running (registry entry, mounted placeholder, latched status bar) by the next line. Any UI write placed AFTER a cancel must reconcile from the registry/store, never assume idle. Two stompers shipped this way: the gallery Stop handler's `setGroups(projectGroups)` wiped the re-fire's just-mounted placeholder (fix: `setGroups([..._placeholdersForFirst(), ...groups])`); statusBar's store reconcile only healed active→idle, so a `_latch` while idle left `genId === owner` and the owner-equality check skipped re-arming forever (fix: re-arm when a live store job exists and the bar is idle — store truth wins BOTH directions). Cost 6 failed point-fixes in MPI-226 because every patch targeted the lifecycle handlers while the stomper ran after them.

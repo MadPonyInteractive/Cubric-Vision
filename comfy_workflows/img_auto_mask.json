@@ -119,23 +119,6 @@
       "title": "Input_Box"
     }
   },
-  "1593": {
-    "inputs": {
-      "picks": "",
-      "segs": [
-        "1665",
-        0
-      ],
-      "fallback_image_opt": [
-        "1630",
-        0
-      ]
-    },
-    "class_type": "ImpactSEGSPicker",
-    "_meta": {
-      "title": "Input_Selected_Masks_Input"
-    }
-  },
   "1627": {
     "inputs": {
       "mask": [
@@ -186,7 +169,7 @@
   "1641": {
     "inputs": {
       "segs": [
-        "1593",
+        "1665",
         0
       ]
     },

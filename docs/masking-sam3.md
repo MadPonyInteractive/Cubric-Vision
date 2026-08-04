@@ -36,20 +36,40 @@ Input_Points_Positive / Input_Points_Negative (MpiText, JSON pixel coords)
   -> SAM3 Points (SAM3_Detect, refine_iterations 2, individual_masks false)
   -> GrowMaskWithBlur(-4) -> GrowMaskWithBlur(+4, fill_holes)   # scatter cleanup
   -> MaskToSEGS(combined=True)
-  -> Input_Points_Mode (MpiIfElse) -> existing ImpactSEGSPicker + SEGSPreview
+  -> Input_Points_Mode (MpiIfElse) -> the shared SEGS fan-out (below)
 ```
 
 Injectable keys: `Input_Points_Positive`, `Input_Points_Negative`, `Input_Points_Mode`
-(bool, default **false**). The branch rejoins the **existing** picker chain, so thumbs /
+(bool, default **false**). The branch rejoins the **existing** chain, so thumbs /
 pick / composite plumbing is reused, not forked, and the shipped one-mask-per-pick contract
 (`ImpactSEGSToMaskList`, never `SegsToCombinedMask`) stays intact. `MpiIfElse` inputs are
 lazy, so points mode never runs YOLO.
 
-**Mask ORDER is part of that contract.** JS maps `image[i] → sortedPicks[i]` (picks sorted
-ascending — `commandExecutor.js`), so the graph must emit per-SEG masks in **ascending SEG
-order** or picks land on the wrong segment. `ImpactSEGSPicker` + `ImpactSEGSToMaskList` preserve
-it; any node that reorders, combines or merges SEGS before `Output_image` re-breaks multi-pick
-silently.
+### One SEGS list, two outputs — and NO pick input (MPI-421)
+
+Every branch ends at the same fan-out, and both halves read the SAME SEGS node:
+
+```
+<gate> -+-> SEGSPreview -> MpiBlockIfEmptyList -> PreviewImage "Output_Detected"   # thumbs
+        `-> ImpactSEGSToMaskList -> MaskToImage -> PreviewImage "Output_image"     # masks
+```
+
+**`masks[i]` is the mask for thumb `i`** — true only because one list is walked in one order
+by both. Anything that reorders, combines or merges SEGS in front of either output breaks the
+mapping silently: the counts still match, the picks paint the wrong objects.
+
+`ImpactSEGSPicker` (`Input_Selected_Masks_Input`) used to sit on the mask half and trim it to
+the selected chips, which is why **a chip toggle re-dispatched the whole graph** — the masks
+for an unselected chip did not exist. It is deleted, along with the injected key; one detect
+returns every object's mask and the client picks between them (`MaskManager.autoPickMasks` is
+a `Map<index, bitmap>` with a separate selected `Set`, so this was always a one-line client
+operation). Do not re-add a pick input to save engine time: the masks are cheap, the round
+trip is not. Measured live 2026-08-04 on `hair:2, eye:2` — 4 thumbs, 4 masks, one run.
+
+The old picker did **not** emit zero images for an empty picks string; it emitted **one**
+arbitrary mask, which `runAutoMask` discarded (`if (!payload.picks?.size) return`). That guard
+is gone with the picker — a bare detect's masks are now the cache fill, and suppressing them
+means every chip re-dispatches again.
 
 ### Behaviour you must not "fix"
 
@@ -92,7 +112,7 @@ hover-to-discover stays YOLO's job.
 Input_Text_Prompt (CLIPTextEncode, fed by the SAM3 checkpoint's own CLIP — free until now)
   -> SAM3 Text (SAM3_Detect, individual_masks TRUE)
   -> MaskToSEGS(combined=True)      # Impact loops mask.shape[0] -> one SEG per object
-  -> Input_Text_Mode (MpiIfElse) -> the Input_Points_Mode gate -> the same picker chain
+  -> Input_Text_Mode (MpiIfElse) -> the Input_Points_Mode gate -> the same SEGS fan-out
 ```
 
 Injectable keys: `Input_Text_Mode` (bool, default **false**) and the DOTTED

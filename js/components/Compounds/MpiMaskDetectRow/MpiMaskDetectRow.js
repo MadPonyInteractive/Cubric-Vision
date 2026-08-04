@@ -15,7 +15,8 @@
  * @param {object} viewer - MpiCanvasViewer instance
  *
  * Requires on viewer.el:
- *   getAutoMaskThumbsEl?(), runAutoMaskDetect(), bakeAutoPicks('manual'|'subtract')
+ *   getAutoMaskThumbsEl?(), runAutoMaskDetect(), cancelAutoMaskDetect(),
+ *   bakeAutoPicks('manual'|'subtract')
  *
  * The thumbs node is OWNED BY THE VIEWER — re-parented here, never destroyed.
  */
@@ -51,6 +52,7 @@ export const MpiMaskDetectRow = ComponentFactory.create({
         const gated     = qs('#gated', el);
         const queueNote = qs('#queue-note', el);
         let _blocked = false;
+        let _running = false;
 
         const thumbsEl = viewer.el.getAutoMaskThumbsEl?.();
         if (thumbsEl) qs('#thumbs-slot', el).appendChild(thumbsEl);
@@ -64,6 +66,25 @@ export const MpiMaskDetectRow = ComponentFactory.create({
             viewer.el.runAutoMaskDetect?.();
         });
         _children.push(detectBtn);
+
+        // MPI-421: a detect is a ComfyUI run that used to be completely invisible —
+        // the button did not change, so a slow pass read as a hang, and the exec's
+        // cancel() had nothing wired to it. Two buttons swapping is cheaper than
+        // teaching MpiButton to restyle itself for one caller.
+        const stopBtn = MpiButton.mount(qs('#detect-slot', el), {
+            icon: 'stop', label: 'Stop', size: 'sm', variant: 'danger',
+            info: 'Stop the detection',
+        });
+        stopBtn.el.hidden = true;
+        stopBtn.on('click', () => viewer.el.cancelAutoMaskDetect?.());
+        _children.push(stopBtn);
+
+        const _offRunning = Events.on('automask:running', ({ running }) => {
+            _running = !!running;
+            detectBtn.el.hidden = _running;
+            stopBtn.el.hidden   = !_running;
+            _syncGate();
+        });
 
         // Add / Subtract — a run renders green (MpiCanvas._recolorMaskLayer) and
         // waits to be committed. A points run returns ONE region, so this is also
@@ -90,9 +111,13 @@ export const MpiMaskDetectRow = ComponentFactory.create({
         // that matters.
         function _syncGate() {
             _blocked = (state.generationQueueCount || 0) > 0;
-            gated.classList.toggle('mpi-mask-detect-row__gated--disabled', _blocked);
-            gated.setAttribute('aria-disabled', _blocked ? 'true' : 'false');
-            if (_blocked) gated.setAttribute('inert', '');
+            // MPI-421: a Cue started DURING a detect must not make the Stop button
+            // inert — that is the one control the user needs while a run is in
+            // flight, and the gate exists to stop new runs, not to trap live ones.
+            const freeze = _blocked && !_running;
+            gated.classList.toggle('mpi-mask-detect-row__gated--disabled', freeze);
+            gated.setAttribute('aria-disabled', freeze ? 'true' : 'false');
+            if (freeze) gated.setAttribute('inert', '');
             else gated.removeAttribute('inert');
             queueNote.hidden = !_blocked;
             detectBtn.el.setDisabled?.(_blocked);
@@ -104,6 +129,7 @@ export const MpiMaskDetectRow = ComponentFactory.create({
 
         el.destroy = () => {
             _offQueueGate();
+            _offRunning();
             // Detach the viewer-owned thumbs node rather than letting it be wiped
             // with our subtree — the viewer still owns the instance.
             if (thumbsEl?.parentNode) thumbsEl.parentNode.removeChild(thumbsEl);

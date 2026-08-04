@@ -272,7 +272,6 @@ async function _cleanupTrimmedVideoInputs(paths = []) {
  * @property {string}     imageUrl     - URL of the source image to detect on
  * @property {string}     detectorModel - Filename for the sams/UltralyticsDetector node (e.g. 'bbox/face_yolov8n.pt')
  * @property {boolean}    useBox       - true = box detection, false = segment detection
- * @property {Set<number>} picks       - Currently selected segment indices (0-based); empty = detect only
  * @property {boolean}    [pointsMode] - true = run the click-point (SAM3) branch instead of the YOLO detector
  * @property {string}     [pointsPositive] - JSON `[{"x":int,"y":int}]` of positive dots, source-image px — required when pointsMode is true
  * @property {string}     [pointsNegative] - JSON `[{"x":int,"y":int}]` of negative dots, source-image px
@@ -283,8 +282,9 @@ async function _cleanupTrimmedVideoInputs(paths = []) {
 /**
  * @typedef {Object} AutoMaskExecution
  * @property {function(string[]):void} onDetected - Called with thumbnail URLs from the "Detected" node
- * @property {function(string[]):void} onMasks    - Called with ordered per-pick mask image URLs from "Output" (length = picks.size)
+ * @property {function(string[]):void} onMasks    - Called with EVERY detected object's mask URL from "Output", in SEG order — `masks[i]` is the mask for `onDetected`'s thumb `i` (MPI-421)
  * @property {function(Error):void}    onError    - Called on failure
+ * @property {function():void}         onDone     - Terminal signal, fired exactly once whether the run succeeded, failed or was interrupted. The handle had no terminal at all until MPI-421, which is why a detect could never drive a progress bar or a Stop button.
  * @property {function():void}         cancel     - Interrupt the running workflow
  */
 
@@ -860,12 +860,15 @@ function _buildParams(payload) {
 /**
  * Executes the auto-mask workflow (img_auto_mask.json).
  *
- * Two outputs are captured from a single workflow run:
+ * Two outputs are captured from a single workflow run, and they are INDEX-ALIGNED:
  *   - "Detected" node  → thumbnail images of each detected segment
- *   - "Output" node    → ordered list of per-pick mask images (length = picks.size)
+ *   - "Output" node    → the mask of each detected segment, same SEG order
  *
- * When `picks` is empty the caller should skip running the workflow. If invoked
- * with empty picks the "Output" emit is suppressed.
+ * MPI-421: the run no longer takes a pick list. `ImpactSEGSPicker` used to trim the
+ * SEGS to the selected chips, so the masks only existed for the picks that were
+ * selected AT DISPATCH — which made every chip toggle a fresh ComfyUI run. The
+ * picker is gone from the graph; one detect brings back every mask and the client
+ * chooses between them locally (`MaskManager.setSelectedAutoPicks`).
  *
  * Returns an AutoMaskExecution handle synchronously — attach callbacks before
  * the first async tick to avoid missing early messages.
@@ -884,16 +887,27 @@ export function runAutoMask(payload) {
         onDetected: null,
         onMasks:    null,
         onError:    null,
+        onDone:     null,
         cancel() {
             if (_settled) return;
             getEngine(payload.forceLocal === true).interrupt();
         },
     };
 
+    // Every exit path below is terminal for the caller's busy state — including the
+    // two early returns that never reach the try/finally.
+    let _doneFired = false;
+    const _fireDone = () => {
+        if (_doneFired) return;
+        _doneFired = true;
+        exec.onDone?.();
+    };
+
     (async () => {
         const workflowFile = getUniversalWorkflow('autoMaskImg');
         if (!workflowFile) {
             exec.onError?.(new Error('autoMaskImg workflow not registered'));
+            _fireDone();
             return;
         }
 
@@ -904,6 +918,7 @@ export function runAutoMask(payload) {
             workflow = await res.json();
         } catch (err) {
             exec.onError?.(err);
+            _fireDone();
             return;
         }
 
@@ -918,11 +933,6 @@ export function runAutoMask(payload) {
                 workflow[id]._meta?.title?.toLowerCase() === 'output_image'
             )
         );
-
-        // Build picks string — 1-based indices as ComfyUI ImpactSEGSPicker expects
-        const picksStr = payload.picks?.size
-            ? [...payload.picks].map(i => i + 1).join(',')
-            : '';
 
         // MPI-361: the graph carries two detector branches behind a lazy MpiIfElse
         // (`Input_Points_Mode`), so only the selected one executes.
@@ -941,7 +951,6 @@ export function runAutoMask(payload) {
             Input_Image:                 payload.imageUrl,
             sams:                        payload.detectorModel,
             Input_Box:                   payload.useBox === true,
-            Input_Selected_Masks_Input:  picksStr,
             Input_Points_Mode:           pointsMode,
             // Always emit BOTH lists. SAM3 takes bare JSON coords, so an emptied
             // negative list has to reach the graph as '[]' — omitting the key would
@@ -970,7 +979,6 @@ export function runAutoMask(payload) {
             }
 
             if (outputNodeIds.has(nodeId) && nodeOutput?.images) {
-                if (!payload.picks?.size) return;
                 const urls = nodeOutput.images.map(img => _buildComfyViewUrl(img, payload.forceLocal === true));
                 exec.onMasks?.(urls);
             }
@@ -992,6 +1000,7 @@ export function runAutoMask(payload) {
             exec.onError?.(err);
         } finally {
             _settled = true;
+            _fireDone();
         }
     })();
 

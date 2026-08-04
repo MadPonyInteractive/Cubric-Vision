@@ -46,6 +46,27 @@ two passes live in **[masking-adjust.md](masking-adjust.md)** — split out at t
 200-line cap. **MPI-436 points the same primitive at the paint layer**, and is where OUTLINES
 belong.
 
+## Detect is a RUN — it shows, and it stops (MPI-421)
+
+`MpiMaskDetectRow` swaps Detect for a **Stop** button while a run is in flight (`hidden`
+toggling on two `MpiButton`s, driven by the `automask:running` event), and the status bar shows
+an **indeterminate** `DETECTING` pulse with a clock. Before this the row never changed and the
+bar read `IDLE`, so a slow pass on a busy image could not be told from a hang — and the exec's
+`cancel()` had existed since day one with nothing wired to it.
+
+Three things to keep:
+
+- **The bar is driven directly** (`StatusBar.progress.*`), not through `tool:*` events. Those
+  latch a gen id and `statusBar._reconcileFromStore` force-idles any owner the generation store
+  cannot confirm; a detect deliberately never enters that store, so an id-tagged emit would be
+  self-healed away mid-run. See [generation-lifecycle.md](generation-lifecycle.md) § detects.
+- **Every path that abandons a run must end it** — `_endAutoMaskRun()` from the tool exit, the
+  Stop handler, the viewer's `destroy`, and the handle's `onDone` (its only terminal; the
+  handle had none before). Miss one and an active bar is stranded with nothing driving it.
+- **The Cue gate does not freeze a live run.** The row's `inert` gate exists to stop NEW runs
+  while Cue is busy; applying it to a running detect would make Stop unclickable, which is the
+  one control that matters then.
+
 ## Add / Subtract — the commit half
 
 App-side, via `bakeAutoPicksInto()` — no `AddMask`/`SubtractMask` nodes, no extra round trip.

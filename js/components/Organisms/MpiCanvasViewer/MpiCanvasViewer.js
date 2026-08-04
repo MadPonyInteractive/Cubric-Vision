@@ -371,6 +371,18 @@ export const MpiCanvasViewer = ComponentFactory.create({
         // swapToCanvas + on history-entry switch.
         const _autoPickStore = new Map();
         let _lastDetectThumbUrls = [];
+        // MPI-421 — everything ONE detect brought back, index-aligned with the thumb
+        // strip. The graph no longer trims its masks to the selected chips, so a chip
+        // toggle is a local composite instead of a fresh ComfyUI run. RAM-only and
+        // viewer-scoped, exactly like _lastDetectThumbUrls: it survives the
+        // swapToPreview/swapToCanvas remount and is dropped on an item switch.
+        let _autoMaskUrls = [];
+        // ponytail: bitmaps are built on first pick, not up front — the transparent
+        // conversion is a full per-pixel pass, and a detect can return ten masks the
+        // user never selects. Upgrade path if pick latency ever bites: prebuild in
+        // the background after onMasks.
+        const _autoMaskBitmaps = new Map();
+        let _autoMaskRunning = false;
 
         function _isCueBusy() {
             return (state.generationQueueCount || 0) > 0;
@@ -378,6 +390,41 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         function _notifyAutoMaskBlocked() {
             StatusBar.notify(AUTO_MASK_QUEUE_DISABLED_REASON, 'warning');
+        }
+
+        /**
+         * MPI-421 — a detect run is a real ComfyUI workflow, and until now it ran
+         * completely invisibly: the status bar read IDLE and the Detect button never
+         * changed, so a slow pass could not be told from a hang.
+         *
+         * A detect drives the bar DIRECTLY rather than through the `tool:*` events a
+         * generation uses, and that is deliberate. Those events latch the bar to a gen
+         * id (MPI-203/208) and `statusBar._reconcileFromStore` force-idles any owner
+         * the generation store cannot confirm — a detect never enters that store (see
+         * `tasks/MPI-421/brief.md` § DECISION 1), so an id-tagged emit would be
+         * self-healed away mid-run. Driving it with a null owner leaves the self-heal
+         * inert. Indeterminate is the honest bar: SAM3 detect emits no tqdm, so there
+         * is no percentage to show.
+         */
+        function _setAutoMaskRunning(running) {
+            if (_autoMaskRunning === running) return;
+            _autoMaskRunning = running;
+            if (running) {
+                StatusBar.progress.prepare('Detecting');
+                StatusBar.progress.setIndeterminate(true);
+                StatusBar.progress.startClock();
+            }
+            // The Detect button becomes Stop while this is true (MpiMaskDetectRow).
+            Events.emit('automask:running', { running });
+        }
+
+        /** Terminal for a detect run. Idempotent — onDone fires once, but a cancel
+         *  or an item switch can end the run before it does. */
+        function _endAutoMaskRun(outcome = 'done') {
+            if (!_autoMaskRunning) return;
+            _setAutoMaskRunning(false);
+            if (outcome === 'done') StatusBar.progress.complete();
+            else StatusBar.progress.cancel();
         }
 
         // Viewer retains ownership of the thumbs instance; MpiMaskDetectRow
@@ -391,10 +438,66 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 canvas.clearAutoPicks();
                 canvas.setSelectedAutoPicks(new Set());
                 _hasMask = !!(canvas.maskCanvas && hasMaskContent(canvas.maskCanvas));
-            } else {
-                _runAutoMaskWorkflow(false);
+                return;
             }
+            // MPI-421 (absorbed MPI-402): every toggle used to re-dispatch the whole
+            // graph, because ImpactSEGSPicker only produced masks for the chips that
+            // were selected at dispatch time. One detect now returns them all, so this
+            // is a local composite. The dispatch survives for ONE case: a cold
+            // rehydrate from maskTempStore, which restores thumbs + picks but not the
+            // RAM url cache — and that run repopulates the cache for free.
+            if (!_autoMaskUrls.length) {
+                _runAutoMaskWorkflow(false);
+                return;
+            }
+            _applyPicksFromCache(picks);
         });
+
+        /**
+         * Composite the selected chips from the cached detect result. Builds the
+         * bitmap for a pick the first time it is selected and keeps it, so toggling
+         * the same chip off and on costs nothing.
+         *
+         * NOTHING here dispatches. The one surviving dispatch lives in the 'change'
+         * handler, gated on an empty cache — because every inconsistency below is one
+         * a re-run would reproduce (a stale pick index survives the very run that was
+         * supposed to fix it), so "recover by re-running" would loop forever. Reset
+         * and say so, exactly like `_restoreAutoPickMasks` does.
+         */
+        async function _applyPicksFromCache(picks) {
+            // The two branches of a run are index-aligned by construction (both walk
+            // the same SEGS list), so a length disagreement means the mapping is not
+            // trustworthy — pick i would paint object j.
+            if (_lastDetectThumbUrls.length && _autoMaskUrls.length !== _lastDetectThumbUrls.length) {
+                clientLogger.warn('automask',
+                    `mask list ${_autoMaskUrls.length} != thumbs ${_lastDetectThumbUrls.length}; dropping picks`);
+                _resetAutoPickStateWithToast();
+                return;
+            }
+            const missing = [...picks].filter(i => !_autoMaskBitmaps.has(i));
+            if (missing.some(i => !_autoMaskUrls[i])) {
+                clientLogger.warn('automask', `pick out of range for ${_autoMaskUrls.length} masks; dropping picks`);
+                _resetAutoPickStateWithToast();
+                return;
+            }
+            try {
+                await Promise.all(missing.map(async (i) => {
+                    const dataUrl = await _maskUrlToTransparentDataUrl(_autoMaskUrls[i]);
+                    const res  = await fetch(dataUrl);
+                    const blob = await res.blob();
+                    _autoMaskBitmaps.set(i, await createImageBitmap(blob));
+                }));
+            } catch (err) {
+                clientLogger.warn('automask', `Failed to apply auto-masks: ${err?.message || err}`);
+                return;
+            }
+            canvas.setAutoPickMasks(new Map(_autoMaskBitmaps));
+            canvas.setSelectedAutoPicks(new Set(picks));
+            await _saveAutoPickEntry(_currentItem, [..._autoMaskUrls], picks, _lastDetectThumbUrls);
+            // MPI-426: a state sync, NOT a publish. The picks live in the display-only
+            // auto layer; the op strip stays locked until Add bakes them.
+            el.evaluateMask();
+        }
 
         async function _maskUrlToTransparentDataUrl(maskUrl) {
             if (typeof maskUrl === 'string' && maskUrl.startsWith('data:')) return maskUrl;
@@ -498,12 +601,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 return;
             }
 
-            const runPicks = new Set(_autoMaskPicks);
             const exec = runAutoMask({
                 imageUrl,
                 detectorModel:   _autoMaskModel,
                 useBox:          _autoMaskUseBox,
-                picks:           runPicks,
                 pointsMode:      _pointsMode,
                 pointsPositive:  points?.positive,
                 pointsNegative:  points?.negative,
@@ -511,6 +612,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 textPrompt:      _textPrompt,
             });
             _autoMaskExec = exec;
+            _setAutoMaskRunning(true);
 
             const isCurrentRun = () =>
                 _autoMaskExec === exec
@@ -535,52 +637,29 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 }
             };
 
+            // MPI-421: this now arrives on EVERY run and carries every detected
+            // object's mask, whatever is selected — so it is the cache fill, and the
+            // compositing moved to _applyPicksFromCache (which the chip strip also
+            // calls, without a workflow).
             exec.onMasks = async (maskUrls) => {
                 if (!isCurrentRun()) return;
-                if (runPicks.size === 0) return;
-                if (maskUrls.length !== runPicks.size) {
-                    clientLogger.warn('automask',
-                        `mask list length ${maskUrls.length} != picks ${runPicks.size}; clearing auto picks`);
-                    canvas.clearAutoPicks();
-                    canvas.setSelectedAutoPicks(new Set());
-                    _hasMask = !!(canvas.maskCanvas && hasMaskContent(canvas.maskCanvas));
-                    return;
-                }
-                try {
-                    const bitmaps = await Promise.all(
-                        maskUrls.map(async (u) => {
-                            const dataUrl = await _maskUrlToTransparentDataUrl(u);
-                            const res = await fetch(dataUrl);
-                            const blob = await res.blob();
-                            return await createImageBitmap(blob);
-                        })
-                    );
-                    const sortedPicks = [...runPicks].sort((a, b) => a - b);
-                    const map = new Map();
-                    sortedPicks.forEach((pickIdx, i) => map.set(pickIdx, bitmaps[i]));
-                    canvas.setAutoPickMasks(map);
-                    canvas.setSelectedAutoPicks(runPicks);
-                    await _saveAutoPickEntry(sourceItem, [...maskUrls], runPicks, _lastDetectThumbUrls);
-                    // REVERSED by MPI-426. This used to read "picking a chip puts real
-                    // pixels in maskCanvas, so publish it or the op strip stays locked
-                    // until Add/Subtract" — the MPI-372/384 contract. It no longer
-                    // does: the picks live in the display-only auto layer, and the
-                    // strip staying locked until Add is now the CORRECT behaviour,
-                    // because there is genuinely no mask to send yet.
-                    //
-                    // The call stays as a state sync, not a publish: it re-reads the
-                    // baked layers and emits mask-clear when a detect arrives on an
-                    // entry whose _hasMask flag is stale.
-                    el.evaluateMask();
-                } catch (err) {
-                    clientLogger.warn('automask', `Failed to apply auto-masks: ${err?.message || err}`);
-                }
+                _autoMaskUrls = [...maskUrls];
+                _autoMaskBitmaps.clear();
+                if (_autoMaskPicks.size === 0) return;   // a bare detect is a preview
+                await _applyPicksFromCache(_autoMaskPicks);
             };
 
             exec.onError = (err) => {
                 if (_autoMaskExec !== exec) return;
                 _autoMaskExec = null;
                 clientLogger.error('automask', 'Auto-mask error', err);
+            };
+
+            // The handle's only terminal (MPI-421) — fires once, however the run
+            // ended, including a Stop.
+            exec.onDone = () => {
+                if (_autoMaskExec !== exec && _autoMaskExec !== null) return;
+                _endAutoMaskRun('done');
             };
         }
 
@@ -666,6 +745,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
         // canvas is ready.
         async function _hydrateThumbsForItem(item) {
             const entry = _autoPickStore.get(_autoPickKey(item)) || await _loadAutoPickEntryFromTemp(item);
+            // A different item's masks are not this item's — the cache is per detect
+            // run, and a run belongs to the entry it was dispatched for (MPI-421).
+            _autoMaskUrls = [];
+            _autoMaskBitmaps.clear();
             if (!entry) {
                 autoMaskThumbs.el.clear();
                 _autoMaskPicks.clear();
@@ -721,6 +804,8 @@ export const MpiCanvasViewer = ComponentFactory.create({
             _clearAutoPickEntry(_currentItem, true);
             _autoMaskPicks.clear();
             _lastDetectThumbUrls = [];
+            _autoMaskUrls = [];
+            _autoMaskBitmaps.clear();
             autoMaskThumbs.el.clear();
             canvas.clearAutoPicks();
             canvas.setSelectedAutoPicks(new Set());
@@ -741,8 +826,14 @@ export const MpiCanvasViewer = ComponentFactory.create({
         function _exitAutoMaskMode(apply) {
             _autoMaskExec?.cancel();
             _autoMaskExec = null;
+            _endAutoMaskRun('cancelled');
 
             if (!apply) {
+                // The cached detect result is part of the preview, so it goes too —
+                // re-entering the tool must not resurrect masks for a thumb strip
+                // that no longer exists (MPI-421).
+                _autoMaskUrls = [];
+                _autoMaskBitmaps.clear();
                 // Drop auto layer only; preserve manual + subtract — those are
                 // committed pixels, not a preview.
                 canvas.clearAutoPicks();
@@ -1502,8 +1593,19 @@ export const MpiCanvasViewer = ComponentFactory.create({
             autoMaskThumbs.el.clear();
             _autoMaskPicks.clear();
             _lastDetectThumbUrls = [];
+            _autoMaskUrls = [];
+            _autoMaskBitmaps.clear();
             _clearAutoPickEntry(_currentItem, true);
             _runAutoMaskWorkflow(true);
+        };
+
+        /** Stop a detect run in flight (MPI-421). The exec's interrupt existed from
+         *  day one — there was simply no UI wired to it. */
+        el.cancelAutoMaskDetect = () => {
+            if (!_autoMaskRunning) return;
+            _autoMaskExec?.cancel();
+            _autoMaskExec = null;
+            _endAutoMaskRun('cancelled');
         };
 
         /** Commit current auto-mask selection and exit auto-mask mode. */
@@ -1727,6 +1829,10 @@ export const MpiCanvasViewer = ComponentFactory.create({
         // (~100MB per 4K image), causing VRAM stacking on every workspace re-open.
         el.destroy = async () => {
             _offCtx?.();
+            // A detect in flight owns the status bar; tearing the viewer down without
+            // ending it strands an active bar with nothing driving it (MPI-421).
+            _autoMaskExec?.cancel();
+            _endAutoMaskRun('cancelled');
             if (_currentItem) {
                 if (!_previewInst) {
                     try {

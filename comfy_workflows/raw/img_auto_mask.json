@@ -254,7 +254,6 @@
           "links": [
             2185,
             2186,
-            2190,
             2191,
             2303,
             2317
@@ -352,60 +351,6 @@
         }
       },
       "widgets_values": [],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 1593,
-      "type": "ImpactSEGSPicker",
-      "pos": [
-        4578.554397292343,
-        6841.618800029347
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "segs",
-          "type": "SEGS",
-          "link": 2322
-        },
-        {
-          "name": "fallback_image_opt",
-          "shape": 7,
-          "type": "IMAGE",
-          "link": 2190
-        }
-      ],
-      "outputs": [
-        {
-          "name": "SEGS",
-          "type": "SEGS",
-          "links": [
-            2285
-          ]
-        }
-      ],
-      "title": "Input_Selected_Masks_Input",
-      "properties": {
-        "cnr_id": "comfyui-impact-pack",
-        "ver": "8.22.2",
-        "Node name for S&R": "ImpactSEGSPicker",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "version": "7.5.2",
-          "input_ue_unconnectable": {}
-        }
-      },
-      "widgets_values": [
-        "",
-        "image"
-      ],
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -1240,8 +1185,8 @@
           "name": "output",
           "type": "*",
           "links": [
-            2322,
-            2323
+            2323,
+            2285
           ]
         }
       ],
@@ -1300,28 +1245,12 @@
       "IMAGE"
     ],
     [
-      2190,
-      1597,
-      0,
-      1593,
-      1,
-      "IMAGE"
-    ],
-    [
       2191,
       1597,
       0,
       1571,
       1,
       "IMAGE"
-    ],
-    [
-      2194,
-      1592,
-      0,
-      1593,
-      0,
-      "SEGS"
     ],
     [
       2212,
@@ -1381,7 +1310,7 @@
     ],
     [
       2285,
-      1593,
+      1665,
       0,
       1641,
       0,
@@ -1521,14 +1450,6 @@
       0,
       1665,
       1,
-      "*"
-    ],
-    [
-      2322,
-      1665,
-      0,
-      1593,
-      0,
       "*"
     ],
     [
