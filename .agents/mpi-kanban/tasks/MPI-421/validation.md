@@ -22,7 +22,28 @@ the cache depends on; sabotage-checked by pointing the mask branch at a differen
 alignment test failed, and the file restored byte-identical. Full suite: **396 pass, 0 fail**.
 ESLint clean on all three touched JS files.
 
-## NOT verified by me — needs an in-app pass
+## USER-VALIDATED IN THE APP, 2026-08-04 — card closed
+
+Fabio ran it and confirmed: `DETECTING` with a live clock during the run, chips composited
+from ONE detect, Stop working, and Add unchanged. Two bugs surfaced during that pass, both
+fixed and re-verified before closing:
+
+1. **The Stop button ate Detect** (commit `bec47363`). `ComponentFactory.mount()` does
+   `container.innerHTML = html`, so mounting a second `MpiButton` into `#detect-slot` DELETED
+   the first — and `.mpi-btn { display: inline-flex }` outranks the UA `[hidden]`, so the
+   survivor could not be hidden either. Detect was unreachable; Stop early-returned on
+   `!_autoMaskRunning` because nothing was running. Now ONE button is re-mounted on the state
+   flip, and the row seeds its state from `viewer.el.isAutoMaskRunning()` so a tool switch
+   mid-run does not show a Detect that would start a second run.
+2. **The bar kept sweeping after Stop** (commit `2ed85e70`). Not detect-specific:
+   `progress.cancel()` never removed `shell-info__fill--indeterminate` — only `complete()` did
+   — so ANY stopped no-progress job (an ESRGAN upscale too) animated forever under an `IDLE`
+   label, until the next job's `_beginActiveCycle()` cleared it on the way in. Fixed at
+   `_setIdle()`, the funnel every terminal reaches.
+
+Both carry sabotage-checked guard tests. Suite at close: **400 pass, 0 fail.**
+
+## The steps that pass was run against
 
 Everything renderer-side. The engine proof above cannot exercise a chip click:
 
