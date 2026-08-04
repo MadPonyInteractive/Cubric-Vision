@@ -141,7 +141,6 @@ interface DepJob {
     totalBytes: number;
     error: string | null;
     sha256Expected: string | null;
-    pipPins?: string[] | null;
 }
 
 // DownloadJob (state.downloadJobs[]). 'pending' is a CLIENT-ONLY state (G2).
