@@ -23,6 +23,13 @@ Three entry paths, one renderer (`MpiToast` in a shared `.mpi-toast-stack`, cap 
 Backend routes never toast directly — they push SSE events (`/comfy/downloads/stream`,
 `/concat/events/stream`) that the frontend service layer converts into `ui:*` emits.
 
+**Placement is settled: TOP-CENTRE, below `--titlebar-h`.** Bottom-right, bottom-left and
+top-right were each tried and each covered real UI. The workspace topbar is
+`justify-content: space-between`, so its centre band is the only strip the shell keeps
+permanently empty — that is why the stack lives there, and why the offset must stay
+below the titlebar (the mascot overhangs the toast by `--s-3` and would land in the drag
+region otherwise). Don't move it back to a corner.
+
 ## The sound model — READ THIS BEFORE THE TABLE
 
 The per-call `sound` flag is **not** "does this toast play a sound". The chime

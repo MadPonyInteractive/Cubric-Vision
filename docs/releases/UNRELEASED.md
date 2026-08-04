@@ -125,6 +125,11 @@
 
 ## fixes
 
+- **Notifications no longer sit on top of what you're working on.** They now appear
+  at the top centre of the window, the one strip the interface keeps clear. Every
+  corner they lived in before — bottom right, bottom left, top right — covered
+  controls or your image.
+
 - **Typing a size in Resize no longer throws an error.** Entering a width or height
   ran the preview again on every single keypress, against the half-finished number
   you were still typing — so the "1" of "1024" was treated as a one-pixel-wide
