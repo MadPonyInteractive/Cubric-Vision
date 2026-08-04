@@ -71,6 +71,15 @@ Whenever you need generic functionality, ALWAYS check the `js/utils/` directory 
 - **Format:** `.mpi-component-name__element--modifier`. This guarantees styles do not bleed globally. 
 - Example: `.mpi-btn`, `.mpi-btn__icon`, `.mpi-btn--primary`.
 
+### 🔴 `hidden` loses to your own CSS — add the override
+A class carrying `display` **outranks** the UA sheet's `[hidden] { display: none }`. So `el.hidden = true` on an element your component styles with `display: flex/block/grid` does **nothing**, silently.
+
+- Give every such element an explicit `[hidden]` rule: `.mpi-x__thumb[hidden], .mpi-x__empty[hidden] { display: none; }`.
+- Or don't render it at all — `.remove()` the node, which is the right call for a control that will never apply to this mount (a destination with no opacity slider, a front end with no second slot).
+- Toggling a modifier class instead of `hidden` is equally fine; what is never fine is `hidden` alone against a `display` you wrote.
+
+**This has shipped three times** (MPI-382 inert slider rows, MPI-373 twice — the second time with warning comments about it sitting in the same file). If you write `hidden`, grep your own `.css` for that element's `display` in the same edit.
+
 ---
 
 ## 🐞 Logging & Error Handling
