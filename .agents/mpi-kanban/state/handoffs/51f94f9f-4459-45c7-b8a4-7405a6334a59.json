@@ -4,7 +4,7 @@
   "generated_at": "2026-08-04T00:40:00Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-413 Phase 2 — one curated pip file for the local engine",
     "branch": "master"
