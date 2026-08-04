@@ -7,7 +7,7 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-07-31T01:20:00Z",
-  "updated_at": "2026-08-04T00:10:00Z",
+  "updated_at": "2026-08-04T07:05:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
@@ -25,5 +25,10 @@
     "macos"
   ],
   "priority": "high",
-  "activeSessionTitle": "MPI-413 Phase 2 — one curated pip file"
+  "activeSessionTitle": "MPI-413 Phase 2 — one curated pip file",
+  "attention": {
+    "state": "required",
+    "reason": "Session ended with the card in doing. Wrapper 0.2.41 is LIVE on the R2 dev channel and proved loaded on a real Pod; the start.sh guard is committed (mpi-ci 4854496) but NOT published. Next steps are all USER-AUTHORIZED live ops: ./publish-runtime.sh dev, then the image build, then one Pod boot. promote is NOT part of this card - it is a release gate.",
+    "updated_at": "2026-08-04T07:05:00Z"
+  }
 }

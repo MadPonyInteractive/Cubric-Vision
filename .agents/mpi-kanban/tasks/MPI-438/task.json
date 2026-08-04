@@ -4,10 +4,10 @@
   "title": "Universal ops break on a Pod volume: code-only node packs arrive only via a model's dep list",
   "description": "ENGINE SPLIT HALF-WIRE. universal_workflows.js lines 5-7 state the contract: 'Dependencies for universal workflows are the universal DEPS set (dependencies.js): every type:custom_nodes node + every engineAsset:true weight (MPI-222). They are installed automatically with the engine and are never tracked per-workflow.' shared.js getUniversalWorkflowDepIds() agrees ('all nodes are universal - MPI-222'). That contract is enforced for the LOCAL engine ONLY: checkUniversalWorkflowDepsStatus() (shared.js) resolves against the local disk via resolveComfyPath/getCustomRoot and feeds the boot-repair ladder. There is NO remote twin. On a Pod the engine is image + volume: installRequirements:true packs are BAKED into the image (remoteModels._isImageResident), but the 7 code-only packs land on the NETWORK VOLUME only when a MODEL that declares them is installed there. So a universal op whose graph uses a code-only pack fails on any volume that never installed one of the specific models carrying it. FOUND LIVE 2026-08-04 on Pod jtoo2fl2xgtt5y / volume 9t3awufudk during MPI-413 Pod testing: Resize Video died with ComfyUI missing_node_type 'Node Video not found', class_type VHS_LoadVideoPath. Pod /object_info showed 1822 node types and ZERO VHS_*; POST /remote/model-present answered present:false for comfyui-videohelpersuite while the control comfyui_ultimatesdupscale (also code-only, also volume) answered present:true. NOT an MPI-413 regression - the wrapper code MPI-413 deleted only ran requirements.txt for an ALREADY-EXTRACTED folder and never downloaded a node, and start.sh's boot loop likewise only touches folders that exist. MEASURED BLAST RADIUS (script swept every UNIVERSAL_WORKFLOWS graph's class_types against the local custom_nodes sources, then mapped pack -> declaring models): ComfyUI-VideoHelperSuite is needed by resizeVideo (VHS_LoadVideoPath, VHS_VideoInfoSource) and declared by only wan-22 and wan22-5b, 2 of 18 models. comfyui-inpaint-cropandstitch is needed by appHeadSwap (InpaintCropImproved, InpaintStitchImproved) and declared by only klein-4b, boogu-edit-high, boogu-edit-balanced, 3 of 18 - a SECOND live-broken op nobody had reported, and MPI-332 keeps Head Swap while ripping the other three test apps. ComfyUI-MpiNodes is needed by all 12 universal ops but declared by all 18 models, so it is only broken on a volume with ZERO models installed (structural, low practical risk). SWEEP TRAP for whoever redoes this: the local custom_nodes/ComfyUI-MpiNodes is a SYMLINK, so fs.readdirSync withFileTypes reports isDirectory() false and every Mpi* class silently vanishes from the index - stat and follow the link or the sweep under-reports. FIX DIRECTION (not yet decided): give the remote engine the twin of checkUniversalWorkflowDepsStatus - on connect / engine setup, ensure the code-only universal node set exists on the volume and install what is missing at its node_lock commit, reusing the existing wrapper volume-install path. Decide whether it runs on every connect or only when a graph needs it, and how it reports progress. VERIFY: on a Pod volume with NO Wan 2.2 and NO Klein/Boogu installed, Resize Video and Head Swap both succeed.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-04T06:15:00Z",
-  "updated_at": "2026-08-04T06:25:00Z",
+  "updated_at": "2026-08-04T07:05:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -24,5 +24,10 @@
     "engine-split"
   ],
   "priority": "high",
-  "activeSessionTitle": "MPI-438 remote twin for universal node deps"
+  "activeSessionTitle": "MPI-438 remote twin for universal node deps",
+  "attention": {
+    "state": "required",
+    "reason": "Session ended with the card in doing, maturity validating. Code complete and suite-green at 390/0, with validation.md holding the diagnosis, the measured blast radius and the four-sabotage table. ZERO live verification - ensureUniversalNodesOnVolume has never executed against a wrapper. Needs the same Pod boot as MPI-413: on a volume with no Wan 2.2 and no Klein/Boogu, Resize Video AND Head Swap must both succeed.",
+    "updated_at": "2026-08-04T07:05:00Z"
+  }
 }
