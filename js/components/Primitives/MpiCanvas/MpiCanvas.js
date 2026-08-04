@@ -86,6 +86,7 @@ import { ComparisonManager } from './managers/ComparisonManager.js';
 import { CropManager }       from './managers/CropManager.js';
 import { PaintManager }      from './managers/PaintManager.js';
 import { ShapeManager }      from './managers/ShapeManager.js';
+import { CompositeManager }  from './managers/CompositeManager.js';
 import { UndoStack }         from './managers/UndoStack.js';
 import { InputController }   from './managers/InputController.js';
 
@@ -183,6 +184,10 @@ class _CanvasCore {
         // is executed by whichever LAYER manager owns the destination, which is what
         // keeps one gizmo serving both without knowing either layer's model.
         this.shape      = new ShapeManager();
+        // MPI-373: the composite hole. Its own SCRATCH layer rather than the mask's
+        // — the mask persists per entry, so a composite sharing it would eat a mask
+        // brushed for an inpaint and leave its own cut behind.
+        this.comp       = new CompositeManager();
         // MPI-376: ONE stack for the whole canvas, not one per tool. Mask and paint
         // share it, chronologically — one canvas, one history. The consequence is
         // deliberate and documented: Ctrl+Z inside the Paint tool can walk back into
@@ -190,6 +195,7 @@ class _CanvasCore {
         this.undoStack  = new UndoStack();
         this.mask.undo  = this.undoStack;
         this.paint.undo = this.undoStack;
+        this.comp.undo  = this.undoStack;
         this._activeMode = 'none';
         this._onModeChange = onModeChange;
         this._maskHidden = false;
@@ -207,7 +213,7 @@ class _CanvasCore {
         this.input = new InputController(
             this.canvas,
             this.container,
-            { view: this.view, mask: this.mask, comparison: this.comparison, crop: this.crop, paint: this.paint, shape: this.shape, undo: this.undoStack },
+            { view: this.view, mask: this.mask, comparison: this.comparison, crop: this.crop, paint: this.paint, shape: this.shape, comp: this.comp, undo: this.undoStack },
             {
                 onDraw: () => { this._applyTransform(); this.draw(); },
                 onResetView: () => this.resetView(),
@@ -216,6 +222,9 @@ class _CanvasCore {
                 onBrushTypeChange: this.options.onBrushTypeChange,
                 onPointsChange: this.options.onPointsChange,
                 onMaskStrokeEnd: this.options.onMaskStrokeEnd,
+                // MPI-373: read through a mutable slot rather than captured here, so
+                // the panel that mounts LATER than this canvas can still claim it.
+                onCompositeStrokeEnd: () => this._onCompositeChange?.(),
                 onUndo: () => this.undoMask(),
                 onRedo: () => this.redoMask()
             },
@@ -228,7 +237,7 @@ class _CanvasCore {
     }
 
     // ── Active Mode (mutual exclusion) ────────────────────────────────────────
-    // Valid values: 'none' | 'mask' | 'crop' | 'compare' | 'paint'
+    // Valid values: 'none' | 'mask' | 'crop' | 'compare' | 'paint' | 'composite'
     get activeMode() { return this._activeMode; }
     set activeMode(v) {
         if (this._activeMode === v) return;
@@ -240,6 +249,10 @@ class _CanvasCore {
         // visible in every mode (it is image content, not an annotation) — this
         // flag only says whose brush the pointer belongs to.
         this.paint.isPaintingMode        = v === 'paint';
+        // MPI-373: composite is a mode for the same reason paint is — it needs its
+        // own brush ownership. (The shape gizmo could be a mere FLAG inside another
+        // mode because it is not a brush and never competes for the pointer.)
+        this.comp.isCompositeMode        = v === 'composite';
         this.input.updateCursor();
         this.draw();
         if (this._onModeChange) this._onModeChange(v);
@@ -288,6 +301,9 @@ class _CanvasCore {
         this.input?.destroy?.();
         this.crop?.destroy?.();
         this.mask?.destroy?.();
+        // MPI-373: drops the underlay Image and the undo back-reference, so a late
+        // callback cannot record against a dead context.
+        this.comp?.destroy?.();
         // Retained snapshots + the full-size scratch buffers are the biggest thing
         // this component holds after the layers themselves — drop them explicitly.
         this.undoStack?.destroy?.();
@@ -388,6 +404,17 @@ class _CanvasCore {
             this.paint.init(this.img.width, this.img.height);
             this.crop.init(this.img.width, this.img.height);
             this.shape.init(this.img.width, this.img.height);
+            // MPI-373: resizes the hole to the new base and clears the CUT, which was
+            // drawn for the old image's geometry. The UNDERLAY deliberately survives:
+            // it mirrors what the panel's slot is showing, and dropping it here would
+            // leave the slot displaying a thumbnail the canvas no longer has. Leaving
+            // the tool is what drops both, through `discardPreview()`.
+            this.comp.init(this.img.width, this.img.height);
+            // ANNOUNCE IT. Apply reloads the entry it just created, which lands here
+            // and wipes the cut — and a panel that is not told keeps Apply enabled
+            // over a hole that no longer exists, so the next press returns silently
+            // with no error anywhere. Every path that empties the cut must say so.
+            this._onCompositeChange?.();
             // mask.init() already cleared the shared stack; paint.init() must NOT
             // clear it again or it would wipe history the mask just re-established.
             // Both are loads, and a load is never an undoable edit.
@@ -810,6 +837,18 @@ class _CanvasCore {
         const H = this.overlayCanvas.height;
         ctx.clearRect(0, 0, W, H);
 
+        // 0. Composite reveal (MPI-373) — image 2 showing through the hole cut in
+        // image 1. FIRST, while the overlay is still empty, which is the whole trick:
+        // `destination-in` against a freshly cleared canvas clips the underlay to the
+        // hole with no scratch buffer and no per-frame allocation.
+        if (this.comp.isActive) {
+            ctx.save();
+            this.comp.drawUnderlayCover(ctx, W, H);
+            ctx.globalCompositeOperation = 'destination-in';
+            ctx.drawImage(this.comp.holeCanvas, 0, 0, W, H);
+            ctx.restore();
+        }
+
         // 1. Comparison clip layer (image-px math; overlay ctx un-transformed)
         if (this.comparison.isComparisonMode && this.comparison.afterWidth) {
             this._drawComparisonLayer();
@@ -1025,7 +1064,8 @@ class _CanvasCore {
         // Whichever brush owns the pointer draws the ring (MPI-375). Both keep the
         // MPI-381 rule that a brushless tool in the family shows no indicator.
         const brush = this.mask.isMaskingMode ? this.mask
-            : (this.paint.isPaintingMode ? this.paint : null);
+            : this.paint.isPaintingMode ? this.paint
+            : (this.comp.isCompositeMode ? this.comp : null);
         if (!brush || !brush.paintEnabled) return;
         if (x !== undefined && !this.input.isSpacePressed) {
             const r = (brush.brushSize * scale) / 2;
@@ -1088,6 +1128,55 @@ class _CanvasCore {
     async setPaintFromDataURL(dataURL) {
         await this.paint.setFromDataURL(dataURL);
         this.draw();
+    }
+
+    // ── Composite API (MPI-373) ───────────────────────────────────────────────
+    // Same surface shape as the paint layer above, so the shared strip drives this
+    // destination by table lookup too. Every name here MUST also be in `_methods`.
+
+    /** Point the tool at image 2. @returns {Promise<boolean>} false when it would not load */
+    async setCompositeUnderlay(url) {
+        const ok = await this.comp.setUnderlay(url);
+        this.draw();
+        return ok;
+    }
+
+    /** Mask Comp: take the hole from a pasted mask. A LOAD — records no undo entry. */
+    async setCompositeHoleFromDataURL(dataURL) {
+        const ok = await this.comp.setHoleFromDataURL(dataURL);
+        this.draw();
+        this._onCompositeChange?.();
+        return ok;
+    }
+
+    /**
+     * Claim the "the cut changed" callback. ONE slot, not a listener list: the panel
+     * that owns it is torn down and rebuilt on every rail switch, and the factory's
+     * `instance.on()` hands back no unsubscribe — so subscribing to the long-lived
+     * viewer from a short-lived panel would leak a listener per mount.
+     * @param {(() => void)|null} fn
+     */
+    setOnCompositeChange(fn) { this._onCompositeChange = fn || null; }
+
+    setCompositeBrushSize(size) { this.comp.brushSize = Math.max(1, size); this.draw(); }
+    setCompositeBrushType(type) { this.comp.brushType = type; this.draw(); }
+    setCompositeEnabled(on)     { this.comp.paintEnabled = on !== false; this.input.updateCursor(); }
+    hasCompositeUnderlay()      { return !!this.comp.underlay; }
+    hasCompositeHole()          { return !this.comp.isEmpty(); }
+    getCompositeURL()           { return this.comp.getURL(); }
+
+    /** Wipe the cut as ONE undo entry; the slot image stays. */
+    clearComposite() {
+        const did = this.comp.clear(true);
+        if (did) { this.draw(); this._onCompositeChange?.(); }
+        return did;
+    }
+
+    /** Drop the WHOLE preview — cut and underlay. The preview contract's entry point. */
+    resetComposite() {
+        const had = this.comp.reset();
+        if (had) this.draw();
+        return had;
     }
 
     // ── Shape gizmo API (MPI-368) ─────────────────────────────────────────────
@@ -1203,6 +1292,9 @@ class _CanvasCore {
         this.mask.refresh();
         this.draw();
         this.options.onMaskStrokeEnd?.();
+        // The stack is shared, so a step may well have restored the composite cut —
+        // announce it too or Apply's gate goes stale after a Ctrl+Z (MPI-373).
+        this._onCompositeChange?.();
         return true;
     }
     /** Drop history without touching pixels — for a LOAD that replaces the layers. */
@@ -1299,6 +1391,9 @@ export const MpiCanvas = ComponentFactory.create({
             'setPaintBrushSize','setPaintBrushType','setPaintColor','setPaintOpacity','getPaintOpacity',
             'setPaintEnabled','getPaintURL','hasPaint','clearPaint','setPaintFromDataURL',
             'setShapeMode','setShapeKind','getShapeKind','hasShape','resetShape','clearShape','commitShape',
+            'setCompositeUnderlay','setCompositeHoleFromDataURL','setCompositeBrushSize','setCompositeBrushType',
+            'setCompositeEnabled','hasCompositeUnderlay','hasCompositeHole','getCompositeURL',
+            'clearComposite','resetComposite','setOnCompositeChange',
             'setProcessedImage','clearProcessedImage'
         ];
         _methods.forEach(name => { el[name] = core[name].bind(core); });

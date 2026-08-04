@@ -78,13 +78,18 @@ PAINT API (MPI-375 — the RGBA layer, NOT a mask; full contract in `docs/painti
          `hasPaint()` / `clearPaint()` — clear wipes the layer as ONE undo entry and returns whether it had pixels.
          `setPaintFromDataURL(url)` — per-entry restore. A **LOAD**: records no undo entry.
          `applyPaint()` — flatten onto the current entry server-side and emit `paint-applied`. Sends the opacity slider along, so the new entry matches the screen; the source never round-trips as base64.
+SHAPE API (MPI-368 — one gizmo, two destinations; full contract in `docs/masking-shapes.md`):
+         `setShapeMode(null|'mask'|'paint')` — ARMS the gizmo and picks where a commit lands. A flag inside the existing mask/paint mode, like `pointsMode` — **not** a fourth `CANVAS_MODES` entry. Also seeds a shape when there is not one.
+         `setShapeKind('rect'|'triangle'|'ellipse')` / `getShapeKind()` / `hasShape()` / `resetShape()` (re-centre).
+         `clearShape()` — drop the gizmo, returns whether there WAS one. Not an edit: no pixels change, so no undo entry. `discardPreview()` calls it.
+         `commitShape('add'|'subtract'|'fill'|'erase')` — rasterise into the destination's layer; returns whether pixels changed. Books exactly one undo entry, **after** the no-op guard, so an empty commit cannot eat a Ctrl+Z. The mask ops fire `onMaskStrokeEnd` (→ `mask-ready`); the paint ops publish nothing.
 NOTE:    The paint layer draws in EVERY mode, UNDER the mask — it is image content, the mask is an annotation over it, and it must survive the switch to a mask tool because paint → mask → detail is the whole feature. It persists per entry as `paint.png` in the same TEMP item dir as the mask layers, written when painted and **DELETED when empty** (a write-only persist would resurrect a cleared layer). `mask-temp:delete` is therefore file-by-file, NOT a dir nuke — Clear mask must not take the paint with it.
 NOTE:    A points run auto-picks index 0 up front, so it is ONE round trip; the detector's detect-then-pick two-step exists only because YOLO returns N segments to choose between. The two detector branches sit behind an `MpiIfElse` titled `Input_Points_Mode` whose inputs are lazy, so the unselected branch never executes.
 NOTE:    Display-invert is honored only in mask-mode (MpiCanvas overlay paint). Prompt-mode preview (MpiMaskedImagePreview) uses CSS-luminance mask and does NOT currently honor `displayInverted`.
 
 ### The mask tool family (MPI-371 — one tool per masking method; split MPI-381)
 
-Rail modes `maskBrush` / `maskPoints` / `maskText` / `maskDetect` inside the `Mask` group; no switcher, no source radio. Shapes (MPI-368) joins as a sibling. Every tool owns only its own controls and mounts the shared compounds below. None emits `apply` — the mask is canvas-resident and PromptBox drives ops. All of them persist under the SINGLE `'mask'` tool key, so settings survive a swap between mask tools.
+Rail modes `maskBrush` / `maskAdjust` / `maskDetect` / `maskPoints` / `maskText` / `maskShapes` inside the `Mask` group; no switcher, no source radio. Every tool owns only its own controls and mounts the shared compounds below. None emits `apply` — the mask is canvas-resident and PromptBox drives ops. All of them persist under the SINGLE `'mask'` tool key, so settings survive a swap between mask tools.
 
 **Every new mask tool must be added in THREE places across two files** — `_MASK_TOOLS` and `TOOL_OPTIONS_REGISTRY` in `MpiGroupHistoryBlock`, plus the rail entry in `MpiHistoryTools`. A miss is silent (the tool mounts but the viewer never enters mask mode, or the button mounts nothing); `tests/mask-tool-registry.test.cjs` guards it.
 
@@ -119,6 +124,14 @@ EMITS:   (none)
 GLOBAL EMITS: `settings:tool:update` `{ toolKey: 'paint', key: 'color', value }` — its OWN key, not `'mask'`.
 LISTENS: (none)
 NOTE:    The Paint family (MPI-375), in `_PAINT_TOOLS` — **not** `_MASK_TOOLS`. Keeps the PromptBox (paint → mask → detail is one operation) via `_isCanvasTool`, and is **not a preview**, so it does NOT extend `discardPreview()` — paint strokes are committed pixels like `manualCanvas`. Mount calls `enterMode('paint')`; `destroy()` calls `exitMode()`. Apply is disabled rather than inert when `viewer.el.applyPaint` is missing.
+
+#### MpiToolOptionsShapes (Organism — js/components/Organisms/MpiToolOptionsShapes/)
+PROPS:   `{ viewer, mode: 'maskShapes'|'paintShapes' }` — `mode` is the DESTINATION, passed by `mountOptions()` into every options compound.
+EMITS:   (none — a committed shape is layer pixels; PromptBox (mask) or the Paint tool's Apply (paint) drives what happens next)
+GLOBAL EMITS: `settings:tool:update` `{ toolKey: 'shapes', key: 'kind', value }` — ONE bucket shared by both mounts. The kind belongs to the GIZMO, not the destination, so Mask → Paint must not change the shape under the user.
+LISTENS: (none)
+NOTE:    ONE component registered under BOTH `maskShapes` (in `_MASK_TOOLS`) and `paintShapes` (in `_PAINT_TOOLS`) — the second shared engine after `brushDab.js`. A `MOUNTS` table holds the per-destination differences; an unknown `mode` **THROWS** rather than defaulting to `'mask'` and rasterising into the wrong layer. Commit words differ by design: Add / Subtract on mask, Fill / Erase on paint. Both mounts are BRUSHLESS (`MpiMaskStrip` with `brush: false`), or a drag off the gizmo would paint instead of panning. Full subsystem: `docs/masking-shapes.md`.
+NOTE:    **A shape commit is one of the mask changes that must publish itself** — `MaskManager.commitShape()` fires `onMaskStrokeEnd`, which is what unlocks the mask-gated ops in the op strip. The paint mount publishes nothing.
 
 #### MpiMaskStrip (Compound — js/components/Compounds/MpiMaskStrip/)
 PROPS:   `{ viewer, brush = true, dest = 'mask' }`

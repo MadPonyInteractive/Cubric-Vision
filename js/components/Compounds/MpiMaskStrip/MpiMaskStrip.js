@@ -14,20 +14,23 @@
  *
  * MPI-375: the strip drives a DESTINATION. `dest: 'mask'` (default) is everything
  * above; `dest: 'paint'` points the same controls at the RGBA paint layer and drops
- * the two mask-only display toggles. See `DESTINATIONS` — a new destination is a new
- * row there, never a new branch in `setup()`.
+ * the two mask-only display toggles; `dest: 'composite'` (MPI-373) points them at the
+ * composite cut and also drops the opacity slider. See `DESTINATIONS` — a new
+ * destination is a new row there, never a new branch in `setup()`.
  *
  * Props:
  * @param {object}  viewer            - MpiCanvasViewer instance
  * @param {boolean} [brush=true]      - show the paint / erase pair, bind B / E, arm painting
- * @param {'mask'|'paint'} [dest='mask'] - which layer the controls drive
+ * @param {'mask'|'paint'|'composite'} [dest='mask'] - which layer the controls drive
  *
  * Requires on viewer.el, per destination:
- *   mask  — setMaskBrushMode('brush'|'eraser'), setMaskInverted(), isMaskInverted(),
- *           setMaskBwView(), isMaskBwView(), setMaskPaintEnabled(),
- *           clearMask(), setMaskOpacity()
- *   paint — setPaintBrushMode('brush'|'eraser'), setPaintEnabled(),
- *           clearPaint(), setPaintOpacity()
+ *   mask      — setMaskBrushMode('brush'|'eraser'), setMaskInverted(), isMaskInverted(),
+ *               setMaskBwView(), isMaskBwView(), setMaskPaintEnabled(),
+ *               clearMask(), setMaskOpacity()
+ *   paint     — setPaintBrushMode('brush'|'eraser'), setPaintEnabled(),
+ *               clearPaint(), setPaintOpacity()
+ *   composite — setCompositeBrushMode('brush'|'eraser'), setCompositeEnabled(),
+ *               clearComposite()  (no opacity — the cut is hard)
  */
 
 import { ComponentFactory } from '../../factory.js';
@@ -82,6 +85,33 @@ const DESTINATIONS = {
         radioName: 'paint-brush-mode',
         maskDisplayToggles: false,
     },
+    /**
+     * MPI-373. The pair means the OPPOSITE of what it means everywhere else — the
+     * eraser cuts the top image away to reveal the slot image, the brush paints it
+     * back — so only the labels change; `CompositeManager.paint()` owns the
+     * inversion and this table stays a table.
+     *
+     * NO OPACITY SLIDER. The other two destinations have a display alpha that means
+     * something (how strongly to tint an annotation, how strongly to flatten a
+     * layer). A composite is a hard cut: the reveal shows the result, and a slider
+     * ghosting it would make the preview disagree with the file Sharp writes.
+     */
+    composite: {
+        settingsKey: 'composite',
+        setEnabled: 'setCompositeEnabled',
+        setBrushMode: 'setCompositeBrushMode',
+        setOpacity: null,
+        clear: 'clearComposite',
+        paintInfo: 'Restore the top image (B)',
+        eraseInfo: 'Reveal the image underneath (E)',
+        clearInfo: 'Reset the cut',
+        radioName: 'composite-brush-mode',
+        maskDisplayToggles: false,
+        opacitySlider: false,
+        // Revealing is the reason the tool exists, so it opens on the eraser. The
+        // radio has to be told, or it would show Paint while the canvas cuts.
+        defaultBrush: 'eraser',
+    },
 };
 
 export const MpiMaskStrip = ComponentFactory.create({
@@ -122,15 +152,19 @@ export const MpiMaskStrip = ComponentFactory.create({
         // ── Paint / erase — optional pair ────────────────────────────────────
 
         if (showBrush) {
+            const startBrush = dest.defaultBrush || 'brush';
             const brushRadio = MpiRadioGroup.mount(document.createElement('div'), {
                 options: [
                     { label: 'Paint', value: 'brush',  icon: 'brush',  info: dest.paintInfo },
                     { label: 'Erase', value: 'eraser', icon: 'eraser', info: dest.eraseInfo },
                 ],
-                value: 'brush',
+                value: startBrush,
                 name: dest.radioName,
                 iconOnly: true,
             });
+            // Push it down too — the radio only reports CHANGES, so a destination
+            // whose manager defaults the other way would disagree until first click.
+            viewer.el[dest.setBrushMode]?.(startBrush);
             brushRadio.on('select', ({ value }) => viewer.el[dest.setBrushMode]?.(value));
             row.appendChild(brushRadio.el);
             _children.push(brushRadio);
@@ -175,6 +209,28 @@ export const MpiMaskStrip = ComponentFactory.create({
         _children.push(invertBtn, bwBtn, clearBtn);
 
         // ── Opacity ──────────────────────────────────────────────────────────
+        // A destination may declare it has no display alpha (composite, MPI-373).
+        // The row is REMOVED, never `[hidden]`: a class carrying `display` outranks
+        // the UA sheet, which is how three inert slider rows reached the screen in
+        // MPI-382. Removing it also means nothing below can wire a dead input.
+
+        // ONE teardown for both shapes of the strip, declared before the early exit
+        // below so a later unbind cannot be added to only one of them.
+        /** @type {(() => void)|null} */
+        let _offOpacity = null;
+        el.destroy = () => {
+            _unbinds.forEach(fn => fn?.());
+            _offOpacity?.();
+            // filter(Boolean): the mask-only toggles are null on the paint and
+            // composite destinations, and `null.destroy?.()` throws — the optional
+            // chain is on `destroy`, not on the child.
+            _children.filter(Boolean).forEach(c => c.destroy?.());
+        };
+
+        if (dest.opacitySlider === false) {
+            qs('.mpi-mask-strip__slider-row', el)?.remove();
+            return;
+        }
 
         const opacityInput = qs('#opacity-input', el);
         const opacityVal   = qs('#opacity-val', el);
@@ -185,7 +241,7 @@ export const MpiMaskStrip = ComponentFactory.create({
         };
         opacityInput.value = String(Math.round(initialOpacity * 100));
         _applyOpacity(Number(opacityInput.value));
-        const _offOpacity = on(opacityInput, 'input', () => {
+        _offOpacity = on(opacityInput, 'input', () => {
             const pct = Number(opacityInput.value);
             _applyOpacity(pct);
             Events.emit('settings:tool:update', { toolKey: dest.settingsKey, key: 'opacity', value: pct / 100 });
@@ -212,15 +268,7 @@ export const MpiMaskStrip = ComponentFactory.create({
             Events.emit('settings:tool:update', { toolKey: dest.settingsKey, key: 'bwView', value: next });
         });
 
-        // ── Lifecycle ────────────────────────────────────────────────────────
-
-        el.destroy = () => {
-            _unbinds.forEach(fn => fn?.());
-            _offOpacity();
-            // filter(Boolean): the mask-only toggles are null on the paint
-            // destination, and `null.destroy?.()` throws — the optional chain is on
-            // `destroy`, not on the child.
-            _children.filter(Boolean).forEach(c => c.destroy?.());
-        };
+        // Lifecycle: `el.destroy` is declared above the opacity block, so both the
+        // full strip and the slider-less one tear down through the same function.
     },
 });

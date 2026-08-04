@@ -32,11 +32,17 @@ code rather than guessed:
 |---|---|---|
 | `MaskManager` — `manualCanvas` + `subtractCanvas` | `paint()`, `clear()`, `bakeAutoPicksInto()`, `applyAdjust()`, `fillHoles()`, `commitShape()` | `setManual/SubtractFromDataURL()`, `init()` — **loads** |
 | `PaintManager` — `paintCanvas` (MPI-375) | `paint()`, `clear(true)`, `commitShape()` | `setFromDataURL()`, `init()` (which calls `clear(false)`) — **loads** |
+| `CompositeManager` — `holeCanvas` (MPI-373) | `paint()`, `clear(true)` | `setHoleFromDataURL()` (a pasted mask is a load), `init()`, `reset()` — **loads and discards**; see [composite.md](composite.md) |
 
 `commitShape()` (MPI-368) is the same method on both managers because it is the same gizmo:
 `ShapeManager` owns the geometry and hands over a path BUILDER, each manager scales it by its
 own `_scale` and fills it. Neither the gizmo nor its drag records anything — moving a shape
 around changes no pixel. Only the commit does.
+
+`CompositeManager` (MPI-373) is on the same shared stack even though its layer is **scratch** —
+a cut is an edit the user is making by hand, so Ctrl+Z has to reach it. Its `reset()` is the
+preview contract's discard, not an edit, and records nothing for the same reason `clearShape()`
+does not: dropping an uncommitted preview is not something the user could have undone.
 
 `PaintManager.init()` must **not** clear the stack a second time: `MpiCanvas.loadImage()` already
 cleared it through `mask.init()`, and clearing again would wipe the history the mask just

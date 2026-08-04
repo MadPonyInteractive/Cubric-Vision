@@ -307,6 +307,50 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsCompositeProps (Organism — js/components/Organisms/MpiToolOptionsComposite)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ * @property {'maskComp'|'paintComp'} mode - which front end; decides where the cut comes from
+ * @property {Object} [clipboard] - app-local copy buffer accessors: { hasImage, getImage, hasMask, getMask }
+ *
+ * The Composite group (MPI-373) — ONE panel under TWO modes, the same pattern as
+ * MpiToolOptionsShapes and for the same reason. The selected entry is image 1 and
+ * sits ON TOP; a slot holds image 2, underneath; a hole through image 1 reveals it.
+ * `paintComp` cuts that hole live with the brush, `maskComp` takes it from a pasted
+ * mask. Per-mount differences are ROWS in the module's `MOUNTS` table; an unknown
+ * mode throws.
+ *
+ * Slots are filled by PASTE, from `Copy image` / `Copy mask` in the history list's
+ * context menu — not by selecting two entries, which is what made the retired
+ * MPI-362 modal restart every time the selection changed.
+ *
+ * The ONLY group that drops the PromptBox (`_COMPOSITE_TOOLS` is absent from
+ * `_modeKeepsPromptBox`): it ends at its own Apply and needs the column for slots.
+ * The whole preview is scratch — `discardPreview()` drops the cut AND the underlay.
+ *
+ * Requires viewer.el: enterMode('composite'), exitMode(), setCompositeUnderlay(),
+ *   setCompositeHole(), hasCompositeHole(), getCompositeURL(), clearComposite(),
+ *   setOnCompositeChange()
+ * Emits: 'composite-apply' { overlayUrl, maskDataUrl } — the Block runs the blend.
+ */
+
+/**
+ * @typedef {Object} MpiMediaSlotProps (Compound — js/components/Compounds/MpiMediaSlot)
+ * @property {string} label - shown when empty, e.g. 'Image underneath'
+ * @property {string} [empty] - hint under the label; defaults to the paste hint
+ * @property {()=>boolean} canPaste - is there something on the copy buffer
+ * @property {()=>{url: string, name?: string}|null} readPaste - take it off the buffer
+ *
+ * A one-media drop point filled by PASTE (MPI-373) — the Composite group's slots.
+ * Right-click opens Paste / Clear (rows are conditional, never greyed); a left click
+ * on an empty slot pastes as a shortcut. Deliberately dumb: it knows a label, a
+ * thumbnail URL and a menu, so the same component holds an image or a mask with no
+ * `kind` branch — what a pasted value MEANS belongs to the panel.
+ *
+ * Instance methods (on instance.el): getValue() → {url, name}|null, clear()
+ * Emits: 'change' { url: string|null, name: string|null }
+ */
+
+/**
  * @typedef {Object} MpiMaskDetectRowProps (Compound — js/components/Compounds/MpiMaskDetectRow)
  * @property {Object} viewer - MpiCanvasViewer instance
  *
@@ -1060,24 +1104,6 @@
  */
 
 /**
- * @typedef {Object} MpiMaskCompositeDialogProps (Compound — js/components/Compounds/MpiMaskCompositeDialog)
- * @property {string} [maskName='this entry']        - Display name of the entry whose mask is used.
- * @property {string} [otherName='the other entry']  - Display name of the other selected entry.
- *
- * Picks the DIRECTION of a mask composite between two history entries (MPI-362).
- * Both names appear inside each option's sentence — the direction is not readable
- * from the mask alone, so "Add"/"Subtract" carry no meaning without them.
- *
- * Instance methods (on instance.el):
- *   show() / hide() — via MpiModal: portals a backdrop + centred dialog to document.body.
- *
- * Emits:
- * 'add'      {} — masked area is filled from the OTHER entry; the rest stays the masked entry.
- * 'subtract' {} — the reverse: the other entry is the base, the masked area comes from the masked entry.
- * 'cancel'   {} — Cancel BUTTON clicked only (NOT emitted on Escape or hide())
- */
-
-/**
  * @typedef {Object} MpiNotesEditorProps (Compound — js/components/Compounds/MpiNotesEditor)
  * @property {string}   [title='Notes']      - Dialog title.
  * @property {string}   [value='']           - Initial notes text shown in the textarea.
@@ -1243,6 +1269,8 @@
  * @property {(idx:number)=>Promise<boolean>|boolean} [hasMaskForIndex] - Per-entry mask availability check
  * @property {()=>boolean} [hasCopiedMask] - Whether a mask is on the app-local copy buffer (gates "Paste mask")
  *
+ * MPI-373 removed "Mask composite" from this menu — the Composite rail group replaced it.
+ *
  * Instance methods (on instance.el):
  *   setActiveIndex(idx)          — highlight active card (no events)
  *   setGroups(history)           — replace history array and rebuild cards
@@ -1257,9 +1285,11 @@
  *   'selection-exited'  {}                              — select mode ended
  *   'delete-selected'   { indices }                     — delete from context menu
  *   'compare-requested' { indices: [number, number] }   — compare from context menu (image only)
- *   'composite-requested' { indices: [number, number] } — mask composite (image only, one entry masked)
  *   'download-selected' { indices }                     — download selected entries
  *   'download-mask'     { index }                       — download single entry mask
+ *   'copy-image'        { index }                       — copy the entry image to the Composite slots (MPI-373)
+ *   'copy-mask'         { index }                       — copy the entry mask layers
+ *   'paste-mask'        { index }                       — paste the copied mask onto the entry
  *   'reveal'            { indices }                       — open entry/Media folder in file system
  *   'reuse'             { item, positive, negative, modelId, operation, injectionParams, mediaItems } - reuse prompt button clicked
  */

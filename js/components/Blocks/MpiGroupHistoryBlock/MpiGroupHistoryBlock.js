@@ -22,6 +22,7 @@ import { MpiToolOptionsMaskPoints } from '../../Organisms/MpiToolOptionsMaskPoin
 import { MpiToolOptionsMaskText } from '../../Organisms/MpiToolOptionsMaskText/MpiToolOptionsMaskText.js';
 import { MpiToolOptionsPaint } from '../../Organisms/MpiToolOptionsPaint/MpiToolOptionsPaint.js';
 import { MpiToolOptionsShapes } from '../../Organisms/MpiToolOptionsShapes/MpiToolOptionsShapes.js';
+import { MpiToolOptionsComposite } from '../../Organisms/MpiToolOptionsComposite/MpiToolOptionsComposite.js';
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
 import { MpiToolOptionsRemoveBg } from '../../Organisms/MpiToolOptionsRemoveBg/MpiToolOptionsRemoveBg.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
@@ -71,7 +72,6 @@ import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareOverlay.js';
 import { MpiContextMenu } from '../../Compounds/MpiContextMenu/MpiContextMenu.js';
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
-import { MpiMaskCompositeDialog } from '../../Compounds/MpiMaskCompositeDialog/MpiMaskCompositeDialog.js';
 import { MpiReusePromptDialog } from '../../Compounds/MpiReusePromptDialog/MpiReusePromptDialog.js';
 
 /**
@@ -92,6 +92,10 @@ const TOOL_OPTIONS_REGISTRY = {
     // pick its destination. One gizmo, two mounts, one panel.
     maskShapes:   MpiToolOptionsShapes,
     paintShapes:  MpiToolOptionsShapes,
+    // Same pattern for the Composite group (MPI-373): ONE panel, two front ends.
+    // `maskComp` takes the cut from a pasted mask, `paintComp` cuts it live.
+    maskComp:     MpiToolOptionsComposite,
+    paintComp:    MpiToolOptionsComposite,
     videoUpscale: MpiToolOptionsUpscale,
     imageUpscale: MpiToolOptionsUpscale,
     removeBackground: MpiToolOptionsRemoveBg,
@@ -115,28 +119,41 @@ const _isMaskTool = (mode) => _MASK_TOOLS.has(mode);
 const _PAINT_TOOLS = new Set(['paint', 'paintShapes']);
 const _isPaintTool = (mode) => _PAINT_TOOLS.has(mode);
 
-/** Any canvas-resident tool, mask family or paint family. Teardown and the
- *  PromptBox gate care about "is a canvas tool open", not which family — splitting
+/** The COMPOSITE family (MPI-373) — the third and last group of the MPI-424
+ *  taxonomy. Its artifact is a blended IMAGE: one operation with two front ends,
+ *  `maskComp` taking the cut from a pasted mask and `paintComp` cutting it live.
+ *  It is the one group that does NOT keep the PromptBox, so it is deliberately
+ *  absent from `_modeKeepsPromptBox` below while still being a canvas tool for
+ *  teardown and the viewer-mode bridge. */
+const _COMPOSITE_TOOLS = new Set(['maskComp', 'paintComp']);
+const _isCompositeTool = (mode) => _COMPOSITE_TOOLS.has(mode);
+
+/** Any canvas-resident tool — mask, paint OR composite. Teardown and the viewer-mode
+ *  bridge care about "is a canvas tool open", not which family; splitting
  *  `_isMaskTool`'s three jobs is what let paint keep the box without pretending to
- *  be a mask tool (MPI-375). */
-const _isCanvasTool = (mode) => _isMaskTool(mode) || _isPaintTool(mode);
+ *  be a mask tool (MPI-375). **Not the PromptBox gate** — that is
+ *  `_modeKeepsPromptBox`, and the two diverged the moment composite arrived. */
+const _isCanvasTool = (mode) => _isMaskTool(mode) || _isPaintTool(mode) || _isCompositeTool(mode);
 
 /** Modes that keep the PromptBox up: prompt, the whole mask family — a mask and a
  *  prompt are ONE operation (MPI-372) — and paint, because paint → mask → detail is
- *  one operation too (MPI-424 taxonomy; Composite is the group that does NOT keep
- *  it). Any path that re-shows the box after hiding it (delete, model switch) MUST
- *  use this, not a bare `=== 'prompt'`. */
-const _modeKeepsPromptBox = (mode) => mode === 'prompt' || _isCanvasTool(mode);
+ *  one operation too. Composite is the group that does NOT keep it (MPI-424
+ *  taxonomy): it ends at its own Apply and needs the column for its slots. Any path
+ *  that re-shows the box after hiding it (delete, model switch) MUST use this, not a
+ *  bare `=== 'prompt'`. */
+const _modeKeepsPromptBox = (mode) => mode === 'prompt' || _isMaskTool(mode) || _isPaintTool(mode);
 
 /**
- * Rail tool mode → canvas viewer mode. The viewer knows three canvas modes now:
- * 'crop', 'mask' and 'paint'. The rail has one entry per masking method, so every
- * mask tool maps onto the single 'mask' mode; the paint family maps onto 'paint',
- * which is what decides whose brush owns the pointer.
+ * Rail tool mode → canvas viewer mode. The viewer knows four canvas modes now:
+ * 'crop', 'mask', 'paint' and 'composite'. The rail has one entry per method, so
+ * every mask tool maps onto the single 'mask' mode, the paint family onto 'paint'
+ * and both composite front ends onto 'composite' — which is what decides whose
+ * brush owns the pointer.
  */
 const _viewerModeFor = (mode) => (mode === 'crop' ? 'crop'
     : _isMaskTool(mode) ? 'mask'
     : _isPaintTool(mode) ? 'paint'
+    : _isCompositeTool(mode) ? 'composite'
     : null);
 
 export const MpiGroupHistoryBlock = ComponentFactory.create({
@@ -168,6 +185,25 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // the source dimensions the paste warning compares against, none of which
         // survive a bitmap round-trip. Lives as long as the workspace is mounted.
         let _copiedMask = null;
+
+        // Copied image (MPI-373): { url, name }. The Composite slots' source, and the
+        // reason `Copy image` sits beside `Copy mask` in the history context menu.
+        // Same buffer discipline as above — app-local, workspace-lifetime, no OS
+        // clipboard: a slot needs the project-file URL the canvas can load, which a
+        // bitmap round-trip would throw away.
+        let _copiedImage = null;
+
+        /**
+         * What the Composite panel is allowed to see of both buffers. Accessors, not
+         * values: the panel mounts once per rail switch and the buffers change under
+         * it, so handing over a snapshot would freeze the paste menu.
+         */
+        const _clipboard = {
+            hasImage: () => !!_copiedImage,
+            getImage: () => (_copiedImage ? { ..._copiedImage } : null),
+            hasMask:  () => !!_copiedMask?.flat,
+            getMask:  () => _copiedMask?.flat || null,
+        };
 
         if (!_group) {
             el.innerHTML = `<p class="mpi-group-history-block__error">Group not found. <span class="mpi-group-history-block__back-slot"></span></p>`;
@@ -477,7 +513,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // _mountPromptBoxIfNeeded still no-ops without an active model.
             // Paint keeps it for the same reason (MPI-375): paint → mask → detail is
             // one operation, so the box must be up before the first stroke.
-            if (_isCanvasTool(mode)) {
+            // COMPOSITE does NOT (MPI-373) — hence `_modeKeepsPromptBox` here rather
+            // than `_isCanvasTool`, which now covers all three families.
+            if (_modeKeepsPromptBox(mode)) {
                 _mountPromptBoxIfNeeded({ force: true });
                 _pb?.el?.show();
             } else {
@@ -491,7 +529,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // `mode` rides along for compounds registered under more than one key —
             // MpiToolOptionsShapes is one component serving both shape mounts and
             // reads it to pick its destination (MPI-368).
-            _options = Compound.mount(slot, { viewer, mode, kind: modeKind, currentItem: _group.history[_currentIdx] || null });
+            _options = Compound.mount(slot, {
+                viewer, mode, kind: modeKind,
+                currentItem: _group.history[_currentIdx] || null,
+                // MPI-373: the Composite slots are filled from the app-local copy
+                // buffer that already backs Copy mask. Handed in as accessors rather
+                // than values — the panel mounts once and the buffer changes under it.
+                clipboard: _clipboard,
+            });
 
             // GIF export owns no source resolution — inject the encoder so its
             // preview/export call hits /api/video/gif with the current item +
@@ -500,6 +545,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             // Options compounds emit 'apply'; mediator routes to _handleApply.
             _options.on?.('apply', (payload) => _handleApply(mode, payload));
+
+            // Composite has its OWN commit event (MPI-373) rather than 'apply': it is
+            // not a generation, it is the same full-res server blend the retired
+            // MPI-362 modal ran. Kept distinct so `_handleApply`'s canvas-tool guard
+            // stays a hard "no canvas tool reaches the generation branches".
+            _options.on?.('composite-apply', ({ overlayUrl, maskDataUrl }) => {
+                const baseItem = _group.history[_currentIdx];
+                if (!baseItem || !overlayUrl || !maskDataUrl) return;
+                _runComposite(baseItem, { filePath: overlayUrl }, maskDataUrl);
+            });
         }
 
         /**
@@ -1786,38 +1841,16 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             await _runCombine(itemIds);
         });
 
-        // MPI-362 — blend two entries through the mask one of them carries. The
-        // client only decides DIRECTION; Sharp does the pixels server-side
-        // (/project/composite-media), so a 4K result never round-trips as base64.
-        historyList.on('composite-requested', async ({ indices }) => {
-            if (isVideo || !Array.isArray(indices) || indices.length !== 2) return;
-            if (!state.currentProject?.folderPath) { _showToast('No project context', 'error'); return; }
-
-            const [entryA, entryB] = indices.map(i => _group.history[i]);
-            if (!entryA?.filePath || !entryB?.filePath) { _showToast('No source media', 'error'); return; }
-
-            // Whichever entry carries the mask owns the direction. The menu gate
-            // only requires ONE of the two to have one; when both do, the
-            // first-selected wins and the dialog names it so the choice is visible.
-            const maskItem  = (await viewer.el.hasMaskForEntry?.(entryA)) ? entryA : entryB;
-            const otherItem = maskItem === entryA ? entryB : entryA;
-            const maskDataUrl = await viewer.el.getMaskDataURLForEntry?.(maskItem);
-            if (!maskDataUrl) { _showToast('Neither entry has a mask', 'warning'); return; }
-
-            const _entryName = (item) => item.displayName || item.operation || 'entry';
-            const dialog = MpiMaskCompositeDialog.mount(document.createElement('div'), {
-                maskName:  _entryName(maskItem),
-                otherName: _entryName(otherItem),
-            });
-            // Add = the other entry lands INSIDE the mask; Subtract is the same
-            // composite with base and overlay swapped.
-            dialog.on('add', () => { dialog.destroy?.(); _runComposite(maskItem, otherItem, maskDataUrl); });
-            dialog.on('subtract', () => { dialog.destroy?.(); _runComposite(otherItem, maskItem, maskDataUrl); });
-            dialog.on('cancel', () => dialog.destroy?.());
-            dialog.el.show();
-        });
-
-        /** Base keeps everything outside the mask; overlay fills the masked area. */
+        /**
+         * Base keeps everything outside the mask; overlay fills the masked area.
+         *
+         * MPI-362's server call, kept verbatim; MPI-373 replaced only what drives it.
+         * The `composite-requested` handler and `MpiMaskCompositeDialog` are GONE: the
+         * dialog asked Add or Subtract in prose while the blend was invisible, which
+         * is why the user ran it three or four times per result. The Composite rail
+         * group now supplies the same three arguments from a live preview, and
+         * direction is no longer a question — the selected entry is always the base.
+         */
         async function _runComposite(baseItem, overlayItem, maskDataUrl) {
             historyList.el.exitSelectMode();
             _setBusy(true);
@@ -1926,6 +1959,19 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             historyList.el.exitSelectMode();
         });
 
+        // MPI-373 — the Composite slots' source. No mask lookup, no dimension
+        // bookkeeping: the slot pastes a URL the canvas can load, and cover-fit
+        // (client) plus `fit: 'cover'` (Sharp) already define what a mismatched pair
+        // does, so there is nothing here for a warning dialog to add.
+        historyList.on('copy-image', ({ index }) => {
+            if (isVideo || typeof index !== 'number') return;
+            const item = _group.history[index];
+            if (!item?.filePath) return;
+            _copiedImage = { url: item.filePath, name: item.displayName || 'image' };
+            // Silent, like Copy mask: the paste appearing in the slot IS the feedback.
+            historyList.el.exitSelectMode();
+        });
+
         historyList.on('copy-mask', async ({ index }) => {
             if (isVideo || typeof index !== 'number') return;
             const item = _group.history[index];
@@ -1937,7 +1983,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
             // Source dimensions ride along so paste can compare against the
             // target and warn before a stretched/misplaced result.
-            _copiedMask = { layers, dims: item.pixelDimensions || null };
+            // `flat` is the same composite Download mask writes — the Composite mask
+            // slot needs ONE image, not the layer pair the mask paste rebuilds from.
+            _copiedMask = {
+                layers,
+                dims: item.pixelDimensions || null,
+                flat: await viewer.el.getMaskDataURLForEntry?.(item) || null,
+            };
             // No toast: user-initiated action, result is self-evident (Paste
             // mask appears in the menu). Toasts are for non-user events.
             historyList.el.exitSelectMode();

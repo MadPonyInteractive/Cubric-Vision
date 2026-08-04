@@ -24,7 +24,9 @@ existed, and re-entering Detect rehydrated that stale selection. It never touche
 or `subtractCanvas`: those are committed pixels. A discard is not an edit, so it records **no**
 undo entry.
 
-**MPI-368 (shapes) and MPI-373 (composite) extend `discardPreview` — not the call site.**
+**MPI-368 (shapes) and MPI-373 (composite) extend `discardPreview` — not the call site.** Both
+shipped that way; composite's is the largest preview of the three, because it drops a slot image
+as well as a cut.
 
 This guard exists because the wiring was ABSENT rather than wrong. `_exitAutoMaskMode(false)` was
 already correct and simply had no caller, and neither did `commitAutoMask`; so a detection
@@ -60,14 +62,16 @@ destination never means a new engine. Order + cards: `tasks/MPI-424/brief.md`.
 |---|---|---|---|---|
 | `Mask` | binary mask layers | brush · detect · adjust · shapes | brush, gizmo | keeps it |
 | `Paint` | RGBA paint layer — **[painting.md](painting.md)** | brush · shapes | the SAME two | keeps it |
-| `Composite` | blended image (373) | mask comp · paint comp | one op, two front ends | **no** |
+| `Composite` — **[composite.md](composite.md)** | blended image | mask comp · paint comp | one op, two front ends | **no** |
 
 `Paint` keeps the box because paint → mask → detail is one operation; `Composite` ends at its own
-Apply and needs the column for its slots. **Both engines are now shared for real** — MPI-375's
-brush and MPI-368's gizmo each mount in two groups, and the paint family is `_PAINT_TOOLS`, never
-`_MASK_TOOLS`, while keeping the PromptBox through `_isCanvasTool`. MPI-373 may not re-decide the
-Composite row or stub it in early. **Only working tools ship**: a method with no panel gets no
-button, never a greyed placeholder.
+Apply and needs the column for its slots. **All three engines are shared for real** — MPI-375's
+brush mounts in all three groups and MPI-368's gizmo in two. Each family has its OWN set:
+`_MASK_TOOLS`, `_PAINT_TOOLS`, `_COMPOSITE_TOOLS`, all three folded into `_isCanvasTool` for
+teardown and the mode bridge. **`_modeKeepsPromptBox` is the one that must NOT delegate to
+`_isCanvasTool`** — that shortcut would hand the box back to Composite, the single group whose
+whole point is dropping it. **Only working tools ship**: a method with no panel gets no button,
+never a greyed placeholder.
 
 **Same job, different engine → one COLLAPSE button.** `Detect` is one rail button that opens
 `points` / `text` / `auto` in a floating strip (`MpiPopup`, `position: 'right'`, auto-dismiss on an

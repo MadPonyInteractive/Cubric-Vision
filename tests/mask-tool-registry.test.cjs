@@ -17,11 +17,22 @@ const read = (p) => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 const RAIL = read('js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js');
 const BLOCK = read('js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js');
 
+/**
+ * The COMPOSITE family (MPI-373) is named `maskComp` / `paintComp`, so it matches
+ * both prefix scrapes below and has to be subtracted from them — it belongs to
+ * `_COMPOSITE_TOOLS`, not to `_MASK_TOOLS` or `_PAINT_TOOLS`. Listed explicitly
+ * rather than pattern-matched: if a fourth family ever collides the same way, the
+ * mask/paint guards must go red and make someone decide, not quietly skip it.
+ */
+const COMPOSITE_MODES = ['maskComp', 'paintComp'];
+
 /** Every `mode: 'maskXxx'` the image rail offers. Since MPI-425 some of these are
  *  nested inside a collapse entry's `sub: []` rather than sitting directly in the
  *  group — the key stays `mode:`, so a collapsed method is still caught here. That
  *  is the point: presentation moved, the registration duty did not. */
-const railMaskTools = [...RAIL.matchAll(/mode:\s*'(mask[A-Za-z]+)'/g)].map(m => m[1]);
+const railMaskTools = [...RAIL.matchAll(/mode:\s*'(mask[A-Za-z]+)'/g)]
+    .map(m => m[1])
+    .filter(m => !COMPOSITE_MODES.includes(m));
 
 /** Mask modes that live inside a collapse entry rather than the rail column. */
 const collapsedMaskTools = [...RAIL.matchAll(/collapse:\s*'[A-Za-z]+'[\s\S]*?sub:\s*\[([\s\S]*?)\]/g)]
@@ -117,7 +128,9 @@ test('PromptBox re-show paths do not gate on prompt mode alone', () => {
 // gate and the viewer-mode bridge, which used to be one predicate doing three jobs.
 // Every failure here is silent in the app: the tool mounts and paints, and only the
 // PromptBox quietly never appears.
-const railPaintTools = [...RAIL.matchAll(/mode:\s*'(paint[A-Za-z]*)'/g)].map(m => m[1]);
+const railPaintTools = [...RAIL.matchAll(/mode:\s*'(paint[A-Za-z]*)'/g)]
+    .map(m => m[1])
+    .filter(m => !COMPOSITE_MODES.includes(m));
 
 test('every rail paint tool is registered in _PAINT_TOOLS', () => {
     const set = BLOCK.match(/const _PAINT_TOOLS = new Set\(\[([^\]]*)\]\)/);
@@ -357,6 +370,187 @@ test('every shape method the panel calls is allowlisted on MpiCanvas', () => {
         assert.match(methods[1], new RegExp(`'${name}'`),
             `${name} is missing from the _methods allowlist — el.${name} would be undefined and the call silently swallowed`);
     }
+});
+
+// MPI-373. The THIRD family, and the one that breaks the pattern the other two set:
+// it is a canvas tool but must NOT keep the PromptBox. That single difference is
+// what a `_isCanvasTool`-shaped gate would silently get wrong — the box would sit on
+// top of the slots and nothing would look broken enough to notice.
+test('the composite family is registered, and in its OWN set', () => {
+    const compSet = BLOCK.match(/const _COMPOSITE_TOOLS = new Set\(\[([^\]]*)\]\)/);
+    const maskSet = BLOCK.match(/const _MASK_TOOLS = new Set\(\[([^\]]*)\]\)/);
+    const paintSet = BLOCK.match(/const _PAINT_TOOLS = new Set\(\[([^\]]*)\]\)/);
+    const registry = BLOCK.match(/const TOOL_OPTIONS_REGISTRY = \{([\s\S]*?)\n\};/);
+    assert.ok(compSet, '_COMPOSITE_TOOLS set literal not found in MpiGroupHistoryBlock');
+    assert.ok(maskSet && paintSet && registry, 'family sets / registry not found');
+
+    for (const mode of COMPOSITE_MODES) {
+        assert.ok(compSet[1].includes(`'${mode}'`), `${mode} is missing from _COMPOSITE_TOOLS`);
+        assert.match(RAIL, new RegExp(`mode:\\s*'${mode}'`), `${mode} has no rail button`);
+        assert.match(registry[1], new RegExp(`\\b${mode}\\s*:`), `${mode} has no TOOL_OPTIONS_REGISTRY entry`);
+        assert.ok(!maskSet[1].includes(`'${mode}'`),
+            `${mode} is in _MASK_TOOLS — its cut would be treated as the entry's mask and persist`);
+        assert.ok(!paintSet[1].includes(`'${mode}'`),
+            `${mode} is in _PAINT_TOOLS — the pointer would belong to the paint brush, not the cut`);
+    }
+});
+
+test('composite is a canvas tool but does NOT keep the PromptBox', () => {
+    const canvasGate = BLOCK.match(/const _isCanvasTool = [^\n]*/);
+    const promptGate = BLOCK.match(/const _modeKeepsPromptBox = [^\n]*/);
+    assert.ok(canvasGate && promptGate, 'the tool-family predicates were not found');
+    assert.match(canvasGate[0], /_isCompositeTool\(mode\)/,
+        `composite must count as a canvas tool for teardown and the mode bridge: ${canvasGate[0]}`);
+    assert.ok(!/_isCanvasTool\(mode\)/.test(promptGate[0]),
+        '_modeKeepsPromptBox delegates to _isCanvasTool, which now includes composite — '
+        + `the one group that must DROP the box would keep it: ${promptGate[0]}`);
+    assert.ok(!/_isCompositeTool\(mode\)/.test(promptGate[0]),
+        `_modeKeepsPromptBox reaches the composite family: ${promptGate[0]}`);
+});
+
+// Same half-wire class as MPI-375's dead paint tool: the bridge must return
+// 'composite' AND the viewer's CANVAS_MODES must accept it. (The generic
+// bridge-vs-viewer test above covers the second half for every mode the bridge can
+// emit; this one asserts the bridge emits it at all.)
+test('the viewer-mode bridge maps the composite family to composite mode', () => {
+    const bridge = BLOCK.match(/const _viewerModeFor = [\s\S]*?;\r?\n/);
+    assert.ok(bridge, '_viewerModeFor not found in MpiGroupHistoryBlock');
+    assert.match(
+        bridge[0],
+        /_isCompositeTool\(mode\)\s*\?\s*'composite'/,
+        `_viewerModeFor never returns 'composite', so the cut brush would own no pointer:\n${bridge[0]}`,
+    );
+});
+
+// The cut is SCRATCH (user, 2026-08-04) and an uncommitted one is a preview — of BOTH
+// halves. Dropping only the hole would leave the slot image under the next tool.
+test('discardPreview drops the whole composite preview', () => {
+    const viewer = read('js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js');
+    const discard = viewer.match(/el\.discardPreview = \(\) => \{[\s\S]*?\n {8}\};/);
+    assert.ok(discard, 'el.discardPreview not found in MpiCanvasViewer');
+    assert.match(discard[0], /canvas\.resetComposite\?\.\(\)/,
+        'discardPreview never resets the composite — an uncommitted cut and its slot image '
+        + 'would outlive the tool, which is exactly what the preview contract forbids');
+
+    const reset = read('js/components/Primitives/MpiCanvas/managers/CompositeManager.js')
+        .match(/ {4}reset\(\) \{[\s\S]*?\n {4}\}/);
+    assert.ok(reset, 'CompositeManager.reset not found');
+    assert.match(reset[0], /this\.underlay = null/,
+        'reset() keeps the underlay — the next tool would still be showing the slot image');
+});
+
+// The composite mask never round-trips as base64 and the route it feeds does NOT
+// fill holes any more (MPI-437). A `fillHoles: true` creeping in here would turn an
+// edge-band cut into a solid disc — the exact defect that card removed.
+test('composite Apply reuses the full-res route, and never fills holes', () => {
+    assert.match(BLOCK, /_runComposite\(baseItem, \{ filePath: overlayUrl \}, maskDataUrl\)/,
+        'the composite panel no longer routes through _runComposite — the full-res server path');
+    const run = BLOCK.match(/async function _runComposite\([\s\S]*?\n {8}\}/);
+    assert.ok(run, '_runComposite not found');
+    assert.match(run[0], /'\/project\/composite-media'/, '_runComposite stopped calling composite-media');
+    assert.ok(!/fillHoles/.test(run[0]),
+        '_runComposite passes fillHoles — MPI-437 made it opt-in because an edge-band mask '
+        + 'composited as a solid disc; MPI-373 inherits that route unchanged');
+});
+
+// THE BUG THE USER HIT (2026-08-04). Apply reloads the entry it just created, which
+// runs loadImage → comp.init() → the cut is wiped. The panel was never told, so Apply
+// stayed enabled over a hole that no longer existed and the next press returned
+// silently at its own null guard — no error, no toast, nothing. Every path that
+// empties the cut has to announce it, or the gate lies.
+test('every path that empties the composite cut announces it', () => {
+    const canvas = read('js/components/Primitives/MpiCanvas/MpiCanvas.js');
+
+    // `\r?\n` — the working tree is CRLF and a bare `\n` anchor matches nothing,
+    // which reads as "the method was renamed" rather than as a line-ending bug. It
+    // cost a red test here once already (see _viewerModeFor above).
+    const load = canvas.match(/this\.comp\.init\([\s\S]{0,1200}?await this\.resetView\(\)/);
+    assert.ok(load, 'the comp.init() call in loadImage was not found');
+    assert.match(load[0], /this\._onCompositeChange\?\.\(\)/,
+        'loadImage clears the cut without announcing it — Apply would stay enabled over an '
+        + 'empty hole and the next press would return silently, which is how this shipped');
+
+    for (const [name, re] of [
+        ['clearComposite', / {4}clearComposite\(\) \{[\s\S]*?\n {4}\}/],
+        ['setCompositeHoleFromDataURL', / {4}async setCompositeHoleFromDataURL\([\s\S]*?\n {4}\}/],
+    ]) {
+        const body = canvas.match(re);
+        assert.ok(body, `${name} not found in MpiCanvas`);
+        assert.match(body[0], /_onCompositeChange\?\.\(\)/,
+            `${name} changes the cut without announcing it — the Apply gate would go stale`);
+    }
+});
+
+// The slot toggles `hidden` on two children its own CSS gives a `display` to, and a
+// class beats the UA sheet — so the filled thumb and the empty hint rendered side by
+// side. Caught in the app, 2026-08-04. Same trap MPI-382 hit with the slider rows.
+test('the media slot actually hides the half it is not showing', () => {
+    const css = read('js/components/Compounds/MpiMediaSlot/MpiMediaSlot.css');
+    for (const cls of ['__thumb', '__empty']) {
+        assert.match(css, new RegExp(`\\.mpi-media-slot${cls}\\[hidden\\]`),
+            `.mpi-media-slot${cls} carries a display but has no [hidden] override — `
+            + 'it renders even when the component hides it');
+    }
+    assert.match(css, /\[hidden\][\s\S]{0,80}\{\s*display:\s*none/,
+        'the [hidden] overrides do not set display: none');
+});
+
+// The preview and the file must agree. The canvas covers-and-centre-crops its
+// underlay; Sharp has to do the same, or a mismatched pair looks like a centre crop
+// on screen and lands stretched on disk.
+test('client preview and server blend both COVER the underlay', () => {
+    assert.match(
+        read('js/components/Primitives/MpiCanvas/managers/CompositeManager.js'),
+        /Math\.max\(W \/ img\.width, H \/ img\.height\)/,
+        'drawUnderlayCover no longer covers — a fit would leave transparent bands inside the cut');
+    const svc = read('services/imageComposite.js');
+    const overlay = svc.match(/const overlay = await sharp\(overlayPath\)[\s\S]*?\.toBuffer\(\);/);
+    assert.ok(overlay, 'the overlay pipeline was not found in imageComposite.js');
+    assert.match(overlay[0], /fit:\s*'cover'/,
+        "the overlay is resized with something other than fit: 'cover' — the written file would "
+        + 'disagree with the preview the user approved');
+});
+
+// Composite methods reach the panel through el, same allowlist trap as the shape and
+// paint families: a missing name is `undefined` and the optional call eats it.
+test('every composite method the panel calls is allowlisted on MpiCanvas', () => {
+    const methods = read('js/components/Primitives/MpiCanvas/MpiCanvas.js').match(/const _methods = \[([\s\S]*?)\n {8}\];/);
+    assert.ok(methods, '_methods allowlist not found in MpiCanvas');
+    for (const name of ['setCompositeUnderlay', 'setCompositeHoleFromDataURL', 'setCompositeEnabled',
+        'hasCompositeHole', 'getCompositeURL', 'clearComposite', 'resetComposite', 'setOnCompositeChange']) {
+        assert.match(methods[1], new RegExp(`'${name}'`),
+            `${name} is missing from the _methods allowlist — el.${name} would be undefined and swallowed`);
+    }
+});
+
+// The strip is shared by three destinations now. A missing row falls back to 'mask',
+// which would point Clear and the brush pair at the entry's real mask.
+test('the shared strip declares a composite destination, with no opacity', () => {
+    const strip = read('js/components/Compounds/MpiMaskStrip/MpiMaskStrip.js');
+    const table = strip.match(/const DESTINATIONS = \{([\s\S]*?)\n\};/);
+    assert.ok(table, 'DESTINATIONS table not found in MpiMaskStrip');
+    assert.match(table[1], /\bcomposite\s*:\s*\{/, 'DESTINATIONS is missing the composite row');
+    const row = table[1].match(/composite:\s*\{([\s\S]*?)\n {4}\}/);
+    assert.ok(row, 'the composite row could not be read');
+    assert.match(row[1], /opacitySlider:\s*false/,
+        'the composite destination offers an opacity slider — a composite is a hard cut, so a '
+        + 'display alpha would make the preview disagree with the file Sharp writes');
+    assert.match(strip, /dest\.opacitySlider === false/,
+        'DESTINATIONS declares opacitySlider but setup() never honours it — the row would render inert');
+});
+
+// The retired MPI-362 modal. Deleting it was a DECISION (user, 2026-08-04), not
+// cleanup, and a half-deletion is the shape that rots: a dangling handler on an event
+// nothing emits, or a preloaded stylesheet for a component that is gone.
+test('the blind Add/Subtract composite modal is fully gone', () => {
+    assert.ok(!fs.existsSync(path.join(__dirname, '..', 'js/components/Compounds/MpiMaskCompositeDialog')),
+        'MpiMaskCompositeDialog still exists — MPI-373 replaced it with the Composite group');
+    assert.ok(!/MpiMaskCompositeDialog/.test(read('js/shell/preloadStyles.js')),
+        'preloadStyles.js still loads the deleted dialog stylesheet');
+    assert.ok(!/composite-requested/.test(read('js/components/Compounds/MpiHistoryList/MpiHistoryList.js')),
+        'MpiHistoryList still emits composite-requested — nothing listens for it any more');
+    assert.match(read('js/components/Compounds/MpiHistoryList/MpiHistoryList.js'), /key: 'copy-image'/,
+        'Copy image is missing from the history context menu — the Composite slots have no source');
 });
 
 // Only the Brush tool paints. A brushless tool that still armed the brush would

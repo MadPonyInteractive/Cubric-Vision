@@ -23,10 +23,10 @@
  *   'delete-selected'   { indices }                 — delete action from context menu
  *   'compare-requested' { indices: [number, number] } — compare action from context menu
  *   'combine-requested' { indices }                  — combine selected videos (video group, ≥2)
- *   'composite-requested' { indices: [number, number] } — mask composite (image group, one masked)
  *   'add-to-gallery'    { index }                    — add single selected entry to gallery
  *   'download-selected' { indices }                  — download selected entries
  *   'download-mask'     { index }                    — download single entry mask
+ *   'copy-image'        { index }                    — copy single entry image to the Composite slots
  *   'copy-mask'         { index }                    — copy single entry mask layers
  *   'paste-mask'        { index }                    — paste copied mask onto entry
  *   'reuse'             { positive, negative }       — reuse prompt button clicked on a card
@@ -234,22 +234,17 @@ export const MpiHistoryList = ComponentFactory.create({
                 const downloadMaskDisabled = _isVideo
                     || targetIdxs.length !== 1
                     || !(await props.hasMaskForIndex?.(targetIdxs[0]));
-                // Mask composite (MPI-362) — same two-entry gate as Compare, plus a
-                // mask on one of them (either one; the Block resolves which and the
-                // dialog names it). Both are checked because the user may have
-                // painted on the older entry and selected the newer one second.
-                let compositeDisabled = _isVideo || targetIdxs.length !== 2;
-                if (!compositeDisabled) {
-                    const masked = await Promise.all(targetIdxs.map(i => props.hasMaskForIndex?.(i)));
-                    compositeDisabled = !masked.some(Boolean);
-                }
+                // MPI-373 removed "Mask composite" from this menu. It selected two
+                // entries, required one of them to already carry a mask, and opened a
+                // blind Add/Subtract dialog — the exact flow the user reported running
+                // three or four times because the blend was invisible while deciding.
+                // The Composite rail group replaces it: copy an image here, paste it
+                // into a slot there, and watch the cut.
                 const items = [
                     { key: 'compare',        icon: 'compare',  label: 'Compare',        disabled: compareDisabled },
                 ];
                 if (_isVideo) {
                     items.push({ key: 'combine', icon: 'merge', label: 'Combine', disabled: combineDisabled });
-                } else {
-                    items.push({ key: 'mask-composite', icon: 'layers', label: 'Mask composite', disabled: compositeDisabled });
                 }
                 // Copy mask shares download-mask's gate (single non-video entry
                 // that actually has a mask). Paste only appears once something
@@ -260,6 +255,10 @@ export const MpiHistoryList = ComponentFactory.create({
                 items.push(
                     { key: 'download',       icon: 'download', label: 'Download' },
                     ...(_isVideo ? [] : [{ key: 'download-mask', icon: 'download', label: 'Download mask', disabled: downloadMaskDisabled }]),
+                    // Copy image (MPI-373) sits beside Copy mask because the Composite
+                    // slots take either one. No mask gate — every image entry has an
+                    // image, which is why it is the plainer of the two.
+                    ...(_isVideo ? [] : [{ key: 'copy-image', icon: 'copy', label: 'Copy image', disabled: targetIdxs.length !== 1 }]),
                     ...(_isVideo ? [] : [{ key: 'copy-mask', icon: 'copy', label: 'Copy mask', disabled: copyMaskDisabled }]),
                     ...(!_isVideo && props.hasCopiedMask?.()
                         ? [{ key: 'paste-mask', icon: 'paste', label: 'Paste mask', disabled: pasteMaskDisabled }]
@@ -284,12 +283,12 @@ export const MpiHistoryList = ComponentFactory.create({
                             emit('compare-requested', { indices: targetIdxs });
                         } else if (key === 'combine') {
                             emit('combine-requested', { indices: targetIdxs });
-                        } else if (key === 'mask-composite') {
-                            emit('composite-requested', { indices: targetIdxs });
                         } else if (key === 'download') {
                             emit('download-selected', { indices: targetIdxs });
                         } else if (key === 'download-mask') {
                             emit('download-mask', { index: targetIdxs[0] });
+                        } else if (key === 'copy-image') {
+                            emit('copy-image', { index: targetIdxs[0] });
                         } else if (key === 'copy-mask') {
                             emit('copy-mask', { index: targetIdxs[0] });
                         } else if (key === 'paste-mask') {

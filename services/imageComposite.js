@@ -121,8 +121,14 @@ async function compositeThroughMask({ basePath, overlayPath, maskBuffer, outPath
     // 0.34 / libvips 8.17 — the output stays 3-channel and the composite below
     // then pastes the overlay over the whole frame). flatten() guarantees the
     // same 3 channels and joins correctly.
+    // COVER, centred (MPI-373) — NOT `fill`. The composite tool draws its underlay
+    // the same way (`CompositeManager.drawUnderlayCover`), and the preview is the
+    // whole point of that card: `fill` here would stretch a mismatched pair on disk
+    // while the canvas showed a centre-crop, so the user would approve one image and
+    // receive another. Identical to `fill` whenever the aspects already match, which
+    // is every pair the retired MPI-362 modal was used on.
     const overlay = await sharp(overlayPath)
-        .resize(width, height, { fit: 'fill' })
+        .resize(width, height, { fit: 'cover', position: 'centre' })
         .flatten({ background: '#000000' })
         .joinChannel(maskFinal, { raw: { width, height, channels: 1 } })
         .png()

@@ -49,6 +49,7 @@ NOT mechanically split these):
 | **Mask adjust** (grow/shrink/edge band off one `_morph`, the measured radius table, Fill Holes' two passes) | [masking-adjust.md](masking-adjust.md) |
 | **Canvas undo** (the shared command stack, what it stores and why, dirty rects, the Ctrl+Z typing trap) | [masking-undo.md](masking-undo.md) |
 | **Painting** (the RGBA layer, the shared dab, image-native resolution, per-entry persistence, the server-side Apply) | [painting.md](painting.md) |
+| **Composite** (the two front ends, the scratch cut, the inverted brush, cover-fit on BOTH ends, pasted slots) | [composite.md](composite.md) |
 | **Crop** (ratio/free/exact-resolution, cropping PAST the image edge + fill colour, edge snapping, pad-then-extract) | [crop.md](crop.md) |
 | **Model Library UI** (usable-vs-installed, featured, install-button gates, tile patching) | [model-library.md](model-library.md) |
 | **Per-component behavioral contracts** (PromptBox, MpiToast, MpiPopup, MpiInput, …) | [component-contracts.md](component-contracts.md) |

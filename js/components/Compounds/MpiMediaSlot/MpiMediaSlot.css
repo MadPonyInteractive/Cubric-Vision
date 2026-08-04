@@ -1,0 +1,63 @@
+.mpi-media-slot {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1;
+    width: 100%;
+    overflow: hidden;
+    border: 1px dashed var(--line);
+    border-radius: var(--r-1);
+    background: var(--surface-2);
+    cursor: pointer;
+    transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+
+.mpi-media-slot:hover,
+.mpi-media-slot:focus-visible {
+    border-color: var(--accent-heat);
+    background: var(--surface-3);
+}
+
+/* A filled slot is content, not a target — the dashed invitation goes away. */
+.mpi-media-slot--filled {
+    border-style: solid;
+    background: var(--surface-canvas);
+}
+
+.mpi-media-slot__thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+/* Both children carry a `display`, and a CLASS beats the UA sheet's
+   `[hidden] { display: none }` — so without these the filled thumb and the empty
+   hint render side by side, which is exactly what shipped. Same trap MPI-382
+   documented for the inert slider rows; it is worth an explicit rule every time a
+   component toggles `hidden` on an element its own CSS gives a display to. */
+.mpi-media-slot__thumb[hidden],
+.mpi-media-slot__empty[hidden] {
+    display: none;
+}
+
+.mpi-media-slot__empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-1);
+    padding: var(--s-2);
+    text-align: center;
+    pointer-events: none;
+}
+
+.mpi-media-slot__label {
+    font-size: var(--t-xs);
+    color: var(--ink-2);
+}
+
+.mpi-media-slot__hint {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+}

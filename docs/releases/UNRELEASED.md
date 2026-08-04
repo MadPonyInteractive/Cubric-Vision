@@ -17,6 +17,17 @@
 > **Chroma's four style LoRAs were uploaded to R2 on 2026-08-02, so this block is
 > clear.** A fifth style (Cinema) was cut on a licence call before release — if you
 > are reading an older draft that lists it, the rack is four.
+>
+> **COMPOSITE (MPI-373) IS DELIBERATELY NOT LISTED BELOW.** The group is built and in
+> the tree, but its user-facing shape is being reworked — the pasted mask slot is going
+> away in favour of the mask already on the selected entry, and the image slot will be
+> filled by a right-click **Send to Composite** on the canvas instead of Copy image.
+> Draft entries describing the paste-two-slots flow were written on 2026-08-04 and then
+> REMOVED, because a changelog line for a flow that will not ship is worse than no line.
+> Write them when the redesign lands and has been seen working: one `whatIsNew` for the
+> group, one `importantChanges` for the retired right-click **Mask composite** modal
+> (that half is certain — the dialog is deleted) and for mismatched-size images now
+> being cropped to fill rather than stretched. Card: MPI-373.
 
 ## whatIsNew
 

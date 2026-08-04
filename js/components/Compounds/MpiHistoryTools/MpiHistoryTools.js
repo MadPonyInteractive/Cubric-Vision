@@ -121,6 +121,20 @@ const IMAGE_TOOLS = [
             { mode: 'paintShapes', icon: 'shapes_stroke', info: 'Shapes' },
         ],
     },
+    {
+        mode: 'composite',
+        label: 'Composite',
+        // The THIRD and last group of the MPI-424 taxonomy (MPI-373). Its artifact is
+        // a blended IMAGE, so it is a group rather than another Mask button, and it is
+        // the only group that drops the PromptBox — it ends at its own Apply and needs
+        // the column for its slots. Two buttons, ONE panel: same operation, two ways
+        // of supplying the cut. NOT a collapse: they are different jobs, not the same
+        // job with different engines, which is the rule Detect is on the other side of.
+        group: [
+            { mode: 'paintComp', icon: 'brush',  info: 'Paint Comp' },
+            { mode: 'maskComp',  icon: 'layers', info: 'Mask Comp' },
+        ],
+    },
 ];
 
 const VIDEO_TOOLS = [

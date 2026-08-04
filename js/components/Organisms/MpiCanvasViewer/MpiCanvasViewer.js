@@ -11,7 +11,7 @@
  * Instance API (on el):
  *   el.loadEntry(item, idx)            — save current mask, load item's image, restore idx's mask
  *   el.loadCompare(itemA, itemB)       — load two images in compare mode
- *   el.enterMode(mode)                — enter 'crop'|'mask'|'paint'|'automask' (or 'none' to exit all)
+ *   el.enterMode(mode)                — enter 'crop'|'mask'|'paint'|'composite'|'automask' (or 'none' to exit all)
  *   el.exitMode()                     — exit any active tool mode
  *   el.getCurrentMaskDataURL()         — returns current mask as data URL, or null
  *   el.hasMask()                      — returns boolean
@@ -768,7 +768,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
          * reads as a dead tool rather than as a missing branch. Adding a canvas mode
          * means adding it HERE and to `_syncModeFromCanvas` below, and nowhere else.
          */
-        const CANVAS_MODES = new Set(['mask', 'paint']);
+        const CANVAS_MODES = new Set(['mask', 'paint', 'composite']);
 
         /**
          * Canvas told us its mode changed; drop any tool mode that no longer matches.
@@ -1517,6 +1517,26 @@ export const MpiCanvasViewer = ComponentFactory.create({
             return !!ok;
         };
 
+        // ── Composite (MPI-373) ──────────────────────────────────────────────
+        // Mirrors the paint surface by name so `MpiMaskStrip` drives this destination
+        // by table lookup too. The layer is SCRATCH — there is no per-entry restore
+        // here on purpose, and no `getURL` counterpart that persists.
+
+        /** Point the tool at image 2 (the slot). @returns {Promise<boolean>} */
+        el.setCompositeUnderlay      = (url) => canvas.setCompositeUnderlay?.(url) ?? Promise.resolve(false);
+        /** Mask Comp: take the cut from a pasted mask instead of a brush. */
+        el.setCompositeHole          = (dataUrl) => canvas.setCompositeHoleFromDataURL?.(dataUrl) ?? Promise.resolve(false);
+        el.setCompositeBrushMode     = (type) => canvas.setCompositeBrushType?.(type);
+        el.setCompositeBrushSize     = (n) => canvas.setCompositeBrushSize?.(n);
+        el.setCompositeEnabled       = (v) => canvas.setCompositeEnabled?.(v);
+        el.hasCompositeUnderlay      = () => !!canvas.hasCompositeUnderlay?.();
+        el.hasCompositeHole          = () => !!canvas.hasCompositeHole?.();
+        /** The cut as a mask PNG at source resolution, or null when nothing is cut. */
+        el.getCompositeURL           = () => canvas.getCompositeURL?.() ?? null;
+        el.clearComposite            = () => !!canvas.clearComposite?.();
+        /** Claim "the cut changed" — ONE slot, cleared by the panel's destroy(). */
+        el.setOnCompositeChange      = (fn) => canvas.setOnCompositeChange?.(fn);
+
         /**
          * THE PREVIEW CONTRACT (MPI-382) — the ONE seam every canvas tool drops its
          * uncommitted preview through. `MpiGroupHistoryBlock.mountOptions()` calls it
@@ -1553,6 +1573,13 @@ export const MpiCanvasViewer = ComponentFactory.create({
             // care whether the tool is still armed, so this is immune to the order
             // mountOptions() happens to discard and destroy in.
             if (canvas.clearShape?.()) dropped = true;
+
+            // MPI-373: an uncommitted composite is a preview too, and a bigger one —
+            // the cut AND the slot image. Both go, so leaving the tool restores the
+            // single-entry canvas and leaves nothing on disk. `resetComposite()`
+            // reports whether there was anything, so this is order-independent like
+            // the shape branch above.
+            if (canvas.resetComposite?.()) dropped = true;
 
             return dropped;
         };

@@ -122,6 +122,24 @@ test('an uncommitted shape gizmo is dropped by the seam too', () => {
     );
 });
 
+// MPI-373. The composite preview is the BIGGEST one — a cut AND a slot image — and
+// it is entirely scratch, so leaving the tool must leave nothing at all: no cut on
+// the canvas, no image underneath, nothing on disk. It hangs on the same seam.
+test('an uncommitted composite is dropped by the seam too', () => {
+    assert.match(
+        discardSeam,
+        /if \(canvas\.resetComposite\?\.\(\)\)\s*dropped = true;/,
+        'discardPreview does not drop the composite through the seam — an uncommitted cut and '
+        + "its underlay would outlive the tool, and the seam's `dropped` result would lie",
+    );
+    const mount = BLOCK.match(/async function mountOptions\(mode\)\s*\{([\s\S]*?)_options\?\.destroy/);
+    assert.doesNotMatch(
+        mount[1],
+        /resetComposite|setCompositeUnderlay/,
+        'mountOptions names the composite — the call site must stay one unconditional discardPreview()',
+    );
+});
+
 test('discarding drops the WHOLE preview, not just the canvas half', () => {
     // Clearing only the auto layers left the thumb strip advertising selected
     // picks for pixels that no longer existed, and re-entering Detect rehydrated

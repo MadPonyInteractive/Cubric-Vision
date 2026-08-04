@@ -110,6 +110,21 @@ export class InputController {
         this.options.onPaintStrokeEnd?.();
     }
 
+    /**
+     * The composite twin (MPI-373). Same gesture contract on the same stack; it
+     * announces nothing, because a cut is neither mask state for the op strip nor a
+     * paint stroke — the panel reads the hole when the user presses Apply.
+     */
+    _endCompositeStroke() {
+        const comp = this.managers.comp;
+        if (!comp?.isDrawing) return;
+        comp.isDrawing = false;
+        const box = comp.takeStrokeBox();
+        if (box) this.managers.undo?.commit(box);
+        else     this.managers.undo?.abort();
+        this.options.onCompositeStrokeEnd?.();
+    }
+
     _initEvents() {
         const { view, mask, comparison } = this.managers;
 
@@ -121,6 +136,7 @@ export class InputController {
             // Whichever brush owns the pointer resizes on the wheel (MPI-375).
             const wheelBrush = (mask.isMaskingMode && mask.paintEnabled) ? mask
                 : (this.managers.paint?.isPaintingMode && this.managers.paint.paintEnabled) ? this.managers.paint
+                : (this.managers.comp?.isCompositeMode && this.managers.comp.paintEnabled) ? this.managers.comp
                 : null;
             if (wheelBrush && !this.isSpacePressed) {
                 const delta = -e.deltaY;
@@ -163,7 +179,7 @@ export class InputController {
 
             const c = this._getContainerCoords(e);
             const i = this._getImageCoords(e);
-            const { view, mask, comparison, crop, paint, shape } = this.managers;
+            const { view, mask, comparison, crop, paint, shape, comp } = this.managers;
             const containerW = this.container.getBoundingClientRect().width || 1;
             // ALT is read straight off the mouse event rather than through a
             // hotkeyRegistry binding: it is only ever consulted at gesture start and
@@ -224,6 +240,11 @@ export class InputController {
                 this.managers.undo?.begin(paint.undoLayers());
                 paint.takeStrokeBox();
                 paint.paint(i.x, i.y);
+            } else if (comp?.isCompositeMode && comp.paintEnabled && !this.isSpacePressed) {
+                comp.isDrawing = true;
+                this.managers.undo?.begin(comp.undoLayers());
+                comp.takeStrokeBox();
+                comp.paint(i.x, i.y);
             } else {
                 this.isPanning = true;
                 view.isManagedView = false;
@@ -251,7 +272,7 @@ export class InputController {
             const c = this._getContainerCoords(e);
             this.currentMouseX = c.x;   // container px (used by brush indicator + slider)
             this.currentMouseY = c.y;
-            const { view, mask, comparison, crop, paint, shape } = this.managers;
+            const { view, mask, comparison, crop, paint, shape, comp } = this.managers;
             this._altHeld = !!e.altKey;
 
             if (comparison.isDraggingSlider) {
@@ -272,6 +293,9 @@ export class InputController {
             } else if (paint?.isDrawing) {
                 const i = this._getImageCoords(e);
                 paint.paint(i.x, i.y);
+            } else if (comp?.isDrawing) {
+                const i = this._getImageCoords(e);
+                comp.paint(i.x, i.y);
             } else if (this.isPanning) {
                 view.offsetX = e.clientX - this.startPanX;
                 view.offsetY = e.clientY - this.startPanY;
@@ -286,6 +310,7 @@ export class InputController {
         this._boundHandlers.mouseup = () => {
             this._endMaskStroke();
             this._endPaintStroke();
+            this._endCompositeStroke();
             this.managers.crop.endDrag();
             this.managers.shape?.endDrag();
             this.isPanning = false;
@@ -309,6 +334,7 @@ export class InputController {
             // Same for paint, or Space mid-stroke leaves an undo capture open and the
             // NEXT stroke's commit would swallow both.
             this._endPaintStroke();
+            this._endCompositeStroke();
             // A gizmo drag has no undo capture to close (the commit is what records),
             // but it must stop tracking or Space+drag would reshape instead of pan.
             this.managers.shape?.endDrag();
@@ -321,6 +347,10 @@ export class InputController {
         const _brushOwner = () => {
             if (mask.isMaskingMode) return mask;
             if (this.managers.paint?.isPaintingMode) return this.managers.paint;
+            // MPI-373: B / E reach the composite cut too. `brushType` means the
+            // INVERSE here — eraser cuts the top image away, brush paints it back —
+            // but the owner protocol is the same, so the keys need no branch.
+            if (this.managers.comp?.isCompositeMode) return this.managers.comp;
             return null;
         };
 
@@ -386,11 +416,11 @@ export class InputController {
     }
 
     updateCursor() {
-        const { mask, comparison, crop, view, paint, shape } = this.managers;
+        const { mask, comparison, crop, view, paint, shape, comp } = this.managers;
         const x = this.currentMouseX;
         const y = this.currentMouseY;
         const target = this.container;
-        if (this.isSpacePressed || (this.isPanning && !mask.isMaskingMode && !paint?.isPaintingMode)) {
+        if (this.isSpacePressed || (this.isPanning && !mask.isMaskingMode && !paint?.isPaintingMode && !comp?.isCompositeMode)) {
             target.style.cursor = 'move';
         } else if (shape?.isActive && !this.isSpacePressed) {
             // Same conversion the crop branch does: container px → image px.
@@ -419,6 +449,10 @@ export class InputController {
             // Same rule as the mask brush: the ring indicator replaces the cursor,
             // and a brushless paint tool (Shapes, MPI-368) keeps a real one.
             target.style.cursor = paint.paintEnabled ? 'none' : 'default';
+        } else if (comp?.isCompositeMode) {
+            // Same rule again — Mask Comp takes its cut from a pasted mask and has
+            // no brush, so it keeps a real cursor (MPI-373).
+            target.style.cursor = comp.paintEnabled ? 'none' : 'default';
         } else if (x !== undefined) {
             const containerW = this.container.getBoundingClientRect().width || 1;
             target.style.cursor = comparison.isOverSlider(x, containerW)

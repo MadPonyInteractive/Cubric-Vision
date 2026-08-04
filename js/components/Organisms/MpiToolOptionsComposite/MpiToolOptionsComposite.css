@@ -1,0 +1,27 @@
+.mpi-tool-options-composite {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+}
+
+.mpi-tool-options-composite__hint {
+    font-size: var(--t-2xs);
+    line-height: 1.4;
+    color: var(--ink-3);
+}
+
+/* One column on Paint Comp, two on Mask Comp — the mask slot's host is REMOVED
+   rather than hidden, so auto-fit does the layout with no modifier class. */
+.mpi-tool-options-composite__slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: var(--s-2);
+}
+
+.mpi-tool-options-composite__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    align-items: center;
+    justify-content: center;
+}

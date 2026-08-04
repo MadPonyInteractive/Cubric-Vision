@@ -1,0 +1,106 @@
+/**
+ * MpiMediaSlot — Compound: a one-media drop point filled by PASTE (MPI-373).
+ *
+ * The Composite group's slots. The selected entry is image 1 and sits on top; a slot
+ * holds what goes underneath, and for Mask Comp a second slot holds the cut. Filling
+ * them by paste rather than by selecting two entries is the whole point of MPI-373:
+ * with the retired modal, changing the selection restarted the operation, so the user
+ * ran it three or four times before the blend looked right.
+ *
+ * DUMB ON PURPOSE. It knows a label, a thumbnail URL and a right-click menu. What is
+ * on the copy buffer, and what a pasted value MEANS, belong to the panel — this way
+ * the same component holds an image and a mask without a `kind` branch in its body.
+ *
+ * Props:
+ * @param {string}          label      - shown when empty, e.g. 'Image underneath'
+ * @param {string}          [empty]    - hint under the label; defaults to the paste hint
+ * @param {() => boolean}   canPaste   - is there something on the buffer to paste
+ * @param {() => {url: string, name?: string}|null} readPaste - take it off the buffer
+ *
+ * Emits:
+ *   'change' { url: string|null, name: string|null } — filled or cleared
+ *
+ * Instance API (on el):
+ *   el.getValue()  — { url, name } | null
+ *   el.clear()     — empty it (emits 'change' with url: null)
+ */
+
+import { ComponentFactory } from '../../factory.js';
+import { MpiContextMenu }   from '../MpiContextMenu/MpiContextMenu.js';
+import { qs, on }           from '../../../utils/dom.js';
+
+export const MpiMediaSlot = ComponentFactory.create({
+    name: 'MpiMediaSlot',
+    css: ['js/components/Compounds/MpiMediaSlot/MpiMediaSlot.css'],
+
+    template: (props = {}) => `
+        <div class="mpi-media-slot" tabindex="0">
+            <img class="mpi-media-slot__thumb" id="slot-thumb" alt="" hidden />
+            <div class="mpi-media-slot__empty" id="slot-empty">
+                <span class="mpi-media-slot__label">${props.label || 'Slot'}</span>
+                <span class="mpi-media-slot__hint">${props.empty || 'Right-click to paste'}</span>
+            </div>
+        </div>
+    `,
+
+    setup: (el, props, emit) => {
+        const thumb = qs('#slot-thumb', el);
+        const empty = qs('#slot-empty', el);
+        const _offs = [];
+
+        /** @type {{url: string, name: string|null}|null} */
+        let _value = null;
+
+        function _render() {
+            const filled = !!_value;
+            thumb.hidden = !filled;
+            empty.hidden = filled;
+            el.classList.toggle('mpi-media-slot--filled', filled);
+            thumb.src = filled ? _value.url : '';
+            thumb.alt = filled ? (_value.name || props.label || '') : '';
+        }
+
+        function _set(next) {
+            _value = next;
+            _render();
+            emit('change', { url: _value?.url || null, name: _value?.name || null });
+        }
+
+        // Right-click is the gesture the history list already teaches for Copy mask,
+        // so the slots answer the same one. The menu is built per open because both
+        // rows are conditional — a Paste row with nothing to paste, or a Clear row on
+        // an empty slot, is a greyed line the user has to read past every time.
+        _offs.push(on(el, 'contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const items = [];
+            if (props.canPaste?.()) items.push({ key: 'paste', icon: 'paste', label: 'Paste' });
+            if (_value) items.push({ key: 'clear', icon: 'trash', label: 'Clear slot', danger: true });
+            if (!items.length) return;
+            MpiContextMenu.show({
+                x: e.clientX,
+                y: e.clientY,
+                items,
+                onSelect: (key) => {
+                    if (key === 'paste') _set(props.readPaste?.() || null);
+                    else if (key === 'clear') _set(null);
+                },
+            });
+        }));
+
+        // Left-click pastes too when the slot is empty and something is on the
+        // buffer. The right-click menu is still the full contract; this is the
+        // shortcut for the only thing an empty slot can do.
+        _offs.push(on(el, 'click', () => {
+            if (_value || !props.canPaste?.()) return;
+            _set(props.readPaste?.() || null);
+        }));
+
+        el.getValue = () => (_value ? { ..._value } : null);
+        el.clear = () => _set(null);
+
+        _render();
+
+        el.destroy = () => { _offs.forEach(fn => fn?.()); };
+    },
+});
