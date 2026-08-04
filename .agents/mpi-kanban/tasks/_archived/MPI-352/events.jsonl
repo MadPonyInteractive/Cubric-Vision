@@ -1,0 +1,6 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-352","type":"task.created","at":"2026-07-26T00:00:00Z","actor":"claude","summary":"Stop reported as a completion - advisory-interrupt output walked the success path."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-352","type":"task.moved","at":"2026-07-26T00:00:00Z","actor":"claude","from":"todo","to":"doing","summary":"Implementation started (root-caused to the store cancelling overlay)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-352","type":"validation.updated","at":"2026-07-26T00:00:00Z","actor":"claude","summary":"5 assertions pass, modules load, ESLint clean, blast radius swept."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-352","type":"task.moved","at":"2026-07-26T00:00:00Z","actor":"claude","from":"doing","to":"done","summary":"User-verified: Stop no longer reports as a finished generation."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-352","type":"task.updated","at":"2026-08-04T16:15:00Z","actor":"opus","summary":"mpi-cleanup: status \"active\" -> \"done\" on a card already in the done column (board-validator violation; no work state changed)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-352","type":"task.deleted","at":"2026-08-04T16:20:00Z","actor":"opus","summary":"Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-352/ (workspace preserved intact). mpi-archive run 2026-08-04."}

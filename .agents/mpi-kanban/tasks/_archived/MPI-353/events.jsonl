@@ -1,0 +1,4 @@
+{"ts": "2026-07-26T05:30:00Z", "type": "task.created", "id": "MPI-353", "to": "doing", "maturity": "validating", "note": "Klein 4B vs Qwen-Edit removal LoRA evaluation - bench research, handoff written"}
+{"ts": "2026-07-26T10:51:28Z", "type": "task.moved", "id": "MPI-353", "from": "doing", "to": "done", "note": "eval concluded: Klein wins -> MPI-354"}
+{"schema":"mpi-kanban/event/v1","id":"MPI-353","type":"task.updated","at":"2026-08-04T16:15:00Z","actor":"opus","summary":"mpi-cleanup: status \"in_progress\" -> \"done\" on a card already in the done column (board-validator violation; no work state changed)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-353","type":"task.deleted","at":"2026-08-04T16:20:00Z","actor":"opus","summary":"Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-353/ (workspace preserved intact). mpi-archive run 2026-08-04."}
