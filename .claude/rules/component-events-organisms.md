@@ -55,6 +55,7 @@ NOTE:    Viewer no longer forwards `loop-change`/`range-change` — block listen
 ### MpiCanvasViewer (Organism — js/components/Organisms/MpiCanvasViewer/)
 EMITS:   `mode-changed`  `{ mode }` — tool mode changed (from any source)
          `crop-applied`  `{ item }` — crop completed; item is the new HistoryItem
+         `paint-applied` `{ item }` — paint layer flattened onto the entry (MPI-375); item is the new HistoryItem. The Block handles it through the SAME `_appendViewerEntry` path as `crop-applied` — both hand back a finished file the server already wrote.
          `mask-ready`    `{ hasMask }` — mask painted or cleared. Now ALSO fires mid-tool on stroke end (MPI-372): `InputController._endMaskStroke()` → `MpiCanvas onMaskStrokeEnd` → `_publishMaskState()` → `evaluateMask()`, emitting only when `hasMask` FLIPS. That is what unlocks mask-gated ops in the op strip while a mask tool stays open — before, mask state was published only when a tool was destroyed. **A tool that creates a mask by any route other than a brush stroke (shape commit, text detection) MUST emit this itself or call `evaluateMask()`.**
          `entry-loaded`  `{ idx, hasMask }` — image loaded for index
          `brush-changed` `{ type: 'brush'|'eraser' }` — brush type changed via hotkey
@@ -71,6 +72,13 @@ API:     `compositeMaskDataURL(dataUrl)` — OR incoming mask onto existing canv
          `setMaskPointsThreshold(n)` / `getMaskPointsThreshold()` — `SAMDetectorCombined.threshold`, 0–1, default 0.93.
          `clearMaskPoints()` / `getMaskPointCount()` — point-prompt list management.
          `bakeAutoPicks('manual'|'subtract')` — Add / Subtract: bake the selected auto-pick masks into the permanent paint layers and drop the auto layer. Returns false (+ warning toast) when nothing is selected. This is how multi-part point selections accumulate — each points run returns exactly ONE region.
+PAINT API (MPI-375 — the RGBA layer, NOT a mask; full contract in `docs/painting.md`):
+         `setPaintColor(hex)` / `setPaintBrushMode('brush'|'eraser')` / `setPaintBrushSize(n)` / `setPaintOpacity(v)` / `setPaintEnabled(bool)` — mirror the mask surface by name so `MpiMaskStrip` can drive either destination by table lookup.
+         `getPaintURL()` — PNG data URL, or **null when nothing is painted** (`isEmpty()` scans alpha rather than trusting a flag, which would go stale on undo).
+         `hasPaint()` / `clearPaint()` — clear wipes the layer as ONE undo entry and returns whether it had pixels.
+         `setPaintFromDataURL(url)` — per-entry restore. A **LOAD**: records no undo entry.
+         `applyPaint()` — flatten onto the current entry server-side and emit `paint-applied`. Sends the opacity slider along, so the new entry matches the screen; the source never round-trips as base64.
+NOTE:    The paint layer draws in EVERY mode, UNDER the mask — it is image content, the mask is an annotation over it, and it must survive the switch to a mask tool because paint → mask → detail is the whole feature. It persists per entry as `paint.png` in the same TEMP item dir as the mask layers, written when painted and **DELETED when empty** (a write-only persist would resurrect a cleared layer). `mask-temp:delete` is therefore file-by-file, NOT a dir nuke — Clear mask must not take the paint with it.
 NOTE:    A points run auto-picks index 0 up front, so it is ONE round trip; the detector's detect-then-pick two-step exists only because YOLO returns N segments to choose between. The two detector branches sit behind an `MpiIfElse` titled `Input_Points_Mode` whose inputs are lazy, so the unselected branch never executes.
 NOTE:    Display-invert is honored only in mask-mode (MpiCanvas overlay paint). Prompt-mode preview (MpiMaskedImagePreview) uses CSS-luminance mask and does NOT currently honor `displayInverted`.
 
@@ -106,10 +114,16 @@ GLOBAL EMITS: `settings:tool:update` `{ toolKey: 'mask', key, value }` — keys 
 LISTENS: (none)
 NOTE:    Open-vocabulary SAM3 (MPI-384) — a name plus a count. **The count is part of the PROMPT, not a knob:** `js/utils/maskTextPrompt.js` stamps `name:N` onto every comma-separated category, because a bare category makes SAM3 return exactly ONE object. Mount calls `setMaskPointsMode(false)` then `setMaskTextMode(true)`; `destroy()` calls `setMaskTextMode(false)`. Uses the normal detect-then-pick flow (N results to choose between), unlike Points which auto-picks index 0.
 
-#### MpiMaskStrip (Compound — js/components/Compounds/MpiMaskStrip/)
-PROPS:   `{ viewer, brush = true }`
+#### MpiToolOptionsPaint (Organism — js/components/Organisms/MpiToolOptionsPaint/)
 EMITS:   (none)
-GLOBAL EMITS: `settings:tool:update` `{ toolKey: 'mask', key, value }` — keys `opacity` (0–1), `inverted` (bool).
+GLOBAL EMITS: `settings:tool:update` `{ toolKey: 'paint', key: 'color', value }` — its OWN key, not `'mask'`.
+LISTENS: (none)
+NOTE:    The Paint family (MPI-375), in `_PAINT_TOOLS` — **not** `_MASK_TOOLS`. Keeps the PromptBox (paint → mask → detail is one operation) via `_isCanvasTool`, and is **not a preview**, so it does NOT extend `discardPreview()` — paint strokes are committed pixels like `manualCanvas`. Mount calls `enterMode('paint')`; `destroy()` calls `exitMode()`. Apply is disabled rather than inert when `viewer.el.applyPaint` is missing.
+
+#### MpiMaskStrip (Compound — js/components/Compounds/MpiMaskStrip/)
+PROPS:   `{ viewer, brush = true, dest = 'mask' }`
+EMITS:   (none)
+GLOBAL EMITS: `settings:tool:update` `{ toolKey: <dest.settingsKey>, key, value }` — `'mask'` keys `opacity` (0–1), `inverted` (bool); on `dest: 'paint'` the same slider writes `toolKey: 'paint'`.
 LISTENS: (none — `Hotkeys.bind 'mask.brush.toolbar'`/`'mask.eraser.toolbar'` ONLY when `brush` is true; unbound in destroy)
 NOTE:    The ONE shared bottom strip, mounted by every tool in the family — change it here, not per tool. `brush: false` drops the paint/erase pair AND its B/E binds, and also DISARMS canvas painting via `setMaskPaintEnabled()`; every tool except Brush mounts it that way. Invert, B/W view (MPI-381), clear and opacity are on every tool. Mount-time restore applies `opacity` via `setMaskOpacity` and `inverted` via `setMaskInverted` (viewer-scope cache, survives canvas remount). Invert active state via `.mpi-mask-strip__invert--on` (accent border + 180° icon rotation).
 
