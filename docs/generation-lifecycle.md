@@ -98,6 +98,15 @@ the bar to itself, and the detect's terminal is ignored because it no longer own
 Rule this generalises to: **a non-generation ComfyUI run gets the bar, not a lane.** If it has
 no media output and no gen id, keep it out of the store and drive the display directly.
 
+**Stopping it exposed a bar bug that was never detect-specific.** `progress.cancel()` never
+removed `shell-info__fill--indeterminate` — only `complete()` did, on its way to the 100% flash —
+so ANY stopped no-progress job (an ESRGAN upscale just as much as a detect) left the fill sweeping
+under an `IDLE` label until the next job's `_beginActiveCycle()` cleared it on the way in. That
+next-job cleanup is why it survived this long. The removal now lives in **`_setIdle()`**, the one
+funnel every terminal reaches — same argument as the MPI-111 timer hard-stop sitting there. Enter
+and exit clear the identical class list, and `tests/status-bar-idle-clears-pulse.test.cjs` holds
+them equal.
+
 ## Post-cancel UI writes must reconcile — loop re-fire is SYNCHRONOUS (MPI-234)
 
 An armed-loop re-fire runs **synchronously inside any cancel call** (`activeGenerations.cancel` / `cancelRunningCueJob`): store cancel → lane drain → loop callback → `enqueueGeneration` → `startGeneration` all complete BEFORE the cancel call returns — a NEW gen is running (registry entry, mounted placeholder, latched status bar) by the next line. Any UI write placed AFTER a cancel must reconcile from the registry/store, never assume idle. Two stompers shipped this way: the gallery Stop handler's `setGroups(projectGroups)` wiped the re-fire's just-mounted placeholder (fix: `setGroups([..._placeholdersForFirst(), ...groups])`); statusBar's store reconcile only healed active→idle, so a `_latch` while idle left `genId === owner` and the owner-equality check skipped re-arming forever (fix: re-arm when a live store job exists and the bar is idle — store truth wins BOTH directions). Cost 6 failed point-fixes in MPI-226 because every patch targeted the lifecycle handlers while the stomper ran after them.

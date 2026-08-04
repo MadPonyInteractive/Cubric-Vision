@@ -210,6 +210,14 @@ function _setIdle() {
     // interval, stranding a ticking timer that reads as a frozen mm:ss at idle
     // (MPI-111 timer symptom). Hard-stop here so reaching idle ALWAYS kills it.
     _stopTimer();
+    // Same reasoning for the fill's animation classes (MPI-421). `cancel()` never
+    // removed the indeterminate pulse — only `complete()` did, on its way to the
+    // 100% flash — so a STOPPED no-progress job (an ESRGAN upscale, a mask detect)
+    // left the bar sweeping under an `IDLE` label until the NEXT job's
+    // `_beginActiveCycle()` happened to clear it. Clearing on the way OUT as well
+    // as on the way IN is what makes idle actually mean idle; the class list is
+    // deliberately identical to `_beginActiveCycle`'s.
+    _fill?.classList.remove('shell-info__fill--flash', 'shell-info__fill--fade', 'shell-info__fill--indeterminate');
     _job.className = 'shell-info__job';
     _jobLabel.textContent = `IDLE · ${_idleScopeLabel()}`;
     _currentLabel = '';
