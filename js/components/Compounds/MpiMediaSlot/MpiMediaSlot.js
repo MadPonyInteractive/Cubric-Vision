@@ -1,15 +1,14 @@
 /**
  * MpiMediaSlot — Compound: a one-media drop point filled by PASTE (MPI-373).
  *
- * The Composite group's slots. The selected entry is image 1 and sits on top; a slot
- * holds what goes underneath, and for Mask Comp a second slot holds the cut. Filling
- * them by paste rather than by selecting two entries is the whole point of MPI-373:
- * with the retired modal, changing the selection restarted the operation, so the user
- * ran it three or four times before the blend looked right.
+ * The Composite group's slot. The selected entry is image 1 and sits on top; the slot
+ * holds what goes underneath. Filling it from a buffer rather than by selecting two
+ * entries is the whole point of MPI-373: with the retired modal, changing the selection
+ * restarted the operation, so the user ran it three or four times before the blend
+ * looked right.
  *
  * DUMB ON PURPOSE. It knows a label, a thumbnail URL and a right-click menu. What is
- * on the copy buffer, and what a pasted value MEANS, belong to the panel — this way
- * the same component holds an image and a mask without a `kind` branch in its body.
+ * on the copy buffer, and what a filled value MEANS, belong to the panel.
  *
  * Props:
  * @param {string}          label      - shown when empty, e.g. 'Image underneath'
@@ -22,6 +21,7 @@
  *
  * Instance API (on el):
  *   el.getValue()  — { url, name } | null
+ *   el.setValue(v) — fill it without a gesture (emits 'change')
  *   el.clear()     — empty it (emits 'change' with url: null)
  */
 
@@ -98,6 +98,11 @@ export const MpiMediaSlot = ComponentFactory.create({
 
         el.getValue = () => (_value ? { ..._value } : null);
         el.clear = () => _set(null);
+        // Fill it without a gesture — the Composite panel seeds the slot from the copy
+        // buffer on mount, because `Send to Composite` happens on a different entry
+        // before the panel exists. Emits `change` like a paste does, so whoever owns
+        // the slot's meaning reacts through one path.
+        el.setValue = (v) => _set(v?.url ? { url: v.url, name: v.name || null } : null);
 
         _render();
 

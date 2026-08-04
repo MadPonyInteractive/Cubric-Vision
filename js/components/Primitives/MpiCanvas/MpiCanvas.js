@@ -1141,12 +1141,43 @@ class _CanvasCore {
         return ok;
     }
 
-    /** Mask Comp: take the hole from a pasted mask. A LOAD — records no undo entry. */
+    /**
+     * Take the hole from a mask PNG. A LOAD — records no undo entry.
+     *
+     * THE ARGUMENT MUST BE WHITE-ON-TRANSPARENT, not opaque black-and-white.
+     * `holeCanvas` is an ALPHA layer: `_renderOverlay()` clips the underlay with
+     * `destination-in` and `isEmpty()` scans alpha, so an opaque mask reads as
+     * "cut everywhere" — while Sharp, which cuts by LUMINANCE, would cut only the
+     * white part. The preview would lie, which is the one thing this card exists
+     * to fix. `setCompositeHoleFromMask()` below is the only caller and picks the
+     * right overload; anything else feeding this must do the same.
+     */
     async setCompositeHoleFromDataURL(dataURL) {
         const ok = await this.comp.setHoleFromDataURL(dataURL);
         this.draw();
         this._onCompositeChange?.();
         return ok;
+    }
+
+    /**
+     * Mask Comp: the cut IS the selected entry's own mask (user, 2026-08-04).
+     *
+     * Replaces the pasted-mask slot. The user already has the whole mask toolkit —
+     * brush, detect, points, text, shapes, adjust — pointed at this exact layer, so
+     * a second place to paste a mask was a worse way to produce the same pixels.
+     *
+     * `this.mask.getURL()` with NO ARGS on purpose: that overload exports
+     * white-on-transparent at source resolution. The `('black', 'white')` overload
+     * every prompt-tool consumer uses is opaque — see the alpha contract above.
+     * An unpainted mask exports blank, so the hole comes back empty and Apply's
+     * gate stays shut on its own; no separate has-a-mask check.
+     *
+     * @returns {Promise<boolean>} false when there is no mask layer to read
+     */
+    async setCompositeHoleFromMask() {
+        const url = this.mask.getURL();
+        if (!url) return false;
+        return this.setCompositeHoleFromDataURL(url);
     }
 
     /**
@@ -1391,7 +1422,8 @@ export const MpiCanvas = ComponentFactory.create({
             'setPaintBrushSize','setPaintBrushType','setPaintColor','setPaintOpacity','getPaintOpacity',
             'setPaintEnabled','getPaintURL','hasPaint','clearPaint','setPaintFromDataURL',
             'setShapeMode','setShapeKind','getShapeKind','hasShape','resetShape','clearShape','commitShape',
-            'setCompositeUnderlay','setCompositeHoleFromDataURL','setCompositeBrushSize','setCompositeBrushType',
+            'setCompositeUnderlay','setCompositeHoleFromDataURL','setCompositeHoleFromMask',
+            'setCompositeBrushSize','setCompositeBrushType',
             'setCompositeEnabled','hasCompositeUnderlay','hasCompositeHole','getCompositeURL',
             'clearComposite','resetComposite','setOnCompositeChange',
             'setProcessedImage','clearProcessedImage'

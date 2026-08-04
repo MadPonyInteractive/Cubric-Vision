@@ -26,7 +26,6 @@
  *   'add-to-gallery'    { index }                    — add single selected entry to gallery
  *   'download-selected' { indices }                  — download selected entries
  *   'download-mask'     { index }                    — download single entry mask
- *   'copy-image'        { index }                    — copy single entry image to the Composite slots
  *   'copy-mask'         { index }                    — copy single entry mask layers
  *   'paste-mask'        { index }                    — paste copied mask onto entry
  *   'reuse'             { positive, negative }       — reuse prompt button clicked on a card
@@ -238,8 +237,10 @@ export const MpiHistoryList = ComponentFactory.create({
                 // entries, required one of them to already carry a mask, and opened a
                 // blind Add/Subtract dialog — the exact flow the user reported running
                 // three or four times because the blend was invisible while deciding.
-                // The Composite rail group replaces it: copy an image here, paste it
-                // into a slot there, and watch the cut.
+                // The Composite rail group replaces it: right-click the CANVAS →
+                // Send to Composite, open Mask Comp or Paint Comp, and watch the cut.
+                // `Copy image` lived here briefly and came back out (user, 2026-08-04)
+                // — the image you want underneath is the one you are looking at.
                 const items = [
                     { key: 'compare',        icon: 'compare',  label: 'Compare',        disabled: compareDisabled },
                 ];
@@ -255,10 +256,6 @@ export const MpiHistoryList = ComponentFactory.create({
                 items.push(
                     { key: 'download',       icon: 'download', label: 'Download' },
                     ...(_isVideo ? [] : [{ key: 'download-mask', icon: 'download', label: 'Download mask', disabled: downloadMaskDisabled }]),
-                    // Copy image (MPI-373) sits beside Copy mask because the Composite
-                    // slots take either one. No mask gate — every image entry has an
-                    // image, which is why it is the plainer of the two.
-                    ...(_isVideo ? [] : [{ key: 'copy-image', icon: 'copy', label: 'Copy image', disabled: targetIdxs.length !== 1 }]),
                     ...(_isVideo ? [] : [{ key: 'copy-mask', icon: 'copy', label: 'Copy mask', disabled: copyMaskDisabled }]),
                     ...(!_isVideo && props.hasCopiedMask?.()
                         ? [{ key: 'paste-mask', icon: 'paste', label: 'Paste mask', disabled: pasteMaskDisabled }]
@@ -287,8 +284,6 @@ export const MpiHistoryList = ComponentFactory.create({
                             emit('download-selected', { indices: targetIdxs });
                         } else if (key === 'download-mask') {
                             emit('download-mask', { index: targetIdxs[0] });
-                        } else if (key === 'copy-image') {
-                            emit('copy-image', { index: targetIdxs[0] });
                         } else if (key === 'copy-mask') {
                             emit('copy-mask', { index: targetIdxs[0] });
                         } else if (key === 'paste-mask') {

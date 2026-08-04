@@ -186,23 +186,24 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         // survive a bitmap round-trip. Lives as long as the workspace is mounted.
         let _copiedMask = null;
 
-        // Copied image (MPI-373): { url, name }. The Composite slots' source, and the
-        // reason `Copy image` sits beside `Copy mask` in the history context menu.
-        // Same buffer discipline as above — app-local, workspace-lifetime, no OS
-        // clipboard: a slot needs the project-file URL the canvas can load, which a
-        // bitmap round-trip would throw away.
-        let _copiedImage = null;
+        // Composite image (MPI-373): { url, name }. What the Composite slot puts
+        // UNDERNEATH, filled by `Send to Composite` on the canvas context menu — the
+        // same gesture the Video workspace offers for Set as start/end frame, and the
+        // better one, because the image you want underneath is usually the one you are
+        // looking at. Same buffer discipline as the mask above — app-local,
+        // workspace-lifetime, no OS clipboard: a slot needs the project-file URL the
+        // canvas can load, which a bitmap round-trip would throw away.
+        let _compositeImage = null;
 
         /**
-         * What the Composite panel is allowed to see of both buffers. Accessors, not
-         * values: the panel mounts once per rail switch and the buffers change under
-         * it, so handing over a snapshot would freeze the paste menu.
+         * What the Composite panel is allowed to see. Accessors, not values: the panel
+         * mounts once per rail switch and the buffer changes under it, so handing over
+         * a snapshot would freeze the slot. There is no mask accessor — Mask Comp reads
+         * the selected entry's own mask (user, 2026-08-04).
          */
         const _clipboard = {
-            hasImage: () => !!_copiedImage,
-            getImage: () => (_copiedImage ? { ..._copiedImage } : null),
-            hasMask:  () => !!_copiedMask?.flat,
-            getMask:  () => _copiedMask?.flat || null,
+            hasImage: () => !!_compositeImage,
+            getImage: () => (_compositeImage ? { ..._compositeImage } : null),
         };
 
         if (!_group) {
@@ -1959,19 +1960,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             historyList.el.exitSelectMode();
         });
 
-        // MPI-373 — the Composite slots' source. No mask lookup, no dimension
-        // bookkeeping: the slot pastes a URL the canvas can load, and cover-fit
-        // (client) plus `fit: 'cover'` (Sharp) already define what a mismatched pair
-        // does, so there is nothing here for a warning dialog to add.
-        historyList.on('copy-image', ({ index }) => {
-            if (isVideo || typeof index !== 'number') return;
-            const item = _group.history[index];
-            if (!item?.filePath) return;
-            _copiedImage = { url: item.filePath, name: item.displayName || 'image' };
-            // Silent, like Copy mask: the paste appearing in the slot IS the feedback.
-            historyList.el.exitSelectMode();
-        });
-
         historyList.on('copy-mask', async ({ index }) => {
             if (isVideo || typeof index !== 'number') return;
             const item = _group.history[index];
@@ -1983,12 +1971,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             }
             // Source dimensions ride along so paste can compare against the
             // target and warn before a stretched/misplaced result.
-            // `flat` is the same composite Download mask writes — the Composite mask
-            // slot needs ONE image, not the layer pair the mask paste rebuilds from.
             _copiedMask = {
                 layers,
                 dims: item.pixelDimensions || null,
-                flat: await viewer.el.getMaskDataURLForEntry?.(item) || null,
             };
             // No toast: user-initiated action, result is self-evident (Paste
             // mask appears in the menu). Toasts are for non-user events.
@@ -2641,15 +2626,33 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // ── Image-viewer context menu ───────────────────────────────────
             // Clear Mask is reachable from any tool (no need to open the Mask
             // tool). Disabled when no mask is painted.
+            //
+            // Send to Composite (MPI-373, user 2026-08-04) is the same gesture the
+            // Video workspace offers as Set as start/end frame, and it replaced
+            // `Copy image` in the history list: the image you want UNDERNEATH is
+            // usually the one you are looking at, so the canvas is the better place
+            // to say so. It fills the slot for BOTH composite front ends on the next
+            // mount — deliberately not "the other selected entry", because changing
+            // the selection restarting the operation is what killed the MPI-362 modal.
             _unsubs.push(Events.on('image-viewer:context-menu', ({ x, y }) => {
                 const noMask = !viewer.el.hasMask?.();
+                const current = _group.history[_currentIdx];
+                const noFile = !current?.filePath;
                 MpiContextMenu.show({
                     x, y,
                     items: [
                         { key: 'clear-mask', icon: 'trash', label: 'Clear mask', disabled: noMask, info: noMask ? 'No mask to clear' : 'Remove the painted mask' },
+                        { key: 'send-composite', icon: 'copy', label: 'Send to Composite', disabled: noFile,
+                          info: noFile ? 'This entry has no file yet' : 'Use this image underneath in Mask Comp / Paint Comp' },
                     ],
                     onSelect: (key) => {
                         if (key === 'clear-mask') viewer.el.clearMask?.();
+                        else if (key === 'send-composite') {
+                            _compositeImage = { url: current.filePath, name: current.displayName || 'image' };
+                            // A toast, unlike Copy mask: the buffer's only consumer is a
+                            // panel that is not on screen yet, so nothing else confirms it.
+                            _showToast('Sent to Composite', 'success');
+                        }
                     },
                 });
             }));

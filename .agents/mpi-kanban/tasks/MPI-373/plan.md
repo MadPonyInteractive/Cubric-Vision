@@ -129,20 +129,24 @@ Order within that one flow (it is one coherent change, not four independent ones
       composite keeping the PromptBox, `discardPreview` leaking the preview, the server
       going back to `fit: 'fill'`, and `maskComp` landing in `_MASK_TOOLS`.
 
+- [x] **THE REDESIGN, 2026-08-04.** Both halves the user specified, plus the defect
+      the diagnosis below turned up. `Send to Composite` on the image-viewer context
+      menu writes `_compositeImage`; the panel seeds its slot from it on mount
+      (`MpiMediaSlot.setValue()`); `Copy image` is out of the history list; the mask
+      slot, `_copiedMask.flat` and `clipboard.hasMask/getMask` are gone;
+      `MpiCanvas.setCompositeHoleFromMask()` reads the selected entry's own mask.
+      Suite **389/0**, `npx eslint js/ services/` 0 errors (19 pre-existing warnings),
+      four negative controls fired and the tree restored green.
+
 ## Remaining Work
 
-**A REDESIGN, specified by the user 2026-08-04 after testing the build.** Paint Comp
-works; Mask Comp's pasted-mask half is being replaced rather than kept:
-
-1. **Right-click the canvas → "Send to Composite"**, the same gesture the Video
-   workspace already offers for Start Frame / End Frame. It fills the image slot for
-   BOTH front ends. `Copy image` comes back OUT of the history context menu.
-2. **The mask slot is DELETED.** Mask Comp uses the mask already on the selected
-   entry — cut that region out of the top image and reveal what is underneath. No
-   pasting a mask, no second slot, no `_copiedMask.flat`.
-
-Also outstanding: the `user-ux` pass in `## Verification`, re-run against the redesign
-rather than against what shipped.
+- The `user-ux` pass in `## Verification`, re-run against the redesign — steps 1-3
+  and 5-7 stand as written; step 4 is now "mask the entry, open **Mask Comp**".
+- The four `.claude/rules/component-*.md` maps still do not know the composite
+  family. Deferred pending the user-ux pass and the user's go-ahead on editing
+  architectural rule files.
+- `docs/releases/UNRELEASED.md` still carries NO composite entries, deliberately —
+  its blockquote holds what to write once the user has seen the redesign working.
 
 ## Plan Drift
 
@@ -178,6 +182,24 @@ rather than against what shipped.
   sheet's `[hidden] { display: none }`. The exact MPI-382 trap I had written warning
   comments about twice in this same card. Both have a test that fails on the shipped
   code and passes on the fix.
+- **2026-08-04 — "Apply never enables" was NOT a wiring bug, and the real defect was
+  next door.** The whole `el` chain was already known present, so the question was what
+  the hole received. Both branches of `getMaskDataURLForEntry()` return an **opaque**
+  black-and-white PNG — `getMaskDataURL('black', 'white')` for the live entry, and an
+  explicit `alpha = 255` flatten in `_buildCompositeFromTemp` for a stored one. Fed to
+  `setHoleFromDataURL` that makes every pixel opaque, so `isEmpty()` is FALSE and Apply
+  would have ENABLED. Apply staying disabled therefore proves the mask never reached the
+  canvas at all: `_copiedMask.flat` was null, `clipboard.hasMask()` gated the slot's
+  Paste row off it, and the row simply never appeared — while `Copy mask` still
+  "succeeded" (it gates on `layers`) and the history list's `Paste mask` still worked,
+  so nothing said a word. Two silent gates, both in code the redesign deletes.
+  **The defect that would have SURVIVED the redesign is the opposite direction:** the
+  canvas cuts the hole by ALPHA (`destination-in`, `isEmpty()`) and Sharp cuts it by
+  LUMINANCE, so that same opaque mask reads as "cut the entire frame" on screen and
+  "cut only the white part" on disk — the preview lying, which is the one thing this
+  card exists to fix. Fixed by reading the mask through `MaskManager.getURL()` with NO
+  arguments (white-on-transparent) instead. A guard holds the overload, and the panel's
+  hint line is now the error surface so the next such failure says so out loud.
 - **2026-08-04 — the real-pixel probe was not run.** The plan listed one for the
   cover-fit maths. The maths and both ends of the cover contract are guarded by source
   tests; what a probe would actually add is proof that *erasing reveals the underlay*,
@@ -193,24 +215,27 @@ decided, which only the user can judge in the running app.
 
 Automated, before handing it over:
 
-- `node --test "tests/*.test.cjs"` — suite is 374/0 at plan time. New tests:
-  registry membership for both composite modes, the discard extension, and the
-  cover-fit transform maths (a real-pixel probe, per
-  `tool_real_pixel_probe_via_playwright_cli`).
-- `npx eslint js/` — 0 errors.
+- `node --test "tests/*.test.cjs"` — **389/0** (374 at plan time). Guards: registry
+  membership for both composite modes, the discard extension, both ends of the
+  cover contract, the announce set, the canvas-not-history slot source, the deleted
+  mask slot, and the alpha-not-luminance mask overload.
+- `npx eslint js/ services/` — 0 errors.
 - No `fillHoles: true` reaches `compositeThroughMask` from this path.
 
 In the app (Electron, not the browser — `npm run test:desktop`'s target):
 
-1. Copy an image entry, open **Paint Comp** on another, paste into the slot —
-   the underlay appears beneath and the top entry is unchanged until erased.
+1. Right-click an image entry on the canvas → **Send to Composite** (toast), select
+   another entry, open **Paint Comp** — the slot is ALREADY filled, the underlay
+   appears beneath, and the top entry is unchanged until erased.
 2. Erase → the underlay shows through live at the painted pixels; brush →
    restores the top image. Ctrl+Z steps both back.
-3. Paste a mismatched-size image — cover-fit, centred, and no transparent gap
+3. Send a mismatched-size image — cover-fit, centred, and no transparent gap
    anywhere the eraser reaches.
-4. **Mask Comp**: paste an image AND a mask; the cut matches the mask. Use an
-   EDGE-BAND mask (Adjust → Edge) — it must composite as a band, not a filled
-   disc. That is MPI-437's regression, and this route inherits it.
+4. **Mask Comp**: mask part of the entry with any mask tool, then open Mask Comp —
+   the cut matches the mask and ONLY the mask (not the whole frame; that was the
+   alpha-vs-luminance defect). Use an EDGE-BAND mask (Adjust → Edge) — it must
+   composite as a band, not a filled disc. That is MPI-437's regression, and this
+   route inherits it. On an UNMASKED entry the hint says so and Apply stays disabled.
 5. Apply → ONE new history entry at full resolution; the source is untouched.
 6. Switch rail tools without applying → underlay and hole are gone, no mask is
    left on either entry, and nothing new is on disk.

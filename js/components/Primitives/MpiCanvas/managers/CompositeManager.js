@@ -163,9 +163,16 @@ export class CompositeManager {
     }
 
     /**
-     * Fill the hole from a pasted mask (Mask Comp). A LOAD of a decision the user
-     * already made elsewhere, so it records no undo entry — the same reasoning as
-     * `PaintManager.setFromDataURL`.
+     * Fill the hole from a mask PNG (Mask Comp reads the entry's own mask). A LOAD
+     * of a decision the user already made elsewhere, so it records no undo entry —
+     * the same reasoning as `PaintManager.setFromDataURL`.
+     *
+     * WHITE-ON-TRANSPARENT ONLY. This layer is consumed by ALPHA on the canvas
+     * (`destination-in` in `_renderOverlay`, and `isEmpty()` below) but by
+     * LUMINANCE on the server, so an opaque black-and-white mask would cut the
+     * whole frame here and only the white part there. `MpiCanvas` owns picking the
+     * right export overload and documents why.
+     *
      * @param {string} dataURL
      * @returns {Promise<boolean>}
      */

@@ -2,7 +2,7 @@
 
 Blend two entries by cutting a hole through the top one. The selected entry is **image 1** and
 sits on top; a slot holds **image 2**, underneath. `paintComp` cuts the hole live with the brush;
-`maskComp` takes the same hole from a pasted mask. Read before touching
+`maskComp` takes the same hole from the mask already on the selected entry. Read before touching
 `js/components/Primitives/MpiCanvas/managers/CompositeManager.js` or `MpiToolOptionsComposite`.
 The last card of the MPI-424 umbrella. Related:
 [masking-tools.md](masking-tools.md) (the taxonomy and the preview contract this obeys) ·
@@ -89,19 +89,38 @@ guards both ends together.
 solid disc; this route inherits that and passes nothing. Closing a hole is the app's job — the
 Fill button in [masking-adjust.md](masking-adjust.md).
 
-## Slots are filled by paste
+## One slot, and where the cut comes from
 
-`MpiMediaSlot` is a dumb one-media drop point: a label, a thumbnail URL, and a right-click menu
-whose rows are conditional rather than greyed. A left click on an empty slot pastes as a
-shortcut. What a pasted value MEANS belongs to the panel, which is how one component holds an
-image or a mask with no `kind` branch.
+**Right-click the canvas → Send to Composite** (user, 2026-08-04). The same gesture the Video
+workspace offers as *Set as start frame* / *Set as end frame*, and the right one here: the image
+you want underneath is usually the one you are looking at. It writes `_compositeImage` in
+`MpiGroupHistoryBlock` — app-local, workspace-lifetime, deliberately not the OS clipboard,
+because a slot needs a project-file URL the canvas can load. The panel seeds the slot from it on
+mount and sees it through a `clipboard` accessor object passed by `mountOptions()` — accessors,
+not values, because the panel mounts once and the buffer changes under it. **`Copy image` in the
+history list was the first source and came back out**; a filled slot has one origin, not two.
 
-The source is the app-local copy buffer in `MpiGroupHistoryBlock` that already backed **Copy
-mask** — deliberately not the OS clipboard, because a slot needs a project-file URL the canvas
-can load. MPI-373 added **Copy image** beside it and a `flat` field on the mask buffer: the mask
-slot needs ONE image, where `paste-mask` rebuilds from the layer pair. The panel sees both
-through a `clipboard` accessor object passed by `mountOptions()` — accessors, not values,
-because the panel mounts once and the buffers change under it.
+**There is no mask slot.** `maskComp` reads the mask already on the selected entry. The pasted
+one was a second, worse way to produce the same pixels — the user already has the whole mask
+toolkit (brush, detect, points, text, shapes, adjust) pointed at that exact layer. Reading that
+layer is fine; *writing* into it is what the scratch-layer decision above rules out.
+
+`MpiMediaSlot` stays a dumb one-media drop point: a label, a thumbnail URL, a right-click
+Paste / Clear whose rows are conditional rather than greyed, a left-click paste shortcut, and
+`setValue()` for the mount-time seed. What a filled value MEANS belongs to the panel.
+
+### The hole is an ALPHA layer, and the mask export has two flavours
+
+`MaskManager.getURL()` **with no arguments** exports white-on-transparent; `getURL('black',
+'white')` — what every prompt-tool consumer reads — exports OPAQUE black-and-white. Only the
+first can feed `holeCanvas`, because the canvas consumes the hole by **alpha** (`destination-in`
+in `_renderOverlay`, and `isEmpty()`) while Sharp consumes it by **luminance**. Hand it the
+opaque flavour and the canvas cuts the *whole frame* while the server cuts only the white part:
+the preview lies, which is the one thing this card exists to fix. `MpiCanvas.setCompositeHoleFromMask()`
+is the single caller and picks the overload; `tests/mask-tool-registry.test.cjs` holds it there.
+
+An unpainted mask exports blank, so the hole comes back empty and Apply's gate stays shut on its
+own — there is no separate has-a-mask check, and the panel's hint line says why.
 
 ## The contracts it obeys
 
@@ -110,7 +129,7 @@ because the panel mounts once and the buffers change under it.
   ([masking-tools.md](masking-tools.md) § The preview contract). Leaving the tool restores the
   single-entry canvas, leaves no mask on either entry, and writes nothing to disk.
 - **Every cut is undoable.** A stroke is a gesture on the shared `UndoStack`; Clear is a
-  layer-wide one-shot. A pasted mask is a LOAD and records nothing
+  layer-wide one-shot. Reading the entry's mask into the hole is a LOAD and records nothing
   ([masking-undo.md](masking-undo.md)).
 - **Every path that changes the cut ANNOUNCES it**, through the single
   `setOnCompositeChange` slot the panel claims on mount and clears on destroy. A slot

@@ -10,8 +10,9 @@
     color: var(--ink-3);
 }
 
-/* One column on Paint Comp, two on Mask Comp — the mask slot's host is REMOVED
-   rather than hidden, so auto-fit does the layout with no modifier class. */
+/* One slot under both front ends since the mask slot was deleted (user, 2026-08-04).
+   Kept as a grid rather than collapsed to the bare slot: it is the seam a second
+   media input would land on, and auto-fit already lays that out with no modifier. */
 .mpi-tool-options-composite__slots {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(0, 1fr));

@@ -4,30 +4,36 @@
  * The last card of the MPI-424 taxonomy, and its cleanest example: ONE operation with
  * two front ends. The selected entry is image 1 and sits ON TOP; a slot holds image 2,
  * underneath. `paintComp` cuts the hole live with the brush; `maskComp` takes the same
- * hole from a pasted mask. Same layer, same preview, same server blend — the only
- * difference is where the cut comes from, which is why this is one component under two
- * modes rather than two components sharing a base.
+ * hole from the mask already on the selected entry. Same layer, same preview, same
+ * server blend — the only difference is where the cut comes from, which is why this is
+ * one component under two modes rather than two components sharing a base.
  *
  * IT REPLACES THE MPI-362 MODAL. That flow selected two entries, required one of them
  * to already carry a mask, and asked Add or Subtract in prose — the blend was invisible
  * while the user decided it, so he ran it three or four times. Nothing about the server
  * side changed; what changed is that he can see it.
  *
- * SLOTS ARE FILLED BY PASTE, not by selection (user, 2026-08-01). Changing the
- * selection used to restart the whole operation. `Copy image` sits beside the existing
- * `Copy mask` in the history list's context menu, and a slot takes either.
+ * ONE SLOT, AND IT IS NOT FILLED BY SELECTION (user, 2026-08-04). Right-click the
+ * canvas on the entry you want underneath → `Send to Composite`; it lands here on the
+ * next mount. Changing the selection used to restart the whole operation, which is why
+ * the slot is a buffer and not "the other selected entry".
+ *
+ * THERE IS NO MASK SLOT. `maskComp` reads the mask already on the selected entry: the
+ * user has the whole mask toolkit — brush, detect, points, text, shapes, adjust —
+ * pointed at that exact layer, so a second place to paste a mask was a worse way to
+ * produce the same pixels.
  *
  * NO PROMPTBOX. Composite is the one group in the taxonomy that drops it: it ends at
- * its own Apply and needs the column for the slots (`docs/masking-tools.md`).
+ * its own Apply and needs the column for the slot (`docs/masking-tools.md`).
  *
  * Props:
  * @param {object} viewer - MpiCanvasViewer instance
  * @param {'maskComp'|'paintComp'} mode - which mount this is
  * @param {object} [clipboard] - app-local copy buffer accessors from MpiGroupHistoryBlock:
- *   { hasImage(), getImage(), hasMask(), getMask() }
+ *   { hasImage(), getImage() }
  *
  * Requires on viewer.el:
- *   enterMode('composite'), exitMode(), setCompositeUnderlay(), setCompositeHole(),
+ *   enterMode('composite'), exitMode(), setCompositeUnderlay(), setCompositeHoleFromMask(),
  *   hasCompositeUnderlay(), hasCompositeHole(), getCompositeURL(), clearComposite()
  *
  * Emits:
@@ -49,17 +55,22 @@ const MOUNTS = {
     paintComp: {
         // The brush IS the cut here, so the strip arms it.
         brush: true,
-        maskSlot: false,
+        // Nothing to read on mount: the cut starts empty and the brush makes it.
+        useEntryMask: false,
         hint: 'Erase the top image to reveal the one underneath. Paint it back to undo the cut.',
     },
     maskComp: {
-        // The cut arrives whole from the mask slot; a brush on top of it would be a
-        // second, worse way to do the same thing.
+        // The cut arrives whole from the entry's own mask; a brush on top of it would
+        // be a second, worse way to do the same thing.
         brush: false,
-        maskSlot: true,
-        hint: 'The mask slot supplies the cut: white takes the image underneath.',
+        useEntryMask: true,
+        hint: 'This entry’s mask is the cut: the masked area takes the image underneath.',
     },
 };
+
+/** Shown instead of the hint when the mount cannot do its job — see `_say()`. */
+const NO_MASK = 'This entry has no mask. Paint or detect one with the Mask tools first.';
+const BAD_IMAGE = 'That image could not be loaded — the slot was emptied.';
 
 export const MpiToolOptionsComposite = ComponentFactory.create({
     name: 'MpiToolOptionsComposite',
@@ -70,7 +81,6 @@ export const MpiToolOptionsComposite = ComponentFactory.create({
             <div class="mpi-tool-options-composite__hint" id="hint-slot"></div>
             <div class="mpi-tool-options-composite__slots">
                 <div class="mpi-tool-options-composite__slot" id="image-slot"></div>
-                <div class="mpi-tool-options-composite__slot" id="mask-slot"></div>
             </div>
             <div class="mpi-tool-options-composite__row" id="commit-slot"></div>
             <div id="strip-slot"></div>
@@ -87,49 +97,71 @@ export const MpiToolOptionsComposite = ComponentFactory.create({
         const _children = [];
 
         viewer.el.enterMode?.('composite');
-        qs('#hint-slot', el).textContent = mount.hint;
+
+        const hintEl = qs('#hint-slot', el);
+        let _badImage = false;
+        let _noMask = false;
+        /**
+         * The hint line doubles as the error surface. Every way this panel can fail is
+         * silent otherwise — a slot renders its own thumbnail whether or not the canvas
+         * accepted the URL, and an entry with no mask just leaves Apply greyed with no
+         * reason given. That silence is what cost a whole test round on 2026-08-04.
+         *
+         * Derived from flags rather than written by each caller: the slot seed and the
+         * entry-mask read both resolve asynchronously, so a `_say(msg)` API would let
+         * whichever landed second erase the other one's reason.
+         */
+        function _say() {
+            hintEl.textContent = _badImage ? BAD_IMAGE : _noMask ? NO_MASK : mount.hint;
+        }
+        _say();
 
         // ── The image slot — what shows through the cut ──────────────────────
 
         const imageSlot = MpiMediaSlot.mount(qs('#image-slot', el), {
             label: 'Image underneath',
-            empty: 'Copy an entry, then paste',
+            empty: 'Right-click an image → Send to Composite',
             canPaste: () => !!clip.hasImage?.(),
             readPaste: () => clip.getImage?.() || null,
         });
         imageSlot.on('change', async ({ url }) => {
             const ok = await viewer.el.setCompositeUnderlay?.(url || null);
             // A slot that shows a thumbnail the canvas could not load is the exact
-            // silent failure the preview contract exists to prevent — empty it back.
-            if (url && !ok) imageSlot.el.clear();
+            // silent failure the preview contract exists to prevent — empty it back,
+            // and SAY SO, or an emptied slot reads as a click that did nothing.
+            // Guarded on `url` so the rollback's own `change` (url: null) does not
+            // immediately clear the reason it was just given.
+            if (url) {
+                _badImage = !ok;
+                if (!ok) imageSlot.el.clear();
+            }
+            _say();
             _syncApply();
         });
         _children.push(imageSlot);
 
-        // ── The mask slot — Mask Comp only ───────────────────────────────────
+        // The panel mounts once per rail switch, so `Send to Composite` (which happens
+        // on a different entry, before this tool is open) lands here rather than
+        // needing a second paste gesture. Right-click → Paste still works for a
+        // re-fill after Clear slot.
+        const seeded = clip.getImage?.();
+        if (seeded) imageSlot.el.setValue(seeded);
 
-        const maskHost = qs('#mask-slot', el);
-        let maskSlot = null;
-        if (mount.maskSlot) {
-            maskSlot = MpiMediaSlot.mount(maskHost, {
-                label: 'Mask (the cut)',
-                empty: 'Copy a mask, then paste',
-                canPaste: () => !!clip.hasMask?.(),
-                readPaste: () => {
-                    const url = clip.getMask?.();
-                    return url ? { url, name: 'mask' } : null;
-                },
-            });
-            maskSlot.on('change', async ({ url }) => {
-                if (url) await viewer.el.setCompositeHole?.(url);
-                else viewer.el.clearComposite?.();
+        // ── Mask Comp: the cut is the entry's OWN mask ───────────────────────
+        // Read once. There is no brush and no mask tool inside this mount, so the
+        // mask cannot change while the panel is up — a subscription would be a
+        // listener leak (the factory's `instance.on()` hands back no unsubscribe)
+        // paid for an event that cannot fire.
+
+        if (mount.useEntryMask) {
+            Promise.resolve(viewer.el.setCompositeHoleFromMask?.()).then((ok) => {
+                // A blank mask exports as a blank PNG rather than null, so the hole
+                // itself is the real answer — `ok` alone would call an unpainted mask
+                // a success and leave Apply greyed with no reason on screen.
+                _noMask = !ok || !viewer.el.hasCompositeHole?.();
+                _say();
                 _syncApply();
             });
-            _children.push(maskSlot);
-        } else {
-            // REMOVED, not hidden: a class carrying `display` outranks `[hidden]`,
-            // which is how inert rows have reached the screen here before (MPI-382).
-            maskHost.remove();
         }
 
         // ── Apply ────────────────────────────────────────────────────────────

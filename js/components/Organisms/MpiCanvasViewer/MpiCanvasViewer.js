@@ -1524,8 +1524,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
         /** Point the tool at image 2 (the slot). @returns {Promise<boolean>} */
         el.setCompositeUnderlay      = (url) => canvas.setCompositeUnderlay?.(url) ?? Promise.resolve(false);
-        /** Mask Comp: take the cut from a pasted mask instead of a brush. */
-        el.setCompositeHole          = (dataUrl) => canvas.setCompositeHoleFromDataURL?.(dataUrl) ?? Promise.resolve(false);
+        /**
+         * Mask Comp: take the cut from the selected entry's OWN mask (user, 2026-08-04).
+         * There is no pasted-mask slot — the mask toolkit already points at that layer.
+         * @returns {Promise<boolean>} false when the entry carries no mask
+         */
+        el.setCompositeHoleFromMask  = () => canvas.setCompositeHoleFromMask?.() ?? Promise.resolve(false);
         el.setCompositeBrushMode     = (type) => canvas.setCompositeBrushType?.(type);
         el.setCompositeBrushSize     = (n) => canvas.setCompositeBrushSize?.(n);
         el.setCompositeEnabled       = (v) => canvas.setCompositeEnabled?.(v);

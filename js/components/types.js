@@ -310,25 +310,25 @@
  * @typedef {Object} MpiToolOptionsCompositeProps (Organism — js/components/Organisms/MpiToolOptionsComposite)
  * @property {Object} viewer - MpiCanvasViewer instance
  * @property {'maskComp'|'paintComp'} mode - which front end; decides where the cut comes from
- * @property {Object} [clipboard] - app-local copy buffer accessors: { hasImage, getImage, hasMask, getMask }
+ * @property {Object} [clipboard] - app-local buffer accessors: { hasImage, getImage }
  *
  * The Composite group (MPI-373) — ONE panel under TWO modes, the same pattern as
  * MpiToolOptionsShapes and for the same reason. The selected entry is image 1 and
  * sits ON TOP; a slot holds image 2, underneath; a hole through image 1 reveals it.
- * `paintComp` cuts that hole live with the brush, `maskComp` takes it from a pasted
- * mask. Per-mount differences are ROWS in the module's `MOUNTS` table; an unknown
- * mode throws.
+ * `paintComp` cuts that hole live with the brush, `maskComp` takes it from the mask
+ * already on the selected entry. Per-mount differences are ROWS in the module's
+ * `MOUNTS` table; an unknown mode throws.
  *
- * Slots are filled by PASTE, from `Copy image` / `Copy mask` in the history list's
- * context menu — not by selecting two entries, which is what made the retired
- * MPI-362 modal restart every time the selection changed.
+ * ONE slot, seeded on mount from `Send to Composite` on the CANVAS context menu — not
+ * by selecting two entries, which is what made the retired MPI-362 modal restart every
+ * time the selection changed. There is no mask slot (user, 2026-08-04).
  *
  * The ONLY group that drops the PromptBox (`_COMPOSITE_TOOLS` is absent from
- * `_modeKeepsPromptBox`): it ends at its own Apply and needs the column for slots.
+ * `_modeKeepsPromptBox`): it ends at its own Apply and needs the column for the slot.
  * The whole preview is scratch — `discardPreview()` drops the cut AND the underlay.
  *
  * Requires viewer.el: enterMode('composite'), exitMode(), setCompositeUnderlay(),
- *   setCompositeHole(), hasCompositeHole(), getCompositeURL(), clearComposite(),
+ *   setCompositeHoleFromMask(), hasCompositeHole(), getCompositeURL(), clearComposite(),
  *   setOnCompositeChange()
  * Emits: 'composite-apply' { overlayUrl, maskDataUrl } — the Block runs the blend.
  */
@@ -340,13 +340,13 @@
  * @property {()=>boolean} canPaste - is there something on the copy buffer
  * @property {()=>{url: string, name?: string}|null} readPaste - take it off the buffer
  *
- * A one-media drop point filled by PASTE (MPI-373) — the Composite group's slots.
- * Right-click opens Paste / Clear (rows are conditional, never greyed); a left click
- * on an empty slot pastes as a shortcut. Deliberately dumb: it knows a label, a
- * thumbnail URL and a menu, so the same component holds an image or a mask with no
- * `kind` branch — what a pasted value MEANS belongs to the panel.
+ * A one-media drop point (MPI-373) — the Composite group's slot. Right-click opens
+ * Paste / Clear (rows are conditional, never greyed); a left click on an empty slot
+ * pastes as a shortcut, and the panel seeds it with `setValue()` on mount. Deliberately
+ * dumb: it knows a label, a thumbnail URL and a menu — what a filled value MEANS
+ * belongs to the panel.
  *
- * Instance methods (on instance.el): getValue() → {url, name}|null, clear()
+ * Instance methods (on instance.el): getValue() → {url, name}|null, setValue(v), clear()
  * Emits: 'change' { url: string|null, name: string|null }
  */
 
@@ -1287,7 +1287,6 @@
  *   'compare-requested' { indices: [number, number] }   — compare from context menu (image only)
  *   'download-selected' { indices }                     — download selected entries
  *   'download-mask'     { index }                       — download single entry mask
- *   'copy-image'        { index }                       — copy the entry image to the Composite slots (MPI-373)
  *   'copy-mask'         { index }                       — copy the entry mask layers
  *   'paste-mask'        { index }                       — paste the copied mask onto the entry
  *   'reveal'            { indices }                       — open entry/Media folder in file system

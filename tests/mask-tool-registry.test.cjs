@@ -516,7 +516,7 @@ test('client preview and server blend both COVER the underlay', () => {
 test('every composite method the panel calls is allowlisted on MpiCanvas', () => {
     const methods = read('js/components/Primitives/MpiCanvas/MpiCanvas.js').match(/const _methods = \[([\s\S]*?)\n {8}\];/);
     assert.ok(methods, '_methods allowlist not found in MpiCanvas');
-    for (const name of ['setCompositeUnderlay', 'setCompositeHoleFromDataURL', 'setCompositeEnabled',
+    for (const name of ['setCompositeUnderlay', 'setCompositeHoleFromDataURL', 'setCompositeHoleFromMask', 'setCompositeEnabled',
         'hasCompositeHole', 'getCompositeURL', 'clearComposite', 'resetComposite', 'setOnCompositeChange']) {
         assert.match(methods[1], new RegExp(`'${name}'`),
             `${name} is missing from the _methods allowlist — el.${name} would be undefined and swallowed`);
@@ -549,8 +549,55 @@ test('the blind Add/Subtract composite modal is fully gone', () => {
         'preloadStyles.js still loads the deleted dialog stylesheet');
     assert.ok(!/composite-requested/.test(read('js/components/Compounds/MpiHistoryList/MpiHistoryList.js')),
         'MpiHistoryList still emits composite-requested — nothing listens for it any more');
-    assert.match(read('js/components/Compounds/MpiHistoryList/MpiHistoryList.js'), /key: 'copy-image'/,
-        'Copy image is missing from the history context menu — the Composite slots have no source');
+});
+
+// THE REDESIGN (user, 2026-08-04). `Copy image` in the history list was the slot's
+// first source and came straight back out: the image you want UNDERNEATH is the one
+// you are looking at, so the gesture belongs on the canvas — the same one the Video
+// workspace already offers as Set as start/end frame. A half-swap (both gestures, or
+// neither) is the shape that rots.
+test('the composite slot is filled from the canvas, not from the history list', () => {
+    const list = read('js/components/Compounds/MpiHistoryList/MpiHistoryList.js');
+    assert.ok(!/'copy-image'/.test(list),
+        'Copy image is still in the history list — it was replaced by Send to Composite on the canvas');
+
+    const menu = BLOCK.match(/Events\.on\('image-viewer:context-menu'[\s\S]*?\n {12}\}\)\);/);
+    assert.ok(menu, 'the image-viewer context-menu handler was not found in MpiGroupHistoryBlock');
+    assert.match(menu[0], /key: 'send-composite'/,
+        'the canvas context menu offers no Send to Composite — nothing can fill the slot');
+    assert.match(menu[0], /_compositeImage = \{/,
+        'Send to Composite never writes the buffer the Composite panel reads');
+});
+
+// THE REDESIGN, part 2: no pasted-mask slot. Mask Comp reads the mask already on the
+// selected entry — the user has the whole mask toolkit pointed at that exact layer.
+test('Mask Comp reads the entry mask instead of a pasted one', () => {
+    const panel = read('js/components/Organisms/MpiToolOptionsComposite/MpiToolOptionsComposite.js');
+    assert.ok(!/mask-slot|maskSlot/.test(panel),
+        'the pasted-mask slot survives in MpiToolOptionsComposite — it was deleted (user, 2026-08-04)');
+    assert.match(panel, /setCompositeHoleFromMask\?\.\(\)/,
+        'Mask Comp never reads the entry mask, so its cut can only ever be empty');
+
+    const clip = BLOCK.match(/const _clipboard = \{[\s\S]*?\n {8}\};/);
+    assert.ok(clip, '_clipboard not found in MpiGroupHistoryBlock');
+    assert.ok(!/hasMask|getMask/.test(clip[0]),
+        '_clipboard still exposes the mask buffer to the panel — dead once the mask slot went');
+});
+
+// THE DEFECT THAT SURVIVED THE FIRST BUILD. `holeCanvas` is consumed by ALPHA on the
+// canvas (`destination-in`, and `isEmpty()`) but by LUMINANCE on the server. The mask
+// export every prompt-tool consumer uses — getURL('black', 'white') — is OPAQUE, so
+// feeding it here reads as "cut the whole frame" on screen and "cut only the white
+// part" on disk: the preview lies, which is the one thing this card exists to fix.
+test('the composite hole is fed an ALPHA mask, not an opaque black-and-white one', () => {
+    const canvas = read('js/components/Primitives/MpiCanvas/MpiCanvas.js');
+    const body = canvas.match(/ {4}async setCompositeHoleFromMask\(\)[\s\S]*?\n {4}\}/);
+    assert.ok(body, 'setCompositeHoleFromMask not found in MpiCanvas');
+    assert.match(body[0], /this\.mask\.getURL\(\)/,
+        'the entry mask is not read through the no-arg (white-on-transparent) overload');
+    assert.ok(!/getURL\(\s*'/.test(body[0]),
+        'setCompositeHoleFromMask passes bg/fg to getURL — that overload is OPAQUE, so the '
+        + 'canvas would cut everywhere while Sharp cut only the white part');
 });
 
 // Only the Brush tool paints. A brushless tool that still armed the brush would
