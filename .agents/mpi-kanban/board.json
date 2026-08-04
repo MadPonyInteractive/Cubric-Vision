@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 442,
+  "next_id": 443,
   "columns": {
     "todo": [
       "MPI-439",
@@ -29,7 +29,8 @@
       "MPI-343",
       "MPI-348",
       "MPI-349",
-      "MPI-403"
+      "MPI-403",
+      "MPI-442"
     ],
     "doing": [
       "MPI-440",
@@ -44,7 +45,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-04T19:12:00Z",
+  "updated_at": "2026-08-04T19:35:00Z",
   "events": [
     {
       "at": "2026-08-04T02:55:00Z",
@@ -1843,6 +1844,12 @@
       "type": "task.moved",
       "task": "MPI-441",
       "note": "doing -> done. User-validated in the app: Grow +50 and a 35px Edge band both track the real silhouette."
+    },
+    {
+      "at": "2026-08-04T19:35:00Z",
+      "type": "task.created",
+      "task": "MPI-442",
+      "note": "The pre-commit hook told everyone to flip lint to strict \"in a separate tracker once clean\" - there was no tracker. Measured: 19 warnings, 9 files."
     }
   ]
 }

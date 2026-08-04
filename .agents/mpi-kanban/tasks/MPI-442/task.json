@@ -1,0 +1,33 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-442",
+  "title": "Flip js/ lint from warn-only to strict - 19 warnings across 9 files",
+  "description": "The pre-commit hook runs eslint with --max-warnings=9999 and prints: \"Lint ran in warn-only mode. Violations above do not block commit. Flip to strict mode in a separate tracker once clean.\" This is that tracker - it did not exist, so the note pointed at nothing and the warn-only mode had no end condition.\n\nMeasured 2026-08-04: 19 warnings, 4 rules, 9 files.\n  9  mpi/no-raw-dom-query      - use qs/qsa/gid from js/utils/dom.js\n  4  mpi/no-hardcoded-hex-color - use the CSS variables in styles/01_base.css\n  4  mpi/require-destroy-on-events - a setup that calls Events.on must define el.destroy()\n  2  (uncategorised, ruleId null)\n\nFiles: MpiAppLibrary.js (2), MpiPromptBox.js (1), CompositeManager.js (1), data/modelConstants/footprint.js (2), managers/hotkeyRegistry.js (2), managers/templateManager.js (1), pages/components.js (5), shell/heroStats.js (4), shell/preloadStyles.js (1).\n\nThe four require-destroy-on-events hits are the ones that matter - an Events.on without a matching destroy() is a real leak per the teardown contract in .claude/rules/components.md, not a style nit. The other three rules are mechanical. Worth checking whether the 2 null-ruleId messages are config/parse errors rather than violations before counting them.\n\nFlip means: drop --max-warnings=9999 from the three sites in package.json (lint, lint:components, the lint-staged entry) and delete the warn-only echo from .husky/pre-commit. Do NOT flip before the count is zero, or every commit in the repo blocks.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-08-04T19:35:00Z",
+  "updated_at": "2026-08-04T19:35:00Z",
+  "labels": [
+    "tooling",
+    "lint",
+    "tech-debt"
+  ],
+  "acceptance": [
+    "eslint js/ reports 0 warnings with no --max-warnings escape hatch",
+    "The 4 mpi/require-destroy-on-events hits are fixed as real teardown bugs (an Events.on with no destroy leaks), not silenced with a disable comment",
+    "The 2 null-ruleId messages are identified - a config or parse error is a different fix from a violation",
+    "--max-warnings=9999 is removed from all THREE sites in package.json (lint, lint:components, lint-staged), not just the top one",
+    "The warn-only echo is deleted from .husky/pre-commit, so the message and the behaviour cannot drift apart again",
+    "A commit with a fresh violation is proven to FAIL the hook - flipping the flag without testing the block is a false done"
+  ],
+  "links": {
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "lint",
+    "tooling"
+  ],
+  "priority": "low",
+  "attention": false
+}
