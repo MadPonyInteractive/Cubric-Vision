@@ -1,21 +1,20 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 436,
+  "next_id": 438,
   "columns": {
     "todo": [
       "MPI-433",
       "MPI-432",
       "MPI-426",
       "MPI-421",
-      "MPI-413",
       "MPI-420",
       "MPI-416",
       "MPI-410",
       "MPI-404",
       "MPI-397",
-      "MPI-368",
       "MPI-435",
       "MPI-373",
+      "MPI-436",
       "MPI-374",
       "MPI-377",
       "MPI-358",
@@ -35,12 +34,15 @@
       "MPI-403"
     ],
     "doing": [
+      "MPI-413",
       "MPI-424",
       "MPI-367",
       "MPI-259",
       "MPI-4"
     ],
     "done": [
+      "MPI-368",
+      "MPI-437",
       "MPI-375",
       "MPI-365",
       "MPI-434",
@@ -127,8 +129,60 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-08-03T23:58:00Z",
+  "updated_at": "2026-08-04T02:55:00Z",
   "events": [
+    {
+      "at": "2026-08-04T02:55:00Z",
+      "type": "task.moved",
+      "task": "MPI-368",
+      "from": "doing",
+      "to": "done",
+      "actor": "opus",
+      "note": "Shape gizmo SHIPPED and USER-VERIFIED across three rounds: both mounts off one ShapeManager, Shift proportion lock, 7.5 degree rotation snap, and a redrawn rail icon. Docs split rather than trimmed (masking-shapes.md new, masking-adjust.md carved out of masking-tools.md, now 147/200). Suite 374/0, 14 negative controls, a 22-assertion real-pixel probe. Commit 6478a71d."
+    },
+    {
+      "at": "2026-08-04T02:55:00Z",
+      "type": "task.moved",
+      "task": "MPI-437",
+      "from": "doing",
+      "to": "done",
+      "actor": "opus",
+      "note": "Composite fillHoles default flipped to opt-IN and USER-VERIFIED on the original edge-band repro. The MPI-431 twin its sweep missed; a shipped test that asserted the old behaviour was inverted. Commit 55f5a048."
+    },
+    {
+      "at": "2026-08-04T02:35:00Z",
+      "type": "task.moved",
+      "task": "MPI-437",
+      "from": "todo",
+      "to": "doing",
+      "actor": "opus",
+      "note": "Fixed the same session it was carded - the user asked for it if it was quick, and it was a one-line default flip. compositeThroughMask now requires an explicit fillHoles: true. The shipped test that asserted the OLD behaviour was inverted: its stated justification (MaskDetailerPipe contour_fill: true) had already been removed by MPI-431."
+    },
+    {
+      "at": "2026-08-04T02:15:00Z",
+      "type": "task.created",
+      "task": "MPI-437",
+      "actor": "opus",
+      "column": "todo",
+      "note": "User-reported edge-band composite bug, root cause found the same session: compositeThroughMask defaults fillHoles ON and no caller ever passes it, so a ring mask is filled to a disc. The MPI-431 twin the graph-side sweep missed. Placed BEFORE MPI-373, which keeps this route under both its front ends."
+    },
+    {
+      "at": "2026-08-04T00:50:00Z",
+      "type": "task.moved",
+      "task": "MPI-368",
+      "from": "todo",
+      "to": "doing",
+      "actor": "opus",
+      "note": "Implementation started. Card 4 of the MPI-424 umbrella, unblocked by MPI-375. Compact plan attached; three user decisions front-loaded (paint mount commits Fill/Erase, gizmo stays after a commit, filled only). Verify mode user-ux."
+    },
+    {
+      "at": "2026-08-04T00:40:00Z",
+      "type": "task.created",
+      "task": "MPI-436",
+      "actor": "opus",
+      "column": "todo",
+      "note": "Adjust for the RGBA paint layer, split out of the MPI-368 planning session. Point MaskManager._morph at the paint layer: shrink is destination-in against the layer, grow fills the new ring in the current colour with the original drawn back on top, and the edge band IS the outline tool. This is WHY MPI-368 ships filled-only - an outline mode on the gizmo would be a second, worse implementation that only outlines shapes."
+    },
     {
       "at": "2026-08-01T23:30:00Z",
       "type": "task.created",

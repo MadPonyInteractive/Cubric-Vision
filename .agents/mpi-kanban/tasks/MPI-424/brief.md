@@ -62,7 +62,16 @@ Grow, shrink and an edge band are one primitive: an edge band is
 | 3 | **MPI-375** Paint | RGBA layer + brush-engine extraction (both mounts) + the alpha brush pack. |
 | 4 | **MPI-368** Shapes | One gizmo, TWO mounts - mask and paint. |
 | 5 | **MPI-373** Composite | Both comps, pasted slots, replaces the MPI-362 modal. |
+| 6 | **MPI-436** Paint Adjust | The SAME `_morph` primitive pointed at the RGBA layer — and the app's outline tool. Added 2026-08-04. |
+| ! | **MPI-437** composite fillHoles | Edge-band masks composited as discs. Root-caused and FIXED 2026-08-04, awaiting the user's repro. MPI-373 inherits that route — do not reintroduce a default fill. |
 | - | **MPI-421** run cost | Independent of the rest; now scoped to ONE Detect panel instead of three. |
+
+**MPI-436 added 2026-08-04 (user), and it is why MPI-368 ships FILLED-ONLY.** An outline
+mode on the shape gizmo would be a second, worse implementation of something Adjust already
+does properly, and it would only ever outline a shape — `_morph` outlines any paint. Shrink
+is `destination-in` against the layer, grow fills the new ring in the current colour with
+the original drawn back on top, and the edge band *is* the outline. Same engine, one more
+destination: the taxonomy's whole thesis, applied to Adjust instead of to the brush.
 
 **3 and 4 SWAPPED 2026-08-03 (user).** Shapes was third and Paint fourth, which is
 backwards: the gizmo's whole point is ONE geometry with TWO destinations, and the
@@ -76,23 +85,27 @@ lands both mounts at once, which is what its card actually says. The checklist's
 ## A fresh session starts HERE
 
 1. Read this file — it is the whole design; the chat it came from is gone.
-2. **MPI-425, MPI-382, MPI-431 and MPI-375 have all SHIPPED** (2026-08-02 →
-   2026-08-03, each verified in the app). The frame exists: groups render, and a
-   group member may carry `collapse` + `sub[]` to open its modes in a floating
-   `MpiPopup` strip instead of stacking them. **Both engines now exist too** — the
-   brush was extracted to `brushDab.js` and the RGBA paint layer is real.
-   **MPI-368 (Shapes) is next**, and it is the card the whole taxonomy was
-   sequenced for: one gizmo, both destinations, in one pass.
-3. Before writing any of MPI-368: read `tasks/MPI-425/plan.md` § Completed (the
+2. **MPI-425, MPI-382, MPI-431, MPI-375 and MPI-368 have all SHIPPED** (2026-08-02
+   → 2026-08-04). The frame exists, and **both shared engines are now genuinely
+   shared**: the brush (`brushDab.js`) and the gizmo (`ShapeManager.js`) each mount
+   in two groups. Four of the five cards are done; **MPI-373 (Composite) is the
+   last**, and it is the one that ends the umbrella.
+3. Before writing any of MPI-373: read `tasks/MPI-425/plan.md` § Completed (the
    shape you mount a button into, and the traps already paid for),
-   `docs/masking-tools.md` § The preview contract (a gizmo in flight IS a preview —
-   extend `discardPreview`, never the call site), **`docs/painting.md` § Seams the
-   next cards land on** (the paint rasterise target, spelled out so this card does
-   not rediscover it), and `docs/masking-undo.md` (a shape commit is a layer-wide
-   one shot → `_recordUndo()` after the no-op guard).
-4. MPI-368 and MPI-373 have settled designs on their own cards but NO plan file
-   yet — run `mpi-create-plan` against each as it comes up, not before. MPI-435
-   (alpha brush pack) is unblocked and parameterises `stampDab` alone.
+   `docs/masking-tools.md` § The preview contract (extend `discardPreview`, never
+   the call site — Shapes is the second tool to have done it, and
+   `docs/masking-shapes.md` shows how), and `docs/masking-undo.md` if it mutates a
+   layer at all.
+4. MPI-373 has a settled design on its own card but NO plan file yet — run
+   `mpi-create-plan` against it when it comes up, not before. MPI-435 (alpha brush
+   pack) is unblocked and parameterises `stampDab` alone. **MPI-436** (Adjust for
+   the paint layer, added 2026-08-04) sits after MPI-373.
+5. **MPI-368 left one thing on the table, deliberately.** The mask export
+   (`MaskManager.getURL()`) treats `a > 0` as mask while Fill Holes cuts at
+   `>= 128`, so the sub-threshold rim antialiasing leaves behind — after ANY
+   erase, including the shipped brush's — exports as solid white. Measured, not
+   inferred: `docs/masking-shapes.md` § Measured against real pixels. It predates
+   this card and belongs to whoever owns the export threshold.
 
 Nothing about this design lives outside these cards. The rejected MPI-379 is the
 record of what was ruled out and why.

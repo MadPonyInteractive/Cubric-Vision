@@ -1,0 +1,30 @@
+{
+ "schema": "mpi-kanban/task-card/v1",
+ "id": "MPI-437",
+ "title": "Mask composite fills the hole in an edge-band mask - server route defaults fillHoles ON",
+ "description": "USER-REPORTED 2026-08-04 with a live repro: an EDGE-BAND mask composite brings through the whole disc instead of just the band. Expected only the ring the mask selects; got the enclosed interior too.\n\nROOT CAUSE, found in one hop and NOT a guess: services/imageComposite.js compositeThroughMask() runs `if (fillHoles !== false) fillMaskHoles(maskRaw, width, height)`. routes/projects.js documents the parameter as \"optional, default true: areas enclosed by paint count as masked, matching MaskDetailerPipe contour_fill\". Grepped every consumer 2026-08-04: NOBODY EVER PASSES IT. It is undefined at every call site, `undefined !== false` is true, and hole filling is unconditionally ON. A ring mask is a disc before Sharp ever sees it.\n\nTHIS IS THE MPI-431 TWIN ITS SWEEP MISSED. That card turned mask_fill_holes OFF in every raw template and the detailers contour_fill with it, for exactly this reason (the graph silently refilled an edge band into a disc before the sampler saw it), and established that THE APP IS NOW THE ONLY THING THAT CLOSES A HOLE - via the Fill button, where the user can see it happen. That sweep covered the graph; this server route kept its own private copy of the behaviour, on by default. Read MPI-431 first: docs/masking-tools.md and tasks/MPI-431/.\n\nFIX DIRECTION (settle before coding): default fillHoles to FALSE so the route respects the mask it was handed, and let a caller opt in explicitly. That matches the MPI-431 ruling and the Fill button. Do NOT delete fillMaskHoles - it is correct code that may earn a real opt-in caller.\n\nBLAST RADIUS - sweep, do not spot-fix:\n- /project/composite-media (MPI-362, the shipped modal) is the reported consumer.\n- /project/apply-paint uses compositeOverlay(), a DIFFERENT function that never calls fillMaskHoles - verified 2026-08-04, unaffected.\n- MPI-373 (Composite, the last MPI-424 card) REPLACES the modal but explicitly keeps this same server route under BOTH its front ends. Fixed here, 373 inherits the fix; left alone, 373 inherits the bug behind a new UI where it is far harder to spot.\n\nRELATED BUT DISTINCT: MaskManager.getURL() exports any non-zero alpha as solid white while the app cuts at >=128 elsewhere (measured in MPI-368 - docs/masking-shapes.md). That one promotes an antialiasing rim to mask; this one fills an enclosed region. Both are about what a mask MEANS by the time it leaves the app, so they are worth deciding in one sitting.",
+ "column": "done",
+ "maturity": "complete",
+ "status": "done",
+ "created_at": "2026-08-04T02:15:00Z",
+ "updated_at": "2026-08-04T02:55:00Z",
+ "labels": [
+  "masking",
+  "bug",
+  "server",
+  "composite"
+ ],
+ "acceptance": [
+  "An EDGE-BAND mask composites as a BAND - the enclosed interior keeps the base image, verified on the user repro (composite of a ring mask)",
+  "A mask with a genuine hole in it composites with that hole open",
+  "A solid mask is unchanged from today - the fix must not move the ordinary case",
+  "fillMaskHoles() still exists and still works when a caller opts in explicitly",
+  "Every consumer of compositeThroughMask swept and classified, not just the reported one",
+  "MPI-373 inherits the fixed route - no second copy of the behaviour behind the new UI"
+ ],
+ "links": {
+  "events": "events.jsonl",
+  "checklist": "checklist.md",
+  "validation": "validation.md"
+ }
+}
