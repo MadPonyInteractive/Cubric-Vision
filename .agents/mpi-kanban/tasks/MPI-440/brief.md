@@ -19,7 +19,7 @@ detection preview still violates the preview contract MPI-382 built the seam for
 |---|---|---|
 | ~~MPI-426~~ | A detection preview must stay a preview — stop auto-adding SAM3 picks to the live mask | **DONE 2026-08-04**, user-validated in the app. Commit `f64fc75e`; see `tasks/MPI-426/validation.md`. Two things every later member inherits: `hasMask()` now means *baked content only*, and the op strip gates on it |
 | MPI-435 | Alpha brush pack — ten procedural brushes for the mask AND paint brush | Lands on the shared brush engine, so both mounts get it at once |
-| MPI-436 | Adjust for the paint layer — grow / shrink / edge band over RGBA (the outline tool) | Reuses mask's `_morph`; the open question is what those ops mean over RGBA rather than coverage |
+| ~~MPI-436~~ | Adjust for the paint layer — grow / shrink / edge band over RGBA (the outline tool) | **BUILT 2026-08-04**, awaiting the user's in-app pass (`tasks/MPI-436/validation.md`). Reuses `distanceField.js`, not the `_morph` the card names — MPI-441 had already deleted that. **It answers the alpha question below** |
 | MPI-439 | Convert mask to paint / paint to mask, from the canvas context menu | New, 2026-08-04 |
 | ~~MPI-421~~ | Auto-mask run cost + feedback — cache per-object masks, then queue what is left | **BUILT 2026-08-04**, commit `1028b958`, awaiting the user's in-app pass (`tasks/MPI-421/validation.md`). The graph's `ImpactSEGSPicker` was the whole of MPI-402: it trimmed the masks to the chips selected at dispatch, so the fix was deleting it. Detect now shows an indeterminate bar and a Stop |
 | ~~MPI-441~~ | **Grow, Shrink and Edge all round the mask off** — `_morph` is a blur+threshold, i.e. an average where a dilation needs a maximum | **DONE 2026-08-04**, user-validated in the app. `_morph` and both `ADJUST_*` thresholds are deleted; the primitive is now an exact distance field in `managers/distanceField.js`. See `tasks/MPI-441/validation.md`. **MPI-436 is unblocked** |
@@ -54,10 +54,23 @@ detection preview still violates the preview contract MPI-382 built the seam for
      rebuilds the field per frame throws the entire benefit away — build on `beginAdjust()`.
    - **Outside the canvas counts as background**, so a layer running off the frame still erodes
      from that border. Paint must not silently pick the opposite convention.
-4. **MPI-436 — START HERE.** Adjust over RGBA, i.e. the outline tool. Most fully specified card in
-   the set (8 acceptance items, all three fills already worked out) and the highest user value.
-   It settles the alpha question below. **Unblocked** — MPI-441 landed.
-5. **MPI-439** — inherits 436's answer for free, and is small.
+4. ~~**MPI-436**~~ — **SHIPPED 2026-08-04**, in-app pass outstanding. Its three fills were right as
+   written; what was wrong was the primitive it named (`_morph`, deleted by MPI-441 the day before —
+   **check a card's named function still exists before starting it**). **Decisions recorded for the
+   rest of the set:**
+   - **THE ALPHA QUESTION IS ANSWERED — see below.**
+   - **One panel, two destinations.** `MpiToolOptionsMaskAdjust` is registered under BOTH
+     `maskAdjust` and `paintAdjust` and picks a `DEST` row off `props.mode`, the MPI-368 / MPI-373
+     pattern. The paint row adds a colour picker and drops Fill Holes; nothing else branches.
+   - **Paint's Apply must NOT call `onMaskStrokeEnd`.** That is the viewer's one mask publish path
+     and it re-gates the op strip; a paint mutation riding it claims a mask that does not exist.
+     Same line the shape commit's paint branch already draws.
+   - **An unapplied paint ADJUSTMENT is a preview and extends `discardPreview()`** — even though the
+     paint LAYER never did. A stroke is committed pixels; a proposed one is not.
+   - **Cost is quadratic in the source.** 2048² → 247 ms first frame then 7 ms; 4096² → 1563 ms then
+     64 ms. The 4K row is a known, deliberately unfixed ceiling (`ponytail:` comment names the
+     upgrade path). MPI-435 should not assume the paint layer is cheap to scan whole.
+5. **MPI-439 — START HERE.** Inherits 436's alpha answer for free, and is small.
 6. **MPI-435** — last. Ten procedural brush presets is polish, it blocks nothing, and the
    `brushDab.js` helper it needs already shipped with MPI-375, so it keeps.
 
@@ -68,17 +81,24 @@ user presses Add. MPI-439's new menu item gates on `viewer.el.hasMask()`. Land 4
 "Convert mask to paint" is offered on an un-Added detection preview and bakes it into the
 paint layer — the exact bug 426 exists to kill, reintroduced through a second door.
 
-## The one decision both 436 and 439 need — make it ONCE
+## The one decision both 436 and 439 need — ANSWERED by MPI-436, 2026-08-04
 
-Mask is coverage; paint is RGBA. Every remaining card trips on the same question: **does an
-operation read paint's alpha, or its luminance, and does it preserve soft edges?**
+Mask is coverage; paint is RGBA. The question was: **does an operation read paint's alpha, or its
+luminance, and does it preserve soft edges?**
 
-- MPI-436: does grow/shrink dilate the alpha channel, or the whole RGBA?
-- MPI-439: does paint→mask read alpha (assumed) or luminance, and does mask→paint carry the
-  mask's alpha through so a soft edge stays soft, or fill flat?
+**The shape of the paint layer is its ALPHA, binarised at ≥128** — the `fillHoles()` cut, the one
+`signedSquaredDistanceField()` already applies. **Not luminance**: a dark scribble is as painted as
+a light one, and reading luminance would make a black stroke read as background.
 
-Answer it in whichever card is picked up first, write it here, and the second card inherits
-it. Two cards answering it independently is how the layers end up disagreeing.
+**Soft edges: the boundary an operation CREATES is hard; every pixel that boundary does not touch
+keeps its own colour AND its own alpha.** That is not a compromise, it is what makes shrink lossless
+in the interior and grow's new ring the only flat part. MPI-436's three fills are the worked
+example (`docs/masking-adjust.md` § The paint layer).
+
+**MPI-439 inherits this, and must not re-decide it.** paint→mask reads alpha at the same ≥128 cut.
+mask→paint is the one direction still open, and it is a fill question, not a channel question: the
+mask's own antialiased rim can be carried through as alpha or filled flat — decide it there, but
+the CHANNEL is settled.
 
 ## Standing constraints — these did not expire with MPI-424
 
