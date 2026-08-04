@@ -87,6 +87,16 @@ test('extra folder routes persist, preserve set-path extras, and union list-file
     await fs.writeFile(path.join(extraLoras, 'extra.safetensors'), '');
     await fs.writeFile(path.join(extraLoras, 'collision.safetensors'), '');
 
+    // The route CANONICALISES what it stores (routes/shared.js
+    // _normalizeExtraFolderPath), so every assertion below has to compare against the
+    // canonical form, not the raw string handed to mkdtemp. On a runner whose username
+    // is longer than 8 characters os.tmpdir() returns an 8.3 short path
+    // (C:\Users\RUNNER~1\...) and the raw string never appears in the yaml at all —
+    // which is exactly how MPI-444 found the graceful-fs realpath bug.
+    const realExtraLoras = await fs.realpath(extraLoras);
+    const realExtraUpscalers = await fs.realpath(extraUpscalers);
+    const lorasPattern = new RegExp(realExtraLoras.replace(/\\/g, '/').replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+
     const app = express();
     app.use(express.json());
     app.use(comfyRouter);
@@ -104,8 +114,8 @@ test('extra folder routes persist, preserve set-path extras, and union list-file
         let data = await res.json();
         assert.equal(data.success, true);
         assert.deepEqual(data.folders, {
-            loras: [await fs.realpath(extraLoras)],
-            upscale_models: [await fs.realpath(extraUpscalers)],
+            loras: [realExtraLoras],
+            upscale_models: [realExtraUpscalers],
         });
 
         res = await fetch(`${baseUrl}/comfy/set-path`, {
@@ -119,7 +129,7 @@ test('extra folder routes persist, preserve set-path extras, and union list-file
         const yamlAfterSetPath = await fs.readFile(yamlPath, 'utf8');
         assert.match(yamlAfterSetPath, /loras: \|/);
         assert.match(yamlAfterSetPath, /upscale_models: \|/);
-        assert.match(yamlAfterSetPath.replace(/\\/g, '/'), new RegExp(extraLoras.replace(/\\/g, '/').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+        assert.match(yamlAfterSetPath.replace(/\\/g, '/'), lorasPattern);
 
         res = await fetch(`${baseUrl}/comfy/list-files?subDir=loras`);
         data = await res.json();
@@ -135,7 +145,7 @@ test('extra folder routes persist, preserve set-path extras, and union list-file
         assert.equal(data.success, true);
         const yamlAfterClear = await fs.readFile(yamlPath, 'utf8');
         assert.match(yamlAfterClear, /loras: \|/);
-        assert.match(yamlAfterClear.replace(/\\/g, '/'), new RegExp(extraLoras.replace(/\\/g, '/').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+        assert.match(yamlAfterClear.replace(/\\/g, '/'), lorasPattern);
     } finally {
         await new Promise(resolve => server.close(resolve));
         for (const [filePath, content] of Object.entries(backups)) {
