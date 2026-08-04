@@ -6,7 +6,10 @@
 - [x] macOS dangling-symlink claim checked against the build script, recorded on MPI-416
 - [x] tests.yml added
 - [x] tag-build coupling decided
-- [ ] red suite proven to fail the workflow — **needs a push, awaiting user go-ahead**
+- [x] red suite proven to fail the workflow — PR #1, `failure`, 3 failed vs master's 2
+- [x] artifacts proven diagnosable — `gh run download` gave trace + screenshot + error-context
+- [x] the 301 MB Electron profile excluded from the upload
+- [ ] a GREEN master run — blocked on MPI-446, both specs `test.fixme`'d on CI meanwhile
 
 ## What was measured, 2026-08-04
 

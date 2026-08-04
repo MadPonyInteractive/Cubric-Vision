@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 446,
+  "next_id": 447,
   "columns": {
     "todo": [
+      "MPI-446",
       "MPI-445",
       "MPI-439",
       "MPI-433",
@@ -48,7 +49,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-04T22:30:00Z",
+  "updated_at": "2026-08-04T23:50:00Z",
   "events": [
     {
       "at": "2026-08-04T21:55:00Z",
@@ -1918,6 +1919,12 @@
       "from": "todo",
       "to": "doing",
       "summary": "Picked up. Consumers re-verified: server.js:146, services/brokerBoot.js:61 and services/connectorResponder.js:80 all dynamic-import @cubric/connector inside try/catch and return null on failure, so option (d) is sound in principle. Next step is the npm ci test on a repo COPY outside c:/AI/Mpi so the sibling is genuinely absent."
+    },
+    {
+      "at": "2026-08-04T23:50:00Z",
+      "type": "task.created",
+      "task": "MPI-446",
+      "note": "Split from MPI-444: two desktop specs are test.fixme'd on CI because shell.js parks boot behind the first-run engine-install modal on any engine-less profile. Fixture gap, not an app bug."
     }
   ]
 }

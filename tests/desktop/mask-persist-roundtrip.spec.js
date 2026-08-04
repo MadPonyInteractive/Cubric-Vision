@@ -244,6 +244,12 @@ test('viewer: destroy persists combined manual and auto mask for remount', async
 });
 
 test('navigation: history load restores active session-temp mask in prompt preview', async ({}, testInfo) => {
+  // MPI-446: same fixture gap as app-close-destroys-instance.spec.js — this one needs
+  // a booted shell to navigate, and boot is parked behind the first-run engine-install
+  // modal on an engine-less profile. The two sibling tests in this file pass on CI
+  // because they drive the viewer directly. Runs locally.
+  test.fixme(!!process.env.CI, 'MPI-446: E2E profile is not seeded past the first-run engine install');
+
   const userDataDir = testInfo.outputPath('user-data');
   fs.mkdirSync(userDataDir, { recursive: true });
 

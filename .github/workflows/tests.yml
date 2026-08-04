@@ -55,6 +55,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-results
-          path: test-results/
+          # Each failing spec leaves its whole Electron profile behind under
+          # user-data/ — 301 MB of Chromium cache in the first red run, for zero
+          # diagnostic value. The traces, screenshots and error-context are the
+          # part worth downloading.
+          path: |
+            test-results/
+            !test-results/**/user-data/**
           if-no-files-found: ignore
           retention-days: 7
