@@ -85,6 +85,9 @@
   while you work. Undo works on it like anything else on the canvas. Press **Apply**
   to bake it in as a new entry — your original is untouched, so deleting the new
   entry undoes it.
+- **Resize — one click back to the original size.** An **Original Size** button under
+  the width and height boxes puts both back to the picture's own dimensions, so you
+  can try a size, change your mind and start again without looking the numbers up.
 
 ## importantChanges
 
@@ -119,6 +122,12 @@
   its Control operation still generates at the size you pick.
 
 ## fixes
+
+- **Typing a size in Resize no longer throws an error.** Entering a width or height
+  ran the preview again on every single keypress, against the half-finished number
+  you were still typing — so the "1" of "1024" was treated as a one-pixel-wide
+  image and stopped with a failure dialog. The preview now waits until you finish
+  and click away.
 
 - **Resize Video works on a cloud GPU whatever you have installed.** It stopped with
   a missing-node error unless that cloud volume happened to have Wan 2.2 on it —
