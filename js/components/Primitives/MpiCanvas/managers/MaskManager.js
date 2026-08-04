@@ -36,6 +36,7 @@
  * them on demand for `Input_Points_Positive` / `Input_Points_Negative`.
  */
 
+import { alphaStencil } from '../../../../utils/maskUtils.js';
 import { stampDab, strokeDabs } from './brushDab.js';
 import { signedSquaredDistanceField, rangeFor, writeRange } from './distanceField.js';
 
@@ -536,6 +537,48 @@ export class MaskManager {
         othCtx.globalCompositeOperation = 'destination-out';
         othCtx.fill(path);
         othCtx.restore();
+
+        this._recomposite();
+        return true;
+    }
+
+    /**
+     * paint → mask (MPI-439): take the paint layer's SHAPE — alpha at ≥128, the cut
+     * MPI-436 settled for this whole family — into the manual layer.
+     *
+     * A COPY, and a MERGE: the paint layer is left alone and an existing mask
+     * survives. It writes `manualCanvas`, never the derived `maskCanvas`, because
+     * only manual and subtract are stored (`docs/masking-undo.md`) — and it punches
+     * the same region out of subtract, because the two are exact mirrors and a
+     * region added to manual while subtract still holds it is erased right back by
+     * the composite. `commitShape()` draws that same line.
+     *
+     * The paint layer runs at 4096 and this one at 1536, so it is downscaled FIRST
+     * and cut after: the threshold pass then runs over 2.4M px instead of 16.7M, and
+     * the browser's own filtering supplies the coverage average.
+     *
+     * @param {HTMLCanvasElement} paintCanvas
+     * @returns {boolean} false when the paint layer had no shape to convert
+     */
+    fillFromPaint(paintCanvas) {
+        if (!this.manualCtx || !this.subtractCtx || !paintCanvas?.width) return false;
+        const w = this.manualCanvas.width;
+        const h = this.manualCanvas.height;
+
+        const small = document.createElement('canvas');
+        small.width = w;
+        small.height = h;
+        small.getContext('2d').drawImage(paintCanvas, 0, 0, w, h);
+        const stencil = alphaStencil(small, this.maskColor);
+        if (!stencil) return false;
+
+        this._recordUndo();
+
+        this.manualCtx.drawImage(stencil, 0, 0);
+        this.subtractCtx.save();
+        this.subtractCtx.globalCompositeOperation = 'destination-out';
+        this.subtractCtx.drawImage(stencil, 0, 0);
+        this.subtractCtx.restore();
 
         this._recomposite();
         return true;

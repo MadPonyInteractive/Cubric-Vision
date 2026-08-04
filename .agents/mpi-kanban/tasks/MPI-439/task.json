@@ -3,11 +3,11 @@
   "id": "MPI-439",
   "title": "Convert mask to paint / paint to mask, from the canvas context menu",
   "description": "Image-mode canvas context menu gains two conversions next to the existing Clear mask / Send to Composite: 'Convert mask to paint' (enabled when the canvas has a mask) and 'Convert paint to mask' (enabled when the paint layer has content). Both gates already exist on the viewer - el.hasMask() and el.hasPaint() - so enablement needs no new plumbing; the conversion itself belongs on MaskManager/PaintManager and is exposed through MpiCanvasViewer like clearMask/clearPaint, never reached into from the Block.\n\nBoth directions mutate a STORED layer (manualCanvas for mask, paintCanvas for paint), so both are layer-wide one-shot ops that MUST call _recordUndo() before mutating and AFTER the no-op guard, or they are silent holes in Ctrl+Z.\n\nFollow-up on the MPI-424 canvas tool family (that umbrella closed with MPI-373; this does not re-open it). Three product questions carry assumed defaults in brief.md - paint colour source, whether the source layer survives, alpha vs luminance - confirm before building.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-04T12:50:00Z",
-  "updated_at": "2026-08-04T12:50:00Z",
+  "updated_at": "2026-08-04T23:05:00Z",
   "labels": [
     "ui",
     "ux",
@@ -28,6 +28,7 @@
   ],
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   }
 }

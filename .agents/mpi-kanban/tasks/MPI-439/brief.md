@@ -42,19 +42,19 @@ Note the asymmetry the doc records: only `manualCanvas` + `subtractCanvas` are s
 mask (`maskCanvas` and `autoCanvas` are derived), and `paintCanvas` is stored for paint. So
 paint→mask must land in `manualCanvas`, not in the composited `maskCanvas`.
 
-## Open questions — DEFAULTS ASSUMED, confirm with the user before building
+## Open questions — ANSWERED BY THE USER 2026-08-04, do not re-decide
 
-1. **What colour does mask→paint paint with?** Assumed: the Paint tool's current colour
-   (`MpiToolOptionsPaint`), at full alpha, filling the mask's coverage. Alternative worth
-   raising: carry the mask's own alpha through so a soft mask edge becomes a soft paint
-   edge, rather than a hard fill.
-2. **Does the source layer survive the conversion?** Assumed: **yes, it is a copy** —
-   convert leaves the source alone, and the user clears it explicitly if they wanted a
-   move. Cheaper to reverse than the other way round.
-3. **Does paint→mask use alpha or luminance?** Assumed: alpha. A fully transparent pixel is
-   outside the mask; anything with alpha is inside.
-
-If the user picks differently on any of these, the answer goes here before code starts.
+1. **What colour does mask→paint paint with?** **The Paint tool's current colour, FLAT.** The
+   mask's coverage is filled at full alpha; carrying the mask's own alpha through so a soft
+   mask edge becomes a soft paint edge was offered and declined. Only the antialiased rim of
+   the scaled coverage is partial, which is the same edge every brush stroke already has.
+2. **Does the source layer survive the conversion?** **Yes — it is a COPY.** Convert leaves
+   the source layer alone and the user clears it explicitly if they wanted a move. It also
+   means the conversion MERGES into the destination (source-over) rather than replacing it:
+   nothing the user already painted or masked is destroyed by a menu item.
+3. **Does paint→mask use alpha or luminance?** **Alpha, cut at ≥128** — inherited from
+   MPI-436, which settled it for the whole MPI-440 set (`docs/masking-adjust.md` § The paint
+   layer). A dark scribble is as painted as a light one. Not re-decidable here.
 
 ## Verification
 

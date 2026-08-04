@@ -23,6 +23,7 @@
  * enumerated set is load-bearing: an unlisted mutation is a silent hole in Ctrl+Z.
  */
 
+import { alphaStencil } from '../../../../utils/maskUtils.js';
 import { stampDab, strokeDabs } from './brushDab.js';
 import { fieldOverContent, rangeFor, writeRange } from './distanceField.js';
 
@@ -447,6 +448,33 @@ export class PaintManager {
         this._adjustPad = 0;
         this._adjustImg = null;
         return had;
+    }
+
+    /**
+     * mask → paint (MPI-439): lay the mask's coverage down as paint, in the CURRENT
+     * colour, flat (user, 2026-08-04 — carrying the mask's own alpha through so a
+     * soft mask edge became a soft paint edge was offered and declined).
+     *
+     * A COPY, and a MERGE: the mask is left alone and existing paint survives, so the
+     * worst a mis-click costs is one Ctrl+Z. The stencil is cut at the mask's own
+     * resolution and scaled up here, which is what gives the result a resampled edge
+     * rather than 2.7px stair-steps.
+     *
+     * Layer-wide one shot: `_recordUndo()` AFTER the empty-source guard, or an
+     * unconvertible mask pushes a dead undo entry (`docs/masking-undo.md`).
+     *
+     * @param {HTMLCanvasElement} maskCanvas the DERIVED mask — what `hasMask()` reads,
+     *   so an unbaked detection preview is not convertible (MPI-426)
+     * @returns {boolean} false when the mask had nothing to convert
+     */
+    fillFromMask(maskCanvas) {
+        if (!this.paintCtx) return false;
+        const stencil = alphaStencil(maskCanvas, this.color);
+        if (!stencil) return false;
+
+        this._recordUndo();
+        this.paintCtx.drawImage(stencil, 0, 0, this.paintCanvas.width, this.paintCanvas.height);
+        return true;
     }
 
     /**

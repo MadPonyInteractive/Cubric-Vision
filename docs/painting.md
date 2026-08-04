@@ -73,6 +73,29 @@ Two separate contracts, both load-bearing:
 is image content, the mask is an annotation over it, and the strokes have to still be on screen
 after the user switches to a mask tool — that switch *is* the feature.
 
+### Converting between them (MPI-439)
+
+The two layers exchange **shape** from the image canvas's right-click menu:
+`MpiCanvas.maskToPaint()` / `paintToMask()` over `PaintManager.fillFromMask()` /
+`MaskManager.fillFromPaint()`. Both are a **COPY and a MERGE** (user, 2026-08-04) — source survives,
+destination keeps what it had, each records one layer-wide entry after the empty-source guard.
+
+Four decisions, not implementation detail:
+
+- **Shape is ALPHA at ≥128** — MPI-436's cut for the whole family
+  ([masking-adjust.md](masking-adjust.md) § The paint layer), applied by one shared helper,
+  `alphaStencil()` in `js/utils/maskUtils.js`. A black scribble converts like a white one, which
+  luminance would not do.
+- **mask → paint fills the CURRENT paint colour, flat** (carrying the mask's own alpha through was
+  declined). The stencil is cut at the source's resolution and **scaled into** the destination —
+  that resampling is what supplies the edge instead of 2.7px stair-steps between 1536 and 4096.
+- **paint → mask writes `manualCanvas`**, never the derived `maskCanvas`, and punches the region
+  out of `subtractCanvas`: the two are exact mirrors, and a region added to manual while subtract
+  still holds it is erased straight back by the composite.
+- **Only paint → mask publishes** (`onMaskStrokeEnd`) — it changes what the op strip gates on.
+  mask → paint must not, or it claims a mask change that never happened. `hasMask()` is baked
+  content only (MPI-426), so an un-Added detection preview is correctly not convertible.
+
 ## Opacity is DISPLAY opacity — and Apply honours it
 
 `PaintManager.opacity` is what the shared strip's slider already means for the mask, so the

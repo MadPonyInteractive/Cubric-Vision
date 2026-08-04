@@ -2640,18 +2640,31 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // the selection restarting the operation is what killed the MPI-362 modal.
             _unsubs.push(Events.on('image-viewer:context-menu', ({ x, y }) => {
                 const noMask = !viewer.el.hasMask?.();
+                const noPaint = !viewer.el.hasPaint?.();
                 const current = _group.history[_currentIdx];
                 const noFile = !current?.filePath;
                 MpiContextMenu.show({
                     x, y,
                     items: [
                         { key: 'clear-mask', icon: 'trash', label: 'Clear mask', disabled: noMask, info: noMask ? 'No mask to clear' : 'Remove the painted mask' },
+                        // MPI-439. Copies, not moves (user, 2026-08-04): the source
+                        // layer survives, so these are reversible by ignoring them.
+                        // `hasMask()` is baked content only (MPI-426), so an unbaked
+                        // detection preview is correctly not convertible.
+                        { key: 'mask-to-paint', icon: 'brush', label: 'Convert mask to paint', disabled: noMask,
+                          info: noMask ? 'No mask to convert' : 'Paint the mask\'s shape in the current colour' },
+                        { key: 'paint-to-mask', icon: 'mask', label: 'Convert paint to mask', disabled: noPaint,
+                          info: noPaint ? 'Nothing painted to convert' : 'Mask the painted shape' },
                         { key: 'send-composite', icon: 'copy', label: 'Send to Composite', disabled: noFile,
                           info: noFile ? 'This entry has no file yet' : 'Use this image underneath in Mask Comp / Paint Comp' },
                     ],
                     onSelect: (key) => {
                         if (key === 'clear-mask') viewer.el.clearMask?.();
-                        else if (key === 'send-composite') {
+                        else if (key === 'mask-to-paint') {
+                            if (viewer.el.maskToPaint?.()) _showToast('Mask converted to paint', 'success');
+                        } else if (key === 'paint-to-mask') {
+                            if (viewer.el.paintToMask?.()) _showToast('Paint converted to mask', 'success');
+                        } else if (key === 'send-composite') {
                             _compositeImage = { url: current.filePath, name: current.displayName || 'image' };
                             // A toast, unlike Copy mask: the buffer's only consumer is a
                             // panel that is not on screen yet, so nothing else confirms it.

@@ -1131,6 +1131,33 @@ class _CanvasCore {
         return did;
     }
 
+    // ── Layer conversion (MPI-439) ────────────────────────────────────────────
+    // Both directions are a COPY and a MERGE (user, 2026-08-04): the source layer
+    // survives and the destination keeps what it had, so a mis-click costs one
+    // Ctrl+Z. Each records its own layer-wide undo entry inside the manager.
+
+    /** mask → paint, in the current paint colour, flat. @returns {boolean} true when pixels changed */
+    maskToPaint() {
+        const did = this.paint.fillFromMask(this.mask.maskCanvas);
+        if (did) this.draw();
+        return did;
+    }
+
+    /**
+     * paint → mask. Unlike its twin this IS a mask change, so it takes the viewer's
+     * one publish path — without it the op strip stays locked on a mask the user can
+     * see (the same line `commitShape()`'s mask branch draws).
+     * @returns {boolean} true when pixels changed
+     */
+    paintToMask() {
+        const did = this.mask.fillFromPaint(this.paint.paintCanvas);
+        if (did) {
+            this.draw();
+            this.options.onMaskStrokeEnd?.();
+        }
+        return did;
+    }
+
     /** Restore a saved paint layer (per-entry reload). A LOAD — records no undo. */
     async setPaintFromDataURL(dataURL) {
         await this.paint.setFromDataURL(dataURL);
@@ -1460,6 +1487,7 @@ export const MpiCanvas = ComponentFactory.create({
             'setPaintBrushSize','setPaintBrushType','setPaintColor','setPaintOpacity','getPaintOpacity',
             'setPaintEnabled','getPaintURL','hasPaint','clearPaint','setPaintFromDataURL',
             'beginPaintAdjust','previewPaintAdjust','applyPaintAdjust','endPaintAdjust','hasPaintAdjustPreview',
+            'maskToPaint','paintToMask',
             'setShapeMode','setShapeKind','getShapeKind','hasShape','resetShape','clearShape','commitShape',
             'setCompositeUnderlay','setCompositeHoleFromDataURL','setCompositeHoleFromMask',
             'refreshCompositeHoleFromMask','setCompositeBrushSize','setCompositeBrushType',

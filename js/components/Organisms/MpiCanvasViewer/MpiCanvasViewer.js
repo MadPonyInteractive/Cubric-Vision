@@ -1380,6 +1380,14 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.clearPaint        = () => !!canvas.clearPaint?.();
         el.setPaintFromDataURL = (url) => canvas.setPaintFromDataURL?.(url);
 
+        // ── Layer conversion (MPI-439) ───────────────────────────────────────
+        // Both are a copy and a merge; the managers own the pixels and the undo
+        // entry, so the Block reaches for these and never for a canvas.
+        /** mask → paint, current paint colour, flat. @returns {boolean} true when pixels changed */
+        el.maskToPaint = () => !!canvas.maskToPaint?.();
+        /** paint → mask (manual layer). @returns {boolean} true when pixels changed */
+        el.paintToMask = () => !!canvas.paintToMask?.();
+
         // ── Shape gizmo (MPI-368) ────────────────────────────────────────────
         // ONE gizmo, two destinations: `dest` is 'mask' or 'paint' and decides which
         // layer a commit rasterises into. It is armed INSIDE the canvas' existing
