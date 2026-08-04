@@ -38,6 +38,7 @@
     display: none;
 }
 
+.mpi-tool-options-resize__row .mpi-btn,
 .mpi-tool-options-resize__row .mpi-dropdown,
 .mpi-tool-options-resize__row .mpi-input,
 .mpi-tool-options-resize__pair .mpi-input,

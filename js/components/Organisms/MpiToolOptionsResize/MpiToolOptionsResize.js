@@ -168,6 +168,7 @@ export const MpiToolOptionsResize = ComponentFactory.create({
                     <div id="resize-width-slot"></div>
                     <div id="resize-height-slot"></div>
                 </div>
+                <div class="mpi-tool-options-resize__row" id="resize-reset-dims-slot"></div>
             </div>
             <div class="mpi-tool-options-resize__section">
                 <div class="mpi-tool-options-resize__section-label">Method</div>
@@ -292,6 +293,7 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             qs('#resize-ratio-slot', el).hidden = !isPreset;
             qs('#resize-multiplier-slot', el).hidden = !isPreset;
             qs('#resize-free-pair', el).hidden = isPreset;
+            qs('#resize-reset-dims-slot', el).hidden = isPreset;
 
             if (isPreset) {
                 orientRadio = MpiRadioGroup.mount(document.createElement('div'), {
@@ -369,15 +371,25 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             type: 'number', label: 'Width', value: settings.width,
             min: 1, step: 1, info: 'Output width',
         });
-        _unsubs.push(widthInput.on('input',  ({ value }) => setValue('width', clampInt(value, settings.width))));
+        // ponytail: 'change' only — MpiInput number commits on blur/Enter/wheel.
+        // Binding 'input' too dispatched a preview workflow per keystroke.
         _unsubs.push(widthInput.on('change', ({ value }) => setValue('width', clampInt(value, settings.width))));
 
         heightInput = mount('#resize-height-slot', MpiInput, {
             type: 'number', label: 'Height', value: settings.height,
             min: 1, step: 1, info: 'Output height',
         });
-        _unsubs.push(heightInput.on('input',  ({ value }) => setValue('height', clampInt(value, settings.height))));
         _unsubs.push(heightInput.on('change', ({ value }) => setValue('height', clampInt(value, settings.height))));
+
+        const resetDimsBtn = mount('#resize-reset-dims-slot', MpiButton, {
+            icon: 'refresh', label: 'Original Size', variant: 'primary', size: 'sm',
+            info: 'Reset width and height to the source image dimensions',
+        });
+        _unsubs.push(resetDimsBtn.on('click', () => {
+            if (!_sourceW || !_sourceH) return;
+            _syncDimInputsToSource();
+            schedulePreview();
+        }));
 
         // ── Method controls ──────────────────────────────────────────────────
         const methodDd = mount('#resize-method-slot', MpiDropdown, {
@@ -410,7 +422,6 @@ export const MpiToolOptionsResize = ComponentFactory.create({
             type: 'number', label: 'Divisible by', value: settings.divisible_by,
             min: 1, step: 1, info: 'Force dimensions to be divisible by this number',
         });
-        _unsubs.push(divisibleInput.on('input',  ({ value }) => setValue('divisible_by', clampInt(value, settings.divisible_by))));
         _unsubs.push(divisibleInput.on('change', ({ value }) => setValue('divisible_by', clampInt(value, settings.divisible_by))));
 
         const flipRadio = mount('#resize-flip-slot', MpiRadioGroup, {
