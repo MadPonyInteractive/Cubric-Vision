@@ -194,8 +194,20 @@ const POD_IMAGE_VERSION_CPU = 'v0.17.0';
 // printed `node-import smoke test OK`, i.e. every baked node imports on 0.29.2.
 // The stable pair deliberately stays on v0.17.0 (ComfyUI 0.28.0) until a live Pod
 // verify — the new LTX commit is backwards compatible, so 0.28.0 keeps working.
-const POD_IMAGE_VERSION_DEV = 'v0.18.0-dev';
-const POD_IMAGE_VERSION_CPU_DEV = 'v0.18.0-dev';
+// v0.19.0-dev (MPI-413): the Pod converges on the ONE curated pip set — the Dockerfile
+// COPYs `python_deps.txt` to /opt/python_deps.txt and installs it in a single --no-deps
+// pass, replacing the per-pack requirements loop. BOTH legs built and pushed in run
+// 30910192827, both pull-verified public (cu130 config sha 51cb77e8, cpu 1b666059).
+// The card's three metrics came out of that build log: `node-import smoke test OK`
+// (zero IMPORT FAILED, i.e. the curated set is not under-specified), exactly ONE opencv
+// distribution (`opencv-contrib-python-headless 5.0.0.93`, `cv2 5.0.0 ximgproc True`)
+// where three used to fight over the `cv2` namespace, and torch still 2.12.0+cu130
+// after the node bake. Pairs with the start.sh guard published to the dev R2 channel the
+// same day: /opt/python_deps.txt now exists, so the boot loop that reinstalled every
+// volume pack's requirements.txt (and with it VideoHelperSuite's rival opencv-python)
+// skips itself. The stable pair stays on v0.17.0 until a release moves it.
+const POD_IMAGE_VERSION_DEV = 'v0.19.0-dev';
+const POD_IMAGE_VERSION_CPU_DEV = 'v0.19.0-dev';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
@@ -224,7 +236,13 @@ const POD_IMAGE_VERSION_CPU_DEV = 'v0.18.0-dev';
 //     spread, so it profiled flat and innocent. Probe with REAL filenames.
 // R2-publish-only, no image rebuild. NOT raised to the pin below on purpose — these are
 // perf fixes, not protocol changes, so an older wrapper must not be rejected.
-const WRAPPER_VERSION = '0.2.36';
+//   0.2.41 (MPI-413) — the wrapper runs NO pip at all: `_run_node_requirements_only` and
+//     the pip step of `_run_node_install` are gone, because the image now bakes the one
+//     curated set. Raised here because v0.19.0-dev BAKES 0.2.41, and this constant is
+//     only the fallback label injected at Pod create for a boot where the R2 fetch fails
+//     (bootstrap.sh unsets it on a successful fetch, so a fetched wrapper always
+//     self-reports). Nothing compares it — the live value at :574 comes from /health.
+const WRAPPER_VERSION = '0.2.41';
 // MPI-329: a network-volume GPU Pod sizes its container disk to MIRROR the volume
 // (+ a small scratch headroom). The volume is the SOURCE of every model, so the
 // hot-store can never need to stage more bytes than the volume holds — mirroring the

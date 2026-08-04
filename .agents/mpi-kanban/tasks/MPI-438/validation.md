@@ -66,12 +66,48 @@ self-identify (`dep.id === its key`, verified), so the `{ ...DEPS[id], id }` spr
 dead code carrying a comment that misstated the data. Both removed; the test's id
 assertion now guards the DATA invariant `remoteInstallDep` actually depends on.
 
-### Not claimed
+### ~~Not claimed~~ → LIVE-VERIFIED 2026-08-04
 
-Zero live remote verification — no Pod was running. `ensureUniversalNodesOnVolume` has
-never executed against a wrapper. The install/poll/restart sequence is code-verified only.
-Folds into MPI-413's image test: a volume with no Wan 2.2 and no Klein/Boogu must run
-Resize Video AND Head Swap.
+Pod `vhks7b6fl1x57h` (L4, EU-RO-1, volume `9t3awufudk` — the volume the bug was found on),
+image `v0.19.0-dev-cu130`, wrapper `0.2.41`.
+
+Before state, captured in the window where the wrapper was up but `comfy_ready` was still
+false (the ensure fires on `comfy_ready`, so this is genuinely "before"):
+
+| pack | before |
+|---|---|
+| `comfyui-videohelpersuite` | `present: false` ← the bug, still live |
+| `comfyui-inpaint-cropandstitch` | `present: true` |
+| `comfyui_ultimatesdupscale` (control) | `present: true` |
+
+Then, unprompted, from app.log:
+
+```
+[runpod] universal nodes: installing 2 missing on volume
+         (ComfyUI-PainterI2Vadvanced, ComfyUI-VideoHelperSuite)
+[runpod] universal nodes: installed …; ComfyUI restart -> 200
+```
+
+`ensureUniversalNodesOnVolume` executed against a real wrapper for the first time.
+`/object_info` went 1822 → **1863** node types with **40 `VHS_*`**, including
+`VHS_LoadVideoPath` — the exact class that threw `missing_node_type`.
+
+**End-to-end generation passed.** Resize Video dispatched as prompt
+`81b0399f-6d48-47e4-9403-e84ff1a4fe2e`: 9 nodes, `VHS_LoadVideoPath` +
+`VHS_VideoInfoSource`, `status: success`, `completed: true`, `outputs: 18:videos`.
+
+**Two corrections to this card's own brief, both found by running it:**
+
+1. **The blast-radius table was incomplete.** The ensure found *two* missing packs, not
+   one — `ComfyUI-PainterI2Vadvanced` was absent as well and is not in the table above.
+   The table was built from `UNIVERSAL_WORKFLOWS` graph `class_type` sets; whatever pulls
+   PainterI2Vadvanced onto the volume was not captured by that sweep. The shipped
+   selection (all 7 code-only packs) was right anyway — it is broader than the table.
+2. **The stated verify condition was not met, and could not be.** It asked for a volume
+   with no Wan 2.2 **and no Klein/Boogu**. `comfyui-inpaint-cropandstitch` was already
+   `present: true` on this volume, so **Head Swap was not a valid test here** — it would
+   have passed for the wrong reason. Not run, and not claimed. The VHS half is the half
+   this volume could prove, and it did.
 
 Pre-existing and untouched: `routes/remoteModels.js:695` carries an unused
 `eslint-disable` directive; confirmed present on the unmodified file.
