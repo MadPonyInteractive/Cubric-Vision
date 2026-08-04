@@ -100,8 +100,9 @@ file cannot drift when nodes are added.
   actually skipped.
 - ~~**Pod Dockerfile consuming the same file.**~~ **DONE 2026-08-04** — see
   `validation.md` § Pod convergence. The Dockerfile installs `python_deps.txt` in one
-  `--no-deps` pass and the wrapper runs no pip at all. Shipping it (wrapper to R2 `dev` →
-  promote, then the image build) is user-authorized and still pending.
+  `--no-deps` pass and the wrapper runs no pip at all. Shipping it (wrapper to R2 `dev`,
+  then the image build) is user-authorized and still pending. `promote` is NOT part of
+  this card — see Plan drift below.
 - ~~**Phase 1's constraint file.**~~ **CLOSED AS SUPERSEDED 2026-08-04** — `--no-deps`
   against a file containing no torch makes the constraint structurally unable to matter.
   Full disposition in `validation.md` § Phase 1.
@@ -120,6 +121,23 @@ file cannot drift when nodes are added.
   regression (a full install still runs it, and a pre-Phase-2 engine already has working
   deps), but the marker does not self-heal every engine "already on disk". Follow-up
   belongs to `repair-deps` gating, not to the curated file.
+- **2026-08-04 — `publish-runtime.sh promote` is a RELEASE step, not a ship step of this
+  card.** The handoff listed it as SHIP STEP 1's tail. Wrong, on the user's challenge and
+  confirmed in two places: `.claude/skills/mpi-release/SKILL.md` § Preconditions makes the
+  `dev` vs `stable` manifest comparison a release gate and says **"Never auto-promote — it
+  is a live op affecting released users, same class as `git push`"**; and
+  `routes/remotePodLifecycle.js:147` `POD_IMAGE_VERSION = 'v0.17.0'` is a frozen constant
+  inside the shipped binary, so a new image TAG cannot reach a released user either — only
+  an app release bumping that constant can. The ship-order rule (wrapper before image) is
+  real but orders things WITHIN a release, it does not mean "promote today".
+  **The substantive reason not to promote early:** wrapper 0.2.41's premise is "every
+  node's Python dep is in the one curated set the image installs". True of the NEW image;
+  false of v0.17.0, which built per-pack requirements. Promoting hands a 1.3.0 user a
+  wrapper that deleted the `_run_node_requirements_only` self-heal, on an image whose deps
+  were never curated — zero benefit to them, nonzero risk.
+  So this card ends at: dev published, dev image built + verified, dev pins bumped.
+  Promote + the stable `POD_IMAGE_VERSION` bump belong to the next release, and
+  `mpi-release`'s manifest-drift precondition is the backstop that catches them.
 
 ## Verification
 

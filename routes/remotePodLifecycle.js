@@ -515,6 +515,28 @@ function _selfHealIfPodDead(podStatus, connecting) {
   return true;
 }
 
+// MPI-438: the universal-workflow dep contract, honoured on the REMOTE engine. The local
+// engine installs every custom_node WITH the engine; a Pod bakes only the
+// `installRequirements: true` packs, so the code-only ones reached the volume purely as a
+// side effect of installing some model that declared them — and a universal op needing one
+// (Resize Video → VideoHelperSuite, Head Swap → inpaint-cropandstitch) died on any volume
+// that never installed that model. Fire once per Pod, non-blocking, the first time the
+// wrapper reports ComfyUI ready: a complete volume costs one batched status call.
+// Keyed on podId with no reset — a volume's node folders survive a container restart, so
+// re-connecting to the SAME Pod has nothing to re-check.
+let _universalEnsuredPodId = null;
+function _ensureUniversalNodes() {
+  const podId = _mode.podId;
+  if (!podId || _universalEnsuredPodId === podId) return;
+  _universalEnsuredPodId = podId;
+  // Deliberately not awaited — /remote/comfy/status is polled by the renderer and must
+  // stay fast. Failures are logged inside; they degrade to the pre-MPI-438 behaviour.
+  require('./remoteModels').ensureUniversalNodesOnVolume().catch((err) => {
+    logger.warn('runpod', `universal node ensure failed: ${err.message}`);
+    _universalEnsuredPodId = null; // let the next status poll retry
+  });
+}
+
 router.get('/remote/comfy/status', async (req, res) => {
   // `connecting` = the synchronous route window OR a background boot/resume still
   // in progress, so the Settings panel stays "creating…" + Connect disabled for
@@ -548,6 +570,7 @@ router.get('/remote/comfy/status', async (req, res) => {
     // Pod is up — the background start finished; clear the spanning flag so the
     // panel flips from "creating…" to ready/Disconnect.
     if (health.ready) _setStarting(false);
+    if (health.comfy_ready) _ensureUniversalNodes();
     res.json({ running: true, ready: !!health.ready, comfyReady: !!health.comfy_ready, wrapperVersion: health.wrapper_version || null, connecting: inFlight(), connectElapsedMs: connectElapsedMs(), noGpu: _mode.noGpu });
   } catch (_) {
     // expected during Pod cold start / stale-payload window — but also the window

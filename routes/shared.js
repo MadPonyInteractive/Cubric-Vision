@@ -607,6 +607,16 @@ function getUniversalWorkflowDepIds() {
 }
 
 /**
+ * The same set as `getUniversalWorkflowDepIds()` but as DEP OBJECTS. MPI-438 needs the
+ * objects, not the ids: the REMOTE side has to read `type` / `filename` / `url` and ask
+ * `_isImageResident` which of them the Pod image already bakes.
+ */
+function getUniversalWorkflowDeps() {
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    return getUniversalWorkflowDepIds().map((id) => DEPS[id]);
+}
+
+/**
  * Checks which universal workflow dependencies are missing OR drifted on disk.
  * Missing = folder absent. Drifted = custom_node folder present but its stamped
  * `.mpi_node_commit` marker does not match the node_lock pinned commit (MPI-222) —
@@ -765,6 +775,7 @@ module.exports = {
     writeExtraModelPathsYaml,
     cleanComfyUITempFiles,
     getUniversalWorkflowDepIds,
+    getUniversalWorkflowDeps,
     checkUniversalWorkflowDepsStatus,
     getUniversalWorkflowDepsTotalSize,
     getPinnedNodeCommit,

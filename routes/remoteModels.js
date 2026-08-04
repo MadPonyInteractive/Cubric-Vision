@@ -725,9 +725,125 @@ function openInstallEventStream(onEvent, onClose) {
   return controller;
 }
 
+/**
+ * MPI-438: make the REMOTE engine honour the universal-workflow dependency contract.
+ *
+ * `universal_workflows.js` promises that every `type:'custom_nodes'` dep "installs
+ * automatically WITH the engine and is never tracked per-workflow", and the LOCAL engine
+ * delivers that — `checkUniversalWorkflowDepsStatus()` + the `/engine/repair-deps` ladder
+ * install the whole set at boot. The remote engine had no twin. On a Pod the "engine" is
+ * image + volume: `installRequirements: true` packs are BAKED (see `_isImageResident`),
+ * but the code-only packs reach the volume ONLY as a side effect of installing a MODEL
+ * that happens to declare them. So a universal op whose graph needs a code-only pack died
+ * on any volume that never installed that particular model — measured live: `resizeVideo`
+ * needs VideoHelperSuite, declared by 2 of 18 models; `appHeadSwap` needs
+ * inpaint-cropandstitch, declared by 3 of 18.
+ *
+ * Cost when the volume is already complete: ONE batched status call, no installs, no
+ * restart. Only a fresh/partial volume pays anything, and node packs are ~1MB each.
+ *
+ * Single-flight: connect can poll status repeatedly, and a second pass firing mid-install
+ * would ask the wrapper to install a dep it is already installing (it rejects duplicates).
+ * @returns {Promise<{checked:number, missing:string[], installed:string[], failed:string[]}>}
+ */
+/**
+ * The universal packs the VOLUME must carry: custom_nodes the Pod image does not bake.
+ * Exported so the test asserts the shipped selection rather than a copy of it.
+ */
+function _universalVolumeNodeDeps() {
+  const { getUniversalWorkflowDeps } = require('./shared');
+  return getUniversalWorkflowDeps()
+    .filter((d) => d && d.type === 'custom_nodes' && !_isImageResident(d));
+}
+
+let _ensureUniversalInFlight = null;
+async function ensureUniversalNodesOnVolume() {
+  if (_ensureUniversalInFlight) return _ensureUniversalInFlight;
+  _ensureUniversalInFlight = (async () => {
+    const wanted = _universalVolumeNodeDeps();
+    const out = { checked: wanted.length, missing: [], installed: [], failed: [] };
+    if (!wanted.length) return out;
+
+    const askDeps = wanted.map((d) => ({ id: d.id, type: 'custom_nodes', filename: d.filename }));
+    const presentIds = async () => {
+      const res = await remoteModelsCheck([{ id: '_universal', deps: askDeps }]);
+      const list = (res && res.results && res.results._universal && res.results._universal.deps) || [];
+      return new Set(list.filter((d) => d && d.installed).map((d) => d.id));
+    };
+
+    let have;
+    try {
+      have = await presentIds();
+    } catch (err) {
+      // Wrapper unreachable / transient. Fail QUIET: a generation that needs a missing
+      // pack still reports its own missing_node_type, which is no worse than before.
+      logger.warn('runpod', `universal node check failed: ${err.message}`);
+      return out;
+    }
+    const missing = wanted.filter((d) => !have.has(d.id));
+    out.missing = missing.map((d) => d.id);
+    if (!missing.length) {
+      logger.info('runpod', `universal nodes: ${wanted.length}/${wanted.length} already on volume`);
+      return out;
+    }
+
+    logger.info('runpod', `universal nodes: installing ${missing.length} missing on volume (${out.missing.join(', ')})`);
+    for (const dep of missing) {
+      try {
+        // Same call a model install makes — the wrapper stamps `.mpi_node_commit` from
+        // `getPinnedNodeCommit`, so these land at the node_lock commit like any other.
+        await remoteInstallDep(dep);
+      } catch (err) {
+        logger.warn('runpod', `universal node install failed for ${dep.id}: ${err.message}`);
+        out.failed.push(dep.id);
+      }
+    }
+
+    // The wrapper answers 202/started and finishes in the background, so poll the SAME
+    // batched check until the folders appear. ~1MB per pack; 60s is generous.
+    const deadline = Date.now() + 60000;
+    let landed = new Set();
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 3000));
+      try {
+        landed = await presentIds();
+      } catch { /* transient — keep polling until the deadline */ }
+      if (missing.every((d) => landed.has(d.id) || out.failed.includes(d.id))) break;
+    }
+    out.installed = missing.filter((d) => landed.has(d.id)).map((d) => d.id);
+    const stalled = missing.filter((d) => !landed.has(d.id) && !out.failed.includes(d.id));
+    if (stalled.length) {
+      // Never report silence as success — a pack still absent at the deadline is a real
+      // gap the next generation will hit.
+      logger.warn('runpod', `universal nodes still absent after 60s: ${stalled.map((d) => d.id).join(', ')}`);
+      out.failed.push(...stalled.map((d) => d.id));
+    }
+
+    // ComfyUI scans custom_nodes at startup, so a pack that landed after boot is invisible
+    // until it restarts. ONE restart covers every pack we just installed.
+    if (out.installed.length) {
+      try {
+        const res = await wrapperFetch('/wrapper/restart-comfy', { method: 'POST', retries: 1 });
+        // 409 = a download-mode Pod with no ComfyUI to restart; not an error here.
+        logger.info('runpod', `universal nodes: installed ${out.installed.join(', ')}; ComfyUI restart -> ${res.status}`);
+      } catch (err) {
+        logger.warn('runpod', `universal nodes installed but ComfyUI restart failed: ${err.message}`);
+      }
+    }
+    return out;
+  })();
+  try {
+    return await _ensureUniversalInFlight;
+  } finally {
+    _ensureUniversalInFlight = null;
+  }
+}
+
 module.exports = {
   isRemoteActive,
   splitDepFilename,
+  ensureUniversalNodesOnVolume,
+  _universalVolumeNodeDeps, // exported for tests (MPI-438)
   wrapperFetch,
   remoteModelsCheck,
   remoteInstallDep,
