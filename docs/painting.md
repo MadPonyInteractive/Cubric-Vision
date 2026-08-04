@@ -158,6 +158,12 @@ unlisted one is a silent hole in Ctrl+Z.
 
 - **MPI-435 (alpha brush pack)** parameterises **`stampDab` and nothing else**. Both the mask
   brush and the paint brush get textures from that one edit.
+- **MPI-436 (Adjust over RGBA) HAS LANDED.** Grow / shrink / edge band on this layer, off the mask's
+  own distance field — and the app's outline tool. The layer model it adds is one preview canvas
+  (`adjustCanvas`) drawn **instead of** `paintCanvas`, and the fact every later card inherits is
+  that **the shape of this layer is its ALPHA**, cut at ≥128. Rules, the three fills and the
+  measured cost ceiling: [masking-adjust.md](masking-adjust.md) § The paint layer. Unlike a stroke,
+  an unapplied adjustment IS a preview and extends `discardPreview()`.
 - **MPI-368 (Shapes) HAS LANDED.** `PaintManager.commitShape(buildPath, erase)` is the paint half
   of one gizmo with two destinations — Fill lays the shape down in `color`, Erase punches it out,
   the same pair the brush already means here. It takes a path BUILDER, not a path, and applies

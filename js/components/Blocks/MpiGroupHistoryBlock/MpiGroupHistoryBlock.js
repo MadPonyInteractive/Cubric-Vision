@@ -83,11 +83,15 @@ import { MpiReusePromptDialog } from '../../Compounds/MpiReusePromptDialog/MpiRe
 const TOOL_OPTIONS_REGISTRY = {
     crop:         MpiToolOptionsCrop,
     maskBrush:    MpiToolOptionsMaskBrush,
-    maskAdjust:   MpiToolOptionsMaskAdjust,
     maskDetect:   MpiToolOptionsMaskDetect,
     maskPoints:   MpiToolOptionsMaskPoints,
     maskText:     MpiToolOptionsMaskText,
     paint:        MpiToolOptionsPaint,
+    // Same again for Adjust (MPI-436): ONE panel, two destinations. `maskAdjust`
+    // grows/shrinks the mask, `paintAdjust` the RGBA layer — and the latter is the
+    // app's outline tool.
+    maskAdjust:   MpiToolOptionsMaskAdjust,
+    paintAdjust:  MpiToolOptionsMaskAdjust,
     // ONE component under BOTH shape modes (MPI-368) — it reads `props.mode` to
     // pick its destination. One gizmo, two mounts, one panel.
     maskShapes:   MpiToolOptionsShapes,
@@ -116,7 +120,7 @@ const _isMaskTool = (mode) => _MASK_TOOLS.has(mode);
  *  into a new entry, not a mask. `paintShapes` (MPI-368) is the SAME gizmo as
  *  `maskShapes` pointed at this layer — the two must never swap sets, or a shape
  *  would rasterise into the wrong one while the rail still looked right. */
-const _PAINT_TOOLS = new Set(['paint', 'paintShapes']);
+const _PAINT_TOOLS = new Set(['paint', 'paintShapes', 'paintAdjust']);
 const _isPaintTool = (mode) => _PAINT_TOOLS.has(mode);
 
 /** The COMPOSITE family (MPI-373) — the third and last group of the MPI-424
@@ -609,7 +613,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             prompt: 'Prompt', crop: 'Crop',
             maskBrush: 'Mask Brush', maskAdjust: 'Mask Adjust', maskDetect: 'Mask Detect',
             maskPoints: 'Mask Points', maskText: 'Mask Text',
-            paint: 'Paint',
+            paint: 'Paint', paintAdjust: 'Paint Adjust',
             videoUpscale: 'Upscale', imageUpscale: 'Upscale',
             removeBackground: 'Remove Background',
             interpolate: 'Interpolate',

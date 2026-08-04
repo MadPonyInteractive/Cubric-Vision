@@ -1640,6 +1640,20 @@ export const MpiCanvasViewer = ComponentFactory.create({
             return !!ok;
         };
 
+        // ── Paint Adjust — grow / shrink / edge band over RGBA (MPI-436) ─────
+        // The same primitive as the mask's Adjust above, pointed at the paint layer:
+        // one `distanceField.js`, two destinations. No `evaluateMask()` on Apply —
+        // the paint layer is not a mask and re-publishing would be a lie about what
+        // the op strip is gated on.
+
+        /** Enter paint Adjust: snapshot the layer so every frame derives from tool-entry state. */
+        el.beginPaintAdjust   = () => canvas.beginPaintAdjust?.();
+        /** @param {{grow?:number, outward?:number, inward?:number, edge?:boolean}} opts radii in IMAGE px */
+        el.previewPaintAdjust = (opts) => canvas.previewPaintAdjust?.(opts) ?? false;
+        /** Bake the preview into the layer as ONE undo entry. */
+        el.applyPaintAdjust   = () => !!canvas.applyPaintAdjust?.();
+        el.endPaintAdjust     = () => !!canvas.endPaintAdjust?.();
+
         // ── Composite (MPI-373) ──────────────────────────────────────────────
         // Mirrors the paint surface by name so `MpiMaskStrip` drives this destination
         // by table lookup too. The layer is SCRATCH — there is no per-entry restore
@@ -1683,6 +1697,14 @@ export const MpiCanvasViewer = ComponentFactory.create({
 
             if (canvas.hasMaskAdjustPreview?.()) {
                 canvas.endMaskAdjust?.();
+                dropped = true;
+            }
+
+            // MPI-436: paint's Adjust is the same kind of uncommitted preview and
+            // extends this seam rather than the call site. The paint LAYER itself
+            // still never does — a stroke is committed pixels (MPI-375).
+            if (canvas.hasPaintAdjustPreview?.()) {
+                canvas.endPaintAdjust?.();
                 dropped = true;
             }
 

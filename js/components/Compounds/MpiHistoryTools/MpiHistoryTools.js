@@ -119,6 +119,10 @@ const IMAGE_TOOLS = [
             // The SAME gizmo as maskShapes above, pointed at the RGBA layer — one
             // geometry, two destinations (MPI-368). Two rail buttons, one component.
             { mode: 'paintShapes', icon: 'shapes_stroke', info: 'Shapes' },
+            // Adjust, pointed at the paint layer (MPI-436) — one panel, one distance
+            // field, two destinations. Last in the group for the same reason mask
+            // Adjust is last in its own: it operates on paint that already exists.
+            { mode: 'paintAdjust', icon: 'mask_adjust_stroke', info: 'Adjust' },
         ],
     },
     {

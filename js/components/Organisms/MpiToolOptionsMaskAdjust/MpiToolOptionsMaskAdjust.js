@@ -1,7 +1,8 @@
 /**
- * MpiToolOptionsMaskAdjust — Organism: the Adjust mask tool (MPI-382).
+ * MpiToolOptionsMaskAdjust — Organism: the Adjust tool, for BOTH layers
+ * (MPI-382 mask, MPI-436 paint).
  *
- * A method OVER an existing mask rather than another way of making one: grow it,
+ * A method OVER an existing layer rather than another way of making one: grow it,
  * shrink it, or reduce it to an edge band. A MODE radio picks which, and only that
  * mode's sliders exist — one bidirectional Grow / Shrink row, or Outward + Inward.
  * The mode is a radio rather than a toggle button because the panel must never show
@@ -12,6 +13,13 @@
  * it lives in `managers/distanceField.js` and is written once — an exact distance
  * field built on tool entry, which each mode reads as one range (MPI-441).
  *
+ * ONE COMPONENT, TWO DESTINATIONS, registered under both `maskAdjust` and
+ * `paintAdjust` — the MPI-368 / MPI-373 pattern. `props.mode` picks the row in
+ * `DEST` below and nothing else in here branches: same operation, different layer.
+ * On the paint layer this IS the outline tool, which is why that destination adds a
+ * colour picker (grow's new ring and the band are filled in it) and drops Fill
+ * Holes, which is a mask idea.
+ *
  * LIVE, not bake-on-release. The user sits on the preview and judges it, then
  * presses Apply. Bake-on-release was rejected by name: dilate-then-erode is a
  * morphological CLOSE, so dragging back is not a restore. Leaving the tool with an
@@ -20,22 +28,64 @@
  *
  * Props:
  * @param {object} viewer - MpiCanvasViewer instance
+ * @param {'maskAdjust'|'paintAdjust'} [mode='maskAdjust'] - which layer to drive
  *
  * Requires on viewer.el:
- *   enterMode('mask'), exitMode(), evaluateMask(), setMaskPointsMode(),
- *   beginMaskAdjust(), previewMaskAdjust(), applyMaskAdjust(), endMaskAdjust(),
- *   fillMaskHoles()
- * No 'apply' emitted — the mask is canvas-resident; PromptBox drives operations.
+ *   enterMode(), exitMode(), and per destination —
+ *   mask  — evaluateMask(), setMaskPointsMode(), beginMaskAdjust(),
+ *           previewMaskAdjust(), applyMaskAdjust(), endMaskAdjust(), fillMaskHoles()
+ *   paint — setPaintColor(), beginPaintAdjust(), previewPaintAdjust(),
+ *           applyPaintAdjust(), endPaintAdjust()
+ * No 'apply' emitted — both layers are canvas-resident; PromptBox drives operations.
  */
 
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton }        from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiColorPicker }   from '../../Primitives/MpiColorPicker/MpiColorPicker.js';
 import { MpiRadioGroup }    from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiMaskStrip }     from '../../Compounds/MpiMaskStrip/MpiMaskStrip.js';
+import { Events }           from '../../../events.js';
+import { state }            from '../../../state.js';
+import { getToolSettings }  from '../../../data/projectModel.js';
 import { qs, on }           from '../../../utils/dom.js';
 
-/** Slider bound in mask-px, at the MASK_MAX_EDGE working size. */
+/** Slider bound in layer px — mask-px at MASK_MAX_EDGE, image-px for paint. */
 const MAX_R = 50;
+
+// eslint-disable-next-line mpi/no-hardcoded-hex-color -- color picker default value
+const DEFAULT_PAINT_COLOR = '#e0446b';
+
+/**
+ * The destination table. A name row per layer, the way `MpiMaskStrip.DESTINATIONS`
+ * does it — a new destination is a new row, never a new `if (isPaint)` threaded
+ * through `setup()`.
+ *
+ * `fillHoles` is mask-only by definition (an enclosed hole is a coverage idea, and
+ * MPI-431 made the app the only thing that closes one). `color` is paint-only for
+ * the mirror-image reason: the mask has no colour to fill a grown ring with.
+ */
+const DEST = {
+    maskAdjust: {
+        viewerMode: 'mask',
+        stripDest: 'mask',
+        begin:   (v)    => v.el.beginMaskAdjust?.(),
+        preview: (v, o) => v.el.previewMaskAdjust?.(o),
+        apply:   (v)    => v.el.applyMaskAdjust?.(),
+        end:     (v)    => v.el.endMaskAdjust?.(),
+        fillHoles: true,
+        color: false,
+    },
+    paintAdjust: {
+        viewerMode: 'paint',
+        stripDest: 'paint',
+        begin:   (v)    => v.el.beginPaintAdjust?.(),
+        preview: (v, o) => v.el.previewPaintAdjust?.(o),
+        apply:   (v)    => v.el.applyPaintAdjust?.(),
+        end:     (v)    => v.el.endPaintAdjust?.(),
+        fillHoles: false,
+        color: true,
+    },
+};
 
 export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
     name: 'MpiToolOptionsMaskAdjust',
@@ -43,6 +93,10 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
 
     template: () => `
         <div class="mpi-tool-options-mask-adjust">
+            <!-- Paint only, and REMOVED rather than [hidden] on the mask: a class
+                 carrying a display rule outranks the UA sheet's [hidden], which is
+                 exactly how the inert slider rows once reached the screen. -->
+            <div class="mpi-tool-options-mask-adjust__row" id="color-slot"></div>
             <div class="mpi-tool-options-mask-adjust__row" id="mode-slot"></div>
 
             <div class="mpi-tool-options-mask-adjust__slider-row" id="grow-row">
@@ -80,13 +134,15 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
 
     setup: (el, props) => {
         const { viewer } = props;
+        const dest = DEST[props.mode] || DEST.maskAdjust;
         const _children = [];
         const _offs = [];
 
-        viewer.el.enterMode?.('mask');
-        // Entering Adjust from Points must give the right mouse button back.
+        viewer.el.enterMode?.(dest.viewerMode);
+        // Entering Adjust from Points must give the right mouse button back. A no-op
+        // on the paint destination, which never had the points mode.
         viewer.el.setMaskPointsMode?.(false);
-        viewer.el.beginMaskAdjust?.();
+        dest.begin(viewer);
 
         const growInput = qs('#grow-input', el);
         const outInput  = qs('#out-input', el);
@@ -101,18 +157,43 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
         let _raf = 0;
 
         /** Coalesce to one preview per frame: a drag fires `input` faster than a
-         *  full-layer blur + threshold can run, and queued frames would lag behind
-         *  the thumb by however many events piled up. */
+         *  full-layer range test can run, and queued frames would lag behind the
+         *  thumb by however many events piled up. */
         const _schedule = () => {
             if (_raf) return;
             _raf = requestAnimationFrame(() => {
                 _raf = 0;
-                viewer.el.previewMaskAdjust?.(edgeMode
+                dest.preview(viewer, edgeMode
                     // Inward's track is mirrored, so its raw value is negative.
                     ? { edge: true, outward: +outInput.value, inward: -inInput.value }
                     : { grow: +growInput.value });
             });
         };
+
+        // ── Colour — paint only (MPI-436) ────────────────────────────────────
+        // Grow fills the new ring in it and the band IS this colour, so it has to be
+        // reachable without leaving the tool. Shares the `paint` tool settings key
+        // with the Paint panel, so the two agree on the current colour.
+
+        if (dest.color) {
+            const startColor = getToolSettings(state.currentProject || {}, 'paint', {}).color
+                || DEFAULT_PAINT_COLOR;
+            viewer.el.setPaintColor?.(startColor);
+            const picker = MpiColorPicker.mount(qs('#color-slot', el), {
+                value: startColor,
+                info: 'Colour for the grown ring and the edge band',
+            });
+            picker.on('change', ({ hex }) => {
+                viewer.el.setPaintColor?.(hex);
+                Events.emit('settings:tool:update', { toolKey: 'paint', key: 'color', value: hex });
+                // A live preview is already filled in the OLD colour — recompute it,
+                // or the swatch and the canvas disagree until the next slider move.
+                _schedule();
+            });
+            _children.push(picker);
+        } else {
+            qs('#color-slot', el)?.remove();
+        }
 
         const _syncLabels = () => {
             qs('#grow-val', el).textContent = `${+growInput.value > 0 ? '+' : ''}${growInput.value} px`;
@@ -134,15 +215,16 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
 
         // ── Mode — GATES the sliders; only the live row is on screen ─────────
 
+        const layerWord = dest.color ? 'paint' : 'mask';
         const modeRadio = MpiRadioGroup.mount(qs('#mode-slot', el), {
             options: [
                 { label: 'Grow', value: 'grow', icon: 'mask_adjust_stroke',
-                  info: 'Grow or shrink the whole mask' },
+                  info: `Grow or shrink the whole ${layerWord}` },
                 { label: 'Edge', value: 'edge', icon: 'invert',
-                  info: 'Reduce the mask to a band around its edge — outward and inward' },
+                  info: `Reduce the ${layerWord} to a band around its edge — outward and inward` },
             ],
             value: 'grow',
-            name: 'mask-adjust-mode',
+            name: `${dest.stripDest}-adjust-mode`,
         });
         modeRadio.on('select', ({ value }) => {
             edgeMode = value === 'edge';
@@ -159,48 +241,56 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
 
         const applyBtn = MpiButton.mount(document.createElement('div'), {
             label: 'Apply', icon: 'check', size: 'sm', variant: 'primary',
-            info: 'Bake the adjustment into the mask (undoable)',
+            info: `Bake the adjustment into the ${layerWord} (undoable)`,
         });
         const resetBtn = MpiButton.mount(document.createElement('div'), {
             label: 'Reset', icon: 'refresh', size: 'sm', variant: 'secondary',
-            info: 'Drop the adjustment and go back to the mask',
+            info: `Drop the adjustment and go back to the ${layerWord}`,
         });
         // MPI-431: the graphs no longer fill holes (mask_fill_holes is off), so this is
         // the only place a hole closes — and the only place the user sees it happen.
-        const fillBtn = MpiButton.mount(document.createElement('div'), {
+        // Mask only: an enclosed hole is a coverage idea, and the paint layer has no
+        // equivalent question to ask.
+        const fillBtn = dest.fillHoles ? MpiButton.mount(document.createElement('div'), {
             label: 'Fill', icon: 'mask_fill_holes_stroke', size: 'sm', variant: 'secondary',
             info: 'Close enclosed holes in the mask (undoable)',
-        });
+        }) : null;
         const commitRow = qs('#commit-slot', el);
         commitRow.appendChild(applyBtn.el);
-        commitRow.appendChild(fillBtn.el);
+        if (fillBtn) commitRow.appendChild(fillBtn.el);
         commitRow.appendChild(resetBtn.el);
         applyBtn.on('click', () => {
-            if (viewer.el.applyMaskAdjust?.()) _reset();
+            if (dest.apply(viewer)) _reset();
         });
         // Fill bakes any live preview along with the fill, as ONE undo entry — so the
         // sliders must return to zero exactly as they do after Apply.
-        fillBtn.on('click', () => {
+        fillBtn?.on('click', () => {
             if (viewer.el.fillMaskHoles?.()) _reset();
         });
-        resetBtn.on('click', _reset);
+        // filter(Boolean): Fill is null on the paint destination, and `null.destroy?.()`
+        // throws — the optional chain is on `destroy`, not on the child.
         _children.push(applyBtn, fillBtn, resetBtn);
 
         _syncLabels();
 
         // No brush pair (MPI-381): Adjust operates on the whole layer, so a drag on
-        // the canvas pans instead of painting.
-        _children.push(MpiMaskStrip.mount(qs('#strip-slot', el), { viewer, brush: false }));
+        // the canvas pans instead of painting. The strip still points at THIS layer,
+        // so its opacity slider and Clear drive the one the tool is adjusting.
+        _children.push(MpiMaskStrip.mount(qs('#strip-slot', el), {
+            viewer, brush: false, dest: dest.stripDest,
+        }));
 
         el.destroy = () => {
             if (_raf) cancelAnimationFrame(_raf);
             // Belt and braces: mountOptions() already discarded through the shared
-            // seam before destroying us, and endMaskAdjust is idempotent.
-            viewer.el.endMaskAdjust?.();
-            viewer.el.evaluateMask?.();
+            // seam before destroying us, and both end*Adjust are idempotent.
+            dest.end(viewer);
+            // Mask only — an adjustment to the paint layer is not a mask change, and
+            // re-publishing would misreport what the op strip is gated on.
+            if (!dest.color) viewer.el.evaluateMask?.();
             viewer.el.exitMode?.();
             _offs.forEach(fn => fn?.());
-            _children.forEach(c => c.destroy?.());
+            _children.filter(Boolean).forEach(c => c.destroy?.());
         };
     },
 });

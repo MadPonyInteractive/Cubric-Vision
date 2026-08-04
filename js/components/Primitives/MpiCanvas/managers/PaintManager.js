@@ -24,6 +24,7 @@
  */
 
 import { stampDab, strokeDabs } from './brushDab.js';
+import { signedSquaredDistanceField, rangeFor, writeRange } from './distanceField.js';
 
 /**
  * Paint is capped far higher than the mask's 1536 because it becomes REAL PIXELS
@@ -83,6 +84,21 @@ export class PaintManager {
         this._strokeBox = null;
         /** Previous dab of the stroke in flight, in paint-px. Reset in takeStrokeBox(). */
         this._lastDab = null;
+
+        // Adjust (MPI-436) — allocated on tool entry, dropped by endAdjust(). The
+        // preview lives here rather than in the layer, so nothing is committed until
+        // Apply and leaving the tool costs a discard rather than an undo.
+        /** @type {HTMLCanvasElement|null} */
+        this.adjustCanvas = null;
+        /** @type {CanvasRenderingContext2D|null} */
+        this.adjustCtx = null;
+        this.hasAdjustPreview = false;
+        /** @type {HTMLCanvasElement|null} the layer as it was on tool entry */
+        this._adjustPristine = null;
+        /** @type {Float32Array|null} */
+        this._adjustField = null;
+        /** @type {ImageData|null} */
+        this._adjustImg = null;
     }
 
     /**
@@ -98,6 +114,8 @@ export class PaintManager {
         this._scale = Math.min(1, PAINT_MAX_EDGE / Math.max(width, height));
         this.paintCanvas.width = Math.max(1, Math.round(width * this._scale));
         this.paintCanvas.height = Math.max(1, Math.round(height * this._scale));
+        // A preview must not outlive the pixels it previewed (MPI-436).
+        this.endAdjust();
         // Setting width/height already blanks the canvas; clear(false) is about the
         // stroke state, and records nothing because a load is not an undoable edit.
         this.clear(false);
@@ -194,6 +212,191 @@ export class PaintManager {
         this.paintCtx.fill(path);
         this.paintCtx.restore();
         return true;
+    }
+
+    // ── Adjust — grow / shrink / edge band over RGBA (MPI-436) ───────────────
+    //
+    // THE SAME PRIMITIVE AS THE MASK, not a second copy: `distanceField.js` is one
+    // module and both layers call it (`MaskManager` § Adjust is the twin). Only the
+    // FILL differs, because a mask is coverage and this layer is colour.
+    //
+    // THE ALPHA DECISION (MPI-440, answered here for MPI-439 to inherit): the shape
+    // of the paint layer IS its ALPHA channel, binarised at >= 128 — the same cut
+    // `fillHoles()` uses, and the one the field already applies. NOT luminance: a
+    // dark scribble and a light one are equally painted, and reading luminance would
+    // make a black stroke read as background. The consequence is that the boundary an
+    // operation CREATES is hard, so a soft edge does not survive where the operation
+    // cuts. Pixels the boundary does not touch keep their own colour AND their own
+    // alpha — which is what makes shrink lossless in the interior and grow's ring the
+    // only flat part.
+
+    /**
+     * Enter Adjust: snapshot the layer so every preview frame derives from tool-entry
+     * state rather than from the frame before it (the MPI-351 double-scale bug).
+     *
+     * The distance field is INVALIDATED here, not built. It describes this snapshot,
+     * so an eager build would charge its cost to entering the tool and to every Apply
+     * even for a user who never moves a slider; the first `previewAdjust()` that needs
+     * one builds it.
+     */
+    beginAdjust() {
+        const w = this.paintCanvas.width;
+        const h = this.paintCanvas.height;
+        if (!w || !h) return;
+
+        if (!this._adjustPristine) this._adjustPristine = document.createElement('canvas');
+        this._adjustPristine.width = w;
+        this._adjustPristine.height = h;
+        this._adjustPristine.getContext('2d', { willReadFrequently: true })
+            .drawImage(this.paintCanvas, 0, 0);
+        this._adjustField = null;
+        this._adjustImg = null;
+
+        if (!this.adjustCanvas) {
+            this.adjustCanvas = document.createElement('canvas');
+            this.adjustCtx = this.adjustCanvas.getContext('2d', { willReadFrequently: true });
+        }
+        this.adjustCanvas.width = w;
+        this.adjustCanvas.height = h;
+        this.hasAdjustPreview = false;
+    }
+
+    /**
+     * Derive the field and the reused preview buffer from the pristine snapshot, once
+     * per snapshot. Reads `_adjustPristine`, NEVER `adjustCanvas` — sourcing it from
+     * its own output is how the adjustment starts compounding frame over frame.
+     *
+     * ponytail: built at the layer's own resolution, which is up to PAINT_MAX_EDGE —
+     * so the cost is quadratic in the source. MEASURED in Chromium, first slider move
+     * then each later frame: **2048² → 247 ms then 7 ms**, **4096² → 1563 ms then
+     * 64 ms**. An ordinary source is the first row and that is fine. A source over
+     * 4096 px is the second, and 1.5 s is a visible freeze on the first move.
+     * The upgrade path if anyone hits it: cap the FIELD at the mask's 1536 and upscale
+     * the region mask, paying radius precision — the thing MPI-441 bought — for it.
+     * Do not pay that until someone reports the freeze.
+     * @returns {boolean} false when there is nothing to build from
+     */
+    _ensureAdjustField() {
+        if (this._adjustField && this._adjustImg) return true;
+        const src = this._adjustPristine;
+        if (!src?.width || !src?.height || !this.adjustCtx) return false;
+        const w = src.width;
+        const h = src.height;
+        const data = src.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+        this._adjustField = signedSquaredDistanceField(data, w, h);
+        this._adjustImg = this.adjustCtx.createImageData(w, h);
+        return true;
+    }
+
+    /**
+     * Recompute the preview from the pristine copy. Radii arrive in IMAGE px, like
+     * every other coordinate here, and are scaled to layer px — the mask works at
+     * 1536 and this layer at 4096, so a radius meant for one is wrong in the other.
+     *
+     * The region is one range test over the field (identical to the mask's); the
+     * three fills are where the layers diverge:
+     * - **shrink** — the region clips the ORIGINAL, so every surviving pixel keeps
+     *   its own colour and the edge eats inward.
+     * - **grow** — the region is filled flat in the current colour and the original
+     *   is drawn back on top, so the new ring is the only flat part.
+     * - **edge band** — the band alone, in the current colour. That is the outline
+     *   tool, and like the mask's Edge it REPLACES the layer rather than adding to
+     *   it: Adjust is a method over the layer, not another way of painting.
+     *
+     * The no-op guard runs BEFORE `_ensureAdjustField()` on purpose — a zero slider
+     * must cost nothing.
+     *
+     * @param {{grow?:number, outward?:number, inward?:number, edge?:boolean}} opts
+     *   grow: >0 dilates, <0 erodes. edge: an outward/inward band instead.
+     * @returns {boolean} true when a preview is up
+     */
+    previewAdjust(opts = {}) {
+        const src = this._adjustPristine;
+        if (!src || !this.adjustCtx) return false;
+        const w = src.width;
+        const h = src.height;
+
+        const s = this._scale;
+        const edge = !!opts.edge;
+        const grow = opts.grow || 0;
+        const range = rangeFor({
+            edge,
+            grow: grow * s,
+            outward: (opts.outward || 0) * s,
+            inward: (opts.inward || 0) * s,
+        });
+        if (!range) {
+            this.adjustCtx.clearRect(0, 0, w, h);
+            this.hasAdjustPreview = false;
+            return false;
+        }
+        if (!this._ensureAdjustField()) return false;
+
+        // putImageData replaces the buffer outright, so there is nothing to clear —
+        // and it ignores globalCompositeOperation, so the region lands as plain white.
+        writeRange(this._adjustField, new Uint32Array(this._adjustImg.data.buffer), range.lo, range.hi);
+        this.adjustCtx.putImageData(this._adjustImg, 0, 0);
+
+        const ctx = this.adjustCtx;
+        ctx.save();
+        if (!edge && grow < 0) {
+            // `source-in` = the source drawn only where the destination is opaque, so
+            // the region acts as the clip and the pixels come through unchanged.
+            ctx.globalCompositeOperation = 'source-in';
+            ctx.drawImage(src, 0, 0);
+        } else {
+            ctx.globalCompositeOperation = 'source-in';
+            ctx.fillStyle = this.color;
+            ctx.fillRect(0, 0, w, h);
+            if (!edge) {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.drawImage(src, 0, 0);
+            }
+        }
+        ctx.restore();
+
+        this.hasAdjustPreview = true;
+        return true;
+    }
+
+    /**
+     * Bake the preview into the layer. Layer-wide ONE SHOT, so a single
+     * `_recordUndo()` after the no-op guard — not a `begin()`/`commit()` gesture
+     * (`docs/masking-undo.md`).
+     * @returns {boolean} false when there was nothing to apply
+     */
+    applyAdjust() {
+        if (!this.hasAdjustPreview || !this.adjustCanvas || !this.paintCtx) return false;
+
+        this._recordUndo();
+
+        this.paintCtx.clearRect(0, 0, this.paintCanvas.width, this.paintCanvas.height);
+        this.paintCtx.drawImage(this.adjustCanvas, 0, 0);
+
+        // Still inside the tool: re-snapshot so the next adjustment starts from what
+        // was just baked instead of from the pre-Apply layer.
+        this.hasAdjustPreview = false;
+        this.beginAdjust();
+        return true;
+    }
+
+    /**
+     * Drop the preview and its buffers. Called by Reset and by leaving the tool
+     * through the shared `discardPreview()` seam. Idempotent.
+     * @returns {boolean} true when a preview was discarded
+     */
+    endAdjust() {
+        const had = this.hasAdjustPreview;
+        this.hasAdjustPreview = false;
+        for (const c of [this.adjustCanvas, this._adjustPristine]) {
+            if (c) { c.width = 0; c.height = 0; }
+        }
+        this.adjustCanvas = null;
+        this.adjustCtx = null;
+        this._adjustPristine = null;
+        this._adjustField = null;
+        this._adjustImg = null;
+        return had;
     }
 
     /**

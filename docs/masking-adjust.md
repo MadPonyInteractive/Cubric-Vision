@@ -25,9 +25,9 @@ filled, corners rounded) and dragging back is **not** a restore.
 **One primitive, three readings.** `signedSquaredDistanceField()` in
 `managers/distanceField.js` — grow is `field <= r²`, shrink is `field <= −(e²+1)`, an edge band is
 `−in² <= field <= out²`. One **range test**, three readings, and the band is a single pass rather
-than a dilate with a `destination-out` erode over it. **MPI-436 points this same primitive at the
-paint layer** (and is where OUTLINES belong): note it reads **alpha**, binarised at ≥128 (the
-`fillHoles()` convention), and emits a hard edge.
+than a dilate with a `destination-out` erode over it. It reads **alpha**, binarised at ≥128 (the
+`fillHoles()` convention), and emits a hard edge. **The paint layer calls the same function**
+(MPI-436, below) — one module, two destinations; a second dilate anywhere is the reuse regressing.
 
 **Why it is not a blur any more (MPI-441).** It was, and the elegance was the bug: a blurred step
 edge is the ramp `Φ(d/r)`, so one Gaussian cut at `Φ(-1)` / `Φ(+1)` gave both directions. But a
@@ -47,11 +47,17 @@ correctly removes the 14px arm. Squared integers throughout, which is what lets 
 `d² >= e²+1` and keeps erode strict with no epsilon.
 
 **Cost moved, and moved the right way.** The field describes the pristine shape, not the radius, so
-it is built **once** in `beginAdjust()` — **125 ms** at 1536² — and each slider frame is then
-**3.5 ms** including `putImageData`, flat in r. The old primitive was free to enter and 8.7 ms per
-frame, 17.4 ms for a band, so any real drag is now cheaper; what it buys is a one-time hitch on
-tool entry and after each Apply (which re-snapshots). Live preview was kept on those numbers.
-`this._adjustImg` is reused across frames — a fresh `ImageData` per tick is a 9 MB allocation.
+it is built **once per snapshot** — **125 ms** at 1536² — and each slider frame is then **3.5 ms**
+including `putImageData`, flat in r. The old primitive was free to enter and 8.7 ms per frame,
+17.4 ms for a band, so any real drag is now cheaper; what it buys is a one-time hitch. Live preview
+was kept on those numbers. `this._adjustImg` is reused across frames — a fresh `ImageData` per tick
+is a 9 MB allocation.
+
+**Built LAZILY, not on tool entry.** `beginAdjust()` snapshots and *invalidates*; the first
+`previewAdjust()` that passes the no-op guard calls `_ensureAdjustField()`. Eager building charged
+the 125 ms to entering the tool **and to every Apply** (which re-snapshots) — including a user who
+came in only to press Fill, or who never moved a slider. The compounding guard is unchanged: the
+field still comes off `_adjustPristine`, never off `adjustCanvas`.
 
 Outside the canvas counts as **background**, which is what the blur did implicitly (it pulled
 transparency in from past the edge), so a mask running off the frame still erodes from that border
@@ -69,6 +75,42 @@ The preview lives in `adjustCanvas` — allocated on entry, freed on discard, dr
 `maskCanvas` so the user never judges the old shape and the proposed one at once. It is never
 exported, and `discardPreview()` drops it, which is what makes Adjust the first tool to extend
 that seam rather than the call site.
+
+### The paint layer — the outline tool (MPI-436)
+
+The same primitive pointed at the RGBA layer: `PaintManager` imports `distanceField.js` and
+`MpiToolOptionsMaskAdjust` is registered under **both** `maskAdjust` and `paintAdjust`, picking a
+row in its `DEST` table off `props.mode` (the MPI-368 / MPI-373 pattern). An outline MODE on the
+shape gizmo was rejected for this: it would be a second, worse implementation, and this one
+outlines *any* paint rather than just a shape — which is why [Shapes](masking-shapes.md) ships
+filled-only.
+
+**THE ALPHA ANSWER (MPI-440's shared question, decided here; MPI-439 inherits it).** The shape of
+the paint layer is its **ALPHA**, binarised at ≥128 — the same cut the field already applies, and
+NOT luminance, under which a black stroke would read as background. The consequence: the boundary
+an operation **creates** is hard, so a soft edge does not survive *where the operation cuts*.
+Pixels the boundary never touches keep their own colour **and** their own alpha.
+
+Only the FILL differs per direction, and this is the whole of what paint adds:
+
+| | Region | Fill | Result |
+|---|---|---|---|
+| Shrink | eroded interior | region clips the original (`source-in`) | every survivor keeps its own colour |
+| Grow | original ∪ ring | region flat in the paint colour, original drawn back **on top** | the new ring is the only flat part |
+| Edge | the band | flat in the paint colour | the outline, and **the scribble is replaced** — Adjust is a method over the layer, like mask Edge |
+
+Radii arrive in **image px** and are scaled by `_scale` — the contract `paint()` and
+`commitShape()` already follow, and the reason it matters here is that this layer runs at 4096
+against the mask's 1536. Apply is the same layer-wide one shot (`_recordUndo()` after the no-op
+guard) and does **not** call `onMaskStrokeEnd`: an adjustment to paint is not a mask change, and
+publishing it would misreport what the op strip is gated on. The preview extends `discardPreview()`
+— the paint LAYER never did, because a stroke is committed pixels ([painting.md](painting.md)).
+
+**Cost is quadratic in the source and the second row is a real ceiling.** Measured in Chromium,
+first slider move then each later frame: **2048² → 247 ms then 7 ms**; **4096² → 1563 ms then
+64 ms**. An ordinary source is the first row. A source over 4096 px hits the second, where 1.5 s is
+a visible freeze. The upgrade path — cap the field at 1536 and upscale the region mask, paying the
+radius precision MPI-441 bought — is marked with a `ponytail:` comment and deliberately not taken.
 
 ### Fill Holes (MPI-431)
 

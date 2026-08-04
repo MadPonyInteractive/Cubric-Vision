@@ -860,7 +860,14 @@ class _CanvasCore {
         // so it has to still be there when the user switches to a mask tool.
         if (this.paint.paintCanvas.width) {
             ctx.globalAlpha = this.paint.opacity;
-            ctx.drawImage(this.paint.paintCanvas, 0, 0, W, H);
+            // Adjust (MPI-436) draws its preview INSTEAD of the layer, never over it —
+            // the same rule the mask preview follows two blocks down, and for the same
+            // reason: the user must not be judging the old scribble and the proposed
+            // one at once. The real layer is untouched until Apply.
+            const paintLayer = (this.paint.hasAdjustPreview && this.paint.adjustCanvas)
+                ? this.paint.adjustCanvas
+                : this.paint.paintCanvas;
+            ctx.drawImage(paintLayer, 0, 0, W, H);
             ctx.globalAlpha = 1;
         }
 
@@ -1129,6 +1136,18 @@ class _CanvasCore {
         await this.paint.setFromDataURL(dataURL);
         this.draw();
     }
+
+    // ── Paint Adjust preview API (MPI-436) ────────────────────────────────────
+    // Mirrors the mask's Adjust surface above, minus the publish call: an adjustment
+    // to the paint layer is not a mask change, so it must NOT go through
+    // `onMaskStrokeEnd` — the shape commit's paint branch draws the same line.
+
+    beginPaintAdjust()       { this.paint.beginAdjust(); this.draw(); }
+    /** @param {{grow?:number, outward?:number, inward?:number, edge?:boolean}} opts radii in IMAGE px */
+    previewPaintAdjust(opts) { const up = this.paint.previewAdjust(opts); this.draw(); return up; }
+    applyPaintAdjust()       { const ok = this.paint.applyAdjust(); if (ok) this.draw(); return ok; }
+    endPaintAdjust()         { const had = this.paint.endAdjust(); this.draw(); return had; }
+    hasPaintAdjustPreview()  { return !!this.paint.hasAdjustPreview; }
 
     // ── Composite API (MPI-373) ───────────────────────────────────────────────
     // Same surface shape as the paint layer above, so the shared strip drives this
@@ -1440,6 +1459,7 @@ export const MpiCanvas = ComponentFactory.create({
             'setCropRatio','setCropSize','getCropRect',
             'setPaintBrushSize','setPaintBrushType','setPaintColor','setPaintOpacity','getPaintOpacity',
             'setPaintEnabled','getPaintURL','hasPaint','clearPaint','setPaintFromDataURL',
+            'beginPaintAdjust','previewPaintAdjust','applyPaintAdjust','endPaintAdjust','hasPaintAdjustPreview',
             'setShapeMode','setShapeKind','getShapeKind','hasShape','resetShape','clearShape','commitShape',
             'setCompositeUnderlay','setCompositeHoleFromDataURL','setCompositeHoleFromMask',
             'refreshCompositeHoleFromMask','setCompositeBrushSize','setCompositeBrushType',

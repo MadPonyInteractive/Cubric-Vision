@@ -86,18 +86,27 @@
 /**
  * @typedef {Object} MpiToolOptionsMaskAdjustProps (Organism — js/components/Organisms/MpiToolOptionsMaskAdjust)
  * @property {Object} viewer - MpiCanvasViewer instance
+ * @property {'maskAdjust'|'paintAdjust'} [mode='maskAdjust'] - which layer to drive
  *
- * A method OVER an existing mask (MPI-382), not another way of making one. One
- * bidirectional Shrink / Grow slider, an Edge button that swaps that ONE row for
- * Outward + Inward, plus Apply, Fill and Reset; mounts MpiMaskStrip WITHOUT the
- * brush pair. Live preview in the pending green — an unapplied adjustment is
+ * A method OVER an existing layer (MPI-382 mask, MPI-436 paint), not another way of
+ * making one. One bidirectional Shrink / Grow slider, an Edge button that swaps that
+ * ONE row for Outward + Inward, plus Apply and Reset; mounts MpiMaskStrip WITHOUT the
+ * brush pair, pointed at this layer. Live preview — an unapplied adjustment is
  * DISCARDED on leaving the tool, through the shared discardPreview seam.
- * Fill (MPI-431) closes enclosed holes — the graphs no longer do it — and bakes
- * any live preview with it as ONE undo entry.
- * Requires viewer.el: enterMode('mask'), exitMode(), evaluateMask(),
- *   setMaskPointsMode(), beginMaskAdjust(), previewMaskAdjust(),
- *   applyMaskAdjust(), endMaskAdjust(), fillMaskHoles()
- * No 'apply' emitted — mask is canvas-resident; PromptBox drives operations.
+ *
+ * ONE panel registered under TWO modes, the MPI-368 / MPI-373 pattern: `props.mode`
+ * picks a row in `DEST` and nothing else branches. On paint this is the OUTLINE tool,
+ * so that destination adds a colour picker (grow's new ring and the band are filled in
+ * it) and drops Fill, which is a mask idea.
+ *
+ * Fill (MPI-431, mask only) closes enclosed holes — the graphs no longer do it — and
+ * bakes any live preview with it as ONE undo entry.
+ * Requires viewer.el: enterMode(), exitMode(), and per destination —
+ *   mask  — evaluateMask(), setMaskPointsMode(), beginMaskAdjust(),
+ *           previewMaskAdjust(), applyMaskAdjust(), endMaskAdjust(), fillMaskHoles()
+ *   paint — setPaintColor(), beginPaintAdjust(), previewPaintAdjust(),
+ *           applyPaintAdjust(), endPaintAdjust()
+ * No 'apply' emitted — both layers are canvas-resident; PromptBox drives operations.
  */
 
 /**
