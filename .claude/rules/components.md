@@ -99,6 +99,22 @@ This applies to ALL components created via `ComponentFactory.mount()`.
 
 ---
 
+## `hidden` does NOT hide a component — its own CSS `display` wins
+
+`[hidden] { display: none }` lives in the UA stylesheet, so **any** component whose CSS sets `display` outranks it. `.mpi-btn` is `display: inline-flex` → `btn.el.hidden = true` leaves the button fully on screen. (`queueNote.hidden` works only because that element sets no `display` of its own.)
+
+```javascript
+// WRONG — the button stays visible
+stopBtn.el.hidden = true;
+
+// CORRECT — a class your own CSS owns, or re-mount the slot with the other variant
+slot.classList.toggle('my-block__slot--hidden', !visible);   // display: none in your CSS
+```
+
+**Swapping two elements with `hidden` is how this bites**, and it usually arrives paired with the mount rule above: the second `mount()` into the shared slot already deleted the first, and `hidden` then fails to hide the survivor. Measured 2026-08-04 on `MpiMaskDetectRow` (MPI-421) — a Detect/Stop swap that hit both traps at once and shipped a button that could not be reached. The fix was ONE button re-mounted on the state flip. `docs/masking-adjust.md` records the same `display`-beats-`hidden` trap for an inert slider row.
+
+---
+
 ## Mount Target Isolation
 
 **Each mount target must be dedicated to exactly one mount call.** Never mount into a container that already has children (whether from the template or from a previous mount).

@@ -91,6 +91,13 @@ Each release file contains:
 - **ComfyUI Engine**: Version info
 - **Platform Update Checklist**: Items to update on the landing page, docs site, GitHub releases, Patreon, and Discord
 
+### Voice — claim the improvement, not the absolute
+
+**"Faster", never "instant"** (user ruling, 2026-08-04). A speed-up gets described as a
+speed-up; an absolute is a promise the next machine, image or model size can break, and one
+slow case then reads as a regression against our own notes. Same shape for "always", "never
+fails" and "no wait". Describe what changed and let the user feel the size of it.
+
 ## Build-time flags and stage derivation
 
 ### `dev_mode` is derived from `BUILD_HASH`

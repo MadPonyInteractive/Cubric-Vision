@@ -28,6 +28,14 @@
 - **Mask toolbar: one Detect button.** The three detection methods (Points, Text,
   Auto) now live in a small strip that opens beside the Detect button instead of
   taking three slots in the toolbar. Same tools, same behaviour — less column.
+- **Choosing between detection results is much faster.** One detection now finds
+  every match in a single pass, so picking a result — or changing your mind and
+  picking another — no longer runs the detection again each time. Trying all of them
+  costs what one used to.
+- **A detection shows its progress, and can be stopped.** The status bar reports a
+  running detection with a timer, and the Detect button turns into Stop while it
+  works. A slow pass over a busy image used to look like the app had frozen, with no
+  way to call it off.
 - **Localised edit — edit part of an image at full size.** Mask an area before an
   edit and only that area is regenerated. A whole-image edit has to shrink your
   picture to the size the model works at; a masked edit crops to the mask instead,
@@ -124,6 +132,10 @@
   its Control operation still generates at the size you pick.
 
 ## fixes
+
+- **The progress bar no longer keeps moving after you press Stop.** Stopping a job
+  that reports no percentage — an upscale, a detection — left the bar sweeping away
+  under an IDLE label until the next job happened to reset it.
 
 - **Notifications no longer sit on top of what you're working on.** They now appear
   at the top centre of the window, the one strip the interface keeps clear. Every
