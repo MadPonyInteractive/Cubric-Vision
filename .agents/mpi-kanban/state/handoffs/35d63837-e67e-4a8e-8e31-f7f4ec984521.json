@@ -1,0 +1,131 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "35d63837-e67e-4a8e-8e31-f7f4ec984521",
+  "generated_at": "2026-08-04T05:10:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-413 — Pod convergence written + Phase 2 real-engine verified",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Install the dependency set WE chose: one curated pip file, not 13 unconstrained per-node resolves.",
+    "status": "in_progress",
+    "summary": "Phase 2 is now REAL-ENGINE VERIFIED on the Linux box, and the Pod convergence is WRITTEN AND COMMITTED in both repos (mpi-ci aa81d65, Cubric-Vision c3a61a91 + 1eb34b20). Nothing is left to design or code. What remains is purely SHIPPING it, which is user-authorized: publish the wrapper to R2 dev, restart the Pod, test, promote, then build the image — and only after that, delete the now-dead local passthrough."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-413/plan.md",
+    "completed": [
+      "Phase 2a-2d (previous session) — curated input, generated lock, generator + drift check, consumer, anti-drift docs",
+      "Phase 2 REAL-ENGINE verification on the Linux box — all obtainable metrics passed, full numbers in validation.md",
+      "Phase 1 CLOSED AS SUPERSEDED — --no-deps against a file with no torch makes a local PIP_CONSTRAINT structurally unable to matter",
+      "Pod convergence CODE — Dockerfile, wrapper.py, python_deps.txt into the build context, build-pod-image step 3a, mpi-ci README, docs/runpod-remote-engine.md section 6"
+    ],
+    "pending": [
+      "SHIP STEP 1 — ./publish-runtime.sh dev in c:/AI/Mpi/mpi-ci/cubric-vision-pod, restart the Pod, test, then ./publish-runtime.sh promote. WRAPPER FIRST, before the image.",
+      "SHIP STEP 2 — bump WRAPPER_VERSION '0.2.36' -> '0.2.41' in routes/remotePodLifecycle.js:227 (needs an APP RESTART to take effect)",
+      "SHIP STEP 3 — build the Pod image via the build-pod-image skill. Its MPI-341 IMPORT FAILED grep is what finally closes the one card metric the Linux box could not measure.",
+      "AFTER the Pod ships — delete the dead local set together: requirementsDrop + _filterRequirements (routes/downloadManager.js), their nodesDeps.js entries, tests/requirements-filter.test.cjs, and the install_command/pip_pins passthrough at routes/remoteModels.js:412-417"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-413",
+    "title": "Install the dependency set WE chose: one curated pip file, not 13 unconstrained per-node resolves",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-413/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-413/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-413/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-413/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-413/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "validation.md — full Phase 2 real-engine section (the four metrics with measured numbers, why IMPORT FAILED was not obtainable on that hardware and the proof it is pre-existing, the repair-deps self-heal gap), the Pod convergence section, and the Phase 1 close-as-superseded record.",
+      "plan.md — the two 'deliberately not in this phase' items struck through with their disposition, plus a Plan Drift section recording that the wrapper half was smaller than assumed and that the self-heal claim is narrower than stated.",
+      "checklist.md rewritten to the real remaining work.",
+      "mpi-ci cubric-vision-pod/README.md — new section on the ONE curated set (why --no-deps is load-bearing, what it retired, why the wrapper runs no pip, copy both files together).",
+      "docs/runpod-remote-engine.md section 6 — new Python-deps bullet; ALSO corrected that section's baked/volume node list, which was factually wrong (it listed LTXVideo and RES4LYF as code-only when both are installRequirements:true).",
+      ".claude/commands/build-pod-image.md step 3a — now copies BOTH node_lock.json and python_deps.txt, with why they must move together.",
+      "Three events appended to both events.jsonl logs; the previous handoff 51f94f9f marked resolved in state/index.json."
+    ],
+    "pending": [
+      "Nothing doc-wise blocks the ship. After the image builds green, add the built image tag + a line to docs/runpod-remote-engine.md's image changelog the way v0.15.0/v0.16.0/v0.17.0 are recorded there."
+    ]
+  },
+  "next_action": {
+    "description": "Ship the Pod convergence, wrapper FIRST. In c:/AI/Mpi/mpi-ci/cubric-vision-pod run ./publish-runtime.sh dev, restart the Pod, test a connect + a generation, then ./publish-runtime.sh promote. Bump WRAPPER_VERSION '0.2.36' -> '0.2.41' in routes/remotePodLifecycle.js:227 and restart the app. THEN build the image with the build-pod-image skill. All of these are user-authorized live ops — ask before each. Drive it from the WINDOWS DEV APP, not the Linux box: dev image and wrapper pins only resolve when BUILD_HASH === 'dev', and the Linux box runs a v1.3.0 release build with a swapped-in master file.",
+    "command": "mpi-continue MPI-413"
+  },
+  "context": {
+    "key_decisions": [
+      "SHIP ORDER IS LOAD-BEARING — wrapper before image. A new curated image running the OLD stable wrapper would re-install VideoHelperSuite's opencv-python at connect and partially undo the cv2 unification. The reverse is safe: the new wrapper on the CURRENT image finds opencv already baked and ffmpeg on PATH, so promoting it early cannot break a released user.",
+      "The wrapper half was far smaller than the previous handoff assumed. install_command and pip_pins are set ONLY on installRequirements:true deps, and those are BAKED (remoteModels._isImageResident) and never volume-installed — so both branches of _install_node_requirements were ALREADY unreachable on the remote path. Of the 7 code-only volume nodes fetched at their pinned commits, exactly ONE ships a requirements.txt: VideoHelperSuite (opencv-python, imageio-ffmpeg). That single line is what the live Pod has been running, and it is a second cv2 build.",
+      "Dropping VideoHelperSuite's requirements is safe and was checked at the pinned commit: videohelpersuite/utils.py lines 64-92 wrap the imageio_ffmpeg import in try/except and fall back to shutil.which('ffmpeg'), which the image apt-installs. The LOCAL engine has never installed VHS's requirements either, so this converges rather than diverges.",
+      "install_command / pip_pins are ACCEPTED AND IGNORED by the new wrapper rather than rejected, because routes/remoteModels.js:412-417 in every released app still sends them. Deleting the app-side passthrough is the LAST step, after the Pod ships — not before.",
+      "Kept in the Dockerfile deliberately: PIP_CONSTRAINT (=/opt/constraints.txt), PIP_EXTRA_INDEX_URL (the cu130 pin is a LOCAL version that exists only on the pytorch index — MPI-342), the MPI-244 post-node +cu130 re-assert, and the MPI-341 IMPORT FAILED grep. The kornia 'pad' assert survived the deletion of its pin and a cv2/ximgproc assert joined it.",
+      "Phase 1 closed as superseded rather than built: runPipCommand has exactly ONE local call site left and it runs --no-deps against a file containing no torch, so a constraint file cannot change any outcome. The only unconstrained pip left is comfy-cli's own during `comfy install`, already guarded on macOS and moot on Windows."
+    ],
+    "constraints": [
+      "A Pod IMAGE BUILD and live Pod ops are USER-AUTHORIZED. Ask before publish-runtime, before restarting a Pod, and before dispatching a build.",
+      "NEVER ./publish-runtime.sh stable for day-to-day work — that lands on released users. The flow is dev -> test -> promote (promote copies the tested dev bytes to stable).",
+      "mpi-ci is a SEPARATE git repo at c:/AI/Mpi/mpi-ci/. Use `git -C` or cd; absolute paths in all tool calls. Its Docker-bound files must commit as LF — verified 0 CR in the committed python_deps.txt and wrapper.py blobs.",
+      "The Linux test box (ssh linuxbox, 192.168.0.200) is an Intel Core i3-2367M (Sandy Bridge, 2011) with NO AVX2. `import kornia_rs` dies with SIGILL there, so ComfyUI can never finish booting on it. This is NOT an MPI-413 defect — it reproduced identically BEFORE any curated package was installed, and kornia_rs is the only failure out of ten modules checked. Do not re-chase it; do not try to get an IMPORT FAILED count from that box.",
+      "The Linux box currently runs a v1.3.0 release build with master's routes/downloadManager.js and dev_configs/python_deps.txt swapped in, plus the curated deps installed. Original saved at app/routes/downloadManager.js.pre413. Its engine is HEALTHIER than before (core requirements were entirely missing, left over from the 2026-07-31 MPI-411 session). SETTLED 2026-08-04 — the user chose to LEAVE it in that mixed state as a Phase-2-current install test box. Do NOT assume it is a clean v1.3.0; md5sum against the repo before trusting it to represent any version. Full detail in memory tool_drive_linux_test_box_over_ssh.",
+      "To drive that box headlessly: ELECTRON_RUN_AS_NODE=1 app/node_modules/electron/dist/electron <script>, with CUBRIC_PORTABLE_ROOT / CUBRIC_ENGINE_ROOT / CUBRIC_MODELS_ROOT / CUBRIC_USER_DATA_ROOT / MPI_RESOURCES_PATH / CUBRIC_UV_BIN set as start-with-terminal.sh sets them. There is NO node on the box. The probe used lives at /tmp/curated-install-probe.js there.",
+      "Dockerfile:89 still defaults COMFYUI_REF=v0.19.3 while node_lock says v0.29.2. Harmless (CI passes the arg, and the build-pod-image command derives it from the lock) but it is a trap for anyone building without the build-arg."
+    ],
+    "files_modified": [
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/Dockerfile",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/python_deps.txt",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/README.md",
+      ".claude/commands/build-pod-image.md",
+      "docs/runpod-remote-engine.md",
+      ".agents/mpi-kanban/tasks/MPI-413/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-413/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-413/validation.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-413/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-413/checklist.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/README.md",
+      ".claude/commands/build-pod-image.md",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/publish-runtime.sh"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "RunPod / remote engine",
+      "Pod image / mpi-ci",
+      "ComfyUI engine / backend / models",
+      "Downloads"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    "docs/runpod-remote-engine.md",
+    "docs/download-manager.md",
+    ".claude/commands/build-pod-image.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-04T05:10:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are picking up MPI-413 in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/35d63837-e67e-4a8e-8e31-f7f4ec984521.json, then .agents/mpi-kanban/tasks/MPI-413/validation.md and checklist.md, and run mpi-continue MPI-413. Nothing is left to design or code — the Pod convergence is written and committed in both repos (mpi-ci aa81d65, Cubric-Vision c3a61a91 and 1eb34b20), and Phase 2 is real-engine verified on the Linux box with all obtainable metrics passing. What remains is SHIPPING it, and every step is a user-authorized live op, so ask before each one. The order is load-bearing: FIRST publish the wrapper (cd c:/AI/Mpi/mpi-ci/cubric-vision-pod, ./publish-runtime.sh dev, restart the Pod, test a connect and a generation, then ./publish-runtime.sh promote), because a new curated image running the OLD stable wrapper would re-install VideoHelperSuite's opencv-python at connect and partially undo the cv2 unification. Then bump WRAPPER_VERSION from '0.2.36' to '0.2.41' at routes/remotePodLifecycle.js:227 and restart the app so the running Express child picks it up. THEN build the image with the build-pod-image skill — its MPI-341 IMPORT FAILED grep is what finally closes the one card metric the Linux box could not measure, because that box is a 2011 Sandy Bridge i3 with no AVX2 where kornia_rs SIGILLs and ComfyUI cannot boot at all (pre-existing, proven, do not re-chase). Only AFTER the Pod ships, delete the now-dead local set together: requirementsDrop and _filterRequirements in routes/downloadManager.js, their nodesDeps.js entries, tests/requirements-filter.test.cjs, and the install_command/pip_pins passthrough at routes/remoteModels.js:412-417. Drive all Pod work from the Windows dev app, not the Linux box. One open question for the user: the Linux box still runs a v1.3.0 build with master's downloadManager.js swapped in (original at app/routes/downloadManager.js.pre413) and the curated deps installed — ask whether to restore it."
+}
