@@ -7,7 +7,7 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-04T06:15:00Z",
-  "updated_at": "2026-08-04T07:05:00Z",
+  "updated_at": "2026-08-04T13:50:34Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -27,7 +27,7 @@
   "activeSessionTitle": "MPI-438 remote twin for universal node deps",
   "attention": {
     "state": "required",
-    "reason": "Session ended with the card in doing, maturity validating. Code complete and suite-green at 390/0, with validation.md holding the diagnosis, the measured blast radius and the four-sabotage table. ZERO live verification - ensureUniversalNodesOnVolume has never executed against a wrapper. Needs the same Pod boot as MPI-413: on a volume with no Wan 2.2 and no Klein/Boogu, Resize Video AND Head Swap must both succeed.",
-    "updated_at": "2026-08-04T07:05:00Z"
+    "reason": "LIVE-VERIFIED 2026-08-04 on Pod vhks7b6fl1x57h / volume 9t3awufudk - the volume the bug was found on. ensureUniversalNodesOnVolume executed against a real wrapper for the first time, installed 2 missing packs (ComfyUI-PainterI2Vadvanced + ComfyUI-VideoHelperSuite), restarted ComfyUI -> 200; /object_info went 1822 -> 1863 node types with 40 VHS_*; and Resize Video completed end to end (prompt 81b0399f, VHS_LoadVideoPath + VHS_VideoInfoSource, status success, outputs 18:videos). Suite 392/0. Head Swap was NOT run and is not claimed: comfyui-inpaint-cropandstitch was already present on that volume, so it would have passed for the wrong reason - the user has accepted this, it is ongoing dev and gets verified before release. AWAITING only an explicit go to move the card to done.",
+    "updated_at": "2026-08-04T13:50:34Z"
   }
 }
