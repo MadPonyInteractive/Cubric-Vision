@@ -1,0 +1,137 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "87bbf66f-5536-4e06-be2b-27f0868b1e9f",
+  "generated_at": "2026-08-04T03:05:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-368 shape gizmo shipped (both mounts, Shift, 7.5 deg snap) + MPI-437 composite fillHoles fixed; MPI-436 carded",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue the masking umbrella plan - the next card should be shapes.",
+    "status": "complete",
+    "summary": "MPI-368 (shape gizmo) and MPI-437 (composite fillHoles) are DONE, user-verified in the app, and committed. Four of the five MPI-424 umbrella cards have now shipped; MPI-373 (Composite) is the last one. Nothing is mid-flight - this is a clean boundary, not a rescue."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-368/plan.md",
+    "completed": [
+      "MPI-368 shipped in three rounds, each user-verified: (1) the gizmo, both mounts, panel + registries + preview discard + docs; (2) Shift = resize without deforming; (3) 7.5 deg rotation snap + a redrawn rail icon.",
+      "MPI-437 carded AND fixed the same session at the user's go-ahead: compositeThroughMask defaulted fillHoles ON and no caller ever passed the flag, so an edge-band mask composited as a solid disc.",
+      "MPI-436 CREATED, not started - Adjust for the RGBA paint layer, which is where OUTLINES belong.",
+      "Docs SPLIT rather than trimmed: docs/masking-shapes.md is new, docs/masking-adjust.md carves Adjust + Fill Holes out of masking-tools.md (211 -> 147, back under its 200 cap).",
+      "Committed: 6478a71d (MPI-368 code/tests/docs), 55f5a048 (MPI-437 fix), 48e0e65a (kanban close-out). Suite 374/0, lint 0 errors, board validator unchanged at its 416 resting state."
+    ],
+    "pending": [
+      "TWO APPROVAL-GATED EDITS THE USER DEFERRED TO THIS SESSION - do these first, they are the only debt: (a) add the shape family to the FOUR component-map rule files, exactly as MPI-375 did for paint in commit 6d112007 - there is a skill, /mpic-update-component-map; (b) add CLAUDE.md Context Router rows for docs/masking-shapes.md and docs/masking-adjust.md.",
+      "MPI-373 (Composite) - the LAST card of the MPI-424 umbrella. Settled design on the card, NO plan file yet: run mpi-create-plan against it when it comes up.",
+      "MPI-435 (alpha brush pack) and MPI-436 (Adjust for the paint layer) are both unblocked and independent of each other.",
+      "NOT FIXED, deliberately: MaskManager.getURL() exports any non-zero alpha as SOLID WHITE while the app cuts at >=128 elsewhere. Needs a decision, not a patch - see context.constraints."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-424",
+    "title": "Canvas tool family umbrella",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-424/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-424/checklist.md",
+      "validation": null,
+      "handoffs": null
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "make the two deferred rule/router edits",
+    "plan MPI-373"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/masking-shapes.md (NEW) - the gizmo, both mounts, the handle system borrowed from CropManager, the Shift and ALT contracts, the 7.5 deg snap, and the measured real-pixel evidence.",
+      "docs/masking-adjust.md (NEW, split out of masking-tools.md) - Adjust + Fill Holes, plus the MPI-437 paragraph explaining that the fill-holes ruling took a second pass to land.",
+      "docs/masking-tools.md trimmed to 147, docs/painting.md and docs/masking-undo.md updated for the shape commit, docs/README.md routes both new docs.",
+      "docs/releases/UNRELEASED.md carries two entries (Shapes under whatIsNew, the composite fix under importantChanges) - see the constraint about WHO committed them.",
+      "Memory: feedback_green_sabotage_is_two_different_bugs.md written and indexed in feedback-index.md.",
+      "tasks/MPI-424/brief.md rewritten for a fresh session: four of five done, MPI-373 last, and the getURL finding recorded as item 5."
+    ],
+    "pending": [
+      "The four component-map rule files do NOT yet know about the shape family (user deferred).",
+      "CLAUDE.md's Context Router still sends Adjust questions to masking-tools.md, which no longer holds Adjust - the content moved to masking-adjust.md (user deferred).",
+      ".agents/mpi-kanban/state/index.json is UNCOMMITTED and carries a PEER's MPI-413 handoff entry plus this handoff's entry. It was left uncommitted on purpose - see constraints."
+    ]
+  },
+  "next_action": {
+    "description": "Make the two edits the user deferred at close-out. FIRST run /mpic-update-component-map to add the shape family (MpiToolOptionsShapes, ShapeManager, the maskShapes and paintShapes rail modes) to the four component-map rule files - MPI-375's commit 6d112007 is the worked precedent for exactly this. SECOND add two Context Router rows to CLAUDE.md: docs/masking-shapes.md for the gizmo, and docs/masking-adjust.md for grow/shrink/edge-band/Fill, whose current row still points at masking-tools.md where that content no longer lives. Both are architectural-rule edits, so propose each and take the user's per-file approval. After that, MPI-373 (Composite) is the next real card and needs mpi-create-plan.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "SHAPES IS ARMED LIKE pointsMode, NOT AS A CANVAS MODE. `shapeMode` (null|'mask'|'paint') is a flag inside the canvas' existing mask/paint mode, so CANVAS_MODES and _enterMode were never touched and brush ownership, the undo gate and the paint render pass keep working underneath. This is the trap MPI-375 fell into (a dead tool that looked alive) and it was designed around, not discovered.",
+      "THE COMMIT LIVES ON THE LAYER MANAGERS, not on MpiCanvas: MaskManager.commitShape() and PaintManager.commitShape(), each taking a path BUILDER and applying its OWN _scale. The mask works at 1536 and paint at 4096 - a path built for one is silently offset in the other. It is also what keeps masking-undo.md's per-manager mutation table honest.",
+      "HIT-TESTING RUNS IN SHAPE-LOCAL SPACE - inverse-rotate the cursor, then run CropManager's axis-aligned test verbatim. One test serves all three kinds AND rotation. CropManager's handle keys, hit radius, drawing and cursor map are IMPORTED, not forked; if a change ever edits two handle systems, that extraction regressed.",
+      "SHIFT LOCKS THE RATIO THE SHAPE HAS, not the 1:1 seed (user's call, Figma behaviour not Photoshop's). ROTATION SNAPS TO 7.5 deg, snapping the ABSOLUTE angle so an off-grid shape squares back up, with the orbit using the same snapped delta or the pivot handle slides off the cursor.",
+      "THE SHAPE SURVIVES ITS COMMIT (stamp again by dragging) but an UNCOMMITTED gizmo is a preview: discardPreview() drops it, on the ONE seam, never at the mountOptions call site. MPI-373 hangs its preview on that same seam.",
+      "MPI-368 SHIPS FILLED-ONLY, and that is why MPI-436 exists. An outline mode on the gizmo would be a second, worse implementation of what Adjust's edge band already does - and it would only ever outline a shape, where _morph outlines any paint.",
+      "DOCS WERE SPLIT, NOT TRIMMED. masking-tools.md was 11 lines over its cap BEFORE this card and the remaining fat was measured evidence. Two new docs; masking-sam3.md was the precedent."
+    ],
+    "constraints": [
+      "THE FINDING THIS SESSION DID NOT FIX. MaskManager.getURL() exports `a > 0` as solid white, while fillHoles() and the rest of the app cut at `>= 128`. Antialiasing means destination-out can never fully remove what an antialiased fill put down, so every erase leaves a sub-threshold rim that the export then promotes to REAL MASK. Measured at 2048 sq: a shape Add->Subtract leaves 1973 px non-zero and 0 px at 128; the SHIPPED MASK BRUSH leaves 1605 px and 0 at 128 after paint-then-erase. The brush number is the point - it predates MPI-368 and belongs to whoever owns the export threshold. getURL() is on the path of every masked generation, so brief before touching it. Detail: docs/masking-shapes.md and tasks/MPI-424/brief.md item 5.",
+      "A PEER COMMITTED THIS SESSION'S CHANGELOG LINES. Commit 83576a88 (MPI-413) swept up docs/releases/UNRELEASED.md including the two entries written here. Nothing is lost and nothing needs repair - but the entries are attributed to an MPI-413 commit, so do not go looking for them under MPI-368. This is the mirror of the trap .claude/rules/git.md documents.",
+      ".agents/mpi-kanban/state/index.json IS UNCOMMITTED ON PURPOSE. Its diff is a PEER's MPI-413 handoff entry, not this session's work, and this handoff adds a second entry to the same file. Committing it would commit their state; the peer's own close-out should. If it is still dirty next session and the peer is gone, commit it then - a handoff file with no index entry is the dangling-record failure.",
+      "SERVER-SIDE CHANGES NEED A RESTART, NOT A RELOAD. routes/ and services/ are main-process code; Ctrl+R reloads the renderer only. MPI-437's fix would have read as 'the fix did not work' against a stale server.",
+      "THE WORKING TREE IS CRLF. Anchor source-scraping regexes on ';\\r?\\n'.",
+      "BACKTICKS DIE IN A DOUBLE-QUOTED SHELL STRING - not just in `git commit -m`, but in `node -e \"...\"` too. It bit this session writing a card description: bash command-substituted the backticked text, the words vanished, and the command still SUCCEEDED. Use a heredoc or a script file for anything containing backticks.",
+      "Tests run as `node --test \"tests/*.test.cjs\"` with the quoted glob. Suite is 374/0 (343 at session start). Board validator's resting state is 416 violations - judge the DELTA, never the exit code."
+    ],
+    "files_modified": [
+      "js/components/Primitives/MpiCanvas/managers/ShapeManager.js (NEW - geometry, hit-testing, Shift lock, 7.5 deg snap, drawScreen)",
+      "js/components/Organisms/MpiToolOptionsShapes/ (NEW - .js + .css, ONE component under BOTH shape modes)",
+      "js/components/Primitives/MpiCanvas/MpiCanvas.js (shape wiring, commitShape dispatch, _methods allowlist)",
+      "js/components/Primitives/MpiCanvas/managers/InputController.js (gizmo branch, ALT/Shift off the mouse event, cursors)",
+      "js/components/Primitives/MpiCanvas/managers/MaskManager.js + PaintManager.js (commitShape on each)",
+      "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js (el.* shape surface, discardPreview extension)",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js (registries + `mode` passed into options props)",
+      "js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js (a rail button in each group)",
+      "js/utils/icons.js (4 new icons), js/components/types.js, js/shell/preloadStyles.js",
+      "services/imageComposite.js + routes/projects.js (MPI-437 - fillHoles is opt-in now)",
+      "tests/shape-gizmo.test.cjs (NEW, 22), tests/mask-tool-registry.test.cjs (+4), tests/preview-contract.test.cjs (+1), tests/mask-composite.test.cjs (inverted)",
+      "docs/masking-shapes.md + docs/masking-adjust.md (NEW), masking-tools.md, masking-undo.md, painting.md, README.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-424/brief.md",
+      "docs/masking-shapes.md",
+      "docs/masking-tools.md",
+      ".claude/rules/component-mounts.md",
+      "CLAUDE.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "Components & UI",
+      "Masking",
+      "Conventions / gotchas"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/component-mounts.md",
+    "docs/masking-tools.md",
+    "docs/masking-shapes.md",
+    "docs/masking-undo.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-04T03:05:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are picking up Cubric Vision work on branch master. Read .agents/mpi-kanban/state/handoffs/87bbf66f-5536-4e06-be2b-27f0868b1e9f.json and use mpi-continue. NOTHING IS MID-FLIGHT: MPI-368 (the shape gizmo) and MPI-437 (the composite fillHoles bug) both shipped, were user-verified in the app, and are committed as 6478a71d, 55f5a048 and 48e0e65a - suite 374/0, lint clean. Your first job is the small debt the user deliberately deferred at close-out: run /mpic-update-component-map to add the shape family to the FOUR component-map rule files (MPI-375's commit 6d112007 did exactly this for the paint family), then add two CLAUDE.md Context Router rows for the two new docs, docs/masking-shapes.md and docs/masking-adjust.md - the router's Adjust row still points at masking-tools.md, and Adjust no longer lives there. Both are architectural rule edits, so propose each and wait for per-file approval. After that the real work is MPI-373 (Composite), the LAST card of the MPI-424 umbrella; it has a settled design on its card but no plan file, so run mpi-create-plan against it, and read tasks/MPI-424/brief.md first because that file is the whole architecture and the chat it came from is gone. Three things to carry. FIRST, MPI-368 left ONE finding unfixed on purpose: MaskManager.getURL() exports any non-zero alpha as SOLID WHITE while the app cuts at >=128 everywhere else, so the antialiasing rim that any erase leaves is promoted to real mask - measured on the shipped mask brush too, so it predates the card, and getURL() is on the path of every masked generation, so brief the user before touching it. SECOND, .agents/mpi-kanban/state/index.json is uncommitted on purpose because its diff is a PEER's MPI-413 handoff entry, not ours. THIRD, backticks inside a double-quoted shell string get command-substituted and the command still succeeds - it silently ate words out of a card description this session, so use a heredoc or a script file whenever text contains backticks."
+}
