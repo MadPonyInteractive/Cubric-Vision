@@ -5,9 +5,9 @@
   "description": "Observed live 2026-07-23 during the MPI-342 remote sweep. The user ran ONE Qwen Image Edit (3 images) and got TWO generations - the requested qwenEdit_001 plus an unrequested appHeadSwap_002 (896x1152, 9s). The toast read '2 generations finished'. app.log shows TWO 'Applied injector \"headSwap\"' lines 8.5 minutes apart (16:33:39Z requested, 16:42:12Z phantom), so the SECOND dispatch came from the app, not from a Pod-side replay or a wrapper queue artifact. Root cause unknown: commandExecutor logs the injector but not what triggered the dispatch, so the log cannot distinguish stale app-op state, a queue/lane leftover, or a reuse/CUE re-fire. Not known whether this predates ComfyUI 0.28 - it was simply first seen during that sweep. Needs a repro plus dispatch-origin instrumentation. Detail in brief.md.",
   "column": "done",
   "maturity": "complete",
-  "status": "active",
+  "status": "done",
   "created_at": "2026-07-23T18:55:00Z",
-  "updated_at": "2026-07-25T00:30:00Z",
+  "updated_at": "2026-08-04T16:15:00Z",
   "labels": [
     "bug",
     "generation",

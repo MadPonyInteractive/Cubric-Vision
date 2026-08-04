@@ -5,9 +5,9 @@
   "description": "User request 2026-07-28. Photoshop-style crop: the box may leave the image, the new area fills with a picked colour (the outpaint prompt target), edges snap to the image bounds, and a third resolution type takes an exact WxH. Long form in brief.md.",
   "column": "done",
   "maturity": "complete",
-  "status": "active",
+  "status": "done",
   "created_at": "2026-07-28T10:00:00Z",
-  "updated_at": "2026-07-29T20:00:00Z",
+  "updated_at": "2026-08-04T16:15:00Z",
   "labels": [
     "ui",
     "ux",

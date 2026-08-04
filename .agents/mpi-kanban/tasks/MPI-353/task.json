@@ -5,9 +5,9 @@
  "description": "Vision has NO object-removal capability (repo grep for 'outpaint' = zero hits). Krea2 already outpaints well, so the real gap is REMOVAL (tattoos, watermarks, unwanted objects) and mask-driven inpaint. Two candidate paths evaluated on the bench 2026-07-26.\n\nPATH A - FLUX.2 Klein 4B + fal green-screen outpaint LoRA (Apache-2.0, all weights downloaded to G:/CubricModels). VERIFIED WORKING: object removal, masked replacement, outpaint. Distilled 8-step beats base 50-step on BOTH speed (20s vs 154s) and fill detail (lap-var 19.6 vs 16.0) - base is over-guided at cfg 4.0, same pathology as the Krea2 cfg finding. Crop-and-stitch (InpaintCropImproved/InpaintStitchImproved, mask_blend_pixels 32) cut the seam gradient 6x, 14.56 -> 2.44. Cost: +16.2GB user download (7.75GB ckpt + 8.04GB qwen_3_4b encoder + 0.34GB VAE + 0.076GB LoRA).\n\nPATH B - Qwen-Image-Edit 2511 (ALREADY SHIPPED) + a dedicated removal LoRA. Three Apache-2.0 removal LoRAs exist on 2511; zero new base model. User tested Qwen at 4-step Lightning: 66s cold and it DESTROYED skin texture. Unfair comparison though - Klein ran 8 steps. The 8-step Lightning LoRA is ALREADY on disk, untested. Full-model Qwen run was in flight at session end (user estimate ~380-400s).\n\nOPEN BLOCKER on both paths: the fill's colour statistics drift from surrounding pixels (measured +5.8R/-3.2G/-11.4B on skin). Model-inherent - nothing ties fill stats to the ring, so step count and cfg do not touch it. kjnodes ColorMatch makes it WORSE (10.60 -> 15.09 mkl, -> 20.66 hm) because its reference crop still CONTAINS the object being removed, pulling the fill toward it. A ring-only mean shift fixes it (10.60 -> 0.93, 11x) but needs a node that does not exist. User has instructions for MpiNodes work not yet given - DO NOT start node work without them.",
  "column": "done",
  "maturity": "complete",
- "status": "in_progress",
+ "status": "done",
  "created_at": "2026-07-26T05:30:00Z",
- "updated_at": "2026-07-26T10:51:28Z",
+ "updated_at": "2026-08-04T16:15:00Z",
  "labels": [
   "inpaint",
   "outpaint",

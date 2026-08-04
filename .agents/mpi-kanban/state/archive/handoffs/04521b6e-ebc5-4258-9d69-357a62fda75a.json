@@ -4,7 +4,7 @@
   "generated_at": "2026-08-03T23:35:00Z",
   "from_session": null,
   "to_role": "docs",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-375 item 4 shipped and user-verified — per-entry paint persistence, Apply through a new sibling route, and the opacity bake",
     "branch": "master"

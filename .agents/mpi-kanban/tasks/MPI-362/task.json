@@ -5,9 +5,9 @@
  "description": "New image-history context-menu action, gated like Compare on exactly 2 selected entries where one carries a mask. A dialog offers Add (masked area comes from the OTHER entry, rest stays the masked entry) or Subtract (the inverse: other entry is the base, masked area comes from the masked entry) plus Cancel. Result lands as a new history entry (operation 'composite'), so it is undoable by deleting it. Motivating case: an upscale morphs one of two cats - mask the bad cat, pull the good one back from the previous entry. Compositing is server-side Sharp (already a dependency, same engine crop-media uses) with a feathered mask, so no ComfyUI workflow and no 4K base64 round-trip.",
  "column": "done",
  "maturity": "complete",
- "status": "active",
+ "status": "done",
  "created_at": "2026-07-27T21:30:49Z",
- "updated_at": "2026-07-27T22:15:00Z",
+ "updated_at": "2026-08-04T16:15:00Z",
  "labels": [
   "image-history",
   "mask",
