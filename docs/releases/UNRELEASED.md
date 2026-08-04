@@ -205,3 +205,8 @@
   app's engine now runs on its own port and stays out of the way of yours, so you
   no longer need to close ComfyUI before opening Cubric Vision. If something else
   is using that port, the app now tells you instead of silently generating on it.
+
+- **The LoRA and upscale pickers in Model Settings open again.** Clicking a LoRA
+  slot or the upscale model did nothing — the arrow flipped as if the list were
+  opening, but no list ever appeared, so neither a LoRA nor a different upscale
+  model could be picked. Affected Model Settings since 1.3.0.
