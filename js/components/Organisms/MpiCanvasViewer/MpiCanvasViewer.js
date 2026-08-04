@@ -1599,6 +1599,11 @@ export const MpiCanvasViewer = ComponentFactory.create({
             _runAutoMaskWorkflow(true);
         };
 
+        /** Is a detect run in flight? The detect row reads this AT MOUNT — the
+         *  `automask:running` event only covers rows that were already listening,
+         *  and a tool switch mid-run mounts a fresh one (MPI-421). */
+        el.isAutoMaskRunning = () => _autoMaskRunning;
+
         /** Stop a detect run in flight (MPI-421). The exec's interrupt existed from
          *  day one — there was simply no UI wired to it. */
         el.cancelAutoMaskDetect = () => {

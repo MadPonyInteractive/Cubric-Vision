@@ -16,7 +16,7 @@
  *
  * Requires on viewer.el:
  *   getAutoMaskThumbsEl?(), runAutoMaskDetect(), cancelAutoMaskDetect(),
- *   bakeAutoPicks('manual'|'subtract')
+ *   isAutoMaskRunning(), bakeAutoPicks('manual'|'subtract')
  *
  * The thumbs node is OWNED BY THE VIEWER — re-parented here, never destroyed.
  */
@@ -52,37 +52,49 @@ export const MpiMaskDetectRow = ComponentFactory.create({
         const gated     = qs('#gated', el);
         const queueNote = qs('#queue-note', el);
         let _blocked = false;
-        let _running = false;
+        // Seeded from the viewer, not from false: a tool switch mid-run mounts a
+        // fresh row that missed the `automask:running` emit, and it must not show
+        // Detect while a run is still in flight.
+        let _running = viewer.el.isAutoMaskRunning?.() === true;
 
         const thumbsEl = viewer.el.getAutoMaskThumbsEl?.();
         if (thumbsEl) qs('#thumbs-slot', el).appendChild(thumbsEl);
 
-        const detectBtn = MpiButton.mount(qs('#detect-slot', el), {
-            icon: 'search', label: 'Detect', size: 'sm', variant: 'primary',
-            info: 'Run detection',
-        });
-        detectBtn.on('click', () => {
-            if (_blocked) return;
-            viewer.el.runAutoMaskDetect?.();
-        });
-        _children.push(detectBtn);
-
         // MPI-421: a detect is a ComfyUI run that used to be completely invisible —
         // the button did not change, so a slow pass read as a hang, and the exec's
-        // cancel() had nothing wired to it. Two buttons swapping is cheaper than
-        // teaching MpiButton to restyle itself for one caller.
-        const stopBtn = MpiButton.mount(qs('#detect-slot', el), {
-            icon: 'stop', label: 'Stop', size: 'sm', variant: 'danger',
-            info: 'Stop the detection',
-        });
-        stopBtn.el.hidden = true;
-        stopBtn.on('click', () => viewer.el.cancelAutoMaskDetect?.());
-        _children.push(stopBtn);
+        // cancel() had nothing wired to it. The button IS the busy state, and it is
+        // ONE button re-mounted, not two swapped by `hidden`. Two reasons, both
+        // measured the hard way on 2026-08-04:
+        //   1. `ComponentFactory.mount()` does `container.innerHTML = html`, so
+        //      mounting a second button into this slot DELETES the first one.
+        //   2. `.mpi-btn { display: inline-flex }` outranks the UA
+        //      `[hidden] { display: none }`, so `el.hidden = true` does not hide a
+        //      button at all — the same trap docs/masking-adjust.md records for the
+        //      inert slider row.
+        // Together those left Stop permanently on screen with no way to reach Detect.
+        const detectSlot = qs('#detect-slot', el);
+        let detectBtn = null;
+
+        function _mountDetectBtn() {
+            detectBtn?.destroy?.();
+            detectBtn = MpiButton.mount(detectSlot, _running
+                ? { icon: 'stop',   label: 'Stop',   size: 'sm', variant: 'danger',
+                    info: 'Stop the detection' }
+                : { icon: 'search', label: 'Detect', size: 'sm', variant: 'primary',
+                    info: 'Run detection' });
+            detectBtn.on('click', () => {
+                if (_running) { viewer.el.cancelAutoMaskDetect?.(); return; }
+                if (_blocked) return;
+                viewer.el.runAutoMaskDetect?.();
+            });
+        }
+        _mountDetectBtn();
 
         const _offRunning = Events.on('automask:running', ({ running }) => {
-            _running = !!running;
-            detectBtn.el.hidden = _running;
-            stopBtn.el.hidden   = !_running;
+            const next = !!running;
+            if (next === _running) return;
+            _running = next;
+            _mountDetectBtn();
             _syncGate();
         });
 
@@ -120,8 +132,12 @@ export const MpiMaskDetectRow = ComponentFactory.create({
             if (freeze) gated.setAttribute('inert', '');
             else gated.removeAttribute('inert');
             queueNote.hidden = !_blocked;
-            detectBtn.el.setDisabled?.(_blocked);
-            detectBtn.el.setAttribute('data-info', _blocked ? QUEUE_DISABLED_REASON : 'Run detection');
+            // While running, the button IS Stop — never disable it, and never
+            // relabel its tooltip with the reason NEW runs are blocked.
+            detectBtn?.el.setDisabled?.(!_running && _blocked);
+            if (!_running) {
+                detectBtn?.el.setAttribute('data-info', _blocked ? QUEUE_DISABLED_REASON : 'Run detection');
+            }
         }
 
         const _offQueueGate = Events.onState('generationQueueCount', _syncGate);
@@ -133,6 +149,7 @@ export const MpiMaskDetectRow = ComponentFactory.create({
             // Detach the viewer-owned thumbs node rather than letting it be wiped
             // with our subtree — the viewer still owns the instance.
             if (thumbsEl?.parentNode) thumbsEl.parentNode.removeChild(thumbsEl);
+            detectBtn?.destroy?.();
             _children.forEach(c => c.destroy?.());
         };
     },

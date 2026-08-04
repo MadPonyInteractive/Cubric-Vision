@@ -95,6 +95,25 @@ test('the detect handle has a terminal, and the viewer ends the run on it', () =
     assert.ok(ends.length >= 4, `only ${ends.length} _endAutoMaskRun call sites — an abandoned run strands an active bar`);
 });
 
+test('the detect slot holds ONE button, and never hides one with `hidden`', () => {
+    // Both halves of a real bug, shipped 2026-08-04 and caught by the user:
+    // ComponentFactory.mount() does `container.innerHTML = html`, so a second
+    // MpiButton.mount into the detect slot DELETES the first — and
+    // `.mpi-btn { display: inline-flex }` outranks the UA `[hidden]`, so the
+    // survivor could not be hidden either. Detect became unreachable and Stop sat
+    // there doing nothing. The row re-mounts ONE button instead.
+    const ROW = fs.readFileSync(
+        path.join(ROOT, 'js/components/Compounds/MpiMaskDetectRow/MpiMaskDetectRow.js'), 'utf8');
+    const intoSlot = ROW.match(/MpiButton\.mount\(\s*(detectSlot|qs\('#detect-slot'[^)]*\))/g) || [];
+    assert.strictEqual(intoSlot.length, 1,
+        `${intoSlot.length} MpiButton.mount calls target the detect slot; mount() replaces innerHTML, so a second one deletes the first`);
+    assert.ok(!/(detect|stop)Btn(\?)?\.el\.hidden\s*=/i.test(ROW),
+        'a button is being hidden with `hidden` — .mpi-btn sets display, which outranks it');
+    // A row mounted mid-run must not show Detect for a run already in flight.
+    assert.ok(ROW.includes('isAutoMaskRunning'), 'the row no longer seeds its busy state from the viewer');
+    assert.ok(VIEWER.includes('el.isAutoMaskRunning'), 'the viewer no longer exposes the busy state');
+});
+
 test('picking a chip composites locally instead of re-running the graph', () => {
     const at = VIEWER.indexOf("autoMaskThumbs.on('change'");
     assert.ok(at > 0, "the thumbs 'change' handler moved — re-anchor this test");
