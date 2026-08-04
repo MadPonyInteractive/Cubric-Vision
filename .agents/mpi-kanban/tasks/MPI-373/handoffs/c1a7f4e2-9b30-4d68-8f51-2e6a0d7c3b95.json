@@ -88,7 +88,7 @@
    "SERVER-SIDE CHANGES NEED A RESTART, NOT A RELOAD. services/ and routes/ are main-process code. services/imageComposite.js changed in this card.",
    "THE WORKING TREE IS CRLF. Anchor source-scraping regexes on `;\\r?\\n` and give generous {0,N} bounds - a bound that was fine before someone added a comment silently stops matching, which reads as \"the method was renamed\". Both cost a red test in this session.",
    "BACKTICKS DIE IN A DOUBLE-QUOTED SHELL STRING - in `git commit -m` and in `node -e \"...\"` alike. Bash command-substitutes them, the words vanish, and the command still SUCCEEDS. Use a heredoc or a script file.",
-   "Tests run as `node --test \"tests/*.test.cjs\"` with the quoted glob. 386/0 at handoff (374 at plan time). The board validator does NOT exist in this repo - a memory hook says to judge its delta, but there is no validate_board.py under .agents/ or the skills tree; do not report a pass from it.",
+   "Tests run as `node --test \"tests/*.test.cjs\"` with the quoted glob. 386/0 at handoff (374 at plan time). The board validator DOES exist, at <mpi-lib>/scripts/validate_board.py - run it as `python <that path> .` from the repo root. Its resting state is 416 violations and exit 1, so judge the DELTA (`grep -c ' - '`), never the exit code. Measured 416 before and after this session. An earlier draft of this handoff said the script was missing; that was a bad `find` invocation, not reality.",
    "NOTHING IS COMMITTED, and the tree also holds a PEER's MPI-413 handoff (state/index.json + state/handoffs/35d63837... + tasks/MPI-413/handoffs/35d63837...). Commit by explicit pathspec; do not sweep their files in."
   ],
   "files_modified": [
