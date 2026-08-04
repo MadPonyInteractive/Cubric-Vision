@@ -17,7 +17,7 @@ detection preview still violates the preview contract MPI-382 built the seam for
 
 | Card | What | Note |
 |---|---|---|
-| MPI-426 | A detection preview must stay a preview — stop auto-adding SAM3 picks to the live mask | **Bug.** Also MPI-424's brief called this out: `_exitAutoMaskMode(false)` exists with no caller, and it is MPI-365's open "detected-but-not-applied mask is still injected" item |
+| ~~MPI-426~~ | A detection preview must stay a preview — stop auto-adding SAM3 picks to the live mask | **DONE 2026-08-04**, user-validated in the app. Commit `f64fc75e`; see `tasks/MPI-426/validation.md`. Two things every later member inherits: `hasMask()` now means *baked content only*, and the op strip gates on it |
 | MPI-435 | Alpha brush pack — ten procedural brushes for the mask AND paint brush | Lands on the shared brush engine, so both mounts get it at once |
 | MPI-436 | Adjust for the paint layer — grow / shrink / edge band over RGBA (the outline tool) | Reuses mask's `_morph`; the open question is what those ops mean over RGBA rather than coverage |
 | MPI-439 | Convert mask to paint / paint to mask, from the canvas context menu | New, 2026-08-04 |
@@ -25,9 +25,13 @@ detection preview still violates the preview contract MPI-382 built the seam for
 
 ## Order
 
-1. **MPI-426** — a correctness bug on a contract the rest assume, and it re-gates the op
-   strip. Everything downstream that reads `hasMask()` inherits the answer.
-2. **MPI-421** — **immediately after 426, not "any time".** Both cards rewrite the
+1. ~~**MPI-426**~~ — **SHIPPED 2026-08-04.** The fix turned out to be a deletion: dropping
+   the auto-pick union from `MaskManager._recomposite()` made all 12
+   `hasMaskContent(maskCanvas)` sites baked-only for free, and the op-strip re-gate the
+   card feared needed no code at all. Its twin `_buildCompositeFromTemp()` carried the same
+   bug and changed with it. **Decision recorded for the rest of the set: a bare detection
+   leaves masked ops LOCKED until Add** — that is intended, not an MPI-372 regression.
+2. **MPI-421 — START HERE.** **Immediately after 426, not "any time".** Both cards rewrite the
    auto-mask result-handling path: 426 changes what `exec.onMasks` does with `runPicks`
    (`MpiCanvasViewer.js`), and 421's absorbed MPI-402 makes chip toggling client-side,
    which changes when that same handler runs at all. Split them apart and `onMasks` gets
@@ -73,9 +77,11 @@ it. Two cards answering it independently is how the layers end up disagreeing.
   manual may resurrect an erased region.
 - Every new tool registers in `_MASK_TOOLS` (where it is mask family) and in
   `TOOL_OPTIONS_REGISTRY` — the MPI-381 guard test fails if one is missing.
-- **Docs are capped at 200 lines each.** `masking.md` (129), `masking-tools.md` (211 —
-  already over, trim before adding), `masking-sam3.md`, `masking-adjust.md`,
-  `masking-shapes.md`, `masking-undo.md`, `painting.md` (170), `composite.md`. Write the
+- **Docs are capped at 200 lines each.** Measured 2026-08-04: `masking.md` 146,
+  `masking-tools.md` 153, `masking-sam3.md` 128, `masking-adjust.md` 95,
+  `masking-shapes.md` 109, `masking-undo.md` 141, `painting.md` 172, `composite.md` 184.
+  All under. (MPI-424's brief said `masking-tools.md` was "211 — already over"; that was
+  stale by the time this card opened. Re-measure, do not inherit the number.) Write the
   fact to the doc it belongs to; there is no catch-all and none may be created.
 
 ## Closing this card

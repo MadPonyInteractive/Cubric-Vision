@@ -33,7 +33,6 @@
       "MPI-403"
     ],
     "doing": [
-      "MPI-426",
       "MPI-440",
       "MPI-438",
       "MPI-413",
@@ -42,6 +41,7 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-426",
       "MPI-424",
       "MPI-373",
       "MPI-368",
@@ -132,7 +132,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-08-04T13:20:00Z",
+  "updated_at": "2026-08-04T13:51:00Z",
   "events": [
     {
       "at": "2026-08-04T02:55:00Z",
@@ -1887,6 +1887,26 @@
       "column": "doing",
       "maturity": "validating",
       "summary": "Code complete, probe-verified, docs updated. Root cause: maskCanvas answered two questions at once - what is on screen and what gets sent - because _recomposite() unioned selectedAutoPicks into it. Fix is a DELETION: drop that union, and all 12 hasMaskContent(maskCanvas) sites plus getURL() became baked-only for free. Twin _buildCompositeFromTemp() fixed in the same pass (it fed _previewMaskCache -> getCurrentMaskDataURL, the second door). Display verified pixel-identical - autoCanvas already drew green on top and that recolour is opaque. USER DECISION: op strip gates on baked content, so a bare detection leaves masked ops locked until Add; this needed NO new code since _opOptions() already reads hasMask(). Rejected the alternative (unlock on detection) because it would offer a masked op while the mask sent was empty. Proof: 12/12 real-pixel probe in Chromium against the live MaskManager, with a sabotage control that failed exactly the two bug assertions; 392/392 node suite; eslint 0. NOT verified: no live click-through of detect-then-Add in the app."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-426",
+      "type": "task.moved",
+      "at": "2026-08-04T13:51:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "USER-VALIDATED live in the app 2026-08-04: a detection no longer enters the mask, and the masked ops stay locked until Add. Fix was a deletion in MaskManager._recomposite() plus its twin _buildCompositeFromTemp(); op-strip re-gating came free because _opOptions() already read hasMask(). Shipped in f64fc75e. First member of the MPI-440 umbrella; next is MPI-421 on the same exec.onMasks path."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-440",
+      "type": "task.progress",
+      "at": "2026-08-04T13:51:00Z",
+      "actor": "opus",
+      "column": "doing",
+      "maturity": "in-progress",
+      "summary": "Member 1 of 5 shipped: MPI-426 done and user-validated (f64fc75e). Session ends here by choice, umbrella stays in doing. NEXT IS MPI-421 - it shares MpiCanvasViewer exec.onMasks with the card just closed, which is why the order was corrected to put it second. Standing decision now inherited by every remaining member: hasMask() means BAKED content only, and the op strip gates on it, so a bare detection leaves masked ops locked until Add. Still open and still needing ONE shared answer before 436/439 diverge: does an op read paint alpha or luminance, and do soft edges survive."
     }
   ]
 }
