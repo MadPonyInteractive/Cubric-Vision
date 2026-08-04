@@ -40,9 +40,12 @@ const methodBody = (name) => {
 test('ONE primitive drives both layers — paint imports it, it does not reimplement it', () => {
     // The card's first acceptance item. A local dilate here would work and would
     // silently fork the two layers' morphology the next time either is tuned.
+    // MPI-445 moved the call one level up: paint asks for `fieldOverContent`, which is
+    // `signedSquaredDistanceField` over the content box. Still one module, still no
+    // second morphology here.
     assert.match(
         SRC,
-        /import \{[^}]*signedSquaredDistanceField[^}]*\} from '\.\/distanceField\.js'/,
+        /import \{[^}]*fieldOverContent[^}]*\} from '\.\/distanceField\.js'/,
         'PaintManager does not import the shared primitive',
     );
     for (const banned of [/function\s+\w*[Dd]istance/, /_morph\s*\(/]) {
@@ -74,7 +77,7 @@ test('every preview frame derives from the pristine copy, never from the last on
     assert.match(body, /const src = this\._adjustPristine/, 'previewAdjust does not read the pristine snapshot');
     assert.doesNotMatch(
         body,
-        /signedSquaredDistanceField/,
+        /fieldOverContent|signedSquaredDistanceField/,
         'previewAdjust builds the field itself — that belongs in _ensureAdjustField, off the pristine snapshot',
     );
 
@@ -85,6 +88,30 @@ test('every preview frame derives from the pristine copy, never from the last on
         /_adjustField\s*=\s*null/,
         'beginAdjust does not invalidate the distance field — the next preview would use the previous snapshot',
     );
+});
+
+test('the field covers the content box, and the preview is drawn at its offset (MPI-445)', () => {
+    // A full-layer field at 4096 was a 1563 ms freeze on the first slider move; the
+    // field is now built over the painted content padded by the largest radius asked
+    // for. Two ways that goes silently wrong: drawing the smaller buffer at 0,0 puts
+    // the whole preview in the top-left corner, and reusing a field that was padded
+    // for a smaller radius lets the region run off its own box.
+    const build = methodBody('_ensureAdjustField');
+    assert.match(build, /fieldOverContent\(data, w, h, pad\)/, '_ensureAdjustField builds over the whole layer');
+    assert.match(build, /_adjustPad\s*>=\s*pad/, 'a field built with a smaller pad is reused — the region runs off its own box');
+
+    const body = methodBody('previewAdjust');
+    assert.match(body, /_ensureAdjustField\(maxR\)/, 'previewAdjust does not tell the field how far it will reach');
+    assert.match(body, /ctx\.rect\(box\.x, box\.y, box\.w, box\.h\);\s*\n\s*ctx\.clip\(\)/, 'the frame is not clipped to the field box');
+    assert.match(body, /putImageData\(this\._adjustImg, box\.x, box\.y\)/, 'the region is not drawn at the field box offset');
+
+    // The fills were the expensive half once the field shrank: a full-canvas fillRect
+    // + drawImage measured 46 ms a frame at 4096, seven times the range test they
+    // composited. Nothing outside the box can be part of any result — the box holds
+    // every non-transparent pixel — so nothing outside it may be touched.
+    for (const banned of [/fillRect\(0, 0, w, h\)/, /drawImage\(src, 0, 0\)/]) {
+        assert.doesNotMatch(body, banned, 'a fill still runs over the whole canvas');
+    }
 });
 
 test('the three fills are what the card specified — shrink keeps colour, grow keeps colour, band is flat', () => {

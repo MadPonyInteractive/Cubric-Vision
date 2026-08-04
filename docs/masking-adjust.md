@@ -106,11 +106,24 @@ guard) and does **not** call `onMaskStrokeEnd`: an adjustment to paint is not a 
 publishing it would misreport what the op strip is gated on. The preview extends `discardPreview()`
 — the paint LAYER never did, because a stroke is committed pixels ([painting.md](painting.md)).
 
-**Cost is quadratic in the source and the second row is a real ceiling.** Measured in Chromium,
-first slider move then each later frame: **2048² → 247 ms then 7 ms**; **4096² → 1563 ms then
-64 ms**. An ordinary source is the first row. A source over 4096 px hits the second, where 1.5 s is
-a visible freeze. The upgrade path — cap the field at 1536 and upscale the region mask, paying the
-radius precision MPI-441 bought — is marked with a `ponytail:` comment and deliberately not taken.
+**The field is built over the painted CONTENT, not the layer (MPI-445).** A full-layer field at
+4096² measured 1563 ms on the first slider move and 64 ms a frame after it — a freeze, then a 15fps
+drag, which is what the user reported on an 8K source. `fieldOverContent()` bounds it to the ink's
+bounding box **padded by the largest radius the frame asks for**, and `previewAdjust()` **clips
+every op to that box** — the fills were the expensive half once the field shrank (a full-canvas
+`fillRect` + `drawImage` was 46 ms a frame, seven times the range test they composited). Measured
+in Chromium at a 4096 layer, first move then each later frame: a normal scribble (0.6% of the
+layer) **70 ms then 0.4 ms**, a scribble spanning most of it (4.1%) **100 ms then 2.9 ms**. Proven
+byte-for-byte identical to the full-canvas path on grow, shrink and band — it is exact, which is
+the whole reason it is preferred to capping the field's RESOLUTION, the option that would hand back
+the precision MPI-441 bought.
+
+Two things that look like details and are not. The box is **padded, never clamped to the ink** —
+outside the box reads as background, so a tight box erodes the layer from a border that is not
+there; and the box bounds **every non-transparent pixel** while the field still cuts the shape at
+alpha ≥128, because the clipped fills would otherwise drop a faint pixel that fell outside it. The
+remaining ceiling is the box's own worst case: paint covering the WHOLE 4096 layer is still 1.6 s
+then 65 ms, and only the resolution cap would move it.
 
 ### Fill Holes (MPI-431)
 

@@ -24,7 +24,7 @@
  */
 
 import { stampDab, strokeDabs } from './brushDab.js';
-import { signedSquaredDistanceField, rangeFor, writeRange } from './distanceField.js';
+import { fieldOverContent, rangeFor, writeRange } from './distanceField.js';
 
 /**
  * Paint is capped far higher than the mask's 1536 because it becomes REAL PIXELS
@@ -35,6 +35,15 @@ import { signedSquaredDistanceField, rangeFor, writeRange } from './distanceFiel
  * than a quarter of a gigabyte on a common one.
  */
 const PAINT_MAX_EDGE = 4096;
+
+/**
+ * Layer-px margin the Adjust field is built with around the painted content
+ * (MPI-445). The panel's sliders cap at 50 IMAGE px and `_scale` is never above 1, so
+ * 52 already covers every radius they can ask for; `_ensureAdjustField()` still
+ * rebuilds with a bigger pad if a caller asks for more, so this is a starting guess
+ * and not a contract with the panel.
+ */
+const ADJUST_PAD = 52;
 
 /** Accent-adjacent, so a fresh stroke never reads as the white mask overlay. */
 // eslint-disable-next-line mpi/no-hardcoded-hex-color -- color picker default value
@@ -95,8 +104,12 @@ export class PaintManager {
         this.hasAdjustPreview = false;
         /** @type {HTMLCanvasElement|null} the layer as it was on tool entry */
         this._adjustPristine = null;
-        /** @type {Float32Array|null} */
+        /** @type {Float32Array|null} covers `_adjustBox`, not the whole layer */
         this._adjustField = null;
+        /** @type {{x:number,y:number,w:number,h:number}|null} the field's footprint */
+        this._adjustBox = null;
+        /** Layer px of margin the current field was built with. */
+        this._adjustPad = 0;
         /** @type {ImageData|null} */
         this._adjustImg = null;
     }
@@ -250,6 +263,8 @@ export class PaintManager {
         this._adjustPristine.getContext('2d', { willReadFrequently: true })
             .drawImage(this.paintCanvas, 0, 0);
         this._adjustField = null;
+        this._adjustBox = null;
+        this._adjustPad = 0;
         this._adjustImg = null;
 
         if (!this.adjustCanvas) {
@@ -266,25 +281,42 @@ export class PaintManager {
      * per snapshot. Reads `_adjustPristine`, NEVER `adjustCanvas` — sourcing it from
      * its own output is how the adjustment starts compounding frame over frame.
      *
-     * ponytail: built at the layer's own resolution, which is up to PAINT_MAX_EDGE —
-     * so the cost is quadratic in the source. MEASURED in Chromium, first slider move
-     * then each later frame: **2048² → 247 ms then 7 ms**, **4096² → 1563 ms then
-     * 64 ms**. An ordinary source is the first row and that is fine. A source over
-     * 4096 px is the second, and 1.5 s is a visible freeze on the first move.
-     * The upgrade path if anyone hits it: cap the FIELD at the mask's 1536 and upscale
-     * the region mask, paying radius precision — the thing MPI-441 bought — for it.
-     * Do not pay that until someone reports the freeze.
+     * Built over the PAINTED CONTENT's bounding box, not the whole layer (MPI-445).
+     * The field's cost is quadratic in the pixel count and this layer runs at up to
+     * PAINT_MAX_EDGE: a full-layer field at 4096² measured 1563 ms on the first slider
+     * move and 64 ms per frame after it, i.e. a visible freeze and then a ~15fps drag.
+     * A scribble covers a fraction of the layer, so bounding the field to it cuts BOTH
+     * numbers by the same factor — and unlike capping the field's resolution (the
+     * upgrade path this comment used to name) it is exact, so MPI-441's radius
+     * precision survives intact. The box is padded, never clamped to the content: the
+     * primitive reads outside-the-box as background, so an unpadded box would erode
+     * the layer from a border that is not there.
+     *
+     * ponytail: what is left is the box's own worst case — paint covering the WHOLE
+     * 4096 layer is still 1.6 s to enter and 65 ms a frame, because that field really
+     * is 16.7M px. The remaining lever is capping the field's resolution at the mask's
+     * 1536 and upscaling the region, which costs the radius precision MPI-441 bought
+     * (~2.7 layer px of quantisation) — a deliberate trade, not a tidy-up. A scribble,
+     * which is what the report was, now costs 70 ms then 0.4 ms.
+     *
+     * @param {number} maxR the largest radius this preview will ask for, in LAYER px —
+     *   the field is rebuilt if the current one was not padded that far
      * @returns {boolean} false when there is nothing to build from
      */
-    _ensureAdjustField() {
-        if (this._adjustField && this._adjustImg) return true;
+    _ensureAdjustField(maxR = 0) {
+        const pad = Math.max(ADJUST_PAD, Math.ceil(maxR) + 2);
+        if (this._adjustField && this._adjustImg && this._adjustPad >= pad) return true;
         const src = this._adjustPristine;
         if (!src?.width || !src?.height || !this.adjustCtx) return false;
         const w = src.width;
         const h = src.height;
         const data = src.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
-        this._adjustField = signedSquaredDistanceField(data, w, h);
-        this._adjustImg = this.adjustCtx.createImageData(w, h);
+        const built = fieldOverContent(data, w, h, pad);
+        if (!built) return false; // nothing painted — no shape to grow or shrink
+        this._adjustField = built.field;
+        this._adjustBox = built.box;
+        this._adjustPad = pad;
+        this._adjustImg = this.adjustCtx.createImageData(built.box.w, built.box.h);
         return true;
     }
 
@@ -325,32 +357,48 @@ export class PaintManager {
             outward: (opts.outward || 0) * s,
             inward: (opts.inward || 0) * s,
         });
-        if (!range) {
+        const maxR = Math.max(
+            Math.abs(grow),
+            Math.abs(opts.outward || 0),
+            Math.abs(opts.inward || 0),
+        ) * s;
+        if (!range || !this._ensureAdjustField(maxR)) {
             this.adjustCtx.clearRect(0, 0, w, h);
             this.hasAdjustPreview = false;
             return false;
         }
-        if (!this._ensureAdjustField()) return false;
 
-        // putImageData replaces the buffer outright, so there is nothing to clear —
-        // and it ignores globalCompositeOperation, so the region lands as plain white.
+        // EVERY op is clipped to the field's box (MPI-445). Not an optimisation of the
+        // fills alone: a full-canvas `fillRect` + `drawImage` measured 46 ms a frame at
+        // 4096 — seven times the range test they were composited with — and a clip is
+        // what stops the preview canvas being touched outside the box at all. Which is
+        // sound because the box holds every non-transparent pixel of the layer: nothing
+        // outside it can be part of any of the three results.
+        const box = this._adjustBox;
         writeRange(this._adjustField, new Uint32Array(this._adjustImg.data.buffer), range.lo, range.hi);
-        this.adjustCtx.putImageData(this._adjustImg, 0, 0);
 
         const ctx = this.adjustCtx;
         ctx.save();
+        ctx.beginPath();
+        ctx.rect(box.x, box.y, box.w, box.h);
+        ctx.clip();
+        ctx.clearRect(box.x, box.y, box.w, box.h);
+        // putImageData ignores both the clip and globalCompositeOperation — it writes
+        // exactly the box, which IS the clip, so the region lands as plain white and
+        // the fills below read it as their own clip.
+        ctx.putImageData(this._adjustImg, box.x, box.y);
         if (!edge && grow < 0) {
             // `source-in` = the source drawn only where the destination is opaque, so
             // the region acts as the clip and the pixels come through unchanged.
             ctx.globalCompositeOperation = 'source-in';
-            ctx.drawImage(src, 0, 0);
+            ctx.drawImage(src, box.x, box.y, box.w, box.h, box.x, box.y, box.w, box.h);
         } else {
             ctx.globalCompositeOperation = 'source-in';
             ctx.fillStyle = this.color;
-            ctx.fillRect(0, 0, w, h);
+            ctx.fillRect(box.x, box.y, box.w, box.h);
             if (!edge) {
                 ctx.globalCompositeOperation = 'source-over';
-                ctx.drawImage(src, 0, 0);
+                ctx.drawImage(src, box.x, box.y, box.w, box.h, box.x, box.y, box.w, box.h);
             }
         }
         ctx.restore();
@@ -395,6 +443,8 @@ export class PaintManager {
         this.adjustCtx = null;
         this._adjustPristine = null;
         this._adjustField = null;
+        this._adjustBox = null;
+        this._adjustPad = 0;
         this._adjustImg = null;
         return had;
     }

@@ -142,6 +142,102 @@ test('rangeFor treats zero as a no-op and keeps erode strict', async () => {
     assert.deepStrictEqual(rangeFor({ edge: true, outward: 4, inward: 3 }), { lo: -9, hi: 16 });
 });
 
+// ── MPI-445: the content-bounded build is the SAME region, not an approximation ──
+
+/** Region of a full-canvas field, as a `(x,y) => boolean`. */
+const fullRegion = async (rgba, w, h, opts) => morph(rgba, w, h, opts);
+
+/** Region of a content-bounded field, mapped back to canvas coords. */
+const boxedRegion = async (rgba, w, h, pad, opts) => {
+    const { fieldOverContent, rangeFor, writeRange } =
+        await import('../js/components/Primitives/MpiCanvas/managers/distanceField.js');
+    const built = fieldOverContent(rgba, w, h, pad);
+    assert.ok(built, 'fieldOverContent found no content');
+    const { field, box } = built;
+    const range = rangeFor(opts);
+    const out32 = new Uint32Array(box.w * box.h);
+    writeRange(field, out32, range.lo, range.hi);
+    return { box, hit: (x, y) => {
+        const bx = x - box.x, by = y - box.y;
+        if (bx < 0 || by < 0 || bx >= box.w || by >= box.h) return false;
+        return out32[by * box.w + bx] !== 0;
+    } };
+};
+
+/** Assert two regions agree on every pixel of the canvas. */
+const assertSameRegion = (a, b, w, h, msg) => {
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            assert.strictEqual(b(x, y), a(x, y), `${msg} — disagreement at ${x},${y}`);
+        }
+    }
+};
+
+test('a field bounded to the content box is IDENTICAL to the full-canvas one', async () => {
+    // The MPI-445 fix. Building over the whole 4096 layer cost 1563 ms on the first
+    // slider move; building over the padded content box costs a fraction of it — but
+    // only if it is exact, because capping the field's RESOLUTION instead would give
+    // back the precision MPI-441 was written to buy. Every op, on a shape with a
+    // concave gap, well inside a canvas much larger than it.
+    const w = 96, h = 64;
+    const s = shape(w, h, (x, y) => (x >= 30 && x <= 44 && y >= 20 && y <= 44)
+        || (x >= 52 && x <= 60 && y >= 20 && y <= 44));
+    for (const opts of [{ grow: 6 }, { grow: -4 }, { edge: true, outward: 5, inward: 3 }]) {
+        const label = JSON.stringify(opts);
+        const { box, hit } = await boxedRegion(s, w, h, 8, opts);
+        assert.ok(box.w < w && box.h < h, `${label} — the box did not shrink, the case proves nothing`);
+        assertSameRegion(await fullRegion(s, w, h, opts), hit, w, h, label);
+    }
+});
+
+test('the box is PADDED, not clamped — an unpadded box would erode from a false border', async () => {
+    // distanceField treats outside-the-box as background, so a box hugging the content
+    // makes the shape look like it ends at the canvas edge on every side. The failure
+    // is silent: shrink eats a ring the user never asked for.
+    const w = 64, h = 64;
+    const s = shape(w, h, (x, y) => x >= 20 && x <= 43 && y >= 20 && y <= 43);
+    const { hit } = await boxedRegion(s, w, h, 8, { grow: -3 });
+    assertSameRegion(await fullRegion(s, w, h, { grow: -3 }), hit, w, h, 'shrink over a padded box');
+
+    const { box } = await boxedRegion(s, w, h, 8, { grow: 3 });
+    assert.deepStrictEqual(box, { x: 12, y: 12, w: 40, h: 40 }, 'the box is not the content bounds + pad');
+});
+
+test('content running off the frame still erodes from the canvas border', async () => {
+    // The convention MPI-441 recorded: outside the CANVAS is background. Clamping the
+    // padded box to the canvas is what keeps that true, and it is the one case where
+    // the box edge is a real border rather than a virtual one.
+    const w = 48, h = 48;
+    const s = shape(w, h, (x, y) => x < 20 && y < 20); // corner block, touching two edges
+    const { box, hit } = await boxedRegion(s, w, h, 6, { grow: -2 });
+    assert.deepStrictEqual(box, { x: 0, y: 0, w: 26, h: 26 }, 'the box was not clamped to the canvas');
+    assertSameRegion(await fullRegion(s, w, h, { grow: -2 }), hit, w, h, 'shrink at the canvas border');
+    assert.ok(!hit(0, 0) && !hit(1, 1), 'the corner did not erode from the canvas border');
+});
+
+test('an empty layer has no field to build', async () => {
+    const { fieldOverContent } =
+        await import('../js/components/Primitives/MpiCanvas/managers/distanceField.js');
+    const w = 16, h = 16;
+    // Alpha 100 everywhere: painted-looking, but under the >=128 shape cut.
+    const soft = new Uint8ClampedArray(w * h * 4).fill(100);
+    assert.strictEqual(fieldOverContent(soft, w, h, 8), null, 'sub-threshold alpha counted as a shape');
+});
+
+test('the box holds every non-transparent pixel, not just the shape', async () => {
+    // The caller composites ONLY inside this box, so a faint pixel outside it would be
+    // silently erased from the preview. The shape cut stays at 128 — the box does not.
+    const { fieldOverContent } =
+        await import('../js/components/Primitives/MpiCanvas/managers/distanceField.js');
+    const w = 64, h = 64;
+    const d = new Uint8ClampedArray(w * h * 4);
+    const put = (x, y, a) => { d[(y * w + x) * 4 + 3] = a; };
+    for (let y = 30; y <= 33; y++) for (let x = 30; x <= 33; x++) put(x, y, 255);
+    put(10, 10, 40); // a faint stroke's rim, far from the solid content
+    const { box } = fieldOverContent(d, w, h, 4);
+    assert.ok(box.x <= 6 && box.y <= 6, 'the box excluded a sub-threshold pixel and would drop it from the preview');
+});
+
 // ── the old primitive, for the comparison above ──────────────────────────────
 
 /** One box pass of radius `br` over an alpha plane, separable. */

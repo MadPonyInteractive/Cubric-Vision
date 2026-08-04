@@ -145,6 +145,69 @@ export function signedSquaredDistanceField(rgba, w, h, alphaT = 128) {
 }
 
 /**
+ * Build the field over the SHAPE'S BOUNDING BOX padded by `pad`, instead of over the
+ * whole layer (MPI-445). The cost of the field is quadratic in the pixel count, and a
+ * scribble on a 4096 paint layer is usually a small fraction of it — 16.7M px cost
+ * 1563 ms, which is a visible freeze on the first slider move.
+ *
+ * It is EXACT — it spends no radius precision, which is the whole reason it is
+ * preferred to capping the field's resolution: `signedSquaredDistanceField()` treats
+ * outside-the-box as background, and every shape pixel is at least `pad` from a box
+ * edge that was not clamped to the canvas, while its nearest REAL background is at
+ * most one px past the unpadded bounds. So for `pad >= 2` the virtual border never
+ * binds, and where the box IS clamped to the canvas the border is the real convention.
+ * Callers must pad by at least the largest radius they will ask for, or the region
+ * itself would run off the box.
+ *
+ * The box bounds every pixel with ANY alpha, while the field still cuts the shape at
+ * `alphaT`. The two differ on purpose: a caller that composites only inside the box —
+ * which is the point of having one — would silently drop a faint pixel that fell
+ * outside it, so the box has to hold the whole layer's ink even though a sub-threshold
+ * pixel is not part of the shape being grown.
+ *
+ * @param {Uint8ClampedArray|Uint8Array} rgba
+ * @param {number} w
+ * @param {number} h
+ * @param {number} pad layer px of margin, >= 2
+ * @param {number} [alphaT] the SHAPE cut
+ * @returns {{field: Float32Array, box: {x:number,y:number,w:number,h:number}}|null}
+ *   null when nothing in the layer reaches `alphaT` — there is no shape to adjust
+ */
+export function fieldOverContent(rgba, w, h, pad, alphaT = 128) {
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    let shape = false;
+    for (let y = 0; y < h; y++) {
+        const row = y * w;
+        for (let x = 0; x < w; x++) {
+            const a = rgba[(row + x) * 4 + 3];
+            if (!a) continue;
+            if (a >= alphaT) shape = true;
+            if (x < x0) x0 = x;
+            if (x > x1) x1 = x;
+            if (y < y0) y0 = y;
+            y1 = y;
+        }
+    }
+    if (!shape) return null;
+
+    x0 = Math.max(0, x0 - pad);
+    y0 = Math.max(0, y0 - pad);
+    x1 = Math.min(w - 1, x1 + pad);
+    y1 = Math.min(h - 1, y1 + pad);
+    const box = { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+
+    let sub = rgba;
+    if (box.w !== w || box.h !== h) {
+        sub = new Uint8ClampedArray(box.w * box.h * 4);
+        for (let row = 0; row < box.h; row++) {
+            const from = ((y0 + row) * w + x0) * 4;
+            sub.set(rgba.subarray(from, from + box.w * 4), row * box.w * 4);
+        }
+    }
+    return { field: signedSquaredDistanceField(sub, box.w, box.h, alphaT), box };
+}
+
+/**
  * The inclusive range `[lo, hi]` over the field that expresses one Adjust reading.
  * All three are the SAME test, which is the point — grow, shrink and both halves of
  * an edge band were one call to `_morph()` and are one call to this.
