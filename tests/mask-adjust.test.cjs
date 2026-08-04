@@ -51,19 +51,30 @@ test('Apply clears subtract, so the erases are not punched twice', () => {
 test('every preview frame derives from the pristine copy, never from the last one', () => {
     // Feeding each frame back in means grow-3 applied three times, which eats
     // detail exactly like the MPI-351 double-scale bug. Since MPI-441 the guard is
-    // on the FIELD: it is built once in beginAdjust() from the pristine mask, so
-    // previewAdjust rebuilding it is the only way the compounding can come back.
+    // on the FIELD: it is derived once per snapshot, from the pristine mask, and
+    // sourcing it from adjustCanvas instead is the one way compounding comes back.
     const body = methodBody('previewAdjust');
     assert.match(body, /_adjustField/, 'previewAdjust does not read the distance field');
     assert.doesNotMatch(
         body,
         /signedSquaredDistanceField/,
-        'previewAdjust rebuilds the distance field — if it ever sources that from its own output the adjustment compounds',
+        'previewAdjust builds the field itself — that belongs in _ensureAdjustField, off the pristine snapshot',
     );
+
+    const build = methodBody('_ensureAdjustField');
+    assert.match(build, /_adjustPristine/, '_ensureAdjustField does not build from the pristine snapshot');
+    assert.doesNotMatch(
+        build,
+        /adjustCanvas/,
+        '_ensureAdjustField sources the field from its own output — the adjustment compounds',
+    );
+
+    // Lazily built, so beginAdjust must DROP the previous one: a stale field would
+    // describe the pre-Apply shape while the pristine snapshot describes the new one.
     assert.match(
         methodBody('beginAdjust'),
-        /_adjustField\s*=\s*signedSquaredDistanceField/,
-        'beginAdjust no longer builds the field from the pristine snapshot',
+        /_adjustField\s*=\s*null/,
+        'beginAdjust does not invalidate the distance field — the next preview would use the previous snapshot',
     );
 });
 

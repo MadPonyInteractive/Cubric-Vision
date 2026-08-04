@@ -552,9 +552,11 @@ export class MaskManager {
      * this tool, so `maskCanvas === manual AND NOT subtract` here and Apply writes
      * the result straight back as the new manual layer.
      *
-     * The distance field is built here for the same reason (MPI-441): it describes
-     * the pristine shape, not the radius, so every frame of a drag reads it and
-     * nothing recomputes it until Apply re-snapshots.
+     * The distance field is INVALIDATED here, not built (MPI-441). It costs 125 ms at
+     * the working size and describes this snapshot, so building it eagerly would
+     * charge that to entering the tool AND to every Apply — including the user who
+     * only came in to press Fill, or who never moves a slider at all. The first
+     * `previewAdjust()` that actually needs it builds it; see `_ensureAdjustField()`.
      */
     beginAdjust() {
         if (!this.maskCanvas) return;
@@ -565,11 +567,10 @@ export class MaskManager {
         if (!this._adjustPristine) this._adjustPristine = document.createElement('canvas');
         this._adjustPristine.width = w;
         this._adjustPristine.height = h;
-        const pristineCtx = this._adjustPristine.getContext('2d', { willReadFrequently: true });
-        pristineCtx.drawImage(this.maskCanvas, 0, 0);
-        this._adjustField = signedSquaredDistanceField(
-            pristineCtx.getImageData(0, 0, w, h).data, w, h,
-        );
+        this._adjustPristine.getContext('2d', { willReadFrequently: true })
+            .drawImage(this.maskCanvas, 0, 0);
+        this._adjustField = null;
+        this._adjustImg = null;
 
         if (!this.adjustCanvas) {
             this.adjustCanvas = document.createElement('canvas');
@@ -577,10 +578,29 @@ export class MaskManager {
         }
         this.adjustCanvas.width = w;
         this.adjustCanvas.height = h;
-        // Reused every frame: a fresh ImageData per slider tick is a 9 MB allocation
-        // at the working size, which is GC churn during a drag for nothing.
-        this._adjustImg = this.adjustCtx.createImageData(w, h);
         this.hasAdjustPreview = false;
+    }
+
+    /**
+     * Build the distance field and the preview buffer from the pristine snapshot, once
+     * per snapshot. Both are dropped by `beginAdjust()`, so this is what re-derives
+     * them — and it reads `_adjustPristine`, never `adjustCanvas`, or the adjustment
+     * would compound frame over frame like the MPI-351 double-scale bug.
+     *
+     * The `ImageData` is cached alongside it because a fresh one per slider tick is a
+     * 9 MB allocation at the working size — GC churn during a drag for nothing.
+     * @returns {boolean} false when there is nothing to build from
+     */
+    _ensureAdjustField() {
+        if (this._adjustField && this._adjustImg) return true;
+        const src = this._adjustPristine;
+        if (!src?.width || !src?.height || !this.adjustCtx) return false;
+        const w = src.width;
+        const h = src.height;
+        const data = src.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, w, h).data;
+        this._adjustField = signedSquaredDistanceField(data, w, h);
+        this._adjustImg = this.adjustCtx.createImageData(w, h);
+        return true;
     }
 
     /**
@@ -589,9 +609,12 @@ export class MaskManager {
      * untouched mask rather than a green copy of it.
      *
      * Grow, shrink and both halves of an edge band are ONE range test over the
-     * distance field built in `beginAdjust()` (MPI-441). The band in particular is
-     * no longer dilate-then-`destination-out`-erode: the complement of an erode is
-     * just the field's other bound, so it is a single pass.
+     * distance field (MPI-441). The band in particular is no longer
+     * dilate-then-`destination-out`-erode: the complement of an erode is just the
+     * field's other bound, so it is a single pass.
+     *
+     * The no-op guard runs BEFORE `_ensureAdjustField()` on purpose: a zero slider
+     * must cost nothing, and entering the tool to press Fill never builds a field.
      *
      * @param {{grow?:number, outward?:number, inward?:number, edge?:boolean}} opts
      *   grow: >0 dilates, <0 erodes. edge: an outward/inward band instead.
@@ -599,7 +622,7 @@ export class MaskManager {
      */
     previewAdjust(opts = {}) {
         const src = this._adjustPristine;
-        if (!src || !this.adjustCtx || !this._adjustField || !this._adjustImg) return false;
+        if (!src || !this.adjustCtx) return false;
         const w = src.width;
         const h = src.height;
 
@@ -609,6 +632,7 @@ export class MaskManager {
             this.hasAdjustPreview = false;
             return false;
         }
+        if (!this._ensureAdjustField()) return false;
 
         // putImageData replaces the buffer outright, so there is nothing to clear.
         writeRange(this._adjustField, new Uint32Array(this._adjustImg.data.buffer), range.lo, range.hi);
