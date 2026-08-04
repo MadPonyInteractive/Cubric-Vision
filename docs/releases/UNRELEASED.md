@@ -61,6 +61,11 @@
   watch the mask change live, then press Apply. Undoable like any other mask edit.
 - **Fill.** Closes enclosed holes in a mask in one press, in the app where you can
   see what is being filled before you commit to it.
+- **Outline anything you paint.** The Adjust tool now works on the paint layer too —
+  grow or shrink a scribble, or reduce it to a band around its edge, which outlines it
+  in the colour you pick. Growing fills the new edge in that colour and leaves what you
+  already painted untouched; shrinking eats the edge inward and keeps every surviving
+  brushstroke its own colour. Live preview and Apply, undoable, same as the mask.
 - **Control Strength.** Krea 2, FLUX.2 Klein, Chroma and the SDXL family gained a
   slider on Control for how hard the control map pulls. At full strength the
   composition is locked to the source; easing it off lets the model reinterpret the

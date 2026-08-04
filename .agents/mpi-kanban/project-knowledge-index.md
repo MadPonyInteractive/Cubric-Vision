@@ -24,7 +24,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 ### Canvas tools (mask / paint / composite / crop)
 
 - **Read first:** `docs/masking-tools.md` (the tool taxonomy, THE PREVIEW CONTRACT, Add/Subtract, the PromptBox contract) — the frame every canvas tool mounts into
-- **Per family:** `docs/masking.md` (layer model) · `docs/masking-sam3.md` (click-point + text detect) · `docs/masking-shapes.md` (the shape gizmo, two mounts) · `docs/masking-adjust.md` (grow/shrink/edge band, Fill Holes) · `docs/painting.md` (the RGBA paint layer, the shared brush dab) · `docs/composite.md` (two front ends, the scratch cut, cover-fit on both ends) · `docs/crop.md`
+- **Per family:** `docs/masking.md` (layer model) · `docs/masking-sam3.md` (click-point + text detect) · `docs/masking-shapes.md` (the shape gizmo, two mounts) · `docs/masking-adjust.md` (grow/shrink/edge band on **both** layers — the outline tool — plus Fill Holes) · `docs/painting.md` (the RGBA paint layer, the shared brush dab) · `docs/composite.md` (two front ends, the scratch cut, cover-fit on both ends) · `docs/crop.md`
 - **Any code that MUTATES a mask or paint layer:** `docs/masking-undo.md` FIRST — an unwired mutation is a silent hole in Ctrl+Z
 - **Rules:** `.claude/rules/component-mounts.md`, `.claude/rules/component-events-organisms.md`, `.claude/rules/component-state.md` (all three carry the mask/paint/shape/composite families)
 - **Memory:** `tools/sharp.md` (server-side blend: the mask-through-alpha recipe and its three silent traps — read before touching `services/imageComposite.js`)
