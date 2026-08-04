@@ -10,6 +10,15 @@ whichever you reach first.** (This line claimed until 2026-08-03 that `~/.claude
 The plugins cache genuinely has no copy.) **The never-edit rule applies to BOTH** — they are
 user-scope pack files and a pack update overwrites them.
 
+**`find` will NOT traverse the `.claude` copy** — it is a SYMLINK to the `.agents` one
+(`mpi-lib -> /c/Users/Fabio/.agents/skills/mpi-lib/`), and `find` does not follow symlinks
+by default. So `find ~/.claude/skills/mpi-lib -name validate_board.py` returns **0 hits**
+while `find -L` on the same path returns 1 — it reads as "the file does not exist" when it
+does. Search the `.agents` path, or pass `-L`. The validator is
+`~/.agents/skills/mpi-lib/scripts/validate_board.py` — in `scripts/`, **not** in
+`task-board-ops/` alongside the docs this file already points you at. (Measured both
+directions 2026-08-04.)
+
 ## Card shape rules
 
 When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):

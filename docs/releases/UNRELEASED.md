@@ -108,9 +108,11 @@
   make it. **Two images of different sizes are now cropped to fill rather than stretched**,
   and the preview on the canvas matches the file that gets written.
 - **A detection you don't add is a preview.** Detect, Points and Text show their
-  result in green as a preview. Leaving the tool now discards it — press **Add**
-  to keep it. Previously an un-added detection followed you to other tools and
-  was silently used in the next generation.
+  result in green as a preview, and it stays a preview: leaving the tool discards
+  it, and generating without pressing **Add** no longer sends it. Previously an
+  un-added detection was silently used in the next generation. Because of this,
+  the operations that need a mask stay unavailable until you press **Add** or
+  **Subtract** — a green preview on its own is not a mask yet.
 - **Krea 2 and Chroma styles now reach Detail and Upscale.** Every operation on
   these models runs one workflow, so the style you picked stays applied through
   the finishing passes instead of being dropped by them.
