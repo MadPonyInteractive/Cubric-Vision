@@ -7,7 +7,7 @@
   "maturity": "complete",
   "status": "done",
   "created_at": "2026-07-30T22:15:00Z",
-  "updated_at": "2026-07-31T16:05:00Z",
+  "updated_at": "2026-08-04T16:45:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
@@ -22,8 +22,8 @@
   ],
   "priority": "medium",
   "attention": {
-    "state": "required",
-    "reason": "Its own half is now POSITIVELY proven (+cpu wheels, torch 2.13.0+cpu). Card still cannot close until MPI-413 stops the custom-node stage overwriting it.",
-    "updated_at": "2026-07-31T03:05:00Z"
+    "state": "cleared",
+    "reason": "Closed 2026-08-04. The hold named MPI-413 as the blocker; MPI-413 shipped, its own attention is cleared, and its card describes itself as the umbrella that ABSORBS MPI-406. Nothing outstanding on this card.",
+    "updated_at": "2026-08-04T16:45:00Z"
   }
 }

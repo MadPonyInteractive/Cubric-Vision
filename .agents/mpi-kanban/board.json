@@ -41,11 +41,10 @@
     "done": [
       "MPI-379",
       "MPI-370",
-      "MPI-198",
-      "MPI-406"
+      "MPI-198"
     ]
   },
-  "updated_at": "2026-08-04T16:20:00Z",
+  "updated_at": "2026-08-04T16:45:00Z",
   "events": [
     {
       "at": "2026-08-04T02:55:00Z",
@@ -1826,6 +1825,12 @@
       "type": "task.deleted",
       "task": "(bulk)",
       "note": "mpi-archive: archived 88 done tasks to tasks/_archived/ (workspaces preserved, per-task task.deleted events logged). Held back MPI-198/MPI-370/MPI-379/MPI-406 - attention required. 19 of the archived cards had no validation.md; user approved on the grounds that their evidence is the commit and the subsystem doc."
+    },
+    {
+      "at": "2026-08-04T16:45:00Z",
+      "type": "task.deleted",
+      "task": "MPI-406",
+      "note": "Closed and archived: hold reason named MPI-413, which shipped and absorbed the residual."
     }
   ]
 }
