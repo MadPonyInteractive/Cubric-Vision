@@ -22,7 +22,7 @@ detection preview still violates the preview contract MPI-382 built the seam for
 | MPI-436 | Adjust for the paint layer — grow / shrink / edge band over RGBA (the outline tool) | Reuses mask's `_morph`; the open question is what those ops mean over RGBA rather than coverage |
 | MPI-439 | Convert mask to paint / paint to mask, from the canvas context menu | New, 2026-08-04 |
 | ~~MPI-421~~ | Auto-mask run cost + feedback — cache per-object masks, then queue what is left | **BUILT 2026-08-04**, commit `1028b958`, awaiting the user's in-app pass (`tasks/MPI-421/validation.md`). The graph's `ImpactSEGSPicker` was the whole of MPI-402: it trimmed the masks to the chips selected at dispatch, so the fix was deleting it. Detect now shows an indeterminate bar and a Stop |
-| MPI-441 | **Grow rounds the mask off instead of growing it** — `_morph` is a blur+threshold, i.e. an average where a dilation needs a maximum | **NEW, 2026-08-04**, from the user's screenshots. Blocks MPI-436, which points the same primitive at RGBA |
+| MPI-441 | **Grow, Shrink and Edge all round the mask off** — `_morph` is a blur+threshold, i.e. an average where a dilation needs a maximum | **NEW, 2026-08-04**, from the user's screenshots. All four readings (grow, shrink, edge outward, edge inward) are one call and change together — he named them. Blocks MPI-436, which points the same primitive at RGBA |
 
 ## Order
 
