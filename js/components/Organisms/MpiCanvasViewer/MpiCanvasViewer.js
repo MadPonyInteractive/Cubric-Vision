@@ -1273,6 +1273,22 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.clearPaint        = () => !!canvas.clearPaint?.();
         el.setPaintFromDataURL = (url) => canvas.setPaintFromDataURL?.(url);
 
+        // ── Shape gizmo (MPI-368) ────────────────────────────────────────────
+        // ONE gizmo, two destinations: `dest` is 'mask' or 'paint' and decides which
+        // layer a commit rasterises into. It is armed INSIDE the canvas' existing
+        // mask/paint mode, like points mode — not as a fourth canvas mode — so
+        // nothing about brush ownership or the undo gate changes underneath it.
+        /** @param {null|'mask'|'paint'} dest */
+        el.setShapeMode  = (dest) => canvas.setShapeMode?.(dest);
+        el.setShapeKind  = (kind) => canvas.setShapeKind?.(kind);
+        el.getShapeKind  = () => canvas.getShapeKind?.() ?? 'rect';
+        el.hasShape      = () => !!canvas.hasShape?.();
+        el.resetShape    = () => canvas.resetShape?.();
+        /** Drop the gizmo. Not an edit — no pixels change, so no undo entry. */
+        el.clearShape    = () => !!canvas.clearShape?.();
+        /** @param {'add'|'subtract'|'fill'|'erase'} op @returns {boolean} true when pixels changed */
+        el.commitShape   = (op) => !!canvas.commitShape?.(op);
+
         /**
          * Flatten the paint layer onto the current entry as ONE new history entry.
          *
@@ -1530,6 +1546,14 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 _exitAutoMaskMode(false);
                 dropped = true;
             }
+
+            // MPI-368: a gizmo in flight IS a preview — an uncommitted shape must not
+            // outlive its tool, or the next tool inherits a shape the user never
+            // committed to. `clearShape()` reports whether there was one and does not
+            // care whether the tool is still armed, so this is immune to the order
+            // mountOptions() happens to discard and destroy in.
+            if (canvas.clearShape?.()) dropped = true;
+
             return dropped;
         };
 

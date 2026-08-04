@@ -21,6 +21,7 @@ import { MpiToolOptionsMaskDetect } from '../../Organisms/MpiToolOptionsMaskDete
 import { MpiToolOptionsMaskPoints } from '../../Organisms/MpiToolOptionsMaskPoints/MpiToolOptionsMaskPoints.js';
 import { MpiToolOptionsMaskText } from '../../Organisms/MpiToolOptionsMaskText/MpiToolOptionsMaskText.js';
 import { MpiToolOptionsPaint } from '../../Organisms/MpiToolOptionsPaint/MpiToolOptionsPaint.js';
+import { MpiToolOptionsShapes } from '../../Organisms/MpiToolOptionsShapes/MpiToolOptionsShapes.js';
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
 import { MpiToolOptionsRemoveBg } from '../../Organisms/MpiToolOptionsRemoveBg/MpiToolOptionsRemoveBg.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
@@ -87,6 +88,10 @@ const TOOL_OPTIONS_REGISTRY = {
     maskPoints:   MpiToolOptionsMaskPoints,
     maskText:     MpiToolOptionsMaskText,
     paint:        MpiToolOptionsPaint,
+    // ONE component under BOTH shape modes (MPI-368) — it reads `props.mode` to
+    // pick its destination. One gizmo, two mounts, one panel.
+    maskShapes:   MpiToolOptionsShapes,
+    paintShapes:  MpiToolOptionsShapes,
     videoUpscale: MpiToolOptionsUpscale,
     imageUpscale: MpiToolOptionsUpscale,
     removeBackground: MpiToolOptionsRemoveBg,
@@ -99,13 +104,15 @@ const TOOL_OPTIONS_REGISTRY = {
 /** Any tool in the mask family. One rail icon per masking method (MPI-371),
  *  one job each (MPI-381). EVERY new mask tool must be added here — teardown,
  *  the PromptBox gate and the viewer-mode bridge all hang off this. */
-const _MASK_TOOLS = new Set(['maskBrush', 'maskAdjust', 'maskDetect', 'maskPoints', 'maskText']);
+const _MASK_TOOLS = new Set(['maskBrush', 'maskAdjust', 'maskDetect', 'maskPoints', 'maskText', 'maskShapes']);
 const _isMaskTool = (mode) => _MASK_TOOLS.has(mode);
 
 /** Any tool in the PAINT family (MPI-375) — the RGBA layer's group. Deliberately
  *  NOT part of `_MASK_TOOLS`: paint's artifact is real colour that Apply flattens
- *  into a new entry, not a mask. MPI-368's Paint Shapes joins this set. */
-const _PAINT_TOOLS = new Set(['paint']);
+ *  into a new entry, not a mask. `paintShapes` (MPI-368) is the SAME gizmo as
+ *  `maskShapes` pointed at this layer — the two must never swap sets, or a shape
+ *  would rasterise into the wrong one while the rail still looked right. */
+const _PAINT_TOOLS = new Set(['paint', 'paintShapes']);
 const _isPaintTool = (mode) => _PAINT_TOOLS.has(mode);
 
 /** Any canvas-resident tool, mask family or paint family. Teardown and the
@@ -481,7 +488,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const Compound = TOOL_OPTIONS_REGISTRY[mode];
             if (!Compound || !slot) return;
 
-            _options = Compound.mount(slot, { viewer, kind: modeKind, currentItem: _group.history[_currentIdx] || null });
+            // `mode` rides along for compounds registered under more than one key —
+            // MpiToolOptionsShapes is one component serving both shape mounts and
+            // reads it to pick its destination (MPI-368).
+            _options = Compound.mount(slot, { viewer, mode, kind: modeKind, currentItem: _group.history[_currentIdx] || null });
 
             // GIF export owns no source resolution — inject the encoder so its
             // preview/export call hits /api/video/gif with the current item +

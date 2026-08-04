@@ -98,6 +98,30 @@ test('every preview producer drops through the ONE seam, not through mountOption
     );
 });
 
+// MPI-368. A gizmo in flight is a preview: it is uncommitted geometry that the
+// next tool would otherwise inherit, and the user would then commit a shape they
+// positioned for a different job. The drop lives on the seam, like Adjust's.
+test('an uncommitted shape gizmo is dropped by the seam too', () => {
+    assert.match(
+        discardSeam,
+        /clearShape/,
+        'discardPreview does not drop the shape gizmo — an uncommitted shape would outlive its tool',
+    );
+    const mount = BLOCK.match(/async function mountOptions\(mode\)\s*\{([\s\S]*?)_options\?\.destroy/);
+    assert.doesNotMatch(
+        mount[1],
+        /clearShape|setShapeMode/,
+        'mountOptions names the shape gizmo — the call site must stay one unconditional discardPreview()',
+    );
+    // clearShape() reports whether there WAS a shape; without that the seam's
+    // return value lies and a discard-only switch looks like a no-op to callers.
+    assert.match(
+        discardSeam,
+        /if \(canvas\.clearShape\?\.\(\)\)\s*dropped = true;/,
+        'the shape discard does not feed the seam\'s `dropped` result',
+    );
+});
+
 test('discarding drops the WHOLE preview, not just the canvas half', () => {
     // Clearing only the auto layers left the thumb strip advertising selected
     // picks for pixels that no longer existed, and re-entering Detect rehydrated

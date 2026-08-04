@@ -158,12 +158,14 @@ unlisted one is a silent hole in Ctrl+Z.
 
 - **MPI-435 (alpha brush pack)** parameterises **`stampDab` and nothing else**. Both the mask
   brush and the paint brush get textures from that one edit.
-- **MPI-368 (Shapes)** rasterises geometry into this layer. The destination is `paintCtx`; a
-  shape commit is a **layer-wide one shot**, so it takes `paint._recordUndo()` *after* its no-op
-  guard, then draws, then `MpiCanvas.draw()`. Scale image-px → layer-px with the manager's
-  `_scale` yourself — only `paint()` does that conversion. `paintEnabled` exists for exactly this
-  case: a paint-family tool that offers no brush disarms it so a drag pans instead of painting,
-  and it mounts `MpiMaskStrip` with `brush: false`, `dest: 'paint'`.
+- **MPI-368 (Shapes) HAS LANDED.** `PaintManager.commitShape(buildPath, erase)` is the paint half
+  of one gizmo with two destinations — Fill lays the shape down in `color`, Erase punches it out,
+  the same pair the brush already means here. It takes a path BUILDER, not a path, and applies
+  `_scale` itself: the mask works at 1536 and this layer at 4096, so a path built for one is
+  silently offset in the other. Layer-wide one shot, so `_recordUndo()` after the no-op guard.
+  `paintEnabled` does the job it was added for — the Shapes panel mounts `MpiMaskStrip` with
+  `brush: false`, which disarms painting so a drag off the gizmo pans. Geometry, hit-testing and
+  the ALT-rotate live in `ShapeManager`; see [masking-tools.md](masking-tools.md) § Shapes.
 
 Any new method reaching the panels must go in **`MpiCanvas._methods`** — the allowlist. A name
 missing there is `undefined` on `el`, and the optional-call idiom in the panels swallows it

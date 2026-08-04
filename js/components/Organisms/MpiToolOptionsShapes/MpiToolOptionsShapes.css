@@ -1,0 +1,37 @@
+.mpi-tool-options-shapes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+
+.mpi-tool-options-shapes__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    align-items: center;
+    justify-content: center;
+}
+
+/* A class carrying `display` OUTRANKS the UA sheet's `[hidden] { display: none }` —
+   the trap that put three inert slider rows on screen in MPI-382. */
+.mpi-tool-options-shapes__row[hidden] {
+    display: none;
+}
+
+/* The gizmo's gestures are not discoverable — nothing on screen says a modifier
+   rotates it — so the panel says so once, quietly. */
+.mpi-tool-options-shapes__hint {
+    font-size: var(--t-2xs);
+    line-height: 1.4;
+    color: var(--ink-3);
+    text-align: center;
+}
+
+.mpi-tool-options-shapes__hint kbd {
+    font-family: inherit;
+    font-size: inherit;
+    color: var(--ink-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-1);
+    padding: 0 var(--s-1);
+}

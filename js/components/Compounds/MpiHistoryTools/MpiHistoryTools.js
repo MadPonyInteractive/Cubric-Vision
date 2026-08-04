@@ -99,6 +99,7 @@ const IMAGE_TOOLS = [
                     { mode: 'maskDetect', icon: 'sparkle', info: 'Auto',   label: 'Auto'   },
                 ],
             },
+            { mode: 'maskShapes', icon: 'shapes_stroke', info: 'Shapes' },
             // Below Detect on purpose (user, 2026-08-03): Adjust operates on a mask
             // that already exists, so it reads in the order the work happens —
             // make it by hand or by detection, then adjust it.
@@ -115,6 +116,9 @@ const IMAGE_TOOLS = [
         // Shapes (MPI-368) joins this group and the Mask one off ONE gizmo.
         group: [
             { mode: 'paint', icon: 'brush', info: 'Paint' },
+            // The SAME gizmo as maskShapes above, pointed at the RGBA layer — one
+            // geometry, two destinations (MPI-368). Two rail buttons, one component.
+            { mode: 'paintShapes', icon: 'shapes_stroke', info: 'Shapes' },
         ],
     },
 ];

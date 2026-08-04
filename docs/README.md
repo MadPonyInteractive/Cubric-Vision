@@ -45,6 +45,8 @@ NOT mechanically split these):
 | **Masking** (layer model, the display-vs-export split, overlay draw, mask storage) | [masking.md](masking.md) |
 | **Canvas tool family** (Mask/Paint/Composite taxonomy, the preview contract, Add/Subtract, who owns which panel, the PromptBox contract) | [masking-tools.md](masking-tools.md) |
 | **SAM3 masking** (click-point + open-vocabulary text tools, their graph branches, the `name:N` trap) | [masking-sam3.md](masking-sam3.md) |
+| **Shape gizmo** (rect/triangle/ellipse, the two mounts, handles + ALT-rotate, shape-local hit-testing) | [masking-shapes.md](masking-shapes.md) |
+| **Mask adjust** (grow/shrink/edge band off one `_morph`, the measured radius table, Fill Holes' two passes) | [masking-adjust.md](masking-adjust.md) |
 | **Canvas undo** (the shared command stack, what it stores and why, dirty rects, the Ctrl+Z typing trap) | [masking-undo.md](masking-undo.md) |
 | **Painting** (the RGBA layer, the shared dab, image-native resolution, per-entry persistence, the server-side Apply) | [painting.md](painting.md) |
 | **Crop** (ratio/free/exact-resolution, cropping PAST the image edge + fill colour, edge snapping, pad-then-extract) | [crop.md](crop.md) |

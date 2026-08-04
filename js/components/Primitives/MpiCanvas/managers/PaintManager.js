@@ -166,6 +166,37 @@ export class PaintManager {
     }
 
     /**
+     * Rasterise a shape into the layer (MPI-368) — the paint half of "one gizmo,
+     * two destinations". Fill lays the shape down in the current colour, Erase
+     * punches it out, exactly as the brush and its eraser do here.
+     *
+     * The caller passes a PATH BUILDER rather than a path, so the geometry is
+     * scaled by THIS layer's `_scale`: the mask works at 1536 and this layer at
+     * 4096, and a path built for one is silently wrong on the other.
+     *
+     * Layer-wide ONE SHOT, so a single full-rect undo entry after the no-op guard
+     * (`docs/masking-undo.md`).
+     *
+     * @param {(scale: number) => Path2D|null} buildPath
+     * @param {boolean} [erase]
+     * @returns {boolean} false when there was nothing to rasterise
+     */
+    commitShape(buildPath, erase = false) {
+        if (!this.paintCtx) return false;
+        const path = buildPath(this._scale);
+        if (!path) return false;
+
+        this._recordUndo();
+
+        this.paintCtx.save();
+        this.paintCtx.globalCompositeOperation = erase ? 'destination-out' : 'source-over';
+        this.paintCtx.fillStyle = this.color;
+        this.paintCtx.fill(path);
+        this.paintCtx.restore();
+        return true;
+    }
+
+    /**
      * Wipe the layer.
      * @param {boolean} [record] false skips the undo snapshot — for a LOAD (init),
      *   where blanking the layer is not an edit the user could have undone.

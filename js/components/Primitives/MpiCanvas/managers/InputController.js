@@ -4,6 +4,7 @@
  */
 
 import { CropManager } from './CropManager.js';
+import { ShapeManager } from './ShapeManager.js';
 import { Hotkeys } from '/js/managers/hotkeyManager.js';
 
 /**
@@ -44,6 +45,8 @@ export class InputController {
 
         this.currentMouseX = undefined;
         this.currentMouseY = undefined;
+        /** Last seen ALT state, from the mouse events (MPI-368 — rotate modifier). */
+        this._altHeld = false;
 
         this._boundHandlers = {};
         this._initEvents();
@@ -160,8 +163,14 @@ export class InputController {
 
             const c = this._getContainerCoords(e);
             const i = this._getImageCoords(e);
-            const { view, mask, comparison, crop, paint } = this.managers;
+            const { view, mask, comparison, crop, paint, shape } = this.managers;
             const containerW = this.container.getBoundingClientRect().width || 1;
+            // ALT is read straight off the mouse event rather than through a
+            // hotkeyRegistry binding: it is only ever consulted at gesture start and
+            // for the cursor, both of which have an event in hand.
+            // ponytail: a registry entry buys nothing here — add one if ALT ever needs
+            // to change behaviour with no pointer involved.
+            this._altHeld = !!e.altKey;
 
             if (pointsClick) {
                 // Clicking an existing dot removes it, whichever button — that is
@@ -183,6 +192,18 @@ export class InputController {
                 const handle = crop.hitTest(i.x, i.y, view.scale);
                 if (handle) {
                     crop.startDrag(handle, i.x, i.y);
+                } else {
+                    this.isPanning = true;
+                    view.isManagedView = false;
+                    this.startPanX = e.clientX - view.offsetX;
+                    this.startPanY = e.clientY - view.offsetY;
+                }
+            } else if (shape?.isActive && !this.isSpacePressed) {
+                // MPI-368. Sits where crop's branch does — a gizmo owns the pointer
+                // over its handles and hands it back (to a pan) everywhere else.
+                const handle = shape.hitTest(i.x, i.y, view.scale);
+                if (handle) {
+                    shape.startDrag(handle, i.x, i.y, e.altKey);
                 } else {
                     this.isPanning = true;
                     view.isManagedView = false;
@@ -230,7 +251,8 @@ export class InputController {
             const c = this._getContainerCoords(e);
             this.currentMouseX = c.x;   // container px (used by brush indicator + slider)
             this.currentMouseY = c.y;
-            const { view, mask, comparison, crop, paint } = this.managers;
+            const { view, mask, comparison, crop, paint, shape } = this.managers;
+            this._altHeld = !!e.altKey;
 
             if (comparison.isDraggingSlider) {
                 const containerW = this.container.getBoundingClientRect().width || 1;
@@ -239,6 +261,11 @@ export class InputController {
             } else if (crop.isDragging) {
                 const i = this._getImageCoords(e);
                 crop.drag(i.x, i.y, view.scale);
+            } else if (shape?.isDragging) {
+                const i = this._getImageCoords(e);
+                // Shift locks the shape's proportions. Read off the event like ALT is:
+                // the modifier only ever matters while the pointer is moving.
+                shape.drag(i.x, i.y, e.shiftKey);
             } else if (mask.isDrawingMask) {
                 const i = this._getImageCoords(e);
                 mask.paint(i.x, i.y);
@@ -260,6 +287,7 @@ export class InputController {
             this._endMaskStroke();
             this._endPaintStroke();
             this.managers.crop.endDrag();
+            this.managers.shape?.endDrag();
             this.isPanning = false;
             this.managers.comparison.isDraggingSlider = false;
             this.updateCursor();
@@ -281,6 +309,9 @@ export class InputController {
             // Same for paint, or Space mid-stroke leaves an undo capture open and the
             // NEXT stroke's commit would swallow both.
             this._endPaintStroke();
+            // A gizmo drag has no undo capture to close (the commit is what records),
+            // but it must stop tracking or Space+drag would reshape instead of pan.
+            this.managers.shape?.endDrag();
             this.updateCursor();
             this.options.onDraw();
         });
@@ -355,12 +386,21 @@ export class InputController {
     }
 
     updateCursor() {
-        const { mask, comparison, crop, view, paint } = this.managers;
+        const { mask, comparison, crop, view, paint, shape } = this.managers;
         const x = this.currentMouseX;
         const y = this.currentMouseY;
         const target = this.container;
         if (this.isSpacePressed || (this.isPanning && !mask.isMaskingMode && !paint?.isPaintingMode)) {
             target.style.cursor = 'move';
+        } else if (shape?.isActive && !this.isSpacePressed) {
+            // Same conversion the crop branch does: container px → image px.
+            const imgX = x !== undefined ? (x - view.offsetX) / view.scale : -1;
+            const imgY = y !== undefined ? (y - view.offsetY) / view.scale : -1;
+            const handle = shape.isDragging
+                ? shape._handle
+                : shape.hitTest(imgX, imgY, view.scale);
+            const rotating = shape.isDragging ? shape._rotating : this._altHeld;
+            target.style.cursor = ShapeManager.getCursor(handle, rotating);
         } else if (crop.isCroppingMode && !this.isSpacePressed) {
             // Convert container-px cursor → image-px for crop hit-test.
             const imgX = x !== undefined ? (x - view.offsetX) / view.scale : -1;

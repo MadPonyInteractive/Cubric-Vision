@@ -30,8 +30,13 @@ code rather than guessed:
 
 | Layer | Records an entry | Deliberately records NOTHING |
 |---|---|---|
-| `MaskManager` — `manualCanvas` + `subtractCanvas` | `paint()`, `clear()`, `bakeAutoPicksInto()`, `applyAdjust()`, `fillHoles()` | `setManual/SubtractFromDataURL()`, `init()` — **loads** |
-| `PaintManager` — `paintCanvas` (MPI-375) | `paint()`, `clear(true)` | `setFromDataURL()`, `init()` (which calls `clear(false)`) — **loads** |
+| `MaskManager` — `manualCanvas` + `subtractCanvas` | `paint()`, `clear()`, `bakeAutoPicksInto()`, `applyAdjust()`, `fillHoles()`, `commitShape()` | `setManual/SubtractFromDataURL()`, `init()` — **loads** |
+| `PaintManager` — `paintCanvas` (MPI-375) | `paint()`, `clear(true)`, `commitShape()` | `setFromDataURL()`, `init()` (which calls `clear(false)`) — **loads** |
+
+`commitShape()` (MPI-368) is the same method on both managers because it is the same gizmo:
+`ShapeManager` owns the geometry and hands over a path BUILDER, each manager scales it by its
+own `_scale` and fills it. Neither the gizmo nor its drag records anything — moving a shape
+around changes no pixel. Only the commit does.
 
 `PaintManager.init()` must **not** clear the stack a second time: `MpiCanvas.loadImage()` already
 cleared it through `mask.init()`, and clearing again would wipe the history the mask just
@@ -64,9 +69,11 @@ Then make sure the change reaches the UI: an undo must end up firing `onMaskStro
 undo at all — the user learns to trust it and then loses work at the first unwired path.
 A new mutation that skips the stack is a silent hole, and nothing will fail loudly.
 
-**MPI-375 (paint) has landed** and did exactly this — one RGBA layer, the same stack, no second
-one ([painting.md](painting.md)). The next card to hit it is **MPI-368** (shapes), whose commit is
-a layer-wide one shot into either destination.
+**MPI-375 (paint) and MPI-368 (shapes) have both landed** and did exactly this — one RGBA layer
+on the same stack ([painting.md](painting.md)), and one gizmo whose commit is a layer-wide one
+shot into either destination. Ctrl+Z inside Shapes therefore walks back through mask strokes,
+paint strokes and shape commits in the order they happened, which is the one-canvas-one-history
+consequence this stack was built around.
 
 ---
 
@@ -122,7 +129,7 @@ about five of those, or thousands of strokes.
   **no consumer** — MPI-382's grow/shrink was the intended one until the 2026-08-01 re-scope made
   Apply a layer-wide one shot instead of a drag bake, so Adjust holds its own pristine copy and
   records with `_recordUndo()`. Left in place for the next real gesture; see
-  `docs/masking-tools.md` § Adjust.
+  `docs/masking-adjust.md`.
 
 `tests/undo-stack.test.cjs` covers the arithmetic (clamping, swap ordering, budget eviction,
 redo invalidation, byte credit). The wiring above was verified live — see the MPI-376 card.

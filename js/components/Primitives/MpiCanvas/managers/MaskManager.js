@@ -506,6 +506,47 @@ export class MaskManager {
         return true;
     }
 
+    /**
+     * Rasterise a shape into the layers (MPI-368). The twin write is
+     * `bakeAutoPicksInto()`'s, for the same reason: `manual AND NOT subtract` is
+     * only reconstructible while the two stay exact mirrors of each other.
+     *
+     * The caller passes a PATH BUILDER rather than a path, so the shape is scaled
+     * by THIS layer's `_scale` — the mask works at 1536 and the paint layer at
+     * 4096, and a path built for one is silently wrong on the other.
+     *
+     * Layer-wide ONE SHOT, so it records a single full-rect undo entry after the
+     * no-op guard (`docs/masking-undo.md`).
+     *
+     * @param {(scale: number) => Path2D|null} buildPath
+     * @param {boolean} [toSubtract] Subtract instead of Add
+     * @returns {boolean} false when there was nothing to rasterise
+     */
+    commitShape(buildPath, toSubtract = false) {
+        if (!this.manualCtx || !this.subtractCtx) return false;
+        const path = buildPath(this._scale);
+        if (!path) return false;
+
+        this._recordUndo();
+
+        const dstCtx = toSubtract ? this.subtractCtx : this.manualCtx;
+        const othCtx = toSubtract ? this.manualCtx   : this.subtractCtx;
+
+        dstCtx.save();
+        dstCtx.globalCompositeOperation = 'source-over';
+        dstCtx.fillStyle = toSubtract ? 'rgba(255, 255, 255, 1)' : this.maskColor;
+        dstCtx.fill(path);
+        dstCtx.restore();
+
+        othCtx.save();
+        othCtx.globalCompositeOperation = 'destination-out';
+        othCtx.fill(path);
+        othCtx.restore();
+
+        this._recomposite();
+        return true;
+    }
+
     // ── Adjust — grow / shrink / edge band (MPI-382) ─────────────────────────
 
     /**

@@ -295,6 +295,70 @@ test('paint persists per entry, and Clear mask cannot take it with it', () => {
         'mask-temp:delete removes the whole item dir again — paint.png lives there and Clear mask would wipe it');
 });
 
+// MPI-368. Shapes is ONE gizmo mounted twice, and the two mounts are one word
+// apart in the source. Swapping which family each belongs to is invisible in the
+// app: the rail still shows both buttons, the panel still opens, and the shape
+// simply lands in the wrong layer.
+test('the two shape mounts sit in DIFFERENT families', () => {
+    const maskSet = BLOCK.match(/const _MASK_TOOLS = new Set\(\[([^\]]*)\]\)/);
+    const paintSet = BLOCK.match(/const _PAINT_TOOLS = new Set\(\[([^\]]*)\]\)/);
+    assert.ok(maskSet && paintSet, 'family sets not found in MpiGroupHistoryBlock');
+
+    assert.ok(maskSet[1].includes(`'maskShapes'`), 'maskShapes is missing from _MASK_TOOLS');
+    assert.ok(paintSet[1].includes(`'paintShapes'`), 'paintShapes is missing from _PAINT_TOOLS');
+    assert.ok(!maskSet[1].includes(`'paintShapes'`),
+        'paintShapes is in _MASK_TOOLS — it would drive the MASK layer while the rail says Paint');
+    assert.ok(!paintSet[1].includes(`'maskShapes'`),
+        'maskShapes is in _PAINT_TOOLS — it would rasterise colour instead of a mask');
+});
+
+// One component is registered under BOTH shape modes and picks its destination from
+// `props.mode`. If the block ever stops passing `mode`, the panel throws on mount —
+// loud, deliberately — but this guard says which end broke.
+test('the options mount passes the mode through, and both shape modes resolve', () => {
+    assert.match(BLOCK, /Compound\.mount\(slot,\s*\{[^}]*\bmode\b/,
+        'mountOptions no longer passes `mode` into the options props — MpiToolOptionsShapes cannot pick a destination');
+
+    const registry = BLOCK.match(/const TOOL_OPTIONS_REGISTRY = \{([\s\S]*?)\n\};/);
+    assert.ok(registry, 'TOOL_OPTIONS_REGISTRY not found');
+    for (const mode of ['maskShapes', 'paintShapes']) {
+        assert.match(registry[1], new RegExp(`\\b${mode}\\s*:`), `${mode} has no options compound`);
+        assert.match(RAIL, new RegExp(`mode:\\s*'${mode}'`), `${mode} has no rail button`);
+    }
+});
+
+// A shape commit is a layer-wide ONE SHOT, so it records a single undo entry AFTER
+// the no-op guard. Both halves are silent when wrong: no record at all is a hole in
+// Ctrl+Z, and recording before the guard books an empty entry that eats a press.
+test('both shape commits record undo, after the no-op guard', () => {
+    const cases = [
+        ['js/components/Primitives/MpiCanvas/managers/MaskManager.js', 'MaskManager'],
+        ['js/components/Primitives/MpiCanvas/managers/PaintManager.js', 'PaintManager'],
+    ];
+    for (const [file, name] of cases) {
+        const body = read(file).match(/commitShape\(buildPath[\s\S]*?\n {4}\}/);
+        assert.ok(body, `${name}.commitShape not found`);
+        const guardAt = body[0].search(/if\s*\(!path\)\s*return false;/);
+        const recordAt = body[0].search(/this\._recordUndo\(\)/);
+        assert.ok(guardAt >= 0, `${name}.commitShape lost its null-path guard`);
+        assert.ok(recordAt >= 0, `${name}.commitShape records no undo entry — a silent hole in Ctrl+Z`);
+        assert.ok(recordAt > guardAt,
+            `${name}.commitShape records BEFORE its no-op guard — a commit with nothing to draw would book an empty entry`);
+    }
+});
+
+// The gizmo API reaches the panel through el, and the allowlist is what makes that
+// true. A name missing there is `undefined` on el and the panel's optional call
+// swallows it: the button clicks and nothing happens.
+test('every shape method the panel calls is allowlisted on MpiCanvas', () => {
+    const methods = read('js/components/Primitives/MpiCanvas/MpiCanvas.js').match(/const _methods = \[([\s\S]*?)\n {8}\];/);
+    assert.ok(methods, '_methods allowlist not found in MpiCanvas');
+    for (const name of ['setShapeMode', 'setShapeKind', 'getShapeKind', 'hasShape', 'resetShape', 'clearShape', 'commitShape']) {
+        assert.match(methods[1], new RegExp(`'${name}'`),
+            `${name} is missing from the _methods allowlist — el.${name} would be undefined and the call silently swallowed`);
+    }
+});
+
 // Only the Brush tool paints. A brushless tool that still armed the brush would
 // let a drag paint with no visible brush control — the incoherence MPI-381 removed.
 test('only the brush tool mounts the strip with its brush pair', () => {
@@ -303,6 +367,9 @@ test('only the brush tool mounts the strip with its brush pair', () => {
         'js/components/Organisms/MpiToolOptionsMaskDetect/MpiToolOptionsMaskDetect.js',
         'js/components/Organisms/MpiToolOptionsMaskPoints/MpiToolOptionsMaskPoints.js',
         'js/components/Organisms/MpiToolOptionsMaskText/MpiToolOptionsMaskText.js',
+        // Shapes is brushless on BOTH mounts (MPI-368) — a drag off the gizmo must
+        // pan, not paint.
+        'js/components/Organisms/MpiToolOptionsShapes/MpiToolOptionsShapes.js',
     ];
     for (const f of withBrush) assert.match(read(f), /MpiMaskStrip\.mount\([\s\S]{0,160}?brush:\s*true/s, `${f} should paint`);
     for (const f of brushless) assert.match(read(f), /MpiMaskStrip\.mount\([\s\S]{0,160}?brush:\s*false/s, `${f} must not paint`);

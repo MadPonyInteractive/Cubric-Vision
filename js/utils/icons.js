@@ -99,6 +99,14 @@ export const ICONS = {
     // Fill Holes (MPI-431): a blob with an enclosed hole, and the hole being closed
     // from the inside out. Dashed inner ring = the hole boundary about to go away.
     'mask_fill_holes_stroke': '<path d="M4.2 9.6a8 8 0 0 1 15.6 1.2 8 8 0 0 1-13.4 7A8 8 0 0 1 4.2 9.6z"/><circle cx="12" cy="12" r="4" stroke-dasharray="2.2 2"/><path d="M12 9.6v4.8M9.6 12h4.8"/>',
+    // Shapes (MPI-368): the rail button shows the three kinds overlapping, and each
+    // kind gets its own icon for the panel's radio. One gizmo, so one family.
+    // Square + circle, offset diagonally. Three shapes at 24×24 with a 2px stroke
+    // read as a blob (measured in the app 2026-08-04) — two is the legible limit.
+    'shapes_stroke': '<rect x="2.5" y="10" width="11.5" height="11.5" rx="1"/><circle cx="15.5" cy="8.5" r="6"/>',
+    'shape_rect_stroke': '<rect x="3.5" y="5.5" width="17" height="13" rx="1"/>',
+    'shape_triangle_stroke': '<path d="M12 4l8.5 15h-17z"/>',
+    'shape_ellipse_stroke': '<ellipse cx="12" cy="12" rx="8.5" ry="6.5"/>',
     // Film/video frame with a centered play triangle → "export animated clip".
     // Stroke-only (fill="none"); fills the 24×24 grid like sibling rail icons
     // (x3 y3 w18 h18) so it doesn't render visually smaller.

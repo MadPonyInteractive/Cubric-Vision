@@ -85,6 +85,7 @@ import { MaskManager }       from './managers/MaskManager.js';
 import { ComparisonManager } from './managers/ComparisonManager.js';
 import { CropManager }       from './managers/CropManager.js';
 import { PaintManager }      from './managers/PaintManager.js';
+import { ShapeManager }      from './managers/ShapeManager.js';
 import { UndoStack }         from './managers/UndoStack.js';
 import { InputController }   from './managers/InputController.js';
 
@@ -178,6 +179,10 @@ class _CanvasCore {
         this.comparison = new ComparisonManager();
         this.crop       = new CropManager();
         this.paint      = new PaintManager();
+        // MPI-368: geometry only. It holds no pixels and no undo — a shape commit
+        // is executed by whichever LAYER manager owns the destination, which is what
+        // keeps one gizmo serving both without knowing either layer's model.
+        this.shape      = new ShapeManager();
         // MPI-376: ONE stack for the whole canvas, not one per tool. Mask and paint
         // share it, chronologically — one canvas, one history. The consequence is
         // deliberate and documented: Ctrl+Z inside the Paint tool can walk back into
@@ -202,7 +207,7 @@ class _CanvasCore {
         this.input = new InputController(
             this.canvas,
             this.container,
-            { view: this.view, mask: this.mask, comparison: this.comparison, crop: this.crop, paint: this.paint, undo: this.undoStack },
+            { view: this.view, mask: this.mask, comparison: this.comparison, crop: this.crop, paint: this.paint, shape: this.shape, undo: this.undoStack },
             {
                 onDraw: () => { this._applyTransform(); this.draw(); },
                 onResetView: () => this.resetView(),
@@ -382,6 +387,7 @@ class _CanvasCore {
             this.mask.init(this.img.width, this.img.height);
             this.paint.init(this.img.width, this.img.height);
             this.crop.init(this.img.width, this.img.height);
+            this.shape.init(this.img.width, this.img.height);
             // mask.init() already cleared the shared stack; paint.init() must NOT
             // clear it again or it would wipe history the mask just re-established.
             // Both are loads, and a load is never an undoable edit.
@@ -873,6 +879,9 @@ class _CanvasCore {
         if (this.comparison.isComparisonMode) this._drawSliderUI();
         const display = this._displayImage();
         this.crop.drawScreen(ctx, this.view, display?.width || 0, display?.height || 0);
+        // Same canvas as the crop rect and for the same two reasons (MPI-383): the
+        // shape may hang off the image, and this surface is not pixelated.
+        this.shape.drawScreen(ctx, this.view);
         this._drawBrushIndicator();
     }
 
@@ -1081,6 +1090,57 @@ class _CanvasCore {
         this.draw();
     }
 
+    // ── Shape gizmo API (MPI-368) ─────────────────────────────────────────────
+    // The gizmo is armed like `pointsMode`, INSIDE the canvas' existing 'mask' or
+    // 'paint' mode — not as a fourth activeMode. Brush ownership, the undo gate and
+    // the paint layer's render pass then all keep working untouched, and the only
+    // thing `shapeMode` decides is where a commit lands.
+
+    /** @param {null|'mask'|'paint'} dest */
+    setShapeMode(dest)   { this.shape.setMode(dest); this.input.updateCursor(); this.draw(); }
+    setShapeKind(kind)   { this.shape.setKind(kind); this.draw(); }
+    getShapeKind()       { return this.shape.kind; }
+    hasShape()           { return this.shape.isActive && this.shape.hasShape; }
+    /** Re-centre the gizmo — the panel's way back when it has been dragged off screen. */
+    resetShape()         { this.shape.seed(); this.draw(); }
+    /** Drop the gizmo. Not an edit: no pixels change, so no undo entry. */
+    clearShape()         { const had = this.shape.clear(); this.draw(); return had; }
+
+    /**
+     * Rasterise the gizmo into whichever layer `shapeMode` names.
+     *
+     * The op vocabulary differs per destination on purpose (user, 2026-08-04): the
+     * mask keeps Add / Subtract, and paint gets Fill / Erase, because "subtract"
+     * already names a mask LAYER and would mean two things at once.
+     *
+     * The shape SURVIVES its commit, so stamping three ellipses is three drags
+     * rather than three re-creations. Leaving the tool still discards it.
+     *
+     * @param {'add'|'subtract'|'fill'|'erase'} op
+     * @returns {boolean} true when pixels changed
+     */
+    commitShape(op) {
+        const dest = this.shape.shapeMode;
+        if (!dest) return false;
+        const buildPath = (scale) => this.shape.buildPath(scale);
+
+        if (dest === 'paint') {
+            const did = this.paint.commitShape(buildPath, op === 'erase');
+            if (did) this.draw();
+            return did;
+        }
+
+        const did = this.mask.commitShape(buildPath, op === 'subtract');
+        if (did) {
+            this.draw();
+            // A shape commit IS a mask change, and this is the viewer's ONE publish
+            // path (_publishMaskState → evaluateMask → mask-ready). Without it the op
+            // strip never unlocks for a mask made without a brush stroke.
+            this.options.onMaskStrokeEnd?.();
+        }
+        return did;
+    }
+
     // ── Processed bitmap API (forward-compat hook for raw tool re-add) ────────
     setProcessedImage(bitmap) {
         this._processedBitmap = bitmap || null;
@@ -1238,6 +1298,7 @@ export const MpiCanvas = ComponentFactory.create({
             'setCropRatio','setCropSize','getCropRect',
             'setPaintBrushSize','setPaintBrushType','setPaintColor','setPaintOpacity','getPaintOpacity',
             'setPaintEnabled','getPaintURL','hasPaint','clearPaint','setPaintFromDataURL',
+            'setShapeMode','setShapeKind','getShapeKind','hasShape','resetShape','clearShape','commitShape',
             'setProcessedImage','clearProcessedImage'
         ];
         _methods.forEach(name => { el[name] = core[name].bind(core); });

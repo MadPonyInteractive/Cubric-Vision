@@ -283,6 +283,30 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsShapesProps (Organism — js/components/Organisms/MpiToolOptionsShapes)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ * @property {'maskShapes'|'paintShapes'} mode - which mount; decides the destination
+ *
+ * The Shapes tool (MPI-368) — ONE panel registered under TWO modes, one per
+ * destination, driving ONE gizmo (`ShapeManager`). Rectangle / triangle / ellipse
+ * with handles and ALT-rotation, committed into the binary mask layers or the RGBA
+ * paint layer. Per-mount differences are ROWS in the module's `MOUNTS` table, never
+ * branches in setup(); an unknown mode throws rather than silently driving the mask.
+ *
+ * Commit vocabulary differs per destination on purpose: mask = Add / Subtract,
+ * paint = Fill / Erase ("subtract" already names a mask layer).
+ *
+ * The shape SURVIVES its commit (stamp again by dragging), but an uncommitted gizmo
+ * is a PREVIEW — `discardPreview()` drops it on any rail switch. Brushless: the strip
+ * mounts `brush: false`, which also disarms canvas painting so a drag pans.
+ *
+ * Requires viewer.el: enterMode('mask'|'paint'), exitMode(), evaluateMask(),
+ *   setMaskPointsMode(), setShapeMode(), setShapeKind(), getShapeKind(),
+ *   resetShape(), clearShape(), commitShape()
+ * Emits nothing — a committed shape is layer pixels.
+ */
+
+/**
  * @typedef {Object} MpiMaskDetectRowProps (Compound — js/components/Compounds/MpiMaskDetectRow)
  * @property {Object} viewer - MpiCanvasViewer instance
  *
