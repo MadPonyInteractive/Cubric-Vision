@@ -523,6 +523,39 @@ is committed).
 
 **Pod wrapper owns + supervises ComfyUI (v0.4.2)** — `POST /wrapper/restart-comfy` restarts ONLY ComfyUI without a Pod reboot. RunPod console op truth table: "Restart Pod" = NO-OP (uptime unchanged, processes NOT restarted); "Reset Pod" = WIPES container; "Stop → Start" = ONLY console op that reloads ComfyUI. `start.sh` `exec`s the wrapper as main process; unexpected ComfyUI death → `os._exit(1)` (safety preserved); intentional restart sets `_restarting` so supervisor relaunches.
 
+## 12. Why not Comfy Cloud (evaluated 2026-08-04 — NO-GO, do not re-litigate)
+
+Comfy Org's Free Tier (400 credits/month, RTX Pro 6000, no card) prompted the question
+"can Vision generate on Comfy Cloud instead of a Pod?". **No — two independent blockers,
+either one fatal.**
+
+1. **The free credits are unreachable by any app.** API access is **Standard/Creator/Pro
+   only**; the Free tier is web-UI only. So the credits that make the offer interesting
+   cannot be spent from Vision at all.
+2. **Custom node uploads are disabled** (Comfy Cloud runs a curated node list; BYO packs
+   are off because they carry local deps). **`ComfyUI-MpiNodes` is in EVERY shipped
+   workflow** in `comfy_workflows/` — all control flow, branching, media I/O and the
+   style-LoRA system (`MpiReroute`, `MpiIfElse`, `MpiAnySwitch`, `MpiLoadVideo`,
+   `MpiSaveVideo`, 40+ more). A private pack will never appear on a public curated list.
+   Same exposure: `ComfyUI-Krea2-ControlNet`, `PainterI2VAdvanced`, `RES4LYF`,
+   `inpaint-cropandstitch`. **This one kills the paid tiers too** — there is no
+   "just subscribe" fallback.
+
+For the record (the part that *did* fit): the API is close to what Vision already speaks —
+`https://cloud.comfy.org`, `X-API-Key` header, `POST /api/prompt` taking ComfyUI
+**API-format** JSON, WebSocket `/ws` progress, `/api/view` outputs (302 → signed URL),
+`GET /api/job/{prompt_id}/status`; concurrency 1/3/5 by tier. Our side has a single URL
+seam (`proxyUrl()`, § 1) and a generic auth helper (`remoteHeaders.buildAuthHeaders`).
+The model half would still have been real work: Comfy Cloud imports safetensors
+(Creator+, from HF/Civitai) but has no analogue of `/wrapper/models/install|status|upload`,
+so `routes/remoteModels.js` would need a "pre-provisioned, assume present" mode. Moot.
+
+**Reopen only if BOTH change:** arbitrary custom-node packs become installable (BYO nodes
+or container) **and** the API drops below the Standard tier. Either alone is not enough.
+
+Sources: `blog.comfy.org/p/free-tier-arrives-in-comfy-cloud`,
+`docs.comfy.org/development/cloud/overview`, `comfy.org/cloud/supported-nodes/`.
+
 ## Related docs / rules
 
 - `docs/comfy.md` — ComfyUI integration, controller, capture, download manager.
