@@ -85,6 +85,19 @@ showed a centre-crop, and the user would approve one image and receive another. 
 which is every pair the retired modal was ever used on. `tests/mask-tool-registry.test.cjs`
 guards both ends together.
 
+**That change brought a defect with it, and the fix is load-bearing: the cover resize is
+MATERIALISED before the mask is joined as alpha.** `fit: 'cover'` is resize-then-CROP, and
+`joinChannel` in the same sharp pipeline binds the plane to the **pre-crop** image — a 896×1088
+overlay scales to 936×1136 before being cropped to 928, so a 928-wide alpha plane was
+zero-extended by 8 columns on the right and the centre-crop kept 4 of them. The result was a
+**4px strip of the BASE down the right edge** of a composite whose mask was white there
+(measured 2026-08-04: exactly 4×1136 = 4544 transparent pixels; every other column matched the
+overlay to 0.0). It could not happen under `fit: 'fill'` — no crop, so the sizes always agreed.
+`compositeOverlay()` (the paint path) is immune on both counts: it stretches with `fill` and
+uses the overlay's OWN alpha, with no separate plane to misalign. A **real-pixel** test guards
+this, because it is libvips behaviour and every source assertion in that file passed while the
+bug shipped.
+
 **`fillHoles` stays opt-out.** MPI-437 made it opt-in because an edge-band mask composited as a
 solid disc; this route inherits that and passes nothing. Closing a hole is the app's job — the
 Fill button in [masking-adjust.md](masking-adjust.md).
@@ -121,6 +134,16 @@ is the single caller and picks the overload; `tests/mask-tool-registry.test.cjs`
 
 An unpainted mask exports blank, so the hole comes back empty and Apply's gate stays shut on its
 own — there is no separate has-a-mask check, and the panel's hint line says why.
+
+**The cut is re-read on every entry load, and that is not optional.** Selecting another history
+entry does NOT remount the panel, so its mount-time read is the one thing that never fires again
+— while `loadImage()` wipes the hole because it was drawn for the old image's geometry. Apply
+went dead with the tool still open, and only a rail switch brought it back (user, 2026-08-04).
+`MpiCanvasViewer.loadEntry()` calls `canvas.refreshCompositeHoleFromMask()` **after**
+`_restoreLayers()`, which is why the panel cannot own this: earlier and it would read the mask of
+the entry the user just left. `CompositeManager.followMask` (set by `setCompositeHoleFromMask()`,
+dropped by `reset()`) is what keeps Paint Comp out of it — its cut is the brush, and inheriting
+the new entry's mask would replace strokes the user made.
 
 ## The contracts it obeys
 

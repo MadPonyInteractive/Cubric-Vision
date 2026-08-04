@@ -52,6 +52,11 @@ export class CompositeManager {
 
         this.isCompositeMode = false;
         this.isDrawing = false;
+        /** Mask Comp armed the hole FROM the entry's mask, so a new entry must re-read
+         *  it. Paint Comp never does — its cut is the brush, and inheriting the new
+         *  entry's mask would replace strokes the user made. Set by
+         *  `MpiCanvas.setCompositeHoleFromMask()`, dropped by `reset()`. */
+        this.followMask = false;
         /** Mask Comp supplies the hole from a pasted mask, so it disarms the brush.
          *  Named to MATCH MaskManager and PaintManager: the wheel handler, the brush
          *  indicator and the B/E owner all duck-type on this one property, so every
@@ -240,6 +245,7 @@ export class CompositeManager {
     reset() {
         const had = !!this.underlay || !this.isEmpty();
         this.underlay = null;
+        this.followMask = false;
         this.clear(false);
         return had;
     }

@@ -984,6 +984,15 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 if (_modeToRestore && _modeToRestore !== 'none') {
                     _enterMode(_modeToRestore);
                 }
+
+                // MPI-373: Mask Comp's cut IS the entry's mask, and `loadImage()` just
+                // wiped the hole because it was drawn for the OLD image's geometry.
+                // Re-read it here — AFTER `_restoreLayers()` has put this entry's mask
+                // on the canvas, which is why the panel cannot do it: selecting another
+                // entry never remounts the panel, so its mount-time read is the one
+                // thing that never fires again, and Apply died with the tool still open.
+                // A no-op on Paint Comp, whose cut is the brush.
+                await canvas.refreshCompositeHoleFromMask?.();
             } finally {
                 _loadingEntry = false;
                 _setLoadingSpinner(false);

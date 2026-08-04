@@ -1175,9 +1175,28 @@ class _CanvasCore {
      * @returns {Promise<boolean>} false when there is no mask layer to read
      */
     async setCompositeHoleFromMask() {
+        this.comp.followMask = true;
         const url = this.mask.getURL();
         if (!url) return false;
         return this.setCompositeHoleFromDataURL(url);
+    }
+
+    /**
+     * Re-read the hole from the mask after the canvas changed entry. A no-op unless
+     * Mask Comp armed it — Paint Comp's cut is the brush, and handing it the new
+     * entry's mask would replace strokes the user made.
+     *
+     * The panel CANNOT do this itself: selecting another history entry does not
+     * remount it, so a mount-time read is the one thing that never fires again.
+     * `loadImage()` wipes the hole for the new geometry, which left Apply dead with
+     * the tool still open — reported 2026-08-04, and the caller has to be the viewer
+     * because the mask only lands after `_restoreLayers()`.
+     *
+     * @returns {Promise<boolean>}
+     */
+    async refreshCompositeHoleFromMask() {
+        if (!this.comp.followMask) return false;
+        return this.setCompositeHoleFromMask();
     }
 
     /**
@@ -1423,7 +1442,7 @@ export const MpiCanvas = ComponentFactory.create({
             'setPaintEnabled','getPaintURL','hasPaint','clearPaint','setPaintFromDataURL',
             'setShapeMode','setShapeKind','getShapeKind','hasShape','resetShape','clearShape','commitShape',
             'setCompositeUnderlay','setCompositeHoleFromDataURL','setCompositeHoleFromMask',
-            'setCompositeBrushSize','setCompositeBrushType',
+            'refreshCompositeHoleFromMask','setCompositeBrushSize','setCompositeBrushType',
             'setCompositeEnabled','hasCompositeUnderlay','hasCompositeHole','getCompositeURL',
             'clearComposite','resetComposite','setOnCompositeChange',
             'setProcessedImage','clearProcessedImage'

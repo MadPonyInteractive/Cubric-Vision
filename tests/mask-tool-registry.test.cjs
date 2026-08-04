@@ -504,11 +504,66 @@ test('client preview and server blend both COVER the underlay', () => {
         /Math\.max\(W \/ img\.width, H \/ img\.height\)/,
         'drawUnderlayCover no longer covers — a fit would leave transparent bands inside the cut');
     const svc = read('services/imageComposite.js');
-    const overlay = svc.match(/const overlay = await sharp\(overlayPath\)[\s\S]*?\.toBuffer\(\);/);
+    // `overlayRgb`, not `overlay`: the cover resize is MATERIALISED before the mask is
+    // joined to it, because joinChannel in the same pipeline binds to the pre-crop image
+    // and left a transparent strip at one edge. The pixel test above guards that half.
+    const overlay = svc.match(/const overlayRgb = await sharp\(overlayPath\)[\s\S]*?\.toBuffer\(\);/);
     assert.ok(overlay, 'the overlay pipeline was not found in imageComposite.js');
     assert.match(overlay[0], /fit:\s*'cover'/,
         "the overlay is resized with something other than fit: 'cover' — the written file would "
         + 'disagree with the preview the user approved');
+});
+
+// A REAL-PIXEL test, and it has to be: the defect it guards is libvips BEHAVIOUR, so
+// every source assertion in this file would have passed while the bug shipped.
+//
+// `fit: 'cover'` is resize-then-CROP, and `joinChannel` in the same pipeline binds the
+// mask to the PRE-crop image — the alpha plane is zero-extended to the wider intermediate
+// and the crop then keeps some of those transparent columns at one edge. The user saw a
+// 4px strip of the BASE down the right edge of a composite whose mask was white there
+// (measured 2026-08-04: exactly 4x1136 = 4544 px). It CANNOT happen while the overlay is
+// resized with `fit: 'fill'`, which is why MPI-373's cover change is what introduced it.
+//
+// Mismatched aspects on purpose — a matching pair crops nothing and passes either way.
+test('a white mask takes the WHOLE overlay, right to the frame edge', async () => {
+    const sharp = require('sharp');
+    const os = require('node:os');
+    const { compositeThroughMask } = require('../services/imageComposite.js');
+
+    const W = 40, H = 50;                       // base 0.80 …
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mpi373-'));
+    const basePath = path.join(dir, 'base.png');
+    const overPath = path.join(dir, 'over.png');
+    const outPath = path.join(dir, 'out.png');
+
+    try {
+        await sharp({ create: { width: W, height: H, channels: 3, background: { r: 255, g: 0, b: 0 } } })
+            .png().toFile(basePath);
+        // … overlay 1.00, so cover scales it to 50x50 and crops 5 columns off EACH side.
+        await sharp({ create: { width: 40, height: 40, channels: 3, background: { r: 0, g: 0, b: 255 } } })
+            .png().toFile(overPath);
+
+        const maskBuffer = await sharp({
+            create: { width: W, height: H, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+        }).png().toBuffer();
+
+        await compositeThroughMask({ basePath, overlayPath: overPath, maskBuffer, outPath, feather: 0 });
+
+        const px = await sharp(outPath).removeAlpha().raw().toBuffer();
+        const leaked = [];
+        for (let y = 0; y < H; y++) {
+            for (let x = 0; x < W; x++) {
+                const i = (y * W + x) * 3;
+                if (px[i] > 40) leaked.push(`${x},${y}`);   // any red = the base showed through
+            }
+        }
+        assert.strictEqual(leaked.length, 0,
+            `${leaked.length} px kept the BASE under an all-white mask (first at ${leaked[0]}). `
+            + 'The mask is being joined to the overlay BEFORE the cover crop, so the alpha plane '
+            + 'is misaligned and a strip at one edge comes out transparent.');
+    } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+    }
 });
 
 // Composite methods reach the panel through el, same allowlist trap as the shape and
@@ -582,6 +637,34 @@ test('Mask Comp reads the entry mask instead of a pasted one', () => {
     assert.ok(clip, '_clipboard not found in MpiGroupHistoryBlock');
     assert.ok(!/hasMask|getMask/.test(clip[0]),
         '_clipboard still exposes the mask buffer to the panel — dead once the mask slot went');
+});
+
+// THE SECOND HALF, and it shipped broken (user, 2026-08-04): selecting another history
+// entry does NOT remount the panel, so its mount-time mask read is the one thing that
+// never fires again — while `loadImage()` wipes the hole because it was drawn for the
+// OLD image's geometry. Apply went dead with the tool still open. The re-read has to
+// live in `loadEntry` and has to run AFTER `_restoreLayers()`, or it reads the mask of
+// the entry the user just left.
+test('changing entry re-reads the cut from the new entry mask', () => {
+    const viewer = read('js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js');
+    const load = viewer.match(/el\.loadEntry = async \(item, idx\) => \{[\s\S]*?\n {8}\};/);
+    assert.ok(load, 'el.loadEntry was not found in MpiCanvasViewer');
+    assert.match(load[0], /refreshCompositeHoleFromMask\?\.\(\)/,
+        'loadEntry never re-reads the composite cut — Mask Comp goes dead on the next entry '
+        + 'and only a rail switch brings it back');
+
+    const iRestore = load[0].indexOf('_restoreLayers');
+    const iRefresh = load[0].indexOf('refreshCompositeHoleFromMask');
+    assert.ok(iRestore >= 0 && iRefresh > iRestore,
+        'the composite re-read runs BEFORE _restoreLayers(), so it would read the mask of the '
+        + 'entry the user just left rather than the one now on screen');
+
+    const canvas = read('js/components/Primitives/MpiCanvas/MpiCanvas.js');
+    const body = canvas.match(/ {4}async refreshCompositeHoleFromMask\(\)[\s\S]*?\n {4}\}/);
+    assert.ok(body, 'refreshCompositeHoleFromMask not found in MpiCanvas');
+    assert.match(body[0], /this\.comp\.followMask/,
+        'the re-read is not gated on followMask — Paint Comp would have the brush cut the user '
+        + 'just made replaced by the new entry\'s mask');
 });
 
 // THE DEFECT THAT SURVIVED THE FIRST BUILD. `holeCanvas` is consumed by ALPHA on the

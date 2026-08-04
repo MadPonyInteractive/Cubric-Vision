@@ -127,9 +127,23 @@ async function compositeThroughMask({ basePath, overlayPath, maskBuffer, outPath
     // while the canvas showed a centre-crop, so the user would approve one image and
     // receive another. Identical to `fill` whenever the aspects already match, which
     // is every pair the retired MPI-362 modal was used on.
-    const overlay = await sharp(overlayPath)
+    // THE RESIZE IS MATERIALISED BEFORE THE ALPHA IS JOINED, and that is load-bearing.
+    // `fit: 'cover'` is resize-then-CROP, and `joinChannel` in the same pipeline binds
+    // the mask to the PRE-crop image: a 896x1088 overlay scales to 936x1136 before
+    // being cropped to 928, so the 928-wide alpha plane was zero-extended by 8 columns
+    // on the right, and the centre-crop then kept 4 of them. The result was a 4px strip
+    // down the right edge showing the BASE through a mask that was white there —
+    // measured 2026-08-04 as exactly 4x1136 = 4544 transparent pixels. It could not
+    // happen while this was `fit: 'fill'` (no crop, so the sizes always matched), which
+    // is why MPI-373's cover change is what introduced it.
+    const overlayRgb = await sharp(overlayPath)
         .resize(width, height, { fit: 'cover', position: 'centre' })
         .flatten({ background: '#000000' })
+        .toColourspace('srgb')
+        .raw()
+        .toBuffer();
+
+    const overlay = await sharp(overlayRgb, { raw: { width, height, channels: 3 } })
         .joinChannel(maskFinal, { raw: { width, height, channels: 1 } })
         .png()
         .toBuffer();

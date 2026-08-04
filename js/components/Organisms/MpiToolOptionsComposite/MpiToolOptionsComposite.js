@@ -148,21 +148,15 @@ export const MpiToolOptionsComposite = ComponentFactory.create({
         if (seeded) imageSlot.el.setValue(seeded);
 
         // ── Mask Comp: the cut is the entry's OWN mask ───────────────────────
-        // Read once. There is no brush and no mask tool inside this mount, so the
-        // mask cannot change while the panel is up — a subscription would be a
-        // listener leak (the factory's `instance.on()` hands back no unsubscribe)
-        // paid for an event that cannot fire.
+        // Armed once here, then RE-READ by the canvas on every entry load — selecting
+        // another history entry does not remount this panel, so a mount-time read is
+        // the one thing that never fires again, and `loadImage()` wipes the hole for
+        // the new geometry. That left Apply dead with the tool still open. The re-read
+        // lives in `MpiCanvasViewer.loadEntry` because the mask only lands after
+        // `_restoreLayers()`; `_syncApply` below picks the result up through the
+        // announce callback, which is why nothing is subscribed from here.
 
-        if (mount.useEntryMask) {
-            Promise.resolve(viewer.el.setCompositeHoleFromMask?.()).then((ok) => {
-                // A blank mask exports as a blank PNG rather than null, so the hole
-                // itself is the real answer — `ok` alone would call an unpainted mask
-                // a success and leave Apply greyed with no reason on screen.
-                _noMask = !ok || !viewer.el.hasCompositeHole?.();
-                _say();
-                _syncApply();
-            });
-        }
+        if (mount.useEntryMask) viewer.el.setCompositeHoleFromMask?.().then(_syncApply);
 
         // ── Apply ────────────────────────────────────────────────────────────
         // Runs the SAME full-res server route the retired modal used
@@ -182,8 +176,13 @@ export const MpiToolOptionsComposite = ComponentFactory.create({
          * silent-failure shape this codebase keeps paying for (MPI-375).
          */
         function _syncApply() {
-            const ready = !!imageSlot.el.getValue() && !!viewer.el.hasCompositeHole?.();
-            applyBtn.el.setDisabled?.(!ready);
+            const hole = !!viewer.el.hasCompositeHole?.();
+            applyBtn.el.setDisabled?.(!(imageSlot.el.getValue() && hole));
+            // Derived here rather than at the read, because the cut is re-read on every
+            // entry load and the reason has to follow the entry. A blank mask exports as
+            // a blank PNG rather than null, so the HOLE is the honest answer — the read's
+            // own return value would call an unpainted mask a success.
+            if (mount.useEntryMask) { _noMask = !hole; _say(); }
         }
 
         applyBtn.on('click', () => {
