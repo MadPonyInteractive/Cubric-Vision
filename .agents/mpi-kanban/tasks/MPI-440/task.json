@@ -1,0 +1,33 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-440",
+  "title": "Canvas tool family umbrella #2 - mask and paint parity",
+  "description": "Successor to MPI-424, which is correctly done - its five members (425 taxonomy -> 382 Adjust -> 368 shape gizmo -> 375 paint layer -> 373 composite) all shipped. This card is NOT a reopening of it; it covers the work that arrived after the taxonomy existed.\n\nMPI-424 built the frame: three toolbar groups, two shared engines each mounted twice, a preview/discard seam in mountOptions(). Everything here is the consequence - the paint layer got the frame but not the parity. Members, in order: MPI-426 (detection preview leaks into the live mask - a BUG that re-gates the op strip, so everything reading hasMask() inherits its answer) -> MPI-421 (immediately after, NOT independent: both rewrite the auto-mask result path in MpiCanvasViewer exec.onMasks, and splitting them edits that handler twice) -> MPI-436 (Adjust over RGBA = the outline tool, the most specified card and the highest value) -> MPI-439 (inherits 436 alpha answer, small) -> MPI-435 (alpha brush pack, pure polish, blocks nothing, goes last).\n\nOne decision is shared by 436 and 439 and must be made ONCE: does an operation read paint's alpha or its luminance, and do soft edges survive? Whichever card is picked up first answers it in brief.md and the second inherits it.\n\nHolds no implementation of its own.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-08-04T12:55:00Z",
+  "updated_at": "2026-08-04T13:01:00Z",
+  "labels": [
+    "ui",
+    "ux",
+    "masking",
+    "painting",
+    "canvas",
+    "umbrella",
+    "canvas-tool-family"
+  ],
+  "acceptance": [
+    "MPI-424 stays done - this card does not reopen it, and its five members are confirmed shipped (425, 382, 368, 375, 373 all in done as of 2026-08-04)",
+    "The five members are MPI-426, MPI-435, MPI-436, MPI-439 and MPI-421, and each carries this umbrella id",
+    "MPI-426 ships first and MPI-421 immediately after it - they share the auto-mask result path in MpiCanvasViewer exec.onMasks, so the two cards that call themselves independent are sequenced as a pair here",
+    "MPI-426 precedes MPI-439: 426 changes what hasMask() means (auto picks stop counting until Add) and 439 gates its new menu item on hasMask(), so the reverse order reintroduces the same bug through the context menu",
+    "The alpha-vs-luminance question is answered ONCE, in whichever of MPI-436 / MPI-439 is picked up first, and recorded in this brief for the other to inherit",
+    "The standing constraints in brief.md - preview contract, undo recipe, MPI-371 layer order, the _MASK_TOOLS / TOOL_OPTIONS_REGISTRY guard test, the 200-line doc cap - are re-read before each member, not assumed to have expired with MPI-424",
+    "This card holds no implementation of its own and closes when all five members are done, or a member is explicitly rejected and the decision is recorded here"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}

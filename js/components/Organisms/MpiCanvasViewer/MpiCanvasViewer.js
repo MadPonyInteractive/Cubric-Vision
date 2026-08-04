@@ -124,18 +124,24 @@ export const MpiCanvasViewer = ComponentFactory.create({
             });
         }
 
-        // Build composite ((manual + auto) MINUS subtract) B/W PNG from TEMP layers.
-        // Returns null when no positive layer is present. Used to seed preview-mode
-        // mask after history-entry switch (canvas torn down).
+        // Build the baked mask (manual MINUS subtract) as a B/W PNG from TEMP layers.
+        // Returns null when there is no manual layer. Used to seed preview-mode mask
+        // after a history-entry switch (canvas torn down).
+        //
+        // THE TWIN of MaskManager._recomposite() — and it carried the same MPI-426
+        // bug. Persisted auto picks used to union in here too, so an un-Added
+        // detection reached the graph by the other door: this composite becomes
+        // `_previewMaskCache`, which `getCurrentMaskDataURL()` returns while the live
+        // canvas is torn down. Picks are still persisted and still restored (they
+        // rehydrate the green preview and the thumb strip across entry switches) —
+        // they just no longer count as mask content. Both halves change together.
         async function _buildCompositeFromTemp(item) {
             const k = _maskKey(item);
             if (!k) return null;
-            const { manual, subtract, auto } = await maskTempStore.read(k.projectId, k.groupId, k.itemId);
-            const autoEntry = _normalizeAutoTempEntry(auto);
-            if (!manual && autoEntry.urls.length === 0) return null;
+            const { manual, subtract } = await maskTempStore.read(k.projectId, k.groupId, k.itemId);
+            if (!manual) return null;
             try {
-                const seedUrl = manual || autoEntry.urls[0];
-                const seedImg = await _loadImg(seedUrl);
+                const seedImg = await _loadImg(manual);
                 const w = seedImg.naturalWidth;
                 const h = seedImg.naturalHeight;
                 if (!w || !h) return null;
@@ -143,20 +149,14 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 tmp.width = w;
                 tmp.height = h;
                 const ctx = tmp.getContext('2d');
-                // Same layer order as MaskManager._recomposite(): subtract punches
-                // the MANUAL layer only, then the auto picks union on top. An auto
-                // pick is a positive assertion made after the erase, so the erase
-                // does not veto it — this is what `Add` bakes.
-                if (manual) ctx.drawImage(seedImg, 0, 0);
+                // Same math as MaskManager._recomposite(): subtract punches the
+                // manual layer. Nothing else composites in — see the note above.
+                ctx.drawImage(seedImg, 0, 0);
                 if (subtract) {
                     const subImg = await _loadImg(subtract);
                     ctx.globalCompositeOperation = 'destination-out';
                     ctx.drawImage(subImg, 0, 0, w, h);
                     ctx.globalCompositeOperation = 'source-over';
-                }
-                for (const url of autoEntry.urls) {
-                    const autoImg = await _loadImg(url);
-                    ctx.drawImage(autoImg, 0, 0, w, h);
                 }
                 // Flatten remaining alpha → opaque white-on-black for prompt-tool consumers
                 const src = ctx.getImageData(0, 0, w, h);
@@ -561,9 +561,16 @@ export const MpiCanvasViewer = ComponentFactory.create({
                     canvas.setAutoPickMasks(map);
                     canvas.setSelectedAutoPicks(runPicks);
                     await _saveAutoPickEntry(sourceItem, [...maskUrls], runPicks, _lastDetectThumbUrls);
-                    // Picking a chip puts real pixels in maskCanvas, so it is a mask
-                    // made outside a brush stroke — publish it or the op strip stays
-                    // locked until Add/Subtract (MPI-372 contract, MPI-384).
+                    // REVERSED by MPI-426. This used to read "picking a chip puts real
+                    // pixels in maskCanvas, so publish it or the op strip stays locked
+                    // until Add/Subtract" — the MPI-372/384 contract. It no longer
+                    // does: the picks live in the display-only auto layer, and the
+                    // strip staying locked until Add is now the CORRECT behaviour,
+                    // because there is genuinely no mask to send yet.
+                    //
+                    // The call stays as a state sync, not a publish: it re-reads the
+                    // baked layers and emits mask-clear when a detect arrives on an
+                    // entry whose _hasMask flag is stale.
                     el.evaluateMask();
                 } catch (err) {
                     clientLogger.warn('automask', `Failed to apply auto-masks: ${err?.message || err}`);

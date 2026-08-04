@@ -126,9 +126,11 @@ A mask and a prompt are **one operation**, so every mask tool keeps the PromptBo
   where no canvas tool is active. In a mask tool it destroys the canvas mid-mask.
 - **Mask state is published as it CHANGES**, from the canvas' stroke-end signal:
   `_endMaskStroke()` → `onMaskStrokeEnd` → `_publishMaskState()` → `evaluateMask()` →
-  `mask-ready`, emitting only on a flip. **A tool that makes a mask by any other route — a shape
-  commit, a text detection — must emit `mask-ready` itself or call `viewer.el.evaluateMask()`, or
-  the op strip never unlocks.**
+  `mask-ready`, emitting only on a flip. **A tool that BAKES a mask by any other route — a shape
+  commit, an Add/Subtract — must emit `mask-ready` itself or call `viewer.el.evaluateMask()`, or
+  the op strip never unlocks.** A *detection* is not such a route (MPI-426): it produces a preview,
+  not mask content, so the strip staying locked until Add is correct. `exec.onMasks` still calls
+  `evaluateMask()`, but as a state sync — it publishes the baked layers, never the picks.
 - **The rail owns which tool is armed.** Both reload paths (`entry-selected`,
   `_reloadViewerWithEntry`) re-arm via `_syncViewerToolMode()`; never clear the mode before
   `loadEntry`, which captures and restores it itself.

@@ -27,29 +27,46 @@ whole-image path.
 |---|---|---|
 | `manualCanvas` | brush strokes — white where painted | `paint()`, `bakeAutoPicksInto('manual')` |
 | `subtractCanvas` | eraser strokes — white where erased | `paint()`, `bakeAutoPicksInto('subtract')` |
-| `maskCanvas` | **the mask** = `(manual AND NOT subtract) ∪ ⋃autoPickMasks[selected]` | `_recomposite()` |
-| `autoCanvas` | **display only** = `⋃autoPickMasks[selected]` | `_recompositeAuto()` |
+| `maskCanvas` | **the mask** = `manual AND NOT subtract` | `_recomposite()` |
+| `autoCanvas` | **display only** = `⋃autoPickMasks[selected]` — where an un-Added detection lives | `_recompositeAuto()` |
 
 `autoPickMasks` is a RAM-only `Map<pickIndex, ImageBitmap|Canvas>` of the last detect run;
 `selectedAutoPicks` is the `Set<number>` of chosen thumbs. A brush dab writes **both** layers —
 paint sets manual white and clears subtract (un-erase), erase does the reverse.
 `bakeAutoPicksInto()` mirrors that exactly, which is why Add/Subtract composes with the brush.
 
-### Layer ORDER is load-bearing — the auto picks go on last
+### A detection is NOT mask content until Add (MPI-426)
 
-Subtract punches the **manual** layer only; selected auto picks union on top. A pick is a positive
-assertion made *after* the erase, so the older erase cannot veto it — punching subtract over the
-picks made a re-detected region invisible while `Add` still filled it in, i.e. preview and commit
-disagreed. `MpiCanvasViewer._buildCompositeFromTemp()` mirrors this order; **both change together.**
+`_recomposite()` builds the mask from the **baked layers alone**. Selected auto picks are
+deliberately absent: they used to union on top, which made `maskCanvas` answer two questions at
+once — *what is on screen* and *what gets sent* — so a detection the user had never Added still
+flowed through `hasMask()` / `getURL()` into `Input_Mask`. Found live during MPI-365: a Qwen
+masked edit was dispatched with an un-Added pick and the pick went with it. The green overlay is a
+proposal, and the user's answer may be **Subtract** as easily as Add, so consuming it as content
+was wrong in both directions.
+
+`bakeAutoPicksInto()` is the only door into the mask. **The op strip inherits this**
+(`MpiGroupHistoryBlock._opOptions()` gates on `hasMask`): a bare detection leaves masked ops
+locked until Add. That is intended, not the MPI-372/384 regression it resembles — the strip now
+offers a masked op exactly when there is a mask to send.
+
+`MpiCanvasViewer._buildCompositeFromTemp()` is the twin — it rebuilds the same mask from persisted
+TEMP layers for preview mode, and carried the same bug through `_previewMaskCache`. **Both change
+together.** Picks are still persisted and restored; they just rehydrate the preview, not the mask.
+
+Layer ORDER still matters where the picks land: `bakeAutoPicksInto()` un-erases as it adds, so a
+pick is not vetoed by an erase that predates it. Punching subtract over the picks instead made a
+re-detected region invisible while `Add` still filled it in — preview and commit disagreed.
 
 ### `autoCanvas` is a DISPLAY split — never an export (MPI-361)
 
-Detected and painted regions are the same white pixels in `maskCanvas`, so a detection inside an
+Detected and painted regions would be the same white pixels, so a detection inside an
 already-painted area used to be invisible. `_recompositeAuto()` rebuilds the auto subset alone so
 `MpiCanvas` can tint it green; it returns early when nothing is selected (per-dab hot path
-unchanged) and is torn down with the other canvases in `destroy()`. **`getURL()` /
-`getMaskDataURL()` still flatten the single unioned `maskCanvas`** — every downstream consumer
-reads that one B/W PNG. Do not leak the split into an export path.
+unchanged) and is torn down with the other canvases in `destroy()`. Since MPI-426 it is also the
+picks' **only** home until they are baked. **`getURL()` / `getMaskDataURL()` flatten `maskCanvas`
+alone** — every downstream consumer reads that one B/W PNG. Do not leak the split into an export
+path, and do not re-union the picks into `maskCanvas` to "fix" a preview that looks unapplied.
 
 ### Storage: session TEMP PNGs — not RAM, not `.meta/`
 

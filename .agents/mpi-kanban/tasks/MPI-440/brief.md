@@ -1,0 +1,85 @@
+# MPI-440 — Canvas tool family umbrella #2: mask and paint parity
+
+Successor to **MPI-424**, which is correctly `done` — its five members (MPI-425 taxonomy →
+MPI-382 Adjust → MPI-368 shape gizmo → MPI-375 paint layer → MPI-373 composite) all
+shipped, and its acceptance said it closes when the last of them does. This card is NOT a
+reopening of that one. It covers the work that arrived *after* the taxonomy existed.
+
+## Why a second umbrella
+
+MPI-424 built the frame: three toolbar groups, two shared engines (one brush, one shape
+gizmo) each mounted twice, a preview/discard seam in `mountOptions()`. Everything in this
+card is the consequence — **the paint layer got the frame but not the parity.** Mask has
+Adjust, alpha brushes are half-built, the two layers cannot exchange content, and the
+detection preview still violates the preview contract MPI-382 built the seam for.
+
+## Members
+
+| Card | What | Note |
+|---|---|---|
+| MPI-426 | A detection preview must stay a preview — stop auto-adding SAM3 picks to the live mask | **Bug.** Also MPI-424's brief called this out: `_exitAutoMaskMode(false)` exists with no caller, and it is MPI-365's open "detected-but-not-applied mask is still injected" item |
+| MPI-435 | Alpha brush pack — ten procedural brushes for the mask AND paint brush | Lands on the shared brush engine, so both mounts get it at once |
+| MPI-436 | Adjust for the paint layer — grow / shrink / edge band over RGBA (the outline tool) | Reuses mask's `_morph`; the open question is what those ops mean over RGBA rather than coverage |
+| MPI-439 | Convert mask to paint / paint to mask, from the canvas context menu | New, 2026-08-04 |
+| MPI-421 | Auto-mask run cost + feedback — cache per-object masks, then queue what is left | **NOT independent** — see the order below. Its own card and MPI-424's brief both call it independent; reading the two cards together on 2026-08-04 shows they share a call path |
+
+## Order
+
+1. **MPI-426** — a correctness bug on a contract the rest assume, and it re-gates the op
+   strip. Everything downstream that reads `hasMask()` inherits the answer.
+2. **MPI-421** — **immediately after 426, not "any time".** Both cards rewrite the
+   auto-mask result-handling path: 426 changes what `exec.onMasks` does with `runPicks`
+   (`MpiCanvasViewer.js`), and 421's absorbed MPI-402 makes chip toggling client-side,
+   which changes when that same handler runs at all. Split them apart and `onMasks` gets
+   edited twice, with the second edit re-testing the first. Their cards each say
+   "independent" — that was written before the pair existed; this umbrella overrides it.
+3. **MPI-436** — Adjust over RGBA, i.e. the outline tool. Most fully specified card in the
+   set (8 acceptance items, all three fills already worked out) and the highest user value.
+   It settles the alpha question below.
+4. **MPI-439** — inherits 436's answer for free, and is small.
+5. **MPI-435** — last. Ten procedural brush presets is polish, it blocks nothing, and the
+   `brushDab.js` helper it needs already shipped with MPI-375, so it keeps.
+
+### Why 426 must precede 439 specifically
+
+MPI-426 changes what `hasMask()` MEANS — auto picks stop counting as mask content until the
+user presses Add. MPI-439's new menu item gates on `viewer.el.hasMask()`. Land 439 first and
+"Convert mask to paint" is offered on an un-Added detection preview and bakes it into the
+paint layer — the exact bug 426 exists to kill, reintroduced through a second door.
+
+## The one decision both 436 and 439 need — make it ONCE
+
+Mask is coverage; paint is RGBA. Every remaining card trips on the same question: **does an
+operation read paint's alpha, or its luminance, and does it preserve soft edges?**
+
+- MPI-436: does grow/shrink dilate the alpha channel, or the whole RGBA?
+- MPI-439: does paint→mask read alpha (assumed) or luminance, and does mask→paint carry the
+  mask's alpha through so a soft edge stays soft, or fill flat?
+
+Answer it in whichever card is picked up first, write it here, and the second card inherits
+it. Two cards answering it independently is how the layers end up disagreeing.
+
+## Standing constraints — these did not expire with MPI-424
+
+- **THE PREVIEW CONTRACT** (user, 2026-08-02): every tool is visited, previewed, then
+  applied — or the preview goes away. An unapplied preview must never outlive its tool.
+  MPI-382 built the discard seam in `mountOptions()`; new tools hang their previews on it
+  and do not re-decide it. MPI-426 is this contract's outstanding violation.
+- **Mask and paint mutations are UNDOABLE.** `docs/masking-undo.md`: layer-wide one shot →
+  `_recordUndo()` before mutating and after the no-op guard; a gesture →
+  `undo.begin()` / `commit(rect)`. Only `manualCanvas` + `subtractCanvas` (mask) and
+  `paintCanvas` (paint) are stored — `maskCanvas` and `autoCanvas` are derived.
+- **Layer ORDER rule from MPI-371 holds:** auto picks union last, so nothing baked into
+  manual may resurrect an erased region.
+- Every new tool registers in `_MASK_TOOLS` (where it is mask family) and in
+  `TOOL_OPTIONS_REGISTRY` — the MPI-381 guard test fails if one is missing.
+- **Docs are capped at 200 lines each.** `masking.md` (129), `masking-tools.md` (211 —
+  already over, trim before adding), `masking-sam3.md`, `masking-adjust.md`,
+  `masking-shapes.md`, `masking-undo.md`, `painting.md` (170), `composite.md`. Write the
+  fact to the doc it belongs to; there is no catch-all and none may be created.
+
+## Closing this card
+
+Holds no implementation of its own. Closes when all five members are `done` — or when a
+member is explicitly rejected and that decision is recorded here, the way MPI-424 recorded
+MPI-379's rejection.

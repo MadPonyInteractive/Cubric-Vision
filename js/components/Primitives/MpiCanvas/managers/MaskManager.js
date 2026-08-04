@@ -326,15 +326,31 @@ export class MaskManager {
     }
 
     /**
-     * Rebuild display composite from layers.
-     * display = (manual AND NOT subtract) ∪ ⋃autoPickMasks[selected]
+     * Rebuild the mask from the BAKED layers only.
+     * mask = manual AND NOT subtract
      *
-     * ORDER IS LOAD-BEARING: the auto picks go on LAST, so a detection wins over
-     * an older erase. Punching subtract over them instead made a region the user
-     * had erased invisible when a later run detected it — while `Add` (which
-     * un-erases, mirroring paint()) filled it in. Preview and commit disagreed;
-     * the auto layer is a deferred positive assertion, not something the erase
-     * that predates it gets to veto.
+     * The selected auto picks are DELIBERATELY absent (MPI-426). They used to
+     * union on top here, which made `maskCanvas` answer two different questions
+     * at once — "what is on screen" and "what gets sent to the graph" — so a
+     * detection the user had not Added still flowed through hasMask() / getURL()
+     * into `Input_Mask`. A user dispatched a Qwen masked edit with an un-Added
+     * pick and the pick went with it (found during MPI-365 verification).
+     *
+     * The green overlay is a PROPOSAL, and the user's answer may be Subtract as
+     * easily as Add — so consuming it as mask content is wrong in both
+     * directions. Picks reach the mask through `bakeAutoPicksInto()` and nowhere
+     * else. This canvas is now the single meaning of "there is a mask to send",
+     * which is also what gates the op strip (`MpiGroupHistoryBlock._opOptions()`
+     * → `hasMask`): a bare detection leaves masked ops locked until Add, and
+     * that is the intended behaviour, not the MPI-372 regression it looks like.
+     *
+     * DISPLAY IS UNAFFECTED: `_recompositeAuto()` below keeps the picks in
+     * `autoCanvas`, which `MpiCanvas._renderOverlay()` draws recoloured on top.
+     * That recolour is opaque, so it never mattered that white sat underneath.
+     *
+     * Layer ORDER still matters where the picks actually land — see
+     * `bakeAutoPicksInto()`, which un-erases as it adds so a pick is not vetoed
+     * by an erase that predates it.
      */
     _recomposite() {
         if (!this.maskCtx || !this.maskCanvas) return;
@@ -345,18 +361,11 @@ export class MaskManager {
         this.maskCtx.save();
         this.maskCtx.clearRect(0, 0, w, h);
 
-        // Step 1: manual AND NOT subtract — destination-out punches subtract holes
+        // manual AND NOT subtract — destination-out punches subtract holes
         this.maskCtx.globalCompositeOperation = 'source-over';
         this.maskCtx.drawImage(this.manualCanvas, 0, 0);
         this.maskCtx.globalCompositeOperation = 'destination-out';
         this.maskCtx.drawImage(this.subtractCanvas, 0, 0);
-
-        // Step 2: union the selected auto picks on top — exactly what Add bakes
-        this.maskCtx.globalCompositeOperation = 'source-over';
-        for (const idx of this.selectedAutoPicks) {
-            const layer = this.autoPickMasks.get(idx);
-            if (layer) this.maskCtx.drawImage(layer, 0, 0, w, h);
-        }
 
         this.maskCtx.restore();
 
@@ -364,16 +373,17 @@ export class MaskManager {
     }
 
     /**
-     * DISPLAY-ONLY split (MPI-361). Same math as _recomposite() minus the manual
-     * layer, so MpiCanvas can tint a DETECTED region differently from a PAINTED
-     * one — the two are the same white pixels in maskCanvas, which makes a
-     * detection inside an already-masked area invisible.
-     *
-     * NEVER exported: getURL() / the viewer's composite still flatten the single
-     * unioned maskCanvas that every downstream mask consumer reads.
+     * DISPLAY-ONLY layer (MPI-361, and since MPI-426 the picks' ONLY home until
+     * they are baked). Lets MpiCanvas tint a DETECTED region differently from a
+     * PAINTED one, which a single unioned canvas could not — a detection inside
+     * an already-masked area was invisible.
      *   auto = ⋃autoPickMasks[selected]
      *
-     * No subtract punch here either — the green tint shows exactly what the run
+     * NEVER exported: getURL() and the viewer's `_buildCompositeFromTemp()` twin
+     * both read the baked mask alone. A pick that has not been Added is not mask
+     * content, so nothing downstream may see it.
+     *
+     * No subtract punch here — the green tint shows exactly what the run
      * returned and exactly what `Add` would bake, which is the whole point of it
      * being a preview.
      */

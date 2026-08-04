@@ -55,6 +55,11 @@ silently.
 
 - **N dots do NOT give N objects.** All points go into one predict call, so SAM3 returns a
   single region consistent with **all** of them. One part per run; Add accumulates.
+- **A detection leaves the masked ops LOCKED until Add** (MPI-426). The green picks are a
+  preview living in the display-only `autoCanvas`; `hasMask()` reads the baked mask, which is
+  what gates the op strip. Reads as "the strip is broken after a detect" and is not — before
+  this, an un-Added pick shipped straight into `Input_Mask`. `docs/masking.md` § A detection is
+  NOT mask content until Add.
 - **There is no threshold on the point path.** `SAM3_Detect` takes one, but the point branch
   ignores it — only `refine_iterations` applies. That is why MPI-380 **deleted** the Scope
   dial instead of remapping it. Do not re-add a threshold control here.

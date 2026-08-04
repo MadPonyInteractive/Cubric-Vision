@@ -1,11 +1,11 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 439,
+  "next_id": 441,
   "columns": {
     "todo": [
+      "MPI-439",
       "MPI-433",
       "MPI-432",
-      "MPI-426",
       "MPI-421",
       "MPI-420",
       "MPI-416",
@@ -33,6 +33,8 @@
       "MPI-403"
     ],
     "doing": [
+      "MPI-426",
+      "MPI-440",
       "MPI-438",
       "MPI-413",
       "MPI-367",
@@ -130,7 +132,7 @@
       "MPI-243"
     ]
   },
-  "updated_at": "2026-08-04T07:05:00Z",
+  "updated_at": "2026-08-04T13:20:00Z",
   "events": [
     {
       "at": "2026-08-04T02:55:00Z",
@@ -1815,6 +1817,76 @@
       "column": "doing",
       "maturity": "validating",
       "summary": "Session ended with the card in doing, maturity validating. Code complete and suite-green at 390/0, with validation.md holding the diagnosis, the measured blast radius and the four-sabotage table. ZERO live verification - ensureUniversalNodesOnVolume has never executed against a wrapper. Needs the same Pod boot as MPI-413: on a volume with no Wan 2.2 and no Klein/Boogu, Resize Video AND Head Swap must both succeed."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-439",
+      "type": "task.created",
+      "at": "2026-08-04T12:50:00Z",
+      "actor": "opus",
+      "column": "todo",
+      "maturity": "planned",
+      "summary": "Convert mask to paint / paint to mask on the image-mode canvas context menu. Gated on viewer.el.hasMask() / hasPaint(); both directions are layer-wide one-shot ops needing _recordUndo() after the no-op guard, or they are silent Ctrl+Z holes. Filed under the MPI-424 canvas tool family; three open product questions carry assumed defaults in brief.md."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-424",
+      "type": "task.note",
+      "at": "2026-08-04T12:50:00Z",
+      "actor": "opus",
+      "column": "done",
+      "maturity": "complete",
+      "summary": "Follow-up MPI-439 filed against this family (mask <-> paint conversion on the canvas context menu). This card stays done - its five members all shipped; 439 builds on the taxonomy rather than joining the set."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-440",
+      "type": "task.created",
+      "at": "2026-08-04T12:55:00Z",
+      "actor": "opus",
+      "column": "todo",
+      "maturity": "planned",
+      "summary": "Second canvas-family umbrella, opened after the user spotted MPI-424 in done with family work still outstanding. Verified first: 424 is correctly closed - all five of its members shipped. The five open cards (426, 435, 436, 439, 421) were never members of it, so the fix is a new umbrella, not a reopen. Order and the one shared alpha-vs-luminance decision are in brief.md."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-424",
+      "type": "task.note",
+      "at": "2026-08-04T12:55:00Z",
+      "actor": "opus",
+      "column": "done",
+      "maturity": "complete",
+      "summary": "Confirmed correctly closed on 2026-08-04: MPI-425, 382, 368, 375 and 373 are all in done, which is exactly what this card acceptance required. The canvas work still outstanding (426, 435, 436, 439, 421) was never part of the five - it is now carried by MPI-440, umbrella #2. Do not reopen this card."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-440",
+      "type": "task.moved",
+      "at": "2026-08-04T13:01:00Z",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "summary": "Umbrella #2 picked up. Order CORRECTED after reading all four member cards end to end: MPI-421 is not independent (it shares MpiCanvasViewer exec.onMasks with MPI-426, so they are a pair), and MPI-435 drops from second to last (pure polish, brushDab.js already shipped, blocks nothing). New order 426 -> 421 -> 436 -> 439 -> 435."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-426",
+      "type": "task.moved",
+      "at": "2026-08-04T13:01:00Z",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "summary": "First member of MPI-440. Reverses the MPI-372/384 decision that a detection puts real pixels in maskCanvas: exec.onMasks calls setSelectedAutoPicks + evaluateMask, MaskManager composites picks into the mask, so an un-Added preview ships into Input_Mask. The op strip must be re-gated on BAKED content in the same pass or MPI-372 returns."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-426",
+      "type": "task.progress",
+      "at": "2026-08-04T13:20:00Z",
+      "actor": "opus",
+      "column": "doing",
+      "maturity": "validating",
+      "summary": "Code complete, probe-verified, docs updated. Root cause: maskCanvas answered two questions at once - what is on screen and what gets sent - because _recomposite() unioned selectedAutoPicks into it. Fix is a DELETION: drop that union, and all 12 hasMaskContent(maskCanvas) sites plus getURL() became baked-only for free. Twin _buildCompositeFromTemp() fixed in the same pass (it fed _previewMaskCache -> getCurrentMaskDataURL, the second door). Display verified pixel-identical - autoCanvas already drew green on top and that recolour is opaque. USER DECISION: op strip gates on baked content, so a bare detection leaves masked ops locked until Add; this needed NO new code since _opOptions() already reads hasMask(). Rejected the alternative (unlock on detection) because it would offer a masked op while the mask sent was empty. Proof: 12/12 real-pixel probe in Chromium against the live MaskManager, with a sabotage control that failed exactly the two bug assertions; 392/392 node suite; eslint 0. NOT verified: no live click-through of detect-then-Add in the app."
     }
   ]
 }
