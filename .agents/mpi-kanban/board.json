@@ -34,13 +34,13 @@
       "MPI-442"
     ],
     "doing": [
-      "MPI-444",
       "MPI-440",
       "MPI-367",
       "MPI-259",
       "MPI-4"
     ],
     "done": [
+      "MPI-444",
       "MPI-436",
       "MPI-443",
       "MPI-441",
@@ -49,7 +49,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-04T23:50:00Z",
+  "updated_at": "2026-08-05T00:05:00Z",
   "events": [
     {
       "at": "2026-08-04T21:55:00Z",
@@ -1925,6 +1925,14 @@
       "type": "task.created",
       "task": "MPI-446",
       "note": "Split from MPI-444: two desktop specs are test.fixme'd on CI because shell.js parks boot behind the first-run engine-install modal on any engine-less profile. Fixture gap, not an app bug."
+    },
+    {
+      "at": "2026-08-05T00:05:00Z",
+      "type": "task.moved",
+      "task": "MPI-444",
+      "from": "doing",
+      "to": "done",
+      "summary": "Green master run 30957212665 and a deliberate red on PR #1. Three real defects found by the gate before it was finished; two desktop specs fixme'd on CI under MPI-446."
     }
   ]
 }
