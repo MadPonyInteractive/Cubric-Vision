@@ -1,21 +1,21 @@
-/* Shared stack container — fixed to bottom-right, lays toasts out in normal
-   flow so each can grow to its own height without overlapping its neighbours.
-   column-reverse keeps the newest toast nearest the bottom edge. */
+/* Shared stack container — fixed to TOP-CENTRE (bottom-right / bottom-left /
+   top-right all covered real UI; the workspace topbar is `space-between`, so its
+   centre band is the one permanently empty strip). Sits below `--titlebar-h` so
+   the overhanging mascot clears the drag region. Toasts lay out in normal flow
+   so each grows to its own height without overlapping its neighbours;
+   column-reverse keeps the newest toast nearest the top edge. */
 .mpi-toast-stack {
     position: fixed;
-    bottom: var(--toast-bottom, var(--s-4));
-    right: var(--s-4);
+    top: calc(var(--titlebar-h) + var(--s-4));
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
     flex-direction: column-reverse;
-    align-items: flex-end;
+    align-items: center;
     gap: var(--s-3);
-    max-height: calc(100vh - var(--s-6));
+    max-height: calc(100vh - var(--titlebar-h) - var(--s-6));
     z-index: 20000;
     pointer-events: none;
-}
-
-body:not(.mpi-focus-mode):has(#prompt-box-mount .mpi-prompt-box:not(.hide)) .mpi-toast-stack {
-    --toast-bottom: calc(var(--s-8) + var(--s-2));
 }
 
 .mpi-toast {
@@ -40,7 +40,7 @@ body:not(.mpi-focus-mode):has(#prompt-box-mount .mpi-prompt-box:not(.hide)) .mpi
     pointer-events: auto;
     user-select: none;
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(-18px);
     transition: opacity var(--t-base) var(--ease), transform var(--t-base) var(--ease);
 }
 
@@ -57,7 +57,7 @@ body:not(.mpi-focus-mode):has(#prompt-box-mount .mpi-prompt-box:not(.hide)) .mpi
 
 .mpi-toast--closing {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(-18px);
     pointer-events: none;
 }
 
