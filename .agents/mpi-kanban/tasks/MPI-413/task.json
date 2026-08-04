@@ -3,11 +3,11 @@
   "id": "MPI-413",
   "title": "Install the dependency set WE chose: one curated pip file, not 13 unconstrained per-node resolves",
   "description": "UMBRELLA - absorbs MPI-406 (closed) and the original MPI-413 diagnosis. Scope agreed with the user 2026-07-31, POST-1.3.0. NOT A RELEASE BLOCKER: a CUDA torch runs fine on CPU, so the app installs and generates; the cost is bandwidth, disk and decompression. THE FRAMING: this is the same defect MPI-419 just fixed, one layer down. MPI-419 was \"we install an unpinned ComfyUI and hope\"; this is \"we let each custom node resolve its own requirements on the user machine and hope\". Both ship a dependency set nobody chose and no CI ever tested. MECHANISM: downloadManager.js:2181 runs pip install -r <reqs> --upgrade through runPipCommand (shared.js:284), a bare python -m pip with NO index and NO constraint file, so torch resolves from default PyPI = the CUDA build. --upgrade makes it fire even on an already-correct engine; the comment at downloadManager.js:2033 claiming --upgrade is idempotent is wrong. Same mechanism as MPI-217 (opencv 4.13 -> 5.0 across the whole engine). EVIDENCE A (Linux, no NVIDIA driver): one node requirements file pulled torch, triton, cuda-toolkit and 14 nvidia-* wheels, several GB, REPLACING the +cpu torch that comfy install had just placed correctly. Wheel decompression contributed to a thermal shutdown on that box. EVIDENCE B (macOS M4 fresh install 2026-07-31, WARM cache): 13 pip invocations, 400 \"Requirement already satisfied\" lines, numpy re-resolved 18x, torch 10x, and 4 packages installed then uninstalled and replaced (kornia 0.8.3, transformers 5.14.1, matplotlib 3.11.1, ultralytics 8.4.113). DESIGN Phase 1 - constrain every node pip (constraint file + drop --upgrade). The Pod image ALREADY does this via ENV PIP_CONSTRAINT=/opt/constraints.txt and the local engine does not; that asymmetry IS the bug. runPipCommand is a SHARED primitive - sweep every call site in one pass. Phase 1 also makes most pipPins redundant, since they are a repair for damage it prevents. DESIGN Phase 2 - maintain OUR OWN aggregated, tested pip file versioned alongside dev_configs/node_lock.json, install it in a single pass, and disable every node requirements step. GENERATE it with uv pip compile in CI and curate the diff, so maintenance works like a node bump instead of relying on memory. SAFETY NET ALREADY EXISTS: the Pod image build boots ComfyUI and greps for IMPORT FAILED (MPI-341), so an under-specified aggregate goes red in CI, not on a user machine. OPEN QUESTIONS: only 4 of 7 installRequirements nodes use a plain requirements.txt - ComfyUI-Frame-Interpolation ships NONE (its deps live inside install.py; measured on macOS it adds exactly one redundant opencv-contrib-python and a failed cupy build), so read what Impact-Pack and controlnet_aux commands do beyond pip before disabling them. Use PEP 508 markers for platform variance or the darwin sam2 / onnxruntime-gpu drops regress. Constrain against ComfyUI core pins so the aggregate is strictly additive. Decide what repair-deps means once installs are not per-node. Decide the fallback when a merged resolve HARD FAILS where sequential silently succeeded by last-writer-wins. Full detail in brief.md. VERIFY on a CPU-only box: 0 hits for \"downloading (triton|nvidia)\", torch reports a +cpu tag, already-satisfied count far below 400, zero IMPORT FAILED, Pod image build stays green.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-07-31T01:20:00Z",
-  "updated_at": "2026-08-04T13:50:34Z",
+  "updated_at": "2026-08-04T15:10:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
@@ -25,10 +25,9 @@
     "macos"
   ],
   "priority": "high",
-  "activeSessionTitle": "MPI-413 Phase 2 — one curated pip file",
   "attention": {
-    "state": "required",
-    "reason": "Pod convergence SHIPPED to dev and live-verified. Image v0.19.0-dev built (run 30910192827, both legs public + pull-verified); the MPI-341 grep returned zero IMPORT FAILED and exactly ONE opencv distribution; Pod vhks7b6fl1x57h ran wrapper 0.2.41 and exercised the pip-less _run_node_install for the first time. The start.sh guard is proven BY EFFECT (its boot line is unreachable - no pod-log route, RunPod console had rolled past it). REMAINING: (1) delete the now-dead local set - requirementsDrop + _filterRequirements in routes/downloadManager.js, their nodesDeps.js entries, tests/requirements-filter.test.cjs, and the install_command/pip_pins passthrough in routes/remoteModels.js; verified safe - all 7 deps carrying those fields are installRequirements:true, i.e. baked and never volume-installed, so the passthrough cannot fire under any wrapper. (2) DEFERRED TO THE RELEASE, not this card: publish-runtime.sh promote + the stable POD_IMAGE_VERSION bump. (3) docs/runpod-remote-engine.md wants a v0.19.0-dev changelog entry and a note on the start.sh guard.",
-    "updated_at": "2026-08-04T13:50:34Z"
+    "state": "cleared",
+    "reason": "Dead local set deleted (requirementsDrop + _filterRequirements + their nodesDeps entries + tests/requirements-filter.test.cjs + the install_command/pip_pins passthrough in remoteModels.js) and docs healed. Card scope complete. NOT part of this card: publish-runtime.sh promote + the stable POD_IMAGE_VERSION bump - both are release gates.",
+    "updated_at": "2026-08-04T15:10:00Z"
   }
 }

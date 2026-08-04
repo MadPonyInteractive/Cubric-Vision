@@ -455,20 +455,6 @@ function _createDepJob(dep) {
         // prefix rewrite already covers. See _mirrorUrlsFor.
         mirrorUrl: dep.mirrorUrl || null,
         noMirror: dep.noMirror || false,
-        // MPI-149 — carry the install-enforcement fields through to the runtime depJob.
-        // finishCustomNodeInstall iterates modelJob.deps (these depJobs); the install
-        // loop reads dep.pipPins (force known-good pins AFTER requirements, e.g.
-        // kornia==0.8.2 for LTXVideo) and dep.installRequirementsCommand (custom
-        // installer, e.g. Frame-Interpolation `python install.py`). Without these here
-        // they were dropped on the engine-deps/upgrade path → kornia floated to 0.8.3 →
-        // LTXVideo `pad` ImportError after every engine update.
-        pipPins: dep.pipPins || null,
-        installRequirementsCommand: dep.installRequirementsCommand || null,
-        // MPI-370 — same reason as the two above: this whitelist is the ONLY thing
-        // the install loop sees. Omitting requirementsDrop here silently disables the
-        // macOS onnxruntime-gpu strip on the universal-workflow path, which is the
-        // exact path that fails.
-        requirementsDrop: dep.requirementsDrop || null,
     };
 }
 
@@ -1138,8 +1124,8 @@ function _broadcast(event, data) {
 // SHADOW STAGE: populated alongside _modelJobs/_depJobs and used for the READ
 // paths (status endpoint, snapshot); the maps stay write-authoritative until the
 // write-flip commit. The maps remain the transport carriers (url, localPath,
-// sha256Expected, pipPins, installRequirementsCommand — fields the pure store
-// deliberately omits). `broadcast` is late-bound so it is defined by call time.
+// sha256Expected — fields the pure store deliberately omits). `broadcast` is
+// late-bound so it is defined by call time.
 const store = createInstallStore({
     broadcast: (event, data) => _broadcast(event, data),
     logger,
@@ -2450,20 +2436,7 @@ async function _runCustomNodeInstall(modelJob) {
         // No per-node requirements step here any more — MPI-413. The engine installs
         // ONE curated set (`_ensureCuratedPythonDeps`, before this loop) instead of
         // asking each node to resolve its own requirements.txt on the user's machine.
-        // What that step used to be, and why it is gone:
-        //   - `requirementsDrop` + `_filterRequirements` rewrote a node's file on disk to
-        //     strip a line that cannot resolve on this platform (MPI-370's unmarked
-        //     `onnxruntime-gpu`; MPI-387's `git+…/sam2`). The curated file carries a PEP
-        //     508 marker and omits sam2, so there is nothing left to strip.
-        //   - `installRequirementsCommand` ran a per-pack command. Frame-Interpolation's
-        //     `python install.py` looped its requirements one `os.system` pip per line and
-        //     then tried to build `cupy-wheel`, which fails on every platform on every
-        //     fresh install and reported SUCCESS anyway (os.system ignores the exit code).
-        //   - `pipPins` forced known-good versions AFTER requirements had already drifted
-        //     the engine — a repair for damage the curated file prevents. Its versions
-        //     ARE the curated pins now.
-        // Both fields stay on the dep objects: `routes/remoteModels.js` still sends
-        // `install_command` / `pip_pins` to the Pod wrapper, which has not converged yet.
+        // The Pod converged on the same set, so the remote passthrough is gone too.
 
         // Stamp the pinned-commit marker LAST, so it only lands on a fully-extracted
         // node. A missing/mismatched marker = drift → targeted reinstall on next boot
@@ -3097,26 +3070,6 @@ function clearEngineDownload() {
 // files (NDH 200-vs-206 append) and had no frontend caller. Engine download is
 // cancel-only via the existing cancel path.
 
-/**
- * Drop unresolvable requirement lines from a requirements.txt body (MPI-370).
- * Matches the requirement NAME only — bare, or followed by a version specifier,
- * extra, or environment marker — so `onnxruntime-gpu-extra` is never caught by a
- * `onnxruntime-gpu` entry. Comments and blank lines are always kept.
- * @returns {string|null} the filtered body, or null when nothing was dropped (so
- *   the caller can skip the write and leave the file byte-identical).
- */
-function _filterRequirements(contents, dropNames) {
-    const drop = (dropNames || []).map((n) => String(n).trim().toLowerCase()).filter(Boolean);
-    if (!drop.length) return null;
-    const lines = contents.split('\n');
-    const kept = lines.filter((line) => {
-        const name = line.trim().toLowerCase();
-        if (!name || name.startsWith('#')) return true;
-        return !drop.some((d) => name === d || (name.startsWith(d) && /^[<>=!~[; ]/.test(name.slice(d.length))));
-    });
-    return kept.length === lines.length ? null : kept.join('\n');
-}
-
 module.exports = {
     router,
     cancelAllDownloads,
@@ -3130,7 +3083,6 @@ module.exports = {
     _byteRatioExcludingNodes, // MPI-231 — exported for unit test
     _customNodeUninstallPath, // MPI-276 — exported for unit test
     _filterDepsForEngine, // MPI-276 — exported for unit test
-    _filterRequirements, // MPI-370 — exported for unit test
     _describeNodeInstallFailures, // MPI-387 — exported for unit test
     _describeTransportError, // MPI-427 — exported for unit test
     _mirrorUrlsFor, // MPI-427 — exported for unit test

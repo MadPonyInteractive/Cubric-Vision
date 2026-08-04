@@ -77,19 +77,6 @@ export const nodesDeps = {
         filename: 'comfyui-impact-pack',
         url: lockUrl('ComfyUI-Impact-Pack'),
         installRequirements: true,
-        // requirements.txt line 10 is `git+https://github.com/facebookresearch/sam2`, which
-        // makes pip shell out to `git clone`. No portable engine ships git and normal users
-        // do not have it on PATH, so this failed 100% of clean installs — and Retry could
-        // never clear it. sam2 is unused here: it backs Impact-Pack sampling nodes we never
-        // exercise, and grep finds no `sam2`/`facebookresearch` reference anywhere in js/,
-        // routes/ or comfy_workflows/. We ship SAM 1 (`sam-vit-b`), which MPI-380 kept as the
-        // Impact segment refiner. Dropped on every platform — no portable engine has git.
-        // (MPI-387)
-        requirementsDrop: {
-            win32: ['git+https://github.com/facebookresearch/sam2'],
-            darwin: ['git+https://github.com/facebookresearch/sam2'],
-            linux: ['git+https://github.com/facebookresearch/sam2'],
-        },
         // requirements.txt is UNPINNED (numpy, scipy, transformers, opencv-python-headless,
         // scikit-image, matplotlib, …) → a --upgrade install can major-bump a SHARED package
         // engine-wide (MPI-217 class). Pin the drift-risky ones to the live proven-good set
@@ -278,17 +265,6 @@ export const nodesDeps = {
         url: lockUrl('comfyui_controlnet_aux'),
         installRequirements: true,
         installRequirementsCommand: 'python -m pip install -r requirements.txt --no-warn-script-location',
-        // ⚠ macOS: the pinned commit's requirements.txt ends with an UNMARKED
-        // `onnxruntime-gpu`. That package is CUDA-only — it has never published a
-        // macOS wheel, for any arch, at any version — so pip reports
-        // "from versions: none", exits 1, and the WHOLE node install fails. Retry
-        // re-runs the identical resolve, so a Mac user can never get past first
-        // install of any depth model (MPI-370). Drop the line on darwin only;
-        // Windows/Linux x86_64 resolve it fine and must keep it.
-        // NOT swapped for CPU `onnxruntime`: we drive DepthAnythingV2 through
-        // AIO_Preprocessor, which is torch-based. Add it if an ONNX-dependent
-        // preprocessor is ever wired.
-        requirementsDrop: { darwin: ['onnxruntime-gpu'] },
         pipPins: [
             'numpy==2.5.1', 'opencv-python==5.0.0.93', 'pillow==12.3.0',
             'scipy==1.18.0', 'scikit-image==0.26.0', 'einops==0.8.2',

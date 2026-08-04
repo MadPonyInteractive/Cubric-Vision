@@ -281,11 +281,13 @@ When `comfyNeedsRestart` is true, `ensureServerRunning()` in `comfyController.js
 objects. A field you add to `nodesDeps.js` / `dependencies.js` and do NOT add here is
 silently absent by the time the install runs, with no error anywhere.
 
-This has bitten twice: MPI-149 lost `pipPins` + `installRequirementsCommand` on the
+This bit twice, both on pip fields that no longer exist (deleted with the per-node
+requirements step, MPI-413): MPI-149 lost `pipPins` + `installRequirementsCommand` on the
 engine-deps/upgrade path (kornia floated → LTXVideo `pad` ImportError), and MPI-370's
 `requirementsDrop` would have been dead on the universal-workflow path — the exact path
-it exists to fix. Guard new fields with a test that asserts the passthrough, and
-negative-control it by removing the line and watching the test fail.
+it existed to fix. The trap is the whitelist, not those fields: guard every new field with
+a test that asserts the passthrough, and negative-control it by removing the line and
+watching the test fail.
 
 ## The curated Python dependency set (MPI-413) — LOCAL engine
 
@@ -322,39 +324,21 @@ node requires re-running it** (`--check`, edit `.in`, regenerate, commit both) o
 ships with missing dependencies. Guard: `tests/curated-python-deps.test.cjs`.
 Full step: `docs/playbooks/add-model/02-dependencies-r2.md`.
 
-**The remote twin has NOT converged.** `routes/remoteModels.js` still sends
-`install_command` and `pip_pins` to the Pod wrapper, and the Pod image bakes deps at build
-time behind `ENV PIP_CONSTRAINT`. Keep those dep fields accurate for that path; they no
-longer affect a local install.
+**The remote twin has converged (MPI-413, 2026-08-04).** The Pod image installs the same
+`python_deps.txt` and the wrapper runs no pip at all, so `routes/remoteModels.js` no longer
+sends `install_command` / `pip_pins` — that passthrough is deleted, along with the local
+`requirementsDrop` / `_filterRequirements` pair. Deleting it could not regress a released
+app: all 7 deps that carried those fields are `installRequirements: true`, i.e. baked into
+the image and never volume-installed, so the passthrough had no reachable consumer under
+any wrapper version.
 
-## Platform-unresolvable requirements — `requirementsDrop` (MPI-370, local path superseded)
-
-> **Superseded locally by the curated set above.** `requirementsDrop` and
-> `_filterRequirements` no longer run on a local install — the curated file carries a PEP
-> 508 marker for `onnxruntime-gpu` and omits `sam2` outright, so there is nothing left to
-> strip. Both are kept: `_filterRequirements` stays exported and unit-tested, and the
-> `_createDepJob` passthrough below still matters for every other field. Retired for real
-> when the Pod converges.
-
-pip fails the **whole** requirements file over one unresolvable name, so a single
-platform-specific line bricks install for an entire OS. `comfyui_controlnet_aux`'s pinned
-requirements.txt ends with an unmarked `onnxruntime-gpu`, which is CUDA-only and has never
-published a macOS wheel — every Mac user was permanently stuck at first install of any
-depth model, with Retry re-running the identical doomed resolve.
-
-```js
-requirementsDrop: { darwin: ['onnxruntime-gpu'] },   // keyed by process.platform
-```
-
-It matched the requirement NAME only — bare, or followed by a specifier, extra, or marker
-— so `onnxruntime-gpu-extra` was never caught, and it wrote only when a line actually
-changed, keeping unaffected platforms byte-identical and making re-runs no-ops.
-
-**Why not in the command string:** `runCustomCommand` (`routes/shared.js`) splits on
-spaces and `spawn`s directly — no shell. No `&&`, and no `python -c "multi word"` either.
-
-**Remote is unaffected** — the Pod bakes this node into a CUDA Linux image, so the wrapper
-never runs this install.
+The two platform-unresolvable lines that `requirementsDrop` used to strip are handled by
+the curated file itself: `onnxruntime-gpu` (CUDA-only, no macOS wheel ever — it bricked
+every Mac first-install of a depth model, MPI-370) carries a PEP 508 marker, and
+`git+…/facebookresearch/sam2` (needs `git` on PATH, which no portable engine ships,
+MPI-387) is omitted outright. `pipPins` and `installRequirementsCommand` survive as data in
+`nodesDeps.js` — `tests/node-drift.test.cjs` and `tests/controlnet-aux-torch-guard.test.cjs`
+still pin them — but nothing executes them on either engine.
 
 ## The universal dep set spans TWO HOSTS — install it half-by-half (MPI-427)
 

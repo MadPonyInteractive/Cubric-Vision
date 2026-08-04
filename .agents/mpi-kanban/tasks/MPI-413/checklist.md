@@ -9,7 +9,7 @@
 - [x] Phase 1 residual — CLOSED AS SUPERSEDED (`--no-deps` makes a local PIP_CONSTRAINT
       structurally unable to matter; see plan.md § Phase 1 disposition)
 - [x] Pod convergence — code written (Dockerfile + wrapper.py + build-context copy + docs)
-- [ ] Pod convergence — SHIP IT to **dev only**. **Every step is a user-authorized live op
+- [x] Pod convergence — SHIP IT to **dev only**. **Every step is a user-authorized live op
       — ask before each.** `promote` is NOT here: it is a release gate (plan.md § Plan
       drift, 2026-08-04).
   - [x] `./publish-runtime.sh dev` in `c:/AI/Mpi/mpi-ci/cubric-vision-pod` — **DONE
@@ -69,7 +69,14 @@
 - [ ] DEFERRED TO THE NEXT RELEASE (not this card): `./publish-runtime.sh promote` + the
       stable `POD_IMAGE_VERSION` bump. `mpi-release`'s manifest-drift precondition is the
       backstop
-- [ ] After the Pod ships — delete the now-dead local set together: `requirementsDrop` +
+- [x] After the Pod ships — delete the now-dead local set together: `requirementsDrop` +
       `_filterRequirements` (routes/downloadManager.js), their `nodesDeps.js` entries,
       `tests/requirements-filter.test.cjs`, and the `install_command` / `pip_pins`
-      passthrough at `routes/remoteModels.js:412-417`
+      passthrough at `routes/remoteModels.js:412-417`. **DONE 2026-08-04.** Also swept two
+      orphans the passthrough deletion created — the `pipPins` /
+      `installRequirementsCommand` carry-through in `_createDepJob` (nothing reads them on
+      either engine now; they survive as DATA in `nodesDeps.js`, still pinned by
+      `node-drift` + `controlnet-aux-torch-guard`) and the stale installStore comment —
+      and healed the two docs that asserted the passthrough still existed:
+      `docs/runpod-remote-engine.md` § 6 and `docs/download-manager.md`
+      (§ curated set + the whole superseded `requirementsDrop` section)

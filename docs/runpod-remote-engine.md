@@ -344,10 +344,12 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   in a single `--no-deps` pass, and the wrapper runs **no pip at all**. `--no-deps` is
   load-bearing: the file is the complete closure minus the engine-owned torch stack and minus
   the duplicate cv2 builds, so without it pip re-derives `torch`/`triton`/`nvidia-*` from
-  diffusers/ultralytics/kornia and restores all three opencv distributions. `install_command` /
-  `pip_pins` are still SENT by `remoteModels.js` (a released app must keep working) and are
-  accepted-and-ignored by the wrapper; they only ever applied to `installRequirements: true`
-  nodes, which are baked and never volume-installed. Copy `python_deps.txt` into the build
+  diffusers/ultralytics/kornia and restores all three opencv distributions. The
+  `install_command` / `pip_pins` passthrough in `remoteModels.js` is GONE (deleted 2026-08-04,
+  with `requirementsDrop` / `_filterRequirements` on the local side). It could not fire under
+  any wrapper version: all 7 deps that carried those fields are `installRequirements: true`,
+  i.e. baked into the image and never volume-installed — so deleting it does not regress a
+  released app. Copy `python_deps.txt` into the build
   context WITH `node_lock.json` — a node bump changes both. The build's `IMPORT FAILED` grep
   (MPI-341) is the gate proving the curated set is not under-specified.
 - **`start.sh` has a SECOND pip path, and it needs the same guard (MPI-413).** Independent of
