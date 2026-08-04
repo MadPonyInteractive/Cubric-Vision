@@ -22,7 +22,7 @@ detection preview still violates the preview contract MPI-382 built the seam for
 | MPI-436 | Adjust for the paint layer — grow / shrink / edge band over RGBA (the outline tool) | Reuses mask's `_morph`; the open question is what those ops mean over RGBA rather than coverage |
 | MPI-439 | Convert mask to paint / paint to mask, from the canvas context menu | New, 2026-08-04 |
 | ~~MPI-421~~ | Auto-mask run cost + feedback — cache per-object masks, then queue what is left | **BUILT 2026-08-04**, commit `1028b958`, awaiting the user's in-app pass (`tasks/MPI-421/validation.md`). The graph's `ImpactSEGSPicker` was the whole of MPI-402: it trimmed the masks to the chips selected at dispatch, so the fix was deleting it. Detect now shows an indeterminate bar and a Stop |
-| MPI-441 | **Grow, Shrink and Edge all round the mask off** — `_morph` is a blur+threshold, i.e. an average where a dilation needs a maximum | **NEW, 2026-08-04**, from the user's screenshots. All four readings (grow, shrink, edge outward, edge inward) are one call and change together — he named them. Blocks MPI-436, which points the same primitive at RGBA |
+| ~~MPI-441~~ | **Grow, Shrink and Edge all round the mask off** — `_morph` is a blur+threshold, i.e. an average where a dilation needs a maximum | **DONE 2026-08-04**, user-validated in the app. `_morph` and both `ADJUST_*` thresholds are deleted; the primitive is now an exact distance field in `managers/distanceField.js`. See `tasks/MPI-441/validation.md`. **MPI-436 is unblocked** |
 
 ## Order
 
@@ -40,13 +40,23 @@ detection preview still violates the preview contract MPI-382 built the seam for
    the status bar, NOT a queue lane — it never enters `generationStore`, because a store job
    raises `generationQueueCount`, which is what disables the detect row and would therefore
    disable its own Stop. It drives `StatusBar.progress.*` directly rather than emitting `tool:*`.
-3. **MPI-441 — START HERE.** New, and it jumps the queue for one reason: **MPI-436 is Adjust over
-   RGBA and reuses `MaskManager._morph`**, which this card says is the wrong primitive (a blur
-   averages; a dilation takes a maximum, so thin limbs thin out and concave gaps fill). Build 436
-   on it and the outline tool inherits a rounding bug. Fix the primitive, then point it at paint.
-4. **MPI-436** — Adjust over RGBA, i.e. the outline tool. Most fully specified card in the
-   set (8 acceptance items, all three fills already worked out) and the highest user value.
-   It settles the alpha question below. **Blocked on MPI-441** — same primitive.
+3. ~~**MPI-441**~~ — **SHIPPED 2026-08-04.** It jumped the queue because MPI-436 reuses the same
+   primitive, and the primitive was wrong. The replacement is **not** the disc-stamping the card
+   floated: a signed squared Euclidean distance field, built ONCE on tool entry because it
+   describes the shape and not the radius. Grow, shrink and both halves of the band are one
+   inclusive range test over it. **Decisions recorded for the rest of the set:**
+   - **The primitive reads ALPHA**, binarised at ≥128 (the `fillHoles()` convention), and emits a
+     hard edge. That is a floor under the question below, not an answer to it — MPI-436 still has
+     to decide whether grow/shrink over RGBA moves the alpha channel alone or the whole pixel, and
+     whether a soft edge survives. What it may NOT do is re-decide *which channel is the shape*.
+   - **The cost model inverted.** Entry now costs 125 ms at 1536² and each frame costs 3.5 ms flat
+     in r, where the blur was free to enter and 8.7 ms per frame (17.4 for a band). A tool that
+     rebuilds the field per frame throws the entire benefit away — build on `beginAdjust()`.
+   - **Outside the canvas counts as background**, so a layer running off the frame still erodes
+     from that border. Paint must not silently pick the opposite convention.
+4. **MPI-436 — START HERE.** Adjust over RGBA, i.e. the outline tool. Most fully specified card in
+   the set (8 acceptance items, all three fills already worked out) and the highest user value.
+   It settles the alpha question below. **Unblocked** — MPI-441 landed.
 5. **MPI-439** — inherits 436's answer for free, and is small.
 6. **MPI-435** — last. Ten procedural brush presets is polish, it blocks nothing, and the
    `brushDab.js` helper it needs already shipped with MPI-375, so it keeps.

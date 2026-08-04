@@ -1,8 +1,8 @@
-# Adjust — grow, shrink, edge band, fill holes (MPI-382, MPI-431)
+# Adjust — grow, shrink, edge band, fill holes (MPI-382, MPI-431, MPI-441)
 
 The methods that operate **over an existing mask** rather than making one: the morphological
 primitive behind Grow / Shrink / Edge, and the flood behind Fill. Read before touching
-`MaskManager._morph()`, `applyAdjust()`, `fillHoles()` or `MpiToolOptionsMaskAdjust`. Split out
+`managers/distanceField.js`, `applyAdjust()`, `fillHoles()` or `MpiToolOptionsMaskAdjust`. Split out
 of [masking-tools.md](masking-tools.md) at its 200-line cap, the same way
 [masking-sam3.md](masking-sam3.md) and [masking-shapes.md](masking-shapes.md) were. Related:
 [masking-tools.md](masking-tools.md) (the tool family and the preview contract this obeys) ·
@@ -22,17 +22,40 @@ keyboard arrows running backwards. Live preview in the pending green, then expli
 bake-on-release was rejected by name, because dilate-then-erode is a morphological CLOSE (pinholes
 filled, corners rounded) and dragging back is **not** a restore.
 
-**One primitive, three readings.** `MaskManager._morph(src, r)` — grow is `r > 0`, shrink is
-`r < 0`, an edge band is `dilate(outward)` with `destination-out` `erode(inward)`. Blur once,
-threshold the alpha once: a blurred step edge is the ramp `Φ(d/r)`, so cutting it at `Φ(-1)` puts
-the edge one sigma out and at `Φ(+1)` one sigma in — both directions, one blur, radius = the blur
-amount. **MPI-436 points this same primitive at the paint layer** (and is where OUTLINES belong).
+**One primitive, three readings.** `signedSquaredDistanceField()` in
+`managers/distanceField.js` — grow is `field <= r²`, shrink is `field <= −(e²+1)`, an edge band is
+`−in² <= field <= out²`. One **range test**, three readings, and the band is a single pass rather
+than a dilate with a `destination-out` erode over it. **MPI-436 points this same primitive at the
+paint layer** (and is where OUTLINES belong): note it reads **alpha**, binarised at ≥128 (the
+`fillHoles()` convention), and emits a hard edge.
 
-**Measured, not assumed** (Chromium's blur is a three-box approximation): on a 300px circle at the
-1536 working size, r of 1 · 2 · 3 · 5 · 8 · 12 move the edge **exactly** r px both ways; beyond
-that CURVATURE costs a little (r=20 → 19/21, r=50 → 47/54), which is why the slider stays in real
-pixels rather than carrying a fudge table. **8.7 ms** per pass, 17.2 ms for a band — live at the
-working size, so the readback threshold beat needing an SVG `feComponentTransfer`.
+**Why it is not a blur any more (MPI-441).** It was, and the elegance was the bug: a blurred step
+edge is the ramp `Φ(d/r)`, so one Gaussian cut at `Φ(-1)` / `Φ(+1)` gave both directions. But a
+blur is an **average** and a dilation is a **maximum**. Blur a 15px arm at sigma 50 and its peak
+alpha falls under the cut — the arm thins away while the torso grows, and mass bleeds across the
+gap between limb and torso and fills it. One averaging pass cannot be both a max and a min filter,
+so the design was replaced, not retuned; both alpha thresholds went with it. The measurement below
+missed it for two years because it was taken on a **circle** — the single best case for the
+approximation.
+
+**Measured, not assumed** — a signed **squared** Euclidean distance field (Felzenszwalb &
+Huttenlocher, separable, O(n)). It is exact at every radius, so there is no table to keep: verified
+in Chromium at the 1536 working size on a **thin + concave** subject (a 14px arm, an 86px gap to
+the torso) — grow 20 puts the arm's edges at exactly 481 and 534, leaves the gap open, and the arm
+survives; the 10/10 band spans exactly 591–610; shrink 50 lands the torso edge at exactly 651 and
+correctly removes the 14px arm. Squared integers throughout, which is what lets `d > e` be
+`d² >= e²+1` and keeps erode strict with no epsilon.
+
+**Cost moved, and moved the right way.** The field describes the pristine shape, not the radius, so
+it is built **once** in `beginAdjust()` — **125 ms** at 1536² — and each slider frame is then
+**3.5 ms** including `putImageData`, flat in r. The old primitive was free to enter and 8.7 ms per
+frame, 17.4 ms for a band, so any real drag is now cheaper; what it buys is a one-time hitch on
+tool entry and after each Apply (which re-snapshots). Live preview was kept on those numbers.
+`this._adjustImg` is reused across frames — a fresh `ImageData` per tick is a 9 MB allocation.
+
+Outside the canvas counts as **background**, which is what the blur did implicitly (it pulled
+transparency in from past the edge), so a mask running off the frame still erodes from that border
+instead of being treated as infinitely wide.
 
 **The two traps.** Every frame recomputes from a pristine copy taken on `beginAdjust()`, never
 from the frame before it — feeding output back in makes grow-3 three times eat detail exactly
@@ -68,9 +91,9 @@ on a typed-array stack, because 1536² blows recursion. The alpha cut is `>= 128
 not `> 0`: mask edges are antialiased, and a strict test walls the flood out of a hole it should
 enter.
 
-**Not `_morph(+r)` then `_morph(-r)`.** That close would reuse the primitive above for free, but
-it only shuts holes smaller than `r` and it rounds the outline. Fill means *every* enclosed hole,
-outline untouched.
+**Not a dilate by `r` then an erode by `r`.** That close would reuse the primitive above for free,
+but it only shuts holes smaller than `r` and it rounds the outline. Fill means *every* enclosed
+hole, outline untouched.
 
 #### TWO passes, because the hole has an antialiased rim
 

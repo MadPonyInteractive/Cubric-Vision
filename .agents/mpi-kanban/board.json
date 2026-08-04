@@ -3,7 +3,6 @@
   "next_id": 442,
   "columns": {
     "todo": [
-      "MPI-441",
       "MPI-439",
       "MPI-433",
       "MPI-432",
@@ -39,12 +38,13 @@
       "MPI-4"
     ],
     "done": [
+      "MPI-441",
       "MPI-379",
       "MPI-370",
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-04T16:45:00Z",
+  "updated_at": "2026-08-04T19:12:00Z",
   "events": [
     {
       "at": "2026-08-04T02:55:00Z",
@@ -1831,6 +1831,18 @@
       "type": "task.deleted",
       "task": "MPI-406",
       "note": "Closed and archived: hold reason named MPI-413, which shipped and absorbed the residual."
+    },
+    {
+      "at": "2026-08-04T16:56:00Z",
+      "type": "task.moved",
+      "task": "MPI-441",
+      "note": "todo -> doing. Implementation started under the MPI-440 umbrella; plan.md attached."
+    },
+    {
+      "at": "2026-08-04T19:12:00Z",
+      "type": "task.moved",
+      "task": "MPI-441",
+      "note": "doing -> done. User-validated in the app: Grow +50 and a 35px Edge band both track the real silhouette."
     }
   ]
 }

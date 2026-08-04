@@ -35,13 +35,14 @@ ever being pressed. Nothing failed — that is what made it survive so long, and
 MPI-365's open "detected-but-not-applied mask is still injected" item.
 `tests/preview-contract.test.cjs` guards every half of it.
 
-## Adjust — grow, shrink, edge band, fill holes (MPI-382, MPI-431)
+## Adjust — grow, shrink, edge band, fill holes (MPI-382, MPI-431, MPI-441)
 
 A method **over** an existing mask rather than another way of making one, so it sits **below
-Detect** in the rail, in the order the work happens. One primitive read three ways —
-`MaskManager._morph(src, r)` — plus Fill, which floods the background inward and closes whatever
-the flood never reaches. Live preview, then explicit **Apply**; an un-applied adjustment is
-dropped by the seam above. The UX rulings, the measured radius table, the two traps and Fill's
+Detect** in the rail, in the order the work happens. One primitive read three ways — an exact
+distance field in `managers/distanceField.js` — plus Fill, which floods the background inward and
+closes whatever the flood never reaches. Live preview, then explicit **Apply**; an un-applied
+adjustment is dropped by the seam above. The UX rulings, why the primitive is no longer a blur,
+the measured numbers, the two traps and Fill's
 two passes live in **[masking-adjust.md](masking-adjust.md)** — split out at this doc's
 200-line cap. **MPI-436 points the same primitive at the paint layer**, and is where OUTLINES
 belong.

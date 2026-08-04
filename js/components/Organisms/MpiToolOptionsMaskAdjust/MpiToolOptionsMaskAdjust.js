@@ -9,7 +9,8 @@
  * handle, and a visible-but-inert Outward slider reads as a broken tool.
  *
  * Grow, shrink and the band are the SAME dilate/erode primitive read three ways;
- * it lives in `MaskManager._morph()` and is written once.
+ * it lives in `managers/distanceField.js` and is written once — an exact distance
+ * field built on tool entry, which each mode reads as one range (MPI-441).
  *
  * LIVE, not bake-on-release. The user sits on the preview and judges it, then
  * presses Apply. Bake-on-release was rejected by name: dilate-then-erode is a

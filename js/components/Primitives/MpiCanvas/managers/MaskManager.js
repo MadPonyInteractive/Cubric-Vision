@@ -37,6 +37,7 @@
  */
 
 import { stampDab, strokeDabs } from './brushDab.js';
+import { signedSquaredDistanceField, rangeFor, writeRange } from './distanceField.js';
 
 const MASK_MAX_EDGE = 1536;
 
@@ -47,26 +48,6 @@ const MASK_MAX_EDGE = 1536;
  * separate coordinate lists, so there is nothing to encode in a radius.
  */
 const POINT_HIT_R = 12;
-
-/**
- * Alpha thresholds for the dilate / erode primitive (MPI-382), as 0-255.
- *
- * A blurred step edge is a symmetric ramp: with `blur(rpx)` the alpha at signed
- * distance d from the original edge is Φ(d / r). Thresholding the ramp at Φ(-1)
- * puts the new edge one sigma OUTSIDE (a dilate by r), at Φ(+1) one sigma INSIDE
- * (an erode by r). So one blur plus one threshold gives both directions, and the
- * radius is the blur amount — nothing else to calibrate.
- *
- * MEASURED against a known circle in Chromium rather than assumed — its blur is a
- * three-box approximation, not a true Gaussian, so the textbook levels had to earn
- * the job. They did: r of 1, 2, 3, 5, 8 and 12 all move the edge EXACTLY r px, in
- * both directions. Past that, curvature (not the threshold) costs a little — at
- * r=50 on a 300px circle a dilate lands at 47 and an erode at 54. Nobody eyeballing
- * a mask edge is counting those 3px, so the slider stays in real pixels rather than
- * gaining a fudge table. Full numbers: docs/masking-tools.md.
- */
-const ADJUST_DILATE_T = 0.1587 * 255;
-const ADJUST_ERODE_T  = 0.8413 * 255;
 
 /**
  * Alpha at or above this counts as MASK for `fillHoles()`, below it as background.
@@ -110,8 +91,11 @@ export class MaskManager {
          *  recomputed from this, never from the frame before it, or grow-3 three
          *  times eats detail exactly like the MPI-351 double-scale bug. */
         this._adjustPristine = null;
-        /** Scratch buffer for _morph(), reused across frames. */
-        this._morphBuf = null;
+        /** Signed squared-distance field of the pristine mask (MPI-441). Built ONCE
+         *  in beginAdjust() because it does not depend on the radius, so a slider
+         *  drag costs one range test per frame instead of one transform.
+         *  @type {Float32Array|null} */
+        this._adjustField = null;
 
         /**
          * UndoStack, injected by MpiCanvas (MPI-376). Only manualCanvas and
@@ -567,6 +551,10 @@ export class MaskManager {
      * source layers: the preview contract guarantees no auto picks survive into
      * this tool, so `maskCanvas === manual AND NOT subtract` here and Apply writes
      * the result straight back as the new manual layer.
+     *
+     * The distance field is built here for the same reason (MPI-441): it describes
+     * the pristine shape, not the radius, so every frame of a drag reads it and
+     * nothing recomputes it until Apply re-snapshots.
      */
     beginAdjust() {
         if (!this.maskCanvas) return;
@@ -577,7 +565,11 @@ export class MaskManager {
         if (!this._adjustPristine) this._adjustPristine = document.createElement('canvas');
         this._adjustPristine.width = w;
         this._adjustPristine.height = h;
-        this._adjustPristine.getContext('2d').drawImage(this.maskCanvas, 0, 0);
+        const pristineCtx = this._adjustPristine.getContext('2d', { willReadFrequently: true });
+        pristineCtx.drawImage(this.maskCanvas, 0, 0);
+        this._adjustField = signedSquaredDistanceField(
+            pristineCtx.getImageData(0, 0, w, h).data, w, h,
+        );
 
         if (!this.adjustCanvas) {
             this.adjustCanvas = document.createElement('canvas');
@@ -585,6 +577,9 @@ export class MaskManager {
         }
         this.adjustCanvas.width = w;
         this.adjustCanvas.height = h;
+        // Reused every frame: a fresh ImageData per slider tick is a 9 MB allocation
+        // at the working size, which is GC churn during a drag for nothing.
+        this._adjustImg = this.adjustCtx.createImageData(w, h);
         this.hasAdjustPreview = false;
     }
 
@@ -592,37 +587,32 @@ export class MaskManager {
      * Recompute the preview from the pristine copy — never from the last frame.
      * Zero on every slider tears the preview down, so the centre position is the
      * untouched mask rather than a green copy of it.
+     *
+     * Grow, shrink and both halves of an edge band are ONE range test over the
+     * distance field built in `beginAdjust()` (MPI-441). The band in particular is
+     * no longer dilate-then-`destination-out`-erode: the complement of an erode is
+     * just the field's other bound, so it is a single pass.
+     *
      * @param {{grow?:number, outward?:number, inward?:number, edge?:boolean}} opts
      *   grow: >0 dilates, <0 erodes. edge: an outward/inward band instead.
      * @returns {boolean} true when a preview is up
      */
-    previewAdjust({ grow = 0, outward = 0, inward = 0, edge = false } = {}) {
+    previewAdjust(opts = {}) {
         const src = this._adjustPristine;
-        if (!src || !this.adjustCtx) return false;
+        if (!src || !this.adjustCtx || !this._adjustField || !this._adjustImg) return false;
         const w = src.width;
         const h = src.height;
-        this.adjustCtx.clearRect(0, 0, w, h);
 
-        if (edge) {
-            if (outward <= 0 && inward <= 0) {
-                this.hasAdjustPreview = false;
-                return false;
-            }
-            // An edge band IS the same primitive twice: dilate(outward) − erode(inward).
-            // _morph returns a shared buffer, so the first result must be drawn before
-            // the second call overwrites it — drawImage copies synchronously.
-            this.adjustCtx.drawImage(this._morph(src, outward), 0, 0);
-            this.adjustCtx.save();
-            this.adjustCtx.globalCompositeOperation = 'destination-out';
-            this.adjustCtx.drawImage(this._morph(src, -inward), 0, 0);
-            this.adjustCtx.restore();
-        } else {
-            if (!grow) {
-                this.hasAdjustPreview = false;
-                return false;
-            }
-            this.adjustCtx.drawImage(this._morph(src, grow), 0, 0);
+        const range = rangeFor(opts);
+        if (!range) {
+            this.adjustCtx.clearRect(0, 0, w, h);
+            this.hasAdjustPreview = false;
+            return false;
         }
+
+        // putImageData replaces the buffer outright, so there is nothing to clear.
+        writeRange(this._adjustField, new Uint32Array(this._adjustImg.data.buffer), range.lo, range.hi);
+        this.adjustCtx.putImageData(this._adjustImg, 0, 0);
 
         this.hasAdjustPreview = true;
         return true;
@@ -665,7 +655,7 @@ export class MaskManager {
      * otherwise — so pressing Fill mid-adjustment bakes both as ONE undo entry. The
      * alternative was silently dropping the user's preview, which is worse.
      *
-     * NOT `_morph(+r)` then `_morph(-r)`. That morphological close would reuse the
+     * NOT a dilate by r then an erode by r. That morphological close would reuse the
      * primitive above for free, but it only closes holes smaller than r and it rounds
      * the outline; "fill holes" means every enclosed hole, outline untouched.
      *
@@ -774,60 +764,15 @@ export class MaskManager {
     endAdjust() {
         const had = this.hasAdjustPreview;
         this.hasAdjustPreview = false;
-        for (const c of [this.adjustCanvas, this._adjustPristine, this._morphBuf]) {
+        for (const c of [this.adjustCanvas, this._adjustPristine]) {
             if (c) { c.width = 0; c.height = 0; }
         }
         this.adjustCanvas = null;
         this.adjustCtx = null;
         this._adjustPristine = null;
-        this._morphBuf = null;
+        this._adjustField = null;
+        this._adjustImg = null;
         return had;
-    }
-
-    /**
-     * Dilate (r > 0) or erode (r < 0) a white-on-transparent layer by |r| mask-px.
-     * Grow, shrink and both halves of an edge band are all THIS function.
-     *
-     * Blur once, threshold once — see ADJUST_DILATE_T. The threshold is a plain
-     * alpha pass over the pixels rather than an SVG `feComponentTransfer`: it is
-     * one readback per frame instead of a document-level filter node, and it
-     * measured live at the working size (docs/masking-tools.md).
-     *
-     * @param {HTMLCanvasElement} src
-     * @param {number} r radius in mask-px
-     * @returns {HTMLCanvasElement} a SHARED buffer — draw from it before calling again
-     */
-    _morph(src, r) {
-        const w = src.width;
-        const h = src.height;
-        const buf = this._morphBuf || (this._morphBuf = document.createElement('canvas'));
-        if (buf.width !== w || buf.height !== h) { buf.width = w; buf.height = h; }
-        const ctx = buf.getContext('2d', { willReadFrequently: true });
-        ctx.filter = 'none';
-        ctx.clearRect(0, 0, w, h);
-
-        const rr = Math.round(Math.abs(r));
-        if (!rr) { ctx.drawImage(src, 0, 0); return buf; }
-
-        ctx.filter = `blur(${rr}px)`;
-        ctx.drawImage(src, 0, 0);
-        ctx.filter = 'none';
-
-        const t = r > 0 ? ADJUST_DILATE_T : ADJUST_ERODE_T;
-        const img = ctx.getImageData(0, 0, w, h);
-        const d = img.data;
-        for (let i = 3; i < d.length; i += 4) {
-            if (d[i] >= t) {
-                d[i - 3] = 255;
-                d[i - 2] = 255;
-                d[i - 1] = 255;
-                d[i] = 255;
-            } else {
-                d[i] = 0;
-            }
-        }
-        ctx.putImageData(img, 0, 0);
-        return buf;
     }
 
     getManualURL() {
