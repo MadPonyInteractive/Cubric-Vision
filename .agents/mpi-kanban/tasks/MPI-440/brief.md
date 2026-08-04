@@ -21,7 +21,8 @@ detection preview still violates the preview contract MPI-382 built the seam for
 | MPI-435 | Alpha brush pack — ten procedural brushes for the mask AND paint brush | Lands on the shared brush engine, so both mounts get it at once |
 | MPI-436 | Adjust for the paint layer — grow / shrink / edge band over RGBA (the outline tool) | Reuses mask's `_morph`; the open question is what those ops mean over RGBA rather than coverage |
 | MPI-439 | Convert mask to paint / paint to mask, from the canvas context menu | New, 2026-08-04 |
-| MPI-421 | Auto-mask run cost + feedback — cache per-object masks, then queue what is left | **NOT independent** — see the order below. Its own card and MPI-424's brief both call it independent; reading the two cards together on 2026-08-04 shows they share a call path |
+| ~~MPI-421~~ | Auto-mask run cost + feedback — cache per-object masks, then queue what is left | **BUILT 2026-08-04**, commit `1028b958`, awaiting the user's in-app pass (`tasks/MPI-421/validation.md`). The graph's `ImpactSEGSPicker` was the whole of MPI-402: it trimmed the masks to the chips selected at dispatch, so the fix was deleting it. Detect now shows an indeterminate bar and a Stop |
+| MPI-441 | **Grow rounds the mask off instead of growing it** — `_morph` is a blur+threshold, i.e. an average where a dilation needs a maximum | **NEW, 2026-08-04**, from the user's screenshots. Blocks MPI-436, which points the same primitive at RGBA |
 
 ## Order
 
@@ -31,17 +32,23 @@ detection preview still violates the preview contract MPI-382 built the seam for
    card feared needed no code at all. Its twin `_buildCompositeFromTemp()` carried the same
    bug and changed with it. **Decision recorded for the rest of the set: a bare detection
    leaves masked ops LOCKED until Add** — that is intended, not an MPI-372 regression.
-2. **MPI-421 — START HERE.** **Immediately after 426, not "any time".** Both cards rewrite the
-   auto-mask result-handling path: 426 changes what `exec.onMasks` does with `runPicks`
-   (`MpiCanvasViewer.js`), and 421's absorbed MPI-402 makes chip toggling client-side,
-   which changes when that same handler runs at all. Split them apart and `onMasks` gets
-   edited twice, with the second edit re-testing the first. Their cards each say
-   "independent" — that was written before the pair existed; this umbrella overrides it.
-3. **MPI-436** — Adjust over RGBA, i.e. the outline tool. Most fully specified card in the
+2. ~~**MPI-421**~~ — **SHIPPED 2026-08-04** (commit `1028b958`), in-app pass still outstanding.
+   The pairing below was right for the wrong reason: both cards did land in `exec.onMasks`, but
+   the fix was not a rewrite of the chip-toggle path — it was **deleting `ImpactSEGSPicker` from
+   the graph**, after which the client half fell out of a `Map` `MaskManager` already had.
+   **Decision recorded for the rest of the set:** a non-generation ComfyUI run (a detect) gets
+   the status bar, NOT a queue lane — it never enters `generationStore`, because a store job
+   raises `generationQueueCount`, which is what disables the detect row and would therefore
+   disable its own Stop. It drives `StatusBar.progress.*` directly rather than emitting `tool:*`.
+3. **MPI-441 — START HERE.** New, and it jumps the queue for one reason: **MPI-436 is Adjust over
+   RGBA and reuses `MaskManager._morph`**, which this card says is the wrong primitive (a blur
+   averages; a dilation takes a maximum, so thin limbs thin out and concave gaps fill). Build 436
+   on it and the outline tool inherits a rounding bug. Fix the primitive, then point it at paint.
+4. **MPI-436** — Adjust over RGBA, i.e. the outline tool. Most fully specified card in the
    set (8 acceptance items, all three fills already worked out) and the highest user value.
-   It settles the alpha question below.
-4. **MPI-439** — inherits 436's answer for free, and is small.
-5. **MPI-435** — last. Ten procedural brush presets is polish, it blocks nothing, and the
+   It settles the alpha question below. **Blocked on MPI-441** — same primitive.
+5. **MPI-439** — inherits 436's answer for free, and is small.
+6. **MPI-435** — last. Ten procedural brush presets is polish, it blocks nothing, and the
    `brushDab.js` helper it needs already shipped with MPI-375, so it keeps.
 
 ### Why 426 must precede 439 specifically

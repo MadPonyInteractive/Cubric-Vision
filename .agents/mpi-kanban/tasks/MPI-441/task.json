@@ -1,0 +1,38 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-441",
+  "title": "Grow rounds the mask off instead of growing it - _morph is a blur, not a dilation",
+  "description": "Reported by the user 2026-08-04 with before/after screenshots: Grow +50 on a person mask does not push the outline outward by 50px in every direction. It rounds the whole shape into a blob - the arms stop tracking, the concave gaps between limb and torso fill in, and the result reads as a smoothed silhouette rather than a grown one.\n\nROOT CAUSE, not a tuning issue. MaskManager._morph(src, r) (js/components/Primitives/MpiCanvas/managers/MaskManager.js, around line 800) implements grow as a Gaussian blur followed by an alpha threshold: ctx.filter = blur(r) then keep alpha >= ADJUST_DILATE_T (0.1587*255 ~ 40). A blurred step edge really is the ramp the doc describes, so for a large convex blob the edge lands r px out - but blur is an AVERAGE, not a maximum. A thin structure (an arm ~15px across) blurred at sigma 50 has its peak alpha driven far below 40, so it shrinks or disappears while the torso grows; the gaps between limbs fill because neighbouring mass bleeds across them. A true dilation is a MAX filter over a disc: every mask pixel paints a disc of radius r, thin features included. Blur-and-threshold only coincides with that on large convex shapes.\n\nWhy the shipped measurements missed it: docs/masking-adjust.md measured on a 300px CIRCLE, the single best case for this approximation, and recorded the error as mild curvature cost (r=50 -> 47/54). On a thin, concave, real subject the failure is qualitative, not a few px.\n\nSHARED PRIMITIVE - the blast radius is all three readings: grow (r>0), shrink (r<0, same bug mirrored: thin features vanish early) and the edge band (dilate + destination-out erode, which inherits both). MPI-436 points this SAME primitive at the paint layer, so it must be fixed FIRST or the outline tool ships built on it.\n\nCandidate fix (not yet proven): replace blur+threshold with a real max filter done in canvas ops - stamp the source at N offsets around a circle of radius r/2, twice, since the Minkowski sum of two circles of radius r/2 is a full disc of radius r. Erode is the same stamping with destination-in (a min filter). N from the chord error, roughly 2*pi/acos(1-1/r), ~32 at r=50. Cost is N drawImage calls per pass against the current single 8.7ms blur - measure before committing to live preview, and fall back to preview-on-release if it cannot hold. Alternatives if that is too slow: a two-pass Euclidean distance transform on a typed array (exact, any r, one cost), or a separable van Herk max filter (fast, but a SQUARE structuring element gives chamfered corners).\n\nMust re-measure docs/masking-adjust.md on a THIN + CONCAVE shape, not only a circle, and correct the table there.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-08-04T15:35:00Z",
+  "updated_at": "2026-08-04T15:35:00Z",
+  "labels": [
+    "ui",
+    "ux",
+    "masking",
+    "canvas",
+    "canvas-tool-family",
+    "bug"
+  ],
+  "acceptance": [
+    "Grow r moves the outline outward by r px in EVERY direction, including on a thin limb and across a concave gap - verified on the user's screenshot case, not only on a circle",
+    "A thin structure narrower than 2r survives a grow instead of thinning or vanishing, and concave gaps are NOT filled (grow is a dilation, never a morphological close)",
+    "Shrink and the edge band are fixed by the same change - they read the same primitive, and a fix that only covers grow is a false done",
+    "The measured radius table in docs/masking-adjust.md is re-measured on a thin + concave shape and corrected; the claim that the error is only curvature cost is removed",
+    "Live preview still holds at the working size, or preview-on-release is adopted deliberately and written down with the measured cost",
+    "tests/mask-adjust.test.cjs gains a case that FAILS on blur-and-threshold: a thin bar or a concave shape whose grown geometry the old primitive cannot produce",
+    "MPI-436 is not started until this lands - it points the same primitive at the paint layer"
+  ],
+  "links": {
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "masking",
+    "adjust",
+    "MPI-440"
+  ],
+  "priority": "normal",
+  "attention": false
+}
