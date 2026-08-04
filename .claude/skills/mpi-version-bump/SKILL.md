@@ -437,9 +437,32 @@ If either suite fails, STOP. A red test at this point means a regression landed
 since the last green commit — fix it, re-run `npm run release:check` (a code fix
 can drift the registry), and only continue once both suites are green again.
 
-Note: `npm run test:desktop` launches its own Electron and its own server on port
-3000. If the app is already running, the spec silently drives the ALREADY-RUNNING
-server instead of its own — close the app first.
+### 🛑 STOP before `test:desktop` — the app must be closed
+
+`npm run test:desktop` launches its own Electron, which forks its own server on
+port 3000. If Cubric Vision is already open that fork cannot bind, and the specs
+silently drive the ALREADY-RUNNING server instead — a green suite that never
+touched the working tree.
+
+**I check the port and stop for the user rather than assuming.** The user normally
+has an instance open and will not think of it unprompted:
+
+```bash
+netstat -ano | findstr ":3000.*LISTENING"    # Windows
+lsof -iTCP:3000 -sTCP:LISTEN                 # macOS/Linux
+```
+
+If anything is listening, I say so in plain text and **wait** — I do not kill it.
+That process is the user's app and may hold unsaved work:
+
+```
+Cubric Vision is running on port 3000. Close it and tell me when it's down —
+the desktop suite can't run against your live instance.
+```
+
+The suite enforces this itself too (`tests/desktop/globalSetup.js` aborts the run
+on a busy port), so a forgotten instance fails loudly instead of faking a pass.
+Checking first just saves a round trip.
 
 Then ask:
 ```

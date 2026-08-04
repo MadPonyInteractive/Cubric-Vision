@@ -47,8 +47,15 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-04T21:05:00Z",
+  "updated_at": "2026-08-04T21:40:00Z",
   "events": [
+    {
+      "at": "2026-08-04T21:40:00Z",
+      "type": "task.updated",
+      "task": "MPI-444",
+      "actor": "opus",
+      "note": "Investigated the three options and found a fourth that beats all of them. dist/ is untracked in Cubric-Studio so a private checkout would also need a tsc build; vendoring would fork an interop contract against the documented ownership split. But all three consumers already dynamic-import the SDK inside try/catch and handle its absence by design (brokerBoot.js returns null with an SDK-not-installed comment), so it is an OPTIONAL dependency declared as a hard one. Moving it out of dependencies unblocks npm ci with no secret, no registry and no copy, and may also fix the shipped macOS dangling-symlink bug on MPI-416. Needs testing on a repo copy before committing - a missing file: target may still break lockfile resolution even under optionalDependencies."
+    },
     {
       "at": "2026-08-04T21:05:00Z",
       "type": "task.moved",

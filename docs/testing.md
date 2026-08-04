@@ -46,7 +46,11 @@ per-test `CUBRIC_E2E_USER_DATA`, so normal app data is never touched.
 
 **Close the app first.** `server.js` hardcodes port 3000, so a spec launched while
 the app is open cannot bind its own server — the test window then loads the
-ALREADY-RUNNING one. It does not error; it silently tests somebody else's process.
+ALREADY-RUNNING one and the suite passes without ever testing the working tree.
+`tests/desktop/globalSetup.js` aborts the run when the port is taken, so this
+fails loudly instead of silently; it never kills the process holding it, because
+that is normally the user's own app. If `PORT` in `server.js` ever moves, move the
+constant in `globalSetup.js` with it.
 
 **Never use `app.firstWindow()`.** Boot opens TWO windows: a frameless splash
 (`splash/splash.html`, loaded instantly by `main.js`) and then the shell on
