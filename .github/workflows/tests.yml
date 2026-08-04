@@ -1,0 +1,60 @@
+name: Tests
+
+# MPI-443 made `npm test` + `npm run test:desktop` a release gate, but the gate was a
+# human step in mpi-version-bump. This runs both on every push so a red suite is seen
+# before a release, not during one.
+#
+# windows-latest runs BOTH: Electron needs no xvfb on Windows, and Playwright drives it
+# through the `electron` npm binary, so there is no `npx playwright install` step.
+#
+# @cubric/connector is a `file:../Cubric-Studio/packages/connector` dependency and that
+# sibling does not exist on a lone checkout. npm ci still exits 0 — it creates a dangling
+# symlink rather than failing — and all three consumers (server.js, services/brokerBoot.js,
+# services/connectorResponder.js) dynamic-import it inside try/catch and stay standalone
+# when it is absent. So no PAT, no registry and no vendored copy are needed here.
+# (The dangling symlink itself is a shipped-artifact problem, tracked on MPI-416.)
+
+on:
+  push:
+    # Release branches are cut per version and named bare (1.3.0, 1.3.1) — a hotfix
+    # landing there never touches master, so master alone would leave it untested
+    # while the v* tag build still runs off it.
+    branches: [master, '[0-9]*.[0-9]*.[0-9]*']
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm test
+
+      # The desktop suite aborts if port 3000 is taken (tests/desktop/globalSetup.js).
+      # A fresh runner has it free.
+      - run: npm run test:desktop
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

@@ -3,7 +3,6 @@
   "next_id": 446,
   "columns": {
     "todo": [
-      "MPI-444",
       "MPI-445",
       "MPI-439",
       "MPI-433",
@@ -34,6 +33,7 @@
       "MPI-442"
     ],
     "doing": [
+      "MPI-444",
       "MPI-440",
       "MPI-367",
       "MPI-259",
@@ -48,7 +48,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-04T21:55:00Z",
+  "updated_at": "2026-08-04T22:30:00Z",
   "events": [
     {
       "at": "2026-08-04T21:55:00Z",
@@ -1910,6 +1910,14 @@
       "type": "task.created",
       "task": "MPI-442",
       "note": "The pre-commit hook told everyone to flip lint to strict \"in a separate tracker once clean\" - there was no tracker. Measured: 19 warnings, 9 files."
+    },
+    {
+      "at": "2026-08-04T22:30:00Z",
+      "type": "task.moved",
+      "task": "MPI-444",
+      "from": "todo",
+      "to": "doing",
+      "summary": "Picked up. Consumers re-verified: server.js:146, services/brokerBoot.js:61 and services/connectorResponder.js:80 all dynamic-import @cubric/connector inside try/catch and return null on failure, so option (d) is sound in principle. Next step is the npm ci test on a repo COPY outside c:/AI/Mpi so the sibling is genuinely absent."
     }
   ]
 }

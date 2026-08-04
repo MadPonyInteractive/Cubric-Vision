@@ -21,7 +21,13 @@ const path = require('node:path');
 const test = require('node:test');
 const express = require('express');
 
-const SETTINGS_JS = path.join(__dirname, '..', 'js', 'components', 'Compounds', 'LandingPages', 'MpiSettings', 'MpiSettings.js');
+// MPI-444: own engine root — see the same note in extra-model-folders.test.cjs.
+// Both files rewrite extra_model_paths.yaml and `node --test` runs them in
+// parallel, which made the other file fail intermittently.
+process.env.CUBRIC_ENGINE_ROOT = require('node:fs')
+    .mkdtempSync(path.join(os.tmpdir(), 'cubric-engine-settings-guard-'));
+
+const SETTINGS_JS =path.join(__dirname, '..', 'js', 'components', 'Compounds', 'LandingPages', 'MpiSettings', 'MpiSettings.js');
 
 test('MpiSettings never resets the server models root from a cached path heuristic', async () => {
     const src = await fs.readFile(SETTINGS_JS, 'utf8');
