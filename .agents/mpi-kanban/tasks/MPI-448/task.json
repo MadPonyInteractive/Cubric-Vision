@@ -5,7 +5,7 @@
   "description": "The port is hardcoded (server.js:29 `const port = 3000`), so `npm run test:desktop` cannot run while the dev app is open — and worse, it does not fail: main.js finds :3000 already answering, the window loads the RUNNING app, and the specs silently drive the dev session with its real engine root and real user data. That blocks day-to-day work (hit during MPI-446: the suite could only be verified after the user closed the app). Make the port a variable the E2E launch picks: server.js reads it, main.js's four hardcoded `127.0.0.1:3000` references and tests/desktop/shellWindow.js's URL match follow it, and tests/desktop/launch.js hands each run a free port. A port already in use must then be a hard error, never a silent attach.",
   "column": "done",
   "maturity": "complete",
-  "status": "closed",
+  "status": "done",
   "created_at": "2026-08-05T02:13:58Z",
   "updated_at": "2026-08-05T10:30:00Z",
   "labels": [
