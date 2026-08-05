@@ -140,6 +140,10 @@ export const MpiEngineInstall = ComponentFactory.create({
         // know whether to pulse the loading animation. The engine install has no
         // pause/resume — that only exists for model downloads (see MPI-54).
         let _downloadState = 'idle'; // 'downloading', 'extracting', 'patching'
+        // MPI-410: true while the UW dep download is emitting real byte totals. It
+        // owns the progress info line for that window so the engine phase stream
+        // cannot overwrite it on every uv/pip status line (the install-screen strobe).
+        let _uwBytesActive = false;
         let _progressBarInst = null;
         let _pathInputInst = null;
         let _browseButtonInst = null;
@@ -575,6 +579,16 @@ export const MpiEngineInstall = ComponentFactory.create({
                     }
                 }
                 el.setStatus(`Extracting${displayFile ? ': ' + displayFile : ''}...`);
+                // MPI-410 (absorbed MPI-412): the engine phase stream and the UW dep
+                // byte stream are INDEPENDENT and both used to write this one line. On
+                // the uv path a status line is broadcast per uv/pip stdout line, so
+                // while UW deps streamed alongside it the info line alternated
+                // "Extracting files..." with "12.3 MB / 400 MB" on every event, and the
+                // sweep flicked on and off with it — the reported strobe. The subtitle
+                // above still reports the phase every time; the info line belongs to
+                // whoever has honest bytes, and while UW deps are streaming that is
+                // them. Ownership, not a debounce: a timer would only slow the flicker.
+                if (_uwBytesActive) return;
                 // Clear progress info during extraction (we don't have granular progress)
                 progressInfo.textContent = 'Extracting files...';
                 // Show loading animation during extraction
@@ -607,6 +621,11 @@ export const MpiEngineInstall = ComponentFactory.create({
 
             _unsubs.push(Events.on('download:progress', (data) => {
                 if (data.modelId === '__universal_workflow__') {
+                    // MPI-410: claim the info line while these ticks carry real bytes,
+                    // so the engine phase stream stops overwriting them (see the
+                    // engine:extracting handler). An indeterminate tick has nothing to
+                    // show, so it does not claim anything.
+                    if (data.totalBytes > 0 && !data.indeterminate) _uwBytesActive = true;
                     // UW deps (parallel) — update progress only.
                     if (_downloadState !== 'downloading') {
                         el.setLoading(false);
@@ -615,8 +634,14 @@ export const MpiEngineInstall = ComponentFactory.create({
                 }
             }));
 
+            _unsubs.push(Events.on('download:complete', (data) => {
+                // UW deps finished — hand the info line back to the phase stream.
+                if (data && data.modelId === '__universal_workflow__') _uwBytesActive = false;
+            }));
+
             _unsubs.push(Events.on('engine:complete', () => {
                 _downloadState = 'idle';
+                _uwBytesActive = false;
                 _unsubscribeEngineEvents();
                 el.setLoading(false);
                 el.setStatus('Complete!');

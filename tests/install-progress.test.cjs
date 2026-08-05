@@ -5,7 +5,7 @@
 // Run: node tests/install-progress.test.cjs
 
 const assert = require('node:assert/strict');
-const { computeProgress, parseSizeToBytes, depDenominator } = require('../routes/install/computeProgress.js');
+const { computeProgress, isNodeTickPending, parseSizeToBytes, depDenominator } = require('../routes/install/computeProgress.js');
 
 const GB = 1024 ** 3;
 const MB = 1024 ** 2;
@@ -143,6 +143,57 @@ test('all deps complete → verifying then 100%', () => {
     const p = computeProgress(job);
     assert.equal(p.progress, 1);
     assert.equal(p.phase, 'verifying');
+});
+
+// -- MPI-410 (absorbed MPI-412): the install-screen strobe -----------------------
+// A custom_nodes dep and a weight dep stream CONCURRENTLY, and the tick broadcast
+// used to derive `indeterminate` from whichever dep ticked last. The engine install
+// screen then alternated 'Preparing dependencies...' with a byte readout on every
+// event, and a model tile re-rendered on the same flag. The sweep must depend on the
+// JOB, not the tick: only while no honest total exists, or while the node phase is
+// all that is left.
+
+const nodeDep = (o) => ({ type: 'custom_nodes', status: 'downloading', seedBytes: 0, totalBytes: 0, downloadedBytes: 0, ...o });
+
+test('mpi410_no_strobe_while_weights_still_stream', () => {
+    const deps = [
+        nodeDep({ status: 'downloading' }),
+        dep({ status: 'downloading', totalBytes: 4 * GB, downloadedBytes: 1 * GB }),
+    ];
+    // The node tick and the weight tick must agree - this is the whole strobe.
+    assert.equal(isNodeTickPending(deps), false, 'node still running but weights are not done: stay determinate');
+    const p = computeProgress({ deps });
+    assert.equal(p.indeterminate, false);
+});
+
+test('mpi410_sweep_once_only_the_node_phase_is_left', () => {
+    const deps = [
+        nodeDep({ status: 'downloading' }),   // pip run, minutes, no honest total
+        dep({ status: 'complete', totalBytes: 4 * GB, downloadedBytes: 4 * GB }),
+    ];
+    assert.equal(isNodeTickPending(deps), true, 'weights done, node still working: sweep');
+});
+
+test('mpi410_node_only_job_stays_indeterminate', () => {
+    const deps = [nodeDep({ status: 'downloading' })];
+    const p = computeProgress({ deps });
+    assert.equal(p.indeterminate, true, 'no byte denominator at all');
+    // The live tick sites compute the same expression.
+    assert.equal(p.totalBytes <= 0 || isNodeTickPending(deps), true);
+});
+
+// The three cases above only prove the MODULE. The strobe lived in the two live
+// broadcast sites, which kept their own copy of the rule - so pin those to it.
+test('mpi410_both_tick_sites_use_the_job_level_rule', () => {
+    const fs = require('node:fs');
+    const path = require('node:path');
+    const src = fs.readFileSync(path.join(__dirname, '..', 'routes', 'downloadManager.js'), 'utf8');
+    // Strip line comments first: the fix's own note quotes the old expression,
+    // and a guard that trips on prose is a guard nobody keeps.
+    const code = src.replace(/^\s*\/\/.*$/gm, '');
+    const uses = code.match(/isNodeTickPending\(modelJob\.deps\)/g) || [];
+    assert.equal(uses.length, 2, 'local AND remote tick sites (engine-split sweep)');
+    assert.equal(/isNodeTick\s*\|\|/.test(code), false, 'no per-dep tick flag may drive the whole-job display again');
 });
 
 console.log(`\ninstall-progress: ${passed} passed`);

@@ -412,32 +412,29 @@ function createWindow() {
     mainWindow.loadURL(SERVER_ORIGIN);
   });
 
-  // MPI-407: the server-ready fallback below gives up after 5s and creates the
-  // window regardless. On a slow machine Express is not listening yet, so this
-  // first loadURL is refused (ERR_CONNECTION_REFUSED) — and with nothing
-  // retrying it the window stayed black permanently, with NO user-accessible
-  // recovery (the menu is removed above, so Ctrl+R is unbound). Measured on
-  // Linux 2026-07-30: the server bound 11.6s after launch and was healthy the
-  // whole time; only this single load attempt had failed.
+  // MPI-410: `ready-to-show` is NOT "the app is live" — it fires on Chromium's
+  // network error page too, so on a slow start the splash was closed and the error
+  // page revealed while the server was still down (measured 2026-08-05: closed
+  // 1.1s BEFORE Express bound). On a slow disk the same close destroyed the splash
+  // while its own loadFile was still in flight, which is the ERR_FAILED (-2) the
+  // report opened on. One handler, both symptoms.
   //
-  // Retry the main-frame load until the server answers. Raising the 5000ms
-  // constant is NOT the fix — it only moves the threshold and re-breaks on a
-  // slower box or a cold/AV-scanned first run.
-  let loadRetries = 0;
-  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDesc, _url, isMainFrame) => {
-    // -3 is ERR_ABORTED, which a normal in-app navigation can raise; retrying
-    // that would fight the renderer rather than help it.
-    if (!isMainFrame || errorCode === -3 || loadRetries >= 60) return;
-    loadRetries += 1;
-    logger.warn('system', `Renderer load failed (${errorCode} ${errorDesc}) — retry ${loadRetries}`);
-    setTimeout(() => {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.loadURL(SERVER_ORIGIN);
-      }
-    }, 500);
-  });
-
-  mainWindow.once('ready-to-show', () => {
+  // The reveal needs a signal that means "our page, loaded". `did-finish-load`
+  // alone does not: it fires for the error page too (title `127.0.0.1:PORT`), and
+  // `getURL()` cannot separate them either — the error page keeps the target URL.
+  // `did-navigate` can: it does not fire AT ALL for a refused navigation, and
+  // carries the HTTP status when the server answers. But it fires when the
+  // response COMMITS, roughly a second before the app paints, so it is the gate,
+  // not the trigger — revealing on it alone swaps the splash for a blank window.
+  // Hence: navigated (real response) + finished loading + first paint. All three
+  // orderings measured on the same slow boot, 2026-08-05.
+  let paintReady = false;
+  let navigated = false;
+  let appLoaded = false;
+  let revealed = false;
+  const revealMainWindow = () => {
+    if (revealed || !mainWindow || mainWindow.isDestroyed()) return;
+    revealed = true;
     if (windowState.isMaximized) {
       mainWindow.maximize();
     }
@@ -453,6 +450,70 @@ function createWindow() {
     // MPI-10: report window visibility to the broker (via the server fork) so
     // it can track the family-wide window count for last-window teardown.
     serverProcess?.send?.({ type: 'cubric-window-state', visible: true });
+  };
+
+  const revealWhenReady = () => {
+    if (paintReady && navigated && appLoaded) revealMainWindow();
+  };
+  mainWindow.once('ready-to-show', () => { paintReady = true; revealWhenReady(); });
+  mainWindow.webContents.on('did-navigate', (_event, _url, httpResponseCode) => {
+    // Any real response counts, not only 200 — a 500 from our own Express is still
+    // the app answering, and hiding the window on it would be the black-window bug
+    // wearing a different hat.
+    if (!(httpResponseCode >= 200)) return;
+    navigated = true;
+    revealWhenReady();
+  });
+  mainWindow.webContents.on('did-finish-load', () => {
+    // Order matters: the ERROR page fires this too, and a sticky flag set there
+    // made the reveal fire 12ms after the server bound — before the real page
+    // could possibly have loaded (measured). Only a finish that FOLLOWS a real
+    // navigation counts.
+    if (!navigated) return;
+    appLoaded = true;
+    revealWhenReady();
+  });
+  // Backstop: nothing above can fire if a load hangs without ever failing, and a
+  // permanently hidden window is worse than a wrong-looking one. 30s matches the
+  // retry ladder's own ceiling (60 × 500ms).
+  setTimeout(() => {
+    if (!revealed) {
+      logger.warn('main', 'Main window never reported a completed load — revealing it anyway.');
+      revealMainWindow();
+    }
+  }, 30000);
+
+  // MPI-407: the server-ready fallback below gives up after 5s and creates the
+  // window regardless. On a slow machine Express is not listening yet, so this
+  // first loadURL is refused (ERR_CONNECTION_REFUSED) — and with nothing
+  // retrying it the window stayed black permanently, with NO user-accessible
+  // recovery (the menu is removed above, so Ctrl+R is unbound). Measured on
+  // Linux 2026-07-30: the server bound 11.6s after launch and was healthy the
+  // whole time; only this single load attempt had failed.
+  //
+  // Retry the main-frame load until the server answers. Raising the 5000ms
+  // constant is NOT the fix — it only moves the threshold and re-breaks on a
+  // slower box or a cold/AV-scanned first run.
+  let loadRetries = 0;
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDesc, _url, isMainFrame) => {
+    // -3 is ERR_ABORTED, which a normal in-app navigation can raise; retrying
+    // that would fight the renderer rather than help it.
+    if (!isMainFrame || errorCode === -3) return;
+    if (loadRetries >= 60) {
+      // Out of retries and still nothing to show. Reveal what there is (the error
+      // page) rather than leaving the user with a splash that never resolves —
+      // the whole point of MPI-407 is that this state stays visible + reportable.
+      logger.error('system', `Renderer load still failing after ${loadRetries} retries — revealing the error page.`);
+      revealMainWindow();
+      return;
+    }
+    loadRetries += 1;
+    logger.warn('system', `Renderer load failed (${errorCode} ${errorDesc}) — retry ${loadRetries}`);
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.loadURL(SERVER_ORIGIN);
+      }
+    }, 500);
   });
 
   mainWindow.on('closed', () => {

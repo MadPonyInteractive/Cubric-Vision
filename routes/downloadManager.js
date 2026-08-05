@@ -41,6 +41,8 @@ const { checkOnline } = require('./netCheck');
 // still exported from shared.js and used by the remote path's Pod wrapper contract.
 const { runPipCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot, processState, writeNodeCommitMarker } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
+// MPI-410: the indeterminate/sweep rule lives here — one contract, node-tested.
+const { isNodeTickPending } = require('./install/computeProgress');
 const {
     isCompleteOnDisk,
     isNodeInstalledOnDisk,
@@ -1577,14 +1579,26 @@ function _wireProgress(depJob, downloader) {
             // total; fall back to seedBytes only while real is still 0 (dep not yet
             // emitting). NB: NOT _depDenominator's Math.max(real,seed) — when the seed
             // over-declares, max() keeps the inflated seed and the bar finishes short.
-            const isNodeTick = myDep.type === 'custom_nodes';
             const ratio = _byteRatioExcludingNodes(modelJob.deps, 'local');
             modelJob.downloadedBytes = ratio.downloaded;
             modelJob.totalBytes = ratio.total;
             modelJob.speed = _modelSpeedLabel(modelJob);
             // A node-only job has a 0 byte-denominator — keep the sweep going rather
             // than a static 0 MB / 0 MB.
-            const indeterminate = isNodeTick || modelJob.totalBytes <= 0;
+            //
+            // MPI-410 (absorbed MPI-412): this used to be `isNodeTick || total <= 0`,
+            // which made the DISPLAY MODE depend on which dep happened to tick last.
+            // Nodes and weights stream concurrently, so the engine install screen
+            // alternated "Preparing dependencies…" with a byte readout on every event
+            // — the reported strobe — and a model tile re-renders on the same flag
+            // (MpiModelManager's render key). The ratio above already excludes
+            // custom_nodes from BOTH sides, so a node tick cannot pollute it; MPI-231's
+            // "203 MB / 15 MB" lie is prevented by that exclusion, not by this flag.
+            // Sweep when the JOB has no honest total, or when the node phase is the
+            // only thing left — the rule routes/install/computeProgress.js already
+            // encodes and tests. Same shape as MPI-164 one level up: a per-dep
+            // condition must not drive a whole-job display.
+            const indeterminate = modelJob.totalBytes <= 0 || isNodeTickPending(modelJob.deps);
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
             _syncStoreProgress(modelJob); // 4c: mirror live progress into the store SOT
             _broadcast('download:progress', {
@@ -1826,11 +1840,13 @@ function _onRemoteInstallEvent(evt) {
             // MPI-231 — exclude custom_nodes from both sides (work-not-bytes): a node
             // re-clone can report git bytes with no honest total vs a tiny seed, and a
             // requirements pip run has no up-front total (twin of the local overshoot).
-            const isNodeTick = myDep.type === 'custom_nodes';
             const ratio = _byteRatioExcludingNodes(modelJob.deps, 'remote');
             modelJob.totalBytes = ratio.total;
             modelJob.downloadedBytes = ratio.downloaded;
-            const nodeIndeterminate = isNodeTick || modelJob.totalBytes <= 0;
+            // MPI-410: the local twin's strobe fix, applied here too (engine-split
+            // sweep) — see the long note on the local tick. Per-dep `isNodeTick` made
+            // the mode flip on whichever dep ticked last.
+            const nodeIndeterminate = modelJob.totalBytes <= 0 || isNodeTickPending(modelJob.deps);
             modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
             _syncStoreProgress(modelJob); // 4c: mirror live progress into the store SOT
             _broadcast('download:progress', {

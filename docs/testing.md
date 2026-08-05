@@ -109,9 +109,10 @@ the failing direction — squatter on a port, launch, exit code 1 with
 
 **Never use `app.firstWindow()`.** Boot opens TWO windows: a frameless splash
 (`splash/splash.html`, loaded instantly by `main.js`) and then the shell on
-`127.0.0.1:$CUBRIC_PORT`; the splash is destroyed on the shell's `ready-to-show`, so
-`firstWindow()` hands back a window that closes underneath the test. Use
-`tests/desktop/shellWindow.js` (`const window = await shellWindow(app)`).
+`127.0.0.1:$CUBRIC_PORT`; the splash is destroyed once the shell has painted AND loaded
+a real HTTP response (MPI-410), so `firstWindow()` hands back a window that closes
+underneath the test. Use `tests/desktop/shellWindow.js` (`const window = await
+shellWindow(app)`).
 
 **Drive the app through its own seams, not the pointer.** Under `CUBRIC_E2E=1` the
 GPU is off and rendering throttles, which makes real pointer clicks flaky. Existing

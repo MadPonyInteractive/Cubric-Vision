@@ -120,6 +120,7 @@ function isNodeTickPending(deps) {
 
 module.exports = {
     computeProgress,
+    isNodeTickPending,
     parseSizeToBytes,
     depDenominator,
 };

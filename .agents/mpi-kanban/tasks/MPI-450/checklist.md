@@ -29,7 +29,15 @@ when it is believed.
       absorbed MPI-405 half hides the Stage-all-models plate behind the API key. **Zero server
       changes.** 451 node + 17 desktop tests pass; the extended `runpod-settings-extract` spec
       has a proven negative control. Needs the user's cloud-only first-run look (validation.md).
-- [ ] **MPI-410** — cold-first-run splash reproduced, root identified, fixed; install screen no longer strobes
+- [x] **MPI-410** - REPRODUCED and fixed 2026-08-05, card in `doing` as `validating`.
+      Root: the main window's `ready-to-show` fires on Chromium's error page, so the
+      splash was closed 1.1s BEFORE the server bound (and destroyed mid-`loadFile` on a
+      slow disk - the `ERR_FAILED (-2)`). Reveal now needs paint + a real HTTP response +
+      a finished load, with two backstops against MPI-407's black window. The absorbed
+      MPI-412 strobe is fixed at two roots (job-level `indeterminate` on both engine
+      twins; one owner for the install screen's info line). 451 node + 17 desktop tests,
+      proven negative control. The strobe half has never been SEEN fire - it needs a real
+      engine install (validation.md).
 - [x] **MPI-374** — UI size survives a full restart; key in `js/core/storageKeys.js`; no resize flash; Browser Mode no-ops. Needs the user's own restart.
 - [ ] Any Gate A card NOT fixed is written into the 1.4 release notes as a known issue
 

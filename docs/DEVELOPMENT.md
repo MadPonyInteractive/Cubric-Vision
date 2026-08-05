@@ -73,9 +73,11 @@ The engine starts **on demand**, not at app boot, so `/comfy/status` reading
 `running:false` before the first dispatch is normal.
 
 Boot opens TWO windows: a frameless splash (`splash/splash.html`, loaded instantly
-by `main.js`) and then the shell on `127.0.0.1:3000`; the splash is destroyed on the
-shell's `ready-to-show`. What that means for a desktop spec (never `app.firstWindow()`)
-is in [testing.md](testing.md).
+by `main.js`) and then the shell on `127.0.0.1:3000`; the splash is destroyed once the
+shell window has both painted AND loaded a real HTTP response (MPI-410 — `ready-to-show`
+alone fires on Chromium's error page, so on a slow start it used to close the splash
+before the server was up). What that means for a desktop spec (never
+`app.firstWindow()`) is in [testing.md](testing.md).
 
 ## Project Shape
 

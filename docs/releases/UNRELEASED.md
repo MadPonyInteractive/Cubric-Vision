@@ -273,3 +273,15 @@
   panel said the RunPod controls were locked until a key was saved, then let you flip
   that one switch anyway — a setting about connecting to a Pod you had no way to
   connect to yet.
+
+- **The startup splash now covers the whole wait, instead of vanishing on the slow
+  starts it exists for.** It was being closed the moment the window had something to
+  paint — including the browser's own "cannot connect" page, which is what shows while
+  the app's engine is still starting on a cold or slow first run. So the splash
+  disappeared early, or on Linux failed to appear at all, and you watched an error page
+  until the app arrived. It now stays up until the app itself is loaded.
+
+- **The install screen no longer flickers during the dependency step.** Two things
+  report progress at once — the phase the installer is on, and the files it is
+  fetching — and they were taking turns overwriting the same line, several times a
+  second. Each now has its own place to speak.
