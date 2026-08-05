@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-450",
+  "title": "1.4 release readiness umbrella - clear the gates before cutting 1.4.0",
+  "description": "There is no pre-release tier in this project (one GitHub-only release flow, see the mpi-release skill), so this card IS the pre-release: the gate list that must be clear before /mpi-version-bump stamps 1.4.0. 1.4 is the biggest feature release since 1.0 - the whole canvas toolkit (mask tools, Paint, Composite, Adjust, ten brushes, shapes), the Control operation replacing Depth, localised edit on four models, plus an engine-provision rewrite - and UNRELEASED.md already carries every claim. The gates are grouped: A must-fix code (MPI-420, MPI-404, MPI-410, MPI-374), B must-verify with no code expected (MPI-249 Linux leg on the real artifact, MPI-432 mac pinch, both test suites), C must-decide so the notes are not false (MPI-433 date gate, MPI-416 macOS split, a claim audit of UNRELEASED.md), D board and version hygiene. Full gate table with the reasoning per member is in brief.md; the tick-list is checklist.md.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-08-05T10:35:00Z",
+  "updated_at": "2026-08-05T10:40:00Z",
+  "labels": [
+    "release",
+    "umbrella",
+    "1.4",
+    "first-run",
+    "cross-platform"
+  ],
+  "acceptance": [
+    "Gate A: MPI-420, MPI-404, MPI-410 and MPI-374 are each closed or explicitly deferred with the deferral written into the release notes as a known issue - not left silently open",
+    "Gate B: both test suites green (npm test + npm run test:desktop), and the Linux leg of MPI-249 run against the REAL 1.4 artifact, not a dev checkout",
+    "Gate C: every claim in UNRELEASED.md is either verified or reworded to what was verified - no fix bullet describes a fix nobody has run",
+    "Gate D: board coherent (MPI-440 closed, MPI-4 and MPI-259 out of doing, validate_board.py exit 0) and npm run release:check passes at 1.4.0",
+    "The release is cut only after every gate above reads closed or consciously waived by the user, with the waiver recorded on this card"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "events": "events.jsonl"
+  },
+  "priority": "high",
+  "attention": false
+}

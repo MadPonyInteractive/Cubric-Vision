@@ -3,11 +3,11 @@
   "id": "MPI-440",
   "title": "Canvas tool family umbrella #2 - mask and paint parity",
   "description": "Successor to MPI-424, which is correctly done - its five members (425 taxonomy -> 382 Adjust -> 368 shape gizmo -> 375 paint layer -> 373 composite) all shipped. This card is NOT a reopening of it; it covers the work that arrived after the taxonomy existed.\n\nMPI-424 built the frame: three toolbar groups, two shared engines each mounted twice, a preview/discard seam in mountOptions(). Everything here is the consequence - the paint layer got the frame but not the parity. Members, in order: MPI-426 (detection preview leaks into the live mask - a BUG that re-gates the op strip, so everything reading hasMask() inherits its answer) -> MPI-421 (immediately after, NOT independent: both rewrite the auto-mask result path in MpiCanvasViewer exec.onMasks, and splitting them edits that handler twice) -> MPI-436 (Adjust over RGBA = the outline tool, the most specified card and the highest value) -> MPI-439 (inherits 436 alpha answer, small) -> MPI-435 (alpha brush pack, pure polish, blocks nothing, goes last).\n\nOne decision is shared by 436 and 439 and must be made ONCE: does an operation read paint's alpha or its luminance, and do soft edges survive? Whichever card is picked up first answers it in brief.md and the second inherits it.\n\nHolds no implementation of its own.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-04T12:55:00Z",
-  "updated_at": "2026-08-04T22:05:00Z",
+  "updated_at": "2026-08-05T10:40:00Z",
   "labels": [
     "ui",
     "ux",
@@ -30,6 +30,7 @@
   ],
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   }
 }
