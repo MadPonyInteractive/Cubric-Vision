@@ -1,6 +1,6 @@
 const fs = require('fs');
 const { test, expect, _electron: electron } = require('@playwright/test');
-const { shellWindow } = require('./shellWindow');
+const { shellWindow, SHELL_URL_RE } = require('./shellWindow');
 
 test('desktop app launches and loads the local shell', async ({}, testInfo) => {
   const userDataDir = testInfo.outputPath('user-data');
@@ -19,7 +19,7 @@ test('desktop app launches and loads the local shell', async ({}, testInfo) => {
   try {
     const window = await shellWindow(app);
 
-    await expect(window).toHaveURL(/127\.0\.0\.1:3000/);
+    await expect(window).toHaveURL(SHELL_URL_RE);
     await expect(window).toHaveTitle(/Cubric/i);
 
     const bodyText = await window.locator('body').innerText({ timeout: 10000 });

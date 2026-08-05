@@ -15,7 +15,8 @@
  * working as a standalone app.
  */
 
-const VISION_PORT = 3000;
+// Same resolution as server.js — this module runs inside that fork (MPI-448).
+const VISION_PORT = Number(process.env.CUBRIC_PORT) || 3000;
 
 /**
  * Pure handler: map a `system.memory.release` request to a POST /comfy/unload

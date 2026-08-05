@@ -8,6 +8,13 @@ const { getComfyPath, getEngineRoot } = require('./routes/platformEngine');
 const secretsStore = require('./main/secretsStore');
 const floatLatent = require('./main/floatLatentWindow.cjs');
 
+// The Express fork's port. 3000 unless CUBRIC_PORT says otherwise, which only the
+// desktop E2E suite does — it hands each run a free port so a spec cannot attach to
+// the dev app already on 3000 (MPI-448). buildServerEnv spreads process.env, so the
+// fork reads the same value; every URL below is built from it, never a literal.
+const SERVER_PORT = Number(process.env.CUBRIC_PORT) || 3000;
+const SERVER_ORIGIN = `http://127.0.0.1:${SERVER_PORT}`;
+
 // A fatal boot error used to leave NOTHING behind: main had no handlers, so the
 // process died silently, and routes/logger appends with `await` — a dying process
 // exits before that promise resolves. A user's "it just flashes and closes" report
@@ -25,7 +32,12 @@ function reportFatal(kind, err) {
     fs.mkdirSync(path.join(root, 'logs'), { recursive: true });
     fs.appendFileSync(path.join(root, 'logs', 'app.log'), line);
   } catch { /* disk unwritable — the dialog is the only channel left */ }
-  try { dialog.showErrorBox('Cubric Vision failed to start', line); } catch { /* no display available */ }
+  // showErrorBox is MODAL: under E2E it would block the process forever waiting on
+  // a click nobody makes, turning a loud failure into a hang. The log line and the
+  // non-zero exit are what a test run reads anyway.
+  if (!process.env.CUBRIC_E2E) {
+    try { dialog.showErrorBox('Cubric Vision failed to start', line); } catch { /* no display available */ }
+  }
   app.exit(1);
 }
 
@@ -117,7 +129,7 @@ async function getActiveDownloadsForQuit() {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 1000);
   try {
-    const res = await fetch('http://127.0.0.1:3000/comfy/downloads/active', {
+    const res = await fetch(`${SERVER_ORIGIN}/comfy/downloads/active`, {
       signal: controller.signal,
     });
     if (!res.ok) return null;
@@ -146,7 +158,7 @@ async function teardownRemotePod() {
   const timeout = setTimeout(() => controller.abort(), 30000);
   try {
     logger.info('main', 'Remote Pod teardown on quit: requesting…');
-    const res = await fetch('http://127.0.0.1:3000/remote/pod/teardown', {
+    const res = await fetch(`${SERVER_ORIGIN}/remote/pod/teardown`, {
       method: 'POST',
       signal: controller.signal,
     });
@@ -273,6 +285,8 @@ let windowState = {};
 const activeNotifications = new Set();
 let quitDownloadWarningAccepted = false;
 let quitDownloadWarningInProgress = false;
+// True once shutdown starts, so the server fork's exit is not read as a crash.
+let isQuitting = false;
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -395,7 +409,7 @@ function createWindow() {
   // Clear cache to ensure local dev static files are updated
   mainWindow.webContents.session.clearCache().then(() => {
     // Load the web app served by Express via 127.0.0.1 for host consistency
-    mainWindow.loadURL('http://127.0.0.1:3000');
+    mainWindow.loadURL(SERVER_ORIGIN);
   });
 
   // MPI-407: the server-ready fallback below gives up after 5s and creates the
@@ -418,7 +432,7 @@ function createWindow() {
     logger.warn('system', `Renderer load failed (${errorCode} ${errorDesc}) — retry ${loadRetries}`);
     setTimeout(() => {
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.loadURL('http://127.0.0.1:3000');
+        mainWindow.loadURL(SERVER_ORIGIN);
       }
     }, 500);
   });
@@ -734,6 +748,11 @@ function startServer() {
   serverProcess.on('exit', (code, signal) => {
     if (code !== 0 && code !== null) {
       logger.error('server', `Server process exited with code ${code} signal ${signal}`);
+      // The fork is the ONLY thing that may answer SERVER_ORIGIN. If it died and
+      // we carried on, loadURL would happily render whatever else owns the port —
+      // a second instance, or the dev app a desktop spec was meant to stay out of
+      // (MPI-448). Fail visibly instead: log, dialog, non-zero exit.
+      if (!isQuitting) reportFatal('server-exit', new Error(`Server process exited with code ${code} (port ${SERVER_PORT}) — see the [system] lines above.`));
     } else {
       logger.info('server', `Server process exited with code ${code} signal ${signal}`);
     }
@@ -1372,6 +1391,7 @@ app.on('window-all-closed', () => {
 
 // Clean ComfyUI temp folders on quit (cross-platform, synchronous)
 app.on('before-quit', () => {
+  isQuitting = true;
   cleanSessionTempFolders();
 });
 

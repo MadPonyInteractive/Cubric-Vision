@@ -26,7 +26,10 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 
 const app = express();
-const port = 3000;
+// The desktop E2E suite hands each run its own free port so it never fights (or
+// silently attaches to) a dev app already on 3000 — MPI-448. main.js resolves the
+// same value and inherits it into this fork. 3000 stays the default everywhere else.
+const port = Number(process.env.CUBRIC_PORT) || 3000;
 
 // ── Middleware ─────────────────────────────────────────────────────────────────
 
@@ -104,7 +107,7 @@ process.on('unhandledRejection', (reason) => {
 // Connected broker client, set once the connector responder registers (MPI-10).
 let _connectorClient = null;
 
-app.listen(port, '127.0.0.1', () => {
+const httpServer = app.listen(port, '127.0.0.1', () => {
     // Dynamic import for ESM-only axios
     import('axios').then(mod => {
         const axios = mod.default;
@@ -161,6 +164,20 @@ app.listen(port, '127.0.0.1', () => {
             } catch { /* best-effort */ }
         }
     }).catch(() => { /* best-effort: Vision works standalone without a broker */ });
+});
+
+// A taken port must KILL this process, never be shrugged off (MPI-448). Without
+// this the fork stayed alive not listening, main.js loaded 127.0.0.1:<port>
+// anyway and got somebody ELSE'S server — a second app instance, or a desktop
+// spec quietly driving the dev session it was supposed to be isolated from.
+// main.js turns this exit code into a visible failure.
+httpServer.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+        logger.error('system', `Port ${port} is already in use — another Cubric Vision (or another app) owns it. Refusing to start.`);
+    } else {
+        logger.error('system', `Server failed to listen on ${port}`, err);
+    }
+    process.exit(1);
 });
 
 // Window-state relay (MPI-10): the Electron main reports window visibility over

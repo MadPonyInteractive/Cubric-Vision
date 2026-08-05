@@ -3,7 +3,7 @@
 // and survive a close → re-open cycle (fresh instance each open).
 const fs = require('fs');
 const { test, expect, _electron: electron } = require('@playwright/test');
-const { shellWindow } = require('./shellWindow');
+const { shellWindow, SHELL_URL_RE } = require('./shellWindow');
 
 test('settings slide-over renders the extracted RunPod section', async ({}, testInfo) => {
   // Suite runs share the machine with other work; app boot under load can blow the 30s default.
@@ -20,7 +20,7 @@ test('settings slide-over renders the extracted RunPod section', async ({}, test
 
   try {
     const window = await shellWindow(app);
-    await expect(window).toHaveURL(/127\.0\.0\.1:3000/);
+    await expect(window).toHaveURL(SHELL_URL_RE);
 
     const pageErrors = [];
     window.on('pageerror', (err) => pageErrors.push(String(err)));
