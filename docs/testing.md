@@ -53,6 +53,15 @@ dir **before** the `routes/comfy` require captures `ENGINE_ROOT`. Do the same in
 test that writes engine state — the fix is isolation, not a retry or a concurrency cap.
 Bonus: the suite no longer rewrites the developer's real engine yaml.
 
+**A source-text test cannot see a control that was never WIRED (MPI-447).** Most of the
+canvas suites assert manager behaviour from source text, and Adjust's **Reset shipped dead
+through two cards** that way: MPI-436 dropped `resetBtn.on('click', _reset)` while rewriting
+the commit row, and the button still mounted, still went into `_children` and still destroyed
+cleanly — every assertion in `mask-adjust.test.cjs` passed. When a panel gains a control,
+guard its HANDLER per button (`assert.match(panel, /<name>Btn\.on\('click'/)`), and prove a
+UI fix by clicking the real button — a panel mounts headless in Chromium against a stub
+`viewer`, which is how this one was proven dead and then proven fixed.
+
 **GREEN — there is no known-failing baseline any more.** Measured 2026-08-04:
 **417 pass / 0 fail** (298 on 2026-07-29). Any red is a real regression; do not go
 looking for it on an "expected failures" list, because that list no longer exists.

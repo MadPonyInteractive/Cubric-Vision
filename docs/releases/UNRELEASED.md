@@ -98,6 +98,11 @@
   while you work. Undo works on it like anything else on the canvas. Press **Apply**
   to bake it in as a new entry — your original is untouched, so deleting the new
   entry undoes it.
+- **Turn a mask into paint, or paint into a mask.** Right-click the image and convert
+  either way. A mask becomes a filled shape in the colour you have picked; paint
+  becomes a mask of the same shape, ready to run an operation over. Both are copies —
+  the layer you converted from stays exactly as it was, so nothing is lost and one
+  Ctrl+Z takes it back.
 - **Resize — one click back to the original size.** An **Original Size** button under
   the width and height boxes puts both back to the picture's own dimensions, so you
   can try a size, change your mind and start again without looking the numbers up.
