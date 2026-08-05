@@ -21,6 +21,26 @@ const { normalizeExtraModelFolders } = require('../routes/shared');
 const comfyRouter = require('../routes/comfy');
 const { getComfyPath, getEngineRoot } = require('../routes/platformEngine');
 
+// MPI-420: the folder keys are DERIVED from the first path segment of every dep
+// filename, so adding vae_approx/ deps was enough to map the folder. That derivation
+// is exactly the kind of magic a refactor breaks quietly — and if the key vanishes,
+// ComfyUI cannot see the preview decoders and silently drops back to the blocky
+// latent2rgb previewer. No error, no failed generation, just worse previews.
+test('every dep folder type reaches the yaml, vae_approx included', () => {
+    const yaml = buildExtraModelPathsYaml('C:\\Models');
+    const { DEPS } = require('../js/data/modelConstants/dependencies.js');
+    const types = new Set(
+        Object.values(DEPS)
+            .filter((d) => d && d.filename && d.type !== 'custom_nodes' && !d.targetPath)
+            .map((d) => d.filename.split('/')[0])
+            .filter((seg) => seg && seg.includes('.') === false),
+    );
+    assert.ok(types.has('vae_approx'), 'vae_approx must be a derived folder type');
+    for (const t of types) {
+        assert.match(yaml, new RegExp(`^\\s+${t}: `, 'm'), `folder type "${t}" is missing from the yaml`);
+    }
+});
+
 test('buildExtraModelPathsYaml only emits multiline additive buckets', () => {
     const yaml = buildExtraModelPathsYaml('C:\\Models', {
         loras: ['D:\\Loras', 'E:\\More Loras'],

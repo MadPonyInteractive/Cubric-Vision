@@ -99,4 +99,33 @@ const volumeEngineAssets = () => Object.values(DEPS)
     }
 }
 
-console.log('remote-engine-assets: 6/6 OK');
+// 7. MPI-420 — the TAESD preview decoders, named rather than left to the generic
+//    rules above. ComfyUI runs with `--preview-method taesd` and falls back to the
+//    blocky latent2rgb previewer when the decoder is missing, so a wrong flag here
+//    is invisible: previews still appear, they are just bad. taesdxl/taef1 come
+//    free inside the Windows portable bundle AND are baked into the Pod image;
+//    taef2 (FLUX.2 Klein) and lighttaew2_2 (Wan 2.2) are newer than both and must
+//    reach a Pod over the volume.
+{
+    const volume = volumeEngineAssets();
+    for (const id of ['taef2-decoder', 'lighttaew2-2']) {
+        assert.ok(volume.includes(id),
+            `${id} must be volume-installed on remote — it is NOT in the Pod image`);
+    }
+    for (const id of ['taesdxl-decoder', 'taef1-decoder']) {
+        assert.strictEqual(_isImageResident(DEPS[id]), true,
+            `${id} is baked into the Pod image — must report image-resident`);
+    }
+    // Every decoder is an engineAsset: it belongs to no model, so a model-keyed
+    // install would never reach it, and a GC with its "owner" would delete it.
+    for (const id of ['taesdxl-decoder', 'taef1-decoder', 'taef2-decoder', 'lighttaew2-2']) {
+        const dep = DEPS[id];
+        assert.ok(dep, `${id} missing from DEPS`);
+        assert.strictEqual(dep.engineAsset, true, `${id} must be an engineAsset`);
+        assert.ok(/^vae_approx\//.test(dep.filename),
+            `${id} must live under vae_approx/ — ComfyUI looks nowhere else`);
+        assert.ok(dep.sha256 && dep.sha256.length === 64, `${id} needs a real sha256`);
+    }
+}
+
+console.log('remote-engine-assets: 7/7 OK');

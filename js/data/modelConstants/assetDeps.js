@@ -403,4 +403,84 @@ export const assetDeps = {
         size: '3.99GB',
         sha256: '9d03f63f36206bab2f36aed5cfedc8693c2881397534e9d5f9ae9a0a41362517',
     },
+    // ── TAESD live-preview decoders (MPI-420) ────────────────────────────────
+    // ComfyUI runs with `--preview-method taesd` (routes/comfy.js, and the .bat
+    // patch in routes/engine.js). The previewer looks for a file in vae_approx/
+    // whose name STARTS WITH the latent format's taesd_decoder_name; with no
+    // match it logs a warning and silently falls back to Latent2RGB — the blocky
+    // colour-blob preview. It is a fallback, not a failure, which is why this
+    // went unnoticed: previews existed, they were just bad.
+    //
+    // Two gaps this closes:
+    //   1. Windows gets vae_approx/ free inside the ComfyUI portable archive.
+    //      macOS/Linux provision via uv/comfy-cli, which git-clones ComfyUI, and
+    //      a clone does NOT carry those weights — so EVERY preview on those
+    //      platforms was latent2rgb (seen on the macOS 1.3.0 run, MPI-370).
+    //   2. The portable bundle only ships taesd/taesdxl/taesd3/taef1. FLUX.2
+    //      (taef2) and Wan 2.2 (lighttaew2_2) are newer than the bundle, so
+    //      Klein and Wan previews were blobs on EVERY platform, Windows included.
+    //
+    // Only the decoders our own models actually name are here: SDXL family →
+    // taesdxl, Krea 2 + Chroma → taef1, FLUX.2 Klein → taef2, Wan 2.2 →
+    // lighttaew2_2. Qwen and LTX name no decoder in ComfyUI 0.29.2 (latent2rgb
+    // is all they can have); SD1.5/SD3 decoders are skipped — we ship neither.
+    // The `vae_approx` folder key needs no yamlHelper edit: it derives from the
+    // first path segment of `filename`.
+    'taesdxl-decoder': {
+        id: 'taesdxl-decoder',
+        name: 'TAESD preview decoder (SDXL)',
+        filename: 'vae_approx/taesdxl_decoder.safetensors',
+        url: 'https://models.cubric.studio/vision/models/vae_approx/taesdxl_decoder.safetensors',
+        size: '2.45MB',
+        sha256: 'ae5256b046b01d577279ed93a55bbb1fb2689e55aa14cfc0f7f841e0160202a5',
+        engineAsset: true,
+        bakedOnPod: true,
+        // The upstream madebyollin repos ship a single diffusers-format file, not
+        // this split decoder — there is no HF URL serving these bytes, so the
+        // generic prefix rewrite would only 404 (same shape as MPI-433).
+        noMirror: true,
+    },
+    'taef1-decoder': {
+        id: 'taef1-decoder',
+        name: 'TAESD preview decoder (FLUX.1)',
+        filename: 'vae_approx/taef1_decoder.safetensors',
+        url: 'https://models.cubric.studio/vision/models/vae_approx/taef1_decoder.safetensors',
+        size: '2.46MB',
+        sha256: 'bb41500b646d5b8b592b7f3ca5d20d888c3075e209d178d99af609cd7e02a1d4',
+        engineAsset: true,
+        bakedOnPod: true,
+        noMirror: true,
+    },
+    // Derived, not re-hosted: madebyollin/taef2 ships ONE combined file
+    // (taef2.safetensors, sha 701d31c0…) holding encoder + decoder in diffusers
+    // key order. ComfyUI's TAESD calls load_state_dict STRICTLY on the decoder
+    // half alone, so the file was converted with madebyollin's own index shift
+    // (decoder.layers.N → N+1) and proved by strict-loading it into
+    // TAESD(latent_channels=128) and decoding. MIT licence. Not in the Pod image.
+    'taef2-decoder': {
+        id: 'taef2-decoder',
+        name: 'TAESD preview decoder (FLUX.2)',
+        origin: 'madebyollin/taef2',
+        filename: 'vae_approx/taef2_decoder.safetensors',
+        url: 'https://models.cubric.studio/vision/models/vae_approx/taef2_decoder.safetensors',
+        size: '5.36MB',
+        sha256: '1280d56190f5e741d087db768cfde3f353bf59b857c0f809f9d3dc6ea9c603d6',
+        engineAsset: true,
+        noMirror: true,
+    },
+    // Wan 2.2 previews take the VIDEO_TAES branch, which loads the whole thing as
+    // a comfy VAE rather than a bare decoder state dict — hence the 45MB and the
+    // lack of a "_decoder" suffix. Byte-identical upstream, so it keeps a real
+    // mirror. Not in the Pod image.
+    'lighttaew2-2': {
+        id: 'lighttaew2-2',
+        name: 'TAEW preview decoder (Wan 2.2)',
+        origin: 'lightx2v/Autoencoders',
+        filename: 'vae_approx/lighttaew2_2.safetensors',
+        url: 'https://models.cubric.studio/vision/models/vae_approx/lighttaew2_2.safetensors',
+        mirrorUrl: 'https://huggingface.co/lightx2v/Autoencoders/resolve/main/lighttaew2_2.safetensors',
+        size: '45.7MB',
+        sha256: '10124099e0c9864db4e6bcd0f09d822282753e553d344fcf2748cf50140ba16a',
+        engineAsset: true,
+    },
 };

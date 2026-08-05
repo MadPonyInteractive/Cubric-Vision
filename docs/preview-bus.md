@@ -100,6 +100,37 @@ card re-mount). `exec.onPreview` survives only to re-emit `generation-queue:chan
 queue thumbnail refreshes as latents land. `generation:preview-reset` (MPI-167 stage-clip
 drop) is unrelated and stays.
 
+## What produces the frames — the TAESD decoders (MPI-420)
+
+ComfyUI is launched with `--preview-method taesd` (`routes/comfy.js`, plus the `.bat`
+patch in `routes/engine.js`). Its previewer looks in `models/vae_approx/` for a file whose
+name **starts with** the latent format's `taesd_decoder_name`. **With no match it does not
+fail — it falls back to `Latent2RGB`**, the blocky colour-blob previewer
+(`latent_preview.py` `get_previewer`). That silence is why a missing decoder is easy to
+miss: previews still arrive, they are just bad.
+
+The decoders our models name ship as `engineAsset` deps under `vae_approx/` in
+`assetDeps.js`. The folder key needs no `yamlHelper` edit — it derives from the first path
+segment of `filename`.
+
+| Model | ComfyUI latent format | Decoder | Notes |
+|---|---|---|---|
+| SDXL Realistic / NSFW, ILL Anime (both), PONY Mix | `SDXL` | `taesdxl_decoder` | baked into the Pod image |
+| Krea 2, Chroma (both) | `Flux` | `taef1_decoder` | baked into the Pod image |
+| FLUX.2 Klein | `Flux2` | `taef2_decoder` | volume-installed on remote |
+| Wan 2.2 | `Wan22` | `lighttaew2_2` | video branch, loads as a whole VAE (45MB) |
+| Qwen Image / Image Edit, LTX | — | **none** | no `taesd_decoder_name` in 0.29.2 → latent2rgb is all they can have |
+
+Two gaps this closed, both silent: `vae_approx/` ships inside the **Windows** ComfyUI
+portable archive but macOS/Linux provision by git-cloning ComfyUI, which carries none of
+it — so every preview on those platforms was latent2rgb; and the bundle predates FLUX.2
+and Wan 2.2, so Klein and Wan were blobs on **every** platform.
+
+`taef2_decoder.safetensors` is **derived**, not re-hosted: `madebyollin/taef2` ships one
+combined file and ComfyUI strict-loads the decoder half alone, so it is converted with
+madebyollin's own index shift (`decoder.layers.N` → `N+1`). Regenerate it — or check a
+future FLUX.3 — with the recipe in `tasks/MPI-420/validation.md`.
+
 ## Files
 - `js/services/comfyController.js` — ingest, engine tag, attribution, broken-frame gate, `preview:frame` emit.
 - `js/services/activeGenerations.js` — `byPromptId`, `getLastPreview`, `_lastPreview` map + bus listener.
