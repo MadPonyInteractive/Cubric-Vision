@@ -7,7 +7,7 @@
   "maturity": "planned",
   "status": "active",
   "created_at": "2026-07-30T20:04:00Z",
-  "updated_at": "2026-08-01T21:40:00Z",
+  "updated_at": "2026-08-05T12:05:00Z",
   "labels": [
     "bug",
     "model-library",
@@ -16,8 +16,8 @@
     "runpod"
   ],
   "acceptance": [
-    "Decide the product question first: is the first-run models-root choice an app-level setting that outlives the engine, or does it stay engine-owned",
-    "With 'Skip the local engine install' ON and a models folder holding real weights, the home hero reports a truthful installed count without any engine present",
+    "DECIDED 2026-08-05: the models root stays ENGINE-OWNED (see brief.md). The fix is that the hero must not claim a count it cannot have - not an app-level models root",
+    "With 'Skip the local engine install' ON, the home hero does NOT read MODELS 0 / 18 - it shows an honest unknown / not-installed state instead of the untouched initial zero",
     "The Model Library is coherent on a cloud-only machine before any Pod connect - either it lists what is on disk or it states plainly why it cannot",
     "extra_model_paths.yaml is still written correctly when a local engine IS later provisioned, from the stored root rather than instead of it",
     "Both engine paths checked - local and remote-connected - per the engine-split sweep rule"
