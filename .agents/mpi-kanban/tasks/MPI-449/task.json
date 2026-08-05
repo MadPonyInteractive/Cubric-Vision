@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-449",
+  "title": "Research MiniMax H3 on the local bench before any engine bump",
+  "description": "H3 is a packed audio+video DiT, supported in ComfyUI core from v0.30.0 (nodes MiniMaxH3ImageToVideo / MiniMaxH3ReferenceToVideo / EmptyMiniMaxH3LatentAV / MiniMaxH3SigmaShift, plus a minimax CLIPLoader type). The bench at G:/ComfyUi was bumped 0.29.2 -> 0.30.2 on 2026-08-05 and the nodes register clean. The open question is not wiring, it is feasibility: weights are at Comfy-Org/MiniMax-H3 and the smallest usable set is 53.9 GB (DiT pruned_fp8_scaled 20.96 + qwen3vl_32b int8_convrot 27.14 + video VAE 5.21 + audio VAE 0.61), against 53.7 GB free on G: and 16 GB VRAM on the RTX 4060 Ti. Answer runnability first on the bench (or a Pod), and only then decide whether to bump the engine off its 0.29.2 pin and wire H3 as a model.",
+  "column": "todo",
+  "maturity": "research",
+  "status": "active",
+  "created_at": "2026-08-05T03:20:00Z",
+  "updated_at": "2026-08-05T03:20:00Z",
+  "labels": [
+    "research",
+    "model",
+    "video",
+    "bench"
+  ],
+  "acceptance": [
+    "A yes/no on whether H3 runs at all on the 4060 Ti 16 GB, measured not guessed - or a Pod run standing in for it",
+    "One working bench workflow that produces video AND audio from H3, saved under the task research folder",
+    "The chosen weight variant recorded with its reason (fp8 vs int8_convrot vs nvfp4, pruned vs full)",
+    "A go/no-go on bumping the engine from 0.29.2 to 0.30.x, with the custom-node pairing risk checked",
+    "If no-go for local, the finding is written down so the next agent does not re-derive it"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  },
+  "priority": "normal",
+  "attention": false
+}

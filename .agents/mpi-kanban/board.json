@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 449,
+  "next_id": 450,
   "columns": {
     "todo": [
+      "MPI-449",
       "MPI-433",
       "MPI-432",
       "MPI-420",
@@ -53,6 +54,13 @@
   },
   "updated_at": "2026-08-05T10:30:00Z",
   "events": [
+    {
+      "at": "2026-08-05T03:20:00Z",
+      "type": "task.created",
+      "task": "MPI-449",
+      "actor": "opus",
+      "note": "Bench bumped 0.29.2 -> 0.30.2 and H3 nodes verified registered; the open question is feasibility, not wiring. Smallest usable weight set is 53.9 GB against 53.7 GB free on G: and 16 GB VRAM on the 4060 Ti. Engine stays pinned at 0.29.2 until this card returns a go."
+    },
     {
       "at": "2026-08-04T21:55:00Z",
       "type": "task.created",
