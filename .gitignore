@@ -33,6 +33,10 @@ comfy_workflows/raw/Model Merger.json
 
 # agents
 .agent
+# Kanban private scratch — contents NEVER committed, README kept so a fresh
+# clone still explains the convention. See .claude/rules/kanban.md.
+.agents/mpi-kanban/private/*
+!.agents/mpi-kanban/private/README.md
 .claude/settings.local.json
 .claude/playwright-cli
 .claude/skills/mpi-component-audit/.last-audit.json

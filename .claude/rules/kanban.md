@@ -25,9 +25,17 @@ directions 2026-08-04.)
 `github.com/MadPonyInteractive/Cubric-Vision`. CLAUDE.md's "Kanban writes are
 pre-authorized — never ask" grants permission to EDIT; it says nothing about privacy.
 Before writing a card, brief, `research.md` or an event `summary`, ask whether it would be
-fine on a web page. Personal data, licence or legal correspondence, credentials, customer
-names and anything under an NDA go **outside every git root** —
-`C:/AI/Mpi/_private/<topic>/` — with only a path pointer in the card.
+fine on a web page. If not, it goes in one of two homes — **never in the card** — and the
+card carries only a path pointer:
+
+| Ask | Home |
+|---|---|
+| Leaking it would be **embarrassing** — operational notes, hosts and endpoints, draft correspondence | `.agents/mpi-kanban/private/` — gitignored (`.gitignore:38`), its `README.md` the only tracked file |
+| Leaking it would be a **breach** — confidentiality undertakings, third-party legal correspondence, credentials, someone else's personal data | `C:/AI/Mpi/_private/<topic>/` — **outside every git root**, so nothing there can be staged at all |
+
+A `.gitignore` is one `git add -f`, one misconfigured tool or one `git clean -x` from
+failing, which is why the second tier exists and is not optional for breach-grade material.
+The MiniMax H3 licence request and authorization live there (`minimax-h3-licence/`, MPI-449).
 
 Caught 2026-08-05 on MPI-449: a licence request carrying a full legal name, email and terms
 agreed under a confidentiality undertaking was written into `tasks/MPI-449/` and was one
