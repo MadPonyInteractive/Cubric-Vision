@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-452", "type": "task.created", "at": "2026-08-05T07:00:00Z", "actor": "opus", "summary": "H3 model wiring split out from the research card. Created blocked: the licence gate (MPI-451) must land first, and whether the authorization reaches end users in excluded territories is still unconfirmed."}

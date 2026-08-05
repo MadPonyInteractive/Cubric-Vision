@@ -1,0 +1,33 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-451",
+  "title": "Licence gate: per-model terms acceptance before a gated model downloads",
+  "description": "Some model licences require us to bind the end user to terms before they receive the weights. MiniMax H3 makes this concrete - our authorization is conditioned on a flow-down commitment (bind each user to terms at least as protective as the Use Restrictions and Acceptable Use Policy, and notify them those restrictions apply). Flux is the next known consumer. Vision has no acceptance step anywhere in the install path today: a Model Library tile calls straight into downloadManager. Build a reusable gate driven by a licence descriptor on the ModelDef - show the terms, require an explicit accept, persist it per model, and where the licence is territory-restricted, link the user to the licensor's own authorization route rather than disclaiming responsibility onto them. Models with no licence descriptor keep today's behaviour exactly. BLOCKS MPI-452 (H3 release).",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-05T06:30:00Z",
+  "updated_at": "2026-08-05T07:00:00Z",
+  "labels": [
+    "legal",
+    "download",
+    "model-library",
+    "blocker",
+    "reusable"
+  ],
+  "acceptance": [
+    "A gated dep cannot download until the user has been shown the terms and explicitly accepted",
+    "Acceptance is recorded per model and survives a restart",
+    "The gate renders the licence's Use Restrictions and Acceptable Use Policy, and states they apply to the user",
+    "For a territory-restricted licence the gate links the licensor's own authorization route - no 'it is your responsibility' disclaimer",
+    "Driven by a descriptor on the ModelDef, so a second model (Flux) needs data only, no new code",
+    "Models with no licence descriptor are completely unaffected - no new step in their install path",
+    "A misuse-reporting route is reachable from the app (Discord link is acceptable)"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  },
+  "priority": "normal",
+  "attention": false
+}
