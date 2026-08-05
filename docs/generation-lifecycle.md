@@ -21,6 +21,33 @@ Op availability is data-driven from `commandRegistry` `mediaInputs` slot count +
 `getAvailableCommands` admits an op only when `requires* ≤ staged count ≤ #slots of that type`
 (+ `requiresMask`) — so a type's MAX capacity = its declared slot count.
 
+## An UNINSTALLED operation is undispatchable — the gate is the mechanism (MPI-453)
+
+Per-op weights are opt-in (`models.js` `operations[].deps`), so a model can be installed for one
+operation and not another — Wan 2.2 with the i2v pair but no t2v. The predicate is
+`deriveInstalledOps` (`resolveModelDeps.js`); every op-picking surface reaches it through
+`modelRegistry`:
+
+- `installedOpsForContext(model)` → the `installedOps` ctx key `getAvailableCommands` filters on.
+  **It returns `null`, not `[]`, when the dep-status cache is unseeded** — null means *unknown* and
+  falls back to the static `supportedOps`; `[]` would hide every op on a cold boot (MPI-122's
+  contract). Consumers: the PromptBox strip (via its own `_ctxWithInstalledOps`) and
+  `MpiGroupHistoryBlock._opOptions`.
+- `firstInstalledOp(model)` → what a fallback seeds. **Never seed from `supportedOps[0]`** — that
+  static list opens Wan 2.2 on `t2v_ms` regardless of what is on disk, and the strip (which DOES
+  filter) then shows a selection it never offered. Fixed at all three `MpiGalleryBlock` sites; the
+  remembered op (`getSelectedOp`) is re-checked too, since an uninstall leaves it dead but selected.
+- The hard net is in `commandExecutor`, beside the MPI-209 arch-weight guard: op declares its own
+  deps + dep-status cache present + not installed → `ui:warning` naming the operation, and no
+  dispatch. The UI is where the op is CHOSEN, never where undispatchability is proven — a reused
+  card or a stale memory can name an op no surface offered.
+
+Both guards skip when the dep-status cache is empty: unknown is not absent, and a false block would
+refuse a generation whose weights are present. When one slips through anyway, ComfyUI's
+`value_not_in_list` on `unet_name` is caught and toasted by name — `docs/comfy.md` § the 400 body.
+Do NOT fix this class by splitting a model into one Library entry per operation: per-op deps are the
+design and MiniMax H3 is the next consumer (MPI-449).
+
 ## The op never forces DOWN — two named exceptions only (MPI-337/356/388)
 
 MPI-337 killed the blanket force-DOWN: losing a required input leaves the op selected and dimmed,

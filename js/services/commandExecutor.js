@@ -20,7 +20,7 @@
 'use strict';
 
 import { ComfyUIController, getEngine } from './comfyController.js';
-import { getUniversalWorkflow, getModelById, getModelDepStatus } from '../data/modelRegistry.js';
+import { getUniversalWorkflow, getModelById, getModelDepStatus, isOperationInstalled } from '../data/modelRegistry.js';
 import { remoteEngineClient } from './remoteEngineClient.js';
 import { resolveDeps, resolveWorkflowFile, variantDepsOf, archVariantOptions } from '../data/modelConstants/resolveModelDeps.js';
 import { downloadService } from './downloadService.js';
@@ -1327,6 +1327,32 @@ export function runCommand(payload) {
             return true;
         };
 
+        // MPI-453 generate-time gate, the OPERATION twin of the arch guard below.
+        // Per-op weights are opt-in (models.js `operations[].deps`), so a model can
+        // be installed for one operation and not another — Wan 2.2 with i2v but no
+        // t2v. Every op-picking surface consults `deriveInstalledOps`, but the UI is
+        // not where that can be PROVEN: a remembered op, a reused card, or a seeded
+        // `supportedOps[0]` fallback can each name an op the strip never offered.
+        // Blocking here is what makes an uninstalled op undispatchable, instead of
+        // ComfyUI rejecting the graph with `unet_name ... not in [...]`.
+        // Skipped when the dep-status cache is empty — unknown is not absent, and a
+        // false block would refuse a generation whose weights are actually there.
+        const _opModel = getModelById(payload.modelId);
+        if (_opModel?.operations?.[payload.operation]
+            && getModelDepStatus(_opModel.id)
+            && !isOperationInstalled(_opModel, payload.operation)) {
+            const opLabel = COMMANDS[payload.operation]?.label || payload.operation;
+            clientLogger.warn('commandExecutor',
+                `Blocked ${payload.operation} on ${_opModel.id} — that operation's weights are not installed`);
+            Events.emit('ui:warning', {
+                title: `${opLabel} is not installed`,
+                message: `${_opModel.name} supports ${opLabel}, but its weights were never installed. `
+                    + 'Open the Model Library and add that operation to this model.',
+            });
+            exec.onError?.(new Error('operation_not_installed'));
+            return;
+        }
+
         // MPI-209 generate-time guard: an arch-variant model (LTX balanced) needs the
         // weight matching the LIVE GPU's arch. If that weight is not on disk, block
         // BEFORE dispatch and offer to install it — never let ComfyUI fail with a
@@ -2102,6 +2128,25 @@ export function runCommand(payload) {
                 Events.emit('ui:warning', {
                     message: `"${name}" was not found in your LoRA/upscale folders. `
                         + 'Add it in Settings → External Connections (drag-drop), or pick another in Model Settings.',
+                });
+                exec.onError?.(err);
+                return;
+            }
+            // MPI-453: ComfyUI rejected a LOADER filename — the weights this
+            // operation needs are not on disk. The pre-dispatch gate above catches
+            // the op-not-installed case; this is the backstop for everything it
+            // cannot see (a weight deleted behind the app's back, a Pod missing a
+            // baked file, a stale dep-status cache). User-actionable → warning
+            // toast NAMING the file, never the bug-reporter dialog.
+            if (err?.code === 'weights_missing_local' || err?.code === 'weights_missing_remote') {
+                const name = err.weightName || 'A required model weight';
+                const remote = err.code === 'weights_missing_remote';
+                clientLogger.warn('comfy', `Model weight missing (${remote ? 'remote' : 'local'}): ${name}`);
+                Events.emit('ui:warning', {
+                    title: 'Model weights not installed',
+                    message: remote
+                        ? `"${name}" isn't on the remote Pod. Install this operation there, or switch to the local engine.`
+                        : `"${name}" isn't installed. Open the Model Library and install this model's operation, then try again.`,
                 });
                 exec.onError?.(err);
                 return;

@@ -34,7 +34,7 @@ import { MpiQueuePanel } from '../../Compounds/MpiQueuePanel/MpiQueuePanel.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { navigate, PAGE_GALLERY } from '../../../router.js';
-import { getModelsByType, isModelUsable } from '../../../data/modelRegistry.js';
+import { getModelsByType, isModelUsable, installedOpsForContext } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getAvailableCommands, getCommandMediaInputs } from '../../../data/commandRegistry.js';
 import { enqueueGeneration, clearPendingQueue, refreshQueueDepth, cancelRunningCueJob } from '../../../services/generationService.js';
@@ -283,7 +283,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     liveMask = !!viewer.el.hasMask();
                 }
             } catch (_) { /* viewer not yet initialized — fall back to cache */ }
-            const maskCtx = { ..._baseCtx, hasMask: liveMask };
+            // MPI-453: the same installed-op filter the PromptBox strip applies —
+            // without it this list offers an op whose per-op weights are absent, and
+            // the block's own `activeOperation` seeds from it.
+            const maskCtx = { ..._baseCtx, hasMask: liveMask, installedOps: installedOpsForContext(activeModel) };
             return getAvailableCommands(activeModel.mediaType, activeModel, { ...maskCtx, ...ctx })
                 .filter(cmd => (cmd.requiresImages ?? 0) > 0 || (cmd.requiresVideo ?? 0) > 0)
                 .map(cmd => ({ value: cmd.key, label: cmd.label, disabled: !cmd.available }));

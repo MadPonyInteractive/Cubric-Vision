@@ -21,6 +21,7 @@ import { clientLogger } from './clientLogger.js';
 import { Events } from '../events.js';
 import { remoteEngineClient } from './remoteEngineClient.js';
 import { buildComfyViewUrl, collectComfyOutputUrls } from '../utils/comfyOutputUrls.js';
+import { findRejectedFile, rejectedBasename, MODEL_FILE_INPUTS } from '../utils/comfyValidationError.js';
 
 // Seconds to wait for the ComfyUI server to report ready before giving up.
 // Cold start on a slow / CPU-only machine loads torch + a checkpoint and can
@@ -112,29 +113,6 @@ function _describeComfyExit(exit) {
     return why
         ? `ComfyUI stopped while starting up — it ${how}. ${why}`
         : `ComfyUI stopped while starting up — it ${how}. See logs/app.log for details.`;
-}
-
-/**
- * Pull the offending `lora_name` out of a LOCAL ComfyUI 400 body's `node_errors`.
- * Shape (ComfyUI execution.py):
- *   node_errors: { "<nodeId>": { errors: [ { type: 'value_not_in_list',
- *     extra_info: { input_name: 'lora_name', received_value: 'sdxl\\x.safetensors' } } ] } }
- * `received_value` is the clean filename — preferred over parsing the `details`
- * string, which is '' whenever any other output node still validated.
- * @param {object|null|undefined} nodeErrors
- * @returns {string|null} the received lora_name, or null when no such error
- */
-function _findNodeErrorLora(nodeErrors) {
-    if (!nodeErrors || typeof nodeErrors !== 'object') return null;
-    for (const node of Object.values(nodeErrors)) {
-        for (const e of (node?.errors || [])) {
-            if (e?.type !== 'value_not_in_list') continue;
-            if (e?.extra_info?.input_name !== 'lora_name') continue;
-            const got = e.extra_info.received_value;
-            if (typeof got === 'string' && got) return got;
-        }
-    }
-    return null;
 }
 
 // Adapters over the shared js/utils/comfyOutputUrls.js (MPI-176): this controller
@@ -1489,7 +1467,7 @@ function createEngine({ engine, alwaysLocal }) {
                     let errCode = null;
                     let errMsg = 'ComfyUI Error';
                     let comfyBody = null;
-                    let nodeErrorLora = null;
+                    let nodeErrors = null;
                     try {
                         const errData = await req.json();
                         // The wrapper's 503 shape puts a STRING in `error`; ComfyUI's own
@@ -1503,9 +1481,9 @@ function createEngine({ engine, alwaysLocal }) {
                         // (server.py). The offending filename lives ONLY in
                         // node_errors[id].errors[].extra_info.received_value — the
                         // top-level `error.details` is '' whenever some other output
-                        // still validated. Reading it here is what lets the missing-LoRA
-                        // case below resolve on the local engine, not just remote.
-                        nodeErrorLora = _findNodeErrorLora(errData?.node_errors);
+                        // still validated. Reading it here is what lets the missing-file
+                        // cases below resolve on the local engine, not just remote.
+                        nodeErrors = errData?.node_errors || null;
                     } catch (_) { /* non-JSON proxy error body — keep the defaults */ }
                     // The detailed ComfyUI body (when present) is the part that names
                     // the real cause — log it and fold it into the surfaced message.
@@ -1525,20 +1503,28 @@ function createEngine({ engine, alwaysLocal }) {
                     // above the only remaining cause is a not-uploaded LoRA — a
                     // user-actionable warning toast, not the bug-reporter dialog.
                     //
-                    // Two carriers for the SAME ComfyUI rejection, one per engine:
+                    // Two carriers for the SAME ComfyUI rejection, one per engine —
+                    // `findRejectedFile` reads both and reports which one answered:
                     //  - remote: the wrapper folds ComfyUI's text into `detail.comfy_body`
-                    //    → scrape the name out of the message.
-                    //  - local:  ComfyUI answers directly with `node_errors` → read the
+                    //    → the name is scraped out of the message.
+                    //  - local:  ComfyUI answers directly with `node_errors` → the
                     //    structured `received_value` (no regex, no '' details trap).
                     // Missing the local carrier is what sent a bare 400 to the
                     // bug-reporter dialog instead of the missing-LoRA toast.
-                    const loraMiss = /value not in list:\s*lora_name:\s*'([^']+)'/i.exec(comfyBody || errMsg);
-                    const missingLora = nodeErrorLora || (loraMiss ? loraMiss[1] : null);
-                    if (missingLora) {
-                        // `node_errors` only ever comes from a direct ComfyUI reply (local);
-                        // `comfy_body` only ever comes from the Pod wrapper (remote).
-                        err.code = nodeErrorLora ? 'lora_missing_local' : 'lora_missing_remote';
-                        err.loraName = String(missingLora).split(/[\\/]/).pop();
+                    const loraHit = findRejectedFile(nodeErrors, ['lora_name'], comfyBody || errMsg);
+                    if (loraHit) {
+                        err.code = loraHit.carrier === 'node_errors' ? 'lora_missing_local' : 'lora_missing_remote';
+                        err.loraName = rejectedBasename(loraHit.name);
+                    }
+                    // MPI-453: the same rejection on a LOADER input — the weights for
+                    // this operation are not on disk (an op the user never installed,
+                    // or a weight removed behind the app's back). Expected and
+                    // user-actionable, so it is tagged for a toast naming the file;
+                    // untagged it reached MpiErrorDialog and invited a junk issue.
+                    const weightHit = !loraHit && findRejectedFile(nodeErrors, MODEL_FILE_INPUTS, comfyBody || errMsg);
+                    if (weightHit) {
+                        err.code = weightHit.carrier === 'node_errors' ? 'weights_missing_local' : 'weights_missing_remote';
+                        err.weightName = rejectedBasename(weightHit.name);
                     }
                     throw err;
                 }

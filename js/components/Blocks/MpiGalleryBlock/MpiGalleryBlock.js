@@ -32,7 +32,7 @@ import { extractFilenameFromPath, extractAbsPath, downloadMediaFiles, deleteMedi
 import { describeItem } from '../../../utils/describeAction.js';
 import { resolveActiveModel, setSelectedModelId, getSelectedModelId, getSelectedOp, setSelectedOp } from '../../../utils/modelHelpers.js';
 import { truncateCardName } from '../../../utils/displayHelpers.js';
-import { MODELS, getModelsByType, getModelById, isModelUsable, isOperationInstalled } from '../../../data/modelRegistry.js';
+import { MODELS, getModelsByType, getModelById, isModelUsable, isOperationInstalled, firstInstalledOp } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getAvailableCommands } from '../../../data/commandRegistry.js';
 import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob, peekCueQueue, cancelRunningCueJob } from '../../../services/generationService.js';
@@ -1064,10 +1064,15 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // keeps Block-side bookkeeping consistent with the initial model.
         // MPI-247: seed from the user's remembered op for this model first, so
         // navigating away and back doesn't snap the op back to t2i/i2i.
+        // MPI-453: the fallback is the first INSTALLED op, not supportedOps[0] —
+        // Wan 2.2 lists t2v_ms first and the user may only have the i2v weights.
         let activeOperation = getSelectedOp(activeModelId)
             ?? (activeModel?.mediaType === 'video' ? 't2v' : 't2i');
-        if (activeModel && !activeModel.supportedOps?.includes(activeOperation)) {
-            activeOperation = activeModel.supportedOps?.[0] ?? activeOperation;
+        // The REMEMBERED op is re-checked too: it was installed when the user last
+        // picked it, and an uninstall since then leaves it selectable but dead.
+        if (activeModel && (!activeModel.supportedOps?.includes(activeOperation)
+            || !isOperationInstalled(activeModel, activeOperation))) {
+            activeOperation = firstInstalledOp(activeModel) ?? activeOperation;
         }
         let imageCount      = 0;
         let videoCount      = 0;
@@ -1268,8 +1273,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 // PromptBox.setModel already picked the right op for current
                 // media context and emitted operation-change. The operation-change
                 // listener below syncs activeOperation — no force-reset here.
-                if (!model.supportedOps?.includes(activeOperation)) {
-                    activeOperation = model.supportedOps?.[0] ?? activeOperation;
+                if (!model.supportedOps?.includes(activeOperation)
+                    || !isOperationInstalled(model, activeOperation)) {
+                    activeOperation = firstInstalledOp(model) ?? activeOperation;
                     _pb?.el?.setOperation(activeOperation);
                 }
             });
@@ -1693,7 +1699,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 activeModel = newModel;
                 activeModelId = newModel.id;
                 setSelectedModelId(newModel.mediaType, newModel.id);
-                activeOperation = newModel.supportedOps?.[0] ?? activeOperation;
+                activeOperation = firstInstalledOp(newModel) ?? activeOperation;
                 _pb = _mountPb({
                     model: newModel,
                     modelList: installedAllModels,

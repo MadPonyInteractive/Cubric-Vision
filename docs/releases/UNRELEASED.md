@@ -253,3 +253,11 @@
   folder can have two spellings — a long one and a short `PROGRA~1`-style one — and
   the app treated them as two different folders, so the same LoRA or upscale folder
   could end up in your list twice. Both spellings now resolve to the same folder.
+
+- **An operation you didn't install no longer fails halfway through generating.**
+  Some models let you install one operation without the other — Wan 2.2's Text to
+  Video and Image to Video are separate downloads. Picking the one you skipped
+  started a generation that died on an error report screen, which read like a bug
+  in the app. The app now only offers the operations you actually installed, and if
+  one slips through it tells you which weights are missing and points you at the
+  Model Library instead of asking you to report it.

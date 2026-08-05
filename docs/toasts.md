@@ -124,19 +124,21 @@ signals* are suppressed. Rule + rationale: memory `feedback_no_toast_user_stop`.
 | `generationService.js:121` | Cue/Run, required media slot empty | Add a/an ${noun} before generating… | warning | **silent** |
 | `generationService.js:135` | Cue/Run, op needs a mask, none painted | Paint a mask before generating… | warning | **silent** |
 | `generationService.js:888` | imageDescribe returned no text | No description was returned. | warning | eligible |
-| `commandExecutor.js:383` | Upscale model file missing → SIAX fallback | Upscale model "…" was not found… Using the default… | warning | eligible |
-| `commandExecutor.js:577` | Remote pre-flight: hot-store has pending files to stage | Preparing the cloud engine for a faster generation… | info | eligible |
-| `commandExecutor.js:619` | "Stage all on connect" on + Pod connected | Warming the cloud engine — staging ${n} model(s)… | info | eligible |
-| `commandExecutor.js:1100` | On-demand GPU-arch weight install failed | Could not install the ${label} weight — generation aborted. | warning | eligible |
-| `commandExecutor.js:1332` | LoRA/upscale model missing in folders (pre-flight) | "…" was not found in your LoRA/upscale folders… | warning | eligible |
-| `commandExecutor.js:1357` | Media slot assigned but stranded (upload/resolve) | Could not load the input ${type}… | warning | eligible |
-| `commandExecutor.js:1374` | "Run locally" on, model not installed locally | "…" is not installed on your local engine… | warning | eligible |
-| `commandExecutor.js:1998` | `engine_restarting` (remote OOM self-restart) | Remote engine is restarting after a memory spike… | warning | eligible |
-| `commandExecutor.js:2009` | 409 `pod_incompatible` | (backend message) | warning | eligible |
-| `commandExecutor.js:2019` | `lora_missing_remote` | "…" isn't installed on the remote Pod… | warning | eligible |
-| `commandExecutor.js:2035` | `lora_missing_local` | "…" was not found in your LoRA/upscale folders… | warning | eligible |
-| `commandExecutor.js:2048` | `input_asset_deleted` | (backend message) | warning | eligible |
-| `commandExecutor.js:2061` | OOM (CUDA / MemoryError) | Ran out of memory processing this… | warning | eligible |
+| `commandExecutor.js:388` | Upscale model file missing → SIAX fallback | Upscale model "…" was not found… Using the default… | warning | eligible |
+| `commandExecutor.js:582` | Remote pre-flight: hot-store has pending files to stage | Preparing the cloud engine for a faster generation… | info | eligible |
+| `commandExecutor.js:624` | "Stage all on connect" on + Pod connected | Warming the cloud engine — staging ${n} model(s)… | info | eligible |
+| `commandExecutor.js:1166` | On-demand GPU-arch weight install failed | Could not install the ${label} weight — generation aborted. | warning | eligible |
+| `commandExecutor.js:1347` | Op whose per-op weights are not installed (pre-dispatch gate, MPI-453) | ${op} is not installed / Open the Model Library and add that operation… | warning | eligible |
+| `commandExecutor.js:1424` | LoRA/upscale model missing in folders (pre-flight) | "…" was not found in your LoRA/upscale folders… | warning | eligible |
+| `commandExecutor.js:1449` | Media slot assigned but stranded (upload/resolve) | Could not load the input ${type}… | warning | eligible |
+| `commandExecutor.js:1466` | "Run locally" on, model not installed locally | "…" is not installed on your local engine… | warning | eligible |
+| `commandExecutor.js:2091` | `engine_restarting` (remote OOM self-restart) | Remote engine is restarting after a memory spike… | warning | eligible |
+| `commandExecutor.js:2102` | 409 `pod_incompatible` | (backend message) | warning | eligible |
+| `commandExecutor.js:2112` | `lora_missing_remote` | "…" isn't installed on the remote Pod… | warning | eligible |
+| `commandExecutor.js:2128` | `lora_missing_local` | "…" was not found in your LoRA/upscale folders… | warning | eligible |
+| `commandExecutor.js:2145` | `weights_missing_local` / `weights_missing_remote` (MPI-453) | Model weights not installed / "…" isn't installed… | warning | eligible |
+| `commandExecutor.js:2160` | `input_asset_deleted` | (backend message) | warning | eligible |
+| `commandExecutor.js:2173` | OOM (CUDA / MemoryError) | Ran out of memory processing this… | warning | eligible |
 | `comfyController.js:300` | Cue during remote connect/disconnect transition | Disconnecting/Connecting the remote engine — wait… | info | eligible |
 | `comfyController.js:327` | Local ComfyUI auto-restart (new nodes) | Restarting ComfyUI — new custom nodes were installed. | info | eligible |
 | `comfyController.js:452` | Dispatch to a no-GPU (download-only) Pod | This Pod has no GPU — it is for downloading models only… | info | eligible |

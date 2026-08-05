@@ -430,6 +430,43 @@ export function isOperationInstalled(modelOrId, op) {
 }
 
 /**
+ * The `installedOps` value to hand `getAvailableCommands`, or null when the
+ * question does not apply — a model with no per-op deps, or a dep-status cache
+ * that has not landed yet. NULL IS LOAD-BEARING: it means "unknown", and
+ * getAvailableCommands then falls back to the static `supportedOps`. Returning
+ * `[]` there would hide every op instead (MPI-122's contract).
+ *
+ * @param {ModelDef|string|null} modelOrId
+ * @returns {string[]|null}
+ */
+export function installedOpsForContext(modelOrId) {
+    const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
+    if (!model?.operations) return null;
+    if (!getModelDepStatus(model.id)) return null;
+    return (model.supportedOps || []).filter(op => isOperationInstalled(model, op));
+}
+
+/**
+ * The model's first INSTALLED operation — what a fallback must land on.
+ *
+ * MPI-453: seeding an op from `supportedOps[0]` picks a static list entry the
+ * user may never have installed (Wan 2.2 opens on `t2v_ms` with only the i2v
+ * weights on disk), and the op strip — which DOES filter by installed ops —
+ * then renders a selection it never offered. Dispatching it hands ComfyUI a
+ * graph whose weights are absent. Falls back to `supportedOps[0]` when nothing
+ * is known to be installed, so an unknown dep-status cache changes nothing.
+ *
+ * @param {ModelDef|string|null} modelOrId
+ * @returns {string|null}
+ */
+export function firstInstalledOp(modelOrId) {
+    const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
+    const ops = model?.supportedOps;
+    if (!Array.isArray(ops) || !ops.length) return null;
+    return ops.find(op => isOperationInstalled(model, op)) ?? ops[0];
+}
+
+/**
  * Detects the MPI-207 "installed for a DIFFERENT GPU arch" state: the current
  * machine's arch-variant weight is NOT on disk, but exactly one OTHER arch's
  * variant weight IS. This is what lets the Models panel show "Install for your
