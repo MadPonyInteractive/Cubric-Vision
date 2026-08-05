@@ -483,7 +483,9 @@ classified by matching our recorded `sha256` against HF LFS oids (the tree API e
 |---|---|---|
 | our own bakes, re-hosted to `Mad-Pony-Interactive/cubric-studio` | 30 | generic prefix rewrite, no per-dep data |
 | byte-identical copies already published by third parties | 66 | explicit per-dep `mirrorUrl` |
-| a dep with neither | 1 today | `noMirror: true` |
+| a dep with neither | 1 of the 97 | `noMirror: true` |
+
+**The 97 are MODEL deps. Three engineAssets added since carry `noMirror: true` too** — `taesdxl-decoder`, `taef1-decoder`, `taef2-decoder` (MPI-420). They are not a gap in the sweep: no HF repo serves those bytes in the split/strict-load form ComfyUI's TAESD needs, so a generic rewrite could only 404. Counted 2026-08-05 during MPI-450's claim audit, because the release note said the whole catalogue had a second route and four deps did not.
 
 **One dep is deliberately single-route until 2026-08-10.** `krea2-raw-transformer-nsfw`
 (coyotte's LUSTIFY V10) was re-hosted by the sweep and then **deleted from HF by the user**

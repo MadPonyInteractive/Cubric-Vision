@@ -115,3 +115,47 @@ test('main.js derives the portable roots without a start script', () => {
   assert.match(main, /win-update\.cjs/);
   assert.ok(!/'update\.bat'/.test(main), 'run-update still spawns the blocked update.bat');
 });
+
+// -- MPI-416 (absorbed MPI-417): the connector symlink ---------------------------
+// `@cubric/connector` is a `file:` dep on a SIBLING REPO, so npm leaves a symlink in
+// node_modules - dangling on CI, where the sibling does not exist. copyAppTree
+// recreates symlinks and macOS ditto preserves them, so a VERIFIED 1.3.0 artifact
+// shipped a link to ../../../Cubric-Studio/... Nothing crashed (every consumer
+// dynamic-imports it in try/catch), but our own documented first-run command,
+// `xattr -dr com.apple.quarantine <folder>`, printed "No such file" for every Mac user.
+test('the @cubric file: dependency is excluded from the staged app tree', async () => {
+    const { shouldExcludeAppPath } = await import(
+        pathToFileURL(path.join(REPO_ROOT, 'scripts', 'build-portable.mjs')).href);
+    assert.equal(shouldExcludeAppPath('node_modules/@cubric/connector', 'connector'), true);
+    assert.equal(shouldExcludeAppPath('node_modules/@cubric', '@cubric'), true);
+    // Everything else in node_modules still ships - the app does not run without it.
+    assert.equal(shouldExcludeAppPath('node_modules/express/index.js', 'index.js'), false);
+    assert.equal(shouldExcludeAppPath('node_modules/@babel/runtime', 'runtime'), false);
+});
+
+test('a dangling symlink anywhere in the staged tree fails the build', async () => {
+    const { assertNoDanglingSymlinks } = await import(
+        pathToFileURL(path.join(REPO_ROOT, 'scripts', 'build-portable.mjs')).href);
+    const os = require('node:os');
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mpi416-'));
+    try {
+        // A real file + a link to it: the shape every macOS .framework uses, and the
+        // reason this check tests reachability rather than banning symlinks.
+        fs.mkdirSync(path.join(root, 'nested'), { recursive: true });
+        fs.writeFileSync(path.join(root, 'nested', 'real.txt'), 'x');
+        try {
+            fs.symlinkSync(path.join(root, 'nested', 'real.txt'), path.join(root, 'good.link'));
+        } catch (err) {
+            // Windows without Developer Mode / admin cannot create symlinks at all.
+            // Skipping is honest; asserting nothing would be a green test that proves nothing.
+            console.log(`  skip  dangling-symlink check (symlinks unavailable: ${err.code})`);
+            return;
+        }
+        await assertNoDanglingSymlinks(root); // resolves: nothing is broken
+
+        fs.symlinkSync(path.join(root, 'nested', 'gone.txt'), path.join(root, 'bad.link'));
+        await assert.rejects(() => assertNoDanglingSymlinks(root), /dangling symlink/);
+    } finally {
+        fs.rmSync(root, { recursive: true, force: true });
+    }
+});

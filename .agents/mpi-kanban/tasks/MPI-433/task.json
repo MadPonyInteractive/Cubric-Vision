@@ -4,10 +4,10 @@
   "title": "After 2026-08-10: re-upload the Krea 2 NSFW weight to HF and give it its second route back",
   "description": "DO NOT START BEFORE 2026-08-10. krea2-raw-transformer-nsfw is coyotte's LUSTIFY! V10 (CivitAI 573152), which is inside a paid early-access window that opens to the public on 2026-08-10. MPI-429 had re-hosted it to Mad-Pony-Interactive/cubric-studio as its mirror origin; the user DELETED that copy on 2026-08-03 because a public HF repo redistributes a paid-window weight in a way our own app-gated R2 does not. The upload is DEFERRED, not cancelled - MPI-430 settled that.\n\nConsequence while it is gone: the dep carries noMirror: true (js/data/modelConstants/modelDeps.js), because without it the generic prefix rewrite hands a blocked user an HF URL that 404s. Measured 2026-08-03: of the 31 deps relying on that rewrite, 30 returned 302 and this one alone 404'd. So this card is the ONLY thing standing between the catalogue and 'every dep has two routes' again.\n\nThe R2 copy is unaffected and has been serving throughout. Nothing is broken for users today; this restores failover coverage for one weight.\n\nWhat to do:\n  1. Confirm coyotte has actually opened the download (CivitAI 573152). If the date slipped, move this card's date, do not upload.\n  2. Upload the local/R2 file to Mad-Pony-Interactive/cubric-studio at vision/models/diffusion_models/lustify-v10-krea-raw-int8_convrot.safetensors - the SAME object path, which is what makes the generic rewrite reach it with no per-dep field.\n  3. Delete noMirror: true and the R2-ONLY comment block from the dep.\n  4. Re-verify by HEAD: the derived mirror must return 302, and the HF LFS oid must equal the recorded sha256 f165d4db2a4c9a8ce67f88851216ec41ee64ed508f0755de9d4dcd03175bc865 (the tree API's lfs.oid IS the sha256 - match by HASH, never by filename).\n  5. Roll back the counts and the dated notes in docs/download-manager.md (mirror table 30/66/1 -> 31/66/0), docs/models/krea2/licences.md, .claude/rules/downloads.md, and the example comment in tests/transport-error-message.test.cjs which currently names this dep as the noMirror case.\n\nUpload traps live in memory: hf_xet and hf_transfer silently bypass a bandwidth cap (tool_hf_upload_bandwidth_cap). 13.15GB.",
   "column": "todo",
-  "maturity": "planned",
+  "maturity": "blocked",
   "status": "active",
   "created_at": "2026-08-03T16:10:00Z",
-  "updated_at": "2026-08-03T16:10:00Z",
+  "updated_at": "2026-08-05T15:05:00Z",
   "labels": [
     "downloads",
     "licences",

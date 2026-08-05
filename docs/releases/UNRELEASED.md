@@ -129,6 +129,13 @@
   the finishing passes instead of being dropped by them.
 - **Krea 2 Control takes a second image.** Image 1 supplies the pose and
   composition, image 2 supplies who is posed into it.
+- **On a Mac, install Apple's Command Line Tools before your first setup.** Setting
+  up the local engine needs `git`, which on macOS only arrives with the Xcode Command
+  Line Tools — and a clean Mac does not have them. The first Install press stops with
+  a message naming exactly that. Open Terminal, run `xcode-select --install`, let
+  Apple's download finish, then press Retry. This is a known issue, not a fault in
+  your download: Windows ships a prebuilt engine and never needs git, while macOS and
+  Linux build theirs. Removing the requirement is being worked on separately.
 - **Krea 2 and Chroma keep your source dimensions.** On Krea 2, every operation
   except Text to Image and Image to Image now follows the input image's shape
   instead of the ratio picker. On Chroma this applies to Detail and Upscale;
@@ -194,11 +201,10 @@
   why on the next launch instead of vanishing silently. Because the updater that
   runs is the one already installed, this takes effect when updating FROM this
   version — updating TO it still needs you to reopen the app yourself.
-- **Pinching on a Mac trackpad no longer resizes the whole interface.** macOS
-  sends a two-finger pinch as a Ctrl+scroll, and the app was treating that as the
-  shortcut for changing UI size — so trying to zoom into an image blew up the
-  entire interface instead. Ctrl+scroll no longer changes UI size on any
-  platform; use **Ctrl** (or **Cmd**) with **+** / **-**, which always did the
+- **Ctrl+scroll no longer changes the size of the interface.** macOS sends a
+  two-finger trackpad pinch as a Ctrl+scroll, and the app was treating that as the
+  shortcut for changing UI size — so on a Mac, trying to zoom into an image blew up
+  the entire interface instead. That shortcut is gone on every platform; use **Ctrl** (or **Cmd**) with **+** / **-**, which always did the
   same job. **And the size you pick now survives a restart** — it used to be
   forgotten on every launch, which meant anyone who needs a larger interface set
   it again every single time they opened the app.
@@ -212,8 +218,8 @@
   rough preview on purpose: Krea 2, both Qwen models and Wan 2.2 share a preview
   decoder with a known bug that corrupts the real generation, so the mediocre
   preview is the safe choice until that is fixed upstream.
-- **Model downloads now have a second route when your network blocks the first.**
-  Every model file was served from one address, so an ISP filter, a school or
+- **Most model downloads now have a second route when your network blocks the
+  first.** Every model file was served from one address, so an ISP filter, a school or
   office network, or antivirus web protection sitting on that one address stopped
   the whole catalogue — nothing would install, and the app looked broken when the
   network was the problem. If the connection to the usual host fails, the download
@@ -222,7 +228,9 @@
   explanation: if both routes fail you still get the "your network blocked this,
   try a VPN" message instead of a bare error code. This helps when a network
   blocks the address; a network that interferes with the transfer itself can still
-  break a download.
+  break a download. Four files still have a single route — one large model whose
+  licence does not allow us to publish a second copy yet, and the three small preview
+  decoders, which exist nowhere else in the form the app needs.
 - **Setting up the engine downloads less, and stops hiding a step that always
   failed.** The generation engine is built from a set of add-ons, and each one used
   to install its own list of supporting libraries — over a dozen separate passes that

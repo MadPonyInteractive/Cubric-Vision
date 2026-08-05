@@ -49,3 +49,26 @@ Full ordered list is in the card's `description`; the two that carry a trap:
 Check CivitAI 573152 first. If coyotte has not opened it, **move this card's date and
 upload nothing** — the whole point of the deferral is the window, not the calendar.
 CivitAI is UK-region-blocked; that check needs Fabio's VPN on (CLAUDE.md § VPN).
+
+## Date gate CHECKED 2026-08-05 (MPI-450 Gate C) — do not upload
+
+1.4 is being cut BEFORE 2026-08-10, so this card does not run: coyotte's public
+release of LUSTIFY V10 has not happened yet and nothing may be uploaded. The card
+keeps its date and stays in `todo`.
+
+What the gate actually decided, per MPI-450's brief: since we ship before the date,
+the release note must not claim the catalogue is universally two-route. Done — the
+`UNRELEASED.md` bullet now reads "**Most** model downloads now have a second route"
+and names what does not.
+
+**The audit found three MORE single-route deps than this card knew about.**
+`taesdxl-decoder`, `taef1-decoder` and `taef2-decoder` (added by MPI-420 in this same
+cycle) all carry `noMirror: true`. They are NOT this card's problem and must not be
+folded into it: no HF repo serves those bytes in the split/strict-load form ComfyUI's
+TAESD needs, so they are permanently single-route by nature, not by licence timing.
+`docs/download-manager.md`'s mirror table was stale on this and now says so.
+
+So step 5 of this card's rollback plan is now wrong in one detail: after the upload,
+the mirror table goes to **31 / 66 / 0 of the 97 model deps**, and the three decoders
+stay listed separately as permanent `noMirror` engineAssets. Do not "restore" a line
+claiming zero single-route deps overall.

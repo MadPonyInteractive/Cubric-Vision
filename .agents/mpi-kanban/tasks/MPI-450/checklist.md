@@ -43,10 +43,31 @@ when it is believed.
 
 ## Gate C — must decide (before the notes are frozen)
 
-- [ ] **MPI-433** — release date checked against 2026-08-10. If on/after: HF re-upload done, same object path, verified by sha256 `f165d4db2a4c9a8ce67f88851216ec41ee64ed508f0755de9d4dcd03175bc865`. If before: the second-route bullet does not claim the whole catalogue
-- [ ] **MPI-416** — dangling `@cubric/connector` symlink fixed in the macOS artifact
-- [ ] **MPI-416** — Xcode Command Line Tools requirement written as a known issue (NOT fixed in 1.4)
-- [ ] **Claim audit** — all 17 fix bullets in `UNRELEASED.md` verified or reworded to what was actually run
+- [x] **MPI-433** — date CHECKED 2026-08-05: 1.4 ships BEFORE 2026-08-10, so nothing is
+      uploaded and the card keeps its date (`maturity: blocked`). The decision that
+      mattered was the note: the bullet now reads "**Most** model downloads now have a
+      second route" and names what does not. **The audit found three MORE single-route
+      deps than MPI-433 knew about** — the MPI-420 preview decoders, permanently
+      `noMirror` by nature, not by licence timing. Recorded on MPI-433's brief and in
+      `docs/download-manager.md`, whose mirror table said "1 today" and was stale.
+- [x] **MPI-416** — dangling `@cubric/connector` symlink FIXED in the build: the
+      `@cubric` scope is excluded from the staged app tree, and `assertNoDanglingSymlinks`
+      now walks the WHOLE staged tree (the earlier check was scoped to `Electron.app`,
+      which is why a verified 1.3.0 artifact shipped a dangling link). Two node tests with
+      a proven negative control, plus a real local Windows stage: 6444 files, check clean,
+      `node_modules/@cubric` absent.
+- [x] **MPI-416** — Xcode Command Line Tools requirement shipped as a known issue in
+      `UNRELEASED.md` § importantChanges (`xcode-select --install` before first setup).
+      The card is `deferred`, NOT fixed — the tarball-instead-of-clone candidate is not
+      established to remove the requirement (CLT also supplies clang). See its brief.
+- [ ] **Claim audit** — PARTIAL. All 23 fix bullets were read and the two that were
+      false were corrected: the mirror bullet (claimed the whole catalogue) and the Mac
+      pinch bullet (asserted a macOS outcome nobody has run — MPI-432 exists to run it).
+      **What remains is per-bullet verification against what was actually executed**, and
+      it belongs with the fold into `RELEASE_NOTES['1.4.0']` at bump time. Known soft
+      spots to settle there: the preview-decoder bullet (Klein verified, Wan not), the
+      install-screen flicker bullet (fixed and unit-tested, never SEEN fire), and
+      "Resize Video works on a cloud GPU" (no remote run recorded).
 
 ## Bump
 

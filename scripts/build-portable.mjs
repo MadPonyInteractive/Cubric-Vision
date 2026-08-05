@@ -340,11 +340,23 @@ async function writeBuildInfo(appRoot, buildHash) {
   );
 }
 
-function shouldExcludeAppPath(relPath, entryName, excludeNodeModules = false) {
+export function shouldExcludeAppPath(relPath, entryName, excludeNodeModules = false) {
   const normalized = toPosix(relPath);
   const rootName = normalized.split('/')[0] || entryName;
   if (APP_COPY_EXCLUDES.has(rootName)) return true;
   if (excludeNodeModules && rootName === 'node_modules') return true;
+  // MPI-416 (absorbed MPI-417): `@cubric/connector` is a `file:` dependency on a
+  // SIBLING REPO, so npm leaves a symlink here — dangling on CI, where the sibling
+  // does not exist, and dangling on every user machine even when it does. The copy
+  // below faithfully recreates symlinks and macOS `ditto` preserves them, so the
+  // shipped .zip carried a link to `../../../Cubric-Studio/...`. It never crashed
+  // anything (all three consumers dynamic-import it in try/catch and run standalone
+  // without it), but our own documented first-run command,
+  // `xattr -dr com.apple.quarantine <folder>`, printed "No such file" at this path
+  // for EVERY Mac user, who reasonably reads that as a broken download.
+  // Excluded, not dereferenced: a shipped build has never had the SDK, so copying
+  // the real files in would be a behaviour change nobody asked for.
+  if (normalized === 'node_modules/@cubric' || normalized.startsWith('node_modules/@cubric/')) return true;
   if (rootName.startsWith('.env')) return true;
   if (normalized.endsWith('.log')) return true;
   return false;
@@ -606,6 +618,38 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
   // excluded or the bundle/plutil is missing.
   if (opts.platform === 'darwin' && opts.nodeModules) {
     await brandMacBundle(appRoot);
+  }
+
+  await assertNoDanglingSymlinks(appRoot);
+}
+
+// MPI-416: the `@cubric/connector` link shipped in a verified macOS artifact because
+// nothing ever looked. A symlink is only staged by copyAppTree recreating one, so the
+// only honest check is over the WHOLE staged app tree — an earlier check existed but
+// was scoped to Electron.app, which is exactly why it missed this. macOS .framework
+// links are relative and resolve fine, so a "does the target exist" test passes them.
+// Throws: a dangling link in an artifact is a build bug, not a warning.
+export async function assertNoDanglingSymlinks(appRoot) {
+  const dangling = [];
+  const walk = async (dir) => {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isSymbolicLink()) {
+        if (!(await pathExists(full))) {
+          dangling.push(`${toPosix(path.relative(appRoot, full))} -> ${await fs.readlink(full)}`);
+        }
+        continue; // never follow a link while walking — a cycle would hang the build
+      }
+      if (entry.isDirectory()) await walk(full);
+    }
+  };
+  await walk(appRoot);
+  if (dangling.length) {
+    throw new Error(
+      `Staged app tree contains ${dangling.length} dangling symlink(s) — they ship as broken paths `
+      + `and break \`xattr -dr com.apple.quarantine\` for the user:\n  ${dangling.join('\n  ')}`,
+    );
   }
 }
 
