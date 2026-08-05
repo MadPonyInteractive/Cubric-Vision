@@ -33,10 +33,21 @@ Triggers:
 
 Each job calls `scripts/build-portable.mjs` with an explicit `--stage-dir`
 under `${{ runner.temp }}` and uploads the full artifact plus update bundle as a
-private GitHub Actions artifact named `cubric-vision-<platform>-<arch>` (14-day
-retention). Public source-repo workflows must not upload early-access portable
-artifacts. CI does **not** publish a GitHub Release and cannot write to a local
-disk - see "Collecting CI artifacts" below.
+private GitHub Actions artifact named `cubric-vision-<platform>-<arch>`
+(`retention-days: 1`). Public source-repo workflows must not upload early-access
+portable artifacts. CI does **not** publish a GitHub Release and cannot write to a
+local disk - see "Collecting CI artifacts" below.
+
+**Every dispatch costs storage, released or not (MPI, 2026-08-05).** One run
+uploads ~1.8 GB (win 925 MB + linux 481 + mac 450) and GitHub meters Actions
+storage **by the hour**, so the 2 GB plan is really ~1460 GB-hours/month. Between
+2026-07-30 and 08-02 there were 16 dispatches and only 2 releases: the 14
+build-iteration runs nobody collected still spent ~137% of the month's whole
+allowance and tripped the 100%-used alert. This is why retention is 1 day, and
+why **any dispatch you are not about to release from should have its artifacts
+deleted as soon as you have what you came for** — same loop as the release flow's
+in `.claude/skills/mpi-release/references/build-dispatch.md`. Iterating on the
+build script? Prefer a single-OS matrix over a full three-OS run.
 
 ### Local dev builds
 

@@ -89,10 +89,11 @@ on the release.
 
 ## Delete the CI artifacts after a verified download (storage hygiene)
 
-The mpi-ci portable artifacts are ~1.6GB per build and count against the 2GB free
-Actions storage quota. Once downloaded to the Builds folder and attached to the
-release, the CI copies are dead weight. Delete them **after** confirming the
-download landed, never before.
+The mpi-ci portable artifacts are ~1.8GB per build and count against the 2GB free
+Actions storage plan — which GitHub meters **by the hour**, so it is really
+~1460 GB-hours/month and one uncollected 3-day run used to cost 130 of them. Once
+downloaded to the Builds folder and attached to the release, the CI copies are
+dead weight. Delete them **after** confirming the download landed, never before.
 
 ```bash
 export MSYS_NO_PATHCONV=1   # Git Bash mangles leading-slash API paths
@@ -109,9 +110,11 @@ for id in $(gh api --paginate "repos/MadPonyInteractive/mpi-ci/actions/runs/$RUN
 done
 ```
 
-Retention is already `retention-days: 3` in the workflow as a backstop, so
-skipping this only delays reclaim by 3 days. Deleting Actions artifacts touches
-nothing else (git, the GitHub Release, and the Pod image are all separate).
+`retention-days: 1` in the workflow is the backstop, not a licence to skip this —
+the previous wording ("skipping only delays reclaim by 3 days") is what let 14
+uncollected runs blow the whole month's storage in 2026-08. Deleting Actions
+artifacts touches nothing else (git, the GitHub Release, and the Pod image are all
+separate).
 
 ## Notes
 
