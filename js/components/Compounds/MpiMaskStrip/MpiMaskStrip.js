@@ -200,7 +200,9 @@ export const MpiMaskStrip = ComponentFactory.create({
             const presetPicker = MpiDropdown.mount(qs('#preset-slot', el), {
                 options: BRUSH_PRESETS.map(p => ({ label: p.label, value: p.id })),
                 value: startPreset,
-                direction: 'up',
+                // Opens DOWN (the default). "Bottom strip" names its place in the tool
+                // panel, not on the screen — the panel starts near the top of the
+                // sidebar, so an upward list runs off the top of the window.
                 info: 'Brush shape — hardness, scatter and flow, generated per dab',
             });
             // Pushed down for the same reason the brush pair is: the dropdown reports
