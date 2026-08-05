@@ -36,6 +36,9 @@ export const STORAGE_KEYS = {
   // Viewer rendering
   PIXEL_MODE:          'mpi_pixel_mode',
 
+  // MPI-374: global UI size (webFrame zoom factor), restored on boot
+  UI_ZOOM_FACTOR:      'mpi_ui_zoom_factor',
+
   // OS notification prefs (per-type opt-out)
   NOTIFICATION_PREFS:  'mpi_notification_prefs',
 

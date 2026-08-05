@@ -190,6 +190,11 @@ export const Storage = {
   getCompDebug:        () => get(STORAGE_KEYS.COMP_DEBUG, false),
   setCompDebug:        (v) => set(STORAGE_KEYS.COMP_DEBUG, v),
 
+  // MPI-374: global UI size. Clamping/validation lives in uiZoom.js, the single
+  // source of truth for the bounds.
+  getUiZoomFactor:     () => get(STORAGE_KEYS.UI_ZOOM_FACTOR, 1),
+  setUiZoomFactor:     (v) => set(STORAGE_KEYS.UI_ZOOM_FACTOR, v),
+
   getSelectedModels:   () => get(STORAGE_KEYS.SELECTED_MODELS, { image: null, video: null }),
   setSelectedModels:   (v) => set(STORAGE_KEYS.SELECTED_MODELS, v),
 

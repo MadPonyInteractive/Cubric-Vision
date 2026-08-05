@@ -4,6 +4,12 @@
 import { initShell } from './shell.js';
 import { initPaths } from './data/modelRegistry.js';
 import { checkForUpdate } from './services/updateChecker.js';
+import { restoreUiZoom } from './utils/uiZoom.js';
+
+// MPI-374: re-apply the stored UI size before anything renders. Deliberately at
+// module top level, not inside init() — an await first would let the page paint
+// at 1.0 and resize under the user.
+restoreUiZoom();
 
 // Capture native dialogs before any override to prevent mutual recursion.
 const _nativeAlert   = window.alert.bind(window);

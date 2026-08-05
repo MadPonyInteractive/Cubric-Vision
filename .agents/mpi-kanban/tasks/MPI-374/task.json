@@ -2,11 +2,11 @@
  "schema": "mpi-kanban/task-card/v1",
  "id": "MPI-374",
  "title": "UI size must survive a restart",
- "column": "todo",
- "maturity": "planned",
+ "column": "doing",
+ "maturity": "validating",
  "status": "active",
  "created_at": "2026-07-28T13:32:00Z",
- "updated_at": "2026-08-01T21:40:00Z",
+ "updated_at": "2026-08-05T10:50:00Z",
  "labels": [
   "ui",
   "ux",
@@ -24,11 +24,7 @@
  "links": {
   "brief": "brief.md",
   "checklist": "checklist.md",
-  "validation": "validation.md",
   "events": "events.jsonl",
-  "files": "files.md",
-  "handoffs": "handoffs/",
-  "plan": "plan.md",
-  "research": "research.md"
+  "validation": "validation.md"
  }
 }
