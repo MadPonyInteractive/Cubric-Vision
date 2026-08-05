@@ -2,6 +2,32 @@
 
 Built under **MPI-450 Gate A**. User's call on the fork: **ship the decoders**.
 
+> ## ⚠️ Correction, same session — read this before the rest
+>
+> The first cut of this card shipped **four** decoders and a table saying *"Krea 2,
+> Chroma → `Flux` → `taef1_decoder`"*. **Both were wrong**, and the user caught it from
+> memory of a prior finding.
+>
+> 1. **Krea 2 is not Flux-latent.** `comfy/supported_models.py`:
+>    `class Krea2 … latent_format = latent_formats.Wan21`. So do both Qwen models. Their
+>    decoder is `lighttaew2_1`, and `taef1` was never theirs. Read the latent format out
+>    of `supported_models.py`, never off a model's transformer lineage.
+> 2. **`lighttaew2_2` was reverted before release.**
+>    [`models/krea2/preview-taesd.md`](../../../../docs/models/krea2/preview-taesd.md)
+>    already recorded a deliberate decision not to install these: ComfyUI issue
+>    **#13366** makes the previewer corrupt the **real generation latent** mid-sampling
+>    on the `Wan21`/`Wan22`/Qwen family. Re-checked upstream 2026-08-05 with `gh api` —
+>    issue **open**, fix PR **#13383 unmerged**, both untouched since April.
+>
+> The already-downloaded copy was **deleted from the user's models root**: the file on
+> disk is what arms the bug, not the dep entry. Ships now: `taesdxl`, `taef1`, `taef2`.
+>
+> A local probe *did* show no in-place mutation of `x0` on 0.29.2 for all three paths
+> (`scratchpad/probe_13366.py`) — evidence, not proof. It only rules out the most direct
+> mechanism, on a random CPU tensor; it cannot rule out the model-management
+> interference that a mid-sampling VAE load can cause. An open upstream corruption bug
+> against the exact file is not something to ship a release on.
+
 ## The card's premise was wrong — correct it before reading further
 
 The card said: *"CONSEQUENCE: no live preview image while sampling; the user watches a

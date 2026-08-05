@@ -107,24 +107,33 @@ const volumeEngineAssets = () => Object.values(DEPS)
 //    taef2 (FLUX.2 Klein) and lighttaew2_2 (Wan 2.2) are newer than both and must
 //    reach a Pod over the volume.
 {
-    const volume = volumeEngineAssets();
-    for (const id of ['taef2-decoder', 'lighttaew2-2']) {
-        assert.ok(volume.includes(id),
-            `${id} must be volume-installed on remote — it is NOT in the Pod image`);
-    }
+    assert.ok(volumeEngineAssets().includes('taef2-decoder'),
+        'taef2-decoder must be volume-installed on remote — it is NOT in the Pod image');
     for (const id of ['taesdxl-decoder', 'taef1-decoder']) {
         assert.strictEqual(_isImageResident(DEPS[id]), true,
             `${id} is baked into the Pod image — must report image-resident`);
     }
     // Every decoder is an engineAsset: it belongs to no model, so a model-keyed
     // install would never reach it, and a GC with its "owner" would delete it.
-    for (const id of ['taesdxl-decoder', 'taef1-decoder', 'taef2-decoder', 'lighttaew2-2']) {
+    for (const id of ['taesdxl-decoder', 'taef1-decoder', 'taef2-decoder']) {
         const dep = DEPS[id];
         assert.ok(dep, `${id} missing from DEPS`);
         assert.strictEqual(dep.engineAsset, true, `${id} must be an engineAsset`);
         assert.ok(/^vae_approx\//.test(dep.filename),
             `${id} must live under vae_approx/ — ComfyUI looks nowhere else`);
         assert.ok(dep.sha256 && dep.sha256.length === 64, `${id} needs a real sha256`);
+    }
+    // THE GUARD THAT MATTERS. ComfyUI #13366 (open, PR #13383 unmerged, re-checked
+    // 2026-08-05): with a lighttaew* decoder installed and taesd previews forced on,
+    // the previewer corrupts the REAL generation latent mid-sampling on the
+    // Wan21/Wan22/Qwen family — Krea 2, both Qwen models and Wan 2.2. Shipping one
+    // trades a mediocre preview for degraded OUTPUT, and the symptom looks like a bad
+    // model, not a bad dep. A future agent WILL be tempted: the file is on R2, the
+    // decoder name is right there in latent_formats.py, and previews for those models
+    // visibly stink. See docs/models/krea2/preview-taesd.md before deleting this.
+    for (const [id, dep] of Object.entries(DEPS)) {
+        assert.ok(!/^lighttaew/.test((dep?.filename || '').split('/').pop() || ''),
+            `${id} installs a lighttaew* preview decoder — ComfyUI #13366 corrupts real generations with it. Confirm that issue is FIXED in our engine version before adding it back.`);
     }
 }
 

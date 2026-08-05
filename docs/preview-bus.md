@@ -113,18 +113,37 @@ The decoders our models name ship as `engineAsset` deps under `vae_approx/` in
 `assetDeps.js`. The folder key needs no `yamlHelper` edit — it derives from the first path
 segment of `filename`.
 
-| Model | ComfyUI latent format | Decoder | Notes |
-|---|---|---|---|
-| SDXL Realistic / NSFW, ILL Anime (both), PONY Mix | `SDXL` | `taesdxl_decoder` | baked into the Pod image |
-| Krea 2, Chroma (both) | `Flux` | `taef1_decoder` | baked into the Pod image |
-| FLUX.2 Klein | `Flux2` | `taef2_decoder` | volume-installed on remote |
-| Wan 2.2 | `Wan22` | `lighttaew2_2` | video branch, loads as a whole VAE (45MB) |
-| Qwen Image / Image Edit, LTX | — | **none** | no `taesd_decoder_name` in 0.29.2 → latent2rgb is all they can have |
+**Read the latent format out of `comfy/supported_models.py`, never off the model's
+lineage.** Krea 2 is Flux-lineage in the transformer only; its latent space is
+Qwen-Image, which ComfyUI classifies as `Wan21`. Assuming "Krea 2 is Flux, so it uses
+taef1" is wrong and was written into this table once already.
 
-Two gaps this closed, both silent: `vae_approx/` ships inside the **Windows** ComfyUI
-portable archive but macOS/Linux provision by git-cloning ComfyUI, which carries none of
-it — so every preview on those platforms was latent2rgb; and the bundle predates FLUX.2
-and Wan 2.2, so Klein and Wan were blobs on **every** platform.
+| Model | ComfyUI latent format | Decoder | Shipped? |
+|---|---|---|---|
+| SDXL Realistic / NSFW, ILL Anime (both), PONY Mix | `SDXL` | `taesdxl_decoder` | ✅ engineAsset, baked on Pod |
+| Chroma (both) | `Flux` | `taef1_decoder` | ✅ engineAsset, baked on Pod |
+| FLUX.2 Klein | `Flux2` | `taef2_decoder` | ✅ engineAsset, volume-installed on remote |
+| **Krea 2, Qwen Image, Qwen Image Edit** | `Wan21` | `lighttaew2_1` | ❌ **deliberately never** — see below |
+| **Wan 2.2** | `Wan22` | `lighttaew2_2` | ❌ **deliberately never** — see below |
+| LTX | `LTXV` / `LTXAV` | none in 0.29.2 | n/a — latent2rgb is its ceiling |
+
+### The `lighttaew*` decoders are a landmine — do not "fix" the blob previews with them
+
+ComfyUI issue **#13366**, *"TAESD preview corrupts midsampling latent if lighttaew2_1 is
+present"*: with the file installed and taesd previews on (we force them globally), the
+previewer corrupts the **real generation latent** — degraded output, not just a bad
+preview. It hits the `Wan21`/`Wan22`/Qwen family, which is Krea 2, both Qwen models and
+Wan 2.2. **Re-checked 2026-08-05: #13366 still open, fix PR #13383 still unmerged, both
+untouched since April.** So those five models keep the mediocre latent2rgb preview on
+purpose. Full reasoning: [`models/krea2/preview-taesd.md`](models/krea2/preview-taesd.md).
+
+The bytes are staged on R2 (`vae_approx/lighttaew2_2.safetensors`, sha `10124099…0ba16a`)
+so that re-adding the dep is the whole job once that PR lands in our engine version.
+
+The gap that WAS closed, silently costing quality until 1.4: `vae_approx/` ships inside
+the **Windows** ComfyUI portable archive, but macOS/Linux provision by git-cloning
+ComfyUI, which carries none of it — so every preview on those platforms was latent2rgb.
+And the bundle predates FLUX.2, so Klein was a blob on every platform.
 
 `taef2_decoder.safetensors` is **derived**, not re-hosted: `madebyollin/taef2` ships one
 combined file and ComfyUI strict-loads the decoder half alone, so it is converted with

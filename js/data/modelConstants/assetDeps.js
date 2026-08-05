@@ -420,12 +420,14 @@ export const assetDeps = {
     //      (taef2) and Wan 2.2 (lighttaew2_2) are newer than the bundle, so
     //      Klein and Wan previews were blobs on EVERY platform, Windows included.
     //
-    // Only the decoders our own models actually name are here: SDXL family →
-    // taesdxl, Krea 2 + Chroma → taef1, FLUX.2 Klein → taef2, Wan 2.2 →
-    // lighttaew2_2. Qwen and LTX name no decoder in ComfyUI 0.29.2 (latent2rgb
-    // is all they can have); SD1.5/SD3 decoders are skipped — we ship neither.
-    // The `vae_approx` folder key needs no yamlHelper edit: it derives from the
-    // first path segment of `filename`.
+    // Only the decoders our own models actually name are here, and ONLY the ones
+    // that are safe to install: SDXL family → taesdxl, Chroma → taef1, FLUX.2
+    // Klein → taef2. Krea 2 and Qwen are NOT Flux-latent (both are `Wan21`, see
+    // comfy/supported_models.py) — their decoder is `lighttaew2_1`, which we
+    // deliberately do NOT ship; the block at the end of this file says why.
+    // LTX names no decoder in ComfyUI 0.29.2, and SD1.5/SD3 are skipped — we ship
+    // no model on either. The `vae_approx` folder key needs no yamlHelper edit:
+    // it derives from the first path segment of `filename`.
     'taesdxl-decoder': {
         id: 'taesdxl-decoder',
         name: 'TAESD preview decoder (SDXL)',
@@ -468,19 +470,20 @@ export const assetDeps = {
         engineAsset: true,
         noMirror: true,
     },
-    // Wan 2.2 previews take the VIDEO_TAES branch, which loads the whole thing as
-    // a comfy VAE rather than a bare decoder state dict — hence the 45MB and the
-    // lack of a "_decoder" suffix. Byte-identical upstream, so it keeps a real
-    // mirror. Not in the Pod image.
-    'lighttaew2-2': {
-        id: 'lighttaew2-2',
-        name: 'TAEW preview decoder (Wan 2.2)',
-        origin: 'lightx2v/Autoencoders',
-        filename: 'vae_approx/lighttaew2_2.safetensors',
-        url: 'https://models.cubric.studio/vision/models/vae_approx/lighttaew2_2.safetensors',
-        mirrorUrl: 'https://huggingface.co/lightx2v/Autoencoders/resolve/main/lighttaew2_2.safetensors',
-        size: '45.7MB',
-        sha256: '10124099e0c9864db4e6bcd0f09d822282753e553d344fcf2748cf50140ba16a',
-        engineAsset: true,
-    },
+    // *** DO NOT ADD THE `lighttaew*` DECODERS. *** They are the Wan21/Wan22/Qwen
+    // family (which is Krea 2, Qwen Image, Qwen Image Edit AND Wan 2.2 — see the
+    // table in docs/preview-bus.md), and they take ComfyUI's VIDEO_TAES branch,
+    // which loads the file as a WHOLE VAE rather than a decoder-only state dict.
+    // ComfyUI issue #13366 — "TAESD preview corrupts midsampling latent if
+    // lighttaew2_1 is present" — means that with the file installed AND taesd
+    // previews on (we force them globally), the previewer corrupts the REAL
+    // generation latent: degraded OUTPUT, not just a bad preview. Re-checked
+    // 2026-08-05: issue #13366 still OPEN, fix PR #13383 still UNMERGED, both
+    // untouched since April. So the trade is a harmless mediocre preview for
+    // corrupted generations, and we keep the mediocre preview.
+    // Full reasoning: docs/models/krea2/preview-taesd.md. The bytes are staged on
+    // R2 at vision/models/vae_approx/lighttaew2_2.safetensors (sha
+    // 10124099e0c9864db4e6bcd0f09d822282753e553d344fcf2748cf50140ba16a) ready for
+    // the day that PR merges into our engine version — adding the dep back is then
+    // the whole job. Until then this comment is the dep.
 };
