@@ -92,8 +92,23 @@ When the bump is considered, it is its own card and it carries the standing risk
 `.claude/rules/comfy_engine.md` — a core bump can break version-sensitive custom nodes,
 so the node-floor pairing check runs before the tag is picked.
 
-Audio is **not** a scope question. Vision already ships audio for LTX — see
-`docs/models/ltx/audio-input.md` (the `LTXVReferenceAudio` wiring, concluded under
-MPI-4). So H3's audio half is prior art to reuse, not a new product decision: the
-existing LTX audio I/O and the `Input_Use_Input_Audio` gate pattern are the reference
-for how an H3 graph would surface sound in the app.
+## The audio half IS a product decision — and it is new ground
+
+Vision's audio line is **input yes, creation no** (confirmed by the user 2026-08-05):
+the app accepts audio files and feeds them to video models, but it synthesises no
+audio and no audio-creation tooling is scheduled — that is Cubric Audio's job.
+
+LTX is the shipped example and it is the CONSUMING side: `docs/models/ltx/audio-input.md`
+(the `LTXVReferenceAudio` wiring, concluded under MPI-4) takes a user's `Input_Audio_File`
+as reference and lip-syncs video to it. Nothing in that path generates sound.
+
+H3 is the opposite. `EmptyMiniMaxH3LatentAV` allocates an audio latent, the audio VAE
+decodes it, and the model returns a soundtrack it invented. **Shipping H3 would make
+Vision an audio-generating app for the first time.** That is a product call for the
+user, and it must be answered before any wiring work — not discovered afterwards.
+
+Two things follow. Do not assume the LTX audio I/O or the `Input_Use_Input_Audio` gate
+transfer; they are built for audio arriving from disk, not audio leaving the sampler.
+And a no on the product question does not automatically kill H3 — dropping the audio
+stream and keeping the video may be viable, but whether the model is usable that way is
+itself untested and belongs in this card's findings.
