@@ -124,9 +124,11 @@ LISTENS: `engine:downloading` — displays download progress
          `engine:upgrade-status` — displays upgrade progress
          `engine:uw-installing` — displays universal workflow deps install
          `download:progress` — filters for modelId='__universal_workflow__', aggregates with engine progress
+         `download:complete` — modelId='__universal_workflow__' only: releases the progress-info line back to the engine phase stream (MPI-410)
          `engine:complete` — hides modal, emits `engine:ready` to Events bus
          `engine:error` — displays error message with retry button
 PATTERN: Single SSE connection bridge — all events come from `downloadService` (no own EventSource)
+NOTE:    The UW byte ticks OWN the progress-info line while they carry real bytes; `engine:extracting` (broadcast per uv/pip stdout line) writes the subtitle only. Two streams, one element, no owner = the install-screen strobe (MPI-410).
 
 ### MpiErrorDialog
 EMITS:   `dismiss`     `{}`

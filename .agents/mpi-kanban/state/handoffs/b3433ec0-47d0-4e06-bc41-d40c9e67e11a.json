@@ -4,7 +4,7 @@
   "generated_at": "2026-08-05T12:10:00Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-450 1.4 release readiness - MPI-453 built, MPI-404 unblocked",
     "branch": "master"
@@ -141,5 +141,7 @@
       "event": "handoff_created"
     }
   ],
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/b3433ec0-47d0-4e06-bc41-d40c9e67e11a.json and use mpi-continue to pick up MPI-450, the 1.4 release readiness umbrella. Gate D is clear and three Gate A cards are built: MPI-374 and MPI-420 are user-verified, and MPI-453 shipped this session (commit 4bc39fbb) and sits in doing as validating pending one check on the user's machine. Your next action is to IMPLEMENT MPI-404, which is now unblocked: the user decided the models root stays ENGINE-OWNED, so the fix is that the home hero must stop claiming a count it cannot have rather than persisting an app-level models root - read .agents/mpi-kanban/tasks/MPI-404/brief.md before touching code, it carries the decision and the explicit do-nots, and the card description carries the full root-cause trace. Move the card todo to doing before editing any file. After MPI-404, MPI-410 (cold-first-run splash, root not settled) is the last untouched Gate A card, then Gate C, then the bump, then Gate B against the real artifacts. Do not pull MPI-454 into the umbrella - it is a peer's feature card blocked by MPI-377, which 1.4 explicitly excludes. Do not add any dependency whose filename starts with lighttaew (ComfyUI issue #13366). A peer agent commits into this tree live, so re-status right before committing and commit only your own paths; board.json and the global events.jsonl are co-owned and currently hold uncommitted work from both sides."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/b3433ec0-47d0-4e06-bc41-d40c9e67e11a.json and use mpi-continue to pick up MPI-450, the 1.4 release readiness umbrella. Gate D is clear and three Gate A cards are built: MPI-374 and MPI-420 are user-verified, and MPI-453 shipped this session (commit 4bc39fbb) and sits in doing as validating pending one check on the user's machine. Your next action is to IMPLEMENT MPI-404, which is now unblocked: the user decided the models root stays ENGINE-OWNED, so the fix is that the home hero must stop claiming a count it cannot have rather than persisting an app-level models root - read .agents/mpi-kanban/tasks/MPI-404/brief.md before touching code, it carries the decision and the explicit do-nots, and the card description carries the full root-cause trace. Move the card todo to doing before editing any file. After MPI-404, MPI-410 (cold-first-run splash, root not settled) is the last untouched Gate A card, then Gate C, then the bump, then Gate B against the real artifacts. Do not pull MPI-454 into the umbrella - it is a peer's feature card blocked by MPI-377, which 1.4 explicitly excludes. Do not add any dependency whose filename starts with lighttaew (ComfyUI issue #13366). A peer agent commits into this tree live, so re-status right before committing and commit only your own paths; board.json and the global events.jsonl are co-owned and currently hold uncommitted work from both sides.",
+  "resolved_at": "2026-08-05T15:30:00Z",
+  "resolved_by": "c81f4a20-3d75-4e6b-9a1f-2b0c7e5d4413"
 }

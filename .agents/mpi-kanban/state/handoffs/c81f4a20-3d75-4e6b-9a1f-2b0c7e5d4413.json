@@ -1,0 +1,144 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "c81f4a20-3d75-4e6b-9a1f-2b0c7e5d4413",
+  "generated_at": "2026-08-05T15:30:00Z",
+  "from_session": "b3433ec0-47d0-4e06-bc41-d40c9e67e11a",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-450 1.4 release readiness - Gate A cleared, Gate C decided, ready for the bump",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Evaluate the board for a clean 1.4 release, build an umbrella plan of everything that must be addressed first, then start working it.",
+    "status": "in_progress",
+    "summary": "MPI-450 is the umbrella (A must-fix code, B must-verify against real artifacts, C must-decide so the notes are not false, D board hygiene). Gates A and D are now CLEAR and Gate C is decided except the per-bullet claim audit, which belongs with the fold at bump time. Nothing in the bump or Gate B has started. Five Gate A cards sit in doing as validating, each waiting on a check only the user's machine (or a real install) can do - none of them blocks the bump."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+    "completed": [
+      "Gate D: cleared in the previous session",
+      "Gate A MPI-374 (UI size persists, USER-VERIFIED), MPI-420 (preview decoders, Klein USER-VERIFIED), MPI-453 (uninstalled-op gate, commit 4bc39fbb)",
+      "Gate A MPI-404: commit d8671a16. Hero shows an unknown dash instead of an unmeasured MODELS 0 / 18, gated on the existing hasNoEngine(); absorbed MPI-405 hides the Stage-all-models plate behind the API key. ZERO server changes - the models root stays engine-owned as the user decided",
+      "Gate A MPI-410: commit 385e30fb. Splash REPRODUCED and root-confirmed; reveal now needs paint + a real HTTP response + a finished load. Absorbed MPI-412 strobe fixed at two roots (job-level indeterminate on both engine twins; one owner for the install screen's info line)",
+      "Gate C MPI-433: date checked 2026-08-05, before the 08-10 gate - no upload, the release-note claim was scoped instead",
+      "Gate C MPI-416: commit df04be8c. The dangling @cubric/connector symlink is fixed in the build and a whole-tree dangling-symlink assertion added; the Xcode CLT half ships as a known issue and the card is deferred",
+      "Gate C claim audit: PARTIAL - all 23 fix bullets read, the two false ones corrected"
+    ],
+    "pending": [
+      "Finish the claim audit DURING the fold into RELEASE_NOTES['1.4.0'] - the soft spots are named on the umbrella checklist",
+      "Bump to 1.4.0 via /mpi-version-bump, fold UNRELEASED.md, release:check, release:approve --yes, CI artifacts on all three OS",
+      "Gate B (AFTER the bump, against the real artifacts): both test suites, MPI-249 Linux leg, MPI-432 pinch check",
+      "Cut: waivers recorded on the card, /mpi-release, docs-site note on the Cubric Studio (Docs) board"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-450",
+    "title": "1.4 release readiness umbrella - clear the gates before cutting 1.4.0",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-450/",
+    "links": {
+      "checklist": ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+      "brief": ".agents/mpi-kanban/tasks/MPI-450/brief.md"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "run /mpi-version-bump",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/shell.md - NEW heroStats.js section: the models slot never asserts a count it cannot have, and why the repaint is edge-gated",
+      "docs/DEVELOPMENT.md + docs/testing.md - both said the splash dies on the shell's ready-to-show. It does not any more",
+      "docs/download-manager.md - the MPI-231 paragraph now says indeterminate is a JOB-level flag, and the mirror table's stale '1 today' is corrected with the three MPI-420 decoders",
+      "docs/releases/UNRELEASED.md - four new fix bullets, one new importantChanges known issue, two false claims corrected",
+      ".claude/rules/component-events-primitives.md + CLAUDE.md router row - user-approved this session",
+      "memory: tool_repro_a_slow_boot_deterministically.md (+ MEMORY.md pointer)"
+    ],
+    "pending": [
+      "UNRELEASED.md still has no bullet for MPI-374 (UI size persists across restart). It was flagged in the last handoff and is still missing - add it during the fold.",
+      "docs/models/krea2/preview-taesd.md still overlaps docs/preview-bus.md. Make it a pointer on the next docs pass; do NOT delete it.",
+      "board.json, .agents/mpi-kanban/events.jsonl and state/index.json are UNCOMMITTED on purpose - co-owned with a peer whose MPI-449/MPI-454 work sits in the same arrays. HEAD therefore lists MPI-404/MPI-410 in todo while their cards say doing; the cards are committed, the board is not. Commit them with the co-owned recipe (.claude/rules/git.md) or leave them for the peer."
+    ]
+  },
+  "next_action": {
+    "description": "Run /mpi-version-bump to 1.4.0. Everything that gates it is done: Gate A is clear (five cards in doing as validating, none blocking), Gate C is decided, release:check passes at 1.3.1. Fold UNRELEASED.md into RELEASE_NOTES['1.4.0'] and finish the claim audit IN THAT PASS - the umbrella checklist names the three soft bullets to settle (preview decoders: Klein verified, Wan not; install-screen flicker: fixed and unit-tested, never seen fire; Resize Video on a cloud GPU: no remote run recorded) and the missing MPI-374 bullet. Then build CI artifacts and run Gate B against them, NOT against the dev checkout.",
+    "command": "mpi-version-bump"
+  },
+  "context": {
+    "key_decisions": [
+      "MPI-404: the models root stays ENGINE-OWNED (user, 2026-08-05). The hero must not assert a count it cannot compute. An app-level models root is a product card of its own if ever wanted.",
+      "MPI-410 root, MEASURED not guessed: mainWindow's ready-to-show fires on Chromium's network error page, so the splash was closed 1.1s BEFORE Express bound. did-finish-load fires for the error page too and getURL() keeps the target URL - only did-navigate separates them. The splash was never starved (81ms to load), so the brief's candidate 2 is dead.",
+      "MPI-412 root: indeterminate was a per-TICK flag, so the display mode flipped on whichever dep ticked last. routes/install/computeProgress.js already held the correct job-level rule, was tested by MPI-276, and was required by NOTHING - the live path kept a divergent copy. Only isNodeTickPending is wired in so far; adopting computeProgress wholesale would change verify/phase semantics for the Model Library and needs its own card.",
+      "MPI-416 split by Gate C: the symlink half shipped, the Xcode CLT half is deferred behind a known-issue line. Do NOT start the tarball-instead-of-clone fix from the card text - CLT also supplies clang, so killing git may only move the dialog later. Verify that first.",
+      "MPI-433 stays date-gated (maturity blocked). The audit found THREE more single-route deps than that card knew about - the MPI-420 preview decoders - and they are permanently noMirror by nature, not by licence timing. Do not fold them into MPI-433's rollback.",
+      "Gate B runs AFTER the bump on purpose: MPI-249 tests the ARTIFACT, and verifying a dev checkout does not verify a build."
+    ],
+    "constraints": [
+      "A peer agent commits into this tree LIVE. It touched MPI-449's brief and events this session. Re-status right before committing and commit ONLY your own paths; board.json and the global events.jsonl are co-owned and currently hold uncommitted work from both sides.",
+      "Board timestamps run AHEAD of the real clock (peer sessions on a VPN exit node). Never correct a peer timestamp, never regress board.json updated_at. This session stamped up to 2026-08-05T15:05:00Z.",
+      "NEVER add a dep whose filename starts with lighttaew - ComfyUI #13366 corrupts real generations on the Wan21/Wan22/Qwen family. The bytes ARE staged on R2, so re-adding the dep is the whole job the day PR #13383 lands in our engine version.",
+      "MPI-454 (Composite Place) is NOT in this umbrella - a peer's feature card, blocked by MPI-377, which 1.4 explicitly excludes.",
+      "Run validate_board.py as 'validate_board.py .' from the REPO ROOT and never through a pipe. It passes today, so a non-zero exit is your own violation.",
+      "Live checks that are the USER's, not an agent's: MPI-453 (Wan 2.2 with only i2v installed), MPI-420 (one Klein + one Wan generation), MPI-374 (a full restart), MPI-404 (a cloud-only first run: hero reads a dash, no Stage-all switch without a key), MPI-410's strobe half (a real engine install)."
+    ],
+    "files_modified": [
+      "main.js",
+      "js/shell/heroStats.js",
+      "js/components/Compounds/LandingPages/MpiRunpodSettings/MpiRunpodSettings.js",
+      "js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js",
+      "routes/downloadManager.js",
+      "routes/install/computeProgress.js",
+      "scripts/build-portable.mjs",
+      "tests/desktop/runpod-settings-extract.spec.js",
+      "tests/install-progress.test.cjs",
+      "tests/portable-win-layout.test.cjs",
+      "docs/shell.md",
+      "docs/DEVELOPMENT.md",
+      "docs/testing.md",
+      "docs/download-manager.md",
+      "docs/releases/UNRELEASED.md",
+      "CLAUDE.md",
+      ".claude/rules/component-events-primitives.md",
+      ".agents/mpi-kanban/tasks/MPI-404/",
+      ".agents/mpi-kanban/tasks/MPI-410/",
+      ".agents/mpi-kanban/tasks/MPI-416/",
+      ".agents/mpi-kanban/tasks/MPI-433/",
+      ".agents/mpi-kanban/tasks/MPI-450/checklist.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-450/brief.md",
+      "docs/releases/UNRELEASED.md",
+      "docs/versioning.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "file",
+    "relevant_topics": [
+      "release readiness (version bump, release notes, both test suites)",
+      "portable builds and the artifact contract",
+      "first-run / landing page and the engine install screen"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/versioning.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md",
+    "docs/versioning.md",
+    "docs/releases/portable-distribution-contract.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-05T15:30:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/c81f4a20-3d75-4e6b-9a1f-2b0c7e5d4413.json and use mpi-continue to pick up MPI-450, the 1.4 release readiness umbrella. Gates A, C and D are now clear - MPI-404 (d8671a16), MPI-410 (385e30fb) and MPI-416's symlink half (df04be8c) all shipped this session, and MPI-433's date gate was checked and left closed because 1.4 ships before 2026-08-10. Five Gate A cards sit in doing as validating; each waits on a check only the user's machine or a real install can do, and none of them blocks the bump. Your next action is /mpi-version-bump to 1.4.0: fold UNRELEASED.md into RELEASE_NOTES['1.4.0'] and finish the claim audit in that same pass - the umbrella checklist names the three soft bullets and the missing MPI-374 bullet. Then build the CI artifacts and run Gate B against THOSE, not against the dev checkout. board.json and the global events.jsonl are co-owned with a live peer and are deliberately uncommitted, so HEAD lists MPI-404/MPI-410 in todo while their committed cards say doing - fix that with the co-owned recipe in .claude/rules/git.md, never git add -A. Do not pull MPI-454 into the umbrella, and do not add any dependency whose filename starts with lighttaew."
+}

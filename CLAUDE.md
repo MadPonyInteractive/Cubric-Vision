@@ -107,7 +107,7 @@ it turned off before staging weights to R2.
 | Project data (project.json, `.meta/`, load/reconciliation, history items) | `docs/project-integrity.md` |
 | Download system (resumable downloads, IPC/SSE events) | `.claude/rules/downloads.md` |
 | Component maps: who mounts / event wiring / state keys / comfy injection | `.claude/rules/component-mounts.md` / `component-events.md` / `component-state.md` / `component-comfy.md` |
-| Shell services (Overlays, Hotkeys, StatusBar) | `docs/shell.md` |
+| Shell services (Overlays, Hotkeys, StatusBar) + the landing hero stat slots (GPU/engine, models, session) | `docs/shell.md` |
 | Stage UI / redesign | `styles/01_base.css` tokens + `.claude/rules/components.md` § "Stage design baseline". Redesign docs ONLY for a new surface / follow-up phase / Stage audit → `docs/README.md` § Redesign spec |
 | Portable builds & distribution | `docs/releases/portable-distribution-contract.md` § "Build Process" (artifact contract in same doc; release copy → `docs/releases/github-release-checklist.md`) |
 | Cloudflare R2 (upload/list/verify weights, builds, pod-runtime files) | `c:\AI\Mpi\MadPony-Identity\capabilities\cloudflare-r2\README.md` |
