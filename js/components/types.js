@@ -265,12 +265,18 @@
  * something for a binary mask) and persists under the `paint` key. Destinations are
  * ROWS in the module's `DESTINATIONS` table, never branches in setup().
  *
+ * MPI-435 added the brush PRESET picker — ten procedural dabs off the one shared
+ * `brushDab.js`, so it belongs to the strip rather than to each tool panel. It is a
+ * destination row like everything else: composite declares no preset setter and the
+ * row is REMOVED, because a composite cut is hard for the same reason it has no
+ * opacity slider. A brushless tool (`brush: false`) loses it too.
+ *
  * Requires viewer.el, per destination:
- *   mask  — setMaskBrushMode('brush'|'eraser'), setMaskInverted(), isMaskInverted(),
- *           setMaskBwView(), isMaskBwView(), setMaskPaintEnabled(), clearMask(),
- *           setMaskOpacity()
- *   paint — setPaintBrushMode('brush'|'eraser'), setPaintEnabled(), clearPaint(),
- *           setPaintOpacity()
+ *   mask  — setMaskBrushMode('brush'|'eraser'), setMaskBrushPreset(id),
+ *           setMaskInverted(), isMaskInverted(), setMaskBwView(), isMaskBwView(),
+ *           setMaskPaintEnabled(), clearMask(), setMaskOpacity()
+ *   paint — setPaintBrushMode('brush'|'eraser'), setPaintBrushPreset(id),
+ *           setPaintEnabled(), clearPaint(), setPaintOpacity()
  * Emits nothing.
  */
 

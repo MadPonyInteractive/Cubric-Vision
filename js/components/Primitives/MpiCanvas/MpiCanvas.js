@@ -1116,6 +1116,8 @@ class _CanvasCore {
 
     setPaintBrushSize(size)  { this.paint.brushSize = Math.max(1, size); this.draw(); }
     setPaintBrushType(type)  { this.paint.brushType = type; this.draw(); }
+    /** MPI-435 — the same ten presets the mask brush has, off the one shared dab. */
+    setPaintBrushPreset(id)  { this.paint.brushPreset = id; }
     setPaintColor(color)     { this.paint.color = color; this.draw(); }
     setPaintOpacity(o)       { this.paint.opacity = o; this.draw(); }
     /** Apply bakes at this, so what the slider shows is what the new entry gets. */
@@ -1340,6 +1342,8 @@ class _CanvasCore {
     setMaskingMode(enabled) { this.activeMode = enabled ? 'mask' : 'none'; }
     setBrushSize(size)      { this.mask.brushSize = Math.max(1, size); this.draw(); }
     setBrushType(type)      { this.mask.brushType = type; }
+    /** MPI-435 — a `BRUSH_PRESETS` id. Validated in `brushDab.getPreset()`, not here. */
+    setBrushPreset(id)      { this.mask.brushPreset = id; }
     flipMaskColor()         { const c = this.mask.flipColor(); this.draw(); return c; }
     setMaskInverted(v)      { this.mask.displayInverted = !!v; this.draw(); }
     isMaskInverted()        { return !!this.mask.displayInverted; }
@@ -1473,7 +1477,7 @@ export const MpiCanvas = ComponentFactory.create({
             'playCompare','pauseCompare','togglePlayCompare','frameStepCompare',
             'setCompareLoop','getCompareLoop','isCompareVideoPair',
             'resetView','setGrid','resize','draw',
-            'setMaskingMode','setBrushSize','setBrushType','flipMaskColor',
+            'setMaskingMode','setBrushSize','setBrushType','setBrushPreset','flipMaskColor',
             'setMaskInverted','isMaskInverted','setMaskBwView','isMaskBwView','setMaskPaintEnabled',
             'setMaskOpacity','clearMask','getMaskDataURL',
             'getManualURL','getSubtractURL','setManualFromDataURL','setSubtractFromDataURL',
@@ -1484,7 +1488,7 @@ export const MpiCanvas = ComponentFactory.create({
             // ALLOWLIST — a core method missing here is `undefined` on el, and the
             // caller dies with "not a function" nowhere near this file.
             'setCropRatio','setCropSize','getCropRect',
-            'setPaintBrushSize','setPaintBrushType','setPaintColor','setPaintOpacity','getPaintOpacity',
+            'setPaintBrushSize','setPaintBrushType','setPaintBrushPreset','setPaintColor','setPaintOpacity','getPaintOpacity',
             'setPaintEnabled','getPaintURL','hasPaint','clearPaint','setPaintFromDataURL',
             'beginPaintAdjust','previewPaintAdjust','applyPaintAdjust','endPaintAdjust','hasPaintAdjustPreview',
             'maskToPaint','paintToMask',

@@ -23,26 +23,31 @@
  * @param {boolean} [brush=true]      - show the paint / erase pair, bind B / E, arm painting
  * @param {'mask'|'paint'|'composite'} [dest='mask'] - which layer the controls drive
  *
+ * MPI-435: it also carries the brush PRESET picker — ten procedural dabs off the one
+ * shared `brushDab.js`, which is why it lives here and not in each tool panel.
+ *
  * Requires on viewer.el, per destination:
- *   mask      — setMaskBrushMode('brush'|'eraser'), setMaskInverted(), isMaskInverted(),
- *               setMaskBwView(), isMaskBwView(), setMaskPaintEnabled(),
- *               clearMask(), setMaskOpacity()
- *   paint     — setPaintBrushMode('brush'|'eraser'), setPaintEnabled(),
- *               clearPaint(), setPaintOpacity()
+ *   mask      — setMaskBrushMode('brush'|'eraser'), setMaskBrushPreset(id),
+ *               setMaskInverted(), isMaskInverted(), setMaskBwView(), isMaskBwView(),
+ *               setMaskPaintEnabled(), clearMask(), setMaskOpacity()
+ *   paint     — setPaintBrushMode('brush'|'eraser'), setPaintBrushPreset(id),
+ *               setPaintEnabled(), clearPaint(), setPaintOpacity()
  *   composite — setCompositeBrushMode('brush'|'eraser'), setCompositeEnabled(),
- *               clearComposite()  (no opacity — the cut is hard)
+ *               clearComposite()  (no opacity and no presets — the cut is hard)
  */
 
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton }       from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiDropdown }     from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiRadioGroup }   from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { BRUSH_PRESETS, DEFAULT_BRUSH_PRESET } from '../../Primitives/MpiCanvas/managers/brushDab.js';
 import { qs, on }          from '../../../utils/dom.js';
 import { Hotkeys }         from '../../../managers/hotkeyManager.js';
 import { Events }          from '../../../events.js';
 import { state }           from '../../../state.js';
 import { getToolSettings } from '../../../data/projectModel.js';
 
-const DEFAULTS = { opacity: 0.7, inverted: false, bwView: false };
+const DEFAULTS = { opacity: 0.7, inverted: false, bwView: false, brushPreset: DEFAULT_BRUSH_PRESET };
 
 /**
  * The strip drives one DESTINATION (MPI-375). Mask and paint share the brush pair,
@@ -65,6 +70,7 @@ const DESTINATIONS = {
         settingsKey: 'mask',
         setEnabled: 'setMaskPaintEnabled',
         setBrushMode: 'setMaskBrushMode',
+        setPreset: 'setMaskBrushPreset',
         setOpacity: 'setMaskOpacity',
         clear: 'clearMask',
         paintInfo: 'Paint mask (B)',
@@ -77,6 +83,7 @@ const DESTINATIONS = {
         settingsKey: 'paint',
         setEnabled: 'setPaintEnabled',
         setBrushMode: 'setPaintBrushMode',
+        setPreset: 'setPaintBrushPreset',
         setOpacity: 'setPaintOpacity',
         clear: 'clearPaint',
         paintInfo: 'Paint colour (B)',
@@ -100,6 +107,11 @@ const DESTINATIONS = {
         settingsKey: 'composite',
         setEnabled: 'setCompositeEnabled',
         setBrushMode: 'setCompositeBrushMode',
+        // NO BRUSH PRESETS either (MPI-435), for the same reason there is no opacity:
+        // the cut is hard. A feathered or scattered dab would make the preview
+        // disagree with the file Sharp writes, and `CompositeManager` keeps calling
+        // the shared dab with no preset — which is exactly the old hard round.
+        setPreset: null,
         setOpacity: null,
         clear: 'clearComposite',
         paintInfo: 'Restore the top image (B)',
@@ -122,6 +134,10 @@ export const MpiMaskStrip = ComponentFactory.create({
         <div class="mpi-mask-strip">
             <div class="mpi-mask-strip__divider"></div>
             <div class="mpi-mask-strip__row" id="strip-row"></div>
+            <div class="mpi-mask-strip__preset-row" id="preset-row">
+                <span class="mpi-mask-strip__preset-label">Brush</span>
+                <div class="mpi-mask-strip__preset" id="preset-slot"></div>
+            </div>
             <div class="mpi-mask-strip__slider-row">
                 <div class="mpi-mask-strip__slider-label">
                     <span>Opacity</span>
@@ -171,6 +187,32 @@ export const MpiMaskStrip = ComponentFactory.create({
 
             _unbinds.push(Hotkeys.bind('mask.brush.toolbar',  () => brushRadio.el.setValue('brush')));
             _unbinds.push(Hotkeys.bind('mask.eraser.toolbar', () => brushRadio.el.setValue('eraser')));
+        }
+
+        // ── Brush preset (MPI-435) — ten procedural dabs, one shared engine ───
+        // Destination-gated like everything else here: a destination with no
+        // `setPreset` (composite) loses the ROW, never `[hidden]` — a class carrying
+        // `display` outranks the UA sheet, the MPI-382 lesson this file already
+        // carries. A brushless tool loses it too: there is no brush to shape.
+
+        if (showBrush && dest.setPreset) {
+            const startPreset = settings.brushPreset || DEFAULT_BRUSH_PRESET;
+            const presetPicker = MpiDropdown.mount(qs('#preset-slot', el), {
+                options: BRUSH_PRESETS.map(p => ({ label: p.label, value: p.id })),
+                value: startPreset,
+                direction: 'up',
+                info: 'Brush shape — hardness, scatter and flow, generated per dab',
+            });
+            // Pushed down for the same reason the brush pair is: the dropdown reports
+            // CHANGES only, so a restored setting would never reach the manager.
+            viewer.el[dest.setPreset]?.(startPreset);
+            presetPicker.on('change', ({ value }) => {
+                viewer.el[dest.setPreset]?.(value);
+                Events.emit('settings:tool:update', { toolKey: dest.settingsKey, key: 'brushPreset', value });
+            });
+            _children.push(presetPicker);
+        } else {
+            qs('#preset-row', el)?.remove();
         }
 
         // ── Invert / B-W (mask only) + clear — on every tool ─────────────────

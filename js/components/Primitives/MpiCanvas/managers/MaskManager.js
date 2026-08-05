@@ -37,7 +37,7 @@
  */
 
 import { alphaStencil } from '../../../../utils/maskUtils.js';
-import { stampDab, strokeDabs } from './brushDab.js';
+import { stampDab, strokeDabs, dabExtent, DEFAULT_BRUSH_PRESET } from './brushDab.js';
 import { signedSquaredDistanceField, rangeFor, writeRange } from './distanceField.js';
 
 const MASK_MAX_EDGE = 1536;
@@ -128,6 +128,8 @@ export class MaskManager {
         this.isDrawingMask = false;
         this.brushSize = 40;
         this.brushType = 'brush';
+        /** A `BRUSH_PRESETS` id (MPI-435). The shared dab owns what it means. */
+        this.brushPreset = DEFAULT_BRUSH_PRESET;
         // MPI-381: mask mode is shared by the whole tool family, but only the
         // Brush tool paints. A tool that mounts MpiMaskStrip without its brush
         // pair disarms this, so a drag on the canvas pans instead of painting
@@ -287,25 +289,31 @@ export class MaskManager {
         const to = { x: imgX * s, y: imgY * s };
         const r = (this.brushSize * s) / 2;
         const erasing = this.brushType === 'eraser';
+        const preset = this.brushPreset;
+        // A scattered preset paints outside its nominal radius, so the undo box is
+        // grown by the dab's real reach (MPI-435). Equal to r on the default brush.
+        const reach = dabExtent(r, preset);
 
         // Every dab writes BOTH layers, and they are exact mirrors: paint lays down
         // in manual and un-erases in subtract, erase does the reverse. That symmetry
-        // is what makes `manual AND NOT subtract` reconstructible after either.
+        // is what makes `manual AND NOT subtract` reconstructible after either — and
+        // it is why the preset's jitter is a hash of (x, y) rather than random: two
+        // calls, same dab, or the mirror breaks and leaves unerasable residue.
         const stamp = (x, y) => {
-            this._growStrokeBox(x, y, r);
+            this._growStrokeBox(x, y, reach);
             if (erasing) {
-                stampDab(this.manualCtx,   x, y, r, 'destination-out');
-                stampDab(this.subtractCtx, x, y, r, 'source-over', 'rgba(255, 255, 255, 1)');
+                stampDab(this.manualCtx,   x, y, r, 'destination-out', null, preset);
+                stampDab(this.subtractCtx, x, y, r, 'source-over', 'rgba(255, 255, 255, 1)', preset);
             } else {
-                stampDab(this.manualCtx,   x, y, r, 'source-over', this.maskColor);
-                stampDab(this.subtractCtx, x, y, r, 'destination-out');
+                stampDab(this.manualCtx,   x, y, r, 'source-over', this.maskColor, preset);
+                stampDab(this.subtractCtx, x, y, r, 'destination-out', null, preset);
             }
         };
 
         // Interpolate from the previous sample (MPI-375). One dab per mousemove left
         // holes in any drag faster than the brush is wide; the shared spacing closes
-        // them for the paint layer and the mask brush alike.
-        strokeDabs(this._lastDab, to, r, stamp);
+        // them for the paint layer and the mask brush alike, and the preset owns it.
+        strokeDabs(this._lastDab, to, r, stamp, preset);
         this._lastDab = to;
         this._recomposite();
     }

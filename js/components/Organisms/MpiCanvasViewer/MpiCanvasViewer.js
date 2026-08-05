@@ -1319,6 +1319,13 @@ export const MpiCanvasViewer = ComponentFactory.create({
             if (mode === 'brush' || mode === 'eraser') canvas.setBrushType(mode);
         };
 
+        /**
+         * Pick one of the ten procedural dab presets (MPI-435). Same id space for both
+         * destinations — one shared dab, so a preset means the same thing on either.
+         * @param {string} id - a `brushDab.BRUSH_PRESETS` id
+         */
+        el.setMaskBrushPreset = (id) => canvas.setBrushPreset?.(id);
+
         /** Clear the entire painted mask and emit 'mask-clear'. */
         el.clearMask = () => {
             if (_previewInst) {
@@ -1374,6 +1381,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.setPaintOpacity   = (v) => canvas.setPaintOpacity?.(v);
         el.setPaintColor     = (c) => canvas.setPaintColor?.(c);
         el.setPaintBrushSize = (s) => canvas.setPaintBrushSize?.(s);
+        el.setPaintBrushPreset = (id) => canvas.setPaintBrushPreset?.(id);
         el.getPaintURL       = () => canvas.getPaintURL?.() ?? null;
         el.hasPaint          = () => !!canvas.hasPaint?.();
         /** Wipe the paint layer as ONE undo entry. @returns {boolean} true if it had pixels */

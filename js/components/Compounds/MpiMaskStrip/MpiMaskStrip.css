@@ -18,6 +18,25 @@
     justify-content: center;
 }
 
+/* MPI-435 — the brush preset picker. Label beside the dropdown rather than above
+   it, so the pack costs one strip row instead of two. */
+.mpi-mask-strip__preset-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+
+.mpi-mask-strip__preset-label {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    letter-spacing: 0.06em;
+}
+
+.mpi-mask-strip__preset {
+    flex: 1;
+    min-width: 0;
+}
+
 .mpi-mask-strip__invert .mpi-ibtn__icon {
     transition: transform var(--t-fast) var(--ease);
     display: inline-flex;

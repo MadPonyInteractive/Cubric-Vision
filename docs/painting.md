@@ -179,8 +179,9 @@ unlisted one is a silent hole in Ctrl+Z.
 
 ## Seams the next cards land on
 
-- **MPI-435 (alpha brush pack)** parameterises **`stampDab` and nothing else**. Both the mask
-  brush and the paint brush get textures from that one edit.
+- **MPI-435 (alpha brush pack) HAS LANDED** — it parameterised `stampDab` and nothing else, so
+  both brushes got the ten presets in one edit. [masking-tools.md](masking-tools.md) § The brush
+  preset pack (here: this doc was already at its 200-line cap when the card opened).
 - **MPI-436 (Adjust over RGBA) HAS LANDED.** Grow / shrink / edge band on this layer, off the mask's
   own distance field — and the app's outline tool. The layer model it adds is one preview canvas
   (`adjustCanvas`) drawn **instead of** `paintCanvas`, and the fact every later card inherits is

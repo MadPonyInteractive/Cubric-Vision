@@ -169,6 +169,32 @@ mounts, and an uncommitted gizmo is a preview dropped by the seam above. Geometr
 system it borrows from `CropManager`, the ALT-rotate contract and the measured evidence live in
 **[masking-shapes.md](masking-shapes.md)** — split out at this doc's 200-line cap.
 
+## The brush preset pack (MPI-435)
+
+Ten brushes as ten **parameter sets** on the one shared dab (`managers/brushDab.js`, model in
+**[painting.md](painting.md) § The shared dab**): `hardness` · `aspect` · `angle` · `angleJitter`
+· `density` · `scatter` · `flow` · `spacing`, sub-dab radius derived (`r / sqrt(density)`) not a
+ninth knob. Nothing to author, license, ship or load, and they resample to any brush size where a
+fixed-resolution stamp cannot. The picker is an `MpiMaskStrip` DESTINATION row, so mask and paint
+get the same ten from one edit; **composite declares no preset setter**, as it has no opacity
+slider. Four facts outrank the table:
+
+- **Jitter is a HASH of (x, y, i), never `Math.random()`.** The mask brush stamps the same dab
+  into `manual` AND `subtract`; a random scatter would hand the two calls different geometry and
+  break `manual AND NOT subtract` with residue no eraser could reach. Proven in Chromium — two
+  independent `stampDab` calls produce byte-identical pixels.
+- **Undo grows by `dabExtent(r, preset)`, not `r`** — `r * (scatter + 1/sqrt(density))`, and
+  exactly `r` on the default. A scattered dab paints outside its nominal radius, and a box grown
+  for `r` leaves those pixels behind on Ctrl+Z, silently ([masking-undo.md](masking-undo.md)).
+- **A soft dab fades to its OWN colour at alpha 0, NOT the CSS keyword `transparent`.** Measured
+  2026-08-05: Chromium interpolates canvas gradient stops **non-premultiplied**, so `transparent`
+  (= `rgba(0,0,0,0)`) drags the rim through BLACK — a soft red read
+  `[250,0,0,101] → [167,0,0,67] → [77,0,0,33]`, a dark halo on every soft stroke.
+- **`flow` builds up WITHIN a stroke** (dabs overlap 75%) — what makes an airbrush an airbrush,
+  and the one place painting's "no per-stroke alpha" rule is deliberately not followed. One
+  isolated low-flow dab on the MASK lands under the ≥128 cut `alphaStencil()` reads shapes at; a
+  real stroke's overlap clears it immediately.
+
 ## Roadmap
 
 The taxonomy table above is the roadmap; MPI-424 sequences the cards behind it. **MPI-379 is

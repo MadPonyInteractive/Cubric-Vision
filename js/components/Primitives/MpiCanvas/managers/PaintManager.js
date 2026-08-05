@@ -24,7 +24,7 @@
  */
 
 import { alphaStencil } from '../../../../utils/maskUtils.js';
-import { stampDab, strokeDabs } from './brushDab.js';
+import { stampDab, strokeDabs, dabExtent, DEFAULT_BRUSH_PRESET } from './brushDab.js';
 import { fieldOverContent, rangeFor, writeRange } from './distanceField.js';
 
 /**
@@ -68,6 +68,8 @@ export class PaintManager {
         // read the same at the same slider value.
         this.brushSize = 40;
         this.brushType = 'brush';
+        /** A `BRUSH_PRESETS` id (MPI-435) — the same ten the mask brush has. */
+        this.brushPreset = DEFAULT_BRUSH_PRESET;
         this.color = DEFAULT_COLOR;
 
         /**
@@ -189,11 +191,15 @@ export class PaintManager {
         // One layer, so an eraser is a straight destination-out — there is no
         // subtract twin to keep in step the way the binary mask needs.
         const op = this.brushType === 'eraser' ? 'destination-out' : 'source-over';
+        const preset = this.brushPreset;
+        // The dab's real reach, not its nominal radius — a scattered preset paints
+        // outside r and an undo box grown for r would leave those pixels behind.
+        const reach = dabExtent(r, preset);
 
         strokeDabs(this._lastDab, to, r, (x, y) => {
-            this._growStrokeBox(x, y, r);
-            stampDab(this.paintCtx, x, y, r, op, this.color);
-        });
+            this._growStrokeBox(x, y, reach);
+            stampDab(this.paintCtx, x, y, r, op, this.color, preset);
+        }, preset);
         this._lastDab = to;
     }
 
