@@ -1,0 +1,143 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "e2e0087b-5152-4aa9-a8e4-a9b219d3f193",
+  "generated_at": "2026-08-05T11:40:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-450 1.4 release readiness - Gate D cleared, first two Gate A cards shipped",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Evaluate the board for a clean 1.4 release, build an umbrella plan of everything that must be addressed first, then start working it.",
+    "status": "in_progress",
+    "summary": "MPI-450 is the umbrella (four gates: A must-fix code, B must-verify against real artifacts, C must-decide so the notes are not false, D board hygiene). Gate D is clear. Two Gate A cards shipped and user-verified in the app (MPI-374, MPI-420). One NEW release blocker was found live during testing and is carded + scoped but not built (MPI-453). Two Gate A cards remain untouched (MPI-404, MPI-410), and MPI-404 is blocked on a product decision only the user can make."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+    "completed": [
+      "Gate D: MPI-440 closed (all members shipped, MPI-435 last, e6229bd3) with a validation.md linking each member's evidence",
+      "Gate D: MPI-4 and MPI-259 moved out of doing as deferred - neither lands in 1.4",
+      "Gate D: validate_board.py exit 0 from the repo root",
+      "Gate A MPI-374: UI size persists across restart. USER-VERIFIED ('Control plus and minus work fine'). Commit 78298142",
+      "Gate A MPI-420: taesdxl + taef1 + taef2 preview decoders uploaded to R2 and wired as engineAssets. Klein previews USER-VERIFIED good. Commits 7138bf01 then a876a53d (the revert)"
+    ],
+    "pending": [
+      "Gate A MPI-453 (NEW, release blocker, scope already decided - build it first)",
+      "Gate A MPI-404 - BLOCKED on the user's product call, see context.constraints",
+      "Gate A MPI-410 - cold-first-run splash, root NOT settled, needs a repro session",
+      "Gate C: MPI-433 date gate (2026-08-10), MPI-416 macOS symlink + known-issue line, claim audit of the 17 fix bullets in UNRELEASED.md",
+      "Bump to 1.4.0 via /mpi-version-bump, then build artifacts",
+      "Gate B (AFTER the bump, against the real artifacts): both test suites, MPI-249 Linux leg, MPI-432 pinch check"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-450",
+    "title": "1.4 release readiness umbrella - clear the gates before cutting 1.4.0",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-450/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+      "validation": null,
+      "handoffs": null
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement MPI-453",
+    "implement MPI-410",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/preview-bus.md - new section: the full model -> latent format -> decoder table, the Latent2RGB fallback that makes a missing decoder silent, and the lighttaew landmine. Corrected in the same session after the user caught the Krea 2 error.",
+      "MPI-420 validation.md - carries the correction banner, the taef2 derivation recipe, and the #13366 re-check",
+      "MPI-420 workspace - make_taef2_decoder.py (regenerates the derived decoder) and probe_13366.py (the mutation probe) both kept",
+      "MPI-453 brief.md - full root-cause trace from the real app.log lines, plus the SCOPE DECIDED section",
+      "MPI-440 validation.md - member-by-member evidence table for the closed umbrella"
+    ],
+    "pending": [
+      "docs/models/krea2/preview-taesd.md is still accurate but now overlaps docs/preview-bus.md. It was written when only Krea 2 was affected; the family is actually Krea 2 + both Qwen models + Wan 2.2. Consider making it a pointer at the preview-bus table on the next docs pass - do NOT delete it, the reasoning lives there.",
+      "UNRELEASED.md has no line yet for the preview-decoder improvement (Klein previews) or for MPI-374 (UI size persists). Add both during the Gate C claim audit, before the bump."
+    ]
+  },
+  "next_action": {
+    "description": "Build MPI-453 - it is a 1.4 release blocker and its scope is already decided (gate the mechanism, do NOT split Wan into two models). Read .agents/mpi-kanban/tasks/MPI-453/brief.md first: it carries the real app.log trace, both defects, the exact call sites, and the rejected alternative with the reasoning. Move the card todo -> doing BEFORE editing any file.",
+    "command": "mpi-continue MPI-453"
+  },
+  "context": {
+    "key_decisions": [
+      "MPI-450 IS the pre-release. This project has one GitHub-only release flow and no pre-release tier, so the umbrella is the gate list rather than a release channel.",
+      "MPI-420: the card's stated premise was WRONG and it changed the whole fix. A missing TAESD decoder does not remove previews - latent_preview.py falls back to Latent2RGB, the blocky colour blob. Verified in the SHIPPED 0.29.2 engine, not the bench.",
+      "MPI-420: Krea 2 is NOT Flux-latent. comfy/supported_models.py has 'class Krea2 ... latent_format = latent_formats.Wan21', as do both Qwen models. Read the latent format out of supported_models.py, never off a model's transformer lineage. I got this wrong once and shipped it in a doc table before the user caught it.",
+      "MPI-420: lighttaew2_2 was shipped and then REVERTED the same session. ComfyUI issue #13366 makes the previewer corrupt the real generation latent mid-sampling on the Wan21/Wan22/Qwen family. Re-checked upstream 2026-08-05 via gh api: issue OPEN, fix PR #13383 UNMERGED, both untouched since April. docs/models/krea2/preview-taesd.md had already recorded this decision.",
+      "MPI-453: gate the mechanism, do NOT split Wan 2.2 into two Library entries. Per-op deps are the deliberate design and MPI-449's MiniMax H3 is the next consumer (one weight set for i2v + t2v, a second for ref2v). Splitting would mean deleting operations[].deps, deriveInstalledOps, the op-draft store and the Model Manager UI as DEAD CODE, then needing the same mechanism one release later.",
+      "Gate B runs AFTER the version bump and build on purpose: MPI-249 tests the ARTIFACT, and verifying a dev checkout does not verify a build."
+    ],
+    "constraints": [
+      "MPI-404 IS BLOCKED ON THE USER and the question was asked but never answered. It is: when someone skips the local engine install and points at a models folder, the home hero reads MODELS 0 / 18 because the models root lives INSIDE the engine (extra_model_paths.yaml, written by routes/engine.js during provisioning). Is the models-root choice an APP-LEVEL setting that outlives the engine (the real fix, bigger change), or does it stay ENGINE-OWNED and the hero simply must not claim a count it cannot have (honest, small)? Ask before writing code.",
+      "NEVER add a dep whose filename starts with lighttaew - ComfyUI #13366. A test in tests/remote-engine-assets.test.cjs now fails on it. The bytes ARE staged on R2 at vision/models/vae_approx/lighttaew2_2.safetensors so that re-adding the dep is the whole job the day PR #13383 lands in our engine version. A downloaded copy was deleted from the user's models root (G:/CubricModels/vae_approx/) because the file ON DISK is what arms the bug, not the dep entry.",
+      "A peer agent is committing into this tree LIVE (it created MPI-451 and MPI-452 for the MiniMax H3 work mid-session, and edited MPI-449 twice). board.json and .agents/mpi-kanban/events.jsonl are co-owned: re-status right before committing and commit only your own paths. Both are currently uncommitted on purpose.",
+      "Board timestamps are AHEAD of the real clock (peer sessions on a VPN exit node). The real UTC time was ~04:00Z while board stamps read 10:30Z. Do not 'correct' a peer timestamp and never regress board.json updated_at - keep stamping forward from the highest value present.",
+      "Every card move must create the files its links declare, and validate_board.py PASSES in this repo - a non-zero exit is your own violation. Run it as 'validate_board.py .' from the REPO ROOT (passing the kanban dir is a false pass at exit 0) and never through a pipe."
+    ],
+    "files_modified": [
+      "js/core/storageKeys.js",
+      "js/core/storage.js",
+      "js/init.js",
+      "js/utils/uiZoom.js",
+      "js/data/modelConstants/assetDeps.js",
+      "tests/ui-zoom-persist.test.cjs",
+      "tests/remote-engine-assets.test.cjs",
+      "tests/extra-model-folders.test.cjs",
+      "docs/preview-bus.md",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-450/",
+      ".agents/mpi-kanban/tasks/MPI-453/",
+      ".agents/mpi-kanban/tasks/MPI-374/",
+      ".agents/mpi-kanban/tasks/MPI-420/",
+      ".agents/mpi-kanban/tasks/MPI-440/",
+      ".agents/mpi-kanban/tasks/MPI-4/task.json",
+      ".agents/mpi-kanban/tasks/MPI-259/task.json"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-453/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-450/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+      "js/data/modelConstants/resolveModelDeps.js",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+      "js/services/comfyController.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "generation lifecycle (dispatch, error surfaces, lanes)",
+      "model registry and per-operation dependencies",
+      "component contracts (PromptBox op strip)",
+      "testing (node --test, the desktop suite, the CI gate)"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/components.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md",
+    "docs/generation-lifecycle.md",
+    "docs/component-contracts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-05T11:40:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/e2e0087b-5152-4aa9-a8e4-a9b219d3f193.json and use mpi-continue to pick up MPI-450, the 1.4 release readiness umbrella. Gate D is clear and two Gate A cards are shipped and user-verified (MPI-374 UI-size persistence, MPI-420 TAESD preview decoders). Your next action is to BUILD MPI-453, a 1.4 release blocker whose scope is already decided: an operation whose per-op weights are not installed is still dispatchable, and ComfyUI's rejection opens the REPORT ON GITHUB dialog instead of a toast naming the missing weight. Read .agents/mpi-kanban/tasks/MPI-453/brief.md before touching code - it has the real app.log trace, both defects, the exact call sites, and the rejected alternative (do NOT split Wan 2.2 into two models). Move the card todo -> doing before editing any file. After MPI-453, MPI-410 is takeable, but MPI-404 is BLOCKED until the user answers whether the models-root choice is an app-level setting that outlives the engine or stays engine-owned. Do not add any dependency whose filename starts with lighttaew - ComfyUI issue #13366 corrupts real generations and a test guards it. A peer agent commits into this tree live, so commit only your own paths."
+}

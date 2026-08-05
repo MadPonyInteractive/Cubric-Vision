@@ -7,7 +7,7 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-05T10:35:00Z",
-  "updated_at": "2026-08-05T10:40:00Z",
+  "updated_at": "2026-08-05T11:40:00Z",
   "labels": [
     "release",
     "umbrella",
@@ -25,7 +25,8 @@
   "links": {
     "brief": "brief.md",
     "checklist": "checklist.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
   },
   "priority": "high",
   "attention": false

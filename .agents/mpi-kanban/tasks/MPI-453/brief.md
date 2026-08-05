@@ -85,12 +85,40 @@ what this log shows. It handles both carriers (local 400 `node_errors`, remote
 The surfaced message should name the file. "Prompt outputs failed validation" tells the
 user nothing; `Wan_22_t2v_High.safetensors` tells them everything.
 
+## SCOPE DECIDED 2026-08-05 — gate the mechanism, do NOT split Wan into two models
+
+The alternative on the table was to make Wan 2.2 **two Library entries** (T2V and I2V),
+one weight set each, count 18 → 19. It would kill this bug for `wan-22`. **Rejected**,
+and the user's own reasoning is what settles it:
+
+> *"We adopted that system for a reason. Even though only Wan is using it at the moment,
+> I believe it's already set up for other models that are upcoming … I was hoping to do
+> the same thing for the new MiniMax H3, which has one model that does image-to-video and
+> text-to-video, and has a different model that does reference-to-video."*
+
+So per-op deps are not a wan-22 quirk, they are the design, and **MPI-449's H3 is the
+next consumer** — one weight set covering i2v + t2v, a second covering ref2v is exactly
+the shape. Splitting would delete a mechanism we need one release later, and it trades a
+UI gate for a permanent migration (existing installs and every history entry carry
+`modelId: 'wan-22'`). He was willing either way — *"it kind of pollutes the model
+library … but it might be simpler for users"* — and flagged that a split would oblige us
+to **delete the per-op machinery as dead code** afterwards (his "garbage collected" means
+source cleanup, **not** dependency GC — both exist in this repo, don't confuse them).
+Tearing out `operations[].deps`, `deriveInstalledOps`, the op-draft store and the Model
+Manager UI that renders it, only to need the same thing for H3, is the cost that decides
+it.
+
+**Therefore:** fix the availability gate + the error surface, keep the system. If the
+Library ever *does* get split per-operation, it should be a product decision on its own
+card, not a bug fix.
+
 ## Do not
 
 - Do **not** widen the dialog copy or add a special case at the throw site. That is the
   symptom, and the root is one layer up.
 - Do **not** make the install pull both weight pairs — the per-op opt-in is deliberate
   (these are multi-GB pairs) and removing the choice to dodge a UI gate is backwards.
+- Do **not** split the model to dodge the gate. See the decision above.
 
 ## Verify
 

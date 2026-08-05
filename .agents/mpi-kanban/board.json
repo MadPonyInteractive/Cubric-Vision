@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 453,
+  "next_id": 454,
   "columns": {
     "todo": [
+      "MPI-453",
       "MPI-451",
       "MPI-452",
       "MPI-433",
@@ -55,7 +56,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-05T11:00:00Z",
+  "updated_at": "2026-08-05T11:40:00Z",
   "events": [
     {
       "at": "2026-08-05T03:20:00Z",
