@@ -16,9 +16,13 @@ when it is believed.
       missing decoder falls back to Latent2RGB, so previews were the colour blob, not absent.
       Real gaps were FLUX.2 Klein + Wan 2.2 on every platform, and everything on macOS/Linux.
       Four engineAssets on R2. Needs one Klein + one Wan generation to confirm the quality change.
-- [ ] **MPI-453** — NEW, found live 2026-08-05, release blocker. An operation whose per-op
-      weights are not installed must not be dispatchable, and a ComfyUI validation rejection
-      must be a toast naming the missing weight, not the REPORT ON GITHUB dialog
+- [x] **MPI-453** — BUILT 2026-08-05, commit `4bc39fbb`, card in `doing` as `validating`.
+      Availability gate (`installedOpsForContext` + `firstInstalledOp`, the three
+      `MpiGalleryBlock` fallbacks, the History op list, and a pre-dispatch gate in
+      `commandExecutor`) plus the error surface (`weights_missing_local`/`_remote` off the
+      shared `js/utils/comfyValidationError.js`). 451 node tests + 17 desktop tests pass.
+      Needs the user's live check: Wan 2.2 with only i2v installed must land on i2v and
+      never open the REPORT ON GITHUB dialog.
 - [ ] **MPI-404** — product question answered (models root: app-level or engine-owned), then a truthful installed count on first run with the local engine skipped
 - [ ] **MPI-410** — cold-first-run splash reproduced, root identified, fixed; install screen no longer strobes
 - [x] **MPI-374** — UI size survives a full restart; key in `js/core/storageKeys.js`; no resize flash; Browser Mode no-ops. Needs the user's own restart.
