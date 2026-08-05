@@ -25,17 +25,28 @@
 
 ## whatIsNew
 
-- **Mask toolbar: one Detect button.** The three detection methods (Points, Text,
-  Auto) now live in a small strip that opens beside the Detect button instead of
-  taking three slots in the toolbar. Same tools, same behaviour — less column.
-- **Choosing between detection results is much faster.** One detection now finds
-  every match in a single pass, so picking a result — or changing your mind and
-  picking another — no longer runs the detection again each time. Trying all of them
-  costs what one used to.
-- **A detection shows its progress, and can be stopped.** The status bar reports a
-  running detection with a timer, and the Detect button turns into Stop while it
-  works. A slow pass over a busy image used to look like the app had frozen, with no
-  way to call it off.
+- **The mask tools, rebuilt as a toolkit.** Everything that makes a mask now sits in
+  one group and works the same way. Paint one by hand with **ten brushes** — hard and
+  soft rounds, feather, airbrush, chisel, calligraphy, spray, charcoal, stipple and a
+  dry brush — instead of the single hard circle. Drop a **rectangle, triangle or
+  ellipse** on the canvas and **Add** or **Subtract** it: drag the shape or its
+  handles to size it, hold **Shift** to resize without squashing it, **Alt** over a
+  handle to spin it, and it stays where you put it so stamping the same ellipse three
+  times is three drags. **Adjust** the result — grow the whole mask, shrink it, or
+  reduce it to a band around its edge — with a live preview and Apply, so you can fix
+  the edge of a subject without regenerating the middle of it. **Fill** closes
+  enclosed holes in one press, where you can see what is being filled before you
+  commit to it. And a finished mask can be **turned into paint** from the right-click
+  menu, or paint turned back into a mask, as a copy that leaves the original alone.
+  No model runs and nothing downloads for any of it: all instant, all undoable.
+- **Detection: one button, one pass, and a way to stop it.** The three detection
+  methods — Points, Text and Auto — now open in a small strip beside a single
+  **Detect** button instead of taking three toolbar slots. One detection finds every
+  match in a single pass, so picking a result, or changing your mind and picking
+  another, no longer re-runs it — trying all of them costs what one used to. While it
+  works, the status bar reports it with a timer and Detect turns into **Stop**: a slow
+  pass over a busy image used to look like the app had frozen, with no way to call it
+  off.
 - **Localised edit — edit part of an image at full size.** Mask an area before an
   edit and only that area is regenerated. A whole-image edit has to shrink your
   picture to the size the model works at; a masked edit crops to the mask instead,
@@ -55,31 +66,11 @@
 - **Four styles on Chroma.** Chroma gains a style rack — B&W Sketch, Lenovo,
   Brushwork and Anime — available on every operation, Detail and Upscale
   included.
-- **Adjust a mask you already have.** A new Adjust tool in the Mask group grows or
-  shrinks the whole mask, or reduces it to a band around its edge — so you can fix
-  the edge of a subject without regenerating the middle of it. Drag the slider and
-  watch the mask change live, then press Apply. Undoable like any other mask edit.
-- **Fill.** Closes enclosed holes in a mask in one press, in the app where you can
-  see what is being filled before you commit to it.
-- **Outline anything you paint.** The Adjust tool now works on the paint layer too —
-  grow or shrink a scribble, or reduce it to a band around its edge, which outlines it
-  in the colour you pick. Growing fills the new edge in that colour and leaves what you
-  already painted untouched; shrinking eats the edge inward and keeps every surviving
-  brushstroke its own colour. Live preview and Apply, undoable, same as the mask.
 - **Control Strength.** Krea 2, FLUX.2 Klein, Chroma and the SDXL family gained a
   slider on Control for how hard the control map pulls. At full strength the
   composition is locked to the source; easing it off lets the model reinterpret the
   framing while keeping
   the pose. Klein bites softer than Krea 2, so it wants a lower setting.
-- **Shapes — drop a rectangle, triangle or ellipse straight onto the canvas.** A
-  Shapes tool in BOTH the Mask and Paint groups. Drag the shape or its handles to
-  size it, hold **Shift** to resize it without squashing it, **Alt** over a handle
-  to spin it around that point, then press
-  **Add** or **Subtract** to commit it to the mask — or **Fill** / **Erase** to
-  commit it to your paint, in the colour you picked. The shape stays where you put
-  it after each press, so stamping the same ellipse in three places is three drags.
-  No model runs and nothing downloads: it is instant, and undoable like every other
-  canvas edit.
 - **Composite — blend two of your images and watch it happen.** Two new tools in a
   Composite group. Right-click the image you want *underneath* and choose **Send to
   Composite**, then open **Paint Comp** on another image and erase — the picture
@@ -90,19 +81,21 @@
   originals are untouched. The old blend asked you to decide before you could see
   anything, which meant running it three or four times to get one result.
 - **Paint — draw on your image and let the model take it from there.** A new Paint
-  tool with a brush, an eraser and a colour picker. A rough scribble tells the model
+  group with a brush, an eraser and a colour picker. A rough scribble tells the model
   *where*, *how big* and *what colour* — something a prompt alone cannot say. Paint a
   shape, then mask it and run Detail over it, and the model works from your sketch
-  instead of guessing. The paint stays on your image while you switch to the mask
-  tools, and it keeps itself per image until you close the app, so nothing is lost
-  while you work. Undo works on it like anything else on the canvas. Press **Apply**
-  to bake it in as a new entry — your original is untouched, so deleting the new
-  entry undoes it.
-- **Turn a mask into paint, or paint into a mask.** Right-click the image and convert
-  either way. A mask becomes a filled shape in the colour you have picked; paint
-  becomes a mask of the same shape, ready to run an operation over. Both are copies —
-  the layer you converted from stays exactly as it was, so nothing is lost and one
-  Ctrl+Z takes it back.
+  instead of guessing. It gets **the same ten brushes as the mask** — feather,
+  airbrush, chisel, calligraphy, spray, charcoal, stipple, dry brush and the two
+  rounds — and the **same rectangle, triangle and ellipse**, committed here as
+  **Fill** or **Erase** in the colour you picked. **Adjust** works on paint too, and
+  it is how you outline something: grow a scribble and the new edge is filled in your
+  colour while what you already painted is left alone, shrink it and the edge is
+  eaten inward with every surviving brushstroke keeping its own colour, or reduce it
+  to a band and the scribble becomes its own outline. The paint stays on your image
+  while you switch to the mask tools, and it keeps itself per image until you close
+  the app, so nothing is lost while you work. Undo works on it like anything else on
+  the canvas. Press **Apply** to bake it in as a new entry — your original is
+  untouched, so deleting the new entry undoes it.
 - **Resize — one click back to the original size.** An **Original Size** button under
   the width and height boxes puts both back to the picture's own dimensions, so you
   can try a size, change your mind and start again without looking the numbers up.

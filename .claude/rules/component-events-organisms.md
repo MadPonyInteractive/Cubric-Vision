@@ -158,7 +158,7 @@ NOTE:    `.mpi-media-slot__thumb` / `__empty` carry a `display`, so their CSS ne
 #### MpiMaskStrip (Compound — js/components/Compounds/MpiMaskStrip/)
 PROPS:   `{ viewer, brush = true, dest = 'mask' }`
 EMITS:   (none)
-GLOBAL EMITS: `settings:tool:update` `{ toolKey: <dest.settingsKey>, key, value }` — `'mask'` keys `opacity` (0–1), `inverted` (bool); on `dest: 'paint'` the same slider writes `toolKey: 'paint'`. `dest: 'composite'` has NO opacity slider (`opacitySlider: false`) and `defaultBrush: 'eraser'`, so it emits nothing on mount.
+GLOBAL EMITS: `settings:tool:update` `{ toolKey: <dest.settingsKey>, key, value }` — `'mask'` keys `opacity` (0–1), `inverted` (bool), `brushPreset` (a `brushDab.BRUSH_PRESETS` id, MPI-435); on `dest: 'paint'` the same controls write `toolKey: 'paint'`. `dest: 'composite'` has NO opacity slider (`opacitySlider: false`) and NO preset picker (`setPreset: null`) and `defaultBrush: 'eraser'`, so it emits nothing on mount.
 LISTENS: (none — `Hotkeys.bind 'mask.brush.toolbar'`/`'mask.eraser.toolbar'` ONLY when `brush` is true; unbound in destroy)
 NOTE:    The ONE shared bottom strip, mounted by every tool in the family — change it here, not per tool. `brush: false` drops the paint/erase pair AND its B/E binds, and also DISARMS canvas painting via `setMaskPaintEnabled()`; every tool except Brush mounts it that way. Invert, B/W view (MPI-381), clear and opacity are on every tool. Mount-time restore applies `opacity` via `setMaskOpacity` and `inverted` via `setMaskInverted` (viewer-scope cache, survives canvas remount). Invert active state via `.mpi-mask-strip__invert--on` (accent border + 180° icon rotation).
 
