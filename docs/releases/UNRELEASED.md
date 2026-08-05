@@ -143,6 +143,12 @@
 
 ## fixes
 
+- **A clear message when another program is using Cubric Vision's port.** The app
+  serves itself over a local port, and if something else already held it, Vision
+  either opened onto whatever that other program was serving or sat on a black
+  window with nothing to click — no menu, no refresh, no way out. It now stops and
+  tells you which port is taken.
+
 - **The progress bar no longer keeps moving after you press Stop.** Stopping a job
   that reports no percentage — an upscale, a detection — left the bar sweeping away
   under an IDLE label until the next job happened to reset it.
