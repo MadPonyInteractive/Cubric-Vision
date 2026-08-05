@@ -2669,7 +2669,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                             // or a conversion made from a mask tool paints the default.
                             const paintColor = getToolSettings(state.currentProject || {}, 'paint', {}).color;
                             if (paintColor) viewer.el.setPaintColor?.(paintColor);
-                            if (viewer.el.maskToPaint?.()) _showToast('Mask converted to paint', 'success');
+                            // The toast says the mask is KEPT because the conversion is a
+                            // copy and the mask draws OVER the paint: the new colour comes
+                            // back washed out under a 70% white overlay, which reads as the
+                            // conversion getting the opacity wrong (user, 2026-08-05).
+                            if (viewer.el.maskToPaint?.()) _showToast('Converted to paint — mask kept on top', 'success');
                         } else if (key === 'paint-to-mask') {
                             if (viewer.el.paintToMask?.()) _showToast('Paint converted to mask', 'success');
                         } else if (key === 'send-composite') {

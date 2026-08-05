@@ -42,3 +42,18 @@ mask's Apply takes that the probes bypassed — is read-only and cannot revert a
 the mask or the paint destination? Until that is answered this card stays in `doing`.
 
 `npm test` green — **430/430**. `eslint` clean on both changed files.
+
+## User pass, 2026-08-05 — closed
+
+Reset and the conversion colour both confirmed working in the app. **Apply works too on the
+restarted build**, which settles report 3 the way the brief guessed: with Reset dead, Apply's own
+feedback (sliders snapping to 0, the preview replaced by an identical baked layer) read as nothing
+happening. No Apply change was made, and none was needed.
+
+One follow-up from the same pass — *"converting mask to paint, the opacity doesn't match"* — is
+**not an opacity bug and needs no pixel change.** The conversion is a COPY, and the mask draws OVER
+the paint (`_renderOverlay` step 1 paint, step 2 mask), so the new colour is being seen through the
+70% white mask overlay: `#c41c24` at 93% ≈ (200,42,48), under white at 70% = (238,191,193) — the
+pale pink in the screenshot, against a vivid red where the user painted outside the mask. Clearing
+or hiding the mask shows the real colour. The toast now says *"Converted to paint — mask kept on
+top"* so the copy is visible in words rather than only in pixels.
