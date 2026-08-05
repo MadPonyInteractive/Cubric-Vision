@@ -261,3 +261,15 @@
   in the app. The app now only offers the operations you actually installed, and if
   one slips through it tells you which weights are missing and points you at the
   Model Library instead of asking you to report it.
+
+- **The home screen no longer claims you have no models when it cannot tell.** On a
+  cloud-only setup — the local engine install skipped, no Pod connected yet — the
+  models count on the home screen read `0 / 18` on a machine whose drive was full of
+  weights. Models live in a folder the local engine owns, so with no engine there is
+  nowhere to look and nothing to count: the app was showing a zero it had never
+  measured. It now shows a dash until an engine, local or cloud, can actually answer.
+
+- **RunPod's "Stage all models on connect" is locked until you save an API key.** The
+  panel said the RunPod controls were locked until a key was saved, then let you flip
+  that one switch anyway — a setting about connecting to a Pod you had no way to
+  connect to yet.

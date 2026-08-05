@@ -23,7 +23,12 @@ when it is believed.
       shared `js/utils/comfyValidationError.js`). 451 node tests + 17 desktop tests pass.
       Needs the user's live check: Wan 2.2 with only i2v installed must land on i2v and
       never open the REPORT ON GITHUB dialog.
-- [ ] **MPI-404** — product question answered (models root: app-level or engine-owned), then a truthful installed count on first run with the local engine skipped
+- [x] **MPI-404** — decision: the models root stays ENGINE-OWNED, so the hero must not claim
+      a count it cannot have. BUILT 2026-08-05, card in `doing` as `validating`. The models
+      slot renders `—` while `hasNoEngine()` (the existing MPI-390 predicate) is true, and the
+      absorbed MPI-405 half hides the Stage-all-models plate behind the API key. **Zero server
+      changes.** 451 node + 17 desktop tests pass; the extended `runpod-settings-extract` spec
+      has a proven negative control. Needs the user's cloud-only first-run look (validation.md).
 - [ ] **MPI-410** — cold-first-run splash reproduced, root identified, fixed; install screen no longer strobes
 - [x] **MPI-374** — UI size survives a full restart; key in `js/core/storageKeys.js`; no resize flash; Browser Mode no-ops. Needs the user's own restart.
 - [ ] Any Gate A card NOT fixed is written into the 1.4 release notes as a known issue

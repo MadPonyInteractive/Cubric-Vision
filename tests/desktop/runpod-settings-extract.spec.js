@@ -49,6 +49,17 @@ test('settings slide-over renders the extracted RunPod section', async ({}, test
     // _initRunpodSection ran via the forwarded onOpen: the key-status hint is populated.
     await expect(window.locator('#mpiSettingsRunpodKeyStatus')).not.toHaveText('', { timeout: 10000 });
 
+    // MPI-404 (absorbed MPI-405): a fresh E2E user-data dir has no API key, and the
+    // panel says the RunPod controls are locked until one is saved. Every Pod-behaviour
+    // control must actually be locked — "Stage all models on connect" was live.
+    // "Skip the local engine install" is exempt on purpose: it is a LOCAL-engine
+    // control and the only way back out of the MPI-390 escape hatch.
+    await expect(window.locator('#mpiSettingsRunpodKeyStatus')).toHaveText('No API key saved.');
+    for (const id of ['AutoConnect', 'AutoRetry', 'StageOnConnect']) {
+      await expect(window.locator(`#mpiSettingsRunpod${id}Group`)).not.toBeVisible();
+    }
+    await expect(window.locator('#mpiSettingsRunpodSkipEngineGroup')).toBeVisible();
+
     // Non-RunPod half of MpiSettings still initialises (auto-start checkbox).
     await expect(window.locator('#mpiSettingsAutoStartSlot input[type="checkbox"]').first()).toBeAttached();
 

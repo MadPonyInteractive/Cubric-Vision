@@ -10,6 +10,7 @@
 import { gid } from '../utils/dom.js';
 import { Events } from '../events.js';
 import { MODELS } from '../data/modelRegistry.js';
+import { hasNoEngine } from '../services/engineGate.js';
 import { clientLogger } from '../services/clientLogger.js';
 
 const GB = 1024 ** 3;
@@ -44,15 +45,36 @@ function _formatRelative(iso) {
     return `${years} year${years === 1 ? '' : 's'} ago`;
 }
 
-function _renderModels(installedCount = 0) {
+// Last count a real install check reported. null = nothing has been measured
+// yet, which is NOT the same as zero (MPI-404).
+let _lastModelCount = null;
+
+function _renderModels(installedCount) {
     const el = gid('heroStatModels');
     if (!el) return;
     el.innerHTML = '';
+    if (installedCount === null) {
+        // Unknown — same placeholder the GPU/session slots use before their data lands.
+        el.textContent = '—';
+        return;
+    }
     const accent = document.createElement('span');
     accent.className = 'mpi-landing__stat-accent';
     accent.textContent = String(installedCount);
     el.appendChild(accent);
     el.appendChild(document.createTextNode(` / ${MODELS.length}`));
+}
+
+// MPI-404: with no engine at all (the MPI-390 escape hatch taken, no Pod
+// connected) there is nowhere for a model to be installed — /comfy/models/check
+// stats an engine models root that was never provisioned and answers
+// "not installed" for every model, so the slot asserted "0 / 18" on a disk that
+// may be full of weights. The models root is engine-owned by design; the honest
+// answer in that state is unknown, not zero. hasNoEngine() is the same predicate
+// the three no-engine door guards use, and costs no I/O on the common path.
+async function _paintModels(count) {
+    if (count !== undefined) _lastModelCount = count;
+    _renderModels((await hasNoEngine()) ? null : _lastModelCount);
 }
 
 // Last `projects:listed` payload, cached so the session slot can repaint the
@@ -260,14 +282,24 @@ function _renderEngine({ connected, gpuName, vramGb, ramGb, uptimeSeconds, price
  * Subscriptions live for the app lifetime (landing page persists).
  */
 export function initHeroStats() {
-    _renderModels(0);
+    _renderModels(null);
     _renderSession(null);
     _renderGpu();
 
-    Events.on('models:checked', ({ installedModelIds }) => _renderModels(installedModelIds?.length ?? 0));
+    Events.on('models:checked', ({ installedModelIds }) => _paintModels(installedModelIds?.length ?? 0));
+    // MPI-404: an engine arriving (or a Pod connecting) can turn the count from
+    // unknown into knowable without the installed SET changing, and the
+    // models:checked emit is diff-gated (modelRegistry.js) — so repaint on those
+    // edges too. Connection is edge-gated: the status heartbeat re-emits
+    // {connected:true} every ~5s and hasNoEngine() would refresh the Pod each time.
+    Events.on('engine:ready', () => _paintModels());
     Events.on('projects:listed', ({ projects }) => _renderSession(projects));
     // Persistent remote-engine feedback (MPI-64 Step 4.4) — flip local↔remote.
-    Events.on('remote:connection', (payload) => _renderEngine(payload || {}));
+    Events.on('remote:connection', (payload) => {
+        const wasConnected = _remoteConnected;
+        _renderEngine(payload || {});
+        if (_remoteConnected !== wasConnected) _paintModels();
+    });
     // MPI-87: live connect % in the GPU slot, but only while the connecting phase
     // is active — a late tick after the phase resolves must not clobber the GPU card.
     Events.on('remote:connect-progress', ({ pct } = {}) => {

@@ -106,6 +106,14 @@ Never call `MpiToast.mount()` directly from components — emit the event instea
 
 Electron window controls — minimize, maximize, close, fullscreen. Fullscreen can be triggered by the custom titlebar button or by F11 through `Hotkeys`; both route to the `window-fullscreen` IPC channel. The renderer listens for `window-fullscreen-change` and asks `window-state` on startup so restored fullscreen windows also hide the custom titlebar immediately.
 
+## heroStats.js (`js/shell/heroStats.js`)
+
+The three landing-hero footer slots: GPU/engine (`/system/gpu-info` + `remote:connection`), models (`models:checked`), session (`projects:listed`, or live Pod cost while remote-connected).
+
+**The models slot never asserts a count it cannot have (MPI-404).** The models root is engine-owned — it lives in the engine's `extra_model_paths.yaml`, written when a local engine is provisioned (`routes/engine.js` step 6). With the MPI-390 escape hatch taken and no Pod connected there is no engine, so `/comfy/models/check` stats a root that was never created and answers "not installed" for every model — a real HTTP 200 that looks exactly like a measurement. Rendering it read `MODELS 0 / 18` on a disk full of weights, which was a cloud-only user's first impression of the app.
+
+So the slot renders `—` whenever `hasNoEngine()` (`js/services/engineGate.js`, the same predicate behind the three no-engine door guards) is true, and the real count otherwise. Zero is only shown when an engine actually answered. `engine:ready` and the remote connect/disconnect **edge** repaint it, because an engine arriving can make the count knowable without the installed SET changing, and the `models:checked` emit is diff-gated in `modelRegistry.js`. The connection repaint is edge-gated on purpose: the status heartbeat re-emits `{connected:true}` every ~5s and `hasNoEngine()` refreshes the Pod each call.
+
 ## projectUI.js (`js/shell/projectUI.js`)
 
 Project-scoped UI elements — project name display, breadcrumb, up-arrow navigation.

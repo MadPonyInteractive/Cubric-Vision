@@ -1569,9 +1569,17 @@ export const MpiRunpodSettings = ComponentFactory.create({
             const body = qs('#mpiSettingsRunpodBody', root);
             const autoConnectGroup = qs('#mpiSettingsRunpodAutoConnectGroup', root);
             const autoRetryGroup = qs('#mpiSettingsRunpodAutoRetryGroup', root);
+            // MPI-404 (absorbed MPI-405): stage-on-connect is a Pod-connect behaviour,
+            // so it belongs behind the key like the other two — the panel said the
+            // controls were locked until a key is saved while this switch stayed live.
+            // "Skip the local engine install" deliberately stays OUT of this set: it is
+            // a LOCAL-engine control and turning it back off is the only way out of the
+            // escape hatch, which must not need a RunPod key.
+            const stageOnConnectGroup = qs('#mpiSettingsRunpodStageOnConnectGroup', root);
             body?.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
             autoConnectGroup?.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
             autoRetryGroup?.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
+            stageOnConnectGroup?.classList.toggle('mpi-settings__runpod-body--hidden', !enabled);
             if (_runpodCfg().enabled !== enabled) {
                 state.runpodConfig = { ..._runpodCfg(), enabled };
             }
