@@ -199,7 +199,19 @@
   shortcut for changing UI size — so trying to zoom into an image blew up the
   entire interface instead. Ctrl+scroll no longer changes UI size on any
   platform; use **Ctrl** (or **Cmd**) with **+** / **-**, which always did the
-  same job.
+  same job. **And the size you pick now survives a restart** — it used to be
+  forgotten on every launch, which meant anyone who needs a larger interface set
+  it again every single time they opened the app.
+
+- **The live preview now looks like your picture, not a colour blob.** While a
+  generation runs, the thumbnail is decoded by a tiny preview model, one per
+  model family — and the ones for FLUX.2 Klein were never installed, so it fell
+  back to a rough colour projection that told you almost nothing about what you
+  were getting. On macOS and Linux *none* of them were installed, so every model
+  had the blob. They now install with the engine. A few models still show the
+  rough preview on purpose: Krea 2, both Qwen models and Wan 2.2 share a preview
+  decoder with a known bug that corrupts the real generation, so the mediocre
+  preview is the safe choice until that is fixed upstream.
 - **Model downloads now have a second route when your network blocks the first.**
   Every model file was served from one address, so an ISP filter, a school or
   office network, or antivirus web protection sitting on that one address stopped

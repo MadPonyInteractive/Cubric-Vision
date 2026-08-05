@@ -1,6 +1,20 @@
-# Krea2 latent preview — why it's mediocre, and why we DON'T fix it
+# The `lighttaew*` preview decoders — why those latents are mediocre, and why we DON'T fix it
 
-**Status (2026-07-10):** known, accepted, do NOT "fix" by installing the decoder.
+**Status (2026-07-10, re-checked 2026-08-05):** known, accepted, do NOT "fix" by
+installing the decoder. **Upstream #13366 is still open and PR #13383 still unmerged**,
+both untouched since April.
+
+> **This file was written about Krea 2 and the scope is wider.** Everything below applies
+> to every model on the `Wan21`/`Wan22` latent format: **Krea 2, Qwen Image, Qwen Image
+> Edit and Wan 2.2**. The per-model decoder table, the `Latent2RGB` fallback that makes a
+> missing decoder silent, and what we DO ship live in
+> [`docs/preview-bus.md`](../../preview-bus.md) § *What produces the frames*. Read that
+> first; this file is the reasoning behind the one row that says "deliberately never".
+>
+> Cost of the split, 2026-08-05 (MPI-420): an agent working from the preview subsystem doc
+> shipped `lighttaew2_2` as a dep — the decision recorded here was in a *model* doc that
+> nothing routed them to, and the user caught it from memory. Both the router row and
+> `preview-bus.md` now carry the warning.
 
 ## The symptom
 
@@ -46,6 +60,14 @@ current `Latent2RGB` fallback never touches the real latent — it is safe. We k
   PR #13383 merged + our bundled ComfyUI includes it). Then `lighttaew2_1` becomes safe to
   install and live-test. It is video-calibrated, so still-image preview quality is still
   unverified even then.
+- **The bytes are already staged.** `lighttaew2_2.safetensors` sits on R2 at
+  `vision/models/vae_approx/` (sha `10124099…0ba16a`, byte-identical to
+  `lightx2v/Autoencoders`), so the day that PR lands, adding the dep back is the whole
+  job. `lighttaew2_1` — Krea 2 and both Qwen models — is from the same repo and is not
+  staged yet.
+- **A test blocks it until then.** `tests/remote-engine-assets.test.cjs` fails on any dep
+  whose filename starts with `lighttaew`. Deleting that assertion is the deliberate act
+  of overriding this decision; do it only with the issue confirmed fixed.
 - No dedicated **Qwen-Image** (still-image) TAE exists upstream as of 2026-07.
 - If installed as a tracked dep later: `vae_approx` asset → `engineAsset: true` in
   `dependencies.js`, installs with the engine on both engines.

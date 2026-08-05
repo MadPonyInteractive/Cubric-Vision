@@ -61,7 +61,7 @@ NOT mechanically split these):
 | Topic | Doc |
 |---|---|
 | ComfyUI integration + engine traps | [comfy.md](comfy.md) |
-| **Latent-preview bus** (`preview:frame`, engine-tagged, broken-frame gate, last-latent hold — subscribe here to show latents anywhere) | [preview-bus.md](preview-bus.md) |
+| **Latent previews** (`preview:frame` bus, engine-tagged, broken-frame gate, last-latent hold — subscribe here to show latents anywhere; ALSO the TAESD decoders: which model uses which, why a missing one silently downgrades to a colour blob, and the `lighttaew*` landmine — read before adding any `vae_approx/` dep) | [preview-bus.md](preview-bus.md) |
 | **Workflow authoring + injection contract** (MpiNodes pack, injector target list, generator/tier patterns) — model/app-agnostic | [workflow-authoring/README.md](workflow-authoring/README.md) |
 | Models-path / YAML / extra-folders | [models-path.md](models-path.md) |
 | Download manager (resumable, NDH) | [download-manager.md](download-manager.md) |
