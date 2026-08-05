@@ -149,3 +149,20 @@ test('fillMaskHoles is on the MpiCanvas method allowlist', () => {
     );
     assert.match(canvas, /'fillMaskHoles'/, 'fillMaskHoles missing from MpiCanvas._methods — el.fillMaskHoles would be undefined');
 });
+
+test('every button in the commit row is WIRED (MPI-446)', () => {
+    // MPI-436 rewrote this block for two destinations and dropped
+    // `resetBtn.on('click', _reset)` on the way through. Nothing failed: the button
+    // rendered, was pushed into _children, and destroyed cleanly — it just did
+    // nothing when clicked, for two shipped cards. A mounted-but-unwired control is
+    // invisible to every other test in this suite, so it gets its own.
+    const panel = fs.readFileSync(
+        path.join(__dirname, '..', 'js/components/Organisms/MpiToolOptionsMaskAdjust/MpiToolOptionsMaskAdjust.js'),
+        'utf8',
+    );
+    for (const btn of ['applyBtn', 'resetBtn']) {
+        assert.match(panel, new RegExp(btn + "\\.on\\('click'"), `${btn} is mounted but never wired — a dead button`);
+    }
+    // Fill is null on the paint destination, so it is the one optional handler.
+    assert.match(panel, /fillBtn\?\.on\('click'/, 'fillBtn is mounted but never wired — a dead button');
+});

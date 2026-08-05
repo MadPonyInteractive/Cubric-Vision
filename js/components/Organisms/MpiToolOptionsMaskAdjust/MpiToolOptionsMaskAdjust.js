@@ -267,6 +267,12 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
         fillBtn?.on('click', () => {
             if (viewer.el.fillMaskHoles?.()) _reset();
         });
+        // Reset IS the discard half of the preview contract from inside the tool:
+        // sliders to zero, and the zero preview tears the pending shape down. Its
+        // handler was dropped by MPI-436 while this block was being rewritten for two
+        // destinations, and nothing failed — the button just went dead. `tests/
+        // mask-adjust.test.cjs` now guards all three of them.
+        resetBtn.on('click', _reset);
         // filter(Boolean): Fill is null on the paint destination, and `null.destroy?.()`
         // throws — the optional chain is on `destroy`, not on the child.
         _children.push(applyBtn, fillBtn, resetBtn);

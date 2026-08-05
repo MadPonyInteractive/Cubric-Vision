@@ -94,6 +94,15 @@ test('the menu gates each item on ITS OWN layer, and the Block owns no pixels', 
     assert.match(src, /key: 'paint-to-mask'[^}]*disabled: noPaint/, 'Convert paint to mask is not gated on hasPaint()');
     assert.match(src, /const noPaint = !viewer\.el\.hasPaint\?\.\(\)/, 'the paint gate is not read from the viewer');
     assert.match(src, /viewer\.el\.maskToPaint\?\.\(\)/, 'the Block does not go through the viewer surface');
+    // MPI-446: PaintManager.color is panel state — it only holds the user's colour
+    // once a paint-family tool has mounted and pushed it, and a canvas remount resets
+    // it to the module default. Converting from a mask tool then paints the default
+    // and looks like the colour picker is being ignored.
+    assert.match(
+        src,
+        /getToolSettings\(state\.currentProject \|\| \{\}, 'paint', \{\}\)\.color[\s\S]*setPaintColor[\s\S]*maskToPaint/,
+        'mask → paint does not resolve the CURRENT paint colour from the tool settings first',
+    );
     assert.match(src, /viewer\.el\.paintToMask\?\.\(\)/, 'the Block does not go through the viewer surface');
     // The two items that were already there must be untouched.
     assert.match(src, /key: 'clear-mask'/, 'Clear mask went missing');

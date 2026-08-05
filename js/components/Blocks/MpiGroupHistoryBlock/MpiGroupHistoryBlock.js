@@ -2661,6 +2661,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     onSelect: (key) => {
                         if (key === 'clear-mask') viewer.el.clearMask?.();
                         else if (key === 'mask-to-paint') {
+                            // `PaintManager.color` is panel state — it only holds the
+                            // user's colour once a paint-family tool has mounted and
+                            // pushed it, and a canvas remount resets it to the default.
+                            // The CURRENT colour is the project's `paint` tool setting,
+                            // which is what both pickers read and write; resolve it here
+                            // or a conversion made from a mask tool paints the default.
+                            const paintColor = getToolSettings(state.currentProject || {}, 'paint', {}).color;
+                            if (paintColor) viewer.el.setPaintColor?.(paintColor);
                             if (viewer.el.maskToPaint?.()) _showToast('Mask converted to paint', 'success');
                         } else if (key === 'paint-to-mask') {
                             if (viewer.el.paintToMask?.()) _showToast('Paint converted to mask', 'success');
