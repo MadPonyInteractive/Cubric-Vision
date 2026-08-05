@@ -11,7 +11,10 @@ module.exports = {
   use: {
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure'
+    // Video only when running locally. A failing CI run recorded ~150 MB of
+    // Electron video per upload; the trace already carries the DOM snapshots
+    // and the screenshot the failure, for a fraction of the Actions storage.
+    video: process.env.CI ? 'off' : 'retain-on-failure'
   },
   outputDir: 'test-results/desktop'
 };
