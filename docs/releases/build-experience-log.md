@@ -109,8 +109,9 @@ CI gotchas hit:
   merge to master first.
 - On the Windows runner, `command -v uv` returns an extension-less path; the real
   binary is `uv.exe`. `stageUvBinary` now falls back to `<path>.exe` on win32.
-- CI uploads to **Actions artifacts** (14-day retention), not a Release and not
-  local disk. Pull with `gh run download <run-id> -n cubric-vision-<os>-<arch>`.
+- CI uploads to **Actions artifacts** (retention: see the contract — it has moved
+  14 → 3 → 1 day as the storage quota kept filling), not a Release and not local
+  disk. Pull with `gh run download <run-id> -n cubric-vision-<os>-<arch>`.
 
 ### uv bundling (zero-setup engine bootstrap)
 
