@@ -37,7 +37,19 @@ When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):
 6. LIFECYCLE: every card with real work passes `todo → doing → done`. A move = update BOTH `board.json` columns AND `tasks/<id>/task.json` (`column` + `maturity` + `updated_at`) + a `task.moved` event in BOTH event logs. The live board is `board.json` with `todo`/`doing`/`done` columns — NOT the legacy `kanban-ops/` Markdown board doc (5-column BACKLOG/PLANNING/… board that does NOT exist).
 
 7. **A move must CREATE the files its `links` declare.** `mutate.md` writes the link, not the file — so a `done` card whose `links.validation` names `validation.md`, or a `doing` card missing its `checklist.md`, fails `validate_board.py` on a dangling link. A card closed WITHOUT being built still needs one; "not applicable, merged into MPI-nnn, never built" is the correct content. (Bit 7 card moves in one close-out, 2026-08-01.)
-8. **Judge the validator by the DELTA, never the exit code.** `validate_board.py` has never exited 0 in this repo — 416 pre-existing violations measured 2026-08-01 (legacy `events.jsonl` lines keyed `ts:`/`event:` instead of `at:`/`type:`, older cards with `null` links or `status: "active"` while in `done`). Redirect to a file and count `grep -c ' - '` before and after your writes, then grep for the ids you touched. Never read it through a pipe: `$?` becomes `tail`'s and a failing board reads as a pass.
+8. **`validate_board.py` PASSES now — exit 0 is the resting state.** The 416-violation
+   backlog measured 2026-08-01 (legacy `events.jsonl` lines keyed `ts:`/`event:`, cards
+   with `null` links or `status: "active"` while in `done`) was cleared 2026-08-04;
+   measured again 2026-08-05, four runs, all `Board validation passed`. So a non-zero
+   exit is YOUR violation — read the lines, do not go hunting for a baseline. (This entry
+   claimed the opposite until 2026-08-05: "has never exited 0 in this repo". It has.
+   Do not reinstate that, and do not reintroduce the delta-counting ritual it justified.)
+   Two ways it still lies at exit 0:
+   - **The argument is the REPO ROOT, not the kanban dir.** `validate_board.py .agents/mpi-kanban`
+     prints `No .agents/mpi-kanban/board.json; nothing to validate.` and exits **0** — a
+     false pass that reads exactly like a clean board. Pass `.` from the repo root.
+   - **Never read it through a pipe** — `$?` becomes `tail`'s and a failing board reads as
+     a pass. Redirect to a file, then check the exit code and grep the ids you touched.
 
 ## The backslash trap — a single stray `\` takes the WHOLE BOARD DOWN
 

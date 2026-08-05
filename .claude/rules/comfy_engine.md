@@ -391,5 +391,20 @@ Backend contract:
 - `POST /comfy/import-model` `{ sourcePath, targetFolder, bucket, overwrite? }` copies a local model file into a CONFIGURED folder (allow-list = primary + extras); refuses overwrite without `overwrite:true` (409). Used by `MpiFolderDrop`.
 - `POST /comfy/models/uninstall` must only trash non-custom-node model files inside the managed primary models root; custom nodes stay guarded by the default custom-nodes root.
 
+**Canonicalisation uses `fs.realpath.native`, and the `.native` is load-bearing (MPI-444).**
+`_normalizeExtraFolderPath` (`routes/shared.js`) exists to canonicalise, and the dedupe
+under it lowercases on win32 to collapse spelling variants. But `fs` there is **fs-extra**,
+whose `realpath` is graceful-fs's JS reimplementation: it resolves symlinks and leaves
+Windows **8.3 short names untouched**. Measured — `C:/PROGRA~1` stays `C:\PROGRA~1` through
+it, while `fs.realpath.native` and `node:fs/promises` `realpath` both return
+`C:\Program Files`. Two spellings of one folder then survive the dedupe and the same folder
+can be added twice. Short paths reach this code whenever a path comes from `%TEMP%` under a
+username longer than 8 characters — invisible on a dev box, which is why CI found it and
+not us. Do not "simplify" it back to plain `fs.realpath`.
+
+Known asymmetry, deliberately not changed: the **primary** root (`POST /comfy/set-path` →
+`resolveModelsRoot`) is NOT canonicalised this way, so `base_path:` can still hold an 8.3
+spelling. It has no dedupe to defeat, and the fix has a wider blast radius.
+
 ### 6. Download Manager Router
 See `.claude/rules/downloads.md` for full download system rules (IPC/SSE, ResumableDownloader, job shapes, event lifecycle, engine pause/resume).

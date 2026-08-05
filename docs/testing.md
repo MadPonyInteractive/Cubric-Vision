@@ -16,7 +16,42 @@ directly too: `node --test tests/*.test.cjs`.
 — it never executes app code. That is how 1.3.0 shipped with the LoRA and upscale
 pickers opening into hidden DOM: every static check passed.
 
+## CI (MPI-444)
+
+`.github/workflows/tests.yml` runs **both** suites on `windows-latest`: `npm ci`,
+`npm test`, `npm run test:desktop`. Triggers: push to `master` **and to bare release
+branches** (`[0-9]*.[0-9]*.[0-9]*` — a hotfix landing on `1.3.1` never touches master but
+still gets a `v*` tag build), PRs to `master`, and `workflow_dispatch`. No
+`npx playwright install` step: Playwright drives the `electron` npm binary, and Electron
+needs no xvfb on Windows.
+
+- **`@cubric/connector` is NOT a blocker.** Its `file:../Cubric-Studio/...` target does
+  not exist on a lone checkout, and `npm ci` does not care — npm creates a dangling
+  symlink and exits 0. All three consumers dynamic-import it inside `try/catch`. No PAT,
+  no registry, no vendored copy. (The dangling symlink in a shipped artifact is a
+  separate problem: MPI-416.)
+- **`build-portable.yml` is deliberately NOT gated on this.** A `v*` tag is cut from a
+  commit this workflow already ran, and `mpi-version-bump` keeps its human gate.
+- **Artifacts on failure only**, minus `test-results/**/user-data/**` — that is each
+  failing spec's whole Electron profile, 301 MB in the first red run. What you want is
+  `trace.zip`, `test-failed-1.png` and `error-context.md`; `gh run download <id>` gets them.
+- **Two desktop specs are `test.fixme(!!process.env.CI, …)`** — `app-close-destroys-instance`
+  and `mask-persist-roundtrip`'s navigation test. They need a BOOTED shell, and
+  `js/shell.js` parks boot behind the first-run engine-install modal on any profile with
+  no engine, which every CI profile is. Fixture gap, not an app bug → **MPI-446**. They
+  still run locally, where the release gate uses them.
+
 ## The unit suite
+
+**Test FILES run in parallel** (`node --test` defaults to CPU count), so anything mutating
+global ON-DISK state races. `extra-model-folders.test.cjs` and
+`settings-models-root-guard.test.cjs` both POST `/comfy/set-path`, which rewrites the one
+`extra_model_paths.yaml` that `getCustomRoot()` reads `base_path` back out of — one file's
+revert landing inside the other's set-path→list-files window made it fail ~1 run in 5 and
+pass on re-run. Each now sets `process.env.CUBRIC_ENGINE_ROOT` to its own `mkdtempSync`
+dir **before** the `routes/comfy` require captures `ENGINE_ROOT`. Do the same in any new
+test that writes engine state — the fix is isolation, not a retry or a concurrency cap.
+Bonus: the suite no longer rewrites the developer's real engine yaml.
 
 **GREEN — there is no known-failing baseline any more.** Measured 2026-08-04:
 **417 pass / 0 fail** (298 on 2026-07-29). Any red is a real regression; do not go

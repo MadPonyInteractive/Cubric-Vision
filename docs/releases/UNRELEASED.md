@@ -232,3 +232,8 @@
   slot or the upscale model did nothing — the arrow flipped as if the list were
   opening, but no list ever appeared, so neither a LoRA nor a different upscale
   model could be picked. Affected Model Settings since 1.3.0.
+
+- **The same extra model folder can no longer be added twice.** On Windows, one
+  folder can have two spellings — a long one and a short `PROGRA~1`-style one — and
+  the app treated them as two different folders, so the same LoRA or upscale folder
+  could end up in your list twice. Both spellings now resolve to the same folder.
