@@ -29,11 +29,42 @@ What changed since this brief was written:
    the installed `comfyui_workflow_templates` 0.11.31 — are placed at
    `G:/ComfyUi/ComfyUI/user/default/workflows/MiniMax_H3_{t2v,i2v,r2v}.json`.
 
-**Next action:** download the 41.74 GB set, restart the bench, run i2v at 864x480 / 5 s /
-20 steps, and record seconds-per-step. That number is the last open item on this card.
-
 Still unanswered, and it belongs to MPI-452 not here: whether the authorization reaches end
 users who are themselves in an excluded territory, or only the licensee.
+
+---
+
+## THIS CARD IS THE UMBRELLA — decided 2026-08-05 by the user
+
+**No separate card for the engine bump.** MPI-449 owns the whole H3 arc: bench research,
+the go/no-go, then the execution. The sequence, once bench testing says H3 is viable:
+
+1. Run the blocking card **MPI-451** (licence gate).
+2. Bump the engine 0.29.2 -> 0.30.x. H3's core nodes are 0.30.0+ with no backport, so this
+   is a hard gate, not a preference (`research.md` § 6b).
+3. Hand off to **MPI-452** for the model wiring.
+
+All of it driven from here. **Use `/mpi-handoff` to carry state into fresh sessions** as
+context fills — that is the intended working mode for this card, not an exception.
+
+### Current state — weights down, first numbers taken, BLOCKED
+
+Done since the section above was written:
+
+- All five files downloaded to `C:/AI/` and checksum-verified. Encoder chosen is
+  ethanfel's abliterated int8 (26.36 GB), not Comfy-Org's — reasoning in `research.md` § 3.
+- **H3 runs on the 4060 Ti 16 GB.** 131 s warm, 20 steps, 640x640 x 56 frames. Acceptance
+  criterion #1 is answered. Details and the tier projections in `research.md` § 6.
+- `MINIMAX_H3_RATIOS` shipped to `js/utils/ratios.js` (commit `f739e076`), inert until
+  MPI-452 wires a ModelDef.
+
+**BLOCKED right now:** a Cubric-Prompt agent is running prompt-enhancement tests with
+Ollama on the same GPU, cycling a vision model in and out of VRAM. Every timing here was
+taken against that contention, so they are **upper bounds**. The clean re-run waits for
+that agent to finish.
+
+Next when unblocked: seed-only re-run at 640x640 for a clean warm number, then 864x480 /
+5 s / 20 steps for a like-for-like against the 194 s third-party reference.
 
 ---
 

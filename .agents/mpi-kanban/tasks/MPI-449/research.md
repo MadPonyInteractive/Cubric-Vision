@@ -248,6 +248,63 @@ connected), I2V (first_frame), last-frame, and first+last interpolation — `fir
 is one workflow file with optional image inputs, not four. Only `ref2va` is a different
 graph and a different DiT.
 
+**`first_frame` is PLAIN-STRETCHED to the canvas — `last_frame` is not.** In
+`MiniMaxH3ImageToVideo.execute`, `first_frame` gets `_resize(..., crop="disabled")` (the
+comment calls it a "geometry anchor") while `last_frame` gets `crop="center"`, an
+aspect-preserving cover-crop. So an i2v source whose aspect does not match the chosen
+canvas is **squashed**, and every generated frame inherits the distortion. **MPI-452 must
+fit the first frame to the canvas aspect before dispatch** (or drive the canvas from the
+image aspect) rather than handing an arbitrary image to the node.
+
+**The i2v template already ships the fix, disconnected.** A "Use Image Size" group sits in
+`video_minimax_h3_i2v` — `ImageScaleToTotalPixels` (id 119) into `GetImageSize` (id 120) —
+with **no input source and zero output links**; `ResolutionSelector` (id 115) drives the
+canvas instead. It is `mode=ALWAYS`, not bypassed, and only avoids erroring on its empty
+required input because ComfyUI prunes unconsumed branches from execution. Wire
+`LoadImage -> 119` and `120.width/height -> the H3 node` and the canvas follows the source
+aspect, making the plain stretch a no-op. **Its shipped default overshoots H3's canvas**,
+though: widgets are `['nearest-exact', 1, 32]` = 1.0 MP, which puts a square source at
+1024x1024 against a 768 native square and 16:9 at 1376x768 against 1344x768. Whatever
+copies this pattern must clamp to `adapt_canvas`, not to a megapixel target.
+
+Related, same call site: the keyframe is lanczos-resized and then VAE-encoded at /16, and
+the VL tower at line 141 receives the **already-resized** image. Split the consequence by
+frequency, because the two halves have different causes and different fixes:
+
+- **High-frequency** (grain, sensor noise, JPEG blocking) is destroyed by the lanczos
+  downscale and the /16 encode. The model never sees it. Preprocessing, not blindness.
+- **Low-frequency** (blur, smear, blown highlights, edit seams, upscale mush) survives
+  both and reaches the model intact. Observed 2026-08-05 on a heavily-degraded 1262x1262
+  dataset photo at 640x640: H3 did not carry that character into the generation. That is
+  **regression toward a clean training distribution**, and it is what every video model
+  does. Pruning is not the cause — modulation weights do not carry "notice the degradation".
+
+**Fine detail is bounded by the /16 latent grid, and one clip proved it.** The video latent
+is `[B,24,T,H/16,W/16]`, so 640x640 = a **40x40** grid, native 768x768 = 48x48, native
+1344x768 = 84x48. A tattoo covering ~20% of frame width gets ~8 latent cells across —
+below the representable resolution, so the model re-invents plausible linework each frame
+instead of tracking the design.
+
+Observed 2026-08-05, and it is self-isolating: in a single i2v clip where the subject walks
+toward the camera, the tattoos **morph heavily while she is far away and stabilise as she
+fills the frame**. Same seed, same model, same run — the only variable is how many latent
+cells the tattoo occupies. That rules out pruning, source-image quality and model capability
+in one observation.
+
+Product consequence: **raising the tier does not fix this.** Native square is 48 cells vs
+40, only 1.2x linear. H3 at a 768 short edge structurally cannot hold tattoo or text detail
+in a wide shot. The three real answers are crop tighter so the subject fills the canvas, run
+a detail pass afterwards, or use **`ref2va`** — its references go through the VL tower at
+`ref_image_size: 'max'` (up to 2048 short edge) and ride along every step, which is identity
+conditioning independent of the subject's apparent size in frame. That last one is the
+LoRA-free character bet and is worth testing after the A/B.
+
+Diagnostic that separates them, and it is free on any existing output: compare output
+**frame 0** to the source. The keyframe is a condition latent re-injected every step and
+never denoised, so frame 0 is the closest the run gets to the input. Artefacts present at
+frame 0 and gone later = temporal drift toward the prior (prompt-addressable). Frame 0
+already clean = the VAE round-trip is scrubbing it (no prompt will fix that).
+
 **The templates' `MathExpression` is redundant.**
 `max(5, round(a*24)) + (5 - (max(5, round(a*24)) % 17)) % 17` converts seconds to frames and
 snaps up to `n % 17 == 5`. `temporal_shape()` already calls `align_frame_count()`, the same
@@ -317,15 +374,45 @@ Task Manager at peak, cross-checked against `/system_stats`:
 
 ### Consequences
 
-1. **The pruned-vs-unpruned A/B is probably not runnable on this box.** Pruned (20.97 GB)
-   already pushed 24.5 GB into shared memory with 3.8 GB of RAM left. Unpruned adds
-   13 GB and there is nowhere for it to go. `minimax_h3_fl2va_int8_convrot` (34.04 GB) is
-   downloaded and on disk; if it OOMs or pages, record that as the answer rather than
-   fighting it — Comfy states pruning is lossless anyway (§2).
+1. ~~The pruned-vs-unpruned A/B is probably not runnable on this box.~~ **Wrong — it ran
+   fine. See § 6a.**
 2. Still not separately measured: whether ComfyUI unloads the encoder before the DiT
    loads, and what audio decode costs on its own. Both are inside the 131 s.
 3. Close the browser before any further timing run — ~15 Chrome tabs at 94% RAM is the
    difference between offloading and paging to disk.
+
+## 6a. RESOLVED — pruned wins. Do not re-run this A/B.
+
+Measured 2026-08-05 on the bench, `MiniMaxH3ImageToVideo`, 640x640, 56 frames, 20 steps,
+`res_multistep` + `simple`, denoise 1.0, ethanfel int8 encoder, same prompt and same source
+image throughout. Only `unet_name` varied.
+
+| DiT | Size | Time | Box |
+|---|---|---|---|
+| `minimax_h3_fl2va_pruned_int8_convrot` | 20.97 GB | **160.0 s** cold | LLM agent running |
+| `minimax_h3_fl2va_int8_convrot` | 34.04 GB | **162.0 s** cold | LLM agent paused |
+
+**+13 GB of weights bought 2 seconds (1.25%) and, by eye, ~2% less tattoo morphing.** The
+unpruned run had the *cleaner* box, so that gap if anything flatters it. Audio differed
+between the two, but that is expected and carries no signal: the same seed through
+different weights is a different trajectory end to end.
+
+**Decision: ship pruned.** Comfy's "no quality loss" claim holds at this resolution, and
+`minimax_h3_fl2va_int8_convrot` (34.04 GB) can be deleted to reclaim disk. MPI-452's
+dependency entry takes the pruned file.
+
+Two predictions this falsified, recorded so they are not repeated:
+
+- **"Unpruned will not fit / will page."** It ran. Memory was near-identical —
+  14.7 GB dedicated + 24.9 GB shared, versus pruned's 14.8 + 24.5. ComfyUI streams weights
+  per layer, so resident footprint is capped by what fits, **not by file size**. A model
+  being larger than VRAM plus comfortable RAM headroom is not, on its own, a reason to
+  expect failure here.
+- **"The size gap will show up as a time gap."** It did not. At this canvas H3 is
+  compute-bound, not weight-transfer-bound.
+
+Not measured, and deliberately not chased: unpruned **warm**. It would only reveal load
+overhead, which changes no decision.
 
 ## 6b. The engine bump is a HARD gate, not a preference
 
