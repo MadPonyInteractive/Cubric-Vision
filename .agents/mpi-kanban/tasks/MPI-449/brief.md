@@ -4,6 +4,41 @@ Goal: find out whether MiniMax H3 is usable for Cubric Vision **before** spendin
 engine bump on it. The bench is the sandbox; the engine stays pinned at 0.29.2 until
 this card returns a go.
 
+---
+
+## START HERE — state as of 2026-08-05 evening
+
+**Read `research.md` first.** It supersedes the storage arithmetic below.
+
+What changed since this brief was written:
+
+1. **Licence resolved.** H3's Community Licence excludes the EU, UK, US and South Korea —
+   and covers Outputs, not just weights. MiniMax runs an official request form for excluded
+   territories (linked from `docs/QA-about-License.md` in the H3 repo). **A request was
+   submitted and authorization was granted the same day.** Request/approval detail is held
+   **outside this repo** — public repo, confidentiality undertaking —
+   at `C:/AI/Mpi/_private/minimax-h3-licence/`. Do not copy any of it in here.
+   Consequences are carded: **MPI-451** (licence gate, blocks release) and **MPI-452**
+   (H3 model wiring, blocked).
+2. **Storage is no longer a constraint.** Weights go to `C:/AI/` (205.8 GB free), not `G:`.
+   The "53.7 GB free / 53.92 GB needed" squeeze below is dead — ignore it.
+3. **Weight set revised: 41.74 GB, not 53.9.** int8 DiT + **int4** text encoder. Table and
+   reasoning in `research.md`.
+4. **The bench is ready.** `extra_model_paths.yaml` gained `text_encoders:` and `vae:` under
+   `C:/AI/` (needs a ComfyUI restart), and the three official H3 templates — which are NOT in
+   the installed `comfyui_workflow_templates` 0.11.31 — are placed at
+   `G:/ComfyUi/ComfyUI/user/default/workflows/MiniMax_H3_{t2v,i2v,r2v}.json`.
+
+**Next action:** download the 41.74 GB set, restart the bench, run i2v at 864x480 / 5 s /
+20 steps, and record seconds-per-step. That number is the last open item on this card.
+
+Still unanswered, and it belongs to MPI-452 not here: whether the authorization reaches end
+users who are themselves in an excluded territory, or only the licensee.
+
+---
+
+## Original brief (storage section below is superseded)
+
 ## What is already done (2026-08-05)
 
 The bench at `G:/ComfyUi` was bumped **0.29.2 -> 0.30.2** (latest tag). Verified live
@@ -92,23 +127,31 @@ When the bump is considered, it is its own card and it carries the standing risk
 `.claude/rules/comfy_engine.md` — a core bump can break version-sensitive custom nodes,
 so the node-floor pairing check runs before the tag is picked.
 
-## The audio half IS a product decision — and it is new ground
+## The audio half is NOT a scope question — LTX already does this
 
-Vision's audio line is **input yes, creation no** (confirmed by the user 2026-08-05):
-the app accepts audio files and feeds them to video models, but it synthesises no
-audio and no audio-creation tooling is scheduled — that is Cubric Audio's job.
+Vision generates audio today and always has: **LTX 2.3 emits video and audio jointly**,
+which is why `ltx23-audio-vae` sits in its `dependencies` in
+`js/data/modelConstants/models.js`. LTX also accepts audio as a control input
+(`LTXVReferenceAudio`, MPI-4 → `docs/models/ltx/audio-input.md`). Both directions are
+shipped.
 
-LTX is the shipped example and it is the CONSUMING side: `docs/models/ltx/audio-input.md`
-(the `LTXVReferenceAudio` wiring, concluded under MPI-4) takes a user's `Input_Audio_File`
-as reference and lip-syncs video to it. Nothing in that path generates sound.
+So H3 returning a soundtrack is **ordinary for this app, not a first**. Treat LTX as
+prior art for how joint video+audio generation is dispatched, decoded through a second
+audio VAE, and surfaced in the gallery. What is genuinely out of Vision's scope is a
+STANDALONE audio tool (text-to-music, an audio editor) — that is Cubric Audio, and H3
+is not that.
 
-H3 is the opposite. `EmptyMiniMaxH3LatentAV` allocates an audio latent, the audio VAE
-decodes it, and the model returns a soundtrack it invented. **Shipping H3 would make
-Vision an audio-generating app for the first time.** That is a product call for the
-user, and it must be answered before any wiring work — not discovered afterwards.
+One H3-specific constraint worth recording: audio is **not optional**. Every entry
+point allocates the joint AV latent — `_empty_av_latent` always builds both the video
+`[B,24,T,H/16,W/16]` and audio `[B,32,2,T40]` tensors, and the extension registers no
+audio-free or audio-only node. `first_frame`/`last_frame` are optional (so pure
+text-to-video+audio works), but you cannot ask H3 for silent video, and you cannot ask
+it for audio without paying the full video sampling cost. If a silent variant is ever
+wanted, it means decoding the video VAE alone and discarding the audio latent.
 
-Two things follow. Do not assume the LTX audio I/O or the `Input_Use_Input_Audio` gate
-transfer; they are built for audio arriving from disk, not audio leaving the sampler.
-And a no on the product question does not automatically kill H3 — dropping the audio
-stream and keeping the video may be viable, but whether the model is usable that way is
-itself untested and belongs in this card's findings.
+(Written after three wrong turns in the same session: this section first called H3's
+audio an open scope question, then reached the right answer via the wrong evidence, then
+invented a "LTX consumes, H3 synthesises" split that does not exist. The user corrected
+it twice. The memory entry behind it — `project_product_scope`, which said "No audio/3D
+planned" — has been fixed. Check `models.js` dependencies before claiming Vision lacks
+an audio capability.)

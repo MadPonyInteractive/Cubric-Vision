@@ -1,17 +1,16 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 450,
+  "next_id": 453,
   "columns": {
     "todo": [
-      "MPI-449",
+      "MPI-451",
+      "MPI-452",
       "MPI-433",
       "MPI-432",
-      "MPI-420",
       "MPI-416",
       "MPI-410",
       "MPI-404",
       "MPI-397",
-      "MPI-374",
       "MPI-377",
       "MPI-358",
       "MPI-357",
@@ -28,15 +27,19 @@
       "MPI-348",
       "MPI-349",
       "MPI-403",
-      "MPI-442"
+      "MPI-442",
+      "MPI-4",
+      "MPI-259"
     ],
     "doing": [
-      "MPI-440",
-      "MPI-367",
-      "MPI-259",
-      "MPI-4"
+      "MPI-420",
+      "MPI-374",
+      "MPI-450",
+      "MPI-449",
+      "MPI-367"
     ],
     "done": [
+      "MPI-440",
       "MPI-435",
       "MPI-439",
       "MPI-445",
@@ -52,7 +55,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-05T10:30:00Z",
+  "updated_at": "2026-08-05T11:00:00Z",
   "events": [
     {
       "at": "2026-08-05T03:20:00Z",
@@ -1943,6 +1946,40 @@
       "from": "doing",
       "to": "done",
       "summary": "Green master run 30957212665 and a deliberate red on PR #1. Three real defects found by the gate before it was finished; two desktop specs fixme'd on CI under MPI-446."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-449",
+      "type": "task.moved",
+      "at": "2026-08-05T05:10:00Z",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "summary": "Picked up for bench research. Storage moves off G: to C:/AI (205.8 GB free), so the 53.7 GB ceiling in the brief no longer binds. Weight matrix, variant meanings and the turbo-LoRA question researched; a UK licence exclusion surfaced as the real blocker."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-451",
+      "type": "task.created",
+      "at": "2026-08-05T06:30:00Z",
+      "actor": "opus",
+      "summary": "Licence flow-down obligation from the MiniMax H3 authorization needs a user consent gate in front of a licence-gated model download. Blocks shipping H3; does not block MPI-449 bench research."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-451",
+      "type": "task.updated",
+      "at": "2026-08-05T07:00:00Z",
+      "actor": "opus",
+      "summary": "Generalised from an H3-only consent gate to a reusable licence-gate system driven by a ModelDef descriptor; Flux named as the next consumer. Design settled: territory-restricted licences route the user to the licensor's own authorization form rather than disclaiming responsibility onto them. Marked as blocking MPI-452."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-452",
+      "type": "task.created",
+      "at": "2026-08-05T07:00:00Z",
+      "actor": "opus",
+      "summary": "H3 model wiring split out from the research card. Created blocked: the licence gate (MPI-451) must land first, and whether the authorization reaches end users in excluded territories is still unconfirmed."
     }
   ]
 }
