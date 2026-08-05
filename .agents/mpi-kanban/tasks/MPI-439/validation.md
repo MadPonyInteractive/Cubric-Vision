@@ -54,3 +54,11 @@ files.
 Right-click the image canvas: both items appear next to Clear mask / Send to Composite, each
 greyed with its reason when its source layer is empty. Convert a mask with a detection you have
 NOT pressed Add on — it must stay disabled (MPI-426's meaning of `hasMask()`).
+
+## User pass, 2026-08-05 — CLOSED
+
+Both conversions exercised in the app. The one issue found in that pass — the conversion painting
+the module default instead of the picked colour — was fixed as MPI-447 and re-verified. The
+follow-up "the opacity doesn't match" was not a defect: the conversion is a copy and the mask draws
+over the paint, so the new colour was being read through the 70% white overlay (MPI-447's
+validation has the arithmetic). User approved final completion.

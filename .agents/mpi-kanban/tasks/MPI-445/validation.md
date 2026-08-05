@@ -58,3 +58,10 @@ the card says must be taken deliberately. Not taken. It is marked `ponytail:` in
 Drag Grow / Shrink / Edge on the 8K source that produced the report — the first move should be
 under a tenth of a second and the drag should feel continuous. Nothing about the RESULT should have
 changed; if an outline looks different from the MPI-436 pass, that is a bug, not a trade.
+
+## User pass, 2026-08-05 — CLOSED
+
+Adjust sliders verified in the app on the restarted build; user approved final completion. The
+resolution cap was never spent, so MPI-441's exactness stands, and the one remaining ceiling — paint
+covering a whole 4096 layer, still 1623 ms then 65 ms — was reviewed and deliberately left, marked
+`ponytail:` in `_ensureAdjustField()` and in `docs/masking-adjust.md`.
