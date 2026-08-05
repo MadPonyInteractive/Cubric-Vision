@@ -3,11 +3,11 @@
   "id": "MPI-446",
   "title": "Desktop suite: seed the E2E profile past the first-run engine install (2 specs fixme'd on CI)",
   "description": "Split from MPI-444. npm run test:desktop is 15 passed / 2 failed on a windows-latest runner and both pass locally. The uploaded screenshot settles it: the app is parked on the first-run Welcome / Let's Set Up ComfyUI modal. js/shell.js:261-290 shows _engineInstall on needsInstall and then parks boot on an await new Promise that only resolves on engine:ready or engine:install-skipped - neither of which a profile with no engine ever emits. So initShell never finishes and anything needing a booted shell is absent (.mpi-base-app resolved to 0 elements 9x over 5s). Every CI profile is that profile; locally the repo engine/ exists so needsInstall is false and the gate never shows. This is a FIXTURE gap, not an app bug - the app is correctly showing onboarding. The 15 passing specs drive components directly and never need boot. skipLocalEngine (MPI-390) already exists for exactly this shape but lives in the renderer's runpod config, so the fixture must get it into the profile BEFORE initShell reads it. The fix belongs in tests/desktop/launch.js so future specs inherit it; the two failing specs predate that helper and inline their own launch. Until then both are test.fixme(!!process.env.CI) so the new gate stays meaningful and they still run locally, where the release gate uses them.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-04T23:50:00Z",
-  "updated_at": "2026-08-05T02:13:58Z",
+  "updated_at": "2026-08-05T02:26:00Z",
   "labels": [
     "testing",
     "ci",
@@ -33,6 +33,5 @@
     "ci"
   ],
   "priority": "normal",
-  "attention": false,
-  "activeSessionTitle": "Claude implementation session"
+  "attention": false
 }

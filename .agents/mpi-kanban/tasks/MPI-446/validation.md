@@ -37,7 +37,8 @@ the boot sync, and a pushed dependency-free model survived a forced `syncModelIn
 (server returns installed for a model that declares no deps) and put the block in prompt
 mode with the mask restored at 250ms.
 
-## Open
+## Closed on a real runner
 
-Run 6 SIMULATES a runner; it is not a runner. Card stays `validating` until
-`.github/workflows/tests.yml` is seen green on a real windows-latest run.
+CI run **30969140710** (windows-latest, push `8bbcc123`): `npm test` green and
+`npm run test:desktop` **17 passed (57.2s)** with both `test.fixme` calls gone. Runs 1-7
+above were the local simulation; this is the runner itself.
