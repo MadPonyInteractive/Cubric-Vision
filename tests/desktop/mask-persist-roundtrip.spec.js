@@ -5,6 +5,7 @@
 const fs = require('fs');
 const { test, expect, _electron: electron } = require('@playwright/test');
 const { shellWindow } = require('./shellWindow');
+const { launchApp } = require('./launch');
 
 const TINY_PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAFElEQVR42mNk+M9QzwAEjGQwACdfA/MhYO3qAAAAAElFTkSuQmCC';
@@ -244,28 +245,35 @@ test('viewer: destroy persists combined manual and auto mask for remount', async
 });
 
 test('navigation: history load restores active session-temp mask in prompt preview', async ({}, testInfo) => {
-  // MPI-446: same fixture gap as app-close-destroys-instance.spec.js — this one needs
-  // a booted shell to navigate, and boot is parked behind the first-run engine-install
-  // modal on an engine-less profile. The two sibling tests in this file pass on CI
-  // because they drive the viewer directly. Runs locally.
-  test.fixme(!!process.env.CI, 'MPI-446: E2E profile is not seeded past the first-run engine install');
-
-  const userDataDir = testInfo.outputPath('user-data');
-  fs.mkdirSync(userDataDir, { recursive: true });
-
-  const env = { ...process.env };
-  delete env.ELECTRON_RUN_AS_NODE;
-  env.CUBRIC_E2E = '1';
-  env.CUBRIC_E2E_USER_DATA = userDataDir;
-
-  const app = await electron.launch({ args: ['.'], env });
+  // MPI-446: unlike its two siblings above, this one needs a BOOTED shell to navigate,
+  // so it launches through the shared helper — `launchApp` sets CUBRIC_E2E, which the
+  // boot gate reads to skip the first-run engine install that otherwise parks boot on
+  // an engine-less profile (js/shell.js:265).
+  const { app, window } = await launchApp(testInfo);
   try {
-    const window = await shellWindow(app);
-
     const result = await window.evaluate(async (imgUrl) => {
       const { state } = await import('/js/state.js');
       const { navigate, PAGE_GALLERY, PAGE_GROUP_HISTORY } = await import('/js/router.js');
       const { maskTempStore } = await import('/js/services/maskTempStore.js');
+      const reg = await import('/js/data/modelRegistry.js');
+      const cmds = await import('/js/data/commandRegistry.js');
+
+      // MPI-446: the masked preview only exists in PROMPT mode, and the history block
+      // falls back to CROP when no model is usable (MpiGroupHistoryBlock.js:1311) — so
+      // this spec silently depended on the dev's own model library. A runner has no
+      // weights at all, and locally it was a race against the boot install-check.
+      // Seed a dependency-free image model instead: no `operations`/`engines`/`variants`
+      // means isModelUsable() takes the cheap `installed` path, and syncModelInstalled()
+      // leaves it installed because it declares no deps to be missing.
+      reg.MODELS.push({
+        id: 'e2e-synthetic',
+        name: 'E2E Synthetic',
+        mediaType: 'image',
+        supportedOps: cmds.getAvailableCommands('image', null, { imageCount: 1, videoCount: 0 })
+          .filter(c => (c.requiresImages ?? 0) > 0)
+          .map(c => c.key),
+        installed: true,
+      });
 
       const item = { id: 'iNavTest', filePath: imgUrl, type: 'image', displayName: 'nav-test' };
       state.currentProject = {

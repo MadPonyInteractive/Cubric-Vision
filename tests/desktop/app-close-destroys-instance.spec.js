@@ -1,6 +1,5 @@
-const fs = require('fs');
-const { test, expect, _electron: electron } = require('@playwright/test');
-const { shellWindow } = require('./shellWindow');
+const { test, expect } = require('@playwright/test');
+const { launchApp, closeApp } = require('./launch');
 
 /**
  * MPI-345 — closing an App must DESTROY its instance, not just hide the overlay.
@@ -16,25 +15,12 @@ const { shellWindow } = require('./shellWindow');
 test.setTimeout(90000);
 
 test('closing an App releases its generation.run hotkey', async ({}, testInfo) => {
-  // MPI-446: this spec needs a BOOTED shell, and shell.js parks boot behind the
-  // first-run engine-install modal on any profile with no engine (js/shell.js:265).
-  // Every CI profile is that profile, so .mpi-base-app never mounts. It is a fixture
-  // gap, not an app bug — the app is correctly showing onboarding. Runs locally,
-  // where an engine exists, so the release gate still covers it.
-  test.fixme(!!process.env.CI, 'MPI-446: E2E profile is not seeded past the first-run engine install');
-
-  const userDataDir = testInfo.outputPath('user-data');
-  fs.mkdirSync(userDataDir, { recursive: true });
-
-  const env = { ...process.env };
-  delete env.ELECTRON_RUN_AS_NODE;
-  env.CUBRIC_E2E = '1';
-  env.CUBRIC_E2E_USER_DATA = userDataDir;
-
-  const app = await electron.launch({ args: ['.'], env });
+  // MPI-446: this spec needs a BOOTED shell. `launchApp` sets CUBRIC_E2E, which the
+  // boot gate reads to skip the first-run engine install — without it boot parks on
+  // that modal for the whole of a runner's engine-less profile (js/shell.js:265).
+  const { app, window } = await launchApp(testInfo);
 
   try {
-    const window = await shellWindow(app);
     // The shell wires the app:open listener during boot; wait for it to settle.
     await window.waitForTimeout(6000);
 
@@ -64,6 +50,6 @@ test('closing an App releases its generation.run hotkey', async ({}, testInfo) =
     await window.waitForTimeout(500);
     expect(await runHandlers()).toBe(before);
   } finally {
-    await app.close();
+    await closeApp(app);
   }
 });

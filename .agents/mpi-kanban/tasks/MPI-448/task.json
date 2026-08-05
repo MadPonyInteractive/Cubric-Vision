@@ -1,0 +1,31 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-448",
+  "title": "Desktop test suite must not fight the dev app for port 3000",
+  "description": "The port is hardcoded (server.js:29 `const port = 3000`), so `npm run test:desktop` cannot run while the dev app is open — and worse, it does not fail: main.js finds :3000 already answering, the window loads the RUNNING app, and the specs silently drive the dev session with its real engine root and real user data. That blocks day-to-day work (hit during MPI-446: the suite could only be verified after the user closed the app). Make the port a variable the E2E launch picks: server.js reads it, main.js's four hardcoded `127.0.0.1:3000` references and tests/desktop/shellWindow.js's URL match follow it, and tests/desktop/launch.js hands each run a free port. A port already in use must then be a hard error, never a silent attach.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-05T02:13:58Z",
+  "updated_at": "2026-08-05T02:13:58Z",
+  "labels": [
+    "testing",
+    "desktop",
+    "dx"
+  ],
+  "acceptance": [
+    "npm run test:desktop passes with the dev app running on :3000, and does not touch it",
+    "The suite never silently attaches to an already-running server — a busy port fails loudly",
+    "server.js, main.js, tests/desktop/shellWindow.js and tests/desktop/launch.js all read the same port value",
+    "CLAUDE.md and docs/testing.md drop the \"port 3000 must be free first\" warning once it is untrue"
+  ],
+  "links": {
+    "events": "events.jsonl",
+    "brief": "brief.md"
+  },
+  "tags": [
+    "MPI-446"
+  ],
+  "priority": "normal",
+  "attention": false
+}

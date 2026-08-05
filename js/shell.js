@@ -233,6 +233,15 @@ export async function initShell() {
   _bootApp();
 }
 
+// MPI-446: a desktop E2E profile is a fresh `CUBRIC_E2E_USER_DATA` dir on a machine
+// with no engine, so the install gate in `_bootApp` parks boot forever on a promise
+// only `engine:ready` / `engine:install-skipped` / `engine:gate-release` can resolve —
+// and the suite never installs an engine. Same skip as `skipLocalEngine`, read from
+// the env `main.js` already branches on. `process` is reachable here because the
+// window runs `nodeIntegration: true` + `contextIsolation: false` (main.js:361-364);
+// the browser dev path has no `process` at all, hence the typeof guard.
+const _isE2E = () => typeof process !== 'undefined' && !!process.env?.CUBRIC_E2E;
+
 /**
  * Restores session state in dev_mode or defaults to landing.
  * Also checks engine provisioning status before allowing app to boot.
@@ -256,8 +265,10 @@ async function _bootApp() {
   const runpodCfg = Storage.getRunpodConfig();
   if (runpodCfg.autoConnectOnStart) {
     await _initRemoteBoot(runpodCfg);
-  } else if (runpodCfg.skipLocalEngine) {
-    clientLogger.info('shell', 'Local engine gate skipped — skipLocalEngine is set (MPI-390)');
+  } else if (runpodCfg.skipLocalEngine || _isE2E()) {
+    clientLogger.info('shell', `Local engine gate skipped — ${runpodCfg.skipLocalEngine
+      ? 'skipLocalEngine is set (MPI-390)'
+      : 'E2E profile, CUBRIC_E2E is set (MPI-446)'}`);
   } else try {
     const versionRes = await fetch('/engine/version-check');
     const versionData = await versionRes.json();
