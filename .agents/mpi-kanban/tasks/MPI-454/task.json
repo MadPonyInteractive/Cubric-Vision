@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-454",
+  "title": "Composite Place - a transform gizmo that scales and positions an image ON TOP of the current entry",
+  "column": "todo",
+  "maturity": "blocked",
+  "status": "active",
+  "created_at": "2026-08-05T07:20:00Z",
+  "updated_at": "2026-08-05T07:20:00Z",
+  "labels": [
+    "feature",
+    "canvas",
+    "composite",
+    "gizmo"
+  ],
+  "description": "BLOCKED BY MPI-377. Third composite front end: the slot image sits ON TOP of the selected entry, moved / scaled / rotated by a gizmo with handles like the shape gizmo, then flattened into a new history entry. Cut-out object from another generation or a photo, dropped onto an existing image, then detailed to blend.",
+  "acceptance": [
+    "A third composite tool (placeComp) sits in the Composite toolbar group and opens with the slot image drawn on top of the selected entry, scaled to fit and centred",
+    "A gizmo with the shape gizmo's handle set moves, scales and rotates the placed image; SHIFT locks its aspect ratio and ALT scales about the centre, same as MpiToolOptionsShapes",
+    "The placed image keeps its own alpha - a background-removed PNG shows the entry through its transparent pixels, with no mask involved",
+    "Apply writes ONE new history entry at the base entry's full resolution; both sources are untouched",
+    "Leaving the tool restores the single-entry canvas and writes nothing to disk (the preview contract in docs/masking-tools.md)",
+    "Undo / redo covers a placement the same way a shape commit is covered",
+    "The tool is dead-gated, not silent: no slot image = the Apply button renders disabled with a hint, never a click that swallows itself"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}
