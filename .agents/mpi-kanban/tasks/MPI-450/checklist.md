@@ -3,6 +3,25 @@
 Reasoning per line is in `brief.md`. A line is ticked only when it is verified, not
 when it is believed.
 
+## ON PICKUP — do these three before anything else
+
+The card was HELD on **2026-08-05** behind Gate E. Ticks below were made under
+assumptions that time may have invalidated.
+
+- [ ] **1. Look up today's date.** `gh api rate_limit -i` → the `Date:` header is ground
+      truth (the local clock is untrustworthy when the VPN is on — see `CLAUDE.md` § VPN).
+- [ ] **2. Is that date, or the expected cut date, on or after 2026-08-10?**
+      - **Before 08-10** → MPI-433's tick in Gate C still holds. Move on.
+      - **On or after 08-10** → **the tick is void.** Reopen MPI-433: re-upload the
+        13.15 GB `krea2-raw-transformer-nsfw` weight to HF at the same object path,
+        verify by hash, and only then let the notes freeze. It is the 1-of-97 dep with
+        a single route, and the "downloads now have a second route" fix bullet is false
+        without it.
+- [ ] **3. Is Gate E actually done?** MPI-449, MPI-451 and MPI-452 all closed and the
+      engine bumped 0.29.2 → 0.30.x. If not, this card is still blocked — do not unblock it.
+      If yes, move it `todo/blocked` → `doing/in-progress` and start with the Gate B
+      re-read (it was scoped against a 0.29.2 engine).
+
 ## Gate D — hygiene (do first, costs minutes)
 
 - [x] MPI-440 closed — all members done, MPI-435 last (`e6229bd3`)
@@ -43,6 +62,9 @@ when it is believed.
 
 ## Gate C — must decide (before the notes are frozen)
 
+- [ ] **MPI-433 date RE-CHECK** — the tick below assumed a cut before 2026-08-10 and the
+      card was held behind H3 on 2026-08-05. Settle it with § **ON PICKUP** step 2 above
+      before trusting it.
 - [x] **MPI-433** — date CHECKED 2026-08-05: 1.4 ships BEFORE 2026-08-10, so nothing is
       uploaded and the card keeps its date (`maturity: blocked`). The decision that
       mattered was the note: the bullet now reads "**Most** model downloads now have a

@@ -1,5 +1,17 @@
 # MPI-450 — 1.4 release readiness umbrella
 
+> **HELD 2026-08-05 (user).** Parked as `todo` / `blocked` behind **Gate E** — the user is
+> personally running MPI-449 → MPI-451 → MPI-452 and the ComfyUI engine bump 0.29.2 → 0.30.x,
+> so nothing on this card is actionable until H3 lands. (`blocked` is a todo-only maturity,
+> which is why the column moved; Gates A, C and D stay ticked.) The card is NOT deleted
+> because everything after Gate E is verification it alone tracks: five Gate A cards sitting
+> in `doing` as `validating` on user-only live checks, the PARTIAL claim audit, the bump and
+> fold, Gate B against the real artifacts, and the waiver record at the cut.
+>
+> **On unblock, re-check MPI-433's date first.** It was closed on "1.4 ships BEFORE
+> 2026-08-10". If H3 pushed the cut past that date the decision flips and the 13.15 GB
+> Krea 2 NSFW re-upload to HF is owed before the notes freeze. Do not trust the tick.
+
 **There is no "pre-release" tier.** The project has ONE release flow — bump, build in
 CI, publish a GitHub Release (`project_release_model_github_only`, the `mpi-release`
 skill). So this card is the pre-release: the gate list that must read clear before

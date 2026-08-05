@@ -1,18 +1,17 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 454,
+  "next_id": 455,
   "columns": {
     "todo": [
-      "MPI-453",
+      "MPI-450",
       "MPI-451",
       "MPI-452",
       "MPI-433",
       "MPI-432",
       "MPI-416",
-      "MPI-410",
-      "MPI-404",
       "MPI-397",
       "MPI-377",
+      "MPI-454",
       "MPI-358",
       "MPI-357",
       "MPI-355",
@@ -33,9 +32,11 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-410",
+      "MPI-404",
+      "MPI-453",
       "MPI-420",
       "MPI-374",
-      "MPI-450",
       "MPI-449",
       "MPI-367"
     ],
@@ -56,8 +57,56 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-05T11:40:00Z",
+  "updated_at": "2026-08-05T16:10:00Z",
   "events": [
+    {
+      "at": "2026-08-05T15:05:00Z",
+      "type": "task.updated",
+      "task": "MPI-433",
+      "note": "Gate C date check: 1.4 ships BEFORE 2026-08-10, so nothing is uploaded and the card keeps its date. The release-note claim was scoped instead. The audit also found THREE more single-route deps (the MPI-420 preview decoders) that this card never covered - permanent noMirror by nature, recorded in brief.md and docs/download-manager.md. maturity=blocked (waiting on a date)."
+    },
+    {
+      "at": "2026-08-05T15:05:00Z",
+      "type": "task.updated",
+      "task": "MPI-416",
+      "note": "Gate C split. Symlink half SHIPPED (scope excluded from the staged tree + a whole-tree dangling-symlink assertion, proven on a real local stage). CLT half deferred out of 1.4 behind a known-issue line in the release notes. maturity=deferred."
+    },
+    {
+      "at": "2026-08-05T14:10:00Z",
+      "type": "task.updated",
+      "task": "MPI-410",
+      "note": "BUILT. Splash half REPRODUCED and root-confirmed: mainWindow ready-to-show fires on Chromium's error page, so the splash was closed 1.1s before the server bound (and destroyed mid-loadFile on a slow disk = the ERR_FAILED -2). Reveal now needs paint + a real HTTP response + a finished load, with two backstops so it can never regress into MPI-407's black window. Absorbed MPI-412 fixed at two roots: indeterminate is now a JOB-level flag on both engine twins (reusing the already-tested computeProgress rule), and the install screen's info line has one owner. 451 node + 17 desktop tests pass, negative control proven. maturity=validating - the strobe half has never been seen fire and needs a real engine install."
+    },
+    {
+      "at": "2026-08-05T13:00:00Z",
+      "type": "task.moved",
+      "task": "MPI-410",
+      "from": "todo",
+      "to": "doing",
+      "note": "Repro session. Reading main.js settles the trigger: not cold cache as such, but server-ready arriving AFTER the 5s fallback, which creates the main window while Express is still down."
+    },
+    {
+      "at": "2026-08-05T12:45:00Z",
+      "type": "task.updated",
+      "task": "MPI-404",
+      "note": "BUILT. Hero models slot renders an unknown dash instead of an unmeasured 0 / 18, gated on the existing hasNoEngine() predicate; absorbed MPI-405 hides the Stage-all-models plate behind the API key. Zero server changes - the models root stays engine-owned as decided. 451 node tests + 17 desktop tests pass, the extended runpod-settings spec has a proven negative control. maturity=validating pending the user's cloud-only first-run look."
+    },
+    {
+      "at": "2026-08-05T12:20:00Z",
+      "type": "task.moved",
+      "task": "MPI-404",
+      "from": "todo",
+      "to": "doing",
+      "note": "Implementing the decided fix: the hero must not claim a count it cannot have (engine-owned models root), plus the absorbed MPI-405 half (Stage-all-models toggle live with no RunPod key)."
+    },
+    {
+      "at": "2026-08-05T07:20:00Z",
+      "type": "task.created",
+      "task": "MPI-454",
+      "actor": "opus",
+      "column": "todo",
+      "note": "Third composite front end, requested by the user, placed directly after its blocker MPI-377. It INVERTS the shipped stack: maskComp/paintComp keep the selected entry on top and cut a hole to reveal the slot image underneath, while this puts the slot image ON TOP at its own size, positioned and scaled by a gizmo with the shape gizmo's handles, using its OWN alpha as the cut - no mask, no brush. Headline flow is grab an object from the internet, Remove Background, place it into an existing generation, then detail it to blend. MPI-377 blocks it because that flow starts with a drag-drop into the History workspace, which today silently becomes a prompt chip instead of an entry, so there is no project-file URL for the slot and nothing for Remove Background to run on. Likely NO new server code: POST /project/apply-paint plus compositeOverlay() already flattens an alpha-carrying RGBA layer onto a base, so rasterising the transform into a full-frame scratch layer client-side keeps the transform off the wire. Its ceiling is written into the brief rather than left to be discovered - PAINT_MAX_EDGE 4096 plus fit:fill resamples a small object on an 8K base - with the upgrade path being a placement rect composited by Sharp at source resolution. Placement gets its OWN scratch layer, never paintCanvas, for the reason docs/composite.md already records: the paint layer persists per entry."
+    },
     {
       "at": "2026-08-05T03:20:00Z",
       "type": "task.created",
