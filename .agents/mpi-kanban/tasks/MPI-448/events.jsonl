@@ -1,1 +1,3 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-448","type":"task.created","at":"2026-08-05T02:13:58Z","actor":"claude","summary":"Split from MPI-446 at the user's request."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-448","type":"task.moved","at":"2026-08-05T09:00:00Z","actor":"claude","from":"todo","to":"doing","summary":"Starting: port becomes CUBRIC_PORT env, E2E picks a free port, busy port fails loudly."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-448","type":"task.moved","at":"2026-08-05T10:30:00Z","actor":"claude","from":"doing","to":"done","summary":"Port is CUBRIC_PORT everywhere; globalSetup picks a free one per run. 17/17 green with the dev app live on 3000. Busy port now exits 1 with a FATAL, proven with a squatter."}

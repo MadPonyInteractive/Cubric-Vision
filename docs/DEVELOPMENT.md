@@ -31,12 +31,13 @@ npm run build:portable:dry-run
 ```
 
 **Tests: `npm test` (unit) + `npm run test:desktop` (Playwright/Electron).** Both
-are a release gate, and the desktop suite needs port 3000 free — the full suite
-contract, the green baseline and the spec-authoring traps live in
-[testing.md](testing.md).
+are a release gate; the desktop suite runs fine with the app open (it takes its own
+free port, MPI-448). The full suite contract, the green baseline and the
+spec-authoring traps live in [testing.md](testing.md).
 
-The Electron app uses an Express server on `127.0.0.1:3000`. Desktop tests use
-an isolated Electron user-data directory so they do not modify normal app data.
+The Electron app uses an Express server on `127.0.0.1:3000` — `CUBRIC_PORT`
+overrides it, which only the desktop suite does. Desktop tests use an isolated
+Electron user-data directory so they do not modify normal app data.
 
 ### The app engine is on 48188, NOT ComfyUI's 8188 default (MPI-434)
 

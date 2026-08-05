@@ -46,8 +46,8 @@ jobs:
 
       - run: npm test
 
-      # The desktop suite aborts if port 3000 is taken (tests/desktop/globalSetup.js).
-      # A fresh runner has it free.
+      # The suite takes its own free port (tests/desktop/globalSetup.js), so nothing
+      # on the runner can collide with it.
       - run: npm run test:desktop
 
       - name: Upload Playwright artifacts

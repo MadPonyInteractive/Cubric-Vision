@@ -88,17 +88,28 @@ Specs live in `tests/desktop/*.spec.js`, config `playwright.desktop.config.js`
 (`workers: 1`, serial). Each launches Electron with `CUBRIC_E2E=1` and a
 per-test `CUBRIC_E2E_USER_DATA`, so normal app data is never touched.
 
-**Close the app first.** `server.js` hardcodes port 3000, so a spec launched while
-the app is open cannot bind its own server — the test window then loads the
-ALREADY-RUNNING one and the suite passes without ever testing the working tree.
-`tests/desktop/globalSetup.js` aborts the run when the port is taken, so this
-fails loudly instead of silently; it never kills the process holding it, because
-that is normally the user's own app. If `PORT` in `server.js` ever moves, move the
-constant in `globalSetup.js` with it.
+**The suite runs alongside your open app** — verified 2026-08-05 with a dev instance
+live on 3000, 17/17 green on port 63877 and the instance untouched (MPI-448).
+
+The port is a value now, not a literal. `CUBRIC_PORT` (default 3000) is read by
+`server.js`, `main.js` and `tests/desktop/shellWindow.js`; `tests/desktop/globalSetup.js`
+picks a free one per run and Playwright's workers inherit it, so every spec's
+`{ ...process.env }` launch block passes it to the Electron fork with no per-spec
+change. Assert the shell URL with `SHELL_URL_RE` from `shellWindow.js` — never a
+`3000` literal, or the spec breaks the moment the port moves.
+
+**A taken port is a hard failure, not a silent attach.** That was the real bug: the
+launched Electron found :3000 already answering, loaded the RUNNING app's page, and
+the specs drove the dev session with its real engine root and real user data —
+`CUBRIC_E2E_USER_DATA` isolation bypassed without one error, and a green run meaning
+nothing. Both halves now refuse: `server.js` exits 1 on `EADDRINUSE`, and `main.js`
+turns a non-zero server exit into `reportFatal` (log + exit 1, no window). Proven in
+the failing direction — squatter on a port, launch, exit code 1 with
+`Port <n> is already in use` in the log.
 
 **Never use `app.firstWindow()`.** Boot opens TWO windows: a frameless splash
 (`splash/splash.html`, loaded instantly by `main.js`) and then the shell on
-`127.0.0.1:3000`; the splash is destroyed on the shell's `ready-to-show`, so
+`127.0.0.1:$CUBRIC_PORT`; the splash is destroyed on the shell's `ready-to-show`, so
 `firstWindow()` hands back a window that closes underneath the test. Use
 `tests/desktop/shellWindow.js` (`const window = await shellWindow(app)`).
 
