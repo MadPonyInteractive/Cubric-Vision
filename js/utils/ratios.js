@@ -173,6 +173,63 @@ export const LTX_RATIOS = {
     ]
 };
 
+// MiniMax H3 (MPI-449 research). H3's canvas is FIXED by the model, not by a
+// resolution ladder: adapt_canvas() in comfy_extras/nodes_minimax_h3.py conforms to a
+// 768 SHORT EDGE with a 768x1344 area cap (= 0.98 MP), each axis /32. That is why the
+// top tier is not a round megapixel number and why 1:1 tops out at 768x768, NOT
+// 1024x1024 — the short-edge rule binds before the area cap, so a square H3 video is
+// genuinely smaller than a 16:9 one. Latent grid is /16 (height // 16); every value
+// here is /32, comfortably clean.
+//
+// NO 2K/4K tier. H3-Regenerate-2K, the 768p->2K second pass, is API-only and NOT in the
+// open weights (docs.comfy.org / Comfy-Org blog) — local is H3-Base at 768p. Adding a 2K
+// tier would just run the model far off its trained canvas.
+//
+// very_high IS the native canvas; the four tiers below it are the megapixel anchors
+// Comfy's own templates use (0.2 / 0.3 / 0.4 / 0.7 MP), resolved through
+// ResolutionSelector at multiple=32. medium (864x480) is the DEFAULT the three shipped
+// video_minimax_h3_* templates open on, and the size the community's published timings
+// are measured at. Sub-native is NOT a degraded path — Comfy shipping 0.4 MP as the
+// template default is the evidence for that. Above 0.98 MP nothing stops a bigger canvas
+// — the cap is never enforced on the output latent (adapt_canvas is only called to
+// conform REFERENCE VIDEOS in r2v) — but it leaves the trained distribution.
+//
+// 1:1 is the SHORT EDGE of the tier's 16:9 pair, the same rule LTX_RATIOS uses (NOT Wan's
+// community-selector squares). That keeps the column monotonic AND keeps it under the 768
+// short edge for free: ResolutionSelector's own square at these MP anchors would be 800 at
+// 0.6 and 1024 at 0.98, both off H3's canvas.
+//
+// NOTE: not yet wired to a shipped model card — H3 model wiring is MPI-452, blocked on
+// the licence gate MPI-451. The 'h3' key below is provisional; MPI-452 owns the final
+// model.type string and must keep RATIO_MODES/BUILTIN_* in step with it.
+export const MINIMAX_H3_RATIOS = {
+    very_low: [
+        { label: "1:1", w: 352, h: 352, icon: "rect_1_1" },
+        { label: "9:16", w: 352, h: 608, icon: "rect_9_16" },
+        { label: "16:9", w: 608, h: 352, icon: "rect_16_9" }
+    ],
+    low: [
+        { label: "1:1", w: 416, h: 416, icon: "rect_1_1" },
+        { label: "9:16", w: 416, h: 736, icon: "rect_9_16" },
+        { label: "16:9", w: 736, h: 416, icon: "rect_16_9" }
+    ],
+    medium: [
+        { label: "1:1", w: 480, h: 480, icon: "rect_1_1" },
+        { label: "9:16", w: 480, h: 864, icon: "rect_9_16" },
+        { label: "16:9", w: 864, h: 480, icon: "rect_16_9" }
+    ],
+    high: [
+        { label: "1:1", w: 640, h: 640, icon: "rect_1_1" },
+        { label: "9:16", w: 640, h: 1152, icon: "rect_9_16" },
+        { label: "16:9", w: 1152, h: 640, icon: "rect_16_9" }
+    ],
+    very_high: [
+        { label: "1:1", w: 768, h: 768, icon: "rect_1_1" },
+        { label: "9:16", w: 768, h: 1344, icon: "rect_9_16" },
+        { label: "16:9", w: 1344, h: 768, icon: "rect_16_9" }
+    ]
+};
+
 // Krea2 (MPI-242) — the first model keyed by BOTH quality tier and orientation
 // (RATIO_MODES.krea2 === 'quality-orientation'). Tier picks the resolution class,
 // orientation picks the framing, so `1:1` means 1024² at 1k and 1472² at 2k.
@@ -261,8 +318,8 @@ function deepFreeze(o) {
     }
     return o;
 }
-[FLUX_RATIOS, SDXL_RATIOS, WAN_RATIOS, WAN_5B_RATIOS, LTX_RATIOS, KREA2_RATIOS, SOCIAL_RATIOS, CROP_RATIOS]
-    .forEach(deepFreeze);
+[FLUX_RATIOS, SDXL_RATIOS, WAN_RATIOS, WAN_5B_RATIOS, LTX_RATIOS, MINIMAX_H3_RATIOS, KREA2_RATIOS,
+    SOCIAL_RATIOS, CROP_RATIOS].forEach(deepFreeze);
 
 // ── Nearest named ratio ────────────────────────────────────────────────────
 
@@ -350,6 +407,7 @@ export const RATIO_MODES = {
     wan:    'quality',
     wan5b:  'quality',
     ltx:    'quality',
+    h3:     'quality', // MiniMax H3 (MPI-449 research, wiring = MPI-452). Provisional key.
     krea2:  'quality-orientation', // MPI-242 — first model with both axes
 };
 
@@ -415,6 +473,7 @@ const BUILTIN_QUALITY_TIERS = {
     wan: ['very_low', 'low', 'medium', 'high', 'very_high'],
     wan5b: ['low', 'medium', 'high'],
     ltx: ['very_low', 'low', 'medium', 'high', 'very_high', '2k', '4k'],
+    h3: ['very_low', 'low', 'medium', 'high', 'very_high'],
     krea2: ['1k', '2k'],
 };
 
@@ -426,6 +485,7 @@ const BUILTIN_RATIOS = {
     wan: WAN_RATIOS,
     wan5b: WAN_5B_RATIOS,
     ltx: LTX_RATIOS,
+    h3: MINIMAX_H3_RATIOS,
     krea2: KREA2_RATIOS,
 };
 

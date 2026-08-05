@@ -109,6 +109,41 @@ created. Needs a bench restart to take effect.
 layer 49. So it is not a "full 32B" download; there is nothing further to trim without
 dropping precision.
 
+### DECIDED 2026-08-05 — the encoder actually downloaded
+
+**`ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot`**, file
+`qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors`, **26.36 GB**, verified
+against the repo's own `SHA256SUMS` (`d84547412144b7c50a6ec77437a889b869d3ace88da77ef1775d3d2a4901c192`).
+Chosen over Comfy-Org's official 27.14 GB int8 for two reasons, both from its README:
+
+- **Complete vision tower retained in BF16**, all norms BF16, 551 BF16 tensors. Only the
+  350 language matrices are int8 convrot (group 256). The reference-image path — the one
+  r2v identity depends on — is therefore full precision.
+- Correct H3 shape: embedding + language layers 0–49, omitting 50–63 / final norm / LM head.
+
+Caveat to keep honest: the base is `llmfan46/Qwen3-VL-32B-Instruct-ultra-uncensored-heretic`,
+a **fine-tune**, not pure abliteration. Prompt adherence may differ from stock in either
+direction. Comfy-Org's 27.14 GB file is the clean control if that ever needs isolating.
+
+**int4 encoders were rejected, with evidence.** `ApacheOne/qwen3vl_32b_ConvRot_int4_int8_ComfyUI`
+publishes a quant report:
+
+| Build | Size | Worst sampled rel-RMSE | cos |
+|---|---|---|---|
+| `MAX_INT4_native_math` | 14.27 GB | **18–19%** | 0.982 |
+| `MIXED_INT4_INT8` | 20.42 GB | **1.194%** | 0.99993 |
+
+MAX_INT4 quantises the **vision tower** too (`visual.blocks.26.attn.proj.weight`, 18.05%
+at int4 g=64) — precisely the reference-image path. Abiray's `int4_convrot` (14.95 GB)
+publishes no report but is the same size class; assume comparable. If RAM ever forces a
+cut, take ApacheOne's MIXED at 20.42 GB, never a 14–15 GB int4.
+
+Other H3-shaped abliterated encoders surveyed (all correctly truncated to layers 0–49;
+generic Qwen3-VL abliterated repos are transformers-format LLMs and will NOT load in a
+`minimax` CLIPLoader): `nif0/...-Minimax-H3-GGUF` L0-49 Q4_K_M 14.93 GB / IQ4_XS 13.41 /
+IQ3_XS 10.23 (needs ComfyUI-GGUF); nvfp4 heretic variants from Abiray, sakamakismile and
+an OTMFLY mirror — Blackwell, skip. No abliterated int4_convrot exists.
+
 ### Deliberately skipped
 
 | File | Why not |
@@ -150,11 +185,22 @@ dropping precision.
 
 ## 5. Sampling recipe from the official templates
 
-Templates exist upstream at `Comfy-Org/workflow_templates@main` —
-`video_minimax_h3_{t2v,i2v,r2v}.json` — but are **not in the installed
-`comfyui_workflow_templates` 0.11.31** (that is also the latest on PyPI). So they will not
-appear in the bench's template browser; pull the JSON from GitHub raw and drag it in.
-Copies fetched to the session scratchpad during this research.
+**Correction (2026-08-05): the templates DO appear in the bench's template browser.** The
+earlier claim here — "not in the installed `comfyui_workflow_templates` 0.11.31, so they
+will not appear" — was misleading. The installed package is an `__init__.py` **stub with
+no `templates/` directory at all**; the frontend fetches the index remotely, so the pin
+never gated H3. Six H3 entries exist upstream and all six show in the browser:
+
+| Name | Tags | What |
+|---|---|---|
+| `video_minimax_h3_{t2v,i2v,r2v}` | no `API` tag | **local weights — these** |
+| `api_minimax_h3_{t2v,flf2v,r2v}` | `API` | MiniMax's hosted paid endpoint |
+
+Filter **Runs on → Local** to hide the API three. The hand-placed copies at
+`G:/ComfyUi/ComfyUI/user/default/workflows/MiniMax_H3_*.json` are redundant.
+
+Both local templates default the CLIPLoader to `qwen3vl_32b_minimax_h3_nvfp4_awq` —
+**wrong for Ada, must be swapped** (§2).
 
 - Sampler `res_multistep`; scheduler `simple` (the r2v note says **`beta` or `normal` beats
   `simple` for reference-heavy prompts**); 20 steps, denoise 1.0
@@ -170,20 +216,135 @@ Copies fetched to the session scratchpad during this research.
   edge for identity fidelity, but reference tokens ride along **every** step.
 - **Sage Attention roughly doubles speed** per Comfy's docs (some layers fall back).
 
-## 6. Runnability — what is known vs what still needs measuring
+## 5b. Canvas rules, and the ratio table already landed in the app
 
-Known: Comfy claims 8–12 GB VRAM is workable via dynamic offloading (an RTX 3060 is cited),
-with **64 GB system RAM strongly recommended**. This machine has **68.5 GB** — it clears
-that bar. One third-party report: 194 s for 20 steps at 864x480, 5.17 s of video (GPU
-unstated). Comfy notes pruned int8_convrot costs ~14% more time per step than the smaller
-formats, in exchange for quality.
+Read from `comfy_extras/nodes_minimax_h3.py` at 0.30.2, not from docs.
 
-Still unmeasured here, and the reason the card stays open:
+**`adapt_canvas()` = 768 short edge, 768x1344 area cap (0.98 MP), each axis /32.** That is
+the trained canvas and it is why the template's size note has an odd `0.98` row.
+**It is NOT enforced on the output.** `adapt_canvas` is called exactly once, at line 241,
+to conform **reference videos** in r2v; the entry nodes take `width`/`height` raw
+(`height // 16`). So a bigger canvas will run — it just leaves the distribution. Every
+node defaults to 1344x768, which is the tell.
 
-1. Peak RAM with the 27 GB encoder plus a 21 GB DiT resident in the same run.
-2. Seconds/step on the 4060 Ti at 864x480, 5 s.
-3. Whether ComfyUI unloads the encoder before the DiT loads, or holds both.
-4. Whether audio decode adds meaningful time.
+The `Note: Size Settings Reference` table is **byte-identical across all three templates**
+(sha1 `9b4d025948f9`) and is just the 16:9 column of core's `ResolutionSelector` at
+`multiple=32`. Only the node *default* differs: t2v and r2v open on 16:9, i2v on **1:1**.
+`ResolutionSelector`'s formula is symmetric in w/h, so 9:16 is the exact transpose of 16:9
+— no separate table needed. Its enum has 8 ratios; `9:21` is the only gap.
+
+**Shipped to `js/utils/ratios.js` as `MINIMAX_H3_RATIOS`** (5 tiers, `'quality'` mode,
+provisional type key `h3`, inert until MPI-452 wires a ModelDef — same status
+`WAN_5B_RATIOS` has had). `very_high` = `adapt_canvas` output; the four below are Comfy's
+own MP anchors. **1:1 is the short edge of each tier's 16:9 pair (the LTX rule), NOT
+`ResolutionSelector`'s square** — that would give 800 at 0.6 MP and 1024 at 0.98, both off
+H3's canvas. Consequence worth surfacing in the UI: **square tops out at 768x768, so a 1:1
+H3 video is genuinely lower-res than a 16:9 one** — the short-edge rule binds before the
+area cap. No 2K/4K tier: H3-Regenerate-2K is API-only (§1).
+
+**One node covers four ops.** `MiniMaxH3ImageToVideo` + the `fl2va` DiT serves T2V (nothing
+connected), I2V (first_frame), last-frame, and first+last interpolation — `first_frame` and
+`last_frame` are optional. The t2v and i2v templates are the *same graph*. For Vision that
+is one workflow file with optional image inputs, not four. Only `ref2va` is a different
+graph and a different DiT.
+
+**The templates' `MathExpression` is redundant.**
+`max(5, round(a*24)) + (5 - (max(5, round(a*24)) % 17)) % 17` converts seconds to frames and
+snaps up to `n % 17 == 5`. `temporal_shape()` already calls `align_frame_count()`, the same
+`while n%17!=5: n+=1`. The node exists only so the UI can expose seconds; a raw frame count
+in `length` is snapped anyway. (Why 17: `video_latent_t(n) = 2 if n<=5 else ((n-5)//17)*5+2`.)
+
+## 6. Runnability — MEASURED 2026-08-05. It runs.
+
+**H3 runs on the RTX 4060 Ti 16 GB. No OOM, no crawl.** That answers the card's first
+acceptance criterion, measured not guessed. Two i2v runs off the shipped
+`video_minimax_h3_i2v` template, read from the bench's own `/history` (not a stopwatch):
+
+| Run | Seed | Time | Note |
+|---|---|---|---|
+| `dc0da971` | 1 | **160.0 s** | cold — includes first load of ~47 GB of weights |
+| `824a0af0` | 1 | 0.013 s | identical seed, fully cached, measures nothing |
+| `4249c26f` | 2 | **131.0 s** | warm — seed-only change, models resident |
+
+Config for all three: 640x640, 2 s → **56 frames** (`n % 17 == 5`), 20 steps,
+`res_multistep` + `simple`, denoise 1.0, DiT `minimax_h3_fl2va_pruned_int8_convrot`,
+encoder `qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot` (ethanfel).
+
+> **These runs were NOT on a clean box — treat every time here as an UPPER BOUND.** A
+> Cubric-Prompt agent was running LLM tests concurrently: Ollama's `llama-server` with a
+> vision model (`--mmproj`), cycling load→test→unload, spiking to ~9.5 GB VRAM and
+> competing for system RAM — the exact resource H3 needed, with 24.5 GB of weights living
+> in shared memory. It was NOT a steady steal: the dedicated-VRAM trace during the H3 run
+> is a flat 14.8 GB plateau, so ComfyUI held most of the card. Clean warm time is
+> **≤ 131 s** and the projections below shift down with it. Re-run seed-only with the
+> Cubric-Prompt agent stopped before quoting any of this as final.
+
+- **Warm = 6.55 s/step.** Model load overhead = **29 s** (160.0 − 131.0).
+- Normalised: **5.711 µs per pixel-frame** warm.
+- Third-party reference was 194 s for 20 steps at 864x480 / 124 frames = 51.4 M
+  pixel-frames. That is **2.24x our work in 1.21x our time**, so that machine is ~1.5x
+  faster per pixel-frame than this one. The 4060 Ti is in the same league, not an
+  outlier.
+
+Projected warm times at 20 steps, from the measured rate (16:9 column of
+`MINIMAX_H3_RATIOS`):
+
+| Tier | 16:9 | 2 s (56f) | 5 s (124f) |
+|---|---|---|---|
+| very_low | 608x352 | 68 s | 152 s |
+| low | 736x416 | 98 s | 217 s |
+| medium | 864x480 | 133 s | 294 s |
+| high | 1152x640 | 236 s | 522 s |
+| very_high | 1344x768 | 330 s | 731 s |
+
+**These are floors, not estimates.** Linear-in-pixel-frames is optimistic — attention is
+quadratic in token count and the larger tiers spill harder. Treat medium/5 s ≈ 5 min as
+the best case.
+
+### Memory behaviour during the run
+
+Task Manager at peak, cross-checked against `/system_stats`:
+
+- System RAM **60.0 / 63.8 GB (94%)**, Comfy reporting **3.8 GB free** of 68.5.
+  (68.5 = what Comfy sees; 63.8 = Windows usable after hardware reserve. Both correct.)
+- GPU dedicated **14.8 / 16.0 GB**, shared **24.5 / 47.8 GB** — 24.5 GB of weights
+  streaming over PCIe every step. That is where the 6.55 s/step goes.
+- GPU utilisation **98%** at 75 °C — it is computing, not just thrashing.
+- `torch_vram_total` reports only **1.38 GB**. Torch's tracked pool is nearly empty while
+  Task Manager shows 14.8 GB dedicated: under the `cudaMallocAsync` backend the weights
+  sit outside torch's allocator, so **Comfy's own VRAM accounting cannot see them**. Do
+  not diagnose H3 memory from `/system_stats` alone.
+
+### Consequences
+
+1. **The pruned-vs-unpruned A/B is probably not runnable on this box.** Pruned (20.97 GB)
+   already pushed 24.5 GB into shared memory with 3.8 GB of RAM left. Unpruned adds
+   13 GB and there is nowhere for it to go. `minimax_h3_fl2va_int8_convrot` (34.04 GB) is
+   downloaded and on disk; if it OOMs or pages, record that as the answer rather than
+   fighting it — Comfy states pruning is lossless anyway (§2).
+2. Still not separately measured: whether ComfyUI unloads the encoder before the DiT
+   loads, and what audio decode costs on its own. Both are inside the 131 s.
+3. Close the browser before any further timing run — ~15 Chrome tabs at 94% RAM is the
+   difference between offloading and paging to disk.
+
+## 6b. The engine bump is a HARD gate, not a preference
+
+`EmptyMiniMaxH3LatentAV`, `MiniMaxH3ImageToVideo`, `MiniMaxH3ReferenceToVideo`,
+`MiniMaxH3SigmaShift` and the `minimax` CLIPLoader type are **core nodes introduced in
+ComfyUI 0.30.0**. There is no custom-node package that backports them. The app engine is
+pinned at **0.29.2** in `dev_configs/system_dependencies.json`, so **no H3 graph can run
+in Cubric Vision at all until the engine is bumped** — this is not a quality or
+performance trade-off, the nodes simply do not exist.
+
+So MPI-452 (H3 model wiring) has **two** blockers, not one:
+
+1. **MPI-451** — the licence gate.
+2. **The 0.29.2 → 0.30.x engine bump** — its own card, carrying the standing risk from
+   `.claude/rules/comfy_engine.md`: a core bump can break version-sensitive custom nodes,
+   so the node-floor pairing check runs before the tag is picked. Encouraging evidence
+   from this card: the bench went 0.29.2 → 0.30.2 with **zero import failures across all
+   20 custom-node packs** and torch untouched. That is the bench's node set, not the
+   engine's, so it lowers the risk rather than clearing it.
 
 ## 7. Sources
 
