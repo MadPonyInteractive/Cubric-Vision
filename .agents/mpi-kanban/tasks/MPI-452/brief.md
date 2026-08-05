@@ -13,6 +13,10 @@ themselves in an excluded territory. Get that in writing before release. If it d
 reach them, MPI-451's route-to-the-licensor's-own-form design is what makes the release
 viable - each user carries their own authorization.
 
+**Asking that question is the suggested first step on MPI-451**, not on this card - the
+answer changes what MPI-451 builds, and a draft is ready in the private folder named below.
+Do not wait on it here; MPI-451 landing is what unblocks this card either way.
+
 Licence detail is held OUTSIDE this repo (public repo + confidentiality undertaking):
 `C:/AI/Mpi/_private/minimax-h3-licence/`.
 

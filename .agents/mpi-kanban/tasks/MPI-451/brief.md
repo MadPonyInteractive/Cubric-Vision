@@ -22,6 +22,22 @@ confidentiality undertaking): `C:/AI/Mpi/_private/minimax-h3-licence/`. Do not c
 A Model Library tile calls straight into `routes/downloadManager.js`. There is no acceptance
 step anywhere in that path and no per-model licence record.
 
+## Suggested first step — one email that may delete a step from this card
+
+Before building the gate, send the licensor the design-confirmation question: **does our
+authorization already extend to end users in the excluded territories, or should each hold
+their own?**
+
+- If **each user needs their own** — build the referral step as described below.
+- If **ours already covers them** — the referral comes out entirely and the gate is just a
+  terms-acceptance dialog. Roughly half the UX of this card disappears.
+
+Either answer is cheap to implement; the point is not to build the harder one and then learn
+it was unnecessary. A draft is ready — **kept out of this repo** because it is licence
+correspondence: `C:/AI/Mpi/_private/minimax-h3-licence/` (last section supersedes the
+earlier one). Not a blocker: if no reply comes, build the referral version, which is correct
+under either answer.
+
 ## Design intent
 
 - A **licence descriptor on the ModelDef**. Absent = today's behaviour, untouched. Present =
