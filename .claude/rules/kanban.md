@@ -19,6 +19,29 @@ does. Search the `.agents` path, or pass `-L`. The validator is
 `task-board-ops/` alongside the docs this file already points you at. (Measured both
 directions 2026-08-04.)
 
+## The board is PUBLIC — writing a card is publishing it
+
+`.agents/mpi-kanban/` is **tracked**, and `origin` is the public
+`github.com/MadPonyInteractive/Cubric-Vision`. CLAUDE.md's "Kanban writes are
+pre-authorized — never ask" grants permission to EDIT; it says nothing about privacy.
+Before writing a card, brief, `research.md` or an event `summary`, ask whether it would be
+fine on a web page. Personal data, licence or legal correspondence, credentials, customer
+names and anything under an NDA go **outside every git root** —
+`C:/AI/Mpi/_private/<topic>/` — with only a path pointer in the card.
+
+Caught 2026-08-05 on MPI-449: a licence request carrying a full legal name, email and terms
+agreed under a confidentiality undertaking was written into `tasks/MPI-449/` and was one
+`git add` from being pushed; the tracked `events.jsonl` summaries leaked the same details
+and had to be rewritten. It reads as scratch space because it is a dotfolder written
+constantly without ceremony — that is exactly why the check has to be deliberate.
+
+**This already happened without anyone noticing.** `state/archive/handoffs/` and
+`tasks/MPI-370/validation.md` carry live-at-the-time SSH endpoints for rented
+infrastructure (`rentamac@gate1.rentamac.io -p 27847`, a RunPod proxy id). No keys leaked
+and both hosts are long gone, but handoffs and validation notes accumulate operational
+detail nobody writes for publication. Sweep `.agents/` for email patterns and `ssh ` before
+committing a session that touched anything sensitive.
+
 ## Card shape rules
 
 When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):
