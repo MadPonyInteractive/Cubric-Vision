@@ -69,6 +69,28 @@ when it is believed.
       install-screen flicker bullet (fixed and unit-tested, never SEEN fire), and
       "Resize Video works on a cloud GPU" (no remote run recorded).
 
+## Gate E — release CONTENT: MiniMax H3 (added 2026-08-05 by the user)
+
+1.4 is the H3 release. Hard chain, no reordering. The bump waits on all three.
+
+- [ ] **MPI-449** — close the research: weight variant chosen WITH its reason, the bench
+      workflow producing video AND audio saved under the task folder, and the go/no-go on
+      moving the engine off the 0.29.2 pin. Runnability is already answered — measured on
+      the 4060 Ti 16 GB. **A peer agent has been working this card — coordinate before
+      picking it up.**
+- [ ] **MPI-451** — the licence gate. Blocks MPI-452 and cannot be waived: our H3
+      authorization is conditioned on binding each user to terms at least as protective
+      as the Use Restrictions and AUP. Descriptor-driven on the ModelDef (Flux is next),
+      per-model acceptance that survives a restart, licensor's own authorization route
+      for the territory restriction, and models without a descriptor completely
+      unaffected.
+- [ ] **MPI-452** — wire H3: engine bump 0.29.2 → 0.30.x with the custom-node pairing
+      check run FIRST, weights from the publisher's repo (never R2), an op producing video
+      AND its audio track in the app, licence text + NOTICE reachable in-app.
+- [ ] Gate B re-read AFTER MPI-452 — it was scoped against a 0.29.2 engine, and the
+      MPI-249 Linux leg now provisions 0.30.x.
+- [ ] H3 `whatIsNew` bullet + licence attribution written into `UNRELEASED.md`
+
 ## Bump
 
 - [ ] `/mpi-version-bump` → 1.4.0 (appVersion.js, package.json, package-lock.json, operation registry, model mappings, operation_registry.json)

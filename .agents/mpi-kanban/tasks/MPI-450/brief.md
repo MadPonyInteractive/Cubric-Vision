@@ -58,21 +58,56 @@ issue. Silently open is not an option — that is the whole point of this card.
   umbrella still sits in `doing`.
 - **MPI-4** (LTX 2.3, untouched since 2026-06-27) and **MPI-259** (Apps v2, since
   2026-07-22) are in `doing` and land in neither 1.4 nor its notes. Move them out so the
-  column is honest. MPI-449 stays — active research, not release-facing.
+  column is honest. (MPI-449 also stays in `doing` — but as RELEASE CONTENT now, see Gate E.)
 - `python ~/.agents/skills/mpi-lib/scripts/validate_board.py .` from the repo root
   (the argument is the REPO ROOT; never through a pipe) → exit 0.
-- Then `/mpi-version-bump` → 1.4.0, `npm run release:check`, `release:approve --yes`.
+- Then **Gate E**, and only then `/mpi-version-bump` → 1.4.0, `npm run release:check`, `release:approve --yes`.
 - **Docs site**: 1.4 adds Paint, Composite, Control and the mask toolkit. Docs coverage
   is the `Cubric Studio (Docs)` repo's own card, and that repo is a **hard no-push** —
   note it, do not act on it from here.
 
 ---
 
+## Gate E — release CONTENT: MiniMax H3 (added 2026-08-05 by the user)
+
+**1.4 is the H3 release.** This gate did not exist when the umbrella was written, and its
+absence is why the close-out on 2026-08-05 wrongly named the version bump as the next
+action. The bump is now the LAST thing before Gate B, not the next thing.
+
+Three cards in a hard chain — none of them can be reordered:
+
+1. **MPI-449** (`doing`, research) — H3 runs: measured on the 4060 Ti 16 GB. What still
+   has to come off this card before it closes is the chosen weight variant with its
+   reason, the saved bench workflow producing video AND audio, and the go/no-go on
+   moving the engine off its 0.29.2 pin. **A peer agent has been working this card**
+   (commits `f739e076`, `d5b858ef`) — check with it before picking the card up.
+2. **MPI-451** (`todo`) — the licence gate. Not optional and not deferrable: our H3
+   authorization is CONDITIONED on binding each user to terms at least as protective as
+   the Use Restrictions and AUP. No gate, no legal route to ship the model. It is a real
+   feature (descriptor on the ModelDef, terms UI, per-model persisted acceptance), so
+   scope it as one — Flux is the next consumer, which is why it is descriptor-driven.
+3. **MPI-452** (`todo`, blocked on 451) — wire H3. Carries the **engine bump off the
+   0.29.2 pin to 0.30.x**, which needs the custom-node pairing check FIRST
+   (`.claude/rules/comfy_engine.md`). Weights come from the publisher's own repo and are
+   NEVER re-hosted on R2. Video + native stereo audio from one sampler pass — the LTX
+   audio I/O in `docs/models/ltx/audio-input.md` is the prior art.
+
+Two consequences for the rest of this umbrella:
+
+- **The engine bump lands INSIDE 1.4.** Gate B was scoped against a 0.29.2 engine; the
+  Linux leg (MPI-249) and any provisioning check now run against 0.30.x. Re-read Gate B
+  after MPI-452 lands rather than assuming it is unchanged.
+- **The notes gain a model.** H3 needs a `whatIsNew` bullet plus the licence NOTICE and
+  attribution the card requires. Models are not version-bumped, but the engine is —
+  `dev_configs/system_dependencies.json` and the provisioning docs move with it.
+
 ## Explicitly NOT in 1.4 — do not let these creep in
 
 MPI-403 (Pod hot-store), MPI-397 (a re-measure, not a fix), MPI-320, MPI-442, MPI-322,
 MPI-302, MPI-355, MPI-348, MPI-325, MPI-289, MPI-343, MPI-349, MPI-357, MPI-358,
-MPI-332, MPI-183, MPI-377, MPI-4, MPI-259, MPI-449.
+MPI-332, MPI-183, MPI-377, MPI-4, MPI-259.
+
+**MPI-449 was on this list until 2026-08-05 and has been REMOVED — the user's call: 1.4 ships WITH MiniMax H3.** The exclusion was written while H3 was open research; it has since been measured RUNNING on the 4060 Ti 16 GB (131 s warm, 20 steps, 640x640 x 56 frames), so "active research, not release-facing" no longer describes it. See § Gate E below — this is a scope ADDITION to the umbrella, not a discovery.
 
 **MPI-367** (per-op help copy is wrong) is a judgement call and the answer is *no* for
 1.4: the `control` help key exists, so there is no missing-key hole — only accuracy —
@@ -86,9 +121,11 @@ if Gate A finishes early.
    (one decision) → MPI-404 (needs the product answer first) → MPI-410 (repro session,
    longest tail, and the only one whose root is unknown).
 3. **Gate C decisions** — they cost nothing and they change what Gate B has to verify.
-4. **Bump to 1.4.0, build the artifacts**, THEN Gate B against the real artifacts.
+4. **Gate E — MiniMax H3** (MPI-449 → MPI-451 → MPI-452, in that order). The longest
+   pole in the release by far, and the reason 1.4 exists in its current shape.
+5. **Bump to 1.4.0, build the artifacts**, THEN Gate B against the real artifacts.
    Verifying a dev checkout does not verify a build.
-5. Cut the release.
+6. Cut the release.
 
 Gate B comes after the bump on purpose: MPI-249 tests the *artifact*, and MPI-432's
 Windows regression check is cheap enough to repeat if anything moves.
