@@ -5,17 +5,23 @@ when it is believed.
 
 ## Gate D — hygiene (do first, costs minutes)
 
-- [ ] MPI-440 closed — all members done, MPI-435 last (`e6229bd3`)
-- [ ] MPI-4 moved out of `doing` (untouched since 2026-06-27, not in 1.4)
-- [ ] MPI-259 moved out of `doing` (untouched since 2026-07-22, not in 1.4)
-- [ ] `validate_board.py .` from the repo root → exit 0, not read through a pipe
+- [x] MPI-440 closed — all members done, MPI-435 last (`e6229bd3`)
+- [x] MPI-4 moved out of `doing` (untouched since 2026-06-27, not in 1.4)
+- [x] MPI-259 moved out of `doing` (untouched since 2026-07-22, not in 1.4)
+- [x] `validate_board.py .` from the repo root → exit 0, not read through a pipe
 
 ## Gate A — must fix (code)
 
-- [ ] **MPI-420** — decision made and shipped: TAESD decoders shipped as engine assets, OR previews turned off. No half-on switch. (LTX/taehv strand explicitly out of scope)
+- [x] **MPI-420** — shipped the decoders (user's call). **The card's premise was wrong**: a
+      missing decoder falls back to Latent2RGB, so previews were the colour blob, not absent.
+      Real gaps were FLUX.2 Klein + Wan 2.2 on every platform, and everything on macOS/Linux.
+      Four engineAssets on R2. Needs one Klein + one Wan generation to confirm the quality change.
+- [ ] **MPI-453** — NEW, found live 2026-08-05, release blocker. An operation whose per-op
+      weights are not installed must not be dispatchable, and a ComfyUI validation rejection
+      must be a toast naming the missing weight, not the REPORT ON GITHUB dialog
 - [ ] **MPI-404** — product question answered (models root: app-level or engine-owned), then a truthful installed count on first run with the local engine skipped
 - [ ] **MPI-410** — cold-first-run splash reproduced, root identified, fixed; install screen no longer strobes
-- [ ] **MPI-374** — UI size survives a full restart; key in `js/core/storageKeys.js`; no resize flash; Browser Mode no-ops
+- [x] **MPI-374** — UI size survives a full restart; key in `js/core/storageKeys.js`; no resize flash; Browser Mode no-ops. Needs the user's own restart.
 - [ ] Any Gate A card NOT fixed is written into the 1.4 release notes as a known issue
 
 ## Gate C — must decide (before the notes are frozen)
