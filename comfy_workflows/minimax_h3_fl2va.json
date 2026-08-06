@@ -87,9 +87,12 @@
   },
   "141": {
     "inputs": {
-      "step": 5,
       "sigmas": [
         "140",
+        0
+      ],
+      "step": [
+        "309",
         0
       ]
     },
@@ -182,7 +185,7 @@
         1
       ],
       "latent_image": [
-        "164",
+        "320",
         0
       ]
     },
@@ -230,35 +233,6 @@
       "title": "VAE Decode Audio"
     }
   },
-  "164": {
-    "inputs": {
-      "true": [
-        "173",
-        0
-      ],
-      "false": [
-        "171",
-        0
-      ],
-      "boolean": [
-        "203",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "166": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Input_Preview_Only"
-    }
-  },
   "167": {
     "inputs": {
       "int": 864
@@ -277,41 +251,11 @@
       "title": "Input_Height"
     }
   },
-  "171": {
-    "inputs": {
-      "filename": "mpi_stage1_2",
-      "samples": [
-        "153",
-        0
-      ],
-      "boolean": [
-        "202",
-        0
-      ],
-      "enabled": [
-        "211",
-        0
-      ]
-    },
-    "class_type": "MpiSaveLatent",
-    "_meta": {
-      "title": "Output_Video_Latent"
-    }
-  },
-  "173": {
-    "inputs": {
-      "filename": "mpi_stage1_2"
-    },
-    "class_type": "MpiLoadLatent",
-    "_meta": {
-      "title": "Input_Video_Latent"
-    }
-  },
   "177": {
     "inputs": {
       "samples": [
-        "200",
-        0
+        "320",
+        1
       ],
       "vae": [
         "121",
@@ -326,8 +270,8 @@
   "178": {
     "inputs": {
       "samples": [
-        "200",
-        0
+        "320",
+        1
       ],
       "vae": [
         "122",
@@ -346,60 +290,6 @@
     "class_type": "MpiInt",
     "_meta": {
       "title": "Input_seed"
-    }
-  },
-  "200": {
-    "inputs": {
-      "input": [
-        "153",
-        1
-      ],
-      "boolean": [
-        "204",
-        0
-      ]
-    },
-    "class_type": "MpiBlocker",
-    "_meta": {
-      "title": "Mpi Blocker"
-    }
-  },
-  "202": {
-    "inputs": {
-      "boolean": [
-        "166",
-        0
-      ]
-    },
-    "class_type": "MpiBooleanInvert",
-    "_meta": {
-      "title": "Mpi Boolean Invert"
-    }
-  },
-  "203": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Input_Is_Continue"
-    }
-  },
-  "204": {
-    "inputs": {
-      "mode": "a_false_b_true",
-      "a": [
-        "203",
-        0
-      ],
-      "b": [
-        "166",
-        0
-      ]
-    },
-    "class_type": "MpiBooleanCompare",
-    "_meta": {
-      "title": "Mpi Boolean Compare"
     }
   },
   "207": {
@@ -440,18 +330,6 @@
     "class_type": "MpiSaveVideo",
     "_meta": {
       "title": "Output_Video"
-    }
-  },
-  "211": {
-    "inputs": {
-      "boolean": [
-        "203",
-        0
-      ]
-    },
-    "class_type": "MpiBooleanInvert",
-    "_meta": {
-      "title": "Not_Is_Continue"
     }
   },
   "212": {
@@ -1037,6 +915,39 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "has img1"
+    }
+  },
+  "309": {
+    "inputs": {
+      "math_expression": "10 if a else 5",
+      "a": [
+        "291",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "320": {
+    "inputs": {
+      "is_continue": false,
+      "is_preview": false,
+      "save_path": "mpi_stage1",
+      "load_path": "mpi_stage1",
+      "latent": [
+        "153",
+        0
+      ],
+      "denoised": [
+        "153",
+        1
+      ]
+    },
+    "class_type": "MpiStageLatents",
+    "_meta": {
+      "title": "Input_Video_Latent"
     }
   }
 }

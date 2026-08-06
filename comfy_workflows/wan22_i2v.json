@@ -165,12 +165,12 @@
         0
       ],
       "positive": [
-        "830",
-        0
+        "928",
+        2
       ],
       "negative": [
-        "831",
-        0
+        "928",
+        3
       ],
       "sampler": [
         "726",
@@ -205,7 +205,7 @@
   "737": {
     "inputs": {
       "samples": [
-        "768",
+        "881",
         1
       ],
       "vae": [
@@ -252,12 +252,12 @@
         0
       ],
       "positive": [
-        "765",
+        "927",
         0
       ],
       "negative": [
-        "766",
-        0
+        "927",
+        1
       ],
       "sampler": [
         "726",
@@ -268,8 +268,8 @@
         0
       ],
       "latent_image": [
-        "767",
-        0
+        "927",
+        4
       ],
       "noise_seed": [
         "717",
@@ -297,20 +297,20 @@
         2
       ],
       "start_image": [
-        "878",
+        "919",
         0
       ],
       "end_image": [
-        "879",
+        "923",
         0
       ],
       "width": [
-        "879",
-        1
+        "836",
+        0
       ],
       "height": [
-        "879",
-        2
+        "837",
+        0
       ],
       "length": [
         "635",
@@ -324,7 +324,7 @@
   },
   "743": {
     "inputs": {
-      "string": "a woman dancing "
+      "string": "The woman is dancing "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -370,116 +370,6 @@
       "title": "Input_Negative"
     }
   },
-  "752": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiBoolean",
-    "_meta": {
-      "title": "Input_Preview_Only"
-    }
-  },
-  "759": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Input_Use_End_Image"
-    }
-  },
-  "765": {
-    "inputs": {
-      "true": [
-        "741",
-        0
-      ],
-      "false": [
-        "825",
-        0
-      ],
-      "boolean": [
-        "759",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "pos"
-    }
-  },
-  "766": {
-    "inputs": {
-      "true": [
-        "741",
-        1
-      ],
-      "false": [
-        "825",
-        1
-      ],
-      "boolean": [
-        "759",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "neg"
-    }
-  },
-  "767": {
-    "inputs": {
-      "true": [
-        "741",
-        2
-      ],
-      "false": [
-        "825",
-        4
-      ],
-      "boolean": [
-        "759",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "lat"
-    }
-  },
-  "768": {
-    "inputs": {
-      "input": [
-        "740",
-        1
-      ],
-      "boolean": [
-        "752",
-        0
-      ]
-    },
-    "class_type": "MpiIfElseInverted",
-    "_meta": {
-      "title": "Mpi If Else Inverted"
-    }
-  },
-  "770": {
-    "inputs": {
-      "input": [
-        "846",
-        0
-      ],
-      "boolean": [
-        "752",
-        0
-      ]
-    },
-    "class_type": "MpiIfElseInverted",
-    "_meta": {
-      "title": "Mpi If Else Inverted"
-    }
-  },
   "774": {
     "inputs": {
       "passthrough": [
@@ -495,7 +385,7 @@
   "775": {
     "inputs": {
       "passthrough": [
-        "770",
+        "881",
         0
       ]
     },
@@ -702,16 +592,16 @@
         2
       ],
       "start_image": [
-        "878",
+        "919",
         0
       ],
       "width": [
-        "879",
-        1
+        "836",
+        0
       ],
       "height": [
-        "879",
-        2
+        "837",
+        0
       ],
       "length": [
         "635",
@@ -725,46 +615,6 @@
     "class_type": "PainterI2VAdvanced",
     "_meta": {
       "title": "PainterI2VAdvanced"
-    }
-  },
-  "830": {
-    "inputs": {
-      "true": [
-        "765",
-        0
-      ],
-      "false": [
-        "825",
-        2
-      ],
-      "boolean": [
-        "759",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "pos"
-    }
-  },
-  "831": {
-    "inputs": {
-      "true": [
-        "766",
-        0
-      ],
-      "false": [
-        "825",
-        3
-      ],
-      "boolean": [
-        "759",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "neg"
     }
   },
   "832": {
@@ -821,90 +671,6 @@
       "title": "Input_Duration"
     }
   },
-  "843": {
-    "inputs": {
-      "filename_prefix": "wan22",
-      "samples": [
-        "848",
-        1
-      ]
-    },
-    "class_type": "SaveLatent",
-    "_meta": {
-      "title": "Output_Video_Latent"
-    }
-  },
-  "844": {
-    "inputs": {
-      "latent": "ComfyUI_00001_.latent"
-    },
-    "class_type": "LoadLatent",
-    "_meta": {
-      "title": "Input_Video_Latent"
-    }
-  },
-  "845": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiBoolean",
-    "_meta": {
-      "title": "Input_Is_Continue"
-    }
-  },
-  "846": {
-    "inputs": {
-      "true": [
-        "844",
-        0
-      ],
-      "false": [
-        "740",
-        0
-      ],
-      "boolean": [
-        "845",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "848": {
-    "inputs": {
-      "input": [
-        "770",
-        1
-      ],
-      "boolean": [
-        "849",
-        0
-      ]
-    },
-    "class_type": "MpiIfElseInverted",
-    "_meta": {
-      "title": "Mpi If Else Inverted"
-    }
-  },
-  "849": {
-    "inputs": {
-      "mode": "a_true_b_false",
-      "a": [
-        "752",
-        0
-      ],
-      "b": [
-        "845",
-        0
-      ]
-    },
-    "class_type": "MpiBooleanCompare",
-    "_meta": {
-      "title": "Mpi Boolean Compare"
-    }
-  },
   "857": {
     "inputs": {
       "sigmas": " 0.85, 0.65, 0.45, 0.25, 0.0"
@@ -955,80 +721,6 @@
       "title": "Output_Preview"
     }
   },
-  "875": {
-    "inputs": {
-      "string": "",
-      "channel": "alpha",
-      "block_if_empty": true
-    },
-    "class_type": "MpiLoadImageFromPath",
-    "_meta": {
-      "title": "Input_Start_Frame"
-    }
-  },
-  "876": {
-    "inputs": {
-      "string": "",
-      "channel": "alpha",
-      "block_if_empty": false
-    },
-    "class_type": "MpiLoadImageFromPath",
-    "_meta": {
-      "title": "Input_End_Frame"
-    }
-  },
-  "878": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 16,
-      "device": "cpu",
-      "image": [
-        "875",
-        0
-      ],
-      "width": [
-        "836",
-        0
-      ],
-      "height": [
-        "837",
-        0
-      ]
-    },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
-    }
-  },
-  "879": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 16,
-      "device": "cpu",
-      "image": [
-        "876",
-        0
-      ],
-      "width": [
-        "878",
-        1
-      ],
-      "height": [
-        "878",
-        2
-      ]
-    },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
-    }
-  },
   "880": {
     "inputs": {
       "start": 1,
@@ -1041,6 +733,354 @@
     "class_type": "MpiListRange",
     "_meta": {
       "title": "Remove first Frame (!repeat)"
+    }
+  },
+  "881": {
+    "inputs": {
+      "is_continue": false,
+      "is_preview": false,
+      "save_path": "mpi_stage1",
+      "load_path": "mpi_stage1",
+      "latent": [
+        "740",
+        0
+      ],
+      "denoised": [
+        "740",
+        1
+      ]
+    },
+    "class_type": "MpiStageLatents",
+    "_meta": {
+      "title": "Input_Video_Latent"
+    }
+  },
+  "899": {
+    "inputs": {
+      "any": [
+        "903",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "902": {
+    "inputs": {
+      "any": [
+        "905",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "903": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Start_Frame"
+    }
+  },
+  "904": {
+    "inputs": {
+      "channel": "alpha",
+      "block_if_empty": true,
+      "string": [
+        "899",
+        0
+      ]
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "start"
+    }
+  },
+  "905": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_End_Frame"
+    }
+  },
+  "908": {
+    "inputs": {
+      "channel": "alpha",
+      "block_if_empty": false,
+      "string": [
+        "902",
+        0
+      ]
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "end"
+    }
+  },
+  "918": {
+    "inputs": {
+      "mode": "both_true",
+      "a": [
+        "899",
+        1
+      ],
+      "b": [
+        "902",
+        1
+      ]
+    },
+    "class_type": "MpiBooleanCompare",
+    "_meta": {
+      "title": "Mpi Boolean Compare"
+    }
+  },
+  "919": {
+    "inputs": {
+      "divisible_by": 16,
+      "position": "center",
+      "image": [
+        "904",
+        0
+      ],
+      "width": [
+        "836",
+        0
+      ],
+      "height": [
+        "837",
+        0
+      ]
+    },
+    "class_type": "MpiCrop",
+    "_meta": {
+      "title": "Mpi Crop"
+    }
+  },
+  "923": {
+    "inputs": {
+      "divisible_by": 16,
+      "position": "center",
+      "image": [
+        "908",
+        0
+      ],
+      "width": [
+        "836",
+        0
+      ],
+      "height": [
+        "837",
+        0
+      ]
+    },
+    "class_type": "MpiCrop",
+    "_meta": {
+      "title": "Mpi Crop"
+    }
+  },
+  "924": {
+    "inputs": {
+      "any_1": [
+        "741",
+        0
+      ],
+      "any_2": [
+        "741",
+        1
+      ],
+      "any_3": [
+        "741",
+        0
+      ],
+      "any_4": [
+        "741",
+        1
+      ],
+      "any_5": [
+        "741",
+        2
+      ]
+    },
+    "class_type": "MpiPacker",
+    "_meta": {
+      "title": "Mpi Packer"
+    }
+  },
+  "925": {
+    "inputs": {
+      "any_1": [
+        "825",
+        0
+      ],
+      "any_2": [
+        "825",
+        1
+      ],
+      "any_3": [
+        "825",
+        2
+      ],
+      "any_4": [
+        "825",
+        3
+      ],
+      "any_5": [
+        "825",
+        4
+      ]
+    },
+    "class_type": "MpiPacker",
+    "_meta": {
+      "title": "Mpi Packer"
+    }
+  },
+  "927": {
+    "inputs": {
+      "pack": [
+        "945",
+        0
+      ]
+    },
+    "class_type": "MpiUnpacker",
+    "_meta": {
+      "title": "Mpi Unpacker"
+    }
+  },
+  "928": {
+    "inputs": {
+      "pack": [
+        "945",
+        0
+      ]
+    },
+    "class_type": "MpiUnpacker",
+    "_meta": {
+      "title": "Mpi Unpacker"
+    }
+  },
+  "934": {
+    "inputs": {
+      "true": [
+        "924",
+        0
+      ],
+      "false": [
+        "925",
+        0
+      ],
+      "boolean": [
+        "918",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "939": {
+    "inputs": {
+      "any_1": [
+        "940",
+        0
+      ],
+      "any_2": [
+        "940",
+        1
+      ],
+      "any_3": [
+        "940",
+        0
+      ],
+      "any_4": [
+        "940",
+        1
+      ],
+      "any_5": [
+        "940",
+        2
+      ]
+    },
+    "class_type": "MpiPacker",
+    "_meta": {
+      "title": "Mpi Packer"
+    }
+  },
+  "940": {
+    "inputs": {
+      "batch_size": 1,
+      "positive": [
+        "744",
+        0
+      ],
+      "negative": [
+        "723",
+        0
+      ],
+      "vae": [
+        "739",
+        2
+      ],
+      "end_image": [
+        "923",
+        0
+      ],
+      "width": [
+        "836",
+        0
+      ],
+      "height": [
+        "837",
+        0
+      ],
+      "length": [
+        "635",
+        0
+      ]
+    },
+    "class_type": "WanFirstLastFrameToVideo",
+    "_meta": {
+      "title": "WanFirstLastFrameToVideo"
+    }
+  },
+  "945": {
+    "inputs": {
+      "true": [
+        "939",
+        0
+      ],
+      "false": [
+        "934",
+        0
+      ],
+      "boolean": [
+        "946",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "946": {
+    "inputs": {
+      "boolean": [
+        "899",
+        1
+      ]
+    },
+    "class_type": "MpiBooleanInvert",
+    "_meta": {
+      "title": "Mpi Boolean Invert"
     }
   }
 }
