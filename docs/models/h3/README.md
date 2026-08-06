@@ -140,6 +140,24 @@ save now reports `ui.latents` (`filename` + `subfolder: "latents"` + `type: "out
 load checks `input/` first, falling back to `<output>/latents/` so a hand-run bench graph
 is unaffected.
 
+### What the no-twin design costs the APP — two half-wires, found by running it
+
+Shipping one file for both stages is right, but the app had **two** places that assumed the
+fleet's shape. Neither errored; both produced a plausible result with a fallback that hid
+the failure. Found 2026-08-06 by running H3 through Vision, not by reading the graph.
+
+| assumption | where | effect | state |
+|---|---|---|---|
+| the latent saver is `class_type: 'SaveLatent'` | `saveLatentNodeIds`, `js/services/commandExecutor.js` | H3 uses `MpiSaveLatent`, so the set was EMPTY, the latent was never collected, and **every** preview fell back to the COLD path and re-ran the whole workflow — returning a different sample than the one approved | **FIXED**, pinned by `tests/save-latent-recognition.test.cjs` |
+| a multi-stage model has a `_stage2` twin FILE | `resolveWorkflowFile`, `js/data/modelConstants/resolveModelDeps.js` | appends `_stage2` unconditionally → Finish 404s on `minimax_h3_fl2va_stage2.json`, which must never exist | **OPEN** |
+
+H3's stage 2 is the same graph driven by `Input_Is_Continue` / `Input_Preview_Only` through
+the lazy `MpiIfElse` gates — that is why `Input_Is_Continue` exists in the graph at all. The
+resolver should fall back to the base file when no twin exists. **Sweep, do not spot-fix:**
+`resolveWorkflowFile` is shared by every model, and `_stageMode`
+(`commandExecutor.js`) plus `comfyController.js` may carry the same assumption. MPI-456
+wants this design for LTX's six twins and WAN's two, so the app-side gaps are on its path.
+
 **Naming trap, locked by an assert in `generate_h3.py`:** the latent pair MUST stay
 `Output_Video_Latent` / `Input_Video_Latent`. `_latentRoleFromTitle` in
 `js/services/commandExecutor.js` tags any title CONTAINING "audio" as the audio latent —

@@ -150,6 +150,11 @@
 
 ## fixes
 
+- **A failed model install now tells you why.** When an install failed after the files
+  had downloaded, the error box came up completely empty — no reason, nothing to act on,
+  and no hint whether it was worth retrying. The reason was there in the logs the whole
+  time; it just never reached the dialog. It does now.
+
 - **A clear message when another program is using Cubric Vision's port.** The app
   serves itself over a local port, and if something else already held it, Vision
   either opened onto whatever that other program was serving or sat on a black

@@ -109,6 +109,7 @@ Two structural forks decide everything downstream:
 | `progressStages.js` bar counts **must be counted live** per run mode. Never guess | [02](02-dependencies-r2.md) |
 | Injection **silently skips** a param whose `Input_*` title matches no node (hid `Input_Is_i2i` + `Input_Batch` for 4 sessions) | [04](04-ops-and-controls.md) |
 | Style-LoRA set ⇒ assert `len(MpiPromptList.options) == number of style LoRAs`. A missing trigger line is a silent half-application | [05](05-prompt-and-styles.md) |
+| A model that BREAKS A SHIPPED CONVENTION — a new node class, a missing twin file, a different filename shape — must have that convention **grepped for in the app before testing**. The app ENCODES conventions in shared resolvers, and each one is a silent half-wire | this file |
 | Models are **NOT** version-bumped | this file |
 
 ## Hard rules
@@ -119,6 +120,18 @@ Model-specific additions:
 
 - **R2 uploads need explicit user approval** before you run them. R2 *deletes* likewise.
 - **Ask the user to save the ComfyUI canvas** before you read any workflow they just edited.
+- **If the model breaks a convention every shipped model follows, grep the app for the code
+  that ENCODES that convention — before you test, not after.** The app has shared resolvers
+  that assume the fleet's shape, and each unswept one is a silent half-wire: no error, a
+  plausible-looking result, and a fallback path that hides it. MiniMax H3 cost two in one
+  session (MPI-452) by being the first model to ship ONE workflow for both stages and the
+  first to use `MpiSaveLatent`: `saveLatentNodeIds` in `js/services/commandExecutor.js`
+  matched only `class_type === 'SaveLatent'`, so **every** preview silently re-ran the whole
+  workflow instead of resuming; and `resolveWorkflowFile` in
+  `js/data/modelConstants/resolveModelDeps.js` appends `_stage2` unconditionally, so Finish
+  404'd on a twin that deliberately does not exist. Both were found by running the app, not
+  by reading the graph. Start the grep from the new thing's name (`MpiSaveLatent`,
+  `_stage2`) and read every hit.
 
 ## Checklist (copy per model)
 
