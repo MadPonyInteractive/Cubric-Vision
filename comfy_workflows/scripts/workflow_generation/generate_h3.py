@@ -44,31 +44,56 @@ MODEL_VARIANTS = {
     "minimax_h3_fl2va_template.json": "minimax_h3_fl2va.json",
 }
 
-# All three captures. `Output_Video_Latent` is load-bearing, not a debug tap: it is how
-# a preview run hands stage 2 its latent, so pruning to the video captures alone would
+# The one node that owns the two-stage handshake (MpiStageLatents, MPI-452). It replaced
+# the eight-node cluster — MpiSaveLatent + MpiLoadLatent + two MpiBooleanInvert + MpiIfElse
+# + MpiBlocker + MpiBooleanCompare + the two MpiSimpleBoolean gates — and the app addresses
+# its widgets as `<title>.is_continue` / `.is_preview` / `.load_path` (the MPI-359 dotted
+# form), so this title is load-bearing in commandExecutor.js. Rename it and BOTH stages
+# silently run stage 1.
+#
+# It KEEPS the old `Input_Video_Latent` title on purpose: the app emits the dotted widget
+# keys and the plain latent-name key under that one title, and whichever shape the graph
+# actually has consumes its half while the other finds nothing to write to. That is what
+# lets LTX and WAN migrate one at a time instead of on a flag day.
+STAGE_TITLE = "Input_Video_Latent"
+STAGE_CLASS = "MpiStageLatents"
+
+# All three captures. The stage node is load-bearing, not a debug tap: it is how a
+# preview run hands stage 2 its latent, so pruning to the video captures alone would
 # delete the Continue path with no error anywhere.
-CAPTURE_TITLES = ("Output_Video", "Output_Preview", "Output_Video_Latent")
+CAPTURE_TITLES = ("Output_Video", "Output_Preview", STAGE_TITLE)
 
 # title -> baked value. The authoring graph holds whatever the user was last testing;
 # every one of these ships as the FALLBACK the graph runs when injection fails, which is
 # exactly when a wrong value is hardest to spot. Same reasoning as
 # generate_klein.py::_assert_and_bake_wf_type.
-BAKED_WIDGETS = {
+# (title, widget key, shipped value). A LIST, not a dict keyed by title, because
+# MpiStageLatents carries FOUR baked widgets on one node — a title-keyed dict could
+# only hold the last of them.
+BAKED_WIDGETS = [
     # Media paths MUST be empty. Non-empty is not a cosmetic leftover: each feeds an
     # MpiAnyChecker whose boolean picks the branch, so a stray value makes the graph
     # believe a frame is present and run first+last-frame conditioning on a file that
     # does not exist. (The 2026-08-06 export came back with `Input_End_Frame = "d"`.)
-    "Input_Start_Frame": ("string", ""),
-    "Input_End_Frame": ("string", ""),
-    # Stage flags: a shipped template always starts at stage 1, never mid-flow.
-    "Input_Preview_Only": ("boolean", False),
-    "Input_Is_Continue": ("boolean", False),
+    ("Input_Start_Frame", "string", ""),
+    ("Input_End_Frame", "string", ""),
+    # Stage flags: a shipped template always starts at stage 1, never mid-flow. Both
+    # now live as WIDGETS on the single MpiStageLatents node (MPI-452) instead of two
+    # separate MpiSimpleBoolean nodes, which is why they share a title here.
+    (STAGE_TITLE, "is_preview", False),
+    (STAGE_TITLE, "is_continue", False),
+    # The stage-1 latent's name. save_path is the app's read-back handle: it collects
+    # the file from `ui.latents` after a preview, so this baked name is what actually
+    # ships. load_path is injected per run, but bakes to the same name so a hand-run
+    # bench continue resolves without editing anything.
+    (STAGE_TITLE, "save_path", "mpi_stage1"),
+    (STAGE_TITLE, "load_path", "mpi_stage1"),
     # Canvas falls back to `low` (864x480) — the tier MINIMAX_H3_RATIOS documents as the
     # default and the size the community's published timings are measured at. The bench
     # exports at whatever was last rendered (352x608 on 2026-08-06).
-    "Input_Width": ("int", 864),
-    "Input_Height": ("int", 480),
-}
+    ("Input_Width", "int", 864),
+    ("Input_Height", "int", 480),
+]
 
 # Every weight the graph loads, as a SET rather than per-title: two VAELoaders share the
 # title "Load VAE", so a title-keyed check cannot tell them apart. Each name must equal
@@ -131,7 +156,7 @@ def _bake_widgets(workflow: dict) -> None:
     A LINKED input is a hard failure, not something to bake over: the app injects into
     these by title, so an input driven by a wire makes the injection land on a value
     nothing reads and the graph runs whatever the upstream happens to produce."""
-    for title, (key, want) in BAKED_WIDGETS.items():
+    for title, key, want in BAKED_WIDGETS:
         nid = _find_id_by_title(workflow, title)
         if nid is None:
             raise SystemExit(f"[FAIL] no node titled {title!r} — the app injects into it "
@@ -167,26 +192,44 @@ def _assert_weights(workflow: dict) -> None:
 
 
 def _assert_latent_titles(workflow: dict) -> None:
-    """The latent pair must not carry "audio" in its title.
+    """Exactly one stage node, correctly titled, and no leftovers of the old pair.
 
     H3 packs video AND audio into ONE NestedTensor latent, so the natural name for it is
     something like `Output_AV_Latent` — and that would break stage 2 silently. The app's
     `_latentRoleFromTitle` (js/services/commandExecutor.js) tags any title CONTAINING
     "audio" as the audio latent, which is a role H3 has no second slot for."""
-    for cls, want in (("MpiSaveLatent", "Output_Video_Latent"),
-                      ("MpiLoadLatent", "Input_Video_Latent")):
-        for nid, node in workflow.items():
-            if node.get("class_type") != cls:
-                continue
-            title = node.get("_meta", {}).get("title", "")
-            if "audio" in title.lower():
-                raise SystemExit(
-                    f"[FAIL] {cls} node {nid} is titled {title!r} — the app reads "
-                    f"'audio' in a latent title as the AUDIO latent role. H3 has one "
-                    f"packed video+audio latent; it must be titled {want!r}.")
-            if title != want:
-                raise SystemExit(f"[FAIL] {cls} node {nid} is titled {title!r}, "
-                                 f"expected {want!r}")
+    stage = [(nid, node) for nid, node in workflow.items()
+             if node.get("class_type") == STAGE_CLASS]
+    if len(stage) != 1:
+        raise SystemExit(
+            f"[FAIL] {len(stage)} {STAGE_CLASS} node(s), expected exactly 1 — this node "
+            f"IS the two-stage handshake. Zero means the graph cannot continue from a "
+            f"preview at all; two means the app's widget injection hits both and the "
+            f"second one's gates are whatever the bench left behind")
+    nid, node = stage[0]
+    title = node.get("_meta", {}).get("title", "")
+    if "audio" in title.lower():
+        raise SystemExit(
+            f"[FAIL] {STAGE_CLASS} node {nid} is titled {title!r} — the app reads "
+            f"'audio' in a latent title as the AUDIO latent role. H3 has one packed "
+            f"video+audio latent; it must be titled {STAGE_TITLE!r}.")
+    if title != STAGE_TITLE:
+        raise SystemExit(
+            f"[FAIL] {STAGE_CLASS} node {nid} is titled {title!r}, expected "
+            f"{STAGE_TITLE!r} — commandExecutor.js injects `{STAGE_TITLE}.is_continue` "
+            f"and injection SILENTLY SKIPS a title that matches no node, so a rename "
+            f"makes every continue re-run stage 1 and return a different sample")
+
+    # The old pair must be GONE, not merely unused: a leftover MpiSaveLatent still saves
+    # (it is an output node), so a stale one would race the stage node for the same
+    # filename and stage 2 could resume from whichever wrote last.
+    leftovers = [nid for nid, n in workflow.items()
+                 if n.get("class_type") in ("MpiSaveLatent", "MpiLoadLatent")]
+    if leftovers:
+        raise SystemExit(
+            f"[FAIL] {STAGE_CLASS} is present but node(s) {leftovers} still use the old "
+            f"MpiSaveLatent/MpiLoadLatent pair — delete them; two savers on one filename "
+            f"is a race, not a redundancy")
 
 
 def _assert_branches(workflow: dict) -> int:
