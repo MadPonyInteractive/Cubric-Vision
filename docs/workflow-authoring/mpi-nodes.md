@@ -72,19 +72,40 @@ Worse, an **`OUTPUT_NODE` is always executed** — ComfyUI seeds the run from ev
 output node and walks backwards. So a `SaveLatent` / `MpiSaveVideo` hanging off
 stage 1 forces stage 1 on every submit no matter what gates exist anywhere.
 
-**This is why `wan22_*_stage2.json` exists**: with no lazy gate available, the only
-way to stop the stage-1 sampler was to delete the node and export a second
-workflow (`wan22_t2v.json` 55 nodes → `wan22_t2v_stage2.json` 54, `Stage1_Bypass`
-gone). LTX copied the pattern, though its twin differs only by a baked
-`Input_Is_Continue` boolean, so LTX's six `_stage2` files are already redundant —
-the app could inject the flag instead of swapping the file
-(`commandExecutor.js` resolves the twin by filename via `payload.isStage2`).
+**That is why the `_stage2` twins existed**: with no lazy gate available, the only way
+to stop the stage-1 sampler was to delete the node and export a second workflow with
+`Stage1_Bypass` gone. LTX copied the pattern.
+
+**Superseded 2026-08-06 (MPI-452) — use `MpiStageLatents`.** One node now owns the whole
+two-stage handshake: it saves stage 1, gates the preview, and loads the latent back on a
+continue, with `is_continue` / `is_preview` / `save_path` / `load_path` as **widgets**
+rather than wired boolean nodes. Its latent inputs are lazy, so a continue requests
+neither and the stage-1 sampler is genuinely skipped — which removes the only reason a
+twin ever existed. It replaces the eight-node cluster (`MpiSaveLatent` + `MpiLoadLatent` +
+two `MpiBooleanInvert` + `MpiIfElse` + `MpiBlocker` + `MpiBooleanCompare` + both
+`MpiSimpleBoolean` gates).
+
+- **H3 and both WAN graphs are migrated**; `wan22_t2v_stage2.json` and
+  `wan22_i2v_stage2.json` are **deleted**. **LTX's six twins are still live** until its
+  re-author lands (MPI-456), and LTX is dual-latent, which the single node does not yet
+  model — that decision is open.
+- The app stops appending `_stage2` only when the ModelDef declares
+  `capabilities.singleFileStages` (`resolveWorkflowFile`, `resolveModelDeps.js`). **Set
+  the flag and delete the twin in the same change**: a stale twin left on disk is found
+  and RUN, silently producing the old graph's output, which is worse than a missing file
+  because nothing errors. `tests/resolve-model-deps.test.cjs::testSingleFileStages`
+  fails both ways.
+- Title the node **`Input_Video_Latent`** — `commandExecutor.js` injects
+  `Input_Video_Latent.is_continue` / `.is_preview` / `.load_path` (the MPI-359 dotted
+  form), and injection silently skips a title matching no node, so a rename does not
+  error: every continue just re-runs stage 1 and returns a different sample.
 
 Which nodes can skip their upstream, and which cannot:
 
 | node | lazy? | why |
 |---|---|---|
 | `MpiBlocker` | **yes** (since 2026-08-06) | decides from `boolean` alone |
+| `MpiStageLatents` | **yes**, via `is_continue` | output node; a continue requests neither `latent` nor `denoised` |
 | `MpiSaveLatent` | **yes**, via `enabled` | output node; `enabled` off requests no `samples` |
 | `MpiIfElse` | yes (always was) | picks between two upstreams |
 | `MpiIfElseInverted` | **no** | one input, always routed somewhere, so always needed |

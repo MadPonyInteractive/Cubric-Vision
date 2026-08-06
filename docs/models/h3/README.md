@@ -140,23 +140,42 @@ save now reports `ui.latents` (`filename` + `subfolder: "latents"` + `type: "out
 load checks `input/` first, falling back to `<output>/latents/` so a hand-run bench graph
 is unaffected.
 
-### What the no-twin design costs the APP — two half-wires, found by running it
+### What the no-twin design cost the APP — four half-wires, all fixed
 
-Shipping one file for both stages is right, but the app had **two** places that assumed the
-fleet's shape. Neither errored; both produced a plausible result with a fallback that hid
-the failure. Found 2026-08-06 by running H3 through Vision, not by reading the graph.
+Shipping one file for both stages is right, but the app had **four** places that assumed
+the fleet's shape. **Not one of them errored.** Every single one produced a plausible
+result behind a fallback that hid the failure, which is why they were found by running H3
+through Vision on 2026-08-06 and never by reading the graph.
 
 | assumption | where | effect | state |
 |---|---|---|---|
-| the latent saver is `class_type: 'SaveLatent'` | `saveLatentNodeIds`, `js/services/commandExecutor.js` | H3 uses `MpiSaveLatent`, so the set was EMPTY, the latent was never collected, and **every** preview fell back to the COLD path and re-ran the whole workflow — returning a different sample than the one approved | **FIXED**, pinned by `tests/save-latent-recognition.test.cjs` |
-| a multi-stage model has a `_stage2` twin FILE | `resolveWorkflowFile`, `js/data/modelConstants/resolveModelDeps.js` | appends `_stage2` unconditionally → Finish 404s on `minimax_h3_fl2va_stage2.json`, which must never exist | **OPEN** |
+| the latent saver is `class_type: 'SaveLatent'` | `saveLatentNodeIds`, `commandExecutor.js` | H3 uses `MpiSaveLatent`, so the set was EMPTY, the latent was never collected, and **every** preview fell back to the COLD path and re-ran the whole workflow — returning a different sample than the one approved | **FIXED**, pinned |
+| a multi-stage model has a `_stage2` twin FILE | `resolveWorkflowFile`, `resolveModelDeps.js` | appended `_stage2` unconditionally → Finish 404'd on `minimax_h3_fl2va_stage2.json`, which must never exist | **FIXED** — `capabilities.singleFileStages` opts a model out |
+| something, somewhere, writes `Input_Is_Continue` | nothing did | **zero writers tree-wide**; the node sat baked `false`, so fixing the resolver alone would have handed stage 2 the base graph with the gate still off — it re-runs stage 1 and returns a different sample, with nothing to announce it | **FIXED** — `_buildParams` emits it for every multi-stage op |
+| the latent-load widget is called `latent` | `_inject`'s target list, `comfyController.js` | core `LoadLatent` calls it `latent` and **is** listed, so all 12 LTX and 4 WAN graphs always injected fine; H3, the only graph on `MpiLoadLatent` (`filename`), got **nothing** injected, kept its baked name, loaded no latent, gated every lazy branch off, and finished in **0.03 s** with empty outputs | **FIXED** — `'filename'` added |
 
-H3's stage 2 is the same graph driven by `Input_Is_Continue` / `Input_Preview_Only` through
-the lazy `MpiIfElse` gates — that is why `Input_Is_Continue` exists in the graph at all. The
-resolver should fall back to the base file when no twin exists. **Sweep, do not spot-fix:**
-`resolveWorkflowFile` is shared by every model, and `_stageMode`
-(`commandExecutor.js`) plus `comfyController.js` may carry the same assumption. MPI-456
-wants this design for LTX's six twins and WAN's two, so the app-side gaps are on its path.
+The fourth one is the expensive lesson: a node the app *cannot address at all* looks
+exactly like a node it addresses wrongly. What separated them was reading the **dispatched
+graph** out of ComfyUI's `/history` and seeing the baked value still sitting there.
+
+**The pattern behind all four:** the app encodes fleet conventions in **shared resolvers**
+keyed on class names, titles and widget names. A model that breaks one does not crash — it
+silently takes a fallback. `docs/playbooks/add-model/README.md` now carries this as a hard
+rule: a model breaking a shipped convention must have that convention **grepped for in the
+app before testing**.
+
+### The design that replaced it
+
+The eight-node save/load/gate cluster is gone. `MpiStageLatents` owns the whole handshake
+in one node with `is_continue` / `is_preview` / `save_path` / `load_path` as widgets and
+lazy latent inputs — see [../../workflow-authoring/mpi-nodes.md](../../workflow-authoring/mpi-nodes.md).
+H3 collapsed 64 → 57 nodes, all four media branches intact. WAN is migrated and its two
+twins are deleted; **LTX's six remain** until its re-author lands (MPI-456), and LTX being
+dual-latent is the open question there.
+
+A fifth half-wire appeared the moment H3 and WAN migrated — `saveLatentNodeIds` did not
+know `MpiStageLatents` either, because its class name says "latents", not "save". The test
+written for the first one caught it before it shipped.
 
 **Naming trap, locked by an assert in `generate_h3.py`:** the latent pair MUST stay
 `Output_Video_Latent` / `Input_Video_Latent`. `_latentRoleFromTitle` in
