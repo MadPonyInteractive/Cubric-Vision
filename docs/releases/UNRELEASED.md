@@ -305,3 +305,10 @@
   report progress at once — the phase the installer is on, and the files it is
   fetching — and they were taking turns overwriting the same line, several times a
   second. Each now has its own place to speak.
+
+- **Installing a model no longer fails after an app update changes a Python package.**
+  Once an update moved one of the engine's Python packages, the next model install died
+  with **Download Failed** right after the files had downloaded — and every install
+  after that failed the same way, so retrying could never work. The engine was running,
+  and Windows will not let anything overwrite a file a running program is using. The
+  update is now applied while the engine is stopped, on its next start.
