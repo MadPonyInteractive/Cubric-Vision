@@ -79,6 +79,11 @@ on a state change must pass a cache; a one-shot sheet does not need one.
 Video previews also carry a `poster` by filename convention (`foo.mp4` → `foo.webp`, generated
 into `comfy_workflows/display/`): `ltx23_high_preview.mp4` is 40MB, so without a poster the
 browser must pull its moov atom before it can show any frame. A missing poster file is a no-op.
+It is assigned to `<video poster>`, so it is what the card SHOWS until hover playback starts —
+which makes it **frame 0 of the clip it ships with**, not any frame you like. Posterising a
+later frame because it composes better jumps the instant the video plays. Reshoot the clip for
+a better opening frame instead, and regenerate the `.webp` from the mp4 you actually ship
+(480px wide; `ffmpeg-static` is already a dependency).
 
 ## Licence row in the detail drawer — gated models only (MPI-451)
 
