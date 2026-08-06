@@ -312,3 +312,25 @@ misrepresentative, but below the trained range. Shoot the replacement at **124+ 
   so the same seed is a different sample.
 - **A Diffusers-format H3 LoRA loads with no error and does nothing** —
   `model_lora_keys_unet` has no H3 branch.
+
+### Step 8 — PASS, 2026-08-07. Clip and poster both reshot.
+
+`comfy_workflows/display/minimax_h3_preview.{mp4,webp}` replaced (commit `9cbc3c6b`).
+
+| Claim | Evidence |
+|---|---|
+| Inside the trained range | `Duration: 00:00:05.17` @ 24 fps = **124 frames** from a 5 s request — the `n % 17 == 5` snap, bottom of 124–362. The retired clip was 56 |
+| Shipped tier | 864x480 (`low`), 808,463 B, 371 s on the 48188 engine |
+| Video + audio, one pass | `h264 (High) 864x480 24 fps` + `aac (LC) 32000 Hz stereo` muxed in the mp4 |
+| Poster regenerated to match | 480x266 WebP, 15,092 B — the same 480-wide convention as the file it replaced |
+
+**Why the take was rerolled, and the constraint it encodes:** `MpiTileSheet.js:101` derives
+the poster by filename convention and assigns it to `<video poster>`, so the poster is
+whatever the card shows *until hover playback starts*. It must therefore be **frame 0 of the
+clip it ships with** — any other frame jumps the instant the video plays. The first take
+(seed 771224) opened on a close-up of the umbrella, which is honest H3 output but poor card
+art, so it was reshot (seed 20260807) prompted for a **wide static opening shot**. Both takes
+are in the session scratchpad as `candidateA.mp4` / `candidateB.mp4`; B shipped.
+
+**Rendered by queueing `minimax_h3_fl2va.json` straight on the engine, NOT through the app** —
+this step ships a display asset, it re-proves no app wiring. Steps 4/6 already carry that.
