@@ -65,6 +65,11 @@ export const STORAGE_KEYS = {
   // MPI-334: in-app update prompt — { version, count } of the latest release the
   // user has dismissed (Cancel). Muted once count reaches 3, until a newer version lands.
   UPDATE_DISMISSED: 'mpi_update_dismissed',
+
+  // MPI-451: per-model licence acceptance receipts, for models whose licence obliges
+  // us to bind the user before they receive the weights —
+  // { [modelId]: { licenceId, version, at } }. Written only by licences.js.
+  LICENCE_ACCEPTED: 'mpi_model_licence_accepted',
 };
 
 // --- sessionStorage keys ---

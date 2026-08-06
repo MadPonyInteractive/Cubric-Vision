@@ -58,6 +58,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiEngineInstall/MpiEngineInstall.css',
   'js/components/Compounds/MpiErrorDialog/MpiErrorDialog.css',
   'js/components/Compounds/MpiChangelogDialog/MpiChangelogDialog.css',
+  'js/components/Compounds/MpiLicenceGate/MpiLicenceGate.css',
   'js/components/Compounds/MpiOpHelpDialog/MpiOpHelpDialog.css',
   'js/components/Compounds/MpiCompareOverlay/MpiCompareOverlay.css',
   'js/components/Compounds/MpiHistoryTools/MpiHistoryTools.css',

@@ -1709,6 +1709,35 @@
 
 
 /**
+ * @typedef {Object} MpiLicenceGateProps (Compound — js/components/Compounds/MpiLicenceGate)
+ * @property {LicenceDescriptor} licence - Descriptor from js/data/modelConstants/licences.js.
+ *
+ * Licence acceptance gate (MPI-451), shown before a licence-gated model downloads.
+ * A few model licences oblige us as distributor to bind the END USER to the
+ * licensor's restrictions before handing over the weights (MiniMax H3 §V.2); this
+ * dialog is that notice and that binding. Only models with a descriptor in
+ * MODEL_LICENCES ever see it — every other install path is untouched.
+ *
+ * Accept unlocks in two steps: the restrictions pane must be scrolled to the end
+ * (which enables the acknowledgement checkboxes), then every box must be ticked.
+ * The scroll gate covers that pane only, not the full agreement, which is a link out.
+ * backdropClose is off — a stray click must not read as a decision here.
+ *
+ * Preferred usage — the promise helper, not a manual mount:
+ *   import { showLicenceGate } from '.../MpiLicenceGate.js';
+ *   if (await showLicenceGate(licence)) install();
+ * downloadService.start() already does this for every gated model, so a caller
+ * should almost never need it directly.
+ *
+ * Emits:
+ *   'accept' {} — every box ticked and Accept pressed
+ *   'cancel' {} — Cancel pressed. Escape / ui:close-all-popups do NOT emit it; the
+ *       showLicenceGate helper watches for the element leaving the DOM and settles
+ *       those as a decline, so the install promise can never hang.
+ */
+
+
+/**
  * @typedef {Object} MpiOpHelpDialogProps (Compound — js/components/Compounds/MpiOpHelpDialog)
  * No props required at mount time — content is provided imperatively via open().
  *

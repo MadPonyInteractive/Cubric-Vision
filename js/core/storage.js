@@ -243,6 +243,11 @@ export const Storage = {
   // MPI-334: dismissed-update record — { version, count }. Default count 0.
   getUpdateDismissed: () => get(STORAGE_KEYS.UPDATE_DISMISSED, { version: null, count: 0 }),
   setUpdateDismissed: (v) => set(STORAGE_KEYS.UPDATE_DISMISSED, v),
+
+  // MPI-451: licence acceptance receipts, keyed by model id. Read/written only by
+  // js/data/modelConstants/licences.js — nothing else should touch these.
+  getLicenceReceipts: () => get(STORAGE_KEYS.LICENCE_ACCEPTED, {}) || {},
+  setLicenceReceipts: (v) => set(STORAGE_KEYS.LICENCE_ACCEPTED, v),
 };
 
 export const Session = {

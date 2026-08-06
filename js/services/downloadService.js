@@ -11,6 +11,8 @@ import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
 import { reSyncInstalledModels, getModelById, MODELS } from '../data/modelRegistry.js';
 import { clientLogger } from './clientLogger.js';
+import { getModelLicence, hasAcceptedLicence, recordLicenceAcceptance } from '../data/modelConstants/licences.js';
+import { showLicenceGate } from '../components/Compounds/MpiLicenceGate/MpiLicenceGate.js';
 
 // MPI-100 — recognise an out-of-disk-space failure from the wrapper/OS error
 // text so it can be surfaced as a friendly toast, not the GitHub error dialog.
@@ -61,7 +63,32 @@ const downloadService = {
     // 'downloading'. Only a 2nd+ concurrent install actually waits and shows QUEUED.
     _inFlight: 0,
 
+    // MPI-451 — the licence chokepoint. A handful of model licences oblige US to bind
+    // the END USER to the licensor's restrictions before they receive the weights
+    // (MiniMax H3 §V.2). Install fires from five call sites — the Model Library, the
+    // App Library, commandExecutor, and two in shell.js — so the gate sits here, at the
+    // one place they all funnel through, rather than on the tile that happens to be the
+    // one a user usually clicks.
+    //
+    // A model with NO descriptor takes the original synchronous path untouched: the
+    // lookup misses and _start runs in the same tick. That matters — MpiModelManager
+    // ._install() relies on start() emitting download:started synchronously to patch its
+    // tile and flip the detail footer to Cancel, and every existing model must keep it.
+    // A GATED model necessarily goes async (the user has to read something), so its tile
+    // stays on Install until the dialog is accepted, which is the correct reading.
     start(modelId, dependencies) {
+        const licence = getModelLicence(modelId);
+        if (licence && !hasAcceptedLicence(modelId)) {
+            return showLicenceGate(licence).then((accepted) => {
+                if (!accepted) return undefined;
+                recordLicenceAcceptance(modelId);
+                return this._start(modelId, dependencies);
+            });
+        }
+        return this._start(modelId, dependencies);
+    },
+
+    _start(modelId, dependencies) {
         // Ensure SSE is connected BEFORE the POST to avoid missing backend broadcasts
         // (download:started, download:progress) that fire before the SSE open event.
         this._ensureSSE();

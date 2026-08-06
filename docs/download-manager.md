@@ -77,7 +77,9 @@ connect, a 15s poll while any job is non-terminal, and after uninstall. Tests:
 Singleton that owns the frontend download mirror (MPI-276: a mirror of the
 store snapshot, not an independent queue).
 
-- `start(modelId, dependencies)`: creates an optimistic client-only **`pending`**
+- `start(modelId, dependencies)`: the **licence chokepoint** (MPI-451), then `_start`
+  — see § The licence gate below. Everything described next is `_start`.
+- `_start(modelId, dependencies)`: creates an optimistic client-only **`pending`**
   job ("Starting…", indeterminate) then POSTs. `pending` is a CLIENT-ONLY state
   (G2) — never in the backend store. `_armPendingRevert` arms a 10s timer: if no
   backend ack lands, it drops the job + emits `download:cancelled` + a
@@ -183,6 +185,55 @@ were deleted would show a green INSTALLED and hide the loss.
 - On `download:snapshot`, REPLACES `state.downloadJobs` wholesale (version-gated); transport detail (speed/phase/indeterminate/error) rides delta events and is carried forward onto the job; the client-only `pending` job is preserved.
 
 **Footer no-Install-flash contract (MPI-241, preserved by MPI-276).** A lingering terminal `done`→`complete` job still counts as *busy* (holds Cancel/progress, never flashes Install) until the post-complete resync prunes it; `anyInstalled` is checked BEFORE busy so Uninstall wins on re-sync. The busy set (G14) = `{pending, queued, downloading, verifying, installing, done-awaiting-resync}`; `verifying` is a `phase`, not a model status; `done` maps to `complete` in the snapshot listener. No "Finishing…" label — `Verifying…` is the only end-phase text. Guard: `tests/model-footer-settling.test.cjs`.
+
+## The licence gate — consent before the weights (MPI-451)
+
+Most weights we ship are permissive. A few are not: their licence obliges **us, as
+distributor**, to bind the END USER to the licensor's restrictions before they receive
+the files, and to tell them those restrictions apply. MiniMax H3 §V.2 is the forcing
+case; Flux is the next known consumer.
+
+**One descriptor, one chokepoint, no new code per model.**
+
+- **Data:** `js/data/modelConstants/licences.js` — `MODEL_LICENCES`, keyed by **model
+  id**, plus `getModelLicence` / `hasAcceptedLicence` / `recordLicenceAcceptance`. A
+  second gated model is a new entry and nothing else. It is deliberately NOT a field on
+  the ModelDef: `models.js` is already the biggest data file in the app, and a licence
+  is versioned independently of the model wiring — bumping `version` re-prompts everyone
+  who accepted the older text, without touching a ModelDef.
+- **UI:** `MpiLicenceGate` (`showLicenceGate(licence) → Promise<boolean>`).
+- **Chokepoint:** `downloadService.start()`. Install fires from five call sites — the
+  Model Library, the App Library, `commandExecutor`, and two in `shell.js` — so the gate
+  sits where they converge, not on the tile a user usually clicks.
+- **Receipt:** `localStorage` `mpi_model_licence_accepted` → `{ [modelId]: { licenceId,
+  version, at } }`, written by `start()` on accept, never by the dialog.
+
+**`start()` must stay synchronous for an ungated model.** It is a thin guard in front of
+`_start`, and a missed lookup falls through in the same tick. That is load-bearing:
+`MpiModelManager._install()` relies on `start()` emitting `download:started`
+synchronously to patch its tile and flip the detail footer to Cancel. A gated model
+necessarily goes async (someone has to read something) and its tile correctly stays on
+Install until the dialog is accepted. Do not make the whole method `async`.
+
+**Three traps, all found in the browser and none visible in source:**
+
+1. **A scroll gate computed before layout gates nothing.** `scrollTop`, `clientHeight`
+   and `scrollHeight` are all 0 until the modal is portalled — and `0 + 0 >= 0 - 4` is
+   true, so the "you have read it" flag was set during `setup()` and the checkboxes
+   shipped unlocked. `_atEnd()` now requires `clientHeight > 0` first. No layout, no
+   verdict. (The same check still has to treat a genuinely short, laid-out pane as read,
+   or a licence that fits would deadlock the dialog forever — it can never fire `scroll`.)
+2. **A throw between "dialog closed" and "promise resolved" wedges the install queue.**
+   `showLicenceGate`'s `finish()` resolves BEFORE it logs, because a `clientLogger.log`
+   that does not exist (the API is `info`/`warn`/`error`) left the promise pending with
+   the dialog already gone — and `start()`'s promise feeds the serial install chain.
+3. **Escape and `ui:close-all-popups` tear the modal down without emitting `cancel`.**
+   `showLicenceGate` watches for the element leaving the DOM and settles those as a
+   decline, so the promise can never hang.
+
+Guards: `tests/licence-gate.test.cjs` pins the pure half (gated vs ungated, the version
+bump, the receipt shape). The DOM half needs a laid-out modal, so it is verified in the
+running app — which is the only reason trap 1 was ever caught.
 
 ## Backend — `routes/downloadManager.js`
 Non-blocking download router using `node-downloader-helper`. **Resume contract (MPI-317):** user CANCEL is intent → partial + marker deleted; failure/stall/app-quit is accident → partial kept, and the next Install resumes it via an explicit Range request (`resumeFromFile` on a marker-blessed partial). Safe because the installed NDH clears `__isResumed` and TRUNCATES on a 200-not-206 answer, so the MPI-258 Bug 2 append-corruption (200 full body appended onto a partial → SHA256 mismatch, hit live on the 25GB LTX transformer) cannot recur on this version. A 416 (partial larger than the remote object) scrubs the unusable partial and restarts clean. There is still no pause/resume UI — those routes stay deleted (c7313dff).

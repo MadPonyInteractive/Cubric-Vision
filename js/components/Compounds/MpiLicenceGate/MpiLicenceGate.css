@@ -1,0 +1,163 @@
+/* ── MpiLicenceGate (MPI-451) ────────────────────────────────────────────────
+   Licence acceptance dialog shown before a gated model downloads. Warn-toned top
+   rule so it never reads as a routine confirmation — this one has consequences. */
+
+.mpi-licence-gate {
+    display: flex;
+    flex-direction: column;
+    /* Eight rows, so the gap is worth ~100px of the height budget at --s-3. Every pixel
+       spent here comes straight out of the pane the user has to read. */
+    gap: var(--s-2);
+    padding: var(--s-4);
+    background: var(--surface-1);
+    border-radius: var(--r-2);
+    border-top: 2px solid var(--accent-warn);
+    max-height: min(86vh, 820px);
+    /* Last-resort valve. The scroller below shrinks first, but on a very short window
+       even its floor plus the fixed rows can exceed the cap — and without this the
+       overflow silently pushes Cancel/Accept off the bottom of the screen (seen at a
+       720px viewport, where the buttons were simply not there). */
+    overflow-y: auto;
+}
+
+/* Head */
+.mpi-licence-gate__head {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--s-3);
+}
+
+.mpi-licence-gate__icon {
+    color: var(--accent-warn);
+    flex: 0 0 auto;
+    line-height: 0;
+}
+
+.mpi-licence-gate__kicker {
+    font-size: var(--t-xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+}
+
+.mpi-licence-gate__title {
+    font-size: var(--t-lg);
+    font-weight: 700;
+    color: var(--ink-1);
+    line-height: 1.3;
+}
+
+.mpi-licence-gate__summary {
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+    line-height: 1.5;
+}
+
+/* Territory banner — the remedy, not a disclaimer */
+.mpi-licence-gate__territory {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-2);
+    padding: var(--s-3);
+    background: var(--surface-2);
+    border-left: 2px solid var(--accent-warn);
+    border-radius: var(--r-2);
+}
+
+.mpi-licence-gate__territory-text {
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+    line-height: 1.5;
+}
+
+/* The restrictions pane — the thing that must be scrolled */
+/* Takes every pixel the fixed rows above and below do not need — the pane the user
+   has to scroll should be the tallest thing in the dialog, not a letterbox. It is also
+   the ONLY row allowed to shrink, so the acknowledgements and the buttons can never be
+   pushed out of view; the floor stops it collapsing to a slit. */
+.mpi-licence-gate__scroller {
+    overflow-y: auto;
+    flex: 1 1 340px;
+    min-height: 96px;
+    padding: var(--s-3);
+    background: var(--surface-canvas);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+    line-height: 1.6;
+}
+
+.mpi-licence-gate__scroller:focus-visible {
+    outline: 2px solid var(--accent-frost);
+    outline-offset: 2px;
+}
+
+.mpi-licence-gate__heading {
+    margin: var(--s-3) 0 var(--s-2);
+    font-size: var(--t-sm);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-1);
+}
+
+.mpi-licence-gate__heading:first-child { margin-top: 0; }
+
+.mpi-licence-gate__intro {
+    margin: 0 0 var(--s-2);
+    color: var(--ink-2);
+}
+
+.mpi-licence-gate__list {
+    margin: 0;
+    padding-left: var(--s-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+
+/* Scroll hint — collapses to nothing once the pane has been read out, so the
+   dialog does not keep a dead row of empty space afterwards. */
+.mpi-licence-gate__hint {
+    font-size: var(--t-xs);
+    color: var(--accent-warn);
+    letter-spacing: 0.04em;
+}
+
+.mpi-licence-gate--read .mpi-licence-gate__hint { display: none; }
+
+/* Acknowledgements */
+.mpi-licence-gate__acks {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+
+/* Links row */
+.mpi-licence-gate__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3);
+}
+
+.mpi-licence-gate__link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: var(--t-xs);
+    color: var(--accent-frost);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.mpi-licence-gate__link:hover { color: var(--ink-1); }
+
+/* Actions */
+.mpi-licence-gate__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--s-2);
+}
