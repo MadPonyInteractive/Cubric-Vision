@@ -12,6 +12,34 @@ unless asked.
 - Agents MAY commit without asking.
 - The Docs-website push block in CLAUDE.md § Sibling repos always applies.
 
+## A `git mv`-then-edit file is `RM`, and a `'^ M'` filter silently drops the edit
+
+`git mv` STAGES the rename with the file's ORIGINAL content. Editing the file afterwards
+leaves it `RM` in `git status --porcelain` — **`R` in the index, `M` in the worktree** — so
+the common "collect my modified files" idiom misses it entirely:
+
+```bash
+git status --porcelain | grep '^ M' | cut -c4-     # ← never matches RM
+```
+
+Bit the Flows rename, 2026-08-06: 32 files were `git mv`'d and then swept, the filter above
+built the pathspec, and the commit captured **every rename with its pre-edit content**.
+`js/data/flowsRegistry.js` landed still saying `export const APPS`.
+
+**Why nothing caught it.** The commit succeeded; its output listed all 32 renames at
+`(100%)` similarity, which reads like success and is actually the tell — 100% means the
+content did not change. Tests were green because `npm test` runs the WORKING TREE, which
+was correct; only the commit was wrong. `git status` afterwards showed the files as ` M`,
+which looks like ordinary leftover work rather than a broken commit.
+
+- **Match both states:** `grep -E '^(.M| M)'`, then `sed 's/.* -> //'` to take the
+  destination path of a rename line.
+- **Verify the COMMIT, not the tree** — for any file you renamed and edited in one go,
+  `git show HEAD:<new-path> | grep <a token that must exist after the edit>`. A rename shown
+  at `(100%)` when you know you edited the file is the signal.
+- Fix is an amend (`git add` the missed paths → `git commit --amend -F <msgfile>`), not a
+  new commit, while the bad commit is still local. Use `-F`/`--no-edit`, never `--amend -m`.
+
 ## Co-owned files — `git commit --only` is NOT safe (MPI-245)
 
 **When a sibling agent has UNSTAGED edits in a file you also touched, `git commit --only <paths>` is NOT safe.** MPI-245 committed another session's in-progress MPI-242 work twice before catching it. Two independent traps: (1) `--only <paths>` commits those paths **as they are in the WORKING TREE**, discarding your hunk-level staging; (2) the `lint-staged` pre-commit hook stashes unstaged changes, runs, and reapplies — that cycle folds the sibling's edits in even when your index was clean.

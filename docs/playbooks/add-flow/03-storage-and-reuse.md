@@ -32,7 +32,7 @@ Contrast: the PromptBox uses `uploadMediaFile` + emits `media:imported` (a visib
 
 Flow gens add TWO additive top-level fields to the `.meta` sidecar: **`flowId`** + **`flowInputs`**
 (the input snapshot at Run time; media by reference, never base64). Plumbed at the save site
-(`generationService` save-generation) AND on the **live in-memory item** (`baseProps` →
+AND on the **live in-memory item** (`baseProps` →
 `createImageItem`/`createVideoItem`) — **both are required**:
 
 - the **sidecar** survives restart (the reconciler hydrates it on project load),
@@ -40,6 +40,27 @@ Flow gens add TWO additive top-level fields to the `.meta` sidecar: **`flowId`**
 
 Parity `flowId:null`/`flowInputs:null` defaults exist on every non-flow item factory + synthetic/
 upload/crop path.
+
+### The save path is FOUR hops, and the middle one is easy to miss
+
+The two fields are named independently at every hop, so renaming or adding one means editing
+all four. A miss in the middle is **silent** — the field simply arrives `undefined` and the
+route's `= null` default writes `null`, so provenance vanishes with no error anywhere:
+
+| # | File | What it does |
+|---|---|---|
+| 1 | `js/services/flowService.js` | `submitFlowGeneration` puts `flowId`/`flowInputs` on the enqueued **config** |
+| 2 | `js/services/generationService.js` | reads `config.flowId` and passes it into `saveGeneration({...})` |
+| 3 | **`js/services/projectService.js`** | **`saveGeneration` DESTRUCTURES both, then re-serialises them into the POST body** |
+| 4 | `routes/projects.js` | `/project/save-generation` reads them off `req.body` (`flowId = null, flowInputs = null`) and writes the sidecar |
+
+Hop 3 is the trap: it is a pure pass-through, so it reads as plumbing nobody has to touch, and
+neither test suite covers the chain end-to-end. The Flows rename broke exactly here — hop 3
+still said `appId, appInputs` while hop 4 had moved to `flowId, flowInputs`, which would have
+persisted `flowId: null` for **every** Flow generation. Caught by a grep, not by a test.
+
+Cheapest check after touching any of these: grep the four files for the field name and confirm
+you get four hits, not three.
 
 > **Snapshot at Run (dispatch), never at completion.** `flowInputs` is frozen when Run is
 > pressed (`state.s_flowInputs`), so changing an input while the gen runs can't corrupt what
