@@ -22,6 +22,8 @@ const path = require('path');
 const REPO = path.join(__dirname, '..');
 const lockText = fs.readFileSync(path.join(REPO, 'dev_configs', 'python_deps.txt'), 'utf8');
 const dmSrc = fs.readFileSync(path.join(REPO, 'routes', 'downloadManager.js'), 'utf8');
+const sharedSrc = fs.readFileSync(path.join(REPO, 'routes', 'shared.js'), 'utf8');
+const comfySrc = fs.readFileSync(path.join(REPO, 'routes', 'comfy.js'), 'utf8');
 
 /** Distribution names the lock pins, ignoring comments, markers and specifiers. */
 const pinned = lockText
@@ -49,10 +51,22 @@ assert.deepStrictEqual(opencv, ['opencv-contrib-python-headless'],
     `exactly one opencv build may be pinned (contrib+headless is the superset), found: ${opencv.join(', ')}`);
 
 // 3. The installer must pass --no-deps, or property 1 and 2 are undone at install time.
-const install = dmSrc.match(/runPipCommand\(\[\s*'install',\s*'-r',\s*PYTHON_DEPS_PATH[^\]]*\]/);
-assert.ok(install, 'downloadManager must install PYTHON_DEPS_PATH via runPipCommand');
+const install = sharedSrc.match(/runPipCommand\(\[\s*'install',\s*'-r',\s*PYTHON_DEPS_PATH[^\]]*\]/);
+assert.ok(install, 'shared.js must install PYTHON_DEPS_PATH via runPipCommand');
 assert.ok(install[0].includes("'--no-deps'"),
     `the curated install MUST use --no-deps (got: ${install[0]})`);
+
+// 3b. MPI-459 — the pass must run with the engine DOWN. Its only caller is the spawn
+// path in /comfy/start, BEFORE the process is launched; running it from the install path
+// meant pip had to replace packages the live engine had imported, which on Windows is a
+// hard `WinError 5` on cv2.pyd and a deterministic `Download Failed` on every install.
+assert.ok(!/ensureCuratedPythonDeps\s*\(/.test(dmSrc),
+    'the curated pip pass must NOT run from the model-install path — the engine is up there');
+const startIdx = comfySrc.indexOf("router.post('/comfy/start'");
+const callIdx = comfySrc.indexOf('await ensureCuratedPythonDeps(', startIdx);
+const spawnIdx = comfySrc.indexOf('processState.activeComfyProcess = spawn(', startIdx);
+assert.ok(startIdx >= 0 && callIdx > startIdx && spawnIdx > callIdx,
+    'ensureCuratedPythonDeps must be awaited inside /comfy/start, before the spawn');
 
 // 4. The per-node requirements step must stay gone. If it comes back it re-introduces
 // the 13-resolve shape the curated file replaced, and it runs AFTER this install.

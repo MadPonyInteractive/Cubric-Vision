@@ -353,11 +353,40 @@ watching the test fail.
 ## The curated Python dependency set (MPI-413) — LOCAL engine
 
 The local engine installs **one** file, `dev_configs/python_deps.txt`, in a single
-`--no-deps` pass at the top of `_runCustomNodeInstall`, gated on a content-hash marker at
-`<ENGINE_ROOT>/.cubric_python_deps`. It runs **no** node's `requirements.txt`, no
-`installRequirementsCommand` and no `pipPins`. All custom_nodes are universal (MPI-222),
-so the whole set is always the right set, and the marker makes a second model's install a
-no-op and an engine that predates the file self-heal.
+`--no-deps` pass — `ensureCuratedPythonDeps()` in `routes/shared.js`, gated on a
+content-hash marker at `<ENGINE_ROOT>/.cubric_python_deps`. It runs **no** node's
+`requirements.txt`, no `installRequirementsCommand` and no `pipPins`. All custom_nodes are
+universal (MPI-222), so the whole set is always the right set, and the marker makes every
+start after the first a no-op and an engine that predates the file self-heal.
+
+### It runs at engine START, not during a model install (MPI-459)
+
+The pass lives in `/comfy/start` (`routes/comfy.js`), immediately before the `spawn` —
+the **only** point in the app where the engine is provably down: the route holds no child
+process and its MPI-434 port probe just proved nothing else answers on 48188.
+
+It used to run at the top of `_runCustomNodeInstall`, i.e. mid-model-install, with no
+regard for whether the engine was up. The moment a release **moves a pin**, pip must
+replace a package the running ComfyUI has already imported — and Windows refuses to
+overwrite a loaded binary. Observed 2026-08-06 installing MiniMax H3:
+`OSError [WinError 5] Access is denied` on
+`python_embeded/Lib/site-packages/cv2/cv2.pyd`, pip exits 1, and the model install reports
+`Download Failed`. It never self-healed: the marker is stamped only on success, so every
+later install repeated it identically while the engine ran. A *fresh* engine is immune —
+`cv2.pyd` does not exist yet, so nothing is locked — which is why this survived to a
+released app. Do not "fix" a recurrence with a retry or a try/catch at the pip call; the
+cause is the engine being up, not pip being flaky.
+
+Nothing is later for the deps: a custom-node install already REQUIRES a restart before
+ComfyUI scans the new nodes (`comfyNeedsRestart` → the gen gate's stop+start in
+`js/services/comfyController.js`), so they land on exactly the boot that first loads the
+nodes needing them. `_runCustomNodeInstall` keeps setting that flag; it is what carries
+the deps to their install point.
+
+**A failed pass does not abort the start.** Before the move, a failure left a working
+engine and only the install reported it; refusing to boot over e.g. an offline pip would
+be a worse regression. The reason is logged and returned as `depsWarning` on the
+`/comfy/start` response, and a node whose moved pin is missing says so in the engine log.
 
 What it replaced: 13 separate pip resolves re-deriving the same shared graph. Measured on
 a warm-cache macOS install — 400 `Requirement already satisfied` lines, `numpy` re-resolved

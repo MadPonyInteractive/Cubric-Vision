@@ -39,7 +39,7 @@ const logger = require('./logger');
 const { checkOnline } = require('./netCheck');
 // runCustomCommand dropped here with the per-node requirements step (MPI-413); it is
 // still exported from shared.js and used by the remote path's Pod wrapper contract.
-const { runPipCommand, resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot, processState, writeNodeCommitMarker } = require('./shared');
+const { resolveComfyPath, getCustomRoot, cleanEmptyDirs, getUniversalWorkflowDepIds, getDefaultModelsRoot, processState, writeNodeCommitMarker } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 // MPI-410: the indeterminate/sweep rule lives here — one contract, node-tested.
 const { isNodeTickPending } = require('./install/computeProgress');
@@ -2226,7 +2226,15 @@ function _checkModelJobsComplete() {
                 _runCustomNodeInstall(modelJob).catch(err => {
                     logger.error('download', `_runCustomNodeInstall crashed: ${err.message}`);
                     _setModelStatus(modelJob, 'failed', 'uw install fail');
-                    _broadcast('download:failed', { modelId: modelJob.modelId });
+                    // Carry the reason (MPI-452). This is the SECOND download:failed for
+                    // the same model on the expected path: _runCustomNodeInstall already
+                    // broadcast one WITH `error`, then threw the same text, and this
+                    // catch re-broadcast without it — so the client's later event
+                    // clobbered the good message and the dialog rendered a blank field
+                    // while the log held the full reason. Same defect MPI-387 fixed for
+                    // the dep-level branch above; it never reached this call site.
+                    // err.message is the real reason on a genuine crash too.
+                    _broadcast('download:failed', { modelId: modelJob.modelId, error: err.message });
                 });
             } else {
                 _setModelStatus(modelJob, 'complete', 'uw done');
@@ -2234,53 +2242,6 @@ function _checkModelJobsComplete() {
             }
         }
     }
-}
-
-// ── Curated Python dependency set (MPI-413) ───────────────────────────────────
-// The engine installs the set WE chose, in ONE pass, instead of letting each custom
-// node resolve its own requirements.txt on the user's machine. That old shape meant 13
-// separate pip resolves re-deriving the same shared graph (measured on a warm-cache
-// macOS install: 400 "Requirement already satisfied" lines, numpy re-resolved 18x,
-// torch 10x, and 4 packages installed then uninstalled and replaced), with whichever
-// node ran last deciding the version of every shared library.
-//
-// `--no-deps` is load-bearing, not an optimisation. python_deps.txt is the complete
-// resolved closure MINUS the engine-owned torch stack and the duplicate cv2 builds, so:
-//   - torch, triton, the nvidia-* wheels and cuda-toolkit CANNOT be touched by this
-//     install. They are not in the file, and without --deps pip would re-derive them
-//     from diffusers/ultralytics/kornia and stomp the +cpu or +cu130 build the engine
-//     deliberately placed (MPI-413 Evidence A: several GB of CUDA wheels on a CPU-only
-//     Linux box with no NVIDIA driver).
-//   - the three transitive opencv variants stay out, so `import cv2` is not decided by
-//     whichever pip ran last.
-// Regenerate the file with `node scripts/compile-node-deps.mjs`; see dev_configs/python_deps.in.
-const PYTHON_DEPS_PATH = path.join(__dirname, '..', 'dev_configs', 'python_deps.txt');
-
-/**
- * Install the curated set once per engine, gated on a content-hash marker so an engine
- * that already has it is a no-op and one that predates it (or drifted) self-heals.
- * Throws on failure: a node whose deps are missing fails to import, and this is the
- * only step that installs them.
- */
-async function _ensureCuratedPythonDeps() {
-    if (!(await fs.pathExists(PYTHON_DEPS_PATH))) {
-        throw new Error(`curated python deps missing at ${PYTHON_DEPS_PATH} — the build is incomplete`);
-    }
-    const contents = await fs.readFile(PYTHON_DEPS_PATH);
-    const hash = crypto.createHash('sha256').update(contents).digest('hex').slice(0, 16);
-    const markerPath = path.join(ENGINE_ROOT, '.cubric_python_deps');
-
-    try {
-        if ((await fs.readFile(markerPath, 'utf8')).trim() === hash) {
-            logger.info('download', `curated python deps already installed (${hash})`);
-            return;
-        }
-    } catch { /* no marker, or unreadable — install */ }
-
-    logger.info('download', `installing curated python deps (${hash}) in one pass`);
-    await runPipCommand(['install', '-r', PYTHON_DEPS_PATH, '--no-deps', '--no-warn-script-location']);
-    await fs.writeFile(markerPath, `${hash}\n`);
-    logger.info('download', `curated python deps installed, marker stamped (${hash})`);
 }
 
 async function _runCustomNodeInstall(modelJob) {
@@ -2304,16 +2265,14 @@ async function _runCustomNodeInstall(modelJob) {
     const extractFailures = [];
     const installFailures = [];
 
-    // One pip pass for every node's dependencies, before any of them extract (MPI-413).
-    // All custom_nodes are universal (MPI-222) — they install with the engine and are
-    // never GC'd with a model — so the whole curated set is always the right set, and
-    // the marker makes a second model's install a no-op.
-    try {
-        await _ensureCuratedPythonDeps();
-    } catch (err) {
-        logger.error('download', `curated python deps FAILED: ${err.message}`);
-        installFailures.push(`curated python dependency set (${err.message})`);
-    }
+    // NO pip pass here (MPI-459). The one curated pass (MPI-413) used to run at this
+    // point, and mid-install is precisely when the engine is most likely to be UP —
+    // which on Windows makes replacing an already-imported package (cv2.pyd) a hard
+    // `WinError 5` and the whole model install a `Download Failed`. It now runs from
+    // `/comfy/start` with the process down; see `ensureCuratedPythonDeps` in
+    // routes/shared.js. The `comfyNeedsRestart` flag set at the end of this function is
+    // what carries the deps to that boot — the same restart the new nodes already need
+    // before ComfyUI will scan them.
 
     for (const dep of customDeps) {
         // Guard: skip deps without a valid localPath string
@@ -2450,14 +2409,15 @@ async function _runCustomNodeInstall(modelJob) {
         }
 
         // No per-node requirements step here any more — MPI-413. The engine installs
-        // ONE curated set (`_ensureCuratedPythonDeps`, before this loop) instead of
-        // asking each node to resolve its own requirements.txt on the user's machine.
-        // The Pod converged on the same set, so the remote passthrough is gone too.
+        // ONE curated set (`ensureCuratedPythonDeps` in routes/shared.js, run at engine
+        // start since MPI-459) instead of asking each node to resolve its own
+        // requirements.txt on the user's machine. The Pod converged on the same set, so
+        // the remote passthrough is gone too.
 
         // Stamp the pinned-commit marker LAST, so it only lands on a fully-extracted
         // node. A missing/mismatched marker = drift → targeted reinstall on next boot
         // (MPI-222). No-op for unpinned nodes. Its pip deps are covered by the curated
-        // set installed before this loop, which has its own marker (MPI-413).
+        // set, which has its own marker (MPI-413).
         try {
             const stamped = await writeNodeCommitMarker(targetDir, dep.id);
             if (stamped) logger.info('download', `node commit marker stamped for ${dep.id}`);

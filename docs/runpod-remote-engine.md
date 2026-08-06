@@ -340,7 +340,8 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
   (ComfyUI scans `custom_nodes` only at boot) → the app warm-cycles the Pod.
 - **Python deps = ONE curated set, identical on both engines (MPI-413).** Neither the image
   nor the wrapper resolves a node's `requirements.txt` any more. The image installs
-  `dev_configs/python_deps.txt` — the same file `routes/downloadManager.js` installs locally —
+  `dev_configs/python_deps.txt` — the same file the local engine installs at start
+  (`ensureCuratedPythonDeps` in `routes/shared.js`, called from `/comfy/start`; MPI-459) —
   in a single `--no-deps` pass, and the wrapper runs **no pip at all**. `--no-deps` is
   load-bearing: the file is the complete closure minus the engine-owned torch stack and minus
   the duplicate cv2 builds, so without it pip re-derives `torch`/`triton`/`nvidia-*` from

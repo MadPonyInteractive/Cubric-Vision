@@ -36,6 +36,7 @@ const {
     getExtraModelFolders,
     setExtraModelFolders,
     writeExtraModelPathsYaml,
+    ensureCuratedPythonDeps,
 } = require('./shared');
 const { getPythonBin, getComfyPath, getEngineRoot, resolveDownloadConfig } = require('./platformEngine');
 const remoteModels = require('./remoteModels');
@@ -429,6 +430,25 @@ router.post('/comfy/start', async (req, res) => {
             ? { ...baseEnv, PYTORCH_ENABLE_MPS_FALLBACK: '1' }
             : baseEnv;
 
+        // The curated Python set installs HERE, with the engine down (MPI-459). This is
+        // the only point in the app where that is guaranteed: we hold no child process
+        // and the port probe above proved nothing else answers, so no site-packages file
+        // is open and Windows cannot refuse the overwrite. A no-op whenever the marker
+        // matches, which is every start except the one after a release moves a pin.
+        //
+        // A failure does NOT abort the start. Before this moved, a failed pass left a
+        // working engine (only the install reported failure), and refusing to boot over
+        // e.g. an offline pip would be a worse regression than the bug being fixed. The
+        // nodes needing a moved pin fail to import and say so in the engine log; the
+        // reason is returned to the caller and recorded here.
+        let depsWarning = null;
+        try {
+            await ensureCuratedPythonDeps();
+        } catch (err) {
+            depsWarning = `curated python deps FAILED: ${err.message}`;
+            logger.error('comfy', `${depsWarning} — starting anyway, custom nodes may fail to import`);
+        }
+
         // Fresh start → forget the previous life's output and exit record, so a stale
         // crash can never be reported against this run (MPI-415).
         _comfyOutputTail.length = 0;
@@ -453,7 +473,7 @@ router.post('/comfy/start', async (req, res) => {
             processState.activeComfyProcess = null;
         });
 
-        res.json({ success: true });
+        res.json({ success: true, ...(depsWarning ? { depsWarning } : {}) });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

@@ -4,10 +4,10 @@
   "title": "Curated pip pass fails on Windows when the engine holds the file it must replace",
   "description": "A model install runs the curated python deps pass (_ensureCuratedPythonDeps, routes/downloadManager.js). When a package in dev_configs/python_deps.txt must REPLACE one the running ComfyUI process has already imported, Windows refuses the overwrite and pip exits 1. Observed 2026-08-06 installing MiniMax H3: OSError WinError 5 Access is denied on python_embeded/Lib/site-packages/cv2/cv2.pyd, engine live on 48188, surfaced to the user as Download Failed. It is NOT transient and does NOT self-heal: the .cubric_python_deps marker is stamped ONLY after a successful pass, so every later model install repeats the identical failure while the engine runs - the same deterministic-Retry trap the MPI-387 comment already warns about. A fresh engine is unaffected because cv2.pyd does not exist yet and there is nothing to lock, so the trigger is specifically a release that MOVES a python dep pin, plus an engine that is up. Fix belongs in the install path (stop or pause the engine around the pip pass, or defer the pass to the next engine start), NOT a try/catch at the crash site. Check the Linux/macOS twins too - the lock is Windows-specific but the deferral design should be one design.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-06T13:52:00Z",
-  "updated_at": "2026-08-06T14:10:00Z",
+  "updated_at": "2026-08-06T14:45:00Z",
   "labels": [
     "engine",
     "downloads",

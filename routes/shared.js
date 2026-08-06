@@ -11,6 +11,7 @@
 
 const fs     = require('fs-extra');
 const path   = require('path');
+const crypto = require('crypto');
 const { createRequire } = require('module');
 const logger = require('./logger');
 const { isCompleteOnDisk, isNodeInstalledOnDisk } = require('./downloadCompletion');
@@ -317,6 +318,67 @@ async function runPipCommand(args) {
             else reject(new Error(`Pip command failed with code ${code}`));
         });
     });
+}
+
+// ── Curated Python dependency set (MPI-413) ───────────────────────────────────
+// The engine installs the set WE chose, in ONE pass, instead of letting each custom
+// node resolve its own requirements.txt on the user's machine. That old shape meant 13
+// separate pip resolves re-deriving the same shared graph (measured on a warm-cache
+// macOS install: 400 "Requirement already satisfied" lines, numpy re-resolved 18x,
+// torch 10x, and 4 packages installed then uninstalled and replaced), with whichever
+// node ran last deciding the version of every shared library.
+//
+// `--no-deps` is load-bearing, not an optimisation. python_deps.txt is the complete
+// resolved closure MINUS the engine-owned torch stack and the duplicate cv2 builds, so:
+//   - torch, triton, the nvidia-* wheels and cuda-toolkit CANNOT be touched by this
+//     install. They are not in the file, and without --deps pip would re-derive them
+//     from diffusers/ultralytics/kornia and stomp the +cpu or +cu130 build the engine
+//     deliberately placed (MPI-413 Evidence A: several GB of CUDA wheels on a CPU-only
+//     Linux box with no NVIDIA driver).
+//   - the three transitive opencv variants stay out, so `import cv2` is not decided by
+//     whichever pip ran last.
+// Regenerate the file with `node scripts/compile-node-deps.mjs`; see dev_configs/python_deps.in.
+//
+// MPI-459 — WHY THIS LIVES HERE AND NOT IN THE INSTALL PATH. The pass used to run from
+// `_runCustomNodeInstall` (routes/downloadManager.js), i.e. mid-model-install, with no
+// regard for whether the engine process was up. The moment a release MOVES a pin, pip
+// must REPLACE a package the running ComfyUI has already imported — and Windows refuses
+// to overwrite a loaded binary: `OSError [WinError 5] Access is denied` on
+// python_embeded/Lib/site-packages/cv2/cv2.pyd, pip exits 1, the model install reports
+// `Download Failed`. It never self-heals: the marker is stamped only on success, so every
+// later install repeats it identically while the engine runs (a fresh engine is immune —
+// cv2.pyd does not exist yet, so nothing is locked). The only place the engine is provably
+// DOWN is `/comfy/start`, just before the spawn, and that is now the sole caller. Nothing
+// is later for the deps: a custom-node install already requires a restart before the nodes
+// register (`comfyNeedsRestart` → the gen gate's stop+start), so they land on exactly the
+// boot that first loads the nodes needing them.
+const PYTHON_DEPS_PATH = path.join(__dirname, '..', 'dev_configs', 'python_deps.txt');
+
+/**
+ * Install the curated set once per engine, gated on a content-hash marker so an engine
+ * that already has it is a no-op and one that predates it (or drifted) self-heals.
+ * Throws on failure: a node whose deps are missing fails to import, and this is the
+ * only step that installs them. Call ONLY with the engine process down.
+ */
+async function ensureCuratedPythonDeps() {
+    if (!(await fs.pathExists(PYTHON_DEPS_PATH))) {
+        throw new Error(`curated python deps missing at ${PYTHON_DEPS_PATH} — the build is incomplete`);
+    }
+    const contents = await fs.readFile(PYTHON_DEPS_PATH);
+    const hash = crypto.createHash('sha256').update(contents).digest('hex').slice(0, 16);
+    const markerPath = path.join(ENGINE_ROOT, '.cubric_python_deps');
+
+    try {
+        if ((await fs.readFile(markerPath, 'utf8')).trim() === hash) {
+            logger.info('download', `curated python deps already installed (${hash})`);
+            return;
+        }
+    } catch { /* no marker, or unreadable — install */ }
+
+    logger.info('download', `installing curated python deps (${hash}) in one pass`);
+    await runPipCommand(['install', '-r', PYTHON_DEPS_PATH, '--no-deps', '--no-warn-script-location']);
+    await fs.writeFile(markerPath, `${hash}\n`);
+    logger.info('download', `curated python deps installed, marker stamped (${hash})`);
 }
 
 /**
@@ -768,6 +830,7 @@ module.exports = {
     streamDownload,
     stripImageMetadata,
     runPipCommand,
+    ensureCuratedPythonDeps,
     runCustomCommand,
     findFileRecursive,
     resolveComfyPath,
