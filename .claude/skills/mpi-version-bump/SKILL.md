@@ -426,7 +426,18 @@ tagged or approved**:
 ```bash
 npm test               # unit suite (node --test, ~9s)
 npm run test:desktop   # Playwright/Electron UI smoke suite (~1.2 min; the app may stay open)
+npm run release:deps   # HEADs every dep URL + its mirrors (~1 min, network) — MPI-460
 ```
+
+`release:deps` is the only check that touches the outside world: it HEADs all 215
+download URLs (215/119 deps as of 1.3.1) and fails on any that moved, were deleted, or
+404. Nothing else catches that class — the unit tests prove the download LOGIC offline,
+and a dead R2 key or a removed HF re-host stays invisible until a user hits it. It is
+NOT in CI on purpose (network-bound, would flake). A dead MIRROR fails the run too: it
+silently drops that dep to a single route, which is the regression MPI-429 exists to
+prevent. It also prints the weights that have no second origin at all — expect 9 today
+(the four MiniMax H3 deps and `controlnet-union-flux` are HF-only;
+`krea2-raw-transformer-nsfw` is R2-only until 2026-08-10, plus the three TAESD decoders).
 
 `release:check` only compares files to each other; it never runs the app. These
 two are the only gate that executes real code, and the desktop suite is what

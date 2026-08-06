@@ -661,8 +661,7 @@ Now: three retries of the SAME url on `RETRY_BACKOFF_MS = [2s, 5s, 15s]`, re-ent
   `h3-qwen3vl-32b-clip`, `vae-minimax-h3-video`, `vae-minimax-h3-audio`) plus
   `controlnet-union-flux`. H3 is HF-only; nothing was staged to R2.
 - **R2-primary with no alternate** — the `noMirror` set: `krea2-raw-transformer-nsfw`
-  (until 2026-08-10, MPI-433), `krea2-raw-transformer`, `pid-qwenimage`, and the three
-  TAESD decoders.
+  (until 2026-08-10, MPI-433) and the three TAESD decoders.
 - The other 100 R2 deps have a second route: 66 by explicit `mirrorUrl`, the rest by the
   generic HF prefix rewrite.
 
@@ -673,6 +672,15 @@ restart. That register is written in exactly one place (`_startPendingDeps`), so
 failover branch — which only nulled `_downloader` — had been dropping off it for its whole
 life: invisible to the stall watchdog, to cancel/uninstall and to shutdown, while the
 launcher counted the freed slot and handed it to another dep.
+
+**Reachability is a separate question from logic, and only one thing asks it.**
+`npm run release:deps` (`scripts/check-dep-urls.mjs`) HEADs every dep `url` plus every
+mirror `_mirrorUrlsFor` would try, and exits 1 on anything unreachable — the MPI-429
+hand sweep, scripted. Release step, never CI: it is network-bound and would flake.
+`custom_nodes` are excluded from the single-route report (github zips, single-route by
+design — MPI-427 measured github 45/45 against models.cubric.studio 0/44). It reuses the
+real `_mirrorUrlsFor` rather than re-deriving the rewrite, because a second copy of that
+math would drift, and drift is the bug class it exists to catch.
 
 Guard: `tests/download-retry.test.cjs` — a local server kills the first connection
 mid-body, and the test asserts the retry's request carries `Range: bytes=<partial>-` and

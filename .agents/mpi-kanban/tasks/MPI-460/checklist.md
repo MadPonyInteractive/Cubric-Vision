@@ -15,3 +15,7 @@
       file matches the expected sha256.
 - [x] `npm test` green: 463/463.
 - [ ] Live proof on the real 25 GB dep: resume from 8.4 GB completes.
+- [x] Pre-release reachability gate: `npm run release:deps`
+      (`scripts/check-dep-urls.mjs`) HEADs every dep url + mirror, exits 1 on any
+      failure. 215/215 reachable on 2026-08-06; negative control with a bogus
+      mirror base exits 1. Wired into the mpi-version-bump pre-release step.
