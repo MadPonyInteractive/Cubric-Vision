@@ -601,14 +601,30 @@ export const MpiModelManager = ComponentFactory.create({
         // shared file on disk only because another installed model needs it (e.g. the
         // 4x-NMKD upscaler, shared VAEs, LTX Gemma) must NOT read as partial progress
         // for a model the user hasn't started — else an idle upscaler shows "4%" and a
-        // never-touched pack shows "1%". Union the full dep universe of every OTHER
-        // installed model; those ids are excluded from BOTH sides of this model's
-        // partial ratio, so the bar reflects only THIS model's own unique download.
+        // never-touched pack shows "1%". Those ids are excluded from BOTH sides of this
+        // model's partial ratio, so the bar reflects only THIS model's own unique download.
+        //
+        // MPI-462: "installed" here must mean ≥1 op on disk (_installedOpsOf), the same
+        // predicate every other install decision uses — _modelState/_listSignature/the
+        // section split, modelRegistry's isModelUsable, and the BACKEND uninstall guard
+        // (_localSharedDepsMap → deriveInstalledOps). The old gate was the raw
+        // `m.installed` flag, i.e. whole-universe-complete (modelRegistry.js:189), which
+        // for any multi-op model never fired: LTX 2.3 balanced's 20.4GB of shared assets
+        // got billed to the `high` tier (33% phantom bar), Wan 2.2's umt5 clip to Wan 5B,
+        // and Boogu's 10.59GB clip to both its tiers.
+        //
+        // A ≥1-op model is NOT universe-complete, so — unlike the old flag — its universe
+        // can name deps that are NOT on disk. Only an ON-DISK dep is owned; a missing one
+        // is still real work and must stay in this model's denominator.
         function _sharedOwnedDepIds(excludeModelId) {
             const owned = new Set();
             for (const m of MODELS) {
-                if (m.id === excludeModelId || m.installed !== true) continue;
-                for (const id of resolveFullUniverse(m)) owned.add(id);
+                if (m.id === excludeModelId || _installedOpsOf(m).length === 0) continue;
+                const depStatus = getModelDepStatus(m.id);
+                if (!depStatus) continue;
+                for (const id of resolveFullUniverse(m)) {
+                    if (_depIsInstalled(depStatus.get(id))) owned.add(id);
+                }
             }
             return owned;
         }

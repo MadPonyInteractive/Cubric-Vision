@@ -95,3 +95,73 @@ reinstall is instant. User decision, not a bug fix.
 - MPI-320 (retire `_modelJobs`/`_depJobs`) and MPI-397 (card-move lag) are adjacent
   and neither covers this.
 - MPI-258 Bug A/C built the exclusion and the 1GB floor being corrected here.
+
+---
+
+## Defect 1 — FIXED and measured 2026-08-06 (MpiModelManager.js `_sharedOwnedDepIds`)
+
+Gate changed from the raw `m.installed` flag to `_installedOpsOf(m).length > 0` — the
+same >=1-op predicate `_modelState` (:705), `_listSignature` (:1123), the section split
+(:1307), `isModelUsable` and the backend uninstall guard already use. Sweep of every
+`m.installed === true` reader: those three already union `|| installedOps.length > 0`,
+and `modelRegistry.js:395/:423` are "no dep cache yet -> trust the server flag"
+fallbacks. Only :610 gated on the flag alone. One line changed.
+
+Second half of the fix, NOT in the original diagnosis: a >=1-op model is not
+universe-complete, so unlike the old flag its universe can name deps that are NOT on
+disk. Each owner's universe is now intersected with its own dep status, so an absent
+dep stays in the target model's denominator instead of being excluded from both sides.
+
+Measured against live disk (probe replaying both exclusion rules over the real
+registry + dep status, then confirmed against the rendered tiles):
+
+| Model | old | new |
+|---|---|---|
+| LTX 2.3 high | bar 33% (20.4 / 61.4GB) | no bar (0 / 41GB) |
+| Wan 2.2 5B | bar 36% (6.27 / 17.2GB) | no bar (0 / 10.93GB) |
+| LTX 2.3 balanced | no bar, 99%, all installed | unchanged (no regression) |
+| Chroma Flash / Hyper | 17% / 22% | unchanged |
+| Boogu high / balanced | 35% / 49% | unchanged |
+
+The shrunken denominators (61.4->41, 17.2->10.93 = each model's own unique weight) show
+the on-disk intersection did not over-exclude. Rendered tiles now show four bars where
+six were. `npm test`: 467 pass, 0 fail.
+
+Note the card's Defect-1 table mis-assigned Boogu: neither tier is >=1-op installed, so
+no exclusion rule can clear those two bars. Boogu and Chroma are BOTH pure Defect 2 —
+four bars drawn by bytes no installed model owns.
+
+## Defect 2 — two of the three candidates are eliminated; Defect 2 remains OPEN
+
+- **Candidate 1 (client POSTed a dep list missing the asset) — RULED OUT.**
+  `resolveFullUniverse('boogu-edit-balanced', null, 'local')` returns
+  `boogu-edit-transformer-balanced, boogu-qwen3vl-8b-clip, vae-flux-ae` + 4 nodes.
+  The clip IS in what `_confirmWholeUninstall` sends.
+- **Candidate 2 (an op-level path that never covers common/asset deps) — RULED OUT for
+  this model.** `boogu-edit-balanced` is FLAT: `dependencies` array, no operation
+  groups, no arch variants. So `hasOps` and `_hasArch` are both false,
+  `draftDiffersFromInstalled` can never be true, the detail button is always
+  "Uninstall" (:1070-1074) and `_applyUpdate`/`_opUninstallDepIds` is unreachable for
+  it. (The common-deps-always-kept behaviour in `_opUninstallDepIds` is real — `keep`
+  includes commonDeps — but no Boogu click can reach it.)
+- **Candidate 3 (errored before the completion log line) — still live, and the log
+  evidence CANNOT settle it.** The retained-log coverage gap is much bigger than the
+  card claimed: `%APPDATA%\Cubric Vision\logs\` has no archive between
+  `app-20260804-200240.log` and `app-20260806-133451.log`, and app.log is overwritten
+  per session. Absence of the line proves nothing over that window.
+- **New hypothesis 4, worth testing alongside 3:** the backend shared-dep guard kept the
+  clip because the SIBLING tier still read as installed at that moment. Boogu's two
+  tiers share the clip and `vae-flux-ae` and differ only by transformer, so whichever
+  tier is uninstalled second is the only one that can free the clip. The card's
+  "the guard would delete it today" check was run with BOTH tiers already gone — a
+  different state from the one the uninstall actually ran in.
+
+Positive evidence the model really was installed and really did go away:
+`2026-08-05T06:05Z` ComfyUI's unet list contains `boogu_image_edit_turbo_int8_convrot`
+(the balanced transformer); it is absent from disk now, while the clip survives at its
+original path with a Jul 11 mtime. So something removed the transformer and not the clip.
+
+Cheap repro (no 22GB download): the isolated engine-root harness —
+`CUBRIC_ENGINE_ROOT` at a throwaway dir with fake dep files + DEPS swapped in
+`require.cache` — drives the real uninstall route both directions, and can order the
+two tiers' uninstalls to test hypothesis 4 directly.
