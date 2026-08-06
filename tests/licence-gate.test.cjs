@@ -59,28 +59,46 @@ test('acceptance survives a restart', async () => {
     assert.strictEqual(hasAcceptedLicence(GATED), true);
 });
 
-test('a version bump re-prompts, and so does a receipt for a different licence', async () => {
+test('a version bump re-prompts, and a receipt for another agreement does not count', async () => {
     const { MODEL_LICENCES, hasAcceptedLicence, recordLicenceAcceptance } = await licences();
     const licence = MODEL_LICENCES[GATED];
 
     // How a revised AUP reaches someone who accepted the old one.
     store.clear();
     recordLicenceAcceptance(GATED);
-    const bumped = licence.version + 1;
     const original = licence.version;
-    licence.version = bumped;
+    licence.version = original + 1;
     assert.strictEqual(hasAcceptedLicence(GATED), false, 'a version bump must re-prompt');
     licence.version = original;
 
-    // And a receipt naming a different agreement is not a receipt for this one — the
-    // licensor replacing the document outright, rather than revising it.
+    // The licensor replacing the document outright rather than revising it: a receipt
+    // filed under a different agreement is not a receipt for this one.
     store.clear();
     recordLicenceAcceptance(GATED);
     const key = [...store.keys()][0];
     const receipts = JSON.parse(store.get(key));
-    receipts[GATED].licenceId = 'some-other-agreement';
-    store.set(key, JSON.stringify(receipts));
+    store.set(key, JSON.stringify({ 'some-other-agreement': receipts[licence.id] }));
     assert.strictEqual(hasAcceptedLicence(GATED), false, 'a receipt for another licence must not count');
+});
+
+test('models sharing one agreement share one acceptance', async () => {
+    const { MODEL_LICENCES, getModelLicence, hasAcceptedLicence, recordLicenceAcceptance } = await licences();
+    // H3 ships as two ModelDefs (fl2va + ref2va) under a single agreement. The licence
+    // binds the PERSON, so re-showing the identical 25 clauses for the second variant
+    // would be friction that buys no consent. Receipts are keyed by LICENCE id, which
+    // is what makes that work — and this test is what stops someone "fixing" it back
+    // to a per-model key.
+    const SIBLING = 'minimax-h3-ref2va';
+    assert.strictEqual(getModelLicence(SIBLING), MODEL_LICENCES[GATED], 'both ids must share ONE descriptor object');
+
+    store.clear();
+    assert.strictEqual(hasAcceptedLicence(SIBLING), false);
+    recordLicenceAcceptance(GATED);
+    assert.strictEqual(hasAcceptedLicence(SIBLING), true, 'accepting via fl2va must cover ref2va');
+
+    // Provenance is still recorded — which install actually prompted it.
+    const receipts = JSON.parse(store.get([...store.keys()][0]));
+    assert.strictEqual(receipts[MODEL_LICENCES[GATED].id].acceptedVia, GATED);
 });
 
 test('every descriptor carries what the gate renders', async () => {

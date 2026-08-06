@@ -205,8 +205,18 @@ case; Flux is the next known consumer.
 - **Chokepoint:** `downloadService.start()`. Install fires from five call sites — the
   Model Library, the App Library, `commandExecutor`, and two in `shell.js` — so the gate
   sits where they converge, not on the tile a user usually clicks.
-- **Receipt:** `localStorage` `mpi_model_licence_accepted` → `{ [modelId]: { licenceId,
-  version, at } }`, written by `start()` on accept, never by the dialog.
+- **Receipt:** `localStorage` `mpi_model_licence_accepted` → `{ [licenceId]: { version,
+  at, acceptedVia } }`, written by `start()` on accept, never by the dialog.
+
+**Receipts are keyed by LICENCE id, not model id** — several models can share one
+descriptor object. H3 ships as two ModelDefs (`minimax-h3` fl2va and
+`minimax-h3-ref2va`, different transformer weights) under a single agreement, so
+accepting during the first install satisfies the second and it runs straight through.
+That is deliberate: the licence binds the *person* ("bind each recipient or user to
+enforceable terms"), so re-showing the identical 25 clauses for the sibling variant is
+friction that buys no consent. Two models under genuinely different licences still get
+two dialogs — different `id`s. Never reuse an `id` across different agreements; it is
+the acceptance key. `acceptedVia` records which install prompted it.
 
 **`start()` must stay synchronous for an ungated model.** It is a thin guard in front of
 `_start`, and a missed lookup falls through in the same tick. That is load-bearing:
