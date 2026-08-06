@@ -1,0 +1,31 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-456",
+  "title": "Collapse the _stage2 workflow twins on LTX and WAN using the new lazy-gate nodes",
+  "description": "Eight _stage2 duplicate workflows exist only because ExecutionBlocker travels DOWNSTREAM ONLY and an OUTPUT_NODE is always executed, so gating after a sampler never stopped that sampler. MPI-449 fixed both forcing paths (lazy MpiBlocker input 42b1540, lazy MpiSaveLatent.enabled fd9bdca, both live-proved) and shipped the pin, so the twins are now removable. Measured 2026-08-06: the SIX LTX twins are 119 vs 119 nodes and differ by exactly ONE widget - Input_Is_Continue false -> true - so they are pure duplication the app could inject instead of swapping filenames. The TWO WAN twins are 68->67 and 55->54 nodes, each missing Stage1_Bypass (SamplerCustom), which is the OUTPUT_NODE forcing problem and needs the lazy gates. Cross-cutting: also touches how the app resolves stage 2 (the _stage2 filename swap in commandExecutor.js and routes/comfy.js).",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-06T06:05:00Z",
+  "updated_at": "2026-08-06T06:05:00Z",
+  "labels": [
+    "workflow",
+    "ltx",
+    "wan",
+    "mpi-nodes",
+    "cleanup"
+  ],
+  "acceptance": [
+    "The six LTX _stage2 files are DELETED and stage 2 is reached by injecting Input_Is_Continue instead of swapping the filename",
+    "The two WAN _stage2 files are DELETED and Stage1_Bypass is gated lazily rather than physically removed",
+    "A real two-stage generation is run THROUGH THE APP for LTX and for WAN - preview, then continue - and the stage-2 output matches what the twin produced",
+    "The _stage2 filename-swap path is removed or narrowed in commandExecutor.js / routes/comfy.js, not left dead",
+    "klein_t2i and qwen_edit still behave correctly - they consume MpiBlocker too and the pin already made it lazy"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  },
+  "priority": "normal",
+  "attention": false
+}

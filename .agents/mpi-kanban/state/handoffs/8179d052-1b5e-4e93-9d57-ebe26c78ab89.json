@@ -31,11 +31,12 @@
     "pending": [
       "TEST THE LAZY GATING THROUGH THE APP - nothing this session ran through Vision, only the bench. The browser prunes muted nodes and the app does not, which is exactly how this class of bug was missed on WAN",
       "The node_lock bump ships a LAZY MpiBlocker to shipped workflows: klein_t2i.json and qwen_edit.json use it (3 nodes). Upstreams are pure and cheap (MpiLoadImageFromPath, MpiIfElse, MpiAnySwitch) so regression risk is LOW and no output should change - but it is UNTESTED, so fold both into the app-side test rather than testing H3 alone",
-      "Collapse the _stage2 workflow twins - now unblocked by the lazy gates. Wants its own card; it is cross-cutting (3 raw templates + comfy.js + commandExecutor.js)",
+      "MPI-456 (carded 2026-08-06): collapse the eight _stage2 twins. LTX half is nearly free - the six files differ by exactly ONE widget, Input_Is_Continue, so injecting it deletes all six. WAN half needs the lazy gate to restore Stage1_Bypass. Do it BEFORE MPI-455, which it shrinks.",
       "Engine bump go/no-go 0.29.2 -> 0.30.x, with the custom-node floor pairing check",
       "Test ref2va (reference-to-video) - the LoRA-free character bet",
       "The single-chip start/end frame BUTTON (H3 first, then MPI-455 shares it)",
-      "When unblocked: MPI-451 licence gate, then the engine bump, then MPI-452 wiring via /mpi-add-model"
+      "When unblocked: MPI-451 licence gate, then the engine bump, then MPI-452 wiring via /mpi-add-model",
+      "MPI-455 (carded): LTX end-frame-only conditioning via LTXVAddGuide frame_idx, sharing the H3 single-chip start/end button."
     ]
   },
   "task_card": {
