@@ -102,6 +102,13 @@
 
 ## importantChanges
 
+- **Some models now ask you to accept their licence before they download.** A few
+  model licences require us to show you the restrictions and record that you accepted
+  them before you receive the weights — MiniMax H3 is the first one we ship. You will
+  see the terms, and where a model is not licensed in your region, a link to request
+  your own authorization from the licensor. Every other model installs exactly as
+  before, with no extra step. The licence and a way to report misuse stay reachable
+  from the model's panel afterwards.
 - **Your mask reaches the model the way you drew it.** A masked edit used to close
   every hole in your mask and grow it slightly before generating, so a mask drawn as
   a ring around a subject arrived at the model as a solid blob — the shape you wanted
