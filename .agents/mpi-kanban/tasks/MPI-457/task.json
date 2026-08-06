@@ -1,0 +1,34 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-457",
+  "title": "Update the engine in place instead of re-downloading it, and give the bump a skill",
+  "description": "Two halves of the same gap. (1) USER-FACING: /engine/upgrade in routes/engine.js does fs.remove on the whole ComfyUI_windows_portable dir and re-downloads the ~1 GB portable 7z plus every custom node and python dep - for what is usually a few-MB core bump. The portable ships ComfyUI as a GIT CHECKOUT (proved 2026-08-06: the app engine sat at 32212244 = the pinned v0.29.2 sha, remote Comfy-Org/ComfyUI) and even bundles its own update/update.py, so a fetch + checkout of the pinned sha plus a pip install of the changed core packages is the same result in seconds. Reserve the full wipe for when it is actually needed - a DEPRECATED or removed custom node, a python/torch floor change in the portable itself, or a broken tree. (2) AGENT-FACING: there is no playbook or skill for bumping the APP engine. /mpi-bump-local-comfy covers only the standalone G:/ComfyUi bench; docs/versioning.md SS COMFY_VERSION is the only written guidance and it is two lines about keeping system_dependencies.json and node_lock.json in sync. The 0.29.2 -> 0.30.0 bump was done by hand under MPI-449 and the whole sequence should be captured.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-06T06:15:00Z",
+  "updated_at": "2026-08-06T06:15:00Z",
+  "labels": [
+    "engine",
+    "comfyui",
+    "skill",
+    "download-manager",
+    "performance"
+  ],
+  "acceptance": [
+    "/engine/upgrade takes an in-place path by default: git fetch --tags + checkout the node_lock pinned sha, pip install only the core packages whose pins changed, restamp .mpi_engine_version",
+    "The full wipe-and-redownload still exists and is REACHED BY A DECISION, not by default - deprecated/removed custom node, a portable-level python or torch change, or a tree that fails a health check",
+    "Deprecation is DETECTED, not guessed: compare the installed custom_nodes set against node_lock.json and only force a wipe when a node was removed from the lock or fails to import",
+    "The in-place path never destroys a symlinked custom node (the dev machine symlinks custom_nodes/ComfyUI-MpiNodes to c:/AI/Mpi/ComfyUi-MpiNodes; the wipe replaces it with a plain clone)",
+    "A user on the previous engine version is upgraded end-to-end on a real machine and ends on the new version with every shipped class_type still registering",
+    "A skill exists for the repo-side bump and encodes the sequence proved on 0.29.2 -> 0.30.0",
+    "The skill's floor check is EMPIRICAL: collect every class_type used by comfy_workflows/*.json and assert all of them register on the target version before the pin is committed",
+    "The skill checks that the target version actually has a portable release asset - upstream tags can exist with no Comfy-Org portable build (v0.30.1 and v0.30.2 had none on 2026-08-06)"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  },
+  "priority": "normal",
+  "attention": false
+}
