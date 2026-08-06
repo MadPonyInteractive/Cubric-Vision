@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-461","at":"2026-08-06T23:10:00Z","actor":"opus","note":"Carded at the user request during MPI-452 close-out. A failed generation strands its lane: the store job is registered but twelve early-return error paths never settle it, so _laneBusy stays true and the cue never drains. Confirmed NOT downloads-related."}

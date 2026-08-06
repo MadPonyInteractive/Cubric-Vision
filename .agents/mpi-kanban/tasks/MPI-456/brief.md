@@ -127,9 +127,20 @@ the old graph's output. `tests/resolve-model-deps.test.cjs::testSingleFileStages
 the real registry against the real workflow directory and fails BOTH ways, so a
 half-migration cannot pass the suite.
 
-**OPEN QUESTION, ask the user — do not assume.** LTX is dual-latent
-(`Input_Video_Latent` + `Input_Audio_Latent`, two savers) and `MpiStageLatents` carries
-ONE latent pair. Either LTX gets two stage nodes with distinct titles, or the node grows a
-second optional latent slot. The "worth checking" note above is now the blocking decision.
+**ANSWERED by the user 2026-08-06 — LTX becomes SINGLE-latent.** It uses LTX's own Packer
+and Anon Packer to pack video and audio into one latent, so there is exactly one save and
+`MpiStageLatents` fits as-is with no second slot and no second stage node. This was
+recorded as an open question earlier in this file; it is not open. Consequences:
+
+- `Input_Audio_Latent` disappears from the LTX graphs. The app still emits it
+  (`_buildParams`, `payload.loadAudioLatentName`) — harmless, because injection silently
+  skips a title matching no node, but that emission and the dual-latent plumbing around
+  `loadAudioLatentName` / `audioLatentFilePath` become dead once LTX lands, and should be
+  removed rather than left to rot.
+- H3 already proved a packed video+audio latent round-trips through `MpiStageLatents`
+  (its NestedTensor pair is what broke core `SaveLatent` in the first place).
+- The LTX work is being carried in a SEPARATE session that has picked up handoff
+  `4340839f`; that handoff still lists this as an open question, so trust this line over
+  it.
 
 **Not verified:** WAN's migrated graphs have not been run through the app. H3's have.
