@@ -94,3 +94,42 @@ Eight fewer files to keep in sync, and it directly shrinks [[MPI-455]]'s six-fil
 sweep — do this first if both are live. `MpiSaveLatent` / `MpiLoadLatent` also handle
 packed AV latents, which may simplify LTX's dual-latent (`Input_Video_Latent` +
 `Input_Audio_Latent`) staging; worth checking, not in scope by default.
+
+---
+
+## UPDATE 2026-08-06 — the WAN half is DONE; only LTX remains
+
+Delivered under MPI-452, because H3's app verification forced the mechanism into
+existence rather than leaving it as a cleanup:
+
+- **`MpiStageLatents`** (`C:\AI\Mpi\ComfyUi-MpiNodes\latent.py`) collapses the whole
+  eight-node cluster — `MpiSaveLatent` + `MpiLoadLatent` + two `MpiBooleanInvert` +
+  `MpiIfElse` + `MpiBlocker` + `MpiBooleanCompare` + both `MpiSimpleBoolean` gates —
+  into ONE node with `is_continue` / `is_preview` / `save_path` / `load_path` as
+  **widgets**. Its latent inputs are lazy, so a continue never asks for them and stage 1
+  is genuinely skipped. That is the whole reason the twins existed.
+- **`capabilities.singleFileStages`** on a ModelDef opts it out of the `_stage2` suffix in
+  `resolveWorkflowFile`. A declaration, not a disk probe.
+- **WAN: shipped.** `wan22_t2v_stage2.json` + `wan22_i2v_stage2.json` DELETED, the flag
+  set on `wan-22`, and `generate_wan.py`'s bypass-splice deriver removed entirely.
+- **H3: shipped**, and its two-stage path is user-verified through the app.
+
+### What LTX still needs
+
+1. Its export (the user is re-authoring it — do not touch the six twins before it lands).
+2. The same surgery `generate_wan.py` got: delete `_derive_stage2`, assert exactly one
+   `MpiStageLatents` titled `Input_Video_Latent`, bake its four widgets.
+3. Delete the six twins; add `singleFileStages` to **both** `ltx-23` and `ltx-23-balanced`.
+
+**Ordering is load-bearing.** The flag and the deletion must land together: unlike H3's
+missing file (a loud 404), a stale twin left on disk is FOUND AND RUN, silently producing
+the old graph's output. `tests/resolve-model-deps.test.cjs::testSingleFileStages` sweeps
+the real registry against the real workflow directory and fails BOTH ways, so a
+half-migration cannot pass the suite.
+
+**OPEN QUESTION, ask the user — do not assume.** LTX is dual-latent
+(`Input_Video_Latent` + `Input_Audio_Latent`, two savers) and `MpiStageLatents` carries
+ONE latent pair. Either LTX gets two stage nodes with distinct titles, or the node grows a
+second optional latent slot. The "worth checking" note above is now the blocking decision.
+
+**Not verified:** WAN's migrated graphs have not been run through the app. H3's have.
