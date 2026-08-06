@@ -48,6 +48,19 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
 - **Format:** Semantic versioning matching upstream tags (e.g., `0.18.0` for ComfyUI).
 - **Where:** Stored in `dev_configs/system_dependencies.json` (drives the local-engine download URL). **Tracked in a SECOND file too:** `dev_configs/node_lock.json` `comfyui.core.tag` is the node/Pod pin (read by `js/data/modelConstants/dependencies.js` for app node URLs AND by the mpi-ci Pod image build). These two CAN DESYNC — on the 1.1.0 promote `system_dependencies.json` said `0.26.0` while `node_lock.json` said `v0.27.0` (local engine would have pulled 0.26 while nodes targeted 0.27).
 - **When to bump:** Only when the bundled engine is upgraded. Edit `system_dependencies.json` **AND** verify it matches `node_lock.json`'s `comfyui.core.tag` — grep BOTH at every bump, do not trust one file alone.
+- **The full bump sequence is NOT here.** There is no skill for the app-engine bump
+  (`/mpi-bump-local-comfy` is the standalone `G:/ComfyUi` bench only), so the procedure
+  proved on 0.29.2 → 0.30.0 lives in **`.agents/mpi-kanban/tasks/MPI-457/brief.md`**
+  until that card ships one. Three things this section does not tell you and that cost a
+  session to derive: an upstream tag can exist with **no Comfy-Org portable build** (v0.30.1
+  and v0.30.2 were real tags with no release, so 0.30.0 was the ceiling — check
+  `gh api repos/Comfy-Org/ComfyUI/releases/tags/v<ver>` before picking a target); the
+  installed portable **is a git checkout**, so the local engine upgrades in place with a
+  `fetch --tags` + `checkout <pinned sha>` + a pip install of only the core packages whose
+  pins moved, instead of the full wipe-and-redownload `/engine/upgrade` performs; and the
+  custom-node floor check should be **empirical** — assert every `class_type` used by
+  `comfy_workflows/*.json` still registers in `/object_info` on the target version, rather
+  than reasoning about which node packs might break.
 - **Access:** `routes/platformEngine.js` reads this value at startup and exports `COMFY_VERSION` for use by `engine.js` and download manager.
 - **Validation:** On app boot, `_bootApp()` calls `GET /engine/version-check` which compares installed engine version against `COMFY_VERSION` from `platformEngine.js`. If mismatch, `MpiEngineInstall` prompts the user to upgrade.
 

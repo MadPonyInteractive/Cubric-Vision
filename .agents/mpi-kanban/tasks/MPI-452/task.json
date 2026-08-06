@@ -4,10 +4,10 @@
   "title": "Wire MiniMax H3 fl2va as a model",
   "description": "Ship MiniMax H3 in Cubric Vision. Engine bumped 0.29.2 -> 0.30.0 and the workflow template/runtime split is done (generate_h3.py + registry). Remaining: dep entries pointed at the publisher's own repos (NEVER re-hosted on R2 - the licence forbids redistribution), models.js ModelDef 'minimax-h3', progressStages, type-consumer sweep. H3 emits video AND native stereo audio from one sampler pass as a packed NestedTensor, so the LTX audio I/O in docs/models/ltx/audio-input.md is the prior art. The licence gate is MPI-451, running in a parallel session - its licences.js already carries a 'minimax-h3' entry, which fixes this model's id. ref2va is a SEPARATE ModelDef (minimax-h3-ref2va). Feasibility numbers and the weight matrix live on MPI-449.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-05T07:00:00Z",
-  "updated_at": "2026-08-06T06:52:00Z",
+  "updated_at": "2026-08-06T08:40:00Z",
   "labels": [
     "model",
     "video",
@@ -24,7 +24,8 @@
   ],
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   },
   "priority": "normal",
   "attention": false
