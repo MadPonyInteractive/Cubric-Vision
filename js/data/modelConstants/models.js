@@ -1057,7 +1057,12 @@ export const MODELS = [
         // motion: WAN's i2v workflow has an Input_Motion_Intensity node, so the
         // motion control is live. LTX has no such node → omits motion → the
         // MpiPromptBox motionIntensity control is hidden for it.
-        capabilities: { multiStage: true, audio: false, branchingContinue: true, motion: true },
+        // singleFileStages (MPI-452/MPI-456): WAN migrated to MpiStageLatents, so ONE
+        // graph now serves both passes and the `_stage2` twins are DELETED. This flag is
+        // what stops resolveWorkflowFile naming them. It is not cosmetic — a stale twin
+        // still on disk would be found and RUN, silently producing the old graph's
+        // output, which is worse than H3's missing-file 404 because nothing errors.
+        capabilities: { multiStage: true, audio: false, branchingContinue: true, motion: true, singleFileStages: true },
         video: 'wan22_preview.mp4',
         type: 'wan',
         // Which LoRA strength knobs the settings UI shows for this model. Wan
@@ -1235,6 +1240,9 @@ export const MODELS = [
         mediaType: 'video',
         // multiStage: the ONE graph carries both sampler passes and picks between them
         // with Input_Preview_Only / Input_Is_Continue, so there is no _stage2 twin file.
+        // singleFileStages says exactly that to resolveWorkflowFile, which otherwise
+        // appends _stage2 to EVERY multi-stage model and 404s Finish on a file that must
+        // never exist (MPI-452). Declared rather than probed so the resolver stays pure.
         // NO branchingContinue → Finish-only, same call as LTX: stage 2 resumes from the
         // stage-1 latent, so a re-prompted branch would not honour the new prompt.
         // audio is deliberately ABSENT even though H3 outputs sound. capabilities.audio
@@ -1242,7 +1250,7 @@ export const MODELS = [
         // (MpiPromptBox.js), and fl2va accepts no audio — it only EMITS it, muxed into
         // the mp4 by MpiSaveVideo(use_audio: true). The reference model that does take
         // audio in is ref2va (minimax-h3-ref2va), and that one wants audio: true.
-        capabilities: { multiStage: true },
+        capabilities: { multiStage: true, singleFileStages: true },
         video: 'minimax_h3_preview.mp4',
         // type drives the ratio ladder. 'h3' is NOT arbitrary: RATIO_MODES.h3,
         // BUILTIN_RATIOS.h3 and BUILTIN_QUALITY_TIERS.h3 were all authored against this

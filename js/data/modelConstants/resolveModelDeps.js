@@ -229,6 +229,12 @@ function variantSuffixOf(model, variantTokens = {}) {
  * Engine suffix comes from `model.engines[engine].workflowSuffix`. A model with no
  * `engines:` block has no suffix on any engine (its workflow is used verbatim).
  *
+ * `capabilities.singleFileStages` OPTS OUT of the `_stage2` suffix: the model ships ONE
+ * graph for both passes and picks between them with `Input_Preview_Only` /
+ * `Input_Is_Continue` through lazy gates (MiniMax H3, MPI-452). Without it the resolver
+ * names a twin that must never exist and Finish 404s. It is a DECLARATION, not a disk
+ * probe, so this function stays pure.
+ *
  * Pure string derivation — no disk/registry access, so it stays node-testable.
  *
  * @param {object} model
@@ -245,7 +251,9 @@ export function resolveWorkflowFile(model, op, engine = null, { stage2 = false, 
     // _stage2 → engine suffix, e.g. ltx_t2v + _mxfp8 + _stage2 (+ _remote).
     const vSuffix = variantSuffixOf(model, variantTokens);
     if (vSuffix) file = file.replace(/\.json$/i, `${vSuffix}.json`);
-    if (stage2) file = file.replace(/\.json$/i, '_stage2.json');
+    if (stage2 && model?.capabilities?.singleFileStages !== true) {
+        file = file.replace(/\.json$/i, '_stage2.json');
+    }
     const suffix = engineSuffixOf(model, engine);
     if (suffix) file = file.replace(/\.json$/i, `${suffix}.json`);
     return file;

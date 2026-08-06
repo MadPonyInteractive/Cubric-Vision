@@ -1242,7 +1242,14 @@ function createEngine({ engine, alwaysLocal }) {
                 'value', 'text', 'int', 'float', 'boolean', 'string', 'color',
                 'ckpt_name', 'model_name', 'unet_name', 'image', 'mask', 'picks',
                 'lora_name', 'strength_model', 'strength_clip',
-                'denoise', 'seed', 'noise_seed', 'video', 'audio', 'latent', 'select'
+                'denoise', 'seed', 'noise_seed', 'video', 'audio', 'latent', 'select',
+                // 'filename' is MpiLoadLatent/MpiSaveLatent's widget. Core LoadLatent
+                // calls the same thing 'latent' (above), which is why the LTX and WAN
+                // stage-2 twins always injected fine and H3 — the only graph on the Mpi
+                // pair — silently did not: the spray found no key, node 173 kept its
+                // BAKED name, nothing loaded, and every lazy branch gated off, so the
+                // continue ran in 0.03s with no output and no error (MPI-452).
+                'filename'
             ];
             for (const t of targets) {
                 if (t in node.inputs) {

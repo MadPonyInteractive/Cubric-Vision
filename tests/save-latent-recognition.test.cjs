@@ -24,11 +24,25 @@ const path = require('node:path');
 const WORKFLOW_DIR = path.join(__dirname, '..', 'comfy_workflows');
 const EXECUTOR = path.join(__dirname, '..', 'js', 'services', 'commandExecutor.js');
 
+/** Every class that WRITES a stage-1 latent, whatever its name suggests. */
+const SAVER_CLASSES = ['SaveLatent', 'MpiSaveLatent', 'MpiStageLatents'];
+
 /** Mirrors the saveLatentNodeIds predicate in commandExecutor.js. */
 function isRecognisedSaveLatent(node) {
-    return node.class_type === 'SaveLatent'
-        || node.class_type === 'MpiSaveLatent'
+    return SAVER_CLASSES.includes(node.class_type)
         || String(node._meta?.title || '').toLowerCase() === 'savelatent';
+}
+
+/**
+ * A node that saves a latent, by CLASS NAME or by known behaviour.
+ *
+ * The name test alone stopped being enough at MPI-452: `MpiStageLatents` saves, loads
+ * AND gates, so its name says "latents" rather than "save", and a purely name-based
+ * sweep went quietly green on a fleet where nothing was collected at all.
+ */
+function looksLikeSaver(node) {
+    return /savelatent/i.test(node.class_type || '')
+        || node.class_type === 'MpiStageLatents';
 }
 
 test('the executor filter still lists every class this test mirrors', () => {
@@ -36,7 +50,7 @@ test('the executor filter still lists every class this test mirrors', () => {
     // to commandExecutor.js but not here, the sweep below would pass while missing it.
     const src = fs.readFileSync(EXECUTOR, 'utf8');
     const block = src.slice(src.indexOf('const saveLatentNodeIds'));
-    for (const cls of ['SaveLatent', 'MpiSaveLatent']) {
+    for (const cls of SAVER_CLASSES) {
         assert.ok(
             block.includes(`class_type === '${cls}'`),
             `commandExecutor.js no longer matches ${cls} — update the filter or this mirror`,
@@ -63,7 +77,7 @@ test('every save-latent node in every shipped workflow is recognised', () => {
         for (const [id, node] of Object.entries(graph)) {
             if (!node || typeof node.class_type !== 'string') continue;
             // Anything whose class NAME claims to save a latent must be recognised.
-            if (!/savelatent/i.test(node.class_type)) continue;
+            if (!looksLikeSaver(node)) continue;
             if (isRecognisedSaveLatent(node)) recognisedCount++;
             else unrecognised.push(`${file} node ${id} (${node.class_type}, title="${node._meta?.title || ''}")`);
         }
@@ -83,7 +97,7 @@ test('H3 specifically — the graph that exposed the gap', () => {
     const h3 = path.join(WORKFLOW_DIR, 'minimax_h3_fl2va.json');
     if (!fs.existsSync(h3)) return;   // model removed; nothing to pin
     const graph = JSON.parse(fs.readFileSync(h3, 'utf8'));
-    const savers = Object.values(graph).filter(n => /savelatent/i.test(n.class_type || ''));
+    const savers = Object.values(graph).filter(looksLikeSaver);
     assert.ok(savers.length, 'H3 must still save a stage-1 latent, or two-stage Continue is gone');
     for (const n of savers) assert.ok(isRecognisedSaveLatent(n), `H3 ${n.class_type} unrecognised`);
     // The title trap: _latentRoleFromTitle tags ANY title containing "audio" as the audio

@@ -697,6 +697,27 @@ function _buildParams(payload) {
         // the payload overrides any previewStage toggle so re-generation from
         // history never produces a preview card.
         params['Preview_Only'] = payload.historyMode === true ? false : (payload.previewOnly === true);
+        // Is_Continue is the OTHER half of the stage split, and it only exists for a
+        // model whose two stages live in ONE file (capabilities.singleFileStages —
+        // MiniMax H3, MPI-452): the filename no longer says which pass to run, so the
+        // graph's lazy gates need telling. A twin-file model has no such node and
+        // injection silently skips a title matching nothing, so emitting it fleet-wide
+        // costs LTX/WAN exactly nothing. Canonicalized to Input_Is_Continue below.
+        params['Is_Continue'] = payload.isStage2 === true;
+        // MpiStageLatents (MPI-452) collapses that whole cluster — save, preview gate,
+        // load, and both booleans — into ONE node whose gates are WIDGETS, not wired
+        // MpiSimpleBoolean nodes. A widget is not addressable by the plain title spray
+        // (it would write one value into every recognised key on the node), so these go
+        // through the `Title.widget` form from MPI-359.
+        //
+        // The node keeps the title `Input_Video_Latent`, so BOTH shapes are addressed at
+        // once and the migration needs no flag day: on a legacy graph that title is core
+        // LoadLatent, where the dotted keys match no widget and are skipped while the
+        // plain `Input_Video_Latent` below still lands on its `latent` key; on a migrated
+        // graph the reverse happens — the dotted keys land and the plain one finds no
+        // recognised target. Neither ever writes the wrong thing to the other.
+        params['Video_Latent.is_continue'] = payload.isStage2 === true;
+        params['Video_Latent.is_preview']  = params['Preview_Only'];
         // LoadLatent is always required for _ms workflows. ComfyUI validates the
         // node even when its output is unreached. Stage-1 uses the default
         // engine-input latent; stage-2 uses the per-preview <uuid>.latent staged
@@ -706,6 +727,10 @@ function _buildParams(payload) {
         // Video-latent load node (MPI-127). WAN + LTX stage-1 both load the single
         // engine-input latent here; stage-2 swaps in the staged preview latent.
         params['Input_Video_Latent'] = _latentName;
+        // Same name to MpiStageLatents' load widget. save_path is deliberately NOT
+        // injected: the staging path stays as-is (user's call), so stage 1 keeps writing
+        // its baked name and the app collects it from `ui.latents` exactly as today.
+        params['Video_Latent.load_path'] = _latentName;
         // Dual-latent stage-2 (LTX, MPI-128). LTX saves TWO latents (video + audio)
         // and stage-2 loads BOTH via Input_Video_Latent + Input_Audio_Latent. When a
         // per-preview audio latent was staged, point its LoadLatent node at it; stage-1
@@ -1662,6 +1687,13 @@ export function runCommand(payload) {
             Object.keys(workflow).filter(id =>
                 workflow[id].class_type === 'SaveLatent' ||
                 workflow[id].class_type === 'MpiSaveLatent' ||
+                // MpiStageLatents saves the stage-1 latent too — its class name just does
+                // not say so, because it also loads and gates. Miss it and the app never
+                // learns the latent exists, so every preview falls back to COLD and
+                // re-runs the whole workflow, handing back a different sample than the
+                // one approved. Same failure MpiSaveLatent had (MPI-452); it reappeared
+                // the moment H3 and WAN migrated onto the new node.
+                workflow[id].class_type === 'MpiStageLatents' ||
                 workflow[id]._meta?.title?.toLowerCase() === 'savelatent'
             )
         );

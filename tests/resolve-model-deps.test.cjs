@@ -357,6 +357,50 @@ function testWorkflowFileResolution() {
     }
 }
 
+// MPI-452: `capabilities.singleFileStages` opts a model OUT of the `_stage2` suffix.
+// MiniMax H3 ships ONE graph for both passes and picks between them with lazy
+// Input_Preview_Only / Input_Is_Continue gates, so `minimax_h3_fl2va_stage2.json` must
+// never exist — and the resolver used to name it anyway, 404ing Finish. The sweep at the
+// end is the real pin: it asserts every multi-stage model's stage-2 filename resolves to
+// a file that EXISTS, which fails in both directions (a twin model missing its file, and
+// a one-file model that forgot the flag). MPI-456 wants this design for LTX's six twins
+// and WAN's two, so that sweep is what tells it when a conversion is half-done.
+function testSingleFileStages() {
+    const fs = require('fs');
+    const path = require('path');
+
+    const oneFile = { id: 'of', capabilities: { multiStage: true, singleFileStages: true },
+        workflows: { t2v_ms: 'one.json' } };
+    assert.strictEqual(resolveWorkflowFile(oneFile, 't2v_ms', 'local', { stage2: true }), 'one.json',
+        'singleFileStages: stage 2 is the SAME file');
+    assert.strictEqual(resolveWorkflowFile(oneFile, 't2v_ms', 'local'), 'one.json',
+        'singleFileStages does not disturb the stage-1 name');
+    // The flag must be exactly true — a truthy value is not a declaration.
+    const notDeclared = { id: 'nd', capabilities: { multiStage: true }, workflows: { t2v_ms: 'one.json' } };
+    assert.strictEqual(resolveWorkflowFile(notDeclared, 't2v_ms', 'local', { stage2: true }), 'one_stage2.json',
+        'no flag → the fleet default (twin file) is unchanged');
+
+    // Fleet sweep against the REAL registry and the REAL workflow directory.
+    const { MODELS } = require('../js/data/modelConstants/models.js');
+    const dir = path.join(__dirname, '..', 'comfy_workflows');
+    let swept = 0;
+    for (const m of MODELS) {
+        if (!m.capabilities?.multiStage) continue;
+        const tokenSets = [{}];
+        for (const opt of archVariantOptions(m)) tokenSets.push({ arch: opt.token });
+        for (const op of Object.keys(m.workflows || {})) {
+            for (const variantTokens of tokenSets) {
+                const file = resolveWorkflowFile(m, op, 'local', { stage2: true, variantTokens });
+                assert.ok(fs.existsSync(path.join(dir, file)),
+                    `${m.id}/${op} stage-2 resolves to "${file}", which does not exist — `
+                    + 'either the twin is missing or the model needs capabilities.singleFileStages');
+                swept += 1;
+            }
+        }
+    }
+    assert.ok(swept >= 8, `expected the sweep to cover the multi-stage fleet, covered ${swept}`);
+}
+
 // MPI-165 Phase B: the operation axis and engine axis are orthogonal and UNION.
 // Asserts the exact four (op × engine) combinations from the plan's worked example.
 function testOpAndEngineCompose() {
@@ -518,6 +562,7 @@ const tests = {
     testRealRegistryIntegrity,
     testEngineResolution,
     testWorkflowFileResolution,
+    testSingleFileStages,
     testOpAndEngineCompose,
     testVariantAxis,
     testOtherArchDetect,
