@@ -626,3 +626,56 @@ fix for deep-packet interference.
 
 `CUBRIC_MODEL_MIRRORS` (comma-separated) REPLACES the default at runtime for testing
 without a rebuild. Guard: `tests/transport-error-message.test.cjs`.
+
+## A blip is not a verdict — same-url retry (MPI-460)
+
+The mirror walk above answers "this ROUTE is blocked". It does not answer "this route
+hiccupped", and until MPI-460 nothing did: `FileDownloader.on('error')` fell straight to
+`_setDepStatus('failed')`. Live 2026-08-06 that made a 60-second quiet socket terminal for
+the 25GB `ltx23-transformer-fp8` at 8.4GB, with the origin healthy throughout (a
+`Range: bytes=8446279680-` against the same object answered 206 minutes later).
+
+The stall watchdog (MPI-291) is what surfaces the quiet socket, and its own error string
+(`Download stalled - no data received.`) matches NO `_TRANSPORT_ERROR_PATTERNS` entry, so
+the failover never even considered it. MPI-291's brief assumed it was routing into
+"the EXISTING failed/retry logic"; MPI-427's retry is the USER clicking Install again
+(`installStore.requeueDep`). Nothing automatic existed.
+
+Now: three retries of the SAME url on `RETRY_BACKOFF_MS = [2s, 5s, 15s]`, re-entering
+`download()` so the MPI-317 resume contract picks the partial back up via Range. Gates:
+
+- **Bytes on disk (`depJob.downloadedBytes > 0`) — the load-bearing one.** MPI-427's user
+  had every connection killed in <200ms, zero bytes, 44 times; for him a budget is 22s
+  bought before the remedy he needs to read. Retry defends PROGRESS, it does not argue
+  with a route that never delivered. This is also what keeps the mirrors-exhausted →
+  `failed` contract intact.
+- A definite 4xx is not retried (416 excepted — the scrub above just made the next attempt
+  a clean start).
+- The retry timer is cleared by `cancel()`/`stopKeep()`, so a cancel during the backoff
+  cannot resurrect the download.
+
+**This matters most where there is no second origin**, and the catalogue is NOT uniformly
+"R2 primary, HF fallback" in either direction (counted 2026-08-06):
+
+- **HF-primary with no alternate** — the four MiniMax H3 deps (`minimax-h3-fl2va-transformer`,
+  `h3-qwen3vl-32b-clip`, `vae-minimax-h3-video`, `vae-minimax-h3-audio`) plus
+  `controlnet-union-flux`. H3 is HF-only; nothing was staged to R2.
+- **R2-primary with no alternate** — the `noMirror` set: `krea2-raw-transformer-nsfw`
+  (until 2026-08-10, MPI-433), `krea2-raw-transformer`, `pid-qwenimage`, and the three
+  TAESD decoders.
+- The other 100 R2 deps have a second route: 66 by explicit `mirrorUrl`, the rest by the
+  generic HF prefix rewrite.
+
+A blip used to kill every single-route dep outright — there was nothing to fail over to.
+
+`_rearm()` is what puts the downloader back in `_activeDownloaders` before ANY in-place
+restart. That register is written in exactly one place (`_startPendingDeps`), so the
+failover branch — which only nulled `_downloader` — had been dropping off it for its whole
+life: invisible to the stall watchdog, to cancel/uninstall and to shutdown, while the
+launcher counted the freed slot and handed it to another dep.
+
+Guard: `tests/download-retry.test.cjs` — a local server kills the first connection
+mid-body, and the test asserts the retry's request carries `Range: bytes=<partial>-` and
+the finished file matches the expected sha256. It drives `forceStall()` directly because
+NDH v2.1.11 does **not** emit `error` on a socket that dies mid-body (re-measured 2026-08-06,
+the same finding MPI-291 built the watchdog on).

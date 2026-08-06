@@ -528,6 +528,10 @@ class FileDownloader {
         // still caught. _watchdogSweep() force-errors any downloader quiet past the window.
         this._lastByteTs = Date.now();
         this._lastBytes = -1;
+        // MPI-460 — same-url retry budget (see the 'error' handler). Counts only
+        // in-place restarts of THIS dep; a mirror failover spends its own walk.
+        this._attempts = 0;
+        this._retryTimer = null;
         // MPI-296 — SHA256 computed incrementally while the file streams in, so the
         // post-download verify never re-reads the whole file (killed a 35s wall on a
         // 6.6GB weight). Valid only for FRESH streams (pipe sees every byte once, in
@@ -686,11 +690,41 @@ class FileDownloader {
                     this._triedUrls.add(next);
                     logger.info('download', `${this.depJob.id}: failing over to mirror ${new URL(next).host}`);
                     this.depJob.url = next;
-                    this._downloader = null;
-                    this._eventsBound = false;
+                    this._rearm();
                     this.download().catch(() => {});   // errors re-enter this handler
                     return;
                 }
+            }
+            // MPI-460 — a transient blip is not a verdict. The stall watchdog's own error
+            // (MPI-291) matches no transport pattern, so the failover above never fires for
+            // it, and the next statement used to be `failed` — one 60s hiccup discarded a
+            // 25GB weight 8.4GB in (live 2026-08-06, origin healthy throughout). Re-enter
+            // download(): the MPI-317 resume contract picks the partial back up via Range,
+            // so a retry costs seconds, not the bytes. Only an exhausted budget is terminal.
+            // A definite 4xx fails identically on every attempt and is not worth one — 416
+            // excepted, because the scrub above just made the next attempt a clean start.
+            //
+            // The gate is BYTES ON DISK, and it is what keeps MPI-427 intact: that user's
+            // ISP killed every connection in under 200ms, 44 times, zero bytes landed — for
+            // him a retry budget is 22s of silence bought before the remedy he needs to
+            // read. Retry defends PROGRESS; it does not argue with a route that never
+            // delivered anything.
+            const httpStatus = Number(err && err.status) || 0;
+            const permanent = httpStatus >= 400 && httpStatus < 500 && httpStatus !== 416;
+            const hasProgress = (this.depJob.downloadedBytes || 0) > 0;
+            const delay = RETRY_BACKOFF_MS[this._attempts];
+            if (hasProgress && !permanent && delay !== undefined) {
+                this._attempts += 1;
+                logger.warn('download', `${this.depJob.id}: ${err.message} — retry ${this._attempts}/${RETRY_BACKOFF_MS.length} in ${delay / 1000}s (resumes from disk)`);
+                this._rearm();
+                this._retryTimer = setTimeout(() => {
+                    this._retryTimer = null;
+                    // A cancel/pause during the backoff wins — cancel() already deleted the
+                    // partial, so restarting here would resurrect a download the user killed.
+                    if (this.depJob.status === 'cancelled' || this.depJob.status === 'paused') return;
+                    this.download().catch(() => {});   // errors re-enter this handler
+                }, delay);
+                return;
             }
             _setDepStatus(this.depJob, 'failed', 'downloader error');
             this.depJob.error = blocked || this._blockedMsg || err.message;
@@ -703,6 +737,22 @@ class FileDownloader {
             _checkModelJobsComplete();
             _startPendingDeps();
         });
+    }
+
+    // MPI-460 — put this downloader back on the active register and restart its byte-flow
+    // clock before any IN-PLACE restart (mirror failover or retry). `_activeDownloaders`
+    // is written in exactly ONE place (_startPendingDeps), so a restart that only nulled
+    // `_downloader` went invisible: no stall watchdog (it iterates the register), no user
+    // cancel or uninstall (they look the dep up in it), no shutdown stopKeep — while the
+    // launcher counted the freed slot and handed it to another dep. That was MPI-429's
+    // failover for its whole life; the retry path would have inherited it.
+    _rearm() {
+        this._downloader = null;
+        this._eventsBound = false;
+        this._lastBytes = -1;
+        this._lastByteTs = Date.now();
+        _activeDownloaders.set(this.depJob.id, this);
+        _startStallWatchdog();
     }
 
     async _ensureDownloader() {
@@ -798,6 +848,7 @@ class FileDownloader {
     // marker. stop() itself no longer removes anything (removeOnStop:false), so
     // the deletion here is the only one on this path.
     async cancel() {
+        clearTimeout(this._retryTimer);  // MPI-460 — a pending retry must not outlive the cancel
         if (this._downloader) {
             await this._downloader.stop().catch(() => false);
         }
@@ -809,6 +860,7 @@ class FileDownloader {
     // next app start resumes via Range. Used by cancelAllDownloads (SIGTERM/SIGINT),
     // never by the user-cancel route.
     async stopKeep() {
+        clearTimeout(this._retryTimer);  // MPI-460 — shutdown outranks a pending retry
         if (this._downloader) {
             await this._downloader.stop().catch(() => false);
         }
@@ -835,6 +887,10 @@ class FileDownloader {
 // force-errored into the existing failed/retry path. Window is longer than NDH's
 // timeout:30000 so this is a genuine backstop, not a double-fire.
 const STALL_MS = 60_000;
+// MPI-460 — same-url retry schedule. Length IS the budget: three restarts, then the
+// failure is real and the user sees it. Spaced so a router reboot or a CDN edge blip
+// has time to clear, and short enough that a genuinely dead route is not a 5-minute wait.
+const RETRY_BACKOFF_MS = [2_000, 5_000, 15_000];
 let _watchdogTimer = null;
 
 function _startStallWatchdog() {
