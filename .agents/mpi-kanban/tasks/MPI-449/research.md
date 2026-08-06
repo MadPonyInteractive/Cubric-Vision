@@ -170,6 +170,65 @@ an OTMFLY mirror — Blackwell, skip. No abliterated int4_convrot exists.
 - `Kijai/MiniMax-H3-TAE` — README only, no weights yet. Watch it: a tiny AE would give
   cheap latent previews on a model where a full video VAE decode is 5.21 GB.
 
+## 4a. LoRA: H3 takes MODEL **and** CLIP — decided 2026-08-06
+
+**The encoder really does influence the output**, so a LoRA trained with encoder weights is
+not a no-op. The text encoder runs **once**, inside the node
+(`comfy_extras/nodes_minimax_h3.py:141-142`):
+
+```python
+tokens = clip.tokenize(prompt, images=images)
+cond   = clip.encode_from_tokens_scheduled(tokens)
+```
+
+That `cond` is consumed at **every** sampling step, so patched encoder weights steer the
+whole run. For H3 this is a bigger lever than a normal TE LoRA: note `images=images` — the
+"clip" is the **qwen3vl VL tower** and it ingests the KEYFRAME as well as the prompt, so an
+encoder LoRA shapes how the model reads the input IMAGE, not just the text.
+
+**DECISION: H3 ships 6 LoRA slots with BOTH strengths.** Requires only two things in
+MPI-452, no UI work:
+
+1. Workflow uses **`MpiLoraModelClip`** — the established 6-slot node, wired as a chain
+   (`Input_Lora_1` .. `Input_Lora_6`, each taking `model` + `clip` from the previous).
+   Copy LTX's rack; do NOT use core `LoraLoader`.
+
+   > **Correction, 2026-08-06.** An earlier revision of this section claimed H3 would be
+   > the FIRST model here with a clip path, on a count of "19 LoRA nodes, all
+   > `LoraLoaderModelOnly`". That count was wrong — the grep pattern
+   > `"class_type": "Lora[A-Za-z]*"` cannot match `MpiLoraModelClip`, which does not start
+   > with `Lora`. Real counts across `comfy_workflows/*.json`: **`MpiLoraModelClip` 141**,
+   > `MpiLoraModel` 128, `LoraLoaderModelOnly` 12, `MpiStyleLoras` 10. Clip strength is the
+   > MAJORITY pattern, and `models.js` already ships `loraStrengths: ['model','clip']` on
+   > two models. H3 is ordinary here, not a precedent.
+2. Leave `loraStrengths` **unset** in the ModelDef. `MpiModelSettings.js:598` already
+   defaults to `['model','clip']`, `_buildStrengthsRow` renders whichever knobs are listed,
+   and `LORA_COUNT = 6` is app-wide. Nothing to build.
+
+**Mechanics confirmed from comfy source:**
+
+- CLIP side: `model_lora_keys_clip` has a generic `text_encoders.*` fallback with no
+  special-casing, and the minimax TE is a plain `comfy.sd1_clip.SD1ClipModel` subclass
+  (`MiniMaxH3TEModel`) built through the normal CLIP path (`comfy/sd.py:1800-1801`), so it
+  patches like any other CLIP. Clip strength is a silent no-op on a LoRA with no TE keys —
+  not an error.
+- Quantization is NOT a blocker: `model_patcher.py` handles `QuantizedTensor` explicitly
+  (lines 960, 1721, 1912). But the shipped encoder is int8_convrot, so expect quantization
+  noise to swallow small deltas — train/validate against the quant that ships.
+- **TRAP — model side has NO H3 branch.** `model_lora_keys_unet` has 17 named model
+  branches (SD3, Flux, Krea2, Kandinsky5, HunyuanVideo...) and MiniMax H3 is not one. H3 is
+  served only by the generic `diffusion_model.*` -> `lora_unet_*` loop. So a
+  **Diffusers-format** H3 LoRA loads WITHOUT ERROR and does nothing, because the
+  Diffusers->comfy key conversion only runs inside those per-model branches. Anyone testing
+  a community LoRA and concluding "H3 ignores LoRAs" has probably hit this.
+
+**Wrong lever for skin texture.** Conditioning steers semantics; skin micro-texture is
+produced by the DiT and decoded by the VAE, and section 5b already found the VAE round-trip
+scrubs high-frequency regardless. An encoder LoRA can push toward "grainy film photograph";
+it cannot add detail the DiT does not render. For texture the DiT is the target — or a
+grain pass in post. Cost asymmetry: the encoder is 32B, a far heavier training target than
+the DiT, for a lever that is indirect on texture.
+
 ## 4. Turbo / lightning LoRA — none exists
 
 - Searched HF by name for lora / lightning / turbo / distill against H3: **zero hits.**
@@ -241,6 +300,76 @@ own MP anchors. **1:1 is the short edge of each tier's 16:9 pair (the LTX rule),
 H3's canvas. Consequence worth surfacing in the UI: **square tops out at 768x768, so a 1:1
 H3 video is genuinely lower-res than a 16:9 one** — the short-edge rule binds before the
 area cap. No 2K/4K tier: H3-Regenerate-2K is API-only (§1).
+
+**The table is one tier SHORT by this repo's own convention** (found 2026-08-06). The
+argument above — H3's canvas is fixed at 768 short edge, so the ladder stops there — does
+not survive `ratios.js:56-58`, which ships WAN a `very_high` of 1920x1088 while calling
+720p "the documented CEILING" and the tier "ABOVE native (works, but extrapolated ->
+detail tier, expect artifacts)". So an above-native detail tier is the established
+pattern here, not an exception. H3 would extrapolate *less* than WAN already does:
+
+| | native | very_high | linear |
+|---|---|---|---|
+| WAN 2.2 14B | 1280x720 | 1920x1088 | 1.50x |
+| H3 (proposed) | 1344x768 | 1920x1088 | 1.43x |
+
+1088 and 1920 are both /32, so H3's grid stays clean. **DECIDED by the user 2026-08-06
+after running it: SHIP `very_high` = 1088x1920, matching WAN and LTX.** Tested at 56
+frames against 768x1344 and judged good — "this settles it when it comes to resolution".
+Eye rendering in particular was called better than any open-source model the user has
+seen.
+
+**The cost is the catch, and it reclassifies the tier.** Scaling is steeply superlinear,
+because attention is quadratic in token count and tokens track pixels:
+
+| canvas | MP | 56 f | vs previous row |
+|---|---|---|---|
+| 480x864 | 0.41 | 157 s | - |
+| 768x1344 | 1.03 | 467 s | 2.5x px -> 3.0x time |
+| 1088x1920 | 2.09 | **1537 s** | 2.0x px -> **3.3x time** |
+
+25.6 minutes for a 2.33 s clip, and 124 frames would be roughly an hour. `very_high` is a
+**final-render tier, not an iterate tier** — which is precisely the case the two-stage
+preview flow in section 7 exists to serve. Memory is NOT the limit at this canvas: 13.2/16 GB
+dedicated with headroom and 55.5/63.8 GB system, i.e. LOWER than the 14.7 GB seen at
+640x640, because ComfyUI keeps fewer weights resident to leave room for activations.
+**Memory has now been a poor predictor for H3 in both directions — by file size (section
+6a) and by canvas size. Stop using it to predict anything here.**
+
+**Composition is NOT seed-stable across a canvas change.** A different canvas is a
+different latent shape, so the same seed is a different sample, not the same shot with
+more detail — observed as the subject being framed nearer in one tier and further in
+another. Consequence: a tier A/B can never be read as "same shot, sharper", and the
+picker must not imply that.
+
+**Ladder consequence, still OPEN for MPI-452.** Making `very_high` = 1088x1920 must not
+just overwrite the current `very_high` (768x1344), because that would drop the native
+in-distribution canvas from the picker. WAN's ladder puts its native at `high`
+(1280x720) and the extrapolated one at `very_high`; copying that exactly gives:
+very_low 352x608, low 480x864, medium 640x1152, high **768x1344** (native), very_high
+**1088x1920** (extrapolated), dropping 416x736. Not yet applied to `ratios.js`.
+
+**Note the template's own
+`Note: Size Settings Reference` going to 2.0 MP is NOT evidence for this** — it is the
+generic `ResolutionSelector` column, byte-identical across all three templates; the H3
+row in it is 0.98 (1344x768), and everything above is the generic ladder continuing.
+
+**Resolution trades texture for cleanliness, and the source image does not control it**
+(observed 2026-08-06, same source across all canvases). Going up, noise drops and morphing
+drops, but skin turns smooth and plastic. Mechanism is the one above: the subject spans
+more latent cells, so the model has the capacity to render its own prior for skin — and
+that prior is clean. At 480x864 it cannot resolve skin, and the coarser decode reads as
+grain. The user preferred 480x864 for that texture.
+
+**That texture is NOT the source's grain.** The source in these runs carried heavy added
+Photoshop grain, and it cannot be the cause: 480x864 and 768x1344 shared the same source
+and differed anyway, so resolution is the only variable that moved. High-frequency grain
+is destroyed by the lanczos downscale and the /16 encode before the model sees it (and the
+VL tower gets the already-resized image), so a de-grained source should change little.
+**Product consequence: grain belongs in a post pass, not in a tier choice** — picking a
+lower tier to get texture silently costs morphing and detail. Untested and worth one run:
+the same seed at 480x864 with a de-grained copy, which would confirm the stripping claim
+live rather than from source reading.
 
 **One node covers four ops.** `MiniMaxH3ImageToVideo` + the `fl2va` DiT serves T2V (nothing
 connected), I2V (first_frame), last-frame, and first+last interpolation — `first_frame` and
@@ -381,7 +510,11 @@ Task Manager at peak, cross-checked against `/system_stats`:
 3. Close the browser before any further timing run — ~15 Chrome tabs at 94% RAM is the
    difference between offloading and paging to disk.
 
-## 6a. RESOLVED — pruned wins. Do not re-run this A/B.
+## 6a. RESOLVED — pruned wins on download size. Re-confirmed 2026-08-06 at 768x1344.
+
+> Do not re-run this A/B at SHORT lengths — it has now been run three times and the
+> answer has not moved. The one open question is long clips; see the caveat at the end
+> of this section.
 
 Measured 2026-08-05 on the bench, `MiniMaxH3ImageToVideo`, 640x640, 56 frames, 20 steps,
 `res_multistep` + `simple`, denoise 1.0, ethanfel int8 encoder, same prompt and same source
@@ -413,6 +546,52 @@ Two predictions this falsified, recorded so they are not repeated:
 
 Not measured, and deliberately not chased: unpruned **warm**. It would only reveal load
 overhead, which changes no decision.
+
+### CONFIRMED at higher resolution 2026-08-06 — with one new finding
+
+Re-run by the user at two larger canvases, 56 frames, seed 4, 20 steps, same prompt and
+source image, only `unet_name` varied:
+
+| canvas | pruned | unpruned | delta |
+|---|---|---|---|
+| 480x864 | 157.02 s | 152.42 s | pruned **slower** by 4.6 s |
+| 768x1344 | 467.28 s | 491.12 s | pruned faster by 23.8 s (-4.9%) |
+
+**The sign flips, so time is not an argument either way.** Both deltas sit inside the
+~25 s run-to-run spread measured in section 7. This retires the timing half of this A/B
+for good - stop quoting seconds as a reason to prefer either file.
+
+**Spatial quality: equal at both canvases.** Confirms the 2026-08-05 call at a canvas
+2.7x larger.
+
+**NEW - the difference is TEMPORAL, not spatial.** At 768x1344 the unpruned run is
+slightly more expressive in facial motion: wider smile, more eye crinkle, on the same
+seed and source. Pruned is a little more restrained. Visible on stills, not subtle
+enough to need frame-by-frame. Judged not worth 13 GB by the user.
+
+**Decision stands: ship pruned.** But the reason is narrower than it looks. Of the three
+candidate arguments, two are dead:
+
+- speed - dead, sign flips, inside noise (above)
+- resident memory - dead since 2026-08-05, ComfyUI streams per layer so footprint is
+  capped by what fits, not by file size (the falsified predictions above)
+- **download size - the only real argument, and it is a big one: 20.97 GB vs 34.04 GB
+  is 13 GB the user does not have to download or store.** For a shipped product that is
+  decisive on its own.
+
+**FINAL 2026-08-06: the unpruned file is DELETED.** `minimax_h3_fl2va_int8_convrot.safetensors`
+(34,038,892,334 bytes) removed from `C:/AI/diffusion_models/` at the user's instruction,
+31.7 GiB reclaimed. `minimax_h3_fl2va_pruned_int8_convrot.safetensors` (20,970,379,616 bytes)
+is the file MPI-452's dependency entry takes. Re-downloadable from `Comfy-Org/MiniMax-H3`
+if the long-clip caveat below ever forces a re-test.
+
+**CAVEAT, and it is the same trap as section 9.** The expressiveness gap was observed at
+**56 frames**, the shortest length H3 makes and less than half the trained minimum.
+Pruning removes capacity, and the damage now has a demonstrated temporal signature -
+which is exactly the axis that would compound over a longer sequence. A gap that reads
+as "not worth 13 GB" at 2.33 s is not proven to stay that small at 124-362 frames.
+**Re-check before a 5-15 s tier default in MPI-452**; do not treat this row as closed
+for long clips.
 
 ## 6b. The engine bump is a HARD gate, not a preference
 
@@ -460,9 +639,11 @@ Save `SamplerCustomAdvanced.output` (noisy, at sigma[N]) and preview
 it looks plausible and is silently wrong.
 
 **5 steps is enough for a preview at 352x352** — 5, 6, 7 and 8 were indistinguishable.
-**But see the trained-range warning below before trusting that number.**
+**Still measured out of range only.** The 2026-08-06 in-range session ran stage 1 at 5
+steps and got a usable preview, but did NOT re-run the 5/6/7/8 comparison at 124
+frames, so the floor itself is unconfirmed in range. See § 9.
 
-### Timings, 352x352 (warm, one Ollama-free run)
+### Timings, 352x352 / 56 frames — SUPERSEDED, below trained range
 
 | | s |
 |---|---|
@@ -471,9 +652,65 @@ it looks plausible and is silently wrong.
 | stage 2, 15 steps + decode | 24.00 |
 | two-stage total | 36.00 (**+1.4 s, +4%**) |
 
-Derived: ~1.2 s/step, ~6 s decode + per-run overhead. Unexplained: single-stage is
-~4.6 s slower than the two halves predict. Not chased. **Retake all of these at 124
-frames** — the numbers above were taken on a pre-fix graph.
+Kept only as the out-of-range reference. Use the in-range table below.
+
+### Timings, 352x608 / 124 frames — IN TRAINED RANGE, 2026-08-06
+
+Warm engine (loaders cached), bench 8188, `res_multistep`, 20 steps, `SplitSigmas`
+step=5. Queued over the API so the browser stayed out of it.
+
+| run | s |
+|---|---|
+| split-in-one-pass, 20 steps + decode (seed 4) | 168.25 |
+| split-in-one-pass, 20 steps + decode (seed 5) | 143.51 |
+| stage 1, 5 steps + preview decode | 51.00 |
+| stage 2, 15 steps + decode (stage-1 result pruned) | 112.25 |
+| stage 2, 15 steps + decode (stage-1 result cached) | 118.92 |
+| **two-stage total** | **163.25 – 169.92** |
+
+**The two-stage overhead is not resolvable at this size.** Two single-pass runs of the
+same graph differ by 24.7 s (~15%), which swamps the +1.4 s measured at 56 frames.
+What the numbers do support: two-stage costs no meaningful penalty — it is not a
+multiple, and the totals straddle the single-pass samples. Do not quote a percentage
+overhead at 124 frames; quote "within run-to-run noise".
+
+Per-step cost cannot be derived cleanly for the same reason. Rough scale: ~5-7 s/step
+at 124f/352x608, against ~1.2 s/step at 56f/352x352.
+
+### Correctness at 124 frames — bit-exact, 2026-08-06
+
+The disk round-trip is the one part of the two-stage flow whose behaviour is
+shape-dependent (`NestedTensor.unbind()` over a 2.2x larger latent), so it was
+re-proved in range rather than assumed:
+
+- two-run flow (stage 1 seed 5 -> stage 2 seed 5), two-run flow (stage 2 re-run at
+  seed 99) and split-in-one-pass at seed 5 all produced the **same mp4 sha256**
+  (`4464f9fd…`). Disk round-trip is lossless at 124 frames.
+- Stage 1 run twice independently wrote the **same latent sha256** (`301843b7…`,
+  3,022,728 bytes) — the save path is deterministic.
+- Seed 5 vs seed 99 on stage 2 gave identical bytes, confirming `DisableNoise` really
+  does ignore the seed. Handy: the seed is therefore free to vary on a continue run,
+  which is what makes the cache-busting test below possible.
+
+### The lazy gate prunes stage 1 for real — proved 2026-08-06
+
+Earlier the stage-2 run showed node 153 (the stage-1 sampler) in `execution_cached`,
+which cannot distinguish "pruned by the lazy gate" from "free because cached". Re-run
+at a **never-sampled seed (99)** so node 153 had no cache entry: it stayed absent from
+the cache list and the run still took 112.25 s, flat against the cached run's 118.92 s
+and nowhere near the 143-168 s a real 20-step pass costs. The gate, not the cache, is
+what skips stage 1.
+
+Second, independent proof: with `enabled` false, stage 2 left the staged latent's hash
+AND mtime untouched — `MpiSaveLatent` did not write, so it never pulled its upstream.
+
+**Method note:** `execution_cached` listing a node is NOT evidence it was needed. Leaf
+constant nodes cache per value, so both booleans show as cached whichever way they are
+flipped. Vary an input nothing has ever sampled to get a clean read.
+
+**Bench has no `ffprobe` on PATH.** The bundled binary is
+`G:/ComfyUi/python_embeded/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe`
+— `-map 0:v:0 -f null -` prints the true frame count.
 
 ### The blocker trap (generic, not H3)
 
@@ -519,15 +756,24 @@ is not a no-op here. Worth one real gallery playthrough in MPI-452.
 unique, no adjacent duplicates, no repeats at all. WAN and LTX duplicate the first
 frame and need the remove-frame node; H3 does not.
 
-## 9. WARNING — every measurement so far is below the trained range
+## 9. Trained-range status — PARTLY CLEARED 2026-08-06
 
 `nodes_minimax_h3.py:90` — `length` default **124**, tooltip "trained range is
-~**124-362**" (5.17-15.08 s). Everything measured on this card ran at **56 frames**,
-under half the shortest trained length. That puts a question mark over:
+~**124-362**" (5.17-15.08 s). Everything measured before 2026-08-06 ran at **56
+frames**, under half the shortest trained length.
 
-- the 5-step preview floor (§ 7)
-- the pruned vs unpruned A/B (§ 6a)
-- the timing table (§ 6 and § 7) — 124 frames is ~2.2x the latent volume
+Re-measured in range at 124 frames / 352x608 (§ 7), verified 124 frames / 5.16 s on
+the real mp4:
 
-**Re-run the step floor and the timings at 124 frames before any of it becomes a tier
-default in MPI-452.**
+| claim | status |
+|---|---|
+| two-stage correctness (disk round-trip lossless) | **CLEARED** — bit-exact at 124f |
+| lazy gate prunes stage 1 | **CLEARED** — proved against a cache-busted seed |
+| timing table | **REPLACED** — and the overhead turns out to be below run-to-run noise |
+| 5-step preview floor (§ 7) | **CLOSED by the user 2026-08-06** — 5 steps accepted as the preview floor. Decided, not re-measured in range; do not re-open it as a measurement task |
+| pruned vs unpruned, spatial quality (§ 6a) | **CLEARED** — equal at 480x864 and 768x1344 |
+| pruned vs unpruned, motion/expressiveness (§ 6a) | **STILL OPEN** — the gap is temporal and was only seen at 56 frames |
+
+**Before either open row becomes a tier default in MPI-452, re-run it at 124 frames.**
+Note the in-range session also changed resolution (352x352 -> 352x608), so it replaces
+the old numbers rather than extending them; do not mix rows across the two tables.

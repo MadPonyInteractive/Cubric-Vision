@@ -1,0 +1,31 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-455",
+  "title": "LTX: expose end-frame-only conditioning, sharing the H3 frame-role button",
+  "description": "LTXVAddGuide takes an arbitrary frame_idx (the shipped ltx_i2v.json uses 0 for first, -1 for last), so LTX can condition on ANY frame - but the workflow gates on two explicit booleans, Input_Text_to_video and Input_Use_End_Image, and the FLF path ALWAYS includes the First guide. There is therefore no way to reach end-frame-only even though the model supports it. Surfaced 2026-08-06 while adding the same capability to MiniMax H3 under MPI-449. Ship the same UI: when the prompt box holds exactly ONE image chip, a button picks whether it is the start or the end frame. Adopt the H3 pattern of deriving mode from WHICH images are present rather than adding a third boolean, so illegal states become unreachable instead of merely discouraged.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-08-06T05:32:00Z",
+  "updated_at": "2026-08-06T05:32:00Z",
+  "labels": [
+    "model",
+    "video",
+    "ltx",
+    "workflow",
+    "ui"
+  ],
+  "acceptance": [
+    "ltx_i2v.json and its fp8/mxfp8/stage2 siblings can reach end-frame-only: the Last AddGuide at frame_idx -1 runs WITHOUT the First guide",
+    "A real end-frame-only LTX generation is run and judged - structurally valid is NOT proof it looks good at guide strength 0.7, since these models are trained mostly on first-frame conditioning",
+    "The single-chip start/end button is SHARED with H3, not reimplemented",
+    "Mode is derived from which images are present, not from a new user boolean",
+    "If end-only looks bad, the finding is written down and the card closes rejected rather than shipping it"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  },
+  "priority": "normal",
+  "attention": false
+}

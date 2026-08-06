@@ -176,23 +176,37 @@ export const LTX_RATIOS = {
 // MiniMax H3 (MPI-449 research). H3's canvas is FIXED by the model, not by a
 // resolution ladder: adapt_canvas() in comfy_extras/nodes_minimax_h3.py conforms to a
 // 768 SHORT EDGE with a 768x1344 area cap (= 0.98 MP), each axis /32. That is why the
-// top tier is not a round megapixel number and why 1:1 tops out at 768x768, NOT
-// 1024x1024 — the short-edge rule binds before the area cap, so a square H3 video is
+// NATIVE tier is not a round megapixel number and why its 1:1 is 768x768, NOT 1024x1024 —
+// the short-edge rule binds before the area cap, so at native a square H3 video is
 // genuinely smaller than a 16:9 one. Latent grid is /16 (height // 16); every value
 // here is /32, comfortably clean.
 //
 // NO 2K/4K tier. H3-Regenerate-2K, the 768p->2K second pass, is API-only and NOT in the
-// open weights (docs.comfy.org / Comfy-Org blog) — local is H3-Base at 768p. Adding a 2K
-// tier would just run the model far off its trained canvas.
+// open weights (docs.comfy.org / Comfy-Org blog) — local is H3-Base at 768p. `very_high`
+// below is an extrapolated DETAIL tier, not a 2K pass; do not add a 2K/4K tier on top.
 //
-// very_high IS the native canvas; the four tiers below it are the megapixel anchors
-// Comfy's own templates use (0.2 / 0.3 / 0.4 / 0.7 MP), resolved through
-// ResolutionSelector at multiple=32. medium (864x480) is the DEFAULT the three shipped
-// video_minimax_h3_* templates open on, and the size the community's published timings
-// are measured at. Sub-native is NOT a degraded path — Comfy shipping 0.4 MP as the
-// template default is the evidence for that. Above 0.98 MP nothing stops a bigger canvas
-// — the cap is never enforced on the output latent (adapt_canvas is only called to
-// conform REFERENCE VIDEOS in r2v) — but it leaves the trained distribution.
+// LADDER SHAPE — native sits at `high`, NOT at the top (MPI-449, 2026-08-06). This
+// mirrors WAN_RATIOS exactly: WAN's documented ceiling (1280x720) sits at `high` and its
+// extrapolated detail tier (1920x1088) at `very_high`. So H3's native 1344x768 is `high`,
+// and `very_high` (1920x1088) is ABOVE the trained canvas — it works, but it is
+// extrapolated, so expect artifacts. Keeping native selectable is the point: overwriting
+// `very_high` with 1920x1088 would have dropped the only in-distribution canvas from the
+// picker. The old 416x736 tier was dropped to make room; the tiers below `high` are the
+// megapixel anchors Comfy's own templates use, resolved through ResolutionSelector at
+// multiple=32. `low` (864x480) is the DEFAULT the three shipped video_minimax_h3_*
+// templates open on, and the size the community's published timings are measured at.
+// Sub-native is NOT a degraded path — Comfy shipping 0.4 MP as the template default is
+// the evidence for that. Nothing stops a canvas above 0.98 MP: the cap is never enforced
+// on the output latent (adapt_canvas is only called to conform REFERENCE VIDEOS in r2v).
+//
+// very_high VERIFIED 2026-08-06 at 1088x1920 on a 4060 Ti, and it is a FINAL-RENDER tier,
+// not an iterate tier. Cost scales steeply superlinearly because attention is quadratic in
+// token count and tokens track pixels: 0.41 MP = 157 s, 1.03 MP = 467 s, 2.09 MP = 1537 s
+// (2x the pixels costs 3.3x the time), all at 56 frames. That is 25.6 min for a 2.33 s
+// clip, ~1 h at 124 frames. Memory is NOT the limit — 13.2/16 GB dedicated at 2.09 MP,
+// LOWER than at 640x640, because ComfyUI keeps fewer weights resident to leave room for
+// activations. Also: a canvas change is a different latent shape, so the same seed is a
+// DIFFERENT sample — tiers are not "same shot, sharper" and the UI must not imply it.
 //
 // 1:1 is the SHORT EDGE of the tier's 16:9 pair, the same rule LTX_RATIOS uses (NOT Wan's
 // community-selector squares). That keeps the column monotonic AND keeps it under the 768
@@ -209,24 +223,27 @@ export const MINIMAX_H3_RATIOS = {
         { label: "16:9", w: 608, h: 352, icon: "rect_16_9" }
     ],
     low: [
-        { label: "1:1", w: 416, h: 416, icon: "rect_1_1" },
-        { label: "9:16", w: 416, h: 736, icon: "rect_9_16" },
-        { label: "16:9", w: 736, h: 416, icon: "rect_16_9" }
-    ],
-    medium: [
         { label: "1:1", w: 480, h: 480, icon: "rect_1_1" },
         { label: "9:16", w: 480, h: 864, icon: "rect_9_16" },
         { label: "16:9", w: 864, h: 480, icon: "rect_16_9" }
     ],
-    high: [
+    medium: [
         { label: "1:1", w: 640, h: 640, icon: "rect_1_1" },
         { label: "9:16", w: 640, h: 1152, icon: "rect_9_16" },
         { label: "16:9", w: 1152, h: 640, icon: "rect_16_9" }
     ],
-    very_high: [
+    // NATIVE — adapt_canvas output (768 short edge, 1344x768 area cap). The last
+    // in-distribution tier; everything above extrapolates.
+    high: [
         { label: "1:1", w: 768, h: 768, icon: "rect_1_1" },
         { label: "9:16", w: 768, h: 1344, icon: "rect_9_16" },
         { label: "16:9", w: 1344, h: 768, icon: "rect_16_9" }
+    ],
+    // ABOVE native — extrapolated detail tier, same role WAN's very_high plays.
+    very_high: [
+        { label: "1:1", w: 1088, h: 1088, icon: "rect_1_1" },
+        { label: "9:16", w: 1088, h: 1920, icon: "rect_9_16" },
+        { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" }
     ]
 };
 
