@@ -7,7 +7,7 @@ Commits: `08ca8805` (gate), `3ee86238` (drawer route), `a56a9a09` (stray clientL
 | # | Criterion | Evidence |
 |---|---|---|
 | 1 | A gated dep cannot download until shown + accepted | Driven live: `downloadService.start('minimax-h3', deps)` with `_start` stubbed — dialog opened, `_start` not called. Cancel and Escape both declined without installing. |
-| 2 | Acceptance recorded per model, survives a restart | Receipt written to `mpi_model_licence_accepted` on accept; a second `start()` of the same model ran **synchronously with no dialog**. `tests/licence-gate.test.cjs` pins the restart case and the version bump. |
+| 2 | Acceptance recorded per model, survives a restart | Receipt written to `mpi_model_licence_accepted` on accept; a second `start()` of the same model ran **synchronously with no dialog**. `tests/licence-gate.test.cjs` pins the restart case and the version bump. **Deviation, see below:** the receipt is keyed by LICENCE id, not model id. |
 | 3 | Renders the Use Restrictions and the AUP, and states they apply | Section V (5 clauses) and Exhibit A (20 items) verbatim from the live `LICENSE`; 25 `<li>` counted in the DOM. The second acknowledgement is the "they apply to me" statement. |
 | 4 | Territory-restricted → licensor's own authorization route, no disclaimer | Banner names the four Excluded Territories and carries a "Request your authorization" button to MiniMax's own form. No "your responsibility" copy anywhere. |
 | 5 | Descriptor-driven — a second model is data only | `MODEL_LICENCES` keyed by model id in `js/data/modelConstants/licences.js`. Adding Flux is one entry. |
@@ -27,13 +27,36 @@ Commits: `08ca8805` (gate), `3ee86238` (drawer route), `a56a9a09` (stray clientL
 3. **The dialog overflowed the viewport at 720px**, pushing Cancel/Accept off screen.
    The restrictions pane is now the only row allowed to shrink.
 
-## Still open — not a defect, a dependency
+## Deviation from criterion 2 — receipts are keyed by LICENCE, not by model
 
-**The H3 model id.** The descriptor is keyed `minimax-h3`. If the MPI-452 wiring session
-names its ModelDef anything else the lookup misses and H3 installs with **no gate at
-all**, silently. Message sent to that session
-(`state/messages/b7f1c0de-4d51-4e0a-9c2f-3a51d1c9e401.json`); re-key or confirm before
-MPI-452 closes.
+Criterion 2 says "recorded per model". It is now recorded per AGREEMENT, and the reason
+is a fact the criterion predates: **H3 ships as two ModelDefs**, `minimax-h3` (fl2va) and
+`minimax-h3-ref2va`, different transformer weights under one licence (confirmed by the
+MPI-452 session, 2026-08-06). Keyed per model, a user would be shown the identical 25
+clauses twice for one agreement.
+
+The licence binds the **person** — "bind each recipient or user to enforceable terms" —
+so a second dialog buys no consent, only friction. Two models under genuinely different
+licences still get two dialogs; they have different licence ids. The receipt keeps
+`acceptedVia` so we still know which install prompted it, and a `version` bump still
+re-prompts.
+
+Reverting to per-model is a one-line change (`all[licence.id]` → `all[modelId]`) if the
+literal criterion is preferred; `tests/licence-gate.test.cjs` § "models sharing one
+agreement share one acceptance" is the test that would need to go with it.
+
+## H3 model id — CONFIRMED, no longer open
+
+The MPI-452 session confirmed the ModelDef id is `minimax-h3` (message
+`c4a91f7e-2d38-4b6a-9e15-7f2c8d4b3a60`), so the descriptor key is correct as written.
+They also flagged the ref2va variant; **this session took that key** — `minimax-h3-ref2va`
+is already in `MODEL_LICENCES` pointing at the same descriptor, so their ModelDef is
+gated the moment it lands, with nothing to wire (reply
+`e2d5b81a-6c07-4f93-8b24-5a90e6f7c132`).
+
+Verified live through the chokepoint after the change: accepting via `minimax-h3` let
+`minimax-h3-ref2va` install **synchronously with no second dialog**, and the ungated path
+is still synchronous.
 
 ## Deliberately left to MPI-452 (they are in its acceptance criteria, not this card's)
 

@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "b7f1c0de-4d51-4e0a-9c2f-3a51d1c9e401",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-08-06T06:32:00Z",
-  "updated_at": "2026-08-06T06:32:00Z",
+  "updated_at": "2026-08-06T07:05:00Z",
   "from": {
     "selector": "task",
     "value": "MPI-451",
@@ -32,5 +32,11 @@
       "event": "created"
     }
   ],
-  "events": []
+  "events": [
+    {
+      "at": "2026-08-06T07:05:00Z",
+      "event": "resolved",
+      "note": "Replied c4a91f7e-2d38-4b6a-9e15-7f2c8d4b3a60: id confirmed as 'minimax-h3', no re-key needed."
+    }
+  ]
 }
