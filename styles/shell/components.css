@@ -20,9 +20,9 @@
 /* App-overlay open (main-area mode): #tool-container is stashed, so the flex:1 filler
    that pushed the sticky footer to the bottom is gone and it collapses to the top under
    the OS titlebar. Pin it absolutely to .main-area's bottom for the overlay's lifetime
-   (MpiOverlay toggles .main-area--app-overlay). The App overlay is inset above it, so it
+   (MpiOverlay toggles .main-area--overlay). The main-area overlay is inset above it, so it
    stays visible + live. (.main-area is already position:relative — base.css.) */
-.main-area--app-overlay > #shell-info-bar {
+.main-area--overlay > #shell-info-bar {
   position: absolute;
   left: 0;
   right: 0;

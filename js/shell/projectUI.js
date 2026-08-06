@@ -77,8 +77,8 @@ export function initProjectUI() {
   if (navSlot) {
     const defs = [
       { label: 'Models',   handler: () => Events.emit('models:open') },
-      // Apps (App Library) — dev-gated until ≥4 apps exist (MPI-256).
-      ...(APP_CONFIG.dev_mode ? [{ label: 'Apps', handler: () => Events.emit('apps:open') }] : []),
+      // Flows (Flow Library) — dev-gated until ≥4 flows exist (MPI-256).
+      ...(APP_CONFIG.dev_mode ? [{ label: 'Flows', handler: () => Events.emit('flows:open') }] : []),
       { label: 'Settings', handler: () => Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings }) },
       { label: 'Hotkeys',  handler: () => Events.emit('slide-over:open', { title: 'Hotkeys',  component: MpiHotkeys  }) },
       { label: 'About',    handler: () => Events.emit('slide-over:open', { title: 'About',    component: MpiAbout    }) },

@@ -55,14 +55,14 @@ NOT mechanically split these):
 | **Model Library UI** (usable-vs-installed, featured, install-button gates, tile patching) | [model-library.md](model-library.md) |
 | **Per-component behavioral contracts** (PromptBox, MpiToast, MpiPopup, MpiInput, …) | [component-contracts.md](component-contracts.md) |
 | **Video player** (frame-accurate hybrid: `<video>` plays / mediabunny canvas owns paused-step; color matrix rule; frame-index coordinate law; sub-range loop) | [video-player.md](video-player.md) |
-| Apps (App Library + App overlays; add-an-app procedure) | [playbooks/add-app/README.md](playbooks/add-app/README.md) |
+| Flows (Flow Library + Flow overlays; add-a-flow procedure) | [playbooks/add-flow/README.md](playbooks/add-flow/README.md) |
 
 ### ComfyUI / generation
 | Topic | Doc |
 |---|---|
 | ComfyUI integration + engine traps | [comfy.md](comfy.md) |
 | **Latent previews** (`preview:frame` bus, engine-tagged, broken-frame gate, last-latent hold — subscribe here to show latents anywhere; ALSO the TAESD decoders: which model uses which, why a missing one silently downgrades to a colour blob, and the `lighttaew*` landmine — read before adding any `vae_approx/` dep) | [preview-bus.md](preview-bus.md) |
-| **Workflow authoring + injection contract** (MpiNodes pack, injector target list, generator/tier patterns) — model/app-agnostic | [workflow-authoring/README.md](workflow-authoring/README.md) |
+| **Workflow authoring + injection contract** (MpiNodes pack, injector target list, generator/tier patterns) — model/flow-agnostic | [workflow-authoring/README.md](workflow-authoring/README.md) |
 | Models-path / YAML / extra-folders | [models-path.md](models-path.md) |
 | Download manager (resumable, NDH) | [download-manager.md](download-manager.md) |
 
@@ -77,7 +77,7 @@ NOT mechanically split these):
 ### Builder Pod / model onboarding
 | Topic | Doc |
 |---|---|
-| **Playbook routing** (add-model, add-app, shared invariants) | [playbooks/README.md](playbooks/README.md) |
+| **Playbook routing** (add-model, add-flow, shared invariants) | [playbooks/README.md](playbooks/README.md) |
 | **Per-model research** (Krea2, Klein, Chroma, SDXL, LTX, Wan, PiD) — authoring, tuning, measured data | [models/README.md](models/README.md) |
 | Builder operational loop | [builder/README.md](builder/README.md) |
 | Environments (ComfyUI portable, cu130) | [builder/01-environments.md](builder/01-environments.md) |

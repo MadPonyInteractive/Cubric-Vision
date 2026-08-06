@@ -140,7 +140,7 @@ A Python pre-release test suite needs to know which operations exist and their w
 
 **Synchronization rule:** Every time you add, remove, or deprecate an operation, both `operationRegistry.js` **and** `operation_registry.json` must be updated together.
 
-**Never REGENERATE this file from the JS registry** — it is a hand-maintained *superset*, and a wholesale regeneration would strip the `universal: true` flags that App ops depend on.
+**Never REGENERATE this file from the JS registry** — it is a hand-maintained *superset*, and a wholesale regeneration would strip the `universal: true` flags that Flow ops depend on.
 
 **Who writes the entry:**
 
@@ -148,7 +148,7 @@ A Python pre-release test suite needs to know which operations exist and their w
 |---|---|
 | Operation added/changed during a version bump | `/mpi-version-bump` (its step 4i — itself a manual edit, not a script) |
 | **New model op** (`/mpi-add-model`) | **You, by hand** — models are never version-bumped, so the bump skill never runs |
-| **New app op** (`/mpi-add-app`) | **You, by hand** — same reason, plus the entry needs `universal: true` |
+| **New Flow op** (`/mpi-add-flow`) | **You, by hand** — same reason, plus the entry needs `universal: true` |
 
 There is no sync script. "Generated" language elsewhere is historical — treat this file as hand-maintained and **always finish with `npm run release:check`**, which fails on any drift between the two registries (missing entry, extra entry, `latestVersion` or `appVersionIntroduced` mismatch). It is not run automatically.
 

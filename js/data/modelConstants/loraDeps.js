@@ -261,7 +261,7 @@ export const loraDeps = {
         size: '236MB',
         sha256: 'a3580f7af2c11d2c9a8867c32807b13284e7c84dde66fddcb29daef0fbdf1fc2',
     },
-    // App-only LoRA (MPI-299 Head Swap) — required by the app via AppDef.requiredDeps,
+    // Flow-only LoRA (MPI-299 Head Swap) — required by the Flow via FlowDef.requiredDeps,
     // NOT by the qwen-edit model. Folding it into the model would push 1.2GB onto every
     // Qwen user for one app (MPI-304). Filed here because it IS a LoRA — deps are filed
     // by KIND, never by owner.

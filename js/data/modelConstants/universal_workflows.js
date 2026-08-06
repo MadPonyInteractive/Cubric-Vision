@@ -41,16 +41,16 @@ export const UNIVERSAL_WORKFLOWS = {
     resizeVideo: {
         workflow: 'resize_video.json',
     },
-    appImageRegen: {
-        workflow: 'app_sdxl_regen.json',
+    flowImageRegen: {
+        workflow: 'flow_sdxl_regen.json',
     },
-    appSdxl4k: {
-        workflow: 'app_sdxl_4k.json',
+    flowSdxl4k: {
+        workflow: 'flow_sdxl_4k.json',
     },
-    appVideoStitch: {
-        workflow: 'app_video_test.json',
+    flowVideoStitch: {
+        workflow: 'flow_video_test.json',
     },
-    appHeadSwap: {
-        workflow: 'app_head_swap.json',
+    flowHeadSwap: {
+        workflow: 'flow_head_swap.json',
     },
 };

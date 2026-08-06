@@ -56,10 +56,10 @@ export const OPERATION_REGISTRY = {
     autoMaskImg:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     resize:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     resizeVideo:  { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
-    appImageRegen: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
-    appSdxl4k: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
-    appVideoStitch: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
-    appHeadSwap: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
+    flowImageRegen: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
+    flowSdxl4k: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
+    flowVideoStitch: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
+    flowHeadSwap: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
 };
 
 /**

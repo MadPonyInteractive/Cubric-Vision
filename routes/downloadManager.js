@@ -232,13 +232,13 @@ async function _localSharedDepsMap(excludeModelId) {
         if (!map.has(depId)) map.set(depId, new Set());
         map.get(depId).add('(installing)');
     }
-    // MPI-304 — an app's own deps belong to no model, so nothing above protects them.
-    for (const depId of _appRequiredDepIds()) {
+    // MPI-304 — a flow's own deps belong to no model, so nothing above protects them.
+    for (const depId of _flowRequiredDepIds()) {
         if (!map.has(depId)) map.set(depId, new Set());
-        map.get(depId).add('(app)');
+        map.get(depId).add('(flow)');
     }
     // MPI-310 — same gap one entity further out: a PLUGIN's deps belong to no model
-    // AND no app, so neither sweep above protects them.
+    // AND no flow, so neither sweep above protects them.
     for (const depId of _pluginRequiredDepIds(excludeModelId)) {
         if (!map.has(depId)) map.set(depId, new Set());
         map.get(depId).add('(plugin)');
@@ -270,7 +270,7 @@ function _multiModelDepIds() {
     return shared;
 }
 
-// MPI-310 — dep ids required by a PLUGIN. Mirror of _appRequiredDepIds below, for the
+// MPI-310 — dep ids required by a PLUGIN. Mirror of _flowRequiredDepIds below, for the
 // third entity: see js/data/pluginsRegistry.js for why plugins are neither models nor
 // apps. Same both-engines requirement.
 //
@@ -302,13 +302,13 @@ function _pluginRequiredDepIds(excludeUninstallId) {
 // of every app's requiredDeps, protected for BOTH engines.
 //
 // Protection is unconditional (not gated on "is this app installed"): unlike a model,
-// an app has no install state of its own — its deps ARE its install state, so gating
+// a flow has no install state of its own — its deps ARE its install state, so gating
 // protection on their presence would be circular.
-function _appRequiredDepIds() {
-    const { APPS } = _require('../js/data/appsRegistry.js');
+function _flowRequiredDepIds() {
+    const { FLOWS } = _require('../js/data/flowsRegistry.js');
     const out = new Set();
-    for (const app of APPS) {
-        for (const depId of (app.requiredDeps || [])) out.add(depId);
+    for (const flow of FLOWS) {
+        for (const depId of (flow.requiredDeps || [])) out.add(depId);
     }
     return out;
 }
@@ -396,7 +396,7 @@ async function _remoteSharedDepIds(excludeModelId) {
     // MPI-304 — mirror of the local guard: app-only deps belong to no model, so the
     // MODELS sweep above cannot protect them. Fixed in the SAME pass as the local twin
     // (CLAUDE.md engine-split rule — a one-engine fix here is a false done).
-    for (const depId of _appRequiredDepIds()) keep.add(depId);
+    for (const depId of _flowRequiredDepIds()) keep.add(depId);
     // MPI-310 — plugin twin, fixed in the same pass for the same reason. Honours the
     // exclusion so a plugin's own uninstall can actually delete its weight (see the
     // local twin's comment for why this differs from the app guard above).

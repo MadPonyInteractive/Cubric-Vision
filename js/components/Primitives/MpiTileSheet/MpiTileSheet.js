@@ -7,7 +7,7 @@ import { renderIcon } from '../../../utils/icons.js';
  *
  * One sheet renders one grid of tiles. Three surfaces use it: the Model Library,
  * the App Library, and the model picker. Before this component the tile markup
- * was written twice (MpiModelManager._buildTile and MpiAppLibrary._buildTile)
+ * was written twice (MpiModelManager._buildTile and MpiFlowLibrary._buildTile)
  * against ONE copy of the CSS that only the Model Library owned — the App
  * Library borrowed the selectors across a component boundary and lost
  * `--lib-card` in the process.

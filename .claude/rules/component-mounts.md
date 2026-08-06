@@ -177,8 +177,8 @@ Pan/zoom transform targets the actual `.mpi-video-surface__video` element, not `
 - `MpiChangelogDialog` props: none   slot: `document.createElement('div')` — "What's New" overlay. Shown once per `APP_VERSION` by `_maybeShowChangelog()` in `_bootApp`, AFTER engine/deps gates + dev-state restore, BEFORE optional Comfy auto-start. Skipped when `Storage.getLastSeenChangelogVersion() === APP_VERSION` or `getReleaseNotes(APP_VERSION)` has no content. Content set via `el.open({ version, stage, notes })`; internally mounts `MpiButton` (Done) + `MpiIcon` (per-section). Reads notes from `js/data/releaseNotes.js`. NOT an updater.
 - `MpiStartingComfy`   props: none   slot: `document.createElement('div')` — shown on `comfy:starting`, hides on `comfy:ready`
 - `MpiModelManager` (the **Model Library** overlay)   props: none   slot: `document.createElement('div')` — lazy singleton mounted by shell on first `models:open`; self-hosts an `MpiOverlay(mountTarget:'body')` + an in-overlay right-drawer detail panel. Shell calls `el.open()` each time (MPI-215). Reserved slide-over stays for Settings/Hotkeys/Queue only.
-- `MpiAppLibrary` (the **App Library** overlay, MPI-256)   props: none   slot: `document.createElement('div')` — lazy singleton mounted by shell on first `apps:open`; self-hosts an `MpiOverlay(mountTarget:'body')` + a right-drawer detail panel. Tiles come from the shared `MpiTileSheet` Primitive (MPI-356 — it owns the `.mpi-tile*` CSS and the sheet grid for all three surfaces: Model Library, App Library, model picker; consumers keep their own state logic and pass the state row in as HTML). `.mpi-detail*` is still a GLOBAL selector borrowed from MpiModelManager.css. Shell calls `el.open()` each time. **Dev-gated** — the only emitters of `apps:open` (Gallery **Ctrl+Tab dev radial** + Landing nav) are `APP_CONFIG.dev_mode`-gated (MPI-338 moved it off the main Tab radial).
-- `MpiBaseApp` (the **App** overlay frame, MPI-256)   props: `{ app: AppDef, uiComponent: Blueprint|null }`   slot: `document.createElement('div')` — mounted by shell on `app:open {appId}` (resolves the descriptor + maps `uiComponent` NAME → blueprint; destroys any prior active app first). Self-hosts an `MpiOverlay(mountTarget:'main-area')`; mounts the per-app `uiComponent` (e.g. `MpiAppImageRegen`) into its content slot. `el.open()` shows it; Back-to-Library = `el.close()` + `apps:open`. CLOSING DESTROYS IT (MPI-345): the frame re-emits its overlay's `close` and the shell destroys the instance one tick later — a hidden-but-alive app kept its global `generation.run` hotkey and queued a phantom generation on the next Ctrl+Enter. Inputs survive in `state.s_appInputs`, and every open remounts fresh.
+- `MpiFlowLibrary` (the **Flow Library** overlay, MPI-256)   props: none   slot: `document.createElement('div')` — lazy singleton mounted by shell on first `flows:open`; self-hosts an `MpiOverlay(mountTarget:'body')` + a right-drawer detail panel. Tiles come from the shared `MpiTileSheet` Primitive (MPI-356 — it owns the `.mpi-tile*` CSS and the sheet grid for all three surfaces: Model Library, Flow Library, model picker; consumers keep their own state logic and pass the state row in as HTML). `.mpi-detail*` is still a GLOBAL selector borrowed from MpiModelManager.css. Shell calls `el.open()` each time. **Dev-gated** — the only emitters of `flows:open` (Gallery **Ctrl+Tab dev radial** + Landing nav) are `APP_CONFIG.dev_mode`-gated (MPI-338 moved it off the main Tab radial).
+- `MpiBaseFlow` (the **Flow** overlay frame, MPI-256)   props: `{ flow: FlowDef, uiComponent: Blueprint|null }`   slot: `document.createElement('div')` — mounted by shell on `flow:open {flowId}` (resolves the descriptor + maps `uiComponent` NAME → blueprint; destroys any prior active Flow first). Self-hosts an `MpiOverlay(mountTarget:'main-area')`; mounts the per-Flow `uiComponent` (e.g. `MpiFlowImageRegen`) into its content slot. `el.open()` shows it; Back-to-Library = `el.close()` + `flows:open`. CLOSING DESTROYS IT (MPI-345): the frame re-emits its overlay's `close` and the shell destroys the instance one tick later — a hidden-but-alive Flow kept its global `generation.run` hotkey and queued a phantom generation on the next Ctrl+Enter. Inputs survive in `state.s_flowInputs`, and every open remounts fresh.
 - `MpiMemoryMonitor`   props: none   slot: `#memory-monitor-mount`
 - `MpiProjectName`     props: `{ projectName }`   slot: `#project-name-mount`
 - `#prompt-box-mount` slot   declared in `index.html` at `#app-shell` level — Blocks (Gallery, History) mount `MpiPromptBox` Organism into it directly; slot persists across workspace switches, so each Block MUST destroy its prior `_pb` handle before remount AND in `el.destroy`.
@@ -237,18 +237,18 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 
 ---
 
-## MpiAppLibrary.js (internal mounts, MPI-256)
+## MpiFlowLibrary.js (internal mounts, MPI-256)
 
 - `MpiOverlay`   props: `{ closable: true, mountTarget: 'body' }`   slot: `document.createElement('div')`
-- `MpiButton` (detail footer Open/Install)   props: `{ text:'Open'|'Install models', variant:'primary', size:'md', disabled?: !canOpen }`   slot: `#app-detail-actions` — rebuilt on each `openDetail()`. Open (all models installed) emits `app:open {appId}`; Install drives each missing model's `downloadService.start`.
+- `MpiButton` (detail footer Open/Install)   props: `{ text:'Open'|'Install models', variant:'primary', size:'md', disabled?: !canOpen }`   slot: `#flow-detail-actions` — rebuilt on each `openDetail()`. Open (all models installed) emits `flow:open {flowId}`; Install drives each missing model's `downloadService.start`.
 
 ---
 
-## MpiBaseApp.js (internal mounts, MPI-256)
+## MpiBaseFlow.js (internal mounts, MPI-256)
 
 - `MpiOverlay`   props: `{ closable: true, mountTarget: 'main-area' }`   slot: `document.createElement('div')`
-- `<per-app uiComponent>` (e.g. `MpiAppImageRegen`)   props: `{ initialInputs }`   slot: `#app-content` — the per-app controls; must expose `el.getInputs()`. BaseApp merges its return with the uploaded source image at Run.
-- `MpiButton` (Run)   props: `{ text:'Run', variant:'primary', size:'md' }`   slot: `#app-run-slot`
+- `<per-Flow uiComponent>` (e.g. `MpiFlowImageRegen`)   props: `{ initialInputs }`   slot: `.mpi-base-flow__content` (built with `ce()`, not an id) — the per-Flow controls; must expose `el.getInputs()`. BaseFlow merges its return with the uploaded source image at Run.
+- `MpiButton` (Run)   props: `{ text:'Run', variant:'primary', size:'md' }`   slot: `.mpi-base-flow__gen` (built with `ce()`, not an id)
 
 ---
 

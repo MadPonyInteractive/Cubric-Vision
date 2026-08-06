@@ -1,5 +1,5 @@
 // MPI-310 — the plugin entity exists to stop a model uninstall from deleting a dep
-// that no model and no app owns. If this fails, the captioner weight silently
+// that no model and no Flow owns. If this fails, the captioner weight silently
 // vanishes after an unrelated uninstall and the feature breaks with a ComfyUI
 // "clip not found" deep in the graph.
 const assert = require('assert');
@@ -26,7 +26,7 @@ const imp = (p) => import(pathToFileURL(path.resolve(p)).href);
         }
     }
 
-    // Key namespacing: must not collide with app keys or bare model ids.
+    // Key namespacing: must not collide with Flow keys or bare model ids.
     assert.strictEqual(reg.pluginDepKey('image-describer'), 'plugin:image-describer');
     assert.ok(reg.pluginForOperation('imageDescribe'), 'op -> plugin lookup must resolve');
 

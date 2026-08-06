@@ -83,7 +83,7 @@ LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox o
 EMITS:   `tool:running`   `{ tool: 'groupHistory', type: string }` — fired on generation start
          `tool:idle`      `{ tool: 'groupHistory', type: string }` — fired on generation success
          `tool:cancelled` `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
-         `app:open` `{ appId }` (MPI-256) — via `openAppFromReuse(payload.item)` at the TOP of `_applyPromptReuse`: Reuse on an app card (sidecar `appId`) reopens the App with `appInputs` restored instead of filling the PromptBox. Deferred one tick past the reuse popup's `ui:close-all-popups`. Missing model → `apps:open` + `ui:warning` instead.
+         `flow:open` `{ flowId }` (MPI-256) — via `openFlowFromReuse(payload.item)` at the TOP of `_applyPromptReuse`: Reuse on a Flow card (sidecar `flowId`) reopens the Flow with `flowInputs` restored instead of filling the PromptBox. Deferred one tick past the reuse popup's `ui:close-all-popups`. Missing model → `flows:open` + `ui:warning` instead.
          `gallery:item-updated` `{ groupId, item, group }` — fired by `generationService` after a `replaceItemId` run mutates an existing history slot (preview → final). Block listens and refreshes the matching card via `grid.el.refreshGroup(group)`; clears any continuing-state flag.
          `gallery:item-removed` `{ groupId, itemId }` — fired by Block after a `preview:discard` confirms and deletes the sidecar + media file
          `grid.on('rename')` handler: `({ group }) => updateGroup(group)` — persists `group.customName` (same path as `grid.on('favourite')`). customName lives inline in `project.json` `itemGroups[]`; `persistGroups()` must whitelist the key (it is not spread).
@@ -109,7 +109,7 @@ LISTENS: `workspace:set-operation` `{ operation: string }` — syncs PromptBox o
 EMITS:   `tool:running`       `{ tool: 'groupHistory', type: string }` — fired on generation start
          `tool:idle`         `{ tool: 'groupHistory', type: string }` — fired on generation success
          `tool:cancelled`    `{ tool: 'groupHistory' }` — fired on user cancel, error, or empty result
-         `app:open` `{ appId }` (MPI-256) — via `openAppFromReuse(payload.item)` at the TOP of `_applyPromptReuse` (above the cross-mediaType reject): Reuse on an app card reopens the App with `appInputs` restored. Same helper/behavior as the Gallery block.
+         `flow:open` `{ flowId }` (MPI-256) — via `openFlowFromReuse(payload.item)` at the TOP of `_applyPromptReuse` (above the cross-mediaType reject): Reuse on a Flow card reopens the Flow with `flowInputs` restored. Same helper/behavior as the Gallery block.
 NOTE:    Reads `state.currentProject`; writes `state.currentProject`
          On mount: rehydrates from `activeGenerations.listFor('groupHistory', _group.id)` — canvas shows cached preview immediately
          `destroy()` unsubscribes all events but does NOT cancel exec — generation continues across navigation

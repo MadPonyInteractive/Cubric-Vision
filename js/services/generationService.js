@@ -19,7 +19,7 @@ import { activeGenerations } from './activeGenerations.js';
 import { trackConcatJob } from './concatProgress.js';
 import { extractFilenameFromPath } from '../utils/mediaActions.js';
 import { getCommand, getCommandMediaInputs } from '../data/commandRegistry.js';
-import { getAppById } from '../data/appsRegistry.js';
+import { getFlowById } from '../data/flowsRegistry.js';
 import { pluginForOperation } from '../data/pluginsRegistry.js';
 import { usesOrientation } from '../utils/ratios.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
@@ -194,18 +194,18 @@ function _buildQueueDisplay(config = {}, opts = {}, source = 'manual', isLoop = 
     const model = config.model || {};
     const command = getCommand(config.operation);
     const ratio = injectionParams.Ratio_Label || injectionParams.ratioLabel || config.ratioLabel || '';
-    // App gens (config.appId) show the App's title in the Cue, not the generic
+    // Flow gens (config.flowId) show the Flow's title in the Cue, not the generic
     // "Universal workflow" fallback that model:{id:null} would otherwise pick.
-    const appTitle = config.appId ? (getAppById(config.appId)?.title || null) : null;
+    const flowTitle = config.flowId ? (getFlowById(config.flowId)?.title || null) : null;
     // Plugin ops (MPI-310) consume no prompt — the Cue's prompt line would fall
-    // back to "No prompt text". Name the capability instead, mirroring appTitle.
+    // back to "No prompt text". Name the capability instead, mirroring flowTitle.
     const plugin = pluginForOperation(config.operation);
     return {
         promptExcerpt: _promptExcerpt(config.positive) || plugin?.title || '',
         negativeExcerpt: _promptExcerpt(config.negative),
         modelId: model.id ?? null,
-        modelName: model.displayName || model.name || model.label || model.id || appTitle || (command?.universal ? 'Universal workflow' : 'Unknown model'),
-        appTitle,
+        modelName: model.displayName || model.name || model.label || model.id || flowTitle || (command?.universal ? 'Universal workflow' : 'Unknown model'),
+        flowTitle,
         operation: config.operation || '',
         ratio,
         width,
@@ -248,7 +248,7 @@ function _queueSnapshotItem(job, status) {
         negativeExcerpt: job.display?.negativeExcerpt || '',
         modelId: job.display?.modelId ?? job.config?.model?.id ?? null,
         modelName: job.display?.modelName || job.config?.model?.name || job.config?.model?.id || 'Unknown model',
-        appTitle: job.display?.appTitle || null,
+        flowTitle: job.display?.flowTitle || null,
         operation: job.display?.operation || job.config?.operation || '',
         ratio: job.display?.ratio
             || job.config?.injectionParams?.Ratio_Label
@@ -412,13 +412,13 @@ function _dispatchNextCue() {
  *
  * The model bucket is cloned wholesale minus its `operations` sub-tree, so ANY
  * perModel control rides along with no hand-maintained key list (matches _shared/_op
- * and the App s_appInputs snapshot). `operations` is excluded — it is the perOp store,
+ * and the Flow s_flowInputs snapshot). `operations` is excluded — it is the perOp store,
  * carried by the `op` bucket; merging it back on reuse would clobber sibling ops.
  *
  * ponytail: cloned from the (300ms-debounced) modelSettings, so a control changed
  * <300ms before dispatch can still snapshot one stale value; the ratio/batch reconcile
  * below covers those two. Upgrade path if it ever bites: snapshot from control
- * getValue() (App-style), which needs a ratioSelector compound-key remap.
+ * getValue() (Flow-style), which needs a ratioSelector compound-key remap.
  */
 function _snapshotControlState(model, operation, injectionParams = {}) {
     if (!state.currentProject || !model?.id) return undefined;
@@ -1069,11 +1069,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         loraSnapshot: _previewLoraSnapshot,
                         previewAssets: _previewAssets,
                         replaceItemId: (_replaceItemId && i === 0) ? _replaceItemId : undefined,
-                        // App provenance (MPI-256) — additive, top-level. Present only for
-                        // App gens; null for normal PromptBox gens. Lets Reuse reopen the App
+                        // Flow provenance (MPI-256) — additive, top-level. Present only for
+                        // Flow gens; null for normal PromptBox gens. Lets Reuse reopen the Flow
                         // with its inputs restored (survives restart — sidecar > session).
-                        appId: config.appId ?? null,
-                        appInputs: config.appInputs ?? null,
+                        flowId: config.flowId ?? null,
+                        flowInputs: config.flowInputs ?? null,
                     });
                     if (data.success) {
                         savedData = data;
@@ -1103,13 +1103,13 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 // Server returns aggregated generationMs on preview→final replace
                 // (prev stage + this stage). Prefer it over the local timer.
                 generationMs: savedData?.generationMs ?? elapsedMs,
-                // App provenance (MPI-256) on the LIVE in-memory item too — not just
-                // the sidecar (line ~988). Without this, Reuse on a JUST-generated app
-                // card reads appId:undefined (the reconciler only hydrates appId from
+                // Flow provenance (MPI-256) on the LIVE in-memory item too — not just
+                // the sidecar (line ~988). Without this, Reuse on a JUST-generated Flow
+                // card reads flowId:undefined (the reconciler only hydrates flowId from
                 // the sidecar on RELOAD), so live reuse fell through to the PromptBox
-                // instead of reopening the App. Reload worked; the fresh session didn't.
-                appId: config.appId ?? null,
-                appInputs: config.appInputs ?? null,
+                // instead of reopening the Flow. Reload worked; the fresh session didn't.
+                flowId: config.flowId ?? null,
+                flowInputs: config.flowInputs ?? null,
                 // Gallery thumb (MPI-319): both images and videos now get one so
                 // the grid renders a small JPG, not the full-res output.
                 thumbPath: savedData?.thumbPath ?? null,
@@ -1339,7 +1339,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             });
             // HOLD-UNTIL-APPLY (MPI-306): with deferCommit the groups are built but
             // NOT persisted — the media + sidecars are already on disk, only the
-            // project record is withheld. The caller (MpiBaseApp) holds them and
+            // project record is withheld. The caller (MpiBaseFlow) holds them and
             // commits with projectService.addGroup on Apply, or simply drops them.
             // Orphaned files are the existing .preview-assets + Cleanup GC path's
             // job (MPI-277/227), not a new mechanism.
@@ -1351,7 +1351,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             const firstGroup = groups[0];
             // Single emit — handler reads state.currentProject.itemGroups (already
             // contains all N groups via addGroup) and rebuilds grid with them.
-            // `items`/`groups` (all N) are additive for multi-output consumers (Apps,
+            // `items`/`groups` (all N) are additive for multi-output consumers (Flows,
             // MPI-259) that show every result in-place; existing readers use `item`.
             // `deferred` tells listeners the media exists but is NOT in the project
             // yet. Current listeners are safe either way (stats refetch reads disk;

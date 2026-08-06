@@ -12,7 +12,7 @@ import { gid, qs } from '../../../utils/dom.js';
  *   - 'body'                     — injects into `document.body` with a backdrop, covers entire viewport
  *   - 'main-area'                — injects into `.main-area` (position:absolute), covers tool-container +
  *                                  prompt-box, leaves `#shell-info-bar` (status bar) live + interactive.
- *                                  Publishes its assigned z-index as the `--app-overlay-z` CSS var so the
+ *                                  Publishes its assigned z-index as the `--main-overlay-z` CSS var so the
  *                                  queue slide-over can stack above it.
  *
  * Both modes use the Stash Pattern: existing children are moved to a hidden
@@ -149,7 +149,7 @@ export const MpiOverlay = ComponentFactory.create({
             // spared #shell-info-bar to the bottom — without it the footer collapses UP to
             // the top of .main-area (behind the overlay, under the OS titlebar). Pin the bar
             // to the bottom for the overlay's lifetime (main-area mode only). Removed on hide.
-            if (mountTarget === 'main-area') _target.classList.add('main-area--app-overlay');
+            if (mountTarget === 'main-area') _target.classList.add('main-area--overlay');
             if (_zIndex !== null) el.style.zIndex = _zIndex;
             _target.appendChild(el);
             _isShown = true;
@@ -163,10 +163,10 @@ export const MpiOverlay = ComponentFactory.create({
             // _doShow ran inside Overlays.request() BEFORE _zIndex was known, so the
             // z-index is applied here (post-request). el is already appended by _doShow.
             if (_zIndex !== null && el.style) el.style.zIndex = _zIndex;
-            // TRAP 3: publish the assigned z as --app-overlay-z so the queue slide-over
+            // TRAP 3: publish the assigned z as --main-overlay-z so the queue slide-over
             // can stack above this overlay (main-area mode only — that's the App overlay).
             if (mountTarget === 'main-area' && _zIndex !== null) {
-                document.documentElement.style.setProperty('--app-overlay-z', String(_zIndex));
+                document.documentElement.style.setProperty('--main-overlay-z', String(_zIndex));
             }
         };
 
@@ -179,11 +179,11 @@ export const MpiOverlay = ComponentFactory.create({
             if (el.parentNode === _target) _target.removeChild(el);
 
             // Undo the TRAP 1b bottom-pin (see _doShow). Safe unconditionally.
-            _target.classList.remove('main-area--app-overlay');
+            _target.classList.remove('main-area--overlay');
 
             // TRAP 3: drop the published z (removeProperty, NOT set to 0 — 0 would
             // pin the queue below its own baseline). Safe to call unconditionally.
-            document.documentElement.style.removeProperty('--app-overlay-z');
+            document.documentElement.style.removeProperty('--main-overlay-z');
 
             if (_backdrop) {
                 _backdrop.remove();

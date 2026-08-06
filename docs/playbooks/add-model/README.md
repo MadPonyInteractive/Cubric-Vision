@@ -14,7 +14,7 @@
 >
 > **Cross-cutting reference:** skim [../common/README.md](../common/README.md) first —
 > the hard rules, raw→API sync, op registration, inject-title guard, and output-capture
-> naming law are shared with the add-app playbook and have their canonical detail there.
+> naming law are shared with the add-flow playbook and have their canonical detail there.
 > This playbook's inline notes override the shared files where they diverge.
 
 Worked example throughout: **Wan 2.2 TI2V-5B** (MPI-172) — a combined-op,
@@ -42,7 +42,7 @@ Model-specific research (LTX tiers, Krea2 samplers, PiD facts) lives in
 `docs/models/<model>/`, NOT here — this playbook is the model-agnostic *how*.
 
 The **cross-cutting workflow machinery** (the MpiNodes pack, the injector target list,
-the template→runtime generator + tier-selector patterns) is shared with the app system
+the template→runtime generator + tier-selector patterns) is shared with the Flow system
 and lives in [../../workflow-authoring/README.md](../../workflow-authoring/README.md).
 This playbook links into it; read it when you're authoring the graph itself or adding a
 new injectable node/control.

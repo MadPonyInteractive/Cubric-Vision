@@ -203,7 +203,7 @@ case; Flux is the next known consumer.
   who accepted the older text, without touching a ModelDef.
 - **UI:** `MpiLicenceGate` (`showLicenceGate(licence) → Promise<boolean>`).
 - **Chokepoint:** `downloadService.start()`. Install fires from five call sites — the
-  Model Library, the App Library, `commandExecutor`, and two in `shell.js` — so the gate
+  Model Library, the Flow Library, `commandExecutor`, and two in `shell.js` — so the gate
   sits where they converge, not on the tile a user usually clicks.
 - **Receipt:** `localStorage` `mpi_model_licence_accepted` → `{ [licenceId]: { version,
   at, acceptedVia } }`, written by `start()` on accept, never by the dialog.

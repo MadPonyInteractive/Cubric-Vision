@@ -5,7 +5,7 @@
      .mpi-overlay--tool — injected into #tool-container (sidebar/titlebar visible)
      .mpi-overlay--body — injected into document.body with backdrop (full viewport)
      .mpi-overlay--main — injected into .main-area (covers tool-container + prompt-box,
-                          leaves #shell-info-bar live; publishes --app-overlay-z)
+                          leaves #shell-info-bar live; publishes --main-overlay-z)
 ═══════════════════════════════════════════════════════════════ */
 
 /* ── Stash: hidden container for background DOM ─────────────── */
@@ -60,7 +60,7 @@
 .mpi-overlay--main {
     position: absolute;
     inset: 0 0 var(--statusbar-h, 32px) 0;
-    z-index: 10010; /* fallback; JS overrides via inline style + publishes --app-overlay-z */
+    z-index: 10010; /* fallback; JS overrides via inline style + publishes --main-overlay-z */
     background: var(--surface-0);
 }
 

@@ -1,9 +1,9 @@
 /**
  * Plugin registry — the THIRD entity, alongside MODELS (js/data/models.js) and
- * APPS (js/data/appsRegistry.js).
+ * FLOWS (js/data/flowsRegistry.js).
  *
  * A PLUGIN is a capability other surfaces call, not a thing the user generates
- * with and not a tile in the App Library. The image describer is the archetype:
+ * with and not a tile in the Flow Library. The image describer is the archetype:
  * it owns a 5.24GB encoder, is triggered from a gallery/history context menu,
  * and produces text rather than media.
  *

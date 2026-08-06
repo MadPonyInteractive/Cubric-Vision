@@ -212,8 +212,8 @@ export const nodesDeps = {
     // masked region to a fixed working size, InpaintStitchImproved (✂️ Inpaint Stitch)
     // pastes it back. Pure-python (torch/numpy/opencv, all already present) — NO
     // requirements.txt ⇒ installRequirements:false (rides the volume, no Pod rebuild).
-    // SOLE CONSUMER = the Head Swap app (`app_head_swap.json`), declared on the app's
-    // `requiredDeps` in appsRegistry.js. It used to be listed on the Krea2 cards for
+    // SOLE CONSUMER = the Head Swap Flow (`flow_head_swap.json`), declared on the Flow's
+    // `requiredDeps` in flowsRegistry.js. It used to be listed on the Krea2 cards for
     // their masked-crop edit path; `b3f9a018` removed that path from the Krea2 graphs
     // and the listing outlived it, which is what kept the pack installing for Head Swap
     // (whose own declaration was missing). Both sides fixed — do not re-add it to a

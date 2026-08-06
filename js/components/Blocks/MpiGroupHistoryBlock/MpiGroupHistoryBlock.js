@@ -40,7 +40,7 @@ import { getAvailableCommands, getCommandMediaInputs } from '../../../data/comma
 import { enqueueGeneration, clearPendingQueue, refreshQueueDepth, cancelRunningCueJob } from '../../../services/generationService.js';
 import { generationStore } from '../../../services/generationStore.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
-import { openAppFromReuse } from '../../../services/appService.js';
+import { openFlowFromReuse } from '../../../services/flowService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
@@ -1171,7 +1171,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     includes: options,
                     showSource: false,
                     // App cards (MPI-263) split Apply into "to Prompt Box" vs "to App".
-                    isAppCard: !!payload.item?.appId,
+                    isFlowCard: !!(payload.item?.flowId ?? payload.item?.appId),
                     // Single-source dialog (no Original/Current toggle) → the
                     // dialog defaults source to 'original'; gate each Use … toggle on
                     // whether THIS payload carries that input (MPI-212/227).
@@ -1187,17 +1187,17 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 dialog.el.show?.();
                 return;
             }
-            // No-dialog fast path (ask=false): app cards reopen the App as before.
+            // No-dialog fast path (ask=false): Flow cards reopen the Flow as before.
             _applyPromptReuse(payload, _reuseIncludes(options), 'app');
         }
 
         async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }, dest = 'app') {
-            // App cards (MPI-256): Reuse reopens the App with saved inputs restored,
+            // Flow cards (MPI-256): Reuse reopens the Flow with saved inputs restored,
             // NOT the PromptBox. Branch FIRST — above the cross-mediaType reject guard
-            // (an app result whose mediaType differs from the reused model would bail
-            // there before reaching the app branch). MPI-263: only when the user chose
+            // (a Flow result whose mediaType differs from the reused model would bail
+            // there before reaching the Flow branch). MPI-263: only when the user chose
             // "Apply to App" (dest==='app'); "Apply to Prompt Box" falls through to inject.
-            if (dest === 'app' && openAppFromReuse(payload.item)) return;
+            if (dest === 'flow' && openFlowFromReuse(payload.item)) return;
             const use = _reuseIncludes(includes);
             if (!use.prompt && !use.settings && !use.model && !use.images && !use.video && !use.audio) return;
 

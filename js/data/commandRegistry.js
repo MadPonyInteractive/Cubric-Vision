@@ -827,8 +827,8 @@ export const commands = {
         universal: true,
         injector: 'resize',
     },
-    appImageRegen: {
-        label: 'App: Image Regen',
+    flowImageRegen: {
+        label: 'Flow: Image Regen',
         progressLabel: 'Generating',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 1,
@@ -836,10 +836,10 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: true,
-        universal: true,   // first Apps op (MPI-256) — app_sdxl_regen.json, i2i baked true.
+        universal: true,   // first Apps op (MPI-256) — flow_sdxl_regen.json, i2i baked true.
     },
-    appSdxl4k: {
-        label: 'App: SDXL 4K',
+    flowSdxl4k: {
+        label: 'Flow: SDXL 4K',
         progressLabel: 'Generating',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 0,          // all image inputs optional — runs t2i with none (MPI-259).
@@ -853,14 +853,14 @@ export const commands = {
             { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
         ],
         promptRequired: true,
-        universal: true,            // 2nd Apps op — app_sdxl_4k.json, multi-model (sdxl-nsfw + nvidia-pid).
+        universal: true,            // 2nd Apps op — flow_sdxl_4k.json, multi-model (sdxl-nsfw + nvidia-pid).
     },
-    appVideoStitch: {
-        label: 'App: Video Stitch',
+    flowVideoStitch: {
+        label: 'Flow: Video Stitch',
         progressLabel: 'Stitching',
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 0,          // no image inputs — video utility, NO generation model.
-        // Video utility (app_video_test.json): up to 2 video PATHS (MpiString Input_video /
+        // Video utility (flow_video_test.json): up to 2 video PATHS (MpiString Input_video /
         // Input_video_2 — VHS_LoadVideoPath reads the string) stitched side-by-side, plus an
         // optional audio track. Empty video paths self-gate their branch via MpiAnyChecker/
         // MpiBlockIfEmpty/MpiIfElse; empty audio keeps the baked LoadAudio placeholder.
@@ -876,10 +876,10 @@ export const commands = {
             { key: 'audio1', mediaType: 'audio', title: 'Input_audio', required: false },
         ],
         promptRequired: false,      // pure media utility — no prompt.
-        universal: true,            // 3rd Apps op — app_video_test.json, NO model.
+        universal: true,            // 3rd Apps op — flow_video_test.json, NO model.
     },
-    appHeadSwap: {
-        label: 'App: Head Swap',
+    flowHeadSwap: {
+        label: 'Flow: Head Swap',
         progressLabel: 'Swapping',
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 0,          // media never a hard requirement at the op layer (the
@@ -896,7 +896,7 @@ export const commands = {
         // Fixed-prompt outcome app: the graph has NO Input_Positive/Input_Negative — both
         // prompts are BAKED. Do not add a prompt box for this app.
         promptRequired: false,
-        universal: true,            // 4th Apps op — app_head_swap.json, qwen-edit + app LoRA.
+        universal: true,            // 4th Apps op — flow_head_swap.json, qwen-edit + app LoRA.
         // MpiBox carries FOUR widgets (x/y/width/height); the generic title injector
         // writes a single value into one widget name and would match the node but
         // silently write nothing. headSwapInjector is the only path a box takes.

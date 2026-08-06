@@ -1,6 +1,6 @@
 # PromptBox control `scope` — the persistence + reuse contract
 
-> **[shared]** by [add-model](../add-model/README.md) and [add-app](../add-app/README.md).
+> **[shared]** by [add-model](../add-model/README.md) and [add-flow](../add-flow/README.md).
 > Read this before adding ANY `PROMPT_BOX_CONTROLS` entry. A control's `scope` field is
 > the **single source of truth** for where its value is stored, snapshotted into a
 > sidecar, and restored on Reuse. Everything below is derived from `scope` — you declare

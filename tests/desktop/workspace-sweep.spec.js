@@ -4,7 +4,7 @@
 // of the places nobody clicks before shipping, not depth on any one of them.
 //
 // Not covered here, on purpose: the Model Library needs installed models and the
-// App Library is dev-gated, so neither mounts meaningfully on an empty E2E user
+// Flow Library is dev-gated, so neither mounts meaningfully on an empty E2E user
 // data dir. They need their own fixtures before they can join this sweep.
 const fs = require('fs');
 const path = require('path');

@@ -51,7 +51,7 @@ Sites that pass it:
 | `MpiRunpodSettings.js:469` / `shell.js:757` | "Connecting to your Pod…" / "Creating a Pod…" |
 | `MpiModelSettings.js:312`, `MpiSettings.js:536` | "Imported ${filename}." (drop-import confirmation) |
 | `MpiModelManager.js:1467-1498` (5 branches) | "${model} updated." / "files kept…" (uninstall confirmation) |
-| `MpiAppLibrary.js:272` | "Open apps from the Gallery…" |
+| `MpiFlowLibrary.js:272` | "Open flows from the Gallery…" |
 | `MpiGalleryBlock.js:356` | "${n} cards added to …" |
 | `MpiGalleryBlock.js:564`, `:745` | "Switched to … — continuing/finishing preview." |
 
@@ -206,24 +206,24 @@ are eligible.
 | 894 | Delete failed | Could not delete the Pod. | warning | eligible |
 | 897 | Delete ok | Pod deleted | success | eligible |
 
-## Apps, canvas, model settings, gallery (`components/`)
+## Flows, canvas, model settings, gallery (`components/`)
 
 | File:line | Trigger | Message | Variant | Sound |
 |---|---|---|---|---|
-| `appService.js:33` | App submit, app id unresolved | That app could not be found. | warning | eligible |
-| `appService.js:47` | App submit, deps not installed | ${title} needs ${what} installed first… | warning | eligible |
-| `appService.js:120` | App-card Reuse, model not installed | ${title} needs its model installed… | warning | eligible |
+| `flowService.js:33` | Flow submit, flow id unresolved | That flow could not be found. | warning | eligible |
+| `flowService.js:47` | Flow submit, deps not installed | ${title} needs ${what} installed first… | warning | eligible |
+| `flowService.js:120` | Flow-card Reuse, model not installed | ${title} needs its model installed… | warning | eligible |
 | `MpiCanvasViewer.js:283` | Detect while Cue busy | Auto detection is unavailable while Cue has running or queued jobs | warning | eligible |
 | `MpiCanvasViewer.js:368` | Auto-mask, no image selected | No image selected | warning | eligible |
 | `MpiCanvasViewer.js:390` | Auto-mask detected nothing | Nothing detected | warning | eligible |
 | `MpiCanvasViewer.js:581` | Auto-mask picks expired on item switch | Auto-mask picks expired — re-run detect | warning | eligible |
-| `MpiBaseApp.js:471` | Drop on app slot, no project open | Open a project first. | warning | eligible |
-| `MpiBaseApp.js:481` | Drop on app slot, place failed | Could not add ${type} file. | warning | eligible |
-| `MpiBaseApp.js:1053` | App Run with no inputs and blank prompt | ${title} needs at least one input… | warning | eligible |
+| `MpiBaseFlow.js:471` | Drop on Flow slot, no project open | Open a project first. | warning | eligible |
+| `MpiBaseFlow.js:481` | Drop on Flow slot, place failed | Could not add ${type} file. | warning | eligible |
+| `MpiBaseFlow.js:1053` | Flow Run with no inputs and blank prompt | ${title} needs at least one input… | warning | eligible |
 | `MpiModelSettings.js:312` | LoRA/upscale drop-import success | Imported ${filename}. | success | **silent** |
 | `MpiSettings.js:536` | Settings folder drop-import success | Imported ${filename}. | success | **silent** |
 | `MpiModelManager.js:1467-1498` | `download:uninstalled` (5 branches) | ${model} updated. / files kept variants | success/info | **silent** |
-| `MpiAppLibrary.js:272` | Open app card off the Gallery page | Open apps from the Gallery, inside a project. | info | **silent** |
+| `MpiFlowLibrary.js:272` | Open Flow card off the Gallery page | Open flows from the Gallery, inside a project. | info | **silent** |
 | `MpiFolderDrop.js:85` | Import POST not ok | Import failed: ${reason} | warning | eligible |
 | `MpiFolderDrop.js:118` | Dropped a non-model extension | "…" is not a model file (.safetensors/.ckpt/…) | warning | eligible |
 | `MpiFolderDrop.js:125` | Import threw | Import failed: ${err.message} | warning | eligible |

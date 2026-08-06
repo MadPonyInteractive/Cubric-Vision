@@ -23,8 +23,8 @@ import { remoteEngineClient } from '../services/remoteEngineClient.js';
 export { MODELS };
 import { UNIVERSAL_WORKFLOWS } from './modelConstants/universal_workflows.js';
 // MPI-304 — app-only deps are stat'd in the model sync's payload (one route, one
-// pass). One-way import: appsRegistry never imports modelRegistry.
-import { appDepUniverse, setAppDepStatus } from './appsRegistry.js';
+// pass). One-way import: flowsRegistry never imports modelRegistry.
+import { flowDepUniverse, setFlowDepStatus } from './flowsRegistry.js';
 // MPI-310 — plugins ride the same check for the same reason. Same one-way import rule.
 import { pluginDepUniverse, setPluginDepStatus } from './pluginsRegistry.js';
 import { Events } from '../events.js';
@@ -142,14 +142,14 @@ export async function syncModelInstalled() {
         // MPI-304 — app-only deps ride the SAME check. /comfy/models/check is
         // id-agnostic (it takes {id, deps} and stats filenames; it never looks at
         // MODELS), so an `app:<id>` entry passes through unchanged and no second
-        // endpoint is needed. Apps have no engine-split weights, so there is no
+        // endpoint is needed. Flows have no engine-split weights, so there is no
         // per-engine resolution to do here — the ids are the ids.
-        const appPayload = appDepUniverse().map(({ id, deps }) => ({
+        const flowPayload = flowDepUniverse().map(({ id, deps }) => ({
             id,
             deps: deps.map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
         }));
 
-        // MPI-310 — plugin deps ride it too, same id-agnostic passthrough as apps.
+        // MPI-310 — plugin deps ride it too, same id-agnostic passthrough as flows.
         // Like apps, plugins have no engine-split weights, so the ids are the ids.
         const pluginPayload = pluginDepUniverse().map(({ id, depIds }) => ({
             id,
@@ -165,7 +165,7 @@ export async function syncModelInstalled() {
         const res = await fetch(checkPath, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ models: modelPayload.concat(appPayload, pluginPayload) }),
+            body: JSON.stringify({ models: modelPayload.concat(flowPayload, pluginPayload) }),
         });
 
         if (!res.ok) return false;
@@ -210,12 +210,12 @@ export async function syncModelInstalled() {
         }
         _driftedNodeDeps = drifted;
 
-        // MPI-304 — hand each app its dep slice. Keyed by appDepKey() in the payload,
-        // unpacked back to the bare appId the availability check reads.
-        for (const { id, appId } of appDepUniverse()) {
+        // MPI-304 — hand each flow its dep slice. Keyed by flowDepKey() in the payload,
+        // unpacked back to the bare flowId the availability check reads.
+        for (const { id, flowId } of flowDepUniverse()) {
             const entry = results[id];
             if (!entry) continue;
-            setAppDepStatus(appId, new Map((entry.deps || []).map(d => [d.id, d.installed === true])));
+            setFlowDepStatus(flowId, new Map((entry.deps || []).map(d => [d.id, d.installed === true])));
         }
 
         // MPI-310 — same unpack for plugins.

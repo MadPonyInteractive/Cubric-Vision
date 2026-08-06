@@ -1421,8 +1421,8 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             createdAt:      new Date().toISOString(),
             name:           null,
             uploaded:       true,
-            appId:          null,   // App provenance parity (MPI-256) — imports are never App gens
-            appInputs:      null,
+            flowId:          null,   // Flow provenance parity (MPI-256) — imports are never Flow gens
+            flowInputs:      null,
             pixelDimensions: { w: req.body.width || 0, h: req.body.height || 0 },
             generationMs:   null,
         };
@@ -1618,7 +1618,7 @@ router.post('/project-media/:projectId/upload-raw', async (req, res) => {
     }
 });
 
-// MPI-259: place a dropped App input file into the content-addressed preview-assets
+// MPI-259: place a dropped Flow input file into the content-addressed preview-assets
 // store (Media/.preview-assets/<sha256><ext>) instead of the visible gallery. Keeps the
 // gallery clean while persisting the file durably so a later Reuse can resolve it (the
 // store is the same one MPI-227 built + the manual Cleanup GCs). Accepts a base64 data
@@ -1766,7 +1766,7 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
  */
 router.post('/project/save-generation', async (req, res) => {
     try {
-        const { folderPath, comfyViewUrl, audioViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId, appId = null, appInputs = null } = req.body;
+        const { folderPath, comfyViewUrl, audioViewUrl, itemId, operation = 'generated', meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId, flowId = null, flowInputs = null } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
         const isVideo = mediaType === 'video';
@@ -1936,11 +1936,11 @@ router.post('/project/save-generation', async (req, res) => {
             createdAt:      new Date().toISOString(),
             name:           null,
             uploaded:       false,
-            // App provenance (MPI-256) — additive, top-level. null for normal PromptBox
-            // gens; the App's id + input snapshot for App gens, so Reuse can reopen the
-            // App with inputs restored (survives restart — sidecar is the source).
-            appId,
-            appInputs,
+            // Flow provenance (MPI-256) — additive, top-level. null for normal PromptBox
+            // gens; the Flow's id + input snapshot for Flow gens, so Reuse can reopen the
+            // Flow with inputs restored (survives restart — sidecar is the source).
+            flowId,
+            flowInputs,
             pixelDimensions: resolvedDims ?? { w: 0, h: 0 },
             // Preview→final replace sums the previous stage's elapsed time into
             // the final sidecar so history shows aggregate generation time.
@@ -2275,8 +2275,8 @@ router.post('/project/crop-media', async (req, res) => {
             createdAt: new Date().toISOString(),
             name: null,
             uploaded: false,
-            appId: null,   // App provenance parity (MPI-256) — crops are never App gens
-            appInputs: null,
+            flowId: null,   // Flow provenance parity (MPI-256) — crops are never Flow gens
+            flowInputs: null,
             pixelDimensions: { w: written.width, h: written.height },
             generationMs: null,
             cropRect: { x, y, w, h },
@@ -2375,8 +2375,8 @@ router.post('/project/composite-media', async (req, res) => {
             createdAt: new Date().toISOString(),
             name: null,
             uploaded: false,
-            appId: null,   // App provenance parity (MPI-256) — composites are never App gens
-            appInputs: null,
+            flowId: null,   // Flow provenance parity (MPI-256) — composites are never Flow gens
+            flowInputs: null,
             pixelDimensions: { w: width, h: height },
             generationMs: null,
             sourceFile: baseAbs,
@@ -2476,8 +2476,8 @@ router.post('/project/apply-paint', async (req, res) => {
             createdAt: new Date().toISOString(),
             name: null,
             uploaded: false,
-            appId: null,   // App provenance parity (MPI-256) — paint is never an App gen
-            appInputs: null,
+            flowId: null,   // Flow provenance parity (MPI-256) — paint is never a Flow gen
+            flowInputs: null,
             pixelDimensions: { w: width, h: height },
             generationMs: null,
             sourceFile: baseAbs,

@@ -150,30 +150,30 @@ test('every opInject title exists, and covers every op the model runs (MPI-354)'
     assert.deepStrictEqual(problems, [], 'opInject is incoherent:\n  ' + problems.join('\n  '));
 });
 
-test('the first App workflow carries its inject + capture titles (MPI-256)', () => {
+test('the first Flow workflow carries its inject + capture titles (MPI-256)', () => {
     // Universal-op workflows (universal_workflows.js) are NOT covered by the generic
-    // per-model sweep above (that only walks models.js `workflows:{}` blocks). The App
-    // op runs App_sdxl_regen.json via model:{id:null}; pin the titles the injector +
-    // capture depend on. Input_Is_i2i must be present (and baked true — the app is
+    // per-model sweep above (that only walks models.js `workflows:{}` blocks). The Flow
+    // op runs flow_sdxl_regen.json via model:{id:null}; pin the titles the injector +
+    // capture depend on. Input_Is_i2i must be present (and baked true — the Flow is
     // always image-in) or the graph silently degrades to txt2img.
-    const file = 'App_sdxl_regen.json';
+    const file = 'flow_sdxl_regen.json';
     const have = titlesOf(file);
     for (const title of ['input_image', 'input_positive', 'input_negative', 'output_image', 'input_is_i2i']) {
         assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
     }
-    // Assert i2i is baked true (app is image-in→image-out, never txt2img).
+    // Assert i2i is baked true (Flow is image-in→image-out, never txt2img).
     const wf = JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8'));
     const i2iNode = Object.values(wf).find(n => (n._meta?.title || '').toLowerCase() === 'input_is_i2i');
-    assert.strictEqual(i2iNode?.inputs?.boolean, true, 'Input_Is_i2i must be baked true in the App workflow');
+    assert.strictEqual(i2iNode?.inputs?.boolean, true, 'Input_Is_i2i must be baked true in the Flow workflow');
 });
 
-test('the second App workflow (SDXL 4K) carries its polymorphic I/O titles (MPI-259)', () => {
-    // appSdxl4k runs App_sdxl_4k.json via model:{id:null}. Re-exported as the polymorphic
-    // I/O test app: prompt/seed + the full media-input matrix (numbered/lowercase slots)
-    // + MULTIPLE same-type capture nodes. Pins the exact titles the app injects into and
+test('the second Flow workflow (SDXL 4K) carries its polymorphic I/O titles (MPI-259)', () => {
+    // flowSdxl4k runs flow_sdxl_4k.json via model:{id:null}. Re-exported as the polymorphic
+    // I/O test Flow: prompt/seed + the full media-input matrix (numbered/lowercase slots)
+    // + MULTIPLE same-type capture nodes. Pins the exact titles the Flow injects into and
     // captures from. Numbered/lowercase names are deliberate — the injector matches them
     // case-insensitively (commandExecutor _buildParams + comfyController media-kind sweep).
-    const file = 'App_sdxl_4k.json';
+    const file = 'flow_sdxl_4k.json';
     const have = titlesOf(file);
     // Always-injected + declared input slots (multi-IMAGE variant: up to 2 images).
     for (const title of [
@@ -188,12 +188,12 @@ test('the second App workflow (SDXL 4K) carries its polymorphic I/O titles (MPI-
     }
 });
 
-test('the third App workflow (Video Stitch) carries its media I/O titles (MPI-259)', () => {
-    // appVideoStitch runs app_video_test.json with model:{id:null} and NO required model.
+test('the third Flow workflow (Video Stitch) carries its media I/O titles (MPI-259)', () => {
+    // flowVideoStitch runs flow_video_test.json with model:{id:null} and NO required model.
     // Pins the lowercase/numbered media-input titles + the video capture titles. The
     // injector matches case-insensitively; the media-kind sweep pattern-forces
     // input_video*/input_audio* so these resolve + upload on the remote engine.
-    const file = 'app_video_test.json';
+    const file = 'flow_video_test.json';
     const have = titlesOf(file);
     for (const title of ['input_video', 'input_video_2', 'input_audio']) {
         assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
@@ -204,7 +204,7 @@ test('the third App workflow (Video Stitch) carries its media I/O titles (MPI-25
 });
 
 test('every MpiStyleSelector is titled + shaped for the dotted injection keys (MPI-359)', () => {
-    // The new style rack puts TWO injected knobs on ONE node, so the app addresses them
+    // The new style rack puts TWO injected knobs on ONE node, so the Flow addresses them
     // as `Title.widget` (comfyController §3). Same silent-skip failure mode as the title
     // sweep above, one level deeper: a renamed node OR a renamed widget = a dead picker.
     // The expected title is DERIVED from the key the control actually emits, so a rename

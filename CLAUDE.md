@@ -101,7 +101,7 @@ it turned off before staging weights to R2.
 | Application state | `.claude/rules/state.md` |
 | Workspaces / routing / dev component gallery | `.claude/rules/workspaces.md` |
 | ComfyUI injection (send tasks, compile JSON, images/masks in graphs) | `.claude/rules/comfy_injection.md` |
-| Workflow authoring / injectable nodes & controls / MpiNodes / tier selectors (model OR app) | `docs/workflow-authoring/README.md` — append what you learn there |
+| Workflow authoring / injectable nodes & controls / MpiNodes / tier selectors (model OR Flow) | `docs/workflow-authoring/README.md` — append what you learn there |
 | ComfyUI engine & backend (model registry, downloads, python server) | `.claude/rules/comfy_engine.md` |
 | App versioning (APP/SCHEMA/COMFY, operation registry) | `.claude/rules/versioning.md`, then `docs/versioning.md` |
 | Project data (project.json, `.meta/`, load/reconciliation, history items) | `docs/project-integrity.md` |
@@ -125,7 +125,7 @@ it turned off before staging weights to R2.
 | Task | Skill | Playbook (the skill's step 0 — non-negotiable) |
 |---|---|---|
 | Wire a NEW model end-to-end | `/mpi-add-model` | `docs/playbooks/add-model/` (README hub + `01`–`06`) — holds every known trap. Models are NOT version-bumped. A handoff or `docs/models/<model>/` doc ASSUMES the playbook — read both |
-| Wire a NEW App (dev-gated App-Library outcome app — NOT a model) | `/mpi-add-app` | `docs/playbooks/add-app/` (README hub + `01`–`05`). Worked examples: Video Stitch, SDXL 4K, Image Regen |
+| Wire a NEW Flow (dev-gated Flow-Library outcome flow — NOT a model) | `/mpi-add-flow` | `docs/playbooks/add-flow/` (README hub + `01`–`05`). Worked examples: Video Stitch, SDXL 4K, Image Regen |
 
 ---
 
@@ -146,7 +146,7 @@ Human-in-the-loop execution system. **Core principle:** parallel sub-agents only
 | `/mpi-component-audit` | ESLint audit of `js/components/` — report only, no fixes |
 | `/mpi-brief-rule` | Return a rule file's Sub-Agent Briefing for dispatch |
 | `/mpi-add-model` | Wire a NEW model (enforces `docs/playbooks/add-model/`) |
-| `/mpi-add-app` | Wire a NEW App (enforces `docs/playbooks/add-app/`) |
+| `/mpi-add-flow` | Wire a NEW Flow (enforces `docs/playbooks/add-flow/`) |
 
 ---
 

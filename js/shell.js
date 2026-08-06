@@ -23,11 +23,11 @@ import { MpiStartingComfy } from './components/Compounds/MpiStartingComfy/MpiSta
 import { MpiEngineInstall } from './components/Compounds/MpiEngineInstall/MpiEngineInstall.js';
 import { MpiChangelogDialog } from './components/Compounds/MpiChangelogDialog/MpiChangelogDialog.js';
 import { MpiModelManager } from './components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
-import { MpiAppLibrary } from './components/Compounds/LandingPages/MpiAppLibrary/MpiAppLibrary.js';
-import { MpiBaseApp } from './components/Organisms/MpiBaseApp/MpiBaseApp.js';
-import { MpiAppImageRegen } from './components/Organisms/MpiAppImageRegen/MpiAppImageRegen.js';
-import { MpiAppHeadSwap } from './components/Organisms/MpiAppHeadSwap/MpiAppHeadSwap.js';
-import { getAppById } from './data/appsRegistry.js';
+import { MpiFlowLibrary } from './components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js';
+import { MpiBaseFlow } from './components/Organisms/MpiBaseFlow/MpiBaseFlow.js';
+import { MpiFlowImageRegen } from './components/Organisms/MpiFlowImageRegen/MpiFlowImageRegen.js';
+import { MpiFlowHeadSwap } from './components/Organisms/MpiFlowHeadSwap/MpiFlowHeadSwap.js';
+import { getFlowById } from './data/flowsRegistry.js';
 import { MpiOkCancel } from './components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { getModelsByType } from './data/modelRegistry.js';
 import { APP_VERSION } from './core/appVersion.js';
@@ -438,47 +438,47 @@ async function _bootApp() {
     _modelLibrary.el.open();
   });
 
-  // App Library — same lazy-singleton pattern as the Model Library (MPI-256).
-  // Dev-gated: the only emitters of apps:open (Gallery radial + Landing nav) are
+  // Flow Library — same lazy-singleton pattern as the Model Library (MPI-256).
+  // Dev-gated: the only emitters of flows:open (Gallery radial + Landing nav) are
   // themselves APP_CONFIG.dev_mode-gated, so a staged build never opens it.
-  let _appLibrary = null;
+  let _flowLibrary = null;
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-  Events.on('apps:open', async () => {
-    // MPI-390: Apps have no PromptBox — just a Generate button — so nothing
+  Events.on('flows:open', async () => {
+    // MPI-390: Flows have no PromptBox — just a Generate button — so nothing
     // inside would surface the no-engine state. Dev-gated today, but the gate
     // belongs here before that changes.
     if (await blockedByNoEngine()) return;
-    if (!_appLibrary) _appLibrary = MpiAppLibrary.mount(document.createElement('div'));
-    _appLibrary.el.open();
+    if (!_flowLibrary) _flowLibrary = MpiFlowLibrary.mount(document.createElement('div'));
+    _flowLibrary.el.open();
   });
 
-  // app:open {appId} — the App Library's Open button. Mount MpiBaseApp with the
-  // resolved descriptor + its per-app controls component (name → blueprint map;
+  // flow:open {flowId} — the Flow Library's Open button. Mount MpiBaseFlow with the
+  // resolved descriptor + its per-flow controls component (name → blueprint map;
   // the descriptor's uiComponent is a string so the registry stays import-free).
-  // One live App at a time — destroy the prior instance before mounting the next.
-  const _appComponents = { MpiAppImageRegen, MpiAppHeadSwap };
-  let _activeApp = null;
+  // One live Flow at a time — destroy the prior instance before mounting the next.
+  const _flowComponents = { MpiFlowImageRegen, MpiFlowHeadSwap };
+  let _activeFlow = null;
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-  Events.on('app:open', ({ appId }) => {
-    const app = getAppById(appId);
-    if (!app) return;
-    if (_activeApp) { _activeApp.el.destroy(); _activeApp = null; }
-    _activeApp = MpiBaseApp.mount(document.createElement('div'), {
-      app,
-      uiComponent: _appComponents[app.uiComponent] || null,
+  Events.on('flow:open', ({ flowId }) => {
+    const flow = getFlowById(flowId);
+    if (!flow) return;
+    if (_activeFlow) { _activeFlow.el.destroy(); _activeFlow = null; }
+    _activeFlow = MpiBaseFlow.mount(document.createElement('div'), {
+      flow,
+      uiComponent: _flowComponents[flow.uiComponent] || null,
     });
-    // Closing an app DESTROYS it (MPI-345). Every open remounts a fresh instance, so
+    // Closing a Flow DESTROYS it (MPI-345). Every open remounts a fresh instance, so
     // a closed one is pure garbage that still holds live listeners — the global
-    // `generation.run` hotkey among them, which is what queued a phantom app job on
+    // `generation.run` hotkey among them, which is what queued a phantom Flow job on
     // the next Ctrl+Enter. Deferred a tick: the close arrives from inside MpiOverlay's
     // own hide() → destroying its DOM mid-emit is exactly the teardown race the
-    // openAppFromReuse defer already dodges.
-    const _closing = _activeApp;
+    // openFlowFromReuse defer already dodges.
+    const _closing = _activeFlow;
     _closing.on('close', () => {
-      if (_activeApp === _closing) _activeApp = null;
+      if (_activeFlow === _closing) _activeFlow = null;
       setTimeout(() => _closing.el.destroy(), 0);
     });
-    _activeApp.el.open();
+    _activeFlow.el.open();
   });
 
   // ComfyUI Auto-start (optional). Local boot only here — when auto-connecting to a

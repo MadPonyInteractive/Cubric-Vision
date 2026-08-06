@@ -28,11 +28,11 @@ Consequences when you touch a group with disabled options:
 
 ## MpiTileSheet — state-dumb tiles; the consumer owns the bottom row (MPI-356)
 
-`MpiTileSheet` (Primitive) renders one grid of tiles for three surfaces: Model Library, App Library, and `MpiModelPicker`. It is a **Primitive, not a Compound**, because both libraries are Compounds and the hierarchy forbids Compounds importing Compounds.
+`MpiTileSheet` (Primitive) renders one grid of tiles for three surfaces: Model Library, Flow Library, and `MpiModelPicker`. It is a **Primitive, not a Compound**, because both libraries are Compounds and the hierarchy forbids Compounds importing Compounds.
 
 It is deliberately **state-dumb**: install progress, availability chips, and the picker's LoRA & Upscale button are none of its business. The consumer hands the fixed-height bottom row over as an HTML string (`item.state`) and patches it in place with `el.patchState(id, html)` — never by rebuilding the sheet. Other instance methods: `setItems`, `setWaiting(id, bool)`, `setSelected(id|null)`, `getTile(id)`. Emits `'select' { id, item }`, echoing back the consumer's own `item.source` payload.
 
-The trap it retired: the tile markup existed twice (`MpiModelManager._buildTile` + `MpiAppLibrary._buildTile`) against ONE copy of the CSS that only the Model Library owned — the App Library borrowed the selectors across a component boundary and silently lost `--lib-card`. Add a new tile surface by feeding this sheet, never by copying tile markup.
+The trap it retired: the tile markup existed twice (`MpiModelManager._buildTile` + `MpiFlowLibrary._buildTile`) against ONE copy of the CSS that only the Model Library owned — the Flow Library borrowed the selectors across a component boundary and silently lost `--lib-card`. Add a new tile surface by feeding this sheet, never by copying tile markup.
 
 ## MpiModelSettings — body-mounted, and its open() must not feed its own listener (MPI-356)
 

@@ -300,7 +300,7 @@ function _syncRadial() {
     _radialInstance = MpiRadialMenu.mount(_radialMount, { context: 'dev' });
     _radialInstance.el.setContextItems('dev', [
         { action: 'components', label: 'Components', icon: 'grid' },
-        { action: 'apps', label: 'Apps', icon: 'layers' },                       // App Library (MPI-256)
+        { action: 'flows', label: 'Flows', icon: 'layers' },                     // Flow Library (MPI-256)
         { action: 'restart-engine', label: 'Restart Engine', icon: 'refresh' },  // restart ComfyUI only
     ]);
 
@@ -309,8 +309,8 @@ function _syncRadial() {
             _loadComponentsGallery();
             return;
         }
-        if (action === 'apps') {
-            Events.emit('apps:open'); // App Library overlay (MPI-256, dev-gated)
+        if (action === 'flows') {
+            Events.emit('flows:open'); // Flow Library overlay (MPI-256, dev-gated)
             return;
         }
         if (action === 'restart-engine') {

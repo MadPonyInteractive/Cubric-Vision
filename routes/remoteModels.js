@@ -732,7 +732,7 @@ function openInstallEventStream(onEvent, onClose) {
  * but the code-only packs reach the volume ONLY as a side effect of installing a MODEL
  * that happens to declare them. So a universal op whose graph needs a code-only pack died
  * on any volume that never installed that particular model — measured live: `resizeVideo`
- * needs VideoHelperSuite, declared by 2 of 18 models; `appHeadSwap` needs
+ * needs VideoHelperSuite, declared by 2 of 18 models; `flowHeadSwap` needs
  * inpaint-cropandstitch, declared by 3 of 18.
  *
  * Cost when the volume is already complete: ONE batched status call, no installs, no

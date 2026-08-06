@@ -1,6 +1,6 @@
 # [shared] Hard rules (both playbooks)
 
-> Word-for-word identical in the add-model and add-app READMEs. Canonical here;
+> Word-for-word identical in the add-model and add-flow READMEs. Canonical here;
 > each playbook links this file and adds only its OWN extra hard rules.
 
 1. **Never hand-edit a workflow JSON.** Titles/values change in ComfyUI, then

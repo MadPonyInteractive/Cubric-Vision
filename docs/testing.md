@@ -35,7 +35,7 @@ needs no xvfb on Windows.
 - **Artifacts on failure only**, minus `test-results/**/user-data/**` — that is each
   failing spec's whole Electron profile, 301 MB in the first red run. What you want is
   `trace.zip`, `test-failed-1.png` and `error-context.md`; `gh run download <id>` gets them.
-- **Two desktop specs are `test.fixme(!!process.env.CI, …)`** — `app-close-destroys-instance`
+- **Two desktop specs are `test.fixme(!!process.env.CI, …)`** — `flow-close-destroys-instance`
   and `mask-persist-roundtrip`'s navigation test. They need a BOOTED shell, and
   `js/shell.js` parks boot behind the first-run engine-install modal on any profile with
   no engine, which every CI profile is. Fixture gap, not an app bug → **MPI-446**. They
@@ -138,7 +138,7 @@ deliberately left alone.
 - **`workspace-sweep.spec.js`** — one shallow test per surface reachable on empty
   user data (landing, Settings slide-over, gallery, group-history): it mounts,
   nothing threw. Breadth for the surfaces nobody hand-tests before a release. The
-  Model Library (needs installed models) and the App Library (dev-gated) are not in
+  Model Library (needs installed models) and the Flow Library (dev-gated) are not in
   it yet — they need fixtures first.
 
 ### Four traps these specs paid for

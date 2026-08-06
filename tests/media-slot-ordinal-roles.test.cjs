@@ -84,7 +84,7 @@ test('non-ordinal roles stay sticky (startFrame/endFrame, Head Swap)', async () 
 
     // Head Swap: image2 (the SOURCE head) alone must not repack into image1
     // (the TARGET) — MPI-306 ran the swap backwards exactly this way.
-    const hsSlots = getCommandMediaInputs('appHeadSwap');
+    const hsSlots = getCommandMediaInputs('flowHeadSwap');
     const sourceOnly = [{ id: 's', url: 's.png', mediaType: 'image', role: 'image2' }];
     assert.deepStrictEqual(stripOrdinalMediaRoles(hsSlots, sourceOnly), sourceOnly, 'Head Swap roles must stay sticky');
     const hs = assignSlots(hsSlots, stripOrdinalMediaRoles(hsSlots, sourceOnly));

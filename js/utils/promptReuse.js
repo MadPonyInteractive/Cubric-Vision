@@ -232,7 +232,7 @@ export function itemHasReusablePrompt(item = {}) {
         item.modelId ||
         source.modelId ||
         item.frozenParams ||
-        item.appId          // App cards (MPI-256): Reuse reopens the App, no modelId/prompt needed
+        (item.flowId ?? item.appId)  // Flow cards (MPI-256): Reuse reopens the Flow, no modelId/prompt needed. appId = pre-rename key
     );
 }
 

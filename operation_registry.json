@@ -119,22 +119,22 @@
     "appVersionIntroduced": "0.0.1",
     "universal": true
   },
-  "appImageRegen": {
+  "flowImageRegen": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.1.0",
     "universal": true
   },
-  "appSdxl4k": {
+  "flowSdxl4k": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.1.0",
     "universal": true
   },
-  "appVideoStitch": {
+  "flowVideoStitch": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.1.0",
     "universal": true
   },
-  "appHeadSwap": {
+  "flowHeadSwap": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.1.0",
     "universal": true

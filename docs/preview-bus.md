@@ -3,7 +3,7 @@
 One system ingests binary latent-preview frames from **both** engines (local ComfyUI
 WS + remote Pod proxy WSS), attributes each to its generation, filters non-image
 frames, and emits **one engine-tagged event any surface can subscribe to**. To show
-live latents anywhere (gallery card, app pane, a future OS floating window) you
+live latents anywhere (gallery card, Flow pane, a future OS floating window) you
 subscribe to one event — no per-consumer WS handling, no engine checks, no attribution
 logic. Shipped MPI-269 (`8f057a7c`).
 
@@ -91,7 +91,7 @@ window where an early frame of a new gen was attributed to the previous gen. Bot
 ## Legacy path (retired — MPI-271)
 
 The old `Events.emit('generation:preview', { id, url })` + `activeGenerations.setPreview`
-path is **gone**. All three consumers (MpiBaseApp app pane, MpiGalleryBlock placeholder
+path is **gone**. All three consumers (MpiBaseFlow Flow pane, MpiGalleryBlock placeholder
 card, MpiGroupHistoryBlock viewer) subscribe to `preview:frame` + seed from
 `getLastPreview`. The `preview:frame` bus listener in `activeGenerations` is now the
 **sole writer** of `entry.latestPreviewUrl` / `placeholderGroup.latestPreviewUrl`, which the

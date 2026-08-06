@@ -218,14 +218,14 @@ export const MpiReusePromptDialog = ComponentFactory.create({
         actionsSlot.appendChild(cancelBtn.el);
 
         // Emit apply with the chosen destination. dest: 'promptbox' honors the
-        // checkboxes; 'app' reopens the App card (checkboxes ignored downstream).
+        // checkboxes; 'flow' reopens the Flow card (checkboxes ignored downstream).
         const _apply = (dest) => {
             emit('apply', { includes: { ...includes }, source, dest });
             el.hide();
         };
 
-        if (props.isAppCard === true) {
-            // App cards (MPI-263): two same-color Apply buttons — no destination
+        if (props.isFlowCard === true) {
+            // Flow cards (MPI-263): two same-color Apply buttons — no destination
             // selector, one click each.
             const toPromptBtn = MpiButton.mount(document.createElement('div'), {
                 text: 'Prompt Box',
@@ -235,14 +235,14 @@ export const MpiReusePromptDialog = ComponentFactory.create({
             toPromptBtn.on('click', () => _apply('promptbox'));
             actionsSlot.appendChild(toPromptBtn.el);
 
-            const toAppBtn = MpiButton.mount(document.createElement('div'), {
-                text: 'App',
+            const toFlowBtn = MpiButton.mount(document.createElement('div'), {
+                text: 'Flow',
                 variant: 'primary',
                 size: 'md',
             });
-            toAppBtn.on('click', () => _apply('app'));
-            modal.on('confirm', () => _apply('app'));
-            actionsSlot.appendChild(toAppBtn.el);
+            toFlowBtn.on('click', () => _apply('flow'));
+            modal.on('confirm', () => _apply('flow'));
+            actionsSlot.appendChild(toFlowBtn.el);
         } else {
             const okBtn = MpiButton.mount(document.createElement('div'), {
                 text: 'Apply',

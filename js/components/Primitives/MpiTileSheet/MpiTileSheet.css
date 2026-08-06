@@ -2,13 +2,13 @@
    MpiTileSheet — shared contact-sheet tile grid (MPI-356)
 
    Extracted verbatim from MpiModelManager.css, which owned these selectors
-   while MpiAppLibrary.js quietly borrowed them (its own header admitted as
+   while MpiFlowLibrary.js quietly borrowed them (its own header admitted as
    much). Three surfaces now render the same tile: the Model Library, the App
    Library, and the model picker — so the tile lives here and nowhere else.
 
    Ground tokens resolve to the Library's --lib-* scale when a consumer
    defines it, so tiles inside .mpi-model-library are pixel-identical to
-   before. The fallbacks carry the same values everywhere else — MpiAppLibrary
+   before. The fallbacks carry the same values everywhere else — MpiFlowLibrary
    never declared --lib-card / --lib-card-hover, so its tiles were rendering
    with an unresolved background until this file supplied one.
 ════════════════════════════════════════════════════════════════ */

@@ -7,7 +7,7 @@
 >
 > This is **shared ground**. Both onboarding a **model**
 > ([../playbooks/add-model/](../playbooks/add-model/README.md)) and building an
-> **app** ([../apps.md](../apps.md)) sit on top of it. Read the file for the thing
+> **Flow** ([../flows.md](../flows.md)) sit on top of it. Read the file for the thing
 > you're doing; you don't need all of it.
 
 ---
@@ -21,8 +21,8 @@ into the matching file below**, or add a new small file. Rules:
 - **One subject per file.** Do NOT dump everything into this README or into one
   giant page. If a topic doesn't fit an existing file, make a new short one and add
   a row to the index below.
-- **Model/app-agnostic only.** Model-specific tuning goes to `docs/models/<model>/`;
-  app-specific wiring goes to `docs/apps.md`. This folder is the machinery both reuse.
+- **Model/Flow-agnostic only.** Model-specific tuning goes to `docs/models/<model>/`;
+  Flow-specific wiring goes to `docs/flows.md`. This folder is the machinery both reuse.
 - **≤200 lines per file** (the repo-wide doc rule). Split before it bloats.
 - The `/mpi-end` close-out reminds you to file what you learned — this banner is the
   standing home for *where* it goes.

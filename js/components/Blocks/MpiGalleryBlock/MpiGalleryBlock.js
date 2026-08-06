@@ -24,7 +24,7 @@ import { MpiAddToProject } from '../../Compounds/MpiAddToProject/MpiAddToProject
 import { MpiPromptBox } from '../../Organisms/MpiPromptBox/MpiPromptBox.js';
 import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
-import { openAppFromReuse } from '../../../services/appService.js';
+import { openFlowFromReuse } from '../../../services/flowService.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { ce, qs, gid } from '../../../utils/dom.js';
 import { navigate, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
@@ -1102,9 +1102,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     includes: options,
                     source: state.promptReuseSource,
                     showSource: true,
-                    // App cards (MPI-263): either resolved source being an app card
+                    // Flow cards (MPI-263): either resolved source being a Flow card
                     // splits Apply into "to Prompt Box" vs "to App".
-                    isAppCard: !!bundle.original?.item?.appId || !!bundle.current?.item?.appId,
+                    isFlowCard: !!(bundle.original?.item?.flowId ?? bundle.original?.item?.appId) || !!(bundle.current?.item?.flowId ?? bundle.current?.item?.appId),
                     // Per-source media availability so the dialog can grey out each
                     // "Use …" toggle for a source lacking that input (MPI-212/227).
                     imageAvailability: {
@@ -1131,17 +1131,17 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
 
             const payload = _resolveReusePayload(bundle, state.promptReuseSource);
-            // No-dialog fast path (ask=false): app cards reopen the App as before.
+            // No-dialog fast path (ask=false): Flow cards reopen the Flow as before.
             if (payload) _applyPromptReuse(payload, _reuseIncludes(options), 'app');
         }
 
         async function _applyPromptReuse(payload = {}, includes = { prompt: true, settings: true, model: true, images: true, video: true, audio: true }, dest = 'app') {
-            // App cards (MPI-256): Reuse reopens the App with its saved inputs
+            // Flow cards (MPI-256): Reuse reopens the Flow with its saved inputs
             // restored, NOT the PromptBox. Branch FIRST — above the _pb guard and the
-            // cross-mediaType reject — an app result whose mediaType differs from the
+            // cross-mediaType reject — a Flow result whose mediaType differs from the
             // reused model would otherwise bail before reaching here. MPI-263: only when
             // the user chose "Apply to App"; "Apply to Prompt Box" falls through to inject.
-            if (dest === 'app' && openAppFromReuse(payload.item)) return;
+            if (dest === 'flow' && openFlowFromReuse(payload.item)) return;
             if (!_pb?.el) return;
             const use = _reuseIncludes(includes);
             if (!use.prompt && !use.settings && !use.model && !use.images && !use.video && !use.audio) return;

@@ -3,7 +3,7 @@
 > Part of [workflow-authoring](README.md). **Canonical home** for the media-input
 > rule. Applies to any Cubric workflow — models AND apps — that reads an image,
 > mask, video, or audio input. It lives here so both the
-> [add-model playbook](../playbooks/add-model/README.md) and [apps](../apps.md)
+> [add-model playbook](../playbooks/add-model/README.md) and [Flows](../flows.md)
 > point at ONE source.
 
 ## The rule (MPI-272)

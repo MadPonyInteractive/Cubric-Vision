@@ -13,6 +13,6 @@
   a defensive fallback; no shipping workflow relies on it.
 
 **Playbook override (divergence lives inline in the playbook):**
-- **App** — multi-output capture uses PREFIX match: `Output_Image*` / `Output_video*`
+- **Flow** — multi-output capture uses PREFIX match: `Output_Image*` / `Output_video*`
   so numbered siblings qualify; `output_audio` / `output_preview` stay EXACT:
-  [../add-app/02-media-io.md](../add-app/02-media-io.md). Models use the single-capture case.
+  [../add-flow/02-media-io.md](../add-flow/02-media-io.md). Models use the single-capture case.

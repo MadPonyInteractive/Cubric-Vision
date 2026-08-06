@@ -53,7 +53,7 @@ first (research steps 1–5 often span several sessions; use a handoff to resume
    Classify each slot: REUSE existing dep vs NEW upload.
 7. **Scaffold the card.** Create an MPI card (`doing` / `in-progress`) — read
    `<mpi-lib>/templates/task.json` for schema, `<mpi-lib>/task-board-ops/mutate.md` for the
-   board+event mutation contract. Note what the model blocks (e.g. a dependent app card).
+   board+event mutation contract. Note what the model blocks (e.g. a dependent Flow card).
 8. **Scaffold the research homes** (mirror `docs/models/krea2/`):
    - `.agents/mpi-kanban/tasks/MPI-<n>/research/` — raw research dumps.
    - `docs/models/<model>/README.md` — the settled hub (copy Krea2's shape: variant table,

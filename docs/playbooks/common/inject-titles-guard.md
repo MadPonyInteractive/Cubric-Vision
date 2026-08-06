@@ -1,6 +1,6 @@
 # [shared] Injection title guard — the silent-skip trap
 
-> The single worst class of add-model/add-app bug: a control that ships dead.
+> The single worst class of add-model/add-flow bug: a control that ships dead.
 
 - The param injector matches a workflow node by `_meta.title` (case-insensitive) and
   **SILENTLY SKIPS a title with no matching node**. A typo'd or renamed title ships as
@@ -18,4 +18,4 @@
 
 The "trap that ate two days" (Krea2 `Input_Is_i2i` + `Input_Batch` ran dead for four
 sessions): [../add-model/04-ops-and-controls.md](../add-model/04-ops-and-controls.md).
-App verify step: [../add-app/05-verify.md](../add-app/05-verify.md).
+Flow verify step: [../add-flow/05-verify.md](../add-flow/05-verify.md).

@@ -929,50 +929,50 @@
  */
 
 /**
- * @typedef {Object} MpiAppLibraryProps (Compound — js/components/Compounds/LandingPages/MpiAppLibrary)
+ * @typedef {Object} MpiFlowLibraryProps (Compound — js/components/Compounds/LandingPages/MpiFlowLibrary)
  *
- * Takes no props. The App Library (MPI-256, dev-gated): a clone of the Model
- * Library skeleton stripped to app scope. Self-hosts a full-page MpiOverlay(body)
- * as a dark contact sheet of app tiles (preview + title + availability badge from
- * appAvailability, read-only over s_installedModelIds), with a right-drawer detail
+ * Takes no props. The Flow Library (MPI-256, dev-gated): a clone of the Model
+ * Library skeleton stripped to flow scope. Self-hosts a full-page MpiOverlay(body)
+ * as a dark contact sheet of flow tiles (preview + title + availability badge from
+ * flowAvailability, read-only over s_installedModelIds), with a right-drawer detail
  * panel carrying the description, the required-models install state, and ONE footer
- * button — all-installed → Open (emits `app:open`, Gallery-only), missing → Install
+ * button — all-installed → Open (emits `flow:open`, Gallery-only), missing → Install
  * (drives each missing model's own dependency download). No ops/arch toggles, VRAM
  * table, filters, or re-sync — availability derives entirely from the installed set,
  * so download:* events only re-derive badges in place (never a full re-render).
  *
- * Opened via: Events.emit('apps:open') → shell mounts it once and calls el.open().
- * Emits: `app:open` {appId} when Open is clicked in the Gallery.
+ * Opened via: Events.emit('flows:open') → shell mounts it once and calls el.open().
+ * Emits: `flow:open` {flowId} when Open is clicked in the Gallery.
  *
  * Instance methods (on instance.el):
- *   open()    — shows the overlay + renders the app grid (alias: onOpen).
+ *   open()    — shows the overlay + renders the flow grid (alias: onOpen).
  *   close()   — hides the overlay.
  *   destroy() — tears down subscriptions, tiles, detail buttons, and the overlay.
  */
 
 /**
- * @typedef {Object} MpiBaseAppProps (Organism — js/components/Organisms/MpiBaseApp)
- * @property {import('../data/appsRegistry.js').AppDef} app - The app descriptor.
- * @property {Object|null} [uiComponent] - The per-app controls blueprint (mounted
+ * @typedef {Object} MpiBaseFlowProps (Organism — js/components/Organisms/MpiBaseFlow)
+ * @property {import('../data/flowsRegistry.js').FlowDef} flow - The flow descriptor.
+ * @property {Object|null} [uiComponent] - The per-flow controls blueprint (mounted
  *   into the content slot; must expose el.getInputs({stepValues})). Null for a
- *   frame-only app.
+ *   frame-only flow.
  * @property {Object} [initialInputs] - Optional seed inputs (overridden by
- *   state.s_appInputs[app.id] when present).
+ *   state.s_flowInputs[flow.id] when present).
  *
- * THE app frame: a STEP CAROUSEL (MPI-306 Phase 1; was a flat form in MPI-256).
+ * THE flow frame: a STEP CAROUSEL (MPI-306 Phase 1; was a flat form in MPI-256).
  * COMPOSITION: mounts a `main-area` MpiOverlay (covers #tool-container + prompt
- * box, spares #shell-info-bar), renders a topbar (Back + app name + a NAVIGATING
+ * box, spares #shell-info-bar), renders a topbar (Back + flow name + a NAVIGATING
  * step ticker) over a slide stage with arrows outside the content.
  *
  * Shape — two zones split by an INSET centre divider on the FIRST and LAST step
  * only (divided = supplying/reviewing, undivided = working):
- *   step 0     media slots (from inputSchema.media) │ what this app does
+ *   step 0     media slots (from inputSchema.media) │ what this flow does
  *   1..N       declared middle steps — bounded centred canvas, no divider
  *   last       controls + Generate                  │ result + Apply
  *
- * STEPS ARE DATA: an app declares `steps: [{kind, role, title, hint, fields?}]`
- * (see AppDef/AppStep in js/data/appsRegistry.js) and writes NO layout code.
- * `kind` keys into STEP_KINDS (MpiBaseApp/stepKinds.js); each kind takes
+ * STEPS ARE DATA: a flow declares `steps: [{kind, role, title, hint, fields?}]`
+ * (see FlowDef/FlowStep in js/data/flowsRegistry.js) and writes NO layout code.
+ * `kind` keys into STEP_KINDS (MpiBaseFlow/stepKinds.js); each kind takes
  * {media, value, onChange, step} and reports a value. The frame collects
  * {[role]: value} into `stepValues` and merges it into the Run inputs — it never
  * learns what a gizmo does. A step is never invalid (every kind defaults), so the
@@ -980,37 +980,37 @@
  * between canvas and hint.
  *
  * Run merges media + stepValues + the uiComponent's getInputs({stepValues}) →
- * submitAppGeneration(app, inputs). The step values are PASSED TO the controls
+ * submitFlowGeneration(flow, inputs). The step values are PASSED TO the controls
  * component so the APP can map roles to its own graph params (e.g. Head Swap's
- * box1/box2) — the frame never learns what a role means. Seeds/writes state.s_appInputs[app.id]
+ * box1/box2) — the frame never learns what a role means. Seeds/writes state.s_flowInputs[flow.id]
  * (top-level replace) so inputs survive close→reopen and Overlays.reset(). Back =
- * el.close() then Events.emit('apps:open'). Mid-run navigation is allowed; closing
+ * el.close() then Events.emit('flows:open'). Mid-run navigation is allowed; closing
  * with an unapplied result does NOT prompt (there is no Discard — see
- * docs/playbooks/add-app/ui/carousel-frame.md).
+ * docs/playbooks/add-flow/ui/carousel-frame.md).
  *
  * The run path COMMITS ON COMPLETION (scope:'gallery') — there is no Apply step.
  * MPI-306 Phase 3 built a hold-until-Apply flow and it was REVERTED after the UX
- * pass (an Apply the user never wants to skip is friction). See appService.js.
+ * pass (an Apply the user never wants to skip is friction). See flowService.js.
  *
- * Mounted via: Events.emit('app:open', {appId}) → shell resolves the descriptor +
- * uiComponent and mounts one instance (destroying any prior active app).
+ * Mounted via: Events.emit('flow:open', {flowId}) → shell resolves the descriptor +
+ * uiComponent and mounts one instance (destroying any prior active flow).
  *
  * Emits: 'close' — the overlay closed (X, Escape, ui:close-all-popups, or Back).
- * The shell DESTROYS the instance on it (MPI-345): a closed app that stays alive
+ * The shell DESTROYS the instance on it (MPI-345): a closed flow that stays alive
  * keeps its listeners, and the global `generation.run` hotkey among them queued a
- * phantom app job on the next Ctrl+Enter. Every open mounts a fresh instance, so
- * nothing is lost — inputs live in state.s_appInputs.
+ * phantom flow job on the next Ctrl+Enter. Every open mounts a fresh instance, so
+ * nothing is lost — inputs live in state.s_flowInputs.
  *
  * Instance methods (on instance.el):
  *   open()/close() — show/hide the overlay (alias onOpen).
  *   destroy()      — tears down subs, the live slide (gizmos + listeners), the
- *                    per-app component, and the overlay.
+ *                    per-flow component, and the overlay.
  */
 
 /**
  * @typedef {Object} MpiStepBoxProps (Organism — js/components/Organisms/MpiStepBox)
  * @property {Object}   media      - The media item this step operates on ({url, …}).
- * @property {Object}   step       - The AppStep declaration (uses `ratio` if present).
+ * @property {Object}   step       - The FlowStep declaration (uses `ratio` if present).
  * @property {Object|null} [value] - Restored value ({box:{x,y,w,h}}) or null.
  * @property {Function} onChange   - (value) => void; called as the box is dragged.
  *
@@ -1018,12 +1018,12 @@
  * region box. Reuses js/utils/cropTool.js with `showGrid:false` (a rule-of-thirds
  * grid is a composition aid; this box marks a subject). Reports
  * `{box:{x,y,w,h}}` in ABSOLUTE SOURCE PIXELS, top-left anchored — the unit
- * `Mpi Box` consumes unconverted (docs/playbooks/add-app/ui/box-gizmo.md).
+ * `Mpi Box` consumes unconverted (docs/playbooks/add-flow/ui/box-gizmo.md).
  * cropTool works normalized; the conversion + EDGE clamp happen here, because
  * `Mpi Box Crop` returns the intersection and does NOT pad — an off-edge box
  * would otherwise yield a silently non-square crop.
  *
- * Knows nothing about its host app, the workflow, or any injector — that is the
+ * Knows nothing about its host flow, the workflow, or any injector — that is the
  * step-kind contract that keeps `steps` data.
  *
  * Instance methods (on instance.el):
@@ -1032,13 +1032,13 @@
  */
 
 /**
- * @typedef {Object} MpiAppImageRegenProps (Organism — js/components/Organisms/MpiAppImageRegen)
+ * @typedef {Object} MpiFlowImageRegenProps (Organism — js/components/Organisms/MpiFlowImageRegen)
  * @property {Object} [initialInputs] - Seed inputs ({positive}) from a prior run.
  *
- * The first App's controls (image-in → image-out regen): a single positive-prompt
- * textarea rendered into MpiBaseApp's content slot. Exposes el.getInputs() →
- * {positive}, which BaseApp merges with the uploaded image before Run. Controls
- * only — the frame, upload, Run, and result come from MpiBaseApp.
+ * The first Flow's controls (image-in → image-out regen): a single positive-prompt
+ * textarea rendered into MpiBaseFlow's content slot. Exposes el.getInputs() →
+ * {positive}, which BaseFlow merges with the uploaded image before Run. Controls
+ * only — the frame, upload, Run, and result come from MpiBaseFlow.
  *
  * Instance methods (on instance.el):
  *   getInputs() — returns {positive} (trimmed prompt text).
@@ -1046,7 +1046,7 @@
  */
 
 /**
- * @typedef {Object} MpiAppHeadSwapProps (Organism — js/components/Organisms/MpiAppHeadSwap)
+ * @typedef {Object} MpiFlowHeadSwapProps (Organism — js/components/Organisms/MpiFlowHeadSwap)
  * @property {Object} [initialInputs] - Seed inputs from a prior run; reads
  *   injectionParams.Input_Tier to restore the tier.
  *
@@ -1316,7 +1316,7 @@
  * @property {{original?:boolean,current?:boolean}} [imageAvailability] - Per-source: does the source carry a reusable input image? false greys "Use Images" (MPI-212)
  * @property {{original?:boolean,current?:boolean}} [videoAvailability] - Per-source: reusable input video? false greys "Use Video" (MPI-227)
  * @property {{original?:boolean,current?:boolean}} [audioAvailability] - Per-source: reusable input audio? false greys "Use Audio" (MPI-227)
- * @property {boolean} [isAppCard=false] - App-generated card: split Apply into "Apply to Prompt Box" + "Apply to App" (MPI-263)
+ * @property {boolean} [isFlowCard=false] - App-generated card: split Apply into "Apply to Prompt Box" + "Apply to App" (MPI-263)
  *
  * Instance methods (on instance.el):
  *   show()    - open the modal
