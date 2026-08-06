@@ -150,6 +150,13 @@
 
 ## fixes
 
+- **A hiccup mid-download no longer throws away the download.** A 25GB model that
+  stalled for a minute — a router blip, a bad moment on the line — was declared failed
+  outright, even though the gigabytes already on disk were perfectly good. It now
+  retries on its own and picks up exactly where it left off. It still stops promptly
+  and tells you what to do when your network is genuinely blocking the connection,
+  rather than sitting there retrying something that will never work.
+
 - **A failed model install now tells you why.** When an install failed after the files
   had downloaded, the error box came up completely empty — no reason, nothing to act on,
   and no hint whether it was worth retrying. The reason was there in the logs the whole

@@ -101,3 +101,36 @@ tile has no room for it. Gate + descriptor contract: `docs/download-manager.md`
 ## Uninstall has no "keep files" state — install-state IS files-on-disk (2026-07-14)
 
 `model.installed` is derived by statting disk (`syncModelInstalled` → `/comfy/models/check`), not stored. So a "keep files but forget install" uninstall is unrepresentable: keep the weights → resync re-flags the model INSTALLED → card never leaves the Installed section, no install button. The old `MpiOkCancel` "Also delete model files from disk" checkbox (`deleteFiles=false`) was exactly this dead no-op (starkest on SDXL, whose only non-universal dep is its checkpoint; the other 3 deps are always-kept universals). Removed from the Uninstall dialog — `on('ok')` now passes `deleteFiles=true` unconditionally. Backend `deleteFiles` param + all guards (universal / shared / outside-managed-root / pip) left intact; it just always receives `true`. Don't re-add a keep-files toggle without a real persisted install record separate from disk-stat.
+
+## The partial-install bar — what it means, and what it does NOT (MPI-258, MPI-462)
+
+`_computePartial(model)` in `MpiModelManager.js` draws the bar under an *idle*
+(non-downloading) tile. It means exactly: **≥1 GB of THIS model's own deps are already
+on disk, and not all of them are.** It is not a paused download and not a resume point.
+
+Three exclusions shape "its own":
+
+- **Deps owned by another installed model** (`_sharedOwnedDepIds`) — a shared VAE or
+  upscaler on disk for someone else must not read as progress here (MPI-258 Bug A).
+- **`custom_nodes`** — work-not-bytes; a shared node folder survives uninstall and would
+  read as a phantom partial. Same rule the live download bar applies
+  (`_byteRatioExcludingNodes`, MPI-231).
+- **A 1 GB floor** (MPI-258 Bug C) — below it, no bar. Sized to stop a handful of small
+  support files showing 1-3% on a pack the user never touched.
+
+**"Installed" in that first exclusion must mean ≥1 op on disk — MPI-462 owns this.** It
+originally gated on the raw `m.installed` flag, which (`modelRegistry.js:189`) means the
+WHOLE universe is present, every dep of every op. Nothing else in the app uses that
+meaning: this same component decides it at :705, :1123 and :1307 as ≥1 installed op, as
+does `isModelUsable`, as does the backend uninstall guard `_localSharedDepsMap` via
+`deriveInstalledOps`. Under the strict flag a multi-op model protected nothing and its
+weights were billed to its sibling tier — measured 2026-08-06, Wan 2.2 5B drew 36% for
+Wan 2.2's 6.27GB clip and LTX 2.3 high drew 33% for LTX balanced's shared assets. Note
+the asymmetry the looser predicate introduces: a ≥1-op model is not universe-complete, so
+its universe can name deps that are NOT on disk, and only an on-disk dep may be treated as
+owned — a missing one is still real work in this model's denominator. Read MPI-462 before
+touching either predicate; it is a shared primitive with several readers.
+
+**The floor does not save you from big orphans.** Weights left on disk that no installed
+model needs (measured 2026-08-06: a 10.59GB clip, a 4.28GB ControlNet) clear 1 GB on
+their own and draw a bar no exclusion can suppress, because nothing owns them.

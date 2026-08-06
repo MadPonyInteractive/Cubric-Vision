@@ -107,8 +107,11 @@ is the read→rewrite cycle. (Bit MPI-344: a board move mojibake'd MPI-337/314/3
 ## Detect INDENT as well as line endings, and load every file before writing any
 
 The serialisation varies **per file**, and indent varies too — not just CRLF vs LF. Measured
-2026-07-31: `board.json` = 2-space CRLF; `MPI-419`/`407`/`408`/`415` `task.json` = 2-space LF;
-`MPI-411`/`198` = 2-space **CRLF**; `MPI-370` = **1-space** LF. A round-trip guard that varies
+2026-07-31, re-measured 2026-08-06: `board.json` = 2-space **LF** (it read CRLF on 2026-07-31
+and this line said so until the re-measure — a round-trip guard caught the drift, which is
+the entire argument for measuring); `MPI-419`/`407`/`408`/`415` `task.json` = 2-space LF;
+`MPI-411`/`198` = 2-space **CRLF**; `MPI-370` = **1-space** LF (all three still true on
+2026-08-06). A round-trip guard that varies
 the line ending but hardcodes `indent=2` still fails on the 1-space card — and if it aborts
 *mid-loop*, the cards it already wrote say `done` while `board.json` still lists them in
 `doing`, which is a silently incoherent board. So: **load and format-detect EVERY file first,
