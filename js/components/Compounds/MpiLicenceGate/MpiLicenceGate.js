@@ -4,6 +4,7 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiCheckbox } from '../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '../../../utils/icons.js';
+import { openExternal } from '../../../utils/openExternal.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 
 /**
@@ -108,7 +109,7 @@ export const MpiLicenceGate = ComponentFactory.create({
                 variant: 'secondary',
                 size: 'sm',
             });
-            requestBtn.on('click', () => _openExternal(licence.territory.authorizationUrl));
+            requestBtn.on('click', () => openExternal(licence.territory.authorizationUrl));
             territorySlot.appendChild(requestBtn.el);
         } else {
             territorySlot.style.display = 'none';
@@ -201,20 +202,11 @@ export const MpiLicenceGate = ComponentFactory.create({
 
         function _link(text, url) {
             const a = ce('button', { className: 'mpi-licence-gate__link', type: 'button', textContent: text });
-            _unsubs.push(on(a, 'click', () => _openExternal(url)));
+            _unsubs.push(on(a, 'click', () => openExternal(url)));
             return a;
         }
     },
 });
-
-/** Open a URL in the system browser; falls back to window.open outside Electron. */
-function _openExternal(url) {
-    try {
-        const { ipcRenderer } = require('electron');
-        if (ipcRenderer) { ipcRenderer.invoke('open-external', url); return; }
-    } catch { /* browser dev mode — no electron module */ }
-    window.open(url, '_blank', 'noopener');
-}
 
 /**
  * Show the gate and resolve true only if the user accepted.

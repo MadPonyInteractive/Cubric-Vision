@@ -402,6 +402,35 @@
 }
 .mpi-detail__disk-val { font-variant-numeric: tabular-nums; }
 
+/* Licence row (MPI-451) — only rendered for a model with a licence descriptor, so
+   every permissively licensed model's drawer is unchanged. This is the standing
+   route back to the agreement and to the misuse-reporting channel; the acceptance
+   dialog itself is shown once, at install. */
+.mpi-detail__licence {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+}
+.mpi-detail__licence-name {
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+}
+.mpi-detail__licence-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3);
+}
+.mpi-detail__licence-link {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: var(--t-xs);
+    color: var(--accent-frost);
+    text-decoration: underline;
+    cursor: pointer;
+}
+.mpi-detail__licence-link:hover { color: var(--ink-1); }
+
 /* VRAM → RAM table (inline, video/tiered models) */
 .mpi-detail__vram {
     width: 100%;

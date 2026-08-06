@@ -80,6 +80,19 @@ Video previews also carry a `poster` by filename convention (`foo.mp4` → `foo.
 into `comfy_workflows/display/`): `ltx23_high_preview.mp4` is 40MB, so without a poster the
 browser must pull its moov atom before it can show any frame. A missing poster file is a no-op.
 
+## Licence row in the detail drawer — gated models only (MPI-451)
+
+`openDetail()` renders a LICENCE field (licence name + "Read the licence" / "Request
+authorization" / "Report misuse") **only when `getModelLicence(model.id)` returns a
+descriptor**. Every permissively licensed model's drawer is byte-identical to before.
+
+It is not decoration. The acceptance dialog is shown once, at install, so without this
+row a user who accepted last month has no route back to the agreement — and MiniMax H3
+§V.5 requires the misuse-reporting mechanism to stay *reasonably accessible*. The drawer
+is the home for it because it is already where a user goes to read what a model is; the
+tile has no room for it. Gate + descriptor contract: `docs/download-manager.md`
+§ The licence gate.
+
 ## Uninstall has no "keep files" state — install-state IS files-on-disk (2026-07-14)
 
 `model.installed` is derived by statting disk (`syncModelInstalled` → `/comfy/models/check`), not stored. So a "keep files but forget install" uninstall is unrepresentable: keep the weights → resync re-flags the model INSTALLED → card never leaves the Installed section, no install button. The old `MpiOkCancel` "Also delete model files from disk" checkbox (`deleteFiles=false`) was exactly this dead no-op (starkest on SDXL, whose only non-universal dep is its checkpoint; the other 3 deps are always-kept universals). Removed from the Uninstall dialog — `on('ok')` now passes `deleteFiles=true` unconditionally. Backend `deleteFiles` param + all guards (universal / shared / outside-managed-root / pip) left intact; it just always receives `true`. Don't re-add a keep-files toggle without a real persisted install record separate from disk-stat.

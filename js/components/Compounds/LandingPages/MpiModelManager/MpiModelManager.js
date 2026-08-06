@@ -16,8 +16,10 @@ import { getCommand } from '../../../../data/commandRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
 import { remoteEngineClient } from '../../../../services/remoteEngineClient.js';
 import { mountPodDiskBar } from '../../../../services/podDiskBar.js';
+import { getModelLicence } from '../../../../data/modelConstants/licences.js';
 import { qs, qsa, ce, on } from '../../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
+import { openExternal } from '../../../../utils/openExternal.js';
 import { formatBytes } from '../../../../utils/formatBytes.js';
 import { tradeTable } from '../../../../data/modelConstants/footprint.js';
 
@@ -934,6 +936,10 @@ export const MpiModelManager = ComponentFactory.create({
                         <span class="mpi-detail__field-label" style="margin:0">Disk</span>
                         <span class="mpi-detail__disk-val">${st.sizeBytes > 0 ? formatBytes(st.sizeBytes) : '—'}</span>
                     </div>
+                </div>
+                <div class="mpi-detail__field" id="detail-licence" style="display:none;">
+                    <span class="mpi-detail__field-label">Licence</span>
+                    <div class="mpi-detail__licence" id="detail-licence-row"></div>
                 </div>`;
 
             // Real preview in the drawer thumb. Unlike the lean tiles (uniform
@@ -994,6 +1000,29 @@ export const MpiModelManager = ComponentFactory.create({
             // are small so the curve floors at MIN_FLOOR (8GB) and resolves in a row
             // or two, but the memory need is still worth showing.
             qs('#detail-vram', detailBody).innerHTML = _tradeTableHtml(model);
+
+            // Licence row (MPI-451) — gated models only, so every permissively licensed
+            // model in the library looks exactly as it did. The acceptance dialog is
+            // shown once, at install; this is the standing route back to the agreement
+            // and to the misuse-reporting channel the licence requires us to keep
+            // reachable (MiniMax H3 §V.5). The drawer is the right home for it: it is
+            // where a user already comes to read what a model is.
+            const licence = getModelLicence(model.id);
+            if (licence) {
+                qs('#detail-licence', detailBody).style.display = '';
+                const row = qs('#detail-licence-row', detailBody);
+                row.append(ce('div', { className: 'mpi-detail__licence-name', textContent: licence.name }));
+                const links = ce('div', { className: 'mpi-detail__licence-links' });
+                const linkTo = (text, url) => {
+                    const b = ce('button', { className: 'mpi-detail__licence-link', type: 'button', textContent: text });
+                    _unsubs.push(on(b, 'click', () => openExternal(url)));
+                    return b;
+                };
+                links.append(linkTo('Read the licence', licence.licenceUrl));
+                if (licence.territory) links.append(linkTo('Request authorization', licence.territory.authorizationUrl));
+                if (licence.report) links.append(linkTo(licence.report.label, licence.report.url));
+                row.append(links);
+            }
 
             // Footer actions — the exact install/update/uninstall wiring from _buildCard.
             // isActiveDownload wins first (MPI-273): a LIVE download on an already-
