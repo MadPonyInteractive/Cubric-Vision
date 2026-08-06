@@ -134,7 +134,7 @@ export const MpiErrorDialog = ComponentFactory.create({
                     return;
                 }
 
-                clientLogger.log('error-dialog', 'GitHub issue created', createData.issueUrl);
+                clientLogger.info('error-dialog', `GitHub issue created: ${createData.issueUrl}`);
 
                 // Open issue in system browser via Electron IPC
                 try {
