@@ -1352,6 +1352,21 @@ export function runCommand(payload) {
             return true;
         };
 
+        // MPI-463: every failure exit from here to dispatch MUST move the store job
+        // to a terminal. register() above took a LANE SLOT, and `running` is exactly
+        // what generationService._laneBusy reads — so a job left non-terminal keeps
+        // that lane busy for the rest of the app's life and _dispatchNextCue skips
+        // it forever (the wedge that reads as "QUEUED forever" with an EMPTY engine
+        // queue and nothing in the server log). The post-dispatch catch settles once
+        // at its top for this reason; this is its pre-dispatch twin. Route bails
+        // through it rather than calling exec.onError directly — that is what makes
+        // a NEW bail added here safe by construction. Toasts stay at the call sites:
+        // this only settles and reports.
+        const _failBail = (err) => {
+            generationStore.settle(jobId, PHASES.ERROR, { error: err?.message || String(err) });
+            exec.onError?.(err);
+        };
+
         // MPI-453 generate-time gate, the OPERATION twin of the arch guard below.
         // Per-op weights are opt-in (models.js `operations[].deps`), so a model can
         // be installed for one operation and not another — Wan 2.2 with i2v but no
@@ -1374,7 +1389,7 @@ export function runCommand(payload) {
                 message: `${_opModel.name} supports ${opLabel}, but its weights were never installed. `
                     + 'Open the Model Library and add that operation to this model.',
             });
-            exec.onError?.(new Error('operation_not_installed'));
+            _failBail(new Error('operation_not_installed'));
             return;
         }
 
@@ -1390,7 +1405,7 @@ export function runCommand(payload) {
             const proceed = await _ensureArchWeightOnDisk(_archModel, arch);
             if (!proceed) {
                 await _cleanupTrimmedVideoInputs([]);
-                exec.onError?.(new Error('arch_weight_missing'));
+                _failBail(new Error('arch_weight_missing'));
                 return;
             }
         } catch (err) {
@@ -1420,7 +1435,7 @@ export function runCommand(payload) {
                 }
             }
         } catch (err) {
-            exec.onError?.(err);
+            _failBail(err);
             return;
         }
 
@@ -1432,7 +1447,7 @@ export function runCommand(payload) {
             tempTrimInputPaths = prepared.tempPaths;
         } catch (err) {
             clientLogger.error('commandExecutor', 'Failed to prepare trimmed video input', err);
-            exec.onError?.(err);
+            _failBail(err);
             return;
         }
         if (await _abortedBail(tempTrimInputPaths)) return;
@@ -1450,7 +1465,7 @@ export function runCommand(payload) {
                 message: `"${_baseName(missingModel)}" was not found in your LoRA/upscale folders. `
                     + 'Add it in Settings → External Connections (drag-drop), or pick another in Model Settings.',
             });
-            exec.onError?.(new Error('model_missing'));
+            _failBail(new Error('model_missing'));
             return;
         }
 
@@ -1475,7 +1490,7 @@ export function runCommand(payload) {
                 message: `Could not load the input ${strandedSlot.mediaType} for this operation. `
                     + 'Remove and re-attach it, then try again.',
             });
-            exec.onError?.(new Error('required_media_slot_empty'));
+            _failBail(new Error('required_media_slot_empty'));
             return;
         }
 
@@ -1492,7 +1507,7 @@ export function runCommand(payload) {
                     message: `"${notLocal}" is not installed on your local engine. `
                         + 'Install it locally, or turn off "Run locally" to generate on the cloud.',
                 });
-                exec.onError?.(new Error('model_not_local'));
+                _failBail(new Error('model_not_local'));
                 return;
             }
         }
@@ -1515,7 +1530,7 @@ export function runCommand(payload) {
             workflow = await res.json();
         } catch (err) {
             await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
-            exec.onError?.(err);
+            _failBail(err);
             return;
         }
 
@@ -1572,7 +1587,7 @@ export function runCommand(payload) {
                     clientLogger.info('commandExecutor', `Applied injector "${opDef.injector}"`);
                 } catch (err) {
                     await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
-                    exec.onError?.(err);
+                    _failBail(err);
                     return;
                 }
             }
@@ -1583,7 +1598,7 @@ export function runCommand(payload) {
         } catch (err) {
             clientLogger.error('commandExecutor', 'Failed to prepare workflow input defaults', err);
             await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
-            exec.onError?.(err);
+            _failBail(err);
             return;
         }
 
@@ -1593,7 +1608,7 @@ export function runCommand(payload) {
             clientLogger.error('commandExecutor', 'Failed to stage preview latent', err);
             Events.emit('ui:error', { title: 'Stage-2 setup failed', message: err.message });
             await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
-            exec.onError?.(err);
+            _failBail(err);
             return;
         }
         if (await _abortedBail(tempTrimInputPaths)) return;

@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 463,
+  "next_id": 464,
   "columns": {
     "todo": [
       "MPI-462",
@@ -36,6 +36,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-463",
       "MPI-460",
       "MPI-459",
       "MPI-452",
@@ -65,7 +66,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-06T23:13:12Z",
+  "updated_at": "2026-08-06T23:26:00Z",
   "events": [
     {
       "at": "2026-08-05T15:05:00Z",
@@ -2046,6 +2047,14 @@
       "at": "2026-08-06T13:52:00Z",
       "actor": "opus",
       "summary": "Filed from the Flow-rename session: npm start died immediately while npm run test:desktop was running. Verified at the time that the suite takes its own free port (60525, 61661) and a per-test CUBRIC_E2E_USER_DATA, and that nothing was listening on 3000 - so neither port nor profile collided. main.js sets userData at 258 BEFORE requestSingleInstanceLock at 291, which should already isolate the lock, so the mechanism is NOT understood and the card opens at research. Second suspect with an identical symptom: server.js exits non-zero on EADDRINUSE and main.js makes that fatal. Repro must name which fires (silent quit = lock, app.log fatal = port) before any guard ships."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-463",
+      "type": "task.created",
+      "at": "2026-08-06T23:26:00Z",
+      "actor": "opus",
+      "summary": "Filed and FIXED in the same session, opened straight in doing/validating. Eleven pre-dispatch failure exits in commandExecutor's dispatch body called exec.onError and returned WITHOUT settling the store job that generationStore.register had already created - and register takes a LANE SLOT, so each one wedged that lane permanently: _laneBusy reads the store's running list, _dispatchNextCue skips a busy lane, and nothing ever clears it short of an app restart. Reads as a hung engine (next gen stuck QUEUED forever, engine queue EMPTY, no server log), which is how it surfaced during MPI-452. Fixed structurally with _failBail, which settles to PHASES.ERROR then reports; the post-dispatch catch already settled once at its own top, so this is its pre-dispatch twin. Pinned by tests/lane-settle-on-bail.test.cjs (4 tests, negative control names the exact offending line). Suite 467/467, lint clean. Renderer code - needs Ctrl+Shift+R. Still unproven LIVE: the wedge was seen live, the fix has not been."
     }
   ]
 }
