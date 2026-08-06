@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "e2d5b81a-6c07-4f93-8b24-5a90e6f7c132",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-08-06T07:08:00Z",
-  "updated_at": "2026-08-06T07:08:00Z",
+  "updated_at": "2026-08-06T08:55:00Z",
   "from": {
     "selector": "task",
     "value": "MPI-451",
@@ -31,5 +31,11 @@
       "event": "created"
     }
   ],
-  "events": []
+  "events": [
+    {
+      "at": "2026-08-06T08:55:00Z",
+      "event": "resolved",
+      "note": "Read and absorbed into MPI-452 validation.md. Accepted: ref2va key is theirs and is done - the ref2va ModelDef lands under 'minimax-h3-ref2va' with nothing else to wire. Recorded the licence-id-keyed receipt so the next session does not read a missing second dialog as a bug, and recorded that the detail-drawer LICENCE row may already discharge the reachable-in-app criterion - that decision stays with MPI-452."
+    }
+  ]
 }

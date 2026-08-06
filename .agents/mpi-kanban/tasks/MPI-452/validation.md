@@ -35,7 +35,21 @@ entirely unverified, which is why this card is `validating` and not `complete`.
 - Clicking install shows **MpiLicenceGate** BEFORE any byte downloads, the restrictions
   pane scrolls, and accept is required.
 - To re-show the dialog after accepting: clear `mpi_model_licence_accepted` in
-  localStorage (contract supplied by the MPI-451 session).
+  localStorage.
+- **DO NOT read this as a bug (confirmed by the MPI-451 session, 2026-08-06):**
+  acceptance receipts are filed under the **LICENCE id**
+  (`minimax-h3-cla-2026-08-02`), NOT the model id. So accepting while installing
+  fl2va ALSO satisfies **ref2va** — the second install runs straight through with no
+  dialog. That is deliberate: the licence binds the person, so re-showing the identical
+  25 clauses for the other variant of the same agreement buys no consent. Two models
+  under genuinely different licences still get two dialogs. The receipt carries
+  `acceptedVia` so you can see which install prompted it.
+- The model detail drawer now carries a standing **LICENCE row** (licence name, Read the
+  licence, Request authorization, Report misuse) for any model with a descriptor, so H3
+  gets it the moment the ModelDef lands. **This may already discharge the "licence text
+  ships and is reachable in-app" acceptance criterion** — decide whether that obligation
+  needs the text bundled OFFLINE or whether linking the HF blob satisfies it. It is
+  MPI-452's criterion, so it is MPI-452's call.
 - The download resolves from the **publisher** URLs, not `models.cubric.studio`. Watch
   for a mirror-rewrite attempt — there should be none, because `_mirrorUrlsFor` only
   rewrites URLs under the R2 path prefix.
