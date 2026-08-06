@@ -60,3 +60,39 @@ A workflow that uses MpiNodes needs the pack installed on the engine. That's the
 [../playbooks/add-model/02-dependencies-r2.md](../playbooks/add-model/02-dependencies-r2.md)
 § custom-node dep. (MpiNodes itself is already a pinned dep; a *new* third-party node
 your graph needs follows that flow.)
+
+## Blocking a branch does NOT stop the work feeding it (MPI-449, 2026-08-06)
+
+`ExecutionBlocker` only travels **downstream**. ComfyUI resolves a node's inputs
+before calling its function, so a gate placed *after* a sampler has already paid
+for that sampler. The only mechanism that prevents upstream execution is a **lazy
+input** (`{"lazy": True}` + `check_lazy_status`).
+
+Worse, an **`OUTPUT_NODE` is always executed** — ComfyUI seeds the run from every
+output node and walks backwards. So a `SaveLatent` / `MpiSaveVideo` hanging off
+stage 1 forces stage 1 on every submit no matter what gates exist anywhere.
+
+**This is why `wan22_*_stage2.json` exists**: with no lazy gate available, the only
+way to stop the stage-1 sampler was to delete the node and export a second
+workflow (`wan22_t2v.json` 55 nodes → `wan22_t2v_stage2.json` 54, `Stage1_Bypass`
+gone). LTX copied the pattern, though its twin differs only by a baked
+`Input_Is_Continue` boolean, so LTX's six `_stage2` files are already redundant —
+the app could inject the flag instead of swapping the file
+(`commandExecutor.js` resolves the twin by filename via `payload.isStage2`).
+
+Which nodes can skip their upstream, and which cannot:
+
+| node | lazy? | why |
+|---|---|---|
+| `MpiBlocker` | **yes** (since 2026-08-06) | decides from `boolean` alone |
+| `MpiSaveLatent` | **yes**, via `enabled` | output node; `enabled` off requests no `samples` |
+| `MpiIfElse` | yes (always was) | picks between two upstreams |
+| `MpiIfElseInverted` | **no** | one input, always routed somewhere, so always needed |
+| `MpiAnyBlocker`, `MpiBlockIfEmptyList` | **no** | decide *from* the value |
+
+So on a preview tap, use `MpiBlocker` — **not** `MpiIfElseInverted`, which is what
+WAN/LTX use today and is the forcing edge in both.
+
+Verified live on the bench, not reasoned: run the same graph twice with an input
+that has never run (so nothing starts cached), then read run 2's
+`execution_cached` — a node listed there executed on run 1.

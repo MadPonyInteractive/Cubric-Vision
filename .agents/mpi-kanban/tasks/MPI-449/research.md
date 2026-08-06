@@ -443,3 +443,91 @@ So MPI-452 (H3 model wiring) has **two** blockers, not one:
 - `github.com/Comfy-Org/workflow_templates` `templates/video_minimax_h3_*.json`
 - Bench source: `G:/ComfyUi/ComfyUI/comfy/ops.py`, `comfy/quant_ops.py`,
   `comfy/text_encoders/minimax.py`, `comfy_extras/nodes_minimax_h3.py`
+
+---
+
+## 7. Two-stage sampling on H3 — settled 2026-08-06
+
+**Split the sigma schedule, don't split the model.** `SplitSigmas(step=5)` feeds
+stage 1 the high sigmas and stage 2 the low ones; stage 2 runs `DisableNoise`.
+Three-way A/B at 352x352, same seed: original single-stage == our split run in one
+pass == save/load across two runs. **Bit-for-bit equal.** That proves `res_multistep`
+resumes exactly, and that the latent survives the disk round-trip (bf16 -> safetensors
+-> `.float()` -> sampler loses nothing).
+
+Save `SamplerCustomAdvanced.output` (noisy, at sigma[N]) and preview
+`denoised_output` (the x0 estimate). Saving the denoised estimate and resuming from
+it looks plausible and is silently wrong.
+
+**5 steps is enough for a preview at 352x352** — 5, 6, 7 and 8 were indistinguishable.
+**But see the trained-range warning below before trusting that number.**
+
+### Timings, 352x352 (warm, one Ollama-free run)
+
+| | s |
+|---|---|
+| single-stage, 20 steps + decode | 34.64 |
+| stage 1, 5 steps + preview decode | 12.00 |
+| stage 2, 15 steps + decode | 24.00 |
+| two-stage total | 36.00 (**+1.4 s, +4%**) |
+
+Derived: ~1.2 s/step, ~6 s decode + per-run overhead. Unexplained: single-stage is
+~4.6 s slower than the two halves predict. Not chased. **Retake all of these at 124
+frames** — the numbers above were taken on a pre-fix graph.
+
+### The blocker trap (generic, not H3)
+
+Gating after a sampler does not stop the sampler, and an `OUTPUT_NODE` forces its
+upstream unconditionally. Full write-up + the WAN/LTX consequence:
+`docs/workflow-authoring/mpi-nodes.md` § "Blocking a branch does NOT stop the work
+feeding it". Fixed in MpiNodes `42b1540` (lazy `MpiBlocker`) and `fd9bdca`
+(`MpiSaveLatent.enabled`). **Bump `dev_configs/node_lock.json` `69a4333` -> `fd9bdca`
+to ship it.**
+
+### New MpiNodes built for this (all pushed, all verified live)
+
+- `MpiSaveLatent` / `MpiLoadLatent` — core `SaveLatent` crashes on an H3 latent
+  (`NestedTensor` has no `.contiguous()`); `unbind()` splits the video+audio pair into
+  `latent_tensor_0/1` and load rebuilds it. `comfy.nested_tensor` is imported INSIDE
+  the function — it only exists from 0.30.0 and the app engine is 0.29.2, so a
+  module-level import would stop the whole pack loading in Vision.
+- `MpiBooleanInvert` — wire-only NOT gate.
+- `MpiH3Length` — see below.
+
+## 8. Duration: H3 cannot do whole seconds
+
+`align_frame_count`: `while n % 17 != 5: n += 1`, at 24 fps. Valid lengths are
+5, 22, 39, 56, 73, 90, 107, 124... An exact integer second needs `n` divisible by 24
+AND `n % 17 == 5`; the smallest is **n = 192 = exactly 8 s**, next 25 s. So 1, 2 and 3
+second clips are **impossible**.
+
+Measured on a real output (`MiniMax_H3_00001_.mp4`, requested "2 seconds"):
+`Duration 00:00:02.33, 24 fps, aac 32000 Hz stereo` = 56 frames. Confirmed.
+
+`MpiH3Length` (seconds -> frames / true seconds / `in_trained_range`) replaces the
+Math Expression and snaps to the **nearest** valid count; core snaps up, which is
+never closer (4 s: core 107 = 4.46 s, nearest 90 = 3.75 s).
+
+**App-side check done by reading, not run:** `MpiVideoControlBar` derives
+`effFps = frameCount / duration` and works in frame indices, so a 2.33 s clip needs no
+UI change. `MpiSaveVideo` encodes at the float fps given and pins length to the video.
+One consequence: H3's audio latent runs at 40 vs video 24, so lengths never match to
+the sample and `MpiSaveVideo`'s pad/trim engages on every H3 clip — `truncate_to_audio`
+is not a no-op here. Worth one real gallery playthrough in MPI-452.
+
+**H3 does NOT repeat frames.** Hashed all 56 decoded frames of a real output: 56
+unique, no adjacent duplicates, no repeats at all. WAN and LTX duplicate the first
+frame and need the remove-frame node; H3 does not.
+
+## 9. WARNING — every measurement so far is below the trained range
+
+`nodes_minimax_h3.py:90` — `length` default **124**, tooltip "trained range is
+~**124-362**" (5.17-15.08 s). Everything measured on this card ran at **56 frames**,
+under half the shortest trained length. That puts a question mark over:
+
+- the 5-step preview floor (§ 7)
+- the pruned vs unpruned A/B (§ 6a)
+- the timing table (§ 6 and § 7) — 124 frames is ~2.2x the latent volume
+
+**Re-run the step floor and the timings at 124 frames before any of it becomes a tier
+default in MPI-452.**

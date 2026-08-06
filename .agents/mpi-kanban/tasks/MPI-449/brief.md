@@ -66,6 +66,33 @@ that agent to finish.
 Next when unblocked: seed-only re-run at 640x640 for a clean warm number, then 864x480 /
 5 s / 20 steps for a like-for-like against the 194 s third-party reference.
 
+### Latent staging nodes — built 2026-08-05, in the MpiNodes repo
+
+Two generic nodes shipped to `c:/AI/Mpi/ComfyUi-MpiNodes/latent.py` so an H3 sample can be
+split into two runs (sample now, decode later) without re-sampling:
+
+- **Mpi Save Latent** — writes `<output>/latents/<name>.latent`, then blocks or continues
+  the branch via the same continue/block boolean as `MpiBlocker`. Its BOOLEAN output is not
+  blocked, so it can still drive a second branch.
+- **Mpi Load Latent** — reads it back and continues. Missing file blocks and reports
+  `loaded` false.
+
+Why they had to exist: core `SaveLatent` calls `samples["samples"].contiguous()` and an H3
+latent is a `comfy.nested_tensor.NestedTensor` pair with no `.contiguous()`. The pair is
+split with `unbind()` into `latent_tensor_0` / `latent_tensor_1` and rebuilt on load.
+`comfy.nested_tensor` is imported **inside the function**, never at module scope — it only
+exists from 0.30.0 and the app engine is still 0.29.2, so a top-level import would stop the
+whole pack loading in Cubric Vision. Single-tensor files keep core's exact keys, so core
+`LoadLatent` still reads them.
+
+Verified by a round-trip harness under the bench python (no server, no GPU): H3-shaped pair,
+plain tensor, core `LoadLatent` reading our file, the missing-file blocker and the path
+helper all pass. **Live registration on the bench still needs a ComfyUI restart.**
+
+What this does NOT buy: finish-later across sessions. Stage 2 also needs the CONDITIONING
+(Qwen3-VL hidden states plus `minimax_keyframes` / `minimax_frame_count`), which safetensors
+cannot hold — the second run must re-encode the prompt.
+
 ---
 
 ## Original brief (storage section below is superseded)
