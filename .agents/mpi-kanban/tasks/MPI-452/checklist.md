@@ -216,6 +216,46 @@ cache so only REPEAT previews failed. The user killed it by changing the prompt
 the first preview after a fresh restart fails too. The move/fixed-name observation is real
 and still worth watching, but it is NOT what caused this.
 
+#### 6c. Finish 404'd on a twin that must not exist — FIXED, plus a writer that was never there
+
+**Symptom:** after 6a, Finish 404s on `comfy_workflows/minimax_h3_fl2va_stage2.json`.
+
+**Root cause 1 — `resolveWorkflowFile`, `js/data/modelConstants/resolveModelDeps.js`:** it
+appended `_stage2` to EVERY multi-stage model. H3 ships one graph for both passes.
+
+**Fixed:** `capabilities.singleFileStages: true` on the H3 ModelDef opts out of the suffix.
+A **declaration, not a disk probe** — the resolver stays pure-string and node-testable, and
+every other model's filename is byte-identical (proved: the flag must be exactly `true`).
+
+**Root cause 2 — found by the sweep, NOT in the handoff: nothing in the app ever wrote
+`Input_Is_Continue`.** Grepped the whole tree: zero writers, node 203 baked `false`. So the
+resolver fix ALONE would have handed stage 2 the base graph with the gate still off — it
+re-runs stage 1 and returns a different sample, i.e. the 6a bug again with no 404 to
+announce it. `_buildParams` now emits `Is_Continue` beside `Preview_Only` for every
+multi-stage op; the `Input_` canonicalization pass at `commandExecutor.js:850` renames it,
+and a twin-file model has no such node so injection silently skips it (LTX/WAN unaffected).
+
+Gate traced in the shipped graph: `211 MpiBooleanInvert (Not_Is_Continue) ← 203`, feeding
+`MpiSaveLatent.enabled` — so `Is_Continue=true` is exactly what makes stage 2 skip the
+latent save and run one bar.
+
+**Rest of the sweep, clean:** `_stageMode` (`commandExecutor.js:1502`) derives from
+`payload.isStage2`, not the filename, and `progressStages` strips `_stage2` before lookup —
+`minimax_h3_fl2va.json` already declares `stage2: 1`. `comfyController.js:1219`'s defensive
+`Preview_Only` strip does not fire, because H3's base file HAS node 166. Latent staging
+(`_stageOneLatent`) keys off payload fields, not node class.
+
+**Pinned:** `tests/resolve-model-deps.test.cjs` → `testSingleFileStages`, which unit-tests
+the opt-out and then **sweeps the real registry against the real `comfy_workflows/`**,
+asserting every multi-stage model's stage-2 filename resolves to a file that EXISTS. That
+fails in both directions — a twin model missing its file, and a one-file model that forgot
+the flag — which is the check MPI-456 will trip when it converts LTX's six twins and WAN's
+two. Suite **462/462**, lint clean. Negative control: with the flag deleted in memory the
+resolver names `minimax_h3_fl2va_stage2.json`, `existsSync` false.
+
+**Renderer + data code — Ctrl+R, no restart. NOT yet re-tested in the app.** Delete the
+existing COLD previews first (see 6a).
+
 #### 6b. t2v previews at 5 steps are unusable (product, not a bug)
 
 User: t2v previews are unrecognisable; i2v previews are fine. Both are true and the reason is
