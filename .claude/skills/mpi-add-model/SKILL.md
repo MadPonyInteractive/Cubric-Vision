@@ -50,8 +50,7 @@ first (research steps 1–5 often span several sessions; use a handoff to resume
    sampler/scheduler/steps; note "known: <values>" and move on.
 6. **Dep-reuse pass.** Grep `js/data/modelConstants/assetDeps.js` + `dependencies.js` for
    every weight — VAEs and text encoders are often already hosted (`vae-*` shared ids).
-   Classify each slot: REUSE existing dep vs NEW upload. Flag any single file **≥20GB**
-   (hot-store gate) now, not at upload time.
+   Classify each slot: REUSE existing dep vs NEW upload.
 7. **Scaffold the card.** Create an MPI card (`doing` / `in-progress`) — read
    `<mpi-lib>/templates/task.json` for schema, `<mpi-lib>/task-board-ops/mutate.md` for the
    board+event mutation contract. Note what the model blocks (e.g. a dependent app card).
@@ -125,7 +124,7 @@ an order, and do not pre-read sections you haven't reached.
 | VRAM/RAM table is **computed**, never authored. Get the dep `size` strings right and it is correct. `sizeTier` is only a badge | 03 |
 | Loader path == dep `filename` == on-disk path. Subfoldered LoRAs list with **backslashes** | 01 |
 | R2: `--s3-no-check-bucket` (else 403) + `--bwlimit 3M`. Verify with `lsf` + HTTP HEAD — a wrapping `echo` masks rclone's exit code | 02 |
-| Any single weight file **≥ 20 GB** ⇒ 🛑 **STOP and ask the user** (Pod hot-store + container-disk budget) | 02 |
+| Pod hot-store has **no size gate** — everything ≥0.1 GB stages; the only per-file skip is a file bigger than pod VRAM. Nothing to ask the user | 02 |
 | `progressStages.js` bar counts **must be counted live** per run mode. Never guess | 02 |
 | Injection **silently skips** a param whose `Input_*` title matches no node (hid `Input_Is_i2i` + `Input_Batch` for 4 sessions) | 04 |
 | Style-LoRA set ⇒ assert `len(MpiPromptList.options) == number of style LoRAs`. A missing trigger line is a silent half-application | 05 |

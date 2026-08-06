@@ -44,6 +44,11 @@ load-bearing, plus the 2-reference face wall and its ruled-out list.
 | [tiers.md](wan/tiers.md) | Wan 2.2 resolution tiers (14B + 5B), /16 grid, no native 2K/4K. Drives `WAN_RATIOS` + `WAN_5B_RATIOS`. |
 | [two-stage-sigmas.md](wan/two-stage-sigmas.md) | **Wan 2.2 two-stage manual-sigma schedule (MPI-126, live-proven).** Lever map + walls. Read before re-tuning Wan sigmas. |
 
+### [h3/](h3/) — MiniMax H3 video **+ native audio** (the first territory-restricted licence we ship)
+| File | Holds |
+|---|---|
+| [README.md](h3/README.md) | Hub: what ships (fl2va; ref2va is a second card), the LICENCE constraints that are baked into the wiring and must not be tidied away, the 4 publisher-hosted weights, the no-`_stage2`-twin two-stage design with measured bar counts, media-derived routing, the 17k+5 frame grid, and why `capabilities.audio` is OFF on a model that outputs audio. |
+
 ### [pid/](pid/) — NVIDIA PiD (PixelDiT) 4× upscaler
 | File | Holds |
 |---|---|

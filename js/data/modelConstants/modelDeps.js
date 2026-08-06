@@ -390,4 +390,36 @@ export const modelDeps = {
         size: '24.1GB',
         sha256: 'b7a945ff24d65ad22c6977787c2e594e74df226e35f1f9dedb64be8fdbd6ffd8',
     },
+    // ── MiniMax H3 transformers (MPI-452) ──────────────────────────────────────
+    // NOT ON R2, AND THAT IS DELIBERATE — do not "fix" it by re-hosting. The
+    // MiniMax H3 Community License Agreement (2026-08-02) grants rights only in the
+    // "Applicable Territory" (worldwide EXCLUDING the EU, UK, USA and South Korea) and
+    // its trigger covers "reproducing, modifying, distributing". Pointing the dep at
+    // Comfy-Org's own repo kills the redistribution claim outright — it is the clearest
+    // and most enforceable clause, and the one thing we can remove for free. The user
+    // half is MPI-451's licence gate (js/data/modelConstants/licences.js, keyed
+    // 'minimax-h3'), which binds each user before the download starts.
+    // `_mirrorUrlsFor` only rewrites URLs under the R2 path prefix, so a huggingface.co
+    // url yields no mirrors on its own — no `noMirror` flag needed here.
+    // Full licence reasoning: .agents/mpi-kanban/tasks/MPI-449/research.md § 0.
+    'minimax-h3-fl2va-transformer': {
+        id: 'minimax-h3-fl2va-transformer',
+        name: 'MiniMax H3 fl2va Transformer (pruned, int8_convrot)',
+        origin: 'Comfy-Org/MiniMax-H3 (pruned + int8_convrot quant by Comfy Org)',
+        filename: 'diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors',
+        url: 'https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors',
+        // PRUNED, not the 34.04GB unpruned sibling. Of the three arguments for unpruned
+        // only download size survived measurement: speed died (the sign flips between
+        // canvases, both deltas inside run-to-run noise) and resident memory died
+        // (ComfyUI streams per layer). The one real difference is TEMPORAL — unpruned is
+        // slightly more expressive — and it was only ever seen at 56 frames, so it is not
+        // proven to persist on long clips. MPI-449 § 6a.
+        size: '20.97GB',
+        sha256: 'e889202c41dafb67b10d67b97f0d8541508036a6090af23425a5c2615d03c47a',
+        credit: {
+            author: 'MiniMax',
+            work: 'MiniMax-H3',
+            url: 'https://huggingface.co/MiniMaxAI/MiniMax-H3',
+        },
+    },
 };

@@ -38,6 +38,15 @@ export const PROGRESS_STAGES = Object.freeze({
     // WAN 2.2 5B — single-stage, ONE sampler pass = 1 bar (verified). Shows "1/1".
     'wan5b_t2v.json': Object.freeze({ single: 1 }),
     'wan5b_i2v.json': Object.freeze({ single: 1 }),
+    // MiniMax H3 — COUNTED live on 0.30.0, 864x480 / 56 frames, all three modes run
+    // (MPI-452, 2026-08-06): single 145s = 2 bars (5-step then 15-step), preview 54s =
+    // 1 bar (5), stage2 98s = 1 bar (15). ONE file serves both ops and both stages —
+    // there is no _stage2 twin, because the lazy MpiSaveLatent `enabled` gate genuinely
+    // skips the stage-1 sampler on a continue rather than running and discarding it
+    // (proved here: the stage2 run emitted NO latent and only the 15-step bar).
+    // Beware when re-counting: tqdm prints each finished bar TWICE, so a raw grep of
+    // "100%" lines reads 4 for the single run. Count distinct bars, not lines.
+    'minimax_h3_fl2va.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
     // Text-to-image (SDXL family) — single-stage, verified 2 bars (load + sampler).
     // Upscalers/detailers NOT yet counted (UltimateSDUpscale has its own passes).
     't2i_ill_anime.json':        Object.freeze({ single: 2 }),

@@ -1,0 +1,1042 @@
+{
+  "121": {
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_fp16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "122": {
+    "inputs": {
+      "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "129": {
+    "inputs": {
+      "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "130": {
+    "inputs": {
+      "clip_name": "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "133": {
+    "inputs": {
+      "clip": [
+        "252",
+        1
+      ],
+      "vae": [
+        "121",
+        0
+      ],
+      "prompt": [
+        "232",
+        0
+      ],
+      "width": [
+        "167",
+        0
+      ],
+      "height": [
+        "168",
+        0
+      ],
+      "length": [
+        "213",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ImageToVideo",
+    "_meta": {
+      "title": "MiniMax H3 Image to Video"
+    }
+  },
+  "140": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 20,
+      "denoise": 1,
+      "model": [
+        "252",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "141": {
+    "inputs": {
+      "step": 5,
+      "sigmas": [
+        "140",
+        0
+      ]
+    },
+    "class_type": "SplitSigmas",
+    "_meta": {
+      "title": "SplitSigmas"
+    }
+  },
+  "150": {
+    "inputs": {
+      "model": [
+        "252",
+        0
+      ],
+      "conditioning": [
+        "264",
+        0
+      ]
+    },
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "Basic Guider"
+    }
+  },
+  "151": {
+    "inputs": {
+      "noise_seed": [
+        "195",
+        0
+      ]
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "152": {
+    "inputs": {
+      "sampler_name": "res_multistep"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "153": {
+    "inputs": {
+      "noise": [
+        "151",
+        0
+      ],
+      "guider": [
+        "150",
+        0
+      ],
+      "sampler": [
+        "152",
+        0
+      ],
+      "sigmas": [
+        "141",
+        0
+      ],
+      "latent_image": [
+        "264",
+        1
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "Stage1_Bypass"
+    }
+  },
+  "156": {
+    "inputs": {
+      "noise": [
+        "159",
+        0
+      ],
+      "guider": [
+        "150",
+        0
+      ],
+      "sampler": [
+        "152",
+        0
+      ],
+      "sigmas": [
+        "141",
+        1
+      ],
+      "latent_image": [
+        "164",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "158": {
+    "inputs": {
+      "samples": [
+        "156",
+        0
+      ],
+      "vae": [
+        "121",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "159": {
+    "inputs": {},
+    "class_type": "DisableNoise",
+    "_meta": {
+      "title": "DisableNoise"
+    }
+  },
+  "160": {
+    "inputs": {
+      "samples": [
+        "156",
+        0
+      ],
+      "vae": [
+        "122",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
+  "164": {
+    "inputs": {
+      "true": [
+        "173",
+        0
+      ],
+      "false": [
+        "171",
+        0
+      ],
+      "boolean": [
+        "203",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "166": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Preview_Only"
+    }
+  },
+  "167": {
+    "inputs": {
+      "int": 864
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Width"
+    }
+  },
+  "168": {
+    "inputs": {
+      "int": 480
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Height"
+    }
+  },
+  "171": {
+    "inputs": {
+      "filename": "mpi_stage1_2",
+      "samples": [
+        "153",
+        0
+      ],
+      "boolean": [
+        "202",
+        0
+      ],
+      "enabled": [
+        "211",
+        0
+      ]
+    },
+    "class_type": "MpiSaveLatent",
+    "_meta": {
+      "title": "Output_Video_Latent"
+    }
+  },
+  "173": {
+    "inputs": {
+      "filename": "mpi_stage1_2"
+    },
+    "class_type": "MpiLoadLatent",
+    "_meta": {
+      "title": "Input_Video_Latent"
+    }
+  },
+  "177": {
+    "inputs": {
+      "samples": [
+        "200",
+        0
+      ],
+      "vae": [
+        "121",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "178": {
+    "inputs": {
+      "samples": [
+        "200",
+        0
+      ],
+      "vae": [
+        "122",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
+  "195": {
+    "inputs": {
+      "int": 4
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_seed"
+    }
+  },
+  "200": {
+    "inputs": {
+      "input": [
+        "153",
+        1
+      ],
+      "boolean": [
+        "204",
+        0
+      ]
+    },
+    "class_type": "MpiBlocker",
+    "_meta": {
+      "title": "Mpi Blocker"
+    }
+  },
+  "202": {
+    "inputs": {
+      "boolean": [
+        "166",
+        0
+      ]
+    },
+    "class_type": "MpiBooleanInvert",
+    "_meta": {
+      "title": "Mpi Boolean Invert"
+    }
+  },
+  "203": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Is_Continue"
+    }
+  },
+  "204": {
+    "inputs": {
+      "mode": "a_false_b_true",
+      "a": [
+        "203",
+        0
+      ],
+      "b": [
+        "166",
+        0
+      ]
+    },
+    "class_type": "MpiBooleanCompare",
+    "_meta": {
+      "title": "Mpi Boolean Compare"
+    }
+  },
+  "207": {
+    "inputs": {
+      "fps": 24,
+      "filename_prefix": "MpiVideo",
+      "use_audio": true,
+      "truncate_to_audio": false,
+      "images": [
+        "289",
+        0
+      ],
+      "audio": [
+        "178",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Preview"
+    }
+  },
+  "208": {
+    "inputs": {
+      "fps": 24,
+      "filename_prefix": "MpiVideo",
+      "use_audio": true,
+      "truncate_to_audio": false,
+      "images": [
+        "290",
+        0
+      ],
+      "audio": [
+        "160",
+        0
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Video"
+    }
+  },
+  "211": {
+    "inputs": {
+      "boolean": [
+        "203",
+        0
+      ]
+    },
+    "class_type": "MpiBooleanInvert",
+    "_meta": {
+      "title": "Not_Is_Continue"
+    }
+  },
+  "212": {
+    "inputs": {
+      "int": 2
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Duration"
+    }
+  },
+  "213": {
+    "inputs": {
+      "seconds": [
+        "214",
+        2
+      ]
+    },
+    "class_type": "MpiH3Length",
+    "_meta": {
+      "title": "Mpi H3 Length"
+    }
+  },
+  "214": {
+    "inputs": {
+      "round": true,
+      "input": [
+        "212",
+        0
+      ]
+    },
+    "class_type": "MpiConvert",
+    "_meta": {
+      "title": "Mpi Convert"
+    }
+  },
+  "217": {
+    "inputs": {
+      "channel": "alpha",
+      "block_if_empty": true,
+      "string": [
+        "254",
+        0
+      ]
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "start"
+    }
+  },
+  "218": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 32,
+      "device": "cpu",
+      "image": [
+        "217",
+        0
+      ],
+      "width": [
+        "167",
+        0
+      ],
+      "height": [
+        "168",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "219": {
+    "inputs": {
+      "channel": "alpha",
+      "block_if_empty": false,
+      "string": [
+        "258",
+        0
+      ]
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "end"
+    }
+  },
+  "220": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 32,
+      "device": "cpu",
+      "image": [
+        "219",
+        0
+      ],
+      "width": [
+        "167",
+        0
+      ],
+      "height": [
+        "168",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "232": {
+    "inputs": {
+      "string": "She arrives from the right of the frame and leans on the wall "
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "246": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "129",
+        0
+      ],
+      "clip": [
+        "130",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_1"
+    }
+  },
+  "248": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "246",
+        0
+      ],
+      "clip": [
+        "246",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_2"
+    }
+  },
+  "249": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "248",
+        0
+      ],
+      "clip": [
+        "248",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_3"
+    }
+  },
+  "250": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "249",
+        0
+      ],
+      "clip": [
+        "249",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_4"
+    }
+  },
+  "251": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "250",
+        0
+      ],
+      "clip": [
+        "250",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_5"
+    }
+  },
+  "252": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "251",
+        0
+      ],
+      "clip": [
+        "251",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_6"
+    }
+  },
+  "253": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Start_Frame"
+    }
+  },
+  "254": {
+    "inputs": {
+      "any": [
+        "253",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "257": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_End_Frame"
+    }
+  },
+  "258": {
+    "inputs": {
+      "any": [
+        "257",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "263": {
+    "inputs": {
+      "any_1": [
+        "133",
+        0
+      ],
+      "any_2": [
+        "133",
+        1
+      ]
+    },
+    "class_type": "MpiPacker",
+    "_meta": {
+      "title": "Mpi Packer"
+    }
+  },
+  "264": {
+    "inputs": {
+      "pack": [
+        "292",
+        0
+      ]
+    },
+    "class_type": "MpiUnpacker",
+    "_meta": {
+      "title": "Mpi Unpacker"
+    }
+  },
+  "275": {
+    "inputs": {
+      "clip": [
+        "252",
+        1
+      ],
+      "vae": [
+        "121",
+        0
+      ],
+      "first_frame": [
+        "218",
+        0
+      ],
+      "prompt": [
+        "232",
+        0
+      ],
+      "width": [
+        "167",
+        0
+      ],
+      "height": [
+        "168",
+        0
+      ],
+      "length": [
+        "213",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ImageToVideo",
+    "_meta": {
+      "title": "MiniMax H3 Image to Video"
+    }
+  },
+  "276": {
+    "inputs": {
+      "any_1": [
+        "275",
+        0
+      ],
+      "any_2": [
+        "275",
+        1
+      ]
+    },
+    "class_type": "MpiPacker",
+    "_meta": {
+      "title": "Mpi Packer"
+    }
+  },
+  "285": {
+    "inputs": {
+      "clip": [
+        "252",
+        1
+      ],
+      "vae": [
+        "121",
+        0
+      ],
+      "first_frame": [
+        "218",
+        0
+      ],
+      "last_frame": [
+        "220",
+        0
+      ],
+      "prompt": [
+        "232",
+        0
+      ],
+      "width": [
+        "167",
+        0
+      ],
+      "height": [
+        "168",
+        0
+      ],
+      "length": [
+        "213",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ImageToVideo",
+    "_meta": {
+      "title": "MiniMax H3 Image to Video"
+    }
+  },
+  "286": {
+    "inputs": {
+      "any_1": [
+        "285",
+        0
+      ],
+      "any_2": [
+        "285",
+        1
+      ]
+    },
+    "class_type": "MpiPacker",
+    "_meta": {
+      "title": "Mpi Packer"
+    }
+  },
+  "289": {
+    "inputs": {
+      "passthrough": [
+        "177",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "290": {
+    "inputs": {
+      "passthrough": [
+        "158",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "291": {
+    "inputs": {
+      "mode": "both_false",
+      "a": [
+        "254",
+        1
+      ],
+      "b": [
+        "258",
+        1
+      ]
+    },
+    "class_type": "MpiBooleanCompare",
+    "_meta": {
+      "title": "Mpi Boolean Compare"
+    }
+  },
+  "292": {
+    "inputs": {
+      "true": [
+        "263",
+        0
+      ],
+      "false": [
+        "305",
+        0
+      ],
+      "boolean": [
+        "291",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "is t2v"
+    }
+  },
+  "293": {
+    "inputs": {
+      "true": [
+        "276",
+        0
+      ],
+      "false": [
+        "286",
+        0
+      ],
+      "boolean": [
+        "294",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "is i2v"
+    }
+  },
+  "294": {
+    "inputs": {
+      "mode": "a_true_b_false",
+      "a": [
+        "254",
+        1
+      ],
+      "b": [
+        "258",
+        1
+      ]
+    },
+    "class_type": "MpiBooleanCompare",
+    "_meta": {
+      "title": "Mpi Boolean Compare"
+    }
+  },
+  "303": {
+    "inputs": {
+      "any_1": [
+        "304",
+        0
+      ],
+      "any_2": [
+        "304",
+        1
+      ]
+    },
+    "class_type": "MpiPacker",
+    "_meta": {
+      "title": "Mpi Packer"
+    }
+  },
+  "304": {
+    "inputs": {
+      "clip": [
+        "252",
+        1
+      ],
+      "vae": [
+        "121",
+        0
+      ],
+      "last_frame": [
+        "220",
+        0
+      ],
+      "prompt": [
+        "232",
+        0
+      ],
+      "width": [
+        "167",
+        0
+      ],
+      "height": [
+        "168",
+        0
+      ],
+      "length": [
+        "213",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3ImageToVideo",
+    "_meta": {
+      "title": "MiniMax H3 Image to Video"
+    }
+  },
+  "305": {
+    "inputs": {
+      "true": [
+        "293",
+        0
+      ],
+      "false": [
+        "303",
+        0
+      ],
+      "boolean": [
+        "254",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "has img1"
+    }
+  }
+}

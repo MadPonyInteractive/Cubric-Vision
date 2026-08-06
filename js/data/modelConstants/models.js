@@ -1221,6 +1221,68 @@ export const MODELS = [
         },
     },
     {
+        id: 'minimax-h3',
+        // THE ID IS LOAD-BEARING BEYOND THIS FILE. MPI-451's licence gate looks up
+        // MODEL_LICENCES by model id in js/data/modelConstants/licences.js, and its H3
+        // descriptor is keyed 'minimax-h3'. Rename this and the lookup MISSES — no error,
+        // no warning, H3 just installs with no consent step, which is precisely what the
+        // flow-down commitment in our authorization forbids. Confirmed with the MPI-451
+        // session 2026-08-06 before this def was written.
+        sizeTier: 'high',
+        modelFamily: 'MiniMax-H3',
+        name: 'MiniMax H3',
+        dropdownMeta: 'VIDEO',
+        mediaType: 'video',
+        // multiStage: the ONE graph carries both sampler passes and picks between them
+        // with Input_Preview_Only / Input_Is_Continue, so there is no _stage2 twin file.
+        // NO branchingContinue → Finish-only, same call as LTX: stage 2 resumes from the
+        // stage-1 latent, so a re-prompted branch would not honour the new prompt.
+        // audio is deliberately ABSENT even though H3 outputs sound. capabilities.audio
+        // surfaces an audio INPUT slot plus the audioMode/useAudio controls
+        // (MpiPromptBox.js), and fl2va accepts no audio — it only EMITS it, muxed into
+        // the mp4 by MpiSaveVideo(use_audio: true). The reference model that does take
+        // audio in is ref2va (minimax-h3-ref2va), and that one wants audio: true.
+        capabilities: { multiStage: true },
+        video: 'minimax_h3_preview.mp4',
+        // type drives the ratio ladder. 'h3' is NOT arbitrary: RATIO_MODES.h3,
+        // BUILTIN_RATIOS.h3 and BUILTIN_QUALITY_TIERS.h3 were all authored against this
+        // string in js/utils/ratios.js (MPI-449) and tests/ratio-modes-exhaustive.test.cjs
+        // guards the set. Native is `high` (768x1344); `very_high` (1088x1920) is above
+        // the trained canvas — a final-render tier, not an iterate tier, because 2x the
+        // pixels costs 3.3x the time.
+        type: 'h3',
+        // Six flat user slots on MpiLoraModelClip, which exposes model AND clip strength.
+        // The clip half matters here more than usual: H3's "clip" is the Qwen3-VL tower
+        // and it ingests the KEYFRAME as well as the prompt. NOTE for anyone adding a
+        // LoRA dep — model_lora_keys_unet has no H3 branch, so a Diffusers-format H3 LoRA
+        // loads with NO ERROR and does nothing; only plain diffusion_model.* /
+        // lora_unet_* keys map. (MPI-449 § 4a)
+        loraStrengths: ['model', 'clip'],
+        // _ms ops because the model IS multi-stage. One workflow file serves both: the
+        // op does not select a branch here — routing derives from which media is present
+        // (has_img1/has_img2), so t2v and i2v are the same graph with an empty vs filled
+        // Input_Start_Frame.
+        supportedOps: ['t2v_ms', 'i2v_ms'],
+        gen_speed: 'slow',
+        description: 'Generates video with synchronized stereo audio in a single pass — no separate audio step. Strong at natural motion and camera movement.',
+        workflows: {
+            t2v_ms: 'minimax_h3_fl2va.json',
+            i2v_ms: 'minimax_h3_fl2va.json',
+        },
+        // FLAT dependencies (not commonDeps/operations): ONE transformer serves both ops,
+        // so there is no separable install unit and no per-op toggle in the manager.
+        // NOTHING HERE IS ON R2 and that is deliberate — see minimax-h3-fl2va-transformer
+        // in modelDeps.js for the licence reasoning. The encoder and both VAEs are shared
+        // with the future minimax-h3-ref2va card.
+        dependencies: [
+            'minimax-h3-fl2va-transformer',
+            'h3-qwen3vl-32b-clip',
+            'vae-minimax-h3-video',
+            'vae-minimax-h3-audio',
+            'ComfyUI-MpiNodes',
+        ],
+    },
+    {
         id: 'wan22-5b',
         sizeTier: 'low',
         modelFamily: 'Wan-2.2',

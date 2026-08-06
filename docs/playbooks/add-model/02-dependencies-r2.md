@@ -1,8 +1,8 @@
 # 02 — Dependencies, R2 upload, progress-bar stages
 
 > Part of the [add-model playbook](README.md). Dep entry shape, baked LoRAs, the
-> ≥20 GB hot-store gate, the R2 upload procedure (with the traps that bite), and
-> the `progressStages.js` bar count.
+> Pod hot-store (everything stages now — no size gate), the R2 upload procedure
+> (with the traps that bite), and the `progressStages.js` bar count.
 
 ## Dependencies — entry shape + R2 upload
 
@@ -107,23 +107,33 @@ baked-node bump also needs `POD_IMAGE_VERSION` bumped + an app restart; the app 
 inside the node folder, boot-installs + self-heals like any `engineAsset`, and is
 image-resident on remote. See `.claude/rules/comfy_engine.md` § 2.5c.
 
-> **🛑 PING THE USER — any single weight file ≥ 20 GB (Pod hot-store + disk budget, MPI-194).**
+> **Pod hot-store — NO SIZE GATE ANY MORE. There is nothing to ping the user about.**
 > RunPod **volume** pods keep weights on a 750 MB/s network volume; re-reading a huge file
-> every gen-stage was the LTX slowdown. The fix (MPI-194) STAGES any single file **≥ 20 GB**
-> from the volume onto the pod's container disk on first use (sticky, LRU-evicted). The
-> container disk is **50 GB** and today fits exactly ONE ≥20GB model (LTX's 41GB transformer).
-> So when you add a model whose dep list has a file **≥ 20 GB**, STOP and tell the user BEFORE
-> shipping — two things need a call:
-> 1. **Disk budget.** If the new ≥20GB hot-set does NOT fit in the free container-disk space
->    (e.g. a 60–70GB weight, or a 2nd big model that must coexist with LTX), `CONTAINER_DISK_GB`
->    in `routes/remotePodLifecycle.js` (create payload) must be bumped. ~$0.004/hr per +30GB.
-> 2. **Confirm it's genuinely ≥20GB per FILE**, not per set. Reference (2026-07-05): LTX
->    transformer 41GB → hot-stored; LTX Gemma TE 9.45GB, every Wan file ≤13.55GB → NOT (under 20,
->    stay on the volume). Threshold constant = `HOT_STORE_MIN_GB = 20` (binary GB via
->    `sizeToGb`) in `js/services/commandExecutor.js`.
+> every gen-stage was the LTX slowdown, and MPI-194 first fixed it by staging only files
+> ≥ 20 GB onto the pod's container disk. **That threshold is gone.** Everything now goes to
+> the hot store on the fast disc: `HOT_STORE_MIN_GB = 0.1` in
+> `js/services/commandExecutor.js`, with the Pod wrapper's floor dropped to match
+> (`CUBRIC_HOT_STORE_MIN_BYTES: '100000000'`, `routes/remotePodLifecycle.js`). 0.1 GB stages
+> transformer + clip + vae + the active LoRAs and skips only ~0-byte stubs. The driver was
+> the "2 min per switch" saga: weights left on the volume random-read at a 10× fault
+> (Krea2 switch measured 80 s from volume vs 9 s from disk, 2026-07-23).
 >
-> Files **under 20 GB need no action** — they stay on the volume, no disk/cost impact. This gate
-> is ONLY about the ≥20GB ones.
+> The only remaining per-file filter is **VRAM, not disk** (MPI-329): a single file LARGER
+> than the pod's VRAM is skipped, because it cannot stay resident (aimdo streams it
+> per-stage regardless of source, so staging buys nothing) and a copy that big would hog
+> the wrapper's one hot-store lock and stall an interactive gen's preflight for minutes.
+> So on a 24 GB card the LTX 42 GB transformer is NOT staged while its 11 GB TE is; a 96 GB
+> card stages both.
+>
+> Disk budget is not a decision either: the container disk mirrors the network-volume size
+> so the full staged set fits, and it is a per-create parameter (`containerDiskInGb`) — the
+> fixed `CONTAINER_DISK_GB` constant this section used to cite no longer exists.
+>
+> **Adding a model with big files therefore needs no approval step for hot-store reasons.**
+> (Corrected 2026-08-06 on MPI-452/H3: this section still described the 20 GB gate and a
+> 50 GB container disk, and sent an agent to ask the user for a disk-budget call that has
+> not been a real decision since the everything-to-hot-store change. `sizeToGb` reads the
+> registry `size` STRING as binary GB, so that string is what any size comparison sees.)
 
 ### FIRST — may we host it at all? (licence gate, MPI-365)
 

@@ -31,6 +31,11 @@ HANDLERS = [
     ("qwen_edit_", "qwen"),  # MPI-300: qwen_edit_template.json — ONE graph → ONE runtime
                              # file; SAME int8 transformer every tier, Input_Tier injected at
                              # runtime by the qwenTier radio (no per-tier file, no tier bake).
+    ("minimax_h3_", "h3"),   # MPI-452: minimax_h3_fl2va_template.json — ONE graph → ONE runtime
+                             # file, no _stage2 twin. The op is NOT an injected int: routing
+                             # derives from which media is present (has_img1/has_img2 through
+                             # lazy MpiIfElse), so illegal states are unreachable. Bakes the
+                             # bench's leftover media paths / canvas / stage flags away.
     ("klein_",    "klein"),  # MPI-354: klein_t2i_template.json — ONE MASTER graph → ONE runtime
                              # file. Every op (t2i/i2i/depth/edit/inpaint/detail/upscale) lives
                              # in this one graph and is selected by the injected Input_wf_type;

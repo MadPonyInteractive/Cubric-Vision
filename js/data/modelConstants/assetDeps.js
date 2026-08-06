@@ -486,4 +486,46 @@ export const assetDeps = {
     // 10124099e0c9864db4e6bcd0f09d822282753e553d344fcf2748cf50140ba16a) ready for
     // the day that PR merges into our engine version — adding the dep back is then
     // the whole job. Until then this comment is the dep.
+
+    // ── MiniMax H3 support weights (MPI-452) ───────────────────────────────────
+    // All three are publisher-hosted for the licence reason spelled out on
+    // `minimax-h3-fl2va-transformer` in modelDeps.js — NOT on R2, deliberately.
+    // SHARED with the ref2va model (minimax-h3-ref2va): the second DiT is a different
+    // transformer but takes the SAME encoder and the SAME two VAEs, which is why these
+    // are resource-named rather than scoped to the fl2va card.
+    //
+    // H3 emits video AND stereo audio from one sampler pass, so it needs TWO VAEs —
+    // the packed NestedTensor latent is decoded by both (VAEDecode + VAEDecodeAudio).
+    // That is not a duplicate: dropping either loses half the output.
+    'h3-qwen3vl-32b-clip': {
+        id: 'h3-qwen3vl-32b-clip',
+        name: 'Qwen3-VL 32B text encoder for MiniMax H3 (uncensored, int8_convrot)',
+        origin: 'ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot',
+        filename: 'text_encoders/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors',
+        url: 'https://huggingface.co/ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot/resolve/main/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors',
+        // int8, NOT int4. The 14.95GB int4 encoder was rejected with evidence in
+        // MPI-449 § 4/§ 5. Comfy-Org's own stock encoder is 27.14GB, so this is not the
+        // large option — it is the same size class, already trimmed of the Qwen3-VL
+        // language layers H3 never reads.
+        size: '26.36GB',
+        sha256: 'd84547412144b7c50a6ec77437a889b869d3ace88da77ef1775d3d2a4901c192',
+    },
+    'vae-minimax-h3-video': {
+        id: 'vae-minimax-h3-video',
+        name: 'MiniMax H3 Video VAE (fp16)',
+        origin: 'Comfy-Org/MiniMax-H3',
+        filename: 'vae/minimax_h3_video_vae_fp16.safetensors',
+        url: 'https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors',
+        size: '5.21GB',
+        sha256: '7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522',
+    },
+    'vae-minimax-h3-audio': {
+        id: 'vae-minimax-h3-audio',
+        name: 'MiniMax H3 Audio VAE (fp32)',
+        origin: 'Comfy-Org/MiniMax-H3',
+        filename: 'vae/minimax_h3_audio_vae_fp32.safetensors',
+        url: 'https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors',
+        size: '0.61GB',
+        sha256: '8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48',
+    },
 };

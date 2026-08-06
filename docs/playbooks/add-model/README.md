@@ -32,7 +32,7 @@ style-LoRA + shared-graph + `Output_prompt` sections.
 | File | Covers | Legacy § |
 |---|---|---|
 | [01-workflow-split.md](01-workflow-split.md) | Author locally first; template → per-op runtime files; media-input placeholder; loader-path == dep-path | §0a, §1, §2, §3 |
-| [02-dependencies-r2.md](02-dependencies-r2.md) | Dep entry shape; baked LoRAs; **≥20 GB hot-store gate**; R2 upload + traps; hashes; `progressStages` bar count | §4, §4b |
+| [02-dependencies-r2.md](02-dependencies-r2.md) | Dep entry shape; baked LoRAs; Pod hot-store (no size gate); R2 upload + traps; hashes; `progressStages` bar count | §4, §4b |
 | [03-model-registry.md](03-model-registry.md) | The `ModelDef` in `models.js`; new-`type` consumer sweep | §5, §6 |
 | [04-ops-and-controls.md](04-ops-and-controls.md) | New-op runtime selector (PiD); one graph → many ops via baked booleans (Krea2) | §8, §11 |
 | [05-prompt-and-styles.md](05-prompt-and-styles.md) | **§9** style-LoRA system; **§10** `Output_prompt` (workflow owns the saved prompt) | §9, §10 |
@@ -58,7 +58,7 @@ enforces it:
    text-encoder / VAE / accelerator-LoRA files are the right + MATCHED versions. An
    older-generation accelerator LoRA on a newer base silently degrades quality.
 2. **Dep-reuse pass.** Grep `assetDeps.js` + `dependencies.js` — VAEs/text encoders are
-   often already hosted. Classify each slot REUSE vs NEW; flag any single file ≥20GB now.
+   often already hosted. Classify each slot REUSE vs NEW.
 3. **Scaffold the card** (`doing`/`in-progress`) and the two research homes:
    `.agents/mpi-kanban/tasks/MPI-<n>/research/` (raw) + `docs/models/<model>/` (settled,
    mirror `docs/models/krea2/`).
@@ -105,7 +105,7 @@ Two structural forks decide everything downstream:
 | Loader path == dep `filename` == on-disk path. Subfoldered LoRAs list with **backslashes** | [01](01-workflow-split.md) |
 | Workflow filenames are **all-lowercase** — raw/runtime/template/`registry` prefix/`models.js` key are one name; the Pod FS is case-sensitive so a mixed-case name works on Windows and 404s remotely. `sync-raw-workflows` gates on it | [01](01-workflow-split.md) |
 | R2: `--s3-no-check-bucket` (else 403) + `--bwlimit 3M`. Verify with `lsf` + HTTP HEAD — a wrapping `echo` masks rclone's exit code | [02](02-dependencies-r2.md) |
-| Any single weight file **≥ 20 GB** ⇒ 🛑 **STOP and ask the user** (Pod hot-store + container-disk budget) | [02](02-dependencies-r2.md) |
+| Pod hot-store has **no size gate** — everything ≥0.1 GB stages; the only per-file skip is a file bigger than pod VRAM. Nothing to ask the user | [02](02-dependencies-r2.md) |
 | `progressStages.js` bar counts **must be counted live** per run mode. Never guess | [02](02-dependencies-r2.md) |
 | Injection **silently skips** a param whose `Input_*` title matches no node (hid `Input_Is_i2i` + `Input_Batch` for 4 sessions) | [04](04-ops-and-controls.md) |
 | Style-LoRA set ⇒ assert `len(MpiPromptList.options) == number of style LoRAs`. A missing trigger line is a silent half-application | [05](05-prompt-and-styles.md) |
