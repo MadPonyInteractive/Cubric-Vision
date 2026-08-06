@@ -4,10 +4,10 @@
   "title": "Licence gate: per-model terms acceptance before a gated model downloads",
   "description": "Some model licences require us to bind the end user to terms before they receive the weights. MiniMax H3 makes this concrete - our authorization is conditioned on a flow-down commitment (bind each user to terms at least as protective as the Use Restrictions and Acceptable Use Policy, and notify them those restrictions apply). Flux is the next known consumer. Vision has no acceptance step anywhere in the install path today: a Model Library tile calls straight into downloadManager. Build a reusable gate driven by a licence descriptor on the ModelDef - show the terms, require an explicit accept, persist it per model, and where the licence is territory-restricted, link the user to the licensor's own authorization route rather than disclaiming responsibility onto them. Models with no licence descriptor keep today's behaviour exactly. BLOCKS MPI-452 (H3 release).",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-05T06:30:00Z",
-  "updated_at": "2026-08-06T06:12:00Z",
+  "updated_at": "2026-08-06T06:45:00Z",
   "labels": [
     "legal",
     "download",
@@ -27,7 +27,8 @@
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
-    "checklist": "checklist.md"
+    "checklist": "checklist.md",
+    "validation": "validation.md"
   },
   "priority": "normal",
   "attention": false
