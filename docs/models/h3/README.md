@@ -46,8 +46,40 @@ Authorization for this machine's territory was requested and granted 2026-08-05.
 request carries a confidentiality undertaking, so it lives **outside every git root** at
 `C:/AI/Mpi/_private/minimax-h3-licence/`. Do not copy any of it into this repo.
 
-Still open on MPI-452: the NOTICE string the licensor requires verbatim, and the
-"Powered by MiniMax H3" attribution on the product surface.
+### What each clause actually cost us
+
+Read against the agreement itself, not from memory — most of § III is *encouraged*, and
+only two lines are load-bearing.
+
+| Clause | Owed? | Discharged by |
+|---|---|---|
+| §III.1 — "provide a copy of this Agreement" | **Yes** | `licences/minimax-h3/LICENSE.txt`, **bundled** |
+| §III.4 — NOTICE text file, verbatim | **Yes** | `licences/minimax-h3/NOTICE.txt` |
+| §III.3.a — "Powered by MiniMax H3" | Encouraged; **we committed to it** in the authorization request | `poweredBy` on the descriptor → Model Library drawer |
+| §IV.2 — prominently display "MiniMax H3" | Yes (free/donation app, but assume it binds) | same row |
+| §V.2 — bind the user before access | **Yes** | `MpiLicenceGate`, MPI-451 |
+| §V.5 — reporting route | **Yes** | `report` → Discord, MPI-451 |
+| §III.2 — modified-file notices | No | we modify no weights |
+| §III.3.b/c — AI-gen identifier, blog post | Encouraged only | — |
+| §IV.1 — separate authorization above $20M/yr | No | nowhere near |
+
+**§III.1 is why the licence is bundled rather than linked.** Its scope is "Third Parties who
+receive the MiniMax H3 Works **or use your products or services related thereto**" — that
+second half reaches every Vision user who runs H3, not only someone we hand weights to, and
+a link to huggingface.co names a copy rather than providing one. `LICENSE.txt` is
+byte-identical to what `MiniMaxAI/MiniMax-H3` serves (17,604 bytes, fetched 2026-08-06).
+`licenceUrl` is therefore root-relative and `openExternal` resolves it against the app
+origin — the port is not fixed (`CUBRIC_PORT`), so it cannot be hardcoded.
+
+**§III.4 strictly binds a distributor, and we distribute nothing** — every weight comes from
+the publisher's own URL. The NOTICE ships anyway; it costs one file and removes the argument.
+
+**The attribution is on the MODEL, not on Vision.** §III.3.a scopes the notice to a product
+"developed using MiniMax H3", which is the model entry, not the app. Consequence: a Flow
+Library Flow built on H3 needs that row in its OWN slide-over — `MpiFlowLibrary`'s drawer has
+no licence row. Noted in `docs/playbooks/add-flow/01-descriptor-and-ops.md`.
+
+Still open on MPI-452: a card preview clip inside the 124–362 trained frame range.
 
 ## Weights
 
@@ -124,6 +156,22 @@ toggle that can disagree with the media present. LTX should adopt this shape (MP
 
 `generate_h3.py` asserts all four branches survive, because a missing one does not error —
 it falls through to another and conditions on the wrong frames.
+
+### The keyframe resize is the graph's job, and it is already done
+
+`MiniMaxH3ImageToVideo` treats its two keyframes differently: `first_frame` gets
+`_resize(..., "disabled")` — a plain stretch, the upstream comment calls it a "geometry
+anchor" — while `last_frame` gets `"center"`, an aspect-preserving cover-crop. Read alone
+that says an i2v source whose aspect misses the canvas is squashed into every frame, and
+MPI-449's research concluded exactly that (§ line 377, assigning a fix to MPI-452).
+
+**It does not apply to the shipped graph, and no fix is wanted.** Nodes 218 and 220
+(`ImageResizeKJv2`, `keep_proportion: crop`, `crop_position: center`, `divisible_by: 32`)
+sit in front of BOTH frame paths and draw `width`/`height` from the same nodes that set the
+H3 canvas, so each frame arrives already at canvas size and the node's stretch is a no-op.
+All 15 `MINIMAX_H3_RATIOS` entries are divisible by 32 — matching `CANVAS_MULTIPLE = 32`
+in the node — so the resize can always land the canvas exactly. **Adding app-side aspect
+fitting would crop twice.** Verified 2026-08-06 against `comfy_workflows/minimax_h3_fl2va.json`.
 
 ## Frames, duration and canvas
 

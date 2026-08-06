@@ -67,6 +67,20 @@ entirely unverified, which is why this card is `validating` and not `complete`.
   `single: 2`).
 - **The app prunes nothing; the browser prunes muted nodes.** This graph was authored on
   the bench, so watch for a node that only worked because the browser dropped it.
+- **i2v ASPECT — raised 2026-08-06, then CLOSED the same day as a non-issue. Do not
+  re-open it from the MPI-449 research.** That research (line 377) is correct about the
+  node: in `MiniMaxH3ImageToVideo.execute`, `first_frame` gets `_resize(..., "disabled")` —
+  a plain stretch the upstream comment calls a "geometry anchor" — while `last_frame` gets
+  `"center"`. It concluded MPI-452 must fit the first frame before dispatch. **The shipped
+  graph already does**, which the research predates: nodes **218** and **220**
+  (`ImageResizeKJv2`, `keep_proportion: crop`, `crop_position: center`, `divisible_by: 32`)
+  sit in front of BOTH frame paths and take `width`/`height` from `["167",0]`/`["168",0]` —
+  the same pair feeding every H3 node's canvas. So each frame reaches the node already at
+  canvas size and the node's stretch is W×H → W×H, a no-op.
+  The one way it could come back is a canvas the resize cannot hit exactly, so that was
+  checked too: all **15** entries in `MINIMAX_H3_RATIOS` are divisible by 32, matching both
+  `divisible_by: 32` on the resize nodes and `CANVAS_MULTIPLE = 32` in the node itself.
+  No mismatch is reachable. **Do not add app-side aspect fitting** — it would crop twice.
 
 ### 3. Preview -> Continue through the app
 This is the piece most likely to break, because it is the only path that exercises the
@@ -82,13 +96,78 @@ H3's audio is muxed INSIDE the mp4 rather than arriving as a separate `audio` ou
 time on save.
 
 ### 5. Remaining deliverables (not verification — unwritten work)
-- The licensor's verbatim **NOTICE** string.
-- **"Powered by MiniMax H3"** attribution on the product surface.
-- Licence text reachable in-app (MPI-451's gate LINKS the HF blob; confirm that
-  satisfies the acceptance criterion or bundle the text).
-- A better card preview clip. The shipped one is this session's test render
-  ("neon-lit rain-slick street", 2.33 s, low tier) — real H3 output, so not
-  misrepresentative, but 56 frames is BELOW the 124–362 trained range.
+
+**Three of four written and verified 2026-08-06 12:36Z.** The agreement was re-read
+verbatim rather than recalled (`MiniMaxAI/MiniMax-H3/raw/main/LICENSE`, 17,604 bytes);
+the per-clause table is now in `docs/models/h3/README.md` § What each clause actually cost
+us. Most of §III turns out to be *encouraged*, not owed.
+
+- [x] **The licensor's verbatim NOTICE string** (§III.4) — `licences/minimax-h3/NOTICE.txt`,
+      copied from the agreement's own line 33, not retyped:
+      `MiniMax H3 is licensed under the MiniMax H3 Community License Agreement, Copyright © 2026 MiniMax. All Rights Reserved.`
+      §III.4 strictly binds a *distributor* and we distribute nothing (publisher URLs), so
+      this is belt-and-braces — it costs one file and removes the argument.
+- [x] **Licence text reachable in-app — BUNDLED, and the "link vs bundle" question is
+      settled by the licence, not by preference.** §III.1: "provide a copy of this
+      Agreement to all such Third Parties who receive the MiniMax H3 Works **or use your
+      products or services related thereto**". That second half reaches every Vision user
+      who runs H3, and linking huggingface.co *names* a copy rather than providing one.
+      `licences/minimax-h3/LICENSE.txt` is byte-identical to what the publisher serves.
+      So the detail-drawer LICENCE row alone did NOT discharge the criterion — it does now
+      that its link resolves to the bundled copy.
+- [x] **"Powered by MiniMax H3"** — `poweredBy` on the descriptor, rendered in the Model
+      Library detail drawer beside the licence name. Encouraged by §III.3.a, mandatory-ish
+      via §IV.2, and committed to in our authorization request regardless.
+      **Placed on the MODEL, not on Vision** (user's call, and the better reading): §III.3.a
+      scopes the notice to a product "developed using MiniMax H3", which is the model entry.
+- [ ] A better card preview clip. The shipped one is the previous session's test render
+      ("neon-lit rain-slick street", 2.33 s, low tier) — real H3 output, so not
+      misrepresentative, but 56 frames is BELOW the 124–362 trained range. Folds into the
+      generation pass below, which needs a run anyway.
+
+Proved, not assumed:
+
+| Claim | How |
+|---|---|
+| Both files are served by the REAL server | Booted `server.js` on `CUBRIC_PORT=3977`; `LICENSE.txt` 200 / **17,604 bytes** / `text/plain`, `NOTICE.txt` 200 / 121 bytes. Not a harness — the actual middleware order |
+| The bundled copy is the publisher's bytes | Byte count identical to the fetch; served line 33 matches NOTICE.txt exactly |
+| A root-relative `licenceUrl` opens | `openExternal` now resolves against `location.href`; `/licences/…` → `http://127.0.0.1:<port>/licences/…`, both existing `https://` URLs unchanged. Port is NOT hardcodable (`CUBRIC_PORT`, MPI-448) |
+| It ships in the portable | Ran the real `shouldExcludeAppPath` from `scripts/build-portable.mjs` over all four paths — all `shipped`. `APP_COPY_EXCLUDES` is a denylist and `licences` is not on it |
+| Suite still green | `npm test` — **459/459** |
+
+`tests/licence-gate.test.cjs` pinned `licenceUrl` to `/^https:\/\//`, which is exactly the
+assumption §III.1 overturns; it now accepts a root-relative path **and stats it on disk**,
+because a typo'd bundled path would open a 404 and silently discharge nothing.
+
+**Still needs eyes in the app** (folds into §1 below): that the `Powered by MiniMax H3` row
+actually renders in H3's drawer, and that "Read the licence" opens the bundled text.
+
+### 5c. Test setup in place — RESTORE THIS when the pass is done
+
+`minimax_h3_audio_vae_fp32.safetensors` (605,254,808 B, the smallest of the four H3 weights
+by an order of magnitude — next is 5.21 GB) was **moved, not deleted**, out of
+`G:\CubricModels\vae\` so H3 reads as not-installed and the licence gate can be exercised
+for a 0.61 GB download instead of 53 GB. If the download is not being tested, restore it:
+
+```powershell
+Move-Item -LiteralPath 'C:\Users\Fabio\AppData\Local\Temp\claude\c--AI-Mpi-Cubric-Vision\dfdc1838-4937-48a2-aa47-1a90ab653c2b\scratchpad\minimax_h3_audio_vae_fp32.safetensors' -Destination 'G:\CubricModels\vae\minimax_h3_audio_vae_fp32.safetensors'
+```
+
+The scratchpad is session-scoped, so once a real download has replaced the file the copy
+there is disposable. Step-by-step runbook for the whole pass: `checklist.md`.
+
+### 5b. Apps built on a gated model — a gap, deliberately not closed
+
+The acceptance gate is free for apps (it lives in `downloadService.start()`, which every
+install path funnels through). **The standing licence row is not** — `MpiAppLibrary`'s
+drawer has no equivalent of `MpiModelManager`'s `#detail-licence-row`, so an app built on
+H3 would show a user no attribution and no route to the agreement. No app uses H3 today, so
+this is documented rather than built: `docs/playbooks/add-app/01-descriptor-and-ops.md`
+§ "A GATED model in `requiredModels`…". Both drawers already share the `.mpi-detail__*`
+classes, so the markup ports directly when one is needed.
+
+> **Rename pending:** "App"/"App Library" is being renamed repo-wide by a parallel agent.
+> That playbook block was written 2026-08-06 ~12:33Z and may postdate the sweep's scan.
 
 ## Known non-blocking observations
 

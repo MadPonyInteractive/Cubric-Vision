@@ -31,7 +31,18 @@
  * @property {string} name        - Licence display name.
  * @property {string} modelName   - What the user believes they are installing.
  * @property {string} summary     - One line above the fold: why this dialog exists.
- * @property {string} licenceUrl  - The full agreement. Opened in the system browser.
+ * @property {string} licenceUrl  - The full agreement. Opened in the system browser. A
+ *                                  ROOT-RELATIVE path points at a copy BUNDLED under
+ *                                  `licences/<id>/`, which `openExternal` resolves against
+ *                                  the app origin. Prefer that whenever the licence obliges
+ *                                  us to PROVIDE a copy rather than merely name one: a link
+ *                                  to the licensor's server is not a copy, and it dies when
+ *                                  they move the file or the user is offline.
+ * @property {string} [poweredBy] - Attribution the licence requires on the surface where the
+ *                                  model is presented (H3 §III.3.a / §IV.2). Rendered in the
+ *                                  Model Library detail drawer, next to the licence name —
+ *                                  the model is what is "powered by" the licensor, not the
+ *                                  app as a whole. Absent = no attribution obligation.
  * @property {{territories: string[], authorizationUrl: string, body: string}} [territory]
  *   Present only when the licence is territory-restricted. The gate then routes the
  *   user to the licensor's OWN authorization route. It must never disclaim the problem
@@ -67,7 +78,16 @@ const MINIMAX_H3 = {
     modelName: 'MiniMax H3',
     summary: 'MiniMax H3 is not open-weight. Its licence requires us to show you these '
            + 'restrictions and record your acceptance before the model can be downloaded.',
-    licenceUrl: 'https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/main/LICENSE',
+    // BUNDLED, not linked (MPI-452). §III.1 obliges us to "provide a copy of this Agreement
+    // to all such Third Parties who receive the MiniMax H3 Works OR USE YOUR PRODUCTS OR
+    // SERVICES RELATED THERETO" — that second clause reaches every Vision user who runs H3,
+    // not only someone we hand weights to, and pointing at huggingface.co is naming a copy,
+    // not providing one. `licences/minimax-h3/LICENSE.txt` is byte-identical to what
+    // MiniMaxAI/MiniMax-H3 serves (17,604 bytes, fetched 2026-08-06) and ships in the
+    // portable, so it also survives being offline or the publisher moving the file.
+    // `licences/minimax-h3/NOTICE.txt` sits beside it carrying the §III.4 string verbatim.
+    licenceUrl: '/licences/minimax-h3/LICENSE.txt',
+    poweredBy: 'Powered by MiniMax H3',
     territory: {
         territories: ['the European Union', 'the United Kingdom', 'the Republic of Korea', 'the United States of America'],
         authorizationUrl: 'https://vrfi1sk8a0.feishu.cn/share/base/form/shrcnD9XM1zYI9VFJxTEbt0d19g',

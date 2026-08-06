@@ -7,12 +7,19 @@
  * Two older copies of this pattern predate the util and were left alone (MpiErrorDialog,
  * MpiEngineInstall) — fold them in the next time either is touched.
  *
- * @param {string} url
+ * A ROOT-RELATIVE url ('/licences/…') is resolved against the app's own origin first.
+ * `shell.openExternal` needs an absolute URL and silently does nothing with a bare path,
+ * and the port is not fixed (CUBRIC_PORT, MPI-448), so it cannot be hardcoded. This is
+ * what lets a licence we must ship OFFLINE (MiniMax H3 §III.1) be opened the same way as
+ * a hosted one — see `licenceUrl` in js/data/modelConstants/licences.js.
+ *
+ * @param {string} url - Absolute URL, or a path relative to the app origin.
  */
 export function openExternal(url) {
+    const href = new URL(url, window.location.href).href;
     try {
         const { ipcRenderer } = require('electron');
-        if (ipcRenderer) { ipcRenderer.invoke('open-external', url); return; }
+        if (ipcRenderer) { ipcRenderer.invoke('open-external', href); return; }
     } catch { /* browser dev mode — no electron module */ }
-    window.open(url, '_blank', 'noopener');
+    window.open(href, '_blank', 'noopener');
 }

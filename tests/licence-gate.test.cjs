@@ -16,6 +16,8 @@
 
 const assert = require('node:assert');
 const test = require('node:test');
+const fs = require('node:fs');
+const path = require('node:path');
 
 // `licences.js` reads acceptance through `Storage`, which is localStorage — absent in
 // node. One in-memory stand-in, installed before the first import.
@@ -126,7 +128,25 @@ test('every descriptor carries what the gate renders', async () => {
         assert.ok(l.id && typeof l.id === 'string', `${modelId}: id`);
         assert.ok(Number.isInteger(l.version) && l.version >= 1, `${modelId}: version`);
         assert.ok(l.name && l.modelName && l.summary, `${modelId}: display copy`);
-        assert.match(l.licenceUrl, /^https:\/\//, `${modelId}: licenceUrl`);
+        // licenceUrl is EITHER hosted, or a root-relative path to a copy bundled under
+        // licences/. MiniMax H3 §III.1 obliges us to *provide a copy* of the agreement to
+        // anyone who "uses your products or services related thereto" — a link to the
+        // licensor's server names a copy rather than providing one, and dies offline or
+        // when they move the file. A bundled path must therefore actually resolve on disk;
+        // a typo'd one would open a 404 in the user's browser and silently discharge
+        // nothing, which is the failure this half of the assertion exists to catch.
+        if (l.licenceUrl.startsWith('/')) {
+            const onDisk = path.join(__dirname, '..', l.licenceUrl);
+            assert.ok(fs.existsSync(onDisk), `${modelId}: bundled licenceUrl missing on disk (${l.licenceUrl})`);
+            assert.ok(fs.statSync(onDisk).size > 0, `${modelId}: bundled licence is empty`);
+        } else {
+            assert.match(l.licenceUrl, /^https:\/\//, `${modelId}: licenceUrl`);
+        }
+        // Attribution is optional (most licences want none), but an empty string would
+        // render a blank row that looks like a layout bug rather than a missing notice.
+        if ('poweredBy' in l) {
+            assert.ok(l.poweredBy && typeof l.poweredBy === 'string', `${modelId}: poweredBy`);
+        }
         assert.ok(Array.isArray(l.sections) && l.sections.length, `${modelId}: sections`);
         for (const s of l.sections) {
             assert.ok(s.heading, `${modelId}: section heading`);

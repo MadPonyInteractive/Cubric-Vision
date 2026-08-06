@@ -415,6 +415,12 @@
     font-size: var(--t-sm);
     color: var(--ink-2);
 }
+/* Required attribution (MPI-452) — licence-mandated, so it reads at the licence name's
+   weight rather than as fine print, but stays inside the Licence field. */
+.mpi-detail__licence-powered {
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+}
 .mpi-detail__licence-links {
     display: flex;
     flex-wrap: wrap;

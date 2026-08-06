@@ -7,7 +7,7 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-05T07:00:00Z",
-  "updated_at": "2026-08-06T08:40:00Z",
+  "updated_at": "2026-08-06T12:58:00Z",
   "labels": [
     "model",
     "video",
@@ -25,7 +25,8 @@
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
-    "validation": "validation.md"
+    "validation": "validation.md",
+    "checklist": "checklist.md"
   },
   "priority": "normal",
   "attention": false

@@ -1012,6 +1012,14 @@ export const MpiModelManager = ComponentFactory.create({
                 qs('#detail-licence', detailBody).style.display = '';
                 const row = qs('#detail-licence-row', detailBody);
                 row.append(ce('div', { className: 'mpi-detail__licence-name', textContent: licence.name }));
+                // Required attribution (MPI-452). It lives HERE, on the model, rather than on
+                // an app-wide About page: H3 §III.3.a scopes the notice to "any product or
+                // service DEVELOPED USING MiniMax H3", and what is developed using it is this
+                // model entry — Vision itself is not. The drawer is also the only surface that
+                // already knows which licence a model carries.
+                if (licence.poweredBy) {
+                    row.append(ce('div', { className: 'mpi-detail__licence-powered', textContent: licence.poweredBy }));
+                }
                 const links = ce('div', { className: 'mpi-detail__licence-links' });
                 const linkTo = (text, url) => {
                     const b = ce('button', { className: 'mpi-detail__licence-link', type: 'button', textContent: text });

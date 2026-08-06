@@ -1649,9 +1649,19 @@ export function runCommand(payload) {
         });
 
         // Map nodeId → class_type for loader detection
+        // MpiSaveLatent is core SaveLatent's twin, not a variant to special-case: H3 packs
+        // video AND audio into ONE NestedTensor latent, which crashes core SaveLatent, so
+        // minimax_h3_fl2va.json is the only shipped graph using it (LTX x12 and WAN x4 all
+        // use core SaveLatent). Missing it here made the set EMPTY for H3, so line ~2042
+        // never collected the latent, `previewAssets.latent` arrived with no filename, and
+        // materialization recorded status:'missing' — every preview fell back to COLD and
+        // re-ran the whole workflow, producing a DIFFERENT sample than the one approved.
+        // MPI-452: the node half of this contract was fixed in ComfyUi-MpiNodes a6e5d5e
+        // (report ui.latents); this is the app half of the same fix.
         const saveLatentNodeIds = new Set(
             Object.keys(workflow).filter(id =>
                 workflow[id].class_type === 'SaveLatent' ||
+                workflow[id].class_type === 'MpiSaveLatent' ||
                 workflow[id]._meta?.title?.toLowerCase() === 'savelatent'
             )
         );
