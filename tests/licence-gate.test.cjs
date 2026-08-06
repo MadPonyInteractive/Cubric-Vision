@@ -91,14 +91,31 @@ test('models sharing one agreement share one acceptance', async () => {
     const SIBLING = 'minimax-h3-ref2va';
     assert.strictEqual(getModelLicence(SIBLING), MODEL_LICENCES[GATED], 'both ids must share ONE descriptor object');
 
+    // Whichever the user installs FIRST is the one that prompts; the other is then
+    // free. Both directions, because "it works the way I happened to test it" is not
+    // the same claim as "it is symmetric".
     store.clear();
     assert.strictEqual(hasAcceptedLicence(SIBLING), false);
     recordLicenceAcceptance(GATED);
     assert.strictEqual(hasAcceptedLicence(SIBLING), true, 'accepting via fl2va must cover ref2va');
 
+    store.clear();
+    assert.strictEqual(hasAcceptedLicence(GATED), false);
+    recordLicenceAcceptance(SIBLING);
+    assert.strictEqual(hasAcceptedLicence(GATED), true, 'accepting via ref2va must cover fl2va');
+
     // Provenance is still recorded — which install actually prompted it.
     const receipts = JSON.parse(store.get([...store.keys()][0]));
-    assert.strictEqual(receipts[MODEL_LICENCES[GATED].id].acceptedVia, GATED);
+    assert.strictEqual(receipts[MODEL_LICENCES[GATED].id].acceptedVia, SIBLING);
+
+    // And a version bump still re-prompts BOTH — one agreement, one receipt, so a
+    // revised AUP cannot reach one variant and miss the other.
+    const licence = MODEL_LICENCES[GATED];
+    const original = licence.version;
+    licence.version = original + 1;
+    assert.strictEqual(hasAcceptedLicence(GATED), false, 'bump must re-prompt fl2va');
+    assert.strictEqual(hasAcceptedLicence(SIBLING), false, 'bump must re-prompt ref2va');
+    licence.version = original;
 });
 
 test('every descriptor carries what the gate renders', async () => {
