@@ -4,13 +4,14 @@
   "title": "A 60s network blip is terminal - a stalled download never retries its own url",
   "description": "MPI-291's stall watchdog fires into a dead end: nothing auto-retries, so one hiccup kills a 25GB install 8.4GB in.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-06T22:15:06Z",
-  "updated_at": "2026-08-06T22:15:06Z",
+  "updated_at": "2026-08-06T23:20:00Z",
   "links": {
     "brief": "brief.md",
     "checklist": "checklist.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   }
 }

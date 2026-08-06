@@ -14,7 +14,8 @@
       mid-body, the retry re-requests with `Range: bytes=51200-` and the finished
       file matches the expected sha256.
 - [x] `npm test` green: 463/463.
-- [ ] Live proof on the real 25 GB dep: resume from 8.4 GB completes.
+- [x] Live proof on the real 25 GB dep: resumed from 8.4 GB at 24.9 MB/s and
+      completed; LTX 2.3 balanced now reads installed. See validation.md.
 - [x] Pre-release reachability gate: `npm run release:deps`
       (`scripts/check-dep-urls.mjs`) HEADs every dep url + mirror, exits 1 on any
       failure. 215/215 reachable on 2026-08-06; negative control with a bogus
