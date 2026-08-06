@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 458,
+  "next_id": 459,
   "columns": {
     "todo": [
+      "MPI-458",
       "MPI-457",
       "MPI-456",
       "MPI-455",
@@ -60,7 +61,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-06T06:45:00Z",
+  "updated_at": "2026-08-06T13:52:00Z",
   "events": [
     {
       "at": "2026-08-05T15:05:00Z",
@@ -2033,6 +2034,14 @@
       "at": "2026-08-05T07:00:00Z",
       "actor": "opus",
       "summary": "H3 model wiring split out from the research card. Created blocked: the licence gate (MPI-451) must land first, and whether the authorization reaches end users in excluded territories is still unconfirmed."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-458",
+      "type": "task.created",
+      "at": "2026-08-06T13:52:00Z",
+      "actor": "opus",
+      "summary": "Filed from the Flow-rename session: npm start died immediately while npm run test:desktop was running. Verified at the time that the suite takes its own free port (60525, 61661) and a per-test CUBRIC_E2E_USER_DATA, and that nothing was listening on 3000 - so neither port nor profile collided. main.js sets userData at 258 BEFORE requestSingleInstanceLock at 291, which should already isolate the lock, so the mechanism is NOT understood and the card opens at research. Second suspect with an identical symptom: server.js exits non-zero on EADDRINUSE and main.js makes that fatal. Repro must name which fires (silent quit = lock, app.log fatal = port) before any guard ships."
     }
   ]
 }

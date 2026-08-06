@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-458",
+  "title": "Scope the single-instance lock so a test Electron never takes the user's",
+  "description": "npm start closed instantly during a desktop test run. Lock should already be userData-scoped, so the mechanism is unconfirmed - reproduce before fixing.",
+  "column": "todo",
+  "maturity": "research",
+  "status": "active",
+  "created_at": "2026-08-06T13:52:00Z",
+  "updated_at": "2026-08-06T13:52:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}
