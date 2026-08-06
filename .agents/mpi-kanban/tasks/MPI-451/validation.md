@@ -45,10 +45,16 @@ Reverting to per-model is a one-line change (`all[licence.id]` → `all[modelId]
 literal criterion is preferred; `tests/licence-gate.test.cjs` § "models sharing one
 agreement share one acceptance" is the test that would need to go with it.
 
-## H3 model id — CONFIRMED, no longer open
+## H3 model id — CONFIRMED ON DISK, no longer open
 
 The MPI-452 session confirmed the ModelDef id is `minimax-h3` (message
-`c4a91f7e-2d38-4b6a-9e15-7f2c8d4b3a60`), so the descriptor key is correct as written.
+`c4a91f7e-2d38-4b6a-9e15-7f2c8d4b3a60`), and it has since **landed on master** —
+`models.js:1224` reads `id: 'minimax-h3'`, matching the descriptor key exactly. Checked
+by cross-referencing the two files at close-out rather than trusting the message, because
+the whole failure mode here is a mismatch nothing reports.
+
+So the gate now has a real install to exercise: the remaining validation is a hands-on
+install of H3 through the UI, which belongs in the H3 session, not here.
 They also flagged the ref2va variant; **this session took that key** — `minimax-h3-ref2va`
 is already in `MODEL_LICENCES` pointing at the same descriptor, so their ModelDef is
 gated the moment it lands, with nothing to wire (reply
