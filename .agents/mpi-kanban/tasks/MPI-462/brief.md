@@ -165,3 +165,78 @@ Cheap repro (no 22GB download): the isolated engine-root harness —
 `CUBRIC_ENGINE_ROOT` at a throwaway dir with fake dep files + DEPS swapped in
 `require.cache` — drives the real uninstall route both directions, and can order the
 two tiers' uninstalls to test hypothesis 4 directly.
+
+---
+
+## Defect 2 — mechanism found 2026-08-06. The guard is behaving AS DESIGNED; the gap is that nothing re-checks afterwards.
+
+Two runs, both real code:
+
+**1. Live, through the actual route.** POSTed `/comfy/models/uninstall` for
+`boogu-edit-balanced` with just `boogu-qwen3vl-8b-clip` + `vae-flux-ae`, with no other
+Boogu tier on disk — the card's exact repro condition:
+
+```
+uninstall: moved to trash G:\CubricModels\text_encoders\qwen3vl_8b_fp8_scaled.safetensors
+uninstall: moved to trash G:\CubricModels\vae\ae.safetensors
+uninstall boogu-edit-balanced: removed 2, kept 0 universal, 0 shared, 0 model files
+```
+
+So in TODAY's state the route deletes the clip and logs normally. Candidate 3 (it
+errored) is not reproducible from this state — whatever happened needed a different one.
+
+**2. Isolated harness over the real guard** (`guard-harness.cjs`, next to this brief —
+`CUBRIC_MODELS_ROOT` at a throwaway dir, sparse files at the deps' real relative paths,
+calls the real `_localSharedDepsMap('boogu-edit-balanced')`; no app, no port 3000):
+
+| Disk state | Clip protected by | Uninstall balanced would |
+|---|---|---|
+| A both tiers complete | Boogu Image Edit (high) | KEEP — correct |
+| B only balanced (today) | nothing | DELETE — matches the live run |
+| C high transformer only, no clip on disk | Boogu Image Edit | (no-op — clip isn't there) |
+| **D high transformer + clip on disk, high NOT usable** | **Boogu Image Edit** | **KEEP** |
+| E only the clip left | nothing | DELETE |
+
+**D is the state that orphans the clip, and it is intentional.** At
+`routes/downloadManager.js:218` a sibling with zero installed ops falls back to
+`resolveDeps(model, null, ...)` — its FULL universe — as long as it has any exclusive
+dep on disk (`:213-215`). For `boogu-edit-high` the exclusive dep is its own transformer
+`diffusion_models/boogu_image_edit_bf16.safetensors`. That is exactly the MPI-310 rule
+written at `:205-206`: "a model whose shared encoder was deleted still has its own
+transformer → still defends what it declares" — the rule that stopped 5.24GB of user
+data being destroyed. Scenario C is the same mechanism and harmless (it names a dep that
+isn't on disk); my expectation row for C was wrong, not the code.
+
+So the sequence that produced the orphan needs no bug in the guard:
+
+1. `boogu-edit-high`'s transformer is on disk (installed, or a part-finished install).
+2. Balanced is uninstalled → the guard KEEPS the shared clip because high defends it.
+   Correct at that instant, and it is why no `removed N` line mentions the clip.
+3. High's transformer later leaves without a route uninstall (a cancelled/failed
+   install cleanup, or a manual delete) → the clip is now defended by nobody, and
+   scheduled for deletion by nobody either.
+
+**The real gap: no step ever re-checks for deps that became orphaned after the fact.**
+Uninstall only considers the model being uninstalled. Nothing reacts to a model
+*ceasing* to be installed by any other route.
+
+### Proposed fix — NOT implemented, needs a decision (MPI-310 precedent)
+
+After any uninstall (and after an install is cancelled/cleaned up), sweep for deps that
+are on disk and in NO model's universe where that model has >=1 installed op, then trash
+them. That is precisely the scan run this session: it found 8 deps / 15.91GB with zero
+false positives, correctly clearing `vae-flux-ae` (wanted by chroma x2, nvidia-pid,
+boogu x2 — none installed) and correctly declining to touch anything owned by the six
+usable models. It needs the `universal` exemption the route already applies
+(`4x-AnimeSharp` was kept as universal) and the in-flight-install-job protection.
+
+Briefing rather than shipping it because MPI-310 destroyed 5.24GB of user data with an
+adjacent change to this same guard.
+
+### Disk reclaimed this session
+
+7 of the 8 orphans trashed via the app's own uninstall route (~15.85GB): the Boogu clip,
+`vae/ae.safetensors`, the FLUX ControlNet Union and the four Chroma style LoRAs.
+`4x-AnimeSharp` (65MB) was kept — the route classifies it `universal` and never deletes
+those. All six phantom bars are now gone from the Model Library. Per the user, no
+reclaim UI: a system that leaves no leftovers has nothing to clean up.
