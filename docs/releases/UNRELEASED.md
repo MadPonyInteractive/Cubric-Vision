@@ -162,7 +162,9 @@
   nothing, and invisible in the app because a model you don't have installed offers no
   Uninstall button. On this machine that had quietly accumulated ~16GB. Uninstall now also
   clears out weights that no installed model needs any more. Files shared with something
-  still installed are kept, exactly as before.
+  still installed are kept, exactly as before. **This works on a cloud Pod's storage volume
+  too** — where it matters more, because that volume outlives the Pod and you pay for its
+  size every month, so anything stranded on it was costing you until you noticed it.
 
 - **A hiccup mid-download no longer throws away the download.** A 25GB model that
   stalled for a minute — a router blip, a bad moment on the line — was declared failed
