@@ -87,3 +87,40 @@ assert.ok(lockText.includes('--no-deps'),
 
 console.log(`curated-python-deps: ${pinned.length} pinned, 0 engine-owned, 1 opencv, `
     + `${withReqs.length} source nodes — all assertions passed`);
+
+// ── MPI-457: the marker must share site-packages' fate ───────────────────────
+// The marker is a CLAIM ABOUT site-packages. At ENGINE_ROOT it outlived the thing it
+// described: `/engine/upgrade`'s full reinstall removes `<root>/<COMFY_DIR>`, which on
+// Windows contains `python_embeded/Lib/site-packages`, while the marker one level up
+// survived. Next `/comfy/start` saw a matching hash, skipped the install, and ComfyUI
+// booted with `No module named 'cv2'` / `'pywt'` — controlnet_aux, RES4LYF, both Impact
+// packs and LTXVideo all IMPORT FAILED, 17 shipped class_types gone, silently.
+// Measured live on 2026-08-07; the wipe was the only upgrade path before MPI-457.
+const { curatedDepsMarkerPath } = require('../routes/shared');
+const { getPythonBin, getEngineRoot, COMFY_DIR } = require('../routes/platformEngine');
+
+const marker = curatedDepsMarkerPath();
+const engineRoot = getEngineRoot();
+
+assert.strictEqual(
+    path.dirname(marker),
+    path.dirname(getPythonBin(engineRoot)),
+    'the marker must sit next to the interpreter whose site-packages it describes'
+);
+assert.notStrictEqual(
+    path.resolve(path.dirname(marker)),
+    path.resolve(engineRoot),
+    'ENGINE_ROOT is exactly where it outlived the wipe — never put it back there'
+);
+
+if (process.platform === 'win32') {
+    // The Windows wipe removes <root>/<COMFY_DIR>. The marker must be INSIDE that, so a
+    // reinstall cannot inherit a stale one.
+    const wiped = path.resolve(path.join(engineRoot, COMFY_DIR));
+    assert.ok(
+        path.resolve(marker).startsWith(wiped + path.sep),
+        `the marker must be inside the tree the wipe removes (${wiped}), got ${marker}`
+    );
+}
+
+console.log('curated-python-deps: marker placement OK');

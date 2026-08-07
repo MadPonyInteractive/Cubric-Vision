@@ -360,13 +360,36 @@ const PYTHON_DEPS_PATH = path.join(__dirname, '..', 'dev_configs', 'python_deps.
  * Throws on failure: a node whose deps are missing fails to import, and this is the
  * only step that installs them. Call ONLY with the engine process down.
  */
+/**
+ * Where the curated-deps marker lives: NEXT TO THE INTERPRETER it describes, never at
+ * the engine root.
+ *
+ * The marker is a claim about site-packages, so it has to share that directory's fate.
+ * At ENGINE_ROOT it did not: `/engine/upgrade`'s full reinstall removes
+ * `<root>/<COMFY_DIR>` — which on Windows CONTAINS `python_embeded/Lib/site-packages` —
+ * while the marker one level up survived. The next `/comfy/start` read a matching hash,
+ * skipped the install, and ComfyUI came up with `No module named 'cv2'` / `'pywt'`:
+ * comfyui_controlnet_aux, RES4LYF, both Impact packs and LTXVideo all IMPORT FAILED,
+ * 17 shipped `class_type`s gone, no error shown to the user. Measured on the MPI-457
+ * proving run, 2026-08-07 — and the wipe was the ONLY upgrade path before that card.
+ *
+ * Anchoring on `getPythonBin` gets both platforms right for the same reason rather than
+ * by coincidence: on Windows it resolves inside the portable, so a wipe takes the marker
+ * with site-packages; on Linux/macOS it resolves into the `comfy-venv` sibling, which a
+ * wipe does NOT remove — and there the deps really do survive, so the marker should too.
+ * @returns {string}
+ */
+function curatedDepsMarkerPath() {
+    return path.join(path.dirname(getPythonBin(ENGINE_ROOT)), '.cubric_python_deps');
+}
+
 async function ensureCuratedPythonDeps() {
     if (!(await fs.pathExists(PYTHON_DEPS_PATH))) {
         throw new Error(`curated python deps missing at ${PYTHON_DEPS_PATH} — the build is incomplete`);
     }
     const contents = await fs.readFile(PYTHON_DEPS_PATH);
     const hash = crypto.createHash('sha256').update(contents).digest('hex').slice(0, 16);
-    const markerPath = path.join(ENGINE_ROOT, '.cubric_python_deps');
+    const markerPath = curatedDepsMarkerPath();
 
     try {
         if ((await fs.readFile(markerPath, 'utf8')).trim() === hash) {
@@ -831,6 +854,7 @@ module.exports = {
     stripImageMetadata,
     runPipCommand,
     ensureCuratedPythonDeps,
+    curatedDepsMarkerPath,
     runCustomCommand,
     findFileRecursive,
     resolveComfyPath,
