@@ -58,6 +58,13 @@ export const PROGRESS_STAGES = Object.freeze({
     // Beware when re-counting: tqdm prints each finished bar TWICE, so a raw grep of
     // "100%" lines reads 4 for the single run. Count distinct bars, not lines.
     'minimax_h3_fl2va.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
+    // ref2va (MPI-475) — the same numbers, and NOT guessed at: the two graphs share their
+    // whole sampler tail. Node 153 (Stage1_Bypass) and 156 are the same two
+    // SamplerCustomAdvanced nodes under the same ids and titles in both files; only the
+    // head differs (MpiH3References instead of the keyframe path). So a whole run is both
+    // passes = 2 bars, and either half on its own is 1. Re-count for real if the tail ever
+    // stops being shared — and mind the tqdm double-print noted above.
+    'minimax_h3_r2va.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
     // Text-to-image (SDXL family) — single-stage, verified 2 bars (load + sampler).
     // Upscalers/detailers NOT yet counted (UltimateSDUpscale has its own passes).
     't2i_ill_anime.json':        Object.freeze({ single: 2 }),

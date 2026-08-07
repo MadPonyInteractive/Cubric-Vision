@@ -77,8 +77,12 @@
       is `matchRefTagQuery` in `commandRegistry.js` — pure, so its edge cases are unit-tested
       rather than eyeballed: `fabio@picture` must NOT open a picker, `@ ` closes one, and
       `@pic` finds `Picture 1` despite the space in the tag.
-- [ ] `progressStages` for `minimax_h3_r2va.json` — needs a LIVE run to count bars. fl2va is
-      `{ single: 2, preview: 1, stage2: 1 }`; not guessed.
+- [x] `progressStages` for `minimax_h3_r2va.json` = `{ single: 2, preview: 1, stage2: 1 }`.
+      Not a guess and not a copy-paste: the two graphs share their entire sampler tail —
+      node 153 (`Stage1_Bypass`) and 156 are the same two `SamplerCustomAdvanced` nodes
+      under the same ids and titles in both files, and only the head differs. A whole run
+      is both passes = 2 bars; either half alone is 1. Re-count for real if the tail ever
+      stops being shared.
 - [ ] **A ref2va preview clip.** The ModelDef currently borrows `minimax_h3_preview.mp4`,
       which is fl2va's. Swap the filename once a run on the CORRECT transformer is judged.
 - [ ] Run one generation per op in the real app (`06-verify.md`).
