@@ -61,19 +61,12 @@ function _collectComfyAudioUrl(nodeOutput, forceLocal = false) {
     return null;
 }
 
-// Tags each collected latent with its role from the SaveLatent node title:
-// Output_Video_Latent -> 'video', Output_Audio_Latent -> 'audio' (LTX dual-latent,
-// MPI-128). Untitled / legacy bare "SaveLatent" -> 'video' (WAN is single video).
-function _latentRoleFromTitle(title) {
-    const t = String(title || '').toLowerCase();
-    if (t.includes('audio')) return 'audio';
-    return 'video';
-}
-
-function _collectComfyLatents(nodeOutput, target, role = 'video') {
+// A multi-stage run saves ONE latent: MpiStageLatents packs video and audio into a
+// single file, so there is nothing to tell apart here.
+function _collectComfyLatents(nodeOutput, target) {
     if (!Array.isArray(nodeOutput?.latents)) return;
     nodeOutput.latents.forEach(latent => {
-        if (latent?.filename) target.push({ ...latent, role });
+        if (latent?.filename) target.push({ ...latent });
     });
 }
 
@@ -127,12 +120,6 @@ async function _stageOneLatent(engineInputName, previewLatentFilePath, forceLoca
 async function _stagePreviewLatent(payload) {
     if (payload?.loadLatentName && payload?.previewLatentFilePath) {
         await _stageOneLatent(payload.loadLatentName, payload.previewLatentFilePath, payload.forceLocal);
-    }
-    // Dual-latent (LTX, MPI-128): stage the per-preview audio latent under its own
-    // engine input name so the stage-2 Input_Audio_Latent LoadLatent node validates
-    // and loads it. WAN previews carry no audio latent → second stage is skipped.
-    if (payload?.loadAudioLatentName && payload?.audioLatentFilePath) {
-        await _stageOneLatent(payload.loadAudioLatentName, payload.audioLatentFilePath, payload.forceLocal);
     }
 }
 
@@ -684,25 +671,16 @@ function _buildParams(payload) {
         // recognised target. Neither ever writes the wrong thing to the other.
         params['Video_Latent.is_continue'] = _isContinue;
         params['Video_Latent.is_preview']  = _isPreview;
-        // LoadLatent is always required for _ms workflows. ComfyUI validates the
-        // node even when its output is unreached. Stage-1 uses the default
-        // engine-input latent; stage-2 uses the per-preview <uuid>.latent staged
-        // by /comfy/stage-preview-latent. Default applies when no explicit
-        // loadLatentName is supplied (every stage-1 run).
+        // Which latent stage 2 reads. Stage-1 runs supply no name and fall back to a
+        // default that nothing places and nothing loads — stage 1 samples from scratch.
         const _latentName = payload.loadLatentName || 'ComfyUI_00001_.latent';
-        // Video-latent load node (MPI-127). WAN + LTX stage-1 both load the single
-        // engine-input latent here; stage-2 swaps in the staged preview latent.
+        // Emitted under both shapes of the one title: the plain key lands on a legacy
+        // LoadLatent's `latent`, the dotted key on MpiStageLatents' `load_path` widget.
+        // Whichever the graph has consumes its half; the other matches nothing and is
+        // skipped. save_path is deliberately NOT injected — stage 1 keeps writing its
+        // baked name and the app collects it from `ui.latents`.
         params['Input_Video_Latent'] = _latentName;
-        // Same name to MpiStageLatents' load widget. save_path is deliberately NOT
-        // injected: the staging path stays as-is (user's call), so stage 1 keeps writing
-        // its baked name and the app collects it from `ui.latents` exactly as today.
         params['Video_Latent.load_path'] = _latentName;
-        // Dual-latent stage-2 (LTX, MPI-128). LTX saves TWO latents (video + audio)
-        // and stage-2 loads BOTH via Input_Video_Latent + Input_Audio_Latent. When a
-        // per-preview audio latent was staged, point its LoadLatent node at it; stage-1
-        // and single-latent models (WAN) supply no audio name and fall back to the
-        // baked engine default (validated, never read on those runs).
-        params['Input_Audio_Latent'] = payload.loadAudioLatentName || 'ltx_audio_latent_00001_.latent';
     }
 
     // Map media to operation-declared Comfy input slots. Slots are role-first:
@@ -2061,7 +2039,7 @@ export function runCommand(payload) {
                 if (_executedSeenNodes.has(nodeId)) return; // reconcile replay of a live-collected node (MPI-203)
                 _executedSeenNodes.add(nodeId);
                 if (saveLatentNodeIds.has(nodeId)) {
-                    _collectComfyLatents(nodeOutput, latentOutputs, _latentRoleFromTitle(workflow[nodeId]?._meta?.title));
+                    _collectComfyLatents(nodeOutput, latentOutputs);
                 }
                 if (outputNodeIds.has(nodeId)) {
                     _collectComfyOutputUrls(nodeOutput, outputUrls, workingPayload.forceLocal === true);

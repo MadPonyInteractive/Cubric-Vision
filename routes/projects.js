@@ -557,11 +557,6 @@ async function materializePreviewAssets({ projectRoot, mediaDir, itemId, stage, 
     }
 
     result.latent = await _materializeLatent(previewAssets.latent, `${itemId}.latent`);
-    // Audio latent (LTX dual-latent). Only present when the workflow saved a
-    // second, audio-role latent; WAN previews have none → audioLatent stays null.
-    result.audioLatent = previewAssets.audioLatent
-        ? await _materializeLatent(previewAssets.audioLatent, `${itemId}.audio.latent`)
-        : null;
 
     const snapshotRequests = Array.isArray(previewAssets.snapshots) ? previewAssets.snapshots : [];
     if (snapshotRequests.length) {
@@ -1106,10 +1101,14 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
             }
 
             // Support-asset cleanup: drop any saved stage-1 latent owned by this
-            // item. Both the video latent and the LTX audio latent (MPI-128, may
-            // be absent). Latents stay per-item (STAGE-2 support, not reuse media,
+            // item. Latents stay per-item (STAGE-2 support, not reuse media,
             // non-deterministic → no dedup benefit) so deleting a preview frees its
             // latent — that is correct (MPI-227 scope boundary).
+            //
+            // `<id>.audio.latent` is NEVER written any more — MpiStageLatents packs
+            // video and audio into one file. Keep sweeping it anyway: projects created
+            // before that migration still carry one on disk, and dropping it from this
+            // list strands those files forever with nothing left to reference them.
             for (const latentName of [`${itemId}.latent`, `${itemId}.audio.latent`]) {
                 const latentPath = path.join(mediaDir, '.latents', latentName);
                 if (hasSupportAssets && await fs.pathExists(latentPath)) {
@@ -1223,14 +1222,6 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
         const latentDiskPath = _videoStat.diskPath;
         if (latentStatus !== 'available') missing.push({ kind: 'latent' });
 
-        // Audio latent (LTX dual-latent, MPI-128). Only gates the fast path when the
-        // sidecar declares one — WAN previews carry none. A declared-but-missing audio
-        // latent blocks the fast path (stage-2 would fail validation on its LoadLatent).
-        const audioLatentInfo = previewAssets.audioLatent;
-        const hasAudioLatent = !!(audioLatentInfo?.engineInputName || audioLatentInfo?.filename || audioLatentInfo?.filePath || audioLatentInfo?.relativePath);
-        const _audioStat = hasAudioLatent ? await _statLatent(audioLatentInfo, `${itemId}.audio.latent`) : { status: 'n/a', diskPath: null };
-        if (hasAudioLatent && _audioStat.status !== 'available') missing.push({ kind: 'audio-latent' });
-
         // Snapshots (I2V only — T2V sidecars carry empty/no snapshots array)
         const snapshotResults = [];
         const snapshotRequests = Array.isArray(previewAssets.snapshots) ? previewAssets.snapshots : [];
@@ -1276,7 +1267,7 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
             && typeof frozenParams.dims.w === 'number'
             && typeof frozenParams.dims.h === 'number');
 
-        const canFastPath = latentStatus === 'available' && (!hasAudioLatent || _audioStat.status === 'available');
+        const canFastPath = latentStatus === 'available';
         // Cold fallback requires frozenParams + all declared snapshots present.
         // For T2V, snapshotRequests is empty, so snapshots condition is trivially true.
         const allSnapshotsPresent = snapshotResults.every(s => s.status === 'available');
@@ -1290,9 +1281,6 @@ router.get('/project-media/:projectId/validate-preview-assets', async (req, res)
             canColdFallback,
             blocked,
             latent: { status: latentStatus, filePath: latentDiskPath ? projectFileUrl(latentDiskPath) : null, engineInputName: latentInfo?.engineInputName || `${itemId}.latent` },
-            audioLatent: hasAudioLatent
-                ? { status: _audioStat.status, filePath: _audioStat.diskPath ? projectFileUrl(_audioStat.diskPath) : null, engineInputName: audioLatentInfo?.engineInputName || `${itemId}.audio.latent` }
-                : null,
             snapshots: snapshotResults,
             frozenComplete,
             missing,

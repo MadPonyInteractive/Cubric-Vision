@@ -20,11 +20,11 @@ WHICH MEDIA IS PRESENT:
                twins the other video models still carry are MPI-456.)
   * tier     — none. H3 ships ONE pruned int8_convrot transformer.
   * audio    — H3 emits video AND stereo audio from one sampler pass as a packed
-               NestedTensor. There is no separate audio latent, so the latent pair is
-               `Output_Video_Latent` / `Input_Video_Latent` and MUST STAY THAT WAY: the
-               app's `_latentRoleFromTitle` tags ANY title containing "audio" as the
-               audio latent, so naming it `Output_AV_Latent` would silently break the
-               stage-2 resume. `_assert_latent_titles` locks that in.
+               NestedTensor. There is no separate audio latent. The one stage node MUST
+               stay titled `Input_Video_Latent`: the app injects the stage gates by that
+               exact title and silently skips a title matching no node, so naming it
+               `Output_AV_Latent` would break the stage-2 resume with no error anywhere.
+               `_assert_latent_titles` locks that in.
 
 So this handler bakes only what the authoring bench leaves behind, and asserts the rest.
 Every check exists because its failure mode is a plausible WRONG VIDEO, not an error.
@@ -197,9 +197,10 @@ def _assert_latent_titles(workflow: dict) -> None:
     """Exactly one stage node, correctly titled, and no leftovers of the old pair.
 
     H3 packs video AND audio into ONE NestedTensor latent, so the natural name for it is
-    something like `Output_AV_Latent` — and that would break stage 2 silently. The app's
-    `_latentRoleFromTitle` (js/services/commandExecutor.js) tags any title CONTAINING
-    "audio" as the audio latent, which is a role H3 has no second slot for."""
+    something like `Output_AV_Latent`. It must still be `Input_Video_Latent`: the app
+    injects the stage gates BY THAT TITLE, and injection silently skips a title matching
+    no node, so a rename makes every continue re-run stage 1 and return a different
+    sample with nothing to announce it."""
     stage = [(nid, node) for nid, node in workflow.items()
              if node.get("class_type") == STAGE_CLASS]
     if len(stage) != 1:
@@ -210,11 +211,6 @@ def _assert_latent_titles(workflow: dict) -> None:
             f"second one's gates are whatever the bench left behind")
     nid, node = stage[0]
     title = node.get("_meta", {}).get("title", "")
-    if "audio" in title.lower():
-        raise SystemExit(
-            f"[FAIL] {STAGE_CLASS} node {nid} is titled {title!r} — the app reads "
-            f"'audio' in a latent title as the AUDIO latent role. H3 has one packed "
-            f"video+audio latent; it must be titled {STAGE_TITLE!r}.")
     if title != STAGE_TITLE:
         raise SystemExit(
             f"[FAIL] {STAGE_CLASS} node {nid} is titled {title!r}, expected "

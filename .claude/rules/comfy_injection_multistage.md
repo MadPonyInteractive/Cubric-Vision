@@ -146,15 +146,12 @@ loaders that self-gate on an empty string (`ExecutionBlocker`), so an unused opt
 rejects nothing. Full contract:
 [docs/workflow-authoring/media-inputs.md](../../docs/workflow-authoring/media-inputs.md).
 
-## Known dead weight — `Input_Audio_Latent`
+## One latent per preview
 
-The app still stages and injects a separate **audio** latent
-([`commandExecutor.js:705`](../../js/services/commandExecutor.js#L705), plus the
-`loadAudioLatentName` / `audioLatentFilePath` chain through `MpiGalleryBlock` and
-`generationService`). **No shipped graph carries `Input_Audio_Latent` or
-`Output_Audio_Latent`** — `MpiStageLatents` handles video and audio in one latent — so
-`_latentRoleFromTitle` never tags an audio latent, `previewAssets.audioLatent` is always
-null, and the injected key lands on nothing.
+A preview saves exactly ONE latent — `MpiStageLatents` packs video and audio into a single
+file. There is no separate audio latent anywhere: not in a graph, not in `previewAssets`,
+not on the wire.
 
-It is inert, not harmful. Do not build on it; delete it when someone is next in this code.
-Same shape as the `Preview_Only` / `Is_Continue` params removed in MPI-473.
+The only place a second `<id>.audio.latent` name still appears is the item-delete sweep in
+`routes/projects.js`, which keeps removing it so projects created before the migration do
+not strand an orphan on disk. Nothing writes that file any more.

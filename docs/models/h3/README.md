@@ -177,11 +177,12 @@ A fifth half-wire appeared the moment H3 and WAN migrated — `saveLatentNodeIds
 know `MpiStageLatents` either, because its class name says "latents", not "save". The test
 written for the first one caught it before it shipped.
 
-**Naming trap, locked by an assert in `generate_h3.py`:** the latent pair MUST stay
-`Output_Video_Latent` / `Input_Video_Latent`. `_latentRoleFromTitle` in
-`js/services/commandExecutor.js` tags any title CONTAINING "audio" as the audio latent —
-a role H3 has no second slot for — so the natural name `Output_AV_Latent` would break
-stage-2 resume silently.
+**Naming trap, locked by an assert in `generate_h3.py`:** the one stage node MUST stay
+titled `Input_Video_Latent`, even though it carries a packed video+audio latent and
+`Output_AV_Latent` reads more naturally. `commandExecutor` injects the stage gates
+(`Input_Video_Latent.is_continue` / `.is_preview`) by that exact title, and injection
+silently skips a title matching no node — so a rename makes every Continue re-run stage 1
+and return a different sample, with nothing to announce it.
 
 ## Routing — derived from media, not from a toggle
 
