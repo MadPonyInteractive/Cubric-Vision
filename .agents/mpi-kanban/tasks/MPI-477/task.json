@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-477",
+  "title": "H3 refiner: the PIXEL-space route, after latent upscaling was disproven",
+  "description": "Latent-space hi-res fix is a dead end on H3 (measured). The untried route is decode -> pixel upscale -> VAE re-encode -> partial re-denoise, which needs a re-nest node to rebuild the video+audio latent pair.",
+  "column": "todo",
+  "maturity": "research",
+  "status": "active",
+  "created_at": "2026-08-07T22:41:27Z",
+  "updated_at": "2026-08-07T22:41:27Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}

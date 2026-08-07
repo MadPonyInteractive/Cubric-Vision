@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-477", "type": "task.created", "at": "2026-08-07T22:41:27Z", "actor": "opus", "column": "todo", "summary": "Carded from the 2026-08-07 bench session: latent upscaling is disproven on H3, pixel-space is the remaining route."}

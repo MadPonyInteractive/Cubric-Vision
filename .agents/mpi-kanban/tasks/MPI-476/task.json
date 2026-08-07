@@ -7,7 +7,7 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-07T19:58:00Z",
-  "updated_at": "2026-08-07T20:05:00Z",
+  "updated_at": "2026-08-07T22:41:27Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
@@ -15,7 +15,7 @@
   },
   "attention": {
     "state": "required",
-    "reason": "Needs the users own eye test in Electron: no Operations row on the Wan card, H3 tables starting at 12GB, the H/B/L letter only on the two LTX cards, and staged chips relabelling when the model changes. Every proof so far is npm test plus live-DOM probes against the BROWSER build.",
-    "updated_at": "2026-08-07T20:05:00Z"
+    "reason": "Confirmed in Electron 2026-08-07: chips relabel on a model change, the H/B/L letter is gone where it disambiguated nothing, and the Wan card has no Operations row. The VRAM item GREW instead of passing - Wan read 16GB, so the floor now lifts onto a card ladder (wan-22, ltx-23-balanced, qwen-edit all 8.29/10.10/8.02 -> 12) and the RAM column rounds to 4GB. Re-check validation.md items 2b and 2c after a reload.",
+    "updated_at": "2026-08-07T22:41:27Z"
   }
 }

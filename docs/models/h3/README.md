@@ -220,10 +220,14 @@ fitting would crop twice.** Verified 2026-08-06 against `comfy_workflows/minimax
   onto that grid (nearest, not up) and reports the true seconds.
 - **Trained range is 124–362 frames** (5.2–15 s). 56 frames works but is below it, so the
   UI default should sit near 5 s, not 2 s.
-- Ratio ladder: native is `high` (768x1344). `very_high` (1088x1920) is ABOVE the trained
-  canvas — a **final-render** tier, not an iterate tier: 2x the pixels costs 3.3x the time
-  (attention is quadratic in token count), so 1088x1920 is ~25.6 min for a 2.33 s clip and
-  roughly an hour at 124 frames.
+- Ratio ladder: native is `high` (768x1344). Everything above it — `very_high` (1088x1920)
+  and `2k` (1472x2560, added 2026-08-07) — is ABOVE the trained canvas: **final-render**
+  tiers, not iterate tiers, because 2x the pixels costs 3.3x the time (attention is
+  quadratic in token count), so 1088x1920 is ~25.6 min for a 2.33 s clip and roughly an
+  hour at 124 frames. Quality holds up there better than "extrapolated" suggests — a bare
+  2560x1472 run was measured clean, which is what earned the `2k` tier — so treat the top
+  of the ladder as a COST limit first. Do not confuse it with **H3-Regenerate-2K**, the
+  768p→2K second pass, which is API-only and not in these weights ([ref2va.md](ref2va.md)).
 - **A canvas change is a different latent shape, so the same seed is a DIFFERENT sample.**
   Tier A/B can never be read as "same shot, sharper", and the UI must not imply it.
 
