@@ -3,8 +3,6 @@
   "next_id": 475,
   "columns": {
     "todo": [
-      "MPI-472",
-      "MPI-473",
       "MPI-461",
       "MPI-458",
       "MPI-456",
@@ -36,6 +34,8 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-473",
+      "MPI-472",
       "MPI-474",
       "MPI-470",
       "MPI-468",
@@ -77,8 +77,17 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-07T06:35:30Z",
+  "updated_at": "2026-08-07T13:55:00Z",
   "events": [
+    {
+      "at": "2026-08-07T13:55:00Z",
+      "type": "task.moved",
+      "task": "MPI-473",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "note": "Implementation started, plan approved by the user. Orientation confirmed the brief and WIDENED it: zero JSON workflow carries a Preview_Only / Input_Preview_Only node (grep, 0 hits), and minimax_h3_fl2va.json node 320 is MpiStageLatents titled Input_Video_Latent - so the models.js:1251 and resolveModelDeps.js:233 comments claiming H3 gates on Input_Preview_Only / Input_Is_Continue are FACTUALLY WRONG, not merely stale, and get corrected rather than deleted. The Input_ canonicalization pass at commandExecutor.js:844 deletes the bare key, so comfyController's params.Preview_Only half of the guard is doubly unreachable. Two sites the brief did not list: generationService.js:986 destructures Preview_Only out of injectionParams, but previewStage.getInjectionParams() returns {}; and generate_h3.py:14 contradicts its own BAKED_WIDGETS at line 83. 12 code sites total. Docs/rules NOT touched - .claude/rules/comfy_injection.md and comfy_injection_multistage.md still declare Input_Preview_Only REQUIRED on _ms base workflows, which is now false, but CLAUDE.md cardinal rule 5 needs explicit permission; reported at close instead."
+    },
     {
       "at": "2026-08-07T04:01:21Z",
       "type": "task.updated",
