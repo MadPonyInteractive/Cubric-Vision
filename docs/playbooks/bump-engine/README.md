@@ -101,6 +101,21 @@ node scripts/engine-floor-check.mjs
 > makes smoking a bumped engine safe. `/build-pod-image` step 1 owns this decision — do not
 > re-derive it. **The smoke therefore runs against the DEV image**, and the evidence is
 > evidence about that image.
+>
+> **The Pod has TWO dev-gated halves and you must stay on the dev side of BOTH.** The image
+> (above) *and* the R2 runtime — `bootstrap.sh` reads `CUBRIC_RUNTIME_CHANNEL`, default
+> `stable`; a dev app run creates Pods on `dev`, a released portable never does. So runtime
+> edits go out with `./publish-runtime.sh dev`, and **never** `publish-runtime.sh stable`,
+> which lands untested on released users. Knowing only one half is enough to break them.
+>
+> **Promotion happens at RELEASE, and it is a clean rebuild — never a rename.** Per
+> [`../../runpod-remote-engine.md` § Dev image pins](../../runpod-remote-engine.md): *"Promotion
+> is a clean rebuild at a real version, never a dev tag renamed into the stable pin."* That is
+> why nothing in the release flow copies `POD_IMAGE_VERSION_DEV` into `POD_IMAGE_VERSION` —
+> there is no const to promote. **An engine bump makes that rebuild mandatory:** ship the app
+> at the new pin while the released image is still on the old one and every user gets a local
+> engine and a remote Pod running different ComfyUI versions, silently. `mpi-release`'s
+> "a dev-only Pod IMAGE tag needs no action" is true for ordinary image work and NOT true here.
 
 Two steps, and the first is the one that gets skipped, because the Pod's lock is **a
 different file in a different repo**: `c:\AI\Mpi\mpi-ci\cubric-vision-pod\node_lock.json`.
