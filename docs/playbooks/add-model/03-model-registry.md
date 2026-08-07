@@ -48,9 +48,13 @@ weight, a heavy production weight) is **NOT** one card with a picker. It is **N 
 - Each card has its own `id` (`ltx-23` + `ltx-23-balanced`; `boogu-edit-high` +
   `-balanced` + `-low`), its own `sizeTier` (`'high'`/`'balanced'`/`'low'` — the L/B/H
   badge), and its **own `dependencies`** (each installs only its tier's weight).
-- **Same `name` + same `modelFamily`** across the siblings. `modelFamily` drives the
-  "show the L/B/H badge only when 2+ tiers of the family are installed" clustering. The
-  `name` shown to the user is identical (`'Boogu Image Edit'`) — the badge disambiguates.
+- **Same `name` + same `modelFamily`** across the siblings. The `name` shown to the user
+  is identical (`'Boogu Image Edit'`) — the badge disambiguates. **The badge gate is the
+  NAME, not the family** (`tierLetterFor`, 2026-08-07): a letter appears only when another
+  INSTALLED model renders the same `name` in a different tier. `modelFamily` groups models
+  that are merely related — Wan-2.2 holds "Wan 2.2 Smooth" and "Wan 2.2 5B", MiniMax-H3
+  holds "MiniMax H3" and "MiniMax H3 Reference" — and gating on it put a letter on cards
+  that were never ambiguous. So: give tier siblings the same `name` or they get no letter.
 - The user installs the tier(s) they want as independent models; a low-VRAM machine
   installs only `low`, a workstation installs `high`. Nothing forces all three.
 

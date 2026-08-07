@@ -235,23 +235,32 @@ function testRealRegistryIntegrity() {
         }
     }
 
-    // wan-22 is the merged, op-keyed model — split ids gone. MPI-470 deprecated t2v_ms,
-    // so i2v_ms is the only selectable op; the op-keyed SHAPE is kept deliberately (it
-    // is the last live exemplar of the resolver's operations{} path).
+    // wan-22 is the merged model — split ids gone. It was the LAST op-keyed model in
+    // the library (MPI-470 left it with one selectable op, so its Model Library card
+    // rendered a toggle row with nothing to choose); per-model operation groups are
+    // gone as a shape, so it must now resolve FLAT. Nothing in the shipped registry
+    // may re-introduce `operations{}` — the install UI that made it meaningful no
+    // longer exists, so a model declaring it would silently install every op with no
+    // toggle. The resolver's operations{} path stays covered by the synthetic models
+    // above, which is where it belongs.
     const wan = MODELS.find(m => m.id === 'wan-22');
     assert.ok(wan, 'wan-22 model is missing from the registry');
-    assert.ok(hasOperationGroups(wan), 'wan-22 must be operation-keyed');
-    assert.deepStrictEqual(selectableOps(wan).sort(), ['i2v_ms']);
+    assert.ok(!MODELS.some(m => hasOperationGroups(m)),
+        'no shipped model may declare operation groups — the install UI for them is gone');
+    assert.deepStrictEqual(selectableOps(wan), []);
     assert.ok(!MODELS.some(m => m.id === 'wan-22-t2v' || m.id === 'wan-22-i2v'),
         'split wan ids must not exist as models');
 
-    // A DEPRECATED op contributes nothing — a stale saved draft or a legacy history
-    // item naming t2v_ms must not drag the removed 27.1GB pair back into a download.
-    const deadOp = resolveDeps(wan, ['t2v_ms'], exists);
-    assert.ok(!deadOp.some(id => id.startsWith('wan-22-')),
-        'deprecated t2v_ms must resolve to commonDeps only');
-    assert.ok(resolveFullUniverse(wan).includes('ComfyUI-PainterI2Vadvanced'),
-        'full universe must include the I2V-only node');
+    // The flatten must not have dropped or duplicated a weight: the i2v-only node and
+    // both transformer halves stay in the universe, and a stale op key contributes
+    // nothing (a flat model ignores selectedOps entirely).
+    for (const id of ['wan-22-i2v-high', 'wan-22-i2v-low', 'ComfyUI-PainterI2Vadvanced']) {
+        assert.ok(resolveFullUniverse(wan).includes(id), `full universe must include ${id}`);
+    }
+    assert.ok(!resolveFullUniverse(wan).some(id => id.startsWith('wan-22-t2v')),
+        'the deprecated t2v weights must stay out of the universe');
+    assert.deepStrictEqual(resolveDeps(wan, ['t2v_ms'], exists), resolveFullUniverse(wan),
+        'a flat model resolves its whole dep set whatever ops are named');
 }
 
 // requiresOps: selecting a dependent op pulls in its prerequisite op's deps, and

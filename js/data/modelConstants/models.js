@@ -1086,26 +1086,23 @@ export const MODELS = [
         workflows: {
             i2v_ms: 'wan22_i2v.json',
         },
-        // Always-installed shared payload (VAE, text encoder, shared custom nodes).
-        commonDeps: [
+        // FLAT dependencies. This was the last `commonDeps` + `operations{}` model in
+        // the library, kept after MPI-470 dropped t2v_ms only so the op-keyed resolver
+        // still had a live exemplar. That cost a one-entry "Operations: Image to Video"
+        // toggle row on the model card — a choice with nothing to choose. Per-model
+        // operation GROUPS are gone as a product shape: a model installs as one unit,
+        // and an op it can run is an op it ships with. Same dep set, same bytes on
+        // disk, so an existing install stays installed.
+        dependencies: [
             'wan_2.1_vae',
             'umt5_xxl_fp8_e4m3fn_scaled',
             'ComfyUI-MpiNodes',
             'ComfyUI-VideoHelperSuite',
             'comfyui-kjnodes',
+            'wan-22-i2v-high',
+            'wan-22-i2v-low',
+            'ComfyUI-PainterI2Vadvanced',
         ],
-        // Per-operation weights the user can opt in/out of. Resolved + unioned with
-        // commonDeps by resolveModelDeps.js before the download lifecycle.
-        // ONE op since MPI-470 dropped t2v_ms, and the operations{} shape is KEPT on
-        // purpose: it leaves wan-22 the only shipped model exercising the op-keyed
-        // resolver (op drafts, per-op install toggles, requiresOps cascade,
-        // deriveInstalledOps). Flattening to `dependencies` would leave that subsystem
-        // with no live exemplar. The cost is a lone toggle row in the Model Library.
-        operations: {
-            i2v_ms: {
-                deps: ['wan-22-i2v-high', 'wan-22-i2v-low', 'ComfyUI-PainterI2Vadvanced'],
-            },
-        },
     },
     {
         id: 'ltx-23',
@@ -1242,9 +1239,15 @@ export const MODELS = [
         // no warning, H3 just installs with no consent step, which is precisely what the
         // flow-down commitment in our authorization forbids. Confirmed with the MPI-451
         // session 2026-08-06 before this def was written.
-        sizeTier: 'high',
+        sizeTier: 'balanced',
         modelFamily: 'MiniMax-H3',
         name: 'MiniMax H3',
+        // The computed floor (25% of 33.9GB of weights, rounded up onto the 8GB grid)
+        // lands on 16GB and reads as "your 12GB card need not apply". Users run H3 on
+        // 8GB with community GGUF quants; we ship int8, so 12 is the honest floor for
+        // OUR weights. Declared per-model rather than by moving K, which would re-floor
+        // every model in the library. See footprint.js `minVramGb`.
+        minVramGb: 12,
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
         // multiStage: the ONE graph carries both sampler passes and picks between them
@@ -1318,9 +1321,13 @@ export const MODELS = [
         // are keyed by LICENCE id, so a user who accepted during an fl2va install gets NO
         // second dialog here. That silence is deliberate — do not read it as a missing gate.
         id: 'minimax-h3-ref2va',
-        sizeTier: 'high',
+        sizeTier: 'balanced',
         modelFamily: 'MiniMax-H3',
         name: 'MiniMax H3 Reference',
+        // Same 12GB floor as fl2va, and not by copy-paste: the two dep sets weigh the
+        // SAME 53.15GB (the transformers are 20.97GB each and everything else is shared),
+        // so the computed floor is the identical 16GB overstatement.
+        minVramGb: 12,
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
         // multiStage + singleFileStages: the ONE graph carries both sampler passes and

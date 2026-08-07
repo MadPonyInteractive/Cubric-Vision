@@ -23,12 +23,15 @@ Op availability is data-driven from `commandRegistry` `mediaInputs` slot count +
 
 ## An UNINSTALLED operation is undispatchable — the gate is the mechanism (MPI-453)
 
-Per-op weights are opt-in (`models.js` `operations[].deps`), so a model can be installed for one
-operation and not another — Wan 2.2 with the i2v pair but no t2v. **MPI-470 deprecated Wan's
-`t2v_ms`, so no shipped model declares 2+ operation groups today** and the partial-install state is
-currently unreachable; the machinery below stays wired for the next multi-op model. The predicate is
-`deriveInstalledOps` (`resolveModelDeps.js`); every op-picking surface reaches it through
-`modelRegistry`:
+Per-op weights used to be opt-in (`models.js` `operations[].deps`), so a model could be installed
+for one operation and not another — Wan 2.2 with the i2v pair but no t2v. MPI-470 deprecated Wan's
+`t2v_ms` and the shape was removed on 2026-08-07, so **every model is one install unit now** and the
+partial-install state is unreachable. The gate still matters, for a different reason: a model can be
+installed and still not run an op it no longer declares (a legacy history item naming `t2v_ms`,
+whose graph is deleted). `isOperationInstalled` therefore requires the op to be in `supportedOps`
+BEFORE it asks about weights — without that, a flat model answers "yes" for any op string. The
+weights predicate is `deriveInstalledOps` (`resolveModelDeps.js`); every op-picking surface reaches
+it through `modelRegistry`:
 
 - `installedOpsForContext(model)` → the `installedOps` ctx key `getAvailableCommands` filters on.
   **It returns `null`, not `[]`, when the dep-status cache is unseeded** — null means *unknown* and
@@ -47,8 +50,10 @@ currently unreachable; the machinery below stays wired for the next multi-op mod
 Both guards skip when the dep-status cache is empty: unknown is not absent, and a false block would
 refuse a generation whose weights are present. When one slips through anyway, ComfyUI's
 `value_not_in_list` on `unet_name` is caught and toasted by name — `docs/comfy.md` § the 400 body.
-Do NOT fix this class by splitting a model into one Library entry per operation: per-op deps are the
-design and MiniMax H3 is the next consumer (MPI-449).
+Do NOT fix this class by splitting a model into one Library entry per operation — that is a
+different question from the (removed) per-op INSTALL groups. A model gets its own card when it is
+its own model: MiniMax H3 and MiniMax H3 Reference are separate cards because they are separate
+transformers with different inputs (MPI-475), not because their ops are separately installable.
 
 ## The op never forces DOWN — two named exceptions only (MPI-337/356/388)
 

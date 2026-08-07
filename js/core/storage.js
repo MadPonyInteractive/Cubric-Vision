@@ -200,10 +200,6 @@ export const Storage = {
   getSelectedModels:   () => get(STORAGE_KEYS.SELECTED_MODELS, { image: null, video: null }),
   setSelectedModels:   (v) => set(STORAGE_KEYS.SELECTED_MODELS, v),
 
-  // Per-model operation toggle draft (MPI-122). { [modelId]: string[] } of selected opKeys.
-  getModelOpDraft:     () => get(STORAGE_KEYS.MODEL_OP_DRAFT, {}),
-  setModelOpDraft:     (v) => set(STORAGE_KEYS.MODEL_OP_DRAFT, v),
-
   // Per-model GPU-arch toggle draft (MPI-209). { [modelId]: string[] } of arch tokens.
   getModelArchDraft:   () => get(STORAGE_KEYS.MODEL_ARCH_DRAFT, {}),
   setModelArchDraft:   (v) => set(STORAGE_KEYS.MODEL_ARCH_DRAFT, v),

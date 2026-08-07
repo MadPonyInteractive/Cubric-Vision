@@ -72,9 +72,7 @@
 
 ## Operation-selectable models — the resolver chokepoint (MPI-122)
 
-A model declares its deps in ONE of two shapes (see `docs/data.md` § resolveModelDeps):
-- **Flat** (all image models): `dependencies: string[]`.
-- **Operation-keyed** (e.g. Wan 2.2 `wan-22`): `commonDeps: string[]` + `operations: { <opKey>: { deps: string[] } }`, and NO flat `dependencies`. The user picks which operations to install in the model manager.
+**Every shipped model is FLAT: `dependencies: string[]`, one install unit** (see `docs/data.md` § modelRegistry). The `commonDeps` + `operations{}` shape — the user picking which ops to install — was removed on 2026-08-07 along with the Model Library toggle row that drove it; `wan-22` was its last holder and MPI-470 had already left it with one op. The resolver still implements the shape for the backend uninstall guard and the next multi-op model, so the rules below still describe it, but nothing ships it.
 
 **The download lifecycle is frozen and op-blind.** `downloadService.start(modelId, deps)` and `uninstall(modelId, deps)` ALWAYS take a RESOLVED FLAT dep array. Operations are collapsed to that flat array by `js/data/modelConstants/resolveModelDeps.js` at the call site — BEFORE the lifecycle. Jobs/SSE/`.cubricdl` markers never learn about operations; jobs stay keyed by `modelId`. **Do NOT add a per-operation download job or a second SSE channel.**
 
@@ -85,11 +83,9 @@ A model declares its deps in ONE of two shapes (see `docs/data.md` § resolveMod
 
 **Never read `model.dependencies` directly.** Use the resolver. A flat model is treated as `commonDeps = dependencies` with no operations, so one code path covers both shapes.
 
-**Per-operation install AND uninstall.** The model-download page lets the user toggle ops on/off on an installed model:
-- Adding an op (Update / Install) downloads only its missing resolved deps.
-- Removing an op (Update, after a confirm) calls `downloadService.uninstall(modelId, deps)` with `deps` = the removed op's resolved deps MINUS any dep still used by an op that REMAINS installed/selected (incl. commonDeps, which any remaining op keeps). This intra-model subtraction is done CLIENT-SIDE — the backend's shared-dep guard only protects across OTHER models (it excludes the target model), so it would not stop you deleting a dep a sibling op of the same model still needs.
-- The button reads Install (0 installed) / Update (draft ≠ installed) / Uninstall (installed, no change). The op draft persists in `state.s_modelOpDraftByModel`.
-No change to the download/SSE contract — per-op uninstall is the same `uninstall()` call with a narrower dep list.
+**There is no per-operation install or uninstall.** The Model Library's Operations toggle row, the `s_modelOpDraftByModel` draft and the per-op uninstall subtraction were all removed with the shape. The remaining draft axis is GPU-arch (MPI-209): the button reads Install (0 installed) / Update (arch draft ≠ arch on disk) / Uninstall.
+
+If a future model brings the op shape back, restore the UI in the SAME change — the intra-model subtraction is the trap that made it non-trivial: uninstalling one op must delete its deps MINUS any dep a REMAINING op still needs, client-side, because the backend's shared-dep guard excludes the target model and would not stop you deleting a dep the model's own sibling op needs.
 
 ---
 

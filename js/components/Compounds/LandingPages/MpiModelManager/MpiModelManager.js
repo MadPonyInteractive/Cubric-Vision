@@ -9,10 +9,9 @@ import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../../da
 import { DEPS } from '../../../../data/modelConstants/dependencies.js';
 import { PLUGINS, pluginDepKey, pluginAvailability } from '../../../../data/pluginsRegistry.js';
 import {
-    resolveDeps, resolveFullUniverse, deriveInstalledOps, selectableOps,
-    expandRequiredOps, dependentsOfOp, archVariantOptions, variantDepsOf, dedupeStable,
+    resolveFullUniverse, deriveInstalledOps,
+    archVariantOptions, variantDepsOf, dedupeStable,
 } from '../../../../data/modelConstants/resolveModelDeps.js';
-import { getCommand } from '../../../../data/commandRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
 import { remoteEngineClient } from '../../../../services/remoteEngineClient.js';
 import { mountPodDiskBar } from '../../../../services/podDiskBar.js';
@@ -32,11 +31,14 @@ import { tradeTable } from '../../../../data/modelConstants/footprint.js';
  * sub-grid (16:9) so rows align. Media (Image/Video) + Size (L/B/H) + live search
  * filters compose. Clicking a tile opens a right-drawer DETAIL panel (an absolute
  * child of the overlay, so it stacks above it) carrying the full per-model
- * controls: description, Operations toggles, GPU-weight arch toggles, VRAM→RAM
- * trade table, disk footprint, and Install / Update / Uninstall.
+ * controls: description, GPU-weight arch toggles, VRAM→RAM trade table, disk
+ * footprint, and Install / Update / Uninstall.
+ *
+ * NO operation toggles. A model installs as ONE unit — see js/data/modelConstants/
+ * models.js (wan-22) for why the last per-op install group was flattened away.
  *
  * This component still owns ALL model-list logic — refresh, install,
- * pause/resume/cancel, uninstall, op toggles (MPI-122), arch toggles
+ * pause/resume/cancel, uninstall, arch toggles
  * (MPI-200/209), engine-split correctness (MPI-163), size-tier trade table
  * (MPI-168), partial-progress, and download:* subscriptions. MPI-215 rewrote only
  * the RENDER layer (lean tiles + detail drawer replacing the old
@@ -155,9 +157,6 @@ export const MpiModelManager = ComponentFactory.create({
         // blank for ~20s behind a busy main thread. The sheets are re-created each
         // render, so the cache has to live out here and be handed in.
         const _previewCache = new Map();
-        // Op-toggle MpiButton instances (in the OPEN detail panel only), torn down
-        // when the panel closes/reopens.  Array<{ key, inst }>  (key 'base' = base)
-        let _detailOpToggles = [];
         // MPI-209: arch-toggle MpiButton instances (open detail panel only).
         //   Array<{ token, inst }>
         let _detailArchToggles = [];
@@ -165,9 +164,6 @@ export const MpiModelManager = ComponentFactory.create({
         let _detailActionBtns = [];
         // The model whose detail panel is currently open (null = closed).
         let _activeDetail = null;
-
-        // ── Base-toggle pseudo-key ───────────────────────────────────────────
-        const BASE = 'base';
 
         // ── Refresh button ───────────────────────────────────────────────────
         const refreshBtn = MpiButton.mount(refreshSlot, {
@@ -298,21 +294,7 @@ export const MpiModelManager = ComponentFactory.create({
             return total;
         }
 
-        // Operations the model bundles into its core (in supportedOps but NOT a
-        // selectable operation group) — e.g. SDXL upscale/detail. When ≥1 exists,
-        // commonDeps form a usable "base" and we show a base toggle. Video models
-        // have none, so no base toggle.
-        function _bundledOps(model) {
-            const sel = new Set(selectableOps(model));
-            return (model.supportedOps || []).filter(op => {
-                if (sel.has(op)) return false;
-                const cmd = getCommand(op);
-                return cmd && !cmd.universal;
-            });
-        }
-        const _hasBaseToggle = model => _bundledOps(model).length > 0;
-
-        // ── Installed-state + draft derivation ───────────────────────────────
+        // ── Installed-state derivation ───────────────────────────────────────
         function _installedOpsOf(model) {
             const depStatus = getModelDepStatus(model.id);
             if (!depStatus) return [];
@@ -326,34 +308,6 @@ export const MpiModelManager = ComponentFactory.create({
                 { arch: remoteEngineClient.archSync(engine) },  // MPI-200: current-arch weight required
             );
             return installedOps;
-        }
-
-        // The user's current op-selection draft for a model. Persisted across
-        // sessions in state.s_modelOpDraftByModel. Defaults:
-        //   - if any op is installed → the installed set (so reopening reflects disk)
-        //   - else (fresh model)     → all selectable ops (default all-on)
-        // A NON-EMPTY saved draft wins. An empty/absent saved draft is NOT honored —
-        // "all ops off" is not a meaningful persisted state for a not-installed model
-        // (it would default Wan to commonDeps-only ~6.5GB and Install would fetch no
-        // ops). A stale empty draft from earlier testing must fall back to the
-        // installed-or-all default, not stick as empty. (MPI-122)
-        function _draftFor(model) {
-            const saved = state.s_modelOpDraftByModel?.[model.id];
-            if (Array.isArray(saved) && saved.length > 0) {
-                // Keep only still-selectable ops, then expand requiresOps.
-                const expanded = expandRequiredOps(model, saved);
-                if (expanded.length > 0) return expanded;
-            }
-            const installed = _installedOpsOf(model);
-            return installed.length ? installed : selectableOps(model);
-        }
-
-        function _setDraft(model, ops) {
-            const next = expandRequiredOps(model, ops);
-            state.s_modelOpDraftByModel = {
-                ...(state.s_modelOpDraftByModel || {}),
-                [model.id]: next,
-            };
         }
 
         // ── Resolve helpers around install/uninstall ─────────────────────────
@@ -443,30 +397,15 @@ export const MpiModelManager = ComponentFactory.create({
             return dedupeStable(ids);
         }
 
-        // Deps to fetch for the drafted op set (commonDeps + drafted ops), scoped to
-        // the current engine (adds engines.local OR engines.remote extraDeps, never
-        // both) and UNIONed across the selected arch tokens (MPI-209).
+        // Deps to fetch for a model, scoped to the current engine (adds engines.local
+        // OR engines.remote extraDeps, never both) and UNIONed across the selected
+        // arch tokens (MPI-209). The whole universe — a model is one install unit.
         function _draftDepIds(model) {
-            return _unionArch(model, arch =>
-                resolveDeps(model, _draftFor(model), null, _engine(), { arch }));
-        }
-
-        // Per-op uninstall dep set: the removed ops' deps MINUS any dep still used
-        // by an op that REMAINS installed-or-drafted (incl. commonDeps, which any
-        // remaining op keeps alive). Intra-model subtraction — the backend's
-        // shared-dep guard only protects across OTHER models, so we must not hand it
-        // a dep a sibling op of THIS model still needs. (MPI-122)
-        function _opUninstallDepIds(model, removedOps, keptOps) {
-            // Engine-scoped + arch-union both sides (MPI-165 / MPI-209): subtract within
-            // the CURRENT engine's + selected-arch universe, never the other engine's
-            // or an unselected arch's weight.
-            const removed = _unionArch(model, arch => resolveDeps(model, removedOps, null, _engine(), { arch }));
-            const keep = new Set(_unionArch(model, arch => resolveDeps(model, keptOps, null, _engine(), { arch }))); // includes commonDeps
-            return removed.filter(id => !keep.has(id));
+            return _unionArch(model, arch => resolveFullUniverse(model, null, _engine(), { arch }));
         }
 
         // Ids whose in-flight uninstall removes the WHOLE model/plugin, as opposed to
-        // the op/arch-removal half of an Update. The download:uninstalled event carries
+        // the arch-removal half of an Update. The download:uninstalled event carries
         // no intent, so the toast used to call every one of them "updated" — which read
         // as the opposite of what happened on a real uninstall (MPI-394). Consumed
         // (and cleared) by the download:uninstalled handler.
@@ -512,67 +451,56 @@ export const MpiModelManager = ComponentFactory.create({
         // guard still protects files used by other models. Keeping-both stays the
         // default; this is the deliberate, out-of-install-pressure cleanup path.
         // Deps to delete when an installed arch is toggled OFF (MPI-209): that arch's
-        // variant deps MINUS anything a KEPT arch or op still needs. Arch transformers
+        // variant deps MINUS anything a KEPT arch still needs. Arch transformers
         // are unique per token, so this is normally just that one weight; the subtract
         // guards the general case (a future shared variant dep). Replaces MPI-207's
         // standalone "remove old weight" button — the toggle now owns removal too.
         function _archUninstallDepIds(model, removedArch, keptArch) {
             const removed = [];
             for (const t of removedArch) removed.push(...variantDepsOf(model, { arch: t }));
-            // Kept = the kept ops' universe (any selected arch) + kept arch weights.
-            const keep = new Set(_unionArch(model, arch => resolveDeps(model, _draftFor(model), null, _engine(), { arch })));
+            // Kept = the model's universe under any selected arch + kept arch weights.
+            const keep = new Set(_draftDepIds(model));
             for (const t of keptArch) for (const id of variantDepsOf(model, { arch: t })) keep.add(id);
             return dedupeStable(removed).filter(id => !keep.has(id));
         }
 
-        // Update: apply the op + arch draft against what's on disk. Adds install;
-        // removals (op OR arch) require confirm. The install path (_draftDepIds)
-        // already unions the selected arch tokens, so a newly-toggled-on arch installs
-        // for free; here we only compute what to DELETE.
+        // Update: apply the arch draft against what's on disk. Adds install; removals
+        // require confirm. The install path (_draftDepIds) already unions the selected
+        // arch tokens, so a newly-toggled-on arch installs for free; here we only
+        // compute what to DELETE. Arch is the ONLY axis an Update can move — there are
+        // no per-operation install groups any more.
         async function _applyUpdate(model) {
-            const installedOps = new Set(_installedOpsOf(model));
-            const draftOps = new Set(_draftFor(model));
-            const addedOps = [...draftOps].filter(op => !installedOps.has(op));
-            const removedOps = [...installedOps].filter(op => !draftOps.has(op));
-
             const installedArch = new Set(_installedArchOf(model));
             const draftArch = new Set(_archDraftFor(model));
             const addedArch = [...draftArch].filter(t => !installedArch.has(t));
             const removedArch = [...installedArch].filter(t => !draftArch.has(t));
 
             const doInstall = async () => {
-                if (!addedOps.length && !addedArch.length) return;
-                // Install resolves the FULL draft (ops ∪ selected arch); the downloader
-                // dedupes already-present deps and the resumable layer skips complete files.
+                if (!addedArch.length) return;
+                // Install resolves the full universe under the selected arch; the
+                // downloader dedupes already-present deps and the resumable layer skips
+                // complete files.
                 await _install(model);
             };
 
-            if (removedOps.length === 0 && removedArch.length === 0) {
+            if (removedArch.length === 0) {
                 await doInstall();
                 return;
             }
 
-            // Removal present → confirm. On OK: uninstall removed ops' + removed archs'
-            // unique deps, then install any added ops/archs.
-            const keptOps = [...draftOps];
+            // Removal present → confirm. On OK: uninstall the removed archs' unique
+            // deps, then install any added ones.
             const keptArch = [...draftArch];
-            const removeDeps = dedupeStable([
-                ..._opUninstallDepIds(model, removedOps, keptOps),
-                ..._archUninstallDepIds(model, removedArch, keptArch),
-            ]).map(id => DEPS[id]).filter(Boolean);
+            const removeDeps = _archUninstallDepIds(model, removedArch, keptArch)
+                .map(id => DEPS[id]).filter(Boolean);
 
-            const removedOpLabels = removedOps.map(op => (getCommand(op) || {}).label || op);
-            const removedArchLabels = removedArch.map(t =>
-                (archVariantOptions(model).find(o => o.token === t)?.label) || t);
-            const removedLabels = [...removedOpLabels, ...removedArchLabels].join(', ');
-            const addedOpLabels = addedOps.map(op => (getCommand(op) || {}).label || op);
-            const addedArchLabels = addedArch.map(t =>
-                (archVariantOptions(model).find(o => o.token === t)?.label) || t);
-            const addedLabels = [...addedOpLabels, ...addedArchLabels].join(', ');
+            const labelOf = t => (archVariantOptions(model).find(o => o.token === t)?.label) || t;
+            const removedLabels = removedArch.map(labelOf).join(', ');
+            const addedLabels = addedArch.map(labelOf).join(', ');
 
             const lines = [`Remove ${removedLabels} from ${model.name}?`];
             if (addedLabels) lines.push(`Also installs: ${addedLabels}.`);
-            lines.push('• Files shared with other operations or models are kept.');
+            lines.push('• Files shared with other models are kept.');
             _showConfirm(lines.join('\n'), async (deleteFiles) => {
                 if (removeDeps.length) {
                     await downloadService.uninstall(model.id, removeDeps, deleteFiles);
@@ -693,29 +621,20 @@ export const MpiModelManager = ComponentFactory.create({
             // (MPI-241)
             const isBusy = isActiveDownload || (!!job && downloadState === 'complete');
 
-            // Sizes: drafted footprint (op-keyed) else the engine-scoped universe — a
-            // Pod must show the current-engine footprint, not bf16+GGUF (MPI-163).
-            const sizeDepIds = selectableOps(model).length
-                ? _draftDepIds(model)
-                : _unionArch(model, arch => resolveFullUniverse(model, null, _engine(), { arch }));
-            const sizeBytes = _sizeOf(sizeDepIds);
+            // Sizes: the engine-scoped universe under the selected arch — a Pod must
+            // show the current-engine footprint, not bf16+GGUF (MPI-163).
+            const sizeBytes = _sizeOf(_draftDepIds(model));
 
             const installedOps = _installedOpsOf(model);
-            const hasOps = selectableOps(model).length > 0;
-            const draft = _draftFor(model);
-            const opDraftDiffers = hasOps && (
-                installedOps.length !== draft.length
-                || installedOps.some(op => !draft.includes(op))
-            );
-            // MPI-209: arch draft ≠ arch-on-disk also counts as "changed" (Update
+            // MPI-209: arch draft ≠ arch-on-disk counts as "changed" (Update
             // installs/uninstalls the toggled weight). Only once ≥1 arch is on disk.
+            // It is now the ONLY draft axis — per-op install groups are gone.
             const installedArch = _installedArchOf(model);
             const archDraft = _archDraftFor(model);
-            const archDraftDiffers = _hasArch(model) && installedArch.length > 0 && (
+            const draftDiffersFromInstalled = _hasArch(model) && installedArch.length > 0 && (
                 installedArch.length !== archDraft.length
                 || installedArch.some(t => !archDraft.includes(t))
             );
-            const draftDiffersFromInstalled = opDraftDiffers || archDraftDiffers;
             // MPI-216: arch-weight-on-disk only counts as installed when common deps
             // are ALSO present (see _buildCard history).
             const anyInstalled = model.installed === true || installedOps.length > 0
@@ -801,55 +720,18 @@ export const MpiModelManager = ComponentFactory.create({
             };
         }
 
-        // ── Detail-panel toggle rows (ops + arch) ─────────────────────────────
-        // Same logic as the old in-card rows; they build into the passed host and
-        // register their instances in the detail toggle arrays so the panel can tear
-        // them down on close. Toggling mutates the draft + re-renders (which repaints
-        // the tile state) then re-renders the OPEN panel so size/actions stay live.
-        function _buildToggleRow(model, host, { frozen }) {
-            const ops = selectableOps(model);
-            if (ops.length === 0) return;
-
-            const draft = new Set(_draftFor(model));
-            const showBase = _hasBaseToggle(model);
-            const commit = () => { _setDraft(model, [...draft]); _refreshAfterDraft(model); };
-
-            if (showBase) {
-                const baseInst = MpiButton.mount(ce('div'), {
-                    label: 'Base model', icon: 'layers', variant: 'secondary', size: 'sm',
-                    toggleable: true, active: draft.size > 0, disabled: frozen,
-                });
-                baseInst.on('toggle', ({ active }) => {
-                    if (!active) draft.clear(); // base off → cascade every op off
-                    commit();
-                });
-                _detailOpToggles.push({ key: BASE, inst: baseInst });
-                host.appendChild(baseInst.el);
-            }
-
-            ops.forEach(op => {
-                const cmd = getCommand(op) || {};
-                const inst = MpiButton.mount(ce('div'), {
-                    label: cmd.label || op,
-                    icon: cmd.icon || undefined,
-                    variant: 'secondary', size: 'sm',
-                    toggleable: true, active: draft.has(op), disabled: frozen,
-                });
-                inst.on('toggle', ({ active }) => {
-                    if (active) {
-                        draft.add(op);
-                        for (const req of expandRequiredOps(model, [op])) draft.add(req);
-                    } else {
-                        draft.delete(op);
-                        for (const dep of dependentsOfOp(model, op)) draft.delete(dep);
-                    }
-                    commit();
-                });
-                _detailOpToggles.push({ key: op, inst });
-                host.appendChild(inst.el);
-            });
-        }
-
+        // ── Detail-panel arch toggle row ──────────────────────────────────────
+        // Builds into the passed host and registers its instances in the detail
+        // toggle array so the panel can tear them down on close. Toggling mutates
+        // the draft + re-renders (which repaints the tile state) then re-renders the
+        // OPEN panel so size/actions stay live.
+        //
+        // The OPERATION toggle row that used to sit above this one is GONE. It let a
+        // user install a subset of a model's operations (MPI-122, for the old Wan
+        // t2v/i2v split), and once MPI-470 deprecated t2v_ms the only model that ever
+        // had one was left rendering a single toggle that could not be turned off.
+        // A model is one install unit now; see models.js (wan-22).
+        //
         // MPI-209: one toggle per declared GPU-arch weight; labels from the card.
         function _buildArchRow(model, host, { frozen }) {
             const opts = archVariantOptions(model);
@@ -911,8 +793,6 @@ export const MpiModelManager = ComponentFactory.create({
         }
 
         function _destroyDetailToggles() {
-            _detailOpToggles.forEach(({ inst }) => inst?.el?.destroy?.());
-            _detailOpToggles = [];
             _detailArchToggles.forEach(({ inst }) => inst?.el?.destroy?.());
             _detailArchToggles = [];
             _detailActionBtns.forEach(inst => inst?.el?.destroy?.());
@@ -938,10 +818,6 @@ export const MpiModelManager = ComponentFactory.create({
                     <span class="mpi-detail__pill mpi-detail__pill--${isVideo ? 'video' : 'image'}">${isVideo ? 'Video' : 'Image'}</span>
                 </div>
                 ${model.description ? `<p class="mpi-detail__desc">${model.description}</p>` : ''}
-                <div class="mpi-detail__field" id="detail-ops" style="display:none;">
-                    <span class="mpi-detail__field-label">Operations</span>
-                    <div class="mpi-detail__toggle-row" id="detail-ops-row"></div>
-                </div>
                 <div class="mpi-detail__field" id="detail-arch" style="display:none;">
                     <span class="mpi-detail__field-label">GPU weight</span>
                     <div class="mpi-detail__toggle-row" id="detail-arch-row"></div>
@@ -1002,11 +878,6 @@ export const MpiModelManager = ComponentFactory.create({
                 thumb.appendChild(img);
             }
 
-            // Operation toggles (MPI-122).
-            if (selectableOps(model).length) {
-                qs('#detail-ops', detailBody).style.display = '';
-                _buildToggleRow(model, qs('#detail-ops-row', detailBody), { frozen: st.isActiveDownload });
-            }
             // GPU-weight arch toggles (MPI-200/209) — arch-variant models only.
             if (_hasArch(model)) {
                 qs('#detail-arch', detailBody).style.display = '';
@@ -1137,7 +1008,6 @@ export const MpiModelManager = ComponentFactory.create({
             return MODELS.map(model => {
                 const installedOps = _installedOpsOf(model);
                 const isInst = model.installed === true || installedOps.length > 0;
-                const draft = selectableOps(model).length ? _draftFor(model) : [];
                 const job = state.downloadJobs.find(j => j.modelId === model.id);
                 const jobSig = job
                     ? `${job.status}:${job.indeterminate ? 1 : 0}:${job.phase || ''}`
@@ -1156,7 +1026,7 @@ export const MpiModelManager = ComponentFactory.create({
                 const archInst = _hasArch(model) ? [..._installedArchOf(model)].sort().join(',') : '';
                 // justInstalled drives the heat dot; include so it appears/clears.
                 const neu = model.justInstalled ? 'n' : '';
-                return `${model.id}|${isInst ? 1 : 0}|${[...installedOps].sort().join(',')}|${[...draft].sort().join(',')}|${archDraft}|${archInst}|${jobSig}|${partSig}|${neu}`;
+                return `${model.id}|${isInst ? 1 : 0}|${[...installedOps].sort().join(',')}|${archDraft}|${archInst}|${jobSig}|${partSig}|${neu}`;
             }).join('||')
                 // MPI-215: filter/search state is part of the visible output — a filter
                 // change with no per-model change must still force a rebuild.

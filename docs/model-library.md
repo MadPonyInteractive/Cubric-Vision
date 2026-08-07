@@ -7,14 +7,34 @@ Verify a named file/function/flag still exists before relying on an entry.
 
 ## Usable vs installed — display/count/pickers gate on `isModelUsable`, never `model.installed`
 
-`model.installed` is the raw ALL-deps-present flag; for op-keyed models it is false on a
-deliberate partial install (Wan 2.2 with only t2v installed, until MPI-470 dropped that op — no
-shipped model has 2+ operation groups today). Gating any user-facing surface
-on it makes the model vanish while the app can clearly run it:
+`model.installed` is the raw ALL-deps-present flag. It is false for a model whose CURRENT-engine or
+CURRENT-arch weight is on disk but whose sibling weight is not (`isModelUsable` routes those through
+`deriveInstalledOps`), and it was false for a deliberate partial op install back when a model could
+have one. Gating any user-facing surface on it makes the model vanish while the app can clearly
+run it:
 
-- **Model pickers/dropdowns** must use `isModelUsable()` (modelRegistry), NOT `model.installed` — a partial op-keyed install must still be pickable (MPI-122).
+- **Model pickers/dropdowns** must use `isModelUsable()` (modelRegistry), NOT `model.installed` (MPI-122).
 - **Landing hero "MODELS X / Y"** counts a model when its base OR ≥1 operation is on disk. `syncModelInstalled` (`js/data/modelRegistry.js`) filters `installedModelIds` on `isModelUsable(id)` (for op-keyed models: `deriveInstalledOps(...).fullyInstalled` = `installedOps.length > 0`), not the raw `result.installed`. The `_modelDepStatusCache` is populated in the same function just above the filter, so `isModelUsable` resolves correctly.
 - **Rule: usable = installed for display/count purposes** — keep the hero count, the manager list, and the pickers all gated on `isModelUsable`.
+
+## The detail drawer has NO Operations row (2026-08-07)
+
+It used to render one toggle per `operations{}` group so a user could install a subset of a
+model's ops (MPI-122). MPI-470 deprecated Wan's `t2v_ms`, which left the last op-keyed model
+showing a single toggle that could not be turned off — a choice with nothing to choose. The row,
+the `_buildToggleRow`/`_draftFor`/`_setDraft` machinery, the `s_modelOpDraftByModel` state key and
+its localStorage mirror are all gone, and `wan-22` is flat. **GPU-arch is now the only draft axis**,
+so an Update means exactly "install/remove an arch weight". See `.claude/rules/downloads.md` for
+what to restore, together, if a future model brings operation groups back.
+
+## The VRAM table's floor can be overridden per model (2026-08-07)
+
+`footprint.js` computes the floor as 25% of total weights, rounded up onto the 8GB grid. That
+rounding turned MiniMax H3 (13.3GB raw) into "16GB minimum", i.e. *don't bother* for a 12GB card
+users demonstrably run it on. A ModelDef may set `minVramGb` to state the floor outright; it draws
+one leading off-grid row and the 8GB grid resumes above it (12 / 16 / 24 / 32). Without an override
+every row stays on the grid — the raw computed floor (8.29GB for Wan) must never become a row, it
+reads as a spec when the table's job is to name a card you can buy.
 
 ## Featured models — editorial "hot / new / best" spotlight (2026-07-11)
 

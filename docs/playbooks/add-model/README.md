@@ -76,13 +76,14 @@ second gate.
 
 Two structural forks decide everything downstream:
 
-1. **Combined-op vs separate-op transformer.**
-   - **Combined** (one transformer serves t2v + i2v, like LTX and 5B): use a flat
-     `dependencies: []` array on the model def. Both ops install together; no
-     per-op toggle in the manager.
-   - **Separate** (distinct weights per op, like Wan-22 14B's high/low experts):
-     use `commonDeps: []` + `operations: { t2v_ms: {deps:[...]}, i2v_ms: {deps:[...]} }`.
-     Each op installs independently.
+1. **One card, or two?** Every model def is a flat `dependencies: []` array and installs
+   as ONE unit — all of its ops ship together. The `commonDeps` + `operations{}` shape
+   (per-op install groups) was removed on 2026-08-07 with the Model Library toggle row
+   that drove it; **do not re-add it** without restoring that UI in the same change
+   (`.claude/rules/downloads.md`). If two ops genuinely need different transformers, ask
+   whether they are the same MODEL: distinct weights with distinct inputs get their own
+   card (MiniMax H3 vs H3 Reference, MPI-475). Weights that only vary by tier or GPU arch
+   are a `sizeTier` sibling or a `variants.arch` axis, not an operation group.
 2. **Single-stage vs multi-stage.** `capabilities.multiStage` — true shows the
    preview-stage toggle + (if also `branchingContinue`) the Continue button.
    Single-stage (5B) → `multiStage: false`, Finish-only.
@@ -139,7 +140,7 @@ Model-specific additions:
 
 - [ ] **READ THIS PLAYBOOK FIRST.** Do not work from a handoff or a model-scoped doc alone — they
       assume the playbook, they do not replace it.
-- [ ] Decide shape: combined (`dependencies[]`) vs separate (`commonDeps`+`operations{}`); single vs multi-stage
+- [ ] Decide shape: one card or two (`dependencies[]` either way — no `operations{}`); single vs multi-stage
 - [ ] Output capture titled `Output_Image` (image) / `Output_Video` (video) / `Output_Preview` (multi-stage preview) — [04](04-ops-and-controls.md). Single naming law (MPI-252); no bare `Output`
 - [ ] Author + save the workflow template in `comfy_workflows/scripts/workflow_generation/`
 - [ ] Verify the op-boolean feeds only the MpiIfElse; normalize all loader file paths to bare filenames — [01](01-workflow-split.md)

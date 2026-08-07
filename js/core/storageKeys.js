@@ -25,8 +25,6 @@ export const STORAGE_KEYS = {
   // Model selection (per-mediaType, persisted across sessions)
   SELECTED_MODELS:        'mpi_selected_models_by_type',
   LAST_SELECTED_MEDIATYPE:'mpi_last_selected_mediatype',
-  // Per-model operation toggle draft (MPI-122) — { [modelId]: string[] of opKeys }
-  MODEL_OP_DRAFT:         'mpi_model_op_draft_by_model',
   // Per-model GPU-arch toggle draft (MPI-209) — { [modelId]: string[] of arch tokens }
   MODEL_ARCH_DRAFT:       'mpi_model_arch_draft_by_model',
 

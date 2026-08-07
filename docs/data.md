@@ -6,11 +6,10 @@ Three core data files. All are plain JS objects — no ORM, no database.
 
 **Single source of truth for all generative models.**
 
-- `MODELS`: Array of `ModelDef` objects. A model declares its deps in ONE of two shapes:
-  - **Flat** (ops are not separately installable — all image models): `{ id, name, mediaType, supportedOps, workflows, dependencies[], dropdownMeta? }`.
-  - **Operation-keyed** (ops carry separable payloads — e.g. Wan 2.2): `{ ..., commonDeps[], operations: { <opKey>: { deps[], requiresOps?[] } } }` and NO flat `dependencies`. `commonDeps` is always installed (VAE, text encoder, shared nodes); each `operations[op].deps` is that op's unique payload the user can opt in/out of in the model manager. Optional `requiresOps` lists ops that op depends on — selecting it pulls them in; deselecting a prerequisite cascades the dependent off. An op only reads installed when its own deps AND its `requiresOps` are on disk.
-  - **Op toggles + per-op install/uninstall:** the model-download page renders one toggle per `operations` key (only ops in both `supportedOps` and `operations` are selectable). The toggle draft persists in `state.s_modelOpDraftByModel` (survives restart). The action button reads Install (nothing installed), Update (draft differs from installed), or Uninstall (installed, no change). Update installs newly-selected ops and, after a confirm, uninstalls deselected ops' UNIQUE deps (deps still used by a remaining op are kept). A "base" toggle (commonDeps) appears only when the model has bundled ops that run on commonDeps alone (image models with upscale/detail); video models show only their op toggles.
+- `MODELS`: Array of `ModelDef` objects. **A model is ONE install unit** — `{ id, name, mediaType, supportedOps, workflows, dependencies[], dropdownMeta? }`. Every op it declares ships with it; an op it can run is an op whose weights are on disk.
+  - **No `commonDeps` + `operations{}` (2026-08-07).** That shape let the user install a SUBSET of a model's ops, and the Model Library rendered a toggle per group (MPI-122, for the old Wan t2v/i2v split). MPI-470 deprecated `t2v_ms` and left `wan-22` — the only such model — rendering a one-entry toggle row with nothing to choose, so both the shape and its UI were removed. **Do not re-add `operations{}` to a shipped ModelDef**: the install UI that made it meaningful is gone, so a model declaring it would silently install every op with no toggle. `tests/resolve-model-deps.test.cjs` asserts no shipped model declares it. The resolver still implements the shape (the backend uninstall guard and `deriveInstalledOps` do), covered by synthetic models in the tests.
   - `dropdownMeta`: Optional short category text shown in compact model selectors (for example `PHOTO`, `ANIME`, `VIDEO`). Keep this as model data rather than deriving it from names in UI code.
+  - `minVramGb`: Optional per-model floor for the VRAM↔RAM trade table, overriding the computed one (`footprint.js`). Use it when the fitted curve overstates the entry card — H3 sets 12 because 25%-of-weights rounds onto the 8GB grid at 16 and users run it on less. An override off the grid draws its own leading row; without one, every row stays on the 8GB grid.
 - `getModelsByType(mediaType, opts?)`: Returns models filtered by media type. Accepts `{ installed: true|false }` to filter by install state.
 - `getModelById(id)`: Lookup by ID. Legacy split ids (`wan-22-t2v` / `wan-22-i2v`) are canonicalized to the merged `wan-22` via `canonicalModelId`.
 - `getWorkflowFile(modelId, op)`: Returns the workflow JSON filename for a model+op combination.
@@ -25,8 +24,10 @@ Pure, framework-free resolver that collapses any model + op-selection into a sta
 - `resolveFullUniverse(model)`: common + EVERY selectable op — used for install-status checks and whole-model uninstall so no op payload is orphaned.
 - `deriveInstalledOps(model, depStatusFn)`: `{ installedOps, fullyInstalled }` derived from per-dep disk/Pod status. An op is installed when common + its own deps are complete. Omitted ops are NOT partial failures.
 - `expandRequiredOps(model, ops)`: expand a selection to include every op it (transitively) requires via `requiresOps`, in stable registry order.
-- `dependentsOfOp(model, op)`: ops that (transitively) require `op` — the UI cascade-off set when `op` is deselected.
+- `dependentsOfOp(model, op)`: ops that (transitively) require `op` — the cascade-off set when `op` is deselected.
 - `selectableOps(model)`, `hasOperationGroups(model)`, `canonicalModelId(id)`, `LEGACY_MODEL_ID_ALIASES`, `dedupeStable(ids)`.
+
+> The four op-axis exports above return empty for every SHIPPED model — no ModelDef declares `operations{}` any more (see above). They stay because the backend uninstall guard implements the shape and the next multi-op model must find it working; their tests use synthetic models.
 
 Contract tests: `tests/resolve-model-deps.test.cjs` (incl. a real-registry integrity check).
 

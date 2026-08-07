@@ -85,13 +85,27 @@ export function ramNeededGb(totalWeights, vramGb) {
 export function tradeTable(model, engine = null, userVramGb = null, variantTokens = {}) {
     const totalWeights = totalWeightsGb(model, engine, variantTokens);
     const footprint = totalWeights + OVERHEAD;
-    const floor = vramFloorGb(model ? totalWeights : 0);
+    // `minVramGb` on the ModelDef overrides the computed floor. It exists because the
+    // K*weights curve is a fit, and rounding it onto the 8GB grid can turn a model a
+    // 12GB card demonstrably runs into one the table says needs 16 — a floor is a
+    // "don't bother" signal, so overstating it costs users a model. Per-model rather
+    // than a change to K, which would re-floor the whole library.
+    const override = Number.isFinite(model?.minVramGb) ? model.minVramGb : null;
+    const floor = override ?? vramFloorGb(model ? totalWeights : 0);
     const startVram = Math.ceil(floor / 8) * 8;       // first row on the 8GB grid ≥ floor
 
     const rows = [];
+    // Only an EXPLICIT override earns a row off the 8GB grid; the grid resumes above
+    // it, so the ladder reads 12 / 16 / 24 / 32 — the sizes cards actually ship in.
+    // The COMPUTED floor must never become a row: it is a raw fit (Wan 2.2 = 8.29GB)
+    // and printing it says "8.29GB VRAM" where the table's whole job is to name a
+    // card the user can go buy.
+    if (override != null && override < startVram) {
+        rows.push({ vram: override, ram: ramNeededGb(totalWeights, override), isFloor: true, isUserRow: false });
+    }
     for (let v = startVram; ; v += 8) {
         const ram = ramNeededGb(totalWeights, v);
-        rows.push({ vram: v, ram, isFloor: v === startVram, isUserRow: false });
+        rows.push({ vram: v, ram, isFloor: rows.length === 0, isUserRow: false });
         if (ram === 0) break;                          // model fully resident — stop
         if (v > startVram + 80) break;                 // safety bound (never expected)
     }
@@ -130,6 +144,18 @@ export function demo() {
     assert(vramFloorGb(6.5) === 8, `SDXL floor → ${vramFloorGb(6.5)} (want 8 via MIN_FLOOR)`);
     assert(vramFloorGb(20) === 8, `Wan floor → ${vramFloorGb(20)} (want 8, accepted optimistic)`);
     assert(Math.abs(vramFloorGb(58.7) - 14.675) < 1e-6, `LTX floor → ${vramFloorGb(58.7)} (want 14.675)`);
+
+    // minVramGb override: a 12GB floor prepends ONE off-grid row, then the 8GB grid
+    // resumes — and the override never moves the RAM figures, only which rows show.
+    const H3 = { dependencies: [], minVramGb: 12 };          // weights 0 → floor would be 8
+    assert(tradeTable(H3).rows[0].vram === 12, 'minVramGb must start the table at 12');
+    assert(tradeTable(H3).rows[0].isFloor === true, 'the override row carries the min flag');
+    assert(tradeTable(H3).rows[1]?.vram === 16, 'the 8GB grid resumes above the override');
+    // WITHOUT an override every row must stay ON the 8GB grid — the computed floor is
+    // a raw fit (8.29 for Wan) and printing it as a row reads as a spec, not a hint.
+    assert(tradeTable({ dependencies: [] }).rows[0].vram === 8, 'no override → the computed floor');
+    assert(tradeTable({ dependencies: [] }).rows.every(r => r.vram % 8 === 0),
+        'no override → every row sits on the 8GB grid');
 
     // sizeToGb parsing
     assert(sizeToGb('41GB') === 41, 'parse 41GB');

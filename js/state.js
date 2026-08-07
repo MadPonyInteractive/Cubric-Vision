@@ -43,17 +43,13 @@ const _state = {
                                // video) is restored. Updated by setSelectedModelId.
                                // Mirrored to localStorage by subscriber below.
 
-    s_modelOpDraftByModel: Storage.getModelOpDraft(),
-                               // MPI-122: { [modelId]: string[] } — the user's
-                               // per-model operation toggle draft in the model-download
-                               // page. Survives restart. Written by MpiModelManager via
-                               // top-level replace; mirrored to localStorage below.
-
     s_modelArchDraftByModel: Storage.getModelArchDraft(),
                                // MPI-209: { [modelId]: string[] } — the user's
                                // per-model GPU-arch toggle draft (which arch weight(s)
-                               // to install). Separate axis from the op draft. Survives
-                               // restart; mirrored to localStorage below.
+                               // to install). The only install draft axis there is:
+                               // per-OPERATION install groups were removed with the
+                               // last op-keyed model. Survives restart; mirrored to
+                               // localStorage below.
 
     s_selectedOpByModel: {},   // MPI-247: { [modelId]: opKey } — the user's last
                                // chosen operation per model. Session-only (NOT
@@ -226,7 +222,6 @@ export function batchState(fn) {
 Events.on('state:changed', ({ key, value }) => {
     if (key === 's_selectedModelIdByType') Storage.setSelectedModels(value);
     else if (key === 's_lastSelectedMediaType') Storage.setLastSelectedMediaType(value);
-    else if (key === 's_modelOpDraftByModel') Storage.setModelOpDraft(value);
     else if (key === 's_modelArchDraftByModel') Storage.setModelArchDraft(value);
     else if (key === 'pixelMode') {
         const mode = (value === 'smooth' || value === 'pixel') ? value : 'auto';

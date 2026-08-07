@@ -291,21 +291,37 @@ export function getModelById(id) {
 }
 
 /**
- * The size-tier letter (H/B/L) for a model, or '' when the model has no tier
- * family (MPI-200). Shared by the model dropdown, prompt-box button, and gallery
- * cards so all three read the same tier convention. A model shows its letter only
- * when it belongs to a `modelFamily` (i.e. tier siblings exist) — a lone model
- * with no family gets no letter (no clutter). Unlike the live dropdown (which
- * gates on 2+ INSTALLED tiers), this is install-independent: a gallery asset made
- * by a specific tier should always show which tier made it.
+ * The size-tier letter (H/B/L) for a model, or '' when the letter would not
+ * disambiguate anything (MPI-200). Shared by the prompt-box model button and the
+ * gallery cards so both read the same tier convention.
+ *
+ * The letter is a DISAMBIGUATOR, not a spec badge: it earns its place only when
+ * two installed models would otherwise render the same label — i.e. another
+ * INSTALLED model shares this one's display `name` in a different tier. That is
+ * true of LTX 2.3 (high + balanced, both literally named "LTX 2.3") and of
+ * nothing else shipped today. `modelFamily` is the wrong gate for it and was the
+ * bug: Wan-2.2 groups "Wan 2.2 Smooth" with "Wan 2.2 5B" and MiniMax-H3 groups
+ * "MiniMax H3" with "MiniMax H3 Reference" — distinct names, so their letters
+ * disambiguated nothing and read as clutter on every gallery card.
+ *
+ * Install-gated on purpose (2026-08-07): with only one tier of a family on disk
+ * there is nothing to tell apart, so a gallery card made by that tier shows a
+ * bare name. Uninstalling the sibling drops the letter, which is correct — it
+ * only ever existed to separate the two.
  * @param {ModelDef|string|null} modelOrId
  * @returns {'H'|'B'|'L'|''}
  */
 const _TIER_LETTER = { low: 'L', balanced: 'B', high: 'H' };
 export function tierLetterFor(modelOrId) {
     const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
-    if (!model || !model.modelFamily) return '';
-    return _TIER_LETTER[model.sizeTier] || '';
+    if (!model || !model.sizeTier) return '';
+    if (!isModelUsable(model)) return '';
+    const ambiguous = MODELS.some(other =>
+        other.id !== model.id
+        && other.name === model.name
+        && other.sizeTier !== model.sizeTier
+        && isModelUsable(other));
+    return ambiguous ? (_TIER_LETTER[model.sizeTier] || '') : '';
 }
 
 /**
@@ -408,8 +424,17 @@ export function isModelUsable(modelOrId) {
  * not). The server's `model.installed` is all-ops-present, so it wrongly blocks
  * a partial install for an op it CAN actually run. (MPI-122 / MPI-157 follow-up)
  *
- * Flat models: no op groups → fall back to `isModelUsable`.
+ * Flat models: no op groups → the model must be usable AND still declare the op.
  * Op-keyed models: true when `op` is in the derived installedOps set.
+ *
+ * The supportedOps half is MPI-453's guarantee surviving the flatten of the last
+ * op-keyed model. That bug was a legacy history item naming an op whose weights
+ * were not on disk; the op-keyed branch caught it because the op was absent from
+ * `installedOps`. On a flat model the op axis is not consulted at all, so a
+ * DEPRECATED op (wan-22's `t2v_ms`, whose graph is deleted) would answer "yes"
+ * and dispatch a generation against a workflow file that does not exist. Callers
+ * pass a model op here (preview Continue/Finish, the remembered-op re-check),
+ * never a universal one.
  *
  * @param {ModelDef|string} modelOrId
  * @param {string} op
@@ -418,7 +443,9 @@ export function isModelUsable(modelOrId) {
 export function isOperationInstalled(modelOrId, op) {
     const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
     if (!model) return false;
-    if (!op || !hasOperationGroups(model)) return isModelUsable(model);
+    if (!op) return isModelUsable(model);
+    if (!(model.supportedOps || []).includes(op)) return false;
+    if (!hasOperationGroups(model)) return isModelUsable(model);
     const depStatus = getModelDepStatus(model.id);
     if (!depStatus) return model.installed === true; // no cache yet → trust server flag
     const isOn = id => {

@@ -119,17 +119,23 @@ test('op-partial sibling (only some ops installed) still protects its shared dep
 
     // A selectable (op-grouped) model with ≥1 shared common dep. Wan 2.2 Smooth was
     // the live one (t2v_ms/i2v_ms over commonDeps incl. the umt5 clip) until MPI-470
-    // deprecated its t2v_ms — and no shipped model declares 2+ operation groups now.
-    // So take the real card and re-add the op group it lost: the guard is what must
-    // not regress, and the next multi-op model must find it working. The t2v dep ids
-    // are still real DEPS entries (kept so the uninstall sweep can reclaim them).
-    const shipped = MODELS.find(m =>
-        m.operations && Array.isArray(m.commonDeps) && m.commonDeps.length > 0);
-    assert.ok(shipped, 'have an op-grouped model with common deps');
-    const model = shipped.supportedOps.length >= 2 ? shipped : {
+    // deprecated its t2v_ms and the flatten took the `operations{}` shape with it —
+    // NO shipped model is op-grouped now. The backend guard still implements the
+    // shape, so it is rebuilt here from the real wan-22 card and real DEPS ids (the
+    // `wan-22-t2v-*` entries are deliberately kept so the uninstall sweep can still
+    // reclaim them). What must not regress is the guard, for the next multi-op model.
+    const shipped = MODELS.find(m => m.id === 'wan-22');
+    assert.ok(shipped, 'have the wan-22 card to build the op-grouped shape from');
+    assert.ok(!MODELS.some(m => m.operations), 'no shipped model is op-grouped any more');
+    const model = {
         ...shipped,
-        supportedOps: ['t2v_ms', ...shipped.supportedOps],
-        operations: { t2v_ms: { deps: ['wan-22-t2v-high', 'wan-22-t2v-low'] }, ...shipped.operations },
+        supportedOps: ['t2v_ms', 'i2v_ms'],
+        commonDeps: ['wan_2.1_vae', 'umt5_xxl_fp8_e4m3fn_scaled'],
+        operations: {
+            t2v_ms: { deps: ['wan-22-t2v-high', 'wan-22-t2v-low'] },
+            i2v_ms: { deps: ['wan-22-i2v-high', 'wan-22-i2v-low'] },
+        },
+        dependencies: undefined,   // commonDeps wins in commonOf(), but be explicit
     };
 
     const ops = Object.keys(model.operations).filter(o => (model.supportedOps || []).includes(o));

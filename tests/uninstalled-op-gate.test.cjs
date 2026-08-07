@@ -143,13 +143,22 @@ function i2vOnlyStatus(installedIds) {
     return (depId) => on.has(depId);
 }
 
-/** wan-22 as it shipped BEFORE MPI-470 dropped t2v_ms — the shape this bug needed. */
+/**
+ * wan-22 as it shipped BEFORE MPI-470 dropped t2v_ms — the shape this bug needed.
+ * The card is FLAT now (the last `operations{}` model was flattened when the Model
+ * Library's per-op install toggles were removed), so both halves of the op-keyed
+ * shape are rebuilt here. Every dep id is real.
+ */
+const COMMON_DEPS = ['wan_2.1_vae', 'umt5_xxl_fp8_e4m3fn_scaled'];
 const T2V_DEPS = ['wan-22-t2v-high', 'wan-22-t2v-low'];
+const I2V_DEPS = ['wan-22-i2v-high', 'wan-22-i2v-low'];
 function wanWithT2V(wan) {
     return {
         ...wan,
-        supportedOps: ['t2v_ms', ...wan.supportedOps],
-        operations: { t2v_ms: { deps: T2V_DEPS }, ...wan.operations },
+        supportedOps: ['t2v_ms', 'i2v_ms'],
+        commonDeps: COMMON_DEPS,
+        dependencies: undefined,
+        operations: { t2v_ms: { deps: T2V_DEPS }, i2v_ms: { deps: I2V_DEPS } },
     };
 }
 
@@ -161,7 +170,7 @@ test('deriveInstalledOps already answers the question the dispatcher never asked
     // MPI-470: the real card is i2v-only now. Deprecation must be COMPLETE — a leftover
     // t2v_ms in either list would still be offered, and its graph is deleted.
     assert.deepEqual(shipped.supportedOps, ['i2v_ms'], 'wan-22 t2v_ms is deprecated (MPI-470)');
-    assert.equal(shipped.operations.t2v_ms, undefined, 'and its dep group went with it');
+    assert.equal(shipped.operations, undefined, 'and the whole op-group shape went with it');
     assert.equal(shipped.workflows.t2v_ms, undefined, 'and its workflow file is deleted');
 
     const wan = wanWithT2V(shipped);
@@ -235,7 +244,12 @@ test('installedOpsForContext fails OPEN on an unseeded dep-status cache', async 
 test('after the real dep-status sync, every op-picking predicate refuses t2v', async () => {
     const { MODELS } = await import('../js/data/modelConstants/models.js');
     const wan = MODELS.find(m => m.id === 'wan-22');
-    const onDisk = new Set([...wan.commonDeps, ...wan.operations.i2v_ms.deps]);
+    // The card is flat now, so "the user's disk" is simply all of it. What still has
+    // to hold is the CONCLUSION: t2v_ms is refused. The op-keyed branch used to reach
+    // it via installedOps; on a flat model `isOperationInstalled` reaches it via
+    // supportedOps, which is why that guard exists — without it a flat model answers
+    // "installed" for an op whose workflow file was deleted.
+    const onDisk = new Set(wan.dependencies);
 
     const realFetch = globalThis.fetch;
     globalThis.fetch = async (_path, opts) => {
@@ -256,8 +270,10 @@ test('after the real dep-status sync, every op-picking predicate refuses t2v', a
         assert.equal(reg.isOperationInstalled('wan-22', 't2v_ms'), false, 'the generate-time gate blocks it');
         assert.equal(reg.isOperationInstalled('wan-22', 'i2v_ms'), true, 'and lets the installed op through');
         assert.equal(reg.firstInstalledOp('wan-22'), 'i2v_ms', 'the seed lands on i2v, not supportedOps[0]');
-        assert.deepEqual(reg.installedOpsForContext('wan-22'), ['i2v_ms'], 'the strip is offered i2v only');
-        assert.equal(reg.isModelUsable('wan-22'), true, 'a partial install must stay in the model picker (MPI-122)');
+        // A flat model has no per-op install question, so the context value is the
+        // load-bearing NULL ("do not filter"), never [] (which would hide every op).
+        assert.equal(reg.installedOpsForContext('wan-22'), null, 'flat model → no op filter');
+        assert.equal(reg.isModelUsable('wan-22'), true, 'the model stays in the picker');
     } finally {
         globalThis.fetch = realFetch;
     }
