@@ -1,114 +1,160 @@
 # ComfyUI injection — multi-stage video workflows
 
-> **AI INSTRUCTION:** Split out of [comfy_injection.md](comfy_injection.md) 2026-07-29 (that
-> file was over the 200-line cap). This is the `_ms` two-file contract ONLY — the title map,
-> the silent-skip trap, LoRA slots and standalone injectors stay in the parent file. Read the
-> parent for how injection works at all; read this when touching `t2v_ms` / `i2v_ms`,
-> preview -> stage-2, LoadLatent staging, or dual-latent (LTX).
+> **AI INSTRUCTION:** Read [comfy_injection.md](comfy_injection.md) first for how injection
+> works at all (title map, silent-skip trap, LoRA slots, standalone injectors). Read THIS
+> file when touching `t2v_ms` / `i2v_ms`, the preview → Continue/Finish flow, or the
+> `MpiStageLatents` node.
 
+## What multi-stage means
 
-> ## SUPERSEDED IN PART — read this before anything below (MPI-449/452/456/466)
->
-> **The two-file premise is dead, and so is `LoadLatent`.** Everything below was
-> written when ComfyUI's `/prompt` API had no way to skip a node, which forced a
-> physically separate `_stage2` file per model. **Lazy inputs fixed that** —
-> `MpiBlocker` and `MpiSaveLatent.enabled` became lazy (MPI-449), so a gated
-> sampler genuinely does not run instead of running and being discarded.
->
-> What is true now:
->
-> - **ONE file carries both stages.** `MpiStageLatents` (titled
->   `Input_Video_Latent`) replaced the whole save/load/boolean cluster; its
->   `is_continue` / `is_preview` are WIDGETS, written by `_buildParams` as
->   `Input_Video_Latent.is_continue` / `.is_preview`. Models declare
->   `capabilities.singleFileStages: true`, which stops `resolveWorkflowFile`
->   appending `_stage2`. **No `_stage2` file exists anywhere** — H3 never had one,
->   WAN and LTX lost theirs.
-> - **Nothing is staged for stage 1.** The validation trap below was real for
->   `LoadLatent`, which is gone from every shipped graph, so
->   `WORKFLOW_INPUT_DEFAULTS`, `POST /comfy/prepare-workflow-inputs` and the three
->   dummy `.latent` files were deleted (MPI-466). `POST /comfy/stage-preview-latent`
->   is a DIFFERENT mechanism and still runs: it writes the real per-preview latent
->   where `load_path` reads it.
-> - **The dual-latent split is gone** — `MpiStageLatents` handles video+audio in one
->   node, so `Input_Audio_Latent` / `Output_Audio_Latent` no longer exist.
-> - **`Input_Preview_Only` and `Input_Is_Continue` are gone as params too (MPI-473).**
->   The boolean nodes died with the cluster above, but `_buildParams` kept emitting
->   both keys, and `comfyController` kept a defensive strip that found no matching
->   node and logged `Preview_Only requested but workflow has no matching node` on
->   EVERY multi-stage run. Both the params and the guard are deleted. The gate has
->   exactly ONE route now: `Input_Video_Latent.is_preview` / `.is_continue`.
->
-> Sections below that describe the two-file swap, `Stage1_Bypass` derivation,
-> `LoadLatent` injection or latent staging are HISTORY. They are kept because the
-> reasoning explains why the current design looks the way it does, and rewriting
-> the file wholesale is its own task. Trust this banner over them.
+An `_ms` op runs a cheap low-res **preview** pass, then a **final** pass that resumes from
+the preview's saved latent. The user drives it with the "Preview initial stage" toggle in
+PromptBox; the preview lands as a gallery card with Continue/Finish buttons.
 
-Operations with `_ms` suffix (e.g. `t2v_ms`, `i2v_ms`) are **multi-stage**: a low-res preview pass plus a final pass that consumes the saved stage-1 latent. The two phases were originally implemented as **two separate workflow files** rather than one branched workflow, because ComfyUI's `/prompt` API had no runtime node-bypass flag — a single-file branched workflow always executed every node referenced in the dependency graph regardless of any `MpiIfElse`/boolean gating. (Lazy inputs removed that constraint — see the banner.)
+**It is per-MODEL, not per-op.** The `_ms` op keys are shared, so the flow is gated by
+`model.capabilities`:
 
-**Multi-stage is per-MODEL, not per-op (MPI-127).** The `_ms` op keys (`t2v_ms`/`i2v_ms`) are SHARED across WAN and LTX. Whether a model actually exposes the preview/stage-2 flow is gated by `model.capabilities.multiStage`: both WAN and LTX = `true` (show the `previewStage` toggle, run the two-file flow below). LTX was single-stage in MPI-127 (`multiStage:false`) because preview→stage-2 needs DUAL-latent staging (video + audio); **MPI-128 wired that and flipped LTX to `multiStage:true`** (see dual-latent note under "LoadLatent injection contract"). So "an `_ms` op = multi-stage" is only true when the active model declares `multiStage`. A model with `multiStage:false` would use only the stage-1 file (no stage-2). Separately, `capabilities.branchingContinue` gates the Continue (branch) button: WAN = `true` (per-stage LoRAs vary stage-2); LTX omits it → **Finish-only** (refined LTX workflow locks stage-2 to stage-1, prompt has no effect on the continuation). See `commandAllowsBranchingContinue(key, model)` in `commandRegistry.js`.
+| Model | `_ms` ops | `multiStage` | `branchingContinue` |
+|---|---|---|---|
+| `wan-22` | `i2v_ms` | yes | **yes** — Continue (branch) button; per-stage LoRAs may differ |
+| `ltx-23` / `ltx-23-balanced` | `t2v_ms`, `i2v_ms` | yes | no — **Finish only** |
+| `minimax-h3` | `t2v_ms`, `i2v_ms` | yes | no — **Finish only** |
+| `wan22-5b` | — | no | no |
 
-**Two-file convention:**
-- `<name>.json` — stage-1 (preview) workflow. Contains the SaveLatent node(s), `Input_Preview_Only`, `Output_Preview` and `Output_Video` capture nodes, full sampler chain.
-- `<name>_stage2.json` — stage-2 workflow. **Authored by saving the API JSON with the stage-1 KSampler node toggled to Bypass mode in the ComfyUI graph editor.** ComfyUI's "Save (API)" export then deletes the bypassed node and rewires every consumer to the bypassed node's upstream feeder slot (Comfy's standard splice behavior). The result is a stage-2-only graph where `LoadLatent` feeds directly into the low-noise sampler. **NOTE: WAN/LTX stage-2 siblings are now GENERATED from the stage-1 API export by `comfy_workflows/scripts/workflow_generation/` (see its `README.md`) — the bypass+re-export is mechanical (title-keyed on `Stage1_Bypass` + `Is_Continue`), not hand-authored.**
+`branchingContinue` omitted → Finish-only, because those graphs lock stage 2 to stage 1's
+conditioning: a re-prompted branch would not honour the new prompt. Gate helper:
+`commandAllowsBranchingContinue(key, model)` in `commandRegistry.js`.
 
-`resolveWorkflowFile(model, op, engine, {stage2})` (in `modelConstants/resolveModelDeps.js`, called from `commandExecutor.runCommand`) returns `<name>.json` normally; when `stage2 === true` it swaps the basename to `<name>_stage2.json`, then appends the engine's `workflowSuffix` (e.g. `_gguf` on a Pod → `<name>_stage2_gguf.json`). (MPI-165)
+## ONE graph carries both stages
 
-**Authoring contract** (all titles are `Input_*`/`Output_*` — the whole video fleet is post-MPI-252):
+Every multi-stage model declares `capabilities.singleFileStages: true`, which stops
+`resolveWorkflowFile` appending a `_stage2` suffix. **There is no `_stage2` file anywhere,
+and adding one is a bug** — the resolver would name a file that must not exist and Finish
+404s.
 
-Stage-1 base file MUST contain:
-- A `MpiBoolean` node titled `"Input_Preview_Only"` whose `inputs.boolean` gates the preview/final branch.
-- A `LoadLatent` node titled `"Input_Video_Latent"` (kept for ComfyUI validation; never reached by stage-1's data flow).
-- A `SaveLatent` node titled `"Output_Video_Latent"` that emits the stage-1 latent on preview runs. **LTX saves TWO** (MPI-128) — a video `SaveLatent` titled `"Output_Video_Latent"` (prefix `ltx_video_latent`) and an audio one titled `"Output_Audio_Latent"` (prefix `ltx_audio_latent`). The app tells them apart by SaveLatent node TITLE (`_collectComfyLatents` tags role: title containing "audio" → audio, else video).
-- A capture node titled `"Output_Preview"` whose payload is the preview clip.
-- A capture node titled `"Output_Video"` whose payload is the full-run final clip.
+Both passes live in one graph, gated by **`MpiStageLatents`** — a single node, titled
+`Input_Video_Latent`, that owns the save/load/gate cluster:
 
-Stage-2 sibling file (`_stage2.json`) MUST contain:
-- A `LoadLatent` node titled `"Input_Video_Latent"` whose `inputs.latent` is the per-preview filename injected at runtime.
-- A capture node titled `"Output_Video"`.
-- NO `Input_Preview_Only` node, NO `SaveLatent`, NO stage-1 sampler (these vanish when the base file is exported with stage-1 KSampler bypassed).
+| Widget | Written by | Meaning |
+|---|---|---|
+| `is_preview` | app, per run | `true` halts at the preview pass |
+| `is_continue` | app, per run | `true` resumes from `load_path` instead of sampling stage 1 |
+| `load_path` | app, per run | which latent stage 2 reads |
+| `save_path` | **baked, never injected** | where stage 1 writes; app collects it from `ui.latents` |
 
-The `Is_Continue` boolean node is **no longer used by WAN** — WAN branch selection happens via the file swap, not an injected boolean. **LTX differs (MPI-127):** LTX's stage-2 is GENERATED no-splice — `Input_Is_Continue` drives an `MpiIfElse` that selects the loaded `Input_Video_Latent`/`Input_Audio_Latent` over the live stage-1 latent, so the generator derives the stage-2 file by flipping that one boolean (no node deletion/rewire). The app still does NOT inject `Is_Continue` at runtime for either model — the stage-2 FILE is pre-stamped. (Live as of MPI-128: LTX preview→Finish reuses both staged latents; this path is exercised, no longer moot.)
+It also takes `latent` / `denoised` **links** from the sampler — see the wired-input trap
+below.
 
-Single-stage workflows (no `_ms`) MUST NOT have the `Preview_Only` node and need only the `Output` capture node.
+This works because `MpiBlocker` and `MpiSaveLatent.enabled` are **lazy** inputs: a gated
+sampler genuinely does not execute, rather than executing and having its output discarded.
 
-**LoadLatent injection contract:** ComfyUI validates the `LoadLatent` selector even when the workflow branches away from it. The app always injects `LoadLatent`:
-- ~~Stage-1 runs (Preview ON or OFF): `LoadLatent = 'ComfyUI_00001_.latent'`, copied into the active engine `input/` folder by `POST /comfy/prepare-workflow-inputs` before every `_ms` submission.~~ **DEAD — nothing is staged for stage 1 (MPI-466).** The route, `WORKFLOW_INPUT_DEFAULTS` and `comfy_workflows/input/` are all deleted. The injector still writes `Input_Video_Latent = 'ComfyUI_00001_.latent'` as a fallback name ([`commandExecutor.js:692`](../../js/services/commandExecutor.js#L692)), but no file is placed for it and no node validates it.
-- Stage-2 runs (Continue/Finish): `LoadLatent = '<previewUuid>.latent'`. The per-preview latent lives in `<project>/Media/.latents/<previewUuid>.latent`; `POST /comfy/stage-preview-latent` copies it into the active engine `input/` folder before the stage-2 submission.
+## Authoring contract
 
-**Dual-latent (LTX, MPI-128).** LTX preview→stage-2 stages BOTH a video and an audio latent. The audio one rides a parallel optional set of fields, so WAN (single latent) is untouched (all audio fields stay undefined):
-- Producer: stage-1 emits `Output_Video_Latent` + `Output_Audio_Latent`; `generationService` splits them into `previewAssets.latent` (video) + `previewAssets.audioLatent` (audio).
-- Persist: `materializePreviewAssets` writes `<project>/Media/.latents/<id>.latent` (video) + `<id>.audio.latent` (audio); the sidecar records both with `status`.
-- Validate: `validate-preview-assets` stats both; `canFastPath` requires the audio latent on disk **only when the sidecar declares one**.
-- Dispatch: `MpiGalleryBlock` Continue/Finish pass `loadAudioLatentName` + `audioLatentFilePath` alongside the video pair.
-- Stage: `_stagePreviewLatent` calls the route TWICE (once per latent), staging the audio latent under engine name `ltx_audio_latent_00001_.latent`.
-- Inject: `_buildParams` emits `Input_Audio_Latent` (the staged audio name) next to `Input_Video_Latent`. Stage-1 / WAN fall back to the baked default `ltx_audio_latent_00001_.latent` (validation-only, never read on those runs).
-- Cleanup: item delete drops both `<id>.latent` and `<id>.audio.latent`.
+A multi-stage graph MUST contain:
 
-**THE VALIDATION TRAP — now LATENTS ONLY (MPI-272).** ComfyUI validates the file selector on **EVERY** `LoadLatent` node in a submitted graph — even nodes the data flow never reaches (e.g. `LoadLatent` behind an `Is_Continue` gate). If a baked latent filename has no matching file in the active engine `input/`, the whole prompt dies with `Invalid latent file` and `Output will be ignored`, even though that node is dead in this run. This bit LTX-2.3 (MPI-127): its t2v graph carries two `LoadLatent` nodes (`Input_Video_Latent` + `Input_Audio_Latent`, both behind the continue gate) — when neither was staged, both failed validation.
+- One **`MpiStageLatents`** titled exactly `Input_Video_Latent`. Rename it and both stages
+  silently run stage 1 — no error anywhere.
+- A capture node titled **`Output_Preview`** — the preview clip, written on an
+  `is_preview: true` run.
+- A capture node titled **`Output_Video`** — the final clip.
 
-> **The trap is GONE, and so is the fix — do not act on the paragraph above (MPI-466).** It described a real constraint that no longer applies: **no shipped graph has a `LoadLatent` node**, so there is nothing left for ComfyUI to reject. The workaround it named — a real default per baked latent name in `WORKFLOW_INPUT_DEFAULTS`, staged before each submit — was deleted along with the route, the list, and the three dummy `.latent` files. `WORKFLOW_INPUT_DEFAULTS` has zero references in `js/` and `routes/`, and `comfy_workflows/input/` no longer exists. **Adding a model stages nothing.** Kept because it explains WHY `MpiStageLatents` exists; see the full note under "The latent contract — DELETED, do not re-add" below, which `tests/optional-media-placeholder.test.cjs` enforces.
+Shipped examples: `ltx_i2v_t2v.json`, `ltx_i2v_t2v_int8.json`, `minimax_h3_fl2va.json`,
+`wan22_i2v.json`. A single-stage video graph (`wan5b_t2v.json`) has `Output_Video` only.
 
-**Image / mask / video / audio inputs NO LONGER hit this trap.** They are path-reading loader nodes (`MpiLoadImageFromPath` / `MpiLoadAudio` / `MpiLoadVideo`, or an `MpiString` fan-out) that take a full path in a `string` widget and **self-gate on empty string** (`ExecutionBlocker`) — there is no baked filename to validate, so an unused optional slot (t2v `Input_Start_Frame`, a no-audio `Input_audio`) rejects nothing. `placeholder.png` / `ltx_silence.wav` are gone. Full contract: [docs/workflow-authoring/media-inputs.md](../../docs/workflow-authoring/media-inputs.md).
+`commandExecutor` picks the capture title per run: `previewOnly` + a multi-stage op →
+`output_preview`, otherwise `output_video`. No `Output_Audio` on a preview — it is a
+throwaway clip; audio rides the final `Output_Video` only.
 
-**`MpiString` = a media PATH. `MpiText` = plain text/data. Picking the wrong one breaks REMOTE ONLY (MPI-380).** `PATH_MEDIA_CLASSES` in `comfyController` holds `MpiLoadImageFromPath`, `MpiLoadAudio`, `MpiLoadVideo`, `VHS_LoadVideoPath` **and `MpiString`** — so ANY param whose same-titled node is an `MpiString` is classified `imagepath` and pushed through `_resolveMediaPath()` and, on a remote engine, `_uploadRemoteMedia()`. Aim a param carrying non-path data (JSON, a number, a prompt fragment) at an `MpiString` and the Pod tries to upload a file named after that data. **Locally it passes** — `_resolveMediaPath` returns something harmless and nothing uploads — so a green local test proves nothing about this. `MpiText` subclasses `MpiString` in the node source but is a distinct `class_type`, is NOT in the set, and exposes the same `string` field, so switching is a one-word change in the raw graph (also fix `Node name for S&R` and the output name → `Text`). Shipped precedent both ways in `klein_t2i.json`: `MpiText` for `Input_Positive` / `Input_Negative`, `MpiString` for `Input_Mask` / `Input_Image_2`. Live example of the data case: SAM3's `Input_Points_Positive` / `Input_Points_Negative` in `img_auto_mask.json`, guarded by `tests/auto-mask-inject-titles.test.cjs`.
+## What the app injects per run
 
-**The latent contract — DELETED, do not re-add (MPI-466).** This paragraph used to say every baked `LoadLatent.inputs.latent` filename needed a real default staged from `comfy_workflows/input/` via `WORKFLOW_INPUT_DEFAULTS` + `POST /comfy/prepare-workflow-inputs`, and that a new model must ship one latent per `LoadLatent` node. All of it is gone: `MpiStageLatents` reads a `load_path` widget the app writes per run, no shipped graph has a `LoadLatent`, and the route, the list and the three dummy files were removed. **Adding a model now stages nothing** — latents included. `tests/optional-media-placeholder.test.cjs` fails if either a bare `Load*` node or `WORKFLOW_INPUT_DEFAULTS` comes back. Media inputs (image/mask/video/audio) still need nothing staged — they read a project-folder path from `string`. Still test a video model with NO audio/frame input to confirm the path nodes self-gate cleanly.
+`_buildParams` ([`commandExecutor.js:661`](../../js/services/commandExecutor.js#L661)), for
+multi-stage ops only:
 
-Note the injector's `Input_Video_Latent` override ([`commandExecutor.js:692`](../../js/services/commandExecutor.js#L692)) still points stage-1 at `ComfyUI_00001_.latent` when the payload names no latent — harmless, because stage-1 never *reads* it. **The rest of this note used to say that default "is always staged" and that a model's own baked latent name "still needs staging". Both are false since MPI-466** — nothing is staged for stage 1, and there is no `LoadLatent` node left to validate. A new model ships no latent files.
+```
+Video_Latent.is_preview   = historyMode ? false : previewOnly
+Video_Latent.is_continue  = isStage2
+Video_Latent.load_path    = payload.loadLatentName || 'ComfyUI_00001_.latent'
+Input_Video_Latent        = same name (plain-title form)
+```
 
-Engine-input copies are NOT proactively cleaned per-run. The server's existing `cleanComfyUITempFiles` shutdown hook (SIGTERM/SIGINT in `server.js`) empties `input/` and `output/` on app exit. Mid-session bloat is bounded by uuid uniqueness — each preview owns one staged latent and stage-2 reads it; subsequent reruns overwrite the same name.
+The dotted `Title.widget` form is required because these are WIDGETS — a plain title spray
+would write one value into every recognised key on the node.
 
-**Preview support-asset validation + cold fallback:** Before Continue/Finish dispatches, `MpiGalleryBlock` calls `projectService.validatePreviewAssets(itemId)` which hits `GET /project-media/:projectId/validate-preview-assets`. The route stats the project latent (`Media/.latents/<id>.latent`) and any I2V snapshots (`Media/.preview-assets/<id>/<role>.<ext>`) recorded on the sidecar and returns one of three states:
+`historyMode` (the video-history workspace) forces `is_preview` false regardless of the
+toggle, so re-generating from history never produces a preview card.
 
-- `canFastPath` — latent present. Continue branches to stage-2 (existing fast path); Finish runs stage-2 with `replaceItemId`.
-- `canColdFallback` — latent missing, `frozenParams` complete, all required snapshots present. Continue reruns stage-1 with `previewOnly=true` + `replaceItemId=<previewId>` to rebuild the latent in place, then on `gallery:item-updated` auto-enqueues the stage-2 branch. Finish runs the full base `_ms` workflow with `previewOnly=false` + `replaceItemId` — no `isStage2` swap, no `LoadLatent` override — so stage-1+stage-2 fuse in a single submission.
-- `blocked` — neither path possible. Card shows red "Missing" badge and hides Continue/Finish; user deletes the preview to recover (`DELETE /project-media` route cleans `.latents/<id>.latent` + `.preview-assets/<id>/` when sidecar `stage === 'preview'`).
+**Nothing is staged before a stage-1 run.** No placeholder latents, no defaults, no
+`input/` folder — a new model ships no latent files. Stage 2 is different: see below.
 
-T2V previews carry no snapshot array, so snapshot validation is a no-op for them — only latent state gates Continue/Finish. Cold-fallback Continue's stage-1 rerun reuses the existing materialization route; the `copySnapshotSource` helper now guards same-path copies because the rerun reads the preview's own already-materialized snapshot into the destination path of the same name.
+## Preview → Continue / Finish
 
-**Symptom of a dead preview gate:** the user toggles "Preview initial stage" in PromptBox, runs, and gets a full final video instead of stopping at preview.
+Before dispatching, `MpiGalleryBlock` calls `validatePreviewAssets(itemId)` →
+`GET /project-media/:projectId/validate-preview-assets` (`routes/projects.js`), which stats
+the project latent (`Media/.latents/<id>.latent`) and any i2v snapshots
+(`Media/.preview-assets/<id>/<role>.<ext>`) recorded on the sidecar. Three outcomes:
 
-**There is no warning for this any more, and there never usefully was one (MPI-473).** `comfyController.runWorkflow` used to scan for a `Preview_Only` / `Input_Preview_Only` node and `clientLogger.warn` when it found none — but once every graph migrated to `MpiStageLatents`, no graph had the node, so the warning fired on EVERY multi-stage generation whether preview worked or not. It was pure noise and is deleted along with the params it guarded.
+- **`canFastPath`** — latent present. Dispatch stage 2: `POST /comfy/stage-preview-latent`
+  copies the latent into the engine `input/` folder, and `load_path` points at it.
+- **`canColdFallback`** — latent missing but `frozenParams` and all required snapshots are
+  present. Continue reruns stage 1 with `replaceItemId` to rebuild the latent in place, then
+  auto-enqueues stage 2 on `gallery:item-updated`. Finish instead runs the whole graph with
+  `previewOnly: false` — both passes fuse into one submission.
+- **`blocked`** — neither is possible. The card shows a red "Missing" badge and hides
+  Continue/Finish; deleting the preview cleans `.latents/<id>.latent` +
+  `.preview-assets/<id>/`.
 
-Diagnose it at the real gate instead: `_buildParams` writes `Input_Video_Latent.is_preview`, and injection **silently skips a param whose title matches no node**. So check, in order — (1) the graph has an `MpiStageLatents` titled exactly `Input_Video_Latent`; (2) the dispatched graph actually carries `is_preview: true` — read it off the engine's `/history`, not off the run finishing; (3) `payload.historyMode` is not forcing it false (the video-history workspace does that deliberately).
+T2V previews carry no snapshots, so only latent state gates them.
+
+`frozenParams` snapshots the determinism-critical inputs at preview time (seed, prompt,
+dims, the full `injectionParams` map, media items) so the final matches the preview's
+intent — see [docs/project-integrity.md](../../docs/project-integrity.md).
+
+Engine `input/` copies are not cleaned per run. `cleanComfyUITempFiles` empties `input/` and
+`output/` on app exit (SIGTERM/SIGINT, `server.js`). Mid-session bloat is bounded by uuid
+uniqueness — one staged latent per preview, overwritten on rerun.
+
+## Traps
+
+**A param whose title matches no node is skipped SILENTLY.** This is the failure mode
+behind every bug in this file's history: no error, no warning, the graph just runs its baked
+default. When preview produces a full video instead of stopping, check in order — (1) the
+graph has an `MpiStageLatents` titled exactly `Input_Video_Latent`; (2) the dispatched graph
+really carries `is_preview: true`, read off the engine's `/history` rather than inferred
+from the run finishing; (3) `historyMode` is not forcing it false.
+
+**Never overwrite a wired input.** `MpiStageLatents` carries both `latent`/`denoised` links
+and injectable widgets under ONE title. Injection targets widgets only; writing a scalar
+over a link hands the node a filename where it expected upstream data and it dies on
+`string indices must be integers`. `comfyController._inject` guards this — do not bypass it.
+
+**`MpiString` = a media PATH. `MpiText` = plain text/data. Choosing wrong breaks REMOTE
+ONLY.** `PATH_MEDIA_CLASSES` in `comfyController` holds `MpiLoadImageFromPath`,
+`MpiLoadAudio`, `MpiLoadVideo`, `VHS_LoadVideoPath` **and `MpiString`** — so any param whose
+same-titled node is an `MpiString` is classified `imagepath`, pushed through
+`_resolveMediaPath()` and, on a remote engine, `_uploadRemoteMedia()`. Aim a param carrying
+non-path data (JSON, a number, a prompt fragment) at an `MpiString` and the Pod tries to
+upload a file named after that data. **Locally it passes** — nothing uploads — so a green
+local test proves nothing. `MpiText` subclasses `MpiString` in the node source but is a
+distinct `class_type` and is NOT in the set, so switching is a one-word change in the raw
+graph (also fix `Node name for S&R` and the output name → `Text`). Precedent both ways in
+`klein_t2i.json`: `MpiText` for `Input_Positive`/`Input_Negative`, `MpiString` for
+`Input_Mask`/`Input_Image_2`. Data case: SAM3's `Input_Points_*` in `img_auto_mask.json`,
+guarded by `tests/auto-mask-inject-titles.test.cjs`.
+
+**Media inputs need no placeholders.** Image/mask/video/audio params are path-reading
+loaders that self-gate on an empty string (`ExecutionBlocker`), so an unused optional slot
+rejects nothing. Full contract:
+[docs/workflow-authoring/media-inputs.md](../../docs/workflow-authoring/media-inputs.md).
+
+## Known dead weight — `Input_Audio_Latent`
+
+The app still stages and injects a separate **audio** latent
+([`commandExecutor.js:705`](../../js/services/commandExecutor.js#L705), plus the
+`loadAudioLatentName` / `audioLatentFilePath` chain through `MpiGalleryBlock` and
+`generationService`). **No shipped graph carries `Input_Audio_Latent` or
+`Output_Audio_Latent`** — `MpiStageLatents` handles video and audio in one latent — so
+`_latentRoleFromTitle` never tags an audio latent, `previewAssets.audioLatent` is always
+null, and the injected key lands on nothing.
+
+It is inert, not harmful. Do not build on it; delete it when someone is next in this code.
+Same shape as the `Preview_Only` / `Is_Continue` params removed in MPI-473.

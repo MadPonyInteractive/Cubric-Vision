@@ -167,11 +167,10 @@ standard title map.
 ## Multi-stage video workflows
 
 Operations with an `_ms` suffix (`t2v_ms`, `i2v_ms`) run a low-res preview pass plus a final
-pass that consumes the saved stage-1 latent, implemented as **two separate workflow files**.
-The full contract — two-file convention, per-file authoring requirements, `resolveWorkflowFile`,
-the LoadLatent injection contract, dual-latent (LTX), THE VALIDATION TRAP, and preview
-support-asset validation / cold fallback — lives in
-[comfy_injection_multistage.md](comfy_injection_multistage.md).
+pass that resumes from the preview's latent. **ONE graph carries both stages**, gated by the
+`MpiStageLatents` node titled `Input_Video_Latent`. The full contract — which models qualify,
+the authoring requirements, what the app injects per run, and the preview → Continue/Finish
+flow — lives in [comfy_injection_multistage.md](comfy_injection_multistage.md).
 
 ## Image & Mask Uploads
 Pass `Input_Image` / `Input_Mask` as Data URIs, blob URLs, http URLs, or local project paths — controller uploads them automatically. Use **static filenames** (e.g. `mpi_detailer_input.png`) to enable ComfyUI execution caching; overwrite the file when content changes.

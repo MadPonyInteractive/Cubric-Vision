@@ -13,7 +13,7 @@ sub-agents (`/mpi-brief-rule <name>`).
 | Global state (`js/state.js` Proxy) | [state.md](state.md) |
 | Workspaces / routing / dev gallery | [workspaces.md](workspaces.md) |
 | ComfyUI injection (send tasks, compile JSON, images/masks) | [comfy_injection.md](comfy_injection.md) |
-| Multi-stage `_ms` video workflows (preview → stage-2, LoadLatent staging, dual-latent, the validation trap) | [comfy_injection_multistage.md](comfy_injection_multistage.md) |
+| Multi-stage `_ms` video workflows (preview → Continue/Finish, the `MpiStageLatents` gate, what the app injects per stage) | [comfy_injection_multistage.md](comfy_injection_multistage.md) |
 | ComfyUI engine & backend (model registry, downloads, python server, engine split) | [comfy_engine.md](comfy_engine.md) |
 | Download system (resumable, IPC/SSE) | [downloads.md](downloads.md) |
 | App versioning (APP/SCHEMA/COMFY) | [versioning.md](versioning.md) |
