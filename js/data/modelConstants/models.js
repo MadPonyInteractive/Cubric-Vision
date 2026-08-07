@@ -1260,7 +1260,12 @@ export const MODELS = [
         // (MpiPromptBox.js), and fl2va accepts no audio — it only EMITS it, muxed into
         // the mp4 by MpiSaveVideo(use_audio: true). The reference model that does take
         // audio in is ref2va (minimax-h3-ref2va), and that one wants audio: true.
-        capabilities: { multiStage: true, singleFileStages: true },
+        // negativePrompt: false because H3 HAS no negative input — neither variant's graph
+        // carries an Input_Negative node, and there is no way to force one (the conditioning
+        // comes out of a single Qwen3-VL encode). Without this the box rendered a negative
+        // field that injection silently skipped: the user typed a stop that never reached
+        // the model, and nothing said so. Confirmed by the user 2026-08-07 (MPI-475).
+        capabilities: { multiStage: true, singleFileStages: true, negativePrompt: false },
         video: 'minimax_h3_preview.mp4',
         // type drives the ratio ladder. 'h3' is NOT arbitrary: RATIO_MODES.h3,
         // BUILTIN_RATIOS.h3 and BUILTIN_QUALITY_TIERS.h3 were all authored against this

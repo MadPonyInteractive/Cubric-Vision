@@ -79,28 +79,30 @@
 - [ ] Run one generation per op in the real app (`06-verify.md`).
 - [ ] `docs/models/h3/README.md` ref2va section — held until a real reference run is judged.
 
-## The open decision — audio tag ordinals
+## RESOLVED — audio tag ordinals
 
-Core shares ONE audio sequence between reference videos and standalone audio clips, and emits
-a video's soundtrack BEFORE its `<Video k>`. So a sounded reference video pushes the first
-standalone clip to `<Audio 2>`. The app cannot know which staged videos carry audio at
-prompt-writing time: `MpiLoadVideo` emits the 1-sample silent sentinel for a track-less file,
-`MpiH3References` drops it, and the ordinals shift. `Picture N` / `Video N` are exact
-regardless; only the three `Audio N` tags are affected.
+Core shares ONE audio sequence between reference videos and standalone clips, emitting a
+video's soundtrack BEFORE its `<Video k>`, so a sounded reference video pushes the first
+standalone clip to `<Audio 2>`. Whether a video HAS a soundtrack is a property of the FILE —
+`MpiLoadVideo` returns the 1-sample sentinel for a track-less one and `MpiH3References` drops
+it — so the ordinal moves on a fact nobody knows until decode time. Neither the app nor the
+user can label the wells correctly up front.
 
-Two ways out, both the user's call:
+**Fix: the node translates.** `rewrite_prompt_tags` in `h3.py` takes the prompt addressed by
+SLOT (exactly what the chips show) and rewrites it to core's ordinals at execution, where both
+numberings are known. A tag naming an empty slot is DROPPED — core presents no such label, so
+a dangling one sends the model looking for a reference that is not there. Video soundtracks
+stay unaddressable on purpose: they have no well, and `<Video k>` already names the clip.
 
-1. **Unwire the three `ref_video_audio_*` links** in the template. Reference videos then
-   contribute motion only, standalone audio is always `<Audio 1..3>`, and the whole UI is
-   deterministic with zero extra logic. Cost: a reference video's soundtrack no longer
-   conditions the result (the user can stage that audio separately).
-2. **Keep them** and accept that the audio tags can be off by the number of sounded reference
-   videos. Would need the picker to resolve `hasAudio` per chip — the project `.meta/` sidecar
-   already carries `hasAudio` for project videos (`routes/projects.js`), but not for a file
-   dragged straight in.
+Chips therefore stay slot-numbered and are always right, and the picker needs no `hasAudio`
+probing. Covered by six asserts in `python h3.py`, including the two that pin the shift
+(`<Audio 1>` stays `<Audio 1>` behind a silent video, becomes `<Audio 2>` behind a sounded one).
 
-Not viable: always emitting the soundtrack slot. `_encode_ref_audio` resamples and VAE-encodes
-the waveform, and a 1-sample tensor through an audio VAE is untested at best.
+Rejected: always emitting the soundtrack slot. `_encode_ref_audio` resamples then VAE-encodes,
+and a 1-sample tensor at `movedim(1, -1)` is a crash or a degenerate latent.
+
+**Unpushed.** `ComfyUi-MpiNodes` is committed locally only, and the ENGINE MUST BE RESTARTED
+after it lands or the converter fails with "class not in /object_info".
 
 ## Judgement owed before the Vision half
 

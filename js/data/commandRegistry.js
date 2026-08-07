@@ -773,11 +773,14 @@ export const commands = {
             { key: 'inputVideo',  mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video',   required: false, ordinal: true, tag: 'Video 1' },
             { key: 'inputVideo2', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video_2', required: false, ordinal: true, tag: 'Video 2' },
             { key: 'inputVideo3', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video_3', required: false, ordinal: true, tag: 'Video 3' },
-            // NOTE: these three are exact only while no reference VIDEO contributes a
-            // soundtrack. Core shares ONE audio sequence between the two, and emits a
-            // video's soundtrack before its <Video k> — so a sounded reference video
-            // pushes the first standalone clip to <Audio 2>. The app cannot know which
-            // staged videos carry audio at prompt-writing time. Tracked on MPI-475.
+            // These three are exact, and that is NOT free. Core shares ONE audio sequence
+            // between reference videos and standalone clips, emitting a video's soundtrack
+            // before its <Video k> — so a sounded reference video would push the first
+            // standalone clip to <Audio 2>, and whether a video HAS a soundtrack is a
+            // property of the FILE, unknown until it is decoded. So the app cannot compute
+            // core's ordinal and must not try: MpiH3References takes the prompt addressed
+            // by SLOT (what these tags are) and rewrites it to core's ordinals at execution,
+            // where both numberings are known. Keep these tags slot-numbered.
             { key: 'inputAudio',  mediaType: 'audio',           title: 'Input_Audio',   required: false, ordinal: true, tag: 'Audio 1' },
             { key: 'inputAudio2', mediaType: 'audio',           title: 'Input_Audio_2', required: false, ordinal: true, tag: 'Audio 2' },
             { key: 'inputAudio3', mediaType: 'audio',           title: 'Input_Audio_3', required: false, ordinal: true, tag: 'Audio 3' },
