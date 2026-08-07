@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 476,
+  "next_id": 477,
   "columns": {
     "todo": [
       "MPI-461",
@@ -34,6 +34,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-476",
       "MPI-475",
       "MPI-474",
       "MPI-470",
@@ -78,7 +79,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-07T14:20:43Z",
+  "updated_at": "2026-08-07T19:58:00Z",
   "events": [
     {
       "at": "2026-08-07T14:20:43Z",
@@ -2187,6 +2188,13 @@
       "task": "MPI-468",
       "actor": "opus",
       "note": "Child MPI-457 (the MECHANIC) CLOSED - in-place upgrade proven end to end on the real machine, floor check 171/171. Umbrella stays in doing for MPI-467, whose Pod smoke matrix has still never executed. The user surfaced the next blocker for it: the Pod image is a full engine behind (mpi-ci/cubric-vision-pod/node_lock.json is v0.29.2 vs Vision v0.30.0, with comfyui-kjnodes and ComfyUI-MpiNodes drifted). Nothing tested today is invalidated by that - today was the LOCAL half, gate 5 - and the smoke would have hard-failed at gate 7 (assertPodEngineVersion dies on a mismatch) before spending anything. The Pod is stale, not broken: it runs the coherent OLD pairing 0.29.2 + old KJNodes, while MPI-465s break is 0.30.x + old KJNodes. Playbook gate 6 and the skill now spell out the cross-repo lock SYNC that was missing - the Pod lock is a different file in a different repo, so bumping Vision does nothing to it, and an un-synced lock rebuilds the image at the OLD engine. Drift command added."
+    },
+    {
+      "at": "2026-08-07T19:58:00Z",
+      "type": "task.created",
+      "task": "MPI-476",
+      "actor": "opus",
+      "note": "Four user-reported drifts on the model surfaces, all shipped in d2800e4c + 01014c1e and left in validating for the users own eye test in Electron. Wan 2.2 Smooths card still offered an Operations toggle after MPI-470 deprecated t2v_ms - one entry, nothing to choose - so wan-22, the last commonDeps+operations{} model, is FLAT and the whole per-op install UI is gone (toggles, drafts, s_modelOpDraftByModel, the per-op uninstall subtraction). That forced a guard ADDITION, not just removals: isOperationInstalled ignored the op argument on a flat model, so flattening wan would have answered YES for the deprecated t2v_ms and re-opened MPI-453 for a legacy history item; it now requires the op to be in supportedOps. ModelDefs may now declare minVramGb - H3 states 12 where the fitted floor rounded to 16, which read as do-not-bother to a 12GB card. The H/B/L letter gated on modelFamily, so cards that disambiguated nothing wore one; it now needs an INSTALLED model with the SAME name in another tier, which today is only LTX 2.3. MiniMax H3 re-tiered high to balanced. And staged chips kept the labels of whichever model was active when the media was staged."
     }
   ]
 }

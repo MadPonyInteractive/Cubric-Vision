@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-476",
+  "title": "Model card cleanups - drop per-op install groups, H3 tier and VRAM floor, tier letter, chip relabel",
+  "description": "Four things the model surfaces were saying that stopped being true, reported by the user 2026-08-07. (1) Wan 2.2 Smooth's card still offered an Operations toggle after MPI-470 deprecated t2v_ms - one entry, nothing to choose. wan-22 was the last commonDeps + operations{} model, so the shape AND its UI are gone: a model installs as ONE unit now. (2) MiniMax H3's VRAM table started at 16GB; users run it on 8GB with community GGUF quants and we ship int8, so ModelDefs may now set minVramGb and H3 states 12. (3) The H/B/L tier letter gated on modelFamily, so cards that disambiguated nothing wore one (Wan 2.2 Smooth, both H3 cards); it now needs another INSTALLED model with the SAME name in a different tier. MiniMax H3 was also tiered high and is balanced. (4) Staged chips kept the labels of whichever model was active when the media was staged - H3's 'Picture 1' survived a switch to LTX, where that image is the start frame. Shipped in d2800e4c + 01014c1e, npm test 492/492, each half proved in the live app's real DOM. Left in validating for the user's own eye test.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-07T19:58:00Z",
+  "updated_at": "2026-08-07T19:58:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}
