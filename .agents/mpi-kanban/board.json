@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 470,
+  "next_id": 471,
   "columns": {
     "todo": [
       "MPI-461",
@@ -35,6 +35,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-470",
       "MPI-468",
       "MPI-467",
       "MPI-466",
@@ -72,8 +73,15 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-07T03:15:25Z",
+  "updated_at": "2026-08-07T03:47:36Z",
   "events": [
+    {
+      "at": "2026-08-07T03:47:36Z",
+      "type": "task.updated",
+      "task": "MPI-457",
+      "actor": "opus",
+      "note": "MPI-468 SPLIT CHANGED, recorded on both cards as the umbrella brief requires. The bump SKILL now EXISTS as /mpi-bump-engine, created under MPI-467 because routing was the gap the user hit: a cold agent told \"test all the models\" had no path to the playbook and would have grabbed /mpi-bump-local-comfy, which is BENCH-only. It follows the repo pattern (/mpi-add-model enforces add-model/, /mpi-add-flow enforces add-flow/). MPI-457 must EXTEND that skill with the in-place mechanic - git fetch --tags + checkout the pinned sha + pip only the changed core packages + restamp .mpi_engine_version - and the gate-5 empirical class_type check. It must NOT create a second bump skill: one skill, one playbook. That collision is the whole reason MPI-468 exists."
+    },
     {
       "at": "2026-08-07T03:15:25Z",
       "type": "task.moved",
