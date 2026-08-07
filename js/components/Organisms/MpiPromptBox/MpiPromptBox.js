@@ -43,7 +43,9 @@ import { checkPromptEnhanceAvailable, enhancePrompt } from '../../../shell/conne
  *   el.swapMediaRoles(roleA, roleB) — flips role tags between two chips (no re-upload)
  *   el.remainingCapacity(mediaType) → number of free media slots for type
  *                                     under the current operation
- *   el.injectPrompts({ positive, negative })
+ *   el.injectPrompts({ positive, negative, negativeAudio })  — negativeAudio is the
+ *                                     video-model audio negative (LTX); omitted
+ *                                     fields keep their current value
  *   el.setOperation(key)
  *   el.setGenerating(bool)
  *   el.updateContext(ctx)
@@ -999,9 +1001,13 @@ export const MpiPromptBox = ComponentFactory.create({
             emit('mode-change', { mode: next });
         }
 
-        el.injectPrompts = ({ positive, negative }) => {
+        el.injectPrompts = ({ positive, negative, negativeAudio }) => {
             positiveValue = positive ?? positiveValue;
             negativeValue = negative ?? negativeValue;
+            // MPI-474: no mode-switch rule of its own. A reuse injects every field at
+            // once, and the visibility rule below exists for a SINGLE-sided inject —
+            // an audio negative arriving alone is not a case any caller produces.
+            negativeAudioValue = negativeAudio ?? negativeAudioValue;
             // MPI-310: injecting ONLY a positive while the box sits in negative mode
             // used to store the text and leave the negative on screen — the injection
             // silently vanished from the user's view (it was still in the draft, so it
@@ -1019,7 +1025,7 @@ export const MpiPromptBox = ComponentFactory.create({
             updateHeight();
             _saveDraft();
         };
-        const _onInjectPrompts = ({ positive, negative }) => el.injectPrompts({ positive, negative });
+        const _onInjectPrompts = ({ positive, negative, negativeAudio }) => el.injectPrompts({ positive, negative, negativeAudio });
 
         let _currentModelType = props.model?.mediaType ?? props.modelList?.[0]?.mediaType ?? null;
 

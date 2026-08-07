@@ -687,8 +687,8 @@ async function _deleteSavedItems(items) {
  * @property {Array}    mediaItems
  * @property {string}   [maskDataUrl]
  * @property {Object}   [injectionParams]
- * @property {boolean}  [previewOnly]   — multi-stage ops only; injects Preview_Only=true
- * @property {boolean}  [historyMode]   — history workspace context; forces Preview_Only=false on _ms ops
+ * @property {boolean}  [previewOnly]   — multi-stage ops only; injects Video_Latent.is_preview=true
+ * @property {boolean}  [historyMode]   — history workspace context; forces is_preview=false on _ms ops
  * @property {boolean}  [extend]        — when true, after save-generation the saved video is
  *                                       concatenated onto `sourceItemId` via /extend-video.
  *                                       The intermediate item is deleted; the extended output
@@ -979,11 +979,12 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             }));
         if (isVideo && config.previewOnly === true && config.historyMode !== true && _previewStage === undefined) {
             _previewStage = 'preview';
-            // Snapshot the full injectionParams map (minus Preview_Only, which is
-            // a stage marker, not a user-controlled param). Continue replays this
-            // wholesale so any PromptBox control (Duration, Motion_Intensity, and
-            // any future control) is locked to the preview-time value.
-            const { Preview_Only: _skip, ...frozenInjection } = injectionParams;
+            // Snapshot the full injectionParams map. Continue replays this wholesale
+            // so any PromptBox control (Duration, Motion_Intensity, and any future
+            // control) is locked to the preview-time value. The stage markers are NOT
+            // in here to be filtered out — `previewStage.getInjectionParams()` returns
+            // `{}` and commandExecutor derives the gate from the payload (MPI-473).
+            const frozenInjection = { ...injectionParams };
             _previewFrozen = {
                 seed:     exec.seed ?? -1,
                 prompt:   positive,
@@ -1061,7 +1062,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         audioViewUrl: (i === 0 && model.mediaType === 'video') ? (outputInfo.audioUrl || null) : null,
                         itemId: thisItemId,
                         operation,
-                        meta: { prompt: positive, negativePrompt: negative, modelId: model.id, seed: exec.seed ?? -1, generationSettings },
+                        meta: { prompt: positive, negativePrompt: negative, negativeAudioPrompt: negativeAudio, modelId: model.id, seed: exec.seed ?? -1, generationSettings },
                         generationMs: elapsedMs,
                         pixelDimensions: resolvedDims,
                         mediaType: model.mediaType,
@@ -1097,6 +1098,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 displayName,
                 prompt: positive,
                 negativePrompt: negative,
+                negativeAudioPrompt: negativeAudio,
                 modelId: model.id,
                 seed: exec.seed ?? -1,
                 generationSettings: savedData?.generationSettings ?? generationSettings,
@@ -1164,6 +1166,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         modelId: model.id,
                         prompt:  positive,
                         negativePrompt: negative,
+                        negativeAudioPrompt: negativeAudio,
                         seed: exec.seed ?? -1,
                         op: operation,
                         // Carry the underlying i2v generation snapshot so the extended
@@ -1216,6 +1219,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         displayName:     truncateCardName(ext.displayName || 'extend'),
                         prompt:          ext.prompt || positive,
                         negativePrompt:  ext.negativePrompt || negative,
+                        negativeAudioPrompt: ext.negativeAudioPrompt || negativeAudio,
                         modelId:         ext.modelId || model.id,
                         seed:            Number.isFinite(ext.seed) ? ext.seed : (exec.seed ?? -1),
                         pixelDimensions: ext.pixelDimensions || resolvedDims,

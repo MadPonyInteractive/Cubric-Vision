@@ -632,6 +632,7 @@
  * @property {string} [operation='t2i']
  * @property {string} [value='']
  * @property {string} [negativeValue='']
+ * @property {string} [negativeAudioValue=''] - Seed for the THIRD prompt field (MPI-474). The prompt button cycles positive → negative → negative audio; the audio stop is offered only when the active model declares `capabilities.audio` (LTX), because only such a graph carries an `Input_Negative_Audio` node to receive it. A model without it cycles two ways exactly as before, and losing the capability while the audio field is active snaps the box back to the plain negative.
  * @property {boolean} [includeNegative=false] - Does this SURFACE offer a negative prompt? Necessary but not sufficient: the toggle also requires the active model's `capabilities.negativePrompt !== false` (absent ⇒ supported), re-evaluated on every model change.
  * @property {boolean} [generating=false]
  * @property {Object} [context={}]

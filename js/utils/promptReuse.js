@@ -147,6 +147,9 @@ export function buildPromptReusePayload(item = {}) {
     return {
         positive: item.prompt ?? source.prompt ?? '',
         negative: item.negativePrompt ?? source.negative ?? '',
+        // MPI-474. Absent on every item generated before the third prompt mode
+        // shipped, which is why it falls through to '' rather than being required.
+        negativeAudio: item.negativeAudioPrompt ?? source.negativeAudio ?? '',
         modelId: item.modelId ?? source.modelId ?? null,
         operation: source.operation ?? item.operation ?? null,
         injectionParams,

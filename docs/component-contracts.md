@@ -38,6 +38,37 @@ per-slot. An end-frame-only run leaves required `startFrame` empty **by design**
 the bail fires only when NO slot of that media type got filled — otherwise a legal
 route reads as "Could not load the input image".
 
+## PromptBox — the prompt button CYCLES three fields, it does not toggle two (MPI-474)
+
+One button, three stops: **positive → negative → negative audio → positive**. The
+third exists because LTX drives two independent negatives — `LTX2_NAG` patches video
+cross-attention from `nag_cond_video` and audio cross-attention from `nag_cond_audio`,
+from two separate conditionings — so a boolean could not express what the graph takes.
+
+- **Gate:** the audio stop is offered only when the active model declares
+  `capabilities.audio`. That is the same signal that surfaces the audio input slot and
+  the `audioMode`/`useAudio` controls, so the three never disagree. Without it the
+  button cycles two ways exactly as before.
+- **`_applyMode(next)` is the ONLY place a mode changes.** It moves the textarea value,
+  the placeholder, the button's icon, its `is-active` flag and the `mode-change` emit
+  together. Those five used to be duplicated across the click handler, `injectPrompts`
+  and the toggle teardown, and they had already drifted.
+- **`MpiButton` cannot do this alone.** `toggleable`/`iconActive` are strictly boolean
+  (a CSS swap on `is-active`), so the mount is NOT `toggleable`; the cycle drives
+  `el.setActive()` + `el.setIcon()` by hand. `setIcon` was added for this and mirrors
+  `setLabel`.
+- **Stranded-edit guard, twice.** Losing `capabilities.audio` while the audio field is
+  active snaps back to `negative` — and that check sits BEFORE `_refreshNegToggle`'s
+  `show === !!_negBtn` early return, which would otherwise skip it because the button
+  itself neither appeared nor disappeared.
+- **`Input_Negative_Audio` is always injected, including empty.** The graph gates NAG on
+  the string being non-empty, so a cleared box must reach the node to switch it back off.
+  `getRunPayload` blanks the value for a model that cannot take it, so a stale draft
+  never rides along.
+- **Reuse round-trips all three.** Saved as `meta.negativeAudioPrompt`, read back by
+  `promptReuse.js`. Items generated before this shipped have no such field and fall
+  through to `''`.
+
 ## MpiProgressBar ships a 160px floor that beats any parent `max-width`
 
 `.mpi-progress { min-width: 160px }` (`js/components/Primitives/MpiProgressBar/MpiProgressBar.css`). A `max-width` on the mount wrapper can never win against it — two bars side by side silently overflow their container and draw ON TOP of each other, which reads as a layout bug in the consumer, not in the primitive. Sizing bars below 160px means overriding `min-width` **scoped to your consumer** (see `.mpi-gallery-grid__zone--center .mpi-progress`), never on the primitive — other consumers rely on the floor.

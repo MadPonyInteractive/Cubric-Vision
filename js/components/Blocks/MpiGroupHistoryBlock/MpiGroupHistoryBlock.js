@@ -1110,14 +1110,15 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _refreshOpOptions();
                 _syncPromptToolDisabled();
             }));
-            _unsubs.push(_pb.on('run', ({ operation, positive, negative, mediaItems, injectionParams, previewOnly }) => {
+            _unsubs.push(_pb.on('run', ({ operation, positive, negative, negativeAudio, mediaItems, injectionParams, previewOnly }) => {
                 const maskDataUrl = viewer.el.hasMask?.()
                     ? viewer.el.getCurrentMaskDataURL?.()
                     : null;
                 // History workspace forces single-stage execution. `historyMode: true`
-                // is plumbed into the executor payload so `Preview_Only` is forced
-                // to false on `_ms` ops regardless of any stale previewStage toggle.
-                _runGenerate({ operation, positive, negative, mediaItems, maskDataUrl, injectionParams, previewOnly, historyMode: true });
+                // is plumbed into the executor payload so the preview gate
+                // (`Video_Latent.is_preview`) is forced to false on `_ms` ops
+                // regardless of any stale previewStage toggle.
+                _runGenerate({ operation, positive, negative, negativeAudio, mediaItems, maskDataUrl, injectionParams, previewOnly, historyMode: true });
             }));
             _unsubs.push(_pb.on('cancel', ({ mode } = {}) => {
                 const active = activeGenerations.listFor('groupHistory', _group.id).filter(e => e.status === 'running');
@@ -1213,7 +1214,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 use.model = false;
                 use.settings = false;
                 targetModel = activeModel;
-                if (!targetModel && use.prompt) _pb?.el?.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
+                if (!targetModel && use.prompt) _pb?.el?.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '', negativeAudio: payload.negativeAudio || '' });
                 if (!targetModel) return;
             }
             if (use.model && targetModel.mediaType !== modeKind) {
@@ -1253,7 +1254,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _setPromptOperation(targetOperation, { remember: true });
 
             if (use.prompt) {
-                _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '' });
+                _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '', negativeAudio: payload.negativeAudio || '' });
             }
             // Reuse the media the user opted into, gated per-type by what the source
             // carries (MPI-212 image → MPI-227 video/audio). A source lacking a type
@@ -1333,7 +1334,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             return { in: rangeIn, out: rangeOut };
         }
 
-        function _generationFromPromptPayload({ operation, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {}, previewOnly = false, historyMode = false, extend = false, sourceItemId = null, forceLocal = false }) {
+        function _generationFromPromptPayload({ operation, positive, negative, negativeAudio, mediaItems = [], maskDataUrl, injectionParams = {}, previewOnly = false, historyMode = false, extend = false, sourceItemId = null, forceLocal = false }) {
             if (!activeModel) return;
 
             const currentItem = _group.history[_currentIdx];
@@ -1377,7 +1378,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 : (viewer.el.hasMask?.() ? viewer.el.getCurrentMaskDataURL?.() : null);
 
             return {
-                config: { operation, model: activeModel, positive, negative, mediaItems: resolvedMedia, maskDataUrl: resolvedMask, injectionParams, previewOnly, historyMode, extend, sourceItemId },
+                config: { operation, model: activeModel, positive, negative, negativeAudio, mediaItems: resolvedMedia, maskDataUrl: resolvedMask, injectionParams, previewOnly, historyMode, extend, sourceItemId },
                 opts: { existingGroup: _group, scope: 'groupHistory', groupId: _group.id, forceLocal },
             };
         }
