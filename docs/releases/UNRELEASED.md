@@ -166,6 +166,14 @@
   too** — where it matters more, because that volume outlives the Pod and you pay for its
   size every month, so anything stranded on it was costing you until you noticed it.
 
+- **Uninstalling now tells you the truth about what it removed.** On a cloud Pod, the
+  confirmation counted every file it asked about as deleted — including files that were
+  never on the volume in the first place. One uninstall reported eight files removed when
+  exactly one existed. And in the opposite case, a model whose files had already gone
+  said "model files kept on disk; still installed" when nothing was kept and nothing was
+  left. Both are gone: a file is only reported as removed when it was actually there and
+  actually deleted.
+
 - **A hiccup mid-download no longer throws away the download.** A 25GB model that
   stalled for a minute — a router blip, a bad moment on the line — was declared failed
   outright, even though the gigabytes already on disk were perfectly good. It now
