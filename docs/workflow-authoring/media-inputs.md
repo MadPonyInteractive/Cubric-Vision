@@ -81,23 +81,35 @@ Data-URL media (the auto-mask painted mask arrives as a `data:` URL, which a
 path node's `os.path.isfile` cannot read) is first staged to a hashed file via
 `POST /comfy/stage-media-data-url`, then flows the normal resolve→inject path.
 
-## The ONE survivor — latents still stage into `input/`
+## Nothing stages any more — the last survivor died with `LoadLatent` (MPI-466)
 
-`LoadLatent` has **no** path-string variant, so `.latent` files are the sole
-exception and still stage the old way:
+**This section used to say the opposite, and the reversal is the point.** It read
+*"Do NOT 'finish the cleanup' by removing latent staging — there is no path node
+for latents; killing this breaks every multi-stage LTX/Wan run."* That was true
+while `LoadLatent` was the only way to read a latent, because ComfyUI validates a
+Load* node's baked filename even when its output is gated off, so three dummy
+`.latent` files had to be copied into the engine `input/` before every `_ms`
+submit.
 
-- `WORKFLOW_INPUT_DEFAULTS` (`routes/comfy.js`) lists **latents only**:
-  `ComfyUI_00001_.latent`, `ltx_video_latent_00001_.latent`,
-  `ltx_audio_latent_00001_.latent`.
-- `_MEDIA_INPUT_CLASSES` (`commandExecutor.js`) = **`LoadLatent` only**;
-  `_prepareWorkflowInputs` copies the latents into the engine `input/` before
-  submit. Stage-2 (`_ms`) additionally injects the per-preview latents over the
-  baked names (dual-latent, MPI-128).
+`MpiStageLatents` **is** the path node that did not exist. It reads its stage-1
+file from a `load_path` widget the app writes per run, checks the engine `input/`
+first and falls back to `<output>/latents/`. WAN, H3 and finally LTX all migrated
+onto it, so no shipped graph carries a `LoadLatent` at all — and staging a file
+that nothing loads is just three dead bytes in the build.
 
-**Do NOT "finish the cleanup" by removing latent staging.** There is no path
-node for latents; killing this breaks every multi-stage LTX/Wan run. The
-`Input_*_Latent` wiring, `stage-preview-latent`, and the three latent defaults
-stay untouched.
+Deleted, therefore, and do not reinstate:
+
+- `WORKFLOW_INPUT_DEFAULTS` and `POST /comfy/prepare-workflow-inputs` (`routes/comfy.js`)
+- `_MEDIA_INPUT_CLASSES` + `_prepareWorkflowInputs` (`commandExecutor.js`)
+- `comfy_workflows/input/{ComfyUI_00001_,ltx_video_latent_00001_,ltx_audio_latent_00001_}.latent`
+
+Pinned by `tests/optional-media-placeholder.test.cjs`, which now fails in BOTH
+directions: a bare Load* node reappearing in an optional graph, and
+`WORKFLOW_INPUT_DEFAULTS` reappearing in `routes/comfy.js`.
+
+`stage-preview-latent` is a DIFFERENT mechanism and stays — it writes the real
+per-run stage-1 latent into the engine `input/` under a per-run name, which is
+exactly what `MpiStageLatents.load_path` then reads.
 
 ## Guard
 

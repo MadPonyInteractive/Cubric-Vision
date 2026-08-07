@@ -44,24 +44,6 @@ const remoteModels = require('./remoteModels');
 const ENGINE_ROOT = getEngineRoot();
 const _comfyEventClients = new Set();
 // Repo-owned LATENT defaults staged into the engine input/ before every _ms submit.
-// ComfyUI validates EVERY LoadLatent node in a workflow even when its output is
-// unreached (e.g. behind an Is_Continue gate), so each model family's LoadLatent
-// baked filename must have a real file here. The engine input/ is garbage-collected
-// on shutdown (cleanComfyUITempFiles), but prepare runs every submit so the defaults
-// are always re-staged.
-//   ComfyUI_00001_.latent       — WAN _ms video latent (legacy default)
-//   ltx_video_latent_00001_     — LTX Input_Video_Latent (node 67)
-//   ltx_audio_latent_00001_     — LTX Input_Audio_Latent (node 69)
-// MPI-272: image/audio placeholders (placeholder.png / ltx_silence.wav) are GONE —
-// media inputs migrated to self-gating MpiLoadImageFromPath / MpiLoadAudio path
-// nodes (empty `string` = no media). LoadLatent has no path-string variant, so
-// latents remain the sole staging survivor.
-const WORKFLOW_INPUT_DEFAULTS = Object.freeze([
-    'ComfyUI_00001_.latent',
-    'ltx_video_latent_00001_.latent',
-    'ltx_audio_latent_00001_.latent',
-]);
-
 function _broadcastComfyEvent(event, data) {
     const payload = `event: ${event}\ndata: ${JSON.stringify({ ...data, engine: 'local' })}\n\n`;
     for (const client of _comfyEventClients) {
@@ -208,52 +190,6 @@ router.get('/comfy/events/stream', (req, res) => {
     req.on('close', () => {
         _comfyEventClients.delete(res);
     });
-});
-
-/**
- * POST /comfy/prepare-workflow-inputs
- * Copies repo-owned workflow input defaults into the active ComfyUI input folder.
- * Multi-stage workflows can fail validation if LoadLatent has no selectable
- * default, even when Is_Continue=false, so this runs before every _ms submit.
- */
-router.post('/comfy/prepare-workflow-inputs', async (req, res) => {
-    try {
-        const sourceDir = path.join(__dirname, '..', 'comfy_workflows', 'input');
-        // MPI-74: a force-local run stages defaults into the LOCAL ComfyUI input dir
-        // even while remote-active, so the local _ms run finds them.
-        const remoteActive = remoteModels.isRemoteActive() && req.body?.forceLocal !== true;
-        const inputDir = remoteActive ? null : getComfyPath(ENGINE_ROOT, 'input');
-        if (!remoteActive) await fs.ensureDir(inputDir);
-
-        const copied = [];
-        for (const filename of WORKFLOW_INPUT_DEFAULTS) {
-            const source = path.join(sourceDir, filename);
-            if (!(await fs.pathExists(source))) {
-                return res.status(500).json({
-                    success: false,
-                    error: `Workflow input default missing: ${filename}`,
-                });
-            }
-            // Remote engine: upload the bundled default to the Pod volume input
-            // dir (idempotent, overwrite) instead of a local copy. All defaults are
-            // now `.latent` (MPI-272 dropped the image/audio placeholders), so this
-            // always uses the latent endpoint; the media fallback stays for safety.
-            if (remoteActive) {
-                const endpoint = filename.endsWith('.latent')
-                    ? '/wrapper/upload/latent'
-                    : '/wrapper/upload/media';
-                await remoteModels.remoteUploadInput(source, filename, endpoint);
-            } else {
-                await fs.copy(source, path.join(inputDir, filename), { overwrite: true });
-            }
-            copied.push(filename);
-        }
-
-        res.json({ success: true, copied });
-    } catch (err) {
-        logger.error('comfy', 'prepare workflow inputs failed', err);
-        res.status(500).json({ success: false, error: err.message });
-    }
 });
 
 /**

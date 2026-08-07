@@ -94,9 +94,13 @@ test('every pre-dispatch bail routes through _failBail', () => {
     const region = lines.slice(start, end + 1).join('\n');
     // `const _failBail = (err) =>` does not match `_failBail(`, so every hit is a CALL.
     const routed = (region.match(/_failBail\(/g) || []).length;
+    // Floor lowered 11 → 10 deliberately (MPI-466): the `_prepareWorkflowInputs` bail was
+    // removed with the input-staging path it guarded. No graph carries a LoadLatent any
+    // more, so there is nothing to stage, nothing to fail, and nothing to bail on. Every
+    // REMAINING pre-dispatch bail still has to route through _failBail.
     assert.ok(
-        routed >= 11,
-        `only ${routed} pre-dispatch bails route through _failBail — 11 were found when this was fixed. `
+        routed >= 10,
+        `only ${routed} pre-dispatch bails route through _failBail — 10 were found when this was fixed. `
         + 'If one was legitimately removed, lower this floor deliberately.',
     );
 });

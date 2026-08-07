@@ -1,21 +1,24 @@
 'use strict';
-// MPI-242 — every OPTIONAL media input must bake a filename that staging provides.
+// MPI-242 / MPI-466 — an OPTIONAL media input may not depend on a staged file.
 //
-// Two independent mechanisms, and both must line up:
-//   1. STAGING — routes/comfy.js copies WORKFLOW_INPUT_DEFAULTS into the engine `input/`.
-//   2. BAKING  — the workflow JSON names the file its Load* node asks for.
+// HISTORY, because the rule INVERTED and the old form reads plausible. ComfyUI
+// validates every Load* node in a workflow even when its output is unreached (e.g.
+// behind a stage gate), so a graph carrying `LoadLatent` had a baked filename that
+// had to really exist in the engine `input/`. The app therefore shipped three dummy
+// `.latent` files and copied them in before every multi-stage submit.
 //
-// Nothing is injected into an optional media node (by definition: the op can run with
-// no image), so ComfyUI validates the BAKED name. Bake a name staging doesn't provide
-// and the graph fails validation at prompt time.
+// Both halves of that are now GONE:
+//   - MPI-272 moved image/audio onto self-gating MpiLoadImageFromPath / MpiLoadAudio
+//     path nodes (empty `string` = no media), leaving latents the sole survivor.
+//   - MPI-466 moved LTX — the last holdout — onto MpiStageLatents, which reads its
+//     stage-1 file from a `load_path` widget the app writes per run. With no
+//     `LoadLatent` anywhere, `WORKFLOW_INPUT_DEFAULTS`, the three dummy latents and
+//     the `/comfy/prepare-workflow-inputs` route were all deleted.
 //
-// A REQUIRED media input (requiresImages >= 1) is exempt: the injector overwrites the
-// widget before submit, so its baked value is dead data. Chroma's detailer/upscaler have
-// shipped for months baking local scratch filenames. Do NOT "fix" those.
-//
-// This is the guard that makes the placeholder survive a re-export. LTX/Wan get it for
-// free because their generators stamp it (generate_ltx.py, generate_wan5b.py); a
-// hand-exported workflow has no such stamp, so the mistake is caught here instead.
+// So the rule is no longer "bake a name that staging provides" — nothing is staged.
+// It is: an optional-media graph must carry NO bare Load* node at all, because there
+// is nothing left to make one validate. That is a stronger check than the old one,
+// and it fails loudly if the staging path is ever reintroduced by accident.
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
@@ -25,26 +28,14 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const WF_DIR = path.join(ROOT, 'comfy_workflows');
 
-// The files routes/comfy.js stages into the engine `input/` before submit.
-// Kept in sync by the assertion below, so a drift here fails loudly.
-// MPI-272 dropped placeholder.png / ltx_silence.wav: image and audio inputs moved to
-// self-gating MpiLoadImageFromPath / MpiLoadAudio path nodes (empty string = no media),
-// so LATENTS are the only staged survivors. LoadImage/LoadAudio stay in MEDIA_CLASSES
-// below on purpose — if one reappears in an optional graph it must be caught, not
-// silently accepted.
-const STAGED = ['ComfyUI_00001_.latent', 'ltx_video_latent_00001_.latent',
-                'ltx_audio_latent_00001_.latent'];
-
-// Guard the guard: if WORKFLOW_INPUT_DEFAULTS changes, this list must too.
+// Guard the guard: if staging comes back, this test's premise is wrong and it must be
+// rewritten rather than silently passing against a mechanism it no longer models.
 const comfyRoutes = fs.readFileSync(path.join(ROOT, 'routes', 'comfy.js'), 'utf8');
-const declared = comfyRoutes
-    .match(/WORKFLOW_INPUT_DEFAULTS\s*=\s*Object\.freeze\(\[([\s\S]*?)\]\)/)[1]
-    .match(/'([^']+)'/g).map(s => s.slice(1, -1));
-assert.deepStrictEqual(declared.sort(), [...STAGED].sort(),
-    'WORKFLOW_INPUT_DEFAULTS drifted — update STAGED in this test');
+assert.ok(!comfyRoutes.includes('WORKFLOW_INPUT_DEFAULTS'),
+    'routes/comfy.js declares WORKFLOW_INPUT_DEFAULTS again — input staging is back, so ' +
+    'the baked-name rule this test replaced applies once more. Rewrite this test.');
 
 const MEDIA_CLASSES = ['LoadImage', 'LoadImageMask', 'LoadAudio', 'LoadLatent'];
-const bakedName = (n) => n.inputs?.image ?? n.inputs?.audio ?? n.inputs?.latent ?? null;
 
 // Which runtime workflows are reachable from an op that can run with NO media?
 // Derived from the registry, never hardcoded — a new model is covered automatically.
@@ -59,79 +50,48 @@ for (const m of MODELS) {
 }
 assert.ok(optionalFiles.size > 0, 'no optional-media workflows found — derivation broke');
 
-// A model's `workflows` map names the BASE file; resolveWorkflowFile appends _stage2 and
-// arch-variant suffixes at runtime. Those variants exist on disk and carry the same
-// Load* nodes, so hold them to the same rule.
-const variantsOf = (base) => {
-    const stem = base.replace(/\.json$/, '');
-    return fs.readdirSync(WF_DIR).filter(f =>
-        f === base || new RegExp(`^${stem}(_stage2|_fp8|_mxfp8|_fp8_stage2|_mxfp8_stage2)\\.json$`).test(f));
-};
-
 const violations = [];
 let checkedFiles = 0;
-let checkedNodes = 0;
 
-for (const base of optionalFiles) {
-    for (const file of variantsOf(base)) {
-        const full = path.join(WF_DIR, file);
-        if (!fs.existsSync(full)) continue;
-        checkedFiles++;
-        const wf = JSON.parse(fs.readFileSync(full, 'utf8'));
-        for (const [id, node] of Object.entries(wf)) {
-            if (!MEDIA_CLASSES.includes(node.class_type)) continue;
-            checkedNodes++;
-            const baked = bakedName(node);
-            const title = node._meta?.title || '(untitled)';
-            if (!STAGED.includes(baked)) {
-                violations.push(`${file} node ${id} (${node.class_type} "${title}") bakes ` +
-                    `"${baked}" — not staged. Set it to a WORKFLOW_INPUT_DEFAULTS name ` +
-                    `in ComfyUI and re-export, or (for image/audio) switch the node to the ` +
-                    `self-gating MpiLoadImageFromPath / MpiLoadAudio path variant.`);
-            }
-        }
+for (const file of optionalFiles) {
+    const full = path.join(WF_DIR, file);
+    if (!fs.existsSync(full)) continue;
+    checkedFiles++;
+    const wf = JSON.parse(fs.readFileSync(full, 'utf8'));
+    for (const [id, node] of Object.entries(wf)) {
+        if (!MEDIA_CLASSES.includes(node.class_type)) continue;
+        const title = node._meta?.title || '(untitled)';
+        violations.push(`${file} node ${id} (${node.class_type} "${title}") — bare Load* ` +
+            `node in an optional-media graph. Nothing is staged into the engine input/ ` +
+            `any more, so its baked filename will not resolve and ComfyUI rejects the ` +
+            `whole graph at prompt time. Use MpiLoadImageFromPath / MpiLoadAudio (image, ` +
+            `audio) or MpiStageLatents (latents).`);
     }
 }
 
 assert.ok(checkedFiles >= 5, `expected several optional-media workflows, checked ${checkedFiles}`);
+assert.deepStrictEqual(violations, [], violations.join('\n  '));
 
-// MPI-466: `checkedNodes > 0` used to guard this, on the assumption that SOME optional
-// workflow always carries a bare Load* media node. That stopped being true when LTX —
-// the last holdout — migrated off LoadLatent onto MpiStageLatents; every optional graph
-// now uses the self-gating path nodes (MPI-272) or the stage node, so the class this
-// test polices is EMPTY. That is the migration finishing, not the derivation breaking,
-// and asserting a non-zero count would now fail for the right reason at the wrong place.
-// The scan above keeps its teeth: reintroduce a bare Load* node in an optional graph and
-// it must still bake a staged name.
-assert.ok(checkedFiles > 0, 'no files inspected — the registry derivation broke');
-
-assert.deepStrictEqual(violations, [],
-    'optional media inputs must bake a staged filename:\n  ' + violations.join('\n  '));
-
-// Positive control, MPI-466 edition. LTX used to provide it: a LoadLatent titled
-// Input_Video_Latent baking the staged 'ltx_video_latent_00001_.latent'. That node no
-// longer exists — MpiStageLatents replaced the whole save/load cluster and addresses its
-// stage-1 file by a PATH widget (save_path/load_path), which staging does not have to
-// pre-provide because the app writes it per run. So the control moves to asserting the
-// replacement is really in place, which is what makes the empty scan above legitimate
-// rather than a silently-disabled test.
+// Positive control: the replacement really is in place on the graph that used to be the
+// reference case. Without this, an empty violations list could just mean the derivation
+// stopped finding files.
 const ltx = JSON.parse(fs.readFileSync(path.join(WF_DIR, 'ltx_i2v_t2v.json'), 'utf8'));
 const stageNode = Object.values(ltx).find(n => n._meta?.title === 'Input_Video_Latent');
 assert.strictEqual(stageNode?.class_type, 'MpiStageLatents',
-    'LTX Input_Video_Latent must be the MpiStageLatents node — if it is a Load* again, ' +
-    'the staged-filename rule applies to it and the scan above must find it');
-// Its `latent` input is a WIRE, not a filename widget — which is precisely why it needs
-// nothing staged. (bakedName reads inputs.latent, so it returns the link tuple here.)
-assert.ok(Array.isArray(bakedName(stageNode)),
-    'MpiStageLatents.latent must be a link — a string there would mean a filename widget ' +
-    'crept back in, and staging would have to provide it');
+    'LTX Input_Video_Latent must be the MpiStageLatents node');
+assert.ok(Array.isArray(stageNode.inputs?.latent),
+    'MpiStageLatents.latent must be a WIRE — a string there is a filename widget, which ' +
+    'would need the staging that no longer exists');
 assert.strictEqual(typeof stageNode.inputs.load_path, 'string',
-    'MpiStageLatents reads its stage-1 file from load_path');
+    'MpiStageLatents reads its stage-1 file from load_path, which the app writes per run');
 
-// Negative control: the check has teeth. An unstaged bake must be rejected.
-assert.ok(!STAGED.includes('placeholder.png'),
-    'placeholder.png was un-staged by MPI-272 — a graph baking it would now fail validation');
+// And the dummy files themselves are gone — a leftover would rot silently in the build.
+for (const stale of ['ComfyUI_00001_.latent', 'ltx_video_latent_00001_.latent',
+                     'ltx_audio_latent_00001_.latent']) {
+    assert.ok(!fs.existsSync(path.join(WF_DIR, 'input', stale)),
+        `comfy_workflows/input/${stale} is back — MPI-466 deleted the staged dummies`);
+}
 
-console.log(`optional-media-placeholder: ${checkedFiles} workflows, ${checkedNodes} media nodes, 0 violations`);
+console.log(`optional-media-placeholder: ${checkedFiles} workflows, 0 bare Load* nodes`);
 
 })().catch(err => { console.error(err.message || err); process.exit(1); });

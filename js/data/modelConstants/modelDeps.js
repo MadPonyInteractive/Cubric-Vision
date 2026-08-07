@@ -81,6 +81,14 @@ export const modelDeps = {
         sha256: '455ea6628d79546bb63147758522706f8a6592ade65f847da0aec8968bf29a4b'
     },
     // Video Models
+    // ── DEPRECATED (MPI-470) — the two `wan-22-t2v-*` entries below are no longer
+    // reachable: wan-22 dropped `t2v_ms`, so nothing installs them. They stay on
+    // purpose. `_orphanedDepIds` (routes/downloadManager.js) iterates THIS map and
+    // trashes what no model protects, so keeping them is exactly what lets the
+    // uninstall sweep reclaim the 27.1GB already sitting on existing users' disks.
+    // Delete these entries and the sweep goes blind — the two files strand forever,
+    // untracked, with nothing in the app able to remove them. The R2 + HF copies stay
+    // up so released builds that still list the dep install rather than 404.
     'wan-22-t2v-high': {
         id: 'wan-22-t2v-high',
         name: 'Wan 2.2 t2v',
@@ -373,6 +381,34 @@ export const modelDeps = {
     // Blackwell is INFERRED from other int8 models running there, not measured for
     // this weight — do not upgrade that to "verified" without a run.
     // Kijai comfy-format ONLY — the official Lightricks fp8 repo is broken.
+    // ── DEPRECATED (MPI-466) — the arch pair the int8 weight replaced. NOT reachable:
+    // no model lists them and `variants.arch` is gone. They stay for the SAME reason
+    // MPI-470 kept the WAN t2v pair: `_orphanedDepIds` (routes/downloadManager.js)
+    // iterates THIS map and trashes what no model protects, so these entries are what
+    // let the sweep reclaim the 24-25GB already sitting on an existing balanced-tier
+    // user's disk. Delete them and that weight strands forever, untracked, with nothing
+    // in the app able to remove it. R2 + HF copies stay up so a released build that
+    // still lists the dep installs rather than 404s.
+    'ltx23-transformer-fp8': {
+        id: 'ltx23-transformer-fp8',
+        name: 'LTX-2.3 22B Distilled Transformer (fp8_scaled)',
+        origin: 'Kijai/LTX2.3_comfy',
+        filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors',
+        mirrorUrl: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors',
+        size: '25.2GB',
+        sha256: '0a1d7aac2b338e8ec7e832149f1dcf11c9323272482b1cca0673d229702370f0',
+    },
+    'ltx23-transformer-mxfp8': {
+        id: 'ltx23-transformer-mxfp8',
+        name: 'LTX-2.3 22B Distilled Transformer (mxfp8_block32)',
+        origin: 'Kijai/LTX2.3_comfy',
+        filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors',
+        mirrorUrl: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors',
+        size: '24.1GB',
+        sha256: 'b7a945ff24d65ad22c6977787c2e594e74df226e35f1f9dedb64be8fdbd6ffd8',
+    },
     'ltx23-transformer-int8': {
         id: 'ltx23-transformer-int8',
         name: 'LTX-2.3 22B Distilled Transformer (int8_convrot)',

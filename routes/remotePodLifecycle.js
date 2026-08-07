@@ -1103,7 +1103,8 @@ router.post('/remote/pod/stop-active', async (req, res) => {
   const podId = _startedPodId || (_mode.active && _mode.podId) || null;
   // Disconnect means "use the LOCAL engine now". Flip remote mode OFF so
   // isRemoteActive() (= active && podId) returns false — otherwise local _ms
-  // generations route input-prep (prepare-workflow-inputs / stage-preview-latent)
+  // generations route input-prep (stage-preview-latent; the sibling
+  // prepare-workflow-inputs route was deleted with the last LoadLatent, MPI-466)
   // to the now-stopped wrapper and fail with "wrapper upload 404". podId is kept
   // client-side for warm-resume; a fresh Connect re-sets active=true.
   setRemoteMode({ active: false, noGpu: false });

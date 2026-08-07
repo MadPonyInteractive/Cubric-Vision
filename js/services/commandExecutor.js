@@ -92,43 +92,6 @@ function _paramIsTrue(params, title) {
     return false;
 }
 
-/** Latent-input node classes whose baked filename must resolve in the engine `input/`. */
-const _MEDIA_INPUT_CLASSES = new Set(['LoadLatent']);
-
-async function _prepareWorkflowInputs(payload, workflow) {
-    // A workflow carrying a LoadLatent node has a baked latent filename that must
-    // exist in the engine `input/`, or ComfyUI rejects the graph at prompt time —
-    // even for nodes whose output is gated off (a stage-1 run never uses the loaded
-    // latent behind the Is_Continue gate).
-    //
-    // MPI-272: image/audio inputs no longer need staging — they migrated to
-    // self-gating MpiLoadImageFromPath / MpiLoadAudio path nodes that read a full
-    // path from a `string` widget and gate on empty. LoadLatent has no path-string
-    // variant, so latents are the sole staging survivor. (Only the LTX/WAN _ms
-    // stage-2 graphs carry a LoadLatent; every other graph short-circuits here.)
-    //
-    // Staging is small locally (a copy), but on the REMOTE engine it uploads each
-    // default to the Pod, so we must not run it for graphs that have no latent node.
-    if (!workflow || typeof workflow !== 'object') return;
-    const hasMediaInput = Object.values(workflow).some(
-        node => _MEDIA_INPUT_CLASSES.has(node?.class_type)
-    );
-    if (!hasMediaInput) return;
-    const res = await fetch('/comfy/prepare-workflow-inputs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ operation: payload.operation, forceLocal: payload.forceLocal === true }),
-    });
-    if (!res.ok) {
-        let message = `prepare-workflow-inputs returned ${res.status}`;
-        try {
-            const data = await res.json();
-            if (data?.error) message = data.error;
-        } catch (_) { /* keep status message */ }
-        throw new Error(message);
-    }
-}
-
 /**
  * Decode a /project-file?path=... URL to an absolute filesystem path.
  * Returns the input unchanged if it doesn't match the project-file pattern.
@@ -1591,15 +1554,6 @@ export function runCommand(payload) {
                     return;
                 }
             }
-        }
-
-        try {
-            await _prepareWorkflowInputs(workingPayload, workflow);
-        } catch (err) {
-            clientLogger.error('commandExecutor', 'Failed to prepare workflow input defaults', err);
-            await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
-            _failBail(err);
-            return;
         }
 
         try {
