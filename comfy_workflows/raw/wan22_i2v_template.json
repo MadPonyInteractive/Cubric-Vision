@@ -1,8 +1,8 @@
 {
   "id": "ccbc067a-f7b1-4a26-af81-390dacb0c7e2",
   "revision": 0,
-  "last_node_id": 946,
-  "last_link_id": 1595,
+  "last_node_id": 948,
+  "last_link_id": 1603,
   "nodes": [
     {
       "id": 730,
@@ -2243,7 +2243,7 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            1508
+            1597
           ]
         }
       ],
@@ -2280,7 +2280,7 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            1509
+            1598
           ]
         }
       ],
@@ -2321,7 +2321,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            1507
+            1596
           ]
         }
       ],
@@ -2599,76 +2599,6 @@
       ]
     },
     {
-      "id": 919,
-      "type": "MpiCrop",
-      "pos": [
-        -735.3340191942161,
-        -736.8380004036509
-      ],
-      "size": [
-        270,
-        170
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 56,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 1507
-        },
-        {
-          "name": "width",
-          "type": "INT",
-          "widget": {
-            "name": "width"
-          },
-          "link": 1508
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "widget": {
-            "name": "height"
-          },
-          "link": 1509
-        }
-      ],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            1510
-          ]
-        },
-        {
-          "name": "width",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "a6e5d5e06f433379111cc4806ecaefb3e5e39404",
-        "Node name for S&R": "MpiCrop"
-      },
-      "widgets_values": [
-        0,
-        0,
-        16,
-        "center"
-      ]
-    },
-    {
       "id": 887,
       "type": "SetNode",
       "pos": [
@@ -2686,7 +2616,7 @@
         {
           "name": "IMAGE",
           "type": "IMAGE",
-          "link": 1510
+          "link": 1599
         }
       ],
       "outputs": [
@@ -2730,7 +2660,7 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            1512
+            1601
           ]
         }
       ],
@@ -2767,7 +2697,7 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            1513
+            1602
           ]
         }
       ],
@@ -2808,7 +2738,7 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            1511
+            1600
           ]
         }
       ],
@@ -2816,76 +2746,6 @@
         "showOutputText": true,
         "horizontal": false
       }
-    },
-    {
-      "id": 923,
-      "type": "MpiCrop",
-      "pos": [
-        470.16249619578025,
-        -715.8992821477685
-      ],
-      "size": [
-        270,
-        170
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 57,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 1511
-        },
-        {
-          "name": "width",
-          "type": "INT",
-          "widget": {
-            "name": "width"
-          },
-          "link": 1512
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "widget": {
-            "name": "height"
-          },
-          "link": 1513
-        }
-      ],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            1516
-          ]
-        },
-        {
-          "name": "width",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "a6e5d5e06f433379111cc4806ecaefb3e5e39404",
-        "Node name for S&R": "MpiCrop"
-      },
-      "widgets_values": [
-        0,
-        0,
-        16,
-        "center"
-      ]
     },
     {
       "id": 889,
@@ -2905,7 +2765,7 @@
         {
           "name": "IMAGE",
           "type": "IMAGE",
-          "link": 1516
+          "link": 1603
         }
       ],
       "outputs": [
@@ -4804,6 +4664,176 @@
         "alpha",
         false
       ]
+    },
+    {
+      "id": 947,
+      "type": "ImageResizeKJv2",
+      "pos": [
+        -760.5656729405015,
+        -738.9610369372053
+      ],
+      "size": [
+        270,
+        336
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 56,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 1596
+        },
+        {
+          "name": "mask",
+          "shape": 7,
+          "type": "MASK",
+          "link": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 1597
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 1598
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1599
+          ]
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
+        "Node name for S&R": "ImageResizeKJv2"
+      },
+      "widgets_values": [
+        512,
+        512,
+        "lanczos",
+        "crop",
+        "0, 0, 0",
+        "center",
+        16,
+        "cpu"
+      ]
+    },
+    {
+      "id": 948,
+      "type": "ImageResizeKJv2",
+      "pos": [
+        447.6728486501256,
+        -721.3408918306762
+      ],
+      "size": [
+        270,
+        336
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 57,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 1600
+        },
+        {
+          "name": "mask",
+          "shape": 7,
+          "type": "MASK",
+          "link": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 1601
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 1602
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1603
+          ]
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
+        "Node name for S&R": "ImageResizeKJv2"
+      },
+      "widgets_values": [
+        512,
+        512,
+        "lanczos",
+        "crop",
+        "0, 0, 0",
+        "center",
+        16,
+        "cpu"
+      ]
     }
   ],
   "links": [
@@ -5392,70 +5422,6 @@
       "BOOLEAN"
     ],
     [
-      1507,
-      897,
-      0,
-      919,
-      0,
-      "IMAGE"
-    ],
-    [
-      1508,
-      895,
-      0,
-      919,
-      1,
-      "INT"
-    ],
-    [
-      1509,
-      896,
-      0,
-      919,
-      2,
-      "INT"
-    ],
-    [
-      1510,
-      919,
-      0,
-      887,
-      0,
-      "IMAGE"
-    ],
-    [
-      1511,
-      922,
-      0,
-      923,
-      0,
-      "IMAGE"
-    ],
-    [
-      1512,
-      920,
-      0,
-      923,
-      1,
-      "INT"
-    ],
-    [
-      1513,
-      921,
-      0,
-      923,
-      2,
-      "INT"
-    ],
-    [
-      1516,
-      923,
-      0,
-      889,
-      0,
-      "IMAGE"
-    ],
-    [
       1518,
       741,
       0,
@@ -5798,6 +5764,70 @@
       793,
       0,
       "MODEL"
+    ],
+    [
+      1596,
+      897,
+      0,
+      947,
+      0,
+      "IMAGE"
+    ],
+    [
+      1597,
+      895,
+      0,
+      947,
+      2,
+      "INT"
+    ],
+    [
+      1598,
+      896,
+      0,
+      947,
+      3,
+      "INT"
+    ],
+    [
+      1599,
+      947,
+      0,
+      887,
+      0,
+      "IMAGE"
+    ],
+    [
+      1600,
+      922,
+      0,
+      948,
+      0,
+      "IMAGE"
+    ],
+    [
+      1601,
+      920,
+      0,
+      948,
+      2,
+      "INT"
+    ],
+    [
+      1602,
+      921,
+      0,
+      948,
+      3,
+      "INT"
+    ],
+    [
+      1603,
+      948,
+      0,
+      889,
+      0,
+      "IMAGE"
     ]
   ],
   "groups": [
@@ -5826,8 +5856,8 @@
     "ds": {
       "scale": 1.1918176537727518,
       "offset": [
-        1717.0878358664152,
-        1051.0893216814507
+        435.85157026302034,
+        951.2418327444481
       ]
     },
     "workflowRendererVersion": "LG",
