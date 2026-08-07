@@ -572,6 +572,15 @@ export const MpiPromptBox = ComponentFactory.create({
             _refreshOpStrip();
             _refreshOpSlot();
             _renderBadge();
+            // A chip's badge and its frame-role pill are properties of the OP+MODEL,
+            // not of the chip: the slot a chip fills is re-derived per op, so its
+            // "Picture 1" / "Start frame" label is only true for the op that was
+            // active when the strip was last painted. Without this the staged media
+            // kept the previous model's labels — H3's "Picture 1" survived a switch
+            // to LTX, where that image is the start frame. _emitMediaChange repaints
+            // for the same reason; this is the other half, and it is cheap (an
+            // unchanged strip takes _renderStrip's same-set fast path).
+            _renderStrip(_withAssignedRoles());
             emit('operation-change', { operation: key, programmatic });
         };
 
@@ -674,6 +683,10 @@ export const MpiPromptBox = ComponentFactory.create({
                 _refreshOpStrip();
                 _refreshOpSlot();
                 _renderBadge();
+                // Same op, different model still re-derives the slots — capabilities
+                // filter them (filterMediaInputsForModel), so the chip labels move even
+                // when the op key does not. setOperation covers the other branch.
+                _renderStrip(_withAssignedRoles());
             }
             if (typeof _refreshRunLabel === 'function') _refreshRunLabel();
         };
@@ -778,13 +791,20 @@ export const MpiPromptBox = ComponentFactory.create({
             const _badgeFor = (item, idx) => _tagBySlot.get(item.role)
                 ?? (items.length > 1 ? String(idx + 1) : '');
 
+            // What the fast path below may NOT change: the role pill, and whether a
+            // badge element exists at all. Its TEXT is fine to re-stamp in place (that
+            // is what reorder needs), but a chip that had no badge has no element to
+            // stamp — so a switch from an untagged op to a tagged one (Wan 5B i2v →
+            // H3 ref2v_ms, both roleKey-less) would silently paint no tag.
+            const _chipKey = (item, idx) => `${_roleKey(item)}|${_badgeFor(item, idx) ? 1 : 0}`;
+
             // Reorder fast path: same chips, new order. Rebuilding the DOM here
             // would reload every <img src> mid-drag (flicker) and drop the
             // dragged node out from under its own pointer handlers — so move the
             // existing nodes instead and only re-stamp the index badges.
             const sameSet = existing.length === items.length
                 && items.every(it => _prevRects.has(it.id))
-                && items.every(it => existing.find(c => c.dataset.id === it.id)?.dataset.roleKey === _roleKey(it));
+                && items.every((it, i) => existing.find(c => c.dataset.id === it.id)?.dataset.roleKey === _chipKey(it, i));
             if (sameSet) {
                 items.forEach((item, idx) => {
                     const chip = existing.find(c => c.dataset.id === item.id);
@@ -801,7 +821,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 const chip = document.createElement('div');
                 chip.className = `mpi-prompt-box-media-strip__chip mpi-prompt-box-media-strip__chip--${item.mediaType}`;
                 chip.dataset.id = item.id;
-                chip.dataset.roleKey = _roleKey(item);
+                chip.dataset.roleKey = _chipKey(item, idx);
                 chip.draggable = false;
                 const mediaHtml = item.mediaType === 'image'
                     ? `<img src="${item.url}" class="mpi-prompt-box-media-strip__thumb" alt="" draggable="false">`
