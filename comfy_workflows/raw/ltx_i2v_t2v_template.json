@@ -47,44 +47,6 @@
       "widgets_values": []
     },
     {
-      "id": 127,
-      "type": "MpiReroute",
-      "pos": [
-        1156.1678684908977,
-        7322.214713133433
-      ],
-      "size": [
-        207.9461079835978,
-        26
-      ],
-      "flags": {},
-      "order": 201,
-      "mode": 2,
-      "inputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "link": 630
-        }
-      ],
-      "outputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "links": [
-            145
-          ]
-        }
-      ],
-      "title": "Stage 2 Audio Latent",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
-      },
-      "widgets_values": []
-    },
-    {
       "id": 156,
       "type": "MpiMath",
       "pos": [
@@ -10383,84 +10345,6 @@
       "bgcolor": "#593930"
     },
     {
-      "id": 128,
-      "type": "MpiReroute",
-      "pos": [
-        1158.7181509022869,
-        7146.344731986153
-      ],
-      "size": [
-        207.9461079835978,
-        26
-      ],
-      "flags": {},
-      "order": 204,
-      "mode": 2,
-      "inputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "link": 629
-        }
-      ],
-      "outputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "links": [
-            144,
-            335
-          ]
-        }
-      ],
-      "title": "Stage 2 Video Latent",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 258,
-      "type": "MpiReroute",
-      "pos": [
-        -1575.5415913123375,
-        6998.176165449407
-      ],
-      "size": [
-        140,
-        26
-      ],
-      "flags": {},
-      "order": 128,
-      "mode": 2,
-      "inputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "link": 637
-        }
-      ],
-      "outputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "links": [
-            466,
-            539
-          ]
-        }
-      ],
-      "title": "Model",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
-      },
-      "widgets_values": []
-    },
-    {
       "id": 508,
       "type": "MpiString",
       "pos": [
@@ -10531,6 +10415,122 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 127,
+      "type": "MpiReroute",
+      "pos": [
+        1156.1678684908977,
+        7322.214713133433
+      ],
+      "size": [
+        207.9461079835978,
+        26
+      ],
+      "flags": {},
+      "order": 201,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "link": 630
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            145
+          ]
+        }
+      ],
+      "title": "Stage 2 Audio Latent",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
+        "Node name for S&R": "MpiReroute"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 128,
+      "type": "MpiReroute",
+      "pos": [
+        1158.7181509022869,
+        7146.344731986153
+      ],
+      "size": [
+        207.9461079835978,
+        26
+      ],
+      "flags": {},
+      "order": 204,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "link": 629
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            144,
+            335
+          ]
+        }
+      ],
+      "title": "Stage 2 Video Latent",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
+        "Node name for S&R": "MpiReroute"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 258,
+      "type": "MpiReroute",
+      "pos": [
+        -1575.5415913123375,
+        6998.176165449407
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 128,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "link": 637
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            466,
+            539
+          ]
+        }
+      ],
+      "title": "Model",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
+        "Node name for S&R": "MpiReroute"
+      },
+      "widgets_values": []
     }
   ],
   "links": [
@@ -12776,10 +12776,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.8954302432552388,
+      "scale": 0.2776319002764997,
       "offset": [
-        5235.210573243361,
-        -5421.543449680315
+        4206.566723295642,
+        -4678.4969882457
       ]
     },
     "frontendVersion": "1.47.12",
