@@ -297,11 +297,11 @@
         2
       ],
       "start_image": [
-        "919",
+        "947",
         0
       ],
       "end_image": [
-        "923",
+        "948",
         0
       ],
       "width": [
@@ -592,7 +592,7 @@
         2
       ],
       "start_image": [
-        "919",
+        "947",
         0
       ],
       "width": [
@@ -842,50 +842,6 @@
       "title": "Mpi Boolean Compare"
     }
   },
-  "919": {
-    "inputs": {
-      "divisible_by": 16,
-      "position": "center",
-      "image": [
-        "904",
-        0
-      ],
-      "width": [
-        "836",
-        0
-      ],
-      "height": [
-        "837",
-        0
-      ]
-    },
-    "class_type": "MpiCrop",
-    "_meta": {
-      "title": "Mpi Crop"
-    }
-  },
-  "923": {
-    "inputs": {
-      "divisible_by": 16,
-      "position": "center",
-      "image": [
-        "908",
-        0
-      ],
-      "width": [
-        "836",
-        0
-      ],
-      "height": [
-        "837",
-        0
-      ]
-    },
-    "class_type": "MpiCrop",
-    "_meta": {
-      "title": "Mpi Crop"
-    }
-  },
   "924": {
     "inputs": {
       "any_1": [
@@ -1030,7 +986,7 @@
         2
       ],
       "end_image": [
-        "923",
+        "948",
         0
       ],
       "width": [
@@ -1081,6 +1037,58 @@
     "class_type": "MpiBooleanInvert",
     "_meta": {
       "title": "Mpi Boolean Invert"
+    }
+  },
+  "947": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 16,
+      "device": "cpu",
+      "image": [
+        "904",
+        0
+      ],
+      "width": [
+        "836",
+        0
+      ],
+      "height": [
+        "837",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
+    }
+  },
+  "948": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 16,
+      "device": "cpu",
+      "image": [
+        "908",
+        0
+      ],
+      "width": [
+        "836",
+        0
+      ],
+      "height": [
+        "837",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize Image v2"
     }
   }
 }
