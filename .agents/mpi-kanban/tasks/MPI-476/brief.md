@@ -138,6 +138,24 @@ app on :3000 (a fake context proves only inputs — see
 module from the page's import cache and reported the bug as still present after
 it was fixed.
 
+## Changelog: this card owes NOTHING — settled 2026-08-07
+
+Three lines were drafted and all three were dropped. Do not re-propose them.
+
+- **H3's VRAM floor (16 → 12) and its size tier (High → Balanced).** MiniMax H3
+  appears nowhere in `js/data/releaseNotes.js` — it ships for the first time in
+  this cycle. Nobody has ever seen H3 at 16GB or under the High filter, so there
+  is no delta to report. This is now a rule in `.claude/skills/mpi-end/SKILL.md`
+  (`21cc719d`): a change to an unreleased thing owes no entry.
+- **The Operations row / per-op install.** The stale `fixes` entry describing it
+  was CUT, not rewritten (`ff839a63`) — its one real consequence, Wan
+  text-to-video weights already on disk, is covered by "Wan 2.2 is
+  image-to-video only now" in `importantChanges`. A header note in
+  `UNRELEASED.md` records the cut so an older draft cannot re-add it.
+- **The tier letter.** Visible to shipped users (Wan cards lose their `B`), but
+  losing a letter confuses nobody — a changelog line explaining an absence costs
+  more attention than it returns.
+
 ## Not covered
 
 Nothing here has been exercised in the **Electron** app by a human — the probes

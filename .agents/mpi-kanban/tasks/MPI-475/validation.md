@@ -6,12 +6,25 @@ generation has happened on the correct transformer.
 
 ## Do this first — it gates everything else
 
-- [ ] Push `ComfyUi-MpiNodes` `238f056` to main.
-- [ ] Restart the engine.
-- [ ] Open ComfyUI `/object_info` → see `MpiH3References`.
+- [x] Push `ComfyUi-MpiNodes` `238f056` to main. — `a603fc4..238f056`, 2026-08-07.
+- [x] Restart the engine.
+- [x] Open ComfyUI `/object_info` → see `MpiH3References`.
 
-Until that lands, prompt tags are NOT rewritten and every `@` tag below reaches the
-model as the user typed it.
+**Verified 2026-08-07** on the engine (`:48188`). Node presence alone does not prove
+the gate: `a603fc4` registers the same node name, so a stale module reads as a pass.
+The `prompt` tooltip is what separates them, and the live one is `238f056`'s:
+
+```
+curl -s http://127.0.0.1:48188/object_info/MpiH3References
+# .input.required.prompt[1].tooltip
+238f056 → "Address references by their SLOT number here: <Picture 1> is whatever …"
+a603fc4 → "Address references by the tags in the ref_tags output: …"
+```
+
+The authoring bench (`:8188`) still serves the `a603fc4` string. That is expected and
+irrelevant — the app generates on `:48188`.
+
+Prompt tags ARE rewritten now, so every `@` tag below reaches the model translated.
 
 ## Eye tests in the app
 
