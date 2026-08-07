@@ -235,18 +235,36 @@ this proves the **wrapper actually serves**. The wrapper binds **`0.0.0.0:8889`*
 (NOT 8000 — `EXPOSE 8889`), needs **`CUBRIC_TOKEN`** in env (fails closed without
 it), and `/wrapper/stats` is **token-gated** — hit unauthenticated `/health` for the
 smoke (it returns `wrapper_version`, the bump-proof), or pass the token header:
+> 🛑 **`/health` reports the R2 CHANNEL's wrapper, NOT the one you just baked — always
+> pass `CUBRIC_RUNTIME_CHANNEL`.** With network, `bootstrap.sh` fetches `wrapper.py` from
+> R2 (`RUNTIME_CHANNEL="${CUBRIC_RUNTIME_CHANNEL:-stable}"`) and, on a successful install,
+> **unsets the baked `CUBRIC_WRAPPER_VERSION`** so the fetched file self-reports — by
+> design, so a stale baked ENV cannot lie about a newer fetched wrapper. Consequence: an
+> unset channel smokes `stable`, so a **dev** image reports whatever `stable` holds and the
+> baked wrapper is never exercised. Measured 2026-08-07: a `0.2.41` dev build reported
+> `0.2.40` and read as a build failure. It was not one.
+> **Smoke a dev image on the dev channel** (`-e CUBRIC_RUNTIME_CHANNEL=dev`) — that is what
+> a dev app's Pods actually boot. To see the BAKED wrapper instead, cut network
+> (`--network none`); bootstrap then falls back to the baked copy.
+
 ```
 docker run -d --rm --name cv-smoke -p 8889:8889 -e CUBRIC_TOKEN=smoketest \
+  -e CUBRIC_RUNTIME_CHANNEL=dev \
   ghcr.io/madponyinteractive/cubric-vision-pod:v<ver>-cpu
 # wait for boot (~15-30s), then:
 for i in $(seq 1 12); do sleep 3; curl -fsS http://127.0.0.1:8889/health >/dev/null 2>&1 && break; done
 curl -fsS http://127.0.0.1:8889/health   # expect {"ready":true,...,"wrapper_version":"<wver>",...}
+docker logs cv-smoke | grep -i "channel\|wrapper"   # confirm WHICH wrapper actually loaded
 docker stop cv-smoke
 ```
-PASS = `/health` 200 with the right `wrapper_version`. (A 401 on `/wrapper/stats`
-without the token is EXPECTED — it proves the route + auth, not a failure.) cpu =
-cheapest boot, representative wrapper. GPU-only behavior still needs the user's live
-Pod verify below.
+PASS = `/health` 200 with the `wrapper_version` **of the channel you booted** — check the
+bootstrap log line, not the number alone. (A 401 on `/wrapper/stats` without the token is
+EXPECTED — it proves the route + auth, not a failure.) cpu = cheapest boot, representative
+wrapper. GPU-only behavior still needs the user's live Pod verify below.
+
+If the daemon is down, every `docker run` fails with `failed to connect to the docker API
+at npipe:...` while `docker manifest inspect` still succeeds — that command is a registry
+query and needs no daemon, so 5a passing tells you nothing about 5b being runnable.
 
 ### Manual gates (you CANNOT do these — tell the user)
 - **Make the Docker Hub repo PUBLIC** (cu130, first push only): hub.docker.com → Repositories → `cubric-vision-pod` → Settings → make public. AND **make the GHCR package PUBLIC** (cpu, first push only): GitHub → Packages → `cubric-vision-pod` → settings → visibility. RunPod can only pull public. Later pushes stay public. (Do 5a only AFTER both.)

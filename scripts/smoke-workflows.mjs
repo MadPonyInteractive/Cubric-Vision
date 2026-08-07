@@ -398,13 +398,22 @@ function checkPodLock() {
     for (const [id, n] of Object.entries(ours.nodes || {})) {
         if (n.commit && theirs.nodes?.[id]?.commit !== n.commit) drift.push(id);
     }
-    if (!drift.length) { log(`\n  pod lock in sync with ${ourTag} ✓`); return true; }
+    // python_deps.txt is the SECOND half of the sync and drifts silently (MPI-413): the
+    // Dockerfile COPYs both, a node bump moves both, and shipping one without the other
+    // bakes a mismatched engine. Checking only the lock is how a "synced" pod still drifts.
+    // Compare LF-normalized — this repo converts line endings, so raw bytes false-positive.
+    const podDeps = path.join(POD_REPO, 'python_deps.txt');
+    const norm = (p) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
+    if (!existsSync(podDeps)) drift.push('python_deps.txt (missing)');
+    else if (norm(path.join(REPO, 'dev_configs/python_deps.txt')) !== norm(podDeps)) drift.push('python_deps.txt');
+    if (!drift.length) { log(`\n  pod lock + python_deps in sync with ${ourTag} ✓`); return true; }
 
     log(`\n  🛑 POD LOCK IS BEHIND — ${drift.join(', ')}`);
-    log(`  The Pod image bakes nodes from that file, so smoking now measures the OLD engine.`);
-    log(`  Sync it, rebuild the DEV image, then re-run:`);
+    log(`  The Pod image bakes nodes from those files, so smoking now measures the OLD engine.`);
+    log(`  Sync them, rebuild the DEV image, then re-run:`);
     log(`    cp dev_configs/node_lock.json "${podLock}"`);
-    log(`    git -C "${POD_REPO}" commit --only node_lock.json -m "chore(pod): sync node_lock to ComfyUI ${String(ourTag || '').replace(/^v/, '')}"`);
+    log(`    cp dev_configs/python_deps.txt "${podDeps}"`);
+    log(`    git -C "${POD_REPO}" commit --only node_lock.json python_deps.txt -m "chore(pod): sync node_lock to ComfyUI ${String(ourTag || '').replace(/^v/, '')}"`);
     log(`    /build-pod-image   — DEV tag v<ver>-dev-<profile>, bump ONLY POD_IMAGE_VERSION_DEV/_CPU_DEV`);
     log(`  Never rebuild the user-facing image for a bump in flight.`);
     return false;

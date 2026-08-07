@@ -123,8 +123,16 @@ Bumping Vision's copy does nothing to it. The image bakes nodes from *that* file
 un-synced lock rebuilds the image at the OLD engine and gate 7 then refuses to smoke —
 after you have paid for a build.
 
+**Two files travel, not one — `node_lock.json` AND `python_deps.txt` (MPI-413).** The
+Dockerfile `COPY`s both, a node bump moves both (the lock directly, the curated set via
+`node scripts/compile-node-deps.mjs`), and shipping one without the other bakes an engine
+whose nodes and Python set disagree. Syncing only the lock is how a Pod that *looks* synced
+still drifts.
+
 Measured 2026-08-07: Vision sat at `v0.30.0` while the Pod lock was still `v0.29.2`, with
-`comfyui-kjnodes` and `ComfyUI-MpiNodes` both behind.
+`comfyui-kjnodes` and `ComfyUI-MpiNodes` both behind. The same day, a lock-only sync passed
+its own drift check while `python_deps.txt` was still missing `imageio-ffmpeg` — the image
+built clean and would have failed every video op at runtime (MPI-472).
 
 **You do not have to remember this — the smoke runner checks it for you.** A step that
 lives only in a playbook is a step someone forgets, so `scripts/smoke-workflows.mjs` runs
@@ -132,17 +140,26 @@ the comparison itself: it **warns on `--plan`** (which still prints the full mat
 **hard-fails before renting anything** on a real run, naming the exact drift and the fix:
 
 ```
-  🛑 POD LOCK IS BEHIND — core v0.29.2 -> v0.30.0, ComfyUI-MpiNodes, comfyui-kjnodes
-  Sync it, rebuild the DEV image, then re-run:
+  🛑 POD LOCK IS BEHIND — core v0.29.2 -> v0.30.0, ComfyUI-MpiNodes, comfyui-kjnodes, python_deps.txt
+  Sync them, rebuild the DEV image, then re-run:
     cp dev_configs/node_lock.json ".../cubric-vision-pod/node_lock.json"
-    git -C ".../cubric-vision-pod" commit --only node_lock.json -m "chore(pod): sync node_lock to ComfyUI 0.30.0"
+    cp dev_configs/python_deps.txt ".../cubric-vision-pod/python_deps.txt"
+    git -C ".../cubric-vision-pod" commit --only node_lock.json python_deps.txt -m "chore(pod): sync node_lock to ComfyUI 0.30.0"
     /build-pod-image   — DEV tag v<ver>-dev-<profile>, bump ONLY POD_IMAGE_VERSION_DEV/_CPU_DEV
 ```
 
-The two files are structurally identical (same 14 nodes, same fields), so the sync really is
-a straight copy. `mpi-ci` lives at `c:\AI\Mpi\mpi-ci\cubric-vision-pod` — override with
+It compares `python_deps.txt` LF-normalized — this repo converts line endings, so a raw byte
+compare would report drift on a clean checkout.
+
+The lock files are structurally identical (same 14 nodes, same fields), so the sync really is
+a straight copy of both. `mpi-ci` lives at `c:\AI\Mpi\mpi-ci\cubric-vision-pod` — override with
 `CUBRIC_POD_REPO`; an absent path warns rather than blocks, so another machine is not stuck.
 It is a separate git repo — commit there with `git -C`.
+
+**Sync LAST, not first.** Both files are live working-tree state in Vision; a card landing
+mid-bump (MPI-472 added `imageio-ffmpeg` hours after a sync on 2026-08-07) silently re-drifts
+a Pod you already synced and built. Re-run `--plan` immediately before the smoke, not only
+before the build.
 
 **7. ASSERT the Pod reports the new version — before smoking anything.**
 This gate is the difference between a real check and theatre: smoke an unrebuilt image and
@@ -165,6 +182,8 @@ without it.
 | `git tag --contains` dates the UPSTREAM commit, not our adoption | Date against `node_lock.json` history |
 | Smoking before the Pod image rebuild validates the **old** engine | Gate 7 exists for this |
 | **The Pod's `node_lock.json` is a DIFFERENT FILE IN A DIFFERENT REPO** — bumping Vision's copy leaves the image on the old engine | Gate 6; measured drift `v0.30.0` vs `v0.29.2` on 2026-08-07 |
+| **`python_deps.txt` travels WITH the lock** — syncing only the lock bakes an engine whose nodes and Python set disagree, and it builds clean | Gate 6; MPI-413. A lock-only sync on 2026-08-07 passed its own check while `imageio-ffmpeg` was missing (MPI-472) |
+| Both sync files are live working-tree state — a card landing mid-bump re-drifts a Pod already synced and built | Gate 6; re-run `--plan` right before the smoke |
 | Building the **user-facing** Pod image with a bumped engine breaks every user's remote Pod on next boot | Gate 6 — build `-dev`, bump only `POD_IMAGE_VERSION_DEV` |
 | **The image and the runtime are promoted separately, and only the runtime is automatic-ish** | `publish-runtime.sh promote` moves R2 bytes; the image tag is a manual `POD_IMAGE_VERSION` edit — see gate 6 note |
 | Pod-green says nothing about the Windows portable | Gate 5 is the local half; both are required |
@@ -180,7 +199,8 @@ without it.
 - [ ] Pin bumped in **both** `node_lock.json` (`tag` + `commit`) and `system_dependencies.json`; both grepped and agreeing
 - [ ] Every pinned custom node re-checked against the new core
 - [ ] **LOCAL gate:** engine upgraded to the new pin and booted; `node scripts/engine-floor-check.mjs` exits 0 ([02](02-local-upgrade.md))
-- [ ] **`node_lock.json` synced into `c:\AI\Mpi\mpi-ci\cubric-vision-pod\`** — core tag AND every node commit agree with Vision's copy (drift command in gate 6), committed there with `git -C`
+- [ ] **`node_lock.json` AND `python_deps.txt` synced into `c:\AI\Mpi\mpi-ci\cubric-vision-pod\`** — core tag, every node commit, and the curated pip set all agree with Vision's copies (drift command in gate 6), committed there with `git -C`
+- [ ] Drift re-checked immediately BEFORE the smoke, not only before the build — both files are live working-tree state and a card landing mid-bump re-drifts them
 - [ ] **DEV** Pod image rebuilt at the new lock (`build-pod-image`) — `v<ver>-dev-<profile>`, only `POD_IMAGE_VERSION_DEV`/`_CPU_DEV` touched, user-facing `POD_IMAGE_VERSION` untouched
 - [ ] **Pod reports the new version** — asserted before any smoke run
 - [ ] Smoke matrix executed and green ([01-smoke-run.md](01-smoke-run.md)); skips named explicitly
