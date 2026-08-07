@@ -86,8 +86,25 @@ release notes. Full sequence + how the engine moves in place → **[02-local-upg
 node scripts/engine-floor-check.mjs
 ```
 
-**6. Rebuild the Pod image at the new lock.** `build-pod-image` skill. The image bakes
-nodes from `node_lock.json`, so an unrebuilt image is still running the old engine.
+**6. SYNC THE LOCK INTO mpi-ci, then rebuild the Pod image.** Two steps, and the first is
+the one that gets skipped, because the Pod's lock is **a different file in a different
+repo**: `c:\AI\Mpi\mpi-ci\cubric-vision-pod\node_lock.json`. Bumping Vision's copy does
+nothing to it. The image bakes nodes from *that* file, so an un-synced lock rebuilds the
+image at the OLD engine and gate 7 then refuses to smoke — after you have paid for a build.
+
+Measured 2026-08-07: Vision sat at `v0.30.0` while the Pod lock was still `v0.29.2`, with
+`comfyui-kjnodes` and `ComfyUI-MpiNodes` both behind. Check before building:
+
+```bash
+node -e "const a=require('./dev_configs/node_lock.json'),
+  b=require('c:/AI/Mpi/mpi-ci/cubric-vision-pod/node_lock.json');
+  const d=Object.keys(a.nodes).filter(n=>a.nodes[n].commit && b.nodes[n]?.commit!==a.nodes[n].commit);
+  console.log('core:', a.comfyui.core.tag, 'vs pod', b.comfyui.core.tag);
+  console.log('drifted nodes:', d.join(', ')||'none')"
+```
+
+Both lines must agree before `build-pod-image` runs. Remember `mpi-ci` is a separate git
+repo — commit there with `git -C`.
 
 **7. ASSERT the Pod reports the new version — before smoking anything.**
 This gate is the difference between a real check and theatre: smoke an unrebuilt image and
@@ -109,6 +126,7 @@ without it.
 | An upstream tag can have **no portable release asset** | `v0.30.1`, `v0.30.2` — check with `gh api` first |
 | `git tag --contains` dates the UPSTREAM commit, not our adoption | Date against `node_lock.json` history |
 | Smoking before the Pod image rebuild validates the **old** engine | Gate 7 exists for this |
+| **The Pod's `node_lock.json` is a DIFFERENT FILE IN A DIFFERENT REPO** — bumping Vision's copy leaves the image on the old engine | Gate 6; measured drift `v0.30.0` vs `v0.29.2` on 2026-08-07 |
 | Pod-green says nothing about the Windows portable | Gate 5 is the local half; both are required |
 | A skipped model reading as a pass | [01](01-smoke-run.md) § What green prints |
 | The full wipe destroys a **symlinked** custom node | The dev machine symlinks `custom_nodes/ComfyUI-MpiNodes` to the node source repo — [02](02-local-upgrade.md) § Traps |
@@ -122,6 +140,7 @@ without it.
 - [ ] Pin bumped in **both** `node_lock.json` (`tag` + `commit`) and `system_dependencies.json`; both grepped and agreeing
 - [ ] Every pinned custom node re-checked against the new core
 - [ ] **LOCAL gate:** engine upgraded to the new pin and booted; `node scripts/engine-floor-check.mjs` exits 0 ([02](02-local-upgrade.md))
+- [ ] **`node_lock.json` synced into `c:\AI\Mpi\mpi-ci\cubric-vision-pod\`** — core tag AND every node commit agree with Vision's copy (drift command in gate 6), committed there with `git -C`
 - [ ] Pod image rebuilt at the new lock (`build-pod-image`)
 - [ ] **Pod reports the new version** — asserted before any smoke run
 - [ ] Smoke matrix executed and green ([01-smoke-run.md](01-smoke-run.md)); skips named explicitly

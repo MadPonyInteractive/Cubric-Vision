@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-471",
+  "title": "The curated-deps marker outlived the site-packages it described - every engine upgrade shipped 5 dead node packs",
+  "description": "ensureCuratedPythonDeps() stamped its marker at ENGINE_ROOT/.cubric_python_deps, but the full reinstall in /engine/upgrade removes ENGINE_ROOT/<COMFY_DIR>, which on Windows CONTAINS python_embeded/Lib/site-packages. The marker sat one level up and survived the thing it was a claim about, so the next /comfy/start read a matching hash and skipped the install. ComfyUI then booted with No module named cv2 / pywt and comfyui_controlnet_aux, RES4LYF, Impact-Pack, Impact-Subpack and LTXVideo all IMPORT FAILED - 17 shipped class_types gone, no error surfaced, failure deferred to whenever the user next ran a graph needing one. Same shape as MPI-465. Until MPI-457 added the in-place path, the wipe was the ONLY upgrade route, so every user who upgraded the engine landed here. Found by actually RUNNING the upgrade (MPI-457 acceptance 5); no unit test could have reached it.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-07T06:33:50Z",
+  "updated_at": "2026-08-07T06:33:50Z",
+  "labels": [
+    "engine",
+    "bug",
+    "shipped-regression"
+  ],
+  "acceptance": [
+    "The marker shares the fate of the site-packages it describes - anchored on getPythonBin(), never ENGINE_ROOT",
+    "Correct on BOTH platforms for the same reason: Windows inside the portable (wipe takes it), Linux/macOS inside comfy-venv (wipe does not, and the deps really do survive)",
+    "A test pins the placement so it cannot drift back",
+    "Proven live: floor check 17 missing -> 0 after a real wipe + reinstall + start cycle"
+  ],
+  "links": {
+    "events": "events.jsonl"
+  },
+  "priority": "normal",
+  "attention": false
+}

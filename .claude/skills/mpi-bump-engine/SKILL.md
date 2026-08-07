@@ -54,7 +54,12 @@ Full detail in the playbook README; this is the enforcement summary.
    ```bash
    node scripts/engine-floor-check.mjs        # 48188 = app engine; --url for the bench
    ```
-6. **Rebuild the Pod image** at the new lock (`build-pod-image`).
+6. **Sync the lock into mpi-ci, THEN rebuild the Pod image** (`build-pod-image`). The Pod's
+   lock is a **different file in a different repo** —
+   `c:\AI\Mpi\mpi-ci\cubric-vision-pod\node_lock.json` — and bumping Vision's copy does
+   nothing to it. Un-synced, you rebuild the image at the OLD engine and gate 7 refuses to
+   smoke *after* the build is paid for. Run the drift command in the playbook README first;
+   the core tag AND every node commit must agree. `mpi-ci` is a separate repo (`git -C`).
 7. 🛑 **Assert the Pod reports the new version** — *before* smoking. Smoke an unrebuilt
    image and you validate the OLD engine, then stamp the bump safe. The runner does this
    itself and hard-fails; do not bypass it.

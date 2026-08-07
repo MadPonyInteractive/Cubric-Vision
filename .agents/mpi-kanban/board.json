@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 471,
+  "next_id": 472,
   "columns": {
     "todo": [
       "MPI-461",
@@ -34,7 +34,6 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-457",
       "MPI-470",
       "MPI-468",
       "MPI-467",
@@ -54,6 +53,8 @@
       "MPI-367"
     ],
     "done": [
+      "MPI-457",
+      "MPI-471",
       "MPI-469",
       "MPI-464",
       "MPI-460",
@@ -73,7 +74,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-07T04:47:20Z",
+  "updated_at": "2026-08-07T06:35:30Z",
   "events": [
     {
       "at": "2026-08-07T04:01:21Z",
@@ -2141,6 +2142,29 @@
       "task": "MPI-467",
       "actor": "opus",
       "note": "Release-gate scope decided by the user and NOT widened: checkSmokeEvidence stays engine-pin-only (release-health-check.mjs:448). Known hole, deliberately accepted - a release that bumps only a node pin does NOT owe smoke evidence, which is the exact shape of MPI-465s own fix commit c077efa9 (it moved a nodes[].commit and left comfyui.core.tag alone). Same for adding a model. Widening the trigger would cost a ~281GB volume fill plus a GPU hour on every node bump; the user will drive the smoke by hand per version instead. Revisit only if a node-bump release ships broken. The floor check (scripts/engine-floor-check.mjs) is also NOT in release:check - it needs a live engine on 48188 and CI has none; wiring it would need its own evidence file."
+    },
+    {
+      "at": "2026-08-07T06:33:50Z",
+      "type": "task.created",
+      "task": "MPI-471",
+      "actor": "opus",
+      "note": "Fixed in 22a91d12 in the same session it was found. Root cause was WHERE the marker lived, not a missing re-check: it is a claim about site-packages, so it belongs beside the interpreter that owns them. Anchored on getPythonBin(). Verified live on this machine - after the reinstall the marker was ABSENT at the new path (old code would have skipped again), the curated install ran, 80 packages landed, and scripts/engine-floor-check.mjs went from 17 missing to 0 (1877 class_types, 171/171). Invariant pinned in tests/curated-python-deps.test.cjs: beside the interpreter, never ENGINE_ROOT, and on win32 inside the tree the wipe removes."
+    },
+    {
+      "at": "2026-08-07T06:35:30Z",
+      "type": "task.moved",
+      "task": "MPI-457",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "note": "ACCEPTANCE 5 RAN AND PASSED on the real machine. Engine put back to v0.29.2 + stamp, POST /engine/upgrade, in place 0.29.2 -> 0.30.0 in ~3 seconds with NO download. Verified: stamp 0.30.0, comfyui_version.py 0.30.0, HEAD exactly the node_lock pinned commit, the ComfyUI-MpiNodes junction SURVIVED (acceptance 4), update/ and the .bat launchers untouched, and scripts/engine-floor-check.mjs green at 1877 class_types / 171 of 171 / 0 missing. Driven through a throwaway :3999 harness because the app server on :3000 predated the fix and Express does not hot-reload - POSTing there would have run the OLD wipe. The run found THREE defects no unit test could reach: (1) _findDeprecatedNode false-positived on a leftover ComfyUI-MpiNodes.stale-aaa1d2d9.disabled and sent an 11GB engine to the wipe - ComfyUI SKIPS .disabled folders so it was never imported; (2) the wipe never called stopComfyUI, and because node deletes children CONCURRENTLY it destroyed update/ and every .bat before EBUSY aborted it, leaving a half-deleted engine; (3) MPI-471, a SHIPPED bug - the curated-deps marker at ENGINE_ROOT outlived the site-packages inside the portable that the wipe removed, so /comfy/start skipped the install and five node packs IMPORT FAILED with 17 class_types gone, silently. All three fixed and committed (6856d841, 22a91d12). Card closes. NOT proven: a bump that genuinely MOVES a pip pin (this one was Requirement already satisfied x3) and the engine-owned-package signal, both unit-covered only."
+    },
+    {
+      "at": "2026-08-07T06:35:30Z",
+      "type": "task.updated",
+      "task": "MPI-468",
+      "actor": "opus",
+      "note": "Child MPI-457 (the MECHANIC) CLOSED - in-place upgrade proven end to end on the real machine, floor check 171/171. Umbrella stays in doing for MPI-467, whose Pod smoke matrix has still never executed. The user surfaced the next blocker for it: the Pod image is a full engine behind (mpi-ci/cubric-vision-pod/node_lock.json is v0.29.2 vs Vision v0.30.0, with comfyui-kjnodes and ComfyUI-MpiNodes drifted). Nothing tested today is invalidated by that - today was the LOCAL half, gate 5 - and the smoke would have hard-failed at gate 7 (assertPodEngineVersion dies on a mismatch) before spending anything. The Pod is stale, not broken: it runs the coherent OLD pairing 0.29.2 + old KJNodes, while MPI-465s break is 0.30.x + old KJNodes. Playbook gate 6 and the skill now spell out the cross-repo lock SYNC that was missing - the Pod lock is a different file in a different repo, so bumping Vision does nothing to it, and an un-synced lock rebuilds the image at the OLD engine. Drift command added."
     }
   ]
 }

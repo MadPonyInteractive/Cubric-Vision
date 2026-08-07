@@ -36,32 +36,61 @@ aborts the process on Windows (`UV_HANDLE_CLOSING` assertion), which would have 
 release gate's verdict into noise. Rewritten on stdlib `http.get` with `connection: close`,
 the same reason `workflow-to-api.mjs` and `resolve-comfy-node.mjs` avoid `fetch`.
 
-## NOT verified — say so plainly
+## Acceptance #5 — RAN, on the real machine, 2026-08-07
 
-**Acceptance #5 (a real end-to-end upgrade on a real machine) has NOT run.** The user's
-engine was mid-generation (LTX in `queue_running`) for the whole session, and the in-place
-path calls `stopComfyUI()` before touching git or pip. Scheduled with the user: run it when
-the engine is free.
+Engine put back to `v0.29.2` + stamp (`/engine/version-check` → `needsUpgrade: true`), then
+`POST /engine/upgrade`. Driven through a throwaway harness on `:3999` mounting the router,
+because the app's Express server on `:3000` had been started before the fix and does not
+hot-reload — POSTing there would have run the *old* wipe.
 
-The pass, when it runs:
+**Result: in place, 0.29.2 → 0.30.0, ~3 seconds, no download.**
 
-1. `git -C <engine>/ComfyUI_windows_portable/ComfyUI checkout v0.29.2` and write `0.29.2`
-   into `<engine>/.mpi_engine_version` — a real user on the previous version.
-2. `POST /engine/upgrade` on `:3000`.
-3. Assert from `logs/app.log` (category `engine`) that it took the **in-place** path — no
-   `_runEngineDownload`, no 7z, no node re-extract.
-4. Assert `.mpi_engine_version` reads `0.30.0` and `comfyui_version.py` agrees.
-5. Assert `custom_nodes/ComfyUI-MpiNodes` is **still a symlink** to
-   `c:/AI/Mpi/ComfyUi-MpiNodes` — the wipe replaces it with a plain clone, silently.
-6. Boot the engine and run `node scripts/engine-floor-check.mjs` — expect 0 missing.
+```
+[engine] Upgrading engine in place to 0.30.0
+[git checkout] HEAD is now at b1693ecb ComfyUI v0.30.0
+[engine] In-place upgrade pip set: comfyui-workflow-templates==0.11.27 comfy-kitchen==0.2.26 comfy-aimdo==0.4.11
+[engine] In-place upgrade landed 0.30.0; version stamp written
+```
 
-It ends where it started, and the pip step is a near no-op (the packages are already at the
-0.30.0 pins), so it exercises the sequence without changing the machine's end state.
+| check | result |
+|---|---|
+| `.mpi_engine_version` | `0.30.0` |
+| `comfyui_version.py` | `0.30.0` |
+| `HEAD` | `b1693ecba9f5…` — **exactly** `node_lock` `comfyui.core.commit` |
+| **MpiNodes symlink (#4)** | `Junction -> C:\AI\Mpi\ComfyUi-MpiNodes` — **survived** |
+| `update/` + `.bat` launchers | intact — nothing wiped |
+| downloads | none |
+| floor check | `1877 class_types · 171/171 · 0 missing` → exit 0 |
 
-**Also unexercised:** the deprecated-node signal (`_findDeprecatedNode`) and the
-engine-owned-package signal have no live case on this machine — nothing is deprecated and
-`0.30.0` moves no torch line. Both are unit-covered for the decision, not for the wipe that
-follows.
+### Three defects it found that no unit test could reach
+
+1. **`_findDeprecatedNode` false positive — it wiped an 11 GB engine.** A leftover
+   `ComfyUI-MpiNodes.stale-aaa1d2d9.disabled` carried a real `.mpi_node_commit` marker and
+   matched no registry id. ComfyUI **skips** `.disabled` folders, so it was never imported.
+   Fixed: ask whether ComfyUI would load the folder before treating it as evidence.
+2. **The wipe never stopped ComfyUI.** Pre-existing. A running engine holds its working
+   directory, so `rmdir` returns EBUSY — but node's recursive delete walks children
+   *concurrently*, so `update/` and every `.bat` were already gone when it aborted. Result
+   was a half-deleted engine. Fixed: `stopComfyUI()` first, then `fs.rm` with retries.
+3. **[MPI-471] The curated-deps marker outlived its site-packages.** Shipped bug, not from
+   this card: the marker at `ENGINE_ROOT` survived a wipe that removed the portable
+   containing `site-packages`, so `/comfy/start` skipped the install and five node packs
+   IMPORT FAILED — 17 `class_type`s gone, silently. Found because the floor check ran on a
+   freshly reinstalled engine and reported 17 missing.
+
+Defect 2 destroyed `update/` and the `.bat`s on this machine; the fallback reinstall it
+triggered restored them, and the MpiNodes symlink (which that wipe replaced with a plain
+clone, exactly as documented) was restored by hand as a junction before the final pass.
+
+**A note on what "in-place" was NOT proven against:** the pip step was a no-op here
+(`Requirement already satisfied` ×3) because the packages were already at the 0.30.0 pins.
+A bump that genuinely *moves* a pin has not been exercised. Also unexercised live: the
+engine-owned-package signal (`0.30.0` moves no torch line) — unit-covered only.
+
+**One incidental finding, worth knowing before the next bump:** the freshly extracted
+portable's ComfyUI is a **shallow** clone carrying a single tag. `git fetch --tags origin`
+was enough to reach the pinned sha here, but a shallow repo that cannot reach it would fail
+the checkout — which routes to the wipe, i.e. it degrades safely.
 
 ## Acceptance, item by item
 
@@ -70,8 +99,8 @@ follows.
 | 1 in-place by default (`fetch --tags` + checkout pinned sha + pip only changed core packages + restamp) | **done** — `_upgradeEngineInPlace()` |
 | 2 the wipe survives and is reached BY A DECISION | **done** — `_fullReinstallReason()` + the automatic fallback on any in-place throw; `mode: 'full'` / `'in-place'` force either side |
 | 3 deprecation DETECTED, not guessed | **done** — a folder carrying our `.mpi_node_commit` marker whose name left the registry. The marker is what keeps a user's hand-dropped node from wiping the engine |
-| 4 the in-place path never destroys a symlinked custom node | **code-correct, unproven live** — it never removes a node folder; step 5 above is the proof |
-| 5 a real user upgraded end to end on a real machine | **NOT RUN** — see above |
+| 4 the in-place path never destroys a symlinked custom node | **done, proven live** — junction survived the upgrade intact |
+| 5 a real user upgraded end to end on a real machine | **done** — 0.29.2 → 0.30.0 in place, floor check 171/171 |
 | 6 a skill encodes the sequence proved on 0.29.2 → 0.30.0 | **done** — `/mpi-bump-engine` extended (no second skill, per MPI-468) + `docs/playbooks/bump-engine/02-local-upgrade.md` |
 | 7 the floor check is EMPIRICAL | **done** — `scripts/engine-floor-check.mjs`, run against a live engine, all three branches proven |
 | 8 the skill checks the target has a portable release asset | **done** — already gate 1 / STEP 0 of the skill (`gh api .../releases/tags/v<ver>`), restated in `02-local-upgrade.md` step 1 with the v0.30.1/v0.30.2 evidence |
