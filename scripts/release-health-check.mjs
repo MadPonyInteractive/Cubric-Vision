@@ -482,7 +482,7 @@ async function checkSmokeEvidence() {
   if (!scope) {
     console.warn('Smoke evidence predates scope recording — it cannot say which models it left out. Re-run to get a file that can.');
   } else if (scope.unproven?.length) {
-    console.warn(`Smoke evidence is SCOPED: ${scope.modelsRun?.length ?? '?'} of ${scope.modelsInRegistry} models ran, and a scoped set is not deduped so it covers no family. UNPROVEN: ${scope.unproven.join(', ')}`);
+    console.warn(`Smoke evidence is SCOPED: ${scope.modelsRun?.length ?? '?'} run + ${scope.covers?.length ?? 0} covered by class_type dedupe, of ${scope.modelsInRegistry}. In no family this run touched: ${scope.unproven.join(', ')}`);
   } else {
     console.log(`Smoke evidence covers all ${scope.modelsInRegistry} models (${scope.modelsRun?.length ?? '?'} run, rest by class_type dedupe).`);
   }

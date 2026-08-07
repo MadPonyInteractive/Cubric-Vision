@@ -98,22 +98,33 @@ function resolveSmokeSet(reg, only) {
     const depsOf = (m, ops) => resolveDeps(m, ops || null, null, ENGINE, { arch: ARCH });
     const gbOf = (ids) => [...ids].reduce((g, i) => g + (isWeight(DEPS[i]) ? sizeToGb(DEPS[i].size) : 0), 0);
 
+    // Group by class_type-set fingerprint ONCE. The scoped path needs the same grouping
+    // the full path does: a family shares one workflow file, so running any member proves
+    // the graph for all of them — that is the premise the whole dedupe rests on, and it
+    // does not stop being true because the caller named the member instead of the runner.
+    const groups = new Map();
+    for (const m of MODELS) {
+        const files = [...new Set(Object.values(m.workflows || {}))].sort();
+        const fp = files.map(classSetOf).join(' || ');
+        if (!groups.has(fp)) groups.set(fp, []);
+        groups.get(fp).push(m);
+    }
+    const familyOf = (m) => [...groups.values()].find(ms => ms.includes(m)) || [m];
+
     let set;
     if (only?.length) {
         const missing = only.filter(id => !MODELS.some(m => m.id === id));
         if (missing.length) die(`unknown model id(s): ${missing.join(', ')}`);
-        // An explicit selection is the caller's call — take it verbatim, no dedupe.
-        // `covers: []` is load-bearing: a scoped run proves NOTHING about its family.
-        set = MODELS.filter(m => only.includes(m.id))
-            .map(m => ({ model: m, ops: m.supportedOps || [], covers: [], gb: gbOf(depsOf(m)) }));
+        // An explicit selection is the caller's call — take it verbatim, no collapsing.
+        // It still COVERS its family: same workflow, same class_type set, same break.
+        const picked = MODELS.filter(m => only.includes(m.id));
+        set = picked.map(m => ({
+            model: m,
+            ops: m.supportedOps || [],
+            covers: familyOf(m).filter(s => s !== m && !picked.includes(s)).map(s => s.id),
+            gb: gbOf(depsOf(m)),
+        }));
     } else {
-        const groups = new Map();
-        for (const m of MODELS) {
-            const files = [...new Set(Object.values(m.workflows || {}))].sort();
-            const fp = files.map(classSetOf).join(' || ');
-            if (!groups.has(fp)) groups.set(fp, []);
-            groups.get(fp).push(m);
-        }
         set = [];
         for (const members of groups.values()) {
             const best = members.slice().sort((a, b) =>
@@ -140,15 +151,14 @@ function resolveSmokeSet(reg, only) {
         .filter(i => isWeight(DEPS[i]) && !union.has(i) && MODELS.some(m => depsOf(m).includes(i)))
         .map(i => `${i}(${DEPS[i].size})`);
 
-    // What this run will NOT prove. On a full run the dedupe covers every model, so this
-    // is empty; on a scoped one it is every model left out — the number that stops an
-    // evidence file from reading as full coverage.
+    // What this run will NOT prove — models whose class_type set NO member of this run
+    // touches. A full run is empty here by construction. A scoped run lists the other
+    // FAMILIES it left out, not the siblings of the one it ran.
     const proven = new Set(set.flatMap(e => [e.model.id, ...e.covers]));
     set.scope = {
         requested: only?.length ? only : 'all',
-        deduped: !only?.length,
         modelsRun: set.map(e => e.model.id),
-        covers: set.flatMap(e => e.covers),
+        covers: [...new Set(set.flatMap(e => e.covers))],   // two siblings picked = one family covered
         unproven: MODELS.map(m => m.id).filter(id => !proven.has(id)),
         modelsInRegistry: MODELS.length,
     };
@@ -173,8 +183,8 @@ function printPlan(reg, set) {
         ` · volume ${Math.ceil((set.totalGb + VOLUME_HEADROOM_GB) / 10) * 10} GB`);
     log(`  budget: ${BUDGET.steps} step · ${BUDGET.edge}px target · ${BUDGET.frames} frame(s) · seed ${BUDGET.seed}`);
     if (set.scope.unproven.length) {
-        log(`\n  SCOPED RUN — ${set.scope.unproven.length} of ${set.scope.modelsInRegistry} models will NOT be`);
-        log(`  proven, and a scoped set is NOT deduped, so it covers no family either:`);
+        log(`\n  SCOPED RUN — ${set.scope.unproven.length} of ${set.scope.modelsInRegistry} models are in no family this`);
+        log(`  run touches, so nothing here proves them:`);
         log(`    ${set.scope.unproven.join(', ')}`);
     }
     if (set.skippedWeights?.length) {
@@ -423,15 +433,16 @@ async function main() {
         counts: { pass: n('PASS'), skip: n('SKIP'), fail: n('FAIL'), opsPlanned: opCount },
         // What this file does NOT prove. Without it a `--models klein-4b` run writes an
         // evidence file that reads exactly like the full matrix: 7 pass, 0 fail. The
-        // runner refuses to fold an in-run SKIP into the pass count; a model excluded by
-        // --models never becomes a result row at all, which is the same lie one level up.
+        // runner refuses to fold an in-run SKIP into the pass count; a whole FAMILY
+        // excluded by --models never becomes a result row at all, which is the same lie
+        // one level up. `covers` is not a gap — a sibling on the same workflow is proven.
         scope: set.scope,
         limits: [
             'Pod-green is not Windows-green: different OS, python, torch, CUDA.',
             'Deduped by class_type set — a break tied to weight FORMAT under the same loader node is not covered.',
             'Proves a graph RUNS; does not judge output quality.',
             ...(set.scope.unproven.length
-                ? [`SCOPED RUN: ${set.scope.unproven.length} of ${set.scope.modelsInRegistry} models were not run and are NOT covered by dedupe — ${set.scope.unproven.join(', ')}.`]
+                ? [`SCOPED RUN: ${set.scope.unproven.length} of ${set.scope.modelsInRegistry} models are in no family this run touched — ${set.scope.unproven.join(', ')}.`]
                 : []),
         ],
         skippedWeights: set.skippedWeights,

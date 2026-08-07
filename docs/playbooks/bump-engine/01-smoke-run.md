@@ -98,27 +98,32 @@ Rules the output must obey:
 
 ## Scoping a run with `--models` — legitimate, but say so
 
-`--models a,b` is a real option and the cost of the full matrix is real. Two things about it
-are not obvious and both are now enforced by the runner:
+`--models a,b` is a real option and the cost of the full matrix is real.
 
-- **A scoped set is NOT deduped.** Passing `--models sdxl-realistic` proves that model and
-  **nothing** about its four family siblings — the dedupe that normally lets one member
-  stand for the group only applies to the full set.
-- **The evidence file records what it did not prove.** Without that, `--models klein-4b`
-  writes `7 pass · 0 fail` — indistinguishable from the full 34-op matrix. `evidence.scope`
-  now carries `modelsRun`, `unproven`, and `modelsInRegistry`, and `--plan` prints the
-  unproven list before anything is rented:
+**A scoped run still COVERS its family.** The dedupe premise does not care who picked the
+member: same workflow file → same `class_type` set → a broken node breaks every sibling
+identically. `--models sdxl-realistic` reports `covers sdxl-nsfw, ill-anime-beauty,
+ill-anime, pony-mix` exactly as the full run does. What it leaves unproven is the other
+**families** — Chroma, Krea2, LTX, Wan, Qwen — not its own siblings.
+
+**The evidence file records that gap.** Without it, `--models klein-4b` writes
+`7 pass · 0 fail`, indistinguishable from the full 34-op matrix. `evidence.scope` carries
+`modelsRun`, `covers`, `unproven` and `modelsInRegistry`, and `--plan` prints the gap before
+anything is rented:
 
 ```
-  SCOPED RUN — 18 of 19 models will NOT be
-  proven, and a scoped set is NOT deduped, so it covers no family either:
-    sdxl-realistic, sdxl-nsfw, ill-anime-beauty, …
+    9.0 GB  sdxl-realistic   tier=low  ops=5  covers sdxl-nsfw, ill-anime-beauty, ill-anime, pony-mix
+  models 1 · ops 5 · weights 9.0 GB · volume 50 GB
+
+  SCOPED RUN — 14 of 19 models are in no family this
+  run touches, so nothing here proves them:
+    chroma-flash, chroma-hyper, krea2, krea2-nsfw, …
 ```
 
 `npm run release:check` **reports** that coverage and does not gate on it — scoping is the
 releaser's call. An evidence file from before scope recording is called out as unable to say
-what it left out. (MPI-457 follow-up: `--models` also crashed in `printPlan` before this,
-so the flag never ran at all.)
+what it left out. (`--models` also crashed in `printPlan` before this, so the flag never ran
+at all.)
 
 ## Cost, and the volume prompt
 
