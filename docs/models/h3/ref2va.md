@@ -156,17 +156,44 @@ this graph exactly. `BasicScheduler` makes 20 sigmas, `SplitSigmas` cuts at 10, 
 Run stage 1 at native 1344×768, upscale the latent there, run stage 2's low sigmas at 2K,
 and only the second half of the denoise pays the 2K price.
 
-**The blocker to settle first is the NestedTensor.** H3's latent is a video+audio PAIR,
-which is why `MpiSaveLatent` exists at all — core's `SaveLatent` crashes on it because a
-NestedTensor has no `.contiguous()`. Core's `LatentUpscale` is the same family of
-problem, so it cannot be dropped in. The node this needs would `unbind()` the pair,
-`common_upscale` the video half's H/W (the /16 grid), leave the audio half untouched (it
-is `[B,32,2,T40]` — time, no spatial dims), and re-nest. `latent.py` already has that
-unbind/re-nest pattern, so it is a small node, not a project.
+**Core's latent upscale CANNOT do it — confirmed on the bench 2026-08-07**, not predicted:
+
+```
+Node Type: LatentUpscaleBy
+AttributeError: 'NestedTensor' object has no attribute 'reshape'
+```
+
+`common_upscale` reshapes the latent, and H3's is the video+audio PAIR — the same family
+of failure that made `MpiSaveLatent` necessary (core's `SaveLatent` dies on the missing
+`.contiguous()`). It bites on the POST-stage-1 latent specifically, which is exactly
+where a hi-res fix has to cut.
+
+**Core's node is also wrong about size, silently.** `LatentUpscale` converts pixels to
+latent cells with a hardcoded `width // 8` — the SD VAE factor. H3's video latent is
+`/16`, so a pixel target comes out at DOUBLE:
+
+| typed into core's node | latent | actual H3 pixels |
+|---|---|---|
+| 1344 × 768 | 168 × 96 | **2688 × 1536** |
+| 672 × 384 | 84 × 48 | 1344 × 768 ✓ |
+
+So core's node only lands the right canvas if you type HALF, which is a footgun in a
+shared graph. `LatentUpscaleBy` sidesteps the divisor (it scales latent dims directly)
+but cannot hit an arbitrary target — and in the H3 ladder **no tier is 2× another**, so
+`scale_by 2.0` never lands on one. In the wider ResolutionSelector megapixel list there
+is exactly ONE clean pair: **0.5MP `960×544` → ×2 → 2.0MP `1920×1088`**.
+
+**`MpiLatentUpscale` (ComfyUi-MpiNodes `latent.py`) exists for this.** It unbinds the
+pair, upscales only the half with spatial dims (selected by `dim() >= 5`, not by index,
+so a reordering cannot break it silently), passes the audio half `[B,32,2,T]` through
+untouched, and re-nests. It takes the target in **pixels** with a `stride` input (16 for
+H3 and Krea2, 8 for the SD/SDXL family) so the number you type is the number you get.
 
 Unknown until tried: whether the DiT tolerates a resolution change at partial denoise.
 SD-era hi-res fix does exactly this and works; a video DiT usually does too. The split
-point (`SplitSigmas.step`) is the knob for how much is left to resample at 2K.
+point (`SplitSigmas.step`) is the knob for how much is left to resample — 10 of 20 steps
+at the new size is enough denoise to REDRAW rather than refine, so push it to 13–15 if
+the shot changes instead of sharpening.
 
 ## Still unchecked
 
