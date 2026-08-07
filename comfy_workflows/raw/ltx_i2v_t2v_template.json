@@ -1,8 +1,8 @@
 {
   "id": "049534f2-e76a-484c-afe0-91f11f5832af",
   "revision": 0,
-  "last_node_id": 630,
-  "last_link_id": 1074,
+  "last_node_id": 631,
+  "last_link_id": 1076,
   "nodes": [
     {
       "id": 60,
@@ -1361,7 +1361,7 @@
         166
       ],
       "flags": {},
-      "order": 219,
+      "order": 220,
       "mode": 2,
       "inputs": [
         {
@@ -1683,7 +1683,7 @@
         58
       ],
       "flags": {},
-      "order": 218,
+      "order": 219,
       "mode": 2,
       "inputs": [
         {
@@ -2673,54 +2673,6 @@
       "bgcolor": "#653"
     },
     {
-      "id": 485,
-      "type": "MpiListRange",
-      "pos": [
-        2033.2533898433717,
-        7214.986141483574
-      ],
-      "size": [
-        270,
-        102
-      ],
-      "flags": {},
-      "order": 214,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "list_input",
-          "type": "*",
-          "link": 848
-        }
-      ],
-      "outputs": [
-        {
-          "name": "list",
-          "shape": 6,
-          "type": "*",
-          "links": [
-            849,
-            850
-          ]
-        },
-        {
-          "name": "count",
-          "type": "INT",
-          "links": null
-        }
-      ],
-      "title": "Remove first Frame (!repeat)",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "fd9bdcae56a6792cbc6d39756b7dfe51d20596e0",
-        "Node name for S&R": "MpiListRange"
-      },
-      "widgets_values": [
-        1,
-        -1
-      ]
-    },
-    {
       "id": 204,
       "type": "MpiIfElse",
       "pos": [
@@ -2846,56 +2798,6 @@
       ],
       "outputs": [],
       "title": "Output_Preview",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiSaveVideo"
-      },
-      "widgets_values": [
-        24,
-        "MpiVideo",
-        true,
-        false
-      ]
-    },
-    {
-      "id": 457,
-      "type": "MpiSaveVideo",
-      "pos": [
-        2372.9728820331234,
-        7231.14939625447
-      ],
-      "size": [
-        270,
-        150
-      ],
-      "flags": {},
-      "order": 215,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 849
-        },
-        {
-          "name": "audio",
-          "shape": 7,
-          "type": "AUDIO",
-          "link": 802
-        },
-        {
-          "name": "use_audio",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "use_audio"
-          },
-          "link": 966
-        }
-      ],
-      "outputs": [],
-      "title": "Output_Video",
       "properties": {
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
@@ -9094,7 +8996,7 @@
         26
       ],
       "flags": {},
-      "order": 216,
+      "order": 215,
       "mode": 2,
       "inputs": [
         {
@@ -10858,6 +10760,147 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 457,
+      "type": "MpiSaveVideo",
+      "pos": [
+        2446.9064779519827,
+        7360.533189112471
+      ],
+      "size": [
+        270,
+        150
+      ],
+      "flags": {},
+      "order": 218,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1076
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 802
+        },
+        {
+          "name": "use_audio",
+          "shape": 7,
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "use_audio"
+          },
+          "link": 966
+        }
+      ],
+      "outputs": [],
+      "title": "Output_Video",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiSaveVideo"
+      },
+      "widgets_values": [
+        24,
+        "MpiVideo",
+        true,
+        false
+      ]
+    },
+    {
+      "id": 485,
+      "type": "MpiListRange",
+      "pos": [
+        1987.885046893162,
+        7147.77378155734
+      ],
+      "size": [
+        270,
+        102
+      ],
+      "flags": {},
+      "order": 214,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "list_input",
+          "type": "*",
+          "link": 848
+        }
+      ],
+      "outputs": [
+        {
+          "name": "list",
+          "shape": 6,
+          "type": "*",
+          "links": [
+            850,
+            1075
+          ]
+        },
+        {
+          "name": "count",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "Remove first Frame (!repeat)",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "fd9bdcae56a6792cbc6d39756b7dfe51d20596e0",
+        "Node name for S&R": "MpiListRange"
+      },
+      "widgets_values": [
+        1,
+        -1
+      ]
+    },
+    {
+      "id": 631,
+      "type": "MpiClearVram",
+      "pos": [
+        2289.954008812521,
+        7146.6462924524585
+      ],
+      "size": [
+        186.9140625,
+        26.262392420374454
+      ],
+      "flags": {},
+      "order": 216,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 1075
+        }
+      ],
+      "outputs": [
+        {
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            1076
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiClearVram",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": []
     }
   ],
   "links": [
@@ -11770,14 +11813,6 @@
       215,
       0,
       485,
-      0,
-      "IMAGE"
-    ],
-    [
-      849,
-      485,
-      0,
-      457,
       0,
       "IMAGE"
     ],
@@ -13084,6 +13119,22 @@
       627,
       2,
       "BOOLEAN"
+    ],
+    [
+      1075,
+      485,
+      0,
+      631,
+      0,
+      "*"
+    ],
+    [
+      1076,
+      631,
+      0,
+      457,
+      0,
+      "IMAGE"
     ]
   ],
   "groups": [
@@ -13199,10 +13250,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.7921162128279488,
+      "scale": 0.5951286347317432,
       "offset": [
-        4829.81870549423,
-        -4394.6765003716855
+        -477.3462306401101,
+        -6453.835286358651
       ]
     },
     "frontendVersion": "1.47.12",
