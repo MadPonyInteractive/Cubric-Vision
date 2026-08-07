@@ -374,13 +374,51 @@ async function runOp(reg, model, op, probeImage) {
 
 // ── 5. Main ──────────────────────────────────────────────────────────────────
 
+// ── 0. Pod lock preflight ────────────────────────────────────────────────────
+// The Pod image bakes its nodes from a DIFFERENT node_lock.json in a DIFFERENT repo, so
+// bumping Vision's copy leaves the image on the old engine and the smoke measures the
+// wrong thing. That step lived only in the playbook, and a step that lives only in a
+// playbook is a step someone forgets — so it runs here, in the command every smoke
+// already starts with, at the moment it is actionable.
+const POD_REPO = process.env.CUBRIC_POD_REPO || 'c:/AI/Mpi/mpi-ci/cubric-vision-pod';
+
+/** Warns on --plan, hard-fails before any spend. @returns {boolean} in sync */
+function checkPodLock() {
+    const podLock = path.join(POD_REPO, 'node_lock.json');
+    if (!existsSync(podLock)) {
+        log(`\n  ⚠ pod lock not found at ${podLock} — cannot verify the image is at this engine.`);
+        log(`    Set CUBRIC_POD_REPO if mpi-ci lives elsewhere.`);
+        return true;                       // absent ≠ drifted; do not block another machine
+    }
+    const ours = JSON.parse(readFileSync(path.join(REPO, 'dev_configs/node_lock.json'), 'utf8'));
+    const theirs = JSON.parse(readFileSync(podLock, 'utf8'));
+    const drift = [];
+    const ourTag = ours.comfyui?.core?.tag, theirTag = theirs.comfyui?.core?.tag;
+    if (ourTag !== theirTag) drift.push(`core ${theirTag} -> ${ourTag}`);
+    for (const [id, n] of Object.entries(ours.nodes || {})) {
+        if (n.commit && theirs.nodes?.[id]?.commit !== n.commit) drift.push(id);
+    }
+    if (!drift.length) { log(`\n  pod lock in sync with ${ourTag} ✓`); return true; }
+
+    log(`\n  🛑 POD LOCK IS BEHIND — ${drift.join(', ')}`);
+    log(`  The Pod image bakes nodes from that file, so smoking now measures the OLD engine.`);
+    log(`  Sync it, rebuild the DEV image, then re-run:`);
+    log(`    cp dev_configs/node_lock.json "${podLock}"`);
+    log(`    git -C "${POD_REPO}" commit --only node_lock.json -m "chore(pod): sync node_lock to ComfyUI ${String(ourTag || '').replace(/^v/, '')}"`);
+    log(`    /build-pod-image   — DEV tag v<ver>-dev-<profile>, bump ONLY POD_IMAGE_VERSION_DEV/_CPU_DEV`);
+    log(`  Never rebuild the user-facing image for a bump in flight.`);
+    return false;
+}
+
 async function main() {
     const reg = await loadRegistry();
     const only = opt('models')?.split(',').map(s => s.trim()).filter(Boolean);
     const set = resolveSmokeSet(reg, only);
     const opCount = printPlan(reg, set);
+    const podLockOk = checkPodLock();
 
     if (PLAN_ONLY) { log('\n--plan: nothing rented, nothing spent.\n'); return; }
+    if (!podLockOk) die('pod lock is behind — sync it and rebuild the DEV image before smoking.');
 
     log(`\n── Live run ──`);
     const volume = await ensureVolume(set.totalGb);

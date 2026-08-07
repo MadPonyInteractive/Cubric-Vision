@@ -124,18 +124,25 @@ un-synced lock rebuilds the image at the OLD engine and gate 7 then refuses to s
 after you have paid for a build.
 
 Measured 2026-08-07: Vision sat at `v0.30.0` while the Pod lock was still `v0.29.2`, with
-`comfyui-kjnodes` and `ComfyUI-MpiNodes` both behind. Check before building:
+`comfyui-kjnodes` and `ComfyUI-MpiNodes` both behind.
 
-```bash
-node -e "const a=require('./dev_configs/node_lock.json'),
-  b=require('c:/AI/Mpi/mpi-ci/cubric-vision-pod/node_lock.json');
-  const d=Object.keys(a.nodes).filter(n=>a.nodes[n].commit && b.nodes[n]?.commit!==a.nodes[n].commit);
-  console.log('core:', a.comfyui.core.tag, 'vs pod', b.comfyui.core.tag);
-  console.log('drifted nodes:', d.join(', ')||'none')"
+**You do not have to remember this — the smoke runner checks it for you.** A step that
+lives only in a playbook is a step someone forgets, so `scripts/smoke-workflows.mjs` runs
+the comparison itself: it **warns on `--plan`** (which still prints the full matrix) and
+**hard-fails before renting anything** on a real run, naming the exact drift and the fix:
+
+```
+  🛑 POD LOCK IS BEHIND — core v0.29.2 -> v0.30.0, ComfyUI-MpiNodes, comfyui-kjnodes
+  Sync it, rebuild the DEV image, then re-run:
+    cp dev_configs/node_lock.json ".../cubric-vision-pod/node_lock.json"
+    git -C ".../cubric-vision-pod" commit --only node_lock.json -m "chore(pod): sync node_lock to ComfyUI 0.30.0"
+    /build-pod-image   — DEV tag v<ver>-dev-<profile>, bump ONLY POD_IMAGE_VERSION_DEV/_CPU_DEV
 ```
 
-Both lines must agree before `build-pod-image` runs. Remember `mpi-ci` is a separate git
-repo — commit there with `git -C`.
+The two files are structurally identical (same 14 nodes, same fields), so the sync really is
+a straight copy. `mpi-ci` lives at `c:\AI\Mpi\mpi-ci\cubric-vision-pod` — override with
+`CUBRIC_POD_REPO`; an absent path warns rather than blocks, so another machine is not stuck.
+It is a separate git repo — commit there with `git -C`.
 
 **7. ASSERT the Pod reports the new version — before smoking anything.**
 This gate is the difference between a real check and theatre: smoke an unrebuilt image and
