@@ -5,7 +5,6 @@
     "todo": [
       "MPI-461",
       "MPI-458",
-      "MPI-457",
       "MPI-456",
       "MPI-455",
       "MPI-450",
@@ -35,6 +34,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-457",
       "MPI-470",
       "MPI-468",
       "MPI-467",
@@ -73,7 +73,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-07T04:01:21Z",
+  "updated_at": "2026-08-07T04:27:25Z",
   "events": [
     {
       "at": "2026-08-07T04:01:21Z",
@@ -2104,6 +2104,29 @@
       "at": "2026-08-07T00:21:00Z",
       "actor": "claude",
       "summary": "Split from MPI-462. The orphan collector shipped local-only; the remote uninstall branch returns before it. Needs _remoteSharedDepIds + a volume inventory, and a live Pod to verify before any deletion code aims at a user's volume."
+    },
+    {
+      "at": "2026-08-07T04:09:00Z",
+      "type": "task.moved",
+      "task": "MPI-457",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "note": "MPI-468 build order step 2 - the MECHANIC starts. Child MPI-467 (the GUARD) is in validating with only its live proving run outstanding, and that run is user-scheduled behind H3/LTX/Wan, so it does not block this. Scope confirmed against the umbrella: EXTEND /mpi-bump-engine, never create a second bump skill. node_lock.json stays READ-only here."
+    },
+    {
+      "at": "2026-08-07T04:27:25Z",
+      "type": "task.updated",
+      "task": "MPI-457",
+      "actor": "opus",
+      "note": "Mechanic shipped (fc731113). /engine/upgrade takes the in-place path by default - git fetch --tags + checkout the node_lock pinned sha + pip for ONLY the requirement lines that moved + restamp .mpi_engine_version + repair whatever nodes the same lock change drifted. The wipe survives as _fullEngineReinstall and is reached by a DETECTED signal (dead tree / a deprecated node carrying our .mpi_node_commit marker / a moved engine-owned package / any in-place throw). Gate 5 is now a command: scripts/engine-floor-check.mjs, proven in all three branches against the LIVE 0.30.0 engine (33 workflows, 171 class_types, 0 missing; a bogus-class_type probe and an unreachable engine both exit 1). Per MPI-468 the skill was EXTENDED, not duplicated: /mpi-bump-engine gate 5 + a new docs/playbooks/bump-engine/02-local-upgrade.md. Suite 482/482, eslint clean. OUTSTANDING: acceptance #5 only - the real end-to-end upgrade on this machine did not run because the engine was mid-LTX-generation all session and the in-place path stops ComfyUI first. The exact pass is written out in validation.md and the user scheduled it for when the engine is free."
+    },
+    {
+      "at": "2026-08-07T04:27:25Z",
+      "type": "task.updated",
+      "task": "MPI-468",
+      "actor": "opus",
+      "note": "Umbrella progress: MPI-457 (the MECHANIC) implemented and in validating alongside MPI-467 (the GUARD). The split held - one skill, one playbook: 457 extended /mpi-bump-engine gate 5 and added 02-local-upgrade.md rather than creating a second bump skill. node_lock.json was never touched. Both children now sit on a LIVE run each: 457 needs one in-place upgrade on this machine (minutes, free, user-scheduled for when the engine is idle); 467 needs the Pod smoke matrix (~281GB + a GPU hour, scheduled behind H3/LTX/Wan)."
     }
   ]
 }
