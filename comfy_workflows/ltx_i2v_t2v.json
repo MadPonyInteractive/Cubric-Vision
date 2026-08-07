@@ -52,7 +52,7 @@
         1
       ],
       "text": [
-        "8",
+        "625",
         0
       ]
     },
@@ -629,7 +629,7 @@
     "inputs": {
       "lora_name": "ltx-2.3\\ltx2.3-transition.safetensors",
       "model": [
-        "426",
+        "627",
         0
       ],
       "strength_model": [
@@ -767,7 +767,7 @@
         0
       ],
       "negative": [
-        "7",
+        "626",
         0
       ]
     },
@@ -1482,7 +1482,7 @@
         0
       ],
       "nag_cond_video": [
-        "7",
+        "626",
         0
       ],
       "nag_cond_audio": [
@@ -1497,15 +1497,18 @@
   },
   "427": {
     "inputs": {
-      "text": "underwater, echo, muffled, faded, distorted, distortion, feedback, low-quality, garbled, warbling, crackle, hiss, static, clipping, background noise, robotic, tinny, hum, buzz\n",
       "clip": [
         "269",
         1
+      ],
+      "text": [
+        "629",
+        0
       ]
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "Negative Prompt 2 (Audio) (NAG only)"
+      "title": "Negative Audio (NAG only)"
     }
   },
   "457": {
@@ -2058,6 +2061,108 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Mpi If Else"
+    }
+  },
+  "623": {
+    "inputs": {
+      "conditioning": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "625": {
+    "inputs": {
+      "any": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "626": {
+    "inputs": {
+      "true": [
+        "7",
+        0
+      ],
+      "false": [
+        "623",
+        0
+      ],
+      "boolean": [
+        "625",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "627": {
+    "inputs": {
+      "true": [
+        "426",
+        0
+      ],
+      "false": [
+        "269",
+        0
+      ],
+      "boolean": [
+        "630",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "628": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Negative_Audio"
+    }
+  },
+  "629": {
+    "inputs": {
+      "any": [
+        "628",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "630": {
+    "inputs": {
+      "mode": "one_is_true",
+      "a": [
+        "625",
+        1
+      ],
+      "b": [
+        "629",
+        1
+      ]
+    },
+    "class_type": "MpiBooleanCompare",
+    "_meta": {
+      "title": "Mpi Boolean Compare"
     }
   }
 }
