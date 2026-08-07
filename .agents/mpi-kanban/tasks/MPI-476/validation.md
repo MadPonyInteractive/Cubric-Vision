@@ -39,18 +39,22 @@ that is a real bug.
 ## 2. H3's VRAM table starts at 12GB
 
 **Do:** Model Library → MiniMax H3 → detail drawer. Then MiniMax H3 Reference.
-**See:** first row `12GB` with the **min** tag → `~48GB`, then 16 → ~40, 24 → ~32,
+**See:** first row `12GB` with the **min** tag → `~44GB`, then 16 → ~40, 24 → ~32,
 32 → ~24, 40 → ~16, 48 → ~8, 56 → —. Footnote: *"53GB of weights · min 12GB VRAM."*
 
-**Note:** you guessed ~60GB of RAM at 12GB VRAM; the formula gives **48**
-(53.15 weights + 1.3 overhead − 12, rounded up to the next 8). If 48 reads too
+> The first row read `~48GB` when this item was written. **2c** below changed the RAM
+> rounding from 8GB to 4GB, which is the only reason it now reads 44 — not a regression.
+> Every other row was already on a 4GB boundary and did not move.
+
+**Note:** you guessed ~60GB of RAM at 12GB VRAM; the formula gives **44**
+(53.15 weights + 1.3 overhead − 12 = 42.45, rounded up to the next 4). If 44 reads too
 optimistic for a 12GB card in practice, the number to change is `minVramGb` or
 the `OVERHEAD`/`K` constants in `js/data/modelConstants/footprint.js` — say so
 and it moves.
 
 **Do:** check any other model's table (Krea 2, LTX 2.3, SDXL).
-**See:** unchanged from before, every row on the 8GB grid. Only H3 declares an
-override.
+**See:** the VRAM rows are unchanged from before, still on the 8GB grid above the
+floor. Only H3 declares an override. (Their RAM figures did move — see 2c.)
 
 ## 2b. Three more cards were floored at 16 for the same reason (added 2026-08-07)
 
