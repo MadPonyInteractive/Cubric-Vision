@@ -3,19 +3,14 @@
   "id": "MPI-476",
   "title": "Model card cleanups - drop per-op install groups, H3 tier and VRAM floor, tier letter, chip relabel",
   "description": "Four things the model surfaces were saying that stopped being true, reported by the user 2026-08-07. (1) Wan 2.2 Smooth's card still offered an Operations toggle after MPI-470 deprecated t2v_ms - one entry, nothing to choose. wan-22 was the last commonDeps + operations{} model, so the shape AND its UI are gone: a model installs as ONE unit now. (2) MiniMax H3's VRAM table started at 16GB; users run it on 8GB with community GGUF quants and we ship int8, so ModelDefs may now set minVramGb and H3 states 12. (3) The H/B/L tier letter gated on modelFamily, so cards that disambiguated nothing wore one (Wan 2.2 Smooth, both H3 cards); it now needs another INSTALLED model with the SAME name in a different tier. MiniMax H3 was also tiered high and is balanced. (4) Staged chips kept the labels of whichever model was active when the media was staged - H3's 'Picture 1' survived a switch to LTX, where that image is the start frame. Shipped in d2800e4c + 01014c1e, npm test 492/492, each half proved in the live app's real DOM. Left in validating for the user's own eye test.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-07T19:58:00Z",
-  "updated_at": "2026-08-07T22:41:27Z",
+  "updated_at": "2026-08-08T00:30:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
     "validation": "validation.md"
-  },
-  "attention": {
-    "state": "required",
-    "reason": "Confirmed in Electron 2026-08-07: chips relabel on a model change, the H/B/L letter is gone where it disambiguated nothing, and the Wan card has no Operations row. The VRAM item GREW instead of passing - Wan read 16GB, so the floor now lifts onto a card ladder (wan-22, ltx-23-balanced, qwen-edit all 8.29/10.10/8.02 -> 12) and the RAM column rounds to 4GB. Re-check validation.md items 2b and 2c after a reload.",
-    "updated_at": "2026-08-07T22:41:27Z"
   }
 }

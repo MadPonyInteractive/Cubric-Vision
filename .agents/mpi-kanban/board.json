@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 478,
+  "next_id": 479,
   "columns": {
     "todo": [
+      "MPI-478",
       "MPI-477",
       "MPI-461",
       "MPI-458",
@@ -35,7 +36,6 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-476",
       "MPI-475",
       "MPI-474",
       "MPI-470",
@@ -57,6 +57,7 @@
       "MPI-367"
     ],
     "done": [
+      "MPI-476",
       "MPI-473",
       "MPI-472",
       "MPI-457",
@@ -80,7 +81,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-07T19:58:00Z",
+  "updated_at": "2026-08-08T00:30:00Z",
   "events": [
     {
       "at": "2026-08-07T14:20:43Z",
@@ -2196,6 +2197,24 @@
       "task": "MPI-476",
       "actor": "opus",
       "note": "Four user-reported drifts on the model surfaces, all shipped in d2800e4c + 01014c1e and left in validating for the users own eye test in Electron. Wan 2.2 Smooths card still offered an Operations toggle after MPI-470 deprecated t2v_ms - one entry, nothing to choose - so wan-22, the last commonDeps+operations{} model, is FLAT and the whole per-op install UI is gone (toggles, drafts, s_modelOpDraftByModel, the per-op uninstall subtraction). That forced a guard ADDITION, not just removals: isOperationInstalled ignored the op argument on a flat model, so flattening wan would have answered YES for the deprecated t2v_ms and re-opened MPI-453 for a legacy history item; it now requires the op to be in supportedOps. ModelDefs may now declare minVramGb - H3 states 12 where the fitted floor rounded to 16, which read as do-not-bother to a 12GB card. The H/B/L letter gated on modelFamily, so cards that disambiguated nothing wore one; it now needs an INSTALLED model with the SAME name in another tier, which today is only LTX 2.3. MiniMax H3 re-tiered high to balanced. And staged chips kept the labels of whichever model was active when the media was staged."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-476",
+      "type": "task.moved",
+      "at": "2026-08-08T00:30:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "User confirmed items 2b and 2c in the UI 2026-08-08 - all four fixes now eye-tested in Electron. Verified independently offline first: footprint.js imports into bare Node, and across all 20 models every floor lands on CARD_SIZES, RAM is monotonic in VRAM and every figure sits on the 4GB grid; wan-22, ltx-23-balanced and qwen-edit read 12GB min, sdxl 8 and ltx-23 16 unchanged. The changelog entry drafted for this card was CUT on the user's call - the fix is real but not worth a line."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-478",
+      "type": "task.created",
+      "at": "2026-08-08T00:30:00Z",
+      "actor": "opus",
+      "summary": "The local engine launches ComfyUI with --lowvram for EVERY NVIDIA GPU, unconditionally (routes/comfy.js). The authoring bench runs with no VRAM flag at all. That is the one unconditional difference between where the fast H3 runs happened and where the slow ones do, and it matches the reported symptom - dedicated VRAM sits at 11.5 of 16GB while 23.7GB spills to shared. NOT yet proven to be the cause: the app's own log shows 6.4 to 143 s/it tonight, so settings dominate. One isolation test decides it."
     }
   ]
 }
