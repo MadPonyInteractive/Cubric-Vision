@@ -126,7 +126,7 @@ it turned off before staging weights to R2.
 
 | Task | Skill | Playbook (the skill's step 0 — non-negotiable) |
 |---|---|---|
-| Bump the SHIPPED ComfyUI engine, or smoke-test models ("test all the models") | `/mpi-bump-engine` | `docs/playbooks/bump-engine/` (README hub + `01-smoke-run.md`). **NOT `/mpi-bump-local-comfy`** (bench-only, never reaches a user). Smoke-only is valid with no bump — after a node bump or a new model |
+| Bump the SHIPPED ComfyUI engine, or smoke-test models ("test all the models") | `/mpi-bump-engine` | `docs/playbooks/bump-engine/` (README hub + `01-smoke-run.md` + `02-local-upgrade.md`). **NOT `/mpi-bump-local-comfy`** (bench-only, never reaches a user). Smoke-only is valid with no bump — after a node bump or a new model |
 | Wire a NEW model end-to-end | `/mpi-add-model` | `docs/playbooks/add-model/` (README hub + `01`–`06`) — holds every known trap. Models are NOT version-bumped. A handoff or `docs/models/<model>/` doc ASSUMES the playbook — read both |
 | Wire a NEW Flow (dev-gated Flow-Library outcome flow — NOT a model) | `/mpi-add-flow` | `docs/playbooks/add-flow/` (README hub + `01`–`05`). Worked examples: Video Stitch, SDXL 4K, Image Regen |
 

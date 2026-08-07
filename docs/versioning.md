@@ -49,21 +49,18 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
 - **Where:** Stored in `dev_configs/system_dependencies.json` (drives the local-engine download URL). **Tracked in a SECOND file too:** `dev_configs/node_lock.json` `comfyui.core.tag` is the node/Pod pin (read by `js/data/modelConstants/dependencies.js` for app node URLs AND by the mpi-ci Pod image build). These two CAN DESYNC — on the 1.1.0 promote `system_dependencies.json` said `0.26.0` while `node_lock.json` said `v0.27.0` (local engine would have pulled 0.26 while nodes targeted 0.27).
 - **When to bump:** Only when the bundled engine is upgraded. Edit `system_dependencies.json` **AND** verify it matches `node_lock.json`'s `comfyui.core.tag` — grep BOTH at every bump, do not trust one file alone.
 - **The full bump sequence is NOT here — it is
-  [`docs/playbooks/bump-engine/README.md`](playbooks/bump-engine/README.md)** (MPI-467),
-  which owns the gate ordering and the executing smoke run. There is still no *skill* for
-  the app-engine bump (`/mpi-bump-local-comfy` is the standalone `G:/ComfyUi` bench only);
-  MPI-457 will add one that calls that playbook. The sequence proved by hand on
-  0.29.2 → 0.30.0 is in `.agents/mpi-kanban/tasks/MPI-457/brief.md`. Three things this
-  section does not tell you and that cost a
-  session to derive: an upstream tag can exist with **no Comfy-Org portable build** (v0.30.1
-  and v0.30.2 were real tags with no release, so 0.30.0 was the ceiling — check
-  `gh api repos/Comfy-Org/ComfyUI/releases/tags/v<ver>` before picking a target); the
-  installed portable **is a git checkout**, so the local engine upgrades in place with a
-  `fetch --tags` + `checkout <pinned sha>` + a pip install of only the core packages whose
-  pins moved, instead of the full wipe-and-redownload `/engine/upgrade` performs; and the
-  custom-node floor check should be **empirical** — assert every `class_type` used by
-  `comfy_workflows/*.json` still registers in `/object_info` on the target version, rather
-  than reasoning about which node packs might break.
+  [`docs/playbooks/bump-engine/`](playbooks/bump-engine/README.md)**, enforced by the
+  `/mpi-bump-engine` skill (`/mpi-bump-local-comfy` is the standalone `G:/ComfyUi` bench
+  only and never reaches a user). The README owns the gate ordering and the executing smoke
+  run (MPI-467); [`02-local-upgrade.md`](playbooks/bump-engine/02-local-upgrade.md) owns the
+  local half (MPI-457) — the pin sequence proved on 0.29.2 → 0.30.0, the empirical
+  `class_type` floor check (`node scripts/engine-floor-check.mjs`), and how
+  `/engine/upgrade` moves the engine **in place** (`fetch --tags` + `checkout <pinned sha>`
+  + pip for only the requirement lines that moved) instead of wiping ~11 GB. One trap worth
+  repeating here because it caps the target before anything else: an upstream tag can exist
+  with **no Comfy-Org portable build** — v0.30.1 and v0.30.2 were real tags with no release,
+  so 0.30.0 was the ceiling. Check `gh api repos/Comfy-Org/ComfyUI/releases/tags/v<ver>`
+  first.
 - **Access:** `routes/platformEngine.js` reads this value at startup and exports `COMFY_VERSION` for use by `engine.js` and download manager.
 - **Validation:** On app boot, `_bootApp()` calls `GET /engine/version-check` which compares installed engine version against `COMFY_VERSION` from `platformEngine.js`. If mismatch, `MpiEngineInstall` prompts the user to upgrade.
 

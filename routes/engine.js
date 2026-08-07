@@ -12,7 +12,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
-const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot, getCustomRoot, resolveComfyPath } = require('./shared');
+const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot, getCustomRoot, resolveComfyPath, getUniversalWorkflowDeps, runPipCommand, NODE_COMMIT_MARKER } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, FileDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_DIR, COMFY_VENV_DIR, COMFY_VERSION, TORCH_MAC, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
@@ -726,6 +726,38 @@ router.get('/engine/deps-status', async (req, res) => {
     }
 });
 
+/**
+ * Install every universal-workflow dep that is missing or drifted, pre-wiping the
+ * drifted node folders first. Shared by /engine/repair-deps and the in-place
+ * upgrade path — a core bump usually moves pinned node commits in the same lock
+ * change, and that is drift to repair, not a reason to wipe the engine.
+ * @returns {Promise<number>} how many deps were (re)installed; 0 = nothing outstanding
+ */
+async function _installOutstandingUwDeps() {
+    const { missingDeps, driftedDeps = [] } = await checkUniversalWorkflowDepsStatus();
+    const repairSet = [...new Set([...missingDeps, ...driftedDeps])];
+    if (!repairSet.length) return 0;
+
+    // Pre-wipe drifted node folders: startUniversalWorkflowInstall skips folders
+    // that already exist (isCompleteOnDisk), so a drifted node (folder PRESENT, wrong
+    // commit) would be marked complete and never reinstalled. Removing the folder first
+    // forces a clean re-extract at the pinned commit. Missing deps have no folder to wipe.
+    if (driftedDeps.length) {
+        const { DEPS } = require('../js/data/modelConstants/dependencies.js');
+        const customRoot = await getCustomRoot();
+        for (const depId of driftedDeps) {
+            const dep = DEPS[depId];
+            if (!dep) continue;
+            const { localPath } = await resolveComfyPath(dep, customRoot, {});
+            await fs.remove(localPath);
+            logger.info('engine', `pre-wiped drifted node folder: ${depId} (${localPath})`);
+        }
+    }
+
+    await startUniversalWorkflowInstall(repairSet, true);
+    return repairSet.length;
+}
+
 router.post('/engine/repair-deps', async (req, res) => {
     logger.info('engine', 'UW deps repair requested');
     res.json({ success: true, status: 'repair-started' });
@@ -750,31 +782,9 @@ router.post('/engine/repair-deps', async (req, res) => {
             return;
         }
 
-        const { missingDeps, driftedDeps = [] } = await checkUniversalWorkflowDepsStatus();
-        const repairSet = [...new Set([...missingDeps, ...driftedDeps])];
-        if (!repairSet.length) {
+        if (!(await _installOutstandingUwDeps())) {
             broadcastEngineEvent('engine:uw-installing', { status: 'All dependencies already present' });
-            broadcastEngineEvent('engine:complete', { success: true });
-            return;
         }
-
-        // Pre-wipe drifted node folders: startUniversalWorkflowInstall skips folders
-        // that already exist (isCompleteOnDisk), so a drifted node (folder PRESENT, wrong
-        // commit) would be marked complete and never reinstalled. Removing the folder first
-        // forces a clean re-extract at the pinned commit. Missing deps have no folder to wipe.
-        if (driftedDeps.length) {
-            const { DEPS } = require('../js/data/modelConstants/dependencies.js');
-            const customRoot = await getCustomRoot();
-            for (const depId of driftedDeps) {
-                const dep = DEPS[depId];
-                if (!dep) continue;
-                const { localPath } = await resolveComfyPath(dep, customRoot, {});
-                await fs.remove(localPath);
-                logger.info('engine', `pre-wiped drifted node folder: ${depId} (${localPath})`);
-            }
-        }
-
-        await startUniversalWorkflowInstall(repairSet, true);
         broadcastEngineEvent('engine:complete', { success: true });
     } catch (err) {
         logger.error('engine', `UW deps repair failed: ${err.message}`);
@@ -804,51 +814,235 @@ router.post('/engine/repair-deps', async (req, res) => {
     }
 });
 
-router.post('/engine/upgrade', async (req, res) => {
-    try {
-        const portableDir = path.join(ENGINE_ROOT, COMFY_DIR);
-        // Migrate legacy in-engine models to the env-aware default root (portable
-        // launcher sets CUBRIC_MODELS_ROOT=<root>/models), NOT a stray mpi_models.
-        const defaultModelsDir = getDefaultModelsRoot();
-        const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
+// ── In-place engine upgrade (MPI-457) ────────────────────────────────────────
+// /engine/upgrade used to delete the whole ~11 GB engine tree and re-download the
+// ~1 GB portable plus every custom node and pip dep. Measured on the 0.29.2 → 0.30.0
+// bump, the real delta was ONE git checkout and THREE pip packages.
+//
+// Both engine layouts ship ComfyUI as a real git checkout — the Windows portable's
+// ComfyUI folder has remote Comfy-Org/ComfyUI at exactly the pinned sha and bundles
+// its own update/update.py, and the uv path is a comfy-cli clone — so in-place is the
+// mechanism upstream supports, not a hack. The one difference: Comfy's own updater
+// pulls master; ours checks out the PINNED sha and never anything else.
+//
+// The wipe is NOT deleted. It is reached by a DETECTED signal (_fullReinstallReason)
+// or by any in-place failure, because a moved portable can only arrive by re-extract.
 
-        // 1. Check if models are inside engine (legacy user)
-        const hasCustomRoot = await fs.pathExists(extraConfigPath);
-        // Capture the user's configured models root from the existing YAML BEFORE
-        // wiping the engine — step 2 removes the YAML and the fresh-install extract
-        // scrubs it, so without this the upgrade silently resets the path to the
-        // default mpi_models (user's D:\CubricModels etc. is lost → 0 models → no
-        // prompt box). getCustomRoot returns null if no custom YAML exists. (MPI-118)
-        const preservedRoot = await getCustomRoot();
-        if (!hasCustomRoot) {
-            broadcastEngineEvent('engine:upgrade-status', { status: 'Moving models to safe location...' });
-            const defaultModels = getComfyPath(ENGINE_ROOT, 'models');
-            if (await fs.pathExists(defaultModels)) {
-                logger.info('engine', `Migrating legacy models from engine to ${defaultModelsDir}`);
-                await fs.move(defaultModels, defaultModelsDir, { overwrite: false });
+/**
+ * Packages the PORTABLE owns, not pip. A ComfyUI requirement line moving one of
+ * these means the portable itself moved, and pip-installing them into the embedded
+ * python is exactly the stomp `--no-deps` exists to prevent (shared.js § curated
+ * python deps) — so that routes to the full reinstall instead.
+ */
+const ENGINE_OWNED_PKG = /^(torch|torchvision|torchaudio|triton|nvidia-.+|cuda-.+)$/i;
+
+/**
+ * Package name from a requirement spec (`comfy-kitchen==0.2.26` → `comfy-kitchen`),
+ * normalised the way pip does — `_` and `-` name the same distribution, so
+ * `nvidia_cudnn_cu13` must not slip past a rule written against `nvidia-*`.
+ */
+function _pkgName(spec) {
+    const m = String(spec).match(/^([A-Za-z0-9._-]+)/);
+    return m ? m[1].toLowerCase().replace(/_/g, '-') : '';
+}
+
+/**
+ * Requirement lines present in the target `requirements.txt` but absent from the
+ * current one, verbatim so pip gets the exact pin ComfyUI asks for. Comments, blanks
+ * and `-r`/`--flag` lines are not installable specs. A line that only DISAPPEARS is
+ * ignored on purpose: leaving a spare package installed is harmless, uninstalling one
+ * out from under a custom node is not. Pure — unit-tested.
+ * @param {string} currentTxt
+ * @param {string} targetTxt
+ * @returns {string[]}
+ */
+function changedRequirements(currentTxt, targetTxt) {
+    const specs = (txt) => String(txt).split(/\r?\n/)
+        .map((l) => l.replace(/\s+#.*$/, '').trim())
+        .filter((l) => l && !l.startsWith('#') && !l.startsWith('-'));
+    const have = new Set(specs(currentTxt));
+    return specs(targetTxt).filter((l) => !have.has(l));
+}
+
+/**
+ * The first engine-owned package in a changed-requirement set, or null. Pure — unit-tested.
+ * @param {string[]} changed
+ * @returns {string|null}
+ */
+function engineOwnedChange(changed) {
+    return changed.map(_pkgName).find((n) => ENGINE_OWNED_PKG.test(n)) || null;
+}
+
+/**
+ * A custom-node folder WE installed — it carries the `.mpi_node_commit` marker —
+ * whose name the registry no longer knows. That is a real deprecation, and the
+ * in-place path cannot resolve it: a checkout leaves the dead node importing forever.
+ * The marker is what makes this safe to act on; a folder the user dropped in by hand
+ * has none, so their own work never triggers an engine wipe.
+ * @returns {Promise<string|null>} folder name, or null
+ */
+async function _findDeprecatedNode() {
+    const customNodesDir = getComfyPath(ENGINE_ROOT, 'custom_nodes');
+    if (!(await fs.pathExists(customNodesDir))) return null;
+    const known = new Set(getUniversalWorkflowDeps()
+        .filter((d) => d && d.type === 'custom_nodes')
+        .map((d) => d.filename));
+    for (const entry of await fs.readdir(customNodesDir, { withFileTypes: true })) {
+        if (!entry.isDirectory() || known.has(entry.name)) continue;
+        if (await fs.pathExists(path.join(customNodesDir, entry.name, NODE_COMMIT_MARKER))) {
+            return entry.name;
+        }
+    }
+    return null;
+}
+
+/**
+ * Why the full wipe-and-redownload is REQUIRED, or null when the engine can move in
+ * place. Every signal here is detected on disk — none is assumed from the version
+ * numbers. (The engine-owned python/torch signal is detected later, from the target's
+ * own requirements.txt, because it is only knowable after the checkout.)
+ * @returns {Promise<string|null>}
+ */
+async function _fullReinstallReason() {
+    if (!(await fs.pathExists(getPythonBin(ENGINE_ROOT)))) return 'the engine python is missing';
+    if (!(await fs.pathExists(getComfyPath(ENGINE_ROOT, 'comfyui_version.py')))) return 'the ComfyUI tree is incomplete';
+    if (!(await fs.pathExists(getComfyPath(ENGINE_ROOT, '.git')))) return 'ComfyUI is not a git checkout';
+    const deprecated = await _findDeprecatedNode();
+    if (deprecated) return `custom node "${deprecated}" is no longer in the registry`;
+    return null;
+}
+
+/**
+ * Move the installed engine to the pinned version without re-downloading it: fetch,
+ * check out the pinned sha, pip-install only the requirement lines that actually
+ * changed, restamp `.mpi_engine_version`, then repair any node the same bump drifted.
+ * Throws on ANY failure — the caller falls back to the full reinstall. (MPI-457)
+ */
+async function _upgradeEngineInPlace() {
+    const comfyRepo = getComfyPath(ENGINE_ROOT);
+    const lock = require('../dev_configs/node_lock.json');
+    const targetRef = lock.comfyui?.core?.commit || lock.comfyui?.core?.tag;
+    if (!targetRef) throw new Error('node_lock.json has no comfyui.core commit or tag');
+
+    // pip cannot overwrite a binary the running engine has loaded (Windows: WinError 5
+    // on cv2.pyd — see shared.js § curated python deps), and git cannot check out files
+    // python holds open. Stop it before touching either.
+    stopComfyUI();
+
+    const gitPath = await ensureGit({
+        onStatus: (status) => broadcastEngineEvent('engine:upgrade-status', { status }),
+    });
+
+    const reqPath = path.join(comfyRepo, 'requirements.txt');
+    const requirementsBefore = await fs.readFile(reqPath, 'utf8').catch(() => '');
+
+    broadcastEngineEvent('engine:upgrade-status', { status: 'Fetching ComfyUI updates...' });
+    await _runStreaming(gitPath, ['fetch', '--tags', 'origin'], { cwd: comfyRepo, stage: 'git fetch' });
+    broadcastEngineEvent('engine:upgrade-status', { status: `Switching engine to ${COMFY_VERSION}...` });
+    await _runStreaming(gitPath, ['checkout', '--force', targetRef], { cwd: comfyRepo, stage: 'git checkout' });
+
+    // Believe the checkout only when the TREE agrees. Restamping a version the code
+    // did not actually move to is the self-concealing drift of MPI-419 — the stamp
+    // reads healthy forever while a pinned node has already stopped importing.
+    const landed = await _readInstalledComfyVersion(ENGINE_ROOT);
+    if (landed !== COMFY_VERSION) {
+        throw new Error(`checkout landed on ${landed || 'an unreadable version'}, expected ${COMFY_VERSION}`);
+    }
+
+    const changed = changedRequirements(requirementsBefore, await fs.readFile(reqPath, 'utf8'));
+    const engineOwned = engineOwnedChange(changed);
+    if (engineOwned) {
+        throw new Error(`${COMFY_VERSION} moves the engine-owned package "${engineOwned}" — only a full reinstall can deliver it`);
+    }
+    if (changed.length) {
+        broadcastEngineEvent('engine:upgrade-status', { status: `Updating ${changed.length} python package(s)...` });
+        logger.info('engine', `In-place upgrade pip set: ${changed.join(' ')}`);
+        await runPipCommand(['install', ...changed]);
+    } else {
+        logger.info('engine', 'In-place upgrade: no requirement line changed — no pip work');
+    }
+
+    await fs.writeFile(path.join(ENGINE_ROOT, '.mpi_engine_version'), landed, 'utf8');
+    logger.info('engine', `In-place upgrade landed ${landed}; version stamp written`);
+
+    broadcastEngineEvent('engine:upgrade-status', { status: 'Checking custom nodes...' });
+    const repaired = await _installOutstandingUwDeps();
+    if (repaired) logger.info('engine', `In-place upgrade repaired ${repaired} outstanding dep(s)`);
+}
+
+/**
+ * The original upgrade: preserve the models root, wipe the portable tree, download
+ * and reinstall everything. Still the only path that can deliver a moved portable.
+ */
+async function _fullEngineReinstall() {
+    const portableDir = path.join(ENGINE_ROOT, COMFY_DIR);
+    // Migrate legacy in-engine models to the env-aware default root (portable
+    // launcher sets CUBRIC_MODELS_ROOT=<root>/models), NOT a stray mpi_models.
+    const defaultModelsDir = getDefaultModelsRoot();
+    const extraConfigPath = getComfyPath(ENGINE_ROOT, 'extra_model_paths.yaml');
+
+    // 1. Check if models are inside engine (legacy user)
+    const hasCustomRoot = await fs.pathExists(extraConfigPath);
+    // Capture the user's configured models root from the existing YAML BEFORE
+    // wiping the engine — step 2 removes the YAML and the fresh-install extract
+    // scrubs it, so without this the upgrade silently resets the path to the
+    // default mpi_models (user's D:\CubricModels etc. is lost → 0 models → no
+    // prompt box). getCustomRoot returns null if no custom YAML exists. (MPI-118)
+    const preservedRoot = await getCustomRoot();
+    if (!hasCustomRoot) {
+        broadcastEngineEvent('engine:upgrade-status', { status: 'Moving models to safe location...' });
+        const defaultModels = getComfyPath(ENGINE_ROOT, 'models');
+        if (await fs.pathExists(defaultModels)) {
+            logger.info('engine', `Migrating legacy models from engine to ${defaultModelsDir}`);
+            await fs.move(defaultModels, defaultModelsDir, { overwrite: false });
+        }
+    }
+
+    // 2. Wipe old engine (models are safe now)
+    broadcastEngineEvent('engine:upgrade-status', { status: 'Removing old engine...' });
+    logger.info('engine', 'Removing old ComfyUI portable');
+    await fs.remove(portableDir);
+
+    // 3. Download + install new version (SSE reports progress). Pass the preserved
+    // models root so the post-extract step 6 re-writes the YAML with the user's path
+    // instead of falling back to the default.
+    if (preservedRoot) logger.info('engine', `Preserving custom models root across upgrade: ${preservedRoot}`);
+    await _runEngineDownload(preservedRoot || undefined);
+}
+
+router.post('/engine/upgrade', async (req, res) => {
+    // `mode` forces a path for testing/recovery; 'auto' (the default) decides. (MPI-457)
+    const mode = (req.body && req.body.mode) || 'auto';
+    // Respond immediately — every phase below is long and the frontend listens on SSE.
+    res.json({ success: true, status: 'upgrade-started' });
+
+    try {
+        let wipeReason = mode === 'full' ? 'a full reinstall was requested' : await _fullReinstallReason();
+
+        if (!wipeReason) {
+            try {
+                logger.info('engine', `Upgrading engine in place to ${COMFY_VERSION}`);
+                await _upgradeEngineInPlace();
+                processState.comfyNeedsRestart = false;
+                broadcastEngineEvent('engine:complete', { success: true });
+                return;
+            } catch (err) {
+                if (mode === 'in-place') throw err;   // caller opted out of the fallback
+                // The wipe is the backstop for everything in-place cannot do — a moved
+                // portable, a tree that will not check out, a node that will not repair.
+                wipeReason = `the in-place upgrade failed (${err.message})`;
             }
         }
 
-        // 2. Wipe old engine (models are safe now)
-        broadcastEngineEvent('engine:upgrade-status', { status: 'Removing old engine...' });
-        logger.info('engine', 'Removing old ComfyUI portable');
-        await fs.remove(portableDir);
-
-        // Respond immediately — frontend listens on SSE
-        res.json({ success: true, status: 'upgrade-started' });
-
-        // 3. Download + install new version async (SSE reports progress). Pass the
-        // preserved models root so the post-extract step 6 re-writes the YAML with
-        // the user's path instead of falling back to the default.
-        if (preservedRoot) logger.info('engine', `Preserving custom models root across upgrade: ${preservedRoot}`);
-        await _runEngineDownload(preservedRoot || undefined);
-
+        logger.warn('engine', `Full engine reinstall — ${wipeReason}`);
+        await _fullEngineReinstall();
     } catch (e) {
         logger.error('system', 'Engine upgrade failed', e);
         broadcastEngineEvent('engine:error', { error: e.message });
-        if (!res.headersSent) res.status(500).json({ success: false, error: e.message });
     }
 });
 
 module.exports = router;
 module.exports.installPathDepthError = installPathDepthError; // MPI-387 — exported for unit test
+module.exports.changedRequirements = changedRequirements;     // MPI-457 — exported for unit test
+module.exports.engineOwnedChange = engineOwnedChange;         // MPI-457 — exported for unit test

@@ -1,7 +1,8 @@
 # Bump the ComfyUI Engine — End-to-End Playbook
 
 > The single procedure for moving the engine users run. **Read this file first, then
-> [01-smoke-run.md](01-smoke-run.md) when you reach the smoke gate.**
+> [02-local-upgrade.md](02-local-upgrade.md) at the local gate and
+> [01-smoke-run.md](01-smoke-run.md) at the smoke gate.**
 >
 > **This is NOT `/mpi-bump-local-comfy`.** That skill bumps the standalone authoring bench
 > at `G:\ComfyUi` and syncs its `extra_model_paths.yaml`. It never touches
@@ -34,7 +35,7 @@ different runtimes, and **a bump is not done until both are proven**:
 
 | | What users get | Proven by |
 |---|---|---|
-| **Local** | `ComfyUI_windows_portable`, provisioned by `_runEngineDownload` (`routes/engine.js`) | Install at the new pin, then assert **every `class_type` used by `comfy_workflows/*.json` registers** |
+| **Local** | `ComfyUI_windows_portable`, provisioned by `_runEngineDownload` (`routes/engine.js`) | Install at the new pin, then assert **every `class_type` used by `comfy_workflows/*.json` registers** ([02](02-local-upgrade.md)) |
 | **Remote** | The RunPod Pod image, which bakes nodes from the same lock | Rebuild the image, assert the version, then the **executing smoke matrix** ([01](01-smoke-run.md)) |
 
 **Pod-green is not Windows-green.** The Pod is Linux off a baked image with its own
@@ -79,7 +80,11 @@ node calling a core API that changed — the node's own pin was innocent. Walk `
 **5. LOCAL gate — empirical `class_type` floor.** Install the engine at the new pin and
 assert that every `class_type` appearing in `comfy_workflows/*.json` registers in
 `/object_info`. This is an **empirical** check against a live engine, never a reading of
-release notes. (Mechanised by MPI-457's bump skill, which calls this playbook.)
+release notes. Full sequence + how the engine moves in place → **[02-local-upgrade.md](02-local-upgrade.md)**:
+
+```bash
+node scripts/engine-floor-check.mjs
+```
 
 **6. Rebuild the Pod image at the new lock.** `build-pod-image` skill. The image bakes
 nodes from `node_lock.json`, so an unrebuilt image is still running the old engine.
@@ -106,7 +111,8 @@ without it.
 | Smoking before the Pod image rebuild validates the **old** engine | Gate 7 exists for this |
 | Pod-green says nothing about the Windows portable | Gate 5 is the local half; both are required |
 | A skipped model reading as a pass | [01](01-smoke-run.md) § What green prints |
-| The full wipe destroys a **symlinked** custom node | The dev machine symlinks `custom_nodes/ComfyUI-MpiNodes` to the node source repo |
+| The full wipe destroys a **symlinked** custom node | The dev machine symlinks `custom_nodes/ComfyUI-MpiNodes` to the node source repo — [02](02-local-upgrade.md) § Traps |
+| An upgrade that restamps a version the tree did not move to conceals itself forever | MPI-419; [02](02-local-upgrade.md) § Traps |
 
 ## Checklist (copy per bump)
 
@@ -115,7 +121,7 @@ without it.
 - [ ] Any suspected break dated against `node_lock.json` history, NOT `git tag --contains`
 - [ ] Pin bumped in **both** `node_lock.json` (`tag` + `commit`) and `system_dependencies.json`; both grepped and agreeing
 - [ ] Every pinned custom node re-checked against the new core
-- [ ] **LOCAL gate:** engine installed at the new pin; every `class_type` in `comfy_workflows/*.json` registers in `/object_info`
+- [ ] **LOCAL gate:** engine upgraded to the new pin and booted; `node scripts/engine-floor-check.mjs` exits 0 ([02](02-local-upgrade.md))
 - [ ] Pod image rebuilt at the new lock (`build-pod-image`)
 - [ ] **Pod reports the new version** — asserted before any smoke run
 - [ ] Smoke matrix executed and green ([01-smoke-run.md](01-smoke-run.md)); skips named explicitly

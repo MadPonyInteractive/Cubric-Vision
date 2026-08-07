@@ -47,9 +47,13 @@ Full detail in the playbook README; this is the enforcement summary.
 3. **Bump both files**, then grep both and confirm they agree.
 4. **Re-check every pinned custom node** against the new core. MPI-465's failure was a node
    calling a changed core API; the node's own pin was innocent.
-5. 🛑 **LOCAL gate** — install at the new pin, assert **every `class_type` used by
-   `comfy_workflows/*.json` registers** in `/object_info`. Empirical, against a live
-   engine — never a reading of release notes.
+5. 🛑 **LOCAL gate** — upgrade the engine to the new pin, boot it, then run the floor
+   check. Empirical, against a live engine — never a reading of release notes.
+   Sequence + the in-place mechanic → **`docs/playbooks/bump-engine/02-local-upgrade.md`**.
+
+   ```bash
+   node scripts/engine-floor-check.mjs        # 48188 = app engine; --url for the bench
+   ```
 6. **Rebuild the Pod image** at the new lock (`build-pod-image`).
 7. 🛑 **Assert the Pod reports the new version** — *before* smoking. Smoke an unrebuilt
    image and you validate the OLD engine, then stamp the bump safe. The runner does this
@@ -93,10 +97,22 @@ asks whether to keep or delete the volume.
 - An engine bump **is** an app version bump — 2nd digit, per `/mpi-release`. Run
   `/mpi-version-bump` after this, not instead of it.
 
-## Scope note (MPI-467 / MPI-457)
+## How the user's engine moves — do not re-derive this
 
-This skill currently enforces the **guard** half: the playbook, the smoke run, the release
-gate (MPI-467). **MPI-457 extends THIS skill** with the in-place `/engine/upgrade` mechanic
-(`git fetch --tags` + checkout the pinned sha + pip only the changed core packages +
-restamp `.mpi_engine_version`) and the empirical gate-5 automation. It must **not** create a
-second bump skill — one skill, one playbook, by decision of the MPI-468 umbrella.
+`POST /engine/upgrade` takes the **in-place** path by default (MPI-457): `git fetch --tags`
+→ `git checkout --force` the `node_lock.json` pinned sha → pip only the requirement lines
+that **moved** → restamp `.mpi_engine_version` → repair any node the same lock change
+drifted. Both engine layouts ship ComfyUI as a real git checkout, so this is upstream's own
+mechanism — except **Comfy's updater pulls `master` and ours checks out the PINNED sha.**
+
+The full wipe still exists and is reached by a **detected** signal, never a guess (dead
+tree, a deprecated node carrying our marker, a moved engine-owned package, or any in-place
+failure). Signal table + traps → `docs/playbooks/bump-engine/02-local-upgrade.md`.
+
+Two consequences for a bump:
+
+- **A moved `torch`/`torchvision`/`torchaudio`/`triton`/`nvidia-*`/`cuda-*` line means every
+  user pays a full ~11 GB reinstall.** Say so in the release notes; do not discover it live.
+- **Never "fix" an upgrade by widening the pip set.** The changed-line set is the contract
+  (`tests/engine-in-place-upgrade.test.cjs`); a wider one re-resolves the whole graph on the
+  user's machine.
