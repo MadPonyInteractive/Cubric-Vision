@@ -160,7 +160,8 @@ back. Quality-tier wall clock: **~130s → ~100s**.
 > Method note: cfg comparisons need coarse steps across **3 seeds** — a fixed seed fixes only the
 > initial noise, and a 2.0/2.1/2.2 sweep produced non-monotonic identity purely from trajectory
 > divergence. **Stage-2 comparisons do not** — with stage 1 fixed, every arm starts from an
-> identical latent. See [[feedback_seed_replication_for_cfg_sweeps]].
+> identical latent, so one seed is enough there. Corollary: 0.1-step sweeps manufacture phantom
+> findings — use coarse steps, and never read a fixed seed as a fixed trajectory.
 >
 > Full reasoning, plus the edit-path dials (`ref_boost`, `grounding_px`, reference framing):
 > [editing.md](editing.md).
@@ -226,7 +227,8 @@ is a separate reference-path problem.
 
 **Timing caveat.** All Raw-tier times above are **RTX PRO 4500** (the Pod), not the user's 4060 Ti
 (where the same run is ~597s). Pod = remote code path; treat these as *relative* comparisons at
-4500-speed, never as app/local-engine timings ([[feedback_runpod_not_local_engine_proof]]).
+4500-speed, never as app/local-engine timings — a RunPod run exercises the REMOTE code path and
+proves nothing about the local engine.
 
 ### The app-vs-browser "83s vs 55s" mystery — SOLVED
 

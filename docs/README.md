@@ -12,6 +12,22 @@ Docs should not exceed **200 lines**; over that = split into topic files. When y
 durable, write it to its **subsystem** doc (below) — there is no catch-all dump file, and none may
 be created. Cross-cutting conventions go in `.claude/rules/dos_and_donts.md`.
 
+## Never write a `[[memory-file]]` backlink into a doc or a rule
+
+Agent memory (`~/.claude/projects/<repo>/memory/`) is **private, unversioned, and pruned freely** —
+nothing in this repo can see it and no check validates a link into it. Every such backlink eventually
+points at a file that no longer exists, and a doc telling an agent to go read a missing file is worse
+than silence: it reads as "the real detail is elsewhere" and stops them looking here. Eight had
+already rotted when this was swept on 2026-08-07, two of them surviving an earlier sweep only because
+they were written with hyphens (`[[feedback-no-seed-ui]]`) instead of underscores.
+
+**If a fact is worth citing from a doc, it is durable — inline it here.** Cite other docs by relative
+path, code by `file.js` + symbol. If memory is genuinely the right home for something (agent
+behaviour, environment technique, who the user is), then the doc should not be reaching for it at all.
+
+*(The two bracketed forms in this section are deliberate examples — they are the only ones left in
+`docs/` and `.claude/rules/`, and a sweep for the pattern should expect exactly these two.)*
+
 **Exempt from the 200-line rule** (append-only evidence / coherent single-subject contracts — do
 NOT mechanically split these):
 - `builder/research/pod-perf-investigation.md` — research lab notebook (evidence log)

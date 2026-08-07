@@ -80,8 +80,8 @@ without re-patching.
 - **Cubric Vision UI plan:** a RADIO `Reference` | `Original`, ENABLED ONLY when audio is present. Drives the two
   gates (one mode live at a time). Implementation next → version bump → release.
 
-NO SEED UI — see [[feedback-no-seed-ui]]: random seed every gen, never expose seed; the lottery is handled by
-the model being seed-tolerant + workflow quality, not by user seed control.
+NO SEED UI — random seed every gen, never show or save the seed, and never propose a seed control. The
+lottery is handled by the model being seed-tolerant + workflow quality, not by user seed control.
 
 ### SHIP decision: one "Audio" RADIO — `Reference` | `Original`
 - **`Reference`** = this path (`LTXVReferenceAudio` voice-ID). Reliable for ONE voice identity. i2v.
