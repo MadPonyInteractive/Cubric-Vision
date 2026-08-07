@@ -107,6 +107,8 @@ imageio==2.37.4
     # via
     #   color-matcher
     #   scikit-image
+imageio-ffmpeg==0.6.0
+    # via -r dev_configs/python_deps.in
 importlib-metadata==9.0.0
     # via
     #   -r dev_configs/python_deps.in

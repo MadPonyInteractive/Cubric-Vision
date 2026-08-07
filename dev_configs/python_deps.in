@@ -79,6 +79,17 @@ filelock
 ftfy
 fvcore
 huggingface_hub>=0.25.2
+# imageio-ffmpeg — NOT a transitive, and NOT the same package as `imageio` (which the
+# lock already pins and which bundles no binary). It ships the ffmpeg executable, and
+# OUR MpiSaveVideo hard-requires one: help_funcs.py find_ffmpeg() tries
+# VHS_FORCE_FFMPEG_PATH, then this import, then shutil.which("ffmpeg"). The Windows
+# portable engine satisfies none of the other two, so without this line every video op
+# on every model fails at the last node, after the full sample (MPI-472, live 2026-08-07).
+# It was only ever declared by comfyui-videohelpersuite's requirements.txt, which nothing
+# installs since MPI-413 — and --check could not see it, because VHS is
+# `installRequirements: false`. The gate now reads every locked node, not just those.
+# The Pod is immune by accident: its image apt-installs ffmpeg, so which() finds one.
+imageio-ffmpeg
 importlib_metadata
 mediapipe>=0.8.0
 ninja~=1.11.1.4

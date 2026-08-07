@@ -50,6 +50,17 @@ const opencv = pinned.filter(n => n.startsWith('opencv-'));
 assert.deepStrictEqual(opencv, ['opencv-contrib-python-headless'],
     `exactly one opencv build may be pinned (contrib+headless is the superset), found: ${opencv.join(', ')}`);
 
+// 2b. MPI-472 — `imageio-ffmpeg` ships the ffmpeg BINARY, and our own MpiSaveVideo node
+// hard-requires one: help_funcs.find_ffmpeg() tries VHS_FORCE_FFMPEG_PATH, then this
+// import, then shutil.which("ffmpeg"). The Windows portable engine satisfies neither of
+// the other two, so without this pin every video op on every model fails at the last
+// node, after the full sample (observed live 2026-08-07). `imageio` is a DIFFERENT
+// package that bundles no binary — the lock pinning it is not this pin.
+assert.ok(pinned.includes('imageio-ffmpeg'),
+    'python_deps.txt must pin imageio-ffmpeg — MpiSaveVideo has no other ffmpeg source on '
+    + 'the portable engine, and it was only ever declared by a node requirements.txt we do '
+    + 'not install');
+
 // 3. The installer must pass --no-deps, or property 1 and 2 are undone at install time.
 const install = sharedSrc.match(/runPipCommand\(\[\s*'install',\s*'-r',\s*PYTHON_DEPS_PATH[^\]]*\]/);
 assert.ok(install, 'shared.js must install PYTHON_DEPS_PATH via runPipCommand');
@@ -77,11 +88,12 @@ assert.ok(!/runCustomCommand\(dep\.installRequirementsCommand/.test(dmSrc),
     'the per-node installRequirementsCommand step must not return in the LOCAL path '
     + '(the field itself stays — remoteModels.js still sends it to the Pod wrapper)');
 
-// 5. Every node the lock is compiled from must still be declared. If a node gains
-// requirements and nobody re-runs the compile, this is the cheap tell.
+// 5. Every node the lock is compiled from must still be declared. The compile reads ALL
+// of them, not the `installRequirements: true` subset — that flag is the Pod's bake/volume
+// split, and filtering the drift check on it is what hid MPI-472.
 const nodeLock = JSON.parse(fs.readFileSync(path.join(REPO, 'dev_configs', 'node_lock.json'), 'utf8'));
-const withReqs = Object.entries(nodeLock.nodes).filter(([, n]) => n.installRequirements);
-assert.ok(withReqs.length > 0, 'node_lock must declare at least one installRequirements node');
+const withReqs = Object.keys(nodeLock.nodes);
+assert.ok(withReqs.length > 0, 'node_lock must declare at least one custom node');
 assert.ok(lockText.includes('--no-deps'),
     'python_deps.txt must carry its own "install with --no-deps" instruction footer');
 

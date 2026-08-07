@@ -123,17 +123,32 @@ async function fetchText(url) {
 
 const rawUrl = (repo, commit, file) => `https://raw.githubusercontent.com/${repo}/${commit}/${file}`;
 
-/** Fetch the declared requirements of every node_lock node that has any. */
+/**
+ * Fetch the declared requirements of EVERY node_lock node that ships a file.
+ *
+ * Deliberately not filtered by `installRequirements`. That flag is the Pod's BAKE vs
+ * VOLUME split — it is not a claim about whether a node declares requirements, and since
+ * MPI-413 nothing runs a node's requirements.txt on either engine, so this file is the
+ * only thing that can install them. Filtering on it hid ComfyUI-VideoHelperSuite
+ * (`installRequirements: false`, two declared lines) for three months: one of them,
+ * `imageio-ffmpeg`, is a hard runtime requirement of OUR MpiSaveVideo node, and the first
+ * engine that fully reinstalled lost every video output on every model (MPI-472).
+ *
+ * A node with no requirements file 404s. That is the normal case, not an error.
+ */
 async function fetchNodeRequirements(lock) {
-    const nodes = Object.entries(lock.nodes).filter(([, n]) => n.installRequirements);
-    return Promise.all(nodes.map(async ([id, node]) => {
+    const fetched = await Promise.all(Object.entries(lock.nodes).map(async ([id, node]) => {
         if (node.source !== 'git-commit') {
             throw new Error(`${id}: only git-commit nodes can be fetched, got source="${node.source}"`);
         }
         const file = REQUIREMENTS_FILE[id] || 'requirements.txt';
-        const text = await fetchText(rawUrl(node.repo, node.commit, file));
-        return { id, file, requirements: parseRequirementsText(text) };
+        const url = rawUrl(node.repo, node.commit, file);
+        const res = await fetch(url);
+        if (res.status === 404) return null;
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${url}`);
+        return { id, file, requirements: parseRequirementsText(await res.text()) };
     }));
+    return fetched.filter(Boolean);
 }
 
 async function runCheck(lock) {
