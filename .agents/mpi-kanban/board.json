@@ -3,8 +3,6 @@
   "next_id": 470,
   "columns": {
     "todo": [
-      "MPI-468",
-      "MPI-467",
       "MPI-461",
       "MPI-458",
       "MPI-457",
@@ -37,6 +35,8 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-468",
+      "MPI-467",
       "MPI-466",
       "MPI-465",
       "MPI-462",
@@ -72,8 +72,26 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-07T03:14:00Z",
+  "updated_at": "2026-08-07T03:15:25Z",
   "events": [
+    {
+      "at": "2026-08-07T03:15:25Z",
+      "type": "task.moved",
+      "task": "MPI-468",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "note": "Umbrella owned by this session. MPI-467 (the GUARD) starts now; MPI-457 (the MECHANIC - in-place /engine/upgrade + the repo-side bump skill) deliberately stays in todo, on the umbrella build order: the playbook is the file both cards write into, so its headings get fixed before the mechanic lands. Machine constraints in brief.md re-checked and still hold - node_lock.json stays READ-only here, and the LTX raw template is another session's dirty file."
+    },
+    {
+      "at": "2026-08-07T03:15:25Z",
+      "type": "task.moved",
+      "task": "MPI-467",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "note": "Implementation started. Plan approved by the user 2026-08-07. Design settled in-session: the smoke runs on a RunPod GPU Pod in EU-RO-1 off a SEPARATE 320GB network volume, not locally - one GPU here and it is busy, and a local run can never hold every weight, which is exactly the silent-skip failure MPI-465 shipped. Card order L4 -> RTX 3090 -> RTX 4090, first available. Runner drives the running app on :3000 because every route already exists (/runpod/gpu-availability, volume CRUD, /remote/*), so it writes no new API code and exercises the path users hit. Execution unit is the OP (~35), not the workflow file (12) - klein-4b alone runs 7 branches through one graph. Minimization is generic by node TITLE (Input_Width/Height/Steps/Frames), never a per-graph table. Smoke set is deduped by class_type SET (a bump breaks a node) at the lowest tier per family: 12 graphs / 312.2GB today, 285.1GB once Wan t2v is deprecated, ~281GB once LTX is int8 at 21GB - both in flight in other sessions, so the runner RECOMPUTES from the registry and hardcodes nothing."
+    },
     {
       "at": "2026-08-05T15:05:00Z",
       "type": "task.updated",
