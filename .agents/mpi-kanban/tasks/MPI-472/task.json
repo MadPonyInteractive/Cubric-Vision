@@ -3,16 +3,16 @@
   "id": "MPI-472",
   "title": "imageio-ffmpeg is not in the dependency lock — a full engine reinstall kills ALL video output",
   "description": "MpiSaveVideo is our node and hard-requires ffmpeg, but the dependency is declared only in comfyui-videohelpersuite/requirements.txt. Pin it in dev_configs/python_deps.in and recompile.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "attention": {
-    "state": "required",
-    "reason": "Fix committed (13014988) and proved on the dev engine: the drift gate flips to DRIFT without the pin, and ensureCuratedPythonDeps() reinstalls imageio-ffmpeg into a stripped engine with get_ffmpeg_exe() resolving. The one product-level check is unrun - no mp4 has rendered since the fix.",
-    "updated_at": "2026-08-07T14:05:00Z"
+    "state": "cleared",
+    "reason": "Closed by the user on the local evidence in validation.md. The live mp4 render stays unrun - the next video generation on any model is the check, and the failure mode it would catch (no ffmpeg binary) is the one proved fixed.",
+    "updated_at": "2026-08-07T14:12:00Z"
   },
   "created_at": "2026-08-07T07:19:49Z",
-  "updated_at": "2026-08-07T14:05:00Z",
+  "updated_at": "2026-08-07T14:12:00Z",
   "links": {
     "brief": "brief.md",
     "checklist": "checklist.md",
