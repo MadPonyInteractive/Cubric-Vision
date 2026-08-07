@@ -78,11 +78,19 @@ export function vramFloorGb(totalWeights) {
     return Math.max(MIN_FLOOR, totalWeights * K);
 }
 
-/** RAM (GB) needed at a given VRAM level — rounded UP to 8GB; never under-states. */
+/**
+ * RAM (GB) needed at a given VRAM level — rounded UP to 4GB; never under-states.
+ *
+ * The rounding was 8GB, which buried a real difference: Wan needs 22.5GB at 12GB VRAM
+ * and 18.5GB at 16, and both landed in the same bucket, so the table printed `12→24`
+ * and `16→24` and read as "16GB buys you nothing". 4GB is still `ceil`, so it still
+ * only ever over-states — and the safety margin was never this rounding anyway, it is
+ * the OS-reserve footnote (~10–20GB) the table deliberately leaves out.
+ */
 export function ramNeededGb(totalWeights, vramGb) {
     const footprint = totalWeights + OVERHEAD;
     const spill = Math.max(0, footprint - vramGb);
-    return Math.ceil(spill / 8) * 8;
+    return Math.ceil(spill / 4) * 4;
 }
 
 /**
@@ -107,9 +115,9 @@ export function tradeTable(model, engine = null, userVramGb = null, variantToken
     const floor = override ?? nextCardSize(vramFloorGb(model ? totalWeights : 0));
 
     // The floor row, then the 8GB grid above it. Only the FLOOR moves onto the card
-    // ladder: `ramNeededGb` rounds up to 8GB, so a 4GB step through the body would put
-    // two adjacent rows in the same bucket (12→24 then 16→24), which reads as "16GB
-    // buys you nothing" — true of the rounding, useless as advice.
+    // ladder — it is the number that decides "can I run this at all", so it has to name
+    // a card that exists. Above it, 8GB steps are the useful granularity; a 4GB step
+    // would double the rows to say very little.
     const gridStart = Math.ceil(floor / 8) * 8;
     const steps = floor < gridStart ? [floor] : [];
     for (let v = gridStart; v <= gridStart + 80; v += 8) steps.push(v);   // bound never expected
@@ -143,13 +151,22 @@ export function demo() {
     //         + text-projection 2.31 + spatial-upscaler 1.5 ≈ 61.13GB of weights.
     // (Slightly above the 58.7 hand-estimate because the upscaler + audio VAE count.)
     const LTX = 58.7;  // use the calibration anchor's number for the pinned assertion
-    assert(ramNeededGb(LTX, 16) === 48, `LTX@16 → ${ramNeededGb(LTX, 16)} (want 48, raw 44 rounds up to 48)`);
-    assert(ramNeededGb(LTX, 24) === 40, `LTX@24 → ${ramNeededGb(LTX, 24)} (want 40)`);
-    assert(ramNeededGb(LTX, 32) === 32, `LTX@32 → ${ramNeededGb(LTX, 32)} (want 32)`);
-    assert(ramNeededGb(LTX, 48) === 16, `LTX@48 → ${ramNeededGb(LTX, 48)} (want 16)`);
+    // At 4GB rounding the anchor comes out EXACT — 44 is the measured free-RAM figure
+    // on the 4060 Ti box, and the table now prints it rather than 8GB-rounding it to 48.
+    assert(ramNeededGb(LTX, 16) === 44, `LTX@16 → ${ramNeededGb(LTX, 16)} (want 44, the measured box)`);
+    assert(ramNeededGb(LTX, 24) === 36, `LTX@24 → ${ramNeededGb(LTX, 24)} (want 36)`);
+    assert(ramNeededGb(LTX, 32) === 28, `LTX@32 → ${ramNeededGb(LTX, 32)} (want 28)`);
+    assert(ramNeededGb(LTX, 48) === 12, `LTX@48 → ${ramNeededGb(LTX, 48)} (want 12)`);
     assert(ramNeededGb(LTX, 64) === 0,  `LTX@64 → ${ramNeededGb(LTX, 64)} (want 0, resident)`);
     // raw need at V=16 is 44 (the user's known-good free-RAM figure) before rounding:
     assert(Math.max(0, LTX + OVERHEAD - 16) === 44, 'LTX raw need @16 must be 44 (user box anchor)');
+
+    // A 4GB VRAM step must move the RAM figure. Wan needs 22.5GB at 12 and 18.5 at 16;
+    // under the old 8GB rounding both printed 24, so the table said 16GB bought nothing.
+    assert(ramNeededGb(33.2, 12) === 24 && ramNeededGb(33.2, 16) === 20,
+        `wan 12/16 → ${ramNeededGb(33.2, 12)}/${ramNeededGb(33.2, 16)} (want 24/20, not 24/24)`);
+    // Still only ever over-states — never under, which would be an OOM.
+    assert(ramNeededGb(33.2, 12) >= 33.2 + OVERHEAD - 12, 'rounding must never under-state');
 
     // Floors: SDXL (6.5) clamps to MIN_FLOOR 8; LTX (58.7) → 14.7; Wan (20) → 8 (accepted).
     assert(vramFloorGb(6.5) === 8, `SDXL floor → ${vramFloorGb(6.5)} (want 8 via MIN_FLOOR)`);

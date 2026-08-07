@@ -66,12 +66,26 @@ footnote must say `min 12GB VRAM` — it and the first row now come from the sam
 number, and before this they could disagree (Wan's footnote said `min 8GB` above a
 table starting at 16).
 
-**Do:** check a small model (SDXL NSFW) and LTX 2.3 High.
-**See:** byte-identical to before — `8GB min` and `16GB min` respectively. Only those
-three cards moved.
+**See on Wan and Qwen specifically:** `12→~24GB`, `16→~20GB`, `24→~12GB`, `32→~4GB`,
+`40→—`. The 12 and 16 rows must show DIFFERENT RAM figures. If both read `24GB`, the
+RAM column is still rounding to 8GB.
 
-> `12→24` and `16→24` on Wan's table are the SAME RAM figure on purpose: RAM rounds up
-> to 8GB, and 12 and 16 fall in one bucket. Not a bug.
+**Do:** check a small model (SDXL NSFW) and LTX 2.3 High.
+**See:** the FLOORS are unchanged — `8GB min` and `16GB min` respectively. Only the
+three cards above changed floor. Every model's RAM figures moved though (see below).
+
+## 2c. Every RAM figure drops by up to 4GB (added 2026-08-07)
+
+Reported on the back of 2b: Wan read `12→24` and `16→24`, the same number twice, which
+says a 16GB card buys nothing over a 12GB one. It does — 22.5GB vs 18.5GB — the 8GB
+rounding was burying it. The RAM column now rounds up to 4GB. Still `ceil`, so still
+only ever over-stating; the real margin is the OS-reserve footnote, not this rounding.
+
+**Do:** open LTX 2.3 (High).
+**See:** `16GB → ~48GB` — unchanged, because its raw figure already sat near an 8GB
+step. 17 of 20 models DID move: e.g. Krea 2 `8→~20GB` (was 24), SDXL `8→~4GB` (was 8).
+**See:** no row reads a LOWER RAM figure at a LOWER VRAM level anywhere. That would be
+the one real bug this change could introduce.
 
 ## 3. The tier letter only appears when it disambiguates
 

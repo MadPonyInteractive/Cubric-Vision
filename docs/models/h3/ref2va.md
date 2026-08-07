@@ -116,5 +116,6 @@ Not defects, just untested as of 2026-08-07: the `max` vs `match` cost on this c
 the `<Audio 2>` shift in a live run (only visible via `ref_tags` on the node output),
 the 15-chip strip scroll, and the status bar reading `1/2` then `2/2` across a run.
 
-The ModelDef also still borrows fl2va's `minimax_h3_preview.mp4` as its card video.
-A judged ref2va clip now exists, so this is a filename swap and nothing else.
+The ModelDef still borrows fl2va's `minimax_h3_preview.mp4` as its card video, and
+that **stays** — the user's call on 2026-08-07, after the judged clips existed. Do not
+re-raise it as an open item; it is a decision, not a leftover.

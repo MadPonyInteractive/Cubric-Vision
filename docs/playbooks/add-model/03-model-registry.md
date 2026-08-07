@@ -35,7 +35,7 @@ Key fields, with the 5B choices:
   motionIntensity control; `branchingContinue` → Continue button. Set/omit to match
   the workflow's actual nodes.
 - **VRAM/RAM table is automatic:** `footprint.js` sums dep `size` fields →
-  `vramFloor = max(8, totalWeights*0.25)`, `ram = ceil(max(0, weights+1.3-vram)/8)*8`.
+  `vramFloor = max(8, totalWeights*0.25)`, `ram = ceil(max(0, weights+1.3-vram)/4)*4`.
   The floor is then lifted onto `CARD_SIZES` (8 / 12 / 16 / then 8s) so it names a card
   you can buy; the table body steps by 8. Get the dep `size` strings right and the hover
   trade-table is correct. `sizeTier` is only a badge. Reach for `minVramGb` ONLY when the

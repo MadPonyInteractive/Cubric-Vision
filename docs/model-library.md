@@ -33,9 +33,17 @@ what to restore, together, if a future model brings operation groups back.
 VRAM" reads as a spec when the table's job is to name a card you can buy — so it is lifted onto
 **`CARD_SIZES`, the sizes cards are actually sold in**: 8, 12, 16, then 8s.
 
-**The floor moves onto that ladder; the body of the table stays on the 8GB grid.** That split is
-deliberate: `ramNeededGb` rounds up to 8GB, so stepping the whole table by 4 would put two adjacent
-rows in the same bucket (`12→24` then `16→24`), which reads as "16GB buys you nothing".
+**The floor moves onto that ladder; the body of the table stays on the 8GB grid.** The floor is the
+number that decides *can I run this at all*, so it has to name a card that exists; above it, 8GB
+steps are the useful granularity.
+
+**The RAM column rounds up to 4GB, not 8.** At 8 it buried a real difference — Wan needs 22.5GB at
+12GB VRAM and 18.5GB at 16, and both landed in one bucket, so the table printed `12→24` and
+`16→24` and read as *"16GB buys you nothing"*. 4GB is still `ceil`, so it still only ever
+over-states, and the margin was never this rounding: it is the OS-reserve footnote (~10–20GB) the
+table deliberately leaves out. A side effect worth knowing — the LTX calibration anchor now comes
+out **exact** (44GB at 16GB VRAM, the measured free-RAM figure on the 4060 Ti box) instead of being
+rounded up to 48.
 
 It used to round the floor up to the 8GB grid, which has **no 12 in it** — the most common
 mid-range size there is. Any fit just over 8 was catapulted to 16, nearly 2x overstated, on three
