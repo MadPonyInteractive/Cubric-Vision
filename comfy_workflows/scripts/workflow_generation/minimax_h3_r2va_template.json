@@ -38,38 +38,6 @@
       "title": "Load CLIP"
     }
   },
-  "133": {
-    "inputs": {
-      "clip": [
-        "252",
-        1
-      ],
-      "vae": [
-        "121",
-        0
-      ],
-      "prompt": [
-        "232",
-        0
-      ],
-      "width": [
-        "167",
-        0
-      ],
-      "height": [
-        "168",
-        0
-      ],
-      "length": [
-        "213",
-        0
-      ]
-    },
-    "class_type": "MiniMaxH3ImageToVideo",
-    "_meta": {
-      "title": "MiniMax H3 Image to Video"
-    }
-  },
   "140": {
     "inputs": {
       "scheduler": "simple",
@@ -87,12 +55,9 @@
   },
   "141": {
     "inputs": {
+      "step": 10,
       "sigmas": [
         "140",
-        0
-      ],
-      "step": [
-        "309",
         0
       ]
     },
@@ -108,7 +73,7 @@
         0
       ],
       "conditioning": [
-        "264",
+        "330",
         0
       ]
     },
@@ -157,7 +122,7 @@
         0
       ],
       "latent_image": [
-        "264",
+        "330",
         1
       ]
     },
@@ -235,7 +200,7 @@
   },
   "167": {
     "inputs": {
-      "int": 352
+      "int": 1920
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -244,7 +209,7 @@
   },
   "168": {
     "inputs": {
-      "int": 608
+      "int": 1088
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -269,7 +234,7 @@
   },
   "195": {
     "inputs": {
-      "int": 4
+      "int": 5
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -314,7 +279,7 @@
   },
   "212": {
     "inputs": {
-      "int": 2
+      "int": 1
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -346,89 +311,9 @@
       "title": "Mpi Convert"
     }
   },
-  "217": {
-    "inputs": {
-      "channel": "alpha",
-      "block_if_empty": false,
-      "string": [
-        "254",
-        0
-      ]
-    },
-    "class_type": "MpiLoadImageFromPath",
-    "_meta": {
-      "title": "start"
-    }
-  },
-  "218": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 32,
-      "device": "cpu",
-      "image": [
-        "217",
-        0
-      ],
-      "width": [
-        "167",
-        0
-      ],
-      "height": [
-        "168",
-        0
-      ]
-    },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
-    }
-  },
-  "219": {
-    "inputs": {
-      "channel": "alpha",
-      "block_if_empty": false,
-      "string": [
-        "258",
-        0
-      ]
-    },
-    "class_type": "MpiLoadImageFromPath",
-    "_meta": {
-      "title": "end"
-    }
-  },
-  "220": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 32,
-      "device": "cpu",
-      "image": [
-        "219",
-        0
-      ],
-      "width": [
-        "167",
-        0
-      ],
-      "height": [
-        "168",
-        0
-      ]
-    },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
-    }
-  },
   "232": {
     "inputs": {
-      "string": "She arrives from the right of the frame and leans on the wall "
+      "string": "Side pan of a rocking chair. Scene change to: why the angle of them off a man walking towards the rocking chair. He sits on the rocking chair, a close-up shot of his face, looking down and smiling. White shot of his cats showing up, curling at his feet. One of the cats jumps on him. All of a sudden a demon comes out of the fireplace "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -549,184 +434,6 @@
       "title": "Input_Lora_6"
     }
   },
-  "253": {
-    "inputs": {
-      "string": ""
-    },
-    "class_type": "MpiString",
-    "_meta": {
-      "title": "Input_Start_Frame"
-    }
-  },
-  "254": {
-    "inputs": {
-      "any": [
-        "253",
-        0
-      ]
-    },
-    "class_type": "MpiAnyChecker",
-    "_meta": {
-      "title": "Mpi Any Checker"
-    }
-  },
-  "257": {
-    "inputs": {
-      "string": ""
-    },
-    "class_type": "MpiString",
-    "_meta": {
-      "title": "Input_End_Frame"
-    }
-  },
-  "258": {
-    "inputs": {
-      "any": [
-        "257",
-        0
-      ]
-    },
-    "class_type": "MpiAnyChecker",
-    "_meta": {
-      "title": "Mpi Any Checker"
-    }
-  },
-  "263": {
-    "inputs": {
-      "any_1": [
-        "133",
-        0
-      ],
-      "any_2": [
-        "133",
-        1
-      ]
-    },
-    "class_type": "MpiPacker",
-    "_meta": {
-      "title": "Mpi Packer"
-    }
-  },
-  "264": {
-    "inputs": {
-      "pack": [
-        "292",
-        0
-      ]
-    },
-    "class_type": "MpiUnpacker",
-    "_meta": {
-      "title": "Mpi Unpacker"
-    }
-  },
-  "275": {
-    "inputs": {
-      "clip": [
-        "252",
-        1
-      ],
-      "vae": [
-        "121",
-        0
-      ],
-      "first_frame": [
-        "218",
-        0
-      ],
-      "prompt": [
-        "232",
-        0
-      ],
-      "width": [
-        "167",
-        0
-      ],
-      "height": [
-        "168",
-        0
-      ],
-      "length": [
-        "213",
-        0
-      ]
-    },
-    "class_type": "MiniMaxH3ImageToVideo",
-    "_meta": {
-      "title": "MiniMax H3 Image to Video"
-    }
-  },
-  "276": {
-    "inputs": {
-      "any_1": [
-        "275",
-        0
-      ],
-      "any_2": [
-        "275",
-        1
-      ]
-    },
-    "class_type": "MpiPacker",
-    "_meta": {
-      "title": "Mpi Packer"
-    }
-  },
-  "285": {
-    "inputs": {
-      "clip": [
-        "252",
-        1
-      ],
-      "vae": [
-        "121",
-        0
-      ],
-      "first_frame": [
-        "218",
-        0
-      ],
-      "last_frame": [
-        "220",
-        0
-      ],
-      "prompt": [
-        "232",
-        0
-      ],
-      "width": [
-        "167",
-        0
-      ],
-      "height": [
-        "168",
-        0
-      ],
-      "length": [
-        "213",
-        0
-      ]
-    },
-    "class_type": "MiniMaxH3ImageToVideo",
-    "_meta": {
-      "title": "MiniMax H3 Image to Video"
-    }
-  },
-  "286": {
-    "inputs": {
-      "any_1": [
-        "285",
-        0
-      ],
-      "any_2": [
-        "285",
-        1
-      ]
-    },
-    "class_type": "MpiPacker",
-    "_meta": {
-      "title": "Mpi Packer"
-    }
-  },
   "289": {
     "inputs": {
       "passthrough": [
@@ -751,98 +458,51 @@
       "title": "Mpi Clear Vram"
     }
   },
-  "291": {
+  "320": {
     "inputs": {
-      "mode": "both_false",
-      "a": [
-        "254",
-        1
-      ],
-      "b": [
-        "258",
-        1
-      ]
-    },
-    "class_type": "MpiBooleanCompare",
-    "_meta": {
-      "title": "Mpi Boolean Compare"
-    }
-  },
-  "292": {
-    "inputs": {
-      "true": [
-        "263",
+      "is_continue": false,
+      "is_preview": false,
+      "save_path": "mpi_stage1",
+      "load_path": "mpi_stage1",
+      "latent": [
+        "153",
         0
       ],
-      "false": [
-        "305",
-        0
-      ],
-      "boolean": [
-        "291",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "is t2v"
-    }
-  },
-  "293": {
-    "inputs": {
-      "true": [
-        "276",
-        0
-      ],
-      "false": [
-        "286",
-        0
-      ],
-      "boolean": [
-        "294",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "is i2v"
-    }
-  },
-  "294": {
-    "inputs": {
-      "mode": "a_true_b_false",
-      "a": [
-        "254",
-        1
-      ],
-      "b": [
-        "258",
+      "denoised": [
+        "153",
         1
       ]
     },
-    "class_type": "MpiBooleanCompare",
+    "class_type": "MpiStageLatents",
     "_meta": {
-      "title": "Mpi Boolean Compare"
+      "title": "Input_Video_Latent"
     }
   },
-  "303": {
+  "321": {
     "inputs": {
-      "any_1": [
-        "304",
-        0
-      ],
-      "any_2": [
-        "304",
-        1
-      ]
+      "string": "C:\\Users\\Fabio\\Downloads\\inpaint_007.png",
+      "channel": "alpha",
+      "block_if_empty": false
     },
-    "class_type": "MpiPacker",
+    "class_type": "MpiLoadImageFromPath",
     "_meta": {
-      "title": "Mpi Packer"
+      "title": "Input_Image"
     }
   },
-  "304": {
+  "329": {
     "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image_2"
+    }
+  },
+  "330": {
+    "inputs": {
+      "ref_image_size": "max",
       "clip": [
         "252",
         1
@@ -851,8 +511,80 @@
         "121",
         0
       ],
-      "last_frame": [
-        "220",
+      "audio_vae": [
+        "122",
+        0
+      ],
+      "ref_image_1": [
+        "321",
+        0
+      ],
+      "ref_image_2": [
+        "329",
+        0
+      ],
+      "ref_image_3": [
+        "336",
+        0
+      ],
+      "ref_image_4": [
+        "337",
+        0
+      ],
+      "ref_image_5": [
+        "338",
+        0
+      ],
+      "ref_image_6": [
+        "339",
+        0
+      ],
+      "ref_image_7": [
+        "345",
+        0
+      ],
+      "ref_image_8": [
+        "343",
+        0
+      ],
+      "ref_image_9": [
+        "344",
+        0
+      ],
+      "ref_video_1": [
+        "331",
+        0
+      ],
+      "ref_video_audio_1": [
+        "331",
+        1
+      ],
+      "ref_video_2": [
+        "332",
+        0
+      ],
+      "ref_video_audio_2": [
+        "332",
+        1
+      ],
+      "ref_video_3": [
+        "346",
+        0
+      ],
+      "ref_video_audio_3": [
+        "346",
+        1
+      ],
+      "ref_audio_1": [
+        "333",
+        0
+      ],
+      "ref_audio_2": [
+        "334",
+        0
+      ],
+      "ref_audio_3": [
+        "347",
         0
       ],
       "prompt": [
@@ -872,62 +604,161 @@
         0
       ]
     },
-    "class_type": "MiniMaxH3ImageToVideo",
+    "class_type": "MpiH3References",
     "_meta": {
-      "title": "MiniMax H3 Image to Video"
+      "title": "Input_Refs"
     }
   },
-  "305": {
+  "331": {
     "inputs": {
-      "true": [
-        "293",
-        0
-      ],
-      "false": [
-        "303",
-        0
-      ],
-      "boolean": [
-        "254",
-        1
-      ]
+      "string": "",
+      "block_if_empty": false
     },
-    "class_type": "MpiIfElse",
+    "class_type": "MpiLoadVideo",
     "_meta": {
-      "title": "has img1"
+      "title": "Input_Video"
     }
   },
-  "309": {
+  "332": {
     "inputs": {
-      "math_expression": "10 if a else 5",
-      "a": [
-        "291",
-        0
-      ]
+      "string": "",
+      "block_if_empty": false
     },
-    "class_type": "MpiMath",
+    "class_type": "MpiLoadVideo",
     "_meta": {
-      "title": "Mpi Math"
+      "title": "Input_Video_2"
     }
   },
-  "320": {
+  "333": {
     "inputs": {
-      "is_continue": false,
-      "is_preview": false,
-      "save_path": "mpi_stage1",
-      "load_path": "mpi_stage1",
-      "latent": [
-        "153",
-        0
-      ],
-      "denoised": [
-        "153",
-        1
+      "string": "",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Input_Audio"
+    }
+  },
+  "334": {
+    "inputs": {
+      "string": "",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Input_Audio_2"
+    }
+  },
+  "335": {
+    "inputs": {
+      "mode": "value",
+      "prefix": "[RefTag]",
+      "message": "",
+      "any": [
+        "330",
+        2
       ]
     },
-    "class_type": "MpiStageLatents",
+    "class_type": "MpiLogger",
     "_meta": {
-      "title": "Input_Video_Latent"
+      "title": "Mpi Logger"
+    }
+  },
+  "336": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image_3"
+    }
+  },
+  "337": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image_4"
+    }
+  },
+  "338": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image_5"
+    }
+  },
+  "339": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image_6"
+    }
+  },
+  "343": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image_8"
+    }
+  },
+  "344": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image_9"
+    }
+  },
+  "345": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image_7"
+    }
+  },
+  "346": {
+    "inputs": {
+      "string": "",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadVideo",
+    "_meta": {
+      "title": "Input_Video_3"
+    }
+  },
+  "347": {
+    "inputs": {
+      "string": "",
+      "block_if_empty": false
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Input_Audio_3"
     }
   }
 }
