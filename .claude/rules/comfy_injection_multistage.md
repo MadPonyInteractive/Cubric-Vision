@@ -7,7 +7,38 @@
 > preview -> stage-2, LoadLatent staging, or dual-latent (LTX).
 
 
-Operations with `_ms` suffix (e.g. `t2v_ms`, `i2v_ms`) are **multi-stage**: a low-res preview pass plus a final pass that consumes the saved stage-1 latent. The two phases are implemented as **two separate workflow files** rather than one branched workflow, because ComfyUI's `/prompt` API has no runtime node-bypass flag — a single-file branched workflow always executes every node referenced in the dependency graph regardless of any `MpiIfElse`/boolean gating.
+> ## SUPERSEDED IN PART — read this before anything below (MPI-449/452/456/466)
+>
+> **The two-file premise is dead, and so is `LoadLatent`.** Everything below was
+> written when ComfyUI's `/prompt` API had no way to skip a node, which forced a
+> physically separate `_stage2` file per model. **Lazy inputs fixed that** —
+> `MpiBlocker` and `MpiSaveLatent.enabled` became lazy (MPI-449), so a gated
+> sampler genuinely does not run instead of running and being discarded.
+>
+> What is true now:
+>
+> - **ONE file carries both stages.** `MpiStageLatents` (titled
+>   `Input_Video_Latent`) replaced the whole save/load/boolean cluster; its
+>   `is_continue` / `is_preview` are WIDGETS, written by `_buildParams` as
+>   `Input_Video_Latent.is_continue` / `.is_preview`. Models declare
+>   `capabilities.singleFileStages: true`, which stops `resolveWorkflowFile`
+>   appending `_stage2`. **No `_stage2` file exists anywhere** — H3 never had one,
+>   WAN and LTX lost theirs.
+> - **Nothing is staged for stage 1.** The validation trap below was real for
+>   `LoadLatent`, which is gone from every shipped graph, so
+>   `WORKFLOW_INPUT_DEFAULTS`, `POST /comfy/prepare-workflow-inputs` and the three
+>   dummy `.latent` files were deleted (MPI-466). `POST /comfy/stage-preview-latent`
+>   is a DIFFERENT mechanism and still runs: it writes the real per-preview latent
+>   where `load_path` reads it.
+> - **The dual-latent split is gone** — `MpiStageLatents` handles video+audio in one
+>   node, so `Input_Audio_Latent` / `Output_Audio_Latent` no longer exist.
+>
+> Sections below that describe the two-file swap, `Stage1_Bypass` derivation,
+> `LoadLatent` injection or latent staging are HISTORY. They are kept because the
+> reasoning explains why the current design looks the way it does, and rewriting
+> the file wholesale is its own task. Trust this banner over them.
+
+Operations with `_ms` suffix (e.g. `t2v_ms`, `i2v_ms`) are **multi-stage**: a low-res preview pass plus a final pass that consumes the saved stage-1 latent. The two phases were originally implemented as **two separate workflow files** rather than one branched workflow, because ComfyUI's `/prompt` API had no runtime node-bypass flag — a single-file branched workflow always executed every node referenced in the dependency graph regardless of any `MpiIfElse`/boolean gating. (Lazy inputs removed that constraint — see the banner.)
 
 **Multi-stage is per-MODEL, not per-op (MPI-127).** The `_ms` op keys (`t2v_ms`/`i2v_ms`) are SHARED across WAN and LTX. Whether a model actually exposes the preview/stage-2 flow is gated by `model.capabilities.multiStage`: both WAN and LTX = `true` (show the `previewStage` toggle, run the two-file flow below). LTX was single-stage in MPI-127 (`multiStage:false`) because preview→stage-2 needs DUAL-latent staging (video + audio); **MPI-128 wired that and flipped LTX to `multiStage:true`** (see dual-latent note under "LoadLatent injection contract"). So "an `_ms` op = multi-stage" is only true when the active model declares `multiStage`. A model with `multiStage:false` would use only the stage-1 file (no stage-2). Separately, `capabilities.branchingContinue` gates the Continue (branch) button: WAN = `true` (per-stage LoRAs vary stage-2); LTX omits it → **Finish-only** (refined LTX workflow locks stage-2 to stage-1, prompt has no effect on the continuation). See `commandAllowsBranchingContinue(key, model)` in `commandRegistry.js`.
 
@@ -54,7 +85,7 @@ Single-stage workflows (no `_ms`) MUST NOT have the `Preview_Only` node and need
 
 **`MpiString` = a media PATH. `MpiText` = plain text/data. Picking the wrong one breaks REMOTE ONLY (MPI-380).** `PATH_MEDIA_CLASSES` in `comfyController` holds `MpiLoadImageFromPath`, `MpiLoadAudio`, `MpiLoadVideo`, `VHS_LoadVideoPath` **and `MpiString`** — so ANY param whose same-titled node is an `MpiString` is classified `imagepath` and pushed through `_resolveMediaPath()` and, on a remote engine, `_uploadRemoteMedia()`. Aim a param carrying non-path data (JSON, a number, a prompt fragment) at an `MpiString` and the Pod tries to upload a file named after that data. **Locally it passes** — `_resolveMediaPath` returns something harmless and nothing uploads — so a green local test proves nothing about this. `MpiText` subclasses `MpiString` in the node source but is a distinct `class_type`, is NOT in the set, and exposes the same `string` field, so switching is a one-word change in the raw graph (also fix `Node name for S&R` and the output name → `Text`). Shipped precedent both ways in `klein_t2i.json`: `MpiText` for `Input_Positive` / `Input_Negative`, `MpiString` for `Input_Mask` / `Input_Image_2`. Live example of the data case: SAM3's `Input_Points_Positive` / `Input_Points_Negative` in `img_auto_mask.json`, guarded by `tests/auto-mask-inject-titles.test.cjs`.
 
-**The latent contract:** every baked `LoadLatent.inputs.latent` filename in a shipped workflow MUST have a real default file present. The mechanism is the flat `WORKFLOW_INPUT_DEFAULTS` list in `routes/comfy.js` — `POST /comfy/prepare-workflow-inputs` copies all of it from repo-owned `comfy_workflows/input/` into the engine `input/` before EVERY `_ms` submit (so it survives the shutdown GC). When you add a model, for each `LoadLatent` node ship its baked-name latent into `comfy_workflows/input/` and add the name to `WORKFLOW_INPUT_DEFAULTS`. Multi-latent models (LTX = video + audio) need ALL their latent names listed; the single `ComfyUI_00001_.latent` default only covers WAN. Media inputs (image/mask/video/audio) need NOTHING staged — they read a project-folder path from `string`. Still test a video model with NO audio/frame input to confirm the path nodes self-gate cleanly.
+**The latent contract — DELETED, do not re-add (MPI-466).** This paragraph used to say every baked `LoadLatent.inputs.latent` filename needed a real default staged from `comfy_workflows/input/` via `WORKFLOW_INPUT_DEFAULTS` + `POST /comfy/prepare-workflow-inputs`, and that a new model must ship one latent per `LoadLatent` node. All of it is gone: `MpiStageLatents` reads a `load_path` widget the app writes per run, no shipped graph has a `LoadLatent`, and the route, the list and the three dummy files were removed. **Adding a model now stages nothing** — latents included. `tests/optional-media-placeholder.test.cjs` fails if either a bare `Load*` node or `WORKFLOW_INPUT_DEFAULTS` comes back. Media inputs (image/mask/video/audio) still need nothing staged — they read a project-folder path from `string`. Still test a video model with NO audio/frame input to confirm the path nodes self-gate cleanly.
 
 Note the injector's `Input_Video_Latent` override (`commandExecutor` ~L479) points stage-1 at `ComfyUI_00001_.latent` regardless of model — fine because stage-1 never *reads* the latent (validation only), and that default is always staged. A model's own baked latent name still needs staging for the nodes the override doesn't rename.
 

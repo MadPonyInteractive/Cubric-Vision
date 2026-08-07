@@ -150,6 +150,12 @@
 
 ## fixes
 
+- **LTX video generation works again.** Every LTX generation has been failing since the
+  1.3.0 release — the run stopped at the first sampling step and produced nothing. A
+  ComfyUI update changed how one of its components hands over the upscaler model, and the
+  node that reads it had not caught up. Both are updated, and LTX runs end to end again.
+  If you have been avoiding LTX because it looked broken, it was, and it is not any more.
+
 - **Models you never installed no longer show a half-finished download bar.** Six model
   tiles were showing progress bars — 17%, 22%, 33%, 35%, 36%, 49% — for downloads nobody
   ever started. The bar was counting files that belong to a model you *do* have installed,

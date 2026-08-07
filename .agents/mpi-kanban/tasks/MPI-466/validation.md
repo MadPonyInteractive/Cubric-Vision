@@ -53,6 +53,21 @@ resumes rather than restarting. **Then `HEAD` the public URL and confirm `conten
 matches 21,505,993,424.** Until that lands, a fresh install of the balanced tier would
 404 — local testing is unaffected because the weight is already on `G:/CubricModels`.
 
+## A changelog entry is DRAFTED AND HELD — write it when section 1 passes
+
+`docs/releases/UNRELEASED.md` already carries MPI-465's fix line (LTX was dead in
+1.3.0/1.3.1). **This card's own entry was deliberately NOT written**, because announcing a
+model change that has never generated in the app is the exact stale-note failure the
+release check exists to catch. Add it to `## importantChanges` once an LTX run passes:
+
+> **LTX's Balanced tier moved to a better, smaller model file.** The two GPU-specific
+> options (RTX 50 Series / RTX 40 & Older) are gone — one file now runs on every card, at
+> 20 GB instead of 24–25 GB, with better detail and sound and a little more speed. If you
+> already have LTX Balanced installed, the new file downloads once and the old one is
+> cleaned up.
+
+Check the wording against what the run actually shows before shipping it.
+
 ## Deliberately NOT done
 
 **The `variants` axis is now dead code and was left in place.** LTX was its last consumer,

@@ -33,15 +33,17 @@
 > `resolveWorkflowFile(model, op, engine, {stage2})` swaps the basename (and
 > appends the engine `_gguf` suffix on a Pod) before fetch. (MPI-165)
 >
-> **LoadLatent injection (always-on for `_ms`):** Before every stage-1 run,
-> `commandExecutor` calls `POST /comfy/prepare-workflow-inputs` to copy the
-> repo-owned default latent `comfy_workflows/input/ComfyUI_00001_.latent` into
-> the active ComfyUI `input/` folder, then injects
-> `LoadLatent: 'ComfyUI_00001_.latent'`. On stage-2 runs, the per-preview
-> `<previewUuid>.latent` is copied in by `POST /comfy/stage-preview-latent` and
-> the same `LoadLatent` slot receives that filename. ComfyUI validates the
-> `LoadLatent` selector on every submission regardless of reachability, so the
-> param must always be set.
+> **Stage latents (MPI-466 — this block used to describe `LoadLatent`).** No
+> shipped graph carries a `LoadLatent` any more. `MpiStageLatents` (titled
+> `Input_Video_Latent`) is the whole two-stage handshake in one node: it saves the
+> stage-1 latent, loads it on a continue, and gates both branches from
+> `is_continue` / `is_preview` WIDGETS that `_buildParams` writes as
+> `Input_Video_Latent.is_continue` / `.is_preview`. Stage 2 still gets its file
+> from `POST /comfy/stage-preview-latent`, which writes the per-preview
+> `<previewUuid>.latent` into the engine `input/` where the node's `load_path`
+> looks first. Stage 1 needs NOTHING staged — the validation trap that forced a
+> dummy default died with the last `LoadLatent`, and
+> `POST /comfy/prepare-workflow-inputs` was deleted with it.
 >
 > **Preview → Continue (branching) vs Finish (replace):** Preview cards expose
 > two icon-only buttons (Continue, Finish). Continue enqueues a stage-2 run
