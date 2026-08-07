@@ -240,3 +240,57 @@ adjacent change to this same guard.
 `4x-AnimeSharp` (65MB) was kept — the route classifies it `universal` and never deletes
 those. All six phantom bars are now gone from the Model Library. Per the user, no
 reclaim UI: a system that leaves no leftovers has nothing to clean up.
+
+---
+
+## The collector, built 2026-08-07 — and why "it must have existed before" is not what happened
+
+The user's read was that a sweep existed and a refactor dropped it. History says otherwise,
+and the real answer is worse:
+
+- **No orphan collector has ever existed in this codebase.** `git log` has no removal.
+- **"GC protection" in this repo means the opposite thing.** `33b09b3e` (MPI-310 step 0) and
+  `tests/plugin-dep-gc.test.cjs` protect app/plugin deps *from* deletion by the uninstall
+  guards. Protection lists, never a collector.
+- **MPI-314 (2026-07-19) is this exact defect, and it was closed WITHOUT shipping code.**
+  Title: "Orphaned-dep reclaim: ownerless weight files have no UI path to delete them". An
+  agent ran a one-off read-only scan, found 8 ownerless LTX-2.3 deps = 18.62GB, deleted them
+  by hand on the user's go-ahead, and closed the card with: *"NO code shipped and NO cleanup
+  UI built ... this was a one-time fossil, not a live leak."*
+
+**That verdict is now disproven.** 19 days later a different model family (Boogu + Chroma)
+stranded a fresh 15.91GB by the same mechanism. Two independent occurrences in under three
+weeks is a live leak. MPI-314 also specified the design that was never built, and this
+implementation follows it: route the decision through the SAME protection primitives, never
+write a second parallel notion of "orphan".
+
+### What shipped
+
+`_orphanedDepIds` + `_sweepOrphanedDeps` in `routes/downloadManager.js`, called at the end of
+the LOCAL uninstall route, gated on `deleteFiles`. The orphan test is
+`_localSharedDepsMap(null)` — the existing guard with nothing excluded, which already unions
+every installed model's deps, live install jobs, flow deps and plugin deps. A dep on disk and
+absent from that map is wanted by nobody.
+
+Refusals, all tested: `custom_nodes` (work-not-bytes, and the local
+`custom_nodes/ComfyUI-MpiNodes` is a SYMLINK to the node source repo — sweeping it would
+destroy that repo), `targetPath` engine-anchored weights, universal workflow deps, and
+anything resolving outside the managed models root. Trash first with a permanent-delete
+fallback, same as the uninstall loop.
+
+`tests/orphan-sweep.test.cjs` — 5 tests over the real functions against a throwaway
+`CUBRIC_MODELS_ROOT`. Suite: 472 pass, 0 fail (was 467).
+
+Read-only classification against the user's REAL disk: 65 deps protected, 41 orphan-eligible
+registry-wide, **0 actually on disk** — the sweep would delete nothing right now, which is
+correct because this session already reclaimed the 8.
+
+### Deliberately NOT shipped — needs its own card
+
+- **The REMOTE twin.** The engine-split rule wants both. The remote branch returns before the
+  sweep, so a Pod volume can still strand deps. It needs `_remoteSharedDepIds` plus a volume
+  file inventory, and it cannot be verified without a live Pod — shipping unverifiable
+  deletion code at a user's volume is the wrong trade. Carded.
+- **Cancelled/failed install cleanup as a second trigger.** An install that fetches a shared
+  dep and is then cancelled can strand it. Uninstall is the mechanism proven to strand twice;
+  this one is theoretical so far.

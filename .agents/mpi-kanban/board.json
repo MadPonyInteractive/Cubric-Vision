@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 464,
+  "next_id": 465,
   "columns": {
     "todo": [
+      "MPI-464",
       "MPI-461",
       "MPI-458",
       "MPI-457",
@@ -66,7 +67,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-06T23:33:00Z",
+  "updated_at": "2026-08-07T00:21:00Z",
   "events": [
     {
       "at": "2026-08-05T15:05:00Z",
@@ -2065,6 +2066,14 @@
       "from": "todo",
       "to": "doing",
       "summary": "Moved to doing. Defect 1 fix applied: _sharedOwnedDepIds now gates on _installedOpsOf (>=1 op, the predicate every other install decision and the backend uninstall guard use) instead of the whole-universe m.installed flag, and intersects each owner's universe with its on-disk dep status - a >=1-op model is not universe-complete, so an absent dep must stay in the target model's denominator. Defect 2 (16GB owned by nothing) still open."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-464",
+      "type": "task.created",
+      "at": "2026-08-07T00:21:00Z",
+      "actor": "claude",
+      "summary": "Split from MPI-462. The orphan collector shipped local-only; the remote uninstall branch returns before it. Needs _remoteSharedDepIds + a volume inventory, and a live Pod to verify before any deletion code aims at a user's volume."
     }
   ]
 }

@@ -246,6 +246,78 @@ async function _localSharedDepsMap(excludeModelId) {
     return map;
 }
 
+// ── Orphan sweep (MPI-462) ────────────────────────────────────────────────────
+//
+// Uninstall only ever considers the deps of the model being uninstalled. A dep that
+// was KEPT because a sibling defended it (the MPI-310 exclusive-evidence rule in
+// _localSharedDepsMap) is never revisited when that sibling later stops being
+// installed — no code path re-asks "does anyone still want this?". The file is then
+// stranded: owned by no installed model, and offered to no uninstall, because a
+// not-installed model's card shows Install and never Uninstall.
+//
+// That is how MPI-462 accumulated 15.91GB (a 10.59GB Boogu text encoder + the Chroma
+// ControlNet and style LoRAs), and how MPI-314 accumulated 18.62GB of LTX deps before
+// it. MPI-314 reclaimed its files BY HAND and closed calling them "a one-time fossil,
+// not a live leak" — 19 days later a different model family stranded a fresh 15.91GB,
+// so that verdict was wrong and this is the missing collector.
+//
+// The orphan test asks the SAME protection primitive the uninstall guard uses, with
+// NOTHING excluded: `_localSharedDepsMap(null)` already unions every installed model's
+// deps, live install jobs, flow deps and plugin deps. A dep on disk that is absent from
+// that map is wanted by nobody. Deliberately NOT a second, parallel notion of "orphan"
+// — one wrong answer here deletes user weights (MPI-310 destroyed 5.24GB that way).
+function _orphanedDepIds(protectedMap) {
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    const universal = new Set(getUniversalWorkflowDepIds());
+    return Object.keys(DEPS).filter((id) => {
+        const d = DEPS[id];
+        if (!d || !d.filename) return false;
+        // WEIGHTS ONLY. A custom_nodes entry is work-not-bytes (it stays on disk after
+        // uninstall by design), and on a dev machine custom_nodes/ComfyUI-MpiNodes is a
+        // SYMLINK to the live node source repo — sweeping it would destroy that repo.
+        // targetPath deps are engine-anchored, outside the models root this may touch.
+        if (d.type === 'custom_nodes' || d.targetPath) return false;
+        return !protectedMap.has(id) && !universal.has(id);
+    });
+}
+
+// Trash every orphaned dep that is really on disk inside the managed models root.
+// Same trash-then-permanent-delete fallback as the uninstall loop (a 25GB weight
+// exceeds the Recycle Bin quota, and a sweep that silently no-ops frees nothing).
+async function _sweepOrphanedDeps(managedModelsRoot, defaultModelsRoot, customRoot) {
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    const protectedMap = await _localSharedDepsMap(null);
+    const swept = [];
+    for (const depId of _orphanedDepIds(protectedMap)) {
+        const d = DEPS[depId];
+        let localPath;
+        if (customRoot) {
+            const { localPath: lp } = await resolveComfyPath({ type: d.type, filename: d.filename }, customRoot, {});
+            localPath = lp;
+        } else {
+            localPath = path.join(defaultModelsRoot, d.filename);
+        }
+        if (!_isInsidePath(managedModelsRoot, localPath)) continue;
+        if (!(await fs.pathExists(localPath))) continue;
+        try {
+            try {
+                await _trash(localPath);
+                logger.info('download', `sweep: moved to trash ${localPath}`);
+            } catch (trashErr) {
+                await fs.remove(localPath);
+                logger.warn('download', `sweep: trash failed (${trashErr.message}) — permanently deleted ${localPath}`);
+            }
+            await cleanEmptyDirs(localPath, managedModelsRoot);
+            await clearDownloadMarker(localPath).catch(() => {});
+            _depJobs.delete(depId);
+            swept.push({ depId, depName: d.name || depId });
+        } catch (err) {
+            logger.error('download', `sweep: failed to trash ${localPath}`, err);
+        }
+    }
+    return swept;
+}
+
 // MPI-310 — dep ids declared by MORE THAN ONE model, computed over the WHOLE registry.
 // Used by BOTH engine guards to split a model's deps into shared vs EXCLUSIVE, so "is
 // this model actually installed" is answered only from files that belong to it alone.
@@ -2810,7 +2882,21 @@ router.post('/comfy/models/uninstall', async (req, res) => {
         }
     }
 
-    logger.info('download', `uninstall ${modelId}: removed ${removed.length}, kept ${keptUniversal.length} universal, ${keptShared.length} shared, ${keptModelFiles.length} model files, ${keptPipInstalls.length} pip-installs`);
+    // MPI-462 — this uninstall may have been the last thing keeping some OTHER dep
+    // alive (the sibling that defended it is now gone). Nothing else re-checks, so
+    // collect here. Gated on deleteFiles: "keep files" must keep every file, not just
+    // the ones the user explicitly uninstalled. Never fatal — the uninstall itself
+    // already succeeded, and a failed sweep must not report it as failed.
+    let sweptOrphans = [];
+    if (deleteFiles) {
+        try {
+            sweptOrphans = await _sweepOrphanedDeps(managedModelsRoot, defaultModelsRoot, customRoot);
+        } catch (err) {
+            logger.error('download', `orphan sweep after ${modelId} uninstall failed: ${err.message}`);
+        }
+    }
+
+    logger.info('download', `uninstall ${modelId}: removed ${removed.length}, kept ${keptUniversal.length} universal, ${keptShared.length} shared, ${keptModelFiles.length} model files, ${keptPipInstalls.length} pip-installs, swept ${sweptOrphans.length} orphaned`);
     _modelJobs.delete(modelId);
     // MPI-396: same store settle as the remote leg above. The reconcileOnce() below
     // is NOT a substitute — its pruneTerminal cannot express "confirmed uninstalled"
@@ -2818,12 +2904,12 @@ router.post('/comfy/models/uninstall', async (req, res) => {
     // to the 120s belt, which post-uninstall never runs because the reconciler poll
     // self-idles when no job is active.
     if (store.dropModel(modelId)) store.broadcastSnapshot();
-    _broadcast('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls });
+    _broadcast('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls, sweptOrphans });
     // G11: reconcile against post-delete disk truth (settles/prunes anything the
     // removal touched) and refresh the snapshot. Non-fatal — the uninstall itself
     // already succeeded.
     reconciler.reconcileOnce().catch((err) => logger.warn('download', `post-uninstall reconcile failed: ${err.message}`));
-    res.json({ success: true, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls });
+    res.json({ success: true, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls, sweptOrphans });
 });
 
 // ── Graceful Shutdown ─────────────────────────────────────────────────────────
@@ -3122,6 +3208,8 @@ module.exports = {
     _shouldResumePartial, // MPI-429 — exported for unit test
     _pluginRequiredDepIds, // MPI-310 — exported for unit test
     _localSharedDepsMap, // MPI-310 — exported for unit test (model-side protection)
+    _orphanedDepIds, // MPI-462 — exported for unit test (orphan sweep)
+    _sweepOrphanedDeps, // MPI-462 — exported for unit test (orphan sweep)
     _setModelStatus, // MPI-317 F5 — exported for unit test (store-terminal guard)
     _installStore: store, // MPI-317 F5 — exported for unit test only; never mutate outside tests
 };

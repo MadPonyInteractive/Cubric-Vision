@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-464",
+  "title": "Orphan sweep has no REMOTE twin - a Pod volume can still strand ownerless weights",
+  "description": "MPI-462 shipped a post-uninstall orphan collector on the LOCAL uninstall route only (_orphanedDepIds/_sweepOrphanedDeps in routes/downloadManager.js, built on _localSharedDepsMap(null)). The remote branch returns early, before the sweep, so the engine-split rule is only half satisfied: uninstalling on a Pod can still leave a dep that nothing installed on the volume wants, with no path to reclaim it. Needs _remoteSharedDepIds(null) as the protection map plus a volume file inventory (remoteModelsCheck) to answer 'is it actually on the volume'. Deliberately not shipped with MPI-462 because deletion code aimed at a user's volume must not go out unverified, and no live Pod was up. Mirror the LOCAL refusals exactly: never custom_nodes (image-resident or volume-installed, work-not-bytes), never targetPath weights, never universal deps, and honour deleteFiles=false. Test alongside tests/orphan-sweep.test.cjs.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-07T00:21:00Z",
+  "updated_at": "2026-08-07T00:21:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}
