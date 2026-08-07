@@ -68,8 +68,10 @@ example): [style-rack.md](style-rack.md).
   /`Input_Audio` may target an `MpiString` fan-out node. All media inputs are
   path→string loaders that self-gate on empty — no placeholder (MPI-272); only
   `LoadLatent` still stages a default. See [media-inputs.md](media-inputs.md).
-- **Preview toggle dual-emits.** `Preview_Only` / `Input_Preview_Only` are both emitted
-  (MPI-127 alias) so tier-agnostic graphs match either.
+- **Preview toggle emits ONE key, on a WIDGET.** `Video_Latent.is_preview` →
+  `Input_Video_Latent.is_preview` on the `MpiStageLatents` node. The old dual-emit of
+  `Preview_Only` / `Input_Preview_Only` (and its `Is_Continue` twin) is DELETED —
+  MPI-473, no shipped graph has either node.
 
 ## Wiring a control that injects (the app side)
 

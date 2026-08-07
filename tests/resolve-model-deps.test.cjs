@@ -365,8 +365,9 @@ function testWorkflowFileResolution() {
 }
 
 // MPI-452: `capabilities.singleFileStages` opts a model OUT of the `_stage2` suffix.
-// MiniMax H3 ships ONE graph for both passes and picks between them with lazy
-// Input_Preview_Only / Input_Is_Continue gates, so `minimax_h3_fl2va_stage2.json` must
+// MiniMax H3 ships ONE graph for both passes and picks between them with the lazy
+// MpiStageLatents widgets `Input_Video_Latent.is_preview` / `.is_continue` (MPI-473
+// retired the standalone boolean nodes), so `minimax_h3_fl2va_stage2.json` must
 // never exist — and the resolver used to name it anyway, 404ing Finish. The sweep at the
 // end is the real pin: it asserts every multi-stage model's stage-2 filename resolves to
 // a file that EXISTS, which fails in both directions (a twin model missing its file, and

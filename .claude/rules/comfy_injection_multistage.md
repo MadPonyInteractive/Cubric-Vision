@@ -32,6 +32,12 @@
 >   where `load_path` reads it.
 > - **The dual-latent split is gone** — `MpiStageLatents` handles video+audio in one
 >   node, so `Input_Audio_Latent` / `Output_Audio_Latent` no longer exist.
+> - **`Input_Preview_Only` and `Input_Is_Continue` are gone as params too (MPI-473).**
+>   The boolean nodes died with the cluster above, but `_buildParams` kept emitting
+>   both keys, and `comfyController` kept a defensive strip that found no matching
+>   node and logged `Preview_Only requested but workflow has no matching node` on
+>   EVERY multi-stage run. Both the params and the guard are deleted. The gate has
+>   exactly ONE route now: `Input_Video_Latent.is_preview` / `.is_continue`.
 >
 > Sections below that describe the two-file swap, `Stage1_Bypass` derivation,
 > `LoadLatent` injection or latent staging are HISTORY. They are kept because the
@@ -99,4 +105,8 @@ Engine-input copies are NOT proactively cleaned per-run. The server's existing `
 
 T2V previews carry no snapshot array, so snapshot validation is a no-op for them — only latent state gates Continue/Finish. Cold-fallback Continue's stage-1 rerun reuses the existing materialization route; the `copySnapshotSource` helper now guards same-path copies because the rerun reads the preview's own already-materialized snapshot into the destination path of the same name.
 
-**Symptom of missing Preview_Only node:** when the user toggles "Preview initial stage" in PromptBox and runs, the gen completes a full final video instead of stopping at preview. `comfyController.runWorkflow` defensively scans for the node when `Preview_Only` is present in params; if missing, it strips the param and emits a `clientLogger.warn('comfy', 'Preview_Only requested but workflow has no matching node — running full generation')`. Check the dev console / `logs/app.log` first when preview mode silently produces a full video.
+**Symptom of a dead preview gate:** the user toggles "Preview initial stage" in PromptBox, runs, and gets a full final video instead of stopping at preview.
+
+**There is no warning for this any more, and there never usefully was one (MPI-473).** `comfyController.runWorkflow` used to scan for a `Preview_Only` / `Input_Preview_Only` node and `clientLogger.warn` when it found none — but once every graph migrated to `MpiStageLatents`, no graph had the node, so the warning fired on EVERY multi-stage generation whether preview worked or not. It was pure noise and is deleted along with the params it guarded.
+
+Diagnose it at the real gate instead: `_buildParams` writes `Input_Video_Latent.is_preview`, and injection **silently skips a param whose title matches no node**. So check, in order — (1) the graph has an `MpiStageLatents` titled exactly `Input_Video_Latent`; (2) the dispatched graph actually carries `is_preview: true` — read it off the engine's `/history`, not off the run finishing; (3) `payload.historyMode` is not forcing it false (the video-history workspace does that deliberately).

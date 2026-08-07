@@ -319,9 +319,11 @@ export const PROMPT_BOX_CONTROLS = {
 
     /**
      * previewStage — Multi-stage video toggle.
-     * When active, the workflow's `Preview_Only` boolean node is set to true,
-     * producing a low-res preview MP4 instead of the final video. Registered
-     * only on `_ms` ops (e.g. t2v_ms, i2v_ms). Persists per-model.
+     * Injects NOTHING (`getInjectionParams()` returns `{}`): the toggle's value
+     * rides the run payload as `previewOnly`, and commandExecutor turns that into
+     * `Video_Latent.is_preview` on the MpiStageLatents node, producing a low-res
+     * preview MP4 instead of the final video. Registered only on `_ms` ops
+     * (e.g. t2v_ms, i2v_ms). Persists per-model.
      */
     previewStage: {
         nodeTitle: null,

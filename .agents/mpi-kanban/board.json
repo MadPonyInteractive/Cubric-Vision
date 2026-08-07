@@ -34,7 +34,6 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-473",
       "MPI-474",
       "MPI-470",
       "MPI-468",
@@ -55,6 +54,7 @@
       "MPI-367"
     ],
     "done": [
+      "MPI-473",
       "MPI-472",
       "MPI-457",
       "MPI-471",
@@ -77,8 +77,17 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-07T13:55:00Z",
+  "updated_at": "2026-08-07T14:20:43Z",
   "events": [
+    {
+      "at": "2026-08-07T14:20:43Z",
+      "type": "task.moved",
+      "task": "MPI-473",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "note": "SHIPPED and USER-VERIFIED live 2026-08-07: preview stops at preview, Continue resumes from the staged latent, and the warning that fired on EVERY multi-stage generation is gone. Preview_Only removed AND its twin Is_Continue, which the brief did not list - grep proved both had zero nodes in every shipped graph, on adjacent lines of the same block, so fixing one would have left the other claiming a node that does not exist. The comfyController guard was deleted whole: it was doubly unreachable, because the Input_ canonicalization pass already deleted the bare key before dispatch. Three files (models.js, resolveModelDeps.js, generate_h3.py) claimed H3 gates on Input_Preview_Only / Input_Is_Continue - FACTUALLY WRONG, not stale: minimax_h3_fl2va.json node 320 is an MpiStageLatents and generate_h3.py bakes is_preview/is_continue at its own line 83. Corrected, not deleted. 12 code sites across 9 files. Docs pass ran on explicit cardinal-rule-5 permission: 11 live sites over 6 rule files and 5 docs, the worst being comfy_injection_multistage.md:102, a troubleshooting instruction telling the reader to grep logs/app.log for a warning string that can no longer be emitted. docs/archive/ deliberately untouched. npm test 482/0. NOT COMMITTED - a concurrent session was writing this tree throughout (types.js, promptReuse.js, MPI-472 moved under this session), so commit by explicit pathspec."
+    },
     {
       "at": "2026-08-07T13:55:00Z",
       "type": "task.moved",

@@ -659,20 +659,17 @@ function _buildParams(payload) {
     Object.assign(params, injectionParams);
 
     if (commandIsMultiStage(payload.operation)) {
-        // Preview_Only only applies to the stage-1 workflow. Stage-2 workflows
-        // (resolved via _stage2 filename swap) have no Preview_Only node, and
-        // comfyController defensively strips this param when the node is absent.
-        // History workspace forces single-stage execution: `historyMode` from
-        // the payload overrides any previewStage toggle so re-generation from
-        // history never produces a preview card.
-        params['Preview_Only'] = payload.historyMode === true ? false : (payload.previewOnly === true);
-        // Is_Continue is the OTHER half of the stage split, and it only exists for a
-        // model whose two stages live in ONE file (capabilities.singleFileStages —
-        // MiniMax H3, MPI-452): the filename no longer says which pass to run, so the
-        // graph's lazy gates need telling. A twin-file model has no such node and
-        // injection silently skips a title matching nothing, so emitting it fleet-wide
-        // costs LTX/WAN exactly nothing. Canonicalized to Input_Is_Continue below.
-        params['Is_Continue'] = payload.isStage2 === true;
+        // The two halves of the stage split. History workspace forces single-stage
+        // execution: `historyMode` from the payload overrides any previewStage toggle
+        // so re-generation from history never produces a preview card.
+        //
+        // Both used to ALSO be emitted as standalone `Preview_Only` / `Is_Continue`
+        // params for the boolean nodes of the same name. Those nodes are gone from the
+        // whole fleet (MPI-473) — LTX, WAN and H3 all gate through MpiStageLatents
+        // widgets now — so the standalone keys addressed nothing and only fed a
+        // defensive strip in comfyController that warned on every multi-stage run.
+        const _isPreview  = payload.historyMode === true ? false : (payload.previewOnly === true);
+        const _isContinue = payload.isStage2 === true;
         // MpiStageLatents (MPI-452) collapses that whole cluster — save, preview gate,
         // load, and both booleans — into ONE node whose gates are WIDGETS, not wired
         // MpiSimpleBoolean nodes. A widget is not addressable by the plain title spray
@@ -685,8 +682,8 @@ function _buildParams(payload) {
         // plain `Input_Video_Latent` below still lands on its `latent` key; on a migrated
         // graph the reverse happens — the dotted keys land and the plain one finds no
         // recognised target. Neither ever writes the wrong thing to the other.
-        params['Video_Latent.is_continue'] = payload.isStage2 === true;
-        params['Video_Latent.is_preview']  = params['Preview_Only'];
+        params['Video_Latent.is_continue'] = _isContinue;
+        params['Video_Latent.is_preview']  = _isPreview;
         // LoadLatent is always required for _ms workflows. ComfyUI validates the
         // node even when its output is unreached. Stage-1 uses the default
         // engine-input latent; stage-2 uses the per-preview <uuid>.latent staged
@@ -835,8 +832,8 @@ function _buildParams(payload) {
 
     // ── Input_ canonicalization pass (MPI-127 / MPI-252) ──────────────────────
     // The whole workflow fleet is now Input_*/Output_* titled (tier-1 deprecated).
-    // A few params are still built with the bare control name (Preview_Only,
-    // Use_End_Image, Upscale_Model, Lora_N, and any control returning a bare key).
+    // A few params are still built with the bare control name (Use_End_Image,
+    // Upscale_Model, Lora_N, and any control returning a bare key).
     // Injection matches node title exactly and silently skips a param whose title
     // has no node, so rename each bare key to its Input_ form and drop the bare
     // half — there is no tier-1 node left to consume it. Keys already prefixed

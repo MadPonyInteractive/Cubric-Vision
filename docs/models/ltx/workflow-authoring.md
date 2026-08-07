@@ -75,8 +75,11 @@ If #296 bakes `true`, EVERY audio-less t2v runs through `LTXVReferenceAudio` wit
 ref clip → degenerate dark first-frame conditioning → **fade-in from black.** Bake #296
 `false` in the template; the app flips it `true` only on a reference-audio chip.
 
-`generate_ltx.py` does NOT stamp this gate (only `Input_Text_to_video` + `Input_Is_Continue`
-are stamped) — it's a pure authoring default, survives template→output verbatim, and MUST
+`generate_ltx.py` does NOT stamp this gate (it stamps the transformer per tier and bakes the
+`MpiStageLatents` stage flags `is_continue` / `is_preview` to a stage-1 run; the old
+`Input_Text_to_video` / `Input_Is_Continue` / `Input_Preview_Only` boolean nodes are now
+BANNED titles that hard-fail the generator if a re-export brings them back)
+— it's a pure authoring default, survives template→output verbatim, and MUST
 be correct in the exported `LTX_i2v_t2v_template.json`. Symptom is app-only / invisible in
 a raw ComfyUI graph run (manual runs load a real image and don't exercise the `_ms`
 orchestration path the same way). Fixed + live-verified 2026-06-29 (t2v_ms_005 bright first

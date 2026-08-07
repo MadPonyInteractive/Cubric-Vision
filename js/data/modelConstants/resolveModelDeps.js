@@ -230,10 +230,10 @@ function variantSuffixOf(model, variantTokens = {}) {
  * `engines:` block has no suffix on any engine (its workflow is used verbatim).
  *
  * `capabilities.singleFileStages` OPTS OUT of the `_stage2` suffix: the model ships ONE
- * graph for both passes and picks between them with `Input_Preview_Only` /
- * `Input_Is_Continue` through lazy gates (MiniMax H3, MPI-452). Without it the resolver
- * names a twin that must never exist and Finish 404s. It is a DECLARATION, not a disk
- * probe, so this function stays pure.
+ * graph for both passes and picks between them with the MpiStageLatents widgets
+ * `Input_Video_Latent.is_preview` / `.is_continue` through lazy gates (MiniMax H3,
+ * MPI-452). Without it the resolver names a twin that must never exist and Finish 404s.
+ * It is a DECLARATION, not a disk probe, so this function stays pure.
  *
  * Pure string derivation — no disk/registry access, so it stays node-testable.
  *

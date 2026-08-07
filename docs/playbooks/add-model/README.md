@@ -89,8 +89,9 @@ Two structural forks decide everything downstream:
    **TRAP — pick the matching OPS.** Multi-stage video uses `t2v_ms`/`i2v_ms`;
    single-stage video uses `t2v`/`i2v` (both exist in `commandRegistry.js`). A
    single-stage model wired with `_ms` ops routes through preview/stage-2 handling
-   → `Prompt outputs failed validation` (400) + `Preview_Only requested but
-   workflow has no matching node`. `supportedOps` AND the `workflows` map keys must
+   → `Prompt outputs failed validation` (400). (It used to ALSO print `Preview_Only
+   requested but workflow has no matching node`; that warning is gone — MPI-473 — so
+   the 400 is now the only signal.) `supportedOps` AND the `workflows` map keys must
    both use the non-`_ms` keys. (MPI-172: 5B is the first video model on `t2v`/`i2v`.)
 
 ## The traps that actually bite (all detailed in the section files)

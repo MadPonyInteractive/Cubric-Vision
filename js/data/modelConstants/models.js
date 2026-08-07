@@ -1248,7 +1248,8 @@ export const MODELS = [
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
         // multiStage: the ONE graph carries both sampler passes and picks between them
-        // with Input_Preview_Only / Input_Is_Continue, so there is no _stage2 twin file.
+        // with the MpiStageLatents widgets `Input_Video_Latent.is_preview` /
+        // `.is_continue` (node 320), so there is no _stage2 twin file.
         // singleFileStages says exactly that to resolveWorkflowFile, which otherwise
         // appends _stage2 to EVERY multi-stage model and 404s Finish on a file that must
         // never exist (MPI-452). Declared rather than probed so the resolver stays pure.

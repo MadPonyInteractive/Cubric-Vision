@@ -11,11 +11,13 @@ WHICH MEDIA IS PRESENT:
                lazy MpiIfElse branches into four MiniMaxH3ImageToVideo nodes. Illegal
                states are unreachable BY CONSTRUCTION — there is no toggle to disagree
                with the media.
-  * stages   — single file, no `_stage2` twin. `Input_Preview_Only` + `Input_Is_Continue`
-               gate the two SamplerCustomAdvanced passes through the lazy MpiSaveLatent
-               `enabled` input, so stage 1 is genuinely skipped on a continue rather than
-               being run and discarded. (The twins the other video models still carry are
-               MPI-456.)
+  * stages   — single file, no `_stage2` twin. The MpiStageLatents widgets
+               `is_preview` + `is_continue` (see STAGE_TITLE below) gate the two
+               SamplerCustomAdvanced passes through the lazy MpiSaveLatent `enabled`
+               input, so stage 1 is genuinely skipped on a continue rather than being
+               run and discarded. The standalone `Input_Preview_Only` /
+               `Input_Is_Continue` boolean nodes are gone fleet-wide (MPI-473). (The
+               twins the other video models still carry are MPI-456.)
   * tier     — none. H3 ships ONE pruned int8_convrot transformer.
   * audio    — H3 emits video AND stereo audio from one sampler pass as a packed
                NestedTensor. There is no separate audio latent, so the latent pair is
