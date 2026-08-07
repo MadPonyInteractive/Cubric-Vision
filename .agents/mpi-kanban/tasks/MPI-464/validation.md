@@ -26,21 +26,65 @@ pseudo-model with ~40 deps is shaped the way the stub assumes on a real Pod, and
 
 ## The Pod leg — what still has to happen
 
-1. Bring up a Pod and connect the app in remote mode.
-2. **Read-only classification FIRST.** Comment out the delete loop's body in
-   `_sweepOrphanedDepsRemote` (keep the `remote sweep: N protected, N eligible, N on
-   volume` log line, which already runs before any delete), restart, uninstall a model
-   with `deleteFiles=true`, and read the line out of
-   `%APPDATA%\Cubric Vision\logs\app.log` filtered by `[download]`. The local equivalent
-   read `65 protected / 41 eligible / 0 on disk`, and that read-out is what proved it
-   would do the right thing. Revert the comment-out afterwards.
-   (Route-probe pattern: memory `tool_runpod_live_api_probe`; `routes/` changes need a
-   FULL restart, memory `tool_main_process_no_hot_reload`.)
-3. Confirm the eligible list contains nothing surprising before allowing a real delete.
-4. Then run it for real and confirm from the wrapper that the swept files are off the
-   volume, and that a sibling model sharing deps is still INSTALLED afterwards.
+**Prerequisite: check the Pod IMAGE first.** `/wrapper/models/delete` ships in image
+v0.4.0 / wrapper 0.2.3. On anything older every delete answers `unsupported`, the sweep
+correctly no-ops, and the run proves NOTHING about deletion — it only re-proves the unit
+test. Confirm the image before spending the session.
 
-`swept 0` is a valid pass — do not manufacture an orphan to watch it fire.
+Also make sure the volume is not empty: at least one model installed, ideally a tier
+family sharing deps (LTX-2.3 high + balanced, or the Boogu pair), so protection is
+non-trivial and step 4 has a sibling to check.
+
+1. Bring up a Pod and connect the app in remote mode.
+
+2. **Read-only classification FIRST — via a temp route, NOT by neutering the sweep.**
+   The obvious version of this step (comment out the delete loop, then uninstall
+   something) costs a real model uninstall to run a "read-only" check. Use the
+   temp-route probe instead (memory `tool_runpod_live_api_probe`): add to
+   `routes/downloadManager.js`, restart the app (a `routes/` change needs a FULL
+   restart — memory `tool_main_process_no_hot_reload`), curl, then **revert**.
+
+   ```js
+   // TEMP MPI-464 probe — REVERT.
+   router.get('/comfy/models/sweep-preview', async (req, res) => {
+       const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+       const protectedIds = await _remoteSharedDepIds(null);
+       const candidates = _orphanedDepIds(protectedIds).filter((id) => !DEPS[id].bakedOnPod);
+       const out = await remoteModels.remoteModelsCheck([{
+           id: '__sweep__',
+           deps: candidates.map((id) => ({ id, type: DEPS[id].type, filename: DEPS[id].filename })),
+       }]);
+       const entry = (out && out.results && out.results.__sweep__) || {};
+       res.json({
+           protected: protectedIds.size,
+           eligible: candidates.length,
+           onVolume: (entry.deps || []).filter((d) => d.installed === true).map((d) => d.id),
+           depsEchoed: (entry.deps || []).length,
+       });
+   });
+   ```
+
+   This is the sweep's classifier verbatim minus the delete loop, so it proves the two
+   things the unit test cannot: that the wrapper answers a pseudo-model carrying ~40 deps
+   (`depsEchoed` must equal `eligible` — a short echo means the wrapper dropped some and
+   the inventory is lying), and what the real volume classification actually is. The local
+   equivalent read `65 protected / 41 eligible / 0 on disk`.
+
+3. **Read `onVolume` before allowing any delete.** Every id in it is a file the sweep will
+   delete on the next remote uninstall. Nothing in that list may be something an installed
+   model needs — that is the whole check, and it is the step MPI-310 skipped.
+
+4. Only then run it for real: uninstall a model in remote mode with `deleteFiles=true`.
+   Confirm from `app.log` (`[download]`) that `remote sweep: … deleted <id>` matches what
+   step 3 predicted, that the model's own sibling sharing deps is still **INSTALLED**
+   afterwards, and that a re-check does not re-report the swept files as present.
+
+5. Second run with `deleteFiles=false` on another model: the sweep must not run at all
+   (no `remote sweep:` line), because "keep files" keeps every file, not only the selected.
+
+`swept 0` is a valid pass — do not manufacture an orphan to watch it fire. If step 3
+reports `onVolume: []`, steps 4-5 still prove the wiring (the log line fires, nothing is
+deleted); that is a pass, not an inconclusive run.
 
 ## Why the bar is not negotiable
 
