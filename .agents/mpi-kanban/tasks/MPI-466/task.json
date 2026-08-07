@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-466",
-  "title": "Collapse LTX to ONE card: dev int8 + distill LoRA as a turbo toggle",
-  "description": "Replace the LTX card PAIR (High distilled-1.1 bf16 41GB + Balanced fp8 25.2 / mxfp8 24.1, arch-split) with ONE card: ltx-2.3-22b-dev_transformer_only_int8_convrot 21.5GB plus the rank-111 distill LoRA 2.74GB, toggled at runtime. Exactly the Krea 2 pattern (capabilities.turboToggle + Input_is_Turbo + an MpiMath-gated accelerator LoRA), which already retired ITS separate Turbo card. LoRA off = dev quality, LoRA on = distilled speed. ~66GB of card-pair becomes one 24.25GB install, and the variants.arch axis may disappear with it.",
+  "title": "Re-wire LTX to the new export: int8 balanced, bf16 high, media-derived routing",
+  "description": "USER DECISION 2026-08-07: drop the distill LoRA toggle and the non-distilled dev model outright. HIGH stays bf16 distilled-1.1; BALANCED moves off fp8/mxfp8 to ltx-2.3-22b-distilled-1.1_transformer_only_int8_convrot (21.5GB), which A/B-beat fp8 on sound, hands and eyes and ran 10s faster. The re-exported graph (comfy_workflows/raw/ltx_i2v_t2v_template.json, 215 nodes against the shipped 119) changes far more than the weight: t2v and i2v merge into one file, Input_Video_Latent and Output_Preview put both stages in one graph (so the six LTX _stage2 twins die here, not in MPI-456), audio becomes an INPUT (Input_Audio / Input_Use_Audio / Input_Use_Reference_Audio) alongside Input_Use_Transition, and routing derives from which frame slots are filled instead of op booleans. On disk today: fp8/mxfp8 deleted, int8 present, the 41GB bf16 never there - so NO LTX runs locally until this card ships, which is why MPI-465 cannot take its app proof first.",
   "column": "todo",
   "maturity": "planned",
   "status": "active",
   "created_at": "2026-08-07T01:05:00Z",
-  "updated_at": "2026-08-07T01:05:00Z",
+  "updated_at": "2026-08-07T01:47:30Z",
   "labels": [
     "model",
     "ltx",
@@ -15,12 +15,13 @@
     "weights"
   ],
   "acceptance": [
-    "PROVE FIRST: a bf16 rank-111 LoRA patches cleanly onto int8 weights and quality holds - turbo mode IS that, so a failure here kills the whole plan",
-    "int8 runs on a NON-Blackwell card (Ada/Ampere), or the variants.arch block stays",
-    "dev mode gets its own steps/CFG/sigma tune - the LTXVScheduler + split-sigma + stage-2 0.85 numbers were all measured on distilled",
-    "The three baked LoRAs (merged 3.87GB, transition, talkvid) still behave on a dev base - they were tuned against distilled",
-    "One ModelDef with capabilities.turboToggle; ltx-23 and ltx-23-balanced both retired",
-    "Both weights uploaded to R2 - our LTX deps serve from models.cubric.studio with HF as mirrorUrl"
+    "variants.arch is DELETED and the _fp8/_mxfp8 workflow suffixes with it - int8 proven on the user Ada card; int8_convrot on Blackwell is inferred from other int8 models, so state that rather than claiming it",
+    "The six LTX _stage2 files are DELETED and stage 2 is reached in-file via capabilities.singleFileStages, H3 precedent from MPI-452",
+    "Routing is media-derived: the app writes no t2v/i2v/first-frame/last-frame boolean, and every Input_ title in the export is confirmed to LAND - injection silently skips a title matching no node, so a plausible WRONG video is the failure mode",
+    "The muted/bypassed nodes in the export are normalized by generate_ltx.py - the app prunes nothing, only the ComfyUI browser does",
+    "ltx23-transformer-fp8 and ltx23-transformer-mxfp8 are retired, and the int8 weight is uploaded to R2 with HF as mirrorUrl - LTX deps serve models.cubric.studio",
+    "Audio INPUT and the transition LoRA either reach the UI or are deferred with the reason recorded on this card",
+    "An LTX generation completes THROUGH THE APP - which is also the last open item on MPI-465"
   ],
   "links": {
     "brief": "brief.md",

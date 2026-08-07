@@ -1,85 +1,74 @@
-# MPI-466 - Collapse LTX to ONE card
+# MPI-466 - Re-wire LTX to the new export
 
-## What we ship today
+## The decision (user, 2026-08-07)
 
-| card | weight | size |
+**Drop the distill LoRA toggle. Drop the non-distilled dev model.** Keep two tiers:
+
+| tier | weight | was |
 |---|---|---|
-| `ltx-23` (High) | `ltx-2.3-22b-distilled-1.1_transformer_only_bf16` | 41GB |
-| `ltx-23-balanced` | `..._fp8_scaled` (RTX 40 & older) / `..._mxfp8_block32` (Blackwell) | 25.2 / 24.1GB |
+| **High** | `ltx-2.3-22b-distilled-1.1_transformer_only_bf16` (41GB) | unchanged |
+| **Balanced** | `ltx-2.3-22b-distilled-1.1_transformer_only_int8_convrot` (21.5GB) | `_fp8_scaled` 25.2GB / `_mxfp8_block32` 24.1GB |
 
-Both cards are **distilled-1.1**. The Balanced card carries a `variants.arch` block, which is
-also what produces the `_fp8` / `_mxfp8` workflow-file suffixes.
+Everything below follows from that. The card's previous plan - one card, dev int8 + the
+rank-111 distill LoRA as a `capabilities.turboToggle` - **is retired.** So is the gate that
+would have decided it (*"does a bf16 rank-111 LoRA patch cleanly onto int8 weights?"*).
+**Do not re-run that experiment**; nothing in the shipped design depends on the answer.
 
-## What changed upstream
+## Why int8 wins the balanced slot
 
-`Kijai/LTX2.3_comfy` now publishes int8 for both model lines, and the distill delta as a LoRA:
+Bench A/B, 2026-08-07, distilled-1.1 int8 against our shipped fp8: **better in every way -
+sound, hands, eyes - and 10s faster.** Measured on a 2s clip at 320x640, so the margin is
+small-clip inflated, but the direction is not in doubt. On top of that, int8 is expected to
+run where mxfp8 cannot, which is what kills the arch axis (below).
 
-```
-diffusion_models/ltx-2.3-22b-dev_transformer_only_int8_convrot.safetensors           21.5GB
-diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_int8_convrot.safetensors 21.5GB
-loras/ltx-2.3-22b-distilled-1.1_lora-dynamic_fro09_avg_rank_111_bf16.safetensors      2.74GB
-loras/ltx-2.3-22b-distilled_lora-dynamic_fro09_avg_rank_105_bf16.safetensors          2.59GB
-```
+## The re-export changes far more than the weight
 
-The two LoRAs are the **same artifact for two distill generations** — `distilled` (original) and
-`distilled-1.1` — mirroring the two full checkpoints. `loras/README.md` says only *"Distill loras
-from Lightricks/LTX-2.3, rank reduced for smaller size"*: they are Lightricks' official distill
-deltas, rank-reduced by Kijai. **We ship distilled-1.1, so the rank-111 file is the matching one.**
-(The `dynamic` / `fro09` / `avg_rank` tokens read as per-layer dynamic rank at a 0.9 Frobenius
-energy threshold, average rank 111 — that decode is from the naming convention, NOT stated in the
-README.)
+`comfy_workflows/raw/ltx_i2v_t2v_template.json` - **215 nodes against the shipped 119**, and
+re-exported once already this session to remove a stray Turbo node.
 
-## The plan
+| What the export carries | Consequence for this card |
+|---|---|
+| t2v and i2v in **one** graph | The `ltx_t2v` / `ltx_i2v` pair collapses |
+| `Input_Video_Latent` **and** `Output_Preview` together | Both stages in one file - the **six** LTX `_stage2` twins die here. Needs `capabilities.singleFileStages: true` (H3's precedent, MPI-452), or `resolveWorkflowFile` appends `_stage2` and Finish 404s |
+| Routing derives from which frame slots are filled | No op booleans for t2v / start-only / end-only / start+end. Same shape H3 uses (`MpiAnyChecker` into lazy `MpiIfElse`) |
+| `Input_Audio`, `Input_Use_Audio`, `Input_Use_Reference_Audio` | Audio becomes an **input**, not just an output |
+| `Input_Use_Transition` | The transition LoRA becomes injectable |
+| ~18 nodes muted/bypassed | **The app prunes nothing; the ComfyUI browser does.** `generate_ltx.py` must normalize them, or a node that only ever worked because the browser dropped it surfaces in Vision first |
 
-**One card**: `ltx-2.3-22b-dev_transformer_only_int8_convrot` (21.5GB) + the rank-111 distill LoRA
-(2.74GB), toggled at runtime. LoRA **off** = dev quality (real CFG, more steps); LoRA **on** =
-distilled speed. **24.25GB replaces ~66GB of card-pair.**
+## The wiring path
 
-This is not a new mechanism — **Krea 2 already does it**, and `models.js` says so:
+`raw/ltx_i2v_t2v_template.json` -> `scripts/workflow-to-api.mjs` (live `/object_info`) ->
+`comfy_workflows/scripts/workflow_generation/ltx_i2v_t2v_template.json` -> `generate_ltx.py`
+-> `comfy_workflows/ltx_*.json`. **Never hand-edit the runtime JSON** - the generator is the
+sanctioned place to normalize (H3's `generate_h3.py` is the worked example, MPI-452).
 
-> *"The old separate Turbo card is GONE: the `Accelerator Lora` (turbo-distill, an SVD delta
-> extracted FROM Raw) reconstructs the Turbo transformer at runtime rather than a second ~12GB
-> download. `capabilities.turboToggle` drives it."*
+Then: `modelDeps.js` (retire fp8 + mxfp8, add int8), `models.js` (both LTX defs), the app-side
+removal of whatever writes the routing booleans, and the R2 upload.
 
-The wiring to copy: `capabilities.turboToggle: true` → the `krea2Turbo` PromptBox control
-(`MpiPromptBox.js:1413`) → injects `Input_is_Turbo` (MPI-365) → the `Accelerator Lora` node's
-MpiMath (`0.0 if a == 1 else 1.0`) sets strength. Krea2's card is `sizeTier: 'balanced'` on the
-grounds that *"the accelerator LoRA means one install now covers both"*.
+## Sequencing - this card gates MPI-465
 
-Krea2 also answers two questions in advance: the toggle drives **more than LoRA strength** (it moves
-steps and discards the negative), and `negativePrompt` stays **`true`** on the card — turbo computes
-the negative and throws it away, rather than the flag flipping per mode.
+**No LTX runs on this machine today.** The fp8/mxfp8 weights were deleted to make room, the
+41GB bf16 was never on the drive, and the int8 file is present but not yet declared. So
+[MPI-465](../MPI-465/task.json)'s one open item - *an LTX generation completes through the
+app* - cannot be taken before this card ships. The KJNodes heal (pin `35e5956`, committed
+`c077efa9`) still happens on the next app boot via the drift check; only the proof waits.
 
-## Evidence so far (bench, 2026-08-07)
+Two calls that stay live on MPI-465 regardless: the **hotfix** question (1.3.0/1.3.1 users
+have had dead LTX since 2026-08-01, and a 1.3.2 restores it on the weights they already have
+- whereas 1.4.0 will hand them a 21.5GB re-download), and the **Pod image rebuild** for
+remote LTX.
 
-The user A/B'd the **distilled-1.1 int8** against our shipped fp8: **better in every way — sound,
-hands, eyes — and 10 s faster.** Measured on a 2 s clip at 320x640, so the margin is small-clip
-inflated and needs re-checking at a shipping tier.
+## Open items
 
-That evidence supports the **safe subset**: swap Balanced's fp8/mxfp8 → distilled-1.1 int8, no LoRA,
-no card change. If the full plan stalls, ship that alone — it is strictly better and nearly free.
-
-## The gate that decides the whole plan
-
-**Does a bf16 rank-111 LoRA patch cleanly onto int8 weights, at quality?** Turbo mode *is* that
-operation. The A/B above does NOT prove it — the distilled int8 runs *without* a distill LoRA.
-
-Cheap partial proof already available: those runs had `ltx23-lora-merged` (3.87GB),
-`ltx23-lora-transition` and `ltx23-lora-talkvid` in the graph. **If any were live in those
-generations, LoRA-on-int8 patching works**, and the only remaining question is whether a rank-111
-distill delta specifically survives it. Check which slots were active before designing anything.
-
-## Other open items
-
-- **Arch.** int8 should run on Ada/Ampere where mxfp8 cannot. One run on a non-Blackwell card
-  decides whether `variants.arch` (and the `_fp8`/`_mxfp8` workflow suffixes) can be deleted.
-- **dev needs its own sampler tune.** `LTXVScheduler` over `ManualSigmas`, the split-sigma
-  two-stage, and the stage-2 `0.85` fix were all measured on **distilled**. Non-distilled dev wants
-  real CFG and more steps; `docs/models/ltx/workflow-authoring.md` already parks this.
-- **The three baked LoRAs were tuned against a distilled base** — re-check them on dev.
-- **R2.** LTX deps serve from `models.cubric.studio` with HF as `mirrorUrl`, so adoption means
-  uploading, not just re-pointing a URL. LTX's licence permits re-hosting (unlike H3).
-- **Sequencing vs the LTX workflow migration (MPI-456).** That migration is already collapsing 12
-  workflow files toward 3 via `MpiStageLatents` + the i2v/t2v merge. Killing the arch axis would take
-  it further. Decide whether this rides along or lands after — doing both blind at once is how a
-  silent half-wire gets in.
+- **Blackwell.** int8 is proven on the user's **Ada** card, and other int8 models were run on
+  Blackwell - but not `int8_convrot` specifically. Say that plainly rather than claiming
+  coverage; it decides whether `variants.arch` deletes cleanly or needs a guard.
+- **Sampler tune.** `LTXVScheduler` over `ManualSigmas`, the split-sigma two-stage and the
+  stage-2 `0.85` fix were measured on **distilled** - which the new balanced tier still is,
+  so they carry over. This item shrank to nothing when the dev model was dropped.
+- **The three baked LoRAs** (merged 3.87GB, transition, talkvid) were tuned against a
+  distilled base, and the base stays distilled. Re-check on int8 rather than on a new arch.
+- **R2.** LTX deps serve `models.cubric.studio` with HF as `mirrorUrl`, so adoption means
+  uploading the int8 file, not just re-pointing a URL. LTX's licence permits re-hosting
+  (unlike H3).
+- **Audio input + transition** reach the UI or get deferred *with the reason on this card*.

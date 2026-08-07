@@ -61,3 +61,42 @@ A real **engine-bump playbook** (`docs/playbooks/bump-engine/`, matching the sha
 - `mpi-release` should refuse to ship a bumped engine with no smoke evidence.
 
 Keep `mpi-bump-local-comfy` bench-only and cross-reference it; do not overload it.
+
+---
+
+## Dispatch notes (added 2026-08-07 - read before starting cold)
+
+**Hand the agent [MPI-468](../MPI-468/task.json), not this card alone.** That umbrella holds
+the ownership split against MPI-457, the build order, and the machine constraints. What
+belongs here specifically:
+
+### Scope of THIS card
+
+`docs/playbooks/bump-engine/` + the smoke runner + the `mpi-release` refusal. The in-place
+`/engine/upgrade` path and the repo-side bump skill are MPI-457's. The skill calls this
+playbook.
+
+### Decisions the card does NOT make for you
+
+- **Where the runner lives.** `scripts/` (a Node mjs beside `workflow-to-api.mjs`, driven by
+  hand and by the release flow) or `tests/` (a `node --test` file, which then runs on CI with
+  no GPU and no weights - Tier 0 only). Pick one and say why; a runner in both places is the
+  failure mode.
+- **How it reaches an engine.** Reuse the running app engine on `48188` versus spawning its
+  own. Reusing is simpler and matches how a bump is actually validated; spawning avoids
+  fighting the user for the port. Do not claim 48188 while Vision is open.
+- **The per-model budget.** "Minimal generation" needs concrete numbers: smallest ratio tier,
+  fewest frames, 1 step. Write them into the playbook so a later run cannot quietly get
+  slower or weaker.
+- **What green prints.** A run that skips a model must say so on the same line as the pass
+  count. Silent truncation reading as full coverage is the whole failure this card exists to
+  prevent.
+
+### Ground truth to check before designing
+
+- `deriveInstalledOps` / the dep-status cache already answer "what is installed here" - do
+  not write a fourth way of asking.
+- `tests/workflow-input-staging-gate.test.cjs` is the only workflow-shaped test today. Read
+  it first; it establishes the shape but does not execute a graph.
+- LTX is **unrunnable on this machine** until MPI-466 lands (fp8 deleted, bf16 never present,
+  int8 not yet wired). Do not treat its absence from a green run as coverage.

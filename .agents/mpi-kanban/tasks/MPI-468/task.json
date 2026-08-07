@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-468",
+  "title": "Umbrella: make ComfyUI engine bumps safe, repeatable and gated (MPI-457 + MPI-467)",
+  "description": "Dispatch handle for the two engine-bump cards, which overlap and would otherwise both write the same playbook. MPI-465 shipped a completely dead LTX to every user on 1.3.0/1.3.1 for six days because a ComfyUI bump changed a return type under a custom node and nothing in this repo ever EXECUTES a workflow. MPI-457 owns the mechanic (in-place /engine/upgrade + the repo-side bump skill); MPI-467 owns the guard (docs/playbooks/bump-engine/ + a smoke runner that really generates + the release gate). Hand a separate session THIS id: brief.md carries the ownership split, the build order, and the machine constraints that make a naive parallel run collide with the LTX and H3 work in flight.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-07T01:47:30Z",
+  "updated_at": "2026-08-07T01:47:30Z",
+  "labels": [
+    "engine",
+    "tooling",
+    "testing",
+    "umbrella"
+  ],
+  "acceptance": [
+    "One session owns both children end to end - no second agent writing into docs/playbooks/bump-engine/ at the same time",
+    "MPI-457 and MPI-467 both close, or the survivor states in writing what was dropped and why",
+    "The smoke gate is wired into mpi-release, not just written down",
+    "Nothing in this work edits dev_configs/node_lock.json - the LTX and H3 sessions own that file right now"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  },
+  "priority": "normal",
+  "attention": false
+}
