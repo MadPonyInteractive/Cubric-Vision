@@ -7,7 +7,7 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-07T01:05:00Z",
-  "updated_at": "2026-08-07T03:37:45Z",
+  "updated_at": "2026-08-07T06:10:00Z",
   "labels": [
     "model",
     "ltx",
@@ -31,7 +31,7 @@
   "priority": "normal",
   "attention": {
     "state": "required",
-    "reason": "Code is complete and committed; NOTHING has run through the app. Start the app so its engine drift-repairs KJNodes 7f43f2c -> 35e5956 (MPI-465), then run LTX t2v on the int8 balanced card and read the dispatched graph off /queue. Also finishes MPI-465.",
-    "updated_at": "2026-08-07T03:37:45Z"
+    "reason": "t2v, preview and preview->Continue all PASS through the app on the int8 balanced tier (MPI-465 closed with them). Remaining: prove the three i2v routes by their OUTPUT - start-only, end-only, start+end. The end-only route was UNREACHABLE until this session and now needs a first run: graph re-exported (start.block_if_empty false on H3+WAN), slot gate fixed, and the last-frame role pill added. Needs a hard reload before testing.",
+    "updated_at": "2026-08-07T06:10:00Z"
   }
 }
