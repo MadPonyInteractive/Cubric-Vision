@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-478",
-  "title": "The local engine forces --lowvram on every NVIDIA GPU - is that costing users real speed?",
-  "description": "routes/comfy.js launches ComfyUI with --lowvram for every detected NVIDIA GPU, unconditionally, regardless of card size or model size. The user's authoring bench (G:\\ComfyUi\run_nvidia_gpu.bat) passes no VRAM flag at all, so it runs ComfyUI's default NORMAL_VRAM. That is the one unconditional difference between where his fast H3 runs happened and where the slow ones happen, and it matches the reported symptom exactly: dedicated VRAM parks at 11.5 of 16GB while 23.7GB spills to shared - 'like having a 10GB card when I have 16'. NOT proven. The app's own log for 2026-08-07 shows 6.4, 10.2, 23.5, 47.5, 94 and 143 s/it, so settings dominate and the app is not uniformly slow. One isolation test decides it (see brief.md). If it wins, the fix is CONDITIONAL, never a deletion - --lowvram was added deliberately (MPI-142/143/144: default normalvram OOM-killed a 42GB LTX transformer on a 24GB 4090) - and it must sweep BOTH engine twins, routes/comfy.js and routes/remotePodLifecycle.js.",
+  "title": "The local engine still passes --lowvram; the Pod dropped it on measurement (inert today under aimdo)",
+  "description": "Opened as a speed hypothesis and DISPROVEN in the same session, at zero generation cost. --lowvram is inert on the engine we ship: ComfyUI 0.30.0 + torch 2.13 + comfy_aimdo 0.4.11 means dynamic VRAM is on, and model_management.py puts LOW_VRAM and NORMAL_VRAM in the SAME branch with the SAME budget (L983); no other vram_state branch tells them apart. Upstream's own docstring: it does nothing if dynamic vram is enabled. So the 11.5/16-dedicated-with-23.7-shared split is aimdo's JIT fault-in, not the flag, and the app-vs-bench gap is settings - the app's own log spans 6.4 to 143 s/it in one evening on one engine. WHAT SURVIVES is an engine half-wire: the Pod dropped the flag deliberately (MPI-146/156, start.sh VRAM_MODE empty) and the local engine never followed. It has sat in routes/comfy.js since the init commit 2026-03-31, predating every shipped model, so no measurement produced it - MPI-144 then copied it OUTWARD to the Pod to match the local engine. Costs nothing today; reactivates into MPI-156's 6-minute cold loads if a future engine ships torch below 2.8. NOT a blind deletion: model_management.py L122/L549 make the flag load-bearing on DirectML. Also records two user corrections the earlier draft had wrong - we DID ship a Q8_0 GGUF (MPI-168) and it OOM'd in ComfyUI-GGUF's dequant outside aimdo's fence (MPI-185, reverted by MPI-190), and offload is proven load-bearing (disabling aimdo container-OOM-killed a 4090 live).",
   "column": "todo",
-  "maturity": "idea",
+  "maturity": "research",
   "status": "active",
   "created_at": "2026-08-08T00:30:00Z",
-  "updated_at": "2026-08-08T00:30:00Z",
+  "updated_at": "2026-08-08T01:05:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl"

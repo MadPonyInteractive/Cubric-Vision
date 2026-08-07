@@ -1,109 +1,104 @@
-# MPI-478 — the engine forces `--lowvram` on every NVIDIA GPU
+# MPI-478 — the local engine still passes `--lowvram`; the Pod dropped it on measurement
 
-Opened 2026-08-08 off a user report: H3 generations in the app feel far slower
-than the same model on his authoring bench, and the GPU never fills.
+Opened 2026-08-08 off a user report that H3 felt far slower in the app than on his
+bench, with the GPU never filling (11.5 / 16 GB dedicated, 23.7 GB shared).
 
-**This card is an investigation, not a fix.** The cause is NOT established.
+**The speed hypothesis this card opened with is DEAD.** `--lowvram` is inert on the
+engine we ship. What survives is a real but low-drama engine half-wire, below.
 
-## What is established
+## Why the flag cannot be the cause — checked in the shipped source, not a doc
 
-| | flags |
+Local engine: **ComfyUI 0.30.0, torch 2.13.0+cu130, comfy_aimdo 0.4.11.** aimdo's gate
+is torch >= 2.8, so dynamic VRAM is ON. Under aimdo, upstream's own docstring for the
+flag is *"Doesn't do anything if dynamic vram is enabled"*.
+
+Verified against `engine/.../ComfyUI/comfy/model_management.py` rather than taken on
+trust. Every `vram_state` branch in the file:
+
+| line | test | LOW_VRAM vs NORMAL_VRAM |
+|---|---|---|
+| 983 | `LOW_VRAM` **or** `NORMAL_VRAM` | **same branch, same `lowvram_model_memory` budget** |
+| 895 | `!= HIGH_VRAM` | same |
+| 1069 | `== HIGH_VRAM` | same |
+| 1080 | `HIGH_VRAM or SHARED` | same |
+| 1083 | `NO_VRAM` | same |
+| 1184 | `(HIGH, NORMAL)` **or `aimdo_enabled`** | same — aimdo is on |
+
+**Not one branch distinguishes LOW_VRAM from NORMAL_VRAM.** Running the engine without
+the flag would execute identical code. The isolation test this card originally proposed
+would have burned a multi-minute generation to measure nothing — do not run it.
+
+The 11.5/16-with-23.7-shared split is aimdo's JIT fault-in working as designed, not the
+flag. `docs/models/h3/performance.md` measured the **bench** at 12.9/16 with ~24 GB
+shared and RAM at 95 %, so both installs do the same thing. The app-vs-bench gap is
+settings, and the app's own log spans 6.4 → 143 s/it in one evening on one engine.
+
+## The research already existed — `docs/builder/` had all of this
+
+Found only after the user said so. `docs/builder/02-image-and-rebuild.md` § "`--normalvram`
+removed in v0.26 + torch 2.8" states the NO-OP outright and instructs: **"Pass NO vram
+flag; let aimdo manage."** `cubric-vision-pod/start.sh` (~L140-166) carries the full
+reasoning and the Pod already complies — `VRAM_MODE="${CUBRIC_VRAM_MODE:-}"`, empty by
+default.
+
+**Read `docs/builder/` before opening any engine-flag card.** This one was opened without
+it.
+
+## What actually survives: local is the last twin still passing it
+
+| twin | flag |
 |---|---|
-| App engine (`:48188`) | `main.py --listen 127.0.0.1 --port 48188 **--lowvram** --preview-method taesd --enable-cors-header …` |
-| Bench (`G:\ComfyUi\run_nvidia_gpu.bat`, `:8188`) | `main.py --windows-standalone-build --preview-method taesd --output-directory …` — **no VRAM flag** |
+| Pod (`start.sh`) | **none** — dropped deliberately, MPI-146/156 |
+| Local (`routes/comfy.js`) | **`--lowvram`**, every NVIDIA GPU, since `a7a371a5` "init commit", 2026-03-31 |
 
-Read off the live process command line and the bat, 2026-08-08. The app's log
-confirms the consequence: `Set vram state to: LOW_VRAM`. Source is
-`routes/comfy.js` — `modeArgs = ['--lowvram']` for every non-Apple, non-CPU
-vendor, with no size condition on either the card or the model.
+`git log -S'--lowvram' -- routes/comfy.js` returns that one commit. It predates LTX, H3
+and every shipped model, so no measurement produced it. MPI-144 then propagated it to the
+Pod *"to MATCH the local engine"* — copying an unexamined default outward — and MPI-146/156
+later removed it there on measurement without the local side following. Textbook half-wire.
 
-Symptom it matches: dedicated GPU memory parks at **11.5 / 16 GB** with
-**23.7 GB in shared**, while the run sits at ~94 s/it. The user's words:
-"like having a 10 GB card when I have 16."
+**Today it costs nothing.** It matters only if a future engine ships torch < 2.8 or aimdo
+gates off, at which point the flag silently reactivates and the failure is MPI-156's:
+legacy ModelPatcher, ~6-minute cold loads on every model switch. Also worth knowing:
+`--lowvram` is not universally inert — `start.sh` L159 names **"MPI-146's 5090 `--lowvram`
+OOM"**.
 
-## What is NOT established — read this before theorising
+### It is NOT a blind one-line deletion
 
-The app is **not** uniformly slow. Its own log for 2026-08-07 (all on `:48188`,
-all with `--lowvram`) contains, in order:
+`model_management.py` L122 sets `lowvram_available = False` on DirectML, and L549-551
+**re-enable it** when `args.lowvram` is passed. So on a DirectML (AMD/Intel) install the
+flag is load-bearing, not inert. Any change has to keep the non-aimdo paths intact —
+condition on the vendor/torch, or gate on `aimdo_enabled`, and verify on a non-NVIDIA box
+before it ships.
 
-```
-10.2 s/it → 47.5 → 23.5 → 6.4 → 143.2 → 94.6
-```
+## Corrections this card owes, both from the user
 
-Six generations spanning **22x**, on one box with one engine. Canvas, duration,
-reference count and `ref_image_size` move the cost far more than any flag could,
-so a bench-vs-app wall-clock comparison across *different settings* proves
-nothing. Do not compare a bench number to an app number unless every setting
-matches.
+- **We DID ship GGUF, and it OOM'd — repeatedly.** An earlier draft said "we have never
+  shipped a GGUF" off `grep -ci gguf dependencies.js` returning 0. That grep describes
+  **today's dep set, not the history**, and the user's recall is the correct one. MPI-168
+  shipped a **Q8_0 GGUF** LTX transformer on the Pod specifically to get LTX HIGH resident
+  in VRAM; MPI-185 is the resulting OOM — a raw `torch` allocation inside
+  `ComfyUI-GGUF/dequant.py:62` (`int16 -> int32 -> float32` upcast), **outside aimdo's
+  fence**, which is why `--vram-headroom=1` was tried against it and **DISPROVEN live** on
+  a 24 GB 4090. MPI-190 reverted the Pod to bf16, *"kills the MPI-185 dequant OOM"*. The
+  zero in `dependencies.js` is the *outcome* of that decision. Do not re-derive GGUF as a
+  fix.
+- **Offload is proven, with or without the flag.** `start.sh` L155-160: dropping aimdo via
+  `--disable-dynamic-vram` on a 4090 made ComfyUI load LTX's full 3-stage set resident,
+  streamed ~57 GB into a ~57 GB-RAM Pod and **container-OOM-killed** it mid-gen. aimdo's
+  fault-in is load-bearing, not overhead.
 
-Also already known and NOT the difference: H3 spills on this box either way.
-`docs/models/h3/performance.md` measured the **bench** at 12.9/16 GB dedicated
-with ~24 GB shared and system RAM at 95 %. Spilling is not what separates them.
+## What is still unanswered
 
-## The one test that settles it
+Why the app run felt slower than the bench, with the flag ruled out. Remaining differences
+worth holding weights and settings constant against: engine version (bench 0.30.2 vs app
+0.30.0), and system RAM pressure (60.5 / 63.8 GB, 95 %, during the report —
+`footprint.js` says a 16 GB card needs ~40 GB of RAM for H3's 53 GB).
 
-One variable, same job, same box. No code change needed — the app only talks to
-`:48188`, so the engine can be started by hand:
+The levers the research names, none of them a vram-mode flag: `--reserve-vram` for a
+big-model VAE-decode OOM, `--fast-disk`, and **model FORMAT (fp8 native), which
+`start.sh` calls the real lever** — it loads faster *with* aimdo on. `--highvram` is
+48 GB+ only and a gamble even there (aimdo's VBAR releases pages in HIGH_VRAM;
+`pod-perf-investigation.md` L96).
 
-1. Let the current generation finish. Note its exact settings and s/it.
-2. Stop the engine from the app.
-3. Relaunch it by hand with the **identical** command line **minus `--lowvram`**:
-   `engine\ComfyUI_windows_portable\python_embeded\python.exe engine\…\ComfyUI\main.py --listen 127.0.0.1 --port 48188 --preview-method taesd --enable-cors-header --extra-model-paths-config …`
-4. Re-run the SAME generation from the app. Compare s/it and the dedicated/shared split.
-
-A second run at `--normalvram` is worth it only if step 4 wins, to tell "the flag"
-from "any restart".
-
-## The local flag was never justified by a measurement — CORRECTED 2026-08-08
-
-An earlier draft of this brief said `--lowvram` was added on measurement, citing the
-MPI-142/143/144 OOM. **That is wrong for the LOCAL engine and the correction matters
-more than anything else on this card.**
-
-`git log -S'--lowvram' -- routes/comfy.js` returns exactly one commit: **`a7a371a5`,
-"init commit", 2026-03-31.** The flag has been there since day one, before LTX, before
-H3, before any shipped model — so no measurement on any current model can have produced
-it. It is an unexamined default, not a decision.
-
-The OOM is the **Pod twin's** justification, not the local one, and
-`routes/remotePodLifecycle.js` says so in its own words: *"MPI-144: Pod ComfyUI now
-launches with --lowvram, **to MATCH the local engine**"*. The Pod copied a default
-nobody had checked.
-
-### What that OOM actually was (checked 2026-08-08, on the user's challenge)
-
-He asked whether it was a GGUF or the 40 GB weight. Neither:
-
-- **We have never shipped a GGUF.** `grep -ci gguf js/data/modelConstants/dependencies.js`
-  → **0**. There is no GGUF weight anywhere in the dep set.
-- It was the **bf16 transformer, `ltx23-transformer-bf16`, 41 GB** — 61.40 GB of weights
-  resolved — which is where the comment's "42GB" comes from.
-- **The 40 GB card did not exist yet.** `ltx-23-balanced` is 40.40 GB total on a 20 GB
-  int8 transformer, and it was created by **MPI-200 (2026-07-05)**, *after* the OOM
-  (**MPI-144, 2026-06-26**) — and created *because* the bf16 transformer never fits.
-  `models.js` says it outright: the bf16 weight "is replaced by a 20GB one that FITS
-  32GB — which kills the aimdo stage-2 eviction thrash MPI-197 traced".
-
-So the OOM was real, on the fattest weight we ship, on a card that had no lighter tier
-to fall back to yet. Every part of that premise except the weight itself has since moved.
-
-### It still is not a deletion
-
-`ltx-23` HIGH resolves to `ltx23-transformer-bf16` on **every** arch today —
-`resolveDeps(..., {arch:'modern'})` and `{arch:'blackwell'}` both give 61.40 GB. (The
-`fp8`/`mxfp8` entries are deliberate orphans: MPI-466 collapsed them into one int8
-weight and the dep entries stay so the orphan sweep does not strand them on existing
-disks.) A 24 GB card on LTX HIGH genuinely still needs offload.
-
-So the shape of any fix is conditional — on measured VRAM, on the resolved model
-footprint, or both — and per THE ROOT-CAUSE RULE it must land on **both engine
-twins**: `routes/comfy.js` (local) and `routes/remotePodLifecycle.js` (Pod). A
-local-only fix is a false done.
-
-## The other ceiling, which no flag moves
-
-System RAM read **60.5 / 63.8 GB (95 %)** during the report. H3 is 53 GB of weights;
-`footprint.js` says a 16 GB card needs ~40 GB of RAM for it. That is a real ceiling on
-this box and `docs/models/h3/performance.md` already names it. If the test above shows
-no change, this is the next thing to look at — and it may simply be that H3 is not a
-16 GB-card model in practice, which is a product statement, not a bug.
+It may also simply be that H3 is not a 16 GB-card model in practice. That is a product
+statement, not a bug.
