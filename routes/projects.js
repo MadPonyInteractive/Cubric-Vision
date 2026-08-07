@@ -1104,17 +1104,10 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
             // item. Latents stay per-item (STAGE-2 support, not reuse media,
             // non-deterministic → no dedup benefit) so deleting a preview frees its
             // latent — that is correct (MPI-227 scope boundary).
-            //
-            // `<id>.audio.latent` is NEVER written any more — MpiStageLatents packs
-            // video and audio into one file. Keep sweeping it anyway: projects created
-            // before that migration still carry one on disk, and dropping it from this
-            // list strands those files forever with nothing left to reference them.
-            for (const latentName of [`${itemId}.latent`, `${itemId}.audio.latent`]) {
-                const latentPath = path.join(mediaDir, '.latents', latentName);
-                if (hasSupportAssets && await fs.pathExists(latentPath)) {
-                    try { await fs.remove(latentPath); }
-                    catch (e) { logger.warn('project', 'preview latent remove failed', e.message); }
-                }
+            const latentPath = path.join(mediaDir, '.latents', `${itemId}.latent`);
+            if (hasSupportAssets && await fs.pathExists(latentPath)) {
+                try { await fs.remove(latentPath); }
+                catch (e) { logger.warn('project', 'preview latent remove failed', e.message); }
             }
             // MPI-227: preview-assets are now a content-addressed, deduped, PERMANENT
             // store — a frame may be shared by many cards (reuse), so card-delete must

@@ -150,8 +150,4 @@ rejects nothing. Full contract:
 
 A preview saves exactly ONE latent — `MpiStageLatents` packs video and audio into a single
 file. There is no separate audio latent anywhere: not in a graph, not in `previewAssets`,
-not on the wire.
-
-The only place a second `<id>.audio.latent` name still appears is the item-delete sweep in
-`routes/projects.js`, which keeps removing it so projects created before the migration do
-not strand an orphan on disk. Nothing writes that file any more.
+not in the delete sweep, not on the wire.
