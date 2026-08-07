@@ -66,12 +66,17 @@
       asserted all dotted keys addressed ONE node — true only while the style rack was the
       sole user. Now grouped by title, and it additionally proves each dotted title exists
       in some workflow.
-- [x] `npm test` 483/483.
+- [x] `npm test` 492/492.
 
-## Not started — the Vision half (remainder)
+## Remaining — the Vision half
 
-- [ ] **The `+` reference picker.** Typing a trigger character pops a list of the staged
-      chips and inserts the chosen tag. Blocked on the audio-ordinal decision below.
+- [x] **The `@` reference picker.** Typing `@` in a ref2v_ms prompt lists the staged chips
+      and inserts the chosen tag at the caret; arrows move, Enter/Tab pick, Escape closes,
+      a click picks via mousedown (click would blur the textarea first). Arms only for an op
+      whose slots carry tags, so `@` stays an ordinary character everywhere else. The matcher
+      is `matchRefTagQuery` in `commandRegistry.js` — pure, so its edge cases are unit-tested
+      rather than eyeballed: `fabio@picture` must NOT open a picker, `@ ` closes one, and
+      `@pic` finds `Picture 1` despite the space in the tag.
 - [ ] `progressStages` for `minimax_h3_r2va.json` — needs a LIVE run to count bars. fl2va is
       `{ single: 2, preview: 1, stage2: 1 }`; not guessed.
 - [ ] **A ref2va preview clip.** The ModelDef currently borrows `minimax_h3_preview.mp4`,

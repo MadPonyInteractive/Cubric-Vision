@@ -343,6 +343,64 @@
     min-width: 0;
 }
 
+/* ── Reference picker (MPI-475) ──────────────────────────────────────────────
+   Typing `@` in a ref2v_ms prompt lists the staged chips so the user can insert a
+   tag instead of remembering one. Sits above the bar, over the chip strip — it is
+   ABOUT those chips, so covering them while choosing costs nothing. */
+
+.mpi-prompt-box__ref-picker {
+    position: absolute;
+    bottom: 100%;
+    left: var(--s-6);
+    min-width: 14rem;
+    max-height: 13rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: var(--s-2);
+    padding: var(--s-1);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    /* Above the media strip (z-index 1), below overlays and modals. */
+    z-index: 3;
+}
+
+.mpi-prompt-box__ref-picker-item {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2);
+    padding: var(--s-1) var(--s-2);
+    background: none;
+    border: 0;
+    text-align: left;
+    cursor: pointer;
+    color: var(--ink-1);
+    font-size: var(--t-xs);
+}
+
+.mpi-prompt-box__ref-picker-item:hover,
+.mpi-prompt-box__ref-picker-item--active {
+    background: var(--accent-heat);
+    color: var(--surface-0);
+}
+
+.mpi-prompt-box__ref-picker-tag {
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mpi-prompt-box__ref-picker-name {
+    color: var(--ink-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mpi-prompt-box__ref-picker-item:hover .mpi-prompt-box__ref-picker-name,
+.mpi-prompt-box__ref-picker-item--active .mpi-prompt-box__ref-picker-name {
+    color: inherit;
+}
+
 /* ── Media strip (sibling element rendered by organism) ──────────────────── */
 
 .mpi-prompt-box-media-strip {

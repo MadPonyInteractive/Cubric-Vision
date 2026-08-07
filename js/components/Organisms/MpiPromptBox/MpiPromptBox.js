@@ -6,7 +6,7 @@ import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, modelShowsBatch, modelControlTypes, getOpHelp, isTextOnlyOp, pickTextOnlyOp } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, matchRefTagQuery, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, modelShowsBatch, modelControlTypes, getOpHelp, isTextOnlyOp, pickTextOnlyOp } from '../../../data/commandRegistry.js';
 import { MpiOpHelpDialog } from '../../Compounds/MpiOpHelpDialog/MpiOpHelpDialog.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { usesQualityTier } from '../../../utils/ratios.js';
@@ -235,6 +235,23 @@ export const MpiPromptBox = ComponentFactory.create({
             // Audio slot on the shared video ops is gated by model capability —
             // WAN never accepts/shows it, LTX does.
             return filterMediaInputsForModel(getCommandMediaInputs(operation), model);
+        }
+
+        // MPI-475: the reference tags currently staged, in strip order — what the chips
+        // badge and what the `@` picker offers. Empty for any op whose slots carry no
+        // `tag`, which is every op but ref2v_ms, so the picker simply never arms there.
+        //
+        // These are SLOT numbers, deliberately. MpiH3References rewrites them to the
+        // ordinals ComfyUI core presents at execution time; the app must not try, because
+        // a reference video's soundtrack consumes an audio ordinal and whether the file
+        // has one is unknown until it is decoded.
+        function _stagedRefTags(operation = activeOperation) {
+            const bySlot = new Map(
+                _mediaSlotsForOperation(operation).filter(s => s.tag).map(s => [s.key, s.tag]));
+            if (!bySlot.size) return [];
+            return _withAssignedRoles(_mediaItems, operation)
+                .map(item => ({ tag: bySlot.get(item.role), item }))
+                .filter(entry => entry.tag);
         }
 
         function _maxMediaForOperation(operation, mediaType) {
@@ -1114,10 +1131,116 @@ export const MpiPromptBox = ComponentFactory.create({
         };
         _unsubs.push(() => _heightProbe.remove());
 
+        // ── Reference picker (MPI-475) ─────────────────────────────────────────
+        // Typing `@` offers the staged references and inserts the chosen chip's tag.
+        // Only arms for an op whose slots carry tags (ref2v_ms), so nothing changes
+        // anywhere else — `@` stays an ordinary character in every other prompt.
+        const _refPicker = document.createElement('div');
+        _refPicker.className = 'mpi-prompt-box__ref-picker hide';
+        el.appendChild(_refPicker);
+        /** @type {Array<{tag:string, item:Object}>} */
+        let _refMatches = [];
+        let _refActive = 0;
+        /** Index of the `@` that opened the picker, or -1 when closed. */
+        let _refAt = -1;
+
+        const _refPickerOpen = () => _refAt !== -1;
+
+        function _closeRefPicker() {
+            if (!_refPickerOpen()) return;
+            _refAt = -1;
+            _refMatches = [];
+            _refPicker.classList.add('hide');
+            _refPicker.innerHTML = '';
+        }
+
+        function _labelFor(entry) {
+            if (entry.item.mediaType === 'audio') return _audioName(entry.item);
+            return entry.item.name || entry.item.mediaType;
+        }
+
+        function _paintRefPicker() {
+            _refPicker.innerHTML = _refMatches.map((entry, i) => `
+                <button type="button"
+                        class="mpi-prompt-box__ref-picker-item${i === _refActive ? ' mpi-prompt-box__ref-picker-item--active' : ''}"
+                        data-idx="${i}">
+                    <span class="mpi-prompt-box__ref-picker-tag">${entry.tag}</span>
+                    <span class="mpi-prompt-box__ref-picker-name">${_labelFor(entry)}</span>
+                </button>
+            `).join('');
+        }
+
+        /** Replaces the `@partial` under the caret with the chosen tag. */
+        function _insertRefTag(entry) {
+            if (!entry) return;
+            const caret = textareaEl.selectionStart;
+            const value = textareaEl.value;
+            const next = `${value.slice(0, _refAt)}<${entry.tag}> ${value.slice(caret)}`;
+            const at = _refAt + entry.tag.length + 3;   // past "<tag> "
+            _closeRefPicker();
+            textareaEl.value = next;
+            textareaEl.setSelectionRange(at, at);
+            textareaEl.focus();
+            updateHeight();
+            _writeMode(next);
+            _saveDraft();
+            emit('input', { positive: positiveValue, negative: negativeValue, negativeAudio: negativeAudioValue, activeMode: promptMode });
+        }
+
+        function _syncRefPicker() {
+            // Never on a negative field — the tags address references, and a negative
+            // prompt has none. (H3 has no negative node at all, but the guard is cheap
+            // and keeps this correct for any future tagged op that does.)
+            const tags = promptMode === 'positive' ? _stagedRefTags() : [];
+            if (!tags.length) return _closeRefPicker();
+
+            const query = matchRefTagQuery(textareaEl.value, textareaEl.selectionStart, tags);
+            if (!query) return _closeRefPicker();
+
+            _refAt = query.at;
+            _refMatches = query.matches;
+            _refActive = Math.min(_refActive, query.matches.length - 1);
+            _refPicker.classList.remove('hide');
+            _paintRefPicker();
+        }
+
+        _unsubs.push(on(_refPicker, 'mousedown', (e) => {
+            // mousedown, not click: the textarea blurs on click and blur closes us first.
+            const btn = e.target.closest('.mpi-prompt-box__ref-picker-item');
+            if (!btn) return;
+            e.preventDefault();
+            _insertRefTag(_refMatches[Number(btn.dataset.idx)]);
+        }));
+
+        _unsubs.push(on(textareaEl, 'keydown', (e) => {
+            if (!_refPickerOpen()) return;
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                const step = e.key === 'ArrowDown' ? 1 : -1;
+                _refActive = (_refActive + step + _refMatches.length) % _refMatches.length;
+                _paintRefPicker();
+                return;
+            }
+            if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                _insertRefTag(_refMatches[_refActive]);
+                return;
+            }
+            if (e.key === 'Escape') _closeRefPicker();
+        }));
+
+        // Caret can move without an input event (arrows, a click into the text).
+        _unsubs.push(on(textareaEl, 'keyup', (e) => {
+            if (e.key.startsWith('Arrow') || e.key === 'Home' || e.key === 'End') _syncRefPicker();
+        }));
+        _unsubs.push(on(textareaEl, 'blur', () => _closeRefPicker()));
+
         _unsubs.push(on(textareaEl, 'input', () => {
             updateHeight();
             _writeMode(textareaEl.value);
             _saveDraft();
+            _refActive = 0;
+            _syncRefPicker();
             emit('input', { positive: positiveValue, negative: negativeValue, negativeAudio: negativeAudioValue, activeMode: promptMode });
         }));
 

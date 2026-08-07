@@ -1326,6 +1326,31 @@ export function getCommandMediaInputs(key) {
 }
 
 /**
+ * MPI-475: the `@` reference-picker query under the caret, or null.
+ *
+ * Pure on purpose — the popup around it is DOM, but which tags match a half-typed
+ * `@pic` is string work, and that is the part with the edge cases: an email address
+ * mid-prompt must not open a picker, a `@` followed by a space must close one, and
+ * `Picture 1` has to be reachable by typing `pic` even though the tag has a space in it.
+ *
+ * @param {string} value  full textarea value
+ * @param {number} caret  selectionStart
+ * @param {Array<{tag:string}>} tags  staged references, in strip order
+ * @returns {{at:number, matches:Array<{tag:string}>}|null} `at` = index of the `@`
+ */
+export function matchRefTagQuery(value, caret, tags) {
+    if (!tags?.length) return null;
+    // `@` then word characters, ending AT the caret. Anything else — a space, a
+    // punctuation mark, a character before the `@` that is not a boundary — closes it.
+    const match = value.slice(0, caret).match(/(^|[\s(["'])@(\w*)$/);
+    if (!match) return null;
+    const needle = match[2].toLowerCase();
+    const matches = tags.filter(t => t.tag.toLowerCase().replace(/\s+/g, '').startsWith(needle));
+    if (!matches.length) return null;
+    return { at: caret - match[2].length - 1, matches };
+}
+
+/**
  * Capability-gates a slot list for a given model. The shared video ops
  * (i2v_ms/t2v_ms) declare an audio slot, but only models with
  * `capabilities.audio` (LTX) may surface/accept it; WAN must not. Call this at
