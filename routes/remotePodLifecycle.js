@@ -206,8 +206,25 @@ const POD_IMAGE_VERSION_CPU = 'v0.17.0';
 // same day: /opt/python_deps.txt now exists, so the boot loop that reinstalled every
 // volume pack's requirements.txt (and with it VideoHelperSuite's rival opencv-python)
 // skips itself. The stable pair stays on v0.17.0 until a release moves it.
-const POD_IMAGE_VERSION_DEV = 'v0.19.0-dev';
-const POD_IMAGE_VERSION_CPU_DEV = 'v0.19.0-dev';
+// v0.20.0-dev (MPI-467): ComfyUI v0.29.2 -> v0.30.0, the Pod half of the engine bump.
+// The Pod bakes its nodes from mpi-ci's OWN node_lock.json, so Vision's bump did nothing
+// to it until that file was synced (4d02e27: core v0.30.0/b1693ecb, workflow-templates
+// 0.11.27, ComfyUI-MpiNodes a6e5d5e0, comfyui-kjnodes 35e59561). python_deps.txt was
+// copied in the same pass (MPI-413 — lock and curated pip set must travel together); its
+// 0.29.2 -> 0.30.0 delta is provenance comments only, so 0.30.0 needs no different pip set.
+// BOTH legs built and pushed in run 31157902185, both pull-verified public. The cu130 leg
+// printed `node-import smoke test OK` — every baked node still imports on 0.30.0, which is
+// the MPI-341 gate and the one that matters for a core bump — plus torch 2.12.0+cu130 and
+// exactly one opencv (`cv2 5.0.0 ximgproc True`). The cpu leg boot-smoked on the DEV
+// runtime channel (/health 200, wrapper 0.2.41).
+// NOT YET SMOKED: the executing 34-op matrix (gates 7-9) is deferred until the H3
+// reference-to-video workflow lands, so this image is built-and-booted, not proven to
+// GENERATE on 0.30.0. `release:check` will keep refusing the bump until that evidence
+// exists — which is the gate working, not a surprise.
+// The stable pair stays on v0.17.0. An engine bump makes a clean release-version rebuild
+// MANDATORY at ship time, or users get a 0.30.0 local engine and a 0.28.0 remote Pod.
+const POD_IMAGE_VERSION_DEV = 'v0.20.0-dev';
+const POD_IMAGE_VERSION_CPU_DEV = 'v0.20.0-dev';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
