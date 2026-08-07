@@ -108,6 +108,12 @@
 
 ## importantChanges
 
+- **LTX 2.3's Balanced tier moved to a better, smaller model file.** The two
+  GPU-specific options (RTX 50 Series / RTX 40 & Older) are gone — one file now runs
+  on every card, at 20GB instead of 24–25GB, with better detail and sound. If you
+  already have LTX Balanced installed, the new file downloads once and the old one is
+  cleaned up. Text to Video and Image to Video also share one workflow now, so which
+  one you get follows from whether you supply a first or last frame.
 - **Wan 2.2 is image-to-video only now.** Its Text to Video operation has been
   retired: LTX 2.3 does that job better, and Wan's text-to-video weights were a
   27GB download that served nothing else. Image to Video is untouched — same

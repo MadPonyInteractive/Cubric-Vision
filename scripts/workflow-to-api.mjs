@@ -61,7 +61,13 @@ function fetchObjectInfo() {
  * positional widgets_values entries.
  */
 const PRIMITIVE = new Set(['INT', 'FLOAT', 'STRING', 'BOOLEAN', 'COMBO']);
-const isWidgetType = (type) => Array.isArray(type) || PRIMITIVE.has(type);
+// A V3 union type arrives as one comma-joined string ("FLOAT,INT"). It is a widget
+// only when EVERY member is primitive — a mixed union (IMAGE,MASK) is a socket.
+// Getting this wrong is silent: the input is skipped AND consumes no positional
+// value, so every later widget on the node shifts by one and still validates.
+const isWidgetType = (type) => Array.isArray(type)
+  || (typeof type === 'string'
+      && type.split(',').every((t) => PRIMITIVE.has(t)));
 
 /**
  * Walk a def's input spec, consuming widgets_values positionally, emitting named
@@ -243,6 +249,28 @@ function convert(workflow, objectInfo) {
     for (const [k, v] of Object.entries(inputs)) {
       if (Array.isArray(v) && v.length === 2 && !output[v[0]]) delete inputs[k];
     }
+  }
+
+  // Self-check against the same /object_info we converted with: every emitted node
+  // must carry every required input. ComfyUI rejects a MISSING required input but
+  // accepts a positionally-shifted one, so this is the only place a widget-mapping
+  // slip is loud instead of shipping as a plausible-but-wrong graph.
+  const holes = [];
+  for (const [id, node] of Object.entries(output)) {
+    const req = objectInfo[node.class_type]?.input?.required || {};
+    // A dynamic group (COMFY_AUTOGROW_V3 / dynamic combo) is emitted as `<name>.<sub>`
+    // entries, never as the bare name — a prefix hit satisfies it.
+    const have = Object.keys(node.inputs);
+    const missing = Object.keys(req)
+      .filter((k) => !have.some((h) => h === k || h.startsWith(`${k}.`)));
+    if (missing.length) holes.push(`  ${id} ${node.class_type} "${node._meta.title}" — missing: ${missing.join(', ')}`);
+  }
+  if (holes.length) {
+    throw new Error(
+      `Converted graph is missing required inputs on ${holes.length} node(s):\n${holes.join('\n')}\n` +
+      `  A MUTED node upstream severs its links (bypass passes them through; mute does not) — ` +
+      `unmute it in the graph and re-export. Otherwise this is a widget-mapping bug in this script.`
+    );
   }
   return output;
 }

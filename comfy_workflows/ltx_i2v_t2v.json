@@ -115,6 +115,10 @@
   "32": {
     "inputs": {
       "cfg": 1,
+      "model": [
+        "258",
+        0
+      ],
       "positive": [
         "586",
         0
@@ -347,6 +351,10 @@
   },
   "117": {
     "inputs": {
+      "samples": [
+        "127",
+        0
+      ],
       "audio_vae": [
         "2",
         0
@@ -384,6 +392,30 @@
     "class_type": "LatentUpscaleModelLoader",
     "_meta": {
       "title": "Load Latent Upscale Model"
+    }
+  },
+  "127": {
+    "inputs": {
+      "any": [
+        "38",
+        1
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "Stage 2 Audio Latent"
+    }
+  },
+  "128": {
+    "inputs": {
+      "any": [
+        "349",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "Stage 2 Video Latent"
     }
   },
   "140": {
@@ -452,7 +484,8 @@
   },
   "144": {
     "inputs": {
-      "batch_size": 24,
+      "frame_rate": 24,
+      "batch_size": 1,
       "audio_vae": [
         "2",
         0
@@ -745,6 +778,10 @@
   },
   "215": {
     "inputs": {
+      "samples": [
+        "128",
+        0
+      ],
       "vae": [
         "1",
         0
@@ -769,6 +806,18 @@
     "class_type": "LTXVAudioVAEDecode",
     "_meta": {
       "title": "LTXV Audio VAE Decode"
+    }
+  },
+  "258": {
+    "inputs": {
+      "any": [
+        "160",
+        0
+      ]
+    },
+    "class_type": "MpiReroute",
+    "_meta": {
+      "title": "Model"
     }
   },
   "264": {
@@ -1187,6 +1236,10 @@
   "326": {
     "inputs": {
       "cfg": 1,
+      "model": [
+        "258",
+        0
+      ],
       "positive": [
         "324",
         0
@@ -1344,6 +1397,7 @@
   },
   "366": {
     "inputs": {
+      "preview_rate": 8,
       "model": [
         "367",
         0

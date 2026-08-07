@@ -1235,6 +1235,16 @@ function createEngine({ engine, alwaysLocal }) {
         }
 
         // 3. Inject Parameters (Title-Based)
+        //
+        // A wired input is `[nodeId, slot]` — the graph author's wiring. Injection
+        // addresses WIDGETS, so a scalar must never overwrite a link: the node then
+        // receives a filename where it expected the upstream value. MpiStageLatents
+        // (MPI-466) is the first shipped node to carry BOTH a `latent` link and
+        // injectable widgets under ONE title, so the plain `Input_Video_Latent` spray
+        // replaced its link with the load filename and the node died on a str
+        // ("string indices must be integers"). ComfyUI cannot catch this — the graph
+        // is still structurally valid — so the guard belongs here.
+        const _isLink = (v) => Array.isArray(v) && v.length === 2 && typeof v[1] === 'number';
         const _inject = (nodeId, val) => {
             const node = workflow[nodeId];
             if (!node || !node.inputs) return;
@@ -1253,6 +1263,7 @@ function createEngine({ engine, alwaysLocal }) {
             ];
             for (const t of targets) {
                 if (t in node.inputs) {
+                    if (_isLink(node.inputs[t])) continue;             // wired — never clobber
                     if (typeof node.inputs[t] === 'number') node.inputs[t] = parseFloat(val);
                     else if (typeof node.inputs[t] === 'boolean') node.inputs[t] = (val === true || val === 'true');
                     else node.inputs[t] = val;
@@ -1279,6 +1290,7 @@ function createEngine({ engine, alwaysLocal }) {
                     const node = workflow[id];
                     if (node?.inputs && widgetKey in node.inputs) {
                         const cur = node.inputs[widgetKey];
+                        if (_isLink(cur)) continue;                    // wired — never clobber
                         if (typeof cur === 'number')       node.inputs[widgetKey] = parseFloat(val);
                         else if (typeof cur === 'boolean') node.inputs[widgetKey] = (val === true || val === 'true');
                         else                               node.inputs[widgetKey] = val;

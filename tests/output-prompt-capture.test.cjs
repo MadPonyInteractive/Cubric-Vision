@@ -83,7 +83,9 @@ assert.strictEqual(stagesFor('ltx_i2v_t2v.json', 'single'), 3, 'LTX single uncha
 assert.strictEqual(stagesFor('ltx_i2v_t2v_int8.json', 'single'), 3, 'int8 tier normalizes to the base row');
 // The `_stage2` strip is still live code, so it is still pinned — but no model produces
 // such a filename any more: every multi-stage graph resolves stage 2 in-file now.
-assert.strictEqual(stagesFor('ltx_i2v_t2v_stage2.json', 'stage2'), 1, '_stage2 suffix still stripped');
+// The expected value is LTX's stage2 count, which MPI-466 re-measured 1 -> 3 on the
+// re-exported graph; this assertion is about the SUFFIX STRIP, not about the number.
+assert.strictEqual(stagesFor('ltx_i2v_t2v_stage2.json', 'stage2'), 3, '_stage2 suffix still stripped');
 assert.strictEqual(stagesFor('wan5b_t2v.json', 'single'), 1, 'Wan5B unchanged');
 
 // Negative/garbage deltas must not corrupt a real count. (Moved off krea2_t2i.json with
