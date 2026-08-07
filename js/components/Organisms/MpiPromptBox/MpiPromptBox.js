@@ -714,6 +714,14 @@ export const MpiPromptBox = ComponentFactory.create({
             }
 
             _stripEl.innerHTML = '';
+            // MPI-466: frame-role pill. Only for an op that declares an endFrame slot
+            // the model's graph can actually serve — `i2v_ms` (LTX, Wan 2.2, MiniMax H3)
+            // does; Wan 5B's single-stage `i2v` no longer declares one, so it shows
+            // nothing rather than an affordance that injects into a missing node.
+            // Roles here are the ASSIGNED ones (_withAssignedRoles ran at line 330), so
+            // the pill reports where the asset is really going, not a stale tag.
+            const _hasEndSlot = _mediaSlotsForOperation().some(s => s.key === 'endFrame');
+            const _imageCount = items.filter(m => m.mediaType === 'image').length;
             items.forEach((item, idx) => {
                 const chip = document.createElement('div');
                 chip.className = `mpi-prompt-box-media-strip__chip mpi-prompt-box-media-strip__chip--${item.mediaType}`;
@@ -733,9 +741,23 @@ export const MpiPromptBox = ComponentFactory.create({
                 const indexHtml = items.length > 1
                     ? `<span class="mpi-prompt-box-media-strip__index">${idx + 1}</span>`
                     : '';
+                // One image => the role is a CHOICE, so the pill is a button. Two images
+                // => start/end are already both taken and order decides, so it is a
+                // read-only label; flipping them is what chip reorder is for.
+                const _isEnd = item.role === 'endFrame';
+                const roleHtml = (_hasEndSlot && item.mediaType === 'image' && _imageCount <= 2)
+                    ? (_imageCount === 1
+                        ? `<button class="mpi-prompt-box-media-strip__role mpi-prompt-box-media-strip__role--toggle${_isEnd ? ' mpi-prompt-box-media-strip__role--end' : ''}"
+                                   aria-pressed="${_isEnd}"
+                                   title="${_isEnd ? 'Use as start frame' : 'Use as last frame'}"
+                           >${_isEnd ? 'Last frame' : 'Start frame'}</button>`
+                        : `<span class="mpi-prompt-box-media-strip__role${_isEnd ? ' mpi-prompt-box-media-strip__role--end' : ''}"
+                           >${_isEnd ? 'Last frame' : 'Start frame'}</span>`)
+                    : '';
                 chip.innerHTML = `
                     ${indexHtml}
                     ${mediaHtml}
+                    ${roleHtml}
                     <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>
                 `;
                 if (items.length > 1) _makeChipReorderable(chip, item.id);
@@ -748,6 +770,21 @@ export const MpiPromptBox = ComponentFactory.create({
                     e.stopPropagation();
                     el.removeMedia?.(item.id);
                 });
+                // Mutate the LIVE item — `items` are role-assigned copies. Clearing the
+                // tag (rather than setting 'startFrame') lets the positional fill own the
+                // default, which is what keeps a lone untagged image on startFrame.
+                const roleBtn = qs('.mpi-prompt-box-media-strip__role--toggle', chip);
+                if (roleBtn) {
+                    on(roleBtn, 'click', (e) => {
+                        e.stopPropagation();
+                        const live = _mediaItems.find(m => m.id === item.id);
+                        if (!live) return;
+                        live.role = live.role === 'endFrame' ? undefined : 'endFrame';
+                        _emitMediaChange();
+                    });
+                    // The chip is pointer-draggable for reorder; the pill must not start one.
+                    on(roleBtn, 'pointerdown', (e) => e.stopPropagation());
+                }
                 _stripEl.appendChild(chip);
             });
 

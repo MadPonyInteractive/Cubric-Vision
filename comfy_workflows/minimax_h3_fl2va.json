@@ -369,7 +369,7 @@
   "217": {
     "inputs": {
       "channel": "alpha",
-      "block_if_empty": true,
+      "block_if_empty": false,
       "string": [
         "254",
         0

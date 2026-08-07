@@ -111,6 +111,47 @@ directions: a bare Load* node reappearing in an optional graph, and
 per-run stage-1 latent into the engine `input/` under a per-run name, which is
 exactly what `MpiStageLatents.load_path` then reads.
 
+## MUTE severs a link. BYPASS passes it through. They are NOT interchangeable (MPI-466)
+
+A **muted** node (LiteGraph `mode: 2`) is removed and its output links go with it.
+A **bypassed** node (`mode: 4`) is removed but its links are re-routed through by
+matching type. The converter reproduces both exactly as the ComfyUI frontend does,
+so a mute left on a live path ships a graph with **missing required inputs**.
+
+What that looks like, because it does not look like an error: LTX shipped with
+`Stage 2 Video/Audio Latent` and `Model` reroutes muted, so `VAEDecode.samples`,
+`LTXVAudioVAEDecode.samples` and both `CFGGuider.model` arrived unlinked. ComfyUI
+reported `Output will be ignored` for EVERY output node and the prompt "executed"
+in **0.07 seconds** with no video and no failure. The app logged
+`Generation completed but no output returned`.
+
+Mute is for a node you want *gone*, on a branch nothing downstream needs. If you
+want a node skipped but the signal to keep flowing, bypass it. If the path is
+live, neither — leave it enabled.
+
+The conversion gate below now catches this class before bake.
+
+## `block_if_empty: false` on any loader whose PRESENCE drives routing (MPI-466)
+
+`MpiLoadImageFromPath` / `MpiLoadAudio` raise an `ExecutionBlocker` when the path
+is empty and `block_if_empty: true`. That blocker propagates downstream and kills
+the branch — which is correct for a genuinely required input, and **wrong for a
+media-derived route**, where the empty slot IS the signal.
+
+In a presence-routed graph the routing is done by `MpiAnyChecker` → `has_value` →
+the lazy `MpiIfElse` gates. The loader must not block, or it pre-empts the gate
+before it can choose. All three end-frame graphs now agree:
+
+| graph | `start` | `end` |
+|---|---|---|
+| `ltx_i2v_t2v*.json` | `false` | `false` |
+| `minimax_h3_fl2va.json` | `false` | `false` |
+| `wan22_i2v.json` | `false` | `false` |
+
+H3 and WAN shipped with `start.block_if_empty: true` and were re-exported. Nobody
+had hit it because `startFrame` was `required: true`, so an empty start never
+reached those graphs — it only surfaced when the last-frame-only route needed one.
+
 ## Guard
 
 `scripts/validate-injection-rules.mjs` gates every converted API before bake

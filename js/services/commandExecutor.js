@@ -1443,9 +1443,16 @@ export function runCommand(payload) {
             getModelById(workingPayload.modelId),
         );
         const _mItems = Array.isArray(workingPayload.mediaItems) ? workingPayload.mediaItems : [];
+        // MPI-466: "required" is per-SLOT, but the failure this catches is per-MEDIA-TYPE
+        // — an attached image that never reached ANY slot. Deliberately routing the only
+        // image to `endFrame` leaves `startFrame` (required) empty by design, and that is
+        // a legal end-frame-only run, not a load failure. So a required slot is stranded
+        // only when NO slot of its media type got filled; otherwise the user chose where
+        // the asset went and the graph's lazy gates route on presence.
         const strandedSlot = _mediaSlots.find(s =>
             s.required && !params[s.title] &&
-            _mItems.some(m => m.mediaType === s.mediaType && m.url)
+            _mItems.some(m => m.mediaType === s.mediaType && m.url) &&
+            !_mediaSlots.some(o => o.mediaType === s.mediaType && params[o.title])
         );
         if (strandedSlot) {
             await _cleanupTrimmedVideoInputs(tempTrimInputPaths);

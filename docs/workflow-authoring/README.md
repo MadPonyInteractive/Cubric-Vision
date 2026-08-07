@@ -80,7 +80,29 @@ Exports to `raw/` rather than Saving to the library.
 Then `node scripts/sync-raw-workflows.mjs` — it converts the git-changed raw files,
 gates on `validate-injection-rules.mjs`, bakes the runtime files via `orchestrate.py`,
 commits `raw/` and leaves the generated files staged. Needs a running ComfyUI (widget
-names come from `/object_info`). Full procedure and its traps:
+names come from `/object_info`).
+
+**Convert against the ENGINE, not the bench — `COMFY_URL=http://127.0.0.1:48188`.**
+The default is `8188`, which is the authoring bench (`G:\ComfyUi`) and runs AHEAD of
+what ships: measured 2026-08-07, bench `0.30.2` vs engine `0.30.0`. The engine's
+schema is the one the graph has to satisfy at run time, so it is the one to convert
+with. (The bench is still where you author — only the conversion needs the engine.)
+
+**A V3 union widget type is one comma-joined string** — `"FLOAT,INT"`, not an array.
+`workflow-to-api.mjs` used to classify that as a SOCKET, so the input was skipped AND
+consumed no positional value, shifting every later widget on the node by one:
+`LTXVEmptyLatentAudio` shipped `batch_size: 24` when 24 was the frame rate. **ComfyUI
+rejects a MISSING required input but silently accepts a SHIFTED one**, so half of it
+was invisible. Fixed (MPI-466): a union is a widget only when EVERY member is
+primitive — `IMAGE,MASK` stays a socket.
+
+`convert()` now self-checks every emitted node against the same `/object_info` it
+converted with and ABORTS on a missing required input, naming the nodes. That is the
+only place this class of slip is loud. A dynamic group (`COMFY_AUTOGROW_V3`) satisfies
+it via its `<name>.<sub>` entries. It also catches a muted node that severed a link —
+see [media-inputs.md](media-inputs.md) § MUTE severs a link.
+
+Full procedure and its traps:
 [../playbooks/add-model/01-workflow-split.md](../playbooks/add-model/01-workflow-split.md)
 — it applies to editing an existing workflow, not just onboarding a new model.
 

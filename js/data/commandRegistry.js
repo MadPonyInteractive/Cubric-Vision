@@ -644,8 +644,12 @@ export const commands = {
         mediaType: MEDIA_TYPE.VIDEO,
         requiresImages: 1,
         mediaInputs: [
+            // NO endFrame here. `i2v` (single-stage) has exactly one consumer — Wan 2.2
+            // 5B — and `wan5b_i2v.json` carries no `Input_End_Frame` node, so the slot
+            // was undeliverable: injection silently skips a title matching nothing, and
+            // the UI would have offered a last-frame affordance that does nothing.
+            // The end-frame models (LTX, Wan 2.2, MiniMax H3) are all on `i2v_ms`.
             { key: 'startFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Start_Frame', required: true },
-            { key: 'endFrame', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_End_Frame', required: false },
         ],
         promptRequired: false,
         components: ['qualityTier', 'duration', 'motionIntensity', 'ratio'],

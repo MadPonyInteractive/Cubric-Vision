@@ -13,6 +13,31 @@ The user's chosen operation persists per model in `state.s_selectedOpByModel` (`
 
 The trap this fixes: the op was NEVER persisted, so every block remount (Gallery↔History nav) re-derived it from a hardcoded default (`t2i`/`t2v` / first-available), and PromptBox re-picked it on model switch and media-state change → the user's Upscale/Pose-Reference/etc. silently snapped back to i2i. **`PromptBox.setOperation(key, { programmatic })`** carries a `programmatic` flag, set `true` on every INTERNAL re-pick (`setModel`, `setModelList`, the `_emitMediaChange` media auto-switch); consumers persist ONLY user picks (`!programmatic`), so a re-pick can't poison the memory. Reuse Prompt re-asserts the reused op LAST, after `clearMedia`/`injectMedia` fire `_emitMediaChange` (which transiently auto-switches when media state mismatches the op's input slots). **Rule: when a block remounts, seed the op from `getSelectedOp` before any default; and any programmatic `setOperation` MUST pass `{ programmatic: true }` or it will be mistaken for a user choice.**
 
+## PromptBox — the frame-role pill reports the ASSIGNED role (MPI-466)
+
+Image chips carry a role pill along the bottom, but only when the active op declares
+an `endFrame` slot the model can actually serve. That gate is the slot list, not a
+model list: `i2v_ms` (LTX, Wan 2.2, MiniMax H3) declares one; single-stage `i2v` no
+longer does, because its only consumer — Wan 2.2 5B — has no `Input_End_Frame` node
+and injection would silently skip the title, giving the user a control that does
+nothing.
+
+- **One image** → the pill is a `<button>`: the role is a genuine choice. Clicking it
+  sets `role: 'endFrame'` or **clears the tag** (never sets `'startFrame'`), so the
+  positional fill keeps owning the default. Its `pointerdown` is stopped, or the pill
+  starts a chip-reorder drag.
+- **Two images** → a read-only `<span>`; start/end are both taken and strip order
+  decides. Reorder is how you swap them.
+
+It renders from `_withAssignedRoles()` output, not raw `item.role`, so it always shows
+where the asset really goes rather than a stale tag. `startFrame`/`endFrame` are
+SEMANTIC roles and stay sticky — `stripOrdinalMediaRoles` only clears ordinal ones.
+
+Companion gate: `commandExecutor.js`'s stranded-slot bail is per-MEDIA-TYPE, not
+per-slot. An end-frame-only run leaves required `startFrame` empty **by design**, so
+the bail fires only when NO slot of that media type got filled — otherwise a legal
+route reads as "Could not load the input image".
+
 ## MpiProgressBar ships a 160px floor that beats any parent `max-width`
 
 `.mpi-progress { min-width: 160px }` (`js/components/Primitives/MpiProgressBar/MpiProgressBar.css`). A `max-width` on the mount wrapper can never win against it — two bars side by side silently overflow their container and draw ON TOP of each other, which reads as a layout bug in the consumer, not in the primitive. Sizing bars below 160px means overriding `min-width` **scoped to your consumer** (see `.mpi-gallery-grid__zone--center .mpi-progress`), never on the primitive — other consumers rely on the floor.

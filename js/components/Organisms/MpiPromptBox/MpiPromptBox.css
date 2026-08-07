@@ -423,6 +423,39 @@
     z-index: 5;
 }
 
+/* Frame-role pill (MPI-466) — which frame this image becomes. A button when the
+   role is a choice (one image), a plain label when order already decides (two). */
+.mpi-prompt-box-media-strip__role {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--s-1) 0;
+    display: block;
+    border: 0;
+    background: color-mix(in oklch, var(--surface-0) 72%, transparent);
+    color: var(--ink-1);
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    z-index: 5;
+}
+
+.mpi-prompt-box-media-strip__role--end {
+    background: color-mix(in oklch, var(--accent-heat) 82%, transparent);
+    color: var(--surface-0);
+}
+
+.mpi-prompt-box-media-strip__role--toggle {
+    cursor: pointer;
+}
+
+.mpi-prompt-box-media-strip__role--toggle:hover {
+    background: color-mix(in oklch, var(--accent-heat) 92%, transparent);
+    color: var(--surface-0);
+}
+
 .mpi-prompt-box-media-strip__thumb {
     width: 100%;
     height: 100%;

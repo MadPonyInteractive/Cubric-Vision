@@ -97,6 +97,26 @@ These use the same LoRA object shape as flat slots, and the controller writes
 
 Injection matches node title EXACTLY and **silently drops any param whose title matches no node** — no error, no log, no toast. THE mechanism behind a family of invisible bugs. **MPI-242 hit it twice:** a batch node titled `Input_Batch` never matched (the injector emits `Input_Batch_Size` — a PURE prefix, never abbreviated), so Batch N rendered 1 image in Krea2 *and* shipped Chroma; and `Input_Is_i2i` existed only in source COMMENTS, so Krea2 i2i ran as t2i for four sessions. Branch selection is now `ModelDef.opInject` — a per-model op → `Input_wf_type` int, since every image model is one master graph whose other branches lazy evaluation prunes (MPI-365). `CommandDef.injectParams`, the older per-OP mechanism, still exists and is still supported but **nothing declares it any more**: `control` lost `Input_depth_reference` and `i2i` lost `Input_Is_i2i` when SDXL migrated. Neither mechanism removes the skip — a wrong title in EITHER is silently dropped. **The diagnostic the injector refuses to give is `tests/inject-params-titles.test.cjs`** — it asserts every `injectParams` AND every `opInject` title exists in every workflow its op runs; run it when wiring a new op onto a shared graph. Also trace a gated control to its real consumer before mounting it: `denoise` reaches the sampler only on the branches that VAE-encode a latent, so it is live on i2i/control and inert on t2i. Same family as the `Output_Image` typo trap (title-map row) and the MPI-229/198 path-heal separator mismatches.
 
+### Injection writes WIDGETS — never a wired link (MPI-466)
+
+`_inject` sprays a value into every recognised key on a title-matched node (`value`,
+`text`, `image`, `latent`, `filename`, …). A wired input is `[nodeId, slot]` — the
+graph author's wiring — so **a scalar must never overwrite one**, and both injection
+paths (the spray and the `Title.widget` form) now skip a key holding a link.
+
+The trap is that ONE title can own both. `MpiStageLatents` (titled
+`Input_Video_Latent`) carries a `latent` LINK *and* `is_continue`/`is_preview`/
+`load_path` widgets, so `params['Input_Video_Latent'] = <filename>` replaced the wire
+with a string and the node died on `TypeError: string indices must be integers` —
+**after four minutes of sampling, on the last node**. ComfyUI cannot catch this: the
+graph is structurally valid and only the type is wrong at execution.
+
+It was fleet-wide, not one model: `ltx_i2v_t2v*.json#568`, `minimax_h3_fl2va.json#320`
+and `wan22_i2v.json#881` all carry that node with that wire. Pinned by
+`tests/inject-never-clobbers-link.test.cjs`. When adding a node that mixes a link with
+injectable widgets, address the widgets by the `Title.widget` form and let the plain
+title fall through.
+
 ### LoRA slot injection — bypass, choke point, clip-knob trap
 
 - **Single choke point (MPI-223):** the `{lora_name, strength_model, strength_clip}` object for every `Input_Lora_*` slot is assembled in exactly ONE place — `commandExecutor.js` `_loraSlotParam` — **upstream of the local/remote engine split**. Any per-slot LoRA logic (bypass, normalization, defaults) belongs there so both engines get it. Don't add slot logic downstream of the split.
