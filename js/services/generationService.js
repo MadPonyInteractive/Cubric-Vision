@@ -725,7 +725,7 @@ async function _deleteSavedItems(items) {
  * @returns {{ cancel: function }}
  */
 export function startGeneration(config, callbacks = {}, opts = {}) {
-    const { operation, model, positive, negative, mediaItems = [], maskDataUrl, injectionParams = {} } = config;
+    const { operation, model, positive, negative, negativeAudio, mediaItems = [], maskDataUrl, injectionParams = {} } = config;
     // The prompt as the user typed it. Everything on the SUBMIT path must use this
     // (it is what feeds the graph). Only the SAVE path may substitute what the
     // encoder actually saw — see the `Output_prompt` note in exec.onComplete.
@@ -775,6 +775,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         modelId: model.id,
         positive,
         negative,
+        negativeAudio,
         mediaItems,
         maskDataUrl,
         injectionParams,

@@ -1344,9 +1344,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 };
             };
 
-            const _galleryGenerationFromPayload = ({ operation, positive, negative, mediaItems, injectionParams = {}, previewOnly = false, forceLocal = false }) => {
+            const _galleryGenerationFromPayload = ({ operation, positive, negative, negativeAudio, mediaItems, injectionParams = {}, previewOnly = false, forceLocal = false }) => {
                 if (!activeModel) return;
-                const config = { operation, model: activeModel, positive, negative, mediaItems, injectionParams, previewOnly };
+                const config = { operation, model: activeModel, positive, negative, negativeAudio, mediaItems, injectionParams, previewOnly };
                 return {
                     config,
                     // MPI-74: forceLocal rides in opts (a routing hint, not gen config).

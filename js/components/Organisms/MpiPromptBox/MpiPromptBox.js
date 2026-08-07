@@ -83,7 +83,14 @@ export const MpiPromptBox = ComponentFactory.create({
 
     setup: (el, props, emit) => {
         let isExpansionLocked = state.promptExpanded === false;
-        let isNegativeMode    = false;
+        // MPI-474: the box cycles through THREE fields, not two. A boolean could not
+        // carry the third, and the audio negative is a genuinely separate prompt —
+        // LTX's NAG patches video cross-attention and audio cross-attention from two
+        // different conditionings. Gated on capabilities.audio, so a model without an
+        // audio negative still cycles positive <-> negative exactly as before.
+        const PROMPT_MODES = ['positive', 'negative', 'negativeAudio'];
+        let promptMode = 'positive';
+        const _isNeg = () => promptMode !== 'positive';
         // Drafts (text + chips) are localized PER WORKSPACE — the gallery box and
         // history box never share. Keyed on props.workspaceKey; defaults to
         // 'gallery'. Explicit props (e.g. a recall) win over the restored draft.
@@ -99,13 +106,39 @@ export const MpiPromptBox = ComponentFactory.create({
 
         const _draftSlot = state.promptDraft?.[_wsKey] || {};
         const _draft = _matchesSlot(_draftSlot) ? _draftSlot : {};
-        let positiveValue     = props.value || _draft.positive || '';
-        let negativeValue     = props.negativeValue || _draft.negative || '';
+        let positiveValue      = props.value || _draft.positive || '';
+        let negativeValue      = props.negativeValue || _draft.negative || '';
+        let negativeAudioValue = props.negativeAudioValue || _draft.negativeAudio || '';
+
+        // Field access by mode, so every read/write site stays a one-liner and a
+        // fourth mode would not mean hunting ternaries.
+        const _readMode = (m = promptMode) =>
+            m === 'negative' ? negativeValue : m === 'negativeAudio' ? negativeAudioValue : positiveValue;
+        const _writeMode = (v, m = promptMode) => {
+            if (m === 'negative') negativeValue = v;
+            else if (m === 'negativeAudio') negativeAudioValue = v;
+            else positiveValue = v;
+        };
+        const _placeholderFor = (m) =>
+            m === 'negative' ? 'Type negative prompt...'
+                : m === 'negativeAudio' ? 'Type negative audio prompt...'
+                    : 'Type your prompt...';
+        const _iconFor = (m) =>
+            m === 'negative' ? 'negative' : m === 'negativeAudio' ? 'audio' : 'check';
+        // The audio stop exists only where an audio negative can actually land.
+        // capabilities.audio is the same signal that surfaces the audio input slot
+        // and the audioMode/useAudio controls, so the two never disagree.
+        const _audioNegAvailable = () => model?.capabilities?.audio === true;
 
         function _saveDraft() {
             state.promptDraft = {
                 ...state.promptDraft,
-                [_wsKey]: { id: _wsId, positive: positiveValue, negative: negativeValue },
+                [_wsKey]: {
+                    id: _wsId,
+                    positive: positiveValue,
+                    negative: negativeValue,
+                    negativeAudio: negativeAudioValue,
+                },
             };
         }
 
@@ -696,12 +729,30 @@ export const MpiPromptBox = ComponentFactory.create({
             const existing = qsa('.mpi-prompt-box-media-strip__chip', _stripEl);
             existing.forEach(c => _prevRects.set(c.dataset.id, c.getBoundingClientRect()));
 
+            // MPI-466: frame-role pill. Only for an op that declares an endFrame slot
+            // the model's graph can actually serve — `i2v_ms` (LTX, Wan 2.2, MiniMax H3)
+            // does; Wan 5B's single-stage `i2v` no longer declares one, so it shows
+            // nothing rather than an affordance that injects into a missing node.
+            // Roles here are the ASSIGNED ones (_withAssignedRoles ran at line 330), so
+            // the pill reports where the asset is really going, not a stale tag.
+            const _hasEndSlot = _mediaSlotsForOperation().some(s => s.key === 'endFrame');
+            const _imageCount = items.filter(m => m.mediaType === 'image').length;
+            // Everything the pill renders from, as one string. The reorder fast path
+            // below keys on the item SET, and that invariant ("same set => same chip
+            // content") stopped being true the moment a chip started rendering a role:
+            // toggling start<->end changes no id, so the fast path skipped the repaint
+            // and the pill never moved. Stamped on the chip and compared on the way in.
+            const _roleKey = (item) => (_hasEndSlot && item.mediaType === 'image' && _imageCount <= 2)
+                ? `${item.role === 'endFrame' ? 'end' : 'start'}:${_imageCount}`
+                : '';
+
             // Reorder fast path: same chips, new order. Rebuilding the DOM here
             // would reload every <img src> mid-drag (flicker) and drop the
             // dragged node out from under its own pointer handlers — so move the
             // existing nodes instead and only re-stamp the index badges.
             const sameSet = existing.length === items.length
-                && items.every(it => _prevRects.has(it.id));
+                && items.every(it => _prevRects.has(it.id))
+                && items.every(it => existing.find(c => c.dataset.id === it.id)?.dataset.roleKey === _roleKey(it));
             if (sameSet) {
                 items.forEach((item, idx) => {
                     const chip = existing.find(c => c.dataset.id === item.id);
@@ -714,18 +765,11 @@ export const MpiPromptBox = ComponentFactory.create({
             }
 
             _stripEl.innerHTML = '';
-            // MPI-466: frame-role pill. Only for an op that declares an endFrame slot
-            // the model's graph can actually serve — `i2v_ms` (LTX, Wan 2.2, MiniMax H3)
-            // does; Wan 5B's single-stage `i2v` no longer declares one, so it shows
-            // nothing rather than an affordance that injects into a missing node.
-            // Roles here are the ASSIGNED ones (_withAssignedRoles ran at line 330), so
-            // the pill reports where the asset is really going, not a stale tag.
-            const _hasEndSlot = _mediaSlotsForOperation().some(s => s.key === 'endFrame');
-            const _imageCount = items.filter(m => m.mediaType === 'image').length;
             items.forEach((item, idx) => {
                 const chip = document.createElement('div');
                 chip.className = `mpi-prompt-box-media-strip__chip mpi-prompt-box-media-strip__chip--${item.mediaType}`;
                 chip.dataset.id = item.id;
+                chip.dataset.roleKey = _roleKey(item);
                 chip.draggable = false;
                 const mediaHtml = item.mediaType === 'image'
                     ? `<img src="${item.url}" class="mpi-prompt-box-media-strip__thumb" alt="" draggable="false">`
@@ -745,12 +789,16 @@ export const MpiPromptBox = ComponentFactory.create({
                 // => start/end are already both taken and order decides, so it is a
                 // read-only label; flipping them is what chip reorder is for.
                 const _isEnd = item.role === 'endFrame';
+                // The swap icon is what says "clickable" — there is no tooltip. Nothing
+                // else in the app floats one, and a hover hint in the status bar would
+                // fire the notify channel on a mouse move. aria-label is for the screen
+                // reader only and paints nothing.
                 const roleHtml = (_hasEndSlot && item.mediaType === 'image' && _imageCount <= 2)
                     ? (_imageCount === 1
                         ? `<button class="mpi-prompt-box-media-strip__role mpi-prompt-box-media-strip__role--toggle${_isEnd ? ' mpi-prompt-box-media-strip__role--end' : ''}"
                                    aria-pressed="${_isEnd}"
-                                   title="${_isEnd ? 'Use as start frame' : 'Use as last frame'}"
-                           >${_isEnd ? 'Last frame' : 'Start frame'}</button>`
+                                   aria-label="${_isEnd ? 'Use as start frame' : 'Use as last frame'}"
+                           >${renderIcon('swap', 'xs')}<span>${_isEnd ? 'Last frame' : 'Start frame'}</span></button>`
                         : `<span class="mpi-prompt-box-media-strip__role${_isEnd ? ' mpi-prompt-box-media-strip__role--end' : ''}"
                            >${_isEnd ? 'Last frame' : 'Start frame'}</span>`)
                     : '';
@@ -936,6 +984,21 @@ export const MpiPromptBox = ComponentFactory.create({
         // throw a ReferenceError on any injection that changes mode.
         let _negBtn = null;
 
+        // The ONE place a mode change happens. Four things must move together —
+        // textarea value, placeholder, the button's icon + active flag, and the
+        // mode-change emit — and before MPI-474 they were duplicated across the
+        // click handler, injectPrompts and the toggle teardown, which is how the
+        // three drifted apart.
+        function _applyMode(next) {
+            promptMode = next;
+            textareaEl.value = _readMode();
+            textareaEl.placeholder = _placeholderFor(next);
+            _negBtn?.el?.setActive?.(_isNeg());
+            _negBtn?.el?.setIcon?.(_iconFor(next));
+            updateHeight();
+            emit('mode-change', { mode: next });
+        }
+
         el.injectPrompts = ({ positive, negative }) => {
             positiveValue = positive ?? positiveValue;
             negativeValue = negative ?? negativeValue;
@@ -947,15 +1010,12 @@ export const MpiPromptBox = ComponentFactory.create({
             // injected; a both-sides inject keeps the current mode.
             const _wantNeg = (negative != null && positive == null);
             const _wantPos = (positive != null && negative == null);
-            if ((_wantPos && isNegativeMode) || (_wantNeg && !isNegativeMode)) {
-                isNegativeMode = _wantNeg;
-                // Keep the toggle button, placeholder and listeners in sync — the
-                // same three things the toggle's own click handler updates.
-                _negBtn?.el?.setActive?.(isNegativeMode);
-                textareaEl.placeholder = isNegativeMode ? 'Type negative prompt...' : 'Type your prompt...';
-                emit('mode-change', { mode: isNegativeMode ? 'negative' : 'positive' });
+            if ((_wantPos && _isNeg()) || (_wantNeg && !_isNeg())) {
+                // An injected plain negative lands on the VIDEO negative — the audio
+                // one is never what a reuse/enhance payload means by "negative".
+                _applyMode(_wantNeg ? 'negative' : 'positive');
             }
-            textareaEl.value = isNegativeMode ? negativeValue : positiveValue;
+            textareaEl.value = _readMode();
             updateHeight();
             _saveDraft();
         };
@@ -1035,10 +1095,9 @@ export const MpiPromptBox = ComponentFactory.create({
 
         _unsubs.push(on(textareaEl, 'input', () => {
             updateHeight();
-            if (isNegativeMode) negativeValue = textareaEl.value;
-            else positiveValue = textareaEl.value;
+            _writeMode(textareaEl.value);
             _saveDraft();
-            emit('input', { positive: positiveValue, negative: negativeValue, activeMode: isNegativeMode ? 'negative' : 'positive' });
+            emit('input', { positive: positiveValue, negative: negativeValue, negativeAudio: negativeAudioValue, activeMode: promptMode });
         }));
 
         // Escape blurs the textarea so app-level hotkeys regain focus.
@@ -1511,6 +1570,12 @@ export const MpiPromptBox = ComponentFactory.create({
                 && model?.capabilities?.negativePrompt !== false
                 && !_krea2TurboOn;
 
+            // MPI-474: the model can lose capabilities.audio without the button
+            // appearing or disappearing, and the early return below would leave the
+            // box stranded on an audio negative that can no longer be delivered —
+            // the same stranded-editing bug the !show branch already guards.
+            if (promptMode === 'negativeAudio' && !_audioNegAvailable()) _applyMode('negative');
+
             if (show === !!_negBtn) return;
 
             if (!show) {
@@ -1519,27 +1584,25 @@ export const MpiPromptBox = ComponentFactory.create({
                 // the textarea back to positive and tell consumers.
                 _negBtn.destroy();   // factory destroy() also removes el from the slot
                 _negBtn = null;
-                if (isNegativeMode) {
-                    isNegativeMode = false;
-                    textareaEl.value = positiveValue;
-                    textareaEl.placeholder = 'Type your prompt...';
-                    updateHeight();
-                    emit('mode-change', { mode: 'positive' });
-                }
+                if (_isNeg()) _applyMode('positive');
                 return;
             }
 
+            // MPI-474: the cycle is positive -> negative -> negative audio, and the
+            // audio stop only exists for a model that HAS an audio negative to steer
+            // (LTX). `toggleable` is deliberately off — MpiButton's built-in toggle is
+            // boolean and would fight a three-state cycle, so the icon and active flag
+            // are driven by _applyMode instead.
             _negBtn = MpiButton.mount(negSlot, {
-                icon: 'check', iconActive: 'negative',
-                info: 'Switch between Positive and Negative Prompt',
-                size: 'sm', variant: 'primary', toggleable: true, active: isNegativeMode
+                icon: _iconFor(promptMode),
+                info: _audioNegAvailable()
+                    ? 'Cycle Positive / Negative / Negative Audio prompt'
+                    : 'Switch between Positive and Negative Prompt',
+                size: 'sm', variant: 'primary', active: _isNeg()
             });
-            _negBtn.on('click', (data) => {
-                isNegativeMode = data.active;
-                textareaEl.value = isNegativeMode ? negativeValue : positiveValue;
-                textareaEl.placeholder = isNegativeMode ? 'Type negative prompt...' : 'Type your prompt...';
-                updateHeight();
-                emit('mode-change', { mode: isNegativeMode ? 'negative' : 'positive' });
+            _negBtn.on('click', () => {
+                const modes = _audioNegAvailable() ? PROMPT_MODES : PROMPT_MODES.slice(0, 2);
+                _applyMode(modes[(modes.indexOf(promptMode) + 1) % modes.length]);
             });
         }
 
@@ -1566,7 +1629,7 @@ export const MpiPromptBox = ComponentFactory.create({
 
         async function _runEnhance() {
             if (_enhancing) return;
-            const source = isNegativeMode ? negativeValue : positiveValue;
+            const source = _readMode();
             if (!source.trim()) { _enhanceToast('Type a prompt to enhance first.', 'warning'); return; }
             _enhancing = true;
             _enhanceBtn?.el?.setDisabled?.(true);
@@ -1586,7 +1649,7 @@ export const MpiPromptBox = ComponentFactory.create({
                         positive: result.prompt ?? positiveValue,
                         negative: result.negativePrompt ?? negativeValue,
                     });
-                    emit('input', { positive: positiveValue, negative: negativeValue, activeMode: isNegativeMode ? 'negative' : 'positive' });
+                    emit('input', { positive: positiveValue, negative: negativeValue, negativeAudio: negativeAudioValue, activeMode: promptMode });
                     // result.note is set when Prompt had no recipe for this model
                     // and fell back to a default enhancer — surface it honestly.
                     _enhanceToast(result.note || 'Prompt enhanced.', result.note ? 'info' : 'success');
@@ -1660,6 +1723,10 @@ export const MpiPromptBox = ComponentFactory.create({
                 operation:  activeOperation,
                 positive:   positiveValue,
                 negative:   negativeValue,
+                // Only sent where it can land. A model without capabilities.audio has
+                // no audio-negative node, and its box never let the user type one, so
+                // a stale draft value must not ride along to a graph that ignores it.
+                negativeAudio: _audioNegAvailable() ? negativeAudioValue : '',
                 mediaItems: el.getMediaItems(),
                 injectionParams,
                 previewOnly,

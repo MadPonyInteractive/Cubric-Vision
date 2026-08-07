@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-473",
+  "title": "Preview_Only is vestigial — remove the dead param, its guard, and four stale comments",
+  "description": "No workflow carries a Preview_Only node. commandExecutor still sets the key only to copy it into Video_Latent.is_preview, then comfyController strips it and warns on every multi-stage generation.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-07T07:19:49Z",
+  "updated_at": "2026-08-07T07:19:49Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

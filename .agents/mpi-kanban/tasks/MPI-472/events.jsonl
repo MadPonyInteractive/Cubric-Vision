@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","at":"2026-08-07T07:19:49Z","actor":"claude","id":"MPI-472","title":"imageio-ffmpeg is not in the dependency lock — a full engine reinstall kills ALL video output"}

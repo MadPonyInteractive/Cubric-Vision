@@ -607,12 +607,18 @@ export async function prefetchInstalledModels() {
  * @returns {Record<string, any>}
  */
 function _buildParams(payload) {
-    const { positive, negative, seed, mediaItems = [], injectionParams = {} } = payload;
+    const { positive, negative, negativeAudio, seed, mediaItems = [], injectionParams = {} } = payload;
     const resolvedSeed = seed ?? ComfyUIController.generateRandomSeed();
 
     const params = {
         Input_Positive: positive || '',
         Input_Negative: negative || '',
+        // MPI-474: LTX steers video and audio away from SEPARATE conditionings —
+        // LTX2_NAG patches attn2 from the video negative and audio_attn2 from this
+        // one. Always emitted, including empty: the graph gates NAG on the string
+        // being non-empty, so a cleared box has to reach the node to turn it back
+        // off. A model whose graph has no such node skips the title silently.
+        Input_Negative_Audio: negativeAudio || '',
         Input_Seed:     resolvedSeed,
     };
 

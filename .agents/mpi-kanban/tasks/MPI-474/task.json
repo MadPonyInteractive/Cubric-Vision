@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-474",
+  "title": "Prompt box cycles three fields: positive, negative, negative audio",
+  "description": "LTX's NAG takes separate video and audio negatives. Turn the boolean positive/negative toggle into a three-state cycle and inject Input_Negative_Audio.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-08-07T07:19:49Z",
+  "updated_at": "2026-08-07T07:19:49Z",
+  "activeSessionTitle": "MPI-466 LTX validation — NAG negative wiring and the third prompt mode",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

@@ -159,6 +159,17 @@ export const MpiButton = ComponentFactory.create({
             if (target) target.textContent = label;
         };
 
+        // Public API: swap the icon after mount. The `iconActive` prop only covers
+        // a BOOLEAN swap (CSS shows __icon or __icon-swap off `is-active`); a
+        // control that cycles through three or more states needs to set the icon
+        // outright. Mirrors setLabel. Only touches the base `__icon` span, so a
+        // button that also declares `iconActive` keeps its swap intact.
+        el.setIcon = (name) => {
+            props.icon = name;
+            const target = qs('.mpi-ibtn__icon', el);
+            if (target) target.innerHTML = renderIcon(name, props.size || 'md');
+        };
+
         // Public API: sync disabled state. Required because click handler reads
         // props.disabled — toggling the DOM attribute alone leaves props stale
         // and clicks silently bail.

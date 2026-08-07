@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","at":"2026-08-07T07:19:49Z","actor":"claude","id":"MPI-473","title":"Preview_Only is vestigial — remove the dead param, its guard, and four stale comments"}

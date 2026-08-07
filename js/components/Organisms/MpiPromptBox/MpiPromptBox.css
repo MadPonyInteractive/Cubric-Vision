@@ -449,6 +449,10 @@
 
 .mpi-prompt-box-media-strip__role--toggle {
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-1);
 }
 
 .mpi-prompt-box-media-strip__role--toggle:hover {
