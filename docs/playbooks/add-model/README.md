@@ -109,6 +109,7 @@ Two structural forks decide everything downstream:
 | Pod hot-store has **no size gate** — everything ≥0.1 GB stages; the only per-file skip is a file bigger than pod VRAM. Nothing to ask the user | [02](02-dependencies-r2.md) |
 | `progressStages.js` bar counts **must be counted live** per run mode. Never guess | [02](02-dependencies-r2.md) |
 | Injection **silently skips** a param whose `Input_*` title matches no node (hid `Input_Is_i2i` + `Input_Batch` for 4 sessions) | [04](04-ops-and-controls.md) |
+| Same silent skip on the OTHER injection source: a `mediaInputs` slot whose `title` matches no node gives the user a chip well that accepts a file, uploads it, and drops it on the floor. Untested until MPI-475 wrote the sweep (`tests/inject-params-titles.test.cjs`), so a model predating it may still carry one. Run `npm test` after declaring slots | [04](04-ops-and-controls.md) |
 | Style-LoRA set ⇒ assert `len(MpiPromptList.options) == number of style LoRAs`. A missing trigger line is a silent half-application | [05](05-prompt-and-styles.md) |
 | A model that BREAKS A SHIPPED CONVENTION — a new node class, a missing twin file, a different filename shape — must have that convention **grepped for in the app before testing**. The app ENCODES conventions in shared resolvers, and each one is a silent half-wire | this file |
 | Models are **NOT** version-bumped | this file |

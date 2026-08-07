@@ -114,6 +114,21 @@
   "Play audio on hover" switch is gone from Settings; it was the same control, two
   rooms away. At zero an audio card stays silent instead of pretending to play, and
   a video still previews without sound.
+- **MiniMax H3 Reference — the same character, place or voice in every clip, with no
+  training.** A new video model that works from references instead of a first frame.
+  Give it a face, a character sheet, a location, a clip whose camera move you want, or
+  a voice, and it generates a new video that keeps them — up to **nine images, three
+  videos and three audio clips** at once. Nothing you give it appears in the output
+  as-is: these are references, not frames, so the model is free to put your character
+  somewhere new rather than animating away from a picture. Point at a specific one in
+  the prompt by typing **`@`**, which lists what you have staged and drops in its tag —
+  "the woman from `<Picture 1>` walking through `<Picture 2>`". Each thumbnail wears the
+  tag it became, so there is nothing to memorise. **Reference detail** decides how much
+  of each reference it reads: *Match* is the fast default, *Max* keeps more and is the
+  one to use for a character sheet, where it costs time on every step. It outputs video
+  with synchronized audio like the rest of H3, and it installs alongside the existing
+  MiniMax H3 sharing its text encoder and both VAEs, so it is one extra model file
+  rather than a second full model.
 - **Engine updates now apply in place — seconds, not a fresh download.** Updating the
   generation engine used to delete the whole thing and download it again from scratch:
   around eleven gigabytes of engine, every add-on and every Python package, even when
