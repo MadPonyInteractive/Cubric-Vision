@@ -98,33 +98,39 @@ function resolveSmokeSet(reg, only) {
     const depsOf = (m, ops) => resolveDeps(m, ops || null, null, ENGINE, { arch: ARCH });
     const gbOf = (ids) => [...ids].reduce((g, i) => g + (isWeight(DEPS[i]) ? sizeToGb(DEPS[i].size) : 0), 0);
 
-    const candidates = only?.length ? MODELS.filter(m => only.includes(m.id)) : MODELS;
+    let set;
     if (only?.length) {
         const missing = only.filter(id => !MODELS.some(m => m.id === id));
         if (missing.length) die(`unknown model id(s): ${missing.join(', ')}`);
         // An explicit selection is the caller's call — take it verbatim, no dedupe.
-        return candidates.map(m => ({ model: m, ops: m.supportedOps || [], covers: [], gb: gbOf(depsOf(m)) }));
+        // `covers: []` is load-bearing: a scoped run proves NOTHING about its family.
+        set = MODELS.filter(m => only.includes(m.id))
+            .map(m => ({ model: m, ops: m.supportedOps || [], covers: [], gb: gbOf(depsOf(m)) }));
+    } else {
+        const groups = new Map();
+        for (const m of MODELS) {
+            const files = [...new Set(Object.values(m.workflows || {}))].sort();
+            const fp = files.map(classSetOf).join(' || ');
+            if (!groups.has(fp)) groups.set(fp, []);
+            groups.get(fp).push(m);
+        }
+        set = [];
+        for (const members of groups.values()) {
+            const best = members.slice().sort((a, b) =>
+                (TIER_RANK[a.sizeTier] ?? 1) - (TIER_RANK[b.sizeTier] ?? 1) ||
+                gbOf(depsOf(a)) - gbOf(depsOf(b)))[0];
+            set.push({
+                model: best,
+                ops: best.supportedOps || [],
+                covers: members.filter(m => m !== best).map(m => m.id),
+                gb: gbOf(depsOf(best)),
+            });
+        }
     }
 
-    const groups = new Map();
-    for (const m of MODELS) {
-        const files = [...new Set(Object.values(m.workflows || {}))].sort();
-        const fp = files.map(classSetOf).join(' || ');
-        if (!groups.has(fp)) groups.set(fp, []);
-        groups.get(fp).push(m);
-    }
-    const set = [];
-    for (const members of groups.values()) {
-        const best = members.slice().sort((a, b) =>
-            (TIER_RANK[a.sizeTier] ?? 1) - (TIER_RANK[b.sizeTier] ?? 1) ||
-            gbOf(depsOf(a)) - gbOf(depsOf(b)))[0];
-        set.push({
-            model: best,
-            ops: best.supportedOps || [],
-            covers: members.filter(m => m !== best).map(m => m.id),
-            gb: gbOf(depsOf(best)),
-        });
-    }
+    // Both branches land here. The scoped branch used to `return` above and skip all of
+    // it, leaving set.totalGb undefined — `--models` died in printPlan before it rented
+    // anything. Nothing downstream may assume it ran the full matrix.
     // Union, so shared VAEs/encoders are counted once — the per-row sum over-states it.
     const union = new Set();
     set.forEach(e => depsOf(e.model).forEach(i => union.add(i)));
@@ -133,6 +139,19 @@ function resolveSmokeSet(reg, only) {
     set.skippedWeights = Object.keys(DEPS)
         .filter(i => isWeight(DEPS[i]) && !union.has(i) && MODELS.some(m => depsOf(m).includes(i)))
         .map(i => `${i}(${DEPS[i].size})`);
+
+    // What this run will NOT prove. On a full run the dedupe covers every model, so this
+    // is empty; on a scoped one it is every model left out — the number that stops an
+    // evidence file from reading as full coverage.
+    const proven = new Set(set.flatMap(e => [e.model.id, ...e.covers]));
+    set.scope = {
+        requested: only?.length ? only : 'all',
+        deduped: !only?.length,
+        modelsRun: set.map(e => e.model.id),
+        covers: set.flatMap(e => e.covers),
+        unproven: MODELS.map(m => m.id).filter(id => !proven.has(id)),
+        modelsInRegistry: MODELS.length,
+    };
     return set;
 }
 
@@ -153,6 +172,11 @@ function printPlan(reg, set) {
     log(`\n  models ${set.length} · ops ${ops} · weights ${set.totalGb.toFixed(1)} GB` +
         ` · volume ${Math.ceil((set.totalGb + VOLUME_HEADROOM_GB) / 10) * 10} GB`);
     log(`  budget: ${BUDGET.steps} step · ${BUDGET.edge}px target · ${BUDGET.frames} frame(s) · seed ${BUDGET.seed}`);
+    if (set.scope.unproven.length) {
+        log(`\n  SCOPED RUN — ${set.scope.unproven.length} of ${set.scope.modelsInRegistry} models will NOT be`);
+        log(`  proven, and a scoped set is NOT deduped, so it covers no family either:`);
+        log(`    ${set.scope.unproven.join(', ')}`);
+    }
     if (set.skippedWeights?.length) {
         log(`\n  NOT loaded by this set (${set.skippedWeights.length}) — a break tied to the weight FORMAT`);
         log(`  under the same loader node would be missed:\n    ${set.skippedWeights.join('\n    ')}`);
@@ -387,6 +411,9 @@ async function main() {
     const skipped = results.filter(r => r.status === 'SKIP').map(r => `${r.model}/${r.op}`);
     log(`\nPASS ${n('PASS')} · SKIP ${n('SKIP')}${skipped.length ? ` (${skipped.join(', ')})` : ''} · FAIL ${n('FAIL')}`);
     log(`budget applied: ${BUDGET.steps} step · ${BUDGET.edge}px target · seed ${BUDGET.seed}`);
+    if (set.scope.unproven.length) {
+        log(`SCOPED — ${set.scope.unproven.length} of ${set.scope.modelsInRegistry} models UNPROVEN: ${set.scope.unproven.join(', ')}`);
+    }
     log(`Pod-green is NOT Windows-green — the local portable half is playbook gate 5.`);
 
     const evidence = {
@@ -394,10 +421,18 @@ async function main() {
         gpu: gpu.displayName || gpu.id, volume: { id: volume.id, size: volume.size },
         budget: BUDGET, results,
         counts: { pass: n('PASS'), skip: n('SKIP'), fail: n('FAIL'), opsPlanned: opCount },
+        // What this file does NOT prove. Without it a `--models klein-4b` run writes an
+        // evidence file that reads exactly like the full matrix: 7 pass, 0 fail. The
+        // runner refuses to fold an in-run SKIP into the pass count; a model excluded by
+        // --models never becomes a result row at all, which is the same lie one level up.
+        scope: set.scope,
         limits: [
             'Pod-green is not Windows-green: different OS, python, torch, CUDA.',
             'Deduped by class_type set — a break tied to weight FORMAT under the same loader node is not covered.',
             'Proves a graph RUNS; does not judge output quality.',
+            ...(set.scope.unproven.length
+                ? [`SCOPED RUN: ${set.scope.unproven.length} of ${set.scope.modelsInRegistry} models were not run and are NOT covered by dedupe — ${set.scope.unproven.join(', ')}.`]
+                : []),
         ],
         skippedWeights: set.skippedWeights,
     };

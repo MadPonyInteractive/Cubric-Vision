@@ -87,6 +87,9 @@ asks whether to keep or delete the volume.
   yourself proposing a validation-only shortcut, you have re-created the bug.
 - **A SKIP is never a PASS.** Silent truncation reading as full coverage is the defect this
   whole system exists to prevent. Report skips on the same line as the pass count.
+- **`--models` is allowed; hiding it is not.** A scoped set is **not deduped**, so it proves
+  nothing about a model's family. State the unproven list when you report — `--plan` prints
+  it, `evidence.scope` records it, and `release:check` repeats it (report only, no gate).
 - **Pod-green is NOT Windows-green.** The Pod is Linux off a baked image with its own
   python/torch/CUDA; users run the Windows portable. Gate 5 is the local half and is not
   optional. Say this in the evidence — never let a green matrix stand in for it.

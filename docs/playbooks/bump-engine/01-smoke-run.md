@@ -96,6 +96,30 @@ Rules the output must obey:
 - The evidence file records the engine version the Pod actually reported, not the one that
   was requested.
 
+## Scoping a run with `--models` — legitimate, but say so
+
+`--models a,b` is a real option and the cost of the full matrix is real. Two things about it
+are not obvious and both are now enforced by the runner:
+
+- **A scoped set is NOT deduped.** Passing `--models sdxl-realistic` proves that model and
+  **nothing** about its four family siblings — the dedupe that normally lets one member
+  stand for the group only applies to the full set.
+- **The evidence file records what it did not prove.** Without that, `--models klein-4b`
+  writes `7 pass · 0 fail` — indistinguishable from the full 34-op matrix. `evidence.scope`
+  now carries `modelsRun`, `unproven`, and `modelsInRegistry`, and `--plan` prints the
+  unproven list before anything is rented:
+
+```
+  SCOPED RUN — 18 of 19 models will NOT be
+  proven, and a scoped set is NOT deduped, so it covers no family either:
+    sdxl-realistic, sdxl-nsfw, ill-anime-beauty, …
+```
+
+`npm run release:check` **reports** that coverage and does not gate on it — scoping is the
+releaser's call. An evidence file from before scope recording is called out as unable to say
+what it left out. (MPI-457 follow-up: `--models` also crashed in `printPlan` before this,
+so the flag never ran at all.)
+
 ## Cost, and the volume prompt
 
 The runner ends by asking whether to delete the volume, and prints both sides so the answer

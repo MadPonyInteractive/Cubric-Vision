@@ -473,6 +473,19 @@ async function checkSmokeEvidence() {
   if (pinMovedAt && evidence?.at && new Date(evidence.at) < new Date(pinMovedAt)) {
     fail(`${bumpNote} smoke-evidence.json is STALE — recorded ${evidence.at}, but node_lock.json last changed ${pinMovedAt}. Re-run the smoke.`);
   }
+
+  // Coverage is REPORTED, never gated — scoping a run is a legitimate call and the cost
+  // of a full matrix is real. What is not legitimate is a scoped file reading as a full
+  // one: 7 pass / 0 fail looks identical either way. Say the number out loud so nobody
+  // signs off on coverage that was never claimed.
+  const scope = evidence?.scope;
+  if (!scope) {
+    console.warn('Smoke evidence predates scope recording — it cannot say which models it left out. Re-run to get a file that can.');
+  } else if (scope.unproven?.length) {
+    console.warn(`Smoke evidence is SCOPED: ${scope.modelsRun?.length ?? '?'} of ${scope.modelsInRegistry} models ran, and a scoped set is not deduped so it covers no family. UNPROVEN: ${scope.unproven.join(', ')}`);
+  } else {
+    console.log(`Smoke evidence covers all ${scope.modelsInRegistry} models (${scope.modelsRun?.length ?? '?'} run, rest by class_type dedupe).`);
+  }
 }
 
 async function main() {
