@@ -31,7 +31,8 @@
   so the clip ends on that image instead of starting from it — the model invents
   everything leading up to it. Drop two images and you get both ends, first and last,
   in strip order. Useful for closing a loop, landing on a specific pose, or joining two
-  shots you already have.
+  shots you already have. Both **LTX 2.3** and **Wan 2.2** take it, including the
+  end-frame-only case where the single image you give is the one the clip finishes on.
 
 - **The mask tools, rebuilt as a toolkit.** Everything that makes a mask now sits in
   one group and works the same way. Paint one by hand with **ten brushes** — hard and
@@ -198,6 +199,14 @@
   1.3.0 release — the run stopped at the first sampling step and produced nothing. A
   ComfyUI update changed how one of its components hands over the upscaler model, and the
   node that reads it had not caught up. Both are updated, and LTX runs end to end again.
+
+- **The negative prompt now does something on LTX.** Anything you typed into the negative
+  box on an LTX video was being ignored. The usual mechanism for it only applies at a
+  guidance strength LTX does not run at, and the one part that *can* carry a negative at
+  LTX's settings had been pointed at your positive prompt by mistake — so it was nudging
+  the video towards what you asked for instead of away from what you didn't want. It is
+  wired correctly now, and leaving the box empty switches it off cleanly instead of
+  leaving it half-applied.
   If you have been avoiding LTX because it looked broken, it was, and it is not any more.
 
 - **Models you never installed no longer show a half-finished download bar.** Six model
