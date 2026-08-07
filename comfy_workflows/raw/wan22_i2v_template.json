@@ -4429,7 +4429,7 @@
       ],
       "size": [
         220.7333984375,
-        695.937890625
+        334
       ],
       "flags": {
         "collapsed": false
@@ -4498,66 +4498,6 @@
           }
         }
       }
-    },
-    {
-      "id": 904,
-      "type": "MpiLoadImageFromPath",
-      "pos": [
-        -1170.141664536965,
-        -760.2414200777253
-      ],
-      "size": [
-        276.9849609375,
-        166
-      ],
-      "flags": {},
-      "order": 46,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "string",
-          "type": "STRING",
-          "widget": {
-            "name": "string"
-          },
-          "link": 1493
-        }
-      ],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            1590
-          ]
-        },
-        {
-          "name": "mask",
-          "type": "MASK",
-          "links": null
-        },
-        {
-          "name": "width",
-          "type": "INT",
-          "links": null
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "links": null
-        }
-      ],
-      "title": "start",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
-        "Node name for S&R": "MpiLoadImageFromPath"
-      },
-      "widgets_values": [
-        "",
-        "alpha",
-        true
-      ]
     },
     {
       "id": 908,
@@ -4804,6 +4744,66 @@
       ],
       "color": "#223",
       "bgcolor": "#335"
+    },
+    {
+      "id": 904,
+      "type": "MpiLoadImageFromPath",
+      "pos": [
+        -1170.141664536965,
+        -760.2414200777253
+      ],
+      "size": [
+        276.9849609375,
+        166
+      ],
+      "flags": {},
+      "order": 46,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 1493
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            1590
+          ]
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "start",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiLoadImageFromPath"
+      },
+      "widgets_values": [
+        "",
+        "alpha",
+        false
+      ]
     }
   ],
   "links": [
@@ -5824,10 +5824,10 @@
     "ue_links": [],
     "links_added_by_ue": [],
     "ds": {
-      "scale": 0.6727499949325764,
+      "scale": 1.1918176537727518,
       "offset": [
-        1998.7634377699192,
-        389.96697447016857
+        1717.0878358664152,
+        1051.0893216814507
       ]
     },
     "workflowRendererVersion": "LG",
