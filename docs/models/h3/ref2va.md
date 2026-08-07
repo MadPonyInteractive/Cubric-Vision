@@ -106,9 +106,9 @@ the rest. `--lowvram` in the engine's launch line is a **no-op** here — its ow
   reference tokens ride every sampling step, so more references is steeper). **If `max`
   costs nothing, the control is not reaching the node** — check the injected
   `Input_Refs.ref_image_size` key.
-  **`max` usually gives the better result** (user, 2026-08-07). Open question, not yet
-  decided: whether the shipped default should flip to `max` and let the user trade back
-  down for speed, rather than the other way round.
+  **`max` usually gives the better result** (user, 2026-08-07) — but the default
+  **stays `match`, and this is SETTLED, not open** (user, 2026-08-08): it is a user
+  control, so the user decides per generation. Do not re-raise a default flip.
 - **No negative prompt.** `negativePrompt: false`, because the graph carries no
   `Input_Negative` and no `Input_Negative_Audio` — dropping the toggle removes both
   fields at once rather than shipping two that inject nowhere.
