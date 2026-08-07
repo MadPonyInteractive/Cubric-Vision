@@ -236,6 +236,24 @@ primitive, not a parallel one:
 - `status === 'unsupported'` (pre-v0.4.0 image, no delete endpoint) **breaks the loop** —
   an unsupported sweep is a whole-sweep no-op, never an error and never a per-dep retry.
 
+**Pod-verified 2026-08-07** on a CPU download-mode Pod (wrapper 0.2.41) against a real
+150GB volume: read-only classification first (`71 protected / 35 eligible / 35 echoed /
+0 on volume`, explained dep-by-dep), then a seeded shared orphan collected for real while
+a shared dep the installed models needed survived beside it, then `deleteFiles: false`
+proven to skip the sweep entirely. Net change to the volume: zero. Full numbers and the
+re-run recipe live in `.agents/mpi-kanban/tasks/MPI-464/validation.md`.
+
+Two things that run cost us and are worth knowing before touching this again:
+
+- **A seeded test orphan must be declared by ≥2 models, none installed.** The first
+  attempt seeded a dep declared by ONE model, which made it that model's *exclusive
+  evidence* (the MPI-310 rule) and resurrected it as installed — the seed defended
+  itself and `onVolume` stayed 0. Not a bug; the rule working.
+- **The sweep sees post-delete truth.** It runs after the uninstall's own delete loop,
+  so a model whose exclusive evidence that loop just removed is no longer installed by
+  the time the sweep classifies. That is exactly what lets the sweep collect an orphan
+  the uninstall itself created.
+
 Wired at the end of the remote uninstall branch, gated on `deleteFiles`, never fatal, and
 its `swept N orphaned` rides the same log line and the same `sweptOrphans` response +
 `download:uninstalled` payload as local. `tests/orphan-sweep-remote.test.cjs` runs the real

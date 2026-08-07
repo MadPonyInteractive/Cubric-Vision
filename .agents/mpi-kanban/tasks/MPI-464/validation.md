@@ -1,93 +1,125 @@
 # MPI-464 — validation
 
-Status: **code complete, unit-verified, NOT closed.** The card's bar is a live Pod and it
-has not been met. Do not move this to `done` on the evidence below.
+Status: **PASSED on a live Pod, 2026-08-07.** The bar the card set was met — read-only
+classification read first, then a real delete, on a real volume.
 
-## Proven locally (2026-08-07)
+## Unit evidence
 
 `tests/orphan-sweep-remote.test.cjs` — 5/5, and `npm test` 477/477 with it in the glob.
-It runs the REAL `_remoteSharedDepIds` / `_orphanedDepIds` / `_sweepOrphanedDepsRemote`
+Runs the REAL `_remoteSharedDepIds` / `_orphanedDepIds` / `_sweepOrphanedDepsRemote`
 against a fake volume (the two wrapper calls stubbed on the required `remoteModels`
-module — no Pod, no network, no local disk):
+module): collects an unwanted dep, refuses one a volume-installed model still wants,
+proves the inventory gate (eligible but absent ⇒ `remoteUninstallDep` never called),
+treats `unsupported` as a whole-sweep no-op, and asserts the classifier never yields
+`custom_nodes` / universal / `targetPath` / `bakedOnPod`.
 
-- collects a dep no volume-installed model wants;
-- refuses a dep a volume-installed model still wants (whole universe of
-  `boogu-edit-balanced` on the volume defends the shared `boogu-qwen3vl-8b-clip`);
-- **the inventory gate** — candidates eligible but nothing on the volume ⇒
-  `remoteUninstallDep` is never called at all;
-- an `unsupported` answer (pre-v0.4.0 image) is a whole-sweep no-op, one call then stop,
-  never an error;
-- the classifier never yields `custom_nodes`, universal, `targetPath` or `bakedOnPod`,
-  with a guard asserting `bakedOnPod` deps still exist so that filter cannot go untested.
+## Pod run — 2026-08-07
 
-What this does NOT prove: that the wrapper's `/wrapper/models/status` answer for a
-pseudo-model with ~40 deps is shaped the way the stub assumes on a real Pod, and that
-`/wrapper/models/delete` actually removes the file from the volume in this path.
+**Setup.** CPU download-mode Pod (`gpuTypeId: '__cpu__'`, `cpu3c`), network volume
+`9t3awufudk` / `EU-RO-1` (150GB), wrapper **0.2.41** — far past the v0.4.0 / 0.2.3 floor
+where `/wrapper/models/delete` ships. No GPU: the sweep only needs
+`/wrapper/models/status` + `/wrapper/models/delete`, so a GPU Pod would have been pure
+cost. Ready in ~20s. Driven entirely over the app's own HTTP routes on `127.0.0.1:3000`
+(create, install, uninstall, check) plus a temp read-only probe route, since remote-mode
+state lives in the running server process.
 
-## The Pod leg — what still has to happen
+**1 — Read-only classification (the step MPI-310 skipped).**
 
-**Prerequisite: check the Pod IMAGE first.** `/wrapper/models/delete` ships in image
-v0.4.0 / wrapper 0.2.3. On anything older every delete answers `unsupported`, the sweep
-correctly no-ops, and the run proves NOTHING about deletion — it only re-proves the unit
-test. Confirm the image before spending the session.
+```
+protected: 71   eligible: 35   depsEchoed: 35   onVolume: 0
+```
 
-Also make sure the volume is not empty: at least one model installed, ideally a tier
-family sharing deps (LTX-2.3 high + balanced, or the Boogu pair), so protection is
-non-trivial and step 4 has a sibling to check.
+`depsEchoed === eligible` is the load-bearing number: it proves the wrapper answers a
+**pseudo-model carrying 35 deps** without dropping any. A short echo would have read as
+"no orphans" while silently under-collecting — the one failure mode the unit test cannot
+see. This is also the piece with no local analogue.
 
-1. Bring up a Pod and connect the app in remote mode.
+`onVolume: 0` was verified dep-by-dep rather than taken on trust. Four models were fully
+installed (`krea2` 26/26, `klein-4b` 21/21, `ltx-23` 12/12, `qwen-edit` 14/14). The two
+suspicious-looking partials both explain cleanly:
 
-2. **Read-only classification FIRST — via a temp route, NOT by neutering the sweep.**
-   The obvious version of this step (comment out the delete loop, then uninstall
-   something) costs a real model uninstall to run a "read-only" check. Use the
-   temp-route probe instead (memory `tool_runpod_live_api_probe`): add to
-   `routes/downloadManager.js`, restart the app (a `routes/` change needs a FULL
-   restart — memory `tool_main_process_no_hot_reload`), curl, then **revert**.
+- `boogu-edit-high` / `boogu-edit-balanced` at 4/7 — the 4 present are **custom_nodes
+  only**; all three weights (including the 10.59GB `boogu-qwen3vl-8b-clip` that stranded
+  locally in MPI-462) are absent. Nothing to collect.
+- `ltx-23-balanced` at 11/13 — every one of its 11 present weights is genuinely defended
+  by the installed `ltx-23`; only its two exclusive transformers are missing. Correctly
+  protected, not orphaned.
 
-   ```js
-   // TEMP MPI-464 probe — REVERT.
-   router.get('/comfy/models/sweep-preview', async (req, res) => {
-       const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
-       const protectedIds = await _remoteSharedDepIds(null);
-       const candidates = _orphanedDepIds(protectedIds).filter((id) => !DEPS[id].bakedOnPod);
-       const out = await remoteModels.remoteModelsCheck([{
-           id: '__sweep__',
-           deps: candidates.map((id) => ({ id, type: DEPS[id].type, filename: DEPS[id].filename })),
-       }]);
-       const entry = (out && out.results && out.results.__sweep__) || {};
-       res.json({
-           protected: protectedIds.size,
-           eligible: candidates.length,
-           onVolume: (entry.deps || []).filter((d) => d.installed === true).map((d) => d.id),
-           depsEchoed: (entry.deps || []).length,
-       });
-   });
-   ```
+**2 — A seeded orphan, and a finding on the first attempt.**
 
-   This is the sweep's classifier verbatim minus the delete loop, so it proves the two
-   things the unit test cannot: that the wrapper answers a pseudo-model carrying ~40 deps
-   (`depsEchoed` must equal `eligible` — a short echo means the wrapper dropped some and
-   the inventory is lying), and what the real volume classification actually is. The local
-   equivalent read `65 protected / 41 eligible / 0 on disk`.
+First seed was `vae-sd3` (168MB). It did **not** become an orphan, and that is the
+MPI-310 exclusive-evidence rule working exactly as designed: `vae-sd3` is declared by
+`nvidia-pid` **alone**, so putting it on the volume made it that model's exclusive
+evidence and resurrected `nvidia-pid` as installed — `protected` 71→79, `eligible` 35→27,
+`onVolume` still 0. **A seeded orphan must be a dep declared by ≥2 models, none
+installed**, or the seed defends itself. Worth knowing before anyone re-runs this.
 
-3. **Read `onVolume` before allowing any delete.** Every id in it is a file the sweep will
-   delete on the next remote uninstall. Nothing in that list may be something an installed
-   model needs — that is the whole check, and it is the step MPI-310 skipped.
+Second seed: `chroma-style-lenovo` (107MB, declared by `chroma-flash` + `chroma-hyper`,
+neither installed, not universal) — one of the very Chroma style LoRAs MPI-462 found
+stranded locally. Classification then read:
 
-4. Only then run it for real: uninstall a model in remote mode with `deleteFiles=true`.
-   Confirm from `app.log` (`[download]`) that `remote sweep: … deleted <id>` matches what
-   step 3 predicted, that the model's own sibling sharing deps is still **INSTALLED**
-   afterwards, and that a re-check does not re-report the swept files as present.
+```
+protected: 79   eligible: 27   depsEchoed: 27   onVolume: 1
+  -> chroma-style-lenovo | loras/chroma/styles/lenovo_chroma.safetensors | 107MB
+```
 
-5. Second run with `deleteFiles=false` on another model: the sweep must not run at all
-   (no `remote sweep:` line), because "keep files" keeps every file, not only the selected.
+Exactly one, and `vae-sd3` correctly **not** listed.
 
-`swept 0` is a valid pass — do not manufacture an orphan to watch it fire. If step 3
-reports `onVolume: []`, steps 4-5 still prove the wiring (the log line fires, nothing is
-deleted); that is a pass, not an inconclusive run.
+**3 — Negative control, `deleteFiles: false`.** Uninstalled `nvidia-pid`:
 
-## Why the bar is not negotiable
+```
+removed: none | keptShared: vae-qwen-image | keptModelFiles: 8 | sweptOrphans: []
+[download] remote uninstall nvidia-pid: … swept 0 orphaned (deleteFiles=false)
+```
+
+No `remote sweep:` classification line at all — the sweep never ran, and the orphan
+survived. "Keep files" keeps every file, not only the selected ones.
+
+**4 — Positive control, `deleteFiles: true`.** Same model:
+
+```
+removed      : pid-flux1,pid-sdxl,pid-sd3,pid-qwenimage,vae-flux-ae,vae-sdxl,vae-sd3,pid-gemma
+keptShared   : vae-qwen-image
+sweptOrphans : [{"depId":"chroma-style-lenovo","depName":"Chroma Style — Lenovo"}]
+
+[download] remote sweep: 71 protected, 35 eligible, 1 on volume
+[download] remote sweep: deleted chroma-style-lenovo (loras/chroma/styles/lenovo_chroma.safetensors) from the volume
+[download] remote uninstall nvidia-pid: removed 8, kept 2 universal, 1 shared, 0 model files, swept 1 orphaned (deleteFiles=true)
+```
+
+`protected` reads 71 again, not 79 — the sweep runs **after** the delete loop, so
+`vae-sd3` was already gone and `nvidia-pid` had lost its exclusive evidence. The
+classification is computed against post-delete truth, which is what makes the sweep able
+to see an orphan the uninstall itself created.
+
+`vae-qwen-image` (declared by the installed `krea2` and `qwen-edit`) survived — the guard
+held while the sweep deleted beside it.
+
+**5 — Post-state, confirmed from the volume, not from the response.**
+
+```
+SWEEP PREVIEW -> protected: 71  eligible: 35  depsEchoed: 35  onVolume: []
+FULLY INSTALLED: krea2 (26/26), klein-4b (21/21), ltx-23 (12/12), qwen-edit (14/14)
+nvidia-pid still on volume: vae-qwen-image, ComfyUI-MpiNodes, comfyui-kjnodes
+chroma-flash still on volume: (nodes only — the LoRA is gone)
+```
+
+Identical to the pre-test read. **Net change to the user's volume: zero.** Everything
+deleted was seeded by this test; every pre-existing file survived. `nvidia-pid`'s other
+deps appear in `removed[]` because the remote branch reports a dep removed unless the
+wrapper answers `unsupported` — those files were never on the volume (it read 3/11
+before the run). That reporting quirk is pre-existing behaviour of the remote uninstall
+branch, not introduced here, and is the one thing this run surfaced that is worth a
+separate look.
+
+**Teardown.** Pod deleted (`/remote/pod/delete-active` → `{"deleted":true}`, mode back to
+inactive). The 150GB volume persists — it is the user's data. The temp probe route was
+reverted and `git diff` on `routes/downloadManager.js` confirmed byte-identical to HEAD
+before committing; the app was restarted and the route confirmed 404.
+
+## Why the bar existed
 
 Both directions of this guard have failed live: MPI-310 destroyed 5.24GB of user data
 with an adjacent change to it, and MPI-258 B1 left ~19GB undeletable swinging the other
-way. Pair the run with MPI-385 (Pod-session umbrella).
+way. Step 1 (read the list before deleting anything) is the step that makes those
+failures visible in advance, and it is the one that must never be skipped on a re-run.
