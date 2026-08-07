@@ -101,14 +101,43 @@ the rest. `--lowvram` in the engine's launch line is a **no-op** here — its ow
 
 ## Controls
 
-- **Reference detail** (`ref_image_size`) — `match` is the default and the baked
-  value; `max` should raise s/step noticeably (11–12 → 14 s/step with ONE reference on
-  the bench, and reference tokens ride every sampling step, so more references is
-  steeper). **If `max` costs nothing, the control is not reaching the node** — check
-  the injected `Input_Refs.ref_image_size` key.
+- **Reference detail** (`ref_image_size`) — `match` is the default and the baked value;
+  `max` raises s/step noticeably (11–12 → 14 with ONE reference on the bench, and
+  reference tokens ride every sampling step, so more references is steeper). **If `max`
+  costs nothing, the control is not reaching the node** — check the injected
+  `Input_Refs.ref_image_size` key.
+  **`max` usually gives the better result** (user, 2026-08-07). Open question, not yet
+  decided: whether the shipped default should flip to `max` and let the user trade back
+  down for speed, rather than the other way round.
 - **No negative prompt.** `negativePrompt: false`, because the graph carries no
   `Input_Negative` and no `Input_Negative_Audio` — dropping the toggle removes both
   fields at once rather than shipping two that inject nowhere.
+
+## The "2K H3" you see online is not this model
+
+Local is **H3-Base only, 768p short edge**. Two pieces of MiniMax's product are NOT in
+the open weights (MPI-449 § 1):
+
+- **H3-Regenerate-2K** — the 768p→2K second pass. This is what the 2K clips are.
+- **H3-Context-IR** — the hosted prompt-refinement front end, which MiniMax itself calls
+  "critical to quality".
+
+So a 2K result posted online is the hosted API, not a local ComfyUI graph, and no local
+setting reproduces it. Sampling H3-Base at a 2K canvas is a different thing: nothing
+enforces the area cap on the output latent, so it RUNS, but it is extrapolation well
+above the trained canvas, and the cost is quadratic — 2.09MP measured at 1537s on a
+4060 Ti, so 2560×1472 (3.77MP) is roughly 3x that PER STAGE before references.
+
+**The second pass we actually have is the universal `videoUpscale` op** —
+`comfy_workflows/video_upscale.json`, a video canvas tool, not model-tied. It loads the
+clip and either scales by `Input_Upscale_Factor` (lanczos, default ×2) or runs
+`4x_NMKD-Siax_200k.pth` through `ImageUpscaleWithModel` and corrects to the exact factor
+with lanczos, chosen by `Input_Upscale_Using_Model` (default off). Generate at native
+1344×768, then upscale ×2 with the model path on → 2688×1536.
+
+What that buys and what it does not: a spatial upscaler sharpens and cleans, it does not
+invent identity detail that was never sampled. For a face small in frame, framing beats
+both the upscaler and the canvas.
 
 ## Still unchecked
 
