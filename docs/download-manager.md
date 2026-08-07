@@ -211,11 +211,38 @@ Log line gains `swept N orphaned`. **`swept 0` is the expected result on a healt
 disk** — a sweep proving it declines is as valid as one that collects; never manufacture
 an orphan to watch it fire.
 
-**The REMOTE twin does not exist — MPI-464.** The remote branch returns before the sweep,
-so a Pod volume still strands. It needs `_remoteSharedDepIds(null)` plus a volume
-inventory, and it was deliberately not shipped blind: deletion code aimed at a user's
-volume must not go out unverified. This is the same one-engine-only trap the paragraph
-above warns about, left open knowingly rather than by omission.
+### The REMOTE twin — `_sweepOrphanedDepsRemote` (MPI-464)
+
+MPI-462 shipped the collector on the local route only; the remote branch returned before
+it, so a Pod volume stranded the same weights — and the volume PERSISTS across Pod
+restarts, so the user keeps paying for the disk. Closed in MPI-464 with the *same*
+primitive, not a parallel one:
+
+- Protection map = **`_remoteSharedDepIds(null)`**. It already accepts a null exclusion
+  through the identical path the local twin uses (`MODELS.filter`, `_inFlightDepIds(null)`,
+  `_pluginRequiredDepIds(null)`) — no change was needed there.
+- Classification = **`_orphanedDepIds` unchanged**. It only calls `.has`, which the remote
+  guard's `Set` answers exactly like the local guard's `Map`, so both engines classify
+  through one function and inherit its refusals (custom_nodes, `targetPath`, universal).
+- Inventory — the one piece with **no local analogue**, since there is no `fs.pathExists`
+  for the volume. It needs **no new wrapper endpoint**: `remoteModelsCheck` accepts a
+  pseudo-model (`{ id: '__sweep__', deps }`), the same trick
+  `_reconcileOutstandingRemoteDeps` already uses to ask about a bare dep list. Only deps
+  it reports `installed` are offered to `remoteUninstallDep`.
+- One extra refusal the local sweep does not need: **`bakedOnPod`**. Those engineAssets
+  live in the Pod IMAGE, so `_isImageResident` makes `remoteModelsCheck` report them
+  installed while the wrapper cannot delete them — asking is a guaranteed `not_found`.
+  This is the remote face of the local `targetPath` refusal.
+- `status === 'unsupported'` (pre-v0.4.0 image, no delete endpoint) **breaks the loop** —
+  an unsupported sweep is a whole-sweep no-op, never an error and never a per-dep retry.
+
+Wired at the end of the remote uninstall branch, gated on `deleteFiles`, never fatal, and
+its `swept N orphaned` rides the same log line and the same `sweptOrphans` response +
+`download:uninstalled` payload as local. `tests/orphan-sweep-remote.test.cjs` runs the real
+classifier against a fake volume (wrapper calls stubbed on the required `remoteModels`
+module — no Pod, no network) and pins every refusal above, plus the inventory gate: with
+candidates eligible but nothing on the volume, `remoteUninstallDep` must not be called at
+all.
 
 The renderer must also not read an arch weight alone as "installed": a flat
 arch-variant model (LTX-2.3 balanced) is installed only when its common deps are

@@ -476,6 +476,64 @@ async function _remoteSharedDepIds(excludeModelId) {
     return keep;
 }
 
+// ── Orphan sweep, REMOTE twin (MPI-464) ───────────────────────────────────────
+//
+// MPI-462 shipped the collector on the LOCAL uninstall route only; the remote branch
+// returns before it, so a Pod volume strands the same ownerless weights — and the
+// volume PERSISTS across Pod restarts, so the user keeps paying for the disk. Exactly
+// the half-wire the engine-split rule exists to stop (.claude/rules/comfy_engine.md).
+//
+// Same primitive, no second notion of "orphan": `_remoteSharedDepIds(null)` is the
+// remote twin of `_localSharedDepsMap(null)` (it already unions every VOLUME-installed
+// model's deps, live install jobs, flow deps and plugin deps), and `_orphanedDepIds`
+// is reused UNCHANGED — it only calls `.has`, which a Set answers exactly like a Map,
+// so both engines classify through one function and its refusals (never custom_nodes,
+// never targetPath, never universal) apply here for free.
+//
+// The one piece with no local analogue is the inventory: the local sweep gets "is it
+// really there" free from fs.pathExists, and there is no such stat for the volume.
+// It needs NO new wrapper endpoint — remoteModelsCheck accepts a pseudo-model, which
+// is how the reconciler already asks (see _reconcileOutstandingRemoteDeps).
+async function _sweepOrphanedDepsRemote() {
+    const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
+    const protectedIds = await _remoteSharedDepIds(null);
+    // `bakedOnPod` weights live in the Pod IMAGE, not on the volume — remoteModelsCheck
+    // reports them installed (_isImageResident) but the wrapper cannot delete them, so
+    // asking would be a guaranteed not_found. This is the remote face of the local
+    // `targetPath` refusal (a targetPath dep is image-resident here too, and
+    // _orphanedDepIds already dropped it).
+    const candidates = _orphanedDepIds(protectedIds).filter((id) => !DEPS[id].bakedOnPod);
+    if (!candidates.length) return [];
+    const out = await remoteModels.remoteModelsCheck([{
+        id: '__sweep__',
+        deps: candidates.map((id) => ({ id, type: DEPS[id].type, filename: DEPS[id].filename })),
+    }]);
+    const entry = (out && out.results && out.results.__sweep__) || {};
+    const onVolume = (entry.deps || []).filter((d) => d.installed === true);
+    // The classification, logged BEFORE anything is deleted. This is deletion aimed at a
+    // user's Pod volume, so the audit line is the record of what the classifier decided —
+    // read it in app.log when this fires, the same way the local sweep's per-file lines
+    // are read. `swept 0` is a healthy result; a jump in `onVolume` is what to question.
+    logger.info('download', `remote sweep: ${protectedIds.size} protected, ${candidates.length} eligible, ${onVolume.length} on volume`);
+    const swept = [];
+    for (const d of onVolume) {
+        const dep = DEPS[d.id];
+        if (!dep) continue;
+        try {
+            const res = await remoteModels.remoteUninstallDep({ id: d.id, type: dep.type, filename: dep.filename });
+            // An older Pod image has no delete endpoint. That is a no-op for the whole
+            // sweep, not an error and not a per-dep retry — stop asking.
+            if (res && res.status === 'unsupported') break;
+            logger.info('download', `remote sweep: deleted ${d.id} (${dep.filename}) from the volume`);
+            _depJobs.delete(d.id);
+            swept.push({ depId: d.id, depName: dep.name || d.id });
+        } catch (err) {
+            logger.error('download', `remote sweep: failed to delete ${d.id}: ${err.message}`);
+        }
+    }
+    return swept;
+}
+
 function _isInsidePath(root, target) {
     const relative = path.relative(path.resolve(root), path.resolve(target));
     return relative === '' || (relative && !relative.startsWith('..') && !path.isAbsolute(relative));
@@ -2743,15 +2801,29 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             });
         }
 
-        logger.info('download', `remote uninstall ${modelId}: removed ${removed.length}, kept ${keptUniversal.length} universal, ${keptShared.length} shared, ${keptModelFiles.length} model files (deleteFiles=${deleteFiles})`);
+        // MPI-464 — remote twin of the local sweep below. This uninstall may have been
+        // the last thing keeping some OTHER volume dep alive; nothing else re-asks, and
+        // the volume outlives the Pod. Gated on deleteFiles for the same reason ("keep
+        // files" keeps every file, not only the selected ones) and never fatal — the
+        // uninstall already succeeded before the sweep runs.
+        let sweptOrphans = [];
+        if (deleteFiles) {
+            try {
+                sweptOrphans = await _sweepOrphanedDepsRemote();
+            } catch (err) {
+                logger.error('download', `remote orphan sweep after ${modelId} uninstall failed: ${err.message}`);
+            }
+        }
+
+        logger.info('download', `remote uninstall ${modelId}: removed ${removed.length}, kept ${keptUniversal.length} universal, ${keptShared.length} shared, ${keptModelFiles.length} model files, swept ${sweptOrphans.length} orphaned (deleteFiles=${deleteFiles})`);
         _modelJobs.delete(modelId);
         // MPI-396: the line above clears the legacy runtime map — NOT the SOT store,
         // which keeps serving the model's terminal `done` job to the status endpoint
         // and every snapshot. Drop it BEFORE the uninstalled broadcast so the FE never
         // re-renders against a job for a model it has just been told is gone.
         if (store.dropModel(modelId)) store.broadcastSnapshot();
-        _broadcast('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls: [], remote: true });
-        return res.json({ success: true, removed, keptUniversal, keptShared, keptModelFiles, remote: true, partialUnsupported: anyUnsupported });
+        _broadcast('download:uninstalled', { modelId, removed, keptUniversal, keptShared, keptModelFiles, keptPipInstalls: [], sweptOrphans, remote: true });
+        return res.json({ success: true, removed, keptUniversal, keptShared, keptModelFiles, sweptOrphans, remote: true, partialUnsupported: anyUnsupported });
     }
 
     const customRoot = await getCustomRoot();
@@ -3208,8 +3280,10 @@ module.exports = {
     _shouldResumePartial, // MPI-429 — exported for unit test
     _pluginRequiredDepIds, // MPI-310 — exported for unit test
     _localSharedDepsMap, // MPI-310 — exported for unit test (model-side protection)
+    _remoteSharedDepIds, // MPI-464 — exported for unit test (remote twin of the above)
     _orphanedDepIds, // MPI-462 — exported for unit test (orphan sweep)
     _sweepOrphanedDeps, // MPI-462 — exported for unit test (orphan sweep)
+    _sweepOrphanedDepsRemote, // MPI-464 — exported for unit test (orphan sweep, remote twin)
     _setModelStatus, // MPI-317 F5 — exported for unit test (store-terminal guard)
     _installStore: store, // MPI-317 F5 — exported for unit test only; never mutate outside tests
 };
