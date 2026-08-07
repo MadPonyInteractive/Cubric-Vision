@@ -26,6 +26,20 @@ const K = 0.25;         // vramFloor as a fraction of total weight size
 const MIN_FLOOR = 8;    // GB — floor guard for small models (SDXL) where K*weights < 8
 const GB = 1024 ** 3;
 
+// The VRAM sizes cards are actually SOLD in. The table's job is to name hardware the
+// user can go and buy, so the rows step through this ladder rather than a bare
+// multiple of 8 — the difference is 12GB, which is missing from the 8GB grid and is
+// the most common mid-range size there is (3060/4070). Rounding a floor up to a grid
+// without it turned a 8.29GB fit into "needs 16GB" on wan-22, ltx-23-balanced and
+// qwen-edit: nearly 2x overstated, on three of the library's cheapest models to run,
+// and a floor is a "don't bother" signal. Above 16 the real ladder IS 8s.
+const CARD_SIZES = [8, 12, 16, 24, 32, 40, 48, 56, 64, 80, 96];
+
+/** Smallest real card size ≥ gb (falls back to the 8GB grid above the list). */
+function nextCardSize(gb) {
+    return CARD_SIZES.find(v => v >= gb) ?? Math.ceil(gb / 8) * 8;
+}
+
 /** Parse a registry size string ('41GB', '254MB', '2.31GB') → GB. 0 if unparseable. */
 export function sizeToGb(sizeStr) {
     if (!sizeStr) return 0;
@@ -85,29 +99,26 @@ export function ramNeededGb(totalWeights, vramGb) {
 export function tradeTable(model, engine = null, userVramGb = null, variantTokens = {}) {
     const totalWeights = totalWeightsGb(model, engine, variantTokens);
     const footprint = totalWeights + OVERHEAD;
-    // `minVramGb` on the ModelDef overrides the computed floor. It exists because the
-    // K*weights curve is a fit, and rounding it onto the 8GB grid can turn a model a
-    // 12GB card demonstrably runs into one the table says needs 16 — a floor is a
-    // "don't bother" signal, so overstating it costs users a model. Per-model rather
-    // than a change to K, which would re-floor the whole library.
+    // `minVramGb` on the ModelDef overrides the computed floor, for when a model is
+    // MEASURED to run below what the fit says — H3 at 12 against a 13.29 fit. The
+    // raw fit is never a row: printing "8.29GB VRAM" answers a question nobody asked,
+    // so it is lifted onto the card ladder, which is also what the footnote quotes.
     const override = Number.isFinite(model?.minVramGb) ? model.minVramGb : null;
-    const floor = override ?? vramFloorGb(model ? totalWeights : 0);
-    const startVram = Math.ceil(floor / 8) * 8;       // first row on the 8GB grid ≥ floor
+    const floor = override ?? nextCardSize(vramFloorGb(model ? totalWeights : 0));
+
+    // The floor row, then the 8GB grid above it. Only the FLOOR moves onto the card
+    // ladder: `ramNeededGb` rounds up to 8GB, so a 4GB step through the body would put
+    // two adjacent rows in the same bucket (12→24 then 16→24), which reads as "16GB
+    // buys you nothing" — true of the rounding, useless as advice.
+    const gridStart = Math.ceil(floor / 8) * 8;
+    const steps = floor < gridStart ? [floor] : [];
+    for (let v = gridStart; v <= gridStart + 80; v += 8) steps.push(v);   // bound never expected
 
     const rows = [];
-    // Only an EXPLICIT override earns a row off the 8GB grid; the grid resumes above
-    // it, so the ladder reads 12 / 16 / 24 / 32 — the sizes cards actually ship in.
-    // The COMPUTED floor must never become a row: it is a raw fit (Wan 2.2 = 8.29GB)
-    // and printing it says "8.29GB VRAM" where the table's whole job is to name a
-    // card the user can go buy.
-    if (override != null && override < startVram) {
-        rows.push({ vram: override, ram: ramNeededGb(totalWeights, override), isFloor: true, isUserRow: false });
-    }
-    for (let v = startVram; ; v += 8) {
+    for (const v of steps) {
         const ram = ramNeededGb(totalWeights, v);
         rows.push({ vram: v, ram, isFloor: rows.length === 0, isUserRow: false });
         if (ram === 0) break;                          // model fully resident — stop
-        if (v > startVram + 80) break;                 // safety bound (never expected)
     }
 
     if (userVramGb != null && rows.length) {
@@ -145,17 +156,27 @@ export function demo() {
     assert(vramFloorGb(20) === 8, `Wan floor → ${vramFloorGb(20)} (want 8, accepted optimistic)`);
     assert(Math.abs(vramFloorGb(58.7) - 14.675) < 1e-6, `LTX floor → ${vramFloorGb(58.7)} (want 14.675)`);
 
-    // minVramGb override: a 12GB floor prepends ONE off-grid row, then the 8GB grid
-    // resumes — and the override never moves the RAM figures, only which rows show.
+    // minVramGb override: an explicit floor starts the table, and the ladder resumes
+    // above it. The override never moves the RAM figures, only which rows show.
     const H3 = { dependencies: [], minVramGb: 12 };          // weights 0 → floor would be 8
     assert(tradeTable(H3).rows[0].vram === 12, 'minVramGb must start the table at 12');
     assert(tradeTable(H3).rows[0].isFloor === true, 'the override row carries the min flag');
-    assert(tradeTable(H3).rows[1]?.vram === 16, 'the 8GB grid resumes above the override');
-    // WITHOUT an override every row must stay ON the 8GB grid — the computed floor is
-    // a raw fit (8.29 for Wan) and printing it as a row reads as a spec, not a hint.
     assert(tradeTable({ dependencies: [] }).rows[0].vram === 8, 'no override → the computed floor');
-    assert(tradeTable({ dependencies: [] }).rows.every(r => r.vram % 8 === 0),
-        'no override → every row sits on the 8GB grid');
+    // A model that fits entirely in its floor row stops there. The old grid loop always
+    // ran once more and printed a second row for a model already fully resident.
+    assert(tradeTable(H3).rows.length === 1, 'resident at the floor → exactly one row');
+    // The ladder itself: real card sizes, and 12 is on it. An override off the ladder
+    // (10) draws its own row and the ladder resumes at 12.
+    assert(nextCardSize(9) === 12 && nextCardSize(12) === 12 && nextCardSize(13) === 16,
+        'the ladder steps 8 → 12 → 16, not 8 → 16');
+    assert(nextCardSize(10 + 1) === 12, 'an off-ladder floor of 10 resumes at 12');
+    assert(nextCardSize(100) === 104, 'above the list the ladder falls back to 8s');
+    // The three the 8GB grid used to catapult to 16: a fit just over 8 must land on 12,
+    // which is a card that exists, not on the next multiple of 8.
+    assert(nextCardSize(vramFloorGb(33.2)) === 12, 'wan-22 (8.29 fit) floors at 12, not 16');
+    assert(nextCardSize(vramFloorGb(40.4)) === 12, 'ltx-23-balanced (10.10 fit) floors at 12');
+    assert(nextCardSize(vramFloorGb(32.1)) === 12, 'qwen-edit (8.02 fit) floors at 12');
+    assert(nextCardSize(vramFloorGb(61.4)) === 16, 'ltx-23 (15.35 fit) still floors at 16');
 
     // sizeToGb parsing
     assert(sizeToGb('41GB') === 41, 'parse 41GB');

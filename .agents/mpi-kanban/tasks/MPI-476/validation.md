@@ -15,8 +15,9 @@ Open the desktop app, not the browser.
 **See:** description, then **GPU weight** only if it has arch variants (it does
 not, so nothing), then **Memory need**, **Disk**. **No "Operations" field, no
 "Image to Video" toggle.**
-**See also:** the memory table is UNCHANGED — `16GB min → ~24GB`, then 24 / 32 / 40.
-If it reads `8.28GB min`, the floor-row fix regressed.
+**See also:** the memory table reads `12GB min → ~24GB`, then 16 / 24 / 32 / 40.
+If it reads `8.28GB min`, the floor-row fix regressed; if it reads `16GB min`, the
+card-ladder fix below did.
 
 **Do:** the same on Krea 2, SDXL NSFW, LTX 2.3, MiniMax H3.
 **See:** no Operations field anywhere. It exists on no model now.
@@ -47,9 +48,30 @@ optimistic for a 12GB card in practice, the number to change is `minVramGb` or
 the `OVERHEAD`/`K` constants in `js/data/modelConstants/footprint.js` — say so
 and it moves.
 
-**Do:** check any other model's table (Krea 2, LTX 2.3, Wan).
+**Do:** check any other model's table (Krea 2, LTX 2.3, SDXL).
 **See:** unchanged from before, every row on the 8GB grid. Only H3 declares an
 override.
+
+## 2b. Three more cards were floored at 16 for the same reason (added 2026-08-07)
+
+Reported while validating item 2: Wan's floor read 16GB, which is wrong for one of
+the cheapest models we ship to run. The cause was not Wan — the computed floor was
+rounded up onto the **8GB grid, which has no 12 in it**, so any fit just over 8 was
+catapulted to 16. Fixed on the ladder, not per card.
+
+**Do:** open the drawer on **Wan 2.2 Smooth**, **LTX 2.3 Balanced** and **Qwen Image
+Edit**.
+**See:** each starts at `12GB` with the **min** tag, then 16 / 24 / 32 / 40. The
+footnote must say `min 12GB VRAM` — it and the first row now come from the same
+number, and before this they could disagree (Wan's footnote said `min 8GB` above a
+table starting at 16).
+
+**Do:** check a small model (SDXL NSFW) and LTX 2.3 High.
+**See:** byte-identical to before — `8GB min` and `16GB min` respectively. Only those
+three cards moved.
+
+> `12→24` and `16→24` on Wan's table are the SAME RAM figure on purpose: RAM rounds up
+> to 8GB, and 12 and 16 fall in one bucket. Not a bug.
 
 ## 3. The tier letter only appears when it disambiguates
 

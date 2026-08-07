@@ -29,12 +29,24 @@ what to restore, together, if a future model brings operation groups back.
 
 ## The VRAM table's floor can be overridden per model (2026-08-07)
 
-`footprint.js` computes the floor as 25% of total weights, rounded up onto the 8GB grid. That
-rounding turned MiniMax H3 (13.3GB raw) into "16GB minimum", i.e. *don't bother* for a 12GB card
-users demonstrably run it on. A ModelDef may set `minVramGb` to state the floor outright; it draws
-one leading off-grid row and the 8GB grid resumes above it (12 / 16 / 24 / 32). Without an override
-every row stays on the grid — the raw computed floor (8.29GB for Wan) must never become a row, it
-reads as a spec when the table's job is to name a card you can buy.
+`footprint.js` computes the floor as 25% of total weights. The raw fit is never a row — "8.29GB
+VRAM" reads as a spec when the table's job is to name a card you can buy — so it is lifted onto
+**`CARD_SIZES`, the sizes cards are actually sold in**: 8, 12, 16, then 8s.
+
+**The floor moves onto that ladder; the body of the table stays on the 8GB grid.** That split is
+deliberate: `ramNeededGb` rounds up to 8GB, so stepping the whole table by 4 would put two adjacent
+rows in the same bucket (`12→24` then `16→24`), which reads as "16GB buys you nothing".
+
+It used to round the floor up to the 8GB grid, which has **no 12 in it** — the most common
+mid-range size there is. Any fit just over 8 was catapulted to 16, nearly 2x overstated, on three
+of the library's cheapest models to run: `wan-22` (8.29), `ltx-23-balanced` (10.10) and
+`qwen-edit` (8.02). A floor is a *don't bother* signal, so overstating it costs users a model.
+Fixed 2026-08-07 by fixing the ladder, not the three cards.
+
+A ModelDef may still set **`minVramGb`** to state the floor outright, for when a model is MEASURED
+to run below the fit: both H3 cards set 12 against a 13.3 fit. An override off the ladder draws its
+own leading row and the ladder resumes above it. The footnote quotes the same floor the first row
+shows — before this they could disagree (Wan's footnote said `min 8GB` over a table starting at 16).
 
 ## Featured models — editorial "hot / new / best" spotlight (2026-07-11)
 
