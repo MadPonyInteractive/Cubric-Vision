@@ -31,9 +31,34 @@ re-exported once already this session to remove a stray Turbo node.
 | t2v and i2v in **one** graph | The `ltx_t2v` / `ltx_i2v` pair collapses |
 | `Input_Video_Latent` **and** `Output_Preview` together | Both stages in one file - the **six** LTX `_stage2` twins die here. Needs `capabilities.singleFileStages: true` (H3's precedent, MPI-452), or `resolveWorkflowFile` appends `_stage2` and Finish 404s |
 | Routing derives from which frame slots are filled | No op booleans for t2v / start-only / end-only / start+end. Same shape H3 uses (`MpiAnyChecker` into lazy `MpiIfElse`) |
-| `Input_Audio`, `Input_Use_Audio`, `Input_Use_Reference_Audio` | Audio becomes an **input**, not just an output |
-| `Input_Use_Transition` | The transition LoRA becomes injectable |
 | ~18 nodes muted/bypassed | **The app prunes nothing; the ComfyUI browser does.** `generate_ltx.py` must normalize them, or a node that only ever worked because the browser dropped it surfaces in Vision first |
+
+**Measured, not assumed** - the `Input_*` / `Output_*` title sets were diffed, shipped
+(`ltx_t2v` + `ltx_i2v` union, 29 titles) against the export (22):
+
+- **ADDED: none.** Audio input (`Input_Audio` / `Input_Use_Audio` /
+  `Input_Use_Reference_Audio`) and `Input_Use_Transition` **already ship** on both LTX cards
+  (`capabilities.audio: true`, reference/direct modes). They are not new work.
+- **REMOVED: seven** - `Input_Text_to_video` and `Input_Use_End_Image` (the routing booleans),
+  `Input_Preview_Only` and `Input_Is_Continue` (the stage flags), and the four-node latent
+  cluster `Output_Video_Latent` / `Output_Audio_Latent` / `Input_Audio_Latent` / `LoadLatent`.
+
+All seven collapse into node **568 `MpiStageLatents`** titled `Input_Video_Latent`, whose
+`is_continue` / `is_preview` are WIDGETS addressed as `<title>.is_continue`.
+
+## The app side is already done - LTX is the last model on the old shape
+
+Do not re-solve this. WAN and H3 migrated onto `MpiStageLatents` already
+(`models.js` `singleFileStages: true` on both), and the app follows:
+
+- `commandExecutor.js:1711` - `saveLatentNodeIds` already recognises `MpiStageLatents`, the
+  fix that MPI-452 6a paid for and that reappeared when H3/WAN migrated.
+- `commandExecutor.js:719` - `_buildParams` already emits `Video_Latent.is_continue` and
+  `Video_Latent.is_preview`; the `Input_` canonicalization pass renames them.
+- `Use_End_Image` / `Text_to_video` are already derived from media presence, so with the
+  nodes gone they become silently-skipped no-ops rather than work.
+
+What remains for LTX is the generator, the deps, and `models.js`.
 
 ## The wiring path
 
