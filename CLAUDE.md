@@ -103,6 +103,8 @@ it turned off before staging weights to R2.
 | ComfyUI injection (send tasks, compile JSON, images/masks in graphs) | `.claude/rules/comfy_injection.md` |
 | Workflow authoring / injectable nodes & controls / MpiNodes / tier selectors (model OR Flow) | `docs/workflow-authoring/README.md` — append what you learn there |
 | ComfyUI engine & backend (model registry, downloads, python server) | `.claude/rules/comfy_engine.md` |
+| **Bump the ComfyUI engine users run** / "we bumped ComfyUI" / **"test all the models"** / smoke-test models after a node bump or a new model | **RUN `/mpi-bump-engine`** — it enforces `docs/playbooks/bump-engine/`. **NOT `/mpi-bump-local-comfy`** (standalone `G:\ComfyUi` BENCH only; never touches `dev_configs/node_lock.json`, never reaches a user). The runner is `node scripts/smoke-workflows.mjs` (`--plan` first — spends nothing; `--models a,b` for a subset). It EXECUTES a minimal generation per op on a RunPod Pod, because validation alone passes the bug this exists to catch. `npm run release:check` REFUSES a bumped engine with no `dev_configs/smoke-evidence.json` (MPI-465/467) |
+| **Removing** a model/tier, or **deprecating ONE operation** on a model that stays | `docs/playbooks/add-model/README.md` § "Removing or re-tiering a model" (+ its op-deprecation sub-section). **Do NOT delete the dep entry** — the orphan sweep reads `DEPS`, so deleting it strands the weight on existing users' disks forever (MPI-470/466 both kept theirs) |
 | App versioning (APP/SCHEMA/COMFY, operation registry) | `.claude/rules/versioning.md`, then `docs/versioning.md` |
 | Project data (project.json, `.meta/`, load/reconciliation, history items) | `docs/project-integrity.md` |
 | Download system (resumable downloads, IPC/SSE events) | `.claude/rules/downloads.md` |
@@ -124,6 +126,7 @@ it turned off before staging weights to R2.
 
 | Task | Skill | Playbook (the skill's step 0 — non-negotiable) |
 |---|---|---|
+| Bump the SHIPPED ComfyUI engine, or smoke-test models ("test all the models") | `/mpi-bump-engine` | `docs/playbooks/bump-engine/` (README hub + `01-smoke-run.md`). **NOT `/mpi-bump-local-comfy`** (bench-only, never reaches a user). Smoke-only is valid with no bump — after a node bump or a new model |
 | Wire a NEW model end-to-end | `/mpi-add-model` | `docs/playbooks/add-model/` (README hub + `01`–`06`) — holds every known trap. Models are NOT version-bumped. A handoff or `docs/models/<model>/` doc ASSUMES the playbook — read both |
 | Wire a NEW Flow (dev-gated Flow-Library outcome flow — NOT a model) | `/mpi-add-flow` | `docs/playbooks/add-flow/` (README hub + `01`–`05`). Worked examples: Video Stitch, SDXL 4K, Image Regen |
 

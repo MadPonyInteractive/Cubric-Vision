@@ -55,6 +55,19 @@ mandatory user-facing copy gates). The version file edits belong to
   runtime work is deliberately not shipping in this release. **Never auto-promote** — it
   is a live op affecting released users, same class as `git push`. (A dev-only Pod IMAGE
   tag needs no action: released builds resolve the frozen `POD_IMAGE_VERSION` pins.)
+- **A bumped engine has smoke evidence (MPI-467).** If `dev_configs/node_lock.json`'s
+  `comfyui.core.tag` moved since the last `v*` tag, `npm run release:check` **refuses the
+  release** unless `dev_configs/smoke-evidence.json` proves a workflow actually RAN on the
+  new pin — right version, zero FAILs, newer than the pin change. This is an enforced code
+  gate in `scripts/release-health-check.mjs`, not a checklist line. Produce it with:
+  ```bash
+  node scripts/smoke-workflows.mjs --plan   # resolve the matrix, spend nothing
+  node scripts/smoke-workflows.mjs          # the real run (RunPod GPU Pod, ~1h)
+  ```
+  Full procedure: [`docs/playbooks/bump-engine/`](../../../docs/playbooks/bump-engine/README.md).
+  MPI-465 shipped a completely dead LTX for six days because nothing executed a graph and
+  ComfyUI's own validation passed it. **Pod-green is not Windows-green** — the local
+  portable half is the playbook's gate 5 and this check does not cover it.
 
 ## Steps
 

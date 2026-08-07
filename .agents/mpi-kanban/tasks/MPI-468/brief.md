@@ -70,3 +70,19 @@ and paste it with CLAUDE.md's Critical Rules Snapshot and THE ROOT-CAUSE RULE. T
 Both children close, or the survivor states in writing what was dropped. The gate is wired
 into `mpi-release`, not merely documented - a playbook nobody's release flow consults is how
 MPI-465 shipped in the first place.
+
+## Split change — the SKILL moved to MPI-467 (2026-08-07)
+
+The ownership table above gave MPI-457 "the repo-side bump **skill**". That changed, and
+this is the explicit record the brief demands rather than a quiet cross.
+
+**`/mpi-bump-engine` now exists**, created under MPI-467 alongside the playbook it
+enforces. The trigger was a routing gap the user found: nothing in `CLAUDE.md` routed
+"test all the models" or "we bumped ComfyUI" anywhere near the playbook, so a cold agent
+would have matched `/mpi-bump-local-comfy` — the **bench-only** skill that never touches
+`node_lock.json`. That is the exact confusion this umbrella was written about. It also
+matches the shipped pattern: one enforcing skill per playbook.
+
+**MPI-457 EXTENDS that skill** with the in-place `/engine/upgrade` mechanic and the
+gate-5 empirical `class_type` check. It must not create a second bump skill — one skill,
+one playbook.

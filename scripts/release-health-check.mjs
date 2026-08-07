@@ -3,6 +3,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -24,6 +25,8 @@ const FILES = {
   releaseNotes: rel('js', 'data', 'releaseNotes.js'),
   releasesDir: rel('docs', 'releases'),
   systemDependencies: rel('dev_configs', 'system_dependencies.json'),
+  nodeLock: rel('dev_configs', 'node_lock.json'),
+  smokeEvidence: rel('dev_configs', 'smoke-evidence.json'),
   preReleaseTest: rel('scripts', 'pre_release_test.py'),
   // The product Pod's start.sh is in the SIBLING mpi-ci repo. It hardcodes the
   // extra_model_paths.yaml ComfyUI reads on the volume. MPI-143: a model whose
@@ -410,6 +413,68 @@ async function checkPodModelPaths() {
   }
 }
 
+// MPI-467 gate: a bumped engine may not ship without evidence that a workflow
+// actually RAN on it. MPI-465 shipped a completely dead LTX for six days because a
+// ComfyUI bump changed a return type under a custom node and nothing in this repo
+// ever executed a graph — ComfyUI's own validation passed it, since it threw at
+// sampling start after the loaders ran. Evidence comes from
+// `node scripts/smoke-workflows.mjs`; the procedure is docs/playbooks/bump-engine/.
+async function checkSmokeEvidence() {
+  const lock = await readJson(FILES.nodeLock);
+  const pinned = String(lock?.comfyui?.core?.tag || '').replace(/^v/, '');
+  if (!pinned) {
+    fail('dev_configs/node_lock.json is missing comfyui.core.tag.');
+    return;
+  }
+
+  // Did the engine move in this release? Compare against the last release tag.
+  const git = (args) => {
+    try {
+      return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    } catch { return null; }
+  };
+  const lastTag = git(['describe', '--tags', '--abbrev=0', '--match', 'v*']);
+  if (!lastTag) {
+    console.warn('Skipping engine smoke-evidence check: no v* tag found (first release, or a shallow clone).');
+    return;
+  }
+  const priorRaw = git(['show', `${lastTag}:dev_configs/node_lock.json`]);
+  if (!priorRaw) {
+    console.warn(`Skipping engine smoke-evidence check: cannot read node_lock.json at ${lastTag}.`);
+    return;
+  }
+  let prior;
+  try { prior = String(JSON.parse(priorRaw)?.comfyui?.core?.tag || '').replace(/^v/, ''); } catch { prior = ''; }
+  if (prior && prior === pinned) return; // engine unchanged — nothing to gate
+
+  const bumpNote = `Engine pin moved ${prior || '(unknown)'} -> ${pinned} since ${lastTag}.`;
+  let evidence;
+  try {
+    evidence = await readJson(FILES.smokeEvidence);
+  } catch {
+    fail(`${bumpNote} No dev_configs/smoke-evidence.json — run \`node scripts/smoke-workflows.mjs\` (docs/playbooks/bump-engine/). A bumped engine may not ship unproven: MPI-465 shipped a dead LTX for six days and graph validation passed it.`);
+    return;
+  }
+
+  const ran = String(evidence?.engine?.got || '').replace(/^v/, '');
+  if (!ran) {
+    fail(`${bumpNote} smoke-evidence.json does not record which engine version the Pod actually reported, so it cannot prove WHAT was smoked (playbook gate 7).`);
+  } else if (ran !== pinned) {
+    fail(`${bumpNote} smoke-evidence.json was produced against ComfyUI ${ran}, not the pinned ${pinned} — that run validated a different engine.`);
+  }
+  if (evidence?.counts?.fail > 0) {
+    fail(`${bumpNote} smoke-evidence.json records ${evidence.counts.fail} FAILED op(s). Fix them or explicitly re-scope before releasing.`);
+  }
+
+  // Stale evidence is the quiet failure: a green file from the PREVIOUS bump still
+  // names an old version, but one carrying the right version and an old timestamp
+  // would pass every check above. Anchor it to when the pin actually moved.
+  const pinMovedAt = git(['log', '-1', '--format=%cI', '--', 'dev_configs/node_lock.json']);
+  if (pinMovedAt && evidence?.at && new Date(evidence.at) < new Date(pinMovedAt)) {
+    fail(`${bumpNote} smoke-evidence.json is STALE — recorded ${evidence.at}, but node_lock.json last changed ${pinMovedAt}. Re-run the smoke.`);
+  }
+}
+
 async function main() {
   try {
     const { appVersion, schemaVersion } = await checkVersions();
@@ -418,6 +483,7 @@ async function main() {
     await checkOperations();
     await checkPreReleaseEngineSource();
     await checkPodModelPaths();
+    await checkSmokeEvidence();
   } catch (err) {
     fail(err.message);
   }

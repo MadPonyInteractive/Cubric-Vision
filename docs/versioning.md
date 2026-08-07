@@ -48,10 +48,13 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
 - **Format:** Semantic versioning matching upstream tags (e.g., `0.18.0` for ComfyUI).
 - **Where:** Stored in `dev_configs/system_dependencies.json` (drives the local-engine download URL). **Tracked in a SECOND file too:** `dev_configs/node_lock.json` `comfyui.core.tag` is the node/Pod pin (read by `js/data/modelConstants/dependencies.js` for app node URLs AND by the mpi-ci Pod image build). These two CAN DESYNC — on the 1.1.0 promote `system_dependencies.json` said `0.26.0` while `node_lock.json` said `v0.27.0` (local engine would have pulled 0.26 while nodes targeted 0.27).
 - **When to bump:** Only when the bundled engine is upgraded. Edit `system_dependencies.json` **AND** verify it matches `node_lock.json`'s `comfyui.core.tag` — grep BOTH at every bump, do not trust one file alone.
-- **The full bump sequence is NOT here.** There is no skill for the app-engine bump
-  (`/mpi-bump-local-comfy` is the standalone `G:/ComfyUi` bench only), so the procedure
-  proved on 0.29.2 → 0.30.0 lives in **`.agents/mpi-kanban/tasks/MPI-457/brief.md`**
-  until that card ships one. Three things this section does not tell you and that cost a
+- **The full bump sequence is NOT here — it is
+  [`docs/playbooks/bump-engine/README.md`](playbooks/bump-engine/README.md)** (MPI-467),
+  which owns the gate ordering and the executing smoke run. There is still no *skill* for
+  the app-engine bump (`/mpi-bump-local-comfy` is the standalone `G:/ComfyUi` bench only);
+  MPI-457 will add one that calls that playbook. The sequence proved by hand on
+  0.29.2 → 0.30.0 is in `.agents/mpi-kanban/tasks/MPI-457/brief.md`. Three things this
+  section does not tell you and that cost a
   session to derive: an upstream tag can exist with **no Comfy-Org portable build** (v0.30.1
   and v0.30.2 were real tags with no release, so 0.30.0 was the ceiling — check
   `gh api repos/Comfy-Org/ComfyUI/releases/tags/v<ver>` before picking a target); the

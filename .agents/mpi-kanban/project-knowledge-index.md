@@ -54,17 +54,22 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - **Also:** `docs/download-manager.md` (what the tiles are actually reporting)
 - **Memory:** none
 
-### Apps (App Library)
+### Flows (Flow Library)
 
-- **Read first:** `docs/apps.md` (the dev-gated outcome apps and how a descriptor becomes one)
-- **Playbook:** `docs/playbooks/add-app/` — enforced by the `/mpi-add-app` skill
+- **Read first:** `docs/flows.md` (the dev-gated outcome flows and how a descriptor becomes one)
+- **Playbook:** `docs/playbooks/add-flow/` — enforced by the `/mpi-add-flow` skill
 - **Memory:** none
 
-### Adding a model or an App
+### Adding a model or a Flow
 
 - **Read first:** `docs/playbooks/add-model/` (README hub + `01`–`06`) — every known trap; enforced by `/mpi-add-model`. Models are NOT version-bumped.
-- **For an App instead:** `docs/playbooks/add-app/` (README hub + `01`–`05`), enforced by `/mpi-add-app`
+- **For a Flow instead:** `docs/playbooks/add-flow/` (README hub + `01`–`05`), enforced by `/mpi-add-flow`
 - **Notes:** a handoff or a `docs/models/<model>/` doc ASSUMES the playbook — read both. `node scripts/compile-node-deps.mjs` is mandatory when a new custom node declares requirements.
+
+### Bumping the ComfyUI engine / smoke-testing models
+
+- **Read first:** `docs/playbooks/bump-engine/` (README hub + `01-smoke-run.md`) — enforced by `/mpi-bump-engine`
+- **Notes:** NOT `/mpi-bump-local-comfy`, which is the standalone `G:\ComfyUi` BENCH only and never touches `dev_configs/node_lock.json`. One pin, TWO engines (Windows portable + Pod image) — both must be proven. Smoke-only is valid with no bump (after a node bump or a new model): `node scripts/smoke-workflows.mjs --plan` first, it spends nothing. `npm run release:check` REFUSES a bumped engine with no `dev_configs/smoke-evidence.json` (MPI-465/467).
 
 ### Workflow authoring
 

@@ -65,6 +65,7 @@ NOT mechanically split these):
 | **Workflow authoring + injection contract** (MpiNodes pack, injector target list, generator/tier patterns) — model/flow-agnostic | [workflow-authoring/README.md](workflow-authoring/README.md) |
 | Models-path / YAML / extra-folders | [models-path.md](models-path.md) |
 | Download manager (resumable, NDH) | [download-manager.md](download-manager.md) |
+| **Bumping the engine users run** (the two engines off one pin, the Pod-version assert, the executing smoke gate) — NOT `/mpi-bump-local-comfy`, which is bench-only | [playbooks/bump-engine/README.md](playbooks/bump-engine/README.md) |
 
 ### RunPod remote engine
 | Topic | Doc |

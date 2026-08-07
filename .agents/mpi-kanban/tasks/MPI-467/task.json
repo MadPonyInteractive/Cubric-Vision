@@ -3,11 +3,11 @@
   "id": "MPI-467",
   "title": "Smoke-run every workflow when ComfyUI is bumped - and give the engine bump a playbook",
   "description": "MPI-465 shipped a totally dead LTX to users for six days because a ComfyUI bump changed a return type under a custom node and NOTHING executes a workflow before release. The engine bump also has no skill and no playbook - mpi-bump-local-comfy only touches the BENCH at G:/ComfyUi, not node_lock's core pin. Build a smoke matrix that EXECUTES a minimal generation per workflow, and hang it off a real engine-bump playbook. SCOPE SPLIT (MPI-468, 2026-08-07): this card owns the GUARD - docs/playbooks/bump-engine/, the smoke runner, and the mpi-release refusal. The in-place upgrade path and the bump skill are MPI-457. Dispatch notes for a cold session are in brief.md; hand the agent MPI-468.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-07T01:40:00Z",
-  "updated_at": "2026-08-07T01:47:30Z",
+  "updated_at": "2026-08-07T03:15:25Z",
   "labels": [
     "testing",
     "engine",
@@ -23,8 +23,13 @@
   ],
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
   },
   "priority": "high",
-  "attention": false
+  "attention": false,
+  "activeSessionTitle": "Engine-bump guard: playbook + Pod smoke runner + release gate"
 }

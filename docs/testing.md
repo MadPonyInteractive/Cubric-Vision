@@ -16,6 +16,12 @@ directly too: `node --test tests/*.test.cjs`.
 — it never executes app code. That is how 1.3.0 shipped with the LoRA and upscale
 pickers opening into hidden DOM: every static check passed.
 
+**Neither suite runs a ComfyUI workflow.** If you were sent here to "test the models"
+or to check them after an engine/node bump, this is the wrong doc — that is
+[`docs/playbooks/bump-engine/`](playbooks/bump-engine/README.md) and `/mpi-bump-engine`,
+which execute a minimal generation per op on a RunPod Pod. Neither suite can catch a
+MPI-465-class break: they have no GPU, no weights, and never dispatch a graph.
+
 ## CI (MPI-444)
 
 `.github/workflows/tests.yml` runs **both** suites on `windows-latest`: `npm ci`,
