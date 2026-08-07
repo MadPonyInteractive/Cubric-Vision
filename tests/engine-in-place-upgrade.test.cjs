@@ -12,7 +12,7 @@
 //      python is the exact stomp `--no-deps` exists to prevent (shared.js § curated
 //      python deps).
 const assert = require('assert');
-const { changedRequirements, engineOwnedChange } = require('../routes/engine');
+const { changedRequirements, engineOwnedChange, comfyLoadsNodeFolder } = require('../routes/engine');
 
 // ── 1. The real bump, verbatim ───────────────────────────────────────────────
 // Trimmed from ComfyUI's own requirements.txt at the two tags. torch is present in
@@ -93,5 +93,20 @@ assert.strictEqual(engineOwnedChange(['nvidia_cudnn_cu13==9.14.0']), 'nvidia-cud
 // Near-misses that must NOT trip it — these are ordinary pip packages ComfyUI really ships.
 assert.strictEqual(engineOwnedChange(['torchsde==0.2.6', 'torchdiffeq==0.2.5']), null,
     'torchsde and torchdiffeq are pip-installable, not portable-owned');
+
+// ── 6. A disabled node folder is not evidence of anything ────────────────────
+// The MPI-457 proving run's first attempt: a leftover
+// `ComfyUI-MpiNodes.stale-aaa1d2d9.disabled` on the dev machine carried a real
+// `.mpi_node_commit` marker from when it was a live install, matched no registry id,
+// and sent an 11 GB engine to the full wipe. ComfyUI skips `.disabled` folders, so it
+// was never loaded and could never have broken a generation.
+assert.strictEqual(comfyLoadsNodeFolder('ComfyUI-MpiNodes.stale-aaa1d2d9.disabled'), false,
+    'the exact folder that triggered the false wipe');
+assert.strictEqual(comfyLoadsNodeFolder('ComfyUI-KJNodes.disabled'), false, 'upstream opt-out suffix');
+assert.strictEqual(comfyLoadsNodeFolder('ComfyUI-KJNodes.DISABLED'), false, 'the suffix is case-insensitive on Windows');
+// A stray copy WITHOUT the suffix does get imported, so it stays a real signal.
+assert.strictEqual(comfyLoadsNodeFolder('ComfyUI-MpiNodes.stale-aaa1d2d9'), true, 'no suffix = ComfyUI imports it');
+assert.strictEqual(comfyLoadsNodeFolder('ComfyUI-LTXVideo'), true, 'an ordinary node loads');
+assert.strictEqual(comfyLoadsNodeFolder('some.disabled.node'), true, 'only the SUFFIX disables, not the substring');
 
 console.log('engine-in-place-upgrade: OK');

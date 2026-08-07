@@ -874,11 +874,28 @@ function engineOwnedChange(changed) {
 }
 
 /**
- * A custom-node folder WE installed — it carries the `.mpi_node_commit` marker —
- * whose name the registry no longer knows. That is a real deprecation, and the
- * in-place path cannot resolve it: a checkout leaves the dead node importing forever.
- * The marker is what makes this safe to act on; a folder the user dropped in by hand
- * has none, so their own work never triggers an engine wipe.
+ * Would ComfyUI actually LOAD this custom_nodes folder? It skips anything ending in
+ * `.disabled` — that is upstream's own opt-out, and it is what a node gets renamed to
+ * when it is set aside rather than removed. A folder ComfyUI will not import cannot
+ * break a generation, so it is never evidence of anything. Pure — unit-tested.
+ *
+ * Learned the expensive way (MPI-457 proving run): a leftover
+ * `ComfyUI-MpiNodes.stale-aaa1d2d9.disabled` on the dev machine carried a real
+ * `.mpi_node_commit` marker from when it was a live install, matched no registry id,
+ * and sent an 11 GB engine to the wipe.
+ * @param {string} folderName
+ * @returns {boolean}
+ */
+function comfyLoadsNodeFolder(folderName) {
+    return !/\.disabled$/i.test(folderName);
+}
+
+/**
+ * A custom-node folder WE installed — it carries the `.mpi_node_commit` marker — that
+ * ComfyUI will LOAD and whose name the registry no longer knows. That is a real
+ * deprecation, and the in-place path cannot resolve it: a checkout leaves the dead node
+ * importing forever. Two things keep this from firing on innocent folders: the marker
+ * (a folder the user dropped in by hand has none) and the load check above.
  * @returns {Promise<string|null>} folder name, or null
  */
 async function _findDeprecatedNode() {
@@ -889,6 +906,7 @@ async function _findDeprecatedNode() {
         .map((d) => d.filename));
     for (const entry of await fs.readdir(customNodesDir, { withFileTypes: true })) {
         if (!entry.isDirectory() || known.has(entry.name)) continue;
+        if (!comfyLoadsNodeFolder(entry.name)) continue;
         if (await fs.pathExists(path.join(customNodesDir, entry.name, NODE_COMMIT_MARKER))) {
             return entry.name;
         }
@@ -998,10 +1016,21 @@ async function _fullEngineReinstall() {
         }
     }
 
-    // 2. Wipe old engine (models are safe now)
+    // 2. Wipe old engine (models are safe now).
+    //
+    // Stop ComfyUI FIRST. A running engine holds its own working directory open, so
+    // `rmdir` on it returns EBUSY — and by then the recursive delete has already taken
+    // out whatever it reached before the lock. Measured on the MPI-457 proving run: the
+    // portable's `update/` folder and every `.bat` launcher were gone, the error was
+    // `EBUSY: resource busy or locked, rmdir '...\ComfyUI'`, and what was left was a
+    // half-deleted engine plus an error toast. A wipe that cannot finish must not start.
+    // (The in-place path already stopped it; this is the other branch.)
     broadcastEngineEvent('engine:upgrade-status', { status: 'Removing old engine...' });
+    stopComfyUI();
     logger.info('engine', 'Removing old ComfyUI portable');
-    await fs.remove(portableDir);
+    // Retries cover the gap between "process asked to stop" and "Windows released the
+    // handles", which is not instant and has no event to wait on.
+    await fs.rm(portableDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 500 });
 
     // 3. Download + install new version (SSE reports progress). Pass the preserved
     // models root so the post-extract step 6 re-writes the YAML with the user's path
@@ -1046,3 +1075,4 @@ module.exports = router;
 module.exports.installPathDepthError = installPathDepthError; // MPI-387 — exported for unit test
 module.exports.changedRequirements = changedRequirements;     // MPI-457 — exported for unit test
 module.exports.engineOwnedChange = engineOwnedChange;         // MPI-457 — exported for unit test
+module.exports.comfyLoadsNodeFolder = comfyLoadsNodeFolder;   // MPI-457 — exported for unit test
