@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 465,
+  "next_id": 466,
   "columns": {
     "todo": [
       "MPI-464",
@@ -36,6 +36,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-465",
       "MPI-462",
       "MPI-463",
       "MPI-459",
@@ -67,7 +68,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-07T00:21:00Z",
+  "updated_at": "2026-08-07T00:30:00Z",
   "events": [
     {
       "at": "2026-08-05T15:05:00Z",
@@ -2074,6 +2075,14 @@
       "at": "2026-08-07T00:21:00Z",
       "actor": "claude",
       "summary": "Split from MPI-462. The orphan collector shipped local-only; the remote uninstall branch returns before it. Needs _remoteSharedDepIds + a volume inventory, and a live Pod to verify before any deletion code aims at a user's volume."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-465",
+      "type": "task.created",
+      "at": "2026-08-07T00:30:00Z",
+      "actor": "opus",
+      "summary": "LTX is dead on ComfyUI 0.30.x - all 12 shipped graphs. ComfyUI f8a3fd9d made LatentUpscaleModelLoader return a ModelPatcher; KJNodes' preview-override wrapper still called .to(device) on it and no patcher class has .to (proven by hasattr against the engine's own python). Surfaced as a bench failure the user reasonably blamed on their own last-frame edit; the offending link has been in the shipped graphs since 2026-07-22. The engine runs 0.30.0 which ALREADY contains the breaking commit, so this is a product regression from the H3 engine bump, unnoticed only because nobody has run LTX through the app since. Pin bumped 7f43f2c -> 35e5956 (kijai's _unwrap_upscale_model, 827fe6e); existing engines self-heal via the MPI-222 .mpi_node_commit drift check. Proven live on the bench - the exact failing prompt completed in 124s after the bump. Open: app-side proof, and the Pod image still bakes the old node."
     }
   ]
 }

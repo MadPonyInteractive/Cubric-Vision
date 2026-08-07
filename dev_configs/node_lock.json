@@ -50,7 +50,7 @@
     "comfyui-kjnodes": {
       "source": "git-commit",
       "repo": "kijai/ComfyUI-KJNodes",
-      "commit": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
+      "commit": "35e5956193769d18a13136cdedb73a36a05c73e6",
       "filename": "comfyui-kjnodes",
       "installRequirements": true
     },

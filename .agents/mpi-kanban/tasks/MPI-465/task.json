@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-465",
+  "title": "LTX is DEAD on the current engine - KJNodes calls .to() on a ModelPatcher",
+  "description": "All 12 shipped LTX graphs crash at the stage-1 sampler on ComfyUI 0.30.x. ComfyUI f8a3fd9d (2026-07-25) made LatentUpscaleModelLoader return a ModelPatcher; KJNodes' LTX2SamplingPreviewOverride wrapper still did latent_upscale_model.to(device), and no patcher class has .to. Fixed by bumping the KJNodes pin to 35e5956, which carries kijai's _unwrap_upscale_model helper. Proven live on the bench.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-07T00:30:00Z",
+  "updated_at": "2026-08-07T00:30:00Z",
+  "labels": [
+    "bug",
+    "ltx",
+    "engine",
+    "custom-nodes"
+  ],
+  "acceptance": [
+    "node_lock pins a KJNodes commit that carries _unwrap_upscale_model",
+    "An existing engine self-heals: the .mpi_node_commit drift check re-installs KJNodes at the new pin on boot",
+    "An LTX generation completes THROUGH THE APP on the app engine, not only on the bench",
+    "The Pod image is rebuilt or confirmed unaffected - it bakes nodes from this same lock"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  },
+  "priority": "high",
+  "attention": true
+}
