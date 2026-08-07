@@ -150,6 +150,20 @@
 
 ## fixes
 
+- **Models you never installed no longer show a half-finished download bar.** Six model
+  tiles were showing progress bars — 17%, 22%, 33%, 35%, 36%, 49% — for downloads nobody
+  ever started. The bar was counting files that belong to a model you *do* have installed,
+  and billing them to its sibling. It now counts only the files that model would actually
+  have to fetch.
+
+- **Uninstalling now clears up after itself properly.** Uninstalling a model has always
+  kept files that another installed model still needs, which is right. But once that other
+  model went away too, its files were left behind for good — owned by nothing, deleted by
+  nothing, and invisible in the app because a model you don't have installed offers no
+  Uninstall button. On this machine that had quietly accumulated ~16GB. Uninstall now also
+  clears out weights that no installed model needs any more. Files shared with something
+  still installed are kept, exactly as before.
+
 - **A hiccup mid-download no longer throws away the download.** A 25GB model that
   stalled for a minute — a router blip, a bad moment on the line — was declared failed
   outright, even though the gigabytes already on disk were perfectly good. It now

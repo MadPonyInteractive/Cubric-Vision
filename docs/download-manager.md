@@ -175,6 +175,48 @@ MPI-164, the `allBytesDone` "Verifying…" gate — fixed remote, ported to loca
 only at MPI-216). **On any shared-dep / install / engine-split change, check
 BOTH the local and remote paths.**
 
+## The orphan sweep — the guard keeps files; something must also collect them (MPI-462)
+
+The guard above is correct and still strands weights. Keeping a shared dep because a
+sibling defends it is right *at that instant*; nothing re-asks later. When the defending
+sibling stops being installed by any path that is not a route uninstall (a cancelled
+install, a manual delete), the dep is owned by no model and offered to no uninstall —
+a not-installed card shows **Install**, never Uninstall. Shipped copy already promises
+*"uninstalling a model now always removes its weights, while files shared with other
+installed models are kept"*, so a permanently-stranded weight is a broken promise, not
+a missing feature.
+
+Measured twice: MPI-314 stranded 18.62GB of LTX-2.3 deps (hand-reclaimed 2026-07-19,
+closed as "a one-time fossil, not a live leak"), then MPI-462 stranded 15.91GB from a
+different family 19 days later — a 10.59GB Boogu text encoder plus the Chroma ControlNet
+and style LoRAs.
+
+`_sweepOrphanedDeps` runs at the end of the LOCAL uninstall route, gated on
+`deleteFiles`, never fatal (the uninstall already succeeded). Its orphan test is
+**`_localSharedDepsMap(null)` — the same guard with nothing excluded**, which already
+unions every installed model's deps, live install jobs, flow deps and plugin deps. On
+disk and absent from that map = wanted by nobody. Deliberately not a second notion of
+"orphan": one wrong answer here deletes user weights, which is exactly how MPI-310
+destroyed 5.24GB.
+
+It refuses, and `tests/orphan-sweep.test.cjs` pins each refusal:
+
+- **`custom_nodes`** — work-not-bytes, and on a dev machine
+  `custom_nodes/ComfyUI-MpiNodes` is a **symlink to the live node source repo**;
+  sweeping it would destroy that repo.
+- **`targetPath` weights** — engine-anchored, outside the models root.
+- **universal workflow deps**, and anything resolving outside the managed models root.
+
+Log line gains `swept N orphaned`. **`swept 0` is the expected result on a healthy
+disk** — a sweep proving it declines is as valid as one that collects; never manufacture
+an orphan to watch it fire.
+
+**The REMOTE twin does not exist — MPI-464.** The remote branch returns before the sweep,
+so a Pod volume still strands. It needs `_remoteSharedDepIds(null)` plus a volume
+inventory, and it was deliberately not shipped blind: deletion code aimed at a user's
+volume must not go out unverified. This is the same one-engine-only trap the paragraph
+above warns about, left open knowingly rather than by omission.
+
 The renderer must also not read an arch weight alone as "installed": a flat
 arch-variant model (LTX-2.3 balanced) is installed only when its common deps are
 ALSO on disk (`MpiModelManager._commonDepsOnDisk`), else a card whose shared deps

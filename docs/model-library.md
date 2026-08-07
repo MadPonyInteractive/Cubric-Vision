@@ -118,7 +118,7 @@ Three exclusions shape "its own":
 - **A 1 GB floor** (MPI-258 Bug C) — below it, no bar. Sized to stop a handful of small
   support files showing 1-3% on a pack the user never touched.
 
-**"Installed" in that first exclusion must mean ≥1 op on disk — MPI-462 owns this.** It
+**"Installed" in that first exclusion means ≥1 op on disk (MPI-462, shipped).** It
 originally gated on the raw `m.installed` flag, which (`modelRegistry.js:189`) means the
 WHOLE universe is present, every dep of every op. Nothing else in the app uses that
 meaning: this same component decides it at :705, :1123 and :1307 as ≥1 installed op, as
@@ -131,6 +131,11 @@ its universe can name deps that are NOT on disk, and only an on-disk dep may be 
 owned — a missing one is still real work in this model's denominator. Read MPI-462 before
 touching either predicate; it is a shared primitive with several readers.
 
-**The floor does not save you from big orphans.** Weights left on disk that no installed
-model needs (measured 2026-08-06: a 10.59GB clip, a 4.28GB ControlNet) clear 1 GB on
-their own and draw a bar no exclusion can suppress, because nothing owns them.
+**The floor does not save you from big orphans, and no exclusion can.** Weights left on
+disk that no installed model needs (measured 2026-08-06: a 10.59GB clip, a 4.28GB
+ControlNet) clear 1 GB on their own and draw a bar nothing here can suppress, because
+nothing owns them — the bar is *honest*, and it is how the user spotted both incidents.
+The fix belongs where the bytes are, not where the bar is: the post-uninstall orphan
+sweep collects them (`docs/download-manager.md` § The orphan sweep). If you see a phantom
+bar on a never-touched model, check for ownerless weights on disk BEFORE touching
+`_computePartial` — MPI-314 and MPI-462 were both this, and neither was a bar bug.

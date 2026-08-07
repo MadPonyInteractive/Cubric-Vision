@@ -7,8 +7,9 @@
   "maturity": "planned",
   "status": "active",
   "created_at": "2026-08-07T00:21:00Z",
-  "updated_at": "2026-08-07T00:21:00Z",
+  "updated_at": "2026-08-07T00:44:00Z",
   "links": {
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "brief": "brief.md"
   }
 }
