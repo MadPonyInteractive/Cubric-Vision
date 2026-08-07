@@ -105,6 +105,14 @@
   "Play audio on hover" switch is gone from Settings; it was the same control, two
   rooms away. At zero an audio card stays silent instead of pretending to play, and
   a video still previews without sound.
+- **Engine updates now apply in place — seconds, not a fresh download.** Updating the
+  generation engine used to delete the whole thing and download it again from scratch:
+  around eleven gigabytes of engine, every add-on and every Python package, even when
+  the actual change was tiny. It now updates just the parts that moved, so a typical
+  update finishes in seconds and costs you almost no bandwidth. The full reinstall is
+  still there and still runs by itself whenever the update genuinely needs one — an
+  add-on that was retired, a change to the engine's own Python, or anything that does
+  not go cleanly — so you never end up on a half-updated engine.
 
 ## importantChanges
 
@@ -169,6 +177,14 @@
   its Control operation still generates at the size you pick.
 
 ## fixes
+
+- **Updating the engine no longer leaves tools quietly missing.** After an engine update,
+  five add-on packs could come back without the Python packages they need — the masking
+  detectors, the pose and depth guides, several samplers and part of LTX. Nothing warned
+  you. The tools simply were not there, and the first sign was a generation failing on a
+  feature that had worked the day before. The engine now reinstalls those packages
+  whenever it replaces itself, and a check was added so a future update cannot skip them
+  the same way.
 
 - **LTX video generation works again.** Every LTX generation has been failing since the
   1.3.0 release — the run stopped at the first sampling step and produced nothing. A
