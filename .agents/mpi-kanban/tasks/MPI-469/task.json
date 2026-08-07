@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-469",
+  "title": "Remote uninstall reports files it never deleted - the LOCAL MPI-276 fix was never mirrored",
+  "description": "The remote delete loop in POST /comfy/models/uninstall pushes a dep into removed[] unless the wrapper answered 'unsupported'. remoteUninstallDep returns 'deleted' | 'not_found' | 'unsupported', so 'not_found' - the file was never on the volume - is reported as removed. The local branch already fixed exactly this in MPI-276 (gate on fs.pathExists; a missing path lands in keptModelFiles with reason 'already-absent') and the remote twin never got it, even though the wrapper hands us the answer. Measured live 2026-08-07 during MPI-464's Pod run: uninstalling nvidia-pid reported 8 deps removed when exactly 1 was on the volume. removed[] is not log-only - it rides the response and the download:uninstalled broadcast, and MpiModelManager consumes it, so check what it drives there before picking the fix shape.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-07T02:11:00Z",
+  "updated_at": "2026-08-07T02:11:00Z",
+  "links": {
+    "events": "events.jsonl",
+    "brief": "brief.md"
+  }
+}
