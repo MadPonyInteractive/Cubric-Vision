@@ -49,10 +49,36 @@ node, so H3 and WAN are unaffected.
 
 The app's engine is **ComfyUI 0.30.0, which already contains `f8a3fd9d`** (verified by reading
 `engine/ComfyUI_windows_portable/ComfyUI/comfy_extras/nodes_hunyuan.py` directly — the version
-number is not the discriminator, the file is), with **KJNodes 1.4.7** lacking the fix. This is
-therefore a **product regression introduced by the H3 engine bump (0.29.2 → 0.30.0)**, and it
-is live right now — it has simply not been noticed because nobody has run LTX through the app
-since the bump.
+number is not the discriminator, the file is), with **KJNodes 1.4.7** lacking the fix.
+
+### It SHIPPED. Corrected 2026-08-07 — the first write of this brief blamed the wrong bump.
+
+This was originally recorded as "a product regression introduced by the H3 engine bump
+(0.29.2 → 0.30.0), not yet noticed because nobody has run LTX since". **Both halves were
+wrong.** The user pushed back that LTX only broke when ComfyUI was bumped — correct, but an
+EARLIER bump than the one blamed. Checked at the release tags rather than by topology:
+
+| tag | tagged | `model = model_patcher` in the loader |
+|---|---|---|
+| `v0.28.0` | 2026-07-15 | **absent** — clean |
+| `v0.29.0` | 2026-07-28 | **present** — the break lands here |
+| `v0.29.2` | 2026-07-31 | present |
+| `v0.30.0` | 2026-08-02 | present |
+
+Our engine pin went `v0.28.0 → v0.29.2` on **2026-07-31** (`e2c2b4d6`). **That** is when LTX
+died, not at the H3 0.30.0 bump six days later.
+
+And it is not internal-only. Both published releases carry the broken pair:
+
+| release | published | ComfyUI core | KJNodes |
+|---|---|---|---|
+| `v1.3.0` | 2026-08-01 | `v0.29.2` | `7f43f2c` |
+| `v1.3.1` | 2026-08-02 | `v0.29.2` | `7f43f2c` |
+
+**So every user on 1.3.0 or 1.3.1 — the current public release — has had a completely dead LTX
+since 2026-08-01.** That makes this a shipped user-facing regression and a hotfix candidate,
+not just an unreleased-changelog line. The user's own bench only surfaced it because they went
+back to LTX for the last-frame work.
 
 ## Fix
 
