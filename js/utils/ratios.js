@@ -181,9 +181,14 @@ export const LTX_RATIOS = {
 // genuinely smaller than a 16:9 one. Latent grid is /16 (height // 16); every value
 // here is /32, comfortably clean.
 //
-// NO 2K/4K tier. H3-Regenerate-2K, the 768p->2K second pass, is API-only and NOT in the
-// open weights (docs.comfy.org / Comfy-Org blog) — local is H3-Base at 768p. `very_high`
-// below is an extrapolated DETAIL tier, not a 2K pass; do not add a 2K/4K tier on top.
+// H3-Regenerate-2K, the 768p->2K SECOND PASS, is API-only and NOT in the open weights
+// (docs.comfy.org / Comfy-Org blog) — local is H3-Base at 768p. `very_high` is an
+// extrapolated DETAIL tier, not that pass.
+//
+// A 2K CANVAS is a separate question and the answer turned out to be yes: this file
+// used to say "do not add a 2K/4K tier on top", which conflated the two. Measured
+// 2026-08-07 on a 4060 Ti, a bare 2560x1472 run is clean. The `2k` tier below exists on
+// that evidence. Still NO 4K tier — nothing has been run there.
 //
 // LADDER SHAPE — native sits at `high`, NOT at the top (MPI-449, 2026-08-06). This
 // mirrors WAN_RATIOS exactly: WAN's documented ceiling (1280x720) sits at `high` and its
@@ -213,9 +218,8 @@ export const LTX_RATIOS = {
 // short edge for free: ResolutionSelector's own square at these MP anchors would be 800 at
 // 0.6 and 1024 at 0.98, both off H3's canvas.
 //
-// NOTE: not yet wired to a shipped model card — H3 model wiring is MPI-452, blocked on
-// the licence gate MPI-451. The 'h3' key below is provisional; MPI-452 owns the final
-// model.type string and must keep RATIO_MODES/BUILTIN_* in step with it.
+// The 'h3' key is no longer provisional: MPI-452 shipped it, and BOTH H3 cards
+// (minimax-h3, minimax-h3-ref2va) declare `type: 'h3'`, so a change here moves both.
 export const MINIMAX_H3_RATIOS = {
     very_low: [
         { label: "1:1", w: 352, h: 352, icon: "rect_1_1" },
@@ -244,6 +248,19 @@ export const MINIMAX_H3_RATIOS = {
         { label: "1:1", w: 1088, h: 1088, icon: "rect_1_1" },
         { label: "9:16", w: 1088, h: 1920, icon: "rect_9_16" },
         { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" }
+    ],
+    // 2K — the SAME numbers LTX_RATIOS uses for its 2k tier, and MEASURED on H3 rather
+    // than assumed (2026-08-07, bench, 4060 Ti): a bare 2560x1472 run came out clean,
+    // with stage 1 alone already reading as a finished 1K product. That is what earned
+    // the tier — see the § "2K" warning above, which this does NOT contradict: the
+    // API-only piece is H3-Regenerate-2K, the 768p->2K SECOND PASS. Sampling H3-Base at
+    // a 2K canvas is a different thing and it works. All /32-clean (1472/32=46,
+    // 2560/32=80). Cost is the real limit, not quality — 2x the pixels costs ~3.3x the
+    // time, so this is a final-render tier like very_high, only more so.
+    '2k': [
+        { label: "1:1", w: 1472, h: 1472, icon: "rect_1_1" },
+        { label: "9:16", w: 1472, h: 2560, icon: "rect_9_16" },
+        { label: "16:9", w: 2560, h: 1472, icon: "rect_16_9" }
     ]
 };
 
@@ -490,7 +507,7 @@ const BUILTIN_QUALITY_TIERS = {
     wan: ['very_low', 'low', 'medium', 'high', 'very_high'],
     wan5b: ['low', 'medium', 'high'],
     ltx: ['very_low', 'low', 'medium', 'high', 'very_high', '2k', '4k'],
-    h3: ['very_low', 'low', 'medium', 'high', 'very_high'],
+    h3: ['very_low', 'low', 'medium', 'high', 'very_high', '2k'],
     krea2: ['1k', '2k'],
 };
 
