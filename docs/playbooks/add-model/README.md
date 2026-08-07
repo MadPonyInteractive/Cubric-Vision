@@ -175,18 +175,56 @@ fp8_scaled Balanced tier, collapsed 3→2):
    tier ints in sync.
 2. **Regen + delete stale runtime JSON** — rerun the generator, then `git rm` the runtime
    file(s) no longer produced. Confirm `ls` shows only the surviving tiers.
-3. **dependencies.js** — delete the dropped weight's dep entry. If a surviving tier is
-   re-slotted, rename its dep id to match the new tier.
+3. **dependencies.js — KEEP the dep entry, do not delete it** (corrected 2026-08-07; the
+   old "delete the dep entry" step predates the orphan sweep and both MPI-470 and MPI-466
+   did the opposite on the same day). `_orphanedDepIds` (`routes/downloadManager.js`,
+   MPI-462/464) iterates `DEPS` and trashes what no model's dep list protects — so the
+   entry surviving is exactly what lets an uninstall reclaim the weight from users who
+   ALREADY downloaded it. Delete it and the sweep goes blind: the file strands forever,
+   untracked, with nothing in the app able to remove it. Mark the entry
+   `// ── DEPRECATED (MPI-nnn)` and say why it stays. If a surviving tier is re-slotted,
+   rename its dep id to match the new tier.
 4. **models.js** — delete the dropped `ModelDef`; re-slot a promoted tier (`id`, `sizeTier`,
    `image`, `gen_speed`, `workflows`, `dependencies`, capabilities like `negativePrompt`).
 5. **progressStages.js** — drop the removed file's key; re-key a renamed file.
 6. **display webp** — the card `image` must show the SURVIVING tier's weight output, not the
    dropped one. Overwrite/rename the webp; `git rm` the orphan.
 7. **Consumer sweep** — grep the old dep id / filename / tier id across `js/`,
-   `operation_registry.json`, docs. Zero orphans.
-8. **R2 delete (approval gate)** — remove the dropped weight from R2 (`rclone deletefile
-   --s3-no-check-bucket`); verify HEAD 404. Weight is re-uploadable from `G:\CubricModels`.
+   `operation_registry.json`, docs. Zero orphans. **Grep `tests/` too** — see below.
+8. **R2 + the HF mirror — the user's call, and the default is LEAVE THEM UP.** A released
+   build still lists the dep, so deleting the object turns its install into a 404 rather
+   than a clean skip. Delete only when the user says so (`rclone deletefile
+   --s3-no-check-bucket`, verify HEAD 404; re-uploadable from `G:\CubricModels`).
 9. **Changelog** — if the model's UNRELEASED entry named the dropped tier, UPDATE that entry
-   (don't add a new one). A stale "three tiers" note ships silently otherwise.
+   (don't add a new one). A stale "three tiers" note ships silently otherwise. Also grep
+   UNRELEASED for the thing as a worked EXAMPLE in someone else's entry — MPI-470 left a
+   fix note explaining itself through an op that no longer exists.
 
 No version bump (still a model change).
+
+### Deprecating ONE operation on a surviving model
+
+Same list, but the model stays. Steps 1–3 and 7–9 apply unchanged; 4/6 do not (the
+`ModelDef` and its webp survive). The op-specific part (MPI-470, Wan 2.2 `t2v_ms`):
+
+- **`models.js` — remove the op from all THREE lists**: `supportedOps`, `workflows`, and
+  `operations{}`. A leftover in any one of them is still offerable or still resolvable.
+  Assert all three in a test; a half-removal reads as done.
+- **The dispatch path needs nothing new.** A legacy history item naming the dead op hits
+  `resolveWorkflowFile` → `null` and `commandExecutor` `_failBail`s with
+  `No workflow registered for model "x", operation "y"`. A stale
+  `s_modelOpDraftByModel` entry is filtered out by `expandRequiredOps`; a remembered op is
+  re-checked against `supportedOps`. Verify these still hold — do not add guards for them.
+- **Leave the op key in `operationRegistry.js`** while any model still uses it (`t2v_ms`
+  is shared by LTX/H3). Only the LAST model dropping a key earns a `deprecated: true`
+  entry, and that is so old history items keep validating — nothing may WRITE it again.
+- **Tests pinned to REAL registry data are the ones that break.** Deprecating the last
+  model with a given shape (wan-22 was the only 2-op model) breaks every test that did
+  `MODELS.find(...)` for that shape. Rebuild the removed shape as a local fixture and
+  say why in a comment — the guard must survive, not the exemplar. Watch for magic-number
+  floors (`assert.ok(swept >= 8)`): rewrite as coverage ("every model in the fleet
+  contributed"), which does not break when a parallel session collapses graphs.
+  See memory `feedback_deprecating_the_last_exemplar`.
+- **Docs use the model as a worked example.** `docs/data.md`, `docs/generation-lifecycle.md`
+  and `docs/model-library.md` all illustrated partial installs with "Wan 2.2 with only
+  t2v". Mark the example historical rather than deleting the mechanism's docs.

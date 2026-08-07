@@ -102,6 +102,14 @@
 
 ## importantChanges
 
+- **Wan 2.2 is image-to-video only now.** Its Text to Video operation has been
+  retired: LTX 2.3 does that job better, and Wan's text-to-video weights were a
+  27GB download that served nothing else. Image to Video is untouched — same
+  model, same speed, same results. If you already downloaded the text-to-video
+  weights, they are no longer counted as part of Wan 2.2, so the next time you
+  uninstall a model they get cleared out with it rather than sitting on your
+  drive owned by nothing. Text to video lives on LTX 2.3, MiniMax H3 and
+  Wan 2.2 5B.
 - **Some models now ask you to accept their licence before they download.** A few
   model licences require us to show you the restrictions and record that you accepted
   them before you receive the weights — MiniMax H3 is the first one we ship. You will
@@ -312,12 +320,11 @@
   could end up in your list twice. Both spellings now resolve to the same folder.
 
 - **An operation you didn't install no longer fails halfway through generating.**
-  Some models let you install one operation without the other — Wan 2.2's Text to
-  Video and Image to Video are separate downloads. Picking the one you skipped
-  started a generation that died on an error report screen, which read like a bug
-  in the app. The app now only offers the operations you actually installed, and if
-  one slips through it tells you which weights are missing and points you at the
-  Model Library instead of asking you to report it.
+  Some models let you install one operation without downloading the other. Picking
+  the one you skipped started a generation that died on an error report screen,
+  which read like a bug in the app. The app now only offers the operations you
+  actually installed, and if one slips through it tells you which weights are
+  missing and points you at the Model Library instead of asking you to report it.
 
 - **The home screen no longer claims you have no models when it cannot tell.** On a
   cloud-only setup — the local engine install skipped, no Pod connected yet — the
