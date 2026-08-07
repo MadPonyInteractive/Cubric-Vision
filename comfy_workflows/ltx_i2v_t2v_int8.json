@@ -1517,7 +1517,7 @@
       "filename_prefix": "MpiVideo",
       "truncate_to_audio": false,
       "images": [
-        "485",
+        "631",
         0
       ],
       "audio": [
@@ -2163,6 +2163,18 @@
     "class_type": "MpiBooleanCompare",
     "_meta": {
       "title": "Mpi Boolean Compare"
+    }
+  },
+  "631": {
+    "inputs": {
+      "passthrough": [
+        "485",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
     }
   }
 }
