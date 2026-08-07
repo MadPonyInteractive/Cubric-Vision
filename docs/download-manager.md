@@ -376,6 +376,23 @@ actually existed and was deleted; a kept/missing path lands in `keptModelFiles`
 (`reason:'already-absent'`) with an honest log line. Guard:
 `tests/uninstall-guards.test.cjs`.
 
+**`removed[]` means DELETED — on both engines (MPI-469).** The remote loop never got
+the rule above: it pushed every wrapper answer that was not `unsupported` into
+`removed[]`, so `remoteUninstallDep`'s `'not_found'` — the file was never on the volume —
+read as a successful delete (measured on a Pod 2026-08-07: `nvidia-pid` reported **8
+removed against 1 real file**). It now buckets `not_found` into `keptModelFiles`
+(`reason:'already-absent'`), same bucket and same reason string as the local twin.
+Two consequences worth knowing:
+- The `anyUnsupported && removed.length === 0` early-return got STRICTER — an old-image
+  Pod holding none of the model's files now reaches it instead of falling through on a
+  fake `removed[]`. Correct: nothing was deleted, so the install record survives.
+- `already-absent` is **gone, not kept**, and the renderer must count it that way. It
+  did not — `MpiModelManager`'s `download:uninstalled` handler folded it into the kept
+  totals, so a model whose files had all vanished toasted *"model files kept on disk;
+  still installed"*. That bug was LOCAL too (since MPI-276) and is fixed in the one
+  place both engines land. Guards: `tests/remote-uninstall-reporting.test.cjs` (route,
+  wrapper stubbed) + a live browser probe of the toast branches.
+
 **Job storage (runtime maps — write-authoritative, transport carriers):**
 - `_depJobs Map<depId, DepJob>` — individual dependency jobs (URL, bytes, status, sha256, pipPins). **No `refCount` field — DELETED MPI-276.**
 - `_modelJobs Map<modelId, DownloadJob>` — model-level aggregate job (totalBytes, downloadedBytes, speed, progress, deps[])

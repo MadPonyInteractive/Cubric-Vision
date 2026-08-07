@@ -2782,6 +2782,16 @@ router.post('/comfy/models/uninstall', async (req, res) => {
                 const out = await remoteModels.remoteUninstallDep(dep);
                 if (out && out.status === 'unsupported') {
                     anyUnsupported = true;
+                } else if (out && out.status === 'not_found') {
+                    // MPI-469: the remote twin of the local branch's MPI-276 gate — only
+                    // report a dep in removed[] when a delete ACTUALLY ran. The wrapper
+                    // already answers 'not_found' when the path was never on the volume;
+                    // the old else-branch swallowed that and reported a delete that never
+                    // happened (nvidia-pid logged 8 removed against 1 real file, measured
+                    // on a Pod 2026-08-07). Same bucket and same reason string as the
+                    // local loop below, so the two engines stay readable as twins.
+                    keptModelFiles.push({ depId: dep.id, depName: dep.name || dep.id, reason: 'already-absent' });
+                    logger.info('download', `remote uninstall: ${dep.id} already absent on the volume — nothing removed`);
                 } else {
                     removed.push({ depId: dep.id, depName: dep.name || dep.id });
                 }
@@ -2791,6 +2801,11 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             }
         }
 
+        // MPI-469 — this condition got STRICTER when 'not_found' stopped inflating
+        // removed[]: an old-image Pod holding none of the model's files now reaches it
+        // where it used to fall through with a fake removed[]. That is the right answer —
+        // nothing was deleted, and the image genuinely cannot delete — so the install
+        // record survives instead of the UI claiming an uninstall the Pod never did.
         if (anyUnsupported && removed.length === 0) {
             logger.warn('download', `remote uninstall ${modelId}: wrapper has no delete endpoint (needs engine update)`);
             return res.json({

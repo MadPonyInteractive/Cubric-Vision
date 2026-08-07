@@ -1478,24 +1478,34 @@ export const MpiModelManager = ComponentFactory.create({
             const modelName = MODELS.find(m => m.id === modelId)?.name
                 || PLUGINS.find(p => pluginDepKey(p.id) === modelId)?.title
                 || modelId;
-            const keptTotal = keptUniversal.length + keptShared.length + keptModelFiles.length + keptPipInstalls.length;
+            // MPI-469 — a dep reported with reason 'already-absent' was NOT kept: it was
+            // not on disk (local) / not on the volume (remote) to begin with, so it is
+            // GONE and the uninstall is complete. Counting it as kept turned the
+            // removed[]-honesty fix into a toast lie — a model whose files had all
+            // vanished toasted "model files kept on disk; still installed". Both engines
+            // emit that reason (local since MPI-276, remote since MPI-469), so this one
+            // line covers both.
+            const absent = keptModelFiles.filter(k => k.reason === 'already-absent').length;
+            const keptFiles = keptModelFiles.length - absent;
+            const gone = removed.length + absent;
+            const keptTotal = keptUniversal.length + keptShared.length + keptFiles + keptPipInstalls.length;
             // "shared" wording is only honest when ANOTHER MODEL still needs a dep
             // (keptShared carries sharedWith). keptUniversal/keptPipInstalls are
             // engine-owned files (VAE, custom nodes, pip env) shared with no model —
             // saying "shared files kept" there falsely implies a sibling model.
-            const keptForModel = keptShared.length + keptModelFiles.length;
+            const keptForModel = keptShared.length + keptFiles;
             // "uninstalled" for a whole model/plugin removal, "updated" when this is the
             // removal half of an Update (an op or arch weight going away). Saying
             // "updated" for both read as the opposite of what happened (MPI-394).
             const verb = _wholeUninstalls.delete(modelId) ? 'uninstalled' : 'updated';
             // sound:false throughout — these confirm a user-initiated uninstall; no chime.
-            if (removed.length > 0 && keptTotal === 0) {
+            if (gone > 0 && keptTotal === 0) {
                 Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} ${verb}.`, sound: false });
-            } else if (removed.length > 0 && keptForModel > 0) {
+            } else if (gone > 0 && keptForModel > 0) {
                 Events.emit('ui:info', { title: 'Uninstalled', message: `${modelName} ${verb} (some shared files kept).`, sound: false });
-            } else if (removed.length > 0) {
+            } else if (gone > 0) {
                 Events.emit('ui:success', { title: 'Uninstalled', message: `${modelName} ${verb}.`, sound: false });
-            } else if (keptModelFiles.length > 0) {
+            } else if (keptFiles > 0) {
                 Events.emit('ui:info', { title: 'Files kept', message: `${modelName} — model files kept on disk; still installed.`, sound: false });
             } else {
                 // MPI-310 — NAME the holders. The generic wording ("shared with other
