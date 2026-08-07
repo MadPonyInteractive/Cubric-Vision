@@ -121,3 +121,13 @@ after it lands or the converter fails with "class not in /object_info".
       placeholder reel clip were both produced on the wrong DiT.
 - [ ] Confirm identity actually follows the reference now. That is the model's entire claim
       and nothing has tested it on the correct weights.
+
+## Tested and rejected — the KJNodes H3 VRAM patches
+
+Measured 2026-08-07 on a 4060 Ti, stage 1 only, same settings both runs:
+**669.80 s without / 762.50 s with = +13.8 %**, identical quality. Both patches are
+mathematically exact (verified in source), so matching output was the expected half; the
+time is the answer. They save VRAM neither card that matters is short of — the 16 GB
+baseline completed fine, and on a 5090 the ~21 GB transformer sits resident in 32 GB with
+nothing to save. NOT wired into either graph. Full evidence + the revisit conditions:
+[docs/models/h3/performance.md](../../../../docs/models/h3/performance.md).

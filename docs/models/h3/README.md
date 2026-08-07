@@ -254,6 +254,10 @@ Related: `execution_cached` listing a node is NOT evidence it was needed — lea
 nodes cache per value, so booleans show cached whichever way they are flipped. To tell
 pruned from cached, vary an input nothing has ever sampled.
 
+Performance levers already tested and REJECTED — the KJNodes H3 VRAM patches (measured
++13.8% for nothing on both cards that matter) and the Sage attention patch — are in
+[performance.md](performance.md). Read it before wiring an optimisation into either graph.
+
 ## Sources
 
 - <https://huggingface.co/Comfy-Org/MiniMax-H3> — both transformers, both VAEs, stock encoders
