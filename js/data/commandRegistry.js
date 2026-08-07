@@ -95,11 +95,21 @@ const I2V_HELP = {
  *   mediaType:'image'|'video'|'audio',
  *   title:string,
  *   required?:boolean,
- *   requiresCapability?:string
+ *   ordinal?:boolean,
+ *   requiresCapability?:string,
+ *   tag?:string
  * }>}                         [mediaInputs] - Named media slots injected by Comfy node title.
  *                                              `requiresCapability` hides the slot on any model
  *                                              whose `capabilities` lacks that flag — how one
  *                                              shared op offers a model-specific extra input.
+ *                                              `ordinal` marks a positional slot: strip order IS
+ *                                              the meaning, so a stale role tag must be dropped
+ *                                              rather than followed (stripOrdinalMediaRoles).
+ *                                              `tag` is the handle the PROMPT uses for this slot
+ *                                              ('Picture 1'). Present it means the chip badges the
+ *                                              tag instead of its strip position — they diverge as
+ *                                              soon as media types are mixed, because the tag
+ *                                              ordinal counts within a type (MPI-475).
  * @property {string[]}        [components]   - IDs of operation-specific sub-controls injected
  *                                              into MpiPromptBox's operation slot.
  *                                              Each ID maps to a component in js/components/.
@@ -706,6 +716,82 @@ export const commands = {
         isMultiStage: true,
         allowsBranchingContinue: true,
     },
+    // MiniMax H3 ref2va (MPI-475). Its OWN op, not a variant of t2v_ms, for reasons that
+    // are all about slot delivery rather than taste:
+    //   - `mediaInputs` lives on the OP. This one declares FIFTEEN slots; hanging them off
+    //     the shared video op would put them in front of LTX and WAN behind fifteen
+    //     capability gates.
+    //   - t2v_ms already declares an audio slot titled `Input_audio`. This graph's audio
+    //     nodes are `Input_Audio` / `_2` / `_3`, so that slot would match no node —
+    //     injection SKIPS a title it cannot find, silently, and the user gets a chip well
+    //     that goes nowhere.
+    //   - The references are not a first frame. Nothing here touches the canvas; they are
+    //     conditioning tokens, so "Image to Video" would be an actively wrong label.
+    // The references reach the graph through MpiH3References (ComfyUi-MpiNodes), which
+    // takes all 18 of core's autogrow slots flat, drops the empty ones and renumbers the
+    // survivors — that is why one static graph can serve any combination of chips.
+    ref2v_ms: {
+        label: 'Reference to Video',
+        short: 'ref2v',
+        info: 'Reference to Video — generate a clip that follows reference images, videos and audio',
+        help: {
+            body: [
+                'Give it references — a character sheet, a face, a location, a clip whose motion you want, a voice — and it generates a NEW video that keeps them consistent. No training, no LoRA.',
+                'References are not frames: none of them appears in the output as-is. They condition the result.',
+                'Address a specific one in the prompt by its tag. Each chip shows the tag it became.',
+            ],
+            examples: [
+                { prompt: 'the woman from <Picture 1> walking through the market in <Picture 2>, handheld', note: 'Names which reference does what.' },
+                { prompt: 'she speaks the line in <Audio 1>, matching the camera move of <Video 1>', note: 'Mixes an audio and a motion reference.' },
+                { prompt: 'a woman in a market', bad: true, note: 'References staged but never addressed — the model has to guess what they are for.' },
+            ],
+        },
+        icon: 'layers',
+        mediaType: MEDIA_TYPE.VIDEO,
+        // 0: a reference-less run is legal (it degrades to plain text-to-video+audio), and
+        // requiring an IMAGE specifically would block a video-only or audio-only reference.
+        requiresImages: 0,
+        // Nine images, three videos, three audio — the node's full surface. ALL ordinal:
+        // strip order IS the tag order, so a removed chip must not strand a role on the
+        // survivors (MPI-330). None required, for the same reason requiresImages is 0.
+        // The audio slots need the model to declare capabilities.audio, which
+        // minimax-h3-ref2va does — see filterMediaInputsForModel.
+        // `tag` is the prompt handle this slot becomes — the chip wears it, and the
+        // reference picker inserts it verbatim. Written out rather than derived: the
+        // ordinal is per TYPE, not per chip, so the strip's own 1..N numbering would be
+        // wrong the moment a user mixes an image and a video.
+        mediaInputs: [
+            { key: 'inputImage',  mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: false, ordinal: true, tag: 'Picture 1' },
+            { key: 'inputImage2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false, ordinal: true, tag: 'Picture 2' },
+            { key: 'inputImage3', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_3', required: false, ordinal: true, tag: 'Picture 3' },
+            { key: 'inputImage4', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_4', required: false, ordinal: true, tag: 'Picture 4' },
+            { key: 'inputImage5', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_5', required: false, ordinal: true, tag: 'Picture 5' },
+            { key: 'inputImage6', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_6', required: false, ordinal: true, tag: 'Picture 6' },
+            { key: 'inputImage7', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_7', required: false, ordinal: true, tag: 'Picture 7' },
+            { key: 'inputImage8', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_8', required: false, ordinal: true, tag: 'Picture 8' },
+            { key: 'inputImage9', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_9', required: false, ordinal: true, tag: 'Picture 9' },
+            { key: 'inputVideo',  mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video',   required: false, ordinal: true, tag: 'Video 1' },
+            { key: 'inputVideo2', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video_2', required: false, ordinal: true, tag: 'Video 2' },
+            { key: 'inputVideo3', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video_3', required: false, ordinal: true, tag: 'Video 3' },
+            // NOTE: these three are exact only while no reference VIDEO contributes a
+            // soundtrack. Core shares ONE audio sequence between the two, and emits a
+            // video's soundtrack before its <Video k> — so a sounded reference video
+            // pushes the first standalone clip to <Audio 2>. The app cannot know which
+            // staged videos carry audio at prompt-writing time. Tracked on MPI-475.
+            { key: 'inputAudio',  mediaType: 'audio',           title: 'Input_Audio',   required: false, ordinal: true, tag: 'Audio 1' },
+            { key: 'inputAudio2', mediaType: 'audio',           title: 'Input_Audio_2', required: false, ordinal: true, tag: 'Audio 2' },
+            { key: 'inputAudio3', mediaType: 'audio',           title: 'Input_Audio_3', required: false, ordinal: true, tag: 'Audio 3' },
+        ],
+        promptRequired: true,
+        // No motionIntensity (no Input_Motion_Intensity node) and no audioMode/useAudio:
+        // this graph takes audio IN as a reference, it does not offer the LTX-style audio
+        // conditioning switch. refImageSize is the one control unique to this op.
+        components: ['qualityTier', 'duration', 'ratio', 'refImageSize', 'previewStage'],
+        isMultiStage: true,
+        // Finish-only, same call as the fl2va half: stage 2 resumes from the stage-1
+        // latent, so a re-prompted branch could not honour the new prompt anyway.
+        allowsBranchingContinue: false,
+    },
     extend: {
         label: 'Extend',
         short: 'extend',
@@ -1099,7 +1185,7 @@ function _maxMediaSlots(cmd, mediaType, minFallback, model = null) {
  */
 export const OP_ORDER = Object.freeze([
     't2i', 'i2i', 'control', 'edit', 'upscale', 'detail', 'inpaint',
-    't2v', 'i2v', 'extend',
+    't2v', 'i2v', 'ref2v', 'extend',
 ]);
 
 function _orderIndex(cmd) {

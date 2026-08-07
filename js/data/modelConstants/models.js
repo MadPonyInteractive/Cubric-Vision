@@ -1301,6 +1301,68 @@ export const MODELS = [
         ],
     },
     {
+        // MPI-475. The reference half of H3, and a SEPARATE model rather than an op on
+        // 'minimax-h3' for three independent reasons, any one of them sufficient:
+        // a different DiT (another 20.97GB, not a variant); MiniMaxH3ReferenceToVideo
+        // sets `minimax_refs` and NEVER `minimax_keyframes`, so it cannot express
+        // start/end-frame conditioning at all; and it additionally requires audio_vae
+        // and ref_image_size, which fl2va has no inputs for.
+        //
+        // The id must stay in step with js/data/modelConstants/licences.js, which already
+        // maps 'minimax-h3-ref2va' to the same MINIMAX_H3 descriptor as fl2va. Receipts
+        // are keyed by LICENCE id, so a user who accepted during an fl2va install gets NO
+        // second dialog here. That silence is deliberate — do not read it as a missing gate.
+        id: 'minimax-h3-ref2va',
+        sizeTier: 'high',
+        modelFamily: 'MiniMax-H3',
+        name: 'MiniMax H3 Reference',
+        dropdownMeta: 'VIDEO',
+        mediaType: 'video',
+        // multiStage + singleFileStages: the ONE graph carries both sampler passes and
+        // picks between them on the MpiStageLatents widgets (node 320), exactly as fl2va
+        // does — so there is no _stage2 twin and resolveWorkflowFile must not look for one.
+        // NO branchingContinue → Finish-only: stage 2 resumes from the stage-1 latent, so
+        // a re-prompted branch could not honour the new prompt.
+        //
+        // audio: true, UNLIKE fl2va. Here it is load-bearing rather than cosmetic —
+        // filterMediaInputsForModel hard-drops every audio slot from a model that does not
+        // declare it, so without this the three audio reference wells vanish.
+        // negativePrompt: false is what keeps that honest: capabilities.audio also arms
+        // the MPI-474 audio-negative stop, and this graph has no Input_Negative_Audio node
+        // (nor an Input_Negative) to receive either prompt. Dropping the whole negative
+        // toggle removes both in one move instead of shipping two fields that inject
+        // nowhere. NOTE: 'minimax-h3' above has the same missing-Input_Negative shape and
+        // does NOT set this — pre-existing, tracked on MPI-475, not fixed here.
+        capabilities: { multiStage: true, singleFileStages: true, audio: true, negativePrompt: false },
+        // ponytail: the fl2va clip, on loan. A ref2va showcase has to wait for a run judged
+        // on the CORRECT transformer — every r2va result before the 2026-08-07 re-export
+        // came off the fl2va DiT and ignored its references, so no existing clip can be
+        // trusted to show what this model does. Swap the filename, nothing else.
+        video: 'minimax_h3_preview.mp4',
+        // Same ratio ladder as fl2va — 'h3' is an existing type, so no consumer sweep.
+        type: 'h3',
+        loraStrengths: ['model', 'clip'],
+        // ONE op. There is no t2v/i2v split to make: references never become frames, so
+        // every run is the same shape and the presence of chips is the only variable.
+        supportedOps: ['ref2v_ms'],
+        gen_speed: 'slow',
+        description: 'Keeps a character, place or voice consistent across generations from reference images alone — no training. Takes up to 9 images, 3 videos and 3 audio references, and outputs video with synchronized audio.',
+        workflows: {
+            ref2v_ms: 'minimax_h3_r2va.json',
+        },
+        // FLAT dependencies: one transformer, one op. The encoder and both VAEs are the
+        // SAME dep ids fl2va uses, so installing this on top of fl2va downloads only the
+        // 20.97GB transformer. NOTHING here is on R2 — see minimax-h3-ref2va-transformer
+        // in modelDeps.js for the licence reasoning.
+        dependencies: [
+            'minimax-h3-ref2va-transformer',
+            'h3-qwen3vl-32b-clip',
+            'vae-minimax-h3-video',
+            'vae-minimax-h3-audio',
+            'ComfyUI-MpiNodes',
+        ],
+    },
+    {
         id: 'wan22-5b',
         sizeTier: 'low',
         modelFamily: 'Wan-2.2',

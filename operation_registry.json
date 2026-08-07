@@ -75,6 +75,10 @@
     "latestVersion": "1.1",
     "appVersionIntroduced": "0.0.1"
   },
+  "ref2v_ms": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.4.0"
+  },
   "extend": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "0.0.1"

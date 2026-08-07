@@ -46,6 +46,10 @@ export const OPERATION_REGISTRY = {
     t2v_ms:       { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     i2v:          { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     i2v_ms:       { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
+    // MiniMax H3 ref2va (MPI-475). New KEY, not a rename — nothing before 1.4.0 could
+    // write it, so no deprecated predecessor is owed. Stamped 1.4.0 to match `control`,
+    // which is likewise ahead of APP_VERSION until the release bump lands.
+    ref2v_ms:     { latestVersion: '1.0', appVersionIntroduced: '1.4.0' },
     extend:       { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
     // Universal operations (not model-tied)
     interpolate:  { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },

@@ -451,4 +451,31 @@ export const modelDeps = {
             url: 'https://huggingface.co/MiniMaxAI/MiniMax-H3',
         },
     },
+    // The reference-to-video DiT (MPI-475). A SECOND transformer, not a variant of the
+    // one above: MiniMaxH3ReferenceToVideo sets `minimax_refs` and never
+    // `minimax_keyframes`, so it cannot express start/end-frame conditioning at all.
+    // Installing ref2va on top of fl2va costs another 20.97GB; the encoder and both
+    // VAEs are shared, so that transformer is the whole delta.
+    // Same licence position as fl2va — publisher URL, never R2. Receipts are keyed by
+    // LICENCE id ('minimax-h3-cla-2026-08-02'), not model id, so a user who accepted
+    // during an fl2va install is NOT asked again here. That silence is the design.
+    'minimax-h3-ref2va-transformer': {
+        id: 'minimax-h3-ref2va-transformer',
+        name: 'MiniMax H3 ref2va Transformer (pruned, int8_convrot)',
+        origin: 'Comfy-Org/MiniMax-H3 (pruned + int8_convrot quant by Comfy Org)',
+        filename: 'diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors',
+        url: 'https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_ref2va_pruned_int8_convrot.safetensors',
+        // Byte-for-byte the same SIZE as the fl2va sibling (20970379616) — same
+        // architecture, same quant. Different weights; the sha256 below is what tells
+        // them apart, and getting it wrong is how a graph silently loads the other one
+        // (which is exactly what happened before the 2026-08-07 re-export: it does not
+        // error, it samples fine, and it ignores every reference).
+        size: '20.97GB',
+        sha256: '9255f52b6677845ad238f20dfaafa94727053694127ab7f255c048f0f9365779',
+        credit: {
+            author: 'MiniMax',
+            work: 'MiniMax-H3',
+            url: 'https://huggingface.co/MiniMaxAI/MiniMax-H3',
+        },
+    },
 };

@@ -53,8 +53,37 @@ function modelDefs(src) {
         const opInject = new Map(
             [...grab('opInject').matchAll(/(\w+):\s*\{([^}]*)\}/g)]
                 .map(m => [m[1], [...m[2].matchAll(/(\w+)\s*:/g)].map(x => x[1])]));
-        return { id: (body.match(/id:\s*'([^']+)'/) || [])[1], workflows, opInject };
+        // `capabilities` is one flat object, often on a single line — grab() wants a
+        // multi-line block, so match it directly. Needed by the mediaInputs sweep, which
+        // has to reproduce filterMediaInputsForModel's gating to avoid demanding a
+        // capability-gated slot of a model that never sees it.
+        const capsBody = (body.match(/capabilities:\s*\{([^}]*)\}/) || [])[1] || '';
+        const capabilities = Object.fromEntries(
+            [...capsBody.matchAll(/(\w+):\s*(true|false)/g)].map(m => [m[1], m[2] === 'true']));
+        return { id: (body.match(/id:\s*'([^']+)'/) || [])[1], workflows, opInject, capabilities };
     }).filter(m => m.id && m.workflows.size);
+}
+
+/** `op: { ... mediaInputs: [ {...}, ... ] ... }` → Map<op, slot[]>. */
+function mediaInputsByOp(src) {
+    const out = new Map();
+    const starts = [...src.matchAll(/^\s{4}(\w+):\s*\{$/gm)].map(m => ({ id: m[1], at: m.index }));
+    for (let i = 0; i < starts.length; i++) {
+        const body = src.slice(starts[i].at, starts[i + 1]?.at ?? src.length);
+        const block = body.match(/mediaInputs:\s*\[([\s\S]*?)\n\s{8}\]/);
+        if (!block) continue;
+        // Comments inside the array are prose, and prose contains apostrophes and the
+        // odd brace — strip them before the entry regex sees them.
+        const clean = block[1].replace(/\/\/[^\n]*/g, '');
+        const slots = [...clean.matchAll(/\{([\s\S]*?)\}/g)].map(m => m[1]).map(entry => ({
+            title: (entry.match(/title:\s*'([^']+)'/) || [])[1],
+            mediaType: /mediaType:\s*'audio'/.test(entry) ? 'audio'
+                : /MEDIA_TYPE\.VIDEO/.test(entry) ? 'video' : 'image',
+            requiresCapability: (entry.match(/requiresCapability:\s*'([^']+)'/) || [])[1] || null,
+        })).filter(s => s.title);
+        if (slots.length) out.set(starts[i].id, slots);
+    }
+    return out;
 }
 
 /**
@@ -203,37 +232,90 @@ test('the third Flow workflow (Video Stitch) carries its media I/O titles (MPI-2
     }
 });
 
-test('every MpiStyleSelector is titled + shaped for the dotted injection keys (MPI-359)', () => {
-    // The new style rack puts TWO injected knobs on ONE node, so the Flow addresses them
-    // as `Title.widget` (comfyController §3). Same silent-skip failure mode as the title
-    // sweep above, one level deeper: a renamed node OR a renamed widget = a dead picker.
-    // The expected title is DERIVED from the key the control actually emits, so a rename
-    // on either side fails here instead of shipping.
+test('every media slot a model can actually see exists in that model\'s workflow', () => {
+    // Same silent-skip class as the injectParams sweep above, on the OTHER injection
+    // source. A `mediaInputs` slot whose title matches no node gives the user a chip well
+    // that accepts a file, uploads it, and drops it on the floor — no error anywhere.
+    // Untested until MPI-475, which is when it started to matter: ref2v_ms declares
+    // FIFTEEN slots, so one typo is a reference that silently never conditions anything.
+    //
+    // The gating here mirrors filterMediaInputsForModel exactly, or the sweep would demand
+    // Klein's depthSubject slots of Krea2 and LTX's audio slot of WAN.
+    const declared = mediaInputsByOp(fs.readFileSync(COMMANDS, 'utf8'));
+    assert.ok(declared.size >= 5, 'mediaInputs parse found almost nothing — the regex has drifted');
+
+    const problems = [];
+    let checked = 0;
+    for (const model of modelDefs(fs.readFileSync(REGISTRY, 'utf8'))) {
+        for (const [op, file] of model.workflows) {
+            for (const slot of declared.get(op) || []) {
+                if (slot.mediaType === 'audio' && model.capabilities.audio !== true) continue;
+                if (slot.requiresCapability && model.capabilities[slot.requiresCapability] !== true) continue;
+                let have;
+                try { have = titlesOf(file); } catch { problems.push(`${model.id}: cannot read ${file}`); continue; }
+                checked++;
+                if (!have.has(slot.title.toLowerCase())) {
+                    problems.push(`${model.id} / ${op}: ${file} has no node titled "${slot.title}" — that slot injects nowhere`);
+                }
+            }
+        }
+    }
+    assert.ok(checked >= 20, `only ${checked} slot/workflow pairs checked — the sweep stopped reaching models`);
+    assert.deepStrictEqual(problems, [], `media slots that would silently no-op:\n  ${problems.join('\n  ')}`);
+});
+
+test('every dotted injection key addresses a real node AND a real widget (MPI-359)', () => {
+    // `Title.widget` addresses ONE widget on a node, which is how a control reaches a knob
+    // that shares its node with others (comfyController §3). Same silent-skip failure mode
+    // as the title sweep above, one level deeper: a renamed node OR a renamed widget = a
+    // dead control, no error. Both expectations are DERIVED from the keys the controls
+    // actually emit, so a rename on either side fails here instead of shipping.
+    //
+    // Grouped BY TITLE since MPI-475. This used to assert every dotted key pointed at the
+    // one same node, which was true only while the style rack was the sole user — ref2va's
+    // `Input_Refs.ref_image_size` made it two, and the flat widget loop below would then
+    // have demanded `ref_image_size` on an MpiStyleSelector. The guard that matters is
+    // per-node, not fleet-wide-singular.
     const controls = fs.readFileSync(
         path.join(ROOT, 'js/components/Organisms/MpiPromptBox/PromptBoxControls.js'), 'utf8');
     const keys = [...controls.matchAll(/'(\w+)\.(\w+)':/g)].map(m => ({ title: m[1], widget: m[2] }));
-    assert.ok(keys.length >= 2, 'no dotted injection keys found — the style controls have drifted');
+    assert.ok(keys.length >= 2, 'no dotted injection keys found — the controls have drifted');
 
-    const titles = new Set(keys.map(k => k.title.toLowerCase()));
-    assert.strictEqual(titles.size, 1, `dotted keys must address ONE node, got ${[...titles].join(', ')}`);
-    const [expectTitle] = titles;
+    /** @type {Map<string, Set<string>>} lowercased node title → widgets addressed on it */
+    const byTitle = new Map();
+    for (const { title, widget } of keys) {
+        const t = title.toLowerCase();
+        if (!byTitle.has(t)) byTitle.set(t, new Set());
+        byTitle.get(t).add(widget);
+    }
 
     const problems = [];
+    const found = new Set();
     for (const file of fs.readdirSync(WORKFLOWS).filter(f => f.endsWith('.json'))) {
         let wf;
         try { wf = JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8')); } catch { continue; }
         for (const node of Object.values(wf)) {
-            if (node?.class_type !== 'MpiStyleSelector') continue;
-            const title = (node._meta?.title || '').toLowerCase();
-            if (title !== expectTitle) {
-                problems.push(`${file}: MpiStyleSelector titled "${title || '(none)'}", expected "${expectTitle}"`);
+            const title = (node?._meta?.title || '').toLowerCase();
+            const widgets = byTitle.get(title);
+            if (widgets) {
+                found.add(title);
+                for (const widget of widgets) {
+                    if (!(widget in (node.inputs || {}))) {
+                        problems.push(`${file}: node "${title}" has no "${widget}" input`);
+                    }
+                }
             }
-            for (const { widget } of keys) {
-                if (!(widget in (node.inputs || {}))) problems.push(`${file}: MpiStyleSelector has no "${widget}" input`);
+            // The style rack's own node must never lose its title — an untitled
+            // MpiStyleSelector is unreachable by every one of its dotted keys at once.
+            if (node?.class_type === 'MpiStyleSelector' && !byTitle.has(title)) {
+                problems.push(`${file}: MpiStyleSelector titled "${title || '(none)'}" matches no dotted key`);
             }
         }
     }
-    assert.deepStrictEqual(problems, [], `style-selector injection would silently no-op:\n  ${problems.join('\n  ')}`);
+    for (const title of byTitle.keys()) {
+        if (!found.has(title)) problems.push(`no workflow carries a node titled "${title}" — that control injects nowhere`);
+    }
+    assert.deepStrictEqual(problems, [], `dotted injection would silently no-op:\n  ${problems.join('\n  ')}`);
 });
 
 test('the Krea2 master graph carries its branch selector and speed toggle', () => {

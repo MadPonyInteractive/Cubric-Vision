@@ -750,6 +750,17 @@ export const MpiPromptBox = ComponentFactory.create({
                 ? `${item.role === 'endFrame' ? 'end' : 'start'}:${_imageCount}`
                 : '';
 
+            // MPI-475: an op whose slots carry a `tag` (ref2v_ms) badges each chip with the
+            // handle the prompt uses instead of its position in the strip. The two differ
+            // as soon as types are mixed — the tag ordinal counts within a type, so an
+            // image, then a video, is "Picture 1" and "Video 1", never 1 and 2.
+            const _tagBySlot = new Map(
+                _mediaSlotsForOperation().filter(s => s.tag).map(s => [s.key, s.tag]));
+            // Roles are the ASSIGNED ones (_withAssignedRoles ran before this), so the
+            // badge reports where the asset really goes, not a stale tag.
+            const _badgeFor = (item, idx) => _tagBySlot.get(item.role)
+                ?? (items.length > 1 ? String(idx + 1) : '');
+
             // Reorder fast path: same chips, new order. Rebuilding the DOM here
             // would reload every <img src> mid-drag (flicker) and drop the
             // dragged node out from under its own pointer handlers — so move the
@@ -762,7 +773,7 @@ export const MpiPromptBox = ComponentFactory.create({
                     const chip = existing.find(c => c.dataset.id === item.id);
                     _stripEl.appendChild(chip); // appendChild moves, not clones
                     const badge = qs('.mpi-prompt-box-media-strip__index', chip);
-                    if (badge) badge.textContent = String(idx + 1);
+                    if (badge) badge.textContent = _badgeFor(item, idx);
                 });
                 _playFlip(_prevRects);
                 return;
@@ -785,9 +796,11 @@ export const MpiPromptBox = ComponentFactory.create({
                                <span class="mpi-prompt-box-media-strip__audio-name" title="${_audioName(item)}">${_audioName(item)}</span>
                            </div>`;
                 // Index badge mirrors the "image N" numbering models like
-                // qwenEdit use in prompts. A lone chip needs no number.
-                const indexHtml = items.length > 1
-                    ? `<span class="mpi-prompt-box-media-strip__index">${idx + 1}</span>`
+                // qwenEdit use in prompts. A lone chip needs no number — but a lone
+                // TAGGED chip still needs its tag, which is the whole point of it.
+                const _badge = _badgeFor(item, idx);
+                const indexHtml = _badge
+                    ? `<span class="mpi-prompt-box-media-strip__index">${_badge}</span>`
                     : '';
                 // One image => the role is a CHOICE, so the pill is a button. Two images
                 // => start/end are already both taken and order decides, so it is a

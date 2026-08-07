@@ -362,6 +362,13 @@
        them. From the original mockup. */
     background: linear-gradient(to top, var(--surface-bar), transparent);
     flex-shrink: 0;
+    /* MPI-475: ref2v_ms stages up to 15 chips — three wrapped rows that, anchored at
+       bottom:100%, would climb the viewport and swallow the gallery. Cap at two rows
+       and scroll the rest. Wrap, FLIP and pointer reorder are untouched; only the
+       overflow changes. The 0.5rem top padding is what keeps the chips' -6px index
+       badges from being clipped by the new scroll box. */
+    max-height: 13rem;
+    overflow-y: auto;
     /* Sits above siblings within #prompt-box-mount stacking context.
      * Mount-level z-index (workspace.css) keeps it above gallery cards
      * while staying beneath drop overlays / modals / toasts. */
