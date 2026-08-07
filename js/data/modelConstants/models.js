@@ -1074,11 +1074,16 @@ export const MODELS = [
             { key: 'high', label: 'HIGH NOISE', injectionPrefix: 'Lora_High' },
             { key: 'low', label: 'LOW NOISE', injectionPrefix: 'Lora_Low' },
         ],
-        supportedOps: ['t2v_ms', 'i2v_ms'],
+        // MPI-470: t2v_ms DEPRECATED — image-to-video only. LTX 2.3 (plus H3 and the 5B
+        // card) covers text-to-video, and the t2v pair was a third-party community merge
+        // costing 27.1GB; the i2v pair is our own. The `wan-22-t2v-*` DEPS entries are
+        // deliberately KEPT (see modelDeps.js) so the uninstall orphan sweep can still
+        // reclaim them from existing users' disks. Nothing may re-add t2v_ms here without
+        // restoring the deleted wan22_t2v graph + its template.
+        supportedOps: ['i2v_ms'],
         gen_speed: 'fast',
-        description: "This video generator uses the Wan 2.2 SmoothMix models. Providing semi-realistic and stylized video generation in it's text to video version and any style in image to video. It's fast and completely uncensored. It creates videos at 16 fps, so it is advisable to interpolate them later.",
+        description: "This video generator uses the Wan 2.2 SmoothMix models. Providing any style in image to video. It's fast and completely uncensored. It creates videos at 16 fps, so it is advisable to interpolate them later.",
         workflows: {
-            t2v_ms: 'wan22_t2v.json',
             i2v_ms: 'wan22_i2v.json',
         },
         // Always-installed shared payload (VAE, text encoder, shared custom nodes).
@@ -1091,10 +1096,12 @@ export const MODELS = [
         ],
         // Per-operation weights the user can opt in/out of. Resolved + unioned with
         // commonDeps by resolveModelDeps.js before the download lifecycle.
+        // ONE op since MPI-470 dropped t2v_ms, and the operations{} shape is KEPT on
+        // purpose: it leaves wan-22 the only shipped model exercising the op-keyed
+        // resolver (op drafts, per-op install toggles, requiresOps cascade,
+        // deriveInstalledOps). Flattening to `dependencies` would leave that subsystem
+        // with no live exemplar. The cost is a lone toggle row in the Model Library.
         operations: {
-            t2v_ms: {
-                deps: ['wan-22-t2v-high', 'wan-22-t2v-low'],
-            },
             i2v_ms: {
                 deps: ['wan-22-i2v-high', 'wan-22-i2v-low', 'ComfyUI-PainterI2Vadvanced'],
             },

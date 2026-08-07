@@ -37,7 +37,7 @@ export const PROGRESS_STAGES = Object.freeze({
     // 119-node build. Re-measure on the first app run and correct if the bars differ.
     'ltx_i2v_t2v.json': Object.freeze({ single: 3, preview: 2, stage2: 1 }),
     // WAN — verified single=2 (one bar per sampler; no separate model-load bar).
-    'wan22_t2v.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
+    // MPI-470 deprecated t2v_ms, so the `wan22_t2v.json` row went with its graph.
     'wan22_i2v.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
     // WAN 2.2 5B — single-stage, ONE sampler pass = 1 bar (verified). Shows "1/1".
     'wan5b_t2v.json': Object.freeze({ single: 1 }),

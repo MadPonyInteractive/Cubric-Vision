@@ -235,18 +235,21 @@ function testRealRegistryIntegrity() {
         }
     }
 
-    // wan-22 is the merged, op-keyed model — both ops selectable, split ids gone.
+    // wan-22 is the merged, op-keyed model — split ids gone. MPI-470 deprecated t2v_ms,
+    // so i2v_ms is the only selectable op; the op-keyed SHAPE is kept deliberately (it
+    // is the last live exemplar of the resolver's operations{} path).
     const wan = MODELS.find(m => m.id === 'wan-22');
     assert.ok(wan, 'wan-22 model is missing from the registry');
     assert.ok(hasOperationGroups(wan), 'wan-22 must be operation-keyed');
-    assert.deepStrictEqual(selectableOps(wan).sort(), ['i2v_ms', 't2v_ms']);
+    assert.deepStrictEqual(selectableOps(wan).sort(), ['i2v_ms']);
     assert.ok(!MODELS.some(m => m.id === 'wan-22-t2v' || m.id === 'wan-22-i2v'),
         'split wan ids must not exist as models');
 
-    // T2V-only selection excludes the I2V-only node; full universe includes it.
-    const t2vOnly = resolveDeps(wan, ['t2v_ms'], exists);
-    assert.ok(!t2vOnly.includes('ComfyUI-PainterI2Vadvanced'),
-        'T2V-only install must not pull the I2V-only node');
+    // A DEPRECATED op contributes nothing — a stale saved draft or a legacy history
+    // item naming t2v_ms must not drag the removed 27.1GB pair back into a download.
+    const deadOp = resolveDeps(wan, ['t2v_ms'], exists);
+    assert.ok(!deadOp.some(id => id.startsWith('wan-22-')),
+        'deprecated t2v_ms must resolve to commonDeps only');
     assert.ok(resolveFullUniverse(wan).includes('ComfyUI-PainterI2Vadvanced'),
         'full universe must include the I2V-only node');
 }
@@ -388,8 +391,11 @@ function testSingleFileStages() {
     const { MODELS } = require('../js/data/modelConstants/models.js');
     const dir = path.join(__dirname, '..', 'comfy_workflows');
     let swept = 0;
+    const fleet = MODELS.filter(m => m.capabilities?.multiStage);
+    const covered = new Set();
     for (const m of MODELS) {
         if (!m.capabilities?.multiStage) continue;
+        covered.add(m.id);
         const tokenSets = [{}];
         for (const opt of archVariantOptions(m)) tokenSets.push({ arch: opt.token });
         for (const op of Object.keys(m.workflows || {})) {
@@ -402,7 +408,14 @@ function testSingleFileStages() {
             }
         }
     }
-    assert.ok(swept >= 8, `expected the sweep to cover the multi-stage fleet, covered ${swept}`);
+    // Guard on COVERAGE, not a magic count: every multi-stage model must have
+    // contributed at least one resolution. A raw threshold tracked the workflow-FILE
+    // count, which moves whenever a model collapses its graphs (MPI-466 folded LTX's
+    // six into two) or drops an op (MPI-470 deleted wan22_t2v.json) — churn that says
+    // nothing about whether the sweep ran.
+    assert.strictEqual(covered.size, fleet.length,
+        `sweep skipped a multi-stage model: covered ${covered.size} of ${fleet.length}`);
+    assert.ok(swept >= fleet.length, `expected ≥1 resolution per multi-stage model, got ${swept}`);
 }
 
 // MPI-165 Phase B: the operation axis and engine axis are orthogonal and UNION.

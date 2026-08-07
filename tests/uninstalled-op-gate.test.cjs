@@ -17,6 +17,13 @@
  *
  * The 400 body below is transcribed from the real
  * `%APPDATA%/Cubric Vision/logs/app.log` at 2026-08-05T06:05:07, not imagined.
+ *
+ * MPI-470 later DEPRECATED wan-22's `t2v_ms`, so the two-op state this bug needed no
+ * longer exists in `models.js` — and with it gone, no shipped model declares 2+
+ * operation groups. The guard is what must not regress, so the two-op model is
+ * reconstructed here by `wanWithT2V()`. Nothing in it is invented: the `wan-22-t2v-*`
+ * DEPS entries are still real (kept on purpose so the uninstall orphan sweep can
+ * reclaim them from users who already downloaded them).
  */
 
 const test = require('node:test');
@@ -136,12 +143,29 @@ function i2vOnlyStatus(installedIds) {
     return (depId) => on.has(depId);
 }
 
+/** wan-22 as it shipped BEFORE MPI-470 dropped t2v_ms — the shape this bug needed. */
+const T2V_DEPS = ['wan-22-t2v-high', 'wan-22-t2v-low'];
+function wanWithT2V(wan) {
+    return {
+        ...wan,
+        supportedOps: ['t2v_ms', ...wan.supportedOps],
+        operations: { t2v_ms: { deps: T2V_DEPS }, ...wan.operations },
+    };
+}
+
 test('deriveInstalledOps already answers the question the dispatcher never asked', async () => {
     const { MODELS } = await import('../js/data/modelConstants/models.js');
     const { deriveInstalledOps } = await import('../js/data/modelConstants/resolveModelDeps.js');
 
-    const wan = MODELS.find(m => m.id === 'wan-22');
-    assert.ok(wan.operations.t2v_ms && wan.operations.i2v_ms, 'wan-22 must keep per-op deps (MPI-453 scope decision)');
+    const shipped = MODELS.find(m => m.id === 'wan-22');
+    // MPI-470: the real card is i2v-only now. Deprecation must be COMPLETE — a leftover
+    // t2v_ms in either list would still be offered, and its graph is deleted.
+    assert.deepEqual(shipped.supportedOps, ['i2v_ms'], 'wan-22 t2v_ms is deprecated (MPI-470)');
+    assert.equal(shipped.operations.t2v_ms, undefined, 'and its dep group went with it');
+    assert.equal(shipped.workflows.t2v_ms, undefined, 'and its workflow file is deleted');
+
+    const wan = wanWithT2V(shipped);
+    assert.ok(wan.operations.t2v_ms && wan.operations.i2v_ms, 'the two-op shape under test');
 
     const installed = [...wan.commonDeps, ...wan.operations.i2v_ms.deps];
     const { installedOps, fullyInstalled } = deriveInstalledOps(wan, i2vOnlyStatus(installed), 'local');
@@ -154,12 +178,16 @@ test('deriveInstalledOps already answers the question the dispatcher never asked
         'seeding from supportedOps[0] lands on an uninstalled op — the reported bug');
 });
 
-test('the rejected filenames ARE the deps t2v_ms declares — the log and the model def agree', async () => {
-    const { MODELS } = await import('../js/data/modelConstants/models.js');
+test('the rejected filenames ARE the deps t2v_ms declares — the log and the dep registry agree', async () => {
     const { DEPS } = await import('../js/data/modelConstants/dependencies.js');
 
-    const wan = MODELS.find(m => m.id === 'wan-22');
-    const files = wan.operations.t2v_ms.deps.map(id => DEPS[id].filename.split('/').pop());
+    // MPI-470 keeps these two entries after deprecating the op: `_orphanedDepIds`
+    // iterates DEPS, so they are what lets the uninstall sweep reclaim 27.1GB from
+    // users who already downloaded them. Deleting them blinds the sweep.
+    for (const id of T2V_DEPS) {
+        assert.ok(DEPS[id], `${id} must stay in DEPS for the orphan sweep (MPI-470)`);
+    }
+    const files = T2V_DEPS.map(id => DEPS[id].filename.split('/').pop());
     assert.deepEqual(files.sort(), ['Wan_22_t2v_High.safetensors', 'Wan_22_t2v_Low.safetensors']);
 
     const rejected = Object.values(LOCAL_400.node_errors)
@@ -170,7 +198,7 @@ test('the rejected filenames ARE the deps t2v_ms declares — the log and the mo
 test('an uninstalled op is not offered, and an installed one still is', async () => {
     const { getAvailableCommands } = await import('../js/data/commandRegistry.js');
     const { MODELS } = await import('../js/data/modelConstants/models.js');
-    const wan = MODELS.find(m => m.id === 'wan-22');
+    const wan = wanWithT2V(MODELS.find(m => m.id === 'wan-22'));
 
     const offered = getAvailableCommands('video', wan, { installedOps: ['i2v_ms'] }).map(c => c.key);
     assert.deepEqual(offered, ['i2v_ms'], 't2v_ms must not reach the op strip');

@@ -117,13 +117,20 @@ test('op-partial sibling (only some ops installed) still protects its shared dep
         require('../js/data/modelConstants/resolveModelDeps.js');
     const { MODELS } = require('../js/data/modelConstants/models.js');
 
-    // A real selectable (op-grouped) model with ≥1 shared common dep. Wan 2.2
-    // Smooth (op-grouped: t2v_ms/i2v_ms, commonDeps incl. the umt5 clip).
-    const model = MODELS.find(m =>
-        m.operations && Object.keys(m.operations).length >= 2 &&
-        Array.isArray(m.commonDeps) && m.commonDeps.length > 0 &&
-        Array.isArray(m.supportedOps) && m.supportedOps.length >= 2);
-    assert.ok(model, 'have an op-grouped model with common deps');
+    // A selectable (op-grouped) model with ≥1 shared common dep. Wan 2.2 Smooth was
+    // the live one (t2v_ms/i2v_ms over commonDeps incl. the umt5 clip) until MPI-470
+    // deprecated its t2v_ms — and no shipped model declares 2+ operation groups now.
+    // So take the real card and re-add the op group it lost: the guard is what must
+    // not regress, and the next multi-op model must find it working. The t2v dep ids
+    // are still real DEPS entries (kept so the uninstall sweep can reclaim them).
+    const shipped = MODELS.find(m =>
+        m.operations && Array.isArray(m.commonDeps) && m.commonDeps.length > 0);
+    assert.ok(shipped, 'have an op-grouped model with common deps');
+    const model = shipped.supportedOps.length >= 2 ? shipped : {
+        ...shipped,
+        supportedOps: ['t2v_ms', ...shipped.supportedOps],
+        operations: { t2v_ms: { deps: ['wan-22-t2v-high', 'wan-22-t2v-low'] }, ...shipped.operations },
+    };
 
     const ops = Object.keys(model.operations).filter(o => (model.supportedOps || []).includes(o));
     assert.ok(ops.length >= 2, 'model exposes ≥2 selectable ops');

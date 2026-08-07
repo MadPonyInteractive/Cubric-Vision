@@ -1065,7 +1065,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // MPI-247: seed from the user's remembered op for this model first, so
         // navigating away and back doesn't snap the op back to t2i/i2i.
         // MPI-453: the fallback is the first INSTALLED op, not supportedOps[0] —
-        // Wan 2.2 lists t2v_ms first and the user may only have the i2v weights.
+        // Wan 2.2 used to list t2v_ms first while the user may only have had the i2v
+        // weights (MPI-470 dropped that op; the guard stands for the next such model).
         let activeOperation = getSelectedOp(activeModelId)
             ?? (activeModel?.mediaType === 'video' ? 't2v' : 't2i');
         // The REMEMBERED op is re-checked too: it was installed when the user last

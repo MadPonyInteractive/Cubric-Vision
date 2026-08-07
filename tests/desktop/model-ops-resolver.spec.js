@@ -35,8 +35,12 @@ test('renderer resolves the merged wan-22 model via the op resolver', async ({},
         viaLegacy: reg.getModelById('wan-22-t2v')?.id || null,
         fullUniverseHasI2VNode:
           res.resolveFullUniverse(wan).includes('ComfyUI-PainterI2Vadvanced'),
-        t2vOnlyExcludesI2VNode:
-          !res.resolveDeps(wan, ['t2v_ms']).includes('ComfyUI-PainterI2Vadvanced'),
+        // MPI-470: t2v_ms is deprecated, so the op-scoped resolve is proved with the
+        // DEPRECATED key — an unknown op must contribute no deps at all, which is what
+        // keeps a stale saved draft (or legacy history item) from dragging the removed
+        // t2v weights back into a download.
+        deadOpResolvesToCommonDepsOnly:
+          !res.resolveDeps(wan, ['t2v_ms']).some(id => id.startsWith('wan-22-')),
         // requiresOps + cascade helpers must be exported and load in-page.
         hasRequiresHelpers:
           typeof res.expandRequiredOps === 'function'
@@ -48,10 +52,10 @@ test('renderer resolves the merged wan-22 model via the op resolver', async ({},
 
     expect(result.merged).toBe(true);
     expect(result.opKeyed).toBe(true);
-    expect(result.selectable).toEqual(['i2v_ms', 't2v_ms']);
+    expect(result.selectable).toEqual(['i2v_ms']); // MPI-470 deprecated t2v_ms
     expect(result.viaLegacy).toBe('wan-22');
     expect(result.fullUniverseHasI2VNode).toBe(true);
-    expect(result.t2vOnlyExcludesI2VNode).toBe(true);
+    expect(result.deadOpResolvesToCommonDepsOnly).toBe(true);
     expect(result.hasRequiresHelpers).toBe(true);
     expect(result.hasDraftState).toBe(true);
   } finally {

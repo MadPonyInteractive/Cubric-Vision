@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-470",
+  "title": "Deprecate Wan 2.2 text-to-video - drop t2v_ms, keep the deps for the sweep",
+  "description": "Wan 2.2 Smooth 14B drops t2v_ms; i2v_ms stays. The t2v pair is DigitalPastel's SmoothMix community merge (2 x 13.55GB, allowNoCredit:false) and LTX 2.3 now owns text-to-video, so the op earns neither its 27.1GB nor its licence exposure. User decisions 2026-08-07: (1) wan-22 t2v_ms only - wan22-5b untouched, i2v_ms survives; (2) wan-22-t2v-high/low STAY in modelDeps.js so _orphanedDepIds can still see them and the uninstall sweep reclaims the 27.1GB already on users' disks - deleting the entries would blind the sweep and strand the files forever; (3) R2 + the HF mirror keep serving the weights, no live destructive op. Also drops the wan22_t2v graph + both templates, its progressStages row, and the desktop op-resolver spec's t2v assertions. Feeds MPI-467's smoke budget: 312.2GB -> 285.1GB.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-07T03:22:00Z",
+  "updated_at": "2026-08-07T03:52:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  }
+}

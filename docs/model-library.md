@@ -8,7 +8,8 @@ Verify a named file/function/flag still exists before relying on an entry.
 ## Usable vs installed — display/count/pickers gate on `isModelUsable`, never `model.installed`
 
 `model.installed` is the raw ALL-deps-present flag; for op-keyed models it is false on a
-deliberate partial install (e.g. Wan 2.2 with only t2v installed). Gating any user-facing surface
+deliberate partial install (Wan 2.2 with only t2v installed, until MPI-470 dropped that op — no
+shipped model has 2+ operation groups today). Gating any user-facing surface
 on it makes the model vanish while the app can clearly run it:
 
 - **Model pickers/dropdowns** must use `isModelUsable()` (modelRegistry), NOT `model.installed` — a partial op-keyed install must still be pickable (MPI-122).

@@ -48,6 +48,13 @@ Badges read from the model page, flags from `/api/v1/models/<id>`, both 2026-08-
 | `wan-22-i2v-high` | — | **our own merge** | Mad Pony Interactive | n/a | n/a | n/a | n/a |
 | `wan-22-i2v-low` | — | **our own merge** | Mad Pony Interactive | n/a | n/a | n/a | n/a |
 
+**The t2v pair is DEPRECATED (MPI-470, 2026-08-07).** `wan-22` dropped `t2v_ms`, so nothing
+installs `wan-22-t2v-high/low` any more — LTX 2.3 owns text-to-video and the pair cost 27.1GB
+of third-party merge. The `modelDeps.js` entries (and their `credit` blocks) deliberately
+REMAIN so the uninstall orphan sweep can still reclaim the files from users who already have
+them; the R2 + HF copies also stay up. So the exposure below shrinks to seven live deps, but
+the credit obligation on these two is not retired while the weights are still hosted.
+
 **The two i2v weights are OURS** (user, 2026-08-03), which is the actual reason their
 sha256 matches nothing on CivitAI — the `smoothMixWan2214BI2V_i2vV20*` filename they
 shipped under is a merge INPUT's name, not their provenance. So `origin` now reads

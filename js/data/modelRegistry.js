@@ -450,8 +450,10 @@ export function installedOpsForContext(modelOrId) {
  * The model's first INSTALLED operation — what a fallback must land on.
  *
  * MPI-453: seeding an op from `supportedOps[0]` picks a static list entry the
- * user may never have installed (Wan 2.2 opens on `t2v_ms` with only the i2v
- * weights on disk), and the op strip — which DOES filter by installed ops —
+ * user may never have installed — Wan 2.2 was the worked example, opening on
+ * `t2v_ms` with only the i2v weights on disk (that case died with MPI-470's
+ * t2v deprecation; the hazard returns with the next multi-op model) — and the
+ * op strip, which DOES filter by installed ops,
  * then renders a selection it never offered. Dispatching it hands ComfyUI a
  * graph whose weights are absent. Falls back to `supportedOps[0]` when nothing
  * is known to be installed, so an unknown dep-status cache changes nothing.

@@ -86,7 +86,9 @@ two `MpiBooleanInvert` + `MpiIfElse` + `MpiBlocker` + `MpiBooleanCompare` + both
 `MpiSimpleBoolean` gates).
 
 - **H3 and both WAN graphs are migrated**; `wan22_t2v_stage2.json` and
-  `wan22_i2v_stage2.json` are **deleted**. **LTX's six twins are still live** until its
+  `wan22_i2v_stage2.json` are **deleted**. (`wan22_t2v.json` itself is gone too — MPI-470
+  deprecated Wan text-to-video; `wan22_i2v.json` is the surviving WAN graph.)
+  **LTX's six twins are still live** until its
   re-author lands (MPI-456), and LTX is dual-latent, which the single node does not yet
   model — that decision is open.
 - The app stops appending `_stage2` only when the ModelDef declares

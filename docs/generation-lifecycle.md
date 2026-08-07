@@ -24,7 +24,9 @@ Op availability is data-driven from `commandRegistry` `mediaInputs` slot count +
 ## An UNINSTALLED operation is undispatchable — the gate is the mechanism (MPI-453)
 
 Per-op weights are opt-in (`models.js` `operations[].deps`), so a model can be installed for one
-operation and not another — Wan 2.2 with the i2v pair but no t2v. The predicate is
+operation and not another — Wan 2.2 with the i2v pair but no t2v. **MPI-470 deprecated Wan's
+`t2v_ms`, so no shipped model declares 2+ operation groups today** and the partial-install state is
+currently unreachable; the machinery below stays wired for the next multi-op model. The predicate is
 `deriveInstalledOps` (`resolveModelDeps.js`); every op-picking surface reaches it through
 `modelRegistry`:
 
@@ -34,7 +36,7 @@ operation and not another — Wan 2.2 with the i2v pair but no t2v. The predicat
   contract). Consumers: the PromptBox strip (via its own `_ctxWithInstalledOps`) and
   `MpiGroupHistoryBlock._opOptions`.
 - `firstInstalledOp(model)` → what a fallback seeds. **Never seed from `supportedOps[0]`** — that
-  static list opens Wan 2.2 on `t2v_ms` regardless of what is on disk, and the strip (which DOES
+  static list opened Wan 2.2 on `t2v_ms` regardless of what was on disk, and the strip (which DOES
   filter) then shows a selection it never offered. Fixed at all three `MpiGalleryBlock` sites; the
   remembered op (`getSelectedOp`) is re-checked too, since an uninstall leaves it dead but selected.
 - The hard net is in `commandExecutor`, beside the MPI-209 arch-weight guard: op declares its own
