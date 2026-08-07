@@ -48,13 +48,6 @@ export const MpiSettings = ComponentFactory.create({
                         </div>
                         <div class="mpi-settings__plate-ctrl" id="mpiSettingsAutoStartSlot"></div>
                     </div>
-                    <div class="mpi-settings__plate" id="mpiSettingsPlayAudioOnHoverPlate">
-                        <div class="mpi-settings__plate-main">
-                            <span class="mpi-settings__plate-label">Play audio on hover</span>
-                            <span class="mpi-settings__plate-desc">Hovering a video or audio card in the gallery plays its sound.</span>
-                        </div>
-                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsPlayAudioOnHoverSlot"></div>
-                    </div>
                 </section>
 
                 <section class="mpi-settings__section">
@@ -210,10 +203,6 @@ export const MpiSettings = ComponentFactory.create({
             // ── Auto-start toggle ────────────────────────────────────────────
             _mountSwitchPlate('#mpiSettingsAutoStartSlot', Storage.getAutoStartComfy(),
                 (v) => Storage.setAutoStartComfy(v));
-
-            // ── Play audio on hover toggle ───────────────────────────────────
-            _mountSwitchPlate('#mpiSettingsPlayAudioOnHoverSlot', Storage.getPlayAudioOnHover(),
-                (v) => Storage.setPlayAudioOnHover(v));
 
             // ── Desktop notification prefs (per-type OS opt-out) ─────────────
             const _saveNotifyPref = (key, checked) => {

@@ -175,8 +175,10 @@ export const Storage = {
   getAutoStartComfy:   () => get(STORAGE_KEYS.AUTO_START_COMFY, false),
   setAutoStartComfy:   (v) => set(STORAGE_KEYS.AUTO_START_COMFY, v),
 
-  getPlayAudioOnHover: () => get(STORAGE_KEYS.PLAY_AUDIO_ON_HOVER, true),
-  setPlayAudioOnHover: (v) => set(STORAGE_KEYS.PLAY_AUDIO_ON_HOVER, v),
+  // Gallery playback volume, 0–1. Drives audio cards AND unmuted hover videos.
+  // 0 IS the mute — it replaced the old "Play audio on hover" settings toggle.
+  getGalleryVolume:    () => Math.min(1, Math.max(0, Number(get(STORAGE_KEYS.GALLERY_VOLUME, 0.8)) || 0)),
+  setGalleryVolume:    (v) => set(STORAGE_KEYS.GALLERY_VOLUME, Math.min(1, Math.max(0, Number(v) || 0))),
 
   getToastSound:       () => get(STORAGE_KEYS.TOAST_SOUND, true),
   setToastSound:       (v) => set(STORAGE_KEYS.TOAST_SOUND, v),

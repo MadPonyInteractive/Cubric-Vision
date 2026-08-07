@@ -105,7 +105,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     <div class="mpi-gallery-grid__tab-slot" data-order="oldest"></div>
                 </div>
                 <div class="mpi-gallery-grid__zone mpi-gallery-grid__zone--center">
+                    <span class="mpi-gallery-grid__slider-icon">${renderIcon('grid', 'sm')}</span>
                     <div class="mpi-gallery-grid__slider-wrap"></div>
+                    <span class="mpi-gallery-grid__slider-icon mpi-gallery-grid__volume-icon"></span>
+                    <div class="mpi-gallery-grid__volume-wrap"></div>
                 </div>
                 <div class="mpi-gallery-grid__zone mpi-gallery-grid__zone--right">
                     <div class="mpi-gallery-grid__tab-slot" data-filter="all"></div>
@@ -366,6 +369,37 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
         _unsubs.push(Hotkeys.bind('gallery.size.inc', incrementSlider));
         _unsubs.push(Hotkeys.bind('gallery.size.dec', decrementSlider));
+
+        // ── Playback volume slider ─────────────────────────────────────────────
+        // Drives hover/click playback for BOTH card kinds — audio cards and the
+        // unmuted hover video. Cards read `_volume` when they create their media
+        // element; live elements are re-set on every slider move.
+        let _volume = Storage.getGalleryVolume();
+        const volumeIcon = qs('.mpi-gallery-grid__volume-icon', el);
+
+        function _applyVolume(media) {
+            if (media) media.volume = _volume;
+        }
+
+        function _paintVolumeIcon() {
+            if (volumeIcon) volumeIcon.innerHTML = renderIcon(_volume === 0 ? 'volumeOff' : 'volumeHigh', 'sm');
+        }
+        _paintVolumeIcon();
+
+        const volumeSlider = MpiProgressBar.mount(qs('.mpi-gallery-grid__volume-wrap', el), {
+            min: 0, max: 100, step: 5, value: Math.round(_volume * 100),
+            interactive: true,
+            wheel: true,
+            handle: true,
+            info: 'Volume: {value}%',
+        });
+
+        volumeSlider.on('input', ({ value }) => {
+            _volume = value / 100;
+            Storage.setGalleryVolume(_volume);
+            _paintVolumeIcon();
+            qsa('audio[data-src], video.mpi-group-card__thumb--video', el).forEach(_applyVolume);
+        });
 
         // ── Card rendering helper ─────────────────────────────────────────────
 
@@ -733,6 +767,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     emit('media-missing', { group, itemId: selected?.id });
                 });
                 audio.src = src;
+                _applyVolume(audio);
                 cardEl.appendChild(audio);
                 _audioEl = audio;
 
@@ -752,11 +787,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     }
                 });
 
-                // Play audio on hover (setting, default on): hovering an audio
-                // card plays it (stop button shows via the 'play' listener);
-                // leaving stops + resets. Click-to-stop still works.
+                // Hovering an audio card plays it (stop button shows via the
+                // 'play' listener); leaving stops + resets. Click-to-stop still
+                // works. Volume 0 is the mute — silent playback would only show
+                // a misleading stop icon, so skip the hover play entirely.
                 cardEl._hoverPlay = () => {
-                    if (!Storage.getPlayAudioOnHover()) return;
+                    if (_volume === 0) return;
                     if (!audio.paused) return;
                     _stopOtherGalleryMedia(audio);
                     audio.play().catch(() => {});
@@ -831,11 +867,11 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // swapped it since binding.
             function _videoHoverPlay() {
                 if (!_videoThumb) return;
-                // Play audio on hover (setting, default on): stop any other
-                // playing card first, then unmute so this card is the only sound.
-                const withAudio = Storage.getPlayAudioOnHover();
-                if (withAudio) {
+                // Volume 0 = mute: the clip still previews, just silently. Above
+                // 0, stop any other playing card first so this is the only sound.
+                if (_volume > 0) {
                     _stopOtherGalleryMedia(_videoThumb);
+                    _applyVolume(_videoThumb);
                     _videoThumb.muted = false;
                 } else {
                     _videoThumb.muted = true;

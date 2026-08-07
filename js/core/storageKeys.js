@@ -11,7 +11,7 @@ export const STORAGE_KEYS = {
   // Engine settings
   COMFY_ROOT_PATH:     'mpi_comfy_root_path',
   AUTO_START_COMFY:    'mpi_auto_start_comfy',
-  PLAY_AUDIO_ON_HOVER: 'mpi_play_audio_on_hover',
+  GALLERY_VOLUME:      'mpi_gallery_volume',
   TOAST_SOUND:         'mpi_toast_sound',
 
   // RunPod remote engine — NON-secret prefs only. The API key and wrapper

@@ -11,10 +11,10 @@
 .mpi-gallery-grid__tabs {
     display: grid;
     /* Left track sizes to the (small) sort controls; right track sizes to the
-       filter chips; the center slider takes whatever is left, up to 14rem, and
-       shrinks first when space is tight. This stops the chips — which are wider
-       than an equal 1fr split allowed — from overflowing onto the slider. */
-    grid-template-columns: auto minmax(0, 14rem) auto;
+       filter chips; the center holds BOTH sliders (size + volume) and shrinks
+       first when space is tight. This stops the chips — which are wider than an
+       equal 1fr split allowed — from overflowing onto the sliders. */
+    grid-template-columns: auto minmax(0, 19rem) auto;
     justify-content: space-between;
     align-items: center;
     gap: 0.5rem;
@@ -66,10 +66,29 @@
     display: contents;
 }
 
-.mpi-gallery-grid__slider-wrap {
-    width: 100%;
-    max-width: 14rem;
+.mpi-gallery-grid__zone--center {
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.mpi-gallery-grid__slider-wrap,
+.mpi-gallery-grid__volume-wrap {
+    flex: 1 1 0;
+    max-width: 7rem;
     min-width: 0;
+}
+
+/* MpiProgressBar ships min-width:160px — two of them plus the icon blow past
+   the center track and overlap. Toolbar sliders are deliberately short. */
+.mpi-gallery-grid__zone--center .mpi-progress {
+    min-width: 0;
+}
+
+.mpi-gallery-grid__slider-icon {
+    display: flex;
+    align-items: center;
+    color: var(--ink-3);
+    flex-shrink: 0;
 }
 
 .mpi-gallery-grid__tab {
