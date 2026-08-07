@@ -189,11 +189,56 @@ so a reordering cannot break it silently), passes the audio half `[B,32,2,T]` th
 untouched, and re-nests. It takes the target in **pixels** with a `stride` input (16 for
 H3 and Krea2, 8 for the SD/SDXL family) so the number you type is the number you get.
 
-Unknown until tried: whether the DiT tolerates a resolution change at partial denoise.
-SD-era hi-res fix does exactly this and works; a video DiT usually does too. The split
-point (`SplitSigmas.step`) is the knob for how much is left to resample — 10 of 20 steps
-at the new size is enough denoise to REDRAW rather than refine, so push it to 13–15 if
-the shot changes instead of sharpening.
+### It RUNS, and it adds real detail — bench, 2026-08-07
+
+The DiT does tolerate a resolution change at partial denoise. Stage 1 at 672×384 →
+`MpiLatentUpscale` → stage 2 at 1344×768 finished and came out **visibly more detailed
+than the un-upscaled version**. Three things had to be right, and the first attempt got
+none of them:
+
+- **Upscale `denoised_output`, not `output`.** `output` is the latent AT sigma 10, still
+  carrying its noise; `nearest-exact` replicates cells, so that noise arrives stretched
+  and blocky and the model does not recognise it. The first attempt produced pure noise.
+- **`RandomNoise` on stage 2, not `DisableNoise`.** A hi-res fix upscales a CLEAN latent
+  and re-noises it for the new resolution.
+- **Its own `BasicScheduler` at `denoise 0.5`**, not `SplitSigmas`' low half —
+  `total_steps = int(steps/denoise)`, so `steps 10 / denoise 0.5` starts at the step-10
+  sigma, which is where stage 1 stopped.
+
+### Two costs, and the second one decides where this is useful
+
+**The audio breaks.** H3 emits video and audio from ONE joint latent, and the audio half
+(`[B,32,2,T]`, no spatial dims) is bound to the video half's token layout. Rescale the
+video mid-denoise and the audio is aligned against something that moved; on top of that,
+an x0 estimate at step 10 is a soft-but-valid IMAGE and a garbled waveform. A video-only
+model has no such coupling to break.
+
+The way out is **a different technique, not a fix to this one** — worth keeping the two
+apart:
+
+| | split-sigma hi-res fix | full pass + refiner |
+|---|---|---|
+| Stage 1 | 10 of 20 steps, trajectory cut in half | **all 20 steps** — a complete, valid generation |
+| Stage 2 | resumes the same trajectory at a new size | a SEPARATE img2img-style pass, `denoise < 1` |
+| Audio | broken — the trajectory never completed | **intact**, pass 1 finished it properly |
+
+The refiner shape needs no new node: the graph decodes video and audio separately and
+`Output_Video` takes them on separate inputs, so take **audio from pass 1's decode** and
+**images from the refiner's**. Pass 1's audio is fully denoised and was never disturbed.
+That only holds while the motion still lines up between the two, which is what caps
+`denoise` — sync sets the knob, not detail.
+
+**Composition is decided at the stage-1 canvas — and this is structural on ref2va.**
+`MiniMaxH3ReferenceToVideo` sets `minimax_refs` and never `minimax_keyframes`: references
+never become frames, so NOTHING anchors the framing and the model composes for whatever
+canvas it is sampling on. Measured: the same prompt and seed framed a close shot on the
+dragon's head at 672×384 and staged the whole scene at 1344×768. So a hi-res fix here
+does not upscale a shot, it **locks in the composition the small canvas chose**.
+
+Consequence — **do not start below native on ref2va.** Put stage 1 at 1344×768, where H3
+frames properly, and hi-res fix UP to 1920×1088 or 2K. And expect this technique to be
+much better behaved on **fl2va i2v**, where the first frame pins the composition and a
+small stage 1 cannot wander.
 
 ## Still unchecked
 
