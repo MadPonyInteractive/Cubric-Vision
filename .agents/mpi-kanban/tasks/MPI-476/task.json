@@ -7,9 +7,15 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-07T19:58:00Z",
-  "updated_at": "2026-08-07T19:58:00Z",
+  "updated_at": "2026-08-07T20:05:00Z",
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  },
+  "attention": {
+    "state": "required",
+    "reason": "Needs the users own eye test in Electron: no Operations row on the Wan card, H3 tables starting at 12GB, the H/B/L letter only on the two LTX cards, and staged chips relabelling when the model changes. Every proof so far is npm test plus live-DOM probes against the BROWSER build.",
+    "updated_at": "2026-08-07T20:05:00Z"
   }
 }

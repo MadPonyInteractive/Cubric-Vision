@@ -1,0 +1,119 @@
+# MPI-476 — validation
+
+Everything below is **do X → see Y**. All four fixes are committed
+(`d2800e4c`, `01014c1e`) and each was proved in a real DOM — but through the
+**browser** build on `:3000`, driven by `playwright-cli`. Nothing has been
+looked at in Electron by a human. That is the gap this file closes.
+
+Open the desktop app, not the browser.
+
+---
+
+## 1. The Wan card has no Operations row
+
+**Do:** Model Library → Wan 2.2 Smooth → open its detail drawer.
+**See:** description, then **GPU weight** only if it has arch variants (it does
+not, so nothing), then **Memory need**, **Disk**. **No "Operations" field, no
+"Image to Video" toggle.**
+**See also:** the memory table is UNCHANGED — `16GB min → ~24GB`, then 24 / 32 / 40.
+If it reads `8.28GB min`, the floor-row fix regressed.
+
+**Do:** the same on Krea 2, SDXL NSFW, LTX 2.3, MiniMax H3.
+**See:** no Operations field anywhere. It exists on no model now.
+
+**Do:** with Wan 2.2 Smooth already installed, press **Uninstall**, confirm, then
+reinstall it.
+**See:** it uninstalls and reinstalls the same set it always did. The flatten kept
+the identical dep ids, so an existing install must still read **Installed** with
+no "partial" bar on first launch — if Wan shows an Install chip or a progress bar
+on a machine where it was installed, the flatten changed the resolved set and
+that is a real bug.
+
+> **The riskiest thing in this card.** `isOperationInstalled` gained a
+> `supportedOps` guard so a flat Wan cannot answer "yes" for the deprecated
+> `t2v_ms`. If you have an OLD Wan text-to-video card in a project's history,
+> its Continue / Finish buttons must refuse with a toast, not open an error
+> dialog and not dispatch. Worth finding one if a project still has it.
+
+## 2. H3's VRAM table starts at 12GB
+
+**Do:** Model Library → MiniMax H3 → detail drawer. Then MiniMax H3 Reference.
+**See:** first row `12GB` with the **min** tag → `~48GB`, then 16 → ~40, 24 → ~32,
+32 → ~24, 40 → ~16, 48 → ~8, 56 → —. Footnote: *"53GB of weights · min 12GB VRAM."*
+
+**Note:** you guessed ~60GB of RAM at 12GB VRAM; the formula gives **48**
+(53.15 weights + 1.3 overhead − 12, rounded up to the next 8). If 48 reads too
+optimistic for a 12GB card in practice, the number to change is `minVramGb` or
+the `OVERHEAD`/`K` constants in `js/data/modelConstants/footprint.js` — say so
+and it moves.
+
+**Do:** check any other model's table (Krea 2, LTX 2.3, Wan).
+**See:** unchanged from before, every row on the 8GB grid. Only H3 declares an
+override.
+
+## 3. The tier letter only appears when it disambiguates
+
+**Do:** look at the prompt-box model button and the gallery card badges.
+**See, with your current install set** (Krea 2 NSFW, FLUX.2 Klein, SDXL NSFW,
+LTX 2.3, Wan 2.2 Smooth, MiniMax H3, MiniMax H3 Reference):
+
+| Surface | Before | Now |
+|---|---|---|
+| Model button on H3 | `MINIMAX H3 H` | `MINIMAX H3` |
+| Gallery card, Wan | `WAN 2.2 SMOOTH B` | `WAN 2.2 SMOOTH` |
+| Gallery card, LTX | `LTX 2.3 B` | `LTX 2.3 B` — **kept**, if both LTX tiers are installed |
+
+If only ONE LTX tier is on disk, LTX loses its letter too, and that is correct —
+nothing to tell apart.
+
+**Do:** Model Library → MiniMax H3.
+**See:** `VIDEO · Balanced tier`, and it sits under the **Balanced** size filter,
+not High. Same for MiniMax H3 Reference.
+
+## 4. Chips relabel when the model changes
+
+This is the one you reported, and the one your existing H3 generations can
+exercise directly.
+
+**Do:** select **MiniMax H3 Reference**, drop an image in the prompt box.
+**See:** the chip badges **Picture 1**.
+**Do:** switch the model to **LTX 2.3** without touching the chip.
+**See:** the badge is gone and the chip now shows the **Start frame** pill.
+**Do:** switch back to H3 Reference.
+**See:** **Picture 1** again.
+
+**Do:** switch to **Wan 2.2 5B** (if installed) with one image staged, then to H3
+Reference.
+**See:** Wan 5B shows no badge and no pill (its single-stage `i2v` declares no
+end-frame slot); switching to H3 Reference must make **Picture 1** appear. This
+is the fast-path hole specifically — a badge element that never existed could not
+be created, so before the fix this transition painted nothing at all.
+
+**Do:** stage 3 images on H3 Reference and drag one to reorder.
+**See:** badges renumber Picture 1 / 2 / 3 in strip order, and the drag stays
+smooth — no flicker, no thumbnails reloading. The fix must not have broken the
+reorder fast path.
+
+**Do:** on LTX with one image, click the **Start frame** pill.
+**See:** it flips to **Last frame** as before.
+
+---
+
+## What would signal a real bug
+
+- Wan (or anything) reading **Install** / showing a partial bar when it was
+  installed before this change → the flatten moved the resolved dep set.
+- An **Update** button appearing on a model with no GPU-arch variants → arch is
+  the only draft axis left, so nothing else can make drafts differ.
+- A **Continue/Finish** on an old Wan t2v history card opening the error dialog
+  instead of a toast → the `supportedOps` guard is not doing its job.
+- An off-grid VRAM row (`8.28GB`) on any model that does not declare
+  `minVramGb`.
+- A chip badge that is right on arrival but wrong after a model switch — i.e.
+  the original report, unfixed.
+
+## Not in scope here
+
+MPI-475's own gates are untouched by this card: the judgement run on the correct
+ref2va transformer, and swapping in a real ref2va preview clip. See
+`tasks/MPI-475/validation.md`.
