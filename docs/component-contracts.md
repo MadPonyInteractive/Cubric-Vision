@@ -13,6 +13,10 @@ The user's chosen operation persists per model in `state.s_selectedOpByModel` (`
 
 The trap this fixes: the op was NEVER persisted, so every block remount (Gallery↔History nav) re-derived it from a hardcoded default (`t2i`/`t2v` / first-available), and PromptBox re-picked it on model switch and media-state change → the user's Upscale/Pose-Reference/etc. silently snapped back to i2i. **`PromptBox.setOperation(key, { programmatic })`** carries a `programmatic` flag, set `true` on every INTERNAL re-pick (`setModel`, `setModelList`, the `_emitMediaChange` media auto-switch); consumers persist ONLY user picks (`!programmatic`), so a re-pick can't poison the memory. Reuse Prompt re-asserts the reused op LAST, after `clearMedia`/`injectMedia` fire `_emitMediaChange` (which transiently auto-switches when media state mismatches the op's input slots). **Rule: when a block remounts, seed the op from `getSelectedOp` before any default; and any programmatic `setOperation` MUST pass `{ programmatic: true }` or it will be mistaken for a user choice.**
 
+## MpiProgressBar ships a 160px floor that beats any parent `max-width`
+
+`.mpi-progress { min-width: 160px }` (`js/components/Primitives/MpiProgressBar/MpiProgressBar.css`). A `max-width` on the mount wrapper can never win against it — two bars side by side silently overflow their container and draw ON TOP of each other, which reads as a layout bug in the consumer, not in the primitive. Sizing bars below 160px means overriding `min-width` **scoped to your consumer** (see `.mpi-gallery-grid__zone--center .mpi-progress`), never on the primitive — other consumers rely on the floor.
+
 ## MpiRadioGroup emits 'select' not 'change'
 
 `MpiRadioGroup` emits `'select'` on user pick, not `'change'`. Listening for `'change'` results in silent no-op. Always use `.on('select', ...)`. Smoke-test that values round-trip to project.json before considering wiring correct.

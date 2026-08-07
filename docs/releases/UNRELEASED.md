@@ -99,6 +99,12 @@
 - **Resize — one click back to the original size.** An **Original Size** button under
   the width and height boxes puts both back to the picture's own dimensions, so you
   can try a size, change your mind and start again without looking the numbers up.
+- **Hover sound now has a volume, not just an on/off.** A volume slider sits next to
+  the gallery size slider, so you set how loud a hovered video or audio card plays
+  without leaving the gallery. Sliding it to zero is the mute — which is why the
+  "Play audio on hover" switch is gone from Settings; it was the same control, two
+  rooms away. At zero an audio card stays silent instead of pretending to play, and
+  a video still previews without sound.
 
 ## importantChanges
 
