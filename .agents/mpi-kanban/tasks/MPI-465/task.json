@@ -7,7 +7,7 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-07T00:30:00Z",
-  "updated_at": "2026-08-07T00:30:00Z",
+  "updated_at": "2026-08-07T01:10:00Z",
   "labels": [
     "bug",
     "ltx",
@@ -25,5 +25,9 @@
     "events": "events.jsonl"
   },
   "priority": "high",
-  "attention": true
+  "attention": {
+    "state": "required",
+    "reason": "LTX is broken in the product on the current engine until the app restarts and drift-repairs onto the new KJNodes pin; the Pod image bakes from the same lock and still needs a rebuild for remote LTX.",
+    "updated_at": "2026-08-07T01:10:00Z"
+  }
 }
