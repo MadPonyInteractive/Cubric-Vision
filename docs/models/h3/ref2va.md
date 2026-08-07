@@ -122,11 +122,20 @@ the open weights (MPI-449 § 1):
 - **H3-Context-IR** — the hosted prompt-refinement front end, which MiniMax itself calls
   "critical to quality".
 
+Note what Context-IR is and is not: it refines the **prompt**, not the picture. It is not
+a hi-res fix and has no bearing on output resolution.
+
 So a 2K result posted online is the hosted API, not a local ComfyUI graph, and no local
 setting reproduces it. Sampling H3-Base at a 2K canvas is a different thing: nothing
-enforces the area cap on the output latent, so it RUNS, but it is extrapolation well
-above the trained canvas, and the cost is quadratic — 2.09MP measured at 1537s on a
-4060 Ti, so 2560×1472 (3.77MP) is roughly 3x that PER STAGE before references.
+enforces the area cap on the output latent, so it RUNS, and the cost is quadratic —
+2.09MP measured at 1537s on a 4060 Ti, so 2560×1472 (3.77MP) is roughly 3x that PER
+STAGE before references.
+
+**But it holds up far better than "expect artifacts" implies.** Run bare on the engine at
+2560×1472, 2026-08-07: **stage 1 alone looked like a finished 1K product** (~544s). The
+`very_high` warning in `js/utils/ratios.js` — "above the trained canvas … so expect
+artifacts" — is more pessimistic than what H3 actually does at 3.77MP. Treat the ladder's
+ceiling as a COST limit first and a quality limit second.
 
 **The second pass we actually have is the universal `videoUpscale` op** —
 `comfy_workflows/video_upscale.json`, a video canvas tool, not model-tied. It loads the
@@ -136,8 +145,28 @@ with lanczos, chosen by `Input_Upscale_Using_Model` (default off). Generate at n
 1344×768, then upscale ×2 with the model path on → 2688×1536.
 
 What that buys and what it does not: a spatial upscaler sharpens and cleans, it does not
-invent identity detail that was never sampled. For a face small in frame, framing beats
-both the upscaler and the canvas.
+invent identity detail that was never sampled, and it introduces artifacts of its own.
+The user's verdict 2026-08-07 is that it is **a placeholder, not an answer**.
+
+### A hi-res fix is the real candidate, and the graph already has the seam
+
+The classic shape — sample low, upscale the latent, finish the denoise high — maps onto
+this graph exactly. `BasicScheduler` makes 20 sigmas, `SplitSigmas` cuts at 10, and
+`MpiStageLatents` (node 320) already carries the latent between the two sampler passes.
+Run stage 1 at native 1344×768, upscale the latent there, run stage 2's low sigmas at 2K,
+and only the second half of the denoise pays the 2K price.
+
+**The blocker to settle first is the NestedTensor.** H3's latent is a video+audio PAIR,
+which is why `MpiSaveLatent` exists at all — core's `SaveLatent` crashes on it because a
+NestedTensor has no `.contiguous()`. Core's `LatentUpscale` is the same family of
+problem, so it cannot be dropped in. The node this needs would `unbind()` the pair,
+`common_upscale` the video half's H/W (the /16 grid), leave the audio half untouched (it
+is `[B,32,2,T40]` — time, no spatial dims), and re-nest. `latent.py` already has that
+unbind/re-nest pattern, so it is a small node, not a project.
+
+Unknown until tried: whether the DiT tolerates a resolution change at partial denoise.
+SD-era hi-res fix does exactly this and works; a video DiT usually does too. The split
+point (`SplitSigmas.step`) is the knob for how much is left to resample at 2K.
 
 ## Still unchecked
 
