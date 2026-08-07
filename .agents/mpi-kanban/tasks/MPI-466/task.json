@@ -4,10 +4,10 @@
   "title": "Re-wire LTX to the new export: int8 balanced, bf16 high, media-derived routing",
   "description": "USER DECISION 2026-08-07: drop the distill LoRA toggle and the non-distilled dev model outright. HIGH stays bf16 distilled-1.1; BALANCED moves off fp8/mxfp8 to ltx-2.3-22b-distilled-1.1_transformer_only_int8_convrot (21.5GB), which A/B-beat fp8 on sound, hands and eyes and ran 10s faster. The re-exported graph (comfy_workflows/raw/ltx_i2v_t2v_template.json, 215 nodes against the shipped 119) changes far more than the weight: t2v and i2v merge into one file, Input_Video_Latent and Output_Preview put both stages in one graph (so the six LTX _stage2 twins die here, not in MPI-456), and routing derives from which frame slots are filled instead of op booleans. On disk today: fp8/mxfp8 deleted, int8 present, the 41GB bf16 never there - so NO LTX runs locally until this card ships, which is why MPI-465 cannot take its app proof first.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-07T01:05:00Z",
-  "updated_at": "2026-08-07T03:00:27Z",
+  "updated_at": "2026-08-07T03:37:45Z",
   "labels": [
     "model",
     "ltx",
@@ -25,8 +25,13 @@
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
-    "checklist": "checklist.md"
+    "checklist": "checklist.md",
+    "validation": "validation.md"
   },
   "priority": "normal",
-  "attention": false
+  "attention": {
+    "state": "required",
+    "reason": "Code is complete and committed; NOTHING has run through the app. Start the app so its engine drift-repairs KJNodes 7f43f2c -> 35e5956 (MPI-465), then run LTX t2v on the int8 balanced card and read the dispatched graph off /queue. Also finishes MPI-465.",
+    "updated_at": "2026-08-07T03:37:45Z"
+  }
 }
