@@ -123,6 +123,17 @@ Because it DELEGATES (does not copy) the end-session logic, a pack update to
      changelog notes ship silently — this step exists because a reverted "Wan 2.2
      model split" note nearly shipped after the model was merged back to one.
 
+   - **A change to an UNRELEASED thing owes no entry.** Before writing "X changed
+     from A to B", grep `UNRELEASED.md` and `js/data/releaseNotes.js` for the
+     FEATURE itself. If it appears only in `UNRELEASED.md` — or in neither — then
+     no released build contains A, so the line describes a difference nobody can
+     perceive. Fold the correction into the existing unreleased entry, or write
+     nothing. This is not the same as the stale-entry check above: that one
+     catches an entry contradicting what shipped; this catches an entry
+     describing a delta against something that never shipped. (2026-08-07:
+     proposed three lines about MiniMax H3's size tier and VRAM floor — for a
+     model that has never appeared in `releaseNotes.js`.)
+
    - **Versioning.** Did the change touch anything the version system tracks?
      Read `.claude/rules/versioning.md` (then `docs/versioning.md`) FIRST, then
      check whether a bump or registry edit is warranted:
