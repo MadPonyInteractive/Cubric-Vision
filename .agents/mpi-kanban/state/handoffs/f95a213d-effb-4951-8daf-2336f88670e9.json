@@ -6,13 +6,13 @@
   "to_role": "implementer",
   "status": "open",
   "session": {
-    "name": "H3 step 8 SHIPPED; MPI-463 (stranded lane) and MPI-465 (LTX dead on 0.30.x) found, fixed and carded; MPI-466 filed to collapse LTX to one card",
+    "name": "H3 step 8 SHIPPED; MPI-463 (stranded lane) fixed; MPI-465 found - LTX dead in the SHIPPED release since 1.3.0; MPI-466 + MPI-467 filed",
     "branch": "master"
   },
   "goal": {
     "original": "Continue handoff 4340839f: finish MPI-452's app verification, then wire ref2va.",
     "status": "in_progress",
-    "summary": "Picked up with LTX blocked on the user's authoring. Shipped checklist step 8 (H3 card preview reshot inside the trained frame range). Fixed the stranded-lane bug the previous session left to the user (MPI-463). Then the user reported their bench LTX graph failing while adding last-frame-only support — it was NOT their edit: ComfyUI 0.30.x broke KJNodes' LTX preview wrapper, killing the ENTIRE LTX fleet in the product too (MPI-465, fixed + proven live). Separately diagnosed and fixed their end-frame-only wiring in the bench template (one link), which the user confirmed works. The session ended on an INT8 finding that reshapes the LTX product (MPI-466). Steps 5 (i2v) and ref2va are still unreached."
+    "summary": "Picked up with LTX blocked on the user's authoring. Shipped checklist step 8 (H3 card preview reshot inside the trained frame range). Fixed the stranded-lane bug the previous session left to the user (MPI-463). Then the user reported their bench LTX graph failing while adding last-frame-only support — it was NOT their edit: ComfyUI v0.29.0 changed a loader return type under KJNodes' LTX preview wrapper, killing the ENTIRE LTX fleet - including in the SHIPPED releases 1.3.0 and 1.3.1 (MPI-465, fixed + proven live; the user chose NO hotfix, it rides on 1.4). Separately diagnosed and fixed their end-frame-only wiring in the bench template (one link), which the user confirmed works. The session ended on an INT8 finding that reshapes the LTX product (MPI-466). Steps 5 (i2v) and ref2va are still unreached."
   },
   "plan": {
     "file": null,
@@ -20,14 +20,14 @@
       "MPI-452 CHECKLIST STEP 8 PASSES — H3 card preview reshot at 864x480, 5 s -> 124 frames (the n % 17 == 5 snap; the retired clip was 56), video + muxed AAC stereo, 371 s on the 48188 engine. minimax_h3_preview.webp regenerated at 480x266. Commits 9cbc3c6b + 1355d41f.",
       "NON-OBVIOUS CONSTRAINT FOUND: MpiTileSheet.js:101 derives the poster by filename convention and hands it to <video poster>, so it IS the card until hover playback starts — it must be frame 0 of the clip it ships with. A better-composed later frame jumps the moment the video plays. First take was rerolled for a wide opening shot rather than posterised from a later frame. Documented in docs/model-library.md (61c453ee).",
       "MPI-463 FIXED — the stranded lane the previous session left uncarded. generationStore.register() takes a LANE SLOT and _laneBusy is DERIVED from the store's running list, so ELEVEN pre-dispatch bails that called exec.onError and returned without settling wedged that lane until app restart. Not twelve: _abortedBail already settles to CANCELLED, and the post-dispatch catch settles once at its own top (which is why ITS nine branches are fine). Fixed structurally with _failBail (settle to PHASES.ERROR, then report); pinned by tests/lane-settle-on-bail.test.cjs with a negative control that names the exact line. 467/467, lint clean. Commits 9d83ea6e + ea2338b5.",
-      "MPI-465 FOUND + FIXED — LTX is DEAD on ComfyUI 0.30.x, all 12 shipped graphs. ComfyUI f8a3fd9d (2026-07-25) made LatentUpscaleModelLoader return a ModelPatcher; KJNodes' LTX2SamplingPreviewOverride wrapper still called latent_upscale_model.to(device), and NEITHER patcher class defines .to (proven with hasattr against the engine's own python). Pin bumped 7f43f2c -> 35e5956 in dev_configs/node_lock.json. PROVEN LIVE: the exact failing prompt pulled from the bench /history and re-queued after the bump completed the whole graph in 124 s. Commit c077efa9.",
+      "MPI-465 FOUND + FIXED — LTX is DEAD in the SHIPPED RELEASE, all 12 graphs. ComfyUI f8a3fd9d made LatentUpscaleModelLoader return a ModelPatcher; KJNodes' LTX2SamplingPreviewOverride still called latent_upscale_model.to(device), and NEITHER patcher class defines .to (proven with hasattr against the engine's own python). DATING IT CORRECTLY MATTERS AND I GOT IT WRONG FIRST: the break lands in ComfyUI v0.29.0 (tagged 2026-07-28), NOT 0.30.0, and our engine pin crossed v0.28.0 -> v0.29.2 on 2026-07-31 (e2c2b4d6). v1.3.0 and v1.3.1 BOTH ship v0.29.2 + kjnodes 7f43f2c, so users have had a dead LTX since 2026-08-01. Pin bumped 7f43f2c -> 35e5956; PROVEN LIVE on the bench (the exact failing prompt completed in 124 s). Commits c077efa9 + f67dda70 (the correction).",
       "THE USER'S END-FRAME-ONLY WIRING FIXED (bench template, one link). Their `is lf` (a_false_b_true) correctly drove the two new packer selectors #606/#601 that skip the First guide — but the SIX gates that route the guided result back into the main path (#316 #318 #327 #328 #338 #349) were still on `is flf` = both_true, so with no start frame they all took the non-FLF branch and the end guide was computed then discarded. Repointed SetNode #559 (`is flf`) from #557 MpiBooleanCompare (both_true) to #507 MpiAnyChecker:1 (`has img2`). USER CONFIRMED END FRAME NOW WORKS.",
       "MPI-466 FILED — collapse LTX to ONE card (dev int8 + rank-111 distill LoRA as a turbo toggle). See its brief."
     ],
     "pending": [
       "MPI-452 CHECKLIST STEP 5 (i2v through the app) still never reached. Needs the user to drive one i2v run; then read the DISPATCHED graph off /queue and confirm Input_Start_Frame is populated — if it is not, the graph takes the t2v branch and returns a perfectly good video that ignored the image.",
       "MPI-463 NOT PROVEN LIVE. The wedge was seen live; the fix has not been. Renderer code — Ctrl+Shift+R. Cheapest proof: force bail #6 (Cue an op with a required media slot and no media), then Cue a normal generation on that same lane — before the fix the second sits on QUEUED forever.",
-      "MPI-465 NOT PROVEN THROUGH THE APP, and the running server CANNOT see the new pin: getPinnedNodeCommit uses a CACHED createRequire, so /engine/deps-status reports driftedDeps: [] right now. The engine repairs itself only after an app RESTART. The Pod image also bakes nodes from this same lock and is still on the old KJNodes, so REMOTE LTX stays broken until it is rebuilt.",
+      "MPI-465 NOT PROVEN THROUGH THE APP, and the running server CANNOT see the new pin: getPinnedNodeCommit uses a CACHED createRequire, so /engine/deps-status reports driftedDeps: [] until the app RESTARTS. USER DECIDED: no hotfix - the fix rides on 1.4, so LTX stays broken for users on 1.3.0/1.3.1 until then. The Pod image bakes from the same lock and still needs a rebuild for remote LTX.",
       "LTX MIGRATION (MPI-456) still open — the user is mid-authoring. Its six _stage2 twins are live and correct until their export lands.",
       "MPI-466 — the LTX one-card plan. Do the LoRA-on-int8 check FIRST; it decides the whole thing.",
       "ref2va as a second ModelDef 'minimax-h3-ref2va' — its MODEL_LICENCES key ALREADY EXISTS, do not add it again."
@@ -57,15 +57,15 @@
       "docs/model-library.md — the poster must be frame 0 of the clip it ships with.",
       "docs/generation-lifecycle.md — register() takes a lane, so every exit owes a terminal (added to the per-gen identity doctrine, where the other lane hazards already live).",
       "tasks/MPI-452/checklist.md — step 8 PASS with its evidence table.",
-      "tasks/MPI-463/brief.md, tasks/MPI-465/brief.md, tasks/MPI-466/brief.md — full root-cause records."
+      "tasks/MPI-463/brief.md, tasks/MPI-465/brief.md, tasks/MPI-466/brief.md — full root-cause records.",
+      "memory: feedback_check_the_wiring_predates_the_edit — includes the second correction (date the break at the release tags AND against our own node_lock history; git tag --contains answers by topology and misleads)."
     ],
     "pending": [
-      "docs/models/ltx/workflow-authoring.md does NOT yet carry the KJNodes/ModelPatcher trap. It is the natural home for 'the optional latent_upscale_model input on LTX2SamplingPreviewOverride is a version-coupled landmine'.",
-      "No memory file written for this session's lesson (see context.key_decisions)."
+      "docs/models/ltx/workflow-authoring.md does NOT yet carry the KJNodes/ModelPatcher trap. It is the natural home for 'the optional latent_upscale_model input on LTX2SamplingPreviewOverride is a version-coupled landmine'."
     ]
   },
   "next_action": {
-    "description": "Ask the user which they want first. (1) Restart the app — that alone lets the engine drift-repair onto the fixed KJNodes and closes MPI-465's second criterion, and it is the precondition for any LTX test through the app. (2) MPI-452 step 5: one i2v run, then read /queue. (3) MPI-463's live proof, which is a 30-second forced bail. (4) MPI-466: before any design, check whether ltx23-lora-merged / transition / talkvid were ACTIVE in the user's int8 runs — if they were, LoRA-on-int8 already works and most of the plan's risk is retired for free. Do NOT touch LTX workflow files until the user's authoring export lands.",
+    "description": "FIRST read on_pickup_first at the end of this file — the user flagged MPI-467 (workflow smoke run on every ComfyUI bump) as the thing to look at on pickup. Ask the user which they want first. (1) Restart the app — that alone lets the engine drift-repair onto the fixed KJNodes and closes MPI-465's second criterion, and it is the precondition for any LTX test through the app. (2) MPI-452 step 5: one i2v run, then read /queue. (3) MPI-463's live proof, which is a 30-second forced bail. (4) MPI-466: before any design, check whether ltx23-lora-merged / transition / talkvid were ACTIVE in the user's int8 runs — if they were, LoRA-on-int8 already works and most of the plan's risk is retired for free. Do NOT touch LTX workflow files until the user's authoring export lands.",
     "command": "mpi-continue MPI-452"
   },
   "context": {
