@@ -94,18 +94,39 @@ for (const base of optionalFiles) {
 }
 
 assert.ok(checkedFiles >= 5, `expected several optional-media workflows, checked ${checkedFiles}`);
-assert.ok(checkedNodes > 0, 'no media nodes inspected — class list or derivation broke');
+
+// MPI-466: `checkedNodes > 0` used to guard this, on the assumption that SOME optional
+// workflow always carries a bare Load* media node. That stopped being true when LTX —
+// the last holdout — migrated off LoadLatent onto MpiStageLatents; every optional graph
+// now uses the self-gating path nodes (MPI-272) or the stage node, so the class this
+// test polices is EMPTY. That is the migration finishing, not the derivation breaking,
+// and asserting a non-zero count would now fail for the right reason at the wrong place.
+// The scan above keeps its teeth: reintroduce a bare Load* node in an optional graph and
+// it must still bake a staged name.
+assert.ok(checkedFiles > 0, 'no files inspected — the registry derivation broke');
 
 assert.deepStrictEqual(violations, [],
     'optional media inputs must bake a staged filename:\n  ' + violations.join('\n  '));
 
-// Positive control: the rule really is satisfied by the workflows that shipped correctly.
-// (Lowercase filename — models.js and the files on disk are both lowercase; the old
-// 'LTX_t2v.json' spelling only ever opened on a case-insensitive Windows FS.)
-const ltx = JSON.parse(fs.readFileSync(path.join(WF_DIR, 'ltx_t2v.json'), 'utf8'));
-const videoLatent = Object.values(ltx).find(n => n._meta?.title === 'Input_Video_Latent');
-assert.strictEqual(bakedName(videoLatent), 'ltx_video_latent_00001_.latent',
-    'LTX t2v Input_Video_Latent is the reference case — generate_ltx.py stamps this');
+// Positive control, MPI-466 edition. LTX used to provide it: a LoadLatent titled
+// Input_Video_Latent baking the staged 'ltx_video_latent_00001_.latent'. That node no
+// longer exists — MpiStageLatents replaced the whole save/load cluster and addresses its
+// stage-1 file by a PATH widget (save_path/load_path), which staging does not have to
+// pre-provide because the app writes it per run. So the control moves to asserting the
+// replacement is really in place, which is what makes the empty scan above legitimate
+// rather than a silently-disabled test.
+const ltx = JSON.parse(fs.readFileSync(path.join(WF_DIR, 'ltx_i2v_t2v.json'), 'utf8'));
+const stageNode = Object.values(ltx).find(n => n._meta?.title === 'Input_Video_Latent');
+assert.strictEqual(stageNode?.class_type, 'MpiStageLatents',
+    'LTX Input_Video_Latent must be the MpiStageLatents node — if it is a Load* again, ' +
+    'the staged-filename rule applies to it and the scan above must find it');
+// Its `latent` input is a WIRE, not a filename widget — which is precisely why it needs
+// nothing staged. (bakedName reads inputs.latent, so it returns the link tuple here.)
+assert.ok(Array.isArray(bakedName(stageNode)),
+    'MpiStageLatents.latent must be a link — a string there would mean a filename widget ' +
+    'crept back in, and staging would have to provide it');
+assert.strictEqual(typeof stageNode.inputs.load_path, 'string',
+    'MpiStageLatents reads its stage-1 file from load_path');
 
 // Negative control: the check has teeth. An unstaged bake must be rejected.
 assert.ok(!STAGED.includes('placeholder.png'),

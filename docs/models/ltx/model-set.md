@@ -9,6 +9,12 @@
 NerdyRodent FINAL set, post-A/B:
 - **Diffusion: full bf16 ONLY** (`ltx-2.3-22b-distilled-1.1_transformer_only_bf16`).
   fp8 dropped ("quality is crap on fp8"); mxfp8 = Blackwell-only → unusable on 3090/4090.
+  **Superseded for the SHIPPED balanced tier, 2026-08-07 (MPI-466):** `int8_convrot`
+  (20 GB) replaced the fp8/mxfp8 PAIR, so the arch split this line describes no longer
+  exists in the product — one weight runs on every GPU and `variants.arch` was deleted.
+  Bench A/B against the retired fp8: better sound, hands and eyes, ~10 s faster. Proven
+  on Ada; Blackwell is inferred from other int8 models, not measured for this weight.
+  bf16 remains the HIGH tier and this paragraph still describes it correctly.
 - **Encoder: heretic gemma fp8_scaled** (`anongecko/gemma-3-12b-it-heretic-fp8-comfy`,
   14.5GB) — video+audio. fp4 hurts, full over-influences.
 - text projection, video + audio VAEs, spatial **+ temporal** upscalers, IC-LoRA

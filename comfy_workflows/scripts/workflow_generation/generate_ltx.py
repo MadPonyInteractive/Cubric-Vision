@@ -1,117 +1,76 @@
 """
 generate_ltx.py
-LTX-2.3 handler: from ONE i2v+t2v API export, produce FOUR app workflow files —
-the four mode/stage variants, all bf16 (both engines run the same transformer):
-  ltx_i2v.json         — Input_Text_to_video=false, Input_Is_Continue=false
-  ltx_i2v_stage2.json  — derived: Input_Is_Continue flipped true
-  ltx_t2v.json         — Input_Text_to_video=true,  Input_Is_Continue=false
-  ltx_t2v_stage2.json  — derived: Input_Is_Continue flipped true
+LTX-2.3 handler: from ONE i2v+t2v API export, produce TWO app workflow files —
+one per quality tier, each serving every op and both stages:
 
-MPI-190: the bf16/GGUF engine split was REVERTED. cu130 (MPI-187/189) collapsed
-the aimdo cold-fault tax that was the GGUF transformer's only justification, so
-both engines now run the same bf16 UNETLoader + the same files — no `_gguf`
-siblings, no loader-swap. The template carries a single wired bf16 `UNETLoader`
-(the parked `UnetLoaderGGUF` was removed from the graph), so nothing to keep or
-delete. The CLIP is a single shared Gemma fp4_mixed loader across every engine/tier.
+  ltx_i2v_t2v.json       — bf16 transformer  (the `ltx-23` HIGH card)
+  ltx_i2v_t2v_int8.json  — int8 transformer  (the `ltx-23-balanced` card)
+
+MPI-466 collapsed this from TWELVE files (i2v/t2v x bf16/fp8/mxfp8 x
+stage-1/stage-2). Three things went away at once:
+
+  1. THE MODE SPLIT. The graph no longer carries `Input_Text_to_video` or
+     `Input_Use_End_Image`. Routing derives from which media strings are filled
+     (`Input_Start_Frame` / `Input_End_Frame` feed lazy branches), so t2v,
+     start-only, end-only and start+end are all reachable in one file and
+     illegal states are unreachable. Same shape H3 uses.
+
+  2. THE STAGE SPLIT. `MpiStageLatents` (titled `Input_Video_Latent`) replaced
+     the eight-node cluster — two SaveLatent, two LoadLatent and the boolean
+     gates. Its `is_continue` / `is_preview` are WIDGETS, so the app addresses
+     them as `Input_Video_Latent.is_continue` instead of needing a titled node
+     per flag. No `_stage2` twin file exists, or may be created; the ModelDefs
+     declare `capabilities.singleFileStages: true` so `resolveWorkflowFile`
+     stops appending the suffix.
+
+  3. THE ARCH AXIS. int8 replaced the fp8_scaled / mxfp8_block32 pair, so the
+     `variants.arch` block and its `_fp8` / `_mxfp8` workflow suffixes are gone.
+     What remains is a genuine QUALITY tier, not a GPU-family selector, which is
+     why the two files are named by dtype rather than resolved from an axis.
 
 ALL node lookup is by `_meta.title` — never by node id (ids change on re-export).
 
-Two LTX-specific differences from the WAN handler:
-
-  1. FAN-OUT. The single source drives both modes via the `Input_Text_to_video`
-     MpiSimpleBoolean gate. We stamp it per output file (i2v=false, t2v=true);
-     the app injects nothing mode-related — the op->file map encodes the mode.
-     FF/LF rides the i2v file's `Input_Use_End_Image` gate (not a separate file).
-
-  2. NO bypass-splice. Unlike WAN (which deletes its stage-1 sampler and rewires
-     consumers), the LTX graph bakes the stage-2 switch in: `Input_Is_Continue`
-     (#71) drives MpiIfElse gates that select the loaded video/audio latents over
-     the live stage-1 latents. The stage-1 sampler stays in the graph; ComfyUI
-     skips it because nothing consumes its output once the switch flips. So the
-     stage-2 derivation is just: flip `Input_Is_Continue` -> true. No deletion,
-     no slot-map, no rewiring.
-
 Authoring contract (you, once per workflow, in the ComfyUI graph):
-  - Title the i2v/t2v mode gate MpiSimpleBoolean -> "Input_Text_to_video"
-  - Title the stage-2 gate MpiBoolean            -> "Input_Is_Continue" (baked false)
-  - Save (API), drop LTX_*_template.json in this folder.
+  - Title the MpiStageLatents node -> "Input_Video_Latent"
+  - Keep "Output_Video" and "Output_Preview" on the two SaveVideo nodes
+  - Save as API, drop ltx_i2v_t2v_template.json in this folder
 """
 
 import json
 import copy
 from pathlib import Path
 
-T2V_GATE_TITLE = "Input_Text_to_video"   # MpiSimpleBoolean: false=i2v, true=t2v
-IS_CONTINUE_TITLE = "Input_Is_Continue"  # MpiBoolean: false=stage-1, true=stage-2
+UNET_LOADER_TITLE = "Load Diffusion Model"   # the single UNETLoader in the graph
+STAGE_LATENTS_TITLE = "Input_Video_Latent"   # MpiStageLatents: the whole two-stage handshake
 
-# MPI-200: quality tiers. ONE template, three transformer variants — only the
-# UNETLoader ("Load Diffusion Model") node changes (unet_name + weight_dtype);
-# CLIP (shared gemma fp4), VAEs, samplers and gates are identical across all
-# three. bf16 = the high-tier quality ceiling (unsuffixed filenames = the
-# existing files, zero churn). fp8_scaled + mxfp8_block32 = the balanced tier;
-# the app arch-selects between them (Blackwell → mxfp8, Ada/older → fp8_scaled).
-# Kijai comfy-format weights ONLY — the official Lightricks fp8 repo is broken.
-UNET_LOADER_TITLE = "Load Diffusion Model"  # the single UNETLoader in the graph
+# suffix: (unet_name, weight_dtype). weight_dtype stays "default" for both — the
+# quantization is baked in the safetensors metadata and UNETLoader reads it there;
+# naming a dtype the node does not list is a value_not_in_list reject.
 VARIANTS = {
-    # suffix: (unet_name, weight_dtype)
-    "":       ("ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors",         "default"),
-    "_fp8":   ("ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors",   "default"),
-    # weight_dtype stays "default": UNETLoader has NO 'mxfp8' option (only
-    # default/fp8_e4m3fn/fp8_e4m3fn_fast/fp8_e5m2). The mxfp8 quantization is
-    # baked in the safetensors metadata — the loader reads it under "default".
-    # Selecting a dtype that isn't in the node's list = value_not_in_list reject.
-    "_mxfp8": ("ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors", "default"),
+    "":      ("ltx-2.3-22b-distilled-1.1_transformer_only_bf16.safetensors",         "default"),
+    "_int8": ("ltx-2.3-22b-distilled-1.1_transformer_only_int8_convrot.safetensors", "default"),
 }
 
-# MPI-272: media inputs migrated to path-into-string nodes (MpiLoadImageFromPath /
-# MpiLoadAudio) that self-gate on an empty `string`. No placeholder staging or
-# stamping needed — the exported template already carries empty strings.
-#
-# Titles that MUST survive into every output (sanity gate). Each entry is a set
-# of acceptable alternatives (any one present passes).
+# Titles that MUST survive into every output (sanity gate).
 REQUIRED_TITLES = [
     {"Output_Video"},          # final capture (SaveVideo)
-    {"Output_Preview"},        # tier-2 preview capture (SaveVideo)
-    {"Input_Video_Latent"},    # stage-2 loaded video latent
-    {"Input_Audio_Latent"},    # stage-2 loaded audio latent (LTX saves TWO latents)
-    {IS_CONTINUE_TITLE},
-    {T2V_GATE_TITLE},
+    {"Output_Preview"},        # preview capture (SaveVideo)
+    {STAGE_LATENTS_TITLE},     # MpiStageLatents — no stage handshake without it
 ]
 
 
-def _find_node_id_by_title(wf: dict, title: str) -> str | None:
-    for nid, node in wf.items():
-        if isinstance(node, dict) and node.get("_meta", {}).get("title") == title:
-            return nid
-    return None
-
-
-def _set_boolean(wf: dict, title: str, value: bool) -> None:
-    nid = _find_node_id_by_title(wf, title)
-    if nid is None:
+def _find_by_title(wf: dict, title: str) -> str:
+    hits = [nid for nid, n in wf.items()
+            if isinstance(n, dict) and n.get("_meta", {}).get("title") == title]
+    if len(hits) != 1:
         raise SystemExit(
-            f"[FAIL] No node titled {title!r}. Title the gate {title!r} in the "
-            f"ComfyUI graph and re-export the API JSON."
+            f"[FAIL] Expected exactly ONE node titled {title!r}, found {len(hits)}."
         )
-    inputs = wf[nid].setdefault("inputs", {})
-    if "boolean" not in inputs:
-        raise SystemExit(
-            f"[FAIL] Node titled {title!r} has no 'boolean' input (got "
-            f"{sorted(inputs)}); cannot stamp it."
-        )
-    inputs["boolean"] = value
+    return hits[0]
 
 
 def _stamp_transformer(wf: dict, unet_name: str, weight_dtype: str) -> None:
-    """MPI-200: stamp the single UNETLoader with a tier variant's transformer file
-    and weight_dtype. Fails loud on a missing node or input (a rename must not
-    silently ship the wrong/unchanged loader)."""
-    nid = _find_node_id_by_title(wf, UNET_LOADER_TITLE)
-    if nid is None:
-        raise SystemExit(
-            f"[FAIL] No node titled {UNET_LOADER_TITLE!r}. Title the UNETLoader "
-            f"{UNET_LOADER_TITLE!r} in the ComfyUI graph and re-export."
-        )
+    nid = _find_by_title(wf, UNET_LOADER_TITLE)
     inputs = wf[nid].setdefault("inputs", {})
     for key in ("unet_name", "weight_dtype"):
         if key not in inputs:
@@ -123,51 +82,56 @@ def _stamp_transformer(wf: dict, unet_name: str, weight_dtype: str) -> None:
     inputs["weight_dtype"] = weight_dtype
 
 
+def _bake_stage_one(wf: dict) -> None:
+    """Force the stage flags to a stage-1 full run.
+
+    The app drives both flags at dispatch (`Input_Video_Latent.is_continue` /
+    `.is_preview`), so whatever the bench happened to be set to when the graph
+    was exported is leftover state, not intent. Baking it means a graph queued
+    straight on an engine — a smoke run, a bug repro — behaves like the app's
+    default rather than silently continuing from a stale mpi_stage1 latent.
+    """
+    nid = _find_by_title(wf, STAGE_LATENTS_TITLE)
+    inputs = wf[nid].setdefault("inputs", {})
+    for key in ("is_continue", "is_preview"):
+        if key not in inputs:
+            raise SystemExit(
+                f"[FAIL] Node titled {STAGE_LATENTS_TITLE!r} has no {key!r} input "
+                f"(got {sorted(inputs)}); is it really MpiStageLatents?"
+            )
+        inputs[key] = False
+
+
 def _check_required(wf: dict, label: str) -> None:
     present = {n.get("_meta", {}).get("title") for n in wf.values() if isinstance(n, dict)}
     for alts in REQUIRED_TITLES:
         if not (alts & present):
             raise SystemExit(f"[FAIL] {label} missing a required node titled one of {sorted(alts)}.")
-
-
-def _variant(template: dict, t2v: bool) -> dict:
-    """Stage-1 file for one mode: stamp the mode gate, ensure Is_Continue=false."""
-    wf = copy.deepcopy(template)
-    _set_boolean(wf, T2V_GATE_TITLE, t2v)
-    _set_boolean(wf, IS_CONTINUE_TITLE, False)
-    return wf
-
-
-def _derive_stage2(stage1: dict) -> dict:
-    """Stage-2 = stage-1 with Input_Is_Continue flipped true. Nothing else."""
-    wf = copy.deepcopy(stage1)
-    _set_boolean(wf, IS_CONTINUE_TITLE, True)
-    return wf
+    # A _stage2 twin must never come back: the app resolves stage 2 in-file now, and
+    # a stray twin would be loaded by nothing while quietly drifting from this source.
+    for banned in ("Input_Is_Continue", "Input_Preview_Only", "Input_Text_to_video"):
+        if banned in present:
+            raise SystemExit(
+                f"[FAIL] {label} still carries {banned!r}. That gate was replaced by "
+                f"{STAGE_LATENTS_TITLE!r} widgets / media-derived routing (MPI-466); "
+                f"re-export from the current graph."
+            )
 
 
 def build(source_path: Path, out_dir: Path) -> list[Path]:
-    """Orchestrator entry. source = i2v+t2v API export. Writes 12 files:
-    4 mode/stage variants (i2v/t2v × stage-1/stage-2) × 3 tier variants
-    (bf16/fp8/mxfp8). MPI-200: only the UNETLoader changes per tier variant;
-    bf16 keeps the unsuffixed filenames (the high-tier card's existing files)."""
+    """Orchestrator entry. source = the i2v+t2v API export. Writes ONE file per
+    tier variant: no mode split, no stage twin, no arch axis."""
     template = json.loads(source_path.read_text(encoding="utf-8"))
     _check_required(template, "Source template")
 
     written: list[Path] = []
     for vsuffix, (unet_name, weight_dtype) in VARIANTS.items():
-        for name, t2v in (("ltx_i2v", False), ("ltx_t2v", True)):
-            stage1 = _variant(template, t2v)
-            _stamp_transformer(stage1, unet_name, weight_dtype)
-            s1_out = out_dir / f"{name}{vsuffix}.json"
-            s1_out.write_text(json.dumps(stage1, indent=2), encoding="utf-8")
-            print(f"  [OK]   {s1_out.name} (stage-1, {T2V_GATE_TITLE}={t2v}, unet={unet_name})")
-            written.append(s1_out)
-
-            stage2 = _derive_stage2(stage1)
-            _check_required(stage2, f"{name}{vsuffix}_stage2")
-            s2_out = out_dir / f"{name}{vsuffix}_stage2.json"
-            s2_out.write_text(json.dumps(stage2, indent=2), encoding="utf-8")
-            print(f"  [OK]   {s2_out.name} (derived, {IS_CONTINUE_TITLE}=true)")
-            written.append(s2_out)
+        wf = copy.deepcopy(template)
+        _stamp_transformer(wf, unet_name, weight_dtype)
+        _bake_stage_one(wf)
+        out = out_dir / f"ltx_i2v_t2v{vsuffix}.json"
+        out.write_text(json.dumps(wf, indent=2), encoding="utf-8")
+        print(f"  [OK]   {out.name} (unet={unet_name})")
+        written.append(out)
 
     return written

@@ -365,30 +365,23 @@ export const modelDeps = {
         size: '41GB',
         sha256: 'cf9c5aafda70d495ff7c9bd3d591899b3cefe679a1a2458feee4c5b6ff9db249',
     },
-    // MPI-200 balanced tier — arch-gated transformers. fp8_scaled = Ada/Ampere/
-    // Turing (weight-only fp8, dequant to bf16 matmul, loads anywhere); mxfp8_block32
-    // = Blackwell native tensor path (weight_dtype=mxfp8, our v0.27+cu130 stack).
-    // Kijai comfy-format ONLY — the official Lightricks fp8 repo is broken. Selected
-    // per machine by the `variants.arch` resolver axis; only ONE installs per GPU.
-    'ltx23-transformer-fp8': {
-        id: 'ltx23-transformer-fp8',
-        name: 'LTX-2.3 22B Distilled Transformer (fp8_scaled)',
+    // MPI-466 balanced tier — int8_convrot, and it REPLACED an arch-gated PAIR
+    // (fp8_scaled for Ada/Ampere/Turing, mxfp8_block32 for Blackwell). One weight now
+    // serves every GPU, which is what let `variants.arch` and the `_fp8`/`_mxfp8`
+    // workflow suffixes be deleted outright. Bench A/B against the retired fp8: better
+    // on sound, hands and eyes, and ~10s faster. Proven on Ada; int8_convrot on
+    // Blackwell is INFERRED from other int8 models running there, not measured for
+    // this weight — do not upgrade that to "verified" without a run.
+    // Kijai comfy-format ONLY — the official Lightricks fp8 repo is broken.
+    'ltx23-transformer-int8': {
+        id: 'ltx23-transformer-int8',
+        name: 'LTX-2.3 22B Distilled Transformer (int8_convrot)',
         origin: 'Kijai/LTX2.3_comfy',
-        filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors',
-        url: 'https://models.cubric.studio/vision/models/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors',
-        mirrorUrl: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_fp8_scaled.safetensors',
-        size: '25.2GB',
-        sha256: '0a1d7aac2b338e8ec7e832149f1dcf11c9323272482b1cca0673d229702370f0',
-    },
-    'ltx23-transformer-mxfp8': {
-        id: 'ltx23-transformer-mxfp8',
-        name: 'LTX-2.3 22B Distilled Transformer (mxfp8_block32)',
-        origin: 'Kijai/LTX2.3_comfy',
-        filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors',
-        url: 'https://models.cubric.studio/vision/models/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors',
-        mirrorUrl: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_mxfp8_block32.safetensors',
-        size: '24.1GB',
-        sha256: 'b7a945ff24d65ad22c6977787c2e594e74df226e35f1f9dedb64be8fdbd6ffd8',
+        filename: 'diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_int8_convrot.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_int8_convrot.safetensors',
+        mirrorUrl: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/diffusion_models/ltx-2.3-22b-distilled-1.1_transformer_only_int8_convrot.safetensors',
+        size: '20GB',
+        sha256: '30fe2173fdb18881eb2482ece17ca044bedb8f28a38550ea7230da796fb8b614',
     },
     // ── MiniMax H3 transformers (MPI-452) ──────────────────────────────────────
     // NOT ON R2, AND THAT IS DELIBERATE — do not "fix" it by re-hosting. The

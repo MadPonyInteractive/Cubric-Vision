@@ -30,8 +30,12 @@
 export const PROGRESS_STAGES = Object.freeze({
     // LTX — measured single=3 (load + 7-step + 3-step). preview/stage2 per the
     // registry's two-stage split (first sampler = 2 steps, second = 1).
-    'ltx_t2v.json': Object.freeze({ single: 3, preview: 2, stage2: 1 }),
-    'ltx_i2v.json': Object.freeze({ single: 3, preview: 2, stage2: 1 }),
+    // MPI-466: the four LTX keys (t2v/i2v x arch) collapsed to ONE file per tier, and
+    // `_int8` normalizes back to this row the same way `_fp8`/`_mxfp8` used to — the
+    // variant swaps the loader, not the sampler graph.
+    // UNVERIFIED against the re-exported graph: these counts were measured on the old
+    // 119-node build. Re-measure on the first app run and correct if the bars differ.
+    'ltx_i2v_t2v.json': Object.freeze({ single: 3, preview: 2, stage2: 1 }),
     // WAN — verified single=2 (one bar per sampler; no separate model-load bar).
     'wan22_t2v.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
     'wan22_i2v.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
@@ -138,7 +142,7 @@ export const PROGRESS_STAGES = Object.freeze({
 // duplicating a row per variant.
 const _baseKey = (workflowFile) => workflowFile
     .replace(/_stage2\.json$/i, '.json')
-    .replace(/_(?:fp8|mxfp8)\.json$/i, '.json')
+    .replace(/_(?:fp8|mxfp8|int8)\.json$/i, '.json')
     .replace(/_(?:sfw|nsfw)\.json$/i, '.json');
 
 export function stagesFor(workflowFile, mode = 'single', extraBars = 0) {

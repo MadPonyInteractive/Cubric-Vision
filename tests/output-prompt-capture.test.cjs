@@ -77,8 +77,13 @@ assert.strictEqual(stagesFor('', 'single', 1), 0, 'empty filename => 0');
 // these filenames lowercase, so 'LTX_t2v.json' silently missed the table and returned
 // 0 — this assertion was failing before MPI-316 touched anything. Real callers pass the
 // models.js value, which is already lowercase.
-assert.strictEqual(stagesFor('ltx_t2v.json', 'single'), 3, 'LTX single unchanged');
-assert.strictEqual(stagesFor('ltx_t2v_stage2.json', 'stage2'), 1, '_stage2 suffix still stripped');
+assert.strictEqual(stagesFor('ltx_i2v_t2v.json', 'single'), 3, 'LTX single unchanged');
+// MPI-466: the balanced tier's `_int8` file normalizes back to the base row, the same way
+// `_fp8`/`_mxfp8` did — a tier variant swaps the loader, never the sampler graph.
+assert.strictEqual(stagesFor('ltx_i2v_t2v_int8.json', 'single'), 3, 'int8 tier normalizes to the base row');
+// The `_stage2` strip is still live code, so it is still pinned — but no model produces
+// such a filename any more: every multi-stage graph resolves stage 2 in-file now.
+assert.strictEqual(stagesFor('ltx_i2v_t2v_stage2.json', 'stage2'), 1, '_stage2 suffix still stripped');
 assert.strictEqual(stagesFor('wan5b_t2v.json', 'single'), 1, 'Wan5B unchanged');
 
 // Negative/garbage deltas must not corrupt a real count. (Moved off krea2_t2i.json with

@@ -1119,7 +1119,10 @@ export const MODELS = [
         // stage-1 and the prompt has no effect on the continuation, so a re-prompted
         // branch is meaningless. audio:true surfaces the audio media slot + the
         // Reference|Original mode UI.
-        capabilities: { multiStage: true, audio: true },
+        // singleFileStages (MPI-466): LTX migrated onto MpiStageLatents, so ONE graph
+        // carries both passes and `resolveWorkflowFile` must stop appending _stage2 —
+        // that twin no longer exists and Finish would 404 on it.
+        capabilities: { multiStage: true, audio: true, singleFileStages: true },
         video: 'ltx23_high_preview.mp4',
         type: 'ltx',
         // LTX has 6 flat user LoRA slots (Input_Lora_1..6), no high/low staging →
@@ -1129,9 +1132,14 @@ export const MODELS = [
         supportedOps: ['t2v_ms', 'i2v_ms'],
         gen_speed: 'medium',
         description: 'This video generator is one of the best open source models available. It comes with synchronized audio — reference-voice and direct-audio modes.',
+        // ONE graph for both ops (MPI-466). t2v / start-frame / end-frame / both are
+        // reachable in the same file because routing derives from which media strings
+        // are filled, not from an op boolean — so the op→file map no longer encodes
+        // the mode. supportedOps still splits them: it drives which media slots the UI
+        // offers, which is a different question from which graph runs.
         workflows: {
-            t2v_ms: 'ltx_t2v.json',
-            i2v_ms: 'ltx_i2v.json',
+            t2v_ms: 'ltx_i2v_t2v.json',
+            i2v_ms: 'ltx_i2v_t2v.json',
         },
         // MPI-190: engine split REVERTED, GGUF fully removed. cu130 (MPI-187/189)
         // collapsed the aimdo cold-fault tax that was the GGUF transformer's only
@@ -1169,10 +1177,14 @@ export const MODELS = [
     },
     {
         // MPI-200: LTX-2.3 BALANCED tier. Same base as `ltx-23` HIGH, but the 42GB
-        // bf16 transformer is replaced by a ~24-25GB arch-gated transformer that
-        // FITS 32GB — which kills the aimdo stage-2 eviction thrash MPI-197 traced
-        // (bf16-never-fits → 48s@10s / 116s@20s stage boundary). Same modelFamily so
-        // the two cluster under one L/B/H badge.
+        // bf16 transformer is replaced by a 20GB one that FITS 32GB — which kills the
+        // aimdo stage-2 eviction thrash MPI-197 traced (bf16-never-fits → 48s@10s /
+        // 116s@20s stage boundary). Same modelFamily so the two cluster under one
+        // L/B/H badge.
+        // MPI-466: the arch-gated PAIR (fp8_scaled / mxfp8_block32) became ONE int8
+        // weight that runs on every GPU, so `variants.arch` is gone and with it the
+        // `_fp8`/`_mxfp8` workflow suffixes. This card is now a pure QUALITY tier —
+        // the only difference from HIGH is which transformer the graph loads.
         id: 'ltx-23-balanced',
         sizeTier: 'balanced',
         featured: true,
@@ -1180,7 +1192,7 @@ export const MODELS = [
         name: 'LTX 2.3',
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
-        capabilities: { multiStage: true, audio: true },
+        capabilities: { multiStage: true, audio: true, singleFileStages: true },
         video: 'ltx23_balanced_preview.mp4',
         type: 'ltx',
         // Same LoRA node shape as ltx-23 High: live strength_clip input, surface
@@ -1189,18 +1201,19 @@ export const MODELS = [
         supportedOps: ['t2v_ms', 'i2v_ms'],
         gen_speed: 'fast',
         description: 'This video generator is one of the best open source models available. It comes with synchronized audio — reference-voice and direct-audio modes. A faster tier that trades a little quality for speed and lighter VRAM use.',
-        // Base filenames — the resolver appends the arch suffix from the `variants`
-        // block (blackwell → `_mxfp8`, modern → `_fp8`), yielding ltx_t2v_mxfp8.json
-        // etc. (all emitted by generate_ltx.py).
+        // The int8 sibling of the High card's file — same graph, different transformer
+        // baked by generate_ltx.py. No suffix is resolved any more: the arch axis that
+        // produced one is gone, so the filename is named outright.
         workflows: {
-            t2v_ms: 'ltx_t2v.json',
-            i2v_ms: 'ltx_i2v.json',
+            t2v_ms: 'ltx_i2v_t2v_int8.json',
+            i2v_ms: 'ltx_i2v_t2v_int8.json',
         },
-        // Shared deps = the High card's set MINUS the bf16 transformer. The
-        // arch-specific transformer comes from the `variants.arch` block: only the
-        // ONE weight matching this machine's GPU installs (mxfp8 on Blackwell,
-        // fp8_scaled on Ada/Ampere/Turing). See resolveModelDeps.js § variant axis.
+        // The High card's set with the int8 transformer in place of the bf16. Every
+        // other weight — both VAEs, the Gemma CLIP, the projection, the upscaler and
+        // the three baked LoRAs — is shared, and the base is still distilled-1.1, so
+        // the LoRAs stay on the generation they were tuned against.
         dependencies: [
+            'ltx23-transformer-int8',
             'ltx23-video-vae',
             'ltx23-audio-vae',
             'ltx23-text-projection',
@@ -1213,17 +1226,6 @@ export const MODELS = [
             'ComfyUI-MpiNodes',
             'comfyui-kjnodes',
         ],
-        variants: {
-            arch: {
-                // `label`/`size` are for the model-manager arch toggle row (MPI-209):
-                // labels are GPU-family names (not the dtype token) so the panel never
-                // hardcodes arch strings; `size` is a display hint for the toggle/guard.
-                options: {
-                    blackwell: { label: 'RTX 50 Series (Blackwell)', size: '24.1GB', extraDeps: ['ltx23-transformer-mxfp8'], workflowSuffix: '_mxfp8' },
-                    modern:    { label: 'RTX 40 & Older',            size: '25.2GB', extraDeps: ['ltx23-transformer-fp8'],   workflowSuffix: '_fp8'   },
-                },
-            },
-        },
     },
     {
         id: 'minimax-h3',

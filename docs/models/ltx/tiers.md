@@ -11,7 +11,8 @@ multi-stage authoring workflow. Times scale with clip length and GPU.
 ## The size rule — /64 is the law for the 2-stage pipeline
 
 **LTX-2.3's VAE requires only /32** (32× spatial), and the template's
-`ImageResizeKJv2` nodes (#87, #92) enforce `divisible_by: 32`. BUT the 2-stage
+`ImageResizeKJv2` nodes (**#516, #517** since the MPI-466 re-export; they were #87/#92
+in the graph this section was written against) enforce `divisible_by: 32`. BUT the 2-stage
 pipeline makes the *effective* grid **/64**: stage-1 is `MpiMath floor(a/2)`
 (nodes #155, #156) feeding `EmptyLTXVLatentVideo` (#143), so the half must land on
 the /32 latent grid — i.e. the input must be /64. A /32-but-not-/64 size does not
@@ -27,6 +28,12 @@ the earlier guess in this section):
   returns **512**, not 544. So 960×544 in → **960×512 out** — silently smaller than
   the picked size. (The earlier note here predicted a pad-UP to 288 → ~576; that
   was wrong — it floors.)
+
+**Re-verified against the MPI-466 re-export (2026-08-07).** The graph changed shape a
+lot — one file for every op and both stages, `MpiStageLatents` in place of the latent
+cluster — but this law is untouched: nodes **155/156** still compute `floor(a/2)` from
+`Input_Width`/`Input_Height` into `EmptyLTXVLatentVideo` **143**, and the resizes still
+carry `divisible_by: 32`. `LTX_RATIOS` needed no change.
 
 So the real rule is: **the 2-stage pipeline grid is effectively /64, NOT /32.**
 - **/64 = the only honest size** — halves cleanly onto the /32 latent grid →

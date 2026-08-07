@@ -351,9 +351,13 @@ function testWorkflowFileResolution() {
         // Lowercase: models.js stores workflow filenames lowercase and the files on
         // disk match, so a case-sensitive FS (Linux/mac) resolves them. Do not
         // "restore" the old CamelCase spelling — it only ever worked on Windows.
-        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'local'), 'ltx_t2v.json');
-        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote'), 'ltx_t2v.json');
-        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote', { stage2: true }), 'ltx_t2v_stage2.json');
+        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'local'), 'ltx_i2v_t2v.json');
+        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote'), 'ltx_i2v_t2v.json');
+        // MPI-466: LTX carries capabilities.singleFileStages now — ONE graph holds both
+        // passes, so stage 2 resolves to the SAME file. A `_stage2` name here would 404.
+        assert.strictEqual(resolveWorkflowFile(ltx, 't2v_ms', 'remote', { stage2: true }), 'ltx_i2v_t2v.json');
+        // Both ops share the graph: routing derives from media presence, not the filename.
+        assert.strictEqual(resolveWorkflowFile(ltx, 'i2v_ms', 'local'), 'ltx_i2v_t2v.json');
     }
 }
 
