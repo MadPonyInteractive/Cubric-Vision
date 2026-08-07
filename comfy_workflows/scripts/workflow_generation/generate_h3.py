@@ -42,8 +42,56 @@ from pathlib import Path
 SCRIPTS_DIR = Path(__file__).parent
 WORKFLOWS_DIR = SCRIPTS_DIR.parent.parent  # comfy_workflows/
 
+# fl2va and ref2va are TWO MODELS sharing one handler, not two ops of one model.
+# They load different transformers and route their media completely differently:
+# fl2va derives its op from which keyframe is present (four lazy branches into four
+# MiniMaxH3ImageToVideo nodes), while ref2va has no keyframe path at all — core's
+# MiniMaxH3ReferenceToVideo sets `minimax_refs` and never `minimax_keyframes`.
+#
+# Everything below the spec (prune, bake, weight + stage asserts) is shared because the
+# failure modes are identical. Only these four things differ per variant, so they live
+# here rather than in a forked copy of this file that would drift.
 MODEL_VARIANTS = {
     "minimax_h3_fl2va_template.json": "minimax_h3_fl2va.json",
+    "minimax_h3_r2va_template.json": "minimax_h3_r2va.json",
+}
+
+# The nine image / three video / three audio reference slots ref2va exposes. Each is an
+# Mpi loader whose `string` MUST ship empty: the node drops a slot by recognising the
+# loaders' empty-path sentinel (a 1x1 image / 1-sample waveform), so a stray bench path
+# does not error — it silently conditions the video on whatever that file happens to be.
+_REF_SLOT_TITLES = (
+    tuple(f"Input_Image{'' if i == 1 else f'_{i}'}" for i in range(1, 10))
+    + tuple(f"Input_Video{'' if i == 1 else f'_{i}'}" for i in range(1, 4))
+    + tuple(f"Input_Audio{'' if i == 1 else f'_{i}'}" for i in range(1, 4))
+)
+
+VARIANT_SPECS = {
+    "minimax_h3_fl2va_template.json": {
+        "transformer": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+        # Path strings feeding the MpiAnyChecker booleans that pick the branch.
+        "media_titles": ("Input_Start_Frame", "Input_End_Frame"),
+        "branch_class": "MiniMaxH3ImageToVideo",
+        # One per reachable media combination: t2v, start only, end only, start+end.
+        "branch_count": 4,
+        "extra_widgets": (),
+    },
+    "minimax_h3_r2va_template.json": {
+        # A SEPARATE DiT from fl2va's, ~21 GB of its own. Pointing this at the fl2va
+        # transformer does not error — it produces a perfectly good video that ignored
+        # the references, which is the single most expensive way to be wrong here.
+        "transformer": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+        "media_titles": _REF_SLOT_TITLES,
+        "branch_class": "MpiH3References",
+        # ONE node takes all 18 slots and filters internally. Branching per combination
+        # would need 2**18 of them, which is why MpiH3References exists.
+        "branch_count": 1,
+        # `match` is the shipped fallback: it fits each reference to the output's pixel
+        # area. `max` uses a 2048 short edge for best identity and is measurably slower
+        # (reference tokens ride through EVERY sampling step), so it must be the user's
+        # explicit choice, injected as `Input_Refs.ref_image_size`, never the default.
+        "extra_widgets": (("Input_Refs", "ref_image_size", "match"),),
+    },
 }
 
 # The one node that owns the two-stage handshake (MpiStageLatents, MPI-452). It replaced
@@ -73,12 +121,6 @@ CAPTURE_TITLES = ("Output_Video", "Output_Preview", STAGE_TITLE)
 # MpiStageLatents carries FOUR baked widgets on one node — a title-keyed dict could
 # only hold the last of them.
 BAKED_WIDGETS = [
-    # Media paths MUST be empty. Non-empty is not a cosmetic leftover: each feeds an
-    # MpiAnyChecker whose boolean picks the branch, so a stray value makes the graph
-    # believe a frame is present and run first+last-frame conditioning on a file that
-    # does not exist. (The 2026-08-06 export came back with `Input_End_Frame = "d"`.)
-    ("Input_Start_Frame", "string", ""),
-    ("Input_End_Frame", "string", ""),
     # Stage flags: a shipped template always starts at stage 1, never mid-flow. Both
     # now live as WIDGETS on the single MpiStageLatents node (MPI-452) instead of two
     # separate MpiSimpleBoolean nodes, which is why they share a title here.
@@ -102,17 +144,13 @@ BAKED_WIDGETS = [
 # the `filename` tail of the matching dep in modelDeps.js/assetDeps.js — a mismatch is
 # invisible until a user installs, because the app downloads the dep it declares and
 # ComfyUI then cannot find the name baked in the graph.
-EXPECTED_WEIGHTS = {
-    "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+# Shared by both variants; the transformer comes from the variant spec.
+SHARED_WEIGHTS = {
     "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
     "minimax_h3_video_vae_fp16.safetensors",
     "minimax_h3_audio_vae_fp32.safetensors",
 }
 WEIGHT_INPUT_KEYS = ("unet_name", "clip_name", "vae_name")
-
-# One MiniMaxH3ImageToVideo per reachable media combination. Fewer means a branch was
-# pruned away or never authored, and the graph would silently fall through to another.
-EXPECTED_H3_BRANCHES = 4
 
 
 def _find_id_by_title(workflow: dict, title: str) -> str | None:
@@ -152,13 +190,20 @@ def _prune_to_captures(workflow: dict) -> None:
               f"{'/'.join(CAPTURE_TITLES)}")
 
 
-def _bake_widgets(workflow: dict) -> None:
-    """Force every BAKED_WIDGETS entry to its shipped fallback.
+def _bake_widgets(workflow: dict, spec: dict) -> None:
+    """Force every baked widget to its shipped fallback.
 
     A LINKED input is a hard failure, not something to bake over: the app injects into
     these by title, so an input driven by a wire makes the injection land on a value
     nothing reads and the graph runs whatever the upstream happens to produce."""
-    for title, key, want in BAKED_WIDGETS:
+    # Media paths MUST be empty. Non-empty is not a cosmetic leftover — on fl2va each
+    # feeds an MpiAnyChecker whose boolean picks the branch, so a stray value makes the
+    # graph believe a frame is present and condition on a file that does not exist (the
+    # 2026-08-06 export came back with `Input_End_Frame = "d"`); on r2va it silently
+    # conditions the video on a leftover bench reference (the 2026-08-07 export came back
+    # with `Input_Image = inpaint_007.png`).
+    media = [(t, "string", "") for t in spec["media_titles"]]
+    for title, key, want in [*media, *BAKED_WIDGETS, *spec["extra_widgets"]]:
         nid = _find_id_by_title(workflow, title)
         if nid is None:
             raise SystemExit(f"[FAIL] no node titled {title!r} — the app injects into it "
@@ -174,16 +219,21 @@ def _bake_widgets(workflow: dict) -> None:
             print(f"  [BAKE] {title}.{key}: {got!r} -> {want!r}")
 
 
-def _assert_weights(workflow: dict) -> None:
-    """Every loader must name a weight the app actually declares as a dep."""
+def _assert_weights(workflow: dict, spec: dict) -> None:
+    """Every loader must name a weight the app actually declares as a dep.
+
+    The transformer is per-variant and is the one worth being loud about: fl2va and
+    ref2va are separate DiTs, and loading the wrong one does NOT error. It samples fine
+    and returns a good-looking video that simply ignored the references."""
+    expected = SHARED_WEIGHTS | {spec["transformer"]}
     found = {
         v
         for node in workflow.values()
         for k, v in node["inputs"].items()
         if k in WEIGHT_INPUT_KEYS and isinstance(v, str)
     }
-    unexpected = found - EXPECTED_WEIGHTS
-    missing = EXPECTED_WEIGHTS - found
+    unexpected = found - expected
+    missing = expected - found
     if unexpected or missing:
         raise SystemExit(
             f"[FAIL] loader weights do not match the declared deps.\n"
@@ -230,16 +280,26 @@ def _assert_latent_titles(workflow: dict) -> None:
             f"is a race, not a redundancy")
 
 
-def _assert_branches(workflow: dict) -> int:
-    """All four media combinations must still be reachable."""
-    n = sum(1 for node in workflow.values()
-            if node.get("class_type") == "MiniMaxH3ImageToVideo")
-    if n != EXPECTED_H3_BRANCHES:
-        raise SystemExit(f"[FAIL] {n} MiniMaxH3ImageToVideo node(s), expected "
-                         f"{EXPECTED_H3_BRANCHES} — one per media combination (t2v, "
-                         f"start only, end only, start+end). A missing branch does not "
-                         f"error, it falls through to another and conditions on the "
-                         f"wrong frames")
+def _assert_branches(workflow: dict, spec: dict) -> int:
+    """The variant's conditioning nodes are all present, and the OTHER variant's are not.
+
+    Both halves matter. Too few of our own does not error — the graph falls through to
+    another branch and conditions on the wrong media. And a leftover node from the other
+    variant means a half-converted graph: r2va was authored by editing a copy of fl2va,
+    so a surviving MiniMaxH3ImageToVideo would quietly re-introduce the keyframe path
+    that ref2va does not have."""
+    want_class, want_n = spec["branch_class"], spec["branch_count"]
+    n = sum(1 for node in workflow.values() if node.get("class_type") == want_class)
+    if n != want_n:
+        raise SystemExit(f"[FAIL] {n} {want_class} node(s), expected {want_n} — a missing "
+                         f"one does not error, it falls through and conditions on the "
+                         f"wrong media")
+    others = {s["branch_class"] for s in VARIANT_SPECS.values()} - {want_class}
+    for cls in sorted(others):
+        stray = [nid for nid, node in workflow.items() if node.get("class_type") == cls]
+        if stray:
+            raise SystemExit(f"[FAIL] node(s) {stray} are {cls}, which belongs to the OTHER "
+                             f"H3 variant — this graph is half-converted")
     return n
 
 
@@ -250,18 +310,20 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
         print(f"  [WARN] {source_path.name} not in MODEL_VARIANTS — nothing to do")
         return []
 
+    spec = VARIANT_SPECS[source_path.name]
     print(f"Template: {source_path.name}")
     workflow = json.loads(source_path.read_text(encoding="utf-8"))
 
     _prune_to_captures(workflow)
-    _bake_widgets(workflow)
-    _assert_weights(workflow)
+    _bake_widgets(workflow, spec)
+    _assert_weights(workflow, spec)
     _assert_latent_titles(workflow)
-    n_branches = _assert_branches(workflow)
+    n_branches = _assert_branches(workflow, spec)
 
     out_path = out_dir / output_name
     out_path.write_text(json.dumps(workflow, indent=2), encoding="utf-8")
-    print(f"  [OK]   {output_name} ({len(workflow)} nodes, {n_branches} H3 branches)")
+    print(f"  [OK]   {output_name} ({len(workflow)} nodes, "
+          f"{n_branches} {spec['branch_class']})")
     return [out_path]
 
 
