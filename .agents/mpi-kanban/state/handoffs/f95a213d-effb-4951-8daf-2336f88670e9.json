@@ -46,7 +46,12 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
       "docs/model-library.md — the poster must be frame 0 of the clip it ships with.",
@@ -101,7 +106,13 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "file",
-    "relevant_topics": ["models", "comfy engine", "workflow authoring", "mpi nodes", "generation lifecycle"]
+    "relevant_topics": [
+      "models",
+      "comfy engine",
+      "workflow authoring",
+      "mpi nodes",
+      "generation lifecycle"
+    ]
   },
   "rules_active": [
     ".claude/rules/dos_and_donts.md",
@@ -112,7 +123,21 @@
     "docs/workflow-authoring/README.md"
   ],
   "recent_events": [
-    { "at": "2026-08-07T01:10:00Z", "event": "handoff_created" }
+    {
+      "at": "2026-08-07T01:10:00Z",
+      "event": "handoff_created"
+    }
   ],
-  "resume_prompt": "You are resuming MPI-452 (MiniMax H3 in Cubric Vision) plus three cards this session opened. SHIPPED: checklist step 8 — the H3 card preview was reshot at 864x480, 5 s -> 124 frames, video + muxed AAC, and its .webp regenerated. Non-obvious constraint learned doing it: MpiTileSheet hands the derived .webp to <video poster>, so the poster IS the card until hover playback starts and must be frame 0 of the clip it ships with. FIXED + CARDED: MPI-463, the stranded lane — generationStore.register() takes a lane slot and _laneBusy derives from the store's running list, so eleven pre-dispatch bails that reported an error without settling wedged that lane until restart; _failBail now settles to PHASES.ERROR then reports, pinned with a negative control, 467/467. FIXED + CARDED: MPI-465 — LTX was DEAD on ComfyUI 0.30.x for all 12 shipped graphs, because ComfyUI f8a3fd9d made LatentUpscaleModelLoader return a ModelPatcher while KJNodes still called .to(device) on it; the KJNodes pin is bumped to 35e5956 and it is PROVEN on the bench (the exact failing prompt completed in 124 s). Two things about MPI-465 you must not misread: the engine is 0.30.0 and ALREADY contains the breaking commit (read the file, not the version), and the RUNNING server cannot see the new pin because node_lock is read through a cached require — /engine/deps-status says no drift until the app restarts. Also fixed the user's own bench wiring: their end-frame-only routing computed the end guide and then discarded it, because six gates were still on `is flf` (both_true) while only the two new packer selectors used `is lf`; repointing Set(is flf) to `has img2` fixed it and the user CONFIRMED end frame now works. FILED: MPI-466, the user's idea to collapse LTX to ONE card — dev int8 21.5GB plus the rank-111 distilled-1.1 LoRA as a runtime turbo toggle, exactly the Krea 2 turboToggle pattern, replacing ~66GB of card-pair with 24.25GB. Its gate is LoRA-on-int8, and there is a free partial proof available: check whether the three baked LTX LoRAs were active in the user's int8 runs. STILL OWED: MPI-452 step 5 (one i2v run through the app, then read /queue for Input_Start_Frame), live proof for MPI-463 and MPI-465, a Pod image rebuild for remote LTX, and ref2va. Do NOT touch LTX workflow files until the user's authoring export lands — their six _stage2 twins are still live and correct."
+  "resume_prompt": "You are resuming MPI-452 (MiniMax H3 in Cubric Vision) plus three cards this session opened. SHIPPED: checklist step 8 — the H3 card preview was reshot at 864x480, 5 s -> 124 frames, video + muxed AAC, and its .webp regenerated. Non-obvious constraint learned doing it: MpiTileSheet hands the derived .webp to <video poster>, so the poster IS the card until hover playback starts and must be frame 0 of the clip it ships with. FIXED + CARDED: MPI-463, the stranded lane — generationStore.register() takes a lane slot and _laneBusy derives from the store's running list, so eleven pre-dispatch bails that reported an error without settling wedged that lane until restart; _failBail now settles to PHASES.ERROR then reports, pinned with a negative control, 467/467. FIXED + CARDED: MPI-465 — LTX was DEAD on ComfyUI 0.30.x for all 12 shipped graphs, because ComfyUI f8a3fd9d made LatentUpscaleModelLoader return a ModelPatcher while KJNodes still called .to(device) on it; the KJNodes pin is bumped to 35e5956 and it is PROVEN on the bench (the exact failing prompt completed in 124 s). Two things about MPI-465 you must not misread: the engine is 0.30.0 and ALREADY contains the breaking commit (read the file, not the version), and the RUNNING server cannot see the new pin because node_lock is read through a cached require — /engine/deps-status says no drift until the app restarts. Also fixed the user's own bench wiring: their end-frame-only routing computed the end guide and then discarded it, because six gates were still on `is flf` (both_true) while only the two new packer selectors used `is lf`; repointing Set(is flf) to `has img2` fixed it and the user CONFIRMED end frame now works. FILED: MPI-466, the user's idea to collapse LTX to ONE card — dev int8 21.5GB plus the rank-111 distilled-1.1 LoRA as a runtime turbo toggle, exactly the Krea 2 turboToggle pattern, replacing ~66GB of card-pair with 24.25GB. Its gate is LoRA-on-int8, and there is a free partial proof available: check whether the three baked LTX LoRAs were active in the user's int8 runs. STILL OWED: MPI-452 step 5 (one i2v run through the app, then read /queue for Input_Start_Frame), live proof for MPI-463 and MPI-465, a Pod image rebuild for remote LTX, and ref2va. Do NOT touch LTX workflow files until the user's authoring export lands — their six _stage2 twins are still live and correct.",
+  "on_pickup_first": {
+    "note": "LOOK AT THIS FIRST when picking up this handoff. User-stated, recorded as given.",
+    "user_words": "Right, I'm guessing we should write tests to at least try and see if all workflows run every time we bump comfyui. Perhaps make it part of the comfyui bump skill or playbook, and if we don't have one, we should create one. The only problem I see with that is that I can't possibly have all models installed at once. Leave the hotfix for now. We'll just fix it on 1.4.",
+    "card": "MPI-467",
+    "decisions": [
+      "NO HOTFIX for MPI-465. The KJNodes fix rides on 1.4. LTX stays dead for users on 1.3.0/1.3.1 until then - that is a deliberate, user-made call, not an oversight.",
+      "Build a smoke run that EXECUTES every workflow on a ComfyUI bump, hung off a bump skill/playbook. Confirmed neither exists: mpi-bump-local-comfy is BENCH-only and node_lock core has no playbook."
+    ],
+    "the_blocker_and_its_answer": "The user raised it himself - he cannot have every model installed at once. He does not need to: smoke what IS installed locally (LTX is, which is exactly what would have caught MPI-465) and put the full matrix on the Builder Pod, whose volume already owns the weights. A skipped model must be REPORTED, never counted as a pass.",
+    "trap_for_whoever_builds_it": "Validation-only is NOT sufficient. MPI-465 threw at sampling start inside a KJNodes OUTER_SAMPLE wrapper, AFTER the loaders ran - ComfyUI validated the graph clean. The smoke must execute a minimal generation, not just POST for node_errors."
+  }
 }

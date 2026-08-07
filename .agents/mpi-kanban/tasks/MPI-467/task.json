@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-467",
+  "title": "Smoke-run every workflow when ComfyUI is bumped - and give the engine bump a playbook",
+  "description": "MPI-465 shipped a totally dead LTX to users for six days because a ComfyUI bump changed a return type under a custom node and NOTHING executes a workflow before release. The engine bump also has no skill and no playbook - mpi-bump-local-comfy only touches the BENCH at G:/ComfyUi, not node_lock's core pin. Build a smoke matrix that EXECUTES a minimal generation per workflow, and hang it off a real engine-bump playbook.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-07T01:40:00Z",
+  "updated_at": "2026-08-07T01:40:00Z",
+  "labels": [
+    "testing",
+    "engine",
+    "release",
+    "tooling"
+  ],
+  "acceptance": [
+    "A smoke run EXECUTES each workflow - validation alone would NOT have caught MPI-465, which threw at sampling start after the loaders ran",
+    "Locally it smokes whatever is INSTALLED and says plainly which models it skipped - never silently reports green for an unrun model",
+    "The full matrix has a home that owns every weight (Builder Pod volume), so local coverage gaps are not permanent",
+    "An engine-bump playbook exists and calls the smoke run as a gate; mpi-bump-local-comfy stays bench-only and is cross-referenced, not overloaded",
+    "The release flow refuses to ship a bumped engine with no smoke evidence"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  },
+  "priority": "high",
+  "attention": false
+}
