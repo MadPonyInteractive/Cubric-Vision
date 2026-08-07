@@ -2,9 +2,9 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "abb1411b-1964-4625-97c5-6184af3f354b",
   "generated_at": "2026-08-07T16:34:32Z",
-  "from_session": "MPI-475 opened — H3 ref2va: the node that makes reference-to-video injectable",
+  "from_session": "MPI-475 opened \u2014 H3 ref2va: the node that makes reference-to-video injectable",
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "LTX + WAN synced, MpiH3References written and proved, MPI-475 filed, generate_h3 parameterised for two variants",
     "branch": "master"
@@ -19,28 +19,28 @@
     "completed": [
       "LTX SYNCED (7cd24660 raw, 6bb781a8 bake). The user's MpiClearVram node 631 sits between the frame-trim MpiListRange and Output_Video, mirroring node 65 on the preview path. 134 nodes both tiers, was 133.",
       "WAN SYNCED (77651ff6 raw, da4970f0 bake). MpiCrop -> ImageResizeKJv2 on both start/end frame inputs (keep_proportion crop, crop_position center, divisible_by 16). 68 nodes, unchanged. USER VERIFIED ALL THREE ROUTES LIVE: start frame, end frame only, first+last, plus multi-stage.",
-      "MPI-473 COMMITTED (efea3c64) — was done/user-verified but uncommitted, and its generate_h3.py edit was blocking the sync guard. 26 files, npm test 482/482 first.",
+      "MPI-473 COMMITTED (efea3c64) \u2014 was done/user-verified but uncommitted, and its generate_h3.py edit was blocking the sync guard. 26 files, npm test 482/482 first.",
       "MpiH3References SHIPPED AND PUSHED (ComfyUi-MpiNodes a603fc4, main). 18 flat optional slots, empties dropped, survivors renumbered from 0. DELEGATES conditioning to core's MiniMaxH3ReferenceToVideo instead of copying its tensor maths. Registered in __init__.py (3 sites), README row, changelog line, assert-based self-check via `python h3.py`.",
-      "PROVED BY OUTPUT on the bench: prompt 8da14ac3, one reference image, 14 empty slots dropped, Output_Video written. That covered the one thing the offline self-check could not — calling core's V3 execute() classmethod directly.",
+      "PROVED BY OUTPUT on the bench: prompt 8da14ac3, one reference image, 14 empty slots dropped, Output_Video written. That covered the one thing the offline self-check could not \u2014 calling core's V3 execute() classmethod directly.",
       "NO REGISTRY PUBLISH FIRED on the push, confirmed: publish_action.yml has a `paths: pyproject.toml` filter and the commit touches four other files. `gh run list` still shows the 2026-07-19 1.2.6 bump as the latest run.",
-      "BOTH H3 WORKFLOWS SYNCED (9619e2ec raw, c5a1a024 generated). fl2va's Output_Preview no longer receives audio — the preview decodes a stage-1 latent so its audio was always under-denoised noise; Output_Video keeps its. Orphaned VAEDecodeAudio pruned, 57 -> 56 nodes. Nothing app-side reads preview audio (checked).",
-      "BOTH H3 TEMPLATES PASS validate-injection-rules, including r2va with the new node — titles unique, all Input_* reach a capture, all 15 loaders block_if_empty false.",
+      "BOTH H3 WORKFLOWS SYNCED (9619e2ec raw, c5a1a024 generated). fl2va's Output_Preview no longer receives audio \u2014 the preview decodes a stage-1 latent so its audio was always under-denoised noise; Output_Video keeps its. Orphaned VAEDecodeAudio pruned, 57 -> 56 nodes. Nothing app-side reads preview audio (checked).",
+      "BOTH H3 TEMPLATES PASS validate-injection-rules, including r2va with the new node \u2014 titles unique, all Input_* reach a capture, all 15 loaders block_if_empty false.",
       "generate_h3.py PARAMETERISED for two variants (8e40d43b). VARIANT_SPECS carries the per-variant transformer, media titles, branch class/count and extra widgets; prune/bake/stage asserts stay shared. fl2va output is BYTE-IDENTICAL after the refactor.",
       "MPI-475 FILED with a full brief. Board validator exits 0, next_id bumped to 476.",
       "The multi-stage caching finding written to .claude/rules/comfy_injection_multistage.md (+20 lines, file at 173/200).",
-      "PromptBox negative-audio icon fixed to volumeOff (struck-through speaker) — it read as a POSITIVE audio prompt before (e48025c6).",
-      "R2VA RE-EXPORTED WITH THE CORRECT TRANSFORMER AND BAKED (877ef1a5 raw, e48025c6 generated). comfy_workflows/minimax_h3_r2va.json — 49 nodes, minimax_h3_ref2va_pruned_int8_convrot, Input_Refs titled, ref_image_size baked to `match`, ZERO leftover bench paths, all 15 loaders block_if_empty false, both captures present. Passes validate-injection-rules.",
+      "PromptBox negative-audio icon fixed to volumeOff (struck-through speaker) \u2014 it read as a POSITIVE audio prompt before (e48025c6).",
+      "R2VA RE-EXPORTED WITH THE CORRECT TRANSFORMER AND BAKED (877ef1a5 raw, e48025c6 generated). comfy_workflows/minimax_h3_r2va.json \u2014 49 nodes, minimax_h3_ref2va_pruned_int8_convrot, Input_Refs titled, ref_image_size baked to `match`, ZERO leftover bench paths, all 15 loaders block_if_empty false, both captures present. Passes validate-injection-rules.",
       "MPI-475 MOVED todo -> doing (in-progress) with a checklist splitting the DONE ComfyUI half from the untouched Vision half.",
-      "CHANGELOG SETTLED (56902d53). Only the LTX negative-prompt fix went into UNRELEASED.md fixes, plus one sentence on the existing end-frame whatIsNew bullet naming LTX 2.3 and Wan 2.2. The H3 preview-audio and WAN frame-fitting entries were REJECTED BY THE USER on the right test: release notes describe changes against v1.3.1, and H3 has never shipped while the WAN issue was never in a release — neither is a fix any user could have experienced. Apply that test to every future proposal.",
-      "MEMORY: two tool files updated with today's traps — /history returns OLDEST FIRST and a blocked node is neither cached nor executed (tool_diff_the_dispatched_graph_from_comfy_history), and never run workflow-to-api.mjs bare (tool_litegraph_to_api_converter)."
+      "CHANGELOG SETTLED (56902d53). Only the LTX negative-prompt fix went into UNRELEASED.md fixes, plus one sentence on the existing end-frame whatIsNew bullet naming LTX 2.3 and Wan 2.2. The H3 preview-audio and WAN frame-fitting entries were REJECTED BY THE USER on the right test: release notes describe changes against v1.3.1, and H3 has never shipped while the WAN issue was never in a release \u2014 neither is a fix any user could have experienced. Apply that test to every future proposal.",
+      "MEMORY: two tool files updated with today's traps \u2014 /history returns OLDEST FIRST and a blocked node is neither cached nor executed (tool_diff_the_dispatched_graph_from_comfy_history), and never run workflow-to-api.mjs bare (tool_litegraph_to_api_converter)."
     ],
     "pending": [
-      "RE-JUDGE EVERY r2va RESULT. Until the 2026-08-07 re-export the graph loaded the FL2VA transformer, which does NOT error — it samples fine and returns a good-looking video that ignored the references. So the `match` vs `max` quality comparison AND the placeholder reel clip were both produced on the wrong DiT. Nothing has yet tested whether identity actually follows the reference on the correct weights, which is the model's entire claim.",
-      "Input_Refs.ref_image_size app control NOT WRITTEN. Graph half is done (node retitled, Primitive dropped, widget unlinked). Emit params['Input_Refs.ref_image_size'] = match | max via the MPI-359 dotted form. Only ever the DOTTED form — a plain key hits the generic title spray and writes into every recognised input on the node.",
+      "RE-JUDGE EVERY r2va RESULT. Until the 2026-08-07 re-export the graph loaded the FL2VA transformer, which does NOT error \u2014 it samples fine and returns a good-looking video that ignored the references. So the `match` vs `max` quality comparison AND the placeholder reel clip were both produced on the wrong DiT. Nothing has yet tested whether identity actually follows the reference on the correct weights, which is the model's entire claim.",
+      "Input_Refs.ref_image_size app control NOT WRITTEN. Graph half is done (node retitled, Primitive dropped, widget unlinked). Emit params['Input_Refs.ref_image_size'] = match | max via the MPI-359 dotted form. Only ever the DOTTED form \u2014 a plain key hits the generic title spray and writes into every recognised input on the node.",
       "The rest of MPI-475, per its checklist: dep entries at publisher URLs, ModelDef, progressStages, media slots (9 image / 3 video / 3 audio), prompt-tag construction, type-consumer sweep, and the scrollable PromptBox chip row.",
-      "MPI-474's audio negative stays HELD from the changelog — the live test was inconclusive (the no-music negative did nothing; audio direction in the POSITIVE prompt is what removed music). Do not write that line until a run proves it.",
+      "MPI-474's audio negative stays HELD from the changelog \u2014 the live test was inconclusive (the no-music negative did nothing; audio direction in the POSITIVE prompt is what removed music). Do not write that line until a run proves it.",
       "MPI-466 and MPI-474 both still sit in doing/validating awaiting the user's explicit go.",
-      "npm run release:check still FAILS by design — engine pin moved 0.29.2 -> 0.30.0 with no dev_configs/smoke-evidence.json. That is MPI-467/468's gate, not a regression."
+      "npm run release:check still FAILS by design \u2014 engine pin moved 0.29.2 -> 0.30.0 with no dev_configs/smoke-evidence.json. That is MPI-467/468's gate, not a regression."
     ]
   },
   "task_card": {
@@ -65,51 +65,51 @@
   ],
   "knowledge_preservation": {
     "completed": [
-      ".agents/mpi-kanban/tasks/MPI-475/brief.md — why ref2va cannot ride on fl2va (three independent reasons), every trap with its source evidence, the measured match-vs-max cost, and the remaining Vision-side scope",
-      ".claude/rules/comfy_injection_multistage.md § Traps — re-running an unchanged multi-stage graph always re-runs stage 2, why IS_CHANGED cannot fix it, and why it cannot reach the app",
-      "ComfyUi-MpiNodes README + changelog — MpiH3References row and entry",
-      "generate_h3.py — its docstring and VARIANT_SPECS comments now carry the fl2va-vs-ref2va distinction"
+      ".agents/mpi-kanban/tasks/MPI-475/brief.md \u2014 why ref2va cannot ride on fl2va (three independent reasons), every trap with its source evidence, the measured match-vs-max cost, and the remaining Vision-side scope",
+      ".claude/rules/comfy_injection_multistage.md \u00a7 Traps \u2014 re-running an unchanged multi-stage graph always re-runs stage 2, why IS_CHANGED cannot fix it, and why it cannot reach the app",
+      "ComfyUi-MpiNodes README + changelog \u2014 MpiH3References row and entry",
+      "generate_h3.py \u2014 its docstring and VARIANT_SPECS comments now carry the fl2va-vs-ref2va distinction"
     ],
     "pending": [
-      "docs/models/h3/README.md has no ref2va section yet. Hold it until the weight is corrected and a real reference run is judged — a doc written against fl2va-transformer output would be wrong in a way nobody could see."
+      "docs/models/h3/README.md has no ref2va section yet. Hold it until the weight is corrected and a real reference run is judged \u2014 a doc written against fl2va-transformer output would be wrong in a way nobody could see."
     ]
   },
   "next_action": {
-    "description": "The ComfyUI half of ref2va is DONE and baked. Start by judging a real reference run on the CORRECT weights — generate with one strong reference and confirm identity actually follows it, then re-run the match vs max comparison, because both earlier readings used the fl2va transformer. Then take the Vision half in checklist order, running /mpi-add-model since it enforces the playbook. The ref_image_size control is the smallest first win and unblocks the character-sheet case that motivates the whole model.",
+    "description": "The ComfyUI half of ref2va is DONE and baked. Start by judging a real reference run on the CORRECT weights \u2014 generate with one strong reference and confirm identity actually follows it, then re-run the match vs max comparison, because both earlier readings used the fl2va transformer. Then take the Vision half in checklist order, running /mpi-add-model since it enforces the playbook. The ref_image_size control is the smallest first win and unblocks the character-sheet case that motivates the whole model.",
     "command": "mpi-continue MPI-475"
   },
   "context": {
     "key_decisions": [
       "MpiH3References DELEGATES to core's MiniMaxH3ReferenceToVideo rather than copying its tensor maths. Verified byte-identical (md5 422138bb) between engine v0.30.0 and bench v0.30.2, so the delegation is safe across both.",
-      "DO NOT BUMP ComfyUI for this. The H3 node file is identical in 0.30.0 and 0.30.2, and only v0.30.0 publishes a Windows portable build — 0.30.1/0.30.2 are tags with no release assets, so there is nothing to bump the shipped engine to.",
+      "DO NOT BUMP ComfyUI for this. The H3 node file is identical in 0.30.0 and 0.30.2, and only v0.30.0 publishes a Windows portable build \u2014 0.30.1/0.30.2 are tags with no release assets, so there is nothing to bump the shipped engine to.",
       "The empty-slot sentinel is EXACT, not heuristic: the Mpi loaders with block_if_empty OFF emit a 1x1 image and a 1-sample waveform, which real media cannot be. A genuinely black reference and a genuinely silent clip both pass through. Do not replace this with a content/brightness test.",
       "ref2va references are NEVER cropped or resized app-side. Both match and max are aspect-preserving down-only scales done by the node, and neither crops. fl2va crops because a keyframe literally becomes frame 0 / frame N-1; a reference never touches the canvas. Capping uploads at a 2048 short edge is the only worthwhile app-side step.",
       "ref_image_size ships as `match` and `max` is the user's explicit choice. Measured 2026-08-07 with ONE reference: match 11-12 s/step, max 14 s/step. Reference tokens ride through EVERY sampling step, so nine refs at max is far steeper than that 20%.",
       "The r2va preview clip (the accidental 10-second script compressed into 1 second) is a PLACEHOLDER by the user's decision. It was made with one reference, so do not caption it as a multi-reference showcase.",
-      "1.4 ships on the H3 hype window — that is the stated priority, so MPI-475 is the critical path.",
+      "1.4 ships on the H3 hype window \u2014 that is the stated priority, so MPI-475 is the critical path.",
       "generate_h3.py handles BOTH variants in one file rather than a forked copy: only four things differ (transformer, media titles, branch class, branch count) and a forked copy would drift on the shared prune/bake/stage asserts."
     ],
     "constraints": [
       "CONVERT AGAINST THE ENGINE: COMFY_URL=http://127.0.0.1:48188. Default 8188 is the authoring bench and runs AHEAD (0.30.2 vs 0.30.0).",
-      "THE ENGINE MUST BE RESTARTED after a MpiNodes change or the converter fails with 'class not in /object_info'. This bit once this session — the bench had MpiH3References and the engine did not.",
+      "THE ENGINE MUST BE RESTARTED after a MpiNodes change or the converter fails with 'class not in /object_info'. This bit once this session \u2014 the bench had MpiH3References and the engine did not.",
       "sync-raw-workflows.mjs REFUSES to run while generated workflow files are uncommitted. Commit them first; this cost two detours this session.",
-      "NEVER run `node scripts/workflow-to-api.mjs` bare. It converts EVERY raw file against the DEFAULT port (8188, the bench) and writes — it clobbered 7 runtime workflows and dropped 10 stray templates this session. All 17 were reverted. Use sync-raw-workflows.mjs.",
+      "NEVER run `node scripts/workflow-to-api.mjs` bare. It converts EVERY raw file against the DEFAULT port (8188, the bench) and writes \u2014 it clobbered 7 runtime workflows and dropped 10 stray templates this session. All 17 were reverted. Use sync-raw-workflows.mjs.",
       "raw/ is READ-ONLY to agents. Never hand-edit a runtime workflow JSON.",
       "/history from ComfyUI returns OLDEST FIRST. Assuming newest-first made me audit a stale graph and report a duplicate-title bug the user had already fixed. Sort by the execution_start timestamp.",
       "A node that was BLOCKED is neither cached nor executed, so 'not in execution_cached' does NOT mean it ran. Judge by the outputs dict instead.",
-      "The MpiNodes repo publish_action.yml fires on push to main ONLY for pyproject.toml changes. Do not touch that file casually, and never use workflow_dispatch — the user was explicit. Versions 1.1.0-1.2.1 are still flagged on the registry.",
-      "MpiNodes help_funcs.py imports comfy/torch/folder_paths at module scope, so h3.py deliberately does NOT import it — that keeps `python h3.py` runnable for the self-check."
+      "The MpiNodes repo publish_action.yml fires on push to main ONLY for pyproject.toml changes. Do not touch that file casually, and never use workflow_dispatch \u2014 the user was explicit. Versions 1.1.0-1.2.1 are still flagged on the registry.",
+      "MpiNodes help_funcs.py imports comfy/torch/folder_paths at module scope, so h3.py deliberately does NOT import it \u2014 that keeps `python h3.py` runnable for the self-check."
     ],
     "files_modified": [
       "comfy_workflows/raw/{ltx_i2v_t2v,wan22_i2v,minimax_h3_fl2va,minimax_h3_r2va}_template.json + every generated twin (ALL COMMITTED)",
       "comfy_workflows/scripts/workflow_generation/generate_h3.py (8e40d43b)",
-      "comfy_workflows/minimax_h3_r2va.json (e48025c6 — NEW)",
+      "comfy_workflows/minimax_h3_r2va.json (e48025c6 \u2014 NEW)",
       "c:\\AI\\Mpi\\ComfyUi-MpiNodes\\{h3.py,__init__.py,README.md,changelog.md} (a603fc4, COMMITTED AND PUSHED)",
-      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js (e48025c6 — volumeOff icon)",
-      ".claude/rules/comfy_injection_multistage.md (e48025c6 — the caching trap)",
+      "js/components/Organisms/MpiPromptBox/MpiPromptBox.js (e48025c6 \u2014 volumeOff icon)",
+      ".claude/rules/comfy_injection_multistage.md (e48025c6 \u2014 the caching trap)",
       "docs/releases/UNRELEASED.md (56902d53)",
       ".agents/mpi-kanban/tasks/MPI-475/ + board.json + events.jsonl (e48025c6)",
-      "WORKING TREE IS CLEAN. Nothing pushed on Cubric-Vision — the user pushes when ready."
+      "WORKING TREE IS CLEAN. Nothing pushed on Cubric-Vision \u2014 the user pushes when ready."
     ],
     "files_to_read_first": [
       ".agents/mpi-kanban/tasks/MPI-475/brief.md",
@@ -146,8 +146,12 @@
     {
       "at": "2026-08-07T16:50:00Z",
       "event": "handoff_updated",
-      "note": "refreshed after close-out — r2va baked, card in doing, changelog settled"
+      "note": "refreshed after close-out \u2014 r2va baked, card in doing, changelog settled"
+    },
+    {
+      "at": "2026-08-07T19:14:04Z",
+      "event": "handoff_resolved"
     }
   ],
-  "resume_prompt": "You are resuming MPI-475: MiniMax H3 ref2va, reference-to-video. Read .agents/mpi-kanban/tasks/MPI-475/checklist.md FIRST — it splits what is done from what is not. THE COMFYUI HALF IS COMPLETE: MpiH3References is written, self-checked, proved by output and pushed (ComfyUi-MpiNodes a603fc4); generate_h3.py handles both H3 variants (8e40d43b); and comfy_workflows/minimax_h3_r2va.json is baked with the correct ref2va transformer (49 nodes, Input_Refs, ref_image_size `match`). The node exists because core's MiniMaxH3ReferenceToVideo takes references through AUTOGROW slots a host app cannot grow at inject time — one branch per combination would be 2**18 — so it takes all 18 slots flat, drops empties by the loaders' 1x1-image / 1-sample-waveform sentinel, renumbers survivors so core's index-based soundtrack pairing holds, and DELEGATES the conditioning to core rather than copying it. YOUR FIRST JOB IS JUDGEMENT, NOT CODE: every r2va result so far was produced on the FL2VA transformer, which does not error — it returns a good video that ignored the references. So the match-vs-max quality read and the placeholder reel clip are both suspect, and nothing has tested the model's actual claim that identity follows the reference. Generate on the correct weights and judge that first. Then the Vision half in checklist order via /mpi-add-model: the Input_Refs.ref_image_size control (dotted form ONLY), then deps at publisher URLs (never R2 — the licence forbids redistribution), ModelDef, progressStages, media slots, prompt tags, and the scrollable chip row. 1.4 ships on the H3 hype window, so this is the critical path. Environment traps that cost time last session: convert against 48188 (NOT the 8188 bench) and RESTART the engine after any MpiNodes change; /history returns OLDEST FIRST; a blocked node is neither cached nor executed; and never run scripts/workflow-to-api.mjs bare."
+  "resume_prompt": "You are resuming MPI-475: MiniMax H3 ref2va, reference-to-video. Read .agents/mpi-kanban/tasks/MPI-475/checklist.md FIRST \u2014 it splits what is done from what is not. THE COMFYUI HALF IS COMPLETE: MpiH3References is written, self-checked, proved by output and pushed (ComfyUi-MpiNodes a603fc4); generate_h3.py handles both H3 variants (8e40d43b); and comfy_workflows/minimax_h3_r2va.json is baked with the correct ref2va transformer (49 nodes, Input_Refs, ref_image_size `match`). The node exists because core's MiniMaxH3ReferenceToVideo takes references through AUTOGROW slots a host app cannot grow at inject time \u2014 one branch per combination would be 2**18 \u2014 so it takes all 18 slots flat, drops empties by the loaders' 1x1-image / 1-sample-waveform sentinel, renumbers survivors so core's index-based soundtrack pairing holds, and DELEGATES the conditioning to core rather than copying it. YOUR FIRST JOB IS JUDGEMENT, NOT CODE: every r2va result so far was produced on the FL2VA transformer, which does not error \u2014 it returns a good video that ignored the references. So the match-vs-max quality read and the placeholder reel clip are both suspect, and nothing has tested the model's actual claim that identity follows the reference. Generate on the correct weights and judge that first. Then the Vision half in checklist order via /mpi-add-model: the Input_Refs.ref_image_size control (dotted form ONLY), then deps at publisher URLs (never R2 \u2014 the licence forbids redistribution), ModelDef, progressStages, media slots, prompt tags, and the scrollable chip row. 1.4 ships on the H3 hype window, so this is the critical path. Environment traps that cost time last session: convert against 48188 (NOT the 8188 bench) and RESTART the engine after any MpiNodes change; /history returns OLDEST FIRST; a blocked node is neither cached nor executed; and never run scripts/workflow-to-api.mjs bare."
 }
