@@ -22,7 +22,10 @@ There are two H3 transformers. This card is **fl2va** (`MiniMaxH3ImageToVideo`),
 everyday workhorse covering t2v, first-frame, last-frame and first+last interpolation.
 **ref2va** (`MiniMaxH3ReferenceToVideo`, omni-reference: ≤9 images, ≤3 videos, ≤3 audio
 clips) is a SEPARATE card, `minimax-h3-ref2va` — a different transformer file in the same
-repo, sharing this card's encoder and both VAEs.
+repo, sharing this card's encoder and both VAEs. It has its own doc:
+[ref2va.md](ref2va.md), which carries the 2026-08-07 judged results, the slot-numbered
+prompt tags, and why a good-looking ref2va clip off the WRONG transformer is not
+evidence of anything.
 
 ## Licence — the constraint that outranks the technical work
 
