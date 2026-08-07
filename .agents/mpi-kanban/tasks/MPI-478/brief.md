@@ -54,13 +54,46 @@ One variable, same job, same box. No code change needed — the app only talks t
 A second run at `--normalvram` is worth it only if step 4 wins, to tell "the flag"
 from "any restart".
 
-## If it wins, the fix is not a deletion
+## The local flag was never justified by a measurement — CORRECTED 2026-08-08
 
-`--lowvram` was added on measurement, not by default. `routes/remotePodLifecycle.js`
-records it (MPI-142/143/144): without it the Pod ran default `normalvram`, tried to
-keep the 42 GB LTX transformer resident, and **OOM-killed** a 5 s 704x1280 i2v on a
-24 GB 4090. Removing it globally trades this slowdown for a crash on the models that
-needed it.
+An earlier draft of this brief said `--lowvram` was added on measurement, citing the
+MPI-142/143/144 OOM. **That is wrong for the LOCAL engine and the correction matters
+more than anything else on this card.**
+
+`git log -S'--lowvram' -- routes/comfy.js` returns exactly one commit: **`a7a371a5`,
+"init commit", 2026-03-31.** The flag has been there since day one, before LTX, before
+H3, before any shipped model — so no measurement on any current model can have produced
+it. It is an unexamined default, not a decision.
+
+The OOM is the **Pod twin's** justification, not the local one, and
+`routes/remotePodLifecycle.js` says so in its own words: *"MPI-144: Pod ComfyUI now
+launches with --lowvram, **to MATCH the local engine**"*. The Pod copied a default
+nobody had checked.
+
+### What that OOM actually was (checked 2026-08-08, on the user's challenge)
+
+He asked whether it was a GGUF or the 40 GB weight. Neither:
+
+- **We have never shipped a GGUF.** `grep -ci gguf js/data/modelConstants/dependencies.js`
+  → **0**. There is no GGUF weight anywhere in the dep set.
+- It was the **bf16 transformer, `ltx23-transformer-bf16`, 41 GB** — 61.40 GB of weights
+  resolved — which is where the comment's "42GB" comes from.
+- **The 40 GB card did not exist yet.** `ltx-23-balanced` is 40.40 GB total on a 20 GB
+  int8 transformer, and it was created by **MPI-200 (2026-07-05)**, *after* the OOM
+  (**MPI-144, 2026-06-26**) — and created *because* the bf16 transformer never fits.
+  `models.js` says it outright: the bf16 weight "is replaced by a 20GB one that FITS
+  32GB — which kills the aimdo stage-2 eviction thrash MPI-197 traced".
+
+So the OOM was real, on the fattest weight we ship, on a card that had no lighter tier
+to fall back to yet. Every part of that premise except the weight itself has since moved.
+
+### It still is not a deletion
+
+`ltx-23` HIGH resolves to `ltx23-transformer-bf16` on **every** arch today —
+`resolveDeps(..., {arch:'modern'})` and `{arch:'blackwell'}` both give 61.40 GB. (The
+`fp8`/`mxfp8` entries are deliberate orphans: MPI-466 collapsed them into one int8
+weight and the dep entries stay so the orphan sweep does not strand them on existing
+disks.) A 24 GB card on LTX HIGH genuinely still needs offload.
 
 So the shape of any fix is conditional — on measured VRAM, on the resolved model
 footprint, or both — and per THE ROOT-CAUSE RULE it must land on **both engine
