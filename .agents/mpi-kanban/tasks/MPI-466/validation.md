@@ -74,10 +74,32 @@ input aborts the conversion. It caught two PRE-EXISTING holes on its first run (
 
 ## NOT proved — the remaining scope
 
-### 2. i2v / first-frame / last-frame routing
-No op boolean exists any more. `Input_Start_Frame` / `Input_End_Frame` are path strings
-feeding lazy branches, so confirm each of the four routes by its OUTPUT, not by the run
-completing: t2v, start-only, end-only, start+end.
+### 2. i2v / first-frame / last-frame routing — **PROVED 2026-08-07**
+
+All three remaining routes ran through the app and were read off the engine's dispatched
+graph, not off the run completing. The branch nodes report the routing themselves:
+
+| run | `Input_Start_Frame` | `Input_End_Frame` | `#509 start` | `#514 end` | `Output_Video` |
+|---|---|---|---|---|---|
+| `8721f851` | **EMPTY** | t2i_029.png | 0 images | 1 image | MpiVideo_00005.mp4 |
+| `5fabe2cd` | t2i_029.png | **EMPTY** | 1 image | 0 images | MpiVideo_00006.mp4 |
+| `0ab03b36` | t2i_028.png | t2i_027.png | 1 image | 1 image | MpiVideo_00007.mp4 |
+
+All `success`, 126 nodes each, 22/22 `Input_`/`Output_` titles landed. The branch outputs
+invert cleanly with the inputs across all three, so presence-routing is real and not a
+coincidence of one run. **End-only — the route that had never executed once — works.**
+
+`Input_Use_Transition` is `false` on all three, which is CORRECT rather than a finding:
+it is gated on audio presence (`PromptBoxControls.js` `audioMode.getInjectionParams`),
+no audio was staged, so no injection happened and the baked default stood.
+
+**A renderer bug had to be fixed first.** The frame-role pill rendered but clicking it did
+nothing: `_renderStrip`'s reorder fast path keys on the item SET, and toggling start/end
+changes no id, so the repaint was skipped and the pill never moved. The click handler was
+firing correctly the whole time. Fixed by stamping `chip.dataset.roleKey` and comparing it
+in the `sameSet` test — the drag-reorder fast path is untouched, since the key is identical
+during a reorder. The pill also lost its floating tooltip (nothing else in the app has one)
+and gained a `swap` icon, which is what now signals it is a button.
 
 ### 3. Preview → Continue — PASSES, with one accepted deviation
 Proved live. Preview `3871ae93` set `is_preview: true` and wrote node **470
