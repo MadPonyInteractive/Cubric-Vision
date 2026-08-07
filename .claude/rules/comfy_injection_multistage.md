@@ -146,6 +146,26 @@ loaders that self-gate on an empty string (`ExecutionBlocker`), so an unused opt
 rejects nothing. Full contract:
 [docs/workflow-authoring/media-inputs.md](../../docs/workflow-authoring/media-inputs.md).
 
+**Re-running an UNCHANGED multi-stage graph always re-runs stage 2. Expected — do not
+chase it, and do NOT "fix" it with `IS_CHANGED`.** Measured on the bench 2026-08-07 with a
+byte-identical re-dispatch (H3 ref2va, 53 nodes): 41 cached, and the 12 misses were
+`MpiStageLatents` plus its entire downstream closure — stage-2 sampler, both VAE decodes,
+both audio decodes, both VideoCombines, `Output_Preview`/`Output_Video`, both
+`MpiClearVram`. Nothing UPSTREAM of the node missed, which is what identifies it as the
+origin rather than a victim.
+
+`OUTPUT_NODE` is not the reason: the nine `MpiLoadImageFromPath` nodes in the same graph are
+also `OUTPUT_NODE` and cached fine. The node reads its latent back from a FILE, which is
+what breaks the signature.
+
+Two consequences worth keeping:
+- **`IS_CHANGED` cannot help.** `execution.py` treats the ABSENCE of `IS_CHANGED` /
+  `fingerprint_inputs` as "not changed" (`self.is_changed[node_id] = False`), so adding one
+  can only ever make caching worse. A future session must not try it as a fix.
+- **It cannot reach the app.** Every app generation injects a fresh `Input_Seed`, so the
+  dispatched graph never repeats and the cache is never consulted for this. The cost is
+  bench time while authoring, nothing else.
+
 ## One latent per preview
 
 A preview saves exactly ONE latent — `MpiStageLatents` packs video and audio into a single

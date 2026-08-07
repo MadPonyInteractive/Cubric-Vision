@@ -200,7 +200,7 @@
   },
   "167": {
     "inputs": {
-      "int": 1376
+      "int": 864
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -209,7 +209,7 @@
   },
   "168": {
     "inputs": {
-      "int": 768
+      "int": 480
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -502,7 +502,7 @@
   },
   "330": {
     "inputs": {
-      "ref_image_size": "max",
+      "ref_image_size": "match",
       "clip": [
         "252",
         1
@@ -647,21 +647,6 @@
     "class_type": "MpiLoadAudio",
     "_meta": {
       "title": "Input_Audio_2"
-    }
-  },
-  "335": {
-    "inputs": {
-      "mode": "value",
-      "prefix": "[RefTag]",
-      "message": "",
-      "any": [
-        "330",
-        2
-      ]
-    },
-    "class_type": "MpiLogger",
-    "_meta": {
-      "title": "Mpi Logger"
     }
   },
   "336": {

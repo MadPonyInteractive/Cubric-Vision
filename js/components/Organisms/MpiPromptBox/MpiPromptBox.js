@@ -126,7 +126,9 @@ export const MpiPromptBox = ComponentFactory.create({
                 : m === 'negativeAudio' ? 'Type negative audio prompt...'
                     : 'Type your prompt...';
         const _iconFor = (m) =>
-            m === 'negative' ? 'negative' : m === 'negativeAudio' ? 'audio' : 'check';
+            // volumeOff (struck-through speaker), not 'audio' — a plain speaker read
+            // as a POSITIVE audio prompt, which is the opposite of what this stop is.
+            m === 'negative' ? 'negative' : m === 'negativeAudio' ? 'volumeOff' : 'check';
         // The audio stop exists only where an audio negative can actually land.
         // capabilities.audio is the same signal that surfaces the audio input slot
         // and the audioMode/useAudio controls, so the two never disagree.
