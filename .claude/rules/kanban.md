@@ -83,6 +83,34 @@ When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):
    - **Never read it through a pipe** — `$?` becomes `tail`'s and a failing board reads as
      a pass. Redirect to a file, then check the exit code and grep the ids you touched.
 
+9. **`next_id` is a shared counter — a stale read OVERWRITES a real card.** MPI-244
+   (2026-07-11) read `board.json` `next_id`, used it, and a concurrent peer had already
+   consumed that id for a finished card — the allocation overwrote MPI-253's `task.json`.
+   Caught only at `mpi-end` when `git diff` showed a title changing under us. Before
+   creating a card, re-read `board.json` fresh **and** `git show HEAD:.agents/mpi-kanban/tasks/MPI-<n>/task.json`;
+   a committed card at that id (especially `done`) means the counter is stale — take a
+   higher free id. At close-out, `git diff` the kanban BEFORE committing: an unexpected
+   title/column change on a card you did not touch is a collision to reconcile, not a
+   change to commit. Restore a clobbered card with `git checkout HEAD -- <path>`, never by
+   hand-retyping.
+
+## Timestamps across sessions are NOT comparable — the VPN skews clocks
+
+Concurrent sessions in this tree stamp kanban times **hours** apart (seen 2026-07-29: one
+session at `07:10Z` while a peer wrote `08:25Z` and `14:47Z`). The cause is the CivitAI VPN's
+exit node — CLAUDE.md § "VPN + the skewed clock" has the offset-derivation recipe. Three
+consequences, each of which cost real time before the cause was known:
+
+1. **Do not "correct" a peer's timestamp.** It is not corruption; their clock reads differently.
+2. **Do not regress `board.json` `updated_at`.** A blind write can push it hours backwards past
+   a peer's value — when building a `board.json` blob, keep the LATER timestamp, not yours.
+3. **Event logs are not ordered by `at`.** Append order is truth. Never sort or dedupe an
+   `events.jsonl` on that field.
+
+Distinct from a genuine read race, which shows as two reads of the same file disagreeing about
+column CONTENTS and is settled by re-reading (`git.md` § "A READ can race a write too"). A pure
+timestamp spread with consistent contents is this, not that.
+
 ## The backslash trap — a single stray `\` takes the WHOLE BOARD DOWN
 
 Card/event text is markdown inside a JSON string, so describing a Windows path or a separator heal (`` `\` `` , `` `/`->`\` ``) writes a lone backslash. `\`` is not a valid JSON escape → the board fails to render with *"Bad escaped character in JSON at position N"* and every card disappears, not just the bad one. Write `\\` in the raw JSON (renders as one `\`). Prefer the word "backslash" over the character in card prose. Before finishing any card/event write, validate: `python -c "import json;[json.loads(l) for l in open(P,encoding='utf-8') if l.strip()]"` for `.jsonl`, `json.load` for `.json`. Repair is escape-only — after fixing, assert the raw line differs from the original ONLY by backslashes so no wording drifts. (Bit us 4× across `events.jsonl`, `MPI-67`, `MPI-118`, `MPI-246`.)
@@ -118,3 +146,51 @@ the line ending but hardcodes `indent=2` still fails on the 1-space card — and
 `doing`, which is a silently incoherent board. So: **load and format-detect EVERY file first,
 then write** — never detect-and-write one card at a time. (Bit MPI-419's close-out; the
 half-moved board had to be repaired by hand.)
+
+### Do not hand-detect the format — use a ROUND-TRIP GUARD
+
+Serialise the parsed object with your candidate format and compare it to the ORIGINAL TEXT
+before writing. Not byte-identical → abort. This replaces every per-file guess above, and on
+a shared tree it doubles as your concurrency check: an abort means a peer rewrote the file
+since you read it, which is the right outcome.
+
+```js
+const txt = fs.readFileSync(P, 'utf8');
+const crlf = txt.includes('\r\n'), trail = txt.endsWith('\n');
+const obj = JSON.parse(txt);
+const ser = o => { let s = JSON.stringify(o, null, 2);        // indent per file
+                   if (crlf) s = s.replace(/\n/g, '\r\n');
+                   if (trail) s += crlf ? '\r\n' : '\n';
+                   return s; };
+if (ser(obj) !== txt) { console.error('ABORT: would reformat'); process.exit(1); }
+obj.field = 'new value';
+fs.writeFileSync(P, ser(obj));
+```
+
+Python needs the same shape plus `newline='\n'` — `io.open(P,'w',encoding='utf-8')` is text
+mode with `newline=None`, which translates `\n` → `os.linesep` = CRLF on Windows. That one
+default turned a 70-line card move into a **1404-line** whole-file rewrite (MPI-364). It never
+reproduces on mac/Linux, so it lands only from Windows sessions. `git diff --stat` after any
+programmatic rewrite: a card move is ~10–70 lines; whole-file churn means you reformatted it.
+
+**The MEASUREMENT can lie too — `grep -c $'\r' <file>` is not a CRLF test.** In Git Bash the
+shell eats the CR, leaving `grep -c ''`, which counts every line — exactly the number a fully
+CRLF file would give. Measured 2026-08-04 (MPI-373): it reported `board.json`, two `task.json`s
+and `state/index.json` as CRLF; all four were LF, and only the round-trip guard caught it
+(aborting on a 1820-byte overshoot that equalled the line count). Count bytes, never grep them:
+
+```js
+let crlf = 0, lf = 0;
+for (let i = 0; i < b.length; i++)
+    if (b[i] === 0x0a) { if (i > 0 && b[i-1] === 0x0d) crlf++; else lf++; }
+```
+
+A file can also be MIXED: `.agents/mpi-kanban/events.jsonl` measured 2018 CRLF and 84 bare-LF
+terminators, last line LF — different sessions appending differently. For a JSONL append match
+the most recent writer (`\r` is whitespace to `JSON.parse`, so either parses) and do **not**
+normalise the log to "fix" it — one such pass rewrote 592 of another session's lines. A
+`json.dumps` append also defaults to `"id": "X"` while existing lines are compact `"id":"X"`;
+match it with `separators=(',',':')`.
+
+When you only need to change one field, prefer the Edit tool (exact-string match) over any
+scripted rewrite — it cannot reformat what it does not serialise.

@@ -129,9 +129,48 @@ silently, with the OLD behaviour intact. Two checks, both cheaper than reading c
 - **Compare file mtimes to the process start time** — `ls -l --time-style=+%Y-%m-%d\ %H:%M <files>`
   against `Get-Process -Id <pid> | Select StartTime` (pid from `netstat -ano | grep ":3000.*LISTENING"`).
 
-Then say **reload or restart, precisely**: if `routes/*` / `services/*` predate the boot the server
-already has them and Ctrl+R is enough — only main-process or separate-window files force a restart
-(see MPI-279).
+Say **reload or restart, precisely** — and say **Ctrl+Shift+R**, because a soft reload can still
+serve a cached ES module.
+
+### Three processes, three reload rules
+
+| Changed | What it needs |
+|---|---|
+| Renderer JS/CSS under `js/`, `styles/` | Ctrl+Shift+R |
+| `main.js`, `main/*.cjs`, a separate window's own HTML (`main/float-latent.html`), **and `routes/*.js` / `services/*.js`** | full quit + relaunch |
+| A re-baked runtime workflow (`comfy_workflows/*.json`) | **nothing** — `comfyController` re-`fetch`es per dispatch, no cache, no module graph. Only the JS half of such a change (e.g. a `models.js` dependency line) needs a reload. Checked MPI-428, not assumed. |
+
+The Express server is the case that gets missed, and **a stale one reads as several unrelated
+bugs in your new code**. MPI-375: after Ctrl+R the console showed `No handler registered for
+'mask-temp:write-paint'`, the same for `delete-paint`, a `POST /project/apply-paint` **404**, and
+a crop that "errored but still applied". Four symptoms, one cause — the renderer had the new code
+(which is why the calls were being made at all) while `main.js` and `routes/*.js` still ran the old.
+
+**Settle it in one command instead of reading code:** curl the new route AND a route that shipped
+before this session. `404` on yours vs `400` on the old one proves the server never loaded your file.
+
+```bash
+curl -s -o /dev/null -w "%{http_code}" -X POST -H "Content-Type: application/json" \
+     -d '{}' http://127.0.0.1:3000/project/<new-route>
+```
+
+A separate window that main recreates each open cycle (the float window on each minimize) DOES
+pick up its own HTML/CSS/JS — `loadFile` re-reads it — but `main.js`/`*.cjs` still need a restart.
+
+### Kill every instance you spawn — a zombie serves the OLD `routes/*.js`
+
+Node caches `require`d modules for the life of the process, so a surviving agent-launched server
+keeps serving pre-fix code and **shadows the user's genuine restarts**. 2026-07-15: a committed
+media-naming fix was reported "not working" — ~20 orphaned `node.exe` processes from earlier agent
+test runs were alive and one owned :3000. `taskkill //F //IM node.exe` cleared them and a clean
+`npm start` loaded the fix.
+
+- Kill any app/server/harness you start in the SAME turn you start it.
+- Before diagnosing "the fix isn't working" on route or main-process code, check for zombies:
+  `netstat -ano | grep :3000` + `tasklist | grep node.exe`. Stale-serving is a top suspect.
+- Never conclude "you didn't restart" from a timestamp — the user restarts more than the logs
+  imply. Use a BEHAVIOURAL probe: does the running app produce an artifact only the new code
+  produces? Lead with the probe, not the instruction.
 
 ## Portable Builds
 

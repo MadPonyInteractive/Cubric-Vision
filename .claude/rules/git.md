@@ -12,6 +12,45 @@ unless asked.
 - Agents MAY commit without asking.
 - The Docs-website push block in CLAUDE.md § Sibling repos always applies.
 
+## Never `git checkout --` to undo a probe (MPI-365)
+
+Proving a new test bites means breaking the source, running the test, reverting the break.
+**Do not revert with `git checkout -- <file>`.** On an UNSTAGED file that restores from the
+index, which equals HEAD — so it discards every edit you made this session, not just the
+probe. 2026-08-03: a one-word negative control on `CONTROL_TYPES` was reverted that way and
+took ~250 lines of `commandRegistry.js` with it (the whole `control` op, `CONTROL_TYPES`, a
+`DEFAULT_STYLE_OPS` deletion). Recovered only because the exact strings were still in
+context.
+
+It reads as safe because in a clean tree that *is* what it does. In a mid-session tree it is
+`--hard`-for-one-file, with no prompt, no output, and a suite that goes green again
+afterwards — which looks like a successful revert rather than a wipe.
+
+- **Undo a probe by re-applying its inverse edit**, with the same tool that made it. The
+  probe was one string; so is the undo.
+- Want a real net? `git stash push -- <file>` → `git stash pop`, or commit before probing.
+- After ANY revert of a file you have been editing, `grep` for one distinctive token of your
+  own work before moving on. A silent wipe is otherwise indistinguishable from success.
+- Blast radius is per-file — a probe in a file you have not touched this session is
+  genuinely harmless. Establish which case you are in first.
+
+## Backticks in `-m` are command substitution, and the commit still succeeds
+
+`git commit -m "... \`someIdentifier\` ..."` **runs** `someIdentifier`. Bash eats the word,
+prints `someIdentifier: command not found` to stderr, and the commit lands anyway with a hole
+in its message ("So ModelDef gains , a generic per-model map"). POSIX double quotes do not
+protect backticks — only single quotes and *quoted* heredocs do. Naming identifiers in
+backticks is the house commit style here, so this fires on well-written messages.
+
+Nothing fails: the pre-commit hook prints a wall of lint-staged output, the one
+`command not found` line scrolls past inside it, and `[master abc1234]` reads as clean
+success. Hit 2026-08-02 on `30a1348c`.
+
+- Any message containing backticks → quoted heredoc (`-F - <<'MSG'`, quotes mandatory) or
+  write the message to a file and `git commit -F <file>`.
+- Never fix it with `--amend -m` — that re-runs the same substitution. Amend with `-F`.
+- Verify: `git log -1 --format=%B | grep <the-identifier>`. A silent pass is not proof.
+
 ## A `git mv`-then-edit file is `RM`, and a `'^ M'` filter silently drops the edit
 
 `git mv` STAGES the rename with the file's ORIGINAL content. Editing the file afterwards

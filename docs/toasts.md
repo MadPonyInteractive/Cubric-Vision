@@ -30,6 +30,38 @@ permanently empty — that is why the stack lives there, and why the offset must
 below the titlebar (the mascot overhangs the toast by `--s-3` and would land in the drag
 region otherwise). Don't move it back to a corner.
 
+## Choosing the channel — dialog, toast, or nothing at all
+
+Two decisions, in this order. Both get made wrong the same way: by reaching for whatever
+channel is nearest the failing line.
+
+**1. Did the user themselves cause it? Then say NOTHING.** A Stop, a cancel, a delete the
+user clicked is self-evident from the UI state change; a toast confirming it is noise. The
+MPI-94 "Stopping… the remote engine is interrupting the current step." toast was shipped
+and reverted (`b425fa1`) for exactly this. Toasts are for what the user did **not** directly
+cause — background completion, engine self-recovery, async failure. The rule binds the
+*success* path too, which is the half that shipped broken for months (see **Stop never
+reports as a completion** below), and spurious toasts also force callers to grow guards
+(`_settled` no-op checks in `commandExecutor`) to suppress what should never have fired.
+
+**2. `ui:error` is a blocking DIALOG with a "Report on GitHub" button.** Ask: *if a user
+pressed Report for this, would it be a bug the team must fix?*
+
+| Answer | Channel |
+|---|---|
+| **No** — disk full, out of VRAM, quota exceeded, offline, model already installed, user cancelled, Pod OOM | `ui:warning` / `ui:info` → toast. Tell them what to do; don't invite a report. |
+| **Yes** — unhandled exception, corrupted state, a 500 that should not happen | `ui:error` → dialog. |
+
+Every wrong call here risks a noise GitHub issue the team has to triage (raised by the user
+2026-06-16 after the MPI-100 disk-full path dialogged). Payload shapes differ: `ui:error`
+carries `{title, message}`, the toast events carry `{message}` only (`js/events.js`).
+
+**The trap is the default, not the call site.** A backend route that 400s on an *expected*
+condition reaches the renderer through `downloadService`, whose `catch` emits `ui:error` —
+so a 400 alone dialogs. The `download:failed` SSE handler does the same for every
+model-level failure. To make an expected backend failure a toast, the **service** must
+recognise it and emit `ui:warning`; changing the status code is not enough.
+
 ## The sound model — READ THIS BEFORE THE TABLE
 
 The per-call `sound` flag is **not** "does this toast play a sound". The chime

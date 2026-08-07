@@ -25,7 +25,7 @@ If you read nothing else before building:
 1. **node_modules cannot be cross-built.** It holds native, per-OS binaries
    (Electron, ffmpeg). A Windows machine cannot produce a launchable Linux/mac
    artifact. Build each OS *on that OS* — GitHub Actions CI matrix does this.
-   See [[project_per_os_ci_build]] and the contract § "Build Process".
+   See the contract § "Build Process".
 2. **Users never run `npm install`.** Ship builds bundle node_modules. Requiring
    an install would mean the user needs Node + a C/C++ toolchain (native modules
    compile on install) + a network Electron download. That breaks
@@ -137,7 +137,7 @@ install would break unsupported GPUs and every existing workflow. Deferred to a
 separate optional-accelerator-build track — kanban **MPI-50**. Base bootstrap
 ships with no accelerators.
 
-### What a later session found (tar/symlink — see [[project_portable_tar_exec_symlink]])
+### What a later session found (tar/symlink)
 
 The first real CI Linux tarball still failed to launch (exit 18). The hand-rolled
 tar writer:
@@ -198,7 +198,7 @@ macOS-specific unknowns to investigate at first build:
   (`xattr -dr com.apple.quarantine <app>`), or that they must right-click → Open.
 - **`.command` double-click behavior.** Finder runs `.command` in Terminal; the
   no-terminal launcher story (Win `start.vbs`, Linux detached) is **deferred on
-  macOS** — it still shows Terminal. See [[project_portable_launcher_split]].
+  macOS** — it still shows Terminal.
 - **uv binary for macOS.** `astral-sh/setup-uv` on `macos-latest` provides a
   native uv; `--uv-bin "$(command -v uv)"` should resolve a real path (no `.exe`
   issue). Verify it is the arm64 build on Apple Silicon runners.

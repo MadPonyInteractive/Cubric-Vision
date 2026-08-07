@@ -67,6 +67,16 @@ GENERATED and a hand-edit to either is thrown away by the next sync:
 | `comfy_workflows/scripts/workflow_generation/` | generated API template (named keys) |
 | `comfy_workflows/*.json` | generated runtime, what the app fetches |
 
+**`raw/` is READ-ONLY to everything but the user.** Never write, move, convert-in-place or
+`git checkout` a file under it. Overwriting a raw file with API JSON is unrecoverable without
+a backup, and it has happened: MPI-272 found `raw/krea2_turbo_t2i_template.json` in API format
+after a manual **Export (API)** mis-click in ComfyUI (that button only appears in dev mode — the
+user-side prevention is to turn dev mode off). No script did it — the converters hard-refuse any
+output resolving inside `raw/` (`assertNotInRaw()` in sync, the outDir check in
+`workflow-to-api.mjs`, commit `f918c907`); do not weaken those guards. The ComfyUI browser's own
+library (`engine/.../user/default/workflows/`) is stale junk, not a source of truth: the user
+Exports to `raw/` rather than Saving to the library.
+
 Then `node scripts/sync-raw-workflows.mjs` — it converts the git-changed raw files,
 gates on `validate-injection-rules.mjs`, bakes the runtime files via `orchestrate.py`,
 commits `raw/` and leaves the generated files staged. Needs a running ComfyUI (widget

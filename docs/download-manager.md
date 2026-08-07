@@ -31,7 +31,7 @@ impossible by construction. A monotonic `version` bumps on every mutation.
   upward (a successful install never decremented it) and lied. "Is this dep
   still needed / in-flight" is answered from job STATUS: `store.activeModelsForDep(depId)`
   (non-terminal model jobs referencing the dep). **Never reintroduce refCount;
-  never gate on `refCount === 0`.** [[feedback_refcount_leaks_never_gate_on_zero]]
+  never gate on `refCount === 0`.**
 - **Snapshot protocol (G9).** `store.snapshot()` = `{version, jobs[]}`. Broadcast
   as `download:snapshot` on SSE connect + after every reconcile pass. The FE
   REPLACES `state.downloadJobs` wholesale, version-gated (deltas apply only if
@@ -85,7 +85,7 @@ store snapshot, not an independent queue).
   backend ack lands, it drops the job + emits `download:cancelled` + a
   `ui:warning` TOAST ("Install didn't start — try again"). Register-before-respond
   (G8) means `POST /download/start` returns the job snapshot, which `_firePost`
-  adopts (→ `downloading`, clears the revert). [[feedback_error_dialog_vs_toast]]
+  adopts (→ `downloading`, clears the revert). Which channel a failure surfaces through is [toasts.md](toasts.md) § Choosing the channel.
 - `cancel(modelId)`: stop an active download (cancel-only — `pause`/`resume` were removed, MPI-258 Bug 2). Idempotent client-side: a second press or a settled card skips the POST.
 - `uninstall(modelId, dependencies)`: Remove model files via backend.
 
@@ -409,7 +409,7 @@ Every runtime status write goes through `_setModelStatus`/`_setDepStatus`, which
 
 **Idle partial bar — 1GB floor (MPI-258).** `MpiModelManager._computePartial` draws a partial bar only when ≥1GB of a model's OWN deps are on disk. Below that, only shared support files are present (Wan 5B borrows Wan 2.2's CLIP/VAE; anime packs share a 65MB upscaler owned by no installed model) which read as a phantom 1-3% on a never-touched pack — the floor suppresses those. This is separate from `_sharedOwnedDepIds` (excludes deps owned by an *installed* other-model, MPI-258 Bug A).
 
-**Custom-node install — "already extracted" is FILES, not folder-exists (MPI-243).** A `targetPath` weight (e.g. RIFE's `ckpts/rife/rife47.pth` resolves UNDER `custom_nodes/comfyui-frame-interpolation/`) downloads BEFORE the node extracts, creating the node dir as a subdir-only **shell**. `_runCustomNodeInstall` keys "already extracted" on `_nodeFolderHasFiles(targetDir)` (folder holds a top-level FILE — real nodes ship `__init__.py`/`install.py`), NOT `pathExists`. `pathExists` false-positived → skipped extraction → `python install.py` in an install.py-less folder → Errno 2, "UW deps installation failed / Press Retry". The rename block MERGES the extracted node into a weight-shell (`fs.copy` overwrite + remove source), preserving `ckpts/`, instead of deleting the node as a "duplicate". Order-independent. Two support fixes same card: stale-zip scrub in `download()` (no NDH ` (1)` dups) + a per-dep reqs failure sets `anyFailure + continue` (one node's install hiccup no longer aborts the batch). Guard: `tests/node-install-batch-resilience.test.cjs`. [[project_targetpath_weight_shell_trap]]
+**Custom-node install — "already extracted" is FILES, not folder-exists (MPI-243).** A `targetPath` weight (e.g. RIFE's `ckpts/rife/rife47.pth` resolves UNDER `custom_nodes/comfyui-frame-interpolation/`) downloads BEFORE the node extracts, creating the node dir as a subdir-only **shell**. `_runCustomNodeInstall` keys "already extracted" on `_nodeFolderHasFiles(targetDir)` (folder holds a top-level FILE — real nodes ship `__init__.py`/`install.py`), NOT `pathExists`. `pathExists` false-positived → skipped extraction → `python install.py` in an install.py-less folder → Errno 2, "UW deps installation failed / Press Retry". The rename block MERGES the extracted node into a weight-shell (`fs.copy` overwrite + remove source), preserving `ckpts/`, instead of deleting the node as a "duplicate". Order-independent. Two support fixes same card: stale-zip scrub in `download()` (no NDH ` (1)` dups) + a per-dep reqs failure sets `anyFailure + continue` (one node's install hiccup no longer aborts the batch). Guard: `tests/node-install-batch-resilience.test.cjs`.
 
 ## State Keys
 In `js/state.js`:
