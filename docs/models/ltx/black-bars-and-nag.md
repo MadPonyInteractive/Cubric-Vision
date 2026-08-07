@@ -43,21 +43,54 @@ is post-gen crop-detect + inpaint-fill — deferred; not worth it while i2v is c
 The distilled LTX-2.3 (`ltx-2.3-22b-distilled`) effectively runs at **CFG=1 → negative
 prompts are IGNORED** by default (official Lightricks position, HF LTX-2 discussion #42).
 
-**Fix = KJNodes `LTX2 NAG` node** (Negative-guidance At Guidance-1), which injects
-negative conditioning at CFG=1.
+**Not merely ignored — never computed.** `comfy/samplers.py:610` sets `uncond_ = None`
+when `cond_scale` is 1, so the negative pass does not run at all. Two consequences:
+a `ConditioningZeroOut` on the CFG negative saves **zero** sampling time (there is
+nothing there to skip), and no amount of prompt-side work can revive the CFG path.
+
+**Fix = KJNodes `LTX2 NAG` node** (Negative-guidance At Guidance-1). It works *inside
+cross-attention* — patching `attn2` from `nag_cond_video` and `audio_attn2` from
+`nag_cond_audio`, on every transformer block — which is exactly why it survives
+distillation while CFG does not.
 
 **Wiring:** NAG sits on the MODEL line, AFTER the LoRA stack, BEFORE the sampler/preview-
 override: `LoRA merge → LTX2 NAG → Preview Override → sampler`. Its `nag_cond_video` /
-`nag_cond_audio` inputs come from the NEGATIVE `CLIPTextEncode`.
+`nag_cond_audio` inputs come from the **NEGATIVE** encodes.
+
+> ⚠️ **That last sentence was true as intent and FALSE in the shipped graph from
+> 2026-07-01 until 2026-08-07.** `nag_cond_video` was wired to `CLIP Text Encode
+> (Positive Prompt)`, so LTX's negative prompt did nothing at all and NAG was steering
+> *away* from what the user asked for. `validate-injection-rules.mjs` checks titles, not
+> semantics, so nothing caught it. **Verify this against the dispatched graph
+> (`/history` on `:48188`), never against this page.** See memory
+> `feedback_doc_right_artifact_wrong`.
+
+**Two independent negatives, both user-driven (MPI-474).** `Input_Negative` feeds the
+video side; `Input_Negative_Audio` feeds the audio side through `Negative Audio (NAG
+only)`. The prompt box cycles positive → negative → negative audio to reach them.
+
+**The baked audio-defect list was REMOVED, and the advice that produced it was wrong.**
+An earlier pass replaced a shot-specific ban list with "universal audio-defect terms
+only" (`underwater, echo, muffled, hiss, crackle, static, tinny, low-quality, hum,
+buzz`). NAG steers **away** from its cond, so that list is an instruction to sound like a
+clean studio recording — which is precisely where LTX's unwanted background **music**
+comes from. It also removed creative range: `echo`, `muffled`, `distortion` and `robotic`
+are things a user may deliberately want. The widget is now empty and user-driven.
+
+**Empty is not neutral — gate, do not zero.** An empty `CLIPTextEncode` still produces a
+real embedding, and NAG would steer away from *that*. So each side is gated on its string
+being non-empty (`MpiAnyChecker.has_value` → `MpiIfElse`), and when **both** are empty
+(`MpiBooleanCompare` mode `one_is_true` → false) the whole NAG node is bypassed and the
+unpatched model goes to the sampler. `MpiIfElse` is lazy, so the untaken branch never
+executes and the per-block attention cost is genuinely not paid. This is why the app
+injects `Input_Negative_Audio` **even when empty** — a cleared box must reach the node to
+switch NAG back off.
 
 **Dependency-cycle trap:** if NAG's cond comes from a `CLIPTextEncode` whose CLIP traces
 back through the same LoRA-model-clip node that NAG's model output feeds, ComfyUI reports
 "Dependency cycle detected." Keep the model path (LoRA→NAG→sampler) and the cond path
 (neg-encode→NAG) one-directional, never crossing back.
 
-NAG is now baked into the LTX template (both video + audio cond, per NerdyRodent). KJNodes
-is already installed local AND on the Pod (WAN uses it too). NAG did NOT fix the black bars
-(above) but is kept because it makes the negative prompt functional at all. The audio
-negative prompt was also generalized this session: the old shot-specific one banned `music,
-instruments, trumpet, cello, ...` + accents — a baked default that blocked legit gens;
-replaced with universal audio-defect terms only.
+KJNodes is installed local AND on the Pod (WAN uses it too). NAG did NOT fix the black
+bars (above) but is kept because it is the only thing that makes a negative prompt
+functional at all on this model.

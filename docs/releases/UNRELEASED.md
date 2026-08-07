@@ -25,6 +25,14 @@
 
 ## whatIsNew
 
+- **Animate *towards* an image, not just away from one.** Drop a single image into the
+  prompt box on a video model and it has always become the first frame. Now the label
+  along the bottom of the thumbnail is a button: click it and it reads **Last frame**,
+  so the clip ends on that image instead of starting from it — the model invents
+  everything leading up to it. Drop two images and you get both ends, first and last,
+  in strip order. Useful for closing a loop, landing on a specific pose, or joining two
+  shots you already have.
+
 - **The mask tools, rebuilt as a toolkit.** Everything that makes a mask now sits in
   one group and works the same way. Paint one by hand with **ten brushes** — hard and
   soft rounds, feather, airbrush, chisel, calligraphy, spray, charcoal, stipple and a
