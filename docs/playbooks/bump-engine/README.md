@@ -86,11 +86,27 @@ release notes. Full sequence + how the engine moves in place → **[02-local-upg
 node scripts/engine-floor-check.mjs
 ```
 
-**6. SYNC THE LOCK INTO mpi-ci, then rebuild the Pod image.** Two steps, and the first is
-the one that gets skipped, because the Pod's lock is **a different file in a different
-repo**: `c:\AI\Mpi\mpi-ci\cubric-vision-pod\node_lock.json`. Bumping Vision's copy does
-nothing to it. The image bakes nodes from *that* file, so an un-synced lock rebuilds the
-image at the OLD engine and gate 7 then refuses to smoke — after you have paid for a build.
+**6. SYNC THE LOCK INTO mpi-ci, then rebuild the Pod image — the DEV image.**
+
+> 🛑 **BUILD THE DEV IMAGE, NEVER THE USER-FACING ONE.** A bumped engine in the released
+> image breaks every user's remote Pod on their next boot, with no staging step in between.
+> The split already exists (MPI-340) and `routes/remotePodLifecycle.js` resolves it:
+> ```js
+> const POD_IMAGE_VERSION     = 'v0.17.0';       // released users
+> const POD_IMAGE_VERSION_DEV = 'v0.19.0-dev';   // dev app runs only
+> const v = _devMode ? POD_IMAGE_VERSION_DEV : POD_IMAGE_VERSION;
+> ```
+> So: tag `v<ver>-dev-<profile>` and bump **only** `POD_IMAGE_VERSION_DEV` /
+> `POD_IMAGE_VERSION_CPU_DEV`. A shipped build cannot resolve a `-dev` tag, which is what
+> makes smoking a bumped engine safe. `/build-pod-image` step 1 owns this decision — do not
+> re-derive it. **The smoke therefore runs against the DEV image**, and the evidence is
+> evidence about that image.
+
+Two steps, and the first is the one that gets skipped, because the Pod's lock is **a
+different file in a different repo**: `c:\AI\Mpi\mpi-ci\cubric-vision-pod\node_lock.json`.
+Bumping Vision's copy does nothing to it. The image bakes nodes from *that* file, so an
+un-synced lock rebuilds the image at the OLD engine and gate 7 then refuses to smoke —
+after you have paid for a build.
 
 Measured 2026-08-07: Vision sat at `v0.30.0` while the Pod lock was still `v0.29.2`, with
 `comfyui-kjnodes` and `ComfyUI-MpiNodes` both behind. Check before building:
@@ -127,6 +143,8 @@ without it.
 | `git tag --contains` dates the UPSTREAM commit, not our adoption | Date against `node_lock.json` history |
 | Smoking before the Pod image rebuild validates the **old** engine | Gate 7 exists for this |
 | **The Pod's `node_lock.json` is a DIFFERENT FILE IN A DIFFERENT REPO** — bumping Vision's copy leaves the image on the old engine | Gate 6; measured drift `v0.30.0` vs `v0.29.2` on 2026-08-07 |
+| Building the **user-facing** Pod image with a bumped engine breaks every user's remote Pod on next boot | Gate 6 — build `-dev`, bump only `POD_IMAGE_VERSION_DEV` |
+| **The image and the runtime are promoted separately, and only the runtime is automatic-ish** | `publish-runtime.sh promote` moves R2 bytes; the image tag is a manual `POD_IMAGE_VERSION` edit — see gate 6 note |
 | Pod-green says nothing about the Windows portable | Gate 5 is the local half; both are required |
 | A skipped model reading as a pass | [01](01-smoke-run.md) § What green prints |
 | The full wipe destroys a **symlinked** custom node | The dev machine symlinks `custom_nodes/ComfyUI-MpiNodes` to the node source repo — [02](02-local-upgrade.md) § Traps |
@@ -141,7 +159,7 @@ without it.
 - [ ] Every pinned custom node re-checked against the new core
 - [ ] **LOCAL gate:** engine upgraded to the new pin and booted; `node scripts/engine-floor-check.mjs` exits 0 ([02](02-local-upgrade.md))
 - [ ] **`node_lock.json` synced into `c:\AI\Mpi\mpi-ci\cubric-vision-pod\`** — core tag AND every node commit agree with Vision's copy (drift command in gate 6), committed there with `git -C`
-- [ ] Pod image rebuilt at the new lock (`build-pod-image`)
+- [ ] **DEV** Pod image rebuilt at the new lock (`build-pod-image`) — `v<ver>-dev-<profile>`, only `POD_IMAGE_VERSION_DEV`/`_CPU_DEV` touched, user-facing `POD_IMAGE_VERSION` untouched
 - [ ] **Pod reports the new version** — asserted before any smoke run
 - [ ] Smoke matrix executed and green ([01-smoke-run.md](01-smoke-run.md)); skips named explicitly
 - [ ] Evidence file written; `mpi-release` gate satisfied

@@ -54,8 +54,12 @@ Full detail in the playbook README; this is the enforcement summary.
    ```bash
    node scripts/engine-floor-check.mjs        # 48188 = app engine; --url for the bench
    ```
-6. **Sync the lock into mpi-ci, THEN rebuild the Pod image** (`build-pod-image`). The Pod's
-   lock is a **different file in a different repo** —
+6. **Sync the lock into mpi-ci, THEN rebuild the DEV Pod image** (`build-pod-image`).
+   🛑 **DEV, never the user-facing image** — a bumped engine in the released image breaks
+   every user's remote Pod on their next boot with nothing in between. Tag
+   `v<ver>-dev-<profile>`, bump **only** `POD_IMAGE_VERSION_DEV` / `_CPU_DEV`; a shipped
+   build cannot resolve a `-dev` tag, which is what makes smoking a bumped engine safe.
+   The Pod's lock is a **different file in a different repo** —
    `c:\AI\Mpi\mpi-ci\cubric-vision-pod\node_lock.json` — and bumping Vision's copy does
    nothing to it. Un-synced, you rebuild the image at the OLD engine and gate 7 refuses to
    smoke *after* the build is paid for. Run the drift command in the playbook README first;
