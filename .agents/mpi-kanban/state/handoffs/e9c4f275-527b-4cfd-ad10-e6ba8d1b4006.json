@@ -2,9 +2,9 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "e9c4f275-527b-4cfd-ad10-e6ba8d1b4006",
   "generated_at": "2026-08-07T19:14:04Z",
-  "from_session": "MPI-475 \u2014 the ref2va Vision half shipped; four verification items left",
+  "from_session": "MPI-475 — the ref2va Vision half shipped; four verification items left",
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MiniMax H3 ref2va wired end-to-end app-side: new op, ModelDef, controls, tagged chips, @ picker, progress stages",
     "branch": "master"
@@ -18,26 +18,26 @@
     "file": null,
     "completed": [
       "The blocking defect from the PREVIOUS handoff is fixed and was already fixed before this session started: comfy_workflows/minimax_h3_r2va.json bakes minimax_h3_ref2va_pruned_int8_convrot.safetensors (verified in the file itself, not from the commit message). Landed in e48025c6 with the volumeOff PromptBox icon and the multi-stage caching rule.",
-      "DEP minimax-h3-ref2va-transformer (modelDeps.js) \u2014 20.97GB, publisher URL, never R2. sha256 9255f52b6677845ad238f20dfaafa94727053694127ab7f255c048f0f9365779 computed from the local G:\\CubricModels copy.",
-      "NEW OP ref2v_ms in commandRegistry.js \u2014 label 'Reference to Video', icon layers, 15 ordinal media slots (9 image / 3 video / 3 audio), isMultiStage, allowsBranchingContinue false. Registered in BOTH mirrors (operationRegistry.js + operation_registry.json) at appVersionIntroduced 1.4.0. 'ref2v' added to OP_ORDER between i2v and extend.",
+      "DEP minimax-h3-ref2va-transformer (modelDeps.js) — 20.97GB, publisher URL, never R2. sha256 9255f52b6677845ad238f20dfaafa94727053694127ab7f255c048f0f9365779 computed from the local G:\\CubricModels copy.",
+      "NEW OP ref2v_ms in commandRegistry.js — label 'Reference to Video', icon layers, 15 ordinal media slots (9 image / 3 video / 3 audio), isMultiStage, allowsBranchingContinue false. Registered in BOTH mirrors (operationRegistry.js + operation_registry.json) at appVersionIntroduced 1.4.0. 'ref2v' added to OP_ORDER between i2v and extend.",
       "ModelDef minimax-h3-ref2va (models.js). Resolves to 54.91GB of which 33.94GB is already shared with fl2va, so installing it on top of fl2va costs only the transformer. type 'h3' reuses the ratio ladder, so NO type-consumer sweep was owed.",
       "refImageSize control (PromptBoxControls.js) -> params['Input_Refs.ref_image_size'] via the MPI-359 dotted form, default 'match', persisted per-op. PROMPT_CONTROL_DEFAULTS.refImageSize added.",
-      "Chips wear their prompt tag instead of their strip position \u2014 slots carry `tag` ('Picture 1' ... 'Audio 3') and MpiPromptBox badges it. The two diverge as soon as media types mix, because the tag ordinal counts WITHIN a type.",
+      "Chips wear their prompt tag instead of their strip position — slots carry `tag` ('Picture 1' ... 'Audio 3') and MpiPromptBox badges it. The two diverge as soon as media types mix, because the tag ordinal counts WITHIN a type.",
       "Chip strip scrolls (max-height 13rem + overflow-y auto). 15 chips, anchored bottom:100%, would otherwise climb the viewport. Wrap, FLIP and pointer reorder untouched.",
-      "The @ reference picker \u2014 typing @ lists staged chips and inserts the tag at the caret. Arrows move, Enter/Tab pick, Escape closes, mousedown clicks (click blurs the textarea first). Arms ONLY for an op whose slots carry tags. Matcher is matchRefTagQuery in commandRegistry.js, pure and unit-tested.",
+      "The @ reference picker — typing @ lists staged chips and inserts the tag at the caret. Arrows move, Enter/Tab pick, Escape closes, mousedown clicks (click blurs the textarea first). Arms ONLY for an op whose slots carry tags. Matcher is matchRefTagQuery in commandRegistry.js, pure and unit-tested.",
       "progressStages minimax_h3_r2va.json = { single: 2, preview: 1, stage2: 1 }, derived from the sampler tail being SHARED with fl2va (nodes 153 Stage1_Bypass and 156 are the same two SamplerCustomAdvanced under the same ids/titles) rather than counted live.",
-      "MpiH3References.rewrite_prompt_tags added (ComfyUi-MpiNodes 238f056, LOCAL ONLY, NOT PUSHED) \u2014 the prompt is written against SLOT numbers and rewritten to core's ordinals inside the node; a tag naming an empty slot is dropped. Six new asserts in `python h3.py`, self-check passes.",
-      "minimax-h3 (fl2va) gained capabilities.negativePrompt:false \u2014 it had been rendering a negative field that injected nowhere. Confirmed by the user: H3 has no negative input anywhere.",
-      "THREE test changes: NEW 'every media slot a model can actually see exists in that model's workflow' (nothing swept mediaInputs titles before, only injectParams \u2014 mutation-tested with a bogus Input_Image_77); reworked the dotted-key test which had assumed the style rack was the only dotted consumer; NEW tests/ref-tag-picker.test.cjs, 9 asserts.",
+      "MpiH3References.rewrite_prompt_tags added (ComfyUi-MpiNodes 238f056, LOCAL ONLY, NOT PUSHED) — the prompt is written against SLOT numbers and rewritten to core's ordinals inside the node; a tag naming an empty slot is dropped. Six new asserts in `python h3.py`, self-check passes.",
+      "minimax-h3 (fl2va) gained capabilities.negativePrompt:false — it had been rendering a negative field that injected nowhere. Confirmed by the user: H3 has no negative input anywhere.",
+      "THREE test changes: NEW 'every media slot a model can actually see exists in that model's workflow' (nothing swept mediaInputs titles before, only injectParams — mutation-tested with a bogus Input_Image_77); reworked the dotted-key test which had assumed the style rack was the only dotted consumer; NEW tests/ref-tag-picker.test.cjs, 9 asserts.",
       "KJNodes H3 VRAM patches INVESTIGATED AND REJECTED, with the measurement recorded in docs/models/h3/performance.md.",
       "docs/releases/UNRELEASED.md gained a whatIsNew entry for MiniMax H3 Reference, and the add-model playbook's trap table gained a row for the mediaInputs silent-skip. BOTH were proposed at close-out and explicitly approved by the user. NOTE the changelog entry describes consistency the judgement run has NOT yet confirmed - if ref2va slips 1.4, that entry must be pulled or moved, not left to ship."
     ],
     "pending": [
       "PUSH ComfyUi-MpiNodes 238f056 AND RESTART THE ENGINE. This gates everything: until it lands the slot->ordinal tag rewriting is not live, so an @-inserted tag reaches the model exactly as typed. Verify with /object_info showing MpiH3References.",
-      "THE JUDGEMENT RUN \u2014 generate with one clear character reference and confirm the identity actually follows it. This is the model's entire claim and nothing has tested it. Every r2va result before the 2026-08-07 re-export came off the FL2VA transformer, which does not error: it samples fine and returns a good-looking video that ignored every reference. A plausible result is NOT evidence.",
-      "RUN THE APP EYE TESTS in tasks/MPI-475/validation.md. The @ picker's DOM half (popup paint, caret insertion, keyboard) has NEVER run \u2014 only its matcher is tested. Everything else app-side is likewise unexercised.",
+      "THE JUDGEMENT RUN — generate with one clear character reference and confirm the identity actually follows it. This is the model's entire claim and nothing has tested it. Every r2va result before the 2026-08-07 re-export came off the FL2VA transformer, which does not error: it samples fine and returns a good-looking video that ignored every reference. A plausible result is NOT evidence.",
+      "RUN THE APP EYE TESTS in tasks/MPI-475/validation.md. The @ picker's DOM half (popup paint, caret insertion, keyboard) has NEVER run — only its matcher is tested. Everything else app-side is likewise unexercised.",
       "A REF2VA PREVIEW CLIP. The ModelDef currently borrows fl2va's minimax_h3_preview.mp4. Swap the filename once a judged clip exists.",
-      "docs/models/h3/README.md ref2va section \u2014 held until the judgement run, deliberately.",
+      "docs/models/h3/README.md ref2va section — held until the judgement run, deliberately.",
       "ONE changelog entry still held: MPI-474's audio negative. The user's 2026-08-07 test was INCONCLUSIVE (a no-music negative did nothing; audio direction in the POSITIVE prompt is what removed music), so holding remains correct. The LTX NAG negative fix is NO LONGER held - it shipped into UNRELEASED.md fixes in 56902d53, alongside a sentence naming LTX 2.3 and Wan 2.2 on the end-frame whatIsNew bullet.",
       "MPI-466 and MPI-474 still sit in doing/validating awaiting the user's explicit go."
     ]
@@ -64,13 +64,13 @@
   ],
   "knowledge_preservation": {
     "completed": [
-      "docs/models/h3/performance.md \u2014 NEW. The KJNodes H3 VRAM patches measured and rejected (669.80s without / 762.50s with, +13.8%, identical output, stage 1 only, 4060 Ti). Records WHY they are absent so it reads as a decision, the revisit condition, the placement if it ever happens, and that chunks==1 returns the model untouched. Also rejects the Sage patch (approximate arithmetic AND sageattention is not installed) and EmptyMiniMaxH3LatentAV (the graph already makes that latent).",
-      ".agents/mpi-kanban/tasks/MPI-475/validation.md \u2014 NEW. Every open item as a do-X-see-Y line, plus the edge cases and what would signal a real bug.",
+      "docs/models/h3/performance.md — NEW. The KJNodes H3 VRAM patches measured and rejected (669.80s without / 762.50s with, +13.8%, identical output, stage 1 only, 4060 Ti). Records WHY they are absent so it reads as a decision, the revisit condition, the placement if it ever happens, and that chunks==1 returns the model untouched. Also rejects the Sage patch (approximate arithmetic AND sageattention is not installed) and EmptyMiniMaxH3LatentAV (the graph already makes that latent).",
+      ".agents/mpi-kanban/tasks/MPI-475/validation.md — NEW. Every open item as a do-X-see-Y line, plus the edge cases and what would signal a real bug.",
       "The MPI-475 checklist carries the full done/remaining split and the RESOLVED audio-ordinal decision with its reasoning.",
       "ComfyUi-MpiNodes README + changelog updated for the tag rewriting."
     ],
     "pending": [
-      "docs/models/h3/README.md ref2va section \u2014 held until the judgement run."
+      "docs/models/h3/README.md ref2va section — held until the judgement run."
     ]
   },
   "next_action": {
@@ -80,10 +80,10 @@
   "context": {
     "key_decisions": [
       "ref2va got its OWN op rather than riding t2v_ms. mediaInputs live on the OP, so 15 slots would land in front of LTX and WAN behind 15 capability gates; t2v_ms already declares an audio slot titled `Input_audio` where this graph has `Input_Audio`, which injection would SILENTLY skip; and references are not a first frame, so 'Image to Video' would be an actively wrong label.",
-      "capabilities.audio is TRUE on ref2va and FALSE on fl2va, and it is load-bearing: filterMediaInputsForModel hard-drops every audio slot from a model that does not declare it, so without it the three audio reference wells vanish. negativePrompt:false is what keeps that honest \u2014 capabilities.audio also arms the MPI-474 audio-negative stop, and this graph has neither an Input_Negative_Audio nor an Input_Negative node. Every capabilities.audio consumer was swept.",
-      "THE AUDIO ORDINAL PROBLEM AND ITS FIX. Core shares ONE audio sequence between reference videos and standalone clips, emitting a video's soundtrack BEFORE its <Video k>, so a sounded reference video pushes the first standalone clip to <Audio 2>. Whether a video HAS a soundtrack is a property of the FILE (MpiLoadVideo returns a 1-sample sentinel for a track-less one and collect_refs drops it), so the ordinal moves on a fact nobody knows until decode time. Neither the app nor the user can label the wells up front. Fix: the NODE translates, at execution, where both numberings are known. REJECTED the alternative of always emitting the soundtrack slot \u2014 _encode_ref_audio resamples then VAE-encodes, and a 1-sample tensor at movedim(1,-1) is a crash or a degenerate latent.",
+      "capabilities.audio is TRUE on ref2va and FALSE on fl2va, and it is load-bearing: filterMediaInputsForModel hard-drops every audio slot from a model that does not declare it, so without it the three audio reference wells vanish. negativePrompt:false is what keeps that honest — capabilities.audio also arms the MPI-474 audio-negative stop, and this graph has neither an Input_Negative_Audio nor an Input_Negative node. Every capabilities.audio consumer was swept.",
+      "THE AUDIO ORDINAL PROBLEM AND ITS FIX. Core shares ONE audio sequence between reference videos and standalone clips, emitting a video's soundtrack BEFORE its <Video k>, so a sounded reference video pushes the first standalone clip to <Audio 2>. Whether a video HAS a soundtrack is a property of the FILE (MpiLoadVideo returns a 1-sample sentinel for a track-less one and collect_refs drops it), so the ordinal moves on a fact nobody knows until decode time. Neither the app nor the user can label the wells up front. Fix: the NODE translates, at execution, where both numberings are known. REJECTED the alternative of always emitting the soundtrack slot — _encode_ref_audio resamples then VAE-encodes, and a 1-sample tensor at movedim(1,-1) is a crash or a degenerate latent.",
       "Chips are SLOT-numbered and must stay that way. Do not add app-side hasAudio probing; the node owns the translation.",
-      "KJNodes H3 patches rejected on measurement, not taste: they save VRAM neither target card is short of. The 16GB baseline completed without them (offload-bound, 24GB in shared, RAM at 95%, GPU at 97%), and on a 5090 \u2014 the expected primary card \u2014 the encoder unloads before sampling so the ~21GB transformer is resident in 32GB with nothing to save. Both patches ARE mathematically exact; the outputs matched, as predicted.",
+      "KJNodes H3 patches rejected on measurement, not taste: they save VRAM neither target card is short of. The 16GB baseline completed without them (offload-bound, 24GB in shared, RAM at 95%, GPU at 97%), and on a 5090 — the expected primary card — the encoder unloads before sampling so the ~21GB transformer is resident in 32GB with nothing to save. Both patches ARE mathematically exact; the outputs matched, as predicted.",
       "progressStages was DERIVED, not counted live, and the comment says so. Legitimate because the two H3 graphs share their whole sampler tail; re-count for real if that stops being true.",
       "1.4 ships on the H3 hype window, so MPI-475 stays the critical path."
     ],
@@ -91,12 +91,12 @@
       "CONVERT AGAINST THE ENGINE: COMFY_URL=http://127.0.0.1:48188. Default 8188 is the authoring bench and runs AHEAD (0.30.2 vs 0.30.0); it has silently shifted a widget before.",
       "THE ENGINE MUST BE RESTARTED after a MpiNodes change or the converter fails with 'class not in /object_info'.",
       "sync-raw-workflows.mjs REFUSES to run while generated workflow files are uncommitted.",
-      "NEVER run `node scripts/workflow-to-api.mjs` bare \u2014 it converts EVERY raw file against port 8188 and writes. Use sync-raw-workflows.mjs.",
-      "raw/ is READ-ONLY to agents. Never hand-edit a workflow JSON \u2014 the user edits the canvas and re-exports.",
-      "The MpiNodes repo publish_action.yml fires on push to main ONLY for pyproject.toml changes. 238f056 does not touch it, so pushing fires no registry publish. Never use workflow_dispatch \u2014 the user was explicit.",
-      "MpiNodes help_funcs.py imports comfy/torch at module scope, so h3.py deliberately does NOT import it \u2014 that keeps `python h3.py` runnable.",
+      "NEVER run `node scripts/workflow-to-api.mjs` bare — it converts EVERY raw file against port 8188 and writes. Use sync-raw-workflows.mjs.",
+      "raw/ is READ-ONLY to agents. Never hand-edit a workflow JSON — the user edits the canvas and re-exports.",
+      "The MpiNodes repo publish_action.yml fires on push to main ONLY for pyproject.toml changes. 238f056 does not touch it, so pushing fires no registry publish. Never use workflow_dispatch — the user was explicit.",
+      "MpiNodes help_funcs.py imports comfy/torch at module scope, so h3.py deliberately does NOT import it — that keeps `python h3.py` runnable.",
       "npm run release:check FAILS, and it is PRE-EXISTING and unrelated: the engine pin moved 0.29.2 -> 0.30.0 since v1.3.0 with no dev_configs/smoke-evidence.json. That is MPI-465/467 territory, not MPI-475.",
-      "The user's C: drive hit 99% full mid-session and was recovered by emptying the recycle bin (172GB free after). Watch it \u2014 the H3 weights are 21GB each and system RAM ran at 95% during a generation."
+      "The user's C: drive hit 99% full mid-session and was recovered by emptying the recycle bin (172GB free after). Watch it — the H3 weights are 21GB each and system RAM ran at 95% during a generation."
     ],
     "files_modified": [
       "js/data/modelConstants/modelDeps.js, models.js (the dep, the ModelDef, and fl2va's negativePrompt:false)",
@@ -107,7 +107,7 @@
       "js/data/progressStages.js",
       "tests/inject-params-titles.test.cjs (one new sweep, one reworked) + tests/ref-tag-picker.test.cjs (new)",
       "docs/models/h3/performance.md (new) + docs/models/h3/README.md (pointer)",
-      "c:\\AI\\Mpi\\ComfyUi-MpiNodes\\{h3.py,README.md,changelog.md} \u2014 committed 238f056, NOT PUSHED",
+      "c:\\AI\\Mpi\\ComfyUi-MpiNodes\\{h3.py,README.md,changelog.md} — committed 238f056, NOT PUSHED",
       "All Cubric-Vision work committed: 57c60af8, 4c778444, 81e40649, f096b088, 3b482332 (+ e48025c6 from the prior session)"
     ],
     "files_to_read_first": [
@@ -148,7 +148,12 @@
     {
       "at": "2026-08-07T19:14:04Z",
       "event": "handoff_updated"
+    },
+    {
+      "at": "2026-08-07T20:10:00Z",
+      "event": "handoff_resolved",
+      "note": "Resumed and superseded by 99a493d1. Its blocking gate is DONE - ComfyUi-MpiNodes 238f056 pushed. Its other three pending items (the judgement run, the app eye tests, a real ref2va preview clip) are UNMET and carried forward verbatim."
     }
   ],
-  "resume_prompt": "You are resuming MPI-475, MiniMax H3 ref2va (reference to video). READ .agents/mpi-kanban/tasks/MPI-475/validation.md FIRST \u2014 it is the whole remaining job as do-X-see-Y lines. The Vision half is DONE and committed (six commits ending 3b482332, npm test 492/492, tree clean): a new op ref2v_ms with 15 media slots, the ModelDef, the refImageSize control, chips badged with their prompt tag, a scrolling chip strip, an @ picker that inserts a tag at the caret, progress stages, and three test guards. NONE of it has run in the app. THE GATE: ComfyUi-MpiNodes 238f056 is committed LOCALLY and not pushed \u2014 it adds rewrite_prompt_tags, which converts the SLOT-numbered tags the chips show into the ordinals ComfyUI core presents. Until it is pushed and the engine restarted, an @-inserted tag reaches the model exactly as typed, and the audio ones can be wrong (core shares one audio sequence between reference videos and standalone clips, so a sounded reference video pushes the first standalone clip to <Audio 2>). THE REAL TEST: generate with one clear character reference and confirm the identity actually follows it. Nothing has tested this. Every r2va result before the 2026-08-07 re-export came off the FL2VA transformer, which does not error \u2014 it samples fine and returns a good-looking video that ignored every reference, which is exactly how the bug went unnoticed. So a plausible result is not evidence. After that: swap in a real ref2va preview clip (the ModelDef borrows fl2va's), write the docs/models/h3/README.md ref2va section, and settle the UNRELEASED.md entry. Do NOT re-investigate the KJNodes H3 VRAM patches \u2014 measured and rejected, docs/models/h3/performance.md. 1.4 ships on the H3 hype window, so this is the critical path."
+  "resume_prompt": "You are resuming MPI-475, MiniMax H3 ref2va (reference to video). READ .agents/mpi-kanban/tasks/MPI-475/validation.md FIRST — it is the whole remaining job as do-X-see-Y lines. The Vision half is DONE and committed (six commits ending 3b482332, npm test 492/492, tree clean): a new op ref2v_ms with 15 media slots, the ModelDef, the refImageSize control, chips badged with their prompt tag, a scrolling chip strip, an @ picker that inserts a tag at the caret, progress stages, and three test guards. NONE of it has run in the app. THE GATE: ComfyUi-MpiNodes 238f056 is committed LOCALLY and not pushed — it adds rewrite_prompt_tags, which converts the SLOT-numbered tags the chips show into the ordinals ComfyUI core presents. Until it is pushed and the engine restarted, an @-inserted tag reaches the model exactly as typed, and the audio ones can be wrong (core shares one audio sequence between reference videos and standalone clips, so a sounded reference video pushes the first standalone clip to <Audio 2>). THE REAL TEST: generate with one clear character reference and confirm the identity actually follows it. Nothing has tested this. Every r2va result before the 2026-08-07 re-export came off the FL2VA transformer, which does not error — it samples fine and returns a good-looking video that ignored every reference, which is exactly how the bug went unnoticed. So a plausible result is not evidence. After that: swap in a real ref2va preview clip (the ModelDef borrows fl2va's), write the docs/models/h3/README.md ref2va section, and settle the UNRELEASED.md entry. Do NOT re-investigate the KJNodes H3 VRAM patches — measured and rejected, docs/models/h3/performance.md. 1.4 ships on the H3 hype window, so this is the critical path."
 }
