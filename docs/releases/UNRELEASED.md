@@ -22,6 +22,12 @@
 > was the only thing gating these lines. Earlier drafts describing a paste-two-slots flow
 > were written and REMOVED before it shipped, because a changelog line for a flow that
 > will not ship is worse than no line; the entries below describe what he actually ran.
+>
+> **A `fixes` entry about installing one operation without the other was CUT on
+> 2026-08-07** — a model installs as one unit now, so no user can reach the state it
+> described. Its one real consequence, the Wan text-to-video weights you may already
+> have downloaded, is covered by "Wan 2.2 is image-to-video only now" in
+> importantChanges. Do not re-add it.
 
 ## whatIsNew
 
@@ -378,13 +384,6 @@
   folder can have two spellings — a long one and a short `PROGRA~1`-style one — and
   the app treated them as two different folders, so the same LoRA or upscale folder
   could end up in your list twice. Both spellings now resolve to the same folder.
-
-- **An operation you didn't install no longer fails halfway through generating.**
-  Some models let you install one operation without downloading the other. Picking
-  the one you skipped started a generation that died on an error report screen,
-  which read like a bug in the app. The app now only offers the operations you
-  actually installed, and if one slips through it tells you which weights are
-  missing and points you at the Model Library instead of asking you to report it.
 
 - **The home screen no longer claims you have no models when it cannot tell.** On a
   cloud-only setup — the local engine install skipped, no Pod connected yet — the
