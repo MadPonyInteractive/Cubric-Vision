@@ -446,6 +446,38 @@ async function stageProbeImage() {
  * expensive half of the run, and it is a fault the registry alone can prove.
  * @returns {{graph:object,applied:object}|{status:'SKIP'|'FAIL',why:string}}
  */
+/**
+ * The app heals Windows path separators at injection; this runner does not go through it.
+ *
+ * `comfyController` § 3b flips `\` to `/` on every path-bearing loader input for any engine
+ * whose enum uses `/` — always true of the Linux Pod. The runner loads a workflow off disk
+ * and POSTs it straight to /proxy/prompt, so it skipped that heal entirely and every BAKED
+ * subfoldered value (75 of them across 14 workflows: `chroma\styles\x`, `krea-2\style\x`,
+ * `flux2-klein\styles\x`) hit ComfyUI `value_not_in_list`. ComfyUI validates PER OUTPUT
+ * NODE, so the damage varied: where the bad value fed the only output the op produced no
+ * media and FAILED; elsewhere that output was dropped and a sibling still rendered, so the
+ * op PASSED with its style LoRAs silently missing. Four FAILs on the 2026-08-08 run were
+ * this, and they were harness artefacts — the product ships the heal.
+ *
+ * Kept deliberately as a MIRROR, not an import: comfyController is browser-side (absolute
+ * `/js/...` specifiers) and does not load in bare Node. If § 3b's key list changes, change
+ * this too — a divergence here reads as a model bug and is not one.
+ */
+const HEAL_KEYS = ['lora_name', 'upscale_model', 'ckpt_name', 'unet_name', 'model_name', 'vae_name', 'clip_name'];
+const HEAL_KEY_RE = /^lora_\d+$/;   // MpiStyleLoras banks slot lora_1..lora_5 (MPI-359)
+function healSeparators(graph) {
+    let n = 0;
+    for (const node of Object.values(graph)) {
+        if (!node || !node.inputs) continue;
+        for (const k of Object.keys(node.inputs)) {
+            if (!HEAL_KEYS.includes(k) && !HEAL_KEY_RE.test(k)) continue;
+            const v = node.inputs[k];
+            if (typeof v === 'string' && v.includes('\\')) { node.inputs[k] = v.replace(/\\/g, '/'); n++; }
+        }
+    }
+    return n;
+}
+
 function prepOp(reg, model, op, probeImage) {
     const { resolveWorkflowFile, COMMANDS } = reg;
     const file = resolveWorkflowFile(model, op, ENGINE, { variantTokens: { arch: ARCH } });
@@ -466,6 +498,7 @@ function prepOp(reg, model, op, probeImage) {
         if (mi.mediaType !== 'image') return { status: 'SKIP', why: `needs a ${mi.mediaType} input; only images are staged` };
         injectByTitle(graph, mi.title, probeImage);
     }
+    healSeparators(graph);
     return { graph, applied: minimizeGraph(graph) };
 }
 
@@ -527,6 +560,69 @@ async function runOp(reg, model, op, probeImage) {
 // already starts with, at the moment it is actionable.
 const POD_REPO = process.env.CUBRIC_POD_REPO || 'c:/AI/Mpi/mpi-ci/cubric-vision-pod';
 
+/**
+ * Gate 8: do the shipped workflows only use FIRST-PARTY nodes the pinned commit actually has?
+ *
+ * `checkPodLock` proves Vision's node_lock and the pod repo's agree. On 2026-08-08 they agreed
+ * perfectly - both pinned ComfyUI-MpiNodes at a6e5d5e0 - and both were STALE: `MpiStageLatents`
+ * landed in da23e911, SIXTEEN HOURS LATER, and five shipped workflows already used it. Two locks
+ * in sync say nothing about whether the pin is new enough for the graphs, so that check can
+ * never catch this. The Pod installed MpiNodes at the pin, ComfyUI had no such node type, and
+ * all six multi-stage video ops died on `missing_node_type` AFTER a GPU was rented.
+ *
+ * MpiNodes is code-only and installs to the volume at connect, so the fix is a pin bump with no
+ * image rebuild - which is exactly why the pin drifts quietly. One unauthenticated fetch of
+ * `__init__.py` at the pinned commit lists every first-party class, so this costs nothing and
+ * runs on --plan. Non-first-party packs (Krea2*, Impact, etc.) are NOT checked: they are pinned
+ * per-node elsewhere and their absence is a different failure with a different fix.
+ */
+async function checkFirstPartyNodes(set) {
+    const lock = JSON.parse(readFileSync(path.join(REPO, 'dev_configs/node_lock.json'), 'utf8'));
+    const entry = (lock.nodes || {})['ComfyUI-MpiNodes'];
+    if (!entry || !entry.commit || !entry.repo) {
+        log(`\n  WARN node_lock has no ComfyUI-MpiNodes pin - cannot check first-party nodes.`);
+        return true;
+    }
+    const url = `https://raw.githubusercontent.com/${entry.repo}/${entry.commit}/__init__.py`;
+    let src;
+    try {
+        const r = await fetch(url);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        src = await r.text();
+    } catch (err) {
+        // Offline / rate-limited is not evidence of drift - never block a run on the check itself.
+        log(`\n  WARN could not read MpiNodes @ ${entry.commit.slice(0, 8)} (${err.message}) - first-party node check skipped.`);
+        return true;
+    }
+    const have = new Set(src.match(/\bMpi[A-Za-z0-9_]*/g) || []);
+    const missing = new Map();
+    for (const e of set) {
+        for (const op of e.ops) {
+            const file = reg_resolveFile(e.model, op);
+            if (!file) continue;
+            const fp = path.join(WF_DIR, file);
+            if (!existsSync(fp)) continue;
+            for (const n of Object.values(JSON.parse(readFileSync(fp, 'utf8')))) {
+                const ct = n && n.class_type;
+                if (typeof ct === 'string' && ct.startsWith('Mpi') && !have.has(ct)) {
+                    if (!missing.has(ct)) missing.set(ct, new Set());
+                    missing.get(ct).add(`${e.model.id}/${op}`);
+                }
+            }
+        }
+    }
+    if (!missing.size) {
+        log(`\n  first-party nodes: every Mpi* class_type exists at MpiNodes ${entry.commit.slice(0, 8)} OK`);
+        return true;
+    }
+    log(`\n  MpiNodes PIN IS TOO OLD for the shipped workflows - ${missing.size} node type(s) missing:`);
+    for (const [ct, ops] of missing) log(`     ${ct} - needed by ${[...ops].join(', ')}`);
+    log(`  node_lock pins ${entry.commit.slice(0, 8)}; these classes are not in its __init__.py.`);
+    log(`  Bump ComfyUI-MpiNodes in BOTH dev_configs/node_lock.json and the pod repo's node_lock.json.`);
+    log(`  MpiNodes is code-only: it reinstalls to the volume at connect, so NO image rebuild is needed.`);
+    return false;
+}
+
 /** Warns on --plan, hard-fails before any spend. @returns {boolean} in sync */
 function checkPodLock() {
     const podLock = path.join(POD_REPO, 'node_lock.json');
@@ -564,16 +660,21 @@ function checkPodLock() {
     return false;
 }
 
+let reg_resolveFile = () => null;
+
 async function main() {
     const reg = await loadRegistry();
+    reg_resolveFile = (m, op) => reg.resolveWorkflowFile(m, op, ENGINE, { variantTokens: { arch: ARCH } });
     const only = opt('models')?.split(',').map(s => s.trim()).filter(Boolean);
     const set = resolveSmokeSet(reg, only);
     const opCount = printPlan(reg, set);
     const preflightFails = preflightOps(reg, set);
     const podLockOk = checkPodLock();
+    const nodesOk = await checkFirstPartyNodes(set);
 
     if (PLAN_ONLY) { log('\n--plan: nothing rented, nothing spent.\n'); return; }
     if (!podLockOk) die('pod lock is behind — sync it and rebuild the DEV image before smoking.');
+    if (!nodesOk) die('the MpiNodes pin predates a node the workflows use - bump it before renting anything.');
     if (preflightFails) die(`${preflightFails} op(s) fail preflight offline — fix the graph/registry before renting anything.`);
 
     log(`\n── Live run ──`);
@@ -787,6 +888,19 @@ if (flag('self-check')) {
     assert(injectByTitle(g, 'Input_wf_type', 4) && g[4].inputs.value === 4, 'injectByTitle sets by title');
     assert(injectByTitle(g, 'Input_Nonexistent', 1) === false, 'injectByTitle reports a miss (silent skip is the trap)');
     assert(snapDown(1216, 128) === 128 && snapDown(768, 128) === 128, 'snapDown lands on a legal multiple');
+
+    // healSeparators: the four FAILs on 2026-08-08 that were the harness, not the model.
+    const hg = {
+        1: { class_type: 'MpiStyleLoras', inputs: { lora_1: 'chroma\\styles\\a.safetensors', lora_2: 'None' } },
+        2: { class_type: 'LoraLoaderModelOnly', inputs: { lora_name: 'krea-2\\style\\b.safetensors' } },
+        3: { class_type: 'MpiPromptList', inputs: { text: 'a\\b keep me' } },
+    };
+    const healed = healSeparators(hg);
+    assert(healed === 2, `healed 2 path values, got ${healed}`);
+    assert(hg[1].inputs.lora_1 === 'chroma/styles/a.safetensors', 'lora_N slot is healed (MpiStyleLoras banks)');
+    assert(hg[1].inputs.lora_2 === 'None', 'None has no separator and passes through');
+    assert(hg[2].inputs.lora_name === 'krea-2/style/b.safetensors', 'lora_name is healed');
+    assert(hg[3].inputs.text.includes('\\'), 'a NON-path input must never be touched');
     console.log(`self-check OK (${applied.join(', ')})`);
     process.exit(0);
 }
