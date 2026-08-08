@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "CLAUDE.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md",
+    ".claude/settings.json",
+    ".claude/hooks/guard-destructive-git.py",
+    ".agents/mpi-kanban.local.md"
+  ]
+}

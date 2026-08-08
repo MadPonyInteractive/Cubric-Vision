@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-493","type":"task.created","at":"2026-08-08T07:30:00Z","actor":"claude","summary":"Card written retroactively at close-out - the work ran uncarded. Diagnosis + fixes are commits 8052e4fb and 9ae5a0ee."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-493","type":"task.moved","from":"todo","to":"done","at":"2026-08-08T09:55:00Z","actor":"claude","summary":"Evidence in validation.md: 18/18 rules resolve, 3/3 bundles, hook selftest 16 blocked / 14 allowed, board validator green."}

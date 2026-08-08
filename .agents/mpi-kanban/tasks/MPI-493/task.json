@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-493",
+  "title": "File claiming had been dead for 7 weeks - three causes, all fixed",
+  "description": "Peer agents were overwriting each other. Root cause was NOT the 2026-07-31 skill-pack update: active_file_claims was [] in every commit from 2026-06-16 on, six weeks earlier. Three independent causes. (1) The claim procedure lives INSIDE the mpi-* skills, so ordinary work never loads it - card moves kept working the whole time because they are in CLAUDE.md, which is the control that rules out 'agents ignore the board'. (2) .agents/mpi-kanban.local.md did not exist, so /mpi-brief-rule - step 1 of the MANDATORY dispatch checklist - answered 'No mpi-kanban config found' and stopped for every rule name, meaning every sub-agent ever dispatched started unbriefed. (3) The lifecycle's first mechanical step calls python scripts/new_uuid.py, referenced in 5 places and shipped in none. Fixed 1+2 downstream; 3 is a pack bug, filed as Mpi-Kanban MPI-26. Also added a PreToolUse hook blocking git checkout --/restore/stash/reset --hard/clean -f, because a documented ban on that had already failed twice, most recently wiping a peer's board move, event-log line, code and doc edits in one command. Ownership (files.json) is now required on the todo->doing move: 0 of 83 cards declared any, so board dispatch had never had a selectable card.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-08T07:30:00Z",
+  "updated_at": "2026-08-08T09:55:00Z",
+  "links": {
+    "validation": "validation.md",
+    "events": "events.jsonl",
+    "files": "files.json"
+  }
+}
