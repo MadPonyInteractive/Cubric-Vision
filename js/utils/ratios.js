@@ -188,7 +188,11 @@ export const LTX_RATIOS = {
 // A 2K CANVAS is a separate question and the answer turned out to be yes: this file
 // used to say "do not add a 2K/4K tier on top", which conflated the two. Measured
 // 2026-08-07 on a 4060 Ti, a bare 2560x1472 run is clean. The `2k` tier below exists on
-// that evidence. Still NO 4K tier — nothing has been run there.
+// that evidence. `4k` was added 2026-08-08 on the user's call and is UNMEASURED — see
+// its own note below. The ladder deliberately stops at one entry per high-res class
+// (2k, 4k) rather than a second full quality ladder: mirroring the five 1K tiers at 2K
+// would ship a dozen unmeasured resolutions to answer a question nobody asked, and LTX
+// already sets the precedent of a single entry per class.
 //
 // LADDER SHAPE — native sits at `high`, NOT at the top (MPI-449, 2026-08-06). This
 // mirrors WAN_RATIOS exactly: WAN's documented ceiling (1280x720) sits at `high` and its
@@ -261,6 +265,19 @@ export const MINIMAX_H3_RATIOS = {
         { label: "1:1", w: 1472, h: 1472, icon: "rect_1_1" },
         { label: "9:16", w: 1472, h: 2560, icon: "rect_9_16" },
         { label: "16:9", w: 2560, h: 1472, icon: "rect_16_9" }
+    ],
+    // 4K — LTX's 4k numbers, /32-clean for H3 (3840/32=120, 2176/32=68). UNMEASURED on
+    // H3: added 2026-08-08 on the user's explicit call, for cards that can carry it, and
+    // it is the ONE tier here with no run behind it. Extrapolate the cost rather than the
+    // quality: 16:9 is 8.36 MP against 2k's 3.77, and this ladder's own measured curve is
+    // ~3.3x time per 2x pixels, so expect roughly 7-8x a 2k run — impractical below a
+    // very large card, which is the point of shipping it as the top rung rather than a
+    // default. If a first 4K run comes back banded or incoherent, this tier is the
+    // suspect, not the sampler.
+    '4k': [
+        { label: "1:1", w: 2176, h: 2176, icon: "rect_1_1" },
+        { label: "9:16", w: 2176, h: 3840, icon: "rect_9_16" },
+        { label: "16:9", w: 3840, h: 2176, icon: "rect_16_9" }
     ]
 };
 
@@ -507,7 +524,7 @@ const BUILTIN_QUALITY_TIERS = {
     wan: ['very_low', 'low', 'medium', 'high', 'very_high'],
     wan5b: ['low', 'medium', 'high'],
     ltx: ['very_low', 'low', 'medium', 'high', 'very_high', '2k', '4k'],
-    h3: ['very_low', 'low', 'medium', 'high', 'very_high', '2k'],
+    h3: ['very_low', 'low', 'medium', 'high', 'very_high', '2k', '4k'],
     krea2: ['1k', '2k'],
 };
 

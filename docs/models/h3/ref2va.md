@@ -117,6 +117,25 @@ the rest. `--lowvram` in the engine's launch line is a **no-op** here — its ow
   **VRAM is not the limit at `max`** — measured 13.0 / 16 GB on a 4060 Ti during a `max`
   run with two references (user, 2026-08-08), i.e. 3 GB still free. The cost is time,
   not residency, which matches `very_high`'s 13.2/16 reading in `ratios.js`.
+
+### `max` vs `match` — the A/B, same prompt and inputs (user, 2026-08-08)
+
+A 2688x2688 character sheet plus a reference video, 1152x640, on a 4060 Ti:
+
+| | wall clock | verdict |
+|---|---|---|
+| `match` | **7 min** | baseline |
+| `max` | **12 min** | **better overall quality, better cinematics**; adherence about the same |
+
+**~1.7x for a real quality gain**, which is why the control ships with both and the
+default is not the question ([[settled above]]). Note what `max` actually does with a
+sheet that large: it caps the reference at a **2048px edge**, so a 2688px sheet is
+downscaled to 2048 — `max` is a ceiling, not "full resolution". At `match` the same
+sheet is fit to the 1152x640 output instead, which is the whole 1.7x.
+
+This also answers the standing question of whether reference tokens dominate per-step
+cost: raising ONLY the reference resolution, with the output canvas identical, moved the
+run 7 -> 12 min. They ride every step, and they are expensive.
 - **No negative prompt.** `negativePrompt: false`, because the graph carries no
   `Input_Negative` and no `Input_Negative_Audio` — dropping the toggle removes both
   fields at once rather than shipping two that inject nowhere.
