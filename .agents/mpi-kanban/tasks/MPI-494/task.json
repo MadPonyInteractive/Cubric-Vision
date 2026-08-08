@@ -3,15 +3,16 @@
   "id": "MPI-494",
   "title": "Dockerfile RIFE prebake still pulls from huggingface.co on a claim that is now false",
   "description": "Requested by the MPI-491 session at close-out, verified 2026-08-08. The image build prebakes RIFE weights from huggingface.co on the strength of a comment at Dockerfile:348 calling marduk191/rife 'a plain non-Xet repo, never 403s'. That is STALE: every HF path now 302s to us.aws.cdn.hf.co/xet-bridge-us, rife included, and MPI-148 is on record that this CDN 403s ranged aria2 NON-DETERMINISTICALLY and broke the whole docker build when it did. So the build carries a flake whose justification no longer holds. docs/runpod-troubleshooting.md is already corrected (9be9dfc3); the Dockerfile is not. NOT a 1.4 gate - it is an image-build risk, never user-facing, and it only bites when a build happens to hit a 403. Fix shape follows MPI-491's finding: either route the prebake through the Xet-native path (huggingface_hub is now in wrapper/requirements.txt) or stage the weights to R2 like the other 101 deps - RIFE has no licence bar on redistribution, unlike H3. Lives in c:/AI/Mpi/mpi-ci/cubric-vision-pod/Dockerfile.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "open",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-08T09:20:57Z",
-  "updated_at": "2026-08-08T09:20:57Z",
+  "updated_at": "2026-08-08T18:55:00Z",
   "links": {
     "brief": "brief.md",
     "files": "files.json",
     "events": "events.jsonl",
-    "validation": "validation.md"
+    "validation": "validation.md",
+    "checklist": "checklist.md"
   }
 }
