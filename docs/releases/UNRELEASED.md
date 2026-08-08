@@ -160,13 +160,13 @@
 
 - **LTX 2.3's Balanced tier moved to a better, smaller model file.** The two
   GPU-specific options (RTX 50 Series / RTX 40 & Older) are gone — one file now runs
-  on every card, at 20GB instead of 24–25GB, with better detail and sound. If you
+  on every card, at 21.5GB instead of 24–25GB, with better detail and sound. If you
   already have LTX Balanced installed, the new file downloads once and the old one is
   cleaned up. Text to Video and Image to Video also share one workflow now, so which
   one you get follows from whether you supply a first or last frame.
 - **Wan 2.2 is image-to-video only now.** Its Text to Video operation has been
   retired: LTX 2.3 does that job better, and Wan's text-to-video weights were a
-  27GB download that served nothing else. Image to Video is untouched — same
+  29GB download that served nothing else. Image to Video is untouched — same
   model, same speed, same results. If you already downloaded the text-to-video
   weights, they are no longer counted as part of Wan 2.2, so the next time you
   uninstall a model they get cleared out with it rather than sitting on your
@@ -241,7 +241,7 @@
   for something that fixes itself. The engine's storage service takes a few seconds longer
   to answer than the engine does, and the app was reading that gap as a real error. It now
   tells you the engine is not ready yet and to try the install again in a moment. Genuine
-  failures — a bad file, a full disk — still report exactly as before.
+  failures — a bad file, for instance — still report exactly as before.
 
 - **A cloud install that was interrupted can be started again.** If your cloud engine
   went away in the middle of a model install — stopped, deleted, or restarted — pressing
@@ -262,6 +262,7 @@
   1.3.0 release — the run stopped at the first sampling step and produced nothing. A
   ComfyUI update changed how one of its components hands over the upscaler model, and the
   node that reads it had not caught up. Both are updated, and LTX runs end to end again.
+  If you have been avoiding LTX because it looked broken, it was, and it is not any more.
 
 - **The negative prompt now does something on LTX.** Anything you typed into the negative
   box on an LTX video was being ignored. The usual mechanism for it only applies at a
@@ -270,7 +271,6 @@
   the video towards what you asked for instead of away from what you didn't want. It is
   wired correctly now, and leaving the box empty switches it off cleanly instead of
   leaving it half-applied.
-  If you have been avoiding LTX because it looked broken, it was, and it is not any more.
 
 - **Models you never installed no longer show a half-finished download bar.** Six model
   tiles were showing progress bars — 17%, 22%, 33%, 35%, 36%, 49% — for downloads nobody

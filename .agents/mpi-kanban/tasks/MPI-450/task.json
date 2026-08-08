@@ -7,7 +7,7 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-05T10:35:00Z",
-  "updated_at": "2026-08-08T05:10:00Z",
+  "updated_at": "2026-08-08T08:40:00Z",
   "labels": [
     "release",
     "umbrella",
@@ -28,7 +28,8 @@
     "brief": "brief.md",
     "checklist": "checklist.md",
     "events": "events.jsonl",
-    "handoffs": "handoffs/"
+    "handoffs": "handoffs/",
+    "claim_audit": "claim-audit.md"
   },
   "priority": "high",
   "attention": {

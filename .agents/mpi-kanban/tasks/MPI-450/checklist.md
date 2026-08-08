@@ -112,14 +112,28 @@ assumptions that time may have invalidated.
       `UNRELEASED.md` § importantChanges (`xcode-select --install` before first setup).
       The card is `deferred`, NOT fixed — the tarball-instead-of-clone candidate is not
       established to remove the requirement (CLT also supplies clang). See its brief.
-- [ ] **Claim audit** — PARTIAL. All 23 fix bullets were read and the two that were
-      false were corrected: the mirror bullet (claimed the whole catalogue) and the Mac
-      pinch bullet (asserted a macOS outcome nobody has run — MPI-432 exists to run it).
-      **What remains is per-bullet verification against what was actually executed**, and
-      it belongs with the fold into `RELEASE_NOTES['1.4.0']` at bump time. Known soft
-      spots to settle there: the preview-decoder bullet (Klein verified, Wan not), the
-      install-screen flicker bullet (fixed and unit-tested, never SEEN fire), and
-      "Resize Video works on a cloud GPU" (no remote run recorded).
+- [x] **Claim audit** — DONE (read half), 2026-08-08. Full per-bullet verdict table:
+      **`claim-audit.md`** in this folder. All 61 bullets graded LIVE / TEST / DECL, with
+      the evidence pointer per bullet. **Scope correction:** the 2026-08-05 pass had read
+      `## fixes` ONLY — `## whatIsNew` (15) and `## importantChanges` (11) had never been
+      audited at all, and `## fixes` had since grown 23 → 35.
+      **Four corrections applied to `UNRELEASED.md`:** the LTX Balanced size (20GB → 21.5GB
+      — the declared string is GiB-derived while the files it is compared against are
+      decimal GB, so the saving read ~5GB when it is ~3GB); the Wan t2v size (27GB → 29GB,
+      both halves HEAD-measured at 14.55GB); the full-disk example dropped from the
+      wake-up-install bullet, which settles the fourth soft spot **without** waiting on
+      MPI-483 (put the phrase back if 483 lands); and the "if you have been avoiding LTX"
+      sign-off moved back under the LTX-dead bullet, where `56902d53` had displaced it.
+      **One soft spot CLEARED, not settled — it was never a gap:** "Resize Video works on
+      a cloud GPU" IS live-verified — MPI-438's validation, Pod `vhks7b6fl1x57h`, prompt
+      `81b0399f`, `status: success`.
+      **One soft spot got WORSE on inspection:** the preview-decoder bullet. The note said
+      "Klein verified, Wan not"; MPI-420's validation leaves **all three** live checks
+      unticked and the card was bulk-closed (`5f27d3cb`) without them, so the "looks like
+      your picture" claim is unobserved on every model. Moved to Gate B below.
+      Remaining FLAGs (install-screen flicker, MPI-480 #3, MPI-481, H3's unrun 4K rung,
+      the two first-run bullets) are named in `claim-audit.md` and are decisions for the
+      fold, not defects in the prose. Only the fold into `RELEASE_NOTES['1.4.0']` is left.
 
 ## Gate E — release CONTENT: MiniMax H3 (added 2026-08-05 by the user)
 
@@ -155,6 +169,15 @@ assumptions that time may have invalidated.
 
 - [ ] `npm test` green
 - [ ] `npm run test:desktop` green
+- [ ] **One FLUX.2 Klein + one Wan 2.2 generation, watching the live preview** — ADDED
+      2026-08-08 by the Gate C claim audit. The `UNRELEASED.md:377` bullet says the live
+      preview "looks like your picture, not a colour blob"; nobody has ever seen it. The
+      decoders themselves are proven (on R2, HEAD-verified, strict-load under the engine
+      python, wired as `vae_approx/` engineAssets with two negative-controlled tests) — the
+      VISUAL outcome is what is unobserved. MPI-420 carried these two checks and was
+      bulk-closed without them, so they have no other home. If they cannot be run before
+      the cut, reword the bullet to the install claim (the decoders now ship) and drop the
+      "looks like your picture" promise.
 - [ ] **Post-smoke throwaway-Pod session — closes MPI-480 #3 AND MPI-481 in one go.**
       ADDED 2026-08-08. Both need the same rig and NEITHER can run beside a live smoke
       run: MPI-481's fix is in `routes/`, which is read at server fork, so the app must
