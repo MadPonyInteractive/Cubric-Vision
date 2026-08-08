@@ -2,6 +2,7 @@
  * preloadStyles.js — Manifest of all primitive, compound, and block styles
  * that must be preloaded at startup to prevent FOUC (Flash of Unstyled Content).
  */
+import { qs } from '../utils/dom.js';
 
 export const PRELOAD_COMPONENT_STYLES = [
   // Primitives
@@ -108,7 +109,7 @@ export const PRELOAD_COMPONENT_STYLES = [
 export function preloadComponentStyles(paths = PRELOAD_COMPONENT_STYLES) {
   const head = document.head;
   paths.forEach(path => {
-    if (head.querySelector(`link[href="${path}"]`)) return;
+    if (qs(`link[href="${path}"]`, head)) return;
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = path;

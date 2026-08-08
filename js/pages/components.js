@@ -322,8 +322,8 @@ function mountAll() {
                 <div data-dev-mount="control-bar"></div>
             </div>
         `;
-        const surfaceSlot = host.querySelector('[data-dev-mount="surface"]');
-        const controlSlot = host.querySelector('[data-dev-mount="control-bar"]');
+        const surfaceSlot = qs('[data-dev-mount="surface"]', host);
+        const controlSlot = qs('[data-dev-mount="control-bar"]', host);
 
         const surface = MpiVideoSurface.mount(surfaceSlot, { fps: 30 });
         surface.el._setSrc('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4');
@@ -800,12 +800,12 @@ function mountAll() {
 
         const title = document.createElement('div');
         title.textContent = 'MpiModal Shell';
-        title.style.cssText = 'font-size:1.25rem;font-weight:700;color:var(--text-primary,#fff);';
+        title.style.cssText = 'font-size:1.25rem;font-weight:700;color:var(--ink-1);';
         inner.appendChild(title);
 
         const body = document.createElement('div');
         body.textContent = 'This is a bare MpiModal primitive. It owns the backdrop, portal, Overlays queue, and Escape handling. Compounds mount their content inside.';
-        body.style.cssText = 'font-size:0.9rem;color:var(--text-secondary,#aaa);line-height:1.5;';
+        body.style.cssText = 'font-size:0.9rem;color:var(--ink-2);line-height:1.5;';
         inner.appendChild(body);
 
         const closeSlot = document.createElement('div');
@@ -1085,6 +1085,7 @@ function mountAll() {
             const hue = (i * 55) % 360;
             ctx.fillStyle = `hsl(${hue}, 60%, 35%)`;
             ctx.fillRect(0, 0, 56, 56);
+            // eslint-disable-next-line mpi/no-hardcoded-hex-color -- canvas pixel fill (2d ctx cannot read CSS vars)
             ctx.fillStyle = '#fff';
             ctx.font = 'bold 18px sans-serif';
             ctx.textAlign = 'center';

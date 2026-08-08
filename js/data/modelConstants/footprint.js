@@ -200,10 +200,8 @@ export function demo() {
     assert(Math.abs(sizeToGb('254MB') - 0.248) < 0.01, 'parse 254MB');
 
     const t = LTX + OVERHEAD;
-    // eslint-disable-next-line no-console
     console.log(`footprint.js self-check PASS — LTX bf16 (weights ${LTX}GB, footprint ${t}GB):`);
     [16, 24, 32, 48, 64].forEach(v =>
-        // eslint-disable-next-line no-console
         console.log(`  ${String(v).padStart(2)}GB VRAM → ~${ramNeededGb(LTX, v)}GB RAM` +
             (v === 16 ? '   (raw 44GB = user 4060 box, runs ✓)' : '')));
     return true;

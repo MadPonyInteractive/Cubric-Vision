@@ -1,4 +1,1 @@
-npx lint-staged || true
-echo ""
-echo "⚠️  Lint ran in warn-only mode. Violations above do not block commit."
-echo "   Flip to strict mode in a separate tracker once clean."
+npx lint-staged

@@ -20,8 +20,8 @@
     "release:notes": "node scripts/release-notes-approval.mjs show",
     "test": "node --test \"tests/**/*.test.cjs\"",
     "test:desktop": "playwright test --config=playwright.desktop.config.js",
-    "lint": "eslint js/ --max-warnings=9999",
-    "lint:components": "eslint js/components/ --max-warnings=9999",
+    "lint": "eslint js/ --max-warnings=0",
+    "lint:components": "eslint js/components/ --max-warnings=0",
     "prepare": "husky"
   },
   "author": "MadPonyInteractive",
@@ -58,7 +58,7 @@
   },
   "lint-staged": {
     "js/**/*.js": [
-      "eslint --no-error-on-unmatched-pattern --max-warnings=9999"
+      "eslint --no-error-on-unmatched-pattern --max-warnings=0"
     ]
   }
 }

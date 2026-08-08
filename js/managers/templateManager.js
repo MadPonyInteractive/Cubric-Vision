@@ -24,7 +24,7 @@
 
 'use strict';
 
-import { gid } from '../utils/dom.js';
+import { gid, qs } from '../utils/dom.js';
 
 const _loading = new Map(); // tplId → Promise (in-flight de-duplication)
 
@@ -69,7 +69,7 @@ async function _fetchAndInject(tplId) {
     // Parse the fetched HTML fragment
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    const tpl = doc.getElementById(tplId);
+    const tpl = qs(`#${tplId}`, doc);
 
     if (!tpl || tpl.tagName.toLowerCase() !== 'template') {
         throw new Error(`[templateLoader] ${url} does not contain <template id="${tplId}">`);

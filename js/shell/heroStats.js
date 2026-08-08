@@ -286,15 +286,19 @@ export function initHeroStats() {
     _renderSession(null);
     _renderGpu();
 
+    // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
     Events.on('models:checked', ({ installedModelIds }) => _paintModels(installedModelIds?.length ?? 0));
     // MPI-404: an engine arriving (or a Pod connecting) can turn the count from
     // unknown into knowable without the installed SET changing, and the
     // models:checked emit is diff-gated (modelRegistry.js) — so repaint on those
     // edges too. Connection is edge-gated: the status heartbeat re-emits
     // {connected:true} every ~5s and hasNoEngine() would refresh the Pod each time.
+    // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
     Events.on('engine:ready', () => _paintModels());
+    // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
     Events.on('projects:listed', ({ projects }) => _renderSession(projects));
     // Persistent remote-engine feedback (MPI-64 Step 4.4) — flip local↔remote.
+    // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
     Events.on('remote:connection', (payload) => {
         const wasConnected = _remoteConnected;
         _renderEngine(payload || {});
@@ -302,6 +306,7 @@ export function initHeroStats() {
     });
     // MPI-87: live connect % in the GPU slot, but only while the connecting phase
     // is active — a late tick after the phase resolves must not clobber the GPU card.
+    // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
     Events.on('remote:connect-progress', ({ pct } = {}) => {
         if (_remotePhase !== 'connecting') return;
         if (!Number.isFinite(pct)) return;

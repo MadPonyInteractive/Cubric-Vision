@@ -37,6 +37,7 @@ import { stampDab, strokeDabs } from './brushDab.js';
 const COMP_MAX_EDGE = 1536;
 
 /** White, because the server reads the mask by LUMINANCE (white = take the overlay). */
+// eslint-disable-next-line mpi/no-hardcoded-hex-color -- mask luminance value, not a themeable color
 const HOLE_FILL = '#ffffff';
 
 export class CompositeManager {

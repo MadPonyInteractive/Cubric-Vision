@@ -1953,7 +1953,7 @@ export const MpiPromptBox = ComponentFactory.create({
         const _triggerRun = () => {
             // An open Flow overlay owns Ctrl+Enter → it runs the Flow, not the PromptBox
             // behind it. bind() fires all handlers, so bail here when a Flow is live.
-            if (document.querySelector('.mpi-base-flow')) return;
+            if (qs('.mpi-base-flow')) return;
             // MPI-73: the run hotkey bypasses the (now-disabled) Cue button — block
             // it too while the remote engine is connecting/disconnecting.
             if (_remoteTransitioning) return;

@@ -1,6 +1,7 @@
 'use strict';
 
 import { APP_CONFIG } from '../../dev_configs/app_config.js';
+import { qs } from '../utils/dom.js';
 
 /** @enum {string} */
 export const KEY_TYPE = {
@@ -281,7 +282,7 @@ export const HOTKEY_REGISTRY = [
         allowWhileTyping: false,
         when: ({ state }) =>
             (state.currentPage === 'gallery' || state.currentPage === 'group-history') &&
-            !document.querySelector('.mpi-overlay--body'),
+            !qs('.mpi-overlay--body'),
     },
 
     // ── Radial Menu ───────────────────────────────────────────────────────────
@@ -301,7 +302,7 @@ export const HOTKEY_REGISTRY = [
         when: ({ state }) =>
             APP_CONFIG.dev_mode &&
             (state.currentPage === 'gallery' || state.currentPage === 'group-history') &&
-            !document.querySelector('.mpi-overlay--body'),
+            !qs('.mpi-overlay--body'),
     },
 
     // ── Modal ─────────────────────────────────────────────────────────────────

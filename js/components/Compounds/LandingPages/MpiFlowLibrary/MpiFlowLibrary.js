@@ -327,8 +327,8 @@ export const MpiFlowLibrary = ComponentFactory.create({
         // (start/complete/cancel), which swap the button between Install/Cancel/Open.
         function _patchProgress(flow) {
             if (!_activeDetail || _activeDetail.id !== flow.id) return;
-            const bar = detailActions.querySelector('.mpi-tile__prog-bar span');
-            const pctEl = detailActions.querySelector('.mpi-tile__prog-pct');
+            const bar = qs('.mpi-tile__prog-bar span', detailActions);
+            const pctEl = qs('.mpi-tile__prog-pct', detailActions);
             if (!bar || !pctEl) { openDetail(flow); return; } // footer not in bar-mode yet → transition
             const pct = Math.min(Math.round(_installProgress(flow).progress * 100), 100);
             bar.style.width = `${pct}%`;
