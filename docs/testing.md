@@ -108,6 +108,18 @@ per-test `CUBRIC_E2E_USER_DATA`, so normal app data is never touched.
 **The suite runs alongside your open app** — verified 2026-08-05 with a dev instance
 live on 3000, 17/17 green on port 63877 and the instance untouched (MPI-448).
 
+What that does NOT buy you is a *second* app. Start `npm start` while one is already
+open and it launches, flashes a splash and closes within ~2s — exit 0, no error, and
+nothing in `app.log`. During a suite run that reads as "the tests killed my app"; it
+is the Electron single-instance lock, working. The lock is keyed on `userData`, and
+`main.js` applies the `CUBRIC_E2E_USER_DATA` branch *before* requesting it, so a spec's
+instance holds a different lock and never contends for yours — measured three ways on
+Electron 41.1.1 (MPI-458 `validation.md`). Tell the two apart by the signature: a lock
+quit is silent, a taken port writes a fatal (next section). Do not "fix" this by
+exempting `CUBRIC_E2E` from the lock — the only spec that behaves differently under
+such a guard is one that forgot `CUBRIC_E2E_USER_DATA`, and it would then boot against
+your real user data instead of dying loudly.
+
 The port is a value now, not a literal. `CUBRIC_PORT` (default 3000) is read by
 `server.js`, `main.js` and `tests/desktop/shellWindow.js`; `tests/desktop/globalSetup.js`
 picks a free one per run and Playwright's workers inherit it, so every spec's
