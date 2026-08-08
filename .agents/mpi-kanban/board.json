@@ -1,17 +1,17 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 481,
+  "next_id": 486,
   "columns": {
     "todo": [
+      "MPI-485",
+      "MPI-483",
+      "MPI-482",
       "MPI-367",
-      "MPI-479",
       "MPI-478",
       "MPI-477",
-      "MPI-461",
       "MPI-456",
       "MPI-455",
       "MPI-433",
-      "MPI-432",
       "MPI-416",
       "MPI-397",
       "MPI-377",
@@ -36,6 +36,9 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-481",
+      "MPI-461",
+      "MPI-479",
       "MPI-480",
       "MPI-450",
       "MPI-468",
@@ -43,7 +46,9 @@
       "MPI-465"
     ],
     "done": [
+      "MPI-484",
       "MPI-458",
+      "MPI-432",
       "MPI-466",
       "MPI-463",
       "MPI-459",
@@ -83,7 +88,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-08T05:00:00Z",
+  "updated_at": "2026-08-08T07:45:00Z",
   "events": [
     {
       "at": "2026-08-07T14:20:43Z",
@@ -2373,6 +2378,56 @@
       "at": "2026-08-08T05:00:00Z",
       "actor": "opus",
       "summary": "Handoff c3a71f04 written for a fresh session. MPI-467 is the 1.4 blocker and the only one: release:check fails solely on the missing smoke-evidence.json. The handoff leads with the prerequisite the --plan run reports (the Pod lock is behind on python_deps.txt, so smoking now measures the old engine), then the DEV-tag-only image build, then the smoke run itself."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-461",
+      "type": "task.moved",
+      "at": "2026-08-08T05:40:00Z",
+      "actor": "opus",
+      "summary": "todo -> doing. Rescoped: the twelve-bail lane strand was already fixed structurally by MPI-463 (_failBail, commit 9d83ea6e). MPI-461 keeps the one acceptance MPI-463 never carried - the user-visible half. Four pre-dispatch bails still settle SILENTLY (workflow-name resolve, trimmed-video prep, workflow JSON fetch, injector throw), and the fetch one is exactly the live 404 that was reported."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-479",
+      "type": "task.moved",
+      "at": "2026-08-08T05:40:00Z",
+      "actor": "opus",
+      "summary": "todo -> doing. Implementing fix (1) from the brief: backfill the reuse snapshot with each control the op actually OFFERS, resolved through op/model/global defaults. Needs the PromptBox mount gate extracted first - backfilling ungated would write a hidden control default into the cross-model shared bucket."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-461",
+      "type": "task.moved",
+      "at": "2026-08-08T06:05:00Z",
+      "actor": "opus",
+      "summary": "Shipped the residual half. MPI-463 had already closed the lane strand structurally (_failBail, 9d83ea6e); what MPI-461 still owed was the user-visible acceptance. _failBail now clientLogger.errors EVERY pre-dispatch bail and, unless the site passes { reported: true }, emits ui:error through the same _formatWorkflowError the post-dispatch catch uses. Four bails were silent before this - workflow-name resolve, trimmed-video prep, workflow JSON fetch (the live 404 that was reported) and the injector throw. Six sites opt out because they already emit their own actionable copy. Tests: two new ones "
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-479",
+      "type": "task.moved",
+      "at": "2026-08-08T06:05:00Z",
+      "actor": "opus",
+      "summary": "Fix (1) from the brief, shipped, plus the extraction it needed. visibleControlIds (PromptBoxControls) now owns the control-visibility gate that used to be 13 inline continues in MpiPromptBox._refreshOpSlot, and resolveControlDefaults resolves each visible control default through the op/model/global layers. _snapshotControlState merges those UNDER the stored values in all three buckets, and the ratio/batch reconciles no longer require the key to pre-exist. ratio, batch and qualityTier opt out via snapshotDefault:false (their stored shape is not their defaultValue). PROVEN LIVE in the renderer, "
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-481",
+      "type": "task.moved",
+      "at": "2026-08-08T05:52:00Z",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "summary": "Picked up. Root cause confirmed by reading the wrapper: the ATTACH guard's two in-flight arms (_remoteDepIds and depJob.status=='downloading') are module-level cache scoped to a Pod instance that nothing invalidates when that Pod dies, is deleted, or warm-cycles. Fixing it with statusResults as the brief suggested would REGRESS MPI-97 (installed:false is also what a genuinely live download reports, so every shared-dep attach would fire a duplicate install and hit the wrapper's 409 install_in_progress). The real fresh truth is GET /wrapper/models/install/active, which the wrapper has carried since image v0.2.1 and the app has never called."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-481",
+      "type": "validation.updated",
+      "at": "2026-08-08T06:05:00Z",
+      "actor": "opus",
+      "summary": "Fix shipped + unit-proven; card held in doing/validating because nothing has touched a Pod. The guard now cross-checks BOTH in-flight arms against the wrapper's own install registry (GET /wrapper/models/install/active) instead of its module-level cache. Brief corrected on three points: fix (1) as written would have regressed MPI-97 (installed:false is also what a LIVE download reports, so it cannot separate a corpse from a real attach), fix (2) folds into fix (1) and must not be scoped to 'no Pod active' (a replacement Pod and a warm-stop resume are both stale WHILE isRemoteActive() is true), and there is no third instance - the local siblings cannot go stale because a local download dies with its own process. 4 new tests, mutation-checked; 503/503 suite green. Owed: one live interrupted Pod install, which the MPI-467 smoke run can carry."
     }
   ]
 }

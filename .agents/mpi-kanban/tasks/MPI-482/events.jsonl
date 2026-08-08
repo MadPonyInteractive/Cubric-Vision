@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-482", "type": "task.created", "at": "2026-08-08T06:55:00Z", "actor": "opus", "summary": "Created from the MPI-467 smoke fill running out of space at model 9 of 12 on a 350 GB volume the preflight had passed."}

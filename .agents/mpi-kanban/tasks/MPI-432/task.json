@@ -3,11 +3,11 @@
   "id": "MPI-432",
   "title": "Verify the macOS pinch-zoom fix on a real Mac",
   "description": "Ctrl+wheel UI zoom was removed so a macOS trackpad pinch reaches the canvas instead of the shell. Unverifiable on Windows - needs a Mac.",
-  "column": "todo",
-  "maturity": "blocked",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "unverified",
   "created_at": "2026-08-03T13:45:00Z",
-  "updated_at": "2026-08-03T13:45:00Z",
+  "updated_at": "2026-08-08T05:40:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl"

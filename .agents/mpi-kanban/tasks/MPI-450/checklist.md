@@ -58,6 +58,18 @@ assumptions that time may have invalidated.
       proven negative control. The strobe half has never been SEEN fire - it needs a real
       engine install (validation.md).
 - [x] **MPI-374** — UI size survives a full restart; key in `js/core/storageKeys.js`; no resize flash; Browser Mode no-ops. Needs the user's own restart.
+- [ ] **MPI-461** — ADDED 2026-08-08 (opened after the gate list was written). One helper
+      settles `PHASES.ERROR` before returning, replacing all TWELVE bare `exec.onError`
+      early returns in `commandExecutor` — not just the workflow-fetch 404 that was hit
+      live on 2026-08-06. Verified by a failed dispatch leaving the lane free: the next
+      cue drains instead of sitting on QUEUED behind an unsettled job.
+- [ ] **MPI-479** — ADDED 2026-08-08 (reported live the same day). `_snapshotControlState`
+      records what actually RAN, backfilling each op-declared component through the
+      op/model/global default layers when the key is absent, so Reuse Prompt can pull a
+      control back DOWN to its default. Shared primitive — verified on more than the
+      reported control (`refImageSize` plus at least one of `previewStage` / `denoise` /
+      `useGrid`). Lower severity than MPI-461: the known-issue line is an acceptable
+      outcome here, a silent skip is not.
 - [ ] Any Gate A card NOT fixed is written into the 1.4 release notes as a known issue
 
 ## Gate C — must decide (before the notes are frozen)
@@ -125,8 +137,25 @@ assumptions that time may have invalidated.
 
 - [ ] `npm test` green
 - [ ] `npm run test:desktop` green
+- [ ] **MPI-458 confirmation run** — ADDED 2026-08-08. NOT a blocker and NOT a gate: the
+      card closed as **not a defect** (`a5320d67`), measured three ways on Electron 41.1.1,
+      so `docs/testing.md`'s "the suite runs alongside your open app" guarantee holds with
+      no waiver and no release-note line. What is owed is one confirmation run — full
+      `npm run test:desktop` concurrent with `npm start`, both surviving — deferred only
+      because the live smoke run held the machine. No source was changed, so nothing here
+      can regress 1.4; it is listed so the deferral is visible rather than forgotten.
+      **Inherited decision: the `CUBRIC_E2E` lock exemption was deliberately NOT shipped.**
+      It fixes nothing and would let a spec that forgot `CUBRIC_E2E_USER_DATA` boot against
+      the user's real profile. Reject it if it resurfaces as "hardening".
+      Parallel app instances are safe but need BOTH their own profile
+      (`CUBRIC_E2E_USER_DATA` / `CUBRIC_USER_DATA_ROOT`) AND their own `CUBRIC_PORT`; a bare
+      second `npm start` still dies in ~2s, exit 0, silently — that is the lock working.
 - [ ] **MPI-249 Linux leg** — real `CubricVision-linux-x64-v1.4.0.tar.gz` extracted on the Linux box, LOCAL uv engine provisioned, nodes installed, one model per family generated. A Pod run does not count
-- [ ] **MPI-432** — Windows/Linux half proven: Ctrl+wheel changes nothing anywhere, Ctrl+plus / Ctrl+minus still change UI size. Mac half either run or the note reworded to what was verified
+- [x] **MPI-432** — WAIVED by the user 2026-08-08, card parked to `done`. The release-note
+      entry is the only deliverable he wants and it is already in `UNRELEASED.md:347` under
+      `## fixes`. No Mac is rented: the removal is platform-wide, the bullet claims no
+      verified macOS outcome, and a broken UI-zoom shortcut is reported within minutes by
+      the tester waiting on 1.4. Closed as a DECISION, not a verification.
 
 ## Cut
 

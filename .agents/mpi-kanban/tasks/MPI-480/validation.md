@@ -60,3 +60,34 @@ Pod, wait for `/health` green, and POST an install immediately, before
 Download Failed + REPORT ON GITHUB dialog. `logs/app.log` should still carry the real
 `remote install trigger failed for <dep>: wrapper install 404` line — the fix changes how
 it is surfaced, never whether it is recorded.
+
+## Acceptance #3 — cheaper than it looks (user, 2026-08-08)
+
+**It does NOT need the smoke volume, and it does not need 350 GB.** The condition
+being proven is a *timing* window on a cold Pod — `/health` green before
+`/wrapper/models/install` is routable — which has nothing to do with volume size or
+with which weights are on it. A throwaway ~10 GB network volume and the smallest dep
+in the catalogue reproduce it identically, for pennies, with no dependency on the
+MPI-467 smoke volume `aghcuvg7nl` being free.
+
+Recipe:
+
+1. Create a small volume in any datacenter (10 GB is plenty).
+2. Create a `__cpu__` Pod against it.
+3. Poll `/health` and POST `/comfy/models/download/start` for one small model the
+   **instant** it goes green — the window is roughly 0.2s wide, so do not wait for
+   `/remote/comfy/status.ready`.
+4. Expected: a warning TOAST — *"The remote engine isn't ready yet — install <model>
+   again in a moment."* — and **no** Download Failed + REPORT ON GITHUB dialog.
+   `logs/app.log` must still carry the real
+   `remote install trigger failed for <dep>: wrapper install 404` line.
+5. Delete the Pod and the throwaway volume.
+
+## Why the MPI-467 run of 2026-08-08 produced no evidence
+
+An SSE capture on `/comfy/downloads/stream` ran for the whole fill (96 deps, 12
+models) and recorded **zero** `download:failed` and **zero** `transient` events. The
+404 window did not occur: the run's first two CPU Pods were recycled by the boot
+watchdog, and the third was already warm by the time the first install POSTed.
+
+That is a condition that did not arise, NOT a passing test. Do not tick #3 off it.

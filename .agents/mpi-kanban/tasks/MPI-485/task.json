@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-485",
+  "title": "The orphan Pod sweep reaps by NAME, so a second app instance deletes the first's running Pod",
+  "description": "The RunPod orphan sweep identifies a stray Pod by NAME ALONE, so any second app instance deletes the first one's running Pod. _sweepOrphanPods (routes/remotePodLifecycle.js:930) builds keep = {keepPodId, _startedPodId, _mode.podId} - all PROCESS-LOCAL - then reaps every Pod whose name is 'cubric-vision' and is not in that set. Every Cubric Vision instance names its Pods 'cubric-vision', and a second instance knows nothing about the first's Pod, so it classifies a healthy in-use Pod as an orphan and deletes it. HAPPENED LIVE 2026-08-08: a desktop-test Electron quit at 05:58:34 and its teardown sweep reaped fkbqtzs8htgvtw - the CPU download Pod of the MPI-467 smoke fill, mid-download at model 9 of 12. The runner then polled a dead Pod, which reads as a stalled download, not as a deleted host. NOT ONLY TEARDOWN: the sweep also runs on the HAPPY PATH at line 803, `_sweepOrphanPods(key, null)` immediately BEFORE creating a Pod, and again at 899 after. So instance B merely CONNECTING is enough to destroy instance A's Pod - it does not have to quit. Both call sites need the fix or it is half-wired. THIS IS ALSO A USER-FACING BUG: two installs on one RunPod key (desktop + laptop, or a portable build beside a dev run) reap each other mid-generation, and the victim sees a stall with no error. It further CORRECTS MPI-458, which closed hours earlier concluding parallel instances are 'safe, but not free - needs its own profile AND its own CUBRIC_PORT'. That is incomplete: profile and port isolate local state, they do not isolate the shared RunPod ACCOUNT. FIX DIRECTION: ownership must be provable, not inferred from a shared name. Stamp a per-installation id at create (Pod name suffix, or an env var alongside the existing CUBRIC_TOKEN, which is already per-instance) and reap only Pods carrying THIS installation's id. A Pod whose owner cannot be established must be LEFT ALONE - the cost of a stray Pod is money, the cost of a false reap is destroyed work. Do NOT 'fix' it by disabling the sweep at teardown only; the create path is the more dangerous of the two.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-08T07:45:00Z",
+  "updated_at": "2026-08-08T07:45:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}

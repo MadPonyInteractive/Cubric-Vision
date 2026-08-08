@@ -45,6 +45,9 @@ is concentrated in two places nobody has exercised: **first run** and the
 | **MPI-410** | The splash never shows on a **cold first run** and the install screen strobes. Cross-platform, pre-existing, and the behaviour is inverted — it works on the warm run where there is nothing to cover. **Root not settled**: two candidates in that card's brief, both need a repro. Budget a repro session; do not fix from the brief. |
 | **MPI-374** | Promoted BY 1.4. This release deletes Ctrl+wheel UI zoom (MPI-432), so Ctrl+plus / Ctrl+minus is now the only UI-size control — and it resets on every launch. A user who needs a large UI is **strictly worse off in 1.4 than in 1.3.1**. ~20 lines: persist through `js/core/storage.js`, key declared in `js/core/storageKeys.js`, restore before first paint, no-op in Browser Mode. |
 
+| **MPI-461** | **Added to Gate A 2026-08-08** — opened after this brief was written, so it was in neither the gate list nor the not-in-1.4 list. A failed generation strands its lane until the app restarts: `commandExecutor` registers a job in `generationStore` (`commandExecutor.js:1293`) then has TWELVE early-return paths that call `exec.onError` and return WITHOUT settling it, so `_laneBusy()` — which derives from `running` filtered on `!TERMINAL_PHASES` — holds that lane forever and `_dispatchNextCue` skips it on every pass. Hit live 2026-08-06 during MPI-452 on a workflow-fetch 404. It presents as a dead app, not as a failed generation: card stuck on QUEUED, CUE climbing, engine `/queue` empty, nothing in `app.log`. **1.4 doubles the op surface, which multiplies the ways a dispatch can early-return** — that is why it gates. Root fix is one helper that settles `PHASES.ERROR` before returning, replacing all twelve bare `exec.onError` calls; per THE ROOT-CAUSE RULE do NOT spot-fix the one path that was hit. |
+| **MPI-479** | **Added to Gate A 2026-08-08** — same reason; reported live the same day. Reuse Prompt cannot recall a control left at its default: `_snapshotControlState` builds the op bucket from `getOpSettings()`, which only holds controls the user has TOUCHED, and `applyPromptReuseSettings` treats an absent bucket as a no-op rather than a reset — so reusing a run that used a default leaves the live control wherever it happens to be. Proven on the user's own sidecars (7 ref2v_ms runs: the 5 that injected the default all recorded `op: null`). **Blast radius is every perOp control on every model** — `previewStage`, `denoise`, `useGrid`, `upscaleFactor` and any future one — not just the one that was reported. Lower severity than MPI-461 (silent wrong value, not a hard stop), so it is the first candidate for a known-issue line if Gate A runs long. Shared primitive: brief it, do not patch the call site. |
+
 Any Gate A card that is not fixed must be written into the release notes as a known
 issue. Silently open is not an option — that is the whole point of this card.
 
@@ -118,6 +121,13 @@ Two consequences for the rest of this umbrella:
 MPI-403 (Pod hot-store), MPI-397 (a re-measure, not a fix), MPI-320, MPI-442, MPI-322,
 MPI-302, MPI-355, MPI-348, MPI-325, MPI-289, MPI-343, MPI-349, MPI-357, MPI-358,
 MPI-332, MPI-183, MPI-377, MPI-4, MPI-259.
+
+**MPI-478 and MPI-477 were weighed against Gate A on 2026-08-08 and excluded.** MPI-478 is
+self-disproven on its own card — `--lowvram` is inert on the engine 1.4 ships (ComfyUI 0.30.0 +
+torch 2.13 + aimdo 0.4.11 put LOW_VRAM and NORMAL_VRAM in the same branch with the same budget),
+so the surviving local-engine half-wire costs nothing until a future engine ships torch below 2.8,
+and it is not a blind deletion (DirectML makes the flag load-bearing). MPI-477 is a research route
+for a refiner that does not exist. Neither is a defect a 1.4 user can hit.
 
 **MPI-449 was on this list until 2026-08-05 and has been REMOVED — the user's call: 1.4 ships WITH MiniMax H3.** The exclusion was written while H3 was open research; it has since been measured RUNNING on the 4060 Ti 16 GB (131 s warm, 20 steps, 640x640 x 56 frames), so "active research, not release-facing" no longer describes it. See § Gate E below — this is a scope ADDITION to the umbrella, not a discovery.
 

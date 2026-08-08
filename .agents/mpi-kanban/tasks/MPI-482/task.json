@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-482",
+  "title": "Declared dependency sizes are hand-written estimates, not measurements - and every space decision reads them",
+  "description": "The `size` string on each DEPS entry is guessed, stale and internally inconsistent, and it is the number every disk/volume decision in the app is derived from. PROVEN 2026-08-08 on the MPI-467 smoke volume: the 95 deps installed there declare 195.7 GB while the volume holds 259 GB of real blocks, and the full smoke set - declared 300.5 GB - did not fit a 350 GB volume, dying at model 9 of 12. Two entries prove the values are not measurements at all: h3-qwen3vl-32b-clip is declared 28.3 GB under minimax-h3 and 26.36 GB under minimax-h3-ref2va (the SAME file, two numbers), and krea2-lora-filterbypass is declared as 160 BYTES. CONSUMERS, all of which inherit the error: the smoke runner's volume preflight (which is how this surfaced), footprint.js, the download progress denominator (modelJob.totalBytes is summed from _parseSizeToBytes over these strings), and the disk-full pre-checks on both engines. THE FIX ALREADY HAS A HOME: scripts/computeDepHashes.py already walks every dep, issues an HTTP HEAD against its URL and writes the result back into the split dep files (modelDeps/assetDeps/loraDeps/nodesDeps). Content-Length - and HuggingFace's X-Linked-Size for LFS pointers - arrives in that SAME HEAD response the ETag comes from, so this is a sibling pass in an existing script, not new tooling. Write true bytes; keep a human-readable string only if the UI needs one, derived from the bytes rather than typed. Do NOT hand-correct the entries that are visibly wrong - that leaves every other unmeasured entry believed.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-08T06:55:00Z",
+  "updated_at": "2026-08-08T06:55:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}
