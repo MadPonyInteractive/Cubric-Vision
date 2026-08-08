@@ -161,18 +161,16 @@ assumptions that time may have invalidated.
 - [ ] Gate B re-read AFTER MPI-452 — it was scoped against a 0.29.2 engine, and the
       MPI-249 Linux leg now provisions 0.30.x.
 - [ ] H3 `whatIsNew` bullet + licence attribution written into `UNRELEASED.md`
-- [ ] **Promote the Pod runtime dev → stable** (`publish-runtime.sh promote`) BEFORE cutting
-      1.4.0. Blocked on the GPU-image `_download_hf` measurement (MPI-491 / MPI-467).
-      **Why this gates and is not cleanup** — verified 2026-08-08: the stable channel manifest
-      reports `wrapper_version 0.2.40`, dev reports `0.2.43`, and released builds only ever
-      boot stable (MPI-340). H3 and H3 Reference are HEADLINE items in `UNRELEASED.md`
-      (lines 123, 135). Ship 1.4.0 against stable 0.2.40 and every released user installing
-      H3 to a Pod gets the aria2 path at **1.66 MB/s — about 10 hours for the ~46GB set**,
-      against a measured ~2.5 minutes on 0.2.43. Nobody reports that as a bug; it just looks
-      like H3 is enormous. **Scope:** remote/Pod installs only (a local install is ~30 min at
-      home-line speed and needs nothing), and only the 6 huggingface.co deps — the 101 R2 and
-      14 github deps are unchanged. **Order:** GPU-image measurement → promote → cut. Promoting
-      first puts an unmeasured transport in front of every released user.
+- [ ] **When `mpi-release` stops on the dev/stable manifest diff, the answer is PROMOTE.**
+      Not a new gate — `mpi-release/SKILL.md:53` already diffs the manifests and stops on a
+      sha mismatch, and it never auto-promotes. The shas WILL differ on this release (dev
+      `0.2.43`, stable `0.2.40`, verified live 2026-08-08), so that stop is going to fire.
+      What the skill supplies is the prompt, not the consequence: someone without this
+      context can answer "dev is deliberately not shipping" and cut 1.4 quite reasonably.
+      Declining ships MiniMax H3 — a headline 1.4 feature — at **1.66 MB/s, ~10 hours for
+      the ~46GB set** instead of ~2.5 minutes, and nobody reports that as a bug because it
+      just looks like a big model. Remote/Pod installs and the six huggingface.co deps only.
+      **The GPU-image `_download_hf` number (MPI-467) comes before the promote answer.**
 
 ## Bump
 
