@@ -130,9 +130,29 @@ repeated timesteps, which would cut evals — but only when `total_timesteps` ap
 `steps`; at H3's ~1000 it never fires. Verified by running the scheduler's own arithmetic
 across totals 999 down to 20; the first collapse appears at 20.)
 
-**So `simple` stays.** Comfy's template description claims *"beta or normal tends to
-outperform simple for reference-heavy prompts like this one"* — measured here on exactly
-such a prompt, it does not.
+**`simple` STAYS, and the deciding axis was the AUDIO.** On the user's eye/ear test
+2026-08-08: `beta` is *slightly* better on some textures, and **markedly worse on sound**.
+Video alone would have shipped `beta`; the audio reversed it, and it was not close.
+
+Comfy's template note — *"beta or normal tends to outperform simple for reference-heavy
+prompts like this one"* — is defensible on **video texture** and says nothing about audio,
+which for a model whose whole claim is joint audio-video is the half that decides.
+
+### THE RULE THIS ESTABLISHES — judge every sampler change on the AUDIO
+
+H3 emits video and audio from **ONE joint latent**; the audio half has no spatial dims and
+is bound to the video half's token layout (see the hi-res-fix section below — it is why a
+split-sigma trajectory destroys the audio and a refiner does not). The sigma schedule is
+therefore not a video-only knob: **it reshapes the trajectory both halves travel.**
+
+So any change to the sampler, the scheduler, the step count or the split on H3 **must be
+listened to, not just looked at.** A video-only comparison is not a result on this model.
+
+**This applies directly to the open step work** (`BasicScheduler.steps` 20 → 15 with the
+split at 5): fewer steps is a trajectory change of exactly the kind that just cost `beta`
+the comparison. Do not accept "the video still looks fine" as the verdict — play the sound.
+The 5-step stage-1 finding that motivated it was itself judged on picture alone, so it is
+provisional until the audio is checked at the same setting.
 
 **The general lesson, which cost two runs to learn:** a 1-second clip is the worst length
 to time anything on this box. Fixed overhead — weight fault-in, two VAE decodes, the mux —
