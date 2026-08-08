@@ -143,11 +143,20 @@ tile has no room for it. Gate + descriptor contract: `docs/download-manager.md`
 
 `model.installed` is derived by statting disk (`syncModelInstalled` → `/comfy/models/check`), not stored. So a "keep files but forget install" uninstall is unrepresentable: keep the weights → resync re-flags the model INSTALLED → card never leaves the Installed section, no install button. The old `MpiOkCancel` "Also delete model files from disk" checkbox (`deleteFiles=false`) was exactly this dead no-op (starkest on SDXL, whose only non-universal dep is its checkpoint; the other 3 deps are always-kept universals). Removed from the Uninstall dialog — `on('ok')` now passes `deleteFiles=true` unconditionally. Backend `deleteFiles` param + all guards (universal / shared / outside-managed-root / pip) left intact; it just always receives `true`. Don't re-add a keep-files toggle without a real persisted install record separate from disk-stat.
 
-## The partial-install bar — what it means, and what it does NOT (MPI-258, MPI-462)
+## The partial-install chip — what it means, and what it does NOT (MPI-258, MPI-462, MPI-487)
 
-`_computePartial(model)` in `MpiModelManager.js` draws the bar under an *idle*
+`_computePartial(model)` in `MpiModelManager.js` draws the state row under an *idle*
 (non-downloading) tile. It means exactly: **≥1 GB of THIS model's own deps are already
 on disk, and not all of them are.** It is not a paused download and not a resume point.
+
+**It is a CHIP, not a bar (MPI-487).** Until 2026-08-08 the partial rendered the identical
+`.mpi-tile__prog` bar an active download draws, so four partials read as four concurrent
+installs — which is the exact signature of the MPI-184 regression the serial install queue
+exists to prevent, and it sent someone hunting a bug that was not there (caught live during
+the MPI-467 smoke fill: four filled bars, ONE job on the server). `_tileState` now returns
+`.mpi-tile__chip--partial` reading `N% ON DISK`, next to `INSTALL` / `INSTALLED`. **A bar in
+the Model Library now means "downloading now" and nothing else — keep it that way.** Both
+numbers stayed; only the static one stopped borrowing the moving one's costume.
 
 Three exclusions shape "its own":
 
@@ -156,7 +165,7 @@ Three exclusions shape "its own":
 - **`custom_nodes`** — work-not-bytes; a shared node folder survives uninstall and would
   read as a phantom partial. Same rule the live download bar applies
   (`_byteRatioExcludingNodes`, MPI-231).
-- **A 1 GB floor** (MPI-258 Bug C) — below it, no bar. Sized to stop a handful of small
+- **A 1 GB floor** (MPI-258 Bug C) — below it, nothing. Sized to stop a handful of small
   support files showing 1-3% on a pack the user never touched.
 
 **"Installed" in that first exclusion means ≥1 op on disk (MPI-462, shipped).** It
@@ -174,9 +183,9 @@ touching either predicate; it is a shared primitive with several readers.
 
 **The floor does not save you from big orphans, and no exclusion can.** Weights left on
 disk that no installed model needs (measured 2026-08-06: a 10.59GB clip, a 4.28GB
-ControlNet) clear 1 GB on their own and draw a bar nothing here can suppress, because
-nothing owns them — the bar is *honest*, and it is how the user spotted both incidents.
+ControlNet) clear 1 GB on their own and draw a chip nothing here can suppress, because
+nothing owns them — the number is *honest*, and it is how the user spotted both incidents.
 The fix belongs where the bytes are, not where the bar is: the post-uninstall orphan
 sweep collects them (`docs/download-manager.md` § The orphan sweep). If you see a phantom
-bar on a never-touched model, check for ownerless weights on disk BEFORE touching
-`_computePartial` — MPI-314 and MPI-462 were both this, and neither was a bar bug.
+chip on a never-touched model, check for ownerless weights on disk BEFORE touching
+`_computePartial` — MPI-314 and MPI-462 were both this, and neither was a display bug.

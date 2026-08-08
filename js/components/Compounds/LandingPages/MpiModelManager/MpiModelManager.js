@@ -689,9 +689,15 @@ export const MpiModelManager = ComponentFactory.create({
                 const pct = Math.min(Math.round((st.job?.progress || 0) * 100), 100);
                 return `<div class="mpi-tile__prog"><div class="mpi-tile__prog-bar"><span style="width:${pct}%"></span></div><span class="mpi-tile__prog-pct">${pct}%</span></div>`;
             }
+            // MPI-487: a partial is BYTES ALREADY ON DISK, not a live download — but it
+            // drew the SAME bar, so four partials read as four concurrent installs while
+            // the server had one job. That misread is the exact signature of the MPI-184
+            // regression the serial queue exists to prevent, so it sends someone hunting a
+            // bug that is not there. A chip cannot be mistaken for a running bar; the bar
+            // above now means "downloading now" and nothing else.
             if (st.partial.hasPartialProgress) {
                 const pct = Math.min(Math.round((st.partial.progress || 0) * 100), 100);
-                return `<div class="mpi-tile__prog"><div class="mpi-tile__prog-bar"><span style="width:${pct}%"></span></div><span class="mpi-tile__prog-pct">${pct}%</span></div>`;
+                return `<span class="mpi-tile__chip mpi-tile__chip--partial">${pct}% on disk</span>`;
             }
             return `<span class="mpi-tile__chip mpi-tile__chip--available">Install</span>`;
         }
