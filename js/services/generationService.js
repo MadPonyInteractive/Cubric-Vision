@@ -22,6 +22,7 @@ import { getCommand, getCommandMediaInputs } from '../data/commandRegistry.js';
 import { getFlowById } from '../data/flowsRegistry.js';
 import { pluginForOperation } from '../data/pluginsRegistry.js';
 import { usesOrientation } from '../utils/ratios.js';
+import { resolveControlDefaults } from '../components/Organisms/MpiPromptBox/PromptBoxControls.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
 
@@ -420,25 +421,36 @@ function _dispatchNextCue() {
  * below covers those two. Upgrade path if it ever bites: snapshot from control
  * getValue() (Flow-style), which needs a ratioSelector compound-key remap.
  */
-function _snapshotControlState(model, operation, injectionParams = {}) {
+function _snapshotControlState(model, operation, injectionParams = {}, ctx = {}) {
     if (!state.currentProject || !model?.id) return undefined;
     const width  = injectionParams.Width  || injectionParams.width  || 0;
     const height = injectionParams.Height || injectionParams.height || 0;
     const _ms = getModelSettings(state.currentProject, model.id);
-    const _shared = _clonePlain(getSharedSettings(state.currentProject, model.mediaType));
-    if (_shared.ratioSelector && width && height) {
+    // Defaults FIRST, stored values on top (MPI-479). The stores only ever hold what the
+    // user edited, so a control left alone was invisible to this snapshot and Reuse could
+    // not recall it. resolveControlDefaults answers "what did this run actually use" for
+    // every control the op OFFERED — same visibility gate the PromptBox mounts through, so
+    // a hidden control never leaks its default into the (cross-model) shared bucket.
+    const _defaults = resolveControlDefaults(model, operation, ctx);
+    const _shared = { ..._defaults.shared, ..._clonePlain(getSharedSettings(state.currentProject, model.mediaType)) };
+    // ratio and batch opt OUT of that backfill (their stored shape is not their
+    // defaultValue) and are reconciled from the run's own injectionParams instead — which
+    // is why neither guard may require the key to already exist. Requiring it was the same
+    // bug one layer up: a user who never touched the ratio picker recorded no ratio at all.
+    const _ratioLabel = injectionParams.Ratio_Label ?? _shared.ratioSelector?.selectedRatio;
+    if (width && height && _ratioLabel !== undefined) {
         _shared.ratioSelector = {
             ..._shared.ratioSelector,
-            selectedRatio: injectionParams.Ratio_Label ?? _shared.ratioSelector.selectedRatio,
+            selectedRatio: _ratioLabel,
             orientation: usesOrientation(model.type)
                 ? (width > height ? 'landscape' : 'portrait')
                 : null,
         };
     }
     const _batchInj = injectionParams.Input_Batch_Size ?? injectionParams.Batch_Size;
-    if ('batch' in _shared && Number.isFinite(_batchInj)) _shared.batch = _batchInj;
-    const _op = _clonePlain(getOpSettings(state.currentProject, model.id, operation));
-    const _model = _clonePlain(_ms);
+    if (Number.isFinite(_batchInj)) _shared.batch = _batchInj;
+    const _op = { ..._defaults.op, ..._clonePlain(getOpSettings(state.currentProject, model.id, operation)) };
+    const _model = { ..._defaults.model, ..._clonePlain(_ms) };
     delete _model.operations;
     const controlState = {};
     if (Object.keys(_shared).length) controlState.shared = _shared;
@@ -484,7 +496,9 @@ export function enqueueGeneration(config, callbacks = {}, opts = {}) {
     // frozen copy instead of re-reading live settings (MPI-336). Every real path funnels
     // through here; a job that skips it falls back to a completion-time snapshot.
     if (config.model?.id && state.currentProject) {
-        config._controlSnapshot = _snapshotControlState(config.model, config.operation, config.injectionParams || {});
+        config._controlSnapshot = _snapshotControlState(
+            config.model, config.operation, config.injectionParams || {},
+            { historyMode: config.historyMode === true });
     }
 
     const queueJobId = opts.queueJobId || crypto.randomUUID();
@@ -955,7 +969,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         // back to a completion-time snapshot only for a job that never went through
         // enqueue (defensive; every real path does).
         const _controlState = config._controlSnapshot
-            ?? _snapshotControlState(model, operation, injectionParams);
+            ?? _snapshotControlState(model, operation, injectionParams, { historyMode: config.historyMode === true });
         if (_controlState) generationSettings.controlState = _controlState;
 
         // Multi-stage video preview tagging: when this run was a Preview-only pass,

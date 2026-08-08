@@ -3,11 +3,11 @@
   "id": "MPI-479",
   "title": "Reuse Prompt cannot recall a control left at its default - the snapshot omits untouched keys",
   "description": "Reported live 2026-08-08: Reuse Prompt did not recall Reference detail on MiniMax H3 ref2va. Root cause is NOT H3-specific and NOT that control - it is the reuse snapshot itself. _snapshotControlState (generationService.js) builds the op bucket from getOpSettings(), which only ever holds controls the user has TOUCHED; a control sitting at its default was never written, so the key is absent, and `if (Object.keys(_op).length) controlState.op = _op` then omits the whole bucket. On the way back, applyPromptReuseSettings (projectService.js) guards `if (operation && Object.keys(opUpdates).length)`, so an absent bucket is a NO-OP rather than a reset - the live control keeps whatever it currently is. Reusing a run that used a default therefore cannot pull the control back down. PROVEN on the user's own sidecars: across 7 ref2v_ms runs, the 5 that injected the DEFAULT match all recorded `op: null`, while the one that injected max and the one he explicitly set back to match both recorded the key. BLAST RADIUS is every perOp control on every model, not just refImageSize - previewStage, denoise, useGrid, upscaleFactor and any future one have the same hole. The shared and model buckets are luckier only because they are near-always non-empty. The proposed fix is the upgrade path _snapshotControlState's own ponytail comment already names: make the snapshot record what actually RAN rather than what was stored - backfill each component the op declares (commandRegistry components + PROMPT_BOX_CONTROLS scope/defaultValue, resolved through the op/model/global default layers) when the key is missing. This is a SHARED PRIMITIVE feeding every Reuse Prompt path, so per THE ROOT-CAUSE RULE it was briefed rather than patched.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-08T01:40:00Z",
-  "updated_at": "2026-08-08T01:40:00Z",
+  "updated_at": "2026-08-08T06:05:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl"

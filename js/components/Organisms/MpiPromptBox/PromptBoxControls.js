@@ -20,7 +20,7 @@ import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { qsa } from '../../../utils/dom.js';
 import { state } from '../../../state.js';
 import { getOpSettings, getSharedSettings, getModelSettings } from '../../../data/projectModel.js';
-import { getCommandDefault, CONTROL_TYPES, modelControlTypes } from '../../../data/commandRegistry.js';
+import { getCommandDefault, getCommandComponents, modelShowsStyleRack, modelShowsRatio, modelShowsBatch, CONTROL_TYPES, modelControlTypes } from '../../../data/commandRegistry.js';
 import { PROMPT_CONTROL_DEFAULTS } from '../../../data/promptControlDefaults.js';
 import { Events } from '../../../events.js';
 import { getModelRatios, usesQualityTier } from '../../../utils/ratios.js';
@@ -126,6 +126,11 @@ export const PROMPT_BOX_CONTROLS = {
         // The sibling `ratio` control keeps selectedRatio/orientation in the
         // SHARED bucket (framing is cross-model), so this control reads ratio
         // from shared but tier from the model bucket.
+        // Not backfilled (MPI-479): this control's real default is per-MODEL
+        // (defaultQualityTier(modelType), then clampQualityTier) — _resolveDefault's three
+        // layers cannot express that. It also self-persists on mount, so the key is already
+        // in the bucket by the time anything dispatches.
+        snapshotDefault: false,
         scope: 'perModel',
         defaultValue: PROMPT_CONTROL_DEFAULTS.qualityTier,
         mount(el, opts = {}) {
@@ -221,6 +226,11 @@ export const PROMPT_BOX_CONTROLS = {
      */
     ratio: {
         nodeTitle: null, // not a single node; Width+Height injected separately
+        // Not backfilled into the reuse snapshot (MPI-479): what this control STORES is the
+        // compound `ratioSelector` {selectedRatio, orientation}, not the bare '1:1' string in
+        // `defaultValue`. The snapshot reconciles it from the run's own injectionParams
+        // (Ratio_Label + Width/Height), which is more faithful than a default anyway.
+        snapshotDefault: false,
         scope: 'shared',
         defaultValue: PROMPT_CONTROL_DEFAULTS.ratio,
         mount(el, opts = {}) {
@@ -513,6 +523,10 @@ export const PROMPT_BOX_CONTROLS = {
 
     batch: {
         nodeTitle: 'Input_Batch_Size',
+        // Not backfilled (MPI-479): `defaultValue` is the DROPDOWN's string ('1') while the
+        // stored value is a number, and writing the string into the record would carry the
+        // wrong type back on reuse. The snapshot takes batch from Input_Batch_Size instead.
+        snapshotDefault: false,
         scope: 'shared',
         defaultValue: String(PROMPT_CONTROL_DEFAULTS.batch),
         mount(hostEl, opts = {}) {
@@ -1590,4 +1604,145 @@ export function getInjectionParamsFromControls(activeControls) {
         }
     }
     return params;
+}
+
+/**
+ * Which of an op's declared controls this MODEL actually offers. Every gate below is a
+ * pure function of (control, model, op, historyMode) — the PromptBox used to hold them
+ * inline as a wall of `continue`s, which was fine while it was the only caller.
+ *
+ * MPI-479 gave it a second one. The reuse snapshot backfills a resolved default for each
+ * control a run OFFERED, and it has to ask the same question the mount loop asks — if it
+ * guessed from `components[]` alone it would write a HIDDEN control's default into the
+ * bucket. For a `shared` control that is not cosmetic: shared is cross-model, so recording
+ * a hidden `motionIntensity` on an LTX run and reusing it would reset the value the user
+ * set on Wan. One gate, two callers, no chance of the two drifting apart.
+ *
+ * @param {object|null} model
+ * @param {string} operation
+ * @param {{historyMode?: boolean}} [ctx]
+ * @returns {string[]} control ids, in the op's declared order
+ */
+export function visibleControlIds(model, operation, ctx = {}) {
+    return getCommandComponents(operation).filter((id) => {
+        if (!PROMPT_BOX_CONTROLS[id]) return false;
+
+        // restores in gallery contexts.
+        if (id === 'previewStage' && ctx.historyMode === true) return false;
+
+        // Preview toggle is capability-gated: only multi-stage models
+        // (WAN + LTX) show it. A model with multiStage:false hides it.
+        if (id === 'previewStage' && model?.capabilities?.multiStage !== true) return false;
+
+        // audioMode radio + useAudio toggle are capability-gated: only
+        // models with audio (LTX) show them. WAN never mounts them.
+        if ((id === 'audioMode' || id === 'useAudio') && model?.capabilities?.audio !== true) return false;
+
+        // Motion intensity is capability-gated: only models whose workflow
+        // has an Input_Motion_Intensity node (WAN) show it. LTX has no such
+        // node, so the control would be dead UI — hide it.
+        if (id === 'motionIntensity' && model?.capabilities?.motion !== true) return false;
+
+        // Style rack (the Input_Style_Selector node) is capability-gated AND
+        // op-gated: a model must ship style LoRAs (defaults FALSE — opt in) and
+        // the rack must actually exist in the graph THAT OP runs. Krea2's
+        // detailer/upscaler are separate rack-less files while Klein's single
+        // master graph carries the rack on every branch, so `detail`/`upscale`
+        // offer the control to one and not the other. See modelShowsStyleRack.
+        if ((id === 'styleSelect' || id === 'stylization')
+            && !modelShowsStyleRack(model, operation)) return false;
+
+        // Ratio picker is model-AND-op gated for the same reason as the rack.
+        // An op that scales its INPUT image to a megapixel target inherits that
+        // image's shape and never reads Input_Width/Height — Klein's depth and
+        // edit do exactly that. Offering the picker there is worse than useless:
+        // it makes the user believe they chose an output shape they did not get.
+        if (id === 'ratio' && !modelShowsRatio(model, operation)) return false;
+
+        // Prompt enhancer (Input_Enhance_Prompt) needs a text encoder whose
+        // CLIP implements .generate() — Qwen3-VL/Gemma yes, T5/umT5 CRASHES.
+        // Never infer this from the op; the model declares it.
+        if (id === 'enhancePrompt' && model?.capabilities?.promptEnhance !== true) return false;
+
+        // Quality-tier radio mounts only for models whose ratio set is keyed
+        // by tier ('quality' + 'quality-orientation'). NOT a capability flag:
+        // the ratio table already states it, and a second source would drift.
+        // Without this, an orientation model (SDXL) would render Wan's tiers.
+        if (id === 'qualityTier' && !usesQualityTier(model?.type)) return false;
+
+        // Qwen-Edit tier radio (Input_Tier) mounts only for models that ship a
+        // runtime accelerator-tier switch (Qwen-Image-Edit). Capability-gated so
+        // it never appears on other edit models (Boogu bakes its tier per file).
+        if (id === 'qwenTier' && model?.capabilities?.tierSelect !== true) return false;
+
+        // Control-adherence slider. Every model but Qwen carries something the
+        // strength scales — a control LoRA (Krea2/Klein) or a ControlNet
+        // (Chroma/SDXL), both behind Input_Control_strength. Qwen conditions on
+        // the control IMAGE with nothing to patch, so the slider would be dead UI
+        // there. Capability-gated, never inferred from the op.
+        if (id === 'controlStrength' && model?.capabilities?.controlStrength !== true) return false;
+
+        // Control-type picker. Gated on the MODEL offering more than one type
+        // rather than on a capability flag: `controlTypes` already states it, and
+        // a second source would drift. A one-type model (Klein/Krea2/Chroma —
+        // depth only) has no Input_Control_Net node in its graph, so the picker
+        // would be dead UI AND a lie about what it could switch to.
+        if (id === 'controlType' && modelControlTypes(model).length < 2) return false;
+
+        // Krea2 turbo toggle (MPI-316) — two speeds, so a toggle rather than a
+        // radio, and since MPI-365 a different node entirely: Input_is_Turbo
+        // (boolean), NOT qwenTier's Input_Tier int. Its own capability flag:
+        // a model has EITHER the 3-way Qwen radio OR this, never both.
+        if (id === 'krea2Turbo' && model?.capabilities?.turboToggle !== true) return false;
+
+        // Batch picker is model-gated. Defaults TRUE (every model batches
+        // unless it opts out), like negativePrompt. Krea2-Turbo opts out:
+        // its two-pass sampler graph has no Input_Batch_Size node, so a
+        // batch>1 request is a dead injection — hide the control.
+        // Batch is model-AND-op gated (MPI-365). `capabilities.batch: false` is
+        // the model-wide off switch; `batchOps` names the ops where a batch > 1
+        // actually multiplies anything. Both live in modelShowsBatch, because
+        // Input_Batch_Size only ever reaches EmptyLatentImage — an op sampling a
+        // VAE-encoded latent silently returns one image while the control says N.
+        if (id === 'batch' && !modelShowsBatch(model, operation)) return false;
+
+        return true;
+    });
+}
+
+/**
+ * The resolved DEFAULT for every control this model+op actually offers, bucketed exactly
+ * like the Reuse snapshot (shared / op / model).
+ *
+ * MPI-479: `getOpSettings` and its siblings only ever hold keys the user EDITED, so a run
+ * left at a default recorded nothing — and on the way back an absent key is a no-op, not a
+ * reset, so Reuse Prompt could not pull a control back down from a non-default current
+ * value. Proven on seven of the user's own ref2v_ms sidecars: the five that ran the default
+ * `refImageSize` all recorded `op: null`; only the two he touched recorded the key. Merging
+ * these defaults UNDER the stored values makes the snapshot say what the run actually USED
+ * rather than what happened to be persisted — the upgrade path _snapshotControlState's own
+ * comment already named.
+ *
+ * Defaults resolve through the same three layers a mounted control uses (op → model →
+ * global). A flat `ctrl.defaultValue` read would record 1.0 `stylization` for a Chroma run
+ * that actually ran its baked 0.6. Controls whose STORED shape differs from `defaultValue`
+ * opt out with `snapshotDefault: false` and are reconciled from injectionParams instead.
+ *
+ * @param {object|null} model
+ * @param {string} operation
+ * @param {{historyMode?: boolean}} [ctx]
+ * @returns {{shared: Object, op: Object, model: Object}}
+ */
+export function resolveControlDefaults(model, operation, ctx = {}) {
+    const buckets = { shared: {}, op: {}, model: {} };
+    const opts = { model, opName: operation };
+    for (const id of visibleControlIds(model, operation, ctx)) {
+        const ctrl = PROMPT_BOX_CONTROLS[id];
+        if (ctrl.snapshotDefault === false) continue;
+        const value = _resolveDefault(ctrl, id, opts);
+        if (value === undefined) continue;
+        const bucket = ctrl.scope === 'perOp' ? 'op' : ctrl.scope === 'perModel' ? 'model' : 'shared';
+        buckets[bucket][id] = value;
+    }
+    return buckets;
 }

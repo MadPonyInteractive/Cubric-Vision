@@ -12,7 +12,7 @@ import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js
 import { usesQualityTier } from '../../../utils/ratios.js';
 import { deriveInstalledOps } from '../../../data/modelConstants/resolveModelDeps.js';
 import { getSelectedOp } from '../../../utils/modelHelpers.js';
-import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls } from './PromptBoxControls.js';
+import { PROMPT_BOX_CONTROLS, getInjectionParamsFromControls, visibleControlIds } from './PromptBoxControls.js';
 import { state } from '../../../state.js';
 import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
@@ -1595,93 +1595,11 @@ export const MpiPromptBox = ComponentFactory.create({
             opSlot.innerHTML = '';
             _activeControls.clear();
 
-            const componentIds = getCommandComponents(activeOperation);
+            // One gate, shared with the reuse snapshot (MPI-479) — see visibleControlIds.
+            const componentIds = visibleControlIds(model, activeOperation, { historyMode: _context.historyMode });
 
             for (const componentId of componentIds) {
                 const ctrl = PROMPT_BOX_CONTROLS[componentId];
-                if (!ctrl) continue;
-
-                // History workspace forces single-stage execution; the
-                // multi-stage preview toggle is never shown there. Persisted
-                // per-model previewStage value is left untouched so the toggle
-                // restores in gallery contexts.
-                if (componentId === 'previewStage' && _context.historyMode === true) continue;
-
-                // Preview toggle is capability-gated: only multi-stage models
-                // (WAN + LTX) show it. A model with multiStage:false hides it.
-                if (componentId === 'previewStage' && model?.capabilities?.multiStage !== true) continue;
-
-                // audioMode radio + useAudio toggle are capability-gated: only
-                // models with audio (LTX) show them. WAN never mounts them.
-                if ((componentId === 'audioMode' || componentId === 'useAudio') && model?.capabilities?.audio !== true) continue;
-
-                // Motion intensity is capability-gated: only models whose workflow
-                // has an Input_Motion_Intensity node (WAN) show it. LTX has no such
-                // node, so the control would be dead UI — hide it.
-                if (componentId === 'motionIntensity' && model?.capabilities?.motion !== true) continue;
-
-                // Style rack (the Input_Style_Selector node) is capability-gated AND
-                // op-gated: a model must ship style LoRAs (defaults FALSE — opt in) and
-                // the rack must actually exist in the graph THAT OP runs. Krea2's
-                // detailer/upscaler are separate rack-less files while Klein's single
-                // master graph carries the rack on every branch, so `detail`/`upscale`
-                // offer the control to one and not the other. See modelShowsStyleRack.
-                if ((componentId === 'styleSelect' || componentId === 'stylization')
-                    && !modelShowsStyleRack(model, activeOperation)) continue;
-
-                // Ratio picker is model-AND-op gated for the same reason as the rack.
-                // An op that scales its INPUT image to a megapixel target inherits that
-                // image's shape and never reads Input_Width/Height — Klein's depth and
-                // edit do exactly that. Offering the picker there is worse than useless:
-                // it makes the user believe they chose an output shape they did not get.
-                if (componentId === 'ratio' && !modelShowsRatio(model, activeOperation)) continue;
-
-                // Prompt enhancer (Input_Enhance_Prompt) needs a text encoder whose
-                // CLIP implements .generate() — Qwen3-VL/Gemma yes, T5/umT5 CRASHES.
-                // Never infer this from the op; the model declares it.
-                if (componentId === 'enhancePrompt' && model?.capabilities?.promptEnhance !== true) continue;
-
-                // Quality-tier radio mounts only for models whose ratio set is keyed
-                // by tier ('quality' + 'quality-orientation'). NOT a capability flag:
-                // the ratio table already states it, and a second source would drift.
-                // Without this, an orientation model (SDXL) would render Wan's tiers.
-                if (componentId === 'qualityTier' && !usesQualityTier(model?.type)) continue;
-
-                // Qwen-Edit tier radio (Input_Tier) mounts only for models that ship a
-                // runtime accelerator-tier switch (Qwen-Image-Edit). Capability-gated so
-                // it never appears on other edit models (Boogu bakes its tier per file).
-                if (componentId === 'qwenTier' && model?.capabilities?.tierSelect !== true) continue;
-
-                // Control-adherence slider. Every model but Qwen carries something the
-                // strength scales — a control LoRA (Krea2/Klein) or a ControlNet
-                // (Chroma/SDXL), both behind Input_Control_strength. Qwen conditions on
-                // the control IMAGE with nothing to patch, so the slider would be dead UI
-                // there. Capability-gated, never inferred from the op.
-                if (componentId === 'controlStrength' && model?.capabilities?.controlStrength !== true) continue;
-
-                // Control-type picker. Gated on the MODEL offering more than one type
-                // rather than on a capability flag: `controlTypes` already states it, and
-                // a second source would drift. A one-type model (Klein/Krea2/Chroma —
-                // depth only) has no Input_Control_Net node in its graph, so the picker
-                // would be dead UI AND a lie about what it could switch to.
-                if (componentId === 'controlType' && modelControlTypes(model).length < 2) continue;
-
-                // Krea2 turbo toggle (MPI-316) — two speeds, so a toggle rather than a
-                // radio, and since MPI-365 a different node entirely: Input_is_Turbo
-                // (boolean), NOT qwenTier's Input_Tier int. Its own capability flag:
-                // a model has EITHER the 3-way Qwen radio OR this, never both.
-                if (componentId === 'krea2Turbo' && model?.capabilities?.turboToggle !== true) continue;
-
-                // Batch picker is model-gated. Defaults TRUE (every model batches
-                // unless it opts out), like negativePrompt. Krea2-Turbo opts out:
-                // its two-pass sampler graph has no Input_Batch_Size node, so a
-                // batch>1 request is a dead injection — hide the control.
-                // Batch is model-AND-op gated (MPI-365). `capabilities.batch: false` is
-                // the model-wide off switch; `batchOps` names the ops where a batch > 1
-                // actually multiplies anything. Both live in modelShowsBatch, because
-                // Input_Batch_Size only ever reaches EmptyLatentImage — an op sampling a
-                // VAE-encoded latent silently returns one image while the control says N.
-                if (componentId === 'batch' && !modelShowsBatch(model, activeOperation)) continue;
 
                 const ctrlEl = document.createElement('div');
                 ctrlEl.style.display = 'contents';

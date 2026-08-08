@@ -36,6 +36,22 @@ is **no key-list to edit** anywhere. Concretely:
    are cloned **wholesale** — the model bucket is `clone(modelSettings[id])` minus its
    `operations` sub-tree. Any perModel key rides along automatically. Frozen at dispatch,
    so changing a control while the gen runs can't corrupt it.
+   **Untouched controls are backfilled** (MPI-479): the stores hold only keys the user
+   EDITED, so a run at the default used to record nothing — and since an absent bucket is
+   a no-op on the way back, not a reset, Reuse Prompt could not pull a control back down
+   from a non-default current value. `resolveControlDefaults` (PromptBoxControls) now
+   supplies a resolved default per control, merged **under** the stored values, so the
+   record says what the run USED rather than what happened to be persisted. Two
+   consequences for a new control: its default must resolve through
+   `_resolveDefault`'s op → model → global layers (it does, for free), and if its STORED
+   shape differs from its `defaultValue` it must declare `snapshotDefault: false` and be
+   reconciled from `injectionParams` instead — the three that do are `ratio` (compound
+   `ratioSelector`), `batch` (dropdown string vs stored number) and `qualityTier`
+   (per-MODEL default). A fourth opt-out fails `tests/reuse-snapshot-defaults.test.cjs`.
+   The backfill only covers controls the model+op actually OFFERS — `visibleControlIds`
+   is the one gate, shared with the PromptBox's own mount loop. That matters most for
+   `shared`, which is cross-model: recording a hidden `motionIntensity` on an LTX run and
+   reusing it would reset the value the user set on Wan.
 3. **Reuse restore.** `buildPromptReuseSettings`' fast path clones `controlState.model`
    wholesale back into `modelUpdates`; `applyPromptReuseSettings → setModelSettings`
    shallow-merges it (leaving sibling ops untouched). Your control comes back.
@@ -62,6 +78,9 @@ That is the entire reason a *new* control "just adopts the system": the system r
 - [ ] `defaultValue` set; matches the workflow's baked value so a failed mount degrades safely
 - [ ] Default registered: `promptControlDefaults.js` (or `commands[op].defaults` for perOp)
 - [ ] Control id added to each relevant op's `components` array
+- [ ] Only if the value you STORE is a different shape from `defaultValue`: `snapshotDefault: false`
+      plus a reconcile from `injectionParams` (MPI-479 — otherwise skip it, the backfill is what makes
+      Reuse recall an untouched control)
 - [ ] **NOTHING else.** No edit to `_MODEL_WIDE_KEYS`, no snapshot key-list, no reuse
       key-list. If you find yourself editing one of those to make a control persist or
       restore, STOP — the machinery regressed away from `scope`; fix the machinery, not
