@@ -91,3 +91,45 @@ models) and recorded **zero** `download:failed` and **zero** `transient` events.
 watchdog, and the third was already warm by the time the first install POSTed.
 
 That is a condition that did not arise, NOT a passing test. Do not tick #3 off it.
+
+## Close-out pass, 2026-08-08 18:42Z — verified on disk, not from the commit message
+
+Re-read the whole chain in the working tree rather than trusting `20ac408b`'s message:
+
+| link | where | state |
+|---|---|---|
+| stamp at the source | `routes/remoteModels.js:386` (status) + `:450` (install), both via `isTransientProxyStatus` | present |
+| stash on the failed dep | `routes/downloadManager.js:2397` | present |
+| carry on the model-level broadcast | `routes/downloadManager.js:2448` | present |
+| renderer branch, job known | `js/services/downloadService.js:616` → `ui:warning` | present, ahead of the `ui:error` fallback |
+| renderer branch, job unknown | `js/services/downloadService.js:639` → `ui:warning` | present |
+| payload contract | `js/events.js:127` documents `transient?: boolean` | present |
+
+`node --test tests/remote-transient-install-toast.test.cjs` → 5 checks, green.
+
+**Swept the renderer for a SECOND hole of the same class; there is none.**
+
+- `_firePost`'s pre-flight branch (`downloadService.js:219`) cannot receive a transient:
+  both remote pre-checks — `remoteModelsCheck` (`downloadManager.js:2153`) and
+  `remoteActiveInstallIds` (`:2180`) — swallow to `logger.warn`, so
+  `/comfy/models/download/start` never returns the wrapper's status. Confirmed by reading
+  every non-200 exit of that route (`1550`, `1559`, `1675`, `2339`): body-shape, offline,
+  licence and disk-full only.
+- The `__universal_workflow__` arm returns early into `MpiEngineInstall._setError` — in-modal
+  error text, not `MpiErrorDialog`, so no Report-on-GitHub button.
+- `notificationService` has no `download:failed` handler at all.
+- `commandExecutor`'s arch-weight install failure already ends in `ui:warning`.
+
+Only `ui:error` reaches the report dialog (`js/shell.js:392` → `MpiErrorDialog`, its
+'Report on GitHub' button at `MpiErrorDialog.js:95`), and no transient path now reaches it.
+
+**Acceptance #3 remains unproven and was not closable in this session.** :3000, remote
+connect and Pod creation were out of bounds (a live smoke matrix owns them), and the Pod
+that produced the original 404 window was deleted at the end of its install leg. The card
+closes on local evidence per the standing rule for a leftover that only a Pod can settle;
+the recipe above is now queued as item 9 on `tasks/_archived/MPI-385/brief.md`.
+
+Ownership declared in `files.json`: `js/services/downloadService.js`,
+`routes/remoteModels.js`, `tests/remote-transient-install-toast.test.cjs`.
+`routes/downloadManager.js` is deliberately EXCLUDED — MPI-481 holds it — even though the
+shipped fix has one line there; it was not touched this session.

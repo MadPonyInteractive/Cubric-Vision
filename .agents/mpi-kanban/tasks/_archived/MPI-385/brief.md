@@ -123,6 +123,25 @@ down here, which is exactly the rot this brief exists to stop. Its own `attentio
 
 ---
 
+### 9. MPI-480 — a warming Pod's wrapper 404 is a toast (**closed on local evidence 2026-08-08, live check still owed**)
+
+The fix (`20ac408b`) is shipped and unit-proven server-side; its acceptance #3 is the only
+leg a Pod can settle, and it is CHEAP — the condition is a *timing* window, not a weights
+or volume condition, so it needs neither the smoke volume `aghcuvg7nl` nor 350 GB.
+
+1. Throwaway ~10 GB volume, any datacenter → a `__cpu__` Pod against it.
+2. Poll `/health`; the INSTANT it goes green, POST `/comfy/models/download/start` for one
+   small model. Do not wait for `/remote/comfy/status.ready` — the window is ~0.2s wide.
+3. Expected: a warning TOAST — *"The remote engine isn't ready yet — install <model> again
+   in a moment."* — and **no** Download Failed + REPORT ON GITHUB dialog. `logs/app.log`
+   must still carry the real `remote install trigger failed for <dep>: wrapper install 404`
+   line; the fix changes how it is surfaced, never whether it is recorded.
+4. Delete the Pod and the throwaway volume.
+
+A run where the window never opens is NOT a pass — the 2026-08-08 smoke fill captured SSE
+for all 96 deps and saw zero `download:failed`, because its Pod was already warm. Only a
+run that actually hits the 404 ticks this off.
+
 ## NOT on this card — a Pod cannot settle these
 
 Listing them is half the point. Each has been mistaken for Pod-verifiable before.

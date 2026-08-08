@@ -1,0 +1,8 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/services/downloadService.js",
+    "routes/remoteModels.js",
+    "tests/remote-transient-install-toast.test.cjs"
+  ]
+}
