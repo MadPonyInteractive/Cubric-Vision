@@ -493,34 +493,50 @@ async function main() {
     if (!mode.active || !mode.podId) die('remote mode is not active after the CPU Pod came up — refusing to install, the deps would download LOCALLY.');
     log(` remote mode active on ${mode.podId}`);
 
-    log(`  installing ${set.depIds.length} deps on a CPU Pod (download mode)…`);
-    // ponytail: install via the app's normal per-model route. Same queue, same SSE, same
-    // code users hit — a bespoke bulk installer would be a second path to keep correct.
-    for (const e of set) {
-        await app('/comfy/models/download/start', {
-            method: 'POST',
-            body: JSON.stringify({ modelId: e.model.id, dependencies: reg.resolveDeps(e.model, null, null, ENGINE, { arch: ARCH }).map(id => reg.DEPS[id]).filter(Boolean) }),
-        });
-    }
     // `installing` and `paused` are in-flight too (routes/downloadManager.js:1523) —
     // waiting on downloading/queued alone lets the run leave for the GPU while the Pod
     // is still unpacking.
     const IN_FLIGHT = ['queued', 'downloading', 'paused', 'installing'];
-    // `jobs.length >= set.length` first: an empty job list means the POSTs have not
-    // registered yet, and "no in-flight job" would otherwise read as "install finished".
-    await waitReady('model install', async () => {
+
+    /** POST the models' installs and wait for the queue to drain. @returns {string[]} model ids with a failed dep */
+    const installModels = async (entries) => {
+        // ponytail: install via the app's normal per-model route. Same queue, same SSE, same
+        // code users hit — a bespoke bulk installer would be a second path to keep correct.
+        for (const e of entries) {
+            await app('/comfy/models/download/start', {
+                method: 'POST',
+                body: JSON.stringify({ modelId: e.model.id, dependencies: reg.resolveDeps(e.model, null, null, ENGINE, { arch: ARCH }).map(id => reg.DEPS[id]).filter(Boolean) }),
+            });
+        }
+        // `jobs.length >= entries.length` first: an empty job list means the POSTs have not
+        // registered yet, and "no in-flight job" would otherwise read as "install finished".
+        await waitReady('model install', async () => {
+            const jobs = (await app('/comfy/downloads/status')).jobs || [];
+            return jobs.length >= entries.length && !jobs.some(j => IN_FLIGHT.includes(j.status));
+        }, 6 * 60 * 60 * 1000);
         const jobs = (await app('/comfy/downloads/status')).jobs || [];
-        return jobs.length >= set.length && !jobs.some(j => IN_FLIGHT.includes(j.status));
-    }, 6 * 60 * 60 * 1000);
+        return jobs.filter(j => (j.deps || []).some(d => d.status === 'failed' || d.status === 'error'))
+            .map(j => j.modelId);
+    };
+
+    log(`  installing ${set.depIds.length} deps on a CPU Pod (download mode)…`);
+    let bad = await installModels(set);
+
+    // One retry round. The wrapper's install route can still 404 after /health goes
+    // green on a cold -cpu Pod, and remoteModels.wrapperFetch only spends ~30s on that
+    // window — on the first live run (2026-08-08) LTX lost all 12 deps to it while every
+    // later model, POSTed seconds afterwards, installed fine. A re-POST is what fixed it
+    // by hand, so the runner does it instead of failing a ~300 GB fill on a boot race.
+    if (bad.length) {
+        log(`\n  ⚠ ${bad.length} model(s) had a failed dep: ${bad.join(', ')} — one retry round…`);
+        const retry = [...set].filter(e => bad.includes(e.model.id));
+        bad = await installModels(retry);
+    }
 
     // Playbook step 4: verify BEFORE renting a GPU. A weight that failed here and is
     // only discovered at sampling time has already cost the expensive half of the run.
-    const jobs = (await app('/comfy/downloads/status')).jobs || [];
-    const badDeps = jobs.flatMap(j => (j.deps || [])
-        .filter(d => d.status === 'failed' || d.status === 'error')
-        .map(d => `${j.modelId}/${d.id}`));
-    if (badDeps.length) die(`${badDeps.length} dep(s) failed to install: ${badDeps.join(', ')}`);
-    log(`  installs verified: ${jobs.length} model job(s), no failed deps`);
+    if (bad.length) die(`install failed after a retry for: ${bad.join(', ')}`);
+    log(`  installs verified: no failed deps`);
 
     // The GPU Pod mounts the same volume, so the CPU Pod has to go first.
     log(`\n  deleting the CPU download Pod…`);
