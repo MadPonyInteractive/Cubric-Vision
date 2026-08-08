@@ -25,8 +25,27 @@ trust. Every `vram_state` branch in the file:
 | 1184 | `(HIGH, NORMAL)` **or `aimdo_enabled`** | same — aimdo is on |
 
 **Not one branch distinguishes LOW_VRAM from NORMAL_VRAM.** Running the engine without
-the flag would execute identical code. The isolation test this card originally proposed
-would have burned a multi-minute generation to measure nothing — do not run it.
+the flag executes identical code.
+
+### MEASURED 2026-08-08 — the source read was right
+
+The user ran it anyway, which was the correct call: a source read is an argument, a run is
+evidence. Same prompt, same inputs, 1152x640 / 3 s / `match`, `NORMAL_VRAM` confirmed in
+the boot log:
+
+| run | vram state | wall clock |
+|---|---|---|
+| `ref2v_ms_008` | LOW_VRAM | 7m 12s |
+| `ref2v_ms_004` | LOW_VRAM | 7m 23s |
+| `ref2v_ms_003` | LOW_VRAM | 7m 22s |
+| **`ref2v_ms_010`** | **NORMAL_VRAM** | **7m 05s** |
+
+7 seconds against a baseline that already spreads 11 s across three runs of itself. **The
+flag does nothing.** Question closed on evidence, not on reading. `routes/comfy.js` was
+patched for the test and reverted (`git checkout --`), tree clean.
+
+Residency during the flagless run: dedicated started at 14.0 GB and settled to 13.7 —
+i.e. the same 10-14 GB band it occupied WITH the flag. Nothing about the split changed.
 
 The 11.5/16-with-23.7-shared split is aimdo's JIT fault-in working as designed, not the
 flag. `docs/models/h3/performance.md` measured the **bench** at 12.9/16 with ~24 GB
