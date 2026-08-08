@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "39da0830-c6ec-417d-b791-f7c38cf069a1",
+  "path": "routes/downloadManager.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/15480f52-7d46-4adf-b0d9-0013a486578a.json",
+  "owner_role": "implementer",
+  "task": null,
+  "status": "complete",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-08-08T19:10:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-08T18:50:00Z",
+      "event": "claimed_for_write",
+      "note": "drop the MpiNodes dev drift skip"
+    },
+    {
+      "at": "2026-08-08T19:10:00Z",
+      "event": "released"
+    }
+  ]
+}

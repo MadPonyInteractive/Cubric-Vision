@@ -309,10 +309,19 @@ commit is on disk and reinstalls on mismatch, **both engines**.
   DEV tag first** — build at a `-dev` `manifest_version` (both GPU + CPU legs) and bump
   `POD_IMAGE_VERSION_DEV`/`POD_IMAGE_VERSION_CPU_DEV`, which only a `BUILD_HASH === 'dev'`
   run resolves; the stable pins move only on a clean rebuild at a real version.
-- **Dev-symlink escape hatch:** on a source/dev run (`BUILD_HASH === 'dev'`) the drift
-  check SKIPS `ComfyUI-MpiNodes` — it's the one node symlinked into `custom_nodes` for
-  live editing, always at/ahead of the pin, and a "repair" would `fs.remove` the
-  symlink. Release builds (no symlink) drift-repair it normally.
+- **NO dev escape hatch for `ComfyUI-MpiNodes` (2026-08-08) — it tracks the pin like
+  every other node, on a dev run too.** Until this date the pack was JUNCTIONED into the
+  engine's `custom_nodes` for live editing and the drift check skipped it whenever
+  `BUILD_HASH === 'dev'`. Both are gone: the junction is deleted and the
+  `_devMode && depId === 'ComfyUI-MpiNodes'` skip is out of
+  `checkUniversalWorkflowDepsStatus()` (shared.js), along with that file's now-unused
+  `_devMode`. **Why:** the junction made an uncommitted, unpushed or unpinned node pass
+  on the dev machine and ship to nobody — measured 2026-08-08, the pin sat 5 commits
+  behind with 3 nodes no user could reach. The app engine is a USER REPLICA; a node the
+  pin does not carry now fails at dispatch here exactly as it would for a user. Live node
+  editing is on the standalone bench instead (`G:\ComfyUi\ComfyUI\custom_nodes\ComfyUi-MpiNodes`
+  → symlink to `c:\AI\Mpi\ComfyUi-MpiNodes`), which is where workflows are authored anyway.
+  Ship a node change with `/mpi-nodes-sync`: commit → push → bump the `node_lock` pin.
 - **`targetPath` in-folder weights:** a weight whose node hard-codes its scan dir
   (RIFE → `custom_nodes/comfyui-frame-interpolation/ckpts/rife/`) declares
   `targetPath: 'custom_nodes/<node>/<subdir>'` + `engineAsset: true`. The resolver

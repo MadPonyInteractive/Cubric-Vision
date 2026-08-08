@@ -5,13 +5,7 @@
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
   "active_tasks": [],
-  "active_file_claims": [
-    "routes/shared.js",
-    ".claude/rules/comfy_engine.md",
-    ".claude/skills/mpi-nodes-sync/SKILL.md",
-    "tests/node-drift.test.cjs",
-    "routes/downloadManager.js"
-  ],
+  "active_file_claims": [],
   "pending_file_states": [
     "dev_configs/node_lock.json",
     "docs/README.md",

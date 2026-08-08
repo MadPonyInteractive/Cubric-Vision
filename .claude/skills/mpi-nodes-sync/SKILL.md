@@ -95,32 +95,29 @@ model at dispatch, and ComfyUI's own validation may pass it.
 **8. `dev_configs/node_lock.json` is a version-bump trigger.** The Stop hook will say so.
 Run `/mpi-version-bump` when the app release is cut — not per node change.
 
-## The dev junction — keep it, but re-check it after an engine op
+## Where you edit nodes live — the BENCH, not the app engine
 
-`engine/ComfyUI_windows_portable/ComfyUI/custom_nodes/ComfyUI-MpiNodes` is a **hand-made
-NTFS junction to the live repo** (`LinkType: Junction`, target `C:\AI\Mpi\ComfyUi-MpiNodes`), not
-an install. Junction, not symlink — it needs no admin rights or Developer Mode. That is the authoring loop: save a `.py`, restart
-ComfyUI, done — no commit/push/pin round trip just to test. Deliberately kept; do not
-"fix" it into a real directory (that would force pushing untested nodes in order to test
-them). Release builds have no symlink and install from the pin normally.
+The standalone authoring bench keeps the live link:
+`G:\ComfyUi\ComfyUI\custom_nodes\ComfyUi-MpiNodes` -> symlink -> `c:\AI\Mpi\ComfyUi-MpiNodes`.
+Edit a `.py`, restart the bench, the node is live. That is also where workflows are
+authored, so a broken node fails at the moment you write the graph.
 
-**It does not survive an engine wipe.** `/engine/upgrade` in-place is fine, but
-`_fullEngineReinstall()` (dead tree, deprecated node, engine-owned package moved) recreates
-`custom_nodes/` — the symlink is gone and MpiNodes installs at the pin instead. Symptom:
-repo edits stop showing up in ComfyUI, with no error. Check + restore (PowerShell — Git Bash
-mangles the flags):
+**The app engine has NO link (removed 2026-08-08) and must not get one back.** It is a
+USER REPLICA: `engine/.../custom_nodes/ComfyUI-MpiNodes` is a normal install that the drift
+ladder keeps at the `node_lock` pin, on a dev run as much as a release build. So a node you
+edited but did not commit / push / pin **fails in the app immediately**, the same way it
+would for a user — instead of passing on your machine and shipping to nobody (which is how
+the pin ended up 5 commits behind with 3 unreachable nodes). The `_devMode` skip that used
+to protect the junction is gone from `checkUniversalWorkflowDepsStatus()`.
 
-```powershell
-Get-Item "engine\ComfyUI_windows_portable\ComfyUI\custom_nodes\ComfyUI-MpiNodes" | Select LinkType, Target
-New-Item -ItemType Junction -Force `
-  -Path   "engine\ComfyUI_windows_portable\ComfyUI\custom_nodes\ComfyUI-MpiNodes" `
-  -Target "c:\AI\Mpi\ComfyUi-MpiNodes"
-```
+Practical consequence: after step 5, the engine re-downloads the pinned node zip (~1.76MB)
+on the next boot / `/engine/repair-deps`. If the app is open while you bump, restart it
+before generating, or MpiNodes stays at the old commit for that session.
 
-If a stale real copy is also present, **rename it to end in `.disabled`** — any other suffix
-still loads, and two copies of the pack registering the same route kills ComfyUI at boot with
-an aiohttp "route will never be executed" traceback that names no pack
-(`.claude/rules/comfy_engine.md` § Parking a node).
+If a stale copy of the pack is ever present alongside the installed one, **rename it to end
+in `.disabled`** — any other suffix still loads, and two copies registering the same route
+kill ComfyUI at boot with an aiohttp "route will never be executed" traceback that names no
+pack (`.claude/rules/comfy_engine.md` § Parking a node).
 
 ## Done means
 
@@ -129,3 +126,4 @@ an aiohttp "route will never be executed" traceback that names no pack
 - [ ] `dev_configs/node_lock.json` pin == that pushed sha (full 40 chars)
 - [ ] Removed/renamed classes grepped out of `comfy_workflows/`
 - [ ] Registry release: only if the user asked for one
+- [ ] App engine restarted after the pin bump (it reinstalls the node at the new pin)

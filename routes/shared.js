@@ -27,18 +27,6 @@ const _require = createRequire(__filename);
 const ENGINE_ROOT = getEngineRoot();
 const EXTRA_MODEL_FOLDER_KEYS = Object.freeze(['loras', 'upscale_models']);
 
-// dev_mode, server-side. Mirrors main.js loadAppConfig() / remotePodLifecycle.js:
-// BUILD_HASH === 'dev' for source/dev runs, a real commit hash for release builds.
-// Read once at load.
-const _devMode = (() => {
-    try {
-        const src = require('fs').readFileSync(
-            require('path').join(__dirname, '..', 'js', 'core', 'buildInfo.js'), 'utf8');
-        const m = src.match(/BUILD_HASH\s*=\s*['"]([^'"]+)['"]/);
-        return (m ? m[1] : 'dev') === 'dev';
-    } catch { return false; } // default off — treat as a release build if unreadable
-})();
-
 /**
  * Resolve the default projects root.
  * Priority:
@@ -747,13 +735,12 @@ async function checkUniversalWorkflowDepsStatus() {
         }
         // Folder present — for a commit-pinned custom_node, check the marker for drift.
         if (dep.type === 'custom_nodes') {
-            // Dev-mode escape hatch: ComfyUI-MpiNodes is the ONE node we symlink into
-            // custom_nodes for live editing on a source run. It is always at/ahead of the
-            // pinned commit (every change ships as a new release), so a drift "repair" here
-            // is a false positive that would fs.remove the symlink (MPI-222). Skip it. This
-            // only fires on a source/dev run — a release build (no symlink) drift-repairs
-            // normally.
-            if (_devMode && depId === 'ComfyUI-MpiNodes') continue;
+            // NOTE: ComfyUI-MpiNodes has NO dev-mode escape hatch (it had one until the
+            // junction below it was removed). Live node editing happens on the standalone
+            // authoring bench, which keeps its own symlink to the node repo; the app engine
+            // is a USER REPLICA and tracks the pin like every other node, on a dev run too.
+            // That is the point: a node change that was not committed, pushed and pinned
+            // fails here exactly as it would for a user, instead of passing on dev only.
             const pinned = getPinnedNodeCommit(depId);
             if (pinned) {
                 let installed = null;

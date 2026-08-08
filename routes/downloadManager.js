@@ -273,8 +273,9 @@ function _orphanedDepIds(protectedMap) {
         const d = DEPS[id];
         if (!d || !d.filename) return false;
         // WEIGHTS ONLY. A custom_nodes entry is work-not-bytes (it stays on disk after
-        // uninstall by design), and on a dev machine custom_nodes/ComfyUI-MpiNodes is a
-        // SYMLINK to the live node source repo — sweeping it would destroy that repo.
+        // uninstall by design). Node folders are never swept — the dev machine used to
+        // link ComfyUI-MpiNodes straight at its source repo here, and a sweep would have
+        // destroyed it; the link is gone, the exclusion still stands on its own merit.
         // targetPath deps are engine-anchored, outside the models root this may touch.
         if (d.type === 'custom_nodes' || d.targetPath) return false;
         return !protectedMap.has(id) && !universal.has(id);

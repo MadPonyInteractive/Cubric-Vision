@@ -111,22 +111,6 @@ test('no-wipe invariant: engine version stamp is untouched by a node repair', ()
     assert.notEqual('.mpi_engine_version', MARKER);
 });
 
-// ── Dev-mode MpiNodes symlink escape hatch (MPI-222) ─────────────────────────────
-// ComfyUI-MpiNodes is the ONE node symlinked into custom_nodes for live editing on a
-// source run. It is always at/ahead of the pinned commit, so a drift "repair" is a
-// false positive that would fs.remove the symlink. checkUniversalWorkflowDepsStatus
-// skips its drift check when _devMode && depId === 'ComfyUI-MpiNodes'. Pure mirror of
-// that guard — a release build (dev off) still drift-checks it normally.
-function driftSkipped(devMode, depId) {
-    return devMode && depId === 'ComfyUI-MpiNodes';
-}
-
-test('dev-mode: MpiNodes drift check is skipped (symlink not clobbered)', () => {
-    assert.equal(driftSkipped(true, 'ComfyUI-MpiNodes'), true, 'dev + MpiNodes → skip');
-    assert.equal(driftSkipped(true, 'ComfyUI-VideoHelperSuite'), false, 'dev + other node → still checks');
-    assert.equal(driftSkipped(false, 'ComfyUI-MpiNodes'), false, 'release + MpiNodes → still checks');
-});
-
 // ── Remote drift decision (pure mirror of remoteModelsCheck, MPI-222 Phase 4) ────
 // installedCommits = folder→commit from the Pod manifest nodes[] (schema v2).
 // Returns { volumeInstalled, bakedWarn } for one node given its class + pinned commit.

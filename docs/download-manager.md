@@ -201,9 +201,9 @@ destroyed 5.24GB.
 
 It refuses, and `tests/orphan-sweep.test.cjs` pins each refusal:
 
-- **`custom_nodes`** — work-not-bytes, and on a dev machine
-  `custom_nodes/ComfyUI-MpiNodes` is a **symlink to the live node source repo**;
-  sweeping it would destroy that repo.
+- **`custom_nodes`** — work-not-bytes. (The dev machine used to junction
+  `custom_nodes/ComfyUI-MpiNodes` straight at the live node source repo, where a sweep
+  would have destroyed it; that link was removed 2026-08-08, the exclusion stands anyway.)
 - **`targetPath` weights** — engine-anchored, outside the models root.
 - **universal workflow deps**, and anything resolving outside the managed models root.
 
@@ -646,9 +646,10 @@ returns `driftedDeps`.
   pre-wipe nukes the WHOLE node folder, including any in-folder weight (see `targetPath`
   below); a tracked `targetPath` weight self-heals on the next boot-install, an
   untracked one is lost.
-- **Dev-symlink skip:** on a source run (`BUILD_HASH==='dev'`) the drift check skips
-  `ComfyUI-MpiNodes` — it's symlinked for live editing and a repair would `fs.remove`
-  the link.
+- **No dev skip (2026-08-08):** the drift check treats `ComfyUI-MpiNodes` like every
+  other node on a source run. The junction it protected is gone — live node editing moved
+  to the standalone bench, so an unpinned node fails on dev instead of passing there and
+  reaching no user. See `.claude/rules/comfy_engine.md` § NO dev escape hatch.
 - **Remote heal:** a drifted volume node installs with `force:true` so the wrapper
   re-clones at the pinned commit; without force it short-circuits `already_installed`
   → an endless install loop. See [runpod-remote-engine.md](runpod-remote-engine.md) § 6.
