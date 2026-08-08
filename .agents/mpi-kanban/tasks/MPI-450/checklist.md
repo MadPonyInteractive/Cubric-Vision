@@ -70,6 +70,24 @@ assumptions that time may have invalidated.
       reported control (`refImageSize` plus at least one of `previewStage` / `denoise` /
       `useGrid`). Lower severity than MPI-461: the known-issue line is an acceptable
       outcome here, a silent skip is not.
+- [ ] **MPI-483** — ADDED 2026-08-08. Gates because **the 1.4 notes cite it as the
+      trustworthy case.** The wake-up-install bullet (`UNRELEASED.md:245`) reassures the
+      reader: *"Genuine failures — a bad file, **a full disk** — still report exactly as
+      before."* The full-disk report is the counterexample the whole bullet leans on, and
+      it is wrong: the gate subtracts `du -sb` **apparent** bytes, inflated by aria2's
+      preallocated `.part` files, so a user with any interrupted download can be told the
+      disk is full when it is not — measured here as a 48.65 GB phantom, refusing an
+      install with "39.4 GB free" when ~91 GB was. The message they get is the MPI-100
+      toast telling them to free space, which is not the remedy. Either fix it or reword
+      that bullet; shipping both as they stand is the one thing this card exists to stop.
+- [ ] **MPI-482** — ADDED 2026-08-08, **prerequisite for MPI-483**. Declared dep sizes are
+      hand-written estimates (95 installed deps declare 195.7 GB against 259 GB of real
+      blocks; one dep declared 160 bytes; one declared two different sizes under two
+      models). A corrected gate fed by wrong sizes is just precisely wrong. Independently
+      user-visible: `modelJob.totalBytes` is summed from these strings on BOTH engines, so
+      every install progress bar in 1.4 is denominated by a guess. The fix is a sibling
+      pass in `scripts/computeDepHashes.py`, which already HEADs every dep —
+      `Content-Length` is in the response it already reads.
 - [ ] Any Gate A card NOT fixed is written into the 1.4 release notes as a known issue
 
 ## Gate C — must decide (before the notes are frozen)
@@ -137,6 +155,25 @@ assumptions that time may have invalidated.
 
 - [ ] `npm test` green
 - [ ] `npm run test:desktop` green
+- [ ] **Post-smoke throwaway-Pod session — closes MPI-480 #3 AND MPI-481 in one go.**
+      ADDED 2026-08-08. Both need the same rig and NEITHER can run beside a live smoke
+      run: MPI-481's fix is in `routes/`, which is read at server fork, so the app must
+      be RESTARTED before it is even testable — and the app is what drives the smoke
+      run. A second instance is not a way around it: per **MPI-485**, an instance that
+      touches the remote engine reaps the other's Pod through the name-based orphan
+      sweep, which is what destroyed run 3 today.
+      Recipe, ~10 min on a **10 GB** throwaway volume (not `aghcuvg7nl`) and one small dep:
+      1. Restart the app so the MPI-481 fix is loaded.
+      2. Cold `__cpu__` Pod → POST an install the instant `/health` goes green (window
+         ~0.2s, do not wait on `status.ready`). Expect a warning TOAST, not the
+         Download Failed + REPORT ON GITHUB dialog → **MPI-480 #3**.
+      3. Let the install run, then DELETE the Pod mid-install and press Install again.
+         Expect a real `/wrapper/models/install` to fire, log tell
+         `stale in-flight record for <depId> — the wrapper has no such install;
+         reinstalling` → **MPI-481**.
+      4. Delete the Pod and the throwaway volume. **Never** `aghcuvg7nl`.
+      Hazard that has NOT changed: cancelling a download with a Pod still attached calls
+      `remoteUninstallDep` and deletes partials off the volume. Delete the Pod FIRST.
 - [ ] **MPI-458 confirmation run** — ADDED 2026-08-08. NOT a blocker and NOT a gate: the
       card closed as **not a defect** (`a5320d67`), measured three ways on Electron 41.1.1,
       so `docs/testing.md`'s "the suite runs alongside your open app" guarantee holds with

@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-487",
+  "title": "A partially-installed bar looks identical to a downloading one - the library reads as parallel installs",
+  "description": "A partially-installed model and an actively-downloading one render the SAME bar, so the Model Library reads as several concurrent installs when only one is running. Caught live 2026-08-08 during the MPI-467 smoke fill: the library showed Qwen Image Edit 98%, MiniMax H3 57%, MiniMax H3 Reference 51% and Wan 2.2 5B 99% with four filled bars, while the server had exactly ONE job in flight (minimax-h3, one dep moving, +72 MB measured over 25s) and Qwen Image Edit and Wan 2.2 5B had no download job AT ALL - their percentages come from _computePartial deriving on-disk coverage. The misread is not cosmetic in consequence: 'four models installing at once' is the exact signature of the fault-5 regression that starved a cpu3c Pod into 524ing its own /health for ninety minutes (MPI-184: the product installs sequentially), so an honest reading of that screen sends someone hunting a serious bug that is not there. Both numbers are legitimate and both should stay - what is missing is that the bar never says WHICH it is. Distinguish 'N% already on disk' from 'N% downloading now': different treatment, a label, or no bar at all for the static case. Renderer-only - _computePartial lives in js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js and js/services/downloadService.js - so it touches no routes/ file, needs no server restart, and is PARALLEL-SAFE with a live smoke run; verify in a browser tab rather than the user's window. A partially-installed model is on the volume RIGHT NOW, which is the state that is otherwise awkward to manufacture.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-08T08:35:00Z",
+  "updated_at": "2026-08-08T08:35:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}
