@@ -498,22 +498,35 @@ async function main() {
     // is still unpacking.
     const IN_FLIGHT = ['queued', 'downloading', 'paused', 'installing'];
 
-    /** POST the models' installs and wait for the queue to drain. @returns {string[]} model ids with a failed dep */
+    /**
+     * Install the models ONE AT A TIME, each fully drained before the next.
+     *
+     * Not a pacing preference — POSTing all 13 at once is a load the product never
+     * generates (the model manager installs sequentially, MPI-184) and the Pod cannot
+     * survive it. Measured 2026-08-08: 63 concurrent wrapper installs starved a cpu3c
+     * download Pod into answering 524 to every request including /health, the install
+     * SSE died every 90s, and the fill flat-lined at ~97 GB while the app's counters
+     * froze at 82.9 GB. The Pod stayed RUNNING throughout, which is what makes the
+     * failure so easy to misread as progress.
+     *
+     * @returns {Promise<string[]>} model ids with a failed dep
+     */
     const installModels = async (entries) => {
         // ponytail: install via the app's normal per-model route. Same queue, same SSE, same
         // code users hit — a bespoke bulk installer would be a second path to keep correct.
-        for (const e of entries) {
+        for (const [i, e] of entries.entries()) {
+            log(`\n  [${i + 1}/${entries.length}] ${e.model.id}`);
             await app('/comfy/models/download/start', {
                 method: 'POST',
                 body: JSON.stringify({ modelId: e.model.id, dependencies: reg.resolveDeps(e.model, null, null, ENGINE, { arch: ARCH }).map(id => reg.DEPS[id]).filter(Boolean) }),
             });
+            // The job must EXIST before "not in flight" can mean "finished" — a POST that
+            // has not registered yet would otherwise read as an instant install.
+            await waitReady(`install ${e.model.id}`, async () => {
+                const j = ((await app('/comfy/downloads/status')).jobs || []).find(x => x.modelId === e.model.id);
+                return !!j && !IN_FLIGHT.includes(j.status);
+            }, 3 * 60 * 60 * 1000);
         }
-        // `jobs.length >= entries.length` first: an empty job list means the POSTs have not
-        // registered yet, and "no in-flight job" would otherwise read as "install finished".
-        await waitReady('model install', async () => {
-            const jobs = (await app('/comfy/downloads/status')).jobs || [];
-            return jobs.length >= entries.length && !jobs.some(j => IN_FLIGHT.includes(j.status));
-        }, 6 * 60 * 60 * 1000);
         const jobs = (await app('/comfy/downloads/status')).jobs || [];
         return jobs.filter(j => (j.deps || []).some(d => d.status === 'failed' || d.status === 'error'))
             .map(j => j.modelId);
