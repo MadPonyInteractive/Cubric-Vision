@@ -5,9 +5,9 @@
   "owner_session": null,
   "owner_role": "implementer",
   "task": ".agents/mpi-kanban/tasks/MPI-467/",
-  "status": "claimed",
+  "status": "complete",
   "claim_kind": "write",
-  "heartbeat_at": "2026-08-08T18:03:18Z",
+  "heartbeat_at": "2026-08-08T20:31:41Z",
   "allowed_actions": [
     "edit",
     "verify"
@@ -16,6 +16,10 @@
     {
       "at": "2026-08-08T18:03:18Z",
       "event": "claimed_for_write"
+    },
+    {
+      "at": "2026-08-08T20:31:41Z",
+      "event": "released_complete"
     }
   ]
 }
