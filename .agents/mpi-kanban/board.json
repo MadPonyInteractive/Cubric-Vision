@@ -1,12 +1,12 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 489,
+  "next_id": 490,
   "columns": {
     "todo": [
+      "MPI-489",
       "MPI-488",
       "MPI-485",
       "MPI-483",
-      "MPI-482",
       "MPI-367",
       "MPI-478",
       "MPI-477",
@@ -32,12 +32,13 @@
       "MPI-348",
       "MPI-349",
       "MPI-403",
-      "MPI-442",
       "MPI-4",
       "MPI-259"
     ],
     "doing": [
+      "MPI-482",
       "MPI-487",
+      "MPI-442",
       "MPI-481",
       "MPI-480",
       "MPI-450",
@@ -91,7 +92,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-08T07:02:00Z",
+  "updated_at": "2026-08-08T06:50:00Z",
   "events": [
     {
       "at": "2026-08-07T14:20:43Z",
@@ -2447,6 +2448,23 @@
       "at": "2026-08-08T07:30:00Z",
       "actor": "opus",
       "summary": "CLOSED on code + test evidence at the user's call, 2026-08-08. The structural half was MPI-463 (_failBail, 9d83ea6e); this card carried the user-visible acceptance and shipped it in f006dc4f - _failBail now logs every pre-dispatch bail and emits ui:error by default, with { reported: true } as the explicit opt-out for the six sites that already say something actionable. Four bails were silent before: workflow-name resolve, trimmed-video prep, workflow JSON fetch (the 404 that was reported live) and the injector throw. Evidence: two negative-controlled tests in lane-settle-on-bail (the default must be loud; an opt-out must have a real emit near it - the negative control names the exact line), plus T21 in generation-store proving a queued->error settle frees the lane and the NEXT job dispatches. Suite 499/499, eslint 0 errors. NOT live-watched: nobody has seen the dialog paint. Accepted because the emit is two lines through ui:error, the same path the post-dispatch catch has used for years and which the user did see paint during this session (the port-48188 refusal, commandExecutor.js:2090)."
+    }
+,
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-442",
+      "type": "task.moved",
+      "at": "2026-08-08T06:45:00Z",
+      "actor": "opus",
+      "summary": "todo -> doing. Re-measured: 20 warnings / 0 errors, not 19 - MpiAppLibrary.js is now MpiFlowLibrary.js and heroStats.js has 5 require-destroy-on-events hits, not 4. The 2 null-ruleId messages are NOT violations: they are unused eslint-disable directives in footprint.js (reportUnusedDisableDirectives), so the fix is deleting stale comments."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-482",
+      "type": "task.moved",
+      "at": "2026-08-08T06:50:00Z",
+      "actor": "opus",
+      "summary": "todo -> doing. Measuring true bytes for all 111 file deps via HEAD, as a sibling pass in scripts/computeDepHashes.py. Scoping note before any edit: nodesDeps (14 entries) CANNOT be measured this way - their url is a lockUrl() call to a git repo, not a file, so the existing scanner's url regex never matched them and a HEAD has no Content-Length to give. They stay hand-written and that will be stated, not hidden. Also confirmed no dep url points at civitai.com (13 civitai hits are credit/licence metadata only), so this needs no VPN. Consumers are NOT being changed: routes/downloadManager.js, routes/comfy.js and routes/install/computeProgress.js all read dep.size through _parseSizeToBytes, and a routes/ edit needs a server restart that would kill the live MPI-467 fill. So `size` is regenerated from the measured bytes and every consumer inherits the correction with no code change."
     }
   ]
 }

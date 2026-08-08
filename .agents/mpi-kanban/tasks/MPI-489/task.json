@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-489",
+  "title": "A renderer that did not start the download never subscribes to the SSE stream, so a live install renders as idle",
+  "description": "state.downloadJobs stays EMPTY in any client that did not itself click Install, because nothing connects the SSE stream except downloadService._start() (js/services/downloadService.js:94, _ensureSSE before the POST) and MpiEngineInstall's four _ensureSSE() calls. No boot path, no Model-Library mount, nothing on models:checked. So a client that arrives while a download is already running never receives download:snapshot - the protocol built for exactly this (MPI-276 G9) is broadcast on every SSE connect, and the connect never happens. Measured live 2026-08-08 during the MPI-467 fill: GET /comfy/downloads/active reported minimax-h3 status downloading with a dep at 6.49/26.36 GB, while a fresh browser tab on the same server held state.downloadJobs = [] and drew that model as an idle partial. The comment at downloadService.js:465 ('on a renderer reload the grid mounts before SSE reconnects... this snapshot is what restores the live bar') describes a reconnect that has no trigger in that path. Blast radius is the RELOAD case, not just a second window: reload mid-download in local-engine mode and the Library shows no progress UI at all until something else calls _ensureSSE - MPI-291's liveness watchdog cannot help (it only arms from _start, and its own guard reads state.downloadJobs, which is empty), and MpiModelManager._pumpBackstop self-idles because it only runs while the Library holds an active job. A remote-engine session is accidentally covered: shell.js's engine-asset heal calls downloadService.start('engine:assets') on first connect, which connects the stream as a side effect. Likely fix is one _ensureSSE() where the download UI mounts (Model Library + Flow Library), so the snapshot lands and the real jobs adopt - but check the reconnect/backoff path first, and confirm a second subscriber does not double-count deltas. Surfaced by MPI-487, which made the gap visible: the partial no longer draws a bar that coincidentally looked like the download it was not.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-08T07:10:00Z",
+  "updated_at": "2026-08-08T07:10:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}

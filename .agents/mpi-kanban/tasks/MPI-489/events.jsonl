@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-489", "type": "task.created", "at": "2026-08-08T07:10:00Z", "actor": "opus", "summary": "Found while verifying MPI-487 against the running fill: the server reported minimax-h3 downloading while a fresh client held zero jobs. Id claimed with os.mkdir exclusive-create per MPI-488."}
