@@ -163,3 +163,20 @@ to released users — deliberate, warned hotfix only, never the day-to-day verb.
 for images: a dev build bumps `POD_IMAGE_VERSION_DEV`/`_CPU_DEV`, never the stable pins.
 Both are gated on `BUILD_HASH === 'dev'`, so a shipped app cannot resolve either. (MPI-340;
 full flow: `c:\AI\Mpi\mpi-ci\cubric-vision-pod\README.md` § "Runtime externalize".)
+
+## 🔌 Consuming a route — call it once, don't infer its shape
+
+A wrong response shape never throws. It destructures to `undefined`, defaults to empty,
+and reads as **"nothing exists yet"** — so the code acts on that. `scripts/smoke-workflows.mjs`
+did `const { volumes = [] } = await app('/runpod/volumes')` against a route that answers a
+**bare array**: every run concluded the account had no volumes and created a new 350 GB
+one. Three existed before it was caught (MPI-467, 2026-08-08), while the weights already
+downloaded sat on a twin each later run ignored.
+
+- **Hit the route once and look at the body** before writing code against it. One `curl`.
+- **Before an action that SPENDS, CREATES or DELETES, make the code refuse to guess.**
+  Several candidates match → don't take "the first that fits"; report them and demand an
+  explicit id. An empty list right before a create is the moment to be suspicious.
+- Same class, same session: the runner logged "installing on a CPU Pod" while never
+  creating one, because `/comfy/models/download/start` was assumed to target the Pod. It
+  branches on `isRemoteActive()` — unverified, that downloads ~300 GB to the local disk.
