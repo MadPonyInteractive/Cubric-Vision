@@ -124,7 +124,7 @@ export const Events = new EventBus();
  * 'download:started'      { modelId: string, job: DownloadJob }    — download enqueued
  * 'download:progress'     { modelId: string, progress: number, speed: string, downloadedBytes: number, totalBytes: number } — download progress update
  * 'download:complete'     { modelId: string }                      — download succeeded
- * 'download:failed'       { modelId: string, error: string }       — download failed
+ * 'download:failed'       { modelId?: string, depId?: string, error: string, networkBlocked?: boolean, transient?: boolean } — download failed. depId-only (no modelId) is a DEP-level failure and is deliberately silent; the flags pick toast vs error dialog (docs/download-manager.md § Failed is not one thing)
  * 'download:cancelled'    { modelId: string }                      — download cancelled by user
  * 'download:uninstalled'  { modelId: string }                      — model files uninstalled
  * 'download:installing'   { modelId: string }                      — custom node install in progress

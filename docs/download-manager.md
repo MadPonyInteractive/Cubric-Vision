@@ -424,11 +424,40 @@ In `js/state.js`:
 | `download:started` | Backend→SSE→Frontend | Model job enqueued and downloading begins |
 | `download:progress` | Backend→SSE→Frontend | Per-dep bytes/speed updated, throttled 1/sec on backend |
 | `download:complete` | Backend→SSE→Frontend | Fires PER-DEP with `{depId, modelId:null}` as each file lands, then ONCE model-level with a real `modelId` when the whole dep set is done (`_checkModelJobsComplete`). Frontend consumers doing expensive work (registry re-sync, grid rebuild) MUST gate on `data.modelId` — running per-dep re-synced the registry N× and flashed the Model Library grid (see [model-library.md](model-library.md) § Library flash on install). |
-| `download:failed` | Backend→SSE→Frontend | SHA256 mismatch or network error |
+| `download:failed` | Backend→SSE→Frontend | SHA256 mismatch or network error. Fires per-dep (`{depId}`, **silent client-side** — MPI-97) and model-level (`{modelId}`) from `_checkModelJobsComplete`; only the model-level one surfaces. Its payload FLAGS pick the surface — see § Failed is not one thing |
 | `download:cancelled` | Backend→SSE→Frontend | User cancelled or shutdown |
 | `download:uninstalled` | Backend→SSE→Frontend | Model uninstalled |
 | `download:installing` | Backend→SSE→Frontend | Custom-node install phase in progress — since MPI-413 that is the one curated `python_deps.txt` pip pass plus the node extractions, not a per-node `requirements.txt` |
 | `comfy:needs-restart` | Backend→SSE→Frontend | Custom node install done; ComfyUI needs auto-restart |
+
+## Failed is not one thing — the payload carries the verdict (MPI-480)
+
+`download:failed` is the same event for "your disk is full", "your network blocked the
+host", "the Pod is still waking up" and "this is a bug". The renderer cannot tell them
+apart from the message string, so the BACKEND classifies and the payload carries the
+verdict. `downloadService.js` branches on the flags, in order, and only the final fallback
+opens the **Download Failed + Report on GitHub** dialog:
+
+| payload | surface | set by |
+| --- | --- | --- |
+| `_isOutOfSpaceError(error)` (text match, not a flag) | disk-full toast | errno 28/122 text from either engine (MPI-100) |
+| `networkBlocked: true` | toast, `error` shown verbatim | `_describeTransportError` (MPI-427) |
+| `transient: true` | "engine isn't ready yet" toast | `isTransientProxyStatus()` in `routes/remoteModels.js` (MPI-480) |
+| none of the above | **error dialog + Report on GitHub** | the genuine-bug fallback |
+
+**A flag only reaches the user if every hop carries it.** The chain is
+`err.<flag>` at the throw → `depJob.<flag>` in the dep-level catch → the
+`_checkModelJobsComplete` broadcast → the renderer branch. The dep-level broadcast is
+silent client-side, so `_checkModelJobsComplete` reading the flag OFF THE FAILED DEP is
+the only route to the user — a flag set on the error but not stashed on the dep job is
+dropped with no error anywhere. This is NOT the `_createDepJob` whitelist (that governs
+fields sourced from the registry dep); these are runtime assignments.
+
+MPI-480 was exactly this hop missing. `wrapperFetch` already retried 404/502/503/504 as
+transient, but `remoteInstallDep` threw a bare `Error`, so the verdict died at the throw
+and a cold Pod's boot race — which a re-POST fixes — asked the user to file a GitHub
+issue. **Do not "fix" that class of bug by widening the retry budget**: it hides the
+instance and leaves the classification wrong.
 
 ## ComfyUI Auto-Restart
 When `comfyNeedsRestart` is true, `ensureServerRunning()` in `comfyController.js` stops ComfyUI, starts it again with `{ isUserRestart: true }`, and polls until ready before any generation proceeds.

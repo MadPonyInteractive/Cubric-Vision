@@ -68,6 +68,17 @@ guard its HANDLER per button (`assert.match(panel, /<name>Btn\.on\('click'/)`), 
 UI fix by clicking the real button — a panel mounts headless in Chromium against a stub
 `viewer`, which is how this one was proven dead and then proven fixed.
 
+**A 30-second retry budget does not make code untestable (MPI-480).** `wrapperFetch`
+spends 15 x 2s on transient statuses before it throws, so a test of what it throws would
+sleep ~30s per case. Swap the clock for the call instead of adding a retry knob nobody
+ships: `globalThis.setTimeout = (cb) => realSetTimeout(cb, 0)` around the await, restored
+in a `finally`. Pair it with `require.cache` stubs for the modules that supply ambient
+state (`remoteProxy`'s `getRemoteMode`, `remoteEngine`'s `getWrapperToken`/`proxyUrl`) plus
+a stubbed `globalThis.fetch`, and the REAL retry loop and REAL throw site run with no app,
+no port and no Pod — 5 cases in under a second. Worked example:
+`tests/remote-transient-install-toast.test.cjs`. Do NOT reach for this to skip a real wait
+in product code; it is a test-only clock, and the budget under test stays untouched.
+
 **GREEN — there is no known-failing baseline any more.** Measured 2026-08-04:
 **417 pass / 0 fail** (298 on 2026-07-29). Any red is a real regression; do not go
 looking for it on an "expected failures" list, because that list no longer exists.

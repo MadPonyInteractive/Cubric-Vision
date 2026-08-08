@@ -58,9 +58,13 @@ carries `{title, message}`, the toast events carry `{message}` only (`js/events.
 
 **The trap is the default, not the call site.** A backend route that 400s on an *expected*
 condition reaches the renderer through `downloadService`, whose `catch` emits `ui:error` —
-so a 400 alone dialogs. The `download:failed` SSE handler does the same for every
-model-level failure. To make an expected backend failure a toast, the **service** must
-recognise it and emit `ui:warning`; changing the status code is not enough.
+so a 400 alone dialogs. The `download:failed` SSE handler dialogs the same way, but only as
+its **final fallback**: it first branches on out-of-space (text match), then `networkBlocked`
+(MPI-427), then `transient` (MPI-480), and each of those is a `ui:warning`. To make an
+expected backend failure a toast, the **service** must recognise it and emit `ui:warning`;
+changing the status code is not enough. For a condition the service cannot recognise from
+the message alone, the BACKEND must carry a flag on the payload — see
+`docs/download-manager.md` § Failed is not one thing for that chain and its dropped-hop trap.
 
 ## The sound model — READ THIS BEFORE THE TABLE
 
@@ -78,8 +82,8 @@ Sites that pass it:
 |---|---|
 | `generationService.js:121` | "Add an image before generating…" (missing media slot) |
 | `generationService.js:135` | "Paint a mask before generating…" (missing mask) |
-| `downloadService.js:169` | "You're offline — connect to the internet…" (Install while offline) |
-| `downloadService.js:178` | "Not enough disk space to install…" (Install, pre-flight) |
+| `downloadService.js:224` | "You're offline — connect to the internet…" (Install while offline) |
+| `downloadService.js:233` | "Not enough disk space to install…" (Install, pre-flight) |
 | `MpiRunpodSettings.js:469` / `shell.js:757` | "Connecting to your Pod…" / "Creating a Pod…" |
 | `MpiModelSettings.js:312`, `MpiSettings.js:536` | "Imported ${filename}." (drop-import confirmation) |
 | `MpiModelManager.js:1467-1498` (5 branches) | "${model} updated." / "files kept…" (uninstall confirmation) |
@@ -187,12 +191,22 @@ signals* are suppressed. Rule + rationale: memory `feedback_no_toast_user_stop`.
 
 | File:line | Trigger | Message | Variant | Sound |
 |---|---|---|---|---|
-| `downloadService.js:169` | Install clicked while offline | You're offline — connect to the internet… | warning | **silent** |
-| `downloadService.js:178` | Install, out-of-space pre-flight | Not enough disk space to install ${model}… | warning | **silent** |
-| `downloadService.js:217` | Install POST never acked (revert timer) | Install didn't start — try again. | warning | eligible |
-| `downloadService.js:291` | Remote uninstall unsupported (warming/old image) | Remote uninstall unavailable right now… | warning | eligible |
-| `downloadService.js:552` | `download:failed` SSE, out-of-space, job matched | Not enough disk space to install ${model}… | warning | eligible |
-| `downloadService.js:563` | `download:failed` SSE, out-of-space, no job match | Not enough disk space to install this model… | warning | eligible |
+| `downloadService.js:224` | Install clicked while offline | You're offline — connect to the internet… | warning | **silent** |
+| `downloadService.js:233` | Install, out-of-space pre-flight | Not enough disk space to install ${model}… | warning | **silent** |
+| `downloadService.js:272` | Install POST never acked (revert timer) | Install didn't start — try again. | warning | eligible |
+| `downloadService.js:346` | Remote uninstall unsupported (warming/old image) | Remote uninstall unavailable right now… | warning | eligible |
+| `downloadService.js:607` | `download:failed` SSE, out-of-space, job matched | Not enough disk space to install ${model}… | warning | eligible |
+| `downloadService.js:615` | `download:failed` SSE, `networkBlocked`, job matched | (server's own text, verbatim — MPI-427) | warning | eligible |
+| `downloadService.js:623` | `download:failed` SSE, `transient`, job matched | The remote engine isn't ready yet — install ${model} again in a moment. | warning | eligible |
+| `downloadService.js:634` | `download:failed` SSE, out-of-space, no job match | Not enough disk space to install this model… | warning | eligible |
+| `downloadService.js:638` | `download:failed` SSE, `networkBlocked`, no job match | (server's own text, verbatim — MPI-427) | warning | eligible |
+| `downloadService.js:640` | `download:failed` SSE, `transient`, no job match | The remote engine isn't ready yet — try the install again in a moment. | warning | eligible |
+
+The three branches above are checked IN ORDER and fall through to `ui:error` **Download
+Failed** (`:627` job-matched, `:644` not) — that fallback is the genuine-bug path and is
+deliberately the only one that offers Report on GitHub. Line numbers here drifted ~55 lines
+before 2026-08-08; re-measure with `grep -n "ui:warning'\|ui:error'" js/services/downloadService.js`
+rather than trusting them.
 
 ## Shell / project / describe (`shell/`, `utils/`, `data/`)
 

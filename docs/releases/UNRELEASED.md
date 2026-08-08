@@ -220,6 +220,14 @@
 
 ## fixes
 
+- **Installing to a cloud Pod that is still waking up no longer looks like a crash.**
+  Start a model install in the first seconds after a cloud engine comes up and every file
+  could fail at once, behind a **Download Failed** box asking you to report it on GitHub —
+  for something that fixes itself. The engine's storage service takes a few seconds longer
+  to answer than the engine does, and the app was reading that gap as a real error. It now
+  tells you the engine is not ready yet and to try the install again in a moment. Genuine
+  failures — a bad file, a full disk — still report exactly as before.
+
 - **Updating the engine no longer leaves tools quietly missing.** After an engine update,
   five add-on packs could come back without the Python packages they need — the masking
   detectors, the pose and depth guides, several samplers and part of LTX. Nothing warned
