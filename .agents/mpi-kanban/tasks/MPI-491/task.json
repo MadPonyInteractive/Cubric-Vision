@@ -7,7 +7,7 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-08T07:40:00Z",
-  "updated_at": "2026-08-08T08:55:00Z",
+  "updated_at": "2026-08-08T09:00:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
@@ -15,7 +15,7 @@
   },
   "attention": {
     "state": "required",
-    "reason": "Shipped and Pod-verified on the -cpu image, but dev-channel only. Two things gate done: the GPU-image _download_hf rate (MPI-467 is measuring it on controlnet-union-flux, the only uninstalled HF dep) and the promote-to-stable call, which is the user's. Do not close on the cpu number alone.",
-    "updated_at": "2026-08-08T08:55:00Z"
+    "reason": "RELEASE GATE, not cleanup. stable serves wrapper 0.2.40 and released builds only ever boot stable, so shipping 1.4.0 without publish-runtime.sh promote gives every user the aria2 path for MiniMax H3 - ~10 hours for the ~46GB set, on a headline 1.4 feature. Requested as a gate on MPI-450 via message af21aa8f. Order: MPI-467's GPU number on controlnet-union-flux, then promote, then cut. Remote/Pod installs only; the local engine is line-limited and needs nothing.",
+    "updated_at": "2026-08-08T09:00:00Z"
   }
 }
