@@ -16,6 +16,7 @@ import subprocess
 import sys
 
 REPO = "c:/AI/Mpi/Cubric-Vision"
+MPINODES = "c:/AI/Mpi/ComfyUi-MpiNodes"  # first-party node pack — a SEPARATE repo
 
 # Paths whose change historically needs a bump and/or image rebuild (Deliverable A).
 # Substring match against `git diff --name-only` output (forward-slash paths).
@@ -79,14 +80,61 @@ def build_message(bump, rebuild, version_touched):
     return "\n".join(lines)
 
 
+def mpinodes_state():
+    """Impure probe -> (dirty, unpushed, pin, head). Any piece may be None if unknown.
+
+    ComfyUi-MpiNodes is symlinked into custom_nodes on this dev machine and the engine
+    drift check skips it on a source run, so node edits work locally with no commit, no
+    push and no pin bump — and reach no user. This catches that. No network (no fetch);
+    `unpushed` compares against the last-known remote-tracking ref.
+    """
+    def git(*a):
+        r = subprocess.run(["git", "-C", MPINODES, *a], capture_output=True, text=True)
+        return r.stdout.strip() if r.returncode == 0 else None
+
+    head = git("rev-parse", "HEAD")
+    if not head:
+        return None, None, None, None  # repo absent — silent
+    dirty = bool(git("status", "--porcelain"))
+    upstream = git("rev-parse", "@{u}")
+    unpushed = bool(upstream) and upstream != head
+    try:
+        with open(REPO + "/dev_configs/node_lock.json", encoding="utf-8") as fh:
+            pin = json.load(fh)["nodes"]["ComfyUI-MpiNodes"]["commit"]
+    except Exception:
+        pin = None
+    return dirty, unpushed, pin, head
+
+
+def build_mpinodes_message(dirty, unpushed, pin, head):
+    """Pure core (testable): -> warning string, or None."""
+    if head is None:
+        return None
+    bad = []
+    if dirty:
+        bad.append("  - uncommitted changes in ComfyUi-MpiNodes")
+    if unpushed:
+        bad.append("  - HEAD is not the pushed origin ref (push, or fetch if merely stale)")
+    if pin and pin != head:
+        bad.append("  - node_lock pin %s != MpiNodes HEAD %s" % (pin[:8], head[:8]))
+    if not bad:
+        return None
+    return "\n".join(
+        ["!  MpiNodes sync - the node pack and the app's pin disagree (run /mpi-nodes-sync):"]
+        + bad
+        + ["  A node change ships only when committed -> pushed -> pinned in dev_configs/node_lock.json."]
+    )
+
+
 def main():
     try:
         json.load(sys.stdin)  # Stop event payload; we don't need its fields
     except Exception:
         pass
-    msg = build_message(*analyze(changed_paths()))
-    if msg:
-        print(msg, file=sys.stderr)  # surfaced to the user, non-blocking
+    for msg in (build_message(*analyze(changed_paths())),
+                build_mpinodes_message(*mpinodes_state())):
+        if msg:
+            print(msg, file=sys.stderr)  # surfaced to the user, non-blocking
     sys.exit(0)  # NEVER block
 
 
@@ -104,6 +152,18 @@ def _selftest():
     # comfy_workflows substring match
     m = build_message(*analyze(["comfy_workflows/t2i_new.json"]))
     assert m and "IMAGE REBUILD" in m
+    # MpiNodes: everything in sync -> silent
+    assert build_mpinodes_message(False, False, "a" * 40, "a" * 40) is None
+    # repo absent -> silent
+    assert build_mpinodes_message(None, None, None, None) is None
+    # pin behind HEAD -> warns with both short shas
+    m = build_mpinodes_message(False, False, "a" * 40, "b" * 40)
+    assert m and "aaaaaaaa" in m and "bbbbbbbb" in m
+    # dirty + unpushed, pin equal -> still warns, no pin line
+    m = build_mpinodes_message(True, True, "a" * 40, "a" * 40)
+    assert m and "uncommitted" in m and "not the pushed" in m and "!=" not in m
+    # unreadable lock -> pin unknown, no false pin claim
+    assert build_mpinodes_message(False, False, None, "b" * 40) is None
     print("selftest OK")
 
 
