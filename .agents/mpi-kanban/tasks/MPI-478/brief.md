@@ -102,3 +102,58 @@ big-model VAE-decode OOM, `--fast-disk`, and **model FORMAT (fp8 native), which
 
 It may also simply be that H3 is not a 16 GB-card model in practice. That is a product
 statement, not a bug.
+
+## A better suspect, found 2026-08-08: H3 never declares its references to the memory estimator
+
+The user asked whether the references loaded into the node are what ComfyUI uses to size
+the offload. They are — that is precisely the design — and **H3 opts out of it**.
+
+The chain, read from the shipped engine:
+
+1. `comfy/sampler_helpers.py:165 estimate_memory()` walks every conditioning and asks the
+   model `extra_conds_shapes(**cond)` for its shapes.
+2. `comfy/model_base.py:404 memory_required()` sums those shapes **alongside** the noise
+   shape, but only for keys listed in `self.memory_usage_factor_conds`.
+3. `comfy/model_management.py:987` turns the result into the weight budget:
+   `lowvram_model_memory = free_mem - minimum_memory_required`.
+
+So conditioning genuinely drives the VRAM/RAM split. But `BaseModel` defaults are
+`memory_usage_factor_conds = ()` and `extra_conds_shapes() -> {}`, and:
+
+| model | declares cond shapes for the budget? |
+|---|---|
+| Flux2 (`model_base.py:973`) | yes — `("ref_latents",)` |
+| Qwen (`1489`, `1543`) | yes — `("ref_latents",)` |
+| Wan family (`1813`, `1881`, `1925`) | yes — `("reference_latent", "pose_latents", …)` |
+| **`class MiniMaxH3` (`2067`)** | **no — zero declarations in the whole class body** |
+
+MiniMaxH3 overrides `extra_conds` (it reads `minimax_refs` and `minimax_keyframes` and
+builds `cond_video_latents` / `cond_audio_latents`), so the references reach the model
+perfectly well. It simply never tells the *estimator* they exist.
+
+**Therefore H3's `memory_required` is computed from the output latent shape alone.** A
+2048px character sheet plus a reference video contribute exactly zero to the budget.
+
+### What that would explain — INFERENCE, not measured
+
+ComfyUI sizes the resident weight set as if there were no references, keeps more weights
+resident than it should, and then the reference activations arrive unbudgeted. The result
+is pressure, aimdo faulting weights back out mid-run, and a wall clock far worse than the
+VRAM reading suggests. It fits every symptom on this box: dedicated parked at 10-14 GB, a
+`max` run costing 1.7x while the VRAM number barely moves (churn, not residency), and the
+`--lowvram` flag being irrelevant because it was never the thing sizing this.
+
+**Flagged as inference deliberately.** The declaration gap is fact, read from source; the
+causal link to the slowdown is not measured. Do not repeat it as established.
+
+### The lever it points at
+
+`--reserve-vram <GB>` — hand back manually the headroom the model failed to declare. This
+is already the documented knob for exactly this shape of problem: `cubric-vision-pod/start.sh`
+says *"If a big-model VAE-decode OOM appears under aimdo (known LTX edge), add
+`--reserve-vram <GB>` here."* Far more promising than any vram-mode flag, and testable in
+one run.
+
+The real fix is upstream: give `MiniMaxH3` a `memory_usage_factor_conds` naming its
+reference keys plus an `extra_conds_shapes` override, the way Flux2/Qwen/Wan already do.
+That is a ComfyUI PR, not something MpiNodes can patch — it is a core model class.
