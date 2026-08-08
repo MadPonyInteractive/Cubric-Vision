@@ -164,6 +164,29 @@ it**, and **a Pod that reports `RUNNING` proves nothing about its wrapper.** The
 progress counters are the trap worth remembering: they are SSE-fed, so a dead reporter is
 indistinguishable from a stalled download unless you look at the Pod itself.
 
+## The second live run — four more, three of them in the GPU leg (2026-08-08)
+
+The install leg finally ran. These came out of it, and the last two were found by **reading
+the GPU half before renting anything** — it had still never executed at that point.
+
+| fault | how it presented | the rule now |
+|---|---|---|
+| Preflight compares the estimate to volume TOTAL, never FREE | `weights 300.5 GB · volume 350 GB` printed clean, then the fill died at **model 9 of 12** with `[Errno 28] No space left on device` after ~40 minutes and two rented Pods | check measured FREE bytes against the remaining requirement, with headroom, and refuse to rent otherwise. The estimate itself is guesswork — see MPI-482 |
+| GPU Pod created with no watchdog | a bare `/remote/pod/create` + a hard 20-minute `waitReady`; `die()` is `process.exit(1)` and deletes **nothing**, so a dead host cost 20 idle minutes and then **LEAKED A RENTED GPU**, billing until a human noticed | route it through `createPodWithRetry`, exactly like the CPU Pod. 2 attempts, not 3 — each attempt is billed GPU time |
+| `pickGpu` matched names by SUBSTRING | `'L4'` also matches **L40** and **L40S**, `'RTX 3090'` also matches **3090 Ti** — a pricier card rented silently. L4 sorting first in RunPod's array is luck, not logic | exact match on `displayName` |
+| `pickGpu`'s stock guard could NEVER fire | `g.stockStatus == null \|\| ...` — the payload has **no `stockStatus` field at all**, so the guard was always true and stock was never checked | use `lowestPrice` being non-null, measured as the real signal: MI300X reports nulls; L4/3090/4090 reported 55/30/31 |
+
+**EU-RO-1 flakiness is the datacenter, not the image — stop re-diagnosing it.** Five CPU
+Pods across two sessions reported `RUNNING` with a container that never started. Proven by
+three consecutive attempts on the *same* image, channel and volume where the third came up:
+an image or runtime fault cannot succeed on the third identical try. **Budget 2-3 wasted Pod
+boots (~5 min each) before the fill starts.** That is normal here, not a fault to debug, and
+the boot watchdog exists to absorb it — it fired twice unattended and was right both times.
+
+**A guard armed on a field that does not exist is worse than no guard**, because it reads as
+coverage. Two of the four above are that shape. When you write a guard against a remote
+payload, `curl` the payload and confirm the field is actually in it.
+
 Related: the hero's GPU label comes from `cfg.gpuType` in Settings, not from the connected
 Pod, so a Pod created outside Settings (this runner) makes the status bar claim the last GPU
 you picked. Cosmetic, and only reachable from here.

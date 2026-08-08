@@ -118,6 +118,25 @@ When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):
    change to commit. Restore a clobbered card with `git checkout HEAD -- <path>`, never by
    hand-retyping.
 
+   **Make the collision LOUD instead of remembering to check.** The pre-check above is
+   correct and it still failed three times on 2026-08-08 — twice by me, once by a peer
+   against me — because it is a manual step that is easy to skip under load, and the write
+   that follows is silent: plain `open(..., 'w')` truncates the peer's card with no error
+   and no diff to notice. So claim the id structurally: create the task directory with
+   `os.mkdir` (raises `FileExistsError` if a peer already took it) and write `task.json` /
+   `events.jsonl` with exclusive-create mode `'x'`. On a raise, walk to the next free id and
+   carry on. That turns a silent clobber into a caught exception, and it costs one line:
+
+   ```python
+   n = board['next_id']
+   while True:
+       try: os.mkdir(f'.agents/mpi-kanban/tasks/MPI-{n}'); break
+       except FileExistsError: n += 1
+   ```
+
+   All three of 2026-08-08's collisions were recoverable ONLY because the loser had already
+   committed. An uncommitted card would simply be gone. Card: MPI-488.
+
 ## Timestamps across sessions are NOT comparable — the VPN skews clocks
 
 Concurrent sessions in this tree stamp kanban times **hours** apart (seen 2026-07-29: one
