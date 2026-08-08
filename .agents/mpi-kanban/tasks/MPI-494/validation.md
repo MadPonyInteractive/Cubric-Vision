@@ -56,5 +56,5 @@ that the Dockerfile verifies `sha256sum -c` inline: a wrong url fails the BUILD
 loudly, by design — there is no silent-corruption path left open. The next
 `cubric-vision-pod-image.yml` dispatch confirms it for free.
 
-**`cubric-vision-pod/README.md:390-398` still carries the false claim** and was
-out of this session's ownership. It is the only known survivor.
+**`cubric-vision-pod/README.md`** carried the same false claim; ownership was
+extended by the user and it is fixed too (mpi-ci 5ca7487). No known survivor.

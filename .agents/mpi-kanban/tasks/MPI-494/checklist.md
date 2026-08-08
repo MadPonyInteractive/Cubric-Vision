@@ -9,4 +9,4 @@
 - [x] url+sha in lockstep with Cubric-Vision `assetDeps.js`
 - [x] Commit in `mpi-ci` (git -C), release the file claim
 - [ ] NOT DONE — no image build run (Docker deliberately down, smoke matrix live); next CI dispatch confirms
-- [ ] NOT OWNED — `cubric-vision-pod/README.md:390-398` repeats the false claim + "5 weights"/"4 non-RIFE"
+- [x] `cubric-vision-pod/README.md` — ownership extended by the user; false claim + both stale counts fixed (mpi-ci 5ca7487). The v0.11.0 changelog entry left alone: accurate history.
