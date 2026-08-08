@@ -281,6 +281,29 @@ is roughly when claiming stopped. Use instead:
 python -c "import uuid; print(uuid.uuid4())"
 ```
 
+### Card ownership — `files.json`, written by the agent taking the card
+
+A file claim says "I am editing this right now". `tasks/<id>/files.json` says "this card owns
+these paths" — it is what `mpi-execute-parallel` reads to decide whether two cards can run in
+parallel at all, and it is the thing a peer greps to find out who holds a file.
+
+**Write it as part of the `todo -> doing` move**, alongside the `board.json` + `task.json` +
+event-log updates:
+
+```json
+{ "schema": "mpi-kanban/files/v1", "files": ["js/data/modelConstants/models.js", "docs/models/krea2/injection.md"] }
+```
+
+**Only the agent taking the card can write it.** `mpi-execute-parallel` forbids inferring
+ownership from card text, title, or a diff — so an unowned card cannot be backfilled by
+anyone later, including a cleanup pass. It is declare-at-move or never.
+
+Measured 2026-08-08: **0 of 83 cards declared ownership.** Two `files.json` existed
+(`MPI-4`, `MPI-322`); both had an empty file list and `MPI-4` used a bare `[]` instead of the
+schema object. A card with no derivable ownership is not selectable, so the board-dispatch
+path has never had a card to dispatch — which is exactly why parallel work here gets
+hand-rolled through raw sub-agent dispatch, where nothing claims anything.
+
 ### Claims do NOT protect against a peer's git command
 
 A claim stops another agent's *editor*. It does not stop `git checkout -- <pathspec>`,
