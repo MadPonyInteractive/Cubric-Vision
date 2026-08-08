@@ -82,7 +82,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-08T04:45:00Z",
+  "updated_at": "2026-08-08T05:00:00Z",
   "events": [
     {
       "at": "2026-08-07T14:20:43Z",
@@ -2364,6 +2364,14 @@
       "from": "doing",
       "to": "done",
       "summary": "Closed at close-out 2026-08-08 under the new rule. Evidence is tests/lane-settle-on-bail.test.cjs - 4 tests that bound the pre-dispatch region by its two ends and BITE BY CONSTRUCTION: the pre-fix shape fails with the exact line (1468: exec.onError?.(new Error('model_missing'))). Test-only, which the rule accepts; if a lane is ever seen stranded in the wild again, reopen."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-467",
+      "type": "task.updated",
+      "at": "2026-08-08T05:00:00Z",
+      "actor": "opus",
+      "summary": "Handoff c3a71f04 written for a fresh session. MPI-467 is the 1.4 blocker and the only one: release:check fails solely on the missing smoke-evidence.json. The handoff leads with the prerequisite the --plan run reports (the Pod lock is behind on python_deps.txt, so smoking now measures the old engine), then the DEV-tag-only image build, then the smoke run itself."
     }
   ]
 }
