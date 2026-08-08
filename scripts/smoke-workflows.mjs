@@ -45,6 +45,10 @@ const ARCH = 'modern';                 // L4/3090/4090 are all 'modern' (gpuArch
 
 // ── The per-op budget. Written down so a later run cannot quietly get weaker.
 const BUDGET = { steps: 1, edge: 128, frames: 1, seed: 42 };
+// No byte movement for this long, while the job still says it is downloading, means the
+// Pod is gone — not that the file is big. 10 min clears the slowest legitimate gap
+// (a hash verify on a 40 GB weight) without letting a dead Pod run the clock out.
+const STALL_MS = 10 * 60 * 1000;
 
 const argv = process.argv.slice(2);
 const flag = (n) => argv.includes(`--${n}`);
@@ -307,14 +311,42 @@ async function pickGpu(volumeId) {
     die(`no preferred GPU available in ${DATACENTER}. Wanted, in order: ${GPU_ORDER.join(' → ')}`);
 }
 
-async function waitReady(what, probe, timeoutMs) {
+/** @param {{soft?:boolean}} [o] soft → return false on timeout instead of exiting */
+async function waitReady(what, probe, timeoutMs, o = {}) {
     const t0 = Date.now();
     while (Date.now() - t0 < timeoutMs) {
         try { if (await probe()) return true; } catch { /* keep polling */ }
         process.stdout.write('.');
         await sleep(5000);
     }
+    if (o.soft) { log(`\n  ⚠ ${what} did not become ready within ${Math.round(timeoutMs / 60000)} min`); return false; }
     die(`${what} did not become ready within ${Math.round(timeoutMs / 60000)} min`);
+}
+
+/**
+ * Create a Pod and REPLACE IT if its wrapper never answers.
+ *
+ * RunPod reports `RUNNING` for a Pod whose container is failing to start — seen live
+ * 2026-08-08, a Pod looping `error creating container: cant create container; network
+ * must exist` for minutes while every app-side probe said RUNNING. There is no signal
+ * for this short of the wrapper answering, and a run that just keeps polling waits
+ * forever on a host that will never work. So: give the boot a budget, then throw the
+ * host away and ask for another one.
+ */
+async function createPodWithRetry(spec, label, readyMs, attempts = 3) {
+    for (let a = 1; a <= attempts; a++) {
+        log(`\n  ${label}: create (attempt ${a}/${attempts})…`);
+        const made = await app('/remote/pod/create', { method: 'POST', body: JSON.stringify(spec) });
+        if (made && made.error) {
+            log(`  ⚠ create refused: ${made.message || made.error}`);
+        } else if (await waitReady(label, async () => (await app('/remote/comfy/status')).ready, readyMs, { soft: true })) {
+            return true;
+        }
+        log(`  recycling the Pod — RUNNING with no wrapper is a dead host, not a slow one`);
+        await app('/remote/pod/delete-active', { method: 'POST' }).catch(() => { });
+        await sleep(5000);
+    }
+    die(`${label} never came up in ${attempts} attempts. RunPod capacity or image pull is broken in ${DATACENTER} right now.`);
 }
 
 /** Gate 7 of the playbook: prove the Pod runs the engine we THINK we are smoking. */
@@ -500,14 +532,11 @@ async function main() {
     // (routes/downloadManager.js), and remote mode only goes active when a Pod is
     // created (_afterPodCreated → setRemoteMode). With no Pod up, every POST in the
     // loop takes the LOCAL branch and lands ~300 GB on the developer's own disk.
-    log(`\n  creating the CPU download Pod (${CPU_SENTINEL} — slim image, no GPU bill)…`);
-    await app('/remote/pod/create', {
-        method: 'POST',
-        body: JSON.stringify({ gpuTypeId: CPU_SENTINEL, volumeId: volume.id, datacenter: DATACENTER }),
-    });
     // A download Pod runs the wrapper only — `ready` is the whole signal; `comfyReady`
-    // never comes (no torch, no ComfyUI in the -cpu image).
-    await waitReady('CPU Pod', async () => (await app('/remote/comfy/status')).ready, 20 * 60 * 1000);
+    // never comes (no torch, no ComfyUI in the -cpu image). A healthy one answers in
+    // ~30s, so 4 min is already generous; past that the host is bad, not busy.
+    const cpuSpec = { gpuTypeId: CPU_SENTINEL, volumeId: volume.id, datacenter: DATACENTER };
+    await createPodWithRetry(cpuSpec, 'CPU download Pod', 4 * 60 * 1000);
     const mode = await app('/remote/mode');
     if (!mode.active || !mode.podId) die('remote mode is not active after the CPU Pod came up — refusing to install, the deps would download LOCALLY.');
     log(` remote mode active on ${mode.podId}`);
@@ -541,10 +570,37 @@ async function main() {
             });
             // The job must EXIST before "not in flight" can mean "finished" — a POST that
             // has not registered yet would otherwise read as an instant install.
-            await waitReady(`install ${e.model.id}`, async () => {
+            //
+            // And bytes must actually MOVE. The app's counters are SSE-fed, so when the Pod
+            // stops answering they simply stop changing — on 2026-08-08 that read as a
+            // download in progress for ninety minutes while nothing was happening. A wait
+            // with no progress check cannot tell a slow download from a dead one.
+            let last = -1, lastMoveMs = Date.now();
+            const done = await waitReady(`install ${e.model.id}`, async () => {
                 const j = ((await app('/comfy/downloads/status')).jobs || []).find(x => x.modelId === e.model.id);
-                return !!j && !IN_FLIGHT.includes(j.status);
-            }, 3 * 60 * 60 * 1000);
+                if (!j) return false;
+                const got = (j.deps || []).reduce((a, d) => a + (d.downloadedBytes || 0), 0);
+                if (got !== last) { last = got; lastMoveMs = Date.now(); }
+                else if (Date.now() - lastMoveMs > STALL_MS) throw new Error('stalled');
+                return !IN_FLIGHT.includes(j.status);
+            }, 3 * 60 * 60 * 1000, { soft: true }).catch(() => false);
+
+            if (!done) {
+                // Recycle the Pod and re-POST once. aria2 resumes from the volume, so the
+                // bytes already down are not lost — a stall costs minutes, not the fill.
+                log(`\n  ⚠ ${e.model.id} stopped progressing — recycling the download Pod and retrying`);
+                await app('/remote/pod/delete-active', { method: 'POST' }).catch(() => { });
+                await sleep(5000);
+                await createPodWithRetry(cpuSpec, 'CPU download Pod', 4 * 60 * 1000);
+                await app('/comfy/models/download/start', {
+                    method: 'POST',
+                    body: JSON.stringify({ modelId: e.model.id, dependencies: reg.resolveDeps(e.model, null, null, ENGINE, { arch: ARCH }).map(id => reg.DEPS[id]).filter(Boolean) }),
+                });
+                await waitReady(`install ${e.model.id} (retry)`, async () => {
+                    const j = ((await app('/comfy/downloads/status')).jobs || []).find(x => x.modelId === e.model.id);
+                    return !!j && !IN_FLIGHT.includes(j.status);
+                }, 3 * 60 * 60 * 1000);
+            }
         }
         const jobs = (await app('/comfy/downloads/status')).jobs || [];
         return jobs.filter(j => (j.deps || []).some(d => d.status === 'failed' || d.status === 'error'))
