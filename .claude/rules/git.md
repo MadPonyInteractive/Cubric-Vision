@@ -159,3 +159,9 @@ You are not a party to their commit; you just happen to be writing while it runs
   batching a session's edits — re-applying three patches costs a minute, re-deriving them does not.
 - Related but NOT the same: the read-race at "A READ can race a write too" above returns a
   misleading *view* of a file that is intact. This one changes the bytes.
+- **FIXED HERE the same day (`d661032f`, MPI-442/490): `.husky/pre-commit` now runs
+  `npx lint-staged --no-stash`,** so a peer's commit no longer touches your working tree. Keep
+  this entry: the stash is lint-staged's DEFAULT, so any repo that has not opted out still has
+  it, and `--no-stash` buys the safety with its own trade — the hook now prints "Skipping backup
+  ... This might result in data loss", meaning a task that fails mid-run has no backup to restore
+  from. Commit-early remains the advice for both halves.
