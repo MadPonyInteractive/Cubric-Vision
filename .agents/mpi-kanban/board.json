@@ -37,8 +37,6 @@
     ],
     "doing": [
       "MPI-481",
-      "MPI-461",
-      "MPI-479",
       "MPI-480",
       "MPI-450",
       "MPI-468",
@@ -46,6 +44,8 @@
       "MPI-465"
     ],
     "done": [
+      "MPI-461",
+      "MPI-479",
       "MPI-484",
       "MPI-458",
       "MPI-432",
@@ -2428,6 +2428,22 @@
       "at": "2026-08-08T06:05:00Z",
       "actor": "opus",
       "summary": "Fix shipped + unit-proven; card held in doing/validating because nothing has touched a Pod. The guard now cross-checks BOTH in-flight arms against the wrapper's own install registry (GET /wrapper/models/install/active) instead of its module-level cache. Brief corrected on three points: fix (1) as written would have regressed MPI-97 (installed:false is also what a LIVE download reports, so it cannot separate a corpse from a real attach), fix (2) folds into fix (1) and must not be scoped to 'no Pod active' (a replacement Pod and a warm-stop resume are both stale WHILE isRemoteActive() is true), and there is no third instance - the local siblings cannot go stale because a local download dies with its own process. 4 new tests, mutation-checked; 503/503 suite green. Owed: one live interrupted Pod install, which the MPI-467 smoke run can carry."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-479",
+      "type": "task.moved",
+      "at": "2026-08-08T07:20:00Z",
+      "actor": "opus",
+      "summary": "CLOSED on the user's own live test, 2026-08-08. Krea2-NSFW upscale, local engine, isolated instance: generated once with Upscale factor UNTOUCHED at its 1.5 default, moved the control to 2.0 without generating, then Reuse Prompt on that card - the factor dropped back to 1.5. That is exactly the recall that was impossible before, because an untouched control recorded nothing and an absent key was a no-op on restore rather than a reset. Shipped in 0c34ec2d. Existing sidecars stay unfixable by design - the value was never recorded; only runs from here on improve."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-461",
+      "type": "task.moved",
+      "at": "2026-08-08T07:30:00Z",
+      "actor": "opus",
+      "summary": "CLOSED on code + test evidence at the user's call, 2026-08-08. The structural half was MPI-463 (_failBail, 9d83ea6e); this card carried the user-visible acceptance and shipped it in f006dc4f - _failBail now logs every pre-dispatch bail and emits ui:error by default, with { reported: true } as the explicit opt-out for the six sites that already say something actionable. Four bails were silent before: workflow-name resolve, trimmed-video prep, workflow JSON fetch (the 404 that was reported live) and the injector throw. Evidence: two negative-controlled tests in lane-settle-on-bail (the default must be loud; an opt-out must have a real emit near it - the negative control names the exact line), plus T21 in generation-store proving a queued->error settle frees the lane and the NEXT job dispatches. Suite 499/499, eslint 0 errors. NOT live-watched: nobody has seen the dialog paint. Accepted because the emit is two lines through ui:error, the same path the post-dispatch catch has used for years and which the user did see paint during this session (the port-48188 refusal, commandExecutor.js:2090)."
     }
   ]
 }
