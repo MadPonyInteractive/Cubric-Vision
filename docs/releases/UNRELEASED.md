@@ -220,6 +220,21 @@
 
 ## fixes
 
+- **Reuse Prompt now brings back settings you never touched.** Reusing an older
+  generation restored the controls you had changed, but silently skipped any control you
+  had left alone — so a setting you had since nudged upwards stayed where it was instead of
+  dropping back to what that run actually used. The app was only recording the settings you
+  edited, and read a missing one as "leave it as it is". Every control a generation used is
+  now recorded, whether you touched it or not. Older generations cannot be repaired — those
+  values were never written down — but everything from this version on reuses exactly.
+
+- **A generation that fails before it starts now tells you why.** Some failures happened
+  before anything reached the engine, and said nothing at all: no message, no error, and the
+  card simply sat on QUEUED while the queue counter climbed. Worse, that failed generation
+  kept its slot, so every generation after it queued behind one that had already given up —
+  the app looked frozen, and only restarting it cleared the queue. Those failures now release
+  the slot and say what went wrong.
+
 - **Installing to a cloud Pod that is still waking up no longer looks like a crash.**
   Start a model install in the first seconds after a cloud engine comes up and every file
   could fail at once, behind a **Download Failed** box asking you to report it on GitHub —
