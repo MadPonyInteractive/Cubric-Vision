@@ -1,11 +1,17 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-08T17:40:16Z",
+  "updated_at": "2026-08-08T17:56:53Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
   "active_tasks": [],
-  "active_file_claims": [],
+  "active_file_claims": [
+    "routes/shared.js",
+    ".claude/rules/comfy_engine.md",
+    ".claude/skills/mpi-nodes-sync/SKILL.md",
+    "tests/node-drift.test.cjs",
+    "routes/downloadManager.js"
+  ],
   "pending_file_states": [
     "dev_configs/node_lock.json",
     "docs/README.md",
@@ -14,5 +20,7 @@
     "scripts/smoke-workflows.mjs"
   ],
   "open_messages": [],
-  "active_handoffs": []
+  "active_handoffs": [
+    ".agents/mpi-kanban/state/handoffs/6eb7096a-c9d4-46cf-b33e-4a119ccff1af.json"
+  ]
 }

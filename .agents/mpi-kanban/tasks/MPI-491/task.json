@@ -3,19 +3,19 @@
   "id": "MPI-491",
   "title": "HuggingFace deps crawl at 1.66 MB/s - aria2's 16 ranged GETs fight HF's request-count limiter",
   "description": "Measured on the live download Pod 2026-08-08, sampling /comfy/downloads/status every 15s for 2 min on h3-qwen3vl-32b-clip: 1.66 MB/s MEAN, and the shape is a token bucket, not a flat rate - bursts to ~3.8 collapsing to ~0.5. ~62GB of MiniMax H3 left = ~10 hours, blocking the MPI-467 smoke fill and Gate E on 1.4 (MPI-450). Sample at 15s or not at all: one long interval lands mid-burst and reads ~2x optimistic. WHY ONLY H3: every other weight comes from R2, where the same aria2c measured ~533 MB/s (wrapper.py:1792). H3 is the only HF-primary family with no R2 copy and that is PERMANENT - the MiniMax CLA's trigger covers 'reproducing, modifying, distributing', so pointing the dep at Comfy-Org's own repo is what kills the section III redistribution claim (MPI-449 research.md section 0, restated at modelDeps.js:425-433). DO NOT 'FIX' THIS BY STAGING H3 TO R2. LEADING CAUSE: _download_aria2 (wrapper.py:1770) fires -x 16 -s 128 -k 1M ranged GETs at huggingface.co/.../resolve/..., and HF's published limit is REQUEST-COUNT not bandwidth (3000 resolver requests per 5 min shared across an anonymous IP), so multi-connection ranged downloading burns the quota and drops into 429-sleep cycles - which is exactly a bursting bucket. MPI-148 recorded the other face of the same conflict (the Xet CDN 403ing ranged aria2, Dockerfile:345) and fixed it by moving those weights to R2, which H3 cannot do. A SECOND MECHANISM makes it self-reinforcing and is specific to our flags: --lowest-speed-limit=1M (wrapper.py:1815) aborts any connection under 1 MB/s for 30s, so with 16 connections sharing a 1.7 MB/s bucket EVERY connection is under the floor, aria2 kills and re-establishes them continuously, and each reconnect is another resolver request. Under that reading aria2 is not failing to help, it is digging the hole. PLAN: measure before adding a dependency. Arm B is one condition at wrapper.py:2027 routing huggingface.co to the wrapper's existing _download_httpx (single sequential GET, already has Range resume, 5 retries, stall detection, cancel, progress, ENOSPC) - zero new deps, ships on the runtime float. Only if that loses does hf_xet (Arm C) get built, and that needs a pip install in start-cpu.sh because the -cpu image the download Pod actually runs has NO huggingface_hub and publish-runtime.sh floats code, not packages.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-08T07:40:00Z",
-  "updated_at": "2026-08-08T09:05:00Z",
+  "updated_at": "2026-08-08T17:53:46Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
     "validation": "validation.md"
   },
   "attention": {
-    "state": "required",
-    "reason": "One open leg: the GPU-image _download_hf rate, owned by MPI-467 (measuring on controlnet-union-flux). Promote is NOT a separate gate - mpi-release already stops on the dev/stable manifest diff and asks. When it does, the answer is PROMOTE: dev 0.2.43 is the H3 download transport, and declining ships a headline 1.4 feature at 1.66 MB/s (~10h for ~46GB) in a way nobody reports as a bug. Remote/Pod installs and the six huggingface.co deps only; local is line-limited and needs nothing.",
-    "updated_at": "2026-08-08T09:05:00Z"
+    "state": "cleared",
+    "updated_at": "2026-08-08T17:53:46Z",
+    "reason": "Closed on the user's call. The GPU-image _download_hf measurement is not this card's leg - it is owned by MPI-467."
   }
 }
