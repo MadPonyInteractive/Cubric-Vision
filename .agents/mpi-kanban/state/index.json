@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-08T08:47:10Z",
+  "updated_at": "2026-08-08T09:24:37Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -10,12 +10,13 @@
     "MPI-467"
   ],
   "active_file_claims": [
-    "docs/README.md",
     "docs/playbooks/bump-engine/01-smoke-run.md",
-    "routes/remoteProxyForward.js",
     "scripts/smoke-workflows.mjs"
   ],
-  "pending_file_states": [],
+  "pending_file_states": [
+    "docs/README.md",
+    "routes/remoteProxyForward.js"
+  ],
   "open_messages": [
     ".agents/mpi-kanban/state/messages/2ceb64ab-0154-411a-9048-d81a2db78be0.json"
   ],
