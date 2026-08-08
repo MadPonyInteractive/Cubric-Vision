@@ -8,7 +8,8 @@
       "../MadPony-Identity",
       "../mpi-ci",
       "../Cubric-Prompt",
-      "../Cubric Studio Brand Assets"
+      "../Cubric Studio Brand Assets",
+      "../ComfyUi-MpiNodes"
     ]
   },
   "hooks": {
