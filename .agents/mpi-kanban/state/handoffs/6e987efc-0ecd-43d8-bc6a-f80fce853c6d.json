@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "6e987efc-0ecd-43d8-bc6a-f80fce853c6d",
   "generated_at": "2026-08-08T09:45:00Z",
-  "status": "open",
+  "status": "resolved",
   "from_session": "MPI-467 live smoke run attempt 2 - fill reached 273 GB then STOPPED on HuggingFace throttling",
   "to_role": "implementer",
   "session": {
@@ -43,7 +43,12 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
       "MPI-467 events record the EU-RO-1 verdict, the full GPU-leg review, and the standing do-not-delete constraint on volume aghcuvg7nl.",
@@ -89,7 +94,13 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "file",
-    "relevant_topics": ["engine bump", "smoke run", "runpod", "release", "downloads"]
+    "relevant_topics": [
+      "engine bump",
+      "smoke run",
+      "runpod",
+      "release",
+      "downloads"
+    ]
   },
   "rules_active": [
     ".claude/rules/dos_and_donts.md",
@@ -100,6 +111,16 @@
     "docs/playbooks/bump-engine/README.md",
     "docs/playbooks/bump-engine/01-smoke-run.md"
   ],
-  "recent_events": [{ "at": "2026-08-08T09:45:00Z", "event": "handoff_created" }],
+  "recent_events": [
+    {
+      "at": "2026-08-08T09:45:00Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-08T17:40:16Z",
+      "event": "resumed_and_closed",
+      "note": "Resumed 2026-08-08. Its STEP 1 (wait for the HF fix) and STEP 2 (resume the fill) are done; STEP 3, the GPU leg, EXECUTED. Superseded by the handoff written at this close-out."
+    }
+  ],
   "resume_prompt": "You are resuming the MPI-467 smoke run. ONE line blocks 1.4: release:check fails because the engine pin moved 0.29.2 -> 0.30.0 with no dev_configs/smoke-evidence.json. STATE: 8 of 12 models installed on volume aghcuvg7nl (450 GB, ~273 GB used); model 9 (minimax-h3) part-downloaded and resumable; 10-12 pending. Nothing is running - Pod deleted, remote inactive, zero download jobs. The fill was STOPPED DELIBERATELY: HuggingFace throttles the H3 weights to a measured mean of 1.66 MB/s (bursts to 3.8, collapsing to 0.5), making the remaining ~62 GB a ~10-hour download, and a separate session is building a fast-download fix. Do not resume on aria2 until that lands. RESUME WITH: node scripts/smoke-workflows.mjs --keep-volume --volume aghcuvg7nl, app on :3000 from a dev checkout. THREE HAZARDS THAT HAVE ALREADY BITTEN: (1) NEVER delete or shrink aghcuvg7nl - the user records YouTube videos off its model set, and the runner's own prompt wrongly argues for deleting it; (2) cancel a download only AFTER deleting the Pod, because cancel-with-a-Pod-attached deletes partials off the volume; (3) a dead Pod leaves stale 'downloading' jobs that make the next install ATTACH and fire nothing - clear them before relaunching, and note MPI-481's fix is committed but lives in routes/, so it is inert until the app restarts. THE GPU LEG HAS STILL NEVER EXECUTED - two faults were already found in it by READING (a leaked rented GPU on a dead host, and substring GPU matching that could rent an L40S instead of an L4), so read the rest before trusting it."
 }

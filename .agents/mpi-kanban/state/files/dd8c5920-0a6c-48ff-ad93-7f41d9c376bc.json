@@ -5,9 +5,9 @@
   "owner_session": ".agents/mpi-kanban/state/sessions/15480f52-7d46-4adf-b0d9-0013a486578a.json",
   "owner_role": "implementer",
   "task": ".agents/mpi-kanban/tasks/MPI-467/task.json",
-  "status": "claimed",
+  "status": "complete",
   "claim_kind": "write",
-  "heartbeat_at": "2026-08-08T08:42:02Z",
+  "heartbeat_at": "2026-08-08T17:40:16Z",
   "allowed_actions": [
     "edit",
     "verify"
@@ -16,6 +16,11 @@
     {
       "at": "2026-08-08T08:42:02Z",
       "event": "claimed_for_write"
+    },
+    {
+      "at": "2026-08-08T17:40:16Z",
+      "event": "released_complete",
+      "note": "Committed b186208f: third-pass fault log (gate 7 deadlock + the post-create Pod leak)."
     }
   ]
 }

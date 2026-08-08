@@ -137,3 +137,59 @@ node scripts/smoke-workflows.mjs --self-check -> OK
 **Not proven:** the manifest body from a real Pod. The route lives in `routes/`, so it is
 **inert until the app restarts** — the same condition MPI-481's committed fix is waiting on.
 First GPU Pod of the next run is where both get their live check.
+
+
+---
+
+# THE GPU LEG EXECUTED — first time ever, 2026-08-08
+
+Pod `gpfaz5y3n7ymku`, L4, EU-RO-1, volume `aghcuvg7nl`. Fill first via the new
+`--install-only` (12 models, ~8 min, CPU Pod deleted automatically), then the matrix.
+
+**PASS 25 · SKIP 0 · FAIL 10** of 35 ops. `dev_configs/smoke-evidence.json` written with
+`engine: {want: 0.30.0, got: 0.30.0, proven: true}` — gate 7 fired for the first time and
+proved the Pod image was built from the pinned engine.
+
+## The ten failures are TWO causes, and only one is the product
+
+### Real (6) — the MpiNodes pin predates a node the workflows use
+
+`node_lock.json` pinned ComfyUI-MpiNodes at `a6e5d5e0` (2026-08-06 **06:37Z**).
+`MpiStageLatents` landed in `da23e911` at **22:53Z the same day** — sixteen hours later —
+and five shipped workflows already use it (node 568, titled `Input_Video_Latent`).
+`MpiH3References` is missing the same way. The Pod installs MpiNodes at the pin, so ComfyUI
+had no such class and every multi-stage video op died on `missing_node_type`:
+
+`wan-22/i2v_ms`, `ltx-23-balanced/t2v_ms`, `ltx-23-balanced/i2v_ms`, `minimax-h3/t2v_ms`,
+`minimax-h3/i2v_ms`, `minimax-h3-ref2va/ref2v_ms`.
+
+User-facing — H3 video is a headline 1.4 feature. **Fixed:** pin bumped to `43a976fd` in
+BOTH locks (`0851f2bb` here, `012902b` in mpi-ci). Code-only node, so it reinstalls to the
+volume at connect with no image rebuild.
+
+`checkPodLock` cannot catch this: it proves the two locks AGREE, and they agreed perfectly
+while both were stale. **Gate 8** now checks a different thing — every `Mpi*` class_type in
+the smoke set against `__init__.py` at the pinned commit. It reproduces all six offline, for
+free, on `--plan`.
+
+### Harness (4) — the runner skipped the app's own separator heal
+
+`chroma-hyper/t2i`, `krea2-nsfw/t2i`, `klein-4b/t2i`, `wan22-5b/t2v` failed on baked Windows
+separators (75 such values across 14 workflows). `comfyController` § 3b heals those for any
+engine whose enum uses `/`, covering `lora_name` AND `lora_1..lora_5` — but the runner POSTs
+to `/proxy/prompt` and never passed through it. It was testing a path no user takes.
+Mirrored into `prepOp`, with a 5-way self-check that is mutation-verified.
+
+**Why this was not obvious:** ComfyUI validates PER OUTPUT NODE. Where a bad value fed the
+only output, the op produced no media and FAILED; elsewhere that output was dropped and a
+sibling still rendered, so the op **PASSED with its style LoRAs silently absent**.
+
+## Still open
+
+- **Re-run for clean evidence.** `release:check` gates on `counts.fail > 0`, so the current
+  file still blocks 1.4. Expect the 4 harness ops to pass (heal is unit-proven); the 6 node
+  ops depend on the wrapper noticing commit drift and reinstalling MpiNodes at the new pin
+  **at connect** — documented in `start.sh` but not yet watched happening. If they fail
+  identically, the drift path is the problem, not the pin.
+- **MPI-491 owes a number:** the GPU-image `_download_hf` rate on `controlnet-union-flux`
+  (3.99GB, the only HF dep left uninstalled), sampled every 15s.

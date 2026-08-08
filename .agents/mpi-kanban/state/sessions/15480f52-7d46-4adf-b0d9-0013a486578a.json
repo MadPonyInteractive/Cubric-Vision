@@ -3,8 +3,9 @@
   "id": "15480f52-7d46-4adf-b0d9-0013a486578a",
   "role": "implementer",
   "task": "MPI-467",
-  "status": "active",
+  "status": "closed",
   "started_at": "2026-08-08T08:42:02Z",
-  "heartbeat_at": "2026-08-08T08:42:02Z",
-  "summary": "MPI-467 GPU leg: review-before-execute, then fix what the read finds. Peer session owns the live fill + wrapper (MPI-491) - not touched."
+  "heartbeat_at": "2026-08-08T17:40:16Z",
+  "summary": "MPI-467 GPU leg. Closed with the matrix EXECUTED for the first time: 25 pass / 10 fail, engine proven 0.30.0. Six failures were real (stale MpiNodes pin, now bumped), four were the harness (missing separator heal, now mirrored). Re-run pending for clean evidence.",
+  "closed_at": "2026-08-08T17:40:16Z"
 }

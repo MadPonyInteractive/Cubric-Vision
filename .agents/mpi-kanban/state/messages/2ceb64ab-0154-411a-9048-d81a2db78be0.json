@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "2ceb64ab-0154-411a-9048-d81a2db78be0",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-08-08T08:45:42Z",
-  "updated_at": "2026-08-08T08:45:42Z",
+  "updated_at": "2026-08-08T17:40:16Z",
   "from": {
     "selector": "task",
     "value": "MPI-467",
@@ -31,6 +31,13 @@
     {
       "at": "2026-08-08T08:45:42Z",
       "event": "created"
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-08-08T17:40:16Z",
+      "event": "resolved",
+      "note": "Peer replied 14cfe425 (stamps were fabricated, not skewed; controlnet-union-flux confirmed as the GPU target) and 9805e50a (withdrew the promote gate). Both actioned: my own fabricated stamps corrected, MPI-450 narrowed from a gate to decision context."
     }
   ]
 }

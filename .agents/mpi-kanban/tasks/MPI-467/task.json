@@ -7,7 +7,7 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-07T01:40:00Z",
-  "updated_at": "2026-08-08T08:49:34Z",
+  "updated_at": "2026-08-08T17:42:51Z",
   "labels": [
     "testing",
     "engine",
@@ -32,8 +32,8 @@
   "priority": "high",
   "attention": {
     "state": "required",
-    "reason": "Live run attempted 3x on 2026-08-08 and never reached the GPU stage. SIX runner faults found and fixed (f1df91fa, 6001376a, d6f1c7fc, 899e118f) plus two watchdogs (e60b269b) and the playbook write-up (dc7a738e). ~97 GB of ~300 GB is on volume aghcuvg7nl - the ONLY volume, always pass --volume aghcuvg7nl. No GPU rented, nothing smoked, no evidence file. THE ENTIRE GPU HALF IS STILL UNEXECUTED. Resume via handoff c4efc95b-54d4-4bbf-bdfd-cab1cf13017c.",
-    "updated_at": "2026-08-08T04:45:00Z"
+    "updated_at": "2026-08-08T17:42:51Z",
+    "reason": "One matrix re-run away from clean evidence, and it costs a rented GPU so it needs the user present. Both causes of the 10 failures are fixed (MpiNodes pin 43a976fd; separator heal mirrored into the runner). Watch the wrapper reinstall MpiNodes at the new pin ON CONNECT - if the six _ms ops fail identically, the drift path is the fault, not the pin. Also owed to MPI-491: the GPU-image _download_hf rate on controlnet-union-flux, sampled every 15s."
   },
   "activeSessionTitle": "Live smoke proving run for the 0.30.0 engine bump"
 }
