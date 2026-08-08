@@ -258,8 +258,27 @@ export function injectByTitle(graph, title, value) {
 
 async function ensureVolume(gb) {
     const want = Math.ceil((gb + VOLUME_HEADROOM_GB) / 10) * 10;
-    const { volumes = [], networkVolumes = [] } = await app('/runpod/volumes');
-    const list = volumes.length ? volumes : networkVolumes;
+    // GET /runpod/volumes answers a BARE ARRAY. Destructuring `{volumes, networkVolumes}`
+    // off it yields two undefineds, so the reuse check saw an empty list and minted a NEW
+    // 350 GB volume on every run — three of them before it was caught (2026-08-08), each
+    // billing monthly for weights already sitting on the last one. Never infer a route's
+    // response shape; this one was one curl away.
+    const raw = await app('/runpod/volumes');
+    const list = Array.isArray(raw) ? raw : (raw.volumes || raw.networkVolumes || []);
+    // --volume pins an exact id. With several same-named volumes only the caller knows
+    // which one holds the weights, and "first that fits" would happily pick an empty twin.
+    const pin = opt('volume');
+    if (pin) {
+        const hit = list.find(v => v.id === pin);
+        if (!hit) die(`--volume ${pin} is not one of: ${list.map(v => v.id).join(', ') || '(none)'}`);
+        log(`  volume: pinned ${hit.id} (${hit.size} GB, ${hit.name || 'unnamed'})`);
+        return hit;
+    }
+    const sameName = list.filter(v => v.dataCenterId === DATACENTER && v.name === VOLUME_NAME);
+    if (sameName.length > 1) {
+        die(`${sameName.length} volumes named ${VOLUME_NAME} in ${DATACENTER} (${sameName.map(v => v.id).join(', ')}). ` +
+            `Delete the spares or pin one with --volume <id> — picking blind risks smoking an EMPTY volume.`);
+    }
     const fits = list.find(v => v.dataCenterId === DATACENTER && Number(v.size) >= want);
     if (fits) { log(`  volume: reusing ${fits.id} (${fits.size} GB, ${fits.name || 'unnamed'})`); return fits; }
 
