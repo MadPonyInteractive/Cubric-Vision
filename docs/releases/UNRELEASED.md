@@ -124,9 +124,10 @@
   the picture and **synchronized stereo audio in a single pass**, instead of handing you a
   silent clip to score afterwards. The sound belongs to the scene because it was made with
   it, not added over the top. It does **Text to Video** and **Image to Video**, and like
-  LTX 2.3 it takes a first frame, a last frame, or both. Resolutions run up to **2K**,
+  LTX 2.3 it takes a first frame, a last frame, or both. Resolutions run up to **4K**,
   though the sizes above its native canvas are final-render territory rather than
-  something to iterate at: twice the pixels costs a little over three times the time. It
+  something to iterate at: twice the pixels costs a little over three times the time, so
+  the top of that ladder is for a card that can carry it, not somewhere to work. It
   is a big model — 53GB of weights, a slow generator, and a 12GB graphics card at the
   minimum — and it asks you to accept its licence before it downloads, which is covered
   further down. If what you want is the same character, place or voice across several
