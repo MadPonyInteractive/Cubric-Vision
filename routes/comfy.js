@@ -167,8 +167,17 @@ router.get('/comfy/status', async (req, res) => {
     // process that has already died.
     const lastExit = processState.lastComfyExit || null;
     try {
-        if (!processState.activeComfyProcess) return res.json({ running: false, needsRestart, lastExit });
         const ax = getAxios();
+        // Same ownership-is-not-availability split as /comfy/start (MPI-484): with no
+        // child of our own the engine may still be up, started by another app instance
+        // on the shared 48188. Ask the port before reporting it down, or an attached
+        // instance shows a dead engine over a live one.
+        if (!processState.activeComfyProcess) {
+            const alive = ax && await ax.get(`http://127.0.0.1:${COMFYUI_PORT}/history`, { timeout: 1000 })
+                .then(() => true).catch(() => false);
+            if (!alive) return res.json({ running: false, needsRestart, lastExit });
+            return res.json({ running: true, ready: true, needsRestart });
+        }
         if (!ax) return res.json({ running: true, ready: false, needsRestart });
         const ready = await ax.get(`http://127.0.0.1:${COMFYUI_PORT}/history`, { timeout: 1000 })
             .then(() => true).catch(() => false);
@@ -283,23 +292,40 @@ router.post('/comfy/start', async (req, res) => {
         // so the restart is still pending. The gen gate will stop+start it.
         if (processState.activeComfyProcess) return res.json({ success: true, message: 'Already running' });
 
-        // MPI-434: we have no child of our own, so ANYTHING answering on our port is
-        // a stranger — another ComfyUI, or an orphan whose node scan predates our
-        // custom nodes. Adopting one is silent and total: `/comfy/status` reports
-        // ready as soon as something answers /history, so every generation goes to an
-        // engine without MpiNodes and dies as "Node 'Input_Seed' not found", which
-        // reads to the user as a broken install. Moving off 8188 makes this rare;
-        // refusing here makes it legible when it still happens. Do NOT downgrade this
-        // to a warning that proceeds — proceeding is the bug.
+        // ATTACH, don't refuse (MPI-484). `activeComfyProcess` answers "did I spawn
+        // it", not "is an engine up" — it is module-level in this server fork — so an
+        // app instance that did not spawn the engine reaches here even when a healthy
+        // one is serving. 48188 is a SHARED port: every instance uses the one engine.
+        //
+        // This replaces MPI-434's 409 ("most likely another ComfyUI — close it"), which
+        // was correct while the engine sat on ComfyUI's default 8188 alongside the
+        // G:\ComfyUi bench and an occupant really was foreign. The engine now owns a
+        // private 48188, and MPI-458's `npm run app:isolated` made a second instance
+        // routine, so the guard's normal case became its false positive — an agent was
+        // told to close the user's own engine mid-run.
+        //
+        // Do NOT simply delete this branch: without it, control falls through to
+        // spawn() below, a second ComfyUI fails to bind the occupied port and exits,
+        // and the instance is left with a DEAD engine and a lastExit — strictly worse
+        // than the dialog. Stopping stays the spawner's alone: stopComfyUI() only ever
+        // kills a handle it owns (routes/shared.js — no kill-by-port, no PID lookup)
+        // and /comfy/unload returns early on a null handle, so an ATTACHED instance
+        // cannot kill the owner's engine. Availability is shared; ownership is not.
         const probeAx = getAxios();
         if (probeAx) {
             const occupied = await probeAx.get(`http://127.0.0.1:${COMFYUI_PORT}/history`, { timeout: 1000 })
                 .then(() => true).catch(() => false);
             if (occupied) {
-                const msg = `Something else is already using port ${COMFYUI_PORT} — most likely another ComfyUI. `
-                    + 'Close it, then start the engine again.';
-                logger.error('comfy', `Refusing to start: port ${COMFYUI_PORT} answered but we did not start it`);
-                return res.status(409).json({ error: msg });
+                logger.info('comfy', `Engine already serving on ${COMFYUI_PORT} (started by another app instance) — attaching`);
+                if (isUserRestart) {
+                    // The restart path is stop-then-start, and our stop was a no-op
+                    // because we do not own the process. Attaching is still the right
+                    // answer — killing another instance's engine is not ours to do —
+                    // but the caller asked for a RESTART and did not get one, so say
+                    // so rather than reporting a clean success into silence.
+                    logger.warn('comfy', 'Restart requested but this instance does not own the engine — attached to the running one instead; restart it from the instance that started it');
+                }
+                return res.json({ success: true, message: 'Already running' });
             }
         }
 

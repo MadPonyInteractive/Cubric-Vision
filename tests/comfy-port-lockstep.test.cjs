@@ -94,15 +94,35 @@ test('the REMOTE Pod port stays on 8188', () => {
         'the RunPod proxy link must still target 8188 (MPI-434 moved the LOCAL engine only)');
 });
 
-test('/comfy/start refuses a port it did not open', () => {
-    // Without this the app adopts whatever answers and dispatches into it. Assert the
-    // probe sits BEFORE the spawn — after it, the damage is already done.
+test('/comfy/start attaches to an engine it did not open, and probes BEFORE spawning', () => {
+    // 48188 is shared across app instances (MPI-484), so an answering port means the
+    // engine is UP — attach. This replaces MPI-434's 409, which was written when the
+    // engine sat on ComfyUI's default 8188 and an occupant really was foreign.
+    //
+    // The probe must still sit BEFORE the spawn, and for a sharper reason than before:
+    // reach spawn() with the port occupied and a second ComfyUI fails to bind and dies,
+    // leaving the instance with a DEAD engine — worse than the dialog this replaced.
     const src = read('routes/comfy.js');
-    const probeAt = src.indexOf('Refusing to start: port');
+    const probeAt = src.indexOf("logger.info('comfy', `Engine already serving on");
     const spawnAt = src.indexOf('processState.activeComfyProcess = spawn(');
-    assert.ok(probeAt > 0, 'routes/comfy.js must refuse an already-occupied ComfyUI port (MPI-434)');
+    assert.ok(probeAt > 0, 'routes/comfy.js must ATTACH to an already-serving ComfyUI port (MPI-484)');
     assert.ok(spawnAt > 0, 'routes/comfy.js must still spawn ComfyUI');
     assert.ok(probeAt < spawnAt, 'the occupancy probe must run BEFORE the spawn, not after');
-    assert.match(src, /return res\.status\(409\)\.json\(\{ error: msg \}\)/,
-        'the refusal must be a non-OK response — comfyController surfaces body.error as a toast');
+    assert.doesNotMatch(src, /res\.status\(409\)\.json\(\{ error: msg \}\)/,
+        'the MPI-434 refusal must be gone — our own shared engine is not a stranger');
+});
+
+test('/comfy/status asks the port before reporting the engine down', () => {
+    // The twin of the above. `activeComfyProcess` answers "did I spawn it", not "is an
+    // engine up", so an instance attached to a shared engine must not report it dead —
+    // the badge would contradict a /comfy/start that just returned success.
+    const src = read('routes/comfy.js');
+    const statusAt = src.indexOf("router.get('/comfy/status'");
+    const streamAt = src.indexOf("router.get('/comfy/events/stream'");
+    assert.ok(statusAt > 0 && streamAt > statusAt, 'could not isolate the /comfy/status handler');
+    const handler = src.slice(statusAt, streamAt);
+    assert.match(handler, /const alive = ax && await ax\.get\(`http:\/\/127\.0\.0\.1:\$\{COMFYUI_PORT\}\/history`/,
+        '/comfy/status must probe the shared port when it holds no child of its own (MPI-484)');
+    assert.match(handler, /if \(!alive\) return res\.json\(\{ running: false/,
+        'only a port that does NOT answer may be reported as running:false');
 });
