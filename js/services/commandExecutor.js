@@ -1304,10 +1304,29 @@ export function runCommand(payload) {
         // queue and nothing in the server log). The post-dispatch catch settles once
         // at its top for this reason; this is its pre-dispatch twin. Route bails
         // through it rather than calling exec.onError directly — that is what makes
-        // a NEW bail added here safe by construction. Toasts stay at the call sites:
-        // this only settles and reports.
-        const _failBail = (err) => {
+        // a NEW bail added here safe by construction.
+        const _failBail = (err, { reported = false } = {}) => {
             generationStore.settle(jobId, PHASES.ERROR, { error: err?.message || String(err) });
+            // "nothing in app.log" was part of the reported symptom — four of these bails
+            // logged nothing at all. One line here covers every one of them; the sites
+            // that already log their own warn are the cheap duplicate, not the gap.
+            clientLogger.error('commandExecutor',
+                `Generation bailed before dispatch (${payload.operation} / ${payload.modelId}): ${err?.message || err}`);
+            // MPI-461, the SECOND half of the same wedge. Settling frees the lane, but a
+            // bail that says nothing leaves the card merely GONE — which is what the live
+            // report actually described: a workflow fetch 404 rolled the block's UI back
+            // in total silence, no toast, no dialog, nothing in the log. So reporting is
+            // the DEFAULT here and opting out is explicit — a new bail added to this
+            // region is loud by construction, the same way _failBail already made it
+            // terminal by construction. `reported: true` marks the sites that already
+            // emitted their own actionable copy (install this operation, re-attach the
+            // media, pick another LoRA); a generic dialog stacked on those would read as
+            // two separate failures. Post-dispatch has had this fall-through all along —
+            // this is its pre-dispatch twin, and it reuses the same formatter.
+            if (!reported) {
+                const { title, message } = _formatWorkflowError(err?.message, payload.modelId);
+                Events.emit('ui:error', { title, message });
+            }
             exec.onError?.(err);
         };
 
@@ -1333,7 +1352,7 @@ export function runCommand(payload) {
                 message: `${_opModel.name} supports ${opLabel}, but its weights were never installed. `
                     + 'Open the Model Library and add that operation to this model.',
             });
-            _failBail(new Error('operation_not_installed'));
+            _failBail(new Error('operation_not_installed'), { reported: true });
             return;
         }
 
@@ -1349,7 +1368,7 @@ export function runCommand(payload) {
             const proceed = await _ensureArchWeightOnDisk(_archModel, arch);
             if (!proceed) {
                 await _cleanupTrimmedVideoInputs([]);
-                _failBail(new Error('arch_weight_missing'));
+                _failBail(new Error('arch_weight_missing'), { reported: true });
                 return;
             }
         } catch (err) {
@@ -1409,7 +1428,7 @@ export function runCommand(payload) {
                 message: `"${_baseName(missingModel)}" was not found in your LoRA/upscale folders. `
                     + 'Add it in Settings → External Connections (drag-drop), or pick another in Model Settings.',
             });
-            _failBail(new Error('model_missing'));
+            _failBail(new Error('model_missing'), { reported: true });
             return;
         }
 
@@ -1441,7 +1460,7 @@ export function runCommand(payload) {
                 message: `Could not load the input ${strandedSlot.mediaType} for this operation. `
                     + 'Remove and re-attach it, then try again.',
             });
-            _failBail(new Error('required_media_slot_empty'));
+            _failBail(new Error('required_media_slot_empty'), { reported: true });
             return;
         }
 
@@ -1458,7 +1477,7 @@ export function runCommand(payload) {
                     message: `"${notLocal}" is not installed on your local engine. `
                         + 'Install it locally, or turn off "Run locally" to generate on the cloud.',
                 });
-                _failBail(new Error('model_not_local'));
+                _failBail(new Error('model_not_local'), { reported: true });
                 return;
             }
         }
@@ -1550,7 +1569,7 @@ export function runCommand(payload) {
             clientLogger.error('commandExecutor', 'Failed to stage preview latent', err);
             Events.emit('ui:error', { title: 'Stage-2 setup failed', message: err.message });
             await _cleanupTrimmedVideoInputs(tempTrimInputPaths);
-            _failBail(err);
+            _failBail(err, { reported: true });
             return;
         }
         if (await _abortedBail(tempTrimInputPaths)) return;

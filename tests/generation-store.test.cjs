@@ -676,6 +676,44 @@ function testFastDispatchAckAfterWork() {
 }
 
 /**
+ * T21 — A pre-dispatch bail frees the lane, and the NEXT job on it still dispatches
+ * (MPI-461/MPI-463, the behavioural half of tests/lane-settle-on-bail.test.cjs).
+ *
+ * `_failBail` in commandExecutor settles a job that never reached the engine — the
+ * store job exists (register() took the lane) but no ACK, no promptId, no phase move.
+ * That is the exact shape that wedged a lane for the rest of the app's life: the
+ * static test proves every bail CALLS settle; this proves settling from QUEUED is
+ * what actually releases the lane, drains it, and lets a successor run. Without it,
+ * "every bail settles" would still be true of a settle that did nothing.
+ */
+function testFailedBailFreesLaneForNextJob() {
+    const { store } = makeStore();
+    const drains = [];
+    const arm = () => store.setLoopCallback('local', (lane) => { drains.push(lane); });
+
+    // Job A: registered, then bailed BEFORE dispatch — straight from queued to error,
+    // no ACCEPTED in between. That skipped phase is the whole point; a settle path that
+    // only worked from a mid-flight phase would leave this lane pinned.
+    const jobA = registerJob(store, { engine: 'local' });
+    arm();
+    assert.strictEqual(store.byId(jobA).phase, PHASES.QUEUED, 'A never left queued — nothing was dispatched');
+    assert.strictEqual(store.settle(jobA, PHASES.ERROR, { error: 'Failed to load workflow: x.json' }), true,
+        'queued→error must be a legal settle — that is what _failBail does');
+
+    assert.strictEqual(store.byId(jobA).phase, PHASES.ERROR, 'A is terminal');
+    assert.strictEqual(store.getSnapshot().running.length, 0,
+        'the bailed job must leave `running` — _laneBusy reads exactly this list');
+    assert.strictEqual(drains.length, 1, 'lane drained once, so the service promotes its next intent');
+
+    // The successor the service now dispatches must actually take the lane.
+    const jobB = registerJob(store, { engine: 'local' });
+    arm();
+    assert.ok(store.getSnapshot().running.map(j => j.jobId).includes(jobB),
+        'the NEXT job on that lane dispatches — the wedge is gone');
+    assert.strictEqual(store.getSnapshot().running.length, 1, 'B is the only running job on that lane');
+}
+
+/**
  * T13 — PHASES constant exported with correct uppercase keys mapping to lowercase values.
  */
 function testPhasesConstant() {
@@ -709,6 +747,7 @@ const TESTS = {
     testStopBeforeAckDrainsCleanly,
     testStagedReloadAndSilentLateSettle,
     testFastDispatchAckAfterWork,
+    testFailedBailFreesLaneForNextJob,
     testPhasesConstant,
 };
 
