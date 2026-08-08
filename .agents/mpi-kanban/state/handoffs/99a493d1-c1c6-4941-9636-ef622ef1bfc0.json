@@ -4,7 +4,7 @@
   "generated_at": "2026-08-07T20:10:00Z",
   "from_session": "MPI-476 shipped in full; MPI-475's real gates are untouched and still owed",
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "Four user-reported model-surface drifts fixed and carded as MPI-476; MpiNodes 238f056 pushed, which was MPI-475's blocking gate",
     "branch": "master"
@@ -50,7 +50,12 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
       "docs/model-library.md — TWO new sections: 'The detail drawer has NO Operations row' (what was removed and why, with a pointer to what must be restored together if operation groups ever come back) and 'The VRAM table's floor can be overridden per model'.",
@@ -113,7 +118,12 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "file",
-    "relevant_topics": ["models", "model library", "components", "downloads"]
+    "relevant_topics": [
+      "models",
+      "model library",
+      "components",
+      "downloads"
+    ]
   },
   "rules_active": [
     ".claude/rules/dos_and_donts.md",
@@ -125,7 +135,15 @@
     "docs/playbooks/add-model/README.md"
   ],
   "recent_events": [
-    { "at": "2026-08-07T20:10:00Z", "event": "handoff_created" }
+    {
+      "at": "2026-08-07T20:10:00Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-08T04:35:00Z",
+      "event": "handoff_resolved",
+      "note": "Superseded and its target card MPI-476 is closed. Swept at close-out 2026-08-08."
+    }
   ],
   "resume_prompt": "You are resuming after MPI-476, four model-surface fixes the user reported while reviewing MPI-475. All four SHIPPED (d2800e4c + 01014c1e, npm test 492/492, tree clean) and each was proved in a real DOM — but through the BROWSER build on :3000, so nothing has been seen in Electron by a human. READ .agents/mpi-kanban/tasks/MPI-476/validation.md FIRST; it is that card's whole remaining job as do-X-see-Y lines, and the user said he already has H3 generations to hand, so the chip-relabel item is checkable at once. What shipped: wan-22 flattened off the last commonDeps+operations{} shape, taking the Model Library's per-op install UI with it (a model is ONE install unit now — do NOT re-add operations{} to a shipped ModelDef without restoring that UI in the same change); a supportedOps guard ADDED to isOperationInstalled, which is the load-bearing half of that flatten (without it a flat wan answers YES for the deprecated t2v_ms and re-opens MPI-453 for a legacy history item); minVramGb overriding the fitted VRAM floor, both H3 cards at 12GB; the H/B/L tier letter gating on an INSTALLED same-NAME sibling rather than modelFamily, with MiniMax H3 re-tiered high -> balanced; and the prompt box repainting its chip strip on a model or op change. SEPARATELY AND MORE IMPORTANT: ComfyUi-MpiNodes 238f056 was PUSHED this session, which was MPI-475's blocking gate — but the engine has NOT been restarted and NOTHING in tasks/MPI-475/validation.md has been done. Its real test is still owed: generate with one clear character reference and confirm the identity follows it. Every r2va result before the 2026-08-07 re-export came off the FL2VA transformer, which does not error — it samples fine and returns a good-looking video that ignored every reference, which is exactly how the bug went unnoticed, so a plausible result is not evidence. Then settle the changelog decisions in context.open_questions; one of them is an UNRELEASED.md entry that is now false and would ship saying users can install a model one operation at a time. Do NOT re-investigate the KJNodes H3 VRAM patches — measured and rejected, docs/models/h3/performance.md."
 }

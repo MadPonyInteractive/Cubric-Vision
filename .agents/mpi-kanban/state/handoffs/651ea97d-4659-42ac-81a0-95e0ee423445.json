@@ -4,7 +4,7 @@
   "generated_at": "2026-08-07T22:41:27Z",
   "from_session": "MPI-475's judgement run PASSED; a hi-res-fix investigation disproved latent upscaling on H3; MPI-476's VRAM item grew into two real defects",
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "H3 ref2va judged live, then a full bench investigation into a hi-res fix - ending in a well-evidenced NEGATIVE result and a 2K tier",
     "branch": "master"
@@ -49,7 +49,12 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
       "docs/models/h3/ref2va.md - NEW, and the session's main deliverable. Judged results, lip-sync recorded as NOT established (one sample, subject looking at a phone), the s/step table, slot-numbered prompt tags and the audio ordinal shift, why the 2K clips online are the hosted API, and the full hi-res-fix investigation with the elimination table.",
@@ -106,7 +111,12 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "file",
-    "relevant_topics": ["models", "model library", "h3", "workflow authoring"]
+    "relevant_topics": [
+      "models",
+      "model library",
+      "h3",
+      "workflow authoring"
+    ]
   },
   "rules_active": [
     ".claude/rules/dos_and_donts.md",
@@ -117,7 +127,14 @@
     "docs/workflow-authoring/README.md"
   ],
   "recent_events": [
-    { "at": "2026-08-07T22:41:27Z", "event": "handoff_created" }
+    {
+      "at": "2026-08-07T22:41:27Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-08T04:30:00Z",
+      "event": "handoff_resolved"
+    }
   ],
   "resume_prompt": "You are resuming after a long live bench session on MiniMax H3. THE HEADLINE: MPI-475's judgement run PASSED - the model's whole claim holds. A character sheet holds identity across several clips, a generated voice MATCHES an audio reference, motion transfers off a reference video, and two references compose into one scene ('the woman from <Picture 1> riding the dragon from <Video 1>'). MPI-475 is now `validating` with only its UI checkbox list left; the preview clip stays borrowed by the user's explicit call. THE SECOND RESULT IS A NEGATIVE ONE AND IT MATTERS MORE: a hi-res fix does NOT work on H3. Every latent UPSCALE produced hard horizontal banding, the one DOWNSCALE did not, and native 2560x1472 is clean - with the interpolation method, the scale ratio, and output-vs-denoised_output each eliminated by test. The DiT does not accept an upscaled latent. DO NOT RE-RUN THAT; read tasks/MPI-477/brief.md, which leads with the elimination table and puts a two-run reference-cost experiment before any node work, because the saving may be illusory on ref2va (reference tokens ride every step regardless of canvas). Two related facts worth holding: ref2va composes for the stage-1 canvas structurally (it sets minimax_refs and never minimax_keyframes, so nothing anchors framing - the same prompt framed a close shot at 672x384 and the whole scene at 1344x768), and the audio breaks on a SPLIT trajectory but not on a refiner, because video and audio come out of ONE joint latent. What shipped instead: a 2k tier on H3, earned by a measured clean run, using the same numbers LTX already ships. Also shipped, both from MPI-476's eye test: the VRAM floor now lifts onto a ladder of real card sizes (wan-22, ltx-23-balanced and qwen-edit all said 16GB where 12 is enough, because the 8GB grid has no 12 in it), and the RAM column rounds to 4GB so a bigger card finally shows a smaller number. MPI-476 CANNOT close yet - re-check its validation.md items 2b and 2c after a reload. There is ONE changelog entry drafted and awaiting approval in context.open_questions; it covers the VRAM/RAM change for the three SHIPPED models, and nothing about H3 is reportable because H3 has never appeared in releaseNotes.js. ComfyUi-MpiNodes has two unpushed commits. npm run release:check fails on a PRE-EXISTING engine-pin gap that this session did not touch."
 }

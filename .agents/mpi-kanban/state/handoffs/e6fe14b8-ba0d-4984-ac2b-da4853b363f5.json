@@ -4,7 +4,7 @@
   "generated_at": "2026-08-06T09:00:00Z",
   "from_session": null,
   "to_role": "verifier",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-452 — engine bumped to 0.30.0 and MiniMax H3 fl2va wired end-to-end; everything proved on the engine, nothing through the app",
     "branch": "master"
@@ -54,7 +54,12 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
       "docs/models/h3/README.md — the settled hub (licence constraints baked into the wiring, the 4 weights, the no-_stage2-twin design with measured numbers, media-derived routing, the 17k+5 grid, why capabilities.audio is OFF on a model that outputs audio)",
@@ -121,7 +126,13 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "file",
-    "relevant_topics": ["models", "comfy engine", "workflow authoring", "mpi nodes", "generation lifecycle"]
+    "relevant_topics": [
+      "models",
+      "comfy engine",
+      "workflow authoring",
+      "mpi nodes",
+      "generation lifecycle"
+    ]
   },
   "rules_active": [
     ".claude/rules/dos_and_donts.md",
@@ -133,7 +144,15 @@
     "docs/generation-lifecycle.md"
   ],
   "recent_events": [
-    { "at": "2026-08-06T09:00:00Z", "event": "handoff_created" }
+    {
+      "at": "2026-08-06T09:00:00Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-08T04:35:00Z",
+      "event": "handoff_resolved",
+      "note": "Superseded and its target card MPI-452 is closed. Swept at close-out 2026-08-08."
+    }
   ],
   "resume_prompt": "You are resuming MPI-452, which wires MiniMax H3 into Cubric Vision. Read .agents/mpi-kanban/tasks/MPI-452/validation.md FIRST — it splits what was actually proved from what was merely written, and its 'NOT proved' section is your work list. The state: the engine is bumped 0.29.2 -> 0.30.0 (H3's nodes do not exist before 0.30.0, and v0.30.1/v0.30.2 have no portable build so 0.30.0 is the ceiling), H3 fl2va is fully wired and committed as ModelDef 'minimax-h3', all 4 weights are on G:/CubricModels with hashes matching what the publisher URLs serve, and npm test passes 459/459. THE ENTIRE APP LAYER IS UNVERIFIED — every proof so far came from hitting the local engine on port 48188 directly, never through Vision. So your first job is to start the app, install H3 (confirming the licence dialog fires before any byte downloads), run a t2v and an i2v, and then exercise preview -> Continue, which is the highest-risk path because it is the only one that drives this session's ComfyUi-MpiNodes fix (a6e5d5e, pushed) through the app's own latent staging rather than the throwaway harness used here. Things that will otherwise look like bugs but are not: installing ref2va later will show NO licence dialog, because acceptance receipts are keyed by LICENCE id not model id and one acceptance covers both variants; and H3's audio arrives muxed inside the mp4 rather than as a separate audio output, which is why capabilities.audio is deliberately OFF. Do NOT re-host any H3 weight on R2 — publisher-hosted URLs are a licence requirement, not an oversight. Do NOT edit js/data/modelConstants/licences.js or js/services/downloadService.js; a parallel MPI-451 session owns them and has already added the 'minimax-h3-ref2va' licence key for you. After verification the user wants the reference-to-video model: a second ModelDef under exactly the id 'minimax-h3-ref2va', a different transformer file in the same Comfy-Org repo, sharing this card's encoder and both VAEs, and unlike fl2va it DOES take audio input so it wants capabilities.audio: true. Also decide what to do with MPI-449, which the user deliberately left in `doing` for you, and note that a 1.4.0 minor bump is now warranted because the engine moved — but that belongs to MPI-450, the 1.4 release umbrella, not to an ad hoc bump."
 }

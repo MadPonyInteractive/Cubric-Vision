@@ -4,7 +4,7 @@
   "generated_at": "2026-08-07T14:20:00Z",
   "from_session": "MPI-466 LTX validation — NAG negative wiring and the third prompt mode",
   "to_role": "verifier",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-466 closed out by output; LTX's negative prompt was found dead and rewired; the prompt box gained a third field",
     "branch": "master"
@@ -49,7 +49,12 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
       "tasks/MPI-466/validation.md — the i2v section rewritten from 'NOT proved' to the three-run table with branch-node outputs, plus the pill repaint fix",
@@ -106,7 +111,13 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "file",
-    "relevant_topics": ["models", "workflow authoring", "comfy engine", "components", "generation lifecycle"]
+    "relevant_topics": [
+      "models",
+      "workflow authoring",
+      "comfy engine",
+      "components",
+      "generation lifecycle"
+    ]
   },
   "rules_active": [
     ".claude/rules/dos_and_donts.md",
@@ -118,7 +129,15 @@
     "docs/component-contracts.md"
   ],
   "recent_events": [
-    { "at": "2026-08-07T14:20:00Z", "event": "handoff_created" }
+    {
+      "at": "2026-08-07T14:20:00Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-08T04:35:00Z",
+      "event": "handoff_resolved",
+      "note": "Superseded and its target card MPI-474 is closed. Swept at close-out 2026-08-08."
+    }
   ],
   "resume_prompt": "You are resuming after a session that closed MPI-466 by output and opened three new cards. Read .agents/mpi-kanban/tasks/MPI-474/validation.md FIRST. State: MPI-466's three i2v routes are PROVED — end-only 8721f851 (start EMPTY, start branch 0 images, end branch 1), start-only 5fabe2cd (exact mirror), start+end 0ab03b36 (both 1). The card sits in doing/validating and needs only the user's explicit go to close. Along the way LTX's negative prompt was found to do NOTHING: every CFGGuider runs at cfg 1 (ComfyUI skips the uncond pass entirely there, comfy/samplers.py:610) and LTX2_NAG — the only thing that carries a negative at cfg 1 — had nag_cond_video wired to the POSITIVE encode. The user re-authored the graph: nag_cond_video now reads the negative encode through an empty-string gate, a new Input_Negative_Audio node feeds nag_cond_audio, and NAG is bypassed entirely when both negatives are empty. Synced and committed; 133 nodes on both tiers. MPI-474 then shipped the app half — the prompt box button now CYCLES positive -> negative -> negative audio, and reuse round-trips all three fields. npm test 482/482. YOUR JOB IS PROOF BY OUTPUT, because none of the negative work has it: no LTX run has completed since the rewire. Hard-reload, type a video negative and confirm the dispatched graph on 48188 shows NAG NOT bypassed; then cycle to the audio stop, type 'music, soundtrack, score' and confirm Input_Negative_Audio carries it — that is the case the whole card exists for, since LTX volunteers background music. Expect default output to differ from MpiVideo_00005/6/7: with both boxes empty NAG is now skipped entirely where it used to run against the positive prompt. Two doc proposals were written up but NOT applied, and two changelog entries are owed but deliberately held until a run completes — both are in this handoff. Finally: two other agents are live in this tree on MPI-472 and MPI-473 and did NOT register coordination sessions, so state/index.json is not trustworthy about peers; MPI-473 owns comfyController.js, commandExecutor.js, PromptBoxControls.js, models.js, resolveModelDeps.js, generate_h3.py and tests/resolve-model-deps.test.cjs, all left uncommitted on purpose."
 }
