@@ -38,6 +38,7 @@ NOT mechanically split these):
 - `toasts.md` — coherent single-subject contract (the full toast/notification call-site map: `ui:*`, `StatusBar.notify`, `notificationService`, the sound model, and which events must NOT toast). Splitting it would scatter "does this fire a toast?" across files, which is the one question the doc exists to answer in one place.
 - `models/ltx/audio-input.md` — research lab notebook (evidence log)
 - `playbooks/add-model/` — end-to-end procedure split into a README hub + numbered section files; the README carries the mandatory step ordering
+- `playbooks/bump-engine/` — same shape, plus `01-smoke-run.md` is an append-only fault log: one section per live run, and the value is that the classes repeat across them. Splitting it by run would hide exactly that.
 
 ## Map — where knowledge lives
 

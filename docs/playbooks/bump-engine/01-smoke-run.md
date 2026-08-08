@@ -190,3 +190,24 @@ payload, `curl` the payload and confirm the field is actually in it.
 Related: the hero's GPU label comes from `cfg.gpuType` in Settings, not from the connected
 Pod, so a Pod created outside Settings (this runner) makes the status bar claim the last GPU
 you picked. Cosmetic, and only reachable from here.
+
+## The third pass — the release gate and the runner deadlocked each other (2026-08-08)
+
+Still by reading, still before renting. The GPU leg had not executed at this point either.
+
+| fault | how it presented | the rule now |
+|---|---|---|
+| **Gate 7 could never fire, and its failure made the evidence unusable** | `assertPodEngineVersion` read `status.comfyVersion \|\| status.version` off `/remote/comfy/status`. That route has never returned either field — it answers `{running, ready, comfyReady, wrapperVersion, connecting, connectElapsedMs, noGpu}` — and the wrapper's `/health` only adds `wrapper_version`. So `got` was always `''`, the mismatch `die()` was dead code, and the run wrote `engine.got: null`. `release-health-check.mjs` § `checkSmokeEvidence` then **refuses that very file** for not recording what was smoked. A full GPU matrix could not produce evidence its own gate would accept | read `comfyui_ref` from the Pod manifest via `/remote/pod/manifest` — the only place a Pod records which ComfyUI its image was built from (`_stamp_manifest_provenance`, from the `CUBRIC_COMFYUI_REF` build arg). No `comfyui_ref` now **stops the run** rather than spending a matrix on a rejected file; `--allow-unproven-engine` is the escape hatch for an unbumped run |
+| `die()` after a successful create still leaked the rental | `die` is `process.exit(1)` and deletes nothing. `createPodWithRetry` (eb89f59f) made the **create** safe; everything downstream was still open — an engine mismatch, a failed probe upload, a 502 from any `app()` call, any throw reaching `main().catch` | `abort()` deletes the live Pod, then exits. Every post-create exit goes through it |
+
+**The lesson is the sweep, not the fault.** "A guard armed on a field that does not exist is
+worse than no guard" was written into the section above after the *second* run — and a third
+instance of the same class was sitting one function away, unswept, in the same file. Finding
+a fault class means grepping every consumer of that class in one pass. The same is true of
+the leak: it was fixed *inside* `createPodWithRetry` and nowhere after it, which is a
+half-wire in a script rather than an engine, but the same shape.
+
+**Two independent halves can each look correct and still deadlock.** The runner degraded
+politely to `proven: false`; the release check strictly refused unproven evidence. Both
+behaviours are right on their own. Nothing catches that pair except reading the producer and
+the consumer together — which costs minutes, against a GPU matrix that does not.

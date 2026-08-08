@@ -114,6 +114,27 @@ router.post('/proxy/restart-comfy', async (req, res) => {
   }
 });
 
+// The Pod's manifest, verbatim. `comfyui_ref` is the ONLY record of which ComfyUI
+// the running image was built from (stamped at first boot from the image's
+// CUBRIC_COMFYUI_REF build arg), and gate 7 of the engine-bump playbook cannot be
+// proven without it: /remote/comfy/status answers {running, ready, comfyReady,
+// wrapperVersion, ...} and the wrapper's /health only adds wrapper_version, so
+// nothing else app-side can say WHICH engine was smoked. Read once per run by
+// scripts/smoke-workflows.mjs, not polled -- so it forwards rather than caching
+// (_evaluatePodHealth keeps a verdict, never the manifest body). A 404 is a
+// legitimate answer: a fresh / pre-init volume has no manifest yet.
+router.get('/remote/pod/manifest', async (req, res) => {
+  const headers = await _guard(res);
+  if (!headers) return;
+  try {
+    const upstream = await fetch(`${proxyUrl(_mode.podId)}/wrapper/manifest`, { headers });
+    await _passthrough(res, upstream);
+  } catch (err) {
+    logger.error('runpod', 'proxy manifest failed', err);
+    res.status(502).json({ error: 'relay_failed' });
+  }
+});
+
 router.get('/proxy/queue', async (req, res) => {
   const headers = await _guard(res);
   if (!headers) return;

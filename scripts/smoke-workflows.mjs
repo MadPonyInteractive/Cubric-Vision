@@ -346,12 +346,14 @@ async function waitReady(what, probe, timeoutMs, o = {}) {
  * host away and ask for another one.
  */
 async function createPodWithRetry(spec, label, readyMs, attempts = 3) {
+    _podLive = false;
     for (let a = 1; a <= attempts; a++) {
         log(`\n  ${label}: create (attempt ${a}/${attempts})…`);
         const made = await app('/remote/pod/create', { method: 'POST', body: JSON.stringify(spec) });
         if (made && made.error) {
             log(`  ⚠ create refused: ${made.message || made.error}`);
         } else if (await waitReady(label, async () => (await app('/remote/comfy/status')).ready, readyMs, { soft: true })) {
+            _podLive = true;
             return true;
         }
         log(`  recycling the Pod — RUNNING with no wrapper is a dead host, not a slow one`);
@@ -361,19 +363,57 @@ async function createPodWithRetry(spec, label, readyMs, attempts = 3) {
     die(`${label} never came up in ${attempts} attempts. RunPod capacity or image pull is broken in ${DATACENTER} right now.`);
 }
 
+/**
+ * A rented Pod OUTLIVES a crashed script. `die` is process.exit(1) and deletes nothing,
+ * so every failure after a create leaked the rental until a human noticed the bill.
+ * eb89f59f closed that for the create itself (createPodWithRetry deletes before each
+ * retry and before it gives up); everything downstream of a successful create was still
+ * open — an engine mismatch, a failed probe upload, a 502 from any app() call, any throw
+ * caught by main(). One flag plus one wrapper closes the tail. Deleting the Pod is also
+ * the SAFE direction with a fill in flight: it is cancelling WITH a Pod attached that
+ * deletes partials off the volume, never the delete itself.
+ */
+let _podLive = false;
+async function abort(msg) {
+    if (_podLive) {
+        log(`
+  deleting the live Pod before exit — an abandoned rental bills until someone notices…`);
+        await app('/remote/pod/delete-active', { method: 'POST' }).catch(() => log('  ⚠ delete FAILED — check RunPod by hand, now.'));
+        _podLive = false;
+    }
+    die(msg);
+}
+
 /** Gate 7 of the playbook: prove the Pod runs the engine we THINK we are smoking. */
 /** Smoking an unrebuilt image validates the OLD engine and stamps the bump safe. */
 async function assertPodEngineVersion() {
     const lock = JSON.parse(readFileSync(path.join(REPO, 'dev_configs/node_lock.json'), 'utf8'));
     const want = lock.comfyui.core.tag.replace(/^v/, '');
-    const status = await app('/remote/comfy/status');
-    const got = String(status.comfyVersion || status.version || '').replace(/^v/, '');
+    // `comfyui_ref` in the Pod manifest is the ONLY record of which ComfyUI the running
+    // image was built from (wrapper _stamp_manifest_provenance, from the CUBRIC_COMFYUI_REF
+    // build arg). This read USED to be `/remote/comfy/status`.comfyVersion — a field that
+    // route has never returned. It answers {running, ready, comfyReady, wrapperVersion,
+    // connecting, connectElapsedMs, noGpu}, and the wrapper's /health only adds
+    // wrapper_version, so `got` was ALWAYS '' and the mismatch die() below was dead code.
+    // That deadlocked the release: the run wrote engine.got = null, and
+    // release-health-check.mjs then refuses that very file for not recording what was
+    // smoked (checkSmokeEvidence, "cannot prove WHAT was smoked"). A full GPU matrix could
+    // not produce evidence its own gate would accept.
+    const manifest = await app('/remote/pod/manifest').catch(() => null);
+    const got = String(manifest?.comfyui_ref || '').replace(/^v/, '');
     if (!got) {
-        log(`  ⚠ Pod reported no engine version — cannot prove it is on ${want}. See playbook gate 7.`);
+        // Continuing here spends a whole GPU matrix on a file release:check will reject,
+        // so it stops by default. The flag exists for the honest case: an image baked
+        // before the build arg, smoked when the engine has NOT moved (unbumped runs are
+        // never gated on evidence).
+        const why = `Pod manifest carries no comfyui_ref, so this run cannot prove it is on ${want} (playbook gate 7). `
+            + `release:check REFUSES evidence with no engine.got when the pin moved. Re-run with --allow-unproven-engine to smoke anyway.`;
+        if (!flag('allow-unproven-engine')) await abort(why);
+        log(`  ⚠ ${why}`);
         return { want, got: null, proven: false };
     }
-    if (got !== want) die(`Pod runs ComfyUI ${got}, node_lock pins ${want}. Rebuild the Pod image first (playbook gate 6) — smoking now would validate the OLD engine.`);
-    log(`  engine: Pod reports ${got}, matches node_lock ✓`);
+    if (got !== want) await abort(`Pod image was built from ComfyUI ${got}, node_lock pins ${want}. Rebuild the Pod image first (playbook gate 6) — smoking now would validate the OLD engine.`);
+    log(`  engine: Pod image built from ${got}, matches node_lock ✓`);
     return { want, got, proven: true };
 }
 
@@ -394,7 +434,7 @@ async function stageProbeImage() {
     const up = await app('/remote/upload/media', {
         method: 'POST', body: JSON.stringify({ localPath: out, filename: 'smoke-probe.png' }),
     });
-    if (!up?.success || !(up.path || up.name)) die('probe image upload to the Pod failed — every op with an image input would self-gate.');
+    if (!up?.success || !(up.path || up.name)) await abort('probe image upload to the Pod failed — every op with an image input would self-gate.');
     log(`  probe image on the Pod: ${up.path || up.name}`);
     return up.path || up.name;
 }
@@ -552,7 +592,7 @@ async function main() {
     const cpuSpec = { gpuTypeId: CPU_SENTINEL, volumeId: volume.id, datacenter: DATACENTER };
     await createPodWithRetry(cpuSpec, 'CPU download Pod', 5 * 60 * 1000);
     const mode = await app('/remote/mode');
-    if (!mode.active || !mode.podId) die('remote mode is not active after the CPU Pod came up — refusing to install, the deps would download LOCALLY.');
+    if (!mode.active || !mode.podId) await abort('remote mode is not active after the CPU Pod came up — refusing to install, the deps would download LOCALLY.');
     log(` remote mode active on ${mode.podId}`);
 
     // `installing` and `paused` are in-flight too (routes/downloadManager.js:1523) —
@@ -637,12 +677,13 @@ async function main() {
 
     // Playbook step 4: verify BEFORE renting a GPU. A weight that failed here and is
     // only discovered at sampling time has already cost the expensive half of the run.
-    if (bad.length) die(`install failed after a retry for: ${bad.join(', ')}`);
+    if (bad.length) await abort(`install failed after a retry for: ${bad.join(', ')}`);
     log(`  installs verified: no failed deps`);
 
     // The GPU Pod mounts the same volume, so the CPU Pod has to go first.
     log(`\n  deleting the CPU download Pod…`);
     await app('/remote/pod/delete-active', { method: 'POST' }).catch(() => log('  ⚠ CPU Pod delete failed — check RunPod.'));
+    _podLive = false;
 
     const gpu = await pickGpu(volume.id);
     // The GPU Pod gets the SAME watchdog as the CPU one, and for a worse reason: this
@@ -711,6 +752,7 @@ async function main() {
         else log('  kept.');
     }
     await app('/remote/pod/delete-active', { method: 'POST' }).catch(() => log('  ⚠ could not delete the Pod — check RunPod.'));
+    _podLive = false;
 
     if (n('FAIL')) process.exit(1);
 }
@@ -738,4 +780,4 @@ if (flag('self-check')) {
     process.exit(0);
 }
 
-main().catch(e => die(e.stack || e.message));
+main().catch(e => abort(e.stack || e.message));
