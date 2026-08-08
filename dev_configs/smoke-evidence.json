@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-08T17:11:47.907Z",
+  "at": "2026-08-08T20:23:40.457Z",
   "engine": {
     "want": "0.30.0",
     "got": "0.30.0",
@@ -81,8 +81,9 @@
     {
       "model": "chroma-hyper",
       "op": "t2i",
-      "status": "FAIL",
-      "why": "completed but produced no media",
+      "status": "PASS",
+      "secs": 87,
+      "media": 1,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -93,8 +94,8 @@
       "model": "chroma-hyper",
       "op": "i2i",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 42,
+      "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -105,8 +106,8 @@
       "model": "chroma-hyper",
       "op": "control",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 96,
+      "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -117,8 +118,8 @@
       "model": "chroma-hyper",
       "op": "upscale",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 80,
+      "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -129,8 +130,8 @@
       "model": "chroma-hyper",
       "op": "detail",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 42,
+      "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -140,9 +141,11 @@
     {
       "model": "krea2-nsfw",
       "op": "t2i",
-      "status": "FAIL",
-      "why": "completed but produced no media",
+      "status": "PASS",
+      "secs": 96,
+      "media": 1,
       "budget": [
+        "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
@@ -152,9 +155,10 @@
       "model": "krea2-nsfw",
       "op": "i2i",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 71,
+      "media": 2,
       "budget": [
+        "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
@@ -164,9 +168,10 @@
       "model": "krea2-nsfw",
       "op": "control",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 100,
+      "media": 2,
       "budget": [
+        "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
@@ -176,9 +181,10 @@
       "model": "krea2-nsfw",
       "op": "krea2Edit",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 158,
+      "media": 2,
       "budget": [
+        "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
@@ -188,9 +194,10 @@
       "model": "krea2-nsfw",
       "op": "upscale",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 67,
+      "media": 2,
       "budget": [
+        "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
@@ -200,9 +207,10 @@
       "model": "krea2-nsfw",
       "op": "detail",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 25,
+      "media": 2,
       "budget": [
+        "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
@@ -211,9 +219,8 @@
     {
       "model": "nvidia-pid",
       "op": "pid",
-      "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "status": "FAIL",
+      "why": "partial validation: MpiScaledDimensions.upscale_method, MpiScaledDimensions.upscale_method, MpiScaledDimensions.upscale_method, MpiScaledDimensions.upscale_method",
       "budget": [
         "Input_Seed=42"
       ]
@@ -221,8 +228,9 @@
     {
       "model": "klein-4b",
       "op": "t2i",
-      "status": "FAIL",
-      "why": "completed but produced no media",
+      "status": "PASS",
+      "secs": 59,
+      "media": 1,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -233,8 +241,8 @@
       "model": "klein-4b",
       "op": "i2i",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 55,
+      "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -245,8 +253,8 @@
       "model": "klein-4b",
       "op": "control",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 59,
+      "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -257,8 +265,8 @@
       "model": "klein-4b",
       "op": "kleinEdit",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 59,
+      "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -269,7 +277,7 @@
       "model": "klein-4b",
       "op": "inpaint",
       "status": "PASS",
-      "secs": 4,
+      "secs": 33,
       "media": 1,
       "budget": [
         "Input_Seed=42",
@@ -293,8 +301,8 @@
       "model": "klein-4b",
       "op": "upscale",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 25,
+      "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -314,44 +322,80 @@
     {
       "model": "wan-22",
       "op": "i2v_ms",
-      "status": "FAIL",
-      "why": "/proxy/prompt -> 503 {\"error\":\"engine_error\",\"message\":\"ComfyUI rejected prompt\",\"detail\":{\"comfy_status\":400,\"comfy_body\":\"{\\\"error\\\": {\\\"type\\\": \\\"missing_node_type\\\", \\\"message\\\": \\\"Node 'Input_Video_Latent' not found."
+      "status": "PASS",
+      "secs": 163,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ]
     },
     {
       "model": "ltx-23-balanced",
       "op": "t2v_ms",
-      "status": "FAIL",
-      "why": "/proxy/prompt -> 503 {\"error\":\"engine_error\",\"message\":\"ComfyUI rejected prompt\",\"detail\":{\"comfy_status\":400,\"comfy_body\":\"{\\\"error\\\": {\\\"type\\\": \\\"missing_node_type\\\", \\\"message\\\": \\\"Node 'Input_Video_Latent' not found."
+      "status": "PASS",
+      "secs": 288,
+      "media": 1,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ]
     },
     {
       "model": "ltx-23-balanced",
       "op": "i2v_ms",
-      "status": "FAIL",
-      "why": "/proxy/prompt -> 503 {\"error\":\"engine_error\",\"message\":\"ComfyUI rejected prompt\",\"detail\":{\"comfy_status\":400,\"comfy_body\":\"{\\\"error\\\": {\\\"type\\\": \\\"missing_node_type\\\", \\\"message\\\": \\\"Node 'Input_Video_Latent' not found."
+      "status": "PASS",
+      "secs": 180,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ]
     },
     {
       "model": "minimax-h3",
       "op": "t2v_ms",
       "status": "FAIL",
-      "why": "/proxy/prompt -> 503 {\"error\":\"engine_error\",\"message\":\"ComfyUI rejected prompt\",\"detail\":{\"comfy_status\":400,\"comfy_body\":\"{\\\"error\\\": {\\\"type\\\": \\\"missing_node_type\\\", \\\"message\\\": \\\"Node 'Input_Video_Latent' not found."
+      "why": "timed out after 15 min",
+      "budget": [
+        "Input_Width=128",
+        "Input_Height=128",
+        "Input_seed=42"
+      ]
     },
     {
       "model": "minimax-h3",
       "op": "i2v_ms",
-      "status": "FAIL",
-      "why": "/proxy/prompt -> 503 {\"error\":\"engine_error\",\"message\":\"ComfyUI rejected prompt\",\"detail\":{\"comfy_status\":400,\"comfy_body\":\"{\\\"error\\\": {\\\"type\\\": \\\"missing_node_type\\\", \\\"message\\\": \\\"Node 'Input_Video_Latent' not found."
+      "status": "PASS",
+      "secs": 260,
+      "media": 2,
+      "budget": [
+        "Input_Width=128",
+        "Input_Height=128",
+        "Input_seed=42"
+      ]
     },
     {
       "model": "minimax-h3-ref2va",
       "op": "ref2v_ms",
-      "status": "FAIL",
-      "why": "/proxy/prompt -> 503 {\"error\":\"engine_error\",\"message\":\"ComfyUI rejected prompt\",\"detail\":{\"comfy_status\":400,\"comfy_body\":\"{\\\"error\\\": {\\\"type\\\": \\\"missing_node_type\\\", \\\"message\\\": \\\"Node 'Input_Video_Latent' not found."
+      "status": "PASS",
+      "secs": 213,
+      "media": 1,
+      "budget": [
+        "Input_Width=128",
+        "Input_Height=128",
+        "Input_seed=42"
+      ]
     },
     {
       "model": "wan22-5b",
       "op": "t2v",
-      "status": "FAIL",
-      "why": "completed but produced no media",
+      "status": "PASS",
+      "secs": 92,
+      "media": 1,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -362,8 +406,8 @@
       "model": "wan22-5b",
       "op": "i2v",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 55,
+      "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -374,9 +418,10 @@
       "model": "qwen-edit",
       "op": "qwenEdit",
       "status": "PASS",
-      "secs": 5,
-      "media": 1,
+      "secs": 176,
+      "media": 2,
       "budget": [
+        "Input_Tier=3",
         "Input_Seed=42"
       ]
     },
@@ -384,17 +429,18 @@
       "model": "qwen-edit",
       "op": "control",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 172,
+      "media": 2,
       "budget": [
+        "Input_Tier=3",
         "Input_Seed=42"
       ]
     }
   ],
   "counts": {
-    "pass": 25,
+    "pass": 33,
     "skip": 0,
-    "fail": 10,
+    "fail": 2,
     "opsPlanned": 35
   },
   "scope": {

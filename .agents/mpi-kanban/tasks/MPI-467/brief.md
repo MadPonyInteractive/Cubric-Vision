@@ -139,3 +139,12 @@ own card, but do not lose it.
 runner still lacks (it compares its estimate to the volume's TOTAL size, never to free
 bytes). MPI-349 owns the volume-availability watch. Neither is a "build a test volume" card,
 and none exists — checked across every card on the board, 2026-08-08.
+
+**MPI-498 — added to this umbrella 2026-08-08, from the second matrix.** The node_errors guard
+(suggested by the MPI-495 session, shipped in `736f29d1`) caught `nvidia-pid/pid` on its FIRST
+live run: `MpiScaledDimensions` requires `upscale_method` and no shipped graph supplies it, so
+ComfyUI drops those outputs and the op still returns media. It "PASSED" the previous matrix at
+4s/1-out for exactly that reason. **Live in v1.3.0/v1.3.1** — the released pin `69a43336` has
+the required input too, so this is not the MPI-467 pin bump. The root fix belongs to THIS card's
+gate 8: it checks class EXISTENCE, never required INPUTS, which is why the defect survived two
+releases and two matrices.

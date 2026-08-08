@@ -240,3 +240,24 @@ matrix does not prove LoRAs loaded.
 **Costs, measured.** Install leg on a CPU Pod: 12 models, ~8 min, pennies. GPU matrix on an
 L4: ~25 min, roughly 0.05 USD per six minutes. A `--plan` run and gate 8 both cost nothing —
 run them before renting anything, every time.
+
+## The fifth pass — 33/35, and four faults the FIRST matrix could not have shown (2026-08-08)
+
+Second GPU matrix, same L4 / EU-RO-1 / volume `aghcuvg7nl`. **PASS 33 · SKIP 0 · FAIL 2**,
+engine proven `0.30.0`. Everything the fourth pass fixed held: all four separator failures
+pass, and five of the six `missing_node_type` ops pass — which finally **observes** the thing
+`start.sh` only documented, that the wrapper reinstalls MpiNodes at the pinned commit on
+commit drift. The pin bump was the right fix and the drift path is not at fault.
+
+| fault | how it presented | the rule now |
+|---|---|---|
+| **Gate 7 raced the stamp it reads** | `comfyui_ref` is written by the wrapper DURING boot and `/remote/pod/manifest` 409s until the app flips remote-active. The gate read it ONCE with `.catch(() => null)`, so "not yet" and "not there" were the same value. It aborted a run four poll-ticks after create, on an image that had proved `0.30.0` twice an hour earlier, and threw away the rented Pod to do it | poll until the field appears or the window closes, and **log what the manifest actually held** on failure. This is the THIRD instance of this file's own documented class — a guard armed on a value that is not there yet. The third pass wrote that lesson and did not apply it to the read *inside* the guard it was creating |
+| **A timed-out op was never interrupted** | `runOp` returned FAIL and left the job executing. ComfyUI runs one prompt at a time, so the next op queued behind it and timed out in turn — one slow op reads as many broken models | `/proxy/interrupt` before returning. Caught live the same night: `Global interrupt` → `got prompt` in the same second, and the next op ran clean |
+| **The runner never staged weights** | The app stages a model's weights to the Pod's fast disk before generating (`commandExecutor`, MPI-194/329); the runner POSTs straight to `/proxy/prompt` and never asked. Measured: container disk **1 GB of 455 GB** for a whole matrix while the volume served every load | `stageModelOnPod` per model, mirroring `commandExecutor`'s filter exactly. **Same bypass class as the separator heal** — that is twice now that testing a path no user takes cost real money |
+| **A PASS hid a partially-validated graph** | ComfyUI validates per OUTPUT NODE and answers 200 with `node_errors`; scoring on media count alone reported a graph that rendered from a surviving output. Reported by the MPI-495 session | keep the whole ack. On its FIRST live run it caught **MPI-498** — `MpiScaledDimensions` needs `upscale_method`, no shipped graph supplies it, and the requirement is in the RELEASED pin. Three weeks old, across two releases and two matrices |
+
+**Two lessons worth more than the fixes.** First: *a runner that skips the app's own
+preparation is not smoking the product* — found twice, in the separator heal and then in the
+hot store, and the second cost a full matrix of cold volume reads. Second: **the same fault
+class kept reappearing inside the very pass that documented it.** Sweeping a class means
+grepping every consumer of it, including the code you are adding while you sweep.

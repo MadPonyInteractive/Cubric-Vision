@@ -451,6 +451,60 @@ async function readPodManifestWithRef(timeoutMs = 3 * 60 * 1000) {
     return last;
 }
 
+// ── Hot store ────────────────────────────────────────────────────────────────
+// The app stages a model's weights onto the Pod's fast container disk BEFORE it
+// generates (commandExecutor _ensureRemoteHotStore, MPI-194/329). The runner POSTs
+// straight to /proxy/prompt, so it never asked - and every op therefore read its
+// weights off the NETWORK VOLUME. Measured 2026-08-08: container disk sat at 1 GB of
+// 455 GB for a whole matrix while the volume served every load. SAME bypass class as
+// the separator heal: a runner that skips the app's own preparation is not smoking the
+// product, and here it pays volume-read latency on every model, in GPU minutes.
+// Mirrors commandExecutor's filter exactly - do not re-derive it: >= HOT_STORE_MIN_GB,
+// and never a file LARGER than VRAM (it cannot stay resident, and a huge copy hogs the
+// wrapper's single hot-store lock).
+const HOT_STORE_MIN_GB = 0.1;   // js/services/commandExecutor.js:453
+
+/** VRAM of the Pod's GPU, or null when unknown (null = no cap, same as the app). */
+async function podVramGb(gpuTypeId) {
+    const d = await app(`/remote/pod/specs?gpuTypeId=${encodeURIComponent(gpuTypeId)}`).catch(() => null);
+    const v = Number(d?.vramGb);
+    return Number.isFinite(v) && v > 0 ? v : null;
+}
+
+/** Hot-store file list for a model. Exported for --self-check: the filename split is */
+/** the fiddly part (the comfy subdir is the FIRST path segment, not dep.type). */
+export function hotStoreFiles(reg, model, vramGb) {
+    const { DEPS, resolveDeps, sizeToGb } = reg;
+    return resolveDeps(model, model.supportedOps || null, null, ENGINE, { arch: ARCH })
+        .map(id => DEPS[id])
+        .filter(d => d && d.filename
+            && sizeToGb(d.size) >= HOT_STORE_MIN_GB
+            && (!vramGb || sizeToGb(d.size) <= vramGb))
+        .map(d => {
+            const slash = d.filename.indexOf('/');
+            if (slash < 0) return null;
+            return {
+                type: d.type || d.filename.slice(0, slash),
+                filename: d.filename.slice(slash + 1),
+                size_bytes: Math.round(sizeToGb(d.size) * (1024 ** 3)),
+                sha256: d.sha256 || '',
+            };
+        })
+        .filter(Boolean);
+}
+
+/** Stage one model's weights. Non-fatal: the volume copy still works, just slower. */
+async function stageModelOnPod(reg, model, vramGb) {
+    const files = hotStoreFiles(reg, model, vramGb);
+    if (!files.length) return;
+    const res = await app('/remote/hot-store/ensure', {
+        method: 'POST', body: JSON.stringify({ files }),
+    }).catch(() => null);
+    if (!res) { log(`  hot-store: ensure failed for ${model.id} - generating from volume`); return; }
+    const staged = (res.results || []).filter(r => r.staged).length;
+    log(`  hot-store: ${staged}/${files.length} file(s) on Pod disk`);
+}
+
 /** Gate 7 of the playbook: prove the Pod runs the engine we THINK we are smoking. */
 /** Smoking an unrebuilt image validates the OLD engine and stamps the bump safe. */
 async function assertPodEngineVersion() {
@@ -895,7 +949,9 @@ async function main() {
 
     const probe = await stageProbeImage();
     const results = [];
+    const vramGb = await podVramGb(gpu.id);
     for (const e of set) {
+        await stageModelOnPod(reg, e.model, vramGb);
         for (const op of e.ops) {
             const r = await runOp(reg, e.model, op, probe).catch(err => ({ op, status: 'FAIL', why: err.message }));
             results.push({ model: e.model.id, ...r });
@@ -1008,6 +1064,25 @@ if (flag('self-check')) {
         { type: 'value_not_in_list', extra_info: { input_name: 'lora_3', received_value: 'krea-2/x.safetensors' } }] } };
     assert(summarizeNodeErrors(ne) === 'MpiStyleLoras.lora_3=krea-2/x.safetensors',
         `node_errors names the BANK SLOT, not lora_name (MPI-359); got ${summarizeNodeErrors(ne)}`);
+
+    // hotStoreFiles: the comfy subdir is the FIRST path segment of filename, not dep.type,
+    // and the VRAM cap must drop a file BIGGER than the card (MPI-329).
+    const hsReg = {
+        sizeToGb: (n) => n,
+        resolveDeps: () => ['big', 'small', 'tiny', 'flat'],
+        DEPS: {
+            big:   { filename: 'diffusion_models/ltx.safetensors', size: 42, sha256: 'aa' },
+            small: { filename: 'text_encoders/t5.safetensors', size: 11, sha256: 'bb' },
+            tiny:  { filename: 'loras/x.safetensors', size: 0.05, sha256: 'cc' },
+            flat:  { filename: 'no_subdir.safetensors', size: 5, sha256: 'dd' },
+        },
+    };
+    const hs = hotStoreFiles(hsReg, { supportedOps: ['t2i'] }, 24);
+    assert(hs.length === 1, `24GB card keeps only the 11GB TE, got ${hs.map(f => f.filename).join(',')}`);
+    assert(hs[0].type === 'text_encoders' && hs[0].filename === 't5.safetensors',
+        `type is the FIRST path segment and is stripped from filename, got ${JSON.stringify(hs[0])}`);
+    assert(hotStoreFiles(hsReg, {}, 96).length === 2, 'a 96GB card also stages the 42GB transformer');
+    assert(hotStoreFiles(hsReg, {}, null).length === 2, 'unknown VRAM = no cap, same as the app');
 
     console.log(`self-check OK (${applied.join(', ')})`);
     process.exit(0);
