@@ -95,6 +95,33 @@ model at dispatch, and ComfyUI's own validation may pass it.
 **8. `dev_configs/node_lock.json` is a version-bump trigger.** The Stop hook will say so.
 Run `/mpi-version-bump` when the app release is cut — not per node change.
 
+## The dev junction — keep it, but re-check it after an engine op
+
+`engine/ComfyUI_windows_portable/ComfyUI/custom_nodes/ComfyUI-MpiNodes` is a **hand-made
+NTFS junction to the live repo** (`LinkType: Junction`, target `C:\AI\Mpi\ComfyUi-MpiNodes`), not
+an install. Junction, not symlink — it needs no admin rights or Developer Mode. That is the authoring loop: save a `.py`, restart
+ComfyUI, done — no commit/push/pin round trip just to test. Deliberately kept; do not
+"fix" it into a real directory (that would force pushing untested nodes in order to test
+them). Release builds have no symlink and install from the pin normally.
+
+**It does not survive an engine wipe.** `/engine/upgrade` in-place is fine, but
+`_fullEngineReinstall()` (dead tree, deprecated node, engine-owned package moved) recreates
+`custom_nodes/` — the symlink is gone and MpiNodes installs at the pin instead. Symptom:
+repo edits stop showing up in ComfyUI, with no error. Check + restore (PowerShell — Git Bash
+mangles the flags):
+
+```powershell
+Get-Item "engine\ComfyUI_windows_portable\ComfyUI\custom_nodes\ComfyUI-MpiNodes" | Select LinkType, Target
+New-Item -ItemType Junction -Force `
+  -Path   "engine\ComfyUI_windows_portable\ComfyUI\custom_nodes\ComfyUI-MpiNodes" `
+  -Target "c:\AI\Mpi\ComfyUi-MpiNodes"
+```
+
+If a stale real copy is also present, **rename it to end in `.disabled`** — any other suffix
+still loads, and two copies of the pack registering the same route kills ComfyUI at boot with
+an aiohttp "route will never be executed" traceback that names no pack
+(`.claude/rules/comfy_engine.md` § Parking a node).
+
 ## Done means
 
 - [ ] Node repo: working tree clean, HEAD == `origin/main`
