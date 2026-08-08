@@ -613,6 +613,16 @@ const downloadService = {
                     // data.error, so show it as-is. Same reasoning as disk-full above:
                     // never nudge a GitHub report for a condition we can't fix in code.
                     Events.emit('ui:warning', { message: data.error });
+                } else if (data.transient) {
+                    // MPI-480 — the Pod's wrapper wasn't routable yet (the RunPod proxy
+                    // 404/502/503/504s for seconds after a Pod starts, while /health is
+                    // ALREADY green). Self-heals: re-pressing Install lands it. The
+                    // contract in routes/remoteModels.js has always said this is a toast
+                    // — the verdict just never survived the throw, so a boot race asked
+                    // the user to file a GitHub issue. [[feedback_error_dialog_vs_toast]]
+                    Events.emit('ui:warning', {
+                        message: `The remote engine isn't ready yet — install ${modelName} again in a moment.`
+                    });
                 } else {
                     Events.emit('ui:error', {
                         title: 'Download Failed',
@@ -626,6 +636,10 @@ const downloadService = {
                     });
                 } else if (data.networkBlocked) {
                     Events.emit('ui:warning', { message: data.error });   // MPI-427
+                } else if (data.transient) {
+                    Events.emit('ui:warning', {                           // MPI-480
+                        message: "The remote engine isn't ready yet — try the install again in a moment."
+                    });
                 } else {
                     Events.emit('ui:error', {
                         title: 'Download Failed',

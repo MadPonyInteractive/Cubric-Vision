@@ -2355,7 +2355,11 @@ async function _startRemoteDownload(modelId, dependencies, res) {
             })
             .catch((err) => {
                 const dj = _depJobs.get(dep.id);
-                if (dj) { _setDepStatus(dj, 'failed', 'remote uw dep error'); dj.error = err.message; }
+                // MPI-480 — stash the transient verdict alongside the message. The dep-level
+                // broadcast below is silent client-side (no modelId, MPI-97); the reason and
+                // its classification only reach the user via _checkModelJobsComplete, which
+                // reads them off the failed dep. Dropping the flag here loses it for good.
+                if (dj) { _setDepStatus(dj, 'failed', 'remote uw dep error'); dj.error = err.message; dj.transient = Boolean(err.transient); }
                 _remoteDepIds.delete(dep.id);
                 logger.error('download', `remote install trigger failed for ${dep.id}: ${err.message}`);
                 _broadcast('download:failed', { depId: dep.id, error: err.message });
@@ -2404,6 +2408,9 @@ function _checkModelJobsComplete() {
                 // MPI-427 — carry the network-blocked verdict up so the client routes it
                 // to a friendly toast instead of the Report-on-GitHub dialog.
                 networkBlocked: Boolean(failedDep && failedDep.networkBlocked),
+                // MPI-480 — same reasoning for a warming Pod's wrapper: the condition
+                // self-heals on a retry, so it is a toast, never a GitHub report.
+                transient: Boolean(failedDep && failedDep.transient),
             });
         } else if (allComplete) {
             if (modelJob.installCustomNodes) {

@@ -77,6 +77,27 @@ function splitDepFilename(depFilename) {
 }
 
 /**
+ * The RunPod proxy returns a TRANSIENT gateway status while the wrapper is briefly
+ * unreachable — 404 for a few seconds right after a Pod restart even when /health is
+ * green, and 502/503/504 when the proxy has the Pod but the wrapper upstream is still
+ * warming or momentarily dropped (seen live on a no-GPU Pod: an uninstall silently did
+ * nothing because its shared-dep guard hit a 502 on /wrapper/models/status and
+ * safe-aborted; "fixed" only by an app restart that re-warmed the proxy). wrapperFetch
+ * retries these rather than fail the whole operation. A real wrapper 4xx/5xx (e.g. 400
+ * bad body, 501 no endpoint) is NOT in this set and still surfaces immediately.
+ *
+ * MPI-480 — this is also the CLASSIFICATION, not just a retry list. A caller that
+ * throws on one of these statuses must stamp `err.transient = true` so the verdict
+ * survives the throw: downloadManager carries it onto the download:failed broadcast and
+ * the renderer routes it to a toast instead of the Report-on-GitHub dialog. Without the
+ * stamp the reason is a bare message string and every warm-up race reads as a bug worth
+ * filing.
+ */
+function isTransientProxyStatus(status) {
+  return status === 404 || status === 502 || status === 503 || status === 504;
+}
+
+/**
  * Fetch a wrapper route through the RunPod proxy with auth + UA, retrying the
  * transient warm-up window. Returns the raw fetch Response (caller reads
  * status/body) or throws on network error after retries.
@@ -105,20 +126,7 @@ async function wrapperFetch(routePath, { method = 'GET', body, retries = 15, ret
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetch(url, opts);
-      // The RunPod proxy returns a TRANSIENT gateway status while the wrapper is
-      // briefly unreachable — 404 for a few seconds right after a Pod restart even
-      // when /health is green, and 502/503/504 when the proxy has the Pod but the
-      // wrapper upstream is still warming or momentarily dropped (seen live on a
-      // no-GPU Pod: an uninstall silently did nothing because its shared-dep guard
-      // hit a 502 on /wrapper/models/status and safe-aborted; "fixed" only by an
-      // app restart that re-warmed the proxy). Retry these rather than fail the
-      // whole operation. A real wrapper 4xx/5xx (e.g. 400 bad body, 501 no
-      // endpoint) is NOT in this set and still surfaces immediately.
-      const isTransientProxyStatus = res.status === 404
-        || res.status === 502
-        || res.status === 503
-        || res.status === 504;
-      if (isTransientProxyStatus && attempt < retries) {
+      if (isTransientProxyStatus(res.status) && attempt < retries) {
         await new Promise((r) => setTimeout(r, retryDelayMs));
         continue;
       }
@@ -374,7 +382,9 @@ async function remoteModelsCheck(models) {
   const res = await wrapperFetch('/wrapper/models/status', { method: 'POST', body: { models: split } });
   const json = await res.json().catch(() => null);
   if (!res.ok || !json) {
-    throw new Error((json && (json.message || json.error)) || `wrapper status ${res.status}`);
+    const err = new Error((json && (json.message || json.error)) || `wrapper status ${res.status}`);
+    if (isTransientProxyStatus(res.status)) err.transient = true; // MPI-480
+    throw err;
   }
 
   json.results = foldBackWrapperStatus(json.results || {}, {
@@ -433,7 +443,12 @@ async function remoteInstallDep(dep, { sizeBytes = 0, force = false } = {}) {
   const json = await res.json().catch(() => null);
   // 202 started, 200 already_installed; anything else is a real failure.
   if (res.status !== 202 && res.status !== 200) {
-    throw new Error((json && (json.message || json.error)) || `wrapper install ${res.status}`);
+    const err = new Error((json && (json.message || json.error)) || `wrapper install ${res.status}`);
+    // MPI-480: the retry budget ran out on a status wrapperFetch itself calls transient
+    // (a warming Pod's proxy). Self-heals on a re-POST — carry the verdict so the client
+    // toasts instead of offering a GitHub report for a boot race.
+    if (isTransientProxyStatus(res.status)) err.transient = true;
+    throw err;
   }
   return json || { status: 'started', id: dep.id };
 }
@@ -851,4 +866,5 @@ module.exports = {
   openInstallEventStream,
   _isImageResident,
   foldBackWrapperStatus, // exported for tests (MPI-328)
+  isTransientProxyStatus, // exported for tests (MPI-480)
 };
