@@ -970,7 +970,11 @@ export const PROMPT_BOX_CONTROLS = {
                 name: 'refImageSize',
                 size: 'sm',
                 columns: 2,
-                info: 'How much of each reference the model reads. Match fits it to the output size (faster). Max keeps up to a 2048px edge — better identity, and the right choice for a character sheet, but slower on every step and steeper the more references you stage.',
+                // Status-bar width is the constraint: every other control's info sits at
+                // 57-108 chars and the first draft ran to 249, which the bar truncated
+                // mid-sentence. The dropped half (use Max for a character sheet; cost is
+                // steeper the more references you stage) lives in docs/models/h3/ref2va.md.
+                info: 'Match fits each reference to the output size (faster). Max keeps a 2048px edge, better identity but slower.',
             });
 
             this._instance.on('select', ({ value }) => {

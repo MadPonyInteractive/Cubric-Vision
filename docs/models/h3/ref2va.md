@@ -109,6 +109,14 @@ the rest. `--lowvram` in the engine's launch line is a **no-op** here — its ow
   **`max` usually gives the better result** (user, 2026-08-07) — but the default
   **stays `match`, and this is SETTLED, not open** (user, 2026-08-08): it is a user
   control, so the user decides per generation. Do not re-raise a default flip.
+  **Use `max` for a character sheet** — that is the case where identity fidelity is the
+  whole point and the extra s/step is worth it. This guidance used to live in the
+  control's own `info` tooltip; it was moved here 2026-08-08 because that string had
+  grown to 249 chars against a 57-108 house norm and the status bar truncated it
+  mid-sentence. The tooltip now carries only the two options and the trade.
+  **VRAM is not the limit at `max`** — measured 13.0 / 16 GB on a 4060 Ti during a `max`
+  run with two references (user, 2026-08-08), i.e. 3 GB still free. The cost is time,
+  not residency, which matches `very_high`'s 13.2/16 reading in `ratios.js`.
 - **No negative prompt.** `negativePrompt: false`, because the graph carries no
   `Input_Negative` and no `Input_Negative_Audio` — dropping the toggle removes both
   fields at once rather than shipping two that inject nowhere.
