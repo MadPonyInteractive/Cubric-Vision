@@ -1,13 +1,24 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-08T09:50:00Z",
+  "updated_at": "2026-08-08T08:47:10Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
-  "active_sessions": [],
-  "active_tasks": [],
-  "active_file_claims": [],
+  "active_sessions": [
+    ".agents/mpi-kanban/state/sessions/15480f52-7d46-4adf-b0d9-0013a486578a.json"
+  ],
+  "active_tasks": [
+    "MPI-467"
+  ],
+  "active_file_claims": [
+    "docs/README.md",
+    "docs/playbooks/bump-engine/01-smoke-run.md",
+    "routes/remoteProxyForward.js",
+    "scripts/smoke-workflows.mjs"
+  ],
   "pending_file_states": [],
-  "open_messages": [],
+  "open_messages": [
+    ".agents/mpi-kanban/state/messages/2ceb64ab-0154-411a-9048-d81a2db78be0.json"
+  ],
   "active_handoffs": [
     ".agents/mpi-kanban/state/handoffs/6e987efc-0ecd-43d8-bc6a-f80fce853c6d.json"
   ]

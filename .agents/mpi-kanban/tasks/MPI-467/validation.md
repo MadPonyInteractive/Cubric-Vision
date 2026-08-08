@@ -74,3 +74,66 @@ resolved by their `8cde2e9c` (MPI-470, Wan t2v deprecation):
 
 Recorded because it shaped this card's numbers: the Wan deprecation is now **committed**,
 so the 279.5 GB / 34-op figure above is measured against committed code, not a dirty tree.
+
+
+---
+
+# Third pass — read the GPU leg again, 2026-08-08 (no spend)
+
+Nothing rented. Both findings are in code the GPU leg would have run within a minute of
+the Pod coming up.
+
+## 1. The runner could not produce evidence the release gate would accept
+
+`assertPodEngineVersion` read `status.comfyVersion || status.version` from
+`/remote/comfy/status`. **Neither field exists.** The route
+(`routes/remotePodLifecycle.js:609`) answers:
+
+```
+{ running, ready, comfyReady, wrapperVersion, connecting, connectElapsedMs, noGpu }
+```
+
+and the wrapper's own `/health` adds only `wrapper_version` — there is no ComfyUI version
+anywhere on that path. So `got` was always `''`, the `die()` on mismatch was unreachable,
+and the run wrote `engine: { want, got: null, proven: false }`.
+
+`scripts/release-health-check.mjs` § `checkSmokeEvidence` then rejects that file:
+
+```js
+const ran = String(evidence?.engine?.got || '').replace(/^v/, '');
+if (!ran) fail(`... cannot prove WHAT was smoked (playbook gate 7).`)
+```
+
+**Deadlock.** The one file that unblocks 1.4 could not be produced by the run that exists
+to produce it — and only after a full GPU matrix had been paid for.
+
+**Fix.** `manifest.comfyui_ref` is the only place a Pod records the ComfyUI its image was
+built from (`_stamp_manifest_provenance`, from the `CUBRIC_COMFYUI_REF` build arg; the CI
+workflow feeds it at `cubric-vision-pod-image.yml:150`). Nothing app-side exposed the
+manifest — `_evaluatePodHealth` caches the *verdict*, never the body — so a passthrough
+route was added. Missing `comfyui_ref` now aborts instead of spending;
+`--allow-unproven-engine` covers the honest case (an image baked before the build arg,
+smoked when the pin has not moved, where evidence is not gated at all).
+
+## 2. Every post-create failure still leaked the rented Pod
+
+`die` is `process.exit(1)` and deletes nothing. `createPodWithRetry` (eb89f59f) fixed the
+**create**; downstream was untouched — an engine mismatch, a failed probe upload, a 502
+from any `app()` call, any throw reaching `main().catch`. `abort()` deletes the live Pod
+and then exits; every post-create exit goes through it, and `_podLive` is cleared by the
+explicit deletes so it never chases a Pod that is already gone.
+
+Deleting is also the safe direction mid-fill: it is cancelling **with** a Pod attached that
+destroys partials on the volume, never the delete itself.
+
+## What is proven, and what is not
+
+```
+GET /remote/pod/manifest -> 409 {"error":"remote_inactive"}     # _guard fires, route registered
+GET /remote/pod/nope     -> 404                                  # no over-broad matching
+node scripts/smoke-workflows.mjs --self-check -> OK
+```
+
+**Not proven:** the manifest body from a real Pod. The route lives in `routes/`, so it is
+**inert until the app restarts** — the same condition MPI-481's committed fix is waiting on.
+First GPU Pod of the next run is where both get their live check.
