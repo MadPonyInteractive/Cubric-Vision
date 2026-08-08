@@ -50,6 +50,30 @@ and both hosts are long gone, but handoffs and validation notes accumulate opera
 detail nobody writes for publication. Sweep `.agents/` for email patterns and `ssh ` before
 committing a session that touched anything sensitive.
 
+## `validating` is NOT a parking space — move it, or ASK
+
+Measured 2026-08-08: the board held **19 cards in `doing`, 16 of them
+`validating`**. Twelve closed in a single pass the moment the user was asked.
+Every one already had its evidence on the card; they sat there because no agent
+ever came back to ask, and the user's reaction to finding them was not a mild
+one.
+
+The maturity means "the work shipped and one check remains". It does **not** mean
+"awaiting rubber stamp". Two outcomes, no third:
+
+| the remaining check is… | do this |
+|---|---|
+| anything an agent can verify — tests, a live probe, a log line, a graph diff, an offline harness | **move to `done`.** No permission needed. Agent evidence is sufficient evidence. |
+| a judgement only a human can make — does it LOOK right, SOUND right, is this copy good, is this the product call | **ASK, in that session, in one line.** Name the card and the single thing needed. |
+
+**A card left in `validating` with no question asked is the defect.** It reads as
+progress and is indistinguishable from abandonment — that is exactly how twelve
+accumulated. If a session ends before the user answers, say so in the close-out;
+an unanswered question is visible, a silent park is not.
+
+`/mpi-end` enforces this — see `.claude/skills/mpi-end/SKILL.md`
+§ "`validating` IS NOT A PARKING SPACE".
+
 ## Card shape rules
 
 When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):

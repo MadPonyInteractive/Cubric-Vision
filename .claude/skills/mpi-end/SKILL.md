@@ -179,6 +179,38 @@ Because it DELEGATES (does not copy) the end-session logic, a pack update to
    `mpi-end-session` step 1 — this skill only adds what that skill omits:
    knowledge healing, changelog, versioning.)
 
+## `validating` IS NOT A PARKING SPACE — resolve every card, or ASK
+
+**Added 2026-08-08 after the board reached 19 cards in `doing`, 16 of them
+`validating`.** Twelve closed in one pass the moment the user was actually asked;
+every one had its evidence recorded already and was sitting there only because
+nobody ever came back. His words: *"If it's validated, it moves to done. It
+doesn't need to wait for my approval. Or if it needs my approval, agents should
+at least ask."*
+
+Before this skill finishes, **every card the session touched must land in exactly
+one of two states.** There is no third option and silence is not one of them.
+
+**1. Evidence exists → move it to `done`. Do not ask.**
+Agent verification counts and is sufficient: passing tests, a live probe, a real
+log line, a `/history` graph diff, an offline harness run. `validating` is not a
+courtesy hold for the user to rubber-stamp work that is already proven. Move it.
+
+**2. A human's eyes or ears are genuinely required → ASK, in this session,
+before it ends.**
+Only a judgement no test can make qualifies: does this LOOK right, does it SOUND
+right, is this copy good, is this the product call. Name the card and the ONE
+thing needed, in one line. If the user answers, act on it. If the session ends
+without an answer, say so plainly in the close-out summary — an unanswered ask is
+still visible, a silent park is not.
+
+**Leaving a card in `validating` without asking is the defect this rule exists to
+stop.** It reads as progress and is indistinguishable from abandonment.
+
+**So: list every `validating` card before closing.** For each, state the evidence
+and its outcome — moved, or the one question. A session that ends with cards
+still parked and no questions asked has not finished.
+
 ## Hard rules
 
 - Never edit the user-scope `mpi-end-session` skill or any file under
