@@ -229,6 +229,48 @@ function snapFrames(cur) {
     return n % 4 === 1 ? 5 : Math.max(1, BUDGET.frames);
 }
 
+// The model's declared speed/quality control. The shipped graph BAKES the SLOW value -
+// krea2_t2i_nsfw.json bakes Input_is_Turbo FALSE while the app itself defaults krea2Turbo
+// TRUE - and those graphs carry NO Input_Steps node, so the 1-step budget cannot reach
+// them: measured 2026-08-08, krea2 ops ran 75-187s against 4-38s elsewhere.
+// CAPABILITY-GATED, never by title alone. klein_t2i.json carries Input_is_Turbo while
+// klein-4b declares turboToggle:false (its base+turbo pair was dropped), and chroma's
+// Input_Tier selects Flash-vs-Hyper rather than speed - a title-only rule would flip both.
+// Values: Input_Tier is 1-indexed 1=Quality 2=Turbo 3=Hyper (js/data/promptControlDefaults.js).
+const FAST_TIER = [
+    ['turboToggle', 'Input_is_Turbo', true],
+    ['tierSelect', 'Input_Tier', 3],
+];
+
+/** Fastest tier a model declares it supports. Reported, never silent - a run that stops */
+/** applying one must SAY so rather than quietly get slower. */
+export function applyFastTier(graph, model) {
+    const applied = [];
+    for (const [cap, title, value] of FAST_TIER) {
+        if (!model?.capabilities?.[cap]) continue;
+        applied.push(`${title}=${injectByTitle(graph, title, value) ? value : 'ABSENT'}`);
+    }
+    return applied;
+}
+
+/** Flatten ComfyUI's node_errors into one line, or null when the prompt validated whole. */
+/** Slot names differ by node - an MpiStyleLoras bank names its inputs lora_1..lora_5, not */
+/** lora_name (MPI-359) - so read extra_info.input_name rather than matching a literal. */
+export function summarizeNodeErrors(nodeErrors) {
+    const ids = Object.keys(nodeErrors || {});
+    if (!ids.length) return null;
+    const parts = [];
+    for (const id of ids) {
+        const n = nodeErrors[id] || {};
+        for (const e of n.errors || []) {
+            const slot = e?.extra_info?.input_name;
+            const got = e?.extra_info?.received_value;
+            parts.push(`${n.class_type || id}${slot ? '.' + slot : ''}${got === undefined ? '' : `=${got}`}`);
+        }
+    }
+    return parts.slice(0, 6).join(', ') + (parts.length > 6 ? ` (+${parts.length - 6} more)` : '');
+}
+
 export function minimizeGraph(graph) {
     const applied = [];
     for (const node of Object.values(graph)) {
@@ -384,6 +426,31 @@ async function abort(msg) {
     die(msg);
 }
 
+/** The manifest is stamped by the wrapper DURING boot (_stamp_manifest_provenance) and
+ *  /remote/pod/manifest 409s until the app has flipped remote-active - so a SINGLE read
+ *  races both and reports a missing comfyui_ref that is merely LATE. That aborted a run
+ *  on 2026-08-08 four poll-ticks after create, on a Pod whose image was correctly built
+ *  from 0.30.0 and which had proved it twice an hour earlier. Poll until the field shows
+ *  up or the window closes; a genuinely unstamped image still aborts, just later. */
+async function readPodManifestWithRef(timeoutMs = 3 * 60 * 1000) {
+    const t0 = Date.now();
+    let last = null;
+    while (Date.now() - t0 < timeoutMs) {
+        const m = await app('/remote/pod/manifest').catch(() => null);
+        if (m?.comfyui_ref) return m;
+        if (m) last = m;
+        await sleep(5000);
+    }
+    if (last) {
+        // Answered, but without the field - say WHAT it held, or the next reader has to
+        // guess between "route never answered" and "image was built without the arg".
+        log(`  manifest answered without comfyui_ref; keys: ${Object.keys(last).join(', ') || '(empty)'}`);
+    } else {
+        log(`  /remote/pod/manifest never answered in ${Math.round(timeoutMs / 60000)} min`);
+    }
+    return last;
+}
+
 /** Gate 7 of the playbook: prove the Pod runs the engine we THINK we are smoking. */
 /** Smoking an unrebuilt image validates the OLD engine and stamps the bump safe. */
 async function assertPodEngineVersion() {
@@ -399,7 +466,7 @@ async function assertPodEngineVersion() {
     // release-health-check.mjs then refuses that very file for not recording what was
     // smoked (checkSmokeEvidence, "cannot prove WHAT was smoked"). A full GPU matrix could
     // not produce evidence its own gate would accept.
-    const manifest = await app('/remote/pod/manifest').catch(() => null);
+    const manifest = await readPodManifestWithRef();
     const got = String(manifest?.comfyui_ref || '').replace(/^v/, '');
     if (!got) {
         // Continuing here spends a whole GPU matrix on a file release:check will reject,
@@ -499,7 +566,8 @@ function prepOp(reg, model, op, probeImage) {
         injectByTitle(graph, mi.title, probeImage);
     }
     healSeparators(graph);
-    return { graph, applied: minimizeGraph(graph) };
+    const fast = applyFastTier(graph, model);
+    return { graph, applied: [...fast, ...minimizeGraph(graph)] };
 }
 
 /** Free sweep of every op's offline half. Returns the count of hard faults. */
@@ -524,10 +592,18 @@ async function runOp(reg, model, op, probeImage) {
     if (prep.status) return { op, status: prep.status, why: prep.why };
     const { graph, applied } = prep;
 
-    const { prompt_id } = await app('/proxy/prompt', {
+    const ack = await app('/proxy/prompt', {
         method: 'POST', body: JSON.stringify({ prompt: graph }),
     });
+    const { prompt_id } = ack || {};
     if (!prompt_id) return { op, status: 'FAIL', why: 'no prompt_id returned' };
+    // ComfyUI validates PER OUTPUT NODE: validate_prompt succeeds as soon as ONE output
+    // survives, and the 200 ack carries node_errors for the ones that did not ({} when
+    // clean). Scoring PASS on media count alone therefore reports a graph that rendered
+    // from a surviving output while its style-LoRA bank was dropped. Reported by the
+    // MPI-495 session, whose app-side half reads the same field. (MPI-495)
+    const partial = summarizeNodeErrors(ack.node_errors);
+    if (partial) return { op, status: 'FAIL', why: `partial validation: ${partial}`, budget: applied };
 
     const t0 = Date.now();
     while (Date.now() - t0 < 15 * 60 * 1000) {
@@ -547,7 +623,13 @@ async function runOp(reg, model, op, probeImage) {
             return { op, status: 'PASS', secs: Math.round((Date.now() - t0) / 1000), media, budget: applied };
         }
     }
-    return { op, status: 'FAIL', why: 'timed out after 15 min' };
+    // Give up on the OP, but never leave it executing: ComfyUI runs one prompt at a time,
+    // so an abandoned job makes every later op queue behind it and time out in turn - a
+    // cascade that reads as many broken models rather than one slow op. Best-effort:
+    // a Pod that has already gone away is exactly when this throws, and that is not a
+    // reason to lose the FAIL we are about to report.
+    await app('/proxy/interrupt', { method: 'POST' }).catch(() => {});
+    return { op, status: 'FAIL', why: 'timed out after 15 min', budget: applied };
 }
 
 // ── 5. Main ──────────────────────────────────────────────────────────────────
@@ -901,6 +983,32 @@ if (flag('self-check')) {
     assert(hg[1].inputs.lora_2 === 'None', 'None has no separator and passes through');
     assert(hg[2].inputs.lora_name === 'krea-2/style/b.safetensors', 'lora_name is healed');
     assert(hg[3].inputs.text.includes('\\'), 'a NON-path input must never be touched');
+    // applyFastTier: capability-gated, because two shipped graphs carry these titles for
+    // a DIFFERENT purpose. A title-only rule would flip klein's turbo and chroma's bake.
+    const tg = () => ({
+        1: { class_type: 'MpiSimpleBoolean', _meta: { title: 'Input_is_Turbo' }, inputs: { boolean: false } },
+        2: { class_type: 'MpiInt', _meta: { title: 'Input_Tier' }, inputs: { int: 1 } },
+    });
+    const on = tg();
+    const onApplied = applyFastTier(on, { capabilities: { turboToggle: true, tierSelect: true } });
+    assert(on[1].inputs.boolean === true, 'turboToggle model gets Input_is_Turbo true');
+    assert(on[2].inputs.int === 3, 'tierSelect model gets Input_Tier 3 (Hyper)');
+    assert(onApplied.length === 2, `fast tier must REPORT what it applied, got ${onApplied.join(',')}`);
+    const off = tg();
+    assert(applyFastTier(off, { capabilities: { turboToggle: false, tierSelect: false } }).length === 0
+        && off[1].inputs.boolean === false && off[2].inputs.int === 1,
+        'a model that does NOT declare the capability is left alone (klein/chroma carry these titles)');
+    assert(applyFastTier({}, { capabilities: { turboToggle: true } })[0] === 'Input_is_Turbo=ABSENT',
+        'a declared capability whose node is missing is reported ABSENT, never silently skipped');
+
+    // node_errors: a 200 ack with a dropped output is NOT a pass (MPI-495).
+    assert(summarizeNodeErrors(undefined) === null && summarizeNodeErrors({}) === null,
+        'a clean prompt returns null - {} is the normal shape, not an error');
+    const ne = { '41': { class_type: 'MpiStyleLoras', errors: [
+        { type: 'value_not_in_list', extra_info: { input_name: 'lora_3', received_value: 'krea-2/x.safetensors' } }] } };
+    assert(summarizeNodeErrors(ne) === 'MpiStyleLoras.lora_3=krea-2/x.safetensors',
+        `node_errors names the BANK SLOT, not lora_name (MPI-359); got ${summarizeNodeErrors(ne)}`);
+
     console.log(`self-check OK (${applied.join(', ')})`);
     process.exit(0);
 }

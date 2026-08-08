@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-497", "type": "task.created", "at": "2026-08-08T18:14:50Z", "actor": "opus", "summary": "Carded from live Pod logs the user surfaced during the MPI-467 GPU smoke matrix. Id claimed with exclusive mkdir per MPI-488."}

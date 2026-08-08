@@ -193,3 +193,52 @@ sibling still rendered, so the op **PASSED with its style LoRAs silently absent*
   identically, the drift path is the problem, not the pin.
 - **MPI-491 owes a number:** the GPU-image `_download_hf` rate on `controlnet-union-flux`
   (3.99GB, the only HF dep left uninstalled), sampled every 15s.
+
+---
+
+# The runner ran every tiered model at its SLOWEST setting (2026-08-08, during the second matrix)
+
+Spotted by the user watching a live Krea2 op. `krea2-nsfw/control` took **187s** against 4-38s
+for comparable SDXL ops.
+
+**Root cause, and it is two facts together.** The shipped graph BAKES the slow value -
+`krea2_t2i_nsfw.json` node 617 `Input_is_Turbo` is `false`, while the app's own
+`promptControlDefaults.js` sets `krea2Turbo: true` ("fast is the better first impression").
+The runner injects no PromptBox control, so it runs the bake. AND those graphs carry **no
+`Input_Steps` node at all**, so the 1-step budget cannot compensate - Krea2's step counts
+live inside the sampler chains that `Input_is_Turbo` selects between (OFF = 25 steps @ cfg
+3.5 + a 3-step pass; ON = 8 steps + the same pass). The evidence file shows this plainly: every
+Krea2 row's `budget` array is `Input_Seed`/`Input_Width`/`Input_Height` only.
+
+**The fix is capability-gated, and a title-only rule would have been WRONG.** Two shipped
+graphs carry these titles for a different purpose:
+
+- `klein_t2i.json` carries `Input_is_Turbo`, but `klein-4b` declares `turboToggle: false` -
+  its base+turbo pair was dropped 2026-07-27.
+- `chroma_t2i.json` / `chroma_hyper_t2i.json` carry `Input_Tier`, where the value selects
+  **Flash vs Hyper bake**, not speed.
+
+So `applyFastTier(graph, model)` reads `model.capabilities` and injects only what the model
+declares: `turboToggle` -> `Input_is_Turbo = true`, `tierSelect` -> `Input_Tier = 3`
+(1=Quality, 2=Turbo, 3=Hyper). It RETURNS what it applied, and a declared capability whose
+node is missing reports `ABSENT` rather than skipping silently - the add-model trap.
+
+**Qwen was already fine and is worth recording:** `qwen_edit.json` bakes `Input_Tier = 3`
+(Hyper), which is FASTER than the app's own default of 1 (Quality). The bake and the app
+default disagree in opposite directions on the two models - which is exactly why this is
+gated per model rather than assumed.
+
+**Verified:**
+
+```
+self-check OK (Input_Width=128, Input_Steps=1, Input_Frames=5)
+```
+
+Four new assertions, then mutation-tested - removing the capability gate fails the right one:
+
+```
+self-check FAILED: a model that does NOT declare the capability is left alone (klein/chroma carry these titles)
+```
+
+Restored from a `cp` backup, green again. **Not applied to the run in flight** - node had
+already loaded the script, so this takes effect on the NEXT matrix, which is what was asked.

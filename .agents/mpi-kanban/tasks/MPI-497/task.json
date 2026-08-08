@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-497",
+  "title": "An already-present dep still fires an 'installed' toast on re-verify",
+  "description": "UMBRELLA: MPI-467 (the 1.4 smoke umbrella) - surfaced by its GPU smoke matrix, listed in tasks/MPI-467/brief.md.\n\nObserved during the MPI-467 GPU smoke matrix, 2026-08-08. The install leg re-verified 95 deps against a volume that ALREADY held all of them (aghcuvg7nl, 325 GB used, filled by the previous run), and the app fired a completion toast per model anyway: 'ILL Anime Beauty installed.', 'SDXL Realistic installed.', 'Download complete - SDXL NSFW installed.' Nothing was downloaded - the deps were present and the verify was a no-op.\n\nUser-facing, not smoke-only: any user who reconnects to a Pod whose volume is already full gets a wall of 'installed' toasts for downloads that never happened. It also devalues the toast, which is the only signal that a real install finished.\n\nA dep that was already present should complete silently, or report as verified rather than installed. WHERE TO LOOK: the remote install completion path that emits the toast - it needs to distinguish 'downloaded now' from 'already there' before deciding to notify.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "open",
+  "created_at": "2026-08-08T18:14:50Z",
+  "updated_at": "2026-08-08T18:25:04Z",
+  "links": {
+    "brief": "brief.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  }
+}

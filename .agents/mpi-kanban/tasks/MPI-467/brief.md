@@ -100,3 +100,42 @@ playbook.
   it first; it establishes the shape but does not execute a graph.
 - LTX is **unrunnable on this machine** until MPI-466 lands (fp8 deleted, bf16 never present,
   int8 not yet wired). Do not treat its absence from a green run as coverage.
+
+---
+
+## Umbrella — cards this run produced or still owes (2026-08-08, second GPU matrix)
+
+This card is the 1.4 smoke umbrella. Everything below was surfaced BY a smoke run and is
+tracked here so nothing rots between the run and the release.
+
+**Carded from live Pod logs the user read during the run:**
+
+- **MPI-496** — stage-all-on-connect stages onto the DOWNLOAD Pod, which has no ComfyUI to
+  serve a staged weight and a container disk RunPod hard-caps at 20 GB. Confirmed NOT a
+  general thrash: MPI-329 already mirrors a GPU Pod's disk to the volume, and this run
+  measured that live — **RunPod telemetry read 1 GB / 455 GB on the GPU Pod against 20 GB on
+  the CPU Pod**, exactly the `_volumeMatchedDiskGb` clamp (450 + 5). The fix is one `noGpu`
+  test on the connect path, nothing more.
+- **MPI-497** — a dep already present on the volume still fires an "installed" toast on
+  re-verify. User-facing: reconnecting to a full volume produces a wall of install toasts for
+  downloads that never happened.
+
+**Owed, and it does NOT need a new volume.** MPI-491 closed without the GPU-image
+`_download_hf` rate. It could not be sampled on this run: `controlnet-union-flux` was already
+complete on the volume (4.28 GB, `downloadedBytes == totalBytes`, no progress lines in
+`app.log` today), so nothing downloaded. To get the number, uninstall THAT ONE DEP and
+reinstall it on a CPU download Pod — 4.28 GB, pennies, reversible. A second volume was
+considered and is not warranted for this.
+
+**Not yet carded — decide before close.** The stall watchdog fired three times during the
+install leg (`remote install silent for 105s / 90s / 100s with 1 dep(s) outstanding —
+treating as stalled`, each followed by `SSE closed (silent-stall) — recovering`). Every one
+recovered and the leg ended `installs verified: no failed deps`. But this was a RE-VERIFY of
+files already on the volume, where silence is the expected state, so the watchdog is doing
+recovery churn on a no-op. Same re-verify path as MPI-497 — fold it in there or give it its
+own card, but do not lose it.
+
+**Prior art to attach to, not duplicate:** MPI-483 owns the free-space preflight the smoke
+runner still lacks (it compares its estimate to the volume's TOTAL size, never to free
+bytes). MPI-349 owns the volume-availability watch. Neither is a "build a test volume" card,
+and none exists — checked across every card on the board, 2026-08-08.

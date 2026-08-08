@@ -211,3 +211,32 @@ half-wire in a script rather than an engine, but the same shape.
 politely to `proven: false`; the release check strictly refused unproven evidence. Both
 behaviours are right on their own. Nothing catches that pair except reading the producer and
 the consumer together — which costs minutes, against a GPU matrix that does not.
+
+## The fourth pass — the GPU leg EXECUTED, and it found what reading could not (2026-08-08)
+
+Pod `gpfaz5y3n7ymku`, L4, EU-RO-1, volume `aghcuvg7nl`. Fill first via the new
+`--install-only` (12 models, ~8 min, CPU Pod deleted automatically), then the matrix.
+
+**PASS 25 · SKIP 0 · FAIL 10** of 35 ops, `dev_configs/smoke-evidence.json` written with
+`engine: {want: 0.30.0, got: 0.30.0, proven: true}`. Gate 7 fired for the first time and
+proved the Pod image was built from the pinned engine. The three passes above were all
+read-found faults; these two are the first that only running could surface.
+
+| fault | how it presented | the rule now |
+|---|---|---|
+| **The MpiNodes pin predated a node five shipped workflows already use** | `node_lock.json` pinned `ComfyUI-MpiNodes` at `a6e5d5e0` (2026-08-06 **06:37Z**); `MpiStageLatents` landed in `da23e911` at **22:53Z the same day**. Every multi-stage video op died `missing_node_type` on `Input_Video_Latent` — `wan-22/i2v_ms`, `ltx-23-balanced/t2v_ms`+`i2v_ms`, `minimax-h3/t2v_ms`+`i2v_ms`, `minimax-h3-ref2va/ref2v_ms`. `MpiH3References` is missing the same way. User-facing: H3 video is a headline 1.4 feature | pin bumped to `43a976fd` in BOTH locks (`0851f2bb` here, `012902b` in mpi-ci) — code-only node, reinstalls to the volume at connect, no image rebuild. **Gate 8** added: diff every `Mpi*` class_type in the smoke set against `__init__.py` at the pinned commit. Reproduces all six OFFLINE, FREE, on `--plan` |
+| **The runner tested a path no user takes** | The runner POSTs straight to `/proxy/prompt` and so skipped `comfyController` § 3b's separator heal — 75 baked Windows paths across 14 workflows hit `value_not_in_list`. Four ops failed: `chroma-hyper/t2i`, `krea2-nsfw/t2i`, `klein-4b/t2i`, `wan22-5b/t2v` | heal mirrored into `prepOp`, covered 5 ways by `--self-check` and mutation-verified. **A runner that bypasses the app's own preparation is not smoking the product** |
+
+**`checkPodLock` could never have caught the pin.** It proves the two locks AGREE — and they
+agreed perfectly while both were stale. Agreement is not currency; gate 8 checks the pin
+against the nodes the workflows actually reference.
+
+**A PASS can hide a silent drop, because ComfyUI validates PER OUTPUT NODE.** Where a bad
+separator fed the only output, the op produced no media and FAILED. Where a sibling output
+still rendered, the op **PASSED with its style LoRAs silently absent**. The runner cannot
+see this — it only checks that media came out. Carded as MPI-495; until it is fixed, a green
+matrix does not prove LoRAs loaded.
+
+**Costs, measured.** Install leg on a CPU Pod: 12 models, ~8 min, pennies. GPU matrix on an
+L4: ~25 min, roughly 0.05 USD per six minutes. A `--plan` run and gate 8 both cost nothing —
+run them before renting anything, every time.
