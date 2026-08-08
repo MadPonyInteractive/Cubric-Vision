@@ -278,6 +278,13 @@
   and billing them to its sibling. It now counts only the files that model would actually
   have to fetch.
 
+- **A model that is part-way onto your disk no longer looks like it is downloading right
+  now.** A model whose files are partly present showed the same filling progress bar as a
+  live download, so a library with a few of those read as several models installing at
+  once — which never happens, since installs run one at a time. It now reads plainly as
+  **98% ON DISK**, beside the Install and Installed labels. A moving bar in the Model
+  Library means one thing only: something is downloading this second.
+
 - **Uninstalling now clears up after itself properly.** Uninstalling a model has always
   kept files that another installed model still needs, which is right. But once that other
   model went away too, its files were left behind for good — owned by nothing, deleted by
