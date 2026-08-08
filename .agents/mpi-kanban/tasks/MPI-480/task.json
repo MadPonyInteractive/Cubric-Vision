@@ -4,10 +4,10 @@
   "title": "A transient wrapper 404 opens the REPORT ON GITHUB dialog instead of a toast",
   "description": "routes/remoteModels.js:82-90 states the contract: a wrapper route that 404s or 5xxs while a Pod warms is TRANSIENT and must surface as a TOAST, never an error + REPORT ON GITHUB dialog. It does not hold. Live 2026-08-08 during the MPI-467 smoke fill: a cold -cpu download Pod answered /health green before /wrapper/models/install was routable, all 12 ltx-23-balanced deps threw \"wrapper install 404\" inside 0.2s, and the user got a Download Failed modal offering to file a GitHub issue for a boot race that a re-POST fixed seconds later. Find where the download:failed broadcast is classified renderer-side and route a transient wrapper status to the toast path the comment already promises. Do NOT fix it by widening the retry budget - that hides the instance and leaves the classification wrong.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-08T05:40:00Z",
-  "updated_at": "2026-08-08T04:45:00Z",
+  "updated_at": "2026-08-08T04:43:58Z",
   "labels": [
     "bug",
     "ux",
@@ -22,7 +22,8 @@
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
-    "handoffs": "handoffs/"
+    "handoffs": "handoffs/",
+    "validation": "validation.md"
   },
   "priority": "normal",
   "attention": {
