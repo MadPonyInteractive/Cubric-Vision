@@ -85,6 +85,34 @@ tokens ride EVERY sampling step, so a clip's worth of frames multiplies every st
 Stage 1 is **10 steps**, not 20: `BasicScheduler` makes 20 sigmas and `SplitSigmas`
 cuts at 10, so each stage samples half. Divide a stage's wall time by 10, not 20.
 
+**Moving the split does NOT save time — it reallocates.** Both `SamplerCustomAdvanced`
+nodes share one guider, one model and one latent size (there is no upscale between
+them), so their per-step cost is identical. `5/15` and `10/10` are both 20 steps and the
+same wall clock. The saving only arrives if `BasicScheduler.steps` comes down too:
+scheduler 15 with a split at 5 is 5 + 10, ~25 % off. What a smaller split DOES buy for
+free is a **2x faster preview**, because `progressStages` runs `preview: 1` = stage 1
+alone.
+
+### `scheduler: 'simple'` is a DELIBERATE baseline, not a leftover
+
+Recorded 2026-08-08 so nobody re-derives it. Comfy's own `video_minimax_h3_r2v`
+template ships `res_multistep` + `simple` + 20 steps, and ours is byte-identical to it —
+but the template's *description* says **"beta or normal scheduler tends to outperform
+simple for reference-heavy prompts like this one"**, arguing against the value in the
+widget beside it.
+
+We kept `simple` on purpose: ComfyUI's position is that **euler/simple is the neutral
+starting point for any sampler or scheduler comparison**, so it is the baseline every
+other result should be measured against — not an unexamined default. (Contrast
+`--lowvram` in `routes/comfy.js`, which really was an unexamined day-one default; the
+difference is exactly that this one is written down.)
+
+A `beta`-vs-`simple` A/B is in progress. A scheduler swap changes sigma spacing, not
+step count, so it is **free** at equal steps — and if `beta` holds detail better it may
+also hold up at fewer steps, which compounds with the step work above. It is a GLOBAL
+quality change to both H3 cards, so it needs to win on more than one prompt before it
+ships.
+
 **Do not read a slow run as a memory problem without checking GPU utilisation first.**
 On the 8m38s run: dedicated VRAM 13.3/16GB, shared 24.1GB, system RAM 60.6/63.8 —
 which looks like thrashing, and is not. GPU utilisation was **98%**, so the card was
