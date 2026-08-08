@@ -685,6 +685,17 @@ async function main() {
     await app('/remote/pod/delete-active', { method: 'POST' }).catch(() => log('  ⚠ CPU Pod delete failed — check RunPod.'));
     _podLive = false;
 
+    // The two halves have very different risk: the fill is a $0.06/hr CPU Pod, the matrix
+    // is a rented GPU that bills while nobody is watching. Splitting them lets the volume
+    // be filled unattended and the GPU leg wait for someone awake — without hand-rolling a
+    // second driver that would miss the retry round, the stall watchdog and the preflight.
+    if (flag('install-only')) {
+        log(`
+--install-only: volume filled and verified. Nothing rented from here.`);
+        log(`Re-run without the flag for the GPU leg — models 1-N re-verify in seconds.`);
+        return;
+    }
+
     const gpu = await pickGpu(volume.id);
     // The GPU Pod gets the SAME watchdog as the CPU one, and for a worse reason: this
     // path used a bare create + a hard 20-minute waitReady, and die() is process.exit(1)
