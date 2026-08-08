@@ -1,0 +1,6 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".claude/rules/kanban.md"
+  ]
+}

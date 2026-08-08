@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-492",
+  "title": "Delete the workaround half of the claim fix once the pack ships Mpi-Kanban MPI-26",
+  "description": "8052e4fb + 9ae5a0ee mixed permanent policy with workarounds for two broken skill-pack behaviours. When the pack fix lands, 15 lines become a doc asserting something FALSE (a 'verified 2026-08-08' section claiming scripts/new_uuid.py does not exist, when it will ship at <mpi-lib-root>/scripts/). Delete those; keep everything else. The brief lists both sides explicitly because 'the skills are fixed now' is exactly the reasoning that would wrongly delete .agents/mpi-kanban.local.md (still load-bearing - mpi-init will not re-run on an adopted project) and the CLAUDE.md claim bullet (fixes a third problem no pack fix can reach: a skill pack has no always-loaded surface in a consumer project). BLOCKED on Mpi-Kanban MPI-26 AND on a global pack reinstall - fixing that repo changes nothing here until npx skills add overwrites ~/.agents/skills/.",
+  "column": "todo",
+  "maturity": "blocked",
+  "status": "open",
+  "created_at": "2026-08-08T08:20:00Z",
+  "updated_at": "2026-08-08T08:20:00Z",
+  "links": {
+    "brief": "brief.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  }
+}
