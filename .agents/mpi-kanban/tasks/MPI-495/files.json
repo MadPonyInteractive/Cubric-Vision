@@ -1,0 +1,8 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/services/comfyController.js",
+    "tests/prompt-partial-validation.test.cjs",
+    "docs/comfy.md"
+  ]
+}

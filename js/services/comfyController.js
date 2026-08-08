@@ -122,6 +122,68 @@ function _collectComfyOutputUrls(httpBase, nodeOutput, target) {
 }
 
 /**
+ * MPI-495: turn the `node_errors` of an ACCEPTED (`200`) `/prompt` into a tagged
+ * error, so a partially-validated graph fails loudly instead of rendering a
+ * silently degraded result.
+ *
+ * ComfyUI validates PER OUTPUT NODE and only rejects the request when EVERY
+ * output is invalid (`execution.py` `validate_prompt` → `return (True, …)` as
+ * soon as one output survives). With one good output left it QUEUES the prompt,
+ * answers `200 {prompt_id, number, node_errors}`, logs "Output will be ignored"
+ * and executes the rest of the graph. The Pod wrapper forwards that body
+ * verbatim (`JSONResponse(r.json())`), so BOTH engines carry it.
+ *
+ * Carrier cannot name the engine here (unlike the 400 path, where the wrapper
+ * flattens ComfyUI's reply into `detail.comfy_body` text): a 200 is structured
+ * `node_errors` on remote too. So the engine is passed in.
+ *
+ * The style rack matters: `MpiStyleLoras` names its slots `lora_1..lora_5`
+ * (MPI-359), NOT `lora_name`, so the offending input is collected by SHAPE —
+ * a fixed `['lora_name']` list sees none of the style LoRAs this card is about.
+ *
+ * @param {object} nodeErrors  `node_errors` from the 200 ack (non-empty)
+ * @param {boolean} isRemote   true when this dispatch targeted the Pod
+ * @returns {Error} tagged with the same codes the 400 path uses, so
+ *   commandExecutor's existing warning toasts fire with no new UI wiring.
+ */
+export function partialValidationError(nodeErrors, isRemote) {
+    const where = isRemote ? 'remote' : 'local';
+    // Every input name the engine actually complained about, so a bank slot
+    // (`lora_3`) is read as a LoRA and a loader input keeps its own family.
+    const rejectedInputs = [];
+    for (const node of Object.values(nodeErrors || {})) {
+        for (const e of (node?.errors || [])) {
+            const input = e?.extra_info?.input_name;
+            if (typeof input === 'string' && !rejectedInputs.includes(input)) rejectedInputs.push(input);
+        }
+    }
+    const loraInputs = rejectedInputs.filter(i => /^(lora_name|lora_\d+)$/.test(i));
+    const loraHit = loraInputs.length ? findRejectedFile(nodeErrors, loraInputs) : null;
+    if (loraHit) {
+        const err = new Error(`ComfyUI skipped a LoRA node: "${loraHit.name}" is not in this engine's list.`);
+        err.code = `lora_missing_${where}`;
+        err.loraName = rejectedBasename(loraHit.name);
+        return err;
+    }
+    const weightHit = findRejectedFile(nodeErrors, MODEL_FILE_INPUTS);
+    if (weightHit) {
+        const err = new Error(`ComfyUI skipped a loader node: "${weightHit.name}" is not installed.`);
+        err.code = `weights_missing_${where}`;
+        err.weightName = rejectedBasename(weightHit.name);
+        return err;
+    }
+    // Anything else is a graph the app compiled and the engine refused to run in
+    // full — a real authoring/injection bug, so it stays untagged and reaches the
+    // bug reporter with the node that failed.
+    const first = Object.entries(nodeErrors || {})[0] || [];
+    const [nodeId, node] = first;
+    const reason = node?.errors?.[0];
+    return new Error(
+        `ComfyUI ignored part of this graph — ${node?.class_type || 'a node'} (${nodeId}) failed validation: `
+        + `${reason?.message || 'invalid input'}${reason?.details ? `: ${reason.details}` : ''}`);
+}
+
+/**
  * Builds one ComfyUI engine instance. Two are created at module load:
  * `remoteEngine` (`alwaysLocal:false`) and `localEngine` (`alwaysLocal:true`).
  * Each instance is fully self-contained — its own WS socket, clientId, prompt
@@ -1531,6 +1593,28 @@ function createEngine({ engine, alwaysLocal }) {
                 const ack = await req.json();
                 promptId = ack?.prompt_id || null;
                 if (!promptId) throw new Error('ComfyUI did not return a prompt_id');
+                // MPI-495: a 200 is NOT proof the whole graph will run. ComfyUI
+                // validates PER OUTPUT NODE and fails the REQUEST only when every
+                // output is invalid; with one good output left it queues the prompt,
+                // returns `node_errors` alongside the id, logs "Output will be
+                // ignored" and executes the rest. Reading only `prompt_id` is what
+                // let a style-LoRA branch fail `value_not_in_list` while a sibling
+                // output still rendered — an UNSTYLED image delivered as a complete
+                // success, with no toast and nothing in the app log. Any partial
+                // rejection means the engine will not run the graph the app
+                // compiled, so fail the generation rather than ship a degraded one.
+                const partial = ack?.node_errors && Object.keys(ack.node_errors).length
+                    ? ack.node_errors
+                    : null;
+                if (partial) {
+                    clientLogger.error('comfy', `/prompt accepted ${promptId} but ${Object.keys(partial).length} node(s) failed validation — the engine would SKIP them: ${JSON.stringify(partial).slice(0, 1000)}`);
+                    // Best-effort un-queue so the doomed run doesn't burn the GPU.
+                    // ponytail: this only removes a PENDING item — if the worker has
+                    // already picked it up we eat one wasted generation. interrupt()
+                    // would cancel whatever is running, which may not be ours.
+                    this.deleteQueueItem(promptId);
+                    throw partialValidationError(partial, !this._alwaysLocal && remoteEngineClient.isRemote());
+                }
                 if (promptId) {
                     this._promptListeners.set(promptId, internalListener);
                     // Register a reject hook so an out-of-band WS drop (B4) can
