@@ -191,3 +191,19 @@ DEPS map to decide what to trash, so a dep removed from the map can never be swe
 24–25GB file strands on every existing user's disk, untracked. Both entries are restored as
 deprecated-but-present. Caught only because MPI-470 had just written the same reasoning
 into the WAN t2v deps — worth knowing before retiring any weight.
+
+## CLOSED 2026-08-08 — the three i2v routes passed, on the user's own runs
+
+The one outstanding item was proving start-only, end-only and start+end by their OUTPUT,
+which needed a human looking at the video. Asked during the smoke-run session and answered
+directly:
+
+> "LTX Image to Video: all operations have been tested and passed. Same thing for WAN, at
+> least locally. Same thing for H3, the two new models from H3."
+
+That is the judgement this card was parked on, and it covers the end-only route that was
+unreachable until the slot gate and the last-frame role pill landed. LOCAL engine only —
+stated as such by the user.
+
+The REMOTE half is not claimed here and is not this card's to claim: it is proven by the
+MPI-467 smoke matrix, which has not run yet. MPI-465 still carries that.

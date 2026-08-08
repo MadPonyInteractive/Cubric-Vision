@@ -7,7 +7,7 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-07T00:30:00Z",
-  "updated_at": "2026-08-07T01:30:00Z",
+  "updated_at": "2026-08-08T04:55:00Z",
   "labels": [
     "bug",
     "ltx",
@@ -28,7 +28,7 @@
   "priority": "high",
   "attention": {
     "state": "required",
-    "reason": "SHIPPED regression: LTX is dead for every user on 1.3.0/1.3.1. Needs a hotfix-release decision, plus an app restart locally to drift-repair the engine and a Pod image rebuild for remote LTX.",
-    "updated_at": "2026-08-07T01:30:00Z"
+    "reason": "LOCAL half CONFIRMED by the user 2026-08-08: LTX image-to-video ops all tested and passed on this machine (same for WAN and both H3 models). What is left is exactly one thing and it is not a human judgement - the REMOTE half, i.e. the Pod image running the 0.30.0 engine, which the MPI-467 smoke matrix proves. That run has been attempted 3x and has never reached the GPU stage; ~97 GB of the fill sits on volume aghcuvg7nl. Close this card on smoke-evidence.json, not on another local check.",
+    "updated_at": "2026-08-08T04:55:00Z"
   }
 }

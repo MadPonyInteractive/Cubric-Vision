@@ -3,11 +3,11 @@
   "id": "MPI-466",
   "title": "Re-wire LTX to the new export: int8 balanced, bf16 high, media-derived routing",
   "description": "USER DECISION 2026-08-07: drop the distill LoRA toggle and the non-distilled dev model outright. HIGH stays bf16 distilled-1.1; BALANCED moves off fp8/mxfp8 to ltx-2.3-22b-distilled-1.1_transformer_only_int8_convrot (21.5GB), which A/B-beat fp8 on sound, hands and eyes and ran 10s faster. The re-exported graph (comfy_workflows/raw/ltx_i2v_t2v_template.json, 215 nodes against the shipped 119) changes far more than the weight: t2v and i2v merge into one file, Input_Video_Latent and Output_Preview put both stages in one graph (so the six LTX _stage2 twins die here, not in MPI-456), and routing derives from which frame slots are filled instead of op booleans. On disk today: fp8/mxfp8 deleted, int8 present, the 41GB bf16 never there - so NO LTX runs locally until this card ships, which is why MPI-465 cannot take its app proof first.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-07T01:05:00Z",
-  "updated_at": "2026-08-07T06:10:00Z",
+  "updated_at": "2026-08-08T04:55:00Z",
   "labels": [
     "model",
     "ltx",
@@ -30,8 +30,7 @@
   },
   "priority": "normal",
   "attention": {
-    "state": "required",
-    "reason": "t2v, preview and preview->Continue all PASS through the app on the int8 balanced tier (MPI-465 closed with them). Remaining: prove the three i2v routes by their OUTPUT - start-only, end-only, start+end. The end-only route was UNREACHABLE until this session and now needs a first run: graph re-exported (start.block_if_empty false on H3+WAN), slot gate fixed, and the last-frame role pill added. Needs a hard reload before testing.",
-    "updated_at": "2026-08-07T06:10:00Z"
+    "state": "none",
+    "updated_at": "2026-08-08T04:55:00Z"
   }
 }
