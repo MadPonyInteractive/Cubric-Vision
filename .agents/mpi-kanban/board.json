@@ -36,7 +36,6 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-482",
       "MPI-487",
       "MPI-442",
       "MPI-481",
@@ -47,6 +46,7 @@
       "MPI-465"
     ],
     "done": [
+      "MPI-482",
       "MPI-486",
       "MPI-461",
       "MPI-479",
@@ -92,7 +92,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-08T06:50:00Z",
+  "updated_at": "2026-08-08T07:20:00Z",
   "events": [
     {
       "at": "2026-08-07T14:20:43Z",
@@ -2465,6 +2465,14 @@
       "at": "2026-08-08T06:50:00Z",
       "actor": "opus",
       "summary": "todo -> doing. Measuring true bytes for all 111 file deps via HEAD, as a sibling pass in scripts/computeDepHashes.py. Scoping note before any edit: nodesDeps (14 entries) CANNOT be measured this way - their url is a lockUrl() call to a git repo, not a file, so the existing scanner's url regex never matched them and a HEAD has no Content-Length to give. They stay hand-written and that will be stated, not hidden. Also confirmed no dep url points at civitai.com (13 civitai hits are credit/licence metadata only), so this needs no VPN. Consumers are NOT being changed: routes/downloadManager.js, routes/comfy.js and routes/install/computeProgress.js all read dep.size through _parseSizeToBytes, and a routes/ edit needs a server restart that would kill the live MPI-467 fill. So `size` is regenerated from the measured bytes and every consumer inherits the correction with no code change."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-482",
+      "type": "task.moved",
+      "at": "2026-08-08T07:20:00Z",
+      "actor": "opus",
+      "summary": "doing -> done. 107 file-backed deps now carry `bytes:` from a HEAD and a `size:` regenerated from it (0ac94728 the pass, af829e0f the data + playbook). Closed on local evidence: the re-run is BYTE-IDENTICAL (0 rewritten, cmp clean), npm test 508/508, eslint clean, and an offline recompute of the full remote/cuda weight union agrees at 401.7 GB from both the strings and the integers. THE PREMISE INVERTED: the typed strings totalled 498.9 GB against a true 478.2 GB - 4.1% OVER, not under - so the registry cannot explain the MPI-467 volume overrun and MPI-483's du -sb apparent-bytes bug is the only live candidate. Both proof entries also failed: krea2-lora-filterbypass really IS 160 bytes (a valid safetensors with one F32 [1,12] tensor) and h3-qwen3vl-32b-clip is declared once at 26.36GB with no 28.3GB anywhere in the tree. Two silent pre-existing script bugs were fixed on the way: the entry-body regex truncated at the first NESTED object's closing brace, so nine deps (the seven CivitAI merges plus chroma1-hd-flash/-hyper) had been invisible to the sha256 pass for as long as it existed; and Path.write_text would have rewritten all 604 lines of the LF-only loraDeps.js as CRLF. THIRD ACCEPTANCE CRITERION NOT MET LOCALLY - whether the corrected total predicts a real fill needs a RunPod fill, which belongs to MPI-467/483, not here. NO consumer was changed: they all read `size`, and touching routes/ needs a restart that would kill the live fill."
     }
   ]
 }
