@@ -3,11 +3,11 @@
   "id": "MPI-475",
   "title": "Wire MiniMax H3 ref2va as a separate model - reference to video",
   "description": "Ship minimax-h3-ref2va as its OWN ModelDef, not an op on minimax-h3. It is a separate DiT (minimax_h3_ref2va_pruned_int8_convrot, 20.97 GB) and MiniMaxH3ReferenceToVideo has no keyframe path at all - it sets minimax_refs, never minimax_keyframes - so it cannot be folded into fl2va. The graph adopts the i2v workflow: outputs are identical (CONDITIONING + LATENT), so the whole tail reuses unchanged and only the head node swaps. The combinatorial problem is already solved by MpiH3References in ComfyUi-MpiNodes (see brief). Remaining: dep entries pointed at the publisher repos (NEVER re-hosted on R2 - the licence forbids redistribution), the ModelDef, progressStages, the type-consumer sweep, the ref_image_size app control, and the media-slot declarations for 9 image / 3 video / 3 audio inputs. Licence receipts are keyed by licence id, so accepting during a fl2va install already satisfies this model - no second dialog is a FEATURE, not a bug. This card is a 1.4 release blocker (MPI-450 Gate E).",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-07T15:56:11Z",
-  "updated_at": "2026-08-07T22:41:27Z",
+  "updated_at": "2026-08-08T04:10:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -17,10 +17,5 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
-  },
-  "attention": {
-    "state": "required",
-    "reason": "Judgement run PASSED 2026-08-07 (identity holds from a character sheet, voice follows an audio reference, motion transfers off a reference video, two references compose). Engine gate closed. Remaining before done: the UI checkbox list in validation.md. Preview clip stays borrowed by the users call.",
-    "updated_at": "2026-08-07T22:41:27Z"
   }
 }

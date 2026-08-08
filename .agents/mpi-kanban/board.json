@@ -37,27 +37,27 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-475",
-      "MPI-474",
-      "MPI-470",
       "MPI-468",
       "MPI-467",
       "MPI-466",
       "MPI-465",
-      "MPI-462",
       "MPI-463",
       "MPI-459",
-      "MPI-452",
-      "MPI-451",
-      "MPI-410",
-      "MPI-404",
-      "MPI-453",
-      "MPI-420",
-      "MPI-374",
-      "MPI-449",
       "MPI-367"
     ],
     "done": [
+      "MPI-449",
+      "MPI-374",
+      "MPI-453",
+      "MPI-420",
+      "MPI-404",
+      "MPI-410",
+      "MPI-451",
+      "MPI-452",
+      "MPI-462",
+      "MPI-470",
+      "MPI-474",
+      "MPI-475",
       "MPI-476",
       "MPI-473",
       "MPI-472",
@@ -82,7 +82,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-08T01:40:00Z",
+  "updated_at": "2026-08-08T04:20:00Z",
   "events": [
     {
       "at": "2026-08-07T14:20:43Z",
@@ -2224,6 +2224,126 @@
       "at": "2026-08-08T01:40:00Z",
       "actor": "opus",
       "summary": "Found while chasing an unrelated H3 speed report. Evidence is the user's own .meta sidecars: 7 ref2v_ms runs, and every one that ran at the DEFAULT refImageSize recorded op: null while both runs where he touched the control recorded the key. Carded rather than fixed inline because the snapshot feeds every Reuse Prompt path."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-475",
+      "type": "task.moved",
+      "at": "2026-08-08T04:10:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "H3 ref2va CLOSED on the user's own call 2026-08-08 after a full live session: the judgement run had already passed, and the evening exercised the chips, the Reference detail control, the settings popup and a dozen real generations. He said H3 is ready to ship."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-474",
+      "type": "task.moved",
+      "at": "2026-08-08T04:10:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed on the user's call 2026-08-08."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-470",
+      "type": "task.moved",
+      "at": "2026-08-08T04:10:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed on the user's call 2026-08-08. Wan 2.2 runs as a single i2v_ms op and its Model Library tile was seen in the same session that eye-tested MPI-476's four fixes."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-462",
+      "type": "task.moved",
+      "at": "2026-08-08T04:10:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed on the user's call 2026-08-08. The remaining item was one uninstall after a server restart, where 'swept 0' was always a valid pass. Remote twin stays deferred to MPI-464."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-452",
+      "type": "task.moved",
+      "at": "2026-08-08T04:10:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed on the user's call 2026-08-08 - H3 fl2va has been generating throughout the H3 sessions."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-451",
+      "type": "task.moved",
+      "at": "2026-08-08T04:10:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed on the user's call 2026-08-08. The licence gate was awaiting validation in the H3 session; that session ran and both H3 cards install and generate."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-410",
+      "type": "task.moved",
+      "at": "2026-08-08T04:10:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed on the user's call 2026-08-08."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-404",
+      "type": "task.moved",
+      "at": "2026-08-08T04:10:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed on the user's call 2026-08-08."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-420",
+      "type": "task.moved",
+      "at": "2026-08-08T04:20:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed on the user's call 2026-08-08."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-453",
+      "type": "task.moved",
+      "at": "2026-08-08T04:20:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed on the user's call 2026-08-08 ('maybe, not sure'), so the gap is recorded rather than dropped: the code is backed by 9 passing tests in tests/uninstalled-op-gate.test.cjs built from a REAL 400 body transcribed out of app.log, including a test that asserts the OLD reader fails on it - but the user has never SEEN the toast fire live, because reaching it needs an op whose weights are genuinely absent. If an uninstalled op ever opens the error dialog instead of toasting, reopen this."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-374",
+      "type": "task.moved",
+      "at": "2026-08-08T04:20:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed on the user's call 2026-08-08 - UI size survives a restart."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-449",
+      "type": "task.moved",
+      "at": "2026-08-08T04:20:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed on the user's call 2026-08-08. This was the feasibility research card and it produced its answer in full: H3 ships as TWO models (minimax-h3 fl2va and minimax-h3-ref2va), both generating, with the findings written up across docs/models/h3/ (README, performance.md, ref2va.md). Nothing about it is still open - the follow-on work has its own cards."
     }
   ]
 }

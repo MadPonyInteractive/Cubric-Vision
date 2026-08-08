@@ -3,11 +3,11 @@
   "id": "MPI-453",
   "title": "An operation whose weights are NOT installed is still dispatchable - and its rejection opens the bug-report dialog",
   "description": "Found live 2026-08-05 by the user on Wan 2.2. He has only the i2v weights installed; the app dispatched t2v_ms anyway, ComfyUI rejected the graph with 400 prompt_outputs_failed_validation, and that surfaced as the REPORT ON GITHUB error dialog. app.log names the real cause exactly: UNETLoader 95/96, \"Value not in list: unet_name: 'Wan_22_t2v_High.safetensors' not in [...]\" - the installed list holds Wan_22_i2v_High/Low but no t2v pair. TWO defects, and the first is the root. (1) AVAILABILITY: js/data/modelConstants/models.js gives wan-22 per-operation deps (operations.t2v_ms.deps = wan-22-t2v-high/low, operations.i2v_ms.deps = its own three), which the user opts in and out of per model - so the app KNOWS those weights are absent. resolveModelDeps.js:495 deriveInstalledOps already computes exactly that set and the Model Manager already uses it; the PromptBox op strip never consults it. The disable-reason hook is right there at MpiPromptBox.js:1251 ('paint a mask first' for requiresMask), so a sibling reason is the shape of the fix. wan-22 is the ONLY model with more than one op carrying its own weights today, which bounds the blast radius - but the gate belongs to the mechanism, not to wan-22. (2) ERROR SURFACE: a ComfyUI validation rejection is an expected, user-actionable state and must be a toast naming the missing weight, never MpiErrorDialog - which invites a bogus GitHub issue. The pattern already exists: MPI-229 turned the missing-LoRA case into a warning toast via _findNodeErrorLora in comfyController.js, reading node_errors[id].errors[].extra_info.received_value because the top-level details string is empty. unet_name (and ckpt_name / vae_name / clip_name) need the same treatment. Do NOT fix this by widening the dialog copy - that is the symptom.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-05T11:25:00Z",
-  "updated_at": "2026-08-05T11:55:00Z",
+  "updated_at": "2026-08-08T04:20:00Z",
   "labels": [
     "release-blocker",
     "MPI-450",
@@ -28,6 +28,5 @@
     "events": "events.jsonl",
     "validation": "validation.md"
   },
-  "priority": "high",
-  "attention": false
+  "priority": "high"
 }

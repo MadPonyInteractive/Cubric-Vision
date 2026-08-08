@@ -3,11 +3,11 @@
   "id": "MPI-449",
   "title": "Research MiniMax H3 on the local bench before any engine bump",
   "description": "H3 is a packed audio+video DiT, supported in ComfyUI core from v0.30.0 (nodes MiniMaxH3ImageToVideo / MiniMaxH3ReferenceToVideo / EmptyMiniMaxH3LatentAV / MiniMaxH3SigmaShift, plus a minimax CLIPLoader type). The bench at G:/ComfyUi was bumped 0.29.2 -> 0.30.2 on 2026-08-05 and the nodes register clean. The open question is not wiring, it is feasibility: weights are at Comfy-Org/MiniMax-H3 and the smallest usable set is 53.9 GB (DiT pruned_fp8_scaled 20.96 + qwen3vl_32b int8_convrot 27.14 + video VAE 5.21 + audio VAE 0.61), against 53.7 GB free on G: and 16 GB VRAM on the RTX 4060 Ti. Answer runnability first on the bench (or a Pod), and only then decide whether to bump the engine off its 0.29.2 pin and wire H3 as a model.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-05T03:20:00Z",
-  "updated_at": "2026-08-06T05:55:00Z",
+  "updated_at": "2026-08-08T04:20:00Z",
   "labels": [
     "research",
     "model",
@@ -26,6 +26,5 @@
     "events": "events.jsonl",
     "research": "research.md"
   },
-  "priority": "normal",
-  "attention": false
+  "priority": "normal"
 }

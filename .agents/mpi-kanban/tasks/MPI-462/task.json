@@ -3,19 +3,14 @@
   "id": "MPI-462",
   "title": "Six models read partially-installed when none are - and 16GB on disk belongs to nothing",
   "description": "The partial bar excludes deps of models that are universe-complete, while everything else calls a model installed at >=1 op; plus an uninstalled Boogu left a 10.59GB clip on disk.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-06T23:13:12Z",
-  "updated_at": "2026-08-07T00:36:00Z",
+  "updated_at": "2026-08-08T04:10:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
     "validation": "validation.md"
-  },
-  "attention": {
-    "state": "required",
-    "reason": "Sweep needs one real uninstall after a server restart (routes/ has no hot-reload); 'swept 0' is a valid pass. Remote twin deliberately deferred to MPI-464.",
-    "updated_at": "2026-08-07T00:36:00Z"
   }
 }
