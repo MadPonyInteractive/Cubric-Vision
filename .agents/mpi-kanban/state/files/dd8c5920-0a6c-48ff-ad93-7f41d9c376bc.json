@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "dd8c5920-0a6c-48ff-ad93-7f41d9c376bc",
+  "path": "docs/playbooks/bump-engine/01-smoke-run.md",
+  "owner_session": ".agents/mpi-kanban/state/sessions/15480f52-7d46-4adf-b0d9-0013a486578a.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/tasks/MPI-467/task.json",
+  "status": "claimed",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-08-08T08:42:02Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-08T08:42:02Z",
+      "event": "claimed_for_write"
+    }
+  ]
+}

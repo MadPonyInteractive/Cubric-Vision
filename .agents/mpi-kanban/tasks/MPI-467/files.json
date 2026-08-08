@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "docs/playbooks/bump-engine/01-smoke-run.md",
+    "routes/remoteProxyForward.js",
+    "scripts/smoke-workflows.mjs",
+    "dev_configs/smoke-evidence.json"
+  ]
+}
