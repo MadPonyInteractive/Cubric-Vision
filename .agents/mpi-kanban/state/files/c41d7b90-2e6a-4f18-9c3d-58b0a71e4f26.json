@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "c41d7b90-2e6a-4f18-9c3d-58b0a71e4f26",
+  "path": "dev_configs/node_lock.json",
+  "owner_session": ".agents/mpi-kanban/state/sessions/15480f52-7d46-4adf-b0d9-0013a486578a.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/tasks/MPI-467/task.json",
+  "status": "complete",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-08-08T17:32:52Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-08T17:31:34Z",
+      "event": "claimed_for_write",
+      "note": "MpiNodes pin bump only. A peer session is building the MpiNodes-sync skill and will also touch this file - short hold, released immediately after the bump."
+    },
+    {
+      "at": "2026-08-08T17:32:52Z",
+      "event": "released_complete",
+      "note": "Pin bumped a6e5d5e0 -> 43a976fd and committed (0851f2bb). File is free - the MpiNodes-sync skill session can take it."
+    }
+  ]
+}

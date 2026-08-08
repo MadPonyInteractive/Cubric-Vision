@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-08T09:24:37Z",
+  "updated_at": "2026-08-08T17:32:52Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -14,6 +14,7 @@
     "scripts/smoke-workflows.mjs"
   ],
   "pending_file_states": [
+    "dev_configs/node_lock.json",
     "docs/README.md",
     "routes/remoteProxyForward.js"
   ],
