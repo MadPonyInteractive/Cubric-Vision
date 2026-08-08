@@ -228,6 +228,13 @@
   tells you the engine is not ready yet and to try the install again in a moment. Genuine
   failures — a bad file, a full disk — still report exactly as before.
 
+- **A cloud install that was interrupted can be started again.** If your cloud engine
+  went away in the middle of a model install — stopped, deleted, or restarted — pressing
+  Install again did nothing at all: no error, no progress, just a bar sitting where it
+  stopped, and the only way out was restarting the app. The app was still treating that
+  abandoned download as if it were running. It now checks with the engine first and
+  restarts anything the engine is no longer working on.
+
 - **Updating the engine no longer leaves tools quietly missing.** After an engine update,
   five add-on packs could come back without the Python packages they need — the masking
   detectors, the pose and depth guides, several samplers and part of LTX. Nothing warned
