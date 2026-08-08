@@ -13,7 +13,8 @@ export const loraDeps = {
         filename: 'loras/wan-2.2-5b/Wan22_TI2V_5B_Turbo_lora_rank_64_fp16.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/wan-2.2-5b/Wan22_TI2V_5B_Turbo_lora_rank_64_fp16.safetensors',
         mirrorUrl: 'https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/LoRAs/Wan22-Turbo/Wan22_TI2V_5B_Turbo_lora_rank_64_fp16.safetensors',
-        size: '317MB',
+        size: '316.95MB',
+        bytes: 332348584,
         sha256: '0ace5244e3d1256f884662c261b017249796cf5b95f05d5ed93cc02a478967b8'
     },
     // Content-filter-bypass LoRA (always-on Input_Bypass_Filter_Lora node). A tiny
@@ -30,6 +31,7 @@ export const loraDeps = {
         filename: 'loras/krea-2/extra/krea2filterbypass3.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/extra/krea2filterbypass3.safetensors',
         size: '160B',
+        bytes: 160,
         sha256: 'ec5901a2d0b8f4e4e1e7e62fe4567566f0837799f7a413b03a06f72f47934dda',
         credit: {
             author: 'S1LV3RC01N',
@@ -52,7 +54,8 @@ export const loraDeps = {
         filename: 'loras/krea-2/edit/krea2_identity_edit_v1_2_r128.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/edit/krea2_identity_edit_v1_2_r128.safetensors',
         mirrorUrl: 'https://huggingface.co/conradlocke/krea2-identity-edit/resolve/main/krea2_identity_edit_v1_2_r128.safetensors',
-        size: '0.91GB',
+        size: '871.81MB',
+        bytes: 914159744,
         sha256: 'f53db0bb4b081d638f196865cbc9f055379704fafb788336784fc1ccde18d825',
     },
     // Accelerator LoRA (MPI-316) — this is TURBO, extracted as an SVD delta FROM Raw.
@@ -75,7 +78,8 @@ export const loraDeps = {
         filename: 'loras/krea-2/extra/krea2_turbo_distill_r128.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/extra/krea2_turbo_distill_r128.safetensors',
         mirrorUrl: 'https://huggingface.co/TheDivergentAI/krea2-turbo-distill-lora/resolve/main/krea2_turbo_distill_r128.safetensors',
-        size: '0.87GB',
+        size: '893.54MB',
+        bytes: 936944890,
         sha256: '0cd8b6a756456229b340d2382f30f91bd8540f9cdee4fb95edb897daf08f8c6f',
     },
     // Baked LoRA — loaded by the workflow, not user slots. Travels with the model.
@@ -88,7 +92,8 @@ export const loraDeps = {
         filename: 'loras/krea-2/control/depth-control-lora.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/control/depth-control-lora.safetensors',
         mirrorUrl: 'https://huggingface.co/Patil/Krea-2-depth-controlnet/resolve/main/depth-control-lora.safetensors',
-        size: '822MB',
+        size: '822.06MB',
+        bytes: 861995928,
         sha256: 'fb80547ed79b47c1e3fea7bb9d36297e3917b2115fab6700ca1501350f9f483c',
     },
     // The 9 style LoRAs are MUTUALLY EXCLUSIVE at runtime: an MpiMath gate zeroes 8
@@ -104,7 +109,8 @@ export const loraDeps = {
         filename: 'loras/krea-2/style/krea2_darkbrush.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_darkbrush.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_darkbrush.safetensors',
-        size: '448MB',
+        size: '447.55MB',
+        bytes: 469291992,
         sha256: 'f47c4316dd93af66e0518c93b582f459571d4925b519133770c73a52cd5db7c6',
     },
     'krea2-style-dotmatrix': {
@@ -114,7 +120,8 @@ export const loraDeps = {
         filename: 'loras/krea-2/style/krea2_dotmatrix.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_dotmatrix.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_dotmatrix.safetensors',
-        size: '448MB',
+        size: '447.55MB',
+        bytes: 469291992,
         sha256: '805aa30d863347222485b9d3ce81642dbc70a73cebc95ab57219d98b878fceec',
     },
     'krea2-style-kidsdrawing': {
@@ -124,7 +131,8 @@ export const loraDeps = {
         filename: 'loras/krea-2/style/krea2_kidsdrawing.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_kidsdrawing.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_kidsdrawing.safetensors',
-        size: '448MB',
+        size: '447.55MB',
+        bytes: 469291992,
         sha256: '8c1d45d204aeb4e34a7d9e16a7d473917592ba0048b03f4e03e037e3578ca500',
     },
     'krea2-style-neondrip': {
@@ -134,7 +142,8 @@ export const loraDeps = {
         filename: 'loras/krea-2/style/krea2_neondrip.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_neondrip.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_neondrip.safetensors',
-        size: '448MB',
+        size: '447.55MB',
+        bytes: 469291992,
         sha256: 'a779c14435949eabae9ce0bface4320cad6672ef3547e8489107e3498d65e871',
     },
     'krea2-style-rainywindow': {
@@ -144,7 +153,8 @@ export const loraDeps = {
         filename: 'loras/krea-2/style/krea2_rainywindow.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_rainywindow.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_rainywindow.safetensors',
-        size: '448MB',
+        size: '447.55MB',
+        bytes: 469291992,
         sha256: '7063a6f15ec6112ad3c06d79097b2a30a3ea7d9072821cb36021010d55989fe5',
     },
     'krea2-style-retroanime': {
@@ -154,7 +164,8 @@ export const loraDeps = {
         filename: 'loras/krea-2/style/krea2_retroanime.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_retroanime.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_retroanime.safetensors',
-        size: '448MB',
+        size: '447.55MB',
+        bytes: 469291992,
         sha256: 'ca42107783d9e517c5d62cb9a9db9ab2ba4887d90e9dad97a9d1a7fe6ff14c56',
     },
     'krea2-style-softwatercolor': {
@@ -164,7 +175,8 @@ export const loraDeps = {
         filename: 'loras/krea-2/style/krea2_softwatercolor.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_softwatercolor.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_softwatercolor.safetensors',
-        size: '448MB',
+        size: '447.55MB',
+        bytes: 469291992,
         sha256: '3805e8655f19fbcac116542685e3f78f3a642e8fbfb857b5352bb32a4b3d445a',
     },
     'krea2-style-sunsetblur': {
@@ -174,7 +186,8 @@ export const loraDeps = {
         filename: 'loras/krea-2/style/krea2_sunsetblur.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_sunsetblur.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_sunsetblur.safetensors',
-        size: '448MB',
+        size: '447.55MB',
+        bytes: 469291992,
         sha256: '194abdd531ca190d32799f26ab5bab634aa5ba3f07b7a60ffb282657db8bf3a0',
     },
     'krea2-style-vintagetarot': {
@@ -184,7 +197,8 @@ export const loraDeps = {
         filename: 'loras/krea-2/style/krea2_vintagetarot.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/krea2_vintagetarot.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Krea-2/resolve/main/loras/krea2_vintagetarot.safetensors',
-        size: '448MB',
+        size: '447.55MB',
+        bytes: 469291992,
         sha256: '8cca96c56658fb3ac5269f9ef2245bd07cbf1b7a189f517c8763470bb1385f9f',
     },
     'krea2-style-midjourney': {
@@ -194,6 +208,7 @@ export const loraDeps = {
         filename: 'loras/krea-2/style/KREA_MIDJ_1.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/krea-2/style/KREA_MIDJ_1.safetensors',
         size: '218MB',
+        bytes: 228587776,
         sha256: 'ad4a9f0b4d61ba77c5783b51fe3a2b637f8245144c1ce5e6a3fcd8225fd7df8a',
     },
     // ── Qwen-Image-Edit-2511 LoRAs (MPI-300) ───────────────────────────────────
@@ -209,7 +224,8 @@ export const loraDeps = {
         filename: 'loras/qwen/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/qwen/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors',
         mirrorUrl: 'https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning/resolve/main/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors',
-        size: '810MB',
+        size: '810.25MB',
+        bytes: 849608296,
         sha256: '22226e8d05d354bb356627d428809f5afd7819399b077238a2b70a82883a904f',
     },
     'qwen-edit-lightning-8step': {
@@ -219,7 +235,8 @@ export const loraDeps = {
         filename: 'loras/qwen/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/qwen/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors',
         mirrorUrl: 'https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning/resolve/main/Qwen-Image-Edit-2511-Lightning-8steps-V1.0-bf16.safetensors',
-        size: '810MB',
+        size: '810.25MB',
+        bytes: 849608296,
         sha256: 'a9e81a58a78f260f67b337a6f615e8fa4cd3bc79847c77b7d61a581b789b1ba8',
     },
     // Style LoRAs (7) — user-selectable style rack (Krea2 style-system: MpiMath a==N
@@ -231,7 +248,8 @@ export const loraDeps = {
         origin: 'CivArchive/2235007',
         filename: 'loras/qwen/styles/Illustration_style.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/Illustration_style.safetensors',
-        size: '590MB',
+        size: '562.72MB',
+        bytes: 590058824,
         sha256: '7b64be03fd3bf0a4aa7465b3942fb4bb68c252d1a514c2047094f9f2df3e58cd',
     },
     'qwen-edit-style-anime3d': {
@@ -240,7 +258,8 @@ export const loraDeps = {
         origin: 'CivArchive/2373282',
         filename: 'loras/qwen/styles/Qwen-Anime-V2.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/Qwen-Anime-V2.safetensors',
-        size: '425MB',
+        size: '405.27MB',
+        bytes: 424960008,
         sha256: '4c4cf33fc51d2f94c7e7d878a2989be3d69a321efd770d54ac42d9b49e23a799',
     },
     'qwen-edit-style-anime2d': {
@@ -249,7 +268,8 @@ export const loraDeps = {
         origin: 'CivArchive/2483865',
         filename: 'loras/qwen/styles/animal_style.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/animal_style.safetensors',
-        size: '236MB',
+        size: '225.18MB',
+        bytes: 236117040,
         sha256: '1d25fdcff7cd2da1a8daafa5ab9dc077d15ff56b9f029ab332b1b4e13d753b03',
     },
     'qwen-edit-style-zankuro': {
@@ -258,7 +278,8 @@ export const loraDeps = {
         origin: 'CivArchive/2132600',
         filename: 'loras/qwen/styles/zankuro-style-v1.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/zankuro-style-v1.safetensors',
-        size: '236MB',
+        size: '225.18MB',
+        bytes: 236117032,
         sha256: 'a3580f7af2c11d2c9a8867c32807b13284e7c84dde66fddcb29daef0fbdf1fc2',
     },
     // Flow-only LoRA (MPI-299 Head Swap) — required by the Flow via FlowDef.requiredDeps,
@@ -286,7 +307,8 @@ export const loraDeps = {
         // this one works. So the finding is "rank-16 fp16 lost", NOT "fp16 lost".
         filename: 'loras/qwen/bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/qwen/bfs_head_v5_2511_merged_version_rank_32_fp32.safetensors',
-        size: '1.2GB',
+        size: '1.12GB',
+        bytes: 1206402600,
         // Verified by ROUND TRIP 2026-07-19: downloaded from the URL above and hashed
         // the served bytes (1,206,402,600 B, identical to local). This field verifies
         // the DOWNLOAD, so hashing the local file alone would not have earned it.
@@ -305,7 +327,8 @@ export const loraDeps = {
         origin: 'CivArchive/2483967',
         filename: 'loras/qwen/styles/style_3d.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/style_3d.safetensors',
-        size: '354MB',
+        size: '337.68MB',
+        bytes: 354082312,
         sha256: '87cee29c91abe22a657fd958d98d0dbd9fe0a43941bea1fec3aa6be0535ed5bb',
     },
     'qwen-edit-style-caricature': {
@@ -314,7 +337,8 @@ export const loraDeps = {
         origin: 'CivArchive/2427075',
         filename: 'loras/qwen/styles/qwen-edit-2509-caricature_v1.1.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/qwen-edit-2509-caricature_v1.1.safetensors',
-        size: '590MB',
+        size: '562.72MB',
+        bytes: 590058888,
         sha256: '60db309510817bfc86e23b570589b9b3d6aedc626e35632b32f54d2cc5b9cf3d',
     },
     'qwen-edit-style-snapshot': {
@@ -323,7 +347,8 @@ export const loraDeps = {
         origin: 'CivArchive/2681332',
         filename: 'loras/qwen/styles/Amateur_snapshot.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/qwen/styles/Amateur_snapshot.safetensors',
-        size: '148MB',
+        size: '141.33MB',
+        bytes: 148192992,
         sha256: '1590201e0a45305c1fa00deb6ebdf33dbb4df5a9de388283911eb0c5b2c35cb5',
     },
     // Baked LoRAs — loaded by the workflow (not user slots), travel with the
@@ -339,7 +364,8 @@ export const loraDeps = {
         origin: 'Mad-Pony-Interactive/cubric-studio',
         filename: 'loras/ltx-2.3/LTX23_softenhance_abliterated_detailer_merged.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/ltx-2.3/LTX23_softenhance_abliterated_detailer_merged.safetensors',
-        size: '3.87GB',
+        size: '3.6GB',
+        bytes: 3869749848,
         sha256: '3c5f9a7ffb75db2f32f26a9636c24695c8a8b926fa83d73a45f069ff65399444',
     },
     'ltx23-lora-transition': {
@@ -348,7 +374,8 @@ export const loraDeps = {
         origin: 'Mad-Pony-Interactive/cubric-studio',
         filename: 'loras/ltx-2.3/ltx2.3-transition.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/ltx-2.3/ltx2.3-transition.safetensors',
-        size: '372MB',
+        size: '372.15MB',
+        bytes: 390229424,
         sha256: 'ba420d6fefafced8e317e2d6ff951b312b52f534377d016b491877a00b830d33',
     },
     'ltx23-lora-talkvid': {
@@ -358,7 +385,8 @@ export const loraDeps = {
         filename: 'loras/ltx-2.3/id-lora-talkvid/ltx-2.3-id-lora-talkvid-3k.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/ltx-2.3/id-lora-talkvid/ltx-2.3-id-lora-talkvid-3k.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/ltx-2.3/resolve/main/split_files/loras/ltx-2.3-id-lora-talkvid-3k.safetensors',
-        size: '1.1GB',
+        size: '1.08GB',
+        bytes: 1157884304,
         sha256: 'e5af73441743b4852f228b03e444888dff3da80d2666033af2367ab7bda6d8b9',
     },
     // Klein turbo/accelerator LoRA — DROPPED 2026-07-27, deliberately not a dep.
@@ -378,7 +406,8 @@ export const loraDeps = {
         origin: 'fal (FLUX.2 Klein outpaint, comfy-converted)',
         filename: 'loras/flux2-klein/flux2-klein-4b-outpaint.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/flux2-klein-4b-outpaint.safetensors',
-        size: '76MB',
+        size: '72.52MB',
+        bytes: 76038936,
         sha256: 'b8a5142b40f2e24aa1f5cfd0710323188836f49ea70b15b5f85b1e364316bc5b',
     },
     // Klein depth refcontrol LoRA (MPI-354) — BAKED on the depth branch (node 143,
@@ -409,7 +438,8 @@ export const loraDeps = {
         origin: 'FLUX.2 Klein refcontrol (depth)',
         filename: 'loras/flux2-klein/flux2_klein_4b_refcontrol_depth.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/flux2_klein_4b_refcontrol_depth.safetensors',
-        size: '92MB',
+        size: '88.15MB',
+        bytes: 92426784,
         sha256: '65ec4c71fa7538b2201481928609a5836773f0dc06a4041b2d28abd05826c401',
     },
     // Klein NSFW LoRA (MPI-354) — BAKED, and PROMPT-GATED, not user-facing: node 38
@@ -424,7 +454,8 @@ export const loraDeps = {
         origin: 'CivitAI 2458332 (Party Time, v2.0_klein4B)',
         filename: 'loras/flux2-klein/NSFW_party_time_v2.0_klein4b.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/NSFW_party_time_v2.0_klein4b.safetensors',
-        size: '180MB',
+        size: '180.01MB',
+        bytes: 188756968,
         sha256: '0c4aea1ba041985d2d7e6ce655b865e0fe22ea37575b3310c4619ad57dc80a00',
     },
     // ── Klein style LoRAs (MPI-354) ────────────────────────────────────────────
@@ -450,7 +481,8 @@ export const loraDeps = {
         origin: 'CivitAI (FLUX.2 Klein 4B Muppet Show style)',
         filename: 'loras/flux2-klein/styles/flux2-klein-4b-lora-muppetshow-style.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/flux2-klein-4b-lora-muppetshow-style.safetensors',
-        size: '88MB',
+        size: '88.15MB',
+        bytes: 92426832,
         sha256: 'd75818b477b4e852eeb862d03e92bcf61ef72326f8e7f0de1bebda38596fab7a',
     },
     'klein-style-cartoon': {
@@ -459,7 +491,8 @@ export const loraDeps = {
         origin: 'CivitAI (FLUX.2 Klein 4B Fluxtoon style)',
         filename: 'loras/flux2-klein/styles/flux2-klein-4b-lora-Fluxtoon-Style.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/flux2-klein-4b-lora-Fluxtoon-Style.safetensors',
-        size: '88MB',
+        size: '88.15MB',
+        bytes: 92426824,
         sha256: 'fd308c80f8801626bc0eb53f778ded7f5ae162c7c6b334f82a263ac5033d1354',
     },
     'klein-style-jojo': {
@@ -468,7 +501,8 @@ export const loraDeps = {
         origin: 'CivitAI (FLUX.2 Klein 4B Jojoso style)',
         filename: 'loras/flux2-klein/styles/flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors',
-        size: '88MB',
+        size: '88.15MB',
+        bytes: 92426808,
         sha256: 'dd021028b403a3760776b04e2e9c3e23551cc9fdce939e2d49c6e31d5f3d860d',
     },
     // The ONE weight we ship whose creator requires attribution — CivitAI
@@ -482,7 +516,8 @@ export const loraDeps = {
         origin: 'CivitAI (Anime new mecha, klein4b)',
         filename: 'loras/flux2-klein/styles/Anime_new_mecha_klein4b.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/Anime_new_mecha_klein4b.safetensors',
-        size: '88MB',
+        size: '88.14MB',
+        bytes: 92426264,
         sha256: '2ca647f74ca265fa3e1c22084b78006662bf0c38cf70418b1e798b25971147a0',
         credit: {
             author: 'n_Arno',
@@ -496,7 +531,8 @@ export const loraDeps = {
         origin: 'CivitAI (Roblox chibi doll, klein4b)',
         filename: 'loras/flux2-klein/styles/robloxchibidoll_lora_klein4b_000002200.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/robloxchibidoll_lora_klein4b_000002200.safetensors',
-        size: '88MB',
+        size: '88.14MB',
+        bytes: 92426632,
         sha256: 'e809c8257a5f58eee14d3ab55a0f8f8b81a41f33eb1f5a3eb79f964cdcc6b7de',
     },
     'klein-style-doodle': {
@@ -505,7 +541,8 @@ export const loraDeps = {
         origin: 'CivitAI (klein4b doodle v1)',
         filename: 'loras/flux2-klein/styles/klein4b-doodle_v1.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/klein4b-doodle_v1.safetensors',
-        size: '22MB',
+        size: '22.05MB',
+        bytes: 23122832,
         sha256: '5ad2d907fcaee23ae2f7b2a9bb125774cb3013d57b0a966fd050271825bdba67',
     },
     'klein-style-vintage': {
@@ -514,7 +551,8 @@ export const loraDeps = {
         origin: 'CivitAI (vintage photo, klein4b)',
         filename: 'loras/flux2-klein/styles/vintage_photo.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/vintage_photo.safetensors',
-        size: '88MB',
+        size: '88.15MB',
+        bytes: 92427896,
         sha256: '727ade732ac509d6cd2de73b21458973878bd8057851c70bd3aec0b337934c1b',
     },
     'klein-style-aesthetic': {
@@ -523,7 +561,8 @@ export const loraDeps = {
         origin: 'CivitAI (Flux Klein 4B Art)',
         filename: 'loras/flux2-klein/styles/Flux-Klein-4B-Art_10.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/Flux-Klein-4B-Art_10.safetensors',
-        size: '184MB',
+        size: '183.78MB',
+        bytes: 192702824,
         sha256: '7243d2664fa35beff2cc43e3e4073d98dfaef1ed16f8a462f3a7a6547c8cf98b',
     },
     // ── Chroma style LoRAs (MPI-365) ───────────────────────────────────────────
@@ -550,7 +589,8 @@ export const loraDeps = {
         origin: 'CivitAI (Chroma - Complex Chaotic B&W Stuff v2.0, Apache-2.0)',
         filename: 'loras/chroma/styles/Complex_Chaotic_BW_Stuff.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/chroma/styles/Complex_Chaotic_BW_Stuff.safetensors',
-        size: '214MB',
+        size: '213.83MB',
+        bytes: 224216168,
         sha256: '69b5226e7ce7f31b11db8a2279edbd26f6623fe7ce7b49050f5a2159f037cb91',
         credit: {
             author: 'TijuanaSlumlord',
@@ -567,7 +607,8 @@ export const loraDeps = {
         origin: 'CivitAI (Lenovo UltraReal, v1.0 Chroma)',
         filename: 'loras/chroma/styles/lenovo_chroma.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/chroma/styles/lenovo_chroma.safetensors',
-        size: '107MB',
+        size: '106.93MB',
+        bytes: 112125552,
         sha256: 'df934b1a366206daa3b5dcfef7c84efd9e75ca19d00867d7fe24fa2bb233fdc9',
         credit: {
             author: 'Danrisi',
@@ -582,7 +623,8 @@ export const loraDeps = {
         origin: 'CivitAI (Chroma - Fine Tactile Brushwork v2.0, Apache-2.0)',
         filename: 'loras/chroma/styles/Fine_Tactile_Brushwork.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/chroma/styles/Fine_Tactile_Brushwork.safetensors',
-        size: '214MB',
+        size: '213.83MB',
+        bytes: 224216080,
         sha256: '7b594e78fb929a6dc6cc6a3dd94f87ba1489ae2774afd38d6514bf3476be307e',
         credit: {
             author: 'TijuanaSlumlord',
@@ -598,7 +640,8 @@ export const loraDeps = {
         origin: 'CivitAI (Illustrious Anime Collection, Chroma-Anime V3)',
         filename: 'loras/chroma/styles/Chroma-Anime-v3.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/chroma/styles/Chroma-Anime-v3.safetensors',
-        size: '428MB',
+        size: '427.78MB',
+        bytes: 448564344,
         sha256: 'd1c5756064bdbc6738bf24e6152c011b8ddaf0b93585963c381c3216318900fb',
     },
 };

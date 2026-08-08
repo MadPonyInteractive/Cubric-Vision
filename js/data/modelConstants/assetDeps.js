@@ -29,6 +29,7 @@ export const assetDeps = {
         url: 'https://models.cubric.studio/vision/models/vae/wan2.2_vae.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan2.2_vae.safetensors',
         size: '1.31GB',
+        bytes: 1409400960,
         sha256: 'e40321bd36b9709991dae2530eb4ac303dd168276980d3e9bc4b6e2b75fed156'
     },
     'wan_2.1_vae': {
@@ -37,7 +38,8 @@ export const assetDeps = {
         filename: 'vae/wan_2.1_vae.safetensors',
         url: 'https://models.cubric.studio/vision/models/vae/wan_2.1_vae.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors',
-        size: '254MB',
+        size: '242.06MB',
+        bytes: 253815318,
         sha256: '2fc39d31359a4b0a64f55876d8ff7fa8d780956ae2cb13463b0223e15148976b'
     },
     // VAEs are SHARED resources — named by the weight, NOT by PiD. ae.safetensors
@@ -50,7 +52,8 @@ export const assetDeps = {
         filename: 'vae/ae.safetensors',
         url: 'https://models.cubric.studio/vision/models/vae/ae.safetensors',
         mirrorUrl: 'https://huggingface.co/lodestones/Chroma/resolve/main/ae.safetensors',
-        size: '335MB',
+        size: '319.77MB',
+        bytes: 335304388,
         sha256: 'afc8e28272cd15db3919bacdb6918ce9c1ed22e96cb12c4d5ed0fba823529e38'
     },
     // FLUX.2 VAE — a DIFFERENT weight from `vae-flux-ae` (FLUX.1's ae.safetensors).
@@ -62,7 +65,8 @@ export const assetDeps = {
         filename: 'vae/flux2-vae.safetensors',
         url: 'https://models.cubric.studio/vision/models/vae/flux2-vae.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/flux2-dev/resolve/main/split_files/vae/flux2-vae.safetensors',
-        size: '336MB',
+        size: '320.64MB',
+        bytes: 336213556,
         sha256: 'd64f3a68e1cc4f9f4e29b6e0da38a0204fe9a49f2d4053f0ec1fa1ca02f9c4b5'
     },
     'vae-sdxl': {
@@ -72,7 +76,8 @@ export const assetDeps = {
         filename: 'vae/sdxl_vae.safetensors',
         url: 'https://models.cubric.studio/vision/models/vae/sdxl_vae.safetensors',
         mirrorUrl: 'https://huggingface.co/stabilityai/sdxl-vae/resolve/main/sdxl_vae.safetensors',
-        size: '335MB',
+        size: '319.14MB',
+        bytes: 334641164,
         sha256: '63aeecb90ff7bc1c115395962d3e803571385b61938377bc7089b36e81e92e2e'
     },
     'vae-sd3': {
@@ -82,7 +87,8 @@ export const assetDeps = {
         filename: 'vae/sd3_vae.safetensors',
         url: 'https://models.cubric.studio/vision/models/vae/sd3_vae.safetensors',
         mirrorUrl: 'https://huggingface.co/silveroxides/SD3-PonyCLIP-forfun/resolve/main/vae/diffusion_pytorch_model.safetensors',
-        size: '168MB',
+        size: '159.9MB',
+        bytes: 167666654,
         sha256: 'f9b67a279283625caee39d61eacb5324243848477b4eb535355eaaa8423d4e09'
     },
     'vae-qwen-image': {
@@ -92,7 +98,8 @@ export const assetDeps = {
         filename: 'vae/qwen_image_vae.safetensors',
         url: 'https://models.cubric.studio/vision/models/vae/qwen_image_vae.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Krea-2/resolve/main/vae/qwen_image_vae.safetensors',
-        size: '254MB',
+        size: '242.05MB',
+        bytes: 253806246,
         sha256: 'a70580f0213e67967ee9c95f05bb400e8fb08307e017a924bf3441223e023d1f'
     },
     'ltx23-video-vae': {
@@ -102,7 +109,8 @@ export const assetDeps = {
         filename: 'vae/LTX23_video_vae_bf16.safetensors',
         url: 'https://models.cubric.studio/vision/models/vae/LTX23_video_vae_bf16.safetensors',
         mirrorUrl: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/vae/LTX23_video_vae_bf16.safetensors',
-        size: '1.45GB',
+        size: '1.35GB',
+        bytes: 1452258578,
         sha256: '01ea62d09bc139f95c5dee7b5c062ad6a3e6cd8be910a1983ac02e7eb5b8ee3b',
     },
     'ltx23-audio-vae': {
@@ -112,7 +120,8 @@ export const assetDeps = {
         filename: 'vae/LTX23_audio_vae_bf16.safetensors',
         url: 'https://models.cubric.studio/vision/models/vae/LTX23_audio_vae_bf16.safetensors',
         mirrorUrl: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/vae/LTX23_audio_vae_bf16.safetensors',
-        size: '370MB',
+        size: '347.95MB',
+        bytes: 364855188,
         sha256: '5bc10fa4adecf99dda132d916e23048cbd56797702c5fa50eb5d2079048a38c3',
     },
     // Text encoders / CLIP -------------------------------------------------
@@ -133,7 +142,8 @@ export const assetDeps = {
         origin: 'huihui-ai/Huihui-Qwen3-VL-4B-Instruct-abliterated',
         filename: 'text_encoders/qwen3vl_4b_abliterated_fp8_scaled.safetensors',
         url: 'https://models.cubric.studio/vision/models/text_encoders/qwen3vl_4b_abliterated_fp8_scaled.safetensors',
-        size: '5.24GB',
+        size: '4.88GB',
+        bytes: 5242481504,
         sha256: '45fe15d359fbc6fe8773f24cebc34acedf5696d96d41a0c9a3039611ece3b866',
     },
     // Qwen3-VL-8B fp8_scaled (hidden 4096) — Boogu's text encoder, `type: 'boogu'` in
@@ -146,7 +156,8 @@ export const assetDeps = {
         filename: 'text_encoders/qwen3vl_8b_fp8_scaled.safetensors',
         url: 'https://models.cubric.studio/vision/models/text_encoders/qwen3vl_8b_fp8_scaled.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Ideogram-4/resolve/main/text_encoders/qwen3vl_8b_fp8_scaled.safetensors',
-        size: '10.59GB',
+        size: '9.86GB',
+        bytes: 10588637512,
         sha256: '4ba424cf62e51392e4d1a39933e803706f4e823c1065f36aaf149c6453f66bcd',
     },
     // Qwen-Image-Edit-2511 text encoder (MPI-300). Qwen2.5-VL-7B (hidden 3584) — NOT
@@ -160,6 +171,7 @@ export const assetDeps = {
         url: 'https://models.cubric.studio/vision/models/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Qwen-Image_ComfyUI/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors',
         size: '8.74GB',
+        bytes: 9384670680,
         sha256: 'cb5636d852a0ea6a9075ab1bef496c0db7aef13c02350571e388aea959c5c0b4',
     },
     // FLUX.2 text encoder — Qwen3-4B, TEXT-ONLY (CLIPLoader `type: flux2`). NOT any of
@@ -173,7 +185,8 @@ export const assetDeps = {
         filename: 'text_encoders/qwen_3_4b.safetensors',
         url: 'https://models.cubric.studio/vision/models/text_encoders/qwen_3_4b.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors',
-        size: '8.04GB',
+        size: '7.49GB',
+        bytes: 8044982048,
         sha256: '6c671498573ac2f7a5501502ccce8d2b08ea6ca2f661c458e708f36b36edfc5a',
     },
     'pid-gemma': {
@@ -183,7 +196,8 @@ export const assetDeps = {
         filename: 'text_encoders/gemma_2_2b_it_elm_bf16.safetensors',
         url: 'https://models.cubric.studio/vision/models/text_encoders/gemma_2_2b_it_elm_bf16.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/PixelDiT/resolve/main/text_encoders/gemma_2_2b_it_elm_bf16.safetensors',
-        size: '5.23GB',
+        size: '4.87GB',
+        bytes: 5232958571,
         sha256: 'e7ae59c203c392db4aa4e27783e924ec3225eb563392260cf747e1130ffcdb88'
     },
     'umt5_xxl_fp8_e4m3fn_scaled': {
@@ -193,6 +207,7 @@ export const assetDeps = {
         url: 'https://models.cubric.studio/vision/models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors',
         size: '6.27GB',
+        bytes: 6735906897,
         sha256: 'c3355d30191f1f066b26d93fba017ae9809dce6c627dda5f6a66eaa651204f68'
     },
     // Chroma T5 text encoder (shared Flux-family t5xxl fp16). MPI-217.
@@ -202,7 +217,8 @@ export const assetDeps = {
         filename: 'text_encoders/t5xxl_fp16.safetensors',
         url: 'https://models.cubric.studio/vision/models/text_encoders/t5xxl_fp16.safetensors',
         mirrorUrl: 'https://huggingface.co/lodestones/stable-diffusion-3-medium/resolve/main/text_encoders/t5xxl_fp16.safetensors',
-        size: '9.2GB',
+        size: '9.12GB',
+        bytes: 9787841024,
         sha256: '6e480b09fae049a72d2a8c5fbccb8d3e92febeb233bbe9dfe7256958a9167635'
     },
     'ltx23-text-projection': {
@@ -212,7 +228,8 @@ export const assetDeps = {
         filename: 'text_encoders/ltx-2.3_text_projection_bf16.safetensors',
         url: 'https://models.cubric.studio/vision/models/text_encoders/ltx-2.3_text_projection_bf16.safetensors',
         mirrorUrl: 'https://huggingface.co/Kijai/LTX2.3_comfy/resolve/main/text_encoders/ltx-2.3_text_projection_bf16.safetensors',
-        size: '2.31GB',
+        size: '2.15GB',
+        bytes: 2312149072,
         sha256: '911d59bb4cb7708179c9a0045ea0fe41212ecfb77aed3a02702b7c0a8274911f',
     },
     // Gemma fp4_mixed CLIP — SHARED across every engine and tier (local + Pod, low
@@ -227,7 +244,8 @@ export const assetDeps = {
         filename: 'text_encoders/gemma_3_12B_it_fp4_mixed.safetensors',
         url: 'https://models.cubric.studio/vision/models/text_encoders/gemma_3_12B_it_fp4_mixed.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/ltx-2/resolve/main/split_files/text_encoders/gemma_3_12B_it_fp4_mixed.safetensors',
-        size: '9.45GB',
+        size: '8.8GB',
+        bytes: 9447702218,
         sha256: 'aaca463d11e6d8d2a4bdb0d6299214c15ef78a3f73e0ef8113d5a9d0219b3f6d',
     },
     // Latent / image upscalers ---------------------------------------------
@@ -238,7 +256,8 @@ export const assetDeps = {
         filename: 'latent_upscale_models/ltx-2.3-spatial-upscaler-x2-1.1.safetensors',
         url: 'https://models.cubric.studio/vision/models/latent_upscale_models/ltx-2.3-spatial-upscaler-x2-1.1.safetensors',
         mirrorUrl: 'https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-spatial-upscaler-x2-1.1.safetensors',
-        size: '1.5GB',
+        size: '949.62MB',
+        bytes: 995743560,
         sha256: '5f416311fa8172b65af67530758964708d29a317b830d689a51143b7f91913ed',
     },
     // Upscale Models (engine assets) ---------------------------------------
@@ -248,7 +267,8 @@ export const assetDeps = {
         filename: 'upscale_models/4x_NMKD-Siax_200k.pth',
         url: 'https://models.cubric.studio/vision/models/upscale_models/4x_NMKD-Siax_200k.pth',
         mirrorUrl: 'https://huggingface.co/uwg/upscaler/resolve/main/ESRGAN/4x_NMKD-Siax_200k.pth',
-        size: '67MB',
+        size: '63.86MB',
+        bytes: 66957746,
         sha256: '560424d9f68625713fc47e9e7289a98aabe1d744e1cd6a9ae5a35e9957fd127e',
         engineAsset: true,
         bakedOnPod: true,
@@ -258,7 +278,8 @@ export const assetDeps = {
         name: '4x-AnimeSharp',
         filename: 'upscale_models/4x-AnimeSharp.pth',
         url: 'https://models.cubric.studio/vision/models/upscale_models/4x-AnimeSharp.pth',
-        size: '65MB',
+        size: '63.91MB',
+        bytes: 67010245,
         sha256: 'e7a7de2dafd7331c1992862bbbcd9e9712a9f9f8e6303f0aaa59b4341d359bab',
         engineAsset: true,
         bakedOnPod: true,
@@ -277,7 +298,8 @@ export const assetDeps = {
         filename: 'background_removal/birefnet.safetensors',
         url: 'https://models.cubric.studio/vision/models/background_removal/birefnet.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/BiRefNet/resolve/main/background_removal/birefnet.safetensors',
-        size: '444MB',
+        size: '423.88MB',
+        bytes: 444473596,
         sha256: '9ab37426bf4de0567af6b5d21b16151357149139362e6e8992021b8ce356a154',
         engineAsset: true,
         bakedOnPod: true,
@@ -298,7 +320,8 @@ export const assetDeps = {
         filename: 'rife47.pth',
         targetPath: 'custom_nodes/comfyui-frame-interpolation/ckpts/rife',
         url: 'https://models.cubric.studio/vision/models/frame_interpolation/rife/rife47.pth',
-        size: '20.4MB',
+        size: '20.36MB',
+        bytes: 21344827,
         sha256: '6a8a825ab2750558bdd20dcced386fd82b7222c7ba58c11d3b611d9c44f1be63',
         engineAsset: true,
     },
@@ -309,7 +332,8 @@ export const assetDeps = {
         filename: 'ultralytics/bbox/face_yolov8n.pt',
         url: 'https://models.cubric.studio/vision/models/ultralytics/bbox/face_yolov8n.pt',
         mirrorUrl: 'https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8n.pt',
-        size: '5.9MB',
+        size: '5.94MB',
+        bytes: 6230011,
         sha256: '70b640f8f60b1cf0dcc72f30caf3da9495eb2fb6509da48c53374ad6806e6a9c',
         engineAsset: true,
         bakedOnPod: true,
@@ -320,7 +344,8 @@ export const assetDeps = {
         filename: 'ultralytics/bbox/hand_yolov8n.pt',
         url: 'https://models.cubric.studio/vision/models/ultralytics/bbox/hand_yolov8n.pt',
         mirrorUrl: 'https://huggingface.co/Bingsu/adetailer/resolve/main/hand_yolov8n.pt',
-        size: '5.9MB',
+        size: '5.95MB',
+        bytes: 6237883,
         sha256: '3991202eb69e9ddcb3b9ba80cdeb41e734ffaf844403d6c9f47d515cd88c6f29',
         engineAsset: true,
     },
@@ -330,7 +355,8 @@ export const assetDeps = {
         filename: 'ultralytics/bbox/person_yolov8n-seg.pt',
         url: 'https://models.cubric.studio/vision/models/ultralytics/bbox/person_yolov8n-seg.pt',
         mirrorUrl: 'https://huggingface.co/Bingsu/adetailer/resolve/main/person_yolov8n-seg.pt',
-        size: '6.9MB',
+        size: '6.46MB',
+        bytes: 6777003,
         sha256: '38fc8aaae97cb6e70be4ec44770005b26ed473471362afcda62a0037d7ccf432',
         engineAsset: true,
     },
@@ -340,7 +366,8 @@ export const assetDeps = {
         filename: 'sams/sam_vit_b_01ec64.pth',
         url: 'https://models.cubric.studio/vision/models/sams/sam_vit_b_01ec64.pth',
         mirrorUrl: 'https://huggingface.co/ybelkada/segment-anything/resolve/main/checkpoints/sam_vit_b_01ec64.pth',
-        size: '367MB',
+        size: '357.67MB',
+        bytes: 375042383,
         sha256: 'ec2df62732614e57411cdcf32a23ffdf28910380d03139ee0f4fcbe91eb8c912',
         engineAsset: true,
         bakedOnPod: true,
@@ -357,7 +384,8 @@ export const assetDeps = {
         filename: 'checkpoints/sam3.1_multiplex_fp16.safetensors',
         url: 'https://models.cubric.studio/vision/models/checkpoints/sam3.1_multiplex_fp16.safetensors',
         mirrorUrl: 'https://huggingface.co/Comfy-Org/sam3.1/resolve/main/checkpoints/sam3.1_multiplex_fp16.safetensors',
-        size: '1.75GB',
+        size: '1.63GB',
+        bytes: 1745546848,
         sha256: '9ba99c92703c2e8b4f47de2d34a539bb8e18923049e238b780d70dbe6368eb03',
         engineAsset: true,
     },
@@ -371,6 +399,7 @@ export const assetDeps = {
         url: 'https://models.cubric.studio/vision/models/controlnet/ControlNet-Union-ProMax-SDXL.safetensors',
         mirrorUrl: 'https://huggingface.co/xinsir/controlnet-union-sdxl-1.0/resolve/main/diffusion_pytorch_model_promax.safetensors',
         size: '2.34GB',
+        bytes: 2513342408,
         sha256: '9fae2e50cb431bfcbe05822b59ec2228df545ef27f711dea8949e9f4ed9f7cdc',
     },
     // Chroma's depth op (MPI-365). Chroma is a pruned FLUX.1-schnell derivative, so a
@@ -401,6 +430,7 @@ export const assetDeps = {
         filename: 'controlnet/FLUX.1-dev-ControlNet-Union-Pro-2.0.safetensors',
         url: 'https://huggingface.co/Shakker-Labs/FLUX.1-dev-ControlNet-Union-Pro-2.0/resolve/main/diffusion_pytorch_model.safetensors',
         size: '3.99GB',
+        bytes: 4281779224,
         sha256: '9d03f63f36206bab2f36aed5cfedc8693c2881397534e9d5f9ae9a0a41362517',
     },
     // ── TAESD live-preview decoders (MPI-420) ────────────────────────────────
@@ -433,7 +463,8 @@ export const assetDeps = {
         name: 'TAESD preview decoder (SDXL)',
         filename: 'vae_approx/taesdxl_decoder.safetensors',
         url: 'https://models.cubric.studio/vision/models/vae_approx/taesdxl_decoder.safetensors',
-        size: '2.45MB',
+        size: '2.34MB',
+        bytes: 2450590,
         sha256: 'ae5256b046b01d577279ed93a55bbb1fb2689e55aa14cfc0f7f841e0160202a5',
         engineAsset: true,
         bakedOnPod: true,
@@ -447,7 +478,8 @@ export const assetDeps = {
         name: 'TAESD preview decoder (FLUX.1)',
         filename: 'vae_approx/taef1_decoder.safetensors',
         url: 'https://models.cubric.studio/vision/models/vae_approx/taef1_decoder.safetensors',
-        size: '2.46MB',
+        size: '2.35MB',
+        bytes: 2464414,
         sha256: 'bb41500b646d5b8b592b7f3ca5d20d888c3075e209d178d99af609cd7e02a1d4',
         engineAsset: true,
         bakedOnPod: true,
@@ -465,7 +497,8 @@ export const assetDeps = {
         origin: 'madebyollin/taef2',
         filename: 'vae_approx/taef2_decoder.safetensors',
         url: 'https://models.cubric.studio/vision/models/vae_approx/taef2_decoder.safetensors',
-        size: '5.36MB',
+        size: '5.11MB',
+        bytes: 5360500,
         sha256: '1280d56190f5e741d087db768cfde3f353bf59b857c0f809f9d3dc6ea9c603d6',
         engineAsset: true,
         noMirror: true,
@@ -507,7 +540,8 @@ export const assetDeps = {
         // MPI-449 § 4/§ 5. Comfy-Org's own stock encoder is 27.14GB, so this is not the
         // large option — it is the same size class, already trimmed of the Qwen3-VL
         // language layers H3 never reads.
-        size: '26.36GB',
+        size: '24.55GB',
+        bytes: 26363476151,
         sha256: 'd84547412144b7c50a6ec77437a889b869d3ace88da77ef1775d3d2a4901c192',
     },
     'vae-minimax-h3-video': {
@@ -516,7 +550,8 @@ export const assetDeps = {
         origin: 'Comfy-Org/MiniMax-H3',
         filename: 'vae/minimax_h3_video_vae_fp16.safetensors',
         url: 'https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors',
-        size: '5.21GB',
+        size: '4.85GB',
+        bytes: 5207808496,
         sha256: '7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522',
     },
     'vae-minimax-h3-audio': {
@@ -525,7 +560,8 @@ export const assetDeps = {
         origin: 'Comfy-Org/MiniMax-H3',
         filename: 'vae/minimax_h3_audio_vae_fp32.safetensors',
         url: 'https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors',
-        size: '0.61GB',
+        size: '577.22MB',
+        bytes: 605254808,
         sha256: '8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48',
     },
 };

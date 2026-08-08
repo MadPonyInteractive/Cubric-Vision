@@ -14,7 +14,8 @@ Weight dep shape (see `dependencies.js` for live examples):
     origin: 'HF-org/repo',                 // NOT informational — see below
     filename: 'diffusion_models/file.safetensors',   // relative to models root == R2 tail
     url: 'https://models.cubric.studio/vision/models/diffusion_models/file.safetensors',
-    size: '9.31GB',                        // footprint.js reads this for the VRAM/RAM table
+    size: '9.31GB',                        // GENERATED - do not type it, see 'Fill sizes'
+    bytes: 9996468224,                     // GENERATED - the measured value of record
     sha256: null                           // fill via /mpic-compute-dep-hashes AFTER upload
 }
 ```
@@ -255,6 +256,29 @@ the weights are in `G:\CubricModels\<type>\` — which is *before* any upload, s
 where they start — you can fill every hash. Do it **in parallel** with (or before) the upload;
 the upload is only what lets end-users download the file, it has nothing to do with computing
 the hash. (HF-hosted deps hash from the remote ETag/stream instead — also no local upload.)
+
+### Fill sizes
+
+Run `python scripts/computeDepHashes.py --sizes`. It HEADs every dep, writes the measured
+byte count as `bytes:`, and REGENERATES `size:` from it. **Never type either by hand.**
+
+Every `size` string used to be hand-typed, and none had ever been measured. Measured
+2026-08-08 (MPI-482): across all 107 file-backed deps the typed strings totalled 498.9 GB
+against a true 478.2 GB - **4.1% OVER**, not under, because the common mistake is copying
+HuggingFace's decimal-GB display into a field every consumer parses as 1024-based. The
+worst single entry was `ltx23-spatial-upscaler` at 1.5GB declared against 0.93GB real.
+
+`size` is what the consumers actually read - `footprint.js`, the smoke runner's volume
+preflight, and `modelJob.totalBytes` via `_parseSizeToBytes` on BOTH engine paths - so
+regenerating that string is what corrects them. `bytes` is the value of record.
+
+The pass runs after upload for R2 deps (it reads R2's `Content-Length`; it falls back to a
+local `stat` under `CUBRIC_MODELS_ROOT` if the HEAD fails). HF deps read `X-Linked-Size`
+from the 302 - **not** that response's `Content-Length`, which is the ~1 KB redirect body.
+Re-running writes nothing; a non-empty diff means a file on the host changed.
+
+custom_nodes deps are skipped: their `url` is a `lockUrl()` git repo, not a file, so there
+is no Content-Length to read. Those 14 `size` strings stay hand-written.
 
 ## Status-bar stage count (`progressStages.js`)
 
