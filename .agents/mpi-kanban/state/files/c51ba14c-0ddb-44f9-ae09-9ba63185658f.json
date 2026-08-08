@@ -5,9 +5,9 @@
   "owner_session": null,
   "owner_role": "implementer",
   "task": ".agents/mpi-kanban/tasks/MPI-495/",
-  "status": "needs_verification",
+  "status": "complete",
   "claim_kind": "write",
-  "heartbeat_at": "2026-08-08T18:52:00Z",
+  "heartbeat_at": "2026-08-08T19:35:00Z",
   "allowed_actions": [
     "edit",
     "verify"
@@ -20,6 +20,11 @@
     {
       "at": "2026-08-08T18:52:00Z",
       "event": "released_needs_verification"
+    },
+    {
+      "at": "2026-08-08T19:35:00Z",
+      "event": "completed",
+      "note": "Committed in 2e045187; test-verified, mutation-checked."
     }
   ]
 }
