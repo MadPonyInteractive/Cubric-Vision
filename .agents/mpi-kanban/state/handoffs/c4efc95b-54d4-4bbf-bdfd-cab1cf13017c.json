@@ -4,7 +4,7 @@
   "generated_at": "2026-08-08T04:45:00Z",
   "from_session": "MPI-467 first live smoke run: six runner faults found and fixed, no GPU rented yet",
   "to_role": "implementer",
-  "status": "open",
+  "status": "consumed",
   "session": {
     "name": "Live proving run attempt 1 - infrastructure half debugged end to end",
     "branch": "master"
