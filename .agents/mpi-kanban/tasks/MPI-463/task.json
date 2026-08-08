@@ -3,11 +3,11 @@
   "id": "MPI-463",
   "title": "A failed dispatch strands its lane forever - eleven bails registered a store job and never settled it",
   "description": "generationStore.register takes a lane slot, and eleven pre-dispatch failure exits in commandExecutor called exec.onError and returned without settling the job. _laneBusy derives from the store's running list, so the lane never freed and _dispatchNextCue skipped it until the app restarted. Fixed structurally via _failBail; live proof still owed.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-06T23:26:00Z",
-  "updated_at": "2026-08-06T23:26:00Z",
+  "updated_at": "2026-08-08T04:45:00Z",
   "labels": [
     "bug",
     "generation",
@@ -22,6 +22,5 @@
     "brief": "brief.md",
     "events": "events.jsonl"
   },
-  "priority": "normal",
-  "attention": false
+  "priority": "normal"
 }

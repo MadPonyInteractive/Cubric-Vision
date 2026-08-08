@@ -41,11 +41,11 @@
       "MPI-467",
       "MPI-466",
       "MPI-465",
-      "MPI-463",
-      "MPI-459",
       "MPI-367"
     ],
     "done": [
+      "MPI-463",
+      "MPI-459",
       "MPI-449",
       "MPI-374",
       "MPI-453",
@@ -82,7 +82,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-08T04:20:00Z",
+  "updated_at": "2026-08-08T04:45:00Z",
   "events": [
     {
       "at": "2026-08-07T14:20:43Z",
@@ -2344,6 +2344,26 @@
       "from": "doing",
       "to": "done",
       "summary": "Closed on the user's call 2026-08-08. This was the feasibility research card and it produced its answer in full: H3 ships as TWO models (minimax-h3 fl2va and minimax-h3-ref2va), both generating, with the findings written up across docs/models/h3/ (README, performance.md, ref2va.md). Nothing about it is still open - the follow-on work has its own cards."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-459",
+      "type": "task.moved",
+      "at": "2026-08-08T04:45:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed at close-out 2026-08-08 under the new rule: agent evidence is sufficient evidence. npm test 459/459 including a new ordering assertion, eslint clean on all three route files, a require() smoke proving no cycle - AND a live run on the user's own machine 2026-08-06 with the marker deliberately corrupted to force the pass, captured in app.log: the pip pass ran at 14:35:42 and ComfyUI spawned at 14:35:57, i.e. before the process existed, which is the whole WinError-5 mechanism. Self-heal confirmed by the restamp. Nothing here needed a human eye."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-463",
+      "type": "task.moved",
+      "at": "2026-08-08T04:45:00Z",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed at close-out 2026-08-08 under the new rule. Evidence is tests/lane-settle-on-bail.test.cjs - 4 tests that bound the pre-dispatch region by its two ends and BITE BY CONSTRUCTION: the pre-fix shape fails with the exact line (1468: exec.onError?.(new Error('model_missing'))). Test-only, which the rule accepts; if a lane is ever seen stranded in the wild again, reopen."
     }
   ]
 }
