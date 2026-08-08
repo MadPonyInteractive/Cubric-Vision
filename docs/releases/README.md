@@ -98,6 +98,16 @@ speed-up; an absolute is a promise the next machine, image or model size can bre
 slow case then reads as a regression against our own notes. Same shape for "always", "never
 fails" and "no wait". Describe what changed and let the user feel the size of it.
 
+### A size in the notes comes from `DEPS`, never from a publisher's page
+
+**Quote `DEPS[<id>].size`** (`js/data/modelConstants/dependencies.js`). Those strings are
+**1024-based** and regenerated from a measured HEAD byte count (MPI-482); HuggingFace
+displays the same file in decimal GB, ~4.5% higher. Copy that number instead and the note
+disagrees with the tile the reader is looking at. Mixing the two in one sentence is worse:
+1.4's LTX bullet compared a GiB figure against a decimal one and inflated the saving from
+~3GB to ~5GB, and correcting only the half that looked wrong made it wrong the other way.
+A total spanning several deps must be summed from `bytes` and formatted 1024-based.
+
 ## Build-time flags and stage derivation
 
 ### `dev_mode` is derived from `BUILD_HASH`
