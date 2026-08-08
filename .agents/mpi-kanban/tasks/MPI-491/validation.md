@@ -249,3 +249,36 @@ sha256: PASS
 - Pod `9d0dndbxd2xsh4` LEFT RUNNING (cpu3c). Delete when the fill is done.
 - `sdxl-realistic` (6.6GB) was added to the volume as the R2 control and completed before
   it could be cancelled. Real model, harmless, but it was not there before.
+
+---
+
+# Phase 3 CLOSED — the local engine needs nothing (2026-08-08)
+
+The plan flagged the local twin as unmeasured. Measured now, no Pod required.
+
+| origin | from the home line | tool |
+|---|---|---|
+| HF (via the Xet bridge) | 43.9 MB/s | curl, 3 runs, consistent |
+| R2 (`models.cubric.studio`) | **47.0 MB/s** | node fetch, 939MB sampled |
+
+Both sit at ~45 MB/s, i.e. **the last mile is the cap, not the transport**. HF is not
+throttling this connection at all — the ~1.7 MB/s ceiling is specific to the datacenter's
+path into `xet-bridge-us`.
+
+So `routes/downloadManager.js` (single-stream `DownloaderHelper`) has nothing to fix, and
+porting `_download_hf` to the local engine would buy **zero** — it cannot beat a saturated
+line. The engine-split sweep is satisfied by measurement rather than by symmetry: the two
+engines legitimately differ here because only one of them sits behind the throttled path.
+
+Corollary for users: a local H3 install runs at line speed, ~30 min for the 74GB set on a
+connection like this one. That is the honest number for release notes.
+
+## A tool trap this turned up
+
+`docs/runpod-troubleshooting.md` told you to confirm an R2 object with a single `curl -sI`,
+explicitly stating that only a *looped* `curl -o` lies. **Both lie.** A single `curl -sI`
+against `models.cubric.studio` returns `http=000`, exit 43, while node `fetch` gets HTTP 200
+and streams 939MB from the same box in the same minute. Following that advice would make a
+healthy R2 object look missing and get a working URL repointed — the exact false negative
+the note exists to prevent. Host-specific, not global: `curl -sIL` against `huggingface.co`
+answers correctly. Doc corrected.
