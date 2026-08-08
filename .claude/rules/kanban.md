@@ -218,3 +218,108 @@ match it with `separators=(',',':')`.
 
 When you only need to change one field, prefer the Edit tool (exact-string match) over any
 scripted rewrite — it cannot reformat what it does not serialise.
+
+## File claims — the lock that nobody has taken since 2026-06-16
+
+Claims are how concurrent sessions avoid overwriting each other. They live in
+`.agents/mpi-kanban/state/`, NOT on the board. **Measured 2026-08-08:** `state/files/` held
+0 live records and `active_file_claims` was `[]` in every commit of `state/index.json` from
+2026-06-16 to today, while 3-5 sessions ran concurrently — MPI-451 and MPI-452 negotiated
+`models.js` / `licences.js` ownership by hand in `mpi-message` bodies on 2026-08-06 because
+the lock built for exactly that was empty. Card moves kept working the whole time; the only
+difference is that card moves are in `CLAUDE.md` and claims were not.
+
+**Claiming is not optional and not skill-gated.** The procedure lives inside the `mpi-*`
+skills (`<mpi-lib>/coordination-ops/lifecycle.md` § Claim Files), so an agent doing ordinary
+work — "fix X", a `/mpi-*`-less session, a dispatched sub-agent — never loads it. Load it
+yourself.
+
+### Before your first edit
+
+1. Read `.agents/mpi-kanban/state/index.json`. Two arrays matter:
+   - `active_file_claims` — **write locks**. Another session's fresh record on a path means
+     do not edit that path. Choose: wait, split ownership, `mpi-message` the owner, or ask.
+   - `pending_file_states` — **provenance, not locks**. Read them before editing; someone
+     finished work there that is not yet reviewed/verified/integrated.
+2. Fresh = `heartbeat_at` inside `heartbeat_timeout_minutes` (120). Only an orchestrator or
+   integrator reclaims a stale claim, and only when intent is clear — otherwise ask the user.
+3. Write one `state/files/<uuid>.json` per path you are about to edit, and add its path to
+   `active_file_claims`:
+
+```json
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "<uuid>",
+  "path": "js/data/models.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/<uuid>.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/<uuid>.json",
+  "status": "claimed",
+  "claim_kind": "write",
+  "heartbeat_at": "<ISO-8601>",
+  "allowed_actions": ["edit", "verify"],
+  "recent_events": [{ "at": "<ISO-8601>", "event": "claimed_for_write" }]
+}
+```
+
+4. At close, set `status` to `released` (nothing changed), `complete`, `needs_review`,
+   `needs_verification`, `needs_integration`, or `verified`, drop it from
+   `active_file_claims`, and add it to `pending_file_states` for the four middle states.
+   **A released claim is not commit permission** — see `.claude/rules/git.md`.
+
+### `python scripts/new_uuid.py` DOES NOT EXIST — do not stall on it
+
+`<mpi-lib>/coordination-ops/lifecycle.md:83`, `messages.md:67`, `docs/coordination/uuid-helper.md`
+and `mpi-handoff/SKILL.md:125` all tell you to generate the uuid with
+`python scripts/new_uuid.py`. That file is in none of the five locations (verified
+2026-08-08); the path is also relative, so it would resolve against the PROJECT root rather
+than the skill root even if it existed. Hitting a missing script at step one of the very
+first coordination write is the cheapest possible reason to skip claiming entirely — which
+is roughly when claiming stopped. Use instead:
+
+```bash
+python -c "import uuid; print(uuid.uuid4())"
+```
+
+### Claims do NOT protect against a peer's git command
+
+A claim stops another agent's *editor*. It does not stop `git checkout -- <pathspec>`,
+`git restore`, `git stash`, `git reset --hard`, or `git clean` — those restore from HEAD and
+take every uncommitted byte in the pathspec, yours and every peer's, with a clean exit and a
+clean `git status` afterwards. Reported 2026-08-08: one such command took a peer's
+`todo -> doing` board move, their line in `.agents/mpi-kanban/events.jsonl`, and their code
+and doc edits together. Rules and recovery: `.claude/rules/git.md` § MPI-365.
+
+## Sub-Agent Briefing
+
+Paste verbatim into any sub-agent that will edit files in this repo.
+
+> **This repo is a SHARED tree with live peer agents. Assume every file you touch may be
+> open in another session right now.**
+>
+> **Your ownership is the exact file list given to you above. Edit nothing else.** If you
+> need a file outside it, do not edit it and do not negotiate: write one message record
+> under `.agents/mpi-kanban/state/messages/<uuid>.json` naming the path and why, then stop
+> that line of work and finish the rest of your owned work.
+>
+> **Claim before editing.** Read `.agents/mpi-kanban/state/index.json` first. If
+> `active_file_claims` holds a record for one of your paths whose `heartbeat_at` is under 2
+> hours old and whose `owner_session` is not yours, do not edit that path — report it as
+> blocked. Otherwise write a `mpi-kanban/file-claim/v1` record per owned path, add it to
+> `active_file_claims`, and release it (`complete` / `verified` / `released`) in your final
+> report. Generate uuids with `python -c "import uuid; print(uuid.uuid4())"` — the
+> `scripts/new_uuid.py` the skill docs name does not exist.
+>
+> **NEVER run `git checkout --`, `git restore`, `git stash`, `git reset --hard`, or
+> `git clean`.** They restore from HEAD and destroy peers' uncommitted work silently, exit 0,
+> with a clean `git status` afterwards. Undo a probe by re-applying its inverse edit with the
+> same tool that made it. Take a baseline with `git show HEAD:<path> > /tmp/base` — never by
+> stashing. Back up with `cp` before any mutation test, and after any revert grep for a
+> distinctive token of your own work rather than trusting `git status`.
+>
+> **Other agents are editing this repo while you run. Never revert, "clean up", or
+> "fix" a change you did not make** — an unfamiliar diff is a peer's in-flight work, not
+> drift.
+>
+> **Board writes:** only if `board.json` / `tasks/<id>/` is in your ownership. Kanban writes
+> are pre-authorized but not conflict-free.

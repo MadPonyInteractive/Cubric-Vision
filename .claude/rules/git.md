@@ -28,11 +28,17 @@ afterwards — which looks like a successful revert rather than a wipe.
 
 - **Undo a probe by re-applying its inverse edit**, with the same tool that made it. The
   probe was one string; so is the undo.
-- Want a real net? `git stash push -- <file>` → `git stash pop`, or commit before probing.
+- Want a real net? **`cp <file> /tmp/f.bak` before the probe, `cp` it back after** — or commit before probing. **NOT `git stash`**: on a tree you do not solely own it sweeps up every uncommitted file in the repo, including a peer agent's and the user's in-flight work, and returns it only if the pop succeeds. 2026-08-07 this ran here while a peer was mid-commit on two docs files and survived on luck. For a read-only baseline use `git show HEAD:<path> > /tmp/base` or `git stash create` (writes a commit object, leaves the tree alone).
 - After ANY revert of a file you have been editing, `grep` for one distinctive token of your
   own work before moving on. A silent wipe is otherwise indistinguishable from success.
 - Blast radius is per-file — a probe in a file you have not touched this session is
   genuinely harmless. Establish which case you are in first.
+- **Blast radius is the PATHSPEC, and with peer agents live it is not only your work.** A broad
+  pathspec reported 2026-08-08 took a peer's `todo -> doing` board move, their line in
+  `.agents/mpi-kanban/events.jsonl`, and their code and doc edits in one command; `board.json` came
+  back byte-identical to HEAD. The same ban covers `git restore`, `git reset --hard` and `git clean`.
+  **Never revert, clean up, or 'fix' a diff you did not make** — an unfamiliar change in a shared
+  tree is a peer's in-flight work, not drift. Ownership rules: `.claude/rules/kanban.md` § File claims.
 
 ## Backticks in `-m` are command substitution, and the commit still succeeds
 
