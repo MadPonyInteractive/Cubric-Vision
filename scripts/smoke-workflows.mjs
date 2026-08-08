@@ -302,13 +302,25 @@ async function pickGpu(volumeId) {
     if (opt('gpu')) return { id: opt('gpu'), displayName: opt('gpu') };
     const avail = await app('/runpod/gpu-availability');
     const gpus = avail.gpuTypes || avail.gpus || [];
+    // EXACT name match, never a substring. `includes('l4')` also matches L40 and L40S —
+    // different cards at a different price — and 'RTX 3090' also matches 3090 Ti. L4
+    // happening to sort first in RunPod's array is luck, not logic, and luck silently
+    // rents the wrong card.
+    // Availability: the payload has NO stockStatus field, so the guard that used to sit
+    // here (`g.stockStatus == null || ...`) could never fire and this function never
+    // actually checked stock. The real signal in this response is `lowestPrice`: an
+    // unavailable type reports nulls (measured 2026-08-08 — MI300X null, while
+    // L4/3090/4090 reported 55/30/31).
+    const named = (g) => `${g.displayName || g.id}`.toLowerCase();
+    const inStock = (g) => (g.lowestPrice && g.lowestPrice.minMemory != null);
     for (const want of GPU_ORDER) {
-        const hit = gpus.find(g =>
-            `${g.displayName || g.id}`.toLowerCase().includes(want.toLowerCase()) &&
-            (g.stockStatus == null || `${g.stockStatus}`.toLowerCase() !== 'none'));
+        const match = gpus.filter(g => named(g) === want.toLowerCase());
+        const hit = match.find(inStock);
         if (hit) { log(`  gpu: ${hit.displayName || hit.id} (preferred #${GPU_ORDER.indexOf(want) + 1})`); return hit; }
+        if (match.length) log(`  ${want}: present but reporting no availability — next choice`);
     }
-    die(`no preferred GPU available in ${DATACENTER}. Wanted, in order: ${GPU_ORDER.join(' → ')}`);
+    die(`no preferred GPU available in ${DATACENTER}. Wanted, in order: ${GPU_ORDER.join(' → ')}. `
+        + `Types offered: ${gpus.map(g => `${g.displayName || g.id}${inStock(g) ? '' : ' (no stock)'}`).join(', ')}`);
 }
 
 /** @param {{soft?:boolean}} [o] soft → return false on timeout instead of exiting */
@@ -633,11 +645,17 @@ async function main() {
     await app('/remote/pod/delete-active', { method: 'POST' }).catch(() => log('  ⚠ CPU Pod delete failed — check RunPod.'));
 
     const gpu = await pickGpu(volume.id);
-    await app('/remote/pod/create', {
-        method: 'POST',
-        body: JSON.stringify({ gpuTypeId: gpu.id, volumeId: volume.id, datacenter: DATACENTER, minMemoryInGb: MIN_RAM_GB }),
-    });
-    await waitReady('GPU Pod', async () => (await app('/remote/comfy/status')).ready, 20 * 60 * 1000);
+    // The GPU Pod gets the SAME watchdog as the CPU one, and for a worse reason: this
+    // path used a bare create + a hard 20-minute waitReady, and die() is process.exit(1)
+    // which deletes NOTHING. A dead host therefore cost 20 idle minutes and then LEAKED a
+    // rented GPU Pod, billing until a human noticed — the CPU leg has been safe from this
+    // since e60b269b only because createPodWithRetry deletes the Pod before every retry
+    // AND before it gives up. EU-RO-1 produced four RUNNING-but-dead hosts on 2026-08-08,
+    // so this is a live risk, not a theoretical one. Two attempts, not three: each one is
+    // billed GPU time, so the retry is a safety net, not a persistence strategy.
+    await createPodWithRetry(
+        { gpuTypeId: gpu.id, volumeId: volume.id, datacenter: DATACENTER, minMemoryInGb: MIN_RAM_GB },
+        'GPU Pod', 20 * 60 * 1000, 2);
     const engine = await assertPodEngineVersion();
 
     const probe = await stageProbeImage();
