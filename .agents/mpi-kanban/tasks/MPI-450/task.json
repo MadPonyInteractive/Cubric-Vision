@@ -3,11 +3,11 @@
   "id": "MPI-450",
   "title": "1.4 release readiness umbrella - clear the gates before cutting 1.4.0",
   "description": "HELD 2026-08-05 behind Gate E (MiniMax H3) - see brief.md. ON PICKUP, run the ON PICKUP section at the top of checklist.md FIRST: it re-checks MPI-433's 2026-08-10 date gate against the real cut date. There is no pre-release tier in this project (one GitHub-only release flow, see the mpi-release skill), so this card IS the pre-release: the gate list that must be clear before /mpi-version-bump stamps 1.4.0. 1.4 is the biggest feature release since 1.0 - the whole canvas toolkit (mask tools, Paint, Composite, Adjust, ten brushes, shapes), the Control operation replacing Depth, localised edit on four models, plus an engine-provision rewrite - and UNRELEASED.md already carries every claim. The gates are grouped: A must-fix code (MPI-420, MPI-404, MPI-410, MPI-374), B must-verify with no code expected (MPI-249 Linux leg on the real artifact, MPI-432 mac pinch, both test suites), C must-decide so the notes are not false (MPI-433 date gate, MPI-416 macOS split, a claim audit of UNRELEASED.md), D board and version hygiene. Full gate table with the reasoning per member is in brief.md; the tick-list is checklist.md.",
-  "column": "todo",
-  "maturity": "blocked",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-05T10:35:00Z",
-  "updated_at": "2026-08-05T16:25:00Z",
+  "updated_at": "2026-08-08T03:10:00Z",
   "labels": [
     "release",
     "umbrella",
@@ -31,5 +31,9 @@
     "handoffs": "handoffs/"
   },
   "priority": "high",
-  "attention": false
+  "attention": {
+    "state": "required",
+    "reason": "UNBLOCKED 2026-08-08: Gate E is complete (MPI-449/451/452 all done, engine on 0.30.0), so the hold behind H3 is over. Live now: the MPI-467 smoke run, which is the last thing release:check fails on. User decisions this session - (1) MPI-433 is a HARD date: uploading the Krea2 NSFW weight to HF before 2026-08-10 is FORBIDDEN, so if 1.4 cuts before the 10th it ships as-is and if it slips to on/after the 10th the upload is done and the dependency changed; (2) the Linux and macOS legs (MPI-249, MPI-432) are deliberately LAST, against the real artifact, and a Mac can be rented if the risk looks real; (3) MPI-367 per-op help copy ships as it stands.",
+    "updated_at": "2026-08-08T03:10:00Z"
+  }
 }

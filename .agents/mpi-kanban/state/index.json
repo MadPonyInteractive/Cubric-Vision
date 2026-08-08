@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-07T22:41:27Z",
+  "updated_at": "2026-08-08T04:45:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -9,8 +9,6 @@
   "pending_file_states": [],
   "open_messages": [],
   "active_handoffs": [
-    ".agents/mpi-kanban/state/handoffs/c3a71f04-9b2e-4d6a-8f15-2b0d7e4a9c33.json",
-    ".agents/mpi-kanban/state/handoffs/b91a6dcb-2321-4252-86de-7eaf3437fb7a.json",
-    ".agents/mpi-kanban/state/handoffs/3e2b6830-98ed-42e0-a68c-5b8e73161f5a.json"
+    ".agents/mpi-kanban/state/handoffs/c4efc95b-54d4-4bbf-bdfd-cab1cf13017c.json"
   ]
 }

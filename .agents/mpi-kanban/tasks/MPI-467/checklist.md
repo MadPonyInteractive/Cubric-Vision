@@ -25,12 +25,15 @@
 - [ ] Gates 7-9 — **DEFERRED to a later session, on the user's call**: the H3
       reference-to-video workflow has to land first, so the smoke set is complete when it
       runs. Nothing was rented; no GPU, no volume.
-      🛑 **The `v0.20.0-dev` image already needs a REBUILD before that smoke.** MPI-472
-      added `imageio-ffmpeg` to `python_deps` hours after the pod repo was synced, so the
-      image built today does not contain it — and per MPI-472's own title that kills ALL
-      video output, which is most of the smoke set (LTX, Wan, H3, wan22-5b). The image
-      built clean; nothing in the build would have caught it. Re-sync BOTH files and
-      rebuild once MPI-472's `python_deps` change is committed.
+      ✅ **CORRECTED 2026-08-08 — no rebuild was owed.** This line used to read that the
+      `v0.20.0-dev` image needed a REBUILD because MPI-472 added `imageio-ffmpeg` to
+      `python_deps` hours after the pod sync. That is true of the file and FALSE of the
+      image. MPI-472 is a Windows-portable-only fix: MpiNodes `help_funcs.py`
+      `find_ffmpeg()` resolves `VHS_FORCE_FFMPEG_PATH` -> `imageio_ffmpeg` ->
+      `shutil.which("ffmpeg")`, and BOTH Pod Dockerfiles apt-install ffmpeg
+      (`Dockerfile:72`, `Dockerfile.cpu:29`) — `start.sh:234-235` already documented it.
+      Only the Windows portable engine satisfies none of the three. The one-line byte
+      drift was closed in mpi-ci `27087c2` with no rebuild; the next build picks the pin up.
       Resume with: `node scripts/smoke-workflows.mjs --plan` — the drift check now covers
       `python_deps.txt` too (`a2b677f3`), so a clean ✓ there is the proof gate 6 held —
       then gate 7 asserts the Pod reports 0.30.0, then the matrix.

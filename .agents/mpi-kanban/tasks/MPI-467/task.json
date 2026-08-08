@@ -4,10 +4,10 @@
   "title": "Smoke-run every workflow when ComfyUI is bumped - and give the engine bump a playbook",
   "description": "MPI-465 shipped a totally dead LTX to users for six days because a ComfyUI bump changed a return type under a custom node and NOTHING executes a workflow before release. The engine bump also has no skill and no playbook - mpi-bump-local-comfy only touches the BENCH at G:/ComfyUi, not node_lock's core pin. Build a smoke matrix that EXECUTES a minimal generation per workflow, and hang it off a real engine-bump playbook. SCOPE SPLIT (MPI-468, 2026-08-07): this card owns the GUARD - docs/playbooks/bump-engine/, the smoke runner, and the mpi-release refusal. The in-place upgrade path and the bump skill are MPI-457. Dispatch notes for a cold session are in brief.md; hand the agent MPI-468.",
   "column": "doing",
-  "maturity": "validating",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-07T01:40:00Z",
-  "updated_at": "2026-08-07T08:20:00Z",
+  "updated_at": "2026-08-08T04:45:00Z",
   "labels": [
     "testing",
     "engine",
@@ -32,8 +32,8 @@
   "priority": "high",
   "attention": {
     "state": "required",
-    "reason": "Implementation complete and verified: playbook, runner, enforced release gate, /mpi-bump-engine skill. Outstanding is the LIVE proving run only - create the 320GB EU-RO-1 volume, fill ~281GB on a CPU Pod, rent L4/3090/4090, execute all 34 ops. The live GPU survey also never ran (app was not up on :3000). Schedule the proving run AFTER H3/LTX/Wan settle - the smoke set is resolved from the registry at run time, so smoking now measures a moving target, and the run doubles as the remote-half verification for those cards.",
-    "updated_at": "2026-08-07T04:01:21Z"
+    "reason": "Live run attempted 3x on 2026-08-08 and never reached the GPU stage. SIX runner faults found and fixed (f1df91fa, 6001376a, d6f1c7fc, 899e118f) plus two watchdogs (e60b269b) and the playbook write-up (dc7a738e). ~97 GB of ~300 GB is on volume aghcuvg7nl - the ONLY volume, always pass --volume aghcuvg7nl. No GPU rented, nothing smoked, no evidence file. THE ENTIRE GPU HALF IS STILL UNEXECUTED. Resume via handoff c4efc95b-54d4-4bbf-bdfd-cab1cf13017c.",
+    "updated_at": "2026-08-08T04:45:00Z"
   },
-  "activeSessionTitle": "Engine-bump guard: playbook + Pod smoke runner + release gate"
+  "activeSessionTitle": "Live smoke proving run for the 0.30.0 engine bump"
 }

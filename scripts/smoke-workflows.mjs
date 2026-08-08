@@ -533,10 +533,12 @@ async function main() {
     // created (_afterPodCreated → setRemoteMode). With no Pod up, every POST in the
     // loop takes the LOCAL branch and lands ~300 GB on the developer's own disk.
     // A download Pod runs the wrapper only — `ready` is the whole signal; `comfyReady`
-    // never comes (no torch, no ComfyUI in the -cpu image). A healthy one answers in
-    // ~30s, so 4 min is already generous; past that the host is bad, not busy.
+    // never comes (no torch, no ComfyUI in the -cpu image). Measured: a healthy one
+    // answers in ~30s, and the user's standing observation is that a CPU Pod never takes
+    // longer than 5 minutes to connect. So 5 min is the ceiling, not a guess: past it the
+    // host is bad, not busy, and waiting longer only pays for a Pod that will never work.
     const cpuSpec = { gpuTypeId: CPU_SENTINEL, volumeId: volume.id, datacenter: DATACENTER };
-    await createPodWithRetry(cpuSpec, 'CPU download Pod', 4 * 60 * 1000);
+    await createPodWithRetry(cpuSpec, 'CPU download Pod', 5 * 60 * 1000);
     const mode = await app('/remote/mode');
     if (!mode.active || !mode.podId) die('remote mode is not active after the CPU Pod came up — refusing to install, the deps would download LOCALLY.');
     log(` remote mode active on ${mode.podId}`);
@@ -591,7 +593,7 @@ async function main() {
                 log(`\n  ⚠ ${e.model.id} stopped progressing — recycling the download Pod and retrying`);
                 await app('/remote/pod/delete-active', { method: 'POST' }).catch(() => { });
                 await sleep(5000);
-                await createPodWithRetry(cpuSpec, 'CPU download Pod', 4 * 60 * 1000);
+                await createPodWithRetry(cpuSpec, 'CPU download Pod', 5 * 60 * 1000);
                 await app('/comfy/models/download/start', {
                     method: 'POST',
                     body: JSON.stringify({ modelId: e.model.id, dependencies: reg.resolveDeps(e.model, null, null, ENGINE, { arch: ARCH }).map(id => reg.DEPS[id]).filter(Boolean) }),
