@@ -25,8 +25,9 @@ Grades — what the sentence rests on, not whether it is believed:
 
 | line | was | now | why |
 |---|---|---|---|
-| 163 | LTX Balanced "at **20GB** instead of 24–25GB" | "at **21.5GB**" | `Content-Length` on the real dep = **21,505,993,424 B** = 21.5 GB. The declared `20GB` string is GiB-derived (20.03 GiB) while `fp8`/`mxfp8` declare **decimal** GB (25.2 / 24.1), so the bullet compared two different units and made the saving look ~5 GB when it is ~3 GB. MPI-482's measured pass will heal the DEPS string to match. |
-| 169 | Wan t2v "a **27GB** download" | "a **29GB** download" | HEAD on both halves: 14,548,461,368 + 14,548,461,376 = **29.1 GB**. Declared `13.55GB` each is ~1 GB low per file — the same MPI-482 defect. |
+| 163 | LTX Balanced "at 20GB instead of **24–25GB**" | "at 20GB instead of **22–23.5GB**" | The bullet compared two different units: `20GB` was GiB-derived, `24–25GB` was HuggingFace's decimal display. **MPI-482 landed while this audit was being written** (`af829e0f`) and settled which unit the app speaks — every `size` string is now regenerated from measured bytes as GiB, so a user reads `20.03GB` for the new file and `22.4` / `23.49GB` for the two it replaces. The note now matches the tiles. Only the OLD half moved; the saving is ~2.5–3.5GB, not ~5. |
+| 169 | Wan t2v "a 27GB download" | **unchanged** | First read as understated (HEAD says 14,548,461,368 + 14,548,461,376 B = 29.1 decimal GB) and briefly corrected to 29GB. `af829e0f` reversed that: the declared `13.55GB` is GiB and always was, so the pair reads 27GB on the tile and 27GB is what the note should say. Restored. |
+| 131 | H3 "**53GB** of weights" | "**50GB** of weights" | Correct as bytes (53.1 decimal GB, HEAD-verified in MPI-452) but no longer what the tile says: post-`af829e0f` the five deps sum to **49.5 GiB**, and the tile is what the reader compares the sentence against. |
 | 245 | "Genuine failures — a bad file, **a full disk** — still report exactly as before." | "a bad file, for instance" | The full-disk report is measurably wrong (**MPI-483**): the gate subtracts `du -sb` *apparent* bytes, so a preallocated `.part` inflates usage and a user with ~91 GB free is refused at "39.4 GB free". The bullet leaned on it as the trustworthy counterexample. Dropping the example makes the sentence true either way; if MPI-483 lands, the phrase can come back. |
 | 265 / 273 | "If you have been avoiding LTX because it looked broken…" sat at the end of the **negative-prompt** bullet | moved back under **LTX video generation works again** | Displaced by `56902d53`, which inserted the negative-prompt bullet above the trailing line instead of below it. It reads as a claim about the negative prompt; it is the sign-off for the dead-LTX fix. |
 
@@ -76,11 +77,18 @@ the prose.
    / 825 start-only) and is covered by the user's 2026-08-08 line — *"Same thing for WAN,
    at least locally"* — which is an attestation, not an observed route table. Remote is
    MPI-467's to prove.
-8. **Every GB figure in the notes is a declared estimate (MPI-482).** Two were wrong
-   enough to fix (above). The ones that are *not* estimates and can be quoted safely:
-   H3's **53GB** (all four publisher URLs HEAD-verified byte-identical, MPI-452), the
-   **25GB** stalled dep (25,226,571,988 B, MPI-460), and the **~16GB** of stranded weights
-   (measured on this machine, MPI-462).
+8. **Every GB figure in the notes is now measured, and they are GiB (MPI-482,
+   `af829e0f`, landed mid-audit).** All 107 `size` strings are regenerated from a HEAD's
+   byte count and formatted 1024-based, so a figure in the notes is only right if it is
+   read off the tile rather than off a publisher's page. The typed strings had been 4.1%
+   **over** true, not under — HuggingFace's decimal display copied into a field every
+   consumer parses as 1024-based — which is the opposite of what MPI-482 was written to
+   prove and is why both size corrections in this audit had to be restated. **Re-check
+   every remaining GB figure against `DEPS[...].size` at fold time**, not against a card's
+   prose. H3's 53GB was one of them and is restated above; no other model total is quoted
+   in the notes. Safe as written:
+   the **25GB** stalled dep (a byte count, 25,226,571,988 B, MPI-460) and the **~16GB** of
+   stranded weights (measured on this machine, MPI-462).
 
 ---
 

@@ -117,13 +117,18 @@ assumptions that time may have invalidated.
       the evidence pointer per bullet. **Scope correction:** the 2026-08-05 pass had read
       `## fixes` ONLY — `## whatIsNew` (15) and `## importantChanges` (11) had never been
       audited at all, and `## fixes` had since grown 23 → 35.
-      **Four corrections applied to `UNRELEASED.md`:** the LTX Balanced size (20GB → 21.5GB
-      — the declared string is GiB-derived while the files it is compared against are
-      decimal GB, so the saving read ~5GB when it is ~3GB); the Wan t2v size (27GB → 29GB,
-      both halves HEAD-measured at 14.55GB); the full-disk example dropped from the
+      **Four corrections applied to `UNRELEASED.md`:** two size claims restated in the
+      units the tiles actually show (LTX Balanced "20GB instead of **22–23.5GB**", not
+      24–25GB; H3 "**50GB** of weights", not 53GB); the full-disk example dropped from the
       wake-up-install bullet, which settles the fourth soft spot **without** waiting on
       MPI-483 (put the phrase back if 483 lands); and the "if you have been avoiding LTX"
       sign-off moved back under the LTX-dead bullet, where `56902d53` had displaced it.
+      **The size half was corrected twice.** MPI-482 landed mid-audit (`af829e0f`) and
+      inverted its own premise: the hand-typed strings were 4.1% **over** true, not under
+      — HuggingFace's decimal display copied into a field every consumer parses as
+      1024-based — and all 107 are now regenerated from measured bytes as GiB. So a GB
+      figure in the notes is right only if it matches `DEPS[...].size`, never a publisher's
+      page. Wan's "27GB" was right all along and is restored.
       **One soft spot CLEARED, not settled — it was never a gap:** "Resize Video works on
       a cloud GPU" IS live-verified — MPI-438's validation, Pod `vhks7b6fl1x57h`, prompt
       `81b0399f`, `status: success`.

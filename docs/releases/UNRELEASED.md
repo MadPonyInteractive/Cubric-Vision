@@ -128,7 +128,7 @@
   though the sizes above its native canvas are final-render territory rather than
   something to iterate at: twice the pixels costs a little over three times the time, so
   the top of that ladder is for a card that can carry it, not somewhere to work. It
-  is a big model — 53GB of weights, a slow generator, and a 12GB graphics card at the
+  is a big model — 50GB of weights, a slow generator, and a 12GB graphics card at the
   minimum — and it asks you to accept its licence before it downloads, which is covered
   further down. If what you want is the same character, place or voice across several
   clips, reach for its sibling below instead.
@@ -160,13 +160,13 @@
 
 - **LTX 2.3's Balanced tier moved to a better, smaller model file.** The two
   GPU-specific options (RTX 50 Series / RTX 40 & Older) are gone — one file now runs
-  on every card, at 21.5GB instead of 24–25GB, with better detail and sound. If you
+  on every card, at 20GB instead of 22–23.5GB, with better detail and sound. If you
   already have LTX Balanced installed, the new file downloads once and the old one is
   cleaned up. Text to Video and Image to Video also share one workflow now, so which
   one you get follows from whether you supply a first or last frame.
 - **Wan 2.2 is image-to-video only now.** Its Text to Video operation has been
   retired: LTX 2.3 does that job better, and Wan's text-to-video weights were a
-  29GB download that served nothing else. Image to Video is untouched — same
+  27GB download that served nothing else. Image to Video is untouched — same
   model, same speed, same results. If you already downloaded the text-to-video
   weights, they are no longer counted as part of Wan 2.2, so the next time you
   uninstall a model they get cleared out with it rather than sitting on your
