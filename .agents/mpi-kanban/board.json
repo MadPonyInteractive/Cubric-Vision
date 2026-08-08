@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 479,
+  "next_id": 480,
   "columns": {
     "todo": [
+      "MPI-479",
       "MPI-478",
       "MPI-477",
       "MPI-461",
@@ -81,7 +82,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-08T00:30:00Z",
+  "updated_at": "2026-08-08T01:40:00Z",
   "events": [
     {
       "at": "2026-08-07T14:20:43Z",
@@ -2215,6 +2216,14 @@
       "at": "2026-08-08T00:30:00Z",
       "actor": "opus",
       "summary": "The local engine launches ComfyUI with --lowvram for EVERY NVIDIA GPU, unconditionally (routes/comfy.js). The authoring bench runs with no VRAM flag at all. That is the one unconditional difference between where the fast H3 runs happened and where the slow ones do, and it matches the reported symptom - dedicated VRAM sits at 11.5 of 16GB while 23.7GB spills to shared. NOT yet proven to be the cause: the app's own log shows 6.4 to 143 s/it tonight, so settings dominate. One isolation test decides it."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-479",
+      "type": "task.created",
+      "at": "2026-08-08T01:40:00Z",
+      "actor": "opus",
+      "summary": "Found while chasing an unrelated H3 speed report. Evidence is the user's own .meta sidecars: 7 ref2v_ms runs, and every one that ran at the DEFAULT refImageSize recorded op: null while both runs where he touched the control recorded the key. Carded rather than fixed inline because the snapshot feeds every Reuse Prompt path."
     }
   ]
 }
