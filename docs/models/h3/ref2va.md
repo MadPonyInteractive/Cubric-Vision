@@ -107,11 +107,38 @@ other result should be measured against — not an unexamined default. (Contrast
 `--lowvram` in `routes/comfy.js`, which really was an unexamined day-one default; the
 difference is exactly that this one is written down.)
 
-A `beta`-vs-`simple` A/B is in progress. A scheduler swap changes sigma spacing, not
-step count, so it is **free** at equal steps — and if `beta` holds detail better it may
-also hold up at fewer steps, which compounds with the step work above. It is a GLOBAL
-quality change to both H3 cards, so it needs to win on more than one prompt before it
-ships.
+### `beta` vs `simple` — TESTED 2026-08-08, NO DIFFERENCE. Do not re-run.
+
+960x544, 1 s, same prompt and seed, run as two ordered pairs on a 4060 Ti:
+
+| order | scheduler | wall |
+|---|---|---|
+| 1st | `simple` | **167 s** |
+| 2nd | `beta` | 141 s |
+| 1st | `beta` | **196 s** |
+| 2nd | `simple` | **167 s** |
+
+**`simple` reproduced 167 s exactly, twice. `beta` gave 141 s and 196 s** — a 55 s spread
+on itself, twice the 26 s "win" the first pair appeared to show. Quality was identical in
+every run. The first pair read as `beta` being 16 % faster purely because it ran second.
+
+There is no mechanism for a compute difference and this was checked in the source, not
+assumed: `res_multistep` calls `model()` exactly once per iteration over
+`len(sigmas) - 1`, with no branch that adds or skips an eval, and `BasicScheduler` at 20
+steps yields 21 sigmas under BOTH schedulers. (`beta_scheduler` *does* deduplicate
+repeated timesteps, which would cut evals — but only when `total_timesteps` approaches
+`steps`; at H3's ~1000 it never fires. Verified by running the scheduler's own arithmetic
+across totals 999 down to 20; the first collapse appears at 20.)
+
+**So `simple` stays.** Comfy's template description claims *"beta or normal tends to
+outperform simple for reference-heavy prompts like this one"* — measured here on exactly
+such a prompt, it does not.
+
+**The general lesson, which cost two runs to learn:** a 1-second clip is the worst length
+to time anything on this box. Fixed overhead — weight fault-in, two VAE decodes, the mux —
+does not scale with steps, so the same absolute jitter that is 2.5 % across the 7-minute
+`match` baselines (7m12 / 7m22 / 7m23) becomes 8-18 % at 141 s. Time per-step changes at
+the medium tier or above, never at very_low.
 
 **Do not read a slow run as a memory problem without checking GPU utilisation first.**
 On the 8m38s run: dedicated VRAM 13.3/16GB, shared 24.1GB, system RAM 60.6/63.8 —
