@@ -21,7 +21,7 @@ Architecture: Electron shell + Express server + vanilla-JS SPA — full map in `
 
 ## Conventions
 
-See `CLAUDE.md` § "Critical Rules Snapshot" for the canonical list (BEM, ComponentFactory, no hardcoded colors, state proxy, project JSON writes, logging, kanban auth, no git commits without ask). Architecture rules live in `.claude/rules/*.md`.
+See `CLAUDE.md` § "Critical Rules Snapshot" for the canonical list (BEM, ComponentFactory, no hardcoded colors, state proxy, project JSON writes, logging, kanban auth, claim files before editing, no destructive git on a shared tree, commit by pathspec — never `add -A`). Architecture rules live in `.claude/rules/*.md`.
 
 ## Important Commands
 
