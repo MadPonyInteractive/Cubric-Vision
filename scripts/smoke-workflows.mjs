@@ -26,6 +26,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { tmpdir } from 'node:os';
 import { createInterface } from 'node:readline/promises';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -38,6 +39,7 @@ const GPU_ORDER = ['L4', 'RTX 3090', 'RTX 4090'];  // cheapest-first by measured
 const MIN_RAM_GB = 48;                 // weights spill to RAM on a 24GB card (footprint.js)
 const VOLUME_NAME = 'cubric-smoke';
 const VOLUME_HEADROOM_GB = 40;
+const CPU_SENTINEL = '__cpu__';        // download-mode Pod (MPI-88); slim -cpu image, no GPU bill
 const ENGINE = 'remote';
 const ARCH = 'modern';                 // L4/3090/4090 are all 'modern' (gpuArch.js)
 
@@ -319,32 +321,72 @@ async function stageProbeImage() {
     const png = await sharp({
         create: { width: BUDGET.edge, height: BUDGET.edge, channels: 3, background: { r: 128, g: 128, b: 128 } },
     }).png().toBuffer();
-    const out = path.join(REPO, '.smoke-probe.png');
+    const out = path.join(tmpdir(), 'smoke-probe.png');
     writeFileSync(out, png);
-    return out;
+    // The Pod cannot see a Windows path. Upload it and inject the Pod-ABSOLUTE path the
+    // loader nodes resolve (`MpiLoadImageFromPath` runs os.path.isfile on the Pod) — the
+    // same route the app's own dispatch uses (comfyController._uploadRemoteMedia). Inject
+    // the local path instead and every op with a required image self-gates to no output,
+    // which reads as a broken model and is not one.
+    const up = await app('/remote/upload/media', {
+        method: 'POST', body: JSON.stringify({ localPath: out, filename: 'smoke-probe.png' }),
+    });
+    if (!up?.success || !(up.path || up.name)) die('probe image upload to the Pod failed — every op with an image input would self-gate.');
+    log(`  probe image on the Pod: ${up.path || up.name}`);
+    return up.path || up.name;
 }
 
-async function runOp(reg, model, op, probeImage) {
+/**
+ * The OFFLINE half of an op: resolve its graph, select its branch, inject the probe and
+ * apply the budget. No network. Split out so `--plan` can sweep all 35 ops for free —
+ * a mismatched `opInject` title found after a ~300 GB volume fill has already cost the
+ * expensive half of the run, and it is a fault the registry alone can prove.
+ * @returns {{graph:object,applied:object}|{status:'SKIP'|'FAIL',why:string}}
+ */
+function prepOp(reg, model, op, probeImage) {
     const { resolveWorkflowFile, COMMANDS } = reg;
     const file = resolveWorkflowFile(model, op, ENGINE, { variantTokens: { arch: ARCH } });
-    if (!file) return { op, status: 'SKIP', why: 'no workflow mapped' };
+    if (!file) return { status: 'SKIP', why: 'no workflow mapped' };
     const p = path.join(WF_DIR, file);
-    if (!existsSync(p)) return { op, status: 'SKIP', why: `workflow file missing: ${file}` };
+    if (!existsSync(p)) return { status: 'SKIP', why: `workflow file missing: ${file}` };
 
     const graph = JSON.parse(readFileSync(p, 'utf8'));
 
     // The model's own branch selector — one graph serving many ops (klein-4b: 7 branches).
     for (const [title, value] of Object.entries(model.opInject?.[op] || {})) {
         if (!injectByTitle(graph, title, value)) {
-            return { op, status: 'FAIL', why: `opInject title "${title}" matches no node — the graph would run the WRONG branch` };
+            return { status: 'FAIL', why: `opInject title "${title}" matches no node — the graph would run the WRONG branch` };
         }
     }
     for (const mi of COMMANDS[op]?.mediaInputs || []) {
         if (!mi.required) continue;
-        if (mi.mediaType !== 'image') return { op, status: 'SKIP', why: `needs a ${mi.mediaType} input; only images are staged` };
+        if (mi.mediaType !== 'image') return { status: 'SKIP', why: `needs a ${mi.mediaType} input; only images are staged` };
         injectByTitle(graph, mi.title, probeImage);
     }
-    const applied = minimizeGraph(graph);
+    return { graph, applied: minimizeGraph(graph) };
+}
+
+/** Free sweep of every op's offline half. Returns the count of hard faults. */
+function preflightOps(reg, set) {
+    const problems = [];
+    for (const e of set) {
+        for (const op of e.ops) {
+            const r = prepOp(reg, e.model, op, '/workspace/comfyui/input/smoke-probe.png');
+            if (r.status) problems.push(`  ${r.status} ${e.model.id}/${op} — ${r.why}`);
+        }
+    }
+    const fails = problems.filter(l => l.trim().startsWith('FAIL')).length;
+    if (problems.length) {
+        log(`\n  preflight (offline, free): ${problems.length} op(s) would not execute`);
+        problems.forEach(l => log(l));
+    } else log(`\n  preflight (offline, free): all ops resolve a graph, a branch and a budget ✓`);
+    return fails;
+}
+
+async function runOp(reg, model, op, probeImage) {
+    const prep = prepOp(reg, model, op, probeImage);
+    if (prep.status) return { op, status: prep.status, why: prep.why };
+    const { graph, applied } = prep;
 
     const { prompt_id } = await app('/proxy/prompt', {
         method: 'POST', body: JSON.stringify({ prompt: graph }),
@@ -424,13 +466,33 @@ async function main() {
     const only = opt('models')?.split(',').map(s => s.trim()).filter(Boolean);
     const set = resolveSmokeSet(reg, only);
     const opCount = printPlan(reg, set);
+    const preflightFails = preflightOps(reg, set);
     const podLockOk = checkPodLock();
 
     if (PLAN_ONLY) { log('\n--plan: nothing rented, nothing spent.\n'); return; }
     if (!podLockOk) die('pod lock is behind — sync it and rebuild the DEV image before smoking.');
+    if (preflightFails) die(`${preflightFails} op(s) fail preflight offline — fix the graph/registry before renting anything.`);
 
     log(`\n── Live run ──`);
     const volume = await ensureVolume(set.totalGb);
+
+    // The CPU Pod is not an optimisation — it is what makes the installs below REMOTE.
+    // /comfy/models/download/start branches on remoteModels.isRemoteActive()
+    // (routes/downloadManager.js), and remote mode only goes active when a Pod is
+    // created (_afterPodCreated → setRemoteMode). With no Pod up, every POST in the
+    // loop takes the LOCAL branch and lands ~300 GB on the developer's own disk.
+    log(`\n  creating the CPU download Pod (${CPU_SENTINEL} — slim image, no GPU bill)…`);
+    await app('/remote/pod/create', {
+        method: 'POST',
+        body: JSON.stringify({ gpuTypeId: CPU_SENTINEL, volumeId: volume.id, datacenter: DATACENTER }),
+    });
+    // A download Pod runs the wrapper only — `ready` is the whole signal; `comfyReady`
+    // never comes (no torch, no ComfyUI in the -cpu image).
+    await waitReady('CPU Pod', async () => (await app('/remote/comfy/status')).ready, 20 * 60 * 1000);
+    const mode = await app('/remote/mode');
+    if (!mode.active || !mode.podId) die('remote mode is not active after the CPU Pod came up — refusing to install, the deps would download LOCALLY.');
+    log(` remote mode active on ${mode.podId}`);
+
     log(`  installing ${set.depIds.length} deps on a CPU Pod (download mode)…`);
     // ponytail: install via the app's normal per-model route. Same queue, same SSE, same
     // code users hit — a bespoke bulk installer would be a second path to keep correct.
@@ -440,10 +502,29 @@ async function main() {
             body: JSON.stringify({ modelId: e.model.id, dependencies: reg.resolveDeps(e.model, null, null, ENGINE, { arch: ARCH }).map(id => reg.DEPS[id]).filter(Boolean) }),
         });
     }
+    // `installing` and `paused` are in-flight too (routes/downloadManager.js:1523) —
+    // waiting on downloading/queued alone lets the run leave for the GPU while the Pod
+    // is still unpacking.
+    const IN_FLIGHT = ['queued', 'downloading', 'paused', 'installing'];
+    // `jobs.length >= set.length` first: an empty job list means the POSTs have not
+    // registered yet, and "no in-flight job" would otherwise read as "install finished".
     await waitReady('model install', async () => {
-        const s = await app('/comfy/downloads/status');
-        return !(s.jobs || []).some(j => j.status === 'downloading' || j.status === 'queued');
+        const jobs = (await app('/comfy/downloads/status')).jobs || [];
+        return jobs.length >= set.length && !jobs.some(j => IN_FLIGHT.includes(j.status));
     }, 6 * 60 * 60 * 1000);
+
+    // Playbook step 4: verify BEFORE renting a GPU. A weight that failed here and is
+    // only discovered at sampling time has already cost the expensive half of the run.
+    const jobs = (await app('/comfy/downloads/status')).jobs || [];
+    const badDeps = jobs.flatMap(j => (j.deps || [])
+        .filter(d => d.status === 'failed' || d.status === 'error')
+        .map(d => `${j.modelId}/${d.id}`));
+    if (badDeps.length) die(`${badDeps.length} dep(s) failed to install: ${badDeps.join(', ')}`);
+    log(`  installs verified: ${jobs.length} model job(s), no failed deps`);
+
+    // The GPU Pod mounts the same volume, so the CPU Pod has to go first.
+    log(`\n  deleting the CPU download Pod…`);
+    await app('/remote/pod/delete-active', { method: 'POST' }).catch(() => log('  ⚠ CPU Pod delete failed — check RunPod.'));
 
     const gpu = await pickGpu(volume.id);
     await app('/remote/pod/create', {
