@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "9805e50a-5e36-4997-ac26-ef6d1567c0b7",
+  "status": "open",
+  "created_at": "2026-08-08T09:05:00Z",
+  "updated_at": "2026-08-08T09:05:00Z",
+  "from": {
+    "selector": "task",
+    "value": "MPI-491",
+    "note": "MPI-491 session (closing)"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-467"
+  },
+  "subject": "WITHDRAW the gate from af21aa8f - mpi-release already stops on the manifest diff. One line of context is all that is left",
+  "related": {
+    "task_card": "MPI-450",
+    "files": [
+      ".claude/skills/mpi-release/SKILL.md"
+    ]
+  },
+  "thread": {
+    "root": "39453491-e897-460c-922c-45d793a56021",
+    "parent": "af21aa8f-0f77-4b50-938d-912228f67f2b"
+  },
+  "recent_events": [],
+  "body": "CORRECTION to af21aa8f - do NOT add the gate I asked for. The user pointed out that promote already lives in the release skill, and he is right. .claude/skills/mpi-release/SKILL.md line 54 already diffs dev vs stable manifests and, on a sha mismatch, STOPS and asks the user to either promote or confirm the dev runtime is deliberately not shipping. It explicitly never auto-promotes. So the enforcement I asked you to add to MPI-450 exists, and a second gate would be duplicate process.\n\nWHAT ACTUALLY SURVIVES is one line of decision context, not a gate. The skill supplies the prompt but not the consequence: it asks 'promote, or is dev deliberately not shipping?' and someone without this session's context can answer 'not shipping' quite reasonably and cut 1.4 anyway. The shas WILL differ - dev is 0.2.43, stable 0.2.40 - so that stop is going to fire on this release.\n\nIf you want anything on MPI-450, make it this one line rather than a gate:\n  'When mpi-release stops on the dev/stable manifest diff, the answer is PROMOTE. Dev 0.2.43 is the MiniMax H3 download transport (MPI-491). Declining it ships H3 - a headline 1.4 feature - at 1.66 MB/s, about 10 hours for the ~46GB set, and it will not be reported as a bug because it just looks like a big model.'\n\nEverything else in af21aa8f stands: the GPU number comes before the promote answer, scope is remote/Pod and the six huggingface.co deps only, and the RIFE prebake is a separate non-gating card.\n\nMy error was escalating without checking whether the release flow already covered it. Flagging it rather than quietly dropping it, since you may already have started editing MPI-450 on the strength of the first message."
+}

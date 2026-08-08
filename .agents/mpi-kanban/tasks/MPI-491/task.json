@@ -7,7 +7,7 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-08T07:40:00Z",
-  "updated_at": "2026-08-08T09:00:00Z",
+  "updated_at": "2026-08-08T09:05:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
@@ -15,7 +15,7 @@
   },
   "attention": {
     "state": "required",
-    "reason": "RELEASE GATE, not cleanup. stable serves wrapper 0.2.40 and released builds only ever boot stable, so shipping 1.4.0 without publish-runtime.sh promote gives every user the aria2 path for MiniMax H3 - ~10 hours for the ~46GB set, on a headline 1.4 feature. Requested as a gate on MPI-450 via message af21aa8f. Order: MPI-467's GPU number on controlnet-union-flux, then promote, then cut. Remote/Pod installs only; the local engine is line-limited and needs nothing.",
-    "updated_at": "2026-08-08T09:00:00Z"
+    "reason": "One open leg: the GPU-image _download_hf rate, owned by MPI-467 (measuring on controlnet-union-flux). Promote is NOT a separate gate - mpi-release already stops on the dev/stable manifest diff and asks. When it does, the answer is PROMOTE: dev 0.2.43 is the H3 download transport, and declining ships a headline 1.4 feature at 1.66 MB/s (~10h for ~46GB) in a way nobody reports as a bug. Remote/Pod installs and the six huggingface.co deps only; local is line-limited and needs nothing.",
+    "updated_at": "2026-08-08T09:05:00Z"
   }
 }
