@@ -335,9 +335,24 @@ running app — which is the only reason trap 1 was ever caught.
 ## Backend — `routes/downloadManager.js`
 Non-blocking download router using `node-downloader-helper`. **Resume contract (MPI-317):** user CANCEL is intent → partial + marker deleted; failure/stall/app-quit is accident → partial kept, and the next Install resumes it via an explicit Range request (`resumeFromFile` on a marker-blessed partial). Safe because the installed NDH clears `__isResumed` and TRUNCATES on a 200-not-206 answer, so the MPI-258 Bug 2 append-corruption (200 full body appended onto a partial → SHA256 mismatch, hit live on the 25GB LTX transformer) cannot recur on this version. A 416 (partial larger than the remote object) scrubs the unusable partial and restarts clean. There is still no pause/resume UI — those routes stay deleted (c7313dff).
 
+**The REMOTE twin of that contract deletes volume bytes — cancel ORDER is load-bearing.**
+On the remote engine, cancel is not "stop a stream". For every dep in `_remoteDepIds` it
+calls `remoteCancelInstall` **and then `remoteUninstallDep`** (`routes/downloadManager.js`,
+the cancel route), which deletes the dep's file — and its `.part` — **off the Pod volume**.
+That is correct for a user pressing Cancel (same "intent" rule as above), and catastrophic
+for an operator clearing stale jobs after a Pod died mid-fill: the jobs look dead, but the
+partials behind them are hours of download that aria2 would otherwise resume.
+
+The safe order is therefore **delete the Pod FIRST, then cancel**. With no Pod attached,
+`wrapperFetch` cannot reach the volume, `remoteCancelInstall` swallows its own error and
+`remoteUninstallDep` is `.catch`-ed, so the cancel degrades to a pure local job-scrub and
+the volume is untouched. Cancelling with a Pod still attached is the destructive path.
+Measured 2026-08-08 during the MPI-467 smoke fill: that order preserved ~273 GB across
+three restarts, and the reverse would have destroyed it each time.
+
 **Endpoints:**
 - `POST /comfy/models/download/start` — register the model job in the store BEFORE responding (register-before-respond, G8); the response body carries the `job` snapshot + store `version`.
-- `POST /comfy/models/download/cancel` — stop + scrub a model's active/queued download. **Idempotent**: an unknown job returns 200 (+ `download:cancelled` broadcast), NOT 404 (MPI-258).
+- `POST /comfy/models/download/cancel` — stop + scrub a model's active/queued download. **Idempotent**: an unknown job returns 200 (+ `download:cancelled` broadcast), NOT 404 (MPI-258). On the remote engine it ALSO deletes the dep off the Pod volume — see the ordering rule above.
 - `GET /comfy/downloads/status` — full queue snapshot (still map-backed; carries `version`).
 - `GET /comfy/downloads/active` — active model downloads plus engine-download flag for Electron quit warnings
 - `GET /comfy/downloads/stream` — SSE broadcast channel; on connect: reconcile pass → `download:snapshot`.
@@ -805,7 +820,9 @@ informational.
 **Local-only by construction.** `_mirrorUrlsFor` lives in the `downloadManager.js`
 `FileDownloader`; the Pod wrapper's aria2c downloader never consults it, so R2 stays
 primary on the remote engine and the HF/Xet multi-connection throttling that the R2
-migration (MPI-129/140) fixed cannot come back. No engine-split sweep applies here.
+migration (MPI-129/140) fixed cannot come back **for the deps that have an R2 copy**.
+It very much came back for the six that do not — see § "HF weights take the Xet-native
+transport, not plain HTTP" (MPI-491). No engine-split sweep applies here.
 
 Proven 2026-08-03: all 96 mirrors HEAD-checked live, `X-Linked-ETag` (the LFS oid) equal
 to the dep's recorded sha256 on every one; and an end-to-end run against a dead origin
@@ -816,6 +833,89 @@ fix for deep-packet interference.
 
 `CUBRIC_MODEL_MIRRORS` (comma-separated) REPLACES the default at runtime for testing
 without a rebuild. Guard: `tests/transport-error-message.test.cjs`.
+
+## HF weights take the Xet-native transport, not plain HTTP (MPI-491)
+
+`https://huggingface.co/<repo>/resolve/<rev>/<path>` is the **compatibility** route. It
+302s to `us.aws.cdn.hf.co/xet-bridge-us`, a shim for clients that only speak plain HTTP,
+and from RunPod EU-RO-1 that shim is capped at **~1.7 MB/s** — a per-IP TOTAL cap, not a
+per-connection one. Measured 2026-08-08 on `h3-qwen3vl-32b-clip` (24.55GB):
+
+| where | transport | conns | MB/s |
+|---|---|---|---|
+| Pod | aria2c | 16 | 1.66 |
+| Pod | httpx | 1 | 1.74 |
+| Pod | **hf_xet (`_download_hf`)** | — | **541 peak, ~350 avg** |
+| Pod | aria2c, R2 control (`sdxl-realistic`) | 16 | 297 |
+| home | curl, same url | 1 | 41.0 |
+
+**Read the first two rows before theorising.** 1 connection and 16 land within 5% of each
+other, so connection count is not the lever and never was — a plausible story about HF's
+request-count limiter (3,000 resolver requests / 5 min per anonymous IP) predicted
+single-stream would win, and it lost. The R2 row proves the NIC is healthy in the same
+minute. The home row is the *same URL* at 24x the datacenter.
+
+What actually works is skipping the bridge. `huggingface_hub` + `hf_xet` asks CAS for the
+file's reconstruction metadata and pulls the xorbs from **presigned S3** — a different
+origin, which the R2 row already showed this Pod can saturate. **~320x on the same file,
+same volume, same minute.** The full MiniMax H3 set (~46GB across five deps) went from a
+projected 10 hours to about 2.5 minutes of transfer.
+
+Order in `_run_install`: `_download_hf` → `_download_httpx` → (non-HF only) `_download_aria2`.
+`_download_hf` returns `None` when it does not apply (not a `/resolve/` url, or
+`huggingface_hub` absent) and raises on real failure; both fall through, so an install can
+never hard-fail because the fast path stumbled. HF is kept out of aria2 entirely by
+`_is_hf_url` — at 1.66 vs 1.74 aria2 is strictly the worse fallback there, and its
+`--lowest-speed-limit=1M` makes it worse still (with 16 connections sharing a 1.7 MB/s
+bucket every connection sits under the floor and gets culled every 30s, and each reconnect
+is another request).
+
+### Getting it onto the image that matters
+
+The Pod that actually installs models is the **slim `-cpu` one**, and it had none of this:
+`wrapper/requirements.txt` was five lines, and `publish-runtime.sh` floats **code, not pip
+packages**. So the install is a guarded line in `start-cpu.sh` — which *is* floated, unlike
+`bootstrap.sh` (baked; putting it there would force a rebuild):
+
+```sh
+python -c "import huggingface_hub" 2>/dev/null || pip install --no-cache-dir huggingface_hub
+```
+
+Non-fatal by design: the wrapper falls back to httpx and must always boot.
+`huggingface_hub` is also in `wrapper/requirements.txt` now, so the next image build bakes
+it and that line becomes a no-op.
+
+### Fine print
+
+- **`HF_XET_CHUNK_CACHE_SIZE_BYTES=0`** is set explicitly. The chunk cache only pays off on
+  repeated/incremental pulls; here it would be pure container-disk growth, and a full
+  container disk is its own outage (MPI-483).
+- **`HF_XET_HIGH_PERFORMANCE` is deliberately NOT set** — it wants ≥64GB RAM and degrades
+  below that. A cpu3c download Pod has nothing like it.
+- **The Xet path discards a partial.** It re-downloads into a stage dir and `os.replace`s
+  over `part`. ref2va threw away a 20.23GB partial and still finished the whole 20.97GB in
+  ~60s. At 550 MB/s resume is not worth the complexity.
+- The stage dir lives at `<part>.hfstage`, inside the models tree, so the finishing move is
+  an `os.replace` on one filesystem and never a cross-device copy of 20GB.
+- It is a **subprocess**, not an in-process call: cancel is a kill (huggingface_hub has no
+  cancellation hook), and an hf_xet segfault cannot take the wrapper down with it.
+
+### Why H3 cannot just move to R2 like everything else
+
+The MiniMax H3 Community Licence's trigger covers "reproducing, modifying, distributing",
+so pointing the dep at Comfy-Org's own repo is what kills the §III redistribution claim
+(`modelDeps.js:425-433`, MPI-449 `research.md` § 0). H3 is HF-primary permanently and by
+design. **Do not "fix" a slow H3 download by re-hosting it on R2.**
+
+### Dead ends — do not re-tread
+
+- **`hf_transfer` / `HF_HUB_ENABLE_HF_TRANSFER=1`**, the well-known Colab "100 MB/s" trick,
+  is **silently ignored** since `huggingface_hub` v1.0. No error, no warning, no effect.
+- **`hf-mirror.com`** — unreachable from here, `http=000`.
+- **A non-Xet HF repo as a fallback.** `Dockerfile:348` calls `marduk191/rife` "a plain
+  non-Xet repo, never 403s" — that is **stale**. Every HF path now 302s to
+  `xet-bridge-us`, rife included.
+- **Raising aria2's `-x`** — hardcoded ceiling of 16, and wrong-signed anyway.
 
 ## A blip is not a verdict — same-url retry (MPI-460)
 
