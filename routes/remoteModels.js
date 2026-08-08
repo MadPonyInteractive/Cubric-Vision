@@ -653,6 +653,31 @@ async function remoteUploadModel(localPath, type, filename) {
   throw lastErr || new Error('wrapper_model_upload_failed');
 }
 
+/**
+ * Which dep installs the WRAPPER itself currently has running (MPI-481).
+ *
+ * The app's own in-flight bookkeeping (`_remoteDepIds`, a dep job's
+ * 'downloading') is module-level and outlives the Pod that produced it: nothing
+ * settles it when the Pod dies, is deleted, or warm-cycles, so it can claim an
+ * install that no longer exists anywhere. The wrapper's `_installs` registry is
+ * the only fresh truth for "is this dep really being installed right now" — the
+ * same role `remoteModelsCheck` plays for "is this dep really on disk".
+ *
+ * The registry KEEPS terminal records (complete/error/cancelled), so only
+ * `state === 'downloading'` counts as in flight. Ids are dep ids (the wrapper's
+ * `inst_id` is the `id` we send on install). Endpoint ships in every Pod image
+ * since v0.2.1; a wrapper that somehow lacks it throws and the caller falls back.
+ *
+ * @returns {Promise<Set<string>>} dep ids the wrapper is actively installing
+ */
+async function remoteActiveInstallIds() {
+  const res = await wrapperFetch('/wrapper/models/install/active', { retries: 1 });
+  const json = await res.json().catch(() => null);
+  if (!res.ok || !json) throw new Error(`wrapper install/active ${res.status}`);
+  const installs = json.installs || {};
+  return new Set(Object.keys(installs).filter((id) => installs[id] && installs[id].state === 'downloading'));
+}
+
 /** Cancel an in-flight wrapper install by dep id. Best-effort. */
 async function remoteCancelInstall(depId) {
   try {
@@ -863,6 +888,7 @@ module.exports = {
   remoteModelPresent,
   remoteUploadModel,
   remoteCancelInstall,
+  remoteActiveInstallIds,
   openInstallEventStream,
   _isImageResident,
   foldBackWrapperStatus, // exported for tests (MPI-328)

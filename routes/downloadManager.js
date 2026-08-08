@@ -2157,6 +2157,29 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         logger.warn('download', `remote pre-check failed: ${err.message}`);
     }
 
+    // MPI-481 — fresh truth for the ATTACH guard's IN-FLIGHT arms, the way
+    // statusResults above is fresh truth for its 'complete' arm. `_remoteDepIds`
+    // and a dep job's 'downloading' are module-level state scoped to ONE Pod
+    // instance, and nothing settles them when that Pod dies, is deleted, or
+    // warm-cycles: the wrapper emits no terminal event for an install that died
+    // with the host. So every dep of the dead run stays 'downloading' forever and
+    // the next Install ATTACHES to a corpse — no /wrapper/models/install fires at
+    // all, the bar sits where the dead run left it, and only an app restart clears
+    // it. The wrapper's install registry knows what is really running.
+    // NOTE this cannot be answered by statusResults: a dep the volume reports as
+    // installed:false is EITHER a corpse OR a genuinely live download, and reading
+    // that as "not in flight" would fire a duplicate install for every real
+    // shared-dep attach — which the wrapper 409s ("this model is already
+    // downloading"), i.e. exactly the Download-Failed dialog MPI-97 removed.
+    // null = could not ask (unreachable / old wrapper) → keep trusting the cache;
+    // a false attach only delays, a false duplicate install fails the whole model.
+    let wrapperInFlight = null;
+    try {
+        wrapperInFlight = await remoteModels.remoteActiveInstallIds();
+    } catch (err) {
+        logger.warn('download', `remote in-flight check failed: ${err.message}`);
+    }
+
     // SET, never += (MPI-276 G12) — a re-POST must not accumulate the denominator.
     const allDepsSize = dependencies.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
     modelJob.totalBytes = allDepsSize;
@@ -2192,13 +2215,24 @@ async function _startRemoteDownload(modelId, dependencies, res) {
         // existence+size), so prefer it: a dep the volume reports as NOT installed
         // must not read 'complete' from cache. statusResults absent (pre-check
         // failed) → fall back to the cached status (install dedupe still guards).
+        // MPI-481 — both in-flight arms are the SAME Pod-scoped cache (they are
+        // set and cleared together), so one cross-check covers both: the wrapper
+        // must still own this install. Anything it disowns is a corpse and falls
+        // through to a real install below.
         const freshStatus = statusResults[dep.id];
         const reallyComplete = depJob.status === 'complete'
             && (freshStatus ? freshStatus.installed === true : true);
-        const inFlight = _remoteDepIds.has(dep.id)
-            || depJob.status === 'downloading'
-            || reallyComplete;
-        if (inFlight) {
+        const cachedInFlight = _remoteDepIds.has(dep.id) || depJob.status === 'downloading';
+        const reallyInFlight = cachedInFlight
+            && (wrapperInFlight ? wrapperInFlight.has(dep.id) : true);
+        if (cachedInFlight && !reallyInFlight) {
+            // Drop the record too, or _remoteDepIds never empties: the stall
+            // watchdog keeps polling and _teardownRemoteEventStreamIfIdle never
+            // closes the SSE, both for a dep no wrapper is installing.
+            _remoteDepIds.delete(dep.id);
+            logger.warn('download', `stale in-flight record for ${dep.id} — the wrapper has no such install; reinstalling`);
+        }
+        if (reallyInFlight || reallyComplete) {
             // Attach only — leave the shared dep's live state alone.
             continue;
         }
@@ -3306,6 +3340,9 @@ module.exports = {
     _orphanedDepIds, // MPI-462 — exported for unit test (orphan sweep)
     _sweepOrphanedDeps, // MPI-462 — exported for unit test (orphan sweep)
     _sweepOrphanedDepsRemote, // MPI-464 — exported for unit test (orphan sweep, remote twin)
+    _startRemoteDownload, // MPI-481 — exported for unit test (stale attach guard)
+    _remoteDepIds, // MPI-481 — exported for unit test only; never mutate outside tests
+    _teardownRemoteEventStreamIfIdle, // MPI-481 — exported so a unit test can disarm the stall watchdog
     _setModelStatus, // MPI-317 F5 — exported for unit test (store-terminal guard)
     _installStore: store, // MPI-317 F5 — exported for unit test only; never mutate outside tests
 };

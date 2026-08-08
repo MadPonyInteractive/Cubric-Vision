@@ -664,6 +664,52 @@ fresh volume), `controlnet-aux-torch-guard.test.cjs` (asserted null → dead), a
 nothing). Fix: text-scanners must read the split file(s) that hold the blocks
 (`nodesDeps.js` for custom_nodes; glob `*Deps.js` for a folder-type sweep).
 
+## The remote ATTACH guard trusts the WRAPPER, not its own cache (MPI-97 / 100 / 481)
+
+`_startRemoteDownload` skips any dep it believes is already handled, so model B
+never fires a second `/wrapper/models/install` for a dep model A is already
+installing (the wrapper 409s a duplicate, which was surfacing as a
+Download-Failed + Report-on-GitHub dialog — MPI-97). B ATTACHES instead: the dep
+stays in B's `modelJob.deps` and the shared install SSE fills B's bar.
+
+**Every arm of that guard is module-level cache, and cache is not truth.** The
+maps outlive what produced them, so each arm needs a cross-check against a live
+source before it may skip an install:
+
+| Arm | Goes stale when | Fresh truth |
+|---|---|---|
+| `depJob.status === 'complete'` | an uninstall deleted the weight (MPI-100) | `remoteModelsCheck` (`statusResults[dep.id].installed`) — real on-disk volume state |
+| `_remoteDepIds.has(dep.id)` / `depJob.status === 'downloading'` | the Pod dies, is deleted, or warm-cycles mid-install (MPI-481) | `remoteActiveInstallIds()` (`GET /wrapper/models/install/active`) — the ids the wrapper is really installing |
+
+Both failures look identical from the outside and neither logs anything: the dep
+never reaches `toInstall`, **no wrapper install fires at all**, and the app waits
+on a stream with no producer. MPI-100's version faked a green INSTALLED over a
+missing weight; MPI-481's froze 13 model jobs across a session (only an app
+restart cleared them, because the maps are module-level).
+
+Two things that are NOT interchangeable here:
+
+- **`statusResults` cannot settle the in-flight arms.** `installed: false` is
+  what a corpse AND a genuinely live download both report, so reading it as
+  "not in flight" fires a duplicate install for every real attach — straight
+  back into the MPI-97 dialog. Only the wrapper's install registry separates them.
+- **A dep the wrapper disowns must also leave `_remoteDepIds`.** Otherwise the
+  set never empties: the MPI-136 stall watchdog keeps polling and
+  `_teardownRemoteEventStreamIfIdle` never closes the SSE, both for an install
+  that does not exist. (The re-install path re-adds it a moment later and hides
+  this; the already-on-the-volume path is where it leaks.)
+
+Unknown beats wrong when the wrapper cannot be asked (unreachable, or an image
+old enough to lack the endpoint — none are: it ships since v0.2.1): fall back to
+trusting the cache. A false attach only delays one install; a false duplicate
+fails the whole model.
+
+**The LOCAL path has no equivalent hole.** `startModelDownload` /
+`startUniversalWorkflowInstall` also skip a dep whose job reads `downloading`,
+but a local download and its `_activeDownloaders` entry live and die in the SAME
+process — the state cannot outlive its producer, so there is nothing to
+cross-check against.
+
 ## Remote (RunPod) Disk-Full Pre-Flight
 
 An old comment in `downloadManager.js` (MPI-100 era) claims a truthful remote

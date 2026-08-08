@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-481",
+  "title": "A dead remote download poisons every later install - the attach guard trusts a stale 'downloading'",
+  "description": "A remote install ATTACHES to a dep whose download is already dead, so no /wrapper/models/install ever fires and the model can never install again until the app restarts. _startRemoteDownload (downloadManager.js:2196-2202) computes `inFlight = _remoteDepIds.has(dep.id) || depJob.status === 'downloading' || reallyComplete` and `continue`s on it - the dep is left out of toInstall and the model waits on a stream that will never emit. The bug is that `depJob.status === 'downloading'` is trusted BLIND, while the line directly above it does the right thing: `reallyComplete` cross-checks the cached 'complete' against fresh wrapper truth from the up-front remoteModelsCheck, precisely because MPI-100 found a stale 'complete' faking a green install after an uninstall. The same staleness applies to 'downloading' and was never covered. FOUND 2026-08-08 while resuming the MPI-467 smoke run: the app had been up since the previous session and still held 13 model jobs, every dep frozen at 'downloading' with unchanging byte counts, because that session's Pod died mid-fill. Every model the runner was about to POST would have attached to those corpses, installed NOTHING, and sat until the 10-minute no-bytes watchdog recycled the Pod - forever, on a rented GPU. Caught before any install POSTed; cleared by cancelling the 13 jobs with the Pod already deleted. NOT smoke-only: any user whose Pod dies or is deleted mid-install hits it by pressing Install again, and the only cure is an app restart. Nothing in the UI explains it - the card just sits there. FIX: give the 'downloading' arm the same freshness cross-check `reallyComplete` already has (statusResults is fetched a few lines above and is real on-disk volume truth), and treat _remoteDepIds as stale when no Pod is active. Do NOT fix it in the runner - the runner only exposed it.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-08T05:45:00Z",
+  "updated_at": "2026-08-08T06:05:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "checklist": "checklist.md",
+    "validation": "validation.md"
+  }
+}
