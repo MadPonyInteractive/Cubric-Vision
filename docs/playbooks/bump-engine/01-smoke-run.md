@@ -144,3 +144,26 @@ each time.
 - The dedupe skips the 8 weights listed above.
 - The runner proves a graph *runs*. It does not judge output quality — a bump that silently
   degrades an image passes this gate.
+
+## What the first live run cost — read before changing the install leg
+
+The runner's infrastructure half was written against the routes and never executed until
+2026-08-08. Five faults surfaced in one session; all are fixed and guarded, and each is here
+because the guard is the only thing keeping it fixed.
+
+| fault | how it presented | the rule now |
+|---|---|---|
+| No CPU download Pod was created | the log said "installing on a CPU Pod" while `isRemoteActive()` was false — the installs would have landed on the **developer's local disk**, ~300 GB | create the `__cpu__` Pod first, then assert `/remote/mode` is active **before** the first install POST |
+| Probe image injected as a local path | `MpiLoadImageFromPath` runs `os.path.isfile` **on the Pod**; every op with a required image would self-gate to "no media" and read as a broken model | upload via `/remote/upload/media`, inject the Pod-absolute path |
+| All models POSTed at once | 63 concurrent installs starved a `cpu3c` Pod into 524-ing **every** route including `/health`; the SSE died every 90s, the fill flat-lined near 97 GB, and the app's counters froze at 82.9 GB | install **one model at a time**, drained before the next — the same shape the model manager ships (MPI-184) |
+| `/runpod/volumes` returns a bare array | destructuring `{volumes, networkVolumes}` off it yielded an empty list, so a **new 350 GB volume was created on every run** — three existed before it was caught | read the array; refuse to guess between same-named volumes and take `--volume <id>` |
+| Install POSTed inside the wrapper's 404 window | a cold `-cpu` Pod answers `/health` before `/wrapper/models/install` exists; all 12 LTX deps died in 0.2s while later models were fine | one retry round per model before the hard fail |
+
+Two habits behind all five: **the response shape of a route is one `curl` away — never infer
+it**, and **a Pod that reports `RUNNING` proves nothing about its wrapper.** The frozen
+progress counters are the trap worth remembering: they are SSE-fed, so a dead reporter is
+indistinguishable from a stalled download unless you look at the Pod itself.
+
+Related: the hero's GPU label comes from `cfg.gpuType` in Settings, not from the connected
+Pod, so a Pod created outside Settings (this runner) makes the status bar claim the last GPU
+you picked. Cosmetic, and only reachable from here.
