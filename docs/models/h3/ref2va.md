@@ -151,8 +151,20 @@ listened to, not just looked at.** A video-only comparison is not a result on th
 **This applies directly to the open step work** (`BasicScheduler.steps` 20 → 15 with the
 split at 5): fewer steps is a trajectory change of exactly the kind that just cost `beta`
 the comparison. Do not accept "the video still looks fine" as the verdict — play the sound.
-The 5-step stage-1 finding that motivated it was itself judged on picture alone, so it is
-provisional until the audio is checked at the same setting.
+
+**5 steps on stage 1 IS audio-clean** — settled 2026-08-08, and note *how*: every run in
+the `beta`-vs-`simple` comparison already used a 5-step stage 1, so the ear test that
+rejected `beta` was simultaneously an ear test OF the 5-step split. `simple` at 5 sounded
+right; that is exactly why `beta` sounding worse was audible. The split shipped on that
+evidence. `BasicScheduler.steps` below 20 remains unjudged on audio.
+
+### The PREVIEW has no audio, deliberately
+
+Stage-1 preview output is video-only, and that is a decision, not an omission: stage-1
+audio is **always** badly distorted, loud and unpleasant — every time, not occasionally.
+It is what a half-finished joint trajectory sounds like, the same mechanism as the
+split-sigma failure below. Shipping it would make every preview sound broken and have
+users reporting a bug that is working as designed. Do not "restore" preview audio.
 
 **The general lesson, which cost two runs to learn:** a 1-second clip is the worst length
 to time anything on this box. Fixed overhead — weight fault-in, two VAE decodes, the mux —
