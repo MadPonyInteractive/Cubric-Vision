@@ -55,9 +55,12 @@
   },
   "141": {
     "inputs": {
-      "step": 10,
       "sigmas": [
         "140",
+        0
+      ],
+      "step": [
+        "373",
         0
       ]
     },
@@ -313,7 +316,7 @@
   },
   "232": {
     "inputs": {
-      "string": "Side pan of a rocking chair. Scene change to: why the angle of them off a man walking towards the rocking chair. He sits on the rocking chair, a close-up shot of his face, looking down and smiling. White shot of his cats showing up, curling at his feet. One of the cats jumps on him. All of a sudden a demon comes out of the fireplace "
+      "string": "She rides the dragon wildly as the dragon starts throwing fire out of his mouth "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -744,6 +747,33 @@
     "class_type": "MpiLoadAudio",
     "_meta": {
       "title": "Input_Audio_3"
+    }
+  },
+  "373": {
+    "inputs": {
+      "math_expression": "10 if a else 5",
+      "a": [
+        "379",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "379": {
+    "inputs": {
+      "operator": "==",
+      "b_value": 0,
+      "a": [
+        "321",
+        3
+      ]
+    },
+    "class_type": "MpiCompare",
+    "_meta": {
+      "title": "Mpi Compare"
     }
   }
 }
