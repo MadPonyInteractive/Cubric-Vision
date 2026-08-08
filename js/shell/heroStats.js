@@ -154,6 +154,9 @@ let _remotePhase = null; // MPI-73: 'connecting' | 'disconnecting' — suppress 
 // Reset to null when the connect resolves (connected / local / disconnected).
 let _lastConnectPct = null;
 
+/** Unsubscribe handles for the app-lifetime bus subscriptions (see destroyHeroStats). */
+const _unsubs = [];
+
 function _buildLocalGpuFrag({ gpu, vramTotal, ramTotal }) {
     const gpuLabel = _stripGpuPrefix(gpu?.name);
     const vram = _formatGB(vramTotal);
@@ -276,42 +279,46 @@ function _renderEngine({ connected, gpuName, vramGb, ramGb, uptimeSeconds, price
         else _renderGpu();
     }
 }
-
 /**
- * Initialize hero footer stats. Idempotent — safe to call once at boot.
- * Subscriptions live for the app lifetime (landing page persists).
+ * Initialize hero footer stats. Idempotent — a second call is a no-op, so the
+ * subscriptions cannot be doubled. They live for the app lifetime (the landing
+ * page persists), so nothing calls destroyHeroStats() in normal operation.
  */
 export function initHeroStats() {
+    if (_unsubs.length) return;
+
     _renderModels(null);
     _renderSession(null);
     _renderGpu();
 
-    // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-    Events.on('models:checked', ({ installedModelIds }) => _paintModels(installedModelIds?.length ?? 0));
+    _unsubs.push(Events.on('models:checked', ({ installedModelIds }) => _paintModels(installedModelIds?.length ?? 0)));
     // MPI-404: an engine arriving (or a Pod connecting) can turn the count from
     // unknown into knowable without the installed SET changing, and the
     // models:checked emit is diff-gated (modelRegistry.js) — so repaint on those
     // edges too. Connection is edge-gated: the status heartbeat re-emits
     // {connected:true} every ~5s and hasNoEngine() would refresh the Pod each time.
-    // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-    Events.on('engine:ready', () => _paintModels());
-    // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-    Events.on('projects:listed', ({ projects }) => _renderSession(projects));
+    _unsubs.push(Events.on('engine:ready', () => _paintModels()));
+    _unsubs.push(Events.on('projects:listed', ({ projects }) => _renderSession(projects)));
     // Persistent remote-engine feedback (MPI-64 Step 4.4) — flip local↔remote.
-    // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-    Events.on('remote:connection', (payload) => {
+    _unsubs.push(Events.on('remote:connection', (payload) => {
         const wasConnected = _remoteConnected;
         _renderEngine(payload || {});
         if (_remoteConnected !== wasConnected) _paintModels();
-    });
+    }));
     // MPI-87: live connect % in the GPU slot, but only while the connecting phase
     // is active — a late tick after the phase resolves must not clobber the GPU card.
-    // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-    Events.on('remote:connect-progress', ({ pct } = {}) => {
+    _unsubs.push(Events.on('remote:connect-progress', ({ pct } = {}) => {
         if (_remotePhase !== 'connecting') return;
         if (!Number.isFinite(pct)) return;
         _lastConnectPct = pct; // cache so a re-render (nav round-trip) restores it
         const gpu = gid('heroStatGpu');
         if (gpu) gpu.textContent = `${pct}%`;
-    });
+    }));
+}
+
+/**
+ * Tear down the listeners. Primarily for hot-reload / tests.
+ */
+export function destroyHeroStats() {
+    while (_unsubs.length) { _unsubs.pop()(); }
 }

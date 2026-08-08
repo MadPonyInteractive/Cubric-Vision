@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 490,
+  "next_id": 492,
   "columns": {
     "todo": [
       "MPI-489",
@@ -36,7 +36,7 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-442",
+      "MPI-491",
       "MPI-481",
       "MPI-480",
       "MPI-450",
@@ -45,6 +45,8 @@
       "MPI-465"
     ],
     "done": [
+      "MPI-442",
+      "MPI-490",
       "MPI-487",
       "MPI-482",
       "MPI-486",
@@ -92,7 +94,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-08T07:20:00Z",
+  "updated_at": "2026-08-08T07:40:00Z",
   "events": [
     {
       "at": "2026-08-07T14:20:43Z",
@@ -2448,8 +2450,7 @@
       "at": "2026-08-08T07:30:00Z",
       "actor": "opus",
       "summary": "CLOSED on code + test evidence at the user's call, 2026-08-08. The structural half was MPI-463 (_failBail, 9d83ea6e); this card carried the user-visible acceptance and shipped it in f006dc4f - _failBail now logs every pre-dispatch bail and emits ui:error by default, with { reported: true } as the explicit opt-out for the six sites that already say something actionable. Four bails were silent before: workflow-name resolve, trimmed-video prep, workflow JSON fetch (the 404 that was reported live) and the injector throw. Evidence: two negative-controlled tests in lane-settle-on-bail (the default must be loud; an opt-out must have a real emit near it - the negative control names the exact line), plus T21 in generation-store proving a queued->error settle frees the lane and the NEXT job dispatches. Suite 499/499, eslint 0 errors. NOT live-watched: nobody has seen the dialog paint. Accepted because the emit is two lines through ui:error, the same path the post-dispatch catch has used for years and which the user did see paint during this session (the port-48188 refusal, commandExecutor.js:2090)."
-    }
-,
+    },
     {
       "schema": "mpi-kanban/event/v1",
       "id": "MPI-442",

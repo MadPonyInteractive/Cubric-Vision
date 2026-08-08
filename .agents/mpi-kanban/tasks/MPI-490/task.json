@@ -1,0 +1,33 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-490",
+  "title": "lint-staged's backup stash can strand every session's uncommitted work - run it --no-stash",
+  "description": "Split from MPI-442, which made this reachable for the first time.\n\nBefore MPI-442 the pre-commit hook ran eslint with --max-warnings=9999, so lint-staged never saw a failing task and never took its error path. MPI-442 flipped lint to strict. A failing lint now drives lint-staged into 'Reverting to original state because of errors', and that revert is NOT safe in this tree.\n\nMeasured live on 2026-08-08 while proving the MPI-442 hook blocks:\n\n  [STARTED] Backing up original state...\n  [COMPLETED] Backed up original state in git stash (a4ad3b10)\n  ...\n  [STARTED] Reverting to original state because of errors...\n  [FAILED] error: Your local changes to the following files would be overwritten by merge:\n  \t.agents/mpi-kanban/tasks/MPI-487/task.json\n  Please commit your changes or stash them before you merge.\n  Aborting\n  Index was not unstashed.\n\nlint-staged hard-resets the tree, then re-applies its backup stash. A PEER SESSION wrote MPI-487/task.json inside that window, so the re-apply refused. Result: the working tree was left at HEAD and every session's uncommitted work - 25 files across ~5 concurrent sessions, not just the committer's - existed only inside stash a4ad3b10. It was fully recovered, but only because the failure was noticed immediately.\n\nThis repo is explicitly a shared tree with several agents writing at once, so 'a peer wrote a file during the hook' is the normal case, not a freak race.\n\nThe fix is one flag. lint-staged --no-stash disables the backup stash and implies --no-revert, so there is no hard-reset and no re-apply to fail. It is safe here specifically because the configured task is lint-ONLY: 'eslint --no-error-on-unmatched-pattern --max-warnings=0' has no --fix, so it never modifies a file and there is nothing a backup would need to protect. If a --fix task is ever added to lint-staged, this decision must be revisited in the same pass.\n\nSide effect, and it is the desirable one: without the stash, eslint sees the file as it is on disk (unstaged edits included) rather than a staged-only reconstruction. For a gate whose job is 'do not let a violation into the tree', linting what is actually there is the better semantic.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-08T07:20:00Z",
+  "updated_at": "2026-08-08T07:35:00Z",
+  "labels": [
+    "tooling",
+    "lint",
+    "git-safety"
+  ],
+  "acceptance": [
+    "The pre-commit hook invokes lint-staged with --no-stash",
+    "A failing lint still BLOCKS the commit (the flag must not weaken the gate MPI-442 just built)",
+    "A failing lint leaves the working tree untouched - no stash created, no files reverted, peers' uncommitted work still on disk",
+    "Verified without endangering the live tree: proven in a throwaway git repo, not by re-running the destructive path here",
+    "The lint-staged task stays lint-only - if --fix is ever added, the --no-stash decision is revisited in the same change"
+  ],
+  "links": {
+    "events": "events.jsonl"
+  },
+  "tags": [
+    "lint",
+    "tooling",
+    "git-safety"
+  ],
+  "priority": "high",
+  "attention": false
+}
