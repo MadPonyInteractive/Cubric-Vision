@@ -137,3 +137,25 @@ Already committed their work? Nothing is lost: `git tag backup HEAD` → `git re
 - **Detect it, do not eyeball it** — every id in every column must have a tracked card:
   `git show HEAD:.agents/mpi-kanban/board.json` → parse the columns → compare against `git ls-files .agents/mpi-kanban/tasks/`. Any id with no tracked `task.json` is this bug.
 - **Why the usual precaution does not save you:** the standing advice is to wait for a peer mid-commit to clear the index. That protects THEM from you; it does nothing to stop their pathspec from including a file you are also editing. Assume a co-owned file may be committed out from under you at any moment, and keep your own half of a structured pair (board entry ↔ card file) committable at all times.
+
+**THEIR COMMIT CAN ROLL BACK YOUR UNCOMMITTED WRITES — the third direction, and the quietest.**
+The two cases above are about whose work lands in whose commit. This one loses work outright and
+touches a file the peer never named. `.husky/pre-commit` runs `lint-staged`, which **stashes the
+whole working tree** ("Backing up original state in git stash"), runs its tasks, then restores.
+Any write you make *inside that window* is reverted to the file's content at their stash moment.
+You are not a party to their commit; you just happen to be writing while it runs.
+
+- **It presents as a partial revert, which is why it reads as your own bug.** 2026-08-08 (MPI-482):
+  three sequential patches went into `scripts/computeDepHashes.py`; patch 1 survived and patches 2
+  and 3 vanished. Each patch had asserted its predecessor's text was present, and `git diff --stat`
+  had confirmed 218 insertions on disk — so the file could not have been "never written". A
+  `git checkout --`-style clobber would have taken patch 1 too; only a stash/restore reverts to a
+  mid-session state.
+- **The tell is a later step behaving as though an earlier edit never happened** — here, a new
+  `--sizes` flag falling through to the old code path. Do not debug that as a logic error:
+  `grep -c '^def <your-new-function>' <file>` first, and if it is 0, this is what happened.
+- **The only real defence is to commit early.** A shared tree gives you no lock, and the window is
+  someone else's commit, which you cannot see coming. Land each working increment rather than
+  batching a session's edits — re-applying three patches costs a minute, re-deriving them does not.
+- Related but NOT the same: the read-race at "A READ can race a write too" above returns a
+  misleading *view* of a file that is intact. This one changes the bytes.
