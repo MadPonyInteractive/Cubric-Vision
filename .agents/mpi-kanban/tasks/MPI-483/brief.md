@@ -7,8 +7,18 @@ bugs that compound, and both read their requirement from the wrong numbers
 ## Bug 1 — the disk-full gate counts APPARENT bytes
 
 `GET /wrapper/disk` is `du -sb` (`wrapper/wrapper.py:11`). `-b` is `--apparent-size`: it
-sums declared file **lengths**, not allocated blocks. aria2 preallocates its `.part`
-files, so a 21 GB transformer that is 9 GB downloaded still reports **21 GB**.
+sums declared file **lengths**, not allocated blocks.
+
+**The mechanism is SPARSENESS, not preallocation** — and the codebase already corrected
+this mislabel once, so do not reintroduce it. `wrapper.py:1754` spells it out: aria2
+writes `-s 128` segments at scattered offsets with **`--file-allocation=none`**, so a
+`.part` file's *logical* size snaps to ~the full total the instant any late segment
+writes near EOF, while its allocated blocks are only what has actually arrived. The same
+comment notes this was *"mislabeled an 'aria2 preallocation artifact' in MPI-95; there is
+no preallocation here."*
+
+That makes the gate's error close to worst-case rather than proportional: an in-flight
+21 GB transformer reads as ~21 GB used from its first minutes, not as the 2 GB it holds.
 
 Measured on `aghcuvg7nl`:
 
