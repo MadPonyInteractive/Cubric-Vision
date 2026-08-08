@@ -278,6 +278,67 @@ router.post('/comfy/stage-preview-latent', async (req, res) => {
     }
 });
 
+// ── Cross-instance engine restart (MPI-484) ─────────────────────────────────
+// ENGINE_ROOT is repo-scoped and COMFYUI_PORT is fixed, so every app instance shares
+// ONE engine — but only the instance that spawned it holds the process handle, and
+// stopComfyUI() deliberately cannot reach anyone else's. A non-owner that installs a
+// custom node therefore needs a restart it is not able to perform: its stop is a
+// no-op, so before this it "restarted" into silence and the node never registered.
+//
+// It leaves a request on disk instead, and the owner performs the restart. A FILE and
+// not the broker: the broker is best-effort (absent → the responder simply never
+// starts) and every instance registers under the same `cubric.vision` appId, so it
+// cannot address the one holding the process. The shared engine root is the only
+// thing both sides are guaranteed to agree on, and it is already the thing they are
+// fighting over.
+const RESTART_REQUEST_FILE = path.join(ENGINE_ROOT, '.engine-restart-request.json');
+
+/** Ask whichever instance owns the engine to restart it. Returns false if it cannot be written. */
+function requestEngineRestart(reason) {
+    try {
+        fs.writeJsonSync(RESTART_REQUEST_FILE, { at: Date.now(), reason: reason || 'unspecified' });
+        return true;
+    } catch (err) {
+        logger.error('comfy', 'Could not write the engine restart request', err);
+        return false;
+    }
+}
+
+let _restartWatch = null;
+
+/** Owner-side: watch for another instance's restart request. `spawnedAt` dates OUR process. */
+function _watchForRestartRequests(spawnedAt) {
+    clearInterval(_restartWatch);
+    _restartWatch = setInterval(async () => {
+        if (!processState.activeComfyProcess) return;   // not ours to restart any more
+        let request;
+        try {
+            if (!fs.existsSync(RESTART_REQUEST_FILE)) return;
+            request = fs.readJsonSync(RESTART_REQUEST_FILE);
+        } catch {
+            return;   // mid-write or malformed — the next tick reads it whole
+        }
+        // A request older than this process was aimed at the engine we already
+        // replaced. Honouring it would restart on every tick, forever.
+        const stale = !request || !(request.at > spawnedAt);
+        try { fs.removeSync(RESTART_REQUEST_FILE); } catch { /* it will be retried */ }
+        if (stale) return;
+
+        logger.info('comfy', `Restart requested by another app instance (${request.reason}) — restarting the shared engine`);
+        stopComfyUI();
+        // Same 2s the client-side restart waits: let the process fully exit, or the
+        // start below races it and finds the port still occupied.
+        await new Promise((r) => setTimeout(r, 2000));
+        const ax = getAxios();
+        const ownPort = Number(process.env.CUBRIC_PORT) || 3000;
+        if (!ax) return;
+        await ax.post(`http://127.0.0.1:${ownPort}/comfy/start`, { isUserRestart: true }, { timeout: 30000 })
+            .catch((err) => logger.error('comfy', 'Delegated engine restart could not start it again', err));
+    }, 2000);
+    // Never hold the event loop open on this — it is a background courtesy.
+    if (_restartWatch.unref) _restartWatch.unref();
+}
+
 /**
  * POST /comfy/start
  * Launches ComfyUI in the background. Idempotent — returns success if already running.
@@ -318,12 +379,15 @@ router.post('/comfy/start', async (req, res) => {
             if (occupied) {
                 logger.info('comfy', `Engine already serving on ${COMFYUI_PORT} (started by another app instance) — attaching`);
                 if (isUserRestart) {
-                    // The restart path is stop-then-start, and our stop was a no-op
-                    // because we do not own the process. Attaching is still the right
-                    // answer — killing another instance's engine is not ours to do —
-                    // but the caller asked for a RESTART and did not get one, so say
-                    // so rather than reporting a clean success into silence.
-                    logger.warn('comfy', 'Restart requested but this instance does not own the engine — attached to the running one instead; restart it from the instance that started it');
+                    // Our stop was a no-op — we do not own the process — so attaching
+                    // alone would report a clean success while nothing restarted and
+                    // the newly installed node stayed unregistered. Delegate it.
+                    const queued = requestEngineRestart(req.body && req.body.reason);
+                    if (queued) {
+                        logger.info('comfy', 'Restart delegated to the instance that owns the engine');
+                        return res.json({ success: true, message: 'Restart requested', delegated: true });
+                    }
+                    logger.warn('comfy', 'Restart needed but this instance does not own the engine and the request could not be written — restart from the instance that started it');
                 }
                 return res.json({ success: true, message: 'Already running' });
             }
@@ -418,6 +482,9 @@ router.post('/comfy/start', async (req, res) => {
         processState.comfyStopRequested = false;
 
         processState.activeComfyProcess = spawn(pythonPath, args, { cwd: path.dirname(mainPath), env: spawnEnv });
+        // We own the engine now, so we are the one that can honour another
+        // instance's restart request (MPI-484).
+        _watchForRestartRequests(Date.now());
         processState.activeComfyProcess.stdout.on('data', (d) => _handleComfyOutput('info', d));
         processState.activeComfyProcess.stderr.on('data', (d) => _handleComfyOutput('warn', d));
         processState.activeComfyProcess.on('exit', (code, signal) => {
@@ -433,6 +500,10 @@ router.post('/comfy/start', async (req, res) => {
             };
             processState.comfyStopRequested = false;
             processState.activeComfyProcess = null;
+            // We no longer own an engine, so we can no longer honour a restart request
+            // for one. Whoever spawns next arms their own watcher (MPI-484).
+            clearInterval(_restartWatch);
+            _restartWatch = null;
         });
 
         res.json({ success: true, ...(depsWarning ? { depsWarning } : {}) });

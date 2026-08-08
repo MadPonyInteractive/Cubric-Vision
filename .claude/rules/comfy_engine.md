@@ -53,6 +53,12 @@ See `docs/comfy.md` for the ComfyUI integration overview and `docs/data.md` for 
 6. **Extra Folder Contract:** Only `loras` and `upscale_models` support additive external folders. Keep extras outside dependency registry, install, uninstall, and garbage-collection flows.
 7. **Pin EVERYTHING the installer pulls — ComfyUI is not the only unpinned thing.** `_provisionUvEngine` must never let a tool choose a version for us. comfy-cli pins nothing by default: it clones ComfyUI master unless given `--version`, and its `MAC_M_SERIES` branch is the ONLY GPU branch that installs torch from the PyTorch **nightly** index (`--pre`, no version), so a Mac user's engine depended on the calendar date they installed. That shipped: nightly `2.14.0.dev20260731` renders SDXL on MPS as grey noise silently — no error, normal runtime, normal-looking gallery card. macOS now installs a pinned stable torch at step 2b BEFORE comfy-cli runs, plus `--skip-torch-or-directml`. Both pins live in `dev_configs/system_dependencies.json`. Full evidence and the isolation table → **[docs/comfy.md](../../docs/comfy.md) § macOS torch is PINNED BY US**.
 
+8. **The engine is SHARED across app instances — ownership is not availability (MPI-484).** `ENGINE_ROOT` is repo-scoped (`.engine-config.json` at the repo root, fallback `<repo>/engine`), never profile-scoped, and `COMFYUI_PORT` is a fixed `48188`. So N app instances — the user's, plus any agent's from `npm run app:isolated` — all resolve to ONE engine install on ONE port. But `processState.activeComfyProcess` is module-level in each server fork, so it answers *"did I spawn it"*, not *"is an engine up"*. Never treat it as a liveness test:
+   - `/comfy/start` **attaches** when the port already answers (never refuses, and never falls through to `spawn()` — a second ComfyUI cannot bind an occupied 48188 and dies, leaving a dead engine).
+   - `/comfy/status` **asks the port** before reporting `running: false`.
+   - Stopping stays the spawner's alone: `stopComfyUI()` only kills a handle it owns — no kill-by-port, no PID lookup — so a non-owner physically cannot stop someone else's engine, and must not gain the ability to.
+   - A non-owner that needs a RESTART (it installed a custom node) delegates it — see § Cross-instance engine restart.
+
 ---
 
 ## 🛠️ Architecture
@@ -409,3 +415,40 @@ spelling. It has no dedupe to defeat, and the fix has a wider blast radius.
 
 ### 6. Download Manager Router
 See `.claude/rules/downloads.md` for full download system rules (IPC/SSE, ResumableDownloader, job shapes, event lifecycle, engine pause/resume).
+
+### 7. Cross-instance engine restart
+
+**The shared engine has exactly one owner, and only the owner can restart it (MPI-484/485).**
+`processState.activeComfyProcess` is module-level in each server fork, so a non-owner's
+`/comfy/stop` is a total no-op — `stopComfyUI()`'s whole body sits behind that handle and
+contains no kill-by-port and no PID lookup, deliberately. That is a safety property, not a
+gap: it is why one instance can never kill another's engine. **Do not "fix" it by killing
+the process on the port** — the owner's exit handler would record an undeserved crash
+(`comfyStopRequested` is false), and the reported reason lands in the wrong app.
+
+The restart still has to happen, because a custom node installed by ANY instance lands in
+the one shared `ENGINE_ROOT` and only registers on a node scan. So a non-owner delegates:
+
+| Side | What happens |
+|---|---|
+| Non-owner | `/comfy/start` with `isUserRestart` while attached → writes `<ENGINE_ROOT>/.engine-restart-request.json` (`{at, reason}`) and answers `{ success: true, message: 'Restart requested', delegated: true }`. The caller's existing readiness poll covers the gap. |
+| Owner | A 2s interval, armed on spawn and cleared on the engine's exit, reads that file, **deletes it first**, then stop + start. |
+
+Two orderings carry the whole design, and `tests/engine-restart-delegation.test.cjs` pins
+both because each failure is an infinite restart loop, not a wrong value:
+
+1. **Delete the request BEFORE restarting.** Restart-then-delete leaves it on disk across
+   the stop, and the freshly spawned engine's own watcher reads it again on its next tick.
+2. **Ignore a request older than our own process** (`request.at > spawnedAt`). The request
+   that CAUSED this engine to start is still on disk when it comes up — without the date
+   check it immediately restarts itself, the same loop through a different door.
+
+**A file, not the broker.** The broker is best-effort (absent → the responder never starts),
+and every instance registers under the same `cubric.vision` appId, so it cannot address the
+one holding the process. The shared engine root is the only thing both sides are guaranteed
+to agree on.
+
+**Known limit:** the delegating instance is told the restart was *requested*, not that it
+*happened*. If no owner is alive, nothing honours the file; the next `/comfy/start` finds
+the port free and spawns, which self-heals into that caller becoming the owner. A stale
+request left by a dead instance is cleared by the next owner's date check.

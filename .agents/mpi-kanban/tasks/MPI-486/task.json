@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-486",
+  "title": "Cross-instance engine restart - a non-owner delegates instead of failing silently",
+  "description": "Closes the hole MPI-484 named: a non-owner instance cannot restart the shared engine because its stop is a no-op, so /comfy/start attached and reported success while nothing restarted and a freshly installed custom node stayed unregistered. Channel is a request file in the shared repo-scoped ENGINE_ROOT: non-owner writes {at,reason} and answers delegated:true; the owner runs a 2s watcher armed on spawn and cleared on exit that deletes the file BEFORE restarting. Broker rejected - best-effort and cannot address one instance among many sharing the cubric.vision appId. Two orderings carry the design and both are pinned by tests because each failure mode is an infinite restart loop: delete-before-restart, and ignore a request older than our own spawn.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-08T06:50:00Z",
+  "updated_at": "2026-08-08T06:55:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  }
+}
