@@ -161,6 +161,18 @@ assumptions that time may have invalidated.
 - [ ] Gate B re-read AFTER MPI-452 — it was scoped against a 0.29.2 engine, and the
       MPI-249 Linux leg now provisions 0.30.x.
 - [ ] H3 `whatIsNew` bullet + licence attribution written into `UNRELEASED.md`
+- [ ] **Promote the Pod runtime dev → stable** (`publish-runtime.sh promote`) BEFORE cutting
+      1.4.0. Blocked on the GPU-image `_download_hf` measurement (MPI-491 / MPI-467).
+      **Why this gates and is not cleanup** — verified 2026-08-08: the stable channel manifest
+      reports `wrapper_version 0.2.40`, dev reports `0.2.43`, and released builds only ever
+      boot stable (MPI-340). H3 and H3 Reference are HEADLINE items in `UNRELEASED.md`
+      (lines 123, 135). Ship 1.4.0 against stable 0.2.40 and every released user installing
+      H3 to a Pod gets the aria2 path at **1.66 MB/s — about 10 hours for the ~46GB set**,
+      against a measured ~2.5 minutes on 0.2.43. Nobody reports that as a bug; it just looks
+      like H3 is enormous. **Scope:** remote/Pod installs only (a local install is ~30 min at
+      home-line speed and needs nothing), and only the 6 huggingface.co deps — the 101 R2 and
+      14 github deps are unchanged. **Order:** GPU-image measurement → promote → cut. Promoting
+      first puts an unmeasured transport in front of every released user.
 
 ## Bump
 

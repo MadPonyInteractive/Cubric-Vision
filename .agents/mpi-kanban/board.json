@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 494,
+  "next_id": 495,
   "columns": {
     "todo": [
+      "MPI-494",
       "MPI-492",
       "MPI-489",
       "MPI-488",
@@ -96,7 +97,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-08T07:40:00Z",
+  "updated_at": "2026-08-08T09:20:57Z",
   "events": [
     {
       "at": "2026-08-07T14:20:43Z",
@@ -871,7 +872,7 @@
       "task": "MPI-318",
       "from": "doing",
       "to": "done",
-      "note": "User-verified live 2026-07-24: single card dragged to an OS folder lands with its real Media-folder filename; drag-to-prompt still works (the thing the prior attempt broke). Shipped via Chromium DownloadURL alongside application/mpi-media on the same HTML5 drag — no preventDefault/startDrag/IPC, one file touched (MpiGalleryGrid.js). Multi-select export dropped by user (DownloadURL is single-file). Changelog fix added to UNRELEASED.md; gallery.md documents the two-consumer dragstart contract. validation.md represents PASS."
+      "note": "User-verified live 2026-07-24: single card dragged to an OS folder lands with its real Media-folder filename; drag-to-prompt still works (the thing the prior attempt broke). Shipped via Chromium DownloadURL alongside application/mpi-media on the same HTML5 drag \u2014 no preventDefault/startDrag/IPC, one file touched (MpiGalleryGrid.js). Multi-select export dropped by user (DownloadURL is single-file). Changelog fix added to UNRELEASED.md; gallery.md documents the two-consumer dragstart contract. validation.md represents PASS."
     },
     {
       "at": "2026-07-24T01:11:59Z",
@@ -932,7 +933,7 @@
       "task": "MPI-337",
       "from": "doing",
       "to": "done",
-      "note": "User-verified live: LTX (t2v_ms/i2v_ms) passed — validates wan-22 (same ops); wan22-5b covered by automated test. Image/KREA/History/Gallery behavior confirmed working earlier this session. 6 code files shipped; docs+rules future-proofed (data-driven gating documented in playbooks + generation-lifecycle + component-events)."
+      "note": "User-verified live: LTX (t2v_ms/i2v_ms) passed \u2014 validates wan-22 (same ops); wan22-5b covered by automated test. Image/KREA/History/Gallery behavior confirmed working earlier this session. 6 code files shipped; docs+rules future-proofed (data-driven gating documented in playbooks + generation-lifecycle + component-events)."
     },
     {
       "at": "2026-07-22T05:17:08.000Z",
@@ -964,7 +965,7 @@
       "at": "2026-07-22T04:59:57.000Z",
       "type": "task.updated",
       "task": "MPI-337",
-      "note": "Brainstorm complete — approved Option A. Op changes only on media-add force-UP + Reuse; a lost requirement (mask/media removed, maskless card) never switches, op stays selected, Run toasts the missing input. Change set: kill _refreshOpOptions fallback (detail->upscale bug) + _emitMediaChange force-DOWN branch; add requiresMask generate-time guard+toast; radial show-all-dimmed (stop filtering disabled, new dimmed non-selectable MpiRadialMenu item state). Run = toast-on-click (reuse existing). Dev Ctrl+Tab radial split to MPI-338."
+      "note": "Brainstorm complete \u2014 approved Option A. Op changes only on media-add force-UP + Reuse; a lost requirement (mask/media removed, maskless card) never switches, op stays selected, Run toasts the missing input. Change set: kill _refreshOpOptions fallback (detail->upscale bug) + _emitMediaChange force-DOWN branch; add requiresMask generate-time guard+toast; radial show-all-dimmed (stop filtering disabled, new dimmed non-selectable MpiRadialMenu item state). Run = toast-on-click (reuse existing). Dev Ctrl+Tab radial split to MPI-338."
     },
     {
       "at": "2026-07-22T04:51:11.717Z",
@@ -1224,13 +1225,13 @@
       "at": "2026-07-19T18:45:00Z",
       "type": "task.created",
       "task": "MPI-314",
-      "note": "Orphaned-dep reclaim — 19GB B1-era LTX shared deps, no owner, no UI delete path."
+      "note": "Orphaned-dep reclaim \u2014 19GB B1-era LTX shared deps, no owner, no UI delete path."
     },
     {
       "at": "2026-07-19T21:00:00Z",
       "type": "task.created",
       "task": "MPI-315",
-      "note": "Log architecture — split ComfyUI output out of app.log; reconcile line-trim vs byte-rotation."
+      "note": "Log architecture \u2014 split ComfyUI output out of app.log; reconcile line-trim vs byte-rotation."
     },
     {
       "at": "2026-07-19T21:30:00Z",
