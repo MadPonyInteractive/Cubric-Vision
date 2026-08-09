@@ -69,3 +69,26 @@ tag (`2e045187` is not an ancestor of `v1.3.1`).
 
 Closed on local evidence with the RunPod leftover carried by the umbrella - the standing
 pattern for a card whose only remainder is a Pod check.
+
+## Later finding: PiD has NEVER worked in a shipped release
+
+Established at close-out, after the section above was written. `dev_configs/node_lock.json`
+at every release tag, checked against `ba9e156` (the commit that made `upscale_method`
+required, 2026-07-16):
+
+```
+v1.1.0  tagged 2026-07-22  MpiNodes aaa1d2d9  contains ba9e156? YES -> broken
+v1.2.0  tagged 2026-07-24  MpiNodes aaa1d2d9  YES -> broken
+v1.3.0  tagged 2026-08-01  MpiNodes 69a43336  YES -> broken
+v1.3.1  tagged 2026-08-02  MpiNodes 69a43336  YES -> broken
+```
+
+PiD's own release blurb was written into `RELEASE_NOTES['1.1.0']` at the 1.1.0 bump
+(`41c59093`, 2026-07-09) and 1.1.0 was tagged 2026-07-22 - six days AFTER the input became
+required. The feature was already broken on the day it was announced. It has produced a
+generated image in no released build; every user who ran it got their source image back.
+
+This raises the changelog wording from "fixed a regression" to "fixed a feature that never
+worked", and widens the affected range from 1.3.x to every release since 1.1.0. The card
+body and the close-out commit both say 1.3.0/1.3.1 - that understates it; this section is
+the correction.
