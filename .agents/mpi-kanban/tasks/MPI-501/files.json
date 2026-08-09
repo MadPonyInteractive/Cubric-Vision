@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/services/comfyController.js",
+    "js/shell/navigation.js",
+    "routes/remoteModels.js",
+    "tests/restart-drain-wait.test.cjs"
+  ]
+}

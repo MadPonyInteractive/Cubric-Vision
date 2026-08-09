@@ -539,7 +539,19 @@ function createEngine({ engine, alwaysLocal }) {
             // auto-retry — mirroring the local path's stop/start. On an OLDER image
             // the endpoint is absent (404) → fall back to the manual-reconnect msg.
             if (state.remoteComfyNeedsRestart) {
-                Events.emit('ui:info', { message: 'Loading new nodes — restarting the remote engine…' });
+                Events.emit('ui:info', { message: 'Loading new nodes — restarting the remote engine (waiting for any running generation to finish)…' });
+                // MPI-501: the restart TERMINATES the ComfyUI process. This gate used to
+                // fire unconditionally, so it could land on a prompt mid-sample and destroy
+                // it with no error, no toast and no log line — it orphaned the same smoke op
+                // in two GPU matrices. Our own dispatch is not queued yet (that happens
+                // after this gate), so draining first cannot deadlock. On timeout REFUSE:
+                // never trade someone else's finished work for our own convenience.
+                if (!await this.waitForIdleQueue()) {
+                    const busyMsg = 'New nodes need the remote engine restarted, but a generation is still running on it. Wait for it to finish, then try again.';
+                    if (!background) this._emitLifecycle('comfy:error', { message: busyMsg });
+                    else Events.emit('ui:info', { message: busyMsg });
+                    throw Object.assign(new Error(busyMsg), { code: 'restart_blocked_busy' });
+                }
                 let restarted = false;
                 try {
                     const r = await fetch('/proxy/restart-comfy', { method: 'POST' });
@@ -701,6 +713,40 @@ function createEngine({ engine, alwaysLocal }) {
         } catch (e) {
             clientLogger.error('comfy', 'getQueue failed', e);
             return { running: [], pending: [] };
+        }
+    },
+
+    /**
+     * MPI-501 — waits for THIS engine's ComfyUI queue to drain, so a caller that is
+     * about to RESTART ComfyUI never terminates a prompt mid-sample.
+     *
+     * Deliberately does NOT reuse `getQueue()`: that one swallows a failed read into
+     * `{ running: [], pending: [] }`, which for a safety gate reads as "idle" and
+     * green-lights exactly the restart this exists to block. Here a failed read is
+     * UNKNOWN — a one-off blip keeps waiting; ComfyUI not answering at all for three
+     * consecutive reads means there is no in-flight prompt left to protect and the
+     * restart IS the repair.
+     *
+     * Engine-aware via `httpBase()`, so the same call covers local and remote.
+     * @param {{ timeoutMs?: number }} [o]
+     * @returns {Promise<boolean>} true = safe to restart; false = still busy, REFUSE
+     */
+    async waitForIdleQueue({ timeoutMs = 300000 } = {}) {
+        const deadline = Date.now() + timeoutMs;
+        let unreachable = 0;
+        for (;;) {
+            const q = await fetch(`${this.httpBase()}/queue`)
+                .then(r => (r.ok ? r.json() : null))
+                .catch(() => null);
+            if (q) {
+                unreachable = 0;
+                if (!(q.queue_running?.length || q.queue_pending?.length)) return true;
+            } else if (++unreachable >= 3) {
+                clientLogger.warn('comfy', 'Queue unreadable before a restart — treating the engine as idle');
+                return true;
+            }
+            if (Date.now() >= deadline) return false;
+            await new Promise(r => setTimeout(r, 2000));
         }
     },
 

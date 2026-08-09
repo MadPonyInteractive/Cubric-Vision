@@ -792,6 +792,33 @@ function _universalVolumeNodeDeps() {
     .filter((d) => d && d.type === 'custom_nodes' && !_isImageResident(d));
 }
 
+/**
+ * MPI-501 — server-side twin of comfyController's `waitForIdleQueue`. Polls the Pod's
+ * ComfyUI queue until it is empty, so a caller about to restart ComfyUI never terminates
+ * a prompt mid-sample. A failed read is UNKNOWN, never "idle": three consecutive misses
+ * mean ComfyUI is not answering at all, so there is no in-flight prompt left to protect.
+ * @param {number} timeoutMs
+ * @returns {Promise<boolean>} true = safe to restart; false = still busy, REFUSE
+ */
+async function _waitForIdleQueue(timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  let unreachable = 0;
+  for (;;) {
+    const q = await wrapperFetch('/wrapper/queue', { retries: 1 })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null);
+    if (q) {
+      unreachable = 0;
+      if (!(q.queue_running || []).length && !(q.queue_pending || []).length) return true;
+    } else if (++unreachable >= 3) {
+      logger.warn('runpod', 'queue unreadable before a ComfyUI restart — treating the engine as idle');
+      return true;
+    }
+    if (Date.now() >= deadline) return false;
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
+
 let _ensureUniversalInFlight = null;
 async function ensureUniversalNodesOnVolume() {
   if (_ensureUniversalInFlight) return _ensureUniversalInFlight;
@@ -858,6 +885,17 @@ async function ensureUniversalNodesOnVolume() {
     // ComfyUI scans custom_nodes at startup, so a pack that landed after boot is invisible
     // until it restarts. ONE restart covers every pack we just installed.
     if (out.installed.length) {
+      // MPI-501: the restart TERMINATES ComfyUI, so it must never land on a running
+      // prompt — the app connects to Pods that already have a queue (reconnect after an
+      // app restart, or a smoke matrix on the same Pod). Nothing awaits this function
+      // (remotePodLifecycle fires it in the background), so waiting costs nothing here.
+      // Refusing degrades to the documented pre-MPI-438 behaviour — a generation needing
+      // the pack reports its own missing_node_type — which is strictly better than
+      // silently destroying someone's finished work.
+      if (!(await _waitForIdleQueue(10 * 60 * 1000))) {
+        logger.error('runpod', `universal nodes installed (${out.installed.join(', ')}) but ComfyUI is STILL BUSY after 10 min — not restarting, that would destroy the running generation. Those packs stay unloaded until the engine restarts: Disconnect/Connect once the queue drains.`);
+        return out;
+      }
       try {
         const res = await wrapperFetch('/wrapper/restart-comfy', { method: 'POST', retries: 1 });
         // 409 = a download-mode Pod with no ComfyUI to restart; not an error here.

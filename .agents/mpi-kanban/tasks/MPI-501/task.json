@@ -3,11 +3,11 @@
   "id": "MPI-501",
   "title": "restart-comfy destroys any in-flight generation - the needs-restart gate never checks the queue",
   "description": "UMBRELLA: MPI-467 (the 1.4 smoke umbrella) - surfaced 2026-08-09 during its live Pod session, listed in tasks/MPI-467/brief.md.\n\nCONFIRMED CAUSE OF A LOST SMOKE OP, and reproduced live by the user 2026-08-09 (\"as soon as it hot stored the model, it said it was restarting ComfyUI because it added new nodes... It gave me a toast with that\").\n\nTHE CHAIN, all four hops read:\n  remote custom-node install completes\n    -> server emits SSE comfy:needs-restart {remote: true}   (downloadManager)\n    -> js/services/downloadService.js:724  state.remoteComfyNeedsRestart = true\n    -> js/services/comfyController.js:543  gate fires on the next dispatch\n    -> toast \"Loading new nodes - restarting the remote engine...\"\n    -> POST /proxy/restart-comfy -> wrapper ComfyManager.restart() -> proc.terminate()\n\nTHE DEFECT: the gate restarts UNCONDITIONALLY. It never reads the queue, so proc.terminate() can land on a prompt that is mid-sample. comfyController retries ITS OWN dispatch afterwards, so the user who triggered it is covered - but ANY OTHER in-flight prompt is destroyed with no error, no toast and no log line. User-facing: a queued batch silently loses work.\n\nWHAT IT COST: minimax-h3/t2v_ms in the second GPU matrix (2026-08-08 ~19:55Z). The smoke runner POSTs straight to /proxy/prompt and never passes through this gate, so it had no idea a restart was coming; it polled a dead prompt_id for 15 minutes and reported \"timed out after 15 min\", which read as a slow model and sent a whole session hunting a model bug that did not exist. The op was later PROVEN HEALTHY at 216s on the same graph and Pod (MPI-467 validation.md).\n\nWHY IT IS PROVABLY A REQUESTED RESTART AND NOT A CRASH: wrapper.py ComfyManager._supervise() answers an unexpected ComfyUI exit with os._exit(1), and start.sh ends in `exec python -m uvicorn` with no respawn loop, so a crash takes the whole container down. Six ops passed on that Pod afterwards. Only POST /wrapper/restart-comfy can respawn ComfyUI while the Pod lives.\n\nFIX DIRECTION: refuse or defer the restart while queue_running is non-empty (GET /proxy/queue already exists and is a plain passthrough of ComfyUI's {queue_running, queue_pending}), or drain first and tell the user. Whatever the shape, a restart must never silently discard someone else's prompt. MPI-467 has already landed the DETECTION half in the runner: an orphaned prompt now fails in ~30s naming this mechanism instead of timing out at 15 minutes.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-09T01:57:49Z",
-  "updated_at": "2026-08-09T03:45:00Z",
+  "updated_at": "2026-08-09T04:35:00Z",
   "labels": [
     "comfy",
     "generation",
@@ -27,7 +27,8 @@
   },
   "attention": {
     "state": "required",
-    "updated_at": "2026-08-09T03:45:00Z",
-    "reason": "BLOCKS MPI-467's clean smoke evidence, and has now destroyed the same op in TWO matrices. Fix agreed: drain-wait on GET /proxy/queue before /proxy/restart-comfy in comfyController.js:543; refuse loudly on timeout. Pair it with the runner's merge + --retry-failed work so the retest costs ~10 min instead of a full matrix."
-  }
+    "updated_at": "2026-08-09T04:35:00Z",
+    "reason": "Implemented + unit-verified (10 asserts on the real helper). STILL NOT PROVEN LIVE: the 2026-08-09 04:15Z retry leg ran with the app OPEN and the renderer demonstrably on the engine path (14x hot-store ensure at 04:16:12), and minimax-h3/t2v_ms PASSED at 123s - but app.log shows NO restart was requested at all (universal nodes: 7/7 already on volume), so the drain-wait never fired. Absence of a restart is not the guard working. Prove it on the LOCAL engine: queue a long gen, hit the dev radial restart, expect the \"Restart blocked\" toast - no rental needed."
+  },
+  "activeSessionTitle": "MPI-501 drain-wait + smoke-runner merge/--retry-failed"
 }

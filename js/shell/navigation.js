@@ -27,6 +27,7 @@ import { loadProjectGrid } from './projectUI.js';
 import { Overlays } from '../managers/overlayManager.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { remoteEngineClient } from '../services/remoteEngineClient.js';
+import { getEngine } from '../services/comfyController.js';
 
 // ── Module-scoped refs ──────────────────────────────────────────────────────
 
@@ -262,6 +263,17 @@ Events.on('state:changed', ({ key, value }) => {
 
 async function _restartEngine() {
     const remote = remoteEngineClient.isRemote();
+    // MPI-501: a restart terminates ComfyUI — on a running queue that destroys the
+    // in-flight prompt with no error anywhere. Same guard as the generation gate, but
+    // a short wait: this is an explicit human action, so refuse fast and let them
+    // decide (Stop it, or wait) rather than leave the radial hanging for minutes.
+    if (!await getEngine(!remote).waitForIdleQueue({ timeoutMs: 30000 })) {
+        Events.emit('ui:error', {
+            title: 'Restart blocked',
+            message: 'A generation is still running on the engine. Stop it or let it finish, then restart.',
+        });
+        return;
+    }
     Events.emit('ui:info', { message: 'Restarting the engine…' });
     try {
         if (remote) {
