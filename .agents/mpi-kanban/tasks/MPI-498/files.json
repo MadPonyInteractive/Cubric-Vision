@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "comfy_workflows/nvidia_pid.json",
+    "comfy_workflows/flow_sdxl_4k.json",
+    "comfy_workflows/raw/nvidia_pid.json",
+    "comfy_workflows/raw/flow_sdxl_4k.json"
+  ]
+}

@@ -543,6 +543,7 @@
     "inputs": {
       "size": 1024,
       "side": true,
+      "upscale_method": "lanczos",
       "image": [
         "1551",
         0
@@ -628,6 +629,7 @@
     "inputs": {
       "size": 4096,
       "side": true,
+      "upscale_method": "lanczos",
       "image": [
         "1613",
         0

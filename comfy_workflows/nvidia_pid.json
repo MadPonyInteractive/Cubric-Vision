@@ -584,6 +584,7 @@
     "inputs": {
       "size": 1024,
       "side": true,
+      "upscale_method": "lanczos",
       "image": [
         "1626",
         0
@@ -663,6 +664,7 @@
     "inputs": {
       "size": 1024,
       "side": true,
+      "upscale_method": "lanczos",
       "image": [
         "1570",
         0
@@ -677,6 +679,7 @@
     "inputs": {
       "size": 2048,
       "side": true,
+      "upscale_method": "lanczos",
       "image": [
         "1570",
         0
@@ -691,6 +694,7 @@
     "inputs": {
       "size": 4096,
       "side": true,
+      "upscale_method": "lanczos",
       "image": [
         "1624",
         0
