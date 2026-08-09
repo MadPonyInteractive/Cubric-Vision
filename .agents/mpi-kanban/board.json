@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 504,
+  "next_id": 506,
   "columns": {
     "todo": [
+      "MPI-504",
       "MPI-502",
       "MPI-500",
       "MPI-499",
@@ -39,6 +40,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-505",
       "MPI-501",
       "MPI-481",
       "MPI-450"
@@ -106,8 +108,33 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-09T08:10:00Z",
+  "updated_at": "2026-08-09T10:05:00Z",
   "events": [
+    {
+      "at": "2026-08-09T10:05:00Z",
+      "type": "task.moved",
+      "task": "MPI-505",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "note": "Backfilled: the two raw H3 templates were exported from the ComfyUI editor this session, so implementation work already exists. files.json records the twelve paths the card owns. Sync, dep entry and the app-side control are still pending."
+    },
+    {
+      "at": "2026-08-09T10:00:34Z",
+      "type": "task.created",
+      "task": "MPI-505",
+      "actor": "opus",
+      "column": "todo",
+      "note": "H3 Turbo LoRA carded after a full bench session. 204s -> 96s at 864x480 warm, measured across 12+ runs. H3 is the only non-distilled video model in the fleet, which is why SageAttention, SolAttn and EasyCache all collapse onto it and why LTX and WAN are explicitly out of scope. R2 upload done and verified; repo work pending."
+    },
+    {
+      "at": "2026-08-09T07:30:00Z",
+      "type": "task.created",
+      "task": "MPI-504",
+      "actor": "opus",
+      "column": "todo",
+      "note": "Character Sheet flow carded from Fabio's ask: one supplied image in, a 3-panel sheet out with the front full body HEADLESS. Was candidate workflow 4 inside MPI-348 s8, never its own card. Carries the Higgsfield HELL GRIND sheet spec and flags that it conflicts with Fabio's own past-tested layout - bench decides. Real risk named: back-view identity from a single photo is unproven locally."
+    },
     {
       "at": "2026-08-08T19:20:00Z",
       "type": "task.moved",
