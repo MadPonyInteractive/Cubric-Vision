@@ -3,6 +3,8 @@ rules_dir: .claude/rules
 critical_snapshot_file: CLAUDE.md
 critical_snapshot_anchor: critical-rules-snapshot-applies-to-all-agents-always-no-file-read-required
 rules:
+  - name: behaviour
+    file: behaviour.md
   - name: kanban
     file: kanban.md
   - name: dos_and_donts
@@ -41,11 +43,11 @@ rules:
     file: component-events-lifecycle.md
 bundles:
   - name: frontend-worker
-    rules: [kanban, dos_and_donts, components, events, state]
+    rules: [behaviour, kanban, dos_and_donts, components, events, state]
   - name: comfy-worker
-    rules: [kanban, dos_and_donts, comfy_engine, comfy_injection]
+    rules: [behaviour, kanban, dos_and_donts, comfy_engine, comfy_injection]
   - name: component-maps
-    rules: [component-mounts, component-events, component-state, component-comfy]
+    rules: [behaviour, component-mounts, component-events, component-state, component-comfy]
 ---
 
 # mpi-brief-rule config
@@ -56,9 +58,12 @@ emits "No mpi-kanban config found" and stops for every rule name. It was missing
 until 2026-08-08, so every sub-agent dispatched before that date started with no
 briefing at all.
 
-`kanban` is first in every bundle on purpose: it carries § File claims and the
-ban on `git checkout --` / `git restore` / `git stash` / `git reset --hard` /
-`git clean` on a shared tree.
+`behaviour` is first in every bundle: generic agent conduct (claims discipline,
+shell style, multi-agent isolation, four-bullet reporting), true in every repo.
+`kanban` follows because it carries this repo's § File claims and card contract.
+
+The `.claude/agents/*.md` worker archetypes are named for the three bundles and
+tell the dispatcher which one to resolve.
 
 Rules with no `## Sub-Agent Briefing` section, so deliberately unlisted:
 `README.md` (index), `comfy_injection_multistage.md`, `git.md` (its content is

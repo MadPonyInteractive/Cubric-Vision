@@ -1,11 +1,13 @@
 ---
 schema: mpi-kanban/project-profile/v1
 mode: scalable-foundation
-mode_rationale: user-confirmed at setup; strong repo evidence (17 .claude/rules, 10 docs/, schema versioning, husky CI, kanban archives)
+mode_rationale: user-confirmed at setup and re-confirmed 2026-08-09; strong repo evidence (21 .claude/rules, docs/ tree with a routing map, schema versioning, CI on push, 0 board violations)
 mode_source: user
+pack_version: 1.0.1
+push_policy: auto
 setup_date: 2026-05-23
-last_refresh: 2026-08-04
-last_refresh_notes: Dead card pointers (MPI-8, MPI-49) removed - neither exists on the board or in either archive. Platform-validation and install-gate claims corrected against the 1.3.0 release. Release commands completed.
+last_refresh: 2026-08-09
+last_refresh_notes: Mpi-Kanban 1.0 migration (MPI-492). The pre-1.0 skills pack is gone and the plugin's six hooks now enforce what CLAUDE.md hand-documented - the pre-authorization, claim, next_id and destructive-git bullets were deleted and named to their hooks. The `.claude/skills/mpi-end/` wrapper was split: its pack half now ships in `mpi-end-session`, its release-awareness half moved to `.agents/mpi-kanban/close-out.md`. Duplicate `guard-destructive-git.py` retired. Added `.claude/rules/behaviour.md` and three worker archetypes. push_policy recorded as auto per the user, 2026-08-09.
 knowledge_index: .agents/mpi-kanban/project-knowledge-index.md
 ---
 
@@ -54,3 +56,4 @@ See `CLAUDE.md` § "Critical Rules Snapshot" for the canonical list (BEM, Compon
 ## Mode Notes
 
 - 2026-05-23: scalable-foundation. New work follows full guardrails (rules, BEM, factory, events, state proxy). No prototype shortcuts.
+- 2026-08-09: re-confirmed by the user at refresh — "this is a huge project". Unchanged.

@@ -24,7 +24,7 @@ into the matching file below**, or add a new small file. Rules:
 - **Model/Flow-agnostic only.** Model-specific tuning goes to `docs/models/<model>/`;
   Flow-specific wiring goes to `docs/flows.md`. This folder is the machinery both reuse.
 - **≤200 lines per file** (the repo-wide doc rule). Split before it bloats.
-- The `/mpi-end` close-out reminds you to file what you learned — this banner is the
+- The `/mpi-end-session` close-out reminds you to file what you learned — this banner is the
   standing home for *where* it goes.
 
 ---

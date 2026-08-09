@@ -3,12 +3,13 @@
   "id": "MPI-488",
   "title": "next_id is not concurrency-safe, and losing the race silently overwrites another agent's card",
   "description": "board.json's next_id is not safe under concurrent sessions, and losing the race OVERWRITES another agent's card. Measured twice on 2026-08-08, in both directions, within ninety minutes: (a) I read next_id=484, wrote MPI-484, and truncated a peer's already-committed shared-48188-port card (142d72b2); (b) that same peer read next_id=485 while I was committing MPI-485, and overwrote my orphan-sweep card's task.json, brief.md and events.jsonl; (c) I then read next_id=486 and clobbered their cross-instance restart card (88b16822). All three were recovered from git ONLY because the loser happened to have committed first - an uncommitted card would simply be gone, with no error and no diff to notice, because the writer opens with mode 'w' and truncation is silent. The read-then-increment rule in <mpi-lib>/task-board-ops/read.md is correct and was followed every time; it just cannot be atomic across processes. TWO CHEAP MITIGATIONS, neither needing a lock service: (1) create the task DIRECTORY with os.mkdir and the files with exclusive-create mode ('x'), so a taken id raises instead of destroying - walk to the next free id and carry on; (2) have validate_board.py flag any tasks/ directory whose id is below next_id but absent from every column, which is the fingerprint a silent clobber leaves. Worth writing into .claude/rules/kanban.md next to the other traps, since every agent that creates a card hits this path.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-08T08:35:00Z",
-  "updated_at": "2026-08-08T08:35:00Z",
+  "updated_at": "2026-08-09T06:40:00Z",
   "links": {
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   }
 }

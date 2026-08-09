@@ -3,27 +3,27 @@
 Rules for editing the MPI Kanban board (`.agents/mpi-kanban/`) and agent-to-agent messages.
 Board mutation mechanics live in `<mpi-lib>/task-board-ops/` (`_schema.md`, `mutate.md`,
 `validate.md`) — read the schema FIRST for any card/board write. This file holds the traps
-that schema doc doesn't. **`<mpi-lib>` lives at BOTH `C:\Users\Fabio\.agents\skills\mpi-lib\`
-and `C:\Users\Fabio\.claude\skills\mpi-lib\` — verified byte-identical 2026-08-03, so read
-whichever you reach first.** (This line claimed until 2026-08-03 that `~/.claude/skills/`
-"comes up empty". It does not, and the false warning cost a detour; do not reinstate it.
-The plugins cache genuinely has no copy.) **The never-edit rule applies to BOTH** — they are
-user-scope pack files and a pack update overwrites them.
+that schema doc doesn't.
 
-**`find` will NOT traverse the `.claude` copy** — it is a SYMLINK to the `.agents` one
-(`mpi-lib -> /c/Users/Fabio/.agents/skills/mpi-lib/`), and `find` does not follow symlinks
-by default. So `find ~/.claude/skills/mpi-lib -name validate_board.py` returns **0 hits**
-while `find -L` on the same path returns 1 — it reads as "the file does not exist" when it
-does. Search the `.agents` path, or pass `-L`. The validator is
-`~/.agents/skills/mpi-lib/scripts/validate_board.py` — in `scripts/`, **not** in
-`task-board-ops/` alongside the docs this file already points you at. (Measured both
-directions 2026-08-04.)
+**`<mpi-lib>` = `${CLAUDE_PLUGIN_ROOT}/skills/mpi-lib/`** — the installed Mpi-Kanban
+plugin, on this machine `~/.claude/plugins/cache/mad-pony-interactive/mpi-kanban/<version>/`.
+The validator is `<mpi-lib>/scripts/validate_board.py` — in `scripts/`, **not** in
+`task-board-ops/` alongside the docs this file already points you at. Run it as
+`python <that path> .` from the repo root; resting state on this board is 0 violations,
+exit 0 (measured 2026-08-09), so any violation is yours.
+
+**Never edit the plugin.** A `/plugin update` overwrites it. A needed pack change is a
+kanban card, filed as an issue on `MadPonyInteractive/mpi-kanban`.
+
+> Until 2026-08-09 this section described a pre-1.0 skills PACK at
+> `~/.agents/skills/mpi-lib/` with a symlinked twin under `~/.claude/skills/` that `find`
+> would not traverse. Both are gone — the pack is a plugin now. Do not reinstate that trap.
 
 ## The board is PUBLIC — writing a card is publishing it
 
 `.agents/mpi-kanban/` is **tracked**, and `origin` is the public
-`github.com/MadPonyInteractive/Cubric-Vision`. CLAUDE.md's "Kanban writes are
-pre-authorized — never ask" grants permission to EDIT; it says nothing about privacy.
+`github.com/MadPonyInteractive/Cubric-Vision`. Board writes need no permission to make;
+that says nothing about privacy.
 Before writing a card, brief, `research.md` or an event `summary`, ask whether it would be
 fine on a web page. If not, it goes in one of two homes — **never in the card** — and the
 card carries only a path pointer:
@@ -71,14 +71,14 @@ progress and is indistinguishable from abandonment — that is exactly how twelv
 accumulated. If a session ends before the user answers, say so in the close-out;
 an unanswered question is visible, a silent park is not.
 
-`/mpi-end` enforces this — see `.claude/skills/mpi-end/SKILL.md`
-§ "`validating` IS NOT A PARKING SPACE".
+`/mpi-end-session` enforces this — see the plugin skill § 6, "`validating` is not a
+parking space".
 
 ## Card shape rules
 
 When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):
 
-1. `status` is NOT free-form — canonical values are `active`/`accepted`; put blocking info in `description` or `brief.md`. **A `done` move must ALSO set `status: "done"`** — `validate.md` § and `validate_board.py` reject a `done` card still reading `status: "active"`, but `mutate.md`'s `moveTask` recipe only names `column`/`maturity`/`updated_at`, so following it literally hand-authors a validator violation. Upstream pack defect — file it there, never patch `~/.claude/skills/`.
+1. `status` is NOT free-form — canonical values are `active`/`accepted`; put blocking info in `description` or `brief.md`. **A `done` move must ALSO set `status: "done"`** — `validate.md` § and `validate_board.py` reject a `done` card still reading `status: "active"`, but `mutate.md`'s `moveTask` recipe only names `column`/`maturity`/`updated_at`, so following it literally hand-authors a validator violation. Upstream plugin defect (still present in 1.0.1, re-checked 2026-08-09) — file it on `MadPonyInteractive/mpi-kanban`, never patch the installed plugin.
 2. `links`: **OMIT a key you have no file for — never write `null`.** `validate_board.py`
    rejects every null with *"link '<key>' must be a relative path inside the task folder"*
    (one violation per key; a new card with five nulls adds five). The full 8-key set is for
@@ -110,7 +110,7 @@ When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):
 9. **`next_id` is a shared counter — a stale read OVERWRITES a real card.** MPI-244
    (2026-07-11) read `board.json` `next_id`, used it, and a concurrent peer had already
    consumed that id for a finished card — the allocation overwrote MPI-253's `task.json`.
-   Caught only at `mpi-end` when `git diff` showed a title changing under us. Before
+   Caught only at close-out when `git diff` showed a title changing under us. Before
    creating a card, re-read `board.json` fresh **and** `git show HEAD:.agents/mpi-kanban/tasks/MPI-<n>/task.json`;
    a committed card at that id (especially `done`) means the counter is stale — take a
    higher free id. At close-out, `git diff` the kanban BEFORE committing: an unexpected
@@ -238,20 +238,25 @@ match it with `separators=(',',':')`.
 When you only need to change one field, prefer the Edit tool (exact-string match) over any
 scripted rewrite — it cannot reformat what it does not serialise.
 
-## File claims — the lock that nobody has taken since 2026-06-16
+## File claims
 
 Claims are how concurrent sessions avoid overwriting each other. They live in
-`.agents/mpi-kanban/state/`, NOT on the board. **Measured 2026-08-08:** `state/files/` held
-0 live records and `active_file_claims` was `[]` in every commit of `state/index.json` from
-2026-06-16 to today, while 3-5 sessions ran concurrently — MPI-451 and MPI-452 negotiated
-`models.js` / `licences.js` ownership by hand in `mpi-message` bodies on 2026-08-06 because
-the lock built for exactly that was empty. Card moves kept working the whole time; the only
-difference is that card moves are in `CLAUDE.md` and claims were not.
+`.agents/mpi-kanban/state/`, NOT on the board.
 
-**Claiming is not optional and not skill-gated.** The procedure lives inside the `mpi-*`
-skills (`<mpi-lib>/coordination-ops/lifecycle.md` § Claim Files), so an agent doing ordinary
-work — "fix X", a `/mpi-*`-less session, a dispatched sub-agent — never loads it. Load it
-yourself.
+**The plugin's `guard-claim` hook enforces them on every write** — Edit, Write and Bash —
+whether or not a skill was invoked. It blocks a write to a path an `active_file_claims`
+record holds with status `claimed`, owned by a session that is live (`active`, heartbeat
+inside the index timeout) and is not yours. A stale, closed or unattributable claim allows
+the write, so the claim you take is what protects you; the hook is what stops the peer.
+
+That enforcement is why this section stopped being an outage report. For six weeks —
+2026-06-16 to 2026-08-08 — `state/files/` held 0 live records and `active_file_claims` was
+`[]` in every commit while 3-5 sessions ran concurrently, because claiming was prose inside
+the `mpi-*` skills that an agent doing ordinary work never loaded. MPI-451 and MPI-452
+negotiated `models.js` / `licences.js` ownership by hand in `mpi-message` bodies on
+2026-08-06 for that reason. Take the claim anyway: the hook cannot protect a path nobody
+declared, and across two independently launched Claude Code windows claims stay advisory —
+no platform has a cross-session file lock.
 
 ### Before your first edit
 
@@ -296,19 +301,19 @@ match this rule, not the neighbours.
    `active_file_claims`, and add it to `pending_file_states` for the four middle states.
    **A released claim is not commit permission** — see `.claude/rules/git.md`.
 
-### `python scripts/new_uuid.py` DOES NOT EXIST — do not stall on it
+### Generating the uuid
 
-`<mpi-lib>/coordination-ops/lifecycle.md:83`, `messages.md:67`, `docs/coordination/uuid-helper.md`
-and `mpi-handoff/SKILL.md:125` all tell you to generate the uuid with
-`python scripts/new_uuid.py`. That file is in none of the five locations (verified
-2026-08-08); the path is also relative, so it would resolve against the PROJECT root rather
-than the skill root even if it existed. Hitting a missing script at step one of the very
-first coordination write is the cheapest possible reason to skip claiming entirely — which
-is roughly when claiming stopped. Use instead:
+`python <mpi-lib>/scripts/new_uuid.py`, or equivalently:
 
 ```bash
 python -c "import uuid; print(uuid.uuid4())"
 ```
+
+The path in the skill docs is relative, so run it by its absolute plugin path.
+
+> This section claimed until 2026-08-09, "verified 2026-08-08", that the script did not
+> exist anywhere. That was true of the pre-1.0 skills pack and is false of the plugin —
+> it ships at `<mpi-lib>/scripts/new_uuid.py`. Do not reinstate the claim.
 
 ### Card ownership — `files.json`, written by the agent taking the card
 
@@ -359,8 +364,8 @@ Paste verbatim into any sub-agent that will edit files in this repo.
 > hours old and whose `owner_session` is not yours, do not edit that path — report it as
 > blocked. Otherwise write a `mpi-kanban/file-claim/v1` record per owned path, add it to
 > `active_file_claims`, and release it (`complete` / `verified` / `released`) in your final
-> report. Generate uuids with `python -c "import uuid; print(uuid.uuid4())"` — the
-> `scripts/new_uuid.py` the skill docs name does not exist.
+> report. Generate uuids with `python -c "import uuid; print(uuid.uuid4())"`. `guard-claim`
+> blocks the write if you skip this and a live peer holds the path.
 >
 > **NEVER run `git checkout --`, `git restore`, `git stash`, `git reset --hard`, or
 > `git clean`.** They restore from HEAD and destroy peers' uncommitted work silently, exit 0,

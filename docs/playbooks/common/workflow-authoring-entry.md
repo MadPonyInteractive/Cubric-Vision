@@ -18,7 +18,7 @@ hand-convert or hand-edit the API JSON.
 - It commits the raw source, converts to API via the live `/object_info`, **gates on
   `validate-injection-rules.mjs`** (STOPS + names the node on a title/capture/seed/
   integrity violation — fix in the ComfyUI graph and re-export, never hand-patch the
-  API), runs `orchestrate.py`, and leaves the generated output **staged** for `/mpi-end`.
+  API), runs `orchestrate.py`, and leaves the generated output **staged** for `/mpi-end-session`.
 - `raw/` is USER-OWNED — tooling reads it, never writes it.
 
 **Playbook overrides (divergences live inline in each playbook):**

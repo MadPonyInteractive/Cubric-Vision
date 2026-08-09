@@ -1,8 +1,8 @@
 ---
 schema: mpi-kanban/project-knowledge-index/v1
 profile: .agents/mpi-kanban/project-profile.md
-last_refresh: 2026-08-04
-last_refresh_notes: Five memory pointers deleted in the 2026-07-29 prune (MPI-399) replaced with the docs that absorbed them. Downloads retargeted at its own doc. Six topics added for docs that were never indexed (gallery, model library, apps, playbooks, workflow authoring, dev/testing/media).
+last_refresh: 2026-08-09
+last_refresh_notes: Mpi-Kanban 1.0 migration pass (MPI-492) — added the Agent workflow & coordination topic. No content topic changed; the four component maps, docs/ routing and memory pointers were spot-checked and still resolve.
 ---
 
 # Project Knowledge Index
@@ -234,6 +234,16 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - `docs/PROJECT.md` — orientation hub
 - `.claude/rules/dos_and_donts.md` — universal baseline
 - **Memory:** `project_product_scope.md` (Vision = image/video only; audio + prompt-gen are sibling apps)
+
+### Agent workflow & coordination (kanban, claims, close-out, sub-agents)
+
+- **Read first:** `.claude/rules/kanban.md` — board/card traps this repo hit, file claims, card ownership
+- `.claude/rules/behaviour.md` — generic agent conduct (claims discipline, shell style, reporting)
+- `.agents/mpi-kanban/close-out.md` — this repo's close-out steps, run by `mpi-end-session` § 7
+- `.agents/mpi-kanban.local.md` — `/mpi-brief-rule` config: 18 rules, 3 bundles
+- `.claude/agents/` — worker archetypes for the three bundles
+- Mechanics live in the **Mpi-Kanban plugin**, `${CLAUDE_PLUGIN_ROOT}/skills/mpi-lib/` — never edit it; a needed change is a card filed on `MadPonyInteractive/mpi-kanban`
+- Six hooks enforce the contract (`guard-card`, `guard-claim`, `guard-git`, `guard-shell`, plus session-start and pre-compact). What a hook enforces is deliberately NOT re-documented in `CLAUDE.md`
 
 ## Board archive layout
 

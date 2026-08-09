@@ -1,6 +1,33 @@
 {
   "schema": "mpi-kanban/files/v1",
   "files": [
-    ".claude/rules/kanban.md"
+    "CLAUDE.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/behaviour.md",
+    ".claude/skills/mpi-end/SKILL.md",
+    ".claude/settings.json",
+    ".claude/hooks/guard-destructive-git.py",
+    ".claude/agents/frontend-worker.md",
+    ".claude/agents/comfy-worker.md",
+    ".claude/agents/component-maps.md",
+    ".agents/mpi-kanban.local.md",
+    ".agents/mpi-kanban/close-out.md",
+    ".agents/mpi-kanban/project-profile.md",
+    ".agents/mpi-kanban/project-knowledge-index.md",
+    ".agents/mpi-kanban/board.json",
+    ".agents/mpi-kanban/events.jsonl",
+    ".agents/mpi-kanban/state/interop.json",
+    ".agents/mpi-kanban/state/index.json",
+    ".agents/mpi-kanban/tasks/MPI-492/task.json",
+    ".agents/mpi-kanban/tasks/MPI-492/files.json",
+    ".agents/mpi-kanban/tasks/MPI-492/validation.md",
+    ".agents/mpi-kanban/tasks/MPI-492/events.jsonl",
+    ".agents/mpi-kanban/tasks/MPI-488/task.json",
+    ".agents/mpi-kanban/tasks/MPI-488/validation.md",
+    ".agents/mpi-kanban/tasks/MPI-488/events.jsonl",
+    ".agents/mpi-kanban/tasks/MPI-4/files.json",
+    ".agents/mpi-kanban/tasks/MPI-4/events.jsonl",
+    "docs/playbooks/common/workflow-authoring-entry.md",
+    "docs/workflow-authoring/README.md"
   ]
 }
