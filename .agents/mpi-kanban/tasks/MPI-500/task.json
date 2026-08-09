@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-500",
+  "title": "Stop trashing model weights - delete them permanently",
+  "description": "UMBRELLA: MPI-467 (the 1.4 smoke umbrella) - surfaced 2026-08-09 during its live Pod session, listed in tasks/MPI-467/brief.md.\n\nUSER DECISION, 2026-08-09, in his words: \"I remember we had some kind of system that would trash models instead of deleting them so that they would be recoverable by the user. That's an old system, and apparently it works for some files and not for others. To be honest, I prefer that they just get deleted, not trashed.\"\n\nWHY IT IS INCONSISTENT, AND IT IS NOT RANDOM. routes/downloadManager.js:305-309 is trash-then-permanent-delete: it calls _trash(localPath) and logs \"sweep: moved to trash\", and only on a THROWN error falls back to a permanent delete logged as \"trash failed (...) - permanently deleted\". When trash SUCCEEDS the user does not get the space back. When it FAILS he does. Same code, two outcomes - which is precisely the \"works for some files and not for others\" he reported. _trash lazy-imports npm trash@8 (ESM-only, hence the dynamic import at lines 26-33).\n\nSCOPE IS STILL OPEN AND IS THE FIRST THING TO SETTLE. The orphan sweep is agreed. The UNINSTALL path also trashes and that was a DELIBERATE \"recoverable by the user\" design sitting on MPI-276's G4 preserve-verbatim list (\"trash->fs.remove fallback\"), so changing it is a product call, not a cleanup. Ask before touching the uninstall surface.\n\nSWEEP THE BLAST RADIUS: grep every _trash call site, and remember the engine split - the LOCAL and REMOTE uninstall branches are separate code and the remote branch deletes through the wrapper, not through trash. Removing the dependency entirely also drops trash@8 from package.json, which is the cleanest end state if the answer is \"everywhere\".\n\nSIDE EFFECT WORTH HAVING: this is half of the npm-test-leak card's fix - a permanent delete makes the leaked fixture reclaimable by the test's own cleanup.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-09T01:57:49Z",
+  "updated_at": "2026-08-09T01:57:49Z",
+  "labels": [
+    "download",
+    "ux",
+    "tooling"
+  ],
+  "priority": "normal",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

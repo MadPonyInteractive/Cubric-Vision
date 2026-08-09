@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-501", "type": "task.created", "at": "2026-08-09T01:57:49Z", "actor": "opus", "summary": "Carded during the MPI-467 live Pod session; root-caused from evidence the user surfaced. Id claimed with exclusive mkdir per MPI-488."}

@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task/v1",
+  "id": "4cc0d2e7-00c8-4a15-b107-f66c26a6fb6c",
+  "task_card": "MPI-467",
+  "title": "MPI-467 - h3/t2v_ms closed live, runner made self-diagnosing, gate 9 shipped",
+  "status": "in_progress",
+  "owner_session": ".agents/mpi-kanban/state/sessions/77f72b70-b77f-4ec5-ad3d-936374d4760e.json",
+  "plan": null,
+  "heartbeat_at": "2026-08-09T01:59:04Z",
+  "allowed_actions": [
+    "read",
+    "implement",
+    "verify",
+    "claim_files"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-09T01:59:04Z",
+      "event": "task_attached"
+    }
+  ]
+}
