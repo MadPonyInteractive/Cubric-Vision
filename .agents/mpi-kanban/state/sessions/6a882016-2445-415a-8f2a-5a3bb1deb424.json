@@ -5,9 +5,9 @@
   "title": "MPI-501 drain-wait + smoke-runner merge/--retry-failed (MPI-467 umbrella)",
   "workspace": "c:/AI/Mpi/Cubric-Vision",
   "branch": "master",
-  "status": "active",
+  "status": "handoff_ready",
   "started_at": "2026-08-09T04:05:00Z",
-  "heartbeat_at": "2026-08-09T04:05:00Z",
+  "heartbeat_at": "2026-08-09T04:55:00Z",
   "recent_events": [
     {
       "at": "2026-08-09T04:05:00Z",
@@ -16,6 +16,14 @@
     {
       "at": "2026-08-09T04:05:00Z",
       "event": "handoff_accepted"
+    },
+    {
+      "at": "2026-08-09T04:55:00Z",
+      "event": "handoff_ready"
+    },
+    {
+      "at": "2026-08-09T04:55:00Z",
+      "event": "session_closed"
     }
   ]
 }
