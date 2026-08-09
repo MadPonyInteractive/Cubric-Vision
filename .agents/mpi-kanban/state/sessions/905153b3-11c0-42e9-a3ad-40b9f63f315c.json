@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "905153b3-11c0-42e9-a3ad-40b9f63f315c",
+  "role": "implementer",
+  "title": "MPI-467 - nvidia_pid crop re-export sync + gate 9 re-verify",
+  "workspace": "c:/AI/Mpi/Cubric-Vision",
+  "branch": "master",
+  "status": "active",
+  "started_at": "2026-08-09T02:22:00Z",
+  "heartbeat_at": "2026-08-09T02:22:00Z",
+  "recent_events": [
+    {
+      "at": "2026-08-09T02:22:00Z",
+      "event": "session_registered"
+    }
+  ]
+}

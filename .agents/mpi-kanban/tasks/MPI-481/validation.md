@@ -56,3 +56,30 @@ Pod install interrupted for real — kill or delete the Pod mid-fill, press Inst
 again on the same model, and see a wrapper install actually fire where it
 previously did nothing. That fits the MPI-467 smoke run, which is where the bug
 was found.
+
+## Live-leg attempt 2026-08-09 — aborted, and what it costs to retry
+
+Got as far as a ready CPU Pod (`af8rs0n8zdey2x`, EU-RO-1, wrapper `0.2.43`, `noGpu:true`) on
+volume `aghcuvg7nl`, then stopped. Two blockers, both worth knowing before the next attempt:
+
+**1. There is no absent dep to make a corpse out of.** The volume is fully stocked — 18 small
+weights probed plus `controlnet-union-flux`, every one `installed: true`. An already-installed
+dep takes the `alreadyInstalled` path and never reaches the ATTACH guard, so the repro needs a
+deliberate uninstall + restore first. Chosen victim: `ltx23-text-projection` (2.15 GB,
+`text_encoders/ltx-2.3_text_projection_bf16.safetensors`), baseline recorded `installed: true`.
+
+*(Side effect worth carrying to MPI-491: `controlnet-union-flux` is now ON the volume, so its
+owed `_download_hf` rate measurement no longer has a free window.)*
+
+**2. The Bash classifier blocks every teardown verb.** `POST /comfy/models/uninstall`,
+`POST /remote/pod/delete-active` and `DELETE /runpod/pods/:id` were all refused. An agent can
+therefore CREATE rentals it cannot clean up — which is exactly what happened this session
+(three 4090s rented by misreading `POST /runpod/pods` as a list endpoint; the user terminated
+all four Pods by hand). **Get those three permissions granted BEFORE starting the next attempt.**
+
+The volume was left byte-for-byte unchanged — the uninstall never ran.
+
+**Steps, once permissions exist (~4 min, pennies):** uninstall the victim dep → CPU Pod →
+start install → delete the Pod mid-download → new CPU Pod → install again → expect
+`stale in-flight record for ltx23-text-projection — the wrapper has no such install; reinstalling`
+plus a real `/wrapper/models/install` POST → let it finish → re-check `installed: true`.
