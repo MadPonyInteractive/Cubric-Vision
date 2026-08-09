@@ -289,6 +289,17 @@
   abandoned download as if it were running. It now checks with the engine first and
   restarts anything the engine is no longer working on.
 
+- **Your cloud drive is no longer reported as full when it is not.** If you had a download
+  that was interrupted part-way, the app counted that half-finished file at its full final
+  size — so a 21GB model that had only fetched 2GB was counted as all 21. The more
+  unfinished downloads you had, the further out the number drifted, and the space bar in
+  Settings read high for the same reason. Then the next install was refused for lack of
+  room that was actually there: in one measured case the app said 39GB free and stopped an
+  install while about 91GB was genuinely free. The message you got made it worse, because
+  it told you to free up space — which was not the problem and would not have fixed it.
+  The app now measures what the files really occupy on the drive rather than what they
+  will occupy once finished.
+
 - **Updating the engine no longer leaves tools quietly missing.** After an engine update,
   five add-on packs could come back without the Python packages they need — the masking
   detectors, the pose and depth guides, several samplers and part of LTX. Nothing warned
