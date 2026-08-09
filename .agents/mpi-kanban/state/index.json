@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-09T06:55:00Z",
+  "updated_at": "2026-08-09T08:30:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -9,7 +9,6 @@
   "pending_file_states": [
     "dev_configs/node_lock.json",
     "docs/README.md",
-    "js/services/downloadService.js",
     "js/services/comfyController.js",
     "tests/prompt-partial-validation.test.cjs",
     "docs/comfy.md",
