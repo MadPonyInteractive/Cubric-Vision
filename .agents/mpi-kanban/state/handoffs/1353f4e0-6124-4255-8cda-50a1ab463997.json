@@ -1,0 +1,133 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "1353f4e0-6124-4255-8cda-50a1ab463997",
+  "generated_at": "2026-08-09T10:10:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "H3 turbo LoRA bench + acceleration research (SolAttn / SageAttention / EasyCache)",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Check the viability of SolAttn, SageAttention and EasyCache for MiniMax H3, LTX and WAN - what nodes, processes and pip packages they need, how safe those are to install - and card whatever is worth adding. Mid-session a just-released MiniMax H3 Turbo LoRA was found and became the main thread.",
+    "status": "in_progress",
+    "summary": "The turbo LoRA is the win: 204s -> 96s at 864x480 warm, authored into both H3 raw graphs and committed, weight staged and verified on R2. SageAttention and SolAttn are rejected with reasons; LTX and WAN are out of scope because both are already step-distilled upstream. What remains is repo plumbing: sync the workflows, add the dep entry, wire the app-side control."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-505/brief.md",
+    "completed": [
+      "Researched all three techniques upstream; recorded verdicts with sources in brief.md",
+      "Established H3 is the only non-distilled video model shipped (20 steps vs LTX 8, WAN 2.2 6, WAN 5B 4) - the reason the whole investigation lands on one model",
+      "Turbo LoRA staged to R2 and verified: sha256 7098acf3ee75028fd9fcd948f50fcc8d995057fabb76f86bd3ca2c0ffc58e409, 620285592 bytes, HTTP 200, byte match",
+      "Authored turbo gating into both raw H3 templates: LoRA strength via MpiMath, MiniMaxH3SigmaShift (12,5), beta/8 vs simple/20, euler vs res_multistep, split 3 vs '10 if a else 5'",
+      "Authored a single-pass path (Input_Single_Pass) that blocks stage 1 via MpiIfElseInverted",
+      "Measured the full matrix at 864x480 warm; user accepted turbo quality as an opt-in trade",
+      "Exported both raw templates from the ComfyUI editor and committed them"
+    ],
+    "pending": [
+      "Run `node scripts/sync-raw-workflows.mjs` - convert against port 48188 (the engine), NOT the 8188 bench, which runs ahead and has silently shifted a widget before",
+      "Verify the sync reports 0 missing-required and 0 dangling",
+      "Add the `minimax-h3-turbo-lora` entry to js/data/modelConstants/loraDeps.js (full snippet is in brief.md; copy the shape of krea2-lora-accelerator)",
+      "Add the dep id + a `h3TurboToggle` capability to BOTH H3 cards in models.js",
+      "Add a sibling `h3Turbo` control to PromptBoxControls.js plus its capability gate - do NOT reuse krea2Turbo",
+      "h3Turbo: false in promptControlDefaults.js; 'h3Turbo' into the t2v_ms / i2v_ms / ref2v_ms component lists",
+      "Bake Input_is_Turbo and Input_Single_Pass into generate_h3.py BAKED_WIDGETS, both false",
+      "Re-run the 204.02s baseline (20 steps, EasyCache off, two-stage, warm) - it is n=1 and it alone decides whether single-pass ships at all",
+      "Check the Console for `NOT LOADED` on the EMA weight to prove the LoRA keys bind",
+      "docs/releases/UNRELEASED.md entry once the toggle is user-facing (live release is 1.3.1)",
+      "Append the SolAttn and SageAttention verdicts to docs/models/h3/performance.md, where the earlier sage rejection already lives"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-505",
+    "title": "MiniMax H3 Turbo LoRA - ship the 20->8 step turbo toggle (204s -> 96s)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-505/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-505/brief.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-505/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-505/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-505/handoffs/"
+    }
+  },
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "brief.md carries the measurement table, every verdict with its reason, and the exact node wiring",
+      "validation.md separates what is proven from what is assumed",
+      "files.json records the 12 owned paths, so the card is dispatchable",
+      "New memory: tool_benchmark_comfy_graph_changes.md (three timing traps), indexed in MEMORY.md"
+    ],
+    "pending": [
+      "docs/models/h3/performance.md needs the SolAttn/SageAttention verdicts appended - proposed, not yet approved",
+      "Decide whether the Apache-2.0 turbo LoRA needs its own licences.js record, separate from minimax-h3-cla-2026-08-02"
+    ]
+  },
+  "next_action": {
+    "description": "Run `node scripts/sync-raw-workflows.mjs` to regenerate the API templates and runtime files from the two committed raw H3 templates (convert against port 48188, not 8188), confirm 0 missing-required and 0 dangling, then add the minimax-h3-turbo-lora entry to loraDeps.js using the snippet in .agents/mpi-kanban/tasks/MPI-505/brief.md.",
+    "command": "mpi-continue MPI-505"
+  },
+  "context": {
+    "key_decisions": [
+      "Turbo is OPT-IN with quality slightly below the 20-step path - the user's explicit call, so the 20-step path stays the default and EasyCache's -22% lands on the primary path rather than an edge case",
+      "LoRA strength is value-gated (MpiMath 1.0/0.0 driving BOTH strength_model and strength_clip), not branch-gated - house pattern, and the AND short-circuit in MpiLoraModelClip is what skips the file load",
+      "Single-pass uses MpiIfElseInverted on the latent, not lazy refusal: an ExecutionBlocker travels downstream only, and the stage-1 sampler is downstream of the latent split",
+      "A sibling h3Turbo control rather than reusing krea2Turbo, which emits prompt:krea2-turbo to hide the negative-prompt toggle and would share one perModel storage key across model families",
+      "SolAttn gets no card - documented verdict only. Reopen only if kijai adds a LICENSE and an LTX branch",
+      "LTX/WAN explicitly out of scope: already distilled upstream, and their seams are load-bearing"
+    ],
+    "constraints": [
+      "The raw templates are exported but NOT synced - raw/ and the runtime files are currently out of step. Nothing is broken for users because no runtime file changed, but do the sync before anything else",
+      "First run after flipping an injected boolean is NOT warm - it produced a false 5% regression this session. Discard run 1 of every config",
+      "A model-side widget change (MiniMaxH3SigmaShift, LoRA strength/name) costs a ~19s re-patch. Seed-only changes stay warm. Never compare across a re-patch",
+      "Same seed + same graph = execution_cached and measures nothing. Vary seeds between repeats; pair them across configs",
+      "864x480 is the app's baked default (generate_h3.py). Half this session's early numbers were taken at 864x408 by mistake and were wrong by 3x - state the resolution beside every number",
+      "progressStages.js needs single: 2 -> single: 1 on both H3 rows IF single-pass ships. Turbo needs no new axis - it changes bar length, not bar count. A wrong count is worse than a missing one",
+      "shift_audio 4/5/6 made no audible difference (verified not a plumbing fault - ModelPatcher.clone preserves object_patches and model_options). Baked at 5. The audio fix was euler/beta",
+      "EasyCache is currently ungated in the graphs, so it runs under turbo where it skips 0 of 8 steps. Gate it off turbo"
+    ],
+    "files_modified": [
+      "comfy_workflows/raw/minimax_h3_fl2va_template.json",
+      "comfy_workflows/raw/minimax_h3_r2va_template.json",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-505/"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-505/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-505/checklist.md",
+      "docs/workflow-authoring/README.md",
+      "js/data/modelConstants/loraDeps.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "workflow authoring",
+      "comfy injection",
+      "model dependencies",
+      "components"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/comfy_injection.md",
+    "docs/workflow-authoring/README.md",
+    "docs/playbooks/add-model/README.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-09T10:10:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are picking up MPI-505, the MiniMax H3 Turbo LoRA. Read .agents/mpi-kanban/state/handoffs/1353f4e0-6124-4255-8cda-50a1ab463997.json and .agents/mpi-kanban/tasks/MPI-505/brief.md first. The bench work is done and committed (2b2df03f): both raw H3 templates carry the turbo wiring, and the 620MB EMA weight is staged and verified on R2. Turbo takes H3 from 20 steps to 8, measured 204s -> 96s at 864x480 warm, and the user has accepted it as an opt-in quality trade. Your next action is to run `node scripts/sync-raw-workflows.mjs` to regenerate the API templates and runtime files from those raw graphs - convert against port 48188, the engine, NOT the 8188 bench - then confirm 0 missing-required and 0 dangling, then add the minimax-h3-turbo-lora entry to js/data/modelConstants/loraDeps.js using the ready-made snippet in the brief. After that comes the app-side control: a sibling h3Turbo entry in PromptBoxControls.js (never a reuse of krea2Turbo), the h3TurboToggle capability on both H3 cards in models.js, and the BAKED_WIDGETS entries in generate_h3.py. One measurement still gates a decision: the 204.02s two-stage baseline is n=1, and it alone decides whether the single-pass path ships or gets dropped entirely - re-run it before touching progressStages.js. Do not touch LTX or WAN; the brief explains why they are out of scope."
+}
