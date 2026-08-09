@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "comfy_workflows/raw/nvidia_pid_template.json",
+    "comfy_workflows/scripts/workflow_generation/generate_pid.py",
+    "comfy_workflows/scripts/workflow_generation/registry.py",
+    "comfy_workflows/scripts/workflow_generation/nvidia_pid_template.json",
+    "comfy_workflows/nvidia_pid_flux.json",
+    "comfy_workflows/nvidia_pid_sd3.json",
+    "comfy_workflows/nvidia_pid_qwen.json",
+    "comfy_workflows/nvidia_pid_sdxl.json"
+  ]
+}

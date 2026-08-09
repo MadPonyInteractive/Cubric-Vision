@@ -79,10 +79,163 @@ The knobs it *does* have, and the recommendation for each:
 
 | Knob | Where | Values | Ship as |
 |---|---|---|---|
-| `chunking_mode` | `SeedVR2TemporalChunk` | `auto` \| `manual` | **`auto`** - the tooltip says it *"predict[s] the largest chunk that fits free VRAM"*. That is the VRAM problem solved with no UI. |
+| `chunking_mode` | `SeedVR2TemporalChunk` | `auto` \| `manual` | **`auto`** - it *"predict[s] the largest chunk that fits free VRAM"*. Solves OOM. **Does NOT solve quality** - see §2d. |
 | `frames_per_chunk` | manual mode only | default 21, **must be 4n+1** | not exposed - `auto` owns it. The 4n+1 constraint is a UI trap avoided by not having the UI. |
-| `temporal_overlap` | `SeedVR2TemporalChunk` | INT, default 0 | fixed default; crossfaded with a Hann window at merge. Raise only if seams show. |
-| `color_correction_method` | `SeedVR2PostProcessing` | `lab` (default) \| `wavelet` \| `adain` \| `none` | **`lab`** - documented as *"most faithful"*. Workflow-side constant unless benching says otherwise. |
+| `temporal_overlap` | `SeedVR2TemporalChunk` | INT, default 0 | **ship `8`, never 0** - §2d. The node clamps it to what the chunk allows, so one constant self-adapts everywhere. |
+
+### 2d. THE CHUNKING TRAP - measured on Fabio's bench, 2026-08-09
+
+First real run: 678x1214 source, 81 frames, 2x, 3B int8, 16 GB card. Output was
+badly degraded. Cause, straight from `comfyui.prev.log`:
+
+```
+SeedVR2TemporalChunk auto: free=14.81GiB, 3.31Mpx -> frames_per_chunk=5 (t_pixel=81).
+```
+
+`auto` split 81 frames into ~17 chunks of **5 pixel frames**, and the template
+ships `temporal_overlap = 0`, which `SeedVR2TemporalMerge` documents as *"plain
+concatenation"*. So a model whose entire value is temporal context saw 5 frames
+at a time and the segments were hard-butted together. Not a wiring fault - every
+widget matched the official template.
+
+**The sizing formula** (`comfy_extras/nodes_seedvr.py` + `comfy/ldm/seedvr/constants.py`):
+
+```
+budget          = free_gb - 8.5 - 4*0.55          # 10.7 GiB flat reserve
+chunk_latent_max= int(budget / (0.55 * mpx_per_frame))
+frames_per_chunk= min(4*(chunk_latent_max-1)+1, t_pixel)
+chunk_latent    = (frames_per_chunk-1)//4 + 1
+```
+
+Reproduced exactly: 14.81 free, 3.31 Mpx -> budget 4.11 -> fpc 5. Predictions on
+that same card:
+
+| factor | Mpx | frames/chunk | max overlap |
+|---:|---:|---:|---:|
+| 2.0 | 3.31 | 5 | 1 |
+| 1.5 | 1.87 | 13 | 3 |
+| 1.25 | 1.29 | 17 | 4 |
+| 1.0 | 0.83 | 33 | 8 |
+
+**Three consequences for the tool:**
+
+1. **`temporal_overlap` is silently clamped**: `min(temporal_overlap, chunk_latent - 1)`,
+   no warning. It counts **latent** frames while `frames_per_chunk` counts
+   **pixel** frames (`chunk_latent = (fpc-1)//4 + 1`), so at 2x an overlap of 4
+   becomes 1. **That clamp is also the generalisation we need**: pass a generous
+   constant (**8**) and it resolves to the maximum the chunk allows on every
+   machine and resolution. No MpiNode, no loop-node pack, no UI. The template
+   shipping `0` is the defect.
+2. **Chunking is unavoidable at useful resolutions.** Running these 81 frames in
+   one pass needs <= 0.356 Mpx (~445x798), *below* the 0.82 Mpx source. No upscale
+   factor reaches it. Design to chunk WELL, not to avoid chunking.
+3. **The outcome is dominated by the user's GPU**, because of the flat 10.7 GiB
+   reserve. The same clip on a 24 GB card gets `fpc=21` at 2x instead of 5. This
+   is exactly why the tool must pick the operating point and never expose it.
+
+**Corrects an earlier claim in this brief** that `auto` was "the VRAM problem
+solved with no UI". It prevents the OOM and silently pays for it in quality.
+
+**Open, pending Fabio's 1.5x + overlap 8 run:** where the quality floor actually
+sits. If a decent `chunk_latent` needs a lower factor than the user asked for,
+the app has to cap the factor - the same formula, run before dispatch. Card that
+once the run says where the line is.
+
+**Gap noted:** `MpiLoadVideo` has no trim, so the official template's
+"trim -> upscale segments -> merge" advice (its `Video Slice` node) is not
+available to us, and neither is a single-chunk control run.
+| `color_correction_method` | `SeedVR2PostProcessing` | `lab` (default) \| `wavelet` \| `adain` \| `none` | node default is `lab` (*"most faithful"*) but **all three shipped templates set `none`**. Pick at the bench; do not assume. |
+
+### 2b. SeedVR2 does IMAGES and VIDEO - and here is the reference graph
+
+Fabio, 2026-08-09: *"VR2, I'm not sure if it can do images as well."* **It can.**
+ComfyUI ships three SeedVR2 templates in `comfyui-workflow-templates` (pinned
+0.11.27), found on disk at
+`python_embeded/Lib/site-packages/comfyui_workflow_templates_json/templates/`:
+
+| Template | Model | Nodes |
+|---|---|---|
+| `utility_seedvr2_3b_int8_upscale_image` | 3B int8 | 10 |
+| `utility_seedvr2_7b_int8_upscale_image` | 7B int8 | 10 |
+| `utility_seedvr2_3b_int8_upscale_video` | 3B int8 | 18 |
+
+So SeedVR2 entries belong in **both** dropdowns - `videoUpscale` and
+`imageUpscale`. That answers open question 1. **Note there is no 7B *video*
+template** - only 3B ships one, presumably VRAM. Not a hard block, but bench the
+7B video path before promising it.
+
+Each template wraps the work in a **subgraph**, so the top level is only
+Load -> subgraph -> Save. The subgraph contents (widget values as shipped):
+
+**Image path (10 nodes):**
+
+```
+ResizeImageMaskNode ('scale by multiplier', 4.0, lanczos)
+  -> SeedVR2Preprocess
+  -> VAEEncodeTiled (tile 512, overlap 128, temporal_size 4096, temporal_overlap 8)
+  -> SeedVR2Conditioning  <- UNETLoader (seedvr2_3b_int8_convrot) 
+  -> KSampler (steps 1, cfg 1.0, euler, simple, denoise 1.0)
+  -> VAEDecodeTiled -> SeedVR2PostProcessing ('none') -> JoinImageWithAlpha
+Loaders: UNETLoader + VAELoader (seedvr2_ema_vae_fp16)
+```
+
+**Video path (18 nodes)** = the same spine plus `GetVideoComponents`,
+`Video Slice` (optional trim), `CreateVideo` (30 fps), `SeedVR2TemporalChunk`
+(temporal_overlap 0, chunking_mode **`auto`**), `SeedVR2TemporalMerge`, three
+`ComfySwitchNode` toggles and a `PrimitiveBoolean` "Split Latent". Its
+`VAEEncodeTiled` uses **temporal_size 64**, not the image path's 4096.
+
+Two things worth lifting straight out of this:
+
+- **Plain `KSampler` at steps 1 / cfg 1.0 / euler / simple / denoise 1.0.** Not
+  `SamplerCustom`. One step, as advertised.
+- **`chunking_mode: auto` is what the official video template ships**, confirming
+  §2a - do not expose `frames_per_chunk`.
+
+### 2c. SeedVR2 is natively a MULTIPLIER - the absolute mode is an option, not a fix
+
+**Correction, Fabio 2026-08-09:** *"SeedVR2 actually works with a multiplier.
+It's only PiD that doesn't."* Right - the shipped templates use
+`ResizeImageMaskNode` in **`scale by multiplier`** mode (4.0 for image, 2.0 for
+video), and SeedVR2 has no fixed input/output size. So the three paths line up
+like this:
+
+| Path | Native semantic |
+|---|---|
+| `.pth` upscale models | multiplier |
+| **SeedVR2** | **multiplier** |
+| PiD | absolute - trained `1024 -> 4096`, a fixed 4x |
+
+Only PiD is the odd one out. An earlier version of this section implied SeedVR2
+needed the absolute mode; it does not.
+
+**But there is one hard reason to consider absolute for SeedVR2 anyway, and it is
+not cosmetic:** `multiplier` is a FLOAT capped at **max 8.0** (verified in the
+node's schema on :48188). If the radio says "4K" and the app converts to a
+multiplier, then any source whose longest edge is under 512px needs **more than
+8x** and the value is out of range - a 360px clip to 4K wants 11.4x. That is a
+real input in a History workspace full of generated clips.
+
+`scale longer dimension` takes an INT up to **16384** and has no such ceiling, so
+it is the safe way to honour an absolute label. Either convert target -> multiplier
+and clamp knowingly, or switch the mode. Do not discover the cap in the wild.
+
+The node is core (`comfy_extras.nodes_post_processing`) and its `resize_type` is
+a dynamic combo with eight modes:
+
+| Mode | Input | Use |
+|---|---|---|
+| `scale by multiplier` | `multiplier` FLOAT 0.01-8.0 | what the templates ship |
+| **`scale longer dimension`** | **`longer_size` INT 0-16384** | **1024 / 2048 / 3072 / 4096, aspect preserved** |
+| `scale total pixels` | `megapixels` FLOAT | alternative absolute |
+| `scale dimensions`, `scale width`, `scale height`, `match size`, `scale to multiple` | | |
+
+So if the radio's four buttons stay absolute, `scale longer dimension` with
+`longer_size` = 1024/2048/3072/4096 expresses them directly, with no multiplier
+arithmetic and no 8x ceiling. **This is a choice, not a requirement** - SeedVR2
+runs perfectly well on the multiplier the templates ship. What is *not* optional
+is deciding which meaning the labels carry, because the `.pth` path is a
+multiplier and PiD is absolute no matter what SeedVR2 does.
 
 ## 3. The weights - full size table
 
@@ -94,18 +247,18 @@ from the HF API, GB = 10^9 bytes. Mirror to R2 per the usual weight-hosting rule
 | File | Size | Notes |
 |---|---:|---|
 | `seedvr2_3b_fp16.safetensors` | 6.78 GB | 3B reference precision |
-| **`seedvr2_3b_fp8_e4m3fn.safetensors`** | **3.39 GB** | **-> plugin `seedvr2-3b`** |
-| `seedvr2_3b_int8_convrot.safetensors` | 3.46 GB | bigger than fp8, needs the rotation path |
+| `seedvr2_3b_fp8_e4m3fn.safetensors` | 3.39 GB | Ada+ only for native fp8 |
+| **`seedvr2_3b_int8_convrot.safetensors`** | **3.46 GB** | **-> plugin `seedvr2-3b`** |
 | `seedvr2_3b_mxfp8.safetensors` | 3.56 GB | Blackwell-class format |
 | `seedvr2_3b_nvfp4.safetensors` | 2.00 GB | Blackwell-only (RTX 50xx) |
 | `seedvr2_7b_fp16.safetensors` | 16.48 GB | 7B reference precision |
-| **`seedvr2_7b_fp8_e4m3fn.safetensors`** | **8.24 GB** | **-> plugin `seedvr2-7b`** |
-| `seedvr2_7b_int8_convrot.safetensors` | 8.33 GB | |
+| `seedvr2_7b_fp8_e4m3fn.safetensors` | 8.24 GB | Ada+ only for native fp8 |
+| **`seedvr2_7b_int8_convrot.safetensors`** | **8.33 GB** | **-> plugin `seedvr2-7b`** |
 | `seedvr2_7b_mxfp8.safetensors` | 8.58 GB | Blackwell-class |
 | `seedvr2_7b_nvfp4.safetensors` | 4.76 GB | Blackwell-only |
 | `seedvr2_7b_sharp_fp16.safetensors` | 16.48 GB | "sharp" tune |
-| **`seedvr2_7b_sharp_fp8_e4m3fn.safetensors`** | **8.24 GB** | **-> plugin `seedvr2-7b-sharp`** |
-| `seedvr2_7b_sharp_int8_convrot.safetensors` | 8.33 GB | |
+| `seedvr2_7b_sharp_fp8_e4m3fn.safetensors` | 8.24 GB | |
+| **`seedvr2_7b_sharp_int8_convrot.safetensors`** | **8.33 GB** | **-> plugin `seedvr2-7b-sharp`** |
 | `seedvr2_7b_sharp_mxfp8.safetensors` | 8.58 GB | |
 | `seedvr2_7b_sharp_nvfp4.safetensors` | 4.76 GB | |
 
@@ -125,22 +278,32 @@ shared VAE survives while *any* SeedVR2 plugin is still installed.
 
 | Plugin | Weight | + shared VAE | Install cost (first) | (subsequent) |
 |---|---:|---:|---:|---:|
-| `seedvr2-3b` | 3.39 GB | 0.50 GB | **3.89 GB** | 3.39 GB |
-| `seedvr2-7b` | 8.24 GB | 0.50 GB | **8.74 GB** | 8.24 GB |
-| `seedvr2-7b-sharp` | 8.24 GB | 0.50 GB | **8.74 GB** | 8.24 GB |
-| all three | 19.87 GB | 0.50 GB | **20.37 GB** | - |
+| `seedvr2-3b` | 3.46 GB | 0.50 GB | **3.96 GB** | 3.46 GB |
+| `seedvr2-7b` | 8.33 GB | 0.50 GB | **8.83 GB** | 8.33 GB |
+| `seedvr2-7b-sharp` | 8.33 GB | 0.50 GB | **8.83 GB** | 8.33 GB |
+| all three | 20.12 GB | 0.50 GB | **20.62 GB** | - |
 
-### Why fp8_e4m3fn for all three
+### Why int8_convrot for all three
 
-- **fp8 over fp16** - half the download and roughly half the weight VRAM. Nobody
-  has published a quality delta that justifies 6.78/16.48 GB for a restoration
-  pass. fp8_e4m3fn is native on Ada (RTX 40xx) and above, and falls back elsewhere.
-- **not int8_convrot** - *larger* than fp8 (3.46 vs 3.39, 8.33 vs 8.24) and buys
-  nothing unless the convolution-rotation path is specifically exercised.
+**Decided by Fabio 2026-08-09: "we will be downloading the int8convrot models."**
+That matches what ComfyUI's own shipped templates use - all three SeedVR2
+templates in `comfyui-workflow-templates` load `*_int8_convrot.safetensors`, and
+the template titles say so ("SeedVR2 3B Int8: Upscale Image").
+
+This **corrects an earlier note in this brief that recommended fp8**. The reason
+int8 wins is hardware reach, not size: **`fp8_e4m3fn` is only native from Ada
+(RTX 40xx) up**, while int8 runs fast on Ampere (RTX 30xx) too. Vision still
+ships to 30-series cards, so int8 is the broader default and the 0.07-0.09 GB it
+costs over fp8 is noise.
+
+- **not fp16** - 6.78/16.48 GB for a restoration pass with no published quality
+  delta to justify it.
 - **not mxfp8 / nvfp4** - Blackwell-class numeric formats. `nvfp4` is the only
   genuinely small 7B (4.76 GB) and is worth revisiting **as a fourth plugin**
-  once the RTX 50xx share matters, but it cannot be the default on a product that
-  still ships to 30-series cards.
+  once the RTX 50xx share matters, but it cannot be a default today.
+- **the VAE is mandatory and separate** - Fabio, 2026-08-09: *"we will also need
+  the VAE."* Confirmed in both templates: every one loads
+  `seedvr2_ema_vae_fp16.safetensors` alongside the diffusion model.
 
 ### 3B vs 7B vs 7B Sharp - the actual difference
 
@@ -236,22 +399,25 @@ is simply unavailable remotely.
 
 ## 7. Open questions for Fabio
 
-1. Does **`imageUpscale`** get the SeedVR2 entries too, or video only? (SeedVR2 7B
-   is the community pick for stills, and the component is the same one.)
-2. fp8 only, or also expose fp16 for people with the VRAM (as separate plugins)?
+1. Bench `color_correction_method`: the node default is `lab` ("most faithful")
+   but every shipped template sets `none` (§2a).
+2. Is the **7B video** path worth shipping? Comfy ships a 7B *image* template and
+   a 3B *video* one, but no 7B video (§2b). Bench before promising it.
 
 **Answered 2026-08-09, do not re-ask:**
 
 - *Does SeedVR2 need a prompt?* **No** - §2a, verified against the node
   signatures, not inferred. No prompt, no denoise, no extra controls at all.
-- *`frames_per_chunk`?* **Not exposed** - `chunking_mode: auto` predicts the
-  largest chunk that fits free VRAM (§2a).
-- *Resolution / factor?* The existing radio stands. Fabio is adding the missing
-  resolutions on the workflow side so all four - **1.5 / 2K / 3K / 4K** - are
-  available. **Flag before building:** the radio's current labels are
-  *multipliers* (`x1.5 x2 x3 x4`) and SeedVR2's factor genuinely multiplies the
-  source, but PiD's are *absolute targets* (MPI-507 §3b). Four buttons, two
-  meanings - confirm which wording wins before the labels are touched.
+- *Does SeedVR2 do images?* **Yes** - §2b, two official image templates. Its
+  entries go in **both** dropdowns. (PiD is image-only; MPI-507 §0.)
+- *Which precision?* **`int8_convrot`** - Fabio's call, and what every official
+  template uses. fp8 is Ada+ only; int8 also runs fast on Ampere (§3).
+- *`frames_per_chunk`?* **Not exposed** - `chunking_mode: auto`, which is also
+  what the official video template ships (§2a, §2b).
+- *Resolution / factor labels?* The radio relabels to **1K / 2K / 3K / 4K** when
+  SeedVR2 or PiD is selected. `ResizeImageMaskNode` supports this natively via
+  `scale longer dimension` (§2c), so no multiplier arithmetic is needed and both
+  generative upscalers share one absolute meaning.
 
 ## Sources
 

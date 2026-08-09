@@ -1,0 +1,129 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "75929468-4c61-4a7b-bd4a-ef4eb1c04d54",
+  "generated_at": "2026-08-09T23:05:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "SeedVR2 + PiD as upscale-dropdown plugins - research, cards, PiD workflow generator",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Card the SeedVR2 work: change the video-history Upscale tool so the user picks None / a .pth upscale model / SeedVR2 3B / SeedVR2 7B, with research on model sizes, which are best, and the differences. It grew to cover moving NVIDIA PiD onto the same mechanism.",
+    "status": "in_progress",
+    "summary": "Two cards written and fully researched (MPI-506 SeedVR2, MPI-507 PiD). The PiD workflow-generation half is BUILT, verified and committed (cf22becf). SeedVR2 does not work acceptably yet: the first two bench runs came out visibly degraded and the cause is only partly understood."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-506 created - SeedVR2 as three plugins (3B / 7B / 7B Sharp), full weight table, licence, engine check",
+      "MPI-507 created - move NVIDIA PiD out of the model picker into the image upscale dropdown as four plugins",
+      "Verified SeedVR2 is native in the SHIPPED engine (v0.30.0) - no bump, no custom node pack",
+      "Verified SeedVR2 takes NO prompt and no denoise (SeedVR2Conditioning builds both conditionings from a VAE latent)",
+      "Verified SeedVR2 does images AND video (three official ComfyUI templates)",
+      "Downloaded all four SeedVR2 int8_convrot weights + VAE to G:/CubricModels, byte-verified",
+      "generate_pid.py + registry rule: ONE template bakes the four VAE-locked PiD workflows",
+      "Verified the four PiD files: bake correct, pixel_space untouched, only 3 widgets differ, injection-rules gate passes",
+      "Diagnosed the SeedVR2 quality failure to auto-chunking (frames_per_chunk=5 at 2x, temporal_overlap=0)"
+    ],
+    "pending": [
+      "SeedVR2 quality is STILL BAD at 1.5x + overlap 8 - root cause not yet established",
+      "MPI-507 blocked on ONE decision: hide the nvidia-pid ModelDef, or teach Flows about plugins (flowSdxl4k)",
+      "App side of both cards not started - plugin entries, dropdown entries, conditional controls",
+      "Propose the docs/workflow-authoring/generator-patterns.md append (three traps hit this session)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-507",
+    "title": "Move NVIDIA PiD out of the model picker into the image upscale dropdown, as four plugins",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-507/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-507/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-507/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-507/handoffs/"
+    }
+  },
+  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "knowledge_preservation": {
+    "completed": [
+      "All SeedVR2 research + the chunking math is in .agents/mpi-kanban/tasks/MPI-506/brief.md",
+      "All PiD research + the four-file decision is in .agents/mpi-kanban/tasks/MPI-507/brief.md",
+      "Generator evidence is in .agents/mpi-kanban/tasks/MPI-507/validation.md",
+      "Healed 18 task-board event records that were missing schema/id - validate_board.py now passes"
+    ],
+    "pending": [
+      "PROPOSED, NOT WRITTEN, needs the user's yes: append three traps to docs/workflow-authoring/generator-patterns.md - (1) the source filename must match /_template\\.json$/i or sync-raw-workflows treats it as a RUNTIME file and orchestrate.py never sees it (a 'tempate' typo cost a round trip); (2) a generator BAKE target takes a bare title, never Input_* - Input_* is the app's runtime-injection contract per validate-injection-rules.mjs, and the doc's existing examples are all Input_Tier selectors which reinforces the wrong instinct for a weight bake; (3) two nodes of the same class with default titles make _find_by_title a coin flip - PiD had two untitled VAELoaders and would have baked the architecture VAE name onto the pixel_space loader, producing four files that validate cleanly and render wrong."
+    ]
+  },
+  "next_action": {
+    "description": "Find out why SeedVR2 still looks bad. The chunking fix was not sufficient: run 1 was 2x with frames_per_chunk=5, run 2 was 1.5x with overlap 8 (clamped to 2, chunk_latent=3) and Fabio reports it is still poor. The cheapest decisive test is the IMAGE workflow (seedvr2_image tab on the bench) on a single frame - it has NO temporal chunking at all, so if a still comes out soft too, chunking was never the main cause and the problem is the model/source, not the video machinery. A pixel comparison script was written but never run: C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/973f6a88-ed27-4d7a-8b21-dc34f47da82f/scratchpad/pixcmp.py compares G:/ComfyUi/ComfyUI/temp/AnimateDiff_00003.png (source frame) against AnimateDiff_00004.png (SeedVR2 output) versus a plain lanczos baseline, using laplacian variance and high-frequency energy. If SeedVR2's output is near-identical to lanczos, the model is effectively a no-op and that is the real bug.",
+    "command": "mpi-continue MPI-507"
+  },
+  "context": {
+    "key_decisions": [
+      "SeedVR2 and PiD become PLUGINS (js/data/pluginsRegistry.js shape), not ModelDefs - a weight that only upscales has no business in the model picker. Fabio's call.",
+      "int8_convrot precision, not fp8 - fp8_e4m3fn is only native from Ada up, int8 also runs on Ampere, and every official ComfyUI template uses int8. Corrects an earlier fp8 recommendation in MPI-506.",
+      "PiD gets FOUR separate workflow files from ONE template, not one injected graph - Fabio's call. Either shape fixes the real problem (a graph naming all four weights is rejected by validate_prompt for a user holding one plugin).",
+      "SeedVR2 gets TWO files (one per tool) with unet_name injected - its three variants differ in ONE literal and share a VAE, so four-files does NOT carry over from PiD.",
+      "PiD resolution = technique A, already built: always generate native 1024->4096, then downscale the output. Correctness needs no bench; 1K costs the same as 4K.",
+      "temporal_overlap should ship as a constant 8, never 0 - the node clamps it to what the chunk allows, so one value self-adapts to every machine. No MpiNode and no loop-node pack needed for that."
+    ],
+    "constraints": [
+      "SeedVR2 quality is UNRESOLVED. Do not treat the chunking diagnosis as the answer - it was necessary but has not proven sufficient.",
+      "Chunking cannot be avoided on a 16GB card: 81 frames in one pass needs <=0.356 Mpx (~445x798), below the 0.82 Mpx SOURCE. Design to chunk well.",
+      "The chunk formula has NO clip-length term (budget = free - 10.7GiB flat; chunk_latent_max = int(budget / (0.55*mpx))), so a segment for-loop cannot change chunk size. A loop IS still warranted for long clips, but for the pixel buffers, which scale linearly - a 30s x 24fps clip is 720 frames.",
+      "temporal_overlap counts LATENT frames while frames_per_chunk counts PIXEL frames (chunk_latent = (fpc-1)//4 + 1), and it is clamped silently by min(overlap, chunk_latent-1).",
+      "MPI-507 app side is blocked on ONE decision: flowsRegistry.js:107 has flowSdxl4k declaring requiredModels ['sdxl-nsfw','nvidia-pid'] deliberately to exercise the multi-model install path. Hide the ModelDef, or teach Flows about plugins?",
+      "NEVER delete the pid-* / vae-* / pid-gemma dep entries - the orphan sweep reads DEPS and a deletion strands those weights on existing users' disks forever.",
+      "comfy_workflows/nvidia_pid.json must stay until the app side switches; models.js still resolves it.",
+      "Convert workflows against the ENGINE on :48188, not the :8188 bench - the bench runs ahead and has silently shifted a widget before.",
+      "MpiLoadVideo has no trim, so the official template's trim->segment->merge advice and a single-chunk control run are both unavailable.",
+      "SHARED TREE: a peer session is mid-close-out (handoff 748eec4a, MPI-450) and owns js/data/modelConstants/*, docs/*, tests/*, raw/ltx_*, raw/minimax_h3_*. Commit by explicit pathspec only."
+    ],
+    "files_modified": [
+      "comfy_workflows/scripts/workflow_generation/generate_pid.py",
+      "comfy_workflows/scripts/workflow_generation/registry.py",
+      "comfy_workflows/scripts/workflow_generation/nvidia_pid_template.json",
+      "comfy_workflows/raw/nvidia_pid_template.json",
+      "comfy_workflows/nvidia_pid_flux.json",
+      "comfy_workflows/nvidia_pid_sd3.json",
+      "comfy_workflows/nvidia_pid_qwen.json",
+      "comfy_workflows/nvidia_pid_sdxl.json",
+      ".agents/mpi-kanban/tasks/MPI-506/",
+      ".agents/mpi-kanban/tasks/MPI-507/"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-506/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-507/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-507/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-507/validation.md",
+      "js/data/pluginsRegistry.js",
+      "js/components/Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "docs/workflow-authoring/generator-patterns.md",
+      "docs/generation-lifecycle.md",
+      ".claude/rules/comfy_injection.md",
+      "docs/playbooks/add-model/README.md"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/components.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md"
+  ],
+  "recent_events": [
+    { "at": "2026-08-09T23:05:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/75929468-4c61-4a7b-bd4a-ef4eb1c04d54.json and use mpi-continue to pick up MPI-507. Two cards are in play: MPI-506 (SeedVR2 as three installable plugins feeding the upscale dropdown, todo/planned) and MPI-507 (NVIDIA PiD moved out of the model picker into the image upscale dropdown as four plugins, doing/in-progress). The PiD workflow-generation half is done, verified and committed as cf22becf - one template now bakes four VAE-locked runtime files. The open problem is that SeedVR2 output still looks bad on the bench after two runs, and the auto-chunking diagnosis explained part of it but has not been proven sufficient; start by testing the seedvr2_image workflow on a single frame, since the image path has no temporal chunking and will tell you whether the video machinery is to blame at all. MPI-507's app side is blocked on one product decision only: flowsRegistry.js:107 declares requiredModels ['sdxl-nsfw','nvidia-pid'] for flowSdxl4k specifically to exercise the multi-model install path, so ask Fabio whether to hide the nvidia-pid ModelDef or teach Flows about plugins. Read both card briefs before touching anything, commit by explicit pathspec because a peer session owns js/, docs/ and tests/ changes in the same tree, and never delete the pid-* dep entries."
+}

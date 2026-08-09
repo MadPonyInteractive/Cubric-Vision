@@ -11,6 +11,21 @@ Depends on the plugin-contributes-a-dropdown-entry mechanism built in
 
 ---
 
+## 0. PiD is IMAGE-ONLY - it must never reach the video tool
+
+Fabio, 2026-08-09: *"PiD is an image upscaler, so it cannot land on the video
+workspace."* The ModelDef already says `mediaType: 'image'` and the `pid` op is
+`MEDIA_TYPE.IMAGE` with `requiresImages: 1`. So PiD entries appear **only** in
+`toolSettings.imageUpscale`, never in the video dropdown.
+
+That makes the MPI-506 §4 entry declaration need a **tool scope** field, not just
+a label - and the two cards prove both halves of it: **SeedVR2 declares both**
+tools (it has official image *and* video templates, MPI-506 §2b), **PiD declares
+image only**. An entry that leaks into the wrong tool is a run-time failure with
+no useful error, so scope it in data, not in the component.
+
+---
+
 ## 1. What PiD is today
 
 `js/data/modelConstants/models.js:820` - a full **ModelDef** occupying a tile in
@@ -141,6 +156,148 @@ card must follow for the removal half.
 - `routes/downloadManager.js:2832` carries a PiD-specific comment about a
   miscounted uninstall; re-read it before touching install paths.
 
+## 4b. DECIDED: four separate PiD workflows, one per model
+
+**Fabio, 2026-08-09:** *"I will export 4 different workflows for PiD. All of them
+will have this input resolution setting."* Four files it is - and this **fully
+solves the validation trap below**, because each file names only its own weight,
+so a user holding one plugin never has an unresolvable `unet_name` in the graph.
+The one-file alternative analysed here is recorded for context, not as a pending
+objection.
+
+What four files cost, so it is not a surprise later: any shared fix is applied
+**four times**, and the plugin entry (MPI-506 §4) must carry **which workflow file
+it runs** rather than the op mapping to a single file the way
+`workflows: { pid: 'nvidia_pid.json' }` does today. Make that a field on the
+plugin entry - it generalises, and SeedVR2 needs the same field for a different
+reason (§4d).
+
+What four files buy beyond the validation fix: each path stays independently
+tunable. That matters here because the paths are not interchangeable - they are
+VAE-locked and could want different sampler settings later.
+
+### Why one file would ALSO have worked - the analysis, kept for reference
+
+Checked `comfy_workflows/nvidia_pid.json` (43 nodes) node by node. **The
+four branches are structurally identical.** They differ in exactly three literals:
+
+| Branch | `UNETLoader.unet_name` | `VAELoader.vae_name` | `PiDConditioning.latent_format` |
+|---|---|---|---|
+| Flux1 | `pid_flux1_1024_to_4096_4step_bf16` | `ae.safetensors` | `flux` |
+| SD3 | `pid_sd3_1024_to_4096_4step_bf16` | `sd3_vae.safetensors` | `sd3` |
+| Qwen-Image | `pid_qwenimage_1024_to_4096_4step_bf16` | `qwen_image_vae.safetensors` | `qwenimage` |
+| SDXL | `pid_sdxl_1024_to_4096_4step_bf16` | `sdxl_vae.safetensors` | `sdxl` |
+
+Everything else is shared or duplicated verbatim: all four `BasicScheduler` are
+`simple / steps 4 / denoise 1`; all four `SamplerCustom` are `add_noise true /
+cfg 1` and point at the **same** `KSamplerSelect` (1565), the same negative
+(1567), the same latent (1569) and the same seed (1628); all four `VAEEncode`
+read the same pixels (1624); the gemma `CLIPLoader` (1571) and the `pixel_space`
+`VAELoader` (1576) are already single and shared.
+
+`latent_format` is a **COMBO with a fixed option list**
+(`['flux','sd3','sdxl','qwenimage']`, verified on :48188), so it is always valid
+no matter which weights are installed.
+
+One branch plus three injected literals would have dropped 43 nodes to ~25 and
+deleted the `Input_Type` `MpiAnySwitch` (1607). Fabio chose four files instead;
+either shape removes the hardcoded names that break under plugins, which is the
+part that actually mattered. Each exported file drops `Input_Type`, the `Types`
+note and the other three branches on its own.
+
+### And keeping the four-branch shape is not merely wasteful - it BREAKS
+
+This is the part that forces the change. `UNETLoader.unet_name` is a COMBO
+populated from the `diffusion_models` folder listing. ComfyUI's
+`validate_prompt` walks every node reachable from the outputs and checks each
+COMBO value against its option list - `execution.py` emits
+`{"type": "value_not_in_list", "message": "Value not in list"}` - and **that
+check has no lazy-evaluation exemption, because validation runs before
+execution.** All four `UNETLoader`s feed the `Input_Type` switch, so all four are
+reachable.
+
+Today that is invisible: installing `nvidia-pid` installs all four weights, so
+all four names resolve. **The moment PiD becomes four plugins, a user with only
+the SDXL plugin has a graph naming three files that are not on disk, and the
+prompt is rejected before it runs.** Collapsing to one injected loader fixes this
+by construction - only the installed weight is ever named.
+
+(The repo's one-master-template pattern on klein-4b relies on lazy pruning, but
+klein has a *single* checkpoint across its branches, so it never hits this.)
+
+### 4d. SeedVR2 does NOT need six files - the asymmetry is real
+
+Do not copy the four-file decision across to MPI-506. PiD's four paths differ in
+**three** literals (`unet_name`, `vae_name`, `latent_format`) *and* are VAE-locked
+to different architectures. SeedVR2's three variants differ in **exactly one**
+literal - `unet_name` - and share a single VAE
+(`seedvr2_ema_vae_fp16.safetensors`), which is why the 3B and 7B image templates
+are node-for-node identical.
+
+So SeedVR2 wants **two** workflow files, one per tool
+(`seedvr2_image` / `seedvr2_video`), with `unet_name` injected from the selected
+plugin. That is safe for the same reason four PiD files are safe: only the
+installed weight is ever named in the dispatched graph. Six files would be four
+redundant copies.
+
+Net across both cards: **4 PiD files + 2 SeedVR2 files = 6 workflows**, and the
+plugin entry carries the file plus, for SeedVR2, the `unet_name` to inject.
+
+## 4c. PiD's resolution problem is a TRAINING-REGIME problem - RESOLVED as technique A
+
+**Fabio, 2026-08-09:** *"SeedVR2 actually works with a multiplier. It's only PiD
+that doesn't. Unless I change how PiD works and adopt the same technique, I'm not
+sure if that's gonna work. I'll need to test it."*
+
+He is right that this is the open one, and the reason is in the weight filenames:
+every PiD checkpoint is `pid_*_**1024_to_4096**_4step_bf16`. The current graph
+enforces exactly that regime - `MpiScaledDimensions` normalises the input to
+**1024** (`side: use_max`) through an `MpiCrop` at `divisible_by 16`, and a second
+`MpiScaledDimensions` at **4096** sizes the `EmptyChromaRadianceLatentImage`. So
+PiD is not "absolute" by preference; it is a **fixed 4x trained at one input
+size**.
+
+Two techniques can produce 1K/2K/3K/4K from that. They are worth naming because
+they fail differently:
+
+- **A - native then downscale.** Always run 1024 -> 4096 as trained, then resize
+  the *output* to the chosen target. Cannot go off-regime, so correctness needs
+  no testing. Cost: 1K and 2K take the same time and VRAM as 4K, which is a real
+  price on the slowest tool in the app.
+- **B - scale the input, keep 4x.** Feed 512 for a 2K target, 256 for 1K. Stays
+  at the 4x ratio the model expects but changes the *absolute* input resolution,
+  and PixelDiT's patching may well be resolution-sensitive. **This is the one to
+  test** - it is Fabio's "adopt the same technique", and if it holds it is
+  strictly better than A.
+
+**Fabio built A** (observed in the live graph, 2026-08-09): three
+`MpiScaledDimensions` at 1024 / 2048 / 3072 all take their `image` input from
+**`VAEDecode`**, and `Input_Resolution` selects between them with `any_4` passing
+the raw 4096 through - the note beside it reads `1 = 1k, 2 = 2k, 3 = 3k,
+4 = 4k`. So PiD always generates at its trained 1024 -> 4096 and the target is a
+downscale of the finished image.
+
+Correctness is therefore not in question and needs no bench. **The one thing to
+know and to say in the UI: 1K is not faster than 4K.** Every target costs a full
+4096 generation, on the slowest tool in the app. If that becomes a complaint,
+technique B is the upgrade path - test B at 512 -> 2048 against A downscaled to
+2048 on the same source, and if B is not visibly worse, take B.
+
+**Do not assume the answer generalises from SeedVR2.** SeedVR2 has no trained
+input size, which is exactly why the multiplier works there and is the open
+question here.
+
+### Also worth doing while the graph is open
+
+`Input_Resolution` (1614) currently has **three** entries - `1618` (1024),
+`1619` (2048) and `1570` (passthrough). The 1K/2K/3K/4K radio needs four real
+targets, so that is where the missing 3072 and 4096 go, and the passthrough entry
+needs a decision.
+
+Note also that PiD's sampler regime is its own: `KSamplerSelect` is **`lcm`** at
+4 steps, not SeedVR2's `euler` at 1 step. Nothing transfers between the two
+graphs except the tool that launches them.
+
 ## 5. Scope boundary
 
 This is a **migration**, not an addition, and it touches a shipped model, a
@@ -149,14 +306,24 @@ shipped Flow and the release gate. MPI-506 is additive and can land alone. Land
 
 ## 6. Open questions for Fabio
 
-1. §3c - hide the ModelDef, or teach Flows about plugins?
-2. Four plugins, or one PiD plugin with a variant sub-choice in the tool? (Four
-   matches "each one could be a plugin" and gives per-path install granularity;
-   one keeps the dropdown short.)
-3. Does PiD stay reachable from the model picker at all during a transition, or is
+1. §3c - hide the ModelDef, or teach Flows about plugins? **This is the last real
+   blocker.**
+2. Does PiD stay reachable from the model picker at all during a transition, or is
    the tool the only entry point from day one?
-4. §3b - multiplier labels or absolute-resolution labels on the factor radio?
 
-**Answered 2026-08-09, do not re-ask:** §3a (grow the panel with a conditional
-text input + denoise) and §3b (Fabio adds the missing `pidResolution` entries so
-all four radio positions resolve).
+**Answered 2026-08-09, do not re-ask:**
+
+- §0 - PiD is **image-only**, so its entries are scoped to `imageUpscale`.
+- §3a - grow the panel with a conditional text input + denoise.
+- §3b - the radio relabels to **1K / 2K / 3K / 4K** when a generative upscaler is
+  selected, and Fabio adds the missing `pidResolution` entries so all four
+  resolve. **Still open (§4c): HOW PiD reaches a non-4K target** - native-then-
+  downscale, or scale the input and keep 4x. Fabio is benching it. SeedVR2 is
+  natively a multiplier and needs no such trick (MPI-506 §2c).
+- §4b - **four separate workflow files**, one per model, Fabio's call. Each names
+  only its own weight, which is what the four-loader single file could not do
+  once weights become optional. The plugin entry carries the file it runs.
+- §4c - **technique A**, already built: native 1024 -> 4096, then downscale the
+  output. Correctness needs no bench; 1K is not faster than 4K.
+- §4d - four plugins (one per path). SeedVR2 does **not** copy this: its three
+  variants differ in one injectable literal, so it needs two files, not six.
