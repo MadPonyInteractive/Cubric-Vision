@@ -23,7 +23,8 @@
       "Authored turbo gating into both raw H3 templates: LoRA strength via MpiMath, MiniMaxH3SigmaShift (12,5), beta/8 vs simple/20, euler vs res_multistep, split 3 vs '10 if a else 5'",
       "Authored a single-pass path (Input_Single_Pass) that blocks stage 1 via MpiIfElseInverted",
       "Measured the full matrix at 864x480 warm; user accepted turbo quality as an opt-in trade",
-      "Exported both raw templates from the ComfyUI editor and committed them"
+      "Exported both raw templates from the ComfyUI editor and committed them",
+      "Appended every verdict to docs/models/h3/performance.md so none of it gets re-researched"
     ],
     "pending": [
       "Run `node scripts/sync-raw-workflows.mjs` - convert against port 48188 (the engine), NOT the 8188 bench, which runs ahead and has silently shifted a widget before",
@@ -35,8 +36,7 @@
       "Bake Input_is_Turbo and Input_Single_Pass into generate_h3.py BAKED_WIDGETS, both false",
       "Re-run the 204.02s baseline (20 steps, EasyCache off, two-stage, warm) - it is n=1 and it alone decides whether single-pass ships at all",
       "Check the Console for `NOT LOADED` on the EMA weight to prove the LoRA keys bind",
-      "docs/releases/UNRELEASED.md entry once the toggle is user-facing (live release is 1.3.1)",
-      "Append the SolAttn and SageAttention verdicts to docs/models/h3/performance.md, where the earlier sage rejection already lives"
+      "docs/releases/UNRELEASED.md entry once the toggle is user-facing (live release is 1.3.1)"
     ]
   },
   "task_card": {
@@ -62,12 +62,11 @@
       "brief.md carries the measurement table, every verdict with its reason, and the exact node wiring",
       "validation.md separates what is proven from what is assumed",
       "files.json records the 12 owned paths, so the card is dispatchable",
-      "New memory: tool_benchmark_comfy_graph_changes.md (three timing traps), indexed in MEMORY.md"
+      "New memory: tool_benchmark_comfy_graph_changes.md (three timing traps), indexed in MEMORY.md",
+      "docs/models/h3/performance.md now carries the turbo/SolAttn/SageAttention/EasyCache verdicts (user-approved 2026-08-09); its H1 dropped 'and rejected' because one lever worked",
+      "Licence question closed by the user: Apache-2.0 needs no separate licences.js record"
     ],
-    "pending": [
-      "docs/models/h3/performance.md needs the SolAttn/SageAttention verdicts appended - proposed, not yet approved",
-      "Decide whether the Apache-2.0 turbo LoRA needs its own licences.js record, separate from minimax-h3-cla-2026-08-02"
-    ]
+    "pending": []
   },
   "next_action": {
     "description": "Run `node scripts/sync-raw-workflows.mjs` to regenerate the API templates and runtime files from the two committed raw H3 templates (convert against port 48188, not 8188), confirm 0 missing-required and 0 dangling, then add the minimax-h3-turbo-lora entry to loraDeps.js using the snippet in .agents/mpi-kanban/tasks/MPI-505/brief.md.",

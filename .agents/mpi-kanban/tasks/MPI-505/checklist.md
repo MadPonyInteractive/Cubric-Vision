@@ -13,4 +13,4 @@
 - [ ] Decide single-pass: re-run the 204.02s baseline first (see brief, open question 1)
 - [ ] Check the Console for `NOT LOADED` on the EMA weight
 - [ ] `docs/releases/UNRELEASED.md` entry (live release is 1.3.1, so UNRELEASED is the target)
-- [ ] Append the SolAttn / SageAttention verdicts to `docs/models/h3/performance.md`
+- [x] Append the SolAttn / SageAttention verdicts to `docs/models/h3/performance.md` (approved + done 2026-08-09)

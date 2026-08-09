@@ -1,4 +1,4 @@
-# H3 — performance levers we tested and rejected
+# H3 — performance levers we tested
 
 Measured answers to "can we make H3 cheaper", so nobody re-runs a 25-minute A/B to
 reach the same conclusion. See also the hub's § Memory is a poor predictor here.
@@ -84,3 +84,69 @@ a commit, so they cannot shift without a deliberate bump.
 Core's standalone empty-latent node offers nothing our graphs lack. Both
 `MiniMaxH3ImageToVideo` and `MiniMaxH3ReferenceToVideo` call `_empty_av_latent`
 internally and return the latent as output 1, which is what the samplers consume.
+
+## Step distillation — the lever that WORKED (MPI-505, measured 2026-08-09)
+
+**H3 was the only non-distilled video model we shipped**, and that single fact explains
+why every acceleration technique in this doc lands on H3 and nowhere else:
+
+| model | steps | distilled |
+|---|---|---|
+| H3 | 20 | no, until the turbo LoRA |
+| LTX 2.3 (both tiers) | 8 (`LTXVScheduler.steps`, a literal) | yes, upstream |
+| WAN 2.2 14B | 6 (`ManualSigmas` 1.0/0.93/0.85 then 0.85/.../0.0) | yes |
+| WAN 5B | 4 | yes, baked distill LoRA at 0.8 |
+
+LTX "High" vs "Balanced" is **precision** (bf16 vs int8) - all four weights are
+`ltx-2.3-22b-distilled-1.1_*`. A turbo LoRA there would distil a distilled model.
+
+`drbaph/MiniMax-H3-Turbo-Lora-ComfyUI`, variant `v4_step600_ema` (Apache-2.0, original
+`larryvrh`) takes H3 to 8 steps. Measured at 864x480 (the baked default), 2s clip, warm:
+
+| config | time |
+|---|---|
+| 20 steps, two-stage, no EasyCache | 204.02s |
+| 20 steps, single-pass, EasyCache | 136s |
+| **8 steps (turbo)** | **90-96s** (4 runs) |
+
+Upstream settings: euler / beta / strength 1.0, sigma shift video 12 and **audio 4-6**.
+The model defaults are 12 / **3.0** (`nodes_minimax_h3.py`, `ldm/minimax/model.py`), and
+the audio value is the one that must move or audio distorts. Sweeping 4/5/6 changed
+nothing audible - the audible fix was euler/beta - so it is baked at 5. Turbo ships
+OPT-IN: quality is slightly below the 20-step path, which is the user's stated trade.
+
+### The two-stage split costs nothing at low step counts
+
+Turbo two-stage (91.59 / 90.07s) and turbo single-pass (91s) are indistinguishable, so
+collapsing the split is only ever worth measuring at high step counts. Note the preview
+decode does **not** run on a full two-stage generation - `MpiStageLatents` blocks
+`denoised` unless `is_preview`, so the split's real cost is one sampler setup plus the
+latent save.
+
+## SolAttn and SageAttention — rejected as node packs (2026-08-09)
+
+Both need Triton, and that is the end of it for the local engine: `triton` is classified
+engine-owned in `scripts/compile-node-deps.mjs` (`isEngineOwned()`) and `routes/engine.js`
+(`ENGINE_OWNED_PKG`), so it cannot enter the curated pip set at all, and Windows embedded
+Python ships no compiler. SageAttention adds three prior rejections - MPI-50 (local),
+MPI-189 (Pod build bugs), MPI-145 (`--use-sage-attention` crashes LTX-2.3 on Ada sm_89,
+engine dies) - and was measured **~2x SLOWER** on Windows, where the failed Triton JIT is
+pure overhead. `kijai/ComfyUI-SolAttn_triton` adds two more: it ships **no LICENSE file**,
+and being CUDA-only it can never run on the macOS build. Its dispatch also branches on H3
+and WAN only, with no LTX path.
+
+Reopen SolAttn only if it gains a licence AND an LTX branch. Do not re-test SageAttention.
+
+## EasyCache — free, already installed, non-turbo only
+
+`comfy_extras/nodes_easycache.py` is **core ComfyUI** (node id `EasyCache`) - no pip dep,
+no node pin, both engines, works on macOS. Worth **-22%** on the 20-step path, but it
+needs steps to work with: at 8 steps it skips **0**, and it cost **+12%** on a cold run,
+so it must never become a silent default.
+
+Its skip pattern is structural and reproduced across seeds: **0 skips in stage 1, 4 in
+stage 2.** `easycache_sample_wrapper` is an `OUTER_SAMPLE` wrapper whose `finally` calls
+`reset()`, so each sampler gets a cold lifetime - stage 1 pays ~2 steps of warmup and
+sits in the high-sigma region where per-step change always clears `reuse_threshold`.
+Stage 2 is the low-sigma region it exists for. Two samplers cannot be given separate
+cache instances, because they share one guider.
