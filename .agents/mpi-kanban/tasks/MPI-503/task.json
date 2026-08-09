@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-503",
+  "title": "Close-out check for cards finished under a different card id",
+  "description": "The `validating is not a parking space` rule catches a card you worked and did not close. It cannot catch the other shape: a card sitting untouched in `todo` whose work lands inside someone else's commit — nobody is holding it, so nobody gets asked. Found twice on 2026-08-09 by a claim audit: MPI-456 (WAN _stage2 twins, deleted by MPI-452's ea9164c7) and MPI-488 (next_id race, fixed upstream in the Mpi-Kanban plugin). scripts/overtaken-cards.py reports every todo card whose id appears in a commit dated after its own updated_at, and .agents/mpi-kanban/close-out.md runs it. Reports only, never writes: a mention is not proof.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-09T08:10:00Z",
+  "updated_at": "2026-08-09T08:10:00Z",
+  "links": {
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  }
+}

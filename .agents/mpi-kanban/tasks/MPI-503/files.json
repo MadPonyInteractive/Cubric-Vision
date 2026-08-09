@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "scripts/overtaken-cards.py",
+    ".agents/mpi-kanban/close-out.md"
+  ]
+}

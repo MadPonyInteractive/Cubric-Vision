@@ -13,6 +13,24 @@ nothing drifted, say so in one line.
 > `validating`-is-not-a-parking-space rule — now ship inside `mpi-end-session`
 > (§ 0, § 3, § 6), so only the project half survives here.
 
+## Overtaken cards (do NOT skip — it costs one command)
+
+```bash
+python scripts/overtaken-cards.py
+```
+
+Lists `todo` cards whose id appears in a commit dated after the card's own
+`updated_at`. Each is a candidate for "already done under a different card id". A
+mention is not proof — read the commit before closing anything, and close only with
+the user's yes.
+
+Why this is here and not covered by the `validating` rule: that rule catches a card
+YOU worked and did not close. This catches the other shape — a card sitting untouched
+in `todo` whose work lands inside someone else's commit. Nobody is holding it, so
+nobody gets asked. Found twice on 2026-08-09: **MPI-456**, whose WAN `_stage2` twins
+were deleted by MPI-452's `ea9164c7`, and **MPI-488**, fixed upstream by the
+Mpi-Kanban plugin. Both had been sitting in `todo` with the work already finished.
+
 ## Release-awareness check (do NOT skip)
 
 Diff THIS session's changes (working tree, or the session's commit(s) if the
