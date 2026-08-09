@@ -1,0 +1,75 @@
+[2026-08-09T02:05:30.552Z] 
+── Smoke set ── EU-RO-1 · arch=modern · engine=remote
+[2026-08-09T02:05:30.553Z]    49.5 GB  minimax-h3             tier=balanced  ops=2
+[2026-08-09T02:05:30.553Z]             t2v_ms             minimax_h3_fl2va.json
+[2026-08-09T02:05:30.553Z]             i2v_ms             minimax_h3_fl2va.json
+[2026-08-09T02:05:30.553Z]    49.5 GB  minimax-h3-ref2va      tier=balanced  ops=1
+[2026-08-09T02:05:30.553Z]             ref2v_ms           minimax_h3_r2va.json
+[2026-08-09T02:05:30.553Z]    38.6 GB  ltx-23-balanced        tier=balanced  ops=2  covers ltx-23
+[2026-08-09T02:05:30.553Z]             t2v_ms             ltx_i2v_t2v_int8.json
+[2026-08-09T02:05:30.554Z]             i2v_ms             ltx_i2v_t2v_int8.json
+[2026-08-09T02:05:30.554Z]    33.1 GB  wan-22                 tier=balanced  ops=1
+[2026-08-09T02:05:30.554Z]             i2v_ms             wan22_i2v.json
+[2026-08-09T02:05:30.554Z]    32.1 GB  qwen-edit              tier=balanced  ops=2
+[2026-08-09T02:05:30.554Z]             qwenEdit           qwen_edit.json
+[2026-08-09T02:05:30.554Z]             control            qwen_edit.json
+[2026-08-09T02:05:30.554Z]    24.1 GB  krea2-nsfw             tier=balanced  ops=6  covers krea2
+[2026-08-09T02:05:30.554Z]             t2i                krea2_t2i_nsfw.json
+[2026-08-09T02:05:30.554Z]             i2i                krea2_t2i_nsfw.json
+[2026-08-09T02:05:30.554Z]             control            krea2_t2i_nsfw.json
+[2026-08-09T02:05:30.554Z]             krea2Edit          krea2_t2i_nsfw.json
+[2026-08-09T02:05:30.554Z]             upscale            krea2_t2i_nsfw.json
+[2026-08-09T02:05:30.554Z]             detail             krea2_t2i_nsfw.json
+[2026-08-09T02:05:30.554Z]    23.0 GB  chroma-hyper           tier=low       ops=5  covers chroma-flash
+[2026-08-09T02:05:30.554Z]             t2i                chroma_hyper_t2i.json
+[2026-08-09T02:05:30.555Z]             i2i                chroma_hyper_t2i.json
+[2026-08-09T02:05:30.555Z]             control            chroma_hyper_t2i.json
+[2026-08-09T02:05:30.555Z]             upscale            chroma_hyper_t2i.json
+[2026-08-09T02:05:30.555Z]             detail             chroma_hyper_t2i.json
+[2026-08-09T02:05:30.555Z]    20.8 GB  boogu-edit-balanced    tier=balanced  ops=1  covers boogu-edit-high
+[2026-08-09T02:05:30.555Z]             edit               boogu_edit_balanced.json
+[2026-08-09T02:05:30.555Z]    17.2 GB  wan22-5b               tier=low       ops=2
+[2026-08-09T02:05:30.555Z]             t2v                wan5b_t2v.json
+[2026-08-09T02:05:30.555Z]             i2v                wan5b_i2v.json
+[2026-08-09T02:05:30.555Z]    16.0 GB  nvidia-pid             tier=low       ops=1
+[2026-08-09T02:05:30.555Z]             pid                nvidia_pid.json
+[2026-08-09T02:05:30.555Z]    12.7 GB  klein-4b               tier=low       ops=7
+[2026-08-09T02:05:30.555Z]             t2i                klein_t2i.json
+[2026-08-09T02:05:30.555Z]             i2i                klein_t2i.json
+[2026-08-09T02:05:30.555Z]             control            klein_t2i.json
+[2026-08-09T02:05:30.555Z]             kleinEdit          klein_t2i.json
+[2026-08-09T02:05:30.555Z]             inpaint            klein_t2i.json
+[2026-08-09T02:05:30.555Z]             detail             klein_t2i.json
+[2026-08-09T02:05:30.556Z]             upscale            klein_t2i.json
+[2026-08-09T02:05:30.556Z]     8.9 GB  sdxl-nsfw              tier=low       ops=5  covers sdxl-realistic, ill-anime-beauty, ill-anime, pony-mix
+[2026-08-09T02:05:30.556Z]             t2i                t2i_sdxl_nsfw.json
+[2026-08-09T02:05:30.556Z]             i2i                t2i_sdxl_nsfw.json
+[2026-08-09T02:05:30.556Z]             control            t2i_sdxl_nsfw.json
+[2026-08-09T02:05:30.556Z]             upscale            t2i_sdxl_nsfw.json
+[2026-08-09T02:05:30.556Z]             detail             t2i_sdxl_nsfw.json
+[2026-08-09T02:05:30.556Z] 
+  models 12 · ops 35 · weights 288.0 GB · volume 330 GB
+[2026-08-09T02:05:30.556Z]   budget: 1 step · 128px target · 1 frame(s) · seed 42
+[2026-08-09T02:05:30.556Z] 
+  NOT loaded by this set (9) — a break tied to the weight FORMAT
+[2026-08-09T02:05:30.556Z]   under the same loader node would be missed:
+    sdxl-realistic(6.62GB)
+    ill-anime(6.46GB)
+    ill-anime-beauty(6.46GB)
+    pony-mix(6.62GB)
+    chroma1-hd-flash(16.58GB)
+    krea2-raw-transformer(12.57GB)
+    boogu-edit-transformer-high(19.17GB)
+    ltx23-transformer-bf16(39.13GB)
+    4x-AnimeSharp(63.91MB)
+[2026-08-09T02:05:30.581Z] 
+  preflight (offline, free): all ops resolve a graph, a branch and a budget ✓
+[2026-08-09T02:05:30.584Z] 
+  pod lock + python_deps in sync with v0.30.0 ✓
+[2026-08-09T02:05:30.832Z] 
+  first-party nodes: every Mpi* class_type exists at MpiNodes 43a976fd OK
+[2026-08-09T02:05:31.156Z] 
+  required inputs: 34 shipped graphs sweep clean — every Mpi* node supplies its required inputs ✓ (via http://127.0.0.1:48188, MpiNodes 43a976fd)
+[2026-08-09T02:05:31.157Z] 
+--plan: nothing rented, nothing spent.
+

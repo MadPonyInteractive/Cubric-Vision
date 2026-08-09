@@ -261,3 +261,76 @@ preparation is not smoking the product* — found twice, in the separator heal a
 hot store, and the second cost a full matrix of cold volume reads. Second: **the same fault
 class kept reappearing inside the very pass that documented it.** Sweeping a class means
 grepping every consumer of it, including the code you are adding while you sweep.
+
+---
+
+## Sixth pass — 2026-08-09. Four faults, and one of them rented a GPU by accident.
+
+### 1. `import`ing the runner ran a LIVE matrix
+
+`scripts/smoke-workflows.mjs` ended in a bare `main().catch(...)`, and the file already carried
+inline `export`s — so it looked importable and was not. Importing it to reuse **one pure helper**
+created a CPU download Pod, ran the whole install leg, deleted that Pod, and created an **L4**
+before a 2-minute command timeout killed it mid-create. Real money, an untracked Pod, and it
+overwrote the `podId` the app was tracking. The `--self-check` block was the same hazard in
+miniature: it ends in `process.exit(0)`, which on import kills the host process.
+
+Fixed with an `INVOKED_DIRECTLY` guard (`process.argv[1]` resolved against `import.meta.url`);
+verified inert, import returns in 7ms. **Never call this file from another module without that
+guard, and never assume a script with exports is safe to import.**
+
+### 2. A rented GPU failure with NO diagnostic record anywhere
+
+The h3 timeout could not be retro-diagnosed because nothing had kept a trace. `app.log` stopped
+at 19:16:50Z while the matrix ran to 20:23:40Z — correct behaviour, a successful proxy hop logs
+nothing — the repo's `logs/app.log` stopped earlier still, `log()` was bare `console.log` so the
+transcript died with the terminal, and the wrapper mirrors ComfyUI stdout to the **Pod** console
+only, which teardown deletes.
+
+Fixed: an ISO-stamped transcript at `dev_configs/smoke-run.log`, truncated per run like the
+evidence file. It paid for itself inside the hour — it is how fault 1's blast radius was
+established in seconds.
+
+### 3. `timed out after 15 min` was hiding a restart, not a slow model
+
+A prompt missing from `/proxy/history` means "still running", so the runner waited the full 15
+minutes and blamed the model. A prompt missing from history **and** from `/proxy/queue` is
+**gone**: ComfyUI holds every accepted prompt in one or the other. Now detected in ~30s and
+reported with the mechanism named.
+
+**Pod-side, only `POST /wrapper/restart-comfy` can do this.** An unexpected ComfyUI death takes
+the whole container down (`ComfyManager._supervise()` → `os._exit(1)`; `start.sh` ends in
+`exec uvicorn`, no respawn), so **a Pod that is still answering proves a REQUESTED restart, not
+a crash.** That single fact is what turned the h3 investigation around; the app-side gate that
+fires it is MPI-501.
+
+False positives were the real design risk: 30s grace for submit→queue, an unreadable queue means
+"keep waiting" (never orphan on a relay blip), and history is re-read **after** the queue so an
+op finishing between the two reads is not failed.
+
+### 4. Gate 8 checked class existence; gate 9 now checks required INPUTS
+
+Class existence was never the failing condition — that is how MPI-498 survived two releases and
+two matrices. Gate 9 sweeps **all 34** shipped graphs, not the resolved smoke set: **no
+`flow_*.json` is reachable by any matrix** (`resolveSmokeSet` walks models × `supportedOps` via
+`model.workflows[op]`, while flow ops live in `flowsRegistry.js`), so the set would have caught
+only 4 of MPI-498's 6 nodes.
+
+**Never parse source for this.** ~120 `Mpi*` nodes in these graphs build `INPUT_TYPES`
+programmatically, so an AST read finds no required-input literal for the majority of first-party
+nodes and reports 0 holes. Gate 9 asks a live engine instead, and refuses to answer unless the
+local MpiNodes checkout equals the `node_lock` pin — otherwise it would describe a different node
+pack than the Pod installs. With no engine it prints `NOT CHECKED` and **never claims green**.
+
+Proven red by replaying the pre-fix graphs out of git (`06cf70d4~1`): exactly MPI-498's six nodes,
+0 against the working tree. `requiredInputHoles(graph, objectInfo)` is exported and
+source-agnostic, so the Pod-side variant (MPI-502) is a second source for the same function, not
+a second gate.
+
+### Standing note for the next run
+
+**Do not run a full matrix while a shipped graph has a known-broken output.** The 2026-08-09
+session proved `nvidia_pid` returns a *cropped* image (a second defect underneath MPI-498's
+validation fix), so a matrix run before that fix would spend a GPU re-recording a broken PiD as
+PASS — media count and wall-clock both look healthy. Fix the graph, re-export through
+`sync-raw-workflows.mjs`, let gate 9 re-verify for free on `--plan`, then rent.

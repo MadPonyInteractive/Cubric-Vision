@@ -4,6 +4,9 @@
     "docs/playbooks/bump-engine/01-smoke-run.md",
     "routes/remoteProxyForward.js",
     "scripts/smoke-workflows.mjs",
-    "dev_configs/smoke-evidence.json"
+    "dev_configs/smoke-evidence.json",
+    "dev_configs/smoke-run.txt",
+    ".agents/mpi-kanban/tasks/MPI-467/validation.md",
+    ".agents/mpi-kanban/tasks/MPI-467/brief.md"
   ]
 }

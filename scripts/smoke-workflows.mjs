@@ -22,7 +22,8 @@
  * ~15 lines whenever a real node bump wants it. Not built on speculation.
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, openSync, writeSync, readdirSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -55,8 +56,27 @@ const flag = (n) => argv.includes(`--${n}`);
 const opt = (n) => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : null; };
 const PLAN_ONLY = flag('plan');
 
-const log = (...a) => console.log(...a);
-const die = (m) => { console.error(`\n✗ ${m}`); process.exit(1); };
+// A 15-minute failure on a rented GPU with no record is a failure you diagnose by
+// guessing. The second matrix's minimax-h3/t2v_ms timeout had NO evidence anywhere:
+// the run went to 20:23Z while app.log stopped at 19:16Z (the app logs nothing for a
+// successful proxy hop, so silence is normal), the wrapper mirrors ComfyUI stdout to
+// the POD console only, and teardown deletes the Pod. The whole transcript was terminal
+// scrollback and died with the terminal. So tee it next to the evidence it explains.
+// Truncated per run, like smoke-evidence.json — one file describing one matrix.
+// .txt, NOT .log: .gitignore:54 is a blanket *.log, and a transcript that cannot be
+// committed alongside the evidence it explains is the gap this exists to close.
+const RUN_LOG = path.join(REPO, 'dev_configs/smoke-run.txt');
+let _runLogFd = null;
+// STAMPED in the file, bare on the console. "It failed around 19:55Z" is only useful
+// next to a line that says what the runner was doing at 19:55Z.
+function _transcribe(line) {
+    try {
+        _runLogFd ??= openSync(RUN_LOG, 'w');
+        writeSync(_runLogFd, `[${new Date().toISOString()}] ${line}\n`);
+    } catch { /* a transcript that cannot be written must never abort a paid run */ }
+}
+const log = (...a) => { console.log(...a); _transcribe(a.map(String).join(' ')); };
+const die = (m) => { console.error(`\n✗ ${m}`); _transcribe(`✗ ${m}`); process.exit(1); };
 
 async function app(route, init) {
     const r = await fetch(`${APP}${route}`, {
@@ -641,6 +661,41 @@ function preflightOps(reg, set) {
     return fails;
 }
 
+// A prompt absent from history is normally just RUNNING, so the loop below waits. But a
+// prompt absent from history AND from the queue is GONE: ComfyUI holds every accepted
+// prompt in one or the other, and only loses it when its own process restarts underneath.
+// The signal is available in seconds and the runner used to spend the full 15 minutes
+// finding it, then report `timed out`, which reads as a slow model and sent a whole
+// session hunting a model bug that was not there (MPI-467: minimax-h3/t2v_ms, 2026-08-08
+// ~19:55Z. Its sibling i2v_ms passed at 260s on the same Pod minutes later). Pod-side, only
+// POST /wrapper/restart-comfy can do this — an unexpected ComfyUI death takes the whole
+// container down with it (wrapper.py ComfyManager._supervise -> os._exit(1); start.sh ends
+// in `exec uvicorn` with no respawn), so a Pod that is still answering proves a REQUESTED
+// restart, not a crash.
+const ORPHAN_GRACE_MS = 30_000;
+
+/** @returns {Promise<string|null>} why the prompt is gone, or null to keep waiting. */
+async function orphanReason(promptId, elapsedMs) {
+    // Never call orphan on the submit->queue window, and never on a relay blip: a queue
+    // read we could not make is not evidence the prompt left.
+    if (elapsedMs < ORPHAN_GRACE_MS) return null;
+    const q = await app('/proxy/queue').catch(() => null);
+    if (!q) return null;
+    const queued = [...(q.queue_running || []), ...(q.queue_pending || [])].some(e => e?.[1] === promptId);
+    if (queued) return null;
+    // Re-read history AFTER the queue. A prompt that finished between the two reads is
+    // briefly absent from both, and reporting that as orphaned would fail a PASSING op.
+    const again = await app(`/proxy/history/${promptId}`).catch(() => null);
+    if (again?.[promptId]) return null;
+    // Name the mechanism in the result line, so the next reader does not have to re-derive
+    // it. comfyReady is the flag that dips across a restart-comfy while wrapper `ready`
+    // stays true the whole time (MPI-107).
+    const st = await app('/remote/comfy/status').catch(() => null);
+    return `prompt orphaned after ${Math.round(elapsedMs / 1000)}s — gone from history AND queue, `
+        + `so ComfyUI restarted under it (comfyReady=${st?.comfyReady ?? '?'}); `
+        + `only POST /wrapper/restart-comfy does that, a crash would have taken the Pod down`;
+}
+
 async function runOp(reg, model, op, probeImage) {
     const prep = prepOp(reg, model, op, probeImage);
     if (prep.status) return { op, status: prep.status, why: prep.why };
@@ -664,7 +719,11 @@ async function runOp(reg, model, op, probeImage) {
         await sleep(4000);
         const h = await app(`/proxy/history/${prompt_id}`).catch(() => null);
         const rec = h?.[prompt_id];
-        if (!rec) continue;
+        if (!rec) {
+            const gone = await orphanReason(prompt_id, Date.now() - t0);
+            if (gone) return { op, status: 'FAIL', why: gone, budget: applied };
+            continue;
+        }
         const st = rec.status || {};
         if (st.status_str === 'error' || st.completed === false && st.messages?.some(m => m[0] === 'execution_error')) {
             const err = st.messages?.find(m => m[0] === 'execution_error')?.[1];
@@ -759,6 +818,133 @@ async function checkFirstPartyNodes(set) {
     return false;
 }
 
+/**
+ * Gate 9: do the shipped graphs SUPPLY every required input of every Mpi* node they use?
+ *
+ * Gate 8 above proves each Mpi* class EXISTS at the pin. Class existence was never the
+ * failing condition, which is how MPI-498 survived two releases and two GPU matrices:
+ * `MpiScaledDimensions` gained a REQUIRED `upscale_method` in MpiNodes ba9e156
+ * (2026-07-16), six shipped graph nodes never supplied it, and ComfyUI's
+ * `execution.py:901` tests `if x not in inputs` and raises `required_input_missing`
+ * BEFORE any default is read - so the input's `lanczos` default saved nothing. The
+ * prompt was then accepted anyway, because `MpiLoadImageFromPath` subclasses
+ * PreviewImage with OUTPUT_NODE=True (img.py:380): the input LOADER is itself a valid
+ * output with no upstream deps, so it survived while every real PreviewImage was
+ * dropped, and PiD returned THE INPUT IMAGE in 4s. (Diagnosed by the MPI-498 session.)
+ *
+ * WHY THIS CANNOT BE CAUGHT AT EXPORT. workflow-to-api.mjs already self-checks exactly
+ * this (its `holes` pass) against the /object_info it converted with - so a node pack
+ * that moves AFTER a graph is frozen on disk is invisible to it, and a hand-edit never
+ * runs it at all. Both happened: nvidia_pid.json was last exported in ab9caa71
+ * (2026-07-17), a HAND-PATCH twelve minutes after a raw sync. A check on the shipped
+ * graphs, independent of how they got there, is the only thing that closes this.
+ *
+ * WHY /object_info AND NEVER A SOURCE PARSE. ~120 Mpi* nodes in these graphs build
+ * INPUT_TYPES PROGRAMMATICALLY (MpiAnySwitch, MpiAnySwitch10, MpiPacker, MpiClearVram,
+ * MpiSimpleBoolean, MpiBoolean...), so a static/AST read of the pinned source finds no
+ * required-input literal for the MAJORITY of first-party nodes and reports 0 holes.
+ * A gate that silently passes most of what it claims to cover is worse than none, so
+ * this asks a live engine what actually registered. When no engine answers it says
+ * NOT CHECKED and never reports green.
+ *
+ * Trusted only when the local MpiNodes checkout is exactly at the pinned commit -
+ * otherwise the answer describes a different node pack than the Pod will install.
+ */
+const MPINODES_REPO = process.env.CUBRIC_MPINODES_REPO || 'c:/AI/Mpi/ComfyUi-MpiNodes';
+const LOCAL_ENGINES = [process.env.COMFY_URL, 'http://127.0.0.1:8188', 'http://127.0.0.1:48188'].filter(Boolean);
+
+/**
+ * The whole gate, as a pure function so --self-check can exercise it and a historical
+ * graph can be replayed straight out of git without touching the working tree.
+ * @returns {string[]} one line per hole, empty when the graph is complete.
+ */
+function requiredInputHoles(graph, objectInfo) {
+    const holes = [];
+    for (const [id, n] of Object.entries(graph)) {
+        const ct = n && n.class_type;
+        // Mpi* only. A third-party pack is pinned per-node elsewhere and the local copy may
+        // legitimately differ from the Pod's, so its `required` set is not evidence here.
+        if (typeof ct !== 'string' || !ct.startsWith('Mpi')) continue;
+        const req = objectInfo[ct]?.input?.required;
+        if (!req) continue;                       // an absent class is gate 8's finding, not this one
+        const have = Object.keys(n.inputs || {});
+        // An autogrow / dynamic-combo group is emitted as `<name>.<sub>` entries and never as
+        // the bare name, so a prefix hit satisfies it (the rule the converter's own self-check
+        // uses). Without this, every H3 reference slot reads as missing.
+        const missing = Object.keys(req).filter(k => !have.some(h => h === k || h.startsWith(`${k}.`)));
+        if (missing.length) holes.push(`${id} ${ct} — missing: ${missing.join(', ')}`);
+    }
+    return holes;
+}
+
+async function checkRequiredInputs(set) {
+    const lock = JSON.parse(readFileSync(path.join(REPO, 'dev_configs/node_lock.json'), 'utf8'));
+    const pin = (lock.nodes || {})['ComfyUI-MpiNodes']?.commit;
+    const skip = (why) => { log(`\n  required inputs: NOT CHECKED — ${why}`); return true; };
+    if (!pin) return skip('node_lock has no ComfyUI-MpiNodes pin');
+
+    let head;
+    try {
+        head = execFileSync('git', ['-C', MPINODES_REPO, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    } catch (err) {
+        return skip(`cannot read ${MPINODES_REPO} (${err.message}); set CUBRIC_MPINODES_REPO`);
+    }
+    if (!head.startsWith(pin) && !pin.startsWith(head)) {
+        // Checking against the wrong pack is how you get a confident wrong answer.
+        return skip(`local MpiNodes is at ${head.slice(0, 8)}, node_lock pins ${pin.slice(0, 8)} — `
+            + `check out the pin (git -C ${MPINODES_REPO} checkout ${pin.slice(0, 8)}) or run /mpi-nodes-sync`);
+    }
+
+    let objectInfo = null, from = null;
+    for (const base of LOCAL_ENGINES) {
+        try {
+            const r = await fetch(`${base}/object_info`, { signal: AbortSignal.timeout(15000) });
+            if (!r.ok) continue;
+            objectInfo = await r.json();
+            from = base;
+            break;
+        } catch { /* try the next one */ }
+    }
+    if (!objectInfo) {
+        return skip(`no local engine answered /object_info (${LOCAL_ENGINES.join(', ')}). `
+            + `Start the bench so this gate can run — it is free and it catches MPI-498's class of defect before a GPU is rented.`);
+    }
+
+    // EVERY shipped graph, not just the resolved smoke set. NO flow_*.json can ever be
+    // reached by a matrix: resolveSmokeSet enumerates models x supportedOps and resolves
+    // through model.workflows[op], while flow ops live in flowsRegistry.js and no model
+    // declares one. MPI-498 proved the cost — the set would have caught 4 of its 6 nodes,
+    // missing both in flow_sdxl_4k.json. That file is being deleted (MPI-332, and the user
+    // confirmed it 2026-08-09), so the flow that actually needs this cover is
+    // flow_head_swap.json: Head Swap is flow #1 of the real product (MPI-299), carries no
+    // MpiScaledDimensions today, and is exposed to the identical class of defect with no
+    // other guard anywhere. This check is file-based and free, so sweeping the whole
+    // directory costs nothing and needs no maintenance as flows come and go.
+    const graphs = readdirSync(WF_DIR).filter(f => f.endsWith('.json')).sort();
+    const holes = [];
+    for (const file of graphs) {
+        let graph;
+        try {
+            graph = JSON.parse(readFileSync(path.join(WF_DIR, file), 'utf8'));
+        } catch (err) {
+            holes.push(`     ${file} — unreadable: ${err.message}`);
+            continue;
+        }
+        holes.push(...requiredInputHoles(graph, objectInfo).map(h => `     ${file} node ${h}`));
+    }
+    if (!holes.length) {
+        log(`\n  required inputs: ${graphs.length} shipped graphs sweep clean — every Mpi* node supplies its required inputs ✓ (via ${from}, MpiNodes ${pin.slice(0, 8)})`);
+        return true;
+    }
+    log(`\n  🛑 SHIPPED GRAPHS ARE MISSING REQUIRED INPUTS — ${holes.length} node(s):`);
+    holes.forEach(l => log(l));
+    log(`  ComfyUI raises required_input_missing on these BEFORE reading any default, then still`);
+    log(`  accepts the prompt if some output survives — so the op can score PASS having generated nothing.`);
+    log(`  Fix the graph AND its comfy_workflows/raw/ twin (the converter reads widgets_values`);
+    log(`  positionally, so a short raw re-drops the input on the next export).`);
+    return false;
+}
+
 /** Warns on --plan, hard-fails before any spend. @returns {boolean} in sync */
 function checkPodLock() {
     const podLock = path.join(POD_REPO, 'node_lock.json');
@@ -807,10 +993,12 @@ async function main() {
     const preflightFails = preflightOps(reg, set);
     const podLockOk = checkPodLock();
     const nodesOk = await checkFirstPartyNodes(set);
+    const inputsOk = await checkRequiredInputs(set);
 
     if (PLAN_ONLY) { log('\n--plan: nothing rented, nothing spent.\n'); return; }
     if (!podLockOk) die('pod lock is behind — sync it and rebuild the DEV image before smoking.');
     if (!nodesOk) die('the MpiNodes pin predates a node the workflows use - bump it before renting anything.');
+    if (!inputsOk) die('shipped graphs are missing required node inputs - fix them before renting anything.');
     if (preflightFails) die(`${preflightFails} op(s) fail preflight offline — fix the graph/registry before renting anything.`);
 
     log(`\n── Live run ──`);
@@ -1007,8 +1195,26 @@ async function main() {
     if (n('FAIL')) process.exit(1);
 }
 
+// THIS MODULE RENTS HARDWARE WHEN IT LOADS — or it did until this guard. `main()` was
+// called bare at the bottom, so a plain `import` of the file ran a LIVE matrix: measured
+// 2026-08-09, importing it to reuse ONE pure helper created a CPU download Pod, ran the
+// whole install leg, deleted that Pod, and created an L4 before a 2-minute command
+// timeout killed it mid-create. Real money, an untracked Pod, and it displaced the
+// podId the app was tracking. The `--self-check` block below is the same hazard in
+// miniature: it ends in process.exit(0), which on import would kill the HOST process.
+// So: nothing below runs unless this file IS the process entry point. Keeping the
+// helpers importable is what makes a probe script able to build the exact same graph
+// the matrix builds, instead of a lookalike.
+const INVOKED_DIRECTLY = !!process.argv[1]
+    && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+
+// applyFastTier / minimizeGraph / summarizeNodeErrors / injectByTitle / hotStoreFiles
+// already carry inline `export` — which is the point: this file was ALWAYS a module
+// someone meant to import, and the bare main() call made doing so cost money.
+export { requiredInputHoles, prepOp, loadRegistry, healSeparators };
+
 // demo(): the pure half runs with no app, no Pod, no network.
-if (flag('self-check')) {
+if (INVOKED_DIRECTLY && flag('self-check')) {
     const g = {
         1: { class_type: 'X', _meta: { title: 'Input_Width' }, inputs: { value: 1024 } },
         2: { class_type: 'X', _meta: { title: 'Input_Steps' }, inputs: { value: 30 } },
@@ -1084,8 +1290,40 @@ if (flag('self-check')) {
     assert(hotStoreFiles(hsReg, {}, 96).length === 2, 'a 96GB card also stages the 42GB transformer');
     assert(hotStoreFiles(hsReg, {}, null).length === 2, 'unknown VRAM = no cap, same as the app');
 
+    // Gate 9. The shape below IS MPI-498: MpiScaledDimensions with a required
+    // upscale_method the graph never supplied. Verified against the real pre-fix graphs
+    // out of git (06cf70d4~1) — 4 holes in nvidia_pid.json, 2 in flow_sdxl_4k.json, the
+    // exact six nodes MPI-498 named, and 0 against the working tree.
+    const oi = {
+        MpiScaledDimensions: { input: { required: { value: ['INT'], upscale_method: ['COMBO'] } } },
+        MpiH3References: { input: { required: { clip: ['CLIP'], ref_images: ['AUTOGROW'] } } },
+        KJUpscale: { input: { required: { upscale_method: ['COMBO'] } } },
+    };
+    const holes = (g) => requiredInputHoles(g, oi);
+    assert(holes({ 1: { class_type: 'MpiScaledDimensions', inputs: { value: 8 } } }).length === 1,
+        'a required input the graph never supplies is a hole (MPI-498)');
+    assert(holes({ 1: { class_type: 'MpiScaledDimensions', inputs: { value: 8, upscale_method: 'lanczos' } } }).length === 0,
+        'a supplied required input is not a hole');
+    assert(holes({ 1: { class_type: 'MpiScaledDimensions', inputs: { value: 8, upscale_method: ['9', 0] } } }).length === 0,
+        'a required input satisfied by a LINK is not a hole — links live in the same inputs map');
+    // The autogrow rule. Core emits `ref_images.ref_image_0`, never the bare `ref_images`;
+    // without the prefix match every H3 reference slot would report as missing and the gate
+    // would cry wolf on a correct graph.
+    assert(holes({ 1: { class_type: 'MpiH3References', inputs: { clip: ['2', 0], 'ref_images.ref_image_0': ['3', 0] } } }).length === 0,
+        'an autogrow group is satisfied by a `<name>.<sub>` entry, not the bare name');
+    // Scope. A third-party pack is pinned per-node elsewhere and the LOCAL copy may
+    // legitimately differ from the Pod's, so its required set is not evidence here.
+    assert(holes({ 1: { class_type: 'KJUpscale', inputs: {} } }).length === 0,
+        'non-Mpi* classes are out of scope — the local copy may not be the Pod copy');
+    // A class absent from /object_info has no `required` map at all, so dropping the guard
+    // makes this line throw on Object.keys(undefined) rather than report — mutation-verified.
+    // Skipping is also the right ANSWER: an absent class is gate 8's finding, and
+    // double-reporting it here would explain it worse.
+    assert(holes({ 1: { class_type: 'MpiNotInThisEngine', inputs: {} } }).length === 0,
+        'a class absent from /object_info is skipped, not crashed on — gate 8 owns that finding');
+
     console.log(`self-check OK (${applied.join(', ')})`);
     process.exit(0);
 }
 
-main().catch(e => abort(e.stack || e.message));
+if (INVOKED_DIRECTLY) main().catch(e => abort(e.stack || e.message));

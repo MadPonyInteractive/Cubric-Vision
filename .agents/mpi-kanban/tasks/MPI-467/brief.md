@@ -148,3 +148,41 @@ ComfyUI drops those outputs and the op still returns media. It "PASSED" the prev
 the required input too, so this is not the MPI-467 pin bump. The root fix belongs to THIS card's
 gate 8: it checks class EXISTENCE, never required INPUTS, which is why the defect survived two
 releases and two matrices.
+
+
+---
+
+## Added to this umbrella 2026-08-09, from the live Pod session
+
+**MPI-467's own named blocker is CLOSED.** `minimax-h3/t2v_ms` — the only op that had never
+passed — **PASSED live at 216s, 1 media, clean `node_errors`**, dispatched onto the Pod through
+the runner's own `prepOp` so it built the exact graph a matrix builds. There was never a t2v
+defect. Full diagnosis in `validation.md`.
+
+**MPI-499 — `npm test` leaks ~10 GB of real disk per run.** `tests/orphan-sweep.test.cjs`
+believes `ftruncateSync` is sparse; on NTFS it fully allocates (measured: `fsutil` says *not*
+sparse). The code under test then *trashes* the file, so the test's own `rmSync` cannot reclaim
+it. 22 copies, ~230 GiB, found in the user's Recycle Bin. Root cause of a recurring drive-full
+that a prior handoff had already logged once (C: at 99%, 172 GB freed).
+
+**MPI-500 — stop trashing model weights, delete them permanently.** User's explicit preference.
+`downloadManager.js:305-309` is trash-then-permanent-delete, so success = space not freed and
+failure = space freed, which is exactly the "works for some files and not others" he reported.
+**Scope is open:** the orphan sweep is agreed; the UNINSTALL path is on MPI-276's
+G4 preserve-verbatim list and needs his decision before anyone touches it.
+
+**MPI-501 — `restart-comfy` destroys any in-flight generation.** The confirmed cause of the
+lost `t2v_ms` op, and the user reproduced the trigger live. The needs-restart gate
+(`comfyController.js:543`) restarts unconditionally and never reads the queue. The detection
+half is already shipped here (orphan detection); the fix belongs to that card.
+
+**MPI-502 — gate 9 needs a Pod-side twin.** Gate 9 shipped in this card and covers `Mpi*`
+classes via a local `/object_info`, pin-gated. The Pod variant would also cover third-party
+packs and the ~120 programmatic-`INPUT_TYPES` nodes, but it needs a new `/wrapper/object_info`
+route and a runtime publish — a live infra op, deliberately not done unasked.
+
+**Still owed on THIS card:** one full matrix for clean evidence (`release:check` refuses
+`counts.fail > 0`). It must wait for the **PiD crop fix** the user is doing now — a matrix run
+before that would just re-record a broken PiD. A `--models` run is NOT a shortcut: it overwrites
+`smoke-evidence.json` and discards the other passes. Turn **Stage all models on connect** back
+ON first.

@@ -242,3 +242,127 @@ self-check FAILED: a model that does NOT declare the capability is left alone (k
 
 Restored from a `cp` backup, green again. **Not applied to the run in flight** - node had
 already loaded the script, so this takes effect on the NEXT matrix, which is what was asked.
+
+---
+
+# minimax-h3/t2v_ms — CLOSED. It PASSES. There was never a t2v defect. (2026-08-09)
+
+```
+minimax-h3/t2v_ms: graph 56 nodes, budget Input_Width=128, Input_Height=128, Input_seed=42
+prompt_id e7281ce0-1e64-4823-a13b-19561c5ab815   node_errors {}
+PASS 216s  media=1
+```
+
+Dispatched onto a live L4 through the runner's **own `prepOp`**, so it built the exact graph a
+matrix builds rather than a lookalike. Against its sibling `i2v_ms` at 260s. `minimax-h3` is now
+**2-for-2**, and all three H3 ops pass (`ref2v_ms` 213s, a different model and graph, never
+implicated).
+
+## The diagnosis, reached OFFLINE before any GPU was involved
+
+**A ComfyUI crash cannot be survived on this Pod, so it never crashed.** `ComfyManager._supervise()`
+answers any unexpected exit with `os._exit(1)`, and `start.sh` ends in `exec python -m uvicorn`
+with no respawn loop — its own comment says "when the wrapper exits, this script falls through,
+and the container comes down". Six ops passed on that Pod after 19:55Z, `i2v_ms` among them.
+**So the OOM / segfault / CUDA-abort family is excluded by construction**, not merely withdrawn.
+
+**Therefore the restart was REQUESTED.** Only `ComfyManager.restart()` respawns ComfyUI while the
+Pod lives, and it is reachable only via `POST /wrapper/restart-comfy`.
+
+**Two callers eliminated from `app.log`:** `ensureUniversalNodesOnVolume` only restarts when it
+*installed* a pack, and the log reads `universal nodes: 7/7 already on volume` at 19:16:50Z;
+`Model cache reseeded via /object_info (no restart needed)` is a model-list refresh and says so.
+
+**The user then reproduced the real trigger live** (2026-08-09): staging a model fired
+`Loading new nodes — restarting the remote engine…`. Chain, all hops read →
+SSE `comfy:needs-restart {remote:true}` → `downloadService.js:724` sets
+`state.remoteComfyNeedsRestart` → `comfyController.js:543` restarts on the next dispatch.
+**That gate never checks the queue**, so `proc.terminate()` can land mid-sample. The runner POSTs
+straight to `/proxy/prompt` and never passes through the gate, so its prompt was destroyed with no
+signal. **Carded as MPI-501.**
+
+**And there is no t2v-specific defect to find.** All four candidates traced and cleared:
+`MpiIfElse` is genuinely lazy (`"lazy": True` + `check_lazy_status`), so only node 133 runs;
+`MpiMath`'s `'10 if a else 5'` is supported (`safe_math` handles `ast.IfExp`) — no silent fallback
+to 0; `PackedLayout(keyframes=None, refs=None, frame_count=None)` takes clean guards, the
+`frame_count is not None` test living *inside* `if keyframes:`; and the work is identical to i2v —
+`BasicScheduler` steps=20 with `SplitSigmas` at 10 (t2v) vs 5 (i2v), so 10+10 against 5+15.
+
+**t2v and i2v are the same file** (`minimax_h3_fl2va.json`), routed by `MpiAnyChecker` on whether
+`Input_Start_Frame` is empty. So it was 0-for-2 for two unrelated reasons — a stale MpiNodes pin,
+then a restart landing on it — and never for a reason of its own.
+
+## No diagnostic record existed, and that was the real defect
+
+`app.log` ended 19:16:50Z; the repo's `logs/app.log` ended ~18:48Z; the matrix ran to 20:23:40Z.
+Over an hour of rented GPU with no app-side line — expected, since a successful proxy hop logs
+nothing. `log()` was bare `console.log`, so the transcript died with the terminal, and the wrapper
+mirrors ComfyUI stdout to the **Pod** console only, which teardown deletes. Fixed: the runner now
+tees an ISO-stamped transcript to `dev_configs/smoke-run.log`. It earned itself within the hour —
+it is the only reason the accidental run below could be reconstructed in seconds.
+
+## Shipped in the runner
+
+- **Orphan detection.** A prompt absent from history **and** from the queue is gone, not slow.
+  Now fails in ~30s naming the mechanism instead of burning 15 minutes to report `timed out`.
+  Guarded against both false positives: a 30s grace covers submit→queue, an unreadable queue
+  returns "keep waiting", and history is re-read *after* the queue so an op that finishes between
+  the two reads is not failed.
+- **Gate 9 — required inputs.** Sweeps **all 34** shipped graphs (not the smoke set) and diffs
+  every `Mpi*` node against a live engine's `required` map, refusing to answer unless the local
+  MpiNodes checkout matches the `node_lock` pin. Never parses source — MPI-498's trap is that
+  ~120 first-party nodes build `INPUT_TYPES` programmatically, so an AST read silently reports
+  0 holes for most of them. When no engine answers it prints `NOT CHECKED` and never claims green.
+
+  **Proven red, not just green.** Replayed against `06cf70d4~1` it flags exactly MPI-498's six
+  nodes — `nvidia_pid` 1609/1618/1619/1623 and `flow_sdxl_4k` 1603/1615 — and 0 against the
+  working tree. Independent confirmation of their fix. Three guards mutation-verified; the
+  whole-directory sweep matters because the smoke set would have caught only 4 of the 6 (no
+  `flow_*.json` is reachable by any matrix).
+
+- **`main()` no longer runs on import.** `import`ing this module used to execute a **live matrix**:
+  measured 2026-08-09, importing it to reuse one pure helper created a CPU download Pod, ran the
+  whole install leg, deleted that Pod, and created an **L4** before a 2-minute timeout killed it
+  mid-create — real money, an untracked Pod, and it displaced the podId the app was tracking.
+  The file already carried inline `export`s, so it was always meant to be importable. Now guarded
+  by `INVOKED_DIRECTLY`; verified inert (import returns in 7ms). That fix is what made the h3
+  test above possible without renting anything.
+
+## Still owed on this card
+
+One **full** matrix for clean evidence (`release:check` refuses `counts.fail > 0`). It must wait
+for the **PiD crop fix**, or the run just re-records a broken PiD. A `--models` run is not a
+shortcut — it overwrites `smoke-evidence.json` and discards the other passes. Turn **Stage all
+models on connect** back ON first; the second matrix ran entirely on cold volume reads.
+
+## A second, independent defect in nvidia_pid — the output is CROPPED
+
+Found by the user the moment MPI-498's fix let PiD produce real output at all. `t2i_013`
+896×1088 → `pid_005` 832×1024, with heads cut off. The arithmetic reproduces it exactly:
+
+```
+1609 MpiScaledDimensions  size=1024 side=use_max   on the 896×1088 source
+     scale = 1024/1088 = 0.9412  →  843 × 1024
+1624 MpiCrop  image←1626:0 (ORIGINAL)  width←1609:0  height←1609:1  divisible_by=16
+     CROPS 896×1088 → 843→832 × 1024        = pid_005, exactly
+```
+
+**The wiring is the bug, not the node.** `MpiCrop` is fed a *scaled* size and crops to it,
+discarding 64 px each way. Its `divisible_by=16` + `position=center` job is to make dimensions
+VAE-safe for the four downstream `VAEEncode` nodes (1578/1590/1596/1602); with the *original*
+dims it would crop nothing (896/16=56, 1088/16=68).
+
+**Fix is one wire:** `MpiCrop.image` from `1626:0` → `1609:3` (`scaled_image`, which
+`common_upscale`s with `"disabled"` crop mode — `img.py:258-279`). Then 1609 resizes properly and
+`MpiCrop` trims 843→832 purely for divisibility. Blast radius checked: 1609's only consumers are
+those two width/height links, and `Input_Image` feeds only 1609 and 1624.
+
+Rejected alternative: swapping both nodes for `Scale Image to Max Dimension`. It matches the
+longest-edge semantic and does fix the crop, but it has no divisibility control — 843 is not a
+multiple of 16 or even 8, so the `VAEEncode`s would do the trim themselves, silently and
+off-centre. `Scale Image to Total Pixels` keeps divisibility (`resolution_steps 16`) but sizes by
+megapixels, breaking the 1K/2K/4K longest-edge contract that 1618/1619/1623 all follow.
+
+Re-export through `sync-raw-workflows.mjs`, never by hand — hand-editing is how MPI-498 shipped
+(`ab9caa71` patched the API JSON directly and skipped the converter's own required-input
+self-check). Gate 9 re-verifies for free on `--plan` afterwards.
