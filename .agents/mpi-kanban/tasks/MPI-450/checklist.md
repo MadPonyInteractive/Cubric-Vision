@@ -58,12 +58,14 @@ assumptions that time may have invalidated.
       proven negative control. The strobe half has never been SEEN fire - it needs a real
       engine install (validation.md).
 - [x] **MPI-374** — UI size survives a full restart; key in `js/core/storageKeys.js`; no resize flash; Browser Mode no-ops. Needs the user's own restart.
-- [ ] **MPI-461** — ADDED 2026-08-08 (opened after the gate list was written). One helper
+- [x] **MPI-461** — CLOSED 2026-08-08. Shipped in `f006dc4f` (structural half MPI-463); closed on code + test evidence in `80d6b05c`. Two negative-controlled tests in `tests/lane-settle-on-bail.test.cjs` plus T21 in `tests/generation-store.test.cjs` proving a queued→error settle frees the lane and the next job dispatches. Nobody watched the dialog paint — closed at the user's call, the emit is the same `ui:error` path that did paint this session.
+      ORIGINAL TEXT: ADDED 2026-08-08 (opened after the gate list was written). One helper
       settles `PHASES.ERROR` before returning, replacing all TWELVE bare `exec.onError`
       early returns in `commandExecutor` — not just the workflow-fetch 404 that was hit
       live on 2026-08-06. Verified by a failed dispatch leaving the lane free: the next
       cue drains instead of sitting on QUEUED behind an unsettled job.
-- [ ] **MPI-479** — ADDED 2026-08-08 (reported live the same day). `_snapshotControlState`
+- [x] **MPI-479** — CLOSED 2026-08-08 on the user's own live recall test (`5f487a9b`). `_snapshotControlState` is live at `js/services/generationService.js:424`, called at `:499`.
+      ORIGINAL TEXT: ADDED 2026-08-08 (reported live the same day). `_snapshotControlState`
       records what actually RAN, backfilling each op-declared component through the
       op/model/global default layers when the key is absent, so Reuse Prompt can pull a
       control back DOWN to its default. Shared primitive — verified on more than the
@@ -80,7 +82,8 @@ assumptions that time may have invalidated.
       install with "39.4 GB free" when ~91 GB was. The message they get is the MPI-100
       toast telling them to free space, which is not the remedy. Either fix it or reword
       that bullet; shipping both as they stand is the one thing this card exists to stop.
-- [ ] **MPI-482** — ADDED 2026-08-08, **prerequisite for MPI-483**. Declared dep sizes are
+- [x] **MPI-482** — CLOSED 2026-08-08 (`af829e0f`), and it INVERTED its own premise mid-flight: the hand-typed strings were 4.1% OVER true, not under — HuggingFace decimal GB copied into a field every consumer parses as 1024-based. All 107 sizes now regenerated from measured `Content-Length` by `scripts/computeDepHashes.py`; the 14 custom_nodes have none (git repos, no measurable length). Consequence for the notes: a GB figure is right only if it matches `DEPS[...].size`, never a publisher's page.
+      ORIGINAL TEXT: ADDED 2026-08-08, **prerequisite for MPI-483**. Declared dep sizes are
       hand-written estimates (95 installed deps declare 195.7 GB against 259 GB of real
       blocks; one dep declared 160 bytes; one declared two different sizes under two
       models). A corrected gate fed by wrong sizes is just precisely wrong. Independently
@@ -237,3 +240,34 @@ assumptions that time may have invalidated.
 - [ ] Every gate above reads closed, or waived by the user with the waiver recorded on this card
 - [ ] `/mpi-release` — GitHub Release published (full builds + update bundles), `1.4.0` branch cut from master
 - [ ] Docs-site coverage noted on the `Cubric Studio (Docs)` board (that repo is a hard no-push — note only)
+
+## Gate audit — 2026-08-09 (`/mpi-project-refresh`)
+
+Every card this checklist names was resolved against the board and the code. Three Gate A
+ticks above were stale: **MPI-461, MPI-479 and MPI-482 all closed on 2026-08-08** and the
+list still read them as open, as did the 04:55 handoff's resume prompt ("Gate A's four open
+cards"). Verified on disk, not from the card text:
+
+| card | evidence |
+|---|---|
+| MPI-461 | `f006dc4f` + `tests/lane-settle-on-bail.test.cjs` |
+| MPI-479 | `generationService.js:424` `_snapshotControlState`, called at `:499` |
+| MPI-482 | `scripts/computeDepHashes.py` reads `Content-Length`; 107 sizes regenerated |
+
+**Gate A now has exactly ONE open card: MPI-483** (its prerequisite MPI-482 is done, so it
+is unblocked and ready to start). Gate E is fully closed — MPI-449, MPI-451 and MPI-452 all
+`done`, the H3 bullets are in `UNRELEASED.md:123/135/147`, and the smoke gate cleared with
+MPI-467/468.
+
+Still genuinely open, in the order the release needs them:
+
+1. **The 2026-08-10 date gate — ONE DAY OUT.** GitHub ground truth `Sun, 09 Aug 2026`.
+   § ON PICKUP step 2 is now live, not hypothetical.
+2. **MPI-483** — the last Gate A card.
+3. **Gate B** — both suites, the Klein + Wan preview look, the throwaway-Pod session
+   (MPI-480 #3 is closed; MPI-481 is `doing/validating`), MPI-458's confirmation run,
+   and the MPI-249 Linux leg on the real artifact.
+4. **MPI-501** — `doing/validating`, still not proven live. The 2026-08-09 GPU leg did not
+   exercise the guard.
+5. **The promote answer** at `mpi-release`'s manifest-diff stop. Its blocker (MPI-467) is
+   closed, so nothing defers it any more.
