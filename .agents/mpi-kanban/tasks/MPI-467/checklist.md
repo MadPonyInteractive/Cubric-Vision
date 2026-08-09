@@ -38,4 +38,11 @@
       `python_deps.txt` too (`a2b677f3`), so a clean ✓ there is the proof gate 6 held —
       then gate 7 asserts the Pod reports 0.30.0, then the matrix.
       Last plan: **11 models · 34 ops · 279.5 GB weights · 320 GB volume**, EU-RO-1.
-- [ ] Proving run (scheduled with the user) — volume create + ~281 GB fill + one full pass
+      ✅ **Gates 7-9 CLEARED OFFLINE 2026-08-09** — `--plan` prints pod-lock+`python_deps`
+      in sync with v0.30.0, every `Mpi*` class_type present at MpiNodes `43a976fd`, and
+      **34 shipped graphs sweep clean on required inputs** via the 48188 engine. Nothing
+      rented. Plan is now **12 models · 35 ops · 288.0 GB weights · 330 GB volume**.
+- [ ] Proving run (scheduled with the user) — volume create + ~288 GB fill + one full pass.
+      **UNBLOCKED 2026-08-09**: the nvidia_pid crop was the last hold and it is fixed +
+      re-exported (`9b631513`, `MpiCrop.image` ← `1609:3`) — see `validation.md`. Turn
+      "Stage all models on connect" back ON first; one FULL run, never `--models`.

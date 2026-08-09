@@ -366,3 +366,40 @@ megapixels, breaking the 1K/2K/4K longest-edge contract that 1618/1619/1623 all 
 Re-export through `sync-raw-workflows.mjs`, never by hand — hand-editing is how MPI-498 shipped
 (`ab9caa71` patched the API JSON directly and skipped the converter's own required-input
 self-check). Gate 9 re-verifies for free on `--plan` afterwards.
+
+---
+
+## The crop fix LANDED and the graph is clean — 2026-08-09
+
+The user re-exported `nvidia_pid` from ComfyUI and reports PiD working. Synced through
+`sync-raw-workflows.mjs` with `COMFY_URL=http://127.0.0.1:48188` (the app engine; the 8188
+bench was down, so there was no chance of converting against the wrong one).
+
+**The one wire is in, in the RUNTIME graph — not just raw:**
+
+```
+comfy_workflows/nvidia_pid.json
+1624 MpiCrop   image = ["1609", 3]   width = ["1609", 0]   height = ["1609", 1]
+1609 MpiScaledDimensions   upscale_method = lanczos   image = ["1626", 0]
+```
+
+`image` now comes from `1609:3` (`scaled_image`), exactly the fix predicted above. MPI-498's
+`upscale_method` is present too, so both defects are closed in one export. Injection-rule gate
+passed; raw committed as `9b631513`; the generated runtime file is STAGED for `/mpi-end`.
+
+**Gate 9 re-verified for free, as designed:**
+
+```
+first-party nodes: every Mpi* class_type exists at MpiNodes 43a976fd OK
+required inputs: 34 shipped graphs sweep clean ✓ (via http://127.0.0.1:48188, MpiNodes 43a976fd)
+pod lock + python_deps in sync with v0.30.0 ✓
+preflight (offline, free): all ops resolve a graph, a branch and a budget ✓
+--plan: nothing rented, nothing spent.
+```
+
+**The matrix grew since the last plan** — `11 models · 34 ops · 279.5 GB · 320 GB volume`
+is now **`12 models · 35 ops · 288.0 GB · 330 GB volume`**. Budget the volume at 330 GB, not
+320, when the proving run is scheduled.
+
+**Remaining on this card is now ONE thing: the full matrix.** Nothing else blocks it —
+the known-broken-output hold from the last session is lifted.

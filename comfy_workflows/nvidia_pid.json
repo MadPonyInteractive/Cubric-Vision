@@ -595,38 +595,16 @@
       "title": "Mpi Scaled Dimensions"
     }
   },
-  "1613": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "crop": "disabled",
-      "image": [
-        "1570",
-        0
-      ],
-      "width": [
-        "1618",
-        0
-      ],
-      "height": [
-        "1618",
-        1
-      ]
-    },
-    "class_type": "ImageScale",
-    "_meta": {
-      "title": "Upscale Image"
-    }
-  },
   "1614": {
     "inputs": {
-      "select": 3,
+      "select": 1,
       "any_1": [
-        "1613",
-        0
+        "1618",
+        3
       ],
       "any_2": [
-        "1616",
-        0
+        "1619",
+        3
       ],
       "any_3": [
         "1570",
@@ -636,28 +614,6 @@
     "class_type": "MpiAnySwitch",
     "_meta": {
       "title": "Input_Resolution"
-    }
-  },
-  "1616": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "crop": "disabled",
-      "image": [
-        "1570",
-        0
-      ],
-      "width": [
-        "1619",
-        0
-      ],
-      "height": [
-        "1619",
-        1
-      ]
-    },
-    "class_type": "ImageScale",
-    "_meta": {
-      "title": "Upscale Image"
     }
   },
   "1618": {
@@ -710,8 +666,8 @@
       "divisible_by": 16,
       "position": "center",
       "image": [
-        "1626",
-        0
+        "1609",
+        3
       ],
       "width": [
         "1609",
@@ -729,7 +685,7 @@
   },
   "1626": {
     "inputs": {
-      "string": "",
+      "string": "C:\\Users\\Fabio\\Downloads\\v1.3.png",
       "channel": "alpha",
       "block_if_empty": true
     },

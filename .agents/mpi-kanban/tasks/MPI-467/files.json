@@ -7,6 +7,9 @@
     "dev_configs/smoke-evidence.json",
     "dev_configs/smoke-run.txt",
     ".agents/mpi-kanban/tasks/MPI-467/validation.md",
-    ".agents/mpi-kanban/tasks/MPI-467/brief.md"
+    ".agents/mpi-kanban/tasks/MPI-467/brief.md",
+    "comfy_workflows/raw/nvidia_pid.json",
+    "comfy_workflows/nvidia_pid.json",
+    ".agents/mpi-kanban/tasks/MPI-467/checklist.md"
   ]
 }

@@ -7,7 +7,7 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-07T01:40:00Z",
-  "updated_at": "2026-08-08T17:42:51Z",
+  "updated_at": "2026-08-09T02:30:00Z",
   "labels": [
     "testing",
     "engine",
@@ -32,8 +32,8 @@
   "priority": "high",
   "attention": {
     "state": "required",
-    "updated_at": "2026-08-08T17:42:51Z",
-    "reason": "One matrix re-run away from clean evidence, and it costs a rented GPU so it needs the user present. Both causes of the 10 failures are fixed (MpiNodes pin 43a976fd; separator heal mirrored into the runner). Watch the wrapper reinstall MpiNodes at the new pin ON CONNECT - if the six _ms ops fail identically, the drift path is the fault, not the pin. Also owed to MPI-491: the GPU-image _download_hf rate on controlnet-union-flux, sampled every 15s."
+    "updated_at": "2026-08-09T02:30:00Z",
+    "reason": "ONE FULL MATRIX away from clean evidence, and nothing else blocks it. The nvidia_pid crop is fixed and re-exported (9b631513); gate 9 sweeps all 34 graphs clean at MpiNodes 43a976fd via the 48188 engine; pod lock + python_deps in sync with v0.30.0. Costs a rented GPU so it needs the user present. Budget 330 GB of volume (12 models / 35 ops / 288.0 GB), not the old 320. Turn 'Stage all models on connect' back ON - the last matrix ran entirely on cold volume reads. NEVER --models: it overwrites smoke-evidence.json with only those models and trips the coverage check. Also owed to MPI-491: the GPU-image _download_hf rate on controlnet-union-flux."
   },
-  "activeSessionTitle": "Live smoke proving run for the 0.30.0 engine bump"
+  "activeSessionTitle": "nvidia_pid crop synced + gate 9 clean - awaiting the full matrix"
 }
