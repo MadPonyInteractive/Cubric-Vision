@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-09T02:30:00Z",
+  "updated_at": "2026-08-09T03:45:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -21,7 +21,9 @@
     "docs/playbooks/bump-engine/01-smoke-run.md",
     ".agents/mpi-kanban/tasks/MPI-467/validation.md",
     "comfy_workflows/raw/nvidia_pid.json",
-    "comfy_workflows/nvidia_pid.json"
+    "comfy_workflows/nvidia_pid.json",
+    "dev_configs/smoke-evidence.json",
+    "dev_configs/smoke-run.txt"
   ],
   "open_messages": [
     ".agents/mpi-kanban/state/messages/dd066a81-b4e6-40ed-8ab5-c1fe30f80cd9.json"

@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-08T20:23:40.457Z",
+  "at": "2026-08-09T03:31:15.243Z",
   "engine": {
     "want": "0.30.0",
     "got": "0.30.0",
@@ -22,7 +22,7 @@
       "model": "sdxl-nsfw",
       "op": "t2i",
       "status": "PASS",
-      "secs": 54,
+      "secs": 8,
       "media": 1,
       "budget": [
         "Input_Seed=42",
@@ -34,7 +34,7 @@
       "model": "sdxl-nsfw",
       "op": "i2i",
       "status": "PASS",
-      "secs": 37,
+      "secs": 4,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -46,7 +46,7 @@
       "model": "sdxl-nsfw",
       "op": "control",
       "status": "PASS",
-      "secs": 79,
+      "secs": 33,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -58,7 +58,7 @@
       "model": "sdxl-nsfw",
       "op": "upscale",
       "status": "PASS",
-      "secs": 38,
+      "secs": 8,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -82,7 +82,7 @@
       "model": "chroma-hyper",
       "op": "t2i",
       "status": "PASS",
-      "secs": 87,
+      "secs": 17,
       "media": 1,
       "budget": [
         "Input_Seed=42",
@@ -94,7 +94,7 @@
       "model": "chroma-hyper",
       "op": "i2i",
       "status": "PASS",
-      "secs": 42,
+      "secs": 13,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -106,7 +106,7 @@
       "model": "chroma-hyper",
       "op": "control",
       "status": "PASS",
-      "secs": 96,
+      "secs": 46,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -118,7 +118,7 @@
       "model": "chroma-hyper",
       "op": "upscale",
       "status": "PASS",
-      "secs": 80,
+      "secs": 13,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -130,7 +130,7 @@
       "model": "chroma-hyper",
       "op": "detail",
       "status": "PASS",
-      "secs": 42,
+      "secs": 4,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -142,7 +142,7 @@
       "model": "krea2-nsfw",
       "op": "t2i",
       "status": "PASS",
-      "secs": 96,
+      "secs": 21,
       "media": 1,
       "budget": [
         "Input_is_Turbo=true",
@@ -155,7 +155,7 @@
       "model": "krea2-nsfw",
       "op": "i2i",
       "status": "PASS",
-      "secs": 71,
+      "secs": 17,
       "media": 2,
       "budget": [
         "Input_is_Turbo=true",
@@ -168,7 +168,7 @@
       "model": "krea2-nsfw",
       "op": "control",
       "status": "PASS",
-      "secs": 100,
+      "secs": 34,
       "media": 2,
       "budget": [
         "Input_is_Turbo=true",
@@ -181,7 +181,7 @@
       "model": "krea2-nsfw",
       "op": "krea2Edit",
       "status": "PASS",
-      "secs": 158,
+      "secs": 68,
       "media": 2,
       "budget": [
         "Input_is_Turbo=true",
@@ -194,7 +194,7 @@
       "model": "krea2-nsfw",
       "op": "upscale",
       "status": "PASS",
-      "secs": 67,
+      "secs": 13,
       "media": 2,
       "budget": [
         "Input_is_Turbo=true",
@@ -207,7 +207,7 @@
       "model": "krea2-nsfw",
       "op": "detail",
       "status": "PASS",
-      "secs": 25,
+      "secs": 4,
       "media": 2,
       "budget": [
         "Input_is_Turbo=true",
@@ -219,8 +219,9 @@
     {
       "model": "nvidia-pid",
       "op": "pid",
-      "status": "FAIL",
-      "why": "partial validation: MpiScaledDimensions.upscale_method, MpiScaledDimensions.upscale_method, MpiScaledDimensions.upscale_method, MpiScaledDimensions.upscale_method",
+      "status": "PASS",
+      "secs": 46,
+      "media": 2,
       "budget": [
         "Input_Seed=42"
       ]
@@ -229,7 +230,7 @@
       "model": "klein-4b",
       "op": "t2i",
       "status": "PASS",
-      "secs": 59,
+      "secs": 13,
       "media": 1,
       "budget": [
         "Input_Seed=42",
@@ -241,7 +242,7 @@
       "model": "klein-4b",
       "op": "i2i",
       "status": "PASS",
-      "secs": 55,
+      "secs": 9,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -253,7 +254,7 @@
       "model": "klein-4b",
       "op": "control",
       "status": "PASS",
-      "secs": 59,
+      "secs": 17,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -265,7 +266,7 @@
       "model": "klein-4b",
       "op": "kleinEdit",
       "status": "PASS",
-      "secs": 59,
+      "secs": 13,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -277,7 +278,7 @@
       "model": "klein-4b",
       "op": "inpaint",
       "status": "PASS",
-      "secs": 33,
+      "secs": 4,
       "media": 1,
       "budget": [
         "Input_Seed=42",
@@ -301,7 +302,7 @@
       "model": "klein-4b",
       "op": "upscale",
       "status": "PASS",
-      "secs": 25,
+      "secs": 8,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -313,7 +314,7 @@
       "model": "boogu-edit-balanced",
       "op": "edit",
       "status": "PASS",
-      "secs": 125,
+      "secs": 42,
       "media": 2,
       "budget": [
         "Input_Seed=42"
@@ -323,7 +324,7 @@
       "model": "wan-22",
       "op": "i2v_ms",
       "status": "PASS",
-      "secs": 163,
+      "secs": 29,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -335,7 +336,7 @@
       "model": "ltx-23-balanced",
       "op": "t2v_ms",
       "status": "PASS",
-      "secs": 288,
+      "secs": 78,
       "media": 1,
       "budget": [
         "Input_Seed=42",
@@ -347,7 +348,7 @@
       "model": "ltx-23-balanced",
       "op": "i2v_ms",
       "status": "PASS",
-      "secs": 180,
+      "secs": 42,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -359,7 +360,7 @@
       "model": "minimax-h3",
       "op": "t2v_ms",
       "status": "FAIL",
-      "why": "timed out after 15 min",
+      "why": "prompt orphaned after 169s — gone from history AND queue, so ComfyUI restarted under it (comfyReady=true); only POST /wrapper/restart-comfy does that, a crash would have taken the Pod down",
       "budget": [
         "Input_Width=128",
         "Input_Height=128",
@@ -370,7 +371,7 @@
       "model": "minimax-h3",
       "op": "i2v_ms",
       "status": "PASS",
-      "secs": 260,
+      "secs": 132,
       "media": 2,
       "budget": [
         "Input_Width=128",
@@ -382,7 +383,7 @@
       "model": "minimax-h3-ref2va",
       "op": "ref2v_ms",
       "status": "PASS",
-      "secs": 213,
+      "secs": 119,
       "media": 1,
       "budget": [
         "Input_Width=128",
@@ -394,7 +395,7 @@
       "model": "wan22-5b",
       "op": "t2v",
       "status": "PASS",
-      "secs": 92,
+      "secs": 12,
       "media": 1,
       "budget": [
         "Input_Seed=42",
@@ -406,7 +407,7 @@
       "model": "wan22-5b",
       "op": "i2v",
       "status": "PASS",
-      "secs": 55,
+      "secs": 8,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -418,7 +419,7 @@
       "model": "qwen-edit",
       "op": "qwenEdit",
       "status": "PASS",
-      "secs": 176,
+      "secs": 50,
       "media": 2,
       "budget": [
         "Input_Tier=3",
@@ -429,7 +430,7 @@
       "model": "qwen-edit",
       "op": "control",
       "status": "PASS",
-      "secs": 172,
+      "secs": 50,
       "media": 2,
       "budget": [
         "Input_Tier=3",
@@ -438,9 +439,9 @@
     }
   ],
   "counts": {
-    "pass": 33,
+    "pass": 34,
     "skip": 0,
-    "fail": 2,
+    "fail": 1,
     "opsPlanned": 35
   },
   "scope": {

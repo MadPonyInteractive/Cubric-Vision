@@ -7,7 +7,7 @@
   "maturity": "planned",
   "status": "active",
   "created_at": "2026-08-09T01:57:49Z",
-  "updated_at": "2026-08-09T01:57:49Z",
+  "updated_at": "2026-08-09T03:45:00Z",
   "labels": [
     "comfy",
     "generation",
@@ -24,5 +24,10 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
+  },
+  "attention": {
+    "state": "required",
+    "updated_at": "2026-08-09T03:45:00Z",
+    "reason": "BLOCKS MPI-467's clean smoke evidence, and has now destroyed the same op in TWO matrices. Fix agreed: drain-wait on GET /proxy/queue before /proxy/restart-comfy in comfyController.js:543; refuse loudly on timeout. Pair it with the runner's merge + --retry-failed work so the retest costs ~10 min instead of a full matrix."
   }
 }

@@ -403,3 +403,69 @@ is now **`12 models · 35 ops · 288.0 GB · 330 GB volume`**. Budget the volume
 
 **Remaining on this card is now ONE thing: the full matrix.** Nothing else blocks it —
 the known-broken-output hold from the last session is lifted.
+
+## THE THIRD MATRIX — 34 PASS / 0 SKIP / 1 FAIL, 2026-08-09
+
+Ran `node scripts/smoke-workflows.mjs --keep-volume` on L4 `orxp87067tddah` (RAM floor 48 GB
+via GraphQL), volume `aghcuvg7nl` reused. Gate 7 cleared for the second time:
+`engine: Pod image built from 0.30.0, matches node_lock ✓`. Pod deleted at the end; nothing left
+billing. Evidence improved 33/2 → **34/1**.
+
+**`PASS nvidia-pid/pid (46s, 2 out)`** — the crop fix and MPI-498's `upscale_method` are proven
+live. Pre-fix this op "finished" in 4s having executed nothing, which is exactly the shape that
+made a broken PiD read as a pass.
+
+The whole video set passed: `ltx-23-balanced` both ops (78s / 42s), `wan-22/i2v_ms` 29s,
+`wan22-5b` both, `minimax-h3-ref2va/ref2v_ms` 119s, `minimax-h3/i2v_ms` 132s.
+
+### The one failure is MPI-501, and the caller is narrowed to one file
+
+```
+FAIL minimax-h3/t2v_ms — prompt orphaned after 169s — gone from history AND queue
+```
+
+- **The wrapper cannot have done it.** `ComfyManager.restart()` has exactly ONE caller, the
+  `POST /wrapper/restart-comfy` route (`wrapper.py:907`). `_supervise` answers an unexpected
+  ComfyUI exit with `os._exit(1)`, taking the container down — the Pod lived and three ops
+  passed after, so this was requested.
+- **The server-side caller is excluded by evidence.** `remoteModels.js:862` only fires when
+  `out.installed` is non-empty; `app.log` records `03:00:59 [runpod] universal nodes: 7/7
+  already on volume`. It never ran.
+- **So it came through `/proxy/restart-comfy` — the RENDERER**: either `comfyController.js:543`
+  (MPI-501's unconditional gate) or the dev radial at `navigation.js:268`.
+- **The renderer was demonstrably live on the engine path throughout** — its own
+  `commandExecutor.js:519` was POSTing `/remote/hot-store/ensure` and taking 409s the whole run
+  (the user screenshotted the flood). Transcript order matches the card's chain exactly:
+  `hot-store: 3/3 file(s) on Pod disk` → `minimax-h3/t2v_ms` orphaned.
+- `app.log` is silent for the entire GPU leg (last line 03:00:59) — the app logs nothing for a
+  successful proxy hop, same as the second matrix.
+
+### CORRECTION — "a --models run trips the coverage check" is FALSE
+
+Carried in the previous handoff and repeated once here before being checked.
+`release-health-check.mjs:477` says the opposite, in as many words:
+`// Coverage is REPORTED, never gated — scoping a run is a legitimate call`. The only hard gates
+are `engine.got === pinned`, `counts.fail > 0`, and staleness.
+
+**The real defect is narrower and worth fixing:** `smoke-evidence.json` is a whole-run snapshot
+(`smoke-workflows.mjs:1181` plain `writeFileSync`), so a scoped run REPLACES it. `--models
+minimax-h3` would leave a file reading `2 pass, 0 fail, SCOPED` that **passes** `release:check` —
+worse than failing, because 1.4 would ship a bumped engine on two proven ops with the record of
+the other 33 destroyed.
+
+### Agreed plan (user's call, 2026-08-09) — do NOT re-run the full matrix
+
+Re-renting 34 green ops to retest one is waste. Three steps instead:
+
+1. **Fix MPI-501** — refuse or defer `/proxy/restart-comfy` while `queue_running` is non-empty.
+   Required either way, or the retest dies the same way. Our own prompt is not queued at the
+   gate, so a drain-wait cannot deadlock. On timeout, refuse loudly rather than destroy.
+2. **Teach the runner to MERGE a scoped run into existing evidence**, guarded so it cannot
+   stitch incompatible runs together: prior `engine.got` must equal the new one, and the prior
+   file must not predate `node_lock.json`'s last git change (that second condition IS the pin
+   check — the MpiNodes pin lives in `node_lock`). Any mismatch → refuse and demand a full run.
+3. **Add `--retry-failed`** — read the evidence, run only the ops that are not `PASS`, imply the
+   merge. Expresses the intent directly instead of making the operator name models.
+
+Then one ~10-12 min L4 leg gets `fail: 0` with full coverage retained, and every future targeted
+retest is cheap rather than a special case.
