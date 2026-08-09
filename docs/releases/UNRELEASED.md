@@ -220,6 +220,16 @@
 
 ## fixes
 
+- **The NVIDIA PiD upscaler now actually upscales.** PiD has never worked. Since the
+  release that introduced it, running it gave you back the picture you put in —
+  unchanged, at its original size, in a few seconds, with no error and no warning. It
+  looked like a finished upscale because the app had genuinely received an image back:
+  the one it had just handed over. One setting the upscaler needs had gone missing from
+  its recipe, so the engine refused to run the part that does the work and quietly ran
+  only the part that loads your picture. The setting is back, and the same gap has been
+  swept for across every model. If you tried PiD before and concluded it did nothing,
+  you were right — try it again.
+
 - **Reuse Prompt now brings back settings you never touched.** Reusing an older
   generation restored the controls you had changed, but silently skipped any control you
   had left alone — so a setting you had since nudged upwards stayed where it was instead of

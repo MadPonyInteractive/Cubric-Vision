@@ -102,6 +102,37 @@ only place this class of slip is loud. A dynamic group (`COMFY_AUTOGROW_V3`) sat
 it via its `<name>.<sub>` entries. It also catches a muted node that severed a link —
 see [media-inputs.md](media-inputs.md) § MUTE severs a link.
 
+**That self-check only fires when someone RE-RUNS the conversion — and a node-pack change
+never triggers one.** A graph is frozen on disk at export time against the schema that
+existed *then*. When a node later gains a REQUIRED input, every already-exported graph
+using it is silently short one key, and nothing re-converts them. `MpiScaledDimensions`
+gained `upscale_method` on 2026-07-16 (`ba9e156`); six nodes across `nvidia_pid.json` and
+`flow_sdxl_4k.json` shipped without it in **every release from 1.1.0 to 1.3.1** (MPI-498).
+The same class was hand-patched twelve minutes after a raw sync a month earlier
+(`ab9caa71`, `block_if_empty` on `MpiLoad*`) with no sweep for other nodes. **After ANY
+MpiNodes pin bump, diff every `Mpi*` node in `comfy_workflows/*.json` against that
+commit's `INPUT_TYPES`** — and EXECUTE `INPUT_TYPES`, never parse the source: ~120 of the
+`Mpi*` nodes in shipped graphs build it programmatically (`MpiAnySwitch`, `MpiPacker`,
+`MpiClearVram`, `MpiSimpleBoolean`), so a static parse reports zero holes for most of the
+pack. Smoke gate 8 is where this belongs (MPI-467).
+
+**A default does NOT rescue a missing key, and the ComfyUI editor cannot show you the
+gap.** `execution.py` tests `if x not in inputs` and raises `required_input_missing`
+*before* any default is read, so a node with `default: "lanczos"` is still rejected. And
+the litegraph frontend materializes a missing widget from that same default on load — the
+editor renders the value whether or not it is in the file, and writes all three back on
+save. Only the serialized `widgets_values` array (raw) or the emitted key (API) is
+evidence. Count widgets against `INPUT_TYPES`; do not trust a screenshot.
+
+**A graph can lose every real output and still return media.** ComfyUI validates PER
+OUTPUT NODE and accepts the prompt as soon as ONE survives — `200 {prompt_id, node_errors}`,
+not a 400. `MpiLoadImageFromPath` subclasses `PreviewImage` with `OUTPUT_NODE = True`, so
+the INPUT LOADER is itself an output node with no upstream deps: it always survives. A
+graph whose `PreviewImage` outputs are all dropped therefore executes the loader alone and
+echoes the INPUT image back as its in-graph preview. That scored PASS on two GPU smoke
+matrices at 4s/1-media before anyone read `node_errors`. **Media count is not proof a graph
+ran** — check `node_errors` on the 200 (MPI-495 does this app-side now).
+
 Full procedure and its traps:
 [../playbooks/add-model/01-workflow-split.md](../playbooks/add-model/01-workflow-split.md)
 — it applies to editing an existing workflow, not just onboarding a new model.

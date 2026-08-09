@@ -4,6 +4,8 @@
     "comfy_workflows/nvidia_pid.json",
     "comfy_workflows/flow_sdxl_4k.json",
     "comfy_workflows/raw/nvidia_pid.json",
-    "comfy_workflows/raw/flow_sdxl_4k.json"
+    "comfy_workflows/raw/flow_sdxl_4k.json",
+    "docs/releases/UNRELEASED.md",
+    "docs/workflow-authoring/README.md"
   ]
 }
