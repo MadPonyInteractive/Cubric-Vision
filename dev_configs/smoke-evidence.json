@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-09T03:31:15.243Z",
+  "at": "2026-08-09T04:21:46.381Z",
   "engine": {
     "want": "0.30.0",
     "got": "0.30.0",
@@ -28,7 +28,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "sdxl-nsfw",
@@ -40,7 +41,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "sdxl-nsfw",
@@ -52,7 +54,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "sdxl-nsfw",
@@ -64,7 +67,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "sdxl-nsfw",
@@ -76,7 +80,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "chroma-hyper",
@@ -88,7 +93,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "chroma-hyper",
@@ -100,7 +106,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "chroma-hyper",
@@ -112,7 +119,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "chroma-hyper",
@@ -124,7 +132,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "chroma-hyper",
@@ -136,7 +145,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "krea2-nsfw",
@@ -149,7 +159,8 @@
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "krea2-nsfw",
@@ -162,7 +173,8 @@
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "krea2-nsfw",
@@ -175,7 +187,8 @@
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "krea2-nsfw",
@@ -188,7 +201,8 @@
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "krea2-nsfw",
@@ -201,7 +215,8 @@
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "krea2-nsfw",
@@ -214,7 +229,8 @@
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "nvidia-pid",
@@ -224,7 +240,8 @@
       "media": 2,
       "budget": [
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "klein-4b",
@@ -236,7 +253,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "klein-4b",
@@ -248,7 +266,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "klein-4b",
@@ -260,7 +279,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "klein-4b",
@@ -272,7 +292,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "klein-4b",
@@ -284,7 +305,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "klein-4b",
@@ -296,7 +318,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "klein-4b",
@@ -308,7 +331,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "boogu-edit-balanced",
@@ -318,7 +342,8 @@
       "media": 2,
       "budget": [
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "wan-22",
@@ -330,7 +355,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "ltx-23-balanced",
@@ -342,7 +368,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "ltx-23-balanced",
@@ -354,18 +381,21 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "minimax-h3",
       "op": "t2v_ms",
-      "status": "FAIL",
-      "why": "prompt orphaned after 169s — gone from history AND queue, so ComfyUI restarted under it (comfyReady=true); only POST /wrapper/restart-comfy does that, a crash would have taken the Pod down",
+      "status": "PASS",
+      "secs": 123,
+      "media": 1,
       "budget": [
         "Input_Width=128",
         "Input_Height=128",
         "Input_seed=42"
-      ]
+      ],
+      "run": "2026-08-09T04:21:46.381Z"
     },
     {
       "model": "minimax-h3",
@@ -377,7 +407,8 @@
         "Input_Width=128",
         "Input_Height=128",
         "Input_seed=42"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "minimax-h3-ref2va",
@@ -389,7 +420,8 @@
         "Input_Width=128",
         "Input_Height=128",
         "Input_seed=42"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "wan22-5b",
@@ -401,7 +433,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "wan22-5b",
@@ -413,7 +446,8 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "qwen-edit",
@@ -424,7 +458,8 @@
       "budget": [
         "Input_Tier=3",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     },
     {
       "model": "qwen-edit",
@@ -435,17 +470,18 @@
       "budget": [
         "Input_Tier=3",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-08-09T03:31:15.243Z"
     }
   ],
   "counts": {
-    "pass": 34,
+    "pass": 35,
     "skip": 0,
-    "fail": 1,
+    "fail": 0,
     "opsPlanned": 35
   },
   "scope": {
-    "requested": "all",
+    "requested": "merged",
     "modelsRun": [
       "sdxl-nsfw",
       "chroma-hyper",
@@ -488,5 +524,9 @@
     "boogu-edit-transformer-high(19.17GB)",
     "ltx23-transformer-bf16(39.13GB)",
     "4x-AnimeSharp(63.91MB)"
+  ],
+  "runs": [
+    "2026-08-09T03:31:15.243Z",
+    "2026-08-09T04:21:46.381Z"
   ]
 }

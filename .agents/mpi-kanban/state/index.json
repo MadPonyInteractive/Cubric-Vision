@@ -1,14 +1,12 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-09T04:00:00Z",
+  "updated_at": "2026-08-09T04:50:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
-    ".agents/mpi-kanban/state/sessions/905153b3-11c0-42e9-a3ad-40b9f63f315c.json"
+    ".agents/mpi-kanban/state/sessions/6a882016-2445-415a-8f2a-5a3bb1deb424.json"
   ],
-  "active_tasks": [
-    ".agents/mpi-kanban/state/tasks/4cc0d2e7-00c8-4a15-b107-f66c26a6fb6c.json"
-  ],
+  "active_tasks": [],
   "active_file_claims": [],
   "pending_file_states": [
     "dev_configs/node_lock.json",
@@ -23,12 +21,12 @@
     "comfy_workflows/raw/nvidia_pid.json",
     "comfy_workflows/nvidia_pid.json",
     "dev_configs/smoke-evidence.json",
-    "dev_configs/smoke-run.txt"
+    "dev_configs/smoke-run.txt",
+    "js/shell/navigation.js",
+    "routes/remoteModels.js",
+    "tests/restart-drain-wait.test.cjs",
+    "tests/smoke-evidence-merge.test.cjs"
   ],
-  "open_messages": [
-    ".agents/mpi-kanban/state/messages/dd066a81-b4e6-40ed-8ab5-c1fe30f80cd9.json"
-  ],
-  "active_handoffs": [
-    ".agents/mpi-kanban/state/handoffs/18f70349-a282-4be3-9d7f-8d60930afb65.json"
-  ]
+  "open_messages": [],
+  "active_handoffs": []
 }

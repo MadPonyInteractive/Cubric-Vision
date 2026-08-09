@@ -125,6 +125,38 @@ releaser's call. An evidence file from before scope recording is called out as u
 what it left out. (`--models` also crashed in `printPlan` before this, so the flag never ran
 at all.)
 
+## Re-running only what failed — `--retry-failed`, and the merge underneath it
+
+```
+node scripts/smoke-workflows.mjs --retry-failed --keep-volume
+```
+
+Reads `dev_configs/smoke-evidence.json`, runs **only the ops that are not PASS**, and merges
+the results back over the recorded matrix. One failing op costs one short GPU leg instead of a
+whole matrix. It exits 0 with nothing rented when every recorded op already passes.
+
+**Why the merge had to exist first.** The evidence file was a whole-run snapshot written with a
+bare `writeFileSync`, so a scoped run *replaced* it. `--models minimax-h3` would have left a
+file reading `2 pass · 0 fail` that `release:check` **accepts** — coverage is reported, never
+gated — with the record of the other 33 proven ops destroyed. That is worse than failing.
+
+The merge is guarded, and both guards run **before anything is rented**:
+
+- the prior file's `engine.got` must equal the pinned `node_lock` tag (re-checked against what
+  the Pod actually reports, which is what catches `--allow-unproven-engine`);
+- the prior file must not predate `node_lock.json`'s last commit — the MpiNodes pins live in
+  that file too, so an older evidence file describes a different engine even when the version
+  string matches. Same anchor `release-health-check.mjs` uses for staleness, deliberately.
+
+Either mismatch refuses the scoped run and demands a full matrix. On success every row carries
+`run` (the ISO stamp of the run that produced it), the file lists its `runs`, counts are
+recomputed off the merged rows, and coverage becomes the **union** — a model is `unproven` only
+when neither run touched its family.
+
+**The app must be idle during a run, or MPI-501's fix must be in.** A live renderer restarts the
+Pod's ComfyUI when a model install adds nodes, and until that fix it did so without reading the
+queue — it orphaned `minimax-h3/t2v_ms` in two separate matrices.
+
 ## Cost, and the volume prompt
 
 The runner ends by asking whether to delete the volume, and prints both sides so the answer

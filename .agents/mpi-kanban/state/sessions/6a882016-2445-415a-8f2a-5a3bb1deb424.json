@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "6a882016-2445-415a-8f2a-5a3bb1deb424",
+  "role": "implementer",
+  "title": "MPI-501 drain-wait + smoke-runner merge/--retry-failed (MPI-467 umbrella)",
+  "workspace": "c:/AI/Mpi/Cubric-Vision",
+  "branch": "master",
+  "status": "active",
+  "started_at": "2026-08-09T04:05:00Z",
+  "heartbeat_at": "2026-08-09T04:05:00Z",
+  "recent_events": [
+    {
+      "at": "2026-08-09T04:05:00Z",
+      "event": "session_registered"
+    },
+    {
+      "at": "2026-08-09T04:05:00Z",
+      "event": "handoff_accepted"
+    }
+  ]
+}

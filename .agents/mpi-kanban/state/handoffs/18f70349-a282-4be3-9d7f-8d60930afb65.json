@@ -4,7 +4,7 @@
   "generated_at": "2026-08-09T04:00:00Z",
   "from_session": ".agents/mpi-kanban/state/sessions/905153b3-11c0-42e9-a3ad-40b9f63f315c.json",
   "to_role": "implementer",
-  "status": "open",
+  "status": "accepted",
   "session": {
     "name": "MPI-467 - nvidia_pid synced and PROVEN, third matrix 34/1, MPI-465 closed; one op left",
     "branch": "master"
@@ -47,7 +47,12 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
       "tasks/MPI-467/validation.md carries the third matrix in full, the MPI-501 elimination chain, the coverage-gating CORRECTION, and the agreed three-step plan.",
@@ -108,7 +113,14 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "file",
-    "relevant_topics": ["smoke run", "engine bump", "runpod", "release", "comfy engine", "minimax h3"]
+    "relevant_topics": [
+      "smoke run",
+      "engine bump",
+      "runpod",
+      "release",
+      "comfy engine",
+      "minimax h3"
+    ]
   },
   "rules_active": [
     ".claude/rules/dos_and_donts.md",
@@ -119,7 +131,14 @@
     "docs/playbooks/bump-engine/01-smoke-run.md"
   ],
   "recent_events": [
-    { "at": "2026-08-09T04:00:00Z", "event": "handoff_created" }
+    {
+      "at": "2026-08-09T04:00:00Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-09T04:05:00Z",
+      "event": "handoff_accepted"
+    }
   ],
   "resume_prompt": "You are resuming MPI-467. THE MATRIX RAN AND IT IS 34 PASS / 0 SKIP / 1 FAIL, up from 33/2. nvidia-pid/pid PASSED at 46s with 2 media, so the user's crop fix (MpiCrop 1624 image -> 1609:3 scaled_image) and MPI-498's upscale_method are PROVEN LIVE - do not re-verify them. MPI-465 is CLOSED on that same evidence because LTX executed on the shipped 0.30.0 Pod image. The single remaining failure is minimax-h3/t2v_ms, orphaned at 169s, and it is NOT a model bug: it passed at 216s last session and its sibling i2v_ms passed at 132s in this very run. It is MPI-501 for the second time - a renderer-triggered /proxy/restart-comfy landing on a running queue. The caller is narrowed by elimination (wrapper restart() has one caller and _supervise would have killed the container; the server-side caller is excluded by app.log 'universal nodes: 7/7 already on volume'), so read .agents/mpi-kanban/tasks/MPI-501/brief.md first. THE USER EXPLICITLY REJECTED RE-RUNNING THE FULL MATRIX - re-renting 34 green ops to retest one is waste. Do three things instead: (1) fix MPI-501 with a drain-wait on GET /proxy/queue before the restart POST in comfyController.js:543, refusing loudly on timeout rather than destroying someone else's prompt; (2) teach scripts/smoke-workflows.mjs to MERGE a scoped run into existing evidence instead of overwriting it, guarded on matching engine.got AND the prior file not predating node_lock.json's last git change; (3) add --retry-failed to run only the ops that are not PASS. Then ASK BEFORE RENTING one ~10-12 minute L4 leg. Note a correction you must not undo: the claim that a --models run trips the coverage check is FALSE - release-health-check.mjs:477 says coverage is REPORTED, never gated; the real defect is that the evidence file is a whole-run snapshot, so a scoped run would pass release:check while proving only two ops. Never delete volume aghcuvg7nl, always --keep-volume, and never POST /runpod/pods - that is createPod, and it rented three 4090s this session by being mistaken for a list route."
 }

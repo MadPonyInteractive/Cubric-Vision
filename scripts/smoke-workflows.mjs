@@ -11,6 +11,7 @@
  *   node scripts/smoke-workflows.mjs --plan            # resolve + print, spend nothing
  *   node scripts/smoke-workflows.mjs                   # full run (default: every model)
  *   node scripts/smoke-workflows.mjs --models qwen-edit,klein-4b
+ *   node scripts/smoke-workflows.mjs --retry-failed    # re-run ONLY the ops that are not PASS
  *   node scripts/smoke-workflows.mjs --keep-volume     # skip the teardown prompt
  *   node scripts/smoke-workflows.mjs --gpu "NVIDIA L4" # force a card
  *
@@ -55,6 +56,8 @@ const argv = process.argv.slice(2);
 const flag = (n) => argv.includes(`--${n}`);
 const opt = (n) => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : null; };
 const PLAN_ONLY = flag('plan');
+const RETRY_FAILED = flag('retry-failed');
+const EVIDENCE = path.join(REPO, 'dev_configs/smoke-evidence.json');
 
 // A 15-minute failure on a rented GPU with no record is a failure you diagnose by
 // guessing. The second matrix's minimax-h3/t2v_ms timeout had NO evidence anywhere:
@@ -982,13 +985,129 @@ function checkPodLock() {
     return false;
 }
 
+// ── 5. Evidence: merge a scoped run instead of replacing the record ──────────
+// smoke-evidence.json used to be a whole-run snapshot written with a bare writeFileSync,
+// so `--models minimax-h3` left a file reading "2 pass, 0 fail" that release:check
+// ACCEPTS — worse than failing, because a release would then ship a bumped engine on two
+// proven ops with the record of the other 33 destroyed. Coverage is reported, never gated
+// (release-health-check.mjs § checkSmokeEvidence), so nothing downstream catches it.
+
+/** The pinned ComfyUI, unprefixed. The engine every row in a mergeable file must describe. */
+function pinnedEngine() {
+    return String(JSON.parse(readFileSync(path.join(REPO, 'dev_configs/node_lock.json'), 'utf8'))?.comfyui?.core?.tag || '').replace(/^v/, '');
+}
+
+/**
+ * The prior evidence a scoped run must merge into, or null when there is none to merge.
+ * Runs BEFORE anything is rented: a file that cannot be merged has to be caught while
+ * refusing is still free.
+ *
+ * Two guards, and the second is the pin check — the MpiNodes pins live in node_lock too,
+ * so a prior file older than node_lock's last commit describes a different engine even
+ * when its version string matches. Same anchor release-health-check.mjs uses for
+ * staleness, deliberately: evidence this runner is willing to keep must be evidence that
+ * gate is willing to accept.
+ * @returns {object|null}
+ */
+function loadMergeBase() {
+    if (!existsSync(EVIDENCE)) return null;
+    let prior;
+    try { prior = JSON.parse(readFileSync(EVIDENCE, 'utf8')); }
+    catch { die('dev_configs/smoke-evidence.json is unreadable — delete it and run the full matrix.'); }
+    if (!Array.isArray(prior?.results)) die('dev_configs/smoke-evidence.json has no results array — delete it and run the full matrix.');
+
+    const want = pinnedEngine();
+    const got = String(prior?.engine?.got || '').replace(/^v/, '');
+    if (got !== want) {
+        die(`dev_configs/smoke-evidence.json records engine ${got || '(unrecorded)'}, node_lock pins ${want}.`
+            + ` A scoped run may not merge into another engine's evidence — run the FULL matrix.`);
+    }
+    let pinMovedAt = null;
+    try {
+        pinMovedAt = execFileSync('git', ['log', '-1', '--format=%cI', '--', 'dev_configs/node_lock.json'],
+            { cwd: REPO, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    } catch { /* no git / shallow clone — the version guard above still stands */ }
+    if (pinMovedAt && prior.at && new Date(prior.at) < new Date(pinMovedAt)) {
+        die(`dev_configs/smoke-evidence.json is STALE — recorded ${prior.at}, node_lock.json last changed ${pinMovedAt}.`
+            + ` Those rows describe the engine BEFORE the pin moved — run the FULL matrix.`);
+    }
+    return prior;
+}
+
+/**
+ * Fresh rows OVER prior rows, keyed model/op. Every row carries the run that produced it,
+ * so a merged file can never pass off an old pass as part of this run.
+ * Coverage is the UNION of the two runs — a model is unproven only when NEITHER touched
+ * its family — because the merged file's claim is what a reader will act on.
+ */
+function mergeEvidence(prior, fresh) {
+    const key = (r) => `${r.model}/${r.op}`;
+    const rows = new Map(prior.results.map(r => [key(r), { ...r, run: r.run || prior.at }]));
+    for (const r of fresh.results) rows.set(key(r), { ...r, run: fresh.at });
+    const results = [...rows.values()];
+    const n = (s) => results.filter(r => r.status === s).length;
+
+    const pScope = prior.scope || null;
+    const scope = {
+        requested: 'merged',
+        modelsRun: [...new Set([...(pScope?.modelsRun || []), ...fresh.scope.modelsRun])],
+        covers: [...new Set([...(pScope?.covers || []), ...fresh.scope.covers])],
+        // No prior scope = a file that cannot say what it left out; it may not narrow this one.
+        unproven: pScope?.unproven ? fresh.scope.unproven.filter(id => pScope.unproven.includes(id)) : fresh.scope.unproven,
+        modelsInRegistry: fresh.scope.modelsInRegistry,
+    };
+    const skippedWeights = (prior.skippedWeights || []).filter(w => (fresh.skippedWeights || []).includes(w));
+    const limits = [
+        ...fresh.limits.filter(l => !l.startsWith('SCOPED RUN:')),
+        ...(scope.unproven.length
+            ? [`SCOPED RUN: ${scope.unproven.length} of ${scope.modelsInRegistry} models are in no family EITHER run touched — ${scope.unproven.join(', ')}.`]
+            : []),
+    ];
+    return {
+        ...fresh,
+        results,
+        counts: { pass: n('PASS'), skip: n('SKIP'), fail: n('FAIL'), opsPlanned: results.length },
+        runs: [...new Set(results.map(r => r.run))].sort(),
+        scope, limits, skippedWeights,
+    };
+}
+
+/** Narrow a resolved set to specific model/op pairs, preserving the run-level props hung off the array. */
+function filterOps(set, keep) {
+    for (const e of set) e.ops = e.ops.filter(op => keep.has(`${e.model.id}/${op}`));
+    const kept = set.filter(e => e.ops.length);
+    if (!kept.length) die(`none of the ops to retry resolve to a workflow: ${[...keep].join(', ')} — run the full matrix.`);
+    return Object.assign(kept, {
+        totalGb: set.totalGb, depIds: set.depIds, skippedWeights: set.skippedWeights,
+        scope: { ...set.scope, modelsRun: kept.map(e => e.model.id) },
+    });
+}
+
 let reg_resolveFile = () => null;
 
 async function main() {
     const reg = await loadRegistry();
     reg_resolveFile = (m, op) => reg.resolveWorkflowFile(m, op, ENGINE, { variantTokens: { arch: ARCH } });
-    const only = opt('models')?.split(',').map(s => s.trim()).filter(Boolean);
-    const set = resolveSmokeSet(reg, only);
+    let only = opt('models')?.split(',').map(s => s.trim()).filter(Boolean);
+
+    // A scoped run REPLACED the evidence file until MPI-501's session. Resolve the merge
+    // base first: every reason to refuse is knowable now, and refusing is only free now.
+    let prior = null, opFilter = null;
+    if (RETRY_FAILED) {
+        prior = loadMergeBase();
+        if (!prior) die('--retry-failed reads the failures from dev_configs/smoke-evidence.json, and there is none. Run the full matrix first.');
+        const failed = prior.results.filter(r => r.status !== 'PASS');
+        if (!failed.length) { log(`\n--retry-failed: all ${prior.results.length} recorded ops already PASS. Nothing to run, nothing to rent.\n`); return; }
+        only = [...new Set(failed.map(r => r.model))];
+        opFilter = new Set(failed.map(r => `${r.model}/${r.op}`));
+        log(`\n--retry-failed: ${failed.length} op(s) not PASS in the recorded matrix — ${[...opFilter].join(', ')}`);
+        log(`  the other ${prior.results.length - failed.length} row(s) are kept and re-stamped, not re-run.`);
+    } else if (only?.length) {
+        prior = loadMergeBase();
+    }
+
+    let set = resolveSmokeSet(reg, only);
+    if (opFilter) set = filterOps(set, opFilter);
     const opCount = printPlan(reg, set);
     const preflightFails = preflightOps(reg, set);
     const podLockOk = checkPodLock();
@@ -1134,6 +1253,12 @@ async function main() {
         { gpuTypeId: gpu.id, volumeId: volume.id, datacenter: DATACENTER, minMemoryInGb: MIN_RAM_GB },
         'GPU Pod', 20 * 60 * 1000, 2);
     const engine = await assertPodEngineVersion();
+    // The pre-flight guard compared the prior file to node_lock; this compares it to what
+    // the Pod actually reported. They differ under --allow-unproven-engine, where `got` is
+    // null and merging would fold rows of unknown provenance into a proven file.
+    if (prior && String(prior.engine?.got || '') !== String(engine.got || '')) {
+        await abort(`this Pod reports engine ${engine.got || '(unproven)'} but dev_configs/smoke-evidence.json records ${prior.engine?.got || '(unrecorded)'} — refusing to merge two engines into one file.`);
+    }
 
     const probe = await stageProbeImage();
     const results = [];
@@ -1178,8 +1303,13 @@ async function main() {
         ],
         skippedWeights: set.skippedWeights,
     };
-    writeFileSync(path.join(REPO, 'dev_configs/smoke-evidence.json'), JSON.stringify(evidence, null, 2) + '\n');
+    const final = prior ? mergeEvidence(prior, evidence) : evidence;
+    writeFileSync(EVIDENCE, JSON.stringify(final, null, 2) + '\n');
     log(`evidence: dev_configs/smoke-evidence.json`);
+    if (prior) {
+        log(`  MERGED — ${evidence.results.length} fresh row(s) over ${prior.results.length} prior;`
+            + ` now PASS ${final.counts.pass} · SKIP ${final.counts.skip} · FAIL ${final.counts.fail} across ${final.results.length} ops.`);
+    }
 
     if (!flag('keep-volume')) {
         log(`\nVolume ${volume.id} (${volume.size} GB): keep ≈ $20/month · delete = ~${set.totalGb.toFixed(0)} GB re-downloaded next run (hours, pennies).`);
@@ -1192,7 +1322,9 @@ async function main() {
     await app('/remote/pod/delete-active', { method: 'POST' }).catch(() => log('  ⚠ could not delete the Pod — check RunPod.'));
     _podLive = false;
 
-    if (n('FAIL')) process.exit(1);
+    // The MERGED counts, not this run's: the exit code answers "is the recorded matrix
+    // green?", which is the same question release:check asks of the file just written.
+    if (final.counts.fail) process.exit(1);
 }
 
 // THIS MODULE RENTS HARDWARE WHEN IT LOADS — or it did until this guard. `main()` was
@@ -1211,7 +1343,7 @@ const INVOKED_DIRECTLY = !!process.argv[1]
 // applyFastTier / minimizeGraph / summarizeNodeErrors / injectByTitle / hotStoreFiles
 // already carry inline `export` — which is the point: this file was ALWAYS a module
 // someone meant to import, and the bare main() call made doing so cost money.
-export { requiredInputHoles, prepOp, loadRegistry, healSeparators };
+export { requiredInputHoles, prepOp, loadRegistry, healSeparators, mergeEvidence };
 
 // demo(): the pure half runs with no app, no Pod, no network.
 if (INVOKED_DIRECTLY && flag('self-check')) {

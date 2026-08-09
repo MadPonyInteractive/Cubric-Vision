@@ -5,7 +5,7 @@
   "title": "MPI-467 - nvidia_pid crop re-export sync + gate 9 re-verify",
   "workspace": "c:/AI/Mpi/Cubric-Vision",
   "branch": "master",
-  "status": "handoff_ready",
+  "status": "closed",
   "started_at": "2026-08-09T02:22:00Z",
   "heartbeat_at": "2026-08-09T04:00:00Z",
   "recent_events": [
@@ -16,6 +16,10 @@
     {
       "at": "2026-08-09T04:00:00Z",
       "event": "handoff_ready"
+    },
+    {
+      "at": "2026-08-09T04:05:00Z",
+      "event": "session_closed"
     }
   ]
 }

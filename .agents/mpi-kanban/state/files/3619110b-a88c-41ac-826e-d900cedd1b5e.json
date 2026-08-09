@@ -1,0 +1,25 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "3619110b-a88c-41ac-826e-d900cedd1b5e",
+  "path": "routes/remoteModels.js",
+  "owner_session": ".agents/mpi-kanban/state/sessions/6a882016-2445-415a-8f2a-5a3bb1deb424.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/state/tasks/4cc0d2e7-00c8-4a15-b107-f66c26a6fb6c.json",
+  "status": "complete",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-08-09T04:40:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-09T04:05:00Z",
+      "event": "claimed_for_write"
+    },
+    {
+      "at": "2026-08-09T04:40:00Z",
+      "event": "completed"
+    }
+  ]
+}

@@ -469,3 +469,68 @@ Re-renting 34 green ops to retest one is waste. Three steps instead:
 
 Then one ~10-12 min L4 leg gets `fail: 0` with full coverage retained, and every future targeted
 retest is cheap rather than a special case.
+
+
+---
+
+## 2026-08-09 — the runner can now retest ONE op without destroying the record
+
+Items 1-3 of the handoff are done; item 4 (the GPU leg) is the only thing left before this
+card's evidence is clean.
+
+**MPI-501 fixed at all three `restart-comfy` callers** — detail on that card's validation.md.
+The one that matters for a matrix: the renderer's generation gate now drains `/queue` and
+REFUSES rather than terminating a prompt mid-sample.
+
+**`scripts/smoke-workflows.mjs` merges instead of overwriting.** The real defect was never the
+coverage check (that is reported, never gated) — it was that the evidence file is a whole-run
+snapshot, so `--models minimax-h3` would have written `2 pass · 0 fail`, a file `release:check`
+ACCEPTS, with the other 33 proven ops destroyed. Now: fresh rows over prior rows keyed
+`model/op`, every row stamped with the `run` that produced it, counts recomputed off the merge,
+coverage the UNION (unproven only when NEITHER run touched the family), skipped weights the
+intersection. Guarded twice, both BEFORE anything is rented — prior `engine.got` must equal the
+pinned tag (re-checked against what the Pod actually reports, which catches
+`--allow-unproven-engine`), and the prior file must not predate `node_lock.json`'s last commit
+(the MpiNodes pins live there too). Either mismatch refuses and demands a full matrix.
+
+**`--retry-failed`** reads the evidence, runs only the ops that are not PASS, and implies the
+merge. Verified offline: `--retry-failed --plan` resolves to exactly `minimax-h3/t2v_ms`,
+1 model · 1 op · 49.5 GB, and all four `--plan` gates stay green (pod lock + python_deps in
+sync with v0.30.0, every Mpi* class_type present at MpiNodes 43a976fd, 34 shipped graphs sweep
+clean on required inputs). It exits 0 with nothing rented when every recorded op passes.
+
+3 asserts-groups green in `tests/smoke-evidence-merge.test.cjs`, including the case that proves
+a merged file stops claiming SCOPED once the union closes the gap. Playbook updated:
+`docs/playbooks/bump-engine/01-smoke-run.md` § "Re-running only what failed".
+
+**Left to do:** ONE ~10-12 min L4 leg with `--retry-failed --keep-volume`, which should take the
+recorded matrix to 35 PASS / 0 FAIL with full coverage retained. Not started — the user is
+asked before any GPU is rented.
+
+
+### The leg ran — 2026-08-09 04:15-04:22Z
+
+L4 `hz8cs0ek8mvwjl` (RAM floor 48GB via GraphQL), volume `aghcuvg7nl` reused, CPU Pod
+`maxuhhqgxsgq1u` for the install leg. Gate 7 clear: Pod image built from 0.30.0, matches
+node_lock. `installs verified: no failed deps` (weights already on the volume).
+
+```
+PASS minimax-h3/t2v_ms (123s, 1 out)
+PASS 1 · SKIP 0 · FAIL 0
+MERGED — 1 fresh row(s) over 35 prior; now PASS 35 · SKIP 0 · FAIL 0 across 35 ops.
+```
+
+The merged file: `at` 04:21:46Z, `engine.got` 0.30.0 proven, 35 rows carrying two `runs`
+(34 stamped 03:31:15Z, 1 stamped 04:21:46Z), `scope.requested: "merged"`, `unproven: []`,
+no `SCOPED RUN:` line in `limits`, `skippedWeights` down to 9 by intersection.
+
+`npm run release:check` -> **passed**, printing `Smoke evidence covers all 20 models (12 run,
+rest by class_type dedupe)`. That is the whole point of the merge: a scoped run that keeps the
+full claim instead of destroying it.
+
+**Both Pods confirmed gone** — `GET /runpod/pods/hz8cs0ek8mvwjl` and `.../maxuhhqgxsgq1u` both
+404. Volume kept.
+
+**One thing this run did NOT prove:** MPI-501's drain-wait. No restart was requested during the
+leg (`universal nodes: 7/7 already on volume`, no `/proxy/restart-comfy` in app.log), so the
+guard never fired. Detail on that card.

@@ -3,11 +3,11 @@
   "id": "MPI-467",
   "title": "Smoke-run every workflow when ComfyUI is bumped - and give the engine bump a playbook",
   "description": "MPI-465 shipped a totally dead LTX to users for six days because a ComfyUI bump changed a return type under a custom node and NOTHING executes a workflow before release. The engine bump also has no skill and no playbook - mpi-bump-local-comfy only touches the BENCH at G:/ComfyUi, not node_lock's core pin. Build a smoke matrix that EXECUTES a minimal generation per workflow, and hang it off a real engine-bump playbook. SCOPE SPLIT (MPI-468, 2026-08-07): this card owns the GUARD - docs/playbooks/bump-engine/, the smoke runner, and the mpi-release refusal. The in-place upgrade path and the bump skill are MPI-457. Dispatch notes for a cold session are in brief.md; hand the agent MPI-468.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-07T01:40:00Z",
-  "updated_at": "2026-08-09T02:30:00Z",
+  "updated_at": "2026-08-09T04:50:00Z",
   "labels": [
     "testing",
     "engine",
@@ -27,13 +27,14 @@
     "checklist": "checklist.md",
     "validation": "validation.md",
     "events": "events.jsonl",
-    "handoffs": "handoffs/"
+    "handoffs": "handoffs/",
+    "files": "files.json"
   },
   "priority": "high",
   "attention": {
-    "state": "required",
-    "updated_at": "2026-08-09T02:30:00Z",
-    "reason": "ONE FULL MATRIX away from clean evidence, and nothing else blocks it. The nvidia_pid crop is fixed and re-exported (9b631513); gate 9 sweeps all 34 graphs clean at MpiNodes 43a976fd via the 48188 engine; pod lock + python_deps in sync with v0.30.0. Costs a rented GPU so it needs the user present. Budget 330 GB of volume (12 models / 35 ops / 288.0 GB), not the old 320. Turn 'Stage all models on connect' back ON - the last matrix ran entirely on cold volume reads. NEVER --models: it overwrites smoke-evidence.json with only those models and trips the coverage check. Also owed to MPI-491: the GPU-image _download_hf rate on controlnet-union-flux."
+    "state": "none",
+    "updated_at": "2026-08-09T04:50:00Z",
+    "reason": "Closed on clean evidence: 35 PASS / 0 SKIP / 0 FAIL, release:check passes reporting full coverage."
   },
   "activeSessionTitle": "nvidia_pid crop synced + gate 9 clean - awaiting the full matrix"
 }
