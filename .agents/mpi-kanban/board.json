@@ -46,10 +46,10 @@
       "MPI-481",
       "MPI-450",
       "MPI-468",
-      "MPI-467",
-      "MPI-465"
+      "MPI-467"
     ],
     "done": [
+      "MPI-465",
       "MPI-498",
       "MPI-495",
       "MPI-494",
@@ -105,7 +105,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-09T01:57:49Z",
+  "updated_at": "2026-08-09T03:55:00Z",
   "events": [
     {
       "at": "2026-08-08T19:20:00Z",
@@ -2588,6 +2588,15 @@
       "task": "MPI-502",
       "actor": "opus",
       "note": "Gate 9 needs a Pod-side twin - read /object_info from the wrapper to cover third-party and programmatic-INPUT_TYPES nodes"
+    },
+    {
+      "at": "2026-08-09T03:55:00Z",
+      "type": "task.moved",
+      "task": "MPI-465",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "note": "LTX is PROVEN ALIVE on the shipped engine. The card's own bar was 'close this on smoke-evidence.json, not another local check', and the third matrix reached the GPU stage for the first time: ltx-23-balanced/t2v_ms PASS 78s 1 media, i2v_ms PASS 42s 2 media, on L4 orxp87067tddah with gate 7 clear (Pod image built from 0.30.0, matches node_lock). Real wall-clock and real media, not the 4s no-op shape that let a dead graph read green. The LOCAL half was user-confirmed 2026-08-08. The matrix's one remaining failure is minimax-h3/t2v_ms = MPI-501, unrelated to LTX and tracked on MPI-467."
     }
   ]
 }

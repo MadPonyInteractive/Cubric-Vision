@@ -3,11 +3,11 @@
   "id": "MPI-465",
   "title": "LTX is DEAD in the SHIPPED release - KJNodes calls .to() on a ModelPatcher",
   "description": "All 12 shipped LTX graphs crash at the stage-1 sampler. ComfyUI f8a3fd9d made LatentUpscaleModelLoader return a ModelPatcher; KJNodes' LTX2SamplingPreviewOverride wrapper still did latent_upscale_model.to(device), and no patcher class has .to. The break landed in ComfyUI v0.29.0 and our engine pin crossed it on 2026-07-31 (v0.28.0 -> v0.29.2) - NOT the later H3 0.30.0 bump, which is what the first write of this card wrongly blamed. Both v1.3.0 and v1.3.1 ship v0.29.2 + KJNodes 7f43f2c, so every user on the current public release has had a dead LTX since 2026-08-01. Fixed by bumping the KJNodes pin to 35e5956; proven live on the bench.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-07T00:30:00Z",
-  "updated_at": "2026-08-08T04:55:00Z",
+  "updated_at": "2026-08-09T03:55:00Z",
   "labels": [
     "bug",
     "ltx",
@@ -23,12 +23,8 @@
   ],
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   },
-  "priority": "high",
-  "attention": {
-    "state": "required",
-    "reason": "LOCAL half CONFIRMED by the user 2026-08-08: LTX image-to-video ops all tested and passed on this machine (same for WAN and both H3 models). What is left is exactly one thing and it is not a human judgement - the REMOTE half, i.e. the Pod image running the 0.30.0 engine, which the MPI-467 smoke matrix proves. That run has been attempted 3x and has never reached the GPU stage; ~97 GB of the fill sits on volume aghcuvg7nl. Close this card on smoke-evidence.json, not on another local check.",
-    "updated_at": "2026-08-08T04:55:00Z"
-  }
+  "priority": "high"
 }
