@@ -1,0 +1,373 @@
+{
+  "1565": {
+    "inputs": {
+      "sampler_name": "lcm"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "1567": {
+    "inputs": {
+      "conditioning": [
+        "1572",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "1569": {
+    "inputs": {
+      "batch_size": 1,
+      "width": [
+        "1623",
+        0
+      ],
+      "height": [
+        "1623",
+        1
+      ]
+    },
+    "class_type": "EmptyChromaRadianceLatentImage",
+    "_meta": {
+      "title": "EmptyChromaRadianceLatentImage"
+    }
+  },
+  "1571": {
+    "inputs": {
+      "clip_name": "gemma_2_2b_it_elm_bf16.safetensors",
+      "type": "pixeldit",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "1572": {
+    "inputs": {
+      "clip": [
+        "1571",
+        0
+      ],
+      "text": [
+        "1587",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "1587": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "1594": {
+    "inputs": {
+      "add_noise": true,
+      "cfg": 1,
+      "model": [
+        "1598",
+        0
+      ],
+      "positive": [
+        "1595",
+        0
+      ],
+      "negative": [
+        "1567",
+        0
+      ],
+      "sampler": [
+        "1565",
+        0
+      ],
+      "sigmas": [
+        "1599",
+        0
+      ],
+      "latent_image": [
+        "1569",
+        0
+      ],
+      "noise_seed": [
+        "1628",
+        0
+      ]
+    },
+    "class_type": "SamplerCustom",
+    "_meta": {
+      "title": "SamplerCustom"
+    }
+  },
+  "1595": {
+    "inputs": {
+      "latent_format": "flux",
+      "positive": [
+        "1572",
+        0
+      ],
+      "latent": [
+        "1596",
+        0
+      ],
+      "degrade_sigma": [
+        "1606",
+        0
+      ]
+    },
+    "class_type": "PiDConditioning",
+    "_meta": {
+      "title": "PiD Conditioning"
+    }
+  },
+  "1596": {
+    "inputs": {
+      "pixels": [
+        "1624",
+        0
+      ],
+      "vae": [
+        "1597",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "1597": {
+    "inputs": {
+      "vae_name": "ae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "PiD_VAE"
+    }
+  },
+  "1598": {
+    "inputs": {
+      "unet_name": "pid_flux1_1024_to_4096_4step_bf16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "1599": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 4,
+      "denoise": 1,
+      "model": [
+        "1598",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "1606": {
+    "inputs": {
+      "float": 0
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Denoise"
+    }
+  },
+  "1609": {
+    "inputs": {
+      "size": 1024,
+      "side": true,
+      "upscale_method": "lanczos",
+      "image": [
+        "1626",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "1623": {
+    "inputs": {
+      "size": 4096,
+      "side": true,
+      "upscale_method": "lanczos",
+      "image": [
+        "1624",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "1624": {
+    "inputs": {
+      "divisible_by": 16,
+      "position": "center",
+      "image": [
+        "1609",
+        3
+      ],
+      "width": [
+        "1609",
+        0
+      ],
+      "height": [
+        "1609",
+        1
+      ]
+    },
+    "class_type": "MpiCrop",
+    "_meta": {
+      "title": "Mpi Crop"
+    }
+  },
+  "1626": {
+    "inputs": {
+      "string": "C:\\Users\\Fabio\\Downloads\\v1.3.png",
+      "channel": "alpha",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "1628": {
+    "inputs": {
+      "int": 416
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "1629": {
+    "inputs": {
+      "vae_name": "pixel_space"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "1630": {
+    "inputs": {
+      "images": [
+        "1631",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "1631": {
+    "inputs": {
+      "select": 1,
+      "any_1": [
+        "1632",
+        3
+      ],
+      "any_2": [
+        "1633",
+        3
+      ],
+      "any_3": [
+        "1635",
+        3
+      ],
+      "any_4": [
+        "1636",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Input_Resolution"
+    }
+  },
+  "1632": {
+    "inputs": {
+      "size": 1024,
+      "side": true,
+      "upscale_method": "lanczos",
+      "image": [
+        "1636",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "1633": {
+    "inputs": {
+      "size": 2048,
+      "side": true,
+      "upscale_method": "lanczos",
+      "image": [
+        "1636",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "1635": {
+    "inputs": {
+      "size": 3072,
+      "side": true,
+      "upscale_method": "lanczos",
+      "image": [
+        "1636",
+        0
+      ]
+    },
+    "class_type": "MpiScaledDimensions",
+    "_meta": {
+      "title": "Mpi Scaled Dimensions"
+    }
+  },
+  "1636": {
+    "inputs": {
+      "samples": [
+        "1594",
+        0
+      ],
+      "vae": [
+        "1629",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  }
+}

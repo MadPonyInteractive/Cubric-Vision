@@ -36,6 +36,13 @@ HANDLERS = [
                              # derives from which media is present (has_img1/has_img2 through
                              # lazy MpiIfElse), so illegal states are unreachable. Bakes the
                              # bench's leftover media paths / canvas / stage flags away.
+    ("nvidia_pid_", "pid"),  # MPI-507: nvidia_pid_template.json — ONE single-branch graph → FOUR
+                             # runtime files, one per VAE-locked path. Bakes UNETLoader.unet_name,
+                             # PiD_VAE.vae_name and PiDConditioning.latent_format. Four FILES rather
+                             # than one injected graph because each path is its own plugin: an
+                             # unknown COMBO value on any output-reachable node is rejected by
+                             # validate_prompt BEFORE execution, so one graph naming all four
+                             # weights would fail for a user holding a single plugin.
     ("klein_",    "klein"),  # MPI-354: klein_t2i_template.json — ONE MASTER graph → ONE runtime
                              # file. Every op (t2i/i2i/depth/edit/inpaint/detail/upscale) lives
                              # in this one graph and is selected by the injected Input_wf_type;
