@@ -3,11 +3,11 @@
   "id": "MPI-456",
   "title": "Collapse the _stage2 workflow twins on WAN (LTX half rides MPI-466)",
   "description": "Eight _stage2 duplicate workflows exist only because ExecutionBlocker travels DOWNSTREAM ONLY and an OUTPUT_NODE is always executed, so gating after a sampler never stopped that sampler. MPI-449 fixed both forcing paths (lazy MpiBlocker input 42b1540, lazy MpiSaveLatent.enabled fd9bdca, both live-proved) and shipped the pin, so the twins are now removable. Measured 2026-08-06: the SIX LTX twins are 119 vs 119 nodes and differ by exactly ONE widget - Input_Is_Continue false -> true - so they are pure duplication the app could inject instead of swapping filenames. The TWO WAN twins are 68->67 and 55->54 nodes, each missing Stage1_Bypass (SamplerCustom), which is the OUTPUT_NODE forcing problem and needs the lazy gates. Cross-cutting: also touches how the app resolves stage 2 (the _stage2 filename swap in commandExecutor.js and routes/comfy.js). SPLIT 2026-08-07: the LTX half is no longer this card. The user re-exported LTX as ONE graph carrying Input_Video_Latent and Output_Preview together, so the six LTX twins die inside MPI-466 as part of the int8 re-wire. What remains here is WAN: the two twins at 68->67 and 55->54 nodes, each missing Stage1_Bypass, plus the shared question of narrowing the _stage2 filename-swap path once no model needs it.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-06T06:05:00Z",
-  "updated_at": "2026-08-07T01:47:30Z",
+  "updated_at": "2026-08-09T07:50:00Z",
   "labels": [
     "workflow",
     "ltx",
@@ -24,7 +24,8 @@
   ],
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   },
   "priority": "normal",
   "attention": false
