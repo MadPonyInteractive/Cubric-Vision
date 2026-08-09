@@ -136,3 +136,37 @@ list — `Input_Positive`/`Input_Negative` → `string` `''`, `Input_Seed` → `
 alongside the weight/tier/bypass bakes. `_find_by_title` no-ops on absent nodes, so one list
 covers every template. (`generate_krea2.py` is the reference.) Injected WEIGHTS
 (tier/weight/bypass/LoRAs) are baked by their own forced helpers, not scrubbed here.
+
+## Three traps that fail SILENTLY (MPI-507)
+
+All three cost a round trip on the PiD template and none of them errors.
+
+**1. The source filename must match `/_template\.json$/i`.** That regex
+(`sync-raw-workflows.mjs`) is the only thing separating a generator SOURCE from a
+runtime file. Miss it — `nvidia_pid_tempate.json` — and sync converts it straight to
+`comfy_workflows/<name>.json` as a runtime graph; `orchestrate.py` globs
+`*_template.json` and never sees it, so no handler ever runs and nothing says why.
+
+**2. A BAKE target takes a bare title. Never `Input_*`.** That prefix is the app's
+runtime-injection contract: *"the app injects ONLY `Input_*` nodes and reads
+`Output_*`"* (`validate-injection-rules.mjs`). A node the generator stamps at build
+time is not injected at run time, so `Input_VAE` on a baked `VAELoader` advertises a
+control that does not exist. Use a bare descriptive title — `Checkpoint`
+(`generate_sdxl.py`), `PiD_VAE` (`generate_pid.py`), or the node's own default name
+(`"Load Diffusion Model"`) when it is unique. It passes validation either way, which
+is exactly why it goes unnoticed.
+
+> Every *other* example on this page bakes a **selector** (`Input_Tier`,
+> `Input_Text_to_video`) whose title is legitimately `Input_*` because the app also
+> injects it. A **weight** bake is the opposite case. Do not pattern-match off the
+> tier examples.
+
+**3. Two nodes of the same class with default titles make `_find_by_title` a coin
+flip.** It returns whichever comes first in iteration order, and node order changes on
+every re-export. The PiD template carries two `VAELoader`s — the architecture VAE and a
+shared `pixel_space` one — so an untitled pair would have stamped `ae.safetensors` onto
+the pixel-space loader and left the real VAE on the previous variant's weight. Four
+files that pass `validate-injection-rules.mjs`, load without error, and render wrong.
+**Title the one you bake** before exporting. Assert it in the handler too:
+`generate_pid.py` skips the variant with a `[WARN]` when its title is absent, rather
+than writing a half-baked file.
