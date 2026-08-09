@@ -4,7 +4,7 @@
   "generated_at": "2026-08-09T02:11:18Z",
   "from_session": ".agents/mpi-kanban/state/sessions/77f72b70-b77f-4ec5-ad3d-936374d4760e.json",
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-467 - h3/t2v_ms CLOSED live; runner made self-diagnosing; gate 9 shipped",
     "branch": "master"
@@ -132,6 +132,11 @@
     {
       "at": "2026-08-09T02:11:18Z",
       "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-09T04:00:00Z",
+      "event": "superseded",
+      "by": ".agents/mpi-kanban/state/handoffs/18f70349-a282-4be3-9d7f-8d60930afb65.json"
     }
   ],
   "resume_prompt": "You are resuming MPI-467. THE PREVIOUS HANDOFF'S NAMED FIRST TASK IS DONE: minimax-h3/t2v_ms PASSED live at 216s, 1 media, clean node_errors. There was never a t2v defect - a REQUESTED ComfyUI restart killed the prompt, and the user reproduced the trigger himself (a remote node install sets state.remoteComfyNeedsRestart and comfyController.js:543 restarts without checking the queue; carded MPI-501). Do NOT re-diagnose it, and do NOT resurrect OOM - a ComfyUI crash takes the whole container down (os._exit(1), no respawn in start.sh), so a Pod that kept answering PROVES a requested restart. The runner is now self-diagnosing: an ISO-stamped transcript at dev_configs/smoke-run.txt, orphan detection that fails in ~30s naming the mechanism instead of 15 minutes of 'timed out', and gate 9 (required inputs, all 34 shipped graphs, live /object_info, pin-gated, never parses source) which replays MPI-498's exact six nodes red and HEAD clean. It is also finally SAFE TO IMPORT - it used to run a live matrix on import and rented an L4 by accident. YOUR BLOCKER IS NOT DIAGNOSIS ANY MORE: nvidia_pid has a SECOND defect the user found the moment MPI-498's fix let it produce output - the result is CROPPED (896x1088 in, 832x1024 out, heads cut off) because MpiCrop node 1624 takes the ORIGINAL image with SCALED dimensions. He is fixing it with one wire (MpiCrop.image -> 1609:3 scaled_image) and re-exporting through sync-raw-workflows.mjs against the 48188 bench. WAIT for that, run gate 9 offline to confirm the graph is clean, THEN ASK BEFORE RENTING - one FULL matrix, never --models (it overwrites smoke-evidence.json and discards the other passes), with 'Stage all models on connect' turned back ON. Never delete volume aghcuvg7nl. Do not edit smoke-evidence.json by hand - release:check refuses its 2 failures and that is correct. One approval is pending: a two-line heal to .claude/rules/kanban.md saying active_tasks holds PATHS to state/tasks/<uuid>.json records, not bare MPI-nnn ids, because a bare id fails whole-board validation."
