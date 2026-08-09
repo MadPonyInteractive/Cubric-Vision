@@ -2,7 +2,7 @@
   "id": "b7203ad8-1d79-4f1b-9c51-5818c6501c66",
   "revision": 0,
   "last_node_id": 459,
-  "last_link_id": 717,
+  "last_link_id": 719,
   "nodes": [
     {
       "id": 179,
@@ -136,7 +136,7 @@
         186
       ],
       "flags": {},
-      "order": 86,
+      "order": 85,
       "mode": 0,
       "inputs": [
         {
@@ -216,7 +216,7 @@
         186
       ],
       "flags": {},
-      "order": 89,
+      "order": 87,
       "mode": 0,
       "inputs": [
         {
@@ -296,7 +296,7 @@
         186
       ],
       "flags": {},
-      "order": 92,
+      "order": 90,
       "mode": 0,
       "inputs": [
         {
@@ -376,7 +376,7 @@
         186
       ],
       "flags": {},
-      "order": 97,
+      "order": 93,
       "mode": 0,
       "inputs": [
         {
@@ -456,7 +456,7 @@
         186
       ],
       "flags": {},
-      "order": 99,
+      "order": 98,
       "mode": 0,
       "inputs": [
         {
@@ -616,7 +616,7 @@
         186
       ],
       "flags": {},
-      "order": 102,
+      "order": 100,
       "mode": 0,
       "inputs": [
         {
@@ -696,7 +696,7 @@
         60
       ],
       "flags": {},
-      "order": 77,
+      "order": 78,
       "mode": 0,
       "inputs": [
         {
@@ -1708,7 +1708,7 @@
         98
       ],
       "flags": {},
-      "order": 69,
+      "order": 70,
       "mode": 0,
       "inputs": [
         {
@@ -2347,7 +2347,7 @@
         58
       ],
       "flags": {},
-      "order": 71,
+      "order": 72,
       "mode": 0,
       "inputs": [
         {
@@ -2429,7 +2429,7 @@
         106
       ],
       "flags": {},
-      "order": 70,
+      "order": 71,
       "mode": 0,
       "inputs": [
         {
@@ -2491,7 +2491,7 @@
         58
       ],
       "flags": {},
-      "order": 78,
+      "order": 79,
       "mode": 0,
       "inputs": [
         {
@@ -2770,7 +2770,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 93,
+      "order": 94,
       "mode": 0,
       "inputs": [
         {
@@ -2933,7 +2933,7 @@
         46
       ],
       "flags": {},
-      "order": 88,
+      "order": 89,
       "mode": 0,
       "inputs": [
         {
@@ -2975,7 +2975,7 @@
         26
       ],
       "flags": {},
-      "order": 98,
+      "order": 99,
       "mode": 0,
       "inputs": [
         {
@@ -3178,7 +3178,7 @@
         78
       ],
       "flags": {},
-      "order": 79,
+      "order": 80,
       "mode": 0,
       "inputs": [
         {
@@ -3232,7 +3232,7 @@
         78
       ],
       "flags": {},
-      "order": 73,
+      "order": 74,
       "mode": 0,
       "inputs": [
         {
@@ -3492,7 +3492,7 @@
         60
       ],
       "flags": {},
-      "order": 74,
+      "order": 75,
       "mode": 0,
       "inputs": [
         {
@@ -3610,7 +3610,7 @@
         326
       ],
       "flags": {},
-      "order": 82,
+      "order": 83,
       "mode": 0,
       "inputs": [
         {
@@ -3677,7 +3677,7 @@
         150
       ],
       "flags": {},
-      "order": 85,
+      "order": 86,
       "mode": 0,
       "inputs": [
         {
@@ -3736,7 +3736,7 @@
         78
       ],
       "flags": {},
-      "order": 72,
+      "order": 73,
       "mode": 0,
       "inputs": [
         {
@@ -3787,7 +3787,7 @@
         334
       ],
       "flags": {},
-      "order": 95,
+      "order": 96,
       "mode": 2,
       "inputs": [
         {
@@ -3865,7 +3865,7 @@
         26
       ],
       "flags": {},
-      "order": 91,
+      "order": 92,
       "mode": 0,
       "inputs": [
         {
@@ -3904,7 +3904,7 @@
         46
       ],
       "flags": {},
-      "order": 94,
+      "order": 95,
       "mode": 0,
       "inputs": [
         {
@@ -3946,7 +3946,7 @@
         326
       ],
       "flags": {},
-      "order": 87,
+      "order": 88,
       "mode": 0,
       "inputs": [
         {
@@ -4045,7 +4045,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 90,
+      "order": 91,
       "mode": 0,
       "inputs": [
         {
@@ -4098,7 +4098,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 83,
+      "order": 84,
       "mode": 0,
       "inputs": [
         {
@@ -4196,7 +4196,7 @@
         150
       ],
       "flags": {},
-      "order": 96,
+      "order": 97,
       "mode": 0,
       "inputs": [
         {
@@ -4270,7 +4270,7 @@
         26
       ],
       "flags": {},
-      "order": 75,
+      "order": 76,
       "mode": 0,
       "inputs": [
         {
@@ -4305,7 +4305,7 @@
         78
       ],
       "flags": {},
-      "order": 80,
+      "order": 81,
       "mode": 0,
       "inputs": [
         {
@@ -4390,7 +4390,7 @@
         150
       ],
       "flags": {},
-      "order": 101,
+      "order": 102,
       "mode": 0,
       "inputs": [
         {
@@ -4546,7 +4546,7 @@
         334
       ],
       "flags": {},
-      "order": 100,
+      "order": 101,
       "mode": 2,
       "inputs": [
         {
@@ -4744,13 +4744,13 @@
         82
       ],
       "flags": {},
-      "order": 76,
+      "order": 69,
       "mode": 0,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 707
+          "link": 718
         }
       ],
       "outputs": [
@@ -4804,46 +4804,6 @@
       ]
     },
     {
-      "id": 456,
-      "type": "EasyCache",
-      "pos": [
-        -1491.6054012310422,
-        4078.6603673056557
-      ],
-      "size": [
-        270,
-        130
-      ],
-      "flags": {},
-      "order": 68,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 713
-        }
-      ],
-      "outputs": [
-        {
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            707
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "EasyCache"
-      },
-      "widgets_values": [
-        0.2,
-        0.15,
-        0.95,
-        true
-      ]
-    },
-    {
       "id": 458,
       "type": "GetNode",
       "pos": [
@@ -4888,7 +4848,7 @@
         78
       ],
       "flags": {},
-      "order": 81,
+      "order": 77,
       "mode": 0,
       "inputs": [
         {
@@ -4899,7 +4859,7 @@
         {
           "name": "false",
           "type": "*",
-          "link": 714
+          "link": 719
         },
         {
           "name": "boolean",
@@ -4927,48 +4887,6 @@
       ]
     },
     {
-      "id": 392,
-      "type": "UNETLoader",
-      "pos": [
-        -2181.189399703177,
-        4078.0245076486226
-      ],
-      "size": [
-        640,
-        90
-      ],
-      "flags": {},
-      "order": 48,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            713,
-            714
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "UNETLoader",
-        "cnr_id": "comfy-core",
-        "ver": "0.30.2",
-        "models": [
-          {
-            "name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
-            "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors",
-            "directory": "diffusion_models"
-          }
-        ]
-      },
-      "widgets_values": [
-        "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
-        "default"
-      ]
-    },
-    {
       "id": 390,
       "type": "CLIPLoader",
       "pos": [
@@ -4980,7 +4898,7 @@
         120
       ],
       "flags": {},
-      "order": 49,
+      "order": 48,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5022,7 +4940,7 @@
         186
       ],
       "flags": {},
-      "order": 84,
+      "order": 82,
       "mode": 0,
       "inputs": [
         {
@@ -5090,6 +5008,88 @@
         "minimax-h3\\minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors",
         1,
         1
+      ]
+    },
+    {
+      "id": 392,
+      "type": "UNETLoader",
+      "pos": [
+        -2181.189399703177,
+        4078.0245076486226
+      ],
+      "size": [
+        640,
+        90
+      ],
+      "flags": {},
+      "order": 49,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            713,
+            718
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UNETLoader",
+        "cnr_id": "comfy-core",
+        "ver": "0.30.2",
+        "models": [
+          {
+            "name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
+      },
+      "widgets_values": [
+        "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+        "default"
+      ]
+    },
+    {
+      "id": 456,
+      "type": "EasyCache",
+      "pos": [
+        -1486.2001783938008,
+        4157.036098445663
+      ],
+      "size": [
+        270,
+        130
+      ],
+      "flags": {},
+      "order": 68,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 713
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            719
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "EasyCache"
+      },
+      "widgets_values": [
+        0.2,
+        0.15,
+        0.95,
+        true
       ]
     }
   ],
@@ -5967,14 +5967,6 @@
       "BOOLEAN"
     ],
     [
-      707,
-      456,
-      0,
-      454,
-      0,
-      "MODEL"
-    ],
-    [
       708,
       459,
       0,
@@ -6023,14 +6015,6 @@
       "MODEL"
     ],
     [
-      714,
-      392,
-      0,
-      459,
-      1,
-      "MODEL"
-    ],
-    [
       715,
       390,
       0,
@@ -6053,6 +6037,22 @@
       246,
       1,
       "CLIP"
+    ],
+    [
+      718,
+      392,
+      0,
+      454,
+      0,
+      "MODEL"
+    ],
+    [
+      719,
+      456,
+      0,
+      459,
+      1,
+      "MODEL"
     ]
   ],
   "groups": [
@@ -6113,10 +6113,10 @@
     "VHS_MetadataImage": true,
     "VHS_KeepIntermediate": true,
     "ds": {
-      "scale": 0.6115909044841494,
+      "scale": 0.7400249944258209,
       "offset": [
-        2305.8751955472953,
-        -3632.2835523491553
+        2353.1168431447854,
+        -3736.6584053362894
       ]
     },
     "reroutes": [
