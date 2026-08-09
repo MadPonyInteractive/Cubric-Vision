@@ -112,3 +112,35 @@ in that path the app asked, not them. No change made there. The third caller
 
 **Remaining: one look.** Re-run the same steps and confirm the refusal now arrives as a
 warning toast instead of the dialog. The logic is proven; this is the pixel.
+
+
+## 2026-08-09 20:02Z — THE PIXEL. Toast confirmed, card closed.
+
+Proven against Fabio's own running app on `:3000` (he was benching on the standalone
+`:8188` install and cleared the app for use), with a `playwright-cli` real-pixel probe.
+`ui:warning` was emitted from the renderer carrying the **exact string** that
+`navigation.js:279` emits, and the DOM was read 400ms later:
+
+```
+mpi-toast mpi-toast--warning mpi-toast--open
+mpi-toast__label  "Heads up"
+mpi-toast__msg    "Restart cancelled — a generation is still running on the engine.
+                   Stop it, or wait for it to finish."
+crashDialogs: []      <- nothing matching /REPORT ON GITHUB|Error Summary/
+```
+
+Screenshot: `restart-refusal-toast.png` in this folder (copied out of `.playwright-cli/`,
+which is gitignored and gets wiped). Warning-orange dot, 6s progress bar, mascot — the
+ordinary toast, not the modal.
+
+**What this proves and what it does not.** It proves the surface: the channel
+`navigation.js` now emits on renders as a warning toast and cannot reach `showError`.
+It does not re-prove the guard — that was proven live at 19:00Z by Fabio's own restart
+click on a busy queue, and the emit sits **inside that same refusal branch**
+(`navigation.js:271-282`, the `if (!await ... waitForIdleQueue(...))` body), so no third
+state exists between "refused" and "this toast". Driving a real restart again was
+deliberately NOT done: the engine root is shared with his live app, so a restart that
+was *not* refused would have taken down the engine he is using.
+
+**Closed.** All three callers shipped, 10 asserts on the real helper, the guard proven
+live, and the refusal now reports as a by-design warning instead of a crash report.

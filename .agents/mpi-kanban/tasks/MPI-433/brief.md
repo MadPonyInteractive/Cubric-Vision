@@ -72,3 +72,28 @@ So step 5 of this card's rollback plan is now wrong in one detail: after the upl
 the mirror table goes to **31 / 66 / 0 of the 97 model deps**, and the three decoders
 stay listed separately as permanent `noMirror` engineAssets. Do not "restore" a line
 claiming zero single-route deps overall.
+
+
+## 2026-08-09 21:35Z - Fabio: this is going ahead, and it is THIS card
+
+Asked for the Krea 2 NSFW upload + fallback restore to be tracked; no new card was
+created because this one already covers it exactly (re-upload the weight, drop
+`noMirror`, restore the second route). Recorded rather than started, for one reason:
+
+**The card's own gate says 2026-08-10 and today is 2026-08-09** (GitHub ground truth
+`Sun, 09 Aug 2026 07:31:02 GMT`, local clock verified equal). Fabio's message says "today
+is the 9th of August, which means we will upload" - so either he means tomorrow, or he
+has confirmed coyotte's window is already open. **Step 1 of this card decides it and has
+not been run:** confirm CivitAI 573152 is actually public. That check needs the VPN
+(CivitAI region-blocks the UK and agent WebFetch can never reach it), and per MPI-430 the
+whole point of deferring was not to redistribute a weight while it is still inside a paid
+early-access window. One day early is exactly the case that rule exists for.
+
+So: gate stays. Nothing here changes `maturity: blocked` until step 1 passes - but the
+moment it does, steps 2-5 are unchanged and ready to run.
+
+**Release-note consequence, already checked.** `UNRELEASED.md:423` reads "Four files
+still have a single route". Restoring this one makes it three, so that line needs a
+one-word edit when the upload lands. It does NOT gate the cut either way: the bullet was
+deliberately reworded during Gate C to be true on both sides of this date, which is what
+settled MPI-450's ON-PICKUP step 2.

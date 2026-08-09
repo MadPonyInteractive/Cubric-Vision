@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "comfy_workflows/raw/minimax_h3_fl2va_template.json",
+    "comfy_workflows/raw/minimax_h3_r2va_template.json",
+    "comfy_workflows/raw/ltx_i2v_t2v_template.json",
+    "comfy_workflows/minimax_h3_fl2va.json",
+    "comfy_workflows/minimax_h3_r2va.json",
+    "comfy_workflows/ltx_i2v_t2v.json",
+    "comfy_workflows/ltx_i2v_t2v_int8.json",
+    "js/data/modelConstants/loraDeps.js",
+    "js/data/modelConstants/assetDeps.js",
+    "js/data/modelConstants/modelDeps.js",
+    "js/data/modelConstants/models.js",
+    "js/services/comfyController.js",
+    "docs/models/h3/turbo.md",
+    "docs/models/h3/performance.md"
+  ]
+}

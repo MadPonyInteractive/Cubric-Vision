@@ -58,7 +58,15 @@ Community Cloud is unsupported (unstable/limited for this use case).
     12.7, 12.6, 12.5, 12.4, 12.3, 12.2, 12.1, 12.0, 11.8` (an off-enum value → schema-400). All
     three floor values are in the enum; any future floor MUST be an enum member.
 - Telemetry: `GET /remote/pod/stats` (RAM+VRAM, wrapper-first), `GET /remote/pod/disk`
-  (volume USED bytes via wrapper `du`, wrapper-first, NO REST fallback — see §5; MPI-169).
+  (volume USED bytes via wrapper `du`, wrapper-first, NO REST fallback — see §5; MPI-169),
+  `GET /remote/pod/ls` (read-only passthrough of wrapper `/wrapper/ls` + an `accounting`
+  block; MPI-483). `accounting` compares the volume's two figures from ONE response:
+  `blockBytes` (`du -s --block-size=1`, what the quota counts) against `apparentBytes`
+  (`os.path.getsize` summed), and reports `phantomBytes = apparent − blocks` — the bytes a
+  partially-downloaded `.part` adds to one figure but not the other. Read it DURING a large
+  aria2 install; both halves must come from the same response, because `/wrapper/disk`
+  caches its `du` for 60s (invalidated only by an install completing or a delete) and the
+  app's `downloadedBytes` lags the wrapper by seconds — gigabytes at Pod download rates.
 - ComfyUI forwarding: `POST /proxy/prompt`, `/interrupt`, `/queue`, `/upload/image`;
   `GET /proxy/view`, `/queue`.
 - Companion routers: `routes/remoteEngine.js` (key resolver, wrapper-token gen/store/clear,

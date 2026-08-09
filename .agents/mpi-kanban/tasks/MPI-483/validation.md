@@ -141,3 +141,110 @@ throwaway-Pod session (which already pairs MPI-480 #3 and MPI-481):
 3. `GET /wrapper/disk` must now track RunPod's console figure, not run ~19% ahead of it.
 
 Until that runs, this card stays `doing/validating`.
+
+
+## 2026-08-09 21:00-21:30Z - live Pod session: wrapper 0.2.44 SHIPPED, the disk check INCONCLUSIVE
+
+**Wrapper 0.2.44 is live on the dev channel and boots.** `./publish-runtime.sh dev`
+published it (manifest `wrapper_version: 0.2.44`, sha
+`85ef00e1a172577a4d00aedee52ba22796a22cb17934997e888b5e5803b32d83`), and six CPU Pods
+created during this session all reported `wrapperVersion: 0.2.44` from
+`/remote/comfy/status`. **Consequence for the release: `mpi-release`'s manifest-diff stop
+will now report dev `0.2.44` vs stable `0.2.40`, and the answer is still PROMOTE.**
+
+**The measurement itself did not settle.** Two runs of the same experiment disagree, so
+this card does NOT close:
+
+| leg | .part age | app-reported downloaded | volume attributes to the .part | reads as |
+|---|---|---|---|---|
+| H | 14.1s | 3.44 GB (24.1%) | **13.61 GB** (95% of declared) | apparent |
+| I | 7.6s | 1.23 GB (8.6%) | **0.00 GB** | neither |
+
+Both used the same 14.31 GB R2/aria2 dep on a clean throwaway volume, and both forced a
+fresh `du` by invalidating the wrapper's cache. They cannot both be right, so the honest
+verdict is **inconclusive** - and a 95%-of-declared reading is emphatically not something
+to close a card on in either direction.
+
+### Why the app-side route cannot answer this question
+
+`/remote/pod/disk` is the wrong instrument, for three compounding reasons found the hard
+way:
+
+1. **`/wrapper/disk` caches `du` for 60s** (`_DISK_TTL_SEC`) and is invalidated only by an
+   install COMPLETING or a delete (`_disk_cache_invalidate`, two call sites) - never by an
+   install starting. So no sample taken during a download is fresh unless something else
+   is deleted at that instant. Every early sample in this session read the pre-install
+   number and looked like a flat zero delta.
+2. **The app's `downloadedBytes` lags the wrapper.** At the 250-460 MB/s this Pod pulled
+   from R2, a few seconds of lag is gigabytes, so it cannot adjudicate real-vs-apparent.
+3. **R2 is fast enough that the file finishes before an interrupt lands.** A Pod delete
+   takes several seconds to take effect and the download keeps running throughout: a
+   2.15 GB dep reached 99.96% and a 14.31 GB one went from 29% at kill to 59% and then
+   ~98% *after* `delete-active` returned `{deleted: true}`.
+
+### The instrument that WOULD answer it, and why it was not reachable
+
+`GET /wrapper/ls` already returns **both accountings for the same file at the same
+instant**: `top_level[].size_bytes` is `du -s --block-size=1` (allocated blocks) and
+`models_files[].size_bytes` is `os.path.getsize` (apparent). The wrapper's own comment at
+that route says the two totals "legitimately differ while a sparse `.part` file is on the
+volume" - which is exactly the quantity this card is about. One call, no timing games, no
+reliance on any byte counter.
+
+**No app route surfaces it**, and it cannot be called directly from this machine: egress
+to `https://<podId>-8889.proxy.runpod.net` fails outright (curl exit code 000) while the
+app reaches it fine from the server process. **So the concrete next step for this card is
+a small app route proxying `/wrapper/ls`** (or extending `/remote/pod/disk` with the
+`top_level` breakdown). After that the check is a single request against any Pod with a
+partial download.
+
+### A finding that may undercut the card's premise, and must be resolved first
+
+Leg I saw **0.00 GB on the volume for a `.part` the app said was 1.23 GB downloaded**, and
+the huggingface path behaves the same way: during the 24.55 GB `h3-qwen3vl-32b-clip`
+install the volume held **49,664 bytes** with 1.27 GB fetched, then jumped to the full
+26.37 GB when it completed. If a download in flight is staged OFF the volume and moved
+across on completion, then for those paths there is no partial `.part` on the volume to
+inflate `du` at all - and the card's model of the bug needs re-checking before its fix can
+be called right. Leg H contradicts this, which is precisely why the `/wrapper/ls`
+comparison is needed rather than more inference.
+
+### Standing decision, unchanged
+
+The full-disk phrase stays OUT of the `UNRELEASED.md` wake-up-install bullet. The Pod
+check did not pass, so the bullet must not lean on it as its trustworthy counterexample.
+
+
+## 2026-08-09 22:00Z - the instrument now exists: `GET /remote/pod/ls`
+
+Built at Fabio's go-ahead, so the next attempt at this card is ONE request instead of a
+Pod session. `routes/remotePodLifecycle.js` gained a read-only passthrough of the
+wrapper's `/wrapper/ls`, plus a pure `compareVolumeAccounting()` that does the comparison
+the card actually needs:
+
+- `blockBytes` - `du -s --block-size=1` for the directory holding MODELS_DIR (allocated
+  blocks; the same accounting `/wrapper/disk` and the volume quota use);
+- `apparentBytes` - the sum of `os.path.getsize` over the model files;
+- **`phantomBytes` = apparent - blocks** - what the pre-fix `du -sb` would have invented;
+- `countedDir` + `approximate`, because `models_files` walks MODELS_DIR while blocks are
+  reported per top-level dir, so the block figure is usually its ancestor's and can
+  include siblings. Named rather than hidden.
+
+Both halves come from ONE response at ONE instant, which is the entire point: the reason
+this card is still open is that the app-side route cannot be sampled honestly while a
+download runs.
+
+**Read `phantomBytes` while a big aria2 install is in flight.** A large positive value
+means sparse `.part` files are on the volume and the old accounting inflated usage by
+that much - the bug is real and the fix removes it. A value near zero means the
+filesystem allocated the whole declared length up front, in which case `du -sb` and
+`du -s --block-size=1` agree on RunPod volumes and **this card's premise does not hold**,
+which is the possibility leg I raised and the reason it was not closed.
+
+Verified: `tests/volume-accounting-gap.test.cjs`, 6 cases, mutation-checked. The
+sibling-prefix case is a proven negative control - reverting the separator in
+`startsWith(`${p}/`)` fails it. It was first written with the prefix the other way round
+and the mutation showed it was guarding nothing, so it was rewritten to `/workspace/model`
+vs `/workspace/models` and only then did the mutation fail it. A failed `du`
+(`size_bytes: null`) returns null rather than counting as zero blocks, which would have
+fabricated a phantom equal to the whole apparent total.

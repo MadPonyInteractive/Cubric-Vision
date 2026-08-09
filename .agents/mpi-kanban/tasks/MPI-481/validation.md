@@ -83,3 +83,37 @@ The volume was left byte-for-byte unchanged — the uninstall never ran.
 start install → delete the Pod mid-download → new CPU Pod → install again → expect
 `stale in-flight record for ltx23-text-projection — the wrapper has no such install; reinstalling`
 plus a real `/wrapper/models/install` POST → let it finish → re-check `installed: true`.
+
+
+## 2026-08-09 21:00-21:30Z - live leg attempted on a throwaway volume, NOT proven
+
+The blocker recorded in the previous attempt is **gone**: all three teardown verbs are
+reachable from this session now - `DELETE /runpod/pods/:id` (404 on a bogus id, i.e. the
+route runs), `POST /comfy/models/uninstall` (400 on a bogus dep), and
+`POST /remote/pod/delete-active` (200). Six Pods were created and all six were deleted and
+verified gone (404 each); the throwaway volumes were deleted; `aghcuvg7nl` was never
+touched.
+
+**The corpse would not stay dead long enough to test.** The repro needs the app holding a
+dep at `downloading` with no wrapper behind it. What actually happens is that the download
+keeps running for several seconds after `delete-active` returns `{deleted: true}`:
+
+- a 2.15 GB dep, Pod deleted ~5s in, finished at **99.96%** and settled to `complete`;
+- a 14.31 GB dep, killed at 29.0%, was still climbing afterwards - 59.3% minutes later and
+  ~98% by the following read.
+
+So the dep either completes (no corpse) or its byte count keeps moving, and one leg that
+did leave `status: downloading` was lost when the measuring script crashed before it
+reached the retry.
+
+**What to do differently next time.** Do not try to kill the Pod mid-flight on an R2 dep -
+R2 delivers 250-460 MB/s into EU-RO-1 and the delete latency is longer than the download.
+Either (a) use a dep whose source is slow enough that the kill is comfortably mid-file -
+the huggingface-hosted ones qualify, and a partial there is fine because MPI-481 only needs
+the app's cache to be stale, not a partial file on the volume; or (b) stop the Pod rather
+than delete it, which leaves the same-id/empty-`_installs` case the fix's own notes call
+out. Then press Install again and grep `app.log` for the tell:
+`stale in-flight record for <depId> - the wrapper has no such install; reinstalling`.
+
+Card stays `doing/validating`. The unit evidence is unchanged and still good; only the live
+leg is outstanding.

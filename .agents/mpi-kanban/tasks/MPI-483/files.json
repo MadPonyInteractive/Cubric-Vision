@@ -3,6 +3,8 @@
   "files": [
     "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py",
     "scripts/smoke-workflows.mjs",
-    "tests/smoke-free-space.test.cjs"
+    "tests/smoke-free-space.test.cjs",
+    "routes/remotePodLifecycle.js",
+    "tests/volume-accounting-gap.test.cjs"
   ]
 }

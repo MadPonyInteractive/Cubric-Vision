@@ -212,9 +212,57 @@ assumptions that time may have invalidated.
       defending against nothing. A second assertion now pins the REAL case (`-1` -> 1).
       **This is the sibling-agent pattern again** — family work lands in this repo with its
       tests unswept. Worth a glance at `npm test` after any Cubric-Prompt/H3 session.
-- [ ] `npm run test:desktop` green
-- [ ] **One FLUX.2 Klein + one Wan 2.2 generation, watching the live preview** — ADDED
-      2026-08-08 by the Gate C claim audit. The `UNRELEASED.md:377` bullet says the live
+- [x] `npm run test:desktop` green — **17/17, exit 0, 2026-08-09 20:04Z.** Ran on port
+      63434 with Fabio's own app live on `:3000` throughout, and `:3000` still answered 200
+      afterwards. The suite prints its own proof of the isolation: *"port 63434 — a dev app
+      on 3000 is left alone."* **That one run also closes the MPI-458 line below** — the
+      confirmation it was owed is precisely "full `test:desktop` concurrent with a live app,
+      both surviving".
+- [x] **One FLUX.2 Klein generation, watching the live preview.** — **PASS, observed
+      2026-08-09 20:25Z.** The bullet's promise holds: the preview is a photograph, not a
+      colour blob. Evidence kept at `klein-live-preview.png` in this folder.
+      Method (it matters, because the naive version proves nothing): a browser renderer on
+      the live app subscribed to `Events.on('preview:frame')` — the bus in
+      `docs/preview-bus.md` — and captured all **4** frames of a 4-step Klein Low t2i
+      (`Prompt executed in 15.99 seconds`). Watching for `<img>` elements first found
+      nothing: the bus hands out **blob URLs and revokes the previous one**, so only the
+      newest frame is still resolvable, which is why steps 1-3 render broken in the
+      screenshot. That is the bus behaving, not a defect.
+      **Three things pin it as the TAESD preview rather than the finished image:** the
+      frame arrived on `preview:frame` with `engine: 'local'`; it is **422x512 against an
+      896x1088 output**, i.e. downscaled; and `app.log` carries **no**
+      `TAESD previews enabled, but could not find models/vae_approx/None` warning anywhere
+      in the 20:22-20:27 window, so `taef2_decoder` was found and loaded. (That warning
+      appears 19 times overall in the log — that is the documented Latent2RGB fallback for
+      every latent format with `taesd_decoder_name = None`, H3 among them. Expected.)
+      Two images landed in the **Test Chips** project as a side effect of the two cue
+      runs; harmless, delete at will.
+      ORIGINAL TEXT: **One FLUX.2 Klein generation, watching the live preview.** — **RESCOPED
+      2026-08-09: the Wan 2.2 half was checking a claim the notes deliberately do NOT
+      make, so running it would have manufactured a bug report.** `UNRELEASED.md:440-442`
+      already carves it out in the same bullet: *"A few models still show the rough
+      preview on purpose: Krea 2, both Qwen models and Wan 2.2 share a preview decoder
+      with a known bug that corrupts the real generation."* The code agrees and says why
+      at length — `js/data/modelConstants/assetDeps.js:506-521`, *"DO NOT ADD THE
+      `lighttaew*` DECODERS"*, ComfyUI issue #13366 still open, fix PR #13383 still
+      unmerged. Only THREE preview decoders ship as `engineAsset` (`taesdxl_decoder`,
+      `taef1_decoder`, `taef2_decoder`), so **there is no Wan 2.2 sharp preview to look
+      at in 1.4 by design.** What is left to verify is the half the bullet does claim:
+      **FLUX.2 Klein must show a recognisable preview**, which is `taef2_decoder` doing
+      its job. Wan 2.2 is worth one glance only as a NEGATIVE CONTROL — a rough preview
+      there is the carve-out being honest, not a defect. If Klein cannot be run before
+      the cut, reword the bullet to the install claim (the decoders now ship) and drop
+      the "looks like your picture" promise.
+      **Checked on the way past, no action needed:** the live engine's `vae_approx/`
+      (`G:\CubricModels`, shared with the bench) holds `taeh3.safetensors` and
+      `taeh3_ollin.safetensors`, neither of which is an app dep. They are INERT on
+      engine 0.30.0 — `comfy/latent_formats.py` has no `taeh3` decoder name anywhere and
+      `MiniMaxH3Video` (:570) inherits `taesd_decoder_name = None`, so H3 previews are
+      Latent2RGB and nothing loads those files. No `lighttaew*` is present, which is the
+      one that would corrupt real generations. Worth re-checking after any engine bump:
+      the hazard is a file in that folder becoming loadable, not the file existing.
+      ORIGINAL TEXT: **One FLUX.2 Klein + one Wan 2.2 generation, watching the live
+      preview** — ADDED 2026-08-08 by the Gate C claim audit. The `UNRELEASED.md:377` bullet says the live
       preview "looks like your picture, not a colour blob"; nobody has ever seen it. The
       decoders themselves are proven (on R2, HEAD-verified, strict-load under the engine
       python, wired as `vae_approx/` engineAssets with two negative-controlled tests) — the
@@ -222,7 +270,30 @@ assumptions that time may have invalidated.
       bulk-closed without them, so they have no other home. If they cannot be run before
       the cut, reword the bullet to the install claim (the decoders now ship) and drop the
       "looks like your picture" promise.
-- [ ] **Post-smoke throwaway-Pod session — closes MPI-480 #3 AND MPI-481 in one go.**
+- [~] **Post-smoke throwaway-Pod session — RUN 2026-08-09 21:00-21:30Z, and NEITHER card
+      closed.** Six CPU Pods created, all six deleted and verified gone (404 each); two
+      throwaway volumes created and deleted; `aghcuvg7nl` never touched. What it DID
+      settle: **wrapper 0.2.44 is published to the dev channel and boots** (every Pod
+      reported `wrapperVersion: 0.2.44`), so `mpi-release`'s manifest-diff stop will read
+      dev `0.2.44` vs stable `0.2.40` — answer still PROMOTE. And the old blocker is
+      gone: all three teardown verbs work from an agent session now.
+      **MPI-483 — inconclusive, and `/remote/pod/disk` is the wrong instrument.** Two runs
+      of the same experiment disagreed (13.61 GB attributed to a 14.1s-old `.part` in one,
+      0.00 GB to a 7.6s-old one in the other). Causes: `/wrapper/disk` caches `du` for 60s
+      and is invalidated only by an install completing or a delete; the app's
+      `downloadedBytes` lags by seconds, which is GBs at the 250-460 MB/s R2 delivers; and
+      a Pod delete takes longer to land than the download takes to finish. `GET
+      /wrapper/ls` already returns BOTH accountings for the same file at the same instant
+      and would settle it in one call — no app route surfaces it and the Pod proxy is not
+      reachable from a shell here (curl 000). **Next step is that small route, not another
+      Pod.** Full detail + a finding that may undercut the card's own premise (an in-flight
+      HF install does not touch the volume at all) in `tasks/MPI-483/validation.md`.
+      **MPI-481 — not proven: the corpse would not stay dead.** The download keeps running
+      for seconds after `delete-active` returns `{deleted:true}`, so a 2.15 GB dep finished
+      at 99.96% and a 14.31 GB dep killed at 29% was at 59% minutes later. Next attempt
+      must use a SLOW (huggingface-hosted) dep, or STOP the Pod rather than delete it.
+      See `tasks/MPI-481/validation.md`.
+      ORIGINAL TEXT: **Post-smoke throwaway-Pod session — closes MPI-480 #3 AND MPI-481 in one go.**
       ADDED 2026-08-08. Both need the same rig and NEITHER can run beside a live smoke
       run: MPI-481's fix is in `routes/`, which is read at server fork, so the app must
       be RESTARTED before it is even testable — and the app is what drives the smoke
@@ -241,7 +312,12 @@ assumptions that time may have invalidated.
       4. Delete the Pod and the throwaway volume. **Never** `aghcuvg7nl`.
       Hazard that has NOT changed: cancelling a download with a Pod still attached calls
       `remoteUninstallDep` and deletes partials off the volume. Delete the Pod FIRST.
-- [ ] **MPI-458 confirmation run** — ADDED 2026-08-08. NOT a blocker and NOT a gate: the
+- [x] **MPI-458 confirmation run** — **DONE 2026-08-09 20:04Z, on the same
+      `test:desktop` pass above.** 17/17 on port 63434 while the user's app held `:3000`;
+      both alive at the end. `docs/testing.md`'s "the suite runs alongside your open app"
+      guarantee holds with no waiver and no release-note line, exactly as the card
+      predicted when it closed as **not a defect**.
+      ORIGINAL TEXT: ADDED 2026-08-08. NOT a blocker and NOT a gate: the
       card closed as **not a defect** (`a5320d67`), measured three ways on Electron 41.1.1,
       so `docs/testing.md`'s "the suite runs alongside your open app" guarantee holds with
       no waiver and no release-note line. What is owed is one confirmation run — full
@@ -268,6 +344,30 @@ assumptions that time may have invalidated.
       --keep-volume --volume aghcuvg7nl`. That is a ~7-minute L4 leg, not a matrix, and it
       MERGES into the existing evidence (MPI-467) instead of replacing it. Back up
       `dev_configs/smoke-run.txt` with `cp` first — ANY invocation truncates it.
+- [ ] **NEW CONTENT ANNOUNCED 2026-08-09 21:35Z BY FABIO — none of it is tested, and two
+      pieces touch things this card already verified.** Added verbatim so the cut cannot
+      quietly ship them unexercised:
+      1. **PID becomes FOUR plugins** (was one). Sibling board cards MPI-506/507 are the
+         live work — MPI-507's own log already claims the workflow-generation half passes.
+      2. **SeedVR2 arrives as THREE more plugins.**
+      3. **MiniMax H3 gained a new LoRA and a new decoder for video preview.**
+      4. **The LTX workflows gained a Tiny VAE decoder.**
+      5. **Krea 2 NSFW goes up to HuggingFace today** — that RESTORES its fallback route.
+      **Two interactions to check before the notes freeze, both cheap:**
+      - *(3) and (4) versus the preview bullet.* If either decoder is meant to drive the
+        LIVE PREVIEW, dropping a file into `vae_approx/` is not enough on engine 0.30.0:
+        `comfy/latent_formats.py` has no `taeh3` name anywhere and `MiniMaxH3Video` (:570)
+        inherits `taesd_decoder_name = None`, so H3 previews are Latent2RGB and nothing
+        loads such a file. If instead they are DECODE NODES inside the graph, the previewer
+        is not involved and this is a non-issue — but `UNRELEASED.md:434-442` names exactly
+        which models show a rough preview on purpose, so that bullet has to be re-read
+        either way. **And `lighttaew*` must still never be installed** (ComfyUI #13366
+        corrupts the real generation, still open).
+      - *(5) versus the second-route bullet.* `UNRELEASED.md:423` says "**Four files still
+        have a single route**". A Krea 2 NSFW upload changes that count, so re-check the
+        number and MPI-433's status once it lands. The bullet was deliberately written to
+        be true on both sides of 2026-08-10, so this is an accuracy tidy, not a blocker.
+      **All five need a smoke pass, and per the standing instruction the H3 leg goes LAST.**
 - [ ] **MPI-249 Linux leg** — real `CubricVision-linux-x64-v1.4.0.tar.gz` extracted on the Linux box, LOCAL uv engine provisioned, nodes installed, one model per family generated. A Pod run does not count
 - [x] **MPI-432** — WAIVED by the user 2026-08-08, card parked to `done`. The release-note
       entry is the only deliverable he wants and it is already in `UNRELEASED.md:347` under
@@ -309,12 +409,19 @@ Still genuinely open, in the order the release needs them:
    card.**
 3. ~~**`npm test` IS RED ON MASTER**~~ — **FIXED 2026-08-09, 530/530.** Detail on the
    Gate B line.
-4. **Gate B** — `test:desktop`, the Klein + Wan preview look, the throwaway-Pod session
+4. **Gate B** — ~~`test:desktop`~~ (17/17 20:04Z, which also closed MPI-458's
+   confirmation run), ~~the Klein preview look~~ (PASS 20:25Z; the Wan half was rescoped — a
+   deliberate carve-out in the notes, not a check), the throwaway-Pod session
    (MPI-480 #3 is closed; MPI-481 is `doing/validating`; **MPI-483's wrapper check joins
    it**), MPI-458's confirmation run, the MPI-249 Linux leg on the real artifact, and
    **the H3 re-smoke LAST** — the graph moved after the evidence was written and Fabio is
    still editing it. `npm test` is done (530/530).
-5. **MPI-501** — **PROVEN LIVE 2026-08-09 19:00Z.** Generation running on the local
+5. ~~**MPI-501**~~ — **CLOSED 2026-08-09 20:05Z, `done/complete`.** The toast was
+   confirmed by a real-pixel probe on the live app: `mpi-toast--warning` carrying the exact
+   refusal string, zero elements matching REPORT ON GITHUB / Error Summary, screenshot kept
+   at `tasks/MPI-501/restart-refusal-toast.png`. A real restart was deliberately not
+   re-driven — the engine root is shared with the user's live app.
+   ORIGINAL TEXT: **PROVEN LIVE 2026-08-09 19:00Z.** Generation running on the local
    engine, dev radial restart, refusal, ComfyUI survived. The run also caught the refusal
    rendering as the `ui:error` crash dialog (REPORT ON GITHUB, for correct behaviour) —
    moved to a `ui:warning` toast and reworded. One look left to confirm the toast, then

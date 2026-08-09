@@ -1561,6 +1561,77 @@ router.get('/remote/pod/disk', async (req, res) => {
   return res.json({ success: false, source: 'remote', unavailable: true, reason });
 });
 
+// MPI-483 — PURE: how many bytes would the OLD apparent-size accounting have
+// over-counted right now? `/wrapper/ls` answers both halves in ONE response, taken at
+// one instant: `top_level[].size_bytes` is `du -s --block-size=1` (allocated blocks —
+// what the volume quota counts, and what /wrapper/disk now returns), while
+// `models_files[].size_bytes` is `os.path.getsize` (apparent length). A partially
+// downloaded aria2 `.part` is exactly where the two legitimately diverge, so their gap
+// IS the phantom this card is about.
+//
+// Reading both from one response is the whole point. Measuring it from the app side
+// instead cannot work: /wrapper/disk caches its `du` for 60s and only an install
+// completing or a delete invalidates it, and the app's own downloadedBytes lags the
+// wrapper by seconds — which at the 250-460MB/s a Pod pulls from R2 is gigabytes. A
+// live session on 2026-08-09 produced two contradictory readings for the same
+// experiment because of exactly that.
+//
+// `models_files` is a flat walk of MODELS_DIR, which sits BELOW one of the mount's
+// top-level dirs, so blocks are attributed to that ancestor. The ancestor can hold more
+// than models — hence `approximate`, true whenever it is not MODELS_DIR itself. A
+// positive gap means sparse partials are present and the pre-fix `du -sb` would have
+// inflated usage by that much; ~zero means the filesystem allocated the whole length
+// and the fix changes nothing there.
+function compareVolumeAccounting(ls) {
+  if (!ls || !ls.success || !Array.isArray(ls.top_level)) return null;
+  const modelsDir = String(ls.models_dir || '');
+  if (!modelsDir) return null;
+  // Longest top-level path that contains MODELS_DIR (usually its ancestor, sometimes itself).
+  let owner = null;
+  for (const entry of ls.top_level) {
+    const p = String(entry?.path || '');
+    if (!p || !Number.isFinite(entry?.size_bytes)) continue;
+    if ((modelsDir === p || modelsDir.startsWith(`${p}/`)) && (!owner || p.length > owner.path.length)) {
+      owner = entry;
+    }
+  }
+  if (!owner) return null;
+  const apparentBytes = Number(ls.models_total_bytes) || 0;
+  const blockBytes = owner.size_bytes;
+  return {
+    apparentBytes,
+    blockBytes,
+    phantomBytes: apparentBytes - blockBytes,
+    countedDir: owner.path,
+    approximate: owner.path !== modelsDir,
+  };
+}
+
+// MPI-483: one call that answers "is a partial download inflating the volume reading?".
+// Read-only passthrough of the wrapper's /wrapper/ls plus the comparison above. Same
+// never-throw contract as /remote/pod/disk — a missing pod or an old wrapper reports
+// success:false rather than failing, because no caller should block on telemetry.
+router.get('/remote/pod/ls', async (req, res) => {
+  const podId = _startedPodId || (_mode.active && _mode.podId) || null;
+  if (!_mode.active || !podId) {
+    return res.json({ success: false, unavailable: true, reason: 'remote_inactive' });
+  }
+  try {
+    const headers = await _authHeaders();
+    if (!headers) return res.json({ success: false, unavailable: true, reason: 'no_auth' });
+    const upstream = await fetch(`${proxyUrl(podId)}/wrapper/ls`, { headers });
+    if (!upstream.ok) {
+      // 404 = wrapper predates /wrapper/ls (MPI-221); 503 = volume not mounted.
+      return res.json({ success: false, unavailable: true, reason: `wrapper_${upstream.status}` });
+    }
+    const ls = await upstream.json();
+    return res.json({ ...ls, accounting: compareVolumeAccounting(ls) });
+  } catch (err) {
+    logger.warn('runpod', `wrapper /wrapper/ls unavailable: ${err?.message || err}`);
+    return res.json({ success: false, unavailable: true, reason: 'error' });
+  }
+});
+
 // Reap stranded stopped 'cubric-vision' Pods (Step 4.3.3). Settings "clean up old
 // Pods" action / Connect-time call. Keeps the currently-tracked Pod.
 router.post('/remote/pod/cleanup-orphans', async (req, res) => {
@@ -1575,4 +1646,4 @@ router.post('/remote/pod/cleanup-orphans', async (req, res) => {
   }
 });
 
-module.exports = { router, remoteVolumeFreeBytes, resolveDiskTotalBytes, _isPodDead, _clampVolumeDisk };
+module.exports = { router, remoteVolumeFreeBytes, resolveDiskTotalBytes, _isPodDead, _clampVolumeDisk, compareVolumeAccounting };

@@ -1,10 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 508,
+  "next_id": 509,
   "columns": {
     "todo": [
       "MPI-506",
-      "MPI-507",
       "MPI-504",
       "MPI-502",
       "MPI-500",
@@ -41,12 +40,14 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-507",
+      "MPI-508",
       "MPI-483",
-      "MPI-501",
       "MPI-481",
       "MPI-450"
     ],
     "done": [
+      "MPI-501",
       "MPI-505",
       "MPI-503",
       "MPI-456",
@@ -110,7 +111,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-09T18:07:10Z",
+  "updated_at": "2026-08-09T22:40:00Z",
   "events": [
     {
       "at": "2026-08-09T14:15:00Z",
@@ -2687,6 +2688,71 @@
       "task": "MPI-507",
       "actor": "opus",
       "note": "Fabio closed 3a and 3b: a text input and denoise go in the toolbar conditionally when PiD is selected, and he adds the missing pidResolution entries so the existing 1.5/2K/3K/4K radio resolves for PiD. pidVariant disappears with the plugin split. Only 3c (flowSdxl4k requiredModels) stays open, plus one new question - the radio's labels are multipliers but PiD's resolutions are absolute targets."
+    },
+    {
+      "at": "2026-08-09T14:40:00Z",
+      "type": "task.updated",
+      "task": "MPI-506",
+      "actor": "opus",
+      "note": "Answered Fabio's three questions off the shipped ComfyUI templates and the live engine rather than guessing. Precision corrected to int8_convrot (his call, and what every official template uses - fp8 is Ada+ only, int8 also runs on Ampere and Vision still ships to 30-series). SeedVR2 confirmed to do IMAGES as well as video via two official image templates, so its entries go in both dropdowns; there is no 7B video template, so bench that. Reference graph captured from the templates. And the 1K/2K/3K/4K relabel turns out to be native - core ResizeImageMaskNode has a 'scale longer dimension' mode taking an absolute longer_size, which retires the 'four buttons, two meanings' warning."
+    },
+    {
+      "at": "2026-08-09T14:40:00Z",
+      "type": "task.updated",
+      "task": "MPI-507",
+      "actor": "opus",
+      "note": "PiD scoped image-only per Fabio, which turns MPI-506's entry declaration into a tool-scoped one. Answered his 'do I need four workflows' with no: the four branches differ in exactly three literals (unet_name, vae_name, latent_format) and everything else is verbatim-identical, so one workflow with three injected literals drops 43 nodes to ~25. More importantly the four-branch shape BREAKS once weights are optional - unet_name is a folder-listing COMBO and validate_prompt rejects unknown values before execution, with no lazy exemption, so a user holding only one plugin would be rejected at prompt time. It only works today because nvidia-pid installs all four weights."
+    },
+    {
+      "at": "2026-08-09T15:05:00Z",
+      "type": "task.updated",
+      "task": "MPI-506",
+      "actor": "opus",
+      "note": "Fabio corrected the resolution framing: SeedVR2 is natively a multiplier (the templates ship 'scale by multiplier'), only PiD is absolute, and an earlier note here implied otherwise. Kept one hard finding on the absolute side: the multiplier input caps at 8.0, so a sub-512px source cannot reach a 4K label - 'scale longer dimension' has no such ceiling. Choice, not a requirement."
+    },
+    {
+      "at": "2026-08-09T15:05:00Z",
+      "type": "task.updated",
+      "task": "MPI-507",
+      "actor": "opus",
+      "note": "Recorded why PiD cannot just adopt SeedVR2's multiplier: every checkpoint is 1024_to_4096 and the graph enforces it (input normalised to 1024 via MpiScaledDimensions + MpiCrop divisible_by 16, output latent sized at 4096), so it is a fixed 4x trained at one input size. Named the two candidate techniques with their different failure modes - native-then-downscale (safe, no time saving) vs scale-the-input-keep-4x (fast, off-regime input, needs the bench) - plus a cheap A/B decider. Fabio owns the test."
+    },
+    {
+      "at": "2026-08-09T15:25:00Z",
+      "type": "task.updated",
+      "task": "MPI-507",
+      "actor": "opus",
+      "note": "Fabio decided four separate PiD workflow files rather than one file with three injected literals. Accepted - it removes the hardcoded-name validation break just as well, since each file names only its own weight; the costs are four copies of every shared fix and a workflow-file field on the plugin entry. Also resolved the resolution question by observation rather than bench: the live graph implements technique A, with the 1024/2048/3072 scalers hanging off VAEDecode and any_4 passing 4096 through, so correctness is not in question and the only thing to surface is that 1K costs the same as 4K."
+    },
+    {
+      "at": "2026-08-09T15:25:00Z",
+      "type": "task.updated",
+      "task": "MPI-506",
+      "actor": "opus",
+      "note": "Recorded the asymmetry so the four-file PiD decision does not get copied here: SeedVR2's three variants differ in one injectable literal and share a VAE, so two files (one per tool) cover it rather than six."
+    },
+    {
+      "at": "2026-08-09T22:05:00Z",
+      "type": "task.moved",
+      "task": "MPI-507",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "note": "Starting the workflow-generation half: Fabio exported comfy_workflows/raw/nvidia_pid_template.json (26 nodes, single branch, arch VAE titled PiD_VAE so the generator cannot grab the pixel_space loader by mistake). Writing generate_pid.py + the registry prefix rule so ONE template bakes the four runtime files by setting UNETLoader.unet_name, PiD_VAE.vae_name and PiDConditioning.latent_format. The app-side half stays blocked on the flowSdxl4k decision (brief 3c) and is not claimed yet."
+    },
+    {
+      "at": "2026-08-09T22:15:00Z",
+      "type": "validation.updated",
+      "task": "MPI-507",
+      "actor": "opus",
+      "note": "Workflow-generation half PASSES. generate_pid.py + the nvidia_pid_ registry rule turn one template into the four runtime files, baking UNETLoader.unet_name, PiD_VAE.vae_name and PiDConditioning.latent_format. Evidence in validation.md: per-file bake check passes and the shared pixel_space VAELoader is untouched in all four; a structural diff of sd3/qwen/sdxl against flux differs in EXACTLY 1595.latent_format, 1597.vae_name, 1598.unet_name and nothing else; validate-injection-rules.mjs returns 'All 4 file(s) conform' rc=0. Converted against the ENGINE on :48188, not the :8188 bench. No prune pass written - all 25 API nodes are upstream of Output_Image, so there is nothing to drop. Old nvidia_pid.json left in place deliberately: models.js still resolves it and deleting it would break the shipped model. Nothing has EXECUTED these graphs yet. Card stays in doing - the app-side half is still blocked on 3c."
+    },
+    {
+      "at": "2026-08-09T22:40:00Z",
+      "type": "task.updated",
+      "task": "MPI-506",
+      "actor": "opus",
+      "note": "First real SeedVR2 run came out degraded and the log named the cause: auto chose frames_per_chunk=5 for 81 frames at 3.31Mpx on a 16GB card, and the template ships temporal_overlap=0 = plain concatenation. Reproduced the sizing formula exactly against the log. The fix needs no MpiNode and no loop pack - temporal_overlap is clamped to what the chunk allows, so a constant 8 self-adapts everywhere. Two structural facts recorded: chunking cannot be avoided at any useful resolution on this card, and the result is dominated by the user's GPU via a flat 10.7GiB reserve. Corrects this card's earlier 'auto solves VRAM with no UI'."
     }
   ]
 }
