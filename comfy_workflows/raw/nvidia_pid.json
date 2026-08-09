@@ -2,7 +2,7 @@
   "id": "4af9e951-4d47-484a-bc44-4b860d8c9e56",
   "revision": 0,
   "last_node_id": 1628,
-  "last_link_id": 366,
+  "last_link_id": 369,
   "nodes": [
     {
       "id": 1571,
@@ -1555,78 +1555,6 @@
       "bgcolor": "#653"
     },
     {
-      "id": 1607,
-      "type": "MpiAnySwitch",
-      "pos": [
-        6722.766655482926,
-        -230.50712398997962
-      ],
-      "size": [
-        270,
-        138
-      ],
-      "flags": {},
-      "order": 39,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "any_1",
-          "shape": 7,
-          "type": "*",
-          "link": 319
-        },
-        {
-          "name": "any_2",
-          "shape": 7,
-          "type": "*",
-          "link": 320
-        },
-        {
-          "name": "any_3",
-          "shape": 7,
-          "type": "*",
-          "link": 321
-        },
-        {
-          "name": "any_4",
-          "shape": 7,
-          "type": "*",
-          "link": 322
-        },
-        {
-          "name": "any_5",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "links": [
-            323
-          ]
-        },
-        {
-          "name": "index",
-          "type": "INT",
-          "links": null
-        }
-      ],
-      "title": "Input_Type",
-      "properties": {
-        "Node name for S&R": "MpiAnySwitch",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
-      },
-      "widgets_values": [
-        1
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 1570,
       "type": "VAEDecode",
       "pos": [
@@ -1661,8 +1589,6 @@
           "links": [
             333,
             339,
-            340,
-            343,
             344
           ]
         }
@@ -1684,165 +1610,11 @@
       "bgcolor": "#533"
     },
     {
-      "id": 1613,
-      "type": "ImageScale",
-      "pos": [
-        7924.5032410911535,
-        -650.6017070762605
-      ],
-      "size": [
-        270,
-        130
-      ],
-      "flags": {},
-      "order": 44,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 343
-        },
-        {
-          "name": "width",
-          "type": "INT",
-          "widget": {
-            "name": "width"
-          },
-          "link": 335
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "widget": {
-            "name": "height"
-          },
-          "link": 336
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            331
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ImageScale",
-        "cnr_id": "comfy-core",
-        "ver": "0.27.0"
-      },
-      "widgets_values": [
-        "lanczos",
-        512,
-        512,
-        "disabled"
-      ]
-    },
-    {
-      "id": 1618,
-      "type": "MpiScaledDimensions",
-      "pos": [
-        7672.241778953277,
-        -582.8701882483751
-      ],
-      "size": [
-        229.70563905351628,
-        122
-      ],
-      "flags": {},
-      "order": 42,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 344
-        }
-      ],
-      "outputs": [
-        {
-          "name": "scaled_width",
-          "type": "INT",
-          "links": [
-            335
-          ]
-        },
-        {
-          "name": "scaled_height",
-          "type": "INT",
-          "links": [
-            336
-          ]
-        },
-        {
-          "name": "is_portrait",
-          "type": "BOOLEAN",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "MpiScaledDimensions",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
-      },
-      "widgets_values": [
-        1024,
-        true,
-        "lanczos"
-      ]
-    },
-    {
-      "id": 1580,
-      "type": "PreviewImage",
-      "pos": [
-        8668.261186242524,
-        -288.71841693329344
-      ],
-      "size": [
-        413.2053821460104,
-        417.2954545549716
-      ],
-      "flags": {},
-      "order": 46,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 334
-        }
-      ],
-      "outputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "links": []
-        }
-      ],
-      "title": "Output_Image",
-      "properties": {
-        "Node name for S&R": "PreviewImage",
-        "cnr_id": "comfy-core",
-        "ver": "0.17.1",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "version": "7.7",
-          "input_ue_unconnectable": {}
-        }
-      },
-      "widgets_values": [],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 1615,
       "type": "Note",
       "pos": [
-        8387.216611847998,
-        -437.9507809650394
+        8037.228433136607,
+        -433.89686383710824
       ],
       "size": [
         210,
@@ -1857,79 +1629,6 @@
       "properties": {},
       "widgets_values": [
         "1 = 1k\n2 = 2k\n3 = 4k"
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 1614,
-      "type": "MpiAnySwitch",
-      "pos": [
-        8363.04557310665,
-        -287.0558380425826
-      ],
-      "size": [
-        270,
-        138
-      ],
-      "flags": {},
-      "order": 45,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "any_1",
-          "shape": 7,
-          "type": "*",
-          "link": 331
-        },
-        {
-          "name": "any_2",
-          "shape": 7,
-          "type": "*",
-          "link": 332
-        },
-        {
-          "name": "any_3",
-          "shape": 7,
-          "type": "*",
-          "link": 333
-        },
-        {
-          "name": "any_4",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        },
-        {
-          "name": "any_5",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "links": [
-            334,
-            346
-          ]
-        },
-        {
-          "name": "index",
-          "type": "INT",
-          "links": null
-        }
-      ],
-      "title": "Input_Resolution",
-      "properties": {
-        "Node name for S&R": "MpiAnySwitch",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
-      },
-      "widgets_values": [
-        3
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -1974,59 +1673,6 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
-    },
-    {
-      "id": 1619,
-      "type": "MpiScaledDimensions",
-      "pos": [
-        7678.325249547616,
-        -372.0107753240065
-      ],
-      "size": [
-        229.70563905351628,
-        122
-      ],
-      "flags": {},
-      "order": 41,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 339
-        }
-      ],
-      "outputs": [
-        {
-          "name": "scaled_width",
-          "type": "INT",
-          "links": [
-            341
-          ]
-        },
-        {
-          "name": "scaled_height",
-          "type": "INT",
-          "links": [
-            342
-          ]
-        },
-        {
-          "name": "is_portrait",
-          "type": "BOOLEAN",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "MpiScaledDimensions",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
-      },
-      "widgets_values": [
-        2048,
-        true,
-        "lanczos"
-      ]
     },
     {
       "id": 1569,
@@ -2099,7 +1745,7 @@
       ],
       "size": [
         229.70563905351628,
-        122
+        166
       ],
       "flags": {},
       "order": 29,
@@ -2129,6 +1775,11 @@
         {
           "name": "is_portrait",
           "type": "BOOLEAN",
+          "links": null
+        },
+        {
+          "name": "scaled_image",
+          "type": "IMAGE",
           "links": null
         }
       ],
@@ -2240,59 +1891,6 @@
       ]
     },
     {
-      "id": 1609,
-      "type": "MpiScaledDimensions",
-      "pos": [
-        3059.5610381977986,
-        -575.3246396997364
-      ],
-      "size": [
-        229.70563905351628,
-        122
-      ],
-      "flags": {},
-      "order": 22,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 361
-        }
-      ],
-      "outputs": [
-        {
-          "name": "scaled_width",
-          "type": "INT",
-          "links": [
-            353
-          ]
-        },
-        {
-          "name": "scaled_height",
-          "type": "INT",
-          "links": [
-            354
-          ]
-        },
-        {
-          "name": "is_portrait",
-          "type": "BOOLEAN",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "MpiScaledDimensions",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
-      },
-      "widgets_values": [
-        1024,
-        true,
-        "lanczos"
-      ]
-    },
-    {
       "id": 1624,
       "type": "MpiCrop",
       "pos": [
@@ -2310,7 +1908,7 @@
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 362
+          "link": 367
         },
         {
           "name": "width",
@@ -2366,6 +1964,103 @@
       ]
     },
     {
+      "id": 1628,
+      "type": "MpiInt",
+      "pos": [
+        5196.667865730201,
+        -137.63973662670912
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            363,
+            364,
+            365,
+            366
+          ]
+        }
+      ],
+      "title": "Input_Seed",
+      "properties": {
+        "Node name for S&R": "MpiInt"
+      },
+      "widgets_values": [
+        416
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1609,
+      "type": "MpiScaledDimensions",
+      "pos": [
+        3046.0479811046944,
+        -655.0516765490497
+      ],
+      "size": [
+        229.70563905351628,
+        166
+      ],
+      "flags": {},
+      "order": 22,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 361
+        }
+      ],
+      "outputs": [
+        {
+          "name": "scaled_width",
+          "type": "INT",
+          "links": [
+            353
+          ]
+        },
+        {
+          "name": "scaled_height",
+          "type": "INT",
+          "links": [
+            354
+          ]
+        },
+        {
+          "name": "is_portrait",
+          "type": "BOOLEAN",
+          "links": null
+        },
+        {
+          "name": "scaled_image",
+          "type": "IMAGE",
+          "links": [
+            367
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiScaledDimensions",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
+      },
+      "widgets_values": [
+        1024,
+        true,
+        "lanczos"
+      ]
+    },
+    {
       "id": 1626,
       "type": "MpiLoadImageFromPath",
       "pos": [
@@ -2374,10 +2069,10 @@
       ],
       "size": [
         276.9849609375,
-        142
+        378
       ],
       "flags": {},
-      "order": 15,
+      "order": 16,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2385,8 +2080,7 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            361,
-            362
+            361
           ]
         },
         {
@@ -2412,7 +2106,7 @@
         "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3"
       },
       "widgets_values": [
-        "",
+        "C:\\Users\\Fabio\\Downloads\\v1.3.png",
         "alpha",
         true
       ],
@@ -2420,96 +2114,301 @@
       "bgcolor": "#653"
     },
     {
-      "id": 1616,
-      "type": "ImageScale",
+      "id": 1619,
+      "type": "MpiScaledDimensions",
       "pos": [
-        7942.219284760597,
-        -448.32207965843975
+        7649.947829652098,
+        -420.6577808591807
+      ],
+      "size": [
+        229.70563905351628,
+        166
+      ],
+      "flags": {},
+      "order": 41,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 339
+        }
+      ],
+      "outputs": [
+        {
+          "name": "scaled_width",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "scaled_height",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "is_portrait",
+          "type": "BOOLEAN",
+          "links": null
+        },
+        {
+          "name": "scaled_image",
+          "type": "IMAGE",
+          "links": [
+            369
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiScaledDimensions",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
+      },
+      "widgets_values": [
+        2048,
+        true,
+        "lanczos"
+      ]
+    },
+    {
+      "id": 1618,
+      "type": "MpiScaledDimensions",
+      "pos": [
+        7643.864359057759,
+        -631.5171937835494
+      ],
+      "size": [
+        229.70563905351628,
+        166
+      ],
+      "flags": {},
+      "order": 42,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 344
+        }
+      ],
+      "outputs": [
+        {
+          "name": "scaled_width",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "scaled_height",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "is_portrait",
+          "type": "BOOLEAN",
+          "links": null
+        },
+        {
+          "name": "scaled_image",
+          "type": "IMAGE",
+          "links": [
+            368
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiScaledDimensions",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
+      },
+      "widgets_values": [
+        1024,
+        true,
+        "lanczos"
+      ]
+    },
+    {
+      "id": 1580,
+      "type": "PreviewImage",
+      "pos": [
+        8318.273007531132,
+        -284.66449980536225
+      ],
+      "size": [
+        421.8731469007216,
+        599.3185144038964
+      ],
+      "flags": {},
+      "order": 44,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 334
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": []
+        }
+      ],
+      "title": "Output_Image",
+      "properties": {
+        "Node name for S&R": "PreviewImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.17.1",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.7",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1607,
+      "type": "MpiAnySwitch",
+      "pos": [
+        6722.766655482926,
+        -230.50712398997962
       ],
       "size": [
         270,
-        130
+        138
+      ],
+      "flags": {},
+      "order": 39,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any_1",
+          "shape": 7,
+          "type": "*",
+          "link": 319
+        },
+        {
+          "name": "any_2",
+          "shape": 7,
+          "type": "*",
+          "link": 320
+        },
+        {
+          "name": "any_3",
+          "shape": 7,
+          "type": "*",
+          "link": 321
+        },
+        {
+          "name": "any_4",
+          "shape": 7,
+          "type": "*",
+          "link": 322
+        },
+        {
+          "name": "any_5",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            323
+          ]
+        },
+        {
+          "name": "index",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "Input_Type",
+      "properties": {
+        "Node name for S&R": "MpiAnySwitch",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
+      },
+      "widgets_values": [
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1614,
+      "type": "MpiAnySwitch",
+      "pos": [
+        8013.0573943952595,
+        -283.0019209146514
+      ],
+      "size": [
+        270,
+        138
       ],
       "flags": {},
       "order": 43,
       "mode": 0,
       "inputs": [
         {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 340
+          "name": "any_1",
+          "shape": 7,
+          "type": "*",
+          "link": 368
         },
         {
-          "name": "width",
-          "type": "INT",
-          "widget": {
-            "name": "width"
-          },
-          "link": 341
+          "name": "any_2",
+          "shape": 7,
+          "type": "*",
+          "link": 369
         },
         {
-          "name": "height",
-          "type": "INT",
-          "widget": {
-            "name": "height"
-          },
-          "link": 342
+          "name": "any_3",
+          "shape": 7,
+          "type": "*",
+          "link": 333
+        },
+        {
+          "name": "any_4",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "any_5",
+          "shape": 7,
+          "type": "*",
+          "link": null
         }
       ],
       "outputs": [
         {
-          "name": "IMAGE",
-          "type": "IMAGE",
+          "name": "any",
+          "type": "*",
           "links": [
-            332
+            334,
+            346
           ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ImageScale",
-        "cnr_id": "comfy-core",
-        "ver": "0.27.0"
-      },
-      "widgets_values": [
-        "lanczos",
-        512,
-        512,
-        "disabled"
-      ]
-    },
-    {
-      "id": 1628,
-      "type": "MpiInt",
-      "pos": [
-        5196.667865730201,
-        -137.63973662670912
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 16,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
+        },
         {
-          "name": "int",
+          "name": "index",
           "type": "INT",
-          "links": [
-            363,
-            364,
-            365,
-            366
-          ]
+          "links": null
         }
       ],
-      "title": "Input_Seed",
+      "title": "Input_Resolution",
       "properties": {
-        "Node name for S&R": "MpiInt"
+        "Node name for S&R": "MpiAnySwitch",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "780c7c3c9c7f2448d525644f9d547e4cf78a3626"
       },
       "widgets_values": [
-        416
+        1
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -2941,22 +2840,6 @@
       "LATENT"
     ],
     [
-      331,
-      1613,
-      0,
-      1614,
-      0,
-      "IMAGE"
-    ],
-    [
-      332,
-      1616,
-      0,
-      1614,
-      1,
-      "IMAGE"
-    ],
-    [
       333,
       1570,
       0,
@@ -2973,58 +2856,10 @@
       "IMAGE"
     ],
     [
-      335,
-      1618,
-      0,
-      1613,
-      1,
-      "INT"
-    ],
-    [
-      336,
-      1618,
-      1,
-      1613,
-      2,
-      "INT"
-    ],
-    [
       339,
       1570,
       0,
       1619,
-      0,
-      "IMAGE"
-    ],
-    [
-      340,
-      1570,
-      0,
-      1616,
-      0,
-      "IMAGE"
-    ],
-    [
-      341,
-      1619,
-      0,
-      1616,
-      1,
-      "INT"
-    ],
-    [
-      342,
-      1619,
-      1,
-      1616,
-      2,
-      "INT"
-    ],
-    [
-      343,
-      1570,
-      0,
-      1613,
       0,
       "IMAGE"
     ],
@@ -3133,14 +2968,6 @@
       "IMAGE"
     ],
     [
-      362,
-      1626,
-      0,
-      1624,
-      0,
-      "IMAGE"
-    ],
-    [
       363,
       1628,
       0,
@@ -3171,71 +2998,50 @@
       1600,
       6,
       "INT"
+    ],
+    [
+      367,
+      1609,
+      3,
+      1624,
+      0,
+      "IMAGE"
+    ],
+    [
+      368,
+      1618,
+      3,
+      1614,
+      0,
+      "IMAGE"
+    ],
+    [
+      369,
+      1619,
+      3,
+      1614,
+      1,
+      "IMAGE"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.611590904484147,
+      "scale": 1.0152559799477072,
       "offset": [
-        -4832.611749001945,
-        725.5810267473804
+        -6475.984668909888,
+        774.4941114058431
       ]
     },
-    "frontendVersion": "1.45.20",
+    "frontendVersion": "1.47.11",
     "workflowRendererVersion": "LG",
     "ue_links": [],
     "links_added_by_ue": [],
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,
     "VHS_MetadataImage": true,
-    "VHS_KeepIntermediate": true,
-    "reroutes": [
-      {
-        "id": 2,
-        "pos": [
-          7586.488135739589,
-          -429.8864482087589
-        ],
-        "linkIds": [
-          339,
-          340,
-          343,
-          344
-        ]
-      },
-      {
-        "id": 3,
-        "parentId": 2,
-        "pos": [
-          7587.5588007703445,
-          -630.3131986332816
-        ],
-        "linkIds": [
-          343,
-          344
-        ]
-      }
-    ],
-    "linkExtensions": [
-      {
-        "id": 339,
-        "parentId": 2
-      },
-      {
-        "id": 340,
-        "parentId": 2
-      },
-      {
-        "id": 343,
-        "parentId": 3
-      },
-      {
-        "id": 344,
-        "parentId": 3
-      }
-    ]
+    "VHS_KeepIntermediate": true
   },
   "version": 0.4
 }
