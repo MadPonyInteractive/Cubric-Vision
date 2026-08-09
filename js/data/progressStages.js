@@ -57,6 +57,11 @@ export const PROGRESS_STAGES = Object.freeze({
     // (proved here: the stage2 run emitted NO latent and only the 15-step bar).
     // Beware when re-counting: tqdm prints each finished bar TWICE, so a raw grep of
     // "100%" lines reads 4 for the single run. Count distinct bars, not lines.
+    //
+    // `single: 2` is the SPLIT count and stays 2 (it is what a two-sampler run emits).
+    // A `single` run now injects Input_Single_Pass and emits ONE bar; commandExecutor
+    // passes -1 for it rather than this table carrying a fourth mode, because the
+    // collapse is a per-run injected value and the table is keyed by file (MPI-505).
     'minimax_h3_fl2va.json': Object.freeze({ single: 2, preview: 1, stage2: 1 }),
     // ref2va (MPI-475) — the same numbers, and NOT guessed at: the two graphs share their
     // whole sampler tail. Node 153 (Stage1_Bypass) and 156 are the same two
@@ -163,7 +168,12 @@ export function stagesFor(workflowFile, mode = 'single', extraBars = 0) {
     if (!workflowFile) return 0;
     const entry = PROGRESS_STAGES[_baseKey(workflowFile)];
     const recorded = entry ? (entry[mode] || 0) : 0;
-    return recorded === 0 ? 0 : recorded + Math.max(0, extraBars | 0);
+    // `extraBars` may be NEGATIVE since MPI-505: H3 collapses its two sampler passes
+    // into one when the run is not making or resuming a preview, which is one bar
+    // FEWER than the table records. Floored at 1 rather than 0 — 0 is the "unrecorded"
+    // signal the caller reads as "tick up without a total", and a run that reached here
+    // is definitely running at least one bar.
+    return recorded === 0 ? 0 : Math.max(1, recorded + (extraBars | 0));
 }
 
 /**

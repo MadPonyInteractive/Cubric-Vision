@@ -3,11 +3,11 @@
   "id": "MPI-505",
   "title": "MiniMax H3 Turbo LoRA - ship the 20->8 step turbo toggle (204s -> 96s)",
   "description": "Bench-proven 2026-08-09, repo work not started. H3 is the ONLY non-distilled video model shipped (20 steps; LTX 8, WAN 2.2 6, WAN 5B 4), so it is the only model with headroom for any acceleration technique. drbaph/MiniMax-H3-Turbo-Lora-ComfyUI (v4 step600 EMA, Apache-2.0, original larryvrh) takes it to 8 steps: 204s -> 96s at 864x480, warm. DONE: weight staged to R2 and verified; both bench graphs wired in the engine user dir. PENDING: export raw templates, sync, dep entry, app-side control. Turbo is OPT-IN and quality is slightly below the 20-step path - the user's explicit call. See brief.md for the measurement table and every verdict.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-09T10:00:34Z",
-  "updated_at": "2026-08-09T10:05:00Z",
+  "updated_at": "2026-08-09T14:15:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -17,6 +17,5 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
-  },
-  "activeSessionTitle": "H3 turbo LoRA bench + acceleration research"
+  }
 }

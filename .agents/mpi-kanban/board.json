@@ -40,12 +40,12 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-505",
       "MPI-501",
       "MPI-481",
       "MPI-450"
     ],
     "done": [
+      "MPI-505",
       "MPI-503",
       "MPI-456",
       "MPI-492",
@@ -108,8 +108,33 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-09T10:05:00Z",
+  "updated_at": "2026-08-09T14:15:00Z",
   "events": [
+    {
+      "at": "2026-08-09T14:15:00Z",
+      "type": "task.moved",
+      "task": "MPI-505",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "note": "Turbo toggle shipped and verified: dep + capability + control + injection + single-pass + the EasyCache gate, all confirmed by tests, an offline wiring probe and the user’s own app runs. Measurements re-taken on the shipped graph and written to docs/models/h3/turbo.md. Remaining Pod smoke run belongs to release readiness, not to this card."
+    },
+    {
+      "at": "2026-08-09T11:47:00Z",
+      "type": "task.updated",
+      "task": "MPI-504",
+      "actor": "opus",
+      "column": "todo",
+      "note": "Two corrections from Fabio. (1) The LoRA-training sheet is OUT OF SCOPE, not a layout option - it is ~20 images and a whole different beast, addressed when that flow is addressed; MPI-504 owns the video-reference 3-panel sheet only. (2) The flow needs TWO MODELS, chosen per path at the bench - an EDIT model for the reference path, and for the attributes path whichever t2i model best obeys a prompt asking it to display the character in that layout. That second question is LAYOUT COMPLIANCE, not aesthetics, and has no answer on the board. Multiple models in one flow is the point of flows."
+    },
+    {
+      "at": "2026-08-09T11:25:00Z",
+      "type": "task.updated",
+      "task": "MPI-504",
+      "actor": "opus",
+      "column": "todo",
+      "note": "Re-scoped by Fabio. The MPI-348 s8.4 layout (side + front profile + full body) is a LORA-TRAINING sheet - a different consumer - so the two layouts are NOT a conflict to settle; layout becomes a flow option keyed to purpose, and this card owns the VIDEO-REFERENCE layout only. Input is now TWO paths: attributes-only (what the character is, wardrobe, scars, age, hair colour, eye colour) restructured into the sheet prompt, and a reference photo. The attributes path is the LOW-RISK one and ships first - it is exactly what Higgsfield did (prompt to sheet in a hosted model) and has no identity-projection problem; the photo path keeps the unproven back-view step. Added: with structured fields a slot template needs no LLM, so Cubric Prompt earns its place only on free prose or per-model shaping. Recorded that their 'never write an age' rule does NOT transfer - that is a hosted content filter and Vision runs local models."
+    },
     {
       "at": "2026-08-09T10:05:00Z",
       "type": "task.moved",

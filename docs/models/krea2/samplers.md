@@ -262,3 +262,32 @@ same node classes / run the same torch — they remove ~ms of HTTP/frontend laye
 | The app adds seconds of injection/pre-gen overhead | enhancer toggle was the entire 83-vs-55s gap; dispatch ~tens of ms |
 | **FBCache** (WaveSpeed block-cache) accelerates Krea2 | hard-fails: `ValueError: No double blocks found for SingleStreamDiT` — Krea2 is single-stream, FBCache needs MMDiT/double blocks |
 | **FSampler** (epsilon-extrapolation skip) accelerates Krea2 | soft-fails: "model type unknown", ran 80 not 40 steps, only 13.8% cut, final image **fried** (nan on last step) |
+
+## EasyCache does NOT work here — measured 2026-08-09, do not retry blind
+
+EasyCache (core ComfyUI, `comfy_extras/nodes_easycache.py`) pays on MiniMax H3 — see
+`../h3/turbo.md` — so it was tried on the 25-step non-turbo path, wired between
+`[77] FromBasicPipe` and `[311] ClownsharKSampler` (the only 25-step sampler, and the
+only one drawing from `[77]`, so placement alone gates it to non-turbo).
+
+It fired — the RES4LYF sampler does route through the wrapper — and skipped **nothing**.
+
+The number that explains it is `cumulative_change_rate`. The accumulator resets to 0
+after every computed step, so each printed value is ONE step's predicted output change:
+
+| model | per-step change rate | at threshold 0.2 |
+|---|---|---|
+| H3 (video, 20 steps) | 0.10 – 0.22 | skips 8/20 |
+| **Krea2 (image, 25 steps, cfg 2.0)** | **0.45 – 0.49** | skips **0/25** |
+
+Krea2 never gets within 2x of the threshold, and the series is flat — steady state, not
+warmup. Raising `reuse_threshold` to 0.5 does make it skip (8/25, ~16% of sampling,
+warm) and the image came back **visibly undercooked**: the skips land in the low-sigma
+tail where detail resolves, so composition matches the baseline and texture does not.
+There is no window between "skips nothing" and "degrades".
+
+Consecutive video steps barely move — that temporal redundancy is what EasyCache is built
+on, and an image has none of it. **Before trying it on any image model** (Qwen, Chroma,
+SDXL), run ONCE with `verbose: true` and read the `cumulative_change_rate` lines:
+near 0.4+ means stop, no A/B and no stopwatch needed. The Krea2 template was never
+exported with the node in it.

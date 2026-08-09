@@ -1,0 +1,120 @@
+# H3 turbo — the 20→8 step distill LoRA (MPI-505)
+
+Split out of `performance.md` on 2026-08-09 when it outgrew that file. Everything here is
+about the shipped turbo toggle: what it costs, what it is worth, and what it changes.
+The levers we tested and rejected stay in `performance.md`.
+## Step distillation — the lever that WORKED (MPI-505, measured 2026-08-09)
+
+**H3 was the only non-distilled video model we shipped**, and that single fact explains
+why every acceleration technique in this doc lands on H3 and nowhere else:
+
+| model | steps | distilled |
+|---|---|---|
+| H3 | 20 | no, until the turbo LoRA |
+| LTX 2.3 (both tiers) | 8 (`LTXVScheduler.steps`, a literal) | yes, upstream |
+| WAN 2.2 14B | 6 (`ManualSigmas` 1.0/0.93/0.85 then 0.85/.../0.0) | yes |
+| WAN 5B | 4 | yes, baked distill LoRA at 0.8 |
+
+LTX "High" vs "Balanced" is **precision** (bf16 vs int8) - all four weights are
+`ltx-2.3-22b-distilled-1.1_*`. A turbo LoRA there would distil a distilled model.
+
+`drbaph/MiniMax-H3-Turbo-Lora-ComfyUI`, variant `v4_step600_ema` (Apache-2.0, original
+`larryvrh`) takes H3 to 8 steps. Measured at 864x480 (the baked default), 2s clip, warm:
+
+| config | time |
+|---|---|
+| 20 steps, two-stage, no EasyCache | 204.02s |
+| 20 steps, single-pass, EasyCache | 136s |
+| **8 steps (turbo)** | **90-96s** (4 runs) |
+
+Those rows predate the shipped graph - 2s, split 3, pre-single-pass, and the 204.02s row
+is n=1. Keep them as the record of what the LoRA does to the STEP COUNT; for wall clock
+use "What turbo is actually worth" below.
+
+Upstream settings: euler / beta / strength 1.0, sigma shift video 12 and **audio 4-6**.
+The model defaults are 12 / **3.0** (`nodes_minimax_h3.py`, `ldm/minimax/model.py`), and
+the audio value is the one that must move or audio distorts. Sweeping 4/5/6 changed
+nothing audible - the audible fix was euler/beta - so it is baked at 5. Turbo ships
+OPT-IN: quality is slightly below the 20-step path, which is the user's stated trade.
+
+### What turbo is actually worth (measured 2026-08-09, shipped shape)
+
+864x480, **5s**, single-pass, warm, decomposed from `app.log` timestamps. Both configs
+n=2 with per-step agreeing to two decimals across a seed change:
+
+| phase | turbo (8 steps) | non-turbo (20 steps) |
+|---|---|---|
+| load before first bar | 1.2s | 1.1s |
+| step 1 (carries model init) | 20.3s | 19.2s |
+| remaining steps | 112.6s (16.09s/step) | 163.0s |
+| video decode | 36.9s | 35.3s |
+| audio decode | ~1.5s | 1.5s |
+| **total** | **171.1s** | **220.1s** |
+
+**~22%, not 50%** - because EasyCache skips **8 of 20** on the quality path and **0 of 8**
+under turbo, so the real comparison is **12 computes vs 8**. The "half" figure only exists
+against an EasyCache-OFF baseline (~364s); quote it only with that caveat.
+
+Turbo cannot touch: **~38s decode**, ~20s init, and a **~17s re-patch on every FLIP** of
+the toggle either way (`MiniMaxH3SigmaShift` calls `add_object_patch`, so the
+transformer re-uploads - 17.7s vs 1.2s before the first bar). Discard run 1 after a flip.
+At **1s/608x352** that fixed cost is ~22s of a 33s run, so the same step cut is worth only
+~10s: state duration AND resolution beside every H3 number.
+
+### Turbo changes MOTION, not just detail (observed 2026-08-09, not yet measured)
+
+The trade is not "same video, fewer steps, slightly softer". Across a run of app tests at
+608x352 and 864x480 the user reports a consistent difference in the motion itself:
+
+| | turbo (8 steps) | non-turbo (20 steps) |
+|---|---|---|
+| motion speed | noticeably **slower**, slight slow-motion feel | natural |
+| low-res morphing | **none observed** | substantial |
+
+Which inverts the usual reading of the toggle. **Speed is fixable in post; morphing is
+not** - so at low resolution turbo can be the better OUTPUT choice, not merely the faster
+one, and the 20-step path's advantage is clearest where the canvas is big enough that it
+does not morph.
+
+Plausible mechanism, NOT verified: 8 steps gives the high-sigma region - where inter-frame
+displacement is decided - very few coarse steps, and a short-schedule distill LoRA tends to
+under-shoot displacement. The 20-step morphing is the opposite failure: enough tail steps
+to keep re-deciding identity on an under-resolved latent.
+
+Qualitative, one prompt, no fixed-seed A/B - it must not move the `h3Turbo: false`
+default until someone runs one at two resolutions. Recorded because it changes what the
+toggle MEANS, and the release copy was written on the wrong assumption.
+
+### The two-stage split costs nothing at low step counts
+
+Turbo two-stage (91.59 / 90.07s) and turbo single-pass (91s) are indistinguishable, so
+collapsing the split is only ever worth measuring at high step counts. Note the preview
+decode does **not** run on a full two-stage generation - `MpiStageLatents` blocks
+`denoised` unless `is_preview`, so the split's real cost is one sampler setup plus the
+latent save.
+
+## EasyCache is gated OFF turbo
+
+At 8 steps EasyCache skips 0 and still pays its per-step bookkeeping. Gating it measured
+**16.09s/step -> 15.56s = 171.07s -> 168.31s warm, ~1.6%**. (First estimated at ~6% off
+the whole turbo/non-turbo per-step gap; only half that gap was EasyCache, the rest is the
+LoRA patch.) A correctness fix that saves 1.6%, not a speed lever.
+
+Both graphs route the model through an `MpiIfElse` on `Input_is_Turbo` — `[369]` in
+fl2va, `[459]` in r2va:
+
+    UNET ─┬─> MiniMaxH3SigmaShift ──> gate.true    (turbo)
+          └─> EasyCache ───────────> gate.false   (non-turbo)
+                                     gate ──> turbo LoRA ──> user LoRA slots
+
+`MpiIfElse` is **lazy**, so on a turbo run the EasyCache node does not execute at all.
+**Verify by log**: a turbo run prints NO `EasyCache enabled` and NO `skipped` line; a
+non-turbo run prints both, with ~8/20. Confirmed live 2026-08-09.
+
+`MiniMaxH3SigmaShift` sits on the turbo branch ONLY, and that is correct rather than an
+oversight — it entered the graph WITH turbo (`2b2df03f`; `2b2df03f^` has zero
+occurrences), so a non-turbo run skipping it is exactly the 1.3.1 behaviour.
+
+Two wiring mistakes were caught at the sync's diff step before either was installed: the
+branches inverted (turbo keeping the cache), and `MiniMaxH3SigmaShift` stranded on one
+branch so the other lost it. Convert-and-diff before installing is what caught both.

@@ -72,8 +72,8 @@
   },
   "140": {
     "inputs": {
-      "scheduler": "simple",
-      "steps": 20,
+      "scheduler": "beta",
+      "steps": 8,
       "denoise": 1,
       "model": [
         "252",
@@ -88,11 +88,11 @@
   "141": {
     "inputs": {
       "sigmas": [
-        "140",
+        "337",
         0
       ],
       "step": [
-        "309",
+        "340",
         0
       ]
     },
@@ -131,7 +131,7 @@
   },
   "152": {
     "inputs": {
-      "sampler_name": "res_multistep"
+      "sampler_name": "euler"
     },
     "class_type": "KSamplerSelect",
     "_meta": {
@@ -149,7 +149,7 @@
         0
       ],
       "sampler": [
-        "152",
+        "345",
         0
       ],
       "sigmas": [
@@ -157,8 +157,8 @@
         0
       ],
       "latent_image": [
-        "264",
-        1
+        "363",
+        0
       ]
     },
     "class_type": "SamplerCustomAdvanced",
@@ -177,7 +177,7 @@
         0
       ],
       "sampler": [
-        "152",
+        "345",
         0
       ],
       "sigmas": [
@@ -197,7 +197,7 @@
   "158": {
     "inputs": {
       "samples": [
-        "156",
+        "359",
         0
       ],
       "vae": [
@@ -220,7 +220,7 @@
   "160": {
     "inputs": {
       "samples": [
-        "156",
+        "359",
         0
       ],
       "vae": [
@@ -269,7 +269,7 @@
   },
   "195": {
     "inputs": {
-      "int": 4
+      "int": 354681354
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -314,7 +314,7 @@
   },
   "212": {
     "inputs": {
-      "int": 2
+      "int": 3
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -428,7 +428,7 @@
   },
   "232": {
     "inputs": {
-      "string": "She arrives from the right of the frame and leans on the wall "
+      "string": "medium rear shot of a knight holding a sword on his shoulder, the camera orbits around into a close-up of his face as he says, \"I had enough\". He looks determined and has a little bit of blood coming out of his mouth. The location is a mediaeval battlefield. The style is cinematic and dark.  Background sound is a huge battle happening: clinking swords, man screaming, the sound of the wind and thunder.  "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -441,12 +441,12 @@
       "strength_model": 1,
       "strength_clip": 1,
       "model": [
-        "129",
+        "323",
         0
       ],
       "clip": [
-        "130",
-        0
+        "323",
+        1
       ]
     },
     "class_type": "MpiLoraModelClip",
@@ -897,19 +897,6 @@
       "title": "has img1"
     }
   },
-  "309": {
-    "inputs": {
-      "math_expression": "10 if a else 5",
-      "a": [
-        "291",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
   "320": {
     "inputs": {
       "is_continue": false,
@@ -928,6 +915,282 @@
     "class_type": "MpiStageLatents",
     "_meta": {
       "title": "Input_Video_Latent"
+    }
+  },
+  "321": {
+    "inputs": {
+      "reuse_threshold": 0.2,
+      "start_percent": 0.15,
+      "end_percent": 0.95,
+      "verbose": true,
+      "model": [
+        "129",
+        0
+      ]
+    },
+    "class_type": "EasyCache",
+    "_meta": {
+      "title": "EasyCache"
+    }
+  },
+  "322": {
+    "inputs": {
+      "shift_video": 12,
+      "shift_audio": 5,
+      "model": [
+        "129",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3SigmaShift",
+    "_meta": {
+      "title": "MiniMax H3 Sigma Shift"
+    }
+  },
+  "323": {
+    "inputs": {
+      "lora_name": "minimax-h3\\minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors",
+      "model": [
+        "369",
+        0
+      ],
+      "clip": [
+        "130",
+        0
+      ],
+      "strength_model": [
+        "343",
+        0
+      ],
+      "strength_clip": [
+        "343",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Mpi Lora Model Clip"
+    }
+  },
+  "324": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_is_Turbo"
+    }
+  },
+  "328": {
+    "inputs": {
+      "math_expression": "10 if a else 5",
+      "a": [
+        "291",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "337": {
+    "inputs": {
+      "true": [
+        "140",
+        0
+      ],
+      "false": [
+        "338",
+        0
+      ],
+      "boolean": [
+        "324",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "338": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 20,
+      "denoise": 1,
+      "model": [
+        "252",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "340": {
+    "inputs": {
+      "true": [
+        "341",
+        0
+      ],
+      "false": [
+        "328",
+        0
+      ],
+      "boolean": [
+        "324",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "341": {
+    "inputs": {
+      "int": 4
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Mpi Int"
+    }
+  },
+  "343": {
+    "inputs": {
+      "math_expression": "1.0 if a else 0.0",
+      "a": [
+        "324",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "345": {
+    "inputs": {
+      "true": [
+        "152",
+        0
+      ],
+      "false": [
+        "346",
+        0
+      ],
+      "boolean": [
+        "324",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "346": {
+    "inputs": {
+      "sampler_name": "res_multistep"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "348": {
+    "inputs": {
+      "noise": [
+        "151",
+        0
+      ],
+      "guider": [
+        "150",
+        0
+      ],
+      "sampler": [
+        "345",
+        0
+      ],
+      "sigmas": [
+        "337",
+        0
+      ],
+      "latent_image": [
+        "363",
+        1
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "Single"
+    }
+  },
+  "357": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Single_Pass"
+    }
+  },
+  "359": {
+    "inputs": {
+      "true": [
+        "348",
+        0
+      ],
+      "false": [
+        "156",
+        0
+      ],
+      "boolean": [
+        "357",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "363": {
+    "inputs": {
+      "input": [
+        "264",
+        1
+      ],
+      "boolean": [
+        "357",
+        0
+      ]
+    },
+    "class_type": "MpiIfElseInverted",
+    "_meta": {
+      "title": "Mpi If Else Inverted"
+    }
+  },
+  "369": {
+    "inputs": {
+      "true": [
+        "322",
+        0
+      ],
+      "false": [
+        "321",
+        0
+      ],
+      "boolean": [
+        "324",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
     }
   }
 }

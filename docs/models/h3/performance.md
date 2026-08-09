@@ -85,43 +85,12 @@ Core's standalone empty-latent node offers nothing our graphs lack. Both
 `MiniMaxH3ImageToVideo` and `MiniMaxH3ReferenceToVideo` call `_empty_av_latent`
 internally and return the latent as output 1, which is what the samplers consume.
 
-## Step distillation — the lever that WORKED (MPI-505, measured 2026-08-09)
+## Step distillation — the lever that WORKED → `turbo.md`
 
-**H3 was the only non-distilled video model we shipped**, and that single fact explains
-why every acceleration technique in this doc lands on H3 and nowhere else:
-
-| model | steps | distilled |
-|---|---|---|
-| H3 | 20 | no, until the turbo LoRA |
-| LTX 2.3 (both tiers) | 8 (`LTXVScheduler.steps`, a literal) | yes, upstream |
-| WAN 2.2 14B | 6 (`ManualSigmas` 1.0/0.93/0.85 then 0.85/.../0.0) | yes |
-| WAN 5B | 4 | yes, baked distill LoRA at 0.8 |
-
-LTX "High" vs "Balanced" is **precision** (bf16 vs int8) - all four weights are
-`ltx-2.3-22b-distilled-1.1_*`. A turbo LoRA there would distil a distilled model.
-
-`drbaph/MiniMax-H3-Turbo-Lora-ComfyUI`, variant `v4_step600_ema` (Apache-2.0, original
-`larryvrh`) takes H3 to 8 steps. Measured at 864x480 (the baked default), 2s clip, warm:
-
-| config | time |
-|---|---|
-| 20 steps, two-stage, no EasyCache | 204.02s |
-| 20 steps, single-pass, EasyCache | 136s |
-| **8 steps (turbo)** | **90-96s** (4 runs) |
-
-Upstream settings: euler / beta / strength 1.0, sigma shift video 12 and **audio 4-6**.
-The model defaults are 12 / **3.0** (`nodes_minimax_h3.py`, `ldm/minimax/model.py`), and
-the audio value is the one that must move or audio distorts. Sweeping 4/5/6 changed
-nothing audible - the audible fix was euler/beta - so it is baked at 5. Turbo ships
-OPT-IN: quality is slightly below the 20-step path, which is the user's stated trade.
-
-### The two-stage split costs nothing at low step counts
-
-Turbo two-stage (91.59 / 90.07s) and turbo single-pass (91s) are indistinguishable, so
-collapsing the split is only ever worth measuring at high step counts. Note the preview
-decode does **not** run on a full two-stage generation - `MpiStageLatents` blocks
-`denoised` unless `is_preview`, so the split's real cost is one sampler setup plus the
-latent save.
+The turbo LoRA, what it is measurably worth on the shipped graph, what it does to MOTION,
+and the EasyCache gate that rides with it all live in **`docs/models/h3/turbo.md`**. It is
+a shipped feature with its own wiring and caveats; this file stays the log of levers we
+tested and mostly rejected.
 
 ## SolAttn and SageAttention — rejected as node packs (2026-08-09)
 

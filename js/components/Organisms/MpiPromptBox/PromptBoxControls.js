@@ -1205,6 +1205,59 @@ export const PROMPT_BOX_CONTROLS = {
     },
 
     /**
+     * h3Turbo — MiniMax H3 speed toggle (MPI-505). Same `Input_is_Turbo` boolean as
+     * krea2Turbo, and a deliberate SIBLING of it rather than a reuse, for two reasons:
+     *
+     *   - krea2Turbo emits `prompt:krea2-turbo`, which MpiPromptBox listens for to hide
+     *     the negative-prompt toggle. H3 has no negative input at all (both cards declare
+     *     `negativePrompt: false`), so that emit would be a cross-family side effect with
+     *     nothing to act on.
+     *   - scope is `perModel`, so the id IS the storage key. Sharing the id would put
+     *     Krea2's turbo state and H3's in one bucket — flipping turbo on an image model
+     *     would silently flip it on a video model that costs 100s a run.
+     *
+     * ON raises the turbo-distill LoRA to strength 1.0 and swaps the whole sampler
+     * shape with it: 8 steps / euler / beta against 20 / res_multistep / simple, plus a
+     * 3-step stage split instead of 10-or-5. 204s -> 96s at 864x480, warm.
+     *
+     * Default OFF (see PROMPT_CONTROL_DEFAULTS.h3Turbo) — turbo quality is below the
+     * 20-step path here, so speed is the opt-in and quality is what a user gets without
+     * asking. That is the opposite call to krea2Turbo, on purpose.
+     */
+    h3Turbo: {
+        nodeTitle: 'Input_is_Turbo',
+        scope: 'perModel',
+        defaultValue: PROMPT_CONTROL_DEFAULTS.h3Turbo,
+        mount(hostEl, opts = {}) {
+            const saved = _readSaved(this, opts);
+            const fallback = _resolveDefault(this, 'h3Turbo', opts);
+            const initial = typeof saved.h3Turbo === 'boolean' ? saved.h3Turbo : !!fallback;
+            this.value = initial;
+
+            // Bare icon button in the button strip, mounting exactly like krea2Turbo.
+            this._instance = MpiButton.mount(hostEl, {
+                icon: 'bolt',
+                info: 'Turbo — 8 steps instead of 20, about half the time, slightly less detail',
+                size: 'sm',
+                variant: 'primary',
+                toggleable: true,
+                active: initial,
+            });
+
+            this._instance.on('click', ({ active }) => {
+                this.value = !!active;
+                _emitUpdate(this, opts, 'h3Turbo', !!active);
+            });
+        },
+        getValue() {
+            return this.value ?? this.defaultValue;
+        },
+        getInjectionParams() {
+            return { Input_is_Turbo: !!(this.value ?? this.defaultValue) };
+        },
+    },
+
+    /**
      * styleSelect — style-LoRA picker (Krea2 pattern, MPI-242; playbook §9).
      *
      * Injects the INDEX (`Input_Style_Selector.selector`), never a filename or a
@@ -1694,6 +1747,12 @@ export function visibleControlIds(model, operation, ctx = {}) {
         // (boolean), NOT qwenTier's Input_Tier int. Its own capability flag:
         // a model has EITHER the 3-way Qwen radio OR this, never both.
         if (id === 'krea2Turbo' && model?.capabilities?.turboToggle !== true) return false;
+
+        // H3 turbo toggle (MPI-505). Its own flag rather than krea2's `turboToggle`,
+        // because it is its own control — the two inject the same node title but differ
+        // in default, in storage key, and in whether they touch the negative prompt.
+        // Declared on both H3 cards; every other model leaves it unset and hides it.
+        if (id === 'h3Turbo' && model?.capabilities?.h3TurboToggle !== true) return false;
 
         // Batch picker is model-gated. Defaults TRUE (every model batches
         // unless it opts out), like negativePrompt. Krea2-Turbo opts out:

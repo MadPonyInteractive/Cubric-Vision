@@ -49,7 +49,8 @@ load-bearing, plus the 2-reference face wall and its ruled-out list.
 |---|---|
 | [README.md](h3/README.md) | Hub: what ships (fl2va; ref2va is a second card), the LICENCE constraints that are baked into the wiring and must not be tidied away, the 4 publisher-hosted weights, the no-`_stage2`-twin two-stage design with measured bar counts, media-derived routing, the 17k+5 frame grid, and why `capabilities.audio` is OFF on a model that outputs audio. |
 | [ref2va.md](h3/ref2va.md) | The REFERENCE card (`minimax-h3-ref2va`): the judged results, slot-numbered prompt tags and the audio ordinal shift, what a reference costs per step, why the 2K clips online are the hosted API, and the hi-res-fix investigation — including why it does NOT work here (ref2va composes for the stage-1 canvas, and the joint video+audio latent breaks a split trajectory). |
-| [performance.md](h3/performance.md) | Measured-and-REJECTED optimisations — the KJNodes H3 VRAM patches and the Sage attention patch. Read before wiring an optimisation into either H3 graph. |
+| [performance.md](h3/performance.md) | Measured-and-REJECTED optimisations — the KJNodes H3 VRAM patches, the Sage attention patch, SolAttn, and EasyCache (which DID pay, on the non-turbo path only). Read before wiring an optimisation into either H3 graph. |
+| [turbo.md](h3/turbo.md) | The shipped turbo toggle: the 8-step distill LoRA, what it is measurably worth on the current graph (171s vs 220s at 864x480/5s warm — ~22%, NOT the ~50% the first bench suggested, and why), the ~17s re-patch every flip costs, that it changes MOTION and not just detail, and the `MpiIfElse` gate that keeps EasyCache off it. Read before quoting any H3 speed number. |
 
 ### [pid/](pid/) — NVIDIA PiD (PixelDiT) 4× upscaler
 | File | Holds |

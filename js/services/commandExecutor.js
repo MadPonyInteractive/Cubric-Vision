@@ -671,6 +671,21 @@ function _buildParams(payload) {
         // recognised target. Neither ever writes the wrong thing to the other.
         params['Video_Latent.is_continue'] = _isContinue;
         params['Video_Latent.is_preview']  = _isPreview;
+        // Single-pass (MPI-505). The stage split exists to PRODUCE a preview: stage 1
+        // stops early, the app collects its latent, stage 2 resumes the same schedule
+        // from it. A run that is neither making a preview nor resuming one is paying
+        // the seam — a second sampler setup and a latent round-trip — for nothing.
+        // So the run mode IS the value; there is no user toggle and nothing to keep in
+        // sync with one. Derived from the two flags above rather than from
+        // `payload.previewOnly` directly, so historyMode (which forces _isPreview false)
+        // is honoured here too.
+        //
+        // H3 is the only graph carrying `Input_Single_Pass` today. LTX and WAN have no
+        // such node, and the injector SILENTLY SKIPS a title it cannot find, so this is
+        // inert on them — the same property the dual-shape latent keys above rely on.
+        // The bar count is adjusted at the dispatch site, which is where the workflow
+        // JSON is loaded and can be asked whether it actually has the node.
+        params['Input_Single_Pass'] = !_isPreview && !_isContinue;
         // Which latent stage 2 reads. Stage-1 runs supply no name and fall back to a
         // default that nothing places and nothing loads — stage 1 samples from scratch.
         const _latentName = payload.loadLatentName || 'ComfyUI_00001_.latent';
@@ -1523,8 +1538,17 @@ export function runCommand(payload) {
         // TextGenerate path this delta was measured on, which is why the two differ.
         const _isKrea2 = /^krea2_/i.test(workflowFile || '');
         const _enhanceBars = (!_isKrea2 && _paramIsTrue(params, 'Input_Enhance_Prompt')) ? 1 : 0;
+        // Single-pass costs a bar: one sampler runs where the table recorded two
+        // (MPI-505). A NEGATIVE delta, which is why stagesFor stopped clamping at 0.
+        // Gated on the graph actually carrying the node, not on the model id — the
+        // param is injected on every multi-stage run and lands nowhere on LTX/WAN, so
+        // trusting the param alone would subtract a bar those runs never saved.
+        const _singlePassBars = (
+            _paramIsTrue(params, 'Input_Single_Pass')
+            && Object.values(workflow).some((n) => n?._meta?.title === 'Input_Single_Pass')
+        ) ? -1 : 0;
         const stageProgress = createStageProgress({
-            stages: stagesFor(workflowFile, _stageMode, _enhanceBars),
+            stages: stagesFor(workflowFile, _stageMode, _enhanceBars + _singlePassBars),
             postTileBars: postTileBarsFor(workflowFile),
         });
 

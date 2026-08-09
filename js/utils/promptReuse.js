@@ -438,7 +438,7 @@ export function buildPromptReuseSettings(payload = {}, model = {}) {
         // Keep in step with generationService's controlState.model snapshot: a
         // per-model control the sidecar recorded must survive this path too, or
         // reuse silently drops the tier and the whole style rack.
-        for (const key of ['qualityTier', 'styleSelect', 'stylization', 'enhancePrompt', 'krea2Turbo']) {
+        for (const key of ['qualityTier', 'styleSelect', 'stylization', 'enhancePrompt', 'krea2Turbo', 'h3Turbo']) {
             if (key in modelSrc) modelUpdates[key] = modelSrc[key];
         }
     }

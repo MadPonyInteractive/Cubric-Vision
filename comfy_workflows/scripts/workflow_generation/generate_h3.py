@@ -137,6 +137,18 @@ BAKED_WIDGETS = [
     # exports at whatever was last rendered (352x608 on 2026-08-06).
     ("Input_Width", "int", 864),
     ("Input_Height", "int", 480),
+    # Turbo (MPI-505): the h3Turbo toggle is the authority and injects this per run —
+    # the bake is only the SAFE DEFAULT, i.e. what a hand-run or a failed mount gets.
+    # False = the 20-step path, which is the higher-quality one; turbo trades quality
+    # for 204s -> 96s at 864x480 and is opt-in. The bench exports it True (that is what
+    # was last measured), so this bake is load-bearing, not cosmetic.
+    ("Input_is_Turbo", "boolean", False),
+    # Single-pass collapses the two sampler stages into one. NOT wired to any control
+    # yet — the decision is still open (the 204.02s two-stage baseline is n=1). Baked
+    # False so the shipped graph keeps the two-stage shape progressStages.js declares;
+    # flipping it without the `single: 2 -> 1` edit would advertise a bar segment that
+    # never arrives.
+    ("Input_Single_Pass", "boolean", False),
 ]
 
 # Every weight the graph loads, as a SET rather than per-title: two VAELoaders share the

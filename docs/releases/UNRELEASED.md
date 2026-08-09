@@ -147,6 +147,26 @@
   with synchronized audio like the rest of H3, and it installs alongside the existing
   MiniMax H3 sharing its text encoder and both VAEs, so it is one extra model file
   rather than a second full model.
+- **Turbo on MiniMax H3 — one click, roughly a quarter off the wait.** Both H3 models now
+  carry the same **Turbo** button the image models have. On, it takes eight sampling steps
+  instead of twenty: a five-second clip that took 3m40s comes back in 2m51s. It is off by
+  default. What changes is not only detail — **movement comes out slower**, closer to slight
+  slow motion, and holds together better at small sizes, where the full path can smear
+  faces and shapes as they move. Speed is something you can fix afterwards in an editor;
+  smearing is not. So it is worth trying on small, quick clips rather than saving it purely
+  for drafts. The choice sticks with the model, so it holds while you work and does not
+  follow you to a different one. It adds a 591MB file to the H3 download, shared by both
+  H3 models.
+
+  The saving grows with the clip: on a one-second clip most of the time goes on loading the
+  model and writing the video out, neither of which turbo touches, so it is worth far less
+  there than on a long one.
+- **MiniMax H3 stopped doing work it only needed for a preview.** H3 used to render in
+  two passes whether or not you asked to see the first one. It now runs straight through
+  in a single pass unless you turn **Preview initial stage** on, which is the only thing
+  the split was ever for. Same settings, same number of sampling steps, one less setup to
+  pay for — and the progress bar says "1" instead of counting to two. Turn the preview
+  back on and it behaves exactly as before, first pass to look at, second to finish.
 - **Engine updates now apply in place — seconds, not a fresh download.** Updating the
   generation engine used to delete the whole thing and download it again from scratch:
   around eleven gigabytes of engine, every add-on and every Python package, even when

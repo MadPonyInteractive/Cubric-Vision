@@ -87,10 +87,18 @@ UNETLoader[129] -> EasyCache[321] -> MiniMaxH3SigmaShift[322](12,5)
                 -> MpiLoraModelClip[323](EMA) -> Input_Lora_1[246] .. Input_Lora_6[252]
 
 [337] sigmas   true=BasicScheduler[140](beta,8)  false=[338](simple,20)
-[340] step     true=MpiInt[341]=3                false=MpiMath[328]("10 if a else 5")
+[340] step     true=MpiInt[341]=4                false=MpiMath[328]("10 if a else 5")
 [345] sampler  true=KSamplerSelect[152](euler)   false=[346](res_multistep)
 [343] strength "1.0 if a else 0.0" -> [323].strength_model AND .strength_clip
 ```
+
+**The turbo split is 4, not 3 (changed 2026-08-09 after the first app test).** Three
+stage-1 steps only ever looked right on a close subject. A wide shot — three dogs, small
+in frame — came back unreadable at 3: stage 1 hands stage 2 a latent with too little
+structure to refine, and nothing downstream can invent it. The r2va twin is node [416].
+This is the preview the user judges a run by, so it is not a quality nicety: at 3 the
+preview lies about what the finish will be. 4/8 also keeps the same half-and-half shape
+the non-turbo path has at 10/20.
 
 Driving **both** strengths matters: `MpiLoraModelClip` only short-circuits when
 `strength_model == 0 AND strength_clip == 0`, and that short-circuit is what makes

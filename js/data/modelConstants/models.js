@@ -1268,7 +1268,11 @@ export const MODELS = [
         // comes out of a single Qwen3-VL encode). Without this the box rendered a negative
         // field that injection silently skipped: the user typed a stop that never reached
         // the model, and nothing said so. Confirmed by the user 2026-08-07 (MPI-475).
-        capabilities: { multiStage: true, singleFileStages: true, negativePrompt: false },
+        // h3TurboToggle arms the `h3Turbo` control (MPI-505), which injects Input_is_Turbo.
+        // Its OWN flag, not krea2's `turboToggle`: that one is wired to a control which
+        // also emits `prompt:krea2-turbo` to hide the negative toggle, and both controls
+        // would then share one perModel storage key across two model families.
+        capabilities: { multiStage: true, singleFileStages: true, negativePrompt: false, h3TurboToggle: true },
         video: 'minimax_h3_preview.mp4',
         // type drives the ratio ladder. 'h3' is NOT arbitrary: RATIO_MODES.h3,
         // BUILTIN_RATIOS.h3 and BUILTIN_QUALITY_TIERS.h3 were all authored against this
@@ -1305,6 +1309,13 @@ export const MODELS = [
             'h3-qwen3vl-32b-clip',
             'vae-minimax-h3-video',
             'vae-minimax-h3-audio',
+            // 591MB turbo distill (MPI-505), SHARED with ref2va — installing both
+            // downloads it once. A flat dep like krea2's accelerator rather than an
+            // opt-in extra: turbo is a per-run toggle, so the weight has to be on disk
+            // before the user can flip it. With turbo OFF both strengths gate to 0 and
+            // MpiLoraModelClip short-circuits the file load entirely, so it costs
+            // nothing on the default path.
+            'minimax-h3-turbo-lora',
             'ComfyUI-MpiNodes',
         ],
     },
@@ -1345,7 +1356,9 @@ export const MODELS = [
         // toggle removes both in one move instead of shipping two fields that inject
         // nowhere. NOTE: 'minimax-h3' above has the same missing-Input_Negative shape and
         // does NOT set this — pre-existing, tracked on MPI-475, not fixed here.
-        capabilities: { multiStage: true, singleFileStages: true, audio: true, negativePrompt: false },
+        // h3TurboToggle: same 8-step distill as fl2va — one LoRA, both DiTs (see the
+        // fl2va card for why this is not krea2's `turboToggle`).
+        capabilities: { multiStage: true, singleFileStages: true, audio: true, negativePrompt: false, h3TurboToggle: true },
         // ponytail: the fl2va clip, on loan. A ref2va showcase has to wait for a run judged
         // on the CORRECT transformer — every r2va result before the 2026-08-07 re-export
         // came off the fl2va DiT and ignored its references, so no existing clip can be
@@ -1371,6 +1384,8 @@ export const MODELS = [
             'h3-qwen3vl-32b-clip',
             'vae-minimax-h3-video',
             'vae-minimax-h3-audio',
+            // Same turbo distill as fl2va (MPI-505) — one weight, both DiTs.
+            'minimax-h3-turbo-lora',
             'ComfyUI-MpiNodes',
         ],
     },

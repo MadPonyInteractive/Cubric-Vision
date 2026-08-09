@@ -681,7 +681,9 @@ export const commands = {
         promptRequired: true,
         // audioMode is capability-gated (only models with capabilities.audio mount
         // it — MpiPromptBox skips it for WAN). Ordered first in the op slot.
-        components: ['audioMode', 'useAudio', 'qualityTier', 'duration', 'ratio', 'previewStage'],
+        // h3Turbo is capability-gated the same way (capabilities.h3TurboToggle) — this op
+        // is shared with LTX and WAN, which are already step-distilled and never mount it.
+        components: ['audioMode', 'useAudio', 'qualityTier', 'duration', 'ratio', 'h3Turbo', 'previewStage'],
         // Two-stage (preview→stage-2) op. Drives the preview/latent-staging path
         // in commandExecutor. Replaces the old `operation.endsWith('_ms')` magic
         // (MPI-128). Whether a given MODEL exposes it is still gated by
@@ -711,7 +713,8 @@ export const commands = {
         ],
         promptRequired: false,
         // audioMode capability-gated (see t2v_ms note); ordered first.
-        components: ['audioMode', 'useAudio', 'qualityTier', 'duration', 'motionIntensity', 'ratio', 'previewStage'],
+        // h3Turbo capability-gated (see t2v_ms note).
+        components: ['audioMode', 'useAudio', 'qualityTier', 'duration', 'motionIntensity', 'ratio', 'h3Turbo', 'previewStage'],
         // Two-stage op (see t2v_ms note). MPI-128.
         isMultiStage: true,
         allowsBranchingContinue: true,
@@ -789,7 +792,8 @@ export const commands = {
         // No motionIntensity (no Input_Motion_Intensity node) and no audioMode/useAudio:
         // this graph takes audio IN as a reference, it does not offer the LTX-style audio
         // conditioning switch. refImageSize is the one control unique to this op.
-        components: ['qualityTier', 'duration', 'ratio', 'refImageSize', 'previewStage'],
+        // h3Turbo: the SAME distill LoRA serves both DiTs, so ref2va gets the toggle too.
+        components: ['qualityTier', 'duration', 'ratio', 'refImageSize', 'h3Turbo', 'previewStage'],
         isMultiStage: true,
         // Finish-only, same call as the fl2va half: stage 2 resumes from the stage-1
         // latent, so a re-prompted branch could not honour the new prompt anyway.

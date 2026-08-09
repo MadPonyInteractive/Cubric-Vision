@@ -31,6 +31,15 @@ export const PROMPT_CONTROL_DEFAULTS = Object.freeze({
     // away. The template bakes a safe default; the injected value always wins, so the
     // bake only shows through if this control fails to mount. (MPI-316, MPI-365)
     krea2Turbo: true,
+    // MiniMax H3 turbo toggle (Input_is_Turbo, MPI-505): OFF = 20 steps (res_multistep,
+    // simple), ON = 8 steps (euler, beta) with the turbo-distill LoRA raised to strength
+    // 1.0. 204s -> 96s at 864x480 warm. Stored perModel, same reasoning as krea2Turbo.
+    //
+    // Default OFF, the OPPOSITE of krea2Turbo, and deliberately so: turbo quality here
+    // sits slightly BELOW the 20-step path (the user's own judgement), so the default
+    // has to be the good one and speed is the opt-in. Krea2's turbo is a wash on
+    // quality, which is why that one defaults ON.
+    h3Turbo: false,
     // Control adherence (Input_Control_strength MpiFloat). What it lands on differs by
     // model — a control-LoRA's `strength` on Krea2/Klein, a ControlNet's on Chroma/SDXL —
     // but the meaning is the same everywhere: 1.0 = full (what each graph bakes and what

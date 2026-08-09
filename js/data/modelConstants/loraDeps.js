@@ -17,6 +17,27 @@ export const loraDeps = {
         bytes: 332348584,
         sha256: '0ace5244e3d1256f884662c261b017249796cf5b95f05d5ed93cc02a478967b8'
     },
+    // H3 turbo distill (MPI-505) — the ONLY step-distill lever we ship for H3, which is
+    // the only non-distilled video model in the fleet (20 steps; LTX 8, WAN 2.2 6, WAN 5B 4).
+    // 20 -> 8 steps, 204s -> 96s at 864x480 warm. OPT-IN: quality sits slightly below the
+    // 20-step path, so the toggle is off by default. Strength is VALUE-gated (MpiMath
+    // 1.0/0.0 into BOTH strength_model and strength_clip) — MpiLoraModelClip only
+    // short-circuits when both are 0, and that short-circuit is what skips the file load
+    // when turbo is off. Subfoldered under loras/minimax-h3/; ComfyUI lists it BACKSLASHED
+    // (`minimax-h3\...`) — rides the MPI-229 heal, same as the krea-2 subfolders.
+    'minimax-h3-turbo-lora': {
+        id: 'minimax-h3-turbo-lora',
+        name: 'MiniMax H3 Turbo LoRA (8-step distill)',
+        // v4 step600 EMA — the README's recommended build; the non-EMA sibling is
+        // "for testing and comparison". Apache-2.0, so no licences.js record is needed.
+        origin: 'drbaph/MiniMax-H3-Turbo-Lora-ComfyUI (Apache-2.0, original larryvrh)',
+        filename: 'loras/minimax-h3/minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/minimax-h3/minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors',
+        mirrorUrl: 'https://huggingface.co/drbaph/MiniMax-H3-Turbo-Lora-ComfyUI/resolve/main/minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors',
+        size: '591.55MB',
+        bytes: 620285592,
+        sha256: '7098acf3ee75028fd9fcd948f50fcc8d995057fabb76f86bd3ca2c0ffc58e409',
+    },
     // Content-filter-bypass LoRA (always-on Input_Bypass_Filter_Lora node). A tiny
     // 12-float projector nudge. Dep of BOTH models (it's negligible); the generator bakes
     // strength 1.0 on SFW (the fp8_scaled weight is filtered) and 0.0 on NSFW (self-unfiltered).
