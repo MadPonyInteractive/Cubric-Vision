@@ -70,3 +70,45 @@ it does NOT prove the drain-wait works, because the drain-wait never ran.
 **Cheapest live proof, no rental:** local engine, queue a long generation, then the dev radial
 restart. Expect the `Restart blocked` toast and ComfyUI still running. That exercises
 `navigation.js` -> `waitForIdleQueue` against a real non-empty `/queue`.
+
+## 2026-08-09 19:00Z — PROVEN LIVE. The guard fired.
+
+Fabio ran exactly that, in his own app on the LOCAL engine: queued a generation, then hit
+the dev radial's Restart Engine while it was still running. **The restart was refused and
+ComfyUI kept running.** That is `navigation.js` -> `waitForIdleQueue` against a real
+non-empty `/queue` — the leg the 04:15Z GPU run could not supply, because nothing there
+ever requested a restart.
+
+The logic is proven. What the same run exposed is the SURFACE.
+
+### Two defects in how the refusal was reported (both fixed, same file)
+
+**1. It rendered as the crash dialog.** The refusal was emitted on `ui:error`, and
+`js/shell.js:392` maps that to `showError(title, message)` — the modal with an
+"Error Summary (optional)" box and a **REPORT ON GITHUB** button. The guard working
+correctly was inviting a bug report against itself. `ui:warning` is the toast channel
+(`js/shell/statusBar.js:579` -> `StatusBar.notify(message, 'warning', 6000)`), which is
+what a by-design refusal should use.
+
+**2. The wording told them to do what they had just done.** It read *"Stop it or let it
+finish, then restart."* They had clicked **Restart Engine** a second earlier. And outside
+this radial nobody restarts ComfyUI by hand at all: the radial is dev-only
+(`navigation.js:310`, `if (!APP_CONFIG.dev_mode ...) return`), and every other restart in
+the product is fired BY the app after a node install. Now reads:
+
+> Restart cancelled — a generation is still running on the engine. Stop it, or wait for it
+> to finish.
+
+### The user-facing twin was already correct — checked, not assumed
+
+`comfyController`'s gate emits `comfy:error`, which is NOT the GitHub dialog: `shell.js:386`
+routes it to `_startingComfy.el.setError(message)`, the engine-start modal. Its wording
+("New nodes need the remote engine restarted, but a generation is still running on it.
+Wait for it to finish, then try again.") never asks the user to restart anything, because
+in that path the app asked, not them. No change made there. The third caller
+(`routes/remoteModels.js`) has no UI surface by design — it logs and skips.
+
+`npm test` 530/530 green after the change; `npx eslint js/shell/navigation.js` clean.
+
+**Remaining: one look.** Re-run the same steps and confirm the refusal now arrives as a
+warning toast instead of the dialog. The logic is proven; this is the pixel.

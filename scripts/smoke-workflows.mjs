@@ -208,8 +208,11 @@ function printPlan(reg, set) {
             ops++;
         }
     }
+    // MPI-483: this is the size a NEW volume would be created at — it is NOT a fit check.
+    // Free space is unknowable until a Pod mounts the volume; the real gate is
+    // volumeFitVerdict, run after the download Pod comes up.
     log(`\n  models ${set.length} · ops ${ops} · weights ${set.totalGb.toFixed(1)} GB` +
-        ` · volume ${Math.ceil((set.totalGb + VOLUME_HEADROOM_GB) / 10) * 10} GB`);
+        ` · new volume would be ${Math.ceil((set.totalGb + VOLUME_HEADROOM_GB) / 10) * 10} GB`);
     log(`  budget: ${BUDGET.steps} step · ${BUDGET.edge}px target · ${BUDGET.frames} frame(s) · seed ${BUDGET.seed}`);
     if (set.scope.unproven.length) {
         log(`\n  SCOPED RUN — ${set.scope.unproven.length} of ${set.scope.modelsInRegistry} models are in no family this`);
@@ -324,6 +327,71 @@ export function injectByTitle(graph, title, value) {
 }
 
 // ── 3. Volume + pods ─────────────────────────────────────────────────────────
+
+const GiB = 1024 ** 3;   // dep sizes are 1024-based (footprint.js sizeToGb)
+const RP_GB = 1e9;       // RunPod volume sizes are base-10 GB
+// Free margin the fit gate demands ON TOP of the remaining weights. Deliberately NOT
+// VOLUME_HEADROOM_GB: that one rounds UP the size of a volume being created, and reusing
+// it as a required margin would refuse a from-empty fill that genuinely fits (322.7 GB of
+// weights on a 350 GB volume). 5 GB covers aria2's scratch and dep-size drift, which is
+// small now that every size is measured (MPI-482), and still fails a nearly-full volume.
+const FIT_MARGIN_GB = 5;
+
+/**
+ * MPI-483 — does the remaining weight set actually FIT on the volume?
+ *
+ * `ensureVolume` compares the estimate against the volume's configured SIZE and nothing
+ * else. It never asks what is FREE and never asks what the volume already holds, so on
+ * 2026-08-08 it passed cleanly, rented two Pods, filled for ~40 minutes and died 8 models
+ * in with the GPU leg still unproven.
+ *
+ * Be precise about what this gate would and would not have caught that day: the 350 GB
+ * volume DOES hold the 322.7 GB set, so with honest numbers this check passes and the run
+ * proceeds. That day's false disk-full was bug 1 above — the wrapper counting apparent
+ * bytes. What this gate stops is the class the runner was blind to entirely: a volume that
+ * genuinely cannot take the remainder, which it would otherwise discover after renting.
+ *
+ * Free space cannot be known before a Pod exists — RunPod's API exposes the configured
+ * size and never live usage (see remotePodLifecycle `_remoteVolumeUsedBytes`), so the
+ * wrapper's `du` is the only source. The earliest honest moment is therefore right after
+ * the download Pod comes up, before the first install.
+ *
+ * Pure so it is testable without renting anything. Returns `ok: true, unknown: true` when
+ * either half of the telemetry is missing — a missing number must never block a run that
+ * would have worked, which is the same choice the app's own download pre-flight makes.
+ *
+ * @param {{usedBytes:number|null, totalBytes:number|null, setBytes:number, headroomBytes:number}} m
+ * @returns {{ok:boolean, unknown:boolean, freeBytes:number, stillNeededBytes:number, line:string, why:string}}
+ */
+export function volumeFitVerdict({ usedBytes, totalBytes, setBytes, headroomBytes }) {
+    const gb = (b) => `${(b / RP_GB).toFixed(1)} GB`;
+    if (!Number.isFinite(usedBytes) || !Number.isFinite(totalBytes) || totalBytes <= 0) {
+        return {
+            ok: true, unknown: true, freeBytes: NaN, stillNeededBytes: NaN,
+            line: 'volume: free space UNKNOWN (no /wrapper/disk) - fit not checked, the fill may still run out',
+            why: '',
+        };
+    }
+    const freeBytes = Math.max(0, totalBytes - usedBytes);
+    // What is already there is assumed to be this set's own weights, which is true for a
+    // reused smoke volume. `foreign` names the case where it cannot be: more on the volume
+    // than the whole set weighs, so "still needed" is understating it. The headroom term
+    // is what keeps the gate meaningful there instead of silently reading as 0 needed.
+    const stillNeededBytes = Math.max(0, setBytes - usedBytes);
+    const foreign = usedBytes > setBytes;
+    const requiredBytes = stillNeededBytes * 1.05 + headroomBytes;
+    const ok = freeBytes >= requiredBytes;
+    const line = `volume: MEASURED used ${gb(usedBytes)} of ${gb(totalBytes)} `
+        + `- free ${gb(freeBytes)}, still needed ${gb(stillNeededBytes)} `
+        + `(+5% +${gb(headroomBytes)} headroom = ${gb(requiredBytes)})`
+        + (foreign ? ' [volume holds MORE than this set weighs - still-needed is a floor]' : '');
+    return {
+        ok, unknown: false, freeBytes, stillNeededBytes, line,
+        why: ok ? '' : `volume cannot fit the set: ${gb(freeBytes)} free, ${gb(requiredBytes)} required `
+            + `(${gb(stillNeededBytes)} of weights still to download + headroom). `
+            + `Grow the volume or run with --models. Refusing to rent - this is what filled for 40 minutes and died 8 models in.`,
+    };
+}
 
 async function ensureVolume(gb) {
     const want = Math.ceil((gb + VOLUME_HEADROOM_GB) / 10) * 10;
@@ -1138,6 +1206,19 @@ async function main() {
     const mode = await app('/remote/mode');
     if (!mode.active || !mode.podId) await abort('remote mode is not active after the CPU Pod came up — refusing to install, the deps would download LOCALLY.');
     log(` remote mode active on ${mode.podId}`);
+
+    // MPI-483: the ONLY moment free space is knowable — a Pod is up (so the wrapper's `du`
+    // answers) and nothing has been downloaded yet. `abort` deletes the live Pod on its way
+    // out, so refusing here costs the CPU Pod's few minutes instead of a 40-minute fill.
+    const disk = await app('/remote/pod/disk').catch(() => null);
+    const fit = volumeFitVerdict({
+        usedBytes: disk?.success ? disk.used : null,
+        totalBytes: disk?.success ? disk.total : null,
+        setBytes: set.totalGb * GiB,
+        headroomBytes: FIT_MARGIN_GB * RP_GB,
+    });
+    log(`  ${fit.line}`);
+    if (!fit.ok) await abort(fit.why);
 
     // `installing` and `paused` are in-flight too (routes/downloadManager.js:1523) —
     // waiting on downloading/queued alone lets the run leave for the GPU while the Pod

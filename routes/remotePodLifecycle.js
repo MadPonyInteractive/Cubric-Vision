@@ -259,6 +259,15 @@ const POD_IMAGE_VERSION_CPU_DEV = 'v0.20.0-dev';
 //     only the fallback label injected at Pod create for a boot where the R2 fetch fails
 //     (bootstrap.sh unsets it on a successful fetch, so a fetched wrapper always
 //     self-reports). Nothing compares it — the live value at :574 comes from /health.
+//   0.2.44 (MPI-483) — /wrapper/disk stopped counting APPARENT bytes. It ran `du -sb`,
+//     and `-b` is `--apparent-size`, so it summed declared file LENGTHS: a sparse aria2
+//     `.part` reads at its full logical size from the first minutes. Measured 307.65 GB
+//     apparent vs 259 GB of real blocks — a 48.65 GB phantom that made
+//     `remoteVolumeFreeBytes()` below refuse an install with "39.4 GB free" while ~91 GB
+//     was free, and the user got the MPI-100 free-up-space toast for a full disk that
+//     was not full. Now `du -s --block-size=1` (allocated blocks, what the quota counts).
+//     R2-publish-only, and NOT raised to the pin below: an older wrapper still answers
+//     the same route with the same shape, just with the inflated number.
 const WRAPPER_VERSION = '0.2.41';
 // MPI-329: a network-volume GPU Pod sizes its container disk to MIRROR the volume
 // (+ a small scratch headroom). The volume is the SOURCE of every model, so the

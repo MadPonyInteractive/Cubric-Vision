@@ -4,7 +4,7 @@
   "generated_at": "2026-08-09T04:55:00Z",
   "from_session": ".agents/mpi-kanban/state/sessions/6a882016-2445-415a-8f2a-5a3bb1deb424.json",
   "to_role": "implementer",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "MPI-501 drain-wait + smoke-runner merge/--retry-failed; MPI-467 and MPI-468 CLOSED on 35/35 evidence",
     "branch": "master"
@@ -49,7 +49,12 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
       "tasks/MPI-501/validation.md - the three callers, why the third SKIPS instead of waiting, the 10 asserts, and an explicit section saying the retry leg did NOT exercise the guard.",
@@ -104,7 +109,14 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "file",
-    "relevant_topics": ["release", "versioning", "runpod", "comfy engine", "linux", "release notes"]
+    "relevant_topics": [
+      "release",
+      "versioning",
+      "runpod",
+      "comfy engine",
+      "linux",
+      "release notes"
+    ]
   },
   "rules_active": [
     ".claude/rules/dos_and_donts.md",
@@ -114,7 +126,12 @@
     "docs/playbooks/bump-engine/01-smoke-run.md"
   ],
   "recent_events": [
-    { "at": "2026-08-09T04:55:00Z", "event": "handoff_created" }
+    {
+      "at": "2026-08-09T04:55:00Z",
+      "event": "handoff_created"
+    }
   ],
-  "resume_prompt": "You are resuming MPI-450, the 1.4 release umbrella. THE SMOKE GATE IS CLEAR - dev_configs/smoke-evidence.json is 35 PASS / 0 SKIP / 0 FAIL across 35 ops on engine 0.30.0 and `npm run release:check` passes reporting FULL coverage. MPI-467 and MPI-468 are closed. Do NOT run another matrix; if an op ever fails, `--retry-failed --keep-volume` retests just that op and merges. Three things, in order. (1) PROVE MPI-501 LIVE - the user approved this for THIS session. No rental: local engine, queue a long generation, hit the dev radial restart, expect the 'Restart blocked' toast with ComfyUI still running. The card is doing/validating with that as its only open item; the 2026-08-09 GPU leg did NOT exercise the guard because nothing requested a restart, so do not close it on that run. (2) SETTLE THE DATE GATE - GitHub ground truth was 'Sun, 09 Aug 2026 04:38:36 GMT', so 2026-08-10 is ONE DAY away. MPI-450's checklist § ON PICKUP step 2: a cut before 08-10 keeps MPI-433's tick; on or after 08-10 VOIDS it and reopens MPI-433 (re-upload the 13.15 GB krea2-raw-transformer-nsfw weight to HF, verify by hash) because the 'second route' note is false without it. (3) Then Gate A's four open cards - MPI-461, MPI-479, MPI-482, MPI-483 (482 is a prerequisite of 483) - and Gate B's MPI-249 Linux leg on the real artifact. Three proposals are waiting for the user's per-file yes: a UNRELEASED.md fixes line for MPI-501, a ten-word addition to .claude/rules/kanban.md line 90 about the required event fields, and a playbook line warning that ANY run of the smoke script - --plan included - truncates dev_configs/smoke-run.txt. Never POST /runpod/pods (that is createPod), never delete volume aghcuvg7nl, always --keep-volume."
+  "resume_prompt": "You are resuming MPI-450, the 1.4 release umbrella. THE SMOKE GATE IS CLEAR - dev_configs/smoke-evidence.json is 35 PASS / 0 SKIP / 0 FAIL across 35 ops on engine 0.30.0 and `npm run release:check` passes reporting FULL coverage. MPI-467 and MPI-468 are closed. Do NOT run another matrix; if an op ever fails, `--retry-failed --keep-volume` retests just that op and merges. Three things, in order. (1) PROVE MPI-501 LIVE - the user approved this for THIS session. No rental: local engine, queue a long generation, hit the dev radial restart, expect the 'Restart blocked' toast with ComfyUI still running. The card is doing/validating with that as its only open item; the 2026-08-09 GPU leg did NOT exercise the guard because nothing requested a restart, so do not close it on that run. (2) SETTLE THE DATE GATE - GitHub ground truth was 'Sun, 09 Aug 2026 04:38:36 GMT', so 2026-08-10 is ONE DAY away. MPI-450's checklist § ON PICKUP step 2: a cut before 08-10 keeps MPI-433's tick; on or after 08-10 VOIDS it and reopens MPI-433 (re-upload the 13.15 GB krea2-raw-transformer-nsfw weight to HF, verify by hash) because the 'second route' note is false without it. (3) Then Gate A's four open cards - MPI-461, MPI-479, MPI-482, MPI-483 (482 is a prerequisite of 483) - and Gate B's MPI-249 Linux leg on the real artifact. Three proposals are waiting for the user's per-file yes: a UNRELEASED.md fixes line for MPI-501, a ten-word addition to .claude/rules/kanban.md line 90 about the required event fields, and a playbook line warning that ANY run of the smoke script - --plan included - truncates dev_configs/smoke-run.txt. Never POST /runpod/pods (that is createPod), never delete volume aghcuvg7nl, always --keep-volume.",
+  "closed_at": "2026-08-09T19:10:00Z",
+  "closed_by": "d55cff0b-5a6f-4f38-be83-0b0333064f29"
 }

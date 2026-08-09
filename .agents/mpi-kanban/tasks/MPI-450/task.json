@@ -7,7 +7,7 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-05T10:35:00Z",
-  "updated_at": "2026-08-08T09:20:00Z",
+  "updated_at": "2026-08-09T19:10:00Z",
   "labels": [
     "release",
     "umbrella",
@@ -34,7 +34,8 @@
   "priority": "high",
   "attention": {
     "state": "required",
-    "reason": "UNBLOCKED 2026-08-08: Gate E is complete (MPI-449/451/452 all done, engine on 0.30.0), so the hold behind H3 is over. Live now: the MPI-467 smoke run, which is the last thing release:check fails on. User decisions this session - (1) MPI-433 is a HARD date: uploading the Krea2 NSFW weight to HF before 2026-08-10 is FORBIDDEN, so if 1.4 cuts before the 10th it ships as-is and if it slips to on/after the 10th the upload is done and the dependency changed; (2) the Linux and macOS legs (MPI-249, MPI-432) are deliberately LAST, against the real artifact, and a Mac can be rented if the risk looks real; (3) MPI-367 per-op help copy ships as it stands. GATE C IS CLOSED (2026-08-08): all 61 UNRELEASED.md bullets carry a verdict in claim-audit.md, five size/wording claims were corrected, and the only new work it created is one Gate B line (a Klein + a Wan generation for the preview-decoder bullet, which no card carries since MPI-420 closed). Every remaining Gate C item is a FLAG for the fold, not a blocker.",
-    "updated_at": "2026-08-08T09:20:00Z"
-  }
+    "reason": "2026-08-09: GATE A IS EMPTY (MPI-483 was the last card and is fixed, doing/validating), Gate D validates exit 0, npm test is 530/530. The 2026-08-10 date gate was settled on evidence and does NOT bite - the note was already reworded to be true either side of it, so MPI-433 stays blocked and is not a blocker. MPI-501 is proven live and needs one look at its new toast to close; MPI-483 needs one Pod check, folded into Gate B's throwaway-Pod session with MPI-480 #3 and MPI-481. GATE B IS ALL THAT REMAINS: test:desktop, a Klein + a Wan generation for the preview-decoder claim, that Pod session, MPI-458's confirmation run, the MPI-249 Linux leg on the real artifact - and the H3 re-smoke LAST, because the H3 graphs were re-authored AFTER smoke-evidence.json was written (04:21:46Z vs 10:06-13:19Z) and Fabio is still editing that workflow.",
+    "updated_at": "2026-08-09T19:10:00Z"
+  },
+  "activeSessionTitle": "1.4 umbrella - Gate B is all that remains"
 }

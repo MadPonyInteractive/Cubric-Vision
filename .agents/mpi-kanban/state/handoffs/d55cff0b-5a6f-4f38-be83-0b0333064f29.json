@@ -1,0 +1,121 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d55cff0b-5a6f-4f38-be83-0b0333064f29",
+  "generated_at": "2026-08-09T19:10:00Z",
+  "from_session": ".agents/mpi-kanban/state/handoffs/6ba59251-ef90-41a1-b633-88d39fe05b55.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-483 fixed (both space accountings); MPI-501 PROVEN LIVE + its refusal moved off the crash dialog; npm test back to green; board repaired",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Clear MPI-450's remaining gates so 1.4 can be cut.",
+    "status": "advanced",
+    "summary": "GATE A IS NOW EMPTY, Gate D validates again, and npm test is 530/530. MPI-483 (the last Gate A card) is fixed and unit-verified, MPI-501 was proven live in Fabio's own app, and the 2026-08-10 date gate turned out not to bite at all. What remains is Gate B, which is almost entirely rented-hardware and real-artifact work - plus one new Gate B item this session found: the H3 smoke rows are stale and must be re-run LAST."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "THE DATE GATE IS SETTLED AND DOES NOT BITE. GitHub ground truth 'Sun, 09 Aug 2026 07:31:02 GMT'. ON PICKUP step 2's premise was STALE - it was written 2026-08-05, before the Gate C pass reworded the bullet. UNRELEASED.md:412 now reads 'Most model downloads now have a second route' and :423 'Four files still have a single route', which is true on BOTH sides of 08-10. So the notes are date-proof and MPI-433 is not a notes blocker either way; the date only controls whether MPI-433 becomes ACTIONABLE, and even then its own brief gates it on checking CivitAI 573152 first. MPI-433 stays todo/blocked. Do NOT reopen it on step 2's original wording.",
+      "MPI-483 FIXED, doing/validating. Bug 1: /wrapper/disk ran `du -sb` and `-b` IS `--apparent-size`, so it summed declared LENGTHS - and the comment directly above the call asserted the opposite ('apparent-size off - real disk blocks, matches quota'), which is why two rewrites of that route (MPI-169, MPI-398) walked past it. Now `du -s --block-size=1` at BOTH call sites (/wrapper/disk and /wrapper/ls's per-top-level-dir breakdown). /wrapper/ls's file walk stays apparent on purpose - it is matched against declared dep sizes, not the quota - and that is now written at the call site. Wrapper source 0.2.43 -> 0.2.44 with a changelog entry in routes/remotePodLifecycle.js; the app's WRAPPER_VERSION pin stays 0.2.41 deliberately (an older wrapper answers the same shape, just inflated).",
+      "MPI-483 Bug 2: new pure exported volumeFitVerdict() in scripts/smoke-workflows.mjs, called right after the CPU download Pod comes up and BEFORE the first install - the earliest moment free space is knowable at all, since RunPod's API has only the configured size and the wrapper's du is the only live source. abort() deletes the live Pod on the way out, so a refusal costs minutes not a 40-minute fill. Units were the trap and are explicit: dep sizes are 1024-based GiB, RunPod volume sizes are base-10 GB. 7 asserts with a proven negative control in tests/smoke-free-space.test.cjs.",
+      "MPI-501 PROVEN LIVE 19:00Z. Fabio queued a generation on the LOCAL engine and hit the dev radial Restart Engine while it ran: the restart was REFUSED and ComfyUI kept running. That is navigation.js -> waitForIdleQueue against a real non-empty /queue - the leg the 04:15Z GPU run could not supply.",
+      "MPI-501 SURFACE FIXED in the same file. The refusal was emitted on `ui:error`, which shell.js:392 maps to showError() - the crash modal with an 'Error Summary (optional)' box and a REPORT ON GITHUB button. The guard working correctly was inviting a bug report against itself. Moved to `ui:warning` (statusBar.js:579 -> StatusBar.notify, 6s toast) and reworded: it had said 'then restart' to someone who had clicked Restart Engine a second earlier, and outside that dev-only radial (APP_CONFIG.dev_mode) nobody restarts ComfyUI by hand at all. The comfyController twin was CHECKED and deliberately left alone - comfy:error goes to the engine-start modal, not the GitHub dialog, and its wording never asks the user to restart.",
+      "npm test BACK TO GREEN, 530/530. It was red on master: 0b15f342 (MPI-505, H3 turbo) made stagesFor floor the TOTAL at 1 so H3 can pass a -1 delta for its single-pass run, which broke output-prompt-capture's pinned 'negative/garbage deltas must not corrupt a real count'. MPI-505 shipped without updating it and closed, so the break had no card. Re-pinned to 1 rather than adding a clamp: the sole caller (commandExecutor.js:1551, _enhanceBars + _singlePassBars) can only emit -1, 0 or +1, so a garbage delta is unreachable. A second assertion now pins the REAL case (-1 -> 1).",
+      "BOARD REPAIRED, validate_board.py exit 0 (Gate D). A Cubric-Prompt agent working in this repo wrote MPI-506/507 events without `schema` and with `task` instead of `id`. Repaired the 5 flagged lines with Fabio's explicit OK; git diff --numstat reads '9 0' - nine insertions, ZERO deletions, so no committed history was rewritten.",
+      "THE THREE 'PROPOSED, NOT APPLIED' ITEMS FROM THE LAST HANDOFF WERE ALL ALREADY APPLIED. Checked each target rather than writing them again: UNRELEASED.md:275-282 is the MPI-501 fix bullet; .claude/rules/kanban.md:90 already states 'An event line needs schema + id + type + at'; docs/playbooks/bump-engine/01-smoke-run.md:130-136 already documents the 'w'-mode truncation and the cp backup. That list was stale - do not re-add any of them."
+    ],
+    "pending": [
+      "ITEM 1 - MPI-501 needs ONE LOOK to close: re-run the same steps (generation running, dev radial Restart Engine) and confirm the refusal now arrives as a warning TOAST instead of the crash dialog. The logic is proven; this is the pixel. Then the card closes.",
+      "ITEM 2 - MPI-483 needs ONE POD CHECK to close, folded into Gate B's throwaway-Pod session below. publish-runtime.sh dev, restart the Pod so 0.2.44 boots, start a multi-GB install, let it reach a partial .part, then GET /wrapper/disk must track RunPod's console figure instead of running ~19% ahead. NOTE this also moves the dev wrapper sha, so mpi-release's manifest-diff stop will report 0.2.44 vs stable 0.2.40 - the answer is still PROMOTE.",
+      "ITEM 3 - GATE B IS ALL THAT IS LEFT, and it is mostly hardware: npm run test:desktop; one FLUX.2 Klein + one Wan 2.2 generation watching the live preview (nobody has ever seen the decoder output, and UNRELEASED.md:377 promises it); the throwaway-Pod session carrying MPI-480 #3 + MPI-481 + MPI-483's wrapper check; MPI-458's confirmation run; and the MPI-249 Linux leg on the REAL artifact.",
+      "ITEM 4 - RE-SMOKE MiniMax H3, LAST. NEW this session and it is a real gap: dev_configs/smoke-evidence.json was written 04:21:46Z, but the H3 graphs were re-authored at 10:06/11:30/12:33/12:53/13:19Z (turbo LoRA, single-pass, EasyCache gate - 2b2df03f .. 0b15f342). Its two H3 rows describe a SUPERSEDED graph and release:check cannot tell, because its guards are the engine tag and node_lock's commit date, not graph content. FABIO'S INSTRUCTION: the H3 workflow is still being touched, so defer every H3 test to one of the LAST steps - re-smoking now would be invalidated by the next edit.",
+      "ITEM 5 - then /mpi-version-bump -> 1.4.0, fold UNRELEASED.md into RELEASE_NOTES['1.4.0'], re-run release:check at 1.4.0, release:approve --yes, CI artifacts, /mpi-release.",
+      "ITEM 6 - NOTHING IS COMMITTED. This session left the tree dirty on purpose (mpi-continue does not commit). See files_modified."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-450",
+    "title": "1.4 release readiness umbrella - clear the gates before cutting 1.4.0",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-450/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-450/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "knowledge_preservation": {
+    "completed": [
+      "tasks/MPI-483/validation.md - both bugs, the false comment that hid bug 1, the blast-radius sweep, the du flag proof (1-byte file: 1 apparent vs 1024 allocated), and TWO corrections recorded rather than quietly fixed.",
+      "tasks/MPI-501/validation.md - the live proof, both surface defects, and why the comfyController twin was left alone.",
+      "tasks/MPI-450/checklist.md - ON PICKUP 1-3 ticked with the date finding; Gate A shows no open cards; the npm test break and its resolution recorded; the H3 re-smoke added as a Gate B item with Fabio's defer-to-last instruction.",
+      "tests/smoke-free-space.test.cjs (new, 7 asserts) and the re-pinned assertions in tests/output-prompt-capture.test.cjs."
+    ],
+    "pending": [
+      "MPI-491 still owes the GPU-image _download_hf rate on controlnet-union-flux; that dep reads installed:true on aghcuvg7nl, so its free window is gone. (Carried from the last handoff, still true.)",
+      "WORTH A RULE OR A MEMORY LINE, not yet written: family work from the sibling Cubric-Prompt board lands in THIS repo with its tests unswept. It cost a red npm test today and, per memory project_family_work_lands_in_vision, two days of a dead test:desktop suite before. A glance at npm test after any sibling-agent session would catch it."
+    ]
+  },
+  "next_action": {
+    "description": "Confirm MPI-501's toast (one look, closes the card), then work Gate B - it is all that is left. Keep the H3 re-smoke for LAST, after the workflow stops moving.",
+    "command": "mpi-continue MPI-450"
+  },
+  "context": {
+    "key_decisions": [
+      "THE DATE GATE DOES NOT BITE. Settled on evidence, not judgement: the release-note bullet was already reworded to be true on both sides of 2026-08-10. Do not reopen MPI-433 for this release.",
+      "GATE A HAS NO OPEN CARDS. MPI-461/479/482 closed 08-08; MPI-483 fixed today. The 04:55 handoff's 'Gate A's four open cards' is dead - do not act on it.",
+      "THE THREE PROPOSALS FROM THE LAST HANDOFF WERE ALREADY APPLIED. Verified per file. Writing them again would duplicate shipped text.",
+      "MPI-483's brief overstates its own bug 2: it says the preflight 'passed cleanly against a volume that could not fit the set'. The arithmetic disagrees - a 350 GB volume DOES hold the 322.7 GB set, so with honest numbers the gate passes and 2026-08-08 still proceeds. That day's false disk-full was bug 1 alone. Bug 2's fix stops a different class: a volume that genuinely cannot take the remainder.",
+      "NO CLAMP WAS ADDED TO stagesFor. The sole caller's delta domain is exactly {-1, 0, +1}, so a garbage delta cannot be produced and defending against it would be speculative. If someone adds a second caller with an unbounded delta, that decision changes.",
+      "THE PEER'S TIMESTAMPS WERE FINE; MINE WERE NOT. I accused a sibling agent of VPN clock skew on the strength of a session-start GitHub anchor, then found ~10.5h of wall clock had passed across the gaps between turns while I kept deriving from it. Their commit 0b15f342 is 13:19:34Z and their card mtimes are 13:18Z/14:01Z - consistent. My MPI-483 stamps were corrected from 07:50Z/09:05Z to their true 18:07:10Z/18:18:53Z, recovered from mtimes with the local clock verified equal to GitHub's. RE-READ THE CLOCK PER WRITE, not once per session."
+    ],
+    "constraints": [
+      "H3 TESTS ARE DEFERRED TO LAST by Fabio's instruction - the workflow is still being edited (turbo LoRA). Any H3 smoke run before it freezes is wasted.",
+      "ANY invocation of scripts/smoke-workflows.mjs TRUNCATES dev_configs/smoke-run.txt, --plan included (_transcribe opens it 'w' on the first log line). cp it first; the file is committed evidence.",
+      "POST /runpod/pods IS createPod, NOT a list route - it rented three 4090s once by being mistaken for one. GET /runpod/pods/<id> -> 404 is how you prove a Pod is gone.",
+      "NEVER delete or shrink volume aghcuvg7nl (cubric-smoke, 350GB, EU-RO-1) - Fabio records YouTube videos off its model set. Always --keep-volume.",
+      "A PIPE SWALLOWS THE RUNNER'S EXIT CODE - read the printed summary. Run it with run_in_background and tail the log file.",
+      "THE LOCAL ENGINE ROOT IS SHARED (.engine-config.json -> repo engine/), so a second app instance restarts the SAME ComfyUI. Never drive a restart from your own instance while Fabio's app is up - that is the MPI-501 bug itself. His bench is separate (:8188; the app engine is :48188).",
+      "BASH HEREDOCS ARE BLOCKED BY A HOOK on this box and unreliable for python anyway (cp1252, backslash halving). Write the script with the Write tool and run it by path.",
+      "json.load() on board.json DIES with a cp1252 UnicodeDecodeError - always io.open(..., encoding='utf-8').",
+      "THE TREE IS SHARED and a sibling agent works in it. Commit by explicit pathspec. NEVER git checkout -- / restore / stash / reset --hard / clean.",
+      "REPAIRING ANOTHER AGENT'S EVENT HISTORY NEEDS EXPLICIT USER APPROVAL, and then repair ONLY the lines the validator names. A first attempt here rewrote 80 global lines because it 'fixed' every line carrying `task` instead of `id` - 75 of those were valid history, since the validator requires `id` on TASK-scoped logs only."
+    ],
+    "files_modified": [
+      "UNCOMMITTED. c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py (SIBLING REPO - separate git, use git -C)",
+      "scripts/smoke-workflows.mjs, tests/smoke-free-space.test.cjs (new), routes/remotePodLifecycle.js (comment only)",
+      "js/shell/navigation.js (MPI-501 surface), tests/output-prompt-capture.test.cjs (re-pinned)",
+      ".agents/mpi-kanban/board.json, events.jsonl, tasks/MPI-483/* (task.json, checklist.md, validation.md, files.json, events.jsonl), tasks/MPI-501/{task.json,validation.md,events.jsonl}, tasks/MPI-450/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-506/events.jsonl + MPI-507/events.jsonl (schema repair, Fabio-approved)",
+      "NOT MINE, already committed by the sibling agent: MPI-504/505/506/507 cards and 0b15f342."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-483/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-501/validation.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "file",
+    "relevant_topics": ["release", "versioning", "runpod", "comfy engine", "linux", "release notes"]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/events.md",
+    ".claude/rules/versioning.md",
+    "docs/playbooks/bump-engine/01-smoke-run.md"
+  ],
+  "recent_events": [
+    { "at": "2026-08-09T19:10:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-450, the 1.4 release umbrella. Big picture: GATE A IS EMPTY, Gate D validates (exit 0), and `npm test` is 530/530. The 2026-08-10 date gate was settled on evidence and does NOT bite - the release-note bullet was already reworded to be true on both sides of it, so MPI-433 stays blocked and is not a blocker. Do not act on the older handoff's 'Gate A's four open cards'; that is dead. TWO CARDS ARE ONE OBSERVATION FROM CLOSING. MPI-501 was PROVEN LIVE (generation running, dev radial restart, refused, ComfyUI survived) and its refusal was moved off the `ui:error` crash dialog - which had been offering REPORT ON GITHUB for correct behaviour - onto a `ui:warning` toast, and reworded; it needs one look to confirm the toast renders. MPI-483 fixed both space accountings (the wrapper's `du -sb` was summing APPARENT bytes while the comment above it claimed the opposite, and the smoke preflight never checked free space at all); it needs one Pod check, folded into Gate B's throwaway-Pod session alongside MPI-480 #3 and MPI-481. GATE B IS ALL THAT REMAINS and it is mostly hardware: test:desktop, a Klein + a Wan generation watching the live preview, that Pod session, MPI-458's confirmation run, and the MPI-249 Linux leg on the REAL artifact. ONE NEW GATE B ITEM: the smoke evidence was written 04:21:46Z but the H3 graphs were re-authored between 10:06 and 13:19Z, so its two H3 rows describe a superseded graph and release:check cannot detect that. FABIO'S INSTRUCTION IS TO DEFER EVERY H3 TEST TO LAST because he is still editing that workflow - when it freezes, `--models minimax-h3 --keep-volume --volume aghcuvg7nl` is a ~7-minute leg that MERGES. The three 'PROPOSED, NOT APPLIED' items from the previous handoff were all already applied - verified per file, do not re-add them. Nothing is committed. Never POST /runpod/pods (that is createPod), never delete volume aghcuvg7nl, always --keep-volume, and never drive an engine restart from your own app instance - the engine root is shared with Fabio's running app."
+}

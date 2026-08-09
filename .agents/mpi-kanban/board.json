@@ -1,8 +1,10 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 506,
+  "next_id": 508,
   "columns": {
     "todo": [
+      "MPI-506",
+      "MPI-507",
       "MPI-504",
       "MPI-502",
       "MPI-500",
@@ -11,7 +13,6 @@
       "MPI-496",
       "MPI-489",
       "MPI-485",
-      "MPI-483",
       "MPI-367",
       "MPI-478",
       "MPI-477",
@@ -40,6 +41,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-483",
       "MPI-501",
       "MPI-481",
       "MPI-450"
@@ -108,7 +110,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-09T14:15:00Z",
+  "updated_at": "2026-08-09T18:07:10Z",
   "events": [
     {
       "at": "2026-08-09T14:15:00Z",
@@ -2650,6 +2652,41 @@
       "from": "doing",
       "to": "done",
       "note": "LTX is PROVEN ALIVE on the shipped engine. The card's own bar was 'close this on smoke-evidence.json, not another local check', and the third matrix reached the GPU stage for the first time: ltx-23-balanced/t2v_ms PASS 78s 1 media, i2v_ms PASS 42s 2 media, on L4 orxp87067tddah with gate 7 clear (Pod image built from 0.30.0, matches node_lock). Real wall-clock and real media, not the 4s no-op shape that let a dead graph read green. The LOCAL half was user-confirmed 2026-08-08. The matrix's one remaining failure is minimax-h3/t2v_ms = MPI-501, unrelated to LTX and tracked on MPI-467."
+    },
+    {
+      "at": "2026-08-09T13:38:00Z",
+      "type": "task.created",
+      "task": "MPI-506",
+      "actor": "opus",
+      "note": "SeedVR2 3B/7B as upscale-model choices in the History video Upscale tool. Research done: native in ComfyUI since PR 14424 (v0.28.0) so the pinned v0.30.0 engine already registers the nodes - verified on :48188. Recommended weights seedvr2_3b_fp8_e4m3fn 3.39GB + seedvr2_7b_fp8_e4m3fn 8.24GB + the shared mandatory VAE 0.50GB. Card is needs-decision because videoUpscale is a universal op and its deps install with the engine, so the plugin-registry opt-in shape has to be chosen before code."
+    },
+    {
+      "at": "2026-08-09T13:52:00Z",
+      "type": "task.updated",
+      "task": "MPI-506",
+      "actor": "opus",
+      "note": "Fabio decided the shape: three plugins (SeedVR2 3B, 7B, 7B Sharp), not a ModelDef and not engineAsset. Card retitled, maturity needs-decision -> planned, and the plugin-contributes-a-dropdown-entry mechanism is now explicitly this card's reusable deliverable. The PiD half of the same conversation is MPI-507."
+    },
+    {
+      "at": "2026-08-09T13:52:00Z",
+      "type": "task.created",
+      "task": "MPI-507",
+      "actor": "opus",
+      "note": "Move NVIDIA PiD out of the model picker into the image upscale dropdown as four plugins, on the mechanism MPI-506 builds. Split from MPI-506 because it is a migration, not an addition: it touches a shipped ModelDef, the flowSdxl4k Flow that declares requiredModels ['sdxl-nsfw','nvidia-pid'] to exercise the multi-model install path, and dev_configs/smoke-evidence.json which gates release:check. Today PiD is all-or-nothing at 16.48GB; as four plugins one path costs ~8.1GB (5.23GB shared gemma encoder + ~2.8GB)."
+    },
+    {
+      "at": "2026-08-09T14:10:00Z",
+      "type": "task.updated",
+      "task": "MPI-506",
+      "actor": "opus",
+      "note": "Answered Fabio's 'I don't know what SeedVR needs' against /object_info on :48188 rather than guessing: SeedVR2Conditioning takes model + a VAE LATENT and emits both positive and negative conditioning, so there is no prompt and no denoise, and the weight set has no text encoder to give it one. chunking_mode 'auto' sizes chunks to free VRAM, so frames_per_chunk stays unexposed. A SeedVR2 entry therefore declares ZERO extra controls, which pairs with PiD's prompt+denoise to make the per-entry control list a real mechanism instead of a special case."
+    },
+    {
+      "at": "2026-08-09T14:10:00Z",
+      "type": "task.updated",
+      "task": "MPI-507",
+      "actor": "opus",
+      "note": "Fabio closed 3a and 3b: a text input and denoise go in the toolbar conditionally when PiD is selected, and he adds the missing pidResolution entries so the existing 1.5/2K/3K/4K radio resolves for PiD. pidVariant disappears with the plugin split. Only 3c (flowSdxl4k requiredModels) stays open, plus one new question - the radio's labels are multipliers but PiD's resolutions are absolute targets."
     }
   ]
 }

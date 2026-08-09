@@ -88,10 +88,21 @@ assert.strictEqual(stagesFor('ltx_i2v_t2v_int8.json', 'single'), 3, 'int8 tier n
 assert.strictEqual(stagesFor('ltx_i2v_t2v_stage2.json', 'stage2'), 3, '_stage2 suffix still stripped');
 assert.strictEqual(stagesFor('wan5b_t2v.json', 'single'), 1, 'Wan5B unchanged');
 
-// Negative/garbage deltas must not corrupt a real count. (Moved off krea2_t2i.json with
-// the rest — Krea2 records no total since MPI-365, so it could no longer prove "a REAL
-// count survives a garbage delta"; that needs a file that actually has one.)
-assert.strictEqual(stagesFor('t2i_sdxl_realistic.json', 'single', -5), 2, 'negative delta clamps to 0');
+// A negative delta REDUCES the total, but never below 1. Re-pinned 2->1 for MPI-505:
+// H3's single-pass run fires one sampler where the table records two, so `stagesFor` had
+// to stop clamping the delta at 0. This assertion used to read "negative delta clamps to
+// 0" and pin 2, i.e. a garbage delta must not corrupt a real count — that contract died
+// with the clamp, and MPI-505 shipped without updating it here, which is what left
+// `npm test` red on master (found by MPI-483, 2026-08-09).
+//
+// No clamp was added back, because nothing can produce a garbage delta: the sole caller
+// (commandExecutor.js `_enhanceBars + _singlePassBars`) emits exactly -1, 0 or +1. The
+// floor of 1 is the real contract — 0 is the "unrecorded" signal the caller reads as
+// "tick up without a total", so a run that got here must never report it.
+// (Moved off krea2_t2i.json originally — Krea2 records no total since MPI-365, so it
+// could not prove anything about a REAL count; that needs a file that actually has one.)
+assert.strictEqual(stagesFor('t2i_sdxl_realistic.json', 'single', -5), 1, 'negative delta floors at 1, never 0');
+assert.strictEqual(stagesFor('t2i_sdxl_realistic.json', 'single', -1), 1, 'the REAL single-pass case: 2 recorded, one bar runs');
 
 // ── the sidecar preference rule (mirrors generationService.exec.onComplete) ────
 // `positive = outputInfo.promptText || _positiveFromBox`

@@ -8,19 +8,24 @@ when it is believed.
 The card was HELD on **2026-08-05** behind Gate E. Ticks below were made under
 assumptions that time may have invalidated.
 
-- [ ] **1. Look up today's date.** `gh api rate_limit -i` → the `Date:` header is ground
-      truth (the local clock is untrustworthy when the VPN is on — see `CLAUDE.md` § VPN).
-- [ ] **2. Is that date, or the expected cut date, on or after 2026-08-10?**
-      - **Before 08-10** → MPI-433's tick in Gate C still holds. Move on.
-      - **On or after 08-10** → **the tick is void.** Reopen MPI-433: re-upload the
-        13.15 GB `krea2-raw-transformer-nsfw` weight to HF at the same object path,
-        verify by hash, and only then let the notes freeze. It is the 1-of-97 dep with
-        a single route, and the "downloads now have a second route" fix bullet is false
-        without it.
-- [ ] **3. Is Gate E actually done?** MPI-449, MPI-451 and MPI-452 all closed and the
-      engine bumped 0.29.2 → 0.30.x. If not, this card is still blocked — do not unblock it.
-      If yes, move it `todo/blocked` → `doing/in-progress` and start with the Gate B
-      re-read (it was scoped against a 0.29.2 engine).
+- [x] **1. Look up today's date.** GitHub ground truth **`Sun, 09 Aug 2026 07:31:02 GMT`**
+      (`gh api rate_limit -i`, taken before the VPN went on this session — the local clock
+      is untrustworthy while it is, see `CLAUDE.md` § VPN).
+- [x] **2. Is that date, or the expected cut date, on or after 2026-08-10?** — **SETTLED,
+      and step 2's own premise turned out to be stale. The date gate no longer voids
+      anything.** It was written on 2026-08-05 *before* the Gate C pass reworded the
+      bullet. `UNRELEASED.md:412` now reads "**Most** model downloads now have a second
+      route" and, at `:423`, "**Four files still have a single route**". That sentence is
+      true before 08-10 and true after it, so **the notes are date-proof and MPI-433 is
+      not a notes blocker in either direction.**
+      What the date actually changes is only whether MPI-433 becomes *actionable*: before
+      08-10 the upload is FORBIDDEN (coyotte's paid window), on/after it is permitted —
+      and even then MPI-433's own brief gates it on checking CivitAI 573152 first, because
+      the point is the window opening, not the calendar. The card stays `todo/blocked`.
+      **Do not reopen MPI-433 on the strength of step 2's original wording.**
+- [x] **3. Is Gate E actually done?** YES — MPI-449, MPI-451 and MPI-452 are all `done`,
+      the engine is on 0.30.0, and the H3 bullets are in `UNRELEASED.md:123/135/147`. The
+      card is `doing/in-progress`. The Gate B re-read against 0.30.x is still owed.
 
 ## Gate D — hygiene (do first, costs minutes)
 
@@ -72,7 +77,17 @@ assumptions that time may have invalidated.
       reported control (`refImageSize` plus at least one of `previewStage` / `denoise` /
       `useGrid`). Lower severity than MPI-461: the known-issue line is an acceptable
       outcome here, a silent skip is not.
-- [ ] **MPI-483** — ADDED 2026-08-08. Gates because **the 1.4 notes cite it as the
+- [~] **MPI-483** — FIXED 2026-08-09, card `doing/validating`. Both accountings: the
+      wrapper's `du -sb` (apparent bytes — and the comment above it claimed the opposite,
+      which is why two rewrites of that route missed it) is now `du -s --block-size=1` at
+      BOTH call sites, wrapper 0.2.44; and the smoke preflight gained a measured-free-space
+      gate that refuses to rent. 7 asserts with a negative control. **One Pod check still
+      owed** — fold it into the Gate B throwaway-Pod session below; the number only differs
+      on a real network volume with a sparse `.part`. See `tasks/MPI-483/validation.md`.
+      **Decision for the fold:** the full-disk phrase the claim audit removed from the
+      wake-up-install bullet stays OUT until that Pod check passes. The fix is unproven
+      live, and the bullet's whole job was to be the trustworthy counterexample.
+      ORIGINAL TEXT: ADDED 2026-08-08. Gates because **the 1.4 notes cite it as the
       trustworthy case.** The wake-up-install bullet (`UNRELEASED.md:245`) reassures the
       reader: *"Genuine failures — a bad file, **a full disk** — still report exactly as
       before."* The full-disk report is the counterexample the whole bullet leans on, and
@@ -95,9 +110,10 @@ assumptions that time may have invalidated.
 
 ## Gate C — must decide (before the notes are frozen)
 
-- [ ] **MPI-433 date RE-CHECK** — the tick below assumed a cut before 2026-08-10 and the
-      card was held behind H3 on 2026-08-05. Settle it with § **ON PICKUP** step 2 above
-      before trusting it.
+- [x] **MPI-433 date RE-CHECK** — DONE 2026-08-09, see § ON PICKUP step 2. The re-check
+      found the gate no longer bites: the Gate C rewording made the bullet true on both
+      sides of 08-10, so the notes do not depend on the cut date. MPI-433 stays
+      `todo/blocked` and is not a blocker for this release either way.
 - [x] **MPI-433** — date CHECKED 2026-08-05: 1.4 ships BEFORE 2026-08-10, so nothing is
       uploaded and the card keeps its date (`maturity: blocked`). The decision that
       mattered was the note: the bullet now reads "**Most** model downloads now have a
@@ -185,7 +201,17 @@ assumptions that time may have invalidated.
 
 ## Gate B — must verify (against the REAL artifacts, after the bump)
 
-- [ ] `npm test` green
+- [x] `npm test` green — **530/530, 2026-08-09 19:00Z.** It was RED for part of the day and
+      the cause is worth keeping: `0b15f342` (MPI-505, H3 turbo) made `stagesFor` floor the
+      TOTAL at 1 so H3 can pass a `-1` delta for its single-pass run, which broke
+      `output-prompt-capture`'s pinned *"negative/garbage deltas must not corrupt a real
+      count"*. MPI-505 shipped without updating it and closed, so the break had no card.
+      Resolved by re-pinning to `1` rather than adding a clamp: the sole caller
+      (`commandExecutor.js:1551`, `_enhanceBars + _singlePassBars`) can only ever emit
+      `-1`, `0` or `+1`, so a garbage delta is unreachable and clamping it would be
+      defending against nothing. A second assertion now pins the REAL case (`-1` -> 1).
+      **This is the sibling-agent pattern again** — family work lands in this repo with its
+      tests unswept. Worth a glance at `npm test` after any Cubric-Prompt/H3 session.
 - [ ] `npm run test:desktop` green
 - [ ] **One FLUX.2 Klein + one Wan 2.2 generation, watching the live preview** — ADDED
       2026-08-08 by the Gate C claim audit. The `UNRELEASED.md:377` bullet says the live
@@ -228,6 +254,20 @@ assumptions that time may have invalidated.
       Parallel app instances are safe but need BOTH their own profile
       (`CUBRIC_E2E_USER_DATA` / `CUBRIC_USER_DATA_ROOT`) AND their own `CUBRIC_PORT`; a bare
       second `npm start` still dies in ~2s, exit 0, silently — that is the lock working.
+- [ ] **RE-SMOKE MiniMax H3 — LAST, and only once the graph stops moving.** ADDED
+      2026-08-09. `dev_configs/smoke-evidence.json` was written at **04:21:46Z**; the H3
+      graphs were re-authored at **10:06, 11:30, 12:33, 12:53 and 13:19Z** (turbo LoRA,
+      single-pass, EasyCache gate — MPI-505, `2b2df03f` … `0b15f342`). **Its two H3 rows
+      therefore describe a superseded graph**, and `release:check` cannot tell: its guards
+      are the engine tag and `node_lock.json`'s commit date, not graph content, so the file
+      passes while two of its 35 rows are stale.
+      **Fabio's instruction, 2026-08-09: the H3 workflow is still being touched, so defer
+      every H3 test to one of the LAST steps before the cut.** Do not re-smoke it now — the
+      run would be invalidated by the next edit.
+      When the graph is frozen: `node scripts/smoke-workflows.mjs --models minimax-h3
+      --keep-volume --volume aghcuvg7nl`. That is a ~7-minute L4 leg, not a matrix, and it
+      MERGES into the existing evidence (MPI-467) instead of replacing it. Back up
+      `dev_configs/smoke-run.txt` with `cp` first — ANY invocation truncates it.
 - [ ] **MPI-249 Linux leg** — real `CubricVision-linux-x64-v1.4.0.tar.gz` extracted on the Linux box, LOCAL uv engine provisioned, nodes installed, one model per family generated. A Pod run does not count
 - [x] **MPI-432** — WAIVED by the user 2026-08-08, card parked to `done`. The release-note
       entry is the only deliverable he wants and it is already in `UNRELEASED.md:347` under
@@ -261,13 +301,27 @@ MPI-467/468.
 
 Still genuinely open, in the order the release needs them:
 
-1. **The 2026-08-10 date gate — ONE DAY OUT.** GitHub ground truth `Sun, 09 Aug 2026`.
-   § ON PICKUP step 2 is now live, not hypothetical.
-2. **MPI-483** — the last Gate A card.
-3. **Gate B** — both suites, the Klein + Wan preview look, the throwaway-Pod session
-   (MPI-480 #3 is closed; MPI-481 is `doing/validating`), MPI-458's confirmation run,
-   and the MPI-249 Linux leg on the real artifact.
-4. **MPI-501** — `doing/validating`, still not proven live. The 2026-08-09 GPU leg did not
-   exercise the guard.
-5. **The promote answer** at `mpi-release`'s manifest-diff stop. Its blocker (MPI-467) is
-   closed, so nothing defers it any more.
+1. ~~**The 2026-08-10 date gate**~~ — **SETTLED 2026-08-09**, see § ON PICKUP steps 1-3.
+   It does not bite: the Gate C rewording made the second-route bullet true on both sides
+   of the date, so the notes are date-proof. MPI-433 stays blocked either way.
+2. ~~**MPI-483** — the last Gate A card.~~ **FIXED 2026-08-09**, `doing/validating`; one
+   Pod check owed, folded into Gate B's throwaway-Pod session. **Gate A now has NO open
+   card.**
+3. ~~**`npm test` IS RED ON MASTER**~~ — **FIXED 2026-08-09, 530/530.** Detail on the
+   Gate B line.
+4. **Gate B** — `test:desktop`, the Klein + Wan preview look, the throwaway-Pod session
+   (MPI-480 #3 is closed; MPI-481 is `doing/validating`; **MPI-483's wrapper check joins
+   it**), MPI-458's confirmation run, the MPI-249 Linux leg on the real artifact, and
+   **the H3 re-smoke LAST** — the graph moved after the evidence was written and Fabio is
+   still editing it. `npm test` is done (530/530).
+5. **MPI-501** — **PROVEN LIVE 2026-08-09 19:00Z.** Generation running on the local
+   engine, dev radial restart, refusal, ComfyUI survived. The run also caught the refusal
+   rendering as the `ui:error` crash dialog (REPORT ON GITHUB, for correct behaviour) —
+   moved to a `ui:warning` toast and reworded. One look left to confirm the toast, then
+   the card closes. See `tasks/MPI-501/validation.md`.
+6. **The promote answer** at `mpi-release`'s manifest-diff stop. Its blocker (MPI-467) is
+   closed, so nothing defers it any more. **The dev sha WILL move before the cut**:
+   MPI-483 bumped the wrapper SOURCE to 0.2.44 but has NOT published it — the dev channel
+   still serves 0.2.43 until `publish-runtime.sh dev` runs as part of MPI-483's Pod check.
+   Once it does, this stop reports `0.2.44` vs stable `0.2.40`, and the answer is still
+   PROMOTE.

@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-507",
+  "title": "Move NVIDIA PiD out of the model picker into the image upscale dropdown, as four plugins",
+  "description": "Fabio, 2026-08-09: 'PiD has four different models instead of being a separate model, which at the moment doesn't make much sense because it's a model that just upscales and doesn't generate anything. PiD will also come in the upscale dropdown for images in the History workspace. I honestly think it's a much better home for these types of models, and it will make our upscale section much more valuable.'\n\nDepends on the plugin-contributes-a-dropdown-entry mechanism built in MPI-506 - build it there, reuse it here unchanged. MPI-506 is additive and can land alone; this one is a migration that touches a shipped model, a shipped Flow and the release gate, so land 506 first.\n\nTHE SPLIT PAYS OFF: all four PiD paths are 1024->4096 4-step bf16, 2.54GB each, plus a per-path VAE (0.17-0.34GB) and ONE shared mandatory gemma text encoder at 5.23GB. Today it is all-or-nothing at 16.48GB to use any single path. As four plugins, the SDXL path alone costs ~8.1GB and each extra path ~2.8GB, with pluginRequiredDepIds() keeping the shared encoder alive while any PiD plugin remains installed.\n\nTHE DROPDOWN IS THE EASY PART. Three real problems, detailed in brief.md: (a) the pid op declares components ['pidVariant','pidResolution','denoise'] plus an optional prompt, all of which live in the PromptBox - MpiToolOptionsUpscale has none of them. pidVariant dies with the split (the plugin IS the variant) but prompt/denoise/resolution need a decision: drop them, or grow the tool panel. That decision sets the card's size. (b) PiD is fixed 4x, so the tool's x1.5/x2/x3/x4 factor radio has no meaning and must be hidden or reinterpreted, not silently ignored. (c) flowsRegistry.js:107 has flowSdxl4k declaring requiredModels ['sdxl-nsfw','nvidia-pid'] and its comment says it DELIBERATELY exercises the multi-model install path, so deleting the ModelDef breaks the Flow and removes that coverage - preferred fix is to keep the ModelDef and hide it from the picker.\n\nHARD RULE FOR THE REMOVAL HALF: do NOT delete the pid-* / vae-* / pid-gemma dep entries. The orphan sweep reads DEPS, so a deleted entry strands those weights on existing users' disks forever (MPI-470 and MPI-466 both kept theirs). Follow docs/playbooks/add-model/README.md section 'Removing or re-tiering a model'. Also sweep dev_configs/smoke-evidence.json, which names nvidia-pid twice and gates npm run release:check.\n\nDECIDED 2026-08-09, two of the three problems closed. (a) Fabio: 'PiD has Denoise and Prompt Box Input, so we can just add a Text Input in the toolbar and the Denoise when PiD is selected.' Grow the panel, conditionally - pidVariant disappears (the plugin IS the variant), pidResolution is absorbed by the factor radio, and denoise + an optional text input appear only when a PiD entry is selected, defaulting to denoise 0.0 and an empty prompt. Build it as MPI-506's declared per-entry control list, not an if(isPid) branch: SeedVR2 is the opposite extreme and declares NO extra controls (verified - it takes no prompt and has no denoise), so both cases must work on day one. (b) Fabio: 'I can add the missing resolutions so that it matches what we have: 1.5, 2K, 3K, 4K' - the pidResolution switch grows until all four radio positions resolve, and the radio stays as-is. Still to settle: the radio's labels are multipliers today but PiD's are absolute targets, so either the labels go absolute everywhere or the radio relabels per entry. Only 3c (the flowSdxl4k dependency) remains open.",
+  "column": "todo",
+  "maturity": "needs-decision",
+  "status": "active",
+  "created_at": "2026-08-09T13:52:00Z",
+  "updated_at": "2026-08-09T14:10:00Z",
+  "labels": [
+    "workflow",
+    "feature",
+    "models",
+    "upscale",
+    "refactor"
+  ],
+  "priority": "normal",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py",
+    "scripts/smoke-workflows.mjs",
+    "tests/smoke-free-space.test.cjs"
+  ]
+}

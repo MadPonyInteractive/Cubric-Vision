@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-506",
+  "title": "SeedVR2 as three plugins (3B / 7B / 7B Sharp) feeding the video upscale dropdown",
+  "description": "Fabio, 2026-08-09. The History video Upscale tool currently offers only 'None' plus whatever .pth sits in ComfyUI's upscale_models/. Add SeedVR2 as THREE INSTALLABLE PLUGINS - SeedVR2 3B, SeedVR2 7B, SeedVR2 7B Sharp - each appearing in the dropdown once installed. Fabio owns the workflow rewrite; this card owns the app side plus the mechanism that lets a plugin contribute a dropdown entry.\n\nDECIDED (Fabio): plugins, not a ModelDef. A weight that only upscales and generates nothing has no business in the model picker. MPI-507 moves NVIDIA PiD onto the same mechanism for the IMAGE upscale tool - build the mechanism here, reuse it there.\n\nENGINE: NOTHING TO BUMP. SeedVR2 is native in ComfyUI since PR #14424 (merged 2026-07-10, first shipped in v0.28.0). Our pin is v0.30.0. Verified live on the engine at :48188, which already registers SeedVR2Preprocess, SeedVR2Conditioning, SeedVR2PostProcessing, SeedVR2TemporalChunk and SeedVR2TemporalMerge from comfy_extras.nodes_seedvr. Do NOT wire numz/ComfyUI-SeedVR2_VideoUpscaler; the core path is the supported one. Licence Apache-2.0, no territory bar.\n\nWEIGHTS (full table in brief.md, source Comfy-Org/SeedVR2, mirror to R2): seedvr2_3b_fp8_e4m3fn 3.39GB, seedvr2_7b_fp8_e4m3fn 8.24GB, seedvr2_7b_sharp_fp8_e4m3fn 8.24GB, plus ONE shared mandatory VAE seedvr2_ema_vae_fp16 0.50GB that all three list. First install 3.89GB / 8.74GB / 8.74GB; all three 20.37GB. fp16 doubles the download for an unmeasured delta, int8_convrot is LARGER than fp8, and mxfp8/nvfp4 are Blackwell-class so they cannot be a default. 3B is the video default (32 blocks, best quality/speed and temporal consistency at a usable chunk size); 7B is the hero-shot option (36 blocks, wider, slower); Sharp is an aggression dial that over-sharpens clean sources. Do NOT default the dropdown to 7B or Sharp.\n\nTHE REUSABLE HALF is the mechanism: PluginDef.operation is singular today and three plugins share videoUpscale, so a plugin needs a data field declaring which tool dropdown it feeds, its label and its injector value; the dropdown reads install state via getPluginDepStatus() and shows an install affordance instead of failing at run time; values get a plugin: prefix so they cannot collide with a .pth filename; coerceSettings() drops a stale value whose weight is gone. Build the entry source kind-aware (video|image) from the start so MPI-507 needs no refactor. FREE ALREADY: the Model Library renders plugins with search/install/uninstall keyed by pluginDepKey (MpiModelManager.js ~1044-1166) and routes/downloadManager.js:363 gives plugin deps GC protection.\n\nWHY NOT engineAsset: videoUpscale is a UNIVERSAL workflow and universal deps install WITH THE ENGINE, so engineAsset would push 20GB onto every user at engine install. image-describer is the precedent - a 4.88GB encoder behind the universal imageDescribe op, with neither engineAsset nor bakedOnPod. Settle the remote/Pod half before coding: an engineAsset is baked into the Pod image, a plugin dep is not.\n\nSEEDVR2 NEEDS NO PROMPT AND NO DENOISE - answered against the node signatures on :48188, not inferred. SeedVR2Conditioning builds BOTH positive and negative conditioning from a VAE latent (inputs: model MODEL + vae_conditioning LATENT); there is no text input, no CLIP input, and no text encoder anywhere in the weight set. Its only knobs are chunking_mode (ship 'auto' - it predicts the largest chunk that fits free VRAM, so frames_per_chunk stays unexposed along with its 4n+1 trap), temporal_overlap (default 0, Hann-crossfaded at merge) and color_correction_method on SeedVR2PostProcessing (ship 'lab', documented as most faithful). So a SeedVR2 entry contributes ZERO extra controls.\n\nTHAT MAKES THE CONTROL MECHANISM A PAIR, NOT A SPECIAL CASE. Fabio decided PiD gets a text input + denoise in the toolbar when selected (MPI-507), and SeedVR2 declares none. Build per-entry extra controls as a declared list on the dropdown entry, never an if(isPid) branch - both consumers exist on day one. Reuse the denoise control from PromptBoxControls.js.\n\nRESOLUTIONS: the existing radio stands; Fabio adds the missing resolutions workflow-side so all four (1.5 / 2K / 3K / 4K) resolve. Flag before touching labels: they read as MULTIPLIERS today (x1.5 x2 x3 x4) and that is true for the .pth path and for SeedVR2, but PiD's are ABSOLUTE targets - four buttons, two meanings.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-09T13:38:00Z",
+  "updated_at": "2026-08-09T14:10:00Z",
+  "labels": [
+    "workflow",
+    "feature",
+    "models",
+    "upscale",
+    "comfy"
+  ],
+  "priority": "normal",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
