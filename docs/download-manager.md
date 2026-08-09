@@ -918,6 +918,24 @@ design. **Do not "fix" a slow H3 download by re-hosting it on R2.**
   `xet-bridge-us`, rife included.
 - **Raising aria2's `-x`** — hardcoded ceiling of 16, and wrong-signed anyway.
 
+### The HF path stages OFF the volume and moves the file across on completion
+
+Measured 2026-08-09 on a CPU download Pod: while `h3-qwen3vl-32b-clip` (24.55GB) was
+downloading, `GET /remote/pod/disk` reported **49,664 bytes** used on a fresh 30GB volume
+with 1.27GB already fetched — then jumped to the full **26.37GB** the moment the install
+completed. The aria2/R2 path behaves the opposite way: it writes its `.part` directly onto
+the volume, so usage climbs (or appears to) throughout.
+
+Two consequences worth knowing before you reason about volume space:
+
+- **An in-flight HF install is invisible to the disk gate**, so free space measured during
+  one is optimistic by the whole remaining file. The gate runs BEFORE the install (see
+  § Remote (RunPod) Disk-Full Pre-Flight), so this is not a live defect — but it does mean
+  the volume needs room for the file even though nothing accumulates there while it runs.
+- **An HF dep cannot be used to exercise anything about partial `.part` files on the
+  volume** — there is no partial there to measure. A 2026-08-09 session lost a Pod leg to
+  this, reaching for the slow HF dep precisely because it ran long enough to sample.
+
 ## A blip is not a verdict — same-url retry (MPI-460)
 
 The mirror walk above answers "this ROUTE is blocked". It does not answer "this route

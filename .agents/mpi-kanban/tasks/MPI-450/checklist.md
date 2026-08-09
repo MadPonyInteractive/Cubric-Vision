@@ -375,6 +375,21 @@ assumptions that time may have invalidated.
       verified macOS outcome, and a broken UI-zoom shortcut is reported within minutes by
       the tester waiting on 1.4. Closed as a DECISION, not a verification.
 
+## Surfaced by this umbrella, deliberately NOT gating 1.4
+
+- **MPI-509** — a remote install can report success having installed nothing: when
+  `_filterDepsForEngine` empties the request, `POST /comfy/models/download/start` still
+  answers `{success:true}` with a 0/0 job that settles to `complete`. Found 2026-08-09
+  during this card's throwaway-Pod session, which lost two Pod legs to it. **Not a gate:**
+  pre-existing, not a regression, and the renderer resolves per-engine correctly so no user
+  path reaches it. Carded so the next person does not rediscover it the same way.
+- The companion finding needed no card — it is a fact, not a defect, and now lives where
+  the router sends people: `docs/download-manager.md` § "The HF path stages OFF the volume
+  and moves the file across on completion". An in-flight HuggingFace install shows
+  **49,664 bytes** used on the volume with 1.27GB already fetched, then jumps to the full
+  26.37GB on completion — so an HF dep can never be used to exercise anything about partial
+  `.part` files, which is the other thing that cost a Pod leg.
+
 ## Cut
 
 - [ ] Every gate above reads closed, or waived by the user with the waiver recorded on this card

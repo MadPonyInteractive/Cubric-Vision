@@ -25,7 +25,8 @@
       "MPI-483 GOT ITS INSTRUMENT: GET /remote/pod/ls now ships (routes/remotePodLifecycle.js), a read-only passthrough of the wrapper's /wrapper/ls plus a pure compareVolumeAccounting() returning blockBytes (du -s --block-size=1), apparentBytes (os.path.getsize summed) and phantomBytes = apparent - blocks, ALL FROM ONE RESPONSE AT ONE INSTANT. 6 tests in tests/volume-accounting-gap.test.cjs, mutation-checked. npm test 531/531.",
       "docs/runpod-troubleshooting.md:104 was CORRECTED - it told agents to add a /remote/pod/ls route temporarily and revert it, which the commit above makes false. docs/runpod-remote-engine.md gained the route in its telemetry list with the read-it-during-an-install instruction.",
       "MPI-433 updated with Fabio's go-ahead for the Krea 2 NSFW upload (no new card - that card already IS this work). Left BLOCKED deliberately, see pending.",
-      "COMMITTED 0331200f. NOT PUSHED - git push was refused by the Bash classifier, not by git."
+      "COMMITTED 0331200f. NOT PUSHED - git push was refused by the Bash classifier, not by git.",
+      "THE TWO LOOSE FINDINGS WERE ACTIONED, not left in a report. MPI-509 was created for the real defect - a remote install that reports success having installed nothing when _filterDepsForEngine empties the request - and it is linked on MPI-450 as explicitly NOT gating 1.4 (pre-existing, no user path reaches it). The other finding was a fact rather than a defect, so it went to docs/download-manager.md section 'The HF path stages OFF the volume and moves the file across on completion' instead of a card: an in-flight HF install shows 49,664 bytes on the volume with 1.27GB fetched and jumps to the full 26.37GB on completion."
     ],
     "pending": [
       "ITEM 1 - MPI-483 IS NOW ONE REQUEST, NOT A POD SESSION. Start a large aria2 (R2/models.cubric.studio) install on a Pod and call GET /remote/pod/ls while it runs. Read `accounting.phantomBytes`: a large positive value means sparse .part files are on the volume, the bug is real and the 0.2.44 fix removes it; a value near zero means the filesystem allocated the whole declared length up front and THIS CARD'S PREMISE DOES NOT HOLD. Do not re-run the app-side /remote/pod/disk experiment - it cannot answer the question and this session proved that twice.",
@@ -67,9 +68,7 @@
       "Memory tool_probe_a_runpod_pod_for_ground_truth.md - the Pod wrapper is UNREACHABLE from the shell (curl 000 to <podId>-8889.proxy.runpod.net) while the app reaches it fine, so every wrapper endpoint needs an app route. MEMORY.md index hook extended to match."
     ],
     "pending": [
-      "MPI-491 still owes the GPU-image _download_hf rate on controlnet-union-flux. Carried again. This session added a relevant measurement though: an in-flight HUGGINGFACE install does not touch the volume at all (49,664 bytes used with 1.27GB fetched, jumping to the full 26.37GB on completion), which is worth folding into that card.",
-      "NOT YET WRITTEN ANYWHERE DURABLE: _filterDepsForEngine silently drops deps the remote engine does not install while POST /comfy/models/download/start still returns success:true - an install that does nothing, with no error. It cost two Pod legs this session (ltx23-transformer-int8 belongs to the balanced tier). Worth a line in docs/download-manager.md.",
-      "The sibling-session pattern keeps costing: family/parallel work lands in this repo with tests unswept. A glance at npm test after any sibling session catches it."
+      "The sibling-session pattern keeps costing: family/parallel work lands in this repo with its tests unswept. A glance at npm test after any sibling session catches it. (Carried - this is a habit to keep, not a task to close.)"
     ]
   },
   "next_action": {
@@ -83,7 +82,8 @@
       "MPI-483 WAS NOT CLOSED ON A 95%-OF-DECLARED READING. Two runs disagreed and the instrument was the problem, so the session built the instrument instead of picking the more convincing number.",
       "MPI-508's card files were committed although they are a sibling's live work: board.json already lists MPI-508 in doing, and HEAD must never point at a card whose task.json is untracked (.claude/rules/git.md § MPI-434). MPI-504/506/507 and all the workflow/model edits were deliberately NOT staged.",
       "MPI-506/507's malformed event lines were NOT repaired. Fabio confirmed those are two live parallel sessions; repairing another agent's history needs explicit approval and they are still writing.",
-      "MPI-433 was UPDATED rather than duplicated - it already is the Krea 2 NSFW upload card - and left blocked because its own CivitAI check has not run and the date is one day early."
+      "MPI-433 was UPDATED rather than duplicated - it already is the Krea 2 NSFW upload card - and left blocked because its own CivitAI check has not run and the date is one day early.",
+      "MPI-491 was NOT reopened for the HuggingFace staging finding. That card is done/complete and the finding is a durable behaviour fact, not owed work, so it went to the subsystem doc the router points at rather than to a card - the repo's rule is that facts live in docs/, and a closed card is not a place anyone looks."
     ],
     "constraints": [
       "BOARD VALIDATION CURRENTLY FAILS, and none of it is ours: MPI-506/507 event lines carry `task` instead of `id` and no `schema`. Do not 'fix' them - they are two live sessions. Filter with `grep -v 'MPI-50[67]'` to see whether anything real broke.",
@@ -100,7 +100,8 @@
     "files_modified": [
       "COMMITTED 0331200f: routes/remotePodLifecycle.js (GET /remote/pod/ls + compareVolumeAccounting), tests/volume-accounting-gap.test.cjs (new, 6 cases), docs/runpod-remote-engine.md, docs/runpod-troubleshooting.md, board.json + the global event log, the MPI-433/450/481/483/501 workspaces, two evidence PNGs, and MPI-508's card files (integrity, not our work).",
       "PUBLISHED, NOT IN GIT: wrapper 0.2.44 to the R2 dev channel via c:/AI/Mpi/mpi-ci/cubric-vision-pod/publish-runtime.sh dev. Its source was already committed as mpi-ci 07970da last session.",
-      "UNCOMMITTED, NOT OURS - leave alone: .agents/mpi-kanban/tasks/MPI-504/506/507, comfy_workflows/** (PID + H3 + LTX templates), docs/preview-bus.md, docs/models/h3/turbo.md, js/data/modelConstants/{assetDeps,loraDeps,models}.js, tests/remote-engine-assets.test.cjs, comfy_workflows/scripts/workflow_generation/**."
+      "UNCOMMITTED, NOT OURS - leave alone: .agents/mpi-kanban/tasks/MPI-504/506/507, comfy_workflows/** (PID + H3 + LTX templates), docs/preview-bus.md, docs/models/h3/turbo.md, js/data/modelConstants/{assetDeps,loraDeps,models}.js, tests/remote-engine-assets.test.cjs, comfy_workflows/scripts/workflow_generation/**.",
+      "COMMITTED after the handoff was first written: .agents/mpi-kanban/tasks/MPI-509/ (new card), board.json, docs/download-manager.md, and MPI-450's checklist."
     ],
     "files_to_read_first": [
       ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
