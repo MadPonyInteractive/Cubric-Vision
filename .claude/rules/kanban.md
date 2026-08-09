@@ -262,6 +262,16 @@ yourself.
      finished work there that is not yet reviewed/verified/integrated.
 2. Fresh = `heartbeat_at` inside `heartbeat_timeout_minutes` (120). Only an orchestrator or
    integrator reclaims a stale claim, and only when intent is clear — otherwise ask the user.
+
+**Every array in `index.json` holds a repo-relative PATH, never a card id.** `validate_board.py`
+resolves each `active_tasks` entry as a path and fails the **WHOLE BOARD** when it does not
+exist — `.agents/mpi-kanban/state/index.json active task is missing: MPI-467`. So `active_tasks`
+wants `.agents/mpi-kanban/state/tasks/<uuid>.json`, a coordination record you create via
+`<mpi-lib>/coordination-ops/lifecycle.md` § Create Or Attach Task (`status: "in_progress"`,
+`task_card: "MPI-nnn"`, `owner_session`). **`state/tasks/` may not exist yet — create it.**
+A bare `"MPI-467"` was written on 2026-08-09 by copying the shape a previous session had left
+in the file, and it reddened the entire board; the bad example is still in git history, so
+match this rule, not the neighbours.
 3. Write one `state/files/<uuid>.json` per path you are about to edit, and add its path to
    `active_file_claims`:
 
