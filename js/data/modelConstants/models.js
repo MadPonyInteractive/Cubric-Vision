@@ -1168,6 +1168,11 @@ export const MODELS = [
             'ltx23-transformer-bf16',
             'ltx23-video-vae',
             'ltx23-audio-vae',
+            // 22MB tiny TAEHV, live previews only (MPI-508). It feeds the `vae` input of
+            // LTX2SamplingPreviewOverride, which decodes real frames — handed the full
+            // video VAE instead, that node silently falls back to latent_rgb_factors,
+            // which is the blocky preview we shipped until now.
+            'ltx23-preview-taehv',
             'ltx23-text-projection',
             'ltx23-gemma-clip',
             'ltx23-spatial-upscaler',
@@ -1220,6 +1225,8 @@ export const MODELS = [
             'ltx23-transformer-int8',
             'ltx23-video-vae',
             'ltx23-audio-vae',
+            // Same 22MB preview decoder as the High tier (MPI-508) — shared, one download.
+            'ltx23-preview-taehv',
             'ltx23-text-projection',
             'ltx23-gemma-clip',
             'ltx23-spatial-upscaler',
@@ -1309,13 +1316,18 @@ export const MODELS = [
             'h3-qwen3vl-32b-clip',
             'vae-minimax-h3-video',
             'vae-minimax-h3-audio',
-            // 591MB turbo distill (MPI-505), SHARED with ref2va — installing both
-            // downloads it once. A flat dep like krea2's accelerator rather than an
-            // opt-in extra: turbo is a per-run toggle, so the weight has to be on disk
-            // before the user can flip it. With turbo OFF both strengths gate to 0 and
-            // MpiLoraModelClip short-circuits the file load entirely, so it costs
-            // nothing on the default path.
+            // 1.82GB turbo distill (MPI-505, weight swapped to lightx2v in MPI-508),
+            // SHARED with ref2va — installing both downloads it once. A flat dep like
+            // krea2's accelerator rather than an opt-in extra: turbo is a per-run toggle,
+            // so the weight has to be on disk before the user can flip it. With turbo OFF
+            // both strengths gate to 0 and MpiLoraModelClip short-circuits the file load
+            // entirely, so it costs nothing on the default path.
             'minimax-h3-turbo-lora',
+            // 22MB tiny TAE, live previews only (MPI-508). H3 has NO core previewer path
+            // at all — its latent format names no decoder — so without this every H3
+            // preview is a latent2rgb colour blob. Read by KJNodes' ModelPreviewOverrideKJ,
+            // never by ComfyUI itself. Shared with ref2va, one download.
+            'taeh3-decoder',
             'ComfyUI-MpiNodes',
         ],
     },
@@ -1384,8 +1396,12 @@ export const MODELS = [
             'h3-qwen3vl-32b-clip',
             'vae-minimax-h3-video',
             'vae-minimax-h3-audio',
-            // Same turbo distill as fl2va (MPI-505) — one weight, both DiTs.
+            // Same turbo distill as fl2va (MPI-505/508) — one weight, both DiTs. The
+            // filename says fl2v; it is applied to ref2va too, which is how the upstream
+            // community graph uses it.
             'minimax-h3-turbo-lora',
+            // Same preview decoder as fl2va (MPI-508) — shared, one download.
+            'taeh3-decoder',
             'ComfyUI-MpiNodes',
         ],
     },

@@ -123,6 +123,29 @@ const volumeEngineAssets = () => Object.values(DEPS)
             `${id} must live under vae_approx/ — ComfyUI looks nowhere else`);
         assert.ok(dep.sha256 && dep.sha256.length === 64, `${id} needs a real sha256`);
     }
+    // MPI-508 — the OTHER kind of preview decoder. taeh3 (H3) and taeltx2_3 (LTX) are
+    // read by NODES in the graph, never by core's previewer: neither latent format
+    // names a `taesd_decoder_name`, so `get_previewer` never looks for them. That is
+    // exactly why they must NOT be engineAssets — they belong to specific models, a
+    // model-keyed install reaches them, and GC with the last owning model is correct.
+    // Flipping either to engineAsset to "match" the three above would pin ~45MB on
+    // every user forever, including ones who install neither H3 nor LTX.
+    for (const [id, folder] of [['taeh3-decoder', 'vae/'], ['ltx23-preview-taehv', 'vae/']]) {
+        const dep = DEPS[id];
+        assert.ok(dep, `${id} missing from DEPS`);
+        assert.notStrictEqual(dep.engineAsset, true,
+            `${id} must NOT be an engineAsset — it is a model-owned, node-read decoder (docs/preview-bus.md)`);
+        assert.ok(dep.filename.startsWith(folder),
+            `${id} must live under ${folder} — a VAELoader reads the 'vae' folder key, so a preview decoder parked in vae_approx/ would simply not appear in the node's dropdown`);
+        assert.ok(dep.sha256 && dep.sha256.length === 64, `${id} needs a real sha256`);
+    }
+    // taeltx2_3 sits in vae/ beside the REAL LTX VAEs. Handing the full video VAE to
+    // LTX2SamplingPreviewOverride is the silent-failure case this guards against: that
+    // node falls back to latent_rgb_factors for any non-TAEHV vae, so a swap back would
+    // restore the blocky previews with nothing failing anywhere.
+    assert.notStrictEqual(DEPS['ltx23-preview-taehv'].filename, DEPS['ltx23-video-vae'].filename,
+        'the LTX preview decoder and the full LTX video VAE are different files with different jobs');
+
     // THE GUARD THAT MATTERS. ComfyUI #13366 (open, PR #13383 unmerged, re-checked
     // 2026-08-05): with a lighttaew* decoder installed and taesd previews forced on,
     // the previewer corrupts the REAL generation latent mid-sampling on the

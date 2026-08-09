@@ -124,6 +124,52 @@ export const assetDeps = {
         bytes: 364855188,
         sha256: '5bc10fa4adecf99dda132d916e23048cbd56797702c5fa50eb5d2079048a38c3',
     },
+    // ── Tiny TAEHV preview decoders (MPI-508) ───────────────────────────────
+    // Both live in `vae/`, NOT `vae_approx/`, and that is deliberate: a VAELoader NODE
+    // reads them, not core's previewer, and VAELoader reads the `vae` folder key.
+    // Neither is an engineAsset — they belong to specific models, so a model-keyed
+    // install reaches them and GC with the last owner is correct. The `vae_approx`
+    // decoders further down are the other kind: core-read, model-agnostic, engine-owned.
+    // Full split: docs/preview-bus.md § "The second kind of decoder".
+    //
+    // comfy/sd.py:868 recognises a TAEHV from `decoder.22.bias`, so a plain VAELoader
+    // produces the right object for both.
+    //
+    // LTX: `LTX2SamplingPreviewOverride` branches on
+    // `vae.first_stage_model.__class__.__name__ == 'TAEHV'` — fed the full video VAE it
+    // silently falls back to latent_rgb_factors (the blocky preview we shipped until
+    // now), fed this it decodes real frames.
+    'ltx23-preview-taehv': {
+        id: 'ltx23-preview-taehv',
+        name: 'LTX-2.3 Preview Decoder (TAEHV)',
+        origin: 'madebyollin/taehv (Apache-2.0)',
+        filename: 'vae/taeltx2_3.safetensors',
+        url: 'https://models.cubric.studio/vision/models/vae/taeltx2_3.safetensors',
+        mirrorUrl: 'https://github.com/madebyollin/taehv/raw/main/safetensors/taeltx2_3.safetensors',
+        size: '22.44MB',
+        bytes: 23531296,
+        sha256: 'f0773b4e3e57318e6aa4dd4a35e1d16213a5f160fbc0376163f06888bbcbe246',
+    },
+    // H3: core cannot preview H3 AT ALL — MiniMaxH3Video/MiniMaxH3AV name no
+    // `taesd_decoder_name`, `taeh3` is absent from latent_preview.VIDEO_TAES, and core's
+    // TAESD could not load it anyway (its Decoder hardcodes width 64; this is 256). Our
+    // own `MpiVideoSamplingPreview` decodes with it and streams frames on the standard
+    // binary preview channel. Because core never touches the file, the #13366 corruption
+    // trap further down cannot reach it.
+    // Must be madebyollin's, NOT Kijai/MiniMax-H3-TAE: Kijai's is a 2D decoder-only TAE
+    // with no temporal layers, so it yields one image per LATENT frame and previews play
+    // ~4x fast. Kijai's own README says as much and points here.
+    'taeh3-decoder': {
+        id: 'taeh3-decoder',
+        name: 'MiniMax H3 Preview Decoder (TAEHV)',
+        origin: 'madebyollin/taehv (Apache-2.0)',
+        filename: 'vae/taeh3.safetensors',
+        url: 'https://models.cubric.studio/vision/models/vae/taeh3.safetensors',
+        mirrorUrl: 'https://github.com/madebyollin/taehv/raw/main/safetensors/taeh3.safetensors',
+        size: '21.66MB',
+        bytes: 22709752,
+        sha256: '4fd022bfcab08772fe0536b17ea1a3bbb5625be11e397868d1c5d891863d4c13',
+    },
     // Text encoders / CLIP -------------------------------------------------
     // `krea2-qwen3vl-clip` (stock Qwen3-VL-4B fp8_scaled) was REMOVED 2026-07-19: the
     // Krea2 cards moved to qwen3vl-abliterated-clip below and the R2 object was deleted,

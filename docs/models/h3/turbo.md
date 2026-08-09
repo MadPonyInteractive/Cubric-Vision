@@ -1,8 +1,40 @@
-# H3 turbo — the 20→8 step distill LoRA (MPI-505)
+# H3 turbo — the 20→6 step distill LoRA (MPI-505, weight swapped MPI-508)
 
 Split out of `performance.md` on 2026-08-09 when it outgrew that file. Everything here is
 about the shipped turbo toggle: what it costs, what it is worth, and what it changes.
 The levers we tested and rejected stay in `performance.md`.
+
+## THE WEIGHT CHANGED THE SAME DAY IT SHIPPED — read this before any number below
+
+MPI-505 shipped `drbaph/MiniMax-H3-Turbo-Lora-ComfyUI` v4_step600_ema (larryvrh) at
+**strength 1.0 / 8 steps**. MPI-508 replaced it, hours later, with
+`lightx2v/Minimax-h3-Turbo` (ComfyUI conversion by `Kijai/MiniMax-H3_comfy`) at
+**strength 0.75 / 6 steps**.
+
+**The reason is the whole lesson: a lower step count is not a speed-up.** Measured
+side by side on the bench, larry's LoRA landed at close to NO-LoRA wall clock — it cut
+the steps and gave the time back per step. lightx2v's is a real one: **105s → 87.77s**
+on the same clip at 6 steps. Anything below that quotes larry unless it says otherwise.
+
+Settings, all measured on the bench 2026-08-09, not inherited from the model card:
+
+| knob | value | why |
+|---|---|---|
+| strength | **0.75** | at 1.0 the AUDIO degrades badly. Audio is the axis that breaks first on H3 — the picture can still look fine while the sound is unusable, so judge it on its own pass |
+| steps | **6** | 4 (what it was distilled for) destroys the audio outright. 6 is the floor |
+| two-stage split | 3 + 3 | looks good; no reason found to prefer single-pass at this step count |
+
+**Strengths are NOT comparable between the two LoRAs.** lightx2v's safetensors metadata
+reads `baked_scale: 0.125` / `peft alpha/r=0.125 baked into lora_B`, so 0.75 here is a
+tuned value on its own curve, not a reduction from larry's 1.0.
+
+Both weights are pure diffusion-model LoRAs — 416 tensors each, split
+`diffusion_model.blocks` ×400 + `diffusion_model.token_refiner` ×16, **zero text-encoder
+keys**. So `strength_clip` is a no-op on either, and the graph feeds the gate into both
+strengths purely because `MpiLoraModelClip` only short-circuits the file load when both
+are 0. Do not "simplify" it to `LoraLoaderModelOnly` — that short-circuit is what makes
+turbo-off free.
+
 ## Step distillation — the lever that WORKED (MPI-505, measured 2026-08-09)
 
 **H3 was the only non-distilled video model we shipped**, and that single fact explains
@@ -37,7 +69,12 @@ the audio value is the one that must move or audio distorts. Sweeping 4/5/6 chan
 nothing audible - the audible fix was euler/beta - so it is baked at 5. Turbo ships
 OPT-IN: quality is slightly below the 20-step path, which is the user's stated trade.
 
-### What turbo is actually worth (measured 2026-08-09, shipped shape)
+### What turbo is actually worth (measured 2026-08-09, LARRY weight at 8 steps)
+
+> Superseded as a wall-clock claim by the swap above — these rows are the larry LoRA,
+> the one that turned out not to be a real speed-up. The **decomposition** is still the
+> useful part: it shows where H3's time actually goes, and the fixed costs it names
+> (decode, init, re-patch) are weight-independent.
 
 864x480, **5s**, single-pass, warm, decomposed from `app.log` timestamps. Both configs
 n=2 with per-step agreeing to two decimals across a seed change:
@@ -95,7 +132,8 @@ latent save.
 
 ## EasyCache is gated OFF turbo
 
-At 8 steps EasyCache skips 0 and still pays its per-step bookkeeping. Gating it measured
+At 8 steps EasyCache skips 0 and still pays its per-step bookkeeping — and at the 6 steps
+we now ship it skips 0 for the same reason, so the gate stands. Gating it measured
 **16.09s/step -> 15.56s = 171.07s -> 168.31s warm, ~1.6%**. (First estimated at ~6% off
 the whole turbo/non-turbo per-step gap; only half that gap was EasyCache, the rest is the
 LoRA patch.) A correctness fix that saves 1.6%, not a speed lever.

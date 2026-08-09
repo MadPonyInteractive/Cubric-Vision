@@ -125,7 +125,56 @@ taef1" is wrong and was written into this table once already.
 | FLUX.2 Klein | `Flux2` | `taef2_decoder` | ✅ engineAsset, volume-installed on remote |
 | **Krea 2, Qwen Image, Qwen Image Edit** | `Wan21` | `lighttaew2_1` | ❌ **deliberately never** — see below |
 | **Wan 2.2** | `Wan22` | `lighttaew2_2` | ❌ **deliberately never** — see below |
-| LTX | `LTXV` / `LTXAV` | none in 0.29.2 | n/a — latent2rgb is its ceiling |
+| LTX | `LTXV` / `LTXAV` | none — core names no decoder | ✅ but NOT via this table — `ltx23-preview-taehv`, see below |
+| MiniMax H3 | `MiniMaxH3Video` / `MiniMaxH3AV` | none — core names no decoder | ✅ but NOT via this table — `taeh3-decoder`, see below |
+
+Both H3 rows and the LTX row route through a **node**, not core. What makes their frames
+reach the app at all is that those nodes emit on the *standard* binary preview channel —
+one `VHS_latentpreview` marker, then one `PREVIEW_IMAGE` per frame with a cursor walking
+the clip in real time. That is the same road every other model's previews travel, which is
+why neither needed a single line of app-side plumbing. A previewer that instead paints a
+widget on its own node (KJNodes' `ModelPreviewOverrideKJ` base64s onto a private
+`kj_preview_override` event) is invisible here no matter how good the picture is.
+
+### The second kind of decoder — node-read, model-owned, NOT an engineAsset (MPI-508)
+
+Everything above is read by **core's previewer**, which is why those decoders are
+`engineAsset`: they belong to no model, a model-keyed install would never reach them, and
+a GC with an "owner" would delete them.
+
+H3 and LTX previews work a different way, and the difference decides every flag on the
+dep. Core cannot serve either one:
+
+- `MiniMaxH3Video` / `MiniMaxH3AV` and `LTXV` / `LTXAV` set **no `taesd_decoder_name`**, so
+  `get_previewer` never even looks for a file.
+- Core's `TAESD` could not load `taeh3` regardless — its `Decoder` hardcodes width 64 and
+  taeh3 is 256.
+
+So both are consumed by **nodes inside the graph**, not by the engine:
+
+| dep | file | read by | how it is selected |
+|---|---|---|---|
+| `taeh3-decoder` | `vae/taeh3.safetensors` | our own `MpiVideoSamplingPreview` | a plain `VAELoader` wired to its `vae` input |
+| `ltx23-preview-taehv` | `vae/taeltx2_3.safetensors` | KJNodes `LTX2SamplingPreviewOverride` | a plain `VAELoader` wired to its `vae` input |
+
+Consequences, all deliberate:
+
+- **Neither is an `engineAsset`.** They belong to specific models (H3's two DiTs, LTX's two
+  tiers), a model-keyed install reaches them, and GC with the last owning model is the
+  correct outcome. Do not "fix" them to match the rows above.
+- **Both live in `vae/`, not `vae_approx/`** — a `VAELoader` reads the `vae` folder key.
+  They are preview decoders in purpose and VAEs in plumbing. `vae_approx/` is for the
+  core-read decoders only.
+- **The #13366 landmine below does not reach them.** That corruption happens inside core's
+  previewer loading a whole VAE; core never touches these files.
+
+The LTX one is a **rewire, not an addition**: `LTX2SamplingPreviewOverride` was always in
+the graph, fed the full video VAE. It branches on
+`vae.first_stage_model.__class__.__name__ == "TAEHV"` and silently falls back to
+`latent_rgb_factors` for anything else — which is why LTX previews were blocky for so long
+while a preview-override node sat right there. Feeding it the tiny TAEHV flips the branch.
+The trade: that path also nulls `latent_upscale_model`, so previews go from sharp-but-blocky
+to soft-but-real, and playback speed becomes honest.
 
 ### The `lighttaew*` decoders are a landmine — do not "fix" the blob previews with them
 

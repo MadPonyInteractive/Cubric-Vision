@@ -17,26 +17,35 @@ export const loraDeps = {
         bytes: 332348584,
         sha256: '0ace5244e3d1256f884662c261b017249796cf5b95f05d5ed93cc02a478967b8'
     },
-    // H3 turbo distill (MPI-505) — the ONLY step-distill lever we ship for H3, which is
-    // the only non-distilled video model in the fleet (20 steps; LTX 8, WAN 2.2 6, WAN 5B 4).
-    // 20 -> 8 steps, 204s -> 96s at 864x480 warm. OPT-IN: quality sits slightly below the
-    // 20-step path, so the toggle is off by default. Strength is VALUE-gated (MpiMath
-    // 1.0/0.0 into BOTH strength_model and strength_clip) — MpiLoraModelClip only
-    // short-circuits when both are 0, and that short-circuit is what skips the file load
-    // when turbo is off. Subfoldered under loras/minimax-h3/; ComfyUI lists it BACKSLASHED
-    // (`minimax-h3\...`) — rides the MPI-229 heal, same as the krea-2 subfolders.
+    // H3 turbo distill (MPI-505, weight swapped MPI-508) — the ONLY step-distill lever we
+    // ship for H3, the only non-distilled video model in the fleet (20 steps; LTX 8,
+    // WAN 2.2 6, WAN 5B 4). 20 -> 6 steps, 105s -> 87.8s measured on one clip. OPT-IN:
+    // quality sits slightly below the 20-step path, so the toggle is off by default.
+    // Strength is VALUE-gated (MpiMath 0.75/0.0 into BOTH strength_model and strength_clip)
+    // — MpiLoraModelClip only short-circuits when both are 0, and that short-circuit is
+    // what skips the file load when turbo is off. The clip half is a no-op either way:
+    // this is a pure diffusion_model LoRA (416 tensors, zero text-encoder keys), gated on
+    // both strengths purely so the short-circuit still fires. Subfoldered under
+    // loras/minimax-h3/; ComfyUI lists it BACKSLASHED (`minimax-h3\...`) — rides the
+    // MPI-229 heal, same as the krea-2 subfolders.
     'minimax-h3-turbo-lora': {
         id: 'minimax-h3-turbo-lora',
-        name: 'MiniMax H3 Turbo LoRA (8-step distill)',
-        // v4 step600 EMA — the README's recommended build; the non-EMA sibling is
-        // "for testing and comparison". Apache-2.0, so no licences.js record is needed.
-        origin: 'drbaph/MiniMax-H3-Turbo-Lora-ComfyUI (Apache-2.0, original larryvrh)',
-        filename: 'loras/minimax-h3/minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/minimax-h3/minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors',
-        mirrorUrl: 'https://huggingface.co/drbaph/MiniMax-H3-Turbo-Lora-ComfyUI/resolve/main/minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors',
-        size: '591.55MB',
-        bytes: 620285592,
-        sha256: '7098acf3ee75028fd9fcd948f50fcc8d995057fabb76f86bd3ca2c0ffc58e409',
+        name: 'MiniMax H3 Turbo LoRA (6-step distill)',
+        // SWAPPED 2026-08-09 (MPI-508). The first weight we shipped here — drbaph's
+        // larryvrh v4_step600_ema — was measured at close to NO-LoRA timing: it cut the
+        // step count and gave the wall clock back. lightx2v's is a real speed-up. Its
+        // strengths are not comparable to the old one's: the safetensors metadata says
+        // `peft alpha/r=0.125 baked into lora_B`, so 0.75 here is a tuned value, not a
+        // reduction from 1.0. At 1.0 the AUDIO degrades badly (audio breaks before the
+        // picture does on H3), and at 4 steps — what it was distilled for — audio is
+        // unusable. 6 steps is the floor. Apache-2.0 upstream, so no licences.js record.
+        origin: 'lightx2v/Minimax-h3-Turbo (Apache-2.0), ComfyUI conversion by Kijai/MiniMax-H3_comfy',
+        filename: 'loras/minimax-h3/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/minimax-h3/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors',
+        mirrorUrl: 'https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors',
+        size: '1.82GB',
+        bytes: 1956171984,
+        sha256: 'fc9b6500f0331fe925b004738baaa31bd34104741c8bf9334816f9ac3005c8c1',
     },
     // Content-filter-bypass LoRA (always-on Input_Bypass_Filter_Lora node). A tiny
     // 12-float projector nudge. Dep of BOTH models (it's negligible); the generator bakes
