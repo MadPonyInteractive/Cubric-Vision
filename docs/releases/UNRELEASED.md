@@ -253,6 +253,15 @@
   tells you the engine is not ready yet and to try the install again in a moment. Genuine
   failures — a bad file, for instance — still report exactly as before.
 
+- **A cloud generation no longer disappears when a model adds new tools.** Some models
+  bring their own add-on packs, and the cloud engine has to restart to pick them up. It did
+  that immediately — including while something else of yours was still generating. Whatever
+  was running was killed mid-render and simply vanished: no error, no message, nothing in
+  the queue, and the picture you were waiting for never arrived. Queue a batch, start one of
+  those models, and the work already in flight was gone. The engine now waits for the work
+  in progress to finish before it restarts, and if it cannot, it says so and leaves your
+  generation alone instead of throwing it away.
+
 - **A cloud install that was interrupted can be started again.** If your cloud engine
   went away in the middle of a model install — stopped, deleted, or restarted — pressing
   Install again did nothing at all: no error, no progress, just a bar sitting where it

@@ -125,6 +125,19 @@ releaser's call. An evidence file from before scope recording is called out as u
 what it left out. (`--models` also crashed in `printPlan` before this, so the flag never ran
 at all.)
 
+## `--plan` DESTROYS the last run's transcript — back it up first
+
+`_transcribe` opens `dev_configs/smoke-run.txt` with mode `'w'` on the **first log line**, so
+**every** invocation truncates it — `--plan` included, before it has rented anything or proven
+anything. A dry run therefore wipes the committed transcript of the last real matrix, which is
+the only record of what the runner was doing at the minute a paid run failed.
+
+```sh
+cp dev_configs/smoke-run.txt /tmp/smoke-run.backup.txt   # then restore with cp, NEVER git checkout
+```
+
+`git checkout --` on this tree takes every peer session's uncommitted work with it (`.claude/rules/git.md` § MPI-365). `cp` back, or leave it truncated and recover from git history by hand.
+
 ## Re-running only what failed — `--retry-failed`, and the merge underneath it
 
 ```
