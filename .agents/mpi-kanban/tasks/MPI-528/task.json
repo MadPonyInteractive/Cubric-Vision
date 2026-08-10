@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-528",
+  "title": "The licensing surface - gated installs and creator attribution",
+  "description": "Consolidation sweep 2026-08-10: MPI-357 and MPI-358 both turn third-party licence metadata into app behaviour and both land in the Model Library. Same sources (Hugging Face, CivitAI by-hash), same VPN constraint, same UI surface.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-10T22:10:00Z",
+  "updated_at": "2026-08-10T22:10:00Z",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

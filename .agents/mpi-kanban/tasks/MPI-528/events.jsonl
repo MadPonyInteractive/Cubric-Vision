@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "mpi-528-created", "type": "task.created", "at": "2026-08-10T22:10:00Z", "task": "MPI-528", "summary": "Umbrella created by the consolidation sweep over MPI-357, MPI-358."}

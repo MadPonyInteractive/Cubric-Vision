@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-526",
+  "title": "Weight deletion and the disk it never gives back - one umbrella over _trash",
+  "description": "Consolidation sweep 2026-08-10: MPI-500 and MPI-499 are one root. routes/downloadManager.js _trash is why deleted weights do not free space, and why npm test leaks ~10 GB a run into the Recycle Bin. Each card already names the other as half its own fix.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-10T22:10:00Z",
+  "updated_at": "2026-08-10T22:10:00Z",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

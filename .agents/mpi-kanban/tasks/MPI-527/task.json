@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-527",
+  "title": "Release artifacts that lie - the build guard, the false-green test, the stale update manifest",
+  "description": "Consolidation sweep 2026-08-10: MPI-522 and MPI-523 are both the portable build/update pipeline shipping something untrue about itself. One is CI-red today; the other cost real diagnosis time at the 1.4.0 close-out.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-10T22:10:00Z",
+  "updated_at": "2026-08-10T22:10:00Z",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}
