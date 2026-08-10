@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "a8082e44-bf00-4533-8816-700d95a021f0",
-  "status": "open",
+  "status": "acknowledged",
   "created_at": "2026-08-10T09:40:00Z",
-  "updated_at": "2026-08-10T09:40:00Z",
+  "updated_at": "2026-08-10T10:25:00Z",
   "from": {
     "role": "implementer",
     "task_card": "MPI-511",
@@ -27,6 +27,12 @@
     {
       "at": "2026-08-10T09:40:00Z",
       "event": "created"
+    },
+    {
+      "at": "2026-08-10T10:25:00Z",
+      "event": "acknowledged",
+      "actor": "MPI-450 close-out",
+      "note": "Carried into handoff d8eec87a-2e41-47d2-81cb-727781cc9e78 as ITEM 3b. Not acted on this session - the 1.4.0 fold has not happened yet, which is exactly the point at which the recommendation applies."
     }
   ]
 }
