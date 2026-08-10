@@ -168,6 +168,12 @@
   the split was ever for. Same settings, same number of sampling steps, one less setup to
   pay for — and the progress bar says "1" instead of counting to two. Turn the preview
   back on and it behaves exactly as before, first pass to look at, second to finish.
+- **Video previews in real colour, playing as a clip.** While **MiniMax H3** or
+  **LTX 2.3** generates, the card no longer shows the blocky coloured blobs every video
+  model used to give you — it shows the actual clip, in real colour, looping as it
+  refines. You can see the framing, the colour grade and the movement while there is
+  still time to stop and change the prompt, instead of waiting out the whole render to
+  find out the shot was wrong. Nothing to turn on and nothing extra to download.
 - **Engine updates now apply in place — seconds, not a fresh download.** Updating the
   generation engine used to delete the whole thing and download it again from scratch:
   around eleven gigabytes of engine, every add-on and every Python package, even when
@@ -451,8 +457,7 @@
   explanation: if both routes fail you still get the "your network blocked this,
   try a VPN" message instead of a bare error code. This helps when a network
   blocks the address; a network that interferes with the transfer itself can still
-  break a download. Four files still have a single route — one large model whose
-  licence does not allow us to publish a second copy yet, and the three small preview
+  break a download. Three files still have a single route — the three small preview
   decoders, which exist nowhere else in the form the app needs.
 - **Setting up the engine downloads less, and stops hiding a step that always
   failed.** The generation engine is built from a set of add-ons, and each one used
