@@ -58,14 +58,19 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
       "tasks/MPI-450/checklist.md - the SCOPE CHANGE section (bump plan in gate order, 0.31.0 research, both traps), the H3 FAIL post-mortem with both dead candidates, the second claim-audit record, and three non-gating findings (the H3 frame-budget gap, PR #15446, the GPU-scalar evidence hole).",
       "tasks/MPI-516/brief.md - the app-hang analysis, the three bail paths, and the upward severity revision with its reasoning."
     ],
     "pending": [
-      "NOTHING IN THIS SESSION IS COMMITTED. The tree is shared with a live peer session and board.json + events.jsonl are co-owned, so committing was deliberately left to whoever closes out. Every file is listed in files_modified below.",
+      "COMMITTED as 333f1622. The tree still carries peer work only (tasks/MPI-504, comfy_workflows/**, untracked state/hooks/) - do not commit those. NOT PUSHED: push_policy in project-profile.md says auto, but CLAUDE.md says push is user-authorized; the conflict was surfaced to Fabio rather than resolved unilaterally.",
       "state/index.json still lists 10 stale pending_file_states from earlier sessions whose files are long committed. Cleanup for mpi-cleanup, not work."
     ]
   },
@@ -93,7 +98,7 @@
       "The board validator wants schema mpi-kanban/event/v1 with `id` and `type` fields. An event written as {at, event, actor, task, note} FAILS validation - that shape was written and corrected today."
     ],
     "files_modified": [
-      "NOTHING COMMITTED THIS SESSION - all of the following are uncommitted working-tree edits.",
+      "ALL OF THIS IS COMMITTED as 333f1622 (chore(MPI-450): settle the H3 smoke FAIL, audit the 1.4 notes, stamp 1.4.0), by explicit pathspec. The working tree is left carrying ONLY peer work - tasks/MPI-504 and comfy_workflows/** - plus the untracked state/hooks/. Check `git log --stat 333f1622` rather than re-deriving what changed.",
       "js/core/appVersion.js - APP_VERSION 1.3.1 -> 1.4.0",
       "package.json + package-lock.json - version 1.4.0 (root and packages[''])",
       "js/data/releaseNotes.js - new RELEASE_NOTES['1.4.0'] block (its engineNote still says 0.30.0)",
@@ -116,7 +121,14 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "scalable-foundation",
-    "relevant_topics": ["release", "versioning", "comfy engine", "runpod", "release notes", "linux"]
+    "relevant_topics": [
+      "release",
+      "versioning",
+      "comfy engine",
+      "runpod",
+      "release notes",
+      "linux"
+    ]
   },
   "rules_active": [
     ".claude/rules/dos_and_donts.md",
@@ -128,7 +140,10 @@
     "docs/runpod-remote-engine.md"
   ],
   "recent_events": [
-    { "at": "2026-08-10T13:00:00Z", "event": "handoff_created" }
+    {
+      "at": "2026-08-10T13:00:00Z",
+      "event": "handoff_created"
+    }
   ],
   "resume_prompt": "You are resuming MPI-450, the 1.4 release umbrella, on master. Read .agents/mpi-kanban/state/handoffs/56669f38-ad54-46c1-80e9-bcac8c3dc666.json, then tasks/MPI-450/checklist.md - its '⚠ SCOPE CHANGE 2026-08-10' section at the TOP is the executable plan and is written in playbook gate order. Everything the previous handoff listed as blocking is DONE: the H3 t2v FAIL is settled (both of its candidates were disproven for free, the retry PASSED at 153s, and the real find was a false-positive path in the smoke runner's own orphan detector, now fixed and mutation-verified), the release notes were audited by claim-auditor and corrected (1 FALSE, 4 OVERSTATED - and one auditor finding was itself WRONG and would have put a false claim into a public changelog, so re-verify that agent always), the LTX bullet was CUT because no released user ever had broken LTX, and the version is stamped 1.4.0 with RELEASE_NOTES['1.4.0'] already written. THEN THE SCOPE CHANGED: Fabio put ComfyUI 0.31.0 into 1.4 after measuring H3 at ~40s against ~70s, and the W4A8 low tier is explicitly NOT in 1.4 - he is building it in a parallel session for 1.5, and 0.31.0 is its prerequisite. So the job is the bump playbook end to end starting at gate 3, then the release chain. Four things will cost you time if you miss them: node_lock pins the FRONTEND too so THREE pins move (1.47.11 -> 1.48.7, 0.11.27 -> 0.11.34); res_multistep changed RNG consumption and four shipped graphs use it, so verify the seed->image mapping empirically at the local gate before writing or omitting a note; the smoke evidence is VOID and needs a FULL matrix because release-health-check refuses a file from a different engine; and an engine bump makes a STABLE Pod image rebuild MANDATORY at release on top of the dev image, so it is TWO builds. Nothing in the last session is committed and the tree is shared with a live peer - commit by explicit pathspec, never touch their files, and never run destructive git."
 }
