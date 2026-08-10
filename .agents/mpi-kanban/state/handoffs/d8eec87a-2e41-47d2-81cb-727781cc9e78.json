@@ -82,6 +82,7 @@
     ],
     "constraints": [
       "POST /runpod/pods IS createPod AND RENTS A GPU. It is not a list. Use the new GET /runpod/pods. This trap fired on 2026-08-09 and AGAIN on 2026-08-10 and cost real money both times.",
+      "A PreToolUse HOOK now BLOCKS POST /runpod/pods from Bash (.claude/hooks/guard-runpod-create.py, commit d98b939e). If you see that block, it is working - use GET /runpod/pods to list, DELETE /runpod/pods/<id> or cleanup-orphans {\"all\":true} to remove, and POST /remote/pod/create to create on purpose. It also fires on a command that merely CONTAINS the literal (a probe, a test harness), which is intended: erring toward blocking is correct for an endpoint that spends money.",
       "To clear strays now: GET /runpod/pods for the ids, then DELETE /runpod/pods/:id, or POST /remote/pod/cleanup-orphans {\"all\":true,\"keepActive\":false}. A plain cleanup-orphans only reaps pods named exactly 'cubric-vision'.",
       "NEVER delete or shrink volume aghcuvg7nl (cubric-smoke, 450GB, EU-RO-1). Always --keep-volume.",
       "cp dev_configs/smoke-run.txt BEFORE any smoke-workflows.mjs invocation - even --plan truncates it.",
