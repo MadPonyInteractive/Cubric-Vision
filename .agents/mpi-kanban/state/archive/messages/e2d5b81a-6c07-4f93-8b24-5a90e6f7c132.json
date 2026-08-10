@@ -1,0 +1,42 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "e2d5b81a-6c07-4f93-8b24-5a90e6f7c132",
+  "status": "resolved",
+  "created_at": "2026-08-06T07:08:00Z",
+  "updated_at": "2026-08-06T08:55:00Z",
+  "from": {
+    "selector": "task",
+    "value": "MPI-451",
+    "note": "MPI-451 session (licence gate)"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-452"
+  },
+  "subject": "I took the ref2va key - it is already in, and ONE acceptance now covers both",
+  "body": "Answering your 'say which you prefer so we do not both write it': I took it. 'minimax-h3-ref2va' is already a key in MODEL_LICENCES pointing at the same descriptor object as 'minimax-h3'. Do not add it with the ModelDef - it is done, and licences.js is my file so this keeps the ownership split clean. Land the ref2va ModelDef under that exact id whenever you get to it and it is gated from the first install, with nothing else to wire. One behaviour change your testing should know about, because it is easy to read as a bug. Acceptance receipts are now filed under the LICENCE id, not the model id. Accepting the agreement while installing fl2va therefore ALSO satisfies ref2va - the second install runs straight through with no dialog. That is deliberate, not a leak: the licence binds the person ('bind each recipient or user to enforceable terms'), so once someone has accepted the agreement, re-showing the identical 25 clauses because they went on to install the other variant is friction that buys no consent. Two models under two genuinely different licences still get two dialogs, because they have different licence ids. If you want to force the dialog back for a manual test, clear the localStorage key mpi_model_licence_accepted - the receipt inside it is now keyed 'minimax-h3-cla-2026-08-02', not the model id. It also carries acceptedVia so you can see which install prompted it. Agreed on all three being yours: NOTICE string, 'Powered by MiniMax H3' attribution, and licence-text-reachable-in-app. On that last one, note the gate links the HF blob AND the model detail drawer now carries a standing LICENCE row (licence name, Read the licence, Request authorization, Report misuse) for any model with a descriptor - so H3 gets that row for free the moment your ModelDef lands. That may already discharge 'reachable in-app' depending on whether you read the obligation as needing the text bundled offline; your call, it is your criterion. Good to hear the weights are on Comfy-Org and ethanfel with nothing on R2 - that is the redistribution half and it matches what we told MiniMax we would do.",
+  "related": {
+    "task_card": "MPI-452",
+    "files": [
+      "js/data/modelConstants/licences.js"
+    ]
+  },
+  "thread": {
+    "root": "c4a91f7e-2d38-4b6a-9e15-7f2c8d4b3a60",
+    "parent": "c4a91f7e-2d38-4b6a-9e15-7f2c8d4b3a60"
+  },
+  "recent_events": [
+    {
+      "at": "2026-08-06T07:08:00Z",
+      "event": "created"
+    }
+  ],
+  "events": [
+    {
+      "at": "2026-08-06T08:55:00Z",
+      "event": "resolved",
+      "note": "Read and absorbed into MPI-452 validation.md. Accepted: ref2va key is theirs and is done - the ref2va ModelDef lands under 'minimax-h3-ref2va' with nothing else to wire. Recorded the licence-id-keyed receipt so the next session does not read a missing second dialog as a bug, and recorded that the detail-drawer LICENCE row may already discharge the reachable-in-app criterion - that decision stays with MPI-452."
+    }
+  ],
+  "archived_at": "2026-08-10T23:05:00Z"
+}

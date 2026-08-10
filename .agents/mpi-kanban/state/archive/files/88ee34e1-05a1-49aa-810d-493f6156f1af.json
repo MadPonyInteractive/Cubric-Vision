@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "88ee34e1-05a1-49aa-810d-493f6156f1af",
+  "path": ".claude/rules/comfy_engine.md",
+  "owner_session": ".agents/mpi-kanban/state/sessions/15480f52-7d46-4adf-b0d9-0013a486578a.json",
+  "owner_role": "implementer",
+  "task": null,
+  "status": "complete",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-08-08T19:10:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-08T18:45:00Z",
+      "event": "claimed_for_write",
+      "note": "drop the MpiNodes dev junction + its drift escape hatch"
+    },
+    {
+      "at": "2026-08-08T19:10:00Z",
+      "event": "released"
+    }
+  ],
+  "archived_at": "2026-08-10T23:05:00Z"
+}

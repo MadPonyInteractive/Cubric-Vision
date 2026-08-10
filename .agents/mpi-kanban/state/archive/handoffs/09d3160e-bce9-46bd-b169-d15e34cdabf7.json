@@ -1,0 +1,153 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "09d3160e-bce9-46bd-b169-d15e34cdabf7",
+  "generated_at": "2026-08-09T22:02:27Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "closed",
+  "session": {
+    "name": "MPI-508 - H3 turbo LoRA swap + real sampling previews for H3 and LTX",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Fabio compared a community MiniMax H3 workflow from Civit.ai against ours. Two things came out of it: their turbo LoRA is a different weight than the one we shipped that morning, and their live preview was dramatically better than our colour-blob previews. Ship both.",
+    "status": "blocked",
+    "summary": "The LoRA swap is complete in deps, docs and R2. The preview work is complete except for proving the new MpiNodes node live. BOTH are blocked on one step: sync-raw-workflows refuses to run because another session left 7 uncommitted NVIDIA PiD files, and orchestrate.py rebuilds ALL templates so it would overwrite them. Until that conversion runs, H3 IS BROKEN IN THE APP - the runtime graphs still name the deleted LoRA."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-508/brief.md",
+    "completed": [
+      "R2: uploaded minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors (verified 200 / 1,956,171,984 bytes exact)",
+      "R2: DELETED the superseded larry LoRA - safe, it entered the tree today in 0b15f342 and `git tag --contains` is empty, so no release ever referenced it",
+      "R2: uploaded vae/taeh3.safetensors (22,709,752) and vae/taeltx2_3.safetensors (23,531,296), both verified 200",
+      "loraDeps.js: minimax-h3-turbo-lora swapped to the lightx2v weight",
+      "assetDeps.js: added taeh3-decoder and ltx23-preview-taehv, both in vae/, neither an engineAsset",
+      "models.js: taeh3 attached to both H3 DiTs, taeltx2_3 to both LTX tiers - verified by importing the real registry, not by reading the diff",
+      "tests/remote-engine-assets.test.cjs: guards the not-an-engineAsset + vae/-folder invariants. Green.",
+      "node scripts/check-dep-urls.mjs -> All 224 URLs reachable",
+      "docs/models/h3/turbo.md + docs/preview-bus.md rewritten for both changes",
+      "ComfyUi-MpiNodes: MpiVideoSamplingPreview written, registered, documented, COMMITTED LOCALLY as 6ae7395 (NOT pushed - untested)",
+      "Fabio wired the new node + a VAELoader on taeh3 into both H3 graphs and exported the raw templates; the KJ preview node is gone from both",
+      "Committed ea8600c7 and pushed to origin/master"
+    ],
+    "pending": [
+      "UNBLOCK: the 7 NVIDIA PiD files (see context.constraints) must be committed or removed by their owner",
+      "Run the conversion: COMFY_URL=http://127.0.0.1:48188 node scripts/sync-raw-workflows.mjs",
+      "Prove MpiVideoSamplingPreview live - no generation has ever run through it",
+      "Push ComfyUi-MpiNodes and pin the new commit in dev_configs/node_lock.json",
+      "Fix the stale H3 turbo entry in docs/releases/UNRELEASED.md (8 steps -> 6, 591MB -> 1.82GB, and re-measure the timings in-app)",
+      "Verify in the app: a real generation on fl2va / r2va / LTX with previews visible, and turbo OFF still short-circuiting the LoRA load"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-508",
+    "title": "H3 + LTX: swap to the lightx2v turbo LoRA at 6 steps, and ship true-RGB sampling previews",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-508/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-508/checklist.md",
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-508/handoffs/"
+    }
+  },
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement",
+    "commit",
+    "push"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/preview-bus.md gained a new section, 'The second kind of decoder - node-read, model-owned, NOT an engineAsset', because the existing table would otherwise make the two new deps look like inconsistent mistakes",
+      "docs/models/h3/turbo.md now leads with the weight swap and marks every larry-era measurement as superseded",
+      "The MPI-508 brief carries the full reasoning chain, including the wrong turns"
+    ],
+    "pending": [
+      "docs/releases/UNRELEASED.md line ~150 still describes the OLD turbo LoRA. Proposed but NOT edited - the new timings cannot be measured in-app until the conversion lands. Nothing ships wrong today because the whole feature is unreleased.",
+      "Consider whether the bench's extra_model_paths.yaml needing a vae_approx mapping belongs in the mpi-bump-local-comfy skill"
+    ]
+  },
+  "next_action": {
+    "description": "Check whether the 7 NVIDIA PiD files are committed or gone (git status on comfy_workflows/ and comfy_workflows/scripts/workflow_generation/). Once clear, run `COMFY_URL=http://127.0.0.1:48188 node scripts/sync-raw-workflows.mjs` - that regenerates the API graphs from the already-committed raw exports and is what unbreaks H3 in the app. Then prove the new preview node with one real H3 generation before pushing ComfyUi-MpiNodes and pinning it in dev_configs/node_lock.json.",
+    "command": "mpi-continue MPI-508"
+  },
+  "context": {
+    "key_decisions": [
+      "REPLACED the turbo LoRA rather than adding a second one. Fabio measured the larry v4_step600_ema weight we shipped in MPI-505 at close to NO-LoRA wall clock - it cut the step count and gave the time back per step. lightx2v's is a real speed-up: 105s -> 87.77s at 6 steps on the same clip.",
+      "Strength 0.75 and 6 steps are measured floors. At 1.0 the audio degrades; at 4 steps (what the weight was distilled for) audio is unusable. On H3 audio breaks BEFORE the picture does, so it must be judged on its own pass.",
+      "The two LoRAs' strengths are not comparable - lightx2v bakes alpha/r=0.125 into lora_B per its own safetensors metadata.",
+      "Deleting the old weight from R2 was safe ONLY because it never shipped (entered the tree in 0b15f342 today; `git tag --contains` empty). The MPI-470/466 rule against deleting dep entries does not apply when no release ever referenced the weight.",
+      "Wrote our own MpiVideoSamplingPreview instead of shipping KJNodes' ModelPreviewOverrideKJ. Their node base64s frames onto a private kj_preview_override WS event bound to a DOM widget - browser-only. Ours emits on the STANDARD binary preview channel plus a VHS_latentpreview marker, which the app already consumes, so it needs ZERO app-side changes.",
+      "That decision replaced an earlier plan to add a ~15-line comfyController listener plus preview_frames:1 stills. Both halves of that plan would have been deleted by the node, so the interim was skipped as MORE work, not less.",
+      "LTX needed no new node at all - only a rewire. LTX2SamplingPreviewOverride was already in the graph fed the FULL video VAE; it branches on first_stage_model being TAEHV and silently falls back to latent_rgb_factors otherwise, which is why those previews were blocky while a previewer sat right there.",
+      "Both tiny decoders live in vae/ and are NOT engineAssets, unlike the three in vae_approx/. Those are core-read and model-agnostic; these are node-read and model-owned, so a model-keyed install reaches them and GC with the last owner is correct."
+    ],
+    "constraints": [
+      "BLOCKER: sync-raw-workflows.mjs refuses while 7 files are uncommitted, because orchestrate.py rebuilds ALL templates and would overwrite them: comfy_workflows/nvidia_pid_{flux,qwen,sd3,sdxl}.json, comfy_workflows/scripts/workflow_generation/{generate_pid.py,nvidia_pid_template.json}, and a modified registry.py. All were written at 22:06 by actor 'opus' - another live session (MPI-506/507). An eighth, comfy_workflows/raw/nvidia_pid_template.json, is not in the refusal list but WOULD be converted and folded into the next commit.",
+      "H3 IS CURRENTLY BROKEN IN THE APP and a restart will not fix it. The committed API graphs still name minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors, which is deleted from R2 and from disk, so the engine rejects the prompt with `value_not_in_list` on node 323. Only the conversion fixes it.",
+      "Convert against the ENGINE on :48188, NEVER the bench on :8188. The bench runs ahead (0.30.2 vs 0.30.0) and has silently shifted a widget before - memory tool_comfy_schema_gate_before_workflow_sync.",
+      "MpiVideoSamplingPreview has NEVER RUN. It registers (/object_info returns its schema) and is wired correctly in both graphs, but no generation has gone through it. It also swallows preview errors by design, so its failure mode is SILENT: no frames, run completes, one line `[MpiVideoSamplingPreview] preview disabled after: ...` in the ComfyUI console. Check for that string first.",
+      "The likeliest first-run bug is the frame cursor. _temporal_ratio reads latent_format.temporal_downscale_ratio (4 for H3). Wrong there raises no error - it just makes playback the wrong speed, which is exactly the symptom Kijai's 2D taeh3 produced earlier in the session.",
+      "Use madebyollin's taeh3 (sha 4fd022bf...4c13), NOT Kijai/MiniMax-H3-TAE (sha f0f60fa0...e527, now deleted everywhere). Kijai's is 2D with no temporal layers, so it returns one image per LATENT frame and plays ~4x fast.",
+      "Board validation FAILS with 19 violations, ALL in MPI-506/MPI-507 event logs written by the other agent (they use \"task\" where the schema wants \"id\", and omit \"schema\"). Not repaired here: editing a JSONL another session is actively appending to is a race, and it is their card's provenance. MPI-508's own log is clean.",
+      "Do not 'simplify' the H3 graphs' MpiLoraModelClip to LoraLoaderModelOnly. Both LoRAs are pure diffusion_model weights with zero text-encoder keys so strength_clip is a no-op, but the both-strengths-zero short-circuit is what makes turbo-off skip the file load entirely.",
+      "Bench-only side effect, leave it: G:/ComfyUi/ComfyUI/extra_model_paths.yaml gained a `vae_approx: vae_approx/` line (backup .bak beside it). Not a repo file."
+    ],
+    "files_modified": [
+      "js/data/modelConstants/loraDeps.js",
+      "js/data/modelConstants/assetDeps.js",
+      "js/data/modelConstants/models.js",
+      "tests/remote-engine-assets.test.cjs",
+      "docs/models/h3/turbo.md",
+      "docs/preview-bus.md",
+      "comfy_workflows/raw/minimax_h3_fl2va_template.json",
+      "comfy_workflows/raw/minimax_h3_r2va_template.json",
+      "comfy_workflows/raw/ltx_i2v_t2v_template.json",
+      "c:/AI/Mpi/ComfyUi-MpiNodes/preview.py",
+      "c:/AI/Mpi/ComfyUi-MpiNodes/__init__.py",
+      "c:/AI/Mpi/ComfyUi-MpiNodes/README.md",
+      "c:/AI/Mpi/ComfyUi-MpiNodes/changelog.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-508/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-508/checklist.md",
+      "docs/preview-bus.md",
+      "c:/AI/Mpi/ComfyUi-MpiNodes/preview.py"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "comfy_engine",
+      "comfy_injection",
+      "workflow-authoring",
+      "models",
+      "preview-bus"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/git.md",
+    "docs/preview-bus.md",
+    "docs/models/h3/turbo.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-09T22:02:27Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-10T06:40:00Z",
+      "event": "handoff_closed",
+      "note": "Closed by mpi-cleanup: MPI-508 is done, so this handoff had nothing left to resume."
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/09d3160e-bce9-46bd-b169-d15e34cdabf7.json and use mpi-continue to pick up MPI-508. MiniMax H3 is currently BROKEN in the app on purpose-ish: the turbo LoRA was swapped to lightx2v (6 steps, strength 0.75) and the old weight is deleted from R2, but the runtime API graphs still name it, so the engine rejects every H3 prompt with value_not_in_list. The raw exports are committed and correct - only the conversion is missing, and it is blocked because sync-raw-workflows refuses while another session's 7 uncommitted NVIDIA PiD files sit in comfy_workflows/ and comfy_workflows/scripts/workflow_generation/. Once their owner commits or removes them, run COMFY_URL=http://127.0.0.1:48188 node scripts/sync-raw-workflows.mjs against the ENGINE on 48188, never the bench on 8188. After that, prove the brand-new ComfyUi-MpiNodes node MpiVideoSamplingPreview with one real H3 generation - it has never run, and it swallows its own errors, so a failure looks like previews simply not appearing plus one line in the ComfyUI console. Only once it is proven should you push ComfyUi-MpiNodes (committed locally as 6ae7395) and pin that commit in dev_configs/node_lock.json.",
+  "archived_at": "2026-08-10T23:05:00Z"
+}

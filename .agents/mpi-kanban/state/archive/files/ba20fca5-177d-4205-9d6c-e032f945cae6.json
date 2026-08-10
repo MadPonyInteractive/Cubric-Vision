@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "ba20fca5-177d-4205-9d6c-e032f945cae6",
+  "path": "comfy_workflows/flow_sdxl_4k.json",
+  "owner_session": null,
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/tasks/MPI-498/",
+  "status": "verified",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-08-09T00:40:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-08T20:18:00Z",
+      "event": "claimed_for_write"
+    },
+    {
+      "at": "2026-08-09T00:40:00Z",
+      "event": "released_verified"
+    }
+  ],
+  "archived_at": "2026-08-10T23:05:00Z"
+}

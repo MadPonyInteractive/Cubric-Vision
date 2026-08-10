@@ -1,0 +1,122 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "c4efc95b-54d4-4bbf-bdfd-cab1cf13017c",
+  "generated_at": "2026-08-08T04:45:00Z",
+  "from_session": "MPI-467 first live smoke run: six runner faults found and fixed, no GPU rented yet",
+  "to_role": "implementer",
+  "status": "consumed",
+  "session": {
+    "name": "Live proving run attempt 1 - infrastructure half debugged end to end",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Sync the Pod lock, then run the full smoke matrix so release:check stops failing and 1.4 can be cut.",
+    "status": "partial",
+    "summary": "The Pod lock question turned out to need NO image rebuild. The smoke run itself was attempted three times and never reached the GPU stage, because the runner's infrastructure half had never been executed and carried SIX faults. All six are now fixed, committed and guarded. ~97 GB of the ~300 GB fill is already on the volume. No GPU has been rented; nothing has been smoked yet."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "POD LOCK: no rebuild was owed, and the card said otherwise. MPI-472 added imageio-ffmpeg to python_deps AFTER the pod sync, but that pin is WINDOWS-PORTABLE-ONLY: MpiNodes help_funcs.py find_ffmpeg() resolves VHS_FORCE_FFMPEG_PATH -> imageio_ffmpeg -> shutil.which(\"ffmpeg\"), and both Pod Dockerfiles apt-install ffmpeg (Dockerfile:72, Dockerfile.cpu:29). start.sh:234-235 already documented this. Byte drift closed in mpi-ci 27087c2 with NO rebuild; v0.20.0-dev stays current. MPI-467 checklist corrected.",
+      "RUNNER FAULT 1 (f1df91fa): no CPU download Pod was ever created. /comfy/models/download/start only goes remote when isRemoteActive(), so ~300 GB would have downloaded to the LOCAL disk. Now creates the __cpu__ Pod and asserts /remote/mode active before the first POST.",
+      "RUNNER FAULT 2 (f1df91fa): the probe image was injected as a Windows path. MpiLoadImageFromPath runs os.path.isfile ON THE POD, so every op with a required image would have self-gated to \"no media\" - a FAIL that reads as a broken model. Now uploads via /remote/upload/media and injects the Pod-absolute path.",
+      "RUNNER FAULT 3 (f1df91fa): the install wait ignored `installing`/`paused` and never checked for failed deps. Now waits on all four in-flight statuses and asserts no failure BEFORE renting a GPU (playbook step 4).",
+      "RUNNER FAULT 4 (6001376a): a cold -cpu Pod answers /health before /wrapper/models/install exists. All 12 ltx-23-balanced deps died to that window in 0.2s while later models were fine. One retry round per model now absorbs it. Also carded the UX half as MPI-480 (the transient 404 opened the REPORT ON GITHUB dialog; routes/remoteModels.js:89 says it must be a toast).",
+      "RUNNER FAULT 5 (d6f1c7fc): the runner POSTed all 13 models at once = 63 concurrent wrapper installs. That starved a cpu3c Pod into 524-ing every route including /health; the SSE died every 90s and the fill flat-lined near 97 GB for ninety minutes while the app counters froze at 82.9 GB. Installs are now sequential, one model drained before the next - the shape the model manager ships (MPI-184).",
+      "RUNNER FAULT 6 (899e118f): GET /runpod/volumes returns a BARE ARRAY; the runner destructured {volumes, networkVolumes} off it, saw an empty list and created a NEW 350 GB volume on every run. THREE existed before it was caught. Now reads the array, refuses to guess between same-named volumes, and takes --volume <id>. The user deleted the two empty twins.",
+      "WATCHDOGS (e60b269b): the two blind spots that needed a human watching the RunPod console. Pod creation now has a 4-minute boot budget then recycles the host up to 3 times (RunPod reports RUNNING for a Pod whose container loops \"network must exist\"), and the per-model wait tracks downloaded bytes, treating 10 minutes of no movement as a dead Pod - recycle, re-POST, aria2 resumes from the volume.",
+      "PLAYBOOK (dc7a738e): all of the above written into docs/playbooks/bump-engine/01-smoke-run.md with how each fault PRESENTED, since the presentation is the trap (SSE-fed counters freeze, so a dead reporter looks exactly like a stalled download).",
+      "BOARD: MPI-450 (the real 1.4 gate umbrella) unblocked todo/blocked -> doing/in-progress; Gate E is complete. MPI-367 -> todo/deferred (its copy ships as-is in 1.4, user decision). MPI-480 created. A malformed JSONL line in MPI-367/events.jsonl repaired. validate_board.py passes."
+    ],
+    "pending": [
+      "STEP 1 - RESUME THE FILL. `node scripts/smoke-workflows.mjs --keep-volume --volume aghcuvg7nl`. The --volume flag is NOT optional now: aghcuvg7nl is the ONLY volume and it holds ~97 GB of the ~300 GB. Requires the app running on :3000 from a DEV checkout (BUILD_HASH === dev) so the Pod uses POD_IMAGE_VERSION_DEV = v0.20.0-dev.",
+      "STEP 2 - WATCH THE FIRST TWO MINUTES ONLY. EU-RO-1 was flaky on 2026-08-08: three consecutive CPU Pods reported RUNNING while their containers failed to start. The runner now recycles the host itself, but if all 3 attempts die the DC is genuinely broken and the run should wait rather than thrash.",
+      "STEP 3 - THE GPU HALF IS COMPLETELY UNPROVEN. Nothing past the install leg has ever executed: pickGpu, the engine-version assert, runOp dispatch, the history poll, the evidence write. Expect faults of the same class as the six above and read the routes before believing the code.",
+      "STEP 4 - CLOSE MPI-465/466/467/468 on the evidence file, then MPI-450 gates B and C, then /mpi-version-bump and /mpi-release."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-467",
+    "title": "Smoke-run every workflow when ComfyUI is bumped - and give the engine bump a playbook",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-467/",
+    "links": {
+      "brief": ".agents/mpi-kanban/tasks/MPI-467/brief.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-467/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-467/validation.md"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/playbooks/bump-engine/01-smoke-run.md - the six faults, how each presented, and the two habits behind them: a route response shape is one curl away, and a Pod that reports RUNNING proves nothing about its wrapper.",
+      "Every fix commit carries its own measurement rather than a description.",
+      ".agents/mpi-kanban/tasks/MPI-480/brief.md - the transient-404-as-GitHub-dialog defect, with the contract it violates and an explicit do-not-fix-by-widening-the-budget note."
+    ],
+    "pending": []
+  },
+  "next_action": {
+    "description": "Resume the fill with --volume aghcuvg7nl, then take the GPU half carefully - it has never run.",
+    "command": "mpi-continue MPI-467"
+  },
+  "context": {
+    "key_decisions": [
+      "MPI-433 IS A HARD DATE, from the user: uploading the Krea2 NSFW weight to HF before 2026-08-10 is FORBIDDEN. If 1.4 cuts before the 10th it ships as-is; on or after, the upload happens and the dependency changes. Today is 2026-08-08 (GitHub Date header).",
+      "Linux and macOS legs (MPI-249, MPI-432) are deliberately LAST, against the real 1.4 artifact. The user will rent a Mac if the risk looks real.",
+      "MPI-367 per-op help copy ships as it stands in 1.4; the content pass continues in later versions.",
+      "The volume is KEPT between runs (~$24.50/month at 350 GB). Delete the Pod, never the volume.",
+      "The user watched this session from the RunPod console and caught two things before the runner could. That is exactly what the watchdogs in e60b269b exist to replace - do not lean on a human next time."
+    ],
+    "constraints": [
+      "npm run release:check still fails on exactly one line: engine pin 0.29.2 -> 0.30.0 with no dev_configs/smoke-evidence.json. That is the whole 1.4 gate.",
+      "ONE volume exists: aghcuvg7nl (cubric-smoke, 350 GB, EU-RO-1) holding ~97 GB. Always pass --volume.",
+      "The app must be a DEV run for the Pod image to resolve to v0.20.0-dev; a released build would boot the frozen stable v0.17.0.",
+      "MPI-480 is being worked by a SECOND SESSION. It must not restart the app on :3000 or connect/disconnect the remote engine while a smoke run is live.",
+      "THE TREE IS SHARED. Commit by explicit pathspec, never git add -A.",
+      "Board writes append to BOTH the card events.jsonl and the global .agents/mpi-kanban/events.jsonl."
+    ],
+    "files_modified": [
+      "scripts/smoke-workflows.mjs (six fixes + two watchdogs: f1df91fa, 6001376a, d6f1c7fc, 899e118f, e60b269b)",
+      "docs/playbooks/bump-engine/01-smoke-run.md (dc7a738e)",
+      "c:/AI/Mpi/mpi-ci/cubric-vision-pod/python_deps.txt (27087c2, separate repo)",
+      ".agents/mpi-kanban/ (MPI-467 in-progress, MPI-450 unblocked, MPI-367 deferred, MPI-480 created)"
+    ],
+    "open_questions": [
+      "Was EU-RO-1 broken on the night of 2026-08-08, or is something about this image/volume combination provoking \"network must exist\"? Three CPU Pods failed to start within an hour; earlier Pods on the same image were fine.",
+      "The GPU half has never run. pickGpu reads /runpod/gpu-availability, which has also never been exercised (the live GPU survey never ran in the original session either)."
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "file",
+    "relevant_topics": [
+      "engine bump",
+      "smoke run",
+      "runpod",
+      "release"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/comfy_engine.md",
+    "docs/playbooks/bump-engine/README.md",
+    "docs/playbooks/bump-engine/01-smoke-run.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-08T04:45:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming the MPI-467 live smoke run. ONE line blocks the 1.4 release: release:check fails because the engine pin moved 0.29.2 -> 0.30.0 with no dev_configs/smoke-evidence.json. The previous session never reached the GPU stage - not because of the engine, but because the runner's infrastructure half had never been executed and carried SIX faults, all now fixed and committed: no CPU download Pod was created (the installs would have landed on the LOCAL disk), the probe image was injected as a Windows path the Pod cannot see, the install wait ignored two in-flight statuses and never checked for failures, a cold Pod's 404 window killed one model's whole dep set, all 13 models were POSTed at once (63 concurrent installs starved the Pod into 524-ing its own /health for ninety minutes), and a bare-array response made it mint a NEW 350 GB volume every run - three existed before it was caught. Two watchdogs now cover the parts that previously needed a human watching the RunPod console: a 4-minute Pod boot budget that recycles the host (RunPod says RUNNING for a Pod whose container is looping \"network must exist\"), and a 10-minute no-bytes-moved stall detector (the app's counters are SSE-fed, so a dead Pod leaves them frozen rather than zeroed). RESUME WITH: node scripts/smoke-workflows.mjs --keep-volume --volume aghcuvg7nl - the flag is mandatory, aghcuvg7nl is the only volume and holds ~97 GB of the ~300 GB fill. The app must be running on :3000 from a dev checkout. THE GPU HALF HAS NEVER EXECUTED - pickGpu, the version assert, runOp dispatch and the evidence write are all unproven, so read the routes before trusting the code, exactly as the six fixes above were found. Also live: MPI-433 is a HARD date - no Krea2 NSFW upload to HF before 2026-08-10; today is the 8th. MPI-480 (a transient wrapper 404 opening the REPORT ON GITHUB dialog) is being worked by a second session and must not restart the app or touch the remote engine while a run is in flight.",
+  "archived_at": "2026-08-10T23:05:00Z"
+}

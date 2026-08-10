@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "77f72b70-b77f-4ec5-ad3d-936374d4760e",
+  "agent": "claude-opus-5",
+  "role": "implementer",
+  "name": "MPI-467 - h3/t2v_ms diagnosed offline; make the runner self-diagnosing + gate 8 inputs",
+  "status": "closed",
+  "task_card": "MPI-467",
+  "heartbeat_at": "2026-08-09T02:04:27Z",
+  "allowed_actions": [
+    "read",
+    "implement",
+    "verify",
+    "claim_files"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-09T00:54:00Z",
+      "event": "session_started"
+    },
+    {
+      "at": "2026-08-09T02:04:27Z",
+      "event": "session_closed"
+    }
+  ],
+  "archived_at": "2026-08-10T23:05:00Z"
+}

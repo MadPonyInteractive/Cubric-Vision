@@ -1,0 +1,141 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "651ea97d-4659-42ac-81a0-95e0ee423445",
+  "generated_at": "2026-08-07T22:41:27Z",
+  "from_session": "MPI-475's judgement run PASSED; a hi-res-fix investigation disproved latent upscaling on H3; MPI-476's VRAM item grew into two real defects",
+  "to_role": "implementer",
+  "status": "resolved",
+  "session": {
+    "name": "H3 ref2va judged live, then a full bench investigation into a hi-res fix - ending in a well-evidenced NEGATIVE result and a 2K tier",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue handoff 99a493d1 (MPI-476 Electron eye test + MPI-475's unmet judgement run), then follow wherever the live testing led.",
+    "status": "done_pending_verification",
+    "summary": "MPI-475's judgement run PASSED on the correct transformer and the model's whole claim holds. MPI-476's items 1/3/4 confirmed in Electron; item 2 did NOT pass - it exposed a wrong VRAM floor on three shipped cards and a RAM column that showed the same figure for two different cards, both now fixed and both needing a re-check. A long bench investigation into a hi-res fix produced a NEGATIVE result worth more than the feature would have been: H3's DiT does not accept an upscaled latent, proven by elimination. A 2k tier shipped on measured evidence instead. MPI-477 carries the one route left."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-475 JUDGEMENT RUN PASSED (the card's whole point). Four shapes on the correct ref2va transformer: a character sheet holds identity across several clips; a sheet + an audio reference produces a voice that MATCHES the reference; an image + a video makes the woman from the image perform the dance from the video; and 'the woman from <Picture 1> riding the dragon from <Video 1>' composed BOTH references into one scene. A bare prompt with no references also works, which is why ref2v_ms is one op with no t2v/i2v split.",
+      "Engine gate closed and verified properly: MpiNodes 238f056 was already live on :48188. Node PRESENCE proves nothing (a603fc4 registers the same name); the `prompt` tooltip is what separates the commits, and the live one is 238f056's.",
+      "VRAM floor fixed at the ladder, not per card (5e0a6a2a). Wan read '16GB minimum' because the computed floor was rounded onto the 8GB grid, which has NO 12 in it. Three cards were wrong: wan-22 (8.29 fit), ltx-23-balanced (10.10), qwen-edit (8.02), all catapulted to 16. Floors now lift onto CARD_SIZES (8/12/16/then 8s). Every 8GB-floor model's table is byte-identical.",
+      "RAM column now rounds to 4GB, not 8 (b677eeeb). Wan showed '12GB -> 24GB' and '16GB -> 24GB', the same figure twice, which tells a user a 16GB card buys nothing. It buys 4GB. Still ceil, so still only over-states. Side effect: the LTX calibration anchor now comes out EXACT (44GB at 16GB VRAM, the measured 4060 Ti figure) instead of rounded to 48. 17 of 20 models moved; verified monotonic.",
+      "MpiLatentUpscale written, committed in ComfyUi-MpiNodes (8482649). Core CANNOT upscale an H3 latent at all - LatentUpscaleBy dies with \"'NestedTensor' object has no attribute 'reshape'\" - and core additionally converts pixels with a hardcoded // 8. This node unbinds the pair, scales only the half with spatial dims (picked by dim() >= 5), passes the audio half through, re-nests, and takes its target in PIXELS with a stride input.",
+      "THE HI-RES FIX IS DISPROVEN ON H3, by elimination rather than argument. Every latent UPSCALE produced hard horizontal banding; the one DOWNSCALE did not; native 2560x1472 is clean. Eliminated in turn: the interpolation method (nearest-exact AND bicubic), the scale ratio (x1.5 uniform AND x1.9), and output vs denoised_output. Conclusion: the DiT does not accept an upscaled latent.",
+      "2k tier added to H3 (6dd921a3) - the SAME numbers LTX already ships (1472/2560), earned by a measured clean 2560x1472 run. UI needed nothing: MpiOptionSelector already maps '2k' with a 'detail-focused, low motion' hint. ratios.js used to say 'do not add a 2K/4K tier', which conflated a 2K CANVAS with the API-only H3-Regenerate-2K SECOND PASS; the comment now separates them. Still no 4k tier.",
+      "docs/models/h3/ref2va.md created and filled across five commits - judged results, the s/step table, prompt-tag rewriting, the 2K-is-the-hosted-API fact, and the whole hi-res-fix investigation including why it fails.",
+      "MPI-477 created for the pixel-space route. MPI-475 -> validating. MPI-476 attention reason rewritten to what is actually left."
+    ],
+    "pending": [
+      "MPI-476: re-check validation.md items 2b and 2c after a reload. Wan / LTX 2.3 Balanced / Qwen Image Edit must read '12GB min -> ~24GB' with the footnote agreeing, and Wan's 12 and 16 rows must show DIFFERENT RAM figures (24 and 20). If both read 24, the RAM column is still rounding to 8.",
+      "MPI-475: the UI checkbox list in its validation.md is the only thing between it and done. Most of it was exercised incidentally by the evening's generations. The preview clip STAYS borrowed - the user's explicit call, recorded in ref2va.md as a decision, not a leftover.",
+      "CHANGELOG DECISION AWAITING APPROVAL - see context.open_questions. One proposed entry, drafted and deliberately NOT written.",
+      "ComfyUi-MpiNodes has TWO unpushed commits (8482649 the node, 43a976f the stride revert). Push is a user-authorised op.",
+      "STILL HELD from earlier sessions, unchanged: the LTX NAG negative fix and MPI-474's audio-negative changelog entries. MPI-466 and MPI-474 still sit in doing/validating awaiting the user's explicit go."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-476",
+    "title": "Model card cleanups - drop per-op install groups, H3 tier and VRAM floor, tier letter, chip relabel",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-476/",
+    "links": {
+      "plan": null,
+      "brief": ".agents/mpi-kanban/tasks/MPI-476/brief.md",
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-476/validation.md",
+      "handoffs": null
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/models/h3/ref2va.md - NEW, and the session's main deliverable. Judged results, lip-sync recorded as NOT established (one sample, subject looking at a phone), the s/step table, slot-numbered prompt tags and the audio ordinal shift, why the 2K clips online are the hosted API, and the full hi-res-fix investigation with the elimination table.",
+      "docs/models/README.md - the h3 block routed only its README; performance.md was never listed and ref2va.md is new. Both rows added, so all three files are reachable from the map.",
+      "docs/models/h3/README.md - the ladder no longer claims very_high is the top, and the top of the ladder is now described as a COST limit rather than a quality one.",
+      "docs/model-library.md + docs/data.md + docs/playbooks/add-model/03-model-registry.md - the CARD_SIZES ladder, the 4GB RAM rounding, and minVramGb narrowed to what it is actually for (a model MEASURED to run below the fit, not tidying a number).",
+      "js/utils/ratios.js - the 2K comment separates a 2K canvas from the API-only Regenerate-2K second pass, and two stale lines went (the 'h3' key is no longer provisional).",
+      "memory feedback_isolate_before_theorising.md - NEW. Four confident wrong mechanisms cost four multi-minute generations before the isolation test was proposed; and a shipped default was changed on an inference the user was still measuring, then reverted."
+    ],
+    "pending": []
+  },
+  "next_action": {
+    "description": "Settle the changelog proposal in context.open_questions, then re-check MPI-476 validation.md items 2b/2c in Electron after a reload. MPI-475 needs only its UI checkbox list. Do NOT re-attempt a latent-space hi-res fix on H3 - read tasks/MPI-477/brief.md first; it leads with the four eliminated hypotheses and puts a two-run reference-cost experiment before any node work.",
+    "command": "mpi-continue MPI-476"
+  },
+  "context": {
+    "key_decisions": [
+      "The hi-res fix was pursued to a NEGATIVE result and that is the session's most valuable output. H3's DiT does not accept an upscaled latent: every upscale banded, the one downscale did not, native is clean. Interpolator, ratio, and output-vs-denoised_output were each eliminated by test. Do not let a future session re-run this - MPI-477's brief leads with the table.",
+      "ref2va composes for the stage-1 canvas, and it is STRUCTURAL: MiniMaxH3ReferenceToVideo sets minimax_refs and never minimax_keyframes, so nothing anchors the framing. The same prompt and seed framed a close shot on the dragon's head at 672x384 and staged the whole scene at 1344x768. Any technique that samples the first pass small changes the SHOT, not just its resolution. Expect the technique to behave far better on fl2va i2v.",
+      "The audio breaks on a SPLIT trajectory, not on a refiner. H3 emits video and audio from ONE joint latent and the audio half is bound to the video half's token layout. A split-sigma hi-res fix cuts the trajectory in half and the audio never completes; a full pass plus a separate denoise<1 pass leaves pass 1's audio intact. The two techniques were being conflated and ref2va.md now separates them in a table.",
+      "MpiNodes stride stays 16. It was changed to 32 on the user's inference (VAE 16 x DiT patch 2) and committed, then reverted (43a976f) when the measurement landed: a 2016x1152 request decoded at 1008x576, exactly half, which proves the decode multiplies by 16.",
+      "The VRAM floor was fixed on the LADDER rather than by hanging minVramGb on three cards. minVramGb survives for what it is actually for - a model measured to run below the fit, as both H3 cards are at 12 against a 13.3 fit.",
+      "H3 keeps fl2va's borrowed preview clip. The user's explicit call once judged clips existed; recorded in ref2va.md as a decision so nobody re-raises it."
+    ],
+    "constraints": [
+      "npm run release:check FAILS and it is PRE-EXISTING and unrelated: the engine pin moved 0.29.2 -> 0.30.0 since v1.3.0 with no dev_configs/smoke-evidence.json. MPI-465/467 territory. Verified unchanged by this session. No release can ship until it is smoke-tested.",
+      "Latest release is 1.3.1 (gh release list), so new user-facing work goes to docs/releases/UNRELEASED.md - never into RELEASE_NOTES['1.3.1'], which is frozen.",
+      "A change to an UNRELEASED thing owes no changelog entry - now a rule in .claude/skills/mpi-end/SKILL.md (21cc719d). MiniMax H3 has never appeared in releaseNotes.js, so nothing about H3's tiers, VRAM floor or the new 2k tier is reportable. Wan 2.2, LTX 2.3 and Qwen Image Edit HAVE shipped, which is why the floor change is a real delta for them and not for H3.",
+      "THE TREE IS SHARED. A peer agent committed twice DURING this session (21cc719d, ff839a63) and settled changelog questions the previous handoff had left open. Commit by explicit pathspec, never git add -A, and re-read a file before assuming your edit is the newest.",
+      "The bench ComfyUI on :8188 and the app's engine on :48188 are different installs. The app generates on 48188; the bench runs ahead and is where this session's graph experiments happened."
+    ],
+    "files_modified": [
+      "js/data/modelConstants/footprint.js (CARD_SIZES floor ladder + 4GB RAM rounding + asserts)",
+      "js/utils/ratios.js (h3 2k tier + BUILTIN_QUALITY_TIERS.h3 + comment corrections)",
+      "docs/models/h3/ref2va.md (NEW), docs/models/h3/README.md, docs/models/README.md",
+      "docs/model-library.md, docs/data.md, docs/playbooks/add-model/03-model-registry.md",
+      ".agents/mpi-kanban/tasks/MPI-475/ (validation.md, task.json), MPI-476/ (brief.md, validation.md, task.json), MPI-477/ (NEW)",
+      "c:\\AI\\Mpi\\ComfyUi-MpiNodes: latent.py, __init__.py, README.md, changelog.md - commits 8482649 + 43a976f, UNPUSHED",
+      "Commits: 1f9eb4ef, 5e0a6a2a, 9676a0a3, b677eeeb, 269b2c57, 8c6cfafb, d1e5257b, 74cad8d5, 6dd921a3, 887bd4af"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-476/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-477/brief.md",
+      "docs/models/h3/ref2va.md",
+      ".agents/mpi-kanban/tasks/MPI-475/validation.md"
+    ],
+    "open_questions": [
+      "CHANGELOG - ONE entry proposed, drafted and NOT written, awaiting approval. docs/releases/UNRELEASED.md section `fixes`: the Memory need table stopped overstating what a card needs. Wan 2.2, LTX 2.3 Balanced and Qwen Image Edit each said 16GB of VRAM where 12 is enough (the minimum was rounded onto a grid of 8s, which has no 12 in it - the most common mid-range card size), and the RAM column rounded the same way, so it could print the same figure for two different cards. All three models HAVE shipped, so this is a delta an existing user can perceive - unlike anything about H3. Nothing else this session is reportable.",
+      "Should ref_image_size default flip from `match` to `max`? The user reports max usually gives the better result, at ~14 vs 11-12 s/step with one reference. Arguably the default should ship the good result and let people trade down for speed. Recorded in ref2va.md as an open question, not decided.",
+      "Do reference tokens dominate per-step cost on ref2va? Two of the session's own timings suggest yes (1152x640 2s 10 steps = 518s vs 2560x1472 1s 10 steps = 544s - about 2.4x the pixel-frames for the same wall time). If they do, every canvas-reduction technique saves far less than the fl2va pixel curve predicts, which decides whether MPI-477 is worth opening at all. Two cheap runs settle it: same canvas, once with references and once bare."
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "file",
+    "relevant_topics": [
+      "models",
+      "model library",
+      "h3",
+      "workflow authoring"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md",
+    "docs/models/h3/ref2va.md",
+    "docs/model-library.md",
+    "docs/workflow-authoring/README.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-07T22:41:27Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-08T04:30:00Z",
+      "event": "handoff_resolved"
+    }
+  ],
+  "resume_prompt": "You are resuming after a long live bench session on MiniMax H3. THE HEADLINE: MPI-475's judgement run PASSED - the model's whole claim holds. A character sheet holds identity across several clips, a generated voice MATCHES an audio reference, motion transfers off a reference video, and two references compose into one scene ('the woman from <Picture 1> riding the dragon from <Video 1>'). MPI-475 is now `validating` with only its UI checkbox list left; the preview clip stays borrowed by the user's explicit call. THE SECOND RESULT IS A NEGATIVE ONE AND IT MATTERS MORE: a hi-res fix does NOT work on H3. Every latent UPSCALE produced hard horizontal banding, the one DOWNSCALE did not, and native 2560x1472 is clean - with the interpolation method, the scale ratio, and output-vs-denoised_output each eliminated by test. The DiT does not accept an upscaled latent. DO NOT RE-RUN THAT; read tasks/MPI-477/brief.md, which leads with the elimination table and puts a two-run reference-cost experiment before any node work, because the saving may be illusory on ref2va (reference tokens ride every step regardless of canvas). Two related facts worth holding: ref2va composes for the stage-1 canvas structurally (it sets minimax_refs and never minimax_keyframes, so nothing anchors framing - the same prompt framed a close shot at 672x384 and the whole scene at 1344x768), and the audio breaks on a SPLIT trajectory but not on a refiner, because video and audio come out of ONE joint latent. What shipped instead: a 2k tier on H3, earned by a measured clean run, using the same numbers LTX already ships. Also shipped, both from MPI-476's eye test: the VRAM floor now lifts onto a ladder of real card sizes (wan-22, ltx-23-balanced and qwen-edit all said 16GB where 12 is enough, because the 8GB grid has no 12 in it), and the RAM column rounds to 4GB so a bigger card finally shows a smaller number. MPI-476 CANNOT close yet - re-check its validation.md items 2b and 2c after a reload. There is ONE changelog entry drafted and awaiting approval in context.open_questions; it covers the VRAM/RAM change for the three SHIPPED models, and nothing about H3 is reportable because H3 has never appeared in releaseNotes.js. ComfyUi-MpiNodes has two unpushed commits. npm run release:check fails on a PRE-EXISTING engine-pin gap that this session did not touch.",
+  "archived_at": "2026-08-10T23:05:00Z"
+}

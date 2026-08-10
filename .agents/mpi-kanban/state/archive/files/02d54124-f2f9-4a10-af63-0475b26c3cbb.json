@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "02d54124-f2f9-4a10-af63-0475b26c3cbb",
+  "path": "comfy_workflows/raw/nvidia_pid.json",
+  "owner_session": null,
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/tasks/MPI-498/",
+  "status": "verified",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-08-09T00:40:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-08T20:18:00Z",
+      "event": "claimed_for_write"
+    },
+    {
+      "at": "2026-08-09T00:40:00Z",
+      "event": "released_verified"
+    }
+  ],
+  "archived_at": "2026-08-10T23:05:00Z"
+}

@@ -1,0 +1,142 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "748eec4a-342d-4c05-bb8c-2fca8c07236a",
+  "generated_at": "2026-08-09T22:55:00Z",
+  "from_session": ".agents/mpi-kanban/state/handoffs/d55cff0b-5a6f-4f38-be83-0b0333064f29.json",
+  "to_role": "implementer",
+  "status": "resolved",
+  "session": {
+    "name": "MPI-501 CLOSED on its pixel; Gate B advanced (test:desktop + MPI-458 + Klein preview); MPI-483 given the instrument it was missing",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Clear MPI-450's remaining gates so 1.4 can be cut.",
+    "status": "in_progress",
+    "summary": "Three Gate B lines closed and MPI-501 is done. The throwaway-Pod session RAN and cleaned up fully, but neither MPI-483 nor MPI-481 closed - 483's measurement contradicted itself, so this session shipped GET /remote/pod/ls, which answers the question in one call instead of a Pod session. Fabio also announced five pieces of NEW untested content that now sit in Gate B."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-501 CLOSED (done/complete). The toast was confirmed by a real-pixel probe on the live app: mpi-toast--warning carrying the exact refusal string, label 'Heads up', and ZERO elements matching REPORT ON GITHUB / Error Summary. Screenshot at tasks/MPI-501/restart-refusal-toast.png. A real restart was deliberately NOT re-driven - the engine root is shared with Fabio's app, so a restart that was not refused would have killed the engine under him. The emit sits inside the refusal branch (navigation.js:271-282), so there is no third state between 'refused' and that toast.",
+      "GATE B: npm run test:desktop GREEN, 17/17, exit 0, on port 63434 with Fabio's app holding :3000 throughout and still answering 200 afterwards. THE SAME RUN CLOSES MPI-458's confirmation line - what it owed was exactly a full desktop suite concurrent with a live app, both surviving. Both ticked on the checklist.",
+      "GATE B: the FLUX.2 Klein live-preview check PASSES. Subscribed to Events.on('preview:frame') and captured all 4 frames of a 4-step Klein Low t2i (prompt executed in 15.99s); the last frame is a fully recognisable photograph. Pinned as the TAESD preview and not the finished image three ways: it arrived on preview:frame with engine local, it is 422x512 against an 896x1088 output, and app.log carries no 'could not find models/vae_approx/None' warning in the 20:22-20:27 window, so taef2_decoder loaded. Evidence at tasks/MPI-450/klein-live-preview.png. NOTE the bus revokes the previous blob URL, so only the newest frame renders - steps 1-3 show broken in the screenshot and that is the bus behaving.",
+      "GATE B: the Wan 2.2 half of that item was RESCOPED, not skipped. UNRELEASED.md:440-442 already carves out Krea 2, both Qwen models and Wan 2.2 as rough-preview-on-purpose (they share the lighttaew decoder, which assetDeps.js:506-521 refuses to ship because ComfyUI issue 13366 corrupts the REAL generation; still open, fix PR 13383 still unmerged). Only three preview decoders ship as engineAsset: taesdxl, taef1, taef2. Running the Wan leg would have manufactured a bug report.",
+      "THE THROWAWAY-POD SESSION RAN AND CLEANED UP. Six CPU Pods created, all six verified gone (404 each); two throwaway volumes created and deleted; aghcuvg7nl NEVER touched. Wrapper 0.2.44 was published to the dev channel (publish-runtime.sh dev) and every Pod booted it, so mpi-release's manifest-diff stop will now read dev 0.2.44 vs stable 0.2.40 - the answer is still PROMOTE. The old blocker is also gone: all three teardown verbs work from an agent session now (DELETE /runpod/pods/:id, POST /comfy/models/uninstall, POST /remote/pod/delete-active).",
+      "MPI-483 GOT ITS INSTRUMENT: GET /remote/pod/ls now ships (routes/remotePodLifecycle.js), a read-only passthrough of the wrapper's /wrapper/ls plus a pure compareVolumeAccounting() returning blockBytes (du -s --block-size=1), apparentBytes (os.path.getsize summed) and phantomBytes = apparent - blocks, ALL FROM ONE RESPONSE AT ONE INSTANT. 6 tests in tests/volume-accounting-gap.test.cjs, mutation-checked. npm test 531/531.",
+      "docs/runpod-troubleshooting.md:104 was CORRECTED - it told agents to add a /remote/pod/ls route temporarily and revert it, which the commit above makes false. docs/runpod-remote-engine.md gained the route in its telemetry list with the read-it-during-an-install instruction.",
+      "MPI-433 updated with Fabio's go-ahead for the Krea 2 NSFW upload (no new card - that card already IS this work). Left BLOCKED deliberately, see pending.",
+      "COMMITTED 0331200f. NOT PUSHED - git push was refused by the Bash classifier, not by git.",
+      "THE TWO LOOSE FINDINGS WERE ACTIONED, not left in a report. MPI-509 was created for the real defect - a remote install that reports success having installed nothing when _filterDepsForEngine empties the request - and it is linked on MPI-450 as explicitly NOT gating 1.4 (pre-existing, no user path reaches it). The other finding was a fact rather than a defect, so it went to docs/download-manager.md section 'The HF path stages OFF the volume and moves the file across on completion' instead of a card: an in-flight HF install shows 49,664 bytes on the volume with 1.27GB fetched and jumps to the full 26.37GB on completion."
+    ],
+    "pending": [
+      "ITEM 1 - MPI-483 IS NOW ONE REQUEST, NOT A POD SESSION. Start a large aria2 (R2/models.cubric.studio) install on a Pod and call GET /remote/pod/ls while it runs. Read `accounting.phantomBytes`: a large positive value means sparse .part files are on the volume, the bug is real and the 0.2.44 fix removes it; a value near zero means the filesystem allocated the whole declared length up front and THIS CARD'S PREMISE DOES NOT HOLD. Do not re-run the app-side /remote/pod/disk experiment - it cannot answer the question and this session proved that twice.",
+      "ITEM 2 - MPI-481's live leg still owed, and the naive repro does NOT work. The corpse will not stay dead: the download keeps running for seconds after delete-active returns {deleted:true}, so a 2.15GB dep finished at 99.96% and a 14.31GB one killed at 29% was at 59% minutes later. Use a SLOW huggingface-hosted dep so the kill lands comfortably mid-file (481 only needs the app's in-flight cache stale, NOT a partial on the volume), or STOP the Pod instead of deleting it - that is the same-id/empty-_installs case the fix's own notes name. Then press Install again and grep app.log for `stale in-flight record for <depId> - the wrapper has no such install; reinstalling`.",
+      "ITEM 3 - FIVE PIECES OF NEW UNTESTED CONTENT, announced by Fabio 2026-08-09 21:35Z and written into MPI-450's Gate B: PID becomes FOUR plugins (sibling cards MPI-506/507), SeedVR2 arrives as THREE more, MiniMax H3 gained a new LoRA and a new video-preview decoder, the LTX workflows gained a Tiny VAE decoder, and Krea 2 NSFW goes to HuggingFace which restores its fallback route. All five need a smoke pass. Fabio said he has an agent on the decoder work - do not duplicate it.",
+      "ITEM 4 - RE-SMOKE MiniMax H3, STILL LAST. Unchanged instruction, and now MORE true: the H3 graphs moved again this session (MPI-508 is live in `doing` for the lightx2v turbo LoRA at 6 steps). dev_configs/smoke-evidence.json's two H3 rows describe a superseded graph and release:check cannot detect it. When the graph freezes: node scripts/smoke-workflows.mjs --models minimax-h3 --keep-volume --volume aghcuvg7nl. cp dev_configs/smoke-run.txt first - ANY invocation truncates it.",
+      "ITEM 5 - MPI-249 Linux leg on the REAL 1.4.0 artifact (still blocked until the bump), then /mpi-version-bump -> 1.4.0, fold UNRELEASED.md into RELEASE_NOTES['1.4.0'], release:check, release:approve --yes, CI artifacts, /mpi-release.",
+      "ITEM 6 - PUSH IS OWED. Commit 0331200f is local; `git push` was blocked by the Bash classifier. Either the user pushes, or a Bash permission rule is added.",
+      "ITEM 7 - MPI-433 stays BLOCKED until its own step 1 passes: confirm CivitAI 573152 is actually public. The card gates on 2026-08-10 and Fabio said this on the 9th, so it is one day early on the face of it; MPI-430 deferred precisely to avoid redistributing a paid-early-access weight. That check needs the VPN (CivitAI region-blocks the UK; agent WebFetch can never reach it). When it lands, UNRELEASED.md:423 'Four files still have a single route' becomes three."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-450",
+    "title": "1.4 release readiness umbrella - clear the gates before cutting 1.4.0",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-450/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-450/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "tasks/MPI-501/validation.md - the pixel proof, what it does and does not prove, and why a real restart was not re-driven.",
+      "tasks/MPI-483/validation.md - the full live session: the two contradictory readings, the three reasons the app-side route cannot adjudicate, and the new /remote/pod/ls instrument with how to read phantomBytes.",
+      "tasks/MPI-481/validation.md - why the corpse would not stay dead, with the two ways to do it differently.",
+      "tasks/MPI-450/checklist.md - test:desktop and MPI-458 ticked, the Klein PASS with its method, the Wan rescope with its reasoning, the Pod-session outcome, and Fabio's five new items.",
+      "tasks/MPI-433/brief.md - Fabio's go-ahead plus the one-day-early flag.",
+      "docs/runpod-remote-engine.md + docs/runpod-troubleshooting.md - the new route documented, and the now-false 'add it temporarily and revert' instruction corrected.",
+      "Memory tool_probe_a_runpod_pod_for_ground_truth.md - the Pod wrapper is UNREACHABLE from the shell (curl 000 to <podId>-8889.proxy.runpod.net) while the app reaches it fine, so every wrapper endpoint needs an app route. MEMORY.md index hook extended to match."
+    ],
+    "pending": [
+      "The sibling-session pattern keeps costing: family/parallel work lands in this repo with its tests unswept. A glance at npm test after any sibling session catches it. (Carried - this is a habit to keep, not a task to close.)"
+    ]
+  },
+  "next_action": {
+    "description": "Read tasks/MPI-483/validation.md, then settle MPI-483 with ONE call: start a large aria2 install on a Pod and read GET /remote/pod/ls -> accounting.phantomBytes. Then MPI-481 using a SLOW huggingface dep (or a Pod stop rather than a delete). Keep every H3 test for last.",
+    "command": "mpi-continue MPI-450"
+  },
+  "context": {
+    "key_decisions": [
+      "MPI-501 CLOSED ON A PIXEL PROBE, NOT A SECOND LIVE RESTART. The engine root is shared with Fabio's running app, so driving a restart that was not refused would have taken his engine down. The emit sits inside the refusal branch, so the toast render was the only unproven half.",
+      "THE WAN 2.2 PREVIEW CHECK WAS RESCOPED, NOT SKIPPED. The release notes deliberately carve Wan out as rough-on-purpose; running it would have produced a bug report against documented intent.",
+      "MPI-483 WAS NOT CLOSED ON A 95%-OF-DECLARED READING. Two runs disagreed and the instrument was the problem, so the session built the instrument instead of picking the more convincing number.",
+      "MPI-508's card files were committed although they are a sibling's live work: board.json already lists MPI-508 in doing, and HEAD must never point at a card whose task.json is untracked (.claude/rules/git.md § MPI-434). MPI-504/506/507 and all the workflow/model edits were deliberately NOT staged.",
+      "MPI-506/507's malformed event lines were NOT repaired. Fabio confirmed those are two live parallel sessions; repairing another agent's history needs explicit approval and they are still writing.",
+      "MPI-433 was UPDATED rather than duplicated - it already is the Krea 2 NSFW upload card - and left blocked because its own CivitAI check has not run and the date is one day early.",
+      "MPI-491 was NOT reopened for the HuggingFace staging finding. That card is done/complete and the finding is a durable behaviour fact, not owed work, so it went to the subsystem doc the router points at rather than to a card - the repo's rule is that facts live in docs/, and a closed card is not a place anyone looks."
+    ],
+    "constraints": [
+      "BOARD VALIDATION CURRENTLY FAILS, and none of it is ours: MPI-506/507 event lines carry `task` instead of `id` and no `schema`. Do not 'fix' them - they are two live sessions. Filter with `grep -v 'MPI-50[67]'` to see whether anything real broke.",
+      "THE POD WRAPPER IS UNREACHABLE FROM THE SHELL. curl to https://<podId>-8889.proxy.runpod.net returns exit code 000 even with the right CUBRIC_TOKEN (readable at GET /runpod/pods/<id> -> env.CUBRIC_TOKEN); the app reaches it fine from its server process. Every wrapper endpoint needs an app route in front of it.",
+      "ROUTES DO NOT HOT-RELOAD. GET /remote/pod/ls exists on disk but the app that has been running since 18:41 does NOT serve it - it needs an app restart before the MPI-483 check can run.",
+      "H3 TESTS STAY LAST. The graph is still moving - MPI-508 is live in `doing` for the turbo LoRA swap.",
+      "NEVER delete or shrink volume aghcuvg7nl (cubric-smoke, 450GB, EU-RO-1). Always --keep-volume.",
+      "POST /runpod/pods IS createPod, NOT a list route. GET /runpod/pods/<id> -> 404 is how you prove a Pod is gone.",
+      "A Pod delete does NOT stop the download promptly - it keeps running for seconds after {deleted:true}. Any experiment that depends on interrupting a fast R2 download will fail.",
+      "THE TREE IS SHARED with two live sibling sessions. Commit by explicit pathspec only. NEVER git checkout -- / restore / stash / reset --hard / clean.",
+      "BASH: heredocs are hook-blocked, and so is a backslash-newline continuation (backslashes are halved). Write scripts with the Write tool and run them by path. json.load on board.json needs encoding='utf-8'.",
+      "PUSH IS BLOCKED by the Bash classifier - commit 0331200f is local."
+    ],
+    "files_modified": [
+      "COMMITTED 0331200f: routes/remotePodLifecycle.js (GET /remote/pod/ls + compareVolumeAccounting), tests/volume-accounting-gap.test.cjs (new, 6 cases), docs/runpod-remote-engine.md, docs/runpod-troubleshooting.md, board.json + the global event log, the MPI-433/450/481/483/501 workspaces, two evidence PNGs, and MPI-508's card files (integrity, not our work).",
+      "PUBLISHED, NOT IN GIT: wrapper 0.2.44 to the R2 dev channel via c:/AI/Mpi/mpi-ci/cubric-vision-pod/publish-runtime.sh dev. Its source was already committed as mpi-ci 07970da last session.",
+      "UNCOMMITTED, NOT OURS - leave alone: .agents/mpi-kanban/tasks/MPI-504/506/507, comfy_workflows/** (PID + H3 + LTX templates), docs/preview-bus.md, docs/models/h3/turbo.md, js/data/modelConstants/{assetDeps,loraDeps,models}.js, tests/remote-engine-assets.test.cjs, comfy_workflows/scripts/workflow_generation/**.",
+      "COMMITTED after the handoff was first written: .agents/mpi-kanban/tasks/MPI-509/ (new card), board.json, docs/download-manager.md, and MPI-450's checklist."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-483/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-481/validation.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "file",
+    "relevant_topics": [
+      "release",
+      "versioning",
+      "runpod",
+      "comfy engine",
+      "linux",
+      "release notes"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/versioning.md",
+    "docs/runpod-remote-engine.md",
+    "docs/playbooks/bump-engine/01-smoke-run.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-09T22:55:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-450, the 1.4 release umbrella. Since the last handoff: MPI-501 is CLOSED (its refusal toast was confirmed by a real-pixel probe on the live app - warning toast, exact string, zero REPORT-ON-GITHUB elements), `npm run test:desktop` is green 17/17 alongside the user's live app WHICH ALSO CLOSES MPI-458's owed confirmation run, and the FLUX.2 Klein live-preview check PASSES with evidence on the card. The Wan 2.2 half of that check was rescoped away: the notes deliberately carve Wan out as rough-preview-on-purpose, so running it would have manufactured a bug report. The throwaway-Pod session RAN - six CPU Pods, all six verified gone, both throwaway volumes deleted, aghcuvg7nl untouched - and it published wrapper 0.2.44 to the dev channel, so mpi-release's manifest stop will read dev 0.2.44 vs stable 0.2.40 and the answer is still PROMOTE. NEITHER MPI-483 NOR MPI-481 CLOSED. 483's measurement contradicted itself because /remote/pod/disk cannot be sampled honestly during a download, so this session shipped the instrument instead: GET /remote/pod/ls returns allocated blocks AND apparent bytes from ONE response plus phantomBytes = apparent - blocks. YOUR NEXT MOVE IS ONE REQUEST - restart the app (routes do not hot-reload), start a large aria2 install on a Pod, and read accounting.phantomBytes: large positive means the bug is real and the fix removes it, near zero means RunPod volumes allocate the full declared length and the card's premise does not hold. MPI-481 needs a SLOW huggingface-hosted dep or a Pod STOP rather than a delete, because a deleted Pod keeps downloading for seconds and the corpse completes instead of freezing. Fabio has announced five pieces of new untested content now sitting in Gate B (PID splits into four plugins, SeedVR2 adds three, H3 gained a LoRA and a video-preview decoder, LTX gained a Tiny VAE decoder, Krea 2 NSFW goes to HuggingFace) - he has an agent on the decoder work, do not duplicate it. Keep every H3 test for LAST; MPI-508 is live for the turbo LoRA swap. Board validation currently FAILS only on MPI-506/507 event lines belonging to two live parallel sessions - do not repair them. Commit 0331200f is LOCAL: `git push` was refused by the Bash classifier, not by git. Read .agents/mpi-kanban/state/handoffs/748eec4a-342d-4c05-bb8c-2fca8c07236a.json first.",
+  "superseded_by": ".agents/mpi-kanban/state/handoffs/abb41bcd-d2f2-4c7d-a365-a53f9d86bfff.json",
+  "archived_at": "2026-08-10T23:05:00Z"
+}

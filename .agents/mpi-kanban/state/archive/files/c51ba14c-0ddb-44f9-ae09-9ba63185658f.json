@@ -1,0 +1,31 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "c51ba14c-0ddb-44f9-ae09-9ba63185658f",
+  "path": "tests/prompt-partial-validation.test.cjs",
+  "owner_session": null,
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/tasks/MPI-495/",
+  "status": "complete",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-08-08T19:35:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-08T18:40:00Z",
+      "event": "claimed_for_write"
+    },
+    {
+      "at": "2026-08-08T18:52:00Z",
+      "event": "released_needs_verification"
+    },
+    {
+      "at": "2026-08-08T19:35:00Z",
+      "event": "completed",
+      "note": "Committed in 2e045187; test-verified, mutation-checked."
+    }
+  ],
+  "archived_at": "2026-08-10T23:05:00Z"
+}

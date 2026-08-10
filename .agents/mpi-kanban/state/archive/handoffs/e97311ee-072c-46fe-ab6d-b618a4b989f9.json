@@ -1,0 +1,141 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "e97311ee-072c-46fe-ab6d-b618a4b989f9",
+  "generated_at": "2026-08-05T09:16:13Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "closed",
+  "session": {
+    "name": "MPI-449 MiniMax H3 bench research + ratio table; next is MpiNodes save/load staging nodes",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Pick up MPI-449 and research MiniMax H3 on the bench: test text-to-video and image-to-video, and compare pruned vs non-pruned weights, before spending an engine bump on it.",
+    "status": "in_progress",
+    "summary": "H3 runs on the RTX 4060 Ti 16 GB and the pruned-vs-unpruned A/B is settled in favour of pruned. Remaining on the card is the engine-bump go/no-go. The user then asked for two new ComfyUI nodes in the MpiNodes repo to save/stop and load/continue a two-stage H3 sample; that work has NOT started."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Bench weights downloaded to C:/AI and checksum-verified (both DiTs, encoder, both VAEs)",
+      "Encoder chosen: ethanfel abliterated int8 26.36 GB; int4 rejected on published RMSE evidence",
+      "H3 measured running: 160.0 s cold / 131.0 s warm, 20 steps, 640x640 x 56 frames",
+      "Pruned vs unpruned A/B resolved - pruned wins (research.md section 6a)",
+      "MINIMAX_H3_RATIOS shipped to js/utils/ratios.js, 5 tiers, 20 ratio tests pass (commit f739e076)",
+      "MPI-449 recorded as the umbrella card for the whole H3 arc (commit d5b858ef)"
+    ],
+    "pending": [
+      "Build save/stop + load/continue nodes in c:/AI/Mpi/ComfyUi-MpiNodes",
+      "Engine bump go/no-go: run the custom-node floor pairing check for 0.29.2 -> 0.30.x",
+      "Clean timing re-run now the Cubric-Prompt LLM agent is paused",
+      "Test ref2va (reference-to-video) - the LoRA-free character bet",
+      "When unblocked: run MPI-451 licence gate, bump the engine, then MPI-452 model wiring via /mpi-add-model"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-449",
+    "title": "Research MiniMax H3 on the local bench before any engine bump",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-449/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-449/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "research.md rewritten with measured runs, canvas rules, encoder decision and the pruned/unpruned result",
+      "brief.md carries the umbrella-scope decision and the current blocked state",
+      "task.json dangling licence_request link removed; board validation passes exit 0"
+    ],
+    "pending": [
+      "No docs/models/h3/ doc yet - that belongs to MPI-452 via /mpi-add-model, which is blocked on MPI-451 and the engine bump",
+      "A separate card is needed for the MpiNodes staging nodes; they are generic, not H3-specific",
+      "board.json and the board-level events.jsonl are dirty from PEER agents - do not sweep them"
+    ]
+  },
+  "next_action": {
+    "description": "Read .claude/skills/mpi-node/SKILL.md in c:/AI/Mpi/ComfyUi-MpiNodes plus its CLAUDE.md and existing logic.py / switches.py / if_else.py, then build two nodes: one that saves an H3 AV latent and can block downstream execution, one that loads it and continues. The user rejected a passthrough mode because Mpi Blocker already exists - match existing repo logic first. Both nodes should also output a boolean. Key constraint: the H3 latent is a comfy.nested_tensor.NestedTensor pair (video + audio) and core SaveLatent CRASHES on it.",
+    "command": "mpi-continue MPI-449"
+  },
+  "context": {
+    "key_decisions": [
+      "Ship the PRUNED DiT: 160.0 s vs 162.0 s cold and roughly 2 percent quality delta for +13 GB. See research.md section 6a.",
+      "Encoder = ethanfel Qwen3-VL-32B-Ultra-Heretic int8_convrot 26.36 GB, chosen because the complete vision tower stays BF16, which matters for ref2va identity. int4 rejected: ApacheOne's report shows 18-19 percent worst-layer RMSE that also hits the vision tower.",
+      "MPI-449 is the UMBRELLA card for the whole H3 arc - no separate card for the engine bump. Sequence: bench research, then MPI-451 licence gate, then engine bump, then MPI-452 wiring.",
+      "MINIMAX_H3_RATIOS uses quality mode with 5 tiers, and 1:1 is the short edge of each tier's 16:9 pair (the LTX rule), because ResolutionSelector's own square overshoots H3's 768 short edge.",
+      "The MpiNodes staging nodes are GENERIC - they would clean up the WAN workflow too - so they need their own card rather than living under MPI-449."
+    ],
+    "constraints": [
+      "NestedTensor exposes ONLY: __add__ __sub__ __mul__ __truediv__ __getitem__ unbind to new_ones float cpu chunk size shape ndim device dtype layout. No contiguous, clone, reshape, mean or std, and NO reflected operators (x*s works, s*x raises).",
+      "Core SaveLatent calls samples[samples].contiguous() and therefore CRASHES on an H3 latent; LoadLatent returns a plain tensor, not the pair. unbind() is the way to split video and audio into one file.",
+      "Saving the latent alone does NOT enable finish-later: stage 2 also needs the CONDITIONING (Qwen3-VL hidden states plus minimax_keyframes and minimax_frame_count), which safetensors cannot hold. Recommendation was latent-only first.",
+      "ExecutionBlocker lives at comfy_execution/graph_utils.py:140 and is handled by the io API - the clean way to block downstream silently.",
+      "H3 core nodes are ComfyUI 0.30.0+ with NO backport. The app engine is pinned 0.29.2, so MPI-452 is gated on the bump AND on MPI-451.",
+      "H3 is guidance-distilled: use BasicGuider, never SamplerCustom (it forces CFG and demands a negative that the H3 node does not output).",
+      "Model shift is 12.0 video / 3.0 audio, applied at model level. Do NOT use ModelSamplingSD3 - use MiniMaxH3SigmaShift, which sets both.",
+      "Fine detail is bounded by the /16 latent grid; raising the tier does not fix it. ref2va is the structural answer.",
+      "first_frame is plain-stretched to the canvas while last_frame is aspect-preserving, so MPI-452 must fit the source to the canvas aspect.",
+      "The bench is port 8188 (v0.30.2); the APP engine is 48188 (v0.29.2). Do not confuse them.",
+      "c:/AI/Mpi/ComfyUi-MpiNodes is NOT in permissions.additionalDirectories - writes there may prompt. It is symlinked into the bench at custom_nodes/ComfyUi-MpiNodes.",
+      "Timings so far were taken while a Cubric-Prompt agent ran Ollama LLM tests on the same GPU, so they are UPPER BOUNDS."
+    ],
+    "files_modified": [
+      "js/utils/ratios.js",
+      ".agents/mpi-kanban/tasks/MPI-449/research.md",
+      ".agents/mpi-kanban/tasks/MPI-449/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-449/task.json",
+      ".agents/mpi-kanban/tasks/MPI-449/events.jsonl",
+      ".agents/mpi-kanban/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-449/research.md",
+      ".agents/mpi-kanban/tasks/MPI-449/brief.md",
+      "c:/AI/Mpi/ComfyUi-MpiNodes/.claude/skills/mpi-node/SKILL.md",
+      "c:/AI/Mpi/ComfyUi-MpiNodes/CLAUDE.md",
+      "c:/AI/Mpi/ComfyUi-MpiNodes/logic.py",
+      "G:/ComfyUi/ComfyUI/comfy/nested_tensor.py"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": null,
+    "relevant_topics": [
+      "models",
+      "comfy engine",
+      "workflow authoring",
+      "ratios"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md",
+    "docs/workflow-authoring/README.md",
+    "docs/playbooks/add-model/README.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-05T09:16:13Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-10T06:40:00Z",
+      "event": "handoff_closed",
+      "note": "Closed by mpi-cleanup: MPI-449 is done, so this handoff had nothing left to resume."
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-449, the umbrella card for bringing MiniMax H3 into Cubric Vision. Read .agents/mpi-kanban/state/handoffs/e97311ee-072c-46fe-ab6d-b618a4b989f9.json first, then .agents/mpi-kanban/tasks/MPI-449/research.md and brief.md. Bench research is essentially done: H3 runs on the RTX 4060 Ti 16 GB (131 s warm, 20 steps, 640x640 x 56 frames), the pruned int8_convrot DiT beat the unpruned one on cost for no quality gain, the ethanfel abliterated int8 text encoder is chosen, and MINIMAX_H3_RATIOS is already shipped in js/utils/ratios.js. The immediate next job is in a DIFFERENT repo: build two ComfyUI nodes in c:/AI/Mpi/ComfyUi-MpiNodes - one that saves an H3 audio+video latent and can block downstream execution, one that loads it and continues a two-stage sample - following that repo's own .claude/skills/mpi-node/SKILL.md and matching its existing logic.py conventions. The critical trap: an H3 latent is a comfy.nested_tensor.NestedTensor pair and core SaveLatent crashes on it because NestedTensor has no .contiguous(); use unbind() to split video and audio into one file. The user rejected a passthrough mode because an Mpi Blocker node already exists, and wants both nodes to also output a boolean. Do not start the engine bump or the H3 model wiring - those are gated on MPI-451 (licence) and on a 0.29.2 to 0.30.x engine bump.",
+  "archived_at": "2026-08-10T23:05:00Z"
+}

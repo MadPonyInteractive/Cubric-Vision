@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "f1885863-1c39-4d9a-af63-a6584159116c",
+  "path": "comfy_workflows/raw/ltx_v2v_foley_template.json",
+  "owner_session": ".agents/mpi-kanban/state/sessions/f0814dde-1f16-4e5a-b226-8ab1278b421d.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/tasks/MPI-4/",
+  "status": "needs_verification",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-08-10T19:35:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-10T18:58:00Z",
+      "event": "claimed_for_write"
+    },
+    {
+      "at": "2026-08-10T19:35:00Z",
+      "event": "released_needs_verification"
+    }
+  ],
+  "outcome": "written and structurally proven; a bench GPU run is the outstanding check"
+}

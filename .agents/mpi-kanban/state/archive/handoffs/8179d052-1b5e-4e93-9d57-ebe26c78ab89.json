@@ -1,0 +1,142 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "8179d052-1b5e-4e93-9d57-ebe26c78ab89",
+  "generated_at": "2026-08-06T05:45:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "resolved",
+  "session": {
+    "name": "MPI-449 re-measured in trained range; ratio ladder shipped; H3 workflow gained a 4th branch",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Research MiniMax H3 on the bench before spending an engine bump on it, then decide the tier/weight defaults it will ship with.",
+    "status": "in_progress",
+    "summary": "Everything that was provisional because it ran at 56 frames has now been re-measured or decided. Two-stage sampling is bit-exact at 124 frames, the lazy gate is proved against a cache-busted seed, pruned won on download size alone, very_high shipped at 1088x1920, and the bench h3_i2v workflow gained an end-frame-only branch. Remaining work is app-side: nothing has been tested THROUGH the app, and the engine is still 0.29.2."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Two-stage sampling re-proved bit-exact at 124 frames / 352x608 - same mp4 sha256 across the two-run flow, a seed-varied re-run, and split-in-one-pass (4464f9fd)",
+      "Lazy gate PROVED, not assumed - re-ran stage 2 at a never-sampled seed so node 153 had no cache entry; still 112 s vs 143-168 s for a real 20-step pass",
+      "Timing table replaced; the two-stage overhead turns out to be BELOW run-to-run noise (two single-pass runs of the same graph differ by 24.7 s)",
+      "dev_configs/node_lock.json bumped 69a4333 -> fd9bdca (committed 5e9661e6)",
+      "Pruned vs unpruned CLOSED at 480x864 and 768x1344 - spatial quality equal, unpruned slightly more expressive in motion, decided on download size (20.97 vs 34.04 GB). Unpruned file DELETED from C:/AI/diffusion_models/",
+      "Resolution DECIDED and shipped: js/utils/ratios.js MINIMAX_H3_RATIOS ladder shifted so native sits at high (768x1344) and very_high is 1088x1920, mirroring WAN. Ratio tests 5/5, eslint clean",
+      "5-step preview floor CLOSED by user decision (not re-measured in range - do not re-open it as a measurement task)",
+      "LoRA decided: H3 ships 6 slots with BOTH model and clip strength, via MpiLoraModelClip. No UI work needed - MpiModelSettings already defaults loraStrengths to [model,clip]",
+      "Bench h3_i2v.json patched: added one MpiIfElse (id 305, title \"has img1\") giving a 4th branch, end-frame-only. All four input states verified by simulation + API conversion (0 dangling)",
+      "MPI-455 created for the same capability on LTX"
+    ],
+    "pending": [
+      "TEST THE LAZY GATING THROUGH THE APP - nothing this session ran through Vision, only the bench. The browser prunes muted nodes and the app does not, which is exactly how this class of bug was missed on WAN",
+      "The node_lock bump ships a LAZY MpiBlocker to shipped workflows: klein_t2i.json and qwen_edit.json use it (3 nodes). Upstreams are pure and cheap (MpiLoadImageFromPath, MpiIfElse, MpiAnySwitch) so regression risk is LOW and no output should change - but it is UNTESTED, so fold both into the app-side test rather than testing H3 alone",
+      "MPI-456 (carded 2026-08-06): collapse the eight _stage2 twins. LTX half is nearly free - the six files differ by exactly ONE widget, Input_Is_Continue, so injecting it deletes all six. WAN half needs the lazy gate to restore Stage1_Bypass. Do it BEFORE MPI-455, which it shrinks.",
+      "Engine bump go/no-go 0.29.2 -> 0.30.x, with the custom-node floor pairing check",
+      "Test ref2va (reference-to-video) - the LoRA-free character bet",
+      "The single-chip start/end frame BUTTON (H3 first, then MPI-455 shares it)",
+      "When unblocked: MPI-451 licence gate, then the engine bump, then MPI-452 wiring via /mpi-add-model",
+      "MPI-455 (carded): LTX end-frame-only conditioning via LTXVAddGuide frame_idx, sharing the H3 single-chip start/end button."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-449",
+    "title": "Research MiniMax H3 on the local bench before any engine bump",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-449/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-449/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "research.md sections 4a (LoRA model+clip, the Diffusers-format trap), 5b (WAN precedent for an above-native tier, resolution-trades-texture), 6a (pruned confirmed + the unpruned deletion), 7 (in-range timings + the lazy-gate proof), 9 (status table)",
+      "js/utils/ratios.js comment block rewritten for the new ladder shape",
+      "Memory: feedback_class_name_grep_undercounts_variants (a prefix-anchored grep produced a confident WRONG count and a false claim in a doc)"
+    ],
+    "pending": [
+      "No docs/models/h3/ doc yet - belongs to MPI-452 via /mpi-add-model",
+      "PROPOSED, not applied, needs user approval: clarify memory feedback_user_edits_raw_workflows_agent_syncs. It says agents do NOT edit workflow JSON, but that rule is about the repo comfy_workflows/raw/ files and the sync script. This session edited a BENCH authoring workflow (G:/ComfyUi/.../h3_i2v.json) on explicit instruction, which is a different thing. Unclarified, it could make a future agent refuse a legitimate bench edit, or hand-edit repo runtime workflows believing the rule is loose"
+    ]
+  },
+  "next_action": {
+    "description": "Start the app-side leg. Nothing from this session has run through Vision - the engine is 0.29.2 and was down all session. Start the app engine, confirm the new MpiNodes registered (/object_info should show MpiH3Length, MpiSaveLatent, MpiLoadLatent, MpiBooleanInvert), then test the lazy gating through the APP rather than the browser, covering klein_t2i and qwen_edit as well as H3 since the node_lock bump changed MpiBlocker for them too.",
+    "command": "mpi-continue MPI-449"
+  },
+  "context": {
+    "key_decisions": [
+      "PRUNED IS FINAL and the unpruned 34 GB file is DELETED. Of the three candidate arguments only DOWNLOAD SIZE survived: speed died (the sign flips between canvases and both deltas sit inside noise) and resident memory died on 2026-08-05 (ComfyUI streams per layer). The one real quality difference is TEMPORAL - unpruned is slightly more expressive - and it was only ever observed at 56 frames, so it is NOT proven to stay small on long clips. Re-testing costs a 32 GB re-download.",
+      "very_high = 1088x1920, and the ladder SHIFTED rather than being overwritten: native 768x1344 moved to high so it stays selectable. Mirrors WAN, which already ships an above-native very_high called an extrapolated detail tier.",
+      "very_high is a FINAL-RENDER tier, not an iterate tier: 2x pixels costs 3.3x time (attention is quadratic in token count), so 1088x1920 is 25.6 min for a 2.33 s clip and roughly an hour at 124 frames.",
+      "H3 workflow routing derives mode from WHICH images are present (has_img1 / has_img2 through lazy MpiIfElse), not from user toggles - so illegal states are unreachable. LTX should adopt this shape too (MPI-455).",
+      "H3 ships 6 LoRA slots with model AND clip strength via MpiLoraModelClip - the established node, NOT core LoraLoader."
+    ],
+    "constraints": [
+      "MEMORY IS A POOR PREDICTOR FOR H3 IN BOTH DIRECTIONS - falsified by file size (2026-08-05) and by canvas size (2026-08-06, 13.2/16 GB at 2.09 MP, LOWER than at 640x640, because ComfyUI keeps fewer weights resident to leave room for activations). Stop using it to predict anything here.",
+      "execution_cached LISTING A NODE IS NOT EVIDENCE IT WAS NEEDED. Leaf constant nodes cache per value, so booleans show cached whichever way they are flipped. To tell pruned from cached, vary an input nothing has ever sampled.",
+      "Composition is NOT seed-stable across a canvas change - a different canvas is a different latent shape, so the same seed is a different sample. A tier A/B can never be read as \"same shot, sharper\".",
+      "The word \"audio\" in a latent node TITLE is load-bearing: _latentRoleFromTitle in commandExecutor.js tags any title containing it as role audio. Naming H3 single AV latent Output_AV_Latent would stage it as the audio latent and silently break stage-2 resume. Keep Input_Video_Latent / Output_Video_Latent.",
+      "model_lora_keys_unet has 17 named model branches and H3 is NOT one, so a Diffusers-format H3 LoRA loads WITHOUT ERROR and does nothing. Only plain diffusion_model.* / lora_unet_* keys map.",
+      "H3 frame counts are n % 17 == 5 at 24 fps; trained range 124-362 frames. The bench writes to D:/WORK/Images/Outputs, NOT G:/ComfyUi/ComfyUI/output.",
+      "Bench is port 8188 (v0.30.2); the APP engine is 48188 (v0.29.2). Do not confuse them.",
+      "comfy.nested_tensor is 0.30.0+; MpiNodes must import it INSIDE the function or the whole pack fails to load on the 0.29.2 app engine.",
+      "The bench has no ffprobe on PATH. Bundled binary: G:/ComfyUi/python_embeded/Lib/site-packages/imageio_ffmpeg/binaries/ffmpeg-win-x86_64-v7.1.exe (-map 0:v:0 -f null - prints the true frame count).",
+      "c:/AI/Mpi/ComfyUi-MpiNodes is NOT in permissions.additionalDirectories - writes there may prompt."
+    ],
+    "files_modified": [
+      "js/utils/ratios.js (MINIMAX_H3_RATIOS ladder + comment block)",
+      "dev_configs/node_lock.json (MpiNodes pin)",
+      ".agents/mpi-kanban/tasks/MPI-449/research.md (sections 4a, 5b, 6a, 7, 9)",
+      ".agents/mpi-kanban/tasks/MPI-455/ (new card)",
+      "G:/ComfyUi/ComfyUI/user/default/workflows/h3_i2v.json (4th branch; backup at h3_i2v.json.bak-pre-4way)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-449/research.md",
+      "js/utils/ratios.js (the MINIMAX_H3_RATIOS comment block)",
+      "docs/workflow-authoring/mpi-nodes.md"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "file",
+    "relevant_topics": [
+      "models",
+      "comfy engine",
+      "workflow authoring",
+      "mpi nodes"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md",
+    "docs/workflow-authoring/README.md",
+    "docs/workflow-authoring/mpi-nodes.md",
+    "docs/playbooks/add-model/README.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-06T05:45:00Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-08T04:35:00Z",
+      "event": "handoff_resolved",
+      "note": "Superseded and its target card MPI-449 is closed. Swept at close-out 2026-08-08."
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-449, the umbrella card for bringing MiniMax H3 into Cubric Vision. Read .agents/mpi-kanban/tasks/MPI-449/research.md first - sections 4a, 5b, 6a, 7 and 9 are the previous session. Everything that was provisional because it ran at 56 frames has now been re-measured or explicitly decided, so section 9 is mostly a status table rather than a warning. Settled: two-stage sampling is bit-exact at 124 frames; the lazy gate genuinely prunes stage 1 (proved against a cache-busted seed, because execution_cached listing a node is NOT evidence it was needed); pruned won on download size alone and the unpruned 34 GB file is DELETED; very_high shipped at 1088x1920 with native moved down to high; H3 takes 6 LoRA slots with model AND clip strength via MpiLoraModelClip. The bench h3_i2v workflow now has four branches including end-frame-only. THE OPEN RISK IS THE APP: nothing this session ran through Vision at all, only the bench at 8188, and the app engine is still 0.29.2. The node_lock bump also ships a LAZY MpiBlocker into klein_t2i and qwen_edit, whose upstreams are pure and cheap so risk is low, but it is untested - cover them in the same app-side pass. Do NOT start the engine bump or the H3 model wiring; those are gated on MPI-451 (licence) and a 0.29.2 -> 0.30.x bump.",
+  "archived_at": "2026-08-10T23:05:00Z"
+}

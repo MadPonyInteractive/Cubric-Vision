@@ -1,0 +1,136 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "01f605ef-e678-4f17-ac96-c027df8cbc4f",
+  "generated_at": "2026-08-08T20:34:27Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "closed",
+  "session": {
+    "name": "MPI-467 second GPU matrix - 33/35, engine proven, two failures left",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Produce a smoke-evidence.json that release:check accepts, so 1.4 can be cut.",
+    "status": "in_progress",
+    "summary": "The matrix ran clean end to end: PASS 33 / SKIP 0 / FAIL 2 of 35 on an L4, engine PROVEN 0.30.0. release:check now accepts the evidence on every dimension EXCEPT the two failures - the gate-7 deadlock is gone and coverage passes (12 models run, all 20 covered). One failure (nvidia-pid) is already FIXED by the MPI-498 session and needs only a re-run; the other (minimax-h3/t2v_ms) is UNDIAGNOSED and is the user's named first task. Nothing is rented. Volume aghcuvg7nl is full (325 GB) and must never be deleted."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "SECOND GPU MATRIX: PASS 33 / SKIP 0 / FAIL 2, engine {want:0.30.0, got:0.30.0, proven:true}. Committed 5dd1e4ee with dev_configs/smoke-evidence.json.",
+      "ALL FOUR SEPARATOR FAILURES PASS - the comfyController 3b heal mirrored into prepOp holds on real hardware.",
+      "FIVE OF SIX missing_node_type OPS PASS. This OBSERVES what start.sh only documented: the wrapper reinstalls MpiNodes at the pinned commit on commit drift. The pin bump to 43a976fd was correct; the drift path is NOT at fault. STEP 2 of the previous handoff is answered and closed.",
+      "GATE 7 RACE FIXED: comfyui_ref is stamped DURING boot and /remote/pod/manifest 409s until remote goes active, but the gate read it once with .catch(() => null), so 'not yet' and 'not there' were one value. It aborted a run four poll-ticks after create and threw away the Pod. Now polls and logs what the manifest held. THIRD instance of this file's own documented fault class.",
+      "INTERRUPT ON TIMEOUT: a timed-out op was left executing, so the next op queued behind it and timed out in turn. Now calls /proxy/interrupt. Caught live: Global interrupt -> got prompt in the same second, next op clean.",
+      "HOT STORE: the runner never staged weights (container disk 1 GB of 455 GB for a whole matrix while the volume served every load). stageModelOnPod now mirrors commandExecutor exactly. VRAM cap mutation-verified.",
+      "NODE_ERRORS GUARD (from the MPI-495 session) shipped and caught MPI-498 on its first live run.",
+      "MPI-496 (stage-all on a download Pod) and MPI-497 (installed toast on re-verify) carded from live Pod logs; MPI-498 carded and now OWNED AND FIXED by another session."
+    ],
+    "pending": [
+      "ITEM 1 - THE USER'S NAMED FIRST TASK: diagnose minimax-h3/t2v_ms. It is the ONLY op that has never passed, 0 for 2, for two DIFFERENT reasons: missing_node_type last matrix (stale pin), and this matrix its prompt was orphaned by a Pod-side ComfyUI restart at ~19:55Z. Its sibling i2v_ms PASSED at 260s on the SAME Pod and the SAME model, and the user reports the workflow runs on his own machine. An OOM hypothesis was raised and WITHDRAWN - do not resurrect it without evidence. THE USER WILL CONNECT THE POD HIMSELF and may test locally first. The cause lives in Pod stdout immediately BEFORE the node-reload sequence (search the RunPod console log for Traceback/Error); it is not in app.log, which showed only 'Model cache reseeded ... no restart needed'.",
+      "ITEM 2 - GATE 8 MUST CHECK REQUIRED INPUTS, NOT JUST CLASS EXISTENCE. Asked for by the MPI-498 session (message 060955d5, acknowledged; reply 29d60d5f). Gate 8 proves every Mpi* class_type EXISTS at the pinned commit - class existence was never the failing condition, which is why MPI-498 survived two releases and two matrices. TRAP, MEASURED: ~120 Mpi* nodes in the shipped graphs build INPUT_TYPES PROGRAMMATICALLY (MpiAnySwitch, MpiAnySwitch10, MpiPacker, MpiClearVram, MpiSimpleBoolean, MpiBoolean), so a static/AST parse sees no required-input literal and silently reports 0 holes for the MAJORITY of first-party nodes. Gate 8 must EXECUTE INPUT_TYPES at the pinned commit, or read /object_info from a Pod - never parse source.",
+      "ITEM 3 - ONE FULL MATRIX for clean evidence. release:check refuses counts.fail > 0. A --models run OVERWRITES smoke-evidence.json with only those models and would discard the 33 passes and trip the coverage check, so scoping is NOT a shortcut to a green file. BEFORE that run: turn 'Stage all models on connect' back ON in Settings (the user already intends to), and expect it to be markedly faster - this matrix ran entirely on cold volume reads.",
+      "ITEM 4 - then close MPI-465/466/467/468 on the clean evidence, then MPI-450 gates B and C, then /mpi-version-bump and /mpi-release.",
+      "ITEM 5 - MPI-495's app-side half (js/services/comfyController.js + tests/prompt-partial-validation.test.cjs) is still UNCOMMITTED and belongs to that session, not this one."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-467",
+    "title": "Smoke-run every workflow when ComfyUI is bumped - and give the engine bump a playbook",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-467/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-467/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-467/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-467/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/playbooks/bump-engine/01-smoke-run.md carries the FIFTH pass (gate-7 race, the uninterrupted timeout, the hot-store bypass, the node_errors guard) - it is an append-only fault log, exempt from the 200-line rule.",
+      "MPI-467 validation.md carries the tiered-model finding (Krea2 ran at its slowest: the graph bakes Input_is_Turbo false while the app defaults krea2Turbo true, and those graphs carry no Input_Steps node so the budget could not compensate).",
+      "MPI-467 brief.md carries the umbrella list: MPI-496, MPI-497, MPI-498, the MPI-491 residual and its method, and the watchdog item.",
+      "File claim on docs/playbooks/bump-engine/01-smoke-run.md released as complete."
+    ],
+    "pending": [
+      "The stall watchdog fired 3x during the install leg (remote install silent for 105s/90s/100s with 1 dep outstanding - treating as stalled, each recovering) on a RE-VERIFY of files already on the volume, where silence is expected. Recovery churn on a no-op. Same re-verify path as MPI-497 - fold it in or card it, but do not lose it.",
+      "The runner burns a full 15 minutes discovering a prompt that is already gone. The signal is available in seconds: queue EMPTY and prompt absent from history means orphaned, not slow. Needs a grace period to avoid a false positive between submit and start. That is pure GPU money per occurrence.",
+      "MPI-491 still owes the GPU-image _download_hf rate on controlnet-union-flux. It could NOT be sampled - the dep was already complete on the volume. Method: uninstall THAT ONE DEP and reinstall on a CPU download Pod (4.28 GB, pennies). A new volume was considered and is NOT warranted."
+    ]
+  },
+  "next_action": {
+    "description": "Diagnose minimax-h3/t2v_ms - the only op that has never passed. The user will connect the Pod himself and may test locally first; do NOT create a Pod without asking.",
+    "command": "mpi-continue MPI-467"
+  },
+  "context": {
+    "key_decisions": [
+      "The OOM explanation for the h3/t2v_ms restart was WITHDRAWN after the user pointed out the Pod has more RAM and VRAM than his machine and the workflow runs locally - and h3/i2v_ms then passed at 260s on the same Pod. It is recorded as UNEXPLAINED rather than replaced with another guess. Do not re-derive OOM.",
+      "MPI-498's severity is now CONFIRMED by the MPI-498 session, not by this one: MpiLoadImageFromPath subclasses PreviewImage with OUTPUT_NODE=True, so the input LOADER is a valid output node with no upstream deps. It survives validation while every real PreviewImage is dropped - PiD was returning THE INPUT IMAGE, not a degraded generation. That is why it read as 4s/1-media.",
+      "Scoping the re-run with --models is NOT a shortcut: it overwrites the evidence file with only those models.",
+      "The user wants to be PRESENT for GPU runs. Ask before starting one."
+    ],
+    "constraints": [
+      "NEVER delete or shrink network volume aghcuvg7nl (cubric-smoke, 450 GB, EU-RO-1) - the user records YouTube videos off its model set. Always --keep-volume --volume aghcuvg7nl. The runner's own teardown prompt argues FOR deleting it and that framing is wrong.",
+      "NO OTHER SESSION MAY CREATE A POD WHILE A MATRIX RUNS. The orphan sweep deletes by NAME and cannot tell a peer's live Pod from a stray - it killed Pod 5im0byu8auhi12 mid-generation on 2026-08-08 and cost a full matrix. That is a real defect and is NOT yet carded.",
+      "A PIPE SWALLOWS THE RUNNER'S EXIT CODE - a trailing echo of the status reports the wrong value. Read the printed summary.",
+      "CANCEL ORDER IS LOAD-BEARING: delete the Pod FIRST, then cancel a download. Cancel with a Pod attached deletes partials off the volume.",
+      "THE TREE IS SHARED. Commit by explicit pathspec. board.json, state/index.json and events.jsonl are co-owned and were deliberately LEFT UNCOMMITTED - a peer session has unstaged edits in them. comfy_workflows/* is claimed by the MPI-498 session; js/services/comfyController.js by MPI-495.",
+      "BASH HEREDOCS HALVE BACKSLASHES on this box even with a quoted delimiter. Write backslash-bearing files with python. Also: python on Windows cannot open Git Bash's /tmp path - use the scratchpad dir."
+    ],
+    "files_modified": [
+      "scripts/smoke-workflows.mjs (736f29d1 + 5dd1e4ee - applyFastTier, summarizeNodeErrors, interrupt-on-timeout, gate-7 poll, stageModelOnPod)",
+      "dev_configs/smoke-evidence.json (5dd1e4ee - 33 pass / 2 fail, engine proven)",
+      "docs/playbooks/bump-engine/01-smoke-run.md (fourth + fifth pass)",
+      ".agents/mpi-kanban/tasks/MPI-467/brief.md and validation.md, tasks/MPI-496, MPI-497, MPI-498"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-467/validation.md",
+      "docs/playbooks/bump-engine/01-smoke-run.md",
+      ".agents/mpi-kanban/state/messages/060955d5-2ce9-478c-a97c-22ba47c949ff.json",
+      "dev_configs/smoke-evidence.json",
+      "scripts/smoke-workflows.mjs"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "file",
+    "relevant_topics": [
+      "engine bump",
+      "smoke run",
+      "runpod",
+      "release",
+      "minimax h3",
+      "mpinodes"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/comfy_engine.md",
+    "docs/playbooks/bump-engine/README.md",
+    "docs/playbooks/bump-engine/01-smoke-run.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-08T20:34:27Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-10T06:40:00Z",
+      "event": "handoff_closed",
+      "note": "Closed by mpi-cleanup: MPI-467 is done, so this handoff had nothing left to resume."
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-467. THE SECOND GPU MATRIX IS DONE: PASS 33 / SKIP 0 / FAIL 2 of 35 on an L4, engine PROVEN 0.30.0, committed in 5dd1e4ee. release:check now accepts the evidence on every dimension EXCEPT the two failures, so the gate-7 deadlock is gone. All four separator failures pass and five of the six missing_node_type ops pass - which OBSERVED, for the first time, the wrapper reinstalling MpiNodes at the pinned commit on commit drift, closing that question. YOUR FIRST TASK, NAMED BY THE USER: diagnose minimax-h3/t2v_ms. It is the only op that has NEVER passed - 0 for 2, for two different reasons: missing_node_type last matrix, and this matrix its prompt was orphaned when ComfyUI restarted Pod-side at about 19:55Z. Its sibling i2v_ms PASSED at 260s on the SAME Pod and model, and the workflow runs on the user's own machine, so an OOM theory was raised and WITHDRAWN - do not resurrect it. The cause is in Pod stdout just BEFORE the node-reload sequence, not in app.log. THE USER WILL CONNECT THE POD HIMSELF and may test locally first - do NOT create a Pod without asking, and never delete volume aghcuvg7nl (his YouTube model set). SECOND: the MPI-498 session asked you to extend gate 8 from class EXISTENCE to required INPUTS, and their trap is load-bearing - about 120 Mpi* nodes build INPUT_TYPES programmatically, so an AST parse silently reports 0 holes for most first-party nodes; gate 8 must EXECUTE INPUT_TYPES at the pinned commit or read /object_info. THIRD: one FULL matrix for clean evidence (a --models run overwrites the file and discards the 33 passes), with Stage all models on connect turned back ON - this matrix ran entirely on cold volume reads because the runner never staged, now fixed. STANDING HAZARD: no other session may create a Pod while a matrix runs - the orphan sweep deletes by NAME and killed a live Pod mid-generation today, costing a full matrix.",
+  "archived_at": "2026-08-10T23:05:00Z"
+}

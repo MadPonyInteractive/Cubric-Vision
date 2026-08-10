@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "2c0eb732-7a1d-43ee-a8e0-9d322b4a6d57",
+  "path": "c:/AI/Mpi/mpi-ci/cubric-vision-pod/README.md",
+  "owner_session": null,
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/tasks/MPI-494/",
+  "status": "verified",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-08-08T19:12:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-08T19:10:00Z",
+      "event": "claimed_for_write"
+    },
+    {
+      "at": "2026-08-08T19:12:00Z",
+      "event": "released_verified"
+    }
+  ],
+  "archived_at": "2026-08-10T23:05:00Z"
+}

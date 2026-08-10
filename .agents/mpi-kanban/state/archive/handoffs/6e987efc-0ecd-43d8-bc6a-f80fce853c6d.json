@@ -1,0 +1,127 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "6e987efc-0ecd-43d8-bc6a-f80fce853c6d",
+  "generated_at": "2026-08-08T09:45:00Z",
+  "status": "resolved",
+  "from_session": "MPI-467 live smoke run attempt 2 - fill reached 273 GB then STOPPED on HuggingFace throttling",
+  "to_role": "implementer",
+  "session": {
+    "name": "Smoke fill 8/12 installed, halted for the HF download fix; GPU leg still never executed",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Run the full smoke matrix so release:check stops failing and 1.4 can be cut.",
+    "status": "partial",
+    "summary": "Eight of twelve models are installed on volume aghcuvg7nl (450 GB, ~273 GB real blocks). Model 9 (minimax-h3) is part-downloaded and RESUMABLE. Models 10-12 pending. The run was STOPPED DELIBERATELY, not by a fault: HuggingFace throttles the H3 weights to a measured mean of 1.66 MB/s, making the remaining ~62 GB a ~10-hour download, and a separate session is building the fast-download fix. Nothing is running: Pod deleted, remote mode inactive, zero download jobs. THE GPU HALF HAS STILL NEVER EXECUTED."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "FOUR more runner faults beyond the six the previous session found. eb89f59f: the GPU Pod was created with a bare /remote/pod/create plus a hard 20-minute waitReady, and die() is process.exit(1) which deletes NOTHING - a dead host would have burned 20 idle minutes and then LEAKED A RENTED GPU. Routed through createPodWithRetry (2 attempts, not 3, because each attempt is billed GPU time). Same commit: pickGpu matched names by SUBSTRING, so 'L4' also matched L40 and L40S and 'RTX 3090' also matched 3090 Ti - now an exact match - and its availability guard could NEVER FIRE because the payload has no stockStatus field at all; it now uses lowestPrice being non-null, measured as the real signal (MI300X null; L4/3090/4090 = 55/30/31). Both were found by READING the leg before it executed.",
+      "EU-RO-1's dead hosts are the DATACENTER, not the image - proven by three identical Pods on the same image, channel and volume where the third came up. The boot watchdog (e60b269b) fired twice unattended and was right both times. Budget 2-3 wasted Pod boots per run there; it is normal, not a fault to debug.",
+      "Volume grown 350 -> 450 GB by the user after the fill ran out of space at model 9 of 12. The preflight had passed it: 'weights 300.5 GB / volume 350 GB' compares an ESTIMATE to TOTAL size, never to free space.",
+      "Cards filed: MPI-482 (declared dep sizes are guesses), MPI-483 (two space accountings misread the same volume), MPI-485 (the orphan Pod sweep reaps by NAME), MPI-487 (a partial-install bar looks identical to a downloading one), MPI-488 (next_id is not concurrency-safe).",
+      "MPI-450 umbrella updated: Gate A gained MPI-461, MPI-479, then MPI-483 and MPI-482; Gate B lost MPI-432 to a recorded waiver and gained both the MPI-458 confirmation run and a post-smoke throwaway-Pod session; MPI-432 parked done/complete with status=unverified so nobody reads done as tested."
+    ],
+    "pending": [
+      "STEP 1 - WAIT for the HF fast-download fix; a separate session owns it. Do NOT resume the fill on aria2: the remaining ~62 GB is a ~10-hour download and the throttle is bursty (3.8 MB/s bursts collapsing to ~0.5, mean 1.66 measured over 2 minutes at 15s resolution).",
+      "STEP 2 - RESUME: node scripts/smoke-workflows.mjs --keep-volume --volume aghcuvg7nl. The --volume flag is MANDATORY. Requires the app on :3000 from a DEV checkout (BUILD_HASH === 'dev') so the Pod resolves to v0.20.0-dev. Models 1-8 re-verify in seconds; aria2 resumes model 9 from its partials on the volume.",
+      "STEP 3 - THE GPU LEG HAS NEVER RUN. pickGpu, assertPodEngineVersion, runOp dispatch, the history poll and the evidence write are all unproven. Two faults were already found in it by reading; expect more of the same class and read the routes before believing the code.",
+      "STEP 4 - the post-smoke throwaway-Pod session (10 GB volume, one small dep, ~10 minutes) closes MPI-480 acceptance 3 AND MPI-481's live check together. Full recipe is on the MPI-450 checklist. It needs an app restart, so it cannot run beside a live fill.",
+      "STEP 5 - close MPI-465/466/467/468 on dev_configs/smoke-evidence.json, then MPI-450 gates B and C, then /mpi-version-bump and /mpi-release."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-467",
+    "title": "Smoke-run every workflow when ComfyUI is bumped - and give the engine bump a playbook",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-467/",
+    "links": {
+      "brief": ".agents/mpi-kanban/tasks/MPI-467/brief.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-467/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-467/validation.md"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "MPI-467 events record the EU-RO-1 verdict, the full GPU-leg review, and the standing do-not-delete constraint on volume aghcuvg7nl.",
+      "MPI-483's brief carries the CORRECTED mechanism: sparseness from -s 128 scattered segments under --file-allocation=none, NOT preallocation. wrapper.py:1754 says so, and records that the codebase already corrected that same mislabel once in MPI-95. I had reintroduced it; do not reintroduce it again.",
+      "MPI-485's brief carries acceptance criteria that include a genuine stray still being reaped, so the fix cannot just neuter the sweep.",
+      "project_smoke_volume_is_content_asset.md in project memory: the volume is a content asset, and the runner's own teardown prompt argues for deleting it, which is now wrong."
+    ],
+    "pending": [
+      "The GPU-leg findings are NOT yet folded into docs/playbooks/bump-engine/01-smoke-run.md beside the other faults. Owed."
+    ]
+  },
+  "next_action": {
+    "description": "Wait for the HF download fix, then resume the fill and take the GPU half carefully - it has never run.",
+    "command": "mpi-continue MPI-467"
+  },
+  "context": {
+    "key_decisions": [
+      "The fill was STOPPED by the user's decision, not by a fault. Do not read the halt as a failure or try to 'recover' it.",
+      "H3 weights are HuggingFace-sourced and MPI-452 forbids re-hosting them on R2. The user has said he will self-host if forced - that is a LICENCE question first (authorization under MPI-451; papers in C:/AI/Mpi/_private/minimax-h3-licence/), not a technical one.",
+      "MPI-432 waived: no Mac is being rented. The release-note entry already exists and is the whole deliverable.",
+      "MPI-485 deliberately NOT gated for 1.4 - no release claim touches it, and it needs two instances sharing one RunPod key, which is our situation rather than a user's."
+    ],
+    "constraints": [
+      "NEVER delete or shrink network volume aghcuvg7nl (cubric-smoke, 450 GB, EU-RO-1). It is NOT scratch - the user records YouTube videos off its installed model set. Always pass --keep-volume --volume aghcuvg7nl. Delete Pods freely; never the volume. Note the runner's own teardown prompt argues FOR deleting it ('hours, pennies') and that framing is now wrong.",
+      "CANCEL ORDER IS LOAD-BEARING: POST /comfy/models/download/cancel calls remoteUninstallDep when a Pod is attached, which DELETES partials off the volume. Delete the Pod FIRST, then cancel. That order is how ~273 GB survived three restarts today.",
+      "STALE JOBS POISON THE NEXT RUN (MPI-481): a dead Pod leaves model jobs stuck at 'downloading', and _startRemoteDownload treats that as in-flight, ATTACHES, and fires NO wrapper install - silent until an app restart. Clear jobs before relaunching. MPI-481's fix is COMMITTED but lives in routes/, so it is INERT until the app is restarted.",
+      "next_id in board.json is NOT concurrency-safe - three collisions today, in both directions, and the loser's card is SILENTLY truncated (mode 'w'). Claim ids with os.mkdir plus exclusive-create ('x'). That is MPI-488.",
+      "THE TREE IS SHARED with several sessions. Commit by explicit pathspec, never git add -A. Do not rebuild board.json from HEAD - peers hold uncommitted moves in it.",
+      "npm run release:check still fails on exactly one line: engine pin 0.29.2 -> 0.30.0 with no dev_configs/smoke-evidence.json. That is the whole 1.4 gate."
+    ],
+    "files_modified": [
+      "scripts/smoke-workflows.mjs (eb89f59f - GPU Pod watchdog, pickGpu exact match and a real stock signal)",
+      ".agents/mpi-kanban/ (MPI-450 gates, MPI-432 parked, MPI-467 events, cards 482/483/485/487/488, this handoff)"
+    ],
+    "open_questions": [
+      "The download Pod's CONTAINER disk sits at 18 GB / 91% of 20 GB and is STABLE - unchanged across three readings while ~2 GB downloaded - so it is a fixed cost, not a leak, and no threat to a fill. But it is unexplained. Ruled out: hot-store (only stages via /wrapper/hot-store/ensure, which needs a generation, and this Pod is CUBRIC_DOWNLOAD_MODE=1), download temp files (wrapper.py:1443 writes <dest>.part next to the final file on the volume), and a fat image (Dockerfile.cpu is python:3.11-slim with no torch and no ComfyUI). Worth answering before it matters.",
+      "Is 1.66 MB/s HuggingFace throttling specifically, or the cpu3c Pod's 2 vCPU? The other session's A/B on a 577 MB file settles it.",
+      "hf_xet and huggingface_hub are NOT in the -cpu image (wrapper/requirements.txt is five lines; Dockerfile.cpu apt-installs only aria2 ffmpeg ca-certificates curl), and publish-runtime.sh floats CODE, not pip packages. Any wrapper fix importing them needs a bootstrap.sh pip install or an image rebuild. The GPU image having hf_xet pinned does not help - the download Pod is the -cpu image.",
+      "There is no HF token plumbing anywhere: no HF_TOKEN in wrapper.py, none app-side; the only Bearer auth in the wrapper is the RunPod key at wrapper.py:392."
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "file",
+    "relevant_topics": [
+      "engine bump",
+      "smoke run",
+      "runpod",
+      "release",
+      "downloads"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    "docs/playbooks/bump-engine/README.md",
+    "docs/playbooks/bump-engine/01-smoke-run.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-08T09:45:00Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-08T17:40:16Z",
+      "event": "resumed_and_closed",
+      "note": "Resumed 2026-08-08. Its STEP 1 (wait for the HF fix) and STEP 2 (resume the fill) are done; STEP 3, the GPU leg, EXECUTED. Superseded by the handoff written at this close-out."
+    }
+  ],
+  "resume_prompt": "You are resuming the MPI-467 smoke run. ONE line blocks 1.4: release:check fails because the engine pin moved 0.29.2 -> 0.30.0 with no dev_configs/smoke-evidence.json. STATE: 8 of 12 models installed on volume aghcuvg7nl (450 GB, ~273 GB used); model 9 (minimax-h3) part-downloaded and resumable; 10-12 pending. Nothing is running - Pod deleted, remote inactive, zero download jobs. The fill was STOPPED DELIBERATELY: HuggingFace throttles the H3 weights to a measured mean of 1.66 MB/s (bursts to 3.8, collapsing to 0.5), making the remaining ~62 GB a ~10-hour download, and a separate session is building a fast-download fix. Do not resume on aria2 until that lands. RESUME WITH: node scripts/smoke-workflows.mjs --keep-volume --volume aghcuvg7nl, app on :3000 from a dev checkout. THREE HAZARDS THAT HAVE ALREADY BITTEN: (1) NEVER delete or shrink aghcuvg7nl - the user records YouTube videos off its model set, and the runner's own prompt wrongly argues for deleting it; (2) cancel a download only AFTER deleting the Pod, because cancel-with-a-Pod-attached deletes partials off the volume; (3) a dead Pod leaves stale 'downloading' jobs that make the next install ATTACH and fire nothing - clear them before relaunching, and note MPI-481's fix is committed but lives in routes/, so it is inert until the app restarts. THE GPU LEG HAS STILL NEVER EXECUTED - two faults were already found in it by READING (a leaked rented GPU on a dead host, and substring GPU matching that could rent an L40S instead of an L4), so read the rest before trusting it.",
+  "archived_at": "2026-08-10T23:05:00Z"
+}

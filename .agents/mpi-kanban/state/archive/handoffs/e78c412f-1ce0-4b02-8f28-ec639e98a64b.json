@@ -1,0 +1,144 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "e78c412f-1ce0-4b02-8f28-ec639e98a64b",
+  "generated_at": "2026-08-09T02:11:18Z",
+  "from_session": ".agents/mpi-kanban/state/sessions/77f72b70-b77f-4ec5-ad3d-936374d4760e.json",
+  "to_role": "implementer",
+  "status": "resolved",
+  "session": {
+    "name": "MPI-467 - h3/t2v_ms CLOSED live; runner made self-diagnosing; gate 9 shipped",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Produce a smoke-evidence.json that release:check accepts, so 1.4 can be cut.",
+    "status": "in_progress",
+    "summary": "The previous handoff's named first task is DONE: minimax-h3/t2v_ms PASSED live at 216s. There was never a t2v defect - a REQUESTED ComfyUI restart killed the prompt, and the user reproduced the trigger himself. release:check still refuses the evidence for its 2 failed ops, and the file was deliberately NOT edited. The blocker is no longer diagnosis - it is that nvidia_pid has a SECOND defect (the output is CROPPED) which the user is fixing in the graph. A matrix run before that fix would re-record a broken PiD as PASS."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "minimax-h3/t2v_ms PASSED live: 216s, media=1, clean node_errors, prompt_id e7281ce0-1e64-4823-a13b-19561c5ab815. Dispatched through the runner's OWN prepOp so it built the exact graph a matrix builds. Sibling i2v_ms 260s. minimax-h3 is 2-for-2.",
+      "DIAGNOSIS, reached offline before any GPU: a ComfyUI crash cannot be survived on this Pod (ComfyManager._supervise -> os._exit(1); start.sh ends in `exec uvicorn`, no respawn), yet six ops passed after 19:55Z. So the restart was REQUESTED. That excludes OOM/segfault/CUDA-abort BY CONSTRUCTION - do not resurrect them.",
+      "THE USER REPRODUCED THE TRIGGER LIVE: a remote node install emits SSE comfy:needs-restart{remote:true} -> downloadService.js:724 sets state.remoteComfyNeedsRestart -> comfyController.js:543 restarts on the next dispatch, WITHOUT checking the queue. Carded MPI-501.",
+      "NO t2v-SPECIFIC DEFECT EXISTS. MpiIfElse is genuinely lazy; MpiMath's '10 if a else 5' is supported (safe_math handles ast.IfExp); PackedLayout(keyframes=None) takes clean guards; work is identical to i2v (steps=20, SplitSigmas at 10 vs 5). t2v and i2v are the SAME FILE routed by MpiAnyChecker on an empty Input_Start_Frame.",
+      "RUNNER: transcript sink at dev_configs/smoke-run.txt (ISO-stamped, .txt because .gitignore:54 blankets *.log). No app-side record existed for the failure - app.log stopped 19:16Z while the matrix ran to 20:23Z.",
+      "RUNNER: orphan detection. A prompt absent from history AND queue is GONE. Fails in ~30s naming the mechanism instead of 15 min of 'timed out'. False positives guarded three ways.",
+      "RUNNER: main() no longer runs on import (INVOKED_DIRECTLY). Importing the file to reuse one helper ran a LIVE matrix and rented an L4 - see the hazard note below.",
+      "GATE 9 (checkRequiredInputs): sweeps ALL 34 shipped graphs against a live engine's required map, pin-gated on the MpiNodes checkout, never parses source. Replayed against 06cf70d4~1 it flags EXACTLY MPI-498's six nodes and 0 against HEAD. Three guards mutation-verified.",
+      "Cards MPI-499/500/501/502 created and added to the MPI-467 umbrella brief; MPI-497 extended with the Model-Library 100%-bar symptom. Board validates.",
+      "Replied to MPI-498 (message dd066a81): their fix independently confirmed, the scoped-run contradiction explained, and the crop defect reported.",
+      "Committed b59a9e82 (runner + playbook sixth pass + validation.md) and a9e79b31 (board + cards + coordination state)."
+    ],
+    "pending": [
+      "ITEM 1 - THE USER IS FIXING THE nvidia_pid CROP. One wire: MpiCrop node 1624's `image` input from 1626:0 (Input_Image, the ORIGINAL) to 1609:3 (MpiScaledDimensions scaled_image, which common_upscales with crop 'disabled'). Today it takes the original image with SCALED width/height and crops away 64px each way - 896x1088 in, 832x1024 out, heads cut off; the arithmetic reproduces the observed size exactly. Blast radius checked: 1609's only consumers are those two width/height links, Input_Image feeds only 1609 and 1624. Do NOT swap both nodes for 'Scale Image to Max Dimension' - it has no divisibility control and 843 is not a multiple of 16 or 8, so the four downstream VAEEncodes would trim it themselves, silently and off-centre. Re-export through sync-raw-workflows.mjs (against the 48188 bench, NOT 8188), never by hand - hand-editing is how MPI-498 shipped. Then gate 9 re-verifies for free on --plan.",
+      "ITEM 2 - ONE FULL MATRIX, after the crop fix. release:check refuses counts.fail > 0. A --models run OVERWRITES smoke-evidence.json with only those models, discarding the other passes and tripping the coverage check, so it is NOT a shortcut - MPI-498 asked for exactly that and was told why it cannot work. Turn 'Stage all models on connect' back ON first; the second matrix ran entirely on cold volume reads. Expect nvidia-pid to PASS at a real generation time rather than 4s, which is itself the proof MPI-498's fix landed.",
+      "ITEM 3 - then close MPI-465/466/467/468 on the clean evidence, then MPI-450 gates B and C, then /mpi-version-bump and /mpi-release.",
+      "ITEM 4 - TWO VALIDATING CARDS NOT TOUCHED THIS SESSION, both blocked on that matrix: MPI-465 (LTX dead in the shipped release) and MPI-481 (a dead remote download poisons later installs - its committed fix was waiting on an app restart, and the app has restarted many times since, so it may now be provable without a Pod).",
+      "ITEM 5 - DONE, no action needed. The knowledge heal was approved and applied: .claude/rules/kanban.md now states that EVERY index.json array holds a repo-relative PATH, never a card id, that active_tasks wants state/tasks/<uuid>.json (created via lifecycle Create Or Attach Task, and the dir may not exist yet), and that a bare MPI-nnn reddens the WHOLE board. A second proposed heal to .claude/rules/git.md was DROPPED - lines 10-11 already document the untracked --only trap and its silent directory variant."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-467",
+    "title": "Smoke-run every workflow when ComfyUI is bumped - and give the engine bump a playbook",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-467/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-467/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-467/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-467/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "tasks/MPI-467/validation.md carries the full h3 closure, the offline diagnosis, gate 9's proven-red replay, and the nvidia_pid crop arithmetic with its rejected alternatives.",
+      "docs/playbooks/bump-engine/01-smoke-run.md carries the SIXTH pass (the import-rents-a-GPU fault, the no-diagnostic-record fault, orphan detection, gate 9) plus a standing note: do NOT run a full matrix while a shipped graph has a known-broken output.",
+      "tasks/MPI-467/brief.md carries the umbrella list including MPI-499/500/501/502.",
+      "File claim completed. scripts/workflow-to-api.mjs and routes/remoteProxyForward.js were claimed then RELEASED UNTOUCHED."
+    ],
+    "pending": [
+      "THE CONVERTER IS NOT THE LEAK - do not re-investigate it. workflow-to-api.mjs ALREADY self-checks that every emitted node carries every required input, against the same /object_info it converted with (its `holes` pass). It cannot catch MPI-498 because a node pack that moves AFTER a graph is frozen on disk is invisible to it, and a hand-edit never runs it at all. nvidia_pid.json was last exported in ab9caa71 - itself a hand-patch twelve minutes after a raw sync.",
+      "MPI-491 still owes the GPU-image _download_hf rate on controlnet-union-flux. Method: uninstall THAT ONE DEP and reinstall on a CPU download Pod (4.28 GB, pennies).",
+      "The stall watchdog firing 3x on a RE-VERIFY of files already present (recovery churn on a no-op) is still uncarded - fold into MPI-497 or card it."
+    ]
+  },
+  "next_action": {
+    "description": "Wait for the user's nvidia_pid crop fix and re-export, run gate 9 offline to confirm the graph, THEN ask before renting a Pod for one full matrix. Do NOT create a Pod without asking.",
+    "command": "mpi-continue MPI-467"
+  },
+  "context": {
+    "key_decisions": [
+      "h3/t2v_ms is CLOSED and PASSES. Do not re-diagnose it. The OOM theory is excluded by construction, not merely withdrawn: a ComfyUI crash takes the whole container down, so a Pod that kept answering proves a REQUESTED restart.",
+      "Gate 9 must NEVER parse source. ~120 Mpi* nodes build INPUT_TYPES programmatically, so an AST read reports 0 holes for the majority of first-party nodes. It reads /object_info from a live engine, and prints NOT CHECKED rather than green when none answers.",
+      "Gate 9 sweeps ALL graphs, not the smoke set: no flow_*.json is reachable by any matrix, and the set would have caught only 4 of MPI-498's 6 nodes.",
+      "smoke-evidence.json was deliberately NOT edited. Flipping its 2 failures to PASS by hand would be fabricating evidence.",
+      "No changelog line for the PiD fix yet. It is user-facing, but PiD is STILL broken by the crop, so a 'PiD fixed' line would ship a lie. MPI-498 deliberately wrote none either.",
+      "The user wants to be PRESENT for GPU runs. Ask before starting one."
+    ],
+    "constraints": [
+      "NEVER delete or shrink network volume aghcuvg7nl (cubric-smoke, 450 GB, EU-RO-1) - the user records YouTube videos off its model set. Always --keep-volume --volume aghcuvg7nl. Verified intact at session close.",
+      "NEVER `import` scripts/smoke-workflows.mjs expecting it to be inert on older checkouts. It is guarded NOW (INVOKED_DIRECTLY), but on 2026-08-09 an import created a CPU Pod, ran the install leg, deleted it, and created an L4 - real money, an untracked Pod, and it overwrote the podId the app tracked. The accidental Pod (6ta1u3t3xvgoxh) was destroyed with the user's authorisation; total spend ~$0.35.",
+      "A PIPE SWALLOWS THE RUNNER'S EXIT CODE - read the printed summary.",
+      "CANCEL ORDER IS LOAD-BEARING: delete the Pod FIRST, then cancel a download.",
+      "BASH HEREDOCS BREAK ON THIS BOX - two attempts failed this session (quoting, then backslash halving). Write the script to a file with the Write tool and run it, or use python -c with forward slashes.",
+      "THE TREE IS SHARED. Commit by explicit pathspec. Two untracked state/files/*.json records (2c0eb732, 4b91d30b) belong to the MPI-498 session - leave them.",
+      "The user's C: drive fills from tests/orphan-sweep.test.cjs (MPI-499). If it fills again mid-session, emptying the Recycle Bin recovers it."
+    ],
+    "files_modified": [
+      "scripts/smoke-workflows.mjs (b59a9e82 - transcript sink, orphanReason, requiredInputHoles + checkRequiredInputs, INVOKED_DIRECTLY guard, 6 new self-check assertions)",
+      "docs/playbooks/bump-engine/01-smoke-run.md (b59a9e82 - sixth pass)",
+      "dev_configs/smoke-run.txt (b59a9e82 - new, committable transcript)",
+      ".agents/mpi-kanban/tasks/MPI-467/{validation.md,brief.md,files.json} (b59a9e82)",
+      ".agents/mpi-kanban/{board.json,events.jsonl}, state/*, tasks/MPI-497, tasks/MPI-499..502 (a9e79b31)"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-467/validation.md",
+      "docs/playbooks/bump-engine/01-smoke-run.md",
+      ".agents/mpi-kanban/tasks/MPI-467/brief.md",
+      "dev_configs/smoke-evidence.json",
+      "scripts/smoke-workflows.mjs"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "file",
+    "relevant_topics": [
+      "engine bump",
+      "smoke run",
+      "runpod",
+      "release",
+      "minimax h3",
+      "mpinodes",
+      "nvidia pid"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/comfy_engine.md",
+    "docs/playbooks/bump-engine/README.md",
+    "docs/playbooks/bump-engine/01-smoke-run.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-09T02:11:18Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-09T04:00:00Z",
+      "event": "superseded",
+      "by": ".agents/mpi-kanban/state/handoffs/18f70349-a282-4be3-9d7f-8d60930afb65.json"
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-467. THE PREVIOUS HANDOFF'S NAMED FIRST TASK IS DONE: minimax-h3/t2v_ms PASSED live at 216s, 1 media, clean node_errors. There was never a t2v defect - a REQUESTED ComfyUI restart killed the prompt, and the user reproduced the trigger himself (a remote node install sets state.remoteComfyNeedsRestart and comfyController.js:543 restarts without checking the queue; carded MPI-501). Do NOT re-diagnose it, and do NOT resurrect OOM - a ComfyUI crash takes the whole container down (os._exit(1), no respawn in start.sh), so a Pod that kept answering PROVES a requested restart. The runner is now self-diagnosing: an ISO-stamped transcript at dev_configs/smoke-run.txt, orphan detection that fails in ~30s naming the mechanism instead of 15 minutes of 'timed out', and gate 9 (required inputs, all 34 shipped graphs, live /object_info, pin-gated, never parses source) which replays MPI-498's exact six nodes red and HEAD clean. It is also finally SAFE TO IMPORT - it used to run a live matrix on import and rented an L4 by accident. YOUR BLOCKER IS NOT DIAGNOSIS ANY MORE: nvidia_pid has a SECOND defect the user found the moment MPI-498's fix let it produce output - the result is CROPPED (896x1088 in, 832x1024 out, heads cut off) because MpiCrop node 1624 takes the ORIGINAL image with SCALED dimensions. He is fixing it with one wire (MpiCrop.image -> 1609:3 scaled_image) and re-exporting through sync-raw-workflows.mjs against the 48188 bench. WAIT for that, run gate 9 offline to confirm the graph is clean, THEN ASK BEFORE RENTING - one FULL matrix, never --models (it overwrites smoke-evidence.json and discards the other passes), with 'Stage all models on connect' turned back ON. Never delete volume aghcuvg7nl. Do not edit smoke-evidence.json by hand - release:check refuses its 2 failures and that is correct. One approval is pending: a two-line heal to .claude/rules/kanban.md saying active_tasks holds PATHS to state/tasks/<uuid>.json records, not bare MPI-nnn ids, because a bare id fails whole-board validation.",
+  "archived_at": "2026-08-10T23:05:00Z"
+}

@@ -1,0 +1,133 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "6eb7096a-c9d4-46cf-b33e-4a119ccff1af",
+  "generated_at": "2026-08-08T17:56:53Z",
+  "status": "closed",
+  "from_session": "MPI-467 - the GPU leg finally EXECUTED; both causes of its 10 failures are fixed, evidence re-run pending",
+  "to_role": "implementer",
+  "session": {
+    "name": "Smoke matrix ran 25/10 on an L4; re-run for clean evidence, then 1.4",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Produce a smoke-evidence.json that release:check accepts, so 1.4 can be cut.",
+    "status": "partial",
+    "summary": "The GPU half executed for the first time. PASS 25 / FAIL 10 / SKIP 0 of 35 ops on an L4, and gate 7 proved the engine (engine.got 0.30.0, proven true) - the first evidence file this runner has ever produced. BOTH causes of the 10 failures are already fixed and committed; nothing is diagnosed-but-unrepaired. What remains is ONE matrix re-run to get a clean file. Nothing is rented: both Pods deleted, remote inactive, zero download jobs. Volume aghcuvg7nl is FULL - all 12 smoke models installed and verified."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "GATE 7 WAS UNFIREABLE AND DEADLOCKED THE RELEASE. assertPodEngineVersion read status.comfyVersion off /remote/comfy/status, a field that route has never returned, so engine.got was always null - and release-health-check.mjs REFUSES evidence with no engine.got. A full matrix could not produce a file its own gate accepts. Now reads manifest.comfyui_ref through a new /remote/pod/manifest passthrough. Verified live: engine: Pod image built from 0.30.0, matches node_lock.",
+      "EVERY POST-CREATE FAILURE LEAKED THE RENTED POD. die() is process.exit(1) and deletes nothing; eb89f59f had fixed only the create path. abort() now deletes the live Pod first and every post-create exit routes through it.",
+      "SIX FAILURES WERE REAL: node_lock pinned ComfyUI-MpiNodes at a6e5d5e0 (2026-08-06 06:37Z), SIXTEEN HOURS before MpiStageLatents existed (da23e911, 22:53Z), and five shipped workflows use it; MpiH3References the same. Every multi-stage video op died missing_node_type. Pin bumped to 43a976fd in BOTH locks (0851f2bb here, 012902b in mpi-ci). Code-only node - reinstalls to the volume at connect, no image rebuild.",
+      "FOUR FAILURES WERE THE HARNESS: the runner POSTs to /proxy/prompt and skipped comfyController 3b's separator heal, so 75 baked Windows paths across 14 workflows hit value_not_in_list. Mirrored into prepOp; --self-check covers it 5 ways and is mutation-verified.",
+      "GATE 8 ADDED: diffs every Mpi* class_type in the smoke set against __init__.py at the pinned commit. Reproduces all six node failures OFFLINE, FREE, on --plan. checkPodLock could never catch this - it only proves the two locks AGREE, and they agreed while both were stale.",
+      "--install-only added: fills and verifies the volume on a 0.06 USD/hr CPU Pod and stops before renting a GPU.",
+      "MPI-491 closed (hf_xet, ~320x). MPI-494 filed (RIFE prebake). MPI-495 filed (the silent style-LoRA drop). MPI-450's promote gate narrowed to decision context after the user pointed out mpi-release already stops on the manifest diff."
+    ],
+    "pending": [
+      "STEP 1 - RE-RUN THE MATRIX: node scripts/smoke-workflows.mjs --keep-volume --volume aghcuvg7nl. The --volume flag is MANDATORY. App on :3000 from a dev checkout. Installs re-verify in about a minute (volume is full), then it goes straight to the GPU. ~25 min on an L4, roughly 0.05 USD per six minutes. THE USER WANTS TO BE PRESENT for GPU runs - do not start one unattended.",
+      "STEP 2 - WATCH ONE THING AT CONNECT: whether the wrapper notices the MpiNodes commit drift and reinstalls at 43a976fd. start.sh documents it (drift -> not-installed -> wrapper install at the pinned commit) but nobody has watched it happen. If the six _ms ops fail identically, the DRIFT PATH is the fault, not the pin.",
+      "STEP 3 - OWED TO THE (now closed) MPI-491: the GPU-image _download_hf rate on controlnet-union-flux, 3.99GB, the only HF dep left uninstalled. Sample /comfy/downloads/status EVERY 15s - one long interval reads about 2x optimistic. If it crawls, check Pod stdout for the string hf_xet path failed BEFORE concluding the GPU image lacks the transport: that string means _download_hf raised and httpx caught it; its ABSENCE with a slow rate means huggingface_hub did not import, which is a different fault with a different fix.",
+      "STEP 4 - then close MPI-465/466/467/468 on the clean evidence, then MPI-450 gates B and C, then /mpi-version-bump and /mpi-release.",
+      "STEP 5 - MPI-495, the silent style-LoRA drop. The user explicitly asked for this next: we will need to fix that silent drop off the LoRAS."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-467",
+    "title": "Smoke-run every workflow when ComfyUI is bumped - and give the engine bump a playbook",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-467/",
+    "links": {
+      "brief": ".agents/mpi-kanban/tasks/MPI-467/brief.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-467/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-467/validation.md"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "docs/playbooks/bump-engine/01-smoke-run.md carries the third-pass section (gate 7 deadlock + the post-create leak). docs/README.md now exempts playbooks/bump-engine/ from the 200-line rule because 01-smoke-run.md is an append-only fault log.",
+      "docs/download-manager.md holds both the Xet transport section and the remote-cancel-order rule (413b93c4).",
+      "Memory: stamp from the clock never by incrementing (project feedback), and the heredoc-halves-backslashes trap (global general.md)."
+    ],
+    "pending": [
+      "The FIRST GPU MATRIX RESULTS are on MPI-467's validation.md but NOT yet folded into 01-smoke-run.md beside the other passes. Owed - and it is the section that finally has live op results rather than read-found faults."
+    ]
+  },
+  "next_action": {
+    "description": "Re-run the matrix with the user present, watching the MpiNodes reinstall at connect.",
+    "command": "mpi-continue MPI-467"
+  },
+  "context": {
+    "key_decisions": [
+      "The user wants to be PRESENT for GPU runs. He said so explicitly after a previous agent left downloads stalling overnight. The download half is fine unattended (--install-only, CPU Pod, pennies); the matrix is not.",
+      "MPI-491 was moved to done on the user's call even though the GPU-image number is unmeasured - that leg belongs to MPI-467, not to it.",
+      "Promote is NOT a separate gate: mpi-release/SKILL.md:53 already stops on the dev/stable manifest diff. The shas WILL differ (dev 0.2.43, stable 0.2.40) and THE ANSWER IS PROMOTE - declining ships H3 at 1.66 MB/s. Recorded on MPI-450.",
+      "The user owns MpiNodes pin automation in a separate session (the mpi-nodes-sync skill). Do not build that; the one-off pin bump is already done."
+    ],
+    "constraints": [
+      "NEVER delete or shrink network volume aghcuvg7nl (cubric-smoke, 450 GB, EU-RO-1). The user records YouTube videos off its model set. Always --keep-volume --volume aghcuvg7nl. The runner's own teardown prompt argues FOR deleting it and that framing is wrong. It is ~325 GB used of 450; RunPod volumes only grow, so the over-provisioning is sunk.",
+      "CANCEL ORDER IS LOAD-BEARING: cancel with a Pod attached calls remoteUninstallDep and deletes partials off the volume. Delete the Pod FIRST, then cancel.",
+      "A PIPE SWALLOWS THE RUNNER'S EXIT CODE. Piping the runner into tee reported exit 0 on a run with 10 failures - that was tee's code. Same class as the rclone-into-tail trap. Read the printed summary, not the exit status.",
+      "BASH HEREDOCS HALVE BACKSLASHES on this box, even with a quoted delimiter, and it silently produced a lora-slot regex that parses fine and matches nothing. Write backslash-bearing files with python and chr(92) concatenation, or write the script to a file first. Leave a test that FAILS if the logic is wrong - a syntax check passes the broken regex.",
+      "THE TREE IS SHARED. Commit by explicit pathspec. .claude/settings.json is currently modified by the user's MpiNodes-sync session - leave it alone.",
+      "release:check currently fails on exactly two lines, both cleared by the re-run: 10 FAILED ops, and evidence STALE against node_lock's newer mtime."
+    ],
+    "files_modified": [
+      "scripts/smoke-workflows.mjs (e2953382, 72784308 - heal mirror, gate 8, --install-only, abort)",
+      "routes/remoteProxyForward.js (b186208f - /remote/pod/manifest)",
+      "dev_configs/node_lock.json (0851f2bb - MpiNodes pin) + mpi-ci cubric-vision-pod/node_lock.json (012902b)",
+      "docs/playbooks/bump-engine/01-smoke-run.md, docs/README.md, docs/download-manager.md",
+      "dev_configs/smoke-evidence.json (committed WITH its 10 failures - the record of why the run existed)",
+      ".agents/mpi-kanban/ (MPI-467 validation, MPI-491 to done + brief, MPI-494, MPI-495, MPI-450, state close-out)"
+    ],
+    "open_questions": [
+      "Does the wrapper actually reinstall MpiNodes on commit drift at connect? Documented, never observed. STEP 2 answers it.",
+      "Does _download_hf engage on the GPU image with no pip step? Inferred from python_deps.txt pinning hf-xet 1.6.0. STEP 3 answers it.",
+      "The download Pod's container disk sat at 13-14 GB of 20 GB and STABLE across a whole fill, then 6 GB after teardown. A previous session logged it at 18 GB / 91%. Unexplained, no threat observed.",
+      "A PASS can hide silently-dropped style LoRAs - ComfyUI validates per output node. That is MPI-495, and the smoke runner itself still cannot detect it: it only checks that media came out."
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "file",
+    "relevant_topics": [
+      "engine bump",
+      "smoke run",
+      "runpod",
+      "release",
+      "downloads",
+      "loras"
+    ]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/comfy_engine.md",
+    ".claude/rules/downloads.md",
+    "docs/playbooks/bump-engine/README.md",
+    "docs/playbooks/bump-engine/01-smoke-run.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-08T17:56:53Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-10T06:40:00Z",
+      "event": "handoff_closed",
+      "note": "Closed by mpi-cleanup: MPI-467 is done, so this handoff had nothing left to resume."
+    }
+  ],
+  "resume_prompt": "You are resuming MPI-467. THE GPU MATRIX HAS NOW RUN - that leg is no longer unproven. Result: PASS 25 / FAIL 10 / SKIP 0 of 35 on an L4, with the engine PROVEN at 0.30.0 (gate 7 fired for the first time; it previously read a field /remote/comfy/status has never returned, so it could never fire, and release-health-check then refused the evidence for having no engine.got - the runner and its own gate were deadlocked). BOTH causes of the 10 failures are already FIXED AND COMMITTED: six were real (node_lock pinned MpiNodes sixteen hours before MpiStageLatents existed, so every multi-stage video op died missing_node_type - pin bumped to 43a976fd in both locks), and four were the harness (the runner skipped comfyController section 3b's separator heal - now mirrored, self-checked, mutation-verified). ONE MATRIX RE-RUN produces clean evidence and unblocks 1.4: node scripts/smoke-workflows.mjs --keep-volume --volume aghcuvg7nl, app on :3000 from a dev checkout. Nothing is rented and the volume is FULL, so installs re-verify in about a minute. THE USER WANTS TO BE PRESENT for any GPU run - ask before starting one. WATCH ONE THING at connect: whether the wrapper reinstalls MpiNodes at the new pin on commit drift; start.sh says it does but nobody has seen it, and if the six _ms ops fail identically the drift path is the fault, not the pin. THREE STANDING HAZARDS: never delete volume aghcuvg7nl (the user's YouTube model set lives on it); delete a Pod BEFORE cancelling a download, because cancel-with-a-Pod-attached deletes partials off the volume; and do not trust an exit code through a pipe - tee reported 0 on the run with 10 failures. Also owed: the GPU-image _download_hf rate on controlnet-union-flux sampled every 15s, and MPI-495, the silent style-LoRA drop, which the user asked for next by name.",
+  "archived_at": "2026-08-10T23:05:00Z"
+}

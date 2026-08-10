@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "f0814dde-1f16-4e5a-b226-8ab1278b421d",
+  "role": "implementer",
+  "task": "MPI-4",
+  "status": "active",
+  "claude_session_id": "d0d8d986-76f3-43b8-97c4-70fbb1568276",
+  "started_at": "2026-08-10T18:58:00Z",
+  "heartbeat_at": "2026-08-10T18:58:00Z",
+  "name": "MPI-4 - full-clip V2V Foley workflow on the bench",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "task_record": ".agents/mpi-kanban/state/tasks/119cd99e-d533-414a-81d2-780022678cbc.json",
+  "recent_events": [
+    {
+      "at": "2026-08-10T18:58:00Z",
+      "event": "session_started"
+    }
+  ]
+}
