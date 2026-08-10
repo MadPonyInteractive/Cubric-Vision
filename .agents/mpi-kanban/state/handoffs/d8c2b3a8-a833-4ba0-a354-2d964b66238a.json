@@ -1,0 +1,125 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d8c2b3a8-a833-4ba0-a354-2d964b66238a",
+  "generated_at": "2026-08-10T16:40:00Z",
+  "from_session": ".agents/mpi-kanban/state/handoffs/56669f38-ad54-46c1-80e9-bcac8c3dc666.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "ComfyUI 0.31.0 bump driven end to end - gates 3 through 9 all green, 35/35 smoke on the new engine, release:check passing",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Clear MPI-450's remaining gates so 1.4 can be cut - which became: run the bump playbook for ComfyUI 0.31.0 end to end, then the release chain.",
+    "status": "in_progress",
+    "summary": "THE BUMP IS DONE AND PROVEN. Every gate of docs/playbooks/bump-engine/ is closed: the pins moved, no node broke, the local engine runs 0.31.0 with a green floor check, the Pod DEV image was rebuilt at v0.21.0-dev, the Pod asserted 0.31.0, and the full matrix executed 35 ops with 0 skips and 0 failures. `npm run release:check` PASSES. What remains is the release chain itself - approve, CI artifacts, the Linux leg, /mpi-release - plus the MANDATORY stable Pod image rebuild."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "GATE 3 - four pin values moved, not one: node_lock core v0.30.0 -> v0.31.0 and commit b1693ecb -> 43cb4fff (read off git/ref/tags/v0.31.0, not copied from a note), frontend 1.47.11 -> 1.48.7 and workflow-templates 0.11.27 -> 0.11.34 (read off the tag's own requirements.txt), system_dependencies 0.30.0 -> 0.31.0. python_deps.txt regenerated at the new core constraint: SEVEN COMMENT LINES, ZERO package moves. Core moved four requirement lines total (the two frontend pins, comfy-kitchen 0.2.26 -> 0.2.28, comfy-aimdo 0.4.11 -> 0.4.13) and none is engine-owned, so no user pays a torch reinstall - that fact is now a release-notes line.",
+      "GATE 4 - nothing our nodes call was removed or renamed. The only deletion in the whole core diff is H3's own scale_latent_inpaint OVERRIDE, and KJNodes' consumer (nodes/nodes.py:2809) reads the BaseModel definition, which still exists. samplers.py only ADDS `self.inner_model.latent_shapes`, and MpiNodes' _PreviewWrapper delegates to the original inner_sample rather than reimplementing it, so the new assignment still fires under our preview hook. Only RES4LYF has post-pin commits that smell of core compat, both about nested/AV latents, and our RES4LYF use is ClownsharKSampler_Beta in FOUR IMAGE graphs. Pins stayed.",
+      "TRAP 2 IS DEAD - res_multistep (#15339) does NOT shift the seed->image mapping, so NO release note is owed. Our graphs select the name `res_multistep`, which dispatches to eta=0, where sigma_up == 0 at every step: the old code added exactly zero and advanced a FUNCTION-LOCAL generator (default_noise_sampler builds a fresh torch.Generator whenever seed is not None, which comfy always sets). Proved empirically as well as from source - the installed 0.30.0 module vs the v0.31.0 file exec'd as a sibling, same seed, BIT-IDENTICAL at eta=0 and eta=1, with a sensitivity control. Script kept at scratchpad/res_multistep_rng.py.",
+      "GATE 5 - the engine moved IN PLACE exactly as MPI-457 designed: checkout + four pip lines, no wipe. Verified ON DISK, not from the log: comfyui_version.py 0.31.0, HEAD 43cb4fff, describe v0.31.0, engine/.mpi_engine_version 0.31.0, live /system_stats 0.31.0. FLOOR CHECK GREEN: 40 workflows, 183 class_types, 0 missing (1885 registered, up from 1881). The one boot-log ImportError is pre-existing and by design - KJNodes' PatchTritonVAE wants triton, which compile-node-deps filters out as engine-owned, and no shipped graph uses that node.",
+      "GATE 6 - mpi-ci synced (ce9bcc0, PUSHED, which also carried the older unpushed 0c4ded6) and the DEV image built in run 31395602115: BOTH legs, both pull-verified public, cu130 on Docker Hub and cpu on GHCR. The cu130 log clears the MPI-341 gate on the new core - `node-import smoke test OK`, zero IMPORT FAILED - with post-node torch 2.12.0+cu130 and exactly one opencv. POD_IMAGE_VERSION_DEV and _CPU_DEV moved to v0.21.0-dev; the stable pair is UNTOUCHED at v0.17.0.",
+      "GATE 7/8/9 - Pod asserted `engine: Pod image built from 0.31.0, matches node_lock`, then the full matrix ran: PASS 35 / SKIP 0 / FAIL 0 across 12 models, 1 step, 128px, seed 42. All three H3 ops passed, which ALSO discharges the live H3 generation MPI-517 was blocked on. Evidence at dev_configs/smoke-evidence.json (engine want/got 0.31.0, proven true, 35 rows); transcript at dev_configs/smoke-run.txt. `npm run release:check` PASSES.",
+      "MPI-517's VAE dep verified INDEPENDENTLY rather than taken on their word: commit 66909bcf exists, both ModelDefs resolve vae-minimax-h3-video-int8, no surviving 'vae-minimax-h3-video' reference in models.js, both runtime graphs carry the new filename, and the R2 object answers HTTP 200 with Content-Length 3171670912 matching the dep's bytes exactly. Also checked the planner's arithmetic instead of trusting it: the smoke set unions to 288.0 GiB and would be 289.9 GiB on the old fp16, so the swap really does take 1.9 GiB off the volume.",
+      "TWO RUNNER DEFECTS FOUND AND FIXED, both by this run, both mutation-verified. (a) A refused GPU create killed the run: app() throws on any non-2xx, so createPodWithRetry's `if (made && made.error)` branch - written for exactly this - was UNREACHABLE for an HTTP error, and a 502 flew past the retry loop AFTER the ~300GB fill leg had completed and the CPU Pod was deleted. It now catches the refusal, advances to the next card in GPU_ORDER, and does NOT spend a billed attempt because nothing was rented. tests/smoke-gpu-fallback.test.cjs, 6 tests, and run 3 vindicated it live: L4 refused -> 3090 refused -> 4090 took it. (b) The evidence recorded the card we first ASKED for, so after a fallback it named hardware the run never touched; it now records the card actually used, and podVramGb sizes the hot store from the same value.",
+      "H3 SMOKES AT ~4x ITS NECESSARY COST, now fixed for the NEXT run. FAST_TIER gated only on `turboToggle`, but H3 declares `h3TurboToggle` (MPI-505 named it separately), so the table matched NOTHING for H3 and the graph's baked Input_is_Turbo:false stood - all three H3 ops ran the slow path at 120-124s against 4-34s elsewhere, on every matrix since H3 landed. Same failure as the krea2 one the comment above FAST_TIER already records. H3 also carries NO Input_Steps node, so the turbo LoRA is its only step lever, which is what makes that one line the whole saving. Resolution was never the problem: snapDown already took 864x480 to 128x128.",
+      "A FALSE CLAIM CAUGHT BY release:deps AND CORRECTED IN ALL THREE COPIES: the notes said 'Three files still have a single route - the three small preview decoders'. The checker reports NINE. Six more simply have no mirror (both H3 transformers, both H3 VAEs, h3-qwen3vl-32b-clip, controlnet-union-flux). Verified each in dependencies.js before editing rather than trusting the tool, then rewrote the sentence to name the SHAPE instead of a count, because the count moves with every dep change.",
+      "MY OWN H3 VAE RELEASE NOTE WAS WRONG AND MPI-517 REMOVED IT - correctly. I verified their argument from git before accepting: H3 appears in NO release-notes block before 1.4.0 and the newest published release is 1.3.1, so H3 SHIPS FOR THE FIRST TIME here. Nobody has it installed, nobody holds the 5.2GB file, and '3.2GB instead of 5.2GB' compares against a build that never shipped. They removed it from releaseNotes.js; I removed the same false text from UNRELEASED.md, which they correctly did not touch, and left a comment there so it is not re-added.",
+      "RELEASE NOTES: engineNote rewritten for 0.31.0 - three lines now (the version plus the small-install fact, the H3 AND LTX/Wan speedup, and the sweep with its real op count restored from the evidence). Archival note docs/releases/2026-08-10-v1.4.0.md WRITTEN, rendered from RELEASE_NOTES by script rather than hand-copying 67 bullets. Both release-health-check doc complaints are gone.",
+      "PRE-RELEASE CHECKS GREEN on the bumped tree: npm test 540/540, npm run test:desktop 17/17, npm run release:deps 227/227 URLs reachable, npm run release:check PASSING."
+    ],
+    "pending": [
+      "APPROVE LAST, then the rest of the chain: `npm run release:approve -- --yes` writes .approved-1.4.0.json and HASHES THE RENDERED NOTES, so any later copy edit re-blocks the build. Commit the approval file. Do it only when the notes are final.",
+      "THE STABLE POD IMAGE REBUILD IS MANDATORY AND IS A SECOND BUILD. Ship the app at 0.31.0 while the released image is still v0.17.0 (ComfyUI 0.30.0) and every remote user silently runs two different ComfyUI versions. Promotion is a CLEAN REBUILD at a real version, never a dev tag renamed, so there is no const to promote - POD_IMAGE_VERSION and POD_IMAGE_VERSION_CPU are a manual edit. mpi-release's 'a dev-only Pod IMAGE tag needs no action' is explicitly untrue for an engine bump.",
+      "CI artifacts on all three OS, then MPI-249's Linux leg against the REAL CubricVision-linux-x64-v1.4.0.tar.gz (it cannot precede the bump - it needs the artifact), then /mpi-release with PROMOTE at the manifest stop.",
+      "RE-RUN THE FOUR CHECKS after any further edit (release:check, npm test, test:desktop, release:deps) - and remember approve is last.",
+      "OPTIONAL BUT CHEAP: re-run the matrix (or just --models minimax-h3,minimax-h3-ref2va) now that FAST_TIER covers h3TurboToggle, to bank the faster H3 legs and produce an evidence file whose `gpu` field is correct. NOT required - the committed evidence is valid and PASSES release:check; its gpu field says L4 while the run was on an RTX 4090, and dev_configs/smoke-run.txt beside it carries the `switching to RTX 4090` lines that prove which card ran. Fabio's call.",
+      "TWO INFRASTRUCTURE FINDINGS WORTH CARDING (recorded in the checklist, deliberately not carded mid-session). (1) GPU_ORDER's comment 'cheapest-first by measured availability' is stale: three runs in a row, L4 refuses and RTX 3090 refuses and only the 4090 takes it, because our own MIN_RAM_GB = 48 excludes those host classes in EU-RO-1. Do NOT fix it by lowering the floor blind - it exists because weights spill to system RAM on a 24GB card. (2) The volume-fit gate is silently disabled on every run: `volume: free space UNKNOWN (no /wrapper/disk)`. The route WORKS - probed live against the GPU Pod, success:true, used 330449383936 of 450000000000 - so it fails only in the CPU-download-Pod leg, which is the one moment the runner asks. Prime suspect is a readiness race: createPodWithRetry waits on /remote/comfy/status .ready, which on a -cpu Pod says nothing about the volume being mounted.",
+      "TWO DOC PROPOSALS RAISED BUT NOT APPLIED (they need Fabio's per-file approval). (1) docs/playbooks/bump-engine/README.md gate 6 should say that moving POD_IMAGE_VERSION_DEV requires an APP RESTART before the smoke - routes/ bakes at Express-child boot, and this cost a GPU rental today: the fill ran, the Pod came up, gate 7 refused with 'Pod image was built from ComfyUI 0.30.0'. (2) docs/playbooks/bump-engine/01-smoke-run.md should say that EVERY smoke-workflows.mjs invocation rewrites dev_configs/smoke-run.txt, --plan included, so the transcript needs backing up AFTER a real run too - I truncated the real one with a later --plan and had to recover it from the run's stdout.",
+      "state/index.json still lists 10 stale pending_file_states from earlier sessions whose files are long committed. Cleanup for mpi-cleanup, not work."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-450",
+    "title": "1.4 release readiness umbrella - clear the gates before cutting 1.4.0",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-450/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-450/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "knowledge_preservation": {
+    "completed": [
+      "tasks/MPI-450/checklist.md - every gate ticked with its evidence, the two settled traps, the run-1 GPU-refusal post-mortem, and the two infrastructure findings with their probe results.",
+      "Memory tool_electron_launch_run_as_node.md + its MEMORY.md index hook - the agent profile has NO RunPod key so a smoke matrix must drive an app on the DEFAULT profile; npm start from a sandboxed shell dies at app.getPath until ELECTRON_RUN_AS_NODE is unset; and a routes/ pin edit needs that app RESTARTED or gate 7 refuses AFTER the rental.",
+      "The whole MPI-450 <-> MPI-517 message thread resolved with outcomes recorded on each message."
+    ],
+    "pending": [
+      "The two doc proposals above are UNAPPLIED and need per-file approval.",
+      "Everything else is committed. The working tree carries ONLY peer work - tasks/MPI-504 and comfy_workflows/** - plus the untracked state/hooks/. Do not commit those."
+    ]
+  },
+  "next_action": {
+    "description": "Decide with Fabio whether to re-run the (now much cheaper) H3 smoke legs, then work the release chain: the MANDATORY stable Pod image rebuild, `npm run release:approve -- --yes` LAST, CI artifacts on all three OS, MPI-249's Linux leg on the real 1.4.0 tarball, and /mpi-release with PROMOTE at the manifest stop.",
+    "command": "mpi-continue MPI-450"
+  },
+  "context": {
+    "key_decisions": [
+      "FABIO'S CALL: ComfyUI 0.31.0 goes into 1.4, taken after the notes were already folded. Proceeded and it is now green.",
+      "A refused Pod create must not spend a billed attempt. Nothing was rented, so conflating refusals with boot failures would burn the two-attempt budget on creates that never existed. Refusals are capped separately at GPU_ORDER.length so a sold-out datacenter still terminates.",
+      "The committed evidence file was NOT hand-corrected. Its `gpu` scalar says L4 for a run that executed on a 4090 - the code is fixed so it can never recur, and the transcript beside it proves which card ran. Editing a machine-written evidence artifact by hand is exactly the habit that makes evidence worthless, so the discrepancy is recorded instead.",
+      "The H3 release-note removal was ACCEPTED after independent verification, not deferred to. A peer's reasoning is evidence, not truth - but theirs held up against git, and mine was the wrong claim.",
+      "MPI-517 closed on this matrix's evidence for its live H3 generation, since Fabio's no-local-generations rule blocked their own run."
+    ],
+    "constraints": [
+      "POST /runpod/pods IS createPod AND RENTS A GPU - use GET /runpod/pods. A PreToolUse hook blocks it from Bash.",
+      "NEVER delete or shrink volume aghcuvg7nl (cubric-smoke, 450GB, EU-RO-1). Always --keep-volume --volume aghcuvg7nl. It now holds ~330GB.",
+      "EVERY smoke-workflows.mjs invocation truncates dev_configs/smoke-run.txt, --plan INCLUDED. Back it up before AND after a real run.",
+      "ROUTES DO NOT HOT-RELOAD. A routes/ edit does not exist until the app is restarted - and the app that matters is the one on the DEFAULT profile, because the agent profile has no RunPod key.",
+      "_sweepOrphanPods kills stray cubric-vision Pods before EVERY create, so spinning any Pod while a smoke matrix is live would delete the running smoke Pod.",
+      "THE TREE IS SHARED with a live peer session. Commit by explicit pathspec only; board.json and events.jsonl are CO-OWNED. NEVER git checkout -- / restore / stash / reset --hard / clean.",
+      "BASH: heredocs are hook-blocked - write a .py with the Write tool and run it by path. Python printing non-ASCII to this console dies on cp1252; write the file, then verify with an ascii-safe read.",
+      "Fabio's standing rule: no numeric claims in user-facing copy unless a committed artifact backs them."
+    ],
+    "files_modified": [
+      "ALL COMMITTED across 89ac23ae, 0ead87b7, 94055cce, dedceb4a, d5e96b7f, e5ef6c66, 21d61f69 (plus mpi-ci ce9bcc0, pushed). Read `git log --stat` rather than re-deriving.",
+      "dev_configs/node_lock.json + system_dependencies.json + python_deps.txt - the three-pin bump",
+      "dev_configs/smoke-evidence.json + smoke-run.txt - the 35/35 run on 0.31.0",
+      "scripts/smoke-workflows.mjs - GPU refusal fallback, selectGpu export, activeGpu in the evidence, h3TurboToggle in FAST_TIER",
+      "tests/smoke-gpu-fallback.test.cjs - NEW, 6 tests",
+      "routes/remotePodLifecycle.js - POD_IMAGE_VERSION_DEV/_CPU_DEV -> v0.21.0-dev",
+      "js/data/releaseNotes.js + docs/releases/UNRELEASED.md + docs/releases/2026-08-10-v1.4.0.md",
+      ".agents/mpi-kanban/tasks/MPI-450/checklist.md + files.json, state/messages/*, state/index.json"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+      "docs/playbooks/bump-engine/README.md",
+      "dev_configs/smoke-evidence.json"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["release", "versioning", "comfy engine", "runpod", "release notes", "linux"]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/versioning.md",
+    ".claude/rules/comfy_engine.md",
+    "docs/playbooks/bump-engine/README.md",
+    "docs/runpod-remote-engine.md"
+  ],
+  "recent_events": [{ "at": "2026-08-10T16:40:00Z", "event": "handoff_created" }],
+  "resume_prompt": "You are resuming MPI-450, the 1.4 release umbrella, on master. Read .agents/mpi-kanban/state/handoffs/d8c2b3a8-a833-4ba0-a354-2d964b66238a.json and then tasks/MPI-450/checklist.md. THE COMFYUI 0.31.0 BUMP IS DONE AND PROVEN - every gate of docs/playbooks/bump-engine/ is closed, the local engine runs 0.31.0 with a green 183/183 floor check, the DEV Pod image is rebuilt at v0.21.0-dev, the Pod asserted 0.31.0, the full matrix executed 35 ops with 0 skips and 0 failures including all three H3 ops, and `npm run release:check` PASSES. Do not redo any of it. What remains is the release chain: the MANDATORY stable Pod image rebuild (an engine bump makes it compulsory - ship the app at 0.31.0 while the released image is still v0.17.0/0.30.0 and every remote user silently runs two ComfyUI versions; promotion is a clean rebuild at a real version, never a dev tag renamed), then `npm run release:approve -- --yes` LAST because it hashes the rendered notes and any later copy edit re-blocks the build, then CI artifacts on all three OS, MPI-249's Linux leg on the real 1.4.0 tarball, and /mpi-release with PROMOTE at the manifest stop. Four things will cost you time if you miss them: every smoke-workflows.mjs invocation truncates dev_configs/smoke-run.txt including --plan; routes/ does not hot-reload so a pin edit needs an app restart before it exists, and the app that matters is the one on the DEFAULT profile because the agent profile has no RunPod key; the committed evidence's `gpu` field says L4 for a run that actually used an RTX 4090 (the code is fixed, the transcript proves the card, and it was deliberately not hand-edited); and the tree is shared with a live peer, so commit by explicit pathspec and never run destructive git."
+}
