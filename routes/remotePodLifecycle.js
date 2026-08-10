@@ -936,16 +936,26 @@ async function _afterPodCreated(key, podId, token, noGpu, { wait, timeoutMs }) {
 // null to reap EVERYTHING (pre-create sweep, before a new Pod exists). The tracked
 // ids (_startedPodId/_mode.podId) are also spared. Best-effort: one delete failing
 // never aborts the rest or the caller. Returns the deleted podIds.
-async function _sweepOrphanPods(key, keepPodId) {
-  const keep = new Set([keepPodId, _startedPodId, _mode.podId].filter(Boolean).map(String));
+async function _sweepOrphanPods(key, keepPodId, { all = false, keepTracked = true } = {}) {
+  // keepTracked=false is what makes a FULL stop possible: the tracked ids are spared
+  // unconditionally otherwise, so passing keepPodId=null alone would still leave the
+  // active Pod running and the caller would think it had cleared everything.
+  const keep = new Set(
+    (keepTracked ? [keepPodId, _startedPodId, _mode.podId] : [keepPodId]).filter(Boolean).map(String)
+  );
   let reaped = [];
   try {
     const listed = await client.listPods(key);
     const pods = Array.isArray(listed.json)
       ? listed.json
       : (listed.json && (listed.json.pods || listed.json.data)) || [];
+    // `all` drops the name filter. The filter is right for the AUTOMATIC sweep — it runs
+    // unattended, and MPI-485 already proved a name match can reap a peer session's live
+    // Pod. But it also means a Pod this app did not name is unreapable, which on
+    // 2026-08-10 left stray Pods billing with no way to clear them from here. So `all` is
+    // opt-in, never the default, and never automatic: a caller must ask for it explicitly.
     const orphans = pods.filter(
-      (p) => p && p.name === 'cubric-vision' && !keep.has(String(p.id))
+      (p) => p && (all || p.name === 'cubric-vision') && !keep.has(String(p.id))
     );
     for (const p of orphans) {
       try {
@@ -1634,12 +1644,20 @@ router.get('/remote/pod/ls', async (req, res) => {
 
 // Reap stranded stopped 'cubric-vision' Pods (Step 4.3.3). Settings "clean up old
 // Pods" action / Connect-time call. Keeps the currently-tracked Pod.
+// `{ all: true }` reaps EVERY Pod on the account except the tracked one — the escape hatch
+// for a Pod this app did not name and therefore cannot recognise as its own. It is opt-in
+// because it is indiscriminate: on an account that also runs non-Cubric Pods it would take
+// those too. Pair it with GET /runpod/pods, which is how you find out what you are about to
+// delete; `keepActive: false` additionally drops the tracked Pod, for a true full stop.
 router.post('/remote/pod/cleanup-orphans', async (req, res) => {
   try {
+    const { all = false, keepActive = true } = req.body || {};
     const key = await getRunPodApiKey();
     if (!key) return res.json({ reaped: [], reason: 'no_api_key' });
-    const reaped = await _sweepOrphanPods(key, _startedPodId || _mode.podId);
-    res.json({ reaped });
+    const reaped = await _sweepOrphanPods(key, keepActive ? (_startedPodId || _mode.podId) : null,
+      { all, keepTracked: keepActive });
+    if (all) logger.warn('runpod', `cleanup-orphans ran in ALL mode — reaped ${reaped.length} Pod(s)`);
+    res.json({ reaped, all, keepActive });
   } catch (err) {
     logger.error('runpod', 'pod cleanup-orphans failed', err);
     res.json({ reaped: [], reason: 'error' });

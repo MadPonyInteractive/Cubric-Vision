@@ -311,6 +311,23 @@ router.delete('/runpod/pods/:id', (req, res) =>
     res.status(r.ok ? 200 : r.status).json(r.json);
   }));
 
+// READ-ONLY inventory of every Pod on the account. `client.listPods` already existed but
+// was reachable only from inside the orphan sweep, so nothing could ANSWER "what is running
+// right now" — and the only `/runpod/pods` verb was POST, which CREATES. On 2026-08-10 that
+// gap cost real money: an agent looking for a list called the create endpoint, made stray
+// Pods, and then could not delete them because it had no way to learn their ids. Deleting
+// needs seeing first; this is the seeing half.
+router.get('/runpod/pods', (req, res) =>
+  _withKey(res, async (key) => {
+    const r = await client.listPods(key);
+    const pods = Array.isArray(r.json) ? r.json : (r.json && (r.json.pods || r.json.data)) || [];
+    res.status(r.ok ? 200 : r.status).json({
+      count: pods.length,
+      costPerHrTotal: pods.reduce((sum, p) => sum + (Number(p.costPerHr) || 0), 0),
+      pods: pods.map((p) => sanitizePodJson(p)),
+    });
+  }));
+
 router.get('/runpod/pods/:id', (req, res) =>
   _withKey(res, async (key) => {
     const r = await client.getPod(key, req.params.id);
