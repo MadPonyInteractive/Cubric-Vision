@@ -4,7 +4,7 @@
   "generated_at": "2026-08-08T20:34:27Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "MPI-467 second GPU matrix - 33/35, engine proven, two failures left",
     "branch": "master"
@@ -124,6 +124,11 @@
     {
       "at": "2026-08-08T20:34:27Z",
       "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-10T06:40:00Z",
+      "event": "handoff_closed",
+      "note": "Closed by mpi-cleanup: MPI-467 is done, so this handoff had nothing left to resume."
     }
   ],
   "resume_prompt": "You are resuming MPI-467. THE SECOND GPU MATRIX IS DONE: PASS 33 / SKIP 0 / FAIL 2 of 35 on an L4, engine PROVEN 0.30.0, committed in 5dd1e4ee. release:check now accepts the evidence on every dimension EXCEPT the two failures, so the gate-7 deadlock is gone. All four separator failures pass and five of the six missing_node_type ops pass - which OBSERVED, for the first time, the wrapper reinstalling MpiNodes at the pinned commit on commit drift, closing that question. YOUR FIRST TASK, NAMED BY THE USER: diagnose minimax-h3/t2v_ms. It is the only op that has NEVER passed - 0 for 2, for two different reasons: missing_node_type last matrix, and this matrix its prompt was orphaned when ComfyUI restarted Pod-side at about 19:55Z. Its sibling i2v_ms PASSED at 260s on the SAME Pod and model, and the workflow runs on the user's own machine, so an OOM theory was raised and WITHDRAWN - do not resurrect it. The cause is in Pod stdout just BEFORE the node-reload sequence, not in app.log. THE USER WILL CONNECT THE POD HIMSELF and may test locally first - do NOT create a Pod without asking, and never delete volume aghcuvg7nl (his YouTube model set). SECOND: the MPI-498 session asked you to extend gate 8 from class EXISTENCE to required INPUTS, and their trap is load-bearing - about 120 Mpi* nodes build INPUT_TYPES programmatically, so an AST parse silently reports 0 holes for most first-party nodes; gate 8 must EXECUTE INPUT_TYPES at the pinned commit or read /object_info. THIRD: one FULL matrix for clean evidence (a --models run overwrites the file and discards the 33 passes), with Stage all models on connect turned back ON - this matrix ran entirely on cold volume reads because the runner never staged, now fixed. STANDING HAZARD: no other session may create a Pod while a matrix runs - the orphan sweep deletes by NAME and killed a live Pod mid-generation today, costing a full matrix."

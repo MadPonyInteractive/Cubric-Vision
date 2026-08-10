@@ -4,7 +4,7 @@
   "generated_at": "2026-08-09T10:10:00Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "H3 turbo LoRA bench + acceleration research (SolAttn / SageAttention / EasyCache)",
     "branch": "master"
@@ -126,6 +126,11 @@
     {
       "at": "2026-08-09T10:10:00Z",
       "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-10T06:40:00Z",
+      "event": "handoff_closed",
+      "note": "Closed by mpi-cleanup: MPI-505 is done, so this handoff had nothing left to resume."
     }
   ],
   "resume_prompt": "You are picking up MPI-505, the MiniMax H3 Turbo LoRA. Read .agents/mpi-kanban/state/handoffs/1353f4e0-6124-4255-8cda-50a1ab463997.json and .agents/mpi-kanban/tasks/MPI-505/brief.md first. The bench work is done and committed (2b2df03f): both raw H3 templates carry the turbo wiring, and the 620MB EMA weight is staged and verified on R2. Turbo takes H3 from 20 steps to 8, measured 204s -> 96s at 864x480 warm, and the user has accepted it as an opt-in quality trade. Your next action is to run `node scripts/sync-raw-workflows.mjs` to regenerate the API templates and runtime files from those raw graphs - convert against port 48188, the engine, NOT the 8188 bench - then confirm 0 missing-required and 0 dangling, then add the minimax-h3-turbo-lora entry to js/data/modelConstants/loraDeps.js using the ready-made snippet in the brief. After that comes the app-side control: a sibling h3Turbo entry in PromptBoxControls.js (never a reuse of krea2Turbo), the h3TurboToggle capability on both H3 cards in models.js, and the BAKED_WIDGETS entries in generate_h3.py. One measurement still gates a decision: the 204.02s two-stage baseline is n=1, and it alone decides whether the single-pass path ships or gets dropped entirely - re-run it before touching progressStages.js. Do not touch LTX or WAN; the brief explains why they are out of scope."

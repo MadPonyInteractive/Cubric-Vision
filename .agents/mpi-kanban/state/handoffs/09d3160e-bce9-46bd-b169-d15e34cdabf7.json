@@ -4,7 +4,7 @@
   "generated_at": "2026-08-09T22:02:27Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "MPI-508 - H3 turbo LoRA swap + real sampling previews for H3 and LTX",
     "branch": "master"
@@ -51,7 +51,14 @@
       "handoffs": ".agents/mpi-kanban/tasks/MPI-508/handoffs/"
     }
   },
-  "allowed_actions": ["read", "continue", "verify", "implement", "commit", "push"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement",
+    "commit",
+    "push"
+  ],
   "knowledge_preservation": {
     "completed": [
       "docs/preview-bus.md gained a new section, 'The second kind of decoder - node-read, model-owned, NOT an engineAsset', because the existing table would otherwise make the two new deps look like inconsistent mistakes",
@@ -115,7 +122,13 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "scalable-foundation",
-    "relevant_topics": ["comfy_engine", "comfy_injection", "workflow-authoring", "models", "preview-bus"]
+    "relevant_topics": [
+      "comfy_engine",
+      "comfy_injection",
+      "workflow-authoring",
+      "models",
+      "preview-bus"
+    ]
   },
   "rules_active": [
     ".claude/rules/comfy_engine.md",
@@ -124,6 +137,16 @@
     "docs/preview-bus.md",
     "docs/models/h3/turbo.md"
   ],
-  "recent_events": [{ "at": "2026-08-09T22:02:27Z", "event": "handoff_created" }],
+  "recent_events": [
+    {
+      "at": "2026-08-09T22:02:27Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-10T06:40:00Z",
+      "event": "handoff_closed",
+      "note": "Closed by mpi-cleanup: MPI-508 is done, so this handoff had nothing left to resume."
+    }
+  ],
   "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/09d3160e-bce9-46bd-b169-d15e34cdabf7.json and use mpi-continue to pick up MPI-508. MiniMax H3 is currently BROKEN in the app on purpose-ish: the turbo LoRA was swapped to lightx2v (6 steps, strength 0.75) and the old weight is deleted from R2, but the runtime API graphs still name it, so the engine rejects every H3 prompt with value_not_in_list. The raw exports are committed and correct - only the conversion is missing, and it is blocked because sync-raw-workflows refuses while another session's 7 uncommitted NVIDIA PiD files sit in comfy_workflows/ and comfy_workflows/scripts/workflow_generation/. Once their owner commits or removes them, run COMFY_URL=http://127.0.0.1:48188 node scripts/sync-raw-workflows.mjs against the ENGINE on 48188, never the bench on 8188. After that, prove the brand-new ComfyUi-MpiNodes node MpiVideoSamplingPreview with one real H3 generation - it has never run, and it swallows its own errors, so a failure looks like previews simply not appearing plus one line in the ComfyUI console. Only once it is proven should you push ComfyUi-MpiNodes (committed locally as 6ae7395) and pin that commit in dev_configs/node_lock.json."
 }

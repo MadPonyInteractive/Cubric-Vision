@@ -73,3 +73,7 @@ project-paths.json
 
 # impeccable skill scratch output
 .impeccable/
+
+# Python bytecode — repo scripts and kanban card scripts are run in place
+__pycache__/
+*.pyc

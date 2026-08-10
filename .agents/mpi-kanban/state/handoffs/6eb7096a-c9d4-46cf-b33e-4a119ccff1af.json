@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "6eb7096a-c9d4-46cf-b33e-4a119ccff1af",
   "generated_at": "2026-08-08T17:56:53Z",
-  "status": "open",
+  "status": "closed",
   "from_session": "MPI-467 - the GPU leg finally EXECUTED; both causes of its 10 failures are fixed, evidence re-run pending",
   "to_role": "implementer",
   "session": {
@@ -121,6 +121,11 @@
     {
       "at": "2026-08-08T17:56:53Z",
       "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-10T06:40:00Z",
+      "event": "handoff_closed",
+      "note": "Closed by mpi-cleanup: MPI-467 is done, so this handoff had nothing left to resume."
     }
   ],
   "resume_prompt": "You are resuming MPI-467. THE GPU MATRIX HAS NOW RUN - that leg is no longer unproven. Result: PASS 25 / FAIL 10 / SKIP 0 of 35 on an L4, with the engine PROVEN at 0.30.0 (gate 7 fired for the first time; it previously read a field /remote/comfy/status has never returned, so it could never fire, and release-health-check then refused the evidence for having no engine.got - the runner and its own gate were deadlocked). BOTH causes of the 10 failures are already FIXED AND COMMITTED: six were real (node_lock pinned MpiNodes sixteen hours before MpiStageLatents existed, so every multi-stage video op died missing_node_type - pin bumped to 43a976fd in both locks), and four were the harness (the runner skipped comfyController section 3b's separator heal - now mirrored, self-checked, mutation-verified). ONE MATRIX RE-RUN produces clean evidence and unblocks 1.4: node scripts/smoke-workflows.mjs --keep-volume --volume aghcuvg7nl, app on :3000 from a dev checkout. Nothing is rented and the volume is FULL, so installs re-verify in about a minute. THE USER WANTS TO BE PRESENT for any GPU run - ask before starting one. WATCH ONE THING at connect: whether the wrapper reinstalls MpiNodes at the new pin on commit drift; start.sh says it does but nobody has seen it, and if the six _ms ops fail identically the drift path is the fault, not the pin. THREE STANDING HAZARDS: never delete volume aghcuvg7nl (the user's YouTube model set lives on it); delete a Pod BEFORE cancelling a download, because cancel-with-a-Pod-attached deletes partials off the volume; and do not trust an exit code through a pipe - tee reported 0 on the run with 10 failures. Also owed: the GPU-image _download_hf rate on controlnet-union-flux sampled every 15s, and MPI-495, the silent style-LoRA drop, which the user asked for next by name."

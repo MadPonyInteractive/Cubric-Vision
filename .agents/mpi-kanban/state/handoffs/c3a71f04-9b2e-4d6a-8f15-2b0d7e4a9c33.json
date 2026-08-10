@@ -4,7 +4,7 @@
   "generated_at": "2026-08-08T05:00:00Z",
   "from_session": "Four levers tested and four killed on evidence; H3 shipped a conditional 5-step stage 1, a 4K tier and its docs; the board went from 19 cards in doing to 5",
   "to_role": "implementer",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "H3 performance hunt that produced four negatives, plus a board and rules clean-up",
     "branch": "master"
@@ -132,6 +132,11 @@
     {
       "at": "2026-08-08T05:00:00Z",
       "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-10T06:40:00Z",
+      "event": "handoff_closed",
+      "note": "Closed by mpi-cleanup: MPI-467 is done, so this handoff had nothing left to resume."
     }
   ],
   "resume_prompt": "You are resuming to ship Cubric Vision 1.4, and the path is short because ONE thing blocks it. `npm run release:check` fails on exactly one line: the engine pin moved 0.29.2 -> 0.30.0 with no dev_configs/smoke-evidence.json. Nothing else in the repo stands in the way. Do NOT go straight to the smoke run - `node scripts/smoke-workflows.mjs --plan` (free, spends nothing) reports a prerequisite: the POD LOCK IS BEHIND on python_deps.txt, and the Pod image bakes nodes from those files, so smoking now would measure the OLD engine. So: (1) copy dev_configs/node_lock.json + python_deps.txt into c:/AI/Mpi/mpi-ci/cubric-vision-pod/ and commit there with git -C; (2) build-pod-image, DEV TAG ONLY - never the user-facing image for a bump in flight; (3) /mpi-bump-engine for the smoke run itself, 12 models / 35 ops / 300.5 GB / 350 GB volume at 1 step, 128px, 1 frame, seed 42; (4) close MPI-465, 466, 467 and 468 on that evidence, since all four are the same chain; (5) /mpi-version-bump then /mpi-release. The board is CLEAN - doing went from 19 cards to 5 last session, and the four still there besides MPI-367 are that same engine chain. THE PREVIOUS SESSION'S MAIN OUTPUT WAS FOUR DEAD ENDS AND YOU MUST NOT RE-RUN ANY OF THEM: --lowvram is inert under aimdo (proven in model_management.py AND measured, 7m05 vs 7m12/7m22/7m23), the beta scheduler shows no reproducible speed difference and loses on AUDIO, moving the sigma split alone saves nothing because both stages cost the same per step, and the latent hi-res fix died the session before. Each is written up where you will hit it. Two H3 rules worth holding: judge every sampler change by EAR as well as eye, because video and audio come out of one joint latent; and never time anything on a 1-second clip, because fixed overhead that is 2.5% of a 7-minute run is 18% of a 141s one - that is how a phantom 16% scheduler win appeared and then evaporated. Do not chase VRAM readings either: residency is whatever is LEFT OVER after the latent estimate, so a smaller canvas shows MORE weights resident. Measure s/it."

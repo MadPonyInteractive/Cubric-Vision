@@ -4,27 +4,27 @@
   "generated_at": "2026-08-07T06:15:00Z",
   "from_session": null,
   "to_role": "verifier",
-  "status": "open",
+  "status": "closed",
   "session": {
-    "name": "MPI-466 — LTX validated through the app (t2v + preview + Continue). Three latent defects fixed on the way; the three i2v routes are all that remain",
+    "name": "MPI-466 \u2014 LTX validated through the app (t2v + preview + Continue). Three latent defects fixed on the way; the three i2v routes are all that remain",
     "branch": "master"
   },
   "goal": {
     "original": "Start the app so its engine drift-repairs KJNodes, then run an LTX t2v on the balanced (int8) tier and read the dispatched graph off /queue to confirm every Input_* landed.",
     "status": "in_progress",
-    "summary": "Done and then some. LTX 2.3 Balanced (int8) now generates end to end through the app — t2v, preview, and preview->Continue all pass with evidence read off the engine, which also closes MPI-465. Getting there required fixing THREE defects that were not in the LTX re-wire at all, two of them fleet-wide. What remains is the three i2v routes (start-only, end-only, start+end), and the end-only route only became reachable at the very end of this session, so it has never run once."
+    "summary": "Done and then some. LTX 2.3 Balanced (int8) now generates end to end through the app \u2014 t2v, preview, and preview->Continue all pass with evidence read off the engine, which also closes MPI-465. Getting there required fixing THREE defects that were not in the LTX re-wire at all, two of them fleet-wide. What remains is the three i2v routes (start-only, end-only, start+end), and the end-only route only became reachable at the very end of this session, so it has never run once."
   },
   "plan": {
     "file": null,
     "completed": [
-      "KJNodes prerequisite was ALREADY MET — marker 35e5956 + _unwrap_upscale_model present, both stamped 02:50:44 by an earlier boot the previous handoff did not know about. The drift check was a no-op this boot",
+      "KJNodes prerequisite was ALREADY MET \u2014 marker 35e5956 + _unwrap_upscale_model present, both stamped 02:50:44 by an earlier boot the previous handoff did not know about. The drift check was a no-op this boot",
       "LTX t2v FULL run passes: /history 43716088 status success, node 457 Output_Video -> MpiVideo_00001.mp4, node 568 -> latents/mpi_stage1.latent. 22/22 Input_/Output_ titles landed with correct values, 126 dispatched == 126 shipped, no LoadLatent, unet = the int8 file",
-      "PREVIEW passes: 3871ae93 with is_preview true wrote node 470 Output_Preview (not 457). This retires the Preview_Only question — the flag reaches the graph via Video_Latent.is_preview",
-      "CONTINUE passes: d3f52077 with is_continue true, load_path = the staged per-preview UUID latent (c801904d-....latent) not the ComfyUI_00001_ default, and NO 568:latents emitted — the lazy save gate fires. Two-stage handshake works in ONE file, no _stage2 twin, no LoadLatent",
+      "PREVIEW passes: 3871ae93 with is_preview true wrote node 470 Output_Preview (not 457). This retires the Preview_Only question \u2014 the flag reaches the graph via Video_Latent.is_preview",
+      "CONTINUE passes: d3f52077 with is_continue true, load_path = the staged per-preview UUID latent (c801904d-....latent) not the ComfyUI_00001_ default, and NO 568:latents emitted \u2014 the lazy save gate fires. Two-stage handshake works in ONE file, no _stage2 twin, no LoadLatent",
       "PROGRESS_STAGES re-measured per mode off each run's own /history execution window: single 3, preview 2, stage2 1 -> 3. Only stage2 moved. tests/output-prompt-capture.test.cjs probe updated with it",
       "BUG 1 FIXED (user's graph): muted reroutes severed VAEDecode.samples, LTXVAudioVAEDecode.samples and both CFGGuider.model -> every output ignored, 0.07s 'success', no video. MUTE severs a link; BYPASS passes it through by type",
       "BUG 2 FIXED (scripts/workflow-to-api.mjs): a V3 union widget type ('FLOAT,INT') was classified as a SOCKET, so it emitted nothing AND consumed no positional value, shifting every later widget by one. Plus a post-conversion gate that checks every node against the same /object_info it converted with",
-      "BUG 3 FIXED (js/services/comfyController.js): _inject overwrote the WIRED MpiStageLatents.latent with the load filename -> TypeError after four minutes of sampling. Guarded on both injection paths. FLEET-WIDE — H3 and WAN carry the same node. Pinned by tests/inject-never-clobbers-link.test.cjs",
+      "BUG 3 FIXED (js/services/comfyController.js): _inject overwrote the WIRED MpiStageLatents.latent with the load filename -> TypeError after four minutes of sampling. Guarded on both injection paths. FLEET-WIDE \u2014 H3 and WAN carry the same node. Pinned by tests/inject-never-clobbers-link.test.cjs",
       "END-FRAME-ONLY ROUTE UNBLOCKED (three changes): user re-exported H3 + WAN with start.block_if_empty false; the undeliverable endFrame slot was dropped from single-stage i2v; the stranded-slot bail became per-media-type; and the PromptBox gained a frame-role pill",
       "R2 upload finished and verified: HTTP 200, Content-Length 21505993424, byte-exact to the local file and the pinned sha256",
       "Docs healed with user approval: comfy_injection.md (never clobber a wired link), media-inputs.md (mute vs bypass, block_if_empty law), workflow-authoring/README.md (union-widget trap, conversion gate, COMFY_URL=48188), component-contracts.md (the pill). Memory tool_comfy_schema_gate_before_workflow_sync updated",
@@ -32,11 +32,11 @@
     ],
     "pending": [
       "THE WHOLE REMAINING SCOPE IS THREE i2v ROUTES, proved BY THEIR OUTPUT and not by the run completing: start-only, end-only, start+end. t2v is already proved",
-      "END-ONLY HAS NEVER RUN. It was unreachable from the app until the last hour of this session, so it is the one with real risk. HARD RELOAD (Ctrl+Shift+R) before testing — the pill is renderer-side",
-      "The bf16 High tier stays unexercised — the 41GB weight is not on this machine and there is no room. Both tiers share ONE generated graph and differ only in the baked unet_name, so verifying balanced verifies the graph; only the weight is untested",
+      "END-ONLY HAS NEVER RUN. It was unreachable from the app until the last hour of this session, so it is the one with real risk. HARD RELOAD (Ctrl+Shift+R) before testing \u2014 the pill is renderer-side",
+      "The bf16 High tier stays unexercised \u2014 the 41GB weight is not on this machine and there is no room. Both tiers share ONE generated graph and differ only in the baked unet_name, so verifying balanced verifies the graph; only the weight is untested",
       "The last-frame pill has NO changelog entry yet, deliberately. Same rule that held the LTX entry: the route it enables has never run. Add it to docs/releases/UNRELEASED.md ## whatIsNew once end-only passes",
       "Optional wording change the user may want: the pill shows the CURRENT role ('Start frame' / 'Last frame') with the action on the tooltip. The user originally described a button reading 'Use as last frame'. One-line change if they prefer their version",
-      "THE DEAD variants AXIS is still in place — mapped but deliberately not started. See constraints",
+      "THE DEAD variants AXIS is still in place \u2014 mapped but deliberately not started. See constraints",
       "MPI-452 (MiniMax H3) is still validating and was untouched in this session too"
     ]
   },
@@ -53,44 +53,49 @@
     }
   },
   "kanban_entry": null,
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
-      "tasks/MPI-466/validation.md — rewritten: what passed through the APP with the /history evidence, the three defects, the accepted stage-1-bypass deviation, and a Noticed-not-actioned section",
-      "tasks/MPI-466/checklist.md — marked through, including the re-measured PROGRESS_STAGES and the three defects",
-      ".claude/rules/comfy_injection.md — injection writes WIDGETS, never a wired link (approved by the user; architectural file)",
-      "docs/workflow-authoring/media-inputs.md — MUTE severs a link vs BYPASS passes it through; block_if_empty:false for presence-routed loaders, with the three-graph table",
-      "docs/workflow-authoring/README.md — the union widget type trap, the new conversion gate, and CONVERT AGAINST 48188 not the 8188 bench",
-      "docs/component-contracts.md — the PromptBox frame-role pill contract and its companion slot gate",
-      "memory tool_comfy_schema_gate_before_workflow_sync + its MEMORY.md hook — convert against the engine; the bench runs ahead and eats ~40GB"
+      "tasks/MPI-466/validation.md \u2014 rewritten: what passed through the APP with the /history evidence, the three defects, the accepted stage-1-bypass deviation, and a Noticed-not-actioned section",
+      "tasks/MPI-466/checklist.md \u2014 marked through, including the re-measured PROGRESS_STAGES and the three defects",
+      ".claude/rules/comfy_injection.md \u2014 injection writes WIDGETS, never a wired link (approved by the user; architectural file)",
+      "docs/workflow-authoring/media-inputs.md \u2014 MUTE severs a link vs BYPASS passes it through; block_if_empty:false for presence-routed loaders, with the three-graph table",
+      "docs/workflow-authoring/README.md \u2014 the union widget type trap, the new conversion gate, and CONVERT AGAINST 48188 not the 8188 bench",
+      "docs/component-contracts.md \u2014 the PromptBox frame-role pill contract and its companion slot gate",
+      "memory tool_comfy_schema_gate_before_workflow_sync + its MEMORY.md hook \u2014 convert against the engine; the bench runs ahead and eats ~40GB"
     ],
     "pending": [
-      "UNRELEASED.md has the LTX Balanced entry but NOT the last-frame pill — held until the end-only route runs",
+      "UNRELEASED.md has the LTX Balanced entry but NOT the last-frame pill \u2014 held until the end-only route runs",
       "The three Noticed-not-actioned items below are uncarded ON PURPOSE; the user decides whether they become cards"
     ]
   },
   "next_action": {
-    "description": "Start the app, HARD RELOAD (Ctrl+Shift+R) because the frame-role pill is renderer-side, then prove the three i2v routes on LTX 2.3 Balanced BY THEIR OUTPUT: start-only, end-only, start+end. Read each dispatched graph off the engine on 48188 rather than trusting that the run finished — Input_Start_Frame / Input_End_Frame are path strings feeding lazy branches, so a wrong-but-plausible video is the failure mode. END-ONLY is the one that has never run: stage one image, click the pill until it reads 'Last frame', and confirm the dispatch carries Input_End_Frame filled with Input_Start_Frame EMPTY. Read tasks/MPI-466/validation.md first.",
+    "description": "Start the app, HARD RELOAD (Ctrl+Shift+R) because the frame-role pill is renderer-side, then prove the three i2v routes on LTX 2.3 Balanced BY THEIR OUTPUT: start-only, end-only, start+end. Read each dispatched graph off the engine on 48188 rather than trusting that the run finished \u2014 Input_Start_Frame / Input_End_Frame are path strings feeding lazy branches, so a wrong-but-plausible video is the failure mode. END-ONLY is the one that has never run: stage one image, click the pill until it reads 'Last frame', and confirm the dispatch carries Input_End_Frame filled with Input_Start_Frame EMPTY. Read tasks/MPI-466/validation.md first.",
     "command": "mpi-continue MPI-466"
   },
   "context": {
     "key_decisions": [
-      "A Continue still RUNS the stage-1 sampler (node 70 LTXVNormalizingSampler, titled Stage1_Bypass, is absent from execution_cached); only the latent SAVE is gated. THE USER ACCEPTED THIS rather than re-authoring the graph, so PROGRESS_STAGES.stage2 was corrected 1 -> 3 to match reality. Do NOT 'fix' this as a bug without asking — the count now encodes the accepted behaviour.",
+      "A Continue still RUNS the stage-1 sampler (node 70 LTXVNormalizingSampler, titled Stage1_Bypass, is absent from execution_cached); only the latent SAVE is gated. THE USER ACCEPTED THIS rather than re-authoring the graph, so PROGRESS_STAGES.stage2 was corrected 1 -> 3 to match reality. Do NOT 'fix' this as a bug without asking \u2014 the count now encodes the accepted behaviour.",
       "The Preview_Only warning that fires on EVERY LTX generation is dead noise and was left in place deliberately. is_preview demonstrably drives the preview via Video_Latent.is_preview; narrowing comfyController's defensive guard is a fleet-wide change to a check that still protects every other model.",
       "The end-frame gate is the SLOT LIST, not a model list: i2v_ms declares an endFrame slot, single-stage i2v no longer does. Its only consumer is Wan 2.2 5B, whose graph has no Input_End_Frame node, so the slot was undeliverable and the UI would have offered a control that does nothing.",
-      "The frame-role pill CLEARS the tag rather than setting 'startFrame', letting the positional fill own the default — that is what keeps a lone untagged image on the start frame.",
-      "The bench/engine version skew (0.30.2 vs 0.30.0) is REAL but was NOT the cause of the widget bug — that was our own converter. Do not bump the engine on account of it. The engine bump has its own cards (MPI-457/467/468).",
+      "The frame-role pill CLEARS the tag rather than setting 'startFrame', letting the positional fill own the default \u2014 that is what keeps a lone untagged image on the start frame.",
+      "The bench/engine version skew (0.30.2 vs 0.30.0) is REAL but was NOT the cause of the widget bug \u2014 that was our own converter. Do not bump the engine on account of it. The engine bump has its own cards (MPI-457/467/468).",
       "MPI-465's app proof rode on THIS card and is now CLOSED by the passing t2v run."
     ],
     "constraints": [
-      "CONVERT AGAINST THE ENGINE: COMFY_URL=http://127.0.0.1:48188 node scripts/sync-raw-workflows.mjs. The default is 8188, the authoring bench, which runs AHEAD of what ships. Also close the bench before a big local run — it held ~40GB and freeing it took LTX from 20.4 s/it to 2.7 s/it, a 7x swing that reads as a hung generation.",
+      "CONVERT AGAINST THE ENGINE: COMFY_URL=http://127.0.0.1:48188 node scripts/sync-raw-workflows.mjs. The default is 8188, the authoring bench, which runs AHEAD of what ships. Also close the bench before a big local run \u2014 it held ~40GB and freeing it took LTX from 20.4 s/it to 2.7 s/it, a 7x swing that reads as a hung generation.",
       "NEVER hand-edit a runtime workflow JSON. Re-export from ComfyUI into comfy_workflows/raw/, then sync-raw-workflows.mjs. The conversion now HARD-FAILS on a node missing a required input, which is how a muted-node mistake surfaces immediately instead of four minutes into a sample.",
-      "A DEP DELETED FROM modelDeps.js CAN NEVER BE UNINSTALLED. _orphanedDepIds (routes/downloadManager.js) iterates the DEPS map and trashes what no model protects — remove the entry and its file strands on every existing user's disk, forever. Retire a weight as a deprecated-but-present entry.",
-      "THE variants AXIS IS DEAD CODE, LEFT IN PLACE DELIBERATELY. LTX was its last consumer. Consumers to sweep if it is ever removed: js/data/modelConstants/resolveModelDeps.js, models.js, modelRegistry.js, footprint.js, MpiModelManager.js, commandExecutor.js, routes/platformEngine.js, tests/resolve-model-deps.test.cjs, plus docs/workflow-authoring/variant-injection.md and the add-model playbook. scripts/smoke-workflows.mjs also passes variantTokens to resolveWorkflowFile — coordinate before changing that signature.",
-      "A PARALLEL SESSION owns MPI-467/468 (engine-bump tooling) and MPI-470. It is PAUSED and needs to run its own testing once LTX is done. It owns scripts/smoke-workflows.mjs and .agents/mpi-kanban/tasks/MPI-468/ — that events.jsonl is dirty in the tree and is THEIRS, do not touch it. Re-read shared files before writing; commit by explicit pathspec.",
+      "A DEP DELETED FROM modelDeps.js CAN NEVER BE UNINSTALLED. _orphanedDepIds (routes/downloadManager.js) iterates the DEPS map and trashes what no model protects \u2014 remove the entry and its file strands on every existing user's disk, forever. Retire a weight as a deprecated-but-present entry.",
+      "THE variants AXIS IS DEAD CODE, LEFT IN PLACE DELIBERATELY. LTX was its last consumer. Consumers to sweep if it is ever removed: js/data/modelConstants/resolveModelDeps.js, models.js, modelRegistry.js, footprint.js, MpiModelManager.js, commandExecutor.js, routes/platformEngine.js, tests/resolve-model-deps.test.cjs, plus docs/workflow-authoring/variant-injection.md and the add-model playbook. scripts/smoke-workflows.mjs also passes variantTokens to resolveWorkflowFile \u2014 coordinate before changing that signature.",
+      "A PARALLEL SESSION owns MPI-467/468 (engine-bump tooling) and MPI-470. It is PAUSED and needs to run its own testing once LTX is done. It owns scripts/smoke-workflows.mjs and .agents/mpi-kanban/tasks/MPI-468/ \u2014 that events.jsonl is dirty in the tree and is THEIRS, do not touch it. Re-read shared files before writing; commit by explicit pathspec.",
       "npm run release:check FAILS by design: the engine pin moved 0.29.2 -> 0.30.0 since v1.3.0 and there is no dev_configs/smoke-evidence.json. That is the parallel session's gate (MPI-467/468), NOT a regression from this work, and it blocks a release until they run scripts/smoke-workflows.mjs.",
-      "1.3.1 IS SHIPPED (gh release list). package.json also reads 1.3.1, so it is NOT the signal — all new user-facing work goes to docs/releases/UNRELEASED.md, never into a frozen RELEASE_NOTES entry.",
-      "Injection SILENTLY SKIPS an Input_* title matching no node, and LTX routes on media presence rather than an op int — so on the remaining i2v routes the failure mode is a plausible WRONG video, not an error. Read the dispatched graph."
+      "1.3.1 IS SHIPPED (gh release list). package.json also reads 1.3.1, so it is NOT the signal \u2014 all new user-facing work goes to docs/releases/UNRELEASED.md, never into a frozen RELEASE_NOTES entry.",
+      "Injection SILENTLY SKIPS an Input_* title matching no node, and LTX routes on media presence rather than an op int \u2014 so on the remaining i2v routes the failure mode is a plausible WRONG video, not an error. Read the dispatched graph."
     ],
     "files_modified": [
       "scripts/workflow-to-api.mjs (union widget types + the post-conversion schema gate)",
@@ -115,7 +120,13 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "file",
-    "relevant_topics": ["models", "workflow authoring", "comfy engine", "generation lifecycle", "components"]
+    "relevant_topics": [
+      "models",
+      "workflow authoring",
+      "comfy engine",
+      "generation lifecycle",
+      "components"
+    ]
   },
   "rules_active": [
     ".claude/rules/dos_and_donts.md",
@@ -131,7 +142,12 @@
     {
       "at": "2026-08-07T06:15:00Z",
       "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-10T06:40:00Z",
+      "event": "handoff_closed",
+      "note": "Closed by mpi-cleanup: MPI-466 is done, so this handoff had nothing left to resume."
     }
   ],
-  "resume_prompt": "You are resuming MPI-466, which re-wired LTX-2.3 in Cubric Vision. Read .agents/mpi-kanban/tasks/MPI-466/validation.md FIRST — it splits what is now PROVED THROUGH THE APP from what is still untested, and the untested part is your entire job. State: LTX 2.3 Balanced (int8) generates end to end through the app. t2v passes (engine /history 43716088: node 457 Output_Video -> MpiVideo_00001.mp4, all 22 Input_/Output_ titles landed, 126 dispatched == 126 shipped), preview passes (is_preview true wrote node 470 Output_Preview), and preview -> Continue passes (is_continue true, load_path = the staged per-preview UUID latent, and NO stage-1 latent re-saved, so the lazy gate fires). That also closed MPI-465. PROGRESS_STAGES was re-measured per mode off each run's own /history window: single 3, preview 2, stage2 1 -> 3. Everything is committed (78d56890, 890caa0c, c65a1f51, 4f04d76c) and npm test is 482/482. WHAT REMAINS is the three i2v routes, proved BY THEIR OUTPUT rather than by the run completing: start-only, end-only, start+end. Start the app and HARD RELOAD with Ctrl+Shift+R first, because the new frame-role pill is renderer-side. END-ONLY is the one that carries real risk: it was literally unreachable from the app until the end of the last session and has never run once. It needed three separate changes to become possible — the user re-exported H3 and WAN with start.block_if_empty false (an empty start used to ExecutionBlock the whole branch), the undeliverable endFrame slot was dropped from the single-stage i2v op, and the stranded-slot bail in commandExecutor became per-media-type because an end-frame-only run leaves the required startFrame empty BY DESIGN. To drive it: stage ONE image and click the pill on the chip until it reads 'Last frame', then confirm the dispatched graph on the engine at 48188 carries Input_End_Frame filled with Input_Start_Frame EMPTY. Always read the dispatched graph rather than trusting the run, because injection silently skips a title matching no node and LTX routes on media presence, so the failure mode is a plausible WRONG video and not an error. Three things you must NOT do: do not 'fix' the fact that a Continue re-runs the stage-1 sampler — the user accepted it and PROGRESS_STAGES.stage2 = 3 now encodes that; do not chase the Preview_Only warning that fires on every LTX generation, it is proven-dead noise left in place on purpose; and do not start removing the now-dead variants axis without reading the constraint list. Also note npm run release:check FAILS on purpose (the engine pin moved to 0.30.0 with no smoke evidence) — that is the PAUSED parallel session's gate on MPI-467/468, not a regression, and that session owns scripts/smoke-workflows.mjs and the dirty .agents/mpi-kanban/tasks/MPI-468/events.jsonl, so leave both alone and commit by explicit pathspec."
+  "resume_prompt": "You are resuming MPI-466, which re-wired LTX-2.3 in Cubric Vision. Read .agents/mpi-kanban/tasks/MPI-466/validation.md FIRST \u2014 it splits what is now PROVED THROUGH THE APP from what is still untested, and the untested part is your entire job. State: LTX 2.3 Balanced (int8) generates end to end through the app. t2v passes (engine /history 43716088: node 457 Output_Video -> MpiVideo_00001.mp4, all 22 Input_/Output_ titles landed, 126 dispatched == 126 shipped), preview passes (is_preview true wrote node 470 Output_Preview), and preview -> Continue passes (is_continue true, load_path = the staged per-preview UUID latent, and NO stage-1 latent re-saved, so the lazy gate fires). That also closed MPI-465. PROGRESS_STAGES was re-measured per mode off each run's own /history window: single 3, preview 2, stage2 1 -> 3. Everything is committed (78d56890, 890caa0c, c65a1f51, 4f04d76c) and npm test is 482/482. WHAT REMAINS is the three i2v routes, proved BY THEIR OUTPUT rather than by the run completing: start-only, end-only, start+end. Start the app and HARD RELOAD with Ctrl+Shift+R first, because the new frame-role pill is renderer-side. END-ONLY is the one that carries real risk: it was literally unreachable from the app until the end of the last session and has never run once. It needed three separate changes to become possible \u2014 the user re-exported H3 and WAN with start.block_if_empty false (an empty start used to ExecutionBlock the whole branch), the undeliverable endFrame slot was dropped from the single-stage i2v op, and the stranded-slot bail in commandExecutor became per-media-type because an end-frame-only run leaves the required startFrame empty BY DESIGN. To drive it: stage ONE image and click the pill on the chip until it reads 'Last frame', then confirm the dispatched graph on the engine at 48188 carries Input_End_Frame filled with Input_Start_Frame EMPTY. Always read the dispatched graph rather than trusting the run, because injection silently skips a title matching no node and LTX routes on media presence, so the failure mode is a plausible WRONG video and not an error. Three things you must NOT do: do not 'fix' the fact that a Continue re-runs the stage-1 sampler \u2014 the user accepted it and PROGRESS_STAGES.stage2 = 3 now encodes that; do not chase the Preview_Only warning that fires on every LTX generation, it is proven-dead noise left in place on purpose; and do not start removing the now-dead variants axis without reading the constraint list. Also note npm run release:check FAILS on purpose (the engine pin moved to 0.30.0 with no smoke evidence) \u2014 that is the PAUSED parallel session's gate on MPI-467/468, not a regression, and that session owns scripts/smoke-workflows.mjs and the dirty .agents/mpi-kanban/tasks/MPI-468/events.jsonl, so leave both alone and commit by explicit pathspec."
 }
