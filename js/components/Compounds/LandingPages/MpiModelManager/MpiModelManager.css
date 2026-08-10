@@ -575,3 +575,11 @@
     color: var(--ink-4);
 }
 .mpi-plugin-row__state--on { color: var(--accent-ok); }
+
+/* Tile-flag explainer (MPI-514) — the hover popup naming what a thumb flag means.
+   Double-class to beat `.mpi-popup` regardless of stylesheet load order. 11000 is
+   the portal layer MpiDropdown / MpiTreePicker already sit on: above this
+   library's body-mode overlay (10010), below toasts (20000). */
+.mpi-popup.mpi-popup--model-flag {
+    z-index: 11000;
+}

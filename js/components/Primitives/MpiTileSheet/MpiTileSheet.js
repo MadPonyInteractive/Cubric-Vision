@@ -3,6 +3,18 @@ import { ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '../../../utils/icons.js';
 
 /**
+ * Thumb flags (MPI-514). Editorial per-item markers, rendered into ONE stacking
+ * column so a tile carrying both never overlaps them. `info` + `badge` ride on
+ * the element as data attributes rather than a native `title`: the Electron
+ * tooltip is banned, and the consumer mounts an MpiPopup explainer off these
+ * (MpiModelManager). This is a Primitive, so it may not import the popup itself.
+ */
+const TILE_FLAGS = [
+    { key: 'featured',   icon: 'sparkle', info: 'Featured',                badge: 'warning' },
+    { key: 'deprecated', icon: 'warning', info: 'Marked for deprecation',  badge: 'danger'  },
+];
+
+/**
  * MpiTileSheet — shared contact-sheet tile grid (Primitive, MPI-356).
  *
  * One sheet renders one grid of tiles. Three surfaces use it: the Model Library,
@@ -33,7 +45,8 @@ import { renderIcon } from '../../../utils/icons.js';
  * @property {string}  [preview]        - Filename under comfy_workflows/display/
  * @property {string}  [meta]           - Second label line (e.g. "VIDEO · High")
  * @property {boolean} [showMediaBadge] - Render the Image/Video pill
- * @property {boolean} [featured]       - Sparkle badge on the thumb
+ * @property {boolean} [featured]       - Gold sparkle flag on the thumb
+ * @property {boolean} [deprecated]     - Warning flag on the thumb (model is on its way out)
  * @property {boolean} [dot]            - Recently-installed heat dot
  * @property {boolean} [waiting]        - Queued-install waiting mascot
  * @property {string}  [state]          - HTML for the fixed-height bottom row
@@ -142,10 +155,17 @@ export const MpiTileSheet = ComponentFactory.create({
             // Heat dot + featured star ride absolute on the thumb so neither
             // shifts the tile when it appears.
             if (item.dot) thumb.appendChild(ce('div', { className: 'mpi-tile__new' }));
-            if (item.featured) {
-                const star = ce('div', { className: 'mpi-tile__featured', title: 'Featured' });
-                star.innerHTML = renderIcon('sparkle', 'sm');
-                thumb.appendChild(star);
+            const flags = TILE_FLAGS.filter(f => item[f.key]);
+            if (flags.length) {
+                const col = ce('div', { className: 'mpi-tile__flags' });
+                flags.forEach(f => {
+                    const flag = ce('div', { className: `mpi-tile__flag mpi-tile__flag--${f.key}` });
+                    flag.dataset.info = f.info;
+                    flag.dataset.badge = f.badge;
+                    flag.innerHTML = renderIcon(f.icon, 'sm');
+                    col.appendChild(flag);
+                });
+                thumb.appendChild(col);
             }
             // Queued-install waiting mascot (MPI-284) — always built so
             // setWaiting() can toggle it without a rebuild.

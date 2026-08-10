@@ -3,6 +3,8 @@ import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiOkCancel } from '../../MpiOkCancel/MpiOkCancel.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { MpiTileSheet } from '../../../Primitives/MpiTileSheet/MpiTileSheet.js';
+import { MpiPopup } from '../../../Primitives/MpiPopup/MpiPopup.js';
+import { MpiBadge } from '../../../Primitives/MpiBadge/MpiBadge.js';
 import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
 import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../../data/modelRegistry.js';
@@ -716,6 +718,9 @@ export const MpiModelManager = ComponentFactory.create({
                 meta: `${model.dropdownMeta || ''}${model.dropdownMeta ? ' · ' : ''}${TIER_WORD[tier] || tier}`,
                 showMediaBadge: true,
                 featured: !!model.featured,
+                // Sunset marker (MPI-514) — the model is leaving the library on a
+                // future release; the card that replaces it is named in its ModelDef.
+                deprecated: !!model.deprecated,
                 // Recently-installed heat dot (MPI-215) — the model's transient flag.
                 dot: !!model.justInstalled,
                 // Queued-install waiting mascot (MPI-284) — hidden until the job sits
@@ -1046,6 +1051,59 @@ export const MpiModelManager = ComponentFactory.create({
                     return `${p.id}:${pluginAvailability(p).installed ? 1 : 0}:${job ? job.status : 'idle'}`;
                 }).join(',');
         }
+
+        // ── Tile-flag explainer (MPI-514) ─────────────────────────────────────
+        // A star or a warning triangle on a thumb means nothing to a user on
+        // sight, and the native `title` tooltip is banned repo-wide. Hovering a
+        // flag mounts an MpiPopup above it carrying one MpiBadge that names it.
+        // MpiTileSheet is a Primitive and may not import components, so the
+        // wiring lives here and reads the sheet's `data-info` / `data-badge`.
+        // mouseenter/mouseleave don't bubble → delegate via mouseover/mouseout.
+        let _flagTip = null;
+        let _flagTipAnchor = null;
+
+        const _hideFlagTip = () => {
+            _flagTip?.destroy?.();
+            _flagTip = null;
+            _flagTipAnchor = null;
+        };
+
+        _unsubs.push(on(bodySlot, 'mouseover', (e) => {
+            const flag = e.target.closest('.mpi-tile__flag');
+            if (!flag || flag === _flagTipAnchor) return;
+            _hideFlagTip();
+            const info = flag.dataset.info;
+            if (!info) return;
+            // Mount into a throwaway wrapper: ComponentFactory.mount() does
+            // `container.innerHTML = html`, so mounting into the flag itself would
+            // wipe its icon. The popup portals to <body>; triggerEl is the anchor.
+            _flagTip = MpiPopup.mount(ce('div'), {
+                active: true,
+                position: 'top',
+                variant: 'glass',
+                triggerEl: flag,
+            });
+            _flagTipAnchor = flag;
+            // MpiPopup portals to <body> at z 9999, UNDER the body-mode overlay this
+            // library runs in (10010) — without the lift the tip renders behind the
+            // grid, positioned correctly and invisible. Scoped to our own modifier
+            // so the shared primitive keeps its default layer.
+            _flagTip.el?.classList.add('mpi-popup--model-flag');
+            const content = qs('.mpi-popup__content', _flagTip.el);
+            if (content) MpiBadge.mount(content, { label: info, variant: flag.dataset.badge || 'secondary', pill: true });
+        }));
+
+        _unsubs.push(on(bodySlot, 'mouseout', (e) => {
+            const flag = e.target.closest('.mpi-tile__flag');
+            if (!flag) return;
+            // Ignore moves that stay inside the same flag (icon ↔ wrapper).
+            if (e.relatedTarget && e.relatedTarget.closest?.('.mpi-tile__flag') === flag) return;
+            _hideFlagTip();
+        }));
+
+        // A re-render detaches the anchor, and the sheet rebuild leaves the
+        // portaled popup orphaned on <body> — drop it with the tiles it belongs to.
+        _unsubs.push(Events.on('ui:close-all-popups', _hideFlagTip));
 
         // ── Section sub-block (one media type, one aspect ratio) ──────────────
         // Renders a media sub-header (icon + count) then a contact-sheet grid of
@@ -1448,6 +1506,7 @@ export const MpiModelManager = ComponentFactory.create({
 
         // ── Cleanup ────────────────────────────────────────────────────────
         el.destroy = () => {
+            _hideFlagTip();
             _unsubs.forEach(fn => fn());
             _podDiskBar?.destroy?.(); // MPI-237
             _destroyAllCards();

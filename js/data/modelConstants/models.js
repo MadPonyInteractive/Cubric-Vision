@@ -9,7 +9,8 @@
  * @property {'image'|'video'} mediaType
  * @property {'low'|'balanced'|'high'} [sizeTier] - Weight-size tier (MPI-168). Shown as a Low/Balanced/High badge + L/B/H marker. A model has ONE tier; siblings ship as separate cards. Absent → treated as 'balanced' by UI.
  * @property {string}   [modelFamily] - Soft grouping key for same-base-model tier variants, e.g. 'LTX-2.3' (MPI-168). Drives tier clustering + the "show L/B/H only when 2+ tiers of a family installed" rule. UI-only; no resolver effect.
- * @property {boolean}  [featured]   - Editorial spotlight flag for the Model Library ("hot / new / best right now"). Featured models sort FIRST within their sub-grid (stable) and carry a gold sparkle star badge. Purely a curation signal — set as many as you like, add/remove freely; no cap, no resolver effect. Consumed only by MpiModelManager (sort + `.mpi-tile__featured` badge).
+ * @property {boolean}  [featured]   - Editorial spotlight flag for the Model Library ("hot / new / best right now"). Featured models sort FIRST within their sub-grid (stable) and carry a gold sparkle star badge. Purely a curation signal — set as many as you like, add/remove freely; no cap, no resolver effect. Consumed only by MpiModelManager (sort) + MpiTileSheet (the `.mpi-tile__flag--featured` badge). See also [deprecated] below.
+ * @property {boolean}  [deprecated] - Editorial sunset flag, the mirror of `featured` (MPI-514): the model is on its way OUT of the Model Library and users should stop investing in it. Renders a warning badge in the same tile slot as the star, with the same hover explainer. Purely a curation signal, no resolver effect and no sort effect. NOT the same field as the `deprecated` flag on OPERATIONS in operationRegistry.js, which is a history-compatibility marker and invisible to users. Set it when a removal card exists; delete it with the ModelDef on the release that removes the model.
  * @property {{multiStage?:boolean, audio?:boolean, negativePrompt?:boolean, styleLoras?:boolean, promptEnhance?:boolean, tierSelect?:boolean}} [capabilities] - Drives capability-gated UI on SHARED ops: multiStage shows the previewStage toggle; audio shows the audio media slot; styleLoras shows the style picker + Stylization slider; promptEnhance shows the enhance toggle; tierSelect shows the runtime speed/quality tier radio (Qwen-Image-Edit's qwenTier → Input_Tier, MPI-300) for models whose tiers share one weight set instead of shipping as sibling cards. Absent → false. EXCEPTION: negativePrompt defaults to TRUE when absent (a model supports negatives unless it opts out) — set `negativePrompt: false` for distilled cfg-1.0 models (Krea2-Turbo) where the negative prompt has no effect and NAG cannot rescue it. Hides the prompt box's positive/negative toggle; the stored negativePrompt value is still persisted. `promptEnhance` requires a text encoder whose CLIP implements `.generate()` (Qwen3-VL, Gemma) — T5/umT5 models (Chroma, Wan) CRASH on the TextGenerate node, so never set it there.
  * @property {string[]} [styleLoraLabels] - Style-LoRA display names, index-aligned with the workflow's MpiMath gates and MpiPromptList trigger lines. Index 0 must be the no-style entry (every gate zeroed); its label is free text. Required when `capabilities.styleLoras` is true.
  * @property {string[]} [styleLoraImages] - Style card images for the picker, filenames in comfy_workflows/display/, INDEX-ALIGNED with styleLoraLabels. Index 0 is the no-style baseline (the same prompt with the rack off) — ship every card from the SAME prompt so the grid reads as a comparison. Optional: a missing entry (or the whole array) renders a placeholder card, so a model can ship styles before its art exists. See docs/playbooks/add-model/05-prompt-and-styles.md §9.
@@ -818,6 +819,11 @@ export const MODELS = [
         // (needs an image + optional prompt). Only op = `pid`. Research + decisions:
         // docs/models/pid/upscaler.md.
         id: 'nvidia-pid',
+        // Sunset: PiD comes back as four plugins on the image-upscale dropdown
+        // (MPI-507). On the release that drops this def, KEEP the pid-* / vae-* /
+        // pid-gemma dep entries - _orphanedDepIds walks DEPS and can only reclaim a
+        // weight that still has an entry (MPI-470/466 both kept theirs).
+        deprecated: true,
         sizeTier: 'low',
         name: 'NVIDIA PiD Upscaler',
         dropdownMeta: 'UPSCALE',
@@ -1111,7 +1117,6 @@ export const MODELS = [
         // modelFamily), per the sizeTier contract "one tier per card". The L/B/H badge
         // + dropdown letter surface only when 2+ tiers of LTX-2.3 are installed.
         sizeTier: 'high',
-        featured: true,
         modelFamily: 'LTX-2.3',
         name: 'LTX 2.3',
         dropdownMeta: 'VIDEO',
@@ -1196,7 +1201,6 @@ export const MODELS = [
         // the only difference from HIGH is which transformer the graph loads.
         id: 'ltx-23-balanced',
         sizeTier: 'balanced',
-        featured: true,
         modelFamily: 'LTX-2.3',
         name: 'LTX 2.3',
         dropdownMeta: 'VIDEO',
@@ -1247,6 +1251,7 @@ export const MODELS = [
         // flow-down commitment in our authorization forbids. Confirmed with the MPI-451
         // session 2026-08-06 before this def was written.
         sizeTier: 'balanced',
+        featured: true,
         modelFamily: 'MiniMax-H3',
         name: 'MiniMax H3',
         // The computed floor (25% of 33.9GB of weights, rounded up onto the 8GB grid)

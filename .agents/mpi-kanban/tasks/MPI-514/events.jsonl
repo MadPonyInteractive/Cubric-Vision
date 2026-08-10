@@ -1,0 +1,2 @@
+{"at": "2026-08-10T10:33:49Z", "type": "task.created", "task": "MPI-514", "actor": "claude", "detail": "created directly in doing - badge explainer popup + deprecated model flag"}
+{"at": "2026-08-10T10:48:24Z", "type": "validation.updated", "task": "MPI-514", "actor": "claude", "detail": "flags + hover explainer verified live on an isolated instance; eslint + 535 node tests green"}

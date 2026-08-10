@@ -69,6 +69,7 @@ export const MpiModelPicker = ComponentFactory.create({
                 meta: `${model.dropdownMeta || ''}${model.dropdownMeta ? ' · ' : ''}${TIER_WORD[tier] || tier}`,
                 showMediaBadge: true,
                 featured: !!model.featured,
+                deprecated: !!model.deprecated,
                 selected: model.id === activeId,
                 // A <button> may not nest inside the tile <button>, so this is a
                 // span; the capture-phase handler below stops it from reaching the

@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/components/Primitives/MpiTileSheet/MpiTileSheet.js",
+    "js/components/Primitives/MpiTileSheet/MpiTileSheet.css",
+    "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
+    "js/components/Compounds/MpiModelPicker/MpiModelPicker.js",
+    "js/components/types.js",
+    "js/data/modelConstants/models.js",
+    "docs/model-library.md"
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-514",
+  "title": "Tile badge explainer popup + a deprecated flag for models",
+  "description": "Replace the native title tooltip on the featured star with an MpiPopup carrying an MpiBadge, and add a deprecated model flag rendering its own tile badge. Marks nvidia-pid as deprecated ahead of MPI-507.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-10T10:33:49Z",
+  "updated_at": "2026-08-10T10:48:24Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl"
+  }
+}

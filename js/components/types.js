@@ -491,7 +491,8 @@
  * @property {string} [preview] - Filename under comfy_workflows/display/
  * @property {string} [meta] - Second label line (e.g. "VIDEO · High")
  * @property {boolean} [showMediaBadge] - Render the Image/Video pill
- * @property {boolean} [featured] - Sparkle badge on the thumb
+ * @property {boolean} [featured] - Gold sparkle flag on the thumb (editorial spotlight)
+ * @property {boolean} [deprecated] - Warning flag on the thumb (model is on its way out)
  * @property {boolean} [dot] - Recently-installed heat dot
  * @property {boolean} [waiting] - Queued-install waiting mascot
  * @property {string} [state] - HTML for the fixed-height bottom row

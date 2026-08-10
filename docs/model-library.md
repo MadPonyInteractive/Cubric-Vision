@@ -56,11 +56,19 @@ to run below the fit: both H3 cards set 12 against a 13.3 fit. An override off t
 own leading row and the ladder resumes above it. The footnote quotes the same floor the first row
 shows — before this they could disagree (Wan's footnote said `min 8GB` over a table starting at 16).
 
-## Featured models — editorial "hot / new / best" spotlight (2026-07-11)
+## Tile flags — `featured` and `deprecated` (2026-07-11, extended MPI-514)
 
-Set `featured: true` on any `ModelDef` in `js/data/modelConstants/models.js` and it (a) sorts FIRST within its media sub-grid and (b) gets a gold sparkle star badge (top-right of the tile thumb). Purpose is editorial — surface what's hot / new / considered best right now. No cap, add/remove freely; it's a static per-model flag with no runtime state, so it's deliberately NOT in the render signature (nothing to churn).
+Two editorial per-model flags in `js/data/modelConstants/models.js`, both rendered into the same top-right stack on the tile thumb, both explained by the same hover popup. Static flags with no runtime state, so they are deliberately NOT in the render signature (nothing to churn). Flip them freely; no cap.
 
-Wiring, all in `MpiModelManager`: sort is a stable `.sort()` in `_mediaBlock` (`(b.featured?1:0)-(a.featured?1:0)` — modern V8 sort is stable, so non-featured keep declared order); badge is built in `_buildTile` next to the `justInstalled` heat dot using the existing `sparkle` icon; CSS `.mpi-tile__featured` (top-right, `--accent-warn` gold, so it never collides with the top-left heat dot). To change the spotlight, just flip the flag on the model defs — no other file needs touching.
+`featured: true` — gold `sparkle`, "hot / new / best right now", sorts FIRST within its media sub-grid. `deprecated: true` — rose `warning`, "on its way OUT of the library, stop investing in it", no sort effect.
+
+**`deprecated` is a MODEL flag and has nothing to do with the `deprecated` flag on OPERATIONS** in `operationRegistry.js`. That one is a history-compatibility marker ("old items still validate, nothing may write this key again"), is invisible to users, and is read only by `scripts/release-health-check.mjs`. Never merge the two.
+
+Marking a model deprecated is a two-step convention, not a system: set the flag and open a card for the actual removal (`nvidia-pid` → MPI-507, which converts PiD into four upscale plugins). The flag disappears with the `ModelDef` on the release that removes it. **On that release, keep the model's dep entries** — `_orphanedDepIds` in `routes/downloadManager.js` can only reclaim a weight that still has one. Procedure: `docs/playbooks/add-model/README.md` § "Removing or re-tiering a model".
+
+Wiring: the sort is a stable `.sort()` in `MpiModelManager._mediaBlock` (`(b.featured?1:0)-(a.featured?1:0)`). The flags themselves are `MpiTileSheet`'s — a `TILE_FLAGS` table drives `.mpi-tile__flags` (a column, so a tile carrying both stacks them) and publishes `data-info` / `data-badge` per flag. The explainer is the CONSUMER's: `MpiTileSheet` is a Primitive and may not import components, so `MpiModelManager` delegates `mouseover`/`mouseout` on its body slot and mounts an `MpiPopup` (position `top`) holding one `MpiBadge` off those data attributes. The popup needs `.mpi-popup--model-flag` (z 11000) because MpiPopup portals to `<body>` at 9999, UNDER the body-mode overlay the library runs in (10010) — without the lift it positions correctly and renders behind the grid.
+
+**The model picker renders the flags but has no explainer** (same tiles, no hover wiring) — it needs the ~35 lines duplicated or the helper promoted, and nobody has asked yet.
 
 ## download:complete lingers in state.downloadJobs
 
