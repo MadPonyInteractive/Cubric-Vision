@@ -7,6 +7,8 @@
     "js/components/Compounds/MpiModelPicker/MpiModelPicker.js",
     "js/components/types.js",
     "js/data/modelConstants/models.js",
-    "docs/model-library.md"
+    "docs/model-library.md",
+    "main.js",
+    "docs/DEVELOPMENT.md"
   ]
 }

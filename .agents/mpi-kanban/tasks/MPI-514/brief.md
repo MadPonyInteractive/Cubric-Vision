@@ -42,3 +42,20 @@ again". It is invisible to users and its only reader is
 `scripts/release-health-check.mjs` against the `dev_configs/operation_registry.json`
 mirror. The model flag added here is a separate field on a separate object; the
 `pid` OP is not deprecated (the plugins still run it).
+
+## Follow-ups Fabio added in the same session
+
+3. Optical centring: the `warning` glyph's ink is a wide, short triangle sitting
+   half a unit high in its 24-unit viewBox, so flex-centring the `<svg>` box left
+   the ink off-centre. Trimmed to 16px + `translateY(0.33px)`, scoped to
+   `.mpi-tile__flag--deprecated`. The star measured dead-centre already and was
+   left alone.
+4. `minimax-h3-ref2va` is featured too.
+5. **The EPIPE dialog** (unrelated to badges, fixed here because it was blocking
+   the session): closing an agent's app instance popped a modal "Cubric Vision
+   failed to start" quoting an EPIPE stack. The console mirror in
+   `routes/logger._write` fails ASYNCHRONOUSLY on a dead pipe, so its try/catch
+   never saw it and `uncaughtException` raised the dialog. `main.js` now swallows
+   `EPIPE`/`EIO` on stdout/stderr only. Written up in
+   `docs/DEVELOPMENT.md` § boot crash.
+

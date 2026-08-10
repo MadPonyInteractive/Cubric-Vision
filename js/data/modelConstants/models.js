@@ -1349,6 +1349,7 @@ export const MODELS = [
         // are keyed by LICENCE id, so a user who accepted during an fl2va install gets NO
         // second dialog here. That silence is deliberate — do not read it as a missing gate.
         id: 'minimax-h3-ref2va',
+        featured: true,
         sizeTier: 'balanced',
         modelFamily: 'MiniMax-H3',
         name: 'MiniMax H3 Reference',

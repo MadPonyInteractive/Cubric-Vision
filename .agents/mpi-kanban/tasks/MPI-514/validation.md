@@ -37,3 +37,23 @@ the overlay, below toasts at 20000). The shared primitive was not touched.
 
 Fabio's own eyes on the popup styling. The model PICKER renders the flags with
 no explainer (deliberate - see docs/model-library.md).
+
+## Second pass (same session)
+
+Ink gaps re-measured live after the centring fix, `.mpi-tile__flag--deprecated`:
+L 3.67 / R 3.67 / T 4.66 / B 4.67 - dead centre, was 2.75/2.75/3.5/4.25. The
+star was already symmetric (5/5/4.25/4.25) and was not touched.
+
+Featured set now: krea2, krea2-nsfw, klein-4b, minimax-h3, minimax-h3-ref2va
+(read back by importing models.js in bare node).
+
+EPIPE: reproduced the exact failure by launching with stdout piped into
+`head -1`. BEFORE the fix that wrote three `[FATAL] [main] uncaughtException:
+Error: EPIPE` lines into the agent profile's app.log (10:45:10, 10:54:32,
+10:54:35), each with the modal dialog. AFTER the fix the same launch logged 12
+further lines with ZERO FATAL entries. The app still exits in that scenario, but
+that is the third-party electron npm CLI wrapper dying on its own dead stdout,
+not our process, and it exits quietly.
+
+`npm test` after the main.js change - 535 tests, 535 pass, 0 fail.
+

@@ -41,6 +41,21 @@ function reportFatal(kind, err) {
   app.exit(1);
 }
 
+// A dead stdout is NOT a fatal app error. When whatever was reading our pipe goes
+// away (a shell consumer exits, `| head` finishes, the launching terminal closes),
+// the console mirror in routes/logger._write fails ASYNCHRONOUSLY: the write call
+// returns fine and the stream emits 'error' afterwards, so that function's own
+// try/catch never sees it. With no listener here Node re-raises it as an
+// uncaughtException, and the handler below turns a dropped log line into a modal
+// "Cubric Vision failed to start" box on a perfectly healthy app. The file log is
+// the durable sink — losing the mirror costs nothing.
+const swallowDeadPipe = (stream) => stream.on('error', (err) => {
+  if (err && (err.code === 'EPIPE' || err.code === 'EIO')) return;
+  reportFatal('stdio', err);
+});
+swallowDeadPipe(process.stdout);
+swallowDeadPipe(process.stderr);
+
 process.on('uncaughtException', (err) => reportFatal('uncaughtException', err));
 process.on('unhandledRejection', (err) => reportFatal('unhandledRejection', err));
 
