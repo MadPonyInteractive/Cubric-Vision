@@ -4,7 +4,7 @@
   "generated_at": "2026-08-09T23:05:00Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "SeedVR2 + PiD as upscale-dropdown plugins - research, cards, PiD workflow generator",
     "branch": "master"
@@ -46,7 +46,12 @@
       "handoffs": ".agents/mpi-kanban/tasks/MPI-507/handoffs/"
     }
   },
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
       "All SeedVR2 research + the chunking math is in .agents/mpi-kanban/tasks/MPI-506/brief.md",
@@ -123,7 +128,10 @@
     ".claude/rules/kanban.md"
   ],
   "recent_events": [
-    { "at": "2026-08-09T23:05:00Z", "event": "handoff_created" }
+    {
+      "at": "2026-08-09T23:05:00Z",
+      "event": "handoff_created"
+    }
   ],
   "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/75929468-4c61-4a7b-bd4a-ef4eb1c04d54.json and use mpi-continue to pick up MPI-507. Two cards are in play: MPI-506 (SeedVR2 as three installable plugins feeding the upscale dropdown, todo/planned) and MPI-507 (NVIDIA PiD moved out of the model picker into the image upscale dropdown as four plugins, doing/in-progress). The PiD workflow-generation half is done, verified and committed as cf22becf - one template now bakes four VAE-locked runtime files. The open problem is that SeedVR2 output still looks bad on the bench after two runs, and the auto-chunking diagnosis explained part of it but has not been proven sufficient; start by testing the seedvr2_image workflow on a single frame, since the image path has no temporal chunking and will tell you whether the video machinery is to blame at all. MPI-507's app side is blocked on one product decision only: flowsRegistry.js:107 declares requiredModels ['sdxl-nsfw','nvidia-pid'] for flowSdxl4k specifically to exercise the multi-model install path, so ask Fabio whether to hide the nvidia-pid ModelDef or teach Flows about plugins. Read both card briefs before touching anything, commit by explicit pathspec because a peer session owns js/, docs/ and tests/ changes in the same tree, and never delete the pid-* dep entries."
 }
