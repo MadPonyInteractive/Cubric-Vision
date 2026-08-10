@@ -462,3 +462,31 @@ Core assigns `uncond_pred = None` under the cfg-1 optimisation
 works in `ltx_i2v_t2v_template.json`. The foley branch KEEPS `MultimodalGuider`:
 no post-cfg hook is registered there, and at cfg 1 its `stg` and `modality_scale`
 terms still contribute (`parameters.py` `calculate()`).
+
+### Correction: the crash is on the FOLEY branch, not the ref-audio branch
+
+The first fix (node 121 -> CFGGuider) was aimed at the wrong node. `/history`
+settles it: FOUR failing runs, `Input_Use_Reference_Audio` **false** in every one,
+and the last three already carried the 121 patch. So `LTXVReferenceAudio` was
+never the registrant.
+
+**The proven invariant: `MultimodalGuider` crashes whenever BOTH modalities sit at
+cfg 1.0.** `do_uncond()` is `not math.isclose(cfg_scale, 1.0)`, so neither
+modality asks for the uncond pass, `noise_pred_neg` is never bound
+(`multimodal_guider.py:157/161`), and line 269 reads it while replicating the
+`sampler_post_cfg_function` hook. Everything before line 269 uses the SPLIT
+vars (`v_/a_noise_pred_neg`), which ARE initialised - only the combined name is not.
+
+**STILL UNKNOWN, and it does not block the fix:** what registers a post-cfg
+function when the ref-audio branch is off. `LTXVReferenceAudio` is ruled out by
+the four runs. `LTX2SamplingPreviewOverride` uses `add_wrapper_with_key(OUTER_SAMPLE)`,
+not a post-cfg hook, so it is ruled out too. Worth 10 minutes with a print in
+that loop if MultimodalGuider is ever wanted back.
+
+**Fix applied: node 118 -> core `CFGGuider` at cfg 1.**
+That is the guider the EXTEND workflow used when it produced usable foley audio
+by accident, and what every other LTX op in this repo runs on this checkpoint.
+It sidesteps the bug entirely rather than tuning around it. `#116`/`#117`
+GuiderParameters are left in place but unwired - they are plan B if
+MultimodalGuider at AUDIO cfg != 1 is ever worth trying, and cost nothing
+unreached. **UNEXECUTED** - reasoned and validated, not yet run.

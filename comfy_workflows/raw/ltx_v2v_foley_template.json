@@ -2174,9 +2174,7 @@
           "localized_name": "GUIDER_PARAMETERS",
           "name": "GUIDER_PARAMETERS",
           "type": "GUIDER_PARAMETERS",
-          "links": [
-            70
-          ]
+          "links": []
         }
       ],
       "title": "Guider Params (VIDEO)",
@@ -3387,7 +3385,7 @@
     },
     {
       "id": 118,
-      "type": "MultimodalGuider",
+      "type": "CFGGuider",
       "pos": [
         2010.1673482522635,
         1320.8221585179651
@@ -3417,21 +3415,6 @@
           "name": "negative",
           "type": "CONDITIONING",
           "link": 69
-        },
-        {
-          "localized_name": "parameters",
-          "name": "parameters",
-          "type": "GUIDER_PARAMETERS",
-          "link": 70
-        },
-        {
-          "localized_name": "skip_blocks",
-          "name": "skip_blocks",
-          "type": "STRING",
-          "widget": {
-            "name": "skip_blocks"
-          },
-          "link": null
         }
       ],
       "outputs": [
@@ -3444,14 +3427,14 @@
           ]
         }
       ],
-      "title": "Guider (no reference audio)",
+      "title": "Guider (foley, cfg 1)",
       "properties": {
-        "cnr_id": "ltxv",
+        "cnr_id": "comfy-core",
         "ver": "aceeae9635f6d493f2893ba3c411a1c36031788a",
-        "Node name for S&R": "MultimodalGuider"
+        "Node name for S&R": "CFGGuider"
       },
       "widgets_values": [
-        "29"
+        1
       ]
     },
     {
@@ -5064,14 +5047,6 @@
       118,
       2,
       "CONDITIONING"
-    ],
-    [
-      70,
-      117,
-      0,
-      118,
-      3,
-      "GUIDER_PARAMETERS"
     ],
     [
       71,
