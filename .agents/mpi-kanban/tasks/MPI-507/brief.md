@@ -361,3 +361,45 @@ shipped Flow and the release gate. MPI-506 is additive and can land alone. Land
   output. Correctness needs no bench; 1K is not faster than 4K.
 - §4d - four plugins (one per path). SeedVR2 does **not** copy this: its three
   variants differ in one injectable literal, so it needs two files, not six.
+## 7. Deprecating PiD - what already exists, and the trap (research 2026-08-10)
+
+Fabio asked for a card that marks models for deprecation: PiD gets a notice in
+**1.4** and is fully deprecated in **1.5**, replaced by the plugin entry this card
+builds. That card is **MPI-514** (another agent's). This section is the research, so
+it is not redone - and because MPI-507 is where the replacement actually lands.
+
+**A `deprecated` flag ALREADY EXISTS - but only on OPERATIONS, and it means
+something else.** `js/core/operationRegistry.js` carries `deprecated: true` on three
+op keys (`poseReference`, `change`, `remove`). Its meaning is **history
+compatibility**: *items written by an older version still validate, and nothing may
+ever WRITE this key again*. It is invisible to users, and its only reader is
+`scripts/release-health-check.mjs`, which just checks the flag agrees with the
+`dev_configs/operation_registry.json` mirror. **A user-facing sunset notice must be a
+SEPARATE field** - reusing this one would change what history validation means.
+
+**For models there is no flag at all.** Deprecation today is a comment convention,
+`// -- DEPRECATED (MPI-nnn)`, plus deletion. So the user-visible half is genuinely
+new work; the op-level half is not.
+
+**PiD's actual shape:** a real `ModelDef` - `id: 'nvidia-pid'`, `type: 'pid'`,
+`supportedOps: ['pid']`, at `js/data/modelConstants/models.js:820`. The `pid` op key
+in `operationRegistry.js` is **NOT** deprecated today.
+
+**THE TRAP, on the 1.5 removal: never delete the `pid-*` / `vae-*` / `pid-gemma` dep
+entries.** `_orphanedDepIds` (`routes/downloadManager.js`) iterates `DEPS` and trashes
+what no model's dep list protects - so the entry SURVIVING is exactly what lets a user
+who already downloaded the weight reclaim the disk. Delete it and the sweep goes
+blind: the file strands forever, untracked, with nothing in the app able to remove it.
+Both MPI-470 and MPI-466 kept theirs; the playbook step was corrected on 2026-08-07
+for this reason. Full procedure: `docs/playbooks/add-model/README.md` § "Removing or
+re-tiering a model".
+
+**A CHANGELOG CONTRADICTION nobody had spotted.** `docs/releases/UNRELEASED.md`
+(~line 250) currently promises **"The NVIDIA PiD upscaler now actually upscales"** for
+the next release. Shipping a deprecation notice in that same release would make both
+claims at once. Latest published release is **1.3.1**, so 1.4.0 is still unreleased and
+that entry is editable - it is not frozen `RELEASE_NOTES` and must not be treated as such.
+
+**Sequencing:** the replacement PiD is deprecated *in favour of* is the plugin dropdown
+entry, and that mechanism does not exist yet - it is MPI-506's, whose `PluginDef` still
+has a singular `operation` and one instance. A 1.5 removal cannot land before it.

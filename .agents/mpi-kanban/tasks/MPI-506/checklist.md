@@ -18,6 +18,15 @@
 
 ## App wiring — NOT STARTED (deferred to 1.5 by Fabio, 2026-08-10)
 
+> **Read this before estimating: what is left is a FEATURE, not wiring.** The
+> workflows are done and proven, but the mechanism they plug into does not exist.
+> `PluginDef` (`js/data/pluginsRegistry.js`) has a **singular `operation`** and
+> exactly **one** instance (`image-describer`), and three SeedVR2 plugins all serve
+> `videoUpscale` — so `operation` stops identifying a plugin. Good news, already
+> checked: `MpiToolOptionsUpscale.js` is **already `kind`-aware** (`'image' | 'video'`),
+> so it needs no refactor. MPI-507 is blocked on this same mechanism by design — it
+> was always meant to be the second consumer.
+
 - [ ] `PluginDef` gains a tool-dropdown entry declaration (which tool, label, injector value). `operation` is singular today and three plugins share `videoUpscale`
 - [ ] Per-entry conditional controls — SeedVR2 declares none, PiD declares prompt + denoise. A declared list, never `if (isPid)`
 - [ ] `plugin:<id>` value namespacing + `coerceSettings()` dropping a stale value whose weight left disk
@@ -30,3 +39,19 @@
 
 - [ ] **`--lowvram` re-measure on `:48188`.** Every fpc number so far is NORMAL_VRAM bench; the app launches `--lowvram` on every NVIDIA GPU (`routes/comfy.js:432`)
 - [ ] **Remote/Pod half (§5).** A plugin dep is not baked into the Pod image. Establish how `image-describer`'s encoder reaches a Pod, and whether SeedVR2 can work remotely at all
+
+## Tooling notes — cost time on 2026-08-10, will cost it again
+
+- **`sync-raw-workflows.mjs` refuses to run** while any generated workflow is dirty, and
+  **nine of them are permanently dirty** here from the `core.autocrlf` renormalisation
+  (content-identical to HEAD, `git diff --numstat` empty). Do NOT try to "fix" them —
+  unpicking it needs a banned git command. Drive its steps 3 and 4 directly instead:
+  `COMFY_URL=http://127.0.0.1:48188 node scripts/workflow-to-api.mjs <raw> > <runtime>`,
+  then `node scripts/validate-injection-rules.mjs <runtime…>`. That is exactly what the
+  script does internally, with no side effects on files other sessions own.
+- **Convert against `:48188`, never the `:8188` bench** — the bench runs ahead and has
+  silently shifted a widget before.
+- **Re-dumping a co-owned kanban JSON with `ensure_ascii=False` re-escapes the WHOLE
+  file** and produced a ~40-line false diff on `board.json` when the real change was two
+  lines. Rebuild from `git show HEAD:<path>`, apply only your edit, dump with
+  `ensure_ascii=True`, and check `git diff --numstat` before committing.
