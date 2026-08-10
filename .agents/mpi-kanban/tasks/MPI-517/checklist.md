@@ -18,6 +18,7 @@
 - [x] Confirm every weight in both runtime graphs is backed by a dep
 - [x] Run orphan-sweep / resolve-model-deps / shared-dep-uninstall / extra-model-folders
       (11 pass, 0 fail)
-- [ ] BLOCKED: one real H3 generation through the app on core v0.31.x
-- [ ] BLOCKED: one clean install of the dep from R2 (download + sha256 + load)
-- [ ] HOLD MERGE until the engine is on v0.31.x
+- [x] Engine reached v0.31.x (89ac23ae) - merge gate cleared, shipped at 66909bcf
+- [x] One real H3 generation through the committed graph on core v0.31.0 - success in
+      150s, video AND audio, 2677MB int8 VAE staged
+- [x] One clean install of the dep from R2 - 3171670912 bytes, sha256 MATCH

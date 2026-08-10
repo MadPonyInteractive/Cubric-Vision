@@ -1,7 +1,7 @@
 # MPI-517 — validation
 
-Status: code complete and locally verified. **Merge is gated on the engine bump**, and one
-live check remains that can only run on core v0.31.x.
+Status: COMPLETE. Shipped at 66909bcf, on core v0.31.0 (89ac23ae). Every check ran; see
+CLOSING EVIDENCE at the end for the two that were outstanding.
 
 ## Proven (commands run, output seen — 2026-08-10)
 
@@ -85,3 +85,51 @@ the download and the `mirrorUrl` (Kijai HF) is the fallback.
   smaller H3 download goes through that card or at close-out.
 - The w4a8 DiTs for a low H3 tier — same repo, same licence position, unblocked by the same
   engine bump. Deferred by Fabio to a separate card pending quality evaluation.
+
+## CLOSING EVIDENCE - both open checks discharged (2026-08-10, core v0.31.0)
+
+### 1. A real H3 generation on the bumped engine
+
+Dispatched the COMMITTED `comfy_workflows/minimax_h3_fl2va.json` to the local engine on
+48188 (owned by the MPI-450 session; they authorised its use under MPI-484). Shipped
+resolution and duration left untouched at 864x480 / 3s so nothing could fail for a size
+reason; only turbo and single-pass were flipped to keep it cheap, both shipped controls.
+Seed fixed at 42.
+
+```
+node_errors: {}                     <- 0.31 VALIDATED the int8 VAE; 0.30 could not
+status: success, completed: True, 150s
+output: MpiVideo_00001.mp4, 629196 bytes
+vae_name dispatched: minimax_h3_video_vae_int8_convrot.safetensors
+streams: avc1 + mp4a, handlers vide + soun   <- video AND audio, so BOTH VAEs decoded
+```
+
+The decisive engine line - it is the int8 build, not merely "a VAE":
+
+```
+Requested to load MiniMaxH3VideoVAE
+Model MiniMaxH3VideoVAE prepared for dynamic VRAM loading. 2677MB Staged.
+```
+
+2677MB staged is the int8 weight; the fp16 build would stage roughly double. Confirms the
+load went through core 0.31's `detect_layer_quantization` branch.
+
+Mid-run the GPU read 2794MiB at 15% while still queued - that was the DiT evicted and the
+3.17GB VAE resident for decode, not a stall.
+
+### 2. A clean install from R2
+
+Full round-trip download of the published object, then hashed:
+
+```
+bytes downloaded: 3171670912
+sha256 from R2  : 9bb2d96f218c76babd85e0611b85ca8fb330a90546c01a0005e8a58a59593410
+dep declares    : 9bb2d96f218c76babd85e0611b85ca8fb330a90546c01a0005e8a58a59593410
+MATCH
+```
+
+So the R2 primary serves exactly the bytes `_verifySha256` demands. This supersedes the
+note in the reply to MPI-450 warning that their matrix would be the first exercise of that
+path - it no longer is.
+
+Card closed on this evidence. Nothing in it is unrun or inferred.
