@@ -3,6 +3,116 @@
 Reasoning per line is in `brief.md`. A line is ticked only when it is verified, not
 when it is believed.
 
+## ⚠ SCOPE CHANGE 2026-08-10 — 1.4 now carries a ComfyUI bump to 0.31.0
+
+**Fabio's call, taken after the notes were already folded.** He installed 0.31.0 on the
+bench and H3 with the turbo LoRA came back at ~40s against ~70s on 0.30.0. His reasoning,
+which is the reason this is not deferred: two ComfyUI releases landed while 1.4 was being
+fixed, and shipping visibly slower than every other app keeps us behind. **The W4A8 low
+tier is NOT in 1.4** — it is a new model tier (add-model playbook, R2 upload, licence
+gate) and Fabio is starting it in a parallel session for 1.5.
+
+**Everything below the bump section was already done and still stands.** The bump does not
+invalidate the code, the tests, or the notes copy — only the smoke evidence and the Pod
+image, both of which are engine-scoped. Do not redo the audit; do add the new claims to it.
+
+### What 0.31.0 actually brings (researched 2026-08-10, gate 0 — do not re-derive)
+
+32 commits, 47 files, `v0.30.0...v0.31.0`. It is an unusually H3-heavy release:
+
+- `Support asym w4a8_int` (kijai #15308) — the quant the 1.5 low tier needs. **This is why
+  0.31 is a prerequisite for that card, not merely nice to have.**
+- `Support int8_convrot VAE for MiniMax-H3` (kijai #15334)
+- `Fix sampler issues for audio with minimax, support more samplers` (kijai #15243)
+- `Fix full offload on minimax audio vae` (#15377), `Fix MiniMax H3 audio corruption with
+  EasyCache` (kijai #15390), `Fix MiniMax H3 noise mask sampling` (#15322),
+  `cast raw parameters to input device in H3 VAEs` (#15268)
+- `Speedup LTX and Wan` (kijai #15138) — **not only H3.** Worth a release-notes line.
+
+**NOT in 0.31.0:** kijai's H3 VAE peak-memory PR (#15446) merged 2026-08-09, the day AFTER
+0.31.0 shipped. Do not write a note claiming the decode-memory win — it lands in the NEXT
+engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating section.
+
+### Two traps found in the research — both cost real time if missed
+
+1. **`node_lock.json` pins the FRONTEND as well as core — three pins move, not one.**
+   `comfyui-frontend-package` 1.47.11 → **1.48.7** and `comfyui-workflow-templates`
+   0.11.27 → **0.11.34**, both read from v0.31.0's own `requirements.txt`. The playbook's
+   "bump the pin in BOTH files" means node_lock + system_dependencies and does NOT mention
+   these; they sit inside node_lock and are easy to leave behind.
+2. **`res_multistep` changed how it consumes RNG (#15339) and FOUR shipped graphs use it**
+   — `chroma_t2i`, `chroma_hyper_t2i`, `minimax_h3_fl2va`, `minimax_h3_r2va`. The noise gate
+   moved from `if sigmas[i + 1] > 0` to `if sigma_up > 0`. Where `sigma_up == 0` the old
+   code still CALLED `noise_sampler` and multiplied by zero — invisible, but the RNG
+   advanced. The new code skips the call, so the seed→image mapping can shift.
+   **UNVERIFIED — prove it empirically at the local gate** (same seed, same graph, 0.30 vs
+   0.31) before writing or omitting a release note. If it does shift, users with saved seeds
+   get different pictures and that IS an importantChanges line.
+
+### The bump, in playbook gate order (`docs/playbooks/bump-engine/README.md`)
+
+- [x] **Gate 0 — research the breaking surfaces.** Done, above.
+- [x] **Gate 1 — target reachable.** `v0.31.0` has 4 Comfy-Org portable assets, published
+      2026-08-08, and is the NEWEST release, so it is the ceiling. (The `v0.30.1`/`v0.30.2`
+      no-asset trap does not bite here.)
+- [x] **Gate 2 — no version desync to repair.** Both files agreed at 0.30.0 before the bump:
+      `node_lock.json` `v0.30.0` / commit `b1693ecb`, `system_dependencies.json` `0.30.0`.
+- [ ] **Gate 3 — bump the pins.** `node_lock.json` core `tag` + `commit`, PLUS the two
+      frontend pins above, PLUS `system_dependencies.json`. Grep all and confirm they agree.
+- [ ] **Gate 4 — re-check every pinned custom node against the new core.** MPI-465's break
+      was a node calling a changed core API while its own pin was innocent. Note #15277
+      "Harden some nodes against potential issues related to combos" touches `nodes.py`
+      (+14-5) — core input validation, the shape of thing that bites a custom node.
+- [ ] **Gate 5 — LOCAL gate.** Upgrade the engine to the new pin, boot it, then
+      `node scripts/engine-floor-check.mjs` (48188 = app engine). Empirical, never a reading
+      of release notes. **Do the res_multistep seed check here too.**
+- [ ] **Gate 6 — sync BOTH files into mpi-ci, THEN rebuild the DEV image.**
+      `node_lock.json` AND `python_deps.txt` → `c:\AI\Mpi\mpi-ci\cubric-vision-pod\`,
+      committed with `git -C`. Then `build-pod-image` at `v<ver>-dev-<profile>`, bumping
+      **ONLY** `POD_IMAGE_VERSION_DEV` / `_CPU_DEV`. **NEVER the user-facing tag** — that
+      breaks every user's Pod on next boot. Re-run `--plan` immediately before the smoke:
+      both files are live working-tree state and a card landing mid-bump re-drifts them.
+      **NOTE: `0c4ded6` in the pod repo is committed but NOT pushed** (a prior sync).
+- [ ] **Gate 7 — assert the Pod reports 0.31.0** before smoking. The runner hard-fails on
+      this itself; do not bypass it.
+- [ ] **⚠ BEFORE GATE 8 — WAIT FOR FABIO'S NEW H3 VAE DEP.** Told 2026-08-10: a new,
+      smaller, faster H3 VAE just shipped and takes H3 to ~27s (from ~40s on 0.31, ~70s on
+      0.30). He is adding it in a **parallel session** as a dependency change and will
+      continue the handoff when it is in. It is almost certainly what `Support int8_convrot
+      VAE for MiniMax-H3` (kijai #15334) enables, so it requires 0.31 and belongs in 1.4
+      alongside the bump. **THE TRAP:** `release:check` gates the evidence on the ENGINE
+      version but **not** on the dep set, so a matrix run before the VAE lands looks
+      perfectly valid while describing a model that no longer exists — and the entire rented
+      matrix is wasted. Same shape as the playbook's "sync LAST" lesson. **Confirm the VAE
+      dep is in the tree, then smoke.**
+- [ ] **Gate 8 — full smoke matrix.** Not `--retry-failed`: the evidence is engine-scoped
+      and `release-health-check.mjs:463` refuses a file produced against a different engine,
+      so all 35 rows are void. Cheaper than this morning's run — the H3 ops now clamp
+      `Input_Duration` to 1 (~22 frames, was ~73) and the volume is warm at 327GB.
+- [ ] **Gate 9 — evidence written**, `npm run release:check` satisfied.
+- [ ] **STABLE Pod image rebuild — MANDATORY, and it is NOT the dev one.** An engine bump
+      makes the release-time rebuild compulsory: ship the app at 0.31 while the released
+      image is still 0.30 and every remote user silently runs two different ComfyUI
+      versions. Promotion is a **clean rebuild at a real version, never a dev tag renamed**,
+      so there is no const to promote — `POD_IMAGE_VERSION` is a manual edit.
+      `mpi-release`'s "a dev-only Pod IMAGE tag needs no action" is explicitly untrue here.
+      **That means TWO image builds this release.**
+
+### Then, and only then, the release chain
+
+- [ ] Re-fold the notes: the `RELEASE_NOTES['1.4.0']` block is ALREADY WRITTEN (18/38/11 +
+      1 engineNote) but its engineNote says 0.30.0 and must be rewritten for 0.31.0 —
+      including the H3 speedup, the LTX/Wan speedup, and the res_multistep outcome if gate 5
+      proves it. `UNRELEASED.md` is still intact, so the fold re-runs from the script in the
+      handoff.
+- [ ] Archival `docs/releases/2026-08-<dd>-v1.4.0.md` — never written yet.
+- [ ] `npm run release:approve -- --yes` (writes `.approved-1.4.0.json`; commit it).
+      **Approve LAST** — the token hashes the rendered notes, so any later copy edit
+      re-blocks the build.
+- [ ] `npm run release:check`, `npm test`, `npm run test:desktop`, `npm run release:deps`.
+- [ ] CI artifacts (all three OS) → MPI-249's Linux leg on the REAL
+      `CubricVision-linux-x64-v1.4.0.tar.gz` → `/mpi-release`, PROMOTE at the manifest stop.
+
 ## ON PICKUP — do these three before anything else
 
 The card was HELD on **2026-08-05** behind Gate E. Ticks below were made under
@@ -146,6 +256,31 @@ assumptions that time may have invalidated.
       `UNRELEASED.md` § importantChanges (`xcode-select --install` before first setup).
       The card is `deferred`, NOT fixed — the tarball-instead-of-clone candidate is not
       established to remove the requirement (CLT also supplies clang). See its brief.
+- [x] **Claim audit, SECOND PASS — the `mpi-kanban:claim-auditor` agent, 2026-08-10, run
+      BEFORE the fold as MPI-511's message asked.** Audited all 524 lines against
+      `v1.3.1..HEAD` (593 commits): **~45 PROVEN, 1 FALSE, 4 OVERSTATED, 1 UNPROVABLE.**
+      Every finding was re-verified against git by hand before any edit — which mattered,
+      because **one finding was itself wrong**: it claimed `ltx-23` declares
+      VideoHelperSuite and wanted the notes to say "Wan 2.2 or LTX 2.3". The two
+      declarations sit inside `wan-22` (models.js:1106) and `wan22-5b` (:1454); `ltx-23`
+      has none. Applying that "fix" would have PUT a false claim into a public changelog.
+      Treat this agent as evidence, never as truth.
+      **Applied:** the FALSE one (Chroma's Control op DOES follow the source image — both
+      Chroma cards declare `imageSizedOps: ['control','detail','upscale']`; the
+      Depth→Control rename left the line stale); the six progress bars restated as the TWO
+      root causes they had (`fa7f2dc1` sibling-billing on 2 bars, `be00aee7` orphan
+      collection on the other 4); "both Qwen models" → "Qwen", there being exactly one.
+      **CUT on Fabio's call:** the whole "LTX video generation works again" bullet. It
+      claimed every LTX generation had failed since 1.3.0, but **v1.3.0 AND v1.3.1 both
+      pinned ComfyUI v0.29.2** and the breaking change is in v0.30.0, pinned only in this
+      cycle — so no released user ever had broken LTX. The bullet described a regression
+      created and fixed inside the dev cycle, invisible to everyone.
+      **REWRITTEN on Fabio's call:** the H3 Turbo bullet no longer carries any specific
+      number. The "2m15s instead of 4m15s on a 16GB card" figure had no committed backing
+      (`turbo.md` holds only the 2-second lightx2v measurement and a 5s table for the OTHER
+      LoRA — the turbo LoRA was swapped mid-cycle, MPI-505 → MPI-508). Turbo is now
+      described qualitatively. Standing rule from Fabio: **no numeric claims for turbo
+      LoRAs.**
 - [x] **Claim audit** — DONE (read half), 2026-08-08. Full per-bullet verdict table:
       **`claim-audit.md`** in this folder. All 61 bullets graded LIVE / TEST / DECL, with
       the evidence pointer per bullet. **Scope correction:** the 2026-08-05 pass had read
@@ -455,8 +590,92 @@ assumptions that time may have invalidated.
       verified macOS outcome, and a broken UI-zoom shortcut is reported within minutes by
       the tester waiting on 1.4. Closed as a DECISION, not a verification.
 
+## The H3 t2v FAIL — settled 2026-08-10, and NOT the way the handoff predicted
+
+**Outcome: `--retry-failed` PASSED (153s, 1 out). Evidence merged: 35 PASS / 0 SKIP / 0 FAIL
+across 35 ops.** The failure did not reproduce. That is NOT the same as a root cause found,
+and this line exists so nobody later reads 35/35 as proof that something was fixed.
+
+**Both handoff candidates are dead, and each was checked before a GPU was rented:**
+
+1. ~~The MPI-501 drain-wait hole (fixed in `2ad444a2`)~~ — **never reached on the failing
+   run.** The app's only server-side restart caller is `routes/remoteModels.js:906`, gated on
+   `out.installed.length`. The app log for that run reads
+   `[2026-08-10T07:13:05.983Z] [INFO] [runpod] universal nodes: 7/7 already on volume`, so
+   nothing installed, `_waitForIdleQueue` never ran, and no restart fired. That one line is
+   the ONLY entry in the whole 07:13–07:44Z window. `2ad444a2` is a correct fix for a real
+   hole; it is not the fix for this.
+2. ~~"ComfyUI died and `start.sh:193`'s supervisor relaunched it"~~ — **that supervisor does
+   not exist.** `:193` is the node-dedupe block. `ComfyManager._supervise`
+   (`wrapper/wrapper.py:304`) calls `os._exit(1)` on an unexpected ComfyUI death and
+   `start.sh` ends in `exec uvicorn` with no respawn, so a crash takes the container DOWN.
+   There is no relaunch path to produce a live Pod with a missing prompt.
+
+**The VRAM theory is also dead, on Fabio's argument, not on a measurement:** H3 t2v runs on
+his local 16GB card, and `i2v_ms` — which carries the same 24.55GB text encoder PLUS an image
+path, so it cannot be cheaper — passes on the same Pod minutes after t2v fails. Memory does
+not explain a pass immediately after a fail. Do not re-open the "bigger card for H3's leg"
+line from the handoff.
+
+**What was actually found — a false-positive path in the detector itself.** `orphanReason`
+declares an orphan on two readings, absent-from-queue AND absent-from-history. The queue read
+is guarded (*"a queue read we could not make is not evidence the prompt left"*); the history
+re-read was NOT. `app()` throws alike on a relay 502 and on a network error, so
+`.catch(() => null)` collapsed "could not read" into "absent" — and one failed read declared
+an orphan. That read is the likeliest to fail: it lands at the completion boundary. The op
+takes **153s**; the FAIL was declared at **162s**.
+
+**This is not proof that the guard is what bit us** — a Pod cannot be re-questioned after it
+is deleted, and the run that would prove it is the one that passed. It IS a defect that can
+manufacture this exact verdict, in the runner, found by reading it. Fixed + mutation-verified:
+`tests/smoke-orphan-guard.test.cjs`, 5 tests incl. a negative control proving a REAL absence
+still reports. `npm test` 540/540 (was 535; the +5 is this file).
+
+**Also corrected: the runner's own diagnostic string, which is what cost the last session.**
+It asserted *"only POST /wrapper/restart-comfy does that, a crash would have taken the Pod
+down"* — naming a caller that provably did not fire. The wrapper half of that claim is sound
+and is kept in the comment; the CONCLUSION is gone. The message now reports the observation
+and names both readings a reader should check.
+
+**Residual, honestly stated:** an intermittent verdict that has now appeared twice (2026-08-08
+MPI-467, 2026-08-10) and passed once under scrutiny. If it recurs, the instrument to reach for
+is a `/remote/comfy/status` poll alongside the run — `ready` staying true through a
+`comfyReady` dip is a requested restart, the wrapper vanishing is a container death (MPI-107).
+That poll ran for this whole retry and showed an UNDISTURBED Pod: `ready:true, comfyReady:true`
+unbroken from 11:25:07Z to 11:28:10Z across the entire 153s op.
+
 ## Surfaced by this umbrella, deliberately NOT gating 1.4
 
+- **The frame budget never reached MiniMax H3, and the smoke has been paying for it.**
+  `TITLE_RULES` clamps `Input_Frames`, but H3 expresses length in SECONDS: `Input_Duration`
+  (`MpiInt`) feeds `MpiH3Length`, which converts at 24fps onto H3's `n % 17 == 5` grid. So
+  no rule matched, the `frames: 1` budget silently skipped H3, and `t2v_ms` smoked a
+  **3-second, ~73-frame video** while every other op ran a single frame — which is the plain
+  reason H3 takes 153s against 4-38s elsewhere, on every matrix run, on a rented GPU.
+  **FIXED 2026-08-10** (`Input_Duration -> 1`, ~22 frames; 1 is the floor an INT node can
+  express and the shipped r2va graph already bakes exactly it). Verified against both real
+  graphs, plus a self-check assertion. Found only because Fabio brought PR #15446 and it
+  prompted a look at what frame count H3 was actually running.
+- **ComfyUI PR #15446 (kijai) — "Optimize MiniMax-H3 VAE", merged 2026-08-09.** H3 decode
+  peak memory grew LINEARLY with video length (full video in VRAM + a float32 copy + a CPU
+  duplicate in `sd.py`); the PR streams it chunked. Measured 3485MB -> 607MB VRAM and
+  +7089MB -> +2320MB RAM at 175 frames, bitwise-identical output. **We do not have it:** it
+  merged after v0.31.0 and we pin v0.30.0. **It does NOT explain this card's smoke FAIL** —
+  a length-dependent peak cannot kill a 128px op — but it is a strong argument for the next
+  engine bump, and it is what revised MPI-516's severity upward: a real user CAN reach the
+  hang by OOMing H3 decode on a long video.
+- **The smoke evidence gates on ENGINE but not on GPU, and `gpu` is one top-level scalar.**
+  `loadMergeBase` refuses a scoped run whose recorded engine differs from the pin
+  (`smoke-workflows.mjs:1088`) and refuses one older than the last `node_lock` move — both
+  correct. Nothing checks the CARD. So `--gpu "RTX 4090"` on a retry merges one fresh row
+  into 34 rows measured on an L4 and rewrites `gpu` for the whole file, which then reads as
+  "35 ops proven on a 4090". Found 2026-08-10 while choosing a card for the H3 retry; it is
+  why that retry deliberately stayed on the L4. **Not a gate:** no run has done it, and the
+  same-card path is unaffected. The honest fix is per-row `gpu`, not a refusal — a retry on
+  a different card is a legitimate thing to want. **NOT carded** — Fabio was asked and the
+  answer was to ship 1.4; raise it again when someone actually wants a cross-card retry.
+- **MPI-516** — a destroyed prompt hangs the app forever (created 2026-08-10, deferred to
+  1.5 on Fabio's call). The only user-facing half of this card's whole H3 investigation.
 - **MPI-509** — a remote install can report success having installed nothing: when
   `_filterDepsForEngine` empties the request, `POST /comfy/models/download/start` still
   answers `{success:true}` with a 0/0 job that settles to `complete`. Found 2026-08-09

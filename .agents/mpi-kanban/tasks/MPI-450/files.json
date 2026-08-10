@@ -8,6 +8,10 @@
     "js/shell/navigation.js",
     "routes/runpodRemote.js",
     "routes/remotePodLifecycle.js",
-    "tests/restart-drain-wait.test.cjs"
+    "tests/restart-drain-wait.test.cjs",
+    "docs/releases/UNRELEASED.md",
+    "scripts/smoke-workflows.mjs",
+    "dev_configs/smoke-evidence.json",
+    "dev_configs/smoke-run.txt"
   ]
 }

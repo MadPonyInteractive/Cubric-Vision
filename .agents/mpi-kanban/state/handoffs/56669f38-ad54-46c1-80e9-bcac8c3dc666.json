@@ -1,0 +1,134 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "56669f38-ad54-46c1-80e9-bcac8c3dc666",
+  "generated_at": "2026-08-10T13:00:00Z",
+  "from_session": ".agents/mpi-kanban/state/handoffs/d8eec87a-2e41-47d2-81cb-727781cc9e78.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "H3 smoke FAIL settled (not the way the handoff predicted), notes audited and corrected, 1.4.0 stamped - then Fabio added a ComfyUI 0.31.0 bump to 1.4",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Clear MPI-450's remaining gates so 1.4 can be cut.",
+    "status": "in_progress",
+    "summary": "The 1.4 blockers from the last handoff are ALL cleared: the H3 t2v FAIL is settled, the notes are audited and corrected, and the version is stamped to 1.4.0. Then the scope changed: Fabio put ComfyUI 0.31.0 into 1.4 (H3 ~40s vs ~70s on his bench). So the remaining work is the bump playbook end to end, then the release chain. The W4A8 low tier is explicitly NOT in 1.4 - Fabio is doing it in a parallel session for 1.5."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "H3 t2v FAIL SETTLED - and BOTH candidates in the previous handoff were wrong, each disproven for FREE before renting anything. (a) The MPI-501 drain-wait hole was never reached: the app's only server-side restart caller (routes/remoteModels.js:906) is gated on out.installed.length, and the app log for the failing run reads 'universal nodes: 7/7 already on volume' - the ONLY log line in the whole 07:13-07:44Z window. No restart fired. 2ad444a2 is a correct fix for a real hole but is not the fix for this. (b) 'start.sh:193's supervisor relaunching ComfyUI' does not exist - :193 is node-dedupe, ComfyManager._supervise calls os._exit(1) on unexpected death and start.sh ends in `exec uvicorn` with no respawn, so a crash takes the CONTAINER down.",
+      "The VRAM theory is dead too, on FABIO'S argument: i2v carries the same 24.55GB text encoder PLUS an image path so it cannot be cheaper, and it passes on the same Pod minutes after t2v fails. Do not re-open 'bigger card for H3's leg'.",
+      "THE RETRY PASSED - minimax-h3/t2v_ms, 153s, 1 out. Evidence merged: 35 PASS / 0 SKIP / 0 FAIL over 35 ops. A /remote/comfy/status poll ran alongside the whole run and showed an UNDISTURBED Pod (ready:true, comfyReady:true unbroken 11:25:07Z-11:28:10Z). NOTE: that evidence is now VOID for 1.4 because the engine is being bumped - see pending.",
+      "FOUND + FIXED the likely cause, in the RUNNER not the app: orphanReason guarded the QUEUE read against a failed fetch but NOT the history re-read, so `.catch(() => null)` collapsed 'could not read' into 'absent from history' - and absent-from-history is half of what declares an orphan. The op takes 153s; the FAIL was declared at 162s, i.e. at the completion boundary where that read is likeliest to fail. NOT PROVEN to be what bit us (the Pod is deleted and the run that would prove it is the one that passed) - it is a defect that can manufacture this exact verdict. tests/smoke-orphan-guard.test.cjs, 5 tests, mutation-verified, incl. a negative control proving a REAL absence still reports.",
+      "Also removed the runner's diagnostic claim 'only POST /wrapper/restart-comfy does that, a crash would have taken the Pod down' - it named a caller that provably did not fire, and that sentence is what sent the previous session hunting. The sound half (the wrapper mechanics) is kept as a comment; the conclusion is gone.",
+      "FOUND + FIXED a second runner defect, via Fabio's ComfyUI PR link: the frame budget NEVER REACHED H3. TITLE_RULES clamps Input_Frames, but H3 expresses length in SECONDS - Input_Duration (MpiInt) feeds MpiH3Length, 24fps on an n%17==5 grid. So minimax-h3/t2v_ms was smoking a 3-second ~73-frame video while every other op ran ONE frame, which is the plain reason H3 took 153s against 4-38s elsewhere, on every matrix run, on a rented GPU. Now clamps Input_Duration to 1 (~22 frames; the shipped r2va graph already bakes exactly 1, so it is proven-legal). Verified against BOTH real H3 graphs plus a self-check assertion.",
+      "NOTES AUDITED - mpi-kanban:claim-auditor over all 524 lines against v1.3.1..HEAD (593 commits): ~45 PROVEN, 1 FALSE, 4 OVERSTATED, 1 UNPROVABLE. Every finding re-verified by hand against git BEFORE any edit, which mattered: ONE FINDING WAS ITSELF WRONG (it claimed ltx-23 declares VideoHelperSuite and wanted the notes to say 'Wan 2.2 or LTX 2.3'; the two declarations are inside wan-22 at models.js:1106 and wan22-5b at :1454 - applying that fix would have PUT a false claim into a public changelog). Treat that agent as evidence, never truth.",
+      "NOTES CORRECTED: the FALSE one (Chroma's Control op DOES follow the source image - both Chroma cards declare imageSizedOps ['control','detail','upscale']; the Depth->Control rename left the line stale); the six progress bars restated as the TWO root causes they had (fa7f2dc1 sibling-billing on 2, be00aee7 orphan collection on 4); 'both Qwen models' -> 'Qwen' (there is exactly one); and UNRELEASED.md:176's 'nothing extra to download' corrected after verifying neither preview decoder carries engineAsset:true and syncModelInstalled resolves the FULL dep universe, so an existing H3/LTX owner really does land in partial state.",
+      "CUT on Fabio's call: the whole 'LTX video generation works again' bullet. It claimed every LTX generation had failed since the 1.3.0 release, but v1.3.0 AND v1.3.1 BOTH pinned ComfyUI v0.29.2 and the breaking change is in v0.30.0 - pinned only in this dev cycle. No released user ever had broken LTX. The bullet described a regression created and fixed inside the cycle, invisible to everyone.",
+      "REWRITTEN on Fabio's call: the H3 Turbo bullet carries NO specific numbers. The '2m15s instead of 4m15s' figure had no committed backing (turbo.md holds only the 2-second lightx2v measurement and a 5s table for the OTHER LoRA - the turbo LoRA was swapped mid-cycle, MPI-505 -> MPI-508). STANDING RULE FROM FABIO: no numeric claims for turbo LoRAs.",
+      "VERSION STAMPED 1.4.0 - js/core/appVersion.js APP_VERSION, package.json, package-lock.json (root + packages['']), all three verified identical. SCHEMA_VERSION untouched at 4. No op registration was owed: `control` and `ref2v_ms` were already stamped appVersionIntroduced '1.4.0' during the cycle, and system_dependencies was already 0.30.0.",
+      "RELEASE_NOTES['1.4.0'] WRITTEN into js/data/releaseNotes.js - 18 whatIsNew, 38 fixes, 0 breakingChanges, 11 importantChanges, 1 engineNote. Folded from UNRELEASED.md by script (markdown stripped, multi-paragraph bullets flattened, backticks removed) because hand-copying 67 bullets is where transcription errors come from. The module parses and the counts match the source exactly.",
+      "MPI-516 CREATED (todo/planned) - a destroyed prompt hangs the app forever. Deferred to 1.5 by Fabio. Its severity was revised UPWARD after Fabio found ComfyUI PR #15446: an H3 decode OOM kills ComfyUI, which on a Pod is os._exit(1) -> container down -> every _pollHistory bail path reads 'still running' -> frozen bar forever. So it IS user-reachable (long H3 video, too little memory), contrary to how it was first carded. NOTE the app-side detail found while writing it: there are THREE bail paths in _pollHistory that all read as 'still running' (:1061 transport, :1064 catch, :1067 absent), not just the one the old handoff named."
+    ],
+    "pending": [
+      "THE WHOLE JOB IS NOW THE ENGINE BUMP TO 0.31.0, THEN THE RELEASE CHAIN. The full gate-ordered checklist, the 0.31.0 research, and the two traps are in tasks/MPI-450/checklist.md under the '⚠ SCOPE CHANGE 2026-08-10' section at the TOP of the file. READ THAT FIRST - it is written to be executed in order and this list does not repeat it.",
+      "TRAP 1 - node_lock.json pins the FRONTEND as well as core, so THREE pins move, not one: comfyui-frontend-package 1.47.11 -> 1.48.7 and comfyui-workflow-templates 0.11.27 -> 0.11.34, both read from v0.31.0's own requirements.txt. The playbook's 'bump the pin in BOTH files' means node_lock + system_dependencies and never mentions these.",
+      "TRAP 2 - res_multistep changed RNG consumption (#15339: `if sigmas[i+1] > 0` -> `if sigma_up > 0`) and FOUR shipped graphs use it: chroma_t2i, chroma_hyper_t2i, minimax_h3_fl2va, minimax_h3_r2va. Where sigma_up==0 the old code still CALLED noise_sampler and multiplied by zero, advancing the RNG; the new code skips it, so the seed->image mapping can shift. UNVERIFIED - prove it at the LOCAL gate with the same seed on 0.30 vs 0.31 before writing or omitting a release note. If it shifts, that is an importantChanges line, because users with saved seeds get different pictures.",
+      "TWO Pod image builds this release, not one: the DEV image for the smoke, and then a MANDATORY STABLE rebuild at release. An engine bump makes the release-time rebuild compulsory - ship the app at 0.31 while the released image is still 0.30 and every remote user silently runs two different ComfyUI versions. Promotion is a clean rebuild at a real version, NEVER a dev tag renamed, so there is no const to promote. mpi-release's 'a dev-only Pod IMAGE tag needs no action' is explicitly untrue for an engine bump.",
+      "THE SMOKE EVIDENCE IS VOID and must be a FULL matrix, not --retry-failed: release-health-check.mjs:463 refuses a file produced against a different engine, so all 35 rows die with the pin move. It is cheaper than this morning though - H3 now clamps Input_Duration to 1 (~22 frames, was ~73) and the volume is warm at 327.3GB of 450GB.",
+      "ORDERING - RUN THE SMOKE LAST, AFTER FABIO'S NEW H3 VAE DEP LANDS. Told 2026-08-10 13:0x: a new, smaller, faster H3 VAE just shipped (H3 now ~27s, down from ~40s on 0.31 and ~70s on 0.30). Fabio is adding it in a PARALLEL SESSION as a dependency change and will continue this handoff when it is in. It is almost certainly what `Support int8_convrot VAE for MiniMax-H3` (kijai #15334) enables, so it REQUIRES 0.31 and belongs in 1.4 with the bump. THE TRAP: release:check gates the evidence on the ENGINE version but NOT on the dep set, so a matrix run BEFORE the VAE lands looks perfectly valid while describing a model that no longer exists - and the whole rented matrix is wasted. This is the same shape as the playbook's 'sync LAST' lesson about node_lock and python_deps being live working-tree state. Confirm the VAE dep is in the tree, then smoke.",
+      "The new VAE also needs a release-notes line and must be added to the claim-audit set - it is a user-facing speed claim, and the standing rule is NO SPECIFIC NUMBERS unless a committed artifact backs them (smoke-evidence.json or a docs/models/h3/ timing table). Fabio's 27s is a bench reading, not committed evidence.",
+      "THE NOTES ARE WRITTEN BUT THE engineNote IS WRONG: RELEASE_NOTES['1.4.0'].engineNotes[0] says 'UPDATED TO 0.30.0 - from 0.29.2' and must become 0.31.0 from 0.29.2. Add the H3 speedup and the LTX/Wan speedup (kijai #15138 - it is not only H3), plus the res_multistep outcome if the local gate proves it. UNRELEASED.md is still INTACT and has NOT been cleared, so nothing is lost either way; only the engineNote string needs editing, not a re-fold.",
+      "DO NOT write a note claiming the H3 decode-memory win. kijai's PR #15446 merged 2026-08-09, the day AFTER 0.31.0 shipped, so it is NOT in this engine. It is in the next one - which is a genuine argument for a 1.5 bump, recorded in the checklist's non-gating section.",
+      "STILL NEVER WRITTEN: the archival docs/releases/2026-08-<dd>-v1.4.0.md. And approval is LAST - `npm run release:approve -- --yes` hashes the rendered notes, so any later copy edit re-blocks the build.",
+      "THEN: release:check, npm test, test:desktop, release:deps, CI artifacts on all three OS, MPI-249's Linux leg on the REAL CubricVision-linux-x64-v1.4.0.tar.gz (it cannot precede the bump - it needs the artifact), then /mpi-release with PROMOTE at the manifest stop."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-450",
+    "title": "1.4 release readiness umbrella - clear the gates before cutting 1.4.0",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-450/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-450/handoffs/"
+    }
+  },
+  "kanban_entry": null,
+  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "knowledge_preservation": {
+    "completed": [
+      "tasks/MPI-450/checklist.md - the SCOPE CHANGE section (bump plan in gate order, 0.31.0 research, both traps), the H3 FAIL post-mortem with both dead candidates, the second claim-audit record, and three non-gating findings (the H3 frame-budget gap, PR #15446, the GPU-scalar evidence hole).",
+      "tasks/MPI-516/brief.md - the app-hang analysis, the three bail paths, and the upward severity revision with its reasoning."
+    ],
+    "pending": [
+      "NOTHING IN THIS SESSION IS COMMITTED. The tree is shared with a live peer session and board.json + events.jsonl are co-owned, so committing was deliberately left to whoever closes out. Every file is listed in files_modified below.",
+      "state/index.json still lists 10 stale pending_file_states from earlier sessions whose files are long committed. Cleanup for mpi-cleanup, not work."
+    ]
+  },
+  "next_action": {
+    "description": "Run /mpi-bump-engine for 0.31.0 and work the gate list in tasks/MPI-450/checklist.md § SCOPE CHANGE, starting at gate 3 (gates 0-2 are already done and ticked there). Gate 3 is the three-pin edit; gate 5 is where the res_multistep seed question gets settled empirically.",
+    "command": "mpi-continue MPI-450"
+  },
+  "context": {
+    "key_decisions": [
+      "FABIO'S CALL: ComfyUI 0.31.0 goes INTO 1.4. He measured H3 with the turbo LoRA at ~40s against ~70s on 0.30.0. His reasoning - two ComfyUI releases landed while 1.4 was being fixed, and shipping visibly slower than every other app keeps us behind. The counter-case (1.4 was green and ready; every addition resets the audit and the smoke) was put to him and he reaffirmed. Proceed.",
+      "FABIO'S CALL: the W4A8 H3 low tier is NOT in 1.4. It is a new model tier - add-model playbook, multi-GB R2 upload, licence gate, its own smoke rows - and he is starting it in a PARALLEL SESSION for 1.5. 0.31.0 is its prerequisite (`Support asym w4a8_int`, kijai #15308), which is a second reason the bump lands now.",
+      "The H3 FAIL was NOT closed as 'fixed by the drain-wait guard'. It is recorded as: did not reproduce, root cause unproven, and the diagnostic that produced it was unsound. That distinction is deliberate - closing it on a green re-run is exactly the mistake MPI-501 made when it sat in done/complete with 'Not proven yet: the live half' in its own validation file.",
+      "A subagent report is evidence, not truth. The claim-auditor returned one finding that would have INTRODUCED a false claim into a public changelog. Every finding was re-verified against git before any edit, and that is the standing rule for this agent.",
+      "STANDING RULE FROM FABIO: no numeric claims for turbo LoRAs in user-facing copy. The LoRA was swapped mid-cycle (MPI-505 -> MPI-508) and the old numbers described the retired one.",
+      "The GPU-scalar evidence hole was deliberately NOT carded. release:check gates the smoke evidence on ENGINE but not on GPU, and `gpu` is one top-level scalar, so a --gpu-forced retry silently relabels every row. Fabio was asked and chose to ship 1.4; the honest fix is per-row gpu, not a refusal. Recorded in the checklist's non-gating section."
+    ],
+    "constraints": [
+      "POST /runpod/pods IS createPod AND RENTS A GPU - it is not a list. Use GET /runpod/pods. A PreToolUse hook (.claude/hooks/guard-runpod-create.py, d98b939e) now BLOCKS it from Bash, including a command that merely CONTAINS the literal. If you see that block it is working.",
+      "NEVER delete or shrink volume aghcuvg7nl (cubric-smoke, 450GB, EU-RO-1). Always --keep-volume --volume aghcuvg7nl. It currently holds 327.3GB and is warm for the next matrix.",
+      "cp dev_configs/smoke-run.txt BEFORE any smoke-workflows.mjs invocation - even --plan truncates it.",
+      "ROUTES DO NOT HOT-RELOAD. The app must be restarted before a routes/ change exists.",
+      "THE TREE IS SHARED with a live peer session (MPI-504/506/514/515 and comfy_workflows/**). Commit by explicit pathspec only; board.json and events.jsonl are CO-OWNED. NEVER git checkout -- / restore / stash / reset --hard / clean.",
+      "BASH: heredocs are hook-blocked - write a .py with the Write tool and run it by path. Backticks in a -m commit message get command-substituted; use git commit -F <file>. When editing a JSON/JS file by anchor, detect CRLF FIRST - an anchor built with a bare \\n does not match this repo's files at all (cost one failed run today).",
+      "0c4ded6 in c:/AI/Mpi/mpi-ci/cubric-vision-pod is COMMITTED BUT NOT PUSHED - a prior node_lock sync. Gate 6 will add another commit there.",
+      "The board validator wants schema mpi-kanban/event/v1 with `id` and `type` fields. An event written as {at, event, actor, task, note} FAILS validation - that shape was written and corrected today."
+    ],
+    "files_modified": [
+      "NOTHING COMMITTED THIS SESSION - all of the following are uncommitted working-tree edits.",
+      "js/core/appVersion.js - APP_VERSION 1.3.1 -> 1.4.0",
+      "package.json + package-lock.json - version 1.4.0 (root and packages[''])",
+      "js/data/releaseNotes.js - new RELEASE_NOTES['1.4.0'] block (its engineNote still says 0.30.0)",
+      "docs/releases/UNRELEASED.md - audit corrections, the LTX bullet CUT, the Turbo bullet de-numbered, :176 corrected. STILL INTACT, not cleared to header.",
+      "scripts/smoke-workflows.mjs - orphanReason UNREAD guard, Input_Duration budget rule, diagnostic string reworded, orphanReason exported, self-check assertion",
+      "tests/smoke-orphan-guard.test.cjs - NEW, 5 tests",
+      "dev_configs/smoke-evidence.json + smoke-run.txt - runner-written by the retry (35/35, VOID once the pin moves)",
+      ".agents/mpi-kanban/tasks/MPI-450/checklist.md + files.json",
+      ".agents/mpi-kanban/tasks/MPI-516/ - NEW card (task.json, brief.md, events.jsonl)",
+      ".agents/mpi-kanban/board.json + events.jsonl - CO-OWNED, also carry the peer's MPI-514/515 work",
+      "UNCOMMITTED AND NOT OURS - leave alone: comfy_workflows/**, tasks/MPI-504, MPI-506, MPI-514, and the peer's edits to models.js / MpiModelPicker / MpiTileSheet / MpiModelManager / types.js / docs/model-library.md"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-450/checklist.md",
+      "docs/playbooks/bump-engine/README.md",
+      "dev_configs/node_lock.json"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["release", "versioning", "comfy engine", "runpod", "release notes", "linux"]
+  },
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md",
+    ".claude/rules/git.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/versioning.md",
+    ".claude/rules/comfy_engine.md",
+    "docs/playbooks/bump-engine/README.md",
+    "docs/runpod-remote-engine.md"
+  ],
+  "recent_events": [
+    { "at": "2026-08-10T13:00:00Z", "event": "handoff_created" }
+  ],
+  "resume_prompt": "You are resuming MPI-450, the 1.4 release umbrella, on master. Read .agents/mpi-kanban/state/handoffs/56669f38-ad54-46c1-80e9-bcac8c3dc666.json, then tasks/MPI-450/checklist.md - its '⚠ SCOPE CHANGE 2026-08-10' section at the TOP is the executable plan and is written in playbook gate order. Everything the previous handoff listed as blocking is DONE: the H3 t2v FAIL is settled (both of its candidates were disproven for free, the retry PASSED at 153s, and the real find was a false-positive path in the smoke runner's own orphan detector, now fixed and mutation-verified), the release notes were audited by claim-auditor and corrected (1 FALSE, 4 OVERSTATED - and one auditor finding was itself WRONG and would have put a false claim into a public changelog, so re-verify that agent always), the LTX bullet was CUT because no released user ever had broken LTX, and the version is stamped 1.4.0 with RELEASE_NOTES['1.4.0'] already written. THEN THE SCOPE CHANGED: Fabio put ComfyUI 0.31.0 into 1.4 after measuring H3 at ~40s against ~70s, and the W4A8 low tier is explicitly NOT in 1.4 - he is building it in a parallel session for 1.5, and 0.31.0 is its prerequisite. So the job is the bump playbook end to end starting at gate 3, then the release chain. Four things will cost you time if you miss them: node_lock pins the FRONTEND too so THREE pins move (1.47.11 -> 1.48.7, 0.11.27 -> 0.11.34); res_multistep changed RNG consumption and four shipped graphs use it, so verify the seed->image mapping empirically at the local gate before writing or omitting a note; the smoke evidence is VOID and needs a FULL matrix because release-health-check refuses a file from a different engine; and an engine bump makes a STABLE Pod image rebuild MANDATORY at release on top of the dev image, so it is TWO builds. Nothing in the last session is committed and the tree is shared with a live peer - commit by explicit pathspec, never touch their files, and never run destructive git."
+}

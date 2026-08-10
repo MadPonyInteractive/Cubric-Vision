@@ -147,19 +147,17 @@
   with synchronized audio like the rest of H3, and it installs alongside the existing
   MiniMax H3 sharing its text encoder and both VAEs, so it is one extra model file
   rather than a second full model.
-- **Turbo on MiniMax H3 — one click, roughly half off the wait.** Both H3 models now
-  carry the same **Turbo** button the image models have. On, it takes six sampling steps
-  instead of twenty — a five-second clip lands in about **2m15s instead of 4m15s** on a
-  16GB card, both measured warm on the same prompt. It is off by
-  default. What changes is not only detail — **movement comes out slower**, closer to slight
-  slow motion, and holds together better at small sizes, where the full path can smear
-  faces and shapes as they move. Speed is something you can fix afterwards in an editor;
-  smearing is not. So it is worth trying on small, quick clips rather than saving it purely
-  for drafts. The choice sticks with the model, so it holds while you work and does not
-  follow you to a different one. It adds a 1.82GB file to the H3 download, shared by both
-  H3 models.
+- **Turbo on MiniMax H3 — one click for a quicker clip.** Both H3 models now carry the
+  same **Turbo** button the image models have. On, it takes far fewer sampling steps, so
+  the wait comes down. It is off by default. What changes is not only detail —
+  **movement comes out slower**, closer to slight slow motion, and holds together better at
+  small sizes, where the full path can smear faces and shapes as they move. Speed is
+  something you can fix afterwards in an editor; smearing is not. So it is worth trying on
+  small, quick clips rather than saving it purely for drafts. The choice sticks with the
+  model, so it holds while you work and does not follow you to a different one. It adds a
+  1.82GB file to the H3 download, shared by both H3 models.
 
-  The saving grows with the clip: on a one-second clip most of the time goes on loading the
+  The saving grows with the clip: on a very short one most of the time goes on loading the
   model and writing the video out, neither of which turbo touches, so it is worth far less
   there than on a long one.
 - **MiniMax H3 stopped doing work it only needed for a preview.** H3 used to render in
@@ -173,7 +171,9 @@
   model used to give you — it shows the actual clip, in real colour, looping as it
   refines. You can see the framing, the colour grade and the movement while there is
   still time to stop and change the prompt, instead of waiting out the whole render to
-  find out the shot was wrong. Nothing to turn on and nothing extra to download.
+  find out the shot was wrong. Nothing to turn on. It needs a small preview decoder that
+  comes with the model — around twenty megabytes, so if you already have MiniMax H3 or
+  LTX 2.3 installed, that one piece downloads the first time you update.
 - **Engine updates now apply in place — seconds, not a fresh download.** Updating the
   generation engine used to delete the whole thing and download it again from scratch:
   around eleven gigabytes of engine, every add-on and every Python package, even when
@@ -242,8 +242,7 @@
   Linux build theirs. Removing the requirement is being worked on separately.
 - **Krea 2 and Chroma keep your source dimensions.** On Krea 2, every operation
   except Text to Image and Image to Image now follows the input image's shape
-  instead of the ratio picker. On Chroma this applies to Detail and Upscale;
-  its Control operation still generates at the size you pick.
+  instead of the ratio picker. On Chroma it applies to Control, Detail and Upscale.
 
 ## fixes
 
@@ -315,12 +314,6 @@
   whenever it replaces itself, and a check was added so a future update cannot skip them
   the same way.
 
-- **LTX video generation works again.** Every LTX generation has been failing since the
-  1.3.0 release — the run stopped at the first sampling step and produced nothing. A
-  ComfyUI update changed how one of its components hands over the upscaler model, and the
-  node that reads it had not caught up. Both are updated, and LTX runs end to end again.
-  If you have been avoiding LTX because it looked broken, it was, and it is not any more.
-
 - **The negative prompt now does something on LTX.** Anything you typed into the negative
   box on an LTX video was being ignored. The usual mechanism for it only applies at a
   guidance strength LTX does not run at, and the one part that *can* carry a negative at
@@ -331,9 +324,11 @@
 
 - **Models you never installed no longer show a half-finished download bar.** Six model
   tiles were showing progress bars — 17%, 22%, 33%, 35%, 36%, 49% — for downloads nobody
-  ever started. The bar was counting files that belong to a model you *do* have installed,
-  and billing them to its sibling. It now counts only the files that model would actually
-  have to fetch.
+  ever started, for two different reasons. Two of them were counting files that belong to a
+  model you *do* have installed and billing them to its sibling; the other four were
+  counting leftovers from models you had removed earlier, which nothing was clearing up.
+  Both are fixed, and a bar now counts only the files that model would actually have to
+  fetch.
 
 - **A model that is part-way onto your disk no longer looks like it is downloading right
   now.** A model whose files are partly present showed the same filling progress bar as a
@@ -444,7 +439,7 @@
   back to a rough colour projection that told you almost nothing about what you
   were getting. On macOS and Linux *none* of them were installed, so every model
   had the blob. They now install with the engine. A few models still show the
-  rough preview on purpose: Krea 2, both Qwen models and Wan 2.2 share a preview
+  rough preview on purpose: Krea 2, Qwen and Wan 2.2 share a preview
   decoder with a known bug that corrupts the real generation, so the mediocre
   preview is the safe choice until that is fixed upstream.
 - **Most model downloads now have a second route when your network blocks the

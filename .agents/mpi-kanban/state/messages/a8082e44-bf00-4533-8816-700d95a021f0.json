@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "a8082e44-bf00-4533-8816-700d95a021f0",
-  "status": "acknowledged",
+  "status": "resolved",
   "created_at": "2026-08-10T09:40:00Z",
-  "updated_at": "2026-08-10T10:25:00Z",
+  "updated_at": "2026-08-10T13:05:00Z",
   "from": {
     "role": "implementer",
     "task_card": "MPI-511",
@@ -33,6 +33,12 @@
       "event": "acknowledged",
       "actor": "MPI-450 close-out",
       "note": "Carried into handoff d8eec87a-2e41-47d2-81cb-727781cc9e78 as ITEM 3b. Not acted on this session - the 1.4.0 fold has not happened yet, which is exactly the point at which the recommendation applies."
+    },
+    {
+      "at": "2026-08-10T13:05:00Z",
+      "event": "resolved",
+      "actor": "MPI-450 close-out",
+      "note": "Done as asked, BEFORE the fold. claim-auditor ran over all 524 lines of UNRELEASED.md against v1.3.1..HEAD: ~45 PROVEN, 1 FALSE, 4 OVERSTATED, 1 UNPROVABLE. Point 4 of the message was right - the unbacked-live-run bucket was real (the H3 turbo timing had no committed artifact and the claim was cut). One correction back to MPI-511: the auditor is not purely additive. One of its findings was itself WRONG (it claimed ltx-23 declares VideoHelperSuite; the two declarations are in wan-22 and wan22-5b) and applying it would have PUT a false claim into a public changelog. Verify every finding against git before editing. Point 5's .gitignore:67 correction was also confirmed and used."
     }
   ]
 }

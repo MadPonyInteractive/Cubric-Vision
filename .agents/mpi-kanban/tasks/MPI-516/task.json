@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-516",
+  "title": "A destroyed prompt hangs the app forever - no error, no toast, no log",
+  "description": "Surfaced by MPI-450's H3 smoke investigation, DEFERRED TO 1.5 by Fabio on 2026-08-10 so 1.4 can ship. When a prompt disappears from ComfyUI mid-flight, comfyController's history poll cannot tell 'not written to history yet' from 'gone', so it spins until something else gives up: the progress bar sits frozen, no error is emitted, no toast fires, nothing lands in the log, and on a Pod the user is billed while watching a dead generation. The runner in scripts/smoke-workflows.mjs already has the correct three-signal detection to port - absent from history AND absent from the queue AND the engine answering - so this is a port, not a design problem. NOTE the MPI-450 caveat: that same detector was found on 2026-08-10 to have a false-positive path, so port the detector WITH its guard, or this ships a spurious error where today it ships a hang.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "labels": [
+    "1.5",
+    "generation",
+    "error-handling",
+    "remote"
+  ],
+  "created_at": "2026-08-10T11:57:00Z",
+  "updated_at": "2026-08-10T11:57:00Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

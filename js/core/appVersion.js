@@ -10,7 +10,7 @@
  */
 
 /** Semantic version of the Cubric Studio application. Bump on every release. */
-export const APP_VERSION = '1.3.1';
+export const APP_VERSION = '1.4.0';
 
 /**
  * Project schema version (integer). Increment whenever project.json structure changes

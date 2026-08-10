@@ -237,6 +237,14 @@ const TITLE_RULES = [
     [/^Input_Height$/i, (cur) => snapDown(cur, BUDGET.edge)],
     [/^Input_Steps$/i, () => BUDGET.steps],
     [/^Input_Frames$/i, (cur) => snapFrames(cur)],
+    // MiniMax H3 expresses length in SECONDS, not frames: Input_Duration (MpiInt) feeds
+    // MpiH3Length, which converts at 24fps onto H3's `n % 17 == 5` grid. So Input_Frames
+    // never matched an H3 graph and the frame budget silently did not apply to it — the
+    // t2v op was smoking a 3-second, ~73-frame video while every other op ran one frame,
+    // which is why H3 took 153s against 4-38s elsewhere. 1 is the floor an INT node can
+    // express (MpiH3Length's `seconds` min is 0.2, and 1s snaps to 22 frames); the
+    // shipped r2va graph already bakes exactly 1, so it is a proven-legal value.
+    [/^Input_Duration$/i, () => 1],
     [/^Input_Seed$/i, () => BUDGET.seed],
 ];
 
@@ -738,15 +746,24 @@ function preflightOps(reg, set) {
 // The signal is available in seconds and the runner used to spend the full 15 minutes
 // finding it, then report `timed out`, which reads as a slow model and sent a whole
 // session hunting a model bug that was not there (MPI-467: minimax-h3/t2v_ms, 2026-08-08
-// ~19:55Z. Its sibling i2v_ms passed at 260s on the same Pod minutes later). Pod-side, only
-// POST /wrapper/restart-comfy can do this — an unexpected ComfyUI death takes the whole
-// container down with it (wrapper.py ComfyManager._supervise -> os._exit(1); start.sh ends
-// in `exec uvicorn` with no respawn), so a Pod that is still answering proves a REQUESTED
-// restart, not a crash.
+// ~19:55Z. Its sibling i2v_ms passed at 260s on the same Pod minutes later).
+//
+// This block used to end by naming the mechanism outright: only POST /wrapper/restart-comfy
+// can do it, because an unexpected ComfyUI death takes the container down (wrapper.py
+// ComfyManager._supervise -> os._exit(1); start.sh ends in `exec uvicorn` with no respawn),
+// so a Pod still answering proves a REQUESTED restart. The second half of that is sound and
+// still holds. The CONCLUSION does not, and it cost a session: on the 2026-08-10 matrix the
+// app fired no restart at all — its log shows `universal nodes: 7/7 already on volume`, so
+// the only server-side caller returned before restarting — yet the op was still reported
+// orphaned. Something can produce this verdict that is neither a requested restart nor a
+// crash, and until it is named, this must report the OBSERVATION and let the reader judge.
+// (MPI-450, 2026-08-10)
 const ORPHAN_GRACE_MS = 30_000;
+// "Could not read" — distinct from a read that came back empty. Only the latter is evidence.
+const UNREAD = Symbol('unread');
 
 /** @returns {Promise<string|null>} why the prompt is gone, or null to keep waiting. */
-async function orphanReason(promptId, elapsedMs) {
+export async function orphanReason(promptId, elapsedMs) {
     // Never call orphan on the submit->queue window, and never on a relay blip: a queue
     // read we could not make is not evidence the prompt left.
     if (elapsedMs < ORPHAN_GRACE_MS) return null;
@@ -756,15 +773,22 @@ async function orphanReason(promptId, elapsedMs) {
     if (queued) return null;
     // Re-read history AFTER the queue. A prompt that finished between the two reads is
     // briefly absent from both, and reporting that as orphaned would fail a PASSING op.
-    const again = await app(`/proxy/history/${promptId}`).catch(() => null);
-    if (again?.[promptId]) return null;
+    // The guard the queue read gets above applies here too, and used to be missing:
+    // app() throws alike on a relay 502 and on a network error, so `.catch(() => null)`
+    // collapsed "could not read history" into "absent from history" — and absent-from-
+    // history is half of what declares an orphan. ONE failed re-read was enough to fail a
+    // PASSING op, and this is the read most likely to fail: it lands at the completion
+    // boundary, right after the op's heaviest work. (MPI-450)
+    const again = await app(`/proxy/history/${promptId}`).catch(() => UNREAD);
+    if (again === UNREAD || again?.[promptId]) return null;
     // Name the mechanism in the result line, so the next reader does not have to re-derive
     // it. comfyReady is the flag that dips across a restart-comfy while wrapper `ready`
     // stays true the whole time (MPI-107).
     const st = await app('/remote/comfy/status').catch(() => null);
-    return `prompt orphaned after ${Math.round(elapsedMs / 1000)}s — gone from history AND queue, `
-        + `so ComfyUI restarted under it (comfyReady=${st?.comfyReady ?? '?'}); `
-        + `only POST /wrapper/restart-comfy does that, a crash would have taken the Pod down`;
+    return `prompt orphaned after ${Math.round(elapsedMs / 1000)}s — read back as absent from `
+        + `history AND from the queue (comfyReady=${st?.comfyReady ?? '?'}). ComfyUI holds an `
+        + `accepted prompt in one or the other, so either it restarted underneath (check the `
+        + `app log for a restart-comfy caller) or the op completed as this check ran`;
 }
 
 async function runOp(reg, model, op, probeImage) {
@@ -1434,6 +1458,7 @@ if (INVOKED_DIRECTLY && flag('self-check')) {
         3: { class_type: 'X', _meta: { title: 'Input_Frames' }, inputs: { value: 121 } },
         4: { class_type: 'X', _meta: { title: 'Input_wf_type' }, inputs: { value: 0 } },
         5: { class_type: 'Y', inputs: { latent: ['1', 0] } },
+        6: { class_type: 'MpiInt', _meta: { title: 'Input_Duration' }, inputs: { int: 3 } },
     };
     const applied = minimizeGraph(g);
     const assert = (c, m) => { if (!c) { console.error(`self-check FAILED: ${m}`); process.exit(1); } };
@@ -1441,6 +1466,9 @@ if (INVOKED_DIRECTLY && flag('self-check')) {
     assert(g[2].inputs.value === 1, `steps -> 1, got ${g[2].inputs.value}`);
     assert(g[3].inputs.value === 5, `121 is 4n+1 so frames -> 5, got ${g[3].inputs.value}`);
     assert(g[4].inputs.value === 0, 'minimizer must not touch a branch selector');
+    // H3 measures length in seconds. Without this rule the frame budget misses H3 entirely
+    // and the op smokes a ~73-frame video (MPI-450). `int`, not `value` — MpiInt's widget.
+    assert(g[6].inputs.int === 1, `H3 duration 3s -> 1s, got ${g[6].inputs.int}`);
     assert(g[5].inputs.latent[0] === '1', 'minimizer must never rewrite a link');
     assert(injectByTitle(g, 'Input_wf_type', 4) && g[4].inputs.value === 4, 'injectByTitle sets by title');
     assert(injectByTitle(g, 'Input_Nonexistent', 1) === false, 'injectByTitle reports a miss (silent skip is the trap)');
