@@ -1411,25 +1411,39 @@ async function _maybeNotifyArchChange() {
 // path (downloadService.start → server re-checks drift per dep → force re-clone of
 // the drifted node; already-complete weights dedupe out). First-connect-gated by the
 // caller so a transient reconnect never re-fires it.
+// Namespaced exactly like ENGINE_ASSETS_JOB_ID below, and for the same reason: a
+// heal is not a model install, so it must not borrow a model's job id. Sending it
+// under `ltx-23` made the Model Library render an install bar for a model that is
+// NOT installed — live 2026-08-10, after a node_lock bump drifted MpiNodes. The
+// job's denominator came from the one 1.76MB node this heal sends, while its
+// numerator kept the 2.3GB shared weight already attached to that model's job
+// (MPI-97), so the card read 125,286% → clamped to a full bar, and settled
+// `complete` on a model missing its transformer, VAE and CLIP. Seven sibling
+// models were left holding the same phantom job.
+const NODE_DRIFT_JOB_ID = 'engine:node-drift';
+
 async function _healRemoteNodeDrift() {
   const drifted = getDriftedNodeDeps();
   if (!drifted.length) return;
 
   const { downloadService } = await import('./services/downloadService.js');
   const { DEPS } = await import('./data/modelConstants/dependencies.js');
-  for (const { modelId, depIds } of drifted) {
-    // MPI-393: ONLY the drifted node deps. This used to send the model's full dep
-    // universe on the theory that the volume pre-check dedupes the rest — true for a
-    // fully-installed model, false for a partial one, where it silently downloaded
-    // every missing weight. A recreated Pod drifts most volume nodes at once, so that
-    // filled a 150GB volume and blocked the user from freeing it. A node re-clone is
-    // KB-scale; the drifted deps carry drifted:true so the wrapper gets force:true and
-    // cannot short-circuit on folder-exists (MPI-222).
-    const deps = depIds.map(id => DEPS[id]).filter(Boolean);
-    if (!deps.length) continue;
-    clientLogger.info('shell', `remote drift heal: re-cloning ${deps.length} node(s) for ${modelId} — ${depIds.join(', ')}`);
-    await downloadService.start(modelId, deps);
-  }
+  // MPI-393: ONLY the drifted node deps. This used to send the model's full dep
+  // universe on the theory that the volume pre-check dedupes the rest — true for a
+  // fully-installed model, false for a partial one, where it silently downloaded
+  // every missing weight. A recreated Pod drifts most volume nodes at once, so that
+  // filled a 150GB volume and blocked the user from freeing it. A node re-clone is
+  // KB-scale; the drifted deps carry drifted:true so the wrapper gets force:true and
+  // cannot short-circuit on folder-exists (MPI-222).
+  //
+  // UNION, not one job per model: a custom node lives ONCE on the volume
+  // (CUSTOM_NODES_DIR/<filename> — not model-scoped), so N models sharing a drifted
+  // node described N re-clones of the same folder. One job re-clones it once.
+  const depIds = [...new Set(drifted.flatMap(d => d.depIds))];
+  const deps = depIds.map(id => DEPS[id]).filter(Boolean);
+  if (!deps.length) return;
+  clientLogger.info('shell', `remote drift heal: re-cloning ${deps.length} node(s) — ${depIds.join(', ')}`);
+  await downloadService.start(NODE_DRIFT_JOB_ID, deps);
 }
 
 // Namespaced like `plugin:<id>` / `app:<id>` (pluginsRegistry.pluginDepKey) so this

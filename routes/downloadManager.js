@@ -1583,11 +1583,8 @@ router.post('/comfy/models/download/start', async (req, res) => {
     const defaultModelsRoot = getDefaultModelsRoot();
     const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
-    // Pre-sum totalBytes from ALL deps (including already-installed ones).
-    // SET, never += (MPI-276 G12): a re-POST of the same model must not accumulate
-    // the denominator — a second click read the bar at 200% of real size.
-    const allDepsSize = localDeps.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
-    modelJob.totalBytes = allDepsSize;
+    // totalBytes is computed AFTER the dep loop, from modelJob.deps — see the note
+    // beside the recalculation below for why it cannot be pre-summed from localDeps.
 
     for (const dep of localDeps) {
         let localPath;
@@ -1648,8 +1645,23 @@ router.post('/comfy/models/download/start', async (req, res) => {
         }
     }
 
-    // Recalculate progress from completed deps before broadcasting (bug fix)
-    modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
+    // Recalculate progress from completed deps before broadcasting.
+    //
+    // BOTH sides come from modelJob.deps, and that is the fix. SET-never-+= (MPI-276
+    // G12) stopped a re-POST doubling the denominator, but it set the denominator from
+    // the REQUEST while the numerator summed modelJob.deps — which ACCUMULATES across
+    // POSTs. A POST carrying a SUBSET of a model's deps therefore divided an
+    // accumulated numerator by a partial denominator. Live 2026-08-10: a node-drift
+    // heal sent one 1.76MB node for `ltx-23`, whose job already held a 2.3GB shared
+    // weight (MPI-97 attach), and the card read 2312149072/1845493.76 = 125,286%,
+    // clamped to a full bar on a model that is not installed.
+    // _byteRatioExcludingNodes is the SAME function the progress ticks use, so start
+    // and tick now agree by construction rather than by two matching hand-sums; it
+    // also keeps MPI-231's custom_nodes exclusion on both sides. Summing modelJob.deps
+    // is deduped by id, so it is idempotent and G12 still holds.
+    const startRatio = _byteRatioExcludingNodes(modelJob.deps, 'local');
+    modelJob.downloadedBytes = startRatio.downloaded;
+    modelJob.totalBytes = startRatio.total;
     modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
 
     // ── Disk-full pre-flight gate (MPI-99) ──────────────────────────────────
@@ -2182,8 +2194,8 @@ async function _startRemoteDownload(modelId, dependencies, res) {
     }
 
     // SET, never += (MPI-276 G12) — a re-POST must not accumulate the denominator.
-    const allDepsSize = dependencies.reduce((sum, d) => sum + _parseSizeToBytes(d.size), 0);
-    modelJob.totalBytes = allDepsSize;
+    // totalBytes is computed AFTER the dep loop, from modelJob.deps — the remote twin
+    // of the local rule; see the note beside the recalculation below.
 
     const toInstall = [];
     for (const dep of dependencies) {
@@ -2342,7 +2354,11 @@ async function _startRemoteDownload(modelId, dependencies, res) {
       }
     }
 
-    modelJob.downloadedBytes = modelJob.deps.reduce((sum, d) => sum + (d.downloadedBytes || 0), 0);
+    // Both sides from modelJob.deps, via the same helper the remote progress tick uses
+    // — the remote twin of the local fix; the full reasoning is beside that one.
+    const startRatio = _byteRatioExcludingNodes(modelJob.deps, 'remote');
+    modelJob.downloadedBytes = startRatio.downloaded;
+    modelJob.totalBytes = startRatio.total;
     modelJob.progress = modelJob.totalBytes > 0 ? modelJob.downloadedBytes / modelJob.totalBytes : 0;
     _registerModelInStore(modelJob, 'remote');
     _setModelStatus(modelJob, 'downloading', 'remote download start');
