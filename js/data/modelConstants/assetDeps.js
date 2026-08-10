@@ -567,8 +567,17 @@ export const assetDeps = {
     // the whole job. Until then this comment is the dep.
 
     // ── MiniMax H3 support weights (MPI-452) ───────────────────────────────────
-    // All three are publisher-hosted for the licence reason spelled out on
+    // Publisher-hosted for the licence reason spelled out on
     // `minimax-h3-fl2va-transformer` in modelDeps.js — NOT on R2, deliberately.
+    //
+    // ONE EXCEPTION: `vae-minimax-h3-video-int8` below is R2-primary (MPI-517). Not a
+    // softening of the licence position — a supply decision that outranked it. Its only
+    // publisher is a repo named "experimental", and these deps generate no mirrors
+    // (`_mirrorUrlsFor` only rewrites URLs under the R2 prefix), so a delete or a silent
+    // re-export would break every new H3 install with nothing to fall back to. Do NOT
+    // generalise it to the transformers or the encoder: those have a stable publisher
+    // (Comfy-Org, 6M downloads) and the §III argument still governs them.
+    //
     // SHARED with the ref2va model (minimax-h3-ref2va): the second DiT is a different
     // transformer but takes the SAME encoder and the SAME two VAEs, which is why these
     // are resource-named rather than scoped to the fl2va card.
@@ -590,15 +599,48 @@ export const assetDeps = {
         bytes: 26363476151,
         sha256: 'd84547412144b7c50a6ec77437a889b869d3ace88da77ef1775d3d2a4901c192',
     },
+    // SUPERSEDED by `vae-minimax-h3-video-int8` (MPI-517) and referenced by NO model.
+    //
+    // KEPT ANYWAY, ON PURPOSE. `_orphanedDepIds` (routes/downloadManager.js) walks
+    // `Object.keys(DEPS)` and resolves each `filename`; a file on disk whose filename is
+    // absent from every DEPS entry is invisible to the sweep, permanently. Deleting this
+    // entry would strand 4.85GB on the disk of every user who installed H3 before the
+    // swap. Present-but-unreferenced is exactly the orphan definition the sweep tests
+    // for, so leaving it here is what RECLAIMS the bytes on the next uninstall sweep.
+    // Same rule as docs/playbooks/add-model § "Removing or re-tiering a model".
+    //
+    // Delete only once no plausible installed base still holds the fp16 file.
     'vae-minimax-h3-video': {
         id: 'vae-minimax-h3-video',
-        name: 'MiniMax H3 Video VAE (fp16)',
+        name: 'MiniMax H3 Video VAE (fp16, superseded)',
         origin: 'Comfy-Org/MiniMax-H3',
         filename: 'vae/minimax_h3_video_vae_fp16.safetensors',
         url: 'https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors',
         size: '4.85GB',
         bytes: 5207808496,
         sha256: '7c1f131492e7eddacaac9069a61b81bdd39de5cc96561e677c5eab1cdce5e522',
+    },
+    // REQUIRES ComfyUI core >= v0.31.0 — PR #15334 `Support int8_convrot VAE for
+    // MiniMax-H3` (merged 2026-08-06, commit bbda8364) is what teaches core to read this
+    // format. On v0.30.x it does not load. If the engine pin in dev_configs/node_lock.json
+    // ever goes BACK below 0.31, this dep has to go back to the fp16 entry above.
+    //
+    // Measured on the bench 2026-08-10 (core v0.31.0): faster than fp16 with no quality
+    // loss, which is why it is the default rather than a low-tier-only option. The local
+    // file Fabio validated was hashed and matches this HF object byte for byte.
+    'vae-minimax-h3-video-int8': {
+        id: 'vae-minimax-h3-video-int8',
+        name: 'MiniMax H3 Video VAE (int8_convrot)',
+        origin: 'Kijai/MiniMax-H3-experimental',
+        filename: 'vae/minimax_h3_video_vae_int8_convrot.safetensors',
+        // R2-primary, publisher as mirror — the inverse of every other H3 dep. Rationale
+        // in the section header above and in MPI-517: the publisher repo is 5 days old and
+        // named "experimental", so it is the supply risk, not the fallback.
+        url: 'https://models.cubric.studio/vision/models/vae/minimax_h3_video_vae_int8_convrot.safetensors',
+        mirrorUrl: 'https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/minimax_h3_video_vae_int8_convrot.safetensors',
+        size: '2.95GB',
+        bytes: 3171670912,
+        sha256: '9bb2d96f218c76babd85e0611b85ca8fb330a90546c01a0005e8a58a59593410',
     },
     'vae-minimax-h3-audio': {
         id: 'vae-minimax-h3-audio',

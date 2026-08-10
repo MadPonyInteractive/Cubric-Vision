@@ -1313,13 +1313,16 @@ export const MODELS = [
         },
         // FLAT dependencies (not commonDeps/operations): ONE transformer serves both ops,
         // so there is no separable install unit and no per-op toggle in the manager.
-        // NOTHING HERE IS ON R2 and that is deliberate — see minimax-h3-fl2va-transformer
-        // in modelDeps.js for the licence reasoning. The encoder and both VAEs are shared
-        // with the future minimax-h3-ref2va card.
+        // The transformer and the encoder are NOT on R2 and that is deliberate — see
+        // minimax-h3-fl2va-transformer in modelDeps.js for the licence reasoning. The one
+        // exception is the int8 video VAE (MPI-517), R2-primary for a supply reason
+        // explained on the dep itself. The encoder and both VAEs are shared with the
+        // minimax-h3-ref2va card.
         dependencies: [
             'minimax-h3-fl2va-transformer',
             'h3-qwen3vl-32b-clip',
-            'vae-minimax-h3-video',
+            // int8_convrot, NOT the fp16 build — REQUIRES core >= v0.31.0 (MPI-517).
+            'vae-minimax-h3-video-int8',
             'vae-minimax-h3-audio',
             // 1.82GB turbo distill (MPI-505, weight swapped to lightx2v in MPI-508),
             // SHARED with ref2va — installing both downloads it once. A flat dep like
@@ -1395,12 +1398,14 @@ export const MODELS = [
         },
         // FLAT dependencies: one transformer, one op. The encoder and both VAEs are the
         // SAME dep ids fl2va uses, so installing this on top of fl2va downloads only the
-        // 20.97GB transformer. NOTHING here is on R2 — see minimax-h3-ref2va-transformer
-        // in modelDeps.js for the licence reasoning.
+        // 20.97GB transformer. The transformer and the encoder are not on R2 — see
+        // minimax-h3-ref2va-transformer in modelDeps.js for the licence reasoning; the
+        // int8 video VAE is the one exception (MPI-517).
         dependencies: [
             'minimax-h3-ref2va-transformer',
             'h3-qwen3vl-32b-clip',
-            'vae-minimax-h3-video',
+            // int8_convrot, NOT the fp16 build — REQUIRES core >= v0.31.0 (MPI-517).
+            'vae-minimax-h3-video-int8',
             'vae-minimax-h3-audio',
             // Same turbo distill as fl2va (MPI-505/508) — one weight, both DiTs. The
             // filename says fl2v; it is applied to ref2va too, which is how the upstream

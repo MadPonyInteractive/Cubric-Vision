@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-518",
+  "title": "Investigate the H3 w4a8 DiTs - is there a real win, and where do they land?",
+  "description": "Kijai published w4a8_mixed builds of both H3 DiTs (fl2va 12.54GB, ref2va 11.77GB, vs 20.97GB int8_convrot each). Fabio ran one generation with the fl2va build and did NOT see much speed difference, so the win is unproven - investigate before deciding anything. Likely home if it ships is the Model Library quality tier. BLOCKED on the 1.4 release and on GPU availability (a Cubric-Prompt agent has it).",
+  "column": "todo",
+  "maturity": "blocked",
+  "status": "active",
+  "labels": [
+    "1.5",
+    "h3",
+    "models",
+    "research"
+  ],
+  "created_at": "2026-08-10T13:45:00Z",
+  "updated_at": "2026-08-10T13:45:00Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

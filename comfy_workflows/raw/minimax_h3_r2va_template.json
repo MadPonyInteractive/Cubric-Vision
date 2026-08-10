@@ -2047,14 +2047,14 @@
         "Node name for S&R": "VAELoader",
         "models": [
           {
-            "name": "minimax_h3_video_vae_fp16.safetensors",
-            "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors",
+            "name": "minimax_h3_video_vae_int8_convrot.safetensors",
+            "url": "https://huggingface.co/Kijai/MiniMax-H3-experimental/resolve/main/minimax_h3_video_vae_int8_convrot.safetensors",
             "directory": "vae"
           }
         ]
       },
       "widgets_values": [
-        "minimax_h3_video_vae_fp16.safetensors"
+        "minimax_h3_video_vae_int8_convrot.safetensors"
       ]
     },
     {

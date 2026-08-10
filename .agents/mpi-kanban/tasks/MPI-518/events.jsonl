@@ -1,0 +1,1 @@
+{"at": "2026-08-10T13:45:00Z", "type": "task.created", "task": "MPI-518", "actor": "opus", "to": "todo", "note": "Investigation card parked while 1.4 ships and the GPU is held by a Cubric-Prompt agent. Fabio saw no real speed gain on his own fl2va w4a8 run, so the win is unproven and nothing is decided yet."}

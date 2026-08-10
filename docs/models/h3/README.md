@@ -86,16 +86,31 @@ Still open on MPI-452: a card preview clip inside the 124–362 trained frame ra
 
 ## Weights
 
-All four verified 2026-08-06: the publisher URLs return HTTP 200 and serve byte counts
-identical to the local copies, so the registry sha256 values are the hashes of what a
-user actually downloads.
+All four verified: the source URLs return HTTP 200 and serve byte counts identical to the
+local copies, so the registry sha256 values are the hashes of what a user actually
+downloads. Three verified 2026-08-06 against their publisher URLs; the video VAE was
+re-verified 2026-08-10 after the int8 swap below.
 
 | dep id | file | size |
 |---|---|---|
 | `minimax-h3-fl2va-transformer` | `minimax_h3_fl2va_pruned_int8_convrot.safetensors` | 20.97 GB |
 | `h3-qwen3vl-32b-clip` | `qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors` | 26.36 GB |
-| `vae-minimax-h3-video` | `minimax_h3_video_vae_fp16.safetensors` | 5.21 GB |
+| `vae-minimax-h3-video-int8` | `minimax_h3_video_vae_int8_convrot.safetensors` | 3.17 GB |
 | `vae-minimax-h3-audio` | `minimax_h3_audio_vae_fp32.safetensors` | 0.61 GB |
+
+**The video VAE is int8_convrot and REQUIRES ComfyUI core ≥ v0.31.0** (MPI-517). Core PR
+#15334 (merged 2026-08-06) is what teaches core to read the format; on v0.30.x it does not
+load. It replaced the 5.21 GB fp16 build on 2026-08-10 after bench measurement showed it
+faster with no quality loss. If the engine pin in `dev_configs/node_lock.json` ever drops
+below 0.31, this dep must go back to `vae-minimax-h3-video` (kept in `assetDeps.js`).
+
+**It is also the one H3 weight we host ourselves.** R2-primary with the publisher as
+`mirrorUrl` — the inverse of the other three. Not a change of licence posture: its only
+publisher is `Kijai/MiniMax-H3-experimental`, created five days before adoption and named
+"experimental", and H3 deps generate no mirrors on their own, so a delete or a silent
+re-export would break every new install with nothing to fall back to. Comfy-Org publishes
+int8_convrot for both DiTs and the encoder but ships this VAE fp16-only (checked
+2026-08-10), so there is no stable-publisher alternative to point at.
 
 **PRUNED is final; the 34.04 GB unpruned file was deleted.** Of three candidate arguments
 only download size survived measurement: speed died (the sign flips between canvases, both

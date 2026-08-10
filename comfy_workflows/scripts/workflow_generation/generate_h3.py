@@ -159,7 +159,7 @@ BAKED_WIDGETS = [
 # Shared by both variants; the transformer comes from the variant spec.
 SHARED_WEIGHTS = {
     "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
-    "minimax_h3_video_vae_fp16.safetensors",
+    "minimax_h3_video_vae_int8_convrot.safetensors",
     "minimax_h3_audio_vae_fp32.safetensors",
     # Tiny TAEHV decoder for MpiVideoSamplingPreview, NOT a sampling VAE. It rides a
     # plain VAELoader, so it lands in vae_name like the real ones (assetDeps.js

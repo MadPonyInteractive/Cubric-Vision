@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/data/modelConstants/assetDeps.js",
+    "js/data/modelConstants/models.js",
+    "comfy_workflows/minimax_h3_fl2va.json",
+    "comfy_workflows/minimax_h3_r2va.json",
+    "comfy_workflows/scripts/workflow_generation/minimax_h3_fl2va_template.json",
+    "comfy_workflows/scripts/workflow_generation/minimax_h3_r2va_template.json",
+    "comfy_workflows/raw/minimax_h3_fl2va_template.json",
+    "comfy_workflows/raw/minimax_h3_r2va_template.json",
+    "comfy_workflows/scripts/workflow_generation/generate_h3.py",
+    "docs/models/h3/README.md"
+  ]
+}
