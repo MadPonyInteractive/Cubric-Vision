@@ -23,6 +23,10 @@
           {
             "type": "command",
             "command": "python c:/AI/Mpi/Cubric-Vision/.claude/hooks/handoff-index-drift.py"
+          },
+          {
+            "type": "command",
+            "command": "python c:/AI/Mpi/Cubric-Vision/.claude/hooks/kanban-event-schema.py"
           }
         ]
       }

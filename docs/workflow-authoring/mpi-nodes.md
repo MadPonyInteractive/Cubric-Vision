@@ -41,6 +41,37 @@ precisely so the app has a clean, titled seam to write into.
 | `MpiPromptList` / `MpiPromptProcessor` | Trigger-phrase list driven by the same int that picks the LoRA — keeps LoRA choice and trigger text from drifting. |
 | `MpiSaveVideo` | Fast single-pass mp4 encode on the engine; remote gens transfer only the final mp4. |
 
+## `MpiMath` — what the expression may contain (2026-08-10)
+
+`MpiMath` runs its string through `safe_math` (`help_funcs.py`), an AST walker, not
+`eval`. Three inputs `a` / `b` / `c`, one `result` typed `*`, so it feeds an `INT` or
+`FLOAT` socket without friction.
+
+**Allowed:** arithmetic (`+ - * / // % **`), comparisons (`> >= < <= == !=`, which
+return a bool usable as 0/1), ternaries (`x if cond else y`), and **`math.*`
+functions called bare** — `floor(...)`, `ceil(...)`, `sqrt(...)`.
+
+**Not allowed — and this is the one that bites:** `min()` and `max()` are *builtins*,
+not `math.*`, so they raise `disallowed call`. Use a ternary (`a if a>b else b`) or
+**`MpiClamp`**, which takes `value` / `min_value` / `max_value` and mirrors `INT in →
+INT out`.
+
+Worked examples from `ltx_v2v_template.json`, all snapping a frame count onto LTX's
+8n+1 latent lattice:
+
+| expression | does |
+|---|---|
+| `floor((a-1)/8)*8+1` | snap a frame count DOWN to the lattice |
+| `floor((a*b+0.5)/8)*8/b` | seconds → the largest whole-8 frame run that fits, `+0.5` so an NTSC rate (23.976) rounds to 72 frames instead of 64 |
+| `a if a>0.001 else 0.001` | floor a duration, since a 0-length `EmptyAudio` cannot be resampled |
+
+A failed expression is **not loud**: `doit` catches, prints `[MpiMath] Error
+evaluating expression '<expr>': <e>` to the console, and **returns `0.0`**. The graph
+runs on. So a typo — or reaching for `min()` — reads as a silent 0 downstream, never
+an error: a derived frame count becomes 0, a duration becomes 0, and the failure
+surfaces as something further along refusing a zero-length input. When a derived
+value looks wrong, read the ComfyUI console before re-checking the wiring.
+
 ## Adding a new node (when you need one)
 
 The pack's `CLAUDE.md` § "Adding a new node — checklist" is the procedure; the
@@ -110,8 +141,15 @@ Which nodes can skip their upstream, and which cannot:
 | `MpiStageLatents` | **yes**, via `is_continue` | output node; a continue requests neither `latent` nor `denoised` |
 | `MpiSaveLatent` | **yes**, via `enabled` | output node; `enabled` off requests no `samples` |
 | `MpiIfElse` | yes (always was) | picks between two upstreams |
+| `MpiSwitch` family — `MpiAnySwitch`, `MpiAnySwitch10`, `MpiLoraSwitch` | **yes** | every one of the N inputs is lazy; `check_lazy_status` requests only `select`'s |
 | `MpiIfElseInverted` | **no** | one input, always routed somewhere, so always needed |
+| `MpiAnyInvSwitch`, `MpiStringInvSwitch` | **no** | same shape as `MpiIfElseInverted` — one input fanned to N outputs, unselected ones returning `ExecutionBlocker` |
 | `MpiAnyBlocker`, `MpiBlockIfEmptyList` | **no** | decide *from* the value |
+
+**The switches split the same way the if/elses do**, and for the same reason: a node
+that picks among N *upstreams* can skip the ones it does not want, while a node that
+routes one *input* to N *outputs* has already been handed its input. Reach for a
+`MpiSwitch` when the branches are expensive; an inverted switch buys nothing upstream.
 
 So on a preview tap, use `MpiBlocker` — **not** `MpiIfElseInverted`, which is what
 WAN/LTX use today and is the forcing edge in both.
