@@ -1,0 +1,300 @@
+{
+  "106": {
+    "inputs": {
+      "tile_size": 512,
+      "overlap": 128,
+      "temporal_size": 64,
+      "temporal_overlap": 8,
+      "pixels": [
+        "112",
+        0
+      ],
+      "vae": [
+        "107",
+        0
+      ]
+    },
+    "class_type": "VAEEncodeTiled",
+    "_meta": {
+      "title": "VAE Encode (Tiled)"
+    }
+  },
+  "107": {
+    "inputs": {
+      "vae_name": "seedvr2_ema_vae_fp16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "108": {
+    "inputs": {
+      "unet_name": "seedvr2_3b_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "109": {
+    "inputs": {
+      "steps": 1,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "108",
+        0
+      ],
+      "positive": [
+        "114",
+        0
+      ],
+      "negative": [
+        "114",
+        1
+      ],
+      "latent_image": [
+        "131",
+        0
+      ],
+      "seed": [
+        "129",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "110": {
+    "inputs": {
+      "tile_size": 512,
+      "overlap": 128,
+      "temporal_size": 64,
+      "temporal_overlap": 8,
+      "samples": [
+        "133",
+        0
+      ],
+      "vae": [
+        "107",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeTiled",
+    "_meta": {
+      "title": "VAE Decode (Tiled)"
+    }
+  },
+  "111": {
+    "inputs": {
+      "resize_type": "scale by multiplier",
+      "scale_method": "lanczos",
+      "input": [
+        "125",
+        0
+      ],
+      "resize_type.multiplier": [
+        "130",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "112": {
+    "inputs": {
+      "resized_images": [
+        "111",
+        0
+      ]
+    },
+    "class_type": "SeedVR2Preprocess",
+    "_meta": {
+      "title": "Pre-Process SeedVR2 Input"
+    }
+  },
+  "113": {
+    "inputs": {
+      "color_correction_method": "lab",
+      "images": [
+        "110",
+        0
+      ],
+      "original_resized_images": [
+        "111",
+        0
+      ]
+    },
+    "class_type": "SeedVR2PostProcessing",
+    "_meta": {
+      "title": "Post-Process SeedVR2 Output"
+    }
+  },
+  "114": {
+    "inputs": {
+      "model": [
+        "108",
+        0
+      ],
+      "vae_conditioning": [
+        "131",
+        0
+      ]
+    },
+    "class_type": "SeedVR2Conditioning",
+    "_meta": {
+      "title": "Apply SeedVR2 Conditioning"
+    }
+  },
+  "119": {
+    "inputs": {
+      "temporal_overlap": 2,
+      "chunking_mode": "manual",
+      "latent": [
+        "106",
+        0
+      ],
+      "chunking_mode.frames_per_chunk": [
+        "300",
+        0
+      ]
+    },
+    "class_type": "SeedVR2TemporalChunk",
+    "_meta": {
+      "title": "Split SeedVR2 Latent"
+    }
+  },
+  "120": {
+    "inputs": {
+      "latents": [
+        "109",
+        0
+      ],
+      "temporal_overlap": [
+        "119",
+        1
+      ]
+    },
+    "class_type": "SeedVR2TemporalMerge",
+    "_meta": {
+      "title": "Merge SeedVR2 Latents"
+    }
+  },
+  "124": {
+    "inputs": {
+      "filename_prefix": "MpiVideo",
+      "use_audio": true,
+      "truncate_to_audio": false,
+      "images": [
+        "113",
+        0
+      ],
+      "audio": [
+        "125",
+        1
+      ],
+      "fps": [
+        "125",
+        2
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Video"
+    }
+  },
+  "125": {
+    "inputs": {
+      "string": "C:\\Users\\Fabio\\Downloads\\clip_1774824957518.mp4",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadVideo",
+    "_meta": {
+      "title": "Input_Video"
+    }
+  },
+  "129": {
+    "inputs": {
+      "int": 416
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "130": {
+    "inputs": {
+      "float": 1.5
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Upscale_Factor"
+    }
+  },
+  "131": {
+    "inputs": {
+      "true": [
+        "119",
+        0
+      ],
+      "false": [
+        "106",
+        0
+      ],
+      "boolean": [
+        "132",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "132": {
+    "inputs": {
+      "boolean": true
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Low_VRAM"
+    }
+  },
+  "133": {
+    "inputs": {
+      "true": [
+        "120",
+        0
+      ],
+      "false": [
+        "109",
+        0
+      ],
+      "boolean": [
+        "132",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "300": {
+    "inputs": {
+      "int": 57
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Frames_Per_Chunk"
+    }
+  }
+}

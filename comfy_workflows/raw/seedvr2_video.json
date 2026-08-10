@@ -1,0 +1,1179 @@
+{
+  "id": "e2c3e7f6-e19d-4eb7-b9a5-dbc31fc43988",
+  "revision": 0,
+  "last_node_id": 300,
+  "last_link_id": 300,
+  "nodes": [
+    {
+      "id": 107,
+      "type": "VAELoader",
+      "pos": [
+        528.0998382559771,
+        686.2933797468351
+      ],
+      "size": [
+        270,
+        90
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            128,
+            132
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "seedvr2_ema_vae_fp16.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/SeedVR2/resolve/main/vae/seedvr2_ema_vae_fp16.safetensors",
+            "directory": "vae"
+          }
+        ]
+      },
+      "widgets_values": [
+        "seedvr2_ema_vae_fp16.safetensors"
+      ]
+    },
+    {
+      "id": 108,
+      "type": "UNETLoader",
+      "pos": [
+        528.0998382559771,
+        526.2933797468351
+      ],
+      "size": [
+        270,
+        110
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            129,
+            136
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "seedvr2_3b_int8_convrot.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/SeedVR2/resolve/main/diffusion_models/seedvr2_3b_int8_convrot.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
+      },
+      "widgets_values": [
+        "seedvr2_3b_int8_convrot.safetensors",
+        "default"
+      ]
+    },
+    {
+      "id": 112,
+      "type": "SeedVR2Preprocess",
+      "pos": [
+        528.0998382559771,
+        856.2933797468351
+      ],
+      "size": [
+        270,
+        60
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "resized_images",
+          "type": "IMAGE",
+          "link": 133
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            127
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "SeedVR2Preprocess"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 124,
+      "type": "MpiSaveVideo",
+      "pos": [
+        2988.848939057821,
+        1060.120233967965
+      ],
+      "size": [
+        270,
+        150
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 159
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 161
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "widget": {
+            "name": "fps"
+          },
+          "link": 162
+        }
+      ],
+      "outputs": [],
+      "title": "Output_Video",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "286e6cf6c165fcdaf2ee204391263125f6e9c7f3",
+        "Node name for S&R": "MpiSaveVideo"
+      },
+      "widgets_values": [
+        24,
+        "MpiVideo",
+        true,
+        false
+      ]
+    },
+    {
+      "id": 110,
+      "type": "VAEDecodeTiled",
+      "pos": [
+        2359.1207704569574,
+        599.5535470649583
+      ],
+      "size": [
+        270,
+        230
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "showAdvanced": true,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 179
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 132
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            134
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "VAEDecodeTiled"
+      },
+      "widgets_values": [
+        512,
+        128,
+        64,
+        8
+      ]
+    },
+    {
+      "id": 111,
+      "type": "ResizeImageMaskNode",
+      "pos": [
+        518.0998382559771,
+        976.2933797468351
+      ],
+      "size": [
+        300,
+        106
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input",
+          "type": "IMAGE,MASK",
+          "link": 160
+        },
+        {
+          "name": "resize_type.multiplier",
+          "type": "FLOAT",
+          "widget": {
+            "name": "resize_type.multiplier"
+          },
+          "link": 174
+        }
+      ],
+      "outputs": [
+        {
+          "name": "resized",
+          "type": "IMAGE",
+          "links": [
+            133,
+            135
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "ResizeImageMaskNode"
+      },
+      "widgets_values": [
+        "scale by multiplier",
+        2,
+        "lanczos"
+      ]
+    },
+    {
+      "id": 113,
+      "type": "SeedVR2PostProcessing",
+      "pos": [
+        2508.0998382559774,
+        956.2933797468351
+      ],
+      "size": [
+        310,
+        110
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 134
+        },
+        {
+          "name": "original_resized_images",
+          "type": "IMAGE",
+          "link": 135
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            159
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "SeedVR2PostProcessing"
+      },
+      "widgets_values": [
+        "lab"
+      ]
+    },
+    {
+      "id": 125,
+      "type": "MpiLoadVideo",
+      "pos": [
+        161.33167272887675,
+        1093.5055689937506
+      ],
+      "size": [
+        270,
+        222
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": [
+            160
+          ]
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            161
+          ]
+        },
+        {
+          "name": "fps",
+          "type": "FLOAT",
+          "links": [
+            162
+          ]
+        },
+        {
+          "name": "frame_count",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "duration",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "has_audio",
+          "type": "BOOLEAN",
+          "links": null
+        }
+      ],
+      "title": "Input_Video",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "43a976fdfda106109ee4db54b887744aa6dbfda4",
+        "Node name for S&R": "MpiLoadVideo"
+      },
+      "widgets_values": [
+        "C:\\Users\\Fabio\\Downloads\\clip_1774824957518.mp4",
+        true
+      ]
+    },
+    {
+      "id": 129,
+      "type": "MpiInt",
+      "pos": [
+        1350.1347775857353,
+        874.9987715556908
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            173
+          ]
+        }
+      ],
+      "title": "Input_Seed",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "43a976fdfda106109ee4db54b887744aa6dbfda4",
+        "Node name for S&R": "MpiInt"
+      },
+      "widgets_values": [
+        416
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 120,
+      "type": "SeedVR2TemporalMerge",
+      "pos": [
+        2028.0998382559771,
+        466.29337974683506
+      ],
+      "size": [
+        230,
+        80
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "latents",
+          "type": "LATENT",
+          "link": 148
+        },
+        {
+          "name": "temporal_overlap",
+          "type": "INT",
+          "link": 149
+        }
+      ],
+      "outputs": [
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "links": [
+            177
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.28.0",
+        "Node name for S&R": "SeedVR2TemporalMerge"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 109,
+      "type": "KSampler",
+      "pos": [
+        1688.0998382559771,
+        466.29337974683506
+      ],
+      "size": [
+        270,
+        340
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 129
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 130
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 131
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 183
+        },
+        {
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": 173
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            148,
+            178
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        959948902156062,
+        "fixed",
+        1,
+        1,
+        "euler",
+        "simple",
+        1
+      ]
+    },
+    {
+      "id": 133,
+      "type": "MpiIfElse",
+      "pos": [
+        2012.9071503350922,
+        607.0658752741172
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "true",
+          "type": "*",
+          "link": 177
+        },
+        {
+          "name": "false",
+          "type": "*",
+          "link": 178
+        },
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 176
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": [
+            179
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "43a976fdfda106109ee4db54b887744aa6dbfda4",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        true
+      ]
+    },
+    {
+      "id": 106,
+      "type": "VAEEncodeTiled",
+      "pos": [
+        918.0998382559771,
+        536.2933797468351
+      ],
+      "size": [
+        270,
+        230
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "showAdvanced": true,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 127
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 128
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            147,
+            181
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "VAEEncodeTiled"
+      },
+      "widgets_values": [
+        512,
+        128,
+        64,
+        8
+      ]
+    },
+    {
+      "id": 114,
+      "type": "SeedVR2Conditioning",
+      "pos": [
+        1316.8945750369048,
+        504.1111431112034
+      ],
+      "size": [
+        270,
+        80
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 136
+        },
+        {
+          "label": "latent",
+          "name": "vae_conditioning",
+          "type": "LATENT",
+          "link": 184
+        }
+      ],
+      "outputs": [
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "links": [
+            130
+          ]
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "links": [
+            131
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "SeedVR2Conditioning"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 131,
+      "type": "MpiIfElse",
+      "pos": [
+        1325.7867518740736,
+        646.8869281504062
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "true",
+          "type": "*",
+          "link": 182
+        },
+        {
+          "name": "false",
+          "type": "*",
+          "link": 181
+        },
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 175
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": [
+            183,
+            184
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "43a976fdfda106109ee4db54b887744aa6dbfda4",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        true
+      ]
+    },
+    {
+      "id": 132,
+      "type": "MpiSimpleBoolean",
+      "pos": [
+        925.1985917922441,
+        987.2467984297235
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "links": [
+            175,
+            176
+          ]
+        }
+      ],
+      "title": "Input_Low_VRAM",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "43a976fdfda106109ee4db54b887744aa6dbfda4",
+        "Node name for S&R": "MpiSimpleBoolean"
+      },
+      "widgets_values": [
+        true
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 119,
+      "type": "SeedVR2TemporalChunk",
+      "pos": [
+        888.0998382559771,
+        826.2933797468351
+      ],
+      "size": [
+        310,
+        126
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "latent",
+          "type": "LATENT",
+          "link": 147
+        },
+        {
+          "name": "chunking_mode.frames_per_chunk",
+          "type": "INT",
+          "widget": {
+            "name": "chunking_mode.frames_per_chunk"
+          },
+          "link": 300
+        }
+      ],
+      "outputs": [
+        {
+          "name": "latents",
+          "shape": 6,
+          "type": "LATENT",
+          "links": [
+            182
+          ]
+        },
+        {
+          "name": "temporal_overlap",
+          "type": "INT",
+          "links": [
+            149
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.28.0",
+        "Node name for S&R": "SeedVR2TemporalChunk"
+      },
+      "widgets_values": [
+        2,
+        "manual",
+        57
+      ]
+    },
+    {
+      "id": 130,
+      "type": "MpiFloat",
+      "pos": [
+        162.37687636408424,
+        956.2369298939645
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            174
+          ]
+        }
+      ],
+      "title": "Input_Upscale_Factor",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "13d9656b2737b9417d2b3dd069f59299a18479e2",
+        "Node name for S&R": "MpiFloat",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        1.5
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 300,
+      "type": "MpiInt",
+      "pos": [
+        1350,
+        700
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            300
+          ]
+        }
+      ],
+      "title": "Input_Frames_Per_Chunk",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "43a976fdfda106109ee4db54b887744aa6dbfda4",
+        "Node name for S&R": "MpiInt"
+      },
+      "widgets_values": [
+        57
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      127,
+      112,
+      0,
+      106,
+      0,
+      "IMAGE"
+    ],
+    [
+      128,
+      107,
+      0,
+      106,
+      1,
+      "VAE"
+    ],
+    [
+      129,
+      108,
+      0,
+      109,
+      0,
+      "MODEL"
+    ],
+    [
+      130,
+      114,
+      0,
+      109,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      131,
+      114,
+      1,
+      109,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      132,
+      107,
+      0,
+      110,
+      1,
+      "VAE"
+    ],
+    [
+      133,
+      111,
+      0,
+      112,
+      0,
+      "IMAGE"
+    ],
+    [
+      134,
+      110,
+      0,
+      113,
+      0,
+      "IMAGE"
+    ],
+    [
+      135,
+      111,
+      0,
+      113,
+      1,
+      "IMAGE"
+    ],
+    [
+      136,
+      108,
+      0,
+      114,
+      0,
+      "MODEL"
+    ],
+    [
+      147,
+      106,
+      0,
+      119,
+      0,
+      "LATENT"
+    ],
+    [
+      148,
+      109,
+      0,
+      120,
+      0,
+      "LATENT"
+    ],
+    [
+      149,
+      119,
+      1,
+      120,
+      1,
+      "INT"
+    ],
+    [
+      159,
+      113,
+      0,
+      124,
+      0,
+      "IMAGE"
+    ],
+    [
+      160,
+      125,
+      0,
+      111,
+      0,
+      "IMAGE"
+    ],
+    [
+      161,
+      125,
+      1,
+      124,
+      1,
+      "AUDIO"
+    ],
+    [
+      162,
+      125,
+      2,
+      124,
+      2,
+      "FLOAT"
+    ],
+    [
+      173,
+      129,
+      0,
+      109,
+      4,
+      "INT"
+    ],
+    [
+      174,
+      130,
+      0,
+      111,
+      1,
+      "FLOAT"
+    ],
+    [
+      175,
+      132,
+      0,
+      131,
+      2,
+      "BOOLEAN"
+    ],
+    [
+      176,
+      132,
+      0,
+      133,
+      2,
+      "BOOLEAN"
+    ],
+    [
+      177,
+      120,
+      0,
+      133,
+      0,
+      "LATENT"
+    ],
+    [
+      178,
+      109,
+      0,
+      133,
+      1,
+      "LATENT"
+    ],
+    [
+      179,
+      133,
+      0,
+      110,
+      0,
+      "LATENT"
+    ],
+    [
+      181,
+      106,
+      0,
+      131,
+      1,
+      "LATENT"
+    ],
+    [
+      182,
+      119,
+      0,
+      131,
+      0,
+      "LATENT"
+    ],
+    [
+      183,
+      131,
+      0,
+      109,
+      3,
+      "LATENT"
+    ],
+    [
+      184,
+      131,
+      0,
+      114,
+      1,
+      "LATENT"
+    ],
+    [
+      300,
+      300,
+      0,
+      119,
+      1,
+      "INT"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "Models",
+      "bounding": [
+        518.0998382559771,
+        456.29337974683506,
+        290,
+        330.15625
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "frontendVersion": "1.47.12",
+    "ds": {
+      "scale": 0.579270463817439,
+      "offset": [
+        468.8396351732946,
+        -45.41676636804696
+      ]
+    },
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}
