@@ -64,7 +64,9 @@ Add-MpPreference -ExclusionPath "C:\AI\Mpi\Cubric-Vision\node_modules","C:\AI\Mp
 `.playwright-cli/**` in `Cubric-Vision.code-workspace`. Watchers over a multi-GB
 `engine/` and a full `node_modules` are what keeps the extension hosts busy.
 
-**Constraint: `Cubric-Vision.code-workspace` is GITIGNORED** (`.gitignore:63`).
+**Constraint: `Cubric-Vision.code-workspace` is GITIGNORED** (`.gitignore:67`,
+`*.code-workspace` — NOT `:63`, which is `project-paths.json`; CLAUDE.md:175 has
+the wrong line and this card copied it).
 The fix is **local only** — a fresh clone or a second machine inherits none of
 it. Do not report it as shipped for anyone else.
 

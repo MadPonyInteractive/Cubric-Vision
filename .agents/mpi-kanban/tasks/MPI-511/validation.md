@@ -97,7 +97,8 @@ a watcher there wakes the extension host on every log line. It stays searchable.
 **NOT YET EFFECTIVE.** VS Code arms its file watcher at window open, so this
 does nothing until the window is reloaded. Status: applied, unproven.
 
-**Local only.** `Cubric-Vision.code-workspace` is gitignored (`.gitignore:63`).
+**Local only.** `Cubric-Vision.code-workspace` is gitignored (`.gitignore:67`,
+the `*.code-workspace` glob — **not** `:63`, which is `project-paths.json`).
 No other clone and no second machine inherits this.
 
 ## Fabio's fact, 2026-08-10 — it re-ranks both fixes
