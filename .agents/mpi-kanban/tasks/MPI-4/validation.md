@@ -428,3 +428,37 @@ Re-verified after the LoRA and prompt changes: 0 structural problems against
 mutation-proof, 58 nodes and 0 error nodes in the live frontend, and the
 `graphToPrompt` diff against an independent conversion is still **0
 differences**. Repo copy is byte-identical to the bench copy (95,163 bytes).
+
+## In-place edits ONLY from here (user, 2026-08-10)
+
+The user hand-organises node positions to read the graph. Measured: all 58 nodes
+had been repositioned between the commit and the next edit. **Never regenerate
+this file from `build_foley.py`** - it rebuilds `pos`/`size`/`groups` and destroys
+that work. The method is now: GET the bench copy -> mutate only the nodes involved
+-> POST -> assert `pos`/`size` unchanged for every node. `patch_inplace.py` in the
+session scratchpad is the shape to copy; `build_foley.py` is a historical record of
+how the graph was first derived, NOT a thing to re-run.
+
+## Crash on the reference-audio branch, and why cfg 1 armed it
+
+First ref-audio run died: `UnboundLocalError: cannot access local variable
+`noise_pred_neg`` in `SamplerCustomAdvanced` (node 39).
+
+**Upstream bug in ComfyUI-LTXVideo.** `guiders/multimodal_guider.py:157`
+initialises `a_noise_pred_neg, v_noise_pred_neg = 0, 0` but never the combined
+`noise_pred_neg`. Line 161 binds it only `if any(params.do_uncond())`, and
+`do_uncond()` is `not math.isclose(cfg_scale, 1.0)` (`guiders/parameters.py`).
+Line 269 then replicates the `sampler_post_cfg_function` hook and reads
+`noise_pred_neg` unconditionally. So the crash needs BOTH cfg 1.0 on both
+modalities AND some node registering a post-cfg function. Exactly one node in
+this graph does: `LTXVReferenceAudio` (`comfy_extras/nodes_lt.py:932`). Dropping
+AUDIO cfg 6 -> 1 to fix the distorted audio armed it; turning the ref-audio
+toggle on fired it.
+
+**Fix: the ref-audio branch uses core `CFGGuider` at cfg 1, not `MultimodalGuider`.**
+Core assigns `uncond_pred = None` under the cfg-1 optimisation
+(`comfy/samplers.py:610`) instead of leaving a name unbound, and
+`LTXVReferenceAudio` -> `CFGGuider` at cfg 1 is exactly what already ships and
+works in `ltx_i2v_t2v_template.json`. The foley branch KEEPS `MultimodalGuider`:
+no post-cfg hook is registered there, and at cfg 1 its `stg` and `modality_scale`
+terms still contribute (`parameters.py` `calculate()`).
