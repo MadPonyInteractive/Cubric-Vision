@@ -117,7 +117,7 @@ export const RELEASE_NOTES = {
     engineNotes: [
       'COMFYUI ENGINE UPDATED TO 0.31.0 - from 0.29.2, two upstream releases in one step. It is a small update to install: the engine itself moves, but nothing in the heavy machine-learning runtime does, so there is no multi-gigabyte re-download.',
       'MiniMax H3 generates faster on the new engine, and so do LTX 2.3 and Wan 2.2 - the work upstream did on H3 sped up the other two as well. Everything else runs as it did.',
-      'Every shipped model was re-swept after the update by executing a real generation for each of its operations on a GPU, and all of them passed.',
+      'Every shipped model was re-swept after the update by executing a real generation for each of its operations on a GPU, 35 in total, and all of them passed.',
     ],
   },
   '1.3.1': {

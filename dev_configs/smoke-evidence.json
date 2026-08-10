@@ -1,8 +1,8 @@
 {
-  "at": "2026-08-10T11:28:40.448Z",
+  "at": "2026-08-10T15:19:44.217Z",
   "engine": {
-    "want": "0.30.0",
-    "got": "0.30.0",
+    "want": "0.31.0",
+    "got": "0.31.0",
     "proven": true
   },
   "datacenter": "EU-RO-1",
@@ -22,14 +22,13 @@
       "model": "sdxl-nsfw",
       "op": "t2i",
       "status": "PASS",
-      "secs": 13,
+      "secs": 8,
       "media": 1,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "sdxl-nsfw",
@@ -41,21 +40,19 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "sdxl-nsfw",
       "op": "control",
       "status": "PASS",
-      "secs": 33,
+      "secs": 17,
       "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "sdxl-nsfw",
@@ -67,8 +64,7 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "sdxl-nsfw",
@@ -80,60 +76,55 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "chroma-hyper",
       "op": "t2i",
       "status": "PASS",
-      "secs": 17,
+      "secs": 13,
       "media": 1,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "chroma-hyper",
       "op": "i2i",
       "status": "PASS",
-      "secs": 13,
+      "secs": 8,
       "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "chroma-hyper",
       "op": "control",
       "status": "PASS",
-      "secs": 47,
+      "secs": 21,
       "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "chroma-hyper",
       "op": "upscale",
       "status": "PASS",
-      "secs": 13,
+      "secs": 8,
       "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "chroma-hyper",
@@ -145,26 +136,37 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "krea2-nsfw",
       "op": "t2i",
       "status": "PASS",
-      "secs": 21,
+      "secs": 13,
       "media": 1,
       "budget": [
         "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "krea2-nsfw",
       "op": "i2i",
+      "status": "PASS",
+      "secs": 9,
+      "media": 2,
+      "budget": [
+        "Input_is_Turbo=true",
+        "Input_Height=128",
+        "Input_Width=128",
+        "Input_Seed=42"
+      ]
+    },
+    {
+      "model": "krea2-nsfw",
+      "op": "control",
       "status": "PASS",
       "secs": 17,
       "media": 2,
@@ -173,50 +175,33 @@
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
-    },
-    {
-      "model": "krea2-nsfw",
-      "op": "control",
-      "status": "PASS",
-      "secs": 33,
-      "media": 2,
-      "budget": [
-        "Input_is_Turbo=true",
-        "Input_Height=128",
-        "Input_Width=128",
-        "Input_Seed=42"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "krea2-nsfw",
       "op": "krea2Edit",
       "status": "PASS",
-      "secs": 68,
+      "secs": 21,
       "media": 2,
       "budget": [
         "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "krea2-nsfw",
       "op": "upscale",
       "status": "PASS",
-      "secs": 13,
+      "secs": 8,
       "media": 2,
       "budget": [
         "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "krea2-nsfw",
@@ -229,19 +214,17 @@
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "nvidia-pid",
       "op": "pid",
       "status": "PASS",
-      "secs": 46,
+      "secs": 21,
       "media": 2,
       "budget": [
         "Input_Seed=42"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "klein-4b",
@@ -253,8 +236,7 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "klein-4b",
@@ -266,25 +248,11 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "klein-4b",
       "op": "control",
-      "status": "PASS",
-      "secs": 17,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
-    },
-    {
-      "model": "klein-4b",
-      "op": "kleinEdit",
       "status": "PASS",
       "secs": 12,
       "media": 2,
@@ -292,8 +260,19 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
+    },
+    {
+      "model": "klein-4b",
+      "op": "kleinEdit",
+      "status": "PASS",
+      "secs": 8,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ]
     },
     {
       "model": "klein-4b",
@@ -305,8 +284,7 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "klein-4b",
@@ -318,123 +296,117 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "klein-4b",
       "op": "upscale",
       "status": "PASS",
-      "secs": 8,
+      "secs": 4,
       "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "boogu-edit-balanced",
       "op": "edit",
       "status": "PASS",
-      "secs": 43,
+      "secs": 17,
       "media": 2,
       "budget": [
         "Input_Seed=42"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "wan-22",
       "op": "i2v_ms",
       "status": "PASS",
-      "secs": 30,
+      "secs": 17,
       "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "ltx-23-balanced",
       "op": "t2v_ms",
       "status": "PASS",
-      "secs": 74,
+      "secs": 34,
       "media": 1,
       "budget": [
+        "Input_Duration=1",
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "ltx-23-balanced",
       "op": "i2v_ms",
       "status": "PASS",
-      "secs": 38,
+      "secs": 21,
       "media": 2,
       "budget": [
+        "Input_Duration=1",
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "minimax-h3",
       "op": "t2v_ms",
       "status": "PASS",
-      "secs": 153,
+      "secs": 124,
       "media": 1,
       "budget": [
         "Input_Width=128",
         "Input_Height=128",
-        "Input_seed=42"
-      ],
-      "run": "2026-08-10T11:28:40.448Z"
+        "Input_seed=42",
+        "Input_Duration=1"
+      ]
     },
     {
       "model": "minimax-h3",
       "op": "i2v_ms",
       "status": "PASS",
-      "secs": 145,
+      "secs": 124,
       "media": 2,
       "budget": [
         "Input_Width=128",
         "Input_Height=128",
-        "Input_seed=42"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+        "Input_seed=42",
+        "Input_Duration=1"
+      ]
     },
     {
       "model": "minimax-h3-ref2va",
       "op": "ref2v_ms",
       "status": "PASS",
-      "secs": 128,
+      "secs": 120,
       "media": 1,
       "budget": [
         "Input_Width=128",
         "Input_Height=128",
         "Input_seed=42"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "wan22-5b",
       "op": "t2v",
       "status": "PASS",
-      "secs": 17,
+      "secs": 12,
       "media": 1,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "wan22-5b",
@@ -446,32 +418,29 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "qwen-edit",
       "op": "qwenEdit",
       "status": "PASS",
-      "secs": 50,
+      "secs": 21,
       "media": 2,
       "budget": [
         "Input_Tier=3",
         "Input_Seed=42"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     },
     {
       "model": "qwen-edit",
       "op": "control",
       "status": "PASS",
-      "secs": 50,
+      "secs": 30,
       "media": 2,
       "budget": [
         "Input_Tier=3",
         "Input_Seed=42"
-      ],
-      "run": "2026-08-10T07:43:50.928Z"
+      ]
     }
   ],
   "counts": {
@@ -481,7 +450,7 @@
     "opsPlanned": 35
   },
   "scope": {
-    "requested": "merged",
+    "requested": "all",
     "modelsRun": [
       "sdxl-nsfw",
       "chroma-hyper",
@@ -524,9 +493,5 @@
     "boogu-edit-transformer-high(19.17GB)",
     "ltx23-transformer-bf16(39.13GB)",
     "4x-AnimeSharp(63.91MB)"
-  ],
-  "runs": [
-    "2026-08-10T07:43:50.928Z",
-    "2026-08-10T11:28:40.448Z"
   ]
 }

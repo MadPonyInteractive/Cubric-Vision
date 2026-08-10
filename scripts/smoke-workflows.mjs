@@ -271,8 +271,16 @@ function snapFrames(cur) {
 // klein-4b declares turboToggle:false (its base+turbo pair was dropped), and chroma's
 // Input_Tier selects Flash-vs-Hyper rather than speed - a title-only rule would flip both.
 // Values: Input_Tier is 1-indexed 1=Quality 2=Turbo 3=Hyper (js/data/promptControlDefaults.js).
+// MiniMax H3 names its capability `h3TurboToggle`, not `turboToggle` — MPI-505 added the
+// `h3Turbo` control under its own flag. So this table matched NOTHING for H3 and the graph's
+// baked `Input_is_Turbo: false` stood: measured 2026-08-10, all three H3 ops ran the slow
+// path at 120-124s while every other op finished in 4-34s, on a rented GPU, on every matrix
+// run since H3 landed. Same failure as the krea2 one above, one capability name later.
+// H3 also carries NO `Input_Steps` node, so the 1-step budget cannot reach it either — the
+// turbo LoRA IS its step lever, which is what makes this line the whole saving.
 const FAST_TIER = [
     ['turboToggle', 'Input_is_Turbo', true],
+    ['h3TurboToggle', 'Input_is_Turbo', true],
     ['tierSelect', 'Input_Tier', 3],
 ];
 
@@ -1406,11 +1414,23 @@ async function main() {
     // AND before it gives up. EU-RO-1 produced four RUNNING-but-dead hosts on 2026-08-08,
     // so this is a live risk, not a theoretical one. Two attempts, not three: each one is
     // billed GPU time, so the retry is a safety net, not a persistence strategy.
+    // `activeGpu` is the card the run REALLY used, which is not `gpu` once a refusal has
+    // moved us down GPU_ORDER. Both consumers below need the real one: the evidence file
+    // is a release artifact that asserts which hardware proved these ops, and podVramGb
+    // sizes the hot store. Recording the card we first ASKED for would be a false claim in
+    // a file whose whole purpose is to be believed — and the three cards happen to share
+    // 24GB today, so the hot-store half would stay silently correct while it drifted.
     const refused = [];
+    let activeGpu = gpu;
     await createPodWithRetry(
         { gpuTypeId: gpu.id, volumeId: volume.id, datacenter: DATACENTER, minMemoryInGb: MIN_RAM_GB },
         'GPU Pod', 20 * 60 * 1000, 2,
-        async (refusedId) => { refused.push(refusedId); return pickGpu(volume.id, refused); });
+        async (refusedId) => {
+            refused.push(refusedId);
+            const next = await pickGpu(volume.id, refused);
+            if (next) activeGpu = next;
+            return next;
+        });
     const engine = await assertPodEngineVersion();
     // The pre-flight guard compared the prior file to node_lock; this compares it to what
     // the Pod actually reported. They differ under --allow-unproven-engine, where `got` is

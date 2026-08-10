@@ -191,13 +191,15 @@
   already have LTX Balanced installed, the new file downloads once and the old one is
   cleaned up. Text to Video and Image to Video also share one workflow now, so which
   one you get follows from whether you supply a first or last frame.
-- **MiniMax H3's video decoder moved to a smaller, faster file.** The part that turns
-  a finished generation back into pictures is now a compressed build: 3.2GB instead of
-  5.2GB, and quicker, with no loss of quality. If you already have MiniMax H3 installed,
-  the app will show it as needing that one file and download it once. The old file is no
-  longer part of the model, so the next time you uninstall a model and let it delete its
-  files, it gets cleared out with it rather than sitting on your drive owned by nothing.
-  It needs the newer engine, which this version installs for you.
+<!-- REMOVED 2026-08-10 (MPI-517 caught it, MPI-450 verified and agreed). A bullet lived
+     here describing H3's video decoder moving 5.2GB -> 3.2GB, what an existing H3 owner
+     would re-download, and the old file being reclaimed. Every clause is false for this
+     release: H3 appears in NO release-notes block before 1.4.0 and the newest published
+     release is 1.3.1, so H3 SHIPS FOR THE FIRST TIME here. Nobody has it installed,
+     nobody holds the 5.2GB file, and the size is a comparison against a build that never
+     shipped. Do not re-add it — the H3 introduction already states the ~50GB footprint,
+     which stays right after the swap (49.44 GiB). This is close-out.md § "A change to an
+     UNRELEASED thing owes no entry", and H3 has now triggered it twice. -->
 - **Wan 2.2 is image-to-video only now.** Its Text to Video operation has been
   retired: LTX 2.3 does that job better, and Wan's text-to-video weights were a
   27GB download that served nothing else. Image to Video is untouched — same
