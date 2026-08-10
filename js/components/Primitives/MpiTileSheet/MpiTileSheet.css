@@ -108,9 +108,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 999px;
+    width: 25px;
+    height: 25px;
     background: oklch(0.26 0.02 350 / 0.6);
     box-shadow: 0 0 0 1px oklch(1 0 0 / 0.08);
     cursor: help;
@@ -119,16 +118,12 @@
 .mpi-tile__flag--featured   { color: var(--accent-warn); }
 .mpi-tile__flag--deprecated { color: var(--accent-heat); }
 
-/* The `warning` glyph is a wide, short triangle: its ink spans 22x19 of a 24x24
-   viewBox and sits half a unit HIGH in it, so flex-centering the <svg> box leaves
-   the ink off-centre — and a triangle reads top-heavy anyway, its mass being at
-   the base. Trim it a touch (side breathing room to match the star's) and nudge
-   it back down. Measured: ink gaps went 2.75/2.75/3.5/4.25 -> even.
-   The star needs none of this; its ink is already symmetric in the box. */
+/* The `warning` glyph's ink sits half a unit HIGH in its 24-unit viewBox, so
+   flex-centering the <svg> box still leaves the triangle off-centre. Nudge it
+   back down by that half unit at the rendered size (18px). The star needs none
+   of this - its ink is already symmetric in the box. */
 .mpi-tile__flag--deprecated svg {
-    width: 16px;
-    height: 16px;
-    transform: translateY(0.33px);
+    transform: translateY(0.375px);
 }
 
 /* Queued-install waiting mascot (MPI-284) — floats on the thumb while a job
