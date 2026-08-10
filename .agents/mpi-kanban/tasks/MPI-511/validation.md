@@ -26,16 +26,26 @@ bash                   1   0.03
 ```
 
 **Read this baseline correctly.** The box was **near-idle** when it was taken —
-6.48%, close to Fabio's stated ~5% normal. `MsMpEng` (Antimalware Service
-Executable) does **not appear at all**, i.e. it burned 0.00s of CPU across the
-whole window.
+6.48%, close to Fabio's stated ~5% normal.
 
-That is not a contradiction of the 11.8% capture — it is the shape of the
-problem. **Both suspects are load-driven, not resident.** Defender bills CPU
-when files are written or read (a model download, an `npm ci`, a test run), and
-VS Code's watchers bill CPU when the watched trees churn. An idle delta
-therefore measures the *resident floor* and **cannot demonstrate the 42%
-load-time reading**. The honest re-measure is during an agent work burst.
+> **CORRECTION, same day.** This baseline first read as "`MsMpEng` does not
+> appear at all, i.e. it burned 0.00s". **That was wrong, and the method is
+> why.** `Get-Process .CPU` returns **0 for every protected process** in a
+> non-elevated shell — `MsMpEng`, `System`, `dwm`, `Registry` all read 0, and a
+> lifetime probe over 55h of uptime confirmed it (`MsMpEng cpuSec=0` against
+> 94 svchosts summing 157s). So the CPU-time-delta script **silently omits
+> Defender and the kernel** — precisely the bucket this spike is expected to
+> live in. The 6.48% figure is a floor over *readable* processes, not a total.
+
+**The method that does work, with no admin: perf counters.**
+`Get-Counter '\Process(*)\% Processor Time'` exposes `msmpeng`, `system`, `dwm`
+and `memory compression`. Verified: `MsMpEng` sampled at 0.06–0.12% — genuinely
+idle, this time on evidence that can distinguish idle from invisible.
+
+With that method the load-driven conclusion still stands, now honestly:
+**neither suspect is resident.** Defender bills CPU when files are written or
+read; VS Code's watchers bill when the watched trees churn. An idle sample
+measures the *resident floor* and **cannot demonstrate the 42% reading**.
 
 Corroborating evidence for the watcher cost, unplanned: a plain
 `du -sh` over `engine/ node_modules/ .playwright-cli/ .playwright/ build/
@@ -90,11 +100,58 @@ does nothing until the window is reloaded. Status: applied, unproven.
 **Local only.** `Cubric-Vision.code-workspace` is gitignored (`.gitignore:63`).
 No other clone and no second machine inherits this.
 
+## Fabio's fact, 2026-08-10 — it re-ranks both fixes
+
+> "When it previously happened, closing all the applications, **including VS
+> Code**, did not release the CPU usage."
+
+A reboot did. That combination is decisive and it **demotes FIX 2**: whatever
+holds the box at 42% survives every app exiting, so it is not VS Code's
+watchers, not the extension hosts, not the app, not the engine. It lives in a
+**service or the kernel** — the bucket `Get-Process` cannot even read.
+
+Consistent supporting evidence, all captured at idle on 55.9h uptime:
+
+| Probe | Reading |
+|---|---|
+| Lifetime CPU, all readable processes | msedge 25578s / 0.97% avg, Code 18722s / 1.09%, Taskmgr 10213s / 0.25%, python (engine) 2763s / 1.47% |
+| Box totals now | 4.53% total — privileged 2.4, user 2.16, DPC 0.15, interrupt 0.08 |
+| Defender scan state | `ScanInProgress` empty, QuickScanAge 1d (ran 08/08 08:30, 96s), **FullScanAge 510 days** |
+
+**No readable process is a 42% resident hog**, and Defender is not sitting in a
+stuck full scan. So the culprit is transient and currently absent. It cannot be
+diagnosed from an idle box — it has to be caught in the act.
+
+## The deliverable: `capture-cpu.ps1`
+
+Lives in this card's folder. No admin needed — it reads perf counters, so it
+sees `MsMpEng`, `System` and `dwm`, which is the whole point. Run it **while the
+box is high**:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .agents/mpi-kanban/tasks/MPI-511/capture-cpu.ps1
+```
+
+It splits privileged vs user vs DPC vs interrupt, which is what actually names
+the layer: `privileged >> user` means service or driver; DPC/interrupt above ~5%
+means a **driver**, and no process will own it — that is the classic signature
+of "closing apps changes nothing, a reboot fixes it".
+
+Smoke-run twice on an idle box (2.84% and 2.61% totals). One fix during the
+smoke: `Get-Counter` over `\Process(*)` throws a terminating-looking error
+whenever any process **exits mid-sample** while still returning good data, so
+`-ErrorAction SilentlyContinue` is load-bearing — without it the script reads as
+broken when it is not.
+
 ## After FIX 2 — re-measure
 
-_pending — blocked on a window reload (Fabio's; reloading his editor is not the
-agent's to do). Re-measure during a work burst, not at idle._
+_pending — blocked on a window reload (Fabio's; he has five sessions open).
+Demoted by Fabio's fact above: closing VS Code entirely did not release the CPU,
+so the watcher excludes are worth keeping but are no longer the lead theory._
 
 ## After FIX 1 — re-measure
 
-_pending — Fabio runs `Add-MpPreference` in an admin shell._
+_pending — Fabio runs `Add-MpPreference` in an admin shell. Still worth doing on
+its own merits (real-time scanning over a weight-download tree), but the 11.8%
+Antimalware line is now the strongest surviving lead precisely BECAUSE Defender
+is a service that survives closing every app._

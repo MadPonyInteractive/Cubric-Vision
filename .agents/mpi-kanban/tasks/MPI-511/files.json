@@ -1,6 +1,7 @@
 {
   "schema": "mpi-kanban/files/v1",
   "files": [
-    "Cubric-Vision.code-workspace"
+    "Cubric-Vision.code-workspace",
+    ".agents/mpi-kanban/tasks/MPI-511/capture-cpu.ps1"
   ]
 }
