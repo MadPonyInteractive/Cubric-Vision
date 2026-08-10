@@ -126,15 +126,49 @@ decide, expensive to discover after shipping.
 repeats the pairing. Deleting the ModelDef breaks that Flow's dependency
 resolution and removes the only test of that path.
 
-Options, in order of preference:
+**RESOLVED 2026-08-10 (Fabio + code check) - neither option. The mechanism already
+exists and it is `requiredDeps`.**
 
-1. **Keep the ModelDef, hide it from the picker.** Cheapest and safest - the Flow
-   keeps resolving, the plugins own the dropdown, and the two share deps.
-   Needs a check that nothing else keys off tile visibility.
-2. **Teach Flows to require a plugin** (`requiredPlugins`, or a namespaced entry in
-   `requiredModels` using `pluginDepKey`). Cleaner long-term, more surface.
-3. Point the Flow at another 4x path. Loses the multi-model install coverage;
-   only if 1 and 2 both fail.
+Fabio: *"Flows are going to be just like models... we already have a head-swap
+that proves extra dependencies apart from just model dependencies... You install
+one thing, you unlock another if the other has the exact same dependencies."*
+Verified in the codebase, not assumed:
+
+- `FlowDef.requiredDeps` takes **DEP ids** on top of `requiredModels` (MPI-304,
+  `flowsRegistry.js:28`). `head-swap` already ships it:
+  `requiredDeps: ['qwen-lora-headswap', 'comfyui-inpaint-cropandstitch']`.
+- `flowAvailability()` gates the badge and the Run guard on **both** lists, and
+  dep status comes from `syncModelInstalled` stat'ing filenames through the
+  **id-agnostic** `/comfy/models/check` (`flowsRegistry.js:232-238`) - the route
+  takes `{id, deps}` and never touches `MODELS`. **That is exactly Fabio's unlock
+  rule, already implemented:** whatever puts those files on disk satisfies every
+  declarer of the same dep ids. A plugin install unlocks the Flow for free.
+- `MpiFlowLibrary._installMissing` already installs flow deps as their own job
+  under `flowDepKey(flow.id)` (`MpiFlowLibrary.js:130-141`), so the install
+  affordance needs no work either.
+
+**So: drop `nvidia-pid` from `requiredModels` and declare the dep ids instead.**
+
+```js
+// flowsRegistry.js flowSdxl4k — was: requiredModels: ['sdxl-nsfw', 'nvidia-pid']
+requiredModels: ['sdxl-nsfw'],
+requiredDeps: ['pid-sdxl', 'vae-sdxl', 'pid-gemma', 'comfyui-kjnodes'],
+```
+
+This is a **strict improvement, not a workaround.** The `nvidia-pid` ModelDef
+declares all four architectures - `pid-flux1, pid-sdxl, pid-sd3, pid-qwenimage,
+vae-flux-ae, vae-sdxl, vae-sd3, vae-qwen-image, pid-gemma, comfyui-kjnodes`
+(`models.js:820`) - so today an SDXL 4K flow downloads four PiD transformers and
+four VAEs to use one pair. `requiredDeps` fetches only what the graph loads.
+
+No `requiredPlugins` field, no picker-hiding hack, no new registry concept.
+
+**One real cost, flag it rather than bury it:** `flowSdxl4k` was pairing two
+models *deliberately*, as the only exercise of the multi-model install path
+(comment at `flowsRegistry.js:100`). After this change it declares one model, so
+that coverage moves to the model+dep path instead. Either accept the swap - the
+dep path is now the one more flows will use - or give the multi-model exercise to
+another flow. Do not let it lapse silently.
 
 **Whichever wins: do NOT delete the `pid-*` / `vae-*` / `pid-gemma` dep entries.**
 The orphan sweep reads `DEPS`, so a deleted entry strands those weights on existing

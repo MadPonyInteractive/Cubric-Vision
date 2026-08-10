@@ -29,8 +29,9 @@ node pair. Practical consequences for the tool:
   The existing **x1.5 / x2 / x3 / x4** radio still works: it drives the pre-resize.
   No UI change needed there. (Contrast PiD on MPI-507, which is fixed 1024->4096.)
 - VRAM is governed by **`frames_per_chunk`**, not by clip length. That is the
-  knob that turns an OOM into a slow run - but `chunking_mode: auto` picks it for
-  us (see §4a).
+  knob that turns an OOM into a slow run - and it is **also the quality knob**,
+  because too small a chunk starves the temporal context the model runs on. The
+  app must size it; `chunking_mode: auto` cannot be trusted to (§2e defect 2).
 
 **Licence: Apache-2.0** on all ByteDance-Seed and Comfy-Org repos. No territory
 restriction, unlike MiniMax H3 - see memory `project_model_licences_can_be_territory_restricted`.
@@ -79,9 +80,10 @@ The knobs it *does* have, and the recommendation for each:
 
 | Knob | Where | Values | Ship as |
 |---|---|---|---|
-| `chunking_mode` | `SeedVR2TemporalChunk` | `auto` \| `manual` | **`auto`** - it *"predict[s] the largest chunk that fits free VRAM"*. Solves OOM. **Does NOT solve quality** - see §2d. |
-| `frames_per_chunk` | manual mode only | default 21, **must be 4n+1** | not exposed - `auto` owns it. The 4n+1 constraint is a UI trap avoided by not having the UI. |
-| `temporal_overlap` | `SeedVR2TemporalChunk` | INT, default 0 | **ship `8`, never 0** - §2d. The node clamps it to what the chunk allows, so one constant self-adapts everywhere. |
+| `chunking_mode` | `SeedVR2TemporalChunk` | `auto` \| `manual` | **`manual`. NOT `auto`** - `auto` prevents the OOM and silently pays for it in quality, allowing 3 latents where 15 run (§2e defect 2). |
+| `frames_per_chunk` | manual mode only | default 21, **must be 4n+1** | **computed app-side, still never exposed.** The 4n+1 constraint is a UI trap avoided by not having the UI. |
+| `temporal_overlap` | `SeedVR2TemporalChunk` | INT, default 0 | **ship `2`. NOT 8** - a constant 8 clamps to `chunk_latent-1`, which forces `step=1` and destroys the image (§2e defect 1). |
+| `color_correction_method` | `SeedVR2PostProcessing` | `lab` (default) \| `wavelet` \| `adain` \| `none` | **ship `lab`** - measured, §2e defect 3. The templates' `none` leaves visible luma drift. |
 
 ### 2d. THE CHUNKING TRAP - measured on Fabio's bench, 2026-08-09
 
@@ -107,44 +109,129 @@ frames_per_chunk= min(4*(chunk_latent_max-1)+1, t_pixel)
 chunk_latent    = (frames_per_chunk-1)//4 + 1
 ```
 
-Reproduced exactly: 14.81 free, 3.31 Mpx -> budget 4.11 -> fpc 5. Predictions on
-that same card:
+Reproduced exactly: 14.81 free, 3.31 Mpx -> budget 4.11 -> fpc 5. What `auto`
+predicts on that card - and **every row is far too conservative**, see §2e:
 
-| factor | Mpx | frames/chunk | max overlap |
+| factor | Mpx | auto's frames/chunk | auto's chunk_latent |
 |---:|---:|---:|---:|
-| 2.0 | 3.31 | 5 | 1 |
-| 1.5 | 1.87 | 13 | 3 |
-| 1.25 | 1.29 | 17 | 4 |
-| 1.0 | 0.83 | 33 | 8 |
+| 2.0 | 3.31 | 5 | 2 |
+| 1.5 | 1.87 | 9 | 3 |
+| 1.25 | 1.29 | 17 | 5 |
+| 1.0 | 0.83 | 33 | 9 |
 
-**Three consequences for the tool:**
+Two structural facts that survive §2e:
 
-1. **`temporal_overlap` is silently clamped**: `min(temporal_overlap, chunk_latent - 1)`,
-   no warning. It counts **latent** frames while `frames_per_chunk` counts
-   **pixel** frames (`chunk_latent = (fpc-1)//4 + 1`), so at 2x an overlap of 4
-   becomes 1. **That clamp is also the generalisation we need**: pass a generous
-   constant (**8**) and it resolves to the maximum the chunk allows on every
-   machine and resolution. No MpiNode, no loop-node pack, no UI. The template
-   shipping `0` is the defect.
-2. **Chunking is unavoidable at useful resolutions.** Running these 81 frames in
-   one pass needs <= 0.356 Mpx (~445x798), *below* the 0.82 Mpx source. No upscale
-   factor reaches it. Design to chunk WELL, not to avoid chunking.
-3. **The outcome is dominated by the user's GPU**, because of the flat 10.7 GiB
-   reserve. The same clip on a 24 GB card gets `fpc=21` at 2x instead of 5. This
-   is exactly why the tool must pick the operating point and never expose it.
+1. **`temporal_overlap` is silently clamped** to `min(temporal_overlap, chunk_latent - 1)`,
+   with no warning. It counts **latent** frames while `frames_per_chunk` counts
+   **pixel** frames (`chunk_latent = (fpc-1)//4 + 1`).
+2. **Chunking is unavoidable at useful resolutions.** 81 frames in one pass OOM'd
+   at 1.5x (§2e). Design to chunk WELL, not to avoid chunking.
 
 **Corrects an earlier claim in this brief** that `auto` was "the VRAM problem
 solved with no UI". It prevents the OOM and silently pays for it in quality.
 
-**Open, pending Fabio's 1.5x + overlap 8 run:** where the quality floor actually
-sits. If a decent `chunk_latent` needs a lower factor than the user asked for,
-the app has to cap the factor - the same formula, run before dispatch. Card that
-once the run says where the line is.
+### 2e. MEASURED 2026-08-10 - three defects, all fixed by widget values
+
+Bench: RTX 4060 Ti 16 GB, **NORMAL_VRAM**, 678x1214 source, 81 frames, 1.5x, 3B
+int8. Scored by laplacian variance against a **fixed** lanczos-1.5x baseline -
+per-run normalisation is unsound, because each run's frame 1 differs when the
+sampler sees a different amount of temporal context. Review clips and drift maps:
+`C:\Users\Fabio\Downloads\seedvr2-eval\`.
+
+**Defect 1 - `temporal_overlap = 8` destroys the image. Ship `2`.**
+
+`step = chunk_latent - min(temporal_overlap, chunk_latent - 1)`. A constant 8 is
+clamped to `chunk_latent - 1` on any consumer card, so **`step = 1` always** -
+the worst value available, not the best. `SeedVR2TemporalMerge` then Hann-
+crossfades chunk onto chunk with an *accumulating* write, so every interior
+latent becomes the running mean of ~3 **independently sampled** one-step
+restorations. One-step detail is uncorrelated between chunks, so averaging
+cancels it; on a moving subject it ghosts (visibly doubled lips at frame 40).
+
+| setting | chunks | step | x lanczos, frame 1 | x lanczos, frames 3-81 | runtime |
+|---|---:|---:|---:|---:|---:|
+| auto fpc=9, overlap 8->2 | 19 | **1** | 10.41 | **5.14** | 409s |
+| manual fpc=33, overlap 2 | 3 | 7 | 7.24 | **7.59** | 375s |
+| manual fpc=57, overlap 2 | 2 | 13 | 3.97 | **6.26** | **268s** |
+
+Only `auto` collapses internally (10.41 -> 5.14). **Frame 1 is the one latent the
+merge never re-blends**, which is why it was the only good frame - and why a
+still-image control test would have cleared the model wrongly.
+
+**Fabio picked `fpc=57` on the clips, 2026-08-10** - *"FPC57 is the best of
+them."* It is also the fastest (268s). Note the laplacian score ranked `fpc=33`
+higher; **the metric was wrong and the eyes were right**, because laplacian
+variance counts grain as detail. Use it to detect the *collapse* (a within-clip
+drop), never to rank two healthy runs.
+
+**This reverses the §2a recommendation.** "Pass a generous constant 8 and the
+clamp resolves it to the maximum the chunk allows" is backwards: it resolves to
+the maximum *overlap*, i.e. the minimum *step*.
+
+**Defect 2 - `auto` is ~5x too conservative. Compute `frames_per_chunk` app-side.**
+
+`auto` allowed `chunk_latent = 3`. Measured on the same card: **9 runs, 15 runs,
+21 OOMs** at the KSampler (14.74 GiB allocated, 776 MiB short). The real ceiling
+is 15-20 latents where the flat `8.5 + 4*0.55 = 10.7 GiB` reserve predicted 3.
+Bigger chunks are also **faster** - fewer sampler invocations (268s vs 409s).
+
+Corroborated independently by numz's README: *"at least a batch_size of 5 is
+required to activate temporal consistency. SEEDVR2 need at least 5 frames to
+calculate it."* `auto` handed the model 5 frames on run 1 and 9 on run 2 - at or
+below the floor where the model's whole value switches on.
+
+The app can size this with no new MpiNode: ComfyUI's `/system_stats` exposes
+`vram_total` / `vram_free`, and the app already talks to that engine.
+`routes/platformEngine.js:144` detects only the GPU *name*, so this is new
+plumbing, but small.
+
+**NOT YET VALID FOR THE APP.** Measured under NORMAL_VRAM on the bench; the
+shipped app launches `--lowvram` on every NVIDIA GPU (`routes/comfy.js:432`),
+which changes both what `get_free_memory()` reads and peak allocation. Re-measure
+on `:48188` before any number reaches the app. Defects 1 and 3 are pure
+arithmetic / post-process and carry no such caveat.
+
+**Defect 3 - `color_correction_method = 'none'` leaves shadowy blobs. Ship `lab`.**
+
+Fabio on the fixed clips: *"shadowy blobs on her face and body"*. **Not** tile
+seams - a seam-gradient test on the VAE tile grid (512/128) returned ratio 1.02,
+i.e. no grid structure. It is smooth low-frequency luma drift, exactly what
+`SeedVR2PostProcessing` exists to remove.
+
+Correction is a post-process, so the sampler output stays `execution_cached` and
+each variant costs **~10-20s** to test - sweep them, never guess:
+
+| method | drift p2..p98 | max abs drift | x sharpness |
+|---|---|---:|---:|
+| `none` (what the templates ship) | -3.00..+14.00 | **36** | 5.79 |
+| **`lab`** (node default) | -1.00..+8.00 | **19** | 5.31 |
+| `wavelet` | -1.00..+9.00 | 20 | 5.40 |
+| `adain` | -7.00..+7.00 | 43 | 5.08 |
+
+`lab` and `wavelet` are within noise of each other; both cut worst-case drift
+~45%. `adain` centres the drift but has the worst outliers and costs the most
+detail. The small sharpness cost is expected - part of what `none` scored as
+detail *was* the drift. **Answers the §2a open question: do not copy the
+templates' `none`.**
+
+### 2f. `comfyorg/comfyui_seedvr2` is NOT an official pack - do not adopt it
+
+Checked 2026-08-10 after Fabio found it. `gh api` says: **fork** of
+`numz/ComfyUI-SeedVR2_VideoUpscaler`, **0 stars**, last pushed 2025-10-21. The
+`comfyorg` org holds 28 repos, **all forks**, no website - it is not `Comfy-Org`
+(77 repos, comfy.org), which is where the `Comfy-Org/SeedVR2` weights live.
+
+Adopting it would cost: a `node_lock.json` entry; **`int8_convrot` entirely** (the
+pack offers only fp16 and fp8_e4m3fn, and fp8 is Ada+ only, so 30-series users
+lose out - see §3); and a node that auto-downloads 16 GB into `models/SEEDVR2`
+outside the dependency manager, with no progress UI, no GC protection and no
+orphan sweep. The genuinely official SeedVR2 support is the **core nodes we
+already run** (§2). Keeps the §2 conclusion, now with the fork checked rather
+than assumed.
 
 **Gap noted:** `MpiLoadVideo` has no trim, so the official template's
 "trim -> upscale segments -> merge" advice (its `Video Slice` node) is not
 available to us, and neither is a single-chunk control run.
-| `color_correction_method` | `SeedVR2PostProcessing` | `lab` (default) \| `wavelet` \| `adain` \| `none` | node default is `lab` (*"most faithful"*) but **all three shipped templates set `none`**. Pick at the bench; do not assume. |
 
 ### 2b. SeedVR2 does IMAGES and VIDEO - and here is the reference graph
 
@@ -189,8 +276,9 @@ Two things worth lifting straight out of this:
 
 - **Plain `KSampler` at steps 1 / cfg 1.0 / euler / simple / denoise 1.0.** Not
   `SamplerCustom`. One step, as advertised.
-- **`chunking_mode: auto` is what the official video template ships**, confirming
-  §2a - do not expose `frames_per_chunk`.
+- **`chunking_mode: auto` is what the official video template ships** - and §2e
+  measured that setting producing the ghosting. Ship `manual`. Still do not
+  *expose* `frames_per_chunk`; the app computes it.
 
 ### 2c. SeedVR2 is natively a MULTIPLIER - the absolute mode is an option, not a fix
 
@@ -399,10 +487,19 @@ is simply unavailable remotely.
 
 ## 7. Open questions for Fabio
 
-1. Bench `color_correction_method`: the node default is `lab` ("most faithful")
-   but every shipped template sets `none` (§2a).
-2. Is the **7B video** path worth shipping? Comfy ships a 7B *image* template and
+1. Is the **7B video** path worth shipping? Comfy ships a 7B *image* template and
    a 3B *video* one, but no 7B video (§2b). Bench before promising it.
+2. `frames_per_chunk` needs a **`--lowvram` re-measure on `:48188`** before the
+   app can size it (§2e defect 2). Bench-only numbers so far.
+**Answered 2026-08-10:**
+
+- *`fpc=33` or `fpc=57`?* **57** - Fabio, on the clips. Also the fastest. The
+  laplacian score preferred 33 and was wrong; see §2e.
+
+- *`color_correction_method`?* **`lab`** - measured, §2e defect 3. Do not copy
+  the templates' `none`; it is what leaves the shadowy blobs.
+- *Is `comfyorg/comfyui_seedvr2` the official pack we should switch to?* **No** -
+  §2f. Zero-star stale fork of numz's pack; `comfyorg` is not `Comfy-Org`.
 
 **Answered 2026-08-09, do not re-ask:**
 
@@ -412,8 +509,9 @@ is simply unavailable remotely.
   entries go in **both** dropdowns. (PiD is image-only; MPI-507 §0.)
 - *Which precision?* **`int8_convrot`** - Fabio's call, and what every official
   template uses. fp8 is Ada+ only; int8 also runs fast on Ampere (§3).
-- *`frames_per_chunk`?* **Not exposed** - `chunking_mode: auto`, which is also
-  what the official video template ships (§2a, §2b).
+- *`frames_per_chunk`?* **Not exposed in the UI** - but **computed app-side and
+  injected in `manual` mode**, not left to `auto`. Superseded 2026-08-10 by §2e
+  defect 2; the earlier answer here said `auto`, which is the defect.
 - *Resolution / factor labels?* The radio relabels to **1K / 2K / 3K / 4K** when
   SeedVR2 or PiD is selected. `ResizeImageMaskNode` supports this natively via
   `scale longer dimension` (§2c), so no multiplier arithmetic is needed and both
