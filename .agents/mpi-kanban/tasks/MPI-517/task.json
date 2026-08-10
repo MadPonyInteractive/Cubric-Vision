@@ -5,7 +5,7 @@
   "description": "Replace the MiniMax H3 video VAE dep (Comfy-Org fp16, 4.85GB) with Kijai's int8_convrot build (3.17GB). Fabio measured it on the bench 2026-08-10: faster, no quality loss. BLOCKED ON THE ENGINE BUMP - the int8_convrot VAE needs core >= v0.31.0 (PR #15334, merged 2026-08-06); shipped engine is v0.30.0, so merging this alone breaks H3 for every user. Bytes are mirrored to R2 as primary with Kijai HF as fallback, because the source is a 5-day-old repo literally named 'experimental' and a delete or a silent re-export would break every new install with no fallback today. The old fp16 dep entry is KEPT unreferenced so the orphan sweep reclaims 4.85GB from existing users.",
   "column": "done",
   "maturity": "complete",
-  "status": "active",
+  "status": "done",
   "labels": [
     "1.4",
     "h3",
