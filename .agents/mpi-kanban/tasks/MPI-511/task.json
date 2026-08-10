@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-511",
+  "title": "Dev-box CPU floor: VS Code watcher excludes + Defender exclusions (environment, not app code)",
+  "description": "Fabio's dev box sits at ~42% CPU while agents work, against a normal idle of ~5%. It has forced a reboot before, so it is not a one-off. Two measured contributors, neither in app code.\n\nFIX 1 - Windows Defender. Antimalware Service Executable measured 11.8%, the biggest single non-VS-Code line. Real-time scanning is walking the repo, the engine and the model volume. Needs an ADMIN PowerShell so it is Fabio's to run: Add-MpPreference -ExclusionPath 'C:\\AI\\Mpi\\Cubric-Vision','G:\\CubricModels'. This is a real security trade, not a free win - the excluded tree downloads model weights from R2 and Hugging Face - so it is stated to Fabio rather than buried, and he may prefer to exclude only node_modules and engine/.\n\nFIX 2 - VS Code file watchers and search over engine/, node_modules/ and .playwright-cli/. VS Code measured 16.1% across 102 processes / 6.9 GB in Fabio's Task Manager capture. Add files.watcherExclude + search.exclude to Cubric-Vision.code-workspace. That file is GITIGNORED (.gitignore:63), so this fix is LOCAL ONLY - a fresh clone or a second machine inherits none of it.\n\nMEASUREMENT METHOD IS PART OF THE CARD. Task Manager's CPU column is a rate and misleads on a 20-core box; the honest number is a per-process CPU-TIME DELTA over a fixed window (Get-Process .CPU before/after, cumulative seconds) divided by elapsed seconds and logical cores. Re-measure after each fix with the same method instead of declaring it fixed from one glance.\n\nRuled out already: this session's own processes are not the resident cause - the box measured 3-4% total between steps with nothing of the session's running. The ComfyUI engine idles at 2.3% and that is normal. Fabio's Bun process (5.8%) is not ours and was absent at measurement time.\n\nDo NOT restart or close the user's app or the engine to chase this. Do NOT re-add the sibling repos to the workspace file while editing it (CLAUDE.md documents why).",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-08-10T06:10:00Z",
+  "updated_at": "2026-08-10T06:10:00Z",
+  "labels": [
+    "environment",
+    "tooling",
+    "performance"
+  ],
+  "priority": "normal",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

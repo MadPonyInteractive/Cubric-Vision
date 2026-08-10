@@ -4,7 +4,10 @@
   "generated_at": "2026-08-10T05:45:45Z",
   "from_session": ".agents/mpi-kanban/state/handoffs/64bc6364-e4d2-45d4-a4aa-d31d158fa58e.json",
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
+  "resolved_at": "2026-08-10T06:30:00Z",
+  "resolved_into": "MPI-511",
+  "resolution_note": "Consumed. The work is now carded as MPI-511 (doing, owns Cubric-Vision.code-workspace) and the board is the source of truth from here, not this file. FIX 2 is APPLIED but not yet effective - VS Code arms watchers at window open, so it needs a window reload, which is Fabio's. FIX 1 is handed to Fabio: it needs an admin shell, and Get-MpPreference will not even READ the exclusion list without one. Baseline captured at 6.48 percent total on 20 cores over 60s, but the box was near-idle and MsMpEng did not register at all - both suspects are load-driven, not resident, so the meaningful re-measure is during a work burst. Evidence lives in tasks/MPI-511/validation.md.",
   "session": {
     "name": "Dev-box CPU floor: Defender exclusions + VS Code watcher excludes",
     "branch": "master"
