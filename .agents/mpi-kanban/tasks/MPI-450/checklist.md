@@ -308,7 +308,20 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       `remotePodLifecycle.js:283` records 0.2.44 as deliberately NOT raised, because an
       older wrapper answers the same route with the same shape.
 
-      **⚠ ONE GATE IS STILL OPEN: the 5b boot smoke has NOT been run on this image.**
+      **5b BOOT SMOKE PASSED 2026-08-10 — gate now CLOSED.** Docker Desktop came up and
+      the cpu image was booted twice, because the two runs prove different things:
+      (1) default `stable` channel, i.e. what a RELEASED user's Pod boots today —
+      `/health` 200, `ready=true`, `wrapper_version 0.2.40`, bootstrap log
+      `installed fetched wrapper.py from .../vision/stable/wrapper.py`; that is the
+      correct answer PRE-promote, not a stale image. (2) `--network none`, so bootstrap
+      cannot reach R2 and falls back to the copy actually baked into the image —
+      `fetch FAILED ... keeping baked wrapper.py` then `starting wrapper on 0.0.0.0:8889
+      (version 0.2.44)` and `manifest stamped (schema 2, wrapper 0.2.44)`. Run 2 is the
+      load-bearing one: it is the only check that proves THIS image carries 0.2.44 rather
+      than merely being labelled so, and it is what the layer-digest divergence below made
+      necessary. Skill gates 1-4 are now all green; gate 5 (live Pod verify) is the user's.
+
+      HISTORICAL — why run 2 was needed at all:
       Docker Desktop is down on this box (`failed to connect to the docker API at
       npipe:...dockerDesktopLinuxEngine`), and `docker manifest inspect` needs no daemon,
       so 5a passing says nothing about whether the image BOOTS. **I tried to inherit the
@@ -391,6 +404,57 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       match it byte-for-byte (`start.sh 6cd65064…`, `start-cpu.sh 5b7a1879…`,
       `wrapper.py 85ef00e1…`). So the manifest stop is a go/no-go for Fabio, not a repair
       job. **Never auto-promote** — it is a live op on released users, same class as a push.
+
+- [x] **`UNRELEASED.md` WAS NEVER CLEARED BY THE BUMP, and the fold WAS complete —
+      checked before touching it.** `mpi-version-bump` is supposed to fold the scratchpad
+      into `releaseNotes.js` + the archival note and then reset the file to its header; the
+      fold happened but the reset did not, leaving 527 lines live. Left alone, the NEXT
+      bump re-folds all of 1.4.0 into 1.5.0 and every bullet ships twice. **Verified safe
+      to clear rather than assumed:** all **67** scratchpad bullets appear in the 70 folded
+      notes, 0 missing (the 3 extra are the engine lines, written directly and never in the
+      scratchpad). The first comparison said 67/67 MISSING and was wrong — the scratchpad
+      carries markdown emphasis the plain-text notes do not, so the probe was matching
+      `**Animate towards...**` against `Animate towards...`. Strip `*` and backticks first.
+      Clearing it does NOT re-block the approval token: only `releaseNotes.js` is hashed.
+
+- [x] **GATE 1 — Fabio reviewed the in-app changelog live 2026-08-10 and it produced FIVE
+      copy changes.** Reviewed in the real `MpiChangelogDialog` on an isolated instance
+      (own profile + own port, his session untouched); the overlay auto-fires because the
+      fresh profile has never seen `LAST_SEEN_CHANGELOG_VERSION` 1.4.0.
+      1. **Krea 2 / Chroma source dimensions moved to position 0 of `importantChanges`** —
+         it sat directly under the macOS xcode-select bullet and read as part of the Mac
+         problem rather than as its own behaviour change.
+      2. **`Turbo on MiniMax H3` DELETED** (935 chars). It implied turbo arrived after H3
+         had shipped, which is false — both ship in 1.4.0 — and it was thick with step and
+         file-size jargon.
+      3. **`MiniMax H3 stopped doing work it only needed for a preview` DELETED** (506
+         chars). Developer-facing; describes a two-pass/one-pass internal, not an outcome.
+      4. **Video previews cut 643 → 233 chars.** "Playing from the first frame" carries
+         Fabio's "correct timing" point without the mechanism: `35405a13` found the
+         previewer reshaped `[B,C,T,H,W]` as if the tail were `(C,H,W)`, transposing TIME
+         against CHANNELS, so previews were wrong in *when* as well as *what*.
+      5. **NVIDIA PiD cut 697 → 316 chars, and the crop fix folded in.** His objection was
+         optics — "it just makes us look like idiots" — not accuracy, so the grovelling
+         went ("PiD has never worked", the since-it-was-introduced timeline, "you were
+         right — try it again") and the plain bug report stayed. **His proposed replacement
+         — crop-only — was NOT taken verbatim, and he agreed once shown why:** `9a9aa03a`
+         is a per-tag pin table proving v1.1.0→v1.3.1 all shipped PiD dead (every MpiNodes
+         pin descends from `ba9e156`, which made `upscale_method` required), and v1.1.0 is
+         the release that ANNOUNCED it. A crop-only line would imply it worked before.
+         The crop half is separately true and NEW in 1.4.0 — `4cfd8542`, verified not an
+         ancestor of `v1.3.1` — so both claims ship in one short bullet.
+      **The 38 `fixes` were also reordered** on his rule: blockers and UI first, plumbing
+      last. He declined to dictate the order, so it was ranked and shown back for sign-off
+      before approving. Applied by script with a permutation assert (`sorted(ORDER) ==
+      range(38)`), so a reorder cannot silently drop or duplicate a bullet.
+      **Both files edited together and machine-checked**: the archival note's three
+      rendered sections were re-emitted from `releaseNotes.js`, hand-written sections
+      untouched, and the new `checkArchivalParity` gate passed — which is exactly the drift
+      this session's gate was added to catch, earning its keep on the first real edit.
+      Deletions confirmed absent from BOTH files (parity only proves notes ⊆ note).
+      **Re-approved after the edits**, hash `f11ac61e` → `e41c2313`, on a green tree:
+      release:check, npm test 546/546, test:desktop 17/17. `release:deps` was NOT re-run —
+      it validates dependency URLs in `dependencies.js`, which no copy edit can reach.
 
 - [ ] CI artifacts (all three OS) → MPI-249's Linux leg on the REAL
       `CubricVision-linux-x64-v1.4.0.tar.gz` → `/mpi-release`, PROMOTE at the manifest stop.
