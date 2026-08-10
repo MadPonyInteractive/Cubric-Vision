@@ -200,6 +200,55 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       and `release-health-check.mjs:463` refuses a file produced against a different engine,
       so all 35 rows are void. Cheaper than this morning's run — the H3 ops now clamp
       `Input_Duration` to 1 (~22 frames, was ~73) and the volume is warm at 327GB.
+      **RUN 1 (2026-08-10) DIED ON A RUNNER DEFECT, NOT ON THE BUMP — fixed in `d5e96b7f`.**
+      It got through the whole fill leg (12 models, `installs verified: no failed deps`,
+      CPU Pod deleted) and then RunPod refused the L4 create with a **502**. Two bugs
+      compounded: `app()` throws on any non-2xx, so `createPodWithRetry`'s
+      `if (made && made.error)` branch — written for exactly this — was **unreachable for an
+      HTTP error** and the throw exited the process; and a refusal retried the **same** card,
+      because `GPU_ORDER` (L4 → 3090 → 4090) was consulted once, before the loop. Now a
+      refusal is caught, advances to the next card, and does **not** spend a billed attempt
+      (nothing was rented). `tests/smoke-gpu-fallback.test.cjs`, 6 tests, mutation-verified —
+      removing the exclusion fails exactly the two tests that assert it, and the file carries
+      a negative control so the exclusion is proven load-bearing rather than incidentally
+      green. **No Pod leaked** (checked: 0 pods) and the volume was untouched.
+      **RUN 2 vindicated it immediately:** L4 refused → 3090 refused → **4090 took it**. A
+      run without the fix would have died three times over.
+      **Worth knowing for the next run: `ramFloorMissed: true` is NOT evidence the RAM floor
+      was the cause.** `remotePodLifecycle.js:845` sets that flag on ANY failure of the
+      RAM-floor GraphQL create path. The real signal is RunPod's own message. Our spec asks
+      `minMemoryInGb: 48` (weights spill to RAM on a 24GB card), and the volume pins us to
+      EU-RO-1, so "no instances available with the requested specifications" across three
+      cards most likely means that DC had no host meeting the RAM floor at that moment —
+      not that three independent cards sold out at once.
+      **CONFIRMED SYSTEMATIC over three runs (2026-08-10): L4 refuses, RTX 3090 refuses,
+      RTX 4090 takes it — every time.** That is not a blip, it is the 48GB
+      `MIN_RAM_GB` floor excluding the L4 and 3090 host classes in EU-RO-1. So
+      `GPU_ORDER`'s comment, "cheapest-first by measured availability", is now stale: the
+      two cheap entries cannot be rented under our own RAM floor, and every run pays two
+      pointless refusal round-trips to rediscover it. Cheap (a refusal rents nothing) but
+      worth re-measuring the order, or dropping the floor if `footprint.js` no longer needs
+      48GB. **Do not "fix" it by lowering the floor blind** — it exists because weights spill
+      to system RAM on a 24GB card.
+      **Second small gap, seen on every run: `volume: free space UNKNOWN (no /wrapper/disk)
+      - fit not checked`.** The runner calls `/remote/pod/disk` and `.catch(() => null)`s it,
+      so an unknown answer silently disables the volume-fit gate. The route DOES exist
+      (`remotePodLifecycle.js:1568` → `_remoteVolumeUsedBytes`), so this is worth one probe
+      against a live Pod rather than a guess. Not blocking — the volume has headroom — but
+      it means the fill can still run the volume out with no warning, which is exactly what
+      that gate was added to prevent.
+      **PROBED 2026-08-10 against the live GPU Pod: the route WORKS** —
+      `{"success":true,"source":"wrapper","used":330449383936,"total":450000000000}`. So it
+      is not a dead route and not an old wrapper. It fails **only in the CPU-download-Pod
+      leg**, which is the one moment the runner asks (`smoke-workflows.mjs:1289`, chosen
+      because it is the only point where a Pod is up AND nothing is downloaded yet). Prime
+      suspect is timing or CPU-image specificity: `createPodWithRetry` waits on
+      `/remote/comfy/status .ready`, which on a `-cpu` Pod says nothing about the volume
+      being mounted, so `/wrapper/disk` can still be answering 503-not-mounted at that
+      instant. **Card it — do NOT chase it mid-matrix:** `_sweepOrphanPods` kills stray
+      `cubric-vision` Pods before every create, so spinning a CPU Pod to test this while a
+      smoke run is live would DELETE the running smoke Pod. Test it between runs, and the
+      probe is one `GET /remote/pod/disk` while a CPU Pod is up.
 - [ ] **Gate 9 — evidence written**, `npm run release:check` satisfied.
 - [ ] **Put the op COUNT back into the engineNote.** `RELEASE_NOTES['1.4.0'].engineNotes`
       was rewritten for 0.31.0 on 2026-08-10 (three lines now: the version + the small-update
