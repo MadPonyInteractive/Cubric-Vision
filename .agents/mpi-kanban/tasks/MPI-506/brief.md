@@ -325,6 +325,132 @@ runs perfectly well on the multiplier the templates ship. What is *not* optional
 is deciding which meaning the labels carry, because the `.pth` path is a
 multiplier and PiD is absolute no matter what SeedVR2 does.
 
+### 2g. THE IMAGE PATH - measured 2026-08-10, and all three variants ship
+
+Fabio, 2026-08-10: *"the objective is to have the 3B, the 7B, and the 7B sharp
+all available for both image and video upscaling."* That is now measured, not
+assumed. **Answers open question 1: the 7B video path DOES ship** - Comfy simply
+never published a 7B video template.
+
+Bench: RTX 4060 Ti 16 GB, NORMAL_VRAM, engine schema from `:48188`. Source is
+**frame 1 of the same clip every §2e number came from** (`678x1214`, 0.82 Mpx,
+staged at `G:\ComfyUi\ComfyUI\input\seedvr2_eval_frame1.png`), so the image and
+video results are directly comparable. Review sheets: `C:\Users\Fabio\Downloads\seedvr2-eval\IMG_*.png`.
+
+**The image path has no VRAM problem.** Every variant ran at every multiplier -
+no OOM anywhere, including 7B at 4x, which is a **13.17 Mpx** single frame:
+
+| variant | x2 (3.29 Mpx) | x4 (13.17 Mpx) |
+|---|---:|---:|
+| 3B | 18.0s | 42.1s |
+| 7B | 18.1s | **63.1s** |
+| 7B Sharp | 18.1s | 48.2s |
+
+That is the structural difference from video and it is worth stating plainly:
+**there is no chunker on the image path**, the VAE is tiled, and one frame is one
+latent. The whole §2e chunking apparatus - `SeedVR2TemporalChunk`,
+`temporal_overlap`, `frames_per_chunk` - **does not exist here**. So the image
+dropdown needs no VRAM sizing at all, and the three entries are interchangeable
+from a memory standpoint.
+
+**7B is NOT strictly better than 3B - it depends on the multiplier.** Laplacian
+energy against a fixed lanczos baseline at the same target size:
+
+| variant | x2 | x4 |
+|---|---:|---:|
+| 3B | **8.88x** | 10.93x |
+| 7B | 5.28x | **16.87x** |
+| 7B Sharp | 8.74x | 12.91x |
+
+At **x2 the 7B under-delivers** - visibly, not just numerically: in
+`IMG_x2_hair.png` the 7B panel is close to lanczos while 3B has restored the door
+frame and individual hair strands. At **x4 the ranking inverts** and 7B leads.
+Consistent with a model trained for large restorations: at a small multiplier it
+has little to do and stays conservative. **Reinforces "do not default to 7B"** -
+now with a measured reason rather than community consensus, and it argues for
+3B as the default at every multiplier the History tool offers.
+
+Caveat worth keeping: the source is a heavily compressed phone clip. On a clean
+high-bitrate source the 7B ordering may differ. One source is one data point.
+
+**`lab` is right on the image path too - same conclusion, one tenth the
+magnitude.** Sweeping `color_correction_method` on the 7B x2 result (post-process
+only, so the sampler stays `execution_cached` - the whole sweep cost 3s a run):
+
+| method | drift p2..p98 | max abs drift | sharpness |
+|---|---|---:|---:|
+| `none` (what the templates ship) | -5.25..+5.46 | **6.86** | 3.09 |
+| **`lab`** | -0.92..-0.05 | **1.12** | 3.03 |
+| `wavelet` | -0.92..-0.05 | 1.16 | 3.04 |
+| `adain` | -2.73..+1.81 | 7.97 | 2.95 |
+
+`lab` cuts worst-case drift **84%** for a 2% sharpness cost. Note the drift here
+peaks at 6.86 against **36** on the video path (§2e) - most of the video drift was
+being *manufactured* by chunk-to-chunk accumulation, not by the model. Same
+ranking as §2e regardless: `lab` ~ `wavelet` >> `none`, `adain` worst outliers.
+
+### 2h. THE VIDEO PATH ON 7B AND SHARP - measured 2026-08-10, both ship
+
+Same bench and clip as §2e (678x1214, 81 frames, 1.5x, NORMAL_VRAM, 16 GB).
+Clips: `C:\Users\Fabio\Downloads\seedvr2-eval\6_*`, `7_*`, `8_*`; frame-40
+triptychs `VID_variants_f40_*.png`.
+
+**7B video works, but only at a smaller chunk.** `frames_per_chunk = 57` - the
+number §2e settled for 3B - **OOMs on 7B**: `Allocation on device 0 would exceed
+allowed memory. Currently allocated 12.28 GiB, Requested 1.25 GiB` at the
+KSampler, after 127s. Dropping to **`fpc = 37` runs clean** on both 7B and 7B
+Sharp.
+
+That drop was **predicted before it was measured**, and the arithmetic is worth
+keeping because it generalises to any future variant:
+
+```
+lost_latents = (weight_GB(variant) - weight_GB(3B)) / (0.55 * Mpx_per_frame)
+             = (8.33 - 3.46) / (0.55 * 1.85)  =  4.8
+chunk_latent: 15 (3B, measured §2e)  ->  ~10  ->  fpc = 4*(10-1)+1 = 37
+```
+
+**So the app's `frames_per_chunk` must be a function of the SELECTED VARIANT, not
+just of free VRAM.** A single number shipped for all three plugins is an OOM on
+7B or a quality give-away on 3B. Still bench-only - the `--lowvram` re-measure on
+`:48188` is unchanged as a gate before any number reaches the app.
+
+**At 1.5x, 3B beats both 7B variants - and the chunk size is NOT the reason.**
+A control run of 3B at the same `fpc = 37` removes the confound:
+
+| run | frames/chunk | x lanczos, frame 40 | runtime |
+|---|---:|---:|---:|
+| 3B | 57 | **4.04** | 268s |
+| 3B | 37 | **3.57** | 277s |
+| 7B | 37 | 1.90 | 403s |
+| 7B Sharp | 37 | 2.45 | 406s |
+
+Chunk size costs ~12% (4.04 -> 3.57). The **model** gap at identical chunk size is
+~1.9x (3.57 vs 1.90). Model dominates; chunking is second order at this scale.
+Confirmed by eye in `VID_variants_f40_hair.png` - both 3B panels resolve hair
+strands and eyelashes the 7B panels leave soft. And 7B costs **45% more wall
+clock** (403s vs 277s) to do less.
+
+This is the **same inversion §2g found on images**: 7B is conservative at small
+multipliers and only pulls ahead at large ones (x4 on the image path). At 1.5x
+video it is the wrong tool. **3B stays the video default**, and 7B/7B Sharp ship
+as the deliberate alternatives Fabio asked for - not as an upgrade path.
+
+**Three graph defects found while preparing the runtime files** (all in
+`seedvr2_video_FIXED.json`, all fixed in `seedvr2_video_APP.json`):
+
+1. **Two `VHS_VideoCombine` nodes execute.** They are OUTPUT nodes, so ComfyUI
+   runs them: every upscale wrote two extra h264 files (one previewing the
+   source, one the result). Bench convenience, not runtime.
+2. **An orphan `VAEDecode` (node 128).** No consumer, superseded by the tiled
+   decode that actually feeds `SeedVR2PostProcessing`. Harmless - ComfyUI is
+   output-driven so it never executes - but it is dead weight in a shipped file.
+3. **`frames_per_chunk` was not injectable.** It sat as a bare widget on
+   `SeedVR2TemporalChunk`, and the app injects ONLY `Input_*`-titled nodes
+   (the naming law). Given defect 2 of §2e says the app must compute this number,
+   and this section says it must vary per variant, the graph needs
+   **`Input_Frames_Per_Chunk`** (`MpiInt`) wired to it. Added.
+
 ## 3. The weights - full size table
 
 Canonical repo: **`Comfy-Org/SeedVR2`** on Hugging Face (Apache-2.0). Sizes read
@@ -487,8 +613,10 @@ is simply unavailable remotely.
 
 ## 7. Open questions for Fabio
 
-1. Is the **7B video** path worth shipping? Comfy ships a 7B *image* template and
-   a 3B *video* one, but no 7B video (§2b). Bench before promising it.
+1. ~~Is the **7B video** path worth shipping?~~ **ANSWERED 2026-08-10 - yes, it ships.**
+   Fabio: all three variants must work for BOTH image and video. Measured in §2h:
+   7B and 7B Sharp both run video at `fpc = 37` (57 OOMs). Comfy simply never
+   published a 7B video template; that was never a capability limit.
 2. `frames_per_chunk` needs a **`--lowvram` re-measure on `:48188`** before the
    app can size it (§2e defect 2). Bench-only numbers so far.
 **Answered 2026-08-10:**

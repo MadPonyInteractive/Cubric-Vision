@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "comfy_workflows/raw/seedvr2_image.json",
+    "comfy_workflows/raw/seedvr2_video.json",
+    "comfy_workflows/seedvr2_image.json",
+    "comfy_workflows/seedvr2_video.json"
+  ]
+}
