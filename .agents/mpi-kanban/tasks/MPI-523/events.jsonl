@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-523","type":"task.created","at":"2026-08-10T19:46:56Z","actor":"claude","summary":"Filed at 1.4.0 close-out: An in-place update never refreshes the installed update-manifest.json"}

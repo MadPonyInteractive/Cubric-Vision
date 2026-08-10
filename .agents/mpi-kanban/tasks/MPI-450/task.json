@@ -3,11 +3,11 @@
   "id": "MPI-450",
   "title": "1.4 release readiness umbrella - clear the gates before cutting 1.4.0",
   "description": "HELD 2026-08-05 behind Gate E (MiniMax H3) - see brief.md. ON PICKUP, run the ON PICKUP section at the top of checklist.md FIRST: it re-checks MPI-433's 2026-08-10 date gate against the real cut date. There is no pre-release tier in this project (one GitHub-only release flow, see the mpi-release skill), so this card IS the pre-release: the gate list that must be clear before /mpi-version-bump stamps 1.4.0. 1.4 is the biggest feature release since 1.0 - the whole canvas toolkit (mask tools, Paint, Composite, Adjust, ten brushes, shapes), the Control operation replacing Depth, localised edit on four models, plus an engine-provision rewrite - and UNRELEASED.md already carries every claim. The gates are grouped: A must-fix code (MPI-420, MPI-404, MPI-410, MPI-374), B must-verify with no code expected (MPI-249 Linux leg on the real artifact, MPI-432 mac pinch, both test suites), C must-decide so the notes are not false (MPI-433 date gate, MPI-416 macOS split, a claim audit of UNRELEASED.md), D board and version hygiene. Full gate table with the reasoning per member is in brief.md; the tick-list is checklist.md.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-05T10:35:00Z",
-  "updated_at": "2026-08-09T19:10:00Z",
+  "updated_at": "2026-08-10T19:46:56Z",
   "labels": [
     "release",
     "umbrella",
@@ -31,11 +31,5 @@
     "handoffs": "handoffs/",
     "claim_audit": "claim-audit.md"
   },
-  "priority": "high",
-  "attention": {
-    "state": "required",
-    "reason": "2026-08-09: GATE A IS EMPTY (MPI-483 was the last card and is fixed, doing/validating), Gate D validates exit 0, npm test is 530/530. The 2026-08-10 date gate was settled on evidence and does NOT bite - the note was already reworded to be true either side of it, so MPI-433 stays blocked and is not a blocker. MPI-501 is proven live and needs one look at its new toast to close; MPI-483 needs one Pod check, folded into Gate B's throwaway-Pod session with MPI-480 #3 and MPI-481. GATE B IS ALL THAT REMAINS: test:desktop, a Klein + a Wan generation for the preview-decoder claim, that Pod session, MPI-458's confirmation run, the MPI-249 Linux leg on the real artifact - and the H3 re-smoke LAST, because the H3 graphs were re-authored AFTER smoke-evidence.json was written (04:21:46Z vs 10:06-13:19Z) and Fabio is still editing that workflow.",
-    "updated_at": "2026-08-09T19:10:00Z"
-  },
-  "activeSessionTitle": "1.4 umbrella - Gate B is all that remains"
+  "priority": "high"
 }

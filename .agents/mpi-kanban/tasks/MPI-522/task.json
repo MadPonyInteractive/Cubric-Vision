@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-522",
+  "title": "The dangling-symlink build guard misses on CI Windows, and its test passes while testing nothing",
+  "description": "TWO defects, and the second is why the first survived. (1) `assertNoDanglingSymlinks` in scripts/build-portable.mjs does NOT flag a planted dangling symlink on a CI Windows runner: tests/portable-win-layout.test.cjs:157 fails `Missing expected rejection` on every push (red all day 2026-08-10, across several sessions and unrelated commits). (2) The SAME test reports PASS locally while testing nothing - this dev box cannot create symlinks (EPERM), so the test hits its own skip path and still counts green. That false green is why nobody noticed the guard was broken. The skip is honest in intent but must not be reported as a pass; make it a real skip or fail loudly. NOT a 1.4.0 blocker and it did NOT affect the shipped artifacts - verified directly on the published bytes: linux tar.gz 0 symlinks, windows zip 0, macOS zip 31 symlinks and 0 dangling (resolving THROUGH intermediate links - Framework/Foo -> Versions/Current/Foo where Versions/Current is itself a link to A; a resolver that does not follow those reports 10 false positives). The primary defence, `shouldExcludeAppPath` keeping @cubric/connector out of the staged tree, is separately tested and passes on CI. Root cause of (1) is unknown and needs a Windows box that CAN create symlinks to reproduce.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-10T19:46:56Z",
+  "updated_at": "2026-08-10T19:46:56Z",
+  "labels": [
+    "build",
+    "ci",
+    "testing",
+    "windows"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
