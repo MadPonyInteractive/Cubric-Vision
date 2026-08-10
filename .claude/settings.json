@@ -34,6 +34,10 @@
           {
             "type": "command",
             "command": "python c:/AI/Mpi/Cubric-Vision/.claude/hooks/guard-runpod-create.py"
+          },
+          {
+            "type": "command",
+            "command": "python c:/AI/Mpi/Cubric-Vision/.claude/hooks/guard-shell-backticks.py"
           }
         ]
       }
