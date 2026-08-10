@@ -154,8 +154,49 @@ So both are consumed by **nodes inside the graph**, not by the engine:
 
 | dep | file | read by | how it is selected |
 |---|---|---|---|
-| `taeh3-decoder` | `vae/taeh3.safetensors` | our own `MpiVideoSamplingPreview` | a plain `VAELoader` wired to its `vae` input |
+| `taeh3-decoder` | `vae/taeh3.safetensors` | our own `MpiVideoSamplingPreview` | **`MpiTinyVaeLoader`** wired to its `vae` input — a plain `VAELoader` **cannot load this file**, see below |
 | `ltx23-preview-taehv` | `vae/taeltx2_3.safetensors` | KJNodes `LTX2SamplingPreviewOverride` | a plain `VAELoader` wired to its `vae` input |
+
+#### `taeh3` needs `MpiTinyVaeLoader` — core's `VAELoader` raises on it (MPI-508)
+
+`TAEHV.__init__` sizes its edge convs as `image_channels * patch_size**2` and selects
+`patch_size = 2` only for `latent_channels in [48, 32]`. `taeh3` is a **24**-channel latent
+with a **12**-wide decoder (3 RGB x 4 temporal frames), so core builds it 3 wide and the
+load dies before sampling:
+
+```
+RuntimeError: Error(s) in loading state_dict for TAEHV:
+  size mismatch for decoder.22.bias: checkpoint [12] vs model [3]
+```
+
+There is no branch in `comfy/sd.py` for that shape and no argument that reaches it, and
+`comfy/taesd/taehv.py` is byte-identical on engine 0.30.0 and bench 0.30.2 — so this is a
+missing case, not a version to wait out. `MpiTinyVaeLoader` rebuilds the two edge convs at
+the right width (a strict state-dict load then matches all 128 tensors) and delegates any
+decoder core already handles — `taeltx2_3` included — to `VAELoader`'s own path.
+
+**Do not "simplify" the H3 graphs back to a `VAELoader`.** It is not a stylistic choice;
+it is the difference between H3 generating and H3 dying on node load.
+
+#### An OUTER_SAMPLE wrapper sees the FLAT pack, not the nested latent (MPI-508)
+
+A multi-part latent (H3 = video + audio) reaches the sampler as **one flat tensor**. Core
+restores the nested view in a callback wrapper it builds *before* calling `outer_sample`,
+so a callback installed by an `OUTER_SAMPLE` wrapper sits **inside** that unpacker and
+receives the raw pack, while core's own previewer — further out — receives the nested one.
+
+Measured on H3: `x0` arrives as `(1, 1, 658752)` with `is_nested` **False**, against
+`latent_shapes = [[1, 24, 17, 40, 40], [1, 32, 2, 93]]` — video + audio, which do sum to
+658752. A shape guard expecting 4D/5D therefore rejects **every** step.
+
+`MpiVideoSamplingPreview` unpacks it itself with `comfy.utils.unpack_latents(x0,
+latent_shapes)[0]`; `latent_shapes` is handed to the wrapper for exactly this. This failed
+**silently** before the fix — the node swallows preview errors by design, and a shape guard
+that returns early raises nothing at all, so the symptom was previews that simply never
+appeared while the generation succeeded. When previews are missing, check the frame COUNT
+first: core's latent2rgb fallback still emits one frame per step on the same channel, so
+"some previews" is not proof the node ran (6 frames on a 6-step sampler = core alone;
+this node bursts a whole clip per callback).
 
 Consequences, all deliberate:
 

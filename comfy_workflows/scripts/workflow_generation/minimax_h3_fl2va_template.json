@@ -73,10 +73,10 @@
   "140": {
     "inputs": {
       "scheduler": "beta",
-      "steps": 8,
+      "steps": 6,
       "denoise": 1,
       "model": [
-        "252",
+        "381",
         0
       ]
     },
@@ -104,7 +104,7 @@
   "150": {
     "inputs": {
       "model": [
-        "252",
+        "381",
         0
       ],
       "conditioning": [
@@ -269,7 +269,7 @@
   },
   "195": {
     "inputs": {
-      "int": 354681354
+      "int": 354681357
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -900,7 +900,7 @@
   "320": {
     "inputs": {
       "is_continue": false,
-      "is_preview": false,
+      "is_preview": true,
       "save_path": "mpi_stage1",
       "load_path": "mpi_stage1",
       "latent": [
@@ -949,7 +949,7 @@
   },
   "323": {
     "inputs": {
-      "lora_name": "minimax-h3\\minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors",
+      "lora_name": "minimax-h3\\minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
       "model": [
         "369",
         0
@@ -1020,7 +1020,7 @@
       "steps": 20,
       "denoise": 1,
       "model": [
-        "252",
+        "381",
         0
       ]
     },
@@ -1051,7 +1051,7 @@
   },
   "341": {
     "inputs": {
-      "int": 4
+      "int": 3
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -1060,7 +1060,7 @@
   },
   "343": {
     "inputs": {
-      "math_expression": "1.0 if a else 0.0",
+      "math_expression": "0.75 if a else 0.0",
       "a": [
         "324",
         0
@@ -1191,6 +1191,32 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Mpi If Else"
+    }
+  },
+  "381": {
+    "inputs": {
+      "preview_rate": 24,
+      "model": [
+        "252",
+        0
+      ],
+      "vae": [
+        "382",
+        0
+      ]
+    },
+    "class_type": "MpiVideoSamplingPreview",
+    "_meta": {
+      "title": "Mpi Video Sampling Preview"
+    }
+  },
+  "382": {
+    "inputs": {
+      "vae_name": "taeh3.safetensors"
+    },
+    "class_type": "MpiTinyVaeLoader",
+    "_meta": {
+      "title": "Mpi Tiny Vae Loader"
     }
   }
 }

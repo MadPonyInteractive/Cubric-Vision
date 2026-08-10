@@ -5036,7 +5036,7 @@
     },
     {
       "id": 463,
-      "type": "VAELoader",
+      "type": "MpiTinyVaeLoader",
       "pos": [
         659.0226326730779,
         4535.1971054299875
@@ -5059,9 +5059,9 @@
         }
       ],
       "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.30.2",
-        "Node name for S&R": "VAELoader"
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "ea85c26c78193a71e49d20cddad8d23004dd9c80",
+        "Node name for S&R": "MpiTinyVaeLoader"
       },
       "widgets_values": [
         "taeh3.safetensors"

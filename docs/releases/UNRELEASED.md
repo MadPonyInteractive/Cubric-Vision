@@ -147,15 +147,17 @@
   with synchronized audio like the rest of H3, and it installs alongside the existing
   MiniMax H3 sharing its text encoder and both VAEs, so it is one extra model file
   rather than a second full model.
-- **Turbo on MiniMax H3 — one click, roughly a quarter off the wait.** Both H3 models now
-  carry the same **Turbo** button the image models have. On, it takes eight sampling steps
-  instead of twenty: a five-second clip that took 3m40s comes back in 2m51s. It is off by
+- **Turbo on MiniMax H3 — one click, roughly half off the wait.** Both H3 models now
+  carry the same **Turbo** button the image models have. On, it takes six sampling steps
+  instead of twenty. <!-- TODO(MPI-508): re-measure the five-second-clip before/after on the
+  lightx2v weight before release. The old "3m40s -> 2m51s" was the superseded larry LoRA and
+  has been removed rather than left to ship wrong. --> It is off by
   default. What changes is not only detail — **movement comes out slower**, closer to slight
   slow motion, and holds together better at small sizes, where the full path can smear
   faces and shapes as they move. Speed is something you can fix afterwards in an editor;
   smearing is not. So it is worth trying on small, quick clips rather than saving it purely
   for drafts. The choice sticks with the model, so it holds while you work and does not
-  follow you to a different one. It adds a 591MB file to the H3 download, shared by both
+  follow you to a different one. It adds a 1.82GB file to the H3 download, shared by both
   H3 models.
 
   The saving grows with the clip: on a one-second clip most of the time goes on loading the

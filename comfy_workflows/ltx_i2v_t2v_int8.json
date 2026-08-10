@@ -72,7 +72,7 @@
   },
   "9": {
     "inputs": {
-      "string": "the scene and the woman transform into a different woman and scene"
+      "string": "medium rear shot of a knight holding a sword on his shoulder, the camera orbits around into a close-up of his face as he says, \"I had enough\". He looks determined and has a little bit of blood coming out of his mouth. The location is a mediaeval battlefield. The style is cinematic and dark.  Background sound is a huge battle happening: clinking swords, man screaming, the sound of the wind and thunder.  "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -1397,7 +1397,7 @@
   },
   "366": {
     "inputs": {
-      "preview_rate": 8,
+      "preview_rate": 16,
       "model": [
         "367",
         0
@@ -1407,7 +1407,7 @@
         0
       ],
       "vae": [
-        "1",
+        "632",
         0
       ]
     },
@@ -2175,6 +2175,15 @@
     "class_type": "MpiClearVram",
     "_meta": {
       "title": "Mpi Clear Vram"
+    }
+  },
+  "632": {
+    "inputs": {
+      "vae_name": "taeltx2_3.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
     }
   }
 }

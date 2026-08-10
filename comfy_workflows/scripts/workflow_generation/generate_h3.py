@@ -161,6 +161,10 @@ SHARED_WEIGHTS = {
     "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
     "minimax_h3_video_vae_fp16.safetensors",
     "minimax_h3_audio_vae_fp32.safetensors",
+    # Tiny TAEHV decoder for MpiVideoSamplingPreview, NOT a sampling VAE. It rides a
+    # plain VAELoader, so it lands in vae_name like the real ones (assetDeps.js
+    # `taeh3-decoder`, declared as `vae/taeh3.safetensors`).
+    "taeh3.safetensors",
 }
 WEIGHT_INPUT_KEYS = ("unet_name", "clip_name", "vae_name")
 

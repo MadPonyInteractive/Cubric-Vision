@@ -11,7 +11,7 @@
 - [x] `models.js` — the two H3 dep-list comments updated (591MB → 1.82GB, fl2v naming)
 - [x] Reset fl2va node 320 `MpiStageLatents.is_preview` to `false` (bench artifact)
 - [x] `docs/models/h3/turbo.md` — leads with the swap; old measurements marked as larry's
-- [ ] Graph conversion (shared with section C — one pass for both halves)
+- [x] Graph conversion (shared with section C — one pass for both halves)
 
 ## B. Preview weights — DONE
 
@@ -32,7 +32,7 @@
       real-time frame cursor, `VHS_latentpreview` + binary `PREVIEW_IMAGE` frames
 - [x] Registered in `__init__.py`, README "Sampling" section, changelog entry
 - [x] Both files parse
-- [ ] **Bench restart** → `/object_info/MpiVideoSamplingPreview` non-empty
+- [x] Engine restart → `/object_info/MpiVideoSamplingPreview` non-empty on **:48188**
 - [ ] Live H3 run on the bench: frames appear, playback at clip speed, no OOM, and a
       forced decode failure does not kill the generation
 - [ ] Commit + push `ComfyUi-MpiNodes`
@@ -42,8 +42,8 @@
 
 ## D. Conversion + verify
 
-- [ ] `sync-raw-workflows` **against `:48188`**, never the bench on `:8188`
-- [ ] Diff the converted API graphs before installing: 0 missing-required, 0 dangling
+- [x] `sync-raw-workflows --all` **against `:48188`**, never the bench on `:8188`
+- [x] Converted API graphs checked: 0 missing-required, 0 dangling, 0 unknown class
 - [ ] A real generation on fl2va / r2va / LTX with previews visible **in the app**
 - [ ] Turbo OFF still short-circuits the LoRA load (the both-zero gate)
 

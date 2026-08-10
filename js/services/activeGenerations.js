@@ -83,6 +83,21 @@ Events.on('preview:frame', ({ engine, promptId, seq, url }) => {
     // Do NOT fall back to "the active gen" — that is the cross-gen mis-attribution
     // this whole card exists to kill.
     if (!entry) return;
+    // MPI-508: revoke the frame this one replaces. Every frame mints a blob URL and
+    // only the LAST survived to be revoked in `end()`, which was affordable while a
+    // generation produced one preview per sampling step (~6-20). MpiVideoSamplingPreview
+    // streams a whole CLIP per callback — measured 400+ frames on a 6-step run — so the
+    // strays became hundreds of leaked blobs per generation AND turned MPI-211's
+    // one-off dead-blob refetch into a console loop.
+    //
+    // Deferred by a task for MPI-211's original reason: the tile and queue thumbnail
+    // still hold the old URL as an <img> src synchronously, and revoking underneath
+    // them makes the browser refetch a dead blob. One task later they have re-rendered
+    // on the new URL.
+    const previous = _lastPreview.get(entry.id)?.url;
+    if (previous && previous !== url && previous.startsWith('blob:')) {
+        setTimeout(() => { try { URL.revokeObjectURL(previous); } catch { /* already revoked */ } }, 0);
+    }
     _lastPreview.set(entry.id, { engine, promptId, seq, url });
     // MPI-271: keep latestPreviewUrl current for the non-subscriber reads that
     // still poll it (queue-panel thumbnail, group-history rehydrate, gallery-grid

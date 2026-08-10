@@ -595,10 +595,10 @@
   "412": {
     "inputs": {
       "scheduler": "beta",
-      "steps": 8,
+      "steps": 6,
       "denoise": 1,
       "model": [
-        "252",
+        "464",
         0
       ]
     },
@@ -638,7 +638,7 @@
   },
   "416": {
     "inputs": {
-      "int": 4
+      "int": 3
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -718,7 +718,7 @@
   "423": {
     "inputs": {
       "model": [
-        "252",
+        "464",
         0
       ],
       "conditioning": [
@@ -737,7 +737,7 @@
       "steps": 20,
       "denoise": 1,
       "model": [
-        "252",
+        "464",
         0
       ]
     },
@@ -981,7 +981,7 @@
   },
   "453": {
     "inputs": {
-      "math_expression": "1.0 if a else 0.0",
+      "math_expression": "0.75 if a else 0.0",
       "a": [
         "444",
         0
@@ -1024,7 +1024,7 @@
   },
   "457": {
     "inputs": {
-      "lora_name": "minimax-h3\\minimax_h3_turbo_v4_step600_ema_pruned_comfyui.safetensors",
+      "lora_name": "minimax-h3\\minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
       "model": [
         "459",
         0
@@ -1065,6 +1065,32 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Mpi If Else"
+    }
+  },
+  "463": {
+    "inputs": {
+      "vae_name": "taeh3.safetensors"
+    },
+    "class_type": "MpiTinyVaeLoader",
+    "_meta": {
+      "title": "Mpi Tiny Vae Loader"
+    }
+  },
+  "464": {
+    "inputs": {
+      "preview_rate": 24,
+      "model": [
+        "252",
+        0
+      ],
+      "vae": [
+        "463",
+        0
+      ]
+    },
+    "class_type": "MpiVideoSamplingPreview",
+    "_meta": {
+      "title": "Mpi Video Sampling Preview"
     }
   }
 }
