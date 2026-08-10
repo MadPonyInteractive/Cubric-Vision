@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "docs/PROJECT.md",
+    "docs/builder/05-author-and-test.md",
+    "docs/builder/02-image-and-rebuild.md",
+    "docs/playbooks/bump-engine/README.md",
+    "docs/releases/portable-distribution-contract.md",
+    "docs/models/krea2/int8-quant.md",
+    "docs/models/h3/ref2va.md",
+    ".claude/rules/comfy_engine.md"
+  ]
+}

@@ -48,11 +48,32 @@ promote, `system_dependencies.json` said `0.26.0` while `node_lock.json` said `v
 the local engine would have pulled 0.26 while every node targeted 0.27. Grep both at every
 bump; never trust one file alone.
 
+## A bump is a standing cadence, not an event — and the floor is the model list
+
+Vision ships a release with new models every **2–4 weeks**, so bumping the engine is routine
+work, not an exception to be argued each time. It is also *structural*, for reasons that do not
+go away:
+
+- Comfy-Org ships a core minor roughly weekly (the `0.2x.0` / `0.3x.0` scheme — **not** the old
+  comfyanonymous `v0.3.x` numbering, which reads confusingly similar).
+- **New models arrive as core or partner NODES gated behind the version they shipped in.** You
+  cannot inject a node the pinned engine does not have, so every model integration raises the
+  minimum floor.
+- **Support for one model trails across several minors.** Krea2's base landed in `0.26` but its
+  merge node and templates in `0.27`; Ideogram 4 landed in `0.26` and its JSON-prompt support in
+  `0.27`. A model queued today often needs a *later* minor than the one it first appeared in.
+- Workflow templates, the frontend and partner nodes move every release regardless of core.
+
+**Pin rule for a wave of models:** research the exact minor each queued node landed in, then pin
+to the **highest floor the near-term model list demands** — one bump per wave, not two a fortnight
+apart. "Latest is surely enough" is not a check; each model's node lineage is.
+
 ## The order — gates in sequence, do not reorder
 
 **0. Research the breaking surfaces FIRST.** Read the upstream changelog and diff between
 the current and target tags for API changes, not just features. Fix in one coherent pass;
-never patch one symptom at a time. (`feedback_research_first_on_version_breaks`.)
+never patch one symptom at a time — a version bump breaks a *set* of surfaces simultaneously, and
+fixing them one at a time as each surfaces turns one bump into a week of whack-a-mole.
 
 **1. Confirm the target is reachable.** An upstream tag can exist with **no Comfy-Org
 portable build** — `v0.30.1` and `v0.30.2` were real tags with no release asset, which made

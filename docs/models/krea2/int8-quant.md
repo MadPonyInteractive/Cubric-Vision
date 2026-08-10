@@ -148,7 +148,7 @@ Blackwell-only, so it cannot rescue the 8 GB Ampere/Ada users who most need it. 
 ## Do not
 
 - **Do not ship int8 as the default** on the strength of one third-party 3090 benchmark.
-- **Do not add a GGUF path** — removed in MPI-190, do not re-raise ([[project memory]]).
+- **Do not add a GGUF path** — removed in MPI-190, do not re-raise.
 - **Do not conflate `int8_convrot` with the "INT8 mixed (Winnougan)"** weight the LTX doc
   rejected. Different weight, different model, different silicon target.
 

@@ -10,6 +10,15 @@ logs, settings capture).
 ⚠️ **Stale-disk rule:** always confirm the user has **SAVED + CLOSED** the ComfyUI
 tab before any JSON write. Live ComfyUI state ≠ what's on disk.
 
+**Knob values are the user's, structure is the agent's.** A single widget value (a
+cfg, one strength, one number) is faster for the user to type in the live GUI than
+for the agent to back up → patch → have him save/close/reload, and the round-trip
+risks clobbering his live graph. Name the node + widget + target value and let him
+set it. The agent takes the structural edits — add/remove/rewire nodes, type swaps —
+where a scripted JSON patch genuinely beats hand-wiring. When both sides have touched
+the file, the user's live save is the source of truth: reconcile by having him reload
+from disk, never by assuming the agent's write won.
+
 ## Before a workflow will RUN — required setup (2026-06-23)
 
 - **Seed latents in `input/`.** The LTX template's `LoadLatent` nodes
@@ -66,6 +75,19 @@ Full detail (why each dead end is dead, the SOI fix, multi-frame looping):
 LoRAs default to **0.5**, sweep 0.3–0.7 (the distilled-LoRA law). See
 [../models/ltx/lora-strength-law.md](../models/ltx/lora-strength-law.md). Watch total stacked
 LoRA strength < ~1.5 or quality degrades.
+
+## A/B a LoRA with strength, never with bypass
+
+OFF = `strength_model` **0.0**, ON = **0.5** (or the test value) — same node, same graph,
+one float changed. Do NOT bypass/un-bypass the LoRA node: each toggle forces a full
+diffusion-model **reload**, and on a big bf16 model the repeated reloads accrete system RAM
+until the Pod OOMs mid-session (crashed one at 99% RAM on LTX-2.3, 2026-06-23 — ComfyUI
+self-restarts in place, so don't `pkill`, it heals, but the run is lost). Strength 0 keeps
+the LoRA loaded-but-inert: no reload, no RAM climb, and a cleaner comparison.
+
+- Isolating one LoRA in a stack: set **every** other to 0.0 and sweep only the one under test.
+- Lock a good base seed FIRST (sweep seeds at strength 0), then A/B on it. A LoRA delta judged
+  on a bad or morphing seed is noise on noise.
 
 ## Save what you learn
 

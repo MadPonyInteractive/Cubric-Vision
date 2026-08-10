@@ -111,6 +111,11 @@ Two Dockerfile guards adopted from `github.com/YanWenKun/ComfyUI-Docker` (review
    after the cu130 trio install, so every later pip call (node bake, kornia pin, and the
    wrapper's connect-time installs at runtime) cannot resolve a non-cu130 torch at all. The
    MPI-244 assert stays as the belt — do not treat constraints as a replacement.
+   **A constraint pinning a LOCAL wheel version (`...+cu130`) needs
+   `ENV PIP_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cu130` beside it** — a PEP-517
+   isolated build env inherits `PIP_CONSTRAINT` but NOT `--index-url`, so a node that builds
+   from source (sam2) resolves the pinned `+cu130` version against PyPI, which has never heard
+   of it, and 404s. Both `ENV`s live together in the Dockerfile; never add one without the other.
 
 ## start.sh + wrapper.py are R2-fetched at boot — no rebuild for shell/wrapper edits (MPI-156)
 

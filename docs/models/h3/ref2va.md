@@ -215,7 +215,7 @@ A 2688x2688 character sheet plus a reference video, 1152x640, on a 4060 Ti:
 | `max` | **12 min** | **better overall quality, better cinematics**; adherence about the same |
 
 **~1.7x for a real quality gain**, which is why the control ships with both and the
-default is not the question ([[settled above]]). Note what `max` actually does with a
+default is not the question (settled above). Note what `max` actually does with a
 sheet that large: it caps the reference at a **2048px edge**, so a 2688px sheet is
 downscaled to 2048 — `max` is a ceiling, not "full resolution". At `match` the same
 sheet is fit to the 1152x640 output instead, which is the whole 1.7x.

@@ -30,7 +30,7 @@ Cubric Studio is a desktop application (Electron) that wraps [ComfyUI](https://g
 | Components | [.claude/rules/components.md](../.claude/rules/components.md) | ComponentFactory, 4-tier hierarchy (Primitives/Compounds/Organisms/Blocks), overlay/hotkey rules (canonical lives in rules) |
 | Projects | [project-integrity.md](project-integrity.md) | Project JSON shape, media folder, portability (folded into project-integrity) |
 | Shell | [shell.md](shell.md) | navigation, overlayManager, hotkeyManager, shell.js |
-| Utilities | [utils.md](utils.md) | dom.js, icons.js, ratios.js, seed.js, and all js/utils/ |
+| Utilities | [utils.md](utils.md) | dom.js, icons.js, ratios.js, and all js/utils/ |
 | Events | [events.md](events.md) | EventBus, canonical event names, cross-component communication |
 | Worktrees | [worktrees.md](worktrees.md) | Git worktree setup, `.engine-config.json` for sharing the ComfyUI engine folder, post-checkout hook |
 
@@ -58,6 +58,19 @@ Cubric Studio is a desktop application (Electron) that wraps [ComfyUI](https://g
 11. **LoRA settings can be flat or staged** - most models use six flat LoRA slots. WAN declares `model.loraStages` and stores LoRAs as `{ high: [...], low: [...] }`, injecting `Lora_High_*` and `Lora_Low_*` by workflow node title.
 12. **Standalone workflow injectors are allowed for tool-panel utility workflows** - operations declare `injector` in `commandRegistry.js`; `commandExecutor` applies the matching `js/services/workflowInjectors/*Injector.js` after workflow JSON load and before submit. Injectors still target nodes by `_meta.title`, never numeric IDs.
 13. **Continue from last frame** — video-history workspace adds an `MpiToolOptionsPrompt` toolbar (`#right-top-slot`) with two role-tagged frame thumbs + Extend / Create new actions. Right-click on `MpiVideoPlayer` exposes "Set as start frame" / "Set as end frame" (auto-switches to an i2v-capable model when needed) and "Reverse video" (`POST /api/video/reverse`, ffmpeg `-vf reverse` + `-af areverse`, output `video_reverse_NNN.mp4`, trim-aware, appends new history entry). Frame staging uploads use `frame-drop` / `frame-capture` sidecar operations and are excluded from landing recent thumbnails. Extend post-processes the freshly generated I2V via server-side ffmpeg concat (`POST /extend-video`, output `extended_NNN.mp4`, sidecar `extendedFrom: { id, displayName }`). Combine (history + gallery context menus, ≥ 2 selected videos in chronological click order via `getSelectionOrder()`) → `POST /combine-videos`, output `combined_NNN.mp4`. Both routes share `services/videoConcat.js`: fast-path concat-demuxer when codec/pix_fmt/fps/dims/audio shape match across inputs; fallback concat-filter (re-encode) with crop-zoom (scale-increase + center crop, NOT pad) for ComfyUI Combine-node parity. Progress streams via dedicated SSE channel `/concat/events/stream` consumed by `js/services/concatProgress.js`. ffmpeg stderr truncated to first line at three layers before any user-visible toast.
+
+14. **No seed UI — ever.** Every generation gets a fresh random seed
+(`ComfyUIController.generateRandomSeed()`, `js/services/comfyController.js:671`, resolved in
+`commandExecutor.js runCommand` and injected into the workflow's `Input_Seed` node). The resolved
+seed is stored on the generated item for provenance, and that is the whole of its life — it is
+never displayed, never editable, and there is no seed field anywhere in `js/components/` (grep:
+`generateRandomSeed`/`Input_Seed` appear only under `js/services/`). Product reason (user,
+2026-06-24): every generative model is a seed lottery, so a seed control is not a feature, it is
+clutter that puts the app in the technical register it is designed to avoid. When a capability is
+seed-variable (LTX voice identity is, even single-speaker — [models/ltx/audio-input.md](models/ltx/audio-input.md)),
+the answer is a better workflow or an invisible re-roll behind a normal "generate again" — never
+"let the user pick a seed". Batch-of-N plus a gallery pick is acceptable, because the user is
+picking an output, not a seed.
 
 ## How to Orient in an Unfamiliar File
 

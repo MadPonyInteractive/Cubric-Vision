@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-521", "type": "task.created", "at": "2026-08-10T22:00:00Z", "actor": "claude", "summary": "Created directly in doing: migrate the oldest memory entries into docs/ and rules."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-521", "type": "task.moved", "at": "2026-08-10T22:40:00Z", "actor": "claude", "summary": "doing -> done: 12 oldest memory files migrated into docs/ + rules and deleted; 3 doc drifts healed."}

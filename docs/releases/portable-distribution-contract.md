@@ -590,7 +590,17 @@ not from an assumed source-tree path.
 
 ## Connector Manifest
 
-Vision remains manifest-only for v1.
+Vision is a **live connector responder** (MPI-5) — it was manifest-only through MPI-8, and that
+is history, not the current contract. `@cubric/connector` is a `file:` dependency on
+`../Cubric-Studio/packages/connector` (`package.json`), loaded via dynamic `import()` in
+`services/brokerBoot.js` + `services/connectorResponder.js`, and Vision answers
+`system.memory.release` by freeing VRAM through its own `/comfy/unload` route. Everything is
+best-effort: no broker, no responder, Vision still runs standalone.
+
+**The ownership boundary has not moved.** The Cubric Studio hub owns the contract and the
+runtime — `@cubric/connector` and `@cubric/broker` — and product apps consume them. Never move
+SDK or broker source into this repo (the hub's `README.md` states the same boundary from the
+other side).
 
 Every staged artifact must include:
 
@@ -598,15 +608,20 @@ Every staged artifact must include:
 resources/cubric/connector-manifest.json
 ```
 
-Smoke assertions:
+Smoke assertions (`assertConnectorManifest` in `scripts/build-portable.mjs`):
 
 - `appId` is `cubric.vision`.
 - `protocolVersion` is `0.1.0`.
-- `metadata.manifestOnly` is `true`.
+- `capabilities` includes `system.memory.release` — this **replaced** the old
+  `metadata.manifestOnly === true` assertion, which would now fail (the shipped manifest says
+  `manifestOnly: false`).
 
-Do not add a runtime import of `@cubric/connector`, broker startup, PromptBox
-connector actions, permission/trust UI, or disabled promotional connector
-controls as part of MPI-8.
+The `file:` dependency on a sibling repo is why `assertNoDanglingSymlinks(appRoot)` sweeps the
+WHOLE staged app tree (MPI-416): npm leaves a symlink for it, `copyAppTree`/`ditto` faithfully
+recreate it, and a shipped macOS .zip once carried a link pointing at `../../../Cubric-Studio/…`
+on every user's disk. Nothing crashed — all consumers dynamic-import in try/catch — but our own
+documented `xattr -dr com.apple.quarantine` first-run command printed "No such file" for every
+Mac user. A dangling link in an artifact throws the build; do not downgrade it to a warning.
 
 ## Platform Disclosure
 

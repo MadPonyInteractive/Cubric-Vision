@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-521",
+  "title": "Memory reorg - migrate the oldest memory entries into docs/ and .claude/rules/",
+  "description": "Fabio, 2026-08-10: reorganise agent memory, taking the OLDEST entries first and moving durable knowledge out of memory into docs/ and .claude/rules/, per the repo law that a fact about the codebase lives in a subsystem doc, never in memory. Memory keeps only who Fabio is, how I should work, in-flight state, cross-project strategy, and how to drive the environment.\n\nScope: the pre-2026-08 files. Each one is either (a) migrated into the right doc/rule then deleted, (b) already covered by a doc/sibling-repo README and deleted as a duplicate, or (c) kept because it is process/environment knowledge with no docs home. Backlinks in the surviving memory files and the MEMORY.md / feedback-index.md / procedures-index.md indexes are healed in the same pass, and every migrated fact is verified against the current code before it is written into a doc.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-10T22:00:00Z",
+  "updated_at": "2026-08-10T22:40:00Z",
+  "labels": [
+    "docs",
+    "memory",
+    "housekeeping"
+  ],
+  "priority": "normal",
+  "links": {
+    "brief": "brief.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl"
+  }
+}

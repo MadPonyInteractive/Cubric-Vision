@@ -150,6 +150,18 @@ came from. UI consumers that judge install state per engine
 the current engine and pass it to `deriveInstalledOps`/`resolveDeps` so a Pod
 never reads "not installed" because the local bf16 is absent (and vice-versa).
 
+**A RunPod test NEVER proves the local branch — "Linux" is not "local engine".** A Pod is
+a Linux box talked to over the network, so it is the **remote** path
+(`remoteEngineClient.isRemote()` true) no matter what OS it runs. A fix on the
+**local-engine-on-non-Windows** branch — the uv/comfy-cli provisioning in `routes/engine.js`
+`_provisionUvEngine` (line 319; the Windows prebuilt-archive path returns early at the
+`process.platform !== 'win32'` gate on line 76) — is therefore untested by any number of green
+Pod runs, which only re-run the remote branch. The axis that fires the local branch is *local
+ComfyUI + host `process.platform !== 'win32'`*, and the only thing that exercises it is the
+portable build on a real Linux/macOS desktop generating locally (closest CI proxy: a headless
+Linux portable build). Name the exact trigger conditions before claiming a test covers a
+dual-engine fix.
+
 **Two orthogonal axes that COMPOSE:** the OPERATION axis (`commonDeps` +
 `operations{}` — which deps depend on *what the user does*, e.g.
 `ComfyUI-PainterI2Vadvanced` is i2v-only) and the ENGINE axis (which deps/workflow
