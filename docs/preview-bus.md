@@ -18,7 +18,7 @@ Events.on('preview:frame', ({ engine, promptId, seq, url }) => { … })
 | `engine`   | `'local'` or `'remote'` — already resolved at ingest from which WS URL the socket bound. |
 | `promptId` | the ComfyUI prompt this frame belongs to. Server-truth (see Attribution). |
 | `seq`      | monotonic per-`promptId` counter. Only assigned to REAL image frames. Drop a frame if you already painted a higher seq. |
-| `url`      | object URL for the JPEG blob. Emitter owns it — do **not** revoke it yourself. |
+| `url`      | object URL for the JPEG blob. **Paint it and forget it → the bus frees it.** RETAIN it (buffer, replay, hold past the next frame) and it is **yours to revoke** — see Blob ownership. |
 
 Resolve the generation:
 ```js
@@ -239,6 +239,31 @@ And the bundle predates FLUX.2, so Klein was a blob on every platform.
 combined file and ComfyUI strict-loads the decoder half alone, so it is converted with
 madebyollin's own index shift (`decoder.layers.N` → `N+1`). Regenerate it — or check a
 future FLUX.3 — with the recipe in `tasks/MPI-420/validation.md`.
+
+### Blob ownership — the RETAINER frees it, not the bus (MPI-508)
+
+A burst previewer changes the arithmetic: a 5s H3 run mints **2500** blob URLs, not 20.
+The obvious answer — the bus revokes each frame the next one replaces — is wrong, and so
+is every variant of it. Measured on real H3 runs:
+
+| bus-side rule | result |
+|---|---|
+| revoke on arrival | **2600** `ERR_FILE_NOT_FOUND` |
+| revoke a lagged tail (ring of 64 > the card's window of 48) | 377, all after the run |
+| flush on the terminal event | 1298, a flat 8/s over exactly 48 distinct URLs |
+| **bus keeps only the newest; the retainer frees its own** | **3** |
+
+Because `MpiGalleryGrid` **replays** a rolling 48-frame window at 8fps for an *unbounded*
+time — the loop runs until the card is REMOVED, which for a video is minutes after the
+last frame while the output downloads, saves and thumbnails. No lag and no lifecycle
+event `activeGenerations` can see marks that moment.
+
+So: `activeGenerations` owns exactly one URL per generation (the newest, revoked in
+`end()`), and any consumer that holds a frame past the next one owns that frame.
+`MpiGalleryGrid` revokes on eviction and on teardown. The cost is that frames reaching
+**no** retainer (gallery unmounted) live until the page unloads — bounded by one run,
+and cheaper than any of the three bugs above. The fix, if it ever matters, is a release
+call from the consumer, never a guessed lag in the bus.
 
 #### A tiny video decoder has NO random access — decode from frame 0 (MPI-508)
 

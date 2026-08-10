@@ -457,6 +457,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // motion continuously instead of freezing. New frames append; over
             // PREVIEW_CLIP_MAX the oldest is evicted + its blob URL revoked. Only
             // evicted/teardown URLs are revoked (clip frames stay alive to repaint).
+            //
+            // THIS BUFFER OWNS ITS FRAMES' LIFETIME, and it has to (MPI-508). The
+            // window is retained for an UNBOUNDED time — the loop replays until the
+            // card is removed, which for a video is minutes after the last frame while
+            // the output downloads and thumbnails. A bus-side "retire the old ones"
+            // rule therefore cannot be written: measured 1298 ERR_FILE_NOT_FOUND at a
+            // flat 8/s, on exactly 48 distinct URLs, when the emitter retired frames
+            // this loop was still painting.
             // ponytail: an array + cursor + interval, no <video> element.
             const PREVIEW_FPS = 8;
             const PREVIEW_CLIP_MAX = 48; // a latent video preview is short; loop the window

@@ -68,6 +68,29 @@ function byPromptId(promptId) {
  */
 const _lastPreview = new Map();
 
+/**
+ * MPI-508 — WHY THIS SERVICE DOES NOT RETIRE PREVIEW FRAMES.
+ *
+ * Every frame mints a blob URL, and `MpiVideoSamplingPreview` bursts a whole clip per
+ * sampler step (56 frames on a 2s H3 run, 124 on a 5s), so "revoke the frame this one
+ * replaces" is the obvious fix. It is wrong, three ways, each measured on a real H3 run:
+ *
+ *  - Revoke on arrival → 2600 ERR_FILE_NOT_FOUND. `MpiGalleryGrid` REPLAYS a rolling
+ *    window at 8fps, so a frame is painted long after it landed.
+ *  - Revoke a lagged tail (ring of 64 > its window of 48) → 377, all after the run.
+ *  - Flush on the terminal event → 1298, a flat 8/s across exactly 48 distinct URLs.
+ *
+ * The window is retained for an UNBOUNDED time: the loop replays until the card is
+ * REMOVED, which for a video is minutes after the last frame while the output
+ * downloads, saves and thumbnails. No lag and no lifecycle event this service can see
+ * marks that moment. So the replayer owns its frames (`MpiGalleryGrid` revokes on
+ * eviction and teardown) and this service owns only the newest — `end()` below.
+ *
+ * ponytail: frames that reach NO replayer (gallery unmounted) live until the page
+ * unloads. Bounded by one run, and the alternative is the bug above. Fix it by giving
+ * the consumer a release call, not by guessing a lag here.
+ */
+
 /** @returns {{engine,promptId,seq,url}|null} The latest latent for this gen. */
 function getLastPreview(id) {
     return _lastPreview.get(id) ?? null;
@@ -83,21 +106,6 @@ Events.on('preview:frame', ({ engine, promptId, seq, url }) => {
     // Do NOT fall back to "the active gen" — that is the cross-gen mis-attribution
     // this whole card exists to kill.
     if (!entry) return;
-    // MPI-508: revoke the frame this one replaces. Every frame mints a blob URL and
-    // only the LAST survived to be revoked in `end()`, which was affordable while a
-    // generation produced one preview per sampling step (~6-20). MpiVideoSamplingPreview
-    // streams a whole CLIP per callback — measured 400+ frames on a 6-step run — so the
-    // strays became hundreds of leaked blobs per generation AND turned MPI-211's
-    // one-off dead-blob refetch into a console loop.
-    //
-    // Deferred by a task for MPI-211's original reason: the tile and queue thumbnail
-    // still hold the old URL as an <img> src synchronously, and revoking underneath
-    // them makes the browser refetch a dead blob. One task later they have re-rendered
-    // on the new URL.
-    const previous = _lastPreview.get(entry.id)?.url;
-    if (previous && previous !== url && previous.startsWith('blob:')) {
-        setTimeout(() => { try { URL.revokeObjectURL(previous); } catch { /* already revoked */ } }, 0);
-    }
     _lastPreview.set(entry.id, { engine, promptId, seq, url });
     // MPI-271: keep latestPreviewUrl current for the non-subscriber reads that
     // still poll it (queue-panel thumbnail, group-history rehydrate, gallery-grid
@@ -155,6 +163,8 @@ function end(id, { revokePreview = true } = {}) {
         // derender the placeholder tile + queue-panel thumbnail (both still hold
         // this blob as an <img> src synchronously). Revoking now makes the
         // browser refetch the dead blob → ERR_FILE_NOT_FOUND console noise.
+        // ONLY the newest url — every earlier frame belongs to whoever replayed
+        // it (see the note above `_lastPreview`).
         const url = entry.latestPreviewUrl;
         setTimeout(() => URL.revokeObjectURL(url), 0);
     }

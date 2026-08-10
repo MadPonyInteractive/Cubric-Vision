@@ -149,9 +149,8 @@
   rather than a second full model.
 - **Turbo on MiniMax H3 — one click, roughly half off the wait.** Both H3 models now
   carry the same **Turbo** button the image models have. On, it takes six sampling steps
-  instead of twenty. <!-- TODO(MPI-508): re-measure the five-second-clip before/after on the
-  lightx2v weight before release. The old "3m40s -> 2m51s" was the superseded larry LoRA and
-  has been removed rather than left to ship wrong. --> It is off by
+  instead of twenty — a five-second clip lands in about **2m15s instead of 4m15s** on a
+  16GB card, both measured warm on the same prompt. It is off by
   default. What changes is not only detail — **movement comes out slower**, closer to slight
   slow motion, and holds together better at small sizes, where the full path can smear
   faces and shapes as they move. Speed is something you can fix afterwards in an editor;
