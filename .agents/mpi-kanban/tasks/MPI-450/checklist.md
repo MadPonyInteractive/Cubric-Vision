@@ -151,8 +151,21 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       - after the build lands: bump `POD_IMAGE_VERSION_DEV` **and** `POD_IMAGE_VERSION_CPU_DEV`
         to `v0.21.0-dev`. **Never `POD_IMAGE_VERSION`** — the stable pair stays at `v0.17.0`
         until the release rebuild.
-      Then re-run `--plan` immediately before the smoke: both synced files are live
-      working-tree state and a card landing mid-bump re-drifts them.
+      **DONE 2026-08-10 — both legs green in run `31395602115`.** Pushed as `ce9bcc0`
+      (which also carried `0c4ded6` up), built at `0.21.0-dev` / wrapper `0.2.44` /
+      `comfyui_ref=v0.31.0`, both legs, both **pull-verified public** (`cu130` on Docker Hub,
+      `cpu` on GHCR). The cu130 log clears the MPI-341 gate on the new core:
+      **`node-import smoke test OK`** — zero `IMPORT FAILED`, i.e. every baked node still
+      imports on 0.31.0 — plus post-node `torch 2.12.0+cu130` and exactly one opencv
+      (`cv2 5.0.0 ximgproc True`). `POD_IMAGE_VERSION_DEV` / `_CPU_DEV` moved to
+      `v0.21.0-dev`; the stable pair is untouched at `v0.17.0`.
+      **The cpu boot smoke (skill step 5b) was NOT run** — the Docker daemon was down.
+      Note `docker manifest inspect` still passed, because it is a registry query needing no
+      daemon, so 5a says nothing about whether the image boots. Gates 7-9 cover it on a real
+      Pod. Re-run it if the daemon comes back before the matrix.
+      **Drift re-checked AFTER the sync, by the runner itself:** `--plan` prints
+      `pod lock + python_deps in sync with v0.31.0 ✓`, plus `first-party nodes: every Mpi*
+      class_type exists at MpiNodes fe812d47` and `40 shipped graphs sweep clean`.
 - [ ] **Gate 7 — assert the Pod reports 0.31.0** before smoking. The runner hard-fails on
       this itself; do not bypass it.
 - [ ] **⚠ BEFORE GATE 8 — WAIT FOR FABIO'S NEW H3 VAE DEP.** Told 2026-08-10: a new,
@@ -165,6 +178,24 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       perfectly valid while describing a model that no longer exists — and the entire rented
       matrix is wasted. Same shape as the playbook's "sync LAST" lesson. **Confirm the VAE
       dep is in the tree, then smoke.**
+      **CLEARED 2026-08-10 — the dep landed at `66909bcf`, and I verified it rather than
+      taking MPI-517's word for it:** both ModelDefs resolve `vae-minimax-h3-video-int8`
+      (no `'vae-minimax-h3-video'` reference survives in `models.js`), both runtime graphs
+      carry `minimax_h3_video_vae_int8_convrot.safetensors`, and the R2 object answers
+      `HTTP 200` with `Content-Length: 3171670912`, matching the dep's `bytes` exactly.
+      The old fp16 entry is still a `DEPS` key — deliberate, that is the orphan-sweep
+      condition, so do NOT flag it as dead config.
+      Independently checked the planner's total instead of trusting it: the smoke set unions
+      to **288.0 GiB**, and **289.9 GiB** on the old fp16, so the swap really does take 1.9
+      GiB off the volume (the VAE is shared by both H3 models and counted once).
+      **Two things MPI-517 flagged that the matrix must treat as first-time risk:**
+      (1) nothing has ever run an END-TO-END install against that R2 object — only a HEAD
+      and a ranged GET — so a VAE download failure in the matrix is more likely theirs than
+      the model's; it fails closed (`_verifySha256` rejects, Kijai `mirrorUrl` is the
+      fallback), so the worst case is a fallback, never a bad weight. (2) MPI-517 stays in
+      `validating` because Fabio's no-local-generations rule blocks their live H3 gen — **if
+      the matrix executes an H3 op, that discharges it and they close on our evidence. Tell
+      them.**
 - [ ] **Gate 8 — full smoke matrix.** Not `--retry-failed`: the evidence is engine-scoped
       and `release-health-check.mjs:463` refuses a file produced against a different engine,
       so all 35 rows are void. Cheaper than this morning's run — the H3 ops now clamp

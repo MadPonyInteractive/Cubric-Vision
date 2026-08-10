@@ -223,8 +223,22 @@ const POD_IMAGE_VERSION_CPU = 'v0.17.0';
 // exists — which is the gate working, not a surprise.
 // The stable pair stays on v0.17.0. An engine bump makes a clean release-version rebuild
 // MANDATORY at ship time, or users get a 0.30.0 local engine and a 0.28.0 remote Pod.
-const POD_IMAGE_VERSION_DEV = 'v0.20.0-dev';
-const POD_IMAGE_VERSION_CPU_DEV = 'v0.20.0-dev';
+// v0.21.0-dev (MPI-450): ComfyUI v0.30.0 -> v0.31.0, the Pod half of the 1.4 engine bump.
+// Same shape as v0.20.0-dev above: Vision's pins move nothing here until mpi-ci's OWN
+// node_lock.json is synced (ce9bcc0 — core v0.31.0/43cb4fff plus the two frontend pins,
+// with python_deps.txt in the same commit because the lock and the curated pip set must
+// travel together). python_deps' 0.30.0 -> 0.31.0 delta is provenance comments only: core
+// moved four requirement lines and none of them is a package this file installs.
+// BOTH legs built and pushed in run 31395602115, both pull-verified public. The cu130 leg
+// printed `node-import smoke test OK` — every baked node still imports on 0.31.0, which is
+// the MPI-341 gate and the one that matters for a core bump — plus post-node torch
+// 2.12.0+cu130 and exactly one opencv (`cv2 5.0.0 ximgproc True`).
+// The cpu boot smoke was NOT run: the Docker daemon was down on the build machine, and
+// `docker manifest inspect` needs no daemon so it proves nothing about booting. Gates 7-9
+// cover it on a real Pod, where the runner hard-fails unless the Pod reports 0.31.0.
+// The stable pair still stays on v0.17.0 — see the mandatory release-time rebuild above.
+const POD_IMAGE_VERSION_DEV = 'v0.21.0-dev';
+const POD_IMAGE_VERSION_CPU_DEV = 'v0.21.0-dev';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
