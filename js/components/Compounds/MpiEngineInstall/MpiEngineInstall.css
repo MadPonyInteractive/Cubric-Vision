@@ -99,7 +99,11 @@
     font: inherit;
     text-align: left;
     color: var(--ink-2);
-    background: var(--surface-1);
+    /* Canvas, not surface-1 — surface-1 sits ABOVE the modal's own surface-2, so
+       the cards read as raised plates and the ink-3 fact lines land near 2:1 on
+       them. Dropping to the darkest surface takes ink-3 to ~3.9:1 and ink-2 to
+       ~6.8:1 without touching a single token value. */
+    background: var(--surface-canvas);
     border: 1px solid var(--line-soft);
     border-radius: var(--r-2);
     cursor: pointer;
@@ -107,8 +111,11 @@
                 border-color var(--t-fast) var(--ease);
 }
 
+/* A small lift, not a full step to --surface-bar: that lightens the fill enough to
+   take the 11px fact lines back under 4.5:1, which is the wash-out this card was
+   darkened to fix. The border and the sliding chevron carry the rest of the hover. */
 .mpi-engine-install__choice:hover {
-    background: var(--surface-3);
+    background: color-mix(in oklch, var(--surface-canvas) 75%, var(--surface-bar));
     border-color: var(--line);
 }
 
