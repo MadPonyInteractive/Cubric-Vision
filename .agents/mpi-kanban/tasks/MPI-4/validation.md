@@ -235,3 +235,196 @@ only changed inputs are downstream of the sampler and the whole upstream stays
 **What this run DID prove:** everything up to the mux works on a silent source -
 the `has_audio` selectors, the fully-masked audio stream, the empty audio latent,
 the sampler, and both decodes all completed. Only the final audio assembly failed.
+
+## 2026-08-10 - full-clip V2V Foley authored (`ltx_v2v_foley_template.json`)
+
+Landed at `comfy_workflows/raw/ltx_v2v_foley_template.json`, byte-identical to
+the copy read back off the bench. 58 nodes, 94 links, single stage.
+**NOT YET EXECUTED** - every check below is structural or arithmetic. The foley
+itself is unjudged until a muted clip runs on the bench GPU.
+
+**The reference file moved.** The URL in `brief.md` 404s. RuneXX renamed it and
+now ships two: `..._Foley-Lora.json` (72 nodes, current) and
+`..._old_version.json` (154 nodes, `LTXVAudioVideoMask`-based). The current one
+introduces a dedicated weight - see the LoRA section below.
+
+**Third mask polarity, and it is a different node.** Extend uses KJ's
+`LTXVAudioVideoMask` with `max_length="pad"`. Foley uses
+`LTXVSetAudioVideoMaskByTime` (`ComfyUI-LTXVideo/latents.py:636`), which exposes
+`mask_video` / `mask_audio` booleans directly:
+`mask_video=false` + `mask_init_value_video=0.0` = every video latent frozen;
+`mask_audio=false` + `mask_init_value_audio` = a uniform audio mask. Present on
+BOTH the bench (8188) and the app engine (48188) - still zero new node packs.
+
+**The audio-influence pair from the main workflow CANNOT be reused here, and it
+would have failed silently.** `ltx_i2v_t2v_template.json` sets audio influence
+with `SolidMask` -> `SetLatentNoiseMask` on the audio latent before the concat.
+`LTXVSetAudioVideoMaskByTime` **overwrites** `av_latent["noise_mask"]` outright
+(`latents.py:826-841`): it builds a fresh audio mask from `mask_init_value_audio`
+and only reads a pre-existing mask on the VIDEO side, and even then only for one
+degenerate shape. A `SetLatentNoiseMask` upstream is silently discarded - no
+error, the influence knob just does nothing. Replaced with
+`Audio_Influence` -> `MpiNormalizeValue(inverse)` -> `mask_init_value_audio`.
+Same uniform semantics (a `SolidMask` is uniform too), two fewer nodes, and it
+cannot be clobbered.
+
+**Influence is forced to 1.0 when input audio is off.** `MpiIfElse#113` selects
+`Invert Influence` vs a constant `1.0` on the same `Input_Use_Input_Audio`
+boolean. Without it, an unused `LTXVEmptyLatentAudio` (`torch.zeros`,
+`nodes_lt_audio.py:155`) would sit at mask 0.1 = 90% frozen, which is the exact
+out-of-distribution point that decoded to hiss on the extend build.
+
+**No video decode at all.** The video is frozen, so the generated frames are the
+input frames. `MpiSaveVideo` muxes the ORIGINAL, full-resolution trimmed frames
+against the decoded audio; only `LTXVSeparateAVLatent:1` is consumed. The encode
+resolution (`Input_Width`/`Input_Height`, default 832x480) is therefore a pure
+compute knob - it cannot degrade the delivered video.
+
+**Length cap.** `Input_Duration` means *max seconds to process*, matching the
+reference's `MAX LENGTH (in seconds)`. Frames =
+`min(floor((dur*fps-1)/8+0.5)*8+1, floor((frame_count-1)/8)*8+1)`. A longer clip
+is truncated, not rejected.
+
+**Input audio is trimmed to the clip before encoding.** `LTXVConcatAVLatent`
+only calls `fit_audio` when the video side is ALREADY an AV latent
+(`nodes_lt.py:800-806`) - ours is a plain video latent, so nothing bounds a
+supplied audio track. A 3-minute reference against a 5s clip would encode to
+~4500 audio latent frames and take the sampler with it. One `TrimAudioDuration`
+fed by `clip_seconds` closes it. The `LTXVReferenceAudio` path deliberately gets
+the UNtrimmed audio - it wants the whole voice sample.
+
+**Reference audio is switched at the GUIDER, not per-socket.** Copied from
+`ltx_i2v_t2v_template.json`: two `MultimodalGuider`s, one fed through
+`MpiLoraModel(talkvid ID)` -> `LTXVReferenceAudio`, and `MpiIfElse` picks. Both
+`MpiIfElse` branches are lazy (`check_lazy_status`), so the ID LoRA never loads
+when the toggle is off.
+
+**`MultimodalGuider` instead of `CFGGuider`, deliberately.** The spine's single
+`cfg=1` cannot express what foley wants: the video branch must stay at cfg 1 for
+the distilled checkpoint while the audio branch benefits from more. Two chained
+`GuiderParameters` carry the reference's own tuned values (AUDIO cfg 6, VIDEO
+cfg 1, `modality_scale` 3, `skip_blocks` "29"). If audio comes out broken under
+our fully-distilled int8 transformer, AUDIO `cfg` is now a widget sweep rather
+than a re-author.
+
+### Verified without spending a generation
+
+- **Class existence, required-input coverage, widget arity, COMBO membership,
+  link type compatibility and both-way link agreement** against a live
+  `/object_info`: 0 problems on the bench (8188). The 57-node build also passed
+  against the app engine (48188); the engine was down when the 58th node
+  (`TrimAudioDuration`, core `comfy_extras/nodes_audio`) was added, so re-run
+  the validator against 48188 once the app is up.
+- **The validator was mutation-tested** - unfed required input, uninstalled
+  COMBO value, dangling link id and wrong `widgets_values` arity are each caught.
+  A validator that cannot fail proves nothing.
+- **Live `app.loadGraphData` in the ComfyUI frontend**: 58 nodes, 0 error nodes,
+  0 missing types.
+- **`app.graphToPrompt()` diffed against an independent API conversion**
+  (`scripts/workflow-to-api.mjs` off the same `/object_info`): **0 differences**
+  across all 58 nodes. This is what proves no widget landed in the wrong
+  positional slot.
+- **Every `MpiMath` expression evaluated with the REAL `safe_math`** imported
+  from `ComfyUi-MpiNodes/help_funcs.py`, over 11 clip shapes (16/24/23.976/25/
+  29.97/30/48/60 fps, on and off the lattice, 1-frame and 8-frame degenerate
+  clips) x 7 duration caps. Every result is an int, >= 1, <= the clip's frame
+  count, and exactly on the 8n+1 lattice. **This check is not optional:**
+  `MpiMath.doit` catches every exception and returns `0.0` with only a `print`
+  (`math.py:28-33`), so a malformed expression is a silent wrong number, never
+  an error node.
+
+### Open, and needs the GPU not more code
+
+- The foley itself. Nothing here proves the model makes good sound.
+- AUDIO `cfg=6` against our fully-distilled int8 checkpoint. The reference ran
+  the DEV transformer with a distill LoRA at 0.4; cfg above 1 is exactly what
+  distillation usually breaks. First failure mode to check, one widget to fix.
+- `LTXVSetAudioVideoMaskByTime` hard-raises when
+  `model.model.diffusion_model.__class__.__name__ != "LTXAVModel"`
+  (`latents.py:707-710`). LTX 2.3 22b should satisfy it; unproven on our
+  checkpoint.
+- `Input_Duration` at a large cap on a 60fps clip is a big latent (473 frames =
+  60 latent frames at cap 10). VRAM ceiling unmeasured.
+
+### The Foley LoRA is BLOCKED on a licence click
+
+`ltx-2.3-22b-lora-foley-v2a-1.0.safetensors` (Lightricks, 227 MB, the only new
+weight the current reference adds) sits in a `gated: auto` HF repo. Anonymous
+gets 401, the Mad-Pony-Interactive write token gets 403 - the account has not
+accepted the terms. Accepting a licence is the user's action, not an agent's.
+`Foley_Lora#100` is wired as `MpiLoraModel` with `lora_name: "None"`, which is a
+pass-through, so the graph runs on base-model foley today and needs one widget
+change once the weight lands. Repo:
+`https://huggingface.co/Lightricks/LTX-2.3-22b-LoRA-Foley-V2A`
+
+### Noticed, not fixed - `ltx_v2v_template.json` is still missing its MpiInts
+
+The extend section above says "restore `Input_Width`/`Input_Height` for the repo
+version". The repo copy still wires `Resize To Target#28` straight off
+`MpiLoadVideo:5/:6`, so there is nothing for the app to inject a resolution
+into. Left alone deliberately - that file is byte-identical to the copy that
+ran, and this is MPI-520's to fix at integration time. The foley file does NOT
+share the defect; it carries both `MpiInt`s.
+
+### 2026-08-10 (same day, after the user supplied Lightricks' own reference)
+
+The user saved `ltx-2.3-foley-v2a.json` — the API-format workflow Lightricks
+ships **inside the LoRA repo**, and the authority the RuneXX file was ported
+from — and downloaded the LoRA to
+`G:\CubricModels\loras\ltx-2.3\ltx-2.3-22b-lora-foley-v2a-1.0.safetensors`
+(226,709,270 bytes, matches the HF blob size). Both engines already list it in
+the `MpiLoraModel` COMBO; no restart was needed.
+
+**The architecture was already right.** Their graph and ours agree node-for-node
+on the load-bearing path: `VAEEncode` -> `LTXVEmptyLatentAudio(frames_number=N)`
+-> `LTXVConcatAVLatent` -> `LTXVSetAudioVideoMaskByTime(mask_video=false)` ->
+`MultimodalGuider` -> `SamplerCustomAdvanced` -> `LTXVSeparateAVLatent:1` ->
+`LTXVAudioVAEDecode` -> save the ORIGINAL frames with the generated audio. Their
+frame math is `((frame_count-1)//8)*8+1` with a `max(1, n)` floor, which is what
+`clip frames (snap 8n+1)#23` already computed.
+
+**19 steering parameters compared and all 19 match** (`compare_to_lightricks.py`):
+`mask_video`, `mask_init_value_video`, `slope_len`, every field of both
+`GuiderParameters` (AUDIO cfg 6 / VIDEO cfg 1, `stg` 1, `perturb_attn` true,
+`rescale` 0, `modality_scale` 3, `skip_step` 0, `cross_attn` true),
+`skip_blocks` "29" on both guiders, LoRA strength 1.0, and the negative prompt.
+The AUDIO cfg 6 and `modality_scale` 3 guesses carried over from the RuneXX port
+are confirmed as Lightricks' own values, not a community invention.
+
+**Changed as a result:**
+- `Foley_Lora#100` now loads
+  `ltx-2.3\ltx-2.3-22b-lora-foley-v2a-1.0.safetensors` at strength 1.0.
+- `Input_Negative` is Lightricks' string verbatim.
+- `Input_Positive` follows their prompt shape: name the sources and their sync,
+  then rule out the rest ("No speech is present. No music is present.").
+
+**The negative prompt suppresses SPEECH, deliberately — and that collides with
+the reference-voice feature.** Their negative carries `speech, dialogue, talking,
+narration`. The Foley LoRA is a sound-EFFECTS model; the spoken line the extend
+run produced came from the BASE model with no LoRA. So the file now has two
+modes that are not simultaneously satisfiable:
+- foley (default): LoRA on, speech negated, `Input_Use_Reference_Audio` off.
+- voice: strip the speech terms from `Input_Negative`, and consider dropping the
+  Foley LoRA to `None`, before turning the reference-voice path on.
+Worth an explicit product decision at app-integration time (MPI-520) rather than
+leaving a user to discover it.
+
+**Divergences kept, each on purpose:** their DEV checkpoint + `LTXVScheduler` 30
+steps + plain `euler` vs our distilled int8 + `ManualSigmas` 8 steps +
+`euler_ancestral_cfg_pp`; their native-resolution `VAEEncode` vs our
+`ImageResizeKJv2` -> `VAEEncodeTiled`; their `LTXVAudioVAELoader` off the
+checkpoint vs our `VAELoaderKJ` off the standalone audio VAE. The last two are
+the spine's own proven loaders. The FIRST one is the live risk:
+
+> **The LoRA was tuned against the DEV model at 30 steps with cfg 6.** We run a
+> fully distilled checkpoint at 8 steps, where cfg above 1 normally breaks. If
+> the audio comes back as noise, that pairing is the cause, and the fix is not
+> the graph — it is either AUDIO `cfg` -> 1, or swapping `ManualSigmas` for
+> `LTXVScheduler` (30 steps, max_shift 2.05, base_shift 0.95, stretch true,
+> terminal 0.1) with `KSamplerSelect` on plain `euler`.
+
+Re-verified after the LoRA and prompt changes: 0 structural problems against
+**both** 8188 and 48188, math unchanged (77 combinations), validator still
+mutation-proof, 58 nodes and 0 error nodes in the live frontend, and the
+`graphToPrompt` diff against an independent conversion is still **0
+differences**. Repo copy is byte-identical to the bench copy (95,163 bytes).

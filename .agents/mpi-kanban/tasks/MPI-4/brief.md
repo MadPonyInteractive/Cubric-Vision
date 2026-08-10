@@ -27,8 +27,13 @@ work that belongs here:
   https://github.com/Lightricks/ComfyUI-LTXVideo
 - **RuneXX LTX-2.3 workflow collection** (many workflows to mine/port):
   https://huggingface.co/RuneXX/LTX-2.3-Workflows/tree/main
-- **NEXT to test — V2V Foley (add sound to any video):**
-  https://huggingface.co/RuneXX/LTX-2.3-Workflows/blob/main/Video-2-Video/LTX-2.3_-_V2V_Foley_Add_Sound_To_Any_Video.json
+- **V2V Foley (add sound to any video)** — the old URL 404s, RuneXX renamed it
+  and now ships two. Current (needs a 227 MB Foley IC-LoRA):
+  `Video-2-Video/LTX-2.3_-_V2V_Foley_Add_Sound_To_Any_Video_Foley-Lora.json`
+  Previous (no LoRA, `LTXVAudioVideoMask`-based):
+  `..._Foley_Add_Sound_To_Any_Video_old_version.json`
+  List a folder with `https://huggingface.co/api/models/RuneXX/LTX-2.3-Workflows/tree/main/<dir>`
+  rather than guessing a filename.
 
 ## Session note (2026-06-21) — PARKED mid-deconstruction
 
@@ -182,8 +187,11 @@ nodes in the donor graph are installed NOWHERE and must not be copied: `TrimAudi
 **Decision: a SEPARATE v2v file, not a branch inside `ltx_i2v_t2v.json`.** The two
 front ends are mutually exclusive at the latent (empty+guide vs encode+mask), and the
 audio sockets mean opposite things (conditioning vs encoded source). Extend and lipsync
-are the same skeleton with the mask polarity flipped — lipsync freezes audio and masks
-video (`max_length="partial"`) — so both ops point at one `ltx_v2v.json`, exactly as
+were ASSUMED to be the same skeleton with the mask polarity flipped — lipsync freezing
+audio and masking video (`max_length="partial"`). **That assumption is WRONG; corrected
+2026-08-10 against the bench's own `LTX_lipdub_v2v_template.json`** (see the lipsync
+section at the end of this brief). Extend and foley do share a skeleton, so both point
+at one `ltx_v2v.json`, exactly as
 `t2v_ms`/`i2v_ms` already share a file in `models.js`. Lipsync is NOT wired yet; the
 seam is the mask's time-range inputs. The bench already holds an
 `LTX_lipdub_v2v_template.json` worth reading before that step.
@@ -240,7 +248,7 @@ conditioned on video it did not make. Confirmed working on a WAN clip: the whole
 3.06s got sound, including a spoken line, at zero extra sampler cost — those
 samples were already being computed and discarded.
 
-### NEXT SESSION — full-clip V2V Foley as its own op
+### Full-clip V2V Foley as its own op — BUILT 2026-08-10, awaiting the GPU
 
 Add sound to any muted video (the WAN use case). Same spine as `ltx_v2v`, third
 mask polarity: **freeze all video, mask all audio, generate no new frames.**
@@ -263,3 +271,120 @@ the reference-audio hook is the answer rather than a bigger model.
 **Scope note:** foley on the extend workflow covers only the reference window
 (~3s at the 73 cap) because that is all the model sees. Widening it means raising
 `Ref_Frames`, which is the cost the cap exists to avoid — hence a separate op.
+
+## Session 2026-08-10 (cont.) — foley workflow BUILT, unexecuted
+
+`comfy_workflows/raw/ltx_v2v_foley_template.json` (58 nodes, 94 links) is on the
+bench as `ltx_v2v_foley_template.json` and byte-identical in the repo. Read
+`validation.md` for every root cause with its code line — do not re-derive them
+from this summary.
+
+Shape: freeze all video (`LTXVSetAudioVideoMaskByTime`, `mask_video=false`),
+generate the whole audio stream, decode **audio only**, mux against the original
+full-resolution frames. Carries `Input_Audio` + `Input_Use_Input_Audio` +
+`Audio_Influence`, and reference-voice via `talkvid ID LoRA` ->
+`LTXVReferenceAudio` behind `Input_Use_Reference_Audio`, as decided.
+
+**THE NEXT ACTION IS A BENCH RUN, NOT CODE.** Open `ltx_v2v_foley_template.json`,
+point `Input_Video` at a muted clip (`Projects/Wan 5b/Media/t2v_005.mp4` is the
+one the extend build used), leave both audio toggles off, run.
+
+Failure modes, in the order they are likely to fire:
+1. `LTXVSetAudioVideoMaskByTime` raises `ValueError` if our checkpoint's
+   diffusion model is not `LTXAVModel`. Unproven on the distilled int8 weights.
+2. **The sampler pairing.** Lightricks tuned this LoRA on the `ltx-2.3-22b-dev`
+   checkpoint with `LTXVScheduler` at 30 steps, plain `euler`, AUDIO cfg 6. We
+   run the fully distilled int8 transformer at 8 `ManualSigmas` steps with
+   `euler_ancestral_cfg_pp`, and cfg above 1 is exactly what distillation
+   normally breaks. If the audio is noise, this is why. Fix in order: AUDIO
+   `cfg` -> 1, then swap `ManualSigmas` for `LTXVScheduler` (30 steps,
+   max_shift 2.05, base_shift 0.95, stretch true, terminal 0.1) + `euler`.
+3. VRAM at a large `Input_Duration` cap. 60fps x cap 10 = 473 frames.
+
+Then the knobs, in order: AUDIO cfg, `modality_scale` (3, from the reference),
+`Input_Width`/`Input_Height` (encode-only, cannot hurt output quality),
+`Audio_Influence` with a real input-audio clip.
+
+**Foley LoRA: RESOLVED.** The user accepted the HF gate and downloaded it to
+`G:\CubricModels\loras\ltx-2.3\ltx-2.3-22b-lora-foley-v2a-1.0.safetensors`.
+`Foley_Lora#100` loads it at strength 1.0; both engines list it.
+
+**Lightricks' own reference is archived at
+`research/lightricks-foley-v2a-reference.json`** (the API workflow shipped
+inside the LoRA repo — the authority the RuneXX file was ported from). Our build
+agrees with it node-for-node and on all 19 steering parameters. Read it before
+changing any guider or mask value.
+
+**Product decision owed at MPI-520:** their negative prompt suppresses
+`speech, dialogue, talking, narration` — the Foley LoRA is a sound-EFFECTS
+model, and the spoken line the extend run produced came from the BASE model. So
+foley mode and the reference-voice mode want different negatives and probably a
+different LoRA state. Do not ship both toggles as if they compose.
+
+Still open from the extend build, unchanged: the `Ref_Frames` 73 -> 41 -> 25
+sweep (decouple `ImageBatchExtendWithOverlap.overlap` first), and whether LTX
+2.3's motion holds off-24fps.
+
+## Lipsync is NOT a third mask polarity — corrected 2026-08-10
+
+Read from the bench's `LTX_lipdub_v2v_template.json` (36 nodes), not assumed.
+The earlier claim in this brief — that lipsync is `ltx_v2v` with
+`max_length="partial"` freezing audio and masking video — is **wrong**. Lipdub
+uses a different front end entirely, and none of the foley/extend mask machinery
+appears in it:
+
+| | extend / foley | lipdub |
+|---|---|---|
+| video latent | encoded source, frozen by a noise mask | `EmptyLTXVLatentVideo` — fully generated |
+| source video enters as | the latent itself | `LTXAddVideoICLoRAGuide` in-context guide |
+| audio enters as | an encoded latent in the AV pair | `LTXVSetAudioRefTokens` on the CONDITIONING |
+| LoRA | none (foley: `LoRA-Foley-V2A`) | `LTXICLoRALoaderModelOnly` + `ic-lora-lipdub-0.9` |
+| after sampling | separate AV, decode | `LTXVCropGuides` strips the guide frames first |
+
+So the video is **re-synthesised**, not preserved. That is what lets a closed or
+still mouth start moving — but identity, lighting and background are regenerated
+from the guide, so drift is the quality risk, and `LTXVCropGuides` is mandatory.
+
+**The template drives it from the source video's OWN audio**
+(`GetVideoComponents:1` -> `LTXVAudioVAEEncode`). Supplying a different track is
+a one-socket swap to an audio loader — that is the dubbing case, and it is what
+makes "supply audio, get lipsync" work.
+
+**Everything needed is already installed.** `LTXAddVideoICLoRAGuide`,
+`LTXICLoRALoaderModelOnly`, `LTXVSetAudioRefTokens`, `LTXVTiledVAEDecode`
+(ComfyUI-LTXVideo) and `LTXVCropGuides` / `EmptyLTXVLatentVideo` /
+`GetVideoComponents` (core) are present on BOTH 8188 and 48188, and
+`ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors` is on disk at
+`C:\AI\loras\LTX2.3\` (the bench's other lora root, not CubricModels).
+
+**Four ready references** in the RuneXX collection under
+`Video-2-Video/Just-Talk_add_voice_to_silent_video/`:
+`..._custom_audio_lip-synced_to_any_video`, `..._dub_any_silent_video_multilanguage`,
+`..._prompt_lip-synced-voice_to_any_video`, and a `..._Sam3` variant (SAM3 gives
+it a spatial mask, presumably to confine the regeneration to a face region).
+
+**Consequence for the op plan:** lipsync does NOT share `ltx_v2v.json`. It is its
+own workflow file and its own op, closer to a fourth front end than a third mask.
+The `models.js` "two ops, one file" trick still applies to extend + foley only.
+
+## Reference audio STAYS in the foley file (user, 2026-08-10)
+
+Asked whether the talkvid ID-LoRA was dead weight; answer is it drives
+`LTXVReferenceAudio` speaker-identity transfer (voice consistency) and the user
+wants it kept. It costs nothing when off - `MpiIfElse.check_lazy_status`
+(`if_else.py:33`) returns only the taken branch, so the LoRA never loads.
+
+**Foley mode and voice mode are still mutually exclusive settings in one file.**
+Voice test needs: a real path in `Input_Audio#106` (it is `block_if_empty=true`,
+so an empty string BLOCKS once the toggle executes it), the speech terms removed
+from `Input_Negative#13`, and `Foley_Lora#100` set to `None` so the SFX LoRA and
+the ID LoRA are not stacked. `identity_guidance_scale` 1.5 runs an extra forward
+pass per step; reference clips should be ~5s (the trained duration).
+
+**Fixed after the first run came back loud and distorted:** AUDIO cfg 6 -> 1
+(every LTX guider in this repo runs cfg 1 on the distilled checkpoint; 6 is
+Lightricks number for the DEV model at 30 steps with plain euler, and it was
+being fed into euler_ancestral_cfg_pp which expects ~1). Next lever if still
+hot: LTXVNormalizingSampler, audio_normalization_factors 1,1,0.25,1,1,0.25,1,1.
+Also changed Resize To Target keep_proportion crop -> resize: crop discards
+frame content, and that encode exists only so the model can SEE the scene.

@@ -1,0 +1,117 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "inputs": {"ckpt_name": "ltx-2.3-22b-dev.safetensors"},
+    "_meta": {"title": "Load LTX-2.3 Checkpoint"}
+  },
+  "2": {
+    "class_type": "LoraLoaderModelOnly",
+    "inputs": {"model": ["1", 0], "lora_name": "ltx-2.3-foley-v4-best.safetensors", "strength_model": 1.0},
+    "_meta": {"title": "Foley LoRA (V2A, step 500)"}
+  },
+  "3": {
+    "class_type": "LTXVGemmaCLIPModelLoader",
+    "inputs": {"gemma_path": "gemma-3-12b-it-qat-q4_0-unquantized_readout_proj/model/model.safetensors", "ltxv_path": "ltx-2.3-22b-dev.safetensors", "max_length": 1024},
+    "_meta": {"title": "Gemma Text Encoder"}
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {"text": "A blacksmith hammers glowing hot steel on an anvil: loud ringing metal hammer impacts, bright spark crackles, forge fire rumble and hissing heat in sync with each hammer strike. Prominent close-mic metal hammering. No speech is present. No music is present.", "clip": ["3", 0]},
+    "_meta": {"title": "Foley prompt (positive)"}
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "inputs": {"text": "music, melody, song, singing, vocals, score, soundtrack, beat, instrumental backing, speech, dialogue, talking, narration, tinny, thin, harsh, clipped, distorted, low bitrate, static, noise, room tone", "clip": ["3", 0]},
+    "_meta": {"title": "Negative (music/speech/static)"}
+  },
+  "6": {
+    "class_type": "VHS_LoadVideo",
+    "inputs": {"video": "blacksmith_muted.mp4", "force_rate": 24, "custom_width": 0, "custom_height": 0, "frame_load_cap": 169, "skip_first_frames": 0, "select_every_nth": 1},
+    "_meta": {"title": "INPUT: load your (muted) video here (frame count auto-derived)"}
+  },
+  "7": {
+    "class_type": "ArbitraryCode",
+    "inputs": {"code": "n = ((int(a) - 1) // 8) * 8 + 1\nresult = max(1, n)", "a": ["6", 1]},
+    "_meta": {"title": "N = round frame_count DOWN to 1+8x (max 169 loaded)"}
+  },
+  "8": {
+    "class_type": "ArbitraryCode",
+    "inputs": {"code": "n = int(b)\nresult = a[:n]", "a": ["6", 0], "b": ["7", 0]},
+    "_meta": {"title": "Trim video frames to first N (1+8x)"}
+  },
+  "9": {
+    "class_type": "VAEEncode",
+    "inputs": {"pixels": ["8", 0], "vae": ["1", 2]},
+    "_meta": {"title": "Encode (trimmed) video -> video latent (frozen)"}
+  },
+  "10": {
+    "class_type": "LTXVAudioVAELoader",
+    "inputs": {"ckpt_name": "ltx-2.3-22b-dev.safetensors"},
+    "_meta": {"title": "Audio VAE"}
+  },
+  "11": {
+    "class_type": "LTXVEmptyLatentAudio",
+    "inputs": {"frames_number": ["7", 0], "frame_rate": 24, "batch_size": 1, "audio_vae": ["10", 0]},
+    "_meta": {"title": "Empty audio latent (frames_number = N from input video)"}
+  },
+  "12": {
+    "class_type": "LTXVConcatAVLatent",
+    "inputs": {"video_latent": ["9", 0], "audio_latent": ["11", 0]},
+    "_meta": {"title": "Concat AV latent"}
+  },
+  "13": {
+    "class_type": "LTXVSetAudioVideoMaskByTime",
+    "inputs": {"av_latent": ["12", 0], "positive": ["4", 0], "negative": ["5", 0], "model": ["2", 0], "vae": ["1", 2], "audio_vae": ["10", 0], "start_time": 0.0, "end_time": 30.0, "video_fps": 24.0, "mask_video": false, "mask_audio": true, "mask_init_value_video": 0.0, "mask_init_value_audio": 0.0, "slope_len": 1},
+    "_meta": {"title": "V2A: freeze video (mask_video=false), generate audio (mask_audio=true)"}
+  },
+  "14": {
+    "class_type": "GuiderParameters",
+    "inputs": {"modality": "AUDIO", "cfg": 6.0, "stg": 1.0, "perturb_attn": true, "rescale": 0.0, "modality_scale": 3.0, "skip_step": 0, "cross_attn": true},
+    "_meta": {"title": "AUDIO guider params (cfg=6)"}
+  },
+  "15": {
+    "class_type": "GuiderParameters",
+    "inputs": {"modality": "VIDEO", "cfg": 1.0, "stg": 1.0, "perturb_attn": true, "rescale": 0.0, "modality_scale": 3.0, "skip_step": 0, "cross_attn": true, "parameters": ["14", 0]},
+    "_meta": {"title": "VIDEO guider params (cfg=1, frozen)"}
+  },
+  "16": {
+    "class_type": "MultimodalGuider",
+    "inputs": {"model": ["2", 0], "positive": ["13", 0], "negative": ["13", 1], "parameters": ["15", 0], "skip_blocks": "29"},
+    "_meta": {"title": "Multimodal Guider"}
+  },
+  "17": {
+    "class_type": "LTXVScheduler",
+    "inputs": {"steps": 30, "max_shift": 2.05, "base_shift": 0.95, "stretch": true, "terminal": 0.1, "latent": ["13", 2]},
+    "_meta": {"title": "Scheduler (30 steps)"}
+  },
+  "18": {
+    "class_type": "KSamplerSelect",
+    "inputs": {"sampler_name": "euler"},
+    "_meta": {"title": "Sampler"}
+  },
+  "19": {
+    "class_type": "RandomNoise",
+    "inputs": {"noise_seed": 42, "control_after_generate": "fixed"},
+    "_meta": {"title": "Noise (seed)"}
+  },
+  "20": {
+    "class_type": "SamplerCustomAdvanced",
+    "inputs": {"noise": ["19", 0], "guider": ["16", 0], "sampler": ["18", 0], "sigmas": ["17", 0], "latent_image": ["13", 2]},
+    "_meta": {"title": "Sampler (generate audio, video frozen)"}
+  },
+  "21": {
+    "class_type": "LTXVSeparateAVLatent",
+    "inputs": {"av_latent": ["20", 0]},
+    "_meta": {"title": "Separate AV -> audio latent"}
+  },
+  "22": {
+    "class_type": "LTXVAudioVAEDecode",
+    "inputs": {"samples": ["21", 1], "audio_vae": ["10", 0]},
+    "_meta": {"title": "Decode audio latent -> AUDIO"}
+  },
+  "23": {
+    "class_type": "VideoSave_LTX",
+    "inputs": {"frames": ["8", 0], "audio": ["22", 0], "file_name": "foley_v2a_output.mp4", "crf": 19, "batch_size": 50, "keep_audio": false, "keep_timestamps": false, "num_threads": 1, "threading_type": "ffmpeg", "fps": 24.0, "device": "cuda:0"},
+    "_meta": {"title": "Save original video + generated foley audio"}
+  }
+}
