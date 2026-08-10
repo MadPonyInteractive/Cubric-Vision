@@ -118,6 +118,21 @@ node scripts/engine-floor-check.mjs
 > re-derive it. **The smoke therefore runs against the DEV image**, and the evidence is
 > evidence about that image.
 >
+> 🛑 **RESTART THE APP AFTER MOVING THOSE CONSTS, BEFORE THE SMOKE.** `routes/` does not
+> hot-reload: `POD_IMAGE_VERSION_DEV` bakes into the Express child at boot, so a matrix
+> driven by an app that started before the edit asks RunPod for the **old** tag. Measured
+> 2026-08-10 — the CPU fill leg ran, the GPU Pod came up, and gate 7 refused with
+> `Pod image was built from ComfyUI 0.30.0, node_lock pins 0.31.0`. The gate did its job,
+> but only after the rental was paid for. Two consequences worth knowing:
+> - **Confirm from the app's own log rather than assuming the restart took** — one grep
+>   beats a rental: `Pod image for <gpu>: …:<tag>` in `%APPDATA%\Cubric Vision\logs\app.log`,
+>   written at every create, including the cheap CPU one that runs first.
+> - **The app you restart must be on the DEFAULT profile.** The RunPod API key lives in the
+>   profile and `npm run app:isolated` deliberately has none, so its `/runpod/pods` answers
+>   `400 no_api_key` and the runner can rent nothing. Starting the default-profile app from
+>   a sandboxed shell needs `unset ELECTRON_RUN_AS_NODE` first, or `electron .` runs as
+>   plain node and dies at `app.getPath` in `main/floatLatentWindow.cjs`.
+>
 > **The Pod has TWO dev-gated halves and you must stay on the dev side of BOTH.** The image
 > (above) *and* the R2 runtime — `bootstrap.sh` reads `CUBRIC_RUNTIME_CHANNEL`, default
 > `stable`; a dev app run creates Pods on `dev`, a released portable never does. So runtime

@@ -149,6 +149,15 @@ cp dev_configs/smoke-run.txt /tmp/smoke-run.backup.txt   # then restore with cp,
 
 `git checkout --` on this tree takes every peer session's uncommitted work with it (`.claude/rules/git.md` § MPI-365). `cp` back, or leave it truncated and recover from git history by hand.
 
+**Back it up AFTER a green run too, not only before.** The dangerous `--plan` is the one you
+type *after* the matrix — the transcript it destroys is the fresh one that has not been
+committed yet, and git history cannot help because that version never existed there.
+Happened 2026-08-10 on the 0.31.0 matrix. **If you lose it, it is recoverable**: the runner's
+stdout carries the same lines (the file is a tee, not a separate format), so restore it from
+the run's captured output and say in the header that the per-line tee timestamps are gone
+while the content is intact — an annotated recovery beats a missing record for the evidence
+file it explains.
+
 ## Re-running only what failed — `--retry-failed`, and the merge underneath it
 
 ```

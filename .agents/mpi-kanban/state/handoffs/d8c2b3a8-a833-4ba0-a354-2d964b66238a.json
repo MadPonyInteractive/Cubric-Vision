@@ -1,7 +1,7 @@
 {
   "schema": "mpi-kanban/handoff/v1",
   "id": "d8c2b3a8-a833-4ba0-a354-2d964b66238a",
-  "generated_at": "2026-08-10T16:40:00Z",
+  "generated_at": "2026-08-10T15:41:00Z",
   "from_session": ".agents/mpi-kanban/state/handoffs/56669f38-ad54-46c1-80e9-bcac8c3dc666.json",
   "to_role": "implementer",
   "status": "open",
@@ -120,6 +120,6 @@
     "docs/playbooks/bump-engine/README.md",
     "docs/runpod-remote-engine.md"
   ],
-  "recent_events": [{ "at": "2026-08-10T16:40:00Z", "event": "handoff_created" }],
+  "recent_events": [{ "at": "2026-08-10T15:41:00Z", "event": "handoff_created" }],
   "resume_prompt": "You are resuming MPI-450, the 1.4 release umbrella, on master. Read .agents/mpi-kanban/state/handoffs/d8c2b3a8-a833-4ba0-a354-2d964b66238a.json and then tasks/MPI-450/checklist.md. THE COMFYUI 0.31.0 BUMP IS DONE AND PROVEN - every gate of docs/playbooks/bump-engine/ is closed, the local engine runs 0.31.0 with a green 183/183 floor check, the DEV Pod image is rebuilt at v0.21.0-dev, the Pod asserted 0.31.0, the full matrix executed 35 ops with 0 skips and 0 failures including all three H3 ops, and `npm run release:check` PASSES. Do not redo any of it. What remains is the release chain: the MANDATORY stable Pod image rebuild (an engine bump makes it compulsory - ship the app at 0.31.0 while the released image is still v0.17.0/0.30.0 and every remote user silently runs two ComfyUI versions; promotion is a clean rebuild at a real version, never a dev tag renamed), then `npm run release:approve -- --yes` LAST because it hashes the rendered notes and any later copy edit re-blocks the build, then CI artifacts on all three OS, MPI-249's Linux leg on the real 1.4.0 tarball, and /mpi-release with PROMOTE at the manifest stop. Four things will cost you time if you miss them: every smoke-workflows.mjs invocation truncates dev_configs/smoke-run.txt including --plan; routes/ does not hot-reload so a pin edit needs an app restart before it exists, and the app that matters is the one on the DEFAULT profile because the agent profile has no RunPod key; the committed evidence's `gpu` field says L4 for a run that actually used an RTX 4090 (the code is fixed, the transcript proves the card, and it was deliberately not hand-edited); and the tree is shared with a live peer, so commit by explicit pathspec and never run destructive git."
 }

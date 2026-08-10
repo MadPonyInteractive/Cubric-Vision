@@ -221,15 +221,24 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       EU-RO-1, so "no instances available with the requested specifications" across three
       cards most likely means that DC had no host meeting the RAM floor at that moment —
       not that three independent cards sold out at once.
-      **CONFIRMED SYSTEMATIC over three runs (2026-08-10): L4 refuses, RTX 3090 refuses,
-      RTX 4090 takes it — every time.** That is not a blip, it is the 48GB
-      `MIN_RAM_GB` floor excluding the L4 and 3090 host classes in EU-RO-1. So
-      `GPU_ORDER`'s comment, "cheapest-first by measured availability", is now stale: the
-      two cheap entries cannot be rented under our own RAM floor, and every run pays two
-      pointless refusal round-trips to rediscover it. Cheap (a refusal rents nothing) but
-      worth re-measuring the order, or dropping the floor if `footprint.js` no longer needs
-      48GB. **Do not "fix" it by lowering the floor blind** — it exists because weights spill
-      to system RAM on a 24GB card.
+      **CORRECTED 2026-08-10 by Fabio — and the earlier wording here was wrong.** This file
+      briefly said the L4/3090 refusals were "confirmed systematic" and that those host
+      classes are excluded in EU-RO-1. **They are not. L4 is normally available and is the
+      right first choice** — Fabio gets one every time he tests, which is a far larger
+      sample than my three runs inside one hour. `GPU_ORDER`'s "cheapest-first" comment is
+      CORRECT; do not re-order it.
+      **The real discriminator is that the SMOKE asks for something his tests do not.**
+      `storage.js` defaults `minRamGb: 0`, so the app's normal Connect sends **no floor**
+      (`MpiRunpodSettings.js:491` omits `minMemoryInGb` unless the user set one). The runner
+      hardcodes `MIN_RAM_GB = 48`, and RunPod applies `minMemoryInGb` as a **hard placement
+      filter** — so it is not "no L4s", it is "no L4 host with >= 48GB system RAM, right
+      now". Same card, different question, and both observations are true at once.
+      **Open design question for Fabio, NOT a silent change:** the floor exists because
+      weights spill to system RAM, and H3 alone loads ~47GB of them, so it is not obviously
+      over-specified even at 1 step / 128px — the step budget shrinks compute, not the
+      weights. But it costs real availability, and the alternative is to try the floor and
+      then RETRY THE SAME CARD without it (warning loudly) rather than walking down to a
+      pricier GPU. **Do not lower it blind.**
       **Second small gap, seen on every run: `volume: free space UNKNOWN (no /wrapper/disk)
       - fit not checked`.** The runner calls `/remote/pod/disk` and `.catch(() => null)`s it,
       so an unknown answer silently disables the volume-fit gate. The route DOES exist
@@ -237,6 +246,16 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       against a live Pod rather than a guess. Not blocking — the volume has headroom — but
       it means the fill can still run the volume out with no warning, which is exactly what
       that gate was added to prevent.
+      **Why it belongs on the CPU Pod specifically, since this reads as misplaced (raised by
+      Fabio 2026-08-10): the gate is about the FILL, not about generation.** The CPU
+      download Pod is the machine that downloads ~300GB onto the volume, so free space is a
+      question about IT, and `smoke-workflows.mjs:1287` records why it is asked at that exact
+      instant — it is "the ONLY moment free space is knowable: a Pod is up (so the wrapper's
+      `du` answers) and nothing has been downloaded yet". Asking after the fill is useless,
+      and asking on the GPU Pod is too late: the fill has already either fitted or run the
+      volume out. `abort` deletes the live Pod on its way out, so refusing here costs the CPU
+      Pod's few minutes instead of a 40-minute fill. Right gate, right place — it is simply
+      not answering.
       **PROBED 2026-08-10 against the live GPU Pod: the route WORKS** —
       `{"success":true,"source":"wrapper","used":330449383936,"total":450000000000}`. So it
       is not a dead route and not an old wrapper. It fails **only in the CPU-download-Pod

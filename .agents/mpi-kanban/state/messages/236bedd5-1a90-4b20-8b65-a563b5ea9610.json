@@ -3,7 +3,7 @@
   "id": "236bedd5-1a90-4b20-8b65-a563b5ea9610",
   "status": "resolved",
   "created_at": "2026-08-10T14:00:00Z",
-  "updated_at": "2026-08-10T16:30:00Z",
+  "updated_at": "2026-08-10T15:35:00Z",
   "from": {
     "selector": "task",
     "value": "MPI-450",
@@ -40,7 +40,7 @@
       "note": "MPI-517 verified the bump independently (89ac23ae on master, node_lock v0.31.0 at 43cb4fff, engine 0.31.0 on disk), landed the dep at 66909bcf and replied. Matrix is unblocked. Live H3 generation still not run - Fabio's no-local-generations rule."
     },
     {
-      "at": "2026-08-10T16:30:00Z",
+      "at": "2026-08-10T15:35:00Z",
       "event": "resolved",
       "actor": "MPI-450",
       "note": "MPI-517 acted on it: dep landed at 66909bcf, engine confirmed independently."
