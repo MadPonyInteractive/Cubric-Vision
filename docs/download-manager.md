@@ -777,19 +777,30 @@ classified by matching our recorded `sha256` against HF LFS oids (the tree API e
 
 | Set | Deps | Mirror |
 |---|---|---|
-| our own bakes, re-hosted to `Mad-Pony-Interactive/cubric-studio` | 30 | generic prefix rewrite, no per-dep data |
+| our own bakes, re-hosted to `Mad-Pony-Interactive/cubric-studio` | 31 | generic prefix rewrite, no per-dep data |
 | byte-identical copies already published by third parties | 66 | explicit per-dep `mirrorUrl` |
-| a dep with neither | 1 of the 97 | `noMirror: true` |
+| a dep with neither | 0 of the 97 | `noMirror: true` |
 
 **The 97 are MODEL deps. Three engineAssets added since carry `noMirror: true` too** — `taesdxl-decoder`, `taef1-decoder`, `taef2-decoder` (MPI-420). They are not a gap in the sweep: no HF repo serves those bytes in the split/strict-load form ComfyUI's TAESD needs, so a generic rewrite could only 404. Counted 2026-08-05 during MPI-450's claim audit, because the release note said the whole catalogue had a second route and four deps did not.
 
-**One dep is deliberately single-route until 2026-08-10.** `krea2-raw-transformer-nsfw`
-(coyotte's LUSTIFY V10) was re-hosted by the sweep and then **deleted from HF by the user**
-— V10 is in a paid early-access window that opens 2026-08-10, and a public HF copy
-redistributes it in a way our own app-gated R2 does not. It carries `noMirror: true` for
-exactly as long as that holds; re-upload and remove the flag after 2026-08-10. Verified
-2026-08-03 by HEAD-ing all 31 generic-rewrite mirrors: 30 × 302, this one 404. Reasoning:
-`docs/models/krea2/licences.md`.
+**`krea2-raw-transformer-nsfw` was single-route by LICENCE TIMING, and is not any more
+(RESOLVED 2026-08-10, MPI-433).** coyotte's LUSTIFY V10 was re-hosted by the sweep and then
+**deleted from HF by the user** on 2026-08-03, because V10 sat in a paid early-access
+window until 2026-08-10 and a public HF copy redistributes it in a way our own app-gated R2
+does not. It carried `noMirror: true` for exactly as long as that held — measured
+2026-08-03 by HEAD-ing all 31 generic-rewrite mirrors: 30 × 302, this one 404. On
+2026-08-10 the window opened, the weight went back to the SAME object path (which is what
+lets the generic rewrite reach it with no per-dep field) and the flag was deleted. Verified
+three ways: resolve URL 302 → 200, `X-Linked-Size` 13148974712, and the tree API `lfs.oid`
+equal to the dep's recorded sha256. Reasoning: `docs/models/krea2/licences.md`.
+
+> **The re-upload took 1 second, not 70 minutes, and that is worth knowing before you plan
+> one.** Deleting a file from an HF repo removes the repo's pointer to it, not the LFS
+> object behind it — so the resolve URL 404s (which is the whole reason `noMirror` was
+> needed) while the bytes stay in HF's storage. Re-adding the same content hits the
+> preupload dedup, no transfer happens, and a bandwidth cap has nothing to pace. Two
+> consequences: budget a re-upload of previously-deleted bytes at ~0, and do not read "the
+> file is deleted from HF" as "the bytes are gone from HF".
 
 `qwen-lora-headswap` was
 the lone exception and it is instructive: it shipped with an empty `origin`, so the
@@ -981,8 +992,8 @@ Now: three retries of the SAME url on `RETRY_BACKOFF_MS = [2s, 5s, 15s]`, re-ent
 - **HF-primary with no alternate** — the four MiniMax H3 deps (`minimax-h3-fl2va-transformer`,
   `h3-qwen3vl-32b-clip`, `vae-minimax-h3-video`, `vae-minimax-h3-audio`) plus
   `controlnet-union-flux`. H3 is HF-only; nothing was staged to R2.
-- **R2-primary with no alternate** — the `noMirror` set: `krea2-raw-transformer-nsfw`
-  (until 2026-08-10, MPI-433) and the three TAESD decoders.
+- **R2-primary with no alternate** — the `noMirror` set: the three TAESD decoders, and only
+  those. `krea2-raw-transformer-nsfw` left this set on 2026-08-10 (MPI-433).
 - The other 100 R2 deps have a second route: 66 by explicit `mirrorUrl`, the rest by the
   generic HF prefix rewrite.
 

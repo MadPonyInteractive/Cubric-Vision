@@ -42,19 +42,30 @@ over-remunerate the creator, and the two have discussed it directly. Decision 20
 no further outreach, ship as-is, credit on the About page. A later reader finding the date
 overlap should stop here rather than re-opening it.
 
-## R2-ONLY until 2026-08-10 — the HF mirror is deleted on purpose
+## R2-ONLY while the paid window ran — RESOLVED 2026-08-10
 
 MPI-429 re-hosted this weight to `Mad-Pony-Interactive/cubric-studio` as its failover
-origin. **The user deleted it from Hugging Face on 2026-08-03 and it must not go back until
-2026-08-10**, the date coyotte opens LUSTIFY V10 to the public. Our R2 copy is reached only
-through the app's download manager; a public HF repo is a public redistribution of a weight
-still inside its paid early-access window, and those are not the same act.
+origin. **The user deleted it from Hugging Face on 2026-08-03**, because coyotte did not
+open LUSTIFY V10 to the public until 2026-08-10. Our R2 copy is reached only through the
+app's download manager; a public HF repo is a public redistribution of a weight still
+inside its paid early-access window, and those are not the same act.
 
-Mechanically that means `noMirror: true` on the dep — the generic prefix rewrite would
+Mechanically that meant `noMirror: true` on the dep — the generic prefix rewrite would
 otherwise hand a blocked user an HF URL that 404s (measured 2026-08-03: 30 of the 31
-re-hosted deps return 302, this one 404). **On/after 2026-08-10: re-upload and delete the
-flag**, so it regains a second route. Contract: `docs/download-manager.md` § The second
-origin.
+re-hosted deps return 302, this one 404).
+
+**Closed 2026-08-10 (MPI-433).** The window opened, Fabio confirmed it on CivitAI 573152,
+and the weight went back to the SAME object path
+(`vision/models/diffusion_models/lustify-v10-krea-raw-int8_convrot.safetensors`) — path
+identity is what lets the generic rewrite reach it with no per-dep `mirrorUrl`, which the
+contract requires. `noMirror` is gone and the dep has two routes again. Verified by hash,
+never by filename: resolve 302 → 200, `X-Linked-Size` 13148974712, tree API `lfs.oid` =
+`f165d4db…`, all equal to the dep's recorded values. Contract:
+`docs/download-manager.md` § The second origin.
+
+**The distinction this section exists for still stands, and it is the reusable part:** the
+gate was never the calendar, it was whether the paid window had actually closed. Timing, not
+the weight, is what made publishing it wrong on 2026-08-09 and fine on 2026-08-10.
 
 ## The redistribution question still applies
 

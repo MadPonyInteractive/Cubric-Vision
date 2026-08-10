@@ -104,7 +104,9 @@ test('a per-dep mirrorUrl WINS and suppresses the generic rewrite', () => {
 });
 
 test('noMirror means NO mirror — not a 404 to spend a retry on', () => {
-    // krea2-raw-transformer-nsfw: on R2, deliberately absent from HF until 2026-08-10.
+    // The TAESD decoders (taesdxl/taef1/taef2): on R2, and permanently absent from HF in
+    // the split/strict-load form ComfyUI needs, so a generic rewrite could only 404.
+    // (krea2-raw-transformer-nsfw was the licence-timed case here until MPI-433, 2026-08-10.)
     assert.deepEqual(_mirrorUrlsFor(R2_URL, { noMirror: true }), []);
 });
 

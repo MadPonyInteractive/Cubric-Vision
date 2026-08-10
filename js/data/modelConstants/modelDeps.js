@@ -279,15 +279,6 @@ export const modelDeps = {
         size: '12.25GB',
         bytes: 13148974712,
         sha256: 'f165d4db2a4c9a8ce67f88851216ec41ee64ed508f0755de9d4dcd03175bc865',
-        // R2-ONLY until 2026-08-10 (MPI-430). This was re-hosted to our HF repo by the
-        // MPI-429 sweep and the user DELETED it there: LUSTIFY V10 is in coyotte's paid
-        // early-access window until 2026-08-10, and a public HF copy is a public
-        // redistribution of it in a way our own R2 (gated behind the app) is not. Without
-        // `noMirror` the generic prefix rewrite hands a blocked user an HF URL that 404s —
-        // measured 404 on 2026-08-03, the only one of the 31 re-hosted deps that fails.
-        // AFTER 2026-08-10, when coyotte opens the download: re-upload it and DELETE this
-        // flag, so the dep gets its second route back.
-        noMirror: true,
         credit: {
             author: 'coyotte',
             work: 'LUSTIFY! V10 (Krea 2)',
