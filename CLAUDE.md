@@ -172,7 +172,7 @@ Cubric-Vision is **master** (this folder — has `.claude/`, kanban, jsconfig, C
 
 **Why, and do not undo it:** a workspace folder behaves as `--add-dir`, which also loads that repo's `.claude/skills/`, `.claude/agents/` and its settings' `enabledPlugins` / `extraKnownMarketplaces`. Measured 2026-07-29 in the reverse direction: a Cubric-Prompt session holding this repo as a workspace folder was running **10 Vision skills + 4 Vision commands**, plus MadPony-Identity's rival `mpi-end` and Vision's `enabledPlugins`. `permissions.additionalDirectories` grants the same read/edit access with **none** of that config loading. So: **never re-add the siblings to `Cubric-Vision.code-workspace`, and never `/add-dir` them mid-session.** Expect a workspace-trust dialog on first start — declining it leaves the grant inert.
 
-**The two halves propagate differently.** `Cubric-Vision.code-workspace` is **gitignored** (`.gitignore:63`), so stripping the folders is a local-only edit that a fresh clone or a second machine will not inherit. `.claude/settings.json` **is** committed, so the grant travels. If the siblings reappear in the workspace, this is why.
+**The two halves propagate differently.** `Cubric-Vision.code-workspace` is **gitignored** (by the `*.code-workspace` glob in `.gitignore`, currently line 67), so stripping the folders is a local-only edit that a fresh clone or a second machine will not inherit. `.claude/settings.json` **is** committed, so the grant travels. If the siblings reappear in the workspace, this is why.
 
 ### Rules when working across roots
 
