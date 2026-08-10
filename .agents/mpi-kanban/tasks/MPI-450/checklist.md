@@ -456,6 +456,62 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       release:check, npm test 546/546, test:desktop 17/17. `release:deps` was NOT re-run —
       it validates dependency URLs in `dependencies.js`, which no copy edit can reach.
 
+- [x] **RUNTIME PROMOTED 2026-08-10 on Fabio's explicit go — verified, not assumed.**
+      `publish-runtime.sh promote` moved the dev bytes to `stable` as SERVER-SIDE copies,
+      so released users get exactly what was tested rather than a re-upload. Confirmed by
+      fetching BOTH manifests afterwards: `stable` went 0.2.40 -> **0.2.44** and all three
+      sha256s now equal dev (`start 6cd65064`, `start_cpu 5b7a1879`, `wrapper 85ef00e1`).
+      The channels are converged, which is the state a release requires - ship the app
+      against an un-promoted runtime and every user breaks at their next Pod boot.
+
+- [x] **CI ARTIFACTS BUILT, all three OS** - tag `v1.4.0` at `f3b20d93` fired
+      `Request portable artifacts` -> mpi-ci run `31414669575`, win32/linux/darwin all
+      `success`. All SIX files downloaded to `D:/CubricStudio/Vision/Builds/v1.4.0/`
+      (3 full builds + 3 update bundles - the bundles are how existing users patch in
+      place; omitting them makes every update a full re-download). Tag points at master
+      HEAD, so tag and artifacts agree - no `workflow_dispatch` rebuild drift.
+
+- [~] **MPI-249 LINUX LEG — run on the REAL 1.4.0 artifact 2026-08-10, and it got through
+      the expensive half before the laptop thermally shut down.** The box is the ThinkPad
+      X121e (`ssh linuxbox`) — and the ssh config was STALE, pointing at 192.168.0.200 with
+      nothing on it; found at **192.168.0.209** by sweeping the /24 for an open port 22 and
+      the config was corrected. It is cabled, this machine is on wifi, and a dead cable was
+      the first failure (`hostname -I` returned EMPTY, which is the whole diagnosis — no
+      lease, so Firefox was never going to load either).
+      **VERIFIED, each independently:**
+      - Transfer integrity: sha256 `3d0b7824…` and 503,654,656 bytes IDENTICAL both ends.
+      - Archive shape: ONE top-level folder, 6,410 files, exec bits preserved on `uv`,
+        `electron` and all five launchers.
+      - **0 dangling symlinks in the extracted tree** (`find -xtype l`). This is the real
+        filesystem answering, not an archive listing, and it independently corroborates the
+        zip/tar analysis done on this machine.
+      - Bundled `uv 0.12.3` runs on a 2011 Sandy Bridge CPU.
+      - **The app LAUNCHES** — confirmed by Fabio on the physical screen, and by the server
+        binding 127.0.0.1:3000. Launched over ssh into a WAYLAND session via `DISPLAY=:0`
+        (Xwayland), since there is no `.Xauthority` and no xvfb on the box.
+      - **`uv-bootstrap` is the path taken** — `nvidia-smi not found` →
+        `Resolved config: uv-bootstrap (vendor none, CUDA unknown)`. That is
+        `_provisionUvEngine`, i.e. the leg a Pod run can NEVER substitute for.
+      - **`Successfully checked out tag: v0.31.0`** — the Linux provision pulls TODAY'S
+        engine bump. The 0.31.0 bump is therefore proven on the local Linux path too, not
+        only on Windows and the Pod.
+      - **`Successfully installed torch-2.13.0+cpu torchvision-0.28.0+cpu
+        torchaudio-2.11.0+cpu`** — the CPU wheel set, correct for a box with no NVIDIA
+        driver, and the single heaviest step (a 191.8 MB torch wheel).
+      - The in-app updater works on Linux: `portable check — current=1.4.0 latest=1.3.1`
+        → `up to date`, correctly reading itself as newer than what GitHub publishes.
+      **NOT DONE: ComfyUI's own requirements never finished — the laptop overheated and
+      rebooted mid-install**, which the archived hardware note predicts verbatim
+      ("thermally shuts down under sustained load"). So the release body must NOT say the
+      install completed. Wording used instead: "the portable extracts and launches, and
+      engine setup runs". **Generation on Linux stays permanently unprovable on this box**
+      — its CPU reports `avx` but NOT `avx2`, checked directly in `/proc/cpuinfo`, which is
+      MPI-415's `kornia_rs` SIGILL as a hardware fact rather than a bug to chase.
+      **The better test is now AFTER publish, not before:** the box also holds a 1.3.0
+      install, and once 1.4.0 is the published `latest` its in-app updater can finally see
+      it — testing the REAL update path users take, which `update-from-zip.sh` cannot. That
+      is MPI-334 evidence on Linux and it is lighter on the hardware than a fresh install.
+
 - [ ] CI artifacts (all three OS) → MPI-249's Linux leg on the REAL
       `CubricVision-linux-x64-v1.4.0.tar.gz` → `/mpi-release`, PROMOTE at the manifest stop.
 
