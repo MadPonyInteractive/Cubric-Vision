@@ -26,6 +26,17 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python c:/AI/Mpi/Cubric-Vision/.claude/hooks/guard-runpod-create.py"
+          }
+        ]
+      }
     ]
   },
   "enabledPlugins": {
