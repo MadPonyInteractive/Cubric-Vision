@@ -1,0 +1,28 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-519",
+  "title": "Engine setup: Remote-Only vs Local+Remote choice pre-step, plus a welcome-modal UI refresh",
+  "description": "Fabio, 2026-08-10: the first-run ComfyUI setup modal (MpiEngineInstall, setup phase) should not open on a models-folder picker. It should open on a CHOICE of two cards - 'Remote Only' (connect a RunPod account, no local engine) and 'Local + Remote' (install ComfyUI on this machine). The existing RunPod escape hatch at the bottom of the setup phase becomes that first card and stops being a footnote link.\n\nSecond half: the current welcome/setup screen is visually weak (two stacked h2s, one of which literally reads 'Welcome', a left-aligned form inside a centred column, an underlined-link escape hatch). Both screens get a design pass with the impeccable skill against the Stage baseline in styles/01_base.css.\n\nBoth must be reviewable in the dev component gallery. The install and upgrade modals are already mounted there (js/pages/components.js preview-engine-install-install / -upgrade, slots in templates/tpl-components.html); the choice screen needs its own entry.\n\nBEHAVIOUR IS ALREADY BUILT, DO NOT REINVENT IT. 'Remote Only' is exactly what the MPI-390 hatch does: set state.runpodConfig = { ...state.runpodConfig, enabled: true, skipLocalEngine: true } then Events.emit('engine:install-skipped'). 'Local + Remote' just reveals the existing setup phase. Do NOT auto-open Settings on the remote path - that races the first-launch 18+/changelog overlay chain (MPI-333).\n\nScope note: the choice pre-step is for mode 'installing' only. 'upgrading' and 'repairing' mean an engine already exists and must go straight to the progress phase as they do today.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-08-10T21:00:00Z",
+  "updated_at": "2026-08-10T21:00:00Z",
+  "labels": [
+    "ui",
+    "onboarding",
+    "design",
+    "runpod"
+  ],
+  "priority": "normal",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

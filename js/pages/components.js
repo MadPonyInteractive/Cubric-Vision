@@ -1042,16 +1042,38 @@ function mountAll() {
         const triggerSlot = document.createElement('div');
         slotEl.appendChild(triggerSlot);
         const btn = MpiButton.mount(triggerSlot, {
-            icon: 'download',
-            label: 'Show Install',
+            icon: 'cloud',
+            label: 'Show Choice',
             variant: 'primary',
-            info: 'Click to test the engine install modal'
+            info: 'First-run: Local + Remote vs Remote only (MPI-519)'
         });
 
         const modal = MpiEngineInstall.mount(document.createElement('div'));
 
         btn.on('click', () => {
             modal.el.show('installing');
+        });
+    });
+
+    // The models-folder screen sits behind the choice card now, so the gallery
+    // reaches it the same way a user does — by pressing "Local + Remote".
+    mount('preview-engine-install-setup', () => {
+        const slotEl = slot('preview-engine-install-setup');
+
+        const triggerSlot = document.createElement('div');
+        slotEl.appendChild(triggerSlot);
+        const btn = MpiButton.mount(triggerSlot, {
+            icon: 'folder',
+            label: 'Show Setup',
+            variant: 'secondary',
+            info: 'Models-folder picker (the choice phase, Local + Remote pressed)'
+        });
+
+        const modal = MpiEngineInstall.mount(document.createElement('div'));
+
+        btn.on('click', () => {
+            modal.el.show('installing');
+            qs('[data-ref="chooseLocal"]', modal.el)?.click();
         });
     });
 

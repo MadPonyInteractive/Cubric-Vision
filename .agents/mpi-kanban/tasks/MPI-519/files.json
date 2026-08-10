@@ -1,0 +1,10 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js",
+    "js/components/Compounds/MpiEngineInstall/MpiEngineInstall.css",
+    "js/pages/components.js",
+    "templates/tpl-components.html",
+    "js/components/types.js"
+  ]
+}

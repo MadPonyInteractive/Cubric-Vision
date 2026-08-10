@@ -1,16 +1,19 @@
 /* MpiEngineInstall.css — Engine provisioning modal */
 
+/* Left-aligned throughout (MPI-519). The old centred column held a left-aligned
+   form inside it, so the label, the input and the title each started on a
+   different x — the single biggest reason this modal read as unfinished. One
+   text edge for every phase fixes it and costs nothing. */
 .mpi-engine-install {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 28px 24px;
-    gap: 20px;
+    align-items: stretch;
+    text-align: left;
+    padding: var(--s-5) var(--s-4) var(--s-4);
+    gap: var(--s-4);
     border-radius: var(--r-1);
     background: var(--surface-2);
     border: 1px solid var(--line-soft);
-    box-shadow: 0 0 20px oklch(0.16 0.02 350 / 0.4);
     width: 100%;
 }
 
@@ -18,11 +21,11 @@
 .mpi-engine-install__phase {
     display: none;
     width: 100%;
-    animation: mpi-engine-install-fade 0.3s ease-out;
+    animation: mpi-engine-install-fade var(--t-base) var(--ease);
 }
 
-.mpi-engine-install__phase[data-phase='setup'],
-.mpi-engine-install__phase[data-phase='progress'] {
+/* Pre-JS default only — _showPhase owns this from the first show() onwards. */
+.mpi-engine-install__phase[data-phase='choose'] {
     display: block;
 }
 
@@ -31,26 +34,30 @@
     to   { opacity: 1; transform: translateY(0); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .mpi-engine-install__phase {
+        animation: none;
+    }
+}
+
 /* ── Content wrapper ─────────────────────────────────────────────────────── */
 .mpi-engine-install__content {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 14px;
+    align-items: stretch;
+    gap: var(--s-3);
     width: 100%;
-}
-
-.mpi-engine-install__content--error {
-    text-align: center;
 }
 
 /* ── Title ───────────────────────────────────────────────────────────────── */
 .mpi-engine-install__title {
     margin: 0;
-    font-size: 1.6rem;
-    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-lg);
+    font-weight: 600;
+    letter-spacing: -0.01em;
     color: var(--ink-1);
-    line-height: 1.3;
+    line-height: 1.25;
+    text-wrap: balance;
 }
 
 .mpi-engine-install__title--error {
@@ -59,15 +66,234 @@
 
 /* ── Subtitle ────────────────────────────────────────────────────────────── */
 .mpi-engine-install__subtitle {
-    margin: 0 0 4px 0;
-    font-size: 0.95rem;
+    margin: -6px 0 var(--s-1) 0;
+    font-size: var(--t-sm);
     color: var(--ink-3);
-    line-height: 1.4;
-    max-width: 90%;
+    line-height: 1.5;
+    max-width: 62ch;
 }
 
 .mpi-engine-install__subtitle--secondary {
     color: var(--ink-3);
+}
+
+/* ── Choice phase (MPI-519) ──────────────────────────────────────────────── */
+/* Two cards, side by side so they can actually be compared — that comparison is
+   the whole job of this screen. auto-fit collapses them to one column below
+   ~560px without a breakpoint. */
+.mpi-engine-install__choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--s-3);
+    width: 100%;
+    margin-top: var(--s-1);
+}
+
+.mpi-engine-install__choice {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-2);
+    width: 100%;
+    padding: var(--s-3);
+    font: inherit;
+    text-align: left;
+    color: var(--ink-2);
+    background: var(--surface-1);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-2);
+    cursor: pointer;
+    transition: background var(--t-fast) var(--ease),
+                border-color var(--t-fast) var(--ease);
+}
+
+.mpi-engine-install__choice:hover {
+    background: var(--surface-3);
+    border-color: var(--line);
+}
+
+.mpi-engine-install__choice:focus-visible {
+    outline: 2px solid var(--accent-frost);
+    outline-offset: 2px;
+}
+
+/* Recommended is the local path — a 1px heat edge and a heat dot, no badge
+   plate. Enough to lead the eye, quiet enough that the other card still reads
+   as a real option rather than a consolation prize. */
+.mpi-engine-install__choice--recommended {
+    border-color: color-mix(in oklch, var(--accent-heat) 45%, transparent);
+}
+
+.mpi-engine-install__choice--recommended:hover {
+    border-color: var(--accent-heat);
+}
+
+.mpi-engine-install__choice-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+    min-height: 24px;
+}
+
+.mpi-engine-install__choice-mark {
+    display: inline-flex;
+    color: var(--ink-3);
+}
+
+.mpi-engine-install__choice--recommended .mpi-engine-install__choice-mark {
+    color: var(--accent-heat);
+}
+
+.mpi-engine-install__choice-flag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--t-xs);
+    font-weight: 500;
+    color: var(--ink-2);
+}
+
+.mpi-engine-install__choice-flag::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: var(--r-pill);
+    background: var(--accent-heat);
+}
+
+.mpi-engine-install__choice-title {
+    display: block;
+    font-size: var(--t-md);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ink-1);
+}
+
+/* ink-2, not ink-3: this is the copy the decision is actually made on, and ink-3
+   over --surface-1 lands around 2:1. ink-2 is the highest step that still leaves
+   the facts below it a rung to sit on. */
+.mpi-engine-install__choice-body {
+    display: block;
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+    line-height: 1.5;
+    text-wrap: pretty;
+}
+
+/* Reserve 3 lines so both fact lists sit on one baseline — only while the cards
+   are side by side. Stacked, there is nothing to align to and the reserve reads
+   as a hole. 620px is where the 94vw modal stops fitting two 260px columns. */
+@media (min-width: 620px) {
+    .mpi-engine-install__choice-body {
+        min-height: 4.5em;
+    }
+}
+
+.mpi-engine-install__choice-facts {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: var(--s-1);
+}
+
+.mpi-engine-install__choice-facts > span {
+    position: relative;
+    padding-left: 14px;
+    font-size: var(--t-xs);
+    color: var(--ink-3);
+    line-height: 1.45;
+    text-wrap: pretty;
+}
+
+.mpi-engine-install__choice-facts > span::before {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 6px;
+    width: 3px;
+    height: 3px;
+    border-radius: var(--r-pill);
+    background: var(--ink-4);
+}
+
+/* The card's own call to action. Not a nested button — the whole card is the
+   button; this is the label that tells you where it goes. */
+.mpi-engine-install__choice-go {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: auto;
+    padding-top: var(--s-3);
+    font-size: var(--t-sm);
+    font-weight: 600;
+    color: var(--ink-1);
+}
+
+.mpi-engine-install__choice--recommended .mpi-engine-install__choice-go {
+    color: var(--accent-heat);
+}
+
+.mpi-engine-install__choice-go .mpi-icon {
+    transition: transform var(--t-fast) var(--ease);
+}
+
+.mpi-engine-install__choice:hover .mpi-engine-install__choice-go .mpi-icon {
+    transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mpi-engine-install__choice,
+    .mpi-engine-install__choice-go .mpi-icon {
+        transition: none;
+    }
+    .mpi-engine-install__choice:hover .mpi-engine-install__choice-go .mpi-icon {
+        transform: none;
+    }
+}
+
+/* ── Foot note (choice phase) ────────────────────────────────────────────── */
+.mpi-engine-install__foot {
+    margin: var(--s-1) 0 0 0;
+    font-size: var(--t-xs);
+    color: var(--ink-3);
+    line-height: 1.4;
+}
+
+.mpi-engine-install__foot a {
+    color: var(--accent-heat);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.mpi-engine-install__foot a:hover {
+    opacity: 0.85;
+}
+
+/* ── Back (setup phase → choice phase) ───────────────────────────────────── */
+.mpi-engine-install__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    align-self: flex-start;
+    margin-bottom: var(--s-1);
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: var(--t-xs);
+    color: var(--ink-3);
+    cursor: pointer;
+    transition: color var(--t-fast) var(--ease);
+}
+
+.mpi-engine-install__back:hover {
+    color: var(--ink-1);
+}
+
+.mpi-engine-install__back:focus-visible {
+    outline: 2px solid var(--accent-frost);
+    outline-offset: 3px;
 }
 
 /* ── Form ────────────────────────────────────────────────────────────────── */
@@ -75,28 +301,38 @@
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: var(--s-2);
     width: 100%;
-    text-align: left;
-    margin-top: 4px;
 }
 
 .mpi-engine-install__label {
     font-size: var(--t-xs);
     font-weight: 600;
-    color: var(--ink-1);
+    color: var(--ink-2);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.16em;
 }
 
 .mpi-engine-install__folder-input-row {
     display: flex;
-    gap: 8px;
+    gap: var(--s-2);
     align-items: stretch;
 }
 
 .mpi-engine-install__folder-input-row > div:first-child {
     flex: 1;
+    min-width: 0;
+}
+
+/* Browse carries the Stage button padding (14/24) and lands ~9px taller than the
+   field, so the pair reads as two stacked controls. Dropping the vertical padding
+   hands the row height to the field and lets the button stretch to it — the field
+   can't be stretched the other way, MpiInput has an auto-height wrapper between
+   the root and the input. */
+.mpi-engine-install__folder-input-row .mpi-btn {
+    padding-top: 0;
+    padding-bottom: 0;
+    height: 100%;
 }
 
 .mpi-engine-install__hint {
@@ -106,20 +342,24 @@
     line-height: 1.4;
 }
 
-/* ── Escape hatches (MPI-390 setup, MPI-427 repair error) ────────────────── */
-/* Sits under the primary action, separated by a soft rule so it reads as the
-   secondary path it is. Two users: the RunPod hatch in the setup phase (local
-   install stays the default) and the repair escape in the error phase. */
+/* Primary action spans the column so the commit point is unmissable. */
+.mpi-engine-install__action .mpi-btn {
+    width: 100%;
+    justify-content: center;
+}
+
+/* ── Escape hatch (MPI-427 repair error) ─────────────────────────────────── */
+/* Sits under Retry, separated by a soft rule so it reads as the secondary path
+   it is. Sole user since MPI-519 moved the RunPod choice to its own phase. */
 .mpi-engine-install__hatch {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: 4px;
     width: 100%;
-    margin-top: 18px;
-    padding-top: 16px;
+    margin-top: var(--s-3);
+    padding-top: var(--s-3);
     border-top: 1px solid var(--line-soft);
-    text-align: center;
 }
 
 .mpi-engine-install__hatch-text {
@@ -181,7 +421,6 @@
     font-size: var(--t-sm);
     color: var(--ink-3);
     line-height: 1.4;
-    text-align: center;
     word-break: break-word;
     overflow-wrap: break-word;
     white-space: normal;
@@ -194,16 +433,14 @@
     font-size: var(--t-sm);
     color: var(--ink-3);
     line-height: 1.4;
-    text-align: center;
 }
 
 /* ── Docs link ───────────────────────────────────────────────────────────── */
 .mpi-engine-install__docs-link {
     margin: 0;
-    font-size: var(--t-sm);
+    font-size: var(--t-xs);
     color: var(--ink-3);
     line-height: 1.4;
-    text-align: center;
 }
 
 .mpi-engine-install__docs-link a {

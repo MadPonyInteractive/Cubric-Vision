@@ -6,6 +6,7 @@ import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { Storage } from '../../../core/storage.js';
 import { state } from '../../../state.js';
 import { qs, qsa, on } from '../../../utils/dom.js';
+import { renderIcon } from '../../../utils/icons.js';
 import { Events } from '../../../events.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { downloadService } from '../../../services/downloadService.js';
@@ -15,12 +16,13 @@ import { downloadService } from '../../../services/downloadService.js';
  *
  * Uses MpiModal primitive for modal management and MpiButton, MpiInput, MpiProgressBar primitives.
  *
- * Two-phase UI for first install:
+ * Three-phase UI for first install:
+ *   Phase 0 (choose):    Local + Remote  vs  Remote Only  (MPI-519)
  *   Phase 1 (setup):     Models path picker + Browse button + Install button
  *   Phase 2 (progress):  Progress bar + status text + speed/size info
  *
- * For upgrades:
- *   Skips Phase 1, goes straight to Phase 2 with "models are safe" messaging
+ * For upgrades / repairs:
+ *   Skips phases 0 and 1, goes straight to Phase 2 with "models are safe" messaging
  *
  * API:
  *   inst.el.show(mode)      — 'installing' | 'upgrading' — shows modal with appropriate phase
@@ -40,43 +42,90 @@ export const MpiEngineInstall = ComponentFactory.create({
     css: ['js/components/Compounds/MpiEngineInstall/MpiEngineInstall.css'],
     template: (props) => `
         <div class="mpi-engine-install">
+            <!-- Phase 0: Choose where Cubric generates (MPI-519).
+                 This replaces the old bottom-of-setup RunPod escape hatch (MPI-390):
+                 the same decision, promoted from a footnote link to the first thing
+                 asked, because "install a multi-GB CUDA engine you will never use" is
+                 not a default — it is one of two equal answers. GPU detection stays
+                 out of it: it misses too much to gate on (MPI-387 F2: Iris/UHD/HD
+                 fall through BY DESIGN), so the user picks, not us. Neither card
+                 opens Settings — that would race the first-launch 18+/changelog
+                 overlay chain (MPI-333). -->
+            <div class="mpi-engine-install__phase" data-phase="choose">
+                <div class="mpi-engine-install__content">
+                    <h2 class="mpi-engine-install__title">Where should Cubric generate?</h2>
+                    <p class="mpi-engine-install__subtitle">Two ways to run ComfyUI. Change this later in Settings.</p>
+
+                    <div class="mpi-engine-install__choices">
+                        <button type="button"
+                                class="mpi-engine-install__choice mpi-engine-install__choice--recommended"
+                                data-ref="chooseLocal">
+                            <span class="mpi-engine-install__choice-head">
+                                <span class="mpi-engine-install__choice-mark">${renderIcon('laptop', 'md')}</span>
+                                <span class="mpi-engine-install__choice-flag">Recommended</span>
+                            </span>
+                            <span class="mpi-engine-install__choice-title">Local + Remote</span>
+                            <span class="mpi-engine-install__choice-body">
+                                Install ComfyUI here and generate on your own GPU.
+                                A cloud GPU stays available for what it can't take.
+                            </span>
+                            <span class="mpi-engine-install__choice-facts">
+                                <span>Installs once, then free to run</span>
+                                <span>Works offline — models stay on your disk</span>
+                                <span>Needs a capable GPU</span>
+                            </span>
+                            <span class="mpi-engine-install__choice-go">
+                                Install ComfyUI ${renderIcon('chevronRight', 'sm')}
+                            </span>
+                        </button>
+
+                        <button type="button" class="mpi-engine-install__choice" data-ref="chooseRemote">
+                            <span class="mpi-engine-install__choice-head">
+                                <span class="mpi-engine-install__choice-mark">${renderIcon('cloud', 'md')}</span>
+                            </span>
+                            <span class="mpi-engine-install__choice-title">Remote only</span>
+                            <span class="mpi-engine-install__choice-body">
+                                Skip the local install and run everything on a RunPod cloud GPU.
+                                Nothing downloads to this machine now.
+                            </span>
+                            <span class="mpi-engine-install__choice-facts">
+                                <span>Nothing to install — straight into the app</span>
+                                <span>Runs on any machine, GPU or not</span>
+                                <span>Needs a RunPod account, billed while a Pod runs</span>
+                            </span>
+                            <span class="mpi-engine-install__choice-go">
+                                Set up RunPod ${renderIcon('chevronRight', 'sm')}
+                            </span>
+                        </button>
+                    </div>
+
+                    <p class="mpi-engine-install__foot">
+                        New to RunPod?
+                        <a href="https://youtu.be/drpZOrMDEq8" data-ref="docsLink" target="_blank" rel="noopener noreferrer">Watch the 2-minute setup</a>
+                    </p>
+                </div>
+            </div>
+
             <!-- Phase 1: Setup (path picker) -->
             <div class="mpi-engine-install__phase" data-phase="setup">
                 <div class="mpi-engine-install__content">
-                    <h2 class="mpi-engine-install__title">Welcome</h2>
-                    <h2 class="mpi-engine-install__title">Let's Set Up ComfyUI</h2>
-                    <p class="mpi-engine-install__subtitle">Choose where to store your AI models</p>
+                    <button type="button" class="mpi-engine-install__back" data-ref="backToChoose">
+                        ${renderIcon('back', 'sm')} Back
+                    </button>
+
+                    <h2 class="mpi-engine-install__title">Install ComfyUI</h2>
+                    <p class="mpi-engine-install__subtitle">Pick where your models live. Expect this folder to grow — models are large, and they stay on your disk.</p>
 
                     <div class="mpi-engine-install__form">
-                        <label class="mpi-engine-install__label">Models Folder</label>
+                        <label class="mpi-engine-install__label">Models folder</label>
                         <div class="mpi-engine-install__folder-input-row">
                             <div data-ref="pathInputMount"></div>
                             <div data-ref="browseButtonMount"></div>
                         </div>
-                        <p class="mpi-engine-install__hint">You can change this path later in Settings</p>
+                        <p class="mpi-engine-install__hint">Changeable later in Settings. Leave it empty to use the default folder.</p>
                     </div>
 
-                    <div data-ref="installButtonMount"></div>
-
-                    <!-- RunPod escape hatch (MPI-390). A machine with no usable GPU
-                         would otherwise have to finish a multi-GB CUDA install it will
-                         never use, purely to reach the RunPod settings this modal is
-                         covering. Always shown — GPU detection misses too much to gate
-                         on (MPI-387 F2: Iris/UHD/HD fall through BY DESIGN). Setup
-                         phase only: upgrade/repair mean a local engine already exists,
-                         so nobody is trapped there. The destination is named in the
-                         button copy on purpose — auto-opening Settings here would race
-                         the first-launch 18+/changelog overlay chain (MPI-333). -->
-                    <div class="mpi-engine-install__hatch">
-                        <p class="mpi-engine-install__hatch-text">No GPU? Cubric can run on a cloud GPU instead.</p>
-                        <button type="button" class="mpi-engine-install__hatch-action" data-ref="skipToRunpod">
-                            Skip this — set up RunPod in Settings
-                        </button>
-                        <p class="mpi-engine-install__hatch-hint">
-                            New to RunPod?
-                            <a href="https://youtu.be/drpZOrMDEq8" data-ref="docsLink" target="_blank" rel="noopener noreferrer">Watch the setup video</a>
-                        </p>
-                    </div>
+                    <div class="mpi-engine-install__action" data-ref="installButtonMount"></div>
                 </div>
             </div>
 
@@ -136,6 +185,7 @@ export const MpiEngineInstall = ComponentFactory.create({
     setup: (el, props, emit) => {
         let _modal = null;
         let _currentMode = null; // 'installing' or 'upgrading'
+        let _currentPhase = null; // 'choose' | 'setup' | 'progress' | 'error' — drives the modal width
         // Tracks the active install phase so the parallel UW-deps progress events
         // know whether to pulse the loading animation. The engine install has no
         // pause/resume — that only exists for model downloads (see MPI-54).
@@ -208,8 +258,10 @@ export const MpiEngineInstall = ComponentFactory.create({
 
         // ── Mount browse button ───────────────────────────────────────────────────
         _browseButtonInst = MpiButton.mount(browseButtonMount, {
+            // md, not lg — lg stands ~20px taller than the path input beside it and
+            // the row stops reading as one control.
             text: 'Browse',
-            size: 'lg',
+            size: 'md',
             variant: 'secondary'
         });
 
@@ -238,8 +290,10 @@ export const MpiEngineInstall = ComponentFactory.create({
 
         // ── Mount install button ──────────────────────────────────────────────────
         _installButtonInst = MpiButton.mount(installButtonMount, {
+            // Full width comes from __action; md keeps the height in step with the
+            // path row above it, so the pink reads as the commit point and not a slab.
             text: 'Install',
-            size: 'lg',
+            size: 'md',
             variant: 'primary'
         });
 
@@ -295,15 +349,25 @@ export const MpiEngineInstall = ComponentFactory.create({
             });
         });
 
-        // ── RunPod escape hatch (MPI-390) ─────────────────────────────────────────
+        // ── Choice phase (MPI-519) ────────────────────────────────────────────────
+        // "Local + Remote" is only a reveal of the setup phase that already existed;
+        // Back returns to the choice. Nothing is committed until Install is pressed,
+        // so neither direction needs to undo anything.
+        const chooseLocal = qs('[data-ref="chooseLocal"]', el);
+        if (chooseLocal) on(chooseLocal, 'click', () => _showPhase('setup'));
+
+        const backToChoose = qs('[data-ref="backToChoose"]', el);
+        if (backToChoose) on(backToChoose, 'click', () => _showPhase('choose'));
+
+        // ── "Remote only" (MPI-390's escape hatch, promoted to a card in MPI-519) ──
         // Sets skipLocalEngine, NOT autoConnectOnStart: that one spins a BILLED Pod
         // at every launch, and "don't make me install an engine I'll never use" must
         // not imply "bill me on every app open". `enabled` goes true as well so the
         // RunPod panel is actually visible once they reach Settings — without it the
-        // hatch would just move the trap one layer down. The boot gate is released
+        // card would just move the trap one layer down. The boot gate is released
         // via engine:install-skipped rather than engine:ready, because the engine is
         // NOT ready and engine:ready consumers must not be told otherwise.
-        const skipToRunpod = qs('[data-ref="skipToRunpod"]', el);
+        const skipToRunpod = qs('[data-ref="chooseRemote"]', el);
         if (skipToRunpod) {
             skipToRunpod.addEventListener('click', () => {
                 // Through state, NOT Storage.setRunpodConfig: state.runpodConfig is
@@ -382,10 +446,20 @@ export const MpiEngineInstall = ComponentFactory.create({
         // button mid-download. Pause/resume lives with model downloads only (MPI-54).
 
         // ── Phase management ──────────────────────────────────────────────────────
+        // The choice phase holds two side-by-side cards and needs a wider box than the
+        // single-column phases. MpiModal reads props.width once, at portal time, so a
+        // phase change mid-show cannot go through it — the cap is set on the modal
+        // element instead (the wrapper stays at the widest value and is transparent,
+        // so the narrow phases just centre inside it).
+        const _PHASE_WIDTH = { choose: '760px' };
+        const _DEFAULT_WIDTH = '520px';
+
         function _showPhase(phaseName) {
+            _currentPhase = phaseName;
             qsa('[data-phase]', el).forEach(phase => {
                 phase.style.display = phase.dataset.phase === phaseName ? 'block' : 'none';
             });
+            if (_modal) _modal.el.style.maxWidth = _PHASE_WIDTH[phaseName] || _DEFAULT_WIDTH;
         }
 
         // ── Modal Management ──────────────────────────────────────────────────────
@@ -404,7 +478,8 @@ export const MpiEngineInstall = ComponentFactory.create({
                 progressSubtitle.textContent = 'Setting up...';
                 upgradeMessage.style.display = 'none';
             } else {
-                _showPhase('setup');
+                // First install opens on the choice, not on the path picker (MPI-519).
+                _showPhase('choose');
                 progressTitle.textContent = 'Installing ComfyUI Engine';
                 progressSubtitle.textContent = 'Downloading engine files...';
                 upgradeMessage.style.display = 'none';
@@ -412,9 +487,14 @@ export const MpiEngineInstall = ComponentFactory.create({
 
             if (!_modal) {
                 _modal = MpiModal.mount(document.createElement('div'), {
-                    width: 'min(500px, 90vw)',
+                    // Widest phase wins here; _showPhase caps the rest. The wrapper
+                    // paints nothing, so a narrower phase reads as a centred box.
+                    width: 'min(760px, 94vw)',
                     backdropClose: false
                 });
+                _modal.el.style.margin = '0 auto';
+                _modal.el.style.transition = 'max-width var(--t-base) var(--ease)';
+                _modal.el.style.maxWidth = _PHASE_WIDTH[_currentPhase] || _DEFAULT_WIDTH;
                 _modal.el.appendChild(el);
             }
             _modal.el.show();

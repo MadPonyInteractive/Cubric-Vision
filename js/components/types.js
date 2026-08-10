@@ -737,19 +737,24 @@
  * No props required — all state is managed imperatively and via SSE.
  *
  * Instance methods (on instance.el):
- *   show(mode)              — 'installing' | 'upgrading' — portals and shows appropriate phase
+ *   show(mode)              — 'installing' | 'upgrading' | 'repairing' — portals and shows appropriate phase
  *   hide()                  — removes portal, clears state
  *   setProgress(data)       — { progress: 0–100, speed, downloadedBytes, totalBytes }
  *   setStatus(text)         — update status message (e.g. 'Extracting...')
  *   setError(message)       — show error message + retry button
  *   destroy()               — cleanup SSE connection and portal
  *
- * Two-phase UI for first install:
- *   Phase 1 (setup):        Models path picker + Browse button + Install button
+ * Three-phase UI for first install:
+ *   Phase 0 (choose):       Local + Remote  vs  Remote only (MPI-519). 'Remote only'
+ *                           sets runpodConfig { enabled, skipLocalEngine } and emits
+ *                           'engine:install-skipped'; 'Local + Remote' reveals phase 1.
+ *                           This phase renders wider than the rest — _showPhase caps
+ *                           the modal element per phase.
+ *   Phase 1 (setup):        Models path picker + Browse button + Install button + Back
  *   Phase 2 (progress):     Progress bar + status text + speed/size info
  *
- * For upgrades:
- *   Skips Phase 1, goes straight to Phase 2 with "models are safe" messaging
+ * For upgrades / repairs:
+ *   Skips phases 0 and 1, goes straight to Phase 2 with "models are safe" messaging
  *
  * SSE integration:
  *   Connects to existing /comfy/downloads/stream and filters for engine:* events
