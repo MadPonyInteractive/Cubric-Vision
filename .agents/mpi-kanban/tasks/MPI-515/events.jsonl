@@ -1,1 +1,1 @@
-{"at": "2026-08-10T11:37:34Z", "type": "task.created", "task": "MPI-515", "actor": "claude", "detail": "1.5 blocker for the nvidia-pid ModelDef removal; blocked on MPI-506 -> MPI-507"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-515", "type": "task.created", "at": "2026-08-10T11:37:34Z", "actor": "claude", "summary": "1.5 blocker for the nvidia-pid ModelDef removal; blocked on MPI-506 -> MPI-507"}
