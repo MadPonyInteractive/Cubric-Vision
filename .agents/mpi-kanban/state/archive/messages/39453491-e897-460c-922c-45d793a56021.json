@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "39453491-e897-460c-922c-45d793a56021",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-08-08T10:40:00Z",
-  "updated_at": "2026-08-08T10:40:00Z",
+  "updated_at": "2026-08-10T23:25:00Z",
   "from": {
     "selector": "task",
     "value": "MPI-491",
@@ -28,5 +28,7 @@
     "root": null,
     "parent": null
   },
-  "recent_events": []
+  "recent_events": [],
+  "resolution": "Resolved 2026-08-10 by mpi-cleanup, on the user's call: leftovers, nobody is using them. The whole thread ran MPI-491 -> MPI-467 and BOTH cards are now done/complete. The one action aimed at a live card (af21aa8f, add a 1.4 gate to MPI-450) was WITHDRAWN by 9805e50a in the same thread, because mpi-release already stops on the manifest diff. Nothing here is outstanding.",
+  "archived_at": "2026-08-10T23:25:00Z"
 }
