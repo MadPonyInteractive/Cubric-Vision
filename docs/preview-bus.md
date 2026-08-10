@@ -240,6 +240,31 @@ combined file and ComfyUI strict-loads the decoder half alone, so it is converte
 madebyollin's own index shift (`decoder.layers.N` → `N+1`). Regenerate it — or check a
 future FLUX.3 — with the recipe in `tasks/MPI-420/validation.md`.
 
+#### A tiny video decoder has NO random access — decode from frame 0 (MPI-508)
+
+A TAEHV is temporal: its `MemBlock`s chain state forward, so frame N is only correct if
+every frame before it was decoded in the same pass. `MpiVideoSamplingPreview` therefore
+decodes the **whole clip, every sampler step** — not a cost choice, the only correct one.
+Its first version walked a cursor over a window of the clip "as real time earned frames",
+and **every frame came out green**.
+
+Two faults, one root. The 5D latent was flattened frames-as-batch with
+`reshape((-1,) + x0.shape[-3:])`, but on `[B,C,T,H,W]` those last three dims are
+`(T,H,W)`, not `(C,H,W)` — so the reshape produced `[C,T,H,W]` labelled `[T,C,H,W]`,
+transposing time and channels. **It never raised:** `TAEHV.decode` only transposes when
+`shape[1] != latent_channels`, and the frame budget clamped the batch to exactly
+`latent_channels`, so the scrambled buffer was accepted as a valid whole clip.
+
+H3's chunking is honoured too: its VAE codes **17 pixel frames per 5 latent tokens**, so
+each chunk's 3-frame prefix is trimmed rather than `TAEHV.decode`'s one global trim, then
+the encoder's 3-token tail pad is dropped (17 tokens → 56 frames, not 65).
+
+**Verify a decode without a GPU or a generation.** kjnodes' `TAEHVDecoder` reads the same
+`taeh3` weight, so load the weight on CPU and assert our decode matches theirs
+bit-for-bit on a random latent (it does — max diff 0.0). A clean state-dict load proves
+nothing: pixel-shuffle interpretation and activation choice are parameterless, they load
+perfectly and decode wrong.
+
 ## Files
 - `js/services/comfyController.js` — ingest, engine tag, attribution, broken-frame gate, `preview:frame` emit.
 - `js/services/activeGenerations.js` — `byPromptId`, `getLastPreview`, `_lastPreview` map + bus listener.

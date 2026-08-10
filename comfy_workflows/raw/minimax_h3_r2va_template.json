@@ -5060,7 +5060,7 @@
       ],
       "properties": {
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ea85c26c78193a71e49d20cddad8d23004dd9c80",
+        "ver": "fe812d47626c01b4c15ce945bebcd1096e0e688b",
         "Node name for S&R": "MpiTinyVaeLoader"
       },
       "widgets_values": [
