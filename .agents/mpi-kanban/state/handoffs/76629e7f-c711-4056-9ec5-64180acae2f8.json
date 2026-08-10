@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "76629e7f-c711-4056-9ec5-64180acae2f8",
   "generated_at": "2026-08-10T05:45:45Z",
-  "from_session": "64bc6364-e4d2-45d4-a4aa-d31d158fa58e",
+  "from_session": ".agents/mpi-kanban/state/handoffs/64bc6364-e4d2-45d4-a4aa-d31d158fa58e.json",
   "to_role": "implementer",
   "status": "open",
   "session": {
@@ -48,7 +48,8 @@
   },
   "context": {
     "key_decisions": [
-      "Not applied in the originating session on purpose: Fabio asked for them to be a separate session, and neither belongs to MPI-508.",
+      "Not applied in the originating session on purpose: Fabio asked for them to be a separate session, and neither belongs to MPI-508 - which CLOSED in that session (board `done`, commit 54619caf, pushed) after the true-RGB previews were verified live on both MiniMax H3 and LTX. Nothing about the preview work is outstanding; do not reopen it.",
+      "Wan was considered for the same node-based previewer and Fabio explicitly declined the scope. Do not carry it as pending work. The analysis, if it is ever wanted: the weight would go in `vae/` (not `vae_approx/`, which is what keeps ComfyUI #13366's latent corruption dormant), the R2 bytes already exist, and `tests/remote-engine-assets.test.cjs:158` would need narrowing from basename to path.",
       "Defender exclusions are a real security trade, not a free win: they turn off real-time scanning for a tree that downloads model weights from R2 and Hugging Face. Say that out loud to Fabio rather than burying it - he may prefer to exclude only node_modules and engine/."
     ],
     "constraints": [

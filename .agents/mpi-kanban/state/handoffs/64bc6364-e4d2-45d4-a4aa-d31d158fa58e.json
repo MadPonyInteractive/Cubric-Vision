@@ -4,7 +4,7 @@
   "generated_at": "2026-08-10T04:07:12Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "MPI-508 - H3 unbroken, MpiTinyVaeLoader shipped, previews still green",
     "branch": "master"
@@ -49,7 +49,14 @@
       "handoffs": ".agents/mpi-kanban/tasks/MPI-508/handoffs/"
     }
   },
-  "allowed_actions": ["read", "continue", "verify", "implement", "commit", "push"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement",
+    "commit",
+    "push"
+  ],
   "knowledge_preservation": {
     "completed": [
       "docs/preview-bus.md gained two sections: why taeh3 needs MpiTinyVaeLoader (with the exact RuntimeError and why it is not a version gap), and why an OUTER_SAMPLE wrapper sees the FLAT pack rather than the nested latent",
@@ -113,7 +120,13 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "scalable-foundation",
-    "relevant_topics": ["comfy_engine", "comfy_injection", "workflow-authoring", "models", "preview-bus"]
+    "relevant_topics": [
+      "comfy_engine",
+      "comfy_injection",
+      "workflow-authoring",
+      "models",
+      "preview-bus"
+    ]
   },
   "rules_active": [
     ".claude/rules/comfy_engine.md",
@@ -121,6 +134,16 @@
     ".claude/rules/git.md",
     "docs/preview-bus.md"
   ],
-  "recent_events": [{ "at": "2026-08-10T04:07:12Z", "event": "handoff_created" }],
+  "recent_events": [
+    {
+      "at": "2026-08-10T04:07:12Z",
+      "event": "handoff_created"
+    },
+    {
+      "at": "2026-08-10T05:57:00Z",
+      "event": "handoff_closed",
+      "note": "Resumed and completed: MPI-508 closed on evidence (board done, commit 54619caf)."
+    }
+  ],
   "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/64bc6364-e4d2-45d4-a4aa-d31d158fa58e.json and use mpi-continue to pick up MPI-508. H3 is no longer broken and everything is committed and pushed (Vision a024801b, ComfyUi-MpiNodes ea85c26, pinned in dev_configs/node_lock.json). One bug is open: MpiVideoSamplingPreview now fires - 400+ frames a run instead of 6 - but every frame renders GREEN. Fabio A/B'd it on the bench against KJNodes reading the same taeh3 weight and theirs is low-res but correct colour from step 1, so the decode is ours. Construction, output range and latent scaling are all already ruled out against their implementation, and copying their add_(1.0).mul_(127.5) would be WRONG - that is their latent2rgb path, not their TAEHV path. The leading cause is that _TinyVaePreviewer.push in c:/AI/Mpi/ComfyUi-MpiNodes/preview.py decodes x0[cursor:cursor+earned], an arbitrary mid-clip window with cold MemBlock state, while KJNodes always decodes a prefix from frame 0 for exactly that reason, and carries a dedicated _decode_h3_full because H3 codes 17 pixel frames per 5 latent tokens. Read their nodes/tiny_vae.py first - it is a working reference for this weight. Do NOT start a generation without asking Fabio first; he runs other agents that need the GPU."
 }
