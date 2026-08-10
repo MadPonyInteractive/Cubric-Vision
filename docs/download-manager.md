@@ -918,23 +918,35 @@ design. **Do not "fix" a slow H3 download by re-hosting it on R2.**
   `xet-bridge-us`, rife included.
 - **Raising aria2's `-x`** — hardcoded ceiling of 16, and wrong-signed anyway.
 
-### The HF path stages OFF the volume and moves the file across on completion
+### BOTH remote download paths stage ON the volume, and a stopped Pod strands what they left
 
-Measured 2026-08-09 on a CPU download Pod: while `h3-qwen3vl-32b-clip` (24.55GB) was
-downloading, `GET /remote/pod/disk` reported **49,664 bytes** used on a fresh 30GB volume
-with 1.27GB already fetched — then jumped to the full **26.37GB** the moment the install
-completed. The aria2/R2 path behaves the opposite way: it writes its `.part` directly onto
-the volume, so usage climbs (or appears to) throughout.
+The HF path stages into `<dest>.part.hfstage/` — *inside* MODELS_DIR, deliberately, so the
+finishing move is an `os.replace` on one filesystem instead of a cross-device copy of 20GB
+(`wrapper.py`, `_download_hf`: "Stage INSIDE the models tree"). The aria2/R2 path writes
+`<dest>.part` next to the final file. Neither one is off-volume.
 
-Two consequences worth knowing before you reason about volume space:
+**A 2026-08-09 note here claimed the opposite** ("stages OFF the volume", 49,664 bytes on
+the volume with 1.27GB fetched). That reading came from `GET /remote/pod/disk`, whose `du`
+is cached for 60s and is invalidated only by an install COMPLETING or a delete — never by
+one starting. It was the pre-install number, not a live one. Measured 2026-08-10 with
+`GET /remote/pod/ls` (live `du`, no cache): mid-install the volume carried
+`text_encoders/<file>.safetensors.part.hfstage/.cache/huggingface/download/….incomplete`
+and its bytes. **Sample volume usage with `/remote/pod/ls`, never with `/remote/pod/disk`,
+while anything is downloading.**
 
-- **An in-flight HF install is invisible to the disk gate**, so free space measured during
-  one is optimistic by the whole remaining file. The gate runs BEFORE the install (see
-  § Remote (RunPod) Disk-Full Pre-Flight), so this is not a live defect — but it does mean
-  the volume needs room for the file even though nothing accumulates there while it runs.
-- **An HF dep cannot be used to exercise anything about partial `.part` files on the
-  volume** — there is no partial there to measure. A 2026-08-09 session lost a Pod leg to
-  this, reaching for the slow HF dep precisely because it ran long enough to sample.
+Consequences that cost a live session on 2026-08-10:
+
+- **An interrupted install strands its staging on the volume and nothing sweeps it.** A Pod
+  STOP kills the container before `_download_hf`'s `shutil.rmtree(stage)` runs, so the tree
+  survives — 11.5GB of it after one killed 24.55GB install. `POST /comfy/models/uninstall`
+  for that same dep answered `already-absent` (it removes `dest` and `dest + ".part"`, not
+  the `.hfstage` directory) and the app's orphan sweep maps volume files to deps, so an
+  unmappable staging path is invisible to it too.
+- **The disk gate counts a dep's own stranded `.part` against its retry.** aria2 removes the
+  old `.part` at the start of the next install ("clean slate", MPI-136) — but the app's
+  free-space gate runs before that and refuses the retry for space the install is about to
+  reclaim. Live: `remote install blocked — volume full: need 13.3 GB, have 12.0 GB free`
+  for the very dep whose 13.3GB `.part` was the thing occupying the volume.
 
 ## A blip is not a verdict — same-url retry (MPI-460)
 

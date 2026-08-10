@@ -42,3 +42,23 @@ Options, in the order they should be considered:
 - `POST /comfy/models/uninstall` - same filter (MPI-276 G13), so it can report success having
   deleted nothing.
 - `scripts/smoke-workflows.mjs` - a first-class caller that is not the renderer.
+
+## Third sighting, 2026-08-10 (MPI-483's Pod session)
+
+Cost another Pod leg. A driver script sent `dependencies: ["wan-22-i2v-high"]` - bare id
+STRINGS rather than dep objects. `_filterDepsForEngine` filters on `d.id`, which is
+`undefined` for a string, so the set emptied and the response was:
+
+```
+{"id":"wan-22","modelId":"wan-22","status":"complete","totalBytes":0,"downloadedBytes":0,"deps":[]}
+```
+
+2.5 minutes of a live Pod were spent watching a volume that was never going to change. This
+is the same defect from a third input shape (id-string, wrong-tier dep object, wrong-engine
+dep object), which is the argument for option 1: **422 naming the dropped ids and the
+engine**. A shape error and an engine mismatch both land here, and only the response can
+tell the caller which.
+
+Note for whoever fixes it: the 422 must distinguish "you sent N deps, all N were dropped"
+from "you sent 0 deps", because a 0-dep POST is how a caller asks for nothing and that is
+not an error.

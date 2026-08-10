@@ -3,11 +3,11 @@
   "id": "MPI-483",
   "title": "Two space accountings misread the same volume - apparent bytes as real, and total size as free space",
   "description": "Both surfaced on 2026-08-08 when the smoke fill hit a false disk-full. They are separate bugs that compound. (1) THE DISK-FULL GATE COUNTS APPARENT BYTES. The Pod wrapper's GET /wrapper/disk is `du -sb` (wrapper.py:11) - `-b` is --apparent-size, which sums declared file LENGTHS, not allocated blocks. The mechanism is SPARSENESS, not preallocation, and the codebase corrected that mislabel once already (wrapper.py:1754, re MPI-95): aria2 writes -s 128 segments at scattered offsets with --file-allocation=none, so a .part file's LOGICAL size snaps to ~the full total the instant a late segment writes near EOF, while its allocated blocks are only what has arrived. The gate's error is therefore close to worst-case, not proportional - a 21 GB transformer reads as ~21 GB used from its first minutes. Measured: the wrapper reported 307.65 GB used while RunPod's console reported 259 GB of real blocks - a 48.65 GB phantom, entirely preallocated-but-unwritten partials. The app subtracts the apparent figure to compute free space, so it refused an install with '47.3 GB needed, 39.4 GB free' when ~91 GB was physically free. A user with a part-finished download therefore gets told the disk is full when it is not, and the error is the MPI-100 out-of-space TOAST, which reads as user-actionable and is not. (2) THE SMOKE PREFLIGHT NEVER CHECKS FREE SPACE. scripts/smoke-workflows.mjs prints 'weights 300.5 GB · volume 350 GB' and compares its estimate to the volume's TOTAL SIZE, never to what is actually free, and never to what the volume already holds. It passed cleanly against a volume that could not fit the set, then died 8 models in with the GPU leg still unproven. It should refuse to rent anything unless measured free bytes exceed the remaining requirement with headroom. Fixing (1) alone still leaves (2) blind, and both read their requirement from the wrong sizes - see MPI-482, which must land first or the corrected gate will just be precisely wrong.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-08-08T06:55:00Z",
-  "updated_at": "2026-08-09T18:18:53Z",
+  "updated_at": "2026-08-10T04:40:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
@@ -16,10 +16,5 @@
     "files": "files.json",
     "handoffs": "handoffs/"
   },
-  "activeSessionTitle": "MPI-483 - fix both space accountings (apparent bytes + smoke preflight)",
-  "attention": {
-    "state": "required",
-    "reason": "Both bugs fixed and unit-verified (7 asserts, negative control). Bug 1's wrapper half changes a number only a real RunPod network volume produces, so it needs ONE Pod check - fold it into MPI-450 Gate B's throwaway-Pod session with MPI-480 #3 and MPI-481: publish-runtime.sh dev, restart, start a multi-GB install, confirm /wrapper/disk tracks RunPod's console instead of running ~19% ahead. WRAPPER_VERSION 0.2.43 -> 0.2.44; the app pin stays 0.2.41 on purpose.",
-    "updated_at": "2026-08-09T18:18:53Z"
-  }
+  "activeSessionTitle": "MPI-483 - fix both space accountings (apparent bytes + smoke preflight)"
 }

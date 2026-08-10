@@ -77,7 +77,22 @@ assumptions that time may have invalidated.
       reported control (`refImageSize` plus at least one of `previewStage` / `denoise` /
       `useGrid`). Lower severity than MPI-461: the known-issue line is an acceptable
       outcome here, a silent skip is not.
-- [~] **MPI-483** — FIXED 2026-08-09, card `doing/validating`. Both accountings: the
+- [x] **MPI-483 — CLOSED 2026-08-10 `done/complete`, and the premise it was opened on is
+      DISPROVEN.** One request settled it: `GET /remote/pod/ls` sampled every 1.5s through a
+      14.31GB aria2/R2 install on a throwaway 40GB volume — `phantomBytes` never left ±15MB
+      (0.1% of the file). 2.4s in, with 50MB fetched, the `.part` was already 13.43GB
+      apparent **and** 13.43GB of allocated blocks: a RunPod network volume charges the full
+      declared length immediately, so `du -sb` and `du -s --block-size=1` agree. **The flag
+      swap is a correctness tidy, not a 48.65GB fix — do not let that phrasing reach the
+      release notes.** The 307.65 vs 259 GB gap is explained by the two figures not being
+      sampled at the same instant (48GB ≈ 2-3 minutes of lag at 250-460 MB/s). Bug 2's
+      free-space gate is untouched and stays. **Consequence for the standing decision
+      below: the full-disk phrase stays OUT of the wake-up-install bullet permanently** —
+      not "until the Pod check passes", but because the check ran and the mechanism it
+      would have cited is not real. Two corrections fell out, both in
+      `docs/download-manager.md`: the HF path stages INSIDE MODELS_DIR (`.part.hfstage`),
+      and a killed install strands that tree with nothing to sweep it.
+      ORIGINAL TEXT: FIXED 2026-08-09, card `doing/validating`. Both accountings: the
       wrapper's `du -sb` (apparent bytes — and the comment above it claimed the opposite,
       which is why two rewrites of that route missed it) is now `du -s --block-size=1` at
       BOTH call sites, wrapper 0.2.44; and the smoke preflight gained a measured-free-space
@@ -277,6 +292,11 @@ assumptions that time may have invalidated.
       reported `wrapperVersion: 0.2.44`), so `mpi-release`'s manifest-diff stop will read
       dev `0.2.44` vs stable `0.2.40` — answer still PROMOTE. And the old blocker is
       gone: all three teardown verbs work from an agent session now.
+      **2026-08-10 — BOTH CLOSED.** MPI-483 measured (phantom ≈ 0, premise disproven) and
+      MPI-481 proven live twice (`stale in-flight record … reinstalling` at 04:18:22Z on the
+      HF path and 04:24:05Z / 04:26:13Z on the R2 path, after a Pod **STOP** rather than a
+      delete). One throwaway Pod + one 40GB volume, both deleted and verified gone;
+      `aghcuvg7nl` never attached. The two blocks below are the superseded 2026-08-09 state.
       **MPI-483 — inconclusive, and `/remote/pod/disk` is the wrong instrument.** Two runs
       of the same experiment disagreed (13.61 GB attributed to a 14.1s-old `.part` in one,
       0.00 GB to a 7.6s-old one in the other). Causes: `/wrapper/disk` caches `du` for 60s
@@ -383,12 +403,20 @@ assumptions that time may have invalidated.
   during this card's throwaway-Pod session, which lost two Pod legs to it. **Not a gate:**
   pre-existing, not a regression, and the renderer resolves per-engine correctly so no user
   path reaches it. Carded so the next person does not rediscover it the same way.
-- The companion finding needed no card — it is a fact, not a defect, and now lives where
-  the router sends people: `docs/download-manager.md` § "The HF path stages OFF the volume
-  and moves the file across on completion". An in-flight HuggingFace install shows
-  **49,664 bytes** used on the volume with 1.27GB already fetched, then jumps to the full
-  26.37GB on completion — so an HF dep can never be used to exercise anything about partial
-  `.part` files, which is the other thing that cost a Pod leg.
+- **MPI-510** — an interrupted remote install strands its partial on the volume (an aria2
+  `.part` at its FULL declared length, or the HuggingFace `.part.hfstage` tree: 11.5GB
+  measured), nothing sweeps it (the wrapper delete handles `dest` + `.part` only; the orphan
+  sweep maps files to deps), and the free-space gate then refuses the retry on that same
+  space — `need 13.3 GB, have 12.0 GB free` for the dep whose own leftover was the occupant.
+  Third symptom on the same route: a gate-blocked install sits at `queued` indefinitely with
+  no error state. Found 2026-08-10 closing MPI-483/481. **Not a gate:** needs a Pod
+  stop/kill mid-install, which is not a user path, and both cards closed without it.
+- **The companion finding got a card too, and yesterday's version of this line was WRONG.**
+  It said the HF path "stages OFF the volume" on the strength of a 49,664-byte reading —
+  which was `/remote/pod/disk`'s 60s `du` cache answering with the pre-install number. HF
+  stages into `<dest>.part.hfstage` **inside** MODELS_DIR by design. Corrected in
+  `docs/download-manager.md` 2026-08-10; sample volume usage with `/remote/pod/ls`, never
+  `/remote/pod/disk`, while anything is downloading.
 
 ## Cut
 
@@ -419,16 +447,16 @@ Still genuinely open, in the order the release needs them:
 1. ~~**The 2026-08-10 date gate**~~ — **SETTLED 2026-08-09**, see § ON PICKUP steps 1-3.
    It does not bite: the Gate C rewording made the second-route bullet true on both sides
    of the date, so the notes are date-proof. MPI-433 stays blocked either way.
-2. ~~**MPI-483** — the last Gate A card.~~ **FIXED 2026-08-09**, `doing/validating`; one
-   Pod check owed, folded into Gate B's throwaway-Pod session. **Gate A now has NO open
-   card.**
+2. ~~**MPI-483** — the last Gate A card.~~ **CLOSED 2026-08-10 `done/complete`.** The Pod
+   check ran: phantom ≈ 0, so bug 1's sparse-`.part` premise is disproven and the flag swap
+   is a tidy, not a 48.65GB fix. Bug 2's free-space gate stands. **Gate A has NO open card.**
 3. ~~**`npm test` IS RED ON MASTER**~~ — **FIXED 2026-08-09, 530/530.** Detail on the
    Gate B line.
 4. **Gate B** — ~~`test:desktop`~~ (17/17 20:04Z, which also closed MPI-458's
    confirmation run), ~~the Klein preview look~~ (PASS 20:25Z; the Wan half was rescoped — a
-   deliberate carve-out in the notes, not a check), the throwaway-Pod session
-   (MPI-480 #3 is closed; MPI-481 is `doing/validating`; **MPI-483's wrapper check joins
-   it**), MPI-458's confirmation run, the MPI-249 Linux leg on the real artifact, and
+   deliberate carve-out in the notes, not a check), ~~the throwaway-Pod session~~
+   (**DONE 2026-08-10** — MPI-480 #3, MPI-481 and MPI-483 all closed; Pod and volume
+   deleted and verified gone), MPI-458's confirmation run, the MPI-249 Linux leg, and
    **the H3 re-smoke LAST** — the graph moved after the evidence was written and Fabio is
    still editing it. `npm test` is done (530/530).
 5. ~~**MPI-501**~~ — **CLOSED 2026-08-09 20:05Z, `done/complete`.** The toast was

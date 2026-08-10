@@ -117,3 +117,47 @@ out. Then press Install again and grep `app.log` for the tell:
 
 Card stays `doing/validating`. The unit evidence is unchanged and still good; only the live
 leg is outstanding.
+
+
+## 2026-08-10 04:17-04:26Z — LIVE LEG PROVEN, twice, on both download paths
+
+A Pod **STOP** is the repro a DELETE could never be: the container dies at once, so the
+app is left holding an in-flight record no wrapper can own. Same throwaway Pod
+`n03g8ux8g14vf0` / volume `nh7pmxrqyi` as MPI-483, wrapper 0.2.44.
+
+**Reproduction 1 — HuggingFace path.** `h3-qwen3vl-32b-clip` (24.55GB) killed at 2.45GB
+(9%) by `POST /remote/pod/stop-active`. The app kept `status: downloading`. Pod restarted
+via `/remote/pod/reconnect` (same id, `recreated:false`), Install pressed again:
+
+```
+[04:18:22.675Z] [WARN] [download] stale in-flight record for h3-qwen3vl-32b-clip — the wrapper has no such install; reinstalling
+[04:18:22.675Z] [INFO] [installStore] Requeued h3-qwen3vl-32b-clip (remote requeue)
+```
+
+**Reproduction 2 — aria2/R2 path.** `wan-22-i2v-high` (14.31GB) killed at ~1.1GB, same
+cycle, same tell at `04:24:05.526Z` and again at `04:26:13.938Z`.
+
+That is the fix firing: `cachedInFlight && !reallyInFlight` → the record is dropped from
+`_remoteDepIds`, logged, and the dep falls through to a real install instead of the silent
+ATTACH that used to return success having queued nothing.
+
+**What was NOT observed, and why it is not the fix's fault.** In both reproductions the
+requeued install was then refused by the volume-space gate —
+`remote install blocked — volume full: need 13.3 GB, have 12.0 GB free of 37.3 GB` — so the
+`/wrapper/models/install` POST itself never fired. That is the deliberately-small 40GB
+throwaway volume plus a finding of its own (MPI-483's write-up): a killed install strands
+its fully-allocated `.part` / `.hfstage` tree, and the gate counts that stranded file
+against the retry of the very dep about to overwrite it. The corpse-detection branch sits
+ENTIRELY upstream of that gate, and a normal wrapper install was exercised repeatedly in
+the same session (`wan-22-i2v-high` installed end-to-end at 04:02, `ltx23-text-projection`
+at 04:28).
+
+**A corpse needs a big file.** Every attempt on a dep small enough to finish inside the
+post-stop grace window completed instead of freezing — 4.28GB and 2.31GB both did, in ~5-8
+seconds. Kill a ≥14GB dep, or don't bother.
+
+Teardown: Pod deleted and verified **404**, throwaway volume deleted, `aghcuvg7nl`
+untouched.
+
+**Verdict: the live leg this card owed is met.** Unit evidence (4 cases, mutation-checked,
+503/503) plus two live reproductions on both transports.

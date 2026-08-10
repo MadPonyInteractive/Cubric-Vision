@@ -248,3 +248,68 @@ and the mutation showed it was guarding nothing, so it was rewritten to `/worksp
 vs `/workspace/models` and only then did the mutation fail it. A failed `du`
 (`size_bytes: null`) returns null rather than counting as zero blocks, which would have
 fabricated a phantom equal to the whole apparent total.
+
+
+## 2026-08-10 04:02Z — MEASURED, and bug 1's premise DOES NOT HOLD
+
+One request, as designed. Throwaway 40GB volume `nh7pmxrqyi` + CPU Pod `n03g8ux8g14vf0`
+(EU-RO-1, wrapper 0.2.44), one 14.31GB aria2/R2 dep (`wan-22-i2v-high`),
+`GET /remote/pod/ls` sampled every 1.5s from first byte to `complete`. Both accountings
+come from ONE response, so there is no sampling skew left to argue about.
+
+| t | app downloaded | apparent (`getsize`) | blocks (`du -s --block-size=1`) | **phantom** |
+|---|---|---|---|---|
+| +0.3s | 0.000 GB | 1.764 GB | 1.776 GB | −0.012 GB |
+| +2.4s | **0.050 GB** | **15.194 GB** | **15.203 GB** | **−0.009 GB** |
+| +9s | 3.703 GB | 15.415 GB | 15.423 GB | −0.008 GB |
+| +35s | 11.499 GB | 15.907 GB | 15.908 GB | −0.001 GB |
+| +57s (complete) | 14.306 GB | 16.070 GB | 16.085 GB | −0.015 GB |
+
+(1.764 GB is the engine-asset baseline already on the volume.)
+
+**Phantom never left ±15 MB on a 14.31 GB file — 0.1%.** Read the second row: 2.4 seconds
+in, with 50 MB actually fetched, the `.part` was already 13.43 GB — and the allocated
+blocks were 13.43 GB too. The file's length snaps to ~full immediately, exactly as the card
+described, **but the filesystem charges for all of it at the same instant.** A RunPod
+network volume does not keep the file sparse, so `du -sb` and `du -s --block-size=1` return
+the same number and swapping the flag changes nothing measurable.
+
+### What this settles, and what it does not
+
+- **Bug 1's mechanism is disproven at this magnitude.** Sparse `.part` files do not inflate
+  the volume reading on RunPod network volumes. The shipped `du -sb` → `du -s --block-size=1`
+  change is still the *correct* accounting for a quota (and the old comment did assert the
+  opposite of what the flag did), but it is a correctness tidy, **not** the fix for a
+  48.65 GB over-count. Do not describe it as one anywhere user-facing.
+- **The 307.65 vs 259 GB gap has a simpler explanation, and it is the one this instrument
+  was built to kill: the two numbers were not taken at the same instant.** The fill runs at
+  250–460 MB/s, so a RunPod-console figure a few minutes stale is tens of GB behind by
+  arithmetic alone — 48.65 GB is ~2–3 minutes of it. Nothing in today's data supports a
+  second mechanism.
+- **Last session's contradictory legs both resolve.** Leg H (13.61 GB attributed to a .part
+  at 24%) is exactly today's behaviour. Leg I's 0.00 GB was `/remote/pod/disk`'s 60s `du`
+  cache answering with the pre-install number — the trap this card already documented.
+- **Bug 2 is untouched by any of this.** The smoke preflight free-space gate is real, unit
+  -tested (7 asserts), and stays.
+
+### Consequence for the disk gate, which is the part that matters in practice
+
+Because allocation is immediate and total, an in-flight install's *whole* declared size is
+charged to the volume from the first second. That makes the gate honest — and it makes a
+retry of an interrupted dep fail: the app refuses on space the install is about to reclaim
+(`need 13.3 GB, have 12.0 GB free` for the dep whose own stranded 13.3 GB `.part` was the
+occupant). Written up in `docs/download-manager.md`; not fixed here, not this card's scope.
+
+### Also corrected today
+
+`docs/download-manager.md` § "The HF path stages OFF the volume…" was **wrong** and is
+replaced. HF stages into `<dest>.part.hfstage/` *inside* MODELS_DIR by design
+(`wrapper.py` `_download_hf`); the 49,664-byte reading behind that claim was the cached
+`/remote/pod/disk` number again. Proven by `models_files` listing the live
+`.part.hfstage/.cache/huggingface/download/….incomplete` mid-install.
+
+### Teardown
+
+Pod `n03g8ux8g14vf0` deleted (`GET /runpod/pods/<id>` → **404**), volume `nh7pmxrqyi`
+deleted, `GET /runpod/volumes` now lists only `aghcuvg7nl` (cubric-smoke, 450GB) —
+never attached, never touched. Remote mode back to `{active:false}`.

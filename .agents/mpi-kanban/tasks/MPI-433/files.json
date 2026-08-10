@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/data/modelConstants/modelDeps.js",
+    "docs/download-manager.md",
+    "docs/models/krea2/licences.md",
+    ".claude/rules/downloads.md",
+    "tests/transport-error-message.test.cjs",
+    "docs/releases/UNRELEASED.md"
+  ]
+}
