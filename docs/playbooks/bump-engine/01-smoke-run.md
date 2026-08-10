@@ -55,9 +55,20 @@ coverage.
 ## The per-op budget
 
 Minimization is **generic, by node title** — walk the graph for `Input_Width`,
-`Input_Height`, `Input_Steps`, `Input_Frames` and clamp. This is the same title convention
-the injector uses, so it survives graph edits. **Never write a per-graph override table**;
-it rots the moment a workflow changes.
+`Input_Height`, `Input_Steps`, `Input_Frames`, `Input_Duration` and clamp. This is the same
+title convention the injector uses, so it survives graph edits. **Never write a per-graph
+override table**; it rots the moment a workflow changes.
+
+**A model can express length in a unit the budget does not know, and then it is not
+budgeted at all — silently.** MiniMax H3 has no `Input_Frames`: it uses `Input_Duration`
+(seconds, an `MpiInt`) feeding `MpiH3Length`, which converts at 24fps onto H3's
+`n % 17 == 5` frame grid. So until 2026-08-10 the `frames: 1` budget skipped H3 entirely
+and `minimax-h3/t2v_ms` smoked a **3-second, ~73-frame** video while every other op ran one
+frame — which is the whole reason H3 cost ~153s against 4–38s elsewhere, on every rented
+matrix. Nothing failed; it just quietly cost 4× the GPU time and gave a transient 4× longer
+to hit it. **When adding a model, check what unit its graph states length in**, and confirm
+against the runner's printed budget line that the op was actually clamped: a title the rules
+do not match produces no entry there, and an absent entry is the only symptom.
 
 | knob | value |
 |---|---|

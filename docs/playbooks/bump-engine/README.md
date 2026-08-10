@@ -70,8 +70,24 @@ pin, not when upstream landed the commit:
 git log -p --follow -- dev_configs/node_lock.json | grep -n "core\|tag"
 ```
 
-**3. Bump the pin in BOTH files.** `node_lock.json` `comfyui.core.tag` + `commit`, and
-`system_dependencies.json`. Grep both afterwards and confirm they agree.
+**3. Bump the pin in BOTH files — and that is THREE pins, not one.** `node_lock.json`
+carries `comfyui.core.tag` + `commit` **and** a `comfyui.frontend` block, and the frontend
+half is the one that gets left behind because "the pin" reads as singular:
+
+| in `node_lock.json` | source of truth for the new value |
+|---|---|
+| `comfyui.core.tag` + `commit` | the target release tag |
+| `comfyui.frontend.comfyui-frontend-package` | the target tag's OWN `requirements.txt` |
+| `comfyui.frontend.comfyui-workflow-templates` | same file |
+
+```bash
+gh api "repos/Comfy-Org/ComfyUI/contents/requirements.txt?ref=v<ver>" --jq '.content' \
+  | base64 -d | grep -i "frontend\|templates"
+```
+
+Then `system_dependencies.json`. Grep all of them afterwards and confirm they agree.
+Measured 2026-08-10 on the 0.30.0 → 0.31.0 bump: core moved while the frontend pins still
+read `1.47.11` / `0.11.27` against the target's `1.48.7` / `0.11.34`.
 
 **4. Re-check every pinned custom node against the new core.** MPI-465's failure mode was a
 node calling a core API that changed — the node's own pin was innocent. Walk `nodes` in
