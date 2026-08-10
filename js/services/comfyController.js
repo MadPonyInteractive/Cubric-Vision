@@ -731,7 +731,7 @@ function createEngine({ engine, alwaysLocal }) {
      * @param {{ timeoutMs?: number }} [o]
      * @returns {Promise<boolean>} true = safe to restart; false = still busy, REFUSE
      */
-    async waitForIdleQueue({ timeoutMs = 300000 } = {}) {
+    async waitForIdleQueue({ timeoutMs = 300000, unreachableMeansIdle = false } = {}) {
         const deadline = Date.now() + timeoutMs;
         let unreachable = 0;
         for (;;) {
@@ -742,8 +742,27 @@ function createEngine({ engine, alwaysLocal }) {
                 unreachable = 0;
                 if (!(q.queue_running?.length || q.queue_pending?.length)) return true;
             } else if (++unreachable >= 3) {
-                clientLogger.warn('comfy', 'Queue unreadable before a restart — treating the engine as idle');
-                return true;
+                // MPI-501 shipped this as an unconditional `return true`, so THREE missed
+                // reads — six seconds — counted as idle and the restart went ahead. That is
+                // correct for a human repairing a wedged engine (the dev radial: a wedged
+                // ComfyUI must stay fixable) and wrong for every app-initiated restart,
+                // where nobody asked and the cost is destroying finished work.
+                //
+                // It is also why the guard read as proven. MPI-501's live proof was the dev
+                // radial on the LOCAL engine, where /queue is a localhost call that does not
+                // blip. The failing path is the automatic REMOTE one, where /queue crosses
+                // the RunPod proxy while the heaviest op in the matrix saturates the GPU —
+                // `minimax-h3/t2v_ms` orphaned at 169s, then again at 162s on 2026-08-10,
+                // both with the drain-wait supposedly in place.
+                //
+                // Unreadable is UNKNOWN, not idle. Only a caller that can say "a human asked
+                // me to repair this" may opt into treating it as idle.
+                if (unreachableMeansIdle) {
+                    clientLogger.warn('comfy', 'Queue unreadable before a restart — treating the engine as idle (repair path)');
+                    return true;
+                }
+                clientLogger.warn('comfy', 'Queue unreadable before a restart — refusing; an in-flight generation cannot be ruled out');
+                return false;
             }
             if (Date.now() >= deadline) return false;
             await new Promise(r => setTimeout(r, 2000));

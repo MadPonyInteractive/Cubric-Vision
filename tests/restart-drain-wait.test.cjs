@@ -71,12 +71,27 @@ test('waitForIdleQueue gates a restart on the real queue', async () => {
             'a blip then a drain still ends safe');
         assert.strictEqual(calls.length, 3, 'a failed read must not short-circuit to idle');
 
-        // 6. Three consecutive failed reads -> ComfyUI is not answering at all, so there
-        //    is no in-flight prompt to protect and the restart IS the repair.
+        // 6. Three consecutive failed reads. This assertion used to be unconditional
+        //    (`true` — a wedged engine must stay repairable), and that is why the guard
+        //    read as proven while `minimax-h3/t2v_ms` kept being orphaned: /queue crosses
+        //    the RunPod proxy on the remote engine, and six seconds of misses under a
+        //    heavy op is not evidence of idle. It now splits by caller.
+        //
+        // 6a. DEFAULT (every app-initiated restart — node installs, both engines):
+        //     unreadable is UNKNOWN, so REFUSE. Nobody asked for this restart, and the
+        //     cost of being wrong is destroying a generation someone is waiting on.
         calls = stubFetch([null, null, null]);
-        assert.strictEqual(await remoteEngine.waitForIdleQueue({ timeoutMs: 30000 }), true,
-            'an engine that never answers is treated as idle, so a wedged ComfyUI can be repaired');
+        assert.strictEqual(await remoteEngine.waitForIdleQueue({ timeoutMs: 30000 }), false,
+            'an unreadable queue must not green-light an app-initiated restart');
         assert.strictEqual(calls.length, 3, 'it takes three misses, not one');
+
+        // 6b. OPT-IN (the dev radial only): a human asked to repair the engine, so an
+        //     unreadable queue must not lock them out of fixing a wedged ComfyUI.
+        calls = stubFetch([null, null, null]);
+        assert.strictEqual(
+            await remoteEngine.waitForIdleQueue({ timeoutMs: 30000, unreachableMeansIdle: true }), true,
+            'the human repair path still treats a dead engine as idle');
+        assert.strictEqual(calls.length, 3, 'the opt-in still takes three misses, not one');
     } finally {
         globalThis.fetch = realFetch;
     }

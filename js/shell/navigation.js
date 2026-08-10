@@ -267,7 +267,11 @@ async function _restartEngine() {
     // in-flight prompt with no error anywhere. Same guard as the generation gate, but
     // a short wait: this is an explicit human action, so refuse fast and let them
     // decide (Stop it, or wait) rather than leave the radial hanging for minutes.
-    if (!await getEngine(!remote).waitForIdleQueue({ timeoutMs: 30000 })) {
+    // `unreachableMeansIdle` is opted into HERE and nowhere else: this is the one caller
+    // where a human has explicitly asked to repair the engine, so an unreadable queue must
+    // not lock them out of fixing a wedged ComfyUI. Every app-initiated restart takes the
+    // default (refuse), because there nobody asked and the cost is someone's finished work.
+    if (!await getEngine(!remote).waitForIdleQueue({ timeoutMs: 30000, unreachableMeansIdle: true })) {
         // A refusal is the guard WORKING, not a failure. This was `ui:error`, which is the
         // shell's crash dialog (`showError`) — so a by-design refusal rendered with an
         // "Error Summary" box and a REPORT ON GITHUB button, inviting a bug report for

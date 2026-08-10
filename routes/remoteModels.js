@@ -811,8 +811,14 @@ async function _waitForIdleQueue(timeoutMs) {
       unreachable = 0;
       if (!(q.queue_running || []).length && !(q.queue_pending || []).length) return true;
     } else if (++unreachable >= 3) {
-      logger.warn('runpod', 'queue unreadable before a ComfyUI restart — treating the engine as idle');
-      return true;
+      // The comment above always said a failed read is UNKNOWN, never "idle" — this
+      // returned `true` anyway, which is the opposite. There is no human in this path
+      // (ensureUniversalNodesOnVolume fires non-blocking, once per Pod), so nobody is
+      // being locked out of a repair by refusing; the caller's documented degrade is to
+      // skip the restart and let a generation that needs the pack report its own
+      // missing_node_type. Six seconds of an unreadable queue is not proof of idle.
+      logger.warn('runpod', 'queue unreadable before a ComfyUI restart — refusing; an in-flight generation cannot be ruled out');
+      return false;
     }
     if (Date.now() >= deadline) return false;
     await new Promise((r) => setTimeout(r, 2000));
