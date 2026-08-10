@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/shell.js",
+    "routes/downloadManager.js",
+    "tests/download-job-denominator.test.cjs",
+    "js/services/comfyController.js",
+    "js/shell/navigation.js",
+    "routes/runpodRemote.js",
+    "routes/remotePodLifecycle.js",
+    "tests/restart-drain-wait.test.cjs"
+  ]
+}

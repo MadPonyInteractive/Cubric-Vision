@@ -388,6 +388,66 @@ assumptions that time may have invalidated.
         number and MPI-433's status once it lands. The bullet was deliberately written to
         be true on both sides of 2026-08-10, so this is an accuracy tidy, not a blocker.
       **All five need a smoke pass, and per the standing instruction the H3 leg goes LAST.**
+- [~] **FULL SMOKE MATRIX RUN 2026-08-10 07:05-07:45Z - 34 PASS / 0 SKIP / 1 FAIL.**
+      Forced to the full matrix, not the LTX+H3 subset: `smoke-evidence.json` (2026-08-09
+      04:21Z) predated the `node_lock.json` commit, so `loadMergeBase` refused a scoped run
+      (a subset would have had to MERGE into evidence describing the old engine). No override
+      flag exists, by design - the gate mirrors `release-health-check.mjs`.
+      **Pre-rent gate found a real blocker:** the pod repo's `node_lock.json` still pinned
+      MpiNodes `43a976f`, two commits BEFORE `MpiVideoSamplingPreview` and `MpiTinyVaeLoader`
+      existed - the H3 graphs would have died on `missing_node_type`. Synced + committed
+      (`0c4ded6` in cubric-vision-pod). **No image rebuild was needed** and the runner says why
+      itself: MpiNodes is code-only (`installRequirements:false`), so since MPI-222 it installs
+      to the VOLUME and the manifest-v2 drift check reinstalls it when the pin moves.
+      **LTX 2.3 previews proven on a Pod for the first time** - `ltx-23-balanced` t2v_ms 74s,
+      i2v_ms 38s, the new `taeltx2_3` wiring executing remotely.
+      **The one FAIL is MPI-501's failure recurring**, identical to MPI-467's:
+      `minimax-h3/t2v_ms - prompt orphaned after 162s` (was 169s). See the two entries below.
+- [~] **MPI-501 REOPENS IN EFFECT - its guard had a six-second hole, now fixed (unit-proven).**
+      MPI-501 sits in `done/complete` while its own `validation.md` still reads
+      *"Not proven yet: the live half."* Its live proof was the dev radial on the LOCAL engine,
+      which is the ONE caller where the bug cannot appear. `comfyController.waitForIdleQueue`
+      returned `true` after THREE unreadable `/queue` polls - six seconds - so an
+      app-initiated restart fired into a live prompt. Local `/queue` is a localhost call that
+      never blips; the failing path is the automatic REMOTE one, where `/queue` crosses the
+      RunPod proxy while the heaviest op saturates the GPU.
+      FIXED by splitting the escape hatch per caller: unreadable is UNKNOWN, so every
+      app-initiated restart REFUSES (`comfyController.js`, plus the server-side twin in
+      `routes/remoteModels.js`, whose doc comment already claimed this while the code did the
+      opposite); only the dev radial (`navigation.js`) opts in via `unreachableMeansIdle:true`,
+      so a human can still repair a wedged engine. `tests/restart-drain-wait.test.cjs` pins
+      BOTH branches. `npm test` 535/535.
+      **NOT live-proven, and must not be closed as if it were.** A competing cause fits the
+      same evidence: `start.sh:193`'s supervisor relaunches a dead ComfyUI child, which looks
+      identical from outside (prompt gone, comfyReady=true, Pod alive). H3 loads
+      `h3-qwen3vl-32b-clip` at **24.55GB on a 24GB L4**, and the budget shrinks the image, not
+      the text encoder; the failing op is always the FIRST H3 op, paying the cold load, while
+      i2v_ms and ref2v_ms pass warm right after. **The distinguishing test:**
+      `node scripts/smoke-workflows.mjs --retry-failed --keep-volume --volume aghcuvg7nl` with
+      the Pod's ComfyUI log captured - an OOM line means the fix is VRAM-side, not the guard.
+- [x] **LTX 2.3 card stuck at a full bar while NOT installed - FIXED.** Found by Fabio during
+      the run. The node-drift heal POSTed an install for `ltx-23` carrying ONE 1.76MB node, so
+      `modelJob.totalBytes` was SET from that request while `modelJob.deps` (which ACCUMULATES)
+      still held a 2.3GB shared weight attached by MPI-97 - 2312149072/1845493.76 = **125,286%**,
+      clamped to a full bar, settling `complete` on a model with no transformer, VAE or CLIP.
+      Seven sibling models held the same phantom job. Two fixes, both structural:
+      `_healRemoteNodeDrift` now uses a namespaced `engine:node-drift` job id (the pattern
+      `ENGINE_ASSETS_JOB_ID` twelve lines below it already established for exactly this - a heal
+      must not render a model card) and unions N per-model jobs into one, since a custom node
+      lives ONCE on the volume; and both `startModelDownload` twins now derive numerator AND
+      denominator from `modelJob.deps` via `_byteRatioExcludingNodes`, the same helper the
+      progress ticks use, so start and tick agree by construction. MPI-276 G12 still holds
+      (summing a dep set deduped by id is idempotent). `tests/download-job-denominator.test.cjs`.
+- [x] **RunPod safety: you cannot delete what you cannot see - FIXED.** During this session an
+      agent looking for a pod LIST called `POST /runpod/pods`, which CREATES, made stray Pods,
+      and then could not remove them: the only sweep filters `p.name === 'cubric-vision'`, so a
+      Pod the app did not name is unreapable, and the key is decryptable only by Electron's main
+      process. Fabio cleared them by hand from the console (stop is instant; terminate needs a
+      typed confirmation - a console guard only, the REST deletePod has none). Added
+      `GET /runpod/pods` (read-only inventory: count, costPerHrTotal, pods) and an opt-in
+      `{all:true, keepActive:false}` mode on `/remote/pod/cleanup-orphans` that drops the name
+      filter. `all` is never automatic - MPI-485 already has the name-filtered sweep killing a
+      peer session's live Pod. Both verified live after the app restart: `{"count":0,...}`.
 - [ ] **MPI-249 Linux leg** — real `CubricVision-linux-x64-v1.4.0.tar.gz` extracted on the Linux box, LOCAL uv engine provisioned, nodes installed, one model per family generated. A Pod run does not count
 - [x] **MPI-432** — WAIVED by the user 2026-08-08, card parked to `done`. The release-note
       entry is the only deliverable he wants and it is already in `UNRELEASED.md:347` under
