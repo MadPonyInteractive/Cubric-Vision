@@ -13,6 +13,8 @@
     "js/data/modelConstants/modelDeps.js",
     "js/data/modelConstants/models.js",
     "js/services/comfyController.js",
+    "dev_configs/node_lock.json",
+    "docs/preview-bus.md",
     "docs/models/h3/turbo.md",
     "docs/models/h3/performance.md"
   ]

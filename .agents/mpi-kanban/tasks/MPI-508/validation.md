@@ -180,8 +180,60 @@ clip through H3's chunking, mirroring `_decode_h3_full`) and select display fram
 result, instead of decoding a moving window. Read `tiny_vae.py` `decode_video` /
 `_decode_h3_full` first — it is a working reference for this exact weight.
 
-### Not done — needs the user
+## BUG 4 RESOLVED — and the cold-state window was only half of it (MpiNodes `fe812d4`)
 
-`ComfyUi-MpiNodes` is committed locally but **not pushed**, so `dev_configs/node_lock.json`
-still pins `43a976f` and has NOT been re-pinned. Pinning to an unpushed SHA would break
-every other machine and CI, and push is a user-authorized op.
+The cold-state window was real, but it is **not what made the frames green**. The
+previewer flattened the 5D latent frames-as-batch with:
+
+```python
+x0 = x0.movedim(2, 1).reshape((-1,) + tuple(x0.shape[-3:]))
+```
+
+On `[B,C,T,H,W]` the last three dims are `(T,H,W)`, **not** `(C,H,W)` — `x0` is still the
+pre-`movedim` tensor when `.shape` is read. So the reshape produced `[C,T,H,W]` labelled
+`[T,C,H,W]`: **time and channels transposed.** Proven on CPU with the measured H3 shape —
+`(1,24,17,4,4)` reshapes to `(24,17,4,4)`, where `(17,24,4,4)` was intended.
+
+**Why it never raised**, which is what hid it for a whole session: `TAEHV.decode` only
+transposes when `shape[1] != latent_channels`, and `earned` was clamped to
+`num_latent_frames` — which the same bug had made **24, the channel count**. So the batch
+was exactly 24, `shape[1] == latent_channels` held, and the scrambled buffer sailed through
+as a valid whole clip. A shape error would have been caught in one run; a shape
+*coincidence* decoded 65 frames of uniform garbage instead.
+
+**The fix is both halves at once.** The cursor is gone: `push` decodes the whole clip from
+frame 0 every step and bursts it (which is what the `VHS_latentpreview` marker already told
+the consumer to accumulate and loop), and `_decode_clip` carries H3's chunking — per-chunk
+prefix trim, then drop the encoder's 3-token tail pad. 17 tokens → **56** frames, not 65.
+
+### Verified without a GPU and without a generation
+
+`tasks/MPI-508/decode_equiv.py` (run it with the engine's `python_embeded/python.exe`)
+loads the real `taeh3` weight on **CPU**, decodes a random
+`[1,24,17,4,4]` latent through both our `_decode_clip` and kjnodes'
+`TAEHVDecoder._decode_h3_full`, and asserts equality:
+
+```
+ours  : (1, 3, 56, 64, 64)     kj : (1, 3, 56, 64, 64)     plain TAEHV.decode: (1, 3, 65, ...)
+PIXELS MATCH KJNodes, max diff 0.0
+marker: [('VHS_latentpreview', {'length': 56, 'rate': 8.0, 'id': '1'})]
+frames sent: 56   (second push: 56 more, no second marker)
+```
+
+The second half drives the real `push()` on a genuine flat pack (`pack_latents([video,
+audio])` → `(1,1,12480)`) with a stubbed `PromptServer`, so unpack + marker + frame
+emission are covered end to end. Stub `sys.modules['server']` before importing `preview.py`
+or the import drags ComfyUI's whole web stack in.
+
+### Still unproven — needs the GPU
+
+The fix is not yet seen in the app. That needs the engine restarted (the staged copy under
+`engine/.../custom_nodes/ComfyUI-MpiNodes/` is already updated and byte-identical to
+`fe812d4`) and one real H3 run. Fabio's other agents were using the GPU, so it was not
+taken. Same run still owes: turbo OFF short-circuits the LoRA, the blob-leak fix
+(no repeated `ERR_FILE_NOT_FOUND`), and the five-second turbo re-measure for
+`docs/releases/UNRELEASED.md`.
+
+One thing to watch in that run: `MpiGalleryGrid`'s `PREVIEW_CLIP_MAX` is **48** and a burst
+is now 56 frames, so the rolling window holds the clip minus its first ~8 frames. Harmless
+if the loop reads fine; bump the constant if it does not.
