@@ -12,6 +12,13 @@
     "docs/releases/UNRELEASED.md",
     "scripts/smoke-workflows.mjs",
     "dev_configs/smoke-evidence.json",
-    "dev_configs/smoke-run.txt"
+    "dev_configs/smoke-run.txt",
+    "dev_configs/node_lock.json",
+    "dev_configs/system_dependencies.json",
+    "dev_configs/python_deps.txt",
+    "js/data/releaseNotes.js",
+    "js/core/appVersion.js",
+    "package.json",
+    "package-lock.json"
   ]
 }

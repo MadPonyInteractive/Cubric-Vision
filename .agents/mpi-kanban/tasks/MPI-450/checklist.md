@@ -45,9 +45,27 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
    moved from `if sigmas[i + 1] > 0` to `if sigma_up > 0`. Where `sigma_up == 0` the old
    code still CALLED `noise_sampler` and multiplied by zero — invisible, but the RNG
    advanced. The new code skips the call, so the seed→image mapping can shift.
-   **UNVERIFIED — prove it empirically at the local gate** (same seed, same graph, 0.30 vs
-   0.31) before writing or omitting a release note. If it does shift, users with saved seeds
-   get different pictures and that IS an importantChanges line.
+   **SETTLED 2026-08-10 — IT DOES NOT SHIFT. No release note is owed.** Two independent
+   proofs, and the second exists because the first is only an argument:
+   - **Source.** The graphs select the sampler by NAME `res_multistep`, which core
+     dispatches to `sample_res_multistep(...) -> res_multistep(..., eta=0.)`. At `eta=0`,
+     `get_ancestral_step` returns `sigma_up == 0` at **every** step, so the old code added
+     `noise_sampler(...) * s_noise * 0` — exactly zero — and the generator it advanced is
+     function-local (`default_noise_sampler(x, seed)` builds a fresh `torch.Generator`
+     whenever `seed` is not None, which comfy always sets). Nothing downstream reads it, so
+     the skipped draw leaks nowhere.
+   - **Empirical**, on the engine's own python: the installed 0.30.0
+     `comfy.k_diffusion.sampling` and the v0.31.0 file exec'd as a sibling module, same fake
+     denoiser / same seed / same sigmas → **bit-identical at eta=0 AND at eta=1**
+     (`maxdiff 0.000e+00`), with a sensitivity control proving the harness can see a
+     difference when there is one. Script kept at
+     `scratchpad/res_multistep_rng.py`; it needs the engine python and the tag's
+     `sampling.py`, so it is re-runnable, not a one-off.
+   - Worth knowing for the next bump: in the two Chroma graphs `res_multistep` is on
+     **`UltimateSDUpscale`**, not the main sampler — those run RES4LYF's
+     `ClownsharKSampler_Beta` at `exponential/res_2s`, which is the pack's own implementation
+     and never touches core's function. Only the two H3 graphs feed it through
+     `KSamplerSelect`.
 
 ### The bump, in playbook gate order (`docs/playbooks/bump-engine/README.md`)
 
@@ -57,22 +75,84 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       no-asset trap does not bite here.)
 - [x] **Gate 2 — no version desync to repair.** Both files agreed at 0.30.0 before the bump:
       `node_lock.json` `v0.30.0` / commit `b1693ecb`, `system_dependencies.json` `0.30.0`.
-- [ ] **Gate 3 — bump the pins.** `node_lock.json` core `tag` + `commit`, PLUS the two
-      frontend pins above, PLUS `system_dependencies.json`. Grep all and confirm they agree.
-- [ ] **Gate 4 — re-check every pinned custom node against the new core.** MPI-465's break
-      was a node calling a changed core API while its own pin was innocent. Note #15277
-      "Harden some nodes against potential issues related to combos" touches `nodes.py`
-      (+14-5) — core input validation, the shape of thing that bites a custom node.
-- [ ] **Gate 5 — LOCAL gate.** Upgrade the engine to the new pin, boot it, then
-      `node scripts/engine-floor-check.mjs` (48188 = app engine). Empirical, never a reading
-      of release notes. **Do the res_multistep seed check here too.**
-- [ ] **Gate 6 — sync BOTH files into mpi-ci, THEN rebuild the DEV image.**
-      `node_lock.json` AND `python_deps.txt` → `c:\AI\Mpi\mpi-ci\cubric-vision-pod\`,
-      committed with `git -C`. Then `build-pod-image` at `v<ver>-dev-<profile>`, bumping
-      **ONLY** `POD_IMAGE_VERSION_DEV` / `_CPU_DEV`. **NEVER the user-facing tag** — that
-      breaks every user's Pod on next boot. Re-run `--plan` immediately before the smoke:
-      both files are live working-tree state and a card landing mid-bump re-drifts them.
-      **NOTE: `0c4ded6` in the pod repo is committed but NOT pushed** (a prior sync).
+- [x] **Gate 3 — bump the pins.** DONE 2026-08-10. All four values moved and re-verified
+      against upstream, not copied from the research note: core `v0.30.0 → v0.31.0` and
+      commit `b1693ecb → 43cb4fff` (read off `git/ref/tags/v0.31.0`), frontend
+      `1.47.11 → 1.48.7` and templates `0.11.27 → 0.11.34` (read off the tag's own
+      `requirements.txt`), `system_dependencies.json` `0.30.0 → 0.31.0`. Grepped after: no
+      `0.30.0` / `1.47.11` / `0.11.27` / `b1693ecb` left in `dev_configs/` except the two
+      VOID smoke-evidence files, which is expected.
+      **`python_deps.txt` regenerated at the new core constraint** (`compile-node-deps.mjs`,
+      which resolves the constraint FROM the pin — free confirmation it propagated):
+      `--check` clean, and the regenerated diff is **7 comment lines, zero package moves**.
+      Core's own `requirements.txt` moved four lines — the two frontend pins plus
+      `comfy-kitchen 0.2.26 → 0.2.28` and `comfy-aimdo 0.4.11 → 0.4.13`. **None is in the
+      engine-owned torch set**, so the in-place upgrade stays four pip lines and no user
+      pays an ~11 GB torch reinstall. Say that in the notes.
+- [x] **Gate 4 — re-check every pinned custom node against the new core.** DONE 2026-08-10.
+      **Nothing our nodes call was removed or renamed.** The only deletion in the whole diff
+      is H3's own `scale_latent_inpaint` **override** — KJNodes reads
+      `model.scale_latent_inpaint` (`nodes/nodes.py:2809`) and `BaseModel` still defines it,
+      so that consumer is intact. `comfy/samplers.py` only ADDS
+      `self.inner_model.latent_shapes = latent_shapes`, and MpiNodes' `_PreviewWrapper`
+      delegates to the original `inner_sample` rather than reimplementing it, so the new
+      assignment still fires under our preview hook. #15277 turned out to be a
+      `DiffusersLoader` refactor, not a validation change that reaches a custom node.
+      Upstream repos: only **RES4LYF** has post-pin commits that smell of core compat
+      (`215f61fe` "x0 already unpacked to NestedTensor by newer comfy callbacks",
+      `7eec6147` packed/nested LTXAV latents) — and our only RES4LYF use is
+      `ClownsharKSampler_Beta` + `ClownModelLoader` in the two Chroma and two Krea2 **image**
+      graphs, which carry no nested latents. **Pins stay; do not bump a node to be tidy.**
+      What DID change semantically, for gate 8 to watch: H3 is now `ModelType.FLOW_AV` with
+      an `audio_shift` (3.0) and audio-stream scaling in `process_latent_in/out`, and
+      `MiniMaxH3SigmaShift` now sets `audio_shift` on a `ModelSamplingAV`. Node **ids** are
+      unchanged (only the display name became `ModelSamplingMiniMaxH3`), so no graph edit is
+      owed — but H3 AV output can legitimately differ from 0.30.
+- [x] **Gate 5 — LOCAL gate. PASSED 2026-08-10.** Engine moved **in place**, exactly as
+      MPI-457 designed it and with no wipe: `git checkout --force 43cb4fff` (`Previous HEAD
+      position was b1693ecb ComfyUI v0.30.0` → `HEAD is now at 43cb4fff ComfyUI v0.31.0`)
+      plus **four** pip lines — `comfyui-frontend-package==1.48.7`,
+      `comfyui-workflow-templates==0.11.34`, `comfy-kitchen==0.2.28`, `comfy-aimdo==0.4.13`.
+      **No engine-owned package moved, so no user pays a torch reinstall.** Verified on disk,
+      not from the log: `comfyui_version.py` = 0.31.0, `git rev-parse HEAD` = `43cb4fff`,
+      `git describe` = `v0.31.0`, `engine/.mpi_engine_version` = `0.31.0`, and the live
+      engine's `/system_stats` reports `comfyui_version 0.31.0` (torch 2.13.0+cu130,
+      python 3.13.14).
+      **Floor check green: 40 workflows, 183 class_types used, 0 missing**, against 1885
+      registered (1881 at 0.30.0 — core added 4). All 14 pinned custom nodes imported.
+      The ONE import error in the boot log is **pre-existing and by design**: KJNodes'
+      `PatchTritonVAE` needs `triton`, which `compile-node-deps.mjs` filters out as
+      engine-owned. No shipped graph uses that node — the floor check is what proves it.
+      Mechanics worth keeping: the upgrade was run from an **isolated instance**
+      (`npm run app:isolated`, port 62192), which detects the pin/stamp drift and upgrades
+      on boot by itself. Fabio's ComfyUI (PID under his Electron) was stopped FIRST — pip
+      cannot overwrite a loaded `cv2.pyd` on Windows — and `routes/comfy.js` does NOT respawn
+      on exit, so it stays down until someone asks for it. Killing the ComfyUI child, not the
+      app, also avoids the quit-time orphan-Pod sweep.
+      **Windows-half caveat still stands: registering is not running.** Gate 8 is still owed.
+- [~] **Gate 6 — sync BOTH files into mpi-ci, THEN rebuild the DEV image.**
+      **SYNC DONE 2026-08-10, commit `ce9bcc0` in mpi-ci** ("chore(pod): sync node_lock +
+      python_deps to ComfyUI 0.31.0"). Diff is the four pin values and nothing else — every
+      node commit already agreed, so there is no node drift riding along. **NOT PUSHED**, and
+      neither is `0c4ded6` beneath it, so mpi-ci is now **two commits ahead of origin/main**.
+      **BLOCKED ON FABIO for the two outward-facing steps:** `git -C … push` (push is
+      user-authorized per CLAUDE.md) and the CI dispatch that builds + publishes the images.
+      Decided and ready to run the moment he says go:
+      - **tag `0.21.0-dev`** (current dev pin is `v0.20.0-dev` = the 0.30.0 Pod half, MPI-467;
+        the README's "current DEV tag v0.19.0-dev" is stale — trust the const)
+      - **`wrapper_version=0.2.44`** — that is what `wrapper.py` self-declares now (MPI-483,
+        allocated-blocks disk). The app's `WRAPPER_VERSION` const stays at `0.2.41` **on
+        purpose**: it is only the fallback label injected at Pod create, and the comment
+        block says non-protocol wrapper fixes are deliberately not raised to it.
+      - **`comfyui_ref=v0.31.0`** — the TAG, never the SHA (`git clone --branch` exits 128
+        on a bare SHA; that was the MPI-189 first-CI failure).
+      - blank `only_profile` so BOTH legs build — a GPU-only push leaves CPU download Pods
+        pulling a tag that does not exist, and the Pod then exits at boot.
+      - after the build lands: bump `POD_IMAGE_VERSION_DEV` **and** `POD_IMAGE_VERSION_CPU_DEV`
+        to `v0.21.0-dev`. **Never `POD_IMAGE_VERSION`** — the stable pair stays at `v0.17.0`
+        until the release rebuild.
+      Then re-run `--plan` immediately before the smoke: both synced files are live
+      working-tree state and a card landing mid-bump re-drifts them.
 - [ ] **Gate 7 — assert the Pod reports 0.31.0** before smoking. The runner hard-fails on
       this itself; do not bypass it.
 - [ ] **⚠ BEFORE GATE 8 — WAIT FOR FABIO'S NEW H3 VAE DEP.** Told 2026-08-10: a new,
@@ -90,6 +170,12 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       so all 35 rows are void. Cheaper than this morning's run — the H3 ops now clamp
       `Input_Duration` to 1 (~22 frames, was ~73) and the volume is warm at 327GB.
 - [ ] **Gate 9 — evidence written**, `npm run release:check` satisfied.
+- [ ] **Put the op COUNT back into the engineNote.** `RELEASE_NOTES['1.4.0'].engineNotes`
+      was rewritten for 0.31.0 on 2026-08-10 (three lines now: the version + the small-update
+      fact, the H3/LTX/Wan speedup, the sweep). The sweep line deliberately carries **no
+      number** yet — the old "35 in total" describes the VOID 0.30.0 matrix and would have
+      been a false claim in a public changelog. Restore the real count from
+      `smoke-evidence.json` once gate 8 lands, and add the new count to the claim-audit set.
 - [ ] **STABLE Pod image rebuild — MANDATORY, and it is NOT the dev one.** An engine bump
       makes the release-time rebuild compulsory: ship the app at 0.31 while the released
       image is still 0.30 and every remote user silently runs two different ComfyUI
