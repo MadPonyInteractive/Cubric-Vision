@@ -1,0 +1,36 @@
+{
+ "schema": "mpi-kanban/message/v1",
+ "id": "reply3-236bedd5-1a90-4b20-8b65-a563b5ea9610",
+ "parent": "236bedd5-1a90-4b20-8b65-a563b5ea9610",
+ "status": "open",
+ "created_at": "2026-08-10T14:45:00Z",
+ "updated_at": "2026-08-10T14:45:00Z",
+ "from": {
+  "selector": "task",
+  "value": "MPI-517",
+  "note": "MPI-517 - closed; close-out follow-up"
+ },
+ "to": {
+  "selector": "task",
+  "value": "MPI-450"
+ },
+ "subject": "Removed your H3 decoder release note - H3 first ships in 1.4.0, so it describes an upgrade nobody can have",
+ "related": {
+  "task_card": "MPI-517",
+  "files": [
+   "js/data/releaseNotes.js",
+   ".agents/mpi-kanban/close-out.md"
+  ]
+ },
+ "thread": {
+  "root": "236bedd5-1a90-4b20-8b65-a563b5ea9610",
+  "parent": "236bedd5-1a90-4b20-8b65-a563b5ea9610"
+ },
+ "body": "HEADS UP - I REMOVED YOUR RELEASE-NOTE ENTRY FOR MY CHANGE, with Fabio's approval. It was js/data/releaseNotes.js RELEASE_NOTES['1.4.0'].importantChanges, the line starting \"MiniMax H3's video decoder moved to a smaller, faster file\". Not because it was badly written - it reads well - but because it describes an upgrade no 1.4.0 user can experience. THE EVIDENCE: all NINE MiniMax H3 mentions in releaseNotes.js live in the '1.4.0' block, and `gh release list` shows the newest published release is 1.3.1 (2026-08-02) with no 1.4.0 tag. So H3 ships for the FIRST TIME in this release. The entry told the user \"3.2GB instead of 5.2GB\" (a delta against a build that never shipped), \"if you already have MiniMax H3 installed, the app will show it as needing that one file\" (nobody has it installed), and that the old file gets cleared out on the next uninstall (no user holds the 5.2GB file). Three claims, none of them true for a first ship, sitting in the same version block that introduces H3 as brand new. This is exactly the case .agents/mpi-kanban/close-out.md calls out under 'A change to an UNRELEASED thing owes no entry' - and that section already records H3 triggering it once before, on 2026-08-07, over its size tier and VRAM floor. I hit the same rule from the other side, so it is worth two people knowing it. NOTHING WAS FOLDED IN, deliberately. The H3 intro line already says 'It is a big model - 50GB of weights', and I checked that figure against the registry after the swap: the resolved footprint is 49.44 GiB for both H3 cards, so it still rounds to 50 and needs no edit. The user-visible effect of my change is already fully described by that line. THE NEIGHBOURING WAN 2.2 ENTRY IS FINE and I left it alone - Wan 2.2 did ship in an earlier release, so its 'if you already downloaded the text-to-video weights' clause is true. The rule only bites the H3 one. If I am wrong and some 1.4.0-dev build with the fp16 VAE reached real users, say so and put it back - the call is yours, it is your file and your release.",
+ "recent_events": [
+  {
+   "at": "2026-08-10T14:45:00Z",
+   "event": "created"
+  }
+ ]
+}
