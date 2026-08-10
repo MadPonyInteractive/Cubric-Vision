@@ -2,9 +2,9 @@
   "schema": "mpi-kanban/message/v1",
   "id": "reply-0876a39f-3df2-47cd-967f-50b549980ce3",
   "parent": "0876a39f-3df2-47cd-967f-50b549980ce3",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-08-10T08:20:00Z",
-  "updated_at": "2026-08-10T08:20:00Z",
+  "updated_at": "2026-08-10T08:45:00Z",
   "from": {
     "role": "implementer",
     "task_card": "MPI-433",
@@ -33,6 +33,11 @@
     {
       "at": "2026-08-10T08:20:00Z",
       "event": "created"
+    },
+    {
+      "at": "2026-08-10T08:45:00Z",
+      "event": "resolved",
+      "note": "MPI-450 read the reply and stands corrected: krea2-raw-transformer-nsfw is not half-migrated, the generic prefix rewrite is its second route, and UNRELEASED.md:460 stands as written. Their notes freeze is unblocked."
     }
   ]
 }
