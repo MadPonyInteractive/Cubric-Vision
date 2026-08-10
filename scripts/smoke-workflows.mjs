@@ -439,28 +439,49 @@ async function ensureVolume(gb) {
     return made.volume || made;
 }
 
-async function pickGpu(volumeId) {
+/**
+ * @param {string[]} [exclude] gpuTypeIds already refused THIS run — availability is a
+ *   snapshot and RunPod can refuse a create seconds after reporting stock, so a card that
+ *   has already said no is not a candidate however healthy the availability payload looks.
+ */
+/**
+ * The choice itself, with no network in it, so it can be tested.
+ *
+ * EXACT name match, never a substring. `includes('l4')` also matches L40 and L40S —
+ * different cards at a different price — and 'RTX 3090' also matches 3090 Ti. L4 happening
+ * to sort first in RunPod's array is luck, not logic, and luck silently rents the wrong
+ * card.
+ * Availability: the payload has NO stockStatus field, so the guard that used to sit here
+ * (`g.stockStatus == null || ...`) could never fire and this function never actually
+ * checked stock. The real signal in this response is `lowestPrice`: an unavailable type
+ * reports nulls (measured 2026-08-08 — MI300X null, while L4/3090/4090 reported 55/30/31).
+ *
+ * @returns {{hit: object|null, notes: string[]}} `hit` null when nothing is left to try.
+ */
+export function selectGpu(gpus, exclude = []) {
+    const named = (g) => `${g.displayName || g.id}`.toLowerCase();
+    const inStock = (g) => (g.lowestPrice && g.lowestPrice.minMemory != null);
+    const notes = [];
+    for (const want of GPU_ORDER) {
+        const match = gpus.filter(g => named(g) === want.toLowerCase());
+        const hit = match.filter(g => !exclude.includes(g.id)).find(inStock);
+        if (hit) return { hit, notes, rank: GPU_ORDER.indexOf(want) + 1 };
+        if (match.length && match.every(g => exclude.includes(g.id))) notes.push(`  ${want}: refused a create already this run — next choice`);
+        else if (match.length) notes.push(`  ${want}: present but reporting no availability — next choice`);
+    }
+    return { hit: null, notes, rank: 0 };
+}
+
+async function pickGpu(volumeId, exclude = []) {
     if (opt('gpu')) return { id: opt('gpu'), displayName: opt('gpu') };
     const avail = await app('/runpod/gpu-availability');
     const gpus = avail.gpuTypes || avail.gpus || [];
-    // EXACT name match, never a substring. `includes('l4')` also matches L40 and L40S —
-    // different cards at a different price — and 'RTX 3090' also matches 3090 Ti. L4
-    // happening to sort first in RunPod's array is luck, not logic, and luck silently
-    // rents the wrong card.
-    // Availability: the payload has NO stockStatus field, so the guard that used to sit
-    // here (`g.stockStatus == null || ...`) could never fire and this function never
-    // actually checked stock. The real signal in this response is `lowestPrice`: an
-    // unavailable type reports nulls (measured 2026-08-08 — MI300X null, while
-    // L4/3090/4090 reported 55/30/31).
-    const named = (g) => `${g.displayName || g.id}`.toLowerCase();
+    const { hit, notes, rank } = selectGpu(gpus, exclude);
+    for (const n of notes) log(n);
+    if (hit) { log(`  gpu: ${hit.displayName || hit.id} (preferred #${rank})`); return hit; }
     const inStock = (g) => (g.lowestPrice && g.lowestPrice.minMemory != null);
-    for (const want of GPU_ORDER) {
-        const match = gpus.filter(g => named(g) === want.toLowerCase());
-        const hit = match.find(inStock);
-        if (hit) { log(`  gpu: ${hit.displayName || hit.id} (preferred #${GPU_ORDER.indexOf(want) + 1})`); return hit; }
-        if (match.length) log(`  ${want}: present but reporting no availability — next choice`);
-    }
     die(`no preferred GPU available in ${DATACENTER}. Wanted, in order: ${GPU_ORDER.join(' → ')}. `
+        + (exclude.length ? `Already refused this run: ${exclude.join(', ')}. ` : '')
         + `Types offered: ${gpus.map(g => `${g.displayName || g.id}${inStock(g) ? '' : ' (no stock)'}`).join(', ')}`);
 }
 
@@ -485,21 +506,52 @@ async function waitReady(what, probe, timeoutMs, o = {}) {
  * for this short of the wrapper answering, and a run that just keeps polling waits
  * forever on a host that will never work. So: give the boot a budget, then throw the
  * host away and ask for another one.
+ *
+ * A REFUSED create is a different animal from a dead host and must not be conflated with
+ * one (2026-08-10). RunPod answers "no longer any instances available with the requested
+ * specifications" with HTTP 502, and `app()` THROWS on any non-2xx — so the `made.error`
+ * branch below, written for exactly this, could never see it. The throw went straight past
+ * this loop and killed a run whose ~300 GB fill leg had already finished and whose CPU Pod
+ * was already deleted. Two consequences, both handled here:
+ *   - a refusal is caught and treated as a refusal, not a crash;
+ *   - it ADVANCES to the next card in GPU_ORDER instead of asking the same sold-out one
+ *     again, and does not spend a billing attempt, because nothing was ever rented.
+ * @param {(refusedId: string) => Promise<{id:string,displayName?:string}|null>} [nextGpu]
+ *   called on a refusal to choose another card; omit for a Pod with no alternative (CPU).
  */
-async function createPodWithRetry(spec, label, readyMs, attempts = 3) {
+async function createPodWithRetry(spec, label, readyMs, attempts = 3, nextGpu = null) {
     _podLive = false;
-    for (let a = 1; a <= attempts; a++) {
+    let cur = { ...spec };
+    // Refusals are capped separately: they cost nothing, so they must not eat the billed
+    // attempts, but they still need a floor or a sold-out datacenter loops forever.
+    let refusals = 0;
+    for (let a = 1; a <= attempts;) {
         log(`\n  ${label}: create (attempt ${a}/${attempts})…`);
-        const made = await app('/remote/pod/create', { method: 'POST', body: JSON.stringify(spec) });
+        let made;
+        try {
+            made = await app('/remote/pod/create', { method: 'POST', body: JSON.stringify(cur) });
+        } catch (err) {
+            made = { error: 'create_failed', message: err.message };
+        }
         if (made && made.error) {
             log(`  ⚠ create refused: ${made.message || made.error}`);
-        } else if (await waitReady(label, async () => (await app('/remote/comfy/status')).ready, readyMs, { soft: true })) {
+            if (!nextGpu || ++refusals > GPU_ORDER.length) {
+                die(`${label}: ${refusals > GPU_ORDER.length ? 'every preferred card refused a create' : 'create refused'} — ${made.message || made.error}`);
+            }
+            const g = await nextGpu(cur.gpuTypeId);
+            if (!g) die(`${label}: create refused and no other preferred card is available — ${made.message || made.error}`);
+            log(`  switching to ${g.displayName || g.id} — nothing was rented, so this does not spend an attempt`);
+            cur = { ...cur, gpuTypeId: g.id };
+            continue;   // a refusal is not a billed attempt
+        }
+        if (await waitReady(label, async () => (await app('/remote/comfy/status')).ready, readyMs, { soft: true })) {
             _podLive = true;
             return true;
         }
         log(`  recycling the Pod — RUNNING with no wrapper is a dead host, not a slow one`);
         await app('/remote/pod/delete-active', { method: 'POST' }).catch(() => { });
         await sleep(5000);
+        a++;
     }
     die(`${label} never came up in ${attempts} attempts. RunPod capacity or image pull is broken in ${DATACENTER} right now.`);
 }
@@ -1354,9 +1406,11 @@ async function main() {
     // AND before it gives up. EU-RO-1 produced four RUNNING-but-dead hosts on 2026-08-08,
     // so this is a live risk, not a theoretical one. Two attempts, not three: each one is
     // billed GPU time, so the retry is a safety net, not a persistence strategy.
+    const refused = [];
     await createPodWithRetry(
         { gpuTypeId: gpu.id, volumeId: volume.id, datacenter: DATACENTER, minMemoryInGb: MIN_RAM_GB },
-        'GPU Pod', 20 * 60 * 1000, 2);
+        'GPU Pod', 20 * 60 * 1000, 2,
+        async (refusedId) => { refused.push(refusedId); return pickGpu(volume.id, refused); });
     const engine = await assertPodEngineVersion();
     // The pre-flight guard compared the prior file to node_lock; this compares it to what
     // the Pod actually reported. They differ under --allow-unproven-engine, where `got` is
