@@ -25,7 +25,17 @@ _(none yet)_
 
 ## What's new
 
-_(none yet)_
+- **First run asks how you want to work before it asks for a folder.** Setup opened on
+  a models-folder picker, with "run on a cloud GPU instead" as a small link at the
+  bottom — so the only obvious path was a multi-gigabyte install, even on a machine
+  that will never use it. It now opens on the actual question: **Local + Remote**
+  installs ComfyUI here and generates on your own card, with a cloud GPU there for the
+  jobs it cannot take; **Remote only** skips the install entirely and takes you
+  straight into the app to connect a RunPod account. Each side says plainly what it
+  costs you — a one-time install and a capable GPU, or an account billed while a Pod
+  runs — and you can change your mind later in Settings. The folder picker is still
+  there, one step further in, and it now reads as one screen rather than three
+  different left edges.
 
 ## Fixes
 
