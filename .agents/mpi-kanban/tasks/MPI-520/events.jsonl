@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-520", "type": "task.created", "at": "2026-08-10T20:30:00Z", "actor": "claude", "summary": "v2v extend app integration, blocked on the 1.4 release"}

@@ -1,8 +1,6 @@
 {
   "schema": "mpi-kanban/files/v1",
   "files": [
-    "comfy_workflows/scripts/workflow_generation/ltx_v2v_template.json",
-    "comfy_workflows/ltx_v2v.json",
-    "comfy_workflows/ltx_v2v_int8.json"
+    "comfy_workflows/raw/ltx_v2v_template.json"
   ]
 }

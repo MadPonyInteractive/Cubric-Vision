@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-520",
+  "title": "LTX 2.3 v2v extend - wire the proven bench workflow into the app",
+  "description": "Bench-proven single-stage video extend (comfy_workflows/raw/ltx_v2v_template.json, 56 nodes) runs end to end incl. silent sources + 3s foley. BLOCKED until 1.4 ships. Then: restore Input_Width/Input_Height, fan to API via generate_ltx.py, extend op in commandRegistry.js + models.js. See MPI-4 brief/validation.",
+  "column": "todo",
+  "maturity": "blocked",
+  "status": "active",
+  "created_at": "2026-08-10T20:30:00Z",
+  "updated_at": "2026-08-10T20:30:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "video",
+    "ltx"
+  ],
+  "priority": "high"
+}

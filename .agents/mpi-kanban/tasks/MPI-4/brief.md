@@ -223,3 +223,43 @@ COMBO membership, widget arity; all 77 links against a re-implementation of Comf
 `validate_node_input`; a live `app.loadGraphData` in the frontend (0 missing types, 0
 error nodes, 0 dangling links); and `app.graphToPrompt()` diffed against an independent
 API conversion — 0 differences. **NOT executed** — needs a real video path and the GPU.
+
+
+## Session 2026-08-10 (cont.) — the extend workflow RUNS; foley discovered
+
+`ltx_v2v_template.json` executed end to end on the bench against an H3 clip (with
+audio) and a WAN 16fps clip (silent). Landed at
+`comfy_workflows/raw/ltx_v2v_template.json`, byte-identical to the copy that ran.
+Every root cause and the code line proving it is in `validation.md` — read that,
+not this summary. App integration is **MPI-520**, blocked on the 1.4 release.
+
+**Foley fell out of the silent-source fix, unplanned.** Masking the whole audio
+stream when the source has no audio (rather than freezing an all-zeros latent
+that decodes to hiss) means LTX generates audio across the reference window too,
+conditioned on video it did not make. Confirmed working on a WAN clip: the whole
+3.06s got sound, including a spoken line, at zero extra sampler cost — those
+samples were already being computed and discarded.
+
+### NEXT SESSION — full-clip V2V Foley as its own op
+
+Add sound to any muted video (the WAN use case). Same spine as `ltx_v2v`, third
+mask polarity: **freeze all video, mask all audio, generate no new frames.**
+Extend pads, lipsync does `partial`, foley freezes the video side. Reference:
+`LTX-2.3 - V2V Foley (Add Sound To Any Video)` in the RuneXX collection (linked
+at the top of this brief), and the bench's own `LTX_lipdub_v2v_template.json`.
+
+**Design decision (user, 2026-08-10): the foley workflow gets the SAME audio input
+and audio reference the main workflow has**, so a user can supply a reference
+voice, or part of the real audio, from the start. `ltx_i2v_t2v_template.json`
+already carries the parts to copy: `MpiLoadAudio | Input_Audio`,
+`LTXVReferenceAudio` (ID-LoRA speaker identity, `identity_guidance_scale`),
+`Input_Use_Input_Audio` / `Input_Use_Reference_Audio` (`MpiSimpleBoolean` →
+`MpiIfElse`), and the `SolidMask` → `SetLatentNoiseMask` audio-mask pair.
+
+Open question that motivated it: on the extend run the model generated a spoken
+line with NO voice reference at all. If timbre turns out unstable across clips,
+the reference-audio hook is the answer rather than a bigger model.
+
+**Scope note:** foley on the extend workflow covers only the reference window
+(~3s at the 73 cap) because that is all the model sees. Widening it means raising
+`Ref_Frames`, which is the cost the cap exists to avoid — hence a separate op.
