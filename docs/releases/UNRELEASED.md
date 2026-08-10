@@ -191,6 +191,13 @@
   already have LTX Balanced installed, the new file downloads once and the old one is
   cleaned up. Text to Video and Image to Video also share one workflow now, so which
   one you get follows from whether you supply a first or last frame.
+- **MiniMax H3's video decoder moved to a smaller, faster file.** The part that turns
+  a finished generation back into pictures is now a compressed build: 3.2GB instead of
+  5.2GB, and quicker, with no loss of quality. If you already have MiniMax H3 installed,
+  the app will show it as needing that one file and download it once. The old file is no
+  longer part of the model, so the next time you uninstall a model and let it delete its
+  files, it gets cleared out with it rather than sitting on your drive owned by nothing.
+  It needs the newer engine, which this version installs for you.
 - **Wan 2.2 is image-to-video only now.** Its Text to Video operation has been
   retired: LTX 2.3 does that job better, and Wan's text-to-video weights were a
   27GB download that served nothing else. Image to Video is untouched — same
