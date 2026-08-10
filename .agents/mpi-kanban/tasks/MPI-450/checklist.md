@@ -166,9 +166,9 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       **Drift re-checked AFTER the sync, by the runner itself:** `--plan` prints
       `pod lock + python_deps in sync with v0.31.0 ✓`, plus `first-party nodes: every Mpi*
       class_type exists at MpiNodes fe812d47` and `40 shipped graphs sweep clean`.
-- [ ] **Gate 7 — assert the Pod reports 0.31.0** before smoking. The runner hard-fails on
+- [x] **Gate 7 — assert the Pod reports 0.31.0** before smoking. The runner hard-fails on
       this itself; do not bypass it.
-- [ ] **⚠ BEFORE GATE 8 — WAIT FOR FABIO'S NEW H3 VAE DEP.** Told 2026-08-10: a new,
+- [x] **⚠ BEFORE GATE 8 — WAIT FOR FABIO'S NEW H3 VAE DEP.** Told 2026-08-10: a new,
       smaller, faster H3 VAE just shipped and takes H3 to ~27s (from ~40s on 0.31, ~70s on
       0.30). He is adding it in a **parallel session** as a dependency change and will
       continue the handoff when it is in. It is almost certainly what `Support int8_convrot
@@ -196,7 +196,7 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       `validating` because Fabio's no-local-generations rule blocks their live H3 gen — **if
       the matrix executes an H3 op, that discharges it and they close on our evidence. Tell
       them.**
-- [ ] **Gate 8 — full smoke matrix.** Not `--retry-failed`: the evidence is engine-scoped
+- [x] **Gate 8 — full smoke matrix.** Not `--retry-failed`: the evidence is engine-scoped
       and `release-health-check.mjs:463` refuses a file produced against a different engine,
       so all 35 rows are void. Cheaper than this morning's run — the H3 ops now clamp
       `Input_Duration` to 1 (~22 frames, was ~73) and the volume is warm at 327GB.
@@ -268,14 +268,58 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       `cubric-vision` Pods before every create, so spinning a CPU Pod to test this while a
       smoke run is live would DELETE the running smoke Pod. Test it between runs, and the
       probe is one `GET /remote/pod/disk` while a CPU Pod is up.
-- [ ] **Gate 9 — evidence written**, `npm run release:check` satisfied.
-- [ ] **Put the op COUNT back into the engineNote.** `RELEASE_NOTES['1.4.0'].engineNotes`
+- [x] **Gate 9 — evidence written**, `npm run release:check` satisfied.
+- [x] **Put the op COUNT back into the engineNote.** DONE — and both numeric claims in
+      the note were re-verified from committed artifacts on 2026-08-10 rather than trusted:
+      `smoke-evidence.json` is 35 rows, all `PASS`, `engine.got 0.31.0 proven true`, so "35 in
+      total" is exact; and `git show v1.3.1:dev_configs/node_lock.json` reads `core.tag
+      v0.29.2`, so "from 0.29.2, two upstream releases in one step" is what released users
+      actually move from — the pre-bump tree was 0.30.0, but no user ever had it.
+      ORIGINAL TEXT: **Put the op COUNT back into the engineNote.** `RELEASE_NOTES['1.4.0'].engineNotes`
       was rewritten for 0.31.0 on 2026-08-10 (three lines now: the version + the small-update
       fact, the H3/LTX/Wan speedup, the sweep). The sweep line deliberately carries **no
       number** yet — the old "35 in total" describes the VOID 0.30.0 matrix and would have
       been a false claim in a public changelog. Restore the real count from
       `smoke-evidence.json` once gate 8 lands, and add the new count to the claim-audit set.
-- [ ] **STABLE Pod image rebuild — MANDATORY, and it is NOT the dev one.** An engine bump
+- [~] **STABLE Pod image rebuild — MANDATORY, and it is NOT the dev one.**
+      **DISPATCHED 2026-08-10T15:52Z — CI run `31405914277`, tag `v0.21.0`, both legs.**
+      Inputs verified before firing, not hand-typed: `comfyui_ref=v0.31.0` read off
+      `node_lock.json` `comfyui.core.tag` (the TAG — a bare SHA `exit 128`s the clone),
+      `wrapper_version=0.2.44` read off `wrapper.py:58`'s own `WRAPPER_VERSION` default,
+      `manifest_version=0.21.0` bare (the MPI-119 double-`v` guard), blank `only_profile`
+      so BOTH legs build (a GPU-only push leaves CPU download Pods pulling a 404 tag and
+      the Pod exits at boot). **The version follows the v0.17.0 precedent** — that tag's
+      own const comment calls it the "Release rebuild of the proven v0.17.0-dev", so the
+      stable tag is the proven dev number with the suffix dropped: `v0.21.0-dev` →
+      `v0.21.0`. Confirmed free on both registries before dispatch, with `v0.21.0-dev` as
+      a positive control so a silently-failing probe could not read as "free".
+      **mpi-ci needed no new commit** — `node_lock.json` and `python_deps.txt` in the build
+      context are sha256-IDENTICAL to Vision's copies and already pushed at `ce9bcc0`;
+      the repo is 0/0 against `origin/main`.
+      **BUILT AND PUBLISHED 2026-08-10 — both legs `success`, both tags pull-verified
+      public** (`v0.21.0-cu130` on Docker Hub, `v0.21.0-cpu` on GHCR). The build log proves
+      it is the 0.31.0 engine and not a relabel: `COMFYUI_REF=v0.31.0` +
+      `CUBRIC_MANIFEST_VERSION=0.21.0` in the buildx args of BOTH legs. The MPI-341 gate is
+      green on the new core — `node-import smoke test OK`, zero `IMPORT FAILED` — with
+      post-node `torch 2.12.0+cu130 torchvision 0.27.0+cu130` and exactly one opencv
+      (`cv2 5.0.0 ximgproc True`). Pins moved: `POD_IMAGE_VERSION` and
+      `POD_IMAGE_VERSION_CPU` → `v0.21.0`, the DEV pair deliberately untouched, `node
+      --check` clean. `WRAPPER_VERSION` stays `0.2.41` — its own comment at
+      `remotePodLifecycle.js:283` records 0.2.44 as deliberately NOT raised, because an
+      older wrapper answers the same route with the same shape.
+
+      **⚠ ONE GATE IS STILL OPEN: the 5b boot smoke has NOT been run on this image.**
+      Docker Desktop is down on this box (`failed to connect to the docker API at
+      npipe:...dockerDesktopLinuxEngine`), and `docker manifest inspect` needs no daemon,
+      so 5a passing says nothing about whether the image BOOTS. **I tried to inherit the
+      dev image's live proof and the attempt FAILED, which is why this matters:** the two
+      images' layer digests were compared directly and they diverge — cu130 from layer
+      index 11, cpu from index 4, config digests unequal — because a clean rebuild
+      re-resolved apt/pip bits. So "v0.21.0-dev ran 35 smoke ops" is NOT evidence about
+      `v0.21.0`. Cheapest close: start Docker Desktop and run skill step 5b against
+      `v0.21.0-cpu` (~1 minute), or accept it on the user's live Pod verify. Do not record
+      it as proven on the strength of the dev run.
+      ORIGINAL TEXT: **STABLE Pod image rebuild — MANDATORY, and it is NOT the dev one.** An engine bump
       makes the release-time rebuild compulsory: ship the app at 0.31 while the released
       image is still 0.30 and every remote user silently runs two different ComfyUI
       versions. Promotion is a **clean rebuild at a real version, never a dev tag renamed**,
@@ -296,8 +340,19 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       transcription errors come from, the same reasoning that made the fold a script. Only
       the lead paragraph, the two New Operations lines (`control`, `ref2v_ms` — both already
       stamped `appVersionIntroduced 1.4.0` in `operation_registry.json`) and the platform
-      checklist are hand-written. **Re-render it after ANY notes edit** —
-      `scratchpad/render-archival-note.mjs`, run from the repo root.
+      checklist are hand-written. **The "re-render it after ANY notes edit" instruction is GONE, and so is the
+      script it named** — `scratchpad/render-archival-note.mjs` lived in a session's temp
+      scratchpad and no longer exists, so this line was pointing the next session at a
+      dead path. A rendering script was the wrong shape anyway: the note has hand-written
+      parts (the lead paragraph, the two New Operations lines, the platform checklist), so
+      re-rendering it clobbers them. **Replaced 2026-08-10 by an enforced gate instead** —
+      `checkArchivalParity` in `scripts/release-health-check.mjs` asserts every
+      `RELEASE_NOTES[appVersion]` bullet appears verbatim in the archival note
+      (whitespace-squashed, so the markdown may wrap freely). Nothing to remember to run:
+      `npm run release:check` already gates the release and now catches the drift.
+      Negative-controlled — a ONE-WORD edit ("towards" -> "toward") inside a rendered
+      bullet turns the check red and names the offending bullet, and the note was restored
+      to a byte-identical sha256 afterwards. Current state: 70 bullets, 70 present.
       If the cut slips past 2026-08-10, rename the file; `release-health-check` matches
       `YYYY-MM-DD-v<ver>.md` on any date, but the name should not lie.
 - [x] **A FALSE CLAIM was caught by `release:deps` and corrected in all three copies**
@@ -312,14 +367,31 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
       alone will remove `vae-minimax-h3-video` from it** by making R2 the primary with HF as
       fallback. **Re-run `release:deps` after their dep lands** and confirm the sentence is
       still true.
-- [ ] `npm run release:approve -- --yes` (writes `.approved-1.4.0.json`; commit it).
-      **Approve LAST** — the token hashes the rendered notes, so any later copy edit
-      re-blocks the build.
+- [x] `npm run release:approve -- --yes` — DONE 2026-08-10T16:13:57Z. Wrote
+      `docs/releases/.approved-1.4.0.json`, hash `f11ac61e…`. Run genuinely last: the four
+      checks were all green on the final tree first — `release:check` passed, `npm test`
+      **546/546** (540 in the last handoff + the 6 in `tests/smoke-gpu-fallback.test.cjs`
+      from `d5e96b7f`, so the delta is accounted for, not mysterious), `npm run
+      test:desktop` **17/17**, `npm run release:deps` **227/227 reachable**. The token
+      hashes the rendered notes, so ANY later copy edit re-blocks the build and this must
+      be re-run. A pin or code edit does not — only the notes are hashed.
 - [x] **`npm test` 540/540 pass · `npm run test:desktop` 17/17 pass · `npm run release:deps`
       all 227 URLs reachable** (2026-08-10, all three on the bumped engine's tree).
       `release:check` is down to ONE failure and it is the right one: the smoke evidence was
       produced against 0.30.0 and is stale against the new pin. Both archival-note complaints
       are gone. **Re-run all four after the smoke** — approve last.
+- [x] **RUNTIME-CHANNEL PROMOTE PRE-CHECKED 2026-08-10 — it IS owed, and it will not
+      refuse.** `mpi-release`'s preconditions stop on a drifted Pod runtime, so this was
+      measured before reaching that stop rather than discovered at it. All three sha256s
+      differ between the channels — `dev` is wrapper **0.2.44**, `stable` is still
+      **0.2.40** (MPI-483's allocated-blocks fix plus MPI-398's event-loop fixes are the
+      delta) — so shipping without a promote would put the new app against the OLD Pod
+      runtime. **And the promote can actually run:** `publish-runtime.sh promote` REFUSES
+      when the working tree's hashes differ from the live `dev` manifest, and all three
+      match it byte-for-byte (`start.sh 6cd65064…`, `start-cpu.sh 5b7a1879…`,
+      `wrapper.py 85ef00e1…`). So the manifest stop is a go/no-go for Fabio, not a repair
+      job. **Never auto-promote** — it is a live op on released users, same class as a push.
+
 - [ ] CI artifacts (all three OS) → MPI-249's Linux leg on the REAL
       `CubricVision-linux-x64-v1.4.0.tar.gz` → `/mpi-release`, PROMOTE at the manifest stop.
 

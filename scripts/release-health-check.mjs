@@ -244,6 +244,40 @@ async function checkVersions() {
   return { appVersion, schemaVersion };
 }
 
+// The archival note under docs/releases/ is a RENDERED COPY of RELEASE_NOTES[version],
+// so the two diverge the moment a bullet is reworded in one and not the other — a public
+// changelog disagreeing with the in-app one is the same class of false claim the rest of
+// this checker exists to stop. It used to be guarded by remembering to re-run a rendering
+// script from a session scratchpad, which is to say it was not guarded at all: that path
+// no longer exists. Compare on whitespace-squashed text so the markdown stays free to
+// wrap its lines however it likes.
+const squash = (text) => text.replace(/\s+/g, ' ').trim();
+
+async function checkArchivalParity(version, notesText, markdownName) {
+  const start = notesText.indexOf(`'${version}': {`);
+  if (start === -1) return; // absent runtime notes already failed above
+
+  // End the block at the NEXT version key. lastIndex starts past this key's own line
+  // start, so the anchored pattern cannot re-match the block we are delimiting.
+  const nextKey = /^\s*['"]\d+\.\d+\.\d+['"]\s*:/gm;
+  nextKey.lastIndex = start + 1;
+  const block = notesText.slice(start, nextKey.exec(notesText)?.index ?? notesText.length);
+
+  const bullets = [...block.matchAll(/^ {6}'((?:[^'\\]|\\.)*)',$/gm)]
+    .map((match) => squash(match[1].replaceAll("\\'", "'").replaceAll('\\\\', '\\')));
+  if (bullets.length === 0) {
+    fail(`Could not read any release-notes bullets for ${version}; archival parity unchecked.`);
+    return;
+  }
+
+  const markdown = squash(await readText(path.join(FILES.releasesDir, markdownName)));
+  for (const bullet of bullets) {
+    if (!markdown.includes(bullet)) {
+      fail(`Archival note ${markdownName} is missing a release-notes bullet: "${bullet.slice(0, 90)}..."`);
+    }
+  }
+}
+
 async function checkReleaseNotes(appVersion) {
   const notesText = await readText(FILES.releaseNotes);
   const escapedVersion = appVersion.replaceAll('.', '\\.');
@@ -253,9 +287,11 @@ async function checkReleaseNotes(appVersion) {
   }
 
   const releaseFiles = await fs.readdir(FILES.releasesDir);
-  const hasMarkdown = releaseFiles.some((name) => name.endsWith(`-v${appVersion}.md`));
-  if (!hasMarkdown) {
+  const markdownName = releaseFiles.find((name) => name.endsWith(`-v${appVersion}.md`));
+  if (!markdownName) {
     fail(`Missing archival release note docs/releases/YYYY-MM-DD-v${appVersion}.md.`);
+  } else {
+    await checkArchivalParity(appVersion, notesText, markdownName);
   }
 
   const runtimeVersions = [...notesText.matchAll(/^\s*['"](\d+\.\d+\.\d+)['"]\s*:/gm)]

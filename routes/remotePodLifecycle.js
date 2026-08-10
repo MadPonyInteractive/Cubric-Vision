@@ -144,7 +144,17 @@ const POD_IMAGE_BASE = 'docker.io/madponyinteractive/cubric-vision-pod';
 // v0.17.0 (MPI-342): ComfyUI 0.28.0 — text-model sampling speedup + int8/int4; carries
 // MPI-341's node-import smoke gate + cu130 pip constraints. Release rebuild of the proven
 // v0.17.0-dev; CI run 30059725213 (both legs green, pull- + boot-verified).
-const POD_IMAGE_VERSION = 'v0.17.0';
+// v0.21.0 (MPI-450): ComfyUI 0.31.0 — the 1.4.0 engine bump, and the rebuild is MANDATORY
+// rather than tidy: ship the app at 0.31.0 against a v0.17.0 image and every remote user
+// silently runs a different ComfyUI locally and remotely. Release rebuild of the proven
+// v0.21.0-dev (35 smoke ops, 0 FAIL, Pod asserted 0.31.0); CI run 31405914277, both legs
+// green and pull-verified public, `node-import smoke test OK` with zero IMPORT FAILED,
+// post-node torch 2.12.0+cu130, exactly one opencv (cv2 5.0.0 ximgproc True).
+// It is a CLEAN REBUILD, not the dev tag renamed — and that distinction is load-bearing,
+// not ceremonial: the two images' layer digests genuinely diverge (cu130 from index 11,
+// cpu from index 4) because the rebuild resolved fresh apt/pip bits, so the dev image's
+// live Pod proof does NOT transfer to this one.
+const POD_IMAGE_VERSION = 'v0.21.0';
 // The CPU image stays on GHCR (not moved to Docker Hub — MPI-189 only repointed
 // the GPU image whose cold-start pull is being measured).
 const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
@@ -174,7 +184,11 @@ const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
 // tree — keep the tags in lockstep (v0.10.3-cpu 404 trap).
 // v0.17.0-cpu (MPI-342): rebuilt in the same CI dispatch as the GPU image (0.28 wave);
 // boot-smoke verified (/health wrapper 0.2.38). Keep in lockstep with the GPU pin.
-const POD_IMAGE_VERSION_CPU = 'v0.17.0';
+// v0.21.0-cpu (MPI-450): rebuilt in the SAME CI dispatch as the GPU image (31405914277,
+// 0.31.0 wave), pushed to GHCR and pull-verified public. Kept in lockstep with the GPU
+// pin — a GPU-only bump is the v0.10.3-cpu 404 trap, where CPU download Pods pull a tag
+// that does not exist and the Pod exits at boot while the app blames a bad host.
+const POD_IMAGE_VERSION_CPU = 'v0.21.0';
 // MPI-340: DEV-ONLY image pins. _devMode (BUILD_HASH === 'dev') is false in every
 // released portable, so a shipped app can NEVER resolve these — the stable pins above
 // stay frozen while Pod-image work iterates. Bump these (not the stable pair) after a
