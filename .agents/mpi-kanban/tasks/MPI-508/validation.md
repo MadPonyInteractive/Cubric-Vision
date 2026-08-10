@@ -225,15 +225,57 @@ audio])` → `(1,1,12480)`) with a stubbed `PromptServer`, so unpack + marker + 
 emission are covered end to end. Stub `sys.modules['server']` before importing `preview.py`
 or the import drags ComfyUI's whole web stack in.
 
-### Still unproven — needs the GPU
+### PROVEN LIVE — four H3 runs (2026-08-10)
 
-The fix is not yet seen in the app. That needs the engine restarted (the staged copy under
-`engine/.../custom_nodes/ComfyUI-MpiNodes/` is already updated and byte-identical to
-`fe812d4`) and one real H3 run. Fabio's other agents were using the GPU, so it was not
-taken. Same run still owes: turbo OFF short-circuits the LoRA, the blob-leak fix
-(no repeated `ERR_FILE_NOT_FOUND`), and the five-second turbo re-measure for
-`docs/releases/UNRELEASED.md`.
+Engine restarted via `.engine-restart-request.json`; the loaded module was fingerprinted
+through `/object_info` (the reworked `preview_rate` tooltip is served, so it is the new
+code, not the staged file sitting unread). Driven through the app on :3000 with a probe
+that measures every `preview:frame` on a canvas.
 
-One thing to watch in that run: `MpiGalleryGrid`'s `PREVIEW_CLIP_MAX` is **48** and a burst
-is now 56 frames, so the rolling window holds the clip minus its first ~8 frames. Harmless
-if the loop reads fine; bump the constant if it does not.
+| run | steps | frames | green | mean RGB |
+|---|---|---|---|---|
+| 2s turbo ON | 6 | 342 (6x**56** + 6 from core) | **0** | 127,110,93 |
+| 5s turbo ON | 6 | 750 (6x**124** + 6) | **0** | 110,99,86 |
+| 5s turbo OFF | **20** | 2500 (20x124 + 20) | **0** | 135,115,97 |
+| 5s turbo ON (final) | 6 | 750 | **0** | 107,83,72 |
+
+56 and 124 are exactly what the CPU test predicts, so the live decode is the fixed path
+and not the old 65-frame one. Sample frames: `.playwright-cli/mpi508/frame*.jpg` — a red
+car on a coastal road at sunset, correct from the first burst.
+
+**Turbo OFF short-circuits correctly**: 20 steps against 6, so the `0.75 if a else 0.0`
+gate does skip the LoRA. Wall clock on a 5s clip, warm: **2m15s turbo ON, 4m15s OFF** —
+that is the number `UNRELEASED.md` was waiting on.
+
+### The blob fix from the previous session was WRONG and is reverted
+
+The same runs showed 2600 `ERR_FILE_NOT_FOUND` in the console. Revoking the frame each
+new one replaces cannot work: `MpiGalleryGrid` REPLAYS a 48-frame window at 8fps, for an
+unbounded time — the loop runs until the card is REMOVED, minutes after the last frame
+while the video downloads and thumbnails. Three bus-side rules were measured and all
+fail; the fourth is the fix:
+
+| rule | errors |
+|---|---|
+| revoke on arrival | 2600 |
+| lagged tail (ring 64 > window 48) | 377 |
+| flush on the terminal event | 1298, flat 8/s over exactly **48 distinct URLs** |
+| bus keeps only the newest, retainer frees its own | **3** |
+
+Those 48 distinct URLs are the diagnosis: it is the card's whole buffer. Shipped in
+`1605d9d3` with the reasoning in `docs/preview-bus.md` § Blob ownership. **Do not
+re-add a bus-side retire rule** — the lag that would be needed is not knowable there.
+
+Instrumenting beat reasoning here: wrapping `URL.revokeObjectURL` to log a stack per
+call is what proved single ownership, after two wrong theories about who was revoking.
+
+### Still open
+
+- The engine's INSTALLED `ComfyUI-MpiNodes` was hand-staged with `fe812d4`'s `preview.py`
+  and restarted. `engine/` is gitignored, so a fresh machine picks it up from the pin —
+  but this machine's copy is otherwise still whatever the last repair installed.
+- `PREVIEW_CLIP_MAX` is **48** while a burst is 56 (2s) or 124 (5s) frames, so the loop
+  replays the clip's tail, never its opening. It read fine across four runs; bump the
+  constant only if a longer clip makes that obvious.
+- Not verified on the REMOTE engine — the previewer's frames travel the same binary
+  channel either way, but a Pod run would prove it.

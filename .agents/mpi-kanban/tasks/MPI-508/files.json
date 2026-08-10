@@ -13,8 +13,11 @@
     "js/data/modelConstants/modelDeps.js",
     "js/data/modelConstants/models.js",
     "js/services/comfyController.js",
+    "js/services/activeGenerations.js",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
     "dev_configs/node_lock.json",
     "docs/preview-bus.md",
+    "docs/releases/UNRELEASED.md",
     "docs/models/h3/turbo.md",
     "docs/models/h3/performance.md"
   ]
