@@ -3,10 +3,10 @@
   "id": "f0814dde-1f16-4e5a-b226-8ab1278b421d",
   "role": "implementer",
   "task": "MPI-4",
-  "status": "active",
+  "status": "handoff_ready",
   "claude_session_id": "d0d8d986-76f3-43b8-97c4-70fbb1568276",
   "started_at": "2026-08-10T18:58:00Z",
-  "heartbeat_at": "2026-08-10T18:58:00Z",
+  "heartbeat_at": "2026-08-10T22:50:00Z",
   "name": "MPI-4 - full-clip V2V Foley workflow on the bench",
   "allowed_actions": [
     "read",
@@ -19,6 +19,12 @@
     {
       "at": "2026-08-10T18:58:00Z",
       "event": "session_started"
+    },
+    {
+      "at": "2026-08-10T22:50:00Z",
+      "event": "handoff_ready"
     }
-  ]
+  ],
+  "summary": "Full-clip V2V Foley workflow built, validated and committed (3f3bb3d8, ca346ef9, 04eb3c78). Ran once and produced audio, but hot and distorted; every run since died with UnboundLocalError noise_pred_neg. Both root causes found with the proving code line; both fixes landed UNEXECUTED. Next act is a bench run.",
+  "handoff": ".agents/mpi-kanban/state/handoffs/07642c07-88b8-4d48-ba49-4bdafba76b2f.json"
 }

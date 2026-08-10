@@ -7,7 +7,7 @@
   "task": ".agents/mpi-kanban/tasks/MPI-4/",
   "status": "needs_verification",
   "claim_kind": "write",
-  "heartbeat_at": "2026-08-10T19:35:00Z",
+  "heartbeat_at": "2026-08-10T22:50:00Z",
   "allowed_actions": [
     "edit",
     "verify"
@@ -20,7 +20,11 @@
     {
       "at": "2026-08-10T19:35:00Z",
       "event": "released_needs_verification"
+    },
+    {
+      "at": "2026-08-10T22:50:00Z",
+      "event": "handed_off_needs_verification"
     }
   ],
-  "outcome": "written and structurally proven; a bench GPU run is the outstanding check"
+  "outcome": "committed; two fixes landed unexecuted, a bench GPU run is the outstanding check"
 }

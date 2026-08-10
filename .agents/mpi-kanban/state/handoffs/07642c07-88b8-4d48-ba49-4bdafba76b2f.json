@@ -1,0 +1,120 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "07642c07-88b8-4d48-ba49-4bdafba76b2f",
+  "generated_at": "2026-08-10T22:50:00Z",
+  "from_session": ".agents/mpi-kanban/state/sessions/f0814dde-1f16-4e5a-b226-8ab1278b421d.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-4 - full-clip V2V Foley workflow built and committed; one guider fix is unexecuted and waiting on a bench run",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Build the full-clip V2V Foley workflow on the bench - freeze all video, mask all audio, generate no new frames - with the same audio input and audio reference sockets the main ltx_i2v_t2v workflow has.",
+    "status": "built, not yet proven",
+    "summary": "comfy_workflows/raw/ltx_v2v_foley_template.json exists, is committed (3f3bb3d8, ca346ef9, 04eb3c78), and is byte-identical to the bench copy. It has RUN once end to end and produced audio - but the audio was very loud and distorted. Two fixes have landed since and NEITHER has been executed. The next session's first act is a bench run, not code."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-4/brief.md",
+    "completed": [
+      "Workflow authored: 58 nodes, 92 links, zero new node packs, every class present on bench 8188 AND app engine 48188",
+      "Mask polarity: LTXVSetAudioVideoMaskByTime with mask_video=false + mask_init_value_video=0.0 freezes every video frame; audio influence rides mask_init_value_audio",
+      "Discovered the main workflow's SolidMask -> SetLatentNoiseMask influence pair CANNOT be reused - LTXVSetAudioVideoMaskByTime overwrites av_latent['noise_mask'] (latents.py:826-841), so it would have silently done nothing",
+      "No video decode: output muxes the ORIGINAL full-res frames against generated audio, so encode resolution cannot degrade the delivered video",
+      "TrimAudioDuration on the input-audio path - LTXVConcatAVLatent only calls fit_audio when the video side is already an AV latent, so a long reference track would otherwise OOM the sampler",
+      "Checked against Lightricks' OWN reference (archived at tasks/MPI-4/research/lightricks-foley-v2a-reference.json): architecture agrees node-for-node, all 19 steering parameters match",
+      "Foley IC-LoRA downloaded by the user to G:/CubricModels/loras/ltx-2.3/, wired at strength 1.0",
+      "FIRST RUN: audio very loud and distorted. Root cause read from /history - AUDIO cfg 6.0 into euler_ancestral_cfg_pp on the distilled int8 checkpoint. Set to 1.0",
+      "Resize To Target keep_proportion crop -> resize: crop discarded frame content from an encode that exists only for model comprehension",
+      "SECOND+ RUNS: UnboundLocalError noise_pred_neg. Traced to MultimodalGuider at cfg 1.0/1.0. Node 118 (and 121) now use core CFGGuider at cfg 1",
+      "Lipsync investigated and the brief's wrong claim corrected: it is NOT a third mask polarity, it is EmptyLTXVLatentVideo + LTXAddVideoICLoRAGuide + LTXVSetAudioRefTokens + ic-lora-lipdub. Its own file, its own op"
+    ],
+    "pending": [
+      "RUN IT. Open ltx_v2v_foley_template.json on the bench, muted clip in Input_Video, both audio toggles OFF, press Run. Everything below is unproven until this passes",
+      "If the audio is still hot: LTXVNormalizingSampler is a drop-in for SamplerCustomAdvanced, audio_normalization_factors default '1,1,0.25,1,1,0.25,1,1' quarters the audio latent at steps 3 and 6 - sized for our 8-step schedule",
+      "If foley quality is poor rather than hot: the Foley LoRA was tuned on ltx-2.3-22b-dev with LTXVScheduler 30 steps and plain euler. We run distilled int8 at 8 ManualSigmas steps. Swapping the scheduler is the bigger lever",
+      "OPEN UNKNOWN, does not block: what registers a sampler_post_cfg_function when the ref-audio branch is off. LTXVReferenceAudio is ruled out by four history runs; LTX2SamplingPreviewOverride uses add_wrapper_with_key(OUTER_SAMPLE), not a post-cfg hook. A print in multimodal_guider.py line 263 answers it in minutes, and is only needed if MultimodalGuider is ever wanted back",
+      "Voice mode is a SEPARATE test from foley mode and they are not simultaneously satisfiable: real path in Input_Audio (it is block_if_empty=true, so an empty string BLOCKS once the toggle executes it), strip 'speech, dialogue, talking, narration' from Input_Negative, and set Foley_Lora to None so the SFX LoRA and the ID LoRA are not stacked",
+      "Product decision owed at MPI-520: foley mode and voice mode want different negatives and a different LoRA state. Do not ship both toggles as if they compose"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-4",
+    "title": "LTX 2.3 video model integration",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
+    "links": {
+      "brief": ".agents/mpi-kanban/tasks/MPI-4/brief.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "files": ".agents/mpi-kanban/tasks/MPI-4/files.json",
+      "research": ".agents/mpi-kanban/tasks/MPI-4/research/"
+    }
+  },
+  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "knowledge_preservation": {
+    "completed": [
+      "tasks/MPI-4/validation.md carries every root cause with the code file and line that proves it - read it, not the summaries",
+      "tasks/MPI-4/brief.md carries the foley scope, the lipsync correction, and the run-order for failure modes",
+      "tasks/MPI-4/research/lightricks-foley-v2a-reference.json is Lightricks' own API workflow, archived so nobody re-derives their guider values"
+    ],
+    "pending": [
+      "PROPOSED, NOT WRITTEN (needs the user's yes): docs/workflow-authoring/ entry for MpiMath - evaluates math.* with NO min/max builtins but DOES support floor, ternaries and comparisons, AND swallows every exception returning 0.0 with only a print (math.py:28-33), so a malformed expression is a silent wrong number rather than an error node",
+      "PROPOSED, NOT WRITTEN: the in-place workflow-edit recipe (GET userdata -> mutate named nodes -> assert pos/size unchanged -> POST) belongs in docs/workflow-authoring/. It is currently only in validation.md"
+    ]
+  },
+  "next_action": {
+    "description": "RUN the foley workflow on the bench. Open ltx_v2v_foley_template.json, muted clip in Input_Video, both audio toggles off, Run. Two fixes have landed unexecuted (AUDIO cfg 6 -> 1, and both guiders MultimodalGuider -> core CFGGuider at cfg 1); this run is what proves or kills them. Read tasks/MPI-4/validation.md first.",
+    "command": "mpi-continue MPI-4"
+  },
+  "context": {
+    "key_decisions": [
+      "EDIT THE BENCH COPY IN PLACE - NEVER REGENERATE. The user hand-organises node positions to read the graph; all 58 had been repositioned between two edits. Method: GET the userdata copy, mutate only the nodes involved, assert every node's pos/size is unchanged, POST. scratchpad patch_inplace2.py is the shape. build_foley.py is a historical record of how the graph was first derived and must NOT be re-run",
+      "Reference audio STAYS in the foley file (user's call) for voice consistency, even though the Foley LoRA is a sound-effects model whose negative suppresses speech",
+      "MultimodalGuider is unusable at cfg 1.0 on both modalities - proven over four runs. Core CFGGuider at cfg 1 is the repo's standard for this checkpoint and is what the extend workflow ran when it produced usable foley audio",
+      "Input_Width/Input_Height stay as injectable MpiInt: they set the resolution the model SEES, never the delivered pixels. A link on the widget slot would silently kill app injection"
+    ],
+    "constraints": [
+      "The user owns the bench browser tab and it holds the graph in memory. Ask them to close or reload it before writing to userdata, and re-fetch immediately before every write",
+      "Reference frame counts sit on the 8n+1 lattice; the graph derives them so no clip is rejected",
+      "Do NOT claim js/data/modelConstants/models.js or js/data/commandRegistry.js - app integration is MPI-520 and is blocked",
+      "SHARED TREE. Commit by explicit pathspec, never git add -A. A peer's mpi-cleanup already committed this session's co-owned files (events.jsonl, state/index.json) out from under it once - re-read before ever concluding work was lost",
+      "Kanban event lines need schema + id + type + at"
+    ],
+    "files_modified": [
+      "comfy_workflows/raw/ltx_v2v_foley_template.json",
+      ".agents/mpi-kanban/tasks/MPI-4/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-4/files.json",
+      ".agents/mpi-kanban/tasks/MPI-4/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-4/research/lightricks-foley-v2a-reference.json"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-4/brief.md",
+      "comfy_workflows/raw/ltx_v2v_foley_template.json"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["workflow authoring", "comfy injection", "comfy engine"]
+  },
+  "rules_active": [
+    "docs/workflow-authoring/README.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md"
+  ],
+  "recent_events": [
+    {
+      "schema": "mpi-kanban/event/v1",
+      "id": "MPI-4",
+      "type": "handoff.created",
+      "at": "2026-08-10T22:50:00Z",
+      "actor": "implementer",
+      "summary": "Foley workflow built and committed; two fixes unexecuted, next act is a bench run"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/07642c07-88b8-4d48-ba49-4bdafba76b2f.json and use mpi-continue on MPI-4. The full-clip V2V Foley workflow is BUILT and committed at comfy_workflows/raw/ltx_v2v_foley_template.json (58 nodes, byte-identical to the bench copy at 127.0.0.1:8188). It ran once and produced audio, but the audio was very loud and distorted, and every run since has died with UnboundLocalError noise_pred_neg. Both causes are diagnosed with the code line that proves them in tasks/MPI-4/validation.md: AUDIO cfg 6.0 into a CFG++ sampler on a distilled checkpoint, and MultimodalGuider never binding noise_pred_neg when both modalities sit at cfg 1.0. Both fixes have LANDED but NEITHER HAS BEEN EXECUTED - the first thing to do is run the workflow on the bench with a muted clip and both audio toggles off, not write more code. CRITICAL PROCESS RULE: the user hand-organises node positions to read the graph, so edit the bench copy IN PLACE (GET userdata, mutate only the nodes involved, assert every node's pos/size unchanged, POST) and never regenerate the file from build_foley.py."
+}

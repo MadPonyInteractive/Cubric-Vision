@@ -8,7 +8,7 @@
   "owner_session": ".agents/mpi-kanban/state/sessions/f0814dde-1f16-4e5a-b226-8ab1278b421d.json",
   "status": "needs_verification",
   "started_at": "2026-08-10T18:58:00Z",
-  "heartbeat_at": "2026-08-10T19:35:00Z",
+  "heartbeat_at": "2026-08-10T22:50:00Z",
   "allowed_actions": [
     "read",
     "edit",
@@ -23,6 +23,10 @@
     {
       "at": "2026-08-10T19:35:00Z",
       "event": "workflow_built_awaiting_gpu_run"
+    },
+    {
+      "at": "2026-08-10T22:50:00Z",
+      "event": "handoff_ready_awaiting_bench_run"
     }
   ]
 }
