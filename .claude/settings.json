@@ -19,6 +19,10 @@
           {
             "type": "command",
             "command": "python c:/AI/Mpi/Cubric-Vision/.claude/hooks/bump-rebuild-reminder.py"
+          },
+          {
+            "type": "command",
+            "command": "python c:/AI/Mpi/Cubric-Vision/.claude/hooks/handoff-index-drift.py"
           }
         ]
       }

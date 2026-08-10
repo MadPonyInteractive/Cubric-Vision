@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-512",
+  "title": "Remote install and Pod disk - one umbrella over six cards that share routes/remote*.js",
+  "description": "Cluster found by the mpi-end-session consolidation sweep: MPI-510, MPI-509, MPI-496, MPI-489, MPI-485, MPI-403 all touch the remote install path or the Pod's disk. They fail in the same place for the same reason and reading them one at a time hides that.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-10T06:05:00Z",
+  "updated_at": "2026-08-10T06:05:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

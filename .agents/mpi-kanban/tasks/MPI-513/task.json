@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-513",
+  "title": "Install state that lies to the user - one umbrella over the store and its display",
+  "description": "Cluster found by the mpi-end-session consolidation sweep: MPI-497, MPI-397 and MPI-320 are all the same shape - what the install UI shows disagrees with what the store knows, and the legacy _modelJobs/_depJobs maps are the common root.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-10T06:05:00Z",
+  "updated_at": "2026-08-10T06:05:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}
