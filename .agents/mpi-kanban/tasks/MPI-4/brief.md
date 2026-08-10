@@ -164,3 +164,62 @@ Register LTX 2.3 as a video model once `comfy_workflows/LTX23_t2v.json` (+
 
 (Originally deferred from the WAN dual-model + 12 LoRAs plan; sequencing lock 2026-05-21
 "post-release only" is now LIFTED — v1.0.0 public release shipped 2026-06-10.)
+
+
+## Session 2026-08-10 — video EXTEND authored on the bench (single stage)
+
+**The whole mechanism is one node.** `LTXVAudioVideoMask` (KJNodes,
+`nodes/ltxv_nodes.py`) with `max_length="pad"`: it takes an ENCODED reference latent,
+zero-pads it along time out to `video_end_time`, and writes `noise_mask=1` on the
+padding only. The sampler then denoises just the new tail and leaves the reference
+frozen. No `LTXVAddGuide`, no `EmptyLTXVLatentVideo` — the latent IS the guide.
+
+**Zero new node packs.** Every load-bearing class is core or `comfyui-kjnodes`, both
+already pinned; verified present on the app engine (48188), not just the bench. Three
+nodes in the donor graph are installed NOWHERE and must not be copied: `TrimAudio`
+(use core `TrimAudioDuration`), `NormalizeAudioLoudness` (drop), `easy showAnything`.
+
+**Decision: a SEPARATE v2v file, not a branch inside `ltx_i2v_t2v.json`.** The two
+front ends are mutually exclusive at the latent (empty+guide vs encode+mask), and the
+audio sockets mean opposite things (conditioning vs encoded source). Extend and lipsync
+are the same skeleton with the mask polarity flipped — lipsync freezes audio and masks
+video (`max_length="partial"`) — so both ops point at one `ltx_v2v.json`, exactly as
+`t2v_ms`/`i2v_ms` already share a file in `models.js`. Lipsync is NOT wired yet; the
+seam is the mask's time-range inputs. The bench already holds an
+`LTX_lipdub_v2v_template.json` worth reading before that step.
+
+**Where it is:** `ltx_v2v_template.json` in the BENCH workflow list (userdata), not yet
+in the repo. 46 nodes, 77 links, single stage — no `MpiStageLatents`, no latent
+upscaler, no TAE preview, no NAG, no transition/ID LoRA, no audio features. Keeps the
+6 user LoRA slots + `Merged Loras`, the `Input_*` node naming, `MpiLoadVideo` and
+`MpiSaveVideo`.
+
+**The 5 audio nodes are structural, not a feature.** LTX 2.3 samples a joint AV latent,
+so `LTXVConcatAVLatent` needs both sides and the audio tail must span the same seconds
+as the video tail. 2 in (trim + encode), 3 out (decode + trim + concat) so the extended
+clip keeps its soundtrack.
+
+**Reference window is derived, so no clip can be rejected.**
+`MpiMath floor((a-1)/8)*8+1` on `MpiLoadVideo.frame_count` → `MpiClamp` (min 1, max 73,
+titled `Input_Ref_Frames`). Snaps DOWN to the 8n+1 lattice the LTX latent grid needs
+(`((N-1)//8)+1`, `nodes_lt.py:79`), then caps. 1s→17, 2s→41, 3.04s+→73, garbage→1.
+`MpiMath` allows `math.*` only — no `min`/`max` builtins — but `floor` and ternaries
+work, and `MpiClamp` mirrors INT in → INT out.
+
+**Costs and open knobs:**
+- 73 ref frames = 10 of the 25 latent frames in a 5s extend at 24fps — ~40% of every
+  sampler step re-generates footage that the crossfade then discards. First sweep once
+  it runs: cap 73 → 41 → 25.
+- The cap also feeds `ImageBatchExtendWithOverlap.overlap`, so it sets the crossfade
+  length too. On a very short clip that is a 1-frame blend (hard cut). Decouple with a
+  second clamp if it shows.
+- Stage 2 (when it returns) has NO mask — `LTXVLatentUpsampler` emits a fresh latent —
+  so the reference tail gets re-sampled and the crossfade is mandatory, not polish.
+- Swapped `LTXVNormalizingSampler` for plain `SamplerCustomAdvanced` (what the donor
+  extend graph uses). If the audio comes out hot, that is the node to put back.
+
+**Verified without spending a generation:** class existence, required-input coverage,
+COMBO membership, widget arity; all 77 links against a re-implementation of ComfyUI's
+`validate_node_input`; a live `app.loadGraphData` in the frontend (0 missing types, 0
+error nodes, 0 dangling links); and `app.graphToPrompt()` diffed against an independent
+API conversion — 0 differences. **NOT executed** — needs a real video path and the GPU.
