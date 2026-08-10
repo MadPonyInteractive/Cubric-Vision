@@ -186,16 +186,41 @@ engine, and it is the reason a 1.5 bump may be worth it too. See the non-gating 
 
 ### Then, and only then, the release chain
 
-- [ ] Re-fold the notes: the `RELEASE_NOTES['1.4.0']` block is ALREADY WRITTEN (18/38/11 +
-      1 engineNote) but its engineNote says 0.30.0 and must be rewritten for 0.31.0 —
-      including the H3 speedup, the LTX/Wan speedup, and the res_multistep outcome if gate 5
-      proves it. `UNRELEASED.md` is still intact, so the fold re-runs from the script in the
-      handoff.
-- [ ] Archival `docs/releases/2026-08-<dd>-v1.4.0.md` — never written yet.
+- [x] **engineNote rewritten for 0.31.0** (2026-08-10). No re-fold was needed — only that
+      one field was wrong, so `UNRELEASED.md` was left alone. Now THREE lines: the version
+      plus the fact that it is a small install (no engine-owned package moved, so no
+      multi-gigabyte re-download), the H3 speedup **and** the LTX/Wan one (#15138 — it is not
+      only H3), and the sweep. **res_multistep gets no line: gate 5 proved it does not
+      shift.** Sweep line carries no count until gate 9 — see the gate 9 follow-up above.
+- [x] **Archival `docs/releases/2026-08-10-v1.4.0.md` written.** Rendered from
+      `RELEASE_NOTES['1.4.0']` **by script**, not hand-copied — 67 bullets is exactly where
+      transcription errors come from, the same reasoning that made the fold a script. Only
+      the lead paragraph, the two New Operations lines (`control`, `ref2v_ms` — both already
+      stamped `appVersionIntroduced 1.4.0` in `operation_registry.json`) and the platform
+      checklist are hand-written. **Re-render it after ANY notes edit** —
+      `scratchpad/render-archival-note.mjs`, run from the repo root.
+      If the cut slips past 2026-08-10, rename the file; `release-health-check` matches
+      `YYYY-MM-DD-v<ver>.md` on any date, but the name should not lie.
+- [x] **A FALSE CLAIM was caught by `release:deps` and corrected in all three copies**
+      (`releaseNotes.js`, `UNRELEASED.md`, the archival note). The notes said "Three files
+      still have a single route — the three small preview decoders". The checker reports
+      **nine**: the three `noMirror` decoders as described, **plus six that simply have no
+      mirror** — `minimax-h3-fl2va-transformer`, `minimax-h3-ref2va-transformer`,
+      `vae-minimax-h3-video`, `vae-minimax-h3-audio`, `h3-qwen3vl-32b-clip`,
+      `controlnet-union-flux`. Verified in `dependencies.js` before editing (single `url`,
+      no `mirrors`, `noMirror:false`), not taken from the tool's word. Rewritten to name the
+      SHAPE rather than a count, because the count moves with every dep change — **MPI-517
+      alone will remove `vae-minimax-h3-video` from it** by making R2 the primary with HF as
+      fallback. **Re-run `release:deps` after their dep lands** and confirm the sentence is
+      still true.
 - [ ] `npm run release:approve -- --yes` (writes `.approved-1.4.0.json`; commit it).
       **Approve LAST** — the token hashes the rendered notes, so any later copy edit
       re-blocks the build.
-- [ ] `npm run release:check`, `npm test`, `npm run test:desktop`, `npm run release:deps`.
+- [x] **`npm test` 540/540 pass · `npm run test:desktop` 17/17 pass · `npm run release:deps`
+      all 227 URLs reachable** (2026-08-10, all three on the bumped engine's tree).
+      `release:check` is down to ONE failure and it is the right one: the smoke evidence was
+      produced against 0.30.0 and is stale against the new pin. Both archival-note complaints
+      are gone. **Re-run all four after the smoke** — approve last.
 - [ ] CI artifacts (all three OS) → MPI-249's Linux leg on the REAL
       `CubricVision-linux-x64-v1.4.0.tar.gz` → `/mpi-release`, PROMOTE at the manifest stop.
 

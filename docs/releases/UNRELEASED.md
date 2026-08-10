@@ -452,8 +452,9 @@
   explanation: if both routes fail you still get the "your network blocked this,
   try a VPN" message instead of a bare error code. This helps when a network
   blocks the address; a network that interferes with the transfer itself can still
-  break a download. Three files still have a single route — the three small preview
-  decoders, which exist nowhere else in the form the app needs.
+  break a download. A handful of files still have a single route: the three small
+  preview decoders, which exist nowhere else in the form the app needs, and a few of
+  the largest model files, which we serve straight from the host that publishes them.
 - **Setting up the engine downloads less, and stops hiding a step that always
   failed.** The generation engine is built from a set of add-ons, and each one used
   to install its own list of supporting libraries — over a dozen separate passes that
