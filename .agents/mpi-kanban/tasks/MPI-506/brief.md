@@ -451,6 +451,78 @@ as the deliberate alternatives Fabio asked for - not as an upgrade path.
    and this section says it must vary per variant, the graph needs
    **`Input_Frames_Per_Chunk`** (`MpiInt`) wired to it. Added.
 
+### 2i. `denoise` and the alpha channel - both answered by measurement, 2026-08-10
+
+Fabio, on his own image run: *"it worked really well upscaling the image that I
+tried, [but] it made a bit too many changes."* Two candidate dials were on the
+table; neither is what it looks like.
+
+**`denoise` is quantised, and at steps=1 most of its range is a NO-OP.** ComfyUI
+sizes the schedule as `int(steps / denoise)` and keeps the last `steps+1` sigmas.
+At `steps = 1` that means **every value from ~0.67 to 1.0 collapses to the same
+1-step schedule** - `denoise = 0.75` produced a **byte-identical** file to `1.0`
+(mean abs diff 0.0000). Only 0.5 (-> a 2-step schedule) and 0.25 (-> 4-step) change
+anything. 3B, x2, vs a fixed lanczos baseline:
+
+| denoise | x lanczos | vs denoise 1.0 |
+|---|---:|---:|
+| 1.0 | 8.88 | - |
+| 0.75 | **8.88** | **0.00 (identical)** |
+| 0.5 | 2.60 | 2.61 |
+| 0.25 | 2.48 | 2.80 |
+
+So it *does* reduce how much the model changes - but as **two coarse steps**, and
+by starting the one-step model from a partially-noised LQ latent it was never
+trained on. The result reads soft and mushy rather than faithful-and-sharp
+(`IMG_denoise_3b_x2_face.png`). **Do not expose it, and do not ship it below 1.0.**
+This confirms §2a's "no denoise control" from measurement rather than from the
+node signature alone.
+
+**The dials that DO work for "too many changes" are already in the graph.** Per
+§2g, at x2 the **7B changes far less than the 3B** (5.28x vs 8.88x lanczos) and at
+x4 it inverts (16.87x vs 10.93x). Fabio's bench image graph shipped **7B at
+multiplier 4.0** - the single most aggressive cell in the whole matrix. Lower the
+factor, or use 3B at x4, and it changes less. No graph edit needed.
+
+**The honest continuous knob, if one is ever wanted**, is not `denoise`: blend
+`SeedVR2PostProcessing`'s output back against the resized original
+(`ResizeImageMaskNode`) with core **`ImageBlend`** (present on `:48188`, `blend_factor`
+FLOAT, `normal` mode), driven by an `Input_Strength` `MpiFloat`. 0 = plain lanczos,
+1 = full SeedVR2, no degradation in between. Not built - proposed only.
+
+**The image path is bit-deterministic.** Same seed, same graph, re-run: mean abs
+diff **0.0000**. A different seed moves the result by mean 2.45 / max 107. So the
+seed is a real knob on stills, and any diff below that magnitude is signal, not noise.
+
+**The alpha channel: `JoinImageWithAlpha` is a pass-through, NOT a mask.** The
+model never sees it - `SeedVR2Preprocess` slices `[..., :3]` (`_seedvr2_pad`, and
+its own description says "Alpha channel is dropped"), and `SeedVR2PostProcessing`
+re-attaches it from `original_resized_images`. Nothing is protected, restricted or
+excluded from restoration. Transparency does round-trip correctly: a
+half-transparent test came out with alpha 0.1 on the masked half and 254.9 on the
+other.
+
+**But a transparent region is NOT free, and the cause is upstream of SeedVR2:**
+
+| source | RGB diff vs a plain RGB source |
+|---|---|
+| fully-opaque RGBA | **0.0000 (bit-identical)** - an alpha channel per se costs nothing |
+| half-transparent RGBA | **mean 2.29 / max 115 in the FULLY OPAQUE half** - i.e. a seed-change worth of drift, everywhere |
+
+Root cause, reproduced offline with no GPU: `comfy.utils.lanczos` round-trips
+through **PIL at 8-bit**, and Pillow's RGBA LANCZOS **zeroes the RGB under fully
+transparent pixels** (measured mean abs diff 149.3 there) while perturbing opaque
+pixels slightly (0.04 mean / 25 max). So `ResizeImageMaskNode` hands the model a
+frame with a **black hole** where the transparency was, and the `lab` colour
+transfer - whose reference is that same resized image - then shifts the result
+globally.
+
+**Consequence for the tool:** History feeds opaque images, so today the cost is
+exactly zero (proved by the bit-identical opaque-RGBA control). If a cutout with
+real alpha is ever upscaled, expect a global colour shift, and the fix is not in
+SeedVR2 - it is to composite over a neutral background before the resize, or to
+resize with a non-lanczos method.
+
 ## 3. The weights - full size table
 
 Canonical repo: **`Comfy-Org/SeedVR2`** on Hugging Face (Apache-2.0). Sizes read
