@@ -1,0 +1,117 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "8ac42dc6-0235-4023-b4d3-0e2ad8a23ba2",
+  "generated_at": "2026-08-10T21:30:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-4 - LTX 2.3 v2v extend PROVEN on the bench; silent sources and 3s foley added; next is the full-clip V2V Foley op",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Work out what in a third-party LTX_Extend workflow actually makes video extension, then build our own minimal version of it - as few new dependencies as possible.",
+    "status": "complete",
+    "summary": "Done and proven. The single-stage v2v extend workflow executes end to end on the bench against both an H3 clip (with audio) and a WAN 16fps clip (silent), and is committed at comfy_workflows/raw/ltx_v2v_template.json (56 nodes, 101 links). App integration is carded as MPI-520, blocked until 1.4 ships. The NEXT piece of work is a separate op: full-clip V2V Foley, adding sound to any muted video."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-4/brief.md",
+    "completed": [
+      "Extend mechanism reduced to one node - LTXVAudioVideoMask max_length='pad' zero-pads an encoded reference latent and masks only the padding. Zero new node packs",
+      "Workflow EXECUTED for the first time: H3 clip with audio, seam judged acceptable by the user",
+      "fps handling: MpiMath#51 floor((a*b+0.5)/8)*8/b snaps the extend tail to the 8n lattice and drives BOTH the mask end time and the audio trim, so video and audio tails are equal at any fps. The +0.5 covers NTSC (23.976 would otherwise drop 72 frames to 64). Removed MpiWanSeconds#22, orphaned and already a pass-through",
+      "Resolution settled: the graph honours whatever width/height the app sends; deriving them client-side keeps injection alive. Confirmed keep_proportion='crop' with divisible_by=32 is a PURE crop (no resample) when target == source",
+      "Silent sources supported end to end, every audio input switched on MpiLoadVideo.has_audio (5 selectors + EmptyAudio + a Zero node)",
+      "Root-caused two bugs the first silent run exposed: AudioConcat returns audio2 alone when audio1 is None (tail audio muxed from t=0 over the reference footage), and LTXVEmptyLatentAudio is torch.zeros which decodes to hiss when the mask leaves it frozen",
+      "FOLEY discovered as a free side effect: masking the whole audio stream makes LTX generate audio across the reference window too, conditioned on video it did not make. Verified on the WAN clip - the whole 3.06s got sound including a spoken line, at zero extra sampler cost",
+      "Preroll floor MpiMath#60 (a if a>0.001 else 0.001) fixes the crash when a clip sits exactly on the 8n+1 lattice, making it entirely the reference window and the pre-roll exactly 0",
+      "Landed comfy_workflows/raw/ltx_v2v_template.json, byte-identical to the copy that ran; created MPI-520; committed 24b5ec44 and pushed"
+    ],
+    "pending": [
+      "BUILD THE FULL-CLIP V2V FOLEY OP - add sound to any muted video (the WAN use case). Same spine as ltx_v2v, third mask polarity: freeze ALL video, mask ALL audio, generate no new frames",
+      "USER DECISION ALREADY MADE: the foley workflow gets the SAME audio input and audio reference the main workflow has, so a user can supply a reference voice or part of the real audio from the start. Copy the parts from ltx_i2v_t2v_template.json - MpiLoadAudio Input_Audio, LTXVReferenceAudio (ID-LoRA speaker identity, identity_guidance_scale), Input_Use_Input_Audio / Input_Use_Reference_Audio (MpiSimpleBoolean -> MpiIfElse), and the SolidMask -> SetLatentNoiseMask audio-mask pair",
+      "Read the reference workflow first: LTX-2.3 - V2V Foley (Add Sound To Any Video) in the RuneXX HF collection, linked at the top of tasks/MPI-4/brief.md. Also the bench's own LTX_lipdub_v2v_template.json before folding lipsync onto the same spine",
+      "Sweep the Ref_Frames cap 73 -> 41 -> 25 on the extend workflow. It ALSO feeds ImageBatchExtendWithOverlap.overlap, so a sweep moves the crossfade length at the same time - decouple with a second clamp before trusting the comparison",
+      "Unjudged: whether LTX 2.3's MOTION holds off-24fps. 16fps runs; quality not assessed. LTXVConditioning is told the frame rate but told is not trained-on"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-4",
+    "title": "LTX 2.3 video model integration",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-4/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-4/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-4/handoffs/"
+    }
+  },
+  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "knowledge_preservation": {
+    "completed": [
+      "tasks/MPI-4/validation.md carries every root cause with the code file and line that proves it - read it before touching the workflow",
+      "tasks/MPI-4/brief.md carries the foley design decision and the next-session scope",
+      "tasks/MPI-520/brief.md carries the whole app-integration work list"
+    ],
+    "pending": [
+      "PROPOSED, NOT WRITTEN (needs the user's yes, carried over from the previous handoff and now larger): docs/workflow-authoring/mpi-nodes.md - MpiMath evaluates math.* only with NO min/max builtins but DOES support floor, ternaries and comparisons (help_funcs.py safe_math); MpiClamp mirrors INT in -> INT out; MpiIfElse marks true/false lazy with check_lazy_status so only the taken branch executes, which is what makes an unused encode branch safe",
+      "PROPOSED, NOT WRITTEN (needs the user's yes): a hook validating kanban .jsonl/.json writes against mpi-kanban/event/v1. The legacy {at, event} shape was written by TWO separate sessions on 2026-08-10 and once on 2026-08-09; .claude/rules/kanban.md line 90 already documents it in prose and it keeps happening",
+      "PROPOSED, NOT WRITTEN (modifying an existing memory file needs confirmation): extend memory tool_author_and_verify_a_comfy_workflow_offline.md with the in-place EDIT recipe - GET/POST /api/userdata/workflows%2F<name>.json, clone donor nodes for anything that exists in the graph, and for a genuinely new node mimic a sibling's widget-input shape (a converted widget KEEPS its widgets_values entry AND gains an inputs entry carrying widget:{name})"
+    ]
+  },
+  "next_action": {
+    "description": "Build the full-clip V2V Foley workflow on the bench - freeze all video, mask all audio, generate no new frames - and give it the same audio input and audio reference sockets the main ltx_i2v_t2v workflow has, so users can supply a reference voice or part of the real audio. Start by reading tasks/MPI-4/brief.md (the section dated 2026-08-10) and the bench's LTX_Extend / LTX_lipdub_v2v_template workflows.",
+    "command": "mpi-continue MPI-4"
+  },
+  "context": {
+    "key_decisions": [
+      "Extend and foley and lipsync are the SAME spine with different mask polarity - extend pads, lipsync does partial, foley freezes the video side. models.js already points two ops at one file, so this needs no new app plumbing",
+      "Foley on the EXTEND workflow only covers the reference window (~3s at the 73 cap) because that is all the model sees. Widening it means raising Ref_Frames, which is the cost the cap exists to avoid - hence a separate op. The user explicitly accepted the 3s scope for v2v",
+      "The foley op gets audio input + audio reference from the start (user, 2026-08-10), rather than being prompt-only",
+      "Keep Input_Width/Input_Height as injectable MpiInt in the REPO copy and derive the default client-side. A link into a widget-input makes ComfyUI ignore the widget, so an in-graph wire would silently kill the app's injected resolution",
+      "1ms pre-roll floor beat matching EmptyAudio's sample rate to the decoder, because LTXVAudioVAEDecode reads output_sample_rate off the CHECKPOINT (vocoder.py 444-450), so a hard-coded rate is the more brittle option"
+    ],
+    "constraints": [
+      "Reference frame counts sit on the 8n+1 lattice (latent frames = ((N-1)//8)+1). Off-lattice does not error - the mask boundary drifts, which reads as a bad seam",
+      "LTX 2.3 samples a JOINT AV latent, so the audio path is structural, not optional. But LTXVConcatAVLatent builds a NestedTensor of two INDEPENDENT streams, so there is no video:audio ratio for an odd fps to violate",
+      "KJ's mask hardcodes audio_latents_per_second = 16000/160/4 = 25, decoupled from video fps",
+      "There is no validate-only endpoint. Do NOT POST to /prompt as a dry run on the user's bench - a 22B model loads before the graph's own ExecutionBlocker stops anything",
+      "The user owns the bench browser tab. It holds the graph in memory, so ASK them to close it before editing userdata, and re-fetch immediately before writing - otherwise their next Ctrl+S clobbers the edit",
+      "Do NOT claim js/data/modelConstants/models.js or js/data/commandRegistry.js while MPI-506 and MPI-507 are live in doing",
+      "SHARED TREE, live peer: MPI-519 was created by another session mid-way through this one. board.json and .agents/mpi-kanban/events.jsonl are co-owned - commit them with the content-anchored blob recipe in .claude/rules/git.md, never git add -A",
+      "1.4 release is in flight (MPI-450). No app wiring until it ships",
+      "Kanban event lines need schema + id + type + at. The legacy {at, event} shape parses fine and fails the validator - .claude/rules/kanban.md line 90"
+    ],
+    "files_modified": [
+      "comfy_workflows/raw/ltx_v2v_template.json",
+      ".agents/mpi-kanban/tasks/MPI-4/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-4/files.json",
+      ".agents/mpi-kanban/tasks/MPI-4/events.jsonl",
+      ".agents/mpi-kanban/tasks/MPI-520/",
+      ".agents/mpi-kanban/board.json",
+      ".agents/mpi-kanban/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-4/brief.md",
+      "comfy_workflows/raw/ltx_v2v_template.json",
+      "comfy_workflows/raw/ltx_i2v_t2v_template.json"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["workflow authoring", "comfy injection", "comfy engine"]
+  },
+  "rules_active": [
+    "docs/workflow-authoring/README.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md"
+  ],
+  "recent_events": [{ "at": "2026-08-10T21:30:00Z", "event": "handoff_created" }],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/8ac42dc6-0235-4023-b4d3-0e2ad8a23ba2.json and use mpi-continue on MPI-4. The LTX 2.3 video-extend work is DONE and proven - comfy_workflows/raw/ltx_v2v_template.json (56 nodes) executes on the bench ComfyUI at 127.0.0.1:8188 against both an H3 clip with audio and a silent WAN 16fps clip, and app integration is already carded as MPI-520 blocked on the 1.4 release. The next job is a NEW workflow: full-clip V2V Foley, adding sound to any muted video, for users extending silent Wan output. It is the same skeleton as the extend file with the mask polarity flipped a third way - freeze ALL video, mask ALL audio, generate no new frames - and the user has decided it must carry the same audio input and audio reference sockets the main ltx_i2v_t2v workflow has, so a reference voice or part of the real audio can be supplied from the start. Read tasks/MPI-4/validation.md first: it holds every root cause from the extend build with the exact code file and line that proves it, including why an all-zeros audio latent decodes to hiss and why AudioConcat silently drops a None audio1. Note the user owns the bench browser tab, so ask them to close it before writing to userdata."
+}
