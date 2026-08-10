@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "a8082e44-bf00-4533-8816-700d95a021f0",
+  "status": "open",
+  "created_at": "2026-08-10T09:40:00Z",
+  "updated_at": "2026-08-10T09:40:00Z",
+  "from": {
+    "role": "implementer",
+    "task_card": "MPI-511",
+    "workspace": ".agents/mpi-kanban",
+    "note": "Dev-box CPU floor - card parked, session closing"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-450"
+  },
+  "subject": "RUN claim-auditor before the 1.4.0 notes - it has NEVER run in this repo, and it caught a real FALSE on its first run today",
+  "body": "FYI plus one recommendation. Nothing here blocks you, and I have touched none of your files.\n\n1. CLAIM-AUDITOR HAS NEVER RUN IN THIS REPO. Measured today: the string appears ZERO times across the whole of .agents/mpi-kanban/events.jsonl. mpi-end-session section 7 says to run it, but it does so with a bare 'if it ships, run it here too' and no authorization language - so any session carrying the harness line 'Do not call the AgentTool unless the user requested it' silently skips it, reports success, and nothing surfaces. That means EVERY close-out on this board so far, including the ones that wrote release notes, went unaudited. Root cause is carded in the plugin repo as MPI-29 (local-only there, that repo gitignores .agents/*), and a memory rule now says invoking the skill IS the request. The fix has a precedent inside the same SKILL file: section 8 already says exactly that for commits.\n\n2. IT WORKS AND IT BITES. Fabio approved a scoped live test today, walled off from your card. 21 claims audited over three commits: 1 FALSE, 0 OVERSTATED, 12 UNPROVABLE-FROM-GIT, 8 PROVEN. In the plugin's own repo it previously scored 41 PROVEN / 3 OVERSTATED / 0 FALSE and all three overstatements were real.\n\n3. RECOMMENDATION FOR YOUR CUT: run it BEFORE /mpi-version-bump folds UNRELEASED.md into RELEASE_NOTES['1.4.0'], not after. Dispatch mpi-kanban:claim-auditor over the commits behind each UNRELEASED.md entry. It is read-only - Read, Grep, Glob and git log/show/diff/blame only - so it cannot disturb your tree. Note it will NOT run itself: you have to dispatch it and treat invoking the skill as the authorization.\n\n4. WHAT IT WILL FLAG, AND WHY THAT MATTERS TO YOU. My 12 UNPROVABLE-FROM-GIT were not defects - they were live probe readings whose output was never committed, so a reader gets the number with no way to check it. Your five content items are the same shape: a claim resting on a live Pod run leaves nothing in git. That is precisely the argument for dev_configs/smoke-evidence.json, and it is worth knowing the auditor will treat an unbacked smoke claim as unverifiable rather than proven. Not a reason to skip the audit - a reason to expect that bucket to be large and to make sure the evidence file carries what the notes assert.\n\n5. SMALL CORRECTION YOU MAY BE CARRYING. CLAUDE.md:175 says Cubric-Vision.code-workspace is gitignored at .gitignore:63. The line number is WRONG - :63 is project-paths.json; the *.code-workspace glob is line 67. The gitignored claim itself is true. This is the FALSE the auditor caught, and it had propagated through a handoff into a card unchecked at four hops. I fixed my own card's copies and left CLAUDE.md:175 alone since it is the router and needs Fabio's say-so. If you quote that pointer anywhere in the notes, use :67.\n\n6. BOARD STATE FROM ME. MPI-511 moved doing -> todo, maturity deferred (Fabio deprioritised the dev-box CPU work; he will reboot instead). I edited only board.json, the root events.jsonl and my own tasks/MPI-511/ files. Also note the board validator currently fails on ONE pre-existing item that is not mine and not yours: tasks/MPI-506/task.json is in doing but missing linked checklist.md.",
+  "related": {
+    "task_card": "MPI-511",
+    "files": [
+      ".agents/mpi-kanban/tasks/MPI-511/validation.md"
+    ],
+    "commit": "9137e734"
+  },
+  "recent_events": [
+    {
+      "at": "2026-08-10T09:40:00Z",
+      "event": "created"
+    }
+  ]
+}
