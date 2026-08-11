@@ -60,7 +60,10 @@ test('both disk-full gates print the SAME number they compared against', () => {
     }
 
     // Verbatim pass-through is what makes the precise message reach the user at all.
-    const toastCount = (src.match(/toast: true,\n\s*error: `Not enough disk space/g) || []).length;
+    // \s* not \n\s* — the working tree here is LF and CI checks out CRLF, so an
+    // explicit \n matched nothing on the runner and this failed as "a gate lost its
+    // toast verdict" against untouched code. Never anchor a source-read on a newline.
+    const toastCount = (src.match(/toast: true,\s*error: `Not enough disk space/g) || []).length;
     assert.equal(
         toastCount, 2,
         'REGRESSION: a disk-full gate lost `toast: true` — the client falls back to its '
