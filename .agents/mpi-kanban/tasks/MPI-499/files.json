@@ -1,0 +1,6 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "tests/orphan-sweep.test.cjs"
+  ]
+}

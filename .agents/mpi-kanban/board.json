@@ -3,7 +3,6 @@
   "next_id": 538,
   "columns": {
     "todo": [
-      "MPI-537",
       "MPI-536",
       "MPI-534",
       "MPI-533",
@@ -30,7 +29,6 @@
       "MPI-504",
       "MPI-502",
       "MPI-500",
-      "MPI-499",
       "MPI-497",
       "MPI-496",
       "MPI-489",
@@ -61,9 +59,11 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-537",
       "MPI-4",
       "MPI-506",
-      "MPI-507"
+      "MPI-507",
+      "MPI-499"
     ],
     "done": [
       "MPI-535",
@@ -140,8 +140,17 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-11T05:20:00Z",
+  "updated_at": "2026-08-11T06:10:00Z",
   "events": [
+    {
+      "at": "2026-08-11T05:40:00Z",
+      "type": "task.moved",
+      "task": "MPI-537",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "note": "Implementation started. Bench authoring of the LTX 2.3 lipdub graph: the bench template is read (36 nodes / 49 links), every node type and the ic-lora-lipdub-0.9 LoRA are present on both 8188 and 48188, and plan.md is now written with five phases. It carries one correction to the brief: the audio latent is EMPTY (LTXVEmptyLatentAudio feeds LTXVConcatAVLatent), so the words come from the prompt text and the source audio enters only as speaker-identity ref tokens - swapping that socket swaps the VOICE, not the content. The unused frozen_audio output (noise_mask=0) is the one-link swap that makes the graph audio-driven, so both modes live in one file."
+    },
     {
       "at": "2026-08-11T05:20:00Z",
       "type": "task.moved",

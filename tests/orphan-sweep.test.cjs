@@ -32,13 +32,12 @@ function place(depIds) {
         if (!d || !d.filename) continue;
         const p = path.join(ROOT, d.filename);
         fs.mkdirSync(path.dirname(p), { recursive: true });
-        const m = (d.size || '').match(/^([\d.]+)\s*(GB|MB|KB|B)$/i);
-        const mult = { GB: 1024 ** 3, MB: 1024 ** 2, KB: 1024, B: 1 };
-        // Sparse — the completeness check stats size, so it must match, but this
-        // costs no real disk.
-        const fd = fs.openSync(p, 'w');
-        fs.ftruncateSync(fd, m ? Math.round(parseFloat(m[1]) * mult[m[2].toUpperCase()]) : 1024);
-        fs.closeSync(fd);
+        // ponytail: empty file. isCompleteOnDisk() is `exists && no .cubricdl marker`
+        // (routes/downloadCompletion.js) — it never stats size, so the declared dep
+        // size is irrelevant here. The old fixture ftruncate'd to d.size believing
+        // that was sparse; NTFS allocates it for real, so every run wrote ~30 GiB
+        // and the sweep TRASHED it, filling the dev machine's Recycle Bin (MPI-499).
+        fs.closeSync(fs.openSync(p, 'w'));
     }
 }
 
