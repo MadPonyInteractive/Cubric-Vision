@@ -133,7 +133,22 @@ function extractStringArray(objectText, key) {
   if (end < 0) return [];
   const inner = objectText.slice(start, end + 1);
   // Match top-level quoted strings (single, double, or backtick).
-  return [...inner.matchAll(/(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g)].map((mm) => mm[2]);
+  return [...inner.matchAll(/(['"`])((?:\\.|(?!\1)[\s\S])*?)\1/g)]
+    .map((mm) => unescapeLiteral(mm[2]));
+}
+
+/**
+ * The match above hands back the RAW source between the quotes, so an escaped
+ * apostrophe is still `\'` — text the overlay never shows, because the app imports
+ * the module and the JS engine resolves the escape. This whole script exists to
+ * promise that the preview is byte-for-byte what ships, and an unresolved escape
+ * breaks exactly that promise (it is also what gets hashed into the approval
+ * token). Caught on the 1.4.1 approval: a fix line previewed as "the video\'s
+ * speed". Only the escapes a changelog string can realistically carry.
+ */
+function unescapeLiteral(raw) {
+    const named = { n: '\n', r: '\r', t: '\t' };
+    return raw.replace(/\\(['"`\\nrt])/g, (_, ch) => named[ch] ?? ch);
 }
 
 /**
