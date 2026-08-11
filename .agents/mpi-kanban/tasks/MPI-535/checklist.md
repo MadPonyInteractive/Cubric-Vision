@@ -7,4 +7,4 @@
 - [x] Verified: 6/6 headless lifecycle tests + a real-renderer playback probe (validation.md)
 - [x] npm test 552/552, eslint clean on every changed file
 - [x] docs/preview-bus.md records the contract
-- [ ] Fabio eyeballs the next H3 single-pass run (should loop at 24fps, not 8)
+- [x] Fabio reran H3 i2v on the fixed renderer: latents loop at clip speed. Confirmed 2026-08-11.

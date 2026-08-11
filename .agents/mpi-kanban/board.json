@@ -61,12 +61,12 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-535",
       "MPI-4",
       "MPI-506",
       "MPI-507"
     ],
     "done": [
+      "MPI-535",
       "MPI-450",
       "MPI-519",
       "MPI-521",
@@ -140,8 +140,17 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-11T04:45:00Z",
+  "updated_at": "2026-08-11T05:20:00Z",
   "events": [
+    {
+      "at": "2026-08-11T05:20:00Z",
+      "type": "task.moved",
+      "task": "MPI-535",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "note": "Closed on the user's own confirmation. He reran MiniMax H3 image-to-video on the fixed renderer and reported the latents playing continuously at clip speed instead of flashing the whole clip once per sampler step; the console error he then asked about was diagnosed as the known revoked-blob repaint residual (documented in docs/preview-bus.md, cosmetic, latched so it cannot repeat) and deliberately not carded. Agent evidence already stood: 6/6 headless lifecycle tests, a real-renderer probe measuring 24 painted frames/s with the marker never delivered, npm test 552/552, eslint clean."
+    },
     {
       "at": "2026-08-11T04:45:00Z",
       "type": "validation.updated",

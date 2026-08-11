@@ -73,3 +73,11 @@ now loop continuously at clip speed (24fps) rather than at 8fps.
 Other preview surfaces are unchanged and still paint on arrival: the Flow pane
 (`MpiBaseFlow`), the queue-panel thumbnail, and the group-history video viewer (which
 skips latents entirely). Only the gallery card has clip playback.
+
+## Closed 2026-08-11
+
+User reran MiniMax H3 image-to-video on the reloaded renderer and confirmed the latents now
+play continuously at clip speed. The one `net::ERR_FILE_NOT_FOUND` he spotted in the console
+afterwards is a revoked preview blob re-requested by a repaint during teardown — the known
+residual of the retainer-owns-its-frames rule (docs/preview-bus.md), cosmetic, latched by
+MPI-277 so it cannot repeat. Left documented, not carded, on his call.
