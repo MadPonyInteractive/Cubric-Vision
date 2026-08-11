@@ -135,6 +135,31 @@ Watchable copies of every run: `C:/Users/Fabio/Downloads/MPI-537-lipdub/`
 (`0` input, `1`–`5` the runs, `6` a source-vs-lipdub side-by-side, `7` the frozen-audio
 dead end).
 
+### JUDGED: a separate reference voice works, and line length is the sync lever
+
+Two more runs, both with `#5005 LTXVAudioVAEEncode.audio` fed by its own `LoadAudio`
+instead of the source clip's track — so the reference voice is decoupled from the video
+and one voice can be reused across clips, which is the consistency use case. Same source
+(`lipdub_face.mp4`, 3.04s / 73 frames), same reference (`flutie8211…mp3`, 7.3s), differing
+only in how much dialogue the line asks for:
+
+| output | line | Fabio |
+|---|---|---|
+| `refvoice_short_00001_` | "I don't know what is going on." | "not great sync" |
+| `refvoice_tiny_00001_` | "I should leave now." | **"got a good sync"** |
+
+**Both findings matter.** The standalone reference audio works — the voice still clones
+with the reference no longer coming from the clip, which is what makes voice consistency
+across separate videos possible. And **the sync lever is how much speech the line asks
+for against how long the clip is**: the shorter line on a 3.04s clip syncs well, the
+longer one does not. That is Lightricks' own note made concrete — "too long and the model
+skips words, too short and it drags" — and it is a UI constraint, not a tuning knob: the
+app has to relate line length to clip duration, or the user gets a bad sync with no idea
+why.
+
+Earlier evidence for the same lever: run 4 crammed the full 7.3s sentence into 3.04s and
+Fabio noticed the timing was fast without being asked.
+
 ### Open, in priority order
 
 1. **Face size is a hard input requirement, not a preference.** The app card needs
