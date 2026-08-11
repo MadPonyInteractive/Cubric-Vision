@@ -1681,11 +1681,19 @@ router.post('/comfy/models/download/start', async (req, res) => {
     if (neededBytes > 0) {
         const targetDir = customRoot || defaultModelsRoot;
         const freeBytes = await _freeDiskBytes(targetDir);
-        if (freeBytes !== null && freeBytes < neededBytes * 1.05) {
+        // MPI-542 — the message must print the number the GATE used, margin included.
+        // It printed the un-margined need, so a block at 29.4 GB free read as
+        // "need 29.3 GB free, have 29.4 GB" — a correct decision that looked broken.
+        const requiredBytes = neededBytes * 1.05;
+        if (freeBytes !== null && freeBytes < requiredBytes) {
             _setModelStatus(modelJob, 'idle', 'disk-full idle');
-            logger.warn('download', `install blocked — disk full: need ${_fmtGb(neededBytes)} free, have ${_fmtGb(freeBytes)} at ${targetDir}`);
+            logger.warn('download', `install blocked — disk full: need ${_fmtGb(requiredBytes)} free, have ${_fmtGb(freeBytes)} at ${targetDir}`);
             return res.status(400).json({
-                error: `Not enough disk space to install this model. ${_fmtGb(neededBytes)} needed, ${_fmtGb(freeBytes)} free.`,
+                // toast:true — the client shows this verbatim (MPI-539's cause-agnostic
+                // verdict). This message names the real drive and the real numbers; the
+                // client's generic "free up space" fallback names neither.
+                toast: true,
+                error: `Not enough disk space to install this model — ${_fmtGb(requiredBytes)} needed (5% working margin included), ${_fmtGb(freeBytes)} free at ${targetDir}.`,
             });
         }
     }
@@ -2397,12 +2405,19 @@ async function _startRemoteDownload(modelId, dependencies, res) {
       } catch (err) {
         logger.warn('download', `remote free-space check unavailable: ${err.message}`);
       }
+      // MPI-542 — margin included in the printed number, same as the local gate.
+      const remoteRequiredBytes = remoteNeededBytes * 1.05;
       if (freeInfo && Number.isFinite(freeInfo.freeBytes)
-          && freeInfo.freeBytes < remoteNeededBytes * 1.05) {
+          && freeInfo.freeBytes < remoteRequiredBytes) {
         _setModelStatus(modelJob, 'idle', 'remote disk-full idle');
-        logger.warn('download', `remote install blocked — volume full: need ${_fmtGb(remoteNeededBytes)}, have ${_fmtGb(freeInfo.freeBytes)} free of ${_fmtGb(freeInfo.totalBytes)}`);
+        logger.warn('download', `remote install blocked — volume full: need ${_fmtGb(remoteRequiredBytes)}, have ${_fmtGb(freeInfo.freeBytes)} free of ${_fmtGb(freeInfo.totalBytes)}`);
         return res.status(400).json({
-          error: `[Errno 28] No space left on device — ${_fmtGb(remoteNeededBytes)} needed, ${_fmtGb(freeInfo.freeBytes)} free on the Pod volume.`,
+          // toast:true — shown verbatim. The old text led with `[Errno 28]`, which the
+          // client's out-of-space matcher swallowed and replaced with "free up space",
+          // pointing the user at the WRONG machine: the full disk is the Pod volume,
+          // and no amount of local cleanup helps. (MPI-542)
+          toast: true,
+          error: `Not enough disk space on the Pod volume to install this model — ${_fmtGb(remoteRequiredBytes)} needed (5% working margin included), ${_fmtGb(freeInfo.freeBytes)} free of ${_fmtGb(freeInfo.totalBytes)}.`,
         });
       }
     }

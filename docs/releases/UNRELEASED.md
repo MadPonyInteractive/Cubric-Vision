@@ -79,3 +79,11 @@ _(none yet)_
   anything drained the queue that stale count fired — announcing generations that had
   ended ten or twenty minutes earlier, sometimes over an hour. Counts that outlive their
   batch are now discarded.
+
+- **"Not enough disk space" now names the disk, and asks for the right amount.** A local
+  install could refuse with "29.3 GB needed, 29.4 GB free" — more free space than it said
+  it wanted — because the check quietly reserves a small working margin the message never
+  mentioned. And when the full disk was your cloud Pod's volume, the app replaced the
+  server's exact figures with "free up space and try again", pointing you at your own
+  machine, where clearing space would not have helped. Both messages now name the drive
+  or the Pod volume and quote the amount actually required.

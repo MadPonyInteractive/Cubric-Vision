@@ -253,9 +253,19 @@ const downloadService = {
             if (err.offline) {
                 // sound:false — immediate feedback of pressing Install; a click must not ring.
                 Events.emit('ui:warning', { message: "You're offline — connect to the internet to download models.", sound: false });
+            } else if (err.toast) {
+                // MPI-542 — the server already wrote a precise, user-facing message
+                // (which drive, how much is needed WITH the gate's margin, how much is
+                // free) so show it verbatim. Checked BEFORE _isOutOfSpaceError: both
+                // disk-full pre-flight gates set this verdict, and the generic message
+                // below overwrote their numbers — the remote one even pointed at the
+                // local disk when the full one was the Pod volume. Same shape as the
+                // networkBlocked/toast arms in the reactive handler (MPI-427/MPI-539).
+                // sound:false — immediate feedback of pressing Install; a click must not ring.
+                Events.emit('ui:warning', { message: err.error, sound: false });
             } else if (_isOutOfSpaceError(err.error)) {
-                // Disk-full PRE-FLIGHT reject (local statfs gate OR remote volume
-                // free-space gate) — expected + user-actionable, so the friendly
+                // Disk-full reject with no server-authored message (an old backend, or
+                // a raw OS/wrapper errno) — expected + user-actionable, so the friendly
                 // toast, never the Report-on-GitHub dialog. Matches the reactive
                 // download:failed handler. [[feedback_error_dialog_vs_toast]]
                 const model = getModelById(modelId);
@@ -634,11 +644,7 @@ const downloadService = {
                 // RunPod network-volume quota; REST exposes only the configured size),
                 // so this reactive catch is the disk-full UX. See
                 // [[feedback_error_dialog_vs_toast]].
-                if (_isOutOfSpaceError(data.error)) {
-                    Events.emit('ui:warning', {
-                        message: `Not enough disk space to install ${modelName}. Free up space and try again.`
-                    });
-                } else if (data.networkBlocked || data.toast) {
+                if (data.networkBlocked || data.toast) {
                     // MPI-427 — the network refused our download host. Expected + fully
                     // user-actionable, and the server already wrote the remedy into
                     // data.error, so show it as-is. Same reasoning as disk-full above:
@@ -649,6 +655,14 @@ const downloadService = {
                     // 2026-08-11: fixing the abandon path made this failure reachable
                     // for the first time, and it came up as the GitHub dialog.
                     Events.emit('ui:warning', { message: data.error });
+                } else if (_isOutOfSpaceError(data.error)) {
+                    // No server-authored message (raw OS/wrapper errno) — fall back to
+                    // the friendly generic. Ordered AFTER the toast arm: MPI-542 made
+                    // both disk-full gates write a precise message, and matching on
+                    // "no space left on device" first threw it away. (MPI-542)
+                    Events.emit('ui:warning', {
+                        message: `Not enough disk space to install ${modelName}. Free up space and try again.`
+                    });
                 } else if (data.transient) {
                     // MPI-480 — the Pod's wrapper wasn't routable yet (the RunPod proxy
                     // 404/502/503/504s for seconds after a Pod starts, while /health is
@@ -666,12 +680,12 @@ const downloadService = {
                     });
                 }
             } else if (data.modelId) {
-                if (_isOutOfSpaceError(data.error)) {
+                if (data.networkBlocked || data.toast) {
+                    Events.emit('ui:warning', { message: data.error });   // MPI-427 / MPI-539 / MPI-542
+                } else if (_isOutOfSpaceError(data.error)) {
                     Events.emit('ui:warning', {
                         message: 'Not enough disk space to install this model. Free up space and try again.'
                     });
-                } else if (data.networkBlocked || data.toast) {
-                    Events.emit('ui:warning', { message: data.error });   // MPI-427 / MPI-539
                 } else if (data.transient) {
                     Events.emit('ui:warning', {                           // MPI-480
                         message: "The remote engine isn't ready yet — try the install again in a moment."
