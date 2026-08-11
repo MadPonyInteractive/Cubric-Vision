@@ -1705,7 +1705,7 @@ export const MpiPromptBox = ComponentFactory.create({
             const wrapper = document.createElement('div');
             wrapper.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
             document.body.appendChild(wrapper);
-            const toast = MpiToast.mount(wrapper, { message, variant, duration: 3000 });
+            const toast = MpiToast.mount(wrapper, { message, variant });
             toast.on('close', () => wrapper.remove());
         }
 

@@ -1,5 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { qs, qsa } from '../../../utils/dom.js';
+import { readingTimeMs } from '../../../utils/string.js';
 import { Storage } from '../../../core/storage.js';
 
 /**
@@ -138,7 +139,10 @@ export const MpiToast = ComponentFactory.create({
     },
 
     setup: (el, props, emit) => {
-        const duration = props.duration !== undefined ? props.duration : 3000;
+        // MPI-542 — the default is READING TIME, not a flat 3s. A 140-character
+        // disk-full message vanished before its first line landed. An explicit
+        // `duration` still wins (and 0 still means persistent).
+        const duration = props.duration !== undefined ? props.duration : readingTimeMs(props.message);
 
         // Stash params so _showToast can start the timer when a queued toast is
         // promoted later.

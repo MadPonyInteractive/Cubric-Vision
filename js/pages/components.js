@@ -579,10 +579,13 @@ function mountAll() {
             const toastWrapper = document.createElement('div');
             document.body.appendChild(toastWrapper);
 
+            // No duration — the gallery must show what the APP shows, which is now
+            // reading time derived from the message (MPI-542). Pinning 6000 here made
+            // the longest fixture, the one this trigger exists to stress, unreadable
+            // in the one place built to catch that.
             const t = MpiToast.mount(toastWrapper, {
                 message: fixture.message,
-                variant: fixture.variant,
-                duration: 6000
+                variant: fixture.variant
             });
 
             t.on('close', () => {

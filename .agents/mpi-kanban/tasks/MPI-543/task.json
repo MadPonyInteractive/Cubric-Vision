@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-543",
+  "title": "Notification history - a button showing the last five toasts",
+  "description": "A toast is the only record of what happened, and it is gone in seconds. Fabio, 2026-08-11: \"a lot of times the user misses them and doesn't know what happened.\" MPI-542 fixed the READING window (duration now scales with the message), but a toast the user was not looking at is still unrecoverable.\n\nShape: a notifications button that shows the last five, most recent first, with each one's variant and text. Candidate homes: the status bar (docs/shell.md owns the slots) or beside the existing header controls.\n\nOpen questions for whoever takes it: does it hold five or a time window; does it survive a workspace change or only a session; does an unseen toast leave the button marked. History has to be captured where toasts are RAISED (the ui:warning / ui:error / ui:success events), not inside MpiToast - a toast that was queued out or dismissed early must still be in the list.\n\nNext version, not 1.4.1.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-08-11T19:10:00Z",
+  "updated_at": "2026-08-11T19:10:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

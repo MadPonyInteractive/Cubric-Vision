@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-543", "type": "task.created", "at": "2026-08-11T19:10:00Z", "actor": "opus", "summary": "Carded from Fabio's ask during the MPI-542 toast-duration work: users miss toasts and have no way to see what happened. Last five, most recent first. Explicitly NOT 1.4.1."}
