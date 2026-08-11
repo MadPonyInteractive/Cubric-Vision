@@ -24,15 +24,16 @@
       "MPI-539 CLOSED on live evidence, recorded in tasks/MPI-539/validation.md. Fabio restarted the app, connected the CPU Pod, installed with a second queued behind, and stopped the Pod mid-download. Card reached a real end state; Model Library returned to LOCAL truth (his words: 'that's proven'); the queued SDXL NSFW cancelled with a named reason and did NOT download locally. Detection measured at 9s from app.log - the 90s stall watchdog never fired, and the lag he noticed is RunPod stopping the container, which he accepted.",
       "MPI-541 REWRITTEN around its own disproof. Same 3.725 GiB box pulled the same model at up to 735 MB/s - above the 652 that supposedly OOMed it - with Telemetry reading 3% memory. Transport exonerated. App-side staging exonerated too: the app log shows MPI-539's abandon path firing by name in that session, so the getEngine fix was already live. Dropped to low/blocked with reopen criteria instead of a speculative fix.",
       "MPI-542 umbrella created and retargeted 1.4.0 -> 1.4.1 (Fabio: 'these changes are going to go into version 1.4.1'). Children MPI-539/540/541 carry parent: MPI-542.",
-      "Full suite 560/560 (was 555). Every new guard mutation-checked - removing it fails its test with the intended message."
+      "Full suite 560/560 (was 555). Every new guard mutation-checked - removing it fails its test with the intended message.",
+      "docs/releases/UNRELEASED.md WRITTEN for 1.4.1 - five user-facing bullets covering the download-Pod engine split, the frozen install card, the GitHub-dialog-to-toast change, the queued install landing on the wrong machine, and the late completion notifications."
     ],
     "pending": [
+      "RELEASE 1.4.1 ONCE THE MPI-542 UMBRELLA'S CARDS ARE DONE. Fabio, 2026-08-11: everything accumulated since 1.4.0 is fixes and small improvements, so it ships as a PATCH and docs/releases/UNRELEASED.md folds as ONE block - no per-target split, no diffing individual entries against the last tag. This SUPERSEDES commit e2b0ddbf, which filed the first-run choice entry 'now under 1.5.0'; that entry ships in 1.4.1 with the rest. The decision is recorded in UNRELEASED.md's header blockquote so a fresh bump cannot miss it. Flow is /mpi-version-bump (3rd digit) then mpi-release.",
       "THE NEXT TASK: the disk-space message, unstarted, and it has TWO confirmed instances in today's app.log. (a) LOCAL: 'install blocked - disk full: need 29.3 GB free, have 29.4 GB at G:/CubricModels' - it had MORE than it asked for and blocked anyway, because routes/downloadManager.js:1684 gates on neededBytes * 1.05 while the message prints the un-margined number. The check was right; the message makes it look broken. (b) REMOTE: 'remote install blocked - volume full: need 57.8 GB, have 34.8 GB free of 139.7 GB' - a correct, precise, remote verdict that the client replaced with 'Not enough disk space to install LTX 2.3. Free up space and try again.', which names no disk and points at the wrong machine. Fix shape is already proven in this file: pass the server's message through, exactly as the networkBlocked / toast arms do. js/services/downloadService.js ~line 637 and ~665 hold the two _isOutOfSpaceError branches that overwrite it.",
       "MPI-540 needs Fabio to confirm no late completion toast over a normal session of generations. Nothing to build; it is an observation over time. Card stays in doing.",
       "The install-toast spam is STILL unreproduced and uncarded (parked under MPI-542). Do not assume the MPI-539 reconcile path: the download:complete handler already filters !data.modelId and that path broadcasts modelId:null. First candidate is a model-level download:complete re-broadcast when the install SSE reconnects and replays.",
       "MPI-539 residual, not covered by the live run: failures 1-3 (getEngine / commandExecutor / _ensureRemoteHotStore) were never re-exercised live, because no generation was dispatched against a __cpu__ Pod today. They rest on the original incident evidence plus mutation-checked unit tests. Worth one deliberate pass: start a long local generation, connect a download-only Pod, confirm no staging is attempted and remote mode is not torn down.",
-      "TWO APPROVALS PENDING, both raised at close-out and neither actioned: (1) a rule edit to .claude/rules/kanban.md recording two enum traps that cost three validator round-trips this session - `maturity: seed` is NOT in the enum (idea/planned/research/needs-decision/blocked/deferred/in-progress/validating/complete/rejected) yet exists on live cards, and a card in `done` must carry `status: completed`, not `active`. (2) a correction to the memory file tool_measure_the_model_fleet_headlessly - its headline 'a module imports headlessly iff nothing in its graph reaches js/components/' is measurably too strong. js/shell/notificationService.js imports FINE in bare Node with DOM stubs despite reaching MpiToast, while js/services/downloadService.js still dies on MpiButton's absolute '/js/utils/icons.js'. The real boundary is whether the graph reaches a component using an ABSOLUTE browser path.",
-      "docs/releases/UNRELEASED.md has NO entry for any of this session's fixes. v1.4.0 is tagged so its notes are frozen; every user-facing fix here belongs in UNRELEASED.md's `## Fixes` section, which /mpi-version-bump folds into 1.4.1. Proposed at close-out, not approved, not written."
+      "TWO APPROVALS PENDING, both raised at close-out and neither actioned: (1) a rule edit to .claude/rules/kanban.md recording two enum traps that cost three validator round-trips this session - `maturity: seed` is NOT in the enum (idea/planned/research/needs-decision/blocked/deferred/in-progress/validating/complete/rejected) yet exists on live cards, and a card in `done` must carry `status: completed`, not `active`. (2) a correction to the memory file tool_measure_the_model_fleet_headlessly - its headline 'a module imports headlessly iff nothing in its graph reaches js/components/' is measurably too strong. js/shell/notificationService.js imports FINE in bare Node with DOM stubs despite reaching MpiToast, while js/services/downloadService.js still dies on MpiButton's absolute '/js/utils/icons.js'. The real boundary is whether the graph reaches a component using an ABSOLUTE browser path."
     ]
   },
   "task_card": {
@@ -47,7 +48,12 @@
       "handoffs": ".agents/mpi-kanban/tasks/MPI-542/handoffs/"
     }
   },
-  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "implement",
+    "verify"
+  ],
   "knowledge_preservation": {
     "completed": [
       "tasks/MPI-539/validation.md - the full live drill, the 9-second measurement from app.log, and the residual that was NOT covered",
@@ -61,7 +67,7 @@
     ]
   },
   "next_action": {
-    "description": "Fix the disk-space message. Two confirmed instances in today's app.log, both quoted in this handoff's pending list. Pass the server's precise message through instead of overwriting it - the pattern already exists in the same function (the networkBlocked / toast arms show data.error verbatim), so this is the third use of a proven shape, not a new mechanism. Make the LOCAL message print the margin-inclusive requirement so the number matches the decision, and stop the REMOTE case saying 'free up space' when the full disk is the Pod volume. Then ask Fabio about the two pending approvals and the UNRELEASED.md entries.",
+    "description": "Fix the disk-space message. Two confirmed instances in today's app.log, both quoted in this handoff's pending list. Pass the server's precise message through instead of overwriting it - the pattern already exists in the same function (the networkBlocked / toast arms show data.error verbatim), so this is the third use of a proven shape, not a new mechanism. Make the LOCAL message print the margin-inclusive requirement so the number matches the decision, and stop the REMOTE case saying 'free up space' when the full disk is the Pod volume. That fix is the last open item on the MPI-542 umbrella besides MPI-540's confirmation - once the umbrella is clear, cut 1.4.1.",
     "command": "mpi-continue MPI-542"
   },
   "context": {
@@ -71,7 +77,8 @@
       "The staleness window is wall-clock, not a batch id. A batch id threaded from the queue would be exact but means a new field through generationService and commandExecutor. Marked with a ponytail: comment naming the ceiling - the visible cost is an undercount when one batch has a >5min gap between items.",
       "MPI-541 was NOT closed and NOT fixed speculatively. Three healthy runs at up to 735 MB/s on a 4 GB box mean the OOM is not a reproducible property of the download path, so capping HF_XET_NUM_CONCURRENT_RANGE_GETS would be a fix for a cause nobody has evidence for. Reopen criteria recorded instead.",
       "The `toast` verdict is deliberately cause-agnostic, unlike networkBlocked and transient which each name a specific condition. It means 'show this exact message as a toast' so any future server-side path can reach the same routing without a new client branch.",
-      "MPI-541 stayed a separate card rather than folding into MPI-539: different root, different repo (mpi-ci), and it would OOM the same box with no app bug at all."
+      "MPI-541 stayed a separate card rather than folding into MPI-539: different root, different repo (mpi-ci), and it would OOM the same box with no app bug at all.",
+      "1.4.1, not 1.5.0, and the whole scratchpad folds together. Fabio's first instruction was that anything already unreleased belonged to 1.5 and only today's fixes to 1.4.1, so the file was split by target; he then looked at what was actually in it and collapsed that - there are no real features pending, so it is all one patch. The split was removed rather than left in place 'just in case': two live targets in one scratchpad is exactly the shape that shipped 1.4.0's bullets twice."
     ],
     "constraints": [
       "A routes/ change does NOT survive a renderer reload - the app needs a full restart. This cost one wasted test cycle today; Fabio re-ran the same drill against the old code before we caught it.",
@@ -86,7 +93,8 @@
       "js/services/downloadService.js",
       "routes/downloadManager.js",
       "tests/notification-stale-count.test.cjs",
-      "tests/download-mode-pod-guards.test.cjs"
+      "tests/download-mode-pod-guards.test.cjs",
+      "docs/releases/UNRELEASED.md"
     ],
     "files_to_read_first": [
       ".agents/mpi-kanban/tasks/MPI-542/checklist.md",
@@ -98,7 +106,11 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "scalable-foundation",
-    "relevant_topics": ["downloads", "comfy_engine", "components"]
+    "relevant_topics": [
+      "downloads",
+      "comfy_engine",
+      "components"
+    ]
   },
   "rules_active": [
     ".claude/rules/downloads.md",
@@ -106,6 +118,11 @@
     "CLAUDE.md THE ROOT-CAUSE RULE",
     ".agents/mpi-kanban/close-out.md (release awareness - UNRELEASED.md, not the frozen 1.4.0 notes)"
   ],
-  "recent_events": [{ "at": "2026-08-11T18:25:00Z", "event": "handoff_created" }],
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/194d9287-494e-4ea8-8bc6-f427d154c77e.json and use mpi-continue to pick up MPI-542, the 1.4.1 field-fix umbrella. MPI-539 is closed on live proof and MPI-540 is fixed - do not re-derive either. Your task is the disk-space message, which has two confirmed instances quoted in the handoff: a LOCAL one that blocked with 29.4 GB free while asking for 29.3 GB (the gate adds a 5% margin the message never mentions) and a REMOTE one where the server computed 'need 57.8 GB, have 34.8 GB free of 139.7 GB' and the client replaced it with a vague 'free up space' that names no disk. Pass the server's message through, the way the networkBlocked and toast arms in the same function already do. Then ask Fabio about the two approvals left pending at close-out (a kanban.md enum rule edit and a memory correction) and about writing this session's fixes into docs/releases/UNRELEASED.md for 1.4.1."
+  "recent_events": [
+    {
+      "at": "2026-08-11T18:25:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/194d9287-494e-4ea8-8bc6-f427d154c77e.json and use mpi-continue to pick up MPI-542, the 1.4.1 field-fix umbrella. MPI-539 is closed on live proof and MPI-540 is fixed - do not re-derive either, and the changelog is already written. Your task is the disk-space message, which has two confirmed instances quoted in the handoff: a LOCAL one that blocked with 29.4 GB free while asking for 29.3 GB (the gate adds a 5% margin the message never mentions) and a REMOTE one where the server computed 'need 57.8 GB, have 34.8 GB free of 139.7 GB' and the client replaced it with a vague 'free up space' that names no disk. Pass the server's message through, the way the networkBlocked and toast arms in the same function already do. When the umbrella's cards are done, Fabio wants 1.4.1 cut as a patch release - docs/releases/UNRELEASED.md folds as one block, including the first-run entry an older commit had filed for 1.5.0."
 }

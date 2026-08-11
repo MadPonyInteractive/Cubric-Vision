@@ -18,6 +18,12 @@
 > clear did not, which would have re-folded all of 1.4.0 into 1.5.0 and shipped
 > every bullet twice. If you are folding a release and this file still holds the
 > last one's items, that is the bug, not a backlog.
+>
+> **Target is 1.4.1, not 1.5.0 (Fabio, 2026-08-11).** Everything accumulated since
+> 1.4.0 is fixes and small improvements, so it ships as a patch and this file folds
+> as one block. The first-run entry below was filed "now under 1.5.0" by MPI-519 on
+> 2026-08-10 — that is superseded; do not act on it. 1.4.1 goes out once the MPI-542
+> umbrella's cards are done.
 
 ## Important changes
 
@@ -43,3 +49,33 @@ _(none yet)_
   flashed the whole clip in an instant each time the sampler advanced, then froze until
   the next step. It now plays continuously at the clip's own frame rate, and no longer
   trims the start of the clip.
+
+- **A cloud Pod used for downloads is no longer treated as a generation engine.**
+  Connecting a "No GPU — download only" Pod while you were working locally could take
+  your generation with it: the app tried to stage model weights onto a machine with no
+  GPU and a few gigabytes of RAM, the Pod was killed, and the app read that as a dead
+  engine and dropped remote mode — taking every in-flight install down with it. A
+  download Pod is now only ever a download target.
+
+- **A cloud install that dies now says so, instead of freezing.** When the Pod went
+  away mid-install, the model card kept showing the Pod's last progress — a live-looking
+  bar and a Cancel button for a download that could never finish, sometimes painted over
+  a model your own disk already had. Those installs now end properly, say why, and offer
+  a working Retry, and the Model Library goes back to showing what is really on your
+  machine.
+
+- **Losing the Pod mid-install is a notice, not an error report.** Stopping your own Pod
+  raised the "Download Failed" dialog with a Report on GitHub button. It is now a normal
+  heads-up message.
+
+- **A queued install can no longer land on the wrong machine.** Installs run one at a
+  time, and the engine was only decided when each one's turn actually came — so a model
+  queued for your cloud Pod could start downloading to your local disk after the Pod
+  disconnected, tens of gigabytes you never asked for. A queued install now remembers
+  where it was meant to go and is cancelled, with a message, if that engine is gone.
+
+- **"Generation complete" notifications no longer arrive long after the fact.** A batch
+  that did not finish cleanly could leave its finished-count behind, and the next time
+  anything drained the queue that stale count fired — announcing generations that had
+  ended ten or twenty minutes earlier, sometimes over an hour. Counts that outlive their
+  batch are now discarded.
