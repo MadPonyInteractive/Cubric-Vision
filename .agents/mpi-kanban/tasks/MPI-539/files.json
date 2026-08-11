@@ -4,6 +4,7 @@
     "js/services/commandExecutor.js",
     "js/services/comfyController.js",
     "routes/downloadManager.js",
-    "tests/download-mode-pod-guards.test.cjs"
+    "tests/download-mode-pod-guards.test.cjs",
+    "js/services/downloadService.js"
   ]
 }

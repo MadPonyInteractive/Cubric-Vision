@@ -1990,6 +1990,16 @@ function _failOutstandingRemoteDeps(reason) {
         _broadcast('download:failed', { depId, error: _REMOTE_ABANDON_MSG });
     }
     _stopRemoteStallWatchdog();
+    // The dep-level broadcast above is DELIBERATELY not user-facing — the client drops
+    // a `download:failed` carrying no modelId (MPI-97, so a dep transient can't raise a
+    // second scary dialog). So failing the deps alone terminated nothing the user can
+    // see: the owning MODEL job stayed 'downloading', the snapshot kept serving its last
+    // Pod progress, and after the fall back to local the Model Library painted "56%"
+    // over a model the LOCAL disk already had (Fabio, 2026-08-11, second sighting).
+    // Every other terminal path funnels through here for exactly that reason; this
+    // twin was the one that did not. It is what turns the failed deps into a model-level
+    // download:failed with a real reason and a working Retry.
+    _checkModelJobsComplete();
 }
 
 // Settle outstanding remote deps against the actual volume state. Used to
@@ -3396,6 +3406,8 @@ module.exports = {
     _startRemoteDownload, // MPI-481 — exported for unit test (stale attach guard)
     _remoteDepIds, // MPI-481 — exported for unit test only; never mutate outside tests
     _failOutstandingRemoteDeps, // MPI-539 — exported for unit test (abandon-loudly path)
+    _modelJobs, // MPI-539 — exported for unit test only; never mutate outside tests
+    _depJobs, // MPI-539 — exported for unit test only; never mutate outside tests
     _teardownRemoteEventStreamIfIdle, // MPI-481 — exported so a unit test can disarm the stall watchdog
     _setModelStatus, // MPI-317 F5 — exported for unit test (store-terminal guard)
     _installStore: store, // MPI-317 F5 — exported for unit test only; never mutate outside tests

@@ -91,3 +91,65 @@ test('_failOutstandingRemoteDeps drains the outstanding set instead of abandonin
         + 'progress forever with no remote target left to advance them',
     );
 });
+
+test('the abandon path terminates the owning MODEL job, not just its deps', () => {
+    // The half the first pin missed, and Fabio hit it a second time on 2026-08-11:
+    // the Pod OOMed mid-install, the app fell back to local, and the Model Library
+    // still showed "MiniMax H3 Reference · 56%" — Pod progress painted over a model
+    // his LOCAL disk already had, with no way to clear it.
+    //
+    // Draining `_remoteDepIds` is not enough. The dep-level `download:failed` this
+    // path broadcasts carries NO modelId, and the client deliberately drops those
+    // (MPI-97, so a dep transient can't raise a second scary dialog). Only a
+    // MODEL-level terminal reaches the card, and only _checkModelJobsComplete()
+    // produces one — which every other terminal path calls and this one did not.
+    const dm = require('../routes/downloadManager.js');
+
+    const depJob = { id: 'mpi539-dep-c', modelId: 'mpi539-model', status: 'downloading' };
+    dm._depJobs.set(depJob.id, depJob);
+    dm._modelJobs.set('mpi539-model', {
+        modelId: 'mpi539-model', status: 'downloading', progress: 0.56, deps: [depJob],
+    });
+    dm._remoteDepIds.add(depJob.id);
+
+    dm._failOutstandingRemoteDeps('unit-test');
+
+    assert.equal(depJob.status, 'failed', 'the dep itself must go terminal');
+    assert.equal(
+        dm._modelJobs.get('mpi539-model').status, 'failed',
+        'REGRESSION: the model job stayed \'downloading\' after its deps were abandoned — '
+        + 'the snapshot keeps serving its last Pod progress and the card is frozen at 56% '
+        + 'over whatever the local disk actually holds',
+    );
+
+    dm._depJobs.delete(depJob.id);
+    dm._modelJobs.delete('mpi539-model');
+});
+
+test('a queued install is dropped, never retargeted, when the engine changes', () => {
+    // Fabio queued Boogu Image Edit behind MiniMax H3 Reference onto a download-only
+    // Pod. The Pod OOMed, the app fell back to local, and the queued install had still
+    // never fired its POST — so its turn would have landed on the LOCAL engine and put
+    // 20.8GB on his own disk unasked. The engine is read when the POST lands, not when
+    // Install is pressed, and a queued job carried no record of which one it meant.
+    //
+    // SOURCE-READ, not behavioural: js/services/downloadService.js cannot import in bare
+    // Node — MpiButton.js imports an ABSOLUTE '/js/utils/icons.js', which resolves to
+    // c:\js\utils\icons.js and throws. So this pins the guard's presence and, critically,
+    // its POSITION: ahead of _firePost. A guard after the POST is not a guard.
+    const fs = require('fs');
+    const src = fs.readFileSync(path.join(__dirname, '..', 'js/services/downloadService.js'), 'utf8');
+
+    assert.match(src, /const queuedEngine = _installEngine\(\)/,
+        'the install no longer records which engine it was queued for');
+
+    const runAt = src.indexOf('const run = () => {');
+    const postAt = src.indexOf('this._firePost(modelId, dependencies)', runAt);
+    const guardAt = src.indexOf('_installEngine() !== queuedEngine', runAt);
+    assert.ok(runAt > 0 && postAt > 0, 'the serial-install chain moved — re-anchor this test');
+    assert.ok(
+        guardAt > runAt && guardAt < postAt,
+        'REGRESSION: the engine-change guard is gone or now sits AFTER the POST — a '
+        + 'queued remote install will fire against whatever engine happens to be current',
+    );
+});

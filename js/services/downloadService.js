@@ -13,6 +13,14 @@ import { reSyncInstalledModels, getModelById, MODELS } from '../data/modelRegist
 import { clientLogger } from './clientLogger.js';
 import { getModelLicence, hasAcceptedLicence, recordLicenceAcceptance } from '../data/modelConstants/licences.js';
 import { showLicenceGate } from '../components/Compounds/MpiLicenceGate/MpiLicenceGate.js';
+import { remoteEngineClient } from './remoteEngineClient.js';
+
+// Which engine an install POST would land on right now. Mirrors the server's
+// `remoteModels.isRemoteActive()` branch in routes/downloadManager.js, which is what
+// decides local-disk vs Pod-volume when the POST arrives — NOT when Install was
+// pressed. `isRemote()` is the right predicate here even for a download-only Pod: a
+// no-GPU Pod is still the install TARGET (MPI-88), which is the whole point of it.
+const _installEngine = () => (remoteEngineClient.isRemote() ? 'remote' : 'local');
 
 // MPI-100 — recognise an out-of-disk-space failure from the wrapper/OS error
 // text so it can be surfaced as a friendly toast, not the GitHub error dialog.
@@ -124,7 +132,30 @@ const downloadService = {
         // download pipe through each verify+extract. Releasing at the download-done
         // point overlaps the next model's download with the current's verify/extract —
         // still only ONE aria2 download stream at a time, so no CPU-pod starvation.
+        // MPI-539 — the engine this install was queued FOR. The POST is serialized, so
+        // a job can sit in the chain for the whole of the install ahead of it, and the
+        // engine is only read when the POST lands. Fabio, 2026-08-11: he queued Boogu
+        // behind MiniMax H3 Reference onto a download-only Pod, the Pod OOMed and the
+        // app fell back to local — leaving a queued install that had never fired,
+        // pointed at nothing, which would then have installed a 20.8GB model onto his
+        // LOCAL disk that he never asked for. Same shape as the earlier "not enough disk
+        // space" toast: a remote-intended install evaluated against local disk. A queued
+        // install carries no engine identity, so nothing could tell the two apart.
+        const queuedEngine = _installEngine();
         const run = () => {
+            // Its turn came, but under a DIFFERENT engine than it was queued for. There
+            // is no correct retarget here — the user asked to install onto that engine,
+            // and it is gone — so drop it rather than silently installing somewhere
+            // else. cancel() already handles the never-POSTed case (its /cancel is a
+            // backend no-op) and clears the card back to Install.
+            if (_installEngine() !== queuedEngine) {
+                clientLogger.warn('downloadService',
+                    `dropped queued install ${modelId}: queued for the ${queuedEngine} engine, now on ${_installEngine()}`);
+                Events.emit('ui:warning', {
+                    message: `${getModelById(modelId)?.name || modelId} was queued for the ${queuedEngine === 'remote' ? 'remote Pod' : 'local engine'}, which is no longer connected — install cancelled.`
+                });
+                return this.cancel(modelId);
+            }
             // MPI-395 — ARM THE TERMINAL LISTENER BEFORE THE POST. The backend registers
             // the job and starts it before /download/start responds (register-before-
             // respond, G8 — see _firePost), and when every dep is already on disk it also

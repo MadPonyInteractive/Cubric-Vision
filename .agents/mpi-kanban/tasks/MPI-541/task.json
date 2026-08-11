@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-541",
+  "title": "The no-GPU download Pod OOMs on HF weights: hf_xet reconstructs in memory on a 4GB box",
+  "description": "Fabio, 2026-08-11, second CPU-Pod incident of the day and a DIFFERENT root from MPI-539. Pod 1w58c4nmyi1jo7 (cubric-vision, ghcr.io/madponyinteractive/cubric-vision-pod:v0.21.0-dev-cpu, EU-RO-1, 2 vCPU / 4 GB RAM / 20 GB container disk) was installing MiniMax H3 Reference onto the volume in download mode. RunPod's Details tab raised 'Out of Memory (OOM) Detected'; the System log shows 'WARN: container is unhealthy: triggered memory limits (OOM)' starting 17:36:47 BST, ~90s after the 17:35:13 container start, then repeating every ~10s for three minutes as the container restarted and retried. No generation was involved this time - it OOMed on a pure download.\n\nHYPOTHESIS, NOT YET PROVEN - the decisive evidence is the Pod's CONTAINER log (which of the two transports it took), and the Pod is stopped. Fabio raised decompression himself and that is the right family:\n\n- start-cpu.sh installs huggingface_hub so the wrapper can use the hf_xet transport (MPI-491), added because this DC is capped at ~1.7 MB/s through the xet-bridge compatibility route. MiniMax H3 is the one family with no R2 copy (licence-barred), so it is exactly the model that takes that path.\n- The app showed 652.3 MB/s. aria2c against HF from this DC measured 1.66 MB/s (MPI-491), so that number can only be the native Xet path.\n- A native Xet client pulls xorbs and RECONSTRUCTS files from chunks - decompress + reassemble, in memory, across a default-16 concurrent range-get pool. On a 4 GB container at 650 MB/s that is the obvious consumer.\n\nWhat is already deliberate in wrapper.py (~line 2008): HF_XET_CHUNK_CACHE_SIZE_BYTES=0 (container-disk protection, MPI-483) and HF_XET_HIGH_PERFORMANCE explicitly NOT set, with a comment that it wants >=64GB RAM. So the memory question was considered - the concurrency knob was simply never bounded to this box.\n\nCHEAP PROOF, in order: (1) read the Container log for the '[cubric] hf_xet path failed' line or its absence, to confirm which transport ran; (2) set HF_XET_NUM_CONCURRENT_RANGE_GETS low (2-4) next to the existing knobs, publish-runtime.sh dev, restart, re-run the same install and watch the Telemetry memory graph. Both wrapper.py and start-cpu.sh are R2-floated, so this needs NO image rebuild.\n\nThe other lever is the box: 4 GB is the smallest thing the download Pod is ever offered, and the transport was tuned for throughput. Whichever way it goes, the fix must bound the transport to the machine rather than assume the machine.\n\nSIBLING REPO - the files are c:/AI/Mpi/mpi-ci/cubric-vision-pod/wrapper/wrapper.py and c:/AI/Mpi/mpi-ci/cubric-vision-pod/start-cpu.sh. Use git -C.\n\nNOT MPI-539: that card's root is 'a download-mode Pod is not a generation engine' and its six failures are all app-side engine identity. This one is the Pod's own download transport and would OOM the same box with no app bug at all.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-08-11T16:56:00Z",
+  "updated_at": "2026-08-11T16:56:00Z",
+  "labels": [
+    "bug",
+    "runpod",
+    "downloads"
+  ],
+  "priority": "high",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl"
+  }
+}
