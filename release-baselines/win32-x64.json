@@ -5,7 +5,7 @@
   "platform": "win32",
   "arch": "x64",
   "fromVersion": null,
-  "toVersion": "1.4.0",
+  "toVersion": "1.4.1",
   "protocolVersion": "0.1.0",
   "connectorManifestPath": "resources/cubric/connector-manifest.json",
   "connectorManifestHash": "140a57c8b6dd7e21cf28dfaafb2ce8d877a46dc51d64d36dc43f6e0dce867275",
@@ -909,6 +909,21 @@
       "path": "resources/app/comfy_workflows/raw/ltx_i2v_t2v_template.json",
       "size": 257373,
       "sha256": "6b0e15b0999ac150f343fe60a5e7b1952127a8284a03a87a06e6c5c529a7c0f0"
+    },
+    {
+      "path": "resources/app/comfy_workflows/raw/ltx_v2v_foley_template.json",
+      "size": 104935,
+      "sha256": "d6f66d979ca7d2a4c90ffdcbdf2b2c5e27d4f0a921e16299519414de19588a14"
+    },
+    {
+      "path": "resources/app/comfy_workflows/raw/ltx_v2v_lipdub_template.json",
+      "size": 50272,
+      "sha256": "6b5a6f790fad43154749b7e155f1364373ce76b7265a310de126656cde8cf9e8"
+    },
+    {
+      "path": "resources/app/comfy_workflows/raw/ltx_v2v_template.json",
+      "size": 107432,
+      "sha256": "e9b7b0c80ac1dd723eb5af6a535d139ef7d311fe3cf9b9c51c6b4604af073c6f"
     },
     {
       "path": "resources/app/comfy_workflows/raw/minimax_h3_fl2va_template.json",
@@ -3577,8 +3592,8 @@
     },
     {
       "path": "resources/app/docs/builder/02-image-and-rebuild.md",
-      "size": 15471,
-      "sha256": "ca1a1f4eb82c81612dab7c393148bd972c73c873c25158ab73d84ee38521338a"
+      "size": 15924,
+      "sha256": "9fca201993f6dfa65ffd1768d2e60c8ccb8385afa01761255530e7d61a3081ba"
     },
     {
       "path": "resources/app/docs/builder/03-spin-and-install.md",
@@ -3592,8 +3607,8 @@
     },
     {
       "path": "resources/app/docs/builder/05-author-and-test.md",
-      "size": 6323,
-      "sha256": "8c9af9379f86bad9c0c3f86447409ef0ae3a9d60ca5c47c5f6ab94f7051dd7b3"
+      "size": 7808,
+      "sha256": "00b0900112ebaf3a96255c80d64c14c589d43df6cd232e67b80ff11adccfbdb4"
     },
     {
       "path": "resources/app/docs/builder/06-teardown.md",
@@ -3632,8 +3647,8 @@
     },
     {
       "path": "resources/app/docs/component-contracts.md",
-      "size": 23098,
-      "sha256": "1926a94c297986d707a236004629970819c151d42c462e4eadb20f4779d17221"
+      "size": 23820,
+      "sha256": "1f8266dd77088c6b2586d4270e49c6d7160d13420c60e4bb4ac8b7f6e38e3675"
     },
     {
       "path": "resources/app/docs/composite.md",
@@ -3747,8 +3762,8 @@
     },
     {
       "path": "resources/app/docs/models/h3/ref2va.md",
-      "size": 21739,
-      "sha256": "654a1d4739fb9dca42b668249303c9db2fc6840a02b6964b01d71b73aef5d0d7"
+      "size": 21735,
+      "sha256": "7a31fd8c837ac3b4733539d154c2d7823c2e61f93bb113173d8c70655f2e287c"
     },
     {
       "path": "resources/app/docs/models/h3/turbo.md",
@@ -3792,8 +3807,8 @@
     },
     {
       "path": "resources/app/docs/models/krea2/int8-quant.md",
-      "size": 8193,
-      "sha256": "bf7904defc82a235fe47f4bffbe74b98d9ce755e0c86b97a28e259e36102474d"
+      "size": 8172,
+      "sha256": "38a2f55f022b0ce21baf4e4c93f6f218f4efc2d04ac45ce63ff1c885f010a153"
     },
     {
       "path": "resources/app/docs/models/krea2/licences.md",
@@ -3837,13 +3852,13 @@
     },
     {
       "path": "resources/app/docs/models/ltx/audio-input.md",
-      "size": 25960,
-      "sha256": "cbd0785b4a9702943309d30b5eca0c6de088a8632c98773e6faf81bc6e86ba6e"
+      "size": 29675,
+      "sha256": "483575a31d9e0fd3de9f37da39f93c17c851b0d6cecf2b98dda7d3ffcc24d549"
     },
     {
       "path": "resources/app/docs/models/ltx/black-bars-and-nag.md",
-      "size": 5947,
-      "sha256": "0375cee3fa4c951e8d3a682311c27c63d447683b786cf9b7ab44ecd14c4c1981"
+      "size": 8163,
+      "sha256": "3a850794984c95f8b27239ec39709c0b2525807ba511a4b636731b3e0e2d31f0"
     },
     {
       "path": "resources/app/docs/models/ltx/lora-merge.md",
@@ -4067,8 +4082,8 @@
     },
     {
       "path": "resources/app/docs/playbooks/bump-engine/README.md",
-      "size": 16509,
-      "sha256": "a0fbd3d022f1069263d9fdd94f682421931e238e6b159dd7b355661343f1a1eb"
+      "size": 17952,
+      "sha256": "da2299fafb1f97955187756c2d28510e9b47978605a485741a35283ff10680b6"
     },
     {
       "path": "resources/app/docs/playbooks/common/hard-rules.md",
@@ -4117,8 +4132,8 @@
     },
     {
       "path": "resources/app/docs/preview-bus.md",
-      "size": 18613,
-      "sha256": "b861592592fcc5ac123227ae6b78127c1e39f97c9e6b0e102108ead19bc44c13"
+      "size": 20641,
+      "sha256": "524649497983acd4268f5e386a2af9f32e3c9c658d51fe96c356da601776eb15"
     },
     {
       "path": "resources/app/docs/project-integrity.md",
@@ -4127,8 +4142,8 @@
     },
     {
       "path": "resources/app/docs/PROJECT.md",
-      "size": 7143,
-      "sha256": "4b0aa15203618f022667ab23e2f5c88a9279a13d4a9edab745c6827039c7bf48"
+      "size": 8232,
+      "sha256": "5cef4465ac3432a5cf154fa2ca041d3907597c0fbe1b6d9a94f41385d5b73623"
     },
     {
       "path": "resources/app/docs/README.md",
@@ -4266,6 +4281,11 @@
       "sha256": "6dbdfd66fe74a45bbfc813afb8de95587224198c22ec688da3132f56cf8dfbd3"
     },
     {
+      "path": "resources/app/docs/releases/.approved-1.4.1.json",
+      "size": 152,
+      "sha256": "2bfa88e0507b98bfe06845cd3af06def4b6839d513b6d7f3cb99d7fd05fab9db"
+    },
+    {
       "path": "resources/app/docs/releases/2026-06-08-v0.0.1.md",
       "size": 1365,
       "sha256": "fec02bcd437a7d2cf8d3438e1a530ad7e93657e20d23d01c649c8e83c35bf99d"
@@ -4356,6 +4376,11 @@
       "sha256": "abbc4e284a03c04594a96dce937cebfc03681e98a14f234798a54dec4deb9017"
     },
     {
+      "path": "resources/app/docs/releases/2026-08-11-v1.4.1.md",
+      "size": 5533,
+      "sha256": "61c0b81b33a34076ce5f21c8fde9d7938e585df5e52de8901686fb9a0dfc4d25"
+    },
+    {
       "path": "resources/app/docs/releases/build-experience-log.md",
       "size": 51955,
       "sha256": "9bfa1ab56a466b631e61addb000bddb56297a9888bc8801d4885d2979c0fd0e3"
@@ -4367,8 +4392,8 @@
     },
     {
       "path": "resources/app/docs/releases/portable-distribution-contract.md",
-      "size": 34336,
-      "sha256": "ef980c2c23dff3890b34efe34197134c2f282275e7a38c168f8ee1ad4105cbf2"
+      "size": 35744,
+      "sha256": "04293782f62451583ab3ea768e5aff85dce3d728ff125b5ee1bdd8c166a9fae5"
     },
     {
       "path": "resources/app/docs/releases/README.md",
@@ -4377,8 +4402,8 @@
     },
     {
       "path": "resources/app/docs/releases/UNRELEASED.md",
-      "size": 39195,
-      "sha256": "d1a4605de0ee5224351d0d9028d2534f3d2b145c60ce427888e005d0eb2e659c"
+      "size": 1541,
+      "sha256": "2e9eae50ad11e2d9b10c571ec0b08fe8eee8057ee35f1098c5ab4402894220ab"
     },
     {
       "path": "resources/app/docs/runpod-remote-engine.md",
@@ -4436,6 +4461,11 @@
       "sha256": "9a40b2f58def43b01d3da3f9d560c648dd473de0fe6f2d1790b8151e2742272d"
     },
     {
+      "path": "resources/app/docs/workflow-authoring/bench-editing.md",
+      "size": 4509,
+      "sha256": "55170af729c6ae0bf6b5b58b17f2904010479f79eb5c93122af9765b7186c053"
+    },
+    {
       "path": "resources/app/docs/workflow-authoring/generator-patterns.md",
       "size": 9828,
       "sha256": "8e0d0f6c8947ac4e9b5969534d20fe5469f38a88ef69a39c31745004a6d23ab6"
@@ -4452,13 +4482,13 @@
     },
     {
       "path": "resources/app/docs/workflow-authoring/mpi-nodes.md",
-      "size": 7529,
-      "sha256": "1a676e981aa101fa44029367a08bea94b79c740722970381cd68e305d60abb61"
+      "size": 9956,
+      "sha256": "8283166b7d7ce28234d1d8ed4dce06f894cad771f4605ad5e37fa63aabd8188b"
     },
     {
       "path": "resources/app/docs/workflow-authoring/README.md",
-      "size": 10176,
-      "sha256": "f06500ac1a6bb2af3442b6c3c9437d11520d70a662d61e09dc89502a2e1fd353"
+      "size": 10455,
+      "sha256": "1434e6a33507cf2b454911dbc7e60726b938f0e0c53236dccf4bdc73610c1a01"
     },
     {
       "path": "resources/app/docs/workflow-authoring/style-rack.md",
@@ -4507,8 +4537,8 @@
     },
     {
       "path": "resources/app/js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
-      "size": 93573,
-      "sha256": "cf0e13246d553de4ab105feefc6c7b3d7d1d047a08a50a20030ae3f381fb73c6"
+      "size": 94130,
+      "sha256": "a73efbd845d7633b2f1ac39431bef57c3df21c44c6181e3958aecdf55546c983"
     },
     {
       "path": "resources/app/js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.css",
@@ -4517,8 +4547,8 @@
     },
     {
       "path": "resources/app/js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
-      "size": 145948,
-      "sha256": "eec7bcc6c09990126d76344a4c407f52982576769b64b191a2d59aca4dcd90f2"
+      "size": 145932,
+      "sha256": "cbc5acce9c5ec0b3dcf90e816a665a3188377251f7b4d3c807ec44c38f32c433"
     },
     {
       "path": "resources/app/js/components/Compounds/LandingPages/mpi-hotkeys/mpi-hotkeys.css",
@@ -4632,13 +4662,13 @@
     },
     {
       "path": "resources/app/js/components/Compounds/MpiEngineInstall/MpiEngineInstall.css",
-      "size": 6973,
-      "sha256": "4922227a5ff7acfaaebad8f2f278a47e9fb1fdfd0d164eb080b7eb936533e5ba"
+      "size": 14682,
+      "sha256": "d83737b3f75fc0411c3a52fa549aeee8eab1d390e50a8d8211e758fcf44e3b8e"
     },
     {
       "path": "resources/app/js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js",
-      "size": 35072,
-      "sha256": "1b1c54fbd8b0f11693a6cdf6360b73c6a3bb2334967b156c24d25dfbec9bb644"
+      "size": 40435,
+      "sha256": "c4f6330fb31afd8dcaf02ed75c28ce29fcc0b398b1364d87bbba963bef759fe0"
     },
     {
       "path": "resources/app/js/components/Compounds/MpiErrorDialog/MpiErrorDialog.css",
@@ -4657,8 +4687,8 @@
     },
     {
       "path": "resources/app/js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
-      "size": 99493,
-      "sha256": "efbc1701241c4a48d5738b90a7a65ad4808ae3d78d4065ca3d8db3e0feb841e6"
+      "size": 101678,
+      "sha256": "d4c87b77884ea58d0578578849c573d7fb56f13ab26a26bd3aba1737536c4a6a"
     },
     {
       "path": "resources/app/js/components/Compounds/MpiHistoryList/MpiHistoryList.css",
@@ -4967,8 +4997,8 @@
     },
     {
       "path": "resources/app/js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
-      "size": 119333,
-      "sha256": "f53a8fed1ffffef445dfb13d2538ebc3d73684510ef93a0d6253cd67d6b46d41"
+      "size": 119317,
+      "sha256": "996c1a5a9f15f8c09d10b49c1b642d2e19c612c88aa3409fb092741a5a635f37"
     },
     {
       "path": "resources/app/js/components/Organisms/MpiPromptBox/PromptBoxControls.js",
@@ -5407,8 +5437,8 @@
     },
     {
       "path": "resources/app/js/components/Primitives/MpiToast/MpiToast.js",
-      "size": 9387,
-      "sha256": "b35f787ca9e68485be0ef64ad35e61f02b60882a577820ef5b3ed72031f9d4f3"
+      "size": 11685,
+      "sha256": "7b0bc1794dd62f717609a3a760766ec3467bf1bc9570963e4260da8965a00c19"
     },
     {
       "path": "resources/app/js/components/Primitives/MpiTreePicker/MpiTreePicker.css",
@@ -5427,8 +5457,8 @@
     },
     {
       "path": "resources/app/js/components/types.js",
-      "size": 94775,
-      "sha256": "d8ca4850405fd8cb5d4e89d2cbaca4a61e301f41efb1e6829909ac3b9c6ba602"
+      "size": 95420,
+      "sha256": "a95af6a98e1a9596f5e4fecf62924a9889a255fea6f6540daad82e5d2da7a15f"
     },
     {
       "path": "resources/app/js/core/appName.cjs",
@@ -5448,12 +5478,12 @@
     {
       "path": "resources/app/js/core/appVersion.js",
       "size": 804,
-      "sha256": "e036197560d677f8584da4637fa44a7f851f4c0bf1abd7d70f36367cde87d36e"
+      "sha256": "8716dd6ed097304c3a28d9f33ff42654b0177c369e35c596283b1098752d2223"
     },
     {
       "path": "resources/app/js/core/buildInfo.js",
       "size": 176,
-      "sha256": "0179049e4e89abc23bfec0961f1b2364a3b87618b2ef297b13a97c983027b43a"
+      "sha256": "41eeec0e7c1ff8e2955af06ba7778924e4d40a5d5586788244f9807c62da59be"
     },
     {
       "path": "resources/app/js/core/operationRegistry.js",
@@ -5567,8 +5597,8 @@
     },
     {
       "path": "resources/app/js/data/releaseNotes.js",
-      "size": 89546,
-      "sha256": "df28f9295a1f9d1fdcb229678cdd9448da3522169135574be36a0b2082604100"
+      "size": 93818,
+      "sha256": "49ee21c37e9e71e3c1280b26d5e859f60051c27cb153f55e0358964fde22e260"
     },
     {
       "path": "resources/app/js/events.js",
@@ -5617,8 +5647,8 @@
     },
     {
       "path": "resources/app/js/pages/components.js",
-      "size": 54856,
-      "sha256": "a6af6bcec8ec0a503472a89e21718fb52af60a1df7e6d5a69c397939262c9009"
+      "size": 56016,
+      "sha256": "5dca38dfdf83f28848c9983bec6b48ce7b13aee9732ff54d167491887a7752e7"
     },
     {
       "path": "resources/app/js/router.js",
@@ -5627,8 +5657,8 @@
     },
     {
       "path": "resources/app/js/services/activeGenerations.js",
-      "size": 8459,
-      "sha256": "8fff2ef4a1b89a448c47a66ea3ed1bcdf19f1703317de5d486b34d33cc1fb0e9"
+      "size": 9613,
+      "sha256": "591aeb1dc688b77c2b8adc0f9ed9274544fb59f80bdfcc31cbfcec4caf42a51e"
     },
     {
       "path": "resources/app/js/services/assetService.js",
@@ -5642,13 +5672,13 @@
     },
     {
       "path": "resources/app/js/services/comfyController.js",
-      "size": 115148,
-      "sha256": "1b7385318dad34afd3644df0fb8d8bef5b009a4a8077e117fdbc39986263581f"
+      "size": 116095,
+      "sha256": "22c3ba19820f3c280df6e1cbad5868bbba66682ab3bb368ced0a121c28d47b80"
     },
     {
       "path": "resources/app/js/services/commandExecutor.js",
-      "size": 123687,
-      "sha256": "68520a418b1a40659e691f8a87d1560240d13a1779dffd38d608067753697f3c"
+      "size": 125211,
+      "sha256": "c66a6955f4564c23e8060d7041f221024cc901514710f7110318d254eed82945"
     },
     {
       "path": "resources/app/js/services/concatProgress.js",
@@ -5657,8 +5687,8 @@
     },
     {
       "path": "resources/app/js/services/downloadService.js",
-      "size": 48116,
-      "sha256": "4a78bb0eef48bc9b966cd5ae1aeeb435de2e27402217da28c19641a69574c782"
+      "size": 52192,
+      "sha256": "67b099da9d4c786cbcee60c6e363ff236f4e11bc5d4fb94ee2f87d4fedb37496"
     },
     {
       "path": "resources/app/js/services/engineGate.js",
@@ -5677,8 +5707,8 @@
     },
     {
       "path": "resources/app/js/services/generationService.js",
-      "size": 78940,
-      "sha256": "75438bd6afce900557c723228259f9a1755f9605d7ccf87c1614f2ac90f1108d"
+      "size": 78950,
+      "sha256": "ef7bed7d7ae7c605381b922690463091b8607fca38a93967de512d671d806ea8"
     },
     {
       "path": "resources/app/js/services/generationStore.js",
@@ -5787,8 +5817,8 @@
     },
     {
       "path": "resources/app/js/shell/notificationService.js",
-      "size": 11024,
-      "sha256": "846233c845a3af1bec0f5f15f5acce4c8e5503049765837f6a1178edf17c176c"
+      "size": 13434,
+      "sha256": "70674d50ea8a83c6662fbad03666c97a54661d69ff8a4332f28450fad81c23a3"
     },
     {
       "path": "resources/app/js/shell/preloadStyles.js",
@@ -5932,8 +5962,8 @@
     },
     {
       "path": "resources/app/js/utils/string.js",
-      "size": 1162,
-      "sha256": "0a132af7aa23f0d542fdfcbcaf3bd73a812d097ec9ba1fbb185bdc78a72de95d"
+      "size": 2036,
+      "sha256": "87f0486f6a8db9271635b4d268ef3cbf0d2d3fb5652c84597cb1a461c76a0179"
     },
     {
       "path": "resources/app/js/utils/thumbnail.js",
@@ -6213,7 +6243,7 @@
     {
       "path": "resources/app/node_modules/.package-lock.json",
       "size": 163677,
-      "sha256": "35d014d8ecf843a82c99596fa3dfc298178e6c22b04d34babbd4293fde2dfd58"
+      "sha256": "7076b36dbb575bd003f1bc00d547f99ca419ef98db342b1576718468eab98d5a"
     },
     {
       "path": "resources/app/node_modules/@derhuerst/http-basic/lib/cache-control-utils.d.ts",
@@ -31813,12 +31843,12 @@
     {
       "path": "resources/app/package-lock.json",
       "size": 180480,
-      "sha256": "47d3260f49a592c71cc4955185e9773cabb8e529df474569364ef35e8383dffa"
+      "sha256": "5fa1b71532ca27c9292d005122510ac445ff945a1dee930785a9a748321e381a"
     },
     {
       "path": "resources/app/package.json",
       "size": 2564,
-      "sha256": "fddd8ad7a3b32238cda3c2ec433cb8446908a3617bb7850092580aa7408013bb"
+      "sha256": "ac0d1fc1844099f7732612d6a24cdbf190bedbd26ec8f91f04a3f31c6dcb17fc"
     },
     {
       "path": "resources/app/PRODUCT.md",
@@ -31832,13 +31862,13 @@
     },
     {
       "path": "resources/app/release-baselines/darwin-arm64.json",
-      "size": 1261256,
-      "sha256": "7ce728abd9dc9e9145ca014af478f5321f84a76c9ca1e57f4e05485344916401"
+      "size": 1265714,
+      "sha256": "9d2827bdcd96f1eede337dbc8346f7f7f72173574dc4ee609bd50dfe32d86d79"
     },
     {
       "path": "resources/app/release-baselines/linux-x64.json",
-      "size": 1205198,
-      "sha256": "997407651a56915e7c752cc573761b8c01bc99fe3bd24ce0c338570eec743b66"
+      "size": 1209656,
+      "sha256": "3048dcf5f6b33a2f9dd21ca00ef5391bb0b2cee23a74b6981633c463d3d9fa5e"
     },
     {
       "path": "resources/app/release-baselines/README.md",
@@ -31847,8 +31877,8 @@
     },
     {
       "path": "resources/app/release-baselines/win32-x64.json",
-      "size": 1271906,
-      "sha256": "f1205c9ec145636aead317c4c3bc9aa78180e67b537095089780487210863cfd"
+      "size": 1276607,
+      "sha256": "63e4ff9fd9941f79a63d27e73bfee7fa9258fd5a22f59e041959e0a9cbaf1a9e"
     },
     {
       "path": "resources/app/resources/cubric/connector-manifest.json",
@@ -31882,8 +31912,8 @@
     },
     {
       "path": "resources/app/routes/downloadManager.js",
-      "size": 191394,
-      "sha256": "b88e7295a169feb30bf829cf2b66abf58a09a59dd726fbf59ed57d344142a154"
+      "size": 196945,
+      "sha256": "655f178676aa19a29e7c8c57ef2769d4af4c2029c4b87eec7fb7c00744e271d0"
     },
     {
       "path": "resources/app/routes/engine.js",
@@ -32127,8 +32157,8 @@
     },
     {
       "path": "resources/app/templates/tpl-components.html",
-      "size": 47175,
-      "sha256": "95cabfa4bb021597aacb85fb81067f96e899a5a9cba92530510e8e376e1e12d4"
+      "size": 47825,
+      "sha256": "b35ebced6b44043b8209b64f1d55094a29a092596f513405a3765ddd680f3a97"
     },
     {
       "path": "resources/cubric/connector-manifest.json",
@@ -32239,14 +32269,14 @@
     "<documents>/Cubric Vision/project-paths.json"
   ],
   "delete": [],
-  "createdAt": "2026-08-10T17:35:31.434Z",
+  "createdAt": "2026-08-11T20:24:47.481Z",
   "artifact": {
     "kind": "portable-stage",
-    "rootName": "CubricVision-windows-x64-v1.4.0",
+    "rootName": "CubricVision-windows-x64-v1.4.1",
     "launchers": [
       "update.bat",
       "update-from-zip.bat"
     ],
-    "buildHash": "f3b20d93107a"
+    "buildHash": "73f855aefeff"
   }
 }

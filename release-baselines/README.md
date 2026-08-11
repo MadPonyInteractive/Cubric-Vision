@@ -57,17 +57,25 @@ Local Windows builds do the same by hand:
 
 ## Current baselines
 
-- All three hold the **v1.3.1 FULL (portable-stage)** manifests (2026-08-02,
-  MPI-427) from the shipped 1.3.1 build, so the next release deltas against
-  1.3.1. `toVersion: 1.3.1`, `fromVersion: null`, `kind: portable-stage`:
-  - `darwin-arm64.json` — 6565 files
-  - `linux-x64.json` — 6385 files
-  - `win32-x64.json` — 6420 files
+- All three hold the **v1.4.1 FULL (portable-stage)** manifests (2026-08-11,
+  MPI-542) from the shipped 1.4.1 build, so the next release deltas against
+  1.4.1. `toVersion: 1.4.1`, `fromVersion: null`, `kind: portable-stage`:
+  - `darwin-arm64.json` — 6595 files
+  - `linux-x64.json` — 6415 files
+  - `win32-x64.json` — 6450 files
 
-  Restamped from the published artifacts (mpi-ci run 30755518372, SHA
-  `5328c033`, branch `1.3.1`) **after** v1.3.1 went live on the GitHub release,
-  per the timing rule in **Contract**. The previous v1.3.0 values were 6563 /
-  6383 / 6418; v1.2.0 were 6505 / 6325 / 6362.
+  Restamped from the published artifacts (mpi-ci run 31532694625, SHA
+  `73f855ae`, tag `v1.4.1`) **after** v1.4.1 went live on the GitHub release,
+  per the timing rule in **Contract**. Preceding values: v1.4.0 were 6589 / 6409
+  / 6444; v1.3.1 were 6565 / 6385 / 6420 (mpi-ci run 30755518372, SHA
+  `5328c033`); v1.3.0 were 6563 / 6383 / 6418; v1.2.0 were 6505 / 6325 / 6362.
+
+  > **A Windows zip contains TWO `update-manifest.json` files** — the top-level
+  > `resources/cubric/` portable-stage one (the baseline) and a nested stale copy
+  > at `resources/app/resources/cubric/`. Take the SHALLOWEST path. Picking the
+  > nested one silently installs a wrong baseline, and nothing downstream would
+  > flag it: the next release's Windows delta would just be quietly wrong.
+  > (Caught by an assertion during the 1.4.1 restamp, 2026-08-11.)
 - They had been left at 1.0.0 through 1.0.1, 1.1.0 and 1.2.0, so every "delta"
   since was computed against 1.0.0 — correct, but far larger than needed (the
   1.2.0 Windows update bundle reads `from 1.0.0 -> 1.2.0`, 1226 files, 90 MB).
