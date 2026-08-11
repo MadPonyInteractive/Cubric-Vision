@@ -143,17 +143,26 @@ test('a dangling symlink anywhere in the staged tree fails the build', async () 
         // reason this check tests reachability rather than banning symlinks.
         fs.mkdirSync(path.join(root, 'nested'), { recursive: true });
         fs.writeFileSync(path.join(root, 'nested', 'real.txt'), 'x');
+
+        // MPI-542 — fall back to JUNCTIONS instead of skipping. Windows refuses
+        // symlinkSync with EPERM without Developer Mode, so this test skipped on every
+        // dev machine and only ever ran on CI. It was red there for days while reading
+        // green here, and it was right: fs.access succeeds on a dangling reparse point,
+        // so the check it guards never fired on Windows at all. A junction is the same
+        // reparse point, needs no privilege, and reproduces the bug exactly.
+        let link;
         try {
             fs.symlinkSync(path.join(root, 'nested', 'real.txt'), path.join(root, 'good.link'));
+            link = (target, name) => fs.symlinkSync(target, path.join(root, name));
         } catch (err) {
-            // Windows without Developer Mode / admin cannot create symlinks at all.
-            // Skipping is honest; asserting nothing would be a green test that proves nothing.
-            console.log(`  skip  dangling-symlink check (symlinks unavailable: ${err.code})`);
-            return;
+            if (err.code !== 'EPERM' || process.platform !== 'win32') throw err;
+            fs.mkdirSync(path.join(root, 'nested', 'realdir'));
+            link = (target, name) => fs.symlinkSync(target, path.join(root, name), 'junction');
+            link(path.join(root, 'nested', 'realdir'), 'good.link');
         }
         await assertNoDanglingSymlinks(root); // resolves: nothing is broken
 
-        fs.symlinkSync(path.join(root, 'nested', 'gone.txt'), path.join(root, 'bad.link'));
+        link(path.join(root, 'nested', 'gone'), 'bad.link');
         await assert.rejects(() => assertNoDanglingSymlinks(root), /dangling symlink/);
     } finally {
         fs.rmSync(root, { recursive: true, force: true });

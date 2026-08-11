@@ -40,7 +40,12 @@ globalThis.document = {
 globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 globalThis.fetch = async () => ({ ok: true, json: async () => ({}) });
 
-const SRC = 'file:///c:/AI/Mpi/Cubric-Vision/js/';
+// Derived from __dirname, never hardcoded: this was written as an absolute
+// file:///c:/AI/Mpi/... URL, so it could only ever resolve on the machine it was
+// written on. CI checks out to D:\a\Cubric-Vision, where all three tests died with
+// ERR_MODULE_NOT_FOUND — green locally, red on every push. (MPI-542)
+const SRC = require('node:url')
+    .pathToFileURL(require('node:path').join(__dirname, '..', 'js') + require('node:path').sep).href;
 const REAL_NOW = Date.now;
 const settle = () => new Promise(r => setTimeout(r, 250)); // past the 150ms flush defer
 

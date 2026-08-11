@@ -629,6 +629,16 @@ async function stagePortableSkeleton(stageRoot, opts, config) {
 // was scoped to Electron.app, which is exactly why it missed this. macOS .framework
 // links are relative and resolve fine, so a "does the target exist" test passes them.
 // Throws: a dangling link in an artifact is a build bug, not a warning.
+/** Does a symlink's target actually exist? stat() follows the link; a dangling one throws. */
+async function linkResolves(linkPath) {
+  try {
+    await fs.stat(linkPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function assertNoDanglingSymlinks(appRoot) {
   const dangling = [];
   const walk = async (dir) => {
@@ -636,7 +646,15 @@ export async function assertNoDanglingSymlinks(appRoot) {
     for (const entry of entries) {
       const full = path.join(dir, entry.name);
       if (entry.isSymbolicLink()) {
-        if (!(await pathExists(full))) {
+        // MPI-542 — resolve with stat(), NOT pathExists(). pathExists uses fs.access,
+        // and on Windows access SUCCEEDS on a dangling reparse point (GetFileAttributesW
+        // reports the link's own attributes when it cannot resolve the target), so every
+        // broken link read as fine and this check was inert on the one platform whose
+        // build we ship the most of. stat() follows the link and throws ENOENT — measured
+        // both ways against a real dangling junction. The test that should have caught it
+        // could not: symlink creation is EPERM without Developer Mode, so it skipped on
+        // every dev machine and only ever ran on CI, where it had been red for days.
+        if (!(await linkResolves(full))) {
           dangling.push(`${toPosix(path.relative(appRoot, full))} -> ${await fs.readlink(full)}`);
         }
         continue; // never follow a link while walking — a cycle would hang the build
