@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-533",
+  "title": "Deprecation tombstone ledger - a retired id must survive its own removal",
+  "description": "MPI-514 shipped a deprecated FLAG on models. The gap is what happens AFTER removal: per docs/model-library.md, \"the flag disappears with the ModelDef on the release that removes it\". So a retired id becomes indistinguishable from a typo, and no accurate message can be written for anything that still references it.\n\nFix follows a precedent already in the codebase: on removal the model's DEP ENTRIES are kept so _orphanedDepIds in routes/downloadManager.js can still reclaim the weight (see MPI-470, which deprecated wan-22-t2v-high/low but kept their entries). Extend the same idea to a TOMBSTONE LEDGER covering retired model ids, dep ids, AND node classes, each carrying removedIn.\n\nThen: unknown id -> \"unknown requirement x\" (dev error); tombstoned id -> \"x was removed in 1.5\" (accurate, actionable). Node classes belong in it too - a Flow can break from an upstream pack bump renaming a class, not only from a model retirement.\n\nMESSAGES ONLY. No shims, no migrations, no compatibility rescue machinery.\n\nCONSUMERS: (1) Flow cards, which must show a disabled card with a named reason rather than failing at Run; (2) the third-party flow validator, so a dev linting locally gets the identical verdict the app will give the user; (3) a flow-breaking-changes section in release notes - retired model/dep ids and renamed node classes - which is what MPI owes devs in exchange for making maintenance their responsibility.\n\nRELATED: MPI-514 (shipped the flag), MPI-507 (PiD -> upscale plugins), MPI-470 (kept deps after deprecation), the community flow packages card.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-08-11T02:20:00Z",
+  "updated_at": "2026-08-11T02:20:00Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}
