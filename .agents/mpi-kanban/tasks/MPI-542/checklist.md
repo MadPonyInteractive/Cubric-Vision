@@ -31,10 +31,12 @@ themselves patched fixes with holes; green tests are not the bar here.
       live timers meant the second expired mid-read. Also fixed the FIFO drain it
       depends on. Commits 2730a7b8, 1eba614a. CONFIRMED LIVE by Fabio: "I was able to
       read all toasts now, even the big ones."
-- [ ] Local disk-full message - live proof. The REMOTE half is proven (Fabio's Pod
-      install, toast quoted the volume and the margined figure). The local half shares
-      the same client arm; only the server string differs. Cheapest check: local engine,
-      Install on Qwen Image Edit (32.1 GB) against ~29 GB free on G:.
+- [x] Disk-space message - live proof, BOTH halves. REMOTE: Fabio's Pod install, toast
+      named the Pod volume with the margined figure. LOCAL: Install on LTX 2.3 High
+      against 29.4 GB free on G: - "41.1 GB needed (5% working margin included), 29.4 GB
+      free at G:/CubricModels". The card reads 57.9 GB disk and the gate asked 41.1,
+      because LTX 2.3 Balanced was already installed and only QUEUED deps need new
+      space: 39.1 x 1.05 = 41.1. Margin visible, drive named, shared deps excluded.
 
 ## The app needs a restart before any of this is re-tested
 
