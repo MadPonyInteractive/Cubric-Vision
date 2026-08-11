@@ -31,9 +31,42 @@ const _unsubs = [];
 // Finished-gen counter for the coalesced completion notification (flushed when
 // state.generationQueueCount reaches 0). See the generation:complete handler.
 let _doneCount = 0;
+// When the most recent counted completion landed. MPI-540: the count had NO
+// expiry. `_maybeArmFlush` only ever flushes it on `generationQueueCount`
+// reaching 0, so a batch whose queue never cleanly drained — exactly what a
+// stranded or errored lane leaves behind, and MPI-539's incident produced
+// several — left `_doneCount` alive indefinitely. It then attached itself to
+// whatever drove the count to 0 NEXT: an unrelated later generation, or a
+// navigation re-deriving it, announcing "N generations finished" 10-20 minutes
+// after the fact (Fabio, twice). Nothing downstream defers — main.js's
+// `showOsNotification` fires on receipt and drops outright when the window is
+// focused — so the count is the only thing that can carry a batch that far.
+let _doneAt = 0;
+// ponytail: a wall-clock window, not a batch identity. The count belongs to a
+// batch and an id threaded from the queue would say exactly that, but it means a
+// new field through generationService and commandExecutor. Time since the last
+// COUNTED completion separates every case seen so far, and past this window the
+// user has long since watched the gallery fill — the notification has no one left
+// to inform. Upgrade to a batch id if a real batch ever trips it (the visible
+// cost is an undercount: a >5min gap between two items in one batch reports the
+// later ones only).
+const DONE_STALE_MS = 5 * 60 * 1000;
 // Single pending flush timer — replaced (never stacked) on each count→0 so a
 // leftover timer from a previous batch can't fire against a new one.
 let _flushTimer = null;
+
+// Drop a count that has outlived the batch it was counting. Called on BOTH edges
+// that can act on `_doneCount`: before counting a new completion (otherwise the
+// orphaned N joins the fresh 1 and reports N+1 with a freshly-stamped time, which
+// no fire-time check can then catch) and at the top of `_maybeArmFlush` (the edge
+// that actually fires the late notification).
+function _dropStaleCount() {
+    if (_doneCount > 0 && (Date.now() - _doneAt) > DONE_STALE_MS) {
+        clientLogger.warn('notificationService',
+            `dropped ${_doneCount} stale finished-gen(s) — batch never drained, last completion ${Math.round((Date.now() - _doneAt) / 1000)}s ago`);
+        _doneCount = 0;
+    }
+}
 
 // Route + fire the coalesced completion notification. Extracted so it can be
 // re-checked from a setTimeout closure without duplicating the routing.
@@ -68,6 +101,7 @@ function _fireCompletionNotification() {
 // bug). Whichever edge lands last with count==0 && _doneCount>0 arms the timer; the
 // timer re-checks both at fire time so a refill in the ~frame gap still cancels it.
 function _maybeArmFlush() {
+    _dropStaleCount();                                           // MPI-540 — never speak for a dead batch
     if ((Number(state.generationQueueCount) || 0) !== 0) return; // batch not drained
     if (_doneCount <= 0) return;                                 // nothing to report
     if (_flushTimer) return;                                     // already scheduled
@@ -121,7 +155,8 @@ export function initNotificationService() {
     // was Stopped, this edge is what drains the queue, and the surviving siblings'
     // count deserves its one toast.
     _unsubs.push(Events.on('generation:complete', ({ cancelled = false } = {}) => {
-        if (!cancelled) _doneCount++;
+        _dropStaleCount(); // MPI-540 — before counting, or an orphan rides along on a fresh stamp
+        if (!cancelled) { _doneCount++; _doneAt = Date.now(); }
         _maybeArmFlush();
     }));
     _unsubs.push(Events.onState('generationQueueCount', (count) => {
@@ -206,6 +241,7 @@ export function initNotificationService() {
 export function destroyNotificationService() {
     if (_flushTimer) { clearTimeout(_flushTimer); _flushTimer = null; }
     _doneCount = 0;
+    _doneAt = 0;
     while (_unsubs.length) { _unsubs.pop()(); }
 }
 

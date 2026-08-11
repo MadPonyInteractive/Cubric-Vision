@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/shell/notificationService.js",
+    "tests/notification-stale-count.test.cjs"
+  ]
+}
