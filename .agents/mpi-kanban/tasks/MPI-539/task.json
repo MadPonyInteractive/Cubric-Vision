@@ -7,7 +7,7 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-11T16:12:00Z",
-  "updated_at": "2026-08-11T16:56:00Z",
+  "updated_at": "2026-08-11T17:20:00Z",
   "labels": [
     "bug",
     "runpod",
@@ -22,5 +22,6 @@
     "validation": "validation.md",
     "files": "files.json",
     "events": "events.jsonl"
-  }
+  },
+  "parent": "MPI-542"
 }
