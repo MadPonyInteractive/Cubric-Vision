@@ -80,6 +80,13 @@ _(none yet)_
   ended ten or twenty minutes earlier, sometimes over an hour. Counts that outlive their
   batch are now discarded.
 
+- **Notifications stay up long enough to read.** Every notification got the same three
+  seconds, whether it said "Copied" or quoted three figures and a drive letter — so the
+  longer and more useful ones were gone before the first line landed. A notification now
+  stays for as long as its message takes to read. And when two are on screen at once,
+  only the first counts down: the second waits its turn instead of expiring while you
+  are still reading the one above it.
+
 - **"Not enough disk space" now names the disk, and asks for the right amount.** A local
   install could refuse with "29.3 GB needed, 29.4 GB free" — more free space than it said
   it wanted — because the check quietly reserves a small working margin the message never

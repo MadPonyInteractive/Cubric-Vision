@@ -68,6 +68,8 @@ function _visibleCount() {
 
 function _startTimer(el, duration, dismiss) {
     if (duration <= 0) return;
+    el._timerStarted = true;
+    el._timerRunning = true;
     const progress = qs('.mpi-toast__progress', el);
     if (progress) {
         progress.style.transition = `width ${duration}ms linear`;
@@ -79,8 +81,8 @@ function _startTimer(el, duration, dismiss) {
 }
 
 // Promote a queued toast into a live slot. It's already in the right place in
-// the DOM, so this only flips the class, kicks the open animation, and starts
-// its timer.
+// the DOM, so this only flips the class and kicks the open animation. The timer
+// is NOT started here — _armOldest decides whose turn it is.
 function _showToast(el) {
     el.classList.remove('mpi-toast--queued');
 
@@ -88,17 +90,43 @@ function _showToast(el) {
     void el.offsetWidth;
     el.classList.add('mpi-toast--open');
 
-    // Start timer and progress bar only when actually shown
-    _startTimer(el, el._duration, el._dismissFn);
+    _armOldest();
 }
 
-// Reveal the next queued toast if a slot is free. column-reverse means the
-// oldest queued toast sits last in the DOM, so promote that one.
+// MPI-542 — only ONE toast counts down at a time.
+//
+// Reading is serial. With two toasts on screen and two independent timers, the
+// second one's window burns while you are still on the first: seen live, the
+// second toast was already half gone by the time the first had been read. Both
+// stay visible (a second toast you cannot see yet is a toast you will miss), but
+// the newer one's clock does not start until the older one is gone.
+//
+// Toasts are appended, so DOM order IS arrival order — the oldest is first. It is
+// also the one the user started reading, so it counts down first. (The stack
+// renders column-reverse, which flips the VISUAL order only; it does not touch
+// the DOM.) A persistent toast (duration 0) never counts down, so it is skipped
+// rather than allowed to hold the line forever.
+function _armOldest() {
+    if (!_stackContainer) return;
+    const visible = qsa(':scope > .mpi-toast:not(.mpi-toast--queued)', _stackContainer);
+    if (visible.some(t => t._timerRunning)) return;   // someone's turn is in progress
+    for (const t of visible) {
+        if (t._timerStarted || t._duration <= 0) continue;
+        _startTimer(t, t._duration, t._dismissFn);
+        return;
+    }
+}
+
+// Reveal the next queued toast if a slot is free.
+// Toasts are appended, so the oldest queued sits FIRST in the DOM — promote that
+// one, or a burst is drained newest-first and the queue reads backwards. (The
+// index used to be `queued.length - 1`, on a comment claiming column-reverse put
+// the oldest last; column-reverse is a rendering direction and reorders nothing.)
 function _drainQueue() {
     if (_visibleCount() >= MAX_VISIBLE_TOASTS) return;
     if (!_stackContainer) return;
     const queued = qsa(':scope > .mpi-toast--queued', _stackContainer);
-    const next = queued[queued.length - 1];
+    const next = queued[0];
     if (next) _showToast(next);
 }
 
@@ -153,6 +181,12 @@ export const MpiToast = ComponentFactory.create({
             if (dismissed) return;   // single clean exit — guards double-fire
             dismissed = true;
             clearTimeout(el._dismissTimer);
+            // Release the countdown BEFORE the close animation, not after it: the
+            // toast above has been readable this whole time and should start its
+            // window now, not ~200ms later. _armOldest skips this one — it is
+            // already _timerStarted. (MPI-542)
+            el._timerRunning = false;
+            _armOldest();
             el.classList.remove('mpi-toast--open');
             el.classList.add('mpi-toast--closing');
             el.addEventListener('transitionend', () => {
@@ -200,7 +234,9 @@ export const MpiToast = ComponentFactory.create({
                 observer.disconnect();
                 dismissed = true;
                 clearTimeout(el._dismissTimer);
+                el._timerRunning = false;   // MPI-542 — never leave the turn held by a gone toast
                 _drainQueue();
+                _armOldest();
             });
         });
         observer.observe(document.body, { childList: true, subtree: true });
