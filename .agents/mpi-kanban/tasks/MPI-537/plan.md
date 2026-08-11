@@ -12,9 +12,19 @@ background drift, which only Fabio's eye can call.
 
 ## Current State
 
-Bench `LTX_lipdub_v2v_template.json` read in full: 36 nodes, 49 links. Every node
-type and `LTX2.3\ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors` are present on both
-8188 and 48188 (`/object_info`, 2026-08-11). Nothing in `comfy_workflows/raw/` yet.
+Phases 1–4 done. The graph is authored, proven on the bench, and now carries the
+`Input_*`/`Output_*` title law: **35 nodes / 48 links**, converting to **33 API
+nodes** with 0 unknown, 0 missing-required, 0 dangling and nothing unreachable, one
+output node (`Output_Video`). Bench and repo copies are byte-identical.
+
+Six injectable titles: `Input_Video`, `Input_Audio`, `Input_Positive`,
+`Input_Negative`, `Input_Seed`, `Output_Video`.
+
+**All five phases complete.** Fabio judged the retitled graph working ("the phase4
+generation works well"), which satisfies this card's `user-ux` verify mode. Two-stage
+is OUT for v1. The i2v thread is retired here: image-to-video with an audio track
+already works in the shipped app across multiple characters, so the missing piece was
+always the **video-in** front end — which is this graph.
 
 ## Plan Drift
 
@@ -35,6 +45,19 @@ type and `LTX2.3\ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors` are present on both
   and leaves only the video to generate. That is a **one-link swap**, and it is why
   the RuneXX collection carries both a `_custom_audio_…` and a
   `_prompt_lip-synced-voice_…` variant. Both modes therefore live in one file.
+
+- **2026-08-11 — Phase 4 is two node SWAPS, not two renames, and it bakes the
+  loaders.** `MpiLoadVideo` emits `images`/`audio`/`fps` directly and has no `VIDEO`
+  output, so it replaces **both** `#5002 LoadVideo` **and** `#5010 GetVideoComponents`
+  — its slots 0/1/2 land on exactly the consumers `GetVideoComponents` fed.
+  Symmetrically `MpiSaveVideo` takes `images`/`audio`/`fps`, so it replaces **both**
+  `#4849 CreateVideo` **and** `#4852 SaveVideo`. Net −7/+6 nodes. Separately, the
+  template still named `…_transformer_only_bf16` and `gemma-3-12b-it-heretic-fp8-comfy`
+  — the weights this install does not have — so the first Phase 4 queue attempt
+  returned the same 400 `prompt_outputs_failed_validation` Phase 1 documented. The
+  substitution is now **baked into the template** (the values `ltx_v2v_foley_template.json`
+  already ships) rather than re-applied by hand on every run. A template that cannot
+  queue on our own install is broken, and the app card would have inherited that too.
 
 ## Phases
 
@@ -98,7 +121,19 @@ ids and the settings that produced it.
 
 ## Remaining Work
 
-All five phases.
+None on this card. Close it.
+
+**The app-side Flow card DOES NOT EXIST YET — create it.** Its two siblings do:
+MPI-536 (foley) and MPI-520 (v2v extend), both `todo`/blocked on **MPI-531**
+(`FlowStepField` is `select|button|toggle` only, so authoring any of them today
+needs a JS `uiComponent` that MPI-531 item 4 must then port). MPI-520's own
+description already points at "lipsync MPI-537". Mirror those two, carry the
+constraints below, and block it on MPI-531 like the others.
+
+Carried to that card (NOT this card's work): what happens when the user's clip is a
+wide shot (auto-crop / warn / refuse), and how the UI relates line length to clip
+duration. Still untested anywhere: clips over 3s, multiple speakers, non-English, and
+whether a ~5s voice reference clones better than a 3s one.
 
 ## Verification
 

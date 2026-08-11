@@ -35,6 +35,7 @@ into the matching file below**, or add a new small file. Rules:
 |---|---|
 | [mpi-nodes.md](mpi-nodes.md) | **MpiNodes is our own node pack** (`C:\AI\Mpi\ComfyUi-MpiNodes`, ~60 nodes). What's in it, and that we can add a new node any time we need one. |
 | [injection.md](injection.md) | How the app writes values into a graph: the `Input_*`/`Output_*` title law, the injector target-input list, and the traps (silent title-miss, LoRA objects, media params). |
+| [bench-editing.md](bench-editing.md) | **Editing a template the user hand-organises** — experiments stay API-only, permanent edits clone donor nodes in place and assert `pos`/`size`, and the serialisation must round-trip byte-for-byte or the whole file lands in the diff. |
 | [generator-patterns.md](generator-patterns.md) | Template → runtime files: the orchestrate/registry/handler system, and the **selector→N-files** pattern (boolean split, `input_tier` 1/2/3 → three files). |
 | [media-inputs.md](media-inputs.md) | **Media-input path→string contract (MPI-272)** — image/mask/video/audio are path-reading loaders (`MpiLoadImageFromPath`/`MpiLoadAudio`/`MpiLoadVideo`) that self-gate on empty `string`; no placeholder. Only `LoadLatent` still stages a default. Path source law + reuse-404 soft-error. |
 | [style-rack.md](style-rack.md) | **Style LoRAs — `MpiStyleSelector` + chained `MpiStyleLoras`** (MPI-359). One index + one strength drive the LoRA AND its trigger line, injected per-widget via the dotted `Input_Style_Selector.selector` / `.strength_model` keys. |

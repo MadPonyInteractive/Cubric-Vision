@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "e48a9fda-56d5-4769-b449-2014e8972251",
+  "path": "comfy_workflows/raw/ltx_v2v_lipdub_template.json",
+  "owner_session": ".agents/mpi-kanban/state/sessions/13204447-df88-46bb-b8c3-f8b7cb6e025e.json",
+  "owner_role": "implementer",
+  "task": ".agents/mpi-kanban/tasks/MPI-537/task.json",
+  "status": "complete",
+  "claim_kind": "write",
+  "heartbeat_at": "2026-08-11T10:05:00Z",
+  "allowed_actions": [
+    "edit",
+    "verify"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-11T07:12:00Z",
+      "event": "claimed_for_write"
+    },
+    {
+      "at": "2026-08-11T10:05:00Z",
+      "event": "released_complete",
+      "note": "Phase 4 landed and the card closed; graph synced bench<->repo."
+    }
+  ]
+}

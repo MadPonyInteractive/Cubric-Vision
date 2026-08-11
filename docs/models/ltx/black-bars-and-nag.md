@@ -94,3 +94,46 @@ back through the same LoRA-model-clip node that NAG's model output feeds, ComfyU
 KJNodes is installed local AND on the Pod (WAN uses it too). NAG did NOT fix the black
 bars (above) but is kept because it is the only thing that makes a negative prompt
 functional at all on this model.
+
+---
+
+## Why cfg 1 in the first place — and why raising it is not free (MPI-4, 2026-08-11)
+
+NAG exists because **cfg 1 kills the negative prompt**: `do_uncond()` is
+`not math.isclose(cfg_scale, 1.0)`, so at cfg 1 no uncond pass runs and the
+`(cfg-1)*(pos-neg)` term is zero. NAG steers at the attention level instead, which is why
+it is *the* cfg-1 answer for negatives rather than one option among several.
+
+### The cfg-1 `uncond_pred = None` crash trap
+
+Core assigns `uncond_pred = None` under its cfg-1 optimisation. `MultimodalGuider` line 269
+replicates the `sampler_post_cfg_function` hook and reads `noise_pred_neg`
+**unconditionally**, so the crash needs **both** cfg 1.0 on both modalities **and** some
+node registering a post-cfg function. Dropping AUDIO cfg 6 → 1 to fix distorted audio is
+exactly what armed it; the reference-audio branch was what registered the hook.
+
+**The fix is to use core `CFGGuider` at cfg 1 on that branch, not `MultimodalGuider`** —
+core guards the None, and at cfg 1 `MultimodalGuider`'s `stg` and `modality_scale` are
+inert anyway. This is already what `ltx_i2v_t2v_template.json` ships.
+
+### cfg is NOT a gain control (measured)
+
+Swept `#118 CFGGuider.cfg` API-only, seed held at 45 on `t2v_004.mp4`:
+
+| cfg | mean_volume | max_volume |
+|---|---|---|
+| 1.0 | -39.7 dB | -10.9 dB |
+| 1.5 | -39.5 dB | -9.2 dB |
+| 2.0 | -39.3 dB | -8.9 dB |
+| 3.0 | **-33.2 dB** | **-1.5 dB** |
+
+From 1.0 to 2.0 the mean moves 0.4 dB — nothing — while the peak creeps 2 dB. At 3.0 the
+mean jumps 6.5 dB and the peak 7.4 dB. **It moves transients, not the body of the track**,
+which is how Lightricks' cfg 6 produced `max_volume 0.0 dB` clipping: not "too loud" so much
+as transient-blown. The usable window is narrow and **3.0 sits at the top of it** — the
+shipped value, judged by ear. Adding NAG on top cost 0.4 dB of peak, leaving 1.1 dB of
+headroom; a more percussive clip is the case that would force 2.5.
+
+> **This is why normalisation was abandoned:** the reference graph has no gain stage, and
+> the only core option (`AudioAdjustVolume`) is a fixed dB gain with no peak detection, so a
+> gain sized for one render clips the next.

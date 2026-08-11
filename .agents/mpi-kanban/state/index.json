@@ -1,14 +1,10 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-11T06:55:00Z",
+  "updated_at": "2026-08-11T10:05:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
-  "active_sessions": [
-    ".agents/mpi-kanban/state/sessions/f0814dde-1f16-4e5a-b226-8ab1278b421d.json"
-  ],
-  "active_tasks": [
-    ".agents/mpi-kanban/state/tasks/119cd99e-d533-414a-81d2-780022678cbc.json"
-  ],
+  "active_sessions": [],
+  "active_tasks": [],
   "active_file_claims": [],
   "pending_file_states": [
     "js/services/comfyController.js",
@@ -66,7 +62,7 @@
       "id": "a92f1c68-9c10-4b71-91db-06527bc5fa99",
       "path": ".agents/mpi-kanban/state/handoffs/a92f1c68-9c10-4b71-91db-06527bc5fa99.json",
       "task_card": "MPI-537",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-11T06:55:00Z"
     }
   ]

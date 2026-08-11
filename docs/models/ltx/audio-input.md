@@ -5,7 +5,61 @@
 
 ---
 
-## ✅✅ VOICE-ID WORKS ON DISTILLED — `LTXVReferenceAudio`, not `LTXVSetAudioRefTokens` (2026-06-24, LATEST — read FIRST)
+## ✅ AUDIO-DRIVEN LIPSYNC WORKS ON THE SHIPPED i2v GRAPH (2026-08-11, MPI-537 — NEWEST)
+
+`ltx_i2v_t2v_template.json` **as it ships** makes the mouth follow a **supplied** audio
+track — no lipdub IC-LoRA, no talking-head LoRA, no new node. User-judged good sync on
+`appi2v_512_00001.mp4` (`Input_Use_Input_Audio: true`, `Input_Use_Reference_Audio: false`).
+The path is `Input_Audio → #198 LTXVAudioVAEEncode → #200 SetLatentNoiseMask → #145
+LTXVConcatAVLatent.audio_latent`, and it is **the same wiring** the community
+`elix3r/…-talking-head` repo uses to build its training clips on base LTX-2.3
+(`LoadAudio → TrimAudioDuration → LTXVAudioVAEEncode → SetLatentNoiseMask(SolidMask 0) →
+LTXVConcatAVLatent`). This is the one case reference/voice-ID mode cannot serve — the user
+supplies the performance (singing) and it must not be regenerated.
+
+**Three input conditions, all learned by getting them wrong first:**
+
+1. **The prompt MUST carry the spoken line.** "…talking to the camera." is not enough — it
+   says she is talking and never gives her a line. Adding `saying: "…"` moved a
+   fixed-seed generation by **PSNR y 20.41**, where two encodes of an identical generation
+   score 44.31. The elix3r card independently ends every clip prompt with
+   `The person is talking, and he says: "[transcript]"`.
+2. **`Input_Height` must be divisible by 64.** `#156 MpiMath floor(a/2)` halves it before
+   `EmptyLTXVLatentVideo`, and the latent then floors to a multiple of 32 — so **544 → 272
+   → 256 → a 512-tall video** — while `#516/#517 ImageResizeKJv2` size the conditioning
+   image to the **injected** height. The image ends up 32 px taller than the latent it is
+   conditioning. Silent: no error, no warning, just a drifting result.
+3. **The start frame must SHOW the face.** Frame 0 of a clip whose subject starts turned
+   away gives the model no identity to hold, so it invents one from the prompt — and
+   faithfully continues the turn. This extends the lipdub face-size finding: the face must
+   be **present and framed**, not merely large.
+
+**Then it is still a seed lottery** — the same lottery this file already documents for
+voice-ID below. A face-forward, correctly-sized run (`appi2v_face64_00001.mp4`) held
+identity perfectly and did not move the mouth. The user recognised it immediately from
+earlier i2v tests, and the elix3r card lists *"seed-dependent output quality"* under its own
+known limitations. **Do not diagnose a wiring bug from one still-mouthed seed.**
+
+### The `elix3r/LTX-2.3-22b-AV-LoRA-talking-head` LoRA — evaluated, NOT adopted
+
+Not the same file as the `ltx-2.3-id-lora-talkvid-3k.safetensors` this template already
+wires as `talk3_ID_Lora` (428,150,680 vs 1,157,884,304 bytes). Three reasons it is not a
+candidate dependency: it is a **subject LoRA for one identity** (trigger `OHWXPERSON`, 26
+training clips); its lips follow **generated** audio — the card says it "internalizes voice
+characteristics without requiring external audio input at inference time", the same
+limitation the lipdub IC-LoRA has; and its licence is **research/personal use, commercial
+requires separate permission**, so it cannot ship.
+
+Its README is worth keeping for three untried tunables: **1280x704 @ 25fps** for
+image+audio "to match the training distribution" (704 survives the /64 rule above), a
+mouth-behaviour prompt block (*"Mouth partially open during speech with only the front
+teeth partially visible, lips moving naturally without fully exposing all teeth"*), and
+*"Background complexity directly impacts lip sync quality. Simple and dark backgrounds
+produce the best results."*
+
+---
+
+## ✅✅ VOICE-ID WORKS ON DISTILLED — `LTXVReferenceAudio`, not `LTXVSetAudioRefTokens` (2026-06-24, read after the above)
 
 > **This corrects the "SOLUTION B ABANDONED / needs 30 steps" block far below.** That conclusion was a WRONG
 > ROOT CAUSE — we tested the wrong node. Voice-identity transfer DOES work on our distilled 8-step / cfg-1 base.
