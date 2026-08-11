@@ -1984,6 +1984,13 @@ function _failOutstandingRemoteDeps(reason) {
         const depJob = _depJobs.get(depId);
         if (depJob) {
             depJob.error = _REMOTE_ABANDON_MSG;
+            // A TOAST, never the Report-on-GitHub dialog. The user stopping their own
+            // Pod (or a Pod dying) is expected, fully explained by the message, and
+            // nothing an issue can fix — same verdict as networkBlocked and transient
+            // carry. Fabio hit the dialog the moment failure 5's fix made this
+            // reachable at all: "I'm gonna get reports on GitHub for this."
+            // [[feedback_error_dialog_vs_toast]]
+            depJob.toast = true;
             _setDepStatus(depJob, 'failed', 'remote target inactive');
         }
         _remoteDepIds.delete(depId);
@@ -2508,6 +2515,10 @@ function _checkModelJobsComplete() {
                 // MPI-480 — same reasoning for a warming Pod's wrapper: the condition
                 // self-heals on a retry, so it is a toast, never a GitHub report.
                 transient: Boolean(failedDep && failedDep.transient),
+                // MPI-539 — "show this exact message as a toast". The remote-abandon
+                // path sets it: a stopped Pod is expected and fully explained by the
+                // error text, so it must not reach the Report-on-GitHub dialog.
+                toast: Boolean(failedDep && failedDep.toast),
             });
         } else if (allComplete) {
             if (modelJob.installCustomNodes) {

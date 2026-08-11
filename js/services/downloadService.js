@@ -638,11 +638,16 @@ const downloadService = {
                     Events.emit('ui:warning', {
                         message: `Not enough disk space to install ${modelName}. Free up space and try again.`
                     });
-                } else if (data.networkBlocked) {
+                } else if (data.networkBlocked || data.toast) {
                     // MPI-427 — the network refused our download host. Expected + fully
                     // user-actionable, and the server already wrote the remedy into
                     // data.error, so show it as-is. Same reasoning as disk-full above:
                     // never nudge a GitHub report for a condition we can't fix in code.
+                    // MPI-539 — `toast` is the same verdict reached from the server for
+                    // any cause: the remote-abandon path sets it, because a user
+                    // stopping their own Pod is not a bug report. Verified live
+                    // 2026-08-11: fixing the abandon path made this failure reachable
+                    // for the first time, and it came up as the GitHub dialog.
                     Events.emit('ui:warning', { message: data.error });
                 } else if (data.transient) {
                     // MPI-480 — the Pod's wrapper wasn't routable yet (the RunPod proxy
@@ -665,8 +670,8 @@ const downloadService = {
                     Events.emit('ui:warning', {
                         message: 'Not enough disk space to install this model. Free up space and try again.'
                     });
-                } else if (data.networkBlocked) {
-                    Events.emit('ui:warning', { message: data.error });   // MPI-427
+                } else if (data.networkBlocked || data.toast) {
+                    Events.emit('ui:warning', { message: data.error });   // MPI-427 / MPI-539
                 } else if (data.transient) {
                     Events.emit('ui:warning', {                           // MPI-480
                         message: "The remote engine isn't ready yet — try the install again in a moment."

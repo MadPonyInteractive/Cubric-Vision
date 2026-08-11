@@ -116,6 +116,12 @@ test('the abandon path terminates the owning MODEL job, not just its deps', () =
 
     assert.equal(depJob.status, 'failed', 'the dep itself must go terminal');
     assert.equal(
+        depJob.toast, true,
+        'REGRESSION: the abandon failure lost its toast verdict — a user stopping their '
+        + 'own Pod raises the Report-on-GitHub dialog, which is how this defect ships as '
+        + 'a stream of bogus issues',
+    );
+    assert.equal(
         dm._modelJobs.get('mpi539-model').status, 'failed',
         'REGRESSION: the model job stayed \'downloading\' after its deps were abandoned — '
         + 'the snapshot keeps serving its last Pod progress and the card is frozen at 56% '
