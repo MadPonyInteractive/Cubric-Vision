@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-538","type":"task.created","at":"2026-08-11T10:20:00Z","actor":"opus","summary":"Created at Fabio's request so the bench-proven lipsync workflow has a card to be picked up from. Mirrors MPI-536 (foley) and MPI-520 (extend) and carries the same MPI-531 blocker; holds the four input constraints MPI-537 established."}

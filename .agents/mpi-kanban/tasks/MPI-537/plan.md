@@ -123,14 +123,13 @@ ids and the settings that produced it.
 
 None on this card. Close it.
 
-**The app-side Flow card DOES NOT EXIST YET — create it.** Its two siblings do:
-MPI-536 (foley) and MPI-520 (v2v extend), both `todo`/blocked on **MPI-531**
-(`FlowStepField` is `select|button|toggle` only, so authoring any of them today
-needs a JS `uiComponent` that MPI-531 item 4 must then port). MPI-520's own
-description already points at "lipsync MPI-537". Mirror those two, carry the
-constraints below, and block it on MPI-531 like the others.
+**The app-side Flow card is [MPI-538](../MPI-538/task.json)**, created 2026-08-11.
+It completes the LTX 2.3 v2v Flow trio with MPI-536 (foley) and MPI-520 (extend),
+and carries the same blocker all three share: **MPI-531** — `FlowStepField` is
+`select|button|toggle` only, so authoring any of them today needs a JS
+`uiComponent` that MPI-531 item 4 would then have to port.
 
-Carried to that card (NOT this card's work): what happens when the user's clip is a
+Carried to MPI-538 (NOT this card's work), and already written into its description: what happens when the user's clip is a
 wide shot (auto-crop / warn / refuse), and how the UI relates line length to clip
 duration. Still untested anywhere: clips over 3s, multiple speakers, non-English, and
 whether a ~5s voice reference clones better than a 3s one.
