@@ -22,8 +22,19 @@ themselves patched fixes with holes; green tests are not the bar here.
 - [x] MPI-540 - stale completion notification. Fixed, mutation-checked. Commit ef3ebd2e.
 - [ ] MPI-540 - Fabio confirms no late completion toast over a normal session.
 - [ ] MPI-541 - the Pod OOM on HF weights. Open. Evidence step named on the card.
-- [ ] The install-toast spam reproduces and gets its own card, or is written off with
-      a reason.
+- [x] The install-toast spam is carded as MPI-544 and OUT of 1.4.1. Still unreproduced;
+      the card carries the two ruled-out paths and the SSE-replay candidate so nobody
+      re-walks them. Unreproduced means unfixable, not ignored - a speculative fix here
+      is a guess at a mechanism nobody has observed.
+- [x] Toast readability. Duration now derives from the message (reading time, clamped
+      3-12s) and only the oldest visible toast counts down - reading is serial, so two
+      live timers meant the second expired mid-read. Also fixed the FIFO drain it
+      depends on. Commits 2730a7b8, 1eba614a. CONFIRMED LIVE by Fabio: "I was able to
+      read all toasts now, even the big ones."
+- [ ] Local disk-full message - live proof. The REMOTE half is proven (Fabio's Pod
+      install, toast quoted the volume and the margined figure). The local half shares
+      the same client arm; only the server string differs. Cheapest check: local engine,
+      Install on Qwen Image Edit (32.1 GB) against ~29 GB free on G:.
 
 ## The app needs a restart before any of this is re-tested
 

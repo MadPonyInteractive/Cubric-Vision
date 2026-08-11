@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-544", "type": "task.created", "at": "2026-08-11T19:45:00Z", "actor": "opus", "summary": "Split out of the MPI-542 umbrella so 1.4.1 is not held by an unreproduced symptom. Carries the two ruled-out paths and the SSE-replay candidate so the next session does not re-walk them."}
