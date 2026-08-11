@@ -1,0 +1,111 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "194d9287-494e-4ea8-8bc6-f427d154c77e",
+  "generated_at": "2026-08-11T18:25:00Z",
+  "from_session": null,
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-539 closed on live proof (6 failures + toast routing), MPI-540 fixed, MPI-541's hypothesis disproven, MPI-542 umbrella retargeted to 1.4.1",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Fabio: fix the late completion toasts, and judge the live re-run of MPI-539's download-mode Pod fix. Mid-session he added: everything carded since the previous session must sit under one umbrella (the 1.4.1 fixes).",
+    "status": "in_progress",
+    "summary": "MPI-539 is CLOSED on live proof - Fabio ran the kill-the-Pod-mid-install drill himself and all six failures held, including two found and fixed during today's session. MPI-540 is fixed and mutation-checked but needs a normal session to confirm. MPI-541's hf_xet theory is DISPROVEN and the card now says so. The disk-space message is the next task and has not been started."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-542/checklist.md",
+    "completed": [
+      "MPI-540 SHIPPED (ef3ebd2e). _doneCount had no expiry, so a batch whose queue never cleanly drained announced itself against a LATER drain - Fabio saw completion toasts 10-20 minutes late, once an hour late. Ruled out a downstream deferral FIRST: main.js showOsNotification fires on receipt and returns early when focused, and statusBar.js has no focus-deferred replay, so the count is the only thing that can carry a batch that far. This matters because Fabio's own theory was 'strip the come-back-when-unfocused thing' - that would have removed a working feature and left the bug. Fix: stamp _doneAt, drop a count older than 5 min, checked on BOTH edges (before counting a new completion AND at the top of _maybeArmFlush). A fire-time check alone is not enough - a fresh completion re-stamps the time and the orphans ride along as N+1.",
+      "MPI-539 failure 5 SHIPPED (a75c8a3e). _failOutstandingRemoteDeps terminated the DEPS but never the owning MODEL job - the one terminal path in downloadManager.js that did not call _checkModelJobsComplete(). Its dep-level download:failed carries no modelId and the client drops those by design (MPI-97), so nothing user-facing ever went terminal.",
+      "MPI-539 failure 6 SHIPPED (a75c8a3e). The client's serial install chain reads the engine when the POST lands, not when Install is pressed, so a queued install could fire against a different engine - Boogu would have put 20.8GB on Fabio's LOCAL disk unasked. A job now records the engine it was queued for and is DROPPED, never retargeted.",
+      "MPI-539 toast routing SHIPPED (5daac061), found DURING the live test. Fixing failure 5 made the failure reachable for the first time and it came up as the Report-on-GitHub dialog. Added a cause-agnostic `toast` verdict beside the existing networkBlocked/transient ones; both client branches join it to the arm that already shows data.error verbatim.",
+      "MPI-539 CLOSED on live evidence, recorded in tasks/MPI-539/validation.md. Fabio restarted the app, connected the CPU Pod, installed with a second queued behind, and stopped the Pod mid-download. Card reached a real end state; Model Library returned to LOCAL truth (his words: 'that's proven'); the queued SDXL NSFW cancelled with a named reason and did NOT download locally. Detection measured at 9s from app.log - the 90s stall watchdog never fired, and the lag he noticed is RunPod stopping the container, which he accepted.",
+      "MPI-541 REWRITTEN around its own disproof. Same 3.725 GiB box pulled the same model at up to 735 MB/s - above the 652 that supposedly OOMed it - with Telemetry reading 3% memory. Transport exonerated. App-side staging exonerated too: the app log shows MPI-539's abandon path firing by name in that session, so the getEngine fix was already live. Dropped to low/blocked with reopen criteria instead of a speculative fix.",
+      "MPI-542 umbrella created and retargeted 1.4.0 -> 1.4.1 (Fabio: 'these changes are going to go into version 1.4.1'). Children MPI-539/540/541 carry parent: MPI-542.",
+      "Full suite 560/560 (was 555). Every new guard mutation-checked - removing it fails its test with the intended message."
+    ],
+    "pending": [
+      "THE NEXT TASK: the disk-space message, unstarted, and it has TWO confirmed instances in today's app.log. (a) LOCAL: 'install blocked - disk full: need 29.3 GB free, have 29.4 GB at G:/CubricModels' - it had MORE than it asked for and blocked anyway, because routes/downloadManager.js:1684 gates on neededBytes * 1.05 while the message prints the un-margined number. The check was right; the message makes it look broken. (b) REMOTE: 'remote install blocked - volume full: need 57.8 GB, have 34.8 GB free of 139.7 GB' - a correct, precise, remote verdict that the client replaced with 'Not enough disk space to install LTX 2.3. Free up space and try again.', which names no disk and points at the wrong machine. Fix shape is already proven in this file: pass the server's message through, exactly as the networkBlocked / toast arms do. js/services/downloadService.js ~line 637 and ~665 hold the two _isOutOfSpaceError branches that overwrite it.",
+      "MPI-540 needs Fabio to confirm no late completion toast over a normal session of generations. Nothing to build; it is an observation over time. Card stays in doing.",
+      "The install-toast spam is STILL unreproduced and uncarded (parked under MPI-542). Do not assume the MPI-539 reconcile path: the download:complete handler already filters !data.modelId and that path broadcasts modelId:null. First candidate is a model-level download:complete re-broadcast when the install SSE reconnects and replays.",
+      "MPI-539 residual, not covered by the live run: failures 1-3 (getEngine / commandExecutor / _ensureRemoteHotStore) were never re-exercised live, because no generation was dispatched against a __cpu__ Pod today. They rest on the original incident evidence plus mutation-checked unit tests. Worth one deliberate pass: start a long local generation, connect a download-only Pod, confirm no staging is attempted and remote mode is not torn down.",
+      "TWO APPROVALS PENDING, both raised at close-out and neither actioned: (1) a rule edit to .claude/rules/kanban.md recording two enum traps that cost three validator round-trips this session - `maturity: seed` is NOT in the enum (idea/planned/research/needs-decision/blocked/deferred/in-progress/validating/complete/rejected) yet exists on live cards, and a card in `done` must carry `status: completed`, not `active`. (2) a correction to the memory file tool_measure_the_model_fleet_headlessly - its headline 'a module imports headlessly iff nothing in its graph reaches js/components/' is measurably too strong. js/shell/notificationService.js imports FINE in bare Node with DOM stubs despite reaching MpiToast, while js/services/downloadService.js still dies on MpiButton's absolute '/js/utils/icons.js'. The real boundary is whether the graph reaches a component using an ABSOLUTE browser path.",
+      "docs/releases/UNRELEASED.md has NO entry for any of this session's fixes. v1.4.0 is tagged so its notes are frozen; every user-facing fix here belongs in UNRELEASED.md's `## Fixes` section, which /mpi-version-bump folds into 1.4.1. Proposed at close-out, not approved, not written."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-542",
+    "title": "1.4.1 field fixes - umbrella for the download-mode Pod incident and everything it surfaced",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-542/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-542/task.json",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-542/checklist.md",
+      "validation": null,
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-542/handoffs/"
+    }
+  },
+  "allowed_actions": ["read", "continue", "implement", "verify"],
+  "knowledge_preservation": {
+    "completed": [
+      "tasks/MPI-539/validation.md - the full live drill, the 9-second measurement from app.log, and the residual that was NOT covered",
+      "tasks/MPI-539/checklist.md - all six failures with the concrete fix behind each",
+      "tasks/MPI-541/task.json - the disproof written at the TOP of the description so nobody re-chases hf_xet",
+      "tasks/MPI-542/checklist.md - the umbrella gate: closes only when each child is proven live, not on green tests"
+    ],
+    "pending": [
+      "The kanban.md enum rule edit and the tool_measure_the_model_fleet_headlessly memory correction - both proposed, neither approved",
+      "docs/releases/UNRELEASED.md fixes entries for 1.4.1"
+    ]
+  },
+  "next_action": {
+    "description": "Fix the disk-space message. Two confirmed instances in today's app.log, both quoted in this handoff's pending list. Pass the server's precise message through instead of overwriting it - the pattern already exists in the same function (the networkBlocked / toast arms show data.error verbatim), so this is the third use of a proven shape, not a new mechanism. Make the LOCAL message print the margin-inclusive requirement so the number matches the decision, and stop the REMOTE case saying 'free up space' when the full disk is the Pod volume. Then ask Fabio about the two pending approvals and the UNRELEASED.md entries.",
+    "command": "mpi-continue MPI-542"
+  },
+  "context": {
+    "key_decisions": [
+      "Did NOT strip the focus-based notification routing, even though Fabio asked for it. Checked main.js and statusBar.js first: nothing downstream defers, so stripping it would have removed a working feature and left the bug untouched. Said so in one line and fixed the actual carrier. The lesson generalises - his theory named a real-sounding mechanism that measurably was not there.",
+      "MPI-540 keeps the coalescing. Deleting it was the laziest fix and would have returned per-gen notification spam on a queue of N, which is the bug coalescing was added to fix. A 5-minute expiry keeps both.",
+      "The staleness window is wall-clock, not a batch id. A batch id threaded from the queue would be exact but means a new field through generationService and commandExecutor. Marked with a ponytail: comment naming the ceiling - the visible cost is an undercount when one batch has a >5min gap between items.",
+      "MPI-541 was NOT closed and NOT fixed speculatively. Three healthy runs at up to 735 MB/s on a 4 GB box mean the OOM is not a reproducible property of the download path, so capping HF_XET_NUM_CONCURRENT_RANGE_GETS would be a fix for a cause nobody has evidence for. Reopen criteria recorded instead.",
+      "The `toast` verdict is deliberately cause-agnostic, unlike networkBlocked and transient which each name a specific condition. It means 'show this exact message as a toast' so any future server-side path can reach the same routing without a new client branch.",
+      "MPI-541 stayed a separate card rather than folding into MPI-539: different root, different repo (mpi-ci), and it would OOM the same box with no app bug at all."
+    ],
+    "constraints": [
+      "A routes/ change does NOT survive a renderer reload - the app needs a full restart. This cost one wasted test cycle today; Fabio re-ran the same drill against the old code before we caught it.",
+      "js/services/downloadService.js CANNOT import in bare Node: MpiButton.js imports an absolute '/js/utils/icons.js' which resolves to c:\\js\\utils\\icons.js. Its guard is therefore a SOURCE-READ test that pins the guard's position ahead of the POST. js/shell/notificationService.js DOES import with DOM stubs - see tests/notification-stale-count.test.cjs for the stub set.",
+      "routes/downloadManager.js exports _modelJobs and _depJobs for unit tests only (added this session, matching the file's existing test-only export convention). Never mutate them outside tests.",
+      "Fabio's app owns :3000. Do not drive it, do not restart it.",
+      "The Pod volume is ~140GB used of 150GB, so a large install will legitimately hit the remote disk gate. That is not a bug - it is what produced today's second disk-message instance.",
+      "Board enum traps that cost three validator round-trips: `maturity: seed` is invalid despite existing on live cards, and a `done` card needs `status: completed`."
+    ],
+    "files_modified": [
+      "js/shell/notificationService.js",
+      "js/services/downloadService.js",
+      "routes/downloadManager.js",
+      "tests/notification-stale-count.test.cjs",
+      "tests/download-mode-pod-guards.test.cjs"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-542/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-539/validation.md",
+      "js/services/downloadService.js"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": ["downloads", "comfy_engine", "components"]
+  },
+  "rules_active": [
+    ".claude/rules/downloads.md",
+    ".claude/rules/comfy_engine.md (Engine Split - the half-wire class of bug this whole thread is)",
+    "CLAUDE.md THE ROOT-CAUSE RULE",
+    ".agents/mpi-kanban/close-out.md (release awareness - UNRELEASED.md, not the frozen 1.4.0 notes)"
+  ],
+  "recent_events": [{ "at": "2026-08-11T18:25:00Z", "event": "handoff_created" }],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/194d9287-494e-4ea8-8bc6-f427d154c77e.json and use mpi-continue to pick up MPI-542, the 1.4.1 field-fix umbrella. MPI-539 is closed on live proof and MPI-540 is fixed - do not re-derive either. Your task is the disk-space message, which has two confirmed instances quoted in the handoff: a LOCAL one that blocked with 29.4 GB free while asking for 29.3 GB (the gate adds a 5% margin the message never mentions) and a REMOTE one where the server computed 'need 57.8 GB, have 34.8 GB free of 139.7 GB' and the client replaced it with a vague 'free up space' that names no disk. Pass the server's message through, the way the networkBlocked and toast arms in the same function already do. Then ask Fabio about the two approvals left pending at close-out (a kanban.md enum rule edit and a memory correction) and about writing this session's fixes into docs/releases/UNRELEASED.md for 1.4.1."
+}
