@@ -39,4 +39,7 @@ _(none yet)_
 
 ## Fixes
 
-_(none yet)_
+- **Video previews play at the video's speed again.** On some runs the live preview
+  flashed the whole clip in an instant each time the sampler advanced, then froze until
+  the next step. It now plays continuously at the clip's own frame rate, and no longer
+  trims the start of the clip.
