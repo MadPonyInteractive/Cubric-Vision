@@ -1425,10 +1425,16 @@ export const MpiGalleryBlock = ComponentFactory.create({
             }
         }));
 
-        // Paint a latent into the first-running entry's placeholder card(s).
+        // Paint a latent into the first-running entry's placeholder card(s). The run's
+        // clip state rides along with EVERY frame (MPI-535): the card must not latch it
+        // off the one-shot marker, because a single missed marker — the card not mounted
+        // yet, or a `setGenerating(null)` render landing between the marker and the first
+        // frame — used to strand the rest of the run in still mode with no second chance.
+        // A single-pass H3 run is one prompt = one marker, which is how that showed up.
         const _paintPreviewInto = (entry, url) => {
             const allTempIds = [entry.tempId, ...(entry.extraTempIds || [])].filter(Boolean);
-            for (const t of allTempIds) grid.el.updatePreview(t, url);
+            const clip = activeGenerations.getPreviewClip(entry.id);
+            for (const t of allTempIds) grid.el.updatePreview(t, url, clip);
         };
 
         // Live latents (MPI-271): resolve preview:frame → generation by promptId, and
@@ -1444,12 +1450,12 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         // New preview window (new sampler stage) → drop the card's current clip so
         // stages don't accumulate into one growing loop. MPI-167.
-        _unsubs.push(Events.on('generation:preview-reset', ({ id }) => {
+        _unsubs.push(Events.on('generation:preview-reset', ({ id, clip }) => {
             if (!_myGenIds.has(id)) return;
             const first = _firstRunningEntry();
             if (!first || first.id !== id) return;
             const allTempIds = [first.tempId, ...(first.extraTempIds || [])].filter(Boolean);
-            for (const t of allTempIds) grid.el.resetPreviewClip(t);
+            for (const t of allTempIds) grid.el.resetPreviewClip(t, clip);
         }));
 
         // After a job ends, rebuild the grid: remove its placeholders if they

@@ -137,11 +137,32 @@ function listFor(scope, groupId) {
     });
 }
 
+/**
+ * MPI-535 — clip-ness is a property of the RUN, not of whatever card happens to be
+ * mounted. The `VHS_latentpreview` marker fires ONCE per sampler run, so a consumer
+ * that latches it can never recover from missing it: H3 single-pass is one prompt =
+ * one marker, and the whole 4-minute run then plays burst-fast stills. Recorded here
+ * (beside `_lastPreview`, same lifetime) so any consumer can re-read it per frame.
+ * @type {Map<string, {rate:number|null, length:number|null}>}
+ */
+const _previewClip = new Map();
+
+/** @returns {{rate:number|null,length:number|null}|null} Clip meta for this gen, if it bursts clips. */
+function getPreviewClip(id) {
+    return _previewClip.get(id) ?? null;
+}
+
 /** Signal a new preview window (new sampler stage) — the card drops its current
- *  looping clip so stages don't accumulate. MPI-167. */
-function resetPreview(id) {
+ *  looping clip so stages don't accumulate. MPI-167. `info` is the marker payload
+ *  ({ length, rate }); it says this run bursts CLIPS and how to play them back. */
+function resetPreview(id, info = null) {
     if (!_registry.has(id)) return;
-    Events.emit('generation:preview-reset', { id });
+    const clip = {
+        rate: Number(info?.rate) > 0 ? Number(info.rate) : null,
+        length: Number(info?.length) > 0 ? Number(info.length) : null,
+    };
+    _previewClip.set(id, clip);
+    Events.emit('generation:preview-reset', { id, clip });
 }
 
 /** Update entry status. */
@@ -169,6 +190,7 @@ function end(id, { revokePreview = true } = {}) {
         setTimeout(() => URL.revokeObjectURL(url), 0);
     }
     _lastPreview.delete(id); // MPI-269: drop the held latent for this gen
+    _previewClip.delete(id); // MPI-535: clip meta lives exactly as long as the gen
     _registry.delete(id);
 }
 
@@ -189,4 +211,4 @@ function cancelAll() {
     for (const id of _registry.keys()) cancel(id);
 }
 
-export const activeGenerations = { start, get, list, listFor, resetPreview, setPromptId, byPromptId, getLastPreview, setStatus, end, cancel, cancelAll };
+export const activeGenerations = { start, get, list, listFor, resetPreview, getPreviewClip, setPromptId, byPromptId, getLastPreview, setStatus, end, cancel, cancelAll };

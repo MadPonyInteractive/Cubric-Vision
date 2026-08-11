@@ -1255,7 +1255,9 @@
  *
  * Instance methods (on instance.el):
  *   setGroups(groups)                 — replace all groups and re-render; detects isGenerating flag
- *   updatePreview(tempId, previewUrl) — push latent preview to a generating card during generation
+ *   updatePreview(tempId, previewUrl, clip) — push latent preview to a generating card during
+ *                                     generation; `clip` = { rate, length } for burst previewers
+ *   resetPreviewClip(tempId, clip)    — new sampler stage: drop the card's current clip window
  *   removeCard(groupId)               — remove a single card by ID without full re-render
  *   setSelectionMode(val)             — toggle selection mode on UI
  *   getSelectionOrder()               — IDs of selected cards in chronological click order

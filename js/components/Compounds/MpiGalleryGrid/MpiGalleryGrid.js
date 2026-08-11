@@ -75,7 +75,9 @@ function _addDownloadUrl(e, item) {
  *
  * Instance methods (on instance.el):
  *   setGroups(groups)                    — replace all groups and re-render
- *   updatePreview(tempId, previewUrl)    — push latent preview url to generating card
+ *   updatePreview(tempId, previewUrl, clip) — push latent preview url to generating card
+ *                                          (clip = { rate, length } when the run bursts clips)
+ *   resetPreviewClip(tempId, clip)       — new sampler stage: drop the current clip window
  *   setSelectionMode(val)                — set selection mode externally
  *
  * Emits:
@@ -446,17 +448,18 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const mascot     = qs('.mpi-group-card__mascot', cardEl);
             let previewImg   = null;
             // Latent-preview frame pacing + loop. Most models send one evolving still
-            // per step, but video models (LTX via the KJNodes preview override) emit a
-            // SEQUENCE of frames (different frame POSITIONS) per step. LTX is distilled:
-            // after step 1 the latent barely changes, so every step's frames are at
-            // ~final preview quality — the value is the MOTION across positions, not
-            // refinement. The frames arrive as instant bursts (the node uses a
-            // synchronous Thread(...).run()), so painting on arrival flashes to the last
-            // frame and then freezes. We hold the most-recent frames as a rolling CLIP
-            // and cycle them at ~8fps, LOOPING until the gen ends — that replays the
-            // motion continuously instead of freezing. New frames append; over
-            // PREVIEW_CLIP_MAX the oldest is evicted + its blob URL revoked. Only
-            // evicted/teardown URLs are revoked (clip frames stay alive to repaint).
+            // per step, but video models (LTX via the KJNodes preview override, H3 via
+            // our own MpiVideoSamplingPreview) emit a SEQUENCE of frames (different frame
+            // POSITIONS) per step. Those samplers are distilled: after step 1 the latent
+            // barely changes, so every step's frames are at ~final preview quality — the
+            // value is the MOTION across positions, not refinement. The frames arrive as
+            // instant bursts, so painting on arrival flashes through the whole clip at
+            // burst speed and then freezes until the next step. We hold the most-recent
+            // frames as a rolling CLIP and cycle them at the rate the clip ANNOUNCED,
+            // LOOPING until the gen ends — that replays the motion at its real speed
+            // instead of freezing. New frames append; over the announced length the
+            // oldest is evicted + its blob URL revoked. Only evicted/teardown URLs are
+            // revoked (clip frames stay alive to repaint).
             //
             // THIS BUFFER OWNS ITS FRAMES' LIFETIME, and it has to (MPI-508). The
             // window is retained for an UNBOUNDED time — the loop replays until the
@@ -466,23 +469,33 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // flat 8/s, on exactly 48 distinct URLs, when the emitter retired frames
             // this loop was still painting.
             // ponytail: an array + cursor + interval, no <video> element.
-            const PREVIEW_FPS = 8;
-            const PREVIEW_CLIP_MAX = 48; // a latent video preview is short; loop the window
+            const PREVIEW_FPS = 8;       // fallback only — the clip announces its own rate
+            const PREVIEW_CLIP_MAX = 48; // fallback only — the clip announces its own length
             let _previewClip = [];   // rolling buffer of frame URLs
             let _previewCursor = 0;  // play head into _previewClip
             let _previewTimer = null;
-            // CLIP mode = loop a motion clip (LTX only). Gated by the VHS_latentpreview
-            // WS event, which ONLY the KJNodes LTX preview override emits. Wan/SDXL/5B
-            // send core single-frame step previews and never fire that event → they stay
-            // in STILL mode: each preview replaces the last (a refining still), NOT a
-            // growing loop. (Fix: the loop used to run for every model unconditionally.)
-            let _isClipMode = false;
+            let _previewTimerRate = 0;
+            // CLIP mode = loop a motion clip. The emitters are the burst previewers
+            // (KJNodes' LTX override, our MpiVideoSamplingPreview on H3); Wan/SDXL/5B send
+            // core single-frame step previews and stay in STILL mode: each preview replaces
+            // the last (a refining still), NOT a growing loop.
+            //
+            // THIS IS A MIRROR, NOT A LATCH (MPI-535). The `VHS_latentpreview` marker that
+            // declares a run "clip" fires ONCE per sampler run, so a card that latched it
+            // could never recover from missing it — and a single-pass H3 run is one prompt,
+            // i.e. exactly one marker for four minutes of sampling. `activeGenerations`
+            // owns the state for the run's whole life and hands it over with every frame;
+            // this just reflects the latest word, so a miss self-heals on the next frame.
+            let _clipMeta = null;    // { rate, length } | null
+            const _clipRate = () => (_clipMeta?.rate > 0 ? _clipMeta.rate : PREVIEW_FPS);
+            const _clipMax  = () => (_clipMeta?.length > 0 ? _clipMeta.length : PREVIEW_CLIP_MAX);
             function _revokePreviewUrl(url) {
                 if (url && url.startsWith('blob:')) { try { URL.revokeObjectURL(url); } catch { /* already revoked */ } }
             }
             function _stopPreviewPlayback() {
-                _isClipMode = false;
+                _clipMeta = null;
                 if (_previewTimer) { clearInterval(_previewTimer); _previewTimer = null; }
+                _previewTimerRate = 0;
                 for (const url of _previewClip) _revokePreviewUrl(url);
                 _previewClip = [];
                 _previewCursor = 0;
@@ -492,11 +505,28 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 if (_previewCursor >= _previewClip.length) _previewCursor = 0; // loop
                 _setPreviewImageSrc(_ensurePreviewImage(), _previewClip[_previewCursor++]);
             }
-            function _enqueuePreviewFrame(url) {
+            /** Run the playback timer at the clip's announced rate, restarting it on a change. */
+            function _armPreviewTimer() {
+                const rate = _clipRate();
+                if (_previewTimer && _previewTimerRate === rate) return;
+                if (_previewTimer) clearInterval(_previewTimer);
+                _previewTimerRate = rate;
+                _paintNextPreviewFrame(); // first frame immediately, then pace
+                _previewTimer = setInterval(_paintNextPreviewFrame, 1000 / rate);
+            }
+            function _enqueuePreviewFrame(url, clip = null) {
                 if (!url) return;
-                // STILL mode (non-LTX): replace the current preview with each new frame.
-                // The old frame is revoked so blobs don't leak.
-                if (!_isClipMode) {
+                if (clip && !_clipMeta) {
+                    // Entering clip playback: the buffer holds at most one still frame
+                    // from before, which would otherwise sit in the loop as frame 0.
+                    for (const u of _previewClip) _revokePreviewUrl(u);
+                    _previewClip = [];
+                    _previewCursor = 0;
+                }
+                if (clip) _clipMeta = clip; // the run's own word, re-read every frame
+                // STILL mode: replace the current preview with each new frame. The old
+                // frame is revoked so blobs don't leak.
+                if (!_clipMeta) {
                     const prev = _previewClip[0];
                     _previewClip = [url];
                     if (prev && prev !== url) _revokePreviewUrl(prev);
@@ -504,14 +534,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     return;
                 }
                 _previewClip.push(url);
-                if (_previewClip.length > PREVIEW_CLIP_MAX) {
+                // Sized by the clip's announced length: a ring shorter than the clip drops
+                // its head, so the loop replays only the tail (48 of H3's 56 frames).
+                while (_previewClip.length > _clipMax()) {
                     _revokePreviewUrl(_previewClip.shift());
                     if (_previewCursor > 0) _previewCursor--; // keep cursor aligned after eviction
                 }
-                if (!_previewTimer) {
-                    _paintNextPreviewFrame(); // first frame immediately, then pace
-                    _previewTimer = setInterval(_paintNextPreviewFrame, 1000 / PREVIEW_FPS);
-                }
+                _armPreviewTimer();
             }
             const nameEl     = qs('.mpi-group-card__name', cardEl);
             const subEl      = qs('.mpi-group-card__sub', cardEl);
@@ -1352,24 +1381,24 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 }
             };
 
-            cardEl.updatePreview = (previewUrl) => {
+            cardEl.updatePreview = (previewUrl, clip = null) => {
                 if (!_generating) return;
                 // First real preview frame = "latency coming in" → shrink to corner.
                 if (!_mascotCooking) {
                     _mascotCooking = true;
                     _setMascotState('cooking');
                 }
-                _enqueuePreviewFrame(previewUrl);
+                _enqueuePreviewFrame(previewUrl, clip);
             };
 
             // A new sampler stage = a fresh preview window. Drop the current clip so
             // stages don't concatenate into one growing loop; the timer keeps running
             // and the next frames build the new window. MPI-167.
-            // This fires ONLY on the VHS_latentpreview WS event (LTX preview override) →
-            // it's also the signal that this gen is a looping motion clip, so enter CLIP
-            // mode here. Non-LTX gens never call this → they stay in STILL mode.
-            cardEl.resetPreviewClip = () => {
-                _isClipMode = true;
+            // This fires on the VHS_latentpreview WS event (the burst previewers), which
+            // also carries the clip's rate + length. Recorded on the generation, so this
+            // is the fast path, not the only one — the frames carry it too (MPI-535).
+            cardEl.resetPreviewClip = (clip = null) => {
+                if (clip) _clipMeta = clip;
                 for (const url of _previewClip) _revokePreviewUrl(url);
                 _previewClip = [];
                 _previewCursor = 0;
@@ -1839,12 +1868,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
             _rerenderJustified('setGroups');
         };
 
-        el.updatePreview = (tempId, previewUrl) => {
-            _cardMap.get(tempId)?.card.el.updatePreview(previewUrl);
+        el.updatePreview = (tempId, previewUrl, clip = null) => {
+            _cardMap.get(tempId)?.card.el.updatePreview(previewUrl, clip);
         };
 
-        el.resetPreviewClip = (tempId) => {
-            _cardMap.get(tempId)?.card.el.resetPreviewClip();
+        el.resetPreviewClip = (tempId, clip = null) => {
+            _cardMap.get(tempId)?.card.el.resetPreviewClip(clip);
         };
 
         el.removeCard = (groupId) => {

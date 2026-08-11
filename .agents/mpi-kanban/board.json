@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 535,
+  "next_id": 536,
   "columns": {
     "todo": [
       "MPI-534",
@@ -59,6 +59,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-535",
       "MPI-4",
       "MPI-506",
       "MPI-507"
@@ -137,8 +138,22 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-10T19:46:56Z",
+  "updated_at": "2026-08-11T04:45:00Z",
   "events": [
+    {
+      "at": "2026-08-11T04:45:00Z",
+      "type": "validation.updated",
+      "task": "MPI-535",
+      "actor": "opus",
+      "note": "Fixed and verified. Clip playback was a one-shot latch on the gallery card element, armed by the single VHS_latentpreview marker a burst previewer sends once per sampler run - so a missed marker stranded the whole run in still mode, which is a whole clip flashed per step at burst speed. It read as single-pass-only because a multi-stage H3 run is two prompts and gets a second arming. Clip state now lives on the generation (activeGenerations, dropped with the gen) and rides every frame to the card, which mirrors instead of latching, so a miss self-heals on the next frame. The marker's {length, rate} were also being discarded outright by commandExecutor: playback now runs at the announced rate (H3 24, LTX 16 - 8fps was a hardcode) and the ring is sized by the announced length (48 was clipping H3's 56-frame clip down to its tail). Evidence: 6/6 new headless lifecycle tests, a real-renderer probe that delivers frames with NO marker and measures 24 painted frames/s looping (the race, reproduced deterministically), 8fps when 8 is announced, and a no-clip burst still freezing as it should; npm test 552/552, eslint clean. Left open: Fabio's eyeball on the next H3 single-pass run."
+    },
+    {
+      "at": "2026-08-11T04:20:00Z",
+      "type": "task.created",
+      "task": "MPI-535",
+      "actor": "opus",
+      "note": "Opened directly in doing from a live user bug report. MiniMax H3 latents played the whole clip once per sampler step at arrival speed instead of looping at the clip's own rate. Root cause is not H3: clip playback is a one-shot latch on the gallery card element, armed by a single VHS_latentpreview marker per sampler run, so any miss downgrades the rest of the run to still mode with no recovery. It read as a single-pass-only bug because a multi-stage run dispatches two prompts and gets a second marker; a later single-pass run worked, confirming a race, not a mode."
+    },
     {
       "at": "2026-08-09T14:15:00Z",
       "type": "task.moved",

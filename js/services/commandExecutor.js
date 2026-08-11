@@ -1992,7 +1992,10 @@ export function runCommand(payload) {
             // a fresh frame window. Reset the card's preview clip so stages don't
             // accumulate/concatenate into one ever-growing loop.
             if (msg.type === 'VHS_latentpreview') {
-                exec.onPreviewReset?.();
+                // The payload is the clip contract, not decoration: `length` frames at
+                // `rate` fps (H3 announces 24, LTX's KJNodes override 16). It used to be
+                // dropped here, which left the consumer guessing both (MPI-535).
+                exec.onPreviewReset?.(msg.data || null);
                 return;
             }
 

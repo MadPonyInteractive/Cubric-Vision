@@ -39,6 +39,38 @@ if (last) paint(last.url);
 The bus records the last-good latent per generation (cleared on `end()`). This is what
 keeps a pane showing the last latent through a gap instead of going blank.
 
+## Clip runs vs still runs — read it off the GENERATION, never latch it (MPI-535)
+
+A burst previewer sends **one `VHS_latentpreview` marker per sampler run**, then a whole
+clip of `PREVIEW_IMAGE` frames per step. That marker is the only thing separating a clip
+run (accumulate + loop) from an ordinary still run (each frame replaces the last), and it
+fires **exactly once**. So it is recorded on the generation, not on whoever was mounted
+when it arrived:
+
+```js
+activeGenerations.resetPreview(genId, { length, rate }); // marker → durable per-run state
+activeGenerations.getPreviewClip(genId);                 // {rate, length} | null — re-read per frame
+```
+
+`MpiGalleryBlock` hands the result to the card with **every** frame; the card mirrors it
+and never latches. That is what makes a missed marker survivable, and it has to be:
+
+- The card may not be in `_cardMap` yet when the marker lands.
+- `setGenerating(null)` on any grid render calls `_clearPreviewImage()` →
+  `_stopPreviewPlayback()`, which wipes playback state — reachable in the window between
+  the marker and the first frame, before `latestPreviewUrl` is set.
+- **A single-pass H3 run is ONE prompt = ONE marker for the whole run.** Multi-stage is two
+  prompts (preview, then Finish), so it gets a second arming and *looks* fine — which is
+  exactly how this shipped: reported as "single-pass is broken", actually a race that a
+  later single-pass run won. Reproduced deterministically by delivering frames with no
+  marker at all; the card now self-heals on the next frame.
+
+`rate` and `length` are the clip's own contract and both are **used**, not decoration:
+playback runs at `rate` (H3 announces 24, KJNodes' LTX override 16 — 8fps is only the
+fallback) and the ring is sized by `length` (a shorter ring silently replays the clip's
+tail — 48 of H3's 56 frames). Measured on the real card: 24 painted frames/s at rate 24,
+7–8 at rate 8, and a no-clip burst still freezes on its last frame as it should.
+
 ## Broken-frame gate (why you never receive garbage)
 
 ComfyUI sends **non-image binary frames on the same preview socket** — e.g. a type-3,

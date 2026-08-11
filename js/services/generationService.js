@@ -862,8 +862,8 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         _emitQueueChanged();
     };
 
-    exec.onPreviewReset = () => {
-        activeGenerations.resetPreview(_regId);
+    exec.onPreviewReset = (info) => {
+        activeGenerations.resetPreview(_regId, info);
     };
 
 

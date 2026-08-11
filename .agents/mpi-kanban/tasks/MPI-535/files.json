@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+    "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+    "js/components/types.js",
+    "js/services/activeGenerations.js",
+    "js/services/commandExecutor.js",
+    "js/services/generationService.js",
+    "tests/preview-clip-state.test.cjs",
+    "docs/preview-bus.md"
+  ]
+}
