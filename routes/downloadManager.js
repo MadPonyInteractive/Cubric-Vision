@@ -1865,7 +1865,13 @@ function _startRemoteStallWatchdog() {
     if (_remoteStallTimer) return;
     _markRemoteTick(); // grace period before the first tick
     _remoteStallTimer = setInterval(() => {
-        if (_remoteDepIds.size === 0 || !remoteModels.isRemoteActive()) return;
+        if (_remoteDepIds.size === 0) return;
+        // MPI-539 — remote mode can go inactive with NO stream close to trigger
+        // _onRemoteStreamClosed (a disconnect from Settings, or the generation-path
+        // teardown this card also fixes). This guard used to just `return`, so the
+        // watchdog spun forever against deps nothing would ever settle. Same verdict as
+        // the close path: no remote target, no recovery — fail them.
+        if (!remoteModels.isRemoteActive()) { _failOutstandingRemoteDeps('remote inactive'); return; }
         if (_remoteReconnectTimer) return; // a reconnect already in flight
 
         // MPI-255: LOST-COMPLETION backstop, independent of the 90s stall gate.
@@ -1933,7 +1939,14 @@ function _ensureRemoteEventStream() {
 function _onRemoteStreamClosed(reason) {
     _remoteEventStream = null;
     if (_remoteDepIds.size === 0) { _stopRemoteStallWatchdog(); return; } // clean close
-    if (!remoteModels.isRemoteActive()) return;    // Pod gone — nothing to recover to
+    // MPI-539 — remote mode went inactive with installs STILL OUTSTANDING. This used to
+    // `return` and the deps were simply abandoned: they stayed in _depJobs as
+    // 'downloading' forever, so GET /comfy/downloads/status kept serving the Pod's last
+    // snapshot and the Model Library painted a frozen "424.7 MB/s · 4.2 / 49.4 GB · ~2
+    // min left" (with a live Cancel) over a model the LOCAL disk already had — remote
+    // progress on top of local installed-state, on the same card. Silence read as
+    // progress for a whole session. Nothing can recover these, so fail them loudly.
+    if (!remoteModels.isRemoteActive()) { _failOutstandingRemoteDeps(reason); return; }
     if (_remoteReconnectTimer) return;             // a reconnect is already scheduled
 
     logger.warn('download', `remote install SSE closed (${reason}); ${_remoteDepIds.size} dep(s) outstanding — recovering`);
@@ -1954,6 +1967,29 @@ function _onRemoteStreamClosed(reason) {
         if (_remoteDepIds.size === 0 || !remoteModels.isRemoteActive()) return;
         _ensureRemoteEventStream();
     }, delay);
+}
+
+// MPI-539 — settle every outstanding remote dep as FAILED when the remote target is
+// gone for good. Both recovery paths above (SSE reconnect, stall watchdog) can only
+// work while remote mode is active; once it is not, an outstanding dep has no owner
+// and must not keep reporting live progress. Terminal + broadcast, so the card shows a
+// real end state (and a working Retry) instead of a frozen Pod snapshot the app can
+// never advance. Compare the reconcile below, which is the OPPOSITE case: the target
+// is still there, so volume truth can settle deps as complete.
+const _REMOTE_ABANDON_MSG = 'Remote engine disconnected before the install finished.';
+function _failOutstandingRemoteDeps(reason) {
+    const outstanding = Array.from(_remoteDepIds);
+    logger.warn('download', `remote target inactive (${reason}); failing ${outstanding.length} outstanding dep(s) — no remote target left to recover to`);
+    for (const depId of outstanding) {
+        const depJob = _depJobs.get(depId);
+        if (depJob) {
+            depJob.error = _REMOTE_ABANDON_MSG;
+            _setDepStatus(depJob, 'failed', 'remote target inactive');
+        }
+        _remoteDepIds.delete(depId);
+        _broadcast('download:failed', { depId, error: _REMOTE_ABANDON_MSG });
+    }
+    _stopRemoteStallWatchdog();
 }
 
 // Settle outstanding remote deps against the actual volume state. Used to
@@ -3359,6 +3395,7 @@ module.exports = {
     _sweepOrphanedDepsRemote, // MPI-464 — exported for unit test (orphan sweep, remote twin)
     _startRemoteDownload, // MPI-481 — exported for unit test (stale attach guard)
     _remoteDepIds, // MPI-481 — exported for unit test only; never mutate outside tests
+    _failOutstandingRemoteDeps, // MPI-539 — exported for unit test (abandon-loudly path)
     _teardownRemoteEventStreamIfIdle, // MPI-481 — exported so a unit test can disarm the stall watchdog
     _setModelStatus, // MPI-317 F5 — exported for unit test (store-terminal guard)
     _installStore: store, // MPI-317 F5 — exported for unit test only; never mutate outside tests

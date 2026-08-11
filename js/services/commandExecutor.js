@@ -482,6 +482,15 @@ async function _remoteVramGb() {
  * toast. Best-effort: on any failure the gen still runs from the volume — never blocks.
  */
 async function _ensureRemoteHotStore(modelId, operation, { silent = false } = {}) {
+    // MPI-539: NEVER stage onto a download-mode Pod. Its container has ~3.7 GiB of RAM
+    // and no GPU — the user is installing weights there, not generating. Staging one
+    // 469MB LoRA OOM-killed the wrapper live on 2026-08-11 (exit 137), which dropped the
+    // install SSE and stranded four in-flight deps. This guard closes a HALF-WIRE: the
+    // stage-on-connect twin (prefetchInstalledModels) has carried it since MPI-329 and
+    // this per-gen path never did. It is doubly lethal here because _remoteVramGb returns
+    // null for __cpu__, and null means "no VRAM cap" in the size filter below — so the
+    // LEAST capable box got the MOST permissive staging set.
+    if (state.runpodConfig?.gpuType === '__cpu__') return;
     const model = getModelById(modelId);
     if (!model) return;
     // null operation → resolveDeps returns the model's FULL op universe (used by the
@@ -1250,7 +1259,12 @@ export function runCommand(payload) {
         if (payload.forceLocal !== true) {
             try { await remoteEngineClient.refresh(); } catch { /* Express unreachable — fall through to local */ }
         }
-        const engine = payload.forceLocal === true
+        // MPI-539: a DOWNLOAD-MODE Pod (no GPU) resolves LOCAL here for the same reason
+        // getEngine() hands back the local-pinned instance — it is a download target,
+        // not a generation engine. This is the read that gates the hot-store preflight
+        // below; leaving it 'remote' staged weights onto a 3.7 GiB CPU box and OOM-killed
+        // the wrapper mid-install. `refresh()` above ran first, so the mirror is fresh.
+        const engine = (payload.forceLocal === true || remoteEngineClient.isDownloadOnly())
             ? 'local'
             : (remoteEngineClient.isRemote() ? 'remote' : 'local');
         // MPI-200: resolve the arch token ONCE per gen, AFTER engine (arch is the

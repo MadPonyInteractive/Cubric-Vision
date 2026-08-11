@@ -1911,6 +1911,17 @@ export const localEngine  = createEngine({ engine: 'local',  alwaysLocal: true }
  * @returns {ReturnType<typeof createEngine>}
  */
 export function getEngine(forceLocal = false) {
+    // MPI-539: a DOWNLOAD-MODE Pod (no GPU, MPI-88) is a download TARGET, never a
+    // generation engine — its wrapper never reports ComfyUI `ready` BY DESIGN. Handing
+    // a dispatch to `remoteEngine` while one is connected walks the remote preflight,
+    // which (a) stages multi-hundred-MB weights onto the Pod's 3.7 GiB CPU box, OOM-
+    // killing the wrapper (exit 137, live 2026-08-11), and (b) reads the resulting
+    // not-ready as a dead Pod and POSTs /remote/mode {active:false} — which disarms the
+    // download manager's SSE reconnect (it bails on !isRemoteActive) and abandons every
+    // in-flight volume install. The local-pinned engine is the already-correct route and
+    // `_alwaysLocal` short-circuits every remote branch, including that teardown. Take
+    // it. Downloads never come through here, so the volume install keeps running.
+    if (remoteEngineClient.isDownloadOnly()) return localEngine;
     return forceLocal ? localEngine : remoteEngine;
 }
 

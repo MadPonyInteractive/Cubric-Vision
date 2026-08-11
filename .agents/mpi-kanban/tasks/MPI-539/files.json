@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/services/commandExecutor.js",
+    "js/services/comfyController.js",
+    "routes/downloadManager.js",
+    "tests/download-mode-pod-guards.test.cjs"
+  ]
+}
