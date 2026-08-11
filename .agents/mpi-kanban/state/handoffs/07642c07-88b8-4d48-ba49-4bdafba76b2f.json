@@ -4,7 +4,7 @@
   "generated_at": "2026-08-10T22:50:00Z",
   "from_session": ".agents/mpi-kanban/state/sessions/f0814dde-1f16-4e5a-b226-8ab1278b421d.json",
   "to_role": "implementer",
-  "status": "open",
+  "status": "superseded",
   "session": {
     "name": "MPI-4 - full-clip V2V Foley workflow built and committed; one guider fix is unexecuted and waiting on a bench run",
     "branch": "master"
@@ -50,7 +50,12 @@
       "research": ".agents/mpi-kanban/tasks/MPI-4/research/"
     }
   },
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
       "tasks/MPI-4/validation.md carries every root cause with the code file and line that proves it - read it, not the summaries",
@@ -98,7 +103,11 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "scalable-foundation",
-    "relevant_topics": ["workflow authoring", "comfy injection", "comfy engine"]
+    "relevant_topics": [
+      "workflow authoring",
+      "comfy injection",
+      "comfy engine"
+    ]
   },
   "rules_active": [
     "docs/workflow-authoring/README.md",
@@ -116,5 +125,6 @@
       "summary": "Foley workflow built and committed; two fixes unexecuted, next act is a bench run"
     }
   ],
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/07642c07-88b8-4d48-ba49-4bdafba76b2f.json and use mpi-continue on MPI-4. The full-clip V2V Foley workflow is BUILT and committed at comfy_workflows/raw/ltx_v2v_foley_template.json (58 nodes, byte-identical to the bench copy at 127.0.0.1:8188). It ran once and produced audio, but the audio was very loud and distorted, and every run since has died with UnboundLocalError noise_pred_neg. Both causes are diagnosed with the code line that proves them in tasks/MPI-4/validation.md: AUDIO cfg 6.0 into a CFG++ sampler on a distilled checkpoint, and MultimodalGuider never binding noise_pred_neg when both modalities sit at cfg 1.0. Both fixes have LANDED but NEITHER HAS BEEN EXECUTED - the first thing to do is run the workflow on the bench with a muted clip and both audio toggles off, not write more code. CRITICAL PROCESS RULE: the user hand-organises node positions to read the graph, so edit the bench copy IN PLACE (GET userdata, mutate only the nodes involved, assert every node's pos/size unchanged, POST) and never regenerate the file from build_foley.py."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/07642c07-88b8-4d48-ba49-4bdafba76b2f.json and use mpi-continue on MPI-4. The full-clip V2V Foley workflow is BUILT and committed at comfy_workflows/raw/ltx_v2v_foley_template.json (58 nodes, byte-identical to the bench copy at 127.0.0.1:8188). It ran once and produced audio, but the audio was very loud and distorted, and every run since has died with UnboundLocalError noise_pred_neg. Both causes are diagnosed with the code line that proves them in tasks/MPI-4/validation.md: AUDIO cfg 6.0 into a CFG++ sampler on a distilled checkpoint, and MultimodalGuider never binding noise_pred_neg when both modalities sit at cfg 1.0. Both fixes have LANDED but NEITHER HAS BEEN EXECUTED - the first thing to do is run the workflow on the bench with a muted clip and both audio toggles off, not write more code. CRITICAL PROCESS RULE: the user hand-organises node positions to read the graph, so edit the bench copy IN PLACE (GET userdata, mutate only the nodes involved, assert every node's pos/size unchanged, POST) and never regenerate the file from build_foley.py.",
+  "superseded_by": "887431d5-f073-464b-9765-a8ea888cefa9"
 }

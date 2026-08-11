@@ -6,9 +6,9 @@
   "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
   "plan": ".agents/mpi-kanban/tasks/MPI-4/brief.md",
   "owner_session": ".agents/mpi-kanban/state/sessions/f0814dde-1f16-4e5a-b226-8ab1278b421d.json",
-  "status": "needs_verification",
+  "status": "in_progress",
   "started_at": "2026-08-10T18:58:00Z",
-  "heartbeat_at": "2026-08-10T22:50:00Z",
+  "heartbeat_at": "2026-08-11T03:25:00Z",
   "allowed_actions": [
     "read",
     "edit",
@@ -27,6 +27,10 @@
     {
       "at": "2026-08-10T22:50:00Z",
       "event": "handoff_ready_awaiting_bench_run"
+    },
+    {
+      "at": "2026-08-11T03:25:00Z",
+      "event": "handed_off"
     }
   ]
 }

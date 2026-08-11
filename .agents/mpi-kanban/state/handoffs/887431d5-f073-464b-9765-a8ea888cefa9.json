@@ -1,0 +1,123 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "887431d5-f073-464b-9765-a8ea888cefa9",
+  "generated_at": "2026-08-11T03:25:00Z",
+  "from_session": ".agents/mpi-kanban/state/sessions/f0814dde-1f16-4e5a-b226-8ab1278b421d.json",
+  "to_role": "implementer",
+  "status": "open",
+  "session": {
+    "name": "MPI-4 - foley workflow PROVEN on the bench, simplified to 53 nodes, audio level fixed by cfg; NAG wiring is the next act",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Run the full-clip V2V foley workflow on the bench and prove the two unexecuted fixes, then fix whatever the run exposes.",
+    "status": "in_progress",
+    "summary": "The foley workflow RAN and PASSED, twice-simplified and re-run after every change. Both previously-unexecuted fixes are proven. The graph is now 53 nodes and the audio level is settled at AUDIO cfg 3.0, judged good by the user. One agreed change remains unbuilt: wire LTX2_NAG, option (a)."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-4/brief.md",
+    "completed": [
+      "RUN PROVEN. prompt 19e08c06 status success - no UnboundLocalError. Core CFGGuider at cfg 1 on #118/#121 is confirmed, the MultimodalGuider crash is gone",
+      "AUDIO cfg 6->1 confirmed as the distortion fix by measurement: the old render peaked at max_volume 0.0 dB (hard clip), the new one at -6.3 dB",
+      "Graph simplified 58 -> 53 nodes. Deleted #101 Input_Width, #102 Input_Height (they fed ONLY the encode - #46 takes #105 Foley Window off the raw #17, so they never touched delivered pixels; 832x480 now lives in #28's own widgets)",
+      "Deleted #19 Input_Duration, #103 max frames, #104 min(req,clip). #104 drove THREE consumers - the video window, the audio latent length AND the mask end time - so the 5s default silently truncated any clip longer than 5s, video included. #23 clip frames now feeds all three. Full-clip by construction",
+      "Long clips will OOM by design. Chunking rejected: each chunk re-rolls its own noise so the ambience jumps at every seam. A length cap belongs in the app, once the ceiling is measured",
+      "AUDIO LEVEL SOLVED BY cfg, NOT normalisation. API-only sweep, seed fixed: cfg 1.0 -39.7/-10.9 dB, 1.5 -39.5/-9.2, 2.0 -39.3/-8.9, 3.0 -33.2/-1.5. cfg moves TRANSIENTS not the body - which is why cfg 6 originally clipped. #118 cfg = 3.0, user judged _00008 good by ear",
+      "Reproduction proven: reconverting the SAVED file and re-queueing returned _00008 itself via execution_cached",
+      "FOUND: at cfg 1 core CFGGuider sets uncond_pred = None (comfy/samplers.py:610), so NO uncond pass runs and Input_Negative was INERT in every foley run before this one. cfg 3 is what put the negative back in play",
+      "FOUND: Audio_Influence#110 is dead in foley mode - it reaches #115 only through #113's TRUE branch, and #113's boolean is Input_Use_Input_Audio. With input audio off, #113 picks #112 One (a*0+1) = 1.0"
+    ],
+    "pending": [
+      "BUILD THIS FIRST - wire LTX2_NAG, option (a), user-agreed ('A is the best choice. Double power'). ONE new node. model in from #100 Foley_Lora; output to BOTH #115.model and #118.model; nag_cond_audio from #15 CLIP Text Encode (Negative); nag_cond_video LEFT EMPTY (video is frozen); widgets scale 11, alpha 0.25, tau 2.5, inplace true - the house values copied from #426 in ltx_i2v_t2v_template.json. KEEP #15 wired to #115.negative as well: that is what makes it option (a) rather than (b), the same negative applied by CFG and at the attention level. Do NOT add a second negative text input - a foley graph has only one kind of negative, and that was the user's point",
+      "Then RUN it and compare against _00008 (mean -33.2 dB / max -1.5 dB, seed 45, t2v_004.mp4, restaurant prompt). Watch the peak: -1.5 dBFS is only 1.5 dB of headroom, so if NAG pushes it into clipping the answer is cfg 2.5, not a limiter",
+      "Voice mode is still a SEPARATE untested configuration, and it is now cheaper to reason about: the user has already stripped 'speech, dialogue, talking' from Input_Negative (narration kept). Still needs a real path in Input_Audio (block_if_empty=true, so an empty string BLOCKS once the toggle executes it) and Foley_Lora set to None so the SFX LoRA and the ID LoRA are not stacked",
+      "Product decision still owed at MPI-520: foley mode and voice mode want different negatives and a different LoRA state. Do not ship both toggles as if they compose",
+      "OPEN UNKNOWN, does not block and now costs nothing: what registers a sampler_post_cfg_function with the ref-audio branch off. Nothing in the graph reads noise_pred_neg any more. Only matters if MultimodalGuider is ever wanted back - and note it is usable whenever ONE modality sits above cfg 1, since do_uncond() is not isclose(cfg,1.0)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-4",
+    "title": "LTX 2.3 video model integration",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-4/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-4/brief.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-4/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "handoffs": ".agents/mpi-kanban/tasks/MPI-4/handoffs/"
+    }
+  },
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
+  "knowledge_preservation": {
+    "completed": [
+      "tasks/MPI-4/validation.md carries three new dated sections this session: the passing run, the node removals, and the cfg sweep with the measured table. Read it, not the summaries",
+      "Memory written: project_ltx_workflows_land_as_flows - foley, lipsync and Video Extend land as FLOWS, so app integration is /mpi-add-flow and never /mpi-add-model. Indexed in MEMORY.md"
+    ],
+    "pending": [
+      "PROPOSED, NOT WRITTEN (needs the user's yes): a docs/workflow-authoring/ entry for guidance on this checkpoint - at cfg 1 core CFGGuider sets uncond_pred=None so the negative prompt is silently inert; MultimodalGuider crashes when BOTH modalities sit at cfg 1; LTX2_NAG is the house answer for a negative at cfg 1; and the measured cfg->level table showing cfg moves transients, not level",
+      "PROPOSED, NOT WRITTEN: the in-place bench-edit recipe (GET userdata -> mutate named nodes -> assert every pos/size unchanged -> POST -> read back FROM the bench) belongs in docs/workflow-authoring/. Used twice more this session; it currently exists only in validation.md",
+      "PROPOSED, NOT WRITTEN, carried from the previous handoff: a docs/workflow-authoring/ entry for MpiMath - evaluates math.* with NO min/max builtins but DOES support floor, ternaries and comparisons, AND swallows every exception returning 0.0 with only a print (math.py:28-33), so a malformed expression is a silent wrong number rather than an error node"
+    ]
+  },
+  "next_action": {
+    "description": "Wire LTX2_NAG into ltx_v2v_foley_template.json as option (a): one node, model in from #100 Foley_Lora, output to BOTH #115.model and #118.model, nag_cond_audio from #15 CLIP Text Encode (Negative), nag_cond_video left empty, widgets [11, 0.25, 2.5, true]. Keep #15 wired to #115.negative too. Then run it and compare the audio against MpiVideo_Foley_00008.mp4 (mean -33.2 dB, max -1.5 dB). Read tasks/MPI-4/validation.md first.",
+    "command": "mpi-continue MPI-4"
+  },
+  "context": {
+    "key_decisions": [
+      "AUDIO cfg = 3.0 on #118 CFGGuider. Chosen by the user's ear over a measured sweep, not by a target number. It also revived the negative prompt as a side effect, so quality and level moved together",
+      "Normalisation was proposed by the user, investigated, and ABANDONED on evidence: Lightricks' own reference has no gain stage, and AudioAdjustVolume is a fixed INT dB with no peak detection, so a gain sized for one render clips the next",
+      "NAG option (a) over (b): (a) needs one node and applies the same negative through CFG and attention both; (b) would need a ConditioningZeroOut on #115.negative because that input is required, so it costs a node to do less",
+      "Width/height are gone rather than injectable BECAUSE this graph never delivers the encoded pixels. That is the opposite of ltx_v2v_template.json, where #28's output IS the delivered clip - do not carry this decision across to that file",
+      "EDIT THE BENCH COPY IN PLACE - NEVER REGENERATE. build_foley.py is a historical record, not a thing to re-run"
+    ],
+    "constraints": [
+      "The user hand-organises node positions. Every write asserts pos/size unchanged on every surviving node, then reads back FROM the bench",
+      "THE MODIFIED DOT IS THE TELL: the user's tab held UNSAVED changes this session, so the saved userdata copy was NOT what they were looking at. Always re-fetch after they touch the tab, and ask them to save or discard first",
+      "A graph can be RUN without touching the saved workflow at all: convert the repo copy with 'node scripts/workflow-to-api.mjs <file>' (single-file mode -> stdout, writes nothing) and POST to /api/prompt. This is how the cfg sweep ran four variants with zero writes - prefer it for any experiment",
+      "Do NOT claim js/data/modelConstants/models.js or js/data/commandRegistry.js - app integration is MPI-520",
+      "SHARED TREE. Commit by explicit pathspec, never git add -A",
+      "Kanban event lines need schema + id + type + at"
+    ],
+    "files_modified": [
+      "comfy_workflows/raw/ltx_v2v_foley_template.json",
+      ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-4/events.jsonl",
+      ".agents/mpi-kanban/events.jsonl"
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-4/validation.md",
+      "comfy_workflows/raw/ltx_v2v_foley_template.json",
+      "comfy_workflows/raw/ltx_i2v_t2v_template.json"
+    ]
+  },
+  "project_knowledge": {
+    "profile": ".agents/mpi-kanban/project-profile.md",
+    "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
+    "mode": "scalable-foundation",
+    "relevant_topics": [
+      "workflow authoring",
+      "comfy injection",
+      "comfy engine"
+    ]
+  },
+  "rules_active": [
+    "docs/workflow-authoring/README.md",
+    "docs/playbooks/add-flow/README.md",
+    ".claude/rules/comfy_injection.md",
+    ".claude/rules/kanban.md",
+    ".claude/rules/git.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-11T03:25:00Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/887431d5-f073-464b-9765-a8ea888cefa9.json and use mpi-continue on MPI-4. The full-clip V2V foley workflow at comfy_workflows/raw/ltx_v2v_foley_template.json is PROVEN - it runs on bench 8188 and the user has approved the audio. It is now 53 nodes: Input_Width, Input_Height and Input_Duration were deleted (the first two fed only the encode and never the delivered pixels; the third silently truncated any clip longer than 5 seconds), and AUDIO cfg on #118 CFGGuider is 3.0, which fixed the level AND revived the negative prompt - at cfg 1 core CFGGuider sets uncond_pred=None so the negative had been inert in every earlier run. One agreed change is unbuilt: wire LTX2_NAG as option (a) - one node, model in from #100 Foley_Lora, out to BOTH #115.model and #118.model, nag_cond_audio from #15, nag_cond_video empty, widgets [11, 0.25, 2.5, true], and keep #15 wired to #115.negative as well. Copy the wiring from #426 in ltx_i2v_t2v_template.json. Then run it and compare against MpiVideo_Foley_00008.mp4 (mean -33.2 dB, max -1.5 dB) - the peak has only 1.5 dB of headroom, so if NAG clips it, drop cfg to 2.5. CRITICAL PROCESS RULES: edit the bench copy IN PLACE asserting every node's pos/size is unchanged, never regenerate it, and run experiments by converting to API format and POSTing to /api/prompt so the saved workflow is never touched. This workflow will ship as a FLOW, not a model - app integration follows /mpi-add-flow."
+}

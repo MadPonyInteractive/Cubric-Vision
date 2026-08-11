@@ -490,3 +490,193 @@ It sidesteps the bug entirely rather than tuning around it. `#116`/`#117`
 GuiderParameters are left in place but unwired - they are plan B if
 MultimodalGuider at AUDIO cfg != 1 is ever worth trying, and cost nothing
 unreached. **UNEXECUTED** - reasoned and validated, not yet run.
+
+## 2026-08-11 - foley workflow EXECUTED, both fixes PROVEN
+
+**Result: PASS.** `ltx_v2v_foley_template.json` ran end to end on bench 8188
+(`prompt_id 19e08c06-3c74-4b65-8b3d-3a33d440c92b`, `status success`, ~45s,
+0 `node_errors`) and produced `MpiVideo_Foley_00002.mp4`. Source was the muted
+`t2v_005.mp4`, `Input_Use_Input_Audio` and `Input_Use_Reference_Audio` both
+false. Confirmed by the user's ears on top of the numbers below.
+
+Run method, which needs no browser tab and so cannot disturb the hand-organised
+layout: convert the REPO copy to API format against live 8188
+(`node scripts/workflow-to-api.mjs comfy_workflows/raw/ltx_v2v_foley_template.json`,
+single-file mode -> stdout, writes nothing) and POST to `/api/prompt`. The bench
+copy was verified byte-identical first (sha256 `512adc56069a5d68...`, 106,248 B,
+58 nodes / 92 links), so the repo copy IS the bench graph.
+
+**Fix 1 - `MultimodalGuider` -> core `CFGGuider` at cfg 1: PROVEN.** No
+`UnboundLocalError: noise_pred_neg`. The converted API graph carries zero
+`MultimodalGuider` nodes; `#118` (foley) and `#121` (ref audio) are both
+`CFGGuider` at `cfg 1`. Four consecutive runs died here before; this one did not.
+
+**Fix 2 - AUDIO cfg 6.0 -> 1.0: PROVEN, and the old failure was CLIPPING.**
+Measured with `ffmpeg -af volumedetect` / `ebur128` (binary:
+`node_modules/ffmpeg-static/ffmpeg.exe`; `node_modules/ffprobe-static` for streams):
+
+| | `_00001` (AUDIO cfg 6, MultimodalGuider) | `_00002` (cfg 1, CFGGuider) |
+|---|---|---|
+| mean_volume | -14.4 dB | -30.7 dB |
+| max_volume | **0.0 dB - hard clip** | -6.3 dB |
+| true peak | - | -6.1 dBFS |
+| integrated | - | -32.2 LUFS (LRA 20.0 LU) |
+
+`max_volume 0.0 dB` is the "very loud and distorted" report, quantified: the old
+render pinned the ceiling. The new one keeps 6 dB of headroom and does not clip.
+LRA 20 LU with a -6.3 dB peak rules out the other reading of a quiet file - there
+is real content, not near-silence.
+
+**Muxing is correct:** h264 3.063s + aac 48 kHz stereo 3.062s in one container,
+so the generated audio is the same length as the untouched original frames. This
+is the no-decode design working - delivered pixels are the source's, never the
+encode's.
+
+**What this closes:** the foley branch of MPI-4 is proven end to end. Every claim
+in this file above it was structural or reasoned; this is the first foley run
+that both completed and sounded right.
+
+**Still open, not blockers:**
+- Level. -32.2 LUFS integrated is quiet for delivery. If it wants lifting, the
+  lever is `Audio_Influence#110` (0.9) or `LTXVNormalizingSampler` as a drop-in
+  for `SamplerCustomAdvanced` - not the guider, which is now settled.
+- The 8-step `ManualSigmas` + `euler_ancestral_cfg_pp` vs the LoRA's training
+  regime (`LTXVScheduler` 30 steps, plain `euler`). Untested; only worth trying
+  if foley QUALITY is judged poor, which it was not.
+- Voice mode is still a separate, untested configuration - see the mode collision
+  above and the product decision owed at MPI-520.
+- What registers a `sampler_post_cfg_function` with the ref-audio branch off is
+  still unknown. It no longer costs anything: nothing in the graph reads
+  `noise_pred_neg` now. Only matters if `MultimodalGuider` is ever wanted back.
+
+## 2026-08-11 - resolution and duration inputs REMOVED from the foley graph
+
+**58 nodes -> 53.** Deleted `#101 Input_Width`, `#102 Input_Height`,
+`#19 Input_Duration`, `#103 max frames (snap 8n+1)` and `#104 Foley_Frames =
+min(req, clip)`. `#23 clip frames (snap 8n+1)` (`floor((a-1)/8)*8+1` off
+`Input_Video.frame_count`) now feeds `#105 Foley Window.num_frames`,
+`#53 LTXVEmptyLatentAudio.frames_number` and `#114 clip_seconds.a` directly.
+User's call, and both halves have a distinct reason.
+
+**Why width/height could go: they never reach the delivered pixels.** Traced:
+`#101/#102` fed only `#28 Resize To Target`, and `#28` feeds only the encode
+(`VAEEncodeTiled`). The output path is `#46 Output_Video.images <- #105 Foley
+Window <- #17 Input_Video`, raw. So they set the resolution the model *sees*,
+never what ships - the opposite of the extend workflow, where `#28`'s output IS
+the delivered clip. 832x480 now lives in `#28`'s own widgets. Confirmed by the
+run below: the input was 1280x704 and the output is 1280x704 while the model
+encoded at 832x480.
+
+**Why duration had to go: it silently truncated the delivered clip.**
+`#104 = min(requested, clip)` drove THREE consumers - the video window, the audio
+latent length, and the mask end time. At the default 5s, any clip longer than 5s
+came out as a 5-second file, video included. It never showed in testing because
+every test clip was ~3s, so `min()` always picked the clip. Full-clip foley has
+no use for the knob; deleting it makes full-clip true by construction.
+
+**Long-clip handling: deliberately none - it will OOM.** The user's call, and the
+right one. Chunking was considered and rejected: each chunk draws its own noise,
+so the ambience re-rolls at every join and the seam is audible. A length cap with
+a real message belongs in the app at MPI-520, once the ceiling has been measured
+on a target card - not in the graph. **Cost of the width/height removal, noted:**
+resolution was the only VRAM lever in this graph, so a user on a smaller card can
+no longer trade resolution for clip length. Acceptable because frame count
+dominates the latent, not resolution, and 832x480 is already near the floor.
+
+**Method, and the tab hazard it avoided.** The user's browser tab held UNSAVED
+changes (`*ltx_v2v_foley_ten...` in the title, `ltx_v2v_foley_template` with the
+modified dot). The saved userdata copy was NOT what they were looking at, so a
+patch against the saved copy would have been overwritten by their next save. They
+saved and closed first; the re-fetch then showed their edits - new positive
+prompt (restaurant ambience), `speech, dialogue, talking` stripped from
+`Input_Negative` (`narration` kept), `t2v_004.mp4`, seed 45 - and five nodes
+moved. **Always re-fetch after the user touches the tab; the modified dot is the
+tell.** Patch applied to that fresh copy, asserting `pos`/`size` unchanged on all
+53 survivors, plus no duplicate link ids, no dangling links, and every
+`inputs[].link` / `outputs[].links` id resolving.
+
+**Verified after POST, read back FROM THE BENCH** (sha `e04cf0b1167dd335`, 53
+nodes / 86 links): all five nodes absent, the three rewires land on `#23`,
+`#28.width`/`.height` unlinked with widgets `[832, 480]`. Re-converted against
+live `/object_info`: 53 API nodes, **0 dangling links, 0 missing required
+inputs**. Repo copy synced byte-identical.
+
+**RUN: PASS.** `prompt_id 266eecc2-e727-4daf-9f54-0a915c833c26`, `status success`,
+0 `node_errors`, `MpiVideo_Foley_00005.mp4`. Input `t2v_004.mp4` (1280x704, 16fps,
+49 frames, 3.063s) -> output h264 **1280x704** 3.063s + aac 3.062s. `#23` returns
+`floor((49-1)/8)*8+1 = 49`, the whole clip, so the frame math survives a non-24
+fps source.
+
+**Level is now the one open quality item.** This render measured mean -39.7 dB /
+max -10.9 dB, against -30.7 / -6.3 on the previous clip. Different prompt and
+different source, so it is not a regression - but two runs in a row have landed
+well under a deliverable level. `Audio_Influence#110` (0.9) and
+`LTXVNormalizingSampler` are the in-graph levers; a post-normalize is the cheap
+one, and safe here because nothing is clipping.
+
+## 2026-08-11 - audio level solved by cfg, NOT by normalisation
+
+Normalisation was proposed and then **abandoned on evidence**. Lightricks' own
+reference graph has no gain stage - `LTXVAudioVAEDecode` goes straight to
+`VideoSave_LTX` - and the only core node available, `AudioAdjustVolume`, is a
+fixed INT dB gain with no peak detection, so a gain sized for one render clips
+the next. The real variable was the one that already differed from their file:
+AUDIO `cfg`, theirs 6.0 against our 1.0.
+
+**Swept `#118 CFGGuider.cfg` via the API only** - the saved bench workflow was
+never touched, each run POSTed a mutated copy of the converted prompt, seed held
+at 45 on `t2v_004.mp4`:
+
+| cfg | mean_volume | max_volume | output |
+|---|---|---|---|
+| 1.0 | -39.7 dB | -10.9 dB | `_00005` |
+| 1.5 | -39.5 dB | -9.2 dB | `_00006` |
+| 2.0 | -39.3 dB | -8.9 dB | `_00007` |
+| 3.0 | **-33.2 dB** | **-1.5 dB** | `_00008` |
+
+**cfg is not a gain control, and that is the finding.** From 1.0 to 2.0 the mean
+moves 0.4 dB - nothing - while the peak creeps 2 dB. At 3.0 the mean jumps 6.5 dB
+and the peak jumps 7.4 dB. It moves TRANSIENTS, not the body of the track, which
+is exactly how cfg 6 produced the original `max_volume 0.0 dB` clipping: the
+first run was not "too loud" so much as transient-blown. The usable window on
+this sampler is narrow and 3.0 sits at the top of it.
+
+**Decision: `#118 CFGGuider.cfg` = 3.0.** The user judged `_00008` by ear -
+"really good, that's a good volume". Applied in place to the bench copy (single
+widget, all 53 node positions and every other node's widgets asserted unchanged),
+read back from the bench, repo synced (`e947b371e3611748`). **Reproduction
+proven:** reconverting the SAVED file and re-queueing returned `_00008` itself
+via `execution_cached` - identical graph, identical seed, so the file on disk is
+provably the run that was approved.
+
+**Headroom is the one caveat: -1.5 dBFS peak leaves 1.5 dB.** A louder prompt or
+a more percussive clip can clip at this cfg. If that shows up, the answer is cfg
+2.5 rather than a limiter.
+
+**Timings do not support a cfg-cost claim.** 42.7s at cfg 1.0, 99.1s at cfg 1.5,
+39.4s at 2.0, 38.3s at 3.0 - n=1 each and the ordering is incoherent, so the
+uncond pass has no measurable cost in this sample. Not a measurement.
+
+### The negative prompt was inert until now
+
+At cfg 1.0 core `CFGGuider` takes the cfg-1 optimisation and sets
+`uncond_pred = None` (`comfy/samplers.py:610`) - no uncond pass, so the negative
+conditioning is never evaluated. **Every foley run before this one ignored
+`Input_Negative` entirely**, including the Lightricks string that was copied in
+verbatim. Raising cfg to 3.0 is what put it back in play, so `_00008` is both the
+first good-volume render AND the first render where the negative did anything.
+
+**`Audio_Influence#110` is dead in foley mode** and should not be reached for as
+a lever: it only feeds `#115.mask_init_value_audio` through `#113`'s TRUE branch,
+and `#113`'s boolean is `Input_Use_Input_Audio`. With input audio off, `#113`
+picks `#112 One (a*0+1)` = 1.0 and the knob does nothing.
+
+**NAG is available and is the house pattern for this problem.** `LTX2_NAG`
+(KJNodes/ltxv) takes a MODEL and has SEPARATE `nag_cond_video` / `nag_cond_audio`
+conditioning inputs, so it can guide the audio modality away from a negative at
+cfg 1 with no uncond pass. The shipped `ltx_i2v_t2v_template.json` already runs
+it: `#426 LTX2_NAG` at scale 11 / alpha 0.25 / tau 2.5 / inplace true, model off
+the end of the LoRA chain, `nag_cond_audio` off a dedicated
+`#427 "Negative Audio (NAG only)"` CLIPTextEncode, output through an `MpiIfElse`
+so it can be bypassed. In foley the video is frozen, so `nag_cond_video` would be
+left empty and NAG would touch audio only.
