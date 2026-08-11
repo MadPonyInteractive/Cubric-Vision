@@ -3,11 +3,11 @@
   "id": "MPI-537",
   "title": "LTX 2.3 lipsync - author and prove the workflow on the bench",
   "description": "Third LTX 2.3 v2v front end after extend and foley. NOT a mask polarity - lipdub re-synthesises the video from an LTXAddVideoICLoRAGuide in-context guide (EmptyLTXVLatentVideo + LTXICLoRALoaderModelOnly + ic-lora-lipdub-0.9 + LTXVSetAudioRefTokens, LTXVCropGuides mandatory), so it is its own workflow file and its own op. Every node and the LoRA are already installed on both 8188 and 48188. Bench authoring only - NOT blocked by MPI-531, which gates app-side Flow authoring, not graph work. App integration follows as its own card. See MPI-4 brief 'Lipsync is NOT a third mask polarity'.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-11T04:50:00Z",
-  "updated_at": "2026-08-11T04:50:00Z",
+  "updated_at": "2026-08-11T05:40:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -23,5 +23,6 @@
     "ltx",
     "flow"
   ],
-  "priority": "high"
+  "priority": "high",
+  "activeSessionTitle": "MPI-537 - LTX 2.3 lipdub: author and prove the graph on the bench"
 }

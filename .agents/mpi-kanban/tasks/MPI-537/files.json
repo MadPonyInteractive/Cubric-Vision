@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/files/v1",
   "files": [
-    "comfy_workflows/raw/"
+    "comfy_workflows/raw/ltx_v2v_lipdub_template.json"
   ]
 }
