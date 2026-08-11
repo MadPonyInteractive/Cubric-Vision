@@ -160,6 +160,42 @@ why.
 Earlier evidence for the same lever: run 4 crammed the full 7.3s sentence into 3.04s and
 Fabio noticed the timing was fast without being asked.
 
+### THE REFRAME: the capability already ships, the gap is a VIDEO INPUT (Fabio, 2026-08-11)
+
+Closing correction, and it may make this whole card the wrong tool. Fabio has already
+tested **both** audio modes — reference audio *and* direct audio — and both work. Not
+here, and not through the lipdub IC-LoRA: he ran them on **text-to-video and
+image-to-video**, where the app graph takes an audio track and the character's lips
+follow it. He has also driven **two voices in one audio file** to voice two characters
+that way.
+
+**The only reason it does not do video-to-video is that there is no video input on that
+graph.**
+
+That matches the architecture exactly. `ltx_i2v_t2v_template.json` wires
+`Input_Audio #477` → `#198 LTXVAudioVAEEncode` → `#200 SetLatentNoiseMask` →
+`#204 MpiIfElse` → `#145 LTXVConcatAVLatent.audio_latent`, with **no full-video
+IC-LoRA guide pinning the frames** — only a start frame. The model must generate all
+motion, so it animates the mouth to the supplied track. That is real audio-driven
+lipsync and it is already in the product.
+
+The lipdub IC-LoRA fails at exactly the point where that graph succeeds: its
+`LTXAddVideoICLoRAGuide` reproduces every frame of the source, so freezing the audio
+leaves the mouth pinned along with everything else (runs 2, 6, and the guide sweep at
+0.75 and 0.50). It buys identity preservation and pays for it with the motion the
+feature needs.
+
+**So the app-side question is probably not "wire the lipdub graph".** It is: can the
+graph that already does both audio modes accept a video instead of a start frame? The
+v2v family (`ltx_v2v_template.json`, and the foley file) already takes video; the i2v
+graph already takes audio and syncs to it. Nobody has yet tried to put the two halves
+together, and that is a cheaper, better-understood path than anything in this card.
+
+**Caveat, so the next session does not over-read this:** MPI-4 records
+`Input_Use_Reference_Audio` as untested *on the v2v foley file*, which is a different
+graph from the i2v one Fabio tested. Both statements are true. Confirm which graph any
+given claim belongs to before relying on it.
+
 ### Open, in priority order
 
 1. **Face size is a hard input requirement, not a preference.** The app card needs
