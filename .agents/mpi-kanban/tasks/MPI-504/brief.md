@@ -1,47 +1,49 @@
-# MPI-504 — Character Sheet flow: one supplied image in, a locked sheet out
+# MPI-504 — Character Sheet flow: attributes or a reference photo in, a video-reference sheet out
 
 Opened 2026-08-09. Fabio: *"I really want to do a character sheet one where the
-user supplies one image and Flow creates a character sheet. I am thinking about
-creating a character sheet just like they are explaining, where the full body
-doesn't have a head."*
+user supplies one image and Flow creates a character sheet… where the full body
+doesn't have a head."* Refined the same day:
+
+> *"The flow will probably be something that can take in a reference photo or
+> just imagine from a prompt. So the user could simply specify: what the
+> character would be, what he would be wearing, if he had scars, how old he was,
+> colour of the hair, colour of the eyes… Then we would just restructure the
+> prompt so that it comes out as a character sheet, with the same type of output
+> that we found works for video."*
 
 Three of the four shipped flows (`image-regen`, `sdxl-4k`, `video-stitch`) are
 marked for deprecation; only `head-swap` follows through. This is the next real
 flow.
 
-## Not new on the board, but not a card either
+## The LoRA-training sheet is OUT OF SCOPE — a different beast, not a layout option
 
-**Character sheet creator is candidate workflow #4 in
-[tasks/MPI-348/brief.md](../MPI-348/brief.md) §8** — *"the keystone"* — with
-Fabio's own best-performing layout from past tests: *"one square image with face
-SIDE profile, face FRONT profile, and a FULL BODY view. Should offer options
-(view/scene count, single-square vs separate images) since a sheet also serves
-users who DO want to train a LoRA."*
+The first version of this card framed the two layouts as a conflict to settle,
+then as a layout option. **Both wrong** (Fabio, 2026-08-09):
 
-MPI-348's own working mode says *"ideas that surface mid-authoring become their
-own cards rather than growing this one."* So this is that card. **MPI-348 keeps
-the Krea2 bench track; MPI-504 owns the flow.** (Also mentioned in passing by
-MPI-475 — H3 `ref2va` is *"the LoRA-free character bet: a character sheet in, a
-consistent character out, no training"* — and MPI-478 uses a 2048px sheet as a
-VRAM measurement case.)
+> *"A lot of the training sheet is completely different. We're talking about
+> something with 20 different images. It's a whole different beast, but this is
+> something for when the flow is actually addressed, not for now."*
 
-## The layout conflict IS the first decision
+So [MPI-348 §8.4](../MPI-348/brief.md) (one square image: face side profile +
+face front profile + full body) is not a variant of this — it is a separate,
+much larger job (~20 images) with a different consumer, and it gets addressed
+when that flow is addressed. **MPI-504 owns the video-reference sheet only.**
 
-Higgsfield's **HELL GRIND** production brief (95-minute AI feature, 15 people,
-under $500K, 14 days of generation, screened at the 2026 Cannes Marché du Film)
-specifies a different sheet — and, unusually, gives the failure each choice
-fixes.
-
-| | Fabio (MPI-348 §8.4) | Higgsfield brief |
+| | Video-reference sheet (**this card**) | LoRA-training sheet (later, separate) |
 |---|---|---|
-| Panels | face **side** profile, face **front** profile, full body | face **close-up**, full body **front**, full body **back** |
-| Portrait | front + side | one large **3/4** view (*"the sheets the model understands best"*), never straight-on |
-| Front body | normal | **no head** |
-| Layout | one square image, options for separate | three panels side by side |
+| Output | 3 panels | ~20 images |
+| Panels | face close-up (3/4), full body **front (headless)**, full body **back** | face side profile, face front profile, full body — plus many more views |
+| Consumer | a video model reading a reference | a trainer |
 
-Both are evidence-backed and they differ on every panel. **Settle it at the
-bench before any UI.** Fabio's version additionally serves LoRA training, which
-is why MPI-348 wanted view/scene-count and single-square-vs-separate as options.
+(Also mentioned in passing by MPI-475 — H3 `ref2va` is *"the LoRA-free character
+bet: a character sheet in, a consistent character out, no training"* — and
+MPI-478 uses a 2048px sheet as a VRAM measurement case.)
+
+## The video-reference spec
+
+From Higgsfield's **HELL GRIND** production brief (95-minute AI feature, 15
+people, under $500K, 14 days of generation, screened at the 2026 Cannes Marché
+du Film). Unusually, it gives the failure each choice fixes.
 
 ### Why the front body is headless
 
@@ -65,22 +67,71 @@ Zero-cost, fixes a whole class of broken wides.
   too late to fix."* Implies the flow should surface candidates rather than
   auto-pick.
 
-## The real risk: our problem is harder than theirs
+## Two input paths — and therefore TWO MODELS
 
-Higgsfield generated sheets **from a prompt** in Soul Cinema (a hosted creative
-model), picking the best of several returns. Fabio's ask is **one supplied image
-in** — reference-driven, not text-driven — and it must hold identity onto a
-**back view the source photo never shows**.
+Fabio, 2026-08-09:
 
-Nothing on the board proves a local model does that. Per
+> *"I think it's gonna need two different models anyway. If the user gives a
+> reference, we're going to need an edit model. If the user doesn't use a
+> reference, we're going to have to look for which model responds better to a
+> prompt that asks it to display the character in that certain way. That's the
+> flexibility with flows. We can have multiple models in a flow, and we select
+> the best models for that flow."*
+
+So the model is **per path, chosen by bench**, not one model for the flow:
+
+| Path | Model class | Selection question |
+|---|---|---|
+| reference photo | an **edit** model | which one holds identity onto views the source never shows |
+| attributes only | a **t2i** model | which one actually obeys *"display the character in this layout"* — a layout-compliance test, not an aesthetics one |
+
+That second question has no answer on the board yet and is not the same
+question as "which model makes the nicest face". Bench it as **layout
+compliance**: does the model return the requested panels, in the requested
+arrangement, with a consistent character across them.
+
+### Path 1 — attributes only, no photo. **Ship this first.**
+
+The user states what the character is, wardrobe, scars and marks, age, build,
+hair colour, eye colour, and so on; the flow restructures that into the sheet
+prompt and a t2i model invents the character front and back.
+
+**This is exactly what Higgsfield did** — Soul Cinema, prompt → sheet, best of
+several returns. There is no identity-projection problem at all, because there
+is no source identity to project. Low risk, and it is the whole feature for a
+user who has no photo.
+
+### Path 2 — reference photo in. **The hard one.**
+
+Must hold identity onto a **back view the source photo never shows**. Nothing on
+the board proves a local model does that. Per
 [MPI-348 §7](../MPI-348/brief.md): Qwen-Edit is *"strongest at COMBINING images;
 weak on single-image instruction edits"* — the wrong half for this. Krea2 is the
 single-ref identity path (`ref_boost` ~4, §8.3). Boogu Image Edit is the
 fallback.
 
-**Prove the back-view step alone at the bench before any flow work.** If no
-local path holds it, the flow ships front + 3/4 close-up only and says so
-honestly rather than shipping a drifting third panel.
+**Prove the back-view step alone at the bench before building this path.** If no
+local path holds it, path 2 ships front + 3/4 close-up only and says so honestly
+rather than shipping a drifting third panel.
+
+## Template or enhancer — decide before building
+
+The user supplies **structured fields**. Structured fields into a fixed slot
+template need **no LLM at all**. An enhancer round-trip (Cubric Prompt) earns
+its place only if the user types free prose instead of filling a form, or if the
+wording needs per-target-model shaping.
+
+Start with the template. Reach for Prompt when the template measurably falls
+short — not before.
+
+## One Higgsfield rule that does NOT transfer
+
+Their brief: *"Never write age in any language — the content filter becomes much
+stricter the moment it reads a minor; instead of age, give the role, the
+clothes, the action."*
+
+That is a **hosted-platform content filter**. Vision runs local models, so age
+is a normal attribute field here. Do not copy that rule across.
 
 ## The headless panel is a mask op, not a prompt
 
@@ -104,14 +155,15 @@ MPI-348 §6 already picked the compositing paths (`ImageCompositeMasked` for
 
 ## Candidate pipeline (shortest thing that could work)
 
-1. **3/4 close-up** — from the input image, relit flat onto neutral grey.
-2. **Full body front** — single-ref identity path.
-3. **Full body back** — same path. **The risky step; bench it first.**
-4. **Head removal on panel 2** — SAM3 mask → inpaint with an empty prompt.
-5. **Composite** — the panels onto one neutral-grey canvas.
+1. **Collect attributes** (form) → restructure into the sheet prompt.
+2. **3/4 close-up** — t2i, or from the reference photo relit flat onto neutral grey.
+3. **Full body front** — same prompt shape; on path 2, the single-ref identity path.
+4. **Full body back** — same. **On path 2 this is the risky step; bench it first.**
+5. **Head removal on panel 3** — SAM3 mask → inpaint with an empty prompt.
+6. **Composite** — the panels onto one neutral-grey canvas.
 
-Steps 1–3 are three *different panels*, not three passes over the same image, so
-the never-twice rule is not violated. Step 4 is masked, which is the point.
+Steps 2–4 are three *different panels*, not three passes over the same image, so
+the never-twice rule is not violated. Step 5 is masked, which is the point.
 
 ## Definition of done includes the stress test
 
