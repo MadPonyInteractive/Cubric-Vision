@@ -680,3 +680,107 @@ the end of the LoRA chain, `nag_cond_audio` off a dedicated
 `#427 "Negative Audio (NAG only)"` CLIPTextEncode, output through an `MpiIfElse`
 so it can be bypassed. In foley the video is frozen, so `nag_cond_video` would be
 left empty and NAG would touch audio only.
+
+## 2026-08-11 - `LTX2_NAG` wired (option a) and RUN: no clipping
+
+**53 nodes -> 54, 86 links -> 88.** One node, `#124 LTX2_NAG`, spliced between
+`#100 Foley_Lora` and its two foley consumers:
+
+| | |
+|---|---|
+| `model` in | new link 99 <- `#100 Foley_Lora`:0 |
+| `nag_cond_audio` | new link 98 <- `#15 CLIP Text Encode (Negative)`:0 |
+| `nag_cond_video` | `null` - the video is frozen, so NAG touches audio only |
+| `model` out | existing links **60** (`#115.model`) and **67** (`#118.model`), origin re-pointed `100 -> 124` |
+| untouched | link 71 (`#100 -> #119 talk3_ID_Lora`), so the ref-audio branch still reads the raw LoRA |
+| widgets | `[11, 0.25, 2.5, true]` = scale / alpha / tau / inplace, the house values from `#426` |
+
+**Option (a), and one correction to how it was written down.** The handoff said
+"keep `#15` wired to `#115.negative`". `#15` never fed `#115` directly - the
+chain is `#15 -> #16 LTXVConditioning.negative -> (slot 1) -> #115.negative`, and
+that chain is untouched. `nag_cond_audio` taps `#15` **raw**, before
+`LTXVConditioning`, matching `#426`. So the same negative string now acts twice:
+through CFG at cfg 3, and at the attention level through NAG. That is what makes
+this (a) and not (b), and no second negative encode was added.
+
+**`ver` is the bench's, not the shipped pin.** `#124.properties.ver` is
+`35e5956193769d18a13136cdedb73a36a05c73e6`, the kjnodes commit this bench runs
+and the same one `#28 ImageResizeKJv2` carries in this file. `#426` in
+`ltx_i2v_t2v_template.json` carries `7f43f2ce...` because that is the shipped
+engine pin. `properties` is dropped by the API conversion, so it affects nothing
+at run time - it only keeps the file self-consistent in the editor.
+
+**RUN: PASS.** `prompt_id dda83a86-31f8-4b23-8125-5522ea5a39fa`, `status success`,
+0 `node_errors`, `MpiVideo_Foley_00009.mp4`. Same conditions as `_00008`: seed 45,
+`t2v_004.mp4`, restaurant prompt, `#118` cfg 3.0. Ran API-only - the saved
+workflow was not touched until after the numbers came back.
+
+| | `_00008` (no NAG) | `_00009` (NAG) |
+|---|---|---|
+| mean_volume | -33.2 dB | **-32.1 dB** |
+| max_volume | -1.5 dB | **-1.1 dB** |
+| true peak | -1.5 dBFS | -1.1 dBFS |
+
+**It did not clip, and that was the one thing that could have gone wrong.** NAG
+moved the peak 0.4 dB and the mean 1.1 dB - upward, into the 1.5 dB of headroom
+`_00008` had left. 1.1 dB of headroom remains, so cfg 3.0 stands and the cfg 2.5
+fallback is not needed. The margin is now thinner than it was; a more percussive
+clip is still the case that would force 2.5.
+
+**`ebur128` integrated is unusable at this clip length** - it reports -70.0 LUFS
+/ 0.0 LRA for both files, which is the silence floor, because a 3.06s clip has
+too few gated blocks. `volumedetect` is the trustworthy read here, and it
+reproduced `_00008`'s published -33.2 / -1.5 exactly, which is what calibrates
+the harness.
+
+**No timing claim.** 112.1s wall for `_00009` against 38.3s for `_00008` is not
+a NAG cost measurement: `_00008` was a re-queue with **38 nodes cached**, while
+`_00009` had 0. The cold runs from the cfg sweep were 42.7 / 99.1 / 39.4s - a
+range that already covers most of the gap. Cold-vs-cold, n=1 each, nothing
+separable.
+
+**Method and verification.** Patched by script from the repo copy, asserting on
+every one of the 53 originals: `pos`, `size`, `widgets_values` unchanged, and
+byte-equality for every node except `#15` and `#100` (whose output link lists
+had to change); plus unique link ids, every link resolving to a live node and
+slot, every `inputs[].link` / `outputs[].links` agreeing with the link table, and
+the five wiring facts above asserted by name. Converted against live
+`/object_info`: 54 API nodes, **0 missing required, 0 dangling**. Only then
+POSTed to the bench, re-fetched, and confirmed **byte-identical to what was
+sent** with **0 of the 53 original nodes moved or resized**. Repo synced,
+bench == repo == sha `8675d9c73789f593`.
+
+**Still open:** whether NAG makes the foley *better* is the user's ear, not a
+number - `_00009` vs `_00008`. Voice mode remains a separate untested
+configuration, and the mode/LoRA collision is still a product decision owed at
+MPI-520.
+
+### REVERTED the same day - NAG bought nothing audible
+
+The user compared `_00009` (NAG) against `_00008` (no NAG) by ear and judged **no
+gain**. The graph was restored to the pre-NAG pre-image and the section above now
+describes a build that is **not** in the file: `ltx_v2v_foley_template.json` is
+back at 53 nodes / 86 links, sha `e947b371e3611748`, on both the bench and in the
+repo, with `#100 Foley_Lora` feeding links 60/67/71 directly again.
+
+**Why it is written down anyway.** The wiring was correct, it ran, and it did not
+clip - so this is a measured negative, not a failed attempt, and the next session
+should not spend another generation rediscovering it:
+
+- NAG moved the level +1.1 dB mean / +0.4 dB peak. Roughly 1 dB is under the
+  threshold of noticing, so the numeric change and the user's "no gain" agree -
+  they are not in conflict.
+- Applying the same negative twice - through CFG at cfg 3 **and** through
+  attention - is redundant here. Once cfg 3 revived the uncond pass, the negative
+  was already doing its work; NAG had nothing left to add. NAG's value case is a
+  negative at **cfg 1**, where no uncond pass runs at all. This graph left that
+  regime the moment cfg went to 3.0.
+- So the two fixes were alternatives, not a stack. If foley ever goes back to
+  cfg 1 for speed, NAG becomes the right answer again and this section is the
+  recipe: one node, `[11, 0.25, 2.5, true]`, model in from `#100`, out to `#115`
+  and `#118`, `nag_cond_audio` from `#15` raw, `nag_cond_video` null.
+
+**Do not re-derive the timing question either.** `_00009` ran 112.1s against
+`_00008`'s 38.3s, but `_00008` was a re-queue with 38 of 54 nodes cached and
+`_00009` had none. The cfg sweep's own cold runs spanned 39-99s. Cold-vs-cold was
+never measured and is not worth a generation now that the node is gone.

@@ -6,8 +6,8 @@
   "status": "handoff_ready",
   "claude_session_id": "d0d8d986-76f3-43b8-97c4-70fbb1568276",
   "started_at": "2026-08-10T18:58:00Z",
-  "heartbeat_at": "2026-08-11T03:25:00Z",
-  "name": "MPI-4 - full-clip V2V Foley workflow on the bench",
+  "heartbeat_at": "2026-08-11T05:05:00Z",
+  "name": "MPI-4 - NAG tried and reverted on evidence; the LTX flow track re-carded",
   "allowed_actions": [
     "read",
     "edit",
@@ -27,8 +27,12 @@
     {
       "at": "2026-08-11T03:25:00Z",
       "event": "handoff_ready"
+    },
+    {
+      "at": "2026-08-11T05:05:00Z",
+      "event": "handoff_ready"
     }
   ],
-  "summary": "Full-clip V2V Foley workflow built, validated and committed (3f3bb3d8, ca346ef9, 04eb3c78). Ran once and produced audio, but hot and distorted; every run since died with UnboundLocalError noise_pred_neg. Both root causes found with the proving code line; both fixes landed UNEXECUTED. Next act is a bench run.",
-  "handoff": ".agents/mpi-kanban/state/handoffs/07642c07-88b8-4d48-ba49-4bdafba76b2f.json"
+  "summary": "LTX2_NAG wired as option (a), run (prompt dda83a86, MpiVideo_Foley_00009.mp4) and measured: no clipping, mean -33.2 -> -32.1 dB, max -1.5 -> -1.1 dB. REVERTED on the user ear - no audible gain, and NAG is redundant above cfg 1 because cfg 3.0 already revived the uncond pass. Foley graph restored to sha e947b371e3611748 on bench and repo. Board re-carded: MPI-536 (foley to app as a Flow, blocked on MPI-531), MPI-537 (lipsync bench authoring, planned), MPI-520 re-scoped model-op -> Flow with its spent 1.4 blocker replaced, MPI-4 -> validating. Next work is lipsync.",
+  "handoff": ".agents/mpi-kanban/state/handoffs/46e2973d-5511-493f-b8c6-17fa08ccefc6.json"
 }

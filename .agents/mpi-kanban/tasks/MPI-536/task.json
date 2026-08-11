@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-536",
+  "title": "LTX 2.3 foley - wire the proven bench workflow into the app as a Flow",
+  "description": "Bench-proven full-clip V2V foley (comfy_workflows/raw/ltx_v2v_foley_template.json, 53 nodes, sha e947b371e3611748) runs end to end and the user approved the audio. Ships as a FLOW, not a model op - no ModelDef, no dep entries, /mpi-add-flow. BLOCKED on MPI-531: FlowStepField is select|button|toggle only, so authoring this Flow today means a new JS uiComponent that MPI-531 item 4 would then have to port. Also owns the foley-vs-voice mode decision that MPI-520 was wrongly carrying. See MPI-4 brief/validation.",
+  "column": "todo",
+  "maturity": "blocked",
+  "status": "active",
+  "created_at": "2026-08-11T04:50:00Z",
+  "updated_at": "2026-08-11T04:50:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "video",
+    "ltx",
+    "flow"
+  ],
+  "priority": "high"
+}

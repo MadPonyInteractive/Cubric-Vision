@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-520",
-  "title": "LTX 2.3 v2v extend - wire the proven bench workflow into the app",
-  "description": "Bench-proven single-stage video extend (comfy_workflows/raw/ltx_v2v_template.json, 56 nodes) runs end to end incl. silent sources + 3s foley. BLOCKED until 1.4 ships. Then: restore Input_Width/Input_Height, fan to API via generate_ltx.py, extend op in commandRegistry.js + models.js. See MPI-4 brief/validation.",
+  "title": "LTX 2.3 v2v extend - wire the proven bench workflow into the app as a Flow",
+  "description": "Bench-proven single-stage video extend (comfy_workflows/raw/ltx_v2v_template.json, 56 nodes) runs end to end incl. silent sources + 3s foley. Ships as a FLOW, not a model op - no ModelDef, no supportedOps, no dep entries, /mpi-add-flow. BLOCKED on MPI-531 (FlowStepField is select|button|toggle only, so authoring it today needs a JS uiComponent that MPI-531 item 4 must then port). The old 1.4/MPI-450 blocker is SPENT - MPI-450 closed 2026-08-10. Work: restore Input_Width/Input_Height as MpiInt (a linked widget-input makes ComfyUI ignore the injected widget), fan to API via generate_ltx.py against 48188, then the FlowDef. Foley is MPI-536, lipsync MPI-537. See MPI-4 brief/validation.",
   "column": "todo",
   "maturity": "blocked",
   "status": "active",
   "created_at": "2026-08-10T20:30:00Z",
-  "updated_at": "2026-08-10T20:30:00Z",
+  "updated_at": "2026-08-11T04:55:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

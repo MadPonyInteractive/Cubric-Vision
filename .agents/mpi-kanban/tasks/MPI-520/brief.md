@@ -1,7 +1,25 @@
-# MPI-520 — LTX 2.3 v2v extend: wire the proven bench workflow into the app
+# MPI-520 — LTX 2.3 v2v extend: wire the proven bench workflow into the app as a Flow
 
-**BLOCKED until the 1.4 release ships (MPI-450).** The workflow itself is done and
-proven; nothing here is research.
+**BLOCKED on MPI-531** (authoring shape). The workflow itself is done and proven;
+nothing here is research.
+
+> **Drift note, 2026-08-11.** This card was written as a MODEL op and blocked on
+> the 1.4 release. Both are now wrong.
+>
+> - **The 1.4 blocker is spent.** MPI-450 closed `done complete` at
+>   `2026-08-10T19:46:56Z`. It is not what holds this card any more.
+> - **The real blocker is MPI-531.** `FlowStepField`
+>   (`MpiBaseFlow/stepKinds.js` + the `FlowDef` typedef in
+>   `js/data/flowsRegistry.js`) is one row of `select | button | toggle` today,
+>   which cannot express this flow's resolution / length controls. Authoring it
+>   now means a new JS `uiComponent`, and MPI-531 item 4 would then have to port
+>   it. MPI-531 item 1 (extend `FlowStepField` with slider / number / text) is the
+>   specific dependency.
+> - **Extend is a FLOW, not a model op** — see `project_ltx_workflows_land_as_flows`.
+>   No `ModelDef`, no `supportedOps`, no `dependencies.js` entry; it runs on the
+>   already-wired LTX 2.3 checkpoint. Work items 2 and 3 below were rewritten for
+>   that. **Work item 1 survives the reframe unchanged** — the injector is the same
+>   for Flows, so the linked-widget trap is identical.
 
 ## What already exists
 
@@ -34,9 +52,14 @@ Proven behaviours:
    `ltx_v2v.json` + `ltx_v2v_int8.json`. **Convert against the app engine (48188),
    not the bench (8188)** — the bench runs ahead and has silently shifted a widget
    before.
-3. **Register the op** — `extend` in `js/data/commandRegistry.js`, `supportedOps`
-   + `workflows` entry in `js/data/modelConstants/models.js`. Single stage, so no
-   `_ms` treatment.
+3. **Follow `/mpi-add-flow`, not `/mpi-add-model`.** `docs/playbooks/add-flow/` —
+   README hub, then `01-descriptor-and-ops.md` for the `FlowDef` in
+   `js/data/flowsRegistry.js` and the op's 4 files, `02-media-io.md` for the media
+   slots. Shape: single model (LTX 2.3), video in → video out,
+   `mediaType: 'video'`. Author declaratively via `steps` + `fields`, with **no
+   new `uiComponent`** — that is the whole reason MPI-531 gates this card. There is
+   no `supportedOps`/`workflows` entry in `models.js` and no `dependencies.js`
+   entry to write.
 4. **Re-check the LoRA slots and loaders** against what the app injects — the
    bench copy carries `int8` transformer + `fp4` gemma widgets and a TAE preview
    chain (`LTX2SamplingPreviewOverride` + `LatentUpscaleModelLoader` + TAE
@@ -54,5 +77,12 @@ Proven behaviours:
 ## Related
 
 - `MPI-4` — the LTX umbrella. Brief + validation carry everything above in full.
-- Foley as its own op (freeze all video, mask all audio, generate no new frames)
-  is the next piece of work and is NOT part of this card.
+- **`MPI-536`** — foley as its own Flow (freeze all video, mask all audio, generate
+  no new frames). Carded 2026-08-11; it is NOT part of this card. **Its resolution
+  decision is the opposite of this one** — foley deleted `Input_Width`/`Input_Height`
+  because that graph never delivers the encoded pixels, while here `#28`'s output IS
+  the delivered clip and they must be restored. Do not carry either decision across.
+- **`MPI-537`** — lipsync, the third front end. Its own workflow file and its own
+  op; it does not share `ltx_v2v.json`.
+- **`MPI-531`** — the blocker. `MPI-529` (Flow Library v2) and `MPI-332` (rips the
+  three test flows) sit upstream of it.
