@@ -40,8 +40,27 @@ function setClient(client) { _client = client; }
 
 // --- generation relay state ------------------------------------------------
 
-/** Subscribed renderer SSE responses. Normally exactly one (the app window). */
+/**
+ * Subscribed renderer SSE responses, oldest first.
+ *
+ * A job goes to exactly ONE of them — the most recent — never to all. Broadcasting
+ * looks harmless while a single window is open and is a live hazard the moment a
+ * second renderer exists (a dev browser tab beside the Electron window, a reload
+ * whose old stream has not closed yet): every subscriber would independently
+ * dispatch the same job, so the user pays for N generations and sees one result,
+ * because the first reply settles the caller and the rest are dropped.
+ *
+ * Most recent wins because that is the renderer the user is actually looking at —
+ * a stale stream from a reloaded window would otherwise keep answering forever.
+ */
 const _jobSubscribers = new Set();
+
+/** The renderer a job should go to: the newest live subscriber, or null. */
+function _activeSubscriber() {
+  let last = null;
+  for (const client of _jobSubscribers) last = client; // Set preserves insertion order
+  return last;
+}
 /** jobId -> { settle, timer } for generations awaiting a renderer result. */
 const _pendingJobs = new Map();
 
@@ -95,11 +114,27 @@ function _dispatchToRenderer(capability, input) {
     if (typeof timer.unref === 'function') timer.unref();
 
     _pendingJobs.set(jobId, { settle: resolve, timer });
-    for (const client of _jobSubscribers) {
+
+    // Deliver to ONE renderer. A dead socket is dropped and the next-newest gets
+    // it, so a window that closed without its close handler firing costs a retry
+    // rather than the job.
+    for (;;) {
+      const client = _activeSubscriber();
+      if (!client) {
+        _settleJob(jobId, {
+          ok: false,
+          error: {
+            code: 'APP_UNAVAILABLE',
+            message: 'No Vision window is listening. Is the app open?',
+          },
+        });
+        return;
+      }
       try {
         client.write(frame);
+        return;
       } catch {
-        _jobSubscribers.delete(client); // dead socket — the close handler may not have fired yet
+        _jobSubscribers.delete(client);
       }
     }
   });

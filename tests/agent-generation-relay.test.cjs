@@ -157,6 +157,38 @@ test('modelId and operation are required', async () => {
   }
 });
 
+test('a job goes to ONE renderer only — never broadcast', async () => {
+  // Found in the MPI-546 live smoke: the relay wrote each frame to every
+  // subscriber, so two renderers (a dev browser tab beside the Electron window)
+  // both dispatched the same job. The user pays for two generations and sees one
+  // result, because the first reply settles the caller and the rest are dropped.
+  const { base, stop } = await startServer();
+  const first = await fakeRenderer(base);
+  const second = await fakeRenderer(base);
+  try {
+    const pending = postJson(`${base}/connector/generate`, { modelId: 'krea2', operation: 't2i' });
+
+    // Newest subscriber wins — it is the renderer the user is looking at.
+    const frame = await second.readFrame();
+    assert.equal(frame.event, 'job');
+
+    // The older one must see NOTHING. Race its next frame against a settled
+    // timer: if the frame wins, the job was broadcast.
+    const leaked = await Promise.race([
+      first.readFrame().then(() => true),
+      new Promise((r) => setTimeout(() => r(false), 250)),
+    ]);
+    assert.equal(leaked, false, 'the older renderer must not receive the job');
+
+    await postJson(`${base}/connector/jobs/${frame.data.jobId}/result`, { ok: true, output: {} });
+    assert.equal((await pending).json.ok, true);
+  } finally {
+    first.close();
+    second.close();
+    await stop();
+  }
+});
+
 test('a result for an unknown job id is a no-op, never an error', async () => {
   const { base, stop } = await startServer();
   try {
