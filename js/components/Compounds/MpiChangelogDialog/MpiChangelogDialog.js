@@ -3,6 +3,7 @@ import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiIcon } from '../../Primitives/MpiIcon/MpiIcon.js';
 import { qs } from '../../../utils/dom.js';
+import { renderInlineMarkdown, wireMarkdownLinks } from '../../../utils/markdown.js';
 import { emptyReleaseNotes } from '../../../data/releaseNotes.js';
 
 /**
@@ -70,16 +71,14 @@ export const MpiChangelogDialog = ComponentFactory.create({
 
     let _version = '';
 
-    // ── Minimal inline markdown → safe HTML (bold / italic / code) ─────────
-    // Not a full parser: escapes HTML first, then applies **bold**, *italic*,
-    // `code`. Enough to make release notes readable without a dependency.
-    const _esc = (s) =>
-      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const _inlineMd = (raw) =>
-      _esc(String(raw))
-        .replace(/`([^`]+)`/g, '<code class="mpi-changelog__code">$1</code>')
-        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-        .replace(/(^|[^*])\*(?!\s)([^*]+?)\*(?!\*)/g, '$1<em>$2</em>');
+    // ── Markdown → sanitized HTML ─────────────────────────────────────────
+    // Notes are one line each, so they render INLINE — no `<p>` wrapper around
+    // a list item. The renderer is the app's shared one (js/utils/markdown.js);
+    // this file used to carry its own three-regex substitute.
+    const _inlineMd = (raw) => renderInlineMarkdown(raw);
+
+    // A markdown link in a note would otherwise navigate the whole app away.
+    const _unwireLinks = wireMarkdownLinks(bodySlot);
 
     // ── Render a single section (heading + bullet list) ────────────────────
     const _renderSection = ({ key, title, icon, tone }, notes) => {
@@ -147,6 +146,7 @@ export const MpiChangelogDialog = ComponentFactory.create({
     actionsSlot.appendChild(doneBtn.el);
 
     el.destroy = () => {
+      _unwireLinks();
       modal.el.hide?.();
       modal.el.destroy?.();
     };

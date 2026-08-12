@@ -1,0 +1,159 @@
+/* ═══════════════════════════════════════════════════════════════════════════════
+   markdown.css — typography for rendered markdown (`.mpi-md`)
+
+   One shared block, because more than one surface renders markdown: the notes
+   editor's preview (project + card notes) and the release-notes dialog. Written
+   as a partial rather than component CSS so both get it from one place.
+   Renderer: js/utils/markdown.js
+═══════════════════════════════════════════════════════════════════════════════ */
+
+.mpi-md {
+    color: var(--ink-2);
+    font-size: var(--t-md);
+    line-height: 1.6;
+    /* `break-word`, not `anywhere`: a long token only breaks when it alone
+       overflows. `anywhere` split `script.md` across two lines inside a table. */
+    overflow-wrap: break-word;
+}
+
+/* First and last child sit flush — the container owns the outer padding. */
+.mpi-md > :first-child { margin-top: 0; }
+.mpi-md > :last-child  { margin-bottom: 0; }
+
+/* ── Headings ─────────────────────────────────────────────────────────────── */
+/* Each level gets its own colour as well as its own size, so depth is readable
+   at a glance in a long document — ink for the title, heat for sections, frost
+   for sub-sections, a muted kicker below that. */
+.mpi-md h1,
+.mpi-md h2,
+.mpi-md h3,
+.mpi-md h4,
+.mpi-md h5,
+.mpi-md h6 {
+    margin: var(--s-4) 0 var(--s-2);
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.mpi-md h1 { font-size: var(--t-xl); color: var(--ink-1); }
+.mpi-md h2 { font-size: var(--t-lg); color: var(--accent-heat); }
+.mpi-md h3 { font-size: var(--t-md); color: var(--accent-frost); }
+.mpi-md h4,
+.mpi-md h5,
+.mpi-md h6 {
+    font-size: var(--t-sm);
+    color: var(--ink-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.mpi-md h1,
+.mpi-md h2 {
+    padding-bottom: var(--s-1);
+    border-bottom: 1px solid var(--line);
+}
+
+/* ── Blocks ───────────────────────────────────────────────────────────────── */
+.mpi-md p { margin: 0 0 var(--s-3); }
+
+.mpi-md ul,
+.mpi-md ol {
+    margin: 0 0 var(--s-3);
+    padding-left: var(--s-4);
+}
+
+.mpi-md li { margin-bottom: var(--s-1); }
+.mpi-md li::marker { color: var(--ink-4); }
+
+/* Task lists (GFM) drop the marker — the checkbox is the marker. */
+.mpi-md li:has(> input[type="checkbox"]) { list-style: none; }
+.mpi-md li > input[type="checkbox"] { margin-right: var(--s-1); }
+
+.mpi-md blockquote {
+    margin: 0 0 var(--s-3);
+    padding: var(--s-1) var(--s-3);
+    border-left: 2px solid var(--accent-frost);
+    color: var(--ink-3);
+}
+
+.mpi-md hr {
+    margin: var(--s-4) 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+}
+
+.mpi-md a {
+    color: var(--accent-frost);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+}
+
+.mpi-md a:hover { border-bottom-color: var(--accent-frost); }
+
+.mpi-md strong { color: var(--ink-1); font-weight: 700; }
+.mpi-md em     { font-style: italic; }
+.mpi-md del    { color: var(--ink-4); }
+
+/* ── Code ─────────────────────────────────────────────────────────────────── */
+.mpi-md code {
+    padding: 1px var(--s-1);
+    background: var(--surface-bar);
+    border-radius: var(--r-2);
+    color: var(--ink-1);
+    font-size: var(--t-sm);
+}
+
+.mpi-md pre {
+    margin: 0 0 var(--s-3);
+    padding: var(--s-2) var(--s-3);
+    overflow-x: auto;
+    background: var(--surface-canvas);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+}
+
+.mpi-md pre code {
+    padding: 0;
+    background: none;
+    line-height: 1.5;
+}
+
+/* ── Tables ───────────────────────────────────────────────────────────────── */
+/* Wide tables scroll inside the block rather than widening the dialog. */
+.mpi-md table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    margin: 0 0 var(--s-3);
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: var(--t-sm);
+}
+
+.mpi-md th,
+.mpi-md td {
+    padding: var(--s-1) var(--s-2);
+    border: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+}
+
+.mpi-md th {
+    background: var(--surface-bar);
+    color: var(--ink-1);
+    font-weight: 700;
+}
+
+/* ── Media ────────────────────────────────────────────────────────────────── */
+.mpi-md img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--r-2);
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────────── */
+.mpi-md--empty {
+    color: var(--ink-4);
+    font-style: italic;
+}

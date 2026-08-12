@@ -9,6 +9,13 @@
     border-radius: var(--r-1);
 }
 
+.mpi-notes-editor__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+}
+
 .mpi-notes-editor__title {
     font-size: var(--t-lg);
     font-weight: 700;
@@ -16,9 +23,19 @@
     line-height: 1.2;
 }
 
+.mpi-notes-editor__mode {
+    flex: 0 0 auto;
+}
+
 .mpi-notes-editor__field {
     display: flex;
     flex-direction: column;
+}
+
+/* Edit and preview swap via `hidden`, which loses to the `display` rules above
+   and in MpiInput.css unless it is spelled out here. */
+.mpi-notes-editor__field > [hidden] {
+    display: none;
 }
 
 .mpi-notes-editor__field .mpi-input {
@@ -29,13 +46,28 @@
     min-height: 12rem;
     max-height: 60vh;
     padding: 0.5rem 0.75rem;
+    /* Long notes SCROLL. This pane used to run in MpiInput's `autoHeight` mode,
+       whose `overflow: hidden` met this `max-height` and silently truncated
+       everything past it (MPI-545). */
+    overflow-y: auto;
     background: var(--surface-bar);
     border: 1px solid var(--line);
     border-radius: var(--r-2);
     color: var(--ink-1);
-    font-size: var(--t-sm);
+    /* Same size as the rendered preview — switching modes should not resize the text. */
+    font-size: var(--t-md);
     line-height: 1.5;
     resize: vertical;
+}
+
+.mpi-notes-editor__preview {
+    min-height: 12rem;
+    max-height: 60vh;
+    padding: 0.5rem 0.75rem;
+    overflow-y: auto;
+    background: var(--surface-bar);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
 }
 
 .mpi-notes-editor__actions {

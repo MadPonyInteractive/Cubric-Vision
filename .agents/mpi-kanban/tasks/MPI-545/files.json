@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "package.json",
+    "package-lock.json",
+    "js/utils/markdown.js",
+    "js/utils/icons.js",
+    "js/components/Compounds/MpiNotesEditor/MpiNotesEditor.js",
+    "js/components/Compounds/MpiNotesEditor/MpiNotesEditor.css",
+    "js/components/Compounds/MpiChangelogDialog/MpiChangelogDialog.js",
+    "js/components/Compounds/MpiChangelogDialog/MpiChangelogDialog.css",
+    "js/components/types.js",
+    "styles/markdown.css",
+    "styles.css"
+  ]
+}

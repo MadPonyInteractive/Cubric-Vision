@@ -1128,15 +1128,20 @@
 /**
  * @typedef {Object} MpiNotesEditorProps (Compound — js/components/Compounds/MpiNotesEditor)
  * @property {string}   [title='Notes']      - Dialog title.
- * @property {string}   [value='']           - Initial notes text shown in the textarea.
+ * @property {string}   [value='']           - Initial notes text (MARKDOWN) shown in the textarea.
  * @property {string}   [placeholder='Write your notes here…'] - Textarea placeholder.
  * @property {Function} [onSave]             - async (notes: string) => void. Persists the notes.
  *                                             While it runs the Save button is disabled and the modal
  *                                             stays open; on rejection the modal stays open for retry.
  *
+ * A pencil/eye radio group in the header swaps the textarea for rendered markdown
+ * (`js/utils/markdown.js`). The preview reads the LIVE textarea, so unsaved edits
+ * show in it. It opens on the eye when `value` has content, on the pencil when empty.
+ *
  * Instance methods (on instance.el):
  *   show() — Self-portals a backdrop + centred dialog to document.body (via MpiModal).
  *   hide() — Removes backdrop/wrapper, releases OverlayManager queue.
+ *   destroy() — Releases the preview's delegated link handler.
  *
  * Usage:
  *   const e = MpiNotesEditor.mount(document.createElement('div'), {

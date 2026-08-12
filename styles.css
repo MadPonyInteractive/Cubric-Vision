@@ -9,6 +9,7 @@
 
 
 @import url('styles/01_base.css');
+@import url('styles/markdown.css');
 
 /* Shell Partial Modules */
 @import url('styles/shell/base.css');

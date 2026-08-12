@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-545",
+  "title": "Markdown rendering for project notes, card notes and release notes",
+  "description": "Notes modals show raw markdown and clip past 60vh with no scrollbar. Render markdown app-wide via an existing npm module, plus an edit/preview toggle in the notes editor.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-12T07:30:00Z",
+  "updated_at": "2026-08-12T07:50:00Z",
+  "labels": [
+    "ui",
+    "components"
+  ],
+  "priority": "medium",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  }
+}
