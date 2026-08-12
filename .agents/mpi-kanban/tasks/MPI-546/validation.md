@@ -1,9 +1,9 @@
 # MPI-546 Validation
 
-## State: code complete, automated checks green, LIVE SMOKE OUTSTANDING
+## State: COMPLETE — automated checks green, live smoke passed
 
-Session paused 2026-08-12 for credits. Phases 1–4 shipped; Phase 5 (live smoke) is
-the only thing between this card and `done`.
+All five phases shipped and verified 2026-08-12. The live smoke also found and fixed
+a duplicate-dispatch bug (commit `99ea5767`).
 
 ## Passed
 
@@ -46,7 +46,39 @@ kill/relaunch cycles left the fixed-profile instance wedged mid-boot (`app:isola
 uses one fixed profile, so a killed instance's remnants collide with the next
 launch). The user's own app was never a candidate for any kill.
 
-## Not yet verified
+## Live smoke PASSED 2026-08-12 (instance on :50478)
+
+Unblocked by pointing the isolated instance at the real weights, Fabio's suggestion:
+`CUBRIC_MODELS_ROOT="G:/CubricModels" npm run app:isolated`. **No code change was
+needed** — the launcher already forwards its env, and `main.js` resolves
+`CUBRIC_MODELS_ROOT` into the server env. The user's own app is already pointed at
+that same folder (`/comfy/get-path` -> `G:\CubricModels`, `isDefault:false`), so this
+matches production rather than inventing a config.
+
+Worth knowing WHY the isolated profile failed before, because it was not what I
+assumed: the ENGINE is already shared (`c:/AI/Mpi/Cubric-Vision/engine`, the repo
+default, since no `.engine-config.json` exists), and its `extra_model_paths.yaml`
+already sets `base_path: G:/CubricModels`. ComfyUI could always see the weights. What
+was missing was the APP-side dep state that `isOperationInstalled` reads — which is
+what produced `OP_UNAVAILABLE`.
+
+**Evidence:**
+
+- `/comfy/get-path` -> `G:\CubricModels`; `/connector/capabilities` ->
+  `generationSubmit: true`; `/comfy/status` -> running + ready.
+- `isOperationInstalled('krea2','t2i')` -> **true** (the previous blocker).
+- `POST /connector/generate` `{krea2, t2i, "a lone rider at dusk..."}` -> **`ok:true`**
+  in **97.8s**; output `t2i_003.png`, 768x1344, itemId `d38147d8`, groupId `94891b2e`.
+- On disk: `Media/t2i_003.png` (1,000,891 bytes), `Media/.meta/d38147d8-….json`
+  carrying the exact prompt / modelId / operation / `generationMs`, plus its
+  `.thumb.jpg`.
+- **`project.json` carries group `94891b2e` with `history: [d38147d8]`** — the project
+  LEARNED about the image. That is precisely what a `/proxy/prompt` POST fails to do,
+  and it is the whole reason this card exists.
+
+Every phase of the card is verified live. Nothing outstanding.
+
+## Superseded — what was outstanding before the smoke
 
 **Phase 5 — live smoke.** Nothing has executed a real generation through this path.
 What the automated tests do NOT cover, because they stub the renderer:

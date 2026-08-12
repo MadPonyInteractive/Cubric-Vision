@@ -3,11 +3,11 @@
   "id": "MPI-546",
   "title": "Agents cannot dispatch a generation - add a generation.submit connector capability",
   "description": "The local HTTP API on 127.0.0.1:3000 can read projects, write card notes and project notes, enhance a prompt, read Pod stats and shut the app down, but no route reaches dispatch. Dispatch lives in the renderer (generationService.startGeneration, commandExecutor, generationStore, PromptBox), so an agent cannot start a generation or create a gallery card. POSTing a graph straight to /proxy/prompt runs on the engine and produces nothing in the UI: the picture lands on disk and the project never learns it exists, which also means no history entry, no sidecar and no Card notes. Add a generation.submit connector capability beside the existing prompt.enhance / system.memory.release / system.shutdown so a submitted job goes through the same path the PromptBox uses and lands as a real gallery card. The Playwright/Electron harness in tests/desktop/ is not an alternative - it launches its own Electron instance and cannot drive an app the user already has open. Blocks agent-driven production work; found while producing the Cubric western film, where every generation has to be run by hand. Also the prerequisite for the Cubric CLI direction.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-12T07:58:00Z",
-  "updated_at": "2026-08-12T08:43:45Z",
+  "updated_at": "2026-08-12T09:22:36Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -17,6 +17,5 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
-  },
-  "activeSessionTitle": "generation.submit connector capability"
+  }
 }

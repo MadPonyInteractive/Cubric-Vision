@@ -4,4 +4,4 @@
 - [x] Renderer dispatch listener
 - [x] Connector capability
 - [x] Docs + skill
-- [ ] Live smoke
+- [x] Live smoke
