@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "at": "2026-08-12T17:41:37Z", "actor": "claude", "id": "MPI-547", "note": "Follow-up to MPI-546: named parameters so an agent can pick ratio/quality/turbo/style."}

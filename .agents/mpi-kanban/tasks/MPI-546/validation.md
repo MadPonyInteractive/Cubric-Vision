@@ -112,3 +112,30 @@ newest-subscriber rule decides which one gets the job.
 
 Needs an installed model and a running engine, which is why it did not fit this
 session.
+
+## Post-close: two MORE bugs, one fixed but NOT verified live (2026-08-12)
+
+Live use after the card closed found two more, both invisible to the API:
+
+1. **No placeholder card, no latents** (`30e42bb7`). The gallery draws in-progress
+   cards from the activeGenerations entry's `placeholderGroup`, and previews route by
+   `tempId`. `agentDispatch` passed neither, so a submit ran its full ~100s behind an
+   empty gallery and the card appeared only at the end. The Cue panel was the only sign
+   anything was happening.
+2. **The project's ratio was ignored entirely** (`ede087b1`). `krea2_t2i_sfw.json` bakes
+   `Input_Width`/`Input_Height` (nodes 75/74 = 768/1344) and the injector only overrides
+   them when `injectionParams` carries Width/Height. The PromptBox always resolves the
+   ratio before dispatch; `agentDispatch` sent nothing, so the baked default won —
+   five agent generations at 9:16 in a project saved at 1:1, with no Width/Height in any
+   sidecar to explain it. Surfaced only because Fabio noticed padding on the placeholder.
+
+**`ede087b1` is committed but was never run live.** The project is saved at 1:1, so the
+next submit should produce a square **1024x1024**. Confirm that before building on it —
+tracked as the first step of MPI-547.
+
+**The lesson, three for three:** every one of these returned `ok: true`. For a feature
+whose whole point is that the APP behaves correctly, the API contract is not the test.
+Watch the real window.
+
+**Follow-up card: MPI-547** — named parameters so an agent can choose ratio, quality
+tier, turbo, style and batch per generation instead of inheriting the open project's.

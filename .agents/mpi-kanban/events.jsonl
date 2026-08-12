@@ -2691,3 +2691,4 @@
 {"schema": "mpi-kanban/event/v1", "type": "validation.updated", "at": "2026-08-12T09:22:36Z", "actor": "claude", "id": "MPI-546", "note": "Live smoke PASSED: real gallery card + sidecar + project.json group."}
 {"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "at": "2026-08-12T09:22:36Z", "actor": "claude", "id": "MPI-546", "note": "All 5 phases complete."}
 {"schema": "mpi-kanban/event/v1", "type": "task.moved", "at": "2026-08-12T09:22:36Z", "actor": "claude", "id": "MPI-546", "from": "doing", "to": "done", "note": "Verified live on isolated instance :50478 with CUBRIC_MODELS_ROOT=G:/CubricModels."}
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "at": "2026-08-12T17:41:37Z", "actor": "claude", "id": "MPI-547", "note": "Follow-up to MPI-546: named parameters so an agent can pick ratio/quality/turbo/style."}
