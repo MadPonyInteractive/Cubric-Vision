@@ -163,6 +163,13 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - **Memory:** `project_release_model_github_only.md`
 - **Notes:** GitHub-only release model (2026-07-21). One master branch, bump the version digit (2nd=features, 3rd=fixes, 1st=breaking), publish a public GitHub Release with full builds + update bundles. `mpi-release` is the one release flow (replaced mpi-merge-branches/mpi-apply-patch/mpi-release-public). No Patreon tiers, no Cloudflare pre-release links. R2 still hosts model weights only.
 
+### Agent-facing HTTP API (connector, generation dispatch)
+
+- **Read first:** `.claude/skills/cubric-vision/SKILL.md` § "Dispatching a generation", `docs/generation-lifecycle.md` § "An agent is the THIRD producer"
+- **Also:** `routes/connector.js` header comment (route-is-the-contract seam), `js/shell/agentDispatch.js`
+- **Memory:** `project_cli_anything_is_the_cli_wrapper.md`, `feedback_verify_ui_driving_apis_live.md`
+- **Notes:** `generation.submit` (MPI-546) lets an agent dispatch through the SAME queue the PromptBox uses — real gallery card, not a bare `/proxy/prompt`. MPI-547 (open) adds named parameters (ratio/quality/turbo/style); today an agent only inherits the open project's settings.
+
 ### Cross-project / product
 
 - **Read first:** `docs/PROJECT.md`

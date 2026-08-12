@@ -1,4 +1,4 @@
-{"at": "2026-08-12T07:58:00Z", "event": "task.created", "actor": "claude", "id": "MPI-546", "note": "filed from MadPony-Identity while producing the Cubric western film"}
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "at": "2026-08-12T07:58:00Z", "actor": "claude", "id": "MPI-546", "note": "filed from MadPony-Identity while producing the Cubric western film"}
 {"schema": "mpi-kanban/event/v1", "type": "task.moved", "at": "2026-08-12T08:34:17Z", "actor": "claude", "id": "MPI-546", "from": "todo", "to": "doing", "note": "Implementation started."}
 {"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "at": "2026-08-12T08:34:17Z", "actor": "claude", "id": "MPI-546", "note": "Derived 5 items from plan.md phases."}
 {"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "at": "2026-08-12T08:43:45Z", "actor": "claude", "id": "MPI-546", "note": "Phases 1-4 done; Live smoke outstanding."}
