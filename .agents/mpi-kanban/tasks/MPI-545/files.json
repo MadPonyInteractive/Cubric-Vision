@@ -11,6 +11,7 @@
     "js/components/Compounds/MpiChangelogDialog/MpiChangelogDialog.css",
     "js/components/types.js",
     "styles/markdown.css",
-    "styles.css"
+    "styles.css",
+    ".claude/rules/dos_and_donts.md"
   ]
 }

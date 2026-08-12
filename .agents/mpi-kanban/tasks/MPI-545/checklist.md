@@ -11,3 +11,4 @@
 - [x] `js/components/types.js` props updated
 - [x] Verified in an isolated app instance - see validation.md
 - [x] Polish pass: 880px dialog, --t-md body type, per-level heading colours
+- [x] Documented in .claude/rules/dos_and_donts.md (briefing bullet + utilities list) so sub-agents inherit it

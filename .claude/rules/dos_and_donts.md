@@ -12,7 +12,8 @@
 - **Never use raw `document.querySelector`.** Use `js/utils/dom.js` shorthands.
 - **BEM naming is mandatory.** Format: `.mpi-block__element--modifier`.
 - **For image surfaces: prefer CSS `transform` on a stack element over `ctx.translate/scale`.** CSS transform uses the GPU compositor — no re-rasterize per frame. `ctx` transforms belong only to screen-UI overlays drawn in container px.
-- **Check `js/utils/` before writing any generic logic** — `async.js`, `file.js`, `images.js`, `video.js`, `mediaDimensions.js`, `string.js`, `ratios.js` may already do what you need.
+- **Check `js/utils/` before writing any generic logic** — `async.js`, `file.js`, `images.js`, `video.js`, `mediaDimensions.js`, `string.js`, `ratios.js`, `markdown.js` may already do what you need.
+- **Never hand-roll markdown.** `js/utils/markdown.js` is the ONE renderer (`marked` parses, `DOMPurify` sanitizes): `renderMarkdown(src)` for a document, `renderInlineMarkdown(src)` for a single line with no `<p>` wrapper, `renderMarkdownInto(el, src)` + `wireMarkdownLinks(el)` for a live pane. Never `innerHTML` markdown output that did not go through it — notes arrive inside project folders the user may not have written. Style the result with the shared `.mpi-md` block in `styles/markdown.css`; do not restyle headings/tables per component.
 - **Frontend logging:** `import { clientLogger } from '../services/clientLogger.js'` — never use bare `console.log/error`.
 - **Backend logging:** `const logger = require('./logger')` from `routes/logger.js`.
 - **🔴 Mutating a mask or paint LAYER? It must be undoable.** `MpiCanvas` owns a shared
@@ -45,6 +46,7 @@ Whenever you need generic functionality, ALWAYS check the `js/utils/` directory 
 - `video.js`
 - `mediaDimensions.js` — measure pixel dimensions (`{w,h}`) from `File`/`Blob`/URL for images or videos. Use before uploads that populate sidecar `pixelDimensions`.
 - `string.js`
+- `markdown.js` — the app's ONLY markdown renderer (MPI-545). `marked` + `DOMPurify`, both zero-dependency single-file browser ESM imported straight from `node_modules/` (no bundler; `express.static(__dirname)` serves them and `electron-builder.yml` ships them). Exports `renderMarkdown` (document), `renderInlineMarkdown` (one line, no `<p>`), `renderMarkdownInto(el, src)` (tags `.mpi-md`, safe to re-call) and `wireMarkdownLinks(el)` (call ONCE — a bare `<a>` click would navigate the whole Electron app away; collect the returned unsubscribe in `_unsubs`). Consumers: `MpiNotesEditor` (project + card notes) and `MpiChangelogDialog` (release notes — it takes full markdown now, even though no shipped version's notes use any yet). Shared typography lives in `styles/markdown.css` as `.mpi-md`.
 
 > **Rule of Thumb:** If you write a block of generic data-processing or DOM-manipulation code that isn't completely specific to a single component, it belongs in `js/utils/`.
 
