@@ -21,8 +21,43 @@
 import { enqueueGeneration } from '../services/generationService.js';
 import { getModelById, isOperationInstalled } from '../data/modelRegistry.js';
 import { getCommandMediaInputs } from '../data/commandRegistry.js';
+import { getSharedSettings } from '../data/projectModel.js';
+import { getModelRatios } from '../utils/ratios.js';
 import { state } from '../state.js';
 import { clientLogger } from '../services/clientLogger.js';
+
+/**
+ * The generation's size, resolved from the project's SAVED ratio — the same state
+ * the PromptBox shows and Reuse restores.
+ *
+ * This is INJECTED, not just used to size the card. The workflow bakes its own
+ * `Input_Width`/`Input_Height` (krea2 t2i ships 768x1344 authoring residue), and the
+ * injector only overrides them when `injectionParams` carries Width/Height. The
+ * PromptBox always resolves the ratio before dispatch; an agent submit sends no
+ * injectionParams, so without this every agent generation silently ignored the
+ * project's ratio and came out at the workflow default — five 9:16 images in a
+ * project set to 1:1, with nothing in the sidecar to explain why.
+ *
+ * The mismatched placeholder padding was the visible half of that; the wrong output
+ * size was the real half.
+ *
+ * Returns 0/0 when no ratio is saved, which leaves the baked default in place and
+ * tells the grid to adopt the finished aspect — the honest answer, not a guess.
+ */
+function _plannedSize(model, injectionParams = {}) {
+    if (injectionParams.Width && injectionParams.Height) {
+        return { width: injectionParams.Width, height: injectionParams.Height };
+    }
+    const shared = getSharedSettings(state.currentProject, model.mediaType || 'image');
+    const sel = shared?.ratioSelector;
+    if (!sel) return { width: 0, height: 0 };
+    // qualityTier is SHARED state, not per-model (projectModel.js § getModelSettings).
+    // A `qualityTier` key does appear inside modelSettings[id] on real projects — it
+    // is leftover, and reading it there would silently size off a stale tier.
+    const list = getModelRatios(model.type, sel.orientation, sel.qualityTier) || [];
+    const match = list.find(r => r.label === sel.selectedRatio);
+    return { width: match?.w || 0, height: match?.h || 0 };
+}
 
 let _source = null;
 /** Job ids already reported — the "one result out" half of the contract. */
@@ -78,13 +113,19 @@ function _submitGeneration(jobId, input = {}) {
             `"${operation}" needs ${needsMedia.map(s => s.mediaType).join(' + ')} input, which this endpoint cannot supply yet.`);
     }
 
+    // Resolve BEFORE building the config — the size is injected into the graph, not
+    // just used to draw the card, so both must agree by construction.
+    const { width, height } = _plannedSize(model, injectionParams);
+
     const config = {
         operation,
         model,
         positive,
         negative,
         mediaItems: [],
-        injectionParams,
+        injectionParams: (width && height)
+            ? { Width: width, Height: height, ...injectionParams }
+            : injectionParams,
     };
 
     // A gallery gen MUST carry a tempId + placeholderGroup or the run is invisible
@@ -102,11 +143,8 @@ function _submitGeneration(jobId, input = {}) {
         name: 'Generating...',
         history: [],
         selectedIndex: 0,
-        // t2i controls its own ratio, so the injected size gives the card its shape
-        // up front. 0/0 would leave the box to adopt an input thumb that a text op
-        // does not have.
-        width: injectionParams.Width || 0,
-        height: injectionParams.Height || 0,
+        width,
+        height,
         isGenerating: true,
     };
 
