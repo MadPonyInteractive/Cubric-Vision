@@ -94,7 +94,13 @@ When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):
 6. LIFECYCLE: every card with real work passes `todo → doing → done`. A move = update BOTH `board.json` columns AND `tasks/<id>/task.json` (`column` + `maturity` + `updated_at`) + a `task.moved` event in BOTH event logs. The live board is `board.json` with `todo`/`doing`/`done` columns.
    **"BOTH event logs" = `tasks/<id>/events.jsonl` + `.agents/mpi-kanban/events.jsonl`.** `board.json` ALSO carries an embedded `events` array, and it is neither of them — it is a stale partial mirror (258 entries against the canonical log's 2311, measured 2026-08-06; 181 of its entries appear nowhere else). Writing a card event there instead of the global `.jsonl` looks right, validates clean, and silently keeps the event out of board-wide history. Append to the two `.jsonl` files; leave the array alone.
 
-7. **A move must CREATE the files its `links` declare.** `mutate.md` writes the link, not the file — so a `done` card whose `links.validation` names `validation.md`, or a `doing` card missing its `checklist.md`, fails `validate_board.py` on a dangling link. A card closed WITHOUT being built still needs one; "not applicable, merged into MPI-nnn, never built" is the correct content. (Bit 7 card moves in one close-out, 2026-08-01.)
+7. **A move must CREATE the file its DESTINATION COLUMN requires.** `mutate.md` writes the link, not the file. A card closed WITHOUT being built still needs its `validation.md`; "not applicable, merged into MPI-nnn, never built" is the correct content. (Bit 7 card moves in one close-out, 2026-08-01.)
+   **Exactly three files are enforced, and only these** (`validate_board.py:193-204`, read 2026-08-11):
+   - `column: "doing"` → `checklist.md` must exist
+   - `column: "done"` → `validation.md` must exist
+   - `attention.state: "required"` → `brief.md` must exist
+
+   **Every OTHER declared link may dangle.** This entry used to say a dangling link fails outright, which is wrong and costs real work: MPI-506 carried dangling `plan` / `research` / `validation` links for days and validated clean the whole time. What the validator checks for the rest is only that the value is a relative path INSIDE the task folder (a `null` is what fails — see rule 2), plus JSON / event-schema validity of any link target that happens to exist. So do not write a `plan.md` or a `research/` to satisfy a link nothing asks for — either write the file because the card needs it, or drop the key.
 8. **`validate_board.py` PASSES now — exit 0 is the resting state.** The 416-violation
    backlog measured 2026-08-01 (legacy `events.jsonl` lines keyed `ts:`/`event:`, cards
    with `null` links or `status: "active"` while in `done`) was cleared 2026-08-04;
