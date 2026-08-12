@@ -3,11 +3,11 @@
   "id": "MPI-4",
   "title": "LTX 2.3 video model integration",
   "description": "LTX 2.3 UMBRELLA. Bench authoring COMPLETE for both v2v front ends: extend (ltx_v2v_template.json, 56 nodes) and full-clip foley (ltx_v2v_foley_template.json, 53 nodes, sha e947b371e3611748) both execute on 8188 and the user approved the foley audio. App integration is carded separately - MPI-520 (extend) and MPI-536 (foley), both Flows, both blocked on MPI-531. Lipsync left this umbrella for MPI-537. Only untested config here is voice mode, whose product decision now sits on MPI-536. Read validation.md.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
   "created_at": "2026-06-01T06:30:12Z",
-  "updated_at": "2026-08-11T04:55:00Z",
+  "updated_at": "2026-08-12T02:00:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -24,6 +24,5 @@
   ],
   "priority": "high",
   "defaultExpanded": false,
-  "legacy_column": "BACKLOG",
-  "attention": false
+  "legacy_column": "BACKLOG"
 }
