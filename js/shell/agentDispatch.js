@@ -87,6 +87,29 @@ function _submitGeneration(jobId, input = {}) {
         injectionParams,
     };
 
+    // A gallery gen MUST carry a tempId + placeholderGroup or the run is invisible
+    // until it finishes: MpiGalleryBlock draws in-progress cards from the
+    // activeGenerations entry's `placeholderGroup`, and live latents route by
+    // tempId (preview:frame -> activeGenerations.byPromptId -> entry.tempId).
+    // Without them an agent submit ran for its full duration behind an empty
+    // gallery, then the card appeared at the end — the Cue panel was the only
+    // sign anything was happening. Same shape the Cue path builds; `Generating...`
+    // is the name the grid renders while `isGenerating` is true.
+    const tempId = crypto.randomUUID();
+    const placeholderGroup = {
+        id: tempId,
+        type: model.mediaType || 'image',
+        name: 'Generating...',
+        history: [],
+        selectedIndex: 0,
+        // t2i controls its own ratio, so the injected size gives the card its shape
+        // up front. 0/0 would leave the box to adopt an input thumb that a text op
+        // does not have.
+        width: injectionParams.Width || 0,
+        height: injectionParams.Height || 0,
+        isGenerating: true,
+    };
+
     const queued = enqueueGeneration(config, {
         onComplete: ({ item, group }) => _report(jobId, {
             ok: true,
@@ -106,7 +129,7 @@ function _submitGeneration(jobId, input = {}) {
             'The generation failed. See the app log for the cause.'),
         onCancel: () => _fail(jobId, 'CANCELLED',
             'The generation was cancelled or produced no output.'),
-    }, { scope: 'gallery' });
+    }, { scope: 'gallery', tempId, placeholderGroup });
 
     // A guard inside enqueueGeneration rejects by returning null — it fires
     // onCancel on its way out, so the report is already in flight. Belt and braces
