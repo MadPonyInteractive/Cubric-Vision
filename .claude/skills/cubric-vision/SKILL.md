@@ -1,6 +1,6 @@
 ---
 name: cubric-vision
-description: Drive a running Cubric Vision desktop app from an agent over its local HTTP API - list and create projects, add and read media, inspect and edit generation metadata, control the ComfyUI engine, and create, monitor and stop a RunPod remote GPU. Use when asked to work with a Cubric Vision project, add or fetch assets from one, check what a project contains, start or stop the engine or a remote pod, read pod cost and disk telemetry, or automate any Vision workflow. Also covers the on-disk project format so a project can be read without the app running. Dispatches text-to-image and text-to-video generations that land as real gallery cards - see Dispatching a generation (media inputs are not supported yet).
+description: Drive a running Cubric Vision desktop app from an agent over its local HTTP API - list and create projects, add and read media, inspect and edit generation metadata, control the ComfyUI engine, and create, monitor and stop a RunPod remote GPU. Use when asked to work with a Cubric Vision project, add or fetch assets from one, check what a project contains, start or stop the engine or a remote pod, read pod cost and disk telemetry, or automate any Vision workflow. Also covers the on-disk project format so a project can be read without the app running - including how to recover the exact prompt, negative prompt, model and settings behind any generated image from its sidecar (they are NOT in the PNG and NOT in project.json), which is the read to do before advising on any prompt. Read this skill before helping a user iterate on a generation: it sets the rule that prompts are handed back whole and pasteable, never as fragments to splice. Dispatches text-to-image and text-to-video generations that land as real gallery cards - see Dispatching a generation (media inputs are not supported yet).
 user-invocable: true
 metadata: {"openclaw":{"emoji":"👁️","os":["win32","darwin","linux"],"requires":{"anyBins":["curl"]},"primaryEnv":"CUBRIC_URL"}}
 ---
@@ -32,6 +32,24 @@ curl -s -m 3 http://127.0.0.1:3000/comfy/status
 
 There is no auth on loopback. Remote-pod tokens are attached server-side and
 never reach a client, so never ask a user for one.
+
+## Hand over whole prompts, never fragments
+
+When a user is generating and you are advising, **every prompt you give back is
+the complete text, ready to paste over what is in the box** - positive in one
+block, negative in a second block, both whole even when only six words changed.
+
+Never hand over a fragment, a diff, a "add this to the end", or a "swap X for
+Y". The user is at the app with a pod running. Finding the insertion point in a
+400-word prompt costs them more time than reading a full one, gets spliced wrong
+under time pressure, and a wrong splice burns a paid generation.
+
+This applies to the negative prompt too, and it applies when the change is
+trivial. If you do not have the current prompt text, **read it from the sidecar
+first** (see Recovering the prompt behind an image) rather than asking the user
+to paste it.
+
+Say what changed in one line *after* the blocks, never instead of them.
 
 ## Projects
 
@@ -184,6 +202,42 @@ cd "<project>/Media/.meta" && for f in *.json; do
   echo -n "$f | "; grep -o '"displayName": "[^"]*"' "$f"
 done
 ```
+
+### Recovering the prompt behind an image
+
+The most common read this skill gets asked for, and the one with the most wrong
+turns. **The prompt lives only in `Media/.meta/<uuid>.json`.** It is not in
+`project.json`, and Vision writes **no PNG metadata at all** - `im.info` on a
+`t2i_*.png` comes back empty, which reads like a stripped or corrupt file rather
+than a design choice. Opening the PNG first is wasted work every time. Measured
+2026-08-12, chasing the prompt behind `t2i_059`.
+
+Given the name the gallery shows, e.g. `t2i_059`, write a small script to a file
+and run it by path - never a heredoc on Windows:
+
+```python
+import json, glob
+want = "t2i_059"                       # displayName, what the gallery shows
+for f in glob.glob(r"<project>\Media\.meta\*.json"):
+    d = json.load(open(f, encoding="utf-8"))
+    if d.get("displayName") == want:
+        print("PROMPT:\n" + (d.get("prompt") or ""))
+        print("\nNEGATIVE:\n" + (d.get("negativePrompt") or ""))
+        print("\nmodel:", d.get("modelId"), "seed:", d.get("seed"))
+```
+
+Going the other way, from a gallery card to its live sidecar, honour
+`selectedIndex`: the card in `project.json` gives `history[selectedIndex]`, and
+that uuid names the `.meta` file. The last element of `history` is a different
+take.
+
+A card the user renamed matches on `customName` in `project.json`, never on a
+filename - see the naming rule above.
+
+The same sidecar is the record of **what a setting was actually set to**:
+`generationSettings.injectionParams` carries the real width, height, ratio label,
+stylization strength and turbo flag for that take. When a user asks why two
+generations differ, diff two sidecars before theorising.
 
 ## Engine control
 
