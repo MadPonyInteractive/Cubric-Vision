@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-549",
+  "title": "Tiled VAE decode for MiniMax H3 reference-to-video - 2K and 4K OOM on a 32GB card",
+  "description": "MiniMax H3 reference-to-video OOMs at 2K and at 4K on an RTX 5090 (32GB VRAM, 60GB RAM) with Reference Detail = Max and three reference slots. 864x480 completes reliably at ~45s for 3s of video. The spike is the VAE decode, which runs directly on the full latent rather than tiled, so it is the decode that needs fixing, not the sampling. Each OOM also takes the remote engine down and restarts the Pod, which costs paid time on a rented GPU. Add tiled decoding to the H3 workflows, with a simple user-facing low-VRAM toggle rather than exposed tile sizes.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-12T21:00:00Z",
+  "updated_at": "2026-08-12T21:00:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "attention": []
+}
