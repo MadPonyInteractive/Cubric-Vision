@@ -110,6 +110,33 @@ The recurring hazard around **Stop** and **cloud+local concurrency (MPI-74 P6)**
 
 Rule of thumb when adding ANY new per-gen UI/state: if two gens (or a Stopped gen's late echo) can touch it, tag the signal with the gen id and reject foreign ids — don't key on `tool` alone. And if a control is *rendered* from one source of truth, it must *act* on that same source — a button drawn from `_lanes` but wired to `activeGenerations` is a dead button waiting to happen.
 
+## An agent is the THIRD producer — and the route is the contract (MPI-546)
+
+`POST /connector/generate` lets an agent dispatch a real generation. Three things produce into
+the queue now: the Gallery/History blocks, `flowService`, and `js/shell/agentDispatch.js`. All
+three go **through `enqueueGeneration`, never around it** — that is what keeps the media/mask
+dispatch guards, the lane accounting and the `_failBail` contract intact for a submit that no
+human pressed.
+
+Dispatch cannot move to the server and that is not laziness: `generationService` imports
+`MpiToast` and `PromptBoxControls.resolveControlDefaults`, `commandExecutor` pulls `state`,
+`Events`, `downloadService` and `progressAggregator`. So `routes/connector.js` relays the job to
+the renderer over an always-on SSE stream (`/connector/jobs/stream`) and the renderer POSTs the
+outcome back to `/connector/jobs/:id/result`, which settles the caller's held HTTP response.
+
+**The split that matters: the ROUTE is the contract, the RELAY is disposable.** If dispatch is
+ever extracted server-side, `/connector/generate` stays and its body swaps for a local call —
+callers never saw the transport. That only holds while the relay stays dumb: one job shape in,
+one result shape out. Media staging, job status, cancellation and queue introspection belong in
+the route, server-side, where they survive the swap. Grow the SSE protocol and the throwaway
+becomes load-bearing. (The same seam is what a generated CLI would code against —
+`.agents/mpi-kanban/tasks/MPI-546/research/cli-anything.md`.)
+
+Two consequences worth knowing before debugging one: `/comfy/events/stream` could NOT carry these
+jobs — `commandExecutor` opens it per generation, so it is not always-on. And the guards in
+`agentDispatch` are not duplicates of `commandExecutor`'s: an agent cannot see a toast, so a
+refusal has to come back as a named error code, not a `ui:warning` nobody reads.
+
 ## Mask detects are a UTILITY LANE — never a queue job (MPI-421)
 
 An auto-mask detect (Detect / Points / Text) is a real ComfyUI workflow, but it does **not**

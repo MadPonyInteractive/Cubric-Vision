@@ -2682,3 +2682,9 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-545", "type": "task.moved", "at": "2026-08-12T07:50:00Z", "actor": "opus", "from": "doing", "to": "done", "summary": "Closed after the polish pass. Fabio confirmed project notes and card notes rendering in his own cowboys project."}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-545", "type": "task.moved", "at": "2026-08-12T07:55:00Z", "actor": "opus", "from": "done", "to": "doing", "summary": "Reopened with Fabio authorization to add the markdown util to .claude/rules/dos_and_donts.md so sub-agents inherit it."}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-545", "type": "task.moved", "at": "2026-08-12T08:00:00Z", "actor": "opus", "from": "doing", "to": "done", "summary": "Closed for good: the markdown util is now in the dos_and_donts Sub-Agent Briefing and utilities list, so every dispatched sub-agent inherits it."}
+{"at": "2026-08-12T07:58:00Z", "event": "task.created", "actor": "claude", "id": "MPI-546", "note": "filed from MadPony-Identity while producing the Cubric western film"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "at": "2026-08-12T08:34:17Z", "actor": "claude", "id": "MPI-546", "from": "todo", "to": "doing", "note": "Implementation started."}
+{"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "at": "2026-08-12T08:34:17Z", "actor": "claude", "id": "MPI-546", "note": "Derived 5 items from plan.md phases."}
+{"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "at": "2026-08-12T08:43:45Z", "actor": "claude", "id": "MPI-546", "note": "Phases 1-4 done; Live smoke outstanding."}
+{"schema": "mpi-kanban/event/v1", "type": "validation.updated", "at": "2026-08-12T08:43:45Z", "actor": "claude", "id": "MPI-546", "note": "npm test 575/575 + lint clean; live smoke not run (needs engine + model)."}
+{"schema": "mpi-kanban/event/v1", "type": "task.updated", "at": "2026-08-12T08:43:45Z", "actor": "claude", "id": "MPI-546", "note": "maturity -> validating"}

@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { handleMemoryRelease } = require('../services/connectorResponder');
+const { handleMemoryRelease, handleGenerationSubmit } = require('../services/connectorResponder');
 
 function makeReq(deep) {
   return {
@@ -69,4 +69,75 @@ test('handleMemoryRelease reports ok:false when /comfy/unload says success:false
   assert.equal(resp.ok, false);
   assert.equal(resp.output.success, false);
   assert.equal(resp.output.message, 'Not running');
+});
+
+// --- generation.submit (MPI-546) -------------------------------------------
+// The capability is a thin wrapper over POST /connector/generate — the route is
+// the contract. These pin the wrapper to the route's envelope so the broker path
+// and the plain-HTTP path cannot drift.
+
+function makeGenReq(input) {
+  return {
+    schemaVersion: 1,
+    requestId: 'req-gen-1',
+    from: { appId: 'cubric.studio' },
+    to: { appId: 'cubric.vision' },
+    capability: 'generation.submit',
+    input,
+  };
+}
+
+test('handleGenerationSubmit POSTs the job to /connector/generate and passes the output through', async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, body: JSON.parse(init.body) });
+    return {
+      ok: true,
+      json: async () => ({ ok: true, output: { itemId: 'item-1', filePath: 'C:/out/a.png' } }),
+    };
+  };
+
+  const resp = await handleGenerationSubmit(
+    makeGenReq({ modelId: 'krea2', operation: 't2i', positive: 'a horse' }),
+    { generateUrl: 'http://127.0.0.1:3000/connector/generate', fetchImpl },
+  );
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, 'http://127.0.0.1:3000/connector/generate');
+  assert.deepEqual(calls[0].body, {
+    modelId: 'krea2',
+    operation: 't2i',
+    positive: 'a horse',
+    negative: '',
+    injectionParams: {},
+  });
+
+  assert.equal(resp.ok, true);
+  assert.equal(resp.capability, 'generation.submit');
+  assert.equal(resp.from.appId, 'cubric.vision');
+  assert.equal(resp.requestId, 'req-gen-1');
+  assert.equal(resp.output.itemId, 'item-1');
+  assert.equal(resp.error, undefined);
+});
+
+test('handleGenerationSubmit forwards the route error instead of inventing one', async () => {
+  const fetchImpl = async () => ({
+    ok: true,
+    json: async () => ({ ok: false, error: { code: 'NO_PROJECT', message: 'No project is open in Vision. Open one first.' } }),
+  });
+  const resp = await handleGenerationSubmit(makeGenReq({ modelId: 'krea2', operation: 't2i' }), { fetchImpl });
+  assert.equal(resp.ok, false);
+  assert.equal(resp.error.code, 'NO_PROJECT');
+  assert.match(resp.error.message, /No project is open/);
+  assert.equal(resp.output, undefined);
+});
+
+test('handleGenerationSubmit returns a RUNTIME_ERROR envelope when the route is unreachable', async () => {
+  const fetchImpl = async () => {
+    throw new Error('server down');
+  };
+  const resp = await handleGenerationSubmit(makeGenReq({ modelId: 'krea2', operation: 't2i' }), { fetchImpl });
+  assert.equal(resp.ok, false);
+  assert.equal(resp.error.code, 'RUNTIME_ERROR');
+  assert.match(resp.error.message, /server down/);
 });

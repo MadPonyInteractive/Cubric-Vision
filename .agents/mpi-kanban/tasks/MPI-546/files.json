@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "routes/connector.js",
+    "services/connectorResponder.js",
+    "resources/cubric/connector-manifest.json",
+    "js/shell/agentDispatch.js",
+    "js/shell.js",
+    "tests/connector-responder.test.cjs",
+    "tests/agent-generation-relay.test.cjs",
+    ".claude/skills/cubric-vision/SKILL.md",
+    "docs/generation-lifecycle.md",
+    "C:/Users/Fabio/.claude/projects/c--AI-Mpi-Cubric-Vision/memory/project_cli_anything_is_the_cli_wrapper.md"
+  ]
+}

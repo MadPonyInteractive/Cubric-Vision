@@ -38,6 +38,7 @@ import { getReleaseNotes, hasReleaseContent } from './data/releaseNotes.js';
 import { preloadComponentStyles } from './shell/preloadStyles.js';
 import { bindWindowControls, quitApp } from './shell/windowControls.js';
 import { initFloatLatentBridge } from './shell/floatLatentBridge.js';
+import { initAgentDispatch } from './shell/agentDispatch.js';
 import { initProjectUI, loadProjectGrid } from './shell/projectUI.js';
 import { initHeroStats } from './shell/heroStats.js';
 import { start as startProjectStats } from './services/projectStatsService.js';
@@ -194,6 +195,7 @@ export async function initShell() {
   StatusBar.listen();
   bindWindowControls();
   initFloatLatentBridge();
+  initAgentDispatch();
   bindMemoryHotkeys(memMonitor);
 
   // 5. Initialize Navigation Orchestrator

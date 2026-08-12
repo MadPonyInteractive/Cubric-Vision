@@ -24,6 +24,16 @@
       "version": "0.1.0"
     },
     {
+      "id": "generation.submit",
+      "providerAppId": "cubric.vision",
+      "kind": "transform",
+      "label": "Submit a generation",
+      "description": "Run a text-to-image or text-to-video generation in Vision's open project. Goes through the same queue the PromptBox uses, so the result lands as a real gallery card with its history entry and sidecar.",
+      "mediaTypes": ["image", "video"],
+      "requiresConsent": true,
+      "version": "0.1.0"
+    },
+    {
       "id": "system.memory.release",
       "providerAppId": "cubric.vision",
       "kind": "transform",

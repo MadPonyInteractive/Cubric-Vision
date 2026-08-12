@@ -65,6 +65,61 @@ async function handleMemoryRelease(request, opts = {}) {
 }
 
 /**
+ * Pure handler: map a `generation.submit` request onto POST /connector/generate,
+ * the route that IS the contract (MPI-546). Deliberately thin — the broker path
+ * and the plain-HTTP path must not drift, and plain HTTP stays primary because it
+ * works with no broker running, which is the case an agent actually hits.
+ *
+ * @param {object} request  the CubricCapabilityRequest
+ * @param {object} [opts]
+ * @param {string} [opts.generateUrl]  override the /connector/generate URL (tests)
+ * @param {Function} [opts.fetchImpl]  override fetch (tests)
+ */
+async function handleGenerationSubmit(request, opts = {}) {
+  const generateUrl = opts.generateUrl || `http://127.0.0.1:${VISION_PORT}/connector/generate`;
+  const fetchImpl = opts.fetchImpl || fetch;
+  const from = { appId: 'cubric.vision', displayName: 'Cubric Vision' };
+  const input = (request && request.input) || {};
+
+  try {
+    const res = await fetchImpl(generateUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        modelId: input.modelId,
+        operation: input.operation,
+        positive: input.positive || '',
+        negative: input.negative || '',
+        injectionParams: input.injectionParams || {},
+      }),
+    });
+    const body = await res.json().catch(() => ({}));
+    return {
+      schemaVersion: 1,
+      requestId: request.requestId,
+      ok: body.ok === true,
+      from,
+      capability: 'generation.submit',
+      ...(body.ok === true
+        ? { output: body.output }
+        : { error: body.error || { code: 'RUNTIME_ERROR', message: 'Generation failed.' } }),
+    };
+  } catch (err) {
+    return {
+      schemaVersion: 1,
+      requestId: request.requestId,
+      ok: false,
+      from,
+      capability: 'generation.submit',
+      error: {
+        code: 'RUNTIME_ERROR',
+        message: err && err.message ? err.message : 'Generation submit failed.',
+      },
+    };
+  }
+}
+
+/**
  * Start the responder: connect to the broker, register Vision's manifest, and
  * register the `system.memory.release` handler. Best-effort — resolves to
  * `null` (does not throw) when the broker is unreachable.
@@ -91,6 +146,9 @@ async function startConnectorResponder(opts) {
     });
     client.onCapabilityRequest('system.memory.release', (req) =>
       handleMemoryRelease(req),
+    );
+    client.onCapabilityRequest('generation.submit', (req) =>
+      handleGenerationSubmit(req),
     );
     // system.shutdown: broker (or a peer app) requests Vision to quit cleanly.
     // server.js is a forked child — process.send() reaches the Electron main.
@@ -154,6 +212,7 @@ async function requestEnhance(client, input) {
 
 module.exports = {
   handleMemoryRelease,
+  handleGenerationSubmit,
   startConnectorResponder,
   isPromptEnhanceAvailable,
   requestEnhance,

@@ -140,7 +140,7 @@ const httpServer = app.listen(port, '127.0.0.1', () => {
             // Share the connected client with the caller routes (/connector/*).
             connectorRoutes.setClient(responder.client);
             _connectorClient = responder.client;
-            logger.info('system', 'Connector responder registered (system.memory.release, system.shutdown) + caller routes live.');
+            logger.info('system', 'Connector responder registered (system.memory.release, system.shutdown, generation.submit) + caller routes live.');
             // D1 eager spawn (MPI-10 Phase 3): boot installed-but-not-running
             // sibling apps headless so their capabilities are live for this
             // session. Vision does NOT self-register a record (it has no

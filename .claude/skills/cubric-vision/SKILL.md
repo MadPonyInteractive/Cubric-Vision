@@ -1,6 +1,6 @@
 ---
 name: cubric-vision
-description: Drive a running Cubric Vision desktop app from an agent over its local HTTP API - list and create projects, add and read media, inspect and edit generation metadata, control the ComfyUI engine, and create, monitor and stop a RunPod remote GPU. Use when asked to work with a Cubric Vision project, add or fetch assets from one, check what a project contains, start or stop the engine or a remote pod, read pod cost and disk telemetry, or automate any Vision workflow. Also covers the on-disk project format so a project can be read without the app running. Does NOT dispatch generations - see the Known gap section.
+description: Drive a running Cubric Vision desktop app from an agent over its local HTTP API - list and create projects, add and read media, inspect and edit generation metadata, control the ComfyUI engine, and create, monitor and stop a RunPod remote GPU. Use when asked to work with a Cubric Vision project, add or fetch assets from one, check what a project contains, start or stop the engine or a remote pod, read pod cost and disk telemetry, or automate any Vision workflow. Also covers the on-disk project format so a project can be read without the app running. Dispatches text-to-image and text-to-video generations that land as real gallery cards - see Dispatching a generation (media inputs are not supported yet).
 user-invocable: true
 metadata: {"openclaw":{"emoji":"👁️","os":["win32","darwin","linux"],"requires":{"anyBins":["curl"]},"primaryEnv":"CUBRIC_URL"}}
 ---
@@ -145,10 +145,18 @@ in a graphics editor, recorded audio — carry names the user picked.
 card's *selected history item*:
 
 ```sh
-curl -s -X POST "$CUBRIC_URL/project-media/$PROJECT_ID/update-meta" \
+curl -s -X POST "$CUBRIC_URL/project-media/$PROJECT_ID/update-meta?folderPath=<urlencoded project folder>" \
   -H 'Content-Type: application/json' \
-  -d '{"folderPath":"<project folder>","itemId":"<uuid>","updates":{"notes":"…"}}'
+  -d '{"itemId":"<uuid>","updates":{"notes":"…"}}'
 ```
+
+**`folderPath` goes in the query string here, not the body.** Corrected
+2026-08-12 on the first live run against a running app. The handler reads
+`req.query.folderPath` and `req.body.{itemId, filename, updates}`, so sending it
+in the body returns a bare `400 folderPath, updates and (itemId or filename)
+required`, which reads like a missing field rather than a misplaced one. It is
+also inconsistent with `/project-notes` and `/project-notes/save` below, which
+both take `folderPath` **in the body**. Check which one you are calling.
 
 They land in `Media/.meta/<uuid>.json` and travel with the folder when a project
 is shared. The consequence: **iterate that card again and the new history item
@@ -275,32 +283,59 @@ answer and this file is a snapshot.
 `/choose-folder` opens a **blocking OS dialog** on the user's desktop. Never call
 it in an unattended run.
 
-## Known gap: generations cannot be dispatched over HTTP
+## Dispatching a generation
 
-**There is no endpoint that submits a prompt and creates a gallery card.** This
-is the one thing agents most want and it is genuinely absent, not undocumented.
+`POST /connector/generate` submits a prompt and lands a **real gallery card** —
+history entry and `.meta` sidecar included — because it goes through the same
+queue the PromptBox uses (MPI-546).
 
-Dispatch lives in the renderer: `generationService.js` `startGeneration`,
-`commandExecutor`, `generationStore`, and the PromptBox. The Express surface
-proxies ComfyUI and manages projects, models and pods, and never creates a card.
+```bash
+curl -s -X POST "$CUBRIC_URL/connector/generate" \
+  -H 'Content-Type: application/json' \
+  -d '{"modelId":"krea2","operation":"t2i","positive":"a lone rider at dusk"}'
+```
 
-The consequence in practice: a graph POSTed straight to `/proxy/prompt` **will
-run on the engine and produce nothing in the UI** — no card, no history entry, no
-`.meta` record. The picture exists and the project does not know about it.
+Body: `modelId` and `operation` are required; `positive`, `negative` and
+`injectionParams` are optional. **The request resolves when the generation
+finishes**, not when it is queued, so expect it to block for as long as the run
+takes (a queued video can be minutes; the route gives up after 30 and the
+generation carries on in the app regardless).
 
-Two honest paths forward, neither built:
+Success returns the item, so a follow-up run can consume it:
 
-1. **A connector capability**, say `generation.submit`, alongside the existing
-   three. This is the native shape, it reuses the envelope, and it is what Cubric
-   Studio would call.
-2. **Drive the real UI** with the existing Playwright/Electron harness
-   (`npm run test:desktop`, specs in `tests/desktop/`, helpers `launch.js` and
-   `shellWindow.js`). Everything already works because it is the real app. The
-   catch: Playwright launches its **own** Electron instance with its own profile,
-   so it cannot drive an app the user already has open.
+```json
+{ "ok": true, "output": { "itemId": "...", "groupId": "...", "type": "image",
+  "filePath": "C:/.../out.png", "seed": 12345, "pixelDimensions": {"w":1024,"h":1024},
+  "generationMs": 8410 } }
+```
 
-Until one exists, an agent preparing generation work should write prompts and
-stage reference media, and hand the actual dispatch to the user.
+Failure returns `{"ok": false, "error": {"code": ..., "message": ...}}`:
+
+| Code | Meaning |
+| --- | --- |
+| `APP_UNAVAILABLE` | No Vision window is listening. The app must be OPEN. |
+| `NO_PROJECT` | No project is open. The run uses whatever project the app has open — it never switches for you. |
+| `UNKNOWN_MODEL` | No model with that id. |
+| `OP_UNAVAILABLE` | The model does not support that operation, or its weights are not installed. |
+| `MEDIA_UNSUPPORTED` | The operation needs image/video input, which this endpoint cannot supply yet. |
+| `CANCELLED` | Cancelled, or produced no output. |
+| `TIMEOUT` | No result in 30 minutes. The generation may still be running. |
+
+Check `generationSubmit` in `GET /connector/capabilities` to confirm a window is
+listening before submitting.
+
+### What it does not do yet
+
+- **No media inputs.** Text-to-image and text-to-video only — an op with a
+  required image/video slot is rejected by name with `MEDIA_UNSUPPORTED`.
+- **No project switching.** Open the project in the app first.
+- **No job status or cancellation.** One submit, one result.
+
+### Still true: do not POST a graph to `/proxy/prompt`
+
+It **runs on the engine and produces nothing in the UI** — no card, no history
+entry, no `.meta` record. The picture exists and the project never learns about
+it. Use `/connector/generate`.
 
 ## Reference slots are positional
 
