@@ -123,6 +123,46 @@ and `name` is the generated one; prefer `customName` when it exists.
 | `pixelDimensions` | `{ w, h }` |
 | `generationMs` | wall-clock for that generation |
 | `createdAt` | ISO timestamp |
+| `notes` | Free text from the gallery's Card notes. Absent until first saved. |
+
+### Naming and notes land in two different files
+
+Both are easy to get wrong from outside the app, and both matter whenever a
+document elsewhere has to point at an image.
+
+**A generation's filename is not the user's to choose.** Vision names its own
+output by operation — `t2i_052.png`, `inpaint_007.png` — and that is the name on
+disk, permanently. Renaming a card in the gallery sets `customName` on the
+**group in `project.json`** and moves nothing; the sidecar's `filePath` still
+resolves to the original file.
+
+So **anything outside the app must cite the app's filename**, and no script may
+assume a user-chosen name exists on disk. A card renamed to "Marshall" is still
+`t2i_017.png`. Only files a user saves into `Media/` by hand — composites built
+in a graphics editor, recorded audio — carry names the user picked.
+
+**Card notes are per generation, not per card.** The gallery writes them to the
+card's *selected history item*:
+
+```sh
+curl -s -X POST "$CUBRIC_URL/project-media/$PROJECT_ID/update-meta" \
+  -H 'Content-Type: application/json' \
+  -d '{"folderPath":"<project folder>","itemId":"<uuid>","updates":{"notes":"…"}}'
+```
+
+They land in `Media/.meta/<uuid>.json` and travel with the folder when a project
+is shared. The consequence: **iterate that card again and the new history item
+has no notes.** Notes written before a re-roll do not follow the card forward.
+When the text describes the card rather than the take, re-apply it to the new
+selected item or keep it in `project.md`.
+
+`project.md` is the project-wide equivalent — free text at the project root, one
+file, read and written by `/project-notes` and `/project-notes/save`. Whole
+project in `project.md`, one image in that image's notes.
+
+For a project that will be published or handed to somebody, fill both in
+deliberately. A reader in the gallery sees card notes without leaving the app,
+which makes them the only documentation that reliably gets read.
 
 **Read the `.thumb.jpg` files, not the PNGs, when surveying a project.** Sources
 are frequently 3 to 5 MB each; the thumbnails are 15 to 45 KB and are enough to
