@@ -401,6 +401,25 @@ So any prompt handed to a user must be accompanied by an explicit numbered load
 list. Never write a prompt citing picture numbers without saying, in order, which
 file each number is.
 
+**To recover the load list from a finished generation**, read
+`generationSettings.mediaItems` in its sidecar: entries carry `role`
+(`inputImage`, `inputImage2`, `inputImage3`, or `startFrame` for i2i) in slot
+order. But `originalUrl` often points into `Media/.preview-assets/<64 hex>.png`
+rather than at a source file, because staging copies the image.
+
+**That hex name is the sha256 of the staged file's own bytes**, and staging is
+byte-exact, so the source is recoverable: hash every `Media/*.png` and match.
+Verified 2026-08-12 on `ref2v_ms_005`, which resolved to `i2i_004.png`,
+`inpaint_005.png` and `t2i_050.png`.
+
+```python
+import glob, hashlib, os
+want = "bd98dd04...full 64 hex from the originalUrl..."
+for f in glob.glob(r"<project>\Media\*.png"):
+    if hashlib.sha256(open(f, "rb").read()).hexdigest() == want:
+        print(os.path.basename(f))
+```
+
 ## Tests
 
 ```sh
