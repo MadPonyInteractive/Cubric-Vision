@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-555",
+  "title": "Reuse prompt leaves the previous run's media chips staged when the reused generation had none",
+  "description": "Reuse a text-to-image card while pictures or audio are staged in the PromptBox and the chips survive - the tray still shows the old references, so the next Cue silently runs with inputs the reused card never had. Found live 2026-08-13 reusing t2i_006/t2i_007 with three pictures and an audio chip staged from a MiniMax H3 reference setup.\n\nROOT CAUSE (both engines): clearMedia() is called INSIDE the \"did the source have media\" branch. js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js:1186 and its twin js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js:1271 both read\n    if (_wantImages || _wantVideo || _wantAudio) { _pb.el.clearMedia(); ... }\nA t2i card fails all three, so the clear never runs and the stale chips are left behind. The clear has to happen whenever media reuse is enabled at all, not only when there is something to inject.\n\nFix BOTH blocks in one pass - a one-sided fix is a false done. Note MpiGroupHistoryBlock also clears at line 1092 for non-video groups, which is a different concern; do not fold them together.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "todo",
+  "created_at": "2026-08-14T00:00:00Z",
+  "updated_at": "2026-08-14T00:00:00Z",
+  "links": {
+    "files": "files.json",
+    "events": "events.jsonl"
+  },
+  "attention": []
+}

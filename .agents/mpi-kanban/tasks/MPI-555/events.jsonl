@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-555", "type": "task.created", "at": "2026-08-14T00:00:00Z", "actor": "claude", "summary": "Filed from the MPI-546 live verification session. Fabio reused a t2i card with H3 reference chips staged and the chips stayed. Root cause traced to the clearMedia() call sitting inside the has-media branch in both gallery blocks."}

@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/services/generationService.js",
+    "js/utils/promptReuse.js"
+  ]
+}

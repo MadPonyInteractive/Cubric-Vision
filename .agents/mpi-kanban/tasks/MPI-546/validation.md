@@ -139,3 +139,33 @@ Watch the real window.
 
 **Follow-up card: MPI-547** — named parameters so an agent can choose ratio, quality
 tier, turbo, style and batch per generation instead of inheriting the open project's.
+
+
+## Round 4 - ede087b1 verified live (2026-08-13)
+
+The last of the three post-close fixes was committed but never re-run. Verified in
+the real app, mpi-546-smoke project, local engine:
+
+- `POST /connector/generate` with `krea2` / `t2i` and NO injectionParams ->
+  **t2i_006, 1024x1024**, 1m53s. The project is saved at 1:1 / 1k and the run
+  honoured it. The five pre-fix cards beside it (t2i_001..005) are all 768x1344,
+  the krea2 workflow bake - that contrast IS the evidence.
+- The sidecar now carries `injectionParams: {Width: 1024, Height: 1024}`. Before
+  the fix it recorded nothing, which is why the wrong size had no explanation.
+- Stale-copy trap avoided: this project carries
+  `modelSettings.krea2.qualityTier = "2k"` alongside
+  `shared.image.ratioSelector.qualityTier = "1k"`. 1024 proves the shared bucket
+  won, as `_plannedSize` intends.
+- Raw override still wins: `klein-4b` / `t2i` with
+  `{Width: 1344, Height: 768, Ratio_Label: "16:9", Input_Style_Selector.selector: 7,
+  Input_Style_Selector.strength_model: 0.65}` -> **t2i_007, 1344x768**, 13.8s,
+  visibly styled.
+
+MPI-546 stays closed. Two NEW bugs surfaced during the verification and are filed
+separately - neither is a regression of this card:
+
+- **MPI-555** - Reuse leaves the previous run's media chips staged when the reused
+  generation had none.
+- **MPI-556** - the sidecar's controlState records the project's controls rather
+  than the run's, so t2i_007's Vintage style came back as None on Reuse. Blocks
+  MPI-547.

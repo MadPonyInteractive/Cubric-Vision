@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+    "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js"
+  ]
+}
