@@ -77,3 +77,6 @@ project-paths.json
 # Python bytecode — repo scripts and kanban card scripts are run in place
 __pycache__/
 *.pyc
+
+# Mpi-Kanban per-session hook flags ({"card_prompted": true}) - ephemeral, never shared
+.agents/mpi-kanban/state/hooks/

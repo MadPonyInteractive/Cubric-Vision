@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "docs/releases/UNRELEASED.md",
+    "js/components/Organisms/MpiPromptBox/PromptBoxControls.js",
+    "js/data/promptControlDefaults.js",
+    "js/data/modelConstants/loraDeps.js"
+  ]
+}
