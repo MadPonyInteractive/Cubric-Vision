@@ -65,15 +65,22 @@ Tiers reuse the WAN quality-tier names (`very_low … very_high`, plus `2k`/`4k`
 rule above); 1:1 = the short edge of each tier's pair. Values below are the
 shipped [`LTX_RATIOS`](../../../js/utils/ratios.js).
 
-| Tier | 16:9 | 9:16 | 1:1 | basis | motion / audio (from earlier tuning) |
-|---|---|---|---|---|---|
-| very_low | 640×320 | 320×640 | 384×384 | motion-draft (off-menu, deliberate); /64-snapped from 352 | max motion, audio hallucinates |
-| low | 768×448 | 448×768 | 448×448 | official training res (detailed/short) | strong motion, audio loose |
-| medium | 960×512 | 512×960 | 512×512 | canonical is Lightricks 960×544 but 544 is /32-only → /64-snapped to 512 for local 2-stage | balanced |
-| high | 1216×704 | 704×1216 | 704×704 | `inference.py` default (30 fps); 9:16 = IC-LoRA "best portrait" | good audio, less motion |
-| very_high | 1920×1088 | 1088×1920 | 1088×1088 | official 1080p production out | best audio, near-static |
-| 2K | 2560×1472 | 1472×2560 | 1472×1472 | Lightricks 1440p (2560×1440) snapped to /64 | detail tier |
-| 4K | 3840×2176 | 2176×3840 | 2176×2176 | Lightricks 4K-UHD (3840×2160) snapped to /64 | detail tier |
+**21:9 cinematic** (MPI-551) is also /64-clean throughout. Its `low` (2.29) and
+`medium` (2.50) are the widest ratio drift in the table — the closest /64 pairs
+at those areas, kept because tightening either breaks the ascending megapixel
+ladder (see § Aspect-ratio exactness). **On t2v it can compound with the
+letterbox artifact** — see [black-bars-and-nag.md](black-bars-and-nag.md); i2v is
+clean.
+
+| Tier | 16:9 | 9:16 | 1:1 | 21:9 | basis | motion / audio (from earlier tuning) |
+|---|---|---|---|---|---|---|
+| very_low | 640×320 | 320×640 | 384×384 | 768×320 | motion-draft (off-menu, deliberate); /64-snapped from 352 | max motion, audio hallucinates |
+| low | 768×448 | 448×768 | 448×448 | 1024×448 | official training res (detailed/short) | strong motion, audio loose |
+| medium | 960×512 | 512×960 | 512×512 | 1280×512 | canonical is Lightricks 960×544 but 544 is /32-only → /64-snapped to 512 for local 2-stage | balanced |
+| high | 1216×704 | 704×1216 | 704×704 | 1664×704 | `inference.py` default (30 fps); 9:16 = IC-LoRA "best portrait" | good audio, less motion |
+| very_high | 1920×1088 | 1088×1920 | 1088×1088 | 2560×1088 | official 1080p production out | best audio, near-static |
+| 2K | 2560×1472 | 1472×2560 | 1472×1472 | 3840×1600 | Lightricks 1440p (2560×1440) snapped to /64 | detail tier |
+| 4K | 3840×2176 | 2176×3840 | 2176×2176 | 5120×2176 | Lightricks 4K-UHD (3840×2160) snapped to /64 | detail tier |
 
 **2K/4K are shipped, not dropped.** The earlier "motion dies, drop them" verdict
 was a **wrong assumption** — the motion loss seen at high res was an image-to-video
@@ -86,7 +93,7 @@ Lightricks' published 2K/4K (`hdr_ic_lora.py` VRAM table + `docs.ltx.video/model
 1440p=`2560×1440`, 4K-UHD=`3840×2160`, plus **17:9 cinema** 2K=`2048×1080` and
 4K=`4096×2160`. Their heights (1080/2160) are NOT /32 — their cloud API pads
 internally; we can't, so we snap the height up to the nearest /64 (1440→1472,
-2160→2176). **17:9 cinema is not in our ratio set** (we ship 16:9/9:16/1:1). If ever
+2160→2176). **17:9 cinema is not in our ratio set** (we ship 16:9/9:16/1:1/21:9 — 21:9 added MPI-551; 17:9 remains unshipped). If ever
 added, the /64-snapped cinema sizes are 2K `2048×1088` and 4K `4096×2176`.
 
 ## Tiers are a motion dial, not just detail

@@ -8,6 +8,12 @@
  * - Do NOT hardcode aspect ratios in individual tool files.
  * - Always use `getModelRatios(modelType, orientation)` to fetch the correct array.
  * - `modelType` comes from model.type in `js/data/modelRegistry.js`
+ *
+ * ENTRY SHAPE: `{ label, w, h, icon }`, plus an OPTIONAL `note` — a short caveat
+ * appended to the ratio button's status-bar info as ` (note)`. Keep it ASCII: it
+ * lands in an HTML `data-info` attribute. Rendered in BOTH MpiOptionSelector paths
+ * (`_templateRatio` and `updateUI`); changing one alone makes the note appear on
+ * first paint and vanish on first interaction.
  */
 
 import { ICONS } from './icons.js';
@@ -59,31 +65,40 @@ export const SDXL_RATIOS = {
 // 320×176 (unusably small). Wan 2.2 has NO native 2K/4K (that's Wan 2.5, a
 // different model). Square + mid ratios follow the community WanResolutionSelector
 // (624×624, 960×960). Future ref [4:3 = 1088×832 | 704×544].
+// 21:9 CINEMATIC (MPI-551) — /16 like the rest of this table. medium (1120x480)
+// keeps WAN's native 480 short edge and high (1728x720) keeps native 720, so both
+// stay in-distribution on the axis WAN actually cares about. very_high is above
+// native, the same extrapolated status the existing 1920x1088 entry carries.
 export const WAN_RATIOS = {
     very_low: [
         { label: "1:1", w: 384, h: 384, icon: "rect_1_1" },
         { label: "9:16", w: 288, h: 512, icon: "rect_9_16" },
-        { label: "16:9", w: 512, h: 288, icon: "rect_16_9" }
+        { label: "16:9", w: 512, h: 288, icon: "rect_16_9" },
+        { label: "21:9", w: 512, h: 208, icon: "rect_21_9" }
     ],
     low: [
         { label: "1:1", w: 512, h: 512, icon: "rect_1_1" },
         { label: "9:16", w: 368, h: 640, icon: "rect_9_16" },
-        { label: "16:9", w: 640, h: 368, icon: "rect_16_9" }
+        { label: "16:9", w: 640, h: 368, icon: "rect_16_9" },
+        { label: "21:9", w: 768, h: 320, icon: "rect_21_9" }
     ],
     medium: [
         { label: "1:1", w: 624, h: 624, icon: "rect_1_1" },
         { label: "9:16", w: 480, h: 832, icon: "rect_9_16" },
-        { label: "16:9", w: 832, h: 480, icon: "rect_16_9" }
+        { label: "16:9", w: 832, h: 480, icon: "rect_16_9" },
+        { label: "21:9", w: 1120, h: 480, icon: "rect_21_9" }
     ],
     high: [
         { label: "1:1", w: 960, h: 960, icon: "rect_1_1" },
         { label: "9:16", w: 720, h: 1280, icon: "rect_9_16" },
-        { label: "16:9", w: 1280, h: 720, icon: "rect_16_9" }
+        { label: "16:9", w: 1280, h: 720, icon: "rect_16_9" },
+        { label: "21:9", w: 1728, h: 720, icon: "rect_21_9" }
     ],
     very_high: [
         { label: "1:1", w: 1088, h: 1088, icon: "rect_1_1" },
         { label: "9:16", w: 1088, h: 1920, icon: "rect_9_16" },
-        { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" }
+        { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" },
+        { label: "21:9", w: 2560, h: 1088, icon: "rect_21_9" }
     ]
 };
 
@@ -98,17 +113,20 @@ export const WAN_5B_RATIOS = {
     low: [
         { label: "1:1", w: 704, h: 704, icon: "rect_1_1" },
         { label: "9:16", w: 544, h: 960, icon: "rect_9_16" },
-        { label: "16:9", w: 960, h: 544, icon: "rect_16_9" }
+        { label: "16:9", w: 960, h: 544, icon: "rect_16_9" },
+        { label: "21:9", w: 1120, h: 480, icon: "rect_21_9" }
     ],
     medium: [
         { label: "1:1", w: 832, h: 832, icon: "rect_1_1" },
         { label: "9:16", w: 640, h: 1152, icon: "rect_9_16" },
-        { label: "16:9", w: 1152, h: 640, icon: "rect_16_9" }
+        { label: "16:9", w: 1152, h: 640, icon: "rect_16_9" },
+        { label: "21:9", w: 1344, h: 576, icon: "rect_21_9" }
     ],
     high: [
         { label: "1:1", w: 960, h: 960, icon: "rect_1_1" },
         { label: "9:16", w: 704, h: 1280, icon: "rect_9_16" },
-        { label: "16:9", w: 1280, h: 704, icon: "rect_16_9" }
+        { label: "16:9", w: 1280, h: 704, icon: "rect_16_9" },
+        { label: "21:9", w: 1664, h: 704, icon: "rect_21_9" }
     ]
 };
 
@@ -135,41 +153,60 @@ export const WAN_5B_RATIOS = {
 // detail-focused native tiers, NOT an upscale pass. (17:9 cinema — 2048x1088,
 // 4096x2176 — is a documented Lightricks option but not in our ratio set; see
 // docs/models/ltx/tiers.md.)
+// 21:9 CINEMATIC (MPI-551) — every value /64 like the rest of this table. Two
+// tiers carry the widest ratio drift in the file (low 2.29, medium 2.50): they are
+// the closest /64 pairs at those areas and tightening either breaks the ascending
+// megapixel ladder. That is in keeping with § "Aspect-ratio exactness" in
+// docs/models/ltx/tiers.md — the shipped 16:9 tiers already run 1.71-1.77.
+//
+// KNOWN INTERACTION, not a 21:9 bug: LTX t2v spontaneously letterboxes on some
+// seeds (trained with letterboxing stripped + pure black as a "generate-here"
+// sentinel), most often on prompts carrying cinematic/anamorphic/widescreen. So a
+// 21:9 t2v canvas can come back with bars INSIDE an already-letterboxed frame.
+// i2v is clean — the start frame pins composition edge to edge. Full diagnosis:
+// docs/models/ltx/black-bars-and-nag.md.
 export const LTX_RATIOS = {
     very_low: [
         { label: "1:1", w: 384, h: 384, icon: "rect_1_1" },
         { label: "9:16", w: 320, h: 640, icon: "rect_9_16" },
-        { label: "16:9", w: 640, h: 320, icon: "rect_16_9" }
+        { label: "16:9", w: 640, h: 320, icon: "rect_16_9" },
+        { label: "21:9", w: 768, h: 320, icon: "rect_21_9" }
     ],
     low: [
         { label: "1:1", w: 448, h: 448, icon: "rect_1_1" },
         { label: "9:16", w: 448, h: 768, icon: "rect_9_16" },
-        { label: "16:9", w: 768, h: 448, icon: "rect_16_9" }
+        { label: "16:9", w: 768, h: 448, icon: "rect_16_9" },
+        { label: "21:9", w: 1024, h: 448, icon: "rect_21_9" }
     ],
     medium: [
         { label: "1:1", w: 512, h: 512, icon: "rect_1_1" },
         { label: "9:16", w: 512, h: 960, icon: "rect_9_16" },
-        { label: "16:9", w: 960, h: 512, icon: "rect_16_9" }
+        { label: "16:9", w: 960, h: 512, icon: "rect_16_9" },
+        { label: "21:9", w: 1280, h: 512, icon: "rect_21_9" }
     ],
     high: [
         { label: "1:1", w: 704, h: 704, icon: "rect_1_1" },
         { label: "9:16", w: 704, h: 1216, icon: "rect_9_16" },
-        { label: "16:9", w: 1216, h: 704, icon: "rect_16_9" }
+        { label: "16:9", w: 1216, h: 704, icon: "rect_16_9" },
+        { label: "21:9", w: 1664, h: 704, icon: "rect_21_9" }
     ],
     very_high: [
         { label: "1:1", w: 1088, h: 1088, icon: "rect_1_1" },
         { label: "9:16", w: 1088, h: 1920, icon: "rect_9_16" },
-        { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" }
+        { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" },
+        { label: "21:9", w: 2560, h: 1088, icon: "rect_21_9" }
     ],
     '2k': [
         { label: "1:1", w: 1472, h: 1472, icon: "rect_1_1" },
         { label: "9:16", w: 1472, h: 2560, icon: "rect_9_16" },
-        { label: "16:9", w: 2560, h: 1472, icon: "rect_16_9" }
+        { label: "16:9", w: 2560, h: 1472, icon: "rect_16_9" },
+        { label: "21:9", w: 3840, h: 1600, icon: "rect_21_9" }
     ],
     '4k': [
         { label: "1:1", w: 2176, h: 2176, icon: "rect_1_1" },
         { label: "9:16", w: 2176, h: 3840, icon: "rect_9_16" },
-        { label: "16:9", w: 3840, h: 2176, icon: "rect_16_9" }
+        { label: "16:9", w: 3840, h: 2176, icon: "rect_16_9" },
+        { label: "21:9", w: 5120, h: 2176, icon: "rect_21_9" }
     ]
 };
 
@@ -224,34 +261,49 @@ export const LTX_RATIOS = {
 //
 // The 'h3' key is no longer provisional: MPI-452 shipped it, and BOTH H3 cards
 // (minimax-h3, minimax-h3-ref2va) declare `type: 'h3'`, so a change here moves both.
+// 21:9 CINEMATIC (MPI-551) — USER-TESTED on this model. 1536x640 (high) beat
+// 1376x576 in a side-by-side, so the dead-on-2.39 1376x576 sits one rung lower at
+// medium. `high` is 0.98 MP, the same pixel budget as the native 16:9, though its
+// 640 short edge is below H3's 768 native — the A/B outranks that theory.
+//
+// EVERY 2k and 4k entry (all four ratios, not just 21:9) carries
+// note: "Experimental - High VRAM". Evidence, not decoration: MPI-549 reports H3
+// ref2v OOMing at both 2k and 4k on a 32GB RTX 5090, and each OOM takes the remote
+// engine down and restarts the Pod — real money on a rented GPU.
 export const MINIMAX_H3_RATIOS = {
     very_low: [
         { label: "1:1", w: 352, h: 352, icon: "rect_1_1" },
         { label: "9:16", w: 352, h: 608, icon: "rect_9_16" },
-        { label: "16:9", w: 608, h: 352, icon: "rect_16_9" }
+        { label: "16:9", w: 608, h: 352, icon: "rect_16_9" },
+        { label: "21:9", w: 832, h: 352, icon: "rect_21_9" }
     ],
     low: [
         { label: "1:1", w: 480, h: 480, icon: "rect_1_1" },
         { label: "9:16", w: 480, h: 864, icon: "rect_9_16" },
-        { label: "16:9", w: 864, h: 480, icon: "rect_16_9" }
+        { label: "16:9", w: 864, h: 480, icon: "rect_16_9" },
+        { label: "21:9", w: 1152, h: 480, icon: "rect_21_9" }
     ],
     medium: [
         { label: "1:1", w: 640, h: 640, icon: "rect_1_1" },
         { label: "9:16", w: 640, h: 1152, icon: "rect_9_16" },
-        { label: "16:9", w: 1152, h: 640, icon: "rect_16_9" }
+        { label: "16:9", w: 1152, h: 640, icon: "rect_16_9" },
+        { label: "21:9", w: 1376, h: 576, icon: "rect_21_9" }
     ],
     // NATIVE — adapt_canvas output (768 short edge, 1344x768 area cap). The last
     // in-distribution tier; everything above extrapolates.
+    // Dev: changed to 1376 as its the actual 1.0 res and fills 16:9 better than 1344 (which is 0.98 MP). The 1376x768 is /32-clean, so it is the right number to ship. 1344x768 is /16-clean but not /32-clean, so it is a "soft" number that the pipeline silently pads up to 1376x768 anyway.
     high: [
         { label: "1:1", w: 768, h: 768, icon: "rect_1_1" },
-        { label: "9:16", w: 768, h: 1344, icon: "rect_9_16" },
-        { label: "16:9", w: 1344, h: 768, icon: "rect_16_9" }
+        { label: "9:16", w: 768, h: 1376, icon: "rect_9_16" },
+        { label: "16:9", w: 1376, h: 768, icon: "rect_16_9" },
+        { label: "21:9", w: 1536, h: 640, icon: "rect_21_9" }
     ],
     // ABOVE native — extrapolated detail tier, same role WAN's very_high plays.
     very_high: [
         { label: "1:1", w: 1088, h: 1088, icon: "rect_1_1" },
         { label: "9:16", w: 1088, h: 1920, icon: "rect_9_16" },
-        { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" }
+        { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" },
+        { label: "21:9", w: 1920, h: 800, icon: "rect_21_9" }
     ],
     // 2K — the SAME numbers LTX_RATIOS uses for its 2k tier, and MEASURED on H3 rather
     // than assumed (2026-08-07, bench, 4060 Ti): a bare 2560x1472 run came out clean,
@@ -262,9 +314,10 @@ export const MINIMAX_H3_RATIOS = {
     // 2560/32=80). Cost is the real limit, not quality — 2x the pixels costs ~3.3x the
     // time, so this is a final-render tier like very_high, only more so.
     '2k': [
-        { label: "1:1", w: 1472, h: 1472, icon: "rect_1_1" },
-        { label: "9:16", w: 1472, h: 2560, icon: "rect_9_16" },
-        { label: "16:9", w: 2560, h: 1472, icon: "rect_16_9" }
+        { label: "1:1", w: 1472, h: 1472, icon: "rect_1_1", note: "Experimental - High VRAM" },
+        { label: "9:16", w: 1472, h: 2560, icon: "rect_9_16", note: "Experimental - High VRAM" },
+        { label: "16:9", w: 2560, h: 1472, icon: "rect_16_9", note: "Experimental - High VRAM" },
+        { label: "21:9", w: 3840, h: 1600, icon: "rect_21_9", note: "Experimental - High VRAM" }
     ],
     // 4K — LTX's 4k numbers, /32-clean for H3 (3840/32=120, 2176/32=68). UNMEASURED on
     // H3: added 2026-08-08 on the user's explicit call, for cards that can carry it, and
@@ -275,9 +328,10 @@ export const MINIMAX_H3_RATIOS = {
     // default. If a first 4K run comes back banded or incoherent, this tier is the
     // suspect, not the sampler.
     '4k': [
-        { label: "1:1", w: 2176, h: 2176, icon: "rect_1_1" },
-        { label: "9:16", w: 2176, h: 3840, icon: "rect_9_16" },
-        { label: "16:9", w: 3840, h: 2176, icon: "rect_16_9" }
+        { label: "1:1", w: 2176, h: 2176, icon: "rect_1_1", note: "Experimental - High VRAM" },
+        { label: "9:16", w: 2176, h: 3840, icon: "rect_9_16", note: "Experimental - High VRAM" },
+        { label: "16:9", w: 3840, h: 2176, icon: "rect_16_9", note: "Experimental - High VRAM" },
+        { label: "21:9", w: 5120, h: 2176, icon: "rect_21_9", note: "Experimental - High VRAM" }
     ]
 };
 

@@ -58,8 +58,12 @@ function _templateRatio(props) {
         const isSelected = r.label === value;
         const iconName   = r.icon.replace('rect_', 'ratio_');
         const dims       = (r.w && r.h) ? ` — ${r.w}×${r.h}` : '';
+        // Optional per-entry caveat (e.g. H3's 2k/4k "Experimental - High VRAM").
+        // Data-driven so no model-type branching lives here; keep the runtime twin
+        // in updateUI() identical or the note shows on first paint then disappears.
+        const note       = r.note ? ` (${r.note})` : '';
         return `<div class="mpi-opt-sel__item" data-label="${r.label}">
-            ${MpiButton.template({ icon: iconName, label: r.label, labelPosition: 'top', size: 'md', active: isSelected, toggleable: true, info: `${r.label}${dims}` })}
+            ${MpiButton.template({ icon: iconName, label: r.label, labelPosition: 'top', size: 'md', active: isSelected, toggleable: true, info: `${r.label}${dims}${note}` })}
         </div>`;
     }).join('');
 
@@ -468,8 +472,10 @@ function _setupRatio(el, props, emit) {
             const isSelected = r.label === value;
             const iconName   = r.icon.replace('rect_', 'ratio_');
             const dims       = (r.w && r.h) ? ` — ${r.w}×${r.h}` : '';
+            // Runtime twin of the note in _templateRatio — keep both in step.
+            const note       = r.note ? ` (${r.note})` : '';
             return `<div class="mpi-opt-sel__item" data-label="${r.label}">
-                ${MpiButton.template({ icon: iconName, label: r.label, labelPosition: 'top', active: isSelected, toggleable: true, info: `${r.label}${dims}` })}
+                ${MpiButton.template({ icon: iconName, label: r.label, labelPosition: 'top', active: isSelected, toggleable: true, info: `${r.label}${dims}${note}` })}
             </div>`;
         }).join('');
 
