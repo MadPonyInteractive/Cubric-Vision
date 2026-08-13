@@ -1183,13 +1183,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
             const _wantImages = use.images && payloadHasReusableImages(payload);
             const _wantVideo = use.video && payloadHasReusableVideos(payload);
             const _wantAudio = use.audio && payloadHasReusableAudio(payload);
-            // Reuse OWNS the tray: clear whenever the user opted into media reuse at
-            // all, not only when the source has media to put back. The _want flags below
-            // are ANDed with what the source carries, so a text-only card fails all three
-            // and the clear never ran - the previous run's chips stayed staged and the
-            // next Cue silently generated with inputs that card never had. (MPI-555)
-            if (use.images || use.video || use.audio) _pb.el.clearMedia?.();
             if (_wantImages || _wantVideo || _wantAudio) {
+                _pb.el.clearMedia?.();
                 const resolved = await resolvePromptReuseMediaItems(payload);
                 const wantType = (t) => (t === 'image' && _wantImages) || (t === 'video' && _wantVideo) || (t === 'audio' && _wantAudio);
                 const mediaItems = resolved.filter(m => wantType(m.mediaType || m.type));

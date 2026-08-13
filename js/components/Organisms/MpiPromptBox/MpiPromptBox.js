@@ -326,6 +326,33 @@ export const MpiPromptBox = ComponentFactory.create({
             if (!silent) _emitMediaChange();
         }
 
+        /**
+         * Drop staged media the CURRENT op+model has no slot for.
+         *
+         * A chip belongs to the pairing that accepted it, and both halves move under
+         * it: Reuse switches model and op together, the op strip switches op alone.
+         * `_mediaSlotsForOperation` is already the authority on what the pairing
+         * accepts (it runs the model-capability filter), so anything whose mediaType
+         * it does not list is unreachable — no slot to label it, nothing to inject it
+         * into, and the next Cue would run carrying an input the user can no longer
+         * see the purpose of. Reusing a text-to-image card left three pictures and an
+         * audio chip staged from a MiniMax H3 reference setup, on a model that takes
+         * neither. (MPI-555)
+         *
+         * Called LAST in setOperation/setModel, never mid-way: the single
+         * _emitMediaChange below can itself re-enter setOperation (dropping to a text
+         * op when the box just went empty), and that must land on a settled state.
+         * Removals are silent for the same reason the replace path is — one emit, not
+         * one per chip.
+         */
+        function _pruneUnsupportedMedia() {
+            const accepted = new Set(_mediaSlotsForOperation().map(slot => slot.mediaType));
+            const doomed = _mediaItems.filter(m => !accepted.has(m.mediaType));
+            if (!doomed.length) return;
+            doomed.forEach(m => _removeItem(m.id, { silent: true }));
+            _emitMediaChange();
+        }
+
         // MPI-356: the ONE deliberate exception to MPI-337's no-force-DOWN rule —
         // an empty box with a media op selected can do nothing at all, so it lands
         // on the model's text-only op. Narrow on purpose: only when the model
@@ -582,6 +609,7 @@ export const MpiPromptBox = ComponentFactory.create({
             // unchanged strip takes _renderStrip's same-set fast path).
             _renderStrip(_withAssignedRoles());
             emit('operation-change', { operation: key, programmatic });
+            _pruneUnsupportedMedia();
         };
 
         // MPI-388: the same drop as MPI-356, fired on workspace ENTRY instead of a
@@ -688,6 +716,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 // when the op key does not. setOperation covers the other branch.
                 _renderStrip(_withAssignedRoles());
             }
+            _pruneUnsupportedMedia();
             if (typeof _refreshRunLabel === 'function') _refreshRunLabel();
         };
 
