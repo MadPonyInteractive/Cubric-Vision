@@ -49,3 +49,56 @@ overlap or any other tuning to the user.
 Found while producing the Cubric western film (Identity repo, MPI-74). That film
 now generates every shot at 864x480 and upscales afterwards, which works, so this
 card is not blocking it.
+
+---
+
+## Outcome: REJECTED (2026-08-13) - the premise was wrong
+
+The card assumed "the decode runs directly on the full latent, there is no tiled
+decoding". That is not true. Verified by reading the engine:
+
+- `comfy/sd.py:957` - the H3 video VAE sets `self.handles_tiling = True`, with the
+  comment "the model tiles internally (256px spatial, 17-frame temporal chunks)".
+- `comfy/sd.py:1190-1213` - plain `VAEDecode` already catches OOM, calls
+  `soft_empty_cache()`, and retries through `_decode_tiled_owned(tile=256//16,
+  overlap=tile//4)`. The warning it logs is "Ran out of memory when regular VAE
+  decoding, retrying with tiled VAE decoding."
+
+So the `VAE Decode` node already in the H3 graphs IS the tiled path, and hits the
+same `handles_tiling` branch a `VAEDecodeTiled` node would. Adding a tiled node
+buys zero VRAM.
+
+The correct reading of the observed failure: the decode tiled and STILL did not
+fit in 32GB. Not "the decode was never tiled".
+
+### Why a tiled node cannot be added anyway
+
+An H3 `LATENT` is a `NestedTensor` bundling (video, audio) - see
+`comfy_extras/nodes_minimax_h3.py:76`. Neither tiled node unbinds it, so both
+error out when wired in (both reproduced by Fabio on the bench):
+
+- `LTXVTiledVAEDecode` - unpacks `batch, channels, frames, height, width =
+  samples.shape`; a nested `.shape` is 4D, so it raises `IndexError: too many
+  indices for tensor of dimension 4`. LTX-specific node, never built for nested
+  AV latents.
+- Core `VAEDecodeTiled` - passes the NestedTensor straight to
+  `vae.decode_tiled()`, raising `TypeError: to() received an invalid combination
+  of arguments - got (NestedTensor)`. Its non-tiled sibling `VAEDecode` does have
+  the unbind (`nodes.py:333`, `if latent.is_nested: latent = latent.unbind()[0]`);
+  the tiled one simply never got that line. Upstream gap, not our wiring.
+
+### What replaces it
+
+MPI-551 shipped the "Experimental - High VRAM" note on every H3 2K/4K tier, so
+the 2K/4K path is labelled rather than fixed. Anyone who wants it rents an
+H100-class card. 864x480 plus an upscale afterwards remains the working route and
+is what the western film (Identity MPI-74) uses.
+
+### Left unmeasured
+
+Nobody confirmed which stage OOMs. Fabio's read is that it came late, after the
+whole thing had processed, which points at decode - but the Pod log was not
+captured and `"retrying with tiled VAE decoding"` was never grepped for. If this
+is ever reopened, that grep is step one. Note `MAX_PIXELS = 768*1344` in
+`nodes_minimax_h3.py` caps the sampling canvas regardless of the requested
+output, so "2K/4K" is upscale-after, not sampled at that size.
