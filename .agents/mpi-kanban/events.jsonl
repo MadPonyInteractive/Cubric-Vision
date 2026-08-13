@@ -2693,3 +2693,6 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.moved", "at": "2026-08-12T09:22:36Z", "actor": "claude", "id": "MPI-546", "from": "doing", "to": "done", "note": "Verified live on isolated instance :50478 with CUBRIC_MODELS_ROOT=G:/CubricModels."}
 {"schema": "mpi-kanban/event/v1", "type": "task.created", "at": "2026-08-12T17:41:37Z", "actor": "claude", "id": "MPI-547", "note": "Follow-up to MPI-546: named parameters so an agent can pick ratio/quality/turbo/style."}
 {"schema": "mpi-kanban/event/v1", "type": "task.created", "at": "2026-08-12T18:05:00Z", "actor": "claude", "id": "MPI-548", "note": "Run-locally override ignored by the LoRA asset list; state.availableLoras is never derived per engine."}
+{"at":"2026-08-13T00:00:00Z","event":"task.created","id":"MPI-551","by":"agent"}
+{"at":"2026-08-13T00:00:00Z","event":"task.moved","id":"MPI-551","from":"todo","to":"doing","by":"agent"}
+{"at":"2026-08-13T00:00:00Z","event":"task.moved","id":"MPI-551","from":"doing","to":"done","by":"agent"}

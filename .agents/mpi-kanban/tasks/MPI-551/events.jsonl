@@ -1,0 +1,3 @@
+{"at":"2026-08-13T00:00:00Z","event":"task.created","id":"MPI-551","by":"agent"}
+{"at":"2026-08-13T00:00:00Z","event":"task.moved","id":"MPI-551","from":"todo","to":"doing","by":"agent"}
+{"at":"2026-08-13T00:00:00Z","event":"task.moved","id":"MPI-551","from":"doing","to":"done","by":"agent"}
