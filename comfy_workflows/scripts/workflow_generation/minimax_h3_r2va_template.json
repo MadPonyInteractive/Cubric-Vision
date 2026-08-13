@@ -1,7 +1,7 @@
 {
   "167": {
     "inputs": {
-      "int": 1152
+      "int": 1376
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -10,7 +10,7 @@
   },
   "168": {
     "inputs": {
-      "int": 640
+      "int": 768
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -19,7 +19,7 @@
   },
   "195": {
     "inputs": {
-      "int": 5
+      "int": 684846896
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -28,7 +28,7 @@
   },
   "212": {
     "inputs": {
-      "int": 1
+      "int": 3
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -62,7 +62,7 @@
   },
   "232": {
     "inputs": {
-      "string": "medium rear shot of a knight holding a sword on his shoulder, the camera orbits around into a close-up of his face as he says, \"I had enough\". He looks determined and has a little bit of blood coming out of his mouth. The location is a mediaeval battlefield. The style is cinematic and dark.  Background sound is a huge battle happening: clinking swords, man screaming, the sound of the wind and thunder.  "
+      "string": "Live-action American West of the early 1880s on colour negative film with a warm cast, pale ochre sand and rust brown gravel under a low early-morning sun from frame left throwing long shadows to frame right, mood still and watchful, 100mm macro lens.\nUse <Picture 1> as the reference for the ground, its vegetation, its colour and its light.\nTake only the ground, the vegetation and the light from <Picture 1>. Do not use it as a starting frame, do not inherit its composition, its camera angle or its grade.\nLying flat on the hot gravel of <Picture 1>, which is pale ochre sand and rust brown gravel scattered with knee-high sage green creosote bushes and occasional taller yucca, flat open ground running to a low horizon with a large clear sky above, a few stems of dry grass stand in the near foreground and the land falls away soft behind, and a small sandy brown lizard with darker banding runs in from frame right in two quick bursts, stops square in the middle of frame facing the lens, lifts its head and holds perfectly still while its throat pulses, then turns and darts off frame left in one movement.\nThe camera holds static throughout, low on the ground, focus shallow and tight on the lizard.\nWind moving low across open ground, one distant bird, the dry scratch of claws on gravel as it arrives and again as it goes.\nNo text, subtitles, logos or watermarks of any kind, no cartoon or overly-CG rendering, no soft dissolves, no warped hands or faces, no flicker."
     },
     "class_type": "MpiText",
     "_meta": {
@@ -185,7 +185,7 @@
   },
   "321": {
     "inputs": {
-      "string": "",
+      "string": "C:\\Users\\Fabio\\Documents\\Cubric Vision\\Projects\\cowboys\\Media\\t2i_067.png",
       "channel": "alpha",
       "block_if_empty": false
     },
@@ -207,7 +207,7 @@
   },
   "330": {
     "inputs": {
-      "ref_image_size": "max",
+      "ref_image_size": "match",
       "clip": [
         "252",
         1
@@ -734,7 +734,7 @@
   "425": {
     "inputs": {
       "scheduler": "simple",
-      "steps": 20,
+      "steps": 25,
       "denoise": 1,
       "model": [
         "464",
@@ -777,7 +777,7 @@
   "427": {
     "inputs": {
       "is_continue": false,
-      "is_preview": false,
+      "is_preview": true,
       "save_path": "mpi_stage1",
       "load_path": "mpi_stage1",
       "latent": [
@@ -812,6 +812,24 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Mpi If Else"
+    }
+  },
+  "429": {
+    "inputs": {
+      "frame_rate": 24,
+      "loop_count": 0,
+      "filename_prefix": "AnimateDiff",
+      "format": "video/h264-mp4",
+      "pingpong": false,
+      "save_output": false,
+      "images": [
+        "430",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Preview"
     }
   },
   "430": {
@@ -981,7 +999,7 @@
   },
   "453": {
     "inputs": {
-      "math_expression": "0.75 if a else 0.0",
+      "math_expression": "0.75 if a else 0.2",
       "a": [
         "444",
         0
@@ -1003,7 +1021,7 @@
     },
     "class_type": "MiniMaxH3SigmaShift",
     "_meta": {
-      "title": "MiniMax H3 Sigma Shift"
+      "title": "ModelSamplingMiniMaxH3"
     }
   },
   "456": {

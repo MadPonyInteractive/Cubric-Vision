@@ -194,22 +194,6 @@
       "title": "SamplerCustomAdvanced"
     }
   },
-  "158": {
-    "inputs": {
-      "samples": [
-        "359",
-        0
-      ],
-      "vae": [
-        "121",
-        0
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
-    }
-  },
   "159": {
     "inputs": {},
     "class_type": "DisableNoise",
@@ -742,7 +726,7 @@
   "290": {
     "inputs": {
       "passthrough": [
-        "158",
+        "387",
         0
       ]
     },
@@ -944,7 +928,7 @@
     },
     "class_type": "MiniMaxH3SigmaShift",
     "_meta": {
-      "title": "MiniMax H3 Sigma Shift"
+      "title": "ModelSamplingMiniMaxH3"
     }
   },
   "323": {
@@ -1017,7 +1001,7 @@
   "338": {
     "inputs": {
       "scheduler": "simple",
-      "steps": 20,
+      "steps": 25,
       "denoise": 1,
       "model": [
         "381",
@@ -1060,7 +1044,7 @@
   },
   "343": {
     "inputs": {
-      "math_expression": "0.75 if a else 0.0",
+      "math_expression": "0.75 if a else 0.2",
       "a": [
         "324",
         0
@@ -1217,6 +1201,22 @@
     "class_type": "MpiTinyVaeLoader",
     "_meta": {
       "title": "Mpi Tiny Vae Loader"
+    }
+  },
+  "387": {
+    "inputs": {
+      "samples": [
+        "359",
+        0
+      ],
+      "vae": [
+        "121",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
     }
   }
 }
