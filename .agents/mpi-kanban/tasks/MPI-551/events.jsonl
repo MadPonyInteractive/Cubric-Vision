@@ -1,3 +1,3 @@
-{"at":"2026-08-13T00:00:00Z","event":"task.created","id":"MPI-551","by":"agent"}
-{"at":"2026-08-13T00:00:00Z","event":"task.moved","id":"MPI-551","from":"todo","to":"doing","by":"agent"}
-{"at":"2026-08-13T00:00:00Z","event":"task.moved","id":"MPI-551","from":"doing","to":"done","by":"agent"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-551", "type": "task.created", "at": "2026-08-13T00:00:00Z", "actor": "claude", "summary": "Card opened on Fabio's request: add a 21:9 cinematic ratio to every video model. H3 numbers came from his own side-by-side test (1536x640 beat 1376x576). LTX, WAN and WAN-5B each got their own table on their own grid."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-551", "type": "task.moved", "at": "2026-08-13T00:00:00Z", "actor": "claude", "summary": "Moved todo -> doing before editing ratios.js."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-551", "type": "task.moved", "at": "2026-08-13T00:00:00Z", "actor": "claude", "summary": "Moved doing -> done. 21:9 added to all 22 video tiers across four tables; optional per-entry note field wired into both MpiOptionSelector render paths; every H3 2k/4k entry carries \"Experimental - High VRAM\". Verified in a running app (selection emits w:1536 h:640 ratio:2.4) and by a new regression test, mutation-checked. Full suite 582/582. Commit 00156c0b."}

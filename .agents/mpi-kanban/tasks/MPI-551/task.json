@@ -4,8 +4,8 @@
   "title": "21:9 cinematic ratio for every video model (H3, LTX, WAN, WAN-5B)",
   "description": "Add a 21:9 cinematic (anamorphic widescreen) entry to every video ratio tier, alongside the existing 1:1 / 9:16 / 16:9. Each model gets its own table honouring its own grid constraint - H3 /32, LTX /64 (2-stage floor), WAN /16, WAN-5B /32 - and each ladder is area-incremental across tiers. Covers the 2k and 4k tiers too. H3 2k and 4k entries (all ratios, not just 21:9) additionally carry an 'Experimental - High VRAM' note in their status-bar info string.",
   "column": "done",
-  "maturity": "shipped",
-  "status": "active",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-13T00:00:00Z",
   "updated_at": "2026-08-13T00:00:00Z",
   "links": {
