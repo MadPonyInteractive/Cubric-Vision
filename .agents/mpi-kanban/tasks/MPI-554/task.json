@@ -3,9 +3,9 @@
   "id": "MPI-554",
   "title": "Changelog top-up since 1.4.1, and the H3 step count the Turbo tooltip still gets wrong",
   "description": "Two leftovers from the sessions that shipped MPI-550/551. (1) UNRELEASED.md only carries MPI-545 - the 21:9 cinematic ratio and the H3 non-turbo quality lift were never folded in. MPI-546 (agent HTTP dispatch) is deliberately excluded: unfinished and untested, so it is not a user-facing note yet. (2) MPI-550 moved the H3 non-turbo path from 20 to 25 steps, but the Turbo button info string still tells users 6 steps instead of 20, and two code comments repeat the old number.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "doing",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-13T00:00:00Z",
   "updated_at": "2026-08-13T00:00:00Z",
   "links": {

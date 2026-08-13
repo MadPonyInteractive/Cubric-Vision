@@ -68,10 +68,9 @@
       "MPI-403",
       "MPI-259"
     ],
-    "doing": [
-      "MPI-554"
-    ],
+    "doing": [],
     "done": [
+      "MPI-554",
       "MPI-550",
       "MPI-551",
       "MPI-546",
@@ -2846,6 +2845,15 @@
       "actor": "opus",
       "to": "doing",
       "note": "Changelog top-up since 1.4.1 plus the stale H3 step count in the Turbo tooltip."
+    },
+    {
+      "at": "2026-08-13T00:00:00Z",
+      "type": "task.moved",
+      "task": "MPI-554",
+      "actor": "claude",
+      "from": "doing",
+      "to": "done",
+      "note": "Shipped in 621f5cc1. UNRELEASED.md carries the 21:9 ratio and the H3 non-turbo quality lift; the Turbo tooltip and three comments now say 25 steps."
     }
   ]
 }
