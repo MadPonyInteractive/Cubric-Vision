@@ -3,7 +3,6 @@
   "next_id": 557,
   "columns": {
     "todo": [
-      "MPI-555",
       "MPI-556",
       "MPI-553",
       "MPI-552",
@@ -72,6 +71,7 @@
     ],
     "doing": [],
     "done": [
+      "MPI-555",
       "MPI-554",
       "MPI-550",
       "MPI-551",
@@ -2872,6 +2872,24 @@
       "actor": "claude",
       "to": "todo",
       "note": "Reuse prompt leaves the previous run's media chips staged when the reused generation had none"
+    },
+    {
+      "at": "2026-08-14T00:00:00Z",
+      "type": "task.moved",
+      "task": "MPI-555",
+      "actor": "claude",
+      "from": "todo",
+      "to": "doing",
+      "note": "Implementation started - clearMedia gate in both gallery blocks."
+    },
+    {
+      "at": "2026-08-14T00:00:00Z",
+      "type": "task.moved",
+      "task": "MPI-555",
+      "actor": "claude",
+      "from": "doing",
+      "to": "done",
+      "note": "Verified live: reusing a klein t2i card with H3 chips staged now empties the tray. Fixed in the PromptBox (8a40dd57); the first attempt in the gallery blocks was reverted."
     }
   ]
 }

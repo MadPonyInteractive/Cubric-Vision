@@ -2,15 +2,16 @@
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-555",
   "title": "Reuse prompt leaves the previous run's media chips staged when the reused generation had none",
-  "description": "Reuse a text-to-image card while pictures or audio are staged in the PromptBox and the chips survive - the tray still shows the old references, so the next Cue silently runs with inputs the reused card never had. Found live 2026-08-13 reusing t2i_006/t2i_007 with three pictures and an audio chip staged from a MiniMax H3 reference setup.\n\nROOT CAUSE (both engines): clearMedia() is called INSIDE the \"did the source have media\" branch. js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js:1186 and its twin js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js:1271 both read\n    if (_wantImages || _wantVideo || _wantAudio) { _pb.el.clearMedia(); ... }\nA t2i card fails all three, so the clear never runs and the stale chips are left behind. The clear has to happen whenever media reuse is enabled at all, not only when there is something to inject.\n\nFix BOTH blocks in one pass - a one-sided fix is a false done. Note MpiGroupHistoryBlock also clears at line 1092 for non-video groups, which is a different concern; do not fold them together.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "todo",
+  "description": "Reuse a text-to-image card while pictures or audio are staged in the PromptBox and the chips survive - the tray still shows the old references, so the next Cue silently runs with inputs the reused card never had. Found live 2026-08-13 reusing t2i_006/t2i_007 with three pictures and an audio chip staged from a MiniMax H3 reference setup.\n\nROOT CAUSE (as SHIPPED, 8a40dd57): the PromptBox never dropped staged media the current op+model has no slot for. setOperation already re-derives every chip's slot LABEL for the new pairing - the slot a chip fills is a property of the op+model, not of the chip - but nothing removed the chips the new pairing cannot accept at all. Klein text-to-image accepts no media whatsoever, so all four chips stayed: unlabelable, uninjectable, and still bound for the next Cue. Fixed with _pruneUnsupportedMedia in js/components/Organisms/MpiPromptBox/MpiPromptBox.js, keyed off _mediaSlotsForOperation (already the authority - it runs the model-capability filter), called last in setOperation and setModel. This also covers switching op or model by hand, not just Reuse.\n\nFIRST ATTEMPT, WRONG LAYER, REVERTED (a47a318f, reverted inside 8a40dd57): moved clearMedia() out of the has-media branch in both gallery blocks. It could never fire - the Reuse dialog greys the media toggles OFF when the SOURCE card carries no media, so use.images and its siblings were all false. Lint passed, 582 tests passed, and the bug was untouched; only reloading the app and clicking Reuse caught it. Both blocks are byte-identical to their pre-attempt state.\n\nThe chips were never Reuse's to own, which is why no fix inside Reuse could have worked.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-14T00:00:00Z",
   "updated_at": "2026-08-14T00:00:00Z",
   "links": {
     "files": "files.json",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   },
   "attention": []
 }
