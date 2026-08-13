@@ -8,12 +8,6 @@
  * - Do NOT hardcode aspect ratios in individual tool files.
  * - Always use `getModelRatios(modelType, orientation)` to fetch the correct array.
  * - `modelType` comes from model.type in `js/data/modelRegistry.js`
- *
- * ENTRY SHAPE: `{ label, w, h, icon }`, plus an OPTIONAL `note` — a short caveat
- * appended to the ratio button's status-bar info as ` (note)`. Keep it ASCII: it
- * lands in an HTML `data-info` attribute. Rendered in BOTH MpiOptionSelector paths
- * (`_templateRatio` and `updateUI`); changing one alone makes the note appear on
- * first paint and vanish on first interaction.
  */
 
 import { ICONS } from './icons.js';
@@ -266,10 +260,11 @@ export const LTX_RATIOS = {
 // medium. `high` is 0.98 MP, the same pixel budget as the native 16:9, though its
 // 640 short edge is below H3's 768 native — the A/B outranks that theory.
 //
-// EVERY 2k and 4k entry (all four ratios, not just 21:9) carries
-// note: "Experimental - High VRAM". Evidence, not decoration: MPI-549 reports H3
-// ref2v OOMing at both 2k and 4k on a 32GB RTX 5090, and each OOM takes the remote
-// engine down and restarts the Pod — real money on a rented GPU.
+// H3's 2k/4k warning ("Experimental - High VRAM") lives on the QUALITY TIER
+// button, not here — see QUALITY_TIER_HINT in MpiOptionSelector.js. It is keyed
+// per model because the default hint is LTX's res/motion tradeoff, which does not
+// describe H3: H3's 2k/4k problem is VRAM (MPI-549 — ref2v OOMs at both tiers on
+// a 32GB RTX 5090, and each OOM restarts the Pod).
 export const MINIMAX_H3_RATIOS = {
     very_low: [
         { label: "1:1", w: 352, h: 352, icon: "rect_1_1" },
@@ -314,10 +309,10 @@ export const MINIMAX_H3_RATIOS = {
     // 2560/32=80). Cost is the real limit, not quality — 2x the pixels costs ~3.3x the
     // time, so this is a final-render tier like very_high, only more so.
     '2k': [
-        { label: "1:1", w: 1472, h: 1472, icon: "rect_1_1", note: "Experimental - High VRAM" },
-        { label: "9:16", w: 1472, h: 2560, icon: "rect_9_16", note: "Experimental - High VRAM" },
-        { label: "16:9", w: 2560, h: 1472, icon: "rect_16_9", note: "Experimental - High VRAM" },
-        { label: "21:9", w: 3840, h: 1600, icon: "rect_21_9", note: "Experimental - High VRAM" }
+        { label: "1:1", w: 1472, h: 1472, icon: "rect_1_1" },
+        { label: "9:16", w: 1472, h: 2560, icon: "rect_9_16" },
+        { label: "16:9", w: 2560, h: 1472, icon: "rect_16_9" },
+        { label: "21:9", w: 3840, h: 1600, icon: "rect_21_9" }
     ],
     // 4K — LTX's 4k numbers, /32-clean for H3 (3840/32=120, 2176/32=68). UNMEASURED on
     // H3: added 2026-08-08 on the user's explicit call, for cards that can carry it, and
@@ -328,10 +323,10 @@ export const MINIMAX_H3_RATIOS = {
     // default. If a first 4K run comes back banded or incoherent, this tier is the
     // suspect, not the sampler.
     '4k': [
-        { label: "1:1", w: 2176, h: 2176, icon: "rect_1_1", note: "Experimental - High VRAM" },
-        { label: "9:16", w: 2176, h: 3840, icon: "rect_9_16", note: "Experimental - High VRAM" },
-        { label: "16:9", w: 3840, h: 2176, icon: "rect_16_9", note: "Experimental - High VRAM" },
-        { label: "21:9", w: 5120, h: 2176, icon: "rect_21_9", note: "Experimental - High VRAM" }
+        { label: "1:1", w: 2176, h: 2176, icon: "rect_1_1" },
+        { label: "9:16", w: 2176, h: 3840, icon: "rect_9_16" },
+        { label: "16:9", w: 3840, h: 2176, icon: "rect_16_9" },
+        { label: "21:9", w: 5120, h: 2176, icon: "rect_21_9" }
     ]
 };
 

@@ -79,37 +79,38 @@ test('21:9 megapixels rise monotonically across tiers', async () => {
     }
 });
 
-test('H3 2k/4k carry the high-VRAM note on EVERY ratio', async () => {
-    const { MINIMAX_H3_RATIOS } = await import(RATIOS);
-    for (const tier of ['2k', '4k']) {
-        for (const r of MINIMAX_H3_RATIOS[tier]) {
-            assert.strictEqual(r.note, 'Experimental - High VRAM',
-                `H3 ${tier} ${r.label} is missing the high-VRAM note`);
-            // The note lands in an HTML data-info attribute.
-            assert.ok(!/[^\x20-\x7E]/.test(r.note), `H3 ${tier} ${r.label} note is not ASCII`);
-        }
-    }
-    // Tiers below 2k must NOT carry it — the note means something.
-    for (const tier of ['very_low', 'low', 'medium', 'high', 'very_high']) {
-        for (const r of MINIMAX_H3_RATIOS[tier]) {
-            assert.strictEqual(r.note, undefined,
-                `H3 ${tier} ${r.label} should not carry a note`);
-        }
-    }
-});
-
-test('both MpiOptionSelector render paths append the note', async () => {
+// The 2K/4K tier hint is PER MODEL. The shared default describes LTX's measured
+// res/motion tradeoff; H3's 2K/4K problem is VRAM, not motion (MPI-549), so the
+// two must not share a string. This is the check that would have caught H3
+// showing "detail-focused, low motion" — a claim about a different model.
+test('H3 2k/4k show the high-VRAM hint, not LTX motion text', async () => {
     const fs = require('node:fs');
     const src = fs.readFileSync(require('node:path').resolve(
         __dirname, '../js/components/Compounds/MpiOptionSelector/MpiOptionSelector.js'), 'utf8');
-    // _templateRatio draws the first paint, updateUI re-draws on every change.
-    // If only one interpolates `note`, the caveat appears then vanishes on the
-    // first interaction — the same template/runtime-twin bug the file already
-    // warns about for the orientation toggle.
-    const reads = (src.match(/r\.note \? ` \(\$\{r\.note\}\)` : ''/g) || []).length;
-    assert.strictEqual(reads, 2,
-        `expected both render paths to build a note string, found ${reads}`);
-    const uses = (src.match(/info: `\$\{r\.label\}\$\{dims\}\$\{note\}`/g) || []).length;
-    assert.strictEqual(uses, 2,
-        `expected both render paths to append the note to info, found ${uses}`);
+
+    const block = src.slice(src.indexOf('const QUALITY_TIER_HINT'));
+    const h3 = block.slice(block.indexOf('h3:'), block.indexOf('};'));
+    for (const tier of ["'2k'", "'4k'"]) {
+        assert.ok(h3.includes(tier), `H3 hint map is missing ${tier}`);
+    }
+    assert.ok(h3.includes('Experimental - High VRAM'),
+        'H3 tiers must show the high-VRAM caveat');
+    assert.ok(!/motion/i.test(h3),
+        'H3 must not carry the motion hint — that is LTX research');
+
+    // ASCII: the hint lands in an HTML data-info attribute.
+    for (const m of block.matchAll(/'([^']*High VRAM[^']*)'/g)) {
+        assert.ok(!/[^\x20-\x7E]/.test(m[1]), `hint is not ASCII: ${m[1]}`);
+    }
+});
+
+test('the tier hint is looked up per model, not from a flat map', async () => {
+    const fs = require('node:fs');
+    const src = fs.readFileSync(require('node:path').resolve(
+        __dirname, '../js/components/Compounds/MpiOptionSelector/MpiOptionSelector.js'), 'utf8');
+    // A flat map is what leaked LTX's motion text onto every other model.
+    assert.ok(/_tierHint\(modelType, t\)/.test(src),
+        'the quality option builder must resolve the hint through modelType');
+    assert.ok(/QUALITY_TIER_HINT\[modelType\] \|\| QUALITY_TIER_HINT\._default/.test(src),
+        'the lookup must fall back to _default for models with no entry');
 });

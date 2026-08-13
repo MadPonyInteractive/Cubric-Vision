@@ -58,12 +58,8 @@ function _templateRatio(props) {
         const isSelected = r.label === value;
         const iconName   = r.icon.replace('rect_', 'ratio_');
         const dims       = (r.w && r.h) ? ` — ${r.w}×${r.h}` : '';
-        // Optional per-entry caveat (e.g. H3's 2k/4k "Experimental - High VRAM").
-        // Data-driven so no model-type branching lives here; keep the runtime twin
-        // in updateUI() identical or the note shows on first paint then disappears.
-        const note       = r.note ? ` (${r.note})` : '';
         return `<div class="mpi-opt-sel__item" data-label="${r.label}">
-            ${MpiButton.template({ icon: iconName, label: r.label, labelPosition: 'top', size: 'md', active: isSelected, toggleable: true, info: `${r.label}${dims}${note}` })}
+            ${MpiButton.template({ icon: iconName, label: r.label, labelPosition: 'top', size: 'md', active: isSelected, toggleable: true, info: `${r.label}${dims}` })}
         </div>`;
     }).join('');
 
@@ -146,12 +142,27 @@ const QUALITY_LABELS = {
     '4k':      '4K',
 };
 
-// 2K/4K carry a motion hint so the status-bar teaches the res/motion tradeoff
-// (research: motion decays as resolution climbs). All other tiers show plain dims.
-const QUALITY_MOTION_HINT = {
-    '2k': 'detail-focused, low motion',
-    '4k': 'max detail, minimal motion',
+// 2K/4K carry a hint so the status bar teaches what the tier costs. All other
+// tiers show plain dims.
+//
+// PER-MODEL, and it has to be: the default below is LTX's measured res/motion
+// tradeoff (motion decays as resolution climbs), which is a statement about LTX
+// and was wrong on every other model that borrowed it. H3's 2K/4K problem is not
+// motion at all — it is VRAM (MPI-549: ref2v OOMs at both tiers on a 32GB 5090,
+// and each OOM restarts the Pod). A model with no entry falls back to `_default`.
+const QUALITY_TIER_HINT = {
+    _default: {
+        '2k': 'detail-focused, low motion',
+        '4k': 'max detail, minimal motion',
+    },
+    h3: {
+        '2k': 'Experimental - High VRAM',
+        '4k': 'Experimental - High VRAM',
+    },
 };
+
+const _tierHint = (modelType, tier) =>
+    (QUALITY_TIER_HINT[modelType] || QUALITY_TIER_HINT._default)[tier];
 
 /**
  * Build per-tier info strings for quality radio buttons.
@@ -168,7 +179,8 @@ function _buildQualityOptions(modelType, selectedRatio, orientation) {
             const ratios = getModelRatios(modelType, orientation, t);
             const match = ratios.find(r => r.label === selectedRatio) || ratios[0];
             if (match?.w && match?.h) {
-                const hint = QUALITY_MOTION_HINT[t] ? ` · ${QUALITY_MOTION_HINT[t]}` : '';
+                const h = _tierHint(modelType, t);
+                const hint = h ? ` · ${h}` : '';
                 info = `${QUALITY_LABELS[t]} — ${match.w}×${match.h}${hint}`;
             }
         }
@@ -472,10 +484,8 @@ function _setupRatio(el, props, emit) {
             const isSelected = r.label === value;
             const iconName   = r.icon.replace('rect_', 'ratio_');
             const dims       = (r.w && r.h) ? ` — ${r.w}×${r.h}` : '';
-            // Runtime twin of the note in _templateRatio — keep both in step.
-            const note       = r.note ? ` (${r.note})` : '';
             return `<div class="mpi-opt-sel__item" data-label="${r.label}">
-                ${MpiButton.template({ icon: iconName, label: r.label, labelPosition: 'top', active: isSelected, toggleable: true, info: `${r.label}${dims}${note}` })}
+                ${MpiButton.template({ icon: iconName, label: r.label, labelPosition: 'top', active: isSelected, toggleable: true, info: `${r.label}${dims}` })}
             </div>`;
         }).join('');
 
