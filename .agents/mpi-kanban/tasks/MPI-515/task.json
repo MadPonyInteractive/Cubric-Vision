@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-515",
   "title": "1.5 BLOCKER - remove the nvidia-pid ModelDef once the PiD plugins ship",
-  "description": "PiD carries the deprecation badge from 1.4 (MPI-514). This card is the other half: on 1.5 the ModelDef leaves models.js and the Model Library, replaced by the four upscale-dropdown plugins MPI-507 builds. Blocked by MPI-506 (plugin dropdown mechanism) -> MPI-507 (the PiD migration): a removal cannot land before the replacement exists. HARD RULE: do NOT delete the pid-* / vae-* / pid-gemma entries from the dep files. _orphanedDepIds in routes/downloadManager.js walks DEPS and can only reclaim a weight that still has an entry - delete it and the file strands on existing users' disks forever, untracked, with nothing in the app able to remove it. MPI-470 and MPI-466 both kept theirs. 1.5 must not ship with the ModelDef still in the picker AND the plugins live - that is two ways to install the same 16GB of weights, which is the whole reason for the split.",
+  "description": "UMBRELLA: MPI-553 - Upscalers leave the model picker, as plugins (project-refresh consolidation sweep 2026-08-13). Members and phase order: tasks/MPI-553/plan.md.\n\nPiD carries the deprecation badge from 1.4 (MPI-514). This card is the other half: on 1.5 the ModelDef leaves models.js and the Model Library, replaced by the four upscale-dropdown plugins MPI-507 builds. Blocked by MPI-506 (plugin dropdown mechanism) -> MPI-507 (the PiD migration): a removal cannot land before the replacement exists. HARD RULE: do NOT delete the pid-* / vae-* / pid-gemma entries from the dep files. _orphanedDepIds in routes/downloadManager.js walks DEPS and can only reclaim a weight that still has an entry - delete it and the file strands on existing users' disks forever, untracked, with nothing in the app able to remove it. MPI-470 and MPI-466 both kept theirs. 1.5 must not ship with the ModelDef still in the picker AND the plugins live - that is two ways to install the same 16GB of weights, which is the whole reason for the split.",
   "column": "todo",
   "maturity": "blocked",
   "status": "active",
@@ -16,7 +16,7 @@
     "model-library"
   ],
   "created_at": "2026-08-10T11:37:34Z",
-  "updated_at": "2026-08-10T11:37:34Z",
+  "updated_at": "2026-08-13T21:46:00Z",
   "links": {
     "brief": "brief.md",
     "checklist": "checklist.md",

@@ -145,8 +145,10 @@ Human-in-the-loop execution system, shipped as the **Mpi-Kanban plugin** (`/plug
 | `/mpi-create-large-plan` | Investigation-backed large plan with parallel research sub-agents |
 | `/mpi-continue` | Resume active work, show/read a board card, or update card state; dispatches disjoint ready cards on its own |
 | `/mpi-execute-parallel` | Parallel batch execution from a large plan |
+| `/mpi-umbrella` | Fold related board cards into an umbrella card. Board restructuring, NOT execution — running cards is `/mpi-continue` |
 | `/mpi-init` | Initialize MPI workflow for a new project or session |
-| `/mpi-end-session` | Session close-out, two exits — `done` closes the card, `resume` writes the handoff. Runs `.agents/mpi-kanban/close-out.md` (this repo's release-awareness steps) before the commit |
+| `/mpi-handoff` | Switch sessions mid-job — commits, pushes, writes the handoff from the plan's running notes, leaves the card in `doing`. Under two minutes; runs no knowledge pass |
+| `/mpi-end-session` | Close-out for FINISHED work — rules/docs sync, knowledge heal, memory, the `validating` sweep, `.agents/mpi-kanban/close-out.md` (this repo's release-awareness steps), the claim auditor, commit, close the card |
 | `/mpi-component-audit` | ESLint audit of `js/components/` — report only, no fixes |
 | `/mpi-brief-rule` | Return a rule file's Sub-Agent Briefing for dispatch |
 | `/mpi-add-model` | Wire a NEW model (enforces `docs/playbooks/add-model/`) |

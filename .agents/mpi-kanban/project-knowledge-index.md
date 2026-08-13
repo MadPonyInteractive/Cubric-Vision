@@ -1,8 +1,8 @@
 ---
 schema: mpi-kanban/project-knowledge-index/v1
 profile: .agents/mpi-kanban/project-profile.md
-last_refresh: 2026-08-09
-last_refresh_notes: Mpi-Kanban 1.0 migration pass (MPI-492) — added the Agent workflow & coordination topic. No content topic changed; the four component maps, docs/ routing and memory pointers were spot-checked and still resolve.
+last_refresh: 2026-08-13
+last_refresh_notes: Pointer sweep. Seven `**Memory:**` targets no longer resolved — the four `feedback_*.md` files were folded into `memory/feedback-index.md` by the 2026-08-07 prune, and `project_cubric_studio_agent_vision.md` / `project_connector_ownership_split.md` / `project_hub_scalable_foundation.md` by MPI-521 (2026-08-10). All seven repointed at where the content actually lives; no topic changed. Every other pointer in this file was resolved against disk and still holds.
 ---
 
 # Project Knowledge Index
@@ -86,7 +86,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/toasts.md` (full call-site map, sound model, `ui:*`/`StatusBar.notify`/`notificationService`)
 - **Also:** `docs/generation-lifecycle.md` § "Completion notifications COALESCE"
-- **Memory:** `feedback_error_dialog_vs_toast.md`, `feedback_no_toast_user_stop.md`
+- **Memory:** `feedback-index.md` — the *error dialog vs toast* and *no toast on a user stop* lines (both were standalone files until the 2026-08-07 prune)
 - **Note:** the coalesce / burst-chime / dual-path memories were deleted in the 2026-07-29 prune (MPI-399) after each claim was verified into `docs/toasts.md`. Read the doc.
 
 ### Application state
@@ -105,7 +105,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/comfy.md`
 - **Rules:** `.claude/rules/comfy_injection.md`, `.claude/rules/component-comfy.md`
-- **Memory:** `feedback_comfy_node_naming_law.md`
+- **Memory:** `feedback-index.md` — the ComfyUI node-naming law line (standalone file until the 2026-08-07 prune)
 
 ### ComfyUI engine / backend / models
 
@@ -173,13 +173,13 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 ### Cross-project / product
 
 - **Read first:** `docs/PROJECT.md`
-- **Memory:** `project_product_scope.md`, `project_cubric_studio_agent_vision.md`, `project_connector_ownership_split.md`, `project_hub_scalable_foundation.md`, `project_madpony_identity_folder.md`
+- **Memory:** `project_product_scope.md`, `project_madpony_identity_folder.md`, `project_release_model_github_only.md`, plus the *Cubric Studio hub end-state* and *Connector ownership* bullets in `MEMORY.md` § Cross-project (both were standalone files until the 2026-08-10 prune, MPI-521; the hub's own `c:/AI/Mpi/Cubric-Studio/README.md` is the source of truth)
 - **Notes:** Vision = image/video only; audio + prompt-gen are sibling Cubric apps.
 
 ### Conventions / gotchas
 
 - **Read first:** `CLAUDE.md` § "Critical Rules Snapshot"
-- **Memory:** `feedback_shared_tree_commit_hygiene.md`, `feedback_no_toast_user_stop.md`, `feedback_error_dialog_vs_toast.md`
+- **Memory:** `feedback-index.md` — the shared-tree commit-hygiene, no-toast-on-user-stop and error-dialog-vs-toast lines (all three were standalone files until the 2026-08-07 prune)
 
 ### Shell, overlays, hotkeys
 

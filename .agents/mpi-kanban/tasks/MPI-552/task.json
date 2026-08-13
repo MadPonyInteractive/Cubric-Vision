@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-552",
+  "title": "LTX 2.3 v2v: wire the proven bench trio as Flows",
+  "description": "UMBRELLA created by the project-refresh consolidation sweep, 2026-08-13. Members: MPI-536 (foley), MPI-520 (v2v extend), MPI-538 (lipsync). All three are bench-proven, user-approved LTX 2.3 v2v workflows waiting on the SAME app-side blocker (MPI-531: FlowStepField is select|button|toggle only). Members and phase order: tasks/<ID>/plan.md.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-13T21:45:00Z",
+  "updated_at": "2026-08-13T21:45:00Z",
+  "links": {
+    "plan": "plan.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

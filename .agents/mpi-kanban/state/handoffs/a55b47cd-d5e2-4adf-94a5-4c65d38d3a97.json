@@ -3,7 +3,7 @@
   "id": "a55b47cd-d5e2-4adf-94a5-4c65d38d3a97",
   "generated_at": "2026-08-11T16:40:00Z",
   "to_role": "implementer",
-  "status": "open",
+  "status": "superseded",
   "session": {
     "name": "MPI-539 - a download-mode Pod is a download target, not a generation engine (4 failures, one root, shipped); MPI-540 carded for the toast mess",
     "branch": "master"
@@ -65,5 +65,6 @@
     ".claude/rules/downloads.md",
     "CLAUDE.md THE ROOT-CAUSE RULE"
   ],
-  "resume_prompt": "Continue MPI-539. The diagnosis is COMPLETE and evidenced in the card - do not re-derive it. The fix shipped in 629ab6cb (suite 555/555) but has NOT been verified live; Fabio was re-running the exact failing scenario himself. Read his result first, then either close out MPI-539 or work the pending list in this handoff."
+  "resume_prompt": "Continue MPI-539. The diagnosis is COMPLETE and evidenced in the card - do not re-derive it. The fix shipped in 629ab6cb (suite 555/555) but has NOT been verified live; Fabio was re-running the exact failing scenario himself. Read his result first, then either close out MPI-539 or work the pending list in this handoff.",
+  "superseded_by": "194d9287-494e-4ea8-8bc6-f427d154c77e"
 }

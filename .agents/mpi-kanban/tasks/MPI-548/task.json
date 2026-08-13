@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-548",
+  "title": "\"Run locally\" override is ignored by the LoRA/upscale asset list - local generations blocked while a Pod is connected",
+  "description": "With a Pod connected and the PromptBox \"Run locally\" toggle ON, a generation using a local-only LoRA is still blocked by the remote guard. Root cause: assetService.loadAll() populates state.availableLoras from GET /comfy/list-files, which has NO remote branch - it always enumerates the LOCAL disk - while routes/comfy.js formats those local filenames with the REMOTE separator when a Pod is active. The list is never re-derived per engine, so the dispatch-time missing-LoRA guard reports the file as absent from the Pod. Reported by Fabio 2026-08-12 with both toasts visible (\"NSFW_party_time_v2.0_klein4b.safetensors isn't installed on the remote Pod\" plus \"Preparing the cloud engine...\", i.e. the remote hot-store preflight also ran).",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-12T18:05:00Z",
+  "updated_at": "2026-08-12T18:05:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

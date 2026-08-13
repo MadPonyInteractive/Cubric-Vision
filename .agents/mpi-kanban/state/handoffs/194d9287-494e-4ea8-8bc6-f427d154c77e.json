@@ -4,7 +4,7 @@
   "generated_at": "2026-08-11T18:25:00Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-539 closed on live proof (6 failures + toast routing), MPI-540 fixed, MPI-541's hypothesis disproven, MPI-542 umbrella retargeted to 1.4.1",
     "branch": "master"

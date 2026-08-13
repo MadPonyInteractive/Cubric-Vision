@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """MPI-508 close-out — Stop-event check that handoffs went through the skill.
 
-A handoff is not just a JSON file. `/mpi-end-session` writes one as the LAST step
-of a close-out that also syncs rules/docs, heals knowledge, runs the project's
-close-out.md, resolves `validating` cards, commits and pushes — and then INDEXES
-it in `state/index.json`. Hand-write the file and every one of those is skipped
-silently; the next session resumes from a handoff nobody reconciled.
+A handoff is not just a JSON file. `/mpi-handoff` tops up the plan's running
+notes, commits and pushes the session's work, and INDEXES the handoff in
+`state/index.json`. Hand-write the file and every one of those is skipped
+silently; the next session resumes from a handoff nobody reconciled, off a
+branch that never got the commit.
 
 Indexing is the discriminator, and it is a fact on disk: the skill always adds the
 handoff to `active_handoffs`, a hand-written one is missing from it. That makes
@@ -84,9 +84,9 @@ def build_message(unindexed, stale):
     lines = ["⚠️  Handoff/index drift — `state/index.json` and `state/handoffs/` disagree:"]
     lines += _listing(unindexed, "is open but NOT in active_handoffs")
     if unindexed:
-        lines.append("    A hand-written handoff skips the whole close-out (rules/docs sync,")
-        lines.append("    knowledge heal, close-out.md, the validating sweep, commit, push).")
-        lines.append("    Run /mpi-end-session — it writes AND indexes the handoff.")
+        lines.append("    A hand-written handoff skips the running-notes top-up, the commit,")
+        lines.append("    the push, and the index entry.")
+        lines.append("    Run /mpi-handoff — it writes AND indexes the handoff.")
     lines += _listing(stale, "is indexed active but its file is closed/superseded/missing")
     if len(unindexed) + len(stale) > SHOW:
         lines.append("    That many at once is a backlog, not this session — run /mpi-cleanup.")
@@ -109,12 +109,12 @@ def _selftest():
     assert build_message(*analyze({"a"}, {"a": "open"})) is None
     # the failure this exists for: written by hand, never indexed
     m = build_message(*analyze(set(), {"abcdef1234": "open"}))
-    assert m and "abcdef12" in m and "/mpi-end-session" in m
+    assert m and "abcdef12" in m and "/mpi-handoff" in m
     # accepted counts as active on both sides
     assert build_message(*analyze({"a"}, {"a": "accepted"})) is None
     # closed file still indexed -> stale, and no "run the skill" advice
     m = build_message(*analyze({"a"}, {"a": "closed"}))
-    assert m and "closed/superseded/missing" in m and "/mpi-end-session" not in m
+    assert m and "closed/superseded/missing" in m and "/mpi-handoff" not in m
     # indexed but file deleted -> stale
     assert "stale" not in (build_message(*analyze({"a"}, {})) or "") or True
     assert build_message(*analyze({"a"}, {})) is not None

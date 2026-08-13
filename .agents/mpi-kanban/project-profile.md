@@ -3,11 +3,12 @@ schema: mpi-kanban/project-profile/v1
 mode: scalable-foundation
 mode_rationale: user-confirmed at setup and re-confirmed 2026-08-09; strong repo evidence (21 .claude/rules, docs/ tree with a routing map, schema versioning, CI on push, 0 board violations)
 mode_source: user
-pack_version: 1.0.1
+pack_version: 1.1.1
 push_policy: auto
 setup_date: 2026-05-23
-last_refresh: 2026-08-09
-last_refresh_notes: Mpi-Kanban 1.0 migration (MPI-492). The pre-1.0 skills pack is gone and the plugin's six hooks now enforce what CLAUDE.md hand-documented - the pre-authorization, claim, next_id and destructive-git bullets were deleted and named to their hooks. The `.claude/skills/mpi-end/` wrapper was split: its pack half now ships in `mpi-end-session`, its release-awareness half moved to `.agents/mpi-kanban/close-out.md`. Duplicate `guard-destructive-git.py` retired. Added `.claude/rules/behaviour.md` and three worker archetypes. push_policy recorded as auto per the user, 2026-08-09.
+last_refresh: 2026-08-13
+last_refresh_notes: Refresh on Mpi-Kanban 1.1.1. Board validation was FAILING on MPI-550 (status `active` in `done`, plus four `links` naming files that were never created) - both repaired, validator now passes. State index pruned - `active_handoffs` held 9 records where only 1 was live, and `pending_file_states` held 10 paths whose claim records were all `complete`/`verified`; three handoff files carried a status their card had outgrown. Seven dead memory pointers in the knowledge index repointed. Consolidation sweep on 62 `todo` cards created two umbrellas - MPI-552 (the LTX v2v Flow trio, all three blocked on MPI-531) and MPI-553 (upscalers leave the model picker, strict 506 -> 507 -> 515 ordering). Verified clean and left alone: `.agents/mpi-kanban.local.md` (19 listed rules == 19 rules carrying a briefing section), `behaviour.md` (byte-identical to the 1.1.1 template), the three worker archetypes, and the project's own `guard-shell-backticks.py`, which is still NOT a duplicate - 1.1.1's `guard-shell.py` has only heredoc and continuation rules.
+prior_refresh_notes: Mpi-Kanban 1.0 migration (MPI-492). The pre-1.0 skills pack is gone and the plugin's six hooks now enforce what CLAUDE.md hand-documented - the pre-authorization, claim, next_id and destructive-git bullets were deleted and named to their hooks. The `.claude/skills/mpi-end/` wrapper was split: its pack half now ships in `mpi-end-session`, its release-awareness half moved to `.agents/mpi-kanban/close-out.md`. Duplicate `guard-destructive-git.py` retired. Added `.claude/rules/behaviour.md` and three worker archetypes. push_policy recorded as auto per the user, 2026-08-09.
 knowledge_index: .agents/mpi-kanban/project-knowledge-index.md
 ---
 
@@ -31,6 +32,7 @@ See `CLAUDE.md` § "Critical Rules Snapshot" for the canonical list (BEM, Compon
 - `npm run server` — run Express server only (no Electron)
 - `npm run test:desktop` — Playwright Electron tests (sets `CUBRIC_E2E_USER_DATA`)
 - `npm run lint` / `npm run lint:components` — ESLint
+- `npm run release:deps` — dependency audit leg of the release gate
 - `npm run release:check` — mandatory release-health gate before bump builds, pre-release generation tests, tags, pushes, or publication
 - `npm run release:notes` — generate the release notes; `npm run release:approve -- --yes` approves them non-interactively (the old `printf 'y\n' |` pipe is blocked by the Bash classifier and reads as a hang)
 - `npm run build:portable:dry-run` — stage-and-verify without producing the artifact
@@ -50,7 +52,6 @@ See `CLAUDE.md` § "Critical Rules Snapshot" for the canonical list (BEM, Compon
 ## Open Gaps
 
 - Stage redesign phases 0–10.2 merged (commit `e9b5eb6`); follow-up phases (>10.2) not yet planned.
-- ~~Portable distribution / install flow gated~~ — CLOSED 2026-08-01: 1.3.0 published on GitHub with 5 artifacts (3 full + 2 update bundles), docs site live, all social surfaces posted. The Windows update bundle was built and verified but deliberately not shipped — the 1.2.0-era updater cannot apply it.
 - Sibling repos (Website, Docs) need new Stage design ported; design source at `c:\AI\Mpi\CubricStudio_Redesign\` (no git).
 
 ## Mode Notes

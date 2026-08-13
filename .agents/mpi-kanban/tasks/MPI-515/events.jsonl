@@ -1,1 +1,2 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-515", "type": "task.created", "at": "2026-08-10T11:37:34Z", "actor": "claude", "summary": "1.5 blocker for the nvidia-pid ModelDef removal; blocked on MPI-506 -> MPI-507"}
+{"schema":"mpi-kanban/event/v1","id":"MPI-515","type":"task.updated","at":"2026-08-13T21:46:00Z","actor":"claude","summary":"Folded into umbrella MPI-553 by the project-refresh consolidation sweep."}

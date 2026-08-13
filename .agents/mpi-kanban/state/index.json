@@ -1,85 +1,14 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-12T17:57:11Z",
+  "updated_at": "2026-08-13T21:40:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
   "active_tasks": [],
   "active_file_claims": [],
-  "pending_file_states": [
-    "js/services/comfyController.js",
-    "scripts/smoke-workflows.mjs",
-    "docs/playbooks/bump-engine/01-smoke-run.md",
-    "js/shell/navigation.js",
-    "routes/remoteModels.js",
-    "tests/restart-drain-wait.test.cjs",
-    "tests/smoke-evidence-merge.test.cjs",
-    "routes/remotePodLifecycle.js",
-    "tests/smoke-free-space.test.cjs",
-    "tests/output-prompt-capture.test.cjs"
-  ],
+  "pending_file_states": [],
   "open_messages": [],
   "active_handoffs": [
-    {
-      "id": "584f6547-fe3c-4f0d-afac-22daeee351b4",
-      "path": ".agents/mpi-kanban/state/handoffs/584f6547-fe3c-4f0d-afac-22daeee351b4.json",
-      "task_card": "MPI-507",
-      "status": "resolved",
-      "created_at": "2026-08-10T06:10:41Z"
-    },
-    {
-      "id": "d8c2b3a8-a833-4ba0-a354-2d964b66238a",
-      "path": ".agents/mpi-kanban/state/handoffs/d8c2b3a8-a833-4ba0-a354-2d964b66238a.json",
-      "task_card": "MPI-450",
-      "status": "open",
-      "created_at": "2026-08-10T15:41:00Z"
-    },
-    {
-      "id": "8ac42dc6-0235-4023-b4d3-0e2ad8a23ba2",
-      "path": ".agents/mpi-kanban/state/handoffs/8ac42dc6-0235-4023-b4d3-0e2ad8a23ba2.json",
-      "task_card": "MPI-4",
-      "status": "resolved",
-      "created_at": "2026-08-10T21:30:00Z",
-      "superseded_by": "07642c07-88b8-4d48-ba49-4bdafba76b2f"
-    },
-    {
-      "id": "887431d5-f073-464b-9765-a8ea888cefa9",
-      "path": ".agents/mpi-kanban/state/handoffs/887431d5-f073-464b-9765-a8ea888cefa9.json",
-      "task_card": "MPI-4",
-      "status": "resolved",
-      "created_at": "2026-08-11T03:25:00Z",
-      "superseded_by": "46e2973d-5511-493f-b8c6-17fa08ccefc6"
-    },
-    {
-      "id": "46e2973d-5511-493f-b8c6-17fa08ccefc6",
-      "path": ".agents/mpi-kanban/state/handoffs/46e2973d-5511-493f-b8c6-17fa08ccefc6.json",
-      "task_card": "MPI-4",
-      "status": "resolved",
-      "created_at": "2026-08-11T05:05:00Z",
-      "superseded_by": "a92f1c68-9c10-4b71-91db-06527bc5fa99"
-    },
-    {
-      "id": "a92f1c68-9c10-4b71-91db-06527bc5fa99",
-      "path": ".agents/mpi-kanban/state/handoffs/a92f1c68-9c10-4b71-91db-06527bc5fa99.json",
-      "task_card": "MPI-537",
-      "status": "resolved",
-      "created_at": "2026-08-11T06:55:00Z"
-    },
-    {
-      "id": "a55b47cd-d5e2-4adf-94a5-4c65d38d3a97",
-      "path": ".agents/mpi-kanban/state/handoffs/a55b47cd-d5e2-4adf-94a5-4c65d38d3a97.json",
-      "task_card": "MPI-539",
-      "status": "superseded",
-      "created_at": "2026-08-11T16:40:00Z",
-      "superseded_by": "194d9287-494e-4ea8-8bc6-f427d154c77e"
-    },
-    {
-      "id": "194d9287-494e-4ea8-8bc6-f427d154c77e",
-      "path": ".agents/mpi-kanban/state/handoffs/194d9287-494e-4ea8-8bc6-f427d154c77e.json",
-      "task_card": "MPI-542",
-      "status": "open",
-      "created_at": "2026-08-11T18:25:00Z"
-    },
     {
       "id": "70112406-4ec5-48b3-a9e6-b4bfc63bacfc",
       "path": ".agents/mpi-kanban/state/handoffs/70112406-4ec5-48b3-a9e6-b4bfc63bacfc.json",
