@@ -1217,14 +1217,14 @@ export const PROMPT_BOX_CONTROLS = {
      *     would silently flip it on a video model that costs 100s a run.
      *
      * ON raises the turbo-distill LoRA to strength 0.75 and swaps the whole sampler
-     * shape with it: 6 steps / euler / beta against 20 / res_multistep / simple, plus a
+     * shape with it: 6 steps / euler / beta against 25 / res_multistep / simple, plus a
      * 3-step stage split instead of 10-or-5. 204s -> ~88s at 864x480, warm.
      *
      * MPI-508 re-measured this: the weight is now lightx2v's, at 6 steps and strength
      * 0.75, not the 8-step/1.0 larry LoRA these numbers were first taken from.
      *
      * Default OFF (see PROMPT_CONTROL_DEFAULTS.h3Turbo) — turbo quality is below the
-     * 20-step path here, so speed is the opt-in and quality is what a user gets without
+     * 25-step path here, so speed is the opt-in and quality is what a user gets without
      * asking. That is the opposite call to krea2Turbo, on purpose.
      */
     h3Turbo: {
@@ -1240,7 +1240,7 @@ export const PROMPT_BOX_CONTROLS = {
             // Bare icon button in the button strip, mounting exactly like krea2Turbo.
             this._instance = MpiButton.mount(hostEl, {
                 icon: 'bolt',
-                info: 'Turbo — 6 steps instead of 20, about half the time, slightly less detail',
+                info: 'Turbo — 6 steps instead of 25, about a third of the time, slightly less detail',
                 size: 'sm',
                 variant: 'primary',
                 toggleable: true,

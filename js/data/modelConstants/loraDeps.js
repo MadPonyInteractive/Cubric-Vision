@@ -18,12 +18,13 @@ export const loraDeps = {
         sha256: '0ace5244e3d1256f884662c261b017249796cf5b95f05d5ed93cc02a478967b8'
     },
     // H3 turbo distill (MPI-505, weight swapped MPI-508) — the ONLY step-distill lever we
-    // ship for H3, the only non-distilled video model in the fleet (20 steps; LTX 8,
-    // WAN 2.2 6, WAN 5B 4). 20 -> 6 steps, 105s -> 87.8s measured on one clip. OPT-IN:
-    // quality sits slightly below the 20-step path, so the toggle is off by default.
-    // Strength is VALUE-gated (MpiMath 0.75/0.0 into BOTH strength_model and strength_clip)
-    // — MpiLoraModelClip only short-circuits when both are 0, and that short-circuit is
-    // what skips the file load when turbo is off. The clip half is a no-op either way:
+    // ship for H3, the only non-distilled video model in the fleet (25 steps; LTX 8,
+    // WAN 2.2 6, WAN 5B 4). 25 -> 6 steps, 105s -> 87.8s measured on one clip. OPT-IN:
+    // quality sits slightly below the 25-step path, so the toggle is off by default.
+    // Strength is VALUE-gated (MpiMath 0.75/0.2 into BOTH strength_model and strength_clip)
+    // — MpiLoraModelClip only short-circuits when both are 0, so since MPI-550 put the
+    // non-turbo branch on 0.2 the short-circuit NEVER fires for H3: this weight now loads
+    // on both paths, and uninstalling it breaks non-turbo too. The clip half is a no-op either way:
     // this is a pure diffusion_model LoRA (416 tensors, zero text-encoder keys), gated on
     // both strengths purely so the short-circuit still fires. Subfoldered under
     // loras/minimax-h3/; ComfyUI lists it BACKSLASHED (`minimax-h3\...`) — rides the

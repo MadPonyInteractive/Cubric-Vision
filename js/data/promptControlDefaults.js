@@ -31,12 +31,14 @@ export const PROMPT_CONTROL_DEFAULTS = Object.freeze({
     // away. The template bakes a safe default; the injected value always wins, so the
     // bake only shows through if this control fails to mount. (MPI-316, MPI-365)
     krea2Turbo: true,
-    // MiniMax H3 turbo toggle (Input_is_Turbo, MPI-505): OFF = 20 steps (res_multistep,
-    // simple), ON = 8 steps (euler, beta) with the turbo-distill LoRA raised to strength
-    // 1.0. 204s -> 96s at 864x480 warm. Stored perModel, same reasoning as krea2Turbo.
+    // MiniMax H3 turbo toggle (Input_is_Turbo, MPI-505): OFF = 25 steps (res_multistep,
+    // simple) with the turbo-distill LoRA held at 0.2, ON = 6 steps (euler, beta) with it
+    // raised to 0.75. 204s -> 96s at 864x480 warm. Stored perModel, same reasoning as
+    // krea2Turbo. (Steps and the 0.2 non-turbo strength are MPI-550; the 6-step/0.75 turbo
+    // weight is MPI-508.)
     //
     // Default OFF, the OPPOSITE of krea2Turbo, and deliberately so: turbo quality here
-    // sits slightly BELOW the 20-step path (the user's own judgement), so the default
+    // sits slightly BELOW the 25-step path (the user's own judgement), so the default
     // has to be the good one and speed is the opt-in. Krea2's turbo is a wash on
     // quality, which is why that one defaults ON.
     h3Turbo: false,

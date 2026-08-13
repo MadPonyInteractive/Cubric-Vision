@@ -31,6 +31,10 @@ _(none yet)_
 
 Notes read as notes now — Project notes and Card notes render your markdown instead of showing the raw text. Headings, tables, lists, quotes and code all come out formatted, with each heading level in its own colour so a long document is easy to scan. A pencil/eye pair at the top right switches between editing the source and reading it, and the preview shows what you have typed before you save it. Long notes scroll — before, anything past the height of the window was simply cut off with no way to reach it. The window is wider and the text larger, so a table has room to breathe. Release notes take markdown too, so this "What's new" can be formatted from here on.
 
+Video has a 21:9 cinematic ratio. It sits beside 1:1, 9:16 and 16:9 on every video model and at every quality level, so the wide anamorphic shape is a choice up front rather than a crop afterwards.
+
+
 ## Fixes
 
-_(none yet)_
+MiniMax H3 video looks better with Turbo off. The slower setting was coming out worse than the fast one, which is backwards - it now gives the quality it asks the extra time for.
+
