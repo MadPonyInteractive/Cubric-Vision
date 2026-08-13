@@ -82,3 +82,41 @@ generations in the western production before it was spotted.
 
 Related: [MPI-549](../MPI-549/brief.md), also H3 workflow work on the same
 rented card.
+
+---
+
+## Outcome (2026-08-13, commit `56827f2c`) - FIXED, cause was neither candidate
+
+The diagnosis above was right about the symptom and wrong about the cause. It is
+**not** the VAE decode (MPI-549 independently disproved that: the H3 video VAE
+already tiles internally) and **not** too few steps. The real cause is the
+opposite of the original guess:
+
+**H3 degrades at HIGH step counts in ComfyUI.** Non-turbo at 20 steps was
+over-cooked, not under-cooked. Which is why the preview latents looked fine all
+the way through sampling and only the final result disappointed - the latents
+were fine, the extra sampling was the damage.
+
+Fabio's fix, authored on the bench and applied to **both** H3 workflows:
+
+| Change | Node | Was | Now |
+|---|---|---|---|
+| Turbo LoRA on the NON-turbo branch | `Mpi Math` | `0.75 if a else 0.0` | `0.75 if a else 0.2` |
+| Non-turbo sampler steps | `BasicScheduler` | 20 | 25 |
+
+Turbo's own 6-step `BasicScheduler` is untouched. The LoRA at 0.2 is a light
+stabiliser on the slow path, not the 0.75 turbo bake.
+
+Synced with `sync-raw-workflows.mjs` against the **48188 engine** (the bench on
+8188 was down); injection rules validated; bench state (prompt, seed, ref image
+path, 1376x768) stripped by the generator bake. `Input_Duration` baked to 3 is
+inert - the app injects it per generation (`PromptBoxControls.js:571`). The sigma
+shift node re-titled itself `ModelSamplingMiniMaxH3` on the bench; same node id,
+same `MiniMaxH3SigmaShift` class, same `shift_video 12 / shift_audio 5`, and no
+app code keys off that title.
+
+**Open, deliberately not blocking this card:** Fabio still has app-side tests to
+run. If those show non-turbo carries no advantage over turbo even with this fix,
+the answer is a NEW card to remove the non-turbo path entirely - not a reopen of
+this one. The ~2x wall clock (~7min vs ~3min) that made non-turbo a bad deal is
+unchanged by this fix.
