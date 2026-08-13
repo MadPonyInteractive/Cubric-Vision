@@ -4,7 +4,7 @@
   "generated_at": "2026-08-12T17:57:11Z",
   "from_session": null,
   "to_role": "implementer",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-546 generation.submit connector capability + MPI-547 follow-up scoping",
     "branch": "master"
@@ -44,7 +44,12 @@
       "handoffs": ".agents/mpi-kanban/tasks/MPI-547/handoffs/"
     }
   },
-  "allowed_actions": ["read", "continue", "verify", "implement"],
+  "allowed_actions": [
+    "read",
+    "continue",
+    "verify",
+    "implement"
+  ],
   "knowledge_preservation": {
     "completed": [
       "docs/generation-lifecycle.md: new section on the agent as third producer + the route-is-the-contract seam",
@@ -80,11 +85,18 @@
       "Every one of MPI-546's three live-found bugs returned ok:true from the API. For any change whose consumer is the UI, watch the real app before calling it done - see feedback_verify_ui_driving_apis_live.md"
     ],
     "files_modified": [
-      "routes/connector.js", "services/connectorResponder.js", "server.js",
-      "resources/cubric/connector-manifest.json", "js/shell/agentDispatch.js", "js/shell.js",
-      "tests/connector-responder.test.cjs", "tests/agent-generation-relay.test.cjs",
-      ".claude/skills/cubric-vision/SKILL.md", "docs/generation-lifecycle.md",
-      ".agents/mpi-kanban/tasks/MPI-546/", ".agents/mpi-kanban/tasks/MPI-547/",
+      "routes/connector.js",
+      "services/connectorResponder.js",
+      "server.js",
+      "resources/cubric/connector-manifest.json",
+      "js/shell/agentDispatch.js",
+      "js/shell.js",
+      "tests/connector-responder.test.cjs",
+      "tests/agent-generation-relay.test.cjs",
+      ".claude/skills/cubric-vision/SKILL.md",
+      "docs/generation-lifecycle.md",
+      ".agents/mpi-kanban/tasks/MPI-546/",
+      ".agents/mpi-kanban/tasks/MPI-547/",
       ".agents/mpi-kanban/project-knowledge-index.md"
     ],
     "files_to_read_first": [
@@ -98,9 +110,22 @@
     "profile": ".agents/mpi-kanban/project-profile.md",
     "knowledge_index": ".agents/mpi-kanban/project-knowledge-index.md",
     "mode": "scalable-foundation",
-    "relevant_topics": ["Agent-facing HTTP API (connector, generation dispatch)", "Application state", "Op & model selection"]
+    "relevant_topics": [
+      "Agent-facing HTTP API (connector, generation dispatch)",
+      "Application state",
+      "Op & model selection"
+    ]
   },
-  "rules_active": [".claude/rules/dos_and_donts.md"],
-  "recent_events": [{ "at": "2026-08-12T17:57:11Z", "event": "handoff_created" }],
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/70112406-4ec5-48b3-a9e6-b4bfc63bacfc.json and use mpi-continue to continue from where we left off. The next action is: verify MPI-546's ratio fix (commit ede087b1) live in the app before starting anything new - restart Cubric Vision, open the mpi-546-smoke project (saved at 1:1), submit a plain t2i with no ratio override via POST /connector/generate, and confirm the output is a square 1024x1024. Only after that passes, move to MPI-547 (.agents/mpi-kanban/tasks/MPI-547/) - named generation parameters so an agent can set ratio/quality/turbo/style per generation instead of inheriting the open project's settings."
+  "rules_active": [
+    ".claude/rules/dos_and_donts.md"
+  ],
+  "recent_events": [
+    {
+      "at": "2026-08-12T17:57:11Z",
+      "event": "handoff_created"
+    }
+  ],
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/70112406-4ec5-48b3-a9e6-b4bfc63bacfc.json and use mpi-continue to continue from where we left off. The next action is: verify MPI-546's ratio fix (commit ede087b1) live in the app before starting anything new - restart Cubric Vision, open the mpi-546-smoke project (saved at 1:1), submit a plain t2i with no ratio override via POST /connector/generate, and confirm the output is a square 1024x1024. Only after that passes, move to MPI-547 (.agents/mpi-kanban/tasks/MPI-547/) - named generation parameters so an agent can set ratio/quality/turbo/style per generation instead of inheriting the open project's settings.",
+  "resolved_at": "2026-08-14T00:00:00Z",
+  "resolution": "Its blocking next_action - live-verify ede087b1 - PASSED (t2i_006 = 1024x1024; evidence in tasks/MPI-546/validation.md Round 4). Every other item it carried now lives on the MPI-547 card itself (brief.md + plan.md hold the locked decisions, the 22-control surface and the phases), so this record is redundant. MPI-547 has NOT started and is now blocked by MPI-556."
 }
