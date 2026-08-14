@@ -145,6 +145,24 @@ When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):
    All three of 2026-08-08's collisions were recoverable ONLY because the loser had already
    committed. An uncommitted card would simply be gone. Card: MPI-488.
 
+10. **An umbrella is a card, not a card FIELD.** `parent` and `children` are NOT in the card
+    contract — membership is recorded in exactly two places, and a reader needs both:
+    the umbrella's `plan.md` (a `## Members` table, one row per member id, plus the phases
+    that order them) and each member's `description`, prefixed
+    `UMBRELLA: MPI-<n> - <title> (consolidation sweep <date>). Members and phase order:
+    tasks/MPI-<n>/plan.md.` A member that does not name its umbrella gets picked up cold and
+    the ordering the umbrella exists for is lost.
+    Members otherwise stay untouched — same column, same maturity, same `files.json`. An
+    umbrella never closes, merges or moves its members; each closes when the phase covering
+    it lands.
+    Do not copy the shape off a neighbouring card, the same trap as rule 5: MPI-542 (`done`)
+    carries `children` + a `labels: ["umbrella"]` from an older convention, and MPI-541
+    carried a matching `parent` until 2026-08-14. Both predate the current shape; MPI-552 /
+    MPI-553 (2026-08-13) and MPI-558–562 (2026-08-14) are the ones to copy.
+    **A two-card cluster is enough** when the pair shares a root cause, a hard ordering, or a
+    one-shot cost (a VPN window, one trip to a Mac). The pack's "3+" is a floor for THEME
+    clustering, not for these.
+
 ## Timestamps across sessions are NOT comparable — the VPN skews clocks
 
 Concurrent sessions in this tree stamp kanban times **hours** apart (seen 2026-07-29: one
