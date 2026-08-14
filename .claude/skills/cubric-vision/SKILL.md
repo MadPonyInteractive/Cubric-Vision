@@ -355,6 +355,25 @@ finishes**, not when it is queued, so expect it to block for as long as the run
 takes (a queued video can be minutes; the route gives up after 30 and the
 generation carries on in the app regardless).
 
+**`modelId` is the ModelDef id, and it is not the name.** They come from
+`js/data/modelConstants/models.js` (grep `id: '`) - `klein-4b`, not `klein`;
+`minimax-h3-ref2va`, not `minimax-h3`. A wrong one returns `UNKNOWN_MODEL`,
+which reads like the model is not installed when it is only misspelled.
+
+**`injectionParams` keys are logical names, not node titles.** `Width`,
+`Height` and `Ratio_Label` for size. A control that shares one node with
+another addresses its own widget through a dotted key - the style rack is
+`Input_Style_Selector.selector` (an integer index into the model's
+`styleLoraLabels`) and `Input_Style_Selector.strength_model` (the stylization
+float). The authority is each control's `getInjectionParams()` in
+`js/components/Organisms/MpiPromptBox/PromptBoxControls.js`.
+
+Raw `injectionParams` always wins over anything the app resolves, which makes
+it the escape hatch for a parameter with no named form yet. **It does not
+reach the sidecar's `controlState`**, so a generation steered this way records
+the project's saved controls instead of the ones it ran with, and Reuse
+restores the wrong thing (MPI-556).
+
 Success returns the item, so a follow-up run can consume it:
 
 ```json

@@ -38,3 +38,5 @@ Video has a 21:9 cinematic ratio. It sits beside 1:1, 9:16 and 16:9 on every vid
 
 MiniMax H3 video looks better with Turbo off. The slower setting was coming out worse than the fast one, which is backwards - it now gives the quality it asks the extra time for.
 
+Reference images and audio no longer linger in the prompt box after you move to a model or operation that cannot use them. Reusing a text-to-image card while references were staged left them sitting in the tray, and the next generation quietly ran carrying inputs it should never have had.
+
