@@ -421,6 +421,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 <div class="mpi-group-card__order-badge mpi-selection-order-badge" style="display:none"></div>
                 <div class="mpi-group-card__top-actions">
                     <div class="mpi-group-card__fav-wrap"></div>
+                    <div class="mpi-group-card__notes-wrap"></div>
                     <div class="mpi-group-card__reuse-wrap"></div>
                 </div>
                 <div class="mpi-group-card__preview-badge">PREVIEW</div>
@@ -546,6 +547,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const subEl      = qs('.mpi-group-card__sub', cardEl);
             const topBadgeEl   = qs('.mpi-group-card__top-badge', cardEl);
             const favWrap      = qs('.mpi-group-card__fav-wrap', cardEl);
+            const notesWrap    = qs('.mpi-group-card__notes-wrap', cardEl);
             const reuseWrap    = qs('.mpi-group-card__reuse-wrap', cardEl);
             const continueWrap = qs('.mpi-group-card__continue-wrap', cardEl);
             const finishWrap   = qs('.mpi-group-card__finish-wrap', cardEl);
@@ -570,6 +572,18 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     emit('favourite', { group, favourite: active });
                 }
                 cardEl.classList.toggle('mpi-group-card--favourited', active);
+            });
+
+            // Notes marker — persistent (not hover-revealed) and shown only when the
+            // selected item carries notes, so an annotated card is spottable without
+            // opening it. Click opens the same editor as the context-menu entry.
+            const _notesBtn = MpiButton.mount(notesWrap, {
+                icon: 'text', size: 'sm', variant: 'ghost', info: 'Has notes',
+            });
+
+            _notesBtn.on('click', (e) => {
+                e.originalEvent?.stopPropagation();
+                emit('card-notes', { group });
             });
 
             const _reuseBtn = MpiButton.mount(reuseWrap, {
@@ -1139,6 +1153,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 _favourite = group?.favourite || false;
                 _favBtn.el.setActive(_favourite);
                 cardEl.classList.toggle('mpi-group-card--favourited', _favourite);
+                notesWrap.style.display = selected?.notes?.trim() ? '' : 'none';
                 reuseWrap.style.display = (itemHasReusablePrompt(selected) || !!findOriginalReusableItem(group)) ? '' : 'none';
 
                 const _isPreview = selected?.stage === 'preview';
@@ -1164,6 +1179,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             cardEl.addEventListener('click', (e) => {
                 if (_generating) return;
                 if (favWrap.contains(e.target)) return;
+                if (notesWrap.contains(e.target)) return;
                 if (reuseWrap.contains(e.target)) return;
                 if (continueWrap.contains(e.target)) return;
                 if (finishWrap.contains(e.target)) return;
@@ -1559,6 +1575,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 sel?.operation || '',
                 sel?.modelId || '',
                 sel?.uploaded ? 'uploaded' : '',
+                sel?.notes?.trim() ? 'notes' : '',
                 original?.operation || '',
                 original?.modelId || '',
                 original?.uploaded ? 'original-uploaded' : '',
