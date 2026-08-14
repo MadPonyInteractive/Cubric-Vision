@@ -72,13 +72,13 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-565",
       "MPI-536",
       "MPI-557",
       "MPI-520",
       "MPI-531"
     ],
     "done": [
+      "MPI-565",
       "MPI-566",
       "MPI-564",
       "MPI-563",
@@ -169,8 +169,17 @@
       "MPI-549"
     ]
   },
-  "updated_at": "2026-08-14T07:05:00Z",
+  "updated_at": "2026-08-14T06:12:41Z",
   "events": [
+    {
+      "at": "2026-08-14T06:12:41Z",
+      "type": "task.moved",
+      "task": "MPI-565",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "note": "doing -> done. Two bugs, both fixed and verified live: card teardown (orphan preview loops) and an in-flight preload revoked by ring eviction (traced 1ms apart on a live run). A/B on a running app: patched burst 0 errors, same burst with the abort disabled 1 error. 608/608 tests."
+    },
     {
       "at": "2026-08-14T05:24:22Z",
       "type": "task.updated",

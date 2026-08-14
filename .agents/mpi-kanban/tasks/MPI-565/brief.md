@@ -44,4 +44,36 @@ and `_cleanupDetachedState`; the grid's `el.destroy` call now resolves.
   timers, and that every `entry.el.remove()` is preceded by a destroy call.
 - Mutation check: the same assertions run against `git show HEAD:` of the file report
   `destroy defined: false`, `guarded: 0/2` — the test fails without the fix.
-- Open: user reload + confirmation that the console stream stops.
+## Part 2 — the residual burst (same card, different bug)
+
+After the teardown fix the stream stopped, but a handful of one-shot errors remained,
+starting at step 1–2 of an H3 reference-to-video run. Instrumented live (probe wrapping
+`createObjectURL`/`revokeObjectURL` and the `HTMLImageElement.src` setter, Playwright on
+:3000) rather than reasoned about, and the trace named it in one run:
+
+```
+t=271801  mint
+t=271801  set    ← _setPreviewImageSrc ← _paintNextPreviewFrame ← _armPreviewTimer
+t=271802  revoke ← _revokePreviewUrl ← _enqueuePreviewFrame (ring eviction)
+```
+
+Self-inflicted, single owner. `_setPreviewImageSrc` preloads each frame through a
+detached `new Image()`. A burst previewer appends frames faster than a decode, so the
+ring evicts the frame the play head started on 1 ms earlier and revokes it mid-load.
+Nothing else ever held the URL — no second consumer, and unrelated to the paint work in
+MPI-566 (that commit contains no blob code at all).
+
+`_revokePreviewUrl` now aborts a matching pending preload — handlers detached, `src`
+removed — before revoking, which covers eviction, `resetPreviewClip` and teardown alike.
+
+### Evidence (live A/B, same harness)
+
+| run | frames | evictions | paints | console errors |
+|---|---|---|---|---|
+| patched | 40 | 32 | 227 | **0** |
+| patched, 120-frame burst | 120 | — | — | **0** |
+| abort disabled (`__AB_OFF`) | 40 | — | — | **1** |
+
+A still-mode krea2 run (6 frames, ~9 s apart) never hit the window — which is why this
+only ever appeared on video models. 608/608 tests, eslint clean.
+
