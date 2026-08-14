@@ -430,14 +430,49 @@ was one chunk, so there were no seams to see. That confirms the predicted table
 above: at crop resolution on a clean card, chunking does not engage. Seams only
 become a question on a loaded card or a longer clip.
 
+**B and C are indistinguishable to Fabio** (2026-08-14): *"the WaveLet and the
+RAW SeedVR 2 are basically the same in my eyes."* The metric agrees - they sit
+within 0.02x of each other.
+
+**This is not yet B6's answer, and must not be read as one.** It says SeedVR2
+barely shifted colour *on this clip*, so the wavelet pass had little to correct.
+It does not test what detail transfer exists for:
+
+- **B1 skipped paste-back entirely by design.** The restored crop was judged on
+  its own. Detail transfer earns its keep at the boundary with the surrounding
+  frame, which nothing here exercised.
+- The LTX v2v branch (B2) samples at a real denoise and invents more, so it has
+  far more room to drift than a 1-step restoration model.
+- Degraded footage - the case Fabio named - gives the sampler more latitude in
+  every direction, colour included.
+
+So `wavelet` stays free insurance for now: identical output when the sampler
+behaves, low-frequency protection when it does not. Whether `MpiDetailTransfer`
+needs to exist is still open, and is decided at B6 after paste-back exists.
+
 **Judging assets** (in the session scratchpad `b1_compare/`):
 `B1_side_by_side.mp4` (A | B | C, 24 fps, for flicker), and
 `B1_200pct_frame002 / 037 / 073.png` (200% face crops at start, middle, end, for
 sharpness and drift). Raw outputs and all 73 PNGs per branch are in
 `D:\WORK\Images\Outputs\MPI557_B1_3b_*`.
 
-**Verdict: NOT YET STATED.** Per this plan's verify mode, B1 does not close
-without Fabio looking at the output. Nothing above is a GO.
+**Verdict: GO.** Fabio, 2026-08-14, after viewing the 200% stills and the
+side-by-side: *"looks fabulous, mate. If we manage to place this on a shitty
+face video, it's gold, all right."*
+
+The gate question - does a ~108 px face upscaled to 512 come back sharp, or
+waxy - is answered **sharp**. Not plastic: the 200% crops carry visible skin
+grain and brow hair, which is the opposite of the failure mode this gate
+existed to catch. Phase 0 continues to B2.
+
+**Scope note that came with the GO, and it changes the next test.** B1 ran on a
+**clean 2560x1408 LTX generation**. The product case Fabio named is a *"shitty
+face video"* - compressed, noisy, small soft face. That is a different input
+distribution and B1 does not speak for it. Before Phase 1 specs anything, point
+the same graph at genuinely degraded footage; the held-back stress clip
+`cowboys/Media/ref2v_ms_006.mp4` (864x480, ~29 px face, 8x upscale) is the
+nearest thing already on disk, and real compressed footage would be better
+still.
 
 ### Bench facts corrected
 

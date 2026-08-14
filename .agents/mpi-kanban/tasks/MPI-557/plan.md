@@ -11,6 +11,24 @@ might not even work awesome at the end."*
 
 ## Current State
 
+**Session 2 handoff, 2026-08-14.** Desk pass D1-D3 done, B7 closed early against
+the brief (union window fails on 55-62% of real clips - `MpiFaceWindow` needs
+tracking, not a static box), and **B1 passed the gate: GO, stated by Fabio.**
+SeedVR2 3B, 208 px window upscaled 2.46x to 512, 73 frames, 35 s, ~10.8x the
+lanczos baseline's high-frequency energy with no within-clip collapse.
+
+Two things the GO came with:
+- The product case is a **"shitty face video"** - B1 ran on a clean 2560x1408
+  LTX generation, which does not speak for degraded footage. Re-run before
+  Phase 1 specs anything.
+- Raw vs wavelet output is **indistinguishable to Fabio** on this clip. Not B6's
+  answer - B1 skipped paste-back by design.
+
+Next is **B2**, the sampler bake-off. The bench is still UP on 8188 (~40 GB
+resident) so B2 can start immediately; kill it if the fresh session is not going
+to run B2 straight away.
+
+
 Project mode: scalable-foundation.
 
 Design, pipeline, rejected options and phase list live in [brief.md](brief.md).
@@ -85,7 +103,7 @@ post-hoc rationalisation:
       restart-then-recheck before concluding anything. Pick and record the
       source clip against the criteria above. **Verify:** probe output pasted
       into brief.md, clip path recorded.
-- [ ] **B1 - THE GATE.** Hardcoded box in `MpiBox` (numbers read off a frame by
+- [x] **B1 - THE GATE.** GO, stated by Fabio 2026-08-14. Verdict + the degraded-footage caveat in brief.md. Hardcoded box in `MpiBox` (numbers read off a frame by
       eye), crop the sequence, upscale to 512, SeedVR2 restore, **stop there**.
       No detection, no paste-back, no detail transfer. Judge the restored crop
       alone: sharp, or waxy/plastic? **Verify:** Fabio views the crop A/B
