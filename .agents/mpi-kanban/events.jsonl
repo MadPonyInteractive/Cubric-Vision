@@ -2710,3 +2710,34 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-515","type":"task.updated","at":"2026-08-13T21:46:00Z","actor":"claude","summary":"Folded into umbrella MPI-553 by the project-refresh consolidation sweep."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-557","type":"task.created","at":"2026-08-13T23:50:13Z","actor":"claude","summary":"Video face detailer - phased, Phase 0 is a bench GO/NO-GO before any app work."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-557","type":"task.updated","at":"2026-08-13T23:50:13Z","actor":"claude","summary":"Phase 0 research plan attached - answers the open questions and returns a GO/NO-GO. Maturity research -> planned."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-558","type":"task.created","at":"2026-08-14T00:20:00Z","actor":"claude","summary":"Umbrella created by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-524","type":"task.updated","at":"2026-08-14T00:20:00Z","actor":"claude","summary":"Folded into umbrella MPI-558 by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-502","type":"task.updated","at":"2026-08-14T00:20:00Z","actor":"claude","summary":"Folded into umbrella MPI-558 by the consolidation sweep."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-557", "type": "task.moved", "at": "2026-08-14T00:15:00Z", "actor": "claude", "summary": "todo -> doing. Phase 0 desk pass (D1-D3) starting: no GPU, no bench yet."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-559","type":"task.created","at":"2026-08-14T00:22:00Z","actor":"claude","summary":"Umbrella created by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-249","type":"task.updated","at":"2026-08-14T00:22:00Z","actor":"claude","summary":"Folded into umbrella MPI-559 by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-416","type":"task.updated","at":"2026-08-14T00:22:00Z","actor":"claude","summary":"Folded into umbrella MPI-559 by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-560","type":"task.created","at":"2026-08-14T00:24:00Z","actor":"claude","summary":"Umbrella created by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-531","type":"task.updated","at":"2026-08-14T00:24:00Z","actor":"claude","summary":"Folded into umbrella MPI-560 by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-532","type":"task.updated","at":"2026-08-14T00:24:00Z","actor":"claude","summary":"Folded into umbrella MPI-560 by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-561","type":"task.created","at":"2026-08-14T00:26:00Z","actor":"claude","summary":"Umbrella created by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-556","type":"task.updated","at":"2026-08-14T00:26:00Z","actor":"claude","summary":"Folded into umbrella MPI-561 by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-547","type":"task.updated","at":"2026-08-14T00:26:00Z","actor":"claude","summary":"Folded into umbrella MPI-561 by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-562","type":"task.created","at":"2026-08-14T00:27:00Z","actor":"claude","summary":"Umbrella created by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-377","type":"task.updated","at":"2026-08-14T00:27:00Z","actor":"claude","summary":"Folded into umbrella MPI-562 by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-454","type":"task.updated","at":"2026-08-14T00:27:00Z","actor":"claude","summary":"Folded into umbrella MPI-562 by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-518","type":"task.updated","at":"2026-08-14T00:30:00Z","actor":"claude","summary":"Folded into umbrella MPI-343 by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-343","type":"task.updated","at":"2026-08-14T00:30:00Z","actor":"claude","summary":"MPI-518 added as a member by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-343","type":"task.updated","at":"2026-08-14T00:30:00Z","actor":"claude","summary":"Promoted to an umbrella by the consolidation sweep - plan.md attached with MPI-518 as a member."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-544","type":"task.updated","at":"2026-08-14T00:33:00Z","actor":"claude","summary":"Folded into umbrella MPI-513 by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-513","type":"task.updated","at":"2026-08-14T00:33:00Z","actor":"claude","summary":"MPI-544 added as a member by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-534","type":"task.updated","at":"2026-08-14T00:33:00Z","actor":"claude","summary":"Folded into umbrella MPI-528 by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-528","type":"task.updated","at":"2026-08-14T00:33:00Z","actor":"claude","summary":"MPI-534 added as a member by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-541","type":"task.updated","at":"2026-08-14T00:40:00Z","actor":"claude","summary":"Removed the non-schema parent field; umbrella membership (MPI-542) now recorded in the description like every other member."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-524","type":"task.updated","at":"2026-08-14T00:50:00Z","actor":"claude","summary":"Healed stale line-number pointers found by the close-out claim auditor; file and symbol names were correct."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-416","type":"task.updated","at":"2026-08-14T00:50:00Z","actor":"claude","summary":"Healed stale line-number pointers found by the close-out claim auditor; file and symbol names were correct."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-377","type":"task.updated","at":"2026-08-14T00:50:00Z","actor":"claude","summary":"Healed stale line-number pointers found by the close-out claim auditor; file and symbol names were correct."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-502","type":"task.updated","at":"2026-08-14T00:50:00Z","actor":"claude","summary":"Healed stale line-number pointers found by the close-out claim auditor; file and symbol names were correct."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-563", "type": "task.created", "at": "2026-08-14T01:05:16Z", "actor": "claude", "summary": "Remote WS drop is classified as OOM because engine_dropped's own message contains 'out of memory'."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-455","type":"task.updated","at":"2026-08-14T00:55:00Z","actor":"claude","summary":"Healed a dead pointer - the card named MPI-4 as its track, but MPI-4 is closed; repointed at MPI-552."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-563", "type": "task.moved", "at": "2026-08-14T01:05:59Z", "actor": "claude", "summary": "Moved todo -> doing to fix the engine_dropped misclassification."}

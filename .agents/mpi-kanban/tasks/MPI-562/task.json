@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-562",
+  "title": "Dropping media onto History: the half-built handler and Composite Place",
+  "description": "UMBRELLA created by the consolidation sweep, 2026-08-14. Members: MPI-377 (media dropped into the History workspace vanishes - it silently becomes a prompt chip instead of a history entry) and MPI-454 (Composite Place, the third composite front end). MPI-454 is already recorded as BLOCKED BY MPI-377: both own MpiGroupHistoryBlock.js and MPI-454 needs the create-entry sequence MPI-377 has to build first. Members and phase order: tasks/MPI-562/plan.md.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-14T00:27:00Z",
+  "updated_at": "2026-08-14T00:27:00Z",
+  "links": {
+    "plan": "plan.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

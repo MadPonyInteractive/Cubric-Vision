@@ -1,7 +1,8 @@
 # MPI-513 — Install state that lies to the user
 
-Umbrella created by the `mpi-end-session` consolidation sweep, 2026-08-10. Three `todo`
+Umbrella created by the `mpi-end-session` consolidation sweep, 2026-08-10. Four `todo`
 cards, one shape: **what the install UI shows disagrees with what the store knows.**
+(MPI-544 added by the 2026-08-14 sweep.)
 
 **The member cards stay on the board.** Nothing was closed, merged or deleted to make
 this. Close a member when the phase covering it lands, and say so in its card. If the
@@ -14,10 +15,13 @@ members turn out to be the better unit, delete this umbrella instead.
 | MPI-497 | An already-present dep still fires an "installed" toast on re-verify |
 | MPI-397 | The install/uninstall card move lags seconds behind the toast — it waits on a disk read |
 | MPI-320 | MPI-276 write-flip: retire the legacy `_modelJobs`/`_depJobs` maps, `installStore` becomes the single writer |
+| MPI-544 | Install-toast spam — a burst of completion toasts for work that is not happening. `research`, NEVER REPRODUCED |
 
 ## Current State
 
-Not started.
+Not started. MPI-544 is the only one that is not a standing defect: it was seen once during
+the 2026-08-11 download-Pod incident and has never reproduced, so it is carded rather than
+fixed — **no evidence, no speculative patch.**
 
 ## Why one card and not three
 
@@ -41,6 +45,18 @@ panel, and a one-consumer fix on a shared primitive is a false done.
 
 Re-run MPI-497 and MPI-397 against phase 1. Close whichever the write-flip already
 fixed, and re-card only what genuinely survives, with the new evidence.
+
+MPI-544 rides here for the same reason but with a weaker claim: it is the same shape as
+MPI-497 (a toast announcing install work that did not happen), and its first candidate — a
+MODEL-LEVEL `download:complete` re-broadcast when the install SSE reconnects and replays —
+is a two-writer symptom, since the MPI-276 G9 snapshot protocol versions *deltas* and a
+replayed terminal event is not a delta. **Do not go hunting it before phase 1 lands.** Two
+dead ends are already ruled out and must not be re-walked: it is NOT the MPI-539 reconcile
+path (the client drops `modelId: null` events, which is what that path broadcasts), and it
+is not the abandon path (now terminal exactly once per model job).
+
+If it fires again before phase 1, capture evidence BEFORE touching code: the `app.log`
+download lines around the burst, and whether the SSE reconnected in that window.
 
 Verification for both is user-visible timing, so it needs the app, not a unit test:
 `/comfy/downloads/status` plus `/active` split "the client thinks" from "the server

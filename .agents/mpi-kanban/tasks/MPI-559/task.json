@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-559",
+  "title": "Cross-platform first run: the verification trip and the Xcode CLT stop",
+  "description": "UMBRELLA created by the consolidation sweep, 2026-08-14. Members: MPI-249 (verify a portable build on Linux + macOS, LOCAL engine) and MPI-416 (macOS first run blocked on missing Xcode Command Line Tools). Both already name the other as SIBLING and both macOS halves wait on the same missing Mac. THE LINUX LEG IS NOT BLOCKED - a Linux desktop has been on hand since 2026-07-30 and phase 1 runs today; this umbrella must not re-block it. Members and phase order: tasks/MPI-559/plan.md.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-14T00:22:00Z",
+  "updated_at": "2026-08-14T00:22:00Z",
+  "links": {
+    "plan": "plan.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

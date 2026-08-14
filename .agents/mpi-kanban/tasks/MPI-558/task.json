@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-558",
+  "title": "The smoke-gate runner: a Pod-side twin and a stale GPU order",
+  "description": "UMBRELLA created by the consolidation sweep, 2026-08-14. Members: MPI-524 (GPU_ORDER comment vs our own 48GB RAM floor) and MPI-502 (gate 9 needs a Pod-side /object_info twin). Same file, scripts/smoke-workflows.mjs - both cards already name the other as SIBLING. Phase 1 is local and cheap; phase 2 is a live runtime op on the Pod wrapper and needs the user go before promote. Members and phase order: tasks/MPI-558/plan.md.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-14T00:20:00Z",
+  "updated_at": "2026-08-14T00:20:00Z",
+  "links": {
+    "plan": "plan.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

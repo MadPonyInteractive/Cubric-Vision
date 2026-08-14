@@ -1,1 +1,2 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-518", "type": "task.created", "at": "2026-08-10T13:45:00Z", "actor": "opus", "to": "todo", "summary": "Investigation card parked while 1.4 ships and the GPU is held by a Cubric-Prompt agent. Fabio saw no real speed gain on his own fl2va w4a8 run, so the win is unproven and nothing is decided yet."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-518","type":"task.updated","at":"2026-08-14T00:30:00Z","actor":"claude","summary":"Folded into umbrella MPI-343 by the consolidation sweep."}

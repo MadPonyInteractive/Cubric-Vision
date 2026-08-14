@@ -1,1 +1,2 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-556", "type": "task.created", "at": "2026-08-14T00:00:00Z", "actor": "claude", "summary": "Filed from the MPI-546 live verification session. Two agent-dispatched generations (t2i_006 krea2, t2i_007 klein-4b with raw style keys) both produced sidecars whose controlState contradicted the run. Blocks MPI-547."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-556","type":"task.updated","at":"2026-08-14T00:26:00Z","actor":"claude","summary":"Folded into umbrella MPI-561 by the consolidation sweep."}

@@ -1,1 +1,2 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-534","type":"task.created","at":"2026-08-11T02:20:00Z","actor":"claude","summary":"Created from the community-flows brainstorm."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-534","type":"task.updated","at":"2026-08-14T00:33:00Z","actor":"claude","summary":"Folded into umbrella MPI-528 by the consolidation sweep."}

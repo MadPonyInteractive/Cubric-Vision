@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-561",
+  "title": "The controls a generation actually used",
+  "description": "UMBRELLA created by the consolidation sweep, 2026-08-14. Members: MPI-556 (the sidecar records the PROJECT controls, not the runs - so Reuse restores a lie) and MPI-547 (named-parameter layer on generation.submit for agent generations). MPI-547 is BLOCKED BY MPI-556 on both cards: raw injectionParams always wins over resolved values, so any named-parameter layer inherits the gap and ships generations that cannot be reused. Members and phase order: tasks/MPI-561/plan.md.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-14T00:26:00Z",
+  "updated_at": "2026-08-14T00:26:00Z",
+  "links": {
+    "plan": "plan.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

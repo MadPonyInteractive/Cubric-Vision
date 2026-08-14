@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-560",
+  "title": "Community Flows: the 1.5 authoring shape and the 1.6 package format",
+  "description": "UMBRELLA created by the consolidation sweep, 2026-08-14. Members: MPI-531 (package-ready Flows for 1.5 - a 1.5 RELEASE BLOCKER) and MPI-532 (community flow packages, targets 1.6). One format decided twice: uiComponent names a JS component a third party can never have, so every Flow authored with a new component in 1.5 is a Flow that must be ported in 1.6. MPI-531 item 1 (FlowStepField slider/number/text) is also MPI-552s single blocker, which makes it the highest-priority item on the Flow track. Members and phase order: tasks/MPI-560/plan.md.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-14T00:24:00Z",
+  "updated_at": "2026-08-14T00:24:00Z",
+  "links": {
+    "plan": "plan.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}
