@@ -2708,3 +2708,5 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-506","type":"task.updated","at":"2026-08-13T21:46:00Z","actor":"claude","summary":"Folded into umbrella MPI-553 by the project-refresh consolidation sweep."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-507","type":"task.updated","at":"2026-08-13T21:46:00Z","actor":"claude","summary":"Folded into umbrella MPI-553 by the project-refresh consolidation sweep."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-515","type":"task.updated","at":"2026-08-13T21:46:00Z","actor":"claude","summary":"Folded into umbrella MPI-553 by the project-refresh consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-557","type":"task.created","at":"2026-08-13T23:50:13Z","actor":"claude","summary":"Video face detailer - phased, Phase 0 is a bench GO/NO-GO before any app work."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-557","type":"task.updated","at":"2026-08-13T23:50:13Z","actor":"claude","summary":"Phase 0 research plan attached - answers the open questions and returns a GO/NO-GO. Maturity research -> planned."}

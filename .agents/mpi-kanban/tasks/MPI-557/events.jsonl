@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-557","type":"task.created","at":"2026-08-13T23:50:13Z","actor":"claude","summary":"Video face detailer - phased, Phase 0 is a bench GO/NO-GO before any app work."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-557","type":"task.updated","at":"2026-08-13T23:50:13Z","actor":"claude","summary":"Phase 0 research plan attached - answers the open questions and returns a GO/NO-GO. Maturity research -> planned."}
