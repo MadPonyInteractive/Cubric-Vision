@@ -3,14 +3,15 @@
   "id": "MPI-566",
   "title": "Fill Holes on the PAINT layer - Adjust's Fill button is mask-only",
   "description": "MpiToolOptionsMaskAdjust drops the Fill button on the paintAdjust destination (DEST.paintAdjust.fillHoles = false), so a closed outline drawn on the paint layer cannot be filled - the single most useful thing an outline tool can do. MaskManager.fillHoles() holds the only flood implementation. Extract the flood to a pure shared module (the distanceField.js precedent - one module, two destinations) and add PaintManager.fillHoles(), filling the enclosed region in the current paint colour with the original drawn back on top, exactly like Adjust's grow row.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "complete",
   "created_at": "2026-08-14T06:05:00Z",
-  "updated_at": "2026-08-14T06:40:00Z",
+  "updated_at": "2026-08-14T07:05:00Z",
   "links": {
     "brief": "brief.md",
     "files": "files.json",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   }
 }

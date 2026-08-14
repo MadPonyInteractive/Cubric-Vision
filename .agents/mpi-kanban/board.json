@@ -76,10 +76,10 @@
       "MPI-536",
       "MPI-557",
       "MPI-520",
-      "MPI-531",
-      "MPI-566"
+      "MPI-531"
     ],
     "done": [
+      "MPI-566",
       "MPI-564",
       "MPI-563",
       "MPI-555",
@@ -169,7 +169,7 @@
       "MPI-549"
     ]
   },
-  "updated_at": "2026-08-14T06:40:00Z",
+  "updated_at": "2026-08-14T07:05:00Z",
   "events": [
     {
       "at": "2026-08-14T05:24:22Z",
@@ -2947,6 +2947,15 @@
       "task": "MPI-566",
       "actor": "opus",
       "note": "Shipped: holeFlood.js (shared, pure, boxed), PaintManager.fillHoles(), MpiCanvas.fillPaintHoles() + allowlist, DEST.fill per destination. 606/606 node tests green; new tests/mask-hole-flood.test.cjs proves the geometry for the first time (the extraction is what made it testable) and its pad case FAILS on a mutated unpadded box. Composites verified in Chromium off a real green outline: interior lands at the fill colour opaque, stroke keeps #58e044, 0 partial-alpha on the inner rim, 693 kept on the outer, nothing outside touched; the mask twin still preserves a separate blob inside the box (the putImageData regression). Remaining check is human: press Fill in Paint Adjust in the app and confirm one Ctrl+Z restores the outline."
+    },
+    {
+      "at": "2026-08-14T07:05:00Z",
+      "type": "task.moved",
+      "task": "MPI-566",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "note": "Closed - Fabio verified in the app: a closed outline in Paint Adjust fills with the picker colour on Fill. Shipped in a9b9bd10 (shared holeFlood.js, PaintManager.fillHoles(), DEST.fill per destination) plus 98a3bc64, which fixed the button being dead on arrival - MpiCanvasViewer forwards to MpiCanvas by hand and fillPaintHoles was never added, so the panel's optional call swallowed it with no error. The allowlist test was necessary and never sufficient; the new test asserts every viewer.el.X?.() the panel reaches for is assigned in the viewer, and fails on the pre-fix source."
     }
   ]
 }
