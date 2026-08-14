@@ -490,8 +490,25 @@ export const MpiGalleryGrid = ComponentFactory.create({
             let _clipMeta = null;    // { rate, length } | null
             const _clipRate = () => (_clipMeta?.rate > 0 ? _clipMeta.rate : PREVIEW_FPS);
             const _clipMax  = () => (_clipMeta?.length > 0 ? _clipMeta.length : PREVIEW_CLIP_MAX);
+            // The preload for the frame the play head is currently decoding. A burst
+            // previewer appends faster than a decode, so the ring can evict the very
+            // frame `_paintNextPreviewFrame` started on — measured at 1ms apart — and
+            // revoking a URL whose <img> load is still in flight kills that load:
+            // net::ERR_FILE_NOT_FOUND, one per burst, for a frame nobody else ever
+            // held. Aborting the preload first is what makes the revoke safe.
+            let _pendingPreload = null;
+            function _abortPendingPreload(url) {
+                if (!_pendingPreload || _pendingPreload.dataset.url !== url) return;
+                _pendingPreload.onload = null;
+                _pendingPreload.onerror = null;
+                _pendingPreload.removeAttribute('src');
+                _pendingPreload = null;
+                if (previewImg?.dataset.pendingPreviewSrc === url) delete previewImg.dataset.pendingPreviewSrc;
+            }
             function _revokePreviewUrl(url) {
-                if (url && url.startsWith('blob:')) { try { URL.revokeObjectURL(url); } catch { /* already revoked */ } }
+                if (!url || !url.startsWith('blob:')) return;
+                _abortPendingPreload(url);
+                try { URL.revokeObjectURL(url); } catch { /* already revoked */ }
             }
             function _stopPreviewPlayback() {
                 _clipMeta = null;
@@ -675,7 +692,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 if (!_isPreviewLoaded()) spinner.style.display = '';
 
                 const next = new Image();
+                next.dataset.url = url;   // so a revoke of this URL can abort this load
+                _pendingPreload = next;
                 next.onload = () => {
+                    if (_pendingPreload === next) _pendingPreload = null;
                     if (img.dataset.pendingPreviewSrc !== url) return;
                     img.src = url;
                     img.dataset.previewSrc = url;
@@ -684,6 +704,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     spinner.style.display = 'none';
                 };
                 next.onerror = () => {
+                    if (_pendingPreload === next) _pendingPreload = null;
                     if (img.dataset.pendingPreviewSrc === url) delete img.dataset.pendingPreviewSrc;
                     if (!img.dataset.previewSrc) {
                         img.classList.remove('mpi-group-card__preview-img--loaded');

@@ -29,6 +29,21 @@ test('the card element exposes destroy(), stopping both of its timers', () => {
     assert.match(body[1], /_stopMascotFlip\(\)/, 'destroy leaves the mascot timer re-arming');
 });
 
+// MPI-565 (second half) — revoking a frame whose preload is in flight kills that
+// load: net::ERR_FILE_NOT_FOUND for a frame nobody else ever held. A burst
+// previewer appends faster than a decode, so the ring evicts the frame the play
+// head just started on — measured at 1ms apart on a live run. Every revoke must
+// abort a matching in-flight preload FIRST.
+test('_revokePreviewUrl aborts a matching in-flight preload before revoking', () => {
+    const body = SRC.match(/function _revokePreviewUrl\(url\) \{([\s\S]*?)\n {12}\}/);
+    assert.ok(body, '_revokePreviewUrl is not defined');
+    const abortAt = body[1].indexOf('_abortPendingPreload(url)');
+    const revokeAt = body[1].indexOf('URL.revokeObjectURL(url)');
+    assert.ok(abortAt !== -1, 'revoke does not abort the pending preload');
+    assert.ok(abortAt < revokeAt, 'the abort must run before the revoke, not after');
+    assert.match(SRC, /_pendingPreload = next;/, 'the preloader is never registered as pending');
+});
+
 test('every path that detaches a card destroys it first', () => {
     const lines = SRC.split('\n');
     const detaches = [];
