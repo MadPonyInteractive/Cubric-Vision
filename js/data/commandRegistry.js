@@ -1000,6 +1000,27 @@ export const commands = {
         injector: 'headSwap',
     },
 
+    // MPI-520. Bench-proven single-stage LTX 2.3 v2v extend: a source clip in, the
+    // same clip PLUS newly generated seconds out (video + audio together — LTX 2.3
+    // emits both). Runs on the already-installed LTX 2.3 checkpoint, so there is no
+    // ModelDef and no dep entry of its own.
+    flowLtxExtend: {
+        label: 'Flow: Extend Video',
+        progressLabel: 'Extending',
+        mediaType: MEDIA_TYPE.VIDEO,        // OUTPUT type
+        requiresImages: 0,                  // media is never a hard requirement at the op layer
+        // ONE video slot. The graph derives width/height/fps from the clip itself
+        // (Input_Video's own outputs feed ImageResizeKJv2), which is why this flow
+        // exposes no resolution control — the output matches the source by design.
+        mediaInputs: [
+            { key: 'video1', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video', required: false },
+        ],
+        // Prompts are the flow's own declared controls, not the PromptBox's — the
+        // prompt describes what happens in the NEW seconds.
+        promptRequired: false,
+        universal: true,
+    },
+
     // ── Future Stubs ──────────────────────────────────────────────────────────
     // Registered so the registry is complete; disabled in UI until implemented.
 

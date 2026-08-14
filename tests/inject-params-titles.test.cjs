@@ -232,6 +232,24 @@ test('the third Flow workflow (Video Stitch) carries its media I/O titles (MPI-2
     }
 });
 
+test('the LTX extend Flow carries its I/O titles AND its declared control node (MPI-520)', () => {
+    // flowLtxExtend runs flow_ltx_extend.json with model:{id:null} on the installed LTX
+    // 2.3 checkpoint. Two silent-skip classes in one test: the media/prompt/seed titles
+    // the injector always writes, and `input_duration` — the first DECLARED control
+    // (MPI-531) addressed straight at a graph node. A control whose node is missing is
+    // worse than a missing slot: the slider moves, the run succeeds, and the duration
+    // the user chose is silently the graph's baked default.
+    const file = 'flow_ltx_extend.json';
+    const have = titlesOf(file);
+    for (const title of [
+        'input_positive', 'input_negative', 'input_seed',
+        'input_video', 'input_duration',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_video'), `${file} must carry a capture node titled "output_video"`);
+});
+
 test('every media slot a model can actually see exists in that model\'s workflow', () => {
     // Same silent-skip class as the injectParams sweep above, on the OTHER injection
     // source. A `mediaInputs` slot whose title matches no node gives the user a chip well

@@ -53,4 +53,7 @@ export const UNIVERSAL_WORKFLOWS = {
     flowHeadSwap: {
         workflow: 'flow_head_swap.json',
     },
+    flowLtxExtend: {
+        workflow: 'flow_ltx_extend.json',
+    },
 };

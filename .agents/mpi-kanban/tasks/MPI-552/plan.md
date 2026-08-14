@@ -75,4 +75,23 @@ different workflow JSONs, different descriptors — but they both touch
 
 ## Plan Drift
 
-(none yet)
+**2026-08-14 — phase order changed: EXTEND went first, not foley.**
+
+Phase 1 (the MPI-531 blocker) landed, and turned out to need more than the card said: field
+types alone do not unblock anything, because `fields` render on middle steps only and the run
+slide's controls came solely from `props.uiComponent`. So item 1 shipped together with
+`FlowDef.controls` — declared run-slide controls, `Input_*` ids routed into `injectionParams`.
+
+Then the order changed, on a fact this plan did not have: **foley and lipsync each need a
+weight that is not a dep yet** (`ltx-2.3-22b-lora-foley-v2a-1.0`,
+`ltx-2.3-22b-ic-lora-lipdub-0.9`), so both are gated on an R2 stage + a `dependencies.js`
+entry before they can install for anyone. **Extend needs no new weight at all** — every loader
+in its graph is already an LTX 2.3 dep — so it was the only one wire-only today, and it went
+first as the proof that a Flow can ship with no JS component.
+
+The foley-vs-voice decision this plan wanted settled first (MPI-536) did NOT leak into extend:
+extend exposes no audio control, and its resolution decision is the opposite of foley's by
+design (recorded in both cards + `existing-flows/ltx-extend.md`).
+
+Remaining order: foley (owns the mode decision), then lipsync. Both should copy
+`docs/playbooks/add-flow/existing-flows/ltx-extend.md` rather than re-deriving the shape.
