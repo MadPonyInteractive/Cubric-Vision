@@ -11,23 +11,51 @@ might not even work awesome at the end."*
 
 ## Current State
 
-**Session 2 handoff, 2026-08-14.** Desk pass D1-D3 done, B7 closed early against
-the brief (union window fails on 55-62% of real clips - `MpiFaceWindow` needs
-tracking, not a static box), and **B1 passed the gate: GO, stated by Fabio.**
-SeedVR2 3B, 208 px window upscaled 2.46x to 512, 73 frames, 35 s, ~10.8x the
-lanczos baseline's high-frequency energy with no within-clip collapse.
+**Session 3, 2026-08-14. Phase 0 has produced its actual finding, and it is
+bigger than any single B-question.**
 
-Two things the GO came with:
-- The product case is a **"shitty face video"** - B1 ran on a clean 2560x1408
-  LTX generation, which does not speak for degraded footage. Re-run before
-  Phase 1 specs anything.
-- Raw vs wavelet output is **indistinguishable to Fabio** on this clip. Not B6's
-  answer - B1 skipped paste-back by design.
+**Restoration fixes SOFT, not WRONG.** Source sharpness measured across all three
+clips explains every result this card has: B1's source lapvar 1.7 -> 10.9x
+restored, B1-stress 1.8 -> 61x, **B10 13.5 -> 3.8x**. B10's source is ~8x sharper
+than B1's, so there was no deficit for a restoration prior to fill and all it
+could do was denoise - which is exactly what Fabio saw. SeedVR2 has no identity
+source and cannot move geometry, by construction (section 4 Level 1).
 
-Next is **B2**, the sampler bake-off. The bench is still UP on 8188 (~40 GB
-resident) so B2 can start immediately; kill it if the fresh session is not going
-to run B2 straight away.
+That splits the opening complaint - *"small faces lose identity and sometimes look
+distorted"* - into two defects, and the branch only answers one:
 
+- **soft + face intact** -> B1, GO, shipped-ready
+- **soft + face never recorded** -> B1-stress, impossible for any restoration model
+- **sharp + face wrong** -> B10, denoise only. **Unanswered.**
+
+**The open decision, for Fabio:** is the product case soft faces or wrong faces?
+Soft -> B1 already says GO and the restoration branch can ship without touching
+identity. Wrong -> section 4 Level 2 becomes load-bearing, and this is probably
+two cards rather than one.
+
+**Three leads for the wrongness case, none investigated:**
+
+1. The character sheet Fabio supplied (`t2i_022.png`) is the Level 2 asset.
+2. **B2 should be re-read, not re-run** - it closed LTX v2v as a *detailer*
+   because it restructured faces at denoise 0.5-0.7. With an identity anchor that
+   restructuring is the feature. B2 did not close LTX as an identity carrier.
+3. **A head-swap LoRA already exists on the bench** -
+   `LTX2.3\head_swap_v3_rank_64.safetensors` (+ an adaptive variant) - and the
+   repo carries `comfy_workflows/raw/flow_head_swap.json`. Nearest existing thing
+   to "wrong face + character sheet", never looked at by this card. **Read that
+   flow before designing anything.**
+
+**Settled B-questions:** B1 GO (soft faces), B2 SeedVR2 wins, B4 void, B7 answered,
+B1-stress failed, B10 weak-with-a-measured-reason. B3 has one data point (768 lost
+to 512 on a 288 px window), B5 has one (no seam at 2 x 41, overlap 2). B6
+paste-back is still fully untouched, and B8 is unmeasured.
+
+**Corrected by Fabio:** `MpiFaceWindow` does **not** need shot detection - the
+user trims to the face shot before handing the clip over. Tracking and multi-face
+association are still required; those happen within one shot.
+
+**The bench is UP on 8188** (~40 GB resident, plus the 20 GB LTX transformer from
+B2 still on the card). **Kill it unless the next session starts with bench work.**
 
 Project mode: scalable-foundation.
 
@@ -110,16 +138,24 @@ post-hoc rationalisation:
       against source at 200% and states GO or NO-GO in brief.md. **On NO-GO,
       stop - move MPI-557 to `done`/`rejected` with the reasoning, and skip
       every item below.**
-- [ ] **B2 - sampler bake-off.** Same clip, same graph, one box swapped:
+- [x] **B2 - sampler bake-off.** WINNER: SeedVR2, stated by Fabio 2026-08-14. Same clip, same graph, one box swapped:
       SeedVR2 vs LTX v2v + `ltx23-lora-merged` (detailer already baked in).
       Judge sharpness, identity stability across the clip, plastic-ness, speed,
       VRAM. Vary the seed between repeats or the second run is a cache hit.
       **Verify:** winner named in brief.md with the four judgements, not just a
       preference.
-- [ ] **B3/B4/B5/B8 - settings sweep on the winner.** B3 crop res 512 vs 768 vs
-      1024, where returns die relative to cost. B4 (LTX branch only) denoise
-      floor where detail appears and ceiling where identity drifts, expect
-      0.2-0.4. B5 do chunk seams show, at what chunk size and overlap. B8 VRAM
+- [x] **B1-stress - degraded footage.** FAILED 2026-08-14, confirmed by Fabio.
+      The re-run the B1 GO was conditioned on. 8x on a ~29 px face returns sharp
+      mush; 4x and 7B-sharp controls fail identically, so the source carries no
+      identity to restore. Findings in brief.md.
+- [x] **B10 - the real degraded case.** WEAK 2026-08-14, and the reason is
+      measured: the source was never soft. Run on Fabio's
+      `ref2v_ms_062.mp4` (112 px face, wrong not small). Verdict pending. Carries
+      first data for B3 and B5, plus a silent conditioning-wiring bug. brief.md.
+- [ ] **B3/B5/B8 - settings sweep on the winner.** (**B4 is void** - it was the
+      LTX-only denoise sweep and that branch lost B2.) B3 crop res 512 vs 768 vs
+      1024, where returns die relative to cost. B5 do chunk seams show, at what
+      chunk size and overlap. B8 VRAM
       ceiling and max chunk at 120 frames x 512². **Verify:** a settings table
       in brief.md with a recommended default per row.
 - [ ] **B6/B7 - paste-back and window.** B6: does frequency separation hold up -
@@ -175,6 +211,45 @@ Four changes, all from the desk pass. Detail and citations in
    chunk on a clean card and roughly four on a loaded one, so B5 must be judged
    with the bench's own `SeedVR2TemporalChunk auto:` log line recorded alongside
    the verdict.
+
+5. **B2's answer did not need a settings sweep to be safe.** The plan asked for
+   denoise ~0.3; 0.50 and 0.70 were run too, so the LTX result cannot be blamed
+   on one badly chosen sigma schedule. More denoise moved drift, not detail.
+   Also: `SamplerCustomAdvanced` has no `denoise` widget - denoise IS the first
+   value in `ManualSigmas`.
+
+6. **B4 is void, not deferred.** It was the LTX-branch denoise sweep. B2 ran
+   0.30 / 0.50 / 0.70 and closed the branch, so there is nothing to sweep. Brief
+   step 6 (crossfade) is likewise fully gone now that only the SeedVR2 branch
+   survives - `SeedVR2TemporalMerge` already does it.
+
+7. **The B1 GO is now a SCOPED go, and the stress clip was mis-selected.**
+   The 864x480 clip tested the wrong thing - a face with no recoverable pixels
+   rather than a wrong-but-present one. Fabio is supplying a replacement.
+   Original note follows:
+ B1-stress shows the restoration branch
+   cannot rescue a face the generator already destroyed - not at 8x, not at 4x,
+   not with the 7B model. Phase 1 must not spec `MpiFaceWindow` against "any
+   shitty face video"; it holds for small-but-intact faces only. Which case the
+   product targets is now a question for Fabio, and it decides whether Phase 3
+   is optional.
+
+8. **`MpiFaceWindow` needs tracking and multi-face association - NOT shot
+   detection.** B10's clip carries a hard cut, but Fabio corrected the inference:
+   the user trims to the face shot before handing the clip over, so cuts are not
+   the node's problem. What IS the node's problem is within-shot: largest-face-
+   per-frame alternates between subjects (6 of 77 frames carry two faces) and
+   produced a 1055 px union from a 112 px face.
+9. **B3 and B5 have partial answers already** from B10, ahead of their own runs -
+   768 lost to 512, and the first genuinely chunked run showed no seam. Neither
+   is a rule yet; both need a second data point.
+
+10. **The card's premise needs re-scoping before Phase 1.** Phase 0 set out to
+    ask "does a small face come back sharp or waxy" and answered it (sharp). The
+    measurement that closed B10 shows that was the easier half: restoration
+    addresses SOFTNESS, and "distorted" faces are a structural problem it cannot
+    touch. Phase 1 must not begin until Fabio says which defect the product
+    targets - the answer changes whether Phase 3 is optional or central.
 
 Also: bench core is 0.31.0, not the 0.30.2 recorded at plan time, and the bench
 path is `G:\ComfyUi\ComfyUI\` (nested).

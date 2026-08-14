@@ -474,6 +474,325 @@ the same graph at genuinely degraded footage; the held-back stress clip
 nearest thing already on disk, and real compressed footage would be better
 still.
 
+### B2 - sampler bake-off, 2026-08-14. WINNER: SeedVR2
+
+Same clip, same window, same 512 sample resolution as B1. Only the sampler
+changed. Graph is `comfy_workflows/raw/ltx_v2v_template.json` **pruned to a pure
+v2v** - that template is Video *Extend*, so `ImageBatchExtendWithOverlap` and
+`LTXVAudioVideoMask` come out, and B1's `MpiBox`/`MpiBoxCrop`/`ImageResizeKJv2`
+go in after the loader.
+
+    MpiLoadVideo -> MpiBox(1173,300,208,208) -> MpiBoxCrop -> ImageResizeKJv2 512 (device cpu)
+      -> VAEEncodeTiled -> LTXVConcatAVLatent(+ LTXVEmptyLatentAudio, silent)
+      -> SamplerCustomAdvanced(euler_ancestral_cfg_pp, cfg 1.0, ManualSigmas)
+      -> LTXVSeparateAVLatent -> VAEDecodeTiled -> SaveImage
+
+- Model `ltx-2.3-22b-distilled-1.1_transformer_only_int8_convrot` + the baked
+  `ltx-2.3\LTX23_softenhance_abliterated_detailer_merged` LoRA at 1.0/1.0 - the
+  detailer this test is about. Gemma CLIP + text projection as shipped.
+- **The AV latent concat is kept.** LTX-2.3 22B is a joint audio-video model;
+  sampling a video-only latent is untested. Audio comes from
+  `LTXVEmptyLatentAudio` (silent, 73 frames @ 24) and is discarded after
+  `LTXVSeparateAVLatent`.
+- **denoise == sigma0.** There is no `denoise` widget on this path -
+  `SamplerCustomAdvanced` takes `ManualSigmas`, and in flow matching the first
+  sigma *is* the denoise level. 0.30 ran `0.3, 0.2, 0.12, 0.05, 0.0`.
+
+**The plan asked for ~0.3 only. 0.50 and 0.70 were added** so a NO cannot be
+blamed on under-driving the branch - and they are the reason the answer is
+solid rather than a schedule artefact.
+
+| run | wall | peak VRAM | sharpness (x lanczos) | drift from source | jitter |
+|---|---|---|---|---|---|
+| **B - SeedVR2 3B** (B1) | 35.1 s | ~1.6 GiB in use (free 14.36 GiB logged) | **10.86x** (8.34-18.53) | 3.86 | 9.9% |
+| D - LTX v2v 0.30 | 86.7 s cold / **30.3 s warm** | **15.71 / 16 GiB** | 2.15x | 2.81 | 3.1% |
+| D - LTX v2v 0.50 | 30.3 s warm | 15.47 GiB | 2.22x | 4.11 | 3.1% |
+| D - LTX v2v 0.70 | 32.4 s warm | 15.60 GiB | 2.45x | 5.72 | 4.5% |
+
+Sharpness is the B1 collapse detector (laplacian variance per frame, normalised
+against the same fixed lanczos baseline). Drift is mean absolute pixel distance
+from that baseline, 0-255 - a *distance* measure, not a quality one. Neither
+ranks two healthy runs; the eye does. They are here because the gap is 5x, not
+because a metric decides this.
+
+**What the numbers say.** More denoise buys LTX **drift, not detail**: sharpness
+crawls 2.15 -> 2.45 while distance from the source doubles, 2.81 -> 5.72. There
+is no setting where the LTX branch adds micro-detail and keeps the face. At 0.30
+it is indistinguishable from the lanczos baseline; at 0.70 the brows and eyes
+have visibly moved and the skin is *smoother*, not more detailed. SeedVR2 sits
+at 10.86x with the lowest cost.
+
+- **Speed is roughly a tie, warm** - 30 s LTX vs 35 s SeedVR2, both measured with
+  loaders and encode cached, so it is a like-for-like number. LTX's 86.7 s cold
+  is the 20 GB transformer loading.
+- **VRAM is not a tie.** LTX pinned **15.71 of 16 GiB** on the 4060 Ti - a 20.03 GB
+  int8 transformer on a 16 GB card, offloading throughout. SeedVR2 3B is 3.5 GB
+  of weights and B1 logged 14.36 GiB still free mid-run. For a detail pass that
+  must run *alongside* whatever generated the video, that is decisive.
+- **Plastic-ness inverts the expectation.** The generative model is the waxy one
+  here. SeedVR2's 200% crops carry skin grain and brow hair; LTX 0.70 renders a
+  cleaner, flatter face.
+
+**Judging assets** (session scratchpad `b2_compare/`): `B2_side_by_side.mp4`
+(A lanczos | B seedvr2 | D 0.30 | D 0.70, 24 fps, for flicker) and
+`B2_200pct_frame002 / 037 / 073.png`. All 73 PNGs per branch are in
+`D:\WORK\Images\Outputs\MPI557_B2_ltx_d030 / d050 / d070`.
+
+**Verdict: SeedVR2 wins.** Fabio, 2026-08-14, after viewing the side-by-side and
+the 200% stills: *"B seedvr2 wins by a long shot."* Winner on all four
+judgements - sharpness (10.86x vs 2.45x at best), identity stability (LTX drifts
+as soon as it is driven hard enough to add anything), plastic-ness (LTX is the
+waxier of the two), and VRAM (3.5 GB vs a 20 GB transformer pinning the card).
+Speed is the one tie.
+
+**The LTX v2v branch is closed, and B4 dies with it.** B4 was the LTX-only
+denoise floor/ceiling sweep; B2 already ran 0.30 / 0.50 / 0.70 and showed there
+is no floor-to-ceiling window where that branch both adds detail and holds the
+face. Nothing left to sweep. Steps 5 and 6 of the section 2 pipeline collapse to
+the SeedVR2 branch only - and `SeedVR2TemporalMerge` already does step 6, so the
+per-branch crossfade work the brief scoped is gone too.
+
+**One honest limit on this result.** It says LTX-2.3 v2v is the wrong tool for
+*adding detail to a face crop*. It does not say the LTX branch is useless to
+this card - a re-render at high denoise is a different product (replace the
+face) with a different failure mode (it is no longer the same person), and
+nothing here tested that. It is also not a verdict on degraded footage, which
+remains the outstanding B1 caveat.
+
+### B1-stress - degraded footage, 2026-08-14. FAILED, confirmed by Fabio
+
+The re-run the B1 GO came with. Same graph, same SeedVR2 3B, different clip:
+`cowboys/Media/ref2v_ms_006.mp4`, 864x480. Window read off frames 0 / 24 / 72 by
+eye as B1 did - the face spans x 245-288, y 50-100 across the clip - squared to
+**64x64 at (234, 43)**, which is an exact **8x** to 512 against B1's 2.46x.
+
+**Result: the face does not come back. It comes back as sharp mush.** Hair,
+fabric, the wagon canvas and the background are restored beautifully. The face
+has no eyes, and the features melt.
+
+Two controls were run to find out *why*, because "degraded footage" and "8x
+upscale" changed at the same time and one run cannot separate them:
+
+| run | window | factor | wall | sharpness (x its own lanczos) | jitter | face |
+|---|---|---|---|---|---|---|
+| 3b | 64 px | 8x | 43.3 s | 60.89x | 12.0% | destroyed |
+| 3b, wider window | 128 px | 4x | 37.2 s | 36.80x | 5.5% | destroyed |
+| 7b-sharp | 64 px | 8x | 41.2 s | 31.52x | 7.1% | destroyed, least badly |
+
+- **Upscale factor is not the limiter.** Halving it to 4x with a window carrying
+  twice the context restored the background even better and left the face just
+  as broken.
+- **Model capacity is not the limiter.** 7B-sharp produces the best hair in the
+  set and the same eyeless face.
+- **The limiter is the source.** Look at the `A source (lanczos)` panel: at 64 px
+  this face has no eyes *in the pixels*. There is no identity signal to restore.
+
+This is section 4 Level 1 failing exactly where section 4 predicted it would.
+SeedVR2 is a **restoration prior with no identity source** - it recovers detail
+that is present but buried, and it cannot invent an identity that was never
+recorded. B1 worked because a 108 px face still carries eyes.
+
+**Note what the metric did here.** The branch with the *worst* face scored the
+*highest* sharpness - 60.89x, nearly six times B1's 10.86x. The number is
+measuring how blurred the source was, not how good the output is. This is the
+third time the laplacian has been observed picking a loser (memory
+`tool_measure_generative_upscale_quality`), and it is the whole reason the gate
+is the eye.
+
+**What this changes.** The product claim has to be scoped: *detail a face that is
+small* is answered GO; *rescue a face the generator already destroyed* is
+answered NO for the restoration branch. Whether Phase 3 (identity) is optional or
+load-bearing now depends on which of those Fabio means by "shitty face video" -
+and the two are genuinely different inputs:
+
+- **Small but intact** - a compressed phone video, a distant subject. Eyes are
+  present, just mushy. This is B1's case and SeedVR2 handles it.
+- **Small and already destroyed** - this clip. A *generated* video whose face the
+  generator itself broke. No restoration model can fix it, because nothing is
+  there. It needs an identity source, which is section 4 Level 2.
+
+Level 2 is awkward now: B2 just closed the LTX v2v branch as a *detailer*. It did
+not close it as an *identity* carrier, and this is precisely the case that would
+need one - a generative pass with a reference. That is an open question, not a
+decision, and it should not be settled without a bench run.
+
+**Fabio, 2026-08-14, on this run:** *"these results were terrible. It just messed
+up her face even more."* Confirmed - the restoration branch is a NO on this input.
+
+**The clip was also the wrong test, and that is on the selection, not the
+sampler.** 864x480 with a ~29 px face is not "a face that needs fixing", it is a
+face that was never recorded. Fabio is supplying a **higher-resolution clip whose
+face is messed up but present** - which is the actual product case and the input
+this section should have been run against. B1-stress therefore answers *"can
+restoration rescue a face with no pixels"* (no, definitively, three ways) and
+does **not** answer *"can it fix a wrong-but-present face"*. That run is
+outstanding.
+
+**Selection rule for the replacement clip, so this does not repeat:** the source
+face must carry recoverable structure at native resolution - eyes readable as
+eyes in the un-upscaled frame. Check the `A source (lanczos)` panel *before*
+spending a run: if the baseline has no eyes, no restoration model can put them
+back and the run measures nothing.
+
+**Judging assets** (session scratchpad `b1s_compare/`): `B1S_side_by_side.mp4`
+and `B1S_face_frame002 / 024 / 048 / 073.png` (source | 3b 8x | 3b 4x | 7b-sharp).
+PNGs in `D:\WORK\Images\Outputs\MPI557_B1S_*`.
+
+**VRAM on these runs is not a clean number** - 14.11-14.17 GiB peak, measured with
+the 20 GB LTX transformer from B2 still resident on the card. B1's own logged
+`free=14.36GiB` is the trustworthy SeedVR2 figure.
+
+### B10 - the REAL degraded case, 2026-08-14, awaiting Fabio's verdict
+
+The clip Fabio supplied after B1-stress proved to be the wrong test:
+`cowboys/Media/ref2v_ms_062.mp4`, 1920x800, 124 frames. Copied to the session
+scratchpad first - it is an active project and the originals were not touched
+again. He also supplied the character sheet `t2i_022.png` (1792x1120); see
+"the sheet is unused" below.
+
+**This is the case nothing had tested: a face with enough pixels to exist, that
+the generator got wrong.** Median face height over the shot is **112 px** -
+*larger* than B1's 108 px. It is not a small-face problem, it is a wrong-face
+problem.
+
+Three things about the input changed the plan before a single sample ran.
+
+**1. The clip contains a CUT.** Frame-difference scan finds a hard cut at frame
+77: shot A (0-76, the wide riding shot, small face) and shot B (77-123, an
+extreme eye close-up that needs no detailing at all). A clip-wide window is not
+merely bad across a cut, it is meaningless. Shot A was cut to its own file and
+everything below runs on that.
+
+**2. Largest-face-per-frame is not a tracker, and it fails on this shot.** Running
+`face_yolov8n` over shot A finds a face in **77/77** frames - but 6 frames carry
+more than one face, and taking the largest box alternates between two people. The
+resulting "union" was **1055 px wide**, half the frame, from a 112 px face. A
+one-line nearest-centre track seeded on the target collapses it to **202 x 221**.
+
+**3. The window that survives is 288x288 at (1104, 220)** - squared, padded 30%,
+which is **2.57x the median face** and 36% of frame height. That is B7's measured
+median blowup (2.2x) reproduced on a fresh clip, and it is why `MpiFaceWindow`
+cannot be a static union box.
+
+| run | sample res | factor | wall | peak VRAM | chunks | sharpness (x source) | jitter |
+|---|---|---|---|---|---|---|---|
+| SeedVR2 3B | 512 | 1.78x | 39.7 s | 12.49 GiB | 1 x 77 | **3.78x** | 12.9% |
+| SeedVR2 3B | 768 | 2.67x | 72.6 s | 12.97 GiB | 2 x 41, overlap 2 | 2.99x | 17.6% |
+
+Both scored against the same lanczos source baseline, with the 768 run downscaled
+to 512 first so the two sample resolutions are compared on equal pixel counts.
+
+**B3 gets its first real answer, and it is not the expected one: 768 is WORSE
+than 512 here**, at 1.8x the wall clock. Sampling above the model's comfortable
+scale dilutes rather than adds - 2.99x against 3.78x. On a 288 px window, returns
+die *before* 768. Whether that is a property of the window size or of SeedVR2
+itself needs the 1024 run and a second window size before it becomes a rule.
+
+**B5 gets its first real answer too: no seam.** The 768 run is the first in this
+card to actually chunk - `frames_per_chunk=41` over 77 frames, overlap 2, so the
+join sits at frame 41. A frame-to-frame delta probe across frames 36-46 shows the
+768 run tracking the single-chunk 512 run and the source within noise
+(17.2-20.7 against 17.7-20.5), with **no step at the join**. `SeedVR2TemporalMerge`'s
+Hann crossfade is doing its job. Confirm by eye before treating it as settled.
+
+**A graph bug worth keeping - it is a silent one.** `SeedVR2Conditioning` must be
+built from the **same latent the sampler receives**. The donor wires one
+`MpiIfElse` output to both `KSampler.latent_image` and
+`SeedVR2Conditioning.vae_conditioning`; feeding conditioning the *unchunked*
+latent instead works fine for as long as `auto` returns a single chunk, then dies
+the moment it splits:
+
+    SeedVR2 conditioning shape must match latent batch/temporal/spatial
+    dimensions; got latent (1, 16, 11, 96, ...)
+
+That is why it survived B1, B1-stress and the 512 run here undetected - every one
+of them was single-chunk. Any hand-built SeedVR2 graph must wire conditioning off
+the chunker output.
+
+**The character sheet is unused, and cannot be used on this branch.** SeedVR2 has
+no reference input - `SeedVR2Conditioning` takes only `(model, latent)`. An
+identity sheet is a section 4 **Level 2** asset and needs a carrier that accepts a
+reference. Holding it for that question; it is not wasted, it is just not
+answerable here.
+
+**Judging assets** (session scratchpad `b10_compare/`): `B10_side_by_side.mp4`
+(source | 512 | 768) and `B10_face_frame005 / 025 / 041 / 060 / 077.png` - frame
+041 is deliberately the 768 run's chunk join. PNGs in
+`D:\WORK\Images\Outputs\MPI557_B10_cowboy_3b_512 / _768`.
+
+**Verdict: weak.** Fabio, 2026-08-14: *"The result is not that great. It's just
+cleaned up the noise. That's it."* Why, measured, is the section below.
+**Correction from Fabio, 2026-08-14 - `MpiFaceWindow` does NOT need shot
+detection.** *"The user would do that as well. It would cut only the part that has
+the face and provide that to the model, and then the close-up would be cut off,
+obviously, because it doesn't need it."* Trimming to a single shot is the user's
+job, done before the clip reaches the tool. The cut in B10's clip is therefore a
+property of that raw source, not a case the node must handle. **The tracking and
+multi-face findings above still stand** - those happen *within* one shot.
+
+
+### THE PHASE 0 FINDING - restoration fixes SOFT, not WRONG
+
+**Fabio on B10, 2026-08-14:** *"The result is not that great. It's just cleaned up
+the noise. That's it. Perhaps the provided video is not great. I'm not sure."*
+
+The video is fine. It is the opposite of not-great, and that is the finding.
+
+Source sharpness measured on each run's own lanczos crop at 512, so all three are
+directly comparable:
+
+| clip | geometry | src lapvar | src HF frac | restored / src |
+|---|---|---|---|---|
+| B1 - clean LTX gen | 108 px face, 2.46x | **1.7** | 0.312 | 10.92x |
+| B1-stress - 864x480 | 29 px face, 8x | 1.8 | 0.220 | 61.05x |
+| **B10 - cowboy** | 112 px face, 1.78x | **13.5** | 0.259 | **3.84x** |
+
+**B10's source is roughly 8x sharper than B1's.** SeedVR2 is a restoration prior:
+it supplies high frequency where high frequency is *missing*. Feed it a source
+that is already sharp and there is no deficit to fill, so what is left to do is
+denoise - which is precisely what Fabio saw. The multiplier tracks the deficit
+inversely across all three clips (1.7 -> 10.9x, 1.8 -> 61x, 13.5 -> 3.8x), and
+that relationship is the whole story of this card so far.
+
+**So the three runs are not three results, they are one law:**
+
+| source | what is wrong with it | SeedVR2 |
+|---|---|---|
+| soft, face intact (B1) | missing high frequency | **fixes it** - the GO |
+| soft, face never recorded (B1-stress) | no identity in the pixels | sharpens mush |
+| sharp, face wrong (B10) | wrong *structure* | denoises, nothing more |
+
+**A restoration model cannot change face STRUCTURE.** It has no identity source
+and it is not asked to move anything - by construction, section 4 Level 1.
+
+**And that is the harder half of the original complaint.** Fabio's opening line
+was *"small faces lose identity and sometimes look distorted"*. Those are two
+different defects. **Distorted is wrongness, and the restoration branch does not
+answer it.** The branch answers "lose identity" only in its blur sense.
+
+**What this points at, for the next session to decide - not decided here:**
+
+1. **Section 4 Level 2 is no longer optional.** Fixing a wrong face needs an
+   identity source and a model willing to move geometry. Fabio has already
+   supplied the asset: the character sheet `t2i_022.png`.
+2. **B2 must be re-read, not re-run.** B2 closed LTX v2v as a *detailer* because
+   at denoise 0.5-0.7 it restructured the face - recorded there as "drift". With
+   an identity anchor, restructuring toward the *right* face is the goal, not the
+   failure mode. B2 explicitly did not close LTX as an identity carrier.
+3. **There is already a head-swap asset on the bench.** The lora enum carries
+   `LTX2.3\head_swap_v3_rank_64.safetensors` and
+   `LTX2.3\head_swap_v3_rank_adaptive_fro_098.safetensors`, and the repo carries
+   `comfy_workflows/raw/flow_head_swap.json`. Reference-conditioned head swap on
+   the LTX-2.3 checkpoint we already ship is the nearest existing thing to
+   "wrong face + character sheet", and it has not been looked at by this card.
+   Read the flow before designing anything new.
+
+**A cheaper question to ask first, though:** is the *product* case soft faces or
+wrong faces? If a user's real complaint is small-and-soft, B1 already says GO and
+the card can ship the restoration branch without touching identity at all. B10
+was chosen to probe wrongness. Whether wrongness is the thing worth building for
+is Fabio's call, and it decides whether this card stays one card or becomes two.
+
 ### Bench facts corrected
 
 - Bench core is **0.31.0**, not the 0.30.2 recorded at plan time.
