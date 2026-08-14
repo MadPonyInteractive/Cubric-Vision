@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-14T01:05:00Z",
+  "updated_at": "2026-08-14T03:40:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -21,9 +21,17 @@
       "id": "aeade4f4-f24a-442d-8161-ed86a7d5fe38",
       "path": ".agents/mpi-kanban/state/handoffs/aeade4f4-f24a-442d-8161-ed86a7d5fe38.json",
       "task_card": "MPI-557",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-14T01:05:00Z",
-      "note": "Phase 0: desk pass done, B7 closed, B1 gate PASSED (GO by Fabio). Next is B2, the sampler bake-off."
+      "note": "Superseded by 2fa7c83b-41ae-42d5-9f22-b4e77117b769 - B2 closed, B1-stress failed, B10 weak."
+    },
+    {
+      "id": "2fa7c83b-41ae-42d5-9f22-b4e77117b769",
+      "path": ".agents/mpi-kanban/state/handoffs/2fa7c83b-41ae-42d5-9f22-b4e77117b769.json",
+      "task_card": "MPI-557",
+      "status": "open",
+      "created_at": "2026-08-14T03:40:00Z",
+      "note": "Phase 0 session 3: B2 closed (SeedVR2 wins, B4 void), both degraded runs weak. The finding - restoration fixes SOFT faces, not WRONG ones. Next action is a scope question for Fabio, not a run."
     }
   ]
 }
