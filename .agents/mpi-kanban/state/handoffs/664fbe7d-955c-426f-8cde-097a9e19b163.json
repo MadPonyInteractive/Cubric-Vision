@@ -1,0 +1,70 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "664fbe7d-955c-426f-8cde-097a9e19b163",
+  "generated_at": "2026-08-14T03:50:00Z",
+  "status": "open",
+  "session": {
+    "name": "Unblock the Flow track and integrate the ready Flows",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Unblock whatever is blocking the LTX v2v Flows and start integrating the ones that are ready. Community-package integration is explicitly a LATER version.",
+    "status": "in_progress",
+    "summary": "The blocker is cleared: MPI-531 item 1 shipped (FlowStepField gains number/slider/text) together with the scope extension it needed, FlowDef.controls - declared run-slide controls, so a Flow ships with no JS component. MPI-520 (Extend Video) is integrated on top of it and verified live except the real generation, which the user cannot run right now (their RunPod work owns the GPU). Foley and lipsync are next and each needs a LoRA staged to R2 first."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-531/plan.md",
+    "completed": [
+      "MPI-531 item 1: FlowStepField number / slider / text, one builder shared by the step row and the run slide",
+      "MPI-531 scope extension: FlowDef.controls - declared run-slide controls; Input_* ids route into injectionParams; seeding reads back from where the value was persisted",
+      "MPI-520: raw/ltx_v2v_template.json renamed to raw/flow_ltx_extend.json, converted against the app engine 48188, injection-rules gate clean",
+      "MPI-520: op flowLtxExtend registered in all 4 files; ltx-extend FlowDef with three DECLARED controls and no uiComponent",
+      "MPI-520: new case in tests/inject-params-titles.test.cjs; 591/591 suite green, eslint clean",
+      "Docs: add-flow hub checklist, 01-descriptor-and-ops, ui/carousel-frame (field types + the declared-controls contract), new existing-flows/ltx-extend.md"
+    ],
+    "pending": [
+      "MPI-520: the user's live generation - the ONLY thing keeping the card in validating",
+      "MPI-520 deferred half: Input_Width/Input_Height as MpiInt, needs a bench re-export",
+      "MPI-536 foley: needs ltx-2.3-22b-lora-foley-v2a-1.0.safetensors staged to R2 + a dependencies.js entry, then wire as a Flow",
+      "MPI-538 lipsync: needs ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors staged to R2 + a dependencies.js entry, then wire as a Flow",
+      "MPI-531 items 2-4 remain open (1.5 release blocker)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-520",
+    "title": "LTX 2.3 v2v extend - wire the proven bench workflow into the app as a Flow",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-520/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-552/plan.md",
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-520/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Start MPI-536 (LTX 2.3 foley). Its ONLY prereq is the foley LoRA: check whether ltx-2.3-22b-lora-foley-v2a-1.0.safetensors has a public HF mirror (the sibling ltx23-lora-talkvid dep mirrors Comfy-Org/ltx-2.3), then stage it to R2 and add a dependencies.js entry. After that the Flow itself is a copy of the ltx-extend shape - read docs/playbooks/add-flow/existing-flows/ltx-extend.md rather than re-deriving it. MPI-536 also OWNS the foley-vs-voice mode decision; voice mode has never been run, and shipping foley alone in v1 is a legitimate answer.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "MPI-531 item 1 as carded was NOT sufficient - fields render on middle steps only, so FlowDef.controls shipped with it. A new Flow declares controls and ships NO uiComponent; if a control is not expressible, add the field type.",
+      "The trio's order changed: extend went FIRST, not foley. Extend needs no new weight; foley and lipsync each need a LoRA that is not a dep yet. Recorded in MPI-552/plan.md Plan Drift.",
+      "ltx-extend requires ltx-23-balanced specifically - the proven graph bakes the int8 transformer. One tier, one workflow file, acceptable because the Flow Library is dev-gated.",
+      "ltx-extend exposes NO resolution control: ImageResizeKJv2 takes width/height from Input_Video's own outputs, so the output matches the source. This is the OPPOSITE of foley, where those inputs were deleted because they fed only the encode. Do not carry either decision across.",
+      "The raw graph was renamed to flow_ltx_extend.json - a bare name converts straight to a runtime file; the _template suffix routes to a generator that does not exist for flows."
+    ],
+    "constraints": [
+      "MPI-557 is a PEER SESSION's card and is NOT a Flow - it is a video-face-detailer experiment. It was parked to todo by mistake this session and restored to doing. Do not touch it, its files, or its column.",
+      "The user is running RunPod video work, so the GPU is theirs. Do not dispatch a generation. The payload of a Flow can be proven with no run: strip state.s_installedModelIds in your OWN app instance, click Generate, and read state.s_flowInputs - _run persists BEFORE submitFlowGeneration's availability guard aborts.",
+      "Never drive :3000 - that is the user's live app. Spin your own with `CUBRIC_MODELS_ROOT=\"G:/CubricModels\" npm run app:isolated` and never pipe the launch into tail/head (the output buffers and the READY line never arrives). TaskStop leaves the Electron alive holding the profile lock, so the next launch dies silently at ~2.3s - kill the process TREE.",
+      "Convert workflows against the APP engine on 48188, never the 8188 bench, and never run workflow-to-api.mjs bare (it converts all of raw/)."
+    ],
+    "files_to_read_first": [
+      "docs/playbooks/add-flow/existing-flows/ltx-extend.md",
+      ".agents/mpi-kanban/tasks/MPI-552/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-536/brief.md",
+      "docs/playbooks/add-flow/ui/carousel-frame.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/664fbe7d-955c-426f-8cde-097a9e19b163.json and continue the Cubric Vision Flow track. Last session cleared the blocker under the whole track - MPI-531 item 1 (FlowStepField gains number/slider/text) plus FlowDef.controls, so a Flow now declares its run-slide controls as data and needs no JS component - and integrated the first Flow on top of it, MPI-520 Extend Video (card in doing/validating, its only open item is the user's own live generation, which they cannot run while their RunPod video work owns the GPU). Next is MPI-536 (LTX 2.3 foley): its one prereq is staging ltx-2.3-22b-lora-foley-v2a-1.0.safetensors to R2 with a dependencies.js entry, after which the Flow is a copy of the ltx-extend shape. MPI-538 (lipsync) follows and needs ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors the same way. MPI-557 belongs to a different session, is not a Flow, and must not be touched."
+}

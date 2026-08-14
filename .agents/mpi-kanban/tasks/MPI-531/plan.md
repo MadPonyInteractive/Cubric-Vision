@@ -60,6 +60,23 @@ declarative form of a shape the app already ships, not a new one.
   my own app instance (`npm run app:isolated`, never `:3000`). Field types with no
   Flow using them is not evidence. That run closes this slice.
 
+## Current State (2026-08-14, handoff)
+
+Item 1 slice **SHIPPED and verified** — `55461326` (frame + typedef + playbook docs) and
+`621174e6` (the first Flow using it). Evidence in `validation.md`; checklist fully ticked.
+591/591 suite green, eslint clean, both commits pushed.
+
+Items 2 (`steps[].image`), 3 (author every 1.5 Flow declaratively) and 4 (port
+`MpiFlowHeadSwap`) are **untouched and still open**. The card is a 1.5 release blocker until
+they land. MPI-532 was deliberately not started.
+
 ## Plan Drift
 
-(none yet)
+**The scope grew by one key, and it had to.** Item 1 alone unblocks nothing: `fields` render
+on middle steps only, and the run slide's controls came solely from `props.uiComponent`. So
+`FlowDef.controls` shipped with it — declared run-slide controls, `Input_*` ids routed into
+`injectionParams`. The card body still describes item 1 as just the field types; that is now
+understated, not wrong.
+
+`number` is implemented but has **no live consumer yet**. Its first will be extend's
+width/height (MPI-520), which needs a bench re-export.

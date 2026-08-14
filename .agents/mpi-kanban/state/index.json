@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-14T03:40:00Z",
+  "updated_at": "2026-08-14T03:50:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -32,6 +32,14 @@
       "status": "open",
       "created_at": "2026-08-14T03:40:00Z",
       "note": "Phase 0 session 3: B2 closed (SeedVR2 wins, B4 void), both degraded runs weak. The finding - restoration fixes SOFT faces, not WRONG ones. Next action is a scope question for Fabio, not a run."
+    },
+    {
+      "id": "664fbe7d-955c-426f-8cde-097a9e19b163",
+      "path": ".agents/mpi-kanban/state/handoffs/664fbe7d-955c-426f-8cde-097a9e19b163.json",
+      "task_card": "MPI-520",
+      "status": "open",
+      "created_at": "2026-08-14T03:50:00Z",
+      "note": "Flow track: MPI-531 item 1 + FlowDef.controls shipped, MPI-520 Extend Video integrated and validating. Next is MPI-536 foley, gated on staging its LoRA to R2."
     }
   ]
 }
