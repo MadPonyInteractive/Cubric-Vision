@@ -2741,3 +2741,4 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-563", "type": "task.created", "at": "2026-08-14T01:05:16Z", "actor": "claude", "summary": "Remote WS drop is classified as OOM because engine_dropped's own message contains 'out of memory'."}
 {"schema":"mpi-kanban/event/v1","id":"MPI-455","type":"task.updated","at":"2026-08-14T00:55:00Z","actor":"claude","summary":"Healed a dead pointer - the card named MPI-4 as its track, but MPI-4 is closed; repointed at MPI-552."}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-563", "type": "task.moved", "at": "2026-08-14T01:05:59Z", "actor": "claude", "summary": "Moved todo -> doing to fix the engine_dropped misclassification."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-563", "type": "task.moved", "at": "2026-08-14T01:11:34Z", "actor": "claude", "summary": "Shipped: engine_dropped now classified before the message-based OOM branch. 590/590 suite green; both regression shapes mutation-tested and caught."}

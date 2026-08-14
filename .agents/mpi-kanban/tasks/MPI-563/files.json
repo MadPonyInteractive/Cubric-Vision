@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/services/commandExecutor.js",
+    "tests/engine-dropped-not-oom.test.cjs"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-563",
+  "title": "Remote WS drop misreports as out-of-memory",
+  "description": "engine_dropped has no branch in commandExecutor; the generic OOM regex matches its own message text and shows the wrong remedy.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-08-14T01:05:16Z",
+  "updated_at": "2026-08-14T01:11:34Z",
+  "links": {
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  }
+}

@@ -2223,10 +2223,29 @@ export function runCommand(payload) {
                 exec.onError?.(err);
                 return;
             }
+            // MPI-563: the remote engine vanished mid-generation (comfyController's
+            // `_onWsDropped`). MUST be tested BEFORE the OOM regex below: that error's own
+            // message reads "the Pod may have run out of memory and restarted", so the
+            // regex matched it and every remote drop — user-stopped Pod, network blip, host
+            // eviction, wrapper crash, idle watchdog — rendered as "the inputs are likely
+            // too large". Wrong REMEDY, not just wrong wording: after a drop the engine is
+            // gone, so retrying with smaller media cannot succeed until the user reconnects,
+            // which is exactly the step `err.message` carries and the OOM toast dropped.
+            if (err?.code === 'engine_dropped') {
+                clientLogger.warn('comfy', `Remote engine dropped — ${workingPayload.operation} / ${workingPayload.modelId}`);
+                Events.emit('ui:warning', {
+                    title: 'Remote engine disconnected',
+                    message: err.message,
+                });
+                exec.onError?.(err);
+                return;
+            }
             // Out-of-memory (system RAM or CUDA/VRAM). User-actionable — the inputs are
             // too large for the available memory, not a bug to report. Warning toast, not
             // the GitHub-report dialog. Covers Python MemoryError, torch CUDA OOM, and the
             // generic "out of memory" / "cannot allocate" phrasings ComfyUI surfaces.
+            // Message-based by design (ComfyUI OOM arrives with no code), which is why the
+            // coded `engine_dropped` case above has to be claimed first.
             if (/\b(memoryerror|out of memory|cannot allocate|outofmemory|cuda out of memory)\b/i.test(err?.message || '')) {
                 clientLogger.warn('comfy', `Out of memory — ${workingPayload.operation} / ${workingPayload.modelId}`);
                 Events.emit('ui:warning', {
