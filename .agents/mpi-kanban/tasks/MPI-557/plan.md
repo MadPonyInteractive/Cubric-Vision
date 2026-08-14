@@ -138,11 +138,12 @@ post-hoc rationalisation:
 Four changes, all from the desk pass. Detail and citations in
 [brief.md](brief.md) section `Phase 0 findings`.
 
-1. **Phase 3 is void as written.** The shipped `ltx23-lora-talkvid` IS an LTX ID
-   LoRA and IS already wired - but it is `LTXVReferenceAudio`'s **speaker**
-   identity, conditioned on a reference audio clip, with no face-reference input.
-   Phase 3 becomes a research question ("does a face ID LoRA exist upstream")
-   rather than a wiring task. No `loraDeps` work exists either way.
+1. **Phase 3 is re-scoped, not void.** There are multiple LTX ID LoRAs. The one
+   we ship (`ltx23-lora-talkvid`) is `LTXVReferenceAudio` **speaker** identity -
+   the wrong sense. The face one is `Alissonerdx/LTX-Best-Face-ID`, built for the
+   LTX-2.3 22B checkpoint we already run, needing a BFSNodes update and a weight
+   fetch. Phase 3 becomes "does its reference conditioning survive a denoise~0.3
+   v2v init" - a bench test, not a wiring task.
 2. **Brief step 6 (crossfade) is free on the SeedVR2 branch.** `SeedVR2TemporalMerge`
    already Hann-crossfades every overlap. It is a wire, not work. Only the LTX v2v
    branch still needs its own.

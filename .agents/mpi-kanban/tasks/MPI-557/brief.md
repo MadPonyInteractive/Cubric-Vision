@@ -198,30 +198,76 @@ centred square -> clamped and shrunk to stay inside the image, with asserts at
 `img.py:859-879`. The squaring/padding half of the node is already written and
 tested; only the per-frame loop and the union are new.
 
-### D2 - the LTX identity LoRA (this rewrites Phase 3)
+### D2 - the LTX identity LoRAs (this re-scopes Phase 3)
 
-Two corrections to the brief.
+**There is more than one LTX ID LoRA. They are not interchangeable.** Fabio,
+2026-08-14, correcting a first pass of this section that had found only the
+shipped one and wrongly concluded no face LoRA existed.
 
-1. **An LTX ID LoRA is already a dep and already wired.** `ltx23-lora-talkvid` -
-   *"LTX-2.3 ID LoRA TalkVid-3K (baked - voice-ID)"*
-   (`js/data/modelConstants/loraDeps.js:412-421`), upstream `Comfy-Org/ltx-2.3`
-   -> `split_files/loras/ltx-2.3-id-lora-talkvid-3k.safetensors`. It loads in
-   `comfy_workflows/ltx_i2v_t2v.json` node 277 at strength 1.0. The brief's *"the
-   identity LoRA is not wired yet and needs a `loraDeps` entry"* is wrong - there
-   is no dep work to do.
+**1. The one we already ship is voice-ID, not face-ID.** `ltx23-lora-talkvid` -
+*"LTX-2.3 ID LoRA TalkVid-3K (baked - voice-ID)"*
+(`js/data/modelConstants/loraDeps.js:412-421`) - loads in
+`comfy_workflows/ltx_i2v_t2v.json` node 277 at strength 1.0, bound to
+`LTXVReferenceAudio` (node 274), whose own description reads *"Set reference
+audio for ID-LoRA **speaker** identity transfer"*. It encodes a reference
+**audio** clip and needs an audio VAE (`comfy_extras/nodes_lt.py:852-893`). No
+face-reference input anywhere in it. **Not the Phase 3 mechanism.**
 
-2. **But it is the wrong kind of identity.** It is bound to `LTXVReferenceAudio`
-   (node 274, `identity_guidance_scale` 1.5), whose own description reads *"Set
-   reference audio for ID-LoRA **speaker** identity transfer"* - it encodes a
-   reference **audio** clip into the conditioning and needs `reference_audio` plus
-   an audio VAE (`comfy_extras/nodes_lt.py:852-893`). There is no face-reference
-   input anywhere in it.
+**2. The face one is `Alissonerdx/LTX-Best-Face-ID`** (huggingface.co, and
+comfyui-wiki.com/en/news/2026-07-06-ltx-best-face-id-lora). Targets **LTX-2.3
+(22B) - the same checkpoint we already ship.** Two files:
 
--> **Phase 3 as written does not exist.** "Wire the LTX identity LoRA on the v2v
-branch" would attach a voice-identity mechanism to a silent face crop. No
-face-identity LoRA is present in the shipped stack and none was found in the LTX
-node pack. Phase 3 should be struck or re-scoped to *"does a face ID LoRA exist
-upstream at all"* - a research question, not a wiring task.
+| File | What |
+|---|---|
+| `Best_FaceID_v1.0_LoRA.safetensors` | base, close-up / bust-crop reference |
+| `Best_FaceID_CharacterSheet_v1.0_LoRA.safetensors` | continuation trained on 4-panel character-sheet references, refs **exactly 1536x1024** |
+
+LoRA rank 128 / alpha 128. Conditioning is an overlap reference latent plus
+TASS-RoPE source-phase tagging (`source_id=2`), trained with an ArcFace identity
+loss and temporal consistency. Prompts take a `ref_t2v:` prefix. Mixing both at
+~0.2+ is the documented combination ("the base close-up LoRA strengthens
+identity while the character-sheet LoRA keeps handling clothing/body"). Licence
+is `other` - **read it before shipping anything**, cf.
+[[project_model_licences_can_be_territory_restricted]].
+
+Its own stated limitations matter for this card: the reference *"can look like
+it is 'pasted'/masked rather than freshly generated"*; identity is *"much
+stronger when the prompt describes the person"*; training skews close-up/frontal
+so *"full-body or large-angle shots hold identity less well"*; and *"ArcFace
+similarity is unreliable on small / turned / occluded faces - judge visually,
+not only by score"* - which independently confirms this plan's front-loaded
+"eye, not metric" decision.
+
+**3. The open question is whether it composes with a v2v pass.** The wiki is
+explicit that it is *"strictly reference-to-video generation... It does not
+perform frame-by-frame transformation of existing video footage."* That is the
+same sentence that killed H3 ref2va in section 4 - **but it does not kill this
+one the same way.** H3 had no v2v path at all. Here the LoRA is weights plus a
+conditioning node stacked on the LTX-2.3 checkpoint we already run v2v on, and
+in a denoise ~0.3 pass the frame-for-frame motion lock comes from the **source
+latents**, not from the conditioning. Whether reference conditioning survives a
+partial-denoise init is a **bench question, not a documentation question**. Do
+not re-reject it from the docs.
+
+**4. Bench state: testable, but not yet.** `ComfyUI-BFSNodes` is already
+installed at `G:\ComfyUi\ComfyUI\custom_nodes\ComfyUI-BFSNodes`, but it is an
+older build - it registers `LTXVEditAnything*`, `BFSHeadSwap*`,
+`ReservedRegionFrameComposer`, `FrameRangedFaceLoader`, `FaceSequenceBatch`, and
+**no `LTX Identity Transfer` node**, which the model card names as its primary
+node. The pack needs updating, and neither weight file is on disk
+(`G:\CubricModels\loras\ltx-2.3\` holds only merged / transition / talkvid /
+foley).
+
+-> **Phase 3 stands, re-scoped.** Not "wire the ID LoRA we already have" - that
+one is the wrong sense of identity. It is: update BFSNodes, fetch
+`Best_FaceID_v1.0`, and test whether its reference conditioning composes with a
+denoise~0.3 v2v pass on a face crop. Still gated behind Phase 0/2 showing the
+failure is **drift**, not mush.
+
+**Side value, outside this card:** the character-sheet variant takes 4-panel
+sheet references, which is exactly the keystone artifact of
+[[project_lora_free_character_system]]. Worth its own look regardless of what
+this card does.
 
 ### D3 - `SeedVR2TemporalChunk`, and three things that change the plan
 
@@ -284,6 +330,114 @@ reserve is over half the card, so the answer swings hard on what else is loaded:
 This also means **B5 is not a fixed property of the pipeline**: at crop
 resolution on a clean card the whole clip may be a single chunk, and the seam
 question only exists on a loaded one.
+
+### B7 answered early - the union window fails on most real clips
+
+Measured 2026-08-14 on **every mp4 in the Vision projects tree** (274 clips,
+`face_yolov8n` at conf 0.35, 16 frames sampled evenly per clip, largest face per
+frame, union squared and padded 30% exactly as section 2 step 2 specifies). The
+plan budgeted "3-4 real clips" for this; the detector is cheap enough that all of
+them ran, so B7 is closed before the bench was even up.
+
+142 clips hold a tracked face in at least 12 of 16 sampled frames. Of those:
+
+| | union > 50% of frame height | blowup median | p90 |
+|---|---|---|---|
+| **All 142** | **88 (62%)** | 2.31 | 7.85 |
+| Single-face only (104) | **57 (55%)** | 2.19 | 5.56 |
+| Multi-face (38) | 31 (82%) | 3.57 | 12.38 |
+
+*blowup = union side / median face side. "union > 50%" is the point where the
+window covers half the frame and the resolution win is mostly gone.*
+
+The multi-face split was measured to rule out an obvious confound - "largest face
+per frame" can jump between people, inflating the union for a reason that is not
+subject motion. It is a real effect (82% vs 55%) but **it does not rescue the
+rule**: over half of single-subject clips still blow the window, on clips only
+3-5 seconds long.
+
+-> **The static union window is not a viable v1.** Section 2's
+`ponytail:` note deferred the smoothed window until "a real clip breaks it" -
+the answer is that most real clips break it, and the median clip already needs a
+window 2.2x the face it is trying to detail. `MpiFaceWindow` should be specced
+with per-frame tracking (or per-segment windows) from the start, not as a
+follow-up. This does not gate B1, which uses a hardcoded box by design.
+
+**Caveat on scope:** these are generated clips from this machine's own projects,
+which skew short and are mostly single-shot. A cut inside a longer clip would
+make the union worse, never better.
+
+### B1 source clip
+
+Picked against the plan's criteria from the same scan - single-face, small face,
+well-behaved window, detector solid across the clip:
+
+- **Primary: `v1.1 LTX Examples/Media/t2v_ms_001.mp4`** - 2560x1408, 3.0s, face
+  7.7% of frame height (~108 px), union window 14.3% (~201 px), blowup 1.85,
+  face found in 16/16 sampled frames. Cropping ~201 px and sampling at 512 is a
+  ~2.5x upscale, which is close to the brief's own 128->512 worked example.
+- **Stress option: `cowboys/Media/ref2v_ms_006.mp4`** - 864x480, face 6.1%
+  (~29 px), union 13% (~62 px). A 62->512 crop is over 8x. Keep in reserve for
+  after the primary answers, so a NO-GO cannot be blamed on an unreasonable
+  upscale.
+
+Both live under `<Documents>/Cubric Vision/Projects/`.
+
+### B1 - executed 2026-08-14, awaiting Fabio's verdict
+
+Ran on the bench (core 0.31.0, RTX 4060 Ti 16 GB). Graph is the shipped donor
+`comfy_workflows/raw/seedvr2_video.json` with `MpiBoxCrop` spliced in after the
+loader - no detection, no paste-back, exactly as the plan specifies.
+
+    MpiLoadVideo -> MpiBox(1173,300,208,208) -> MpiBoxCrop -> ImageResizeKJv2 512
+      -> SeedVR2Preprocess -> VAEEncodeTiled -> SeedVR2Conditioning
+      -> SeedVR2TemporalChunk(auto, overlap 2) -> KSampler -> SeedVR2TemporalMerge
+      -> VAEDecodeTiled -> SeedVR2PostProcessing
+
+- Model `seedvr2_3b_int8_convrot`, VAE `seedvr2_ema_vae_fp16`. KSampler
+  **1 step, cfg 1.0, euler/simple, denoise 1.0** - SeedVR2 is a one-step
+  restoration model, so this is the donor's own setting, not a shortcut.
+- Clip `v1.1 LTX Examples/Media/t2v_ms_001.mp4`, 73 frames, 2560x1408. Window
+  208x208 at (1173, 300), upscaled 2.46x to 512.
+- **35.1 s** for sample + decode (load/crop/encode were cache hits from the
+  previous attempt, so this is not a cold end-to-end number).
+
+Three outputs so the comparison is against a fixed baseline, per the plan:
+
+| | what |
+|---|---|
+| **A** | lanczos only - the crop upscaled, no model. The fixed baseline. |
+| **B** | SeedVR2, `color_correction_method: none` - raw model output |
+| **C** | SeedVR2, `color_correction_method: wavelet` - the section 3 detail transfer |
+
+**Collapse detector** (laplacian variance, normalised per-frame against the
+fixed lanczos baseline - used only to detect a within-clip collapse, never to
+rank quality):
+
+- B and C both carry **~10.8x** the baseline's high-frequency energy
+  (min 8.3x, max 18.4x).
+- Held across the clip - by thirds, **11.6x / 10.2x / 10.7x**. **No collapse.**
+- B and C are within 0.02x of each other, as expected: `wavelet` swaps the low
+  frequencies, which barely register in a laplacian.
+- **One thing to watch by eye:** frame-to-frame laplacian change is **10.0% mean
+  / 29.3% max** against the baseline's 3.5% / 10.4%. Roughly 3x the baseline's
+  temporal jitter. Some of that is real detail moving with the face, but boiling
+  would look the same to this metric - which is exactly why the gate is the eye.
+
+**B5 did not arise in this run.** `auto` chunking logged
+`free=14.36GiB, 0.26Mpx -> frames_per_chunk=73 (t_pixel=73)` - the entire clip
+was one chunk, so there were no seams to see. That confirms the predicted table
+above: at crop resolution on a clean card, chunking does not engage. Seams only
+become a question on a loaded card or a longer clip.
+
+**Judging assets** (in the session scratchpad `b1_compare/`):
+`B1_side_by_side.mp4` (A | B | C, 24 fps, for flicker), and
+`B1_200pct_frame002 / 037 / 073.png` (200% face crops at start, middle, end, for
+sharpness and drift). Raw outputs and all 73 PNGs per branch are in
+`D:\WORK\Images\Outputs\MPI557_B1_3b_*`.
+
+**Verdict: NOT YET STATED.** Per this plan's verify mode, B1 does not close
+without Fabio looking at the output. Nothing above is a GO.
 
 ### Bench facts corrected
 
