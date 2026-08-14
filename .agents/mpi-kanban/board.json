@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 564,
+  "next_id": 566,
   "columns": {
     "todo": [
       "MPI-562",
@@ -19,7 +19,6 @@
       "MPI-543",
       "MPI-541",
       "MPI-538",
-      "MPI-536",
       "MPI-534",
       "MPI-533",
       "MPI-532",
@@ -73,11 +72,14 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-565",
+      "MPI-536",
       "MPI-557",
       "MPI-520",
       "MPI-531"
     ],
     "done": [
+      "MPI-564",
       "MPI-563",
       "MPI-555",
       "MPI-554",
@@ -166,8 +168,22 @@
       "MPI-549"
     ]
   },
-  "updated_at": "2026-08-14T01:11:34Z",
+  "updated_at": "2026-08-14T05:24:22Z",
   "events": [
+    {
+      "at": "2026-08-14T05:24:22Z",
+      "type": "task.updated",
+      "task": "MPI-565",
+      "actor": "opus",
+      "note": "Fix shipped: cardEl.destroy() stops the preview interval + mascot timer, called from removeCard and _cleanupDetachedState. tests/gallery-card-teardown.test.cjs passes; the same assertions fail on the pre-fix source (destroy undefined, 0/2 detach sites guarded). Remaining check is human: reload the app and confirm the ERR_FILE_NOT_FOUND stream stops after a generation completes or a card is deleted."
+    },
+    {
+      "at": "2026-08-14T05:21:35Z",
+      "type": "task.created",
+      "task": "MPI-565",
+      "actor": "opus",
+      "note": "Orphan preview loops after card removal - hundreds of ERR_FILE_NOT_FOUND reported by the user."
+    },
     {
       "at": "2026-08-11T05:40:00Z",
       "type": "task.moved",
@@ -2898,6 +2914,15 @@
       "from": "doing",
       "to": "done",
       "note": "Verified live: reusing a klein t2i card with H3 chips staged now empties the tray. Fixed in the PromptBox (8a40dd57); the first attempt in the gallery blocks was reverted."
+    },
+    {
+      "at": "2026-08-14T03:52:47Z",
+      "type": "task.moved",
+      "task": "MPI-536",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "note": "Implementation started. Unblocked by MPI-531 (FlowDef.controls); prereq research done - the foley LoRA has no public mirror (Lightricks repo is gated), so R2 is the only path."
     }
   ]
 }

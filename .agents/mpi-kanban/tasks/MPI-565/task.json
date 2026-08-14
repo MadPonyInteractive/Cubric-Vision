@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-565",
+  "title": "Gallery cards removed without teardown - orphan preview loops spam ERR_FILE_NOT_FOUND",
+  "description": "A gallery card's latent-preview playback is a setInterval and its mascot flip re-arms itself, but neither removal path (removeCard, _cleanupDetachedState) tears the card down and the card never defines destroy(). A detached card keeps painting clip frames whose blobs their owner revoked -> unbounded net::ERR_FILE_NOT_FOUND at the clip rate, one stream per removed card, accumulating all session.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-14T05:21:35Z",
+  "updated_at": "2026-08-14T05:24:22Z",
+  "links": {
+    "brief": "brief.md",
+    "files": "files.json",
+    "events": "events.jsonl"
+  }
+}

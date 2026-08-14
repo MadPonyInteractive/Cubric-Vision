@@ -1504,6 +1504,19 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 _promoteVideo();
             };
 
+            // Removing the wrapper from the DOM is NOT teardown. The preview clip
+            // plays on a setInterval and the mascot flip re-arms itself, so a
+            // detached card keeps painting frames forever — including the blobs
+            // its own gen revoked when it ended → net::ERR_FILE_NOT_FOUND at the
+            // clip rate, one stream per removed card, accumulating all session.
+            // Every removal path (removeCard, _cleanupDetachedState, grid destroy)
+            // MUST call this.
+            cardEl.destroy = () => {
+                _generating = false;
+                _stopPreviewPlayback();
+                _stopMascotFlip();
+            };
+
             _render();
 
             return { card: { el: cardEl }, wrapper };
@@ -1607,6 +1620,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         function _cleanupDetachedState(activeIds) {
             for (const [id, entry] of _cardMap) {
                 if (activeIds.has(id)) continue;
+                entry.card.el.destroy?.();
                 entry.el.remove();
                 _cardMap.delete(id);
             }
@@ -1896,6 +1910,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         el.removeCard = (groupId) => {
             const entry = _cardMap.get(groupId);
             if (!entry) return;
+            entry.card.el.destroy?.();
             entry.el.remove();
             _cardMap.delete(groupId);
             _aspectRatioCache.delete(groupId);
