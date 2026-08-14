@@ -70,7 +70,7 @@ post-hoc rationalisation:
 
 ## Implementation
 
-- [ ] **Desk pass (D1-D3) - no GPU.** D1: does `MpiBoxCrop` accept a multi-frame
+- [x] **Desk pass (D1-D3) - no GPU.** D1: does `MpiBoxCrop` accept a multi-frame
       IMAGE batch, and is `UltralyticsDetectorProvider` per-image only? Read the
       node source in `ComfyUi-MpiNodes` and Impact-Subpack. D2: does an LTX
       identity LoRA exist upstream, and where (this gates whether Phase 3 exists
@@ -121,17 +121,44 @@ post-hoc rationalisation:
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] **Desk pass D1-D3** (2026-08-14). All three answered and written into
+      [brief.md](brief.md) section `Phase 0 findings`, each citing its source file.
+      Headline: `MpiFaceWindow` is confirmed needed, Phase 3's premise is void,
+      and core already ships two of the pieces the brief planned to build.
 
 ## Remaining Work
 
-- All of Phase 0, per the checklist above.
+- Phase 0 from the bench gate onward (boot + schema probe, then B1). The desk
+  pass is done; **B1 is the next step and needs the GPU and Fabio's eye.**
 - Out of scope by design: the three custom nodes, the Flow, the identity LoRA.
   Those get a second plan written against this one's verdict.
 
 ## Plan Drift
 
-- None yet.
+Four changes, all from the desk pass. Detail and citations in
+[brief.md](brief.md) section `Phase 0 findings`.
+
+1. **Phase 3 is void as written.** The shipped `ltx23-lora-talkvid` IS an LTX ID
+   LoRA and IS already wired - but it is `LTXVReferenceAudio`'s **speaker**
+   identity, conditioned on a reference audio clip, with no face-reference input.
+   Phase 3 becomes a research question ("does a face ID LoRA exist upstream")
+   rather than a wiring task. No `loraDeps` work exists either way.
+2. **Brief step 6 (crossfade) is free on the SeedVR2 branch.** `SeedVR2TemporalMerge`
+   already Hann-crossfades every overlap. It is a wire, not work. Only the LTX v2v
+   branch still needs its own.
+3. **B6 becomes an A/B, not a build.** `SeedVR2PostProcessing`'s `wavelet` option
+   is `content_high_freq + style_low_freq` at 5 levels - the section 3 detail
+   transfer, already in core, multi-scale, no radius to pick. `MpiDetailTransfer`
+   may be redundant. Flagged for Fabio at B6, not decided here: it sits under a
+   menu labelled "color correction", and section 3 bans colour matching.
+4. **B5 (do seams show) is conditional, not fixed.** SeedVR2 `auto` chunking
+   reserves a flat 8.5 GiB, over half this 16 GB card. A 120-frame 512 crop is one
+   chunk on a clean card and roughly four on a loaded one, so B5 must be judged
+   with the bench's own `SeedVR2TemporalChunk auto:` log line recorded alongside
+   the verdict.
+
+Also: bench core is 0.31.0, not the 0.30.2 recorded at plan time, and the bench
+path is `G:\ComfyUi\ComfyUI\` (nested).
 
 ## Verification
 

@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-557/brief.md",
+    ".agents/mpi-kanban/tasks/MPI-557/plan.md"
+  ]
+}
