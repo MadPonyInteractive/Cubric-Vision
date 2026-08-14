@@ -75,11 +75,20 @@ cargo-cult install-sync machinery from modelRegistry).
   requiredModels, // MODEL ids (NOT dep ids) — [] for a no-model flow
   operation,      // the universal-op key from commandRegistry.js
   workflow,       // the workflow filename from universal_workflows.js
-  uiComponent,    // per-flow component NAME (string) — OMIT for a media-only flow
+  uiComponent,    // LEGACY per-flow component NAME (string) — OMIT it; declare `controls`
+  controls,       // declared run-slide controls (MPI-531) — the replacement for uiComponent
   mediaType,      // 'image' | 'video' — the OUTPUT type (always required)
   inputSchema,    // { positive?: 'string', media?: [ ...slot groups ] }
 }
 ```
+
+**A new flow declares `controls`, not a `uiComponent`.** A component is a thing a third-party
+Flow can never have, so every knob written as JS is debt the community-package work has to
+port. `controls` is the same field vocabulary a step's `fields` uses, rendered by the frame on
+the run slide; an id prefixed `Input_` routes into `injectionParams` instead of the top level.
+Full contract + the id-routing table: [ui/carousel-frame.md](ui/carousel-frame.md) § The last
+step's controls are DECLARED too. Worked example:
+[existing-flows/ltx-extend.md](existing-flows/ltx-extend.md).
 
 ### No-model flow (Video Stitch)
 

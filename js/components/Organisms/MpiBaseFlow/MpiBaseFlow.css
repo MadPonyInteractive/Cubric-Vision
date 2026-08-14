@@ -461,11 +461,68 @@
     color: var(--ink-1);
     border-color: var(--ink-3);
 }
+.mpi-base-flow__field-input,
+.mpi-base-flow__field-text {
+    font-family: inherit;
+    font-size: var(--t-2xs);
+    color: var(--ink-1);
+    background: oklch(0.26 0.018 350 / 0.6);
+    border: 1px solid var(--line);
+    padding: 4px var(--s-2);
+    min-width: 0;
+}
+.mpi-base-flow__field-input {
+    width: 5.5em;
+}
+.mpi-base-flow__field-text {
+    resize: vertical;
+}
+.mpi-base-flow__field-range {
+    accent-color: var(--accent-frost);
+    cursor: pointer;
+}
+/* The readout is the control — a slider without its number is a guess. Tabular
+   digits so the row does not jitter as the value changes width. */
+.mpi-base-flow__field-value {
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    min-width: 3ch;
+    text-align: right;
+}
 .mpi-base-flow__field-select:focus-visible,
 .mpi-base-flow__field-button:focus-visible,
-.mpi-base-flow__field-toggle:focus-visible {
+.mpi-base-flow__field-toggle:focus-visible,
+.mpi-base-flow__field-input:focus-visible,
+.mpi-base-flow__field-text:focus-visible,
+.mpi-base-flow__field-range:focus-visible {
     outline: 1px solid var(--accent-frost);
     outline-offset: 1px;
+}
+
+/* Stacked — the run slide's declared controls (MPI-531). Same fields, but this
+   column is 236px of vertical stack, so the label sits ABOVE its control and each
+   control fills the width. The one-row cap belongs to the STEP row, not here. */
+.mpi-base-flow__fields--stacked {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-3);
+}
+.mpi-base-flow__fields--stacked .mpi-base-flow__field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-2);
+}
+.mpi-base-flow__fields--stacked .mpi-base-flow__field-input {
+    width: 100%;
+}
+.mpi-base-flow__field-slider {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+.mpi-base-flow__field-slider .mpi-base-flow__field-range {
+    flex: 1;
+    min-width: 0;
 }
 
 /* ── Last step: controls + result ───────────────────────────────────────── */

@@ -32,8 +32,19 @@
  *                                       that model). MPI-304.
  * @property {string}   operation      - Universal-op key (commandRegistry.js)
  * @property {string}   workflow       - ComfyUI workflow filename (universal_workflows.js)
- * @property {string}   uiComponent    - Per-flow Organism component name (controls only; hosted by MpiBaseFlow)
- * @property {Object}   inputSchema    - What the uiComponent collects → injected into the workflow
+ * @property {string}   [uiComponent]  - Per-flow Organism component name (controls only; hosted by
+ *                                       MpiBaseFlow). LEGACY SURFACE — a component is a thing a
+ *                                       third-party Flow can never have, so a new Flow declares
+ *                                       `controls` instead and omits this (MPI-531).
+ * @property {FlowStepField[]} [controls] - Run-slide controls, rendered BY THE FRAME from the same
+ *                                       field vocabulary a step's `fields` uses. An id reaches the op
+ *                                       as a top-level input (`positive`, `negative`), EXCEPT an id
+ *                                       prefixed `Input_`, which names a graph node and is routed
+ *                                       into `injectionParams` instead. So
+ *                                       `{ id: 'positive', type: 'text', rows: 3 }` is the whole of
+ *                                       what a prompt-collecting `uiComponent` used to be. Declaring
+ *                                       both is legal (mid-port) and the component wins on merge.
+ * @property {Object}   inputSchema    - What the flow collects → injected into the workflow
  * @property {FlowStep[]} [steps]       - Declared MIDDLE steps of the flow's carousel (MPI-306).
  *                                       Step 0 (inputs) and the last step (run) are IMPLICIT —
  *                                       the frame renders them from inputSchema + the flow's
@@ -57,10 +68,19 @@
  *                               means the step should SPLIT.
  *
  * @typedef {Object} FlowStepField
- * @property {string}  id      - Key the value lands under in the step's `fields` object.
- * @property {'select'|'button'|'toggle'} type
+ * @property {string}  id      - Key the value lands under. In a step's `fields` object
+ *                               when declared on a step; a TOP-LEVEL run input when
+ *                               declared in the flow's `controls` (so `id: 'positive'`
+ *                               reaches the op as `positive`).
+ * @property {'select'|'button'|'toggle'|'number'|'slider'|'text'} type
  * @property {string}  [label]
  * @property {Array<{v:string|number, label:string}>} [options] - For `select`.
+ * @property {number}  [min]   - For `number` / `slider`. ENFORCED, not decorative:
+ *                               the value is clamped before it reaches the graph.
+ * @property {number}  [max]   - For `number` / `slider`.
+ * @property {number}  [step]  - For `number` / `slider`.
+ * @property {number}  [rows]  - For `text`. `> 1` renders a textarea (the prompt case).
+ * @property {string}  [placeholder] - For `text`.
  * @property {*}       [default]
  */
 
@@ -211,6 +231,56 @@ export const FLOWS = [
                 tickerLabel: 'Reference head',
                 title: 'Mark which head to take',
                 hint: 'Box the head to use. A close-up portrait works best.',
+            },
+        ],
+    },
+    // MPI-520 — the first Flow authored with NO uiComponent. Its three controls are
+    // DECLARED (MPI-531), so the whole descriptor is data a third-party manifest
+    // could carry. Do not add a component here to gain a knob; add the field type.
+    //
+    // Runs on the already-installed LTX 2.3 checkpoint — no ModelDef, no dep entry.
+    // `ltx-23-balanced` specifically: the bench-proven graph bakes the int8
+    // transformer (UNETLoader → ...int8_convrot.safetensors), so the High card's
+    // bf16 weight would not satisfy it. One tier, one workflow file — revisit if the
+    // Flow Library ever leaves the dev gate with only the High card installed.
+    {
+        id: 'ltx-extend',
+        title: 'Extend Video',
+        preview: 'ltx23_balanced_preview.webp',
+        description: 'Continue a video past its last frame. Drop a clip, describe what happens next, and LTX 2.3 generates the new seconds — with matching audio — onto the end of it.',
+        requiredModels: ['ltx-23-balanced'],
+        operation: 'flowLtxExtend',
+        workflow: 'flow_ltx_extend.json',
+        mediaType: 'video',
+        inputSchema: {
+            media: [
+                { type: 'video', mode: 'upto', max: 1, roles: ['video1'], labels: ['Video to extend'] },
+            ],
+        },
+        // No middle steps: nothing here is marked on the clip itself, so the flow is
+        // a 2-step carousel (supply → run).
+        steps: [],
+        // Declared controls — rendered by MpiBaseFlow on the run slide, each value
+        // reaching the op under its own id. `positive`/`negative` are read by
+        // submitFlowGeneration; `Input_Duration` is an injection param, so it is
+        // named for the graph node it writes.
+        controls: [
+            {
+                id: 'positive', type: 'text', rows: 3, label: 'What happens next',
+                placeholder: 'Describe the new seconds — action, camera, sound…',
+            },
+            {
+                id: 'negative', type: 'text', rows: 2, label: 'Avoid',
+                // The bench-proven negative, kept as the default because it is what
+                // the approved runs used — an empty box here is a different graph.
+                default: 'letterbox, black bars, cinematic bars, pillarbox, border, vignette, blurry, low quality, still frame, frames, watermark, overlay, titles, unrealistic, plastic, fake, out-of-focus, low-detail, slow motion',
+            },
+            {
+                // Seconds of NEW video, snapped to whole latent frames by the graph
+                // (MpiMath `floor((a*b+0.5)/8)*8/b` off the source's own fps). A
+                // slider because it is a bounded coarse choice, not a typed number.
+                id: 'Input_Duration', type: 'slider', label: 'Seconds to add',
+                min: 1, max: 10, step: 1, default: 4,
             },
         ],
     },

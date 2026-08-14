@@ -138,6 +138,50 @@ than one row of fields is telling you the step should SPLIT IN TWO, not that the
 grow. Hold this line: it is the seam where a guided flow quietly rots back into a settings
 form.
 
+### Field types
+
+`select` · `button` · `toggle` · `number` · `slider` · `text` (MPI-531 added the last three).
+
+- `number` / `slider` take `min` / `max` / `step`. **The bounds are ENFORCED**, not decorative —
+  the value is clamped before it reaches the graph, and a typed number is written back clamped
+  so the widget never shows one value while sending another. A slider always renders its live
+  numeric readout: a slider without its number is a guess.
+- `text` takes `placeholder` and `rows`; `rows > 1` renders a `textarea`. That is the prompt case.
+- Anything else logs a warning and renders nothing. A silently-missing control is the failure
+  mode this whole file exists to avoid.
+
+## The last step's controls are DECLARED too (MPI-531)
+
+The run slide used to have exactly one source of controls: the flow's `uiComponent`, a JS
+Organism. **A third party can never have a JS component**, so every Flow authored that way is
+a Flow that must be ported when community packages land. A flow now declares them instead:
+
+```js
+controls: [
+  { id: 'positive', type: 'text', rows: 3, label: 'What happens next' },
+  { id: 'Input_Duration', type: 'slider', label: 'Seconds to add', min: 1, max: 10, step: 1, default: 4 },
+]
+```
+
+Same vocabulary, same renderer, rendered stacked into the run slide's 236px control column —
+the one-row cap belongs to the step row, not here.
+
+**Where a value lands is decided by its id:**
+
+| id | goes to | why |
+|---|---|---|
+| `positive`, `negative` | top-level run inputs | `submitFlowGeneration` reads them by those names |
+| `Input_*` | `injectionParams` | the prefix names a GRAPH NODE — the app-wide injection naming law |
+| anything else | top-level run input under its own id | the shape `uiComponent.getInputs()` always returned |
+
+Seeding follows the same split, so a reopened flow restores an `Input_*` control from the
+persisted `injectionParams` rather than coming back at its default.
+
+`uiComponent` still mounts and still wins on merge (a flow carrying both is mid-port), but it
+is now the LEGACY surface. **A new Flow declares `controls` and ships no component.** If a
+control cannot be expressed, add the field type — do not reach for a component. Worked
+example: [../existing-flows/ltx-extend.md](../existing-flows/ltx-extend.md).
+
 ## Results are not real until Apply
 
 **This is a run-path change, not a UI detail.** It SHIPPED 2026-07-18 (commit `bcbe161f`).

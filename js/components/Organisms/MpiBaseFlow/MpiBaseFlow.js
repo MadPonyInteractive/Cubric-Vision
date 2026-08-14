@@ -56,6 +56,13 @@ import { getStepKind } from './stepKinds.js';
  * for free. Hard cap: one row, no nesting/panels/accordions. A gizmo wanting more
  * means the step should SPLIT.
  *
+ * DECLARED CONTROLS (MPI-531): the flow itself may declare `controls: [...]` — the
+ * SAME field vocabulary, rendered stacked on the run slide, each value landing as a
+ * top-level run input under its own id. That is the declarative form of what a
+ * `uiComponent`'s `getInputs()` returns, and it is what lets a Flow ship with no JS
+ * component at all — a component being precisely the thing a third-party Flow can
+ * never have (docs/playbooks/add-flow/ui/carousel-frame.md).
+ *
  * ── Results save themselves ──────────────────────────────────────────────────
  * A finished result is committed by the run path and the pane simply SAYS SO
  * ("Saved to your gallery"). Hold-until-Apply was built (MPI-306 Phase 3) and
@@ -217,6 +224,34 @@ export const MpiBaseFlow = ComponentFactory.create({
 
         /** Reported step values, keyed by the step's media role. @type {Object} */
         const _stepValues = { ...(seeded.stepValues || {}) };
+
+        /**
+         * Declared run-slide controls (MPI-531). Same field vocabulary as a step's
+         * row, rendered on the last step, and each value lands as a TOP-LEVEL run
+         * input under the field's own id — `{ id: 'positive' }` → `inputs.positive`,
+         * exactly what a `uiComponent`'s `getInputs()` returns today. That is what
+         * lets a Flow collect a prompt or a seed with NO JS component, which is the
+         * whole point: a component is a thing a third-party Flow can never have.
+         * @type {Array<Object>}
+         */
+        const _controls = Array.isArray(flow.controls) ? flow.controls : [];
+        /**
+         * Live control values. Seeded (and pre-filled from `default`) at SETUP, not
+         * at render: a run with untouched controls must still send their defaults,
+         * and the run slide is rebuilt on every navigation.
+         * @type {Object}
+         */
+        const _controlValues = {};
+        _controls.forEach((f) => {
+            if (f.type === 'button') return;   // a button is an action, not a value
+            // An `Input_*` control was persisted INSIDE injectionParams (that is where
+            // _collectInputs put it), so a reopen has to look there or the control
+            // silently comes back at its default while the last run used another value.
+            const v = /^input_/i.test(f.id)
+                ? (seeded.injectionParams?.[f.id] ?? f.default)
+                : (seeded[f.id] ?? f.default);
+            if (v !== undefined) _controlValues[f.id] = v;
+        });
 
         /** Live step-kind instances, keyed by step index — destroyed on rebuild. */
         const _stepInstances = new Map();
@@ -499,7 +534,115 @@ export const MpiBaseFlow = ComponentFactory.create({
             onDirty();
         }
 
-        // ── Declared fields (ONE row, frame-rendered) ───────────────────────────
+        // ── Declared fields (frame-rendered) ────────────────────────────────────
+        /**
+         * A declared field's numeric value, coerced and held inside its declared
+         * bounds. A `min`/`max` that only decorates the widget is a lie the graph
+         * pays for — a typed-in seed or width outside the model's range fails the
+         * generation, not the input.
+         *
+         * @param {string|number} raw
+         * @param {Object} f  the field declaration
+         * @returns {number}
+         */
+        function _fieldNumber(raw, f) {
+            let n = Number(raw);
+            if (!Number.isFinite(n)) n = Number(f.default) || 0;
+            if (f.min != null) n = Math.max(Number(f.min), n);
+            if (f.max != null) n = Math.min(Number(f.max), n);
+            return n;
+        }
+
+        /**
+         * Render ONE declared field. Shared by a step's fields row and the run
+         * slide's declared controls, so both surfaces speak one dialect — the same
+         * reason the frame renders fields at all instead of each gizmo drawing its
+         * own (carousel-frame.md § A step may declare FIELDS).
+         *
+         * @param {Object} f      a FlowStepField
+         * @param {*} cur         the field's current value, default already applied
+         * @param {Function} onChange (val) => void
+         * @param {Array<Function>} unsubs
+         * @returns {HTMLElement|null} null for an unknown type
+         */
+        function _buildField(f, cur, onChange, unsubs) {
+            const wrap = ce('label', { className: 'mpi-base-flow__field' });
+            if (f.label && f.type !== 'button') {
+                const lbl = ce('span', { className: 'mpi-base-flow__field-label' });
+                lbl.textContent = f.label;
+                wrap.appendChild(lbl);
+            }
+
+            if (f.type === 'select') {
+                const sel = ce('select', { className: 'mpi-base-flow__field-select' });
+                (f.options || []).forEach((o) => {
+                    const opt = ce('option', { value: String(o.v) });
+                    opt.textContent = o.label ?? String(o.v);
+                    sel.appendChild(opt);
+                });
+                if (cur != null) sel.value = String(cur);
+                unsubs.push(on(sel, 'change', () => onChange(sel.value)));
+                wrap.appendChild(sel);
+            } else if (f.type === 'button') {
+                const btn = ce('button', {
+                    className: 'mpi-base-flow__field-button', type: 'button',
+                });
+                btn.textContent = f.label || f.id;
+                unsubs.push(on(btn, 'click', () => onChange(true)));
+                wrap.appendChild(btn);
+            } else if (f.type === 'toggle') {
+                const box = ce('input', { type: 'checkbox', className: 'mpi-base-flow__field-toggle' });
+                box.checked = Boolean(cur);
+                unsubs.push(on(box, 'change', () => onChange(box.checked)));
+                wrap.appendChild(box);
+            } else if (f.type === 'number') {
+                const inp = ce('input', { type: 'number', className: 'mpi-base-flow__field-input' });
+                if (f.min != null) inp.min = String(f.min);
+                if (f.max != null) inp.max = String(f.max);
+                if (f.step != null) inp.step = String(f.step);
+                if (cur != null) inp.value = String(cur);
+                unsubs.push(on(inp, 'change', () => {
+                    const n = _fieldNumber(inp.value, f);
+                    // Write the clamped value back: a field that silently sends a
+                    // different number than it shows is worse than a rejected run.
+                    inp.value = String(n);
+                    onChange(n);
+                }));
+                wrap.appendChild(inp);
+            } else if (f.type === 'slider') {
+                const rng = ce('input', { type: 'range', className: 'mpi-base-flow__field-range' });
+                rng.min = String(f.min ?? 0);
+                rng.max = String(f.max ?? 100);
+                if (f.step != null) rng.step = String(f.step);
+                rng.value = String(_fieldNumber(cur ?? f.min ?? 0, f));
+                // A slider with no readout is a guess. The number IS the control.
+                const out = ce('span', { className: 'mpi-base-flow__field-value' });
+                out.textContent = rng.value;
+                unsubs.push(on(rng, 'input', () => {
+                    out.textContent = rng.value;
+                    onChange(Number(rng.value));
+                }));
+                // Range + readout share one line in BOTH layouts — the stacked
+                // column would otherwise drop the number onto its own row.
+                const bar = ce('div', { className: 'mpi-base-flow__field-slider' });
+                bar.appendChild(rng);
+                bar.appendChild(out);
+                wrap.appendChild(bar);
+            } else if (f.type === 'text') {
+                const multi = Number(f.rows) > 1;
+                const inp = ce(multi ? 'textarea' : 'input', { className: 'mpi-base-flow__field-text' });
+                if (multi) inp.rows = Number(f.rows); else inp.type = 'text';
+                if (f.placeholder) inp.placeholder = f.placeholder;
+                inp.value = cur != null ? String(cur) : '';
+                unsubs.push(on(inp, 'input', () => onChange(inp.value)));
+                wrap.appendChild(inp);
+            } else {
+                clientLogger.warn('MpiBaseFlow', `unknown field type "${f.type}" — skipping`);
+                return null;
+            }
+            return wrap;
+        }
+
         /**
          * Render a step's declared `fields` as a single row between canvas and hint.
          * THE FRAME renders this, not the gizmo, so every gizmo's controls match for
@@ -520,41 +663,13 @@ export const MpiBaseFlow = ComponentFactory.create({
 
             const row = ce('div', { className: 'mpi-base-flow__fields' });
             fields.forEach((f) => {
-                const wrap = ce('label', { className: 'mpi-base-flow__field' });
-                if (f.label && f.type !== 'button') {
-                    const lbl = ce('span', { className: 'mpi-base-flow__field-label' });
-                    lbl.textContent = f.label;
-                    wrap.appendChild(lbl);
-                }
-
-                if (f.type === 'select') {
-                    const sel = ce('select', { className: 'mpi-base-flow__field-select' });
-                    (f.options || []).forEach((o) => {
-                        const opt = ce('option', { value: String(o.v) });
-                        opt.textContent = o.label ?? String(o.v);
-                        sel.appendChild(opt);
-                    });
-                    const cur = value?.fields?.[f.id] ?? f.default;
-                    if (cur != null) sel.value = String(cur);
-                    unsubs.push(on(sel, 'change', () => onFieldChange(f.id, sel.value)));
-                    wrap.appendChild(sel);
-                } else if (f.type === 'button') {
-                    const btn = ce('button', {
-                        className: 'mpi-base-flow__field-button', type: 'button',
-                    });
-                    btn.textContent = f.label || f.id;
-                    unsubs.push(on(btn, 'click', () => onFieldChange(f.id, true)));
-                    wrap.appendChild(btn);
-                } else if (f.type === 'toggle') {
-                    const box = ce('input', { type: 'checkbox', className: 'mpi-base-flow__field-toggle' });
-                    box.checked = Boolean(value?.fields?.[f.id] ?? f.default);
-                    unsubs.push(on(box, 'change', () => onFieldChange(f.id, box.checked)));
-                    wrap.appendChild(box);
-                } else {
-                    clientLogger.warn('MpiBaseFlow', `unknown field type "${f.type}" — skipping`);
-                    return;
-                }
-                row.appendChild(wrap);
+                const node = _buildField(
+                    f,
+                    value?.fields?.[f.id] ?? f.default,
+                    (val) => onFieldChange(f.id, val),
+                    unsubs,
+                );
+                if (node) row.appendChild(node);
             });
             return row;
         }
@@ -679,6 +794,26 @@ export const MpiBaseFlow = ComponentFactory.create({
             // Per-flow controls (composition) mount here — the flow's own knobs.
             const contentSlot = ce('div', { className: 'mpi-base-flow__content' });
             controls.appendChild(contentSlot);
+
+            // Declared controls (MPI-531) — stacked, because this column is 236px of
+            // vertical stack, not the step row's one-row cap. A flow may declare
+            // these INSTEAD of a uiComponent; declaring both is legal and the
+            // component wins on merge (see _collectInputs).
+            if (_controls.length) {
+                const declared = ce('div', {
+                    className: 'mpi-base-flow__fields mpi-base-flow__fields--stacked',
+                });
+                _controls.forEach((f) => {
+                    const node = _buildField(
+                        f,
+                        _controlValues[f.id] ?? f.default,
+                        (val) => { _controlValues[f.id] = val; },
+                        unsubs,
+                    );
+                    if (node) declared.appendChild(node);
+                });
+                contentSlot.appendChild(declared);
+            }
 
             const genWrap = ce('div', { className: 'mpi-base-flow__gen' });
             const runHost = ce('div');
@@ -1039,10 +1174,28 @@ export const MpiBaseFlow = ComponentFactory.create({
             // exactly what the frame must never learn — so the frame passes the
             // raw role-keyed values through and the flow owns the mapping.
             const extra = _perFlow?.el?.getInputs?.({ stepValues: { ..._stepValues } }) || {};
+
+            // A declared control keyed `Input_*` names a GRAPH NODE, so it is an
+            // injection param, not a run input — that prefix is the app-wide
+            // injection naming law, not flow knowledge the frame should not hold.
+            // Everything else (`positive`, `negative`) is a run input by its own id.
+            const declared = {};
+            const declaredParams = {};
+            Object.entries(_controlValues).forEach(([k, v]) => {
+                if (/^input_/i.test(k)) declaredParams[k] = v; else declared[k] = v;
+            });
+
             return {
                 ...(mediaItems.length ? { mediaItems } : {}),
                 ...(Object.keys(_stepValues).length ? { stepValues: { ..._stepValues } } : {}),
+                // Declared controls first, the component's getInputs() after: a flow
+                // carrying both is mid-port, and the JS half is the one that still
+                // owns translation the frame must not learn.
+                ...declared,
                 ...extra,
+                ...(Object.keys(declaredParams).length
+                    ? { injectionParams: { ...declaredParams, ...(extra.injectionParams || {}) } }
+                    : {}),
             };
         }
 
