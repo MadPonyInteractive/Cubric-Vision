@@ -1669,6 +1669,12 @@ export const MpiCanvasViewer = ComponentFactory.create({
         /** Bake the preview into the layer as ONE undo entry. */
         el.applyPaintAdjust   = () => !!canvas.applyPaintAdjust?.();
         el.endPaintAdjust     = () => !!canvas.endPaintAdjust?.();
+        /**
+         * Fill enclosed holes with the current colour (MPI-566) — the payoff of the
+         * outline tool. Same flood as `fillMaskHoles` above; only the composite differs.
+         * No `evaluateMask()`, for the reason the whole paint block gives.
+         */
+        el.fillPaintHoles     = () => !!canvas.fillPaintHoles?.();
 
         // ── Composite (MPI-373) ──────────────────────────────────────────────
         // Mirrors the paint surface by name so `MpiMaskStrip` drives this destination

@@ -275,3 +275,28 @@ test('BOTH destinations offer Fill, and each routes to its own layer', () => {
     assert.match(setup, /dest\.fill\(viewer\)/, 'the Fill button does not go through the destination row');
     assert.doesNotMatch(setup, /dest\.fillHoles\s*\?/, 'the Fill button is still conditional on the destination');
 });
+
+test('EVERY method the panel reaches for is forwarded by the viewer', () => {
+    // `viewer.el` is the MpiCanvasViewer, which forwards to MpiCanvas BY HAND, one
+    // assignment per method — and the panel calls all of them through `?.()`. So a
+    // method that exists on MpiCanvas and on its _methods allowlist but was never
+    // forwarded is `undefined` on `viewer.el`, the optional call swallows it, and the
+    // control renders, mounts, wires and does NOTHING. No error, no console entry.
+    //
+    // That is exactly how MPI-566's Fill shipped broken: added to MpiCanvas and to the
+    // allowlist, missing from the viewer, and the panel-level tests all passed. The
+    // allowlist check below it is necessary and was never sufficient — this is the
+    // other half, and it covers the whole panel rather than one method name.
+    const VIEWER_SRC = read('js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js');
+    const wanted = new Set();
+    for (const m of PANEL.matchAll(/\b(?:viewer|v)\.el\.(\w+)\?\./g)) wanted.add(m[1]);
+    assert.ok(wanted.size >= 10, `only found ${wanted.size} viewer calls in the panel — the regex missed the seam`);
+
+    for (const name of wanted) {
+        assert.match(
+            VIEWER_SRC, new RegExp(`el\\.${name}\\s*=`),
+            `the panel calls viewer.el.${name}() but MpiCanvasViewer never forwards it — `
+            + 'the optional call makes that a dead control, silently',
+        );
+    }
+});
