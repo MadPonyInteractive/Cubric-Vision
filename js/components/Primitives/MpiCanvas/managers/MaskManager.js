@@ -39,6 +39,7 @@
 import { alphaStencil } from '../../../../utils/maskUtils.js';
 import { stampDab, strokeDabs, dabExtent, DEFAULT_BRUSH_PRESET } from './brushDab.js';
 import { signedSquaredDistanceField, rangeFor, writeRange } from './distanceField.js';
+import { holeFlood, regionCanvas } from './holeFlood.js';
 
 const MASK_MAX_EDGE = 1536;
 
@@ -49,13 +50,6 @@ const MASK_MAX_EDGE = 1536;
  * separate coordinate lists, so there is nothing to encode in a radius.
  */
 const POINT_HIT_R = 12;
-
-/**
- * Alpha at or above this counts as MASK for `fillHoles()`, below it as background.
- * Half-open deliberately: mask edges are antialiased, so a strict `> 0` test would
- * treat the feathered rim as solid and wall the flood out of a hole it should enter.
- */
-const FILL_HOLES_T = 128;
 
 export class MaskManager {
     constructor() {
@@ -730,9 +724,10 @@ export class MaskManager {
      * otherwise — so pressing Fill mid-adjustment bakes both as ONE undo entry. The
      * alternative was silently dropping the user's preview, which is worse.
      *
-     * NOT a dilate by r then an erode by r. That morphological close would reuse the
-     * primitive above for free, but it only closes holes smaller than r and it rounds
-     * the outline; "fill holes" means every enclosed hole, outline untouched.
+     * The flood itself is `holeFlood.js` and is NOT mask-only (MPI-566): `PaintManager`
+     * calls the same function, and the region it hands back is composited differently
+     * per layer — coverage here, the current colour there. One module, two destinations,
+     * exactly as `distanceField.js` is for Adjust.
      *
      * @returns {boolean} false when there was no hole to fill
      */
@@ -744,80 +739,21 @@ export class MaskManager {
         const w = src.width;
         const h = src.height;
         const ctx = src.getContext('2d', { willReadFrequently: true });
-        const img = ctx.getImageData(0, 0, w, h);
-        const d = img.data;
-
-        // Flood the BACKGROUND inward from the border. Whatever the flood never
-        // reaches is enclosed — that is the definition of a hole, and it needs no
-        // contour tracing. Iterative on an explicit stack: 1536² would blow recursion.
-        const n = w * h;
-        const outside = new Uint8Array(n);
-        const stack = new Int32Array(n);
-        let sp = 0;
-        const push = (i) => {
-            if (outside[i] || d[i * 4 + 3] >= FILL_HOLES_T) return;
-            outside[i] = 1;
-            stack[sp++] = i;
-        };
-        for (let x = 0; x < w; x++) { push(x); push((h - 1) * w + x); }
-        for (let y = 0; y < h; y++) { push(y * w); push(y * w + w - 1); }
-        while (sp > 0) {
-            const i = stack[--sp];
-            const x = i % w;
-            if (x > 0)     push(i - 1);
-            if (x < w - 1) push(i + 1);
-            if (i >= w)    push(i - w);
-            if (i < n - w) push(i + w);
-        }
-
-        // Pass 2 — the hole and ITS ANTIALIASED RIM. Punching a hole leaves alpha
-        // ramping 255→0 across a pixel or two; pass 1 classified the ramp's inner half
-        // as mask, so writing only the interior leaves a semi-transparent ring exactly
-        // where the hole used to be. At 70% overlay opacity that ring is plainly
-        // visible — it is the same seam ComfyUI's mask editor leaves, and the reason
-        // the fill has to be defined over the ramp rather than over a threshold.
-        //
-        // Seed from the hole interiors, then expand into any neighbour that is neither
-        // `outside` nor already fully opaque. Solid mask (alpha 255) is the wall, so
-        // the flood cannot escape a hole and reach the mask's OUTER rim — that edge
-        // keeps its antialiasing, which is why Fill does not harden the outline.
-        const fill = new Uint8Array(n);
-        sp = 0;
-        for (let i = 0; i < n; i++) {
-            if (!outside[i] && d[i * 4 + 3] < FILL_HOLES_T) { fill[i] = 1; stack[sp++] = i; }
-        }
-        const spread = (i) => {
-            if (fill[i] || outside[i] || d[i * 4 + 3] === 255) return;
-            fill[i] = 1;
-            stack[sp++] = i;
-        };
-        while (sp > 0) {
-            const i = stack[--sp];
-            const x = i % w;
-            if (x > 0)     spread(i - 1);
-            if (x < w - 1) spread(i + 1);
-            if (i >= w)    spread(i - w);
-            if (i < n - w) spread(i + w);
-        }
-
-        let filled = 0;
-        for (let i = 0; i < n; i++) {
-            if (!fill[i]) continue;
-            const p = i * 4;
-            if (d[p + 3] === 255) continue;
-            d[p] = 255; d[p + 1] = 255; d[p + 2] = 255; d[p + 3] = 255;
-            filled++;
-        }
-        if (!filled) return false;   // no-op must not push an empty undo entry
+        const region = holeFlood(ctx.getImageData(0, 0, w, h).data, w, h);
+        if (!region) return false;   // no-op must not push an empty undo entry
 
         this._recordUndo();
 
-        // Write through a scratch canvas: `src` may be maskCanvas, which _recomposite()
-        // is about to rebuild from the source layers.
+        // Compose through a scratch canvas: `src` may be maskCanvas, which _recomposite()
+        // is about to rebuild from the source layers. The region goes on with drawImage,
+        // NOT putImageData — putImageData ignores compositing and would blank the mask
+        // everywhere inside the box that is not hole.
         const buf = document.createElement('canvas');
         buf.width = w;
         buf.height = h;
-        buf.getContext('2d').putImageData(img, 0, 0);
+        const bctx = buf.getContext('2d');
+        bctx.drawImage(src, 0, 0);
+        bctx.drawImage(regionCanvas(region), region.box.x, region.box.y);
 
         this.manualCtx.clearRect(0, 0, this.manualCanvas.width, this.manualCanvas.height);
         this.manualCtx.drawImage(buf, 0, 0, this.manualCanvas.width, this.manualCanvas.height);

@@ -31,7 +31,7 @@ code rather than guessed:
 | Layer | Records an entry | Deliberately records NOTHING |
 |---|---|---|
 | `MaskManager` — `manualCanvas` + `subtractCanvas` | `paint()`, `clear()`, `bakeAutoPicksInto()`, `applyAdjust()`, `fillHoles()`, `commitShape()`, `fillFromPaint()` | `setManual/SubtractFromDataURL()`, `init()` — **loads** |
-| `PaintManager` — `paintCanvas` (MPI-375) | `paint()`, `clear(true)`, `commitShape()`, `applyAdjust()`, `fillFromMask()` | `setFromDataURL()`, `init()` (which calls `clear(false)`) — **loads** |
+| `PaintManager` — `paintCanvas` (MPI-375) | `paint()`, `clear(true)`, `commitShape()`, `applyAdjust()`, `fillHoles()`, `fillFromMask()` | `setFromDataURL()`, `init()` (which calls `clear(false)`) — **loads** |
 | `CompositeManager` — `holeCanvas` (MPI-373) | `paint()`, `clear(true)` | `setHoleFromDataURL()` (a pasted mask is a load), `init()`, `reset()` — **loads and discards**; see [composite.md](composite.md) |
 
 `commitShape()` (MPI-368) is the same method on both managers because it is the same gizmo:

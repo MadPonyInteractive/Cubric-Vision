@@ -17,8 +17,7 @@
  * `paintAdjust` — the MPI-368 / MPI-373 pattern. `props.mode` picks the row in
  * `DEST` below and nothing else in here branches: same operation, different layer.
  * On the paint layer this IS the outline tool, which is why that destination adds a
- * colour picker (grow's new ring and the band are filled in it) and drops Fill
- * Holes, which is a mask idea.
+ * colour picker: grow's new ring, the band, and the Fill are all in it.
  *
  * LIVE, not bake-on-release. The user sits on the preview and judges it, then
  * presses Apply. Bake-on-release was rejected by name: dilate-then-erode is a
@@ -35,7 +34,7 @@
  *   mask  — evaluateMask(), setMaskPointsMode(), beginMaskAdjust(),
  *           previewMaskAdjust(), applyMaskAdjust(), endMaskAdjust(), fillMaskHoles()
  *   paint — setPaintColor(), beginPaintAdjust(), previewPaintAdjust(),
- *           applyPaintAdjust(), endPaintAdjust()
+ *           applyPaintAdjust(), endPaintAdjust(), fillPaintHoles()
  * No 'apply' emitted — both layers are canvas-resident; PromptBox drives operations.
  */
 
@@ -60,9 +59,12 @@ const DEFAULT_PAINT_COLOR = '#e0446b';
  * does it — a new destination is a new row, never a new `if (isPaint)` threaded
  * through `setup()`.
  *
- * `fillHoles` is mask-only by definition (an enclosed hole is a coverage idea, and
- * MPI-431 made the app the only thing that closes one). `color` is paint-only for
- * the mirror-image reason: the mask has no colour to fill a grown ring with.
+ * `fill` is per destination because the RESULT differs, not because the idea does:
+ * the mask fills a hole with coverage, the paint layer fills it with the current
+ * colour. It was mask-only until MPI-566, on the reasoning that an enclosed hole is
+ * a coverage idea — wrong for the layer that ships the OUTLINE tool, where drawing a
+ * closed shape and filling it is the whole point. `color` stays paint-only for the
+ * reason that always held: the mask has no colour to fill anything with.
  */
 const DEST = {
     maskAdjust: {
@@ -72,7 +74,8 @@ const DEST = {
         preview: (v, o) => v.el.previewMaskAdjust?.(o),
         apply:   (v)    => v.el.applyMaskAdjust?.(),
         end:     (v)    => v.el.endMaskAdjust?.(),
-        fillHoles: true,
+        fill:    (v)    => v.el.fillMaskHoles?.(),
+        fillInfo: 'Close enclosed holes in the mask (undoable)',
         color: false,
     },
     paintAdjust: {
@@ -82,7 +85,8 @@ const DEST = {
         preview: (v, o) => v.el.previewPaintAdjust?.(o),
         apply:   (v)    => v.el.applyPaintAdjust?.(),
         end:     (v)    => v.el.endPaintAdjust?.(),
-        fillHoles: false,
+        fill:    (v)    => v.el.fillPaintHoles?.(),
+        fillInfo: 'Fill enclosed holes with the current colour (undoable)',
         color: true,
     },
 };
@@ -249,23 +253,23 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
         });
         // MPI-431: the graphs no longer fill holes (mask_fill_holes is off), so this is
         // the only place a hole closes — and the only place the user sees it happen.
-        // Mask only: an enclosed hole is a coverage idea, and the paint layer has no
-        // equivalent question to ask.
-        const fillBtn = dest.fillHoles ? MpiButton.mount(document.createElement('div'), {
+        // MPI-566 gave the paint layer the same button: same flood, and the destination
+        // decides only what the enclosed region gets filled WITH.
+        const fillBtn = MpiButton.mount(document.createElement('div'), {
             label: 'Fill', icon: 'mask_fill_holes_stroke', size: 'sm', variant: 'secondary',
-            info: 'Close enclosed holes in the mask (undoable)',
-        }) : null;
+            info: dest.fillInfo,
+        });
         const commitRow = qs('#commit-slot', el);
         commitRow.appendChild(applyBtn.el);
-        if (fillBtn) commitRow.appendChild(fillBtn.el);
+        commitRow.appendChild(fillBtn.el);
         commitRow.appendChild(resetBtn.el);
         applyBtn.on('click', () => {
             if (dest.apply(viewer)) _reset();
         });
         // Fill bakes any live preview along with the fill, as ONE undo entry — so the
         // sliders must return to zero exactly as they do after Apply.
-        fillBtn?.on('click', () => {
-            if (viewer.el.fillMaskHoles?.()) _reset();
+        fillBtn.on('click', () => {
+            if (dest.fill(viewer)) _reset();
         });
         // Reset IS the discard half of the preview contract from inside the tool:
         // sliders to zero, and the zero preview tears the pending shape down. Its
@@ -273,8 +277,6 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
         // destinations, and nothing failed — the button just went dead. `tests/
         // mask-adjust.test.cjs` now guards all three of them.
         resetBtn.on('click', _reset);
-        // filter(Boolean): Fill is null on the paint destination, and `null.destroy?.()`
-        // throws — the optional chain is on `destroy`, not on the child.
         _children.push(applyBtn, fillBtn, resetBtn);
 
         _syncLabels();
@@ -296,7 +298,7 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
             if (!dest.color) viewer.el.evaluateMask?.();
             viewer.el.exitMode?.();
             _offs.forEach(fn => fn?.());
-            _children.filter(Boolean).forEach(c => c.destroy?.());
+            _children.forEach(c => c.destroy?.());
         };
     },
 });

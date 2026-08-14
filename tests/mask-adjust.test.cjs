@@ -86,7 +86,7 @@ test('every preview frame derives from the pristine copy, never from the last on
 
 test('Fill records ONE undo entry, after the guard and before it mutates', () => {
     const body = methodBody('fillHoles');
-    const guard  = body.indexOf('if (!filled) return false');
+    const guard  = body.indexOf('if (!region) return false');
     const record = body.indexOf('_recordUndo()');
     const write  = body.indexOf('this.manualCtx.drawImage');
 
@@ -106,13 +106,31 @@ test('Fill clears subtract, so the erases are not punched twice', () => {
     );
 });
 
-test('Fill floods from the border rather than seeding inside the mask', () => {
-    // The whole method is "background reachable from the edge is outside; the rest
-    // is a hole". Seeding anywhere else inverts the meaning and fills the image.
+test('ONE flood drives both layers — the mask calls it, it does not own it', () => {
+    // The flood lived in this method until the paint layer needed a Fill button
+    // (MPI-566). It is `holeFlood.js` now, the way the morphology is `distanceField.js`
+    // — and a mask-side copy would silently fork the two layers' definition of
+    // "enclosed" the next time either is touched.
+    //
+    // What this method still owns is the COMPOSITE, which is the whole difference
+    // between the destinations: coverage here, the current colour on the paint layer.
+    // The geometry the two share (border seeding, the rim pass, the `=== 255` wall,
+    // the padded box) is proved for real in mask-hole-flood.test.cjs — that test only
+    // exists because the extraction made the flood pure.
+    const src = fs.readFileSync(
+        path.join(__dirname, '..', 'js/components/Primitives/MpiCanvas/managers/MaskManager.js'),
+        'utf8',
+    );
+    assert.match(src, /import \{[^}]*holeFlood[^}]*\} from '\.\/holeFlood\.js'/,
+        'MaskManager does not import the shared flood');
     const body = methodBody('fillHoles');
-    assert.match(body, /push\(\(h - 1\) \* w \+ x\)/, 'fillHoles does not seed the bottom border row');
-    assert.match(body, /push\(y \* w \+ w - 1\)/, 'fillHoles does not seed the right border column');
-    assert.doesNotMatch(body, /new Array\(/, 'fillHoles should use typed arrays for the 1536² flood');
+    assert.match(body, /holeFlood\(/, 'fillHoles does not call the shared flood');
+    assert.doesNotMatch(body, /new Uint8Array|new Int32Array/,
+        'fillHoles builds its own flood buffers — that is a second implementation');
+    // putImageData ignores compositing, so writing the region straight in would blank
+    // every mask pixel inside the box that is not hole.
+    assert.match(body, /drawImage\(regionCanvas\(region\)/,
+        'the region is not composited onto the mask — putImageData would erase the box');
 });
 
 test('Fill bakes a live preview instead of silently dropping it', () => {
@@ -122,21 +140,6 @@ test('Fill bakes a live preview instead of silently dropping it', () => {
         methodBody('fillHoles'),
         /hasAdjustPreview && this\.adjustCanvas\)\s*\?\s*this\.adjustCanvas/,
         'fillHoles ignores the live preview — an adjustment in flight is silently discarded',
-    );
-});
-
-test('Fill covers the hole RIM, not just its interior', () => {
-    // The seam bug (user, 2026-08-03 — same one ComfyUI's mask editor leaves).
-    // Punching a hole leaves alpha ramping 255→0 over a pixel or two. Writing only
-    // the pixels below the threshold leaves the ramp's inner half at partial alpha —
-    // a visible ring at 70% overlay opacity. The second flood is what removes it, and
-    // its wall is `=== 255`, which is also what stops it hardening the OUTER edge.
-    const body = methodBody('fillHoles');
-    assert.match(body, /const fill = new Uint8Array\(n\)/, 'fillHoles lost its rim pass — the old hole boundary stays semi-transparent');
-    assert.match(
-        body,
-        /if \(fill\[i\] \|\| outside\[i\] \|\| d\[i \* 4 \+ 3\] === 255\) return;/,
-        'the rim flood no longer stops at fully-opaque mask — it can escape a hole and harden the outer edge',
     );
 });
 
@@ -163,6 +166,7 @@ test('every button in the commit row is WIRED (MPI-446)', () => {
     for (const btn of ['applyBtn', 'resetBtn']) {
         assert.match(panel, new RegExp(btn + "\\.on\\('click'"), `${btn} is mounted but never wired — a dead button`);
     }
-    // Fill is null on the paint destination, so it is the one optional handler.
-    assert.match(panel, /fillBtn\?\.on\('click'/, 'fillBtn is mounted but never wired — a dead button');
+    // Fill was the one optional handler while it was mask-only; MPI-566 gave both
+    // destinations a Fill, so it is mounted unconditionally and wired like the rest.
+    assert.match(panel, /fillBtn\.on\('click'/, 'fillBtn is mounted but never wired — a dead button');
 });

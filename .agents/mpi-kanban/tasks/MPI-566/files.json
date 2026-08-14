@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/components/Primitives/MpiCanvas/managers/holeFlood.js",
+    "js/components/Primitives/MpiCanvas/managers/MaskManager.js",
+    "js/components/Primitives/MpiCanvas/managers/PaintManager.js",
+    "js/components/Primitives/MpiCanvas/MpiCanvas.js",
+    "js/components/Organisms/MpiToolOptionsMaskAdjust/MpiToolOptionsMaskAdjust.js",
+    "tests/mask-hole-flood.test.cjs",
+    "tests/paint-adjust.test.cjs",
+    "docs/masking-adjust.md"
+  ]
+}

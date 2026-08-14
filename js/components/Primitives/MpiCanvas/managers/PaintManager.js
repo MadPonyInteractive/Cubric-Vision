@@ -26,6 +26,7 @@
 import { alphaStencil } from '../../../../utils/maskUtils.js';
 import { stampDab, strokeDabs, dabExtent, DEFAULT_BRUSH_PRESET } from './brushDab.js';
 import { fieldOverContent, rangeFor, writeRange } from './distanceField.js';
+import { holeFlood, regionCanvas } from './holeFlood.js';
 
 /**
  * Paint is capped far higher than the mask's 1536 because it becomes REAL PIXELS
@@ -432,6 +433,68 @@ export class PaintManager {
         // was just baked instead of from the pre-Apply layer.
         this.hasAdjustPreview = false;
         this.beginAdjust();
+        return true;
+    }
+
+    /**
+     * Fill every ENCLOSED hole in the paint layer, in the CURRENT colour (MPI-566).
+     *
+     * This is the payoff of the outline tool: Edge reduces a scribble to a band, and a
+     * closed outline the user cannot fill is a tool stopped one press short. The flood is
+     * `holeFlood.js` — the SAME function the mask calls, not a paint-side copy — and it
+     * reads alpha at >= 128, which is the layer's shape by the MPI-440 ruling.
+     *
+     * The composite is Adjust's GROW row byte for byte: the region flat in the colour,
+     * the original drawn back ON TOP. So the fill is the only flat part, every existing
+     * stroke keeps its own colour AND its own alpha, and the hole's antialiased rim
+     * composites over the fill instead of leaving the semi-transparent seam a
+     * threshold-and-write would.
+     *
+     * Fills what is ON SCREEN — the live preview when one is up, the layer otherwise — so
+     * pressing Fill mid-adjustment bakes both as ONE undo entry, the mask's rule and for
+     * the mask's reason: silently dropping the user's preview is worse.
+     *
+     * Layer-wide one shot, so `_recordUndo()` after the no-op guard, never a
+     * `begin()`/`commit()` gesture (`docs/masking-undo.md`).
+     *
+     * @returns {boolean} false when there was no hole to fill
+     */
+    fillHoles() {
+        if (!this.paintCtx) return false;
+        const src = (this.hasAdjustPreview && this.adjustCanvas) ? this.adjustCanvas : this.paintCanvas;
+        if (!src?.width || !src?.height) return false;
+
+        const w = src.width;
+        const h = src.height;
+        const ctx = src.getContext('2d', { willReadFrequently: true });
+        const region = holeFlood(ctx.getImageData(0, 0, w, h).data, w, h);
+        if (!region) return false;   // no-op must not push an empty undo entry
+
+        this._recordUndo();
+
+        // Through a scratch canvas rather than in place: the region has to be UNDER the
+        // original, and `src` may be the layer we are about to clear.
+        const box = region.box;
+        const buf = document.createElement('canvas');
+        buf.width = w;
+        buf.height = h;
+        const bctx = buf.getContext('2d');
+        bctx.drawImage(regionCanvas(region), box.x, box.y);
+        // `source-in` = drawn only where the destination is opaque, so the region is the
+        // clip and the rect lands as the region in the paint colour.
+        bctx.globalCompositeOperation = 'source-in';
+        bctx.fillStyle = this.color;
+        bctx.fillRect(box.x, box.y, box.w, box.h);
+        bctx.globalCompositeOperation = 'source-over';
+        bctx.drawImage(src, 0, 0);
+
+        this.paintCtx.clearRect(0, 0, this.paintCanvas.width, this.paintCanvas.height);
+        this.paintCtx.drawImage(buf, 0, 0);
+
+        // The preview (if any) is now baked, so drop it and re-snapshot — otherwise the
+        // next slider move would recompute from a pristine copy that predates the fill.
+        this.hasAdjustPreview = false;
+        if (this._adjustPristine) this.beginAdjust();
         return true;
     }
 

@@ -1176,6 +1176,12 @@ class _CanvasCore {
     previewPaintAdjust(opts) { const up = this.paint.previewAdjust(opts); this.draw(); return up; }
     applyPaintAdjust()       { const ok = this.paint.applyAdjust(); if (ok) this.draw(); return ok; }
     endPaintAdjust()         { const had = this.paint.endAdjust(); this.draw(); return had; }
+    /**
+     * Fill enclosed holes in the paint layer (MPI-566). NO `onMaskStrokeEnd`, unlike the
+     * mask twin: an adjustment to paint is not a mask change, and publishing one would
+     * misreport what the op strip is gated on — the rule `applyPaintAdjust` follows.
+     */
+    fillPaintHoles()         { const ok = this.paint.fillHoles(); if (ok) this.draw(); return ok; }
     hasPaintAdjustPreview()  { return !!this.paint.hasAdjustPreview; }
 
     // ── Composite API (MPI-373) ───────────────────────────────────────────────
@@ -1491,6 +1497,7 @@ export const MpiCanvas = ComponentFactory.create({
             'setPaintBrushSize','setPaintBrushType','setPaintBrushPreset','setPaintColor','setPaintOpacity','getPaintOpacity',
             'setPaintEnabled','getPaintURL','hasPaint','clearPaint','setPaintFromDataURL',
             'beginPaintAdjust','previewPaintAdjust','applyPaintAdjust','endPaintAdjust','hasPaintAdjustPreview',
+            'fillPaintHoles',
             'maskToPaint','paintToMask',
             'setShapeMode','setShapeKind','getShapeKind','hasShape','resetShape','clearShape','commitShape',
             'setCompositeUnderlay','setCompositeHoleFromDataURL','setCompositeHoleFromMask',

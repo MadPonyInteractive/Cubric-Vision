@@ -191,7 +191,7 @@ test('an adjustment to the paint layer is not published as a mask change', () =>
     const methods = CANVAS.match(/const _methods = \[([\s\S]*?)\n {8}\];/);
     assert.ok(methods, '_methods allowlist not found in MpiCanvas');
     for (const name of ['beginPaintAdjust', 'previewPaintAdjust', 'applyPaintAdjust',
-        'endPaintAdjust', 'hasPaintAdjustPreview']) {
+        'endPaintAdjust', 'hasPaintAdjustPreview', 'fillPaintHoles']) {
         assert.match(methods[1], new RegExp(`'${name}'`),
             `${name} is missing from the _methods allowlist — el.${name} would be undefined and swallowed`);
     }
@@ -202,10 +202,76 @@ test('ONE panel serves both destinations, and drives the layer it is mounted on'
     // regardless of mode would adjust the MASK while the rail showed Paint.
     assert.match(PANEL, /const DEST = \{[\s\S]*?paintAdjust:/, 'the panel has no paint destination row');
     const setup = PANEL.slice(PANEL.indexOf('setup:'));
-    for (const banned of ['beginMaskAdjust', 'previewMaskAdjust', 'applyMaskAdjust', 'endMaskAdjust']) {
+    for (const banned of ['beginMaskAdjust', 'previewMaskAdjust', 'applyMaskAdjust', 'endMaskAdjust',
+        'fillMaskHoles']) {
         assert.ok(!setup.includes(banned), `setup() calls ${banned} directly — it must go through DEST`);
     }
     // The strip has to follow the destination too, or Clear and the opacity slider
     // drive the mask from inside the paint tool.
     assert.match(setup, /dest:\s*dest\.stripDest/, 'the shared strip is not pointed at the tool destination');
+});
+
+// ── Fill (MPI-566) ──────────────────────────────────────────────────────────────
+//
+// The outline tool without a Fill is stopped one press short, and the failure modes
+// are the same silent ones as Apply's: a second flood forking the two layers, a
+// missing undo entry, and a Fill that publishes a mask change it is not.
+
+test('ONE flood drives both layers — paint imports it, it does not reimplement it', () => {
+    // Exactly the constraint the distance field is already under. `MaskManager` held
+    // the only copy until MPI-566; a paint-side flood would work and would silently
+    // fork the two layers' definition of "enclosed" the next time either is touched.
+    assert.match(SRC, /import \{[^}]*holeFlood[^}]*\} from '\.\/holeFlood\.js'/,
+        'PaintManager does not import the shared flood');
+    const body = methodBody('fillHoles');
+    assert.match(body, /holeFlood\(/, 'fillHoles does not call the shared flood');
+    assert.doesNotMatch(body, /new Uint8Array|new Int32Array/,
+        'fillHoles builds its own flood buffers — that is a second implementation');
+});
+
+test('Fill records ONE undo entry, after the guard and before it mutates', () => {
+    const body = methodBody('fillHoles');
+    const guard  = body.lastIndexOf('return false');
+    const record = body.indexOf('_recordUndo()');
+    const write  = body.indexOf('this.paintCtx.clearRect');
+
+    assert.ok(record !== -1, 'fillHoles does not record undo — a silent hole in Ctrl+Z');
+    assert.ok(guard !== -1 && guard < record, 'fillHoles records undo before its no-op guard');
+    assert.ok(write !== -1 && record < write, 'fillHoles mutates the layer before recording undo');
+    assert.doesNotMatch(body, /pendingLayer|undo\.begin/, 'fillHoles uses the gesture facility for a one-shot');
+});
+
+test('Fill takes what is ON SCREEN, and the fill is the current colour under the original', () => {
+    // Same rule as the mask's: a live preview is baked WITH the fill as one entry
+    // rather than silently dropped. And the composite is Adjust's grow row — region
+    // flat in the colour, original back on top — which is what keeps every existing
+    // stroke's own colour and alpha.
+    const body = methodBody('fillHoles');
+    assert.match(body, /hasAdjustPreview && this\.adjustCanvas\s*\)\s*\?/,
+        'fillHoles ignores a live preview — pressing Fill mid-adjustment would drop it');
+    assert.match(body, /source-in[\s\S]*fillStyle = this\.color/,
+        'the filled region is not clipped to the hole in the current colour');
+    const fillAt = body.indexOf('fillRect');
+    const overAt = body.indexOf('drawImage(src');
+    assert.ok(fillAt !== -1 && overAt > fillAt,
+        'the original is not drawn back on top — the fill would flatten existing strokes');
+});
+
+test('Fill on the paint layer is not published as a mask change', () => {
+    const fill = CANVAS.match(/fillPaintHoles\(\)\s*\{([^}]*)\}/);
+    assert.ok(fill, 'fillPaintHoles not found on MpiCanvas');
+    assert.doesNotMatch(fill[1], /onMaskStrokeEnd/, 'paint Fill publishes a mask change');
+});
+
+test('BOTH destinations offer Fill, and each routes to its own layer', () => {
+    // It was mask-only, on the reasoning that an enclosed hole is a coverage idea —
+    // wrong for the layer that ships the outline tool. The panel must not grow an
+    // `if (isPaint)` to say so: the destination row carries it, like everything else.
+    const dest = PANEL.match(/const DEST = \{[\s\S]*?\n\};/);
+    assert.ok(dest, 'the DEST table moved');
+    assert.match(dest[0], /fillMaskHoles/, 'the mask destination lost its Fill');
+    assert.match(dest[0], /fillPaintHoles/, 'the paint destination has no Fill');
+    const setup = PANEL.slice(PANEL.indexOf('setup:'));
+    assert.match(setup, /dest\.fill\(viewer\)/, 'the Fill button does not go through the destination row');
+    assert.doesNotMatch(setup, /dest\.fillHoles\s*\?/, 'the Fill button is still conditional on the destination');
 });

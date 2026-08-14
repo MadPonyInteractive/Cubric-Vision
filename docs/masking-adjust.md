@@ -1,9 +1,10 @@
-# Adjust — grow, shrink, edge band, fill holes (MPI-382, MPI-431, MPI-441)
+# Adjust — grow, shrink, edge band, fill holes (MPI-382, MPI-431, MPI-441, MPI-566)
 
-The methods that operate **over an existing mask** rather than making one: the morphological
-primitive behind Grow / Shrink / Edge, and the flood behind Fill. Read before touching
-`managers/distanceField.js`, `applyAdjust()`, `fillHoles()` or `MpiToolOptionsMaskAdjust`. Split out
-of [masking-tools.md](masking-tools.md) at its 200-line cap, the same way
+The methods that operate **over an existing layer** rather than making one: the morphological
+primitive behind Grow / Shrink / Edge, and the flood behind Fill. **Both are one module with two
+destinations** — `managers/distanceField.js` and `managers/holeFlood.js` — and both the mask and the
+paint layer call them. Read before touching either module, `applyAdjust()`, `fillHoles()` or
+`MpiToolOptionsMaskAdjust`. Split out of [masking-tools.md](masking-tools.md) at its 200-line cap, the same way
 [masking-sam3.md](masking-sam3.md) and [masking-shapes.md](masking-shapes.md) were. Related:
 [masking-tools.md](masking-tools.md) (the tool family and the preview contract this obeys) ·
 [masking.md](masking.md) (the layer model) · [masking-undo.md](masking-undo.md) (the one-shot
@@ -125,7 +126,7 @@ alpha ≥128, because the clipped fills would otherwise drop a faint pixel that 
 remaining ceiling is the box's own worst case: paint covering the WHOLE 4096 layer is still 1.6 s
 then 65 ms, and only the resolution cap would move it.
 
-### Fill Holes (MPI-431)
+### Fill Holes (MPI-431) — on BOTH layers since MPI-566
 
 A third button in the commit row, beside Apply and Reset. **The app is now the only thing that
 closes a hole**: MPI-431 turned `mask_fill_holes` OFF in every raw template (and the detailers'
@@ -140,11 +141,39 @@ mask it was handed, `fillMaskHoles()` stays for an explicit opt-in, and
 `tests/mask-composite.test.cjs` guards both directions. If a THIRD copy of this behaviour turns
 up, it is the same bug again — the sweep is "who else closes a hole without being asked".
 
-`MaskManager.fillHoles()` **floods the background inward from the border**; whatever the flood
-never reaches is enclosed, and that is the definition of a hole — no contour tracing. Iterative
-on a typed-array stack, because 1536² blows recursion. The alpha cut is `>= 128`, deliberately
-not `> 0`: mask edges are antialiased, and a strict test walls the flood out of a hole it should
-enter.
+`holeFlood()` in `managers/holeFlood.js` **floods the background inward from the border**; whatever
+the flood never reaches is enclosed, and that is the definition of a hole — no contour tracing.
+Iterative on a typed-array stack, because 1536² blows recursion. The alpha cut is `>= 128`,
+deliberately not `> 0`: edges are antialiased, and a strict test walls the flood out of a hole it
+should enter.
+
+**It was mask-only until MPI-566, and that ruling was wrong for the layer that ships the outline
+tool.** "An enclosed hole is a coverage idea" reads fine until you notice the *paint* destination IS
+that tool (§ above): filling a closed shape is the whole point of one, and by the MPI-440 ruling the
+paint layer's shape is its alpha. So the flood moved into its own module rather than being copied —
+**one function, only the COMPOSITE differs.** It returns the REGION, white where the hole is:
+
+| | Composite | Result |
+|---|---|---|
+| Mask | region drawn **on top** | coverage added is coverage; the hole closes |
+| Paint | region flat in the **current colour**, original drawn back **on top** | the fill is the only flat part; every existing stroke keeps its own colour AND alpha, and the hole's rim composites over the fill |
+
+The paint row is Adjust's *grow* row byte for byte — Fill is not a fourth fill. Neither caller may
+write the region with `putImageData`: it ignores compositing and would blank every non-hole pixel in
+the box. `drawImage` through `regionCanvas()`, in both.
+
+**Bounded to the ink, and the pad is load-bearing.** Seeded from the bounding box of every
+non-transparent pixel padded by 1, not from the canvas border — equivalent because everything
+outside that box is transparent and connected to the box's own transparent ring (proven against a
+full-canvas reference in the test), and necessary because paint runs at 4096², where a full-canvas
+flood is 16.7M pixels and ~170 MB of transient typed arrays per press. Drop the pad and a box whose
+edge is ink seeds nothing, every interior region reads as enclosed, and Fill floods the whole layer.
+
+Pure is also what made the geometry **testable** at all: `MaskManager` cannot be instantiated in
+node, so until MPI-566 only the undo discipline was guarded — `tests/mask-hole-flood.test.cjs` is
+the shape. Composites verified in Chromium: a green outline filled in a different colour keeps its
+stroke at `#58e044` and its interior lands at the fill colour opaque, **0** partial-alpha pixels on
+the inner rim and 693 on the outer.
 
 **Not a dilate by `r` then an erode by `r`.** That close would reuse the primitive above for free,
 but it only shuts holes smaller than `r` and it rounds the outline. Fill means *every* enclosed

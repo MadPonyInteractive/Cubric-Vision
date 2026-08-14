@@ -64,7 +64,7 @@ NOT mechanically split these):
 | **Canvas tool family** (Mask/Paint/Composite taxonomy, the preview contract, Add/Subtract, who owns which panel, the PromptBox contract) | [masking-tools.md](masking-tools.md) |
 | **SAM3 masking** (click-point + open-vocabulary text tools, their graph branches, the `name:N` trap) | [masking-sam3.md](masking-sam3.md) |
 | **Shape gizmo** (rect/triangle/ellipse, the two mounts, handles + ALT-rotate, shape-local hit-testing) | [masking-shapes.md](masking-shapes.md) |
-| **Mask adjust** (grow/shrink/edge band off one distance field, why it is not a blur, Fill Holes' two passes) | [masking-adjust.md](masking-adjust.md) |
+| **Adjust** on either layer (grow/shrink/edge band off one distance field, why it is not a blur, Fill Holes' two passes and its two composites) | [masking-adjust.md](masking-adjust.md) |
 | **Canvas undo** (the shared command stack, what it stores and why, dirty rects, the Ctrl+Z typing trap) | [masking-undo.md](masking-undo.md) |
 | **Painting** (the RGBA layer, the shared dab, image-native resolution, per-entry persistence, the server-side Apply) | [painting.md](painting.md) |
 | **Composite** (the two front ends, the scratch cut, the inverted brush, cover-fit on BOTH ends, pasted slots) | [composite.md](composite.md) |
