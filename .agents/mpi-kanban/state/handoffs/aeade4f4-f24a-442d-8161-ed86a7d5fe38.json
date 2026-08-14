@@ -1,0 +1,68 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "aeade4f4-f24a-442d-8161-ed86a7d5fe38",
+  "generated_at": "2026-08-14T01:05:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-557 Phase 0 - desk pass D1-D3, B7, and the B1 GO/NO-GO gate",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Run MPI-557 Phase 0: answer the open questions on the bench and return a GO/NO-GO on a video face detailer, before any app work.",
+    "status": "in_progress",
+    "summary": "Desk pass answered D1-D3, B7 closed early against the brief, and B1 - the gate - PASSED with a GO stated by Fabio. Phase 0 continues at B2, the SeedVR2 vs LTX v2v sampler bake-off."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-557/plan.md",
+    "completed": [
+      "Desk pass D1-D3, each answer cited to source in brief.md",
+      "Bench booted, schema gate passed - all 19 required nodes present on core 0.31.0",
+      "B7 closed early: union-window rule measured over all 274 project clips",
+      "B1 THE GATE: executed, GO stated by Fabio 2026-08-14"
+    ],
+    "pending": [
+      "B2 - sampler bake-off, SeedVR2 vs LTX v2v + ltx23-lora-merged, same clip, one box swapped",
+      "Re-run B1 on genuinely degraded footage - the product case, which B1 did not test",
+      "B3/B4/B5/B8 - settings sweep on the winner",
+      "B6 - paste-back and detail transfer (still open; B1 skipped paste-back by design)",
+      "Write the Phase 0 verdict section and shut the bench down"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-557",
+    "title": "Video face detailer",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-557/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-557/plan.md",
+      "checklist": null,
+      "validation": null
+    }
+  },
+  "next_action": {
+    "description": "Run B2, the sampler bake-off: same clip and graph as B1 with only the sampler swapped - SeedVR2 (already proven) vs LTX v2v + ltx23-lora-merged at denoise ~0.3. Judge sharpness, identity stability across the clip, plastic-ness, speed and VRAM. Vary the seed between repeats or the second run is an execution_cached hit. The bench may still be up on 8188; re-probe before assuming.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "B1 GO stated by Fabio after viewing 200% stills and a side-by-side, not self-certified - the plan's verify mode is user-ux and forbids self-certifying the gate.",
+      "Phase 3 re-scoped, not void: multiple LTX ID LoRAs exist. The shipped ltx23-lora-talkvid is LTXVReferenceAudio SPEAKER identity (wrong sense). The face one is Alissonerdx/LTX-Best-Face-ID, same LTX-2.3 22B checkpoint we ship. Do NOT re-reject it on its 'strictly reference-to-video' line the way H3 was rejected - unlike H3 we have a v2v path on that checkpoint, so whether its reference conditioning survives a denoise~0.3 init is a bench question.",
+      "MpiFaceWindow must be specced WITH tracking. B7 measured the static union window over 142 clips holding a tracked face: 62% blow the window past half the frame height, and single-face-only clips still fail 55%. The brief's 'defer the smoothed window until a real clip breaks it' is answered - most real clips break it.",
+      "SeedVR2 core already ships two pieces the brief planned to build: SeedVR2TemporalMerge does the chunk crossfade (brief step 6 is a wire, not work), and SeedVR2PostProcessing's 'wavelet' option IS the section 3 detail transfer (content_high_freq + style_low_freq, 5 levels). MpiDetailTransfer may be redundant - decided at B6, not before."
+    ],
+    "constraints": [
+      "The bench was left RUNNING on 8188 (~40 GB resident) so B2 could start immediately. Kill it if B2 is not the next thing. Bench path is G:\\ComfyUi\\ComfyUI\\ (nested); core is 0.31.0, ahead of the 0.30.2 the plan recorded.",
+      "SeedVR2TemporalChunk's chunking_mode is a DynamicCombo: in API format it flattens to sibling inputs ('chunking_mode': 'auto', or 'manual' plus 'frames_per_chunk'), NOT a nested dict. A nested dict passes validation and then dies at runtime with 'missing 1 required positional argument'.",
+      "ImageResizeKJv2 lanczos raises 'Lanczos is not supported on the GPU' - set device 'cpu' on that node.",
+      "B1's clip is a CLEAN 2560x1408 LTX generation. The product case Fabio named is a 'shitty face video'. The GO does not cover degraded footage; the held-back stress clip is cowboys/Media/ref2v_ms_006.mp4 (864x480, ~29px face, 8x upscale).",
+      "Raw vs wavelet being indistinguishable is NOT B6 answered - B1 skipped paste-back entirely by design.",
+      "board.json and events.jsonl carry MPI-557's todo->doing move on disk but were deliberately left uncommitted by this session: a peer session was mid-sweep in both files (it created MPI-558 to MPI-562) and its hunks interleave. Do not 'fix' that diff."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-557/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-557/plan.md",
+      "comfy_workflows/raw/seedvr2_video.json"
+    ]
+  },
+  "resume_prompt": "Continue MPI-557 (Video face detailer) in Cubric Vision, card in `doing`, Phase 0 bench research. Read .agents/mpi-kanban/state/handoffs/aeade4f4-f24a-442d-8161-ed86a7d5fe38.json then .agents/mpi-kanban/tasks/MPI-557/brief.md and plan.md - the brief carries every Phase 0 finding so far, each cited to source. Status: the desk pass answered D1-D3, B7 closed early (the static union window fails on 55-62% of real clips, so MpiFaceWindow needs tracking from the start), and B1 - the GO/NO-GO gate - PASSED, with the GO stated by Fabio after viewing the output. The next action is B2, the sampler bake-off: same clip and graph as B1 with only the sampler swapped, SeedVR2 versus LTX v2v + ltx23-lora-merged at denoise ~0.3, judged on sharpness, identity stability, plastic-ness, speed and VRAM. The working B1 script is in the previous session's scratchpad but is trivial to rebuild from brief.md's recorded graph. Judging is by eye and must not be self-certified - the plan's verify mode is user-ux."
+}
