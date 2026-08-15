@@ -1,0 +1,19 @@
+/* MpiStepPreview — the `preview` step kind: a big look at the media being worked
+   on, with the step's prompt fields below it. */
+.mpi-step-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Bounded by the VIEWPORT, not a fixed box: the point of this step is that the
+   media is finally big enough to judge. max-height keeps a tall portrait clip
+   from pushing the fields row off-screen. */
+.mpi-step-preview__media {
+    display: block;
+    max-width: 100%;
+    max-height: min(52vh, 520px);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface-canvas);
+}

@@ -5,6 +5,70 @@
 
 ---
 
+## ✅ FOLEY GENERATES SPEECH FROM THE PROMPT ALONE (2026-08-15, bench, MPI-536 graph)
+
+**Both audio booleans FALSE, `Input_Audio` EMPTY — and the clip came back with the man
+speaking the requested line in the requested voice.** No reference audio, no direct audio,
+no lipdub IC-LoRA. This is a 4th capability of the shipped foley Flow that nobody carded.
+
+Proven from the EXECUTION RECORD, not by ear or inference — `/history` on the bench
+(prompt `0556a310`, `status: success`) shows:
+
+```
+#106 MpiLoadAudio  Input_Audio                  -> {'string': '', 'block_if_empty': True}
+#108 MpiSimpleBoolean Input_Use_Input_Audio     -> False
+#122 MpiIfElse     Input_Use_Reference_Audio    -> False
+```
+
+So `#122` selected `#118` (foley guider, cfg 3); `#120 LTXVReferenceAudio` / `#121` sat on
+the unselected branch and a blocked `MpiIfElse` branch is never executed. The user's audio
+could not have reached the model. Confirmed twice: the user then deleted the audio file
+reference entirely and got the SAME result.
+
+**The prompt is what carries it** — `#12 Input_Positive`:
+
+> `Sound of wind and dust in the background. Crickets in the distance and the man says with
+> a deep raspy voice and a american southern accent, "Well I knew this was going to happen."`
+
+A quoted line + a voice description. This is the SAME contract `audio-input.md` documented
+for the i2v graph ("the prompt MUST carry the spoken line", `saying: "…"`) — now shown to
+hold on the FOLEY graph too, which was never tested for it.
+
+**The voice resembling the user's own is coincidence** — he removed the audio and got the
+same voice. (His words: "somebody used my voice to train the model, apparently.")
+
+### Known problem with it: quality
+
+User's ear, first run: **"boxy and extra loud"**. Suspect BEFORE the sampler — `#13
+Input_Negative` still ships the bench foley negative, which at cfg 3 is LIVE and contains:
+
+- `vocals, singing, narration` — fighting the very thing being asked for
+- `tinny, thin, harsh, clipped, distorted, low bitrate, static, noise, room tone` — the exact
+  artefact family the user described
+
+Untested: whether stripping the vocal/artefact terms from the negative cleans the speech.
+Seed re-roll being tried first by the user.
+
+### Consequence for the product shape
+
+There are THREE routes to voice, not two, and the cheapest already works:
+
+| Route | Booleans | State |
+|---|---|---|
+| Prompt-only voice | both false | **PROVEN** (this finding) |
+| Direct audio (user's own recording — the lipsync case) | `#108=true` | untested |
+| Voice-ID reference | `#122=true` | untested |
+
+Whether the reference branch is needed AT ALL depends on how well prompt-only voice can be
+directed. Do not design the Flow's audio UI until that is known.
+
+### Bench file
+
+`G:\ComfyUi\ComfyUI\user\default\workflows\flow_ltx_foley_AUDIO_bench.json` — the shipped
+53-node graph, `Input_Video`/`Input_Audio` pre-seeded with the user's test pair, both
+booleans at the shipped default. `id` renamed to `ltx-foley-audio-bench` so a stray save in
+the bench UI cannot overwrite the shipped file. `comfy_workflows/` is untouched (git clean).
+
 ## ✅ AUDIO-DRIVEN LIPSYNC WORKS ON THE SHIPPED i2v GRAPH (2026-08-11, MPI-537 — NEWEST)
 
 `ltx_i2v_t2v_template.json` **as it ships** makes the mouth follow a **supplied** audio

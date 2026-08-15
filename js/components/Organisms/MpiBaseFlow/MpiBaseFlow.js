@@ -1,6 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiOverlay } from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiMediaPicker } from '../../Compounds/MpiMediaPicker/MpiMediaPicker.js';
 import { Events } from '../../../events.js';
 import { state, AUTO_PIXEL_THRESHOLD } from '../../../state.js';
 import { ViewManager } from '../../Primitives/MpiCanvas/managers/ViewManager.js';
@@ -405,6 +406,20 @@ export const MpiBaseFlow = ComponentFactory.create({
                 slot.appendChild(icon);
                 slot.appendChild(hint);
 
+                // …or pick what the project already holds. Until this existed a
+                // Flow could only consume media from OUTSIDE the app, so the clip
+                // the user had just generated was unreachable from the slot above
+                // it. Stops the click reaching the slot's own file-input handler.
+                const browse = ce('button', {
+                    className: 'mpi-base-flow__slot-browse', type: 'button',
+                });
+                browse.textContent = 'Choose from project';
+                unsubs.push(on(browse, 'click', (e) => {
+                    e.stopPropagation();
+                    _openMediaPicker(entry, idx, onDirty);
+                }));
+                slot.appendChild(browse);
+
                 const fileInput = ce('input', {
                     type: 'file', accept: _acceptFor(group.type), hidden: true, multiple: true,
                 });
@@ -437,6 +452,40 @@ export const MpiBaseFlow = ComponentFactory.create({
 
             unit.appendChild(slot);
             return unit;
+        }
+
+        /**
+         * Open the project-media picker for one slot and fill it with the pick.
+         *
+         * No _placePreviewAsset here, deliberately: picked media is ALREADY in the
+         * project and already on disk, so there is nothing to hash, copy or place —
+         * the slot just takes its path. `source: 'flow-project'` distinguishes it
+         * from an imported file ('flow-upload') for anything later reading the
+         * persisted input snapshot.
+         *
+         * @param {Object} entry     the media group entry owning this slot
+         * @param {number} idx       slot index within the group
+         * @param {Function} onDirty re-render callback
+         */
+        function _openMediaPicker(entry, idx, onDirty) {
+            const picker = MpiMediaPicker.mount(document.createElement('div'), {
+                mediaType: entry.group.type,
+                onPick: ({ filePath }) => {
+                    entry.items[idx] = {
+                        url: filePath,
+                        mediaType: entry.group.type,
+                        source: 'flow-project',
+                        role: entry.group.roles[idx],
+                    };
+                    onDirty();
+                },
+            });
+            // onDirty rebuilds the slide, which destroys this slide's listeners —
+            // the picker portals to document.body so it survives that, and tears
+            // itself down on hide rather than riding the slide's unsubs.
+            picker.el.addEventListener('pick', () => picker.el.destroy?.());
+            picker.el.addEventListener('cancel', () => picker.el.destroy?.());
+            picker.el.show();
         }
 
         /**
@@ -941,7 +990,11 @@ export const MpiBaseFlow = ComponentFactory.create({
         // ── Result painting ─────────────────────────────────────────────────────
         /** Show the empty-state copy only while the pane holds nothing. */
         function _syncResultEmpty() {
-            if (_resultEmptyEl) _resultEmptyEl.hidden = !!_resultMediaEl?.firstChild;
+            // Hidden while a run is in flight too: between Generate and the first
+            // latent the pane holds no media yet, and leaving the copy up would put
+            // "Your result appears here." under the scanline — the frame claiming
+            // nothing is happening while it sweeps.
+            if (_resultEmptyEl) _resultEmptyEl.hidden = !!_resultMediaEl?.firstChild || _running;
         }
 
         // ── Result zoom / pan ───────────────────────────────────────────────────
@@ -1100,14 +1153,22 @@ export const MpiBaseFlow = ComponentFactory.create({
             // a GET blob:… ERR_FILE_NOT_FOUND.
             _resultMediaEl.innerHTML = '';
             // The run is over — the sweep now lives on the frame, so clearing the
-            // media layer no longer takes it with it.
-            _setScanline(false);
+            // media layer no longer takes it with it. Guarded on _running: a slide
+            // REBUILD replays the last result through here, and mid-run that would
+            // disarm a sweep the run still owns (_setRunning is the only arming
+            // authority now).
+            if (!_running) _setScanline(false);
             if (!withPath.length) { _syncResultEmpty(); return; }
             for (const { it, path } of withPath) {
                 const url = resolveMediaUrl(path);
                 const isVideo = it?.type === 'video' || it?.mediaType === 'video';
+                // NOT muted: a Flow whose whole output is the audio (foley) played
+                // silent until the user found the speaker button. `muted` is normally
+                // the autoplay-policy guard, but this element never autoplays — the
+                // user presses play — so it was guarding nothing and costing the
+                // result. Do not re-add it without an `autoplay` to justify it.
                 const media = isVideo
-                    ? ce('video', { src: url, controls: true, muted: true, loop: true })
+                    ? ce('video', { src: url, controls: true, loop: true })
                     : ce('img', { src: url, alt: 'result', draggable: false });
                 // Fit the FINAL image once it has dimensions — a latent's view never
                 // carries over (different crop, different resolution).
@@ -1160,6 +1221,14 @@ export const MpiBaseFlow = ComponentFactory.create({
         // ── Run ─────────────────────────────────────────────────────────────────
         function _setRunning(isRunning) {
             _running = isRunning;
+            // Arm the sweep the INSTANT the run starts, not on the first latent.
+            // _paintResult also arms it, but the first latent can be tens of seconds
+            // out (model load, VAE encode) and until then the slide showed nothing
+            // moving while the status bar did — the frame reading as hung.
+            // Every reset path (complete / error / cancel) routes through here, so
+            // disarming needs no separate call.
+            _setScanline(isRunning);
+            _syncResultEmpty();
             _syncRunUi();
         }
 

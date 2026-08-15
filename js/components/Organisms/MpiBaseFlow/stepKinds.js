@@ -1,4 +1,5 @@
 import { MpiStepBox } from '../MpiStepBox/MpiStepBox.js';
+import { MpiStepPreview } from '../MpiStepPreview/MpiStepPreview.js';
 
 /**
  * STEP_KINDS — the step-kind registry (MPI-306 Phase 1).
@@ -19,6 +20,10 @@ import { MpiStepBox } from '../MpiStepBox/MpiStepBox.js';
  */
 export const STEP_KINDS = {
     box: MpiStepBox,
+    // `preview` is the odd one: a LOOK, not a gizmo. It reports nothing, and
+    // exists because step 0 loads media at thumbnail size — a flow whose input
+    // is a video had nowhere the user could actually see it before running.
+    preview: MpiStepPreview,
     // mask, light, mood… as they are built.
 };
 

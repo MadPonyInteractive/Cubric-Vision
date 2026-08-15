@@ -130,3 +130,96 @@ understated, not wrong.
 
 `number` is implemented but has **no live consumer yet**. Its first will be extend's
 width/height (MPI-520), which needs a bench re-export.
+
+### 2026-08-15 (session 2) — the punch list, re-scoped against the code
+
+Read the frame before building. Two of Fabio's four items are NARROWER than the handoff
+recorded them, and one new item arrived:
+
+- **Item 2 (result pane).** `_showResults` ALREADY builds `<video controls muted loop>` for
+  `type === 'video'` (`MpiBaseFlow.js:1110`). What Fabio saw is `_resultEmptyEl` — the empty
+  state, hidden by `_syncResultEmpty()` only when `_resultMediaEl` has a child. So the bug is
+  upstream: either `onComplete` fired with no items, or the item was not tagged `video`.
+  DIAGNOSE on a live run; do not build a second player over a working one.
+- **Item 2b (NEW, Fabio 2026-08-15).** The result video is hardcoded `muted: true`. On foley —
+  a Flow whose whole output IS the audio — the result plays silent until the user finds a tiny
+  speaker button. `muted` normally guards autoplay policy, but there is NO `autoplay` anywhere
+  in `js/components/`, so it guards nothing here. Safe to drop; confirm on the live run.
+  Note the frame hand-rolls a raw `<video>` while `MpiVideoViewer` exists — possibly the same
+  root as item 2.
+- **Item 4 (dead air).** The scanline WORKS; it is simply never armed at run start.
+  `_setScanline(true)` is called only from `_paintResult` (`:1082`), i.e. on the first latent.
+  `_run` must arm it.
+- **Item 1 (media picker).** Confirmed net-new — no picker component exists in the repo.
+  Scope settled with Fabio: CURRENT PROJECT ONLY, filtered to the slot's media type.
+
+Dispatch evaluated and SKIPPED: of 15 ready cards, MPI-560 is this card's own umbrella parent
+and MPI-552 / MPI-529 touch the same Flow surface this card is mid-edit on. Not disjoint.
+
+### 2026-08-15 (session 2, end) — frame work part-shipped; the session turned into an audio BENCH
+
+**Frame (MPI-531 proper) — 3 of 4 punch-list items done and verified in the app:**
+media picker (new `MpiMediaPicker`), instant scanline on Generate, unmuted result video.
+Item 3 (step-2 relayout) is **deliberately STOPPED** — see below. `MpiStepPreview` is written
+and registered but has NO consumer yet.
+
+**Why item 3 stopped (user's call, and he is right):** reference audio would add a SECOND
+media slot (audio) to foley's `inputSchema`. Building the step-0 thumbnail + big-preview
+middle step against today's one-slot input set means rebuilding it when the slot lands.
+UI waits on the bench.
+
+**Open, NOT dismissed:** the user reported the isolated instance "not working" after this
+session's edits. Frame checks were DOM-level and passed; no full generation ran through it.
+`_setRunning` (now also drives scanline + empty-state) and the new `MpiMediaPicker` import
+are both in scope. Detail + the three candidates are in `validation.md`.
+
+### The bench session — LTX foley audio branch
+
+Bench file: `G:\ComfyUi\ComfyUI\user\default\workflows\flow_ltx_foley_AUDIO_bench.json`
+(53-node shipped graph + user's edits; `comfy_workflows/` is untouched, git-clean).
+
+**FINDING 1 — foley generates SPEECH from the prompt alone.** Both audio booleans false,
+`Input_Audio` empty, and the clip came back speaking the requested line in the requested
+voice. Proven from `/history`, not by ear. Written up in `docs/models/ltx/audio-input.md`.
+
+**FINDING 2 — three separate audio problems, wrongly conflated all session:**
+
+| symptom | real cause | evidence |
+|---|---|---|
+| "underwater" | **wind rumble, seed-dependent** | sub-200 Hz == full-mix level on bad seeds (-30.9 vs -30.8); good seed drops it 30 dB |
+| loud / clipping | **prompt + seed**, not gain structure | -18.9/-0.5 vs -16.5/0.0 across prompt variants |
+| phasing | **HF-weighted L/R divergence on near-mono audio** | MID -36.4 / SIDE -66.5; SIDE slopes -91→-62 dB with frequency |
+
+The seed lottery is WIDE: 35 dB swing in top-band content between seeds on one graph.
+`docs/models/ltx/audio-input.md` already says "seed is a LOTTERY — seed-hunt always".
+
+**FINDING 3 — the normalising-sampler detour was a WRONG CALL. Reverted.** Two nodes tried:
+- `LTX2AudioLatentNormalizingSampling` (KJNodes) — a MODEL patch whose wrapper assumes
+  standard LTX2 joint AV sampling. Foley freezes video / masks audio, so its recombine threw
+  `mat1 and mat2 shapes cannot be multiplied (548736x1 and 128x3)`. Wrong layer entirely.
+- `LTXVNormalizingSampler` (LTXVideo, the node the USER named) — correct layer, drops into
+  `#39`. At the default `1,1,0.25,1,1,0.25,1,1` it **destroyed the audio** (user: "phasing
+  filter on top"), measuring -39.4 dB with the top octave gone.
+
+`#39` is back to `SamplerCustomAdvanced`, verified from `/history` on three runs. **Do not
+re-propose a normaliser for the loudness** — the loudness was ~2 dB of prompt/seed variance,
+not a structural gain problem, and I mis-attributed a -80.8 dB top-end reading to the node
+when a no-node run on the same seed showed the identical figure.
+
+**Measurement method worth reusing:** ffmpeg `volumedetect` at
+`./node_modules/ffmpeg-static/ffmpeg.exe`, plus band splits (`lowpass=200` rumble /
+`lowpass=4000` / `highpass=8000`) and a mid-side pan for correlation. The rumble-vs-top-band
+ratio predicted the user's ear verdict on every run — seeds can be screened numerically
+instead of listened to one by one. `ebur128` is useless under ~10s (reports the -70 floor).
+
+### Next session, in order
+
+1. **Mono A/B on the phasing** (agreed, read-only): collapse the best run to mono and
+   compare. Phasing gone → it is the L/R divergence. Phasing stays → it is baked into the
+   mono content. No graph edit.
+2. **`#108=true` direct-audio run** — the one mode never executed on this graph, and per
+   MPI-537 the PROVEN lipsync path (supplied audio, not reference). Needs: the spoken line
+   in the prompt, `Input_Height` divisible by 64, frame 0 showing the face.
+3. Reference/voice-ID (`#122=true`) is **likely a dead end at 8 steps** — `audio-input.md`
+   records it as DROPPED for v1 on distilled (identity needs ~30 steps). Do not burn runs on
+   it before 1 and 2.

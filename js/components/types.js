@@ -1178,6 +1178,32 @@
  */
 
 /**
+ * @typedef {Object} MpiMediaPickerProps (Compound — js/components/Compounds/MpiMediaPicker)
+ * @property {'image'|'video'|'audio'} [mediaType='image'] - Only history items of this type are listed.
+ * @property {Function} [onPick] - (item: {filePath: string, mediaType: string}) => void.
+ *                                 Called before the modal hides. The media is ALREADY in the
+ *                                 project and on disk, so the caller takes the path as-is —
+ *                                 nothing is hashed, copied or placed.
+ *
+ * Scope is the CURRENT project only (settled 2026-08-15): a Flow slot could
+ * previously be filled ONLY by importing from outside the app. Not a file manager.
+ *
+ * Instance methods (on instance.el):
+ *   show() — Self-portals a backdrop + centred dialog to document.body (via MpiModal).
+ *   hide() — Removes backdrop/wrapper, releases OverlayManager queue.
+ *
+ * Usage:
+ *   const p = MpiMediaPicker.mount(document.createElement('div'), {
+ *       mediaType: 'video', onPick: ({ filePath }) => { … },
+ *   });
+ *   p.el.show();
+ *
+ * Emits:
+ * 'pick'   { filePath: string, mediaType: string } — A tile was chosen; the modal then hides.
+ * 'cancel' {}                                      — Cancel BUTTON only (NOT on Escape or hide()).
+ */
+
+/**
  * @typedef {Object} MpiInstalledDisplayProps (Compound — js/components/Compounds/MpiInstalledDisplay)
  * @property {string} [title='']          - Title text on the top-left
  * @property {string} [meta='']           - Small text on the top-right (e.g., "13.75GB REQUIRED")
