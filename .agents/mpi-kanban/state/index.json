@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-14T08:00:00Z",
+  "updated_at": "2026-08-15T10:35:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -45,9 +45,17 @@
       "id": "5c14b524-b8a5-473b-b85d-f3b751d41293",
       "path": ".agents/mpi-kanban/state/handoffs/5c14b524-b8a5-473b-b85d-f3b751d41293.json",
       "task_card": "MPI-531",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-15T07:43:43Z",
-      "note": "MPI-536 foley CLOSED on Fabio's live run. Next is the Flow-frame punch list (media picker, playable result, step-2 relayout, instant spinner) + a new card for the latent-preview consumers."
+      "note": "Superseded by 3cc9002a-88ed-40da-a7b5-12cf45f673c3 - media picker + scanline + unmuted result shipped (3843e8d5); punch list items 2 and 3 still open."
+    },
+    {
+      "id": "3cc9002a-88ed-40da-a7b5-12cf45f673c3",
+      "path": ".agents/mpi-kanban/state/handoffs/3cc9002a-88ed-40da-a7b5-12cf45f673c3.json",
+      "task_card": "MPI-531",
+      "status": "open",
+      "created_at": "2026-08-15T10:35:00Z",
+      "note": "3 of 4 Flow-frame items shipped. Next: read-only mono A/B on the audio phasing, then #108=true direct-audio (the proven lipsync path). Audio normaliser was tried and reverted."
     }
   ]
 }

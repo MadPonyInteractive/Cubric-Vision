@@ -1,0 +1,73 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "3cc9002a-88ed-40da-a7b5-12cf45f673c3",
+  "generated_at": "2026-08-15T10:35:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-531 Flow-frame punch list (3 of 4 shipped) + LTX foley audio bench",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Work the Flow-frame punch list from the live foley run in priority order: (1) in-app media picker, (2) playable video in the result pane, (3) relayout step 2 with a big source preview and prompts below, (4) immediate spinner/scanline on Generate. Then card the latent-preview consumer bug separately.",
+    "status": "in_progress",
+    "summary": "Items 1 and 4 shipped and verified in the app, plus an unreported bug Fabio named mid-session (the result video was hardcoded muted, so foley played silent). Item 2 turned out to be misdiagnosed - the player already existed - and its real cause is still unknown. Item 3 is deliberately STOPPED: reference audio would add a second media slot to foley, so building the relayout now means rebuilding it. The session then became a bench session on the foley audio branch, which produced a real capability finding and one wrong turn that was reverted.",
+    "commit": "3843e8d5"
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-531/plan.md",
+    "completed": [
+      "Item 1 - MpiMediaPicker (Compound over MpiModal), current project only, filtered by slot media type. Verified END TO END in an isolated app against the real project '1.4 media': browse -> 1 correctly-filtered video of 9 items -> pick -> slot filled -> picker closed. Two of my own bugs found and fixed during that verification (inverted modal nesting; a stale-DOM misread that looked like a broken filter).",
+      "Item 4 - scanline now arms in _setRunning (the single owner of run state), not only in _paintResult. Measured 124 ms after the Generate click: scanline armed, empty text hidden, status 'Generating...', button 'Cancel'. Cancel disarms. _showResults' disarm guarded on !_running so a mid-run slide rebuild cannot kill a live sweep.",
+      "Item 2b (NEW, Fabio mid-session) - result <video> was hardcoded muted:true, so foley played silent. Verified there is NO autoplay anywhere in js/components/, so muted was guarding nothing. Removed.",
+      "MpiStepPreview - the `preview` step kind written, registered in stepKinds.js, CSS in preloadStyles.js. NO CONSUMER YET (see pending item 1).",
+      "BENCH FINDING - the foley graph generates SPEECH from the prompt alone (both audio booleans false, Input_Audio empty). Proven from /history, not by ear. Written up at the top of docs/models/ltx/audio-input.md.",
+      "608/608 tests green, eslint clean, comfy_workflows/ untouched (git-clean)."
+    ],
+    "pending": [
+      "MONO A/B ON THE PHASING (agreed next action, read-only, no graph edit) - collapse the best run to mono and compare by ear. Phasing gone => it is the L/R divergence. Phasing stays => it is baked into the mono content.",
+      "Then #108=true DIRECT AUDIO - the one mode never executed on this graph, and per MPI-537 the PROVEN lipsync path (supplied audio, NOT reference). Needs the spoken line in the prompt, Input_Height divisible by 64, and frame 0 showing the face.",
+      "Item 2 (result pane) STILL UNDIAGNOSED - _showResults already builds <video controls loop>; what Fabio saw was _resultEmptyEl. Real cause is upstream (onComplete with no items, or an item not tagged video). Needs one real generation to diagnose.",
+      "Item 3 (step-2 relayout) PARKED until the bench settles whether reference audio adds a second media slot. MpiStepPreview is ready for it.",
+      "OPEN - Fabio reported the isolated instance 'not working'. Frame checks were DOM-level and passed; no full generation ran through it, so _setRunning and the MpiMediaPicker import are NOT cleared. Three candidates in validation.md.",
+      "NEW CARD still not written - the latent-preview CONSUMER bug (bus is correct per docs/preview-bus.md; the four consumers each re-implement it). Was in the last handoff, still outstanding.",
+      "MPI-538 lipsync - needs ltx-2.3-22b-ic-lora-lipdub-0.9 staged; CHECK whether Lightricks/LTX-2.3-22b-IC-LoRA-DubIt is gated before planning a mirrorUrl."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-531",
+    "title": "Package-ready flows for 1.5 - author every built-in Flow in a shippable shape",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-531/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-531/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-531/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-531/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Do the mono A/B on the phasing first - it is read-only and needs no graph edit. Take the best bench output from G:\\ComfyUi\\ComfyUI\\temp\\*-audio.mp4, render a mono collapse with ./node_modules/ffmpeg-static/ffmpeg.exe, and have Fabio A/B it: phasing gone means the HF-weighted L/R divergence is the cause, phasing remaining means it is in the mono content. THEN run #108=true (direct audio) - the proven lipsync path, never executed on this graph. Do NOT re-propose an audio normaliser: that was tried and reverted this session.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Item 3 stopped on Fabio's call and he was right: reference audio would add a SECOND media slot (audio) to foley's inputSchema, so building the step-0-thumbnail + big-preview middle step against today's one-slot input set means rebuilding it. UI waits on the bench.",
+      "The audio-normaliser detour was a WRONG CALL, fully reverted. LTX2AudioLatentNormalizingSampling (KJNodes) is a MODEL patch whose wrapper assumes standard LTX2 joint AV sampling - foley freezes video and masks audio, so it threw 'mat1 and mat2 shapes cannot be multiplied (548736x1 and 128x3)'. LTXVNormalizingSampler (the node Fabio named) is the right layer but at its default 1,1,0.25,1,1,0.25,1,1 it DESTROYED the audio. #39 is back to SamplerCustomAdvanced, verified from /history across three runs.",
+      "Three audio problems were conflated all session and are now separated: 'underwater' = WIND RUMBLE, seed-dependent (sub-200 Hz equals full-mix level on bad seeds, 30 dB lower on a good one); loudness/clipping = PROMPT+SEED variance (~2 dB), not gain structure; phasing = HF-weighted L/R divergence on near-mono audio (MID -36.4 / SIDE -66.5, SIDE sloping -91 -> -62 dB with frequency).",
+      "Reference/voice-ID (#122=true) is probably a dead end at 8 steps - docs/models/ltx/audio-input.md records it as DROPPED for v1 on distilled because identity needs ~30 steps. Do not burn runs on it before the mono test and #108."
+    ],
+    "constraints": [
+      "The seed lottery is WIDE - 35 dB swing in top-band content between seeds on one graph. One good run is not a result. audio-input.md already says 'seed is a LOTTERY - seed-hunt always'.",
+      "Fabio drives the bench UI and edits widgets himself. ALWAYS ask before writing to the bench file, and wait for him to save and close the tab first - he asked for this explicitly.",
+      "Bench file is G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\flow_ltx_foley_AUDIO_bench.json. comfy_workflows/ in the repo is UNTOUCHED and must stay that way until the bench settles.",
+      "Measurement recipe that worked: ffmpeg at ./node_modules/ffmpeg-static/ffmpeg.exe with volumedetect, band splits (lowpass=200 rumble / lowpass=4000 / highpass=8000) and a mid-side pan. The rumble-vs-top-band ratio predicted Fabio's ear verdict on EVERY run, so seeds can be screened numerically. ebur128 is useless under ~10s.",
+      "MPI-557 is a PEER SESSION's card - do not touch it, its files, or its column. Its message 4f94885d is theirs.",
+      "python reading any repo JSON needs explicit encoding='utf-8' - cp1252 is the default here and dies on the board and on /object_info display names."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-531/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-531/validation.md",
+      "docs/models/ltx/audio-input.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/3cc9002a-88ed-40da-a7b5-12cf45f673c3.json and use mpi-continue to continue MPI-531 (in doing). Last session shipped three of the four Flow-frame punch-list items - the in-app media picker (new MpiMediaPicker, verified end to end against a real project), the instant scanline on Generate (124 ms, was previously dead until the first latent), and the unmuted result video - committed as 3843e8d5 and pushed. The step-2 relayout is deliberately parked because reference audio would add a second media slot to foley, and the result-pane bug turned out to be misdiagnosed and is still open. The session then became a bench session on the LTX foley audio branch, which proved that the foley graph generates SPEECH from the prompt alone with no audio input at all (recorded in docs/models/ltx/audio-input.md), and separated three audio problems that had been conflated: wind rumble (seed-dependent), loudness (prompt+seed, ~2 dB), and phasing (HF-weighted L/R divergence on near-mono audio). An audio-normaliser was tried and fully reverted - do not re-propose one. The agreed next action is a read-only mono A/B to settle the phasing, then the #108=true direct-audio run, which is the proven lipsync path and the one mode never executed on this graph. Fabio drives the bench UI himself: ask before writing to the bench file and wait for him to save and close the tab."
+}
