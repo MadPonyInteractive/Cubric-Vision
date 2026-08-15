@@ -297,6 +297,117 @@ sharpener amplifies shimmer the LTX source already carried. A different node pac
 changes the sharpener, not the shimmer. See MPI-557 brief § The wavy shimmer,
 ROOT-CAUSED.
 
+### 2f-ter. THE NODE CHOICE IS SETTLED - core wins, the pack is rejected. MEASURED 2026-08-15
+
+**Gate closed.** `numz/ComfyUI-SeedVR2_VideoUpscaler` was installed on the bench
+(clone `4490bd1`, v2.5.23) and baked off against the bundled
+`comfy_extras.nodes_seedvr` on the same clip, same seed, same 1.5x, same `lab`.
+**Core beats it on every axis measured.** Do not revisit without new evidence.
+
+Bench: RTX 4060 Ti 16 GB, **ComfyUI 0.31.0**, NORMAL_VRAM, 678x1214, 81 frames,
+1.5x, 3B, seed 416, overlap 2, `lab`. Clips in
+`C:\Users\Fabio\Downloads\seedvr2-eval\` (`BASE_core_*`, `PACK_numz_batch33.mp4`,
+`CMP_*`, `MATCH33_*`, `SWEEP_*`).
+
+#### The decisive number: matched chunk size
+
+Earlier comparisons ran each path at its own ceiling, which confounded chunk size
+with node path. The control removes it - **both at 33 frames per chunk**:
+
+| path | chunk | detail vs lanczos (f3-81) | time |
+|---|---:|---:|---:|
+| **core** `comfy_extras.nodes_seedvr` | 33 | **3.86** | 386s |
+| pack `numz` | 33 | **2.57** | 446s |
+
+**Core resolves ~50% more detail at identical chunk size**, and is 13% faster.
+Confirmed by eye in `MATCH33_f40_lanczos-core-pack.png`: core separates hair
+strands and necklace links the pack leaves soft. The metric and the eyes agree
+here - unusual for this card, and worth trusting because of the control.
+
+#### BlockSwap does not solve our OOM - it is the wrong lever
+
+The pack's headline feature was tested properly, escalating the dial on the
+whole-clip (81-frame) run that OOMs core:
+
+| `blocks_to_swap` | allocated at OOM | short by |
+|---:|---:|---:|
+| 0 | 13.62 GiB | 1.46 GiB |
+| 16 | 13.21 GiB | 1.46 GiB |
+| 32 + `swap_io_components` | 12.03 GiB | 1.46 GiB |
+
+Full BlockSwap bought **1.6 GiB and still OOMed**. **The weights were never the
+bottleneck at 81 frames - the activations are**, and BlockSwap only moves
+transformer blocks. The SeedVR2 paper corroborates the mechanism: its *adaptive
+window attention* scales the attention window with output resolution, so
+activation memory grows with frames x resolution regardless of where the weights
+live. BlockSwap is quality- and speed-neutral (431s/2.57 with swap vs 446s/2.57
+without) - it works exactly as documented, it just does not address this.
+
+**The pack also OOMs EARLIER than core.** Core runs 69 frames per chunk; the pack
+dies at 49 and needs 33. Its ceiling on this card is *lower*, not higher.
+
+#### Neither path tiles SPATIALLY - and that is not the fix anyway
+
+Both split **temporally** (frames), never spatially; every frame goes through the
+transformer whole. Core calls it `frames_per_chunk`, the pack calls it
+`batch_size` - the same idea under two names. The only spatial tiling anywhere is
+the pack's VAE `encode_tiled`/`decode_tiled` (1024/128, 768/128), which is the
+autoencoder, not the sampler, and does not touch the activation memory that OOMs.
+If a spatially-tiled SeedVR2 exists somewhere, it is in neither of these.
+
+#### The trade we no longer have to make
+
+The feared cost of switching (§2f-bis) was `int8_convrot` and the 30-series users
+who need it. Confirmed from the live schema: the pack's shelf is fp16 /
+fp8_e4m3fn / GGUF Q4_K_M / Q8_0 - **no int8 of any kind**. Fabio ruled out GGUF.
+So the trade would have been real *and* the quality is worse. Rejected on both.
+
+Integration costs avoided, all still real: a `node_lock.json` entry, a
+`requirements.txt` install (only `peft` + `rotary_embedding_torch` were missing -
+installed `--no-deps` to protect torch 2.12.0+cu130), and **3.7 GB auto-downloaded
+to `models/SEEDVR2` outside the dependency manager** with no progress UI, no GC
+protection and no orphan sweep.
+
+**Disposition:** the clone is left at
+`G:\ComfyUi\ComfyUI\custom_nodes\seedvr2_videoupscaler.disabled` (suffix disables
+it; reversible). Its 3.7 GB of weights are still in `G:\ComfyUi\ComfyUI\models\SEEDVR2\`
+and can be deleted - nothing we ship reads them.
+
+**MPI-557 is unblocked** - it takes the core nodes as its sampler.
+
+### 2j. CHUNK SIZE HAS A PEAK AT 33, AND IT IS NOT THE SHIPPED VALUE. MEASURED 2026-08-15
+
+Full sweep, core nodes, same bench and clip as 2f-ter:
+
+| `frames_per_chunk` | detail (f3-81) | ratio f1/interior | time |
+|---:|---:|---:|---:|
+| 17 | 3.27 | 0.70 | 285s |
+| 25 | 3.43 | 0.82 | 275s |
+| **33** | **3.86** | **0.97** | 386s |
+| 57 (shipped) | 3.46 | 0.70 | 391s |
+| 69 | 3.17 | 0.84 | 280s |
+| 81 | **OOM** at KSampler - 14.74 GiB allocated, 776 MiB short | | |
+
+**33 is a genuine optimum, not a monotonic trend** - quality falls off on BOTH
+sides. It also has by far the flattest decay (ratio 0.97 vs 0.70 at 57), meaning
+frame 1 and the clip interior are nearly equal in detail; every other setting sags
+toward the interior. Confirmed by eye in `SWEEP_f40_fpc25-33-69.png`.
+
+**This corrects the 2026-08-10 conclusion.** `fpc = 57` was picked from review
+clips on the assumption that a bigger chunk buys temporal context. At matched
+conditions the opposite holds on this clip, and 57 is measurably worse than 33 on
+both detail and decay. **`comfy_workflows/seedvr2_video.json` ships 57 and should
+ship 33.**
+
+Fabio's instinct - *"process the video on a second-by-second basis, 24 frames at a
+time"* - points the right way. Note the chunker enforces **4n+1**, so 24 is not a
+legal value; 25 is the nearest and 33 is the measured peak.
+
+**Caveat, unchanged:** one clip, one card, NORMAL_VRAM. The `--lowvram` re-measure
+(the app launches `--lowvram` on every NVIDIA GPU, `routes/comfy.js:432`) is still
+an open gate before this number ships. What is now settled is the node path and
+the *shape* of the curve, not the constant for every machine.
+
 **Gap noted:** `MpiLoadVideo` has no trim, so the official template's
 "trim -> upscale segments -> merge" advice (its `Video Slice` node) is not
 available to us, and neither is a single-chunk control run.

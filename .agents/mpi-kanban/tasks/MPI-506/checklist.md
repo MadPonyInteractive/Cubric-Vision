@@ -33,12 +33,14 @@
 - [ ] Three `PLUGINS` entries + four deps (3 weights + shared VAE), R2-hosted with sha256
 - [ ] Upload 20.62 GB to R2 and mirror to HF
 - [ ] Injection mapping: selected entry -> `unet_name`
+- [ ] **Change `Input_Frames_Per_Chunk` from 57 to 33** in `comfy_workflows/seedvr2_video.json` (+ the `raw/` twin), pending the `--lowvram` re-measure above
 - [ ] `frames_per_chunk` sizing off `/system_stats`, PER VARIANT (§2h). `routes/platformEngine.js` reads only the GPU name today
 
 ## Open gates — must clear before a number or a plugin ships
 
-- [ ] **THE NODE CHOICE — settle this FIRST; it can retire the gates below.** Bake off `numz/ComfyUI-SeedVR2_VideoUpscaler` against the bundled `comfy_extras.nodes_seedvr` on a **full-frame** upscale. §2f-bis. Decisive test: a 1.5x whole-video run on the 16 GB 4060 Ti, which **OOMs on core today** (Fabio, 2026-08-14). Also compare `input_noise_scale` / `latent_noise_scale` / `preserve_frames` / batching, and check whether defects 1 and 2 exist there at all. Price the trade: the pack ships fp16/fp8_e4m3fn, so switching likely costs `int8_convrot` and the 30-series users who need it — confirm whether int8 has landed since 2026-08-10. **MPI-557 is blocked on this.**
-- [ ] **`--lowvram` re-measure on `:48188`.** Every fpc number so far is NORMAL_VRAM bench; the app launches `--lowvram` on every NVIDIA GPU (`routes/comfy.js:432`). **Only worth running against whichever node path wins above** — core's fpc numbers are meaningless if we switch packs
+- [x] **THE NODE CHOICE - SETTLED 2026-08-15, core wins, pack REJECTED.** Baked off `numz/ComfyUI-SeedVR2_VideoUpscaler` (v2.5.23) against the bundled `comfy_extras.nodes_seedvr` on the bench. At MATCHED chunk size (33) core resolves **~50% more detail (3.86 vs 2.57)** and is 13% faster. BlockSwap does NOT solve the OOM - full swap bought 1.6 GiB and still fell 1.46 GiB short, because the activations are the bottleneck, not the weights. The pack also OOMs EARLIER than core (49 vs 69 frames). No int8 on its shelf either. Full evidence + disposition: brief S 2f-ter. **MPI-557 is unblocked.**
+- [x] **Chunk-size sweep - `fpc = 33` is the measured peak, NOT the shipped 57** (17/25/33/57/69/81 swept; quality falls off on both sides; 33 also has the flattest decay at ratio 0.97 vs 0.70). Corrects the 2026-08-10 pick. Brief S 2j.
+- [ ] **`--lowvram` re-measure on `:48188`.** Every fpc number so far is NORMAL_VRAM bench; the app launches `--lowvram` on every NVIDIA GPU (`routes/comfy.js:432`). Node path is now SETTLED (core), so this gate is live: re-run the 17/25/33/57 sweep under `--lowvram` before any fpc constant reaches the app
 - [ ] **Remote/Pod half (§5).** A plugin dep is not baked into the Pod image. Establish how `image-describer`'s encoder reaches a Pod, and whether SeedVR2 can work remotely at all
 
 ## Tooling notes — cost time on 2026-08-10, will cost it again
