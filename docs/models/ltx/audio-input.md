@@ -69,6 +69,122 @@ directed. Do not design the Flow's audio UI until that is known.
 booleans at the shipped default. `id` renamed to `ltx-foley-audio-bench` so a stray save in
 the bench UI cannot overwrite the shipped file. `comfy_workflows/` is untouched (git clean).
 
+## ✅ RESOLVED — TWO SEPARATE ARTIFACTS WERE BEING CALLED "PHASING" (2026-08-15)
+
+They have different causes, different tells, and only one of them is fixable. Do not merge them.
+
+| | **A — real phasing** | **B — bad reconstruction** |
+|---|---|---|
+| **what** | genuine phase artifact | model reproducing a sound class badly |
+| **scope** | **EVERY sound in the clip** | **one sound class** (breath, and the lizard) |
+| **driver** | **SEED** — present on bad seeds, absent on good ones | training coverage — present on good seeds too |
+| **fix** | seed-hunt; screen numerically before listening | none at graph level — it is the model |
+
+**A is a seed lottery**, consistent with the standing "seed is a LOTTERY — seed-hunt always"
+rule and with the 35 dB top-band swing measured between seeds on one graph. **B is what the
+whole two-session investigation below was actually chasing**, and it is not a signal defect at
+all. Everything in the elimination table was testing for a mechanism that, for B, does not
+exist.
+
+### B — the breath artifact is model reconstruction quality
+
+User's verdict after the A/B/E sweep, listening closely:
+
+> *"I was mistaking phasing with the model being dumb — not being properly trained with
+> breaths, because the breath sounds like it's phased. Listening to it carefully, it's not
+> phasing. It's just a bad reproduction of a breath."*
+
+Same failure mode as the lizard run where *"the lizard made a sound and the sound had nothing
+to do with the lizard"*. The model emits something plausible-SHAPED but wrong for the source.
+Breath is a worst case: broadband, quiet, structurally specific. Thin coverage → breath-adjacent
+noise that reads as a phase artifact.
+
+**Part of the original "underwater" complaint is this.** Sessions were spent on gain structure,
+band ratios and stereo geometry for something that was partly reconstruction quality on
+specific sound classes — and partly A, which a seed re-roll answers.
+
+**The elimination table below applies to B.** For A, the answer is the seed, and the
+rumble-vs-top-band ratio screens it numerically without listening (see the measurement method
+in `tasks/MPI-531/plan.md`).
+
+### Everything ELIMINATED along the way — do not re-run these
+
+| suspect | verdict | evidence |
+|---|---|---|
+| HF-weighted L/R divergence | **DEAD** | 44 dB MID/SIDE gap = already mono; A/B identical by ear + in Fairlight; L/R differ 0.002 dB RMS |
+| Mono fold of a true stereo run | **DEAD** | user's own theory, tested on `00026`: *"there is no phasing when you convert it to mono"* |
+| `#115 slope_len` (mask crossfade) | **DEAD** | slope 1 vs 8 vs 16 → **bit-identical SHA256**. In foley mode the audio mask is a uniform constant (`mask_audio: False`, `mask_init_value_audio` → 1.0), so there are no edges to ramp. Inert by construction |
+| `phased` token in `#13 Input_Negative` | **not the cause** | removing it changed the render but not the artifact — see proximity note below |
+| `Foley_Lora` strength 1.0 → 0.7 | **not the cause** | user: *"E and A are very similar"* |
+| Audio normaliser nodes | **DEAD, REVERTED** | see the 2026-08-15 session note in `tasks/MPI-531/plan.md` |
+
+### Side finding — the negative prompt shapes PERCEIVED DISTANCE
+
+Removing `phased` from `#13` gave the voice a **proximity effect** — user: *"the voice is closer
+to the ears"*. The token was there to suppress an artifact; it was also pushing the source back.
+Worth knowing when tuning the shipped negative: these tokens move spatial perception, not just
+artifact suppression.
+
+### Sweep method (reusable)
+
+`scripts/workflow-to-api.mjs <one-file>` converts the bench GUI graph to API format on stdout
+(it resolves widgets from the live `/object_info` — a hand-rolled converter drops every widget
+value silently). Then POST `/prompt` per variant with ONE input changed and the seed held.
+Detect outputs by diffing the output dir before/after, since `/history` output nodes vary.
+**A cached run writes NO file** — an identical graph + seed returns the cached result, so an
+empty diff means "no change", not "failed".
+
+## ❌ THE PHASING IS NOT L/R DIVERGENCE — two theories tested and DISPROVEN (2026-08-15)
+
+Both were measurement-led, both looked right, both were wrong. Recorded so neither is
+re-proposed.
+
+**Theory 1 — the phasing is HF-weighted L/R divergence.** Mid-side on the good foley
+seeds read MID −21.0 / SIDE −65.4, with SIDE sloping −91 → −62 dB with frequency, which
+reads as a stereo problem. **Disproven by construction:** a 44 dB MID/SIDE gap is mono
+with codec noise on the side, so a mono fold removes nothing audible. Rendered the A/B
+anyway (`00006`, `00007`) — user's verdict: *"both mono and stereo sound exactly the
+same"*, confirmed in Fairlight (identical L/R faders). Per-channel `astats` on the
+source: L/R differ by **0.002 dB RMS**. The content was mono all along.
+
+**Theory 2 (user's) — fold a genuinely stereo run to mono and the phasing appears.**
+Tested on `MpiVideo_Foley_00026`, which has a real stereo field (MID −41.4 / SIDE −56.1,
+a 14.7 dB gap) and whose side channel is strongly HF-weighted — only **5.5 dB** below mid
+above 8 kHz versus 32 dB below at 200 Hz. That slope is exactly what an HF phase-
+divergence mechanism would look like. **Disproven by ear:** user, on the mono fold —
+*"there is no phasing when you convert it to mono"*. The HF-weighted side channel is a
+red herring; it is stereo width, not phase cancellation.
+
+**Where that leaves the phasing:** cause still UNKNOWN, with the stereo field and the
+mono fold both eliminated. It is in the mono content itself. Remaining suspects, none
+tested:
+1. the audio VAE decode (`#42 LTXVAudioVAEDecode` / `LTX23_audio_vae_bf16`) — latent-
+   domain smearing is the usual signature;
+2. `Foley_Lora` at its current strength;
+3. `#13 Input_Negative`, which literally begins with the token `phased` and is LIVE at
+   cfg 3 — a negative can summon what it names when alignment is weak. Nearly free to
+   test: strip the token, hold the seed.
+
+**Do not re-propose a normaliser** (see the 2026-08-15 session note in
+`tasks/MPI-531/plan.md`) and do not re-propose a mono downmix — that is this section.
+
+## Bench graph corrections (2026-08-15)
+
+- **`#126 Input_Positive` is an ORPHAN node — it feeds nothing.** The live prompt is
+  **`#12`** (→ `#14 CLIPTextEncode`). `#126` holds the speech prompt from the
+  prompt-only-speech finding above, which makes it easy to mistake for the active one.
+  Editing `#126` produces a run with no spoken line and reads as "the audio branch
+  failed" when nothing failed.
+- **`Audio_Influence` (`#110`) is INVERTED.** It passes through `#111
+  MpiNormalizeValue` in `inverse` mode into `mask_init_value_audio`, so `0.9` → mask
+  ≈ `0.1`. High influence = low mask = the supplied audio is PRESERVED. The knob moves
+  the opposite way to its name.
+- **Outputs do not land in `ComfyUI/output/`.** `#46 MpiSaveVideo` has
+  `save_output: false` and the install's output path is overridden to
+  **`D:\WORK\Images\Outputs`** (`MpiVideo_Foley_*.mp4` — the files to listen to).
+  The `AnimateDiff_*-audio.mp4` files in `ComfyUI/temp/` come from the `#124`/`#127`
+  Video Combine nodes and are a DIFFERENT save of the same run; one run writes both.
+
 ## ✅ AUDIO-DRIVEN LIPSYNC WORKS ON THE SHIPPED i2v GRAPH (2026-08-11, MPI-537 — NEWEST)
 
 `ltx_i2v_t2v_template.json` **as it ships** makes the mouth follow a **supplied** audio

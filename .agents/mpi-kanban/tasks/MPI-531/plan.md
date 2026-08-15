@@ -212,14 +212,81 @@ when a no-node run on the same seed showed the identical figure.
 ratio predicted the user's ear verdict on every run — seeds can be screened numerically
 instead of listened to one by one. `ebur128` is useless under ~10s (reports the -70 floor).
 
+### 2026-08-15 (session 3) — the audio bench answered a DIFFERENT question than it set out to
+
+Went in to settle the phasing. Came out with the stereo/prompt contract instead, and with
+the phasing still open. Full writeups: `docs/models/ltx/prompt-contract.md` (the prompt
+rules) and `docs/models/ltx/audio-input.md` (the disproven theories + graph corrections).
+
+**Settled — the prompt controls the stereo field, the video does not.** Three runs on the
+lizard clip (`ref2v_ms_063.mp4`, subject crosses right → left), foley mode:
+`00025` empty prompt → mono (48.6 dB MID/SIDE gap); `00026` + `00027`, two seeds, both
+with directional language → real pans (14.7 / 18.1 dB gaps, `R-L` tracing right at the
+head and left at the tail). Also proven: **the model sees the video** — `00025` generated
+coherent audio at −21.1 dB from an EMPTY prompt against a −52.7 dB source. It just
+defaults to centre.
+
+Second, independent axis: **sound-first phrasing drives quality**. `00027` rewrote the
+same directional cue as a sound description rather than a shot description and gained
+12 dB of presence plus, per the user's ear, an actual breath instead of a generic noise.
+
+**Phasing — still UNKNOWN, two theories dead.** Mine (HF-weighted L/R divergence) was
+disproven by construction: a 44 dB MID/SIDE gap means the content was already mono, and
+the user confirmed by ear and in Fairlight that the A/B was identical. The user's (fold a
+truly stereo run and the phasing appears) was disproven by ear on `00026`'s mono fold.
+Remaining suspects, untested and ranked in `audio-input.md`: the audio VAE decode,
+`Foley_Lora` strength, and `#13 Input_Negative` — which begins with the token `phased`,
+live at cfg 3, and is nearly free to test.
+
+**Bench traps found the hard way** (all three now in `audio-input.md`): `#126
+Input_Positive` is an ORPHAN and `#12` is the live one; `Audio_Influence` is INVERTED
+(0.9 → mask ≈ 0.1); outputs go to `D:\WORK\Images\Outputs`, NOT `ComfyUI/output/`,
+and the `AnimateDiff_*` temp files are a second save of the same run.
+
+**`#108=true` direct audio STILL NOT RUN.** Staged once, then dropped for the stereo
+question, and the bench is now on the lizard clip in foley mode. Re-staging notes: it
+needs a video whose frame 0 shows a face, and `Boss.mp3` is MONO content (57 dB gap) so
+it proves nothing about stereo — its value is the lipsync path only.
+
+### 2026-08-15 (session 3, cont.) — the phasing thread is CLOSED
+
+Ran a 5-run sweep (one variable each, seed held) against the live bench via
+`scripts/workflow-to-api.mjs` + `POST /prompt`. Outputs `00031`–`00035`, copies in the
+session scratchpad under `sweep/`.
+
+**Result: "the phasing" was TWO different things**, now split in
+`docs/models/ltx/audio-input.md`:
+- **A — real phasing**: affects EVERY sound in a clip, **seed-driven**. Seed-hunt; the
+  rumble-vs-top-band ratio screens it numerically.
+- **B — bad reconstruction**: one sound CLASS (breath; the lizard), present on good seeds
+  too. **Not a signal defect — it is the model's training coverage.** No graph-level fix.
+
+User's call after listening to the sweep: *"it's not phasing. It's just a bad reproduction of
+a breath."* Two sessions of gain/band/stereo measurement were chasing a mechanism that, for B,
+does not exist.
+
+**Eliminated conclusively this sweep** (do not re-run): `slope_len` 1 vs 8 vs 16 →
+**bit-identical SHA256** (the foley audio mask is a uniform constant, so there are no edges to
+ramp — inert by construction); `Foley_Lora` 1.0 → 0.7 (*"E and A are very similar"*); the
+`phased` negative token (changed the render but not the artifact — though it DID produce a
+proximity effect, voice closer, worth knowing for negative tuning).
+
+**Also corrected:** last session's "stereo placement is prompt-driven" was too strong.
+`00028`/`00030`/`00031` — three static close-ups with explicit direction words, including an
+off-frame speaker "from the right" — all came back mono. Stereo appears only when the subject
+MOVES on screen. `prompt-contract.md` rewritten accordingly.
+
 ### Next session, in order
 
-1. **Mono A/B on the phasing** (agreed, read-only): collapse the best run to mono and
-   compare. Phasing gone → it is the L/R divergence. Phasing stays → it is baked into the
-   mono content. No graph edit.
-2. **`#108=true` direct-audio run** — the one mode never executed on this graph, and per
-   MPI-537 the PROVEN lipsync path (supplied audio, not reference). Needs: the spoken line
-   in the prompt, `Input_Height` divisible by 64, frame 0 showing the face.
+1. **Lizard clip with NO directional language** — the one run that separates motion from
+   prompt. If it still pans, direction words contribute nothing and the rule is purely
+   "stereo follows on-screen movement".
+2. **`#108=true` direct audio** — the carded blocker, still never executed. Needs a video whose
+   frame 0 shows a face. `Boss.mp3` is MONO content, so it proves the lipsync path only.
 3. Reference/voice-ID (`#122=true`) is **likely a dead end at 8 steps** — `audio-input.md`
-   records it as DROPPED for v1 on distilled (identity needs ~30 steps). Do not burn runs on
-   it before 1 and 2.
+   records it as DROPPED for v1 on distilled (identity needs ~30 steps). Unchanged from the
+   last two sessions: do not burn runs on it before the two above.
+
+**Audio-quality expectations are now set, and they are a MODEL property, not a graph bug:**
+breath and other thinly-covered sound classes reproduce badly, and no widget fixes that. Seed
+variance handles the rest. Design the Flow's copy around that.
