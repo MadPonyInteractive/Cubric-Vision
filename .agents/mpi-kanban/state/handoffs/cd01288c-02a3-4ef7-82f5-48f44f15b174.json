@@ -1,0 +1,75 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "cd01288c-02a3-4ef7-82f5-48f44f15b174",
+  "generated_at": "2026-08-15T11:50:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-531 LTX foley audio bench - phasing thread closed, stereo claim corrected",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Mono A/B on the foley audio phasing, then the #108=true direct-audio run (the proven lipsync path, never executed on this graph).",
+    "status": "in_progress",
+    "summary": "The mono A/B ran and DISPROVED the L/R-divergence theory, and a 5-run sweep then closed the phasing thread entirely: it was TWO artifacts, one seed-driven and one a model training-coverage limit with no graph-level fix. The session also disproved last session's 'stereo is prompt-driven' claim. #108=true was staged but never run - the bench got redirected to the stereo question and is now on the lizard clip in foley mode.",
+    "commit": "7e8860e6"
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-531/plan.md",
+    "completed": [
+      "Mono A/B - rendered and verified (MID unchanged, SIDE at the -85.5 dB floor). User confirmed A and B identical by ear and in Fairlight. L/R differ by 0.002 dB RMS: the content was already mono. Theory DEAD.",
+      "User's own theory (fold a TRUE stereo run and phasing appears) tested on 00026 and also DEAD - 'there is no phasing when you convert it to mono'.",
+      "5-run sweep, seed held, one variable each, via scripts/workflow-to-api.mjs + POST /prompt. Eliminated slope_len (1 vs 8 vs 16 = BIT-IDENTICAL SHA256), Foley_Lora 1.0->0.7, and the 'phased' negative token.",
+      "RESOLUTION - 'the phasing' is TWO artifacts: (A) real phasing, every sound in a clip, SEED-driven, screenable numerically; (B) bad reconstruction of one sound CLASS (breath, the lizard), present on good seeds, a model training-coverage limit with NO graph fix. Written up in docs/models/ltx/audio-input.md.",
+      "CORRECTED last session's stereo claim - 00028/00030/00031 are three static close-ups with explicit direction words (including an off-frame speaker 'from the right') and ALL came back mono. Stereo needs ON-SCREEN MOTION. docs/models/ltx/prompt-contract.md rewritten.",
+      "Side finding - removing 'phased' from the negative gives a PROXIMITY effect (voice closer). Negative tokens shape perceived distance, not just artifacts.",
+      "Bench graph corrections recorded: #126 Input_Positive is an ORPHAN (#12 is live), Audio_Influence is INVERTED (0.9 -> mask 0.1), outputs go to D:\\WORK\\Images\\Outputs."
+    ],
+    "pending": [
+      "LIZARD CLIP WITH NO DIRECTIONAL LANGUAGE - the one run that separates motion from prompt. If it still pans, direction words contribute nothing and the rule is purely 'stereo follows on-screen movement'.",
+      "#108=true DIRECT AUDIO - the carded blocker, staged once this session and still NEVER EXECUTED. This is what the user named for next session ('supplying sound to the workflow').",
+      "Item 2 (Flow result pane) STILL UNDIAGNOSED - _showResults already builds <video controls loop>; what was seen is _resultEmptyEl. Needs one real generation through the app.",
+      "Item 3 (step-2 relayout) PARKED until the bench settles whether reference audio adds a second media slot. MpiStepPreview is written and registered with NO consumer.",
+      "OPEN - user reported the isolated instance 'not working' after session 2's edits; frame checks were DOM-level only. Three candidates in validation.md.",
+      "NEW CARD still not written - the latent-preview CONSUMER bug (bus is correct per docs/preview-bus.md; the four consumers each re-implement it). Outstanding across three handoffs now.",
+      "MPI-538 lipsync - needs ltx-2.3-22b-ic-lora-lipdub-0.9 staged; CHECK whether Lightricks/LTX-2.3-22b-IC-LoRA-DubIt is gated before planning a mirrorUrl."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-531",
+    "title": "Package-ready flows for 1.5 - author every built-in Flow in a shippable shape",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-531/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-531/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-531/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-531/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Run the #108=true DIRECT AUDIO test - supplying sound to the workflow, which the user named as next session's job. It is the one mode never executed on this graph and per MPI-537 the PROVEN lipsync path (supplied audio, NOT reference). Set #108=true, put the spoken line in #12 (NOT #126 - it is an orphan that feeds nothing), pick a video whose frame 0 shows a face (ref2v_ms_106.mp4 works; the bench is currently on the lizard clip ref2v_ms_063.mp4 in foley mode and must be switched back), and re-roll the seed. Note Boss.mp3 is MONO content (57 dB MID/SIDE gap), so it proves the lipsync path only and says nothing about stereo. Verify from /history that #109 and #113 actually took the true branch before trusting any ear judgement. Optionally first: the one-run lizard test with NO directional language, which separates motion from prompt as the stereo driver.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "The phasing thread is CLOSED and its dead ends are recorded as dead in docs/models/ltx/audio-input.md. Do NOT re-propose: an audio normaliser (tried and reverted, session 2), a mono downmix, slope_len, Foley_Lora strength, or the 'phased' negative token. All eliminated with evidence.",
+      "Artifact B (bad reconstruction of breath and similar sound classes) has NO graph-level fix - it is the model's training coverage. Set product expectations around it rather than hunting a setting.",
+      "Stereo emerges from ON-SCREEN MOTION, not from prompt direction words. Do not promise prompt-controlled panning in Flow copy.",
+      "Reference/voice-ID (#122=true) remains a likely dead end at 8 steps - audio-input.md records it as DROPPED for v1 on distilled (identity needs ~30 steps). Do not burn runs on it before the two pending items."
+    ],
+    "constraints": [
+      "Fabio drives the bench UI and edits widgets himself. ASK before writing to the bench file and wait for him to save and close the tab - he asked for this explicitly. He left it saved and closed at session end, on the lizard clip in foley mode.",
+      "Bench file is G:\\ComfyUi\\ComfyUI\\user\\default\\workflows\\flow_ltx_foley_AUDIO_bench.json. comfy_workflows/ in the repo is UNTOUCHED and must stay that way until the bench settles.",
+      "OUTPUTS GO TO D:\\WORK\\Images\\Outputs (MpiVideo_Foley_*.mp4) - the path is overridden and ComfyUI/output/ is EMPTY. The AnimateDiff_*-audio.mp4 files in ComfyUI/temp/ are a SECOND save of the same run from the Video Combine nodes; one run writes both, and confusing them cost real time this session.",
+      "#126 Input_Positive is an ORPHAN node feeding nothing - #12 is the live prompt. Editing #126 produces a run with no spoken line and reads as a failed audio branch.",
+      "To script a bench run: scripts/workflow-to-api.mjs <one-file> converts GUI->API on stdout (single-file form only - NEVER run it bare, it batch-converts all of raw/ and writes). A hand-rolled converter drops every widget value silently. A CACHED run writes NO file, so an empty output diff means 'no change', not 'failed'.",
+      "python reading any repo JSON needs explicit encoding='utf-8' - cp1252 is the default here.",
+      "Bash tool: no heredocs and no backslash-continuations (guard-shell blocks both; backslashes are halved). Write scripts with the Write tool and run them by path."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-531/plan.md",
+      "docs/models/ltx/audio-input.md",
+      "docs/models/ltx/prompt-contract.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/cd01288c-02a3-4ef7-82f5-48f44f15b174.json and use mpi-continue to continue MPI-531 (in doing). Last session was a bench session on the LTX foley audio branch and it CLOSED the phasing thread: what had been called 'phasing' turned out to be two different artifacts - real phasing, which affects every sound in a clip and is seed-driven, and bad reconstruction of one sound class (breath, and a lizard whose sound 'had nothing to do with the lizard'), which is the model's training coverage and has no graph-level fix. A 5-run sweep with the seed held eliminated slope_len (bit-identical output across 1/8/16), Foley_Lora strength and the 'phased' negative token; an audio normaliser was tried and reverted the session before. The session also DISPROVED the previous session's claim that stereo placement is prompt-driven: three static close-ups with explicit direction words, including an off-frame speaker 'from the right', all came back mono, so stereo needs on-screen motion. All of that is committed as 7e8860e6 and pushed. The next job, which Fabio named himself, is supplying sound to the workflow: the #108=true direct-audio run, the proven lipsync path and the one mode never executed on this graph. The bench is currently on the lizard clip in foley mode and must be switched back to a video whose frame 0 shows a face. Fabio drives the bench UI himself - ask before writing to the bench file and wait for him to save and close the tab."
+}

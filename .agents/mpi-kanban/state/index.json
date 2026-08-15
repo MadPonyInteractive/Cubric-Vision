@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-15T10:35:00Z",
+  "updated_at": "2026-08-15T11:50:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -53,9 +53,17 @@
       "id": "3cc9002a-88ed-40da-a7b5-12cf45f673c3",
       "path": ".agents/mpi-kanban/state/handoffs/3cc9002a-88ed-40da-a7b5-12cf45f673c3.json",
       "task_card": "MPI-531",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-15T10:35:00Z",
-      "note": "3 of 4 Flow-frame items shipped. Next: read-only mono A/B on the audio phasing, then #108=true direct-audio (the proven lipsync path). Audio normaliser was tried and reverted."
+      "note": "Superseded by cd01288c-02a3-4ef7-82f5-48f44f15b174 - phasing thread closed (two artifacts, both characterised), stereo claim corrected. #108 direct audio still not run."
+    },
+    {
+      "id": "cd01288c-02a3-4ef7-82f5-48f44f15b174",
+      "path": ".agents/mpi-kanban/state/handoffs/cd01288c-02a3-4ef7-82f5-48f44f15b174.json",
+      "task_card": "MPI-531",
+      "status": "open",
+      "created_at": "2026-08-15T11:50:00Z",
+      "note": "Foley audio bench closed the phasing thread - it was TWO artifacts (seed-driven phasing vs model reconstruction of breath). Stereo needs on-screen motion, not prompt direction words. Next: #108=true direct audio."
     }
   ]
 }
