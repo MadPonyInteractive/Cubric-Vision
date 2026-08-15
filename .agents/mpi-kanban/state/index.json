@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-14T05:41:25Z",
+  "updated_at": "2026-08-15T07:43:43Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -49,9 +49,17 @@
       "id": "664fbe7d-955c-426f-8cde-097a9e19b163",
       "path": ".agents/mpi-kanban/state/handoffs/664fbe7d-955c-426f-8cde-097a9e19b163.json",
       "task_card": "MPI-520",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-14T03:50:00Z",
-      "note": "Flow track: MPI-531 item 1 + FlowDef.controls shipped, MPI-520 Extend Video integrated and validating. Next is MPI-536 foley, gated on staging its LoRA to R2."
+      "note": "Superseded by 5c14b524-b8a5-473b-b85d-f3b751d41293 - MPI-536 foley shipped, live-verified and closed."
+    },
+    {
+      "id": "5c14b524-b8a5-473b-b85d-f3b751d41293",
+      "path": ".agents/mpi-kanban/state/handoffs/5c14b524-b8a5-473b-b85d-f3b751d41293.json",
+      "task_card": "MPI-531",
+      "status": "open",
+      "created_at": "2026-08-15T07:43:43Z",
+      "note": "MPI-536 foley CLOSED on Fabio's live run. Next is the Flow-frame punch list (media picker, playable result, step-2 relayout, instant spinner) + a new card for the latent-preview consumers."
     }
   ]
 }
