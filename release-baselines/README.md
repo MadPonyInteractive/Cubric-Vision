@@ -57,17 +57,17 @@ Local Windows builds do the same by hand:
 
 ## Current baselines
 
-- All three hold the **v1.4.1 FULL (portable-stage)** manifests (2026-08-11,
-  MPI-542) from the shipped 1.4.1 build, so the next release deltas against
-  1.4.1. `toVersion: 1.4.1`, `fromVersion: null`, `kind: portable-stage`:
-  - `darwin-arm64.json` — 6595 files
-  - `linux-x64.json` — 6415 files
-  - `win32-x64.json` — 6450 files
+- All three hold the **v1.4.2 FULL (portable-stage)** manifests (2026-08-15)
+  from the shipped 1.4.2 build, so the next release deltas against
+  1.4.2. `toVersion: 1.4.2`, `fromVersion: null`, `kind: portable-stage`:
+  - `darwin-arm64.json` — 6650 files
+  - `linux-x64.json` — 6470 files
+  - `win32-x64.json` — 6508 files
 
-  Restamped from the published artifacts (mpi-ci run 31532694625, SHA
-  `73f855ae`, tag `v1.4.1`) **after** v1.4.1 went live on the GitHub release,
-  per the timing rule in **Contract**. Preceding values: v1.4.0 were 6589 / 6409
-  / 6444; v1.3.1 were 6565 / 6385 / 6420 (mpi-ci run 30755518372, SHA
+  Restamped from the published artifacts (mpi-ci run 31910502305, SHA
+  `372c1895`, tag `v1.4.2`) **after** v1.4.2 went live on the GitHub release,
+  per the timing rule in **Contract**. Preceding values: v1.4.1 were 6595 / 6415
+  / 6450; v1.4.0 were 6589 / 6409 / 6444; v1.3.1 were 6565 / 6385 / 6420 (mpi-ci run 30755518372, SHA
   `5328c033`); v1.3.0 were 6563 / 6383 / 6418; v1.2.0 were 6505 / 6325 / 6362.
 
   > **A Windows zip contains TWO `update-manifest.json` files** — the top-level
