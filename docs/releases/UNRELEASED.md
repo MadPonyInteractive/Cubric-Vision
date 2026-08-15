@@ -6,6 +6,9 @@
 > archival `docs/releases/YYYY-MM-DD-v<newVersion>.md`, then clear this file
 > back to the header.
 >
+> **Cleared 2026-08-15 after 1.4.2 shipped.** All nine items (4 new + 5 fixes) were
+> folded into `RELEASE_NOTES['1.4.2']` and `docs/releases/2026-08-15-v1.4.2.md`.
+>
 > **Cleared 2026-08-11 after 1.4.1 shipped.** All nine bullets (1 new + 8 fixes)
 > were folded into `RELEASE_NOTES['1.4.1']` and
 > `docs/releases/2026-08-11-v1.4.1.md`, including the first-run entry an earlier
@@ -29,24 +32,8 @@ _(none yet)_
 
 ## What's new
 
-Notes read as notes now — Project notes and Card notes render your markdown instead of showing the raw text. Headings, tables, lists, quotes and code all come out formatted, with each heading level in its own colour so a long document is easy to scan. A pencil/eye pair at the top right switches between editing the source and reading it, and the preview shows what you have typed before you save it. Long notes scroll — before, anything past the height of the window was simply cut off with no way to reach it. The window is wider and the text larger, so a table has room to breathe. Release notes take markdown too, so this "What's new" can be formatted from here on.
-
-A card with notes says so. An annotated gallery card now carries a small notes icon in its top-right corner, between the heart and the reuse button, and it stays visible without hovering — so a project you have been given can be scanned for the cards someone wrote about instead of opening each one to check. Clicking it opens those notes straight away.
-
-Fill works on paint now. The Fill button in Adjust closed enclosed holes in a mask but did nothing to the paint layer, so a closed shape drawn with the paint brush — the one thing an outline tool exists for — could not be filled in. Pressing Fill on paint now floods every enclosed area in your current colour, and every brushstroke you already made keeps its own colour on top of it.
-
-Video has a 21:9 cinematic ratio. It sits beside 1:1, 9:16 and 16:9 on every video model and at every quality level, so the wide anamorphic shape is a choice up front rather than a crop afterwards.
-
+_(none yet)_
 
 ## Fixes
 
-Removed gallery cards no longer leave their video preview running in the background.
-
-Losing a cloud engine mid-generation now says the engine dropped, instead of blaming the size of your inputs.
-
-MiniMax H3 at 2K and 4K no longer shows LTX 2.3's motion caveat. It now reads Experimental - High VRAM.
-
-MiniMax H3 video looks better with Turbo off. The slower setting was coming out worse than the fast one, which is backwards - it now gives the quality it asks the extra time for.
-
-Reference images and audio no longer linger in the prompt box after you move to a model or operation that cannot use them. Reusing a text-to-image card while references were staged left them sitting in the tray, and the next generation quietly ran carrying inputs it should never have had.
-
+_(none yet)_

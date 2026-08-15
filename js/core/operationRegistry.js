@@ -64,8 +64,8 @@ export const OPERATION_REGISTRY = {
     flowSdxl4k: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
     flowVideoStitch: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
     flowHeadSwap: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
-    flowLtxExtend: { latestVersion: '1.0', appVersionIntroduced: '1.4.1' },
-    flowLtxFoley: { latestVersion: '1.0', appVersionIntroduced: '1.4.1' },
+    flowLtxExtend: { latestVersion: '1.0', appVersionIntroduced: '1.4.2' },
+    flowLtxFoley: { latestVersion: '1.0', appVersionIntroduced: '1.4.2' },
 };
 
 /**

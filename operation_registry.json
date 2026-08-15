@@ -145,12 +145,12 @@
   },
   "flowLtxExtend": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.4.1",
+    "appVersionIntroduced": "1.4.2",
     "universal": true
   },
   "flowLtxFoley": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.4.1",
+    "appVersionIntroduced": "1.4.2",
     "universal": true
   }
 }
