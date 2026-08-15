@@ -2,15 +2,15 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "2fa7c83b-41ae-42d5-9f22-b4e77117b769",
   "generated_at": "2026-08-14T03:40:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-557 Phase 0 session 3 - B2 bake-off, the degraded-footage re-runs, and the finding that reframes the card",
     "branch": "master"
   },
   "goal": {
     "original": "Run MPI-557 Phase 0: answer the open questions on the bench and return a GO/NO-GO on a video face detailer, before any app work.",
-    "status": "in_progress",
-    "summary": "B2 closed - SeedVR2 beats LTX v2v decisively. The degraded-footage re-run the B1 GO was conditioned on came back weak, and measuring WHY produced the card's real finding: restoration fixes SOFT faces, not WRONG ones. That splits the product case in two and the split is now Fabio's call to make."
+    "status": "blocked",
+    "summary": "RESOLVED 2026-08-14. Fabio answered the scope question: SOFT faces. B3 was re-run and answered (pad is a resolution tax; window must cover face TRAVEL; 176@640 + lab is the shipped shape). The wavy shimmer was root-caused to the LTX source, not the model. Card then parked BLOCKED on MPI-506 - the SeedVR2 node choice (numz pack vs bundled core nodes) is under review and every remaining B-question assumes the sampler."
   },
   "plan": {
     "file": ".agents/mpi-kanban/tasks/MPI-557/plan.md",

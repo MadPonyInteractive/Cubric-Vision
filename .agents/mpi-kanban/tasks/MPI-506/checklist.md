@@ -37,7 +37,8 @@
 
 ## Open gates — must clear before a number or a plugin ships
 
-- [ ] **`--lowvram` re-measure on `:48188`.** Every fpc number so far is NORMAL_VRAM bench; the app launches `--lowvram` on every NVIDIA GPU (`routes/comfy.js:432`)
+- [ ] **THE NODE CHOICE — settle this FIRST; it can retire the gates below.** Bake off `numz/ComfyUI-SeedVR2_VideoUpscaler` against the bundled `comfy_extras.nodes_seedvr` on a **full-frame** upscale. §2f-bis. Decisive test: a 1.5x whole-video run on the 16 GB 4060 Ti, which **OOMs on core today** (Fabio, 2026-08-14). Also compare `input_noise_scale` / `latent_noise_scale` / `preserve_frames` / batching, and check whether defects 1 and 2 exist there at all. Price the trade: the pack ships fp16/fp8_e4m3fn, so switching likely costs `int8_convrot` and the 30-series users who need it — confirm whether int8 has landed since 2026-08-10. **MPI-557 is blocked on this.**
+- [ ] **`--lowvram` re-measure on `:48188`.** Every fpc number so far is NORMAL_VRAM bench; the app launches `--lowvram` on every NVIDIA GPU (`routes/comfy.js:432`). **Only worth running against whichever node path wins above** — core's fpc numbers are meaningless if we switch packs
 - [ ] **Remote/Pod half (§5).** A plugin dep is not baked into the Pod image. Establish how `image-describer`'s encoder reaches a Pod, and whether SeedVR2 can work remotely at all
 
 ## Tooling notes — cost time on 2026-08-10, will cost it again

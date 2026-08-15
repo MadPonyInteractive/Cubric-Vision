@@ -11,8 +11,82 @@ might not even work awesome at the end."*
 
 ## Current State
 
-**Session 3, 2026-08-14. Phase 0 has produced its actual finding, and it is
-bigger than any single B-question.**
+**Session 4, 2026-08-14. SCOPE IS SETTLED: the product target is SOFT faces
+(Fabio, "A"). The restoration branch ships; identity work leaves this card.**
+
+**B10 is downgraded to INCONCLUSIVE** (Fabio, same day): its face reached the
+sampler with **199 px vs B1's 266 px** - 25% fewer, despite a *larger* source
+face, because a 30% pad on a 2.57x window spent the budget on background. So B10
+does not isolate wrongness, and its "768 loses to 512" answer was scored after
+downscaling 768 -> 512, which structurally cannot detect a resolution win. Full
+correction in [brief.md](brief.md) § CORRECTION - B10 was under-resolved.
+
+**B3 is ANSWERED.** Fabio's verdict (relayed via message `4f94885d` from the
+MPI-536 session, which he pasted into by mistake): *"the bottom right one is the
+best one"* = the `144/512` tile. His eye picked face-pixels-per-second, confirming
+the pad lever. That tile also **clips the face in 24 of 72 frames** (the travel
+envelope is 160 px tall; a 144 window cannot hold it at any centre), so the shipped
+shape is **`176 @ 640`** - 393 face px, 68.6 s, no cut.
+
+**And the 'wavy shadows' he flagged in every tile are fixed by one argument.**
+Diagnosed in the relayed message as MPI-506 § 2e DEFECT 3 and confirmed here by
+measurement: every B3 run used `color_correction_method: "none"`, the app ships
+`lab`. Low-frequency luma drift, temporal sd **1.19 (none) -> 0.10 (lab)** - a 12x
+cut, `wavelet` marginally better at 0.09, `adain` poor at 0.86. Free to apply
+(post-process, 4.1 s with the sampler cached).
+
+**The shimmer is ROOT-CAUSED and it is not ours.** Fabio pushed on why the
+best-regarded open-source video upscaler would produce wavy faces at all. It
+does not. Three probes, in order: temporal VAE tiling ruled out (64 vs 128 →
+byte-identical); a frozen-input run (73 lossless-identical frames) shows the
+model's own instability is real but **sub-visible** - Fabio's own eye: *"her face
+doesn't have anything moving, the grey stuff has stuff moving"*, i.e. only in the
+x16 drift map; and finally a per-band detail-gain vs churn-gain ratio on the real
+clip: **churn rises in proportion to sharpening in every band** (fine: detail
+x1.45, churn x1.58). **SeedVR2 is faithfully restoring shimmer the LTX source
+already had.** Also settled: the node offers exactly four correction methods and
+both cards swept all four, and MPI-506 explicitly *settled* (~45% cut), never
+solved. Full evidence in [brief.md](brief.md) § The wavy shimmer, ROOT-CAUSED.
+
+**This changes B6's question.** Frequency separation grafts the restored HIGH
+frequencies - the band carrying the amplified shimmer. B6 must now answer *how
+much* of the finest band to graft and whether it needs temporal smoothing, not
+merely whether the maths works. And shimmer must be judged on real degraded
+footage, never on an LTX generation.
+
+**Default shape falling out of B3:**
+> window = union of the face box across the shot + ~10% margin; sample resolution
+> = whatever lands the face at ~380-400 px; `color_correction_method: lab`.
+
+Awaiting only: does `176 @ 640` + `lab` still look like his pick. Earlier findings:
+
+- **Pad is a resolution tax, and cutting it is free money.** A 176 window at 512
+  delivers **315 face px in 36.3 s** vs the 208 window's **266 px in 47.8 s** -
+  more face, less time. 18% more face at 768 for the same cost.
+- **The window must cover face TRAVEL, not face size.** Median face 108 px but the
+  travel union is 115x160, so a 144 window (1.33x the median face) clips the chin.
+  That is `MpiFaceWindow`'s output spec.
+- **And no metric can rank sample resolutions** - downscale-to-common erases the
+  benefit, native-scale penalises it. Settled; eye only. Detail in
+  [brief.md](brief.md) § B3 re-run.
+
+Next action: **B6 paste-back** once Fabio returns the B3 verdict. B6 is still the
+gating risk - with the sampler settled it is the only remaining question that can
+sink the card, because a GO on the restored crop does not survive a visible graft.
+`ImageBlur` is present on the bench, so it can be hand-wired. B5 no-seam stands
+(a delta probe, not a resolution comparison); B8 is partially answered - VRAM does
+not climb with sample res (14.92/15.57/14.09 GiB at 512/768/1024), so the open
+half is 120 frames.
+
+Parked, NOT rejected, and out of scope for MPI-557: section 4 Level 2, the
+character sheet `t2i_022.png`, the LTX2.3 head_swap LoRAs, and
+`comfy_workflows/raw/flow_head_swap.json` (which is **Qwen-Image-Edit 2511**, not
+LTX - corrected this session; it is a still-image reference-conditioned swap, so
+it carries identity but flickers per-frame). If wrongness ever becomes a target it
+is a **separate card** starting from those three leads. Detail in
+[brief.md](brief.md) § SCOPE DECISION.
+
+**The finding that produced the decision, kept because it constrains the build:**
 
 **Restoration fixes SOFT, not WRONG.** Source sharpness measured across all three
 clips explains every result this card has: B1's source lapvar 1.7 -> 10.9x
@@ -24,26 +98,12 @@ source and cannot move geometry, by construction (section 4 Level 1).
 That splits the opening complaint - *"small faces lose identity and sometimes look
 distorted"* - into two defects, and the branch only answers one:
 
-- **soft + face intact** -> B1, GO, shipped-ready
+- **soft + face intact** -> B1, GO. **This is the product case.**
 - **soft + face never recorded** -> B1-stress, impossible for any restoration model
-- **sharp + face wrong** -> B10, denoise only. **Unanswered.**
+- **sharp + face wrong** -> B10, denoise only. **Out of scope, parked.**
 
-**The open decision, for Fabio:** is the product case soft faces or wrong faces?
-Soft -> B1 already says GO and the restoration branch can ship without touching
-identity. Wrong -> section 4 Level 2 becomes load-bearing, and this is probably
-two cards rather than one.
-
-**Three leads for the wrongness case, none investigated:**
-
-1. The character sheet Fabio supplied (`t2i_022.png`) is the Level 2 asset.
-2. **B2 should be re-read, not re-run** - it closed LTX v2v as a *detailer*
-   because it restructured faces at denoise 0.5-0.7. With an identity anchor that
-   restructuring is the feature. B2 did not close LTX as an identity carrier.
-3. **A head-swap LoRA already exists on the bench** -
-   `LTX2.3\head_swap_v3_rank_64.safetensors` (+ an adaptive variant) - and the
-   repo carries `comfy_workflows/raw/flow_head_swap.json`. Nearest existing thing
-   to "wrong face + character sheet", never looked at by this card. **Read that
-   flow before designing anything.**
+B10 and B1-stress are closed as out-of-scope probes, not as failures. Do not
+re-run them; their value was producing the law above.
 
 **Settled B-questions:** B1 GO (soft faces), B2 SeedVR2 wins, B4 void, B7 answered,
 B1-stress failed, B10 weak-with-a-measured-reason. B3 has one data point (768 lost
@@ -148,16 +208,24 @@ post-hoc rationalisation:
       The re-run the B1 GO was conditioned on. 8x on a ~29 px face returns sharp
       mush; 4x and 7B-sharp controls fail identically, so the source carries no
       identity to restore. Findings in brief.md.
-- [x] **B10 - the real degraded case.** WEAK 2026-08-14, and the reason is
-      measured: the source was never soft. Run on Fabio's
-      `ref2v_ms_062.mp4` (112 px face, wrong not small). Verdict pending. Carries
-      first data for B3 and B5, plus a silent conditioning-wiring bug. brief.md.
+- [x] **B10 - the real degraded case.** WEAK 2026-08-14, then **downgraded to
+      INCONCLUSIVE** the same day: the face reached the sampler with 199 px vs
+      B1's 266 px, so "starved of pixels" and "structurally wrong" both fit and
+      the run separates neither. Run on Fabio's `ref2v_ms_062.mp4`. Its B5
+      no-seam data stands; **its B3 answer does not.** Keeps the silent
+      conditioning-wiring bug. brief.md § CORRECTION.
 - [ ] **B3/B5/B8 - settings sweep on the winner.** (**B4 is void** - it was the
       LTX-only denoise sweep and that branch lost B2.) B3 crop res 512 vs 768 vs
-      1024, where returns die relative to cost. B5 do chunk seams show, at what
-      chunk size and overlap. B8 VRAM
-      ceiling and max chunk at 120 frames x 512². **Verify:** a settings table
-      in brief.md with a recommended default per row.
+      1024, where returns die relative to cost - **re-run: B10's answer was
+      scored after downscaling to a common 512, which cannot detect a resolution
+      win. Judge at NATIVE resolution, by eye.** Same run tests the knob the B10
+      correction exposed: size the resize off the **face height** rather than the
+      window, so the 30% pad stops taxing face pixels (B1 got 266 face px, B10
+      only 199). B5 do chunk seams show, at what chunk size and overlap - the
+      no-seam result stands, it was a delta probe. B8 VRAM ceiling and max chunk
+      at 120 frames x 512². **Verify:** a settings table in brief.md with a
+      recommended default per row, plus a stated rule for choosing sample
+      resolution from face height.
 - [ ] **B6/B7 - paste-back and window.** B6: does frequency separation hold up -
       `out = source_crop + (restored - blur(restored, r))` - what blur radius,
       does it ghost. Hand-wire from `ImageBlur` + arithmetic; ugly is fine, this

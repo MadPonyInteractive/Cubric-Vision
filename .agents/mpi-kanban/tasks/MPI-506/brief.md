@@ -216,6 +216,12 @@ templates' `none`.**
 
 ### 2f. `comfyorg/comfyui_seedvr2` is NOT an official pack - do not adopt it
 
+> **CORRECTED 2026-08-14 - this section drew a wrong conclusion about the PARENT
+> repo, and MPI-557 acted on it before catching the error. Read § 2f-bis below
+> before citing anything here.** The fork verdict stands. The inference that the
+> whole lineage is unofficial, and that core is therefore "the genuinely official
+> SeedVR2 support", does not.
+
 Checked 2026-08-10 after Fabio found it. `gh api` says: **fork** of
 `numz/ComfyUI-SeedVR2_VideoUpscaler`, **0 stars**, last pushed 2025-10-21. The
 `comfyorg` org holds 28 repos, **all forks**, no website - it is not `Comfy-Org`
@@ -225,9 +231,71 @@ Adopting it would cost: a `node_lock.json` entry; **`int8_convrot` entirely** (t
 pack offers only fp16 and fp8_e4m3fn, and fp8 is Ada+ only, so 30-series users
 lose out - see §3); and a node that auto-downloads 16 GB into `models/SEEDVR2`
 outside the dependency manager, with no progress UI, no GC protection and no
-orphan sweep. The genuinely official SeedVR2 support is the **core nodes we
-already run** (§2). Keeps the §2 conclusion, now with the fork checked rather
-than assumed.
+orphan sweep. ~~The genuinely official SeedVR2 support is the **core nodes we
+already run** (§2).~~ **That last sentence is the error - see § 2f-bis.**
+
+### 2f-bis. The PARENT pack is real, official-in-practice, and untested by us
+
+**Measured 2026-08-14** after Fabio pushed back with the repo's own README page.
+`gh api repos/numz/ComfyUI-SeedVR2_VideoUpscaler`:
+
+| field | value |
+|---|---|
+| `fork` | **false** - it is not a fork of anything |
+| stars | **2,741** |
+| description | *"Official SeedVR2 Video Upscaler for ComfyUI"* |
+| last push | **2025-12-24** - actively maintained |
+| Comfy registry | listed as `seedvr2_videoupscaler`, **953,379 downloads** |
+
+**What went wrong in §2f:** the fork was checked, correctly rejected, and then its
+0-star/stale evidence was carried up to the parent. The parent was never checked.
+A child's provenance is not the parent's - and this pack is what the ecosystem
+actually runs.
+
+**What we run instead, stated exactly:** `comfy_extras.nodes_seedvr` - the five
+`SeedVR2*` nodes bundled with ComfyUI core, confirmed off `/object_info`
+(`python_module: comfy_extras.nodes_seedvr`, no `cnr_id`). Fabio's read is that
+the bundled template targets far larger hardware than a consumer card, and his
+evidence is direct: **a 1.5x whole-video upscale OOMed immediately on his 16 GB
+4060 Ti.**
+
+**Do NOT cite MPI-557's 7B runs as evidence that 7B fits.** Those were a
+**512x512 crop, 73 frames** - 3B, 7B and 7B-sharp all completed in ~30 s, which
+proves only that `int8_convrot` fits at *crop* scale. It says nothing about frame
+scale, which is where the OOM is. That over-scoped claim was made in the MPI-557
+session and is retracted here.
+
+**The open question this card now owns** (MPI-557 is blocked on it):
+
+> Does `numz/ComfyUI-SeedVR2_VideoUpscaler` beat the core nodes on a **full-frame**
+> upscale - and at what cost?
+
+Specifics to settle, none of them yet measured:
+
+- **Memory-efficient inference / batching.** The pack's own headline. Whether its
+  `resolution` / `max_resolution` / `batch_size` / `uniform_batch_size` path
+  survives a 1.5x whole-video run on 16 GB where core OOMs is the decisive test.
+- **Knobs core does not expose:** `input_noise_scale`, `latent_noise_scale`,
+  `preserve_frames`, `temporal_overlap`, plus torch.compile settings and explicit
+  `encode_tiled` / `decode_tile_size` / `decode_tile_overlap` VAE control.
+- **Do defects 1 and 2 even exist there?** Both (§2e) are fights with core's
+  `SeedVR2TemporalChunk` clamp and its over-conservative `auto`. The pack may
+  simply not have those failure modes, which would retire two of this card's
+  three defects rather than work around them.
+- **The int8 question is now a trade, not an objection.** The pack ships fp16 /
+  fp8_e4m3fn, so switching likely costs `int8_convrot` and the 30-series users who
+  depend on it. Weigh that against a path that does not OOM - and check whether
+  the pack has added int8 since 2026-08-10.
+- The packaging objections above (16 GB auto-download outside the dep manager, no
+  progress UI, no GC protection, no orphan sweep) **all still stand** and are real
+  integration work. They are a cost to price, not a reason to skip the bake-off.
+
+**What this does NOT explain, so do not re-open it here:** the wavy shimmer.
+MPI-557 root-caused that on 2026-08-14 as a source property - per-band churn rises
+in proportion to sharpening (fine band: detail x1.45, churn x1.58), so any
+sharpener amplifies shimmer the LTX source already carried. A different node pack
+changes the sharpener, not the shimmer. See MPI-557 brief § The wavy shimmer,
+ROOT-CAUSED.
 
 **Gap noted:** `MpiLoadVideo` has no trim, so the official template's
 "trim -> upscale segments -> merge" advice (its `Video Slice` node) is not

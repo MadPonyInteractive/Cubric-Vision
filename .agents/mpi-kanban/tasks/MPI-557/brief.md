@@ -722,6 +722,10 @@ answerable here.
 
 **Verdict: weak.** Fabio, 2026-08-14: *"The result is not that great. It's just
 cleaned up the noise. That's it."* Why, measured, is the section below.
+**SUPERSEDED 2026-08-14 - read § CORRECTION - B10 was under-resolved before
+citing anything in this section.** The face reached the sampler with 25% fewer
+pixels than B1's did, so this run does not isolate wrongness, and its
+768-vs-512 answer was scored in a way that cannot detect a resolution win.
 **Correction from Fabio, 2026-08-14 - `MpiFaceWindow` does NOT need shot
 detection.** *"The user would do that as well. It would cut only the part that has
 the face and provide that to the model, and then the close-up would be cut off,
@@ -732,6 +736,11 @@ multi-face findings above still stand** - those happen *within* one shot.
 
 
 ### THE PHASE 0 FINDING - restoration fixes SOFT, not WRONG
+
+> **PARTIALLY SUPERSEDED 2026-08-14.** The law below still holds on its own
+> reasoning, but **B10 is no longer its evidence** - that run was starved of face
+> pixels, not merely fed a wrong face. Read § CORRECTION - B10 was under-resolved
+> alongside this section.
 
 **Fabio on B10, 2026-08-14:** *"The result is not that great. It's just cleaned up
 the noise. That's it. Perhaps the provided video is not great. I'm not sure."*
@@ -779,19 +788,322 @@ answer it.** The branch answers "lose identity" only in its blur sense.
    at denoise 0.5-0.7 it restructured the face - recorded there as "drift". With
    an identity anchor, restructuring toward the *right* face is the goal, not the
    failure mode. B2 explicitly did not close LTX as an identity carrier.
-3. **There is already a head-swap asset on the bench.** The lora enum carries
-   `LTX2.3\head_swap_v3_rank_64.safetensors` and
-   `LTX2.3\head_swap_v3_rank_adaptive_fro_098.safetensors`, and the repo carries
-   `comfy_workflows/raw/flow_head_swap.json`. Reference-conditioned head swap on
-   the LTX-2.3 checkpoint we already ship is the nearest existing thing to
-   "wrong face + character sheet", and it has not been looked at by this card.
-   Read the flow before designing anything new.
+3. **There are already two head-swap assets, and they are NOT the same thing.**
+   Corrected 2026-08-14 by reading the flow's node inventory rather than its
+   filename:
+   - The **bench lora enum** carries `LTX2.3\head_swap_v3_rank_64.safetensors`
+     and `LTX2.3\head_swap_v3_rank_adaptive_fro_098.safetensors` - these are for
+     the LTX-2.3 checkpoint we ship, and are still unlooked-at.
+   - `comfy_workflows/raw/flow_head_swap.json` is **not LTX**. It is
+     **Qwen-Image-Edit 2511** - `TextEncodeQwenImageEditPlus`, `UNETLoader`,
+     `bfs_head_v5_2511_merged_version_rank_32_fp32` plus the Lightning 4/8-step
+     LoRAs, cropping through `InpaintCropImproved`/`InpaintStitchImproved` and
+     windowing through `MpiBox`/`MpiBoxCrop`/`MpiBoxMask`.
+
+   So the repo flow **is** a reference-conditioned identity carrier - it has the
+   input SeedVR2 structurally lacks, and it already uses this card's own face
+   window primitives. But it is a **still-image** graph: applied per frame it
+   reintroduces exactly the temporal flicker section 1 exists to avoid. It is a
+   lead for the wrongness branch, not a solution.
 
 **A cheaper question to ask first, though:** is the *product* case soft faces or
 wrong faces? If a user's real complaint is small-and-soft, B1 already says GO and
 the card can ship the restoration branch without touching identity at all. B10
 was chosen to probe wrongness. Whether wrongness is the thing worth building for
 is Fabio's call, and it decides whether this card stays one card or becomes two.
+
+### SCOPE DECISION - Fabio, 2026-08-14: SOFT faces
+
+**Answer: A - soft faces.** The product target is small-and-soft. The restoration
+branch ships as-is on the B1 GO, and identity work is out of scope for this card.
+
+Consequences, binding on the rest of Phase 0:
+
+- **SeedVR2 is the sampler, settled.** No further sampler questions.
+- **B1-stress is closed as an out-of-scope probe, not a failure.** A 29 px face
+  carries no identity to restore; that is not the product case.
+- **B10 is INCONCLUSIVE, not a failure and not proof of anything.** See the
+  correction below - it was under-resolved, and the "wrong face" reading is only
+  one of two explanations that fit.
+- **Section 4 Level 2, the character sheet `t2i_022.png`, the LTX2.3 head_swap
+  LoRAs and the Qwen `flow_head_swap.json` are all PARKED.** Not rejected. If
+  wrongness ever becomes the target it is a **separate card**, and the three
+  leads above are its starting point. Do not fold them back into MPI-557.
+- **Remaining Phase 0 is settings + paste-back only:** B3 (crop resolution),
+  B5 (chunk seams), B8 (VRAM ceiling at 120 frames), B6 (frequency-separation
+  paste-back). Then the verdict section, then the build plan.
+- **The gating risk moves to B6.** With the sampler settled, the only thing left
+  that can still sink the card is paste-back: if frequency separation ghosts or
+  the graft is visible, a GO on the crop does not survive the composite. B6 is
+  now the highest-value remaining run, not the last one.
+
+### CORRECTION - B10 was under-resolved, not proof of wrongness
+
+**Fabio, 2026-08-14:** *"The guy's face wasn't that bad, and there weren't enough
+pixels to make it that much better. This falls back to what happens in image
+detailing as well... what he needs to do is just upscale first with a simple
+upscaler and then try restoration, and that happens a lot better. The previous
+test with the cowboy was probably missing that upscale phase, but that's not up
+to us. That's up to the user, so it might not have been a fail."*
+
+**He is right, and the geometry already recorded in this brief proves it.** The
+comparison that matters is not source face height, it is **how many pixels the
+face occupies inside the sampled crop** - and B10 lost that comparison despite
+having the *larger* source face:
+
+| run | window | face | face % of window | upscale | **face px at 512 sample** |
+|---|---|---|---|---|---|
+| B1 (GO) | 208 px | 108 px | 52% | 2.46x | **266 px** |
+| B10 (weak) | 288 px | 112 px | 39% | 1.78x | **199 px** |
+
+B10's face was 4 px taller at source and arrived at the sampler with **25% fewer
+pixels**, because the 30% pad on a 2.57x-blown-up window spent the resolution
+budget on background. The `112 px face` headline made B10 look like the
+better-resourced run. It was the worse-resourced one.
+
+**Two consequences, and the second is a design lever we own.**
+
+1. **The wrongness conclusion is downgraded.** "SeedVR2 denoised because the face
+   was structurally wrong" and "SeedVR2 denoised because it was starved of face
+   pixels" both fit every number in B10. The run cannot separate them, so it
+   proves neither. The *law* above (restoration supplies missing high frequency,
+   and cannot supply what is not missing) still stands on its own reasoning -
+   section 4 Level 1 - but **B10 is not its evidence.** Nothing in Phase 0 has
+   actually tested a wrong face at an adequate pixel budget.
+2. **"Upscale first, then restore" is not only the user's job - it is B3.** In
+   Fabio's image-detailing analogy the user pre-upscales the footage. Inside this
+   pipeline the equivalent lever is ours: the crop -> `ImageResizeKJv2` factor is
+   exactly that pre-upscale, and **window padding is a hidden tax on it.** Two
+   knobs fall out, neither yet measured:
+   - **Sample resolution should be driven by the FACE, not the window.** Sizing
+     the resize so the *face* lands at a target height makes the pad free instead
+     of expensive.
+   - **Pad tighter.** 30% on an already-2.57x window is the difference measured
+     in the table.
+
+**And this invalidates B10's 768-vs-512 answer.** The two runs were scored *after
+downscaling the 768 result to 512* so the pixel counts matched. That normalisation
+is fair for judging sharpness-per-pixel and structurally **cannot show a benefit
+from extra resolution** - it throws away the exact thing more resolution buys,
+before measuring. So "768 is worse than 512" is an artifact of the scoring method
+as much as a finding. **B3 must be re-run and judged at native resolution, by
+eye.** The B5 no-seam result from the same run is unaffected - that was a
+frame-to-frame delta probe, not a resolution comparison.
+
+### B3 re-run - 2026-08-14, six runs on the B1 clip, awaiting Fabio's verdict
+
+Bench rebooted (core 0.31.0, RTX 4060 Ti 16 GB), schema gate passed - all five
+`SeedVR2*` nodes plus `MpiBox`, `MpiBoxCrop`, `ImageResizeKJv2`, `VAEEncodeTiled`,
+`VAEDecodeTiled` and **`ImageBlur`** (which B6 needs) present. Same clip as B1
+(`t2v_ms_001.mp4`, 73 frames, 2560x1408), same graph, SeedVR2 3B, seed 20260814.
+Two variables swept: **sample resolution** and, new this session, **window pad**.
+
+Face geometry measured with `face_yolov8n` over all 73 frames, filtered to
+detections inside the B1 window (largest-per-frame picks up a second face and
+returns a useless 1125 px union - the same multi-face trap B10 hit):
+
+- median face height **108 px**, but the face's **travel union is 115 x 160 px**.
+  The face is 108 tall and moves through a 160-tall envelope over the shot.
+
+| window | pad x median face | sample | **face px delivered** | wall | peak VRAM |
+|---|---|---|---|---|---|
+| 208 | 1.93 | 512 | 266 | 47.8 s | 14.92 GiB |
+| 208 | 1.93 | 768 | 400 | 97.5 s | 15.57 GiB |
+| 208 | 1.93 | 1024 | 533 | 194.4 s | 14.09 GiB |
+| **176** | **1.63** | **512** | **315** | **36.3 s** | 14.35 GiB |
+| **176** | **1.63** | **768** | **472** | 101.3 s | 13.44 GiB |
+| 144 | 1.33 | 512 | 385 | 34.4 s | 12.58 GiB - **CLIPS** |
+
+**1. The pad tax is real and it is free money.** `176 @ 512` delivers **315 face
+px in 36.3 s** against `208 @ 512`'s **266 px in 47.8 s** - *more* face resolution
+for *less* wall clock, because the smaller window means fewer pixels sampled.
+Same at the next rung: `176 @ 768` gives 472 px vs `208 @ 768`'s 400 px at
+effectively the same cost (101.3 s vs 97.5 s). **18% more face for free.** This is
+Fabio's "upscale first, then restore" instinct, as an internal lever.
+
+**2. The window must cover face TRAVEL, not face size.** `144` is 1.33x the
+*median* face and looks generous - it clips 7 px off the top and 8 px off the
+bottom of the travel envelope. The rule is therefore **pad the union of the face
+across the shot**, not the median box. `MpiFaceWindow` already has to track; this
+says what it must output.
+
+**3. VRAM does not climb with sample resolution.** 14.92 / 15.57 / 14.09 GiB for
+512 / 768 / 1024 - the chunker adapts, so 1024 is not a ceiling at 73 frames.
+Partial B8; the 120-frame question is still open.
+
+**4. NO METRIC CAN RANK THESE, and that is now settled rather than suspected.**
+The B10 method (downscale everything to a common size) erases the benefit of
+resolution before measuring. Scoring at native resolution has the *opposite*
+confound: laplacian variance falls as the same edge spreads over more pixels, so
+the ladder reads 7.27x / 4.35x / 3.10x for 512 / 768 / 1024 - which measures
+scale, not quality, and would "prove" 512 wins. **Both normalisations are wrong in
+opposite directions.** There is no single-number sharpness comparison across
+sample resolutions on this card. Stop trying to build one - the plan's front-loaded
+decision (judge by eye, metrics as collapse-detector only) was correct, and this
+is the third time the metric has tried to pick a winner it cannot see.
+
+**Judging assets** (session scratchpad `b3_compare/`), built so nothing is ever
+downscaled - every panel is upscaled `INTER_NEAREST` to the largest run's size,
+which adds no smoothness the run did not produce:
+
+- `B3_side_by_side.mp4` - all seven strips, for identity stability and jitter.
+- `B3_face_frame005 / 020 / 040 / 055 / 070.png` - stills.
+- `native_*_f040.png` - each run at its own native pixels, for 1:1 peeping.
+
+**Open for Fabio's eye:** (a) where do returns actually die - 512, 768 or 1024;
+(b) does `176` framing look right or too tight; (c) does the clipping run visibly
+cut the chin, confirming the travel-union rule.
+
+### B3 verdict + the drift artifact - 2026-08-14
+
+**Fabio's verdict, verbatim: *"the bottom right one is the best one"*** - the
+`144 / 512` tile: 385 face px, 34.4 s, 12.58 GiB. It reached this session by relay:
+he pasted the grid into the MPI-536 foley session by mistake, and that session
+forwarded it as message `4f94885d` (acknowledged). Its analysis is folded in below.
+
+**His eye picked face pixels per second, which is the pad lever working.** Of the
+seven tiles that one carries the second-most face pixels at the *lowest* cost. Both
+knobs are now confirmed by his judgement, not only by geometry.
+
+**But that tile clips, and it is arithmetic, not a framing opinion.** The face
+travels through a **160 px-tall envelope** while measuring 108 px tall, so a 144
+window cannot contain it *at any centre*. Measured per frame against the tracked
+boxes: **the face is cut in 24 of 72 frames, worst 8 px** (frames 10-13, 23-25,
+35-38, 43-44, 54-56, 60-63, 67-70). One frame in three.
+
+**Resolution: keep what he picked, drop the clipping.** `176 @ 640` delivers **393
+face px** - two more than his pick - in **68.6 s**, with no cut. That is the
+recommended default shape, and it generalises as a rule rather than a number:
+
+> **window = union of the face box across the shot + ~10% margin;
+> sample resolution = whatever lands the face at ~380-400 px.**
+
+#### The 'wavy shadows' - measured, and it is a one-word fix
+
+Fabio, on every tile: *"wavy kind of shadows on the video ... in still frames you
+can't really see it, but when you look at the video you can. Like clouds moving on
+top of the video."*
+
+The forwarded message identified this as **MPI-506 § 2e DEFECT 3**,
+`color_correction_method` on `SeedVR2PostProcessing`, and it was right. **Every B3
+run used `none`. The app ships `lab`.** The drift was uncorrected in all seven
+tiles he judged.
+
+Swept at `176 / 640`, all four modes, against a lanczos baseline rebuilt at the
+same geometry, low spatial frequencies only (Gaussian sigma = res/16), luma, 0-255.
+**`temporal sd` is the column that matters** - how much the drift *moves* over the
+shot, which is what reads as clouds sliding:
+
+| correction | drift p2..p98 | max abs | **temporal sd** |
+|---|---|---|---|
+| `none` (what B3 ran) | -1.3 .. 5.0 | 12.3 | **1.19** |
+| **`lab` (shipped)** | -0.9 .. -0.1 | 2.7 | **0.10** |
+| `wavelet` | -0.7 .. -0.2 | 2.5 | **0.09** |
+| `adain` | -3.7 .. 2.1 | 9.8 | 0.86 |
+
+**`lab` cuts the moving component 12x, `wavelet` 13x, `adain` barely helps.** Same
+ordering MPI-506 measured independently, so two cards agree. The artifact was not a
+property of the pipeline - it was a wrong argument in the bench runner.
+
+Cost is nil: correction is a post-process, so with the sampler cached each variant
+re-ran in **4.1 s**. (The first `lab` run cost 33.5 s only because the intervening
+176 runs had evicted the cache.)
+
+**Caveat, stated rather than buried:** the baseline was rebuilt with cv2
+`INTER_LANCZOS4` rather than `ImageResizeKJv2`'s lanczos, so the absolute numbers
+carry a small systematic offset. All four variants share that baseline, so the
+*ranking* - the finding - is unaffected.
+
+**Assets** (scratchpad `b3_compare/`, H.264 so Windows plays them; the first
+attempt was mp4v at 4858 px wide, over the 4096 limit most decoders enforce, and
+would not open):
+
+- `B3_colorcorrection_h264.mp4` - source + all four modes, 3200x670, in motion.
+- `B3_driftmap_h264.mp4` - the drift itself at 8x gain. `none` visibly breathes;
+  `lab` and `wavelet` sit flat.
+- `B3_grid_h264.mp4` - the original 2x4 resolution/pad grid.
+
+**Still open for Fabio's eye:** does `176 @ 640` + `lab` look right - does fixing
+the clip and the drift preserve what made his pick the best one.
+
+### The wavy shimmer, ROOT-CAUSED 2026-08-14 - it is in the SOURCE, not the model
+
+Fabio, after seeing `lab` still shimmer: *"lab shipped is the best one but it still
+has the wavy stuff ... I can't remember if I settled for less wavy shit or if we
+carried on until we had no wavy shit at all"*, and then the question that drove
+this to root: *"I just find it weird that SeedVR2, which everybody's talking about
+as the best open-source model to upscale videos, would upscale a video with wavy
+shit on the face of their characters."*
+
+**He was right on both counts, and the second question found the answer.**
+
+**1. MPI-506 settled, it did not solve.** Its own words: `lab` and `wavelet`
+*"both cut worst-case drift ~45%"* (36 -> 19 max abs). Colour correction was always
+a mitigation. **And the node offers exactly four methods** - `lab`, `wavelet`,
+`adain`, `none`, confirmed off `/object_info` - both cards swept all four, so there
+is no untried setting. That question is closed.
+
+**2. Temporal VAE tiling is NOT the cause.** `temporal_size` 64 vs 128 on 73 frames
+produced **byte-identical output** (drift equal to 4 dp). The SeedVR2 VAE compresses
+time, so 73 frames were never more than one temporal tile. The donor
+`raw/seedvr2_video.json` also uses the same `[512, 128, 64, 8]` tiled VAE and `lab`,
+so we are not diverging from the reference. Hypothesis killed for ~70 s of GPU.
+
+**3. FROZEN-INPUT TEST - the model's own instability is real but sub-visible.** Fed
+73 identical frames (lossless, verified worst frame-to-frame delta **0**), SeedVR2
+still varies its output. Per spatial band, temporal sd on a 0-255 scale:
+
+| model / correction | low (s32) | mid (s8) | fine (s2) | fine max swing |
+|---|---|---|---|---|
+| 3B `none` | 0.294 | 0.208 | 0.299 | 8.7 |
+| 3B `lab` | **0.014** | 0.124 | **0.290** | 8.4 |
+| 7B `lab` | 0.013 | 0.091 | 0.230 | 6.4 |
+| 7B-sharp `lab` | 0.014 | 0.101 | 0.251 | 7.4 |
+
+Two things fall out. **`lab` kills the low band (21x) and does nothing to the fine
+band** - which is why no colour-correction value was ever going to remove what
+Fabio sees; it is not a colour problem. And **Fabio's own eye on the frozen clips:**
+*"her face doesn't have anything moving ... the grey stuff has stuff moving"* - the
+artifact is only visible in the x16 drift map. So the model's intrinsic swim is
+**below visibility**, and cannot be what he sees on real clips.
+
+**4. THE ROOT CAUSE: the shimmer is already in the LTX source, and SeedVR2 sharpens
+it.** Motion confounds any temporal measure, so source and restored were compared
+as a ratio - detail gain against churn gain, per band, on the real clip at
+`176 / 512` with `lab`:
+
+| band | detail gain | churn gain | reading |
+|---|---|---|---|
+| low (s32) | x0.99 | x1.01 | unchanged |
+| mid (s8) | x1.04 | x1.11 | tracks |
+| **fine (s2)** | **x1.45** | **x1.58** | **churn tracks detail** |
+
+**Churn rises in proportion to sharpening in every band.** SeedVR2 is not injecting
+temporal instability - it is a faithful restorer, and restoring detail necessarily
+restores the source's own temporal noise with it. The test clip is an LTX
+generation that already shimmers; sharpening it 1.45x makes the shimmer 1.58x more
+visible. **Nothing is wrong with the model, and nothing is wrong with our graph.**
+
+**Consequences for this card, and they are load-bearing:**
+
+- **Stop looking for a sampler-side or correction-side fix.** There isn't one. Ship
+  `lab` (it does remove the low-frequency drift, cheaply) and treat the remaining
+  shimmer as a source property.
+- **This lands directly on B6.** Frequency-separation paste-back grafts the
+  restored *high* frequencies onto the source - which is exactly the band that
+  carries the amplified shimmer. A naive graft imports it wholesale. B6 must now
+  answer a sharper question than "does the maths work": **how much of the finest
+  band to graft**, and whether it needs temporal smoothing before it lands.
+- **Judge shimmer on real degraded footage, never on an LTX generation.** The test
+  clip's shimmer is a property of how it was made. A user's real clip carries
+  compression noise instead, and the same amplification logic applies to that.
+- 7B is mildly steadier than 3B on the frozen test (fine sd 0.230 vs 0.290). Not a
+  reason to switch on its own; note it for the settings table.
+
+**Assets:** `B3_frozen_none_x16.mp4` / `B3_frozen_lab_x16.mp4` (output beside the
+x16 drift map - the artifact is invisible at x1, which is the point) and
+`B3_shimmer_source_vs_restored.mp4` (lanczos source left, SeedVR2 `lab` right, same
+geometry - the source's own shimmer is visible there before any model touches it).
 
 ### Bench facts corrected
 

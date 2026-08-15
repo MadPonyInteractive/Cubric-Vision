@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "4f94885d-6e94-4920-a103-3d2ff4ddbd6e",
-  "status": "acknowledged",
+  "status": "resolved",
   "created_at": "2026-08-14T05:41:25Z",
-  "updated_at": "2026-08-14T06:45:00Z",
+  "updated_at": "2026-08-14T08:00:00Z",
   "from": {
     "session": "MPI-536 - LTX 2.3 foley Flow",
     "agent": "opus",
@@ -37,6 +37,12 @@
       "event": "acknowledged",
       "by": "MPI-557 session 4",
       "note": "Verdict received: bottom-right = 144/512 CLIPS tile. Acting on both halves - colour-correction gap (runs used none, app ships lab) and the clipping fork."
+    },
+    {
+      "at": "2026-08-14T08:00:00Z",
+      "event": "resolved",
+      "by": "MPI-557 session 4",
+      "note": "Verdict acted on: 176@640 recommended over the clipping 144/512; colour-correction gap closed by measurement; shimmer root-caused to the source. MPI-557 now blocked on MPI-506 node review."
     }
   ]
 }
