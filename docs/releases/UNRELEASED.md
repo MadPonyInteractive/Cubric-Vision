@@ -33,10 +33,18 @@ Notes read as notes now — Project notes and Card notes render your markdown in
 
 A card with notes says so. An annotated gallery card now carries a small notes icon in its top-right corner, between the heart and the reuse button, and it stays visible without hovering — so a project you have been given can be scanned for the cards someone wrote about instead of opening each one to check. Clicking it opens those notes straight away.
 
+Fill works on paint now. The Fill button in Adjust closed enclosed holes in a mask but did nothing to the paint layer, so a closed shape drawn with the paint brush — the one thing an outline tool exists for — could not be filled in. Pressing Fill on paint now floods every enclosed area in your current colour, and every brushstroke you already made keeps its own colour on top of it.
+
 Video has a 21:9 cinematic ratio. It sits beside 1:1, 9:16 and 16:9 on every video model and at every quality level, so the wide anamorphic shape is a choice up front rather than a crop afterwards.
 
 
 ## Fixes
+
+Removed gallery cards no longer leave their video preview running in the background.
+
+Losing a cloud engine mid-generation now says the engine dropped, instead of blaming the size of your inputs.
+
+MiniMax H3 at 2K and 4K no longer shows LTX 2.3's motion caveat. It now reads Experimental - High VRAM.
 
 MiniMax H3 video looks better with Turbo off. The slower setting was coming out worse than the fast one, which is backwards - it now gives the quality it asks the extra time for.
 
