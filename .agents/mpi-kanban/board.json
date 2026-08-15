@@ -72,12 +72,12 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-536",
       "MPI-557",
       "MPI-520",
       "MPI-531"
     ],
     "done": [
+      "MPI-536",
       "MPI-565",
       "MPI-566",
       "MPI-564",
@@ -169,7 +169,7 @@
       "MPI-549"
     ]
   },
-  "updated_at": "2026-08-14T06:12:41Z",
+  "updated_at": "2026-08-15T07:40:55Z",
   "events": [
     {
       "at": "2026-08-14T06:12:41Z",
@@ -2965,6 +2965,15 @@
       "from": "doing",
       "to": "done",
       "note": "Closed - Fabio verified in the app: a closed outline in Paint Adjust fills with the picker colour on Fill. Shipped in a9b9bd10 (shared holeFlood.js, PaintManager.fillHoles(), DEST.fill per destination) plus 98a3bc64, which fixed the button being dead on arrival - MpiCanvasViewer forwards to MpiCanvas by hand and fillPaintHoles was never added, so the panel's optional call swallowed it with no error. The allowlist test was necessary and never sufficient; the new test asserts every viewer.el.X?.() the panel reaches for is assigned in the viewer, and fails on the pre-fix source."
+    },
+    {
+      "at": "2026-08-15T07:40:55Z",
+      "type": "task.moved",
+      "task": "MPI-536",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "note": "Live foley generation run by Fabio in his own app - result approved. Closes the only open item."
     }
   ]
 }

@@ -1237,6 +1237,12 @@ export const MODELS = [
             'ltx23-lora-merged',
             'ltx23-lora-transition',
             'ltx23-lora-talkvid',
+            // Foley V2A (MPI-536) — the ltx-foley FLOW's LoRA, on THIS tier only.
+            // Its graph bakes the int8 transformer, so the High card cannot run the
+            // Flow; listing it there too would cost those users 216MB for nothing.
+            // The three LoRAs above sit on both tiers because the shipped t2v/i2v
+            // graphs load them on both — that is not the case here.
+            'ltx23-lora-foley',
             'ComfyUI-LTXVideo',
             'ComfyUI-MpiNodes',
             'comfyui-kjnodes',

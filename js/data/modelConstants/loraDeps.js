@@ -420,6 +420,26 @@ export const loraDeps = {
         bytes: 1157884304,
         sha256: 'e5af73441743b4852f228b03e444888dff3da80d2666033af2367ab7bda6d8b9',
     },
+    // Foley V2A LoRA (MPI-536) — baked by the ltx-foley FLOW's graph, not by the
+    // shipped t2v/i2v ones, which is why it sits on `ltx-23-balanced` ONLY: that
+    // graph's UNETLoader bakes the int8 transformer, so the High card cannot run
+    // the Flow and would download 216MB it can never use.
+    // NO mirrorUrl, deliberately: the only upstream copy is
+    // Lightricks/LTX-2.3-22b-LoRA-Foley-V2A, which is a GATED repo (401 +
+    // X-Error-Code: GatedRepo for an anonymous fetch), so a mirror entry would
+    // fail every failover it was added for. Comfy-Org's split_files/loras does not
+    // carry this file, and FuzzPuppy/LTX-2.3-Foley-LoRA is a DIFFERENT community
+    // train (ltx-2.3-foley-400-steps.safetensors) — not a mirror of these bytes.
+    'ltx23-lora-foley': {
+        id: 'ltx23-lora-foley',
+        name: 'LTX-2.3 Foley V2A LoRA (baked — video-to-audio)',
+        origin: 'Mad-Pony-Interactive/cubric-studio',
+        filename: 'loras/ltx-2.3/ltx-2.3-22b-lora-foley-v2a-1.0.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/ltx-2.3/ltx-2.3-22b-lora-foley-v2a-1.0.safetensors',
+        size: '216.21MB',
+        bytes: 226709270,
+        sha256: '1bc16020f3937f1dc4957b24c713bc04ec550d6502db8c3e1dd822c412e1fb85',
+    },
     // Klein turbo/accelerator LoRA — DROPPED 2026-07-27, deliberately not a dep.
     // klein-4b-transformer ships the DISTILLED checkpoint (see modelDeps.js), which is
     // already a cfg 1.0 / 4-step weight, so the base+turbo two-tier pair this entry

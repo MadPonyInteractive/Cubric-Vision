@@ -1,0 +1,873 @@
+{
+  "1": {
+    "inputs": {
+      "unet_name": "ltx-2.3-22b-distilled-1.1_transformer_only_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "2": {
+    "inputs": {
+      "clip_name1": "gemma_3_12B_it_fp4_mixed.safetensors",
+      "clip_name2": "ltx-2.3_text_projection_bf16.safetensors",
+      "type": "ltxv",
+      "device": "default"
+    },
+    "class_type": "DualCLIPLoader",
+    "_meta": {
+      "title": "Load CLIP (Dual)"
+    }
+  },
+  "3": {
+    "inputs": {
+      "vae_name": "LTX23_video_vae_bf16.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE (video)"
+    }
+  },
+  "4": {
+    "inputs": {
+      "vae_name": "LTX23_audio_vae_bf16.safetensors",
+      "device": "main_device",
+      "weight_dtype": "bf16"
+    },
+    "class_type": "VAELoaderKJ",
+    "_meta": {
+      "title": "VAELoader KJ (audio)"
+    }
+  },
+  "5": {
+    "inputs": {
+      "lora_name": "ltx-2.3\\LTX23_softenhance_abliterated_detailer_merged.safetensors",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "49",
+        0
+      ],
+      "clip": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Merged Loras"
+    }
+  },
+  "6": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "5",
+        0
+      ],
+      "clip": [
+        "5",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_1"
+    }
+  },
+  "7": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "6",
+        0
+      ],
+      "clip": [
+        "6",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_2"
+    }
+  },
+  "8": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "7",
+        0
+      ],
+      "clip": [
+        "7",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_3"
+    }
+  },
+  "9": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "8",
+        0
+      ],
+      "clip": [
+        "8",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_4"
+    }
+  },
+  "10": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "9",
+        0
+      ],
+      "clip": [
+        "9",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_5"
+    }
+  },
+  "11": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "10",
+        0
+      ],
+      "clip": [
+        "10",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_6"
+    }
+  },
+  "12": {
+    "inputs": {
+      "string": "I hear footsteps and background sounds from a restaurant of people eating, clinking cutlery, and a chef screaming in the background."
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "13": {
+    "inputs": {
+      "string": "music, melody, song, singing, vocals, score, soundtrack, beat, instrumental backing, narration, tinny, thin, harsh, clipped, distorted, low bitrate, static, noise, room tone"
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Negative"
+    }
+  },
+  "14": {
+    "inputs": {
+      "clip": [
+        "11",
+        1
+      ],
+      "text": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Positive)"
+    }
+  },
+  "15": {
+    "inputs": {
+      "clip": [
+        "11",
+        1
+      ],
+      "text": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative)"
+    }
+  },
+  "16": {
+    "inputs": {
+      "positive": [
+        "14",
+        0
+      ],
+      "negative": [
+        "15",
+        0
+      ],
+      "frame_rate": [
+        "17",
+        2
+      ]
+    },
+    "class_type": "LTXVConditioning",
+    "_meta": {
+      "title": "LTX Conditioning (fps)"
+    }
+  },
+  "17": {
+    "inputs": {
+      "string": "C:\\Users\\Fabio\\Documents\\Cubric Vision\\Projects\\Wan 5b\\Media\\t2v_004.mp4",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadVideo",
+    "_meta": {
+      "title": "Input_Video"
+    }
+  },
+  "18": {
+    "inputs": {
+      "int": 45
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "23": {
+    "inputs": {
+      "math_expression": "floor((a-1)/8)*8+1",
+      "a": [
+        "17",
+        3
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "clip frames (snap 8n+1)"
+    }
+  },
+  "28": {
+    "inputs": {
+      "width": 832,
+      "height": 480,
+      "upscale_method": "lanczos",
+      "keep_proportion": "resize",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 32,
+      "device": "cpu",
+      "image": [
+        "105",
+        0
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize To Target"
+    }
+  },
+  "30": {
+    "inputs": {
+      "tile_size": 512,
+      "overlap": 64,
+      "temporal_size": 4096,
+      "temporal_overlap": 8,
+      "pixels": [
+        "28",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "VAEEncodeTiled",
+    "_meta": {
+      "title": "Encode Video (frozen)"
+    }
+  },
+  "34": {
+    "inputs": {
+      "video_latent": [
+        "30",
+        0
+      ],
+      "audio_latent": [
+        "109",
+        0
+      ]
+    },
+    "class_type": "LTXVConcatAVLatent",
+    "_meta": {
+      "title": "Concat AV Latent"
+    }
+  },
+  "35": {
+    "inputs": {
+      "noise_seed": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "36": {
+    "inputs": {
+      "sampler_name": "euler_ancestral_cfg_pp"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "37": {
+    "inputs": {
+      "sigmas": "1.0, 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "ManualSigmas"
+    }
+  },
+  "39": {
+    "inputs": {
+      "noise": [
+        "35",
+        0
+      ],
+      "guider": [
+        "122",
+        0
+      ],
+      "sampler": [
+        "36",
+        0
+      ],
+      "sigmas": [
+        "37",
+        0
+      ],
+      "latent_image": [
+        "115",
+        2
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "40": {
+    "inputs": {
+      "av_latent": [
+        "39",
+        0
+      ]
+    },
+    "class_type": "LTXVSeparateAVLatent",
+    "_meta": {
+      "title": "Separate AV Latent"
+    }
+  },
+  "42": {
+    "inputs": {
+      "samples": [
+        "40",
+        1
+      ],
+      "audio_vae": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "LTXVAudioVAEDecode",
+    "_meta": {
+      "title": "LTXV Audio VAE Decode"
+    }
+  },
+  "46": {
+    "inputs": {
+      "filename_prefix": "MpiVideo_Foley",
+      "use_audio": true,
+      "truncate_to_audio": false,
+      "images": [
+        "105",
+        0
+      ],
+      "audio": [
+        "42",
+        0
+      ],
+      "fps": [
+        "17",
+        2
+      ]
+    },
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Video"
+    }
+  },
+  "47": {
+    "inputs": {
+      "model_name": "ltx-2.3-spatial-upscaler-x2-1.1.safetensors"
+    },
+    "class_type": "LatentUpscaleModelLoader",
+    "_meta": {
+      "title": "Load Latent Upscale Model"
+    }
+  },
+  "49": {
+    "inputs": {
+      "preview_rate": 16,
+      "model": [
+        "1",
+        0
+      ],
+      "latent_upscale_model": [
+        "47",
+        0
+      ],
+      "vae": [
+        "50",
+        0
+      ]
+    },
+    "class_type": "LTX2SamplingPreviewOverride",
+    "_meta": {
+      "title": "LTX2 Sampling Preview Override"
+    }
+  },
+  "50": {
+    "inputs": {
+      "vae_name": "taeltx2_3.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "53": {
+    "inputs": {
+      "batch_size": 1,
+      "audio_vae": [
+        "4",
+        0
+      ],
+      "frames_number": [
+        "23",
+        0
+      ],
+      "frame_rate": [
+        "17",
+        2
+      ]
+    },
+    "class_type": "LTXVEmptyLatentAudio",
+    "_meta": {
+      "title": "LTXV Empty Latent Audio"
+    }
+  },
+  "100": {
+    "inputs": {
+      "lora_name": "ltx-2.3\\ltx-2.3-22b-lora-foley-v2a-1.0.safetensors",
+      "strength_model": 1,
+      "model": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Foley_Lora"
+    }
+  },
+  "105": {
+    "inputs": {
+      "start_index": 0,
+      "images": [
+        "17",
+        0
+      ],
+      "num_frames": [
+        "23",
+        0
+      ]
+    },
+    "class_type": "GetImageRangeFromBatch",
+    "_meta": {
+      "title": "Foley Window"
+    }
+  },
+  "106": {
+    "inputs": {
+      "string": "",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Input_Audio"
+    }
+  },
+  "107": {
+    "inputs": {
+      "audio": [
+        "123",
+        0
+      ],
+      "audio_vae": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "LTXVAudioVAEEncode",
+    "_meta": {
+      "title": "Audio Encode"
+    }
+  },
+  "108": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Use_Input_Audio"
+    }
+  },
+  "109": {
+    "inputs": {
+      "true": [
+        "107",
+        0
+      ],
+      "false": [
+        "53",
+        0
+      ],
+      "boolean": [
+        "108",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Audio In Select"
+    }
+  },
+  "110": {
+    "inputs": {
+      "float": 0.9
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Audio_Influence"
+    }
+  },
+  "111": {
+    "inputs": {
+      "input_min": 0,
+      "input_max": 1,
+      "output_min": 0,
+      "output_max": 1,
+      "clamp": true,
+      "mode": "inverse",
+      "value": [
+        "110",
+        0
+      ]
+    },
+    "class_type": "MpiNormalizeValue",
+    "_meta": {
+      "title": "Invert Influence"
+    }
+  },
+  "112": {
+    "inputs": {
+      "math_expression": "a*0+1",
+      "a": [
+        "110",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "One (a*0+1)"
+    }
+  },
+  "113": {
+    "inputs": {
+      "true": [
+        "111",
+        0
+      ],
+      "false": [
+        "112",
+        0
+      ],
+      "boolean": [
+        "108",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "audio mask value"
+    }
+  },
+  "114": {
+    "inputs": {
+      "math_expression": "a/b",
+      "a": [
+        "23",
+        0
+      ],
+      "b": [
+        "17",
+        2
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "clip_seconds = a/b"
+    }
+  },
+  "115": {
+    "inputs": {
+      "start_time": 0,
+      "mask_video": false,
+      "mask_audio": false,
+      "mask_init_value_video": 0,
+      "slope_len": 1,
+      "av_latent": [
+        "34",
+        0
+      ],
+      "positive": [
+        "16",
+        0
+      ],
+      "negative": [
+        "16",
+        1
+      ],
+      "model": [
+        "100",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ],
+      "audio_vae": [
+        "4",
+        0
+      ],
+      "end_time": [
+        "114",
+        0
+      ],
+      "video_fps": [
+        "17",
+        2
+      ],
+      "mask_init_value_audio": [
+        "113",
+        0
+      ]
+    },
+    "class_type": "LTXVSetAudioVideoMaskByTime",
+    "_meta": {
+      "title": "Foley Mask (freeze video, mask audio)"
+    }
+  },
+  "116": {
+    "inputs": {
+      "modality": "AUDIO",
+      "cfg": 1,
+      "stg": 1,
+      "perturb_attn": true,
+      "rescale": 0,
+      "modality_scale": 3,
+      "skip_step": 0,
+      "cross_attn": true
+    },
+    "class_type": "GuiderParameters",
+    "_meta": {
+      "title": "Guider Params (AUDIO)"
+    }
+  },
+  "117": {
+    "inputs": {
+      "modality": "VIDEO",
+      "cfg": 1,
+      "stg": 1,
+      "perturb_attn": true,
+      "rescale": 0,
+      "modality_scale": 3,
+      "skip_step": 0,
+      "cross_attn": true,
+      "parameters": [
+        "116",
+        0
+      ]
+    },
+    "class_type": "GuiderParameters",
+    "_meta": {
+      "title": "Guider Params (VIDEO)"
+    }
+  },
+  "118": {
+    "inputs": {
+      "cfg": 3,
+      "model": [
+        "100",
+        0
+      ],
+      "positive": [
+        "115",
+        0
+      ],
+      "negative": [
+        "115",
+        1
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "Guider (foley, cfg 1)"
+    }
+  },
+  "119": {
+    "inputs": {
+      "lora_name": "ltx-2.3\\id-lora-talkvid\\ltx-2.3-id-lora-talkvid-3k.safetensors",
+      "strength_model": 1,
+      "model": [
+        "100",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "talk3_ID_Lora"
+    }
+  },
+  "120": {
+    "inputs": {
+      "identity_guidance_scale": 1.5,
+      "start_percent": 0,
+      "end_percent": 1,
+      "model": [
+        "119",
+        0
+      ],
+      "positive": [
+        "115",
+        0
+      ],
+      "negative": [
+        "115",
+        1
+      ],
+      "reference_audio": [
+        "106",
+        0
+      ],
+      "audio_vae": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "LTXVReferenceAudio",
+    "_meta": {
+      "title": "LTXVReferenceAudio"
+    }
+  },
+  "121": {
+    "inputs": {
+      "cfg": 1,
+      "model": [
+        "120",
+        0
+      ],
+      "positive": [
+        "120",
+        1
+      ],
+      "negative": [
+        "120",
+        2
+      ]
+    },
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "Guider (reference audio, cfg 1)"
+    }
+  },
+  "122": {
+    "inputs": {
+      "boolean": false,
+      "true": [
+        "121",
+        0
+      ],
+      "false": [
+        "118",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Input_Use_Reference_Audio"
+    }
+  },
+  "123": {
+    "inputs": {
+      "start_index": 0,
+      "audio": [
+        "106",
+        0
+      ],
+      "duration": [
+        "114",
+        0
+      ]
+    },
+    "class_type": "TrimAudioDuration",
+    "_meta": {
+      "title": "Input Audio Trim (to clip)"
+    }
+  }
+}

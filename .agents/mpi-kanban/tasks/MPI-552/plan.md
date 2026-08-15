@@ -95,3 +95,18 @@ design (recorded in both cards + `existing-flows/ltx-extend.md`).
 
 Remaining order: foley (owns the mode decision), then lipsync. Both should copy
 `docs/playbooks/add-flow/existing-flows/ltx-extend.md` rather than re-deriving the shape.
+
+**2026-08-14 — phase 2 landed: MPI-536 foley shipped, card `doing`/`validating`.** Its only
+open item is the user's live generation, same gate as extend. Two facts lipsync inherits:
+
+1. **The weight prereq is real work, and a mirror may not exist.** `ltx23-lora-foley` is the
+   first LTX dep with **no `mirrorUrl`** — the only upstream copy
+   (`Lightricks/LTX-2.3-22b-LoRA-Foley-V2A`) is a GATED repo, `401` + `X-Error-Code:
+   GatedRepo` anonymously. Before planning one for MPI-538, check whether
+   `Lightricks/LTX-2.3-22b-IC-LoRA-DubIt` is gated the same way.
+2. **A Flow's weight goes on the tier that can run it, not on the family.** Foley's LoRA sits
+   on `ltx-23-balanced` only, because the graph bakes the int8 transformer. The three older
+   baked LoRAs are on both tiers only because the SHIPPED t2v/i2v graphs load them on both.
+
+The foley-vs-voice decision is settled: **v1 ships foley only**, voice mode has never been
+run. Lipsync does not inherit a guess from it.

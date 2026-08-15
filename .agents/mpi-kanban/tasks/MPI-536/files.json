@@ -1,6 +1,17 @@
 {
   "schema": "mpi-kanban/files/v1",
   "files": [
-    "comfy_workflows/raw/ltx_v2v_foley_template.json"
+    "comfy_workflows/raw/ltx_v2v_foley_template.json",
+    "comfy_workflows/raw/flow_ltx_foley.json",
+    "comfy_workflows/flow_ltx_foley.json",
+    "js/data/modelConstants/loraDeps.js",
+    "js/data/modelConstants/models.js",
+    "js/data/flowsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/data/modelConstants/universal_workflows.js",
+    "js/services/operationRegistry.js",
+    "dev_configs/operation_registry.json",
+    "tests/inject-params-titles.test.cjs",
+    "docs/playbooks/add-flow/existing-flows/ltx-foley.md"
   ]
 }

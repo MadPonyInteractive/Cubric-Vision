@@ -47,9 +47,14 @@ Start this card when MPI-531's item 1 has landed, then author declaratively via
 
 1. **Follow `/mpi-add-flow`.** `docs/playbooks/add-flow/` — README hub, then
    `01-descriptor-and-ops.md` for the `FlowDef` and the op's 4 files, `02-media-io.md`
-   for the media slots. This is a **Flow**, so there is no `ModelDef`, no
-   `supportedOps`/`workflows` entry in `models.js`, and no `dependencies.js` entry —
-   it runs on the already-wired LTX 2.3 checkpoint.
+   for the media slots. This is a **Flow**, so there is no `ModelDef` and no
+   `supportedOps`/`workflows` entry in `models.js`.
+   **CORRECTED 2026-08-14 — it DOES need a dep entry.** This paragraph said "no
+   `dependencies.js` entry — it runs on the already-wired LTX 2.3 checkpoint";
+   `Foley_Lora#100` disproves it. `ltx23-lora-foley` was staged to R2 and added to
+   `ltx-23-balanced` only (the graph bakes the int8 transformer). The upstream repo is
+   GATED, so the dep ships with no `mirrorUrl` — detail in
+   `docs/playbooks/add-flow/existing-flows/ltx-foley.md`.
 2. **Shape** (playbook step 0): single model (LTX 2.3), video in → video out,
    `mediaType: 'video'`. Inputs: the source video, a positive prompt, a negative
    prompt. Foley generates no new frames, so there is no resolution or duration

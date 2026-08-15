@@ -1,13 +1,25 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-14T03:50:00Z",
+  "updated_at": "2026-08-14T05:41:25Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
   "active_tasks": [],
   "active_file_claims": [],
   "pending_file_states": [],
-  "open_messages": [],
+  "open_messages": [
+    {
+      "id": "4f94885d-6e94-4920-a103-3d2ff4ddbd6e",
+      "path": ".agents/mpi-kanban/state/messages/4f94885d-6e94-4920-a103-3d2ff4ddbd6e.json",
+      "to": {
+        "selector": "task",
+        "value": "MPI-557"
+      },
+      "status": "open",
+      "created_at": "2026-08-14T05:41:25Z",
+      "subject": "Misrouted to me: Fabio's B3 verdict (bottom-right = 144/512, the CLIPPING run) + the wavy-shadow artifact is MPI-506 defect 3, color_correction_method"
+    }
+  ],
   "active_handoffs": [
     {
       "id": "584f6547-fe3c-4f0d-afac-22daeee351b4",

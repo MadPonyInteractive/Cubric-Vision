@@ -284,6 +284,56 @@ export const FLOWS = [
             },
         ],
     },
+    // MPI-536 — the foley twin of ltx-extend. Same tier, same no-uiComponent shape,
+    // OPPOSITE resolution decision: this graph's Input_Width/Input_Height were deleted
+    // because they fed only the encode and never the delivered pixels (Output_Video
+    // takes its images off the raw source), so the output always matches the input and
+    // there is nothing to expose. Do not copy extend's width/height plan across.
+    //
+    // Unlike extend this one DOES add a weight: ltx23-lora-foley, on `ltx-23-balanced`
+    // only (see models.js). The graph bakes the int8 transformer, so that tier is the
+    // only one that can run it.
+    //
+    // v1 IS FOLEY ONLY. The same file carries a voice mode — Input_Audio#106 fed a real
+    // path, the speech terms dropped from the negative, Foley_Lora#100 set to None — and
+    // it has never been run. The two are mutually exclusive settings, so shipping them
+    // as two toggles would present untested configuration as a composable feature.
+    {
+        id: 'ltx-foley',
+        title: 'Add Foley',
+        preview: 'ltx23_balanced_preview.webp',
+        description: 'Give a silent clip a soundtrack. Drop a video, describe what it should sound like, and LTX 2.3 generates matching foley across the whole clip — the picture comes back untouched.',
+        requiredModels: ['ltx-23-balanced'],
+        operation: 'flowLtxFoley',
+        workflow: 'flow_ltx_foley.json',
+        mediaType: 'video',
+        inputSchema: {
+            media: [
+                { type: 'video', mode: 'upto', max: 1, roles: ['video1'], labels: ['Video to score'] },
+            ],
+        },
+        // Nothing is marked on the clip — 2-step carousel (supply → run).
+        steps: [],
+        // Two controls, and deliberately no third: no duration (whole-clip by
+        // construction), no resolution (see above), no seed (_buildParams fills
+        // Input_Seed per run), no audio-influence knob (Audio_Influence#110 only
+        // reaches the sampler through the voice-mode branch, so surfacing it here
+        // would be a dead control).
+        controls: [
+            {
+                id: 'positive', type: 'text', rows: 3, label: 'What it should sound like',
+                placeholder: 'Describe the sounds — footsteps, room tone, traffic, wind…',
+            },
+            {
+                id: 'negative', type: 'text', rows: 2, label: 'Avoid',
+                // The bench-proven negative verbatim. Its speech/music terms are what
+                // keep foley from drifting into score or narration, and it only bites
+                // at all because the guider runs at cfg 3.0 — at cfg 1 core CFGGuider
+                // sets uncond_pred = None and this string is inert.
+                default: 'music, melody, song, singing, vocals, score, soundtrack, beat, instrumental backing, narration, tinny, thin, harsh, clipped, distorted, low bitrate, static, noise, room tone',
+            },
+        ],
+    },
 ];
 
 /** @returns {FlowDef[]} All flow descriptors. */

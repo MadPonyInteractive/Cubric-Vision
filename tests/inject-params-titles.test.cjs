@@ -250,6 +250,22 @@ test('the LTX extend Flow carries its I/O titles AND its declared control node (
     assert.ok(have.has('output_video'), `${file} must carry a capture node titled "output_video"`);
 });
 
+test('the LTX foley Flow carries its I/O titles (MPI-536)', () => {
+    // flowLtxFoley declares NO injection-param control — its two controls are the
+    // top-level positive/negative that submitFlowGeneration writes — so the pinned set
+    // is the media/prompt/seed titles the injector always writes plus the capture.
+    // `input_audio` is deliberately absent from this list: that node belongs to the
+    // unshipped voice mode and the op declares no audio slot, so nothing addresses it.
+    const file = 'flow_ltx_foley.json';
+    const have = titlesOf(file);
+    for (const title of [
+        'input_positive', 'input_negative', 'input_seed', 'input_video',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_video'), `${file} must carry a capture node titled "output_video"`);
+});
+
 test('every media slot a model can actually see exists in that model\'s workflow', () => {
     // Same silent-skip class as the injectParams sweep above, on the OTHER injection
     // source. A `mediaInputs` slot whose title matches no node gives the user a chip well

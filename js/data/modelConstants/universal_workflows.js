@@ -56,4 +56,7 @@ export const UNIVERSAL_WORKFLOWS = {
     flowLtxExtend: {
         workflow: 'flow_ltx_extend.json',
     },
+    flowLtxFoley: {
+        workflow: 'flow_ltx_foley.json',
+    },
 };

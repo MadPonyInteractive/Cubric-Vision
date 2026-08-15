@@ -147,5 +147,10 @@
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.4.1",
     "universal": true
+  },
+  "flowLtxFoley": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.4.1",
+    "universal": true
   }
 }

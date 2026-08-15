@@ -1021,6 +1021,28 @@ export const commands = {
         universal: true,
     },
 
+    // MPI-536. Bench-proven full-clip LTX 2.3 v2v FOLEY: a silent clip in, the SAME
+    // pixels out with a generated soundtrack. The delivered frames come off the raw
+    // source (Foley Window → Output_Video.images), never off the 832x480 encode, which
+    // is why there is no resolution control — the opposite of flowLtxExtend, where the
+    // resize IS the delivered clip. Whole-clip by construction (the clip-frames node
+    // drives the foley window, the audio latent length and the mask end from one
+    // place), so there is no duration control either.
+    flowLtxFoley: {
+        label: 'Flow: Add Foley',
+        progressLabel: 'Adding foley',
+        mediaType: MEDIA_TYPE.VIDEO,        // OUTPUT type — video + its new audio
+        requiresImages: 0,                  // media is never a hard requirement at the op layer
+        mediaInputs: [
+            { key: 'video1', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video', required: false },
+        ],
+        // No 'audio' slot on purpose: Input_Audio#106 belongs to VOICE mode, which is
+        // mutually exclusive with foley and has never been run (MPI-536 § v1 ships foley
+        // only). Declaring the slot would present the two as composable.
+        promptRequired: false,
+        universal: true,
+    },
+
     // ── Future Stubs ──────────────────────────────────────────────────────────
     // Registered so the registry is complete; disabled in UI until implemented.
 

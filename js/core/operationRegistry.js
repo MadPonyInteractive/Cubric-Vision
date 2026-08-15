@@ -65,6 +65,7 @@ export const OPERATION_REGISTRY = {
     flowVideoStitch: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
     flowHeadSwap: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
     flowLtxExtend: { latestVersion: '1.0', appVersionIntroduced: '1.4.1' },
+    flowLtxFoley: { latestVersion: '1.0', appVersionIntroduced: '1.4.1' },
 };
 
 /**
