@@ -9,3 +9,4 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.updated", "at": "2026-08-14T04:09:04Z", "actor": "opus", "id": "MPI-536", "note": "maturity in-progress -> validating; only the user's live generation is open."}
 {"schema": "mpi-kanban/event/v1", "type": "validation.updated", "at": "2026-08-15T07:40:55Z", "actor": "opus", "id": "MPI-536", "note": "Live run passed in Fabio's own app; result approved."}
 {"schema": "mpi-kanban/event/v1", "type": "task.moved", "at": "2026-08-15T07:40:55Z", "actor": "opus", "id": "MPI-536", "from": "doing", "to": "done", "note": "Closed on the user's own confirmation of the live generation."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-536", "type": "task.updated", "at": "2026-08-16T03:00:00Z", "actor": "claude", "summary": "Umbrella repointed to MPI-560 (MPI-552 merged into it, 2026-08-16). Now phase 3 of the Flow track."}

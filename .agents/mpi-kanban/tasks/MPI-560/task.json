@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-560",
-  "title": "Community Flows: the 1.5 authoring shape and the 1.6 package format",
-  "description": "UMBRELLA created by the consolidation sweep, 2026-08-14. Members: MPI-531 (package-ready Flows for 1.5 - a 1.5 RELEASE BLOCKER) and MPI-532 (community flow packages, targets 1.6). One format decided twice: uiComponent names a JS component a third party can never have, so every Flow authored with a new component in 1.5 is a Flow that must be ported in 1.6. MPI-531 item 1 (FlowStepField slider/number/text) is also MPI-552s single blocker, which makes it the highest-priority item on the Flow track. Members and phase order: tasks/MPI-560/plan.md.",
+  "title": "The Flow track - one umbrella over authoring shape, the LTX v2v trio, Flows v2 and community packages",
+  "description": "UMBRELLA created 2026-08-14, MERGED 2026-08-16 at Fabio's request: MPI-529 (Flow Library v2) and MPI-552 (LTX 2.3 v2v trio) were deleted into this card. One Flow track, five phases, seven members: MPI-332 (rip the 3 test flows), MPI-531 (1.5 authoring shape - RELEASE BLOCKER, item 1 landed), MPI-536 + MPI-520 (shipped, validating) + MPI-538 (LTX v2v trio), MPI-259 (Flows v2 deferred paths), MPI-532 (1.6 community packages).\n\nThey were one track split three ways: every card ends up editing js/data/flowsRegistry.js, and every card was gated on the same FlowStepField work. THE ONE IDEA: uiComponent names a JS component a third party can never have, so the 1.5 authoring shape IS the 1.6 package format, paid a release early where it is cheap. Keep the port surface at ONE component (MpiFlowHeadSwap).\n\nMembers, phase order, settled decisions and both deleted plans' drift notes: tasks/MPI-560/plan.md.",
   "column": "todo",
   "maturity": "planned",
   "status": "active",
   "created_at": "2026-08-14T00:24:00Z",
-  "updated_at": "2026-08-14T00:24:00Z",
+  "updated_at": "2026-08-16T00:00:00Z",
   "links": {
     "plan": "plan.md",
     "files": "files.json",

@@ -1,1 +1,2 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-560","type":"task.created","at":"2026-08-14T00:24:00Z","actor":"claude","summary":"Umbrella created by the consolidation sweep."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-560", "type": "task.updated", "at": "2026-08-16T03:00:00Z", "actor": "claude", "summary": "Merged MPI-529 and MPI-552 into this umbrella; retitled as the single Flow umbrella; plan.md rewritten with 5 phases and 7 members."}
