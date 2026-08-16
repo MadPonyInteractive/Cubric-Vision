@@ -377,6 +377,8 @@ and can be deleted - nothing we ship reads them.
 
 ### 2j. CHUNK SIZE HAS A PEAK AT 33, AND IT IS NOT THE SHIPPED VALUE. MEASURED 2026-08-15
 
+> **SUPERSEDED IN PART, 2026-08-16.** The peak at 33 held only on the FIRST clip. A second clip (AI-generated, 1536x640) inverted it - 57 scored 3.79 vs 33 at 3.67 - so the optimum is CONTENT-DEPENDENT and the shipped 57 should stay. More importantly, S 2k questions whether the video path ships at all. Read 2k first.
+
 Full sweep, core nodes, same bench and clip as 2f-ter:
 
 | `frames_per_chunk` | detail (f3-81) | ratio f1/interior | time |
@@ -904,3 +906,103 @@ is simply unavailable remotely.
 - [ByteDance-Seed/SeedVR2-3B](https://huggingface.co/ByteDance-Seed/SeedVR2-3B) / [SeedVR2-7B](https://huggingface.co/ByteDance-Seed/SeedVR2-7B)
 - [One-step 4K video upscaling in ComfyUI with SeedVR2 - AInVFX](https://www.ainvfx.com/blog/one-step-4k-video-upscaling-and-beyond-for-free-in-comfyui-with-seedvr2/)
 - [numz/ComfyUI-SeedVR2_VideoUpscaler](https://github.com/numz/ComfyUI-SeedVR2_VideoUpscaler) - the pre-core custom pack, **not** what we wire
+
+### 2k. THE PRODUCT VERDICT - SeedVR2 SHARPENS, IT DOES NOT RECONSTRUCT, AND IT CANNOT DO 2x ON 16 GB. MEASURED 2026-08-16
+
+**This section may end the card.** Everything above answers *how to wire SeedVR2
+well*. This one asks whether it should ship at all, and the measurements say the
+product case is weak for our actual target (near-production AI video that needs a
+sharpen, not a restoration).
+
+Fabio's read, which the numbers then confirmed: *"it's just sharpening, it's not
+improving detail... it messed up the eyes, the iris is almost square. Does the
+model not know what an eye is?"*
+
+#### 1. The frequency signature is a sharpener's - and it gets WORSE with more room
+
+Method: radial FFT of each clip against a **fixed lanczos baseline** at the same
+output size. `gain(f) = energy(clip,f)/energy(lanczos,f)`. A sharpener boosts the
+MID band (amplifying edges that already exist) and falls back toward 1.0 at the
+top of the band. A reconstructor holds gain HIGH at the top, because it is
+synthesising structure the source never had. Reported as `top/mid`.
+
+| clip | factor | mid gain | top gain | **top/mid** |
+|---|---:|---:|---:|---:|
+| h264 re-encode of lanczos (**control**) | - | 1.04 | 1.11 | **1.06** |
+| `4x_NMKD-Siax_200k` .pth | 1.5x | 1.23 | 1.10 | 0.89 |
+| SeedVR2 3B, AI clip | 1.5x | 6.18 | 3.50 | **0.57** |
+| SeedVR2 3B, cowboys clip | **2x** | 5.96 | 2.53 | **0.43** |
+
+**The control is the load-bearing part** - it rules out the codec as the
+explanation. Re-encoding the lanczos reference through the identical h264 settings
+returns `top/mid` 1.06, so the pipeline preserves the top band and the 0.57 / 0.43
+readings are properties of the model, not of the encode.
+
+**A prediction was made and FAILED, which is why this is trustworthy.** The
+hypothesis was that 1.5x simply gave the model no room, and that a higher factor
+would force reconstruction and push `top/mid` up. At 2x it went **down** (0.57 ->
+0.43). SeedVR2 does the same thing at every scale tested; it is not
+detail-starved at low factors.
+
+**Do NOT restate this as "no better than a .pth upscaler" - that part is false.**
+SIAX at 1.5x contributes almost nothing (mid 1.23, top 1.10 - visually
+indistinguishable from lanczos in `AI_siax_vs_seedvr2_f45.png`). SeedVR2 moves
+5x more mid-band energy and visibly adds freckles, knit stitches and wood grain.
+It is an order of magnitude beyond a .pth sharpener. It is simply **not the
+detail reconstructor the paper implies**, at the scales we can afford to run.
+
+#### 2. There is no semantic prior, and that is STRUCTURAL
+
+SeedVR2 runs **one sampling step at cfg 1.0 with no text conditioning** - no
+prompt, no CLIP input, no text encoder anywhere in the weight set (S 2a). It has
+no object model, so it cannot know that an iris is round. What it has is a learned
+prior over *local texture statistics*, which is why it produces plausible skin
+pores and fabric weave while deforming eyes, and why it invents dark blotches on
+clean cheeks and ears (`EYE_zoom_lanczos-vs-seedvr2.png`).
+
+**This is not a settings bug and no widget fixes it.** Any future "why did it do
+that to the face" question has this as its answer.
+
+#### 3. The VRAM ceiling breaks the product case on a 16 GB card
+
+Fabio: *"if we're offering a model that can't even do 2x on a 16 GB card, then
+there's no point in offering it."*
+
+Measured on the 4060 Ti 16 GB, NORMAL_VRAM bench (the app runs `--lowvram`, which
+is a *separate* open gate - these numbers are the optimistic case):
+
+| source | Mpx | factor | max `frames_per_chunk` |
+|---|---:|---:|---|
+| 678x1214 | 0.82 | 1.5x | 57-69 |
+| 1536x640 | 0.98 | 1.5x | 57 |
+| 1344x768 | 1.03 | **2x** | **13** - 33 OOMs |
+| 1344x768 | 1.03 | **3x** | **OOMs at fpc=5** - the model's own floor |
+
+**2x on a ~1 Mpx source collapses the chunk to 13 frames**, against the model's
+own documented floor of 5 for temporal consistency to engage at all. Shipping a
+*video* upscaler at barely twice its minimum temporal context is exactly the
+condition that produces the oscillation Fabio reports on faces and freckles. The
+chunk size is not a tuning knob at that point - it is the whole product.
+
+#### What this does NOT close
+
+- The **image** path (S 2g) is unaffected by every argument here: no chunker, no
+  temporal consistency requirement, and a single frame at 4x has room the video
+  path never gets. If SeedVR2 ships at all, the image tool is the honest home.
+- **7B / 7B Sharp were not re-tested** under this analysis. They lost at 1.5x on
+  the real clip (S 2h) and there is no reason to expect a different *signature* -
+  more capacity, same one-step no-conditioning architecture - but it is unmeasured.
+
+#### The two directions Fabio raised, both better-founded than more SeedVR2 tuning
+
+1. **Upscale-then-interpolate.** Upscale a reduced frame set (fewer frames per
+   pass = bigger effective chunk = more context per frame), then interpolate back
+   up. The interpolator enforces the temporal coherence the upscaler cannot, and
+   it directly attacks BOTH failures above. Fabio has run this manually off 16 fps
+   WAN clips with better results than a straight upscale.
+2. **Regenerative upscaling (LTX).** A regenerative pass has conditioning and
+   multiple steps, so it carries the semantic prior SeedVR2 structurally lacks -
+   the thing that would keep an iris round. Different class of tool, and the right
+   one for near-production AI video.
+
+Both deserve their own cards rather than more widget sweeps here.

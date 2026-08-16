@@ -33,11 +33,13 @@
 - [ ] Three `PLUGINS` entries + four deps (3 weights + shared VAE), R2-hosted with sha256
 - [ ] Upload 20.62 GB to R2 and mirror to HF
 - [ ] Injection mapping: selected entry -> `unet_name`
-- [ ] **Change `Input_Frames_Per_Chunk` from 57 to 33** in `comfy_workflows/seedvr2_video.json` (+ the `raw/` twin), pending the `--lowvram` re-measure above
+- [x] **`Input_Frames_Per_Chunk` STAYS AT 57 - the 33 finding did NOT generalise.** A second clip (AI-generated, 1536x640 landscape) inverted it: 57 scored 3.79 vs 33 at 3.67, where the first clip had 33 ahead 3.86 to 3.46. The optimum is content- and aspect-dependent; 57 is safe on both and never failed. Brief S 2j + 2k.
 - [ ] `frames_per_chunk` sizing off `/system_stats`, PER VARIANT (§2h). `routes/platformEngine.js` reads only the GPU name today
 
 ## Open gates — must clear before a number or a plugin ships
 
+
+- [ ] **PRODUCT DECISION - DOES THE VIDEO PATH SHIP AT ALL? (Fabio, blocking)** Measured 2026-08-16: SeedVR2's frequency signature is a SHARPENER's, not a reconstructor's (top/mid 0.57 at 1.5x, WORSE at 0.43 at 2x, against a 1.06 codec control), it has no semantic prior at all (one step, cfg 1.0, no text encoder - hence square irises and invented cheek blotches), and on a 16 GB card **2x collapses the chunk to 13 frames and 3x OOMs even at the fpc=5 floor**. Fabio: *"if we're offering a model that can't even do 2x on a 16 GB card, then there's no point in offering it."* Options: (a) drop the video path, ship the IMAGE path only - it has no chunker and is unaffected; (b) drop SeedVR2 entirely; (c) ship video with a hard factor cap. Full evidence: brief S 2k.
 - [x] **THE NODE CHOICE - SETTLED 2026-08-15, core wins, pack REJECTED.** Baked off `numz/ComfyUI-SeedVR2_VideoUpscaler` (v2.5.23) against the bundled `comfy_extras.nodes_seedvr` on the bench. At MATCHED chunk size (33) core resolves **~50% more detail (3.86 vs 2.57)** and is 13% faster. BlockSwap does NOT solve the OOM - full swap bought 1.6 GiB and still fell 1.46 GiB short, because the activations are the bottleneck, not the weights. The pack also OOMs EARLIER than core (49 vs 69 frames). No int8 on its shelf either. Full evidence + disposition: brief S 2f-ter. **MPI-557 is unblocked.**
 - [x] **Chunk-size sweep - `fpc = 33` is the measured peak, NOT the shipped 57** (17/25/33/57/69/81 swept; quality falls off on both sides; 33 also has the flattest decay at ratio 0.97 vs 0.70). Corrects the 2026-08-10 pick. Brief S 2j.
 - [ ] **`--lowvram` re-measure on `:48188`.** Every fpc number so far is NORMAL_VRAM bench; the app launches `--lowvram` on every NVIDIA GPU (`routes/comfy.js:432`). Node path is now SETTLED (core), so this gate is live: re-run the 17/25/33/57 sweep under `--lowvram` before any fpc constant reaches the app
