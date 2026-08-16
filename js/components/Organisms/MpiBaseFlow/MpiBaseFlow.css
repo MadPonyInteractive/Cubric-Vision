@@ -433,6 +433,7 @@
     align-items: center;
     justify-content: center;
     gap: var(--s-4);
+    width: 100%;
 }
 .mpi-base-flow__field {
     display: inline-flex;
@@ -485,6 +486,17 @@
 }
 .mpi-base-flow__field-text {
     resize: vertical;
+    width: 100%;
+}
+/* A textarea is not a row control. On a STEP row every other field is a short
+   label-beside-control pair, but a prompt box needs its label above it and real
+   width or two of them render as a pair of slits under the preview. Scoped with
+   :has() so the one-row cap still holds for every other field type. */
+.mpi-base-flow__fields .mpi-base-flow__field:has(.mpi-base-flow__field-text) {
+    flex-direction: column;
+    align-items: stretch;
+    flex: 1 1 320px;
+    max-width: 480px;
 }
 .mpi-base-flow__field-range {
     accent-color: var(--accent-frost);

@@ -243,25 +243,36 @@ export const FLOWS = [
                 { type: 'video', mode: 'upto', max: 1, roles: ['video1'], labels: ['Video to score'] },
             ],
         },
-        // Nothing is marked on the clip — 2-step carousel (supply → run).
-        steps: [],
-        // Two controls, and deliberately no third: no duration (whole-clip by
-        // construction), no resolution (see above), no seed (_buildParams fills
-        // Input_Seed per run), no audio-influence knob (Audio_Influence#110 only
-        // reaches the sampler through the voice-mode branch, so surfacing it here
-        // would be a dead control).
-        controls: [
+        // Nothing is MARKED on the clip, but the user still has to see it: step 0
+        // loads media at thumbnail size, so a `preview` step is the first point at
+        // which they can judge the take they are about to score — and the prompts
+        // belong with it, written while watching the thing being described.
+        // 3-step carousel (supply → describe → run).
+        //
+        // Two fields, and deliberately no third: no duration (whole-clip by
+        // construction), no resolution, no seed (_buildParams fills Input_Seed per
+        // run), no audio-influence knob (Audio_Influence#110 only reaches the
+        // sampler through the voice-mode branch, so surfacing it here would be a
+        // dead control).
+        steps: [
             {
-                id: 'positive', type: 'text', rows: 3, label: 'What it should sound like',
-                placeholder: 'Describe the sounds — footsteps, room tone, traffic, wind…',
-            },
-            {
-                id: 'negative', type: 'text', rows: 2, label: 'Avoid',
-                // The bench-proven negative verbatim. Its speech/music terms are what
-                // keep foley from drifting into score or narration, and it only bites
-                // at all because the guider runs at cfg 3.0 — at cfg 1 core CFGGuider
-                // sets uncond_pred = None and this string is inert.
-                default: 'music, melody, song, singing, vocals, score, soundtrack, beat, instrumental backing, narration, tinny, thin, harsh, clipped, distorted, low bitrate, static, noise, room tone',
+                kind: 'preview', role: 'video1',
+                tickerLabel: 'Describe',
+                title: 'Describe what it should sound like',
+                fields: [
+                    {
+                        id: 'positive', type: 'text', rows: 3, label: 'What it should sound like',
+                        placeholder: 'Describe the sounds — footsteps, room tone, traffic, wind…',
+                    },
+                    {
+                        id: 'negative', type: 'text', rows: 2, label: 'Avoid',
+                        // The bench-proven negative verbatim. Its speech/music terms are what
+                        // keep foley from drifting into score or narration, and it only bites
+                        // at all because the guider runs at cfg 3.0 — at cfg 1 core CFGGuider
+                        // sets uncond_pred = None and this string is inert.
+                        default: 'music, melody, song, singing, vocals, score, soundtrack, beat, instrumental backing, narration, tinny, thin, harsh, clipped, distorted, low bitrate, static, noise, room tone',
+                    },
+                ],
             },
         ],
     },

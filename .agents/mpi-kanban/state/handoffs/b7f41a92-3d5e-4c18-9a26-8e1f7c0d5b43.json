@@ -1,0 +1,78 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "b7f41a92-3d5e-4c18-9a26-8e1f7c0d5b43",
+  "generated_at": "2026-08-16T07:20:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-531 Flow frame - rip landed, media picker rebuilt, foley gained a middle step",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Sort out MPI-531 (1.5 release blocker). Finish the rip (MPI-332), then the Flow UI punch list.",
+    "status": "in_progress",
+    "summary": "MPI-332 is DONE and live-verified. The media picker was rebuilt to Fabio's spec and he signed it off in the running app. Foley gained its middle 'Describe' step. Three new cards were raised from his live use (MPI-570/571/572) - one of them, the latent-preview consumer bug, had survived THREE handoffs uncarded, which is why he had to repeat it. The step-2 work is UNVERIFIED on screen and carries one fix he has not seen yet.",
+    "commit": "cf8b6208"
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-531/plan.md",
+    "completed": [
+      "MPI-332 (MPI-560 phase 1) SHIPPED - commit 4f0e1a3-range, see `git log --grep=MPI-332`. 3 FlowDefs + 3 ops across all four registries + MpiFlowImageRegen + 5 workflow files removed; 608 -> 605 tests (3 tests pinned the deleted workflows and went with them). VERIFIED LIVE in an isolated app: flowsRegistry loads {head-swap, ltx-extend, ltx-foley}, commandRegistry {flowHeadSwap, flowLtxExtend, flowLtxFoley}, zero ripped ids. Card is still in `doing` ONLY because nobody moved it - the work and its acceptance clause are done.",
+      "TWO ERRORS IN MPI-332's CARD BODY, both from the Apps->Flows rename (985faa09), recorded so the next card-writer does not repeat them: every line number was stale TWICE over (even the healed :88/:103/:137 were really :108/:123/:157), and the workflow files it named as app_*.json had been renamed to flow_*.json, so a worker 'deleted' five files that did not exist and reported success. Locate by id/symbol, never by line.",
+      "MEDIA PICKER REBUILT - commit cf8b6208. Fabio's verdict on the first cut was 'it works and it's useless'. Now: filter tabs (All/Images/Videos/Audio, opening on the slot's type), name under each tile with the extension dropped, expand button for a large preview that does NOT pick, hover-to-play on video tiles with the poster underneath so an un-hovered grid of 90 clips paints stills. Upload is now the FIRST GRID CELL, making the picker the single entry point; the empty slot box lost its rival file-dialog click and its Browse button and now has exactly one job. VERIFIED BY FABIO in the app: 'I just tested it, and it's all good.'",
+      "Two real bugs fixed inside that work: `_handleFiles` targeted only FREE slots, so an upload aimed at an occupied slot silently landed in the next one - or nowhere at all on a single-slot Flow like foley; and both the picker tooltip and the slot name split a `/project-file?path=<urlencoded>` URL on slashes, yielding the encoded query tail (Fabio's screenshot showed `project-file?path=C%3A%5CUsers%5C...`).",
+      "A filled VIDEO slot now plays its clip muted and looping instead of printing a filename - the CSS comment calling that gap 'MPI-259 open' was true and is now false. Clicking a filled slot reopens the picker to swap the take.",
+      "FOLEY NOW HAS A MIDDLE STEP (uncommitted, see pending): 01 Inputs - 02 Describe - 03 Generate. `kind: 'preview'`, which is what MpiStepPreview was written for last session and never wired. Its two prompts moved from run-slide `controls` onto the step's `fields`. This is a DATA change - head-swap and ltx-extend are untouched.",
+      "Two pieces of frame plumbing that were genuinely missing, both additive and both verified zero-blast-radius (NO flow used step `fields` before this): step fields never reached the payload (they sat nested in `stepValues` where the op does not look, so the prompt would be silently dropped and the graph's baked default used), and field defaults were never seeded (`_buildField` only writes on change, so an untouched field sends nothing - that is how foley's bench-proven negative goes missing on the one run nobody edited).",
+      "One test added (606/606): a step declaring `fields` must declare a role its `inputSchema.media` supplies. A bad role renders the prompt boxes under 'Add the image for this step on the first step' while the value still reaches the run - a control that works while telling the user it cannot.",
+      "THREE CARDS RAISED from Fabio's live use - MPI-570 (gallery hover video keeps playing when an overlay opens), MPI-571 (latent-preview consumers), MPI-572 (Flow step template). All three carry a traced root cause, not a symptom.",
+      "Repaired a schema-invalid event line on MPI-569 (a PEER agent's card, from Cubric-Prompt MPI-27) that was failing validate_board.py for everyone. Added only the missing `schema` key; their content is verbatim."
+    ],
+    "pending": [
+      "STEP 2 IS UNVERIFIED ON SCREEN. The foley middle step, its plumbing and the reuse fix below are all uncommitted and none has been looked at in the app. Fabio has corrected the layout TWICE, so show him before building further on it.",
+      "THE REUSE FIX NEEDS PROVING. Fabio hit 'Reuse -> Flow opens -> positive prompt EMPTY'. Root cause found and fixed but NOT verified: reuse restores the sidecar's `flowInputs`, and every foley card generated BEFORE the step move stored `positive` at the TOP LEVEL (it was a `control`). The new seeding read only `stepValues`, found nothing, and fell back to a default the prompt does not have. Seeding now falls back top-level (and to injectionParams for an `Input_*` id). VERIFY WITH AN OLD FOLEY CARD, not a fresh one - a fresh card persists both shapes and would pass either way.",
+      "A REAL GENERATION THROUGH FOLEY. The step-field promotion path is new and its failure mode is SILENT: the run succeeds and quietly uses the graph's baked default. Assert the dispatched prompt from /history, do not trust the box on screen.",
+      "MPI-332 -> done, and MPI-531 -> its own next state. Both are still in `doing`.",
+      "MPI-531 items 2/3/4 remain untouched: `steps[].image`, author every 1.5 Flow declaratively, port MpiFlowHeadSwap.",
+      "release-baselines/ still lists the deleted MpiFlowImageRegen + workflows. Left alone DELIBERATELY - nothing reads it (grep proves only kanban records mention the name) and it is a capture of what a past build contained, so hand-editing would falsify it. It re-captures at the next build."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-531",
+    "title": "Package-ready flows for 1.5 - author every built-in Flow in a shape a third-party manifest can express",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-531/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-531/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-531/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-531/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "FIRST, sit with Fabio on the code as it stands - he asked for this explicitly: 'I would like to discuss all the code that is at the moment with the next agent, because I already see some stuff happening in the UI that concerns me.' The named concerns are MPI-570 (hover video keeps playing / hover does nothing / audio late) and MPI-572 (the first+last stage should be a frame-owned TEMPLATE, not restated per flow). Do not start by writing code. THEN verify the uncommitted step-2 work in an isolated app - foley, 01 Inputs / 02 Describe / 03 Generate - and prove the reuse fix with an OLD foley card.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "STEP 2 IS A MIDDLE STEP, NOT THE RUN SLIDE. This session first restructured `_buildRunSlide` into a stacked layout and Fabio caught it: that function is SHARED FRAME CODE, so it would have changed head-swap and ltx-extend, neither of which asked for it, and head-swap's uiComponent mounts into that exact slot. Fully reverted (`git diff` on MpiBaseFlow was empty before the rebuild). Every Flow has the same first stage and the same last stage; only the middle varies. Anything a single Flow needs belongs in its FlowDef or a step kind - never in the shared slide builders.",
+      "PICKER SCOPE: current project + filesystem, in ONE surface. Settled with Fabio. The upload card is the first grid cell; the slot box behind it opens the picker and does nothing else. Not a file manager - no cross-project browsing.",
+      "PICKER TILES ARE SQUARE. An earlier revision made them 16:9 unprompted and Fabio rejected it: a 9:16 vertical crops to a sliver. A square treats both aspects evenly; the large preview uses object-fit: contain so a vertical shows whole. Do not 'improve' this.",
+      "Ordering in the picker is the GALLERY's own at open time, deliberately with no sort control - the user has just been looking at the gallery. This also fixed a real inversion: `_collect` walked the groups backwards.",
+      "Escape already closes the picker via OverlayManager - verified, no code needed. Also corrected mid-session: `--main-overlay-z` IS cleaned up on hide (MpiOverlay.js:186); an earlier claim that it leaked was wrong, from reading the hide path too narrowly.",
+      "The ORIGINAL 'it's not working' report that survived two handoffs is CLOSED. It was the picker rendering UNDER other overlays, caused by the mount nesting being inverted, and it was already fixed in 3843e8d5. No open bug. The lesson worth keeping: the previous session recorded THAT Fabio said it, never WHAT he said, so it cost two sessions to resolve a fixed bug."
+    ],
+    "constraints": [
+      "NEVER take Fabio's app instance. `CUBRIC_MODELS_ROOT=\"G:/CubricModels\" npm run app:isolated` - it prints READY <url>. A fresh agent profile shows the 18+ CONSENT GATE, which is a statement about the user and is THEIRS to click, not the agent's; ask.",
+      "playwright-cli sessions do NOT persist between `npx` invocations in this environment - each call reports 'browser not open'. Multi-step UI probing has to happen inside ONE eval, and eval wraps its argument as `() => (EXPR)` so a multi-statement probe must be a single-line IIFE.",
+      "A GPU is in use by Fabio's Cubric-Prompt agent at times - ASK before dispatching a generation. Nothing was generated in this entire session.",
+      "Bash tool: heredocs are BLOCKED by guard-shell (backslash halving). Write scripts with the Write tool and run them by path. `git stash` is BLOCKED by guard-git on this shared tree - revert with the same tool that made the edit.",
+      "Commit by explicit pathspec (`git commit --only <paths>`), never `git add -A` - shared tree with live peer agents. A peer created MPI-569 during this session."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-531/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-570/task.json",
+      ".agents/mpi-kanban/tasks/MPI-572/task.json",
+      "docs/preview-bus.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/b7f41a92-3d5e-4c18-9a26-8e1f7c0d5b43.json and use mpi-continue to continue MPI-531 (in doing). Fabio's explicit first ask is a DISCUSSION, not code: he wants to go over the current Flow/gallery code with you because things he sees in the UI concern him. Those concerns are now carded - MPI-570 (a hovered gallery video keeps looping WITH SOUND when an overlay opens over it, because playback is stopped only by mouseleave and an overlay mounting under a stationary cursor never fires one; plus hover sometimes doing nothing and audio arriving late, which are probably NOT the same bug), MPI-571 (the latent-preview consumers - four surfaces each re-implement a bus that is itself correct; this had survived three handoffs uncarded, which is why he has had to repeat it), and MPI-572 (every Flow shares a first and last stage, so that should be a frame-owned template rather than restated per flow - which is MPI-531's own 'expressible as a third-party manifest' clause wearing a different hat). Uncommitted on disk: foley's new middle 'Describe' step, the step-field payload promotion and default seeding it needed, and a fix for the empty-prompt-on-Reuse bug he hit - verify that one with an OLD foley card, since a fresh card persists both the old and new shapes and would pass either way. MPI-332 is done and live-verified but still sits in doing."
+}

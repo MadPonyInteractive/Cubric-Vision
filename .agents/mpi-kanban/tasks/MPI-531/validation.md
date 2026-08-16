@@ -146,3 +146,90 @@ Candidates, in order:
    projects; "no models" reads as broken (memory `tool_isolated_instance_needs_models_root`).
 
 Next session: reproduce with a real generation before assuming (3).
+
+## Session 4 (2026-08-16) — the rip landed, the picker was rebuilt, foley gained a middle step
+
+### MPI-332 — VERIFIED LIVE, and it closes the rip
+
+Registries read out of a running isolated app (port 51603), not from source:
+
+| check | result |
+|---|---|
+| `flowsRegistry.FLOWS` ids | `head-swap`, `ltx-extend`, `ltx-foley` — the three ripped flows gone |
+| `flowsRegistry` helper exports | all 9 intact |
+| `commandRegistry` flow ops | `flowHeadSwap`, `flowLtxExtend`, `flowLtxFoley`; ripped set empty |
+| suite | 608 → 605 (the 3 tests pinning the deleted workflows went with them) |
+
+**The card body was wrong twice, both times from the Apps→Flows rename (`985faa09`).** Every
+line number was stale — even the healed `:88/:103/:137` were really `:108/:123/:157` — and the
+`app_*.json` workflow files it listed had been renamed to `flow_*.json`, so a worker reported
+deleting five files that did not exist. Locate by id/symbol, never by line.
+
+### The media picker — REBUILT, and signed off by Fabio in the app
+
+His verdict on the first cut: *"it works and it's useless."* Rebuilt to his spec (`cf8b6208`):
+filter tabs, names with the extension dropped, an expand button that previews without picking,
+hover-to-play with the poster underneath, gallery ordering at open time, and **upload as the
+first grid cell** so the picker is the single entry point. The empty slot box lost its rival
+file-dialog click and its Browse button — one box, one job.
+
+Verified by Fabio in the running app: *"I just tested it, and it's all good."*
+
+Two real bugs fixed inside that work, both silent:
+
+- `_handleFiles` targeted only FREE slots, so an upload aimed at an occupied slot landed in the
+  next one — or nowhere at all on a single-slot Flow like foley.
+- Both the picker tooltip and the slot name split a `/project-file?path=<urlencoded>` URL on
+  slashes, so they showed the encoded query tail (visible in his screenshot).
+
+**Tiles are SQUARE.** An earlier revision made them 16:9 unprompted; Fabio rejected it because a
+9:16 vertical crops to a sliver. Do not re-litigate.
+
+### Step 2 — the first attempt was WRONG, and the correction is the lesson
+
+The run slide was first restructured into a stacked layout. **Fabio caught it: `_buildRunSlide`
+is shared frame code**, so that change would have hit head-swap and ltx-extend — neither of which
+asked for it, and head-swap's `uiComponent` mounts into that exact slot. A shared primitive
+changed to serve one flow is the thing the root-cause rule exists to stop. Fully reverted (`git
+diff` on `MpiBaseFlow` was empty before the rebuild).
+
+The correct shape, which he then stated plainly: **every Flow has the same first stage and the
+same last stage; only the middle varies.** So foley gets a MIDDLE step — `kind: 'preview'`, which
+is exactly what `MpiStepPreview` was written for last session and never wired. `01 Inputs · 02
+Describe · 03 Generate`, ticker derives itself. A FlowDef data change; the other two flows are
+untouched.
+
+Two pieces of plumbing were genuinely missing, both additive, both proven zero-blast-radius
+(**no flow used step `fields` before this**):
+
+1. **Step fields never reached the payload** — they sat nested in `stepValues`, where the op does
+   not look. The prompt would have been silently dropped and the graph's baked default used.
+2. **Field defaults were never seeded** — `_buildField` only writes on change, so an untouched
+   field sends nothing. That is how a bench-proven negative goes missing on the one run nobody
+   edited it.
+
+### The empty prompt on Reuse — MY regression, fixed, NOT yet verified
+
+Fabio hit `Reuse → Flow opens → positive prompt EMPTY`. Cause: reuse restores the sidecar's
+`flowInputs`, and every foley card made **before** the step move stored `positive` at the TOP
+LEVEL (it was a `control`). The new seeding read only `stepValues`, found nothing, and fell back
+to a default the prompt does not have. Seeding now falls back to top-level, and to
+`injectionParams` for an `Input_*` id.
+
+**Verify with an OLD foley card.** A fresh card persists both shapes and would pass either way.
+
+### Cards raised from his live use
+
+- **MPI-570** — a hovered gallery video keeps looping *with sound* when an overlay opens over it.
+  Root cause traced: playback stops only via `mouseleave`, and an overlay mounting under a
+  stationary cursor never fires one. `_stopOtherGalleryMedia(null)` already exists and is correct;
+  nothing calls it. Also carries his two other hover reports (hover doing nothing; audio late),
+  which are probably *not* the same bug.
+- **MPI-571** — the latent-preview consumers. **This had survived three handoffs uncarded**,
+  which is why he has had to repeat it.
+- **MPI-572** — first+last stage as a frame-owned template rather than restated per flow.
+
+### Not verified
+
+Step 2, its plumbing, and the reuse fix are **uncommitted and unseen on screen**. No generation
+was run this entire session — the GPU was left free for his Cubric-Prompt agent.

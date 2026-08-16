@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/data/flowsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/data/modelConstants/universal_workflows.js",
+    "js/shell.js",
+    "js/shell/preloadStyles.js",
+    "js/components/types.js",
+    "js/components/Organisms/MpiFlowImageRegen/MpiFlowImageRegen.js",
+    "js/components/Organisms/MpiFlowImageRegen/MpiFlowImageRegen.css",
+    "comfy_workflows/app_sdxl_regen.json",
+    "comfy_workflows/app_sdxl_4k.json",
+    "comfy_workflows/raw/app_sdxl_4k.json",
+    "comfy_workflows/app_video_test.json",
+    "comfy_workflows/raw/app_video_test.json"
+  ]
+}

@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-571", "type": "task.created", "at": "2026-08-16T07:15:00Z", "actor": "opus", "summary": "Carded from Fabio's live-use report during the MPI-531 session."}

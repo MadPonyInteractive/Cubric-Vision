@@ -198,9 +198,10 @@ test('the LTX extend Flow carries its I/O titles AND its declared control node (
 });
 
 test('the LTX foley Flow carries its I/O titles (MPI-536)', () => {
-    // flowLtxFoley declares NO injection-param control — its two controls are the
+    // flowLtxFoley declares NO injection-param field — its two prompt fields are the
     // top-level positive/negative that submitFlowGeneration writes — so the pinned set
     // is the media/prompt/seed titles the injector always writes plus the capture.
+    // (Those two live on the `preview` STEP since MPI-531, not on the run slide.)
     // `input_audio` is deliberately absent from this list: that node belongs to the
     // unshipped voice mode and the op declares no audio slot, so nothing addresses it.
     const file = 'flow_ltx_foley.json';
@@ -335,4 +336,38 @@ test('the Qwen master graph carries its branch selector', () => {
     assert.ok(have.has('input_wf_type'), 'qwen_edit.json must carry a node titled "input_wf_type"');
     // Qwen KEEPS its three-tier radio — unlike Krea2, whose tier became a boolean.
     assert.ok(have.has('input_tier'), 'qwen_edit.json must keep its Input_Tier radio node');
+});
+
+test('a Flow step that declares fields declares a role its media schema supplies (MPI-531)', () => {
+    // A step renders its gizmo only when `_mediaForRole(step.role)` finds media, but
+    // its FIELDS are frame-owned and render either way. So a step whose role matches
+    // no `inputSchema.media` role shows its prompt boxes under the line "Add the image
+    // for this step on the first step." forever, and the value still reaches the run -
+    // a control that works while telling the user it cannot. Cheap to typo, invisible
+    // in review, and only reproducible by opening the Flow with media loaded.
+    const src = fs.readFileSync(path.join(ROOT, 'js/data/flowsRegistry.js'), 'utf8');
+
+    // Roles are declared as `roles: ['video1', ...]` inside inputSchema.media, and
+    // consumed as `role: 'video1'` on a step. Both are flat string literals, so a
+    // per-flow slice is enough - no JS evaluation, matching this file's other sweeps.
+    const flows = [...src.matchAll(/^\s{8}id: '([a-z0-9-]+)',$/gm)];
+    assert.ok(flows.length, 'flowsRegistry.js declares no flows - the id pattern moved');
+
+    for (let i = 0; i < flows.length; i++) {
+        const id = flows[i][1];
+        const body = src.slice(flows[i].index, flows[i + 1]?.index ?? src.length);
+
+        const supplied = new Set(
+            [...body.matchAll(/roles:\s*\[([^\]]*)\]/g)]
+                .flatMap(m => [...m[1].matchAll(/'([^']+)'/g)].map(r => r[1]))
+        );
+        // Only steps that actually declare fields are in scope: a gizmo-only step with
+        // a bad role already fails loudly by rendering nothing the user can act on.
+        const stepsBlock = body.slice(body.indexOf('steps: ['));
+        for (const m of stepsBlock.matchAll(/role:\s*'([^']+)'/g)) {
+            assert.ok(supplied.has(m[1]),
+                `flow "${id}" has a step with role "${m[1]}", which no inputSchema.media ` +
+                `roles[] supplies (supplied: ${[...supplied].join(', ') || 'none'})`);
+        }
+    }
 });

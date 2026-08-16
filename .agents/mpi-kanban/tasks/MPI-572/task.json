@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-572",
+  "title": "Flow steps: make first+last a frame-owned TEMPLATE, so a FlowDef only declares the middle",
+  "description": "Fabio, 2026-08-16, on seeing foley gain a middle step: every Flow has the SAME first stage (supply inputs) and the SAME last stage (generate + result); only the in-between varies. That shape should be a template the frame owns once, not something re-expressed per flow - 'instead of repetition in code'.\n\nWHERE IT STANDS TODAY: the frame is ALREADY half-way there and that is worth knowing before touching it. `_buildInputsSlide` and `_buildRunSlide` are frame-owned and no FlowDef declares them; `steps: []` really does mean 'no middle steps'; and the ticker derives itself ('Inputs' + middles + 'Generate'). So the repetition Fabio is reacting to is NOT the slides - it is what each FlowDef still has to restate around them: `inputSchema.media` labels, `controls` vs step `fields` (two vocabularies for the same widgets, landing in different places in the payload), and the run-slide `uiComponent` escape hatch.\n\nTHIS IS MPI-531's ACCEPTANCE CLAUSE IN DISGUISE: 'the FlowDef is fully expressible as a third-party manifest'. A manifest cannot carry JS, so anything the frame does not own by default is a thing a third-party Flow cannot have. Design the default template with that test, not for the three built-ins.\n\nOPEN QUESTION for the next session to settle WITH Fabio: should `controls` (run slide) and step `fields` collapse into ONE declaration surface? They already share a renderer (`_buildField`) and, since 2026-08-16, the same payload law - a field id `Input_*` becomes an injectionParam, anything else goes top-level. Two names for one concept is the repetition he is pointing at.\n\nSibling of MPI-531 (authoring shape) under the MPI-560 Flow track.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "pending",
+  "created_at": "2026-08-16T07:15:00Z",
+  "updated_at": "2026-08-16T07:15:00Z",
+  "labels": [
+    "architecture",
+    "flows",
+    "1.5"
+  ],
+  "links": {
+    "events": "events.jsonl"
+  }
+}

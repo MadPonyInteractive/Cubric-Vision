@@ -262,6 +262,35 @@ export const MpiBaseFlow = ComponentFactory.create({
             if (v !== undefined) _controlValues[f.id] = v;
         });
 
+        // A STEP's fields need the same seeding, for the same reason: `_buildField`
+        // only WRITES a value when the user changes it, so a field left untouched
+        // would reach the op as nothing at all and the run would silently use the
+        // graph's baked default. That is how a bench-proven negative prompt goes
+        // missing on the one run nobody edited it. Persisted value wins over the
+        // declared default, exactly as above.
+        (flow.steps || []).forEach((step) => {
+            if (!step?.role || !Array.isArray(step.fields)) return;
+            step.fields.forEach((f) => {
+                if (f.type === 'button') return;
+                // Three sources, most-specific first. The TOP-LEVEL fallback is what
+                // makes an older card reusable: `_collectInputs` promotes a field to
+                // the payload root (and `Input_*` into injectionParams), and a flow
+                // that authored the same id as a run-slide `control` before it moved
+                // onto a step persisted it there too. Reading `stepValues` alone made
+                // every foley card generated before that move reopen with an EMPTY
+                // prompt — a silent data loss the user hits through Reuse, not here.
+                const persisted = seeded.stepValues?.[step.role]?.fields?.[f.id]
+                    ?? (/^input_/i.test(f.id) ? seeded.injectionParams?.[f.id] : seeded[f.id]);
+                const v = persisted ?? f.default;
+                if (v === undefined) return;
+                const prev = _stepValues[step.role] || {};
+                _stepValues[step.role] = {
+                    ...prev,
+                    fields: { ...(prev.fields || {}), [f.id]: v },
+                };
+            });
+        });
+
         /** Live step-kind instances, keyed by step index — destroyed on rebuild. */
         const _stepInstances = new Map();
 
@@ -1275,9 +1304,23 @@ export const MpiBaseFlow = ComponentFactory.create({
             // Everything else (`positive`, `negative`) is a run input by its own id.
             const declared = {};
             const declaredParams = {};
-            Object.entries(_controlValues).forEach(([k, v]) => {
+            const _sort = ([k, v]) => {
                 if (/^input_/i.test(k)) declaredParams[k] = v; else declared[k] = v;
+            };
+            // A STEP's declared fields obey the same law as the run slide's controls
+            // — same vocabulary, same renderer, so the same destination. Without
+            // this a prompt authored on a middle step reaches the op only nested
+            // inside `stepValues`, where the op does not look, and the run silently
+            // uses the graph's baked default. `stepValues` still carries them too:
+            // a uiComponent translates from there (Head Swap: box→Input_Box) and
+            // must keep seeing the raw role-keyed shape.
+            Object.values(_stepValues).forEach((v) => {
+                Object.entries(v?.fields || {}).forEach(_sort);
             });
+            // Controls last: a flow declaring the same id in both means the run
+            // slide's value is the one the user saw immediately before pressing
+            // Generate.
+            Object.entries(_controlValues).forEach(_sort);
 
             return {
                 ...(mediaItems.length ? { mediaItems } : {}),
