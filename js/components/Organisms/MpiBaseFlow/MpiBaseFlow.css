@@ -292,25 +292,6 @@
     letter-spacing: 0.04em;
 }
 
-/* The second way to fill a slot: the project's own media. Quiet by default —
-   drop/click is still the primary gesture and this must not compete with it. */
-.mpi-base-flow__slot-browse {
-    margin-top: var(--s-2);
-    padding: var(--s-1) var(--s-2);
-    font-size: var(--t-2xs);
-    color: var(--ink-3);
-    background: none;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    cursor: pointer;
-}
-.mpi-base-flow__slot-browse:hover,
-.mpi-base-flow__slot-browse:focus-visible {
-    color: var(--ink-1);
-    border-color: var(--accent-heat);
-    outline: none;
-}
-
 /* FILLED: THE IMAGE IS THE BOX. Border hugs the image at ITS OWN aspect —
    no fixed height, no crop, no letterbox padding, no background. This is the
    rule most likely to be got wrong. */
@@ -332,7 +313,16 @@
     width: auto;
     height: auto;
 }
-/* Video/audio have no thumbnail yet (MPI-259 open) — the filename fills the box. */
+/* A filled VIDEO slot plays its own clip, muted and looping, so the user can see
+   what is in the slot rather than read a filename at it. */
+.mpi-base-flow__slot-video {
+    display: block;
+    max-width: 208px;
+    max-height: 190px;
+    width: auto;
+    height: auto;
+}
+/* AUDIO still has no thumbnail — the filename fills the box. */
 .mpi-base-flow__slot-name {
     display: block;
     max-width: 208px;

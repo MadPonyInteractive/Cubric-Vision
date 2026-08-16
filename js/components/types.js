@@ -1170,9 +1170,14 @@
  *                                 Called before the modal hides. The media is ALREADY in the
  *                                 project and on disk, so the caller takes the path as-is —
  *                                 nothing is hashed, copied or placed.
+ * @property {Function} [onImport] - (files: File[]) => void. Files chosen from the FILESYSTEM.
+ *                                 Omit it and no Import button renders. The caller is expected
+ *                                 to route these through its own place/hash path, so an
+ *                                 imported file is handled identically whichever surface
+ *                                 reached it.
  *
- * Scope is the CURRENT project only (settled 2026-08-15): a Flow slot could
- * previously be filled ONLY by importing from outside the app. Not a file manager.
+ * Two sources, one surface (settled with the user 2026-08-16): the project's own
+ * media AND the filesystem. Still not a file manager — no cross-project browsing.
  *
  * Instance methods (on instance.el):
  *   show() — Self-portals a backdrop + centred dialog to document.body (via MpiModal).
@@ -1186,6 +1191,7 @@
  *
  * Emits:
  * 'pick'   { filePath: string, mediaType: string } — A tile was chosen; the modal then hides.
+ * 'import' { files: File[] }                       — Files picked from disk; the modal then hides.
  * 'cancel' {}                                      — Cancel BUTTON only (NOT on Escape or hide()).
  */
 

@@ -136,10 +136,18 @@ function _slotLabel(group, idx) {
  * @param {string} type
  * @returns {string}
  */
-function _acceptFor(type) {
-    if (type === 'image') return 'image/*';
-    if (type === 'video') return 'video/*';
-    return 'audio/*';
+/**
+ * Display name for a media URL, extension dropped.
+ *
+ * A slot URL is a `/project-file?path=<urlencoded absolute path>` form, so
+ * splitting it on slashes yields the ENCODED query tail rather than a filename.
+ * Decode the `path` parameter first.
+ */
+function _mediaName(url) {
+    const raw = String(url || '');
+    const q = raw.indexOf('path=');
+    const p = q === -1 ? raw : decodeURIComponent(raw.slice(q + 5).split('&')[0]);
+    return (p.split(/[/\\]/).pop() || '').replace(/\.[^.\s]+$/, '');
 }
 
 export const MpiBaseFlow = ComponentFactory.create({
@@ -378,9 +386,18 @@ export const MpiBaseFlow = ComponentFactory.create({
                         src: resolveMediaUrl(item.url),
                         alt: _slotLabel(group, idx),
                     }));
+                } else if (group.type === 'video') {
+                    // A filled video slot used to be a FILENAME, so the user could not
+                    // see what they had picked. It loops silently instead — the clip is
+                    // the only honest confirmation that the right take is in the slot.
+                    slot.appendChild(ce('video', {
+                        className: 'mpi-base-flow__slot-video',
+                        src: resolveMediaUrl(item.url),
+                        muted: true, loop: true, autoplay: true, playsInline: true,
+                    }));
                 } else {
                     const name = ce('span', { className: 'mpi-base-flow__slot-name' });
-                    name.textContent = item.url.split(/[/\\]/).pop() || item.url;
+                    name.textContent = _mediaName(item.url);
                     slot.appendChild(name);
                 }
                 const clear = ce('button', {
@@ -398,41 +415,36 @@ export const MpiBaseFlow = ComponentFactory.create({
                     onDirty();
                 }));
                 slot.appendChild(clear);
+
+                // A filled slot is still a picker button: clicking it reopens the
+                // gallery to swap the take. Without this the only way to change a
+                // slot was to clear it first, which reads as "destroy to edit".
+                unsubs.push(on(slot, 'click', () => _openMediaPicker(entry, idx, onDirty)));
+                unsubs.push(on(slot, 'keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        _openMediaPicker(entry, idx, onDirty);
+                    }
+                }));
             } else {
                 const icon = ce('span', { className: 'mpi-base-flow__slot-icon' });
                 icon.innerHTML = renderIcon('image', 'lg');
                 const hint = ce('span', { className: 'mpi-base-flow__slot-hint' });
-                hint.textContent = `Drop ${group.type} here`;
+                hint.textContent = `Choose ${group.type}`;
                 slot.appendChild(icon);
                 slot.appendChild(hint);
 
-                // …or pick what the project already holds. Until this existed a
-                // Flow could only consume media from OUTSIDE the app, so the clip
-                // the user had just generated was unreachable from the slot above
-                // it. Stops the click reaching the slot's own file-input handler.
-                const browse = ce('button', {
-                    className: 'mpi-base-flow__slot-browse', type: 'button',
-                });
-                browse.textContent = 'Choose from project';
-                unsubs.push(on(browse, 'click', (e) => {
-                    e.stopPropagation();
-                    _openMediaPicker(entry, idx, onDirty);
-                }));
-                slot.appendChild(browse);
-
-                const fileInput = ce('input', {
-                    type: 'file', accept: _acceptFor(group.type), hidden: true, multiple: true,
-                });
-                slot.appendChild(fileInput);
-
-                unsubs.push(on(slot, 'click', () => fileInput.click()));
+                // ONE function: open the library. The slot used to be two targets in
+                // one box — the box itself opened a file dialog, a Browse button
+                // opened the picker — so the same click meant different things by a
+                // few pixels. The picker now owns BOTH sources (its upload card is
+                // the filesystem), so the box has exactly one job.
+                unsubs.push(on(slot, 'click', () => _openMediaPicker(entry, idx, onDirty)));
                 unsubs.push(on(slot, 'keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
-                }));
-                unsubs.push(on(fileInput, 'change', async () => {
-                    const files = Array.from(fileInput.files || []);
-                    fileInput.value = '';
-                    await _handleFiles(entry, idx, files, onDirty);
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        _openMediaPicker(entry, idx, onDirty);
+                    }
                 }));
                 unsubs.push(on(slot, 'dragover', (e) => {
                     e.preventDefault();
@@ -478,6 +490,14 @@ export const MpiBaseFlow = ComponentFactory.create({
                         role: entry.group.roles[idx],
                     };
                     onDirty();
+                },
+                // The picker's second source. It routes into the SAME _handleFiles as
+                // the slot's own input, so an imported file is placed, hashed and
+                // deduped identically no matter which surface the user reached it from.
+                onImport: (files) => {
+                    _handleFiles(entry, idx, files, onDirty).catch((err) => {
+                        clientLogger.error('MpiBaseFlow', `flow media import failed: ${err?.message || err}`);
+                    });
                 },
             });
             // onDirty rebuilds the slide, which destroys this slide's listeners —
@@ -548,9 +568,14 @@ export const MpiBaseFlow = ComponentFactory.create({
 
             // Multi-file drop fills THIS slot then any later free ones; it never
             // walks backwards over slots the user deliberately left empty.
+            //
+            // startIdx is always a target even when OCCUPIED: the user aimed at that
+            // slot (dropped on it, or reopened the picker from it), so replacing what
+            // is there is the intent. Skipping it would silently divert the file to a
+            // later slot — or drop it entirely on a single-slot Flow like foley.
             const targets = [];
             for (let i = startIdx; i < group.max && targets.length < files.length; i++) {
-                if (!entry.items[i]) targets.push(i);
+                if (i === startIdx || !entry.items[i]) targets.push(i);
             }
             if (files.length > targets.length) {
                 clientLogger.warn('MpiBaseFlow', `dropped ${files.length} ${group.type}(s) but only ${targets.length} slot(s) free from slot ${startIdx} — ignoring extras`);
