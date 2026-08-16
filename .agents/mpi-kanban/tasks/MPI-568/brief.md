@@ -98,6 +98,55 @@ card - and note MPI-507 now owns the plugin-contributes-a-dropdown-entry
 mechanism that MPI-506 was going to build, so a future LTX upscaler entry would
 reuse **that**, not rebuild it.
 
-Fabio's other direction, **upscale-then-interpolate** (upscale a reduced frame
-set, then interpolate back so the interpolator supplies the temporal coherence),
-is NOT carded yet and is independent of this one.
+## IDEA (same card): upscale a reduced frame set, then interpolate back
+
+Fabio's own direction, folded in here 2026-08-16 rather than carded separately.
+Test it **after** the questions above - it is a variation on whatever sampler
+wins, not a competitor to it.
+
+**The idea.** Drop to every Nth frame (or start from a natively low-fps source),
+upscale only those, then interpolate back up to the target frame rate. Fabio has
+run this manually off **16 fps WAN clips** with better results than a straight
+upscale: *"I would upscale them and then interpolate, and then the interpolation
+actually does a good job of matching the previous and next frames."*
+
+**Why it attacks BOTH failures MPI-506 measured**, which is what makes it worth
+bench time:
+
+1. **VRAM / cost.** Fewer frames per pass is the one lever that reliably moves
+   the chunk ceiling. SeedVR2 at 2x collapsed to `frames_per_chunk = 13` of 48;
+   halve the frames and the same budget buys twice the temporal context per
+   frame - or the run simply fits where it did not.
+2. **Temporal coherence.** An interpolator's whole job is matching adjacent
+   frames, so it *enforces* the coherence a per-frame or short-chunk upscaler
+   cannot. This is the direct answer to the oscillation Fabio reports on faces
+   and freckles, and to the flicker risk on MPI-557's `.pth` arm.
+
+**Already on the bench - verified 2026-08-16, nothing to install:**
+
+| Piece | Status |
+|---|---|
+| `rife47.pth` | on disk, `G:\CubricModels\` |
+| `FrameInterpolate` + `FrameInterpolationModelLoader` | **CORE** - `comfy_extras.nodes_frame_interpolation` |
+| `RIFE VFI`, `FILM VFI` | present via `custom_nodes.comfyui-frame-interpolation` |
+
+The core pair matters: it means this needs **no node pack and no `node_lock.json`
+entry**, unlike the custom-node route.
+
+**What to measure.** Same instruments as the rest of the card, plus the one thing
+that is specific to this shape:
+
+- Does the interpolated result beat the straight upscale on **flicker**? That is
+  the claim. Sharpness is not the question here.
+- **Does interpolation smear real motion?** The failure mode of every VFI: fast
+  motion, occlusion and thin structures (hair, fingers) are where it invents
+  mush. A face turning is the honest test, not a slow push-in.
+- Cost per second of footage vs the straight upscale - halving the frames should
+  more than halve the sampler time, so this may be the cheapest arm on the card.
+- **Which N?** 2 (every other frame) is the conservative start. Fabio's WAN case
+  is really "the source was 16 fps to begin with", which is a different and
+  easier problem than decimating a 24/30 fps clip - do not conflate them when
+  reading the result.
+
+`ponytail:` this is a bench idea, not a spec. If it wins, the app-side shape
+(a checkbox? automatic below some frame budget?) is a later decision.
