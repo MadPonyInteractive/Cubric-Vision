@@ -81,7 +81,7 @@ DigitalPastel, koronen, reijlita).
 `sdxl-nsfw` is coyotte's and sets `allowNoCredit: true` — its block is **deliberate**, the
 same choice already made for the Krea 2 weight from the same creator.
 
-## The `Image` flag — DECIDED 2026-08-03, do not re-open
+## The `Image` flag — DECIDED 2026-08-03, RE-OPENED and CLOSED HARDER 2026-08-16
 
 `ill-anime` (koronen) and `pony-mix` (reijlita) grant **`RentCivit` only**: no `Image`,
 which is the flag that lets a user sell what they generate. Vision is a local app whose
@@ -98,3 +98,71 @@ not an oversight** — a later reader who spots the missing `Image` flag should 
 Why the Chroma precedent did not decide it: `chroma-style-cinema` was one style LoRA in a
 rack that could be renumbered at no cost to anyone. These are **base checkpoints already in
 users' hands in released v1.0.1**. Different cost, different call.
+
+### 2026-08-16 — re-opened at the user's request, then closed won't-fix (MPI-534)
+
+MPI-534 existed to replace `ill-anime` and `pony-mix` with cleanly-licensed bases.
+It was picked up, researched, and **closed WON'T-FIX**. The reasoning supersedes the
+2026-08-03 framing above rather than contradicting it:
+
+- Vision is **free and open-source** and forces the same on anyone building on it.
+  Commercial rights in generated output were never a guarantee made to users, and
+  output responsibility already sits with the user via the existing consent-box
+  pattern (the MiniMax H3 territory flow).
+- **Standing rule from here on:** only **GATED or FORCED** licence obligations are in
+  scope — a provider blocking access until something is done (H3's territory
+  restriction, Klein 9B's gate), or a term explicitly naming apps like ours
+  (`purplesmartai/pony-v7-base` bars use in "an inference service or application" —
+  simply don't pick it). CivitAI badge flags are creator-ticked metadata, not a
+  contract, and are **not** to be raised again for a free app. So the sentence above
+  — "`Image` is normally the decisive flag for us" — no longer describes how this
+  project decides.
+
+### DMD2 makes every SDXL weight non-commercial anyway — hash-proven
+
+The table's `allowCommercialUse` column must **not** be read as "this weight is
+commercially clean". Our SDXL checkpoints are OUR merges, and the recipe kept in
+`comfy_workflows/scripts/Model Merger.json` uses two LoRAs:
+
+| LoRA | strength | source | licence |
+|---|---|---|---|
+| `spo_sdxl_10ep_4k-data_lora_webui.safetensors` | 0.4 | `SPO-Diffusion-Models/SPO-SDXL_4k-p_10ep_LoRA` | apache-2.0 — fine |
+| `dmd2_sdxl_4step_lora.safetensors` | 0.7 | `tianweiy/DMD2` | **cc-by-nc-4.0 — NON-COMMERCIAL** |
+
+Verified 2026-08-16 by hash, not by filename: our local copy and the HF file are both
+787,359,616 bytes with sha256
+`a374289e9446d7f14d2037c4b3770756b7b52c292142a691377c3c755010a1bb`. That is the
+strongest evidence class in this doc — stronger than the filename+creator provenance
+behind the table itself.
+
+**Scope of the evidence — read this before quoting the section.** `Model Merger.json`
+is an authoring scratchpad, not an executed pipeline record. Its SDXL chain
+(`CheckpointLoaderSimple` → both `LoraLoaderModelOnly` → `CheckpointSave`, nodes
+1/2/3/5) is **bypassed** (`mode: 4`); the only ACTIVE circuit in the file today is a
+Wan 2.2 i2v merge (nodes 6/7/12). It wires exactly ONE checkpoint input,
+`PONY\animergemeij_v30VAE.safetensors` → `checkpoints/PONY_Mix`.
+
+So what is **directly evidenced** is: the DMD2 file identity (hash, above) and that
+`PONY_Mix` was produced by this SPO+DMD2 recipe. That the SAME merge was applied to
+`SDXL_Realistic`, `SDXL_NSFW`, `ILL_Anime` and `ILL_Anime_Beauty` is a reasonable
+**inference** — all five share one template and the same 7-step / CFG 1.5 / `lcm`
+sampler that only a distillation LoRA makes work — but no repo artifact records those
+four merge runs. Confirming it would mean inspecting the weights themselves.
+
+**Consequence, on that basis:** any SDXL weight carrying the DMD2 merge is
+non-commercial regardless of what its base grants upstream, so swapping a base for a
+"cleanly-licensed" one would produce a weight that is still NC while being RECORDED as
+clean. That is why MPI-534 closed rather than shipping a swap. **Deliberately accepted,
+per the standing rule above — do not open a card for it.**
+
+DMD2 is also load-bearing: it is what makes the SDXL graphs run at 7 steps / CFG 1.5 /
+`lcm` (that sampler config is itself the strongest circumstantial evidence that the
+distillation LoRA is present in all five weights). Dropping it costs real speed and
+quality. The two `LoraLoaderModelOnly` nodes sit **bypassed** (`mode: 4`) in
+`sdxl_t2i_template.json` too, and the API export strips them, so no runtime file
+contains them — the merge is the only place they apply.
+
+Replacement research, if these are ever swapped on QUALITY grounds, is kept in
+`.agents/mpi-kanban/tasks/MPI-534/brief.md`: HF candidates with hashes
+(`AstraliteHeart/pony-diffusion-v6` OpenRAIL-M, `Laxhar/noobai-XL-1.1` FAIPL), the
+rejected `purplesmartai/pony-v7-base`, and the full merge recipe.

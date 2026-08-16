@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/data/modelConstants/modelDeps.js",
+    "js/data/modelConstants/models.js",
+    "docs/models/community-merges-licences.md",
+    ".agents/mpi-kanban/tasks/MPI-534/task.json",
+    ".agents/mpi-kanban/tasks/MPI-534/brief.md",
+    ".agents/mpi-kanban/tasks/MPI-534/validation.md"
+  ]
+}

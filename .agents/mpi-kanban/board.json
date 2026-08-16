@@ -70,11 +70,11 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-534",
       "MPI-520",
       "MPI-531"
     ],
     "done": [
+      "MPI-534",
       "MPI-506",
       "MPI-536",
       "MPI-565",
@@ -168,8 +168,17 @@
       "MPI-549"
     ]
   },
-  "updated_at": "2026-08-16T00:00:00Z",
+  "updated_at": "2026-08-16T04:20:25Z",
   "events": [
+    {
+      "at": "2026-08-16T04:20:25Z",
+      "type": "task.moved",
+      "task": "MPI-534",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "note": "doing -> done (rejected / won't-fix). Free open-source app; commercial output rights were never guaranteed and user consent already covers output. DMD2 (cc-by-nc-4.0, hash-proven, merged 0.7 into all five SDXL weights) made the card's goal unreachable regardless. No code changed, no merge run. Research kept in brief.md."
+    },
     {
       "at": "2026-08-16T04:20:25Z",
       "type": "task.moved",
