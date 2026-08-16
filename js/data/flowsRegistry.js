@@ -102,76 +102,7 @@ export function flowDepKey(flowId) {
 
 /** @type {FlowDef[]} */
 export const FLOWS = [
-    // First flow (MPI-256 Phase 4): image-in → image-out regen, 1 model.
-    // Re-pointed to sdxl-nsfw (sdxl-realistic isn't installed; identical graph).
-    {
-        id: 'image-regen',
-        title: 'Image Regen',
-        preview: 'sdxl-real-05.webp',
-        description: 'Upload an image and re-imagine it with a prompt. Runs SDXL image-to-image and drops the result into your gallery.',
-        requiredModels: ['sdxl-nsfw'],
-        operation: 'flowImageRegen',
-        workflow: 'flow_sdxl_regen.json',
-        uiComponent: 'MpiFlowImageRegen',
-        mediaType: 'image',
-        inputSchema: { positive: 'string', mediaItems: 'image[1]' },
-    },
-    // Second flow (MPI-259): multi-model test flow. Text-to-image (NO source image),
-    // exercises the multi-model install path (sdxl-nsfw + nvidia-pid) + the flexible
-    // input seam (no media slot). Reuses MpiFlowImageRegen (positive-prompt only).
-    {
-        id: 'sdxl-4k',
-        title: 'SDXL 4K',
-        preview: 'chroma-flash-01.webp',
-        description: 'Multi-image test Flow. Takes up to two source images and a prompt, and can produce up to three 4K SDXL outputs — exercises the multi-model install path, polymorphic media inputs, and multi-output.',
-        requiredModels: ['sdxl-nsfw', 'nvidia-pid'],
-        operation: 'flowSdxl4k',
-        workflow: 'flow_sdxl_4k.json',
-        uiComponent: 'MpiFlowImageRegen',
-        mediaType: 'image',
-        // Polymorphic inputs (MPI-259). `media` = declared media slots; BaseFlow renders
-        // an upload zone per declared type. A group MAY also declare
-        // `labels: ['Original', 'Face Reference']` (index-aligned with roles) — slot
-        // copy is the APP's to name, and the carousel frame shows it above each slot;
-        // without it the frame falls back to a numbered noun (MPI-306).
-        // `mode:'upto'` = dynamic-until-cap (numbered,
-        // an empty zone appears until `max` slots are filled). `role` matches the op's
-        // mediaInputs key so the injector maps each item to its Input_* node.
-        inputSchema: {
-            positive: 'string',
-            media: [
-                { type: 'image', mode: 'upto', max: 2, roles: ['image1', 'image2'] },
-            ],
-        },
-        // Multi-output: up to 3 image capture nodes (Output_Image / _2 / _3), each
-        // self-gated in the workflow by input presence. The KEPT count is only known
-        // at completion (capture-what-ran) — no fixed count is declared here; the run
-        // shows ONE "Generating…" card and lands the real 1..N cards on complete.
-    },
-    // Third flow (MPI-259): NO-MODEL video utility. Loads up to two video PATHS + an
-    // optional audio track, stitches the videos side-by-side, carries audio through,
-    // and saves. Exercises the model-free path (requiredModels: []; always available,
-    // no install gate), video media slots, and video output. No prompt / no uiComponent
-    // — MpiBaseFlow renders the media slots straight from inputSchema.media.
-    {
-        id: 'video-stitch',
-        title: 'Video Stitch',
-        preview: 'sdxl-real-01.webp',   // reuse an existing model preview for the tile
-        description: 'Stitch up to two videos side-by-side and carry an audio track through. Needs no model — drop your clips and run.',
-        requiredModels: [],
-        operation: 'flowVideoStitch',
-        workflow: 'flow_video_test.json',
-        mediaType: 'video',
-        // Two video slots (Input_video / Input_video_2) + one audio slot (Input_audio).
-        // roles match the op's mediaInputs keys so the injector maps each item to its node.
-        inputSchema: {
-            media: [
-                { type: 'video', mode: 'upto', max: 2, roles: ['video1', 'video2'] },
-                { type: 'audio', mode: 'upto', max: 1, roles: ['audio1'] },
-            ],
-        },
-    },
-    // Fourth flow (MPI-299): 2-image head swap. Takes a TARGET image (body/scene kept)
+    // First flow (MPI-299): 2-image head swap. Takes a TARGET image (body/scene kept)
     // and a SOURCE image (head taken), each with an optional box marking the head
     // region, and swaps one onto the other.
     //

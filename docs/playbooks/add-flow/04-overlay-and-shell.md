@@ -9,7 +9,7 @@ overlay/status-bar/z-order gotchas. Read [README](README.md) first.
 |---|---|---|---|
 | `MpiFlowLibrary` | Compound | `js/components/Compounds/LandingPages/MpiFlowLibrary/` | Dev-gated picker overlay. Body-mode MpiOverlay, tile grid + availability badge, detail slide-over with Open/Install |
 | `MpiBaseFlow` | Organism | `js/components/Organisms/MpiBaseFlow/` | Shared Flow frame (COMPOSITION, not inheritance). `main-area` MpiOverlay; header + Back, media slots (from `inputSchema.media`), content slot for a per-flow uiComponent, Run, result pane |
-| `MpiFlowImageRegen` | Organism | `js/components/Organisms/MpiFlowImageRegen/` | First flow's controls-only component (a prompt textarea + `el.getInputs()`), mounted into MpiBaseFlow's content slot. Reused by SDXL 4K |
+| `MpiFlowHeadSwap` | Organism | `js/components/Organisms/MpiFlowHeadSwap/` | The ONLY surviving per-flow `uiComponent` (MPI-332 ripped the rest). Controls-only, exposes `el.getInputs()`, mounted into MpiBaseFlow's content slot. **Prefer declarative `controls` (MPI-531) for a new Flow — a `uiComponent` cannot be expressed by a third-party manifest.** |
 
 `MpiBaseFlow` and `MpiFlowLibrary` both use the **MpiOverlay primitive**; they do NOT reimplement
 the overlay.

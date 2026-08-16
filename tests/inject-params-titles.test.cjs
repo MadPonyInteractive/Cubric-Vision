@@ -179,59 +179,6 @@ test('every opInject title exists, and covers every op the model runs (MPI-354)'
     assert.deepStrictEqual(problems, [], 'opInject is incoherent:\n  ' + problems.join('\n  '));
 });
 
-test('the first Flow workflow carries its inject + capture titles (MPI-256)', () => {
-    // Universal-op workflows (universal_workflows.js) are NOT covered by the generic
-    // per-model sweep above (that only walks models.js `workflows:{}` blocks). The Flow
-    // op runs flow_sdxl_regen.json via model:{id:null}; pin the titles the injector +
-    // capture depend on. Input_Is_i2i must be present (and baked true — the Flow is
-    // always image-in) or the graph silently degrades to txt2img.
-    const file = 'flow_sdxl_regen.json';
-    const have = titlesOf(file);
-    for (const title of ['input_image', 'input_positive', 'input_negative', 'output_image', 'input_is_i2i']) {
-        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
-    }
-    // Assert i2i is baked true (Flow is image-in→image-out, never txt2img).
-    const wf = JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8'));
-    const i2iNode = Object.values(wf).find(n => (n._meta?.title || '').toLowerCase() === 'input_is_i2i');
-    assert.strictEqual(i2iNode?.inputs?.boolean, true, 'Input_Is_i2i must be baked true in the Flow workflow');
-});
-
-test('the second Flow workflow (SDXL 4K) carries its polymorphic I/O titles (MPI-259)', () => {
-    // flowSdxl4k runs flow_sdxl_4k.json via model:{id:null}. Re-exported as the polymorphic
-    // I/O test Flow: prompt/seed + the full media-input matrix (numbered/lowercase slots)
-    // + MULTIPLE same-type capture nodes. Pins the exact titles the Flow injects into and
-    // captures from. Numbered/lowercase names are deliberate — the injector matches them
-    // case-insensitively (commandExecutor _buildParams + comfyController media-kind sweep).
-    const file = 'flow_sdxl_4k.json';
-    const have = titlesOf(file);
-    // Always-injected + declared input slots (multi-IMAGE variant: up to 2 images).
-    for (const title of [
-        'input_positive', 'input_negative', 'input_seed',
-        'input_image', 'input_image_2',
-    ]) {
-        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
-    }
-    // Multi-output: several same-type capture nodes (MPI-259 prefix-match capture).
-    for (const title of ['output_image', 'output_image_2', 'output_image_3']) {
-        assert.ok(have.has(title), `${file} must carry a capture node titled "${title}"`);
-    }
-});
-
-test('the third Flow workflow (Video Stitch) carries its media I/O titles (MPI-259)', () => {
-    // flowVideoStitch runs flow_video_test.json with model:{id:null} and NO required model.
-    // Pins the lowercase/numbered media-input titles + the video capture titles. The
-    // injector matches case-insensitively; the media-kind sweep pattern-forces
-    // input_video*/input_audio* so these resolve + upload on the remote engine.
-    const file = 'flow_video_test.json';
-    const have = titlesOf(file);
-    for (const title of ['input_video', 'input_video_2', 'input_audio']) {
-        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
-    }
-    for (const title of ['output_video', 'output_video_2']) {
-        assert.ok(have.has(title), `${file} must carry a capture node titled "${title}"`);
-    }
-});
-
 test('the LTX extend Flow carries its I/O titles AND its declared control node (MPI-520)', () => {
     // flowLtxExtend runs flow_ltx_extend.json with model:{id:null} on the installed LTX
     // 2.3 checkpoint. Two silent-skip classes in one test: the media/prompt/seed titles

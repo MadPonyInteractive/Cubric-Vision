@@ -1039,20 +1039,6 @@
  */
 
 /**
- * @typedef {Object} MpiFlowImageRegenProps (Organism — js/components/Organisms/MpiFlowImageRegen)
- * @property {Object} [initialInputs] - Seed inputs ({positive}) from a prior run.
- *
- * The first Flow's controls (image-in → image-out regen): a single positive-prompt
- * textarea rendered into MpiBaseFlow's content slot. Exposes el.getInputs() →
- * {positive}, which BaseFlow merges with the uploaded image before Run. Controls
- * only — the frame, upload, Run, and result come from MpiBaseFlow.
- *
- * Instance methods (on instance.el):
- *   getInputs() — returns {positive} (trimmed prompt text).
- *   destroy()   — removes the input listener.
- */
-
-/**
  * @typedef {Object} MpiFlowHeadSwapProps (Organism — js/components/Organisms/MpiFlowHeadSwap)
  * @property {Object} [initialInputs] - Seed inputs from a prior run; reads
  *   injectionParams.Input_Tier to restore the tier.

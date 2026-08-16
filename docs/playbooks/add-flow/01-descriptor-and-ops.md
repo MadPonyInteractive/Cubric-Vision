@@ -14,6 +14,11 @@ The two registrations every flow needs: the **op** (in 4 files) and the **descri
 A flow op is a **universal op** (a second producer into the generation queue, exactly like
 the History block's universal tool ops). Register it in all four, in this order:
 
+> The `flowVideoStitch` op used below is an **illustrative example, not a shipping op** — it
+> was one of the three test Flows ripped in MPI-332. It is kept here because it is the only
+> shape that exercises the full media-input matrix (image + video + the audio string) in one
+> block. For a real, shipping example see `flowLtxFoley` in `js/data/commandRegistry.js`.
+
 1. **`js/data/commandRegistry.js`** — the op definition:
    ```js
    flowVideoStitch: {

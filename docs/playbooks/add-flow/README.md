@@ -132,6 +132,6 @@ Flow-specific additions:
 - `js/services/flowService.js` — `submitFlowGeneration`, `openFlowFromReuse`
 - `js/components/Compounds/LandingPages/MpiFlowLibrary/` — the picker overlay
 - `js/components/Organisms/MpiBaseFlow/` — the Flow frame (renders media slots, Run, result pane)
-- `js/components/Organisms/MpiFlowImageRegen/` — the first flow's controls (reused by SDXL 4K)
-- `comfy_workflows/App_*.json` / `app_*.json` — flow workflows (case-insensitive resolver)
+- `js/components/Organisms/MpiFlowHeadSwap/` — the only surviving per-flow `uiComponent` (MPI-332); prefer declarative `controls` (MPI-531) for new Flows
+- `comfy_workflows/flow_*.json` — flow workflows (resolved case-insensitively)
 - `state.s_flowInputs` — session-only per-flow input snapshot

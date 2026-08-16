@@ -924,57 +924,6 @@ export const commands = {
         universal: true,
         injector: 'resize',
     },
-    flowImageRegen: {
-        label: 'Flow: Image Regen',
-        progressLabel: 'Generating',
-        mediaType: MEDIA_TYPE.IMAGE,
-        requiresImages: 1,
-        mediaInputs: [
-            { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
-        ],
-        promptRequired: true,
-        universal: true,   // first Apps op (MPI-256) — flow_sdxl_regen.json, i2i baked true.
-    },
-    flowSdxl4k: {
-        label: 'Flow: SDXL 4K',
-        progressLabel: 'Generating',
-        mediaType: MEDIA_TYPE.IMAGE,
-        requiresImages: 0,          // all image inputs optional — runs t2i with none (MPI-259).
-        // Up to 2 optional image slots → Input_Image / Input_Image_2 (MpiLoadImageFromPath
-        // nodes — take a filesystem PATH in their `string` input; empty path self-gates its
-        // Output_Image* branch via ExecutionBlocker, no card). role keys match the app's
-        // inputSchema. Injector routes these class='MpiLoadImageFromPath' slots through the
-        // media path-resolve branch (local path / Pod-uploaded path), not an upload-name.
-        mediaInputs: [
-            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: false },
-            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
-        ],
-        promptRequired: true,
-        universal: true,            // 2nd Apps op — flow_sdxl_4k.json, multi-model (sdxl-nsfw + nvidia-pid).
-    },
-    flowVideoStitch: {
-        label: 'Flow: Video Stitch',
-        progressLabel: 'Stitching',
-        mediaType: MEDIA_TYPE.VIDEO,
-        requiresImages: 0,          // no image inputs — video utility, NO generation model.
-        // Video utility (flow_video_test.json): up to 2 video PATHS (MpiString Input_video /
-        // Input_video_2 — VHS_LoadVideoPath reads the string) stitched side-by-side, plus an
-        // optional audio track. Empty video paths self-gate their branch via MpiAnyChecker/
-        // MpiBlockIfEmpty/MpiIfElse; empty audio keeps the baked LoadAudio placeholder.
-        // Titles are LOWERCASE/numbered to match the authored nodes; the injector matches
-        // case-insensitively and the media-kind sweep pattern-forces input_video*/input_audio*.
-        mediaInputs: [
-            { key: 'video1', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_video',   required: false },
-            { key: 'video2', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_video_2', required: false },
-            // Audio slot: mediaType is the string 'audio' (MEDIA_TYPE only enumerates
-            // image/video). The app's audio item carries mediaType 'audio' too, so the
-            // role-first match in _buildParams lines up — with VIDEO here it never matched
-            // and Input_audio was never injected (output kept the source's own audio).
-            { key: 'audio1', mediaType: 'audio', title: 'Input_audio', required: false },
-        ],
-        promptRequired: false,      // pure media utility — no prompt.
-        universal: true,            // 3rd Apps op — flow_video_test.json, NO model.
-    },
     flowHeadSwap: {
         label: 'Flow: Head Swap',
         progressLabel: 'Swapping',

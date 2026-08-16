@@ -25,7 +25,6 @@ import { MpiChangelogDialog } from './components/Compounds/MpiChangelogDialog/Mp
 import { MpiModelManager } from './components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
 import { MpiFlowLibrary } from './components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js';
 import { MpiBaseFlow } from './components/Organisms/MpiBaseFlow/MpiBaseFlow.js';
-import { MpiFlowImageRegen } from './components/Organisms/MpiFlowImageRegen/MpiFlowImageRegen.js';
 import { MpiFlowHeadSwap } from './components/Organisms/MpiFlowHeadSwap/MpiFlowHeadSwap.js';
 import { getFlowById } from './data/flowsRegistry.js';
 import { MpiOkCancel } from './components/Compounds/MpiOkCancel/MpiOkCancel.js';
@@ -458,7 +457,7 @@ async function _bootApp() {
   // resolved descriptor + its per-flow controls component (name → blueprint map;
   // the descriptor's uiComponent is a string so the registry stays import-free).
   // One live Flow at a time — destroy the prior instance before mounting the next.
-  const _flowComponents = { MpiFlowImageRegen, MpiFlowHeadSwap };
+  const _flowComponents = { MpiFlowHeadSwap };
   let _activeFlow = null;
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('flow:open', ({ flowId }) => {

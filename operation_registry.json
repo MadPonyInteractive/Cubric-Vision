@@ -123,21 +123,6 @@
     "appVersionIntroduced": "0.0.1",
     "universal": true
   },
-  "flowImageRegen": {
-    "latestVersion": "1.0",
-    "appVersionIntroduced": "1.1.0",
-    "universal": true
-  },
-  "flowSdxl4k": {
-    "latestVersion": "1.0",
-    "appVersionIntroduced": "1.1.0",
-    "universal": true
-  },
-  "flowVideoStitch": {
-    "latestVersion": "1.0",
-    "appVersionIntroduced": "1.1.0",
-    "universal": true
-  },
   "flowHeadSwap": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.1.0",

@@ -41,15 +41,6 @@ export const UNIVERSAL_WORKFLOWS = {
     resizeVideo: {
         workflow: 'resize_video.json',
     },
-    flowImageRegen: {
-        workflow: 'flow_sdxl_regen.json',
-    },
-    flowSdxl4k: {
-        workflow: 'flow_sdxl_4k.json',
-    },
-    flowVideoStitch: {
-        workflow: 'flow_video_test.json',
-    },
     flowHeadSwap: {
         workflow: 'flow_head_swap.json',
     },
