@@ -932,6 +932,7 @@ synthesising structure the source never had. Reported as `top/mid`.
 | `4x_NMKD-Siax_200k` .pth | 1.5x | 1.23 | 1.10 | 0.89 |
 | SeedVR2 3B, AI clip | 1.5x | 6.18 | 3.50 | **0.57** |
 | SeedVR2 3B, cowboys clip | **2x** | 5.96 | 2.53 | **0.43** |
+| SeedVR2 3B, cowboys clip | **3x** | 8.04 | 1.96 | **0.24** |
 
 **The control is the load-bearing part** - it rules out the codec as the
 explanation. Re-encoding the lanczos reference through the identical h264 settings
@@ -940,9 +941,10 @@ readings are properties of the model, not of the encode.
 
 **A prediction was made and FAILED, which is why this is trustworthy.** The
 hypothesis was that 1.5x simply gave the model no room, and that a higher factor
-would force reconstruction and push `top/mid` up. At 2x it went **down** (0.57 ->
-0.43). SeedVR2 does the same thing at every scale tested; it is not
-detail-starved at low factors.
+would force reconstruction and push `top/mid` up. It went **down** at every step - 0.57 at 1.5x, 0.43 at 2x, **0.24 at 3x**. The decline is
+monotonic: mid gain RISES (6.18 -> 5.96 -> 8.04) while top gain COLLAPSES (3.50 -> 2.53 ->
+1.96). The more room it is given, the more purely it behaves as a mid-band amplifier.
+SeedVR2 is not detail-starved at low factors; reconstruction is simply not what it does.
 
 **Do NOT restate this as "no better than a .pth upscaler" - that part is false.**
 SIAX at 1.5x contributes almost nothing (mid 1.23, top 1.10 - visually
@@ -976,7 +978,7 @@ is a *separate* open gate - these numbers are the optimistic case):
 | 678x1214 | 0.82 | 1.5x | 57-69 |
 | 1536x640 | 0.98 | 1.5x | 57 |
 | 1344x768 | 1.03 | **2x** | **13** - 33 OOMs |
-| 1344x768 | 1.03 | **3x** | **OOMs at fpc=5** - the model's own floor |
+| 1344x768 | 1.03 | **3x** | **fpc=5 only** - 1278s for a 2s clip (~21 min) |
 
 **2x on a ~1 Mpx source collapses the chunk to 13 frames**, against the model's
 own documented floor of 5 for temporal consistency to engage at all. Shipping a
