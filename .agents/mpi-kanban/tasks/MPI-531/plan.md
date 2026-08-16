@@ -290,3 +290,45 @@ MOVES on screen. `prompt-contract.md` rewritten accordingly.
 **Audio-quality expectations are now set, and they are a MODEL property, not a graph bug:**
 breath and other thinly-covered sound classes reproduce badly, and no widget fixes that. Seed
 variance handles the rest. Design the Flow's copy around that.
+
+
+### 2026-08-16 (session 4) - direct audio PROVEN, and lipsync is definitively a different graph
+
+The `#108=true` run finally happened. It works, and it answered a question the card had been
+carrying since MPI-536: **supplied audio preserves the WORDS**, not just the timing. Two runs,
+seed and prompt held, only the audio file swapped (`dc472c37` Boss vs `3acc6ffd` Henchman):
+each output's 10 ms-RMS envelope tracked its OWN source at r=+0.984 / +0.986 and the other at
++0.41, with different audio hashes. Fabio confirmed by ear - Boss.mp3 says "You better stop
+right there" and that is what the clip said, against a `#12` asking for a different line.
+
+**Two traps recorded in `docs/models/ltx/audio-input.md`:**
+- **Raw-sample correlation is a FALSE NEGATIVE** (+0.09 on a working pair). A VAE round-trip
+  kills sample phase and keeps the envelope - correlate 10 ms RMS frames, never samples. I
+  reported "not passthrough" off the raw number before Fabio's ear corrected it.
+- **Length must match the window** - `#105` is 73 frames @24fps ~ 3.04 s; both runs were
+  pre-trimmed. An 8 s source misaligns.
+
+**Lipsync is NOT a foley mode - settled, not proposed.** Foley's `#115` is literally "freeze
+video, mask audio", so no mouth can ever move on it; four crops across `00036` show the mouth
+shut while speech plays. `#108=true` here is re-voicing over frozen video.
+
+**Card outcome:** MPI-538 already IS the lipsync card and is better specified than a new one -
+it owns the v2v lipdub graph, the face-size constraint and the line-length lever. I created a
+duplicate (MPI-569) before reading it and removed it cleanly - board.json `next_id` was 569
+before and after, so the id was never consumed and is still free for the next card; the
+card left no trace in the event logs or `tasks/`. `validate_board.py` passes (it did flag one
+unrelated pre-existing violation, MPI-520 linking a `checklist.md`/`plan.md` that do not
+exist - fixed by dropping the stale links). Today's evidence was folded into MPI-538 instead, including an explicit TENSION note:
+that card says "frozen audio is PROVEN DEAD" and "reference audio IS the feature", which its
+own v2v runs may still support, while supplied audio demonstrably carries words on a
+frozen-video graph. Left as an open bench question rather than overwritten.
+
+**Fabio's decisions this session:** close the foley thread; lipsync becomes its own Flow later
+(MPI-538); do NOT rip the audio booleans from `flow_ltx_foley.json` - the app already declares
+no audio slot and no influence knob, so they are unreachable from the UI, and removing them
+would delete MPI-538's control arm mid-investigation.
+
+**Next:** foley is done at the bench. The remaining MPI-531 items (2 `steps[].image`, 3 author
+declaratively, 4 port `MpiFlowHeadSwap`) are untouched, plus the frame punch list (media
+picker shipped; result pane + step-2 relayout open) and the still-unwritten latent-preview
+consumer card.

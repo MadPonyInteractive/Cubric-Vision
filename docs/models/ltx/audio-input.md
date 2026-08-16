@@ -56,11 +56,51 @@ There are THREE routes to voice, not two, and the cheapest already works:
 | Route | Booleans | State |
 |---|---|---|
 | Prompt-only voice | both false | **PROVEN** (this finding) |
-| Direct audio (user's own recording — the lipsync case) | `#108=true` | untested |
-| Voice-ID reference | `#122=true` | untested |
+| Direct audio (user's own recording) | `#108=true` | **PROVEN 2026-08-16** — see below. NOT the lipsync case on this graph |
+| Voice-ID reference | `#122=true` | untested; **DROPPED for v1** on distilled (§ below) |
 
 Whether the reference branch is needed AT ALL depends on how well prompt-only voice can be
 directed. Do not design the Flow's audio UI until that is known.
+
+## ✅ DIRECT AUDIO (`#108=true`) WORKS ON FOLEY — AND IT IS NOT LIPSYNC (2026-08-16)
+
+First execution of this mode on the foley graph, after being staged and dropped twice.
+
+**The words survive.** Two runs, seed (`918273645`) and prompt held, **only** the supplied
+file swapped — `Boss_3s.mp3` (prompt `dc472c37`) vs `Henchman_3s.mp3` (`3acc6ffd`):
+
+| pair | envelope r |
+|---|---|
+| output A vs **its own** source | **+0.984** |
+| output B vs **its own** source | **+0.986** |
+| each output vs the *other* source | +0.41 |
+| output A vs output B | +0.42 (different SHA256) |
+
+Identical seed and prompt producing different audio, each tracking its own input, is the
+proof the supplied latent drives the result. The user then confirmed by ear that the
+supplied line came through **verbatim** — Boss.mp3 says *"You better stop right there"*,
+which is what the clip said, while `#12` had asked for a different line entirely. So
+supplied audio overrides the prompt's spoken line; it is not merely conditioning timing.
+
+**But no mouth moves, by construction.** `#115 LTXVSetAudioVideoMaskByTime` is titled
+*"Foley Mask (freeze video, mask audio)"* — the video latent is frozen, so there is no
+mouth to animate. Four crops sampled across `00036` show the mouth shut throughout while
+speech plays. **`#108=true` on foley is re-voicing over frozen video: bring-your-own-voice,
+not bring-your-own-performance.** Lipsync is a different graph (§ MPI-537 below) and a
+different card (MPI-538).
+
+### Measure this with the ENVELOPE, not raw samples
+
+Raw-sample cross-correlation on the same pair returned **+0.09** — a false negative that
+reads as "the audio was regenerated". A VAE round-trip destroys sample phase while
+preserving the amplitude envelope, so correlate **10 ms RMS frames**, not samples. The
+per-second levels are a cheap sanity check on the same idea: output tracked its source
+within ~0.8 dB across all three seconds, dip at 2–3 s included.
+
+### Length must match the window
+
+The foley window is `#105 GetImageRangeFromBatch` = **73 frames @ 24 fps ≈ 3.04 s**. An
+8 s source against it truncates or misaligns; both runs above were pre-trimmed to 3.042 s.
 
 ### Bench file
 

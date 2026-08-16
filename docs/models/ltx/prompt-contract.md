@@ -29,6 +29,17 @@ over the clip. Always either:
 
 (Durable → bake into the Cubric-Prompt recipe.)
 
+### SUPPLIED AUDIO OVERRIDES THE PROMPT'S SPOKEN LINE (2026-08-16)
+
+The `saying: "…"` contract holds only while the model is GENERATING the audio. With direct
+audio live (`Input_Use_Input_Audio` / `#108=true`), the supplied recording's words come
+through **verbatim** and the prompt's quoted line is ignored — measured and user-confirmed
+on the foley bench, where `#12` asked for one line and the supplied file's line is what
+played. Detail: `audio-input.md` § Direct audio.
+
+So a Flow that accepts user audio must not also promise prompt-authored dialogue: the
+prompt still steers ambience and delivery, never the words.
+
 ## Stereo needs ON-SCREEN MOTION — direction words alone do NOT pan (2026-08-15, foley bench)
 
 **Six runs, and the only two that produced a stereo field both had a subject physically
