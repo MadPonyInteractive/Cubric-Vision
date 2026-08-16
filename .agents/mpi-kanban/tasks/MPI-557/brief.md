@@ -44,6 +44,31 @@ existing detailer skeleton for one that sees all frames at once.**
    - **LTX v2v** at denoise ~0.3 - invents more detail, prompt-steerable, risk
      is drift. `raw/ltx_v2v_template.json` already carries
      `ImageBatchExtendWithOverlap` + `GetImageRangeFromBatch`.
+   - **Plain `.pth` upscale-with-model** (`ImageUpscaleWithModel`, e.g.
+     `4x_NMKD-Siax_200k` or `1x-ITF-SkinDiffDetail-Lite-v1`) - **added
+     2026-08-16 on Fabio's call, to be benched HEAD-TO-HEAD against SeedVR2 on
+     the same crop.** No temporal model at all, so no chunking, no VRAM ceiling,
+     and seconds per clip instead of minutes. On a face CROP the quality gap that
+     exists at full-frame scale may simply not be visible, and the crop is small
+     enough that a 4x model has plenty of headroom.
+     `1x-ITF-SkinDiffDetail-Lite-v1` is the more interesting of the two for this
+     card - a 1x SKIN-DETAIL model, which is precisely this card's job, and it
+     never rescales.
+
+     **Be honest about the gap when benching.** At FULL FRAME the two are not
+     close: measured 2026-08-16 (MPI-506 brief S 2k), SIAX scores mid-gain 1.23 /
+     top-gain 1.10 against a lanczos baseline - nearly a no-op - while SeedVR2
+     scores 6.18 / 3.50 and visibly adds freckles, knit stitches and wood grain
+     where SIAX looks like plain lanczos. The question this bench answers is
+     whether that gap still matters on a 128x128 face window, NOT whether the two
+     are equivalent. Both outcomes are useful: if `.pth` holds up it is
+     dramatically cheaper; if it does not, SeedVR2's cost is justified HERE even
+     though it was not justified as a standalone tool.
+
+     Temporal coherence is the open risk on the `.pth` arm: a per-frame pass has
+     NO temporal model, so flicker is possible where SeedVR2's whole value is
+     temporal context. Step 8's detail transfer and the already-coherent source
+     may carry it. **Look for flicker, not sharpness.**
 6. Cross-fade chunk overlaps. Identity can step at a seam otherwise.
 7. Scale back down to crop size.
 8. **Detail transfer, NOT colour match** - see section 3.
@@ -52,6 +77,30 @@ existing detailer skeleton for one that sees all frames at once.**
 
 Only steps 5 and 8 are genuinely new logic. Everything else is nodes already
 shipped.
+
+> **SEEDVR2: DROPPED AS A STANDALONE FEATURE, STILL A CANDIDATE HERE - Fabio,
+> 2026-08-16.** Read the scope carefully, the two halves differ. MPI-506's
+> plan to ship SeedVR2 as three installable plugins feeding the upscale dropdown
+> **is dropped** (*"we're going to drop SeedVR implementation"*), because as a
+> general-purpose upscaler it fails on cost and character: it **sharpens rather
+> than reconstructs**, monotonically more so as the factor rises (top/mid 0.57 at
+> 1.5x, 0.43 at 2x, 0.24 at 3x, against a 1.06 codec control); it has **no
+> semantic prior** - one sampling step, cfg 1.0, no text encoder in the weight
+> set - so it deforms eyes and invents blotches on clean skin; and 3x runs only at
+> `frames_per_chunk = 5`, the model's own temporal floor, at ~10 minutes per
+> second of footage. Full evidence: MPI-506 brief S 2k.
+>
+> **None of that disqualifies it for THIS card**, and Fabio's read is that it
+> remains usable in this workflow. The economics invert on a face crop: a
+> 128x128 window is ~100x fewer pixels than a full frame, so the VRAM ceiling and
+> the 10-min-per-second cost - the two decisive objections - largely evaporate,
+> and a big chunk becomes affordable. The sharpening character is also less of a
+> problem when step 8 grafts only high frequencies back onto an otherwise
+> untouched frame.
+>
+> **So step 5 is a three-way bench, not a shortlist of one:** `.pth`, SeedVR2,
+> LTX v2v, on the same crop, judged on flicker and identity as much as detail.
+> The Phase 0 findings that reference SeedVR2 (D3, B1) stay valid.
 
 ## 3. Colour match is BANNED here - use detail transfer
 
