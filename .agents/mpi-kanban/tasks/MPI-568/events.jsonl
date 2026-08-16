@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-568", "type": "task.created", "at": "2026-08-16T02:20:00Z", "actor": "claude", "summary": "LTX spatial upscaler bench evaluation - successor to the dropped SeedVR2. Weight and nodes are already on disk/core, so no integration tax; the decisive test is the radial-FFT top/mid character measurement plus the 16 GB ceiling."}
