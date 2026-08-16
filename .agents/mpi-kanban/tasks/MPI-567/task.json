@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-567",
+  "title": "Scribble-to-object Flow - user draws on the image, ControlNet + SDXL renders it in",
+  "description": "Fabio, 2026-08-16. A Flow that turns the user's own DRAWING on top of their image into a rendered object stitched back into that image - a special inpaint driven by a scribble, not by a prompt alone. BENCH FIRST: author and prove the whole graph in the node graph, THEN wire it with /mpi-add-flow. No app work until the bench half is user-approved. Spec, open questions and the model/preprocessor choices: tasks/MPI-567/brief.md.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-08-16T00:00:00Z",
+  "updated_at": "2026-08-16T00:00:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}
