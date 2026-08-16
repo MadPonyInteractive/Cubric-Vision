@@ -6,6 +6,14 @@ They were one track split three ways: every one of them ends up editing
 `js/data/flowsRegistry.js`, and every one of them was gated on the same `FlowStepField`
 work. **MPI-529 and MPI-552 are deleted; this card is the only Flow umbrella.**
 
+**Second merge, 2026-08-16, same session:** MPI-530 (character consistency at the bench)
+was deleted into this card too, on Fabio's call that every Flow-related card belongs in one
+place. Its two members — MPI-348 (Krea2 swap family) and MPI-504 (character sheet) — are now
+direct members here as phase 4. They are the only members that are **bench** work rather
+than app wiring: authored by Fabio in the ComfyUI node graph, not dispatchable file edits
+against `js/data/flowsRegistry.js`. That distinction is a scheduling fact, not a reason to
+split the track again — see phase 4.
+
 **The member cards stay on the board.** Nothing was closed or merged to make this. Close a
 member when the phase covering it lands, and say so in its card.
 
@@ -18,8 +26,10 @@ member when the phase covering it lands, and say so in its card.
 | MPI-536 | LTX 2.3 foley Flow — **shipped, `validating`** | 3 |
 | MPI-520 | LTX 2.3 v2v extend Flow — **shipped, `validating`** | 3 |
 | MPI-538 | LTX 2.3 lipsync Flow | 3 |
-| MPI-259 | Flows v2 — install / multi-model / reuse paths, UI design pass, 2nd flow | 4 |
-| MPI-532 | Community flow packages — data-only folders in `user_flows/`. **Targets 1.6** | 5 |
+| MPI-504 | Character sheet — attributes or a reference photo in, a video-reference sheet out (front body HEADLESS). **Bench** | 4 |
+| MPI-348 | Krea2 swap family: face / head / character, co-developed in the node graph. **Bench** | 4 |
+| MPI-259 | Flows v2 — install / multi-model / reuse paths, UI design pass, 2nd flow | 5 |
+| MPI-532 | Community flow packages — data-only folders in `user_flows/`. **Targets 1.6** | 6 |
 
 Adjacent, deliberately NOT members: **MPI-455** (end-frame conditioning — op-side wiring on
 the shipped `ltx_i2v.json`, not a Flow) and **MPI-533** (the tombstone ledger phase 5's
@@ -100,7 +110,45 @@ inherited facts:
 The foley-vs-voice mode decision is settled: **v1 ships foley only**; voice mode has never
 been run. Lipsync inherits no guess.
 
-## Phase 4: Flows v2 (MPI-259)
+## Phase 4: The bench track — where the next real Flow comes from (MPI-504, MPI-348)
+
+Folded in from MPI-530 (deleted 2026-08-16). Phases 1–3 and 5–6 wire Flows into the app;
+this phase is the only one that **invents** one. Both members are authored by Fabio in the
+ComfyUI node graph, with the agent supplying node semantics, graph topology and the measured
+regimes so nothing is re-derived at the bench.
+
+Both are the same bet: **consistent characters with no LoRA training**, as Flows on Krea2
+(memory `project_lora_free_character_system`). Both consume the same Krea2 knowledge —
+`docs/models/krea2/injection.md`, `docs/models/krea2/resolution.md`, and the measured
+`ref_boost` table in `docs/models/krea2/editing.md`, which MOVES: read it there, never cache
+the numbers.
+
+They feed each other in one direction. **MPI-504 (the sheet) comes first** — it is the
+keystone artifact, and the swap family is what consumes a locked character. Building the
+swaps against ad-hoc references means re-deriving the reference format the sheet is supposed
+to define. MPI-504's `brief.md` already reads `../MPI-348/brief.md`.
+
+- **MPI-504 — the sheet.** The layout that works as a VIDEO reference is the unknown, and
+  the front body is HEADLESS: a production hack, not an oversight.
+  `~/.claude/memory/domain/ai-video-asset-production.md` carries it along with "never run an
+  image through a model twice", the 3/4 location plates and the empty camera-walk trick.
+  Read it before designing the sheet. **The LoRA-training sheet is out of scope** — a
+  different beast, and the card says so.
+- **MPI-348 — the swap family.** Face swap, head swap, character swap/restage on
+  `krea2edit`, against the sheet format MPI-504 settles. Head Swap already ships as Flow #1
+  (`comfy_workflows/flow_head_swap.json`) and is the working reference topology.
+
+**The boundary that survives the merge:** proving a graph at the bench is not wiring a Flow.
+A Flow outcome discovered here gets its OWN member card on this umbrella and goes through
+`/mpi-add-flow` and its playbook — exactly as the LTX trio in phase 3 did after MPI-537
+proved them at the bench. Do not wire an app Flow from inside MPI-348 or MPI-504.
+
+Verification is bench-side, at the node graph: a sheet that holds identity across
+regenerations, and a swap that keeps it. Memory
+`tool_author_and_verify_a_comfy_workflow_offline` has the offline half — CLONE donor node
+objects, and a `graphToPrompt` diff of 0 proves the graph without paying for a run.
+
+## Phase 5: Flows v2 (MPI-259)
 
 The deferred v1 paths — the Install button end to end, a flow whose required model is NOT
 installed, flows declaring MULTIPLE required models, the reuse matrix. **This is why the
@@ -110,10 +158,10 @@ running them earlier means proving them on fixtures about to leave the repo.
 Order inside the card is its own, but install-a-flow comes first — a badge and install
 routing for a flow with a missing model is the path with the most unknowns, and multi-model
 plus the reuse matrix sit on top of it. Overlay UI design pass and the 2nd flow follow.
-New flows discovered along the way get their own cards (see MPI-530, the
-character-consistency track).
+New flows discovered along the way get their own cards on this umbrella — phase 4 is where
+they come from.
 
-## Phase 5: The 1.6 package format (MPI-532)
+## Phase 6: The 1.6 package format (MPI-532)
 
 A folder dropped into `user_flows/` — restart and it appears. Manifest JSON + workflow JSON
 + optional images. No Python, no pip, no custom node repos.
@@ -153,21 +201,37 @@ idea is explicitly NOT this card — advertising only, never a payment rail.
   component or zero.
 - Phase 3: per member, the `/mpi-add-flow` playbook's own gates (`docs/playbooks/add-flow/`).
   A real generation is the only proof that counts.
-- Phase 4: user-visible UX, needs the app.
-- Phase 5: an MPI Flow republished as a data-only `user_flows/` package loads, validates and
+- Phase 4: bench-side only — a sheet that holds identity across regenerations, and a swap
+  that keeps it. No app change is in scope for the phase itself.
+- Phase 5: user-visible UX, needs the app.
+- Phase 6: an MPI Flow republished as a data-only `user_flows/` package loads, validates and
   runs on a restart with no registry edit.
 
 Spin your own app (`npm run app:isolated`), never the user's `:3000`.
 
 ## Parallel Batch
 
-Phases are ordered: 1 before 4 (fixtures), 2 before 3 (the `uiComponent` debt), 2 before 5
+Phases are ordered: 1 before 5 (fixtures), 2 before 3 (the `uiComponent` debt), 2 before 6
 (the manifest schema is only knowable once `FlowDef` is final). Within phase 3, MPI-538 is
-alone now. Within phase 5, loader / validator / docs split cleanly and could run as a batch.
+alone now. Within phase 6, loader / validator / docs split cleanly and could run as a batch.
 Derive ownership from each member's `files.json` at dispatch time, not from this list.
+
+**Phase 4 is not dispatchable and does not block anything here.** Both its members are
+user-in-the-loop bench sessions at the node graph, owning no `js/` file, so they run beside
+any other phase rather than in sequence with it. Inside the phase, MPI-504 precedes MPI-348
+by construction. Do not hand phase 4 to a worker sub-agent.
 
 ## Plan Drift
 
 **2026-08-16 — merged.** MPI-529 and MPI-552 deleted into this card; their phase order,
 drift notes and settled decisions are folded in above. No member card was closed or altered
 in scope by the merge.
+
+**2026-08-16 — second merge, MPI-530.** The character-consistency bench umbrella was deleted
+into this card as phase 4 (members MPI-504, MPI-348); Flows v2 and community packages
+renumbered 4→5 and 5→6. Fabio's call: one umbrella for everything Flow-related, after three
+separate Flow umbrellas had already proven the split costly. The one fact the merge had to
+carry rather than flatten is that phase 4 is bench work, not app wiring — recorded in the
+phase and in the batch section above. MPI-530's own plan warned "do not grow this umbrella
+into a Flow-wiring card"; that warning survives as the phase-4 boundary paragraph. No member
+card was closed or altered in scope.

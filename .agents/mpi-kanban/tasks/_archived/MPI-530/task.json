@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-530",
+  "title": "Character consistency at the bench - the swap family and the character sheet",
+  "description": "MERGED INTO MPI-560 (The Flow track) on 2026-08-16 at Fabio's request - every Flow-related card in one umbrella. Members MPI-504 and MPI-348 are now direct members of MPI-560 as phase 4; this card's plan content lives in tasks/MPI-560/plan.md under 'Phase 4: The bench track'. Do not reopen.\n\nConsolidation sweep 2026-08-10: MPI-348 and MPI-504 are one bench track feeding the LoRA-free character system. MPI-504 brief.md already reads MPI-348 brief.md. Both author in the node graph before any Flow is built.",
+  "column": "archived",
+  "maturity": "merged",
+  "status": "active",
+  "created_at": "2026-08-10T22:10:00Z",
+  "updated_at": "2026-08-16T00:00:00Z",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

@@ -20,10 +20,8 @@
       "MPI-543",
       "MPI-541",
       "MPI-538",
-      "MPI-534",
       "MPI-533",
       "MPI-532",
-      "MPI-530",
       "MPI-528",
       "MPI-527",
       "MPI-526",
@@ -72,6 +70,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-534",
       "MPI-520",
       "MPI-531"
     ],
@@ -169,8 +168,17 @@
       "MPI-549"
     ]
   },
-  "updated_at": "2026-08-15T07:40:55Z",
+  "updated_at": "2026-08-16T00:00:00Z",
   "events": [
+    {
+      "at": "2026-08-16T04:20:25Z",
+      "type": "task.moved",
+      "task": "MPI-534",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "note": "todo -> doing. Re-opening the 2026-08-03 keep decision at user request: seek replacement Illustrious / Pony checkpoints with a clean Image commercial-use grant."
+    },
     {
       "at": "2026-08-14T06:12:41Z",
       "type": "task.moved",
