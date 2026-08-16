@@ -1,0 +1,1 @@
+{"at": "2026-08-16T06:40:00Z", "actor": "claude-opus-5", "type": "task.created", "id": "MPI-569", "reason": "Raised from Cubric-Prompt MPI-27 phase 1: exempt ops with a legitimately empty prompt short-circuit at MpiPromptBox.js:1744 and toast the wrong message."}

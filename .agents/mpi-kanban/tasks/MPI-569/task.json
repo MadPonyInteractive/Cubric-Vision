@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-569",
+  "title": "Enhance on an exempt operation with an empty prompt shows the wrong toast",
+  "description": "Cubric Prompt now REFUSES to enhance operations that take an instruction rather than a scene description (Cubric-Prompt MPI-27 phase 1, landed 2026-08-16). An exempt op returns the user's prompt unchanged with note = 'No prompt enhancement is available for this operation.', and Vision ALREADY surfaces that correctly as an info toast - verified end to end, no change needed for the happy path: connectorOps.js:42 forwards data.output.note and MpiPromptBox.js:1766 calls _enhanceToast(result.note || 'Prompt enhanced.', result.note ? 'info' : 'success').\n\nTHE HOLE: MpiPromptBox.js:1744 returns BEFORE the request is ever sent when the prompt box is empty - if (!source.trim()) { _enhanceToast('Type a prompt to enhance first.', 'warning'); return; }. On an exempt op whose prompt is LEGITIMATELY empty - inpaint-erase (Klein's removal path wants the prompt empty), resize, removeBackground, interpolate, videoUpscale - the user is told to type something that would then be refused. Cubric Prompt is never called, so no note of ours can fix it; the fix is Vision-side and small.\n\nFIX: on an exempt operation, toast the not-available message instead of 'Type a prompt to enhance first.' Vision needs to know WHICH ops are exempt. Prompt owns that list (src/main/recipes/operations.ts, OPERATION_MAP); serving it over the connector keeps ONE source of truth and matches how enhanceRecipe already defers to Prompt. A hardcoded Vision list works but drifts the next time an op is added on either side.\n\nDO NOT USE promptRequired AS THE GATE - it looks like the flag and is not. i2v and i2v_ms are promptRequired:false and DO enhance; edit and qwenEdit are promptRequired:true and do NOT. It means 'the prompt may be empty', never 'the prompt is unwanted'. Wiring it would disable Enhance on i2v and leave it live on edit - exactly backwards.\n\nOUT OF SCOPE, considered and rejected 2026-08-16: disabling the Enhance button on exempt ops. The toast already covers it and says WHY, where a disabled button explains nothing. Note also that the button mounts once (MpiPromptBox.js:1780, if (!enhanceSlot || _enhanceBtn) return;), so any gate would have to re-evaluate on operation-change (already emitted, line 611).\n\nALSO IN THIS CARD (one line): connectorOps.js:42's comment says note is 'set when Prompt fell back to a default recipe'. It is now also set on an exempt operation.\n\nTHE EXEMPT SET as of Cubric-Prompt 2026-08-16: edit, kleinEdit, qwenEdit, krea2Edit, inpaint, detail, upscale, pid, imageUpscale, imageDescribe, extend, interpolate, videoUpscale, removeBackground, autoMaskImg, resize, resizeVideo, flowVideoStitch, flowHeadSwap, flowLtxExtend, flowLtxFoley. Everything else enhances, including control - a ControlNet reference constrains STRUCTURE, so the prompt still carries the creative load, which is why Qwen Image Edit is not wholly exempt.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-16T06:40:00Z",
+  "updated_at": "2026-08-16T06:40:00Z",
+  "labels": [
+    "connector",
+    "prompt-enhance",
+    "ux",
+    "promptbox"
+  ],
+  "priority": "normal",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

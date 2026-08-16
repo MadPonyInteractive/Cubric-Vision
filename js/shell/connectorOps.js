@@ -38,7 +38,7 @@ export async function enhancePrompt(payload) {
         ok: true,
         prompt: data.output.prompt,
         negativePrompt: data.output.negativePrompt,
-        note: data.output.note, // set when Prompt fell back to a default recipe
+        note: data.output.note, // set when Prompt fell back to a default recipe, or when the operation is exempt from enhancement
       };
     }
     return { ok: false, error: data.error?.message || 'Enhance unavailable.' };
