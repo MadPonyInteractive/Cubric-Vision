@@ -110,7 +110,13 @@ function laneFor(genId) {
 async function blobUrlToDataUrl(url) {
   if (!url) return null;
   if (url.startsWith('data:')) return url;
-  const blob = await fetch(url).then((r) => r.blob());
+  // A frame this bridge is still looping can already be REVOKED: it never owns
+  // its frames (see _players), so whichever surface does owns their lifetime and
+  // frees them on a stage reset or its own teardown. fetch() on a dead blob:
+  // rejects, and an unhandled rejection out of the playback timer is not a
+  // diagnosis anyone reads — drop the frame and let the next one paint.
+  const blob = await fetch(url).then((r) => r.blob()).catch(() => null);
+  if (!blob) return null;
   return await new Promise((resolve) => {
     const fr = new FileReader();
     fr.onload = () => resolve(fr.result);
@@ -214,6 +220,17 @@ export function initFloatLatentBridge() {
   // NOTE: no add-tile on generation:started. The lane can't be resolved reliably
   // there (store job not yet registered), so the first preview:frame — which
   // carries the authoritative engine tag — creates and labels the tile instead.
+
+  // A new sampler stage (MPI-167) — drop the current window so stages don't
+  // concatenate into one growing loop. The bridge shipped WITHOUT this listener
+  // while the other three surfaces all had it, and it is the one consumer that
+  // cannot survive missing it: the three in-renderer surfaces OWN their frames and
+  // REVOKE them on reset, so a bridge still looping that window paints dead blob:
+  // URLs until enough new frames push them out of its ring.
+  // eslint-disable-next-line mpi/require-destroy-on-events
+  Events.on('generation:preview-reset', ({ id, clip }) => {
+    _players.get(laneFor(id))?.reset(clip);
+  });
 
   // A gen COMPLETED → keep its tile, freeze it on the final result so the user can
   // click it to open the app (the whole window restores on click). The window stays
