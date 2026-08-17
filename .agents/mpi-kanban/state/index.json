@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-15T11:50:00Z",
+  "updated_at": "2026-08-17T04:18:56Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -61,9 +61,25 @@
       "id": "cd01288c-02a3-4ef7-82f5-48f44f15b174",
       "path": ".agents/mpi-kanban/state/handoffs/cd01288c-02a3-4ef7-82f5-48f44f15b174.json",
       "task_card": "MPI-531",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-15T11:50:00Z",
       "note": "Foley audio bench closed the phasing thread - it was TWO artifacts (seed-driven phasing vs model reconstruction of breath). Stereo needs on-screen motion, not prompt direction words. Next: #108=true direct audio."
+    },
+    {
+      "id": "c8fcbf68-7f0b-4e4b-9bbe-1dd1c2df64b3",
+      "path": ".agents/mpi-kanban/state/handoffs/c8fcbf68-7f0b-4e4b-9bbe-1dd1c2df64b3.json",
+      "task_card": "MPI-531",
+      "status": "open",
+      "created_at": "2026-08-17T04:18:56Z",
+      "note": "Next session fixes MPI-570 FIRST (Fabio's instruction); read tasks/MPI-570/brief.md, not the card description."
+    },
+    {
+      "id": "b7f41a92-3d5e-4c18-9a26-8e1f7c0d5b43",
+      "path": ".agents/mpi-kanban/state/handoffs/b7f41a92-3d5e-4c18-9a26-8e1f7c0d5b43.json",
+      "task_card": "MPI-531",
+      "status": "resolved",
+      "created_at": "2026-08-16T07:20:00Z",
+      "note": "Superseded by c8fcbf68-7f0b-4e4b-9bbe-1dd1c2df64b3 - resumed and completed 2026-08-17."
     }
   ]
 }

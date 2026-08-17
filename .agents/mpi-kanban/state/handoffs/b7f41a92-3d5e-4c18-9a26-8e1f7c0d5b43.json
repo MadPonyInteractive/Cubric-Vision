@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "b7f41a92-3d5e-4c18-9a26-8e1f7c0d5b43",
   "generated_at": "2026-08-16T07:20:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-531 Flow frame - rip landed, media picker rebuilt, foley gained a middle step",
     "branch": "master"
