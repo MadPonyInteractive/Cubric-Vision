@@ -22,10 +22,18 @@ const SRC = fs.readFileSync(
     'utf8',
 );
 
+// MPI-571 moved the ring itself into the ONE shared consumer, so half of what
+// MPI-565 pinned now lives there. Both invariants survive the move — they are just
+// split across two files, and each is still checked at the file that owns it.
+const PLAYER = fs.readFileSync(
+    path.join(__dirname, '..', 'js', 'services', 'previewClipPlayer.js'),
+    'utf8',
+);
+
 test('the card element exposes destroy(), stopping both of its timers', () => {
     const body = SRC.match(/cardEl\.destroy = \(\) => \{([\s\S]*?)\n {12}\};/);
     assert.ok(body, 'cardEl.destroy is not defined');
-    assert.match(body[1], /_stopPreviewPlayback\(\)/, 'destroy leaves the preview interval running');
+    assert.match(body[1], /_previewPlayer\.stop\(\)/, 'destroy leaves the preview interval running');
     assert.match(body[1], /_stopMascotFlip\(\)/, 'destroy leaves the mascot timer re-arming');
 });
 
@@ -34,13 +42,18 @@ test('the card element exposes destroy(), stopping both of its timers', () => {
 // previewer appends faster than a decode, so the ring evicts the frame the play
 // head just started on — measured at 1ms apart on a live run. Every revoke must
 // abort a matching in-flight preload FIRST.
-test('_revokePreviewUrl aborts a matching in-flight preload before revoking', () => {
-    const body = SRC.match(/function _revokePreviewUrl\(url\) \{([\s\S]*?)\n {12}\}/);
-    assert.ok(body, '_revokePreviewUrl is not defined');
-    const abortAt = body[1].indexOf('_abortPendingPreload(url)');
+test('the player announces an eviction before freeing it, and the card aborts on that', () => {
+    // Half one, in the player: onEvict is the abort seam, and it MUST run before
+    // the revoke. Reversed, the abort is pointless and the ERR_FILE_NOT_FOUND is back.
+    const body = PLAYER.match(/function _revoke\(url\) \{([\s\S]*?)\n {4}\}/);
+    assert.ok(body, 'previewClipPlayer._revoke is not defined');
+    const evictAt = body[1].indexOf('onEvict?.(url)');
     const revokeAt = body[1].indexOf('URL.revokeObjectURL(url)');
-    assert.ok(abortAt !== -1, 'revoke does not abort the pending preload');
-    assert.ok(abortAt < revokeAt, 'the abort must run before the revoke, not after');
+    assert.ok(evictAt !== -1, 'the player frees a frame without announcing the eviction');
+    assert.ok(evictAt < revokeAt, 'the eviction must be announced before the revoke, not after');
+
+    // Half two, in the card: it has to actually hang its abort off that seam.
+    assert.match(SRC, /onEvict:\s*_abortPendingPreload/, 'the card no longer aborts its preload on eviction');
     assert.match(SRC, /_pendingPreload = next;/, 'the preloader is never registered as pending');
 });
 

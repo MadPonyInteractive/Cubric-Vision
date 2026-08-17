@@ -35,6 +35,7 @@ NOT mechanically split these):
 - `releases/build-experience-log.md` — build evidence log
 - `project-integrity.md`, `runpod-remote-engine.md`, `releases/portable-distribution-contract.md`, `download-manager.md` — coherent single-subject contracts, near/over the line by design (download-manager: the full install/download/uninstall lifecycle + store/reconciler/snapshot, MPI-276)
 - `versioning.md` — coherent single-subject contract (APP/SCHEMA/COMFY versioning + op registry)
+- `preview-bus.md` — coherent single-subject contract (the whole latent-preview path: bus, attribution, the one shared consumer, blob ownership). Its decoder half WAS split out to `preview-decoders.md` (MPI-571); what is left is one contract and splitting it further would scatter "who paints this frame, and who frees it" across files.
 - `toasts.md` — coherent single-subject contract (the full toast/notification call-site map: `ui:*`, `StatusBar.notify`, `notificationService`, the sound model, and which events must NOT toast). Splitting it would scatter "does this fire a toast?" across files, which is the one question the doc exists to answer in one place.
 - `models/ltx/audio-input.md` — research lab notebook (evidence log)
 - `playbooks/add-model/` — end-to-end procedure split into a README hub + numbered section files; the README carries the mandatory step ordering
@@ -79,7 +80,8 @@ NOT mechanically split these):
 | Topic | Doc |
 |---|---|
 | ComfyUI integration + engine traps | [comfy.md](comfy.md) |
-| **Latent previews** (`preview:frame` bus, engine-tagged, broken-frame gate, last-latent hold — subscribe here to show latents anywhere; ALSO the TAESD decoders: which model uses which, why a missing one silently downgrades to a colour blob, and the `lighttaew*` landmine — read before adding any `vae_approx/` dep) | [preview-bus.md](preview-bus.md) |
+| **Latent previews** (`preview:frame` bus, engine-tagged, broken-frame gate, last-latent hold, blob ownership — and `previewClipPlayer`, the ONE consumer every surface must use: never paint the bus directly, never write a second ring) | [preview-bus.md](preview-bus.md) |
+| Latent-preview DECODERS (which model uses which, why a missing one silently downgrades to a colour blob, the node-read H3/LTX pair, the `lighttaew*` landmine — read before adding any `vae_approx/` dep) | [preview-decoders.md](preview-decoders.md) |
 | **Workflow authoring + injection contract** (MpiNodes pack, injector target list, generator/tier patterns) — model/flow-agnostic | [workflow-authoring/README.md](workflow-authoring/README.md) |
 | Models-path / YAML / extra-folders | [models-path.md](models-path.md) |
 | Download manager (resumable, NDH) | [download-manager.md](download-manager.md) |

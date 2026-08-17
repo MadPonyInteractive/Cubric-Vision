@@ -17,6 +17,7 @@
 import { Events } from '../events.js';
 import { state } from '../state.js';
 import { activeGenerations } from '../services/activeGenerations.js';
+import { createPreviewClipPlayer } from '../services/previewClipPlayer.js';
 import { generationStore } from '../services/generationStore.js';
 import { getModelById } from '../data/modelRegistry.js';
 import { resolveMediaUrl } from '../utils/mediaActions.js';
@@ -39,6 +40,45 @@ let windowOpen = false;
 const FRAME_MIN_MS = 120;
 const _lastSent = new Map();   // genId -> ms of last forwarded frame
 const _encoding = new Set();   // genId currently mid-encode (drop newer until done)
+
+// One shared latent player per lane (MPI-571). Before this, the throttle forwarded
+// only the NEWEST frame, so a clip-bursting video run showed ONE STILL FRAME in the
+// minimised window while the gallery card looped the motion — the divergence this
+// card exists to kill. Now the player does the pacing and the throttle just samples
+// whatever frame the loop is currently on, so the tile MOVES at no extra encode
+// cost: the data-URL volume is still bounded by FRAME_MIN_MS, unchanged.
+//
+// The player must NOT own its frames. It runs for EVERY generation regardless of
+// scope, so it overlaps the gallery card, the History viewer and the Flow pane on
+// the same run — freeing a frame here would revoke a blob one of them is still
+// looping. `ownsFrames` therefore stays at its default false and these frames live
+// until the page unloads, which docs/preview-bus.md already accepts as the cost of
+// a no-retainer consumer.
+const _players = new Map();    // lane -> PreviewClipPlayer
+// The bridge now paces its own output, so it also owns the sequence. The bus `seq`
+// cannot be forwarded any more: a LOOPING player replays earlier frames, whose seq
+// goes backwards, and the window drops anything not strictly newer — which would
+// freeze the tile on frame 1 and reproduce the exact bug being fixed.
+const _outSeq = new Map();     // lane -> monotonic seq sent to the float window
+
+function playerFor(lane) {
+  let player = _players.get(lane);
+  if (player) return player;
+  player = createPreviewClipPlayer({
+    paint: (url) => sendFrame(lane, url),
+    canPaint: () => windowOpen,
+  });
+  _players.set(lane, player);
+  return player;
+}
+
+/** Drop a lane's playback (gen finished, cancelled, or the window closed). */
+function stopLane(lane) {
+  _players.get(lane)?.stop();
+  _players.delete(lane);
+  _lastSent.delete(lane);
+  _encoding.delete(lane);
+}
 
 function titleFor(entry) {
   return getModelById(entry.modelId)?.name || entry.modelId || 'Generating';
@@ -79,6 +119,31 @@ async function blobUrlToDataUrl(url) {
   });
 }
 
+/**
+ * Encode one frame and push it to the float window, throttled per lane. This is the
+ * player's `paint` target: the loop runs at the clip's real rate and this samples
+ * it, so the IPC/base64 volume stays exactly where FRAME_MIN_MS put it. Coalesced
+ * to one in-flight encode per lane — a fast multi-gen run must not flood the channel
+ * with base64 data URLs (that was eating RAM).
+ */
+async function sendFrame(lane, url) {
+  if (!windowOpen || _encoding.has(lane)) return;
+  if (Date.now() - (_lastSent.get(lane) || 0) < FRAME_MIN_MS) return;
+  _encoding.add(lane);
+  let dataUrl = null;
+  try { dataUrl = await blobUrlToDataUrl(url); } finally { _encoding.delete(lane); }
+  if (!dataUrl || !windowOpen) return; // window may have closed mid-encode
+  _lastSent.set(lane, Date.now());
+  const genId = generationStore.activeGenId(lane);
+  const title = genId ? titleFor(activeGenerations.get(genId) || {}) : '';
+  const seq = (_outSeq.get(lane) || 0) + 1;
+  _outSeq.set(lane, seq);
+  // add-tile is idempotent: creates the lane tile (with title/owner) if absent,
+  // or relabels+takes ownership if the queue advanced on this lane.
+  ipcRenderer.send('float-latent:add-tile', { lane, genId, title });
+  ipcRenderer.send('float-latent:frame', { lane, genId, dataUrl, seq });
+}
+
 /** Open the window with a tile per running gen, seeded from the last held latent. */
 async function openTiles() {
   for (const entry of runningGens()) {
@@ -90,7 +155,11 @@ async function openTiles() {
     ipcRenderer.send('float-latent:add-tile', { lane, genId: entry.id, title: titleFor(entry) });
     if (last?.url) {
       const dataUrl = await blobUrlToDataUrl(last.url);
-      if (dataUrl) ipcRenderer.send('float-latent:frame', { lane, dataUrl, seq: last.seq });
+      // Bridge-owned seq, like every other send — the bus `seq` is not comparable
+      // with it and a mixed pair would drop frames on the newer-only guard.
+      const seq = (_outSeq.get(lane) || 0) + 1;
+      _outSeq.set(lane, seq);
+      if (dataUrl) ipcRenderer.send('float-latent:frame', { lane, dataUrl, seq });
     }
   }
 }
@@ -113,6 +182,9 @@ export function initFloatLatentBridge() {
   // Main closed the window (restore/focus/dismiss/last-tile). Stop forwarding.
   ipcRenderer.on('float-latent:closed', () => {
     windowOpen = false;
+    // Stop the loops too, not just the throttle maps: a player left running would
+    // keep calling sendFrame for a window that is gone.
+    for (const lane of [..._players.keys()]) stopLane(lane);
     _lastSent.clear();
     _encoding.clear();
   });
@@ -121,8 +193,8 @@ export function initFloatLatentBridge() {
   // as activeGenerations.js's bus listener. No cleanup array needed.
   // Live frames — forward only while the window is open.
   // eslint-disable-next-line mpi/require-destroy-on-events
-  Events.on('preview:frame', async ({ engine, seq, url }) => {
-    if (!windowOpen) return;
+  Events.on('preview:frame', ({ engine, url }) => {
+    if (!windowOpen || !url) return;
     // Route STRICTLY by the engine tag → lane. The engine tag is the ONLY reliable
     // lane source: the two engines have independent promptId spaces (byPromptId can
     // collide) AND the store job isn't registered yet at generation:started time
@@ -133,19 +205,10 @@ export function initFloatLatentBridge() {
     const lane = engine === 'remote' ? 'remote' : 'local';
     const genId = generationStore.activeGenId(lane);
     if (genId) _laneOf.set(genId, lane); // seed for complete/cancel (no engine tag there)
-    const now = Date.now();
-    if (_encoding.has(lane)) return;
-    if (now - (_lastSent.get(lane) || 0) < FRAME_MIN_MS) return;
-    _encoding.add(lane);
-    let dataUrl = null;
-    try { dataUrl = await blobUrlToDataUrl(url); } finally { _encoding.delete(lane); }
-    if (!dataUrl || !windowOpen) return; // window may have closed mid-encode
-    _lastSent.set(lane, Date.now());
-    const title = genId ? titleFor(activeGenerations.get(genId) || {}) : '';
-    // add-tile is idempotent: creates the lane tile (with title/owner) if absent,
-    // or relabels+takes ownership if the queue advanced on this lane.
-    ipcRenderer.send('float-latent:add-tile', { lane, genId, title });
-    ipcRenderer.send('float-latent:frame', { lane, genId, dataUrl, seq });
+    // The run's clip state rides along with EVERY frame (MPI-535) — re-read here
+    // rather than latched, because the marker that declares a run "clip" fires once
+    // and the float window is usually not even open when it lands.
+    playerFor(lane).push(url, genId ? activeGenerations.getPreviewClip(genId) : null);
   });
 
   // NOTE: no add-tile on generation:started. The lane can't be resolved reliably
@@ -160,8 +223,7 @@ export function initFloatLatentBridge() {
   // eslint-disable-next-line mpi/require-destroy-on-events
   Events.on('generation:complete', async ({ id, item }) => {
     const lane = laneFor(id);
-    _lastSent.delete(lane); // throttle/encode maps are lane-keyed (see preview:frame)
-    _encoding.delete(lane);
+    stopLane(lane); // loop + throttle/encode maps are all lane-keyed
     _laneOf.delete(id);
     if (!windowOpen) return;
     // PER-LANE completion: the mascot "Done" cue fires when THIS lane's batch is
@@ -188,8 +250,7 @@ export function initFloatLatentBridge() {
   // when the last tile goes.
   const drop = ({ id }) => {
     const lane = laneFor(id);
-    _lastSent.delete(lane);
-    _encoding.delete(lane);
+    stopLane(lane);
     _laneOf.delete(id);
     if (windowOpen) ipcRenderer.send('float-latent:tile-remove', { lane, genId: id });
   };

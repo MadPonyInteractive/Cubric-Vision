@@ -17,6 +17,7 @@ import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
 import { extractAbsPath, extractFilenameFromPath } from '../../../utils/mediaActions.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { buildGalleryPromptReusePayloads, itemHasReusablePrompt, findOriginalReusableItem } from '../../../utils/promptReuse.js';
+import { createPreviewClipPlayer } from '../../../services/previewClipPlayer.js';
 
 // One-card-at-a-time: stop every OTHER playing media element in the gallery —
 // audio cards (<audio data-src>) AND unmuted hover videos — so a hover/click
@@ -460,54 +461,21 @@ export const MpiGalleryGrid = ComponentFactory.create({
             const spinner    = qs('.mpi-group-card__spinner', cardEl);
             const mascot     = qs('.mpi-group-card__mascot', cardEl);
             let previewImg   = null;
-            // Latent-preview frame pacing + loop. Most models send one evolving still
-            // per step, but video models (LTX via the KJNodes preview override, H3 via
-            // our own MpiVideoSamplingPreview) emit a SEQUENCE of frames (different frame
-            // POSITIONS) per step. Those samplers are distilled: after step 1 the latent
-            // barely changes, so every step's frames are at ~final preview quality — the
-            // value is the MOTION across positions, not refinement. The frames arrive as
-            // instant bursts, so painting on arrival flashes through the whole clip at
-            // burst speed and then freezes until the next step. We hold the most-recent
-            // frames as a rolling CLIP and cycle them at the rate the clip ANNOUNCED,
-            // LOOPING until the gen ends — that replays the motion at its real speed
-            // instead of freezing. New frames append; over the announced length the
-            // oldest is evicted + its blob URL revoked. Only evicted/teardown URLs are
-            // revoked (clip frames stay alive to repaint).
+            // Latent previews are paced and looped by the ONE shared consumer,
+            // `previewClipPlayer` (MPI-571) — read that module for still-vs-clip
+            // mode, the announced `rate`/`length`, the marker-miss self-heal and
+            // who frees the blob. This card used to own that ring; three other
+            // surfaces re-implemented it and each got it wrong differently, which
+            // is why it now lives in one place. Only the two card-specific hooks
+            // stay here.
             //
-            // THIS BUFFER OWNS ITS FRAMES' LIFETIME, and it has to (MPI-508). The
-            // window is retained for an UNBOUNDED time — the loop replays until the
-            // card is removed, which for a video is minutes after the last frame while
-            // the output downloads and thumbnails. A bus-side "retire the old ones"
-            // rule therefore cannot be written: measured 1298 ERR_FILE_NOT_FOUND at a
-            // flat 8/s, on exactly 48 distinct URLs, when the emitter retired frames
-            // this loop was still painting.
-            // ponytail: an array + cursor + interval, no <video> element.
-            const PREVIEW_FPS = 8;       // fallback only — the clip announces its own rate
-            const PREVIEW_CLIP_MAX = 48; // fallback only — the clip announces its own length
-            let _previewClip = [];   // rolling buffer of frame URLs
-            let _previewCursor = 0;  // play head into _previewClip
-            let _previewTimer = null;
-            let _previewTimerRate = 0;
-            // CLIP mode = loop a motion clip. The emitters are the burst previewers
-            // (KJNodes' LTX override, our MpiVideoSamplingPreview on H3); Wan/SDXL/5B send
-            // core single-frame step previews and stay in STILL mode: each preview replaces
-            // the last (a refining still), NOT a growing loop.
-            //
-            // THIS IS A MIRROR, NOT A LATCH (MPI-535). The `VHS_latentpreview` marker that
-            // declares a run "clip" fires ONCE per sampler run, so a card that latched it
-            // could never recover from missing it — and a single-pass H3 run is one prompt,
-            // i.e. exactly one marker for four minutes of sampling. `activeGenerations`
-            // owns the state for the run's whole life and hands it over with every frame;
-            // this just reflects the latest word, so a miss self-heals on the next frame.
-            let _clipMeta = null;    // { rate, length } | null
-            const _clipRate = () => (_clipMeta?.rate > 0 ? _clipMeta.rate : PREVIEW_FPS);
-            const _clipMax  = () => (_clipMeta?.length > 0 ? _clipMeta.length : PREVIEW_CLIP_MAX);
             // The preload for the frame the play head is currently decoding. A burst
             // previewer appends faster than a decode, so the ring can evict the very
-            // frame `_paintNextPreviewFrame` started on — measured at 1ms apart — and
-            // revoking a URL whose <img> load is still in flight kills that load:
+            // frame the player started on — measured at 1ms apart — and revoking a
+            // URL whose <img> load is still in flight kills that load:
             // net::ERR_FILE_NOT_FOUND, one per burst, for a frame nobody else ever
-            // held. Aborting the preload first is what makes the revoke safe.
+            // held. Aborting the preload first is what makes the revoke safe, so it
+            // hangs off the player's onEvict.
             let _pendingPreload = null;
             function _abortPendingPreload(url) {
                 if (!_pendingPreload || _pendingPreload.dataset.url !== url) return;
@@ -517,61 +485,18 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 _pendingPreload = null;
                 if (previewImg?.dataset.pendingPreviewSrc === url) delete previewImg.dataset.pendingPreviewSrc;
             }
-            function _revokePreviewUrl(url) {
-                if (!url || !url.startsWith('blob:')) return;
-                _abortPendingPreload(url);
-                try { URL.revokeObjectURL(url); } catch { /* already revoked */ }
-            }
-            function _stopPreviewPlayback() {
-                _clipMeta = null;
-                if (_previewTimer) { clearInterval(_previewTimer); _previewTimer = null; }
-                _previewTimerRate = 0;
-                for (const url of _previewClip) _revokePreviewUrl(url);
-                _previewClip = [];
-                _previewCursor = 0;
-            }
-            function _paintNextPreviewFrame() {
-                if (!_generating || !_previewClip.length) return;
-                if (_previewCursor >= _previewClip.length) _previewCursor = 0; // loop
-                _setPreviewImageSrc(_ensurePreviewImage(), _previewClip[_previewCursor++]);
-            }
-            /** Run the playback timer at the clip's announced rate, restarting it on a change. */
-            function _armPreviewTimer() {
-                const rate = _clipRate();
-                if (_previewTimer && _previewTimerRate === rate) return;
-                if (_previewTimer) clearInterval(_previewTimer);
-                _previewTimerRate = rate;
-                _paintNextPreviewFrame(); // first frame immediately, then pace
-                _previewTimer = setInterval(_paintNextPreviewFrame, 1000 / rate);
-            }
-            function _enqueuePreviewFrame(url, clip = null) {
-                if (!url) return;
-                if (clip && !_clipMeta) {
-                    // Entering clip playback: the buffer holds at most one still frame
-                    // from before, which would otherwise sit in the loop as frame 0.
-                    for (const u of _previewClip) _revokePreviewUrl(u);
-                    _previewClip = [];
-                    _previewCursor = 0;
-                }
-                if (clip) _clipMeta = clip; // the run's own word, re-read every frame
-                // STILL mode: replace the current preview with each new frame. The old
-                // frame is revoked so blobs don't leak.
-                if (!_clipMeta) {
-                    const prev = _previewClip[0];
-                    _previewClip = [url];
-                    if (prev && prev !== url) _revokePreviewUrl(prev);
-                    _setPreviewImageSrc(_ensurePreviewImage(), url);
-                    return;
-                }
-                _previewClip.push(url);
-                // Sized by the clip's announced length: a ring shorter than the clip drops
-                // its head, so the loop replays only the tail (48 of H3's 56 frames).
-                while (_previewClip.length > _clipMax()) {
-                    _revokePreviewUrl(_previewClip.shift());
-                    if (_previewCursor > 0) _previewCursor--; // keep cursor aligned after eviction
-                }
-                _armPreviewTimer();
-            }
+            const _previewPlayer = createPreviewClipPlayer({
+                paint:    (url) => _setPreviewImageSrc(_ensurePreviewImage(), url),
+                onEvict:  _abortPendingPreload,
+                // A card that stopped generating must not keep repainting: every
+                // removal path calls destroy(), but setDone/refreshGroup drop
+                // _generating without tearing the card down.
+                canPaint: () => _generating,
+                // The placeholder card is the ONLY retainer for a gallery-scope run
+                // (History is groupHistory-scope, and a Flow run mounts no gallery
+                // placeholder at all — MPI-306), so it owns these blobs' lifetime.
+                ownsFrames: true,
+            });
             const nameEl     = qs('.mpi-group-card__name', cardEl);
             const subEl      = qs('.mpi-group-card__sub', cardEl);
             const topBadgeEl   = qs('.mpi-group-card__top-badge', cardEl);
@@ -738,7 +663,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             }
 
             function _clearPreviewImage() {
-                _stopPreviewPlayback();
+                _previewPlayer.stop();
                 previewImg?.remove();
                 previewImg = null;
             }
@@ -1439,7 +1364,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     _mascotCooking = true;
                     _setMascotState('cooking');
                 }
-                _enqueuePreviewFrame(previewUrl, clip);
+                _previewPlayer.push(previewUrl, clip);
             };
 
             // A new sampler stage = a fresh preview window. Drop the current clip so
@@ -1449,10 +1374,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // also carries the clip's rate + length. Recorded on the generation, so this
             // is the fast path, not the only one — the frames carry it too (MPI-535).
             cardEl.resetPreviewClip = (clip = null) => {
-                if (clip) _clipMeta = clip;
-                for (const url of _previewClip) _revokePreviewUrl(url);
-                _previewClip = [];
-                _previewCursor = 0;
+                _previewPlayer.reset(clip);
             };
 
             cardEl.setDone = (newGroup) => {
@@ -1548,7 +1470,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // MUST call this.
             cardEl.destroy = () => {
                 _generating = false;
-                _stopPreviewPlayback();
+                _previewPlayer.stop();
                 _stopMascotFlip();
             };
 

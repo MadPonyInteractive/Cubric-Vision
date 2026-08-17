@@ -123,10 +123,16 @@
     else if (title && t.cap.textContent !== title) t.cap.textContent = title;
   });
 
-  // ponytail: float window is STILL-only — one <img> swap per frame. LTX latents
-  // (looping clips in the gallery card) show as a single live frame here; that's a
-  // deliberate simplification, not worth the clip-loop + IPC machinery for a minimized
-  // window. Add clip mode only if users actually ask to watch LTX motion while minimized.
+  // ponytail: still one <img> swap per frame, and it stays that way. Clip pacing
+  // and looping live in the RENDERER (floatLatentBridge -> previewClipPlayer, the
+  // one shared consumer, MPI-571), which loops on cheap blob URLs and lets the
+  // existing per-lane throttle sample the loop. So the tile now MOVES on a video
+  // run without this window learning anything about clips, and without re-encoding
+  // a 56-frame clip to base64 on every sampler step.
+  //
+  // `seq` here is the BRIDGE's own counter, not the bus's. A looping player replays
+  // earlier frames, so a forwarded bus seq would go backwards and the newer-only
+  // guard below would freeze the tile on frame 1 — the exact bug this fixed.
   function ensureImg(t) {
     if (!t.img) {
       t.img = document.createElement('img');

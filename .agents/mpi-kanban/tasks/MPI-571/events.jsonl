@@ -1,1 +1,6 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-571", "type": "task.created", "at": "2026-08-16T07:15:00Z", "actor": "opus", "summary": "Carded from Fabio's live-use report during the MPI-531 session."}
+{"at": "2026-08-17T06:05:00Z", "actor": "claude", "task": "MPI-571", "type": "task.moved", "from": "todo", "to": "doing", "reason": "Implementation started."}
+{"at": "2026-08-17T06:05:00Z", "actor": "claude", "task": "MPI-571", "type": "task.updated", "changes": {"maturity": "in-progress", "status": "active", "activeSessionTitle": "MPI-571 - one shared latent-preview consumer"}}
+{"at": "2026-08-17T06:05:00Z", "actor": "claude", "task": "MPI-571", "type": "checklist.updated", "note": "Derived 5 items from plan.md phase titles."}
+{"at": "2026-08-17T06:55:00Z", "actor": "claude", "task": "MPI-571", "type": "checklist.updated", "note": "Phases 1-4 done; phase 5 docs done, live check outstanding."}
+{"at": "2026-08-17T06:55:00Z", "actor": "claude", "task": "MPI-571", "type": "validation.updated", "note": "615/615 + lint + live browser probe of the gallery and video-viewer halves. Flow pane + float window need a clip-bursting generation."}

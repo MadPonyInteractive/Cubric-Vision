@@ -8,6 +8,7 @@ import { ViewManager } from '../../Primitives/MpiCanvas/managers/ViewManager.js'
 import { submitFlowGeneration } from '../../../services/flowService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
+import { createPreviewClipPlayer } from '../../../services/previewClipPlayer.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
@@ -315,6 +316,21 @@ export const MpiBaseFlow = ComponentFactory.create({
         let _current = 0;
         let _running = false;
         let _myTempId = null;
+        /**
+         * Latent playback (MPI-571). This pane used to paint every frame the bus
+         * handed it, the instant it arrived — so a burst previewer replayed the
+         * whole clip at burst speed on EVERY sampler step and then froze on a
+         * still until the next one. The shared player paces it at the rate the
+         * clip announced and loops instead of freezing.
+         *
+         * It does NOT own the frames: `ownsFrames` stays false so a frame this
+         * pane drops can never be one another surface is still looping. A flow
+         * run mounts no gallery placeholder (MPI-306), so in practice nothing
+         * else holds these — but the default is the safe one.
+         */
+        const _previewPlayer = createPreviewClipPlayer({
+            paint: (url) => _paintResult(url, { blurring: true }),
+        });
         let _hasPending = false;
         /**
          * The last completed result, held so it survives step navigation.
@@ -1280,16 +1296,32 @@ export const MpiBaseFlow = ComponentFactory.create({
         }
 
         // Live latents (MPI-271): resolve the frame to its generation by server-truth
-        // promptId, and paint when it's OUR running job (tempId match).
+        // promptId, and paint when it's OUR running job (tempId match). The run's clip
+        // state rides along with EVERY frame (MPI-535) — re-read per frame, never
+        // latched, because the marker that declares a run "clip" fires exactly once
+        // and this pane may not have been mounted when it landed.
         _unsubs.push(Events.on('preview:frame', ({ promptId, url }) => {
             if (!_myTempId || !url) return;
             const entry = activeGenerations.byPromptId(promptId);
-            if (entry?.tempId === _myTempId) _paintResult(url, { blurring: true });
+            if (entry?.tempId !== _myTempId) return;
+            _previewPlayer.push(url, activeGenerations.getPreviewClip(entry.id));
+        }));
+
+        // A new sampler stage = a fresh preview window, so stages don't concatenate
+        // into one growing loop. MPI-167.
+        _unsubs.push(Events.on('generation:preview-reset', ({ id, clip }) => {
+            if (!_myTempId) return;
+            if (activeGenerations.get(id)?.tempId !== _myTempId) return;
+            _previewPlayer.reset(clip);
         }));
 
         // ── Run ─────────────────────────────────────────────────────────────────
         function _setRunning(isRunning) {
             _running = isRunning;
+            // The single choke point every end path (complete / error / cancel) goes
+            // through, so stopping playback needs no separate call in each of them.
+            // Without it the loop keeps repainting blobs the finished gen revoked.
+            if (!isRunning) _previewPlayer.stop();
             // Arm the sweep the INSTANT the run starts, not on the first latent.
             // _paintResult also arms it, but the first latent can be tens of seconds
             // out (model load, VAE encode) and until then the slide showed nothing
@@ -1450,6 +1482,7 @@ export const MpiBaseFlow = ComponentFactory.create({
 
         el.destroy = () => {
             _teardownSlide();
+            _previewPlayer.stop();
             _unsubs.forEach(fn => fn?.());
             overlay?.el?.destroy?.();
         };

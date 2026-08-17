@@ -40,6 +40,20 @@
     cursor: move;
 }
 
+/* Live latent frame, painted over the loaded video while a generation runs
+   (MPI-571). Above the player so it covers the video, below the crop overlay
+   and the spinner so neither is hidden by it. */
+.mpi-video-viewer__latent {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+    z-index: 2;
+}
+
 .mpi-video-viewer__overlay {
     position: absolute;
     pointer-events: none;

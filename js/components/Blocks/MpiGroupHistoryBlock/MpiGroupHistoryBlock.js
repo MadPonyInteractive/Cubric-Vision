@@ -40,6 +40,7 @@ import { getAvailableCommands, getCommandMediaInputs } from '../../../data/comma
 import { enqueueGeneration, clearPendingQueue, refreshQueueDepth, cancelRunningCueJob } from '../../../services/generationService.js';
 import { generationStore } from '../../../services/generationStore.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
+import { createPreviewClipPlayer } from '../../../services/previewClipPlayer.js';
 import { openFlowFromReuse } from '../../../services/flowService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { qs, gid } from '../../../utils/dom.js';
@@ -725,9 +726,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         /** Inline replacement for strategy.onGenerationPreview / onRehydratePreview. */
         function _applyPreview(url) {
             if (isVideo) {
-                // Video workspace: latents are PNG/JPG frames, useless to play
-                // in a video element. Skip painting them so the viewer stays
-                // free for the user to queue more ops while generation runs.
+                // A JPEG latent cannot go into a <video>, so this used to return and
+                // the video workspace showed a spinner for the whole run and nothing
+                // else. MPI-571 gave the viewer its own latent LAYER instead: the
+                // loaded video stays put underneath, so nothing is reloaded when the
+                // run ends and the user keeps queueing ops while it plays.
+                viewer.el.setLatentPreview?.(url);
                 return;
             }
             if (!url) return;
@@ -744,6 +748,26 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 viewer.el.loadEntry?.({ filePath: url }, _currentIdx)?.catch?.(() => {});
             };
             probe.src = url;
+        }
+
+        /**
+         * Latent playback (MPI-571) — the ONE shared consumer. History never had a
+         * ring of its own: image runs replaced each frame (correct, they are still
+         * runs) and video runs painted nothing at all. A clip-bursting run always
+         * lands here as a VIDEO group, so the video branch is the one this changes.
+         *
+         * Owns its frames: a `groupHistory`-scope gen has no gallery placeholder and
+         * no Flow pane, so this viewer is its only retainer.
+         */
+        const _previewPlayer = createPreviewClipPlayer({
+            paint: _applyPreview,
+            ownsFrames: true,
+        });
+
+        /** Terminal event for one of our gens — drop the loop and the latent layer. */
+        function _endPreviewPlayback() {
+            _previewPlayer.stop();
+            if (isVideo) viewer.el.setLatentPreview?.(null);
         }
 
         function _restoreCurrentEntryAfterCancel() {
@@ -777,12 +801,19 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (!url) return;
             const entry = activeGenerations.byPromptId(promptId);
             if (!entry || !_myGenIds.has(entry.id)) return;
-            // Video workspace: preview latents are static frames, not playable.
-            // Leave viewer in its current state so user can queue more ops.
-            if (isVideo) return;
             viewer.el.setGenerating?.(false);
             // keep mascot visible — generation still running (latents incoming)
-            _applyPreview(url);
+            // The run's clip state rides along with EVERY frame (MPI-535): re-read,
+            // never latched, because the marker fires once and this block may not
+            // have been mounted when it landed.
+            _previewPlayer.push(url, activeGenerations.getPreviewClip(entry.id));
+        }));
+
+        // A new sampler stage = a fresh preview window, so stages don't concatenate
+        // into one growing loop. MPI-167.
+        _unsubs.push(Events.on('generation:preview-reset', ({ id, clip }) => {
+            if (!_myGenIds.has(id)) return;
+            _previewPlayer.reset(clip);
         }));
 
         /**
@@ -836,6 +867,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (!_myGenIds.has(id) && !_stoppedPendingComplete.has(id)) return;
             _myGenIds.delete(id);
             _stoppedPendingComplete.delete(id);
+            _endPreviewPlayback();
             viewer.el.setGenerating?.(false);
             // Result paint overlaps the mascot on complete, so no happy flash here —
             // just hide the waiting peek.
@@ -884,6 +916,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         _unsubs.push(Events.on('generation:error',     ({ id }) => {
             _stoppedPendingComplete.delete(id);
             if (_myGenIds.delete(id)) {
+                _endPreviewPlayback();
                 viewer.el.setGenerating?.(false);
                 _mascotHide(0);
                 _restoreCurrentEntryAfterCancel();
@@ -896,6 +929,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 // remember the id so the late generation:complete repaints the
                 // viewer (MPI-195).
                 _stoppedPendingComplete.add(id);
+                _endPreviewPlayback();
                 viewer.el.setGenerating?.(false);
                 _mascotHide(0);
                 _restoreCurrentEntryAfterCancel();
@@ -2695,6 +2729,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         el.destroy = async () => {
             clearTimeout(_mascotLingerTimer);
+            _previewPlayer.stop();
             _options?.destroy?.();
             _options = null;
 

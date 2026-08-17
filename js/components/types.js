@@ -590,6 +590,8 @@
  *   captureSnapshot({ time }?)        — returns { blob, dataUrl } of current frame, respecting active crop
  *   setTopRight(items)                — top-right chip strip passthrough
  *   resetView()                       — fit video back to stage (zoom=1, no pan)
+ *   setLatentPreview(url)             — paint a live latent frame OVER the loaded video
+ *                                       (MPI-571); null/'' hides the layer again
  *   setGenerating(bool)               — show/hide spinner (generation flag); OR'd with internal load flag
  *   setLoading(bool)                  — external load flag; loadVideo toggles it
  *                                       automatically off the first loadeddata/error

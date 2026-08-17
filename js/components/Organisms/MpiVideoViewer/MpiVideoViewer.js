@@ -37,6 +37,8 @@
  *   enterInterpolateMode() / exitInterpolateMode()
  *   setTopRight(items)                      — corner chip strip
  *   resetView()                             — fit video back to stage (zoom=1, no pan)
+ *   setLatentPreview(url)                   — paint a live latent frame OVER the video
+ *                                             (MPI-571); null/'' hides the layer again
  *   setGenerating(bool)                     — show/hide spinner (generation flag);
  *                                             OR'd with internal load flag
  *   setLoading(bool)                        — external load flag (rare; loadVideo
@@ -72,6 +74,7 @@ export const MpiVideoViewer = ComponentFactory.create({
         <div class="mpi-video-viewer" data-mode="idle">
             <div class="mpi-video-viewer__stage">
                 <div data-mount="surface" class="mpi-video-viewer__player"></div>
+                <img class="mpi-video-viewer__latent" alt="" hidden>
                 <canvas class="mpi-video-viewer__overlay"></canvas>
                 <div class="mpi-video-viewer__spinner" id="spinner-wrap"></div>
                 <div class="mpi-video-viewer__corners" id="corners-mount"></div>
@@ -137,6 +140,7 @@ export const MpiVideoViewer = ComponentFactory.create({
 
         // ── Overlay canvas setup ─────────────────────────────────────────
 
+        const latentImg = qs('.mpi-video-viewer__latent', el);
         const overlayCanvas = qs('.mpi-video-viewer__overlay', el);
         const stageEl = qs('.mpi-video-viewer__stage', el);
 
@@ -323,6 +327,23 @@ export const MpiVideoViewer = ComponentFactory.create({
         };
 
         el.setGenerating = (on) => _setGeneratingSpinner(on);
+
+        // Live latents over the video (MPI-571). The video workspace had NO surface
+        // for these at all — a video op running in History showed a spinner and
+        // nothing else, because a JPEG latent cannot be painted into a <video>. It
+        // is its own layer rather than a swap of the player: the loaded video stays
+        // put underneath, so nothing has to be reloaded when the run ends, and the
+        // user keeps queueing ops while it runs. Pacing and looping belong to
+        // previewClipPlayer — this only paints what it is handed.
+        el.setLatentPreview = (url) => {
+            if (!url) {
+                latentImg.hidden = true;
+                latentImg.removeAttribute('src');
+                return;
+            }
+            latentImg.src = url;
+            latentImg.hidden = false;
+        };
         el.setLoading    = (on) => _setLoadingSpinner(on);
 
         el.resetView = () => _resetView();

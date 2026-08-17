@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/services/previewClipPlayer.js",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+    "js/shell/floatLatentBridge.js",
+    "main/float-latent.html",
+    "docs/preview-bus.md",
+    "tests/previewClipPlayer.test.cjs",
+    "js/components/Organisms/MpiVideoViewer/MpiVideoViewer.js",
+    "js/components/Organisms/MpiVideoViewer/MpiVideoViewer.css",
+    "js/components/types.js",
+    "tests/gallery-card-teardown.test.cjs",
+    "docs/preview-decoders.md",
+    "docs/README.md"
+  ]
+}
