@@ -1,0 +1,68 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "44bcd4be-6bf4-4299-93b1-194243d08bac",
+  "generated_at": "2026-08-17T09:55:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-325 - a box step may leave the frame",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Resume MPI-572 from handoff 2f9d9b47: read the Head Swap output's .meta/ sidecar and split 'MPI-572 regressed Head Swap' from 'the graph is wrong'. Then address the box-off-canvas situation.",
+    "status": "in_progress",
+    "summary": "MPI-572 is CLOSED - the sidecar exonerated the app half, so the blended head is a graph/model matter Fabio owns and deliberately did NOT card. MPI-325 was then built end to end across both repos and user-verified in the app; it is `validating` on two non-code blockers only: the nodes pack is committed but NOT pushed or pinned, and one real generation through an overhanging box has not run."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-325/plan.md",
+    "completed": [
+      "MPI-572 closed on sidecar evidence (doing -> done, maturity complete)",
+      "Phase 1 - `allowOverflow` on cropTool; one `_clampPos` owns every position bound, default off",
+      "Phase 2 - MpiStepBox honours `step.overflow`, skips its own edge clamp, pads its stage",
+      "Phase 3 - nodes pack: MpiBox x/y accept negative, MpiBoxCrop gains optional `pad` (commit 38b3a27, UNPUSHED)",
+      "Phase 4 - head-swap steps declare `overflow`, graph node 89 carries `pad: true`, injector stopped clamping",
+      "Phase 5 - `docs/playbooks/add-flow/ui/box-gizmo.md` rewritten (it stated the opposite)"
+    ],
+    "pending": [
+      "PUSH + PIN the nodes pack - see next_action. Nothing else in MPI-325 is code",
+      "One real Head Swap generation through an overhanging box (GPU; Fabio ruled it out this session)",
+      "MPI-531 still owns ltx-extend's second step AND the FIRST-stage template (`inputSchema.media` restating the op's `mediaInputs`) - neither was MPI-572's scope"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-325",
+    "title": "Head Swap: box may extend outside frame + auto-pad (keep it square)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-325/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-325/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-325/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-325/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Ask Fabio to authorize pushing `c:\\AI\\Mpi\\ComfyUi-MpiNodes` (commit 38b3a27 is local-only), then pin the new SHA in `dev_configs/node_lock.json`. This is not bookkeeping: `comfy_workflows/flow_head_swap.json` now sends `pad: true` to MpiBoxCrop, and ComfyUI SILENTLY DROPS an input a node does not declare - so on an unpinned engine the gizmo lets a user drag a box off-frame and hands the model a squashed reference head with no error anywhere. The dev machine symlinks the pack into custom_nodes and the drift check skips it, so local testing will NOT reveal this. After the pin, MPI-325's only remaining item is one GPU generation.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "The blended Head Swap result is NOT carded and must not be - Fabio owns that workflow revisit and has tests still to run. MPI-572's sidecar read exonerated the app: Input_Tier was the NUMBER 2 and box1/box2 were {x,y,width,height}, both proven to land on a head by cropping them out of their own sources.",
+      "box1 and box2 needed DIFFERENT fixes, and the card's own wording was wrong about it. box1 masks (MpiBoxMask is full-frame, clips at the edge, and InpaintCropImproved's crop_magic_im grows the region back to the target aspect itself) so it needs NO pad. box2 crops straight into the text encoder with nothing to re-square it, so it needs `pad`. Padding the SOURCE is never right for a masked slot - it would grow the delivered picture.",
+      "`overflow` is bounded to HALF the box's own size, so its centre always stays over the content. Verified exact: a hard drag left reported x = -125 on a 250-wide box.",
+      "headSwapInjector's `_clampBox` was deleted (now `_intBox`). It mirrored a gizmo constraint that no longer exists, and a mirror of a deleted constraint silently rewrites a legal negative origin to 0."
+    ],
+    "constraints": [
+      "NEVER drive :3000 - Fabio's live session. Use `npm run app:isolated` (own port + own profile) and kill the process TREE afterwards, checking the parent chain first (root should be `launch-instance.mjs`).",
+      "NO GPU RUNS without asking - Fabio ruled them out mid-session on 2026-08-17.",
+      "`git push` was blocked once by the auto-mode classifier as a bare `git push`; `git push origin master` went through. Not a permissions problem with the branch.",
+      "The 48px stage margin is FIXED while the overflow bound scales with the box, so a very large box dragged to its limit could still clip its own handles. Raised with Fabio, deliberately not actioned on a head-sized box.",
+      "docs/playbooks/add-flow/ui/carousel-frame.md is 416 lines against the 200-line budget and 01-descriptor-and-ops.md is 228. Pre-existing, flagged across two sessions now, still not actioned - close-out work."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-325/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-325/validation.md",
+      "docs/playbooks/add-flow/ui/box-gizmo.md",
+      "js/utils/cropTool.js"
+    ]
+  },
+  "resume_prompt": "Resume MPI-325 in Cubric-Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/44bcd4be-6bf4-4299-93b1-194243d08bac.json and the card workspace at .agents/mpi-kanban/tasks/MPI-325/. The card is in `doing`/`validating` and its CODE IS DONE, committed as bdb33dd0 and user-verified in the app: a box step declaring `overflow: 'allow'` may now be dragged past the frame edge, and the reference crop pads back to square. Do not re-open the implementation. Two things remain and neither is code. FIRST, the blocker: the sibling repo c:\\AI\\Mpi\\ComfyUi-MpiNodes has commit 38b3a27 (MpiBox accepts a negative origin, MpiBoxCrop gains an optional `pad`) sitting LOCAL-ONLY, and comfy_workflows/flow_head_swap.json already sends `pad: true` to that node. ComfyUI silently drops an input a node does not declare, and the dev machine symlinks the pack so nothing local will surface it - meaning on an unpinned engine a user drags a box off-frame and gets a squashed reference head with no error. Ask Fabio to authorize the push, then pin the SHA in dev_configs/node_lock.json. SECOND: one real Head Swap generation through an overhanging box, whose pass/fail test is that the delivered image has NO padded strip on it. Fabio ruled out GPU runs on 2026-08-17, so ask before running one. Never touch :3000; it is his live app. Separately: MPI-572 is closed and its blended-head result is Fabio's own workflow revisit - do NOT create a card for it."
+}
