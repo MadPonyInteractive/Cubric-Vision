@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-573",
+  "title": "Audio in Vision: mic recorder popup + audio as an output media type",
+  "description": "Fold Cubric Audio into Vision instead of shipping a second app: a mic-recording popup that lands clips in the gallery, plus MEDIA_TYPE.AUDIO so a Flow can emit audio. Flow cards come later.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-17T04:49:31Z",
+  "updated_at": "2026-08-17T04:49:31Z",
+  "links": {
+    "plan": "plan.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}
