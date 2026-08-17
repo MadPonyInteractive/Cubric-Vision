@@ -1,8 +1,8 @@
 {
   "id": "ef79f889-3543-4493-af24-aafc09e55f6b",
   "revision": 0,
-  "last_node_id": 114,
-  "last_link_id": 156,
+  "last_node_id": 115,
+  "last_link_id": 158,
   "nodes": [
     {
       "id": 5,
@@ -224,91 +224,6 @@
         "32",
         "cpu (compatible)"
       ]
-    },
-    {
-      "id": 6,
-      "type": "InpaintStitchImproved",
-      "pos": [
-        13377.976997588392,
-        8913.568703191853
-      ],
-      "size": [
-        225.7486328125,
-        46
-      ],
-      "flags": {},
-      "order": 34,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "stitcher",
-          "type": "STITCHER",
-          "link": 7
-        },
-        {
-          "name": "inpainted_image",
-          "type": "IMAGE",
-          "link": 8
-        }
-      ],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            34
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "InpaintStitchImproved",
-        "cnr_id": "comfyui-inpaint-cropandstitch",
-        "ver": "2.1.8",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.5.1"
-        }
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 24,
-      "type": "PreviewImage",
-      "pos": [
-        13659.211399539781,
-        8911.906127950688
-      ],
-      "size": [
-        369.92902875686923,
-        506.760696491634
-      ],
-      "flags": {},
-      "order": 35,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 34
-        }
-      ],
-      "outputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "title": "Output_Image",
-      "properties": {
-        "Node name for S&R": "PreviewImage",
-        "cnr_id": "comfy-core",
-        "ver": "0.27.0"
-      },
-      "widgets_values": [],
-      "color": "#432",
-      "bgcolor": "#653"
     },
     {
       "id": 92,
@@ -1914,6 +1829,126 @@
       "widgets_values": [
         true
       ]
+    },
+    {
+      "id": 24,
+      "type": "PreviewImage",
+      "pos": [
+        13927.966280465494,
+        8906.662130274088
+      ],
+      "size": [
+        369.92902875686923,
+        506.760696491634
+      ],
+      "flags": {},
+      "order": 36,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 158
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "title": "Output_Image",
+      "properties": {
+        "Node name for S&R": "PreviewImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0"
+      },
+      "widgets_values": [],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 6,
+      "type": "InpaintStitchImproved",
+      "pos": [
+        13377.976997588392,
+        8913.568703191853
+      ],
+      "size": [
+        225.7486328125,
+        46
+      ],
+      "flags": {},
+      "order": 34,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "stitcher",
+          "type": "STITCHER",
+          "link": 7
+        },
+        {
+          "name": "inpainted_image",
+          "type": "IMAGE",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            157
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "InpaintStitchImproved",
+        "cnr_id": "comfyui-inpaint-cropandstitch",
+        "ver": "2.1.8",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.5.1"
+        }
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 115,
+      "type": "MpiClearVram",
+      "pos": [
+        13666.677910923268,
+        8918.5040849057
+      ],
+      "size": [
+        186.9140625,
+        26
+      ],
+      "flags": {},
+      "order": 35,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 157
+        }
+      ],
+      "outputs": [
+        {
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            158
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiClearVram"
+      }
     }
   ],
   "links": [
@@ -2052,14 +2087,6 @@
       22,
       1,
       "VAE"
-    ],
-    [
-      34,
-      6,
-      0,
-      24,
-      0,
-      "IMAGE"
     ],
     [
       124,
@@ -2292,6 +2319,22 @@
       100,
       0,
       "MODEL"
+    ],
+    [
+      157,
+      6,
+      0,
+      115,
+      0,
+      "IMAGE"
+    ],
+    [
+      158,
+      115,
+      0,
+      24,
+      0,
+      "IMAGE"
     ]
   ],
   "groups": [
@@ -2311,10 +2354,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.7627768444386408,
+      "scale": 0.7627768444386409,
       "offset": [
-        -9458.221841474833,
-        -8932.796510842722
+        -12146.294657199825,
+        -8517.826257999053
       ]
     },
     "reroutes": [
