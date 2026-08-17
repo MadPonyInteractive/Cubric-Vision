@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "docs/README.md",
+    "docs/utils.md",
+    "docs/gallery.md",
+    "docs/testing.md",
+    "docs/DEVELOPMENT.md",
+    "docs/download-manager.md",
+    "docs/runpod-remote-engine.md",
+    "docs/workflow-authoring/README.md",
+    "docs/workflow-authoring/converters.md",
+    "docs/models/README.md",
+    "docs/models/seedvr2/README.md",
+    "docs/releases/README.md",
+    ".claude/rules/comfy_engine.md"
+  ]
+}

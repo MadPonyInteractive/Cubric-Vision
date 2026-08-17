@@ -2802,3 +2802,4 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-332", "type": "task.moved", "at": "2026-08-17T05:02:00Z", "actor": "opus", "from": "doing", "to": "done", "summary": "doing -> done. Work shipped in an earlier session; parked by Fabio 2026-08-17 after on-disk re-verification."}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-557", "type": "task.updated", "at": "2026-08-17T05:05:00Z", "actor": "opus", "summary": "maturity planned -> blocked, on MPI-568 (LTX spatial upscaler bench). Fabio wants 568's results before 557 proceeds."}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-568", "type": "task.updated", "at": "2026-08-17T05:05:00Z", "actor": "opus", "summary": "MPI-557 is now blocked on this card - unblock it when this bench reports."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","task":"MPI-574","at":"2026-08-17T05:07:03Z","actor":"claude","from":"todo","to":"doing","note":"Created directly in doing - reorg session started."}

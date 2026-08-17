@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-574",
+  "title": "Memory reorg 4 - migrate codebase facts out of agent memory into docs/ and rules",
+  "description": "Fourth memory reorganisation (after MPI-399, 2026-08-07 and MPI-521). Audit all ~106 files in the project memory directory, migrate every CODEBASE fact into its subsystem doc or rule file, delete the shadow copies, and heal MEMORY.md + feedback-index.md + procedures-index.md (the was-to-now routing table). Memory keeps only: who Fabio is, how to work (feedback), in-flight state, cross-project strategy, and how to drive the environment.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-17T05:07:03Z",
+  "updated_at": "2026-08-17T05:30:52Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
