@@ -357,3 +357,48 @@ workspace boundary, NOT per-caller, and cover minimise + focus loss too). Then M
 **Still owed on this card:** one real foley run asserting the dispatched prompt from
 `/history` - the step-field promotion fails SILENTLY - plus card items 2 (`steps[].image`),
 3 (author every 1.5 Flow declaratively) and 4 (port MpiFlowHeadSwap).
+
+### 2026-08-17 (session 6) - MPI-570 shipped and closed, MPI-332 parked
+
+Neither is MPI-531 work; both were sitting in front of it. Recorded here because this plan is
+what the next session reads.
+
+**MPI-570 - DONE.** Gallery hover video no longer loops with sound behind an overlay. Two files:
+`overlayManager.js` (`_notifyDepthChange` passes the new stack depth; `onDepthChange` had zero
+consumers) and `MpiGalleryGrid.js` (`_overlayOpen`, the mirror of `_isScrolling`, driven from
+`Overlays.onDepthChange`). Full evidence in `tasks/MPI-570/validation.md`.
+
+Two findings worth carrying, because they contradict what MPI-570's brief predicted:
+
+1. **The brief's event ordering did not reproduce.** It expected `mouseenter` on the card the
+   closing popup reveals, then the overlay a tick later. Measured with a real parked cursor,
+   `card-mouseenter` NEVER fired - only `overlay-depth-1@10.2ms`. The overlay covered the card
+   before the browser's hit-test pass, so the boundary event went to the overlay. The ordering
+   depends on overlay mount time and is not derivable from the call graph, which is why the fix
+   keeps BOTH a stop and a gate. Either alone would have been a no-op for one of the two
+   orderings.
+2. **Four call sites reach `_hoverPlay`, not two.** Besides `_onCardEnter` and the audio-card
+   `mouseenter`, `_promoteVideo`'s already-hovering autoplay and the scroll-idle replay (a
+   150ms timer that can land after an overlay opened) both call it directly.
+
+The bug was measured live BEFORE the fix (playing unmuted, `currentTime` 0.54 -> 1.73 at
+`depth:1`) so the fix is provably not a no-op. Fabio confirmed in-app.
+
+**MPI-332 - parked to done.** Re-verified on disk rather than taken on the previous handoff's
+word: 0 references to the three flow ids anywhere in `js/` or `comfy_workflows/`, all six files
+deleted, Head Swap kept. `tasks/MPI-332/validation.md`.
+
+**Current state.** MPI-531 itself is UNCHANGED this session - no MPI-531 file was touched.
+606/606 green, eslint clean.
+
+**Next action: MPI-571 FIRST, then MPI-531's owed generation - Fabio's call, 2026-08-17.**
+The ordering flipped deliberately. MPI-571 (the four latent-preview consumers) needs
+generations, and MPI-531's outstanding debt is also a generation, so doing MPI-571 first lets
+one GPU session serve both. **But it only parks MPI-531 if that run is a FOLEY run whose
+DISPATCHED prompt is read back from Comfy `/history`** - the step-field promotion path fails
+silently, so a successful-looking run that quietly used the graph's baked default proves
+nothing, and the box on screen is not evidence. If MPI-571's generations end up on some other
+flow, MPI-531 still owes its own foley run.
+
+**Still owed on this card:** the foley `/history` assertion above, plus card items 2
+(`steps[].image`), 3 (author every 1.5 Flow declaratively) and 4 (port `MpiFlowHeadSwap`).

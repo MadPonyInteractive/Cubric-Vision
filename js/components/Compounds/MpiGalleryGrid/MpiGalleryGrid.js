@@ -12,6 +12,7 @@ import { state } from '../../../state.js';
 import { Storage } from '../../../core/storage.js';
 import { Events } from '../../../events.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
+import { Overlays } from '../../../managers/overlayManager.js';
 import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
 import { extractAbsPath, extractFilenameFromPath } from '../../../utils/mediaActions.js';
 import { clientLogger } from '../../../services/clientLogger.js';
@@ -170,6 +171,17 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // on. So scroll-past = silence, settling = instant play, no dwell.
         let _isScrolling = false;
         let _scrollIdleTimer = null;
+
+        // ── Hover playback vs overlays (MPI-570) ──────────────────────────────
+        // An overlay mounting over a stationary cursor fires no `mouseleave`, so a
+        // hover-playing card would loop — with sound — behind it. Same for the app
+        // being minimised or losing focus. `_overlayOpen` is the mirror of
+        // `_isScrolling`: while the gallery is not the visible surface, hover never
+        // plays. The gate matters as much as the stop — `mouseenter` from a card
+        // REVEALED under the cursor (a closing popup uncovering it) is fired by the
+        // browser's hit-test pass, which can land after the overlay has pushed. A
+        // stop alone would miss exactly that ordering.
+        let _overlayOpen = false;
 
         // ── Selection state ───────────────────────────────────────────────────
         const _selectedIds = new Set();
@@ -871,6 +883,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 };
                 on(cardEl, 'mouseenter', () => {
                     if (_isScrolling) return; // scroll-past never plays
+                    if (_overlayOpen) return; // gallery is not the visible surface (MPI-570)
                     cardEl._hoverPlay();
                 });
                 on(cardEl, 'mouseleave', () => {
@@ -931,6 +944,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             function _onCardEnter() {
                 if (_isScrolling) return; // scroll-past never plays (MPI-321)
+                if (_overlayOpen) return; // gallery is not the visible surface (MPI-570)
                 cardEl._hoverPlay();
             }
 
@@ -992,7 +1006,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 // If user is already hovering at the moment of promotion (and not
                 // mid-scroll), start playback as soon as data lands. Scroll-settle
                 // replays via the idle handler, so the scroll gate stays honored.
-                if (cardEl.matches(':hover') && !_isScrolling) {
+                if (cardEl.matches(':hover') && !_isScrolling && !_overlayOpen) {
                     v.addEventListener('loadeddata', () => v.play().catch(() => {}), { once: true });
                 }
             }
@@ -1826,10 +1840,25 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 _isScrolling = false;
                 // Play the card the cursor came to rest on (mouseenter won't
                 // re-fire — the pointer didn't move, the scroll did).
+                if (_overlayOpen) return; // an overlay opened mid-scroll (MPI-570)
                 qs('.mpi-group-card:hover', grid)?._hoverPlay?.();
             }, 150);
         }, { passive: true }));
         _unsubs.push(() => { if (_scrollIdleTimer) clearTimeout(_scrollIdleTimer); });
+
+        // MPI-570 — depth 0 → 1 IS "the gallery stopped being the visible surface",
+        // and every overlay goes through Overlays.request (Flow, Model Manager, Flow
+        // Library, History), which notifies AFTER instance.show(). So this is the one
+        // choke point, not a per-caller patch. Minimise and focus loss are the same
+        // stop: the cursor stays parked on a card and no mouseleave ever arrives.
+        _unsubs.push(Overlays.onDepthChange((depth) => {
+            _overlayOpen = depth > 0;
+            if (_overlayOpen) _stopOtherGalleryMedia(null);
+        }));
+        _unsubs.push(on(window, 'blur', () => _stopOtherGalleryMedia(null)));
+        _unsubs.push(on(document, 'visibilitychange', () => {
+            if (document.hidden) _stopOtherGalleryMedia(null);
+        }));
 
         // ── Info toggle button ───────────────────────────────────────────────
 

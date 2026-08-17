@@ -3,17 +3,22 @@
   "id": "MPI-570",
   "title": "Gallery hover video keeps playing (with sound) when an overlay opens over it",
   "description": "Reported by Fabio 2026-08-16, reproduced from his own use: hover a video card in the gallery, press Reuse -> the Flow overlay opens and the card UNDERNEATH THE CURSOR keeps looping, with its audio, behind/through the overlay.\n\nROOT CAUSE (traced, not guessed): hover playback is stopped only by `_onCardLeave`, bound to the card's `mouseleave` (js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js ~L953). When an overlay MOUNTS OVER a stationary cursor the pointer never moves, so no `mouseleave` fires and nothing else ever pauses the element. The stop-everything helper already exists and is correct - `_stopOtherGalleryMedia(null)` (~L24) pauses, rewinds and re-mutes every `audio[data-src]` and `video.mpi-group-card__thumb--video`. It is simply never called on overlay open.\n\nFIX SHAPE: call it when the gallery stops being the visible surface, not from the Flow. The Flow is one of several overlays (Model Manager, Flow Library, History) and a per-caller fix is the one-consumer fix the root-cause rule bans. Candidates: the `ui:close-all-popups` / OverlayManager show path, or a `state:changed` watch on the workspace. Whatever is chosen must also cover the app being MINIMISED and the window losing focus, which Fabio also reported ('they keep playing when the app screen opens').\n\nSECOND, POSSIBLY RELATED SYMPTOM, same report: hovering a gallery video sometimes does NOTHING, and sometimes plays with the audio arriving late. `_onCardEnter` early-returns while `_isScrolling` (MPI-321, deliberate - scroll-past must not play) and a scroll-idle handler is supposed to play the card the cursor settled on (~L1816). Verify that handoff actually fires; a missed one reads exactly as 'hover does nothing'. The late audio is a different mechanism: `_videoHoverPlay` unmutes and calls `play()` on an element that may still be buffering, so sound starts when data arrives rather than on hover. Do not assume the two are one bug.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "pending",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-16T07:15:00Z",
-  "updated_at": "2026-08-16T07:15:00Z",
+  "updated_at": "2026-08-17T04:56:00Z",
   "labels": [
     "bug",
     "gallery",
     "flows"
   ],
   "links": {
+    "plan": "plan.md",
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
     "events": "events.jsonl"
   }
 }

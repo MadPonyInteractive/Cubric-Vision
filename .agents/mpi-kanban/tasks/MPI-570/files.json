@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/managers/overlayManager.js",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js"
+  ]
+}

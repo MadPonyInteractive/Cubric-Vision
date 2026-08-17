@@ -98,7 +98,7 @@ class OverlayManager {
 
     /**
      * Subscribe to stack depth changes (fires after push/pop).
-     * @param {function(): void} cb
+     * @param {function(number): void} cb - receives the new stack depth
      * @returns {function(): void} unsubscribe
      */
     onDepthChange(cb) {
@@ -117,8 +117,9 @@ class OverlayManager {
 
     /** @private */
     _notifyDepthChange() {
+        const depth = this._stack.length;
         for (const cb of this._depthSubs) {
-            try { cb(); } catch (e) { console.error('[Overlays] depthChange subscriber error:', e); }
+            try { cb(depth); } catch (e) { console.error('[Overlays] depthChange subscriber error:', e); }
         }
     }
 }
