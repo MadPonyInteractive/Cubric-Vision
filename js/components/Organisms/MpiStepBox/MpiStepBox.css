@@ -23,6 +23,14 @@
     touch-action: none;
 }
 
+/* `overflow: 'allow'` (MPI-325) — the box may hang off an edge, so the stage
+   grows a margin for it to hang into. Without this the overlay canvas is the
+   size of the image and the off-frame part of the box, handles included, is
+   simply clipped away. */
+.mpi-step-box__stage--overflow {
+    padding: var(--s-6);
+}
+
 .mpi-step-box__media {
     display: block;
     max-width: 100%;

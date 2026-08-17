@@ -277,7 +277,8 @@
       "mpi_box": [
         "88",
         0
-      ]
+      ],
+      "pad": true
     },
     "class_type": "MpiBoxCrop",
     "_meta": {

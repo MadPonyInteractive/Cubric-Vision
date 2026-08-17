@@ -32,6 +32,19 @@ import { qs, on } from '../../../utils/dom.js';
  * user blames on the model. cropTool already clamps in normalized space; the
  * pixel conversion below re-clamps the EDGES before deriving w/h so rounding
  * can never push the box off the source.
+ *
+ * `step.overflow === 'allow'` LIFTS that clamp (MPI-325), because a square
+ * forced to stay inside the frame cannot sit tight on an edge-adjacent head —
+ * it has to grow until it swallows the neighbour. Opting in is DECLARED by the
+ * step, never inferred from the flow, so this stays data a manifest can carry.
+ *
+ * A flow may only opt in where its consumer survives the overhang:
+ *   - `Mpi Box Mask` — safe. The mask is full-frame and clips at the edge, and
+ *     `InpaintCropImproved` re-squares the region itself before sampling.
+ *   - `Mpi Box Crop` — needs the node's own `pad` input on, or the reference
+ *     comes back non-square.
+ * Padding the SOURCE is never the answer for a masked slot: it would grow the
+ * delivered image.
  */
 
 /** Minimum box edge in source pixels — below this a crop is meaningless. */
@@ -56,25 +69,35 @@ function _naturalSize(imgEl) {
  * let an off-edge box keep its size and slide, which is exactly the silent
  * non-square crop this guards against.
  *
+ * `allowOverflow` skips BOTH clamps so the box keeps its full requested size and
+ * reports a NEGATIVE origin when it hangs off the top/left. The graph is the
+ * consumer of that: `clamp_box` intersects, and `Mpi Box Crop`'s `pad` puts back
+ * what the intersection dropped.
+ *
  * @param {{x:number,y:number,w:number,h:number}} norm
  * @param {{w:number,h:number}} natural
+ * @param {boolean} [allowOverflow=false]
  * @returns {{x:number,y:number,w:number,h:number}} integer source pixels
  */
-function _normToSourcePx(norm, natural) {
+function _normToSourcePx(norm, natural, allowOverflow = false) {
     let x1 = norm.x * natural.w;
     let y1 = norm.y * natural.h;
     let x2 = (norm.x + norm.w) * natural.w;
     let y2 = (norm.y + norm.h) * natural.h;
 
-    x1 = Math.max(0, Math.min(x1, natural.w));
-    y1 = Math.max(0, Math.min(y1, natural.h));
-    x2 = Math.max(0, Math.min(x2, natural.w));
-    y2 = Math.max(0, Math.min(y2, natural.h));
+    if (!allowOverflow) {
+        x1 = Math.max(0, Math.min(x1, natural.w));
+        y1 = Math.max(0, Math.min(y1, natural.h));
+        x2 = Math.max(0, Math.min(x2, natural.w));
+        y2 = Math.max(0, Math.min(y2, natural.h));
+    }
 
     const x = Math.round(Math.min(x1, x2));
     const y = Math.round(Math.min(y1, y2));
     const w = Math.max(MIN_BOX_PX, Math.round(Math.abs(x2 - x1)));
     const h = Math.max(MIN_BOX_PX, Math.round(Math.abs(y2 - y1)));
+
+    if (allowOverflow) return { x, y, w, h };
 
     // MIN_BOX_PX may have grown the box past an edge — pull the origin back.
     return {
@@ -122,10 +145,15 @@ export const MpiStepBox = ComponentFactory.create({
         const overlayEl = /** @type {HTMLCanvasElement} */ (qs('#step-box-overlay', el));
         const dimsEl = qs('#step-box-dims', el);
 
+        /** Declared per step — see the file header for which consumers may opt in. */
+        const _allowOverflow = step.overflow === 'allow';
+
         /** @type {{x:number,y:number,w:number,h:number}|null} */
         let _box = props.value?.box || null;
         let _cropTool = null;
         let _natural = { w: 1, h: 1 };
+
+        if (_allowOverflow) stageEl.classList.add('mpi-step-box__stage--overflow');
 
         /** Report the current box upward. The frame stores it under the step's role. */
         function _report() {
@@ -137,14 +165,25 @@ export const MpiStepBox = ComponentFactory.create({
          * Size the overlay canvas to the rendered image box. cropTool maps
          * normalized coords through canvas pixel space, so a canvas that does
          * not match the displayed image puts the handles in the wrong place.
+         *
+         * Under `overflow: 'allow'` the canvas instead fills the whole STAGE,
+         * which the `--overflow` modifier has padded. A box that leaves the frame
+         * would otherwise be clipped away with its handles — you cannot judge how
+         * much hair you included in a rectangle you cannot see. cropTool's
+         * `_getContentBounds` already letterboxes the natural aspect into the
+         * canvas and centres it, so the larger canvas needs no coord change: the
+         * padding is symmetric, so the fitted rect IS the rendered image rect.
          */
         function _syncOverlaySize() {
             const rect = mediaEl.getBoundingClientRect();
             if (!rect.width || !rect.height) return;
-            overlayEl.width = Math.round(rect.width);
-            overlayEl.height = Math.round(rect.height);
-            overlayEl.style.width = `${Math.round(rect.width)}px`;
-            overlayEl.style.height = `${Math.round(rect.height)}px`;
+            const w = _allowOverflow ? stageEl.clientWidth : Math.round(rect.width);
+            const h = _allowOverflow ? stageEl.clientHeight : Math.round(rect.height);
+            if (!w || !h) return;
+            overlayEl.width = w;
+            overlayEl.height = h;
+            overlayEl.style.width = `${w}px`;
+            overlayEl.style.height = `${h}px`;
             _cropTool?.redraw();
         }
 
@@ -157,8 +196,9 @@ export const MpiStepBox = ComponentFactory.create({
                 overlayCanvas: overlayEl,
                 targetElement: mediaEl,
                 showGrid: false,      // region marker, not a composition aid
+                allowOverflow: _allowOverflow,
                 onChange: (normRect) => {
-                    _box = _normToSourcePx(normRect, _natural);
+                    _box = _normToSourcePx(normRect, _natural, _allowOverflow);
                     _report();
                 },
             });
@@ -177,7 +217,7 @@ export const MpiStepBox = ComponentFactory.create({
 
             // Adopt whatever cropTool settled on (a ratio lock rewrites the seed),
             // so the reported value always matches what is drawn.
-            _box = _normToSourcePx(_cropTool.getRect(), _natural);
+            _box = _normToSourcePx(_cropTool.getRect(), _natural, _allowOverflow);
             _report();
         }
 

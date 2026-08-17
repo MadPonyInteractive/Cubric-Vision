@@ -17,6 +17,7 @@
  *     targetElement,     // img or video element with intrinsic dimensions
  *     onChange,          // (normRect) => void, called on drag end
  *     showGrid,          // optional, default true — rule-of-thirds guides
+ *     allowOverflow,     // optional, default false — see _clampPos
  *   });
  *
  *   cropTool.enable({ x: 0.1, y: 0.1, w: 0.8, h: 0.8 });
@@ -35,7 +36,7 @@ const HANDLE_STROKE = 'oklch(0.95 0.005 80)';         /* --ink-1 */
 
 import { Hotkeys } from '../managers/hotkeyManager.js';
 
-export function createCropTool({ overlayCanvas, targetElement, onChange, showGrid = true }) {
+export function createCropTool({ overlayCanvas, targetElement, onChange, showGrid = true, allowOverflow = false }) {
     let _isEnabled = false;
     let _lockedRatio = null; // null = FREE (no aspect lock)
     let _normRect = { x: 0, y: 0, w: 1, h: 1 }; // normalized [0..1]
@@ -132,6 +133,28 @@ export function createCropTool({ overlayCanvas, targetElement, onChange, showGri
     }
 
     /**
+     * Clamp a normalized origin on one axis. The ONLY place the frame bounds a
+     * position — every drag/resize path routes through it (MPI-325).
+     *
+     * Default: the rect stays wholly inside the frame, `[0, 1 - size]`.
+     *
+     * `allowOverflow`: the rect may hang off an edge by up to HALF its own size,
+     * so its CENTRE always stays over the content. That is the honest reading of
+     * "the thing you are boxing is on the image, only the box's margin is not",
+     * and it keeps the rect grabbable without a separate minimum-overlap
+     * constant. A caller opting in must also be prepared for a NEGATIVE origin.
+     *
+     * @param {number} v normalized origin
+     * @param {number} size normalized extent on the same axis
+     * @returns {number}
+     */
+    function _clampPos(v, size) {
+        return allowOverflow
+            ? Math.max(-size / 2, Math.min(v, 1 - size / 2))
+            : Math.max(0, Math.min(v, 1 - size));
+    }
+
+    /**
      * Clamp and fit normalized rect to locked ratio and bounds.
      *
      * `preserve` (default false) keeps the CALLER'S rect instead of resetting to a
@@ -145,8 +168,8 @@ export function createCropTool({ overlayCanvas, targetElement, onChange, showGri
             const w = Math.min(Math.max(r.w, 0.01), 1);
             const h = Math.min(Math.max(r.h, 0.01), 1);
             return {
-                x: Math.max(0, Math.min(r.x, 1 - w)),
-                y: Math.max(0, Math.min(r.y, 1 - h)),
+                x: _clampPos(r.x, w),
+                y: _clampPos(r.y, h),
                 w, h,
             };
         };
@@ -248,8 +271,8 @@ export function createCropTool({ overlayCanvas, targetElement, onChange, showGri
         if (_activeHandle === 'body') {
             let x = sr.x + dx;
             let y = sr.y + dy;
-            x = Math.max(0, Math.min(x, 1 - sr.w));
-            y = Math.max(0, Math.min(y, 1 - sr.h));
+            x = _clampPos(x, sr.w);
+            y = _clampPos(y, sr.h);
             _normRect = { x, y, w: sr.w, h: sr.h };
             return;
         }
@@ -287,10 +310,19 @@ export function createCropTool({ overlayCanvas, targetElement, onChange, showGri
             }
             if (w < minSize) { x = sr.x + sr.w - minSize; w = minSize; }
             if (h < minSize) { y = sr.y + sr.h - minSize; h = minSize; }
-            x = Math.max(0, x);
-            y = Math.max(0, y);
-            w = Math.min(w, 1 - x);
-            h = Math.min(h, 1 - y);
+            if (allowOverflow) {
+                // Size still caps at the frame span — the ask is a box that may
+                // LEAVE the frame, never one bigger than the picture.
+                w = Math.min(w, 1);
+                h = Math.min(h, 1);
+                x = _clampPos(x, w);
+                y = _clampPos(y, h);
+            } else {
+                x = Math.max(0, x);
+                y = Math.max(0, y);
+                w = Math.min(w, 1 - x);
+                h = Math.min(h, 1 - y);
+            }
             _normRect = { x, y, w, h };
             return;
         }
@@ -363,21 +395,30 @@ export function createCropTool({ overlayCanvas, targetElement, onChange, showGri
         let h = w / r;
         if (h < minSize) { h = minSize; w = h * r; }
 
-        // Bound max w by horizontal space available from anchor
-        let maxW = w;
-        if (signX > 0)      maxW = Math.min(maxW, 1 - anchorX);
-        else if (signX < 0) maxW = Math.min(maxW, anchorX);
-        else                maxW = Math.min(maxW, 2 * Math.min(anchorX, 1 - anchorX));
+        if (allowOverflow) {
+            // The frame no longer bounds the SIZE — that is the whole point: a
+            // square tight on an edge-adjacent head cannot be grown while it is
+            // pinned to the edge. It still caps at the frame span.
+            w = Math.max(minSize, Math.min(w, 1));
+            h = w / r;
+            if (h > 1) { h = 1; w = h * r; }
+        } else {
+            // Bound max w by horizontal space available from anchor
+            let maxW = w;
+            if (signX > 0)      maxW = Math.min(maxW, 1 - anchorX);
+            else if (signX < 0) maxW = Math.min(maxW, anchorX);
+            else                maxW = Math.min(maxW, 2 * Math.min(anchorX, 1 - anchorX));
 
-        // Bound by vertical space, converted to width via ratio
-        let maxH;
-        if (signY > 0)      maxH = 1 - anchorY;
-        else if (signY < 0) maxH = anchorY;
-        else                maxH = 2 * Math.min(anchorY, 1 - anchorY);
-        maxW = Math.min(maxW, maxH * r);
+            // Bound by vertical space, converted to width via ratio
+            let maxH;
+            if (signY > 0)      maxH = 1 - anchorY;
+            else if (signY < 0) maxH = anchorY;
+            else                maxH = 2 * Math.min(anchorY, 1 - anchorY);
+            maxW = Math.min(maxW, maxH * r);
 
-        w = Math.max(minSize, maxW);
-        h = w / r;
+            w = Math.max(minSize, maxW);
+            h = w / r;
+        }
 
         let x, y;
         if (signX > 0)      x = anchorX;
@@ -387,6 +428,10 @@ export function createCropTool({ overlayCanvas, targetElement, onChange, showGri
         if (signY > 0)      y = anchorY;
         else if (signY < 0) y = anchorY - h;
         else                y = anchorY - h / 2;
+
+        // Overflow still keeps the box's centre over the content; a no-op when off.
+        x = _clampPos(x, w);
+        y = _clampPos(y, h);
 
         _normRect = { x, y, w, h };
     }

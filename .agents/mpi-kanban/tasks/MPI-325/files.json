@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/utils/cropTool.js",
+    "js/components/Organisms/MpiStepBox/MpiStepBox.js",
+    "js/services/workflowInjectors/headSwapInjector.js",
+    "js/data/flowsRegistry.js",
+    "comfy_workflows/flow_head_swap.json",
+    "docs/playbooks/add-flow/ui/box-gizmo.md",
+    "tests/box-overflow.test.cjs",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/img.py",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/README.md",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/changelog.md"
+  ]
+}

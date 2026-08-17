@@ -112,3 +112,13 @@ they are two index-aligned arrays that work and have tripped nobody. Left alone 
 - 2026-08-17: plan written at pickup. Card had no plan.md — the description's open question
   was already answered by MPI-531 before this card was ever opened, so the scope narrowed from
   "design the step template" to "remove the one remaining non-manifest surface".
+- 2026-08-17 (close): the blended Head Swap risk is CLOSED, and not by the planned
+  `/history` diff. The `.meta/` sidecar records the payload the app emitted one step
+  earlier, so a disk read settled it for free: `Input_Tier: 2` (number, non-default),
+  `box1`/`box2` both `{x, y, width, height}`, both proven to land on a head by cropping
+  them out of their own sources. App exonerated; the blend is Qwen leaking the source
+  through a correct mask. Verification step 3 is superseded — prefer the sidecar to a
+  `/history` diff whenever the question is "what did the app send".
+- 2026-08-17 (close): FIRST-stage template and ltx-extend's second step were NOT done in
+  this card and are not its scope — both belong to MPI-531, which already claims
+  `flowsRegistry.js`.

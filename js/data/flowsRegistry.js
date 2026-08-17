@@ -165,13 +165,25 @@ export const FLOWS = [
                 // image1's box masks the head being replaced (→ Input_Box, Mpi Box
                 // Mask), image2's crops the head being taken (→ Input_Box_2, Mpi Box
                 // Crop). This is what MpiFlowHeadSwap.getInputs() used to do in JS.
-                kind: 'box', role: 'image1', param: 'box1', ratio: 1,
+                //
+                // `overflow: 'allow'` (MPI-325) lets the square leave the frame. A
+                // head at the edge otherwise forces the box to GROW until it
+                // swallows the neighbour, which is how the MPI-324 validation run
+                // swapped the wrong face. Safe on THIS slot with no graph change:
+                // Mpi Box Mask is full-frame and clips, and Inpaint Crop re-squares
+                // the region itself. Never pad image1 — that would grow the
+                // delivered picture.
+                kind: 'box', role: 'image1', param: 'box1', ratio: 1, overflow: 'allow',
                 tickerLabel: 'Target head',
                 title: 'Mark where the new head goes',
                 hint: 'Box the head you want replaced. Include the hair and jaw.',
             },
             {
-                kind: 'box', role: 'image2', param: 'box2', ratio: 1,
+                // Same overflow, but this slot is CROPPED, so the graph has to put
+                // the overhang back: node 89 Mpi Box Crop carries `pad: true`. Turn
+                // one off and the other is wrong — an unpadded overhang reaches the
+                // encoder as a squashed reference head.
+                kind: 'box', role: 'image2', param: 'box2', ratio: 1, overflow: 'allow',
                 tickerLabel: 'Reference head',
                 title: 'Mark which head to take',
                 hint: 'Box the head to use. A close-up portrait works best.',

@@ -8,12 +8,18 @@
  * injector: it is the only way a box reaches the graph.
  *
  * Box coordinate contract (verified against the authored MpiNodes — full write-up in
- * docs/playbooks/add-app/ui/box-gizmo.md):
+ * docs/playbooks/add-flow/ui/box-gizmo.md):
  *   - x/y are TOP-LEFT, in absolute SOURCE pixels of the image that slot loaded.
- *   - Out-of-bounds CLAMPS to the intersection; it does NOT pad. A box hanging off
- *     the edge therefore yields a smaller, non-square crop — a distorted reference
- *     head the user reads as a model failure. The gizmo constrains to bounds, and we
- *     clamp again here so a bad param can never reach the graph.
+ *     They MAY BE NEGATIVE (MPI-325): a step declaring `overflow: 'allow'` lets the
+ *     box hang off an edge so a square can sit tight on an edge-adjacent head.
+ *   - Out-of-bounds still CLAMPS to the intersection in `clamp_box`. Whether that
+ *     costs anything is the CONSUMER's business, and it is now declared in the graph
+ *     rather than guessed here: a mask wants the clip, and `Mpi Box Crop`'s `pad`
+ *     input puts back what the intersection dropped.
+ *
+ * This injector therefore does NOT clamp. It used to, mirroring a gizmo constraint
+ * that no longer exists — and a mirror of a deleted constraint is worse than none,
+ * because it silently rewrites a legal negative origin to 0 and moves the box.
  *
  * Suffix convention: one box per image slot, suffix matching the image
  * (Input_Box ↔ Input_Image, Input_Box_2 ↔ Input_Image_2). Unsuffixed IS slot 1.
@@ -50,21 +56,17 @@ function _int(value) {
 }
 
 /**
- * Clamp a box to the image it belongs to, preserving the top-left anchor.
- * Mirrors the gizmo's own constraint so a stale/hand-built param cannot produce
- * the silent non-square crop described above. Without known image dimensions we
- * only enforce non-negative origin + positive size.
+ * Round a box to integer widget values. The origin passes through with its SIGN
+ * intact — see the header for why nothing is clamped here. Only the size is
+ * guarded, because a zero or negative extent is not a region under any reading.
  */
-function _clampBox(box) {
-    const x = Math.max(0, _int(box.x) ?? 0);
-    const y = Math.max(0, _int(box.y) ?? 0);
-    let width = Math.max(1, _int(box.width) ?? 1);
-    let height = Math.max(1, _int(box.height) ?? 1);
-    const imgW = _int(box.imageWidth);
-    const imgH = _int(box.imageHeight);
-    if (imgW && imgW > 0) width = Math.max(1, Math.min(width, imgW - Math.min(x, imgW - 1)));
-    if (imgH && imgH > 0) height = Math.max(1, Math.min(height, imgH - Math.min(y, imgH - 1)));
-    return { x, y, width, height };
+function _intBox(box) {
+    return {
+        x: _int(box.x) ?? 0,
+        y: _int(box.y) ?? 0,
+        width: Math.max(1, _int(box.width) ?? 1),
+        height: Math.max(1, _int(box.height) ?? 1),
+    };
 }
 
 /**
@@ -72,8 +74,8 @@ function _clampBox(box) {
  *
  * @param {Record<string, any>} workflow
  * @param {Object} params
- * @param {{x:number,y:number,width:number,height:number,imageWidth?:number,imageHeight?:number}} [params.box1]
- * @param {{x:number,y:number,width:number,height:number,imageWidth?:number,imageHeight?:number}} [params.box2]
+ * @param {{x:number,y:number,width:number,height:number}} [params.box1]
+ * @param {{x:number,y:number,width:number,height:number}} [params.box2]
  * @returns {Record<string, any>}
  */
 export function injectHeadSwap(workflow, params = {}) {
@@ -81,7 +83,7 @@ export function injectHeadSwap(workflow, params = {}) {
         const box = params[key];
         // A box is optional per image: no box → leave the node's baked default.
         if (!box || typeof box !== 'object') continue;
-        const values = _clampBox(box);
+        const values = _intBox(box);
         // Absent node is NOT an error (a single-image run has no Input_Box_2 to fill,
         // and the suffix convention allows a graph to carry fewer boxes than slots).
         for (const node of _nodesByTitle(workflow, title)) {
