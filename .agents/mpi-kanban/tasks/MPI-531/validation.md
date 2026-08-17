@@ -292,3 +292,28 @@ sizes, and they were too small.
 run succeeds and quietly uses the graph's baked default — so it still needs one real foley run
 with the dispatched prompt asserted from `/history`, not read off the box on screen. The GPU
 was left free for the Cubric-Prompt agent again this session.
+
+## Foley dispatched-prompt readback — PARKED 2026-08-17, promotion CONFIRMED
+
+The debt was: the flow step-field promotion path fails SILENTLY — the run succeeds and
+quietly uses the graph's baked default — so the box on screen proves nothing. Only the
+DISPATCHED graph does.
+
+Fabio ran foley (`flowLtxFoley_001`, LTX 2.3, source `flowLtxExtend_001.mp4`). Read back
+from the app engine's `/history` on :48188, prompt `45f7b18c`, 53 nodes:
+
+| node | dispatched value |
+|---|---|
+| `MpiText #12` (positive) | `'Footstep. '` |
+| `MpiText #13` (negative) | `'music, melody, song, singing, vocals, score, soundtrack, beat, …'` |
+| `MpiLoadVideo #17` | `…\1.4 media\Media\flowLtxExtend_001.mp4` |
+
+The baked default of `#12` in `comfy_workflows/flow_ltx_foley.json` is
+*"I hear footsteps and background sounds from a restaurant of people eating, clinking
+cutlery, and a chef screaming in the background."*
+
+Dispatched ≠ baked default, so **the step field reached the graph**. That is the whole
+claim this readback owed, and it is now evidence rather than a box on screen.
+
+(An LTX **extend** run read back the same way the day before showed the same: `#12` carried
+Fabio's own continuation sentence and `#13` the seeded negative default.)

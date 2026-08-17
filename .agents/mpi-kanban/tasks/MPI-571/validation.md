@@ -102,3 +102,37 @@ both-engine rule — a local run does not prove remote).
 **If that run is a FOLEY (LTX) run it also parks MPI-531's last debt** — read the
 DISPATCHED prompt back from Comfy `/history`, because the step-field promotion path
 fails silently and the box on screen is not evidence. A run on any other flow does not.
+
+## Final — all four surfaces confirmed live (2026-08-17, second pass)
+
+Fabio re-ran after `ae8d6149` — an LTX foley run for the Flow pane and the History viewer,
+H3 for the rest.
+
+| surface | verdict |
+|---|---|
+| Gallery | PASS |
+| Flow result pane | PASS — paces and loops; the burst-replay-then-freeze is gone |
+| History workspace | PASS — plays, and the latent now fills the stage instead of floating as a small tile |
+| Minimised float window | PASS — *"Minimised looks fine"* |
+
+**The minimised "stuck" was never a bug.** He confirmed the frozen tile carried the Done
+badge and "Click to open" — `finalize`'s finished state. Asked whether it should keep
+looping instead, his call was **freeze on Done**. No code change; the behaviour stands as
+designed and this line is the record of that decision.
+
+Also ruled out on the way: the four runs were H3 and LTX, both CLIP previewers, so the
+still-mode tail was not in play either; and they were four SEPARATE runs, not a queue, so
+nothing could have stranded `float-latent.html`'s `t.done` gate.
+
+### Carried out of this card — MPI-575
+
+The LTX preview FLASHES junk frames on the audio-carrying flows (foley, extend), never on
+H3. It flashes identically in all three in-renderer surfaces, which is what places it
+upstream of this card: they now share one consumer and simply paint what the bus delivers.
+Root-cause read + the measurement that settles it are on **MPI-575**. Fabio's call: not a
+blocker.
+
+### Still unproven by construction
+
+The remote engine lane. `docs/preview-bus.md`'s both-engine rule — a local run never
+proves remote.
