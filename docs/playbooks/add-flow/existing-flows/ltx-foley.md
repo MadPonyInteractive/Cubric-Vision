@@ -6,7 +6,7 @@
 > siblings it DOES add a weight (see § The LoRA).
 >
 > Authored from [ltx-extend.md](ltx-extend.md)'s shape: declared `fields`, no
-> `uiComponent`. The two flows are twins with one deliberate inversion — resolution.
+> component. The two flows are twins with one deliberate inversion — resolution.
 
 ## Status
 
@@ -113,7 +113,7 @@ message, in the app. Not built: the ceiling has not been measured on a target ca
 
 ## Verification (2026-08-14, isolated app on its own port + profile)
 
-1. `flow:open` mounts a 2-step carousel with **no** `uiComponent`.
+1. `flow:open` mounts a 2-step carousel with **no** component.
 2. The run slide renders both `textarea`s — the negative pre-filled with the bench default.
 3. **Payload proof without spending a generation:** type a prompt, then strip
    `state.s_installedModelIds` before clicking Generate. `_run` persists to

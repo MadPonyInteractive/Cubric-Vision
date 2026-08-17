@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
+    "js/components/Organisms/MpiBaseFlow/stepKinds.js",
+    "js/components/Organisms/MpiFlowHeadSwap/",
+    "js/data/flowsRegistry.js",
+    "js/services/flowService.js",
+    "js/shell.js",
+    "js/shell/preloadStyles.js",
+    "js/components/types.js",
+    "tests/flow-step-param-binding.test.cjs",
+    "docs/flows.md",
+    "docs/playbooks/add-flow/README.md",
+    "docs/playbooks/add-flow/01-descriptor-and-ops.md",
+    "docs/playbooks/add-flow/04-overlay-and-shell.md",
+    "docs/playbooks/add-flow/ui/README.md",
+    "docs/playbooks/add-flow/ui/carousel-frame.md",
+    "docs/playbooks/add-flow/existing-flows/head-swap.md",
+    "docs/playbooks/add-flow/existing-flows/ltx-extend.md",
+    "docs/playbooks/add-flow/existing-flows/ltx-foley.md"
+  ]
+}

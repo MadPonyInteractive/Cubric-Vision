@@ -549,6 +549,18 @@
 .mpi-base-flow__fields--stacked .mpi-base-flow__field-input {
     width: 100%;
 }
+/* A radio stacks its group over its note in BOTH layouts — the note annotates the
+   whole choice, so it never sits beside one button. */
+.mpi-base-flow__field-radio {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+/* Quiet: it annotates the choice, it is not part of it. Cost here is a RELATIVE
+   ratio, never seconds (carousel-frame.md § Tier cost is RELATIVE). */
+.mpi-base-flow__field-note {
+    color: var(--ink-4);
+}
 .mpi-base-flow__field-slider {
     display: flex;
     align-items: center;

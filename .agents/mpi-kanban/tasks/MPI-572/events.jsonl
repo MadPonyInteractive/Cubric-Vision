@@ -1,1 +1,7 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-572", "type": "task.created", "at": "2026-08-16T07:15:00Z", "actor": "opus", "summary": "Carded from Fabio's live-use report during the MPI-531 session."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-572", "type": "task.moved", "at": "2026-08-17T06:16:00Z", "actor": "opus", "from": "todo", "to": "doing", "summary": "Implementation started."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-572", "type": "task.updated", "at": "2026-08-17T06:16:00Z", "actor": "opus", "summary": "maturity=in-progress, status=active, plan.md attached, ownership written."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-572", "type": "checklist.updated", "at": "2026-08-17T06:16:00Z", "actor": "opus", "summary": "Derived 4 phase items from plan.md."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-572", "type": "checklist.updated", "at": "2026-08-17T06:40:00Z", "actor": "opus", "summary": "All four phases shipped."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-572", "type": "validation.updated", "at": "2026-08-17T06:40:00Z", "actor": "opus", "summary": "619/619 tests, eslint clean, live render verified on an isolated app. Run-payload diff still needs Fabio + a GPU."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-572", "type": "task.updated", "at": "2026-08-17T06:40:00Z", "actor": "opus", "summary": "maturity=validating; ownership widened to the doc sweep."}

@@ -80,20 +80,26 @@ cargo-cult install-sync machinery from modelRegistry).
   requiredModels, // MODEL ids (NOT dep ids) — [] for a no-model flow
   operation,      // the universal-op key from commandRegistry.js
   workflow,       // the workflow filename from universal_workflows.js
-  uiComponent,    // LEGACY per-flow component NAME (string) — OMIT it; declare `controls`
-  controls,       // declared run-slide controls (MPI-531) — the replacement for uiComponent
+  fields,         // declared run-slide controls (MPI-531) — the SAME `fields` a step declares
   mediaType,      // 'image' | 'video' — the OUTPUT type (always required)
   inputSchema,    // { positive?: 'string', media?: [ ...slot groups ] }
 }
 ```
 
-**A new flow declares `controls`, not a `uiComponent`.** A component is a thing a third-party
-Flow can never have, so every knob written as JS is debt the community-package work has to
-port. `controls` is the same field vocabulary a step's `fields` uses, rendered by the frame on
-the run slide; an id prefixed `Input_` routes into `injectionParams` instead of the top level.
-Full contract + the id-routing table: [ui/carousel-frame.md](ui/carousel-frame.md) § The last
-step's controls are DECLARED too. Worked example:
-[existing-flows/ltx-extend.md](existing-flows/ltx-extend.md).
+**A flow declares `fields`. There is no component surface — it was removed in MPI-572.** A
+component is a thing a third-party Flow can never have, so every knob written as JS was debt
+the community-package work would have had to port. `fields` is the same vocabulary a step's
+`fields` uses, rendered by the frame on the run slide; an id prefixed `Input_` routes into
+`injectionParams` instead of the top level. **If a control cannot be expressed, add the field
+type — do not reach for a component.** Full contract + the id-routing table:
+[ui/carousel-frame.md](ui/carousel-frame.md) § `fields` is the ONE control surface. Worked
+examples: [existing-flows/ltx-extend.md](existing-flows/ltx-extend.md) (run slide),
+[existing-flows/head-swap.md](existing-flows/head-swap.md) (a `radio` + two step `param` binds).
+
+**A step may also bind its gizmo to a graph param**: `{ kind:'box', role:'image1', param:'box1' }`.
+The flow declares WHICH role feeds WHICH node — that stays flow knowledge — while the shape the
+graph wants belongs to the step KIND (`stepValueToParam`, `stepKinds.js`). That pair replaced the
+one job only JS could do, and is what makes a FlowDef fully expressible as a manifest.
 
 ### No-model flow (Video Stitch)
 
@@ -112,14 +118,14 @@ step's controls are DECLARED too. Worked example:
       { type: 'audio', mode: 'upto', max: 1, roles: ['audio1'] },
     ],
   },
-  // no uiComponent — MpiBaseFlow renders the media slots straight from inputSchema.media
+  // no fields — MpiBaseFlow renders the media slots straight from inputSchema.media
 }
 ```
 
 - **`requiredModels: []`** → `flowAvailability` returns `{available:true, missing:[]}` always.
   No install gate, badge is Ready, Open enabled (in a project).
-- **No `uiComponent`** → the shell's `flow:open` handler resolves `_flowComponents[undefined]`
-  to `null`; `MpiBaseFlow` mounts NO per-flow controls, just the media slots + Run. Valid path.
+- **No `fields`** → `MpiBaseFlow` renders just the media slots + Run. Valid path: a pure media
+  utility has nothing to ask.
 - `inputSchema.media[].roles` MUST match the op's `mediaInputs` keys (`video1`/`video2`/`audio1`).
 
 ### Multi-model flow (SDXL 4K)

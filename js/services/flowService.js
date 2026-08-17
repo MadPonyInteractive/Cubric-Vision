@@ -22,7 +22,7 @@ import { Events } from '../events.js';
  * Queue a generation for a Flow.
  *
  * @param {import('../data/flowsRegistry.js').FlowDef|string} flowOrId
- * @param {Object} inputs - Collected by the flow's uiComponent. Media are passed by
+ * @param {Object} inputs - Collected by MpiBaseFlow from the FlowDef. Media are passed by
  *                          reference (content-addressed store paths), never base64.
  * @param {Object} [callbacks] - onComplete/onError/onCancel, forwarded to enqueueGeneration.
  * @returns {{queueJobId: string}|null} enqueue result, or null if the guard aborted.

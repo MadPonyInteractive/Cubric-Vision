@@ -7,7 +7,7 @@
 > gets MOVED here, and the flow's own file links to it. If a pattern stays buried in a flow
 > file, flow #5 never finds it and reinvents it worse. Promote early.
 
-Read this when you build any flow's `uiComponent`, or when a design pass touches the Flow
+Read this when you build any flow's controls or steps, or when a design pass touches the Flow
 overlay / Flow Library. The procedure for wiring a flow is the numbered sections
 ([../README.md](../README.md)); this folder is the *look and behaviour* those sections assume.
 
@@ -20,7 +20,7 @@ overlay / Flow Library. The procedure for wiring a flow is the numbered sections
 
 ## Baseline rules
 
-- **The frame is `MpiBaseFlow`.** A flow's `uiComponent` supplies ONLY the controls that
+- **The frame is `MpiBaseFlow`.** A flow's declared `fields` supply ONLY the controls that
   differ. Never re-implement the frame, the media slots, Run, or the result pane —
   [../04-overlay-and-shell.md](../04-overlay-and-shell.md).
 - **Don't ask the user for precision you throw away.** If the graph reduces the input to N

@@ -128,6 +128,31 @@ The step's reported value widens to carry them — `{ box: {...}, fields: { rati
 so the `{ media, value, onChange }` contract is unchanged and the frame still knows nothing
 about what a gizmo does.
 
+### A step may declare WHERE ITS VALUE GOES — `param` (MPI-572)
+
+A gizmo reports a value; something has to name the graph node it feeds. That naming is flow
+knowledge — Head Swap knows `image1`'s box masks the head being *replaced* and `image2`'s crops
+the head being *taken* — so the flow declares it, one word:
+
+```js
+{ kind: 'box', role: 'image1', param: 'box1', title: '…', hint: '…' }
+```
+
+The frame writes that step's value into `injectionParams[param]`. The **shape** the graph wants
+is not flow knowledge, it is a property of the gizmo, so it lives with the KIND
+(`stepValueToParam`, `stepKinds.js`) — for `box`, the `w`/`h` → `width`/`height` rename and
+nothing else. **Coords pass through unconverted**; arithmetic there is the centre-anchor bug
+([box-gizmo.md](box-gizmo.md) § Coord contract).
+
+A `null` is **omitted**, never sent: an unmarked step leaves the node on its baked default. A
+kind that reports nothing (`preview`) has no adapter and can carry no `param`.
+
+The reported value's own shape is deliberately NOT renamed to match — `stepValues` is persisted
+for Reuse, so renaming at the source would strand every card already saved with `w`/`h`.
+
+**This is what closed the manifest gap.** It was the one thing a `uiComponent` did that a FlowDef
+could not say for itself, and with it declared, the component surface was deleted outright.
+
 **Why the frame renders the row rather than the gizmo:** consistency for free. If each gizmo
 drew its own row, the mask painter's and the box's would drift into two dialects of the same
 thing. Declared fields mean every gizmo's controls look identical without coordination.
@@ -140,13 +165,24 @@ form.
 
 ### Field types
 
-`select` · `button` · `toggle` · `number` · `slider` · `text` (MPI-531 added the last three).
+`select` · `radio` · `button` · `toggle` · `number` · `slider` · `text` (MPI-531 added
+`number`/`slider`/`text`; MPI-572 added `radio`).
 
 - `number` / `slider` take `min` / `max` / `step`. **The bounds are ENFORCED**, not decorative —
   the value is clamped before it reaches the graph, and a typed number is written back clamped
   so the widget never shows one value while sending another. A slider always renders its live
   numeric readout: a slider without its number is a guess.
 - `text` takes `placeholder` and `rows`; `rows > 1` renders a `textarea`. That is the prompt case.
+- `radio` takes `options: [{ v, label, info?, note? }]` and an optional `columns`. It is the only
+  field type that mounts a Primitive (`MpiRadioGroup`), and it earns that: a tier choice rendered
+  as a `select` hides the alternatives behind a click, and comparing them is the entire point.
+  - It emits the option's **original `v`**, never the DOM string — `Input_Tier` is an int in the
+    graph, and `"1"` reaching `MpiAnySwitch` as text is a silent wrong-branch.
+  - `info` is a status-bar **hover**; `note` is the **always-visible** line under the group. Both
+    exist because a tier's cost has to be readable without hunting for it, while its gloss does not.
+  - A seeded value naming an option this build no longer has falls back to `default`, **and writes
+    the fallback back** — same law as the clamped number field: a control that shows one value
+    while sending another is the worst outcome available.
 - Anything else logs a warning and renders nothing. A silently-missing control is the failure
   mode this whole file exists to avoid.
 
@@ -185,17 +221,21 @@ never reached the payload, defaults were never seeded, and Reuse read only `step
 |---|---|---|
 | `positive`, `negative` | top-level run inputs | `submitFlowGeneration` reads them by those names |
 | `Input_*` | `injectionParams` | the prefix names a GRAPH NODE — the app-wide injection naming law |
-| anything else | top-level run input under its own id | the shape `uiComponent.getInputs()` always returned |
+| anything else | top-level run input under its own id | the shape the run inputs have always had |
+| a step's `param` | `injectionParams` under that name | the flow named the node; the kind gave it its shape |
 
 Seeding follows the same split, so a reopened flow restores an `Input_*` field from the
 persisted `injectionParams` rather than coming back at its default. It also falls back to the
 payload ROOT for a step field, which is what keeps an OLD card reusable after a field moves
 between the flow and a step.
 
-`uiComponent` still mounts and still wins on merge (a flow carrying both is mid-port), but it
-is now the LEGACY surface. **A new Flow declares `fields` and ships no component.** If a
-control cannot be expressed, add the field type — do not reach for a component. Worked
-example: [../existing-flows/ltx-extend.md](../existing-flows/ltx-extend.md).
+**`uiComponent` is GONE (MPI-572).** The prop, the shell's `_flowComponents` map and the last
+component (`MpiFlowHeadSwap`) were all deleted; no flow ships JS. If a control cannot be
+expressed, **add the field type** — one branch in `_buildField`, available to every flow ever
+written, including ones you will never see. Do not add a component back: it is the single thing
+that would re-break the manifest test. Worked examples:
+[../existing-flows/ltx-extend.md](../existing-flows/ltx-extend.md) (run slide),
+[../existing-flows/head-swap.md](../existing-flows/head-swap.md) (`radio` + two `param` binds).
 
 ## Results are not real until Apply
 
@@ -244,6 +284,10 @@ Live previews already have their plumbing: `submitFlowGeneration` returns `tempI
 | 1 | box the target head (`image1` → `Input_Box` → `Mpi Box Mask`) |
 | 2 | box the reference head (`image2` → `Input_Box_2` → `Mpi Box Crop`), defaults to full image |
 | 3 | tier radio (Quality / Turbo / Hyper) + Generate → result → Apply |
+
+Every row of that table is now DECLARED: steps 1 and 2 are `kind:'box'` with
+`param: 'box1'` / `'box2'`, and step 3's radio is a `fields` entry (`Input_Tier`). The flow
+carries no JS at all — it is the proof that the frame's template is complete.
 
 No prompt anywhere: both prompts are baked in the graph. No seed UI, ever. The two boxes look
 identical but mean different things — step 1 marks *where the head goes*, step 2 marks *which

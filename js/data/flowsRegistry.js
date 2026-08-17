@@ -32,10 +32,6 @@
  *                                       that model). MPI-304.
  * @property {string}   operation      - Universal-op key (commandRegistry.js)
  * @property {string}   workflow       - ComfyUI workflow filename (universal_workflows.js)
- * @property {string}   [uiComponent]  - Per-flow Organism component name (controls only; hosted by
- *                                       MpiBaseFlow). LEGACY SURFACE — a component is a thing a
- *                                       third-party Flow can never have, so a new Flow declares
- *                                       `controls` instead and omits this (MPI-531).
  * @property {FlowStepField[]} [fields] - Run-slide fields, rendered BY THE FRAME. THE SAME `fields`
  *                                       a step declares (MPI-572) — declaring them here places them
  *                                       on the run slide, declaring them on a step places them on
@@ -45,14 +41,14 @@
  *                                       prefixed `Input_`, which names a graph node and is routed
  *                                       into `injectionParams` instead. So
  *                                       `{ id: 'positive', type: 'text', rows: 3 }` is the whole of
- *                                       what a prompt-collecting `uiComponent` used to be. Declaring
- *                                       a `uiComponent` too is legal (mid-port) and the component
- *                                       wins on merge.
+ *                                       what a prompt-collecting component used to be. There is NO
+ *                                       component surface left (MPI-572): a FlowDef is DATA, which
+ *                                       is what makes it expressible as a third-party manifest.
  * @property {Object}   inputSchema    - What the flow collects → injected into the workflow
  * @property {FlowStep[]} [steps]       - Declared MIDDLE steps of the flow's carousel (MPI-306).
  *                                       Step 0 (inputs) and the last step (run) are IMPLICIT —
  *                                       the frame renders them from inputSchema + the flow's
- *                                       controls. Omit or `[]` for a 2-step carousel. A flow writes
+ *                                       fields. Omit or `[]` for a 2-step carousel. A flow writes
  *                                       NO layout code: MpiBaseFlow renders every declared step.
  *
  * @typedef {Object} FlowStep
@@ -64,6 +60,12 @@
  * @property {string}  title   - Shown above the canvas.
  * @property {string}  [hint]  - Guidance shown below the canvas (and below any fields row).
  * @property {string}  [tickerLabel] - Short label for the step ticker; falls back to `title`.
+ * @property {string}  [param] - Bind this step's GIZMO value to an injection param (MPI-572).
+ *                               The flow says WHICH role feeds WHICH node (that is flow
+ *                               knowledge); the KIND supplies the shape the graph wants
+ *                               (`stepValueToParam`, stepKinds.js). Omit and the step reports
+ *                               into `stepValues` only. A gizmo with nothing to report sends
+ *                               nothing, leaving the node on its baked default.
  * @property {number}  [ratio] - Aspect lock for the gizmo (UI-only; the graph's width/height
  *                               are independent). Omit for a free box.
  * @property {FlowStepField[]} [fields] - ONE row of controls between canvas and hint, rendered
@@ -75,11 +77,16 @@
  * @property {string}  id      - Key the value lands under, and it is the SAME key wherever the
  *                               field was declared: `id: 'positive'` reaches the op as `positive`,
  *                               `Input_*` reaches it inside `injectionParams`. A step's fields are
- *                               additionally mirrored under that step's role in `stepValues`, which
- *                               is what a `uiComponent` translates from.
- * @property {'select'|'button'|'toggle'|'number'|'slider'|'text'} type
+ *                               additionally mirrored under that step's role in `stepValues`,
+ *                               which is the shape Reuse restores from.
+ * @property {'select'|'radio'|'button'|'toggle'|'number'|'slider'|'text'} type
  * @property {string}  [label]
- * @property {Array<{v:string|number, label:string}>} [options] - For `select`.
+ * @property {Array<{v:string|number, label:string, info?:string, note?:string}>} [options] -
+ *                               For `select` / `radio`. `radio` emits the option's ORIGINAL `v`,
+ *                               so a numeric graph param stays a number. `info` is a status-bar
+ *                               hover; `note` is the always-visible line under the group — a
+ *                               tier's cost has to be legible without hunting for it.
+ * @property {number}  [columns] - For `radio`: render as an N-column grid.
  * @property {number}  [min]   - For `number` / `slider`. ENFORCED, not decorative:
  *                               the value is clamped before it reaches the graph.
  * @property {number}  [max]   - For `number` / `slider`.
@@ -134,10 +141,6 @@ export const FLOWS = [
         requiredDeps: ['qwen-lora-headswap', 'comfyui-inpaint-cropandstitch'],
         operation: 'flowHeadSwap',
         workflow: 'flow_head_swap.json',
-        // Controls = the tier radio ONLY. It also owns the box→injectionParams
-        // translation (which role feeds which node is flow knowledge, not the
-        // frame's) — see MpiFlowHeadSwap.js.
-        uiComponent: 'MpiFlowHeadSwap',
         mediaType: 'image',
         inputSchema: {
             media: [
@@ -157,22 +160,53 @@ export const FLOWS = [
         // crops a square — a non-square selection would clip the result.
         steps: [
             {
-                kind: 'box', role: 'image1', ratio: 1,
+                // `param` binds this step's box to the graph (MPI-572). WHICH role
+                // feeds WHICH node is flow knowledge, so the flow declares it —
+                // image1's box masks the head being replaced (→ Input_Box, Mpi Box
+                // Mask), image2's crops the head being taken (→ Input_Box_2, Mpi Box
+                // Crop). This is what MpiFlowHeadSwap.getInputs() used to do in JS.
+                kind: 'box', role: 'image1', param: 'box1', ratio: 1,
                 tickerLabel: 'Target head',
                 title: 'Mark where the new head goes',
                 hint: 'Box the head you want replaced. Include the hair and jaw.',
             },
             {
-                kind: 'box', role: 'image2', ratio: 1,
+                kind: 'box', role: 'image2', param: 'box2', ratio: 1,
                 tickerLabel: 'Reference head',
                 title: 'Mark which head to take',
                 hint: 'Box the head to use. A close-up portrait works best.',
             },
         ],
+        // The flow's ONE knob, declared (MPI-572) — this plus the two step `param`
+        // bindings above is the whole of what MpiFlowHeadSwap.js used to be, so the
+        // component is gone and this descriptor is now data a manifest could carry.
+        //
+        // Input_Tier is 1-indexed to match the graph's MpiAnySwitch. `note` is the
+        // always-visible cost, `info` the hover gloss.
+        //
+        // Cost is a RELATIVE percentage and NEVER absolute seconds — a baked ETA is
+        // a lie on every GPU but the one it was measured on, while the ratio is a
+        // property of the pipeline. Measured 2026-07-18 (386 s / 100 s / 51 s); the
+        // ratio is NOT derivable from step count, because Quality runs without the
+        // speed LoRA. The label must say TIME — "13%" alone reads as 13% quality.
+        // NO seed UI, ever (existing-flows/head-swap.md); no prompt, both baked.
+        fields: [
+            {
+                id: 'Input_Tier', type: 'radio', label: 'Speed', columns: 3, default: 1,
+                options: [
+                    { v: 1, label: 'Quality', note: 'baseline',
+                      info: 'Baseline time. Full sampling — best edge blending and skin match.' },
+                    { v: 2, label: 'Turbo', note: '~25% of time',
+                      info: '~25% of the time. Half the steps; softer detail in hair.' },
+                    { v: 3, label: 'Hyper', note: '~13% of time',
+                      info: '~13% of the time. Fewest steps — for checking framing, not final work.' },
+                ],
+            },
+        ],
     },
-    // MPI-520 — the first Flow authored with NO uiComponent. Its three controls are
-    // DECLARED (MPI-531), so the whole descriptor is data a third-party manifest
-    // could carry. Do not add a component here to gain a knob; add the field type.
+    // MPI-520 — the first Flow authored with no component at all. Its three controls
+    // are DECLARED (MPI-531), so the whole descriptor is data a third-party manifest
+    // could carry. Do not reach for a component to gain a knob; add the field type.
     //
     // Runs on the already-installed LTX 2.3 checkpoint — no ModelDef, no dep entry.
     // `ltx-23-balanced` specifically: the bench-proven graph bakes the int8
@@ -221,7 +255,7 @@ export const FLOWS = [
             },
         ],
     },
-    // MPI-536 — the foley twin of ltx-extend. Same tier, same no-uiComponent shape,
+    // MPI-536 — the foley twin of ltx-extend. Same tier, same all-declared shape,
     // OPPOSITE resolution decision: this graph's Input_Width/Input_Height were deleted
     // because they fed only the encode and never the delivered pixels (Output_Video
     // takes its images off the raw source), so the output always matches the input and

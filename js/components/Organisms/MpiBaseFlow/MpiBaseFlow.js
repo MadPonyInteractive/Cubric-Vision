@@ -1,6 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiOverlay } from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiMediaPicker } from '../../Compounds/MpiMediaPicker/MpiMediaPicker.js';
 import { Events } from '../../../events.js';
 import { state, AUTO_PIXEL_THRESHOLD } from '../../../state.js';
@@ -13,7 +14,7 @@ import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
-import { getStepKind } from './stepKinds.js';
+import { getStepKind, stepValueToParam } from './stepKinds.js';
 
 /**
  * MpiBaseFlow — THE flow frame: a step carousel (MPI-306 Phase 1).
@@ -44,10 +45,12 @@ import { getStepKind } from './stepKinds.js';
  * frame never learns what a gizmo does — that is what keeps a new gizmo to one
  * component + one registry line.
  *
- * Those step values are also HANDED TO the flow's controls component
- * (`getInputs({ stepValues })`), because turning a role into a graph param is
- * flow knowledge: Head Swap knows image1's box masks and image2's box crops, and
- * the frame must not.
+ * A step may also DECLARE where its value goes: `param: 'box1'` binds the gizmo's
+ * value to that injection param (MPI-572). Which role feeds which node stays flow
+ * knowledge — the flow says it — while the SHAPE the graph wants belongs to the
+ * kind (`stepValueToParam`, stepKinds.js). That pair is what replaced the flow
+ * component's `getInputs({ stepValues })`, and with it the last thing in a FlowDef
+ * that a third-party manifest could not express.
  *
  * A step is NEVER invalid: every kind supplies a usable default, so the forward
  * arrow is never blocked. Required-because-the-flow-walks-you-there, not
@@ -58,8 +61,7 @@ import { getStepKind } from './stepKinds.js';
  *   - on a STEP  → ONE row between canvas and hint, rendered BY THE FRAME (not the
  *     gizmo) so every gizmo's controls match for free. Hard cap: one row, no
  *     nesting/panels/accordions. A gizmo wanting more means the step should SPLIT.
- *   - on the FLOW → stacked on the run slide, the declarative form of what a
- *     `uiComponent`'s `getInputs()` returns.
+ *   - on the FLOW → stacked on the run slide.
  * One vocabulary, one renderer (`_buildField`), one seeding path (`_seedField`),
  * one payload law (`Input_*` → injectionParams, everything else top-level). This
  * used to be two surfaces — a flow-level `controls` beside a step's `fields` — and
@@ -82,7 +84,7 @@ import { getStepKind } from './stepKinds.js';
  * State: seeds from and writes `state.s_flowInputs[flowId]` (top-level replace) so
  * inputs survive close→reopen AND the Overlays.reset() force-close on navigation.
  *
- * Props: { flow: FlowDef, uiComponent: Blueprint|null, initialInputs?: Object }.
+ * Props: { flow: FlowDef, initialInputs?: Object }.
  */
 
 /**
@@ -245,10 +247,9 @@ export const MpiBaseFlow = ComponentFactory.create({
          * Flow-level declared fields (MPI-531) — the SAME `fields` a step declares,
          * just placed on the run slide instead of a step. Each value lands as a
          * TOP-LEVEL run input under the field's own id — `{ id: 'positive' }` →
-         * `inputs.positive`, exactly what a `uiComponent`'s `getInputs()` returns
-         * today. That is what lets a Flow collect a prompt or a seed with NO JS
-         * component, which is the whole point: a component is a thing a third-party
-         * Flow can never have.
+         * `inputs.positive`. That is what lets a Flow collect a prompt or a seed with
+         * NO JS component, which is the whole point: a component is a thing a
+         * third-party Flow can never have.
          * @type {Array<Object>}
          */
         const _fields = Array.isArray(flow.fields) ? flow.fields : [];
@@ -345,7 +346,6 @@ export const MpiBaseFlow = ComponentFactory.create({
         let _lastResults = null;
         /** Last status-line copy, replayed when the run slide is rebuilt. */
         let _statusText = '';
-        let _perFlow = null;
         let _runBtn = null;
         let _resultMediaEl = null;
         let _resultEmptyEl = null;
@@ -717,6 +717,52 @@ export const MpiBaseFlow = ComponentFactory.create({
                 if (cur != null) sel.value = String(cur);
                 unsubs.push(on(sel, 'change', () => onChange(sel.value)));
                 wrap.appendChild(sel);
+            } else if (f.type === 'radio') {
+                // The only mounted Primitive among the field types, so it is the
+                // only one needing a host and a destroy. Worth it: a tier choice
+                // read as a <select> hides the alternatives behind a click, and the
+                // whole point of a tier is that you compare them (MPI-572).
+                const opts = f.options || [];
+                const find = v => opts.find(o => String(o.v) === String(v));
+                // A seeded value comes off a PERSISTED card, so it may name an
+                // option this build no longer has. Fall back rather than render a
+                // group with nothing selected while quietly sending the stale value.
+                const sel = find(cur) ? cur : f.default;
+                // Write the fallback back, same law as the clamped number field: a
+                // control that shows one value while sending another is the worst
+                // outcome available here.
+                if (sel !== cur) onChange(sel);
+                const host = ce('div');
+                const inst = MpiRadioGroup.mount(host, {
+                    options: opts.map(o => ({
+                        label: o.label ?? String(o.v), value: String(o.v), info: o.info,
+                    })),
+                    value: String(sel ?? ''),
+                    name: `${flow.id}-${f.id}`,
+                    size: 'sm',
+                    ...(Number.isFinite(f.columns) ? { columns: f.columns } : {}),
+                });
+                // `note` is the ALWAYS-VISIBLE half of an option's copy; `info` is a
+                // status-bar hover that vanishes with the pointer. A tier's cost has
+                // to be legible without hunting for it, so the two are separate
+                // (carousel-frame.md § Tier cost is RELATIVE).
+                const note = ce('span', { className: 'mpi-base-flow__field-note' });
+                const paint = (v) => { note.textContent = find(v)?.note || ''; };
+                paint(sel);
+                inst.on('select', ({ value }) => {
+                    const o = find(value);
+                    if (!o) return;
+                    paint(o.v);
+                    // Emit the option's ORIGINAL `v`, never the DOM string: a graph
+                    // param like Input_Tier is an int, and "1" reaching MpiAnySwitch
+                    // as text is a silent wrong-branch.
+                    onChange(o.v);
+                });
+                unsubs.push(() => inst?.el?.destroy?.());
+                const col = ce('div', { className: 'mpi-base-flow__field-radio' });
+                col.appendChild(host);
+                if (opts.some(o => o.note)) col.appendChild(note);
+                wrap.appendChild(col);
             } else if (f.type === 'button') {
                 const btn = ce('button', {
                     className: 'mpi-base-flow__field-button', type: 'button',
@@ -930,9 +976,7 @@ export const MpiBaseFlow = ComponentFactory.create({
             controls.appendChild(contentSlot);
 
             // Flow-level declared fields (MPI-531) — stacked, because this column is
-            // 236px of vertical stack, not the step row's one-row cap. A flow may
-            // declare these INSTEAD of a uiComponent; declaring both is legal and the
-            // component wins on merge (see _collectInputs).
+            // 236px of vertical stack, not the step row's one-row cap.
             if (_fields.length) {
                 const declared = ce('div', {
                     className: 'mpi-base-flow__fields mpi-base-flow__fields--stacked',
@@ -997,11 +1041,6 @@ export const MpiBaseFlow = ComponentFactory.create({
             _runBtn.on('click', () => { if (_running) _cancel(); else _run(); });
 
             unsubs.push(() => { _runBtn?.el?.destroy?.(); });
-
-            if (props.uiComponent) {
-                _perFlow = props.uiComponent.mount(contentSlot, { initialInputs: seeded });
-                unsubs.push(() => { _perFlow?.el?.destroy?.(); _perFlow = null; });
-            }
 
             _syncRunUi();
             _paintPending();
@@ -1338,13 +1377,6 @@ export const MpiBaseFlow = ComponentFactory.create({
             // filter(Boolean) — `items` is sparse (an empty slot is a hole), and a
             // hole must never reach the op as an undefined media item.
             const mediaItems = _mediaGroups.flatMap(entry => entry.items.filter(Boolean));
-            // The controls component is handed the collected step values so it can
-            // translate them into ITS graph's params (Head Swap: box→Input_Box).
-            // That translation is FLOW knowledge — which role feeds which node is
-            // exactly what the frame must never learn — so the frame passes the
-            // raw role-keyed values through and the flow owns the mapping.
-            const extra = _perFlow?.el?.getInputs?.({ stepValues: { ..._stepValues } }) || {};
-
             // A declared field keyed `Input_*` names a GRAPH NODE, so it is an
             // injection param, not a run input — that prefix is the app-wide
             // injection naming law, not flow knowledge the frame should not hold.
@@ -1358,9 +1390,8 @@ export const MpiBaseFlow = ComponentFactory.create({
             // one renderer, so one destination. Without this a prompt authored on a
             // middle step reaches the op only nested inside `stepValues`, where the
             // op does not look, and the run silently uses the graph's baked default.
-            // `stepValues` still carries them too: a uiComponent translates from
-            // there (Head Swap: box→Input_Box) and must keep seeing the raw
-            // role-keyed shape.
+            // `stepValues` still carries them too: it is the persisted shape Reuse
+            // restores from, so it stays raw and role-keyed.
             Object.values(_stepValues).forEach((v) => {
                 Object.entries(v?.fields || {}).forEach(_sort);
             });
@@ -1369,16 +1400,25 @@ export const MpiBaseFlow = ComponentFactory.create({
             // Generate.
             Object.entries(_fieldValues).forEach(_sort);
 
+            // A step that declares `param` binds its GIZMO's value to an injection
+            // param (MPI-572). The flow says which role feeds which node — that is
+            // flow knowledge and stays declared — while the kind supplies the shape
+            // the graph wants. Together they replace the one job a `uiComponent`
+            // could do that a FlowDef could not say: `getInputs({ stepValues })`.
+            // A null is OMITTED, so an unmarked step leaves the node on its baked
+            // default, exactly as the old translation did.
+            (flow.steps || []).forEach((step) => {
+                if (!step?.param || !step.role) return;
+                const v = stepValueToParam(step.kind, _stepValues[step.role]);
+                if (v !== null) declaredParams[step.param] = v;
+            });
+
             return {
                 ...(mediaItems.length ? { mediaItems } : {}),
                 ...(Object.keys(_stepValues).length ? { stepValues: { ..._stepValues } } : {}),
-                // Declared controls first, the component's getInputs() after: a flow
-                // carrying both is mid-port, and the JS half is the one that still
-                // owns translation the frame must not learn.
                 ...declared,
-                ...extra,
                 ...(Object.keys(declaredParams).length
-                    ? { injectionParams: { ...declaredParams, ...(extra.injectionParams || {}) } }
+                    ? { injectionParams: { ...declaredParams } }
                     : {}),
             };
         }

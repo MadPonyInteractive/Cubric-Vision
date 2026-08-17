@@ -8,21 +8,22 @@ overlay/status-bar/z-order gotchas. Read [README](README.md) first.
 | Component | Tier | File | Role |
 |---|---|---|---|
 | `MpiFlowLibrary` | Compound | `js/components/Compounds/LandingPages/MpiFlowLibrary/` | Dev-gated picker overlay. Body-mode MpiOverlay, tile grid + availability badge, detail slide-over with Open/Install |
-| `MpiBaseFlow` | Organism | `js/components/Organisms/MpiBaseFlow/` | Shared Flow frame (COMPOSITION, not inheritance). `main-area` MpiOverlay; header + Back, media slots (from `inputSchema.media`), content slot for a per-flow uiComponent, Run, result pane |
-| `MpiFlowHeadSwap` | Organism | `js/components/Organisms/MpiFlowHeadSwap/` | The ONLY surviving per-flow `uiComponent` (MPI-332 ripped the rest). Controls-only, exposes `el.getInputs()`, mounted into MpiBaseFlow's content slot. **Prefer declarative `controls` (MPI-531) for a new Flow — a `uiComponent` cannot be expressed by a third-party manifest.** |
+| `MpiBaseFlow` | Organism | `js/components/Organisms/MpiBaseFlow/` | Shared Flow frame (COMPOSITION, not inheritance). `main-area` MpiOverlay; header + Back, media slots (from `inputSchema.media`), declared `fields`, Run, result pane |
 
 `MpiBaseFlow` and `MpiFlowLibrary` both use the **MpiOverlay primitive**; they do NOT reimplement
 the overlay.
 
-### The uiComponent is optional
+### There is no per-flow component (MPI-572)
 
-The shell `flow:open` handler maps the descriptor's `uiComponent` NAME → blueprint via
-`_flowComponents[flow.uiComponent] || null`. A media-only flow omits `uiComponent`; BaseFlow renders
-the media slots from `inputSchema.media` and mounts no per-flow controls. `el.getInputs()` is only
-called when a uiComponent exists (`_perFlow?.el?.getInputs?.()`).
+The shell `flow:open` handler mounts `MpiBaseFlow` with the descriptor and **nothing else** —
+`MpiBaseFlow.mount(…, { flow })`. The name→blueprint map it used to resolve (`_flowComponents`)
+is gone, along with the last flow component, `MpiFlowHeadSwap`.
 
-To add a uiComponent: register its CSS in `preloadStyles.js`, props in `types.js`, and map its
-NAME → blueprint in `js/shell.js`'s `_flowComponents`.
+**Do not add one back.** A component cannot be carried by a third-party manifest, which is the
+acceptance clause the whole Flow track is built to meet (MPI-531). Everything a flow needs is
+declarable: a knob is a `fields` entry, and a gizmo's output is a step's `param` binding. If a
+control genuinely cannot be expressed, **add the field type** in `_buildField` — one branch,
+available to every flow ever written, including ones you will never see.
 
 ## The flow
 
@@ -31,7 +32,7 @@ Gallery → (dev-gated) Ctrl+Tab dev radial "Flows" | Landing "Flows" nav → fl
   → MpiFlowLibrary overlay (grid + availability badges)
     → card → detail slide-over (description + required-models install state + Open/Install)
       → Open → flow:open {flowId} → MpiFlowLibrary closes, MpiBaseFlow opens
-        → fill slots + controls → Run → submitFlowGeneration → EXISTING queue
+        → fill slots + declared fields → Run → submitFlowGeneration → EXISTING queue
           → result lands as gallery card(s) (also shown in the Flow's result pane)
 ```
 

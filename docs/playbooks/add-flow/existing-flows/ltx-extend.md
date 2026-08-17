@@ -5,7 +5,8 @@
 > **SHIPPED as a Flow** 2026-08-14 — no `ModelDef`, no `supportedOps`, no dep entry; it runs
 > on the already-installed LTX 2.3 checkpoint.
 >
-> **This is the first Flow authored with NO `uiComponent`.** Its three controls are declared
+> **This was the first Flow authored with no component at all** (they are all like this now —
+> the component surface was removed in MPI-572). Its three controls are declared
 > data (`FlowDef.fields`, MPI-531). Adding a JS component here to gain a knob would undo
 > that — add the field type instead. Portable UI decisions live in [../ui/](../ui/).
 
@@ -68,7 +69,7 @@ the delivered clip. Same family, opposite call (`MPI-536` brief § Deliberately 
 
 ## Verification (2026-08-14, isolated app on its own port + profile)
 
-1. `flow:open` mounts a 2-step carousel with **no** `uiComponent` — `_flowComponents[undefined]`
+1. `flow:open` mounts a 2-step carousel with **no** component — `_flowComponents[undefined]`
    resolves to `null`, which is a supported path, not a hole.
 2. The run slide renders all three declared controls: two `textarea`s and a `range` with its
    live readout.

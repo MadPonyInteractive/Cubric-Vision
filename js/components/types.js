@@ -962,9 +962,6 @@
 /**
  * @typedef {Object} MpiBaseFlowProps (Organism — js/components/Organisms/MpiBaseFlow)
  * @property {import('../data/flowsRegistry.js').FlowDef} flow - The flow descriptor.
- * @property {Object|null} [uiComponent] - The per-flow controls blueprint (mounted
- *   into the content slot; must expose el.getInputs({stepValues})). Null for a
- *   frame-only flow.
  * @property {Object} [initialInputs] - Optional seed inputs (overridden by
  *   state.s_flowInputs[flow.id] when present).
  *
@@ -988,10 +985,11 @@
  * forward arrow is never blocked. Declared `fields` render as ONE frame-owned row
  * between canvas and hint.
  *
- * Run merges media + stepValues + the uiComponent's getInputs({stepValues}) →
- * submitFlowGeneration(flow, inputs). The step values are PASSED TO the controls
- * component so the APP can map roles to its own graph params (e.g. Head Swap's
- * box1/box2) — the frame never learns what a role means. Seeds/writes state.s_flowInputs[flow.id]
+ * Run merges media + stepValues + every declared field → submitFlowGeneration(flow,
+ * inputs). A step that declares `param` binds its gizmo's value to that injection
+ * param (e.g. Head Swap's box1/box2) — the flow says which role feeds which node,
+ * the kind says what shape it takes, and the frame still never learns what a role
+ * MEANS (MPI-572). Seeds/writes state.s_flowInputs[flow.id]
  * (top-level replace) so inputs survive close→reopen and Overlays.reset(). Back =
  * el.close() then Events.emit('flows:open'). Mid-run navigation is allowed; closing
  * with an unapplied result does NOT prompt (there is no Discard — see
@@ -1001,8 +999,8 @@
  * MPI-306 Phase 3 built a hold-until-Apply flow and it was REVERTED after the UX
  * pass (an Apply the user never wants to skip is friction). See flowService.js.
  *
- * Mounted via: Events.emit('flow:open', {flowId}) → shell resolves the descriptor +
- * uiComponent and mounts one instance (destroying any prior active flow).
+ * Mounted via: Events.emit('flow:open', {flowId}) → shell resolves the descriptor
+ * and mounts one instance (destroying any prior active flow).
  *
  * Emits: 'close' — the overlay closed (X, Escape, ui:close-all-popups, or Back).
  * The shell DESTROYS the instance on it (MPI-345): a closed flow that stays alive
@@ -1038,32 +1036,6 @@
  * Instance methods (on instance.el):
  *   getValue() — returns {box:{x,y,w,h}} in source pixels.
  *   destroy()  — disconnects the ResizeObserver, destroys the crop tool.
- */
-
-/**
- * @typedef {Object} MpiFlowHeadSwapProps (Organism — js/components/Organisms/MpiFlowHeadSwap)
- * @property {Object} [initialInputs] - Seed inputs from a prior run; reads
- *   injectionParams.Input_Tier to restore the tier.
- *
- * Head Swap's controls (MPI-306 Phase 2): a Quality/Turbo/Hyper tier radio →
- * `Input_Tier` (1/2/3), plus the translation of the frame's role-keyed step
- * values into this graph's box params. Cost labels are RELATIVE ratios
- * (baseline / ~25% / ~13% of time), NEVER absolute seconds — a baked ETA is a lie
- * on every GPU but the one it was measured on (carousel-frame.md).
- *
- * NO prompt UI (both prompts are baked in the graph) and NO seed UI, ever.
- *
- * WHY THE BOX MAPPING LIVES HERE: the frame collects `{[role]: {box}}` and must
- * never learn what a role means; image1's box masks the head being replaced
- * (Input_Box) while image2's crops the head being taken (Input_Box_2). Coords
- * pass through UNCONVERTED (MpiStepBox already reports clamped top-left source
- * pixels) — only the w/h → width/height key rename happens.
- *
- * Instance methods (on instance.el):
- *   getInputs({stepValues}) — returns {injectionParams:{Input_Tier, box1?, box2?}};
- *                             a box is omitted when its step reported none, so the
- *                             node keeps its baked default.
- *   destroy()               — destroys the radio group.
  */
 
 /**

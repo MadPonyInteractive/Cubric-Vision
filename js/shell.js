@@ -25,7 +25,6 @@ import { MpiChangelogDialog } from './components/Compounds/MpiChangelogDialog/Mp
 import { MpiModelManager } from './components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js';
 import { MpiFlowLibrary } from './components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js';
 import { MpiBaseFlow } from './components/Organisms/MpiBaseFlow/MpiBaseFlow.js';
-import { MpiFlowHeadSwap } from './components/Organisms/MpiFlowHeadSwap/MpiFlowHeadSwap.js';
 import { getFlowById } from './data/flowsRegistry.js';
 import { MpiOkCancel } from './components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { getModelsByType } from './data/modelRegistry.js';
@@ -454,20 +453,17 @@ async function _bootApp() {
   });
 
   // flow:open {flowId} — the Flow Library's Open button. Mount MpiBaseFlow with the
-  // resolved descriptor + its per-flow controls component (name → blueprint map;
-  // the descriptor's uiComponent is a string so the registry stays import-free).
+  // resolved descriptor, and nothing else: a Flow is DATA (MPI-572). The per-flow
+  // controls component this used to resolve is gone, because a component is the one
+  // thing a third-party Flow manifest can never carry.
   // One live Flow at a time — destroy the prior instance before mounting the next.
-  const _flowComponents = { MpiFlowHeadSwap };
   let _activeFlow = null;
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('flow:open', ({ flowId }) => {
     const flow = getFlowById(flowId);
     if (!flow) return;
     if (_activeFlow) { _activeFlow.el.destroy(); _activeFlow = null; }
-    _activeFlow = MpiBaseFlow.mount(document.createElement('div'), {
-      flow,
-      uiComponent: _flowComponents[flow.uiComponent] || null,
-    });
+    _activeFlow = MpiBaseFlow.mount(document.createElement('div'), { flow });
     // Closing a Flow DESTROYS it (MPI-345). Every open remounts a fresh instance, so
     // a closed one is pure garbage that still holds live listeners — the global
     // `generation.run` hotkey among them, which is what queued a phantom Flow job on

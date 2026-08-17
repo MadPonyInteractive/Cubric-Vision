@@ -40,8 +40,10 @@ is outstanding, which does not block this flow.
   This flow's tier switch mirrors it exactly (no new tier work).
 - **Extra dependency:** a head-swap LoRA, flow-only. See § Dependency below.
 - **Output:** `mediaType: 'image'`, single output.
-- **uiComponent:** `MpiFlowHeadSwap` — the tier radio ONLY. The boxes are carousel STEPS
-  (frame-rendered `kind:'box'`), not part of the controls; see [../ui/box-gizmo.md](../ui/box-gizmo.md).
+- **No component (MPI-572).** The tier is a declared `radio` field (`Input_Tier`, 1/2/3) on the
+  run slide; the boxes are carousel STEPS (`kind:'box'`) that declare `param: 'box1'` / `'box2'`.
+  `MpiFlowHeadSwap` was deleted — those two declarations are all it ever was. See
+  [../ui/box-gizmo.md](../ui/box-gizmo.md) and [../ui/carousel-frame.md](../ui/carousel-frame.md).
 
 ### The UI, as shipped (MPI-306 Phase 2)
 
@@ -50,15 +52,16 @@ Four steps, all DATA on the FlowDef — no per-flow layout code:
 | Step | Ticker | What |
 |---|---|---|
 | 0 | Inputs | two slots, labelled `Original` / `Face Reference` (`labels` on the media group) |
-| 1 | Target head | `box` step, role `image1`, `ratio:1` — "Mark where the new head goes" |
-| 2 | Reference head | `box` step, role `image2`, `ratio:1` — "Mark which head to take" |
-| 3 | Generate | tier radio + Generate → result |
+| 1 | Target head | `box` step, role `image1`, `param:'box1'`, `ratio:1` — "Mark where the new head goes" |
+| 2 | Reference head | `box` step, role `image2`, `param:'box2'`, `ratio:1` — "Mark which head to take" |
+| 3 | Generate | `Input_Tier` radio + Generate → result |
 
-**The box→node mapping lives in `MpiFlowHeadSwap.getInputs({stepValues})`, not the frame.**
-The frame collects `{[role]: {box}}` and must never learn what a role means; which box masks
-and which crops is flow knowledge. Coords pass through **unconverted** — `MpiStepBox` already
-reports clamped top-left source pixels — with only the `w`/`h` → `width`/`height` rename the
-injector's widget names need.
+**The box→node mapping is DECLARED on the step (`param`), not written in JS** (MPI-572). The
+frame collects `{[role]: {box}}` and still never learns what a role means; which box masks and
+which crops stays flow knowledge — the flow just says it in one word instead of a component.
+Coords pass through **unconverted** — `MpiStepBox` already reports clamped top-left source
+pixels — with only the `w`/`h` → `width`/`height` rename the injector's widget names need, and
+that rename lives with the `box` KIND (`stepValueToParam`, `stepKinds.js`).
 
 Tier cost labels are the MEASURED relative ratios (`baseline` / `~25% of time` /
 `~13% of time`), never absolute seconds ([../ui/carousel-frame.md](../ui/carousel-frame.md)

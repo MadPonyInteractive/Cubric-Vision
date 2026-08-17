@@ -35,7 +35,7 @@ model, image-in→image-out) are the other worked examples.
 
 | File | Covers |
 |---|---|
-| [01-descriptor-and-ops.md](01-descriptor-and-ops.md) | The `FlowDef` in `flowsRegistry.js`; the op in **4 files**; no-model vs multi-model flows; DECLARED `fields` (and why not a uiComponent) |
+| [01-descriptor-and-ops.md](01-descriptor-and-ops.md) | The `FlowDef` in `flowsRegistry.js`; the op in **4 files**; no-model vs multi-model flows; DECLARED `fields`, a step's `param` bind, and why no component |
 | [02-media-io.md](02-media-io.md) | Polymorphic media slots; **path-reading input nodes** (MpiLoadImageFromPath / MpiString-video / MpiLoadAudioFromPath); injection routing; self-gating outputs; multi-output capture; the **audio-slot mediaType + filter traps** |
 | [03-storage-and-reuse.md](03-storage-and-reuse.md) | Flow input files → **`.preview-assets`** store (not the gallery); sidecar `flowId`/`flowInputs`; reuse routing |
 | [04-overlay-and-shell.md](04-overlay-and-shell.md) | `MpiBaseFlow` / `MpiFlowLibrary`; install progress; Ctrl+Enter runs the open flow; overlay z-order + the spared status bar; dev-gate |
@@ -45,7 +45,7 @@ Two folders sit alongside the numbered sections:
 
 | Folder | Holds |
 |---|---|
-| [ui/](ui/README.md) | **PORTABLE** flow UI/UX — the patterns every flow's `uiComponent` follows (box gizmo, baseline rules). Read before any flow UI work; promote generalisable decisions INTO it |
+| [ui/](ui/README.md) | **PORTABLE** flow UI/UX — the frame, its declared fields and step gizmos (box gizmo, baseline rules). Read before any flow UI work; promote generalisable decisions INTO it |
 | [existing-flows/](existing-flows/) | **SPECIFIC** — one file per flow: its shape, decisions, and dead ends. Read the relevant one before touching that flow |
 
 The **cross-cutting workflow machinery** (the MpiNodes pack, the injector target list, the
@@ -119,9 +119,9 @@ Flow-specific additions:
 - [ ] Decide shape: model / no-model; inputs (media/prompt/gizmo/none); output mediaType — this file
 - [ ] Author + prove the workflow in LOCAL ComfyUI. All input/output nodes path-reading + `Input_*`/`Output_*` titled — [02](02-media-io.md)
 - [ ] Register the op in **4 files**: `commandRegistry.js` (`universal:true`, mediaType, mediaInputs with `Input_*` titles + correct per-slot mediaType — **audio = `'audio'`**), `universal_workflows.js`, `operationRegistry.js`, `operation_registry.json` (hand-maintained superset) — [01](01-descriptor-and-ops.md)
-- [ ] Add the `FlowDef` in `flowsRegistry.js` (`requiredModels` = MODEL ids or `[]`; `inputSchema.media` slot groups; `mediaType`; `uiComponent` name or omit) — [01](01-descriptor-and-ops.md)
+- [ ] Add the `FlowDef` in `flowsRegistry.js` (`requiredModels` = MODEL ids or `[]`; `inputSchema.media` slot groups; `mediaType`) — [01](01-descriptor-and-ops.md)
 - [ ] Media roles in `inputSchema.media[].roles` MATCH the op's `mediaInputs` keys — [02](02-media-io.md)
-- [ ] Controls: declare `fields: [...]` on the FlowDef (MPI-531/MPI-572) — the SAME `fields` a step declares, placed on the run slide — the frame renders them, `Input_*` ids route into `injectionParams`. **Do NOT write a uiComponent**; a JS component is what a third-party Flow can never have. If a control is not expressible, add the FIELD TYPE — [ui/carousel-frame.md](ui/carousel-frame.md) § `fields` is the ONE control surface
+- [ ] Controls: declare `fields: [...]` on the FlowDef (MPI-531/MPI-572) — the SAME `fields` a step declares, placed on the run slide — the frame renders them, `Input_*` ids route into `injectionParams`. **There is no component surface** (MPI-572 deleted it); a JS component is what a third-party Flow can never have. If a control is not expressible, add the FIELD TYPE — [ui/carousel-frame.md](ui/carousel-frame.md) § `fields` is the ONE control surface
 - [ ] Add a case to `tests/inject-params-titles.test.cjs` (assert every `Input_*`/`Output_*` title exists) — [05](05-verify.md)
 - [ ] Verify: inject test green, `node --check`, live run (each media type + multi-output), reuse across restart — [05](05-verify.md)
 - [ ] NO app version bump for the Flow itself; a NEW op sets `appVersionIntroduced` in both op registries
@@ -132,6 +132,5 @@ Flow-specific additions:
 - `js/services/flowService.js` — `submitFlowGeneration`, `openFlowFromReuse`
 - `js/components/Compounds/LandingPages/MpiFlowLibrary/` — the picker overlay
 - `js/components/Organisms/MpiBaseFlow/` — the Flow frame (renders media slots, Run, result pane)
-- `js/components/Organisms/MpiFlowHeadSwap/` — the only surviving per-flow `uiComponent` (MPI-332); prefer declarative `fields` (MPI-531) for new Flows
 - `comfy_workflows/flow_*.json` — flow workflows (resolved case-insensitively)
 - `state.s_flowInputs` — session-only per-flow input snapshot
