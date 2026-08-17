@@ -1646,6 +1646,26 @@ export const MpiRunpodSettings = ComponentFactory.create({
                 // just raised, skipLocalEngine goes back to true — so this switch
                 // has to follow it back ON or Settings would show a lie.
                 _unsubs.push(Events.on('engine:install-skipped', () => _syncSkipEngine(true)));
+
+                // With an engine INSTALLED the switch is greyed out. The flag only
+                // ever meant "I have no engine and want in anyway", and leaving it
+                // settable was not cosmetic: it skips the whole boot gate, node
+                // DRIFT repair included, so the app runs custom nodes a commit
+                // behind their pin with no error anywhere (measured, MPI-325).
+                // Boot clears a stale flag; this stops it coming back. Deliberately
+                // NOT offering "uninstall the engine instead" — no uninstall path
+                // exists, and reinstalling the app is the honest answer.
+                fetch('/engine/version-check')
+                    .then((r) => r.json())
+                    .then(({ needsInstall }) => {
+                        if (needsInstall === true) return;   // no engine — leave it usable
+                        if (_runpodCfg().skipLocalEngine === true) {
+                            state.runpodConfig = { ..._runpodCfg(), skipLocalEngine: false };
+                        }
+                        _syncSkipEngine(false);
+                        seInst.el.setDisabled?.(true);
+                    })
+                    .catch(() => { /* fail open — a hiccuped check must not lock the switch */ });
             }
 
             // ── Auto-retry connection (MPI-110) ──────────────────────────────

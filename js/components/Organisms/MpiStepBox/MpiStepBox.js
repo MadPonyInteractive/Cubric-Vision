@@ -51,6 +51,13 @@ import { qs, on } from '../../../utils/dom.js';
 const MIN_BOX_PX = 32;
 
 /**
+ * Screen px of stage margin beyond the box's own reach, so a handle sitting on
+ * the extreme edge is still drawn whole and grabbable rather than half-clipped.
+ * Handles are 10px across, hit-tested at 16 (cropTool).
+ */
+const HANDLE_SLACK = 16;
+
+/**
  * Natural (intrinsic) dimensions of a loaded media element.
  * @param {HTMLImageElement} imgEl
  * @returns {{w:number,h:number}}
@@ -169,14 +176,33 @@ export const MpiStepBox = ComponentFactory.create({
          * Under `overflow: 'allow'` the canvas instead fills the whole STAGE,
          * which the `--overflow` modifier has padded. A box that leaves the frame
          * would otherwise be clipped away with its handles — you cannot judge how
-         * much hair you included in a rectangle you cannot see. cropTool's
-         * `_getContentBounds` already letterboxes the natural aspect into the
-         * canvas and centres it, so the larger canvas needs no coord change: the
-         * padding is symmetric, so the fitted rect IS the rendered image rect.
+         * much hair you included in a rectangle you cannot see.
+         *
+         * The padding is NOT free of coordinate consequences, and an earlier note
+         * here claimed it was. cropTool derives its normalized space from where the
+         * media actually renders inside the canvas (`_getTargetBox`); fitting the
+         * media into the whole padded canvas instead scales it up by the padding —
+         * ~18% here — so the drawn box stops matching the pixels it reports. That
+         * margin is also what bounds the box's SIZE, hence the proportional padding
+         * set below rather than a flat one.
          */
         function _syncOverlaySize() {
             const rect = mediaEl.getBoundingClientRect();
             if (!rect.width || !rect.height) return;
+            if (_allowOverflow) {
+                // The stage margin is the ONLY thing bounding how big the box may get
+                // (cropTool._maxNorm reads it back off the canvas), so the margin IS
+                // the policy: pad each axis out to the media's LONGEST edge, and a
+                // square box can always reach that edge. On this portrait that is the
+                // difference between boxing the face and boxing head + hair + neck —
+                // a square capped at the WIDTH cannot include either.
+                // Square media pads to nothing but the handle slack, which is correct:
+                // there the box already covers everything at 1:1.
+                const longest = Math.max(rect.width, rect.height);
+                const padX = Math.round((longest - rect.width) / 2) + HANDLE_SLACK;
+                const padY = Math.round((longest - rect.height) / 2) + HANDLE_SLACK;
+                stageEl.style.padding = `${padY}px ${padX}px`;
+            }
             const w = _allowOverflow ? stageEl.clientWidth : Math.round(rect.width);
             const h = _allowOverflow ? stageEl.clientHeight : Math.round(rect.height);
             if (!w || !h) return;

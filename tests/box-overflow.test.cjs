@@ -76,6 +76,57 @@ test('cropTool only lifts the bound when asked, and never lets the centre leave'
     assert.doesNotMatch(src, /Math\.max\(0, Math\.min\(r\.x, 1 - w\)\)/, 'clamp01 still inline');
 });
 
+/**
+ * The box may also be BIGGER than the picture (MPI-325 follow-up). A square tight
+ * on a head near the top of a PORTRAIT has to pass the image's WIDTH to take in the
+ * hair, and the first cut capped size at exactly one frame span, so it stopped at
+ * 768x768 on a 768-wide image with the hair still cut off.
+ *
+ * The cap is now the padded canvas, read back off the DOM — which also fixes the
+ * silent half: fitting the media into the whole padded canvas scaled every
+ * normalized coord up by the padding, so the drawn box was ~18% larger than the
+ * pixels the readout promised.
+ */
+test('an overflow box may exceed the frame, bounded by the padded canvas', async () => {
+    const { createCropTool } = await esm('js/utils/cropTool.js');
+
+    // 400x400 canvas, media rendered 200x200 inside it -> 100px of padding all
+    // round, so the canvas is exactly 2 frame-widths: the cap must be 2.0.
+    const make = (allowOverflow) => {
+        const ctx = new Proxy({}, { get: () => () => {} });
+        const canvas = {
+            width: 400, height: 400,
+            style: {}, getContext: () => ctx,
+            addEventListener() {}, removeEventListener() {},
+            getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 400 }),
+        };
+        const target = {
+            tagName: 'IMG', naturalWidth: 768, naturalHeight: 768,
+            getBoundingClientRect: () => ({ left: 100, top: 100, width: 200, height: 200 }),
+        };
+        return createCropTool({ overlayCanvas: canvas, targetElement: target, allowOverflow });
+    };
+
+    const over = make(true);
+    over.setRect({ x: 0, y: 0, w: 1.8, h: 1.8 });
+    assert.strictEqual(over.getRect().w, 1.8, 'a box wider than the frame must survive');
+
+    over.setRect({ x: 0, y: 0, w: 5, h: 5 });
+    assert.strictEqual(over.getRect().w, 2, 'and stop at the canvas, so the handles stay reachable');
+
+    // The default path is untouched: MpiVideoViewer must still cap at the frame.
+    const bounded = make(false);
+    bounded.setRect({ x: 0, y: 0, w: 1.8, h: 1.8 });
+    assert.strictEqual(bounded.getRect().w, 1, 'without overflow the frame is still the cap');
+
+    // Coordinate mapping: normalized space is the MEDIA, not the padded canvas.
+    // Fitting 768x768 into the whole 400px canvas would report w: 400 (the ~18%
+    // class of error); the media is 200px, so 200 is the only right answer.
+    const b = over.getContentBounds();
+    assert.strictEqual(b.w, 200, 'norm 1.0 must be the rendered media, not the padded canvas');
+    assert.strictEqual(b.x, 100, 'and it must sit where the media actually renders');
+});
+
 test('the only other cropTool consumer stays bounded', () => {
     const src = read('js/components/Organisms/MpiVideoViewer/MpiVideoViewer.js');
     assert.doesNotMatch(src, /allowOverflow/, 'a video crop leaving the frame is meaningless');

@@ -57,13 +57,42 @@ export function createCropTool({ overlayCanvas, targetElement, onChange, showGri
     const HANDLE_HIT_SIZE = 16;
 
     /**
+     * The region of the overlay canvas the TARGET ELEMENT occupies, in canvas
+     * pixel space. Normally the whole canvas — the overlay is sized to the media.
+     *
+     * Not so under `allowOverflow` (MPI-325): there the canvas is the PADDED
+     * stage, deliberately larger than the media so an off-frame box has somewhere
+     * to draw. Fitting the content into the whole canvas then scales the image UP
+     * by the padding, and every normalized coord silently inherits that error —
+     * measured at ~18% on a 768px portrait, i.e. the drawn box was not the crop
+     * the readout promised.
+     */
+    function _getTargetBox() {
+        const cRect = overlayCanvas.getBoundingClientRect();
+        const tRect = targetElement.getBoundingClientRect();
+        if (!cRect.width || !cRect.height || !tRect.width || !tRect.height) {
+            return { x: 0, y: 0, w: overlayCanvas.width, h: overlayCanvas.height };
+        }
+        // CSS px -> canvas px; the two differ whenever the canvas is scaled by CSS.
+        const sx = overlayCanvas.width / cRect.width;
+        const sy = overlayCanvas.height / cRect.height;
+        return {
+            x: (tRect.left - cRect.left) * sx,
+            y: (tRect.top - cRect.top) * sy,
+            w: tRect.width * sx,
+            h: tRect.height * sy,
+        };
+    }
+
+    /**
      * Get the bounding rect of the actual content (accounting for letterbox/pillarbox).
      * For images: uses naturalWidth/naturalHeight; for video: uses videoWidth/videoHeight.
      * Returns { x, y, w, h } in overlay canvas pixel space.
      */
     function _getContentBounds() {
-        const canvasW = overlayCanvas.width;
-        const canvasH = overlayCanvas.height;
+        const box = _getTargetBox();
+        const canvasW = box.w;
+        const canvasH = box.h;
 
         let contentW, contentH;
         if (targetElement.tagName === 'VIDEO') {
@@ -89,10 +118,29 @@ export function createCropTool({ overlayCanvas, targetElement, onChange, showGri
             displayW = canvasH * contentRatio;
         }
 
-        const x = (canvasW - displayW) / 2;
-        const y = (canvasH - displayH) / 2;
+        const x = box.x + (canvasW - displayW) / 2;
+        const y = box.y + (canvasH - displayH) / 2;
 
         return { x, y, w: displayW, h: displayH };
+    }
+
+    /**
+     * How far a normalized extent may exceed the frame before its handles leave
+     * the canvas. 1 = exactly the frame, which is the default and the only value
+     * that ever applied before MPI-325.
+     *
+     * Under `allowOverflow` the canvas is the padded stage, so the padding IS the
+     * headroom: the cap is simply how many frame-widths of canvas there are. Pad
+     * the stage more and the box may grow more — no second constant to keep in
+     * sync with the CSS. Falls back to 1 before layout, when the rects are empty.
+     */
+    function _maxNorm() {
+        if (!allowOverflow) return { w: 1, h: 1 };
+        const b = _getContentBounds();
+        return {
+            w: b.w > 0 ? Math.max(1, overlayCanvas.width / b.w) : 1,
+            h: b.h > 0 ? Math.max(1, overlayCanvas.height / b.h) : 1,
+        };
     }
 
     /**
@@ -165,8 +213,9 @@ export function createCropTool({ overlayCanvas, targetElement, onChange, showGri
      */
     function _applyRatioToRect(rect = _normRect, preserve = false) {
         const clamp01 = (r) => {
-            const w = Math.min(Math.max(r.w, 0.01), 1);
-            const h = Math.min(Math.max(r.h, 0.01), 1);
+            const max = _maxNorm();
+            const w = Math.min(Math.max(r.w, 0.01), max.w);
+            const h = Math.min(Math.max(r.h, 0.01), max.h);
             return {
                 x: _clampPos(r.x, w),
                 y: _clampPos(r.y, h),
@@ -311,10 +360,13 @@ export function createCropTool({ overlayCanvas, targetElement, onChange, showGri
             if (w < minSize) { x = sr.x + sr.w - minSize; w = minSize; }
             if (h < minSize) { y = sr.y + sr.h - minSize; h = minSize; }
             if (allowOverflow) {
-                // Size still caps at the frame span — the ask is a box that may
-                // LEAVE the frame, never one bigger than the picture.
-                w = Math.min(w, 1);
-                h = Math.min(h, 1);
+                // The box MAY be bigger than the picture — a square tight on a head
+                // near the top of a portrait has to grow past the image WIDTH to take
+                // in the hair. It caps at the padded canvas, so the handles stay
+                // reachable (see _maxNorm).
+                const max = _maxNorm();
+                w = Math.min(w, max.w);
+                h = Math.min(h, max.h);
                 x = _clampPos(x, w);
                 y = _clampPos(y, h);
             } else {
@@ -396,12 +448,15 @@ export function createCropTool({ overlayCanvas, targetElement, onChange, showGri
         if (h < minSize) { h = minSize; w = h * r; }
 
         if (allowOverflow) {
-            // The frame no longer bounds the SIZE — that is the whole point: a
-            // square tight on an edge-adjacent head cannot be grown while it is
-            // pinned to the edge. It still caps at the frame span.
-            w = Math.max(minSize, Math.min(w, 1));
+            // The frame bounds neither the position nor the SIZE — that is the whole
+            // point: a square tight on an edge-adjacent head cannot be grown while it
+            // is pinned to the edge, and on a portrait it must pass the image WIDTH to
+            // reach the hair. The padded canvas is the only bound (see _maxNorm), so
+            // the handles never leave the stage.
+            const max = _maxNorm();
+            w = Math.max(minSize, Math.min(w, max.w));
             h = w / r;
-            if (h > 1) { h = 1; w = h * r; }
+            if (h > max.h) { h = max.h; w = h * r; }
         } else {
             // Bound max w by horizontal space available from anchor
             let maxW = w;

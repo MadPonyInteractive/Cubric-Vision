@@ -51,17 +51,20 @@ the pixel.
 top-right, drawn into the stage margin with its handles reachable, readout held at `642 x 642`.
 The `user-ux` verify mode is closed; the card is validating on the two blockers below only.
 
-**Two things are NOT done, and neither is code:**
+**2026-08-17 - the nodes pack SHIPPED. Fabio authorized the push; `38b3a27` is on
+`origin/main` and `dev_configs/node_lock.json` pins it.** That closes the blocker that made
+the app half unsafe: the graph sends `pad: true`, ComfyUI silently DROPS an input a node does
+not declare, and the released engine now installs the commit that declares it. Verified as a
+chain (push -> `ls-remote` -> `gh api` -> `git grep '"pad"' 38b3a27` -> the pin), evidence in
+`validation.md`. Two things to carry forward: the pack's branch is **`main`**, not master
+(the earlier handoff said master), and a bare `curl` of the archive URL returns `000` from the
+agent shell - use `gh api`, or you will read a live SHA as missing.
 
-1. `ComfyUi-MpiNodes` is edited but NOT pushed and NOT pinned in `dev_configs/node_lock.json`.
-   Push is user-authorized. This matters more than it reads: the graph now sends `pad: true`
-   to `MpiBoxCrop`, ComfyUI silently DROPS an input a node does not declare, so on an
-   unpinned engine the gizmo lets a user drag off-frame and hands the model a squashed
-   reference head with no error anywhere. Pin before this reaches a user.
-2. One real Head Swap generation through an overhanging box. Fabio ruled out GPU runs for the
-   session; the checks either side of the graph boundary both pass, but not as one pipeline.
+**ONE thing is NOT done, and it is not code:** a real Head Swap generation through an
+overhanging box. Fabio ruled out GPU runs for the session; the checks either side of the graph
+boundary both pass, but not yet as one pipeline. Pass/fail test in `validation.md`.
 
-Next action: commit both repos by pathspec, then ask Fabio for the push + pin.
+Next action: ask Fabio for that single GPU run. The card closes on it and on nothing else.
 
 ## Approach
 

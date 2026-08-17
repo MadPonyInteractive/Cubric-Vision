@@ -5,12 +5,20 @@ user-invocable: true
 ---
 # /mpi-nodes-sync — the node pack and the app's pin, in one flow
 
-**The problem this exists for.** `ComfyUi-MpiNodes` is a **separate git repo**. On this dev
-machine it is **symlinked into `custom_nodes`**, and the engine's drift check *skips* it on a
-source run (`.claude/rules/comfy_engine.md` § Dev-symlink escape hatch). So a node edit works
-locally with **no commit, no push, and no pin bump** — and ships to nobody. Measured
+**The problem this exists for.** `ComfyUi-MpiNodes` is a **separate git repo**, so a node edit
+lands on disk with **no commit, no push, and no pin bump** — and ships to nobody. Measured
 2026-08-08: the app pinned `a6e5d5e` while the repo was 5 commits ahead at `43a976f`, three
 new nodes unreachable to every user.
+
+**The dev-symlink escape hatch is GONE — do not repeat that claim.** The junction into the app
+engine's `custom_nodes` was deleted and the drift skip removed from
+`checkUniversalWorkflowDepsStatus()`; the app engine is a **USER REPLICA** that installs and
+drift-checks the pinned commit on a dev run too (`.claude/rules/comfy_engine.md` § Engine
+Split). The symlink survives only on the standalone authoring bench (`G:\ComfyUi`). This text
+said the opposite until 2026-08-17 and it cost a session: a stale node really did run for six
+boots, but the cause was `skipLocalEngine` skipping the whole boot gate (MPI-325), not a
+symlink. When a pinned node looks stale, check that flag and the `.mpi_node_commit` marker —
+never assume a dev exemption is hiding it.
 
 A node change is not done until: **committed → pushed → the app's pin moved.**
 

@@ -225,7 +225,7 @@
   "24": {
     "inputs": {
       "images": [
-        "6",
+        "115",
         0
       ]
     },
@@ -512,6 +512,18 @@
     "class_type": "LoraLoaderModelOnly",
     "_meta": {
       "title": "Head Swap LoRA"
+    }
+  },
+  "115": {
+    "inputs": {
+      "passthrough": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
     }
   }
 }

@@ -73,16 +73,70 @@ When it is run:
    image**. A strip there means something padded the source, which is the failure mode
    this card deliberately avoided.
 
-## Blocked on the user
+## Nodes pack SHIPPED - pushed + pinned 2026-08-17
 
-`ComfyUi-MpiNodes` is edited but **not pushed and not pinned**. A node change ships only
-when committed -> pushed -> pinned in `dev_configs/node_lock.json`; the dev machine
-symlinks the pack into `custom_nodes`, so local work verifies with no pin and the drift
-check stays quiet. Push is a user-authorized live op.
+The pack was committed but local-only, and `comfy_workflows/flow_head_swap.json:281`
+already sends `pad: true` to `MpiBoxCrop`. ComfyUI ignores an input a node does not
+declare, so an unpinned engine would have taken the drag off-frame and quietly handed the
+model the intersection - a squashed reference head, no error anywhere.
 
-Until it is pinned, a user on the released engine gets `MpiBoxCrop` without `pad`, and
-`comfy_workflows/flow_head_swap.json` now sends `pad: true` to it. ComfyUI ignores an
-input a node does not declare, so the crop silently falls back to the intersection — the
-old behaviour, not a crash. **The gizmo would let them drag off-frame and quietly hand
-the model a squashed reference head**, so the pin is not optional dressing; it is what
-makes this card's app half safe to ship.
+**Why nothing local surfaced it - and the reason written in the handoff was WRONG.** The
+handoff said the dev machine symlinks the pack so the drift check skips it. That junction
+was deleted 2026-08-08 along with the `_devMode` skip in `checkUniversalWorkflowDepsStatus()`
+(`routes/shared.js`, `.claude/rules/comfy_engine.md` § Engine Split) - the app engine is a
+USER REPLICA and drift-checks the pin like anyone else. The real cause was `skipLocalEngine`
+skipping the WHOLE boot gate, dep check included, so the repair never ran across six boots.
+CLAUDE.md and the `mpi-nodes-sync` skill both carried the stale claim and were healed here.
+
+Fabio authorized the push. Closed as one chain, each link proven:
+
+| Link | Evidence |
+|---|---|
+| pushed | `fe812d4..38b3a27  main -> main` (the pack's branch is `main`, not master) |
+| on the remote | `git ls-remote origin main` -> `38b3a27a2d32b3522d27bc3de3aa8053d578020d` |
+| GitHub serves it | `gh api repos/MadPonyInteractive/ComfyUi-MpiNodes/commits/38b3a27a...` returns the commit |
+| the pushed tree declares the input | `git grep '"pad"' 38b3a27 -- '*.py'` -> `img.py:593  "pad": ("BOOLEAN", {"default": False,` |
+| Vision pins it | `dev_configs/node_lock.json` `nodes.ComfyUI-MpiNodes.commit` = `38b3a27a2d32b3522d27bc3de3aa8053d578020d` (was `fe812d47...`, the commit BEFORE the pad node) |
+| no stale copy of the old SHA | `grep -rn fe812d4762 dev_configs/` -> none |
+
+Note for anyone re-treading this: a plain `curl` of the GitHub archive URL returned
+`000`/exit 43 from the agent shell, which reads as "the SHA is not there" and is not -
+`gh api` reached it immediately. Do not diagnose a pin from a bare curl here.
+
+The pin is the released-engine half of this card. One item remains.
+
+## GPU run - PASSED 2026-08-17, and it exercised BOTH fixes at once
+
+Fabio ran a real Head Swap through an overhanging box on his own app once the GPU
+freed up. His verdict on the delivered image: **"the result is good. There is no padded
+strip."** That is the pass condition - a strip would have meant something padded the
+SOURCE, which this design deliberately avoided on the target path.
+
+Ground truth for the graph half, read from the engine's `/history` on port 48188 (the graph
+the app actually INJECTED, not the one it intended to). These are runtime values - no file in
+the repo carries them, so re-read `/history` rather than expecting a test to assert them:
+
+| Node | Dispatched |
+|---|---|
+| `MpiBoxCrop` #89 | `{"pad": true, "image": ["81",0], "mpi_box": ["88",0]}` |
+| `Input_Box_2` (reference) | `width 1354, height 1354, x -267, y -5` |
+| `Input_Box` (target) | `width 199, height 199, x 214, y 211` |
+
+Three things this single run proves that no local check could:
+
+1. **`pad: true` was NOT dropped.** ComfyUI silently discards an input a node does not
+   declare, so its presence in the executed graph is positive proof the engine is on
+   `38b3a27` - the pin took effect end to end.
+2. **The reference box exceeded the image WIDTH** (1354 on a 768-wide source) and sat at
+   a **negative origin on both axes** (`-267, -5`). The size cap and the position
+   overflow were both exercised in one dispatch.
+3. **The target box stayed inside the frame** (199 at 214,211), which is why the
+   delivered image has no strip. The asymmetry held in practice, not just in theory.
+
+## Still open - one item, cosmetic, not yet seen live
+
+The Settings switch for `skipLocalEngine` (below) greys out once an engine is installed,
+and a stale flag clears itself at boot. Both are covered by tests, neither has been seen
+in the running app - Fabio's flag was still set when this was written, so his NEXT app
+start is the check: the switch should be greyed, and `[shell]` should log
+`skipLocalEngine cleared`.

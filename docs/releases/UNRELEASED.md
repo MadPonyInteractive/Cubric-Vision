@@ -32,9 +32,19 @@ _(none yet)_
 
 ## What's new
 
-_(none yet)_
+- Head Swap boxes can now leave the picture, and grow past it. The square you draw around a
+  head may sit beyond the image edge and stretch up to the picture's longest side, so a head
+  near a border — or tall hair, or a neck tattoo — can be taken in without the box swallowing
+  whoever is standing next to them. The reference head is padded back to square before the
+  model sees it, and the picture you get back is untouched: no border strip.
 
 ## Fixes
+
+- The app no longer keeps running outdated engine components after an update. Anyone who had
+  used "Skip the local engine install" kept that setting even after an engine was installed,
+  and it quietly switched off the check that repairs out-of-date components — so a fixed or
+  improved component could sit unused indefinitely, with nothing reported. The setting now
+  clears itself once an engine is present, and is greyed out while one is installed.
 
 - Live latent previews now play everywhere they appear. The Flow result pane replayed
   the whole clip at burst speed on every sampler step and then froze, the History

@@ -25,6 +25,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
 
 // storage.js talks to localStorage through get()/set() wrappers only, so a
 // Map-backed stub installed before the dynamic import is enough.
@@ -77,4 +79,42 @@ test('a non-boolean skipLocalEngine heals to false rather than becoming truthy',
 
     Storage.setRunpodConfig({ ...Storage.getRunpodConfig(), skipLocalEngine: 'yes' });
     assert.strictEqual(Storage.getRunpodConfig().skipLocalEngine, false);
+});
+
+
+/**
+ * MPI-325: the flag is only honest while there is NO engine, and leaving it set
+ * afterwards was not cosmetic. It skips the WHOLE local gate — the universal-dep
+ * check included, which is also the custom-node DRIFT repair. Measured on this
+ * machine: ComfyUI-MpiNodes sat one commit behind its pin across six boots, the
+ * app reported everything fine, and the graph's `pad: true` was silently dropped
+ * by the old node because ComfyUI ignores an input a node does not declare.
+ *
+ * Two halves, both pinned here because both are renderer-side: boot CLEARS a
+ * stale flag, Settings GREYS the switch so it cannot come back.
+ */
+test('boot clears a stale skipLocalEngine when an engine is installed', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'js/shell.js'), 'utf8');
+
+    const gate = src.slice(src.indexOf('const runpodCfg = Storage.getRunpodConfig()'));
+    assert.match(
+        gate.slice(0, 1600),
+        /if \(runpodCfg\.skipLocalEngine\)[\s\S]*?engine\/version-check[\s\S]*?needsInstall !== true[\s\S]*?skipLocalEngine: false/,
+        'an installed engine must clear the flag BEFORE the gate branches on it',
+    );
+    // The clear has to reach the local copy too, or this boot still skips the gate
+    // and the repair waits for the NEXT launch.
+    assert.match(gate.slice(0, 1600), /runpodCfg\.skipLocalEngine = false/, 'local copy left stale');
+});
+
+test('Settings greys the switch out once an engine is installed', () => {
+    const src = fs.readFileSync(
+        path.join(__dirname, '..', 'js/components/Compounds/LandingPages/MpiRunpodSettings/MpiRunpodSettings.js'),
+        'utf8',
+    );
+
+    assert.match(src, /needsInstall === true\) return;/, 'no engine -> the switch stays usable');
+    assert.match(src, /seInst\.el\.setDisabled\?\.\(true\)/, 'an installed engine must disable the switch');
+    // Fail OPEN: a hiccuped health check must never lock a user out of the hatch.
+    assert.match(src, /\.catch\(\(\) => \{ \/\* fail open/, 'version-check failure must not disable the switch');
 });

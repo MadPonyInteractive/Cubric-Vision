@@ -56,12 +56,27 @@ So a step declares it:
 { kind: 'box', role: 'image1', param: 'box1', ratio: 1, overflow: 'allow' }
 ```
 
-`overflow: 'allow'` lets the box hang off an edge by up to HALF its own size — its centre
-always stays over the content, so it is never dragged into nowhere and never stops being
-grabbable. Under it, `x`/`y` reach the graph **negative**, and `MpiBox`'s widgets accept that
-(their `min` was `0` until MPI-325 — a gizmo relaxed without the node is a no-op at the
-boundary). `MpiStepBox` also pads its stage so the off-frame part of the box is still drawn;
-a rectangle you cannot see is not a selection you can judge.
+`overflow: 'allow'` lifts BOTH frame bounds, and it needs both:
+
+- **Position** — the box may hang off an edge by up to HALF its own size, so its centre always
+  stays over the content: never dragged into nowhere, never ungrabbable. `x`/`y` reach the
+  graph **negative**, and `MpiBox`'s widgets accept that (their `min` was `0` until MPI-325 —
+  a gizmo relaxed without the node is a no-op at the boundary).
+- **Size** — the box may grow to the media's **LONGEST edge**, so a square can exceed a
+  portrait's WIDTH. Position alone is not enough: a square capped at the width of a 768×1354
+  portrait cannot take in hair above the head or a tattoo below the chin, whatever you do with
+  its position. Verified live at `1354 × 1354` on exactly that image.
+
+`MpiStepBox` pads its stage per axis, out to that longest edge (+ handle slack), so the whole
+box is drawn and its handles stay grabbable — a rectangle you cannot see is not a selection you
+can judge. **That padding is the size policy**: `cropTool._maxNorm()` reads the cap back off
+the canvas rather than holding a second constant that could drift from the CSS.
+
+**The padding is NOT coordinate-free, and assuming it was cost a silent bug.** The overlay
+canvas under overflow is the padded STAGE, so normalized space must be derived from where the
+media actually renders inside it (`cropTool._getTargetBox`). Letterboxing the media into the
+whole canvas instead scales every coordinate up by the padding — measured ~18%, i.e. the drawn
+box was not the crop the readout promised, with no error anywhere.
 
 **Whether a flow may opt in is a property of the CONSUMER, not the gizmo:**
 
@@ -161,6 +176,8 @@ Nothing outstanding on the coord contract — anchor and out-of-bounds behaviour
 verified above. Remaining UI questions (slot previews, result pane, control placement) are in
 [README.md](README.md) § Open / to brainstorm.
 
-`overflow: 'allow'` is verified on the app side only (unit tests + a live gizmo check): a real
-Head Swap generation through a padded overhanging box has NOT been run — see MPI-325's
-`validation.md`.
+`overflow: 'allow'` is verified end to end as of 2026-08-17: unit tests, a live gizmo check,
+and a real Head Swap generation through a padded overhanging box. The executed graph (read from
+the engine's `/history`) carried `pad: true` on `MpiBoxCrop` with the reference box at
+`1354×1354, origin -267,-5` — past the source's WIDTH and off-frame on both axes — and the
+delivered image came back with no padded strip. Evidence in MPI-325's `validation.md`.

@@ -263,6 +263,31 @@ async function _bootApp() {
   // deliberately a separate flag from autoConnectOnStart, which would bill a Pod
   // at every launch. Cleared by the Settings toggle, which re-arms this gate.
   const runpodCfg = Storage.getRunpodConfig();
+
+  // `skipLocalEngine` skips the WHOLE local gate — including the universal-dep
+  // check, which is also the node DRIFT repair. So a user who ever pressed the
+  // escape hatch kept running stale pinned custom nodes through every later
+  // engine bump, with no error: ComfyUI drops an input an old node does not
+  // declare rather than failing. Measured here — the pack sat 1 commit behind
+  // its pin across six boots while the app reported everything fine.
+  //
+  // The flag only ever meant "I have no engine and want in anyway". Once one IS
+  // installed it is stale, so clear it and let the ordinary gate run. Settings
+  // greys the switch out for the same reason (MpiRunpodSettings).
+  if (runpodCfg.skipLocalEngine) {
+    try {
+      const res = await fetch('/engine/version-check');
+      if ((await res.json()).needsInstall !== true) {
+        clientLogger.info('shell', 'skipLocalEngine cleared — an engine is installed, so the dep/drift gate must run');
+        state.runpodConfig = { ...runpodCfg, skipLocalEngine: false };
+        runpodCfg.skipLocalEngine = false;
+      }
+    } catch (err) {
+      // Leave the flag alone — the gate below already fails open on this check.
+      clientLogger.warn('shell', `engine version-check failed while re-testing skipLocalEngine: ${err.message}`);
+    }
+  }
+
   if (runpodCfg.autoConnectOnStart) {
     await _initRemoteBoot(runpodCfg);
   } else if (runpodCfg.skipLocalEngine || _isE2E()) {
