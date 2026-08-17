@@ -1,0 +1,68 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "23129362-b4d2-4e41-99be-98dab0841082",
+  "generated_at": "2026-08-17T05:15:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-570 fixed and closed; MPI-332 parked; the queue in front of MPI-531 is now empty",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Fix MPI-570 first, per Fabio's instruction, reading tasks/MPI-570/brief.md rather than the card description.",
+    "status": "in_progress",
+    "summary": "MPI-570 is shipped, live-verified before AND after, confirmed in-app by Fabio, and closed to done. MPI-332 was re-verified on disk and parked to done. MPI-531 itself was not touched this session - it is now the only thing left in doing besides MPI-520, and its remaining debt is a generation. Fabio's call: the NEXT session does MPI-571 first, because one GPU session can serve both cards.",
+    "commit": "25a7cbfe"
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-531/plan.md",
+    "completed": [
+      "MPI-570 DONE and closed. Two files: overlayManager.js (_notifyDepthChange passes the new stack depth - onDepthChange had zero consumers, so nothing could break) and MpiGalleryGrid.js (_overlayOpen, the mirror of the existing _isScrolling gate, driven from Overlays.onDepthChange). depth > 0 also calls the existing _stopOtherGalleryMedia(null), which was already correct and is untouched. window blur / document visibilitychange trigger the same stop. Commit 25a7cbfe.",
+      "THE BRIEF'S PREDICTED ORDERING DID NOT REPRODUCE. tasks/MPI-570/brief.md expected mouseenter to fire on the card a closing popup reveals, then the overlay a tick later. Measured with a real parked cursor on a cover div: card-mouseenter NEVER fired - only overlay-depth-1@10.2ms, because the overlay covered the card before the browser's hit-test pass ran. The ordering depends on how long the overlay takes to mount and is NOT derivable from the call graph. That is why the fix is a stop AND a gate: the stop covers a mouseenter landing before the push, the gate covers one landing after. Either alone would have been the 'looks right, ships, changes nothing' no-op the brief warned about - just for a different reason than the brief expected.",
+      "FOUR call sites reach _hoverPlay, not the two the plan named: _onCardEnter, the audio-card mouseenter, _promoteVideo's already-hovering autoplay, and the scroll-idle replay (a 150ms timer that can land after an overlay opened). All four gated.",
+      "The bug was MEASURED LIVE BEFORE the fix - playing unmuted, currentTime 0.54 -> 1.73 at depth 1 - so the fix is provably not a no-op. Verified after on the real flowService.openFlowFromReuse path (3.78s unmuted -> paused/muted/rewound at depth 1), on window blur, on visibilitychange, and on the two regressions that matter: hover works again after a blur stop, and after the overlay closes. 606/606 tests, eslint clean. Fabio confirmed in-app.",
+      "MPI-332 parked to done. Re-verified on disk rather than taken on the previous handoff's word: 0 references to image-regen / sdxl-4k / video-stitch anywhere in js/ or comfy_workflows/, all six listed files deleted, Head Swap kept. tasks/MPI-332/validation.md."
+    ],
+    "pending": [
+      "MPI-571 FIRST - Fabio's explicit call this session. The four latent-preview consumers. It needs generations, and MPI-531's remaining debt is also a generation, so one GPU session is meant to serve both.",
+      "MPI-531's owed foley run. It only parks on the back of MPI-571's generations IF that run is a FOLEY run whose DISPATCHED prompt is read back from Comfy /history. The step-field promotion path fails SILENTLY - the run succeeds and quietly uses the graph's baked default - so the box on screen is not evidence. If MPI-571's generations land on some other flow, MPI-531 still owes its own foley run.",
+      "MPI-531 items 2 (steps[].image), 3 (author every 1.5 Flow declaratively) and 4 (port MpiFlowHeadSwap) remain untouched.",
+      "MPI-520 is still in doing at maturity validating - not looked at this session."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-531",
+    "title": "Package-ready flows for 1.5 - author every built-in Flow in a shape a third-party manifest can express",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-531/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-531/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-531/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-531/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Start on MPI-571 - the four latent-preview consumers - NOT MPI-531. Fabio flipped the order deliberately on 2026-08-17: MPI-571 needs generations and MPI-531's only remaining debt is also a generation, so one GPU session should serve both. Read tasks/MPI-571/ and the MPI-531 plan's '### The latent-preview bug - the SOURCE OF TRUTH exists and the consumers diverge from it' section, which is where that bug was first characterised. Move MPI-571 todo -> doing and write its files.json before editing. ASK before dispatching any generation - another of Fabio's agents may want the GPU. When the generation happens, if it can be a FOLEY run, read the DISPATCHED prompt back from Comfy /history and that also parks MPI-531; a run on any other flow does not.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "MPI-571 BEFORE MPI-531, Fabio's call 2026-08-17. Both need the GPU; doing the preview work first means one generation session can close both. He explicitly declined to spend a foley generation on MPI-531 alone, having done several already.",
+      "MPI-570's brief is now PARTLY WRONG and tasks/MPI-570/validation.md records where. Its mechanism (no mouseleave under a stationary cursor) is right; its predicted event ORDERING is not. Do not cite the brief's ordering claim again without re-measuring.",
+      "A card whose work shipped in an earlier session still gets its evidence RE-VERIFIED on disk before closing (MPI-332: grep + file existence + the kept-file check). A previous handoff's assertion that something shipped is a claim, not evidence.",
+      "GPU ETIQUETTE holds: nothing was generated this session or the last one. Ask Fabio before dispatching."
+    ],
+    "constraints": [
+      "Bash tool: HEREDOCS ARE BLOCKED by guard-shell, and so are backslash-newline continuations. Appending a long markdown block to a plan file needs the Write tool plus a python script run by path - `cat >> file << 'EOF'` is rejected outright. Same for commit messages: write the file, then `git commit -F <path>`.",
+      "Git Bash mangles a bare Windows flag: `taskkill /PID <n> /T /F` becomes 'C:/Program Files/Git/PID' and fails. Run it through PowerShell instead - `powershell -NoProfile -Command \"taskkill.exe /PID <n> /T /F\"`. Also avoid inline PowerShell containing `[Math]::Min(...)` - bash chokes on the brackets; put the script in a .ps1 and run it with -File.",
+      "The isolated app does NOT need its own projects - projects live machine-wide in C:/Users/Fabio/Documents/Cubric Vision/Projects, so a fresh profile still sees all of them. The folder name is not the display name: the folder `cowboys` is the project 'The Failed Heist', which holds the flowLtxFoley_*.mp4 cards. Own profile via CUBRIC_AGENT_PROFILE=<own dir> plus CUBRIC_MODELS_ROOT=G:/CubricModels.",
+      "Opening a project does not mount the gallery. Drive it with `import('/js/router.js')` then `navigate(PAGE_GALLERY)`, and note that video thumbs are PROMOTED lazily by an IntersectionObserver - right after a navigate there may be 0 `video.mpi-group-card__thumb--video` in the DOM even though the project has 66 video groups. Wait a few seconds, and re-check after any overlay episode, which rebuilds the cards.",
+      "playwright-cli `hover` accepts a plain CSS selector, not just an eN snapshot ref - `npx playwright-cli -s=<name> hover \"#some-id\"` works and parks the REAL cursor, which is what any mouseenter-on-reveal measurement needs. Sessions persist across npx invocations via -s=<name>."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-531/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-571/task.json",
+      ".agents/mpi-kanban/tasks/MPI-570/validation.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/23129362-b4d2-4e41-99be-98dab0841082.json and use mpi-continue to continue from where we left off. Fabio's instruction for this session is to start with MPI-571 - the four latent-preview consumers - NOT MPI-531, even though MPI-531 is the card sitting in doing. He flipped the order on 2026-08-17 because MPI-571 needs generations and MPI-531's only remaining debt is also a generation, so one GPU session should serve both. Move MPI-571 todo -> doing and write its files.json before editing anything, and ASK before dispatching any generation - another of his agents may want the GPU. If the generation can be a FOLEY run, read the DISPATCHED prompt back from Comfy /history: that also parks MPI-531, because its step-field promotion path fails SILENTLY and the box on screen proves nothing. A run on any other flow does not park it. Last session shipped and closed MPI-570 (gallery hover video looping with sound behind an overlay) and parked MPI-332; both are done, do not reopen them. Note that MPI-570's brief turned out to be partly wrong about event ordering - tasks/MPI-570/validation.md records what was actually measured."
+}

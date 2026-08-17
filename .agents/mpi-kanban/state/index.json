@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-17T04:18:56Z",
+  "updated_at": "2026-08-17T05:15:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -69,9 +69,9 @@
       "id": "c8fcbf68-7f0b-4e4b-9bbe-1dd1c2df64b3",
       "path": ".agents/mpi-kanban/state/handoffs/c8fcbf68-7f0b-4e4b-9bbe-1dd1c2df64b3.json",
       "task_card": "MPI-531",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-17T04:18:56Z",
-      "note": "Next session fixes MPI-570 FIRST (Fabio's instruction); read tasks/MPI-570/brief.md, not the card description."
+      "note": "Superseded by 23129362-b4d2-4e41-99be-98dab0841082 - MPI-570 fixed, verified and closed; MPI-332 parked."
     },
     {
       "id": "b7f41a92-3d5e-4c18-9a26-8e1f7c0d5b43",
@@ -80,6 +80,14 @@
       "status": "resolved",
       "created_at": "2026-08-16T07:20:00Z",
       "note": "Superseded by c8fcbf68-7f0b-4e4b-9bbe-1dd1c2df64b3 - resumed and completed 2026-08-17."
+    },
+    {
+      "id": "23129362-b4d2-4e41-99be-98dab0841082",
+      "path": ".agents/mpi-kanban/state/handoffs/23129362-b4d2-4e41-99be-98dab0841082.json",
+      "task_card": "MPI-531",
+      "status": "open",
+      "created_at": "2026-08-17T05:15:00Z",
+      "note": "Next session starts with MPI-571, NOT MPI-531 - Fabio's call, one GPU session to serve both cards."
     }
   ]
 }
