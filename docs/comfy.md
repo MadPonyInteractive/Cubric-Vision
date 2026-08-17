@@ -152,6 +152,8 @@ lifecycle event table, ComfyUI auto-restart) live in
 
 **Seed node required for cache-dedupe:** `commandExecutor.js` listens for `execution_cached` WS event. If ALL `outputNodeIds` are cached AND no node titled `"Seed"` (case-insensitive) exists, `cacheHit = true` → short-circuits, no `saveGeneration`, toast "No changes, skipping...". Any workflow consuming a seed MUST have a node titled exactly `"Seed"`. Replace mode bypasses dedupe.
 
+**Two sampler/resize mechanics that read as bugs and are not:** `denoise` is quantised as `int(steps/denoise)`, so on a ONE-step model everything from ~0.67 to 1.0 is the same schedule (a dead-looking dial may be arithmetic, not unwired); and `comfy.utils.lanczos` round-trips through PIL, where **RGBA LANCZOS zeroes the RGB under fully transparent pixels**, handing any downstream model a black hole where the transparency was. Both measured with numbers in [models/seedvr2/README.md](models/seedvr2/README.md) § ComfyUI mechanics.
+
 **PYTHONUTF8=1 on Windows (MPI-118):** Windows embedded Python 3.13 defaults to cp1252. A custom node with a non-Latin-1 char (e.g. `"$Δ \hat{t}$"`, U+0394) causes `SyntaxError` + traceback crash → whole ComfyUI exits. Fix: `PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8'` in ComfyUI spawn env (`routes/comfy.js`) + `set PYTHONUTF8=1` prepended to `run_nvidia_gpu.bat` in `engine.js`.
 
 **GPU build selection by arch, not CUDA:** `resolveDownloadConfig()` selects portable build via `selectNvidiaBuild(gpuName, cudaVersion)` using GPU ARCHITECTURE. `--query-gpu=name` never emits `CUDA Version:` header → CUDA always `unknown` under old logic → everyone fell to cu126 including Blackwell. Gate on arch (GPU model name): RTX/GTX-16xx+ → default `nvidia.7z`; GTX 10xx & older → `nvidia_cu126.7z`.

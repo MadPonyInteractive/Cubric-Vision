@@ -360,6 +360,15 @@ The Node.js backend tracks the active python process in memory (`processState.ac
 - Do not add random CLI arguments to the spawn command without checking if they break compatibility with portable installs.
 - Any new routes that communicate with ComfyUI's internal API (`/manager/unload_models`, etc.) must account for deep vs. shallow memory cleaning.
 - ComfyUI stdout/stderr phase lines may drive renderer lifecycle via `/comfy/events/stream`. Preserve `Model Initializing ...` and `Model Initialization complete!` parsing in `routes/comfy.js`; StatusBar timing depends on those events for model-initialization-sensitive sampler/upscale nodes.
+- **ComfyUI addresses execution/progress WS events to the ORIGINATING client id, so a passive
+  listener captures nothing (MPI-354).** `execution_start`, `progress`, `execution_success` and
+  friends are sent with the `sid` of the socket that queued the prompt. A second connection to
+  `/ws` therefore sits silent while runs come and go — which looks exactly like "nothing is
+  happening" rather than "you are not the addressee", and cost a whole observation harness that
+  logged `capture: connected` and captured zero runs. Anything that needs those events must own
+  the client id by queueing the prompt itself; otherwise read the app's own progress stream. The
+  sampler tqdm never reaches `logs/app.log` either (only the `0/1` model-init bar), so bar counts
+  cannot be grepped out of the log as a substitute.
 
 ### 3. Engine Installation Flow (Fresh Install)
 

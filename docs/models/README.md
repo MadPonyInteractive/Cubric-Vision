@@ -57,6 +57,11 @@ load-bearing, plus the 2-reference face wall and its ruled-out list.
 |---|---|
 | [upscaler.md](pid/upscaler.md) | Source-verified compat/tier/knobs; `degrade_sigma` is the only tuning knob; image-only. Read before building/testing PiD. |
 
+### [seedvr2/](seedvr2/) — SeedVR2 video upscaler (**rejected full-frame, live for the face detailer**)
+| File | Holds |
+|---|---|
+| [README.md](seedvr2/README.md) | The measured verdict — a top/mid FFT gain ratio proves it sharpens rather than reconstructs (0.57 → 0.24 as the factor rises), why the architecture predicts that, why it is still an order of magnitude past a `.pth`, and why a 128×128 face crop changes the answer. Plus the shimmer root-cause (the SOURCE's, amplified — no sampler-side fix), the four `color_correction_method` values, the VRAM-ceiling formula, and two ComfyUI mechanics measured here that are **not** SeedVR2-specific (`denoise` quantisation on a one-step model; Pillow RGBA lanczos zeroing RGB under transparency). |
+
 ### [chroma/](chroma/) — Chroma (pruned FLUX.1-schnell, Apache-2.0, T5-only)
 | File | Holds |
 |---|---|

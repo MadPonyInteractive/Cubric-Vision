@@ -45,6 +45,44 @@ Only when an experiment is *settled* does it go into the file. In place, never r
 5. **Re-convert and re-run.** A rename or a rewire that converts clean can still fail to
    queue — see the loader trap below.
 
+## Prove a graph correct without spending a generation — three checks, in this order
+
+**There is NO validate-only endpoint.** `/prompt` validates and then QUEUES, so it is not a dry
+run: a 22B model loads before the graph's own `ExecutionBlocker` stops anything. Never point it at
+the user's bench to "check" a graph. Instead:
+
+1. **Structural** — the class exists on the engine, every *required* link-typed input is connected,
+   every COMBO widget value is in the engine's list (`value_not_in_list` is the most common
+   reject), and `widgets_values` covers every widget slot.
+2. **Type** — re-implement `validate_node_input` (`comfy_execution/validation.py`): equal passes,
+   `*` on either side passes, otherwise the comma-split sets must OVERLAP. **INT → FLOAT is a
+   REJECT.** Exception: a node whose `VALIDATE_INPUTS` takes an `input_types` argument (e.g.
+   `MpiClamp`) makes ComfyUI skip the check for that node entirely — `execution.py` guards on
+   `'input_types' not in validate_function_inputs`.
+3. **Live** — playwright-cli against the bench: `app.loadGraphData(json)`, then read back `_nodes`
+   length, `LiteGraph.registered_node_types` misses, `has_errors`, and dangling `inputs[].link`.
+   Then `app.graphToPrompt()` and diff its output against your own API conversion. **0 diffs proves
+   the server would receive exactly the graph you designed** — as close to "it will run" as you get
+   without paying for a run. The browser cannot write files, so to get `graphToPrompt` out: POST it
+   to `/api/userdata/tmp_*.json`, curl it from the shell, `DELETE` it after.
+
+**The bench is a file store**, which is what makes all of this scriptable:
+`GET|POST|DELETE /api/userdata/workflows%2F<name>.json` on 8188, `?overwrite=true` on POST. The
+app's `*_template.json` live there in BROWSER format while the repo's copies are the API exports of
+the same graphs — so the bench is the donor shelf. `json.load` on a downloaded one dies
+`charmap codec can't decode`; open with `encoding='utf-8'`.
+
+**A widget converted to an input keeps its entry in `widgets_values` AND gains an `inputs` entry
+carrying `widget: {name}`** — both, not either. Mimic a sibling node in the SAME file that already
+has a linked widget rather than guessing the shape. Synthesize from `/object_info` only for a class
+no donor graph contains (inputs = required then optional; a widget is any INT/FLOAT/STRING/BOOLEAN/
+COMBO without `forceInput`).
+
+Before every POST, validate that each link agrees with its target's back-pointer, that no
+`inputs[].link` or `outputs[].links` dangles, and that a node whose branch inputs are `forceInput`
+(`MpiIfElse`) has every input fed. Re-fetch immediately before writing and assert the graph is
+still the shape you read, so the script ABORTS rather than corrupting a graph that moved under you.
+
 ## Match ComfyUI's serialisation, or every line lands in the diff
 
 ComfyUI writes `JSON.stringify(obj, null, 2)`. In Python that is:

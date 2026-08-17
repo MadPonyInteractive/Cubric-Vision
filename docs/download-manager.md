@@ -360,6 +360,36 @@ three restarts, and the reverse would have destroyed it each time.
 
 > The `/download/pause`, `/download/resume`, `/engine/pause`, `/engine/resume` routes and the `_pausedDownloaders` map were DELETED in c7313dff. Do not reintroduce them.
 
+### Driving the subsystem over HTTP — payload shapes a scripted caller gets wrong
+
+The two GET routes above are the diagnostic pair: they separate **"the client thinks X"** from
+**"the server knows X"** in one shot, with no DevTools paste and nothing running unattended in
+the user's session. A tile reading `Queued…` while `/downloads/status` holds no job for that
+model and `/downloads/active` is empty proves the POST never fired (that is how MPI-395 was
+root-caused). Fold the `status` body through `node -e` — it is thousands of chars, because every
+completed job lingers with its full dep list.
+
+The write side is scriptable too (install → poll → uninstall from one script, which is what made
+MPI-396's live proof possible). Three payload shapes bite:
+
+- **`/comfy/models/download/start` and `/comfy/models/uninstall` take the FULL `DEPS[id]` objects**
+  (`url`, `size`, `sha256` — not `{id, type, filename}`). The route re-resolves per engine, so it
+  can only FILTER your list, never add to it. Build the list by importing
+  `js/data/modelConstants/{models,dependencies,resolveModelDeps}.js` in bare Node
+  (`resolveFullUniverse(model, null, 'local')`) — see [testing-harnesses.md](testing-harnesses.md).
+- **`POST /comfy/models/check-local` answers `results[<modelId>].deps` as an ARRAY** of
+  `{id, installed, partialBytes}`, not a map. Parsing it as a map silently reads every model as
+  fully installed.
+- **Pick a REVERSIBLE target for anything destructive**: a dep absent from disk and owned by
+  exactly one model (`nvidia-pid` / `vae-sd3`, 168 MB) installs and uninstalls without touching
+  real weights and cannot trip the shared-dep guard. Survey candidates by summing `DEPS[].size`
+  over each model's missing deps.
+
+**Limits.** These are SERVER state only. Client-only values (`_inFlight`, optimistic
+`pending`/`queued` jobs) exist nowhere but the renderer. And `logs/app.log` does not cover this —
+the remote install path logs almost nothing (a whole MPI-395 session produced no line after
+Pod-create), so silence there is not inaction.
+
 **FileDownloader class** (`routes/downloadManager.js`; renamed from `ResumableDownloader` in MPI-276, resumable again since MPI-317):
 A single-stream `node-downloader-helper` wrapper: start/resume, cancel (stop + remove), stop-keep (shutdown), SHA256 verify, SSE progress broadcast.
 - `.download()`: a marker-blessed partial (file AND `.cubricdl` survived a failure/stall/quit) resumes via `resumeFromFile` with an explicit Range request. **The resume key is the marker's `sha256`, not its url** (`_shouldResumePartial`, MPI-429): same hash = same bytes = safe to resume from whatever origin is now in play. No url comparison can answer this once a mirror exists — our HF re-host serves the same object under a path PREFIX, and a third-party copy under a different repo AND filename. `_isSameObjectUrl` survives only as the fallback for pre-MPI-429 markers and for deps with no `sha256` (custom-node zips); it is suffix-tolerant so the prefix case still matches. Getting this wrong re-arms MPI-317's data loss — deleting exactly the partial failover exists to preserve. The SHA256 verify remains the net (MPI-427). No marker-blessed partial → scrub any stale file, one clean stream. 30s socket-inactivity `timeout` so a black-hole route emits `error` instead of hanging (MPI-120).

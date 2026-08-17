@@ -41,6 +41,38 @@ MPI-132: hovering a gallery VIDEO card unmutes+plays its `<video>`; hovering an 
 
 **Scroll gate (MPI-321).** Scrolling drags the cursor across cards, firing `mouseenter` on each → without a gate every one plays → stutter + audio blares on scroll-past. Now: a setup-scope `_isScrolling` flag; the grid `scroll` handler sets it, calls `_stopOtherGalleryMedia(null)` (stops ALL media, including under the cursor), and restarts a 150ms idle timer. The idle timer clears the flag and replays whatever card the cursor settled on via `qs('.mpi-group-card:hover')?._hoverPlay?.()` (mouseenter won't re-fire — the scroll moved, not the pointer). `mouseenter` (audio + video) and `_promoteVideo`'s hover-autoplay both bail while `_isScrolling`. Each card exposes `cardEl._hoverPlay` (video/audio play logic; no-op for image). A REAL hover (not scrolling) plays instantly — no dwell. Rejected first attempt: a 200ms hover-intent dwell — the wait-to-play felt bad.
 
+## Live preview frames — exercising a generating card without a GPU
+
+A card exposes `cardEl.updatePreview(objectUrl, clip)` and `cardEl.resetPreviewClip(clip)`; the
+grid-level `el.updatePreview` / `el.resetPreviewClip` are thin forwarders that look the card up in
+`_cardMap` (keyed by **group id**, despite the `tempId` parameter name). **Frame buffering,
+eviction and loop semantics are NOT here** — they belong to the clip player and its bus; read
+[preview-bus.md](preview-bus.md) before reasoning about ring size or replay rate.
+
+What is useful from the gallery side: the burst-previewer path (H3/LTX clip frames) is entirely
+client-side, so it reproduces from the page with **no generation, no GPU and no cost** — feed a
+burst far larger than the buffer and the eviction race arises in one tick (MPI-565):
+
+```js
+const st = (await import('/js/state.js')).state;
+const gid = st.currentProject.itemGroups[0].id;
+const card = el.getCardByGroupId(gid);
+card.setGenerating(null);                                            // a finished card becomes live
+const b = await new Promise(r => canvas.toBlob(r, 'image/jpeg'));    // real decodable bytes
+for (let i = 0; i < 40; i++) card.updatePreview(URL.createObjectURL(b), { rate: 8, length: 8 });
+```
+
+Put a fix behind a temporary `window.__AB_OFF` flag and feed the identical burst both ways — same
+harness on both sides, or "0 errors" only proves the harness got quieter. The control that matters
+is the same probe on a slow still-mode run (krea2, ~9 s between frames): 0 errors over 6 frames is
+what proves a race is a *burst*-only window rather than a fix that happened to work.
+
+Two lookup traps in such a probe: `activeGenerations.list()` is **EMPTY after a page reload** even
+while a card still shows generating — that run belongs to the previous renderer — so take the group
+id off `state` and use `getCardByGroupId`, never `list()[0].tempId`. And the generating card's
+wrapper carries no `data-group-id`; that lives on the ROW wrapper, so `closest()` from the card
+returns null.
+
 ## Selection survives setGroups refresh (2026-07-12)
 
 `MpiGalleryGrid.setGroups()` used to `_selectedIds.clear()` unconditionally → a generation finishing mid-select (which re-feeds the grid) silently dropped the user's multi-select and kicked them out of selection mode. Fix: reconcile instead of clear — keep selected ids whose group still exists, drop only vanished ones, and `_exitSelectionMode()` only when the set empties. Any grid refresh path that replaces `_groups` must preserve live selection, not reset it.

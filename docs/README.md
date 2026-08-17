@@ -48,6 +48,7 @@ NOT mechanically split these):
 | Orientation hub (architecture, invariants) | [PROJECT.md](PROJECT.md) |
 | Dev setup / commands / reading `logs/app.log` | [DEVELOPMENT.md](DEVELOPMENT.md) |
 | Tests — both suites, the release gate, writing a desktop spec | [testing.md](testing.md) |
+| **Harnesses — running app code WITHOUT the app** (bare-Node registry imports + the absolute-path import boundary, `CUBRIC_ENGINE_ROOT` install harness, one router on a spare port, your own `app:isolated` instance) | [testing-harnesses.md](testing-harnesses.md) |
 | Workspaces / routing | [workspaces.md](workspaces.md) |
 | Data layer (registries, projectModel, resolver, persist whitelist, reuse/sidecar) | [data.md](data.md) |
 | Project data model (.meta sidecars, reconciliation) | [project-integrity.md](project-integrity.md) |
@@ -55,7 +56,7 @@ NOT mechanically split these):
 | Shell services (overlays, hotkeys, statusbar) | [shell.md](shell.md) |
 | Events / EventBus | [events.md](events.md) |
 | **Toasts & notifications** (full call-site map, sound model, `ui:*`/`StatusBar.notify`/`notificationService`) | [toasts.md](toasts.md) |
-| Utilities (dom, icons, ratios, seed, mediaActions save/download) | [utils.md](utils.md) |
+| Utilities (dom, icons, ratios, seed, mediaActions save/download) + **clientLogger** — the only frontend log path (no `.log` method; the 3rd arg is an ERROR slot, not metadata) | [utils.md](utils.md) |
 | Worktrees / shared engine | [worktrees.md](worktrees.md) |
 | **Generation lifecycle** (dispatch guard, progress pipeline, Stop/lanes identity doctrine, queue-drain notifications) | [generation-lifecycle.md](generation-lifecycle.md) |
 | **Op & model selection** (op strip's two mounts, absent-vs-dim gating, op memory, media transitions, model picker, bar order) | [op-model-selection.md](op-model-selection.md) |

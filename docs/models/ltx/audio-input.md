@@ -97,6 +97,13 @@ preserving the amplitude envelope, so correlate **10 ms RMS frames**, not sample
 per-second levels are a cheap sanity check on the same idea: output tracked its source
 within ~0.8 dB across all three seconds, dip at 2–3 s included.
 
+**An envelope match is NOT a word match** — the two are separable, and the model can re-generate
+the words over a preserved timing. A correlation licenses "timing and prosody are preserved", never
+"the audio is the user's"; that half was settled here by the user listening, and only a listener
+can settle it. The swapped-file arm is what makes even the timing claim proof: without holding seed
+and prompt while changing ONLY the audio, a high correlation is still consistent with "the same seed
+rebuilt the same thing".
+
 ### Length must match the window
 
 The foley window is `#105 GetImageRangeFromBatch` = **73 frames @ 24 fps ≈ 3.04 s**. An

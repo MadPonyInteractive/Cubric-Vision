@@ -42,6 +42,38 @@
 - Exporting a FRESH output the user never saved to the project (e.g. a GIF): write it to a temp file → expose via `/project-file?path=<temp>` → `<a download="clip.gif">`. No new IPC.
 - Also here: `extractAbsPath`, `extractFilenameFromPath`, `resolveMediaUrl` (path/URL normalization for `<img>`/`<video>` src), `deleteMediaFiles`.
 
+## clientLogger.js (`js/services/clientLogger.js`) — the ONLY frontend log path
+
+Never `console.log`. The renderer logs through this service, which POSTs to `/log` so lines
+land in `<userData>/logs/app.log` beside the backend's.
+
+**The API is `info` / `warn` / `error`. There is no `.log`.** Calling `clientLogger.log(...)`
+throws a TypeError *at the call site*, so inside a promise chain it leaves the promise pending
+forever with no visible symptom beyond "the thing that was waiting never happened" (MPI-451: the
+licence dialog closed and the install queue silently wedged; it had also been killing
+`MpiErrorDialog`'s open-the-created-issue step for months — the issue filed, the browser never
+opened). Both fixed 2026-08-06. Grep for `clientLogger.log(` before adding one.
+
+**The third argument is an ERROR slot, not a metadata slot.** `_send()` serializes it with
+`err.stack || String(err)`, so a plain object logs the message and **silently drops every value**:
+
+```js
+clientLogger.info('x', 'paste', { manual: url.length, isCurrent: true }); // values LOST
+clientLogger.info('x', `paste manual=${url.length} isCurrent=${isCurrent}`); // works
+```
+
+Interpolate values into the message string. A log line that shows up in `app.log` with no data is
+this, not a code path that did not run — it cost a full user test round in MPI-311, and
+`[MpiHistoryList] entry dims` has been logging bare for the same reason since before that card.
+
+**It ships over `globalThis.fetch`, which poisons a fetch stub in a test.** A node test that swaps
+`globalThis.fetch` to script a service's HTTP calls also catches every `clientLogger.*` the code
+under test emits, so the call COUNT goes wrong while the behaviour is right — it reads as the
+service polling one extra time (`tests/restart-drain-wait.test.cjs`: `4 !== 3`, the 4th call was a
+log line). Filter the stub by URL and answer `/log` separately.
+
+Backend logging is `routes/logger.js` — see [DEVELOPMENT.md](DEVELOPMENT.md) § One file, one writer.
+
 ## Other utilities
 
 | File | Purpose |

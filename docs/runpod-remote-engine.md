@@ -185,6 +185,22 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
 - **Teardown delete-nothing fix:** the sweep always spares the tracked ids, so delete-on-quit
   deletes the **tracked Pod FIRST** (`_deleteTrackedPod` clears the ids) THEN sweeps with an
   empty keep-set.
+- **⚠️ The sweep identifies strays by Pod NAME, so a SECOND credentialled instance reaps the
+  FIRST one's live Pod.** `_sweepOrphanPods` spares only ids the *calling process* tracks; a
+  second app instance tracks none, so its keep-set is empty and every other instance's
+  `cubric-vision` Pod looks like an orphan — **including RUNNING ones, deliberately** (that is the
+  double-billing guardrail, working as designed). It fires on Pod **create** as well as teardown,
+  so merely CONNECTING is enough. No prompt, no confirmation, and the log line is an `INFO`:
+  `[runpod] orphan sweep deleted 1 stray Pod(s): <id>`.
+
+  Measured 2026-08-08: a throwaway test profile built by **copying** the real one out of
+  `%APPDATA%\Cubric Vision` carried `runpod-secrets.json` with it, and on quit that instance
+  killed another agent's live smoke-run Pod mid-fill. Profile and port isolate LOCAL state; they
+  do not isolate the shared RunPod ACCOUNT. So: **never copy `runpod-secrets.json` into a test or
+  agent profile** — no key, no reach, no reap (a credential-free instance quits with
+  `action=none ok=false reaped=none podId=none`). `npm run app:isolated` is safe only *because* it
+  copies nothing; copy a profile in and the hazard is back. Warning the user "don't connect it to
+  the Pod" is NOT sufficient mitigation — the sweep fires on quit regardless. Carded as MPI-485.
 
 ## 5. Volume / data center rules
 

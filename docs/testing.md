@@ -12,6 +12,11 @@ npm run test:desktop   # Playwright/Electron UI specs — ~1.2 min
 module and dies with `Cannot find module '...\tests'`. The glob form works
 directly too: `node --test tests/*.test.cjs`.
 
+**Below the suites there is an ad-hoc tier** — bare-Node registry imports, a throwaway
+`CUBRIC_ENGINE_ROOT` install harness, one router on a spare port, your own `app:isolated`
+instance. Which one can prove what, and the import boundary that decides whether a module loads
+outside a browser at all, is [testing-harnesses.md](testing-harnesses.md).
+
 **Why the gate exists.** `npm run release:check` only compares files to each other
 — it never executes app code. That is how 1.3.0 shipped with the LoRA and upscale
 pickers opening into hidden DOM: every static check passed.
