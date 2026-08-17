@@ -16,3 +16,14 @@
       isolated app (the real generation is MPI-520's own gate, not this card's)
 
 Items 2–4 of the card remain OPEN and are not in this slice.
+
+## MPI-572 slice — one control surface (2026-08-16)
+
+- [x] `FlowDef.controls` collapsed into `FlowDef.fields` — one name, one vocabulary
+- [x] Two seeding loops merged into one `_seedField(f, persisted)` helper
+- [x] Flow-level placement verified live (extend: 3 fields render stacked, all seeded)
+- [x] Step placement verified live (foley step 2: 2 fields, negative default seeded)
+- [x] Reuse of an OLD-shape card (top-level only, no `stepValues`) still repopulates
+- [x] Prompt boxes: `resize: none`, equal size, taller — `rows` no longer sets height
+- [x] `npm test` green (606/606), eslint clean, `node --check` clean
+- [x] `docs/playbooks/add-flow/` updated (hub, `ui/carousel-frame.md`, both worked examples)

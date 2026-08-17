@@ -35,7 +35,7 @@ model, image-in→image-out) are the other worked examples.
 
 | File | Covers |
 |---|---|
-| [01-descriptor-and-ops.md](01-descriptor-and-ops.md) | The `FlowDef` in `flowsRegistry.js`; the op in **4 files**; no-model vs multi-model flows; DECLARED controls (and why not a uiComponent) |
+| [01-descriptor-and-ops.md](01-descriptor-and-ops.md) | The `FlowDef` in `flowsRegistry.js`; the op in **4 files**; no-model vs multi-model flows; DECLARED `fields` (and why not a uiComponent) |
 | [02-media-io.md](02-media-io.md) | Polymorphic media slots; **path-reading input nodes** (MpiLoadImageFromPath / MpiString-video / MpiLoadAudioFromPath); injection routing; self-gating outputs; multi-output capture; the **audio-slot mediaType + filter traps** |
 | [03-storage-and-reuse.md](03-storage-and-reuse.md) | Flow input files → **`.preview-assets`** store (not the gallery); sidecar `flowId`/`flowInputs`; reuse routing |
 | [04-overlay-and-shell.md](04-overlay-and-shell.md) | `MpiBaseFlow` / `MpiFlowLibrary`; install progress; Ctrl+Enter runs the open flow; overlay z-order + the spared status bar; dev-gate |
@@ -64,7 +64,7 @@ Three forks decide everything downstream:
      Library Install button drives each model's own dep download. See [01](01-descriptor-and-ops.md).
 2. **Inputs.** Flows are input-agnostic: a prompt, image(s), video(s), audio, a gizmo, or
    **nothing** (just Run). Declared in `inputSchema` — media slots in `inputSchema.media`,
-   other controls DECLARED in `controls` (never a JS component). Media is NEVER a hard requirement in v1, but
+   other controls DECLARED in `fields` (never a JS component). Media is NEVER a hard requirement in v1, but
    a flow that declares slots and gets none (and no prompt) is empty-run-guarded. See [02](02-media-io.md).
 3. **Output type.** `mediaType` on the `FlowDef` (`'image'|'video'`) — the OUTPUT type, always
    required. Multi-output = N results of ONE mediaType (mixed image+video in one run is
@@ -121,7 +121,7 @@ Flow-specific additions:
 - [ ] Register the op in **4 files**: `commandRegistry.js` (`universal:true`, mediaType, mediaInputs with `Input_*` titles + correct per-slot mediaType — **audio = `'audio'`**), `universal_workflows.js`, `operationRegistry.js`, `operation_registry.json` (hand-maintained superset) — [01](01-descriptor-and-ops.md)
 - [ ] Add the `FlowDef` in `flowsRegistry.js` (`requiredModels` = MODEL ids or `[]`; `inputSchema.media` slot groups; `mediaType`; `uiComponent` name or omit) — [01](01-descriptor-and-ops.md)
 - [ ] Media roles in `inputSchema.media[].roles` MATCH the op's `mediaInputs` keys — [02](02-media-io.md)
-- [ ] Controls: declare `controls: [...]` on the FlowDef (MPI-531) — the frame renders them, `Input_*` ids route into `injectionParams`. **Do NOT write a uiComponent**; a JS component is what a third-party Flow can never have. If a control is not expressible, add the FIELD TYPE — [ui/carousel-frame.md](ui/carousel-frame.md) § The last step's controls are DECLARED too
+- [ ] Controls: declare `fields: [...]` on the FlowDef (MPI-531/MPI-572) — the SAME `fields` a step declares, placed on the run slide — the frame renders them, `Input_*` ids route into `injectionParams`. **Do NOT write a uiComponent**; a JS component is what a third-party Flow can never have. If a control is not expressible, add the FIELD TYPE — [ui/carousel-frame.md](ui/carousel-frame.md) § `fields` is the ONE control surface
 - [ ] Add a case to `tests/inject-params-titles.test.cjs` (assert every `Input_*`/`Output_*` title exists) — [05](05-verify.md)
 - [ ] Verify: inject test green, `node --check`, live run (each media type + multi-output), reuse across restart — [05](05-verify.md)
 - [ ] NO app version bump for the Flow itself; a NEW op sets `appVersionIntroduced` in both op registries
@@ -132,6 +132,6 @@ Flow-specific additions:
 - `js/services/flowService.js` — `submitFlowGeneration`, `openFlowFromReuse`
 - `js/components/Compounds/LandingPages/MpiFlowLibrary/` — the picker overlay
 - `js/components/Organisms/MpiBaseFlow/` — the Flow frame (renders media slots, Run, result pane)
-- `js/components/Organisms/MpiFlowHeadSwap/` — the only surviving per-flow `uiComponent` (MPI-332); prefer declarative `controls` (MPI-531) for new Flows
+- `js/components/Organisms/MpiFlowHeadSwap/` — the only surviving per-flow `uiComponent` (MPI-332); prefer declarative `fields` (MPI-531) for new Flows
 - `comfy_workflows/flow_*.json` — flow workflows (resolved case-insensitively)
 - `state.s_flowInputs` — session-only per-flow input snapshot

@@ -5,7 +5,7 @@
 > **SHIPPED as a Flow** 2026-08-14 — no `ModelDef`, no `supportedOps`, but unlike its
 > siblings it DOES add a weight (see § The LoRA).
 >
-> Authored from [ltx-extend.md](ltx-extend.md)'s shape: declared `controls`, no
+> Authored from [ltx-extend.md](ltx-extend.md)'s shape: declared `fields`, no
 > `uiComponent`. The two flows are twins with one deliberate inversion — resolution.
 
 ## Status
@@ -49,16 +49,30 @@ dep. It is now `ltx23-lora-foley` in `loraDeps.js`, staged to R2 (216.21MB, sha2
 
 ## The controls, and what is deliberately absent
 
+They live on the **middle step**, not on the flow — this is a 3-step carousel
+(01 Inputs / 02 Describe / 03 Generate) and the prompts belong next to the clip being
+described, written while watching it. Step 0 loads media at thumbnail size, so the `preview`
+step is the first point at which the user can judge the take they are about to score.
+
 ```js
-controls: [
-  { id: 'positive', type: 'text', rows: 3, label: 'What it should sound like', placeholder: '…' },
-  { id: 'negative', type: 'text', rows: 2, label: 'Avoid', default: '<the bench negative>' },
+steps: [
+  {
+    kind: 'preview', role: 'video1', tickerLabel: 'Describe',
+    title: 'Describe what it should sound like',
+    fields: [
+      { id: 'positive', type: 'text', rows: 3, label: 'What it should sound like', placeholder: '…' },
+      { id: 'negative', type: 'text', rows: 2, label: 'Avoid', default: '<the bench negative>' },
+    ],
+  },
 ]
 ```
 
-Both are top-level run inputs — `submitFlowGeneration` reads `inputs.positive` /
-`inputs.negative`. There is no `Input_*`-prefixed control here at all, so this flow's payload
-carries **no `injectionParams`**, which is the difference from extend.
+Placement is the ONLY difference from declaring them flow-level like
+[extend](ltx-extend.md) does — same vocabulary, same renderer, same payload law
+(MPI-572, [../ui/carousel-frame.md](../ui/carousel-frame.md)). Both are top-level run
+inputs: `submitFlowGeneration` reads `inputs.positive` / `inputs.negative`. There is no
+`Input_*`-prefixed field here at all, so this flow's payload carries **no `injectionParams`**,
+which is the difference from extend.
 
 - **No resolution.** `Input_Width`/`Input_Height` were DELETED from this graph because they
   fed only the encode: `Output_Video.images` comes off the Foley Window off the RAW

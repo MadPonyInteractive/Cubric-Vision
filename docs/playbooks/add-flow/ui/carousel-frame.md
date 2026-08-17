@@ -150,21 +150,34 @@ form.
 - Anything else logs a warning and renders nothing. A silently-missing control is the failure
   mode this whole file exists to avoid.
 
-## The last step's controls are DECLARED too (MPI-531)
+## `fields` is the ONE control surface — placement is the only variable (MPI-531 / MPI-572)
 
 The run slide used to have exactly one source of controls: the flow's `uiComponent`, a JS
 Organism. **A third party can never have a JS component**, so every Flow authored that way is
-a Flow that must be ported when community packages land. A flow now declares them instead:
+a Flow that must be ported when community packages land. A flow declares `fields` instead —
+the same `fields` a step declares:
 
 ```js
-controls: [
+// on the FLOW → rendered stacked on the run slide
+fields: [
   { id: 'positive', type: 'text', rows: 3, label: 'What happens next' },
   { id: 'Input_Duration', type: 'slider', label: 'Seconds to add', min: 1, max: 10, step: 1, default: 4 },
 ]
+
+// on a STEP → rendered as that step's one row, between canvas and hint
+steps: [
+  { kind: 'preview', role: 'video1', title: '…', fields: [ { id: 'positive', type: 'text', rows: 3 } ] },
+]
 ```
 
-Same vocabulary, same renderer, rendered stacked into the run slide's 236px control column —
-the one-row cap belongs to the step row, not here.
+**Where you declare it is the only thing that changes.** One vocabulary, one renderer
+(`_buildField`), one seeding path (`_seedField`), one payload law. On the run slide they are
+stacked into the 236px control column; on a step they obey the one-row cap.
+
+This was two surfaces until 2026-08-16 — a flow-level `controls` beside a step's `fields` —
+and the split cost three bugs the day foley's prompts moved from one to the other: step fields
+never reached the payload, defaults were never seeded, and Reuse read only `stepValues`.
+**Do not reintroduce a second name for this concept** (MPI-572).
 
 **Where a value lands is decided by its id:**
 
@@ -174,11 +187,13 @@ the one-row cap belongs to the step row, not here.
 | `Input_*` | `injectionParams` | the prefix names a GRAPH NODE — the app-wide injection naming law |
 | anything else | top-level run input under its own id | the shape `uiComponent.getInputs()` always returned |
 
-Seeding follows the same split, so a reopened flow restores an `Input_*` control from the
-persisted `injectionParams` rather than coming back at its default.
+Seeding follows the same split, so a reopened flow restores an `Input_*` field from the
+persisted `injectionParams` rather than coming back at its default. It also falls back to the
+payload ROOT for a step field, which is what keeps an OLD card reusable after a field moves
+between the flow and a step.
 
 `uiComponent` still mounts and still wins on merge (a flow carrying both is mid-port), but it
-is now the LEGACY surface. **A new Flow declares `controls` and ships no component.** If a
+is now the LEGACY surface. **A new Flow declares `fields` and ships no component.** If a
 control cannot be expressed, add the field type — do not reach for a component. Worked
 example: [../existing-flows/ltx-extend.md](../existing-flows/ltx-extend.md).
 

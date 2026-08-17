@@ -36,14 +36,18 @@
  *                                       MpiBaseFlow). LEGACY SURFACE — a component is a thing a
  *                                       third-party Flow can never have, so a new Flow declares
  *                                       `controls` instead and omits this (MPI-531).
- * @property {FlowStepField[]} [controls] - Run-slide controls, rendered BY THE FRAME from the same
- *                                       field vocabulary a step's `fields` uses. An id reaches the op
- *                                       as a top-level input (`positive`, `negative`), EXCEPT an id
+ * @property {FlowStepField[]} [fields] - Run-slide fields, rendered BY THE FRAME. THE SAME `fields`
+ *                                       a step declares (MPI-572) — declaring them here places them
+ *                                       on the run slide, declaring them on a step places them on
+ *                                       that step, and nothing else differs: one vocabulary, one
+ *                                       renderer, one payload law. An id reaches the op as a
+ *                                       top-level input (`positive`, `negative`), EXCEPT an id
  *                                       prefixed `Input_`, which names a graph node and is routed
  *                                       into `injectionParams` instead. So
  *                                       `{ id: 'positive', type: 'text', rows: 3 }` is the whole of
  *                                       what a prompt-collecting `uiComponent` used to be. Declaring
- *                                       both is legal (mid-port) and the component wins on merge.
+ *                                       a `uiComponent` too is legal (mid-port) and the component
+ *                                       wins on merge.
  * @property {Object}   inputSchema    - What the flow collects → injected into the workflow
  * @property {FlowStep[]} [steps]       - Declared MIDDLE steps of the flow's carousel (MPI-306).
  *                                       Step 0 (inputs) and the last step (run) are IMPLICIT —
@@ -68,10 +72,11 @@
  *                               means the step should SPLIT.
  *
  * @typedef {Object} FlowStepField
- * @property {string}  id      - Key the value lands under. In a step's `fields` object
- *                               when declared on a step; a TOP-LEVEL run input when
- *                               declared in the flow's `controls` (so `id: 'positive'`
- *                               reaches the op as `positive`).
+ * @property {string}  id      - Key the value lands under, and it is the SAME key wherever the
+ *                               field was declared: `id: 'positive'` reaches the op as `positive`,
+ *                               `Input_*` reaches it inside `injectionParams`. A step's fields are
+ *                               additionally mirrored under that step's role in `stepValues`, which
+ *                               is what a `uiComponent` translates from.
  * @property {'select'|'button'|'toggle'|'number'|'slider'|'text'} type
  * @property {string}  [label]
  * @property {Array<{v:string|number, label:string}>} [options] - For `select`.
@@ -191,11 +196,12 @@ export const FLOWS = [
         // No middle steps: nothing here is marked on the clip itself, so the flow is
         // a 2-step carousel (supply → run).
         steps: [],
-        // Declared controls — rendered by MpiBaseFlow on the run slide, each value
-        // reaching the op under its own id. `positive`/`negative` are read by
-        // submitFlowGeneration; `Input_Duration` is an injection param, so it is
-        // named for the graph node it writes.
-        controls: [
+        // Declared fields — rendered by MpiBaseFlow on the run slide (that is what
+        // declaring them HERE rather than on a step means), each value reaching the op
+        // under its own id. `positive`/`negative` are read by submitFlowGeneration;
+        // `Input_Duration` is an injection param, so it is named for the graph node
+        // it writes.
+        fields: [
             {
                 id: 'positive', type: 'text', rows: 3, label: 'What happens next',
                 placeholder: 'Describe the new seconds — action, camera, sound…',

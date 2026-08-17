@@ -332,3 +332,28 @@ would delete MPI-538's control arm mid-investigation.
 declaratively, 4 port `MpiFlowHeadSwap`) are untouched, plus the frame punch list (media
 picker shipped; result pane + step-2 relayout open) and the still-unwritten latent-preview
 consumer card.
+
+### 2026-08-16 (session 5) - the two surfaces became one, and the prompt boxes got sized
+
+MPI-572's open question is SETTLED, by Fabio, in the lazy direction: `controls` and step
+`fields` collapse into ONE surface named `fields`, and WHERE it is declared is the only
+variable. Flow-level -> run slide. On a step -> that step. Same vocabulary, same renderer,
+one seeding path (`_seedField`), one payload law. See validation.md for the evidence.
+
+NOT built, deliberately: a declared first/last-step template (the frame already owns those -
+letting a FlowDef declare them is the thing that got reverted last session), and a
+frame-default positive/negative pair for `promptRequired` ops (two flows is not a pattern yet).
+
+**Current state.** Committed through the collapse + the prompt-box sizing; 606/606 green,
+both placements and old-card Reuse verified live in an isolated app. MPI-332 is still sitting
+in `doing` with its work finished and live-verified - it only needs moving.
+
+**Next action:** MPI-570 (a hovered gallery video keeps looping WITH SOUND when an overlay
+opens over it - `_stopOtherGalleryMedia(null)` exists and is correct at MpiGalleryGrid.js:24,
+is called on scroll at :1822, and is simply never called on overlay open; fix at the overlay/
+workspace boundary, NOT per-caller, and cover minimise + focus loss too). Then MPI-571
+(latent-preview consumers) LAST, because it needs generations.
+
+**Still owed on this card:** one real foley run asserting the dispatched prompt from
+`/history` - the step-field promotion fails SILENTLY - plus card items 2 (`steps[].image`),
+3 (author every 1.5 Flow declaratively) and 4 (port MpiFlowHeadSwap).

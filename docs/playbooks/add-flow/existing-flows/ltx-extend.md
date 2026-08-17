@@ -6,7 +6,7 @@
 > on the already-installed LTX 2.3 checkpoint.
 >
 > **This is the first Flow authored with NO `uiComponent`.** Its three controls are declared
-> data (`FlowDef.controls`, MPI-531). Adding a JS component here to gain a knob would undo
+> data (`FlowDef.fields`, MPI-531). Adding a JS component here to gain a knob would undo
 > that — add the field type instead. Portable UI decisions live in [../ui/](../ui/).
 
 ## Status
@@ -34,7 +34,7 @@
 ## The controls, and why each is what it is
 
 ```js
-controls: [
+fields: [
   { id: 'positive', type: 'text', rows: 3, label: 'What happens next', placeholder: '…' },
   { id: 'negative', type: 'text', rows: 2, label: 'Avoid', default: '<the bench negative>' },
   { id: 'Input_Duration', type: 'slider', label: 'Seconds to add', min: 1, max: 10, step: 1, default: 4 },

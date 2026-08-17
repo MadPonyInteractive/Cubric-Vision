@@ -52,17 +52,23 @@ import { getStepKind } from './stepKinds.js';
  * arrow is never blocked. Required-because-the-flow-walks-you-there, not
  * required-because-Run-is-gated.
  *
- * DECLARED FIELDS: a step may declare `fields: [...]` — ONE row between canvas
- * and hint, rendered BY THE FRAME (not the gizmo) so every gizmo's controls match
- * for free. Hard cap: one row, no nesting/panels/accordions. A gizmo wanting more
- * means the step should SPLIT.
+ * DECLARED FIELDS (MPI-531/MPI-572): `fields: [...]` is the ONE control surface,
+ * and where it is declared is the ONLY thing that varies:
+ *   - on a STEP  → ONE row between canvas and hint, rendered BY THE FRAME (not the
+ *     gizmo) so every gizmo's controls match for free. Hard cap: one row, no
+ *     nesting/panels/accordions. A gizmo wanting more means the step should SPLIT.
+ *   - on the FLOW → stacked on the run slide, the declarative form of what a
+ *     `uiComponent`'s `getInputs()` returns.
+ * One vocabulary, one renderer (`_buildField`), one seeding path (`_seedField`),
+ * one payload law (`Input_*` → injectionParams, everything else top-level). This
+ * used to be two surfaces — a flow-level `controls` beside a step's `fields` — and
+ * the split cost three bugs the day foley's prompts moved from one to the other:
+ * step fields never reached the payload, defaults were never seeded, and Reuse read
+ * only `stepValues`. Do not reintroduce a second name for this concept.
  *
- * DECLARED CONTROLS (MPI-531): the flow itself may declare `controls: [...]` — the
- * SAME field vocabulary, rendered stacked on the run slide, each value landing as a
- * top-level run input under its own id. That is the declarative form of what a
- * `uiComponent`'s `getInputs()` returns, and it is what lets a Flow ship with no JS
- * component at all — a component being precisely the thing a third-party Flow can
- * never have (docs/playbooks/add-flow/ui/carousel-frame.md).
+ * It is what lets a Flow ship with no JS component at all — a component being
+ * precisely the thing a third-party Flow can never have
+ * (docs/playbooks/add-flow/ui/carousel-frame.md).
  *
  * ── Results save themselves ──────────────────────────────────────────────────
  * A finished result is committed by the run path and the pane simply SAYS SO
@@ -235,53 +241,62 @@ export const MpiBaseFlow = ComponentFactory.create({
         const _stepValues = { ...(seeded.stepValues || {}) };
 
         /**
-         * Declared run-slide controls (MPI-531). Same field vocabulary as a step's
-         * row, rendered on the last step, and each value lands as a TOP-LEVEL run
-         * input under the field's own id — `{ id: 'positive' }` → `inputs.positive`,
-         * exactly what a `uiComponent`'s `getInputs()` returns today. That is what
-         * lets a Flow collect a prompt or a seed with NO JS component, which is the
-         * whole point: a component is a thing a third-party Flow can never have.
+         * Flow-level declared fields (MPI-531) — the SAME `fields` a step declares,
+         * just placed on the run slide instead of a step. Each value lands as a
+         * TOP-LEVEL run input under the field's own id — `{ id: 'positive' }` →
+         * `inputs.positive`, exactly what a `uiComponent`'s `getInputs()` returns
+         * today. That is what lets a Flow collect a prompt or a seed with NO JS
+         * component, which is the whole point: a component is a thing a third-party
+         * Flow can never have.
          * @type {Array<Object>}
          */
-        const _controls = Array.isArray(flow.controls) ? flow.controls : [];
+        const _fields = Array.isArray(flow.fields) ? flow.fields : [];
+
         /**
-         * Live control values. Seeded (and pre-filled from `default`) at SETUP, not
-         * at render: a run with untouched controls must still send their defaults,
-         * and the run slide is rebuilt on every navigation.
+         * Seed ONE declared field, wherever it was declared. `_buildField` only
+         * WRITES a value when the user changes it, so a field left untouched would
+         * reach the op as nothing at all and the run would silently use the graph's
+         * baked default — that is how a bench-proven negative prompt goes missing on
+         * the one run nobody edited.
+         *
+         * Sources, most specific first:
+         *   1. `persisted` — the step-scoped value, when the field lives on a step.
+         *   2. The payload ROOT (`Input_*` → injectionParams, else top level), which
+         *      is where `_collectInputs` promotes every field regardless of where it
+         *      was declared. This is also what makes an OLDER card reusable across a
+         *      field moving between the flow and a step: reading the step scope alone
+         *      made every foley card made before that move reopen with an EMPTY
+         *      prompt — silent data loss the user hits through Reuse, not here.
+         *   3. The declared `default`.
+         *
+         * @param {Object} f  a FlowStepField
+         * @param {*} [persisted]  step-scoped persisted value, if any
+         * @returns {*} the value to seed, or undefined to seed nothing
+         */
+        function _seedField(f, persisted) {
+            if (f.type === 'button') return undefined;  // an action, not a value
+            const root = /^input_/i.test(f.id) ? seeded.injectionParams?.[f.id] : seeded[f.id];
+            return persisted ?? root ?? f.default;
+        }
+
+        /**
+         * Live flow-level field values. Seeded at SETUP, not at render: a run with
+         * untouched fields must still send their defaults, and the run slide is
+         * rebuilt on every navigation.
          * @type {Object}
          */
-        const _controlValues = {};
-        _controls.forEach((f) => {
-            if (f.type === 'button') return;   // a button is an action, not a value
-            // An `Input_*` control was persisted INSIDE injectionParams (that is where
-            // _collectInputs put it), so a reopen has to look there or the control
-            // silently comes back at its default while the last run used another value.
-            const v = /^input_/i.test(f.id)
-                ? (seeded.injectionParams?.[f.id] ?? f.default)
-                : (seeded[f.id] ?? f.default);
-            if (v !== undefined) _controlValues[f.id] = v;
+        const _fieldValues = {};
+        _fields.forEach((f) => {
+            const v = _seedField(f);
+            if (v !== undefined) _fieldValues[f.id] = v;
         });
 
-        // A STEP's fields need the same seeding, for the same reason: `_buildField`
-        // only WRITES a value when the user changes it, so a field left untouched
-        // would reach the op as nothing at all and the run would silently use the
-        // graph's baked default. That is how a bench-proven negative prompt goes
-        // missing on the one run nobody edited it. Persisted value wins over the
-        // declared default, exactly as above.
+        // A STEP's fields seed through the same helper — one path, so a fix to one
+        // placement can never miss the other.
         (flow.steps || []).forEach((step) => {
             if (!step?.role || !Array.isArray(step.fields)) return;
             step.fields.forEach((f) => {
-                if (f.type === 'button') return;
-                // Three sources, most-specific first. The TOP-LEVEL fallback is what
-                // makes an older card reusable: `_collectInputs` promotes a field to
-                // the payload root (and `Input_*` into injectionParams), and a flow
-                // that authored the same id as a run-slide `control` before it moved
-                // onto a step persisted it there too. Reading `stepValues` alone made
-                // every foley card generated before that move reopen with an EMPTY
-                // prompt — a silent data loss the user hits through Reuse, not here.
-                const persisted = seeded.stepValues?.[step.role]?.fields?.[f.id]
-                    ?? (/^input_/i.test(f.id) ? seeded.injectionParams?.[f.id] : seeded[f.id]);
-                const v = persisted ?? f.default;
+                const v = _seedField(f, seeded.stepValues?.[step.role]?.fields?.[f.id]);
                 if (v === undefined) return;
                 const prev = _stepValues[step.role] || {};
                 _stepValues[step.role] = {
@@ -898,19 +913,19 @@ export const MpiBaseFlow = ComponentFactory.create({
             const contentSlot = ce('div', { className: 'mpi-base-flow__content' });
             controls.appendChild(contentSlot);
 
-            // Declared controls (MPI-531) — stacked, because this column is 236px of
-            // vertical stack, not the step row's one-row cap. A flow may declare
-            // these INSTEAD of a uiComponent; declaring both is legal and the
+            // Flow-level declared fields (MPI-531) — stacked, because this column is
+            // 236px of vertical stack, not the step row's one-row cap. A flow may
+            // declare these INSTEAD of a uiComponent; declaring both is legal and the
             // component wins on merge (see _collectInputs).
-            if (_controls.length) {
+            if (_fields.length) {
                 const declared = ce('div', {
                     className: 'mpi-base-flow__fields mpi-base-flow__fields--stacked',
                 });
-                _controls.forEach((f) => {
+                _fields.forEach((f) => {
                     const node = _buildField(
                         f,
-                        _controlValues[f.id] ?? f.default,
-                        (val) => { _controlValues[f.id] = val; },
+                        _fieldValues[f.id] ?? f.default,
+                        (val) => { _fieldValues[f.id] = val; },
                         unsubs,
                     );
                     if (node) declared.appendChild(node);
@@ -1298,7 +1313,7 @@ export const MpiBaseFlow = ComponentFactory.create({
             // raw role-keyed values through and the flow owns the mapping.
             const extra = _perFlow?.el?.getInputs?.({ stepValues: { ..._stepValues } }) || {};
 
-            // A declared control keyed `Input_*` names a GRAPH NODE, so it is an
+            // A declared field keyed `Input_*` names a GRAPH NODE, so it is an
             // injection param, not a run input — that prefix is the app-wide
             // injection naming law, not flow knowledge the frame should not hold.
             // Everything else (`positive`, `negative`) is a run input by its own id.
@@ -1307,20 +1322,20 @@ export const MpiBaseFlow = ComponentFactory.create({
             const _sort = ([k, v]) => {
                 if (/^input_/i.test(k)) declaredParams[k] = v; else declared[k] = v;
             };
-            // A STEP's declared fields obey the same law as the run slide's controls
-            // — same vocabulary, same renderer, so the same destination. Without
-            // this a prompt authored on a middle step reaches the op only nested
-            // inside `stepValues`, where the op does not look, and the run silently
-            // uses the graph's baked default. `stepValues` still carries them too:
-            // a uiComponent translates from there (Head Swap: box→Input_Box) and
-            // must keep seeing the raw role-keyed shape.
+            // A STEP's fields obey the same law as the flow's own — one vocabulary,
+            // one renderer, so one destination. Without this a prompt authored on a
+            // middle step reaches the op only nested inside `stepValues`, where the
+            // op does not look, and the run silently uses the graph's baked default.
+            // `stepValues` still carries them too: a uiComponent translates from
+            // there (Head Swap: box→Input_Box) and must keep seeing the raw
+            // role-keyed shape.
             Object.values(_stepValues).forEach((v) => {
                 Object.entries(v?.fields || {}).forEach(_sort);
             });
-            // Controls last: a flow declaring the same id in both means the run
-            // slide's value is the one the user saw immediately before pressing
+            // Flow-level last: a flow declaring the same id in both places means the
+            // run slide's value is the one the user saw immediately before pressing
             // Generate.
-            Object.entries(_controlValues).forEach(_sort);
+            Object.entries(_fieldValues).forEach(_sort);
 
             return {
                 ...(mediaItems.length ? { mediaItems } : {}),

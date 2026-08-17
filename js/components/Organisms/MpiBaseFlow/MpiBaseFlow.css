@@ -484,8 +484,11 @@
 .mpi-base-flow__field-input {
     width: 5.5em;
 }
+/* NOTHING in this app is user-resizable, so a drag grip here is a control the rest
+   of the product does not have — and the box it resizes is the one thing on the
+   slide the user is already meant to be looking past, at the preview. MPI-572. */
 .mpi-base-flow__field-text {
-    resize: vertical;
+    resize: none;
     width: 100%;
 }
 /* A textarea is not a row control. On a STEP row every other field is a short
@@ -497,6 +500,16 @@
     align-items: stretch;
     flex: 1 1 320px;
     max-width: 480px;
+}
+/* On a STEP row the prompt boxes are ONE size, set here and not by `rows`. Two
+   boxes sitting side by side under the preview at different heights read as a bug,
+   and `rows` is authored for CONTENT (a 3-line prompt beside a 2-line negative),
+   which is not a layout decision. `rows` still chooses input-vs-textarea; it no
+   longer chooses height. The run slide's stacked column keeps its own sizing — it
+   is 236px of vertical stack shared with the Generate button, so a fixed 120px
+   there would push Generate off. */
+.mpi-base-flow__fields:not(.mpi-base-flow__fields--stacked) .mpi-base-flow__field-text {
+    height: 120px;
 }
 .mpi-base-flow__field-range {
     accent-color: var(--accent-frost);

@@ -233,3 +233,62 @@ to a default the prompt does not have. Seeding now falls back to top-level, and 
 
 Step 2, its plumbing, and the reuse fix are **uncommitted and unseen on screen**. No generation
 was run this entire session — the GPU was left free for his Cubric-Prompt agent.
+
+## MPI-572 slice — ONE control surface + the prompt-box sizing (2026-08-16, session 5)
+
+Verified in an isolated app (`CUBRIC_AGENT_PROFILE=…/cubric-mpi572-profile` + own port
+57593 — the shared `cubric-agent-profile` was already held by a peer instance from 07:06,
+which is what the single-instance lock quit at ~2.3s/exit 0 was telling me; the fix is a
+DIFFERENT profile, never killing the peer). Project `1.4 media`, driven with playwright-cli.
+
+### `controls` → `fields`: one name, one seeding path
+
+`FlowDef.controls` is gone. A flow declares `fields`; declaring them on the FlowDef places
+them on the run slide, declaring them on a step places them on that step, and **nothing else
+differs**. The two near-identical seeding loops collapsed into one `_seedField(f, persisted)`.
+
+Why this was worth doing rather than a rename for taste: the split had already diverged. The
+step loop carried a 3-source fallback (the Reuse fix) and the flow-level loop carried 2, so
+the next fix to either would have missed the other — and the day foley's prompts moved from
+one surface to the other it cost three bugs (payload promotion, default seeding, Reuse).
+
+| Check | Result |
+|---|---|
+| `npm test` | **606/606 pass** |
+| `npx eslint` on the edited files | clean |
+| `node --check` on both edited `.js` | clean |
+
+**Both placements live:**
+
+- **Flow-level** (`ltx-extend`, run slide): all three fields render stacked with their labels
+  ("What happens next" / "Avoid" / "Seconds to add"), the negative seeded to its bench default
+  and the slider to `4`.
+- **Step** (`ltx-foley`, step 02 Describe): both fields render, negative seeded to the bench
+  default.
+
+**Reuse of an OLD-shape card still works** — the regression risk of merging the loops. Three
+foley sidecars exist in `projects/cowboys/`: two written BEFORE the step move carry
+`positive`/`negative` at the TOP LEVEL with `stepValues: null`. Driving the real entry point
+(`flowService.openFlowFromReuse`) with that shape repopulates step 2's positive AND negative,
+and the persisted negative correctly beat the declared default. A fresh card would have passed
+either way — this one cannot.
+
+### The prompt boxes (Fabio's UI note)
+
+Three things, all his: nothing else in the app is user-resizable, the two boxes were different
+sizes, and they were too small.
+
+- `resize: none` on `.mpi-base-flow__field-text` — the drag grip is gone everywhere.
+- On a STEP row both boxes are **one size, 367 × 120**, measured live, *despite* `rows: 3` vs
+  `rows: 2`. `rows` still chooses input-vs-textarea; it no longer chooses height. Two boxes
+  side by side under the preview at different heights read as a bug.
+- The run slide's stacked column keeps `rows`-driven heights (49 / 36 measured) — it is 236px
+  of vertical stack shared with the Generate button, so a fixed 120px there would push Generate
+  off. Scoped with `:not(--stacked)`.
+
+### Still not verified
+
+**No generation has been run.** The step-field promotion path's failure mode is SILENT — the
+run succeeds and quietly uses the graph's baked default — so it still needs one real foley run
+with the dispatched prompt asserted from `/history`, not read off the box on screen. The GPU
+was left free for the Cubric-Prompt agent again this session.
