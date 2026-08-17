@@ -150,6 +150,14 @@ the harness, and confirm `netstat | grep :3999` is dead and `git status` shows n
 
 ## 4. Your own app instance — `npm run app:isolated`
 
+> **A one-off probe script must set `process.env.CUBRIC_PORT` BEFORE it requires
+> `tests/desktop/shellWindow.js`.** That module reads the port into a `const` at load
+> time, so setting it afterwards leaves the helper hunting for `127.0.0.1:3000` — which
+> is the user's live app, not yours — and it times out with
+> `shellWindow: no 127.0.0.1:3000 window within 30000ms`, which reads as a launch
+> failure and is not one. Passing the port in the child `env` alone is not enough; the
+> helper reads the PARENT's environment.
+
 When you genuinely need a running app, take your own: `npm run app:isolated`
 (`scripts/launch-instance.mjs`) picks a free `CUBRIC_PORT`, sets `CUBRIC_USER_DATA_ROOT` to a
 STABLE profile (`%TEMP%\cubric-agent-profile`, stable on purpose so an engine install survives), and

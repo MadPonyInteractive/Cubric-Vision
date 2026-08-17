@@ -118,6 +118,21 @@ every run regardless of scope, overlaps all three, and therefore must not own. I
 defaults to false: a consumer that should have owned leaks a bounded amount, one that
 should not have owned silently breaks another surface.
 
+**A non-owning consumer needs `generation:preview-reset` MORE than an owner does, not
+less.** The reset listener in the snippet above is not optional bookkeeping: the owners
+REVOKE the whole window on a stage reset, so a consumer that holds those same URLs and
+skips the event goes on painting dead blobs until enough new frames push them out of
+its ring — a `fetch()` rejection per frame and a stuttering surface. The float bridge
+shipped without that listener and was the only consumer it could hurt (`ae8d6149`).
+
+**Background timer throttling is NOT a hazard here — measured, do not re-chase.** The
+float window's pacing runs on a `setInterval` in the MAIN renderer, which is hidden
+exactly when that window is up, so Chromium's 1s hidden clamp and its 5-minute
+intensive tier look like the obvious suspects. Neither applies: an Electron window
+minimised on Windows keeps `document.visibilityState === 'visible'`, and a 125ms
+interval ticked 80/80 per 10s while visible, while minimised, and again after 5m20s
+minimised.
+
 ## Broken-frame gate (why you never receive garbage)
 
 ComfyUI sends **non-image binary frames on the same preview socket** — e.g. a type-3,

@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-17T06:55:00Z",
+  "updated_at": "2026-08-17T07:28:15Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -93,9 +93,9 @@
       "id": "82528dd9-b0f7-4933-8024-8f04c3da78d5",
       "path": ".agents/mpi-kanban/state/handoffs/82528dd9-b0f7-4933-8024-8f04c3da78d5.json",
       "task_card": "MPI-571",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-17T07:20:00Z",
-      "note": "MPI-571 code-complete and offline-verified. Next session opens on Fabio's live check of all four surfaces; nothing was generated."
+      "note": "Resolved 2026-08-17: four surfaces confirmed live, MPI-571 closed."
     },
     {
       "id": "2f9d9b47-2ee6-43e7-ad0c-9a85422db062",

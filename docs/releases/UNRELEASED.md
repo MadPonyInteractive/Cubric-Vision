@@ -36,4 +36,8 @@ _(none yet)_
 
 ## Fixes
 
-_(none yet)_
+- Live latent previews now play everywhere they appear. The Flow result pane replayed
+  the whole clip at burst speed on every sampler step and then froze, the History
+  workspace showed nothing at all on a video run, and the minimised preview window sat
+  on a single still frame. All four surfaces now share one player and pace the clip at
+  the rate it announces.

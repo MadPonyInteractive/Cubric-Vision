@@ -3,11 +3,11 @@
   "id": "MPI-571",
   "title": "Latent preview: four consumers each re-implement the bus, and each gets it wrong differently",
   "description": "Fabio has reported this to THREE separate sessions and it has never been carded - it lived only in handoff prose, which is why he has had to repeat it. Carded now so it stops evaporating.\n\nSYMPTOM (his own words, from a real run): the minimised-app preview shows ONE STILL FRAME for a video generation, while the Flow result pane REPLAYS THE WHOLE CLIP FAST on every sampler step and then freezes on a still.\n\nTHE BUS IS NOT THE BUG. docs/preview-bus.md already defines the contract precisely: the `VHS_latentpreview` marker fires ONCE PER SAMPLER RUN and is recorded on the GENERATION (`activeGenerations.resetPreview` / `getPreviewClip`), never latched on whoever happens to be mounted; `rate` and `length` are load-bearing (playback runs at `rate`, the ring is sized by `length`); and MpiGalleryBlock re-hands the clip to the card with EVERY frame so a missed marker self-heals (MPI-535).\n\nWHAT IS MISSING is one shared consumer. The gallery card, the Flow result pane, History and the minimised mini-window each need the same accumulate-ring + `rate` playback, and today only the gallery card implements it. Two different wrong behaviours from two different re-implementations is the signature.\n\nSCOPE: extract the ring+playback into one consumer the four surfaces share; do not 'fix' the bus. Per the root-cause rule this is a shared-primitive job - fix all four call sites in one pass, not the Flow pane alone because that is the one being looked at.\n\nREAD FIRST: docs/preview-bus.md. Prior context: tasks/MPI-531/plan.md 'The latent-preview bug - the SOURCE OF TRUTH exists and the consumers diverge from it'.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-16T07:15:00Z",
-  "updated_at": "2026-08-17T06:05:00Z",
+  "updated_at": "2026-08-17T07:28:15Z",
   "labels": [
     "bug",
     "generation",
@@ -20,6 +20,5 @@
     "files": "files.json",
     "events": "events.jsonl",
     "handoffs": "handoffs/"
-  },
-  "activeSessionTitle": "MPI-571 - one shared latent-preview consumer"
+  }
 }
