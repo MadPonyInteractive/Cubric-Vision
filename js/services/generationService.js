@@ -504,8 +504,19 @@ export function enqueueGeneration(config, callbacks = {}, opts = {}) {
     const queueJobId = opts.queueJobId || crypto.randomUUID();
     const source = opts.source || (state.loopArmed ? 'loop' : 'manual');
     const isLoop = opts.isLoop === true || source === 'loop';
-    const display = opts.queueDisplay || _buildQueueDisplay(config, opts, source, isLoop);
-    _cueQueue.push({ queueJobId, config, callbacks, opts: { ...opts, queueJobId, queueDisplay: display, source, isLoop }, display, source, isLoop });
+    // MPI-548: resolve the "Run locally" override HERE, once, for every path — not at
+    // each call site. `state.engineOverride` is the single source of truth (R31), but
+    // `forceLocal` was threaded by hand, so a dispatch site that never passed it sent a
+    // CLOUD gen while the toggle was ON: Continue's stage-2 branch and its cold stage-1
+    // rerun, preview:finish, the three group-history tools, agentDispatch and
+    // describeAction — eight of the ten sites. Normalising before `_buildQueueDisplay`
+    // also fixes the Cue badge's engine label, which reads the same flag.
+    // An EXPLICIT `opts.forceLocal` still wins (`??`, so a deliberate `false` counts):
+    // the loop re-fire PINS its lane in `_onLaneDrain` and must not be re-derived, or a
+    // mid-loop toggle would bounce the re-fire onto the other lane.
+    const jobOpts = { ...opts, forceLocal: opts.forceLocal ?? (state.engineOverride === 'local') };
+    const display = opts.queueDisplay || _buildQueueDisplay(config, jobOpts, source, isLoop);
+    _cueQueue.push({ queueJobId, config, callbacks, opts: { ...jobOpts, queueJobId, queueDisplay: display, source, isLoop }, display, source, isLoop });
     _updateQueueDepth();
     _dispatchNextCue();
     return { queueJobId };
@@ -798,7 +809,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         isStage2: config.isStage2 === true,
         loadLatentName: config.loadLatentName,
         previewLatentFilePath: config.previewLatentFilePath,
-        forceLocal: opts.forceLocal === true, // MPI-74: per-gen local override → runCommand reads payload.forceLocal
+        // MPI-74: per-gen local override → runCommand reads payload.forceLocal.
+        // MPI-548: same `??` derivation as enqueueGeneration, so a DIRECT startGeneration
+        // (bypassing the Cue queue) honours the toggle too. Idempotent when the queue
+        // already normalised it.
+        forceLocal: (opts.forceLocal ?? (state.engineOverride === 'local')) === true,
     });
 
     activeGenerations.start({

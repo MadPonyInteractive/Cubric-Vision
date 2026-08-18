@@ -545,6 +545,11 @@ export const MpiToolOptionsResize = ComponentFactory.create({
                 injectionParams: previewParams,
                 previewOnly: true,
                 suppressLifecycleEvents: true,
+                // MPI-548: the only dispatch that calls runCommand directly, so it misses
+                // the override generationService now resolves for every queued path. Read
+                // the same source of truth — a thumbnail preview must not go to the Pod
+                // while the user has pinned the local engine.
+                forceLocal: state.engineOverride === 'local',
             });
             _previewExec = exec;
 

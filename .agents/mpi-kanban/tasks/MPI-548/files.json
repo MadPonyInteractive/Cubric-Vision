@@ -8,6 +8,8 @@
     "js/shell.js",
     "js/components/Compounds/MpiModelSettings/MpiModelSettings.js",
     "js/components/Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js",
-    ".agents/mpi-kanban/tasks/MPI-548/**"
+    ".agents/mpi-kanban/tasks/MPI-548/**",
+    "js/services/generationService.js",
+    "js/components/Organisms/MpiToolOptionsResize/MpiToolOptionsResize.js"
   ]
 }

@@ -175,7 +175,7 @@
       "MPI-549"
     ]
   },
-  "updated_at": "2026-08-18T07:50:00Z",
+  "updated_at": "2026-08-18T08:15:00Z",
   "events": [
     {
       "at": "2026-08-16T04:20:25Z",
@@ -3007,6 +3007,13 @@
       "from": "todo",
       "to": "doing",
       "note": "Implementation started. Re-diagnosis first: the card's stated root cause (state.availableLoras not engine-aware) cannot have produced the reported toast - the named LoRA is a BAKED shipped dep, and lora_missing_remote is a Pod-side ComfyUI 400, not the pre-dispatch guard."
+    },
+    {
+      "at": "2026-08-18T08:15:00Z",
+      "type": "task.updated",
+      "task": "MPI-548",
+      "actor": "opus",
+      "note": "Defect A root-caused and fixed. Fabio confirmed the LAPTOP icon was showing, so the override was ON - and the sweep found forceLocal is threaded per dispatch site, with 8 of 10 sites never passing it (Continue stage-2, Continue cold stage-1, preview:finish, the three group-history tools, agentDispatch, describeAction, plus MpiToolOptionsResize's direct runCommand). Fixed structurally in the funnel: enqueueGeneration and startGeneration now derive opts.forceLocal ?? (state.engineOverride === 'local'), resolved before _buildQueueDisplay so the Cue engine chip is fixed too; an explicit value still wins so the loop re-fire's lane pin survives. Verified: 629/629 tests, eslint clean, and three live probes in an isolated instance (override ON + silent opts now resolves local, was remote). in-progress -> validating on Fabio's own Pod-connected run (verify mode user-ux)."
     }
   ]
 }
