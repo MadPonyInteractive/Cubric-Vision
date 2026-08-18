@@ -16,7 +16,6 @@
       "MPI-558",
       "MPI-556",
       "MPI-553",
-      "MPI-548",
       "MPI-547",
       "MPI-507",
       "MPI-544",
@@ -28,7 +27,6 @@
       "MPI-528",
       "MPI-527",
       "MPI-526",
-      "MPI-525",
       "MPI-524",
       "MPI-523",
       "MPI-522",
@@ -71,6 +69,8 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-548",
+      "MPI-525",
       "MPI-520",
       "MPI-531"
     ],
@@ -175,7 +175,7 @@
       "MPI-549"
     ]
   },
-  "updated_at": "2026-08-17T05:05:00Z",
+  "updated_at": "2026-08-18T07:50:00Z",
   "events": [
     {
       "at": "2026-08-16T04:20:25Z",
@@ -2998,6 +2998,15 @@
       "from": "doing",
       "to": "done",
       "note": "Live foley generation run by Fabio in his own app - result approved. Closes the only open item."
+    },
+    {
+      "at": "2026-08-18T07:50:00Z",
+      "type": "task.moved",
+      "task": "MPI-548",
+      "actor": "opus",
+      "from": "todo",
+      "to": "doing",
+      "note": "Implementation started. Re-diagnosis first: the card's stated root cause (state.availableLoras not engine-aware) cannot have produced the reported toast - the named LoRA is a BAKED shipped dep, and lora_missing_remote is a Pod-side ComfyUI 400, not the pre-dispatch guard."
     }
   ]
 }

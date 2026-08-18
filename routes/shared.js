@@ -393,6 +393,28 @@ async function ensureCuratedPythonDeps() {
 }
 
 /**
+ * Will the NEXT engine start pay the multi-minute pip pass? (MPI-525)
+ * Mirrors the two skip/install branches of `ensureCuratedPythonDeps` without running
+ * anything, so the blocking startup modal can name that phase up front — minutes of
+ * silent pip work under "Starting ComfyUI Engine..." read as a hang.
+ * @returns {Promise<boolean>}
+ */
+async function curatedDepsPending() {
+    let hash;
+    try {
+        const contents = await fs.readFile(PYTHON_DEPS_PATH);
+        hash = crypto.createHash('sha256').update(contents).digest('hex').slice(0, 16);
+    } catch {
+        return false;   // no curated list on disk — the start throws, it does not install
+    }
+    try {
+        return (await fs.readFile(curatedDepsMarkerPath(), 'utf8')).trim() !== hash;
+    } catch {
+        return true;    // no marker, or unreadable — same branch that installs
+    }
+}
+
+/**
  * Executes a custom command (e.g. `python install.py`) in a specified working directory.
  * Automatically replaces `python` with the embedded Python path.
  */
@@ -841,6 +863,7 @@ module.exports = {
     stripImageMetadata,
     runPipCommand,
     ensureCuratedPythonDeps,
+    curatedDepsPending,
     curatedDepsMarkerPath,
     runCustomCommand,
     findFileRecursive,

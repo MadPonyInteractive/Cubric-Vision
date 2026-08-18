@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "routes/shared.js",
+    "routes/comfy.js",
+    "js/services/comfyController.js",
+    "js/shell.js",
+    "js/components/Compounds/MpiStartingComfy/MpiStartingComfy.js",
+    "js/components/types.js"
+  ]
+}

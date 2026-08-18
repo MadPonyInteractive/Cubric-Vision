@@ -2,12 +2,12 @@
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-548",
   "title": "\"Run locally\" override is ignored by the LoRA/upscale asset list - local generations blocked while a Pod is connected",
-  "description": "With a Pod connected and the PromptBox \"Run locally\" toggle ON, a generation using a local-only LoRA is still blocked by the remote guard. Root cause: assetService.loadAll() populates state.availableLoras from GET /comfy/list-files, which has NO remote branch - it always enumerates the LOCAL disk - while routes/comfy.js formats those local filenames with the REMOTE separator when a Pod is active. The list is never re-derived per engine, so the dispatch-time missing-LoRA guard reports the file as absent from the Pod. Reported by Fabio 2026-08-12 with both toasts visible (\"NSFW_party_time_v2.0_klein4b.safetensors isn't installed on the remote Pod\" plus \"Preparing the cloud engine...\", i.e. the remote hot-store preflight also ran).",
-  "column": "todo",
-  "maturity": "planned",
+  "description": "With a Pod connected, a Klein generation was blocked by \"NSFW_party_time_v2.0_klein4b.safetensors isn't installed on the remote Pod\" alongside \"Preparing the cloud engine...\". RE-DIAGNOSED 2026-08-18: the original root cause (state.availableLoras not derived per engine) is DISPROVEN - the named file is a BAKED shipped dep (klein-lora-nsfw, klein_t2i.json node 38) that never passes through the asset list, and lora_missing_remote is a Pod-side ComfyUI value_not_in_list rejection, not the pre-dispatch guard. Two separate defects: A - a cloud dispatch was allowed for an op whose dep the Pod's ComfyUI refused, so the isOperationInstalled gate believed the Pod had a file it did not accept (stale remote install-state, or a path disagreement); B - the asset list genuinely is engine-blind (/comfy/list-files has no remote branch and re-labels local filenames with the remote separator), which is real but cannot produce this toast. Reported by Fabio 2026-08-12.",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-12T18:05:00Z",
-  "updated_at": "2026-08-12T18:05:00Z",
+  "updated_at": "2026-08-18T08:05:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -17,5 +17,6 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
-  }
+  },
+  "activeSessionTitle": "MPI-548 re-diagnosis + engine-aware asset lists"
 }

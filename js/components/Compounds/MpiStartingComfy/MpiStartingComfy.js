@@ -24,8 +24,8 @@ export const MpiStartingComfy = ComponentFactory.create({
                 <img src="assets/mascot/idle.png" alt="Starting Engine" class="mpi-starting-comfy__img" />
             </div>
             <div class="mpi-starting-comfy__content">
-                <h2 class="mpi-starting-comfy__title gradient-text">${props.title || 'Starting ComfyUI Engine...'}</h2>
-                <p class="mpi-starting-comfy__text text-muted">${props.text || 'This may take a few moments...'}</p>
+                <h2 class="mpi-starting-comfy__title gradient-text" data-ref="title">${props.title || 'Starting ComfyUI Engine...'}</h2>
+                <p class="mpi-starting-comfy__text text-muted" data-ref="text">${props.text || 'This may take a few moments...'}</p>
                 <div class="mpi-starting-comfy__status" data-ref="status"></div>
             </div>
         </div>
@@ -37,6 +37,9 @@ export const MpiStartingComfy = ComponentFactory.create({
         let spinnerInst = null;
 
         const statusSlot = qs('[data-ref="status"]', el);
+        const titleEl    = qs('[data-ref="title"]', el);
+        const textEl     = qs('[data-ref="text"]', el);
+        const _default   = { title: titleEl.textContent, text: textEl.textContent };
 
         el.setLoading = (isLoading) => {
             statusSlot.innerHTML = '';
@@ -51,8 +54,13 @@ export const MpiStartingComfy = ComponentFactory.create({
             statusSlot.innerHTML = `<p class="mpi-starting-comfy__error">${errMsg}</p>`;
         };
 
-        el.show = () => {
+        // `phase` renames the copy for a startup step that is not just "starting" —
+        // e.g. the multi-minute curated pip pass on a fresh install (MPI-525). Always
+        // reset from it, so a later plain show() cannot inherit the previous phase.
+        el.show = (phase) => {
             if (_backdrop) return; // already visible — idempotent
+            titleEl.textContent = (phase && phase.title) || _default.title;
+            textEl.textContent  = (phase && phase.text)  || _default.text;
             el.setLoading(true);
 
             _backdrop = document.createElement('div');

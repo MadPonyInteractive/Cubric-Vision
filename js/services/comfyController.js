@@ -435,7 +435,16 @@ function createEngine({ engine, alwaysLocal }) {
             // background: a boot auto-start brings the engine up silently — no
             // blocking "Starting ComfyUI Engine…" overlay. Manual generation still
             // emits it so the user sees the engine spinning up before their job.
-            if (!opts.background) this._emitLifecycle('comfy:starting');
+            // MPI-525: name the phase BEFORE the wait. On a fresh install (or the first
+            // start after a release moves the pin) `/comfy/start` runs a multi-minute
+            // curated pip pass with the engine down, inside the request we await below —
+            // minutes under the generic "Starting ComfyUI Engine…" title read as a hang.
+            if (!opts.background) {
+                const { pending } = !status.running
+                    ? await fetch('/comfy/deps-pending').then(r => r.json()).catch(() => ({}))
+                    : {};
+                this._emitLifecycle('comfy:starting', pending ? { phase: 'python-deps' } : {});
+            }
 
             if (!status.running) {
                 clientLogger.info('comfy', 'Requesting ComfyUI server start');

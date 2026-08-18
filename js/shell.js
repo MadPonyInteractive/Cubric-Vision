@@ -388,14 +388,20 @@ async function _bootApp() {
   let _comfyModalEngine = null; // which engine the visible modal belongs to (or null)
 
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
-  Events.on('comfy:starting', ({ engine = 'remote' } = {}) => {
+  Events.on('comfy:starting', ({ engine = 'remote', phase } = {}) => {
     // Suppress the blocking modal if the other engine is mid-gen — that engine's
     // UI (Cue card, previews) must stay live. The booting engine still comes up;
     // its own job tracks progress on its Cue card.
     if (_otherEngineRunning(engine)) return;
     if (_comfyModalEngine && _comfyModalEngine !== engine) return; // other engine owns the modal
     _comfyModalEngine = engine;
-    _startingComfy.el.show();
+    // MPI-525: the curated Python set installs at engine START, with the engine
+    // down — the only point that survives an upgrade wiping site-packages. So the
+    // work stays; the LABEL names it, or minutes of silent pip read as a hang.
+    _startingComfy.el.show(phase === 'python-deps' ? {
+      title: 'Installing Python packages...',
+      text: 'First engine start only — this can take several minutes.',
+    } : null);
   });
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('comfy:ready', ({ engine = 'remote' } = {}) => {

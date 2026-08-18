@@ -1581,7 +1581,10 @@
  * @property {string}   [text]   - Descriptive text below title
  *
  * Instance methods (on instance.el):
- *   show()                      — Shows the modal with loading spinner
+ *   show(phase?)                — Shows the modal with loading spinner. `phase` is an
+ *                                 optional `{ title, text }` overriding the copy for a
+ *                                 named startup step (e.g. the curated pip pass);
+ *                                 omitting it resets to the default copy.
  *   hide()                      — Hides the modal
  *   setError(errMsg)            — Hides spinner and shows error text
  *   setLoading(isLoading)       — Toggles loading spinner

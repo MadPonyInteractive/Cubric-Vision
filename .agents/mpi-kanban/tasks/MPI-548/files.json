@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/services/assetService.js",
+    "routes/comfy.js",
+    "js/services/commandExecutor.js",
+    "js/data/modelRegistry.js",
+    "js/shell.js",
+    "js/components/Compounds/MpiModelSettings/MpiModelSettings.js",
+    "js/components/Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js",
+    ".agents/mpi-kanban/tasks/MPI-548/**"
+  ]
+}

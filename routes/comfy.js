@@ -37,6 +37,7 @@ const {
     setExtraModelFolders,
     writeExtraModelPathsYaml,
     ensureCuratedPythonDeps,
+    curatedDepsPending,
 } = require('./shared');
 const { getPythonBin, getComfyPath, getEngineRoot, resolveDownloadConfig } = require('./platformEngine');
 const remoteModels = require('./remoteModels');
@@ -185,6 +186,18 @@ router.get('/comfy/status', async (req, res) => {
     } catch (e) {
         res.json({ running: false, needsRestart, lastExit });
     }
+});
+
+/**
+ * GET /comfy/deps-pending
+ * -> { pending: boolean } — whether the next /comfy/start will run the curated pip
+ * pass. That pass runs INSIDE the start request with the engine down (MPI-459), so
+ * the frontend reads this BEFORE starting and names the phase on the blocking
+ * startup modal (MPI-525). Only the first start after a moved pin pays it; every
+ * later start hash-matches and skips in milliseconds.
+ */
+router.get('/comfy/deps-pending', async (req, res) => {
+    res.json({ pending: await curatedDepsPending() });
 });
 
 router.get('/comfy/events/stream', (req, res) => {
