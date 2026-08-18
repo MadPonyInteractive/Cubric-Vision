@@ -40,6 +40,13 @@ _(none yet)_
 
 ## Fixes
 
+- The first engine start no longer looks frozen. Setting up a new engine installs a large set of
+  Python packages before ComfyUI can start, and for the minutes that took, the window only said
+  "Starting ComfyUI Engine…" — no progress, no explanation, so it read as a hang. That step now
+  names itself, "Installing Python packages… First engine start only", and hands over to
+  "Starting ComfyUI Engine…" the moment it finishes. Later starts skip the step entirely, as they
+  always did.
+
 - The app no longer keeps running outdated engine components after an update. Anyone who had
   used "Skip the local engine install" kept that setting even after an engine was installed,
   and it quietly switched off the check that repairs out-of-date components — so a fixed or

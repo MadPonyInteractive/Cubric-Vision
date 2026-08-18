@@ -121,11 +121,12 @@ Two details:
   the app would not, which reads as a new bug. Conversely, once a floating rejection is genuinely
   fixed, a handler-free harness running clean is proof.
 
-> **HAZARD this pattern exists to avoid.** On the dev machine
-> `engine/ComfyUI_windows_portable/ComfyUI/custom_nodes/ComfyUI-MpiNodes` is a **symlink** to
-> `C:\AI\Mpi\ComfyUi-MpiNodes`. The obvious way to force a dep repair — delete the node folder —
-> would destroy the live node source repo. Check for the symlink before touching anything under
-> `custom_nodes/`.
+> **HAZARD this pattern exists to avoid** — but check WHICH install you are in. The
+> `custom_nodes/ComfyUi-MpiNodes` symlink to `C:\AI\Mpi\ComfyUi-MpiNodes` now lives on the
+> standalone **bench** (`G:\ComfyUi`), not the app engine: deleting that folder still destroys the
+> live node source repo. The app engine is a user replica and its junction is long gone — measured
+> 2026-08-18, `engine/` has ZERO reparse points. Confirm before touching anything under
+> `custom_nodes/`: `Get-ChildItem <root> -Recurse -Force -Attributes ReparsePoint`.
 
 ## 3. One router on a spare port — testing a new route
 
@@ -163,6 +164,15 @@ When you genuinely need a running app, take your own: `npm run app:isolated`
 STABLE profile (`%TEMP%\cubric-agent-profile`, stable on purpose so an engine install survives), and
 prints `READY <url>`. Drive that URL, never 3000.
 
+- **To test an ENGINE INSTALL, give it a throwaway engine**:
+  `CUBRIC_ENGINE_ROOT="<scratch>" npm run app:isolated`. The launcher spreads `process.env`, and
+  `getEngineRoot()` checks the var FIRST — ahead of `.engine-config.json` — so the whole app,
+  modal included, runs against a scratch root with the real engine untouched. Without it you are
+  installing into the user's `engine/`. To force a from-scratch pass on the REAL engine anyway,
+  use the product's own wipe (`POST /engine/upgrade {"mode":"full"}`, signal table in
+  [playbooks/bump-engine/02-local-upgrade.md](playbooks/bump-engine/02-local-upgrade.md)) rather
+  than deleting by hand: it stops ComfyUI first and preserves the models root. Measured MPI-525:
+  4m04.6s to reinstall, then a 2m47.6s curated pip pass with ~140 packages genuinely downloading.
 - **It copies NOTHING, and that is the safety property** — see
   [runpod-remote-engine.md](runpod-remote-engine.md) § the orphan sweep for what a copied profile
   did to another agent's live Pod.
