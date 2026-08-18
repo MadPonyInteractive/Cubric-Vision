@@ -46,6 +46,13 @@ _(none yet)_
   improved component could sit unused indefinitely, with nothing reported. The setting now
   clears itself once an engine is present, and is greyed out while one is installed.
 
+- "Run locally" is now honoured everywhere, not just on the Cue button. With a cloud Pod
+  connected and the toggle switched on, continuing a preview, finishing a preview, and the
+  History workspace's own image, video and resize tools all still sent the job to the Pod —
+  so a generation needing something only your own machine has could fail on the cloud engine
+  while the app showed it was running locally. The queue chip disagreed too, reading REMOTE
+  next to a local toggle. Every dispatch path now reads the one setting.
+
 - Live latent previews now play everywhere they appear. The Flow result pane replayed
   the whole clip at burst speed on every sampler step and then froze, the History
   workspace showed nothing at all on a video run, and the minimised preview window sat
