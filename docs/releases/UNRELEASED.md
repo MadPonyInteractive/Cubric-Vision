@@ -53,6 +53,14 @@ _(none yet)_
   while the app showed it was running locally. The queue chip disagreed too, reading REMOTE
   next to a local toggle. Every dispatch path now reads the one setting.
 
+- Connecting to a cloud Pod no longer claims to have installed models it did not. Every
+  connect announced one "<Model> installed." message per model already on the volume — six
+  at a time, with nothing downloaded — plus a raw internal job name, "engine:node-drift
+  installed.". A background repair that runs once per connect was being mistaken for a
+  download, and when the window was in the background each one also became a desktop
+  notification. Those repairs are now silent, as they were always meant to be; a real
+  install still tells you, including one that completes as a side-effect of another.
+
 - Live latent previews now play everywhere they appear. The Flow result pane replayed
   the whole clip at burst speed on every sampler step and then froze, the History
   workspace showed nothing at all on a video run, and the minimised preview window sat

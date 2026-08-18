@@ -510,7 +510,18 @@ faked registry flip, `{ silent: true }` produced no toast and the control produc
 the raw-id toast and `Krea 2 installed.`
 
 Pinned by `tests/install-queue-wedge.test.cjs` § *internal heal jobs are started silent*,
-which also asserts no `'engine:` literal returns to `notificationService.js`.
+which also asserts no `'engine:` literal returns to `notificationService.js` — to its
+CODE: the test strips comments first, and the comment there deliberately still names both
+ids to explain why the allowlist is gone.
+
+**A fully-installed LOCAL install emits no model-level `download:complete` at all.** The
+route marks each already-on-disk dep complete inside the dep loop and calls
+`_startPendingDeps()`, which finds nothing queued — and nothing on that path calls
+`_checkModelJobsComplete()`. So the model-level event never fires. (The REMOTE twin does
+settle it: `_startRemoteDownload`'s `already_installed` branch broadcasts per-dep and then
+calls `_checkModelJobsComplete`.) Consequence for testing: a local no-op install cannot be
+used to exercise a `download:complete` consumer — stub `EventSource` instead, see
+[testing-harnesses.md](testing-harnesses.md) § 4.
 
 ## Failed is not one thing — the payload carries the verdict (MPI-480)
 

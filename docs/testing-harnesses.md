@@ -191,6 +191,16 @@ prints `READY <url>`. Drive that URL, never 3000.
   kill its PARENT, because the listener is the `server.js` child and killing it leaves the root and
   renderer alive. Killing only the windows can leave the fork serving the OLD route code.
 
+- **To exercise an SSE handler without the server, stub `EventSource` in the page.**
+  `downloadService._connectSSE()` does `new EventSource(...)` and registers its handlers with
+  `addEventListener`, so replacing `window.EventSource` with a class that just captures those
+  callbacks, then calling `_connectSSE()`, hands you the REAL handlers to fire synthetic
+  events into — real registry, real notificationService, real toasts, no network. This is the
+  only practical way to test a `download:complete` consumer locally, because a fully-installed
+  LOCAL install never emits the model-level event (see
+  [download-manager.md](download-manager.md) § Download Events). Used to prove MPI-576 both
+  ways in one run: silent job → no toast, control → the exact reported storm.
+
 Launch mechanics for a hand-rolled instance (why `unset ELECTRON_RUN_AS_NODE` is mandatory, and the
 two failure signatures — lock = silent exit 0, port = loud `[FATAL] [main] server-exit` + exit 1) are
 in [testing.md](testing.md) § The desktop suite and [DEVELOPMENT.md](DEVELOPMENT.md).
