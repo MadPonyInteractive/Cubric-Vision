@@ -1,4 +1,11 @@
 {
-  "schema": "mpi-kanban/task-files/v1",
-  "files": []
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/services/downloadService.js",
+    "js/shell/notificationService.js",
+    "js/shell.js",
+    "tests/install-queue-wedge.test.cjs",
+    "docs/download-manager.md",
+    "docs/toasts.md"
+  ]
 }

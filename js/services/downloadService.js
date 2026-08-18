@@ -84,19 +84,28 @@ const downloadService = {
     // tile and flip the detail footer to Cancel, and every existing model must keep it.
     // A GATED model necessarily goes async (the user has to read something), so its tile
     // stays on Install until the dialog is accepted, which is the correct reading.
-    start(modelId, dependencies) {
+    //
+    // MPI-576 — `opts.silent` marks an INTERNAL job whose completion must never reach
+    // the user (the remote node-drift heal, the engine-asset heal). It is recorded in
+    // `_silentJobs` and stamped onto the completion event as `data.silent`, so every
+    // consumer reads it as a fact about the job instead of matching a job id. That
+    // replaces the id allowlist in notificationService, which two `engine:*` ids in a
+    // row have now escaped: 'engine:assets' was allowlisted for MPI-395,
+    // 'engine:node-drift' was never added and leaked its raw id to the user as
+    // "engine:node-drift installed."
+    start(modelId, dependencies, opts = {}) {
         const licence = getModelLicence(modelId);
         if (licence && !hasAcceptedLicence(modelId)) {
             return showLicenceGate(licence).then((accepted) => {
                 if (!accepted) return undefined;
                 recordLicenceAcceptance(modelId);
-                return this._start(modelId, dependencies);
+                return this._start(modelId, dependencies, opts);
             });
         }
-        return this._start(modelId, dependencies);
+        return this._start(modelId, dependencies, opts);
     },
 
-    _start(modelId, dependencies) {
+    _start(modelId, dependencies, opts = {}) {
         // Ensure SSE is connected BEFORE the POST to avoid missing backend broadcasts
         // (download:started, download:progress) that fire before the SSE open event.
         this._ensureSSE();
@@ -110,6 +119,7 @@ const downloadService = {
         // still-queued job (no POST fired yet) drops its job so its turn is skipped.
         const willQueue = this._inFlight > 0;
         this._inFlight += 1;
+        if (opts.silent === true) _silentJobs.add(modelId);
         const job = _createJob(modelId, dependencies);
         // MPI-276 G2: optimistic client-only 'pending' state — "Starting…",
         // indeterminate — until the backend acks. A queued install (something ahead
@@ -598,9 +608,23 @@ const downloadService = {
             // flickered back. Per-dep completes carry no modelId, so gate the sync on it and
             // emit only the model-level event downstream. (fixes the install-flash storm)
             if (!isUW) {
+                // MPI-576 — a SILENT job (the first-connect node-drift heal, the
+                // engine-asset heal) re-syncs the registry but announces nothing. The
+                // cascade toast below reads "was absent before the re-sync, present
+                // after" as "it was just installed", and on the drift heal that
+                // inference is true-but-unwanted: a drifted volume node reports
+                // `installed:false` for EVERY model whose dep universe contains it
+                // (routes/remoteModels.js — `d.installed = false; d.drifted = true`),
+                // so re-cloning that one KB-scale node flips the whole sharing set back
+                // to installed at once. Fabio's connect announced six models that way,
+                // with nothing downloaded. MPI-230 required that heal to be silent —
+                // "no prompt, no toast" — and this is the site that broke it.
+                const silent = _silentJobs.delete(data.modelId);
+                data.silent = silent;
                 // Capture installed IDs before re-sync to detect cascade installs
                 const preSync = new Set(MODELS.filter(m => m.installed).map(m => m.id));
                 reSyncInstalledModels().then(() => {
+                    if (silent) return;
                     // Toast any model that became installed as a side-effect (shared deps)
                     // Skip the primary modelId — already toasted above
                     for (const m of MODELS) {
@@ -623,6 +647,7 @@ const downloadService = {
         this._eventSource.addEventListener('download:failed', (e) => {
             const data = JSON.parse(e.data);
             _speedSamples.delete(data.modelId); // MPI-94 L4 — drop the speed sample
+            _silentJobs.delete(data.modelId);   // MPI-576 — terminal: drop the silent mark
             // UW dep failures are surfaced through engine:error / install modal — skip toast here
             if (data.modelId === '__universal_workflow__') {
                 Events.emit('download:failed', data);
@@ -820,6 +845,15 @@ function _parseSizeToBytes(sizeStr) {
     const multipliers = { 'GB': 1024 ** 3, 'MB': 1024 ** 2, 'KB': 1024, 'B': 1 };
     return val * (multipliers[unit] || 0);
 }
+
+// MPI-576 — job ids started with { silent: true }: the internal heals (the remote
+// node-drift re-clone, the engine-asset install). Their completion is not announced —
+// not by notificationService, not by the cascade toast in the download:complete
+// handler, which stamps `data.silent` off this set. Deliberately NOT a field
+// on the job: the /download/jobs snapshot handler replaces state.downloadJobs wholesale
+// with SERVER-built jobs, which carry no client-side fields, so a snapshot landing
+// mid-heal would strip the flag and re-open the leak. Cleared on the terminal event.
+const _silentJobs = new Set();
 
 // MPI-94 L4 — client-side download-speed derivation for remote (wrapper aria2c)
 // progress, which arrives without a speed string. Keyed by modelId; holds the

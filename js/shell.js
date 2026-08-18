@@ -1471,7 +1471,12 @@ async function _healRemoteNodeDrift() {
   const deps = depIds.map(id => DEPS[id]).filter(Boolean);
   if (!deps.length) return;
   clientLogger.info('shell', `remote drift heal: re-cloning ${deps.length} node(s) — ${depIds.join(', ')}`);
-  await downloadService.start(NODE_DRIFT_JOB_ID, deps);
+  // MPI-576: silent BY CONSTRUCTION. MPI-230 wanted this heal to run with "no prompt,
+  // no toast"; it did not. Its completion announced the raw job id, and — because a
+  // drifted node makes every model that shares it report `installed:false` — the
+  // cascade toast in downloadService announced all of them as fresh installs the moment
+  // the re-clone landed. Both toast sites now read it off the completion event.
+  await downloadService.start(NODE_DRIFT_JOB_ID, deps, { silent: true });
 }
 
 // Namespaced like `plugin:<id>` / `app:<id>` (pluginsRegistry.pluginDepKey) so this
@@ -1507,7 +1512,9 @@ async function _installRemoteEngineAssets() {
     d && d.engineAsset === true && !d.bakedOnPod && !d.targetPath);
   if (!deps.length) return;
   const { downloadService } = await import('./services/downloadService.js');
-  await downloadService.start(ENGINE_ASSETS_JOB_ID, deps);
+  // MPI-576: silent BY CONSTRUCTION — replaces the id allowlist entry MPI-395 added in
+  // notificationService for this exact job.
+  await downloadService.start(ENGINE_ASSETS_JOB_ID, deps, { silent: true });
 }
 
 async function _initDataRegistries() {

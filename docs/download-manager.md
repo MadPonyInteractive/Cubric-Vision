@@ -468,12 +468,49 @@ In `js/state.js`:
 | --- | --- | --- |
 | `download:started` | Backend→SSE→Frontend | Model job enqueued and downloading begins |
 | `download:progress` | Backend→SSE→Frontend | Per-dep bytes/speed updated, throttled 1/sec on backend |
-| `download:complete` | Backend→SSE→Frontend | Fires PER-DEP with `{depId, modelId:null}` as each file lands, then ONCE model-level with a real `modelId` when the whole dep set is done (`_checkModelJobsComplete`). Frontend consumers doing expensive work (registry re-sync, grid rebuild) MUST gate on `data.modelId` — running per-dep re-synced the registry N× and flashed the Model Library grid (see [model-library.md](model-library.md) § Library flash on install). |
+| `download:complete` | Backend→SSE→Frontend | Fires PER-DEP with `{depId, modelId:null}` as each file lands, then ONCE model-level with a real `modelId` when the whole dep set is done (`_checkModelJobsComplete`). Frontend consumers doing expensive work (registry re-sync, grid rebuild) MUST gate on `data.modelId` — running per-dep re-synced the registry N× and flashed the Model Library grid (see [model-library.md](model-library.md) § Library flash on install). The frontend stamps **`silent: true`** on the model-level event when the job was started with `{ silent: true }` — see § Internal heal jobs are silent by construction. |
 | `download:failed` | Backend→SSE→Frontend | SHA256 mismatch or network error. Fires per-dep (`{depId}`, **silent client-side** — MPI-97) and model-level (`{modelId}`) from `_checkModelJobsComplete`; only the model-level one surfaces. Its payload FLAGS pick the surface — see § Failed is not one thing |
 | `download:cancelled` | Backend→SSE→Frontend | User cancelled or shutdown |
 | `download:uninstalled` | Backend→SSE→Frontend | Model uninstalled |
 | `download:installing` | Backend→SSE→Frontend | Custom-node install phase in progress — since MPI-413 that is the one curated `python_deps.txt` pip pass plus the node extractions, not a per-node `requirements.txt` |
 | `comfy:needs-restart` | Backend→SSE→Frontend | Custom node install done; ComfyUI needs auto-restart |
+
+## Internal heal jobs are silent by construction (MPI-576)
+
+Two jobs run on the first remote connect with no user behind them — the node-drift
+re-clone (`engine:node-drift`, `shell.js _healRemoteNodeDrift`) and the engine-asset
+install (`engine:assets`, `_installRemoteEngineAssets`). Neither may be announced.
+
+The caller declares it: `downloadService.start(id, deps, { silent: true })`. The id goes
+into the module-level `_silentJobs` set — **not** onto the job object, because the
+`download:jobs` snapshot handler replaces `state.downloadJobs` wholesale with
+SERVER-built jobs and would strip a client-side field. The model-level
+`download:complete` handler resolves and clears the mark, stamps `data.silent` onto the
+event, and both announcement sites read it:
+
+- `notificationService.js` returns early → no toast, no OS notification.
+- The **cascade toast** in `downloadService.js` returns early → the registry re-sync
+  still runs, only the announcement is suppressed.
+
+**Why this is a flag and not a list of job ids.** It WAS a list: MPI-395 added the single
+literal `'engine:assets'` to notificationService's allowlist. The very next `engine:*` id
+escaped it — MPI-576, where a connect announced `engine:node-drift installed.` (a raw
+internal job id) plus **one "installed." toast per model already on the volume**, six of
+them, with nothing downloaded. That storm is the cascade toast, whose heuristic is "absent
+before the re-sync, present after → just installed". On a drift heal that inference is
+true but unwanted: a drifted volume node reports `installed:false` for EVERY model whose
+dep universe contains it (`routes/remoteModels.js` — `d.installed = false; d.drifted =
+true`), so re-cloning one KB-scale node flips the whole sharing set at once. MPI-230 had
+required that heal to be silent — "no prompt, no toast" — and these were the two sites
+that broke it.
+
+A genuine shared-dep cascade (install model A, model B's dep set completes) still toasts:
+that job is not silent. Verified live by an A/B on a local instance — same job, same
+faked registry flip, `{ silent: true }` produced no toast and the control produced both
+the raw-id toast and `Krea 2 installed.`
+
+Pinned by `tests/install-queue-wedge.test.cjs` § *internal heal jobs are started silent*,
+which also asserts no `'engine:` literal returns to `notificationService.js`.
 
 ## Failed is not one thing — the payload carries the verdict (MPI-480)
 

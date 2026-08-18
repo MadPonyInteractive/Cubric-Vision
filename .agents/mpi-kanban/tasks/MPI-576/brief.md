@@ -111,3 +111,64 @@ fires is not. Server emitters: `routes/downloadManager.js` lines 770, 2051, 2179
 Cosmetic but load-bearing: the storm is indistinguishable from a real install, so it trains the
 user to ignore install toasts — and an OS notification fires per model when the window is
 unfocused ([notificationService.js:222-229](js/shell/notificationService.js#L222-L229)).
+
+
+---
+
+## Root cause, CORRECTED (2026-08-18, after reading the code)
+
+The diagnosis above is right about the SITE and wrong about the MECHANISM, and the
+difference matters because it invalidates the fix it proposes.
+
+**It is not an engine-switch artifact.** The brief argues the whole remote set flips
+`absent -> present` because install-state is re-derived against a different engine, with
+`preSync` captured from a stale local-scoped registry. It cannot be: `reSyncInstalledModels`
+IS `syncModelInstalled` ([modelRegistry.js:267](js/data/modelRegistry.js#L267)), and the
+connect edge already awaits it at [shell.js:1559](js/shell.js#L1559) BEFORE the heal runs.
+So `preSync` is already the remote-derived set.
+
+**It is the drift heal itself.** A drifted volume node is reported
+`installed: false` for every dep that names it
+([remoteModels.js:321](routes/remoteModels.js#L321) — `d.installed = false; d.drifted = true`),
+so EVERY model whose dep universe contains that node reads absent on the connect-edge sync.
+`_healRemoteNodeDrift` then re-clones the one KB-scale node, and the post-heal re-sync flips
+the whole sharing set back to installed at once. Six models share it -> six toasts. The flip
+is REAL; it is just not a download, and MPI-230 had already required this heal to be silent.
+
+**Therefore the brief's proposed server field would NOT have fixed it.** "Did bytes move?"
+answers TRUE here — the heal re-clones with `force: true` specifically so the wrapper cannot
+short-circuit on folder-exists. A no-op/bytes-moved flag would have left the storm intact.
+
+## What shipped
+
+The brief's THIRD bullet, which does hold: silent BY CONSTRUCTION.
+
+- `downloadService.start(id, deps, { silent: true })` — the caller declares it. Both internal
+  heals now do ([shell.js](js/shell.js) `_healRemoteNodeDrift`, `_installRemoteEngineAssets`).
+- The id lands in a module-level `_silentJobs` set in
+  [downloadService.js](js/services/downloadService.js), NOT on the job object: the
+  `download:jobs` snapshot handler replaces `state.downloadJobs` wholesale with SERVER-built
+  jobs and would strip a client-side field mid-heal.
+- The model-level `download:complete` handler resolves + clears the mark, stamps
+  `data.silent`, and skips the cascade toast. The registry re-sync still runs.
+- [notificationService.js](js/shell/notificationService.js) gates on `data.silent` — the
+  `'engine:assets'` literal is DELETED. A third `engine:*` id cannot leak.
+
+Not done, deliberately: no server-side change. `download:complete`'s payload and timing are
+untouched, so none of its eight consumers move.
+
+## Verification
+
+- `tests/install-queue-wedge.test.cjs` — the MPI-395 `engine:assets`-literal test is replaced
+  by the by-construction pin (both heals started silent; both toast sites honour it; no
+  `'engine:` literal may return to notificationService). Mutation-checked: reverting either
+  gate turns it red. Full suite 629/629, eslint clean.
+- **Live A/B on an isolated local instance** (no Pod — the seam is engine-agnostic). Stubbed
+  `EventSource`, fired a real model-level `download:complete` through the real handler with
+  `krea2.installed` forced false so the cascade condition was genuinely met:
+  - `{ silent: true }` -> `[]`. No toast at all.
+  - control, same code path, no flag -> `engine:probe-loud installed.` AND `Krea 2 installed.`
+    — i.e. the reported bug reproduced exactly, and the genuine cascade toast still works.
+
+Left for Fabio: one real Pod connect on a volume with node drift, to confirm the storm is
+gone end to end. Everything reachable without a Pod is verified.

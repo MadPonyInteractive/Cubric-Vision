@@ -104,7 +104,15 @@ These are the ones that also have an OS-notification path + a preference toggle.
 |---|---|---|---|---|
 | `generation:complete` (coalesced; fires when `generationQueueCount → 0`; **skips `cancelled:true`**) | `Generation finished.` / `${n} generations finished.` | success | eligible (one chime per batch) | `notify-generation-complete` if unfocused + `notificationPrefs.generation !== false` |
 | `remote:connection` rising edge (`connected:true`, no phase) | `${gpuName} connected.` / `Remote engine connected.` | success | eligible | `notify-connection-complete` if unfocused + `notificationPrefs.connection !== false` |
-| `download:complete` (real modelId/plugin) | `${modelName} installed.` | success | eligible | `notify-download-complete` if unfocused + `notificationPrefs.downloads !== false` |
+| `download:complete` (real modelId/plugin, **and `data.silent !== true`**) | `${modelName} installed.` | success | eligible | `notify-download-complete` if unfocused + `notificationPrefs.downloads !== false` |
+
+**`data.silent` is the internal-heal gate (MPI-576), and it replaced an id allowlist.**
+A job started with `downloadService.start(id, deps, { silent: true })` — the first-connect
+node-drift re-clone and the engine-asset install — announces nothing here or in the cascade
+toast below. Do NOT reintroduce a job-id literal in this file: the previous allowlist held
+one (`'engine:assets'`, MPI-395) and the next `engine:*` id walked straight through it,
+announcing a raw job id to the user on every connect. Contract in
+[download-manager.md](download-manager.md) § Internal heal jobs are silent by construction.
 
 OS-notif handlers in `main.js` (`showOsNotification`) re-gate on `!mainWindow.isFocused()` — a
 double focus gate (renderer + main).
@@ -199,6 +207,7 @@ signals* are suppressed. Rule + rationale: memory `feedback_no_toast_user_stop`.
 | `downloadService.js:615` | `download:failed` SSE, `networkBlocked`, job matched | (server's own text, verbatim — MPI-427) | warning | eligible |
 | `downloadService.js:623` | `download:failed` SSE, `transient`, job matched | The remote engine isn't ready yet — install ${model} again in a moment. | warning | eligible |
 | `downloadService.js:634` | `download:failed` SSE, out-of-space, no job match | Not enough disk space to install this model… | warning | eligible |
+| `downloadService.js` cascade (in the `download:complete` re-sync `.then`) | A model became installed as a SIDE-EFFECT of another install (shared deps) | `${model.name} installed.` | success | eligible |
 | `downloadService.js:638` | `download:failed` SSE, `networkBlocked`, no job match | (server's own text, verbatim — MPI-427) | warning | eligible |
 | `downloadService.js:640` | `download:failed` SSE, `transient`, no job match | The remote engine isn't ready yet — try the install again in a moment. | warning | eligible |
 
