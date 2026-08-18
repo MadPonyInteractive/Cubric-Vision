@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-576", "at": "2026-08-18T08:35:00Z", "actor": "opus", "summary": "Created from Fabio's report: a per-model \"installed.\" toast storm on every Pod connect. Root cause identified in the same session - the cascade-install toast diffs a re-sync instead of asking whether bytes moved."}

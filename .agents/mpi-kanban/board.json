@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 576,
+  "next_id": 577,
   "columns": {
     "todo": [
+      "MPI-576",
       "MPI-575",
       "MPI-573",
       "MPI-569",
@@ -175,7 +176,7 @@
       "MPI-549"
     ]
   },
-  "updated_at": "2026-08-18T08:15:00Z",
+  "updated_at": "2026-08-18T08:35:00Z",
   "events": [
     {
       "at": "2026-08-16T04:20:25Z",
@@ -3014,6 +3015,13 @@
       "task": "MPI-548",
       "actor": "opus",
       "note": "Defect A root-caused and fixed. Fabio confirmed the LAPTOP icon was showing, so the override was ON - and the sweep found forceLocal is threaded per dispatch site, with 8 of 10 sites never passing it (Continue stage-2, Continue cold stage-1, preview:finish, the three group-history tools, agentDispatch, describeAction, plus MpiToolOptionsResize's direct runCommand). Fixed structurally in the funnel: enqueueGeneration and startGeneration now derive opts.forceLocal ?? (state.engineOverride === 'local'), resolved before _buildQueueDisplay so the Cue engine chip is fixed too; an explicit value still wins so the loop re-fire's lane pin survives. Verified: 629/629 tests, eslint clean, and three live probes in an isolated instance (override ON + silent opts now resolves local, was remote). in-progress -> validating on Fabio's own Pod-connected run (verify mode user-ux)."
+    },
+    {
+      "at": "2026-08-18T08:35:00Z",
+      "type": "task.created",
+      "task": "MPI-576",
+      "actor": "opus",
+      "note": "Reported by Fabio 2026-08-18 with five screenshots, root-caused in the same session."
     }
   ]
 }
