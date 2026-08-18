@@ -58,9 +58,12 @@ export const MpiStartingComfy = ComponentFactory.create({
         // e.g. the multi-minute curated pip pass on a fresh install (MPI-525). Always
         // reset from it, so a later plain show() cannot inherit the previous phase.
         el.show = (phase) => {
-            if (_backdrop) return; // already visible — idempotent
+            // Copy is set BEFORE the idempotent guard: a second show() while visible is
+            // how a caller advances the phase (pip done → engine booting), so it must
+            // still relabel. Always assigned, so a later plain show() cannot inherit it.
             titleEl.textContent = (phase && phase.title) || _default.title;
             textEl.textContent  = (phase && phase.text)  || _default.text;
+            if (_backdrop) return; // already visible — idempotent
             el.setLoading(true);
 
             _backdrop = document.createElement('div');

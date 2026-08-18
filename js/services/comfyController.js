@@ -439,11 +439,13 @@ function createEngine({ engine, alwaysLocal }) {
             // start after a release moves the pin) `/comfy/start` runs a multi-minute
             // curated pip pass with the engine down, inside the request we await below —
             // minutes under the generic "Starting ComfyUI Engine…" title read as a hang.
+            let depsPhase = false;
             if (!opts.background) {
                 const { pending } = !status.running
                     ? await fetch('/comfy/deps-pending').then(r => r.json()).catch(() => ({}))
                     : {};
-                this._emitLifecycle('comfy:starting', pending ? { phase: 'python-deps' } : {});
+                depsPhase = pending === true;
+                this._emitLifecycle('comfy:starting', depsPhase ? { phase: 'python-deps' } : {});
             }
 
             if (!status.running) {
@@ -457,6 +459,11 @@ function createEngine({ engine, alwaysLocal }) {
                     const body = await startRes.json().catch(() => ({}));
                     throw new Error(body.error || `ComfyUI could not be started (HTTP ${startRes.status}).`);
                 }
+                // The pip pass is finished by the time /comfy/start answers — everything
+                // after this is the engine booting. Measured 2.5s of pip against 44s of
+                // boot on an already-satisfied set, so leaving the install label up for
+                // the whole wait would mislabel most of it.
+                if (depsPhase) this._emitLifecycle('comfy:starting');
             }
 
             for (let i = 0; i < COMFY_READY_TIMEOUT_S; i++) {
