@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-17T09:55:00Z",
+  "updated_at": "2026-08-18T08:20:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -112,6 +112,14 @@
       "status": "open",
       "created_at": "2026-08-17T09:55:00Z",
       "note": "MPI-325 code is done, committed bdb33dd0 and user-verified. Blocked on pushing + pinning ComfyUi-MpiNodes 38b3a27 - the graph already sends `pad: true` to a node an unpinned engine does not declare, and ComfyUI drops it silently."
+    },
+    {
+      "id": "881489b1-b90c-4190-9803-4343e3da5285",
+      "path": ".agents/mpi-kanban/state/handoffs/881489b1-b90c-4190-9803-4343e3da5285.json",
+      "task_card": "MPI-525",
+      "status": "open",
+      "created_at": "2026-08-18T08:20:00Z",
+      "note": "MPI-525 fix shipped + pushed (deff8474, d1548dea) and label verified on a forced pip pass. Remaining: the user-authorised TRUE engine wipe + reinstall, never touching G:\\CubricModels."
     }
   ]
 }
