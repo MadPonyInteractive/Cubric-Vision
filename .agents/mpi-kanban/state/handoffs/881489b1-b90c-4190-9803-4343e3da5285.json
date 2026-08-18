@@ -2,14 +2,14 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "881489b1-b90c-4190-9803-4343e3da5285",
   "generated_at": "2026-08-18T08:20:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-525 - name the curated pip pass on the engine startup modal",
     "branch": "master"
   },
   "goal": {
     "original": "The engine install dialog says 'Starting ComfyUI Engine' during minutes of pip work - fix the REPORTING, do not move the work.",
-    "status": "in_progress",
+    "status": "complete",
     "summary": "Shipped and live-verified on a forced (stale-marker) curated pass: the modal now reads 'Installing Python packages...' while pip runs, then flips to 'Starting ComfyUI Engine...' the moment /comfy/start answers. Two commits, pushed. Only leftover is the user-requested TRUE wipe-and-reinstall of engine/, so the label is seen over a real multi-minute pip pass instead of a 2.5s already-satisfied one."
   },
   "plan": {
@@ -22,17 +22,16 @@
       "MpiStartingComfy: show(phase?) assigns copy BEFORE its idempotent guard so a second call relabels a modal already on screen",
       "tests/curated-deps-pending.test.cjs: three marker states, hermetic via CUBRIC_ENGINE_ROOT",
       "Live run on an isolated instance with the marker staled: both phase transitions observed (+0.1s install label, +1.6s engine label, +24.8s gone/ready), marker restamped, deps-pending flipped to false",
-      "Commits deff8474 and d1548dea, pushed to origin/master"
+      "Commits deff8474 and d1548dea, pushed to origin/master",
+      "TRUE wipe-and-reinstall verified: product-path full reinstall (4m04.6s), genuine from-scratch curated pip pass (2m47.6s, packages really downloaded), install label held the whole pass, flipped to the engine label 22ms after pip ended, modal cleared at 187.8s on {ready:true}",
+      "Durations recorded in .agents/mpi-kanban/tasks/MPI-525/validation.md; MPI-525 moved to done/complete"
     ],
-    "pending": [
-      "TRUE wipe: delete engine/ and let the app reinstall it end to end, so the 'Installing Python packages...' label is seen over a real multi-minute pip pass (packages actually downloading, not already satisfied)",
-      "Record the observed durations in .agents/mpi-kanban/tasks/MPI-525/validation.md and move the card to done"
-    ]
+    "pending": []
   },
   "task_card": {
     "id": "MPI-525",
     "title": "The engine install dialog says \"Starting ComfyUI Engine\" during minutes of pip work",
-    "column": "doing",
+    "column": "done",
     "workspace": ".agents/mpi-kanban/tasks/MPI-525/",
     "links": {
       "plan": null,
@@ -65,5 +64,6 @@
       "routes/shared.js"
     ]
   },
-  "resume_prompt": "Continue MPI-525 in Cubric Vision (c:\\AI\\Mpi\\Cubric-Vision, branch master). The fix is already shipped and pushed in commits deff8474 and d1548dea: the engine startup modal now reads 'Installing Python packages... / First engine start only - this can take several minutes.' while the curated pip pass runs inside POST /comfy/start, then flips to the generic 'Starting ComfyUI Engine...' the moment that request answers. It was verified live by staling the deps marker, which forced a real but fast (2.5s) pass. The one remaining item, which the user explicitly authorised, is a TRUE verification: wipe c:\\AI\\Mpi\\Cubric-Vision\\engine\\ and let the app reinstall it, so the label is seen over a genuinely multi-minute pip pass. HARD CONSTRAINT from the user: never delete anything under G:\\CubricModels. Read .agents/mpi-kanban/state/handoffs/881489b1-b90c-4190-9803-4343e3da5285.json for the full context, launch your own instance with npm run app:isolated (never the user's, never :3000), and remember the modal only appears on a NON-background start. Then record the durations in .agents/mpi-kanban/tasks/MPI-525/validation.md and close the card."
+  "resume_prompt": "Continue MPI-525 in Cubric Vision (c:\\AI\\Mpi\\Cubric-Vision, branch master). The fix is already shipped and pushed in commits deff8474 and d1548dea: the engine startup modal now reads 'Installing Python packages... / First engine start only - this can take several minutes.' while the curated pip pass runs inside POST /comfy/start, then flips to the generic 'Starting ComfyUI Engine...' the moment that request answers. It was verified live by staling the deps marker, which forced a real but fast (2.5s) pass. The one remaining item, which the user explicitly authorised, is a TRUE verification: wipe c:\\AI\\Mpi\\Cubric-Vision\\engine\\ and let the app reinstall it, so the label is seen over a genuinely multi-minute pip pass. HARD CONSTRAINT from the user: never delete anything under G:\\CubricModels. Read .agents/mpi-kanban/state/handoffs/881489b1-b90c-4190-9803-4343e3da5285.json for the full context, launch your own instance with npm run app:isolated (never the user's, never :3000), and remember the modal only appears on a NON-background start. Then record the durations in .agents/mpi-kanban/tasks/MPI-525/validation.md and close the card.",
+  "resolved_at": "2026-08-18T10:55:00Z"
 }

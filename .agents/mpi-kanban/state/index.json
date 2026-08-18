@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-18T08:20:00Z",
+  "updated_at": "2026-08-18T10:55:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -117,9 +117,9 @@
       "id": "881489b1-b90c-4190-9803-4343e3da5285",
       "path": ".agents/mpi-kanban/state/handoffs/881489b1-b90c-4190-9803-4343e3da5285.json",
       "task_card": "MPI-525",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-18T08:20:00Z",
-      "note": "MPI-525 fix shipped + pushed (deff8474, d1548dea) and label verified on a forced pip pass. Remaining: the user-authorised TRUE engine wipe + reinstall, never touching G:\\CubricModels."
+      "note": "Resolved 2026-08-18: the TRUE engine wipe-and-reinstall ran via POST /engine/upgrade {\"mode\":\"full\"}. Real 2m47.6s pip download; \"Installing Python packages...\" held the whole pass and flipped 22ms after the marker stamped. MPI-525 closed on that evidence."
     }
   ]
 }
