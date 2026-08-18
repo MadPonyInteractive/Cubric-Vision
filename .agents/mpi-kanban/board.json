@@ -70,12 +70,12 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-548",
       "MPI-525",
       "MPI-520",
       "MPI-531"
     ],
     "done": [
+      "MPI-548",
       "MPI-325",
       "MPI-572",
       "MPI-571",
@@ -176,7 +176,7 @@
       "MPI-549"
     ]
   },
-  "updated_at": "2026-08-18T08:35:00Z",
+  "updated_at": "2026-08-18T08:55:00Z",
   "events": [
     {
       "at": "2026-08-16T04:20:25Z",
@@ -3022,6 +3022,15 @@
       "task": "MPI-576",
       "actor": "opus",
       "note": "Reported by Fabio 2026-08-18 with five screenshots, root-caused in the same session."
+    },
+    {
+      "at": "2026-08-18T08:55:00Z",
+      "type": "task.moved",
+      "task": "MPI-548",
+      "actor": "opus",
+      "from": "doing",
+      "to": "done",
+      "note": "Fabio verified the fix in his own app and confirmed it passes. The 'Run locally' override is now resolved once in generationService's funnel, so all ten dispatch sites honour it - eight never passed forceLocal before. Evidence in validation.md: 629/629 tests, eslint clean, three live probes in an isolated instance, plus Fabio's own run. Defect B (engine-blind asset list) and Defect A-prime (a Pod missing a baked dep should be blocked by the op gate, needs a Pod) stay OPEN and are recorded in the card - they were never this bug's cause."
     }
   ]
 }

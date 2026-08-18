@@ -3,7 +3,7 @@
 ## Phase 0 — re-diagnose
 
 - [x] Trace `lora_missing_remote` to its real emitter (Pod-side ComfyUI 400 /
-      200-ack `node_errors`, `comfyController.js:1642` + `:161-165`) — NOT the
+      200-ack `node_errors`, `comfyController.js:1658` + `:164`) — NOT the
       pre-dispatch guard.
 - [x] Establish which engine the failing dispatch used (hot-store toast is gated
       `engine === 'remote' && forceLocal !== true`).
@@ -35,7 +35,7 @@
 - [x] `_laneOf` now sees the resolved flag, so the intent lane and the store lane agree.
 - [x] `npm test` 629/629; eslint clean on both edited files.
 - [x] Live probes in an isolated instance (own profile + own port, never `:3000`).
-- [ ] Fabio confirms in the app with a Pod connected (`validation.md` cases 1-3).
+- [x] Fabio confirmed in the app 2026-08-18 - "I verified your implementation. It passes."
 
 ## Phase 2′ — Defect A′ (needs a Pod, no evidence yet)
 

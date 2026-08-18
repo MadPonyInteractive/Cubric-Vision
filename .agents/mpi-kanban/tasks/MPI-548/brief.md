@@ -22,9 +22,9 @@ but it is a *different* defect and cannot have produced these toasts.
 
 ### 1. `lora_missing_remote` is NOT the pre-dispatch guard
 
-It is set at [comfyController.js:1642](js/services/comfyController.js#L1642), from a
+It is set at [comfyController.js:1658](js/services/comfyController.js#L1658), from a
 ComfyUI **`value_not_in_list` 400 returned by the Pod** — and by its twin at
-[comfyController.js:161-165](js/services/comfyController.js#L161-L165) for the 200-ack
+[comfyController.js:164](js/services/comfyController.js#L164) for the 200-ack
 `node_errors` carrier. Either way the compiled graph **reached the engine and was
 rejected there**. The pre-dispatch `_findMissingModel`
 ([commandExecutor.js:352-393](js/services/commandExecutor.js#L352-L393)) is
@@ -46,7 +46,7 @@ dep**, `klein-lora-nsfw` ([loraDeps.js:502](js/data/modelConstants/loraDeps.js#L
 strength from the MpiMath keyword gate on node 44).
 
 Baked loader values go straight to `/prompt` through the separator heal at
-[comfyController.js:1428-1470](js/services/comfyController.js#L1428-L1470) — they never
+[comfyController.js:1444-1486](js/services/comfyController.js#L1444-L1486) — they never
 touch `/comfy/list-files`, `state.availableLoras`, or any dropdown. So no change to the
 asset list can affect this toast.
 
@@ -81,7 +81,7 @@ Ruled out while chasing this:
 - Hot-store: staged copies land in `COMFY_MODELS_DIR` which ComfyUI scans *before* the
   volume `extra_model_paths`, so the volume file is still enumerated. A 180MB LoRA is far
   under the 15GB stage floor anyway.
-- `_uploadRemoteModels` ([comfyController.js:1803](js/services/comfyController.js#L1803))
+- `_uploadRemoteModels` ([comfyController.js:1819](js/services/comfyController.js#L1819))
   only walks `params` for `{lora_name,…}` objects — it never sees a baked node input, so
   it is not involved either way.
 
@@ -110,7 +110,7 @@ to remember — and 8 of the 10 sites do not:
 | `MpiGroupHistoryBlock:1516` | `_handleResizeApply` | no |
 | `agentDispatch:151` | agent / CLI dispatch | no |
 | `describeAction:55` | `imageDescribe` plugin op | no |
-| `MpiToolOptionsResize:539` | direct `runCommand` (thumbnail preview) | no |
+| `MpiToolOptionsResize` | direct `runCommand` (thumbnail preview) | no |
 
 `opts.forceLocal` absent → `startGeneration` computed `forceLocal: opts.forceLocal === true`
 = `false` → the frozen engine resolved `'remote'` → the hot-store preflight ran and the Pod
