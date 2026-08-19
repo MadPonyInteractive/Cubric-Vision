@@ -81,6 +81,22 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       stronger texture words (`poker-straight` reads identically to `straight`)
 - [ ] **Standing rule for this flow: one seed is a pilot, not a result.** Any wording verdict needs
       3-4 seeds compared per seed, visual verdict primary, numbers as support
+- [x] **THE REAR-HAIR DEFECT WAS THE TEST RIG.** 2x2 grid, three seeds per cell, unanimous: turbo ON
+      renders the rear hair wavy at BOTH 1k and 2k; turbo OFF renders it straight at BOTH. The
+      2k-turbo cell is the control that settles it — same resolution as the fix, same defect as the
+      rig. Resolution has no bearing on hair texture; the sampler path (8+3 steps cfg `1.0` vs 25+2
+      cfg `2.0`) is the whole effect, and it reproduces at 1k so it is cheap to test (111s, not 328s)
+- [x] **Seams at 2k-quality: ACCEPTED, not a defect** (Fabio) — the sheet splits into three plates
+      with visible seams at 2k-quality where turbo keeps one continuous backdrop. The sheets still
+      work as a reference, so the continuous-backdrop spec line is a preference here, not a gate
+- [x] **Rig decision** (Fabio): realistic → **turbo OFF + 2k**; turbo → mainly the stylised styles;
+      **both controls stay user-facing regardless** (low-VRAM users). Costs: 1k-turbo 33s ·
+      2k-turbo 85s · 1k-quality ~105s · 2k-quality 328s
+- [ ] **Anime / cyberpunk style check** — Recipe_Anime across all three rigs x three seeds, heavy
+      wardrobe and gear, black hair with pink ends, pupil catch-lights. Tests Fabio's read that
+      turbo is fine for stylised. NOTE the phrase is ~105 words, above the recipe's own 90-word
+      ceiling, so it stresses length (open call #4) at the same time and a failure is not cleanly
+      attributable to style alone
 - [ ] Gate #1: neutral-pronoun A/B against Fabio's original wording, same seed
 - [ ] Head branch: face detect → `ImpactSEGSOrderedFilter` area ascending take 1 → bbox grown
       upward → head mask → grow 24 @ 2k. Confirm `face_yolov8n` sees the small face at 1k

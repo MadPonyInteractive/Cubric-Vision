@@ -382,3 +382,56 @@ earlier flips had the same cause: single samples at one seed.
 3-4 seeds, compared per seed, with the visual verdict as primary and the numbers as support. A
 tidy-looking gradient across single samples — which is exactly what the F/L/M/N/K ranking looked
 like — is what noise produces when you sort n=1 draws.
+
+## 2026-08-19 · THE REAR-HAIR DEFECT WAS THE TEST RIG, NOT THE PROMPT
+
+**Ran:** twelve generations, F wording throughout, three seeds per cell (`504504`, `777001`,
+`909090`), paired. Turbo OFF changes the sampler path as well as any resolution change — `72`/`162`
+at 8+3 steps cfg `1.0` becomes `311`/`436` at 25+2 steps cfg `2.0` — so resolution and sampler were
+separated into their own cells rather than compared as one "2k quality vs 1k turbo" arm.
+
+| rear-panel hair | 1k (1280×768) | 2k (2048×1280) |
+|---|---|---|
+| **turbo ON** — 8+3 steps, cfg 1.0 | wavy, drifts brown | **wavy** — 33s / 85s |
+| **turbo OFF** — 25+2 steps, cfg 2.0 | **straight** | **straight, grey, matches** — 111s / 328s |
+
+**Unanimous, 3/3 seeds in every cell. Resolution has no bearing on rear-hair texture.** The 2k-turbo
+cell is the control that settles it: same resolution as the fix, same wavy hair as the defect.
+Turning turbo OFF is the whole effect, and it reproduces at 1k, so this is testable cheaply forever
+after — 111s, not 328s.
+
+**So the defect this card chased for eleven wording arms was an artefact of the test rig.** The
+1k+turbo rig was the right call for placement, which is what it was chosen for; it simply is not
+valid for anything about hair texture, and nobody had grounds to know that until the grid was run.
+Every wording verdict in this file above — the F shape aside, which fixed COLOUR and replicates —
+was measured inside a rig that was generating the defect.
+
+**Sequence of claims about texture, for the record:** asserted → withdrawn as never established →
+re-established on arm K → withdrawn when K failed to reproduce across seeds → **finally explained**,
+as a turbo artefact rather than a model limit or a wording failure. The first four all rest on n=1
+at seed `504504`. The fifth rests on a 2×2 grid at three seeds.
+
+### The seams at 2k-quality — ACCEPTED, not a defect (Fabio, 2026-08-19)
+
+At 2k-quality the sheet stops being one continuous frame: all three seeds render three plates with
+visible vertical seams and slightly different backdrop tones, where the turbo runs keep one
+continuous backdrop. **Fabio's call: this is not an issue — the sheets still work as a reference.**
+Recorded so it is not re-raised as a bug; the spec line about a continuous backdrop is a preference
+here, not a gate.
+
+### The rig decision (Fabio, 2026-08-19)
+
+- **Realistic characters → turbo OFF, 2k.** That is the quality rig, and it is what Photoreal ships
+  at.
+- **Turbo → mainly the stylised styles** (anime, cartoon), where the wave artefact is expected to
+  matter far less or not at all.
+- **Both controls stay exposed to the user regardless.** Some users have low VRAM, so resolution and
+  turbo are user-facing choices, not a baked policy. 2k is preferable overall where the card fits.
+- Cost, measured: 1k-turbo 33s · 2k-turbo 85s · 1k-quality ~105s · 2k-quality 328s.
+
+### What this does NOT change
+
+The F hair shape stays adopted. It fixed rear-panel **colour**, which replicated at three seeds and
+is a separate axis from the texture artefact — the rear panel went brown under control wording and
+grey under F wording in the same rig. Recipe categories 2 and 4 carry it, and the v4.1 text-only
+regression is still owed.

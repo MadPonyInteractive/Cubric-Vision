@@ -161,11 +161,27 @@ compared per seed. Dead levers, do not retest: the sheet template (arms D and G)
 prompt at 1k turbo (`72`/`162` are cfg `1.0`, so `Input_Negative` is inert — only the quality path
 `311` at cfg `2.0` makes it live), and stronger texture words.
 
+**THE REAR-HAIR DEFECT WAS THE TEST RIG — closed 2026-08-19.** A 2×2 grid at three seeds per cell,
+unanimous: turbo ON renders the rear hair wavy at **both** 1k and 2k; turbo OFF renders it straight
+at **both**. The 2k-turbo cell settles it — same resolution as the fix, same defect as the rig. So
+resolution is irrelevant to hair texture and the sampler path is the whole effect (`72`/`162` at
+8+3 steps cfg `1.0` vs `311`/`436` at 25+2 cfg `2.0`), and it reproduces at 1k, so it is cheap to
+test from here (111s rather than 328s).
+
+Eleven wording arms chased an artefact of the rig. The 1k+turbo rig was right for placement, which
+is what it was picked for — it is simply not valid for texture, which nothing before this grid
+could have told us.
+
+**Fabio's rig decision, 2026-08-19:** realistic characters → **turbo OFF + 2k**; turbo → mainly the
+stylised styles (anime, cartoon); **both controls stay user-facing regardless**, because low-VRAM
+users need the choice. 2k preferable where the card fits. The **seams at 2k-quality are ACCEPTED,
+not a defect** — the sheet splits into three plates there where turbo keeps one continuous
+backdrop, and Fabio's call is that the sheets still work as a reference, so that spec line is a
+preference rather than a gate. Costs: 1k-turbo 33s · 2k-turbo 85s · 1k-quality ~105s ·
+2k-quality 328s.
+
 Next action: the **v4.1 recipe regression** (text-only, four inputs, needs the LLM so it needs the
-lease), then gate #1 (neutral pronouns) and the head branch — both now run at 3-4 seeds, not one.
-The open texture question, if it is worth more GPU: does the rear hair resolve straighter at 2k
-than at 1k? That is a resolution hypothesis, not a wording one, and it is the last untested
-mechanism. Open calls 1-5 still stand; all need the GPU, and the GPU needs the lease
+lease), then gate #1 (neutral pronouns) and the head branch — both now run at 3-4 seeds, not one. Open calls 1-5 still stand; all need the GPU, and the GPU needs the lease
 (`mpi-lib/scripts/gpu_lease.py run -- <cmd>`, machine-global, one slot).
 
 Recorded in validation.md and not to be lost again: **the character phrases of all six arms,
