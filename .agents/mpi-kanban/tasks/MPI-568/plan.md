@@ -9,7 +9,25 @@ iris is almost square"*, not by a number.
 
 ## Current State
 
-2026-08-19. Bench `:8188` up (PID 9908, NORMAL_VRAM). Phases 1 and 2 done.
+2026-08-19, later session. Both blockers cleared: Fabio's eye verdict is in and
+the wavy distortion is root-caused (LTX VAE round trip, ~2x amplified by the
+temporal upscaler). The temporal arm is CLOSED NEGATIVE. x1.5 does NOT solve the
+VRAM ceiling. **The card's live thread is now the CHANGE-CONTROL OP**, because
+Fabio's target is sigma 0.85's look with a separate dial on drift, and sigma
+cannot be that dial.
+
+**Detail transfer is built, measured and half-validated:** it fixes structural
+hallucination and grade drift (63% less drift at full reconstruction, no GPU,
+adjustable after the run) and is powerless against INVENTED TEXTURE - Fabio saw
+invented veins on the face, worse at 100% than 70%.
+
+**Next action: the split-radius sweep.** A coarser high-pass should drop the
+finest invented detail (the veins) while keeping the structural detail that made
+the op worth having. Radius is currently hard-coded at 10 px and never swept -
+it is the one untried parameter of the op that directly targets the defect he
+found. Zero GPU. Then the ground-truth invented-texture test.
+
+Earlier state, unchanged: bench `:8188` up (NORMAL_VRAM). Phases 1 and 2 done.
 
 **The v2v graph works.** Built at
 `<scratchpad>/build_v2v.py` (21 nodes, authored rather than carved out of the
@@ -273,6 +291,10 @@ difference between fitting on a 16 GB card and not.
 
 ### The temporal upscaler WORKS, and it is the cheapest thing on this card
 
+> **SUPERSEDED on quality, 2026-08-19** - see "THE GROUND-TRUTH REDO" below. The
+> cost numbers here stand; the 22%/28% quality figures and the "closes phase 7 in
+> the affirmative" conclusion do not. Do not quote this section's quality claims.
+
 Measured 2026-08-19, clip A:
 
 | run | time | peak VRAM | in -> out |
@@ -376,9 +398,323 @@ count is legal and the sample sizes match.
 `VHS_LoadVideo` will happily hand over 13 and LTX will silently crop to 9 - no
 error, and the output frame count is the only symptom.
 
-**Next action:** the `attention_mask` arm, the x1.5 spatial arm (the likely
-answer to the VRAM ceiling), the clean 25->49 ground-truth redo, then the
-deferred clip B cross-check and a clean uncontended full-length re-time.
+**Next action:** superseded - see `## Current State` at the top. The ground-truth
+redo is done; the queue is now the hybrid temporal arm, `attention_mask`, x1.5,
+clip B and a clean uncontended re-time.
+
+### FABIO'S EYE VERDICT ON THE SIGMA LADDER, 2026-08-19 - phases 4 and 5 CLOSE
+
+Asked on `SHEET_ladder_face_f12.png`, `EYE_zoom_f12.png`, `OBJECT_necklace_f12.png`.
+His words, and what each settles:
+
+1. **"No longer her at sigma 0.85. Still her at sigma 0.50."** The identity
+   boundary sits between 0.50 and 0.85, not lower. Every arm at 0.50 and below is
+   in the usable range.
+2. **"The iris at sigma 0.50 is still an iris. Not a square."** This is the exact
+   failure that killed SeedVR2 in MPI-506, tested with the same crop, and LTX
+   passes it. **Q3 is answered YES.**
+3. **The "necklace" is a ZIPPER on her dress** - my label was wrong. It survives
+   at 0.50 and **at 0.85 the upper part of it is completely gone.** That is
+   stronger evidence than the face: 0.85 does not merely restyle a person, it
+   DELETES an object that is present in the source. Identity drift is arguable;
+   deleting a garment feature is not.
+4. **"This is like any image upscaler. Too much noise creates too much change -
+   the user should account for that. If we have a knob that controls the amount
+   of change, then this is wonderful as is. You may proceed."**
+
+**The knob question, answered:** `sigmas` IS that knob, and it is the familiar
+one - the denoise/creativity slider every image upscaler ships. It is not a
+tuning detail to hide. There is no second knob worth exposing:
+`LTXVAddGuide.strength` was measured and is structurally incapable of it (the
+guide IS the source, so it can only pull back toward source blur - see the guide
+sweep below), and `attention_mask` is the one untested variant.
+
+**So the product shape is settled:** one slider, useful range ~0.15-0.50,
+default 0.30-0.50, **0.85 off the top of the range** - and 0.85 now has two
+independent reasons against it, identity AND object deletion, plus a third from
+the swim work below.
+
+### THE x1.5 UPSCALER DOES NOT SOLVE THE VRAM CEILING - hypothesis dead
+
+Full length, clip A, sigma 0.85, `img_compression` 0, uncontended GPU:
+
+| arm | output | Mpx | time | peak VRAM |
+|---|---|---:|---:|---:|
+| x1.5 spatial | 1024x1824 | 1.87 | **157s** | **15484 MB** |
+| x2 spatial | 1344x2432 | 3.27 | 263s | 15301 MB |
+
+**43% fewer output pixels and it peaked HIGHER.** The plan's expectation - "1.8
+Mpx vs x2's 3.27 Mpx, the difference between fitting on a 16 GB card and not" -
+is wrong. Peak VRAM on this graph is set by the transformer and the VAE, not by
+the output resolution, so shrinking the target buys nothing on the axis that
+matters. (The x1.5 weight is also the LARGER file: 1.02 GB vs 0.99.)
+
+What x1.5 does buy is **time: 157s against 263s, 40% faster.** That is a real
+option for a cheaper preview pass, but it is not the answer to the 16 GB
+question, and the card should stop treating it as one.
+
+These are also the card's first UNCONTENDED timings - nothing else was on the
+GPU. 263s for 81 frames at 30 fps = **97 s per second of footage** at 2x.
+
+### FABIO REJECTED "SIGMA IS THE KNOB" TWICE, AND HE IS RIGHT
+
+2026-08-19: *"SIGMA 85 produced the best results so far. The only issue is that
+it has a lot of change on the result. If we have an op to control the change
+that is done, the hallucinations by the model, then we are on a good path."*
+
+**The earlier answer on this card - "`sigmas` IS that knob" - was wrong, and the
+sweep table above is why.** Sigma does not control change; it controls
+REGENERATION, and change and quality both ride on it. Dropping 0.85 -> 0.50 buys
+identity by giving back the reconstruction that made 0.85 worth having. That is
+a trade, not a control. What is wanted is a dial on drift that leaves the
+reconstruction alone, and no sampler parameter can be one - by the time the
+sampler has run, the change is already in the pixels.
+
+**So the control has to act AFTER the pass, not inside it.**
+
+### THE CHANGE-CONTROL OP: detail transfer (`detail_transfer.py`, self-checked)
+
+In a 2x upscale, identity lives in the LOW frequencies (face geometry, garment
+shape, pose) and reconstruction lives in the HIGH ones (pores, hair strands,
+fabric weave, the zipper's teeth). Sigma 0.85 rewrites both. Keep only the half
+that is wanted:
+
+```
+out = source + strength * (highpass(s085) - highpass(source))
+```
+
+One blur. No second model, no extra sampling, **no GPU** - and because it runs on
+the decoded result, **the dial can be moved after generation without re-running
+anything.** That is the shape of the op Fabio asked for.
+
+Measured over the 25-frame clip A, against the lanczos 2x source:
+
+| arm | drift | swim |
+|---|---:|---:|
+| source (lanczos) | 0.00 | 0.00 |
+| **detail 35%** | 1.98 | **1.43** |
+| detail 70% | 3.96 | 2.85 |
+| **detail 100%** | **5.66** | 4.08 |
+| sigma 0.85 RAW | 15.25 | 4.29 |
+
+**It answers both open problems with one control.** At 100% it carries
+essentially all of 0.85's reconstruction (swim 4.08 of 4.29) for **63% less
+drift** - 5.66 against 15.25. At 35% the swim is 1.43, *cleaner than any arm
+measured on this card* including sigma 0.30's 2.79. The dial spans from
+"cleanest thing here" to "0.85's look with a third of its change".
+
+**The control that makes this a finding rather than a hope.** If 0.85 had
+DISPLACED features rather than re-rendered them, its high frequencies would be
+misaligned against the source and the transfer would degenerate into an unsharp
+mask - i.e. a sharpener, the exact thing MPI-506 rejected SeedVR2 for. So the
+sheet carries an unsharp-mask panel **matched to the same drift**:
+`DETAIL_ladder_f12_r10_400_120.png`. The unsharp control is visibly crunchy and
+haloed; the detail-transfer panel at the same drift is clean. The detail is real.
+
+**And it fixes the specific defect Fabio named.** On the zipper crop
+(`DETAIL_ladder_f12_r10_620_780.png`) raw 0.85 has deleted the pull-tab and
+thinned the zipper. Every detail-transfer rung keeps both, because the zipper is
+structure and structure comes from the source by construction. The tab softens
+as the dial rises, which is the trade being made visible rather than hidden.
+
+Open on it: the split radius is fixed at 10 px and unswept; a region mask
+(face vs everything else) is the obvious next refinement and is the pixel-space
+version of the `attention_mask` idea, without a re-run.
+
+#### IT IS NOT A HALLUCINATION KNOB, AND FABIO FOUND THE PROOF ON FIRST VIEWING
+
+Asked directly: *"is detail the knob we were talking about to choose how much the
+model can hallucinate?"* **No.** The model hallucinates exactly as much - it
+still renders a different woman and still deletes the zipper. The dial decides
+how much of that output SURVIVES, by keeping the high-frequency half and
+discarding the low-frequency half. It works only because hallucination mostly
+lands in STRUCTURE while the wanted reconstruction lands in TEXTURE. The stated
+consequence was that **high-frequency invention passes straight through and the
+dial cannot filter it.**
+
+**Fabio then found exactly that, unprompted, on the full-length clips:**
+*"detail 70 started to invent some veins on her face. At least it looks like
+veins, which are more predominant at detail 100."* Predominant-at-100 is the
+signature: the artifact scales with the dial, so it is being IMPORTED from the
+0.85 pass, not created by the blend. This is the op's real ceiling and it is now
+observed, not theoretical.
+
+**Second finding, in the op's favour:** *"The difference between detail 100 and
+Sigma 85 is that detail 100 kept the colour. Sigma 85 completely changed the
+lighting."* Colour and lighting are low-frequency, so the transfer holds them by
+construction. Raw 0.85 regrading the shot is a defect nobody had named yet - add
+it to 0.85's list alongside identity and the deleted zipper.
+
+**So the op stands, with a known ceiling:** it fixes structural hallucination and
+grade drift, and is powerless against invented texture. The face-region mask does
+not fix the veins either - the veins are ON the face. What would: a lower split
+radius (coarser high-pass, dropping the finest invented detail), or a true
+pre-pixel control (`attention_mask`, cfg/prompt), or a ground-truth test that
+measures invented texture directly.
+
+### THE WAVY DISTORTION IS THE VAE, NOT THE INTERPOLATION - root-caused 2026-08-19
+
+Fabio saw it on `real_temporal_gt_00001.mp4` and all three instruments scored
+that clip well. New instrument: `wave.py` (self-checked). Two ideas the old
+three lacked:
+
+- **Split the output by parity.** The temporal upscaler doubles frames, so EVEN
+  output frames came from REAL input frames. Those cannot carry interpolation
+  error. Any residual on them is upstream.
+- **Measure how much the residual CHANGES frame to frame ("swim"), not how big
+  it is.** A constant difference is invisible - it just looks like a slightly
+  different render. One that is re-drawn every frame is what the eye calls
+  waviness. `flicker.py` measured the FRAME's temporal difference, which is
+  dominated by real motion, and that is why it was blind.
+
+**The frames that should have been copies are not.** On `real_temporal_gt`, an
+even frame sits 7.58 grey levels from its true source frame, against a **0.31
+codec floor** measured on an h264 re-encode of the same frames.
+
+**Attribution - four arms, same 25 decimated inputs, one variable each**
+(`warp_arms.py`, all `no_sample`, 3-12s and 4.6-8.7 GB each, so this whole
+investigation cost under a minute of GPU):
+
+| arm | even-frame residual | swim |
+|---|---:|---:|
+| h264 re-encode (floor) | 0.31 | 0.51 |
+| VAE round trip only, crf 0 | **4.06** | 2.63 |
+| + `LTXVPreprocess(img_compression=18)` | 4.93 | 2.67 |
+| + temporal upscaler x2 | 5.54 | **4.76** |
+| `real_temporal_gt` (the flagged clip) | 7.58 | 4.72 |
+
+So: **the LTX VAE round trip alone accounts for ~13x the codec floor and is the
+floor under everything.** The preprocess adds ~20% to the residual and nothing
+to the swim. The temporal upscaler adds ~12% more residual but nearly **doubles
+the swim**, which is the part the eye sees.
+
+**Two hypotheses died to their own controls, and both are worth keeping:**
+
+- **It is NOT the frame count.** "Fewer frames = fewer latent frames = more
+  warp" was the obvious story (9 frames is 2 latent frames, LTX's VAE compresses
+  time by 8). Measured flat: 9/25/49 consecutive frames score 3.83 / 3.89 /
+  3.93. The `real_temporal_gt` clip being worst is the crf-18 preprocess plus
+  its DECIMATED input (double displacement between input frames), not its length.
+- **It is NOT a geometric warp**, despite the residual map looking like one.
+  Searching a per-tile +/-2px shift (`wave.py warp`) removes only 10-19% of it,
+  against **0% and a 0.00 mean shift on the codec control** - so the instrument
+  does not overfit, and the content is REWRITTEN rather than MOVED. "Wavy" is
+  the right percept and the wrong mechanism.
+
+**The visual proof is `EVENFRAME_f24.png`** - a frame that came from a real
+input, three ways: REAL / TEMPORAL x2 / VAE-round-trip-only. The temporal panel
+is visibly softer and geometrically looser; the VAE-only panel is close to the
+real one. **The temporal upscaler degrades frames that needed no work at all.**
+`SWIM_triptych.mp4` and `SWIM_zoom_face.mp4` show it in motion, which is the
+only way the swim is visible.
+
+**Laplacian variance failed again, in the same way MPI-506 recorded.** It scores
+the temporal even frames 14.7 against the real source's 12.2 - i.e. it calls the
+visibly-softer frame the sharper one, because ringing is edge energy. Do not use
+it to check the hybrid arm below.
+
+#### What this costs the product - the swim is in the arm Fabio approved
+
+Same instrument on the 2x spatial arms, reference = lanczos 2x, codec floor 0.43:
+
+| arm | swim |
+|---|---:|
+| h264 control | 0.43 |
+| sigma 0.30 c0 (**the shippable arm**) | 2.79 |
+| sigma 0.50 | 3.00 |
+| sigma 0.85 c0 | 4.13 |
+| temporal x2 on decimated input (rejected by eye) | 4.76 |
+
+**The swim is not a temporal-upscaler bug, it is an LTX-latent-path property.**
+It is present at 2.79-3.00 in the arm Fabio just approved - roughly 60% of the
+level he rejected, on a clip where he did not see it. That is a margin, not an
+absence: flatter, longer or slower footage may cross the line. And **sigma 0.85
+sits at 4.13, level with the clip he rejected** - a third independent reason to
+keep it off the slider's range.
+
+#### FABIO CONFIRMED ALL THREE, 2026-08-19 - and the VAE panel is the finding
+
+Shown `SWIM_zoom_face.mp4`, `EVENFRAME_f24.png`, `INTERP_f09.png`:
+
+1. *"The right panel, the Temporal x2, is what I called wavy, which now, zoomed
+   in, is clearly distorted."* The instrument and the percept are the same thing.
+2. *"Temporal frame looks like an undercooked upscale, and **the VAE distorted
+   and messed up parts of the face**."* He saw damage in the VAE-ONLY panel too -
+   the one arm that applies no upscaler at all. That is the floor under every
+   LTX latent path in this app, including the sigma 0.50 arm he approved. It is
+   the most consequential sentence on this card.
+3. *"Temporal x2 is just a blob. The crossfade: you can see both frames, so
+   that's useless."* Both interpolation candidates rejected by eye. The 4.5% L1
+   tie between them was two failures scoring alike, not two near-equals.
+
+#### The obvious fix for the temporal arm - and it should NOT be run
+
+**Deleted from the queue rather than left pending.** The idea was: keep the real
+frames, take only the invented ones from the model, so the even-frame damage
+disappears by construction.
+
+It cannot work here, and finding 3 is why. The invented frames are *blobs* at
+fast motion. Interleaving blobs with sharp real frames does not average the
+defect away - it puts a sharp reference next to it 30 times a second, which
+makes it MORE visible, not less. The hybrid is only worth building if the
+invented frames are independently acceptable, and Fabio has now said they are
+not. Skipping the run.
+
+The model damages frames it was handed intact. So: **keep the original frames
+and take ONLY the invented ones from the model.** That deletes the even-frame
+damage by construction and costs nothing.
+
+The risk it introduces is a 30 Hz sharpness pulse between real and invented
+frames. Laplacian variance says 1%, and laplacian variance is exactly the
+instrument that just failed on this footage - so **this needs an eye check, not
+a number.**
+
+### THE GROUND-TRUTH REDO, WITH LEGAL FRAME COUNTS - the 22/28% figures are replaced
+
+The old run was mis-framed (13 frames is not 8n+1, LTX cropped to 9). The clean
+version is `warp_tmp00_9`: **25 legal input frames -> 49 out**, 24 invented
+frames, matched sample sizes, compared against the 24 real frames withheld.
+
+| invented frames only, vs withheld truth | L1 |
+|---|---:|
+| **temporal upscaler** | **7.50** |
+| naive duplication, raw source | 10.22 |
+| naive duplication, VAE-matched (fair) | 11.87 |
+| **plain CROSSFADE of the two real neighbours** | **7.85** |
+
+**27% better than duplication, 37% against a VAE-fair duplication.** Those
+replace the un-quotable 22%/28%.
+
+**But a plain crossfade ties it to within 4.5%, and that is the finding.** An
+average of two frames is the L1-optimal hedge under motion, so pixel distance
+systematically flatters a blend and cannot establish that this is a GOOD
+interpolator - only that it beats duplication. The eye splits them and the split
+depends on motion (`INTERP_f09.png`, `INTERP_f25.png`):
+
+- **fast motion (f09):** the crossfade double-exposes but stays readable; the
+  temporal output **smears the face into mush** - the VFI failure mode the card
+  told us to watch for, and it does appear on this clip.
+- **slow motion (f25):** the crossfade is the sharper of the two.
+
+So the temporal arm is **not** the clean win the earlier note claimed. It is
+worth keeping only if the hybrid fixes it.
+
+### The fps bug is NOT fixed, and it is parked
+
+`build_v2v.build` now takes `out_fps`, which sets `VHS_VideoCombine.frame_rate`
+independently of the source fps - that half is real and future runs can use it.
+
+**The remux of the existing clips FAILED and was reported as working.**
+`ffmpeg -r 60 -i in.mp4 -c copy out.mp4` sets the INPUT frame rate, which mp4
+demuxing ignores, so `FIX_temporal_only_60fps.mp4` still plays at 30 - Fabio
+checked and it is still slow motion. A stream copy cannot retime an mp4 this
+way; it needs `setpts` with a re-encode, or the rate set at write time via
+`out_fps`.
+
+**Parked on Fabio's call, 2026-08-19:** *"There is no point in spending energy on
+fixing FPS at this point"* - not until an upscaler is chosen. Both readings stay
+products when one is (49 frames at 60 = smooth doubling, at 30 = half speed),
+and neither is automatic.
 
 ## Phase 1: Correct the brief's premises
 
@@ -481,11 +817,47 @@ plus cost per second for both.
 
 ## Remaining Work
 
-All seven phases. Phases 6 and 7 gated on phase 4's verdict.
+**The temporal upscaler is CLOSED and negative** - rejected by eye on both the
+frames it invents and the frames it was handed. Not a tuning problem; do not
+re-open it with a different sigma or frame count. What remains is the spatial
+arm and one open question that outranks the rest.
+
+1. **THE SHIP/NO-SHIP TEST - the swim on a full clip in motion.** Fabio approved
+   sigma 0.50 from a still ladder, then separately said the VAE alone "messed up
+   parts of the face". Those two verdicts are in tension and only a full-length
+   moving clip resolves it. Run clip A at 81 frames, sigma 0.50, `img_compression`
+   0, and watch it - the swim is invisible on a still by construction. This also
+   discharges the uncontended re-time the card owes, since it needs an exclusive
+   GPU anyway (97% of 16 GB).
+2. **Sweep the detail-transfer split radius** - THE NEXT ACTION. Fixed at 10 px
+   and never swept. A coarser high-pass drops the finest invented detail (the
+   veins Fabio saw) while keeping structural detail. Zero GPU: every input is
+   already on disk. A face-region mask does NOT fix this - the veins are on the
+   face - so radius comes first.
+2b. **Ground-truth test for invented texture.** Downscale the source 2x, upscale
+   it back, compare the invented high frequencies against the withheld real
+   frames. It is the only way to separate "resolved real detail" (the nose stud)
+   from "made-up detail" (the veins), and no instrument on this card can do that
+   today. ~1 minute of GPU.
+3. Clip B (non-LTX AI source) cross-check - interrupted twice, never landed.
+4. `LTXVAddGuide.attention_mask` - the in-graph version of 2. Only worth it if
+   the pixel-space mask proves the idea and something still needs the model to
+   know about the region.
+
+**Answered and closed:** the x1.5 arm (does not solve VRAM, is 40% faster) and
+the uncontended re-time (97 s per second of footage at 2x).
 
 ## Completed
 
-(nothing yet)
+- Phases 1-5. Phase 4's metric verdict is void by its own control; phases 4 and
+  5 close on Fabio's eye verdict instead, which is what `Verify mode: user-ux`
+  always meant.
+- Phase 7 answered by a better route than the card proposed (latent temporal
+  upscaler, no RIFE) - but answered NEGATIVELY on quality until the hybrid arm
+  is tried: it degrades the frames it was handed and only ties a crossfade.
+- The wavy distortion root-caused to the LTX VAE round trip, with the temporal
+  upscaler as a ~2x amplifier. New instrument `wave.py`, self-checked.
+- The output-fps bug fixed (`out_fps`), existing clips remuxed.
 
 ## Plan Drift
 
@@ -505,6 +877,17 @@ All seven phases. Phases 6 and 7 gated on phase 4's verdict.
      0.85 start barely regenerates. Sweep it up.
   If the top band lifts under either, the verdict changes, and phase 6 was
   never really a separate question from phase 4.
+- 2026-08-19 (later): **the card's decisive question was the wrong one twice
+  over.** Phase 4 asked "sharpener or reconstructor" and its metric could not
+  survive its own control. The thing that actually decides whether this ships is
+  neither - it is the SWIM, a per-frame rewriting of fine detail that is a
+  property of the LTX latent path itself and is present in every arm including
+  the approved one. No phase on this card was looking for it, and three
+  instruments were built that could not see it. A fourth (`wave.py`) can.
+- 2026-08-19 (later): phase 7's verdict is downgraded. The earlier note called
+  the temporal upscaler "the best find of the session"; with legal frame counts
+  and a crossfade control it only ties a linear blend, and it damages the real
+  frames. The hybrid arm is what decides it.
 - 2026-08-19: MPI-506's AI-generated source clip no longer exists on disk, so
   clip B is a substitute (a non-LTX WAN clip) rather than the same footage.
   Clip A is unchanged, so the headline comparison still holds.
