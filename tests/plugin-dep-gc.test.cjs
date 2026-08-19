@@ -30,6 +30,19 @@ const imp = (p) => import(pathToFileURL(path.resolve(p)).href);
     assert.strictEqual(reg.pluginDepKey('image-describer'), 'plugin:image-describer');
     assert.ok(reg.pluginForOperation('imageDescribe'), 'op -> plugin lookup must resolve');
 
+    // MPI-580 — the dropdown contribution point. The dep key is also the dropdown
+    // value, so the round trip has to hold or a selected entry resolves to nothing.
+    assert.strictEqual(
+        reg.pluginFromDepKey(reg.pluginDepKey('image-describer'))?.id, 'image-describer',
+        'dep key must round-trip back to its plugin');
+    // A bare upscale-model FILENAME must never resolve to a plugin — that is the whole
+    // reason the entry carries a namespaced value rather than a title.
+    assert.strictEqual(reg.pluginFromDepKey('4x-NMKD-Siax.pth'), undefined);
+    assert.strictEqual(reg.pluginFromDepKey(''), undefined);
+    // A plugin declaring no `upscale` block contributes to neither kind.
+    assert.deepStrictEqual(reg.upscalePluginsFor('video'), []);
+    assert.deepStrictEqual(reg.upscalePluginsFor('image'), []);
+
     // The registry being right is not enough — downloadManager.js must actually SEE it
     // across the ESM/CJS boundary (it loads registries via createRequire, not import).
     const dm = require('../routes/downloadManager.js');

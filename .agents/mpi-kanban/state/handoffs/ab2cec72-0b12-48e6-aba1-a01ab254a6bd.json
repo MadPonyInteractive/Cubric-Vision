@@ -1,0 +1,72 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "ab2cec72-0b12-48e6-aba1-a01ab254a6bd",
+  "generated_at": "2026-08-19T23:38:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-580 built and verified - the plugin contribution point exists; MPI-579 is next",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Finish the LTX spatial upscaler bench, then implement it into the UI as an entry in the History workspace upscale dropdown - shipped as a plugin named 'LTX Video upscaler'.",
+    "status": "in_progress",
+    "summary": "THE MECHANISM IS DONE. MPI-580 is written, verified in a real app instance, and sits in doing/validating: a plugin can contribute an entry to the EXISTING upscale dropdown, that entry contributes its own declared controls with a hidden 0-1 mapping, and a Flow can require a plugin. Nothing is user-visible yet because no plugin declares `upscale` - that is MPI-579, which is now unblocked and is the next session's whole job."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-580/plan.md",
+    "completed": [
+      "THE GC FORK WAS WITHDRAWN BEFORE ANY CODE. The plan's first draft asked Fabio what the Library row says for a user without LTX, and floated persisted 'adoption' state. He corrected it: plugins must not differ case by case. Verified in code - qwen3vl-abliterated-clip is ALREADY shared between the image-describer plugin and both Krea2 tiers (models.js:686, :802), so the shared-dep case ships today and the existing rules cover both uninstall directions. No GC code was written and the card description was healed",
+      "PHASE 1 - PluginDef gains `upscale {kinds,label,fields}`; selection value is the dep key `plugin:<id>` so it can never be confused with an upscale-model filename; upscalePluginsFor / upscalePluginOption / pluginFromDepKey are the contribution point",
+      "PHASE 2 - `_buildField`/`_fieldNumber` extracted out of MpiBaseFlow into js/utils/declaredFields.js, with `block` (BEM prefix, defaults to mpi-base-flow) and `namespace` params, so MpiBaseFlow's classes and CSS are untouched. Added `mapTo` (the hidden range), `splitDeclaredValues` and `isInjectionParam` (the one Input_ routing law)",
+      "PHASE 3 - MpiToolOptionsUpscale lists contributing plugins for its `kind`, renders the selected entry's declared controls, persists them per plugin id under toolSettings.pluginValues, and HIDES Upscale Factor for a plugin entry (a plugin's graph owns its own scale)",
+      "PHASE 4 - a `plugin:` branch in MpiGroupHistoryBlock's _handleApply; _runVideoTool/_runImageTool gained an `inputs` param so a plugin's prompt reaches the op as `positive`; FlowDef.requiredPlugins folds a required plugin's deps into the flow dep set through one helper (flowDepIds), so badge, Run guard and install button gate together",
+      "VERIFIED - npm test 630/630, plus a real app:isolated run against a TEMPORARY stub plugin (removed; grep TEMP-MPI580 is empty): entry inside the existing dropdown between None and the model files, video-only, controls revealed on select, Run emitting values that split into positive + Input_Denoise 0.675 from a slider reading 0.5. Flow regression clean. Evidence in tasks/MPI-580/validation.md"
+    ],
+    "pending": [
+      "START MPI-579 - the LTX Video upscaler plugin, the first consumer. Its card is thorough and current; read it rather than re-deriving. It owns the PluginDef, its commandRegistry op, the app-side v2v workflow, audio pass-through and the in-app VRAM measurement",
+      "BOTH SLIDERS ARE ALREADY SPECIFIED - denoise UI 0-1 -> sigmas 0.50-0.85 default UI 0.5; prompt strength UI 0-1 -> cfg 1-3 default UI 0. Declare them as `mapTo` fields and the mechanism does the rest. Do NOT re-derive them and do not restore the overruled cfg-3 recommendation",
+      "IN-APP VRAM IS A GO/NO-GO for MPI-579, not a footnote - the bench peaked at 97% of 16GB on NORMAL_VRAM/int8 and the app runs --lowvram/bf16, so no MPI-568 number is an app number",
+      "AUDIO PASS-THROUGH IS UNBUILT - Fabio's call is whatever comes in goes out; the bench drops it because VHS_LoadVideo is video-only",
+      "MPI-580 stays in doing/validating - close it at mpi-end-session once MPI-579 proves it in front of Fabio. There is nothing for him to look at until then",
+      "LATER, NOT NOW: the same capability also becomes a FLOW. Fabio, 2026-08-19: Flows are the surface for users who cannot drive the rest of the UI, so capabilities ship twice ON PURPOSE. His ordering is History workspace video FIRST"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-580",
+    "title": "The plugin entity grows up - a dropdown entry, plugin-owned controls, and a plugin a Flow can require",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-580/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-580/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-580/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-580/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Start MPI-579 (LTX Video upscaler) - read its card description, which is current and thorough, then write its plan.md. The mechanism it was blocked on is DONE: declare `upscale: { kinds: ['video'], label: 'LTX Video upscaler', fields: [...] }` on the new PluginDef and the dropdown entry, its controls and the hidden 0-1 mapping all come for free - a slider needs only `mapTo: [0.50, 0.85]`. What MPI-579 still has to build is the plugin definition itself, its commandRegistry op, the app-side v2v workflow off MPI-568's proven build_v2v.py, audio pass-through, and the in-app VRAM measurement that decides whether this runs in the app at all.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "PLUGINS DO NOT GET SPECIAL CASES. Fabio, 2026-08-19: 'Plug-ins shouldn't differ just because of this or that. The plugin needs X, Y, and Z, so the plugin will need to install X, Y, and Z. If X, Y, and Z are already installed because LTX is installed, then the plugin is already installed.' This killed an invented product question about the Library row and an invented GC redesign. The precedent is live in the shipped build: the image describer's encoder is also a Krea2 dep.",
+      "ONE CONTROL VOCABULARY, ONE RENDERER. A plugin's controls are `FlowStepField` verbatim (MPI-572), rendered by the extracted js/utils/declaredFields.js. Copying the renderer was rejected because that is precisely the two-surface bug MPI-572 was written to kill - and the Flow twin of this capability would have made it a third copy.",
+      "`mapTo` IS APPLIED AT PAYLOAD TIME, NEVER AT WIDGET TIME. The stored and persisted value is always the declared 0-1 one, so a restored control seeds correctly and no inverse mapping exists anywhere in the codebase.",
+      "FLOWS ARE THE BEGINNER SURFACE AND DUPLICATION IS DELIBERATE. The same capability ships as a workspace tool AND as a Flow so a non-technical user never leaves the Flow Library. An agent finding the same capability twice must not 'fix' it by deleting one. Recorded in memory as project_flows_are_the_beginner_surface."
+    ],
+    "constraints": [
+      "`[hidden]` DOES NOT HIDE an element whose class gives it `display:flex` - the UA rule loses. It cost one wrong screenshot in this session (Upscale Factor stayed visible under a plugin entry, and the plugin's controls would have leaked under None). The `__section[hidden]` rule in MpiToolOptionsUpscale.css is load-bearing, not tidiness. DOM assertions did not catch it; the screenshot did.",
+      "A PEER SESSION IS LIVE IN THIS TREE and owns MPI-504 plus js/data/modelConstants/models.js - never stage them. It commits mid-session, so re-read git status rather than trusting an earlier one. Its four MPI-504 event lines are MALFORMED ({at,actor,task,type} instead of {schema,id,type,at,actor,summary}) and are the only board-validator failures; they are the peer's to fix, not yours.",
+      "The Bash tool BLOCKS heredocs - write python with the Write tool and run it by path. Board/event writes must use the {schema,id,type,at,actor,summary} shape or the validator fails two ways per line.",
+      "NEVER take Fabio's app instance. `npm run app:isolated` spins your own; its READY line never reaches the background output file (buffering), so read the port out of the profile's app.log instead: %TEMP%/cubric-agent-profile/logs/app.log. Stopping it needs the process TREE - taskkill /PID <root> /T /F.",
+      "A REAL-PIXEL PROBE EARNS ITS COST HERE. Mounting the component in the live app with a fake viewer proved the whole chain (kind filtering, entry placement, controls, mapped payload) without needing a project with video history - and it was the SCREENSHOT, not the assertions, that found the only real bug."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-579/task.json",
+      ".agents/mpi-kanban/tasks/MPI-580/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-580/validation.md",
+      "js/data/pluginsRegistry.js",
+      "js/utils/declaredFields.js"
+    ]
+  },
+  "resume_prompt": "Continue the LTX Video upscaler work in Cubric-Vision. Read .agents/mpi-kanban/state/handoffs/ab2cec72-0b12-48e6-aba1-a01ab254a6bd.json first, then the MPI-579 card description - it is current and thorough, do not re-derive it. THE PLUGIN MECHANISM IS BUILT AND VERIFIED (MPI-580, in doing/validating, 630 tests green plus a real-app probe): a plugin declares `upscale: { kinds, label, fields }` and gets an entry in the EXISTING History upscale dropdown, its own controls rendered from the shared FlowStepField vocabulary, and a hidden UI-to-graph mapping via `mapTo: [lo, hi]`. MPI-579 is now unblocked and is the job: the LTX Video upscaler PluginDef, its commandRegistry op, the app-side v2v workflow off MPI-568's build_v2v.py, audio pass-through, and an in-app VRAM measurement that is a go/no-go. Both sliders are already specified and must not be re-derived - denoise UI 0-1 over sigmas 0.50-0.85 default 0.5, prompt strength UI 0-1 over cfg 1-3 default 0. Do not close MPI-580 or MPI-568; mpi-end-session closes both once the upscaler is in the UI. A peer session is live in this tree and owns MPI-504 and js/data/modelConstants/models.js - never stage them."
+}

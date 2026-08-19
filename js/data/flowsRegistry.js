@@ -30,6 +30,13 @@
  *                                       requires. Filed in the dep file for their KIND, never
  *                                       folded into a model's list (that taxes every user of
  *                                       that model). MPI-304.
+ * @property {string[]} [requiredPlugins] - PLUGIN ids (pluginsRegistry.js) this flow needs
+ *                                       (MPI-580). Their deps fold into this flow's dep set,
+ *                                       so they gate the same badge, the same Run guard and
+ *                                       the same install button — a plugin has no install
+ *                                       state of its own to check. Declared when a flow
+ *                                       ADOPTS a capability that also stands alone, e.g. the
+ *                                       Video face detailer adopting the LTX Video upscaler.
  * @property {string}   operation      - Universal-op key (commandRegistry.js)
  * @property {string}   workflow       - ComfyUI workflow filename (universal_workflows.js)
  * @property {FlowStepField[]} [fields] - Run-slide fields, rendered BY THE FRAME. THE SAME `fields`
@@ -100,6 +107,7 @@
 
 import { state } from '../state.js';
 import { DEPS } from './modelConstants/dependencies.js';
+import { getPlugin } from './pluginsRegistry.js';
 
 /**
  * The download-queue / dep-status key for a flow's own deps. Namespaced so it can
@@ -377,13 +385,35 @@ export function getFlowDepStatus(flowId) {
  * dropped (filter(Boolean)) exactly as the model resolver does.
  * @returns {Array<{id: string, flowId: string, deps: Object[]}>}
  */
+/**
+ * Every dep id a flow needs on top of its models: its own `requiredDeps`, plus the
+ * deps of every plugin it declares in `requiredPlugins` (MPI-580).
+ *
+ * A required plugin folds into the flow's dep set rather than gaining a gate of its
+ * own, because a plugin has no install state to check — its deps ARE its install
+ * state (pluginsRegistry.js). Folding therefore reuses the whole MPI-304 machinery:
+ * the same badge, the same Run guard, the same install button. Without it a Flow
+ * installs and runs with its plugin absent, and fails deep inside ComfyUI.
+ *
+ * @param {FlowDef} flow
+ * @returns {string[]} dep ids, de-duplicated
+ */
+function flowDepIds(flow) {
+    const out = new Set(flow?.requiredDeps || []);
+    for (const pluginId of (flow?.requiredPlugins || [])) {
+        for (const depId of (getPlugin(pluginId)?.requiredDeps || [])) out.add(depId);
+    }
+    return [...out];
+}
+
 export function flowDepUniverse() {
     return FLOWS
-        .filter(a => (a.requiredDeps || []).length)
+        .map(a => ({ id: flowDepKey(a.id), flowId: a.id, depIds: flowDepIds(a) }))
+        .filter(a => a.depIds.length)
         .map(a => ({
-            id: flowDepKey(a.id),
-            flowId: a.id,
-            deps: (a.requiredDeps || []).map(depId => DEPS[depId]).filter(Boolean),
+            id: a.id,
+            flowId: a.flowId,
+            deps: a.depIds.map(depId => DEPS[depId]).filter(Boolean),
         }));
 }
 
@@ -396,7 +426,7 @@ export function flowDepUniverse() {
 export function getFlowDependencies(flowOrId) {
     const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
     if (!flow) return [];
-    return (flow.requiredDeps || []).map(depId => DEPS[depId]).filter(Boolean);
+    return flowDepIds(flow).map(depId => DEPS[depId]).filter(Boolean);
 }
 
 /**
@@ -421,6 +451,6 @@ export function flowAvailability(flowOrId) {
     const installed = state.s_installedModelIds || [];
     const missing = (flow.requiredModels || []).filter(id => !installed.includes(id));
     const depStatus = _flowDepStatusCache.get(flow.id);
-    const missingDeps = (flow.requiredDeps || []).filter(id => depStatus?.get(id) !== true);
+    const missingDeps = flowDepIds(flow).filter(id => depStatus?.get(id) !== true);
     return { available: missing.length === 0 && missingDeps.length === 0, missing, missingDeps };
 }

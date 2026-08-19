@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/data/pluginsRegistry.js",
+    "js/data/flowsRegistry.js",
+    "js/utils/declaredFields.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js",
+    "js/components/Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.css",
+    "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+    "js/components/types.js"
+  ]
+}

@@ -15,6 +15,7 @@ import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
 import { getStepKind, stepValueToParam } from './stepKinds.js';
+import { buildField, mapDeclaredValue, isInjectionParam } from '../../../utils/declaredFields.js';
 
 /**
  * MpiBaseFlow — THE flow frame: a step carousel (MPI-306 Phase 1).
@@ -668,160 +669,14 @@ export const MpiBaseFlow = ComponentFactory.create({
             onDirty();
         }
 
-        // ── Declared fields (frame-rendered) ────────────────────────────────────
-        /**
-         * A declared field's numeric value, coerced and held inside its declared
-         * bounds. A `min`/`max` that only decorates the widget is a lie the graph
-         * pays for — a typed-in seed or width outside the model's range fails the
-         * generation, not the input.
-         *
-         * @param {string|number} raw
-         * @param {Object} f  the field declaration
-         * @returns {number}
-         */
-        function _fieldNumber(raw, f) {
-            let n = Number(raw);
-            if (!Number.isFinite(n)) n = Number(f.default) || 0;
-            if (f.min != null) n = Math.max(Number(f.min), n);
-            if (f.max != null) n = Math.min(Number(f.max), n);
-            return n;
-        }
-
-        /**
-         * Render ONE declared field. Shared by a step's fields row and the run
-         * slide's declared controls, so both surfaces speak one dialect — the same
-         * reason the frame renders fields at all instead of each gizmo drawing its
-         * own (carousel-frame.md § A step may declare FIELDS).
-         *
-         * @param {Object} f      a FlowStepField
-         * @param {*} cur         the field's current value, default already applied
-         * @param {Function} onChange (val) => void
-         * @param {Array<Function>} unsubs
-         * @returns {HTMLElement|null} null for an unknown type
-         */
-        function _buildField(f, cur, onChange, unsubs) {
-            const wrap = ce('label', { className: 'mpi-base-flow__field' });
-            if (f.label && f.type !== 'button') {
-                const lbl = ce('span', { className: 'mpi-base-flow__field-label' });
-                lbl.textContent = f.label;
-                wrap.appendChild(lbl);
-            }
-
-            if (f.type === 'select') {
-                const sel = ce('select', { className: 'mpi-base-flow__field-select' });
-                (f.options || []).forEach((o) => {
-                    const opt = ce('option', { value: String(o.v) });
-                    opt.textContent = o.label ?? String(o.v);
-                    sel.appendChild(opt);
-                });
-                if (cur != null) sel.value = String(cur);
-                unsubs.push(on(sel, 'change', () => onChange(sel.value)));
-                wrap.appendChild(sel);
-            } else if (f.type === 'radio') {
-                // The only mounted Primitive among the field types, so it is the
-                // only one needing a host and a destroy. Worth it: a tier choice
-                // read as a <select> hides the alternatives behind a click, and the
-                // whole point of a tier is that you compare them (MPI-572).
-                const opts = f.options || [];
-                const find = v => opts.find(o => String(o.v) === String(v));
-                // A seeded value comes off a PERSISTED card, so it may name an
-                // option this build no longer has. Fall back rather than render a
-                // group with nothing selected while quietly sending the stale value.
-                const sel = find(cur) ? cur : f.default;
-                // Write the fallback back, same law as the clamped number field: a
-                // control that shows one value while sending another is the worst
-                // outcome available here.
-                if (sel !== cur) onChange(sel);
-                const host = ce('div');
-                const inst = MpiRadioGroup.mount(host, {
-                    options: opts.map(o => ({
-                        label: o.label ?? String(o.v), value: String(o.v), info: o.info,
-                    })),
-                    value: String(sel ?? ''),
-                    name: `${flow.id}-${f.id}`,
-                    size: 'sm',
-                    ...(Number.isFinite(f.columns) ? { columns: f.columns } : {}),
-                });
-                // `note` is the ALWAYS-VISIBLE half of an option's copy; `info` is a
-                // status-bar hover that vanishes with the pointer. A tier's cost has
-                // to be legible without hunting for it, so the two are separate
-                // (carousel-frame.md § Tier cost is RELATIVE).
-                const note = ce('span', { className: 'mpi-base-flow__field-note' });
-                const paint = (v) => { note.textContent = find(v)?.note || ''; };
-                paint(sel);
-                inst.on('select', ({ value }) => {
-                    const o = find(value);
-                    if (!o) return;
-                    paint(o.v);
-                    // Emit the option's ORIGINAL `v`, never the DOM string: a graph
-                    // param like Input_Tier is an int, and "1" reaching MpiAnySwitch
-                    // as text is a silent wrong-branch.
-                    onChange(o.v);
-                });
-                unsubs.push(() => inst?.el?.destroy?.());
-                const col = ce('div', { className: 'mpi-base-flow__field-radio' });
-                col.appendChild(host);
-                if (opts.some(o => o.note)) col.appendChild(note);
-                wrap.appendChild(col);
-            } else if (f.type === 'button') {
-                const btn = ce('button', {
-                    className: 'mpi-base-flow__field-button', type: 'button',
-                });
-                btn.textContent = f.label || f.id;
-                unsubs.push(on(btn, 'click', () => onChange(true)));
-                wrap.appendChild(btn);
-            } else if (f.type === 'toggle') {
-                const box = ce('input', { type: 'checkbox', className: 'mpi-base-flow__field-toggle' });
-                box.checked = Boolean(cur);
-                unsubs.push(on(box, 'change', () => onChange(box.checked)));
-                wrap.appendChild(box);
-            } else if (f.type === 'number') {
-                const inp = ce('input', { type: 'number', className: 'mpi-base-flow__field-input' });
-                if (f.min != null) inp.min = String(f.min);
-                if (f.max != null) inp.max = String(f.max);
-                if (f.step != null) inp.step = String(f.step);
-                if (cur != null) inp.value = String(cur);
-                unsubs.push(on(inp, 'change', () => {
-                    const n = _fieldNumber(inp.value, f);
-                    // Write the clamped value back: a field that silently sends a
-                    // different number than it shows is worse than a rejected run.
-                    inp.value = String(n);
-                    onChange(n);
-                }));
-                wrap.appendChild(inp);
-            } else if (f.type === 'slider') {
-                const rng = ce('input', { type: 'range', className: 'mpi-base-flow__field-range' });
-                rng.min = String(f.min ?? 0);
-                rng.max = String(f.max ?? 100);
-                if (f.step != null) rng.step = String(f.step);
-                rng.value = String(_fieldNumber(cur ?? f.min ?? 0, f));
-                // A slider with no readout is a guess. The number IS the control.
-                const out = ce('span', { className: 'mpi-base-flow__field-value' });
-                out.textContent = rng.value;
-                unsubs.push(on(rng, 'input', () => {
-                    out.textContent = rng.value;
-                    onChange(Number(rng.value));
-                }));
-                // Range + readout share one line in BOTH layouts — the stacked
-                // column would otherwise drop the number onto its own row.
-                const bar = ce('div', { className: 'mpi-base-flow__field-slider' });
-                bar.appendChild(rng);
-                bar.appendChild(out);
-                wrap.appendChild(bar);
-            } else if (f.type === 'text') {
-                const multi = Number(f.rows) > 1;
-                const inp = ce(multi ? 'textarea' : 'input', { className: 'mpi-base-flow__field-text' });
-                if (multi) inp.rows = Number(f.rows); else inp.type = 'text';
-                if (f.placeholder) inp.placeholder = f.placeholder;
-                inp.value = cur != null ? String(cur) : '';
-                unsubs.push(on(inp, 'input', () => onChange(inp.value)));
-                wrap.appendChild(inp);
-            } else {
-                clientLogger.warn('MpiBaseFlow', `unknown field type "${f.type}" — skipping`);
-                return null;
-            }
-            return wrap;
-        }
+        // ── Declared fields (frame-rendered) ───────────────────────
+        // `buildField` lives in js/utils/declaredFields.js (MPI-580) because a plugin
+        // contributing controls to the History Upscale dropdown speaks this same
+        // vocabulary, and the same capabilities are being duplicated as Flows. One
+        // renderer, or the two surfaces drift the way MPI-572's two surfaces did.
+        // `block` defaults to this component's, so nothing here restyles.
+        const _buildField = (f, cur, onChange, unsubs) =>
+            buildField(f, cur, onChange, unsubs, { namespace: flow.id });
 
         /**
          * Render a step's declared `fields` as a single row between canvas and hint.
@@ -1383,8 +1238,15 @@ export const MpiBaseFlow = ComponentFactory.create({
             // Everything else (`positive`, `negative`) is a run input by its own id.
             const declared = {};
             const declaredParams = {};
+            // A field may declare `mapTo` — a hidden range the UI never shows
+            // (MPI-580). The stored value is always the DECLARED one, so a restored
+            // control seeds correctly; the mapping is applied once, here.
+            const _decls = new Map();
+            [...(_fields || []), ...(flow.steps || []).flatMap(st => st?.fields || [])]
+                .forEach(f => { if (f?.id) _decls.set(f.id, f); });
             const _sort = ([k, v]) => {
-                if (/^input_/i.test(k)) declaredParams[k] = v; else declared[k] = v;
+                const mapped = mapDeclaredValue(_decls.get(k) || {}, v);
+                if (isInjectionParam(k)) declaredParams[k] = mapped; else declared[k] = mapped;
             };
             // A STEP's fields obey the same law as the flow's own — one vocabulary,
             // one renderer, so one destination. Without this a prompt authored on a

@@ -13,6 +13,13 @@
     align-items: center;
 }
 
+/* `hidden` is a UA `display:none`, which the class above outranks — so a section
+   toggled with `.hidden = true` stays on screen (MPI-580: Upscale Factor kept
+   showing under a plugin entry, and the plugin's own controls showed under None). */
+.mpi-tool-options-upscale__section[hidden] {
+    display: none;
+}
+
 .mpi-tool-options-upscale__section-label {
     font-size: var(--t-2xs);
     color: var(--ink-3);
@@ -40,4 +47,113 @@
 
 .mpi-tool-options-upscale #model-slot {
     justify-content: stretch;
+}
+
+/* ── A plugin entry's declared controls (MPI-580) ────────────────────────────
+   Rendered by the shared field renderer (js/utils/declaredFields.js) with this
+   block as its BEM prefix, so the vocabulary is the flow frame's and the styling
+   is this panel's. Stacked, not one row: the tool panel is a narrow column. */
+.mpi-tool-options-upscale__section:has(#plugin-slot) {
+    align-items: stretch;
+}
+
+.mpi-tool-options-upscale__fields {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-3);
+    width: 100%;
+}
+
+.mpi-tool-options-upscale__field {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--s-1);
+    font-size: var(--t-2xs);
+}
+
+.mpi-tool-options-upscale__field-label {
+    color: var(--ink-4);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.mpi-tool-options-upscale__field-select,
+.mpi-tool-options-upscale__field-input,
+.mpi-tool-options-upscale__field-text {
+    font-family: inherit;
+    font-size: var(--t-2xs);
+    color: var(--ink-1);
+    background: oklch(0.26 0.018 350 / 0.6);
+    border: 1px solid var(--line);
+    padding: 4px var(--s-2);
+    width: 100%;
+    min-width: 0;
+}
+
+/* Nothing in this app is user-resizable — the drag grip is a control the rest of
+   the product does not have (MPI-572). */
+.mpi-tool-options-upscale__field-text {
+    resize: none;
+}
+
+.mpi-tool-options-upscale__field-button {
+    font-family: inherit;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    background: none;
+    border: 1px solid var(--line);
+    padding: 4px var(--s-3);
+    cursor: pointer;
+    transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+
+.mpi-tool-options-upscale__field-button:hover {
+    color: var(--ink-1);
+    border-color: var(--ink-3);
+}
+
+.mpi-tool-options-upscale__field-range {
+    accent-color: var(--accent-frost);
+    cursor: pointer;
+    flex: 1;
+    min-width: 0;
+}
+
+/* The readout IS the control — a slider without its number is a guess. Tabular
+   digits so the row does not jitter as the value changes width. */
+.mpi-tool-options-upscale__field-value {
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    min-width: 3ch;
+    text-align: right;
+}
+
+.mpi-tool-options-upscale__field-slider {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+
+.mpi-tool-options-upscale__field-radio {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+
+.mpi-tool-options-upscale__field-note {
+    color: var(--ink-4);
+}
+
+.mpi-tool-options-upscale__field-select:focus-visible,
+.mpi-tool-options-upscale__field-button:focus-visible,
+.mpi-tool-options-upscale__field-toggle:focus-visible,
+.mpi-tool-options-upscale__field-input:focus-visible,
+.mpi-tool-options-upscale__field-text:focus-visible,
+.mpi-tool-options-upscale__field-range:focus-visible {
+    outline: 1px solid var(--accent-frost);
+    outline-offset: 1px;
 }

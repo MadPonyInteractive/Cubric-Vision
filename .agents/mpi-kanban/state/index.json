@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-19T15:22:47Z",
+  "updated_at": "2026-08-20T09:05:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -85,17 +85,33 @@
       "id": "2b4f4f52-b714-4236-81de-97f42688024a",
       "path": ".agents/mpi-kanban/state/handoffs/2b4f4f52-b714-4236-81de-97f42688024a.json",
       "task_card": "MPI-504",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-19T15:10:00Z",
-      "note": "Rear-hair thread CLOSED as a test-rig artefact (turbo, not resolution). Turbo established as a product axis: locks the character, suits stylised; non-turbo varies it, suits realistic. Head branch redesigned to a SAM3 hair+face+hat union with the face detect kept as the area selector. Next is the unrun v4.1 recipe regression."
+      "note": "Superseded by 1a513284-13ea-4fb6-b552-eae123a13de2 - the v4.1 regression ran (recipe is now v4.2), bench gate #1 passed, and Fabio decided the prompt UI."
     },
     {
       "id": "04c19785-9c74-41bf-ae82-bd4c8643c87c",
       "path": ".agents/mpi-kanban/state/handoffs/04c19785-9c74-41bf-ae82-bd4c8643c87c.json",
       "task_card": "MPI-568",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-19T15:22:47Z",
-      "note": "Bench CLOSED - sigmas 0.50-0.85 default 0.675 and cfg 1-3 default 1.0, both shown as 0-1 with the mapping hidden. Implementation split: MPI-580 owns the plugin mechanism, MPI-579 the LTX Video upscaler. Neither has a plan yet."
+      "note": "Superseded by ab2cec72-0b12-48e6-aba1-a01ab254a6bd - the MPI-580 mechanism is built and verified, and the work moves to MPI-579, its first consumer."
+    },
+    {
+      "id": "ab2cec72-0b12-48e6-aba1-a01ab254a6bd",
+      "path": ".agents/mpi-kanban/state/handoffs/ab2cec72-0b12-48e6-aba1-a01ab254a6bd.json",
+      "task_card": "MPI-580",
+      "status": "open",
+      "created_at": "2026-08-19T23:38:00Z",
+      "note": "Plugin mechanism DONE and verified (630 tests + a real-app probe): a plugin contributes an entry to the existing upscale dropdown, its own declared controls, and a hidden 0-1 mapping via mapTo. Next is MPI-579, the LTX Video upscaler that consumes it."
+    },
+    {
+      "id": "1a513284-13ea-4fb6-b552-eae123a13de2",
+      "path": ".agents/mpi-kanban/state/handoffs/1a513284-13ea-4fb6-b552-eae123a13de2.json",
+      "task_card": "MPI-504",
+      "status": "open",
+      "created_at": "2026-08-20T09:05:00Z",
+      "note": "Recipe is v4.2 - the adopted F hair shape was NOT reaching the output until a slot template fixed rule 4. Gate #1 PASSED, neutralisation is safe. Next work is the DECIDED three-step prompt UI (plan.md `## The prompt UI`)."
     }
   ]
 }

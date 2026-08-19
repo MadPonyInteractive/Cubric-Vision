@@ -74,6 +74,8 @@ import { MpiCompareOverlay } from '../../Compounds/MpiCompareOverlay/MpiCompareO
 import { MpiContextMenu } from '../../Compounds/MpiContextMenu/MpiContextMenu.js';
 import { MpiOkCancel } from '../../Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiReusePromptDialog } from '../../Compounds/MpiReusePromptDialog/MpiReusePromptDialog.js';
+import { getPlugin, pluginAvailability } from '../../../data/pluginsRegistry.js';
+import { splitDeclaredValues } from '../../../utils/declaredFields.js';
 
 /**
  * Registry mapping MpiHistoryTools `activate { mode }` keys to the compound
@@ -585,6 +587,22 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // into the generation branches below.
             if (_isCanvasTool(mode)) return;
             if (mode === 'videoUpscale' || mode === 'imageUpscale') {
+                // A PLUGIN entry (MPI-580) is not an upscale model: it owns its own op
+                // and its own graph, so none of the Upscale_* params apply. Its declared
+                // values split by the same law the flow frame uses — `Input_*` names a
+                // graph node, everything else is a run input.
+                const plugin = payload.pluginId ? getPlugin(payload.pluginId) : null;
+                if (plugin) {
+                    const { inputs, injectionParams } = splitDeclaredValues(
+                        plugin.upscale?.fields, payload.values,
+                    );
+                    if (!pluginAvailability(plugin).installed) {
+                        _showToast(`${plugin.title} is not installed`, 'error');
+                        return;
+                    }
+                    if (mode === 'imageUpscale') return _runImageTool(plugin.operation, injectionParams, inputs);
+                    return _runVideoTool(plugin.operation, injectionParams, inputs);
+                }
                 const injectionParams = {
                     Upscale_Factor: payload.factor ?? 2,
                     Upscale_Using_Model: !!payload.model,
@@ -1431,7 +1449,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _activeExec = null; // Cue dispatcher manages exec lifecycle
         }
 
-        function _runVideoTool(operation, injectionParams = {}) {
+        // `inputs` carries top-level run inputs a DECLARED field produced (MPI-580) —
+        // a plugin entry's prompt box is `positive`, not an injection param. Built-in
+        // tools pass none and keep the empty-prompt behaviour they always had.
+        function _runVideoTool(operation, injectionParams = {}, inputs = {}) {
             const currentItem = _group.history[_currentIdx];
             if (!currentItem?.filePath) { _showToast('No source video', 'error'); return; }
             const trim = _activeVideoTrim(currentItem);
@@ -1445,7 +1466,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const videoModel = { id: null, mediaType: 'video' };
             _setGenerating(true);
             enqueueGeneration(
-                { operation, model: videoModel, positive: '', negative: '', mediaItems, injectionParams },
+                { operation, model: videoModel, positive: '', negative: '', ...inputs, mediaItems, injectionParams },
                 {
                     onCancel: () => {
                         _activeExec = null;
@@ -1464,14 +1485,14 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _activeExec = null; // Cue dispatcher manages exec lifecycle.
         }
 
-        function _runImageTool(operation, injectionParams = {}) {
+        function _runImageTool(operation, injectionParams = {}, inputs = {}) {
             const currentItem = _group.history[_currentIdx];
             if (!currentItem?.filePath) { _showToast('No source image', 'error'); return; }
             const mediaItems = [{ url: resolveMediaUrl(currentItem.filePath), mediaType: 'image', source: 'history' }];
             const imageModel = { id: null, mediaType: 'image' };
             _setGenerating(true);
             enqueueGeneration(
-                { operation, model: imageModel, positive: '', negative: '', mediaItems, injectionParams },
+                { operation, model: imageModel, positive: '', negative: '', ...inputs, mediaItems, injectionParams },
                 {
                     onCancel: () => {
                         _activeExec = null;

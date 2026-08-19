@@ -24,6 +24,25 @@
  * @property {string}   description   One line, shown under the title in the Library row.
  * @property {string[]} requiredDeps  assetDeps ids this plugin owns.
  * @property {string}   operation     commandRegistry op key this plugin runs.
+ * @property {PluginUpscaleEntry} [upscale]  Contributes an ENTRY to the EXISTING History
+ *                                   Upscale dropdown (MPI-580). Omit and the plugin is
+ *                                   invisible there, exactly like image-describer.
+ *
+ * @typedef {Object} PluginUpscaleEntry
+ * @property {Array<'image'|'video'>} kinds  Which MpiToolOptionsUpscale `kind` lists it.
+ *                                   This is the WHOLE of the both-kinds generalisation:
+ *                                   the video upscaler (MPI-579) declares `['video']`, the
+ *                                   PiD plugins (MPI-507) declare `['image']`, and neither
+ *                                   writes any mechanism.
+ * @property {string}   [label]      Dropdown label; falls back to `title`.
+ * @property {Object[]} [fields]     Controls revealed when the entry is selected, in the
+ *                                   `FlowStepField` vocabulary (flowsRegistry.js, MPI-572)
+ *                                   — same shapes, same payload law: a bare id reaches the
+ *                                   op as a top-level input, an `Input_`-prefixed id is
+ *                                   routed into `injectionParams`. A slider may add
+ *                                   `mapTo: [lo, hi]` to show 0–1 while sending the real
+ *                                   range; the mechanism owns that primitive, the plugin
+ *                                   owns the numbers.
  */
 
 /** @type {PluginDef[]} */
@@ -39,7 +58,8 @@ export const PLUGINS = [
 
 /** Namespaces download-queue / dep-status keys so they cannot collide with
  *  model ids or the app registry's `app:<id>` keys. */
-export const pluginDepKey = (pluginId) => `plugin:${pluginId}`;
+const PLUGIN_KEY_PREFIX = 'plugin:';
+export const pluginDepKey = (pluginId) => `${PLUGIN_KEY_PREFIX}${pluginId}`;
 
 /** Flat union of every plugin's deps. Unconditional, exactly like the app twin:
  *  a plugin has no install state of its own — its deps ARE its install state,
@@ -96,3 +116,33 @@ export function pluginAvailability(pluginOrId) {
  *  deps without hardcoding the plugin id at the call site. */
 export const pluginForOperation = (operation) =>
     PLUGINS.find(p => p.operation === operation);
+
+// ── Dropdown contribution (MPI-580) ───────────────────────────────────────────
+// The Upscale dropdown already exists (MpiToolOptionsUpscale, shared by the image
+// and video tools via `kind`); a plugin contributes an ENTRY to it, never a new
+// dropdown. Selection is carried by the plugin's dep key, so a plugin entry can
+// never be confused with an upscale-model filename.
+
+/**
+ * Installed plugins contributing an entry to one Upscale dropdown kind.
+ * NOT installed = absent, matching the describeAction gate: offering a control that
+ * fails deep inside ComfyUI with a missing weight is the worse outcome.
+ *
+ * @param {'image'|'video'} kind
+ * @returns {PluginDef[]}
+ */
+export const upscalePluginsFor = (kind) =>
+    PLUGINS.filter(p => p.upscale?.kinds?.includes(kind) && pluginAvailability(p).installed);
+
+/** The dropdown option for a contributing plugin. Its value is the dep key
+ *  (`plugin:<id>`), which is also what tells dispatch it is not a model file. */
+export const upscalePluginOption = (plugin) => ({
+    label: plugin.upscale?.label || plugin.title,
+    value: pluginDepKey(plugin.id),
+});
+
+/** The plugin behind a dropdown value, or undefined for a model filename / None. */
+export const pluginFromDepKey = (value) =>
+    (typeof value === 'string' && value.startsWith(PLUGIN_KEY_PREFIX))
+        ? getPlugin(value.slice(PLUGIN_KEY_PREFIX.length))
+        : undefined;

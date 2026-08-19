@@ -150,7 +150,12 @@
 /**
  * @typedef {Object} MpiToolOptionsUpscaleProps (Organism — js/components/Organisms/MpiToolOptionsUpscale)
  * @property {Object} viewer - MpiVideoViewer instance
- * Emits: 'apply' { factor: number, model: string }
+ * @property {'image'|'video'} [kind='video'] - Persistence key + which plugin entries list
+ * Emits: 'apply' { factor: number, model: string, pluginId?: string, values?: Object }
+ *   `model` is an upscale-model filename, '' for None, or a plugin dep key
+ *   (`plugin:<id>`) when a plugin contributed the entry (MPI-580). `pluginId` and the
+ *   plugin's declared control `values` (UNMAPPED — the dispatcher applies `mapTo`)
+ *   ride along only for a plugin entry.
  */
 
 /**
