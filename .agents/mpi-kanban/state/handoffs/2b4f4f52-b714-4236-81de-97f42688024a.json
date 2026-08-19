@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "2b4f4f52-b714-4236-81de-97f42688024a",
   "generated_at": "2026-08-19T15:10:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-504 Character Sheet - the rear-hair thread closed as a TEST-RIG artefact, turbo established as a product axis, head branch redesigned",
     "branch": "master"

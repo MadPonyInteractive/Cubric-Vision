@@ -10,16 +10,49 @@ prompt) is in [prompts.md](prompts.md). This file is the build.
 
 ## Current State
 
+**2026-08-20 — the prompt UI is DECIDED, and it is the next build.** Fabio settled the shape in
+conversation: a **three-step Flow** with the enhancer promoted out of hiding into two user-facing
+fields. Step 2 is the refine surface (user box → Enhance → editable enhanced box), step 3 is the
+condensed generate surface where the enhanced prompt is invisible. Enhance is the only writer;
+**no Enhance pressed means the raw user prompt is used**; editing the user prompt clears the
+enhancement, visibly in step 2 and via the Enhance button's appearance in step 3; step 3's Enhance
+fills step 2's box. The sidecar stores **both** prompts and Reuse injects the enhanced one verbatim.
+**No seed is stored** — considered and rejected, since the phrase itself is stored. The enhancer
+seed does become load-bearing inside the graph. Full spec, and what already exists vs what does
+not, in **`## The prompt UI`** below.
+
+**2026-08-19, session 4 (second half) — bench gate #1 is CLOSED, passed.** The neutralised template
+(`man`→`character`, `his`→`the`, five spans) was A/B'd against Fabio's original wording on one male
+character at three seeds at 1k-turbo plus the shipping 2k-quality rig — 8 generations, `raw/`
+untouched. **Visually indistinguishable in all four cells.** Layout compliance does not depend on
+the gendered words, so the `man`/`woman`-token fallback is not needed and should not be built. Each
+cell asserted the wording actually reached the sampler by reading back `673 Output_prompt` (8 of 8),
+and the builder aborts if a reversal anchor is missing — both guards exist because an arm that
+silently fails to differ manufactures a false pass. Also measured in passing: 2k-quality costs
+**239-240s**, not the 328s recorded earlier.
+
+**2026-08-19, session 4 — the recipe regression ran, and the adopted hair shape was not actually
+reaching the output.** Text-only, no generation, 24 samples over three arms at two seeds each. The
+four v3 guarantees all survive the F-shape edit (`nothing held` even improved to 4 of 4). But
+**v4.1's prose amendment was obeyed in category 2 and ignored in category 4**: the rear clause
+restated the hair colour 2 of 8, and colour-and-texture together 0 of 8 — so the F shape's measured
+win, which IS the rear colour, did not survive the round trip through the LLM. A **slot template**
+in rule 4 fixed it (rear colour 8 of 8, main clause unharmed at 7 of 8); that is **v4.2 and it is
+now the shipped recipe text in prompts.md §2**. Residual, open and Fabio's call: ~2 in 8 still write
+`dark brown` in the main clause and `black` at the back. **v4.3 tried to close that with a worked
+example and was disproved** — the example leaked into a red-haired character at both seeds, and 4
+of 8 rear clauses became verbatim duplicates of the main clause. Two seeds also caught a false
+verdict mid-pass: v4.2 looked like it cost the main clause at seed 0 and did not at seed 1.
+
 **2026-08-19, session 3 — the rig questions are CLOSED, the flow is in good shape.** Roughly 30
 generations this session settled three things and produced no code change: the F hair shape is
-adopted into the recipe (v4.1, text-only regression still owed), **the rear-hair defect was the
+adopted into the recipe, **the rear-hair defect was the
 test rig rather than the prompt** (turbo, not resolution — 2×2 grid at three seeds), and **turbo vs
 non-turbo is a product axis, not a quality dial**: turbo locks the character across seeds and suits
 the stylised styles, non-turbo varies the character and suits realistic. Anime at 2k-turbo is the
 best sheet the card has produced. The head branch was redesigned by Fabio on the way past: the face
 detection stays as the area SELECTOR, and the mask that gets filled becomes a SAM3 union of `hair` +
-`face` + `hat`. Next is the v4.1 recipe regression, then gate #1 and the head branch. Details in
-validation.md, newest entries last.
+`face` + `hat`. Details in validation.md, newest entries last.
 
 **2026-08-19, session 2.** Two graphs exist in `comfy_workflows/raw/`, exported by Fabio from the
 bench editor and **verified offline** (no generation):
@@ -200,13 +233,71 @@ backdrop, and Fabio's call is that the sheets still work as a reference, so that
 preference rather than a gate. Costs: 1k-turbo 33s · 2k-turbo 85s · 1k-quality ~105s ·
 2k-quality 328s.
 
-Next action: the **v4.1 recipe regression** (text-only, four inputs, needs the LLM so it needs the
-lease), then gate #1 (neutral pronouns) and the head branch — both now run at 3-4 seeds, not one. Open calls 1-5 still stand; all need the GPU, and the GPU needs the lease
+**The v4.1 regression is DONE and gate #1 is CLOSED (both 2026-08-19) — see below.** Next action is
+the **head branch** (face detect selects the area, SAM3 union of `hair` + `face` + `hat` builds the
+mask), then the Klein A/B. Run wording verdicts at 3-4 seeds, not one. Open calls 1-5 still stand;
+all need the GPU, and the GPU needs the lease
 (`mpi-lib/scripts/gpu_lease.py run -- <cmd>`, machine-global, one slot).
 
 Recorded in validation.md and not to be lost again: **the character phrases of all six arms,
 verbatim.** This session had to rebuild the four earlier ones from the bench's `/history` because
 only their outcomes were ever written down, and that history dies on a bench restart.
+
+## The prompt UI — DECIDED by Fabio, 2026-08-20
+
+The enhancer stops being a hidden in-graph step and becomes a **user-facing two-field surface**.
+This is a Flow with **three steps**.
+
+| step | contents |
+|---|---|
+| **1 — start** | No media input for this flow. Either an N/A icon or the input section simply absent. |
+| **2 — prompt (refine)** | Small **user-input** box on top → big **Enhance** button → large **enhanced-prompt** box the user can review and edit. |
+| **3 — generate** | Small user input, **Enhance** button, **Generate** button. The enhanced prompt is **NOT shown here.** |
+
+**The rules, all Fabio's, all decided:**
+
+1. **Enhance is the only writer of the enhanced box.** Generate never enhances on its own.
+2. **If the user never presses Enhance, only the user prompt is used** — it goes into the
+   `[CHARACTER PROMPT]` hole raw. There is no silent enhancement.
+3. **Editing the user prompt CLEARS the enhanced prompt.** In step 2 this must be visible
+   immediately, so the user understands that editing their prompt discards the enhancement. In
+   step 3, where the enhanced prompt is invisible, **the Enhance button changes appearance** to
+   signal that the current prompt is not enhanced.
+4. **Step 3's Enhance fills step 2's box.** One shared enhanced-prompt value, written from either
+   step, displayed only in step 2. A user who wants to adjust what step 3 produced goes back to
+   step 2 to edit it.
+5. **The sidecar stores BOTH** the user prompt and the enhanced prompt. **Reuse injects the stored
+   enhanced prompt verbatim and never re-enhances** — same principle as the existing reuse path.
+6. **No seed is stored.** Considered and rejected by Fabio: the enhanced prompt is itself stored
+   and injected verbatim, so the seed adds nothing, and nothing else in the app stores one.
+
+**Why this shape, beyond the UI.** The character phrase is currently an invisible intermediate —
+regenerated per dispatch, never shown, never stored. That costs reproducibility (the phrase moves
+underneath a held image seed), repair (the v4.2 residual — ~2 in 8 outputs give the rear panel a
+different hair colour — is unfixable by the user while hidden, and v4.3 proved more recipe wording
+is not the answer), and the descriptor the brief's asset registry wants, since an asset is a PAIR
+of image plus a phrase reused word for word. An editable, stored enhanced prompt is that phrase.
+
+**The enhancer seed becomes load-bearing** and must be wired as an input on `TextGenerate`. Step 3's
+loop is Enhance → Generate → Enhance → Generate, and without a seed input every Enhance returns the
+same phrase. Measured: the same user text at seed 0 vs seed 1 returns a different ethnicity, hair
+and wardrobe — a different person, not a rewording. The seed is driven internally; it is never a
+user-facing field.
+
+### What already exists, and what does NOT — checked 2026-08-20
+
+- **The two graphs are already separate.** `krea2_t2i_only.json` contains **no `TextGenerate`** —
+  the enhancer is its own workflow, `comfy_workflows/raw/qwen3vl_4b_prompt_enhancer.json`. The
+  two-stage split this design needs is already the shape at the bench; the work is app-side.
+- **The existing PromptBox Enhance is NOT this system and cannot be reused as-is.**
+  `MpiPromptBox.js` `_runEnhance()` calls `el.injectPrompts()` with the result, **overwriting the
+  prompt in place** — the user's original is destroyed, not kept beside it. It is also a **Cubric
+  Prompt connector** call (`shell/connectorOps.js`, MPI-5), not the local qwen3vl enhancer. Only
+  the *reuse-injects-verbatim* half has precedent (`js/utils/promptReuse.js`).
+- **`enhancePrompt: false` in `js/data/promptControlDefaults.js` is a third, unrelated thing** — a
+  per-model boolean control. Do not confuse it with either of the above.
+- The enhancer graph carries the recipe as its baked default, so it runs standalone at the bench.
+  The shipped recipe text is **v4.2** (prompts.md §2).
 
 ## The flow
 
@@ -399,6 +490,19 @@ longer exists, so each resolves to a deletion, not a re-wire:
    node if Fabio wants it.
 
 ## Plan Drift
+
+**2026-08-19 — "adopted into the recipe" was not the same as "the recipe produces it".** The F hair
+shape was adopted, applied to prompts.md §2 categories 2 and 4, and the plan then carried it as
+settled with only a regression owed. The regression found category 4 was **being ignored 6 times in
+8**. A wording adopted on hand-written character phrases is a hypothesis about the enhancer until
+the enhancer is run — arms E and F proved the shape works on Krea2, not that a 4B will write it.
+Treat every future recipe-side adoption the same way: the arm that measured the effect and the
+recipe that has to reproduce it are two different tests.
+
+**2026-08-19 — the two-seed rule earns its keep on TEXT too, not just images.** The n=1 rule was
+written from image arms. Mid-pass, seed 0 said v4.2 cost the main clause a hair description; seed 1
+said 4 of 4 and the "cost" vanished. Sampling at temperature 0.5 varies text enough to invent a
+verdict, so the runner now takes `SEED` and every arm runs twice.
 
 **2026-08-19 — the seven-group strip list is WRONG, and it fails silently.** Two of the seven
 groups carry nodes the t2i path cannot run without. Found by tracing upstream from the outputs

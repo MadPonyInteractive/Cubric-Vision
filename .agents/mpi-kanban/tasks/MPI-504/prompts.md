@@ -91,9 +91,22 @@ prompt he has already run:
 | at **his** sides | at **the** sides |
 | against **his** thighs | against **the** thighs |
 
-Check: one male character, both wordings, same seed. If the neutral version loses the layout,
-the fallback is to let the enhancer state the sex and keep a `man`/`woman` token switched off
-the same output — a second bench call, not a v1 blocker.
+**PASSED 2026-08-19 — the gate is closed.** One male character (arm F's phrase), both wordings, at
+three seeds at 1k-turbo plus the shipping 2k-quality rig — 8 generations, `raw/` untouched, patched
+in the API payload only. **Visually indistinguishable in all four cells:** same man, same three
+panels in the same arrangement, same continuous backdrop, wardrobe, knife at the right hip, scar on
+the left cheekbone, catch-light in both pupils. Layout compliance does not depend on `man` / `his`.
+
+**The fallback below is therefore NOT needed and should not be built** — kept only as a record of
+what was considered:
+
+> ~~If the neutral version loses the layout, let the enhancer state the sex and keep a
+> `man`/`woman` token switched off the same output.~~
+
+Each cell asserted the wording actually reached the sampler by reading back `673 Output_prompt` —
+8 of 8 — and the builder aborts if any of the five reversal anchors is missing. Both guards exist
+because an arm that silently fails to differ manufactures a false pass. Full entry and the image
+paths: validation.md.
 
 ---
 
@@ -123,7 +136,7 @@ Describe only these four things, in this order:
 1. Who they are. Age, build, height, sex, and origin or ethnicity where the user implied one.
 2. The face and head. Face shape, skin, hair colour, hair length, hair texture and how it is worn, facial hair, eye colour, lines, scars, tattoos, marks. Name the hair in full here - colour, length and texture together in one clause.
 3. The wardrobe and worn gear, head to foot. Headwear, each garment in the order it is worn, colours, fabrics, wear and dirt, belts, jewellery, footwear - and any weapon, tool, bag or kit the character keeps ON THE BODY: holstered, sheathed, slung, quivered, belted or shouldered. Say where each piece sits and how large it reads against the body, so the sheet doubles as the scale reference for that item.
-4. How the wardrobe and gear read FROM BEHIND. The back of the outer garment, how the hair falls or is tied at the back, anything slung or quivered across the back. The sheet carries a rear view and the model has to know what belongs there. Restate the hair's colour and texture here, in the rear clause itself, not only where the hair was first described - the rear view is rendered from this clause.
+4. How the wardrobe and gear read FROM BEHIND. The back of the outer garment, how the hair falls or is tied at the back, anything slung or quivered across the back. The sheet carries a rear view and the model has to know what belongs there. Write the rear hair clause in this exact shape: "the <colour> <texture> hair <worn how at the back>". The colour word and the texture word must both appear again here even though you already wrote them above - the rear view is rendered from this clause alone.
 
 Leave all of this out:
 - Any location, background, ground, sky, weather, building, loose prop or furniture, and any second person or animal. The character stands on a plain grey studio backdrop.
@@ -150,21 +163,28 @@ Output ONLY the description: 45 to 90 words, lower-case first letter, no full st
 <|im_start|>user
 ```
 
-### What it returns — MEASURED 2026-08-19, three revisions
+### What it returns — MEASURED 2026-08-19, five revisions
 
-The recipe above is **v3**. v1 and v2 were run and disproved on the bench engine (8188) against
-the four regression inputs, with the real Prompt Enhancement chain rebuilt node for node — same
-`qwen3vl_4b_abliterated_fp8_scaled`, same ChatML assembly, temperature 0.5, seed 0. Full
-outputs: [research/enhancer-regression-2026-08-19.md](research/enhancer-regression-2026-08-19.md).
+The recipe above is **v4.2**. v1, v2, v4.1 and v4.3 were run and disproved on the bench engine
+(8188) against the four regression inputs, with the real Prompt Enhancement chain rebuilt node
+for node — same `qwen3vl_4b_abliterated_fp8_scaled`, same ChatML assembly, temperature 0.5.
+v1–v3 ran at seed 0 only; **the v4.x arms ran at seeds 0 and 1**, 8 samples each. Full outputs:
+[research/enhancer-regression-2026-08-19.md](research/enhancer-regression-2026-08-19.md).
 
-| | v1 (drafted blind) | v2 | v3 (above) |
-|---|---|---|---|
-| stays on the user's character | **2 of 4** | 4 of 4 | 4 of 4 |
-| 45–90 words | 0 of 4 (86–129) | 2 of 4 | **4 of 4** (50–81) |
-| nothing held | 4 of 4 | 4 of 4 | 3 of 4 |
-| no place / light / camera | 2 of 4 | 4 of 4 | **4 of 4** |
-| says something about the back | 4 of 4 | 4 of 4 | 4 of 4 |
-| positive phrasing only | 0 of 4 | 0 of 4 | **0 of 4** |
+| | v1 (drafted blind) | v2 | v3 | v4.1 | v4.2 (above) |
+|---|---|---|---|---|---|
+| stays on the user's character | **2 of 4** | 4 of 4 | 4 of 4 | 4 of 4 | 4 of 4 |
+| 45–90 words | 0 of 4 (86–129) | 2 of 4 | **4 of 4** (50–81) | 7 of 8 | 8 of 8 |
+| nothing held | 4 of 4 | 4 of 4 | 3 of 4 | 4 of 4 | 7 of 8 |
+| no place / light / camera | 2 of 4 | 4 of 4 | **4 of 4** | 4 of 4 | 7 of 8 |
+| says something about the back | 4 of 4 | 4 of 4 | 4 of 4 | 4 of 4 | 8 of 8 |
+| positive phrasing only | 0 of 4 | 0 of 4 | **0 of 4** | 0 of 4 | 0 of 8 |
+| **rear clause restates the hair COLOUR** | — | — | — | **2 of 8** | **8 of 8** |
+| rear clause restates colour AND texture | — | — | — | 0 of 8 | 5 of 8 |
+| main/rear colour contradiction | — | — | — | 0 of 8 | **2 of 8 — open** |
+
+v1–v3 are 4 samples (seed 0); v4.1 and v4.2 are 8 (seeds 0 and 1). `positive phrasing only` has
+never landed at any revision and is fixed in the graph, not the recipe — see the scrub nodes below.
 
 **v1's killer was an example inside the instruction.** The parenthetical
 `("a weathered Plains chief in his late sixties, ...")` that showed the noun-phrase shape was
@@ -172,6 +192,12 @@ copied out verbatim as the answer: *a cyberpunk street medic* and *a gunslinger*
 as the Plains chief, wardrobe and all. A 4B reads a complete example as the target, not as a
 shape. v3 shows the shape as a slot template (`"a <age> <build> <who they are>, ..."`), which no
 model can mistake for prose — **do not put a readable example in this prompt again.**
+
+**Re-proved at v4.3, 2026-08-19.** An attempt to close the rear-clause colour drift wrote *"if you
+wrote 'dark brown' above, the rear clause says 'dark brown', not 'black'"* — and `dark brown` was
+copied out of the instruction into the output of a **red-haired** character, at both seeds. The
+rule is not v1-specific and it is not about long examples: **any readable example is read as the
+target.** Slot templates only.
 
 **Positive phrasing never landed, at any revision.** Every output states absences —
 "no facial hair", "no tattoos or scars", and for `a gunslinger, no weapons` the model wrote the
@@ -257,8 +283,33 @@ Two things this does NOT fix, both measured:
   clause (`identical hair colour, hair length and hair texture in all three views`) did nothing at
   all — arm D, validation.md. The words have to be in the character phrase.
 
-**Not applied to the recipe text above yet.** The v4 regression was run against the current wording,
-so this amendment needs its own pass — cheap, text-only, four inputs — before it becomes v4.1.
+**APPLIED AND REGRESSED 2026-08-19 — and the prose amendment was not enough.** Written as the
+sentence quoted above (that arm is **v4.1**), the model obeyed category 2 but not category 4:
+across 8 samples the rear clause restated the hair colour **2 times in 8**, and colour-and-texture
+together **0 times in 8**. The only colour hits came on the input where the user typed `red hair`
+themselves. So the F shape's measured win — rear-panel colour, replicated at three seeds on
+hand-written phrases — **did not survive the round trip through the LLM**, because the LLM was not
+writing the clause the win depends on.
+
+What fixed it is a **slot template**, the same device that killed v1's example leak — now the
+shipped wording in rule 4 above:
+
+> Write the rear hair clause in this exact shape: `"the <colour> <texture> hair <worn how at the
+> back>"`. The colour word and the texture word must both appear again here even though you
+> already wrote them above - the rear view is rendered from this clause alone.
+
+That is **v4.2**: rear colour **8 of 8**, colour-and-texture **5 of 8**, and it costs nothing on
+the main clause (7 of 8 vs v4.1's 6 of 8 — the one seed-0 regression there was sampling noise and
+did not reproduce at seed 1).
+
+**Open residual, ~2 in 8: the model writes `dark brown` in the main clause and `black` at the
+back.** A wrong-coloured rear panel is the exact defect this shape exists to kill, so it is not
+closed — it is smaller. Do NOT try to close it with a worked example: **v4.3 did, and was
+disproved** (research file). Demanding a verbatim copy with the illustrative pair *"if you wrote
+'dark brown' … not 'black'"* leaked `dark brown` into a **red-haired** character at both seeds, and
+made 4 of 8 rear clauses a character-for-character duplicate of the main clause, which describes
+nothing about the back at all. The upgrade path is accepting the drift or moving the invariant out
+of the recipe — not more wording.
 
 ### The gear policy — settled 2026-08-19
 

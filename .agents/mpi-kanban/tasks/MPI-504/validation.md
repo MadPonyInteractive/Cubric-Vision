@@ -504,3 +504,127 @@ it, and the between-arm deltas were correspondingly small. The noise floor measu
 - **Non-turbo stays valid as a VARIATION lever for any style**, not just as a quality setting —
   it is how a user gets candidate faces to choose between.
 - **Both controls stay exposed to the user regardless**, because low-VRAM users need the choice.
+
+## 2026-08-19 · the v4.1 recipe regression — the adopted F shape was NOT reaching the output, and a slot template fixed it
+
+Text-only, no generation. Bench `8188`, `qwen3vl_4b_abliterated_fp8_scaled` through core
+`TextGenerate`, the Prompt Enhancement chain rebuilt node for node, temperature 0.5,
+`use_default_template` true, four regression inputs. **Three arms at two seeds each — 24 samples.**
+Every output is recorded verbatim in
+[research/enhancer-regression-2026-08-19.md](research/enhancer-regression-2026-08-19.md).
+
+### The four v3 guarantees survive the F-shape edit
+
+`45–90 words`, `no example leak`, `nothing held`, `no place / light / camera` and `scrub clean`
+all hold at v4.1 — `nothing held` improved from 3 of 4 to 4 of 4. The two pre-existing conditions
+are unchanged and still cleared by the two `RegexReplace` nodes: the raw output ends with a full
+stop, and it states absences. The known stub ceiling moved input (v3 left `, the back of the coat,`
+on input 4; v4.1 leaves `the back of the vest,` on input 2) — same cause, same verdict. Input 4's
+watch passes at every arm and seed: `no weapons` never reaches Krea2.
+
+### The finding: category 2 landed, category 4 did not
+
+| | v4.1 (8 samples) | v4.2 (8) | v4.3 (8) |
+|---|---|---|---|
+| main clause names colour + length + texture | 6 of 8 | **7 of 8** | 3 of 8 |
+| **rear clause restates the COLOUR** | **2 of 8** | **8 of 8** | 8 of 8 |
+| rear clause restates colour AND texture | 0 of 8 | 5 of 8 | 8 of 8 |
+| main/rear colour contradiction | 0 of 8 | **2 of 8** | 2 of 8 (leak-caused) |
+| rear clause a verbatim copy of the main clause | 0 of 8 | 0 of 8 | **4 of 8** |
+| example leaked out of the instruction | 0 of 8 | 0 of 8 | **2 of 8** |
+
+**v4.1 — the prose amendment — obeyed the main clause and ignored the rear one.** Category 2 is
+clean (`dark brown hair cut short and stiff`, `short black wavy hair`, `long thick black hair tied
+back in a low ponytail`). Category 4 restated the colour twice in eight, and colour-and-texture
+together zero times in eight. The only colour hits are the schoolteacher, and only because the user
+typed `red hair` themselves.
+
+**This mattered because the F shape's measured win IS the rear colour** — control renders the back
+view brown, F renders it grey, replicated at three seeds (the noise-floor entry above). Arms E and
+F were hand-written character phrases. At v4.1 that win **did not survive the round trip through
+the LLM**, because the LLM was not writing the clause it depends on. A wording adopted on
+hand-written evidence is not adopted until the enhancer reproduces it.
+
+**v4.2 — a slot template in rule 4 — fixes it, and is now the shipped recipe.** Rear colour
+2 of 8 → 8 of 8, colour-and-texture 0 of 8 → 5 of 8, and it costs nothing on the main clause
+(7 of 8 vs 6 of 8). The seed-0 run showed the gunslinger losing hair from the main clause and it
+read like a real cost — **seed 1 came back 4 of 4 and it was sampling noise.** That is this card's
+own n=1 rule catching a second false verdict; the two-seed rig is why the write-up says the
+opposite of what one seed said.
+
+### Open residual — ~2 in 8 write a different colour at the back
+
+Both times: `dark brown` in the main clause, `black` in the rear. A wrong-coloured rear panel is
+the exact defect the F shape exists to kill, so this is smaller, not closed. **Fabio's call
+whether to accept it.** The path that does NOT work is more wording — see below.
+
+### v4.3 is DISPROVED, and it re-proved a rule already written down
+
+The attempt at the residual demanded a verbatim copy and illustrated it: *"if you wrote 'dark
+brown' above, the rear clause says 'dark brown', not 'black'"*.
+
+1. **The example leaked**, exactly as v1's parenthetical did — `dark brown` was copied out of the
+   instruction into a **red-haired** character at both seeds (`the red hair dark brown texture worn
+   in a loose braid`). prompts.md already said *do not put a readable example in this prompt again*;
+   this arm is that rule violated and re-measured. The rule is not about long examples — **any**
+   readable example is read as the target. Slot templates only.
+2. **"Verbatim" was obeyed too literally** — 4 of 8 rear clauses are a character-for-character
+   duplicate of the main clause, which says nothing about how the hair reads from behind. The
+   length word also drops out of the main clause in 5 of 8.
+
+### Verified
+
+`prompts.md` §2's recipe block was diffed byte-for-byte against the v4.2 system prompt that was
+actually measured — identical, 4239 chars, ChatML head and tail intact — and the two shipped scrub
+regexes were re-applied offline to all 8 measured v4.2 outputs: negation gone, rear clause kept,
+no trailing punctuation, 8 of 8. The recipe on disk is the recipe that was tested.
+
+**Still text-only. No sheet has been generated from a v4.2 enhancer output** — whether the
+8-of-8 rear colour actually moves the rendered rear panel is an image question and remains open.
+
+## 2026-08-19 · BENCH GATE #1 — the neutralisation PASSES, four cells, no visible difference
+
+**Ran:** 8 generations under the GPU lease, `krea2_t2i_only.json` converted to API form and patched
+in the payload only — **`raw/` untouched**. `Recipe_Photoreal` (`Input_Recipe 1`), one male
+character held constant (arm F's phrase, verbatim from the arms E/F entry above, chosen because it
+is male — which is what this gate needs — and because its sheets are already known-good).
+
+| cell | rig | neutral | original |
+|---|---|---|---|
+| seed `777001` | 1280×768 turbo | 35s | 36s |
+| seed `909090` | 1280×768 turbo | 35s | 34s |
+| seed `123123` | 1280×768 turbo | 33s | 35s |
+| seed `777001` | 1792×1120 quality | 239s | 240s |
+
+**Verdict: the neutral wording loses nothing.** In all four cells the two arms are visually
+indistinguishable beyond the noise a changed conditioning produces anyway — same man, same three
+panels in the same arrangement, same continuous backdrop, same wardrobe, the knife at the right
+hip, the scar on the left cheekbone, catch-light in both pupils. Nothing about layout compliance
+depends on the words `man` / `his`. **The fallback in prompts.md §1 (let the enhancer state the sex
+and switch a `man`/`woman` token) is not needed and should not be built.**
+
+Two things this run confirms in passing, both consistent with what was already measured: the
+1k-turbo rear hair is wavy and the 2k-quality rear hair is **straight**, independently reproducing
+the turbo finding; and 2k-quality shows the three-plate seams, which are accepted.
+
+**The wording was verified to reach the graph on every single cell, not just in the builder.** Each
+run reads back node `673 Output_prompt` — the assembled string the sampler actually saw — and
+asserts that the `man`/`his` tokens are present in the original arm and absent in the neutral one.
+8 of 8 OK. This matters because the arm that silently fails to differ is the one that manufactures
+a false "no difference" verdict. The builder also aborts if any of the five reversal anchors is
+missing from the template, for the same reason.
+
+**Rig note.** 1k-turbo was chosen as the cheap instrument (33-36s vs 239s) because layout was first
+proven at 1k turbo and the rear-hair work established that the sampler path, not the resolution,
+carries these effects. The 2k-quality pair is the shipping rig for a realistic character and was
+run to confirm the result holds there. It does. Measured 2k-quality cost is **239-240s**, not the
+328s recorded earlier — worth re-checking that figure if it is ever used for planning.
+
+**The images are in a session scratchpad and are transient**, like every sheet this card has made:
+`…/350fcf8d-…/scratchpad/gate1/{neutral,original}_seed<seed>_<w>x<h>_{turbo,quality}.png`, with
+`gate1-log.json` beside them holding the character phrase and the five reversals. Say if they
+should be kept somewhere durable — they are ~20 MB total, so they do not belong in the task
+workspace as-is.
+
+**Fabio's eyes still own the call**, per the standing rule that these sheets are judged by eye. The
+read above is mine; if he sees a layout difference I missed, the gate reopens.

@@ -138,9 +138,298 @@ Positive-only and harmless to Krea2; not worth a bigger regex.
 
 ---
 
+## v4.1, v4.2, v4.3 — the F hair shape through the enhancer, and how the rear clause was finally made to carry it
+
+Run 2026-08-19, same rig as v1–v3 (bench `8188`, `qwen3vl_4b_abliterated_fp8_scaled`, ChatML
+rebuilt node for node, temperature 0.5, `use_default_template` true, one sample per input per
+arm). **Two seeds per arm this time, 0 and 1** — 24 samples total — because this card's own
+standing rule is that one sample is a pilot, not a result. The runner gained a `SEED` env var
+and a positional hair-clause dump; both are in the Runner section below.
+
+**v4.1** is the recipe as prompts.md §2 carried it after Fabio adopted the F shape: category 2
+gained *"Name the hair in full here - colour, length and texture together in one clause"*,
+category 4 gained *"Restate the hair's colour and texture here, in the rear clause itself"*.
+That text had been edited but never run — this pass is the regression it owed.
+
+**v4.2** replaces category 4's restate sentence with a slot template, the same device that killed
+v1's example leak:
+
+> Write the rear hair clause in this exact shape: `"the <colour> <texture> hair <worn how at the
+> back>"`. The colour word and the texture word must both appear again here even though you
+> already wrote them above - the rear view is rendered from this clause alone.
+
+**v4.3** adds a verbatim-copy instruction on top of v4.2, to close v4.2's residual colour drift.
+**It was disproved — see below.**
+
+### The four v3 guarantees — v4.1 holds all of them
+
+| gate | v3 | v4.1 |
+|---|---|---|
+| stays on the user's character | 4 of 4 | **4 of 4** |
+| 45–90 words | 4 of 4 (50–81) | **4 of 4** at seed 0 (49–81); 3 of 4 at seed 1 (chief 95w) |
+| nothing held | 3 of 4 | **4 of 4** |
+| no place / light / camera | 4 of 4 | **4 of 4** |
+| no example leak | 4 of 4 | **4 of 4** |
+| post-scrub: negation gone / rear clause kept / no trailing stop | 4 of 4 | **4 of 4**, both seeds |
+
+Unchanged pre-existing conditions, both cleared by the two `RegexReplace` nodes, neither a
+regression: the raw output still ends with a full stop, and still states absences. The known stub
+ceiling merely moved input — v3 left `, the back of the coat,` on input 4, v4.1 leaves
+`the back of the vest,` on input 2. Same cause, same verdict.
+
+**Input 4 (`a gunslinger, no weapons`) passes its watch at every arm and every seed.** The user's
+negative never reaches Krea2.
+
+### The hair — scored by reading the clauses, over two seeds
+
+The checker booleans are a screen, not the evidence. They false-negative in three known ways:
+they split on commas so a description spanning two clauses scores false; the texture word list
+lacks `stiff`; and the rear/main classifier reads the `back` inside `slicked back` as a rear
+marker. The positional clause dump (`@offset`) is what these scores were read off.
+
+| | v4.1 (8 samples) | v4.2 (8) | v4.3 (8) |
+|---|---|---|---|
+| main clause names colour + length + texture | 6 of 8 | **7 of 8** | 3 of 8 — length is dropped |
+| rear clause restates the colour | 2 of 8 | **8 of 8** | 8 of 8 |
+| rear clause restates colour AND texture | 0 of 8 | **5 of 8** | 8 of 8 |
+| main/rear colour **contradiction** | 0 of 8 | 2 of 8 | 2 of 8 (leak-caused) |
+| rear clause is a **verbatim copy** of the main clause | 0 of 8 | 0 of 8 | **4 of 8** |
+| **example leak from the instruction** | 0 of 8 | 0 of 8 | **2 of 8** |
+
+**v4.1 fails the gate that matters.** Category 2 landed cleanly — `dark brown hair cut short and
+stiff`, `short black wavy hair`, `long thick black hair tied back in a low ponytail`. Category 4
+did not: the rear clause restates the colour twice in eight, and colour-and-texture together
+zero times in eight. The only colour hit at seed 0 is the schoolteacher, and only because the
+user typed `red hair` themselves.
+
+This is not cosmetic. validation.md records the F shape's measured, replicating win as rear-panel
+**colour** at three seeds — control renders the back view brown, F renders it grey. Arms E and F
+were hand-written character phrases. **At v4.1 the win does not survive the round trip through the
+LLM**, because the LLM does not write the clause the win depends on.
+
+**v4.2 fixes it: rear colour 2 of 8 → 8 of 8, colour-and-texture 0 of 8 → 5 of 8.** The seed-0
+run also showed the gunslinger losing hair from the main clause entirely, which read like a cost —
+seed 1 came back 4 of 4 on that gate, so it was sampling noise, and across both seeds v4.2 is
+*better* on the main clause than v4.1 (7 of 8 vs 6 of 8). The slot template costs nothing it was
+feared to cost.
+
+**v4.2's real residual: 2 of 8 write a different colour at the back.** Both times the model wrote
+`dark brown` in the main clause and `black` in the rear — a rear panel rendering the wrong hair
+colour, which is precisely the defect the F shape exists to kill. Note that v4.1's clean
+contradiction column is not a win: it never states colour at the back at all, so it fails the same
+thing silently instead of visibly.
+
+### v4.3 — DISPROVED, and it re-proved a lesson already in this file
+
+The attempt at v4.2's residual was to demand a verbatim copy, with an illustrative pair:
+
+> Copy the colour word and the texture word from the clause above VERBATIM - the same words, never
+> a synonym, never a different shade. If you wrote "dark brown" above, the rear clause says "dark
+> brown", not "black". …
+
+Two failures, both structural:
+
+1. **The example leaked, exactly as v1's did.** On `a tired schoolteacher, 40s, red hair` the
+   phrase `dark brown` was copied out of the *instruction* into the *output*, at both seeds:
+   `the red hair dark brown texture worn in a loose braid` (seed 0) and a red-haired character
+   given `the dark brown wavy hair tied back in a loose braid` (seed 1). **A 4B reads any readable
+   example as the target.** This file already said *"do not put a readable example in this prompt
+   again"* — v4.3 is that rule violated and re-measured. The slot-template form (`<colour>`,
+   `<texture>`) is safe precisely because it is not readable prose.
+2. **"Verbatim" was obeyed too literally.** Four of eight rear clauses are a character-for-character
+   copy of the main clause — `dark brown wavy hair tied back in a low knot` appearing twice in one
+   output. A duplicated clause is not a rear-view description: it says nothing about how the hair
+   reads from behind, which is the entire job of category 4. The length word also disappears from
+   the main clause in 5 of 8.
+
+**Verdict: adopt v4.2, discard v4.3.** The residual colour drift stays open at ~2 in 8, and the
+upgrade path is not a wording example — it is either accepting it, or moving the invariant out of
+the recipe entirely.
+
+### The outputs, verbatim
+
+Recorded in full because this card has already had to rebuild arms from `/history` once. Text
+shown is post-scrub — what actually reaches Krea2.
+
+### v4.1, seed 0
+
+**`a 1870s Western Indian Chief`** — 73w → 73w scrubbed
+
+> a 30-year-old tall, broad-shouldered male, of mixed Anishinaabe and Ojibwe descent, with a strong jawline, clean-shaven face, dark brown hair cut short and stiff, wearing a full woolen war bonnet, a frayed leather vest over a buckskin shirt, a heavy steel belt with holstered rifle, a quiver slung across the back, the back of the coat hangs plain, the hair is tied back in a tight knot, the texture is coarse and unruly
+
+- hair clauses: `dark brown hair cut short and stiff` · `the hair is tied back in a tight knot`
+
+**`a cyberpunk street medic`** — 64w → 59w scrubbed
+
+> a 28 year old lean wiry female, clean-shaven, with short black wavy hair, wearing a matte black tactical vest over a grey compression suit, with a worn leather belt and a holstered pistol at her hip, the back of the vest, her hair falls in loose waves behind her, the vest’s seams and straps are frayed from constant use
+
+- hair clauses: `with short black wavy hair` · `her hair falls in loose waves behind her`
+
+**`a tired schoolteacher, 40s, red hair`** — 81w → 77w scrubbed
+
+> a tired schoolteacher, 40s, medium build, standing at 5'8", female, of european descent, with a round face, fair skin, long red hair, wavy and loose over the shoulders, clean-shaven, brown eyes, wearing a faded navy blazer over a cream blouse, dark trousers, worn leather belt, black ankle boots, a worn satchel slung across the left shoulder, the back of the blazer hangs plain, red hair tied loosely at the nape, the satchel’s strap visible across the spine
+
+- hair clauses: `long red hair` · `red hair tied loosely at the nape`
+
+**`a gunslinger, no weapons`** — 49w → 40w scrubbed
+
+> a 32-year-old lean, tall male, clean-shaven, with dark brown, shoulder-length wavy hair, wearing a faded black leather jacket over a worn denim shirt and chipped boots, the back of the coat hangs plain, hair tied back in a loose braid
+
+- hair clauses: `shoulder-length wavy hair` · `hair tied back in a loose braid`
+
+
+### v4.1, seed 1
+
+**`a 1870s Western Indian Chief`** — 95w → 90w scrubbed
+
+> a 30-year-old tall, broad-shouldered male, of mixed Indigenous descent, with a square jaw, dark brown skin, long thick black hair tied back in a low ponytail, clean-shaven, deep-set brown eyes, wearing a dark woolen coat over a faded red shirt, leather chaps, a heavy brass belt with a large buckle, a holstered revolver at his hip, a quiver of arrows slung across his back, the back of the coat hangs plain, the hair falls straight down the spine, the quiver reads as a wide, curved band across the lower back
+
+- hair clauses: `long thick black hair tied back in a low ponytail` · `the hair falls straight down the spine`
+
+**`a cyberpunk street medic`** — 74w → 71w scrubbed
+
+> a 28 year old lean, tall, male, of mixed asian descent, with a sharp jawline, pale skin, jet-black hair cut short and slicked back, clean-shaven, wearing a matte black tactical vest over a grey jumpsuit, with a silver belt, a holstered pistol at hip, a medical kit slung across the chest, the back of the vest, the hair is tied tight at the nape, the fabric hangs smooth against the spine
+
+- hair clauses: `jet-black hair cut short and slicked back` · `the hair is tied tight at the nape`
+
+**`a tired schoolteacher, 40s, red hair`** — 76w → 71w scrubbed
+
+> a tired schoolteacher, 40s, medium build, standing at 5'8", female, of european descent, with a round face, fair skin, long red hair, wavy and loose over her shoulders, clean-shaven, wearing a faded navy blazer over a cream blouse, dark trousers, worn leather boots, a thin belt with a silver buckle, the back of the blazer hangs plain, red hair tied loosely at the nape, falling in soft waves down her spine
+
+- hair clauses: `long red hair` · `red hair tied loosely at the nape`
+
+**`a gunslinger, no weapons`** — 61w → 61w scrubbed
+
+> a 32-year-old lean male, standing 5'10", with a clean-shaven face and sharp jawline, wearing a faded brown leather jacket over a black shirt, dark trousers, and worn boots, with a gunbelt slung low across his hips, the back of the coat hangs plain, his hair is long, dark, and wavy, tied back in a loose braid that trails down his spine
+
+- hair clauses: `his hair is long` · `tied back in a loose braid that trails down his spine.`
+
+
+### v4.2, seed 0
+
+**`a 1870s Western Indian Chief`** — 55w → 55w scrubbed
+
+> a 30-year-old tall, broad-shouldered male, of mixed heritage, with a square jaw, clean-shaven face, dark brown hair cut short and slicked back, wearing a dark woolen coat over a leather vest, a frayed bandana around his neck, a brass belt with a holstered revolver at his hip, the black hair tied tightly at the back
+
+- hair clauses: `dark brown hair cut short and slicked back` · `the black hair tied tightly at the back`
+
+**`a cyberpunk street medic`** — 58w → 58w scrubbed
+
+> a 28 year old lean wiry male, clean-shaven, with short black curly hair, wearing a patched tactical vest over a dark grey hoodie, layered with a worn leather belt and a silver pendant, carrying a holstered medical injector on the right thigh, the black curly hair tied back in a tight knot at the nape of the neck
+
+- hair clauses: `with short black curly hair` · `the black curly hair tied back in a tight knot at the nape of the neck.`
+
+**`a tired schoolteacher, 40s, red hair`** — 73w → 69w scrubbed
+
+> a tired schoolteacher, 40s, medium build, standing at 5'8", female, of european descent, with a round face, fair skin, red hair long and wavy, tied back in a loose braid, clean-shaven, light brown eyes, wearing a faded navy blazer over a cream blouse, dark trousers, worn leather belt with a silver buckle, black boots, a holstered pistol at her hip, the red wavy hair hangs loose at the back
+
+- hair clauses: `red hair long and wavy` · `tied back in a loose braid` · `the red wavy hair hangs loose at the back.`
+
+**`a gunslinger, no weapons`** — 70w → 66w scrubbed
+
+> a 32 year old lean male, 6'1", clean-shaven, with a sharp jawline and deep-set eyes, wearing a faded brown leather coat over a black shirt and dark trousers, the back of the coat hangs plain, the dark hair tied back in a loose braid, the texture smooth and thick, the braid runs down the nape of the neck, the coat’s hem rests just above the ankles
+
+- hair clauses: `the dark hair tied back in a loose braid` · `the braid runs down the nape of the neck`
+
+
+### v4.2, seed 1
+
+**`a 1870s Western Indian Chief`** — 76w → 71w scrubbed
+
+> a 30-year-old tall, broad-shouldered male, of mixed indigenous heritage, with a square jaw, clean-shaven face, dark brown hair long and wavy, tied back in a thick braid, wearing a dark woolen coat over a leather vest, with a heavy brass belt holding a holstered revolver at his right hip, the blackened leather straps visible against his thigh, the dark brown wavy hair hangs loose at the back, the coat’s rear seam
+
+- hair clauses: `dark brown hair long and wavy` · `tied back in a thick braid` · `the dark brown wavy hair hangs loose at the back`
+
+**`a cyberpunk street medic`** — 52w → 52w scrubbed
+
+> a 28 year old lean, tall, male cyberpunk street medic, clean-shaven, with short dark brown hair slicked back, wearing a matte black tactical vest over a reinforced grey jumpsuit, with a holstered pulse rifle at his hip, a medical kit slung across his chest, the black hair tied tightly at the back
+
+- hair clauses: `with short dark brown hair slicked back` · `the black hair tied tightly at the back`
+
+**`a tired schoolteacher, 40s, red hair`** — 72w → 68w scrubbed
+
+> a tired schoolteacher, 40s, medium build, standing at 5'8", female, of european descent, with a round face, fair skin, red hair long and wavy, tied back in a loose braid, clean-shaven, brown eyes, wearing a faded navy blazer over a cream blouse, dark trousers, worn leather belt with a silver buckle, black boots, a holstered pistol at her hip, the red wavy hair hangs loose at the back
+
+- hair clauses: `red hair long and wavy` · `tied back in a loose braid` · `the red wavy hair hangs loose at the back.`
+
+**`a gunslinger, no weapons`** — 53w → 49w scrubbed
+
+> a 32 year old lean tall male, clean-shaven, with dark brown wavy hair cut to shoulder length, wearing a faded black leather jacket over a worn denim shirt and chipped boots, the back of the coat hangs plain, the dark brown wavy hair tied back in a loose knot
+
+- hair clauses: `with dark brown wavy hair cut to shoulder length` · `the dark brown wavy hair tied back in a loose knot.`
+
+
+### v4.3, seed 0
+
+**`a 1870s Western Indian Chief`** — 78w → 74w scrubbed
+
+> a 30-year-old tall, broad-shouldered male, of mixed Anishinaabe and Sioux descent, with a square jaw, clean-shaven face, dark brown wavy hair tied back in a low bandana, wearing a dark red woolen coat over a buckskin shirt, leather chaps, a heavy brass belt with holstered revolver at hip, a quiver of arrows slung across the back, the dark brown wavy hair tied back in a low bandana, the back of the coat hangs plain
+
+- hair clauses: `dark brown wavy hair tied back in a low bandana` · `the dark brown wavy hair tied back in a low bandana`
+
+**`a cyberpunk street medic`** — 50w → 50w scrubbed
+
+> a 28 year old lean wiry male, clean-shaven, with short black hair slicked back, wearing a matte black tactical vest over a faded grey hoodie, dark blue cargo pants, and worn combat boots, with a holstered medical injector on the right thigh, the black hair slicked back at the nape
+
+- hair clauses: `with short black hair slicked back` · `the black hair slicked back at the nape.`
+
+**`a tired schoolteacher, 40s, red hair`** — 81w → 77w scrubbed
+
+> a tired schoolteacher, 40s, medium build, standing at 5'8", female, of european descent, with a round face, fair skin, red hair long and wavy, tied back in a loose braid, clean-shaven, blue eyes, wearing a faded navy blazer over a cream blouse, dark trousers, brown leather belt with a silver buckle, a worn canvas satchel slung across the shoulder, the red hair dark brown texture worn in a loose braid, the back of the blazer hangs plain
+
+- hair clauses: `red hair long and wavy` · `tied back in a loose braid` · `the red hair dark brown texture worn in a loose braid`
+
+**`a gunslinger, no weapons`** — 53w → 49w scrubbed
+
+> a 32-year-old lean, tall male, clean-shaven, with dark brown wavy hair tied back in a low knot, wearing a faded black leather jacket over a worn denim shirt and chipped boots, the dark brown wavy hair tied back in a low knot, the back of the coat hangs plain
+
+- hair clauses: `with dark brown wavy hair tied back in a low knot` · `the dark brown wavy hair tied back in a low knot`
+
+
+### v4.3, seed 1
+
+**`a 1870s Western Indian Chief`** — 73w → 67w scrubbed
+
+> a 30-year-old tall, broad-shouldered male, of mixed Indigenous descent, with a square jaw, clean-shaven face, dark brown wavy hair tied back in a low knot, wearing a dark woolen coat over a faded red shirt, leather belt with holstered revolver at his right hip, a quiver of arrows slung across his back, the dark brown wavy hair tied back in a low knot, the coat hangs plain
+
+- hair clauses: `dark brown wavy hair tied back in a low knot` · `the dark brown wavy hair tied back in a low knot`
+
+**`a cyberpunk street medic`** — 59w → 59w scrubbed
+
+> a 28 year old lean, wiry male, of mixed asian and european descent, with a sharp jawline, clean-shaven, black slicked-back hair, wearing a matte black tactical vest over a grey armored jacket, with a holstered pulse rifle at his hip, a medical kit slung across his back, the black slicked-back hair tied in a low ponytail at the back
+
+- hair clauses: `black slicked-back hair` · `the black slicked-back hair tied in a low ponytail at the back`
+
+**`a tired schoolteacher, 40s, red hair`** — 84w → 80w scrubbed
+
+> a tired schoolteacher, 40s, medium build, standing at 5'8", female, of european descent, with a round face, fair skin, red hair long and wavy, tied back in a loose braid, clean-shaven, brown eyes, wearing a faded navy blazer over a cream blouse, dark trousers, worn leather belt with a silver buckle, black ankle boots, a holstered pistol at her hip, the red hair tied back in a loose braid, the dark brown wavy hair tied back in a loose braid
+
+- hair clauses: `red hair long and wavy` · `tied back in a loose braid` · `the red hair tied back in a loose braid` · `the dark brown wavy hair tied back in a loose braid.`
+
+**`a gunslinger, no weapons`** — 53w → 49w scrubbed
+
+> a 32-year-old lean, tall male, clean-shaven, with dark brown wavy hair tied back in a low knot, wearing a faded black leather jacket over a worn denim shirt and chipped boots, the dark brown wavy hair tied back in a low knot, the back of the coat hangs plain
+
+- hair clauses: `with dark brown wavy hair tied back in a low knot` · `the dark brown wavy hair tied back in a low knot`
+
+---
+
 ## Runner
 
-Kept verbatim so the next revision is one command, not a rebuild.
+Kept verbatim so the next revision is one command, not a rebuild. `HERE` is the session
+scratchpad and has to be repointed each session — the scratchpad does not survive.
+
+**Two deltas added for the v4.x pass, not shown in the listing below:**
+
+- `const SEED = Number(process.env.SEED || 0);`, with `run(input, SEED)` at the call site, so an
+  arm re-runs at a second seed with `SEED=1 node enhancer-regression2.mjs …`. Use it: the v4.2
+  main-clause "cost" looked real at seed 0 and was sampling noise.
+- The hair-clause dump prints each clause with its character offset
+  (`for (const c of r.hairClauses) console.log('  @' + String(r.text.indexOf(c)).padStart(4) + '  ' + c)`)
+  rather than a main/rear split. The split classifier is wrong — it reads the `back` inside
+  `slicked back` as a rear marker — and position disambiguates without a smarter classifier.
+  Plus the checks `s1`–`s3` (the two scrub nodes applied offline) and `v1`–`v5` (the hair shape).
+  **The `v*` booleans are a screen, not evidence: read the clause dump.**
 
 ```js
 // MPI-504 enhancer regression, arm-based.

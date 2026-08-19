@@ -1,0 +1,76 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "1a513284-13ea-4fb6-b552-eae123a13de2",
+  "generated_at": "2026-08-20T09:05:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-504 Character Sheet - the v4.1 regression ran (recipe is now v4.2), bench gate #1 passed, and Fabio decided the prompt UI",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Run the owed v4.1 enhancer recipe regression, then continue the card's bench gates.",
+    "status": "in_progress",
+    "summary": "The regression found the adopted F hair shape was NOT reaching the output - category 4 was being ignored 6 times in 8 - and a slot template fixed it, making the recipe v4.2. Bench gate #1 then passed: the neutralised template is indistinguishable from Fabio's gendered original across four cells. Fabio then decided the prompt UI, which is the next build: a three-step Flow with the enhancer promoted into two user-facing prompt boxes."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    "completed": [
+      "THE v4.1 REGRESSION RAN - 24 samples, 3 arms x 2 seeds, text-only. The four v3 guarantees all survive the F-shape edit and `nothing held` improved to 4 of 4",
+      "THE FINDING: v4.1's prose amendment was obeyed in category 2 and IGNORED in category 4 - the rear clause restated the hair colour 2 of 8, colour-and-texture together 0 of 8. The F shape's measured win IS the rear colour, so it was dying in the round trip through the LLM",
+      "v4.2 FIXED IT and is the shipped recipe in prompts.md s2 - a slot template in rule 4 ('the <colour> <texture> hair <worn how at the back>'). Rear colour 8 of 8, main clause unharmed at 7 of 8. Byte-verified: the recipe block in prompts.md is identical to the arm that was measured",
+      "v4.3 DISPROVED - it tried to close the residual with a worked example and leaked `dark brown` into a RED-HAIRED character at both seeds, plus 4 of 8 rear clauses became verbatim duplicates of the main clause. Re-proves the rule already in the research file: no readable example, slot templates only",
+      "BENCH GATE #1 PASSED - neutral-pronoun A/B, one male character, 3 seeds at 1k-turbo plus the shipping 2k-quality rig, 8 generations, raw/ untouched. Visually indistinguishable in all four cells; the man/woman-token fallback is NOT needed and should not be built",
+      "THE PROMPT UI IS DECIDED by Fabio (2026-08-20) - full spec in plan.md `## The prompt UI`"
+    ],
+    "pending": [
+      "BUILD THE PROMPT UI - the three-step Flow with two prompt boxes. This is the next real work; the spec is settled and written down",
+      "Head branch: face detect SELECTS the area, then a SAM3 union of hair + face + hat builds the mask",
+      "Klein A/B: baked removal prompt vs the no-prompt remove op + crop/stitch",
+      "All four styles return their medium and keep the catch-light (Anime and Photoreal proven; 3D and Cartoon untested)",
+      "Generate a sheet from a v4.2 enhancer output - the 8-of-8 rear colour is measured in TEXT only, never in an image",
+      "Residual, Fabio's call: ~2 in 8 v4.2 outputs write `dark brown` in the main clause and `black` at the back. Accept it, or move the invariant out of the recipe - NOT more wording",
+      "10/10 stress test, then /mpi-add-flow for the app wiring"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-504",
+    "title": "Character Sheet flow - a description in, a video-reference sheet out (front body HEADLESS)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-504/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Start building the decided prompt UI - read plan.md `## The prompt UI` first, it is the full spec. Three-step Flow: step 1 start with NO media input (N/A icon or no input section), step 2 the refine surface (small user-input box, big Enhance button, large editable enhanced-prompt box), step 3 the condensed generate surface (small user input, Enhance, Generate, enhanced prompt NOT shown). Enhance is the only writer of the enhanced box; if the user never presses Enhance the raw user prompt is used; editing the user prompt CLEARS the enhancement - visibly in step 2, and in step 3 by changing the Enhance button's appearance; step 3's Enhance fills step 2's box. Sidecar stores BOTH prompts, Reuse injects the enhanced one verbatim and never re-enhances, and NO seed is stored. Scope the work first: the two graphs are already separate, so this is app-side, and the existing PromptBox Enhance CANNOT be reused as-is because it overwrites in place and calls the Cubric Prompt connector rather than the local qwen3vl enhancer.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE PROMPT UI (Fabio, 2026-08-20) - three-step Flow, enhancer promoted out of hiding into two user-facing fields. Rules, all his: Enhance is the ONLY writer of the enhanced box; no Enhance pressed means the raw user prompt is used, never a silent enhancement; editing the user prompt CLEARS the enhanced prompt, apparent immediately in step 2 and signalled in step 3 by the Enhance button changing appearance; step 3's Enhance fills step 2's box (one shared value, displayed only in step 2); the sidecar stores BOTH prompts and Reuse injects the enhanced one verbatim.",
+      "NO SEED IS STORED IN THE SIDECAR - proposed and rejected by Fabio. The enhanced prompt is itself stored and injected verbatim, so the seed adds nothing, and nothing else in the app stores one. The enhancer seed IS still load-bearing inside the graph: step 3's loop is Enhance -> Generate -> Enhance, and without a seed input every Enhance returns the same phrase. Measured: identical user text at seed 0 vs seed 1 returns a different ethnicity, hair and wardrobe - a different person, not a rewording.",
+      "WHY THE UI CHANGE IS WORTH IT, beyond the seed: the character phrase is currently an invisible intermediate, regenerated per dispatch, never shown or stored. That costs reproducibility (the phrase moves underneath a held image seed), repair (the v4.2 residual is unfixable by the user while hidden), and the asset-registry descriptor the brief wants - an asset is a PAIR of image plus a phrase reused word for word.",
+      "THE RECIPE IS v4.2 and prompts.md s2 carries it, byte-verified against the measured arm. The rear-clause slot template is what made the adopted F shape actually reach the output.",
+      "GATE #1 IS CLOSED - the neutralisation is safe, and the man/woman-token fallback in prompts.md s1 is marked not-to-build rather than deleted.",
+      "2k-quality actually costs 239-240s, not the 328s previously recorded. Worth correcting anywhere that figure drives planning."
+    ],
+    "constraints": [
+      "THE EXISTING PromptBox ENHANCE CANNOT BE REUSED AS-IS. `MpiPromptBox.js` `_runEnhance()` calls `el.injectPrompts()` with the result, OVERWRITING the prompt in place - the user's original is destroyed, not kept beside it. It is also a Cubric Prompt CONNECTOR call (shell/connectorOps.js, MPI-5), not the local qwen3vl enhancer. Only the reuse-injects-verbatim half has precedent, in js/utils/promptReuse.js. And `enhancePrompt: false` in js/data/promptControlDefaults.js is a THIRD, unrelated thing - a per-model boolean control. Three different 'enhance' concepts; do not conflate them.",
+      "THE TWO GRAPHS ARE ALREADY SEPARATE - `krea2_t2i_only.json` contains NO TextGenerate; the enhancer is its own workflow, `comfy_workflows/raw/qwen3vl_4b_prompt_enhancer.json`. The two-stage split the UI needs already exists at the bench, so this work is app-side, not graph surgery.",
+      "ONE SEED IS A PILOT, NOT A RESULT - and this now applies to TEXT arms too, not just images. Mid-regression, seed 0 said the v4.2 slot template cost the main clause its hair description and seed 1 said 4 of 4; the 'cost' was sampling noise at temperature 0.5. The runner takes a SEED env var - use it, every arm twice.",
+      "NO READABLE EXAMPLE IN THE ENHANCER SYSTEM PROMPT, EVER. Proven at v1 and re-proven at v4.3: a 4B copies any readable example out of the instruction into the output. Slot templates (`<colour>`, `<texture>`) are safe because they are not readable prose.",
+      "comfy_workflows/raw/ is USER-OWNED. Every graph experiment this session ran was applied to the API payload ONLY - convert with `COMFY_URL=http://127.0.0.1:8188 node scripts/workflow-to-api.mjs comfy_workflows/raw/x.json > <scratchpad tmp>` and patch that. Never run that script bare - with no argument it converts everything in raw/ and WRITES.",
+      "THE GPU NEEDS THE LEASE: python \"${CLAUDE_PLUGIN_ROOT}/skills/mpi-lib/scripts/gpu_lease.py\" run -- <command>. Machine-global, one slot - run it as a BACKGROUND Bash call. Read-only probes (/queue, /history, /object_info, /view) are NOT matched, do not wrap those.",
+      "TextGenerate.sampling_mode is a COMFY_DYNAMICCOMBO_V3 - its sub-inputs are FLAT keys prefixed with the parent id (`sampling_mode.seed`), not a nested object. Getting it wrong returns prompt_outputs_failed_validation naming every sub-input at once, which reads like the node is broken.",
+      "Generated sheets are ComfyUI TEMP files and die on a bench restart; the session scratchpad dies too. Fabio confirmed the gate #1 images need no saving. Record character phrases VERBATIM in validation.md - this card already had to rebuild four arms from /history once."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-504/prompts.md",
+      ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    ]
+  },
+  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/1a513284-13ea-4fb6-b552-eae123a13de2.json first, then plan.md (start with `## Current State` and `## The prompt UI`), prompts.md and validation.md (newest entries LAST) in .agents/mpi-kanban/tasks/MPI-504/. The card is in doing. Last session ran the owed v4.1 enhancer regression and it found that the adopted F hair shape was NOT reaching the output - the rear clause restated the hair colour only 2 times in 8 - so a slot template was added to recipe rule 4, making it v4.2, which takes that to 8 of 8; a v4.3 attempt at the residual was disproved because its worked example leaked into the output. Bench gate #1 then PASSED: the neutralised template is visually indistinguishable from Fabio's gendered original across three seeds at 1k-turbo plus the shipping 2k-quality rig. Fabio then DECIDED the prompt UI, and building it is the next work - a three-step Flow that promotes the enhancer out of hiding into two user-facing prompt boxes, spec'd in full under `## The prompt UI` in plan.md. Standing rules learned the hard way: one seed is a pilot not a result (true for text arms too), never put a readable example in the enhancer system prompt, raw/ is user-owned so graph experiments go in the API payload only, and the GPU needs the lease wrapper (gpu_lease.py run -- <cmd>, machine-global, one slot)."
+}

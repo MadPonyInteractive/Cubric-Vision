@@ -18,6 +18,15 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
 - [x] `use_default_template` A/B on `58 TextGenerate` — byte-identical, flag is inert, keep `true`
 - [x] Two `RegexReplace` scrub nodes designed and verified offline on all four real v3 outputs
       (negation gone 4/4, rear view kept 4/4, trailing full stop gone 4/4) — now part of the build
+- [x] **v4.1 regression (session 4)** — the adopted F hair shape, four inputs × two seeds × three
+      arms. The four v3 guarantees survive; category 4 did NOT land as prose (rear colour 2 of 8),
+      a slot template fixed it (**v4.2**, 8 of 8) and is now the shipped recipe; **v4.3 disproved**
+      (instruction example leaked, duplicate clauses) → research/enhancer-regression-2026-08-19.md
+- [ ] Residual, Fabio's call: ~2 in 8 v4.2 outputs write `dark brown` in the main clause and
+      `black` at the back. Accept the drift, or move the invariant out of the recipe — NOT more
+      wording (v4.3 is the evidence)
+- [ ] Generate a sheet from a v4.2 enhancer output — the 8-of-8 rear colour is measured in TEXT
+      only; whether it moves the rendered rear panel is still open
 - [ ] Re-run the regression against the built graph once the scrub nodes are in it, to confirm
       the whole chain end to end rather than the recipe alone
 
@@ -105,7 +114,10 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       visibly DIFFERENT men without it. So non-turbo is a **variation lever**, not merely a quality
       setting — it is how a user hunts for a face. This also partly explains the small between-arm
       deltas above: every wording arm ran under turbo, i.e. against a locked character
-- [ ] Gate #1: neutral-pronoun A/B against Fabio's original wording, same seed
+- [x] **Gate #1 PASSED 2026-08-19** — neutral-pronoun A/B against Fabio's original wording, one male
+      character, 3 seeds at 1k-turbo + the shipping 2k-quality rig, 8 generations. Visually
+      indistinguishable in all four cells; the `man`/`woman`-token fallback is NOT needed.
+      Wording verified reaching the sampler per cell (8/8) via `673 Output_prompt`
 - [ ] Head branch: face detect → `ImpactSEGSOrderedFilter` area ascending take 1 — **unchanged, and
       it stays: its output SELECTS the area to inpaint (which head), it is not the mask** — then
       **SAM3 `hair` + `face` + `hat` union builds the mask that gets filled** → grow 24 @ 2k.
