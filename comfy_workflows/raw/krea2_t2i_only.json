@@ -1,8 +1,8 @@
 {
   "id": "08988737-a544-4ab1-99fb-22d67b7c36e3",
   "revision": 0,
-  "last_node_id": 665,
-  "last_link_id": 1435,
+  "last_node_id": 673,
+  "last_link_id": 1444,
   "nodes": [
     {
       "id": 136,
@@ -1822,7 +1822,7 @@
         {
           "name": "STRING",
           "type": "STRING",
-          "link": 1386
+          "link": 1443
         }
       ],
       "outputs": [
@@ -2589,7 +2589,7 @@
           "name": "Text",
           "type": "STRING",
           "links": [
-            1386
+            1442
           ]
         }
       ],
@@ -2739,6 +2739,346 @@
       "widgets_values": [
         512
       ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 666,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -5300,
+        3260
+      ],
+      "size": [
+        560,
+        420
+      ],
+      "flags": {},
+      "order": 54,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            1437
+          ]
+        }
+      ],
+      "title": "Recipe_Photoreal",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline",
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0"
+      },
+      "widgets_values": [
+        "Live-action photographic character reference sheet of [CHARACTER PROMPT], photographed as a real actor for a feature film. A single continuous studio photograph containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking into the lens, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Authentic skin texture with visible pores, natural hair, realistic eyes with a small bright catch-light in each pupil, 85mm lens."
+      ]
+    },
+    {
+      "id": 667,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -4700,
+        3260
+      ],
+      "size": [
+        560,
+        420
+      ],
+      "flags": {},
+      "order": 55,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            1438
+          ]
+        }
+      ],
+      "title": "Recipe_3D",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline",
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0"
+      },
+      "widgets_values": [
+        "3D animated character reference sheet of [CHARACTER PROMPT], modelled as a hero character for a feature animation. A single continuous rendered turnaround image containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking into the camera, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Clean stylised 3D render with subsurface skin shading, groomed hair, glossy eyes with a small bright catch-light in each pupil, even studio render lighting."
+      ]
+    },
+    {
+      "id": 668,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -4100,
+        3260
+      ],
+      "size": [
+        560,
+        420
+      ],
+      "flags": {},
+      "order": 56,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            1439
+          ]
+        }
+      ],
+      "title": "Recipe_Anime",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline",
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0"
+      },
+      "widgets_values": [
+        "Anime character reference sheet of [CHARACTER PROMPT], drawn as a key character for an animated feature. A single continuous cel-shaded illustration containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Crisp line art with flat cel-shaded colour fills, clean anime eyes with a small bright highlight in each pupil, model-sheet clarity."
+      ]
+    },
+    {
+      "id": 669,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -3500,
+        3260
+      ],
+      "size": [
+        560,
+        420
+      ],
+      "flags": {},
+      "order": 57,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            1440
+          ]
+        }
+      ],
+      "title": "Recipe_Cartoon",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline",
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0"
+      },
+      "widgets_values": [
+        "2D cartoon character reference sheet of [CHARACTER PROMPT], drawn as a hero character for an animated series. A single continuous flat-colour illustration containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Bold clean outlines with flat colour fills and simple soft shading, expressive eyes with a small bright highlight in each pupil, model-sheet clarity."
+      ]
+    },
+    {
+      "id": 671,
+      "type": "MpiInt",
+      "pos": [
+        -5300,
+        3720
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 58,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            1436
+          ]
+        }
+      ],
+      "title": "Input_Recipe",
+      "properties": {
+        "Node name for S&R": "MpiInt"
+      },
+      "widgets_values": [
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 670,
+      "type": "MpiAnySwitch",
+      "pos": [
+        -4960,
+        3720
+      ],
+      "size": [
+        270,
+        138
+      ],
+      "flags": {},
+      "order": 59,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any_1",
+          "shape": 7,
+          "type": "*",
+          "link": 1437
+        },
+        {
+          "name": "any_2",
+          "shape": 7,
+          "type": "*",
+          "link": 1438
+        },
+        {
+          "name": "any_3",
+          "shape": 7,
+          "type": "*",
+          "link": 1439
+        },
+        {
+          "name": "any_4",
+          "shape": 7,
+          "type": "*",
+          "link": 1440
+        },
+        {
+          "name": "any_5",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "select",
+          "type": "INT",
+          "widget": {
+            "name": "select"
+          },
+          "link": 1436
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            1441
+          ]
+        },
+        {
+          "name": "index",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "Recipe_Select",
+      "properties": {
+        "Node name for S&R": "MpiAnySwitch",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
+      },
+      "widgets_values": [
+        1
+      ]
+    },
+    {
+      "id": 672,
+      "type": "StringReplace",
+      "pos": [
+        -4600,
+        3720
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 60,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 1441
+        },
+        {
+          "name": "replace",
+          "type": "STRING",
+          "widget": {
+            "name": "replace"
+          },
+          "link": 1442
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            1443,
+            1444
+          ]
+        }
+      ],
+      "title": "Sheet_Prompt",
+      "properties": {
+        "Node name for S&R": "StringReplace",
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0"
+      },
+      "widgets_values": [
+        "",
+        "[CHARACTER PROMPT]",
+        ""
+      ]
+    },
+    {
+      "id": 673,
+      "type": "PreviewAny",
+      "pos": [
+        -4100,
+        3720
+      ],
+      "size": [
+        340,
+        450
+      ],
+      "flags": {},
+      "order": 61,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "source",
+          "type": "*",
+          "link": 1444
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": []
+        }
+      ],
+      "title": "Output_prompt",
+      "properties": {
+        "Node name for S&R": "PreviewAny",
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0"
+      },
+      "widgets_values": [],
       "color": "#432",
       "bgcolor": "#653"
     }
@@ -3177,14 +3517,6 @@
       "MODEL"
     ],
     [
-      1386,
-      112,
-      0,
-      658,
-      0,
-      "STRING"
-    ],
-    [
       1408,
       139,
       0,
@@ -3295,6 +3627,78 @@
       560,
       1,
       "INT"
+    ],
+    [
+      1436,
+      671,
+      0,
+      670,
+      5,
+      "INT"
+    ],
+    [
+      1437,
+      666,
+      0,
+      670,
+      0,
+      "STRING"
+    ],
+    [
+      1438,
+      667,
+      0,
+      670,
+      1,
+      "STRING"
+    ],
+    [
+      1439,
+      668,
+      0,
+      670,
+      2,
+      "STRING"
+    ],
+    [
+      1440,
+      669,
+      0,
+      670,
+      3,
+      "STRING"
+    ],
+    [
+      1441,
+      670,
+      0,
+      672,
+      0,
+      "STRING"
+    ],
+    [
+      1442,
+      112,
+      0,
+      672,
+      1,
+      "STRING"
+    ],
+    [
+      1443,
+      672,
+      0,
+      658,
+      0,
+      "STRING"
+    ],
+    [
+      1444,
+      672,
+      0,
+      673,
+      0,
+      "STRING"
     ]
   ],
   "groups": [

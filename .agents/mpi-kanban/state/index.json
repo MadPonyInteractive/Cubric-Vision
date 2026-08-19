@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-19T10:58:00Z",
+  "updated_at": "2026-08-19T13:20:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -29,9 +29,17 @@
       "id": "a8609f95-286f-4fdc-8b35-e0b2c489fc9f",
       "path": ".agents/mpi-kanban/state/handoffs/a8609f95-286f-4fdc-8b35-e0b2c489fc9f.json",
       "task_card": "MPI-504",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-19T16:40:00Z",
-      "note": "Recipe measured to v4 and its residual closed in the graph, not the prompt. Both graphs exist and verify clean; the enhancer is universal with the recipe injected at run time. Nothing generated yet - next is the sheet template wiring, then the first 8:5 2k sheet."
+      "note": "Superseded by cbf47af6-60a6-4790-899a-cceed36f2c59 - the sheet prompt is wired and proven live over four generations, and the hair thread has been measured and its wrong write-up corrected."
+    },
+    {
+      "id": "cbf47af6-60a6-4790-899a-cceed36f2c59",
+      "path": ".agents/mpi-kanban/state/handoffs/cbf47af6-60a6-4790-899a-cceed36f2c59.json",
+      "task_card": "MPI-504",
+      "status": "open",
+      "created_at": "2026-08-19T13:20:00Z",
+      "note": "Sheet prompt wired into krea2_t2i_only.json and proven live - four generations, layout correct in all. Open thread is the rear panel's hair; Fabio's call is to name the hair ONCE in the main clause, and the 'texture cannot be steered' note is withdrawn as never established."
     }
   ]
 }

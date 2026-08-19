@@ -26,7 +26,8 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
 - [~] Copy + seven-group strip RAN, then FAILED review: that list deletes the conditioning
       (`Edit` builds it) and the resolution (`Images` holds W/H). Invalid file removed; the
       corrected keep-list is in plan.md § What must survive the strip
-- [ ] **Fabio strips the graph in the bench editor** — t2i only, Prompt Enhancement group out
+- [x] **Fabio stripped the graph in the bench editor** — `krea2_t2i_only.json`, 54 nodes, t2i
+      only, Prompt Enhancement group out
 - [x] **`qwen3vl_4b_prompt_enhancer.json`** — built by Fabio, then patched: v4 recipe in,
       two `RegexReplace` scrub nodes added, `Input_enhance_prompt` `MpiIfElse` deleted.
       Verified offline; patterns proven against the four real v4 outputs
@@ -37,10 +38,27 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       4/4 (Python `re` == JS), and an injected translator recipe returned French
 - [ ] At `/mpi-add-flow`: decide whether the op is a universal `promptEnhance` (the
       `getUniversalWorkflow('imageDescribe')` shape) rather than sheet-specific
-- [ ] Wire the four templates + `MpiAnySwitch` on `Input_Style`, and the `[CHARACTER PROMPT]`
-      `StringReplace` fed by `Input_Positive` — the prompt box, verbatim, no in-graph enhancer
-- [ ] Point a `PreviewAny` titled `Output_prompt` at the ASSEMBLED sheet prompt (MPI-242 contract)
-- [ ] First sheet at 8:5 2k — layout intact, one continuous backdrop, same character ×3
+- [x] Wired the four templates + `MpiAnySwitch` on **`Input_Recipe`** (renamed from
+      `Input_Style`), and the `[CHARACTER PROMPT]` `StringReplace` fed by `Input_Positive`
+      verbatim — nodes `666`-`672`, no in-graph enhancer. Verified offline: 62/62 nodes
+      reachable, converter exit 0, substitution simulated ×4
+- [x] `673 PreviewAny` titled `Output_prompt` points at the ASSEMBLED sheet prompt (MPI-242 contract)
+- [x] First sheet generated — **1k + turbo, not 2k** (Fabio: placement is the test, quality is
+      not, since the sheet feeds another model). 1280×768, seed 504504, 40s. Layout PASSES:
+      two narrow bodies left (front + back), 3/4 portrait right, one continuous backdrop,
+      wardrobe consistent, catch-light present. `Output_prompt` returned the ASSEMBLED prompt
+      live (MPI-242 contract proven, not just converted)
+- [~] **Rear-panel hair drifts** — A/B run. SYSTEMATIC, not seed luck (arm C: fresh seed, same
+      wording, same brown wavy rear). Wording knob is real but partial (arm B: naming the colour
+      in the rear clause moved brown → grey-streaked at the same seed; `straight` did nothing,
+      texture stayed wavy). Colour responds, texture does not. Next: name colour AND texture in
+      the TEMPLATE's global identity clause — RAN, NEGATIVE (arm D: no better than control).
+      Settled: the knob is the character phrase's rear clause, so the fix is recipe payload and
+      the template stays as written. Texture never responded to any wording = known v1 limit
+- [ ] **Hair named ONCE, in full** (Fabio's call, supersedes the v4.1 rear-clause repeat): one run,
+      `long straight iron-grey hair worn loose past the shoulders` in the MAIN clause, rear clause
+      untouched, seed 504504 held. Settles whether panel disagreement is a description gap or a
+      model limit — the "texture is a limitation" claim was withdrawn as never established
 - [ ] Gate #1: neutral-pronoun A/B against Fabio's original wording, same seed
 - [ ] Head branch: face detect → `ImpactSEGSOrderedFilter` area ascending take 1 → bbox grown
       upward → head mask → grow 24 @ 2k. Confirm `face_yolov8n` sees the small face at 1k

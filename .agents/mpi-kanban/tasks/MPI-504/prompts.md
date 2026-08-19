@@ -57,8 +57,19 @@ Higgsfield rule (d): without it the face is dead and no video model can act with
 stays boring on purpose or the character carries that look into every scene.
 
 The four templates are four `PrimitiveStringMultiline` nodes behind an `MpiAnySwitch` on
-`Input_Style` (1-indexed, matching the head-swap `Input_Tier` pattern). Nothing about the
+**`Input_Recipe`** (1-indexed, matching the head-swap `Input_Tier` pattern). Nothing about the
 style reaches the app beyond that integer.
+
+**The field is `Input_Recipe`, not `Input_Style`** (Fabio, 2026-08-19): the node picks a prompt
+RECIPE, so the same bank-behind-an-int is reusable by any later flow that needs one. It also
+keeps the name clear of `Input_Style_Selector`, which is the style-LoRA rack and a different
+thing entirely.
+
+Built 2026-08-19 in `comfy_workflows/raw/krea2_t2i_only.json` as nodes `666`-`669`
+(`Recipe_Photoreal` / `Recipe_3D` / `Recipe_Anime` / `Recipe_Cartoon`), `670 Recipe_Select`
+and `671 Input_Recipe`. The three non-photoreal strings were generated from the skeleton above,
+with the Photoreal output asserted byte-identical to the block below — so the skeleton and the
+table stay the source of truth, and a fifth style is one row plus one node.
 
 ### Photoreal, assembled (the exact string for the node)
 
@@ -208,6 +219,40 @@ call at the review step, not a check.
 
 Runner: `scratchpad/enhancer-regression2.mjs <sysprompt file> <use_default_template> <label>`,
 copied into the research file.
+
+### Hair — name it ONCE, in full (Fabio, 2026-08-19). SUPERSEDES the v4.1 proposal below
+
+**The shape to test and, if it holds, to adopt:** the main hair clause carries the whole description — colour AND texture together, e.g. `long straight iron-grey hair worn loose past the shoulders` — and the rear clause names only how it falls or is tied at the back, repeating no attribute. Fabio's reasoning: saying the same thing twice is the likelier source of the confusion.
+
+**This reverses the direction of the amendment written below**, which asked the rear clause to restate the colour. Keep that text as the record of what was measured — it is real evidence, arm B did improve by repeating — but do not adopt it without running the single-reference arm first; the two readings predict different outcomes and one run separates them.
+
+**Also corrected:** the claim that hair TEXTURE does not respond to wording was never established. The character phrase never asked for a texture at all, so the wavy back view violated no instruction; the defect is that the panels disagree. See validation.md, the correction entry.
+
+### Rear clause — restate the hair COLOUR, measured 2026-08-19 (v4.1 proposal, SUPERSEDED above)
+
+Rule 4 currently asks for *"how the hair falls or is tied at the back"*. Measured on the sheet,
+that is not enough: with the rear clause naming only how the hair falls, Krea2 rendered the back
+view's hair dark brown against straight iron-grey on the other two panels, on **two different
+seeds**. Repeating the colour in that clause moved it to grey-streaked at a held seed — the one
+wording change of three tried that did anything.
+
+Proposed amendment to rule 4, appended to its existing sentence:
+
+> … **and restate the hair's colour there, in the rear clause itself — not only where the hair is
+> first described.** The rear view is rendered from that clause alone.
+
+Two things this does NOT fix, both measured:
+
+- **Hair texture.** An arm that said `the same straight iron-grey hair` in the REAR clause still
+  returned wavy hair at the back. This was first written up as "texture does not respond to
+  wording" — **withdrawn**: the main hair clause named no texture at all, so the attribute was
+  never stated where every panel reads it. Untested, not a limitation.
+- **A template-side instruction.** Naming the invariant in the sheet template's global identity
+  clause (`identical hair colour, hair length and hair texture in all three views`) did nothing at
+  all — arm D, validation.md. The words have to be in the character phrase.
+
+**Not applied to the recipe text above yet.** The v4 regression was run against the current wording,
+so this amendment needs its own pass — cheap, text-only, four inputs — before it becomes v4.1.
 
 ### The gear policy — settled 2026-08-19
 

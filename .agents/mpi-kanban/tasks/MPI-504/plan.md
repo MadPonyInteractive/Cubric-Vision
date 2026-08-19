@@ -80,8 +80,54 @@ itself. Worth considering at `/mpi-add-flow` time: this is the same shape as
 `getUniversalWorkflow('imageDescribe')`, so the op could be a universal `promptEnhance` that any
 flow calls with its own recipe, rather than a character-sheet-specific op.
 
-Next action: close those three, then wire the four style templates and the `[CHARACTER PROMPT]`
-hole into `krea2_t2i_only.json`. Open calls 1-5 still stand and all need the GPU.
+**2026-08-19, session 3 — the sheet prompt is wired into `krea2_t2i_only.json`.** 54 → **62
+nodes**, 69 → **77 links**, authorised by Fabio (raw/ is user-owned). Eight new nodes `666`-`673`:
+the four recipe templates, `Recipe_Select`, `Input_Recipe`, `Sheet_Prompt` and `Output_prompt`;
+build detail in § Then add, in order.
+
+**Verified offline, no GPU, no generation:** link integrity clean; Set/Get pairing clean (the one
+unread `Set_model` predates this edit — confirmed against the pre-patch copy, left alone);
+**62 of 62 nodes reachable** walking upstream from `442 SaveImage` / `494 Output_Image` /
+`673 Output_prompt` with `Get`→`Set` as an edge; the substitution simulated for all four recipes
+(hole filled, character present, 241-246 words assembled). `scripts/workflow-to-api.mjs` converts
+exit 0 against the live bench `/object_info` with `_meta.title` intact on every injectable, all
+16 injectable titles unique, `51 CLIPTextEncode.text` ← `672`, and `671 Input_Recipe` lands on
+an unwired `int` key, which `comfyController._inject` sprays (`js/services/comfyController.js:1373`).
+
+**The first sheet is generated and the layout passes** (2026-08-19, `prompt_id ff505256`, 40s).
+**Test rig is 1k + turbo ON, not 2k turbo-off** — Fabio: placement is what matters and the sheet
+feeds another model, so quality proves nothing here and costs time. `673 Output_prompt` returned
+the assembled 303-word prompt as node text, so the MPI-242 contract is proven live. Evidence and
+the full read of the image: validation.md.
+
+**The rear-panel hair drift is measured, not guessed** (A/B, two arms, validation.md): it is
+SYSTEMATIC across seeds, and the description reaches that panel for COLOUR but not for TEXTURE.
+It matters because the front body loses its head to the Klein pass, leaving the rear panel as the
+only hair-from-behind reference the video model gets.
+
+That arm RAN and came back NEGATIVE (arm D, validation.md): the template's global identity clause
+changed nothing. Krea2 attends to the concrete rear-view description and ignores a general
+"all views must match" instruction. **Settled: the knob is the character phrase's rear clause**,
+so the fix is enhancer-recipe payload, the template stays as Fabio wrote it, and the graph does
+not move. **The "hair texture is a v1 limitation" line is WITHDRAWN** — never established. Colour was
+stated and disobeyed on one panel (a real adherence failure); texture was never asked for at all,
+so the wavy back view broke no instruction and the actual defect is that the panels disagree. Arm
+B only added `straight` to the REAR clause while the main clause named no texture, so the
+mechanism was never tested. validation.md carries the correction.
+
+**Fabio's call: name the hair ONCE, in full.** Colour and texture together in the main clause, the
+rear clause naming only how it falls, no attribute repeated — on the reading that saying a thing
+twice is what confuses the model. This REVERSES the v4.1 proposal in prompts.md §2 (which asked
+the rear clause to restate the colour); that proposal stays as the record of what arm B measured,
+unadopted.
+
+Next action: one run — `long straight iron-grey hair worn loose past the shoulders` in the MAIN
+clause, rear clause untouched, seed `504504` held so it compares straight against run 1, B and D.
+Panels agree → description gap, and the recipe rule takes Fabio's single-mention shape. Panels
+still disagree → texture consistency is a model limit, established on evidence. Then gate #1
+(neutral pronouns) and the head branch. After that, gate #1 (neutral pronouns) and the head branch. Open calls 1-5 still
+stand; all need the GPU, and the GPU now needs the lease
+(`mpi-lib/scripts/gpu_lease.py run -- <cmd>`, machine-global, one slot).
 
 ## The flow
 
@@ -100,7 +146,7 @@ Declared `fields` (no component — MPI-531 shape):
 | field | type | default | notes |
 |---|---|---|---|
 | `positive` | text | — | the character. Placeholder copy asks for who they are, wardrobe, age, hair, eyes, marks |
-| `Input_Style` | radio ×4 | 1 Photoreal | Photoreal · 3D · Anime · Cartoon |
+| `Input_Recipe` | radio ×4 | 1 Photoreal | Photoreal · 3D · Anime · Cartoon. **Renamed from `Input_Style`** (Fabio, 2026-08-19) — the switch picks a prompt RECIPE, so any other flow can borrow the same bank-behind-an-int pattern |
 | `Input_Quality` | radio ×2 | **2k** | 1k `1280×768` · 2k `1792×1120` |
 | `Input_is_Turbo` | toggle | **off** | the krea2 accelerator LoRA |
 | `Input_Remove_Head` | toggle | **on** | the SAM3 + Klein pass |
@@ -203,12 +249,16 @@ longer exists, so each resolves to a deletion, not a re-wire:
 
 ### Then add, in order
 
-1. **Four sheet templates** (`PrimitiveStringMultiline`) → `MpiAnySwitch` on `Input_Style`
-   (1-indexed, the head-swap `Input_Tier` pattern).
-2. **The hole.** `StringReplace`: string = the selected template, find `[CHARACTER PROMPT]`,
-   replace ← the *Prompt Enhancement* group's output (node `241` `Input_enhance_prompt`, which
-   already picks enhanced-vs-raw). The result feeds `Set_positive text` in place of
-   `Input_Positive`'s direct wire — the user's raw text now only ever reaches the enhancer.
+1. **DONE 2026-08-19.** Four sheet templates (`PrimitiveStringMultiline` `666`-`669`, titled
+   `Recipe_Photoreal` / `Recipe_3D` / `Recipe_Anime` / `Recipe_Cartoon`) → `670 MpiAnySwitch`
+   `Recipe_Select`, `select` ← `671 MpiInt` **`Input_Recipe`** (1-indexed, the head-swap
+   `Input_Tier` pattern). Generated from the one skeleton in prompts.md §1 rather than typed
+   four times — the Photoreal output is asserted byte-identical to the canonical block there.
+2. **DONE 2026-08-19.** The hole: `672 StringReplace` `Sheet_Prompt` — `string` ← `670`,
+   `find` = `[CHARACTER PROMPT]` (widget), `replace` ← `112 Input_Positive` **verbatim**.
+   Its output feeds `658 Set_positive text` (old link `1386` deleted) and `673 PreviewAny`
+   **`Output_prompt`**. No `241` any more — the enhancer left this graph, so what the box holds
+   is what the hole gets, and `51 CLIPTextEncode.text` now reads `672` through `Get_positive text`.
 3. **Swap the enhancer recipe.** Node `420`'s widget → the character-only system prompt (**v3**)
    in [prompts.md](prompts.md) §2. Keep the `<|im_start|>system` / `<|im_end|>\n<|im_start|>user`
    wrapper exactly — nodes `422` and `419` build the rest of the ChatML frame around it.
