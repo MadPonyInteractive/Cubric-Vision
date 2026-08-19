@@ -1,0 +1,75 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "c2dd055b-96a7-4f54-8815-36a299f2e736",
+  "generated_at": "2026-08-19T03:45:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-568 bench: LTX spatial + temporal upscaler evaluation",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Bench-evaluate the LTX spatial upscaler as the SeedVR2 successor: does it reconstruct rather than sharpen, does it keep an eye an eye, and does it clear the 16 GB ceiling that killed MPI-506.",
+    "status": "in_progress",
+    "summary": "The standalone v2v graph is built and works (81f 672x1216 -> 1344x2432, ONE pass, 278s, peak 15898MB of 16380 - no chunking, so SeedVR2's chunk-boundary oscillation cannot occur). The card's decisive radial-FFT metric was shown NOT to survive its own control and cannot decide this card. sigma is the real product knob: 0.85 replaces the person, 0.30 keeps identity and resolves real detail. Fabio surfaced two further upscalers (temporal x2, spatial x1.5), both now on disk and both running on the existing node unchanged; the temporal one is the cheapest arm on the card by far and beats frame duplication against ground truth. Fabio has NOT yet given the eye verdict that closes the card, and he reported wavy SeedVR2-like distortion on the temporal_gt clip that none of the three instruments caught."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-568/plan.md",
+    "completed": [
+      "Phase 1 - three of the card's premises corrected in brief.md (the upscaler ALREADY ships in ltx_i2v_t2v.json nodes 123/125; LowVRAMLatentUpscaleModelLoader is a custom node not core; the core FrameInterpolate pair has an EMPTY model combo and is unusable)",
+      "Phase 2 - standalone v2v graph authored (scratchpad/build_v2v.py, 21 nodes), verified on a 25-frame run",
+      "Phase 3 - Q1 + Q4 answered: 81 frames in one pass, 278s, peak 15898MB",
+      "Phase 4 - sigma + img_compression sweep, plus the no-sampler control that invalidated the metric",
+      "Phase 5 - eye/object crops produced; sigma 0.85 replaces identity, 0.30 preserves it",
+      "Guide-strength sweep (LTXVAddGuide) at sigma 0.85, incl. a re-run after fixing the guide-resolution bug",
+      "Temporal upscaler downloaded, wired and tested, incl. a ground-truth interpolation test vs frame duplication"
+    ],
+    "pending": [
+      "Fabio's eye verdict - this card is `user-ux`, no metric closes it",
+      "Root-cause the WAVY DISTORTION Fabio saw on real_temporal_gt (same artifact class as SeedVR2; all three instruments scored that clip WELL)",
+      "Redo the ground-truth interpolation test with legal frame counts: 49-frame span -> every 2nd = 25 in -> 49 out -> compare vs the real 49",
+      "Write the output at the correct fps - VHS_VideoCombine.frame_rate was left at source fps, so temporal runs came out slow-mo",
+      "LTXVAddGuide attention_mask arm - pin the FACE only, leave hair/background free (the one untested config that could give 0.85's look with identity)",
+      "x1.5 spatial upscaler arm - 1.8 Mpx vs x2's 3.27 Mpx, the likely answer to the VRAM ceiling",
+      "Clip B (AI landscape) cross-check - interrupted twice for Fabio's GPU, never landed",
+      "A clean UNCONTENDED full-length re-time - every timing so far shared the GPU with the app engine"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-568",
+    "title": "LTX spatial upscaler - bench evaluation as the SeedVR2 successor",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-568/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-568/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-568/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-568/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Ask Fabio for the eye verdict on the sigma ladder sheets in D:/WORK/Images/Outputs/mpi568/ (SHEET_ladder_face_f12.png, EYE_zoom_f12.png, OBJECT_necklace_f12.png), then root-cause the wavy distortion he reported on real_temporal_gt_00001.mp4 - no existing instrument detects it, so a new one or a pure eye check is needed before the temporal arm can be trusted.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "The card's radial-FFT top/mid metric CANNOT decide this card. The no-sampler control (upsampler + VAE, no sampler) scores 0.69 - better than every arm that looks good - while producing visible mush. The pipeline's no-op floor is 0.69, not 1.0, so LTX's 0.58-0.85 was never comparable to SeedVR2's 0.43. Three instruments were built (sharpness, flicker, fidelity) and EACH ranked something wrong when read alone.",
+      "sigma is the product knob, not a tuning detail: 0.85 (the value the shipped graph uses for stage 2) coherently renders a DIFFERENT PERSON on v2v input; 0.15-0.50 preserve identity. Best setting found: sigma 0.30 with img_compression 0.",
+      "LTXVAddGuide cannot deliver sigma 0.85's look with the right identity, and the reason is structural, not a wiring bug: the guide IS the source, so it carries no information the upscale lacks and can only pull back toward source sharpness. Re-measured after fixing a real guide-resolution bug; conclusion unchanged.",
+      "The temporal upscaler is the best find of the session and closes phase 7 by a better route than the card proposed - latent-space interpolation, no RIFE, no decoded-pixel round trip, no node_lock.json entry."
+    ],
+    "constraints": [
+      "GPU IS SHARED WITH FABIO. He works on the same 16 GB card. This graph peaks at 15898MB (97%), so it CANNOT coexist with a loaded app engine - that is a product constraint, not just a bench annoyance. To yield the card: kill the runner, then POST /interrupt IN A LOOP (ComfyUI only acts at a step boundary; one POST is not enough), then POST /free {unload_models:true,free_memory:true}. Killing the client alone frees nothing - the job is server-side.",
+      "EVERY LTX frame count in this graph must be 8n+1 (1, 9, 17, 25, 33, 49...). VHS_LoadVideo will hand over 13 and LTX SILENTLY crops to 9 - no error, and the output frame count is the only symptom. This mis-framed the ground-truth arm (ran 9->17, not the 13->25 claimed).",
+      "LTXVAddGuide rescales its guide to the target latent with BILINEAR (comfy_extras/nodes_lt.py, common_upscale). Feed it source-resolution frames against a 2x latent and the model is pinned to a blurry bilinear upscale - no error, just a soft result that reads as a model property. Always resize the guide to target res with lanczos first, as the shipped graph does at node 516.",
+      "Bench is :8188 (G:/ComfyUi, NORMAL_VRAM) and carries only the INT8 transformer; the app runs --lowvram on bf16. No number measured here is an app number - that gate is still open, exactly as it was after MPI-506.",
+      "MPI-506's AI-generated source clip is GONE from disk (only derived CB_* outputs survive in C:/Users/Fabio/Downloads/seedvr2-eval/). Clip B is a substitute: a 49-frame cut of wan-2.2-5b.mp4, deliberately non-LTX so the upscaler is not flattered by reconstructing its own output distribution.",
+      "A peer session has uncommitted MPI-504 work in the tree, interleaved with this card's changes in board.json and events.jsonl. This handoff's commit used the build-the-blob recipe from .claude/rules/git.md; MPI-504 is still M/?? and must stay that way."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-568/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-568/brief.md",
+      "C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/e9f7dc25-31bc-42c2-bfff-8c95ae748b48/scratchpad/build_v2v.py",
+      "C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/e9f7dc25-31bc-42c2-bfff-8c95ae748b48/scratchpad/sweep.py"
+    ]
+  },
+  "resume_prompt": "Continue MPI-568, the LTX upscaler bench evaluation in Cubric-Vision. Read .agents/mpi-kanban/state/handoffs/c2dd055b-96a7-4f54-8815-36a299f2e736.json and .agents/mpi-kanban/tasks/MPI-568/plan.md first - the plan carries the full measurement tables and every correction, do not re-derive them. The card is in `doing`. The standalone v2v graph works and lives in the previous session's scratchpad (build_v2v.py / sweep.py / detail_vs_sharpen.py / flicker.py / fidelity.py / sheet.py / align.py at C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/e9f7dc25-31bc-42c2-bfff-8c95ae748b48/scratchpad/); bench outputs are in D:/WORK/Images/Outputs/mpi568/. This card is `user-ux`: no metric closes it, Fabio's eyes do. Two things he reported that are NOT yet actioned - the temporal outputs play at the wrong speed because VHS_VideoCombine.frame_rate was left at source fps (49 frames at 30fps = slow motion; frame-rate doubling needs 60), and real_temporal_gt_00001.mp4 shows WAVY DISTORTION of the same class that killed SeedVR2, which none of the three instruments detected. Root-cause that before trusting the temporal arm. The GPU is shared with Fabio and this graph uses 97% of it - ask before starting long runs."
+}

@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-18T10:55:00Z",
+  "updated_at": "2026-08-19T03:45:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -9,6 +9,14 @@
   "pending_file_states": [],
   "open_messages": [],
   "active_handoffs": [
+    {
+      "id": "c2dd055b-96a7-4f54-8815-36a299f2e736",
+      "path": ".agents/mpi-kanban/state/handoffs/c2dd055b-96a7-4f54-8815-36a299f2e736.json",
+      "task_card": "MPI-568",
+      "status": "open",
+      "created_at": "2026-08-19T03:45:00Z",
+      "note": "LTX upscaler bench paused for context. Graph works and the sigma answer is measured; the FFT metric was disproved by its own control. Open: Fabio's eye verdict, the wavy distortion on temporal_gt, the fps fix, attention_mask and x1.5 arms."
+    },
     {
       "id": "584f6547-fe3c-4f0d-afac-22daeee351b4",
       "path": ".agents/mpi-kanban/state/handoffs/584f6547-fe3c-4f0d-afac-22daeee351b4.json",
@@ -120,6 +128,14 @@
       "status": "resolved",
       "created_at": "2026-08-18T08:20:00Z",
       "note": "Resolved 2026-08-18: the TRUE engine wipe-and-reinstall ran via POST /engine/upgrade {\"mode\":\"full\"}. Real 2m47.6s pip download; \"Installing Python packages...\" held the whole pass and flipped 22ms after the marker stamped. MPI-525 closed on that evidence."
+    },
+    {
+      "id": "764f7081-1a72-4e0e-b3d4-b928f80518dd",
+      "path": ".agents/mpi-kanban/state/handoffs/764f7081-1a72-4e0e-b3d4-b928f80518dd.json",
+      "task_card": "MPI-504",
+      "status": "open",
+      "created_at": "2026-08-19T10:00:00Z",
+      "note": "Session 1 of the re-scoped v1: whole spec written with no GPU, nothing built. Next session starts at the bench."
     }
   ]
 }
