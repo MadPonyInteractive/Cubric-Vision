@@ -1,0 +1,75 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "a8609f95-286f-4fdc-8b35-e0b2c489fc9f",
+  "generated_at": "2026-08-19T16:40:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-504 Character Sheet - enhancer recipe measured and revised, both graphs built and verified, enhancer made universal",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Run the enhancer regression from prompts.md section 2, then build the character-sheet graph by stripping krea2_t2i_template.json.",
+    "status": "in_progress",
+    "summary": "The regression disproved the drafted recipe and cost three revisions; v4 is measured and the residual failure is closed by two RegexReplace nodes rather than by prompt wording. The scripted group-box strip was WRONG and was thrown away - Fabio stripped the graph by hand. Both graphs now exist, verified offline, and the enhancer was made universal with the recipe injected at run time and proven live. Nothing has been generated: no sheet image exists yet."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    "completed": [
+      "Enhancer regression run on bench 8188 across four arms, no generation. v1 disproved: 2 of 4 inputs returned the example that lived inside the instruction. Recipe now at v4, 70-82 words 4/4, no leak, nothing held 4/4",
+      "Two RegexReplace scrub nodes designed, verified offline, then proven live - Python re matches the offline JS check BYTE FOR BYTE on all four outputs",
+      "use_default_template measured INERT on TextGenerate with a manual ChatML string - byte-identical true vs false, node executing fresh both times",
+      "Gear policy tier 3 CUT by Fabio, on evidence: v4 gave 'a gunslinger, no weapons' a gunbelt, positively phrased, uncatchable by any scrub",
+      "Prompt review step specced - it is the shipped Describe Image shape (outputKind text -> onText -> workspace:inject-prompts), not new architecture",
+      "krea2_t2i_only.json verified: 54 nodes, 0 orphan Gets, 0 dangling required inputs, conditioning and resolution intact, both turbo switches live",
+      "Input_height renamed to Input_Height in the raw graph, on Fabio's explicit authorisation",
+      "User LoRA rack KEPT by Fabio as a feature - needs no new machinery, two shipped flows already carry the same rack",
+      "qwen3vl_4b_prompt_enhancer.json patched (v4 recipe, two scrub nodes, MpiIfElse deleted) and made UNIVERSAL - recipe and both scrub patterns inject at run time, proven live with a translator recipe"
+    ],
+    "pending": [
+      "Wire the four style templates + MpiAnySwitch on Input_Style into krea2_t2i_only.json, and the [CHARACTER PROMPT] StringReplace fed by Input_Positive verbatim",
+      "Add a PreviewAny titled Output_prompt pointed at the ASSEMBLED sheet prompt (MPI-242 contract), not at the enhancer",
+      "First sheet at 8:5 2k - layout intact, one continuous backdrop, same character across all three panels",
+      "Bench gate #1: neutral-pronoun A/B against Fabio's original wording, same seed",
+      "Head branch: face detect -> ImpactSEGSOrderedFilter area ascending take 1 -> bbox grown upward -> head mask -> GrowMask -> Klein inpaint",
+      "Klein A/B: baked removal prompt vs the no-prompt remove op + crop/stitch",
+      "10/10 stress test, then /mpi-add-flow for the app wiring"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-504",
+    "title": "Character Sheet flow - a description in, a video-reference sheet out (front body HEADLESS)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-504/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Wire the sheet prompt into comfy_workflows/raw/krea2_t2i_only.json: four PrimitiveStringMultiline style templates behind an MpiAnySwitch on Input_Style, a StringReplace putting Input_Positive verbatim into the [CHARACTER PROMPT] hole, and a PreviewAny titled Output_prompt on the ASSEMBLED result. raw/ is user-owned - agree the edit with Fabio before touching it, or hand him the spec. Then the first sheet at 8:5 2k, which needs the GPU and his say-so.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Gear policy tier 3 CUT. The recipe writes the character only; a user who wants no weapons edits the description. Forced by evidence, not preference - v4 returned 'with a gunbelt slung low across his hips' for 'a gunslinger, no weapons', and a positively-phrased item is invisible to any scrub. Rejected on the way: a StringContains-triggered weapon-clause regex, because the vocabulary is open-ended and a wordlist that catches 'bandolier' also deletes the satchel the user wanted.",
+      "Prompt enhancement is its own workflow, and it is UNIVERSAL. The recipe injects into Input_System_Prompt, and BOTH scrub patterns inject too (Input_Scrub_Negation.regex_pattern, Input_Tidy.regex_pattern) so a universal workflow cannot silently mangle another flow's output; a flow wanting no scrub injects a pattern that cannot match, (?!x)x. Consequence: the recipe is APP payload now, not graph payload - prompts.md's opening claim was corrected.",
+      "No enhance toggle anywhere. The button enhances, the result lands in the prompt box, the sheet takes the box verbatim - so double-enhancing is impossible rather than guarded against. The MpiIfElse was deleted, not flipped.",
+      "The user LoRA rack STAYS (reversing the earlier 'a Flow runs clean' line). A character LoRA carries identity while the sheet carries layout, and the user still describes wardrobe, hair and face on top. flow_ltx_extend and flow_ltx_foley already ship the same six-slot rack and comfyController routes Input_Lora_N through its MPI-219 branch, so no new machinery.",
+      "Never put a readable example inside a system prompt for this 4B. v1's parenthetical 'a weathered Plains chief in his late sixties, ...' came back verbatim as the answer for two unrelated inputs. Show a slot template instead."
+    ],
+    "constraints": [
+      "STRIPPING A GRAPH BY GROUP BOX FAILS SILENTLY HERE. The Edit group BUILDS the shared conditioning (CLIPTextEncode -> ToBasicPipe -> Set_Models, which FromBasicPipe in the KEPT Generation group reads) and the Images group holds Input_Width/Input_Height. SetNode/GetNode link by NAME, so every link still resolves on a decapitated graph and 'all links resolve: true' proves nothing. Check Get/Set pairing and trace orphan Gets to their CONSUMERS.",
+      "comfy_workflows/raw/ is USER-OWNED. Fabio authors there. Two edits were made this session and BOTH were explicitly authorised by him first - do not treat that as standing permission.",
+      "GPU: Fabio asked for no GPU run without his say-so, even though the bench is idle. Text-only enhancer runs are seconds on the 4B but still ask.",
+      "TextGenerate.sampling_mode is a COMFY_DYNAMICCOMBO_V3 - its sub-inputs are FLAT keys prefixed with the parent id ('sampling_mode.temperature'), not a nested object. Getting it wrong returns required_input_missing for every sub-input at once, which reads like a broken node.",
+      "MPI-568's files are modified in the working tree by another session and were deliberately left uncommitted. Do not stage them."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-504/prompts.md",
+      ".agents/mpi-kanban/tasks/MPI-504/research/enhancer-regression-2026-08-19.md"
+    ]
+  },
+  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/a8609f95-286f-4fdc-8b35-e0b2c489fc9f.json first, then plan.md, prompts.md and research/enhancer-regression-2026-08-19.md in .agents/mpi-kanban/tasks/MPI-504/. The card is in doing. Two graphs now exist in comfy_workflows/raw/ and both are verified offline: krea2_t2i_only.json (54 nodes, Fabio's hand strip, clean) is the sheet base, and qwen3vl_4b_prompt_enhancer.json (12 nodes) is a UNIVERSAL text-only enhancer whose recipe and scrub patterns inject at run time. The enhancer recipe is at v4, measured over four bench arms; the gear policy's third tier was cut on evidence and exclusion moves to a prompt-review step. NOTHING HAS BEEN GENERATED - no sheet image exists. Next is wiring the four style templates and the [CHARACTER PROMPT] hole into krea2_t2i_only.json, but raw/ is user-owned so agree that edit with Fabio first, and the first 8:5 2k sheet needs both the GPU and his explicit say-so."
+}
