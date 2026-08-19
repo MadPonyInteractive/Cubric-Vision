@@ -1,0 +1,74 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "2b4f4f52-b714-4236-81de-97f42688024a",
+  "generated_at": "2026-08-19T15:10:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-504 Character Sheet - the rear-hair thread closed as a TEST-RIG artefact, turbo established as a product axis, head branch redesigned",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Wire the sheet prompt into the graph and get the first sheets out; then settle the rear panel's hair drift.",
+    "status": "in_progress",
+    "summary": "~30 generations, no code change. The F hair shape is adopted into the recipe (v4.1, regression owed). The rear-hair defect turned out to be the TEST RIG, not the prompt - turbo, not resolution. Turbo vs non-turbo is now understood as a product axis: turbo locks the character and suits stylised styles, non-turbo varies the character and suits realistic. Anime at 2k-turbo is the best sheet this card has produced."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    "completed": [
+      "F hair shape ADOPTED by Fabio and applied to recipe categories 2 and 4 in prompts.md s2 - the recipe is now v4.1 and OWES a text-only regression pass over the four inputs",
+      "Arms E and F disproved Fabio's single-mention reading: removing the repeat changed nothing, the two repeating arms are the only two that ever moved the rear panel",
+      "SEED NOISE FLOOR (Fabio's catch): every arm had been n=1 at seed 504504. F vs K over three fresh seeds came out 2-2 per-seed, within-arm spread an order of magnitude wider than between-arm. The whole G/I/K/L/M/N ranking is WITHDRAWN",
+      "THE DEFECT WAS THE RIG: a 2x2 grid at three seeds per cell - turbo ON gives wavy rear hair at BOTH 1k and 2k, turbo OFF gives straight at BOTH. Resolution is irrelevant; the sampler path is the whole effect and it reproduces at 1k (111s, not 328s)",
+      "Anime/cyberpunk, nine runs: 2k-turbo PASSES beautifully and the wave artefact does not appear at all there; 2k-quality is sketchy AND puts the hood up hiding the rear hair - a functional failure for a reference sheet",
+      "Turbo LOCKS the character across seeds, non-turbo VARIES it - confirmed on this card's own runs (same man x3 under turbo, three different men without it)",
+      "Head branch redesigned by Fabio - see key_decisions"
+    ],
+    "pending": [
+      "The v4.1 recipe regression - text-only, four inputs, needs the LLM so it needs the GPU lease. The recipe text was edited but has NOT been re-run since v3",
+      "Bench gate #1: neutral-pronoun A/B against Fabio's original wording - now at 3-4 seeds, not one",
+      "Head branch: face detect SELECTS the area, then a SAM3 union of hair + face + hat builds the mask",
+      "Klein A/B: baked removal prompt vs the no-prompt remove op + crop/stitch",
+      "All four styles return their medium and keep the catch-light (Anime now proven; Photoreal proven; 3D and Cartoon untested)",
+      "10/10 stress test, then /mpi-add-flow for the app wiring"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-504",
+    "title": "Character Sheet flow - a description in, a video-reference sheet out (front body HEADLESS)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-504/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Run the v4.1 enhancer recipe regression: prompts.md s2 categories 2 and 4 were edited to carry the adopted F hair shape (name colour, length and texture together in the main clause; restate colour and texture in the rear clause), but the recipe has not been re-run since v3. Text-only, four regression inputs, qwen3vl_4b through TextGenerate on bench 8188 - no image, but it needs the GPU lease because it is the LLM. Check the four v3 guarantees still hold: 70-90 words, no example leak, nothing held in the hands, no place/light/camera, scrub clean - and that the hair now arrives named in full in the main clause AND restated in the rear clause.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "RIG POLICY (Fabio, measured this session): realistic characters -> turbo OFF at 2k; stylised (anime, cartoon) -> turbo ON; BOTH controls stay user-facing because low-VRAM users need the choice. 2k preferable where the card fits. Costs: 1k-turbo 33s, 2k-turbo 85s, 1k-quality ~105s, 2k-quality 328s.",
+      "TURBO IS A PRODUCT AXIS, NOT A QUALITY DIAL. Turbo locks the character across seeds (same man at three seeds); non-turbo varies it (three different men at the same seeds). So non-turbo is the VARIATION lever - how a user hunts for a face - not merely 'better quality'. Do not present it as a quality toggle in the app.",
+      "HEAD BRANCH (Fabio): stage 1 is UNCHANGED and still required - face_yolov8n plus ImpactSEGSOrderedFilter still SELECT which head is operated on, and that region is the area to inpaint. But the mask that gets FILLED is a union of three SAM3 semantic masks: hair + face + hat. Retired is the face's grown bbox used AS the mask. Reasons from experience: a face-only mask fails on a hatted character (cowboy-movie work - inpainting a face under a hat needed the hat masked too), hair over clothing needs a precise hair mask, and a box stamped on the head makes the inpaint model destroy the clothing it covers and invent new detail.",
+      "SEAMS AT 2k-QUALITY ARE ACCEPTED, not a defect (Fabio) - the sheet splits into three plates there where turbo keeps one continuous backdrop, and the sheets still work as a reference. The continuous-backdrop spec line is a preference, not a gate. Do not re-raise it as a bug.",
+      "The F hair shape is ADOPTED: name colour, length and texture together in the main clause AND restate colour and texture in the rear clause. It fixed rear-panel COLOUR, replicated at three seeds. Fabio's earlier single-mention call was an observation from other models, not a verdict, and he withdrew it on the evidence."
+    ],
+    "constraints": [
+      "ONE SEED IS A PILOT, NOT A RESULT. Every wording verdict on this flow needs 3-4 seeds compared PER SEED, with the visual verdict primary. Eleven arms were run at seed 504504 alone and the entire ranking had to be withdrawn. Seed 504504 is also an unusually HARD seed - the F shape already worked at 777001/909090/123123 while looking broken there.",
+      "HOLDING THE SEED DOES NOT CONTROL THE COMPARISON. The seed fixes the initial noise tensor, but editing the prompt changes the conditioning, so the sampler takes a different path and the draw is fresh anyway.",
+      "FIXED PIXEL SAMPLE BOXES ARE INVALID ACROSS SEEDS AND RESOLUTIONS - composition shifts, and one portrait box landed on the red shirt and produced a confident backwards number. Judge these sheets by eye; use numbers only within one seed at one resolution.",
+      "DEAD LEVERS, do not retest: the sheet template (arm D global identity clause AND arm G concrete panel-local clause, both no-ops), the negative prompt at 1k turbo (nodes 72/162 are cfg 1.0 so Input_Negative is INERT - only the quality path 311 at cfg 2.0 makes it live), and stronger texture words (poker-straight reads identically to straight).",
+      "comfy_workflows/raw/ is USER-OWNED. Every template or graph experiment this session ran was applied to the API payload ONLY, never to his file. That is deliberate and is not standing permission to edit raw/.",
+      "THE GPU NEEDS THE LEASE: python \"${CLAUDE_PLUGIN_ROOT}/skills/mpi-lib/scripts/gpu_lease.py\" run -- <command>. Machine-global, one slot, waits up to 1800s - run it as a BACKGROUND Bash call. Read-only probes (/queue, /history, /object_info, /view) are NOT matched, do not wrap those. A peer session holds the GPU often, so expect to queue.",
+      "Generated sheets are ComfyUI TEMP files and die on a bench restart. Every arm's character phrase is now recorded VERBATIM in validation.md precisely because this session had to rebuild four earlier arms from /history - do not let a future arm go unrecorded."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-504/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-504/prompts.md"
+    ]
+  },
+  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/2b4f4f52-b714-4236-81de-97f42688024a.json first, then validation.md (newest entries LAST), plan.md and prompts.md in .agents/mpi-kanban/tasks/MPI-504/. The card is in doing. The sheet prompt is wired into comfy_workflows/raw/krea2_t2i_only.json and proven live over ~30 generations. Last session closed the rear-panel hair thread: the drift was an artefact of the 1k+turbo TEST RIG, not the prompt - a 2x2 grid at three seeds showed turbo ON gives wavy rear hair at both 1k and 2k while turbo OFF gives straight at both, so resolution is irrelevant. Turbo is now understood as a product axis rather than a quality dial: it LOCKS the character across seeds and suits stylised styles, while non-turbo VARIES the character and suits realistic. Anime at 2k-turbo passed beautifully. The F hair shape (name the hair in full in the main clause AND restate colour and texture in the rear clause) is adopted into the recipe, making it v4.1 - and that regression has NOT been run, which is the next action. Standing rule learned the hard way: one seed is a pilot, not a result; every wording verdict needs 3-4 seeds. raw/ is user-owned so any graph edit needs Fabio's go, and the GPU needs the lease wrapper (gpu_lease.py run -- <cmd>, machine-global, one slot, expect to queue behind a peer)."
+}

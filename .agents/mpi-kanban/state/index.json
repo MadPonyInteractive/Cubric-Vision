@@ -1,11 +1,28 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-19T15:19:00Z",
+  "updated_at": "2026-08-19T15:07:54Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
-  "active_sessions": [],
+  "active_sessions": [
+    {
+      "id": "9fee70c0-7f0f-4824-abc1-b2da9305e03e",
+      "path": ".agents/mpi-kanban/state/sessions/9fee70c0-7f0f-4824-abc1-b2da9305e03e.json",
+      "role": "implementer",
+      "status": "active",
+      "heartbeat_at": "2026-08-19T15:01:40Z"
+    }
+  ],
   "active_tasks": [],
-  "active_file_claims": [],
+  "active_file_claims": [
+    {
+      "id": "4bb5b7e4-7f4f-42e6-9845-c87d10eaccb1",
+      "path": ".agents/mpi-kanban/state/files/4bb5b7e4-7f4f-42e6-9845-c87d10eaccb1.json",
+      "task_card": "MPI-568",
+      "status": "claimed",
+      "owner_session": ".agents/mpi-kanban/state/sessions/9fee70c0-7f0f-4824-abc1-b2da9305e03e.json",
+      "heartbeat_at": "2026-08-19T15:01:40Z"
+    }
+  ],
   "pending_file_states": [],
   "open_messages": [],
   "active_handoffs": [
@@ -45,7 +62,7 @@
       "id": "cbf47af6-60a6-4790-899a-cceed36f2c59",
       "path": ".agents/mpi-kanban/state/handoffs/cbf47af6-60a6-4790-899a-cceed36f2c59.json",
       "task_card": "MPI-504",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-19T13:20:00Z",
       "note": "Sheet prompt wired into krea2_t2i_only.json and proven live - four generations, layout correct in all. Open thread is the rear panel's hair; Fabio's call is to name the hair ONCE in the main clause, and the 'texture cannot be steered' note is withdrawn as never established."
     },
@@ -56,6 +73,14 @@
       "status": "open",
       "created_at": "2026-08-19T15:19:00Z",
       "note": "Range NARROWED to 0.50-0.85 and cfg approved as a second prompt-strength slider, reversing the one-slider headline. Target 2 measured, VRAM ceiling closed. cfg_range.py never got the GPU - re-launch it."
+    },
+    {
+      "id": "2b4f4f52-b714-4236-81de-97f42688024a",
+      "path": ".agents/mpi-kanban/state/handoffs/2b4f4f52-b714-4236-81de-97f42688024a.json",
+      "task_card": "MPI-504",
+      "status": "open",
+      "created_at": "2026-08-19T15:10:00Z",
+      "note": "Rear-hair thread CLOSED as a test-rig artefact (turbo, not resolution). Turbo established as a product axis: locks the character, suits stylised; non-turbo varies it, suits realistic. Head branch redesigned to a SAM3 hair+face+hat union with the face detect kept as the area selector. Next is the unrun v4.1 recipe regression."
     }
   ]
 }
