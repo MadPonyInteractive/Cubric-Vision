@@ -734,10 +734,36 @@ export const MpiBaseFlow = ComponentFactory.create({
             right.appendChild(title);
             if (flow.preview) {
                 const frame = ce('div', { className: 'mpi-base-flow__example' });
-                // Same path the Flow Library uses for this descriptor field.
-                frame.appendChild(ce('img', {
+                // Same path the Flow Library uses for these descriptor fields.
+                const still = ce('img', {
                     src: `comfy_workflows/display/${flow.preview}`, alt: '', loading: 'lazy',
-                }));
+                });
+                // A flow's HERO is the wide autoplaying loop (`video`), NOT the 4/5 still the
+                // tile shows — the still is only its poster and its fallback. The tile stays an
+                // image either way (MpiFlowLibrary passes media:'image'), so a flow declaring
+                // `video` does NOT become a video tile the way a ModelDef would.
+                if (flow.video) {
+                    const clip = ce('video', {
+                        src: `comfy_workflows/display/${flow.video}`,
+                        poster: `comfy_workflows/display/${flow.preview}`,
+                    });
+                    // Properties, not attributes — `muted` set as an attribute does not
+                    // reliably satisfy the autoplay policy (same reason MpiTileSheet does this).
+                    clip.muted = true; clip.loop = true; clip.playsInline = true;
+                    clip.autoplay = true; clip.preload = 'auto';
+                    // The explicit play() is what MpiModelManager's detail thumb does too —
+                    // the autoplay attribute alone is not reliable once the element is
+                    // appended after load. Rejection is fine to swallow: the poster shows.
+                    unsubs.push(on(clip, 'loadedmetadata', () => { clip.play().catch(() => {}); }));
+                    // A missing or broken clip must not leave a black box where the hero is.
+                    unsubs.push(on(clip, 'error', () => {
+                        clip.remove();
+                        frame.appendChild(still);
+                    }));
+                    frame.appendChild(clip);
+                } else {
+                    frame.appendChild(still);
+                }
                 right.appendChild(frame);
             }
             const explainer = ce('div', { className: 'mpi-base-flow__explainer' });

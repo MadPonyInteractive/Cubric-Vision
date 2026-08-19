@@ -22,7 +22,13 @@
  * @typedef {Object} FlowDef
  * @property {string}   id             - Unique identifier
  * @property {string}   title          - Display name (card + slide-over)
- * @property {string}   preview        - Preview image filename (card + slide-over)
+ * @property {string}   preview        - 4/5 still (webp) under comfy_workflows/display/. Drives the
+ *                                       Flow Library tile and the slide-over thumb, and doubles as
+ *                                       the hero's poster + fallback. docs/playbooks/add-flow/06.
+ * @property {string}   [video]        - WIDE (8:5 or 16:9) autoplaying loop under the same folder —
+ *                                       the HERO on the flow's first slide only. Unlike a ModelDef's
+ *                                       `video`, this never turns the tile into a video tile: the
+ *                                       tile stays the 4/5 still. Omit and the hero shows `preview`.
  * @property {string}   description    - Slide-over copy
  * @property {string[]} requiredModels - MODEL ids (NOT dep ids); drives the availability badge
  * @property {string[]} [requiredDeps] - DEP ids (dependencies.js facade) this flow needs on top

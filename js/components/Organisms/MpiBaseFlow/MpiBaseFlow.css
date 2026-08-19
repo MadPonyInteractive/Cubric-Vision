@@ -368,7 +368,8 @@
     line-height: 0;
     margin-bottom: var(--s-5);
 }
-.mpi-base-flow__example img {
+.mpi-base-flow__example img,
+.mpi-base-flow__example video {
     display: block;
     width: 100%;
     height: auto;

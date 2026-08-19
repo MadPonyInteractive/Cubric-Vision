@@ -1,166 +1,167 @@
-# 06 — The flow's preview image
+# 06 — The flow's preview media
 
-Every flow ships **one** image. This file is how it gets made, and what it has to
-survive.
+A flow ships **two** assets, and they do different jobs:
 
-## The slot: ONE field, THREE placements
+| Field | Asset | Where | Job |
+|---|---|---|---|
+| `preview` | 4/5 **still** `.webp` | Flow Library tile, slide-over thumb, hero poster + fallback | Say what the flow **is**, instantly, at ~220 px |
+| `video` | wide (8:5 or 16:9) **autoplaying loop** `.mp4` | Hero on the flow's first slide only | Show what the flow **does** |
 
-`FlowDef.preview` is a filename under `comfy_workflows/display/`. There is no
-second field — no separate tile thumb, no separate hero. One asset is drawn three
-times, twice cropped and once whole:
+`video` is optional. Omit it and the hero shows the still — which is the state of
+every flow until its loop is made.
+
+## Where each one is drawn
 
 | Placement | Code | Treatment |
 |---|---|---|
-| Flow Library tile | `MpiTileSheet.css:56` (`.mpi-tile--image .mpi-tile__thumb`) | `aspect-ratio: 4/5`, `object-fit: cover`, idle `filter: saturate(.92) brightness(.92)`, hover `scale(1.04)` |
-| Slide-over detail thumb | `MpiModelManager.css:300` (`.mpi-detail__thumb--image`) | `aspect-ratio: 4/5`, `object-fit: cover` |
-| Hero inside the open flow | `MpiBaseFlow.js:735` → `.mpi-base-flow__example img` | `width:100%; height:auto` — **natural aspect, no crop** |
+| Flow Library tile | `MpiTileSheet.css:56` | `aspect-ratio: 4/5`, `object-fit: cover`, idle `filter: saturate(.92) brightness(.92)`, hover `scale(1.04)` |
+| Slide-over detail thumb | `MpiModelManager.css:300` | `aspect-ratio: 4/5`, `object-fit: cover` |
+| Hero, first slide | `MpiBaseFlow.js` `_buildInputsSlide` | `<video>` autoplay/muted/loop/playsInline, poster = `preview`, `width:100%; height:auto` — natural aspect, no crop |
 
-Consequences, and they are the whole brief:
+**A flow's `video` does NOT make it a video tile.** A `ModelDef` with `video` gets
+a 16:9 hover-play tile; a flow keeps its 4/5 still, because `MpiFlowLibrary.js:104`
+passes `media: 'image'`. That divergence is deliberate — the tile's job is the
+instant read, and a grid of autoplaying clips is noise.
 
-- **Ship it at 4/5.** Then the two cropped placements crop nothing, and the hero
-  shows exactly what the tile showed. Any other ratio means the tile silently
-  centre-crops an image you composed for the hero.
-- **It must read at ~220 px wide.** The grid is
-  `repeat(auto-fill, minmax(220px, 1fr))` (`MpiTileSheet.css:22`), so the tile
-  thumb is ≈220×275 CSS px. Fine detail, thin type and two-panel diptychs die at
-  that size.
-- **It is desaturated and dimmed until hover.** Compose with contrast to spare;
-  a low-contrast image reads as fog in the grid.
+## `preview` — the 4/5 still
 
-## File spec
+- **896 × 1120** (or 512 × 640). `.webp` q≈82, **100–250 KB**.
+- Must read at **~220 px wide** — the grid is `repeat(auto-fill, minmax(220px, 1fr))`.
+  Fine detail, thin type and two-panel diptychs die at that size.
+- Tiles render **desaturated and dimmed** until hover. Compose with contrast to spare.
+- Keep anything load-bearing out of the outer 10% on every edge.
+- **A simple, immediate statement of the flow.** One subject, one idea. This is not
+  where the transformation gets explained — that is the hero's job.
+- Name it for the flow, not the model: `flow-head-swap.webp`.
 
-Match the 59 assets already in `comfy_workflows/display/`:
+## `video` — the hero loop
 
-- **`.webp`**, quality ~82. Budget **100–250 KB** (the largest shipped asset is
-  246 KB).
-- **896 × 1120** (4/5). `512 × 640` is enough for a 2× display and is the smaller
-  file; prefer 896 only when the hero shows real texture.
-- Name it after the flow, not the model: `flow-head-swap.webp`. A model-named
-  file is how the current placeholders happened.
+- **8:5 (1280 × 800)** or **16:9 (1280 × 720)**. The hero column is
+  `max-width: 460px` (`MpiBaseFlow.css:238`), so 1280 wide covers a 2× display
+  with room to spare. Do not ship 4K.
+- **`.mp4`, H.264, ≤ 2 MB, 4–8 s, seamless loop.** The budget is hard because the
+  hero **autoplays** — it downloads the moment the flow opens, unlike the model
+  tiles that only play on hover. For scale: `minimax_h3_preview.mp4` is 0.8 MB and
+  fine; `ltx23_high_preview.mp4` is 38 MB and would be unusable here.
+- **Not a GIF.** The codebase already settled this — see the `ponytail:` note at
+  `MpiOpHelpDialog.js:32`, *"media is treated as a GIF that compresses better"*. A
+  GIF of the same clip is an order of magnitude larger and its 256-colour palette
+  bands badly on the dark UI.
+- **It is silent.** Autoplay requires `muted`, so the viewer never hears a hero.
+  Anything audible has to be shown, not played.
+- Name it beside the still: `flow-head-swap.mp4` next to `flow-head-swap.webp`.
 
-## What the image should show
+## What the hero should show
 
-A flow is a **transformation**, and its tile has to say which one at 220 px. The
-placeholders fail exactly here: Head Swap wears `sdxl-real-05.webp`, and Extend
-Video and Add Foley wear the *same* `ltx23_balanced_preview.webp`, so two flows
-are one card.
+A flow is a **transformation**. The hero has 6 seconds and no sound to name which
+one. Pick the device by what actually changes:
 
-Three directions, in order of how well they survive the crop:
+| The flow changes… | Device | Example |
+|---|---|---|
+| The **content of the frame** | Real before → after, wiped or dissolved, with the seam visible | **Head Swap** — the two source images, then the result |
+| The **length or motion** | Play the original, mark where it ended, let the extension run past the mark | **Extend Video** — a progress rail that keeps going |
+| Something **not visible at all** | Animate the channel that changed, over an unchanged frame | **Add Foley** — the frame plays untouched while a waveform draws itself in sync, impact by impact |
 
-1. **Outcome-forward + one mark** — the result, plus a single legible graphic
-   token of what changed (a corner inset of the source, one accent stroke, one
-   badge). Survives 220 px, informative at full width. **Default.**
-2. **Pure outcome still** — a model preview by another name. Cheapest; says
-   nothing about the transformation, and cannot distinguish two flows on one model.
-3. **Before/after diptych** — most honest, worst at 220 px. Only for a flow whose
-   change is a whole-frame silhouette shift.
+**The rule behind the third row:** when the output looks identical to the input,
+a before/after is a lie — two identical panels. Show the *added channel* instead.
+For audio that means a waveform, a level meter, or beat markers landing on the
+events that made the sound. It is the only honest device, and because the hero is
+muted it is also the only one that communicates anything at all.
 
-Rules that hold for all three:
+Real before/after material is the strongest input where it exists, so use it —
+just do not force it onto a flow whose change is invisible.
 
-- **One subject, in the middle 60%.** The hero is uncropped but the tile is not
-  the same shape as your instinct — keep type and marks out of the outer 10% on
-  every edge.
-- **Accent marks use the app tokens**, sampled from `styles/01_base.css`:
-  `--accent-heat` `oklch(0.76 0.17 355)` (primary), `--accent-frost`
-  `oklch(0.82 0.13 220)` (generative state). Never invent a colour.
-- **No baked UI.** A screenshot of the app inside the tile ages the moment the UI
-  moves, and nothing in the build will catch it.
+Rules for all three:
 
-## The pipeline
+- **Accent marks use the app tokens** from `styles/01_base.css`: `--accent-heat`
+  `oklch(0.76 0.17 355)`, `--accent-frost` `oklch(0.82 0.13 220)`. Never invent a colour.
+- **Loop seamlessly** — first and last frame must match, or the restart reads as a glitch.
+- **No baked UI.** A screenshot of the app inside the hero ages the moment the UI moves.
+- **Legible at 460 px.** Any type in the loop is small type.
 
-Three rungs. Stop at the first that gets the image.
+## Making them
 
-### 1. Plate — Krea2 through the running app
+### 1. Plates — real output, not an impression of it
 
-The photographic content comes from a real generation, which lands as a real
-gallery card (sidecar included) so the prompt stays recoverable. The endpoint is
-`POST /connector` + `/generate`, body `{modelId, operation, positive,
-injectionParams}`:
+The honest plate for a flow is **a real run of that flow** in the app; take the
+files off disk. For a purely generated plate (a background, a subject), the
+`cubric-vision` skill's connector route dispatches Krea2 and lands a real gallery
+card with its sidecar — see `.claude/skills/cubric-vision/SKILL.md` § Dispatching
+a generation for the call, the error codes and the `injectionParams` rules
+(`Width` / `Height`). It cannot supply media inputs yet, so the transform leg is
+always a UI run.
 
-```
-modelId:          krea2
-operation:        t2i
-injectionParams:  { "Width": 896, "Height": 1120 }
-```
+**`:3000` is normally Fabio's live app** — generating there lands in his project.
+Ask, or run `npm run app:isolated` and use the port it prints.
 
-It returns `{"ok":true,"output":{"filePath":"C:/.../out.png", ...}}` — that path
-is the plate. The full endpoint contract, the curl form, every error code and the
-`injectionParams` rules are in the **`cubric-vision` skill**
-(`.claude/skills/cubric-vision/SKILL.md` § Dispatching a generation). Read it
-there rather than copying the call around.
+### 2. The still — `sharp`
 
-Two things that will bite:
-
-- **It uses whatever project the app has open** and never switches. `NO_PROJECT`
-  means open one first.
-- **`:3000` is usually Fabio's live app.** Generating into his session is a real
-  side effect — ask, or run your own instance (`npm run app:isolated`) and point
-  `CUBRIC_URL` at the port it prints.
-
-For a flow that transforms an *existing* image (Head Swap), the honest plate is a
-**real run of the flow itself** in the app — then the preview is the output, not
-an impression of it. The connector route cannot do that leg (no media inputs yet,
-`MEDIA_UNSUPPORTED`), so run it in the UI and take the file off disk.
-
-### 2. Composite — `sharp`, already a dependency
-
-`sharp ^0.34.5` is a direct dependency and installed. Crop, inset, encode, done —
-no new package, no browser, no scaffold:
+`sharp ^0.34.5` is already a direct dependency. Crop, inset, encode:
 
 ```js
-// node this from the scratchpad; ponytail: inline until it survives 3 flows unchanged
+// ponytail: inline until it survives 3 flows unchanged, then promote to scripts/
 import sharp from 'sharp';
-
 const W = 896, H = 1120;
-const inset = await sharp('source-head.png')
-    .resize(240, 300, { fit: 'cover' }).toBuffer();
-
 await sharp('plate.png')
     .resize(W, H, { fit: 'cover', position: 'attention' })
-    .composite([{ input: inset, left: W - 240 - 32, top: H - 300 - 32 }])
     .webp({ quality: 82 })
     .toFile('comfy_workflows/display/flow-head-swap.webp');
 ```
 
-`position: 'attention'` crops toward the salient region rather than the centre,
-which is what saves a portrait whose subject sits off-axis. Read
-`~/.claude/memory/tools/sharp.md` before any mask or `joinChannel` work — it
-carries three silent channel-count traps.
+`position: 'attention'` crops toward the salient region instead of the centre.
+Read `~/.claude/memory/tools/sharp.md` before any mask or `joinChannel` work.
 
-### 3. Escalate only when the design needs more
+### 3. The hero loop — HyperFrames
 
-- **Real type layout, brand fonts, gradients** → write one HTML file and
-  `playwright-cli screenshot --filename=…` it. Already in the toolchain.
-- **A tile that MOVES** → HyperFrames (`C:/AI/Mpi/video-tool`, authoring contract
-  at `MadPony-Identity/playbooks/hyperframes-authoring.md`). `hyperframes
-  snapshot --at <t>` also emits stills, and `hyperframes remove-background` cuts
-  a subject to a transparent PNG — genuinely useful for rung 2's inset. But a
-  project scaffold plus a GSAP timeline for one still is ceremony `sharp` does
-  not need, so do not reach for it to make a static image.
-  **Note the tile cannot play a clip today**: `MpiTileSheet` supports
-  `.mpi-tile--video`, but `MpiFlowLibrary.js:104` hardcodes `media: 'image'`.
-  Motion previews are a wiring change, not an art change.
+**This is what HyperFrames is for**, and where it beats every lighter option: an
+HTML composition with a real GSAP timeline, brand fonts, and an MP4 out. Tool at
+`C:/AI/Mpi/video-tool`; the authoring contract — root element, `data-duration`,
+`class="clip"`, the timeline registration, and the gotchas that cost time — is
+`MadPony-Identity/playbooks/hyperframes-authoring.md`. **Read it before authoring**,
+and note two deltas for a hero:
+
+- Its scaffold assumes **1080 × 1920** (9:16 shorts). A hero is **1280 × 800** or
+  **1280 × 720** — set `data-width` / `data-height` on `#root` and the matching
+  explicit `width` / `height` in CSS, or the root collapses silently.
+- Render **silent** (include no `<audio>` element), which is what we want anyway.
+
+`hyperframes remove-background` cuts a subject to a transparent PNG — useful for
+floating a head or a subject over a graphic plate in the before/after device.
+
+Then transcode to the budget and verify the loop:
+
+```bash
+ffmpeg -i renders/hero.mp4 -c:v libx264 -crf 26 -preset slow -an \
+       -vf scale=1280:-2 -movflags +faststart comfy_workflows/display/flow-head-swap.mp4
+```
+
+There is **no ffmpeg on PATH here** — use the one in `video-tool`
+(`node_modules/ffmpeg-static/ffmpeg.exe`).
+
+Simpler heroes that are just a cut between two stills do not need HyperFrames;
+ffmpeg alone will do it. Escalate only when the loop wants real animated graphics.
 
 ## Checklist
 
-- [ ] Ratio is **4/5**, dimensions 896×1120 (or 512×640)
-- [ ] `.webp`, 100–250 KB
-- [ ] Named for the **flow**, not the model
+- [ ] `preview`: 4/5, 896×1120 (or 512×640), `.webp`, 100–250 KB
+- [ ] Reads at **220 px** — the flow is identifiable at tile size
 - [ ] Nothing load-bearing in the outer 10%
-- [ ] Eyeballed at **220 px wide** — the transformation still reads
-- [ ] Eyeballed full-width in the open flow — no crop surprise
-- [ ] Distinct from every other flow's preview (two flows on one model must not
-      share an image)
-- [ ] Accent marks use `--accent-heat` / `--accent-frost`, no invented colour
-- [ ] `preview:` in `flowsRegistry.js` points at the new file, placeholder comment
-      deleted
+- [ ] Distinct from every other flow's still (two flows on one model must not share one)
+- [ ] `video`: 8:5 or 16:9, 1280 wide, `.mp4` H.264, **≤ 2 MB**, 4–8 s, loops seamlessly
+- [ ] Hero device matches what actually changes — invisible change → animate the channel, never a fake before/after
+- [ ] Hero verified **muted** (it always is) and legible at 460 px
+- [ ] Accent marks use `--accent-heat` / `--accent-frost`
+- [ ] Both fields set in `flowsRegistry.js`, placeholder comment deleted
 
 ## Traps
 
 | trap | why it bites |
 |---|---|
-| Composing for the hero, not the tile | The hero is uncropped and the tile is 4/5 `cover` — off-ratio art gets centre-cropped with no warning anywhere |
-| Reusing a model preview | It is the current state of all three flows, and it makes two different flows one card |
-| Forgetting the idle filter | Tiles render at `saturate(.92) brightness(.92)`; art that is exactly contrasty enough in isolation reads flat in the grid |
-| Generating into `:3000` | That is normally the user's live session — a generation lands in *their* project |
-| Reaching for HyperFrames for a still | Needs a project scaffold, `meta.json`, `hyperframes.json` and a GSAP timeline; `sharp` is already installed and does the job in 10 lines |
+| Sizing the hero like a model preview | Model clips play on **hover** and run to 38 MB. A hero **autoplays** on open — over ~2 MB the first slide stalls |
+| Composing the still for the hero | The hero is uncropped, the tile is 4/5 `cover` — off-ratio art gets centre-cropped with no warning anywhere |
+| A before/after on an audio-only flow | Two identical panels. Animate the added channel instead |
+| Expecting the hero to be heard | Autoplay demands `muted`. Audio must be drawn |
+| Reusing a model preview | It is the current state of all three flows, and it makes two of them one card |
+| Forgetting the idle filter | Tiles render at `saturate(.92) brightness(.92)`; art that is just contrasty enough in isolation reads flat in the grid |
+| Generating into `:3000` | That is normally the user's live session |
+| A GIF | An order of magnitude larger than the same clip as H.264, and it bands on the dark UI |
