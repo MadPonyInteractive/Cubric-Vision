@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-577",
+  "title": "handoff-index-drift.py is blind to a status desync between the index and the record",
+  "description": "The hook compares handoff EXISTENCE and disk status, never the index entry's status against the record file's. So the class of drift found on 2026-08-19 - 10 files still saying `open` after the index recorded them superseded, and MPI-325's entry saying `open` while its own file carried the closure note - is invisible to it. It rotted for six days after a refresh that had just cleaned the same list. Add the third comparison. Evidence and the repair that was applied by hand: brief.md, commit 908343a0.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-19T10:55:50Z",
+  "updated_at": "2026-08-19T10:55:50Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

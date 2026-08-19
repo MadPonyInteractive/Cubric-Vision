@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-577", "type": "task.created", "at": "2026-08-19T10:55:50Z", "actor": "claude", "summary": "Carded out of the 1.2.0 project refresh. The hook has a third comparison missing - index-entry status vs record-file status - and that blind spot let 11 handoff records desync for six days."}
