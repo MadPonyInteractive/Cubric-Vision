@@ -75,7 +75,7 @@ cargo-cult install-sync machinery from modelRegistry).
 {
   id,             // unique
   title,          // card + slide-over
-  preview,        // filename under comfy_workflows/display/ (reuse any existing webp)
+  preview,        // filename under comfy_workflows/display/ — its OWN 4/5 webp, see 06
   description,    // slide-over copy
   requiredModels, // MODEL ids (NOT dep ids) — [] for a no-model flow
   operation,      // the universal-op key from commandRegistry.js
@@ -107,7 +107,7 @@ one job only JS could do, and is what makes a FlowDef fully expressible as a man
 {
   id: 'video-stitch',
   title: 'Video Stitch',
-  preview: 'sdxl-real-01.webp',   // any existing preview
+  preview: 'flow-video-stitch.webp',   // its own 4/5 webp — [06](06-preview-image.md)
   requiredModels: [],             // always available, no install gate
   operation: 'flowVideoStitch',
   workflow: 'flow_video_test.json',

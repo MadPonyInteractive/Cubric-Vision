@@ -13,3 +13,4 @@ This file is a pointer only — do not add content here.
 | Flow inputs → `.preview-assets` store, sidecar `flowId`/`flowInputs`, reuse routing | [03-storage-and-reuse.md](playbooks/add-flow/03-storage-and-reuse.md) |
 | MpiBaseFlow / MpiFlowLibrary, install progress, Ctrl+Enter, overlay z-order + status bar, dev-gate | [04-overlay-and-shell.md](playbooks/add-flow/04-overlay-and-shell.md) |
 | Definition of Done | [05-verify.md](playbooks/add-flow/05-verify.md) |
+| The `preview` image — one asset, three placements; the 4/5 rule, the plate→composite pipeline | [06-preview-image.md](playbooks/add-flow/06-preview-image.md) |

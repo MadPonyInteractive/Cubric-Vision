@@ -40,6 +40,7 @@ model, image-in→image-out) are the other worked examples.
 | [03-storage-and-reuse.md](03-storage-and-reuse.md) | Flow input files → **`.preview-assets`** store (not the gallery); sidecar `flowId`/`flowInputs`; reuse routing |
 | [04-overlay-and-shell.md](04-overlay-and-shell.md) | `MpiBaseFlow` / `MpiFlowLibrary`; install progress; Ctrl+Enter runs the open flow; overlay z-order + the spared status bar; dev-gate |
 | [05-verify.md](05-verify.md) | Definition of Done — inject test, node --check, live run (video/audio/multi-output), reuse |
+| [06-preview-image.md](06-preview-image.md) | The flow's `preview` image — **ONE asset, THREE placements**; the 4/5 rule; plate (Krea2) → composite (`sharp`) → webp; when playwright/HyperFrames earn their keep |
 
 Two folders sit alongside the numbered sections:
 
@@ -101,6 +102,7 @@ Flow-specific notes:
 | A modal opened over an open flow (error dialog) gets a z-floor above `--main-overlay-z` or its backdrop renders UNDER the flow overlay | [04](04-overlay-and-shell.md) |
 | The `main-area` Flow overlay spares `#shell-info-bar` but stashing `#tool-container` collapses the sticky bar to the top — pin it `absolute; bottom:0` while `.main-area--overlay` is set | [04](04-overlay-and-shell.md) |
 | `operation_registry.json` is a hand-maintained superset — **never regenerate** (strips `universal` flags) | [01](01-descriptor-and-ops.md) |
+| `preview` is **ONE field feeding THREE placements** — tile and detail thumb crop it `4/5 cover`, the in-flow hero shows it at natural aspect. Art composed for the hero gets centre-cropped in the grid with no warning | [06](06-preview-image.md) |
 
 ## Hard rules
 
@@ -124,6 +126,7 @@ Flow-specific additions:
 - [ ] Controls: declare `fields: [...]` on the FlowDef (MPI-531/MPI-572) — the SAME `fields` a step declares, placed on the run slide — the frame renders them, `Input_*` ids route into `injectionParams`. **There is no component surface** (MPI-572 deleted it); a JS component is what a third-party Flow can never have. If a control is not expressible, add the FIELD TYPE — [ui/carousel-frame.md](ui/carousel-frame.md) § `fields` is the ONE control surface
 - [ ] Add a case to `tests/inject-params-titles.test.cjs` (assert every `Input_*`/`Output_*` title exists) — [05](05-verify.md)
 - [ ] Verify: inject test green, `node --check`, live run (each media type + multi-output), reuse across restart — [05](05-verify.md)
+- [ ] `preview` image: its OWN 4/5 webp under `comfy_workflows/display/`, named for the flow — never a reused model preview, never shared with another flow — [06](06-preview-image.md)
 - [ ] NO app version bump for the Flow itself; a NEW op sets `appVersionIntroduced` in both op registries
 
 ## Files (the flow subsystem)

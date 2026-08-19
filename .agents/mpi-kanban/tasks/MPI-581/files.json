@@ -1,0 +1,10 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "docs/playbooks/add-flow/06-preview-image.md",
+    "docs/playbooks/add-flow/README.md",
+    "docs/flows.md",
+    "js/data/flowsRegistry.js",
+    "comfy_workflows/display/"
+  ]
+}
