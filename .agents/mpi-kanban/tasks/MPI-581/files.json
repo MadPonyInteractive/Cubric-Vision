@@ -5,6 +5,8 @@
     "docs/playbooks/add-flow/README.md",
     "docs/flows.md",
     "js/data/flowsRegistry.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
     "comfy_workflows/display/"
   ]
 }
