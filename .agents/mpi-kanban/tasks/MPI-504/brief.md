@@ -15,6 +15,40 @@ Three of the four shipped flows (`image-regen`, `sdxl-4k`, `video-stitch`) are
 marked for deprecation; only `head-swap` follows through. This is the next real
 flow.
 
+## V1 SCOPE — RE-SCOPED 2026-08-19: PROMPT ONLY, NO IMAGE INPUT
+
+Fabio, 2026-08-19: **make it shippable by dropping the image input.** The user writes the
+character down and nothing else. *"We already have a recipe for creating these sheets with
+Krea2. All the user has to write down is the character description. We already have head
+swap, so the user can use head swap to later on swap it with a character image. Taking in an
+image as input, we might do that in the future, but not for this version."*
+
+That kills the one unproven step this card was carrying — holding identity onto a **back view**
+the source photo never shows. The reference-photo path is deferred whole, not solved; head-swap
+covers "make it look like this person" as a second pass on the finished sheet.
+
+The build lives in [plan.md](plan.md); the prompt payload — sheet template in four styles, the
+character-only enhancer recipe, the removal prompt — in [prompts.md](prompts.md). In short:
+
+- **Krea2 t2i**, one proven prompt template with a `[CHARACTER PROMPT]` hole, at a **fixed 8:5**
+  (`1280x768` / `1792x1120`). User picks 1k or 2k (**2k default**) and turbo on/off (**off
+  default**).
+- **The headless front body is an OPTIONAL step, on by default**: SAM3 selects the head from a
+  text prompt, the mask is grown, and Klein 4B inpaints it away with a baked prompt (*"remove
+  the head of the character, leaving only the clothes behind"*) — a method Fabio has already
+  run by hand. This keeps the sheet's own pixels untouched outside the mask.
+- **The enhancer recipe is the other half of the work.** The existing in-graph recipe (the
+  *Prompt Enhancement* group inside `krea2_t2i_template.json`) writes a whole SCENE: given *"a
+  1870s Western Indian Chief"* it returns a sun-baked plain, a smoke-stained teepee, dust in
+  the heat and a staff in his right hand. Every one of those contradicts the sheet. The new
+  recipe describes the CHARACTER only, as a noun phrase that drops into the hole.
+- **The style axis is new.** Fabio's prompt is written for a live-action character; the same
+  skeleton ships in four styles (photoreal, 3D, anime, cartoon) by swapping five marked spans.
+
+Everything below this section is the ORIGINAL research brief. It still holds, with one
+correction: where it describes a reference-photo path or an edit model, that is now v2.
+
+
 ## The LoRA-training sheet is OUT OF SCOPE — a different beast, not a layout option
 
 The first version of this card framed the two layouts as a conflict to settle,

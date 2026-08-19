@@ -1,0 +1,78 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "764f7081-1a72-4e0e-b3d4-b928f80518dd",
+  "generated_at": "2026-08-19T10:00:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-504 Character Sheet flow - re-scope to a shippable v1 and write everything a GPU is not needed for",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Make the Character Sheet flow shippable: drop image input, prompt only. Krea2 sheet from a proven prompt template, optional SAM3+Klein head removal on the small figure, a style axis beyond photoreal, and a new character-only enhancer recipe. GPU was busy, so do what could be done without it.",
+    "status": "in_progress",
+    "summary": "Card re-scoped, moved to doing, and fully specced. plan.md, prompts.md and checklist.md are written; brief.md carries a v1 section on top. Two design questions were closed rather than deferred (gear policy, front-head picking). No graph exists yet and nothing has been generated - comfy_workflows/raw/ is deliberately untouched because it is user-owned."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    "completed": [
+      "MPI-504 re-scoped to v1: prompt only, reference-photo path deferred whole to v2 (head-swap covers identity as a second pass), which removes the card's one unproven step",
+      "Card moved todo -> doing with files.json ownership; board validates",
+      "Sheet template parametrised into four styles (photoreal / 3D / anime / cartoon) off five marked spans; gendered words neutralised as bench gate #1",
+      "Character-only enhancer system prompt drafted for node 420 of the copied Prompt Enhancement group, with a worked example and five text-only regression checks",
+      "Gear policy settled: three tiers in recipe text, no new field",
+      "Head picking solved: faces exist only on the portrait and the FRONT body, so area-sorted face detection identifies the front panel with no classifier",
+      "Group-by-group strip list for krea2_t2i_template.json, verified against the file (218 nodes, 10 groups)"
+    ],
+    "pending": [
+      "Enhancer regression - text only, needs a running engine but no real generation. Do this FIRST, it validates the recipe before any image is made",
+      "Build the graph: copy krea2_t2i_template.json -> flow_character_sheet.json, delete the seven groups, split Styles, collapse the dead branch switches",
+      "Wire the four style templates + MpiAnySwitch on Input_Style, and the [CHARACTER PROMPT] StringReplace off the enhancer output",
+      "Swap node 420's system prompt for the character-only recipe",
+      "First sheet at 8:5 2k, then bench gate #1 (neutral-pronoun A/B, same seed)",
+      "Head branch: face detect -> ImpactSEGSOrderedFilter area ascending take 1 -> bbox grown upward -> head mask -> GrowMask -> Klein inpaint",
+      "Klein A/B: baked removal prompt vs the no-prompt remove op + crop/stitch",
+      "10/10 stress test, then /mpi-add-flow for the app wiring"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-504",
+    "title": "Character Sheet flow - a description in, a video-reference sheet out (front body HEADLESS)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-504/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Run the enhancer regression from prompts.md section 2 (four inputs, six checks each) - it needs a running engine but no real generation, and it proves the recipe before any image is made. Then start the graph: copy comfy_workflows/raw/krea2_t2i_template.json to flow_character_sheet.json in the bench editor and delete the seven groups named in plan.md.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "v1 takes a PROMPT ONLY. Image input deferred to v2 - head-swap already covers 'make it look like this person' as a second pass on the finished sheet, and dropping it removes the unproven back-view identity step.",
+      "The sheet prompt and the enhancer recipe are GRAPH PAYLOAD, not app code - baked widget values, the head-swap pattern. The app only injects the character text, a style index and the toggles.",
+      "Build the graph by STRIPPING krea2_t2i_template.json rather than authoring fresh: the t2i branch, tier switch and Prompt Enhancement group are already proven in it. 136 of its 218 nodes delete as whole groups.",
+      "Gear policy: worn weapons and kit BELONG on the sheet - the cowboy-movie sheets this layout comes from had none, which cost separate item sheets and unknown scale. Three tiers, recipe text only, NO new field: named gear always worn; at most two archetype-inevitable pieces when none named; none when the user rules it out in plain words. Hands stay open and empty, held objects still banned.",
+      "The 'no weapons' case needs no UI because the LLM reads it as an instruction and the image prompt simply omits it. A negative never reaches Krea2, which is positive-phrasing-only - 'no weapons' sent to the model draws weapons.",
+      "Front-body head picking uses FACES, not heads: a face exists only on the portrait and the front panel (the rear view has none), so it identifies the front body with no classifier and the rear view keeps its hair-from-behind reference.",
+      "Ratio is FIXED 8:5, not a user choice. 1280x768 (1k) / 1792x1120 (2k), both already in KREA2_RATIOS and both /16-clean. 2k default, turbo off by default, head removal on by default."
+    ],
+    "constraints": [
+      "comfy_workflows/raw/ is USER-OWNED (add-flow playbook). Fabio authors the graph in the bench editor - do not write a raw workflow file for him.",
+      "SAM3_Detect sorts results by CONFIDENCE, not size (nodes_sam3.py:223, argsort on scores descending), so 'take face number two' is a confidence race. Sort by area with ImpactSEGSOrderedFilter (target area(=w*h), ascending, take_count 1) instead.",
+      "Text and box are mutually exclusive on one SAM3_Detect, so 'head, inside this box' is never one node - either feed the box to the box branch with no text, or crop and run text on the crop. And bare 'head', never 'head:1' - :1 detects nothing (the name:N trap).",
+      "Strip-list traps verified in the file: KEEP Input_Bypass_Filter_Lora (krea2filterbypass3, baked at strength 1 - dropping it is an unasked behaviour change), and the Styles group does NOT delete whole because it holds Input_Positive/Input_Negative. The accelerator LoRA survives deleting Detailer and Upscale because Generation carries its own copy at node 440.",
+      "face_yolov8n.pt is ALREADY a shipped dep (face-yolov8n in assetDeps.js, already on R2) - declare it as requiredDeps the way head-swap declares its LoRA, no new upload. Fabio expects it to catch the small face even at 1k; logged as confirm-in-passing, not a risk.",
+      "Bench gate #1 is the only unproven edit to a prompt Fabio has already run: his original says man/his five times and the template neutralises them to character/the. A/B one male character, same seed.",
+      "MPI-568's files were left STAGED in the index by another session - they are not this card's and were deliberately left staged, not committed."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-504/prompts.md",
+      ".agents/mpi-kanban/tasks/MPI-504/checklist.md"
+    ]
+  },
+  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/764f7081-1a72-4e0e-b3d4-b928f80518dd.json first, then the card's plan.md, prompts.md and checklist.md in .agents/mpi-kanban/tasks/MPI-504/. The card is in doing. Fabio re-scoped it on 2026-08-19 to a shippable v1: a PROMPT ONLY (no image input), Krea2 t2i at a fixed 8:5, his proven sheet-prompt template with a [CHARACTER PROMPT] hole, an optional SAM3+Klein pass that removes the head from the small front-body figure, and a new character-only enhancer recipe replacing the scene-writing one in the Prompt Enhancement group. Session 1 had no GPU and wrote the whole spec; nothing is built yet and comfy_workflows/raw/ is untouched because it is user-owned. Start with the enhancer regression in prompts.md section 2 - it needs no real generation - then build the graph by stripping krea2_t2i_template.json per plan.md."
+}

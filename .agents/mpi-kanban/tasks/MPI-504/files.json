@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-504/**",
+    "comfy_workflows/raw/flow_character_sheet.json"
+  ]
+}
