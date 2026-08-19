@@ -25,6 +25,33 @@ model, so a regenerative upscale pass carries a semantic prior and can be
 prompt-steered. That is the specific property SeedVR2 lacks, and the reason this
 is worth a card rather than another SeedVR2 sweep.
 
+## CORRECTION 2026-08-19: this upscaler ALREADY SHIPS - the real gap is narrower
+
+Checked against the repo, not assumed. `comfy_workflows/ltx_i2v_t2v.json` node
+`123` is `LTXVLatentUpsampler`, fed by node `125`
+`LatentUpscaleModelLoader` / `ltx-2.3-spatial-upscaler-x2-1.1.safetensors` - the
+exact weight this card was written to evaluate. The shipped graph is already a
+two-stage regenerative upscale:
+
+1. node `143` `EmptyLTXVLatentVideo` builds the latent at `floor(w/2)` x
+   `floor(h/2)` (nodes `155`/`156`), and node `70`
+   `LTXVNormalizingSampler` samples it at that half resolution;
+2. node `123` upsamples the resulting latent **x2**;
+3. node `168` re-runs `LTXVImgToVideoInplace` on the upscaled latent and node
+   `39` `SamplerCustomAdvanced` refines at full resolution from
+   `sigmas 0.85, 0.7250, 0.4219, 0.0` - a partial denoise, not a fresh sample.
+
+So "can an LTX latent upscale plus a partial-denoise refine produce good
+pixels?" is **already answered in production, on the target hardware**. It is
+what every LTX generation in the app has been doing.
+
+**What is NOT answered, and is the actual subject of this card:** whether the
+same pair works as a **standalone v2v upscale of existing footage**, where the
+latent comes from a VAE encode of a video the model never generated. That is a
+materially harder input - no matching noise schedule, no generation history,
+and whatever codec and grain the source arrived with. Phases 2-5 of `plan.md`
+test exactly that, and nothing weaker should be read as a pass.
+
 ## Everything needed is ALREADY HERE - verified on the bench 2026-08-16
 
 Checked against `:8188` `/object_info` and the model folders, not assumed:
@@ -34,13 +61,15 @@ Checked against `:8188` `/object_info` and the model folders, not assumed:
 | `ltx-2.3-spatial-upscaler-x2-1.1.safetensors` | **on disk**, 0.99 GB, `G:\CubricModels\latent_upscale_models\` |
 | `LTXVLatentUpsampler` | **core** - `comfy_extras.nodes_lt_upsampler` |
 | `LatentUpscaleModelLoader` | **core** - `comfy_extras.nodes_hunyuan`, emits `LATENT_UPSCALE_MODEL` |
-| `LowVRAMLatentUpscaleModelLoader` | **core**, same output type - see the VRAM note below |
+| `LowVRAMLatentUpscaleModelLoader` | ~~core~~ **CORRECTED 2026-08-19: `custom_nodes.ComfyUI-LTXVideo`**, same output type - see the VRAM note below. If this reaches the app it needs a `node_lock.json` entry |
 | `LTXVTiledSampler`, `LTXVTiledVAEDecode`, `LTXVSpatioTemporalTiledVAEDecode` | present via `custom_nodes.ComfyUI-LTXVideo` |
-| LTX 2.3 checkpoint + workflows | already shipped and wired (`ltx_i2v_t2v_template.json`, `ltx_v2v_lipdub_template.json`) |
+| LTX 2.3 checkpoint + workflows | already shipped and wired. **CORRECTED 2026-08-19:** the real filenames are `comfy_workflows/ltx_i2v_t2v.json`, `ltx_i2v_t2v_int8.json`, `flow_ltx_extend.json`, `flow_ltx_foley.json` - there is no `_template.json` suffix and no `ltx_v2v_lipdub` |
 
 **So there is nothing to download, no node pack to adopt, no `node_lock.json`
 entry and no R2 upload** - which is the entire integration tax that made MPI-506
-expensive. This card costs bench time only.
+expensive. This card costs bench time only. **Two caveats added 2026-08-19:**
+`LowVRAMLatentUpscaleModelLoader` is a custom node (row above), and the
+interpolation arm needs one too (see the correction in the IDEA section).
 
 Note the signature: `LTXVLatentUpsampler` takes `samples` **LATENT** + a
 `LATENT_UPSCALE_MODEL` + a `VAE`, and returns **LATENT**. It upscales in latent
@@ -127,11 +156,21 @@ bench time:
 | Piece | Status |
 |---|---|
 | `rife47.pth` | on disk, `G:\CubricModels\` |
-| `FrameInterpolate` + `FrameInterpolationModelLoader` | **CORE** - `comfy_extras.nodes_frame_interpolation` |
-| `RIFE VFI`, `FILM VFI` | present via `custom_nodes.comfyui-frame-interpolation` |
+| `FrameInterpolate` + `FrameInterpolationModelLoader` | core nodes registered, but **UNUSABLE - see the correction below** |
+| `RIFE VFI`, `FILM VFI` | present via `custom_nodes.comfyui-frame-interpolation`, **five checkpoints loaded - this is the arm that works today** |
 
-The core pair matters: it means this needs **no node pack and no `node_lock.json`
-entry**, unlike the custom-node route.
+~~The core pair matters: it means this needs no node pack and no
+`node_lock.json` entry, unlike the custom-node route.~~
+
+**CORRECTED 2026-08-19.** The core pair is registered but has no models:
+`FrameInterpolationModelLoader`'s `model_name` combo comes back **empty**,
+because there is no `frame_interpolation` model folder - `rife47.pth` sits at
+`G:\CubricModels\` root, which that loader does not read. `RIFE VFI`
+(`custom_nodes.comfyui-frame-interpolation`) offers `rife47.pth`, `rife49.pth`,
+`rife417.pth`, `rife426.pth` and `sudo_rife4_269.662_testV1_scale1.pth` right
+now, so **phase 7 runs on the custom node**. The "no node pack, no
+`node_lock.json` entry" claim holds for the upscaler only, not for
+interpolation.
 
 **What to measure.** Same instruments as the rest of the card, plus the one thing
 that is specific to this shape:
