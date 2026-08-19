@@ -34,7 +34,42 @@ is. You may proceed."* The knob is `sigmas`. **Q2/Q4/Q5 close on this.**
 - Ground-truth interpolation redone with legal 8n+1 counts and matched sample
   sizes: temporal 7.50 vs duplication 10.22, vs a crossfade at 7.85.
 
+- **The split radius does not control invented texture** (`band_split.py`,
+  self-checked, its unsharp control passing on all three frames). Swept r=2..20
+  on frames 12/40/65: the invention/reconstruction ratio is worst at r=2 (0.511)
+  and best at r=8-10 (0.345), while every drift-matched strength twin at r=10
+  sits at a constant 0.347. Radius is dominated by strength; the hypothesis in
+  the previous handoff is dead. The luma-only arm is negative on the same
+  frames - the veins survive with the red drained out.
+- **The evidence gate suppresses invention on a region it was not tuned on.**
+  `RADIUS_gateTORSO_f40.png`, drift-matched at 132%: the source is plain fabric
+  with a faint seam, ungated detail-100 invents three red dots on the flat
+  fabric, the gated arm loses them and keeps the seam's buttons.
+  `FULL_gated132.mp4` rendered at 81 frames and verified against the in-memory
+  arm (face drift 5.83 in the clip vs 5.47 computed; the 1.96 residual is the
+  crf-14 encode, which `FULL_detail100.mp4` also carries, so the A/B is fair).
+
 ## Still open before this card can close
+
+- **THE POSITIVE PROMPT IS AN UNCONTROLLED VARIABLE UNDER EVERY MEASUREMENT ON
+  THIS CARD.** `build_v2v.py` conditions on `"a woman's face in close up, natural
+  skin texture, freckles, sharp eyes"` by default and always has. It asks for the
+  speckled skin the whole downstream filtering effort has been trying to remove.
+  `cfg: 1` also makes the negative prompt inert. Every arm, sweep and ratio on
+  this card was measured under that conditioning; none of them are wrong, but
+  none of them are clean either. Re-baseline before drawing further conclusions.
+- **Gate verdict from Fabio: partial pass.** Veins gone; fabric speckles only
+  partly (my "three red dots" was an under-count from a single crop); expressions
+  lost; and a new face artifact he describes as "bad interpolation". Leading
+  hypothesis for the last one is that the gate is recomputed per frame and
+  flickers, pulsing the detail layer - untested, zero GPU to test.
+- **The gate has NO independent evidence yet.** `band_split.py` is built from
+  the same source-high-pass statistic as the gate and would flatter it no matter
+  what, so it may never be used to score it. Only Fabio's eyes on
+  `FULL_gated132.mp4` and the ground-truth invented-texture test can close it.
+- The gate's stated limit is untested: it suppresses invention where there is
+  nothing to reconstruct from, so a hallucination that lands ON a real edge
+  passes through it unchanged.
 
 - **The hybrid temporal arm needs an eye check** - laplacian variance says the
   sharpness pulse is 1%, and that instrument demonstrably fails on this footage

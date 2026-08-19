@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-19T16:40:00Z",
+  "updated_at": "2026-08-19T05:30:50Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -10,12 +10,20 @@
   "open_messages": [],
   "active_handoffs": [
     {
+      "id": "8e0183d6-a911-498b-bf5b-7132a34a9a32",
+      "path": ".agents/mpi-kanban/state/handoffs/8e0183d6-a911-498b-bf5b-7132a34a9a32.json",
+      "task_card": "MPI-568",
+      "status": "open",
+      "created_at": "2026-08-19T05:30:50Z",
+      "note": "Split radius CLOSED NEGATIVE (strength in disguise). Evidence gate built and half-approved: veins gone, speckles partly, expressions lost, a new interpolation-like face artifact. Next is upstream - the positive prompt has asked for freckles on every arm of this card, and cfg 1 makes the negative inert."
+    },
+    {
       "id": "348b37e7-0694-4c92-8653-1797b9d5d4a2",
       "path": ".agents/mpi-kanban/state/handoffs/348b37e7-0694-4c92-8653-1797b9d5d4a2.json",
       "task_card": "MPI-568",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-19T05:30:00Z",
-      "note": "Both prior blockers cleared. Live thread is the CHANGE-CONTROL OP: sigma is not the drift dial, detail transfer is and it works for structure and grade but passes invented texture (veins) through. Next: sweep the split radius, zero GPU."
+      "note": "Superseded by 8e0183d6-a911-498b-bf5b-7132a34a9a32 - the radius sweep ran and is negative, the evidence gate is a partial pass by eye, and the positive prompt was found asking for the artifact."
     },
     {
       "id": "c2dd055b-96a7-4f54-8815-36a299f2e736",

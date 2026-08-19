@@ -36,6 +36,34 @@ Derived from `plan.md` phase titles.
       (157s vs 263s), so it is a preview-pass option, not the ceiling answer
 - [x] A clean UNCONTENDED full-length re-time: 263s for 81 frames at 2x =
       97 s per second of footage
+- [x] **Split-radius sweep - DONE and NEGATIVE.** r swept 2..20 on frames
+      12/40/65 with a self-checked invention/reconstruction measure and its
+      unsharp control. Radius is strength in disguise (every drift-matched
+      strength twin sits at the same ratio) and lowering it is strictly worse
+      (0.511 at r=2 vs 0.347 at r=10). Optimum is r=8-10; leave it at 10
+- [x] Luma-only transfer arm - NEGATIVE. The veins are luma structures, not a
+      red cast; draining the chroma leaves them in place
+- [x] **The evidence gate built and rendered** - weight the transfer by the
+      source's own local high-pass energy, so flat skin and flat fabric get
+      nothing and the lash line/zipper get the model's full rendering.
+      `radius_sweep.py` arm `g` + `transfer_clip.py` 6th arg `gate`, both
+      self-checked. Full-length `FULL_gated132.mp4`, drift-matched to
+      `FULL_detail100.mp4`
+- [x] **FABIO'S EYES on `FULL_gated132.mp4` - PARTIAL PASS.** Veins gone;
+      fabric speckles only partly gone (the "three dots" was an under-count from
+      one crop); expressions lost; new face artifact that "feels like bad
+      interpolation"
+- [ ] **THE POSITIVE PROMPT - re-run sigma 0.85 neutral and empty.** The graph
+      has conditioned on ".. natural skin texture, freckles, sharp eyes" on every
+      arm of this card, i.e. it has been ASKING for the speckles. Uncontrolled
+      variable upstream of every measurement here. Also `cfg: 1` makes the
+      negative prompt inert. ~1 min GPU per arm, shared card, ask first
+- [ ] Temporally smooth the gate (average over 3-5 frames or hold from one) and
+      re-render - the leading explanation for the interpolation-like artifact.
+      Zero GPU
+- [ ] Ground-truth invented-texture test - now doubly needed, as the ONLY
+      independent check on the gate (`band_split.py` shares the gate's statistic
+      and may never score it)
 - [ ] `LTXVAddGuide.attention_mask` - deprioritised; only matters if 0.85's look
       is still wanted, and 0.85 now has three marks against it
 - [ ] Clip B cross-check

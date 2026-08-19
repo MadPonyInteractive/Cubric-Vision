@@ -21,11 +21,24 @@ hallucination and grade drift (63% less drift at full reconstruction, no GPU,
 adjustable after the run) and is powerless against INVENTED TEXTURE - Fabio saw
 invented veins on the face, worse at 100% than 70%.
 
-**Next action: the split-radius sweep.** A coarser high-pass should drop the
-finest invented detail (the veins) while keeping the structural detail that made
-the op worth having. Radius is currently hard-coded at 10 px and never swept -
-it is the one untried parameter of the op that directly targets the defect he
-found. Zero GPU. Then the ground-truth invented-texture test.
+**The split-radius sweep is DONE and NEGATIVE** - radius does not separate
+invention from reconstruction and r=10 was already at the optimum. But the
+measurement built to prove that named the control that does work: an
+EVIDENCE-GATED transfer, which suppresses the veins and the invented dots while
+keeping the lash line and the zipper. Built, self-checked, rendered at full
+length as `FULL_gated132.mp4`.
+
+**The gate got its eye verdict and it is a PARTIAL PASS with a new defect** - the
+veins went, the speckles did not all go, expressions were lost, and the face
+picked up something that reads like bad interpolation. See the verdict section.
+
+**Next action: THE POSITIVE PROMPT, which has been an uncontrolled variable on
+every arm of this card.** Fabio asked whether the graph even takes one. It does,
+and it has been running `"a woman's face in close up, natural skin texture,
+freckles, sharp eyes"` since the graph was built - a prompt that explicitly
+ORDERS the speckles everyone has been trying to filter out downstream. Re-run
+sigma 0.85 with a neutral prompt and with an empty one before any more
+post-processing work. ~1 minute of GPU per arm; the GPU is shared, so ask first.
 
 Earlier state, unchanged: bench `:8188` up (NORMAL_VRAM). Phases 1 and 2 done.
 
@@ -552,6 +565,159 @@ radius (coarser high-pass, dropping the finest invented detail), or a true
 pre-pixel control (`attention_mask`, cfg/prompt), or a ground-truth test that
 measures invented texture directly.
 
+### THE RADIUS SWEEP IS NEGATIVE - and it named the control that works
+
+2026-08-19. Swept at last, on the full-length pair (`real_lanczos2x.mp4` +
+`full_s085_x2_00001.mp4`), frames 12/40/65, with `radius_sweep.py` and
+`band_split.py` (both self-checked).
+
+**First, a correction to this plan's own wording.** It said "a lower split radius
+(coarser high-pass)". Those are opposite things. `highpass = a - blur(a, r)`, so
+RAISING r widens the transferred band downward (adds mid-scale, hence more
+structure and more of 0.85's identity change) and LOWERING r narrows it to the
+finest detail. The arm that could drop the veins was therefore a LOW radius.
+
+**By eye it looked like it worked, and that reading was wrong.** At r=2 the
+cheek is clean, at r=5 the marks are faint, at r=10 they are plain, at r=20 they
+are blotchy. But r=2's drift is 0.97 against r=10's 5.17 - the veins vanish
+because the whole transfer has shrunk 5x, which is what the strength dial
+already did.
+
+**The measurement that settles it** (`band_split.py`, self-checked). It tiles the
+face box 32x32 and splits the tiles by the SOURCE's own high-pass energy, so the
+regions are chosen once from the source and are identical for every arm. A
+bottom-quartile tile is flat skin: there is no real detail there to resolve, so
+whatever the transfer adds is INVENTED. A top-quartile tile (lash line, iris,
+nostril, lip edge) is where evidence exists, so what lands there is
+RECONSTRUCTION. The drift-matched unsharp arm is the control that keeps it
+honest - it can only amplify what the source already has, so its ratio must come
+out lowest or the instrument is broken. It did, on all three frames.
+
+Frame 40 (12 and 65 agree within 0.02 on every row):
+
+| arm | drift | invent | recon | inv/rec |
+|---|---:|---:|---:|---:|
+| detail 100% r=2 | 0.97 | 0.79 | 1.54 | **0.511** |
+| detail 100% r=3 | 1.53 | 1.08 | 2.44 | 0.444 |
+| detail 100% r=5 | 2.76 | 1.69 | 4.55 | 0.372 |
+| detail 100% r=8 | 4.34 | 2.49 | 7.23 | **0.345** |
+| detail 100% r=10 | 5.17 | 2.93 | 8.43 | 0.347 |
+| detail 100% r=14 | 6.41 | 3.60 | 9.93 | 0.363 |
+| detail 100% r=20 | 7.58 | 4.31 | 11.09 | 0.388 |
+| strength twins at r=10, drift-matched to each row above | - | - | - | 0.347 flat |
+| UNSHARP control (floor) | 5.17 | 2.31 | 9.93 | 0.232 |
+
+**Radius is strength in disguise, and a worse version of it.** The ratio is flat
+at 0.347 for every strength twin (it must be - the op is linear in strength), and
+every low-radius arm is WORSE than its twin: 0.511 at r=2 against 0.347. The
+optimum is r=8-10, which is where the op already was. There is nothing to win
+here, and the parameter should be left at 10.
+
+**The number that points somewhere useful is the gap to the unsharp floor.** An
+unsharp mask cannot invent, and it still scores 0.232 because flat skin is not
+perfectly flat. Every transfer arm sits ~1.5x above that floor. That excess is
+the veins, and it is present at every radius.
+
+#### The evidence gate - suppress the transfer where there is nothing to resolve
+
+Invented texture lands where the source has no detail; reconstruction lands where
+it does. So weight the transfer by the source's own evidence:
+
+```
+ev   = blur(|src - blur(src, r)|, 2r)          # how much real detail is here
+gate = clip(ev / percentile(ev, 80), 0, 1)
+out  = src + strength * gate * (highpass(gen,r) - highpass(src,r))
+```
+
+Flat skin and flat fabric get nothing; the lash line, the nostril and the zipper
+get the model's full rendering - which is the half an unsharp mask can never
+produce. `radius_sweep.py` arm `g`, `transfer_clip.py` 6th arg `gate`, both
+self-checked (including a synthetic half-flat frame the gate must suppress).
+
+**The proof is on a region the gate was never tuned on**
+(`RADIUS_gateTORSO_f40.png`, drift-matched at 132%): the source is plain white
+fabric with a faint seam; ungated detail-100 invents **three red dots on the flat
+fabric**; the gated arm loses the dots and keeps the seam's buttons. Same artifact
+class as the veins - a red mark on a featureless area - and visible at a glance
+rather than at 2x zoom. On the face (`RADIUS_gateFACE_f40.png`) the cheek
+speckles largely go while the iris, lashes and teeth hold.
+
+**Its real limit, stated plainly:** the buttons along the seam are themselves
+probably invented, and the gate keeps them *because there is evidence at that
+location*. It suppresses invention where there is nothing to reconstruct FROM -
+not invention as such. A model that hallucinates on top of a real edge is
+untouched by it.
+
+**`band_split.py` MUST NOT be used to score the gate.** The gate is built from
+per-pixel source high-pass energy and the instrument's regions are chosen by
+per-tile source high-pass energy - the same signal. It would be scoring its own
+construction and would flatter the gate no matter what. This is exactly the
+failure this card has hit five times already, caught before it was quoted. The
+gate's evidence is Fabio's eyes plus the ground-truth test below, and nothing
+else.
+
+**Also negative, so it does not get tried again: the luma-only arm.** The veins
+read reddish, so transferring only the Y high-pass and keeping the source chroma
+looked free. It is not - `RADIUS_faceB_f40.png` shows the marks still there with
+the red drained out. They are luma structures, not a chroma cast.
+
+#### FABIO'S VERDICT ON THE GATE, 2026-08-19 - partial pass, and it surfaced the real lead
+
+*"the veins were gone, expressions were lost, and for the fabric, it was not just
+the three dots that were created. It was some other speckles... There's something
+weird going on in our face in the full gated 132. Hard to explain. It feels like
+bad interpolation or something."*
+
+Four separate readings, and they do not all point the same way:
+
+1. **The veins ARE gone.** The gate does what it was built to do.
+2. **The speckles are NOT all gone**, and my report of "three red dots" was an
+   under-count taken from one crop. There is more invention on the fabric than
+   the gate removes, which is consistent with its stated limit - anything landing
+   on or near real evidence survives it.
+3. **Expressions were lost.** New, and NOT explained by the gate's design:
+   expression is low-frequency and comes from the source untouched in every
+   detail-transfer arm. Either the 132% strength is over-driving on-edge detail
+   until the face reads mask-like, or the eye is reading the flat-region
+   suppression as deadness. Untested either way.
+4. **"Feels like bad interpolation."** Leading hypothesis, and cheap to test:
+   **the gate is recomputed per frame from a noisy source, so the mask itself
+   flickers**, the transferred amount pulses frame to frame, and a pulsing detail
+   layer reads exactly like a bad interpolation. Nothing in the op temporally
+   smooths the gate. Test: rebuild `FULL_gated132.mp4` with the gate averaged
+   over a 3-5 frame window, or held from a single frame, and compare. Zero GPU.
+
+### THE POSITIVE PROMPT HAS BEEN ASKING FOR THE ARTIFACT ALL ALONG
+
+Fabio, 2026-08-19: *"Is there anything happening in the positive prompt, or does
+it not take a positive prompt? My observation is based on possibly using the
+positive prompt to help the model understand what's happening."*
+
+It takes one. `build_v2v.py` has a full text stack - `DualCLIPLoader` (gemma3-12b
++ the ltx-2.3 projection) at node 5, `CLIPTextEncode` positive at node 30 and
+negative at node 31, through `LTXVConditioning` at node 32. And the default it
+has been running on **every arm of this card** is:
+
+```
+"a woman's face in close up, natural skin texture, freckles, sharp eyes"
+```
+
+**It asks for freckles.** Every downstream instrument, dial, radius sweep and
+gate on this card has been trying to filter out speckled skin texture that the
+prompt was ordering. This is an uncontrolled variable sitting upstream of every
+measurement taken so far, and it was never noticed because the prompt was written
+once at graph-build time and never revisited.
+
+Second thing found in the same read: **`cfg: 1` at the sampler (node 33), so the
+negative prompt is inert.** There is no classifier-free guidance, so node 31 has
+never done anything. Anyone reaching for the negative prompt to suppress an
+artifact has to raise cfg first, and raising cfg is its own change to the arm.
+
+**This outranks every remaining post-processing idea.** The order is: fix the
+prompt, re-measure, and only then decide what the gate and the detail dial are
+still for. Do NOT tune more filters on top of an arm whose conditioning asks for
+the defect.
+
 ### THE WAVY DISTORTION IS THE VAE, NOT THE INTERPOLATION - root-caused 2026-08-19
 
 Fabio saw it on `real_temporal_gt_00001.mp4` and all three instruments scored
@@ -829,16 +995,27 @@ arm and one open question that outranks the rest.
    0, and watch it - the swim is invisible on a still by construction. This also
    discharges the uncontended re-time the card owes, since it needs an exclusive
    GPU anyway (97% of 16 GB).
-2. **Sweep the detail-transfer split radius** - THE NEXT ACTION. Fixed at 10 px
-   and never swept. A coarser high-pass drops the finest invented detail (the
-   veins Fabio saw) while keeping structural detail. Zero GPU: every input is
-   already on disk. A face-region mask does NOT fix this - the veins are on the
-   face - so radius comes first.
+1b. **THE NEXT ACTION - re-run sigma 0.85 with a NEUTRAL and an EMPTY positive
+   prompt.** The graph has been conditioned on `"...natural skin texture,
+   freckles, sharp eyes"` on every arm of this card. Fix the upstream cause
+   before tuning anything else downstream. Also decide what to do about `cfg: 1`
+   making the negative prompt inert. ~1 min of GPU per arm, shared card, ask.
+1c. **Temporal stability of the gate** - zero GPU. The gate is recomputed per
+   frame, so it can flicker and make the detail layer pulse, which is the
+   leading explanation for Fabio's "feels like bad interpolation". Average the
+   gate over 3-5 frames (or hold it from one) and re-render.
+2. ~~Fabio's eyes on the evidence gate~~ **DONE - partial pass.** Veins gone,
+   speckles only partly, expressions lost, plus a new interpolation-like face
+   artifact. See the verdict section.
 2b. **Ground-truth test for invented texture.** Downscale the source 2x, upscale
    it back, compare the invented high frequencies against the withheld real
    frames. It is the only way to separate "resolved real detail" (the nose stud)
-   from "made-up detail" (the veins), and no instrument on this card can do that
-   today. ~1 minute of GPU.
+   from "made-up detail" (the veins) - and it is now doubly needed, because it is
+   the only INDEPENDENT check on the gate: `band_split.py` shares the gate's own
+   statistic and cannot score it. ~1 minute of GPU.
+2c. ~~Sweep the detail-transfer split radius~~ **DONE, NEGATIVE.** Radius is
+   strength in disguise and lowering it is strictly worse; leave it at 10. The
+   luma-only arm is negative too. See the radius-sweep section.
 3. Clip B (non-LTX AI source) cross-check - interrupted twice, never landed.
 4. `LTXVAddGuide.attention_mask` - the in-graph version of 2. Only worth it if
    the pixel-space mask proves the idea and something still needs the model to
@@ -888,6 +1065,15 @@ the uncontended re-time (97 s per second of footage at 2x).
   the temporal upscaler "the best find of the session"; with legal frame counts
   and a crossfade control it only ties a linear blend, and it damages the real
   frames. The hybrid arm is what decides it.
+- 2026-08-19: **the radius hypothesis died and this plan's own wording was part
+  of why.** "A lower split radius (coarser high-pass)" describes two opposite
+  operations; raising r widens the band downward, lowering it narrows to the
+  finest detail. Corrected in the radius-sweep section. The sweep then killed the
+  hypothesis outright - radius is dominated by strength at matched drift - and
+  the instrument built to prove it named the evidence gate instead. The sixth
+  instrument-honesty trap on this card was caught before it was quoted rather
+  than after: `band_split.py` shares a statistic with the gate and may never
+  score it.
 - 2026-08-19: MPI-506's AI-generated source clip no longer exists on disk, so
   clip B is a substitute (a non-LTX WAN clip) rather than the same footage.
   Clip A is unchanged, so the headline comparison still holds.
