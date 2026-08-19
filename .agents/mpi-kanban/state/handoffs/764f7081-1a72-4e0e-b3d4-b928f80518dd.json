@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "764f7081-1a72-4e0e-b3d4-b928f80518dd",
   "generated_at": "2026-08-19T10:00:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-504 Character Sheet flow - re-scope to a shippable v1 and write everything a GPU is not needed for",
     "branch": "master"
@@ -74,5 +74,6 @@
       ".agents/mpi-kanban/tasks/MPI-504/checklist.md"
     ]
   },
-  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/764f7081-1a72-4e0e-b3d4-b928f80518dd.json first, then the card's plan.md, prompts.md and checklist.md in .agents/mpi-kanban/tasks/MPI-504/. The card is in doing. Fabio re-scoped it on 2026-08-19 to a shippable v1: a PROMPT ONLY (no image input), Krea2 t2i at a fixed 8:5, his proven sheet-prompt template with a [CHARACTER PROMPT] hole, an optional SAM3+Klein pass that removes the head from the small front-body figure, and a new character-only enhancer recipe replacing the scene-writing one in the Prompt Enhancement group. Session 1 had no GPU and wrote the whole spec; nothing is built yet and comfy_workflows/raw/ is untouched because it is user-owned. Start with the enhancer regression in prompts.md section 2 - it needs no real generation - then build the graph by stripping krea2_t2i_template.json per plan.md."
+  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/764f7081-1a72-4e0e-b3d4-b928f80518dd.json first, then the card's plan.md, prompts.md and checklist.md in .agents/mpi-kanban/tasks/MPI-504/. The card is in doing. Fabio re-scoped it on 2026-08-19 to a shippable v1: a PROMPT ONLY (no image input), Krea2 t2i at a fixed 8:5, his proven sheet-prompt template with a [CHARACTER PROMPT] hole, an optional SAM3+Klein pass that removes the head from the small front-body figure, and a new character-only enhancer recipe replacing the scene-writing one in the Prompt Enhancement group. Session 1 had no GPU and wrote the whole spec; nothing is built yet and comfy_workflows/raw/ is untouched because it is user-owned. Start with the enhancer regression in prompts.md section 2 - it needs no real generation - then build the graph by stripping krea2_t2i_template.json per plan.md.",
+  "note": "Superseded by a8609f95-286f-4fdc-8b35-e0b2c489fc9f - regression run and recipe revised to v4, both graphs built and verified, enhancer made universal."
 }

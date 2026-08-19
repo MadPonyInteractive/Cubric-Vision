@@ -1,8 +1,9 @@
 ---
 schema: mpi-kanban/project-knowledge-index/v1
 profile: .agents/mpi-kanban/project-profile.md
-last_refresh: 2026-08-13
-last_refresh_notes: Pointer sweep. Seven `**Memory:**` targets no longer resolved — the four `feedback_*.md` files were folded into `memory/feedback-index.md` by the 2026-08-07 prune, and `project_cubric_studio_agent_vision.md` / `project_connector_ownership_split.md` / `project_hub_scalable_foundation.md` by MPI-521 (2026-08-10). All seven repointed at where the content actually lives; no topic changed. Every other pointer in this file was resolved against disk and still holds.
+last_refresh: 2026-08-19
+last_refresh_notes: 'Three dead `**Memory:**` targets repointed, all deleted by the MPI-574 memory reorg (2026-08-17) four days after the previous sweep - `tool_litegraph_to_api_converter.md` to `docs/workflow-authoring/converters.md`, `tool_read_download_state_without_console.md` into `docs/download-manager.md`, and `tool_website_image_converter.md` dropped in favour of the command line the profile already carries. One topic added: the GPU lease, now enforced. Every other pointer resolved against disk.'
+prior_refresh_notes: 'Pointer sweep (2026-08-13). Seven `**Memory:**` targets no longer resolved — the four `feedback_*.md` files were folded into `memory/feedback-index.md` by the 2026-08-07 prune, and `project_cubric_studio_agent_vision.md` / `project_connector_ownership_split.md` / `project_hub_scalable_foundation.md` by MPI-521 (2026-08-10). All seven repointed; no topic changed.'
 ---
 
 # Project Knowledge Index
@@ -74,7 +75,8 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 ### Workflow authoring
 
 - **Read first:** `docs/workflow-authoring/README.md` (injectable nodes, controls, MpiNodes, tier selectors) — append what you learn there
-- **Memory:** `tool_litegraph_to_api_converter.md` (browser→API conversion + batch sync), `tool_comfy_schema_gate_before_workflow_sync.md` (probe `/object_info` FIRST; 8188 = hand-maintained bench, 48188 = the app's engine)
+- **Also:** `docs/workflow-authoring/converters.md` (browser→API conversion + batch sync — was memory `tool_litegraph_to_api_converter.md` until MPI-574 moved it into the docs, 2026-08-17)
+- **Memory:** `tool_comfy_schema_gate_before_workflow_sync.md` (probe `/object_info` FIRST; 8188 = hand-maintained bench, 48188 = the app's engine)
 
 ### Events & cross-component communication
 
@@ -117,7 +119,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/download-manager.md` (resumable downloads, IPC/SSE events, the EXCLUSIVE-vs-shared dependency model)
 - **Rules:** `.claude/rules/downloads.md`
-- **Memory:** `tool_read_download_state_without_console.md` — the download system is drivable from the shell in BOTH directions (status/active GETs, install/uninstall POSTs), so a download bug does not need the app open
+- **Memory:** none — the "drive downloads over HTTP in BOTH directions (status/active GETs, install/uninstall POSTs), so a download bug does not need the app open" note moved into `docs/download-manager.md` with MPI-574 (2026-08-17); it was memory `tool_read_download_state_without_console.md`
 - **Also:** `docs/models-path.md` (where weights land and how the path is resolved)
 
 ### Project data & integrity
@@ -221,7 +223,8 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 ### Sibling website / docs
 
 - **Read first:** `c:\AI\Mpi\Cubric Studio (Website)\`, `c:\AI\Mpi\Cubric Studio (Docs)\`, design source at `c:\AI\Mpi\CubricStudio_Redesign\`
-- **Memory:** `project_website_subdomain_strategy.md`, `tool_website_image_converter.md`
+- **Memory:** `project_website_subdomain_strategy.md`
+- **Converter:** `node scripts/convert-images.cjs --prefix=<name> --out=<name>` — batch PNG/JPG → WebP for the sibling carousels; flags and defaults are in the profile's `## Important Commands`
 - **Notes:** separate repos; use absolute paths and `git -C`; CLAUDE.md does NOT auto-load there.
 
 ### Cubric Studio user docs (sibling Docs repo)
@@ -247,10 +250,18 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - **Read first:** `.claude/rules/kanban.md` — board/card traps this repo hit, file claims, card ownership
 - `.claude/rules/behaviour.md` — generic agent conduct (claims discipline, shell style, reporting)
 - `.agents/mpi-kanban/close-out.md` — this repo's close-out steps, run by `mpi-end-session` § 7
-- `.agents/mpi-kanban.local.md` — `/mpi-brief-rule` config: 18 rules, 3 bundles
+- `.agents/mpi-kanban.local.md` — `/mpi-brief-rule` config: 19 rules, 3 bundles, plus `gpu_command_patterns` (see below)
 - `.claude/agents/` — worker archetypes for the three bundles
 - Mechanics live in the **Mpi-Kanban plugin**, `${CLAUDE_PLUGIN_ROOT}/skills/mpi-lib/` — never edit it; a needed change is a card filed on `MadPonyInteractive/mpi-kanban`
-- Six hooks enforce the contract (`guard-card`, `guard-claim`, `guard-git`, `guard-shell`, plus session-start and pre-compact). What a hook enforces is deliberately NOT re-documented in `CLAUDE.md`
+- Eight hooks enforce the contract (`guard-card`, `guard-claim`, `guard-git`, `guard-gpu`, `guard-shell`, `precompact-handoff`, `session-start`, `session-end`). What a hook enforces is deliberately NOT re-documented in `CLAUDE.md`
+
+### The GPU lease (enforced here since 2026-08-19)
+
+- **Read first:** `.agents/mpi-kanban.local.md` § `gpu_command_patterns` — the four matched commands and why each of the deliberate exclusions is excluded
+- **The lease:** `${CLAUDE_PLUGIN_ROOT}/skills/mpi-lib/scripts/gpu_lease.py` — `run -- <command>` takes a free device and sets `CUDA_VISIBLE_DEVICES`; `status` names who holds what. Run it as a BACKGROUND Bash call so waiting costs no tokens
+- **Scope:** the lock is machine-global (`~/.mpi-kanban/gpu/<index>.lock`, kernel flock, released on exit/crash/Ctrl-C/TaskStop — no TTL, no stale lease). This box has ONE device, slot 0
+- **The gap to know about:** enforcement is per-repo. A sibling repo with no `gpu_command_patterns` is not leased and will still collide — add the same block there
+- **Not this:** Pod/remote GPU collisions are `.claude/hooks/guard-runpod-create.py`, not the lease; `/proxy/prompt` is deliberately unmatched
 
 ## Board archive layout
 

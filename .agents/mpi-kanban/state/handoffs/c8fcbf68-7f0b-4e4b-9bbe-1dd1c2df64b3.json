@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "c8fcbf68-7f0b-4e4b-9bbe-1dd1c2df64b3",
   "generated_at": "2026-08-17T04:18:56Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-531 - the two control surfaces became one, and MPI-570's real mechanism got proven",
     "branch": "master"
@@ -70,5 +70,6 @@
       ".agents/mpi-kanban/tasks/MPI-531/validation.md"
     ]
   },
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/c8fcbf68-7f0b-4e4b-9bbe-1dd1c2df64b3.json and use mpi-continue. Fabio's instruction for this session is to fix MPI-570 first, in a fresh window. READ .agents/mpi-kanban/tasks/MPI-570/brief.md BEFORE the card's own description - the description traces a different bug from the one he reported, and it names a fix candidate (`ui:close-all-popups`) that fires too early and would change nothing. His bug: he presses the flow button in the reuse box, the popup closes, and whatever gallery video is under his mouse at that moment starts looping WITH SOUND and keeps going while the Flow overlay is up. It is not the card he was hovering - it is the one the closing popup uncovers under a stationary cursor, and `mouseenter` firing on that reveal was measured last session (0 while covered, 1 on reveal). The fix hooks OverlayManager.push after instance.show() and calls the existing, already-correct `_stopOtherGalleryMedia(null)`; also cover minimise and window focus loss. Move MPI-570 todo -> doing and write its files.json before editing anything. MPI-531 stays in doing behind it (its remaining debt is one real foley generation asserted from Comfy /history, plus card items 2/3/4), and MPI-332 is finished and merely needs moving to done. Ask before using the GPU - another of Fabio's agents may want it."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/c8fcbf68-7f0b-4e4b-9bbe-1dd1c2df64b3.json and use mpi-continue. Fabio's instruction for this session is to fix MPI-570 first, in a fresh window. READ .agents/mpi-kanban/tasks/MPI-570/brief.md BEFORE the card's own description - the description traces a different bug from the one he reported, and it names a fix candidate (`ui:close-all-popups`) that fires too early and would change nothing. His bug: he presses the flow button in the reuse box, the popup closes, and whatever gallery video is under his mouse at that moment starts looping WITH SOUND and keeps going while the Flow overlay is up. It is not the card he was hovering - it is the one the closing popup uncovers under a stationary cursor, and `mouseenter` firing on that reveal was measured last session (0 while covered, 1 on reveal). The fix hooks OverlayManager.push after instance.show() and calls the existing, already-correct `_stopOtherGalleryMedia(null)`; also cover minimise and window focus loss. Move MPI-570 todo -> doing and write its files.json before editing anything. MPI-531 stays in doing behind it (its remaining debt is one real foley generation asserted from Comfy /history, plus card items 2/3/4), and MPI-332 is finished and merely needs moving to done. Ask before using the GPU - another of Fabio's agents may want it.",
+  "note": "Superseded by 23129362-b4d2-4e41-99be-98dab0841082 - MPI-570 fixed, verified and closed; MPI-332 parked."
 }

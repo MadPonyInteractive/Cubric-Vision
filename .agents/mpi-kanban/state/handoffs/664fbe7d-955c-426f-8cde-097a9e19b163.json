@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "664fbe7d-955c-426f-8cde-097a9e19b163",
   "generated_at": "2026-08-14T03:50:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "Unblock the Flow track and integrate the ready Flows",
     "branch": "master"
@@ -66,5 +66,6 @@
       "docs/playbooks/add-flow/ui/carousel-frame.md"
     ]
   },
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/664fbe7d-955c-426f-8cde-097a9e19b163.json and continue the Cubric Vision Flow track. Last session cleared the blocker under the whole track - MPI-531 item 1 (FlowStepField gains number/slider/text) plus FlowDef.controls, so a Flow now declares its run-slide controls as data and needs no JS component - and integrated the first Flow on top of it, MPI-520 Extend Video (card in doing/validating, its only open item is the user's own live generation, which they cannot run while their RunPod video work owns the GPU). Next is MPI-536 (LTX 2.3 foley): its one prereq is staging ltx-2.3-22b-lora-foley-v2a-1.0.safetensors to R2 with a dependencies.js entry, after which the Flow is a copy of the ltx-extend shape. MPI-538 (lipsync) follows and needs ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors the same way. MPI-557 belongs to a different session, is not a Flow, and must not be touched."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/664fbe7d-955c-426f-8cde-097a9e19b163.json and continue the Cubric Vision Flow track. Last session cleared the blocker under the whole track - MPI-531 item 1 (FlowStepField gains number/slider/text) plus FlowDef.controls, so a Flow now declares its run-slide controls as data and needs no JS component - and integrated the first Flow on top of it, MPI-520 Extend Video (card in doing/validating, its only open item is the user's own live generation, which they cannot run while their RunPod video work owns the GPU). Next is MPI-536 (LTX 2.3 foley): its one prereq is staging ltx-2.3-22b-lora-foley-v2a-1.0.safetensors to R2 with a dependencies.js entry, after which the Flow is a copy of the ltx-extend shape. MPI-538 (lipsync) follows and needs ltx-2.3-22b-ic-lora-lipdub-0.9.safetensors the same way. MPI-557 belongs to a different session, is not a Flow, and must not be touched.",
+  "note": "Superseded by 5c14b524-b8a5-473b-b85d-f3b751d41293 - MPI-536 foley shipped, live-verified and closed."
 }

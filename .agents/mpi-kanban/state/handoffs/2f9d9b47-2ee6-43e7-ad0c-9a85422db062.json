@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "2f9d9b47-2ee6-43e7-ad0c-9a85422db062",
   "generated_at": "2026-08-17T06:55:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-572 - kill the uiComponent escape hatch (last+first stage templates)",
     "branch": "master"
@@ -64,5 +64,6 @@
       "js/data/flowsRegistry.js"
     ]
   },
-  "resume_prompt": "Resume MPI-572 in Cubric-Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/2f9d9b47-2ee6-43e7-ad0c-9a85422db062.json and the card workspace at .agents/mpi-kanban/tasks/MPI-572/. The card is in `doing`/`validating`. Commit 64279953 removed the last per-flow JS component (MpiFlowHeadSwap): a step now declares `param: 'box1'` and the tier is a declared `radio` field, so every FlowDef is data a third-party manifest could carry - that is the card's LAST-stage half, done. The FIRST-stage half is untouched: a FlowDef still restates `inputSchema.media` on top of the op's own `mediaInputs`. Before any new work, settle the open risk: Fabio ran Head Swap on real Qwen weights and the swapped head came back BLENDED with the original rather than replaced. He believes it is the workflow, not the app - that is UNVERIFIED, and a blend is exactly what a wrong `box1` produces, which is the path this card rewrote. Read the output's `.meta/` sidecar from disk (project '1.4 media') and check injectionParams.box1/box2 shape and Input_Tier's type before trusting the app half. Never touch :3000; it is Fabio's live app."
+  "resume_prompt": "Resume MPI-572 in Cubric-Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/2f9d9b47-2ee6-43e7-ad0c-9a85422db062.json and the card workspace at .agents/mpi-kanban/tasks/MPI-572/. The card is in `doing`/`validating`. Commit 64279953 removed the last per-flow JS component (MpiFlowHeadSwap): a step now declares `param: 'box1'` and the tier is a declared `radio` field, so every FlowDef is data a third-party manifest could carry - that is the card's LAST-stage half, done. The FIRST-stage half is untouched: a FlowDef still restates `inputSchema.media` on top of the op's own `mediaInputs`. Before any new work, settle the open risk: Fabio ran Head Swap on real Qwen weights and the swapped head came back BLENDED with the original rather than replaced. He believes it is the workflow, not the app - that is UNVERIFIED, and a blend is exactly what a wrong `box1` produces, which is the path this card rewrote. Read the output's `.meta/` sidecar from disk (project '1.4 media') and check injectionParams.box1/box2 shape and Input_Tier's type before trusting the app half. Never touch :3000; it is Fabio's live app.",
+  "note": "Resolved 2026-08-17: the sidecar read exonerated the app half, MPI-572 closed, and the blended head was confirmed as Fabio's own workflow revisit - deliberately not carded. Superseded by 44bcd4be-6bf4-4299-93b1-194243d08bac."
 }

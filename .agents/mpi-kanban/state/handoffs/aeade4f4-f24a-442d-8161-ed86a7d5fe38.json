@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "aeade4f4-f24a-442d-8161-ed86a7d5fe38",
   "generated_at": "2026-08-14T01:05:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-557 Phase 0 - desk pass D1-D3, B7, and the B1 GO/NO-GO gate",
     "branch": "master"
@@ -64,5 +64,6 @@
       "comfy_workflows/raw/seedvr2_video.json"
     ]
   },
-  "resume_prompt": "Continue MPI-557 (Video face detailer) in Cubric Vision, card in `doing`, Phase 0 bench research. Read .agents/mpi-kanban/state/handoffs/aeade4f4-f24a-442d-8161-ed86a7d5fe38.json then .agents/mpi-kanban/tasks/MPI-557/brief.md and plan.md - the brief carries every Phase 0 finding so far, each cited to source. Status: the desk pass answered D1-D3, B7 closed early (the static union window fails on 55-62% of real clips, so MpiFaceWindow needs tracking from the start), and B1 - the GO/NO-GO gate - PASSED, with the GO stated by Fabio after viewing the output. The next action is B2, the sampler bake-off: same clip and graph as B1 with only the sampler swapped, SeedVR2 versus LTX v2v + ltx23-lora-merged at denoise ~0.3, judged on sharpness, identity stability, plastic-ness, speed and VRAM. The working B1 script is in the previous session's scratchpad but is trivial to rebuild from brief.md's recorded graph. Judging is by eye and must not be self-certified - the plan's verify mode is user-ux."
+  "resume_prompt": "Continue MPI-557 (Video face detailer) in Cubric Vision, card in `doing`, Phase 0 bench research. Read .agents/mpi-kanban/state/handoffs/aeade4f4-f24a-442d-8161-ed86a7d5fe38.json then .agents/mpi-kanban/tasks/MPI-557/brief.md and plan.md - the brief carries every Phase 0 finding so far, each cited to source. Status: the desk pass answered D1-D3, B7 closed early (the static union window fails on 55-62% of real clips, so MpiFaceWindow needs tracking from the start), and B1 - the GO/NO-GO gate - PASSED, with the GO stated by Fabio after viewing the output. The next action is B2, the sampler bake-off: same clip and graph as B1 with only the sampler swapped, SeedVR2 versus LTX v2v + ltx23-lora-merged at denoise ~0.3, judged on sharpness, identity stability, plastic-ness, speed and VRAM. The working B1 script is in the previous session's scratchpad but is trivial to rebuild from brief.md's recorded graph. Judging is by eye and must not be self-certified - the plan's verify mode is user-ux.",
+  "note": "Superseded by 2fa7c83b-41ae-42d5-9f22-b4e77117b769 - B2 closed, B1-stress failed, B10 weak."
 }

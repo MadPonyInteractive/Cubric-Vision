@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "5c14b524-b8a5-473b-b85d-f3b751d41293",
   "generated_at": "2026-08-15T07:43:43Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-536 LTX 2.3 foley Flow - shipped and live-verified",
     "branch": "master"
@@ -71,5 +71,6 @@
       "docs/playbooks/add-flow/existing-flows/ltx-foley.md"
     ]
   },
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/5c14b524-b8a5-473b-b85d-f3b751d41293.json and continue the Cubric Vision Flow track. Last session shipped MPI-536 (LTX 2.3 foley) end to end and CLOSED it - the LoRA is staged to R2, the Flow ships with declared controls and no uiComponent, and Fabio ran a live generation in his own app and approved the result. That live run also proved MPI-531 item 1 for real. What it exposed is that the Flow FRAME is not shippable yet: there is no in-app media picker (a Flow can only import from outside the project), the result pane is text rather than a playable video, the prompt controls are cramped and in the wrong place (they belong in step 2 under a big preview of the source video), and nothing moves on the slide between pressing Generate and the first latent. Separately, the latent-preview consumers diverge from the contract docs/preview-bus.md already defines - the minimised mini-window shows one still frame while the Flow result pane replays the clip fast on every sampler step - which needs its own card, not a patch. Reference audio for LTX needs a BENCH session, not app work. The active card is MPI-531 (doing). MPI-557 belongs to a different session and must not be touched."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/5c14b524-b8a5-473b-b85d-f3b751d41293.json and continue the Cubric Vision Flow track. Last session shipped MPI-536 (LTX 2.3 foley) end to end and CLOSED it - the LoRA is staged to R2, the Flow ships with declared controls and no uiComponent, and Fabio ran a live generation in his own app and approved the result. That live run also proved MPI-531 item 1 for real. What it exposed is that the Flow FRAME is not shippable yet: there is no in-app media picker (a Flow can only import from outside the project), the result pane is text rather than a playable video, the prompt controls are cramped and in the wrong place (they belong in step 2 under a big preview of the source video), and nothing moves on the slide between pressing Generate and the first latent. Separately, the latent-preview consumers diverge from the contract docs/preview-bus.md already defines - the minimised mini-window shows one still frame while the Flow result pane replays the clip fast on every sampler step - which needs its own card, not a patch. Reference audio for LTX needs a BENCH session, not app work. The active card is MPI-531 (doing). MPI-557 belongs to a different session and must not be touched.",
+  "note": "Superseded by 3cc9002a-88ed-40da-a7b5-12cf45f673c3 - media picker + scanline + unmuted result shipped (3843e8d5); punch list items 2 and 3 still open."
 }

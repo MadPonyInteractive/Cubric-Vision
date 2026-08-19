@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "23129362-b4d2-4e41-99be-98dab0841082",
   "generated_at": "2026-08-17T05:15:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-570 fixed and closed; MPI-332 parked; the queue in front of MPI-531 is now empty",
     "branch": "master"
@@ -64,5 +64,6 @@
       ".agents/mpi-kanban/tasks/MPI-570/validation.md"
     ]
   },
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/23129362-b4d2-4e41-99be-98dab0841082.json and use mpi-continue to continue from where we left off. Fabio's instruction for this session is to start with MPI-571 - the four latent-preview consumers - NOT MPI-531, even though MPI-531 is the card sitting in doing. He flipped the order on 2026-08-17 because MPI-571 needs generations and MPI-531's only remaining debt is also a generation, so one GPU session should serve both. Move MPI-571 todo -> doing and write its files.json before editing anything, and ASK before dispatching any generation - another of his agents may want the GPU. If the generation can be a FOLEY run, read the DISPATCHED prompt back from Comfy /history: that also parks MPI-531, because its step-field promotion path fails SILENTLY and the box on screen proves nothing. A run on any other flow does not park it. Last session shipped and closed MPI-570 (gallery hover video looping with sound behind an overlay) and parked MPI-332; both are done, do not reopen them. Note that MPI-570's brief turned out to be partly wrong about event ordering - tasks/MPI-570/validation.md records what was actually measured."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/23129362-b4d2-4e41-99be-98dab0841082.json and use mpi-continue to continue from where we left off. Fabio's instruction for this session is to start with MPI-571 - the four latent-preview consumers - NOT MPI-531, even though MPI-531 is the card sitting in doing. He flipped the order on 2026-08-17 because MPI-571 needs generations and MPI-531's only remaining debt is also a generation, so one GPU session should serve both. Move MPI-571 todo -> doing and write its files.json before editing anything, and ASK before dispatching any generation - another of his agents may want the GPU. If the generation can be a FOLEY run, read the DISPATCHED prompt back from Comfy /history: that also parks MPI-531, because its step-field promotion path fails SILENTLY and the box on screen proves nothing. A run on any other flow does not park it. Last session shipped and closed MPI-570 (gallery hover video looping with sound behind an overlay) and parked MPI-332; both are done, do not reopen them. Note that MPI-570's brief turned out to be partly wrong about event ordering - tasks/MPI-570/validation.md records what was actually measured.",
+  "note": "Superseded by 82528dd9-b0f7-4933-8024-8f04c3da78d5 - MPI-571 built, committed (d297e9de) and offline-verified; Fabio's live four-surface check is next."
 }

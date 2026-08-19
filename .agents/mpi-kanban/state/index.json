@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-19T05:30:50Z",
+  "updated_at": "2026-08-19T10:58:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -18,140 +18,12 @@
       "note": "Split radius CLOSED NEGATIVE (strength in disguise). Evidence gate built and half-approved: veins gone, speckles partly, expressions lost, a new interpolation-like face artifact. Next is upstream - the positive prompt has asked for freckles on every arm of this card, and cfg 1 makes the negative inert."
     },
     {
-      "id": "348b37e7-0694-4c92-8653-1797b9d5d4a2",
-      "path": ".agents/mpi-kanban/state/handoffs/348b37e7-0694-4c92-8653-1797b9d5d4a2.json",
-      "task_card": "MPI-568",
-      "status": "resolved",
-      "created_at": "2026-08-19T05:30:00Z",
-      "note": "Superseded by 8e0183d6-a911-498b-bf5b-7132a34a9a32 - the radius sweep ran and is negative, the evidence gate is a partial pass by eye, and the positive prompt was found asking for the artifact."
-    },
-    {
-      "id": "c2dd055b-96a7-4f54-8815-36a299f2e736",
-      "path": ".agents/mpi-kanban/state/handoffs/c2dd055b-96a7-4f54-8815-36a299f2e736.json",
-      "task_card": "MPI-568",
-      "status": "resolved",
-      "created_at": "2026-08-19T03:45:00Z",
-      "note": "Superseded by 348b37e7-0694-4c92-8653-1797b9d5d4a2 - eye verdict in, wavy distortion root-caused to the VAE, temporal arm closed negative."
-    },
-    {
       "id": "584f6547-fe3c-4f0d-afac-22daeee351b4",
       "path": ".agents/mpi-kanban/state/handoffs/584f6547-fe3c-4f0d-afac-22daeee351b4.json",
       "task_card": "MPI-507",
       "status": "open",
       "created_at": "2026-08-10T06:10:41Z",
       "note": "Card was parked back to todo by 9a92c0ff - the handoff still records the SeedVR2 root-cause and the PiD Flow blocker."
-    },
-    {
-      "id": "aeade4f4-f24a-442d-8161-ed86a7d5fe38",
-      "path": ".agents/mpi-kanban/state/handoffs/aeade4f4-f24a-442d-8161-ed86a7d5fe38.json",
-      "task_card": "MPI-557",
-      "status": "resolved",
-      "created_at": "2026-08-14T01:05:00Z",
-      "note": "Superseded by 2fa7c83b-41ae-42d5-9f22-b4e77117b769 - B2 closed, B1-stress failed, B10 weak."
-    },
-    {
-      "id": "2fa7c83b-41ae-42d5-9f22-b4e77117b769",
-      "path": ".agents/mpi-kanban/state/handoffs/2fa7c83b-41ae-42d5-9f22-b4e77117b769.json",
-      "task_card": "MPI-557",
-      "status": "resolved",
-      "created_at": "2026-08-14T03:40:00Z",
-      "note": "Resolved 2026-08-14: scope question answered (SOFT faces), B3 re-run completed, shimmer root-caused. Card parked blocked on MPI-506."
-    },
-    {
-      "id": "664fbe7d-955c-426f-8cde-097a9e19b163",
-      "path": ".agents/mpi-kanban/state/handoffs/664fbe7d-955c-426f-8cde-097a9e19b163.json",
-      "task_card": "MPI-520",
-      "status": "resolved",
-      "created_at": "2026-08-14T03:50:00Z",
-      "note": "Superseded by 5c14b524-b8a5-473b-b85d-f3b751d41293 - MPI-536 foley shipped, live-verified and closed."
-    },
-    {
-      "id": "5c14b524-b8a5-473b-b85d-f3b751d41293",
-      "path": ".agents/mpi-kanban/state/handoffs/5c14b524-b8a5-473b-b85d-f3b751d41293.json",
-      "task_card": "MPI-531",
-      "status": "resolved",
-      "created_at": "2026-08-15T07:43:43Z",
-      "note": "Superseded by 3cc9002a-88ed-40da-a7b5-12cf45f673c3 - media picker + scanline + unmuted result shipped (3843e8d5); punch list items 2 and 3 still open."
-    },
-    {
-      "id": "3cc9002a-88ed-40da-a7b5-12cf45f673c3",
-      "path": ".agents/mpi-kanban/state/handoffs/3cc9002a-88ed-40da-a7b5-12cf45f673c3.json",
-      "task_card": "MPI-531",
-      "status": "resolved",
-      "created_at": "2026-08-15T10:35:00Z",
-      "note": "Superseded by cd01288c-02a3-4ef7-82f5-48f44f15b174 - phasing thread closed (two artifacts, both characterised), stereo claim corrected. #108 direct audio still not run."
-    },
-    {
-      "id": "cd01288c-02a3-4ef7-82f5-48f44f15b174",
-      "path": ".agents/mpi-kanban/state/handoffs/cd01288c-02a3-4ef7-82f5-48f44f15b174.json",
-      "task_card": "MPI-531",
-      "status": "resolved",
-      "created_at": "2026-08-15T11:50:00Z",
-      "note": "Foley audio bench closed the phasing thread - it was TWO artifacts (seed-driven phasing vs model reconstruction of breath). Stereo needs on-screen motion, not prompt direction words. Next: #108=true direct audio."
-    },
-    {
-      "id": "c8fcbf68-7f0b-4e4b-9bbe-1dd1c2df64b3",
-      "path": ".agents/mpi-kanban/state/handoffs/c8fcbf68-7f0b-4e4b-9bbe-1dd1c2df64b3.json",
-      "task_card": "MPI-531",
-      "status": "resolved",
-      "created_at": "2026-08-17T04:18:56Z",
-      "note": "Superseded by 23129362-b4d2-4e41-99be-98dab0841082 - MPI-570 fixed, verified and closed; MPI-332 parked."
-    },
-    {
-      "id": "b7f41a92-3d5e-4c18-9a26-8e1f7c0d5b43",
-      "path": ".agents/mpi-kanban/state/handoffs/b7f41a92-3d5e-4c18-9a26-8e1f7c0d5b43.json",
-      "task_card": "MPI-531",
-      "status": "resolved",
-      "created_at": "2026-08-16T07:20:00Z",
-      "note": "Superseded by c8fcbf68-7f0b-4e4b-9bbe-1dd1c2df64b3 - resumed and completed 2026-08-17."
-    },
-    {
-      "id": "23129362-b4d2-4e41-99be-98dab0841082",
-      "path": ".agents/mpi-kanban/state/handoffs/23129362-b4d2-4e41-99be-98dab0841082.json",
-      "task_card": "MPI-531",
-      "status": "resolved",
-      "created_at": "2026-08-17T05:15:00Z",
-      "note": "Superseded by 82528dd9-b0f7-4933-8024-8f04c3da78d5 - MPI-571 built, committed (d297e9de) and offline-verified; Fabio's live four-surface check is next."
-    },
-    {
-      "id": "82528dd9-b0f7-4933-8024-8f04c3da78d5",
-      "path": ".agents/mpi-kanban/state/handoffs/82528dd9-b0f7-4933-8024-8f04c3da78d5.json",
-      "task_card": "MPI-571",
-      "status": "resolved",
-      "created_at": "2026-08-17T07:20:00Z",
-      "note": "Resolved 2026-08-17: four surfaces confirmed live, MPI-571 closed."
-    },
-    {
-      "id": "2f9d9b47-2ee6-43e7-ad0c-9a85422db062",
-      "path": ".agents/mpi-kanban/state/handoffs/2f9d9b47-2ee6-43e7-ad0c-9a85422db062.json",
-      "task_card": "MPI-572",
-      "status": "resolved",
-      "created_at": "2026-08-17T06:55:00Z",
-      "note": "Resolved 2026-08-17: the sidecar read exonerated the app half, MPI-572 closed, and the blended head was confirmed as Fabio's own workflow revisit - deliberately not carded. Superseded by 44bcd4be-6bf4-4299-93b1-194243d08bac."
-    },
-    {
-      "id": "44bcd4be-6bf4-4299-93b1-194243d08bac",
-      "path": ".agents/mpi-kanban/state/handoffs/44bcd4be-6bf4-4299-93b1-194243d08bac.json",
-      "task_card": "MPI-325",
-      "status": "open",
-      "created_at": "2026-08-17T09:55:00Z",
-      "note": "MPI-325 code is done, committed bdb33dd0 and user-verified. Blocked on pushing + pinning ComfyUi-MpiNodes 38b3a27 - the graph already sends `pad: true` to a node an unpinned engine does not declare, and ComfyUI drops it silently."
-    },
-    {
-      "id": "881489b1-b90c-4190-9803-4343e3da5285",
-      "path": ".agents/mpi-kanban/state/handoffs/881489b1-b90c-4190-9803-4343e3da5285.json",
-      "task_card": "MPI-525",
-      "status": "resolved",
-      "created_at": "2026-08-18T08:20:00Z",
-      "note": "Resolved 2026-08-18: the TRUE engine wipe-and-reinstall ran via POST /engine/upgrade {\"mode\":\"full\"}. Real 2m47.6s pip download; \"Installing Python packages...\" held the whole pass and flipped 22ms after the marker stamped. MPI-525 closed on that evidence."
-    },
-    {
-      "id": "764f7081-1a72-4e0e-b3d4-b928f80518dd",
-      "path": ".agents/mpi-kanban/state/handoffs/764f7081-1a72-4e0e-b3d4-b928f80518dd.json",
-      "task_card": "MPI-504",
-      "status": "resolved",
-      "created_at": "2026-08-19T10:00:00Z",
-      "note": "Superseded by a8609f95-286f-4fdc-8b35-e0b2c489fc9f - regression run and recipe revised to v4, both graphs built and verified, enhancer made universal."
     },
     {
       "id": "a8609f95-286f-4fdc-8b35-e0b2c489fc9f",

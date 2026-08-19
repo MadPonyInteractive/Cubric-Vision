@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "c2dd055b-96a7-4f54-8815-36a299f2e736",
   "generated_at": "2026-08-19T03:45:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-568 bench: LTX spatial + temporal upscaler evaluation",
     "branch": "master"
@@ -71,5 +71,6 @@
       "C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/e9f7dc25-31bc-42c2-bfff-8c95ae748b48/scratchpad/sweep.py"
     ]
   },
-  "resume_prompt": "Continue MPI-568, the LTX upscaler bench evaluation in Cubric-Vision. Read .agents/mpi-kanban/state/handoffs/c2dd055b-96a7-4f54-8815-36a299f2e736.json and .agents/mpi-kanban/tasks/MPI-568/plan.md first - the plan carries the full measurement tables and every correction, do not re-derive them. The card is in `doing`. The standalone v2v graph works and lives in the previous session's scratchpad (build_v2v.py / sweep.py / detail_vs_sharpen.py / flicker.py / fidelity.py / sheet.py / align.py at C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/e9f7dc25-31bc-42c2-bfff-8c95ae748b48/scratchpad/); bench outputs are in D:/WORK/Images/Outputs/mpi568/. This card is `user-ux`: no metric closes it, Fabio's eyes do. Two things he reported that are NOT yet actioned - the temporal outputs play at the wrong speed because VHS_VideoCombine.frame_rate was left at source fps (49 frames at 30fps = slow motion; frame-rate doubling needs 60), and real_temporal_gt_00001.mp4 shows WAVY DISTORTION of the same class that killed SeedVR2, which none of the three instruments detected. Root-cause that before trusting the temporal arm. The GPU is shared with Fabio and this graph uses 97% of it - ask before starting long runs."
+  "resume_prompt": "Continue MPI-568, the LTX upscaler bench evaluation in Cubric-Vision. Read .agents/mpi-kanban/state/handoffs/c2dd055b-96a7-4f54-8815-36a299f2e736.json and .agents/mpi-kanban/tasks/MPI-568/plan.md first - the plan carries the full measurement tables and every correction, do not re-derive them. The card is in `doing`. The standalone v2v graph works and lives in the previous session's scratchpad (build_v2v.py / sweep.py / detail_vs_sharpen.py / flicker.py / fidelity.py / sheet.py / align.py at C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/e9f7dc25-31bc-42c2-bfff-8c95ae748b48/scratchpad/); bench outputs are in D:/WORK/Images/Outputs/mpi568/. This card is `user-ux`: no metric closes it, Fabio's eyes do. Two things he reported that are NOT yet actioned - the temporal outputs play at the wrong speed because VHS_VideoCombine.frame_rate was left at source fps (49 frames at 30fps = slow motion; frame-rate doubling needs 60), and real_temporal_gt_00001.mp4 shows WAVY DISTORTION of the same class that killed SeedVR2, which none of the three instruments detected. Root-cause that before trusting the temporal arm. The GPU is shared with Fabio and this graph uses 97% of it - ask before starting long runs.",
+  "note": "Superseded by 348b37e7-0694-4c92-8653-1797b9d5d4a2 - eye verdict in, wavy distortion root-caused to the VAE, temporal arm closed negative."
 }
