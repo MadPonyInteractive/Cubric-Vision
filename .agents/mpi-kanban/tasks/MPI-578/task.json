@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-578",
+  "title": "LTX 2.5 upscaler - adopt the new latent upscalers once ComfyUI is bumped",
+  "description": "BLOCKED ON THE COMFYUI ENGINE BUMP. LTX 2.5 needs a newer ComfyUI than the one we ship, and than the standalone bench runs (0.31.0 as of 2026-08-19). Do not start this until that lands.\n\nWHY THIS CARD EXISTS. MPI-568 benched the LTX 2.3 spatial upscaler as the SeedVR2 successor and it is shipping as a v1 on 2.3. Fabio's call, 2026-08-19: 'we could release the first version of our upscaler in 2.3 and, at a later release, bump it to 2.5 once we have bumped ComfyUI.' This card is that later release.\n\nWHAT 2.5 SHIPS (researched 2026-08-19, sourced but NOT verified locally). LTX 2.5 released 2026-08-11, Lightricks/LTX-2.5 on HF (gated), ComfyUI core support merged the same day. Two latent upscalers, under latent_upscale_models/ rather than the repo root as in 2.3:\n  ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors   996 MB  spatial x2\n  ltx-2.5-latent-temporal-upscaler-x2-bf16-1.0.safetensors  262 MB  temporal x2\nTHE x1.5 SPATIAL IS DROPPED in 2.5. We have it for 2.3 and MPI-568 measured it as 40% faster than x2 while NOT solving the VRAM ceiling, so losing it costs a preview-pass option, not a capability.\n\nCOMPATIBILITY IS INFERENCE, NOT FACT. Both 2.5 sizes match our 2.3 x2 files within rounding (ours: 995,743,560 and 261,944,000 bytes), and multiple secondary sources say the existing core node pair loads them - LatentUpscaleModelLoader (comfy_extras.nodes_hunyuan) + LTXVLatentUpsampler (comfy_extras.nodes_lt_upsampler). NOBODY HAS CHECKED THE WEIGHTS. First step of this card is a 30-second read of the safetensors header: confirm post_upsample_res_blocks.0.conv2.bias is present and the config metadata fields (spatial_upsample, temporal_upsample, spatial_scale, rational_resampler, mid_channels) are unchanged. If they are, this is a weight swap with no node work; if not, the whole estimate changes.\n\nDO NOT ADOPT Lightricks/LTX-2.5-22b-IC-LoRA-Pixel-Spatial-Upscaler BY MISTAKE. It is an IC-LoRA pixel-space mechanism, not a latent upsampler, and it does not load through those nodes. Different card if it is ever wanted.\n\nTHE 2.5 VAE IS THE REAL WORK, NOT THE UPSCALER. 2.5 ships a new DiffVAE (ltx-2.5-video-vae-bf16.safetensors, 1.47 GB) plus a cheaper conv VAE (1.45 GB) and an audio VAE (365 MB). Lightricks call it 'Diffusion Fidelity Rendering' - an extra diffusion decode stage explicitly targeting sharper faces and LESS SMEARING DURING FAST MOTION. MPI-568 root-caused its central defect, the 'swim' (per-frame rewriting of fine detail, ~13x a codec floor), to the LTX 2.3 VAE ROUND TRIP ITSELF - present with no upscaler in the graph at all, and the thing Fabio saw when he said the VAE 'messed up parts of the face'. That is the exact symptom class DFR claims to address. SO NO SWIM NUMBER FROM MPI-568 CARRIES TO 2.5, in either direction. Re-run warp_arms.py's VAE-round-trip-only arm on the 2.5 VAE before quoting anything. If DFR does fix it, that is a bigger win than the upscaler swap and should be said out loud.\n\nWHAT TO RE-MEASURE, and what NOT to. Re-run: the sigma ladder on both source classes (a degraded real clip and an AI-generated one), the VAE round-trip swim arm, and peak VRAM. DO NOT re-open on 2.5 without new evidence: the detail-transfer op and its evidence gate (CLOSED NEGATIVE - the donor regenerates the performance, so the transfer stamps one expression onto another), the split radius (strength in disguise), or the temporal upscaler (rejected by eye on both the frames it invents and the frames it is handed). Those are properties of the method, not of 2.3.\n\nSOURCE CLASSES THAT MATTER, from MPI-568's own correction: the real application is AI-generated footage, in two flavours - low-res generation needing a bump, and a high-res finished generation going higher for delivery. A degraded phone clip is the hard case, not the representative one.\n\nENGINE BUMP ROUTING - two different bumps, do not conflate them. Evaluating 2.5 on the standalone bench is /mpi-bump-local-comfy (G:\\ComfyUi, never reaches a user). Shipping it is /mpi-bump-engine and its playbook, including the smoke evidence that npm run release:check refuses to ship without. This card owns neither; it consumes them.",
+  "column": "todo",
+  "maturity": "blocked",
+  "status": "active",
+  "created_at": "2026-08-19T13:40:00Z",
+  "updated_at": "2026-08-19T13:40:00Z",
+  "labels": [
+    "upscale",
+    "ltx",
+    "comfy",
+    "blocked",
+    "research"
+  ],
+  "priority": "normal",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

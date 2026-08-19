@@ -16,7 +16,12 @@ Derived from `plan.md` phase titles.
 - [x] A change-control op that does not cost quality: detail transfer, measured
       and controlled against a matched unsharp mask. 63% less drift at full
       reconstruction; also attenuates the swim; no GPU, adjustable after the run
-- [ ] Sweep the detail-transfer split radius, and try a face-region mask
+- [x] ~~Sweep the detail-transfer split radius, and try a face-region mask~~
+      **MOOT - the whole detail-transfer line is CLOSED NEGATIVE.** Watched in
+      motion it stamps the donor's expression onto the base ("eyes open and
+      closed at the same time"), because sigma 0.85 regenerates the performance,
+      not just the texture. The gate, the radius sweep and `band_split.py` all
+      sat on top of it and close with it
 - [x] The wavy distortion root-caused - LTX VAE round trip, ~2x amplified by the
       temporal upscaler, present at ~60% strength in the approved spatial arm
 - [~] Output fps: `out_fps` added to build_v2v, but the remux of the existing
@@ -53,11 +58,29 @@ Derived from `plan.md` phase titles.
       fabric speckles only partly gone (the "three dots" was an under-count from
       one crop); expressions lost; new face artifact that "feels like bad
       interpolation"
-- [ ] **THE POSITIVE PROMPT - re-run sigma 0.85 neutral and empty.** The graph
-      has conditioned on ".. natural skin texture, freckles, sharp eyes" on every
-      arm of this card, i.e. it has been ASKING for the speckles. Uncontrolled
-      variable upstream of every measurement here. Also `cfg: 1` makes the
-      negative prompt inert. ~1 min GPU per arm, shared card, ask first
+- [x] **THE POSITIVE PROMPT - CONFIRMED and fixed at source.** Ran sigma 0.85
+      neutral and empty against the freckle arm already on disk, prompt the only
+      variable. Fabio on `PROMPT_cheek_f12.png`: *"I can clearly see two moles,
+      which probably were the model's attempt at doing freckles."* Neutral and
+      empty cheeks are clean. Defaults changed in `build_v2v.py`, `sweep.py` and
+      `full_arms.py`. It does NOT fix identity replacement at 0.85 - all three
+      arms render the same different woman and the same button placket
+- [x] **RE-BASELINE on the neutral prompt - DONE.** `nb_s050_x2` (294s) and
+      `nb_s085_x2` (258s), 81 frames. The speckles are gone at source; every arm
+      made before 2026-08-19 is contaminated
+- [x] **SHIP/NO-SHIP - PASSED.** Fabio on `nb_s050_x2_00001.mp4` in motion:
+      *"050 holds up motion. It's the best result we had so far."*
+- [x] **0.85 stays ON the slider** - Fabio's call, correcting this card. Identity
+      replacement and object deletion are trades a user picks at the top of a
+      denoise range; identity LoRAs are another flow's job, out of scope here.
+      Range ships 0.15-0.85; he expects 0.85 to suit animation/cartoons/anime
+- [ ] **THE SIGMA LADDER ON AN AI-GENERATED SOURCE** - the card benched a
+      degraded phone clip and the real application is low-res AI footage needing
+      a resolution bump. Fabio is supplying the video; it goes in
+      `G:/ComfyUi/ComfyUI/input/`. Supersedes the clip B cross-check. **The
+      slider default is unsettled until this runs**
+- [ ] Decide neutral vs EMPTY as the shipped default, and whether to raise `cfg`
+      so the negative prompt does anything. Product call, belongs on the app card
 - [ ] Temporally smooth the gate (average over 3-5 frames or hold from one) and
       re-render - the leading explanation for the interpolation-like artifact.
       Zero GPU

@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-19T13:20:00Z",
+  "updated_at": "2026-08-19T13:45:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -10,12 +10,20 @@
   "open_messages": [],
   "active_handoffs": [
     {
+      "id": "f3f9d6b3-5f22-4017-9c80-2e520ad1f9be",
+      "path": ".agents/mpi-kanban/state/handoffs/f3f9d6b3-5f22-4017-9c80-2e520ad1f9be.json",
+      "task_card": "MPI-568",
+      "status": "open",
+      "created_at": "2026-08-19T13:45:00Z",
+      "note": "One slider is the product (sigmas 0.15-0.85); every post-pass control is closed negative. Prompt was ordering the speckles - fixed at source. Target 1 measured (default rec 0.50); target 2 mid-run and it FITS at 14921 MB."
+    },
+    {
       "id": "8e0183d6-a911-498b-bf5b-7132a34a9a32",
       "path": ".agents/mpi-kanban/state/handoffs/8e0183d6-a911-498b-bf5b-7132a34a9a32.json",
       "task_card": "MPI-568",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-19T05:30:50Z",
-      "note": "Split radius CLOSED NEGATIVE (strength in disguise). Evidence gate built and half-approved: veins gone, speckles partly, expressions lost, a new interpolation-like face artifact. Next is upstream - the positive prompt has asked for freckles on every arm of this card, and cfg 1 makes the negative inert."
+      "note": "Superseded by f3f9d6b3-5f22-4017-9c80-2e520ad1f9be - prompt cause confirmed and fixed, re-baselined, 0.50 passed the ship watch, detail transfer and gate closed negative, and the card moved to the AI source class."
     },
     {
       "id": "584f6547-fe3c-4f0d-afac-22daeee351b4",

@@ -32,13 +32,50 @@ length as `FULL_gated132.mp4`.
 veins went, the speckles did not all go, expressions were lost, and the face
 picked up something that reads like bad interpolation. See the verdict section.
 
-**Next action: THE POSITIVE PROMPT, which has been an uncontrolled variable on
-every arm of this card.** Fabio asked whether the graph even takes one. It does,
-and it has been running `"a woman's face in close up, natural skin texture,
-freckles, sharp eyes"` since the graph was built - a prompt that explicitly
-ORDERS the speckles everyone has been trying to filter out downstream. Re-run
-sigma 0.85 with a neutral prompt and with an empty one before any more
-post-processing work. ~1 minute of GPU per arm; the GPU is shared, so ask first.
+**THE PROMPT LEAD IS CONFIRMED AND FIXED AT SOURCE.** The A/B ran; Fabio's
+verdict on `PROMPT_cheek_f12.png` is *"I can clearly see two moles, which
+probably were the model's attempt at doing freckles."* The graph's default
+positive prompt was ordering the artifact every downstream dial was built to
+remove. `build_v2v.py`, `sweep.py` and `full_arms.py` now default to
+`"a woman in close up"`. **Every arm on this card produced before 2026-08-19 ran
+the freckle prompt and is contaminated by it** - including
+`full_s085_x2_00001.mp4`, which is the base the detail transfer, the radius
+sweep and the evidence gate were all measured against.
+
+**THE PRODUCT IS ONE SLIDER AND EVERY POST-PASS CONTROL IS DEAD.** Three things
+closed today, in order:
+
+1. **The prompt was ordering the speckles.** Confirmed by eye, fixed at source.
+   `nb_s085_x2_00001.mp4` vs its contaminated twin: old cheeks speckled, new ones
+   clean, two independent frames. Six words, no filter.
+2. **Sigma 0.50 PASSED the ship/no-ship watch** - *"the best result we had so
+   far"* - and **0.85 stays on the slider** as a user-chosen trade (Fabio's call;
+   the card had wrongly ruled it out). Range ships 0.15 - 0.85.
+3. **The detail transfer and the evidence gate are CLOSED NEGATIVE**, root-caused:
+   the donor regenerates the PERFORMANCE, not just the texture, so transferring
+   its high frequencies stamps one expression onto another - *"eyes open and
+   closed at the same time"*. Every post-pass dial on this card died with it.
+
+**Target 1 (low-res AI -> bump) is MEASURED and a default is recommended:
+`sigmas 0.50`, range 0.15 - 0.85.** See TARGET 1 RESULT. On this source class the
+low end compresses (0.15-0.50 cluster tightly), 0.85 no longer replaces the
+person, and the one place the op loses to lanczos is fast motion, where the VAE
+round trip softens hard edges.
+
+**Next action: TARGET 2 IS MID-RUN.** `hi_s015` landed at **516s, peak 14921 MB**
+from a 1.03 Mpx source to 4.13 Mpx out - **it FITS, and with more headroom than
+clip A's 3.27 Mpx did (15301-15898 MB)**. So peak is set by the transformer, not
+the source, across 0.41 -> 1.03 Mpx. `hi_s030` / `hi_s050` / `hi_s085` were still
+running at handoff; outputs land as `D:/WORK/Images/Outputs/mpi568/hi_s0*.mp4`.
+Read them, build the same three sheets, and get Fabio's pick for the
+production-upscale case.
+
+**MPI-578 created** for the LTX 2.5 upscaler bump, `todo` / `blocked` on the
+ComfyUI engine bump. v1 ships on 2.3 - Fabio's call.
+
+The GPU is arbitrated by the machine-global lease now
+(`<mpi-lib>/scripts/gpu_lease.py`), not by asking - wrap a sampler run and it
+queues behind whoever holds the slot.
 
 Earlier state, unchanged: bench `:8188` up (NORMAL_VRAM). Phases 1 and 2 done.
 
@@ -447,6 +484,11 @@ default 0.30-0.50, **0.85 off the top of the range** - and 0.85 now has two
 independent reasons against it, identity AND object deletion, plus a third from
 the swim work below.
 
+> **SUPERSEDED 2026-08-19 by Fabio - `0.85 STAYS ON THE SLIDER` below.** Identity
+> replacement and object deletion are TRADES the user chooses at the top of a
+> denoise range, not disqualifiers, and identity restoration is another flow's
+> job. The range ships as 0.15 - 0.85. Only the swim survives as a defect.
+
 ### THE x1.5 UPSCALER DOES NOT SOLVE THE VRAM CEILING - hypothesis dead
 
 Full length, clip A, sigma 0.85, `img_compression` 0, uncontended GPU:
@@ -718,6 +760,353 @@ prompt, re-measure, and only then decide what the gate and the detail dial are
 still for. Do NOT tune more filters on top of an arm whose conditioning asks for
 the defect.
 
+#### THE A/B RAN AND THE LEAD IS CONFIRMED - 2026-08-19
+
+Three arms, identical in every respect except the prompt string: 25 frames,
+sigmas `0.85, 0.7250, 0.4219, 0.0`, `img_compression` 0, x2 spatial, seed
+984885689, same source. `s085_c00_00001.mp4` was already on disk and served as
+the freckle-prompt control, so only two runs were needed (`prompt_arms.py`,
+96s and 66s, peaks 15633/15849 MB).
+
+| arm | prompt |
+|---|---|
+| freckles (control, on disk) | `a woman's face in close up, natural skin texture, freckles, sharp eyes` |
+| `p_neutral` | `a woman in close up` |
+| `p_empty` | `` |
+
+**The prompt is wired and it is a SECONDARY variable** (`prompt_measure.py`,
+frames 2/12/22):
+
+| pair | L1 |
+|---|---:|
+| freckles vs neutral | 4.32 - 4.79 |
+| freckles vs empty | 5.50 - 6.32 |
+| neutral vs empty | 4.02 - 4.74 |
+| freckles vs sigma 0.30 (reference rung) | 15.2 - 16.9 |
+| freckles vs lanczos source (reference rung) | 15.0 - 15.6 |
+
+So it moves real pixels, at roughly a third the magnitude of a sigma step. It is
+neither inert nor dominant.
+
+**FABIO'S VERDICT, on `PROMPT_cheek_f12.png`** (3x zoom on flat cheek, the three
+arms side by side): *"I can clearly see two moles, which probably were the
+model's attempt at doing freckles."* The freckle arm carries two discrete dark
+marks on flat cheek skin; the neutral and empty arms do not.
+`PROMPT_cheek_f10.png` is the second sample and agrees, weaker - a reddish blotch
+plus a small mark where the other two are smooth.
+
+**What the prompt fix does NOT buy.** All three arms still render the same
+different woman, the same changed pose and framing, and the zipper is a button
+placket in every one (`frames_f12.png`). Identity replacement at sigma 0.85 was
+never the prompt's doing and dropping "freckles" does not touch it. The prompt
+explains the SKIN MARKS, not the 0.85 regeneration.
+
+**Fixed at source**, so the next session cannot re-contaminate: `build_v2v.py`,
+`sweep.py` and `full_arms.py` all default to `"a woman in close up"`, each with a
+dated comment naming what the old default was doing.
+
+**Still open, and it is a product question rather than a bench one:** neutral vs
+empty as the shipped default. Both cheeks came out clean. Empty is the honest
+default for an upscale op (a user upscaling footage is not writing a prompt), but
+it was not the arm Fabio looked at closely, and at `cfg: 1` an unconditioned
+distilled model is the less-tested path. Decide it on the app card, not here.
+
+### THE KNOB QUESTION, THIRD TIME - and the two askings are different questions
+
+Fabio, 2026-08-19, after approving 0.50 in motion: *"going to 085 has a much
+better improvement, although a lot of changes happen. Can we have a knob that
+can be used more or less like denoise on image upscalers? Do we already have
+it?"*
+
+**Yes, and it is `sigmas`.** This card has answered the knob question twice and
+reversed itself once, and the reversal is what makes it look unsettled. It is
+not. The two askings are different questions and both answers are right:
+
+| the ask | answer |
+|---|---|
+| *"a knob like DENOISE on image upscalers"* (this one) | **`sigmas`. We have it.** A denoise slider on an image upscaler has exactly the property the sweep table measured: raise it and you get more reconstruction AND more change, welded together. That is not a defect in our knob, it is what that control IS everywhere. |
+| *"a dial on the CHANGE that leaves the reconstruction alone"* (2026-08-19, earlier) | **No sampler parameter can be that**, and `sigmas` specifically is not. By the time the sampler has run the change is in the pixels. That is why the detail transfer exists - it acts after the pass. |
+
+**Do not read this as reopening "sigma is the change knob".** It is not, and
+Fabio rejected that twice. What is being corrected is a narrower thing: the plan
+let "sigma is not the change knob" harden into "we have no denoise knob", and
+that second sentence was never true.
+
+**So the shippable product shape is one slider, `sigmas`, across its FULL range
+0.15 - 0.85.** Low is true-to-original with improvements; high is a cleaner,
+sharper result that re-renders. 0.50 at full length in motion is *"the best
+result we had so far"*.
+
+#### 0.85 STAYS ON THE SLIDER - the card had this wrong, corrected by Fabio
+
+This plan said three times that 0.85 was "off the top of the range", and I
+repeated it as "0.85 is not going to become selectable". **That was a product
+decision being made inside a bench card, and it was the wrong call.**
+
+Fabio, 2026-08-19: *"going up to 0.85 did give us a clear, cleaner result at the
+expense of changes, which is something that the user might want. Sometimes
+identity is not the issue. Sometimes it's not a consistent character, and it just
+needs a sharper generation. Plus there's also identity LoRAs that can be explored
+in other flows to restore identity, which we will not do here because that's not
+the goal of the upscaler."*
+
+So the three findings against 0.85 have to be re-classified, because two of them
+were never defects:
+
+| finding at 0.85 | what it actually is |
+|---|---|
+| identity replacement | **A TRADE the user chooses.** Exactly what a denoise slider does at the top of its range on any image upscaler. Not every clip is a consistent character. |
+| object deletion (zipper -> button placket) | **Same trade**, same slider position. Worth documenting in the UI copy, not worth removing the range. |
+| swim 4.13, level with a rejected clip | **The only one that is still a defect**, because the user is not choosing it and it is not what "more denoise" is supposed to buy. It needs its own read at 0.85 in motion on the clean arm. |
+
+**Identity restoration is explicitly OUT OF SCOPE for the upscaler.** Identity
+LoRAs belong to other flows. Do not let a future session re-open "how do we keep
+her at 0.85" - that question was answered by moving it off this card.
+
+**What this does to the detail transfer.** It stops being the thing that makes
+the product work and becomes an optional extra. *(Then it died outright when
+watched in motion - see THE DETAIL TRANSFER IS CLOSED NEGATIVE below. The
+product is the slider alone.)*
+
+**Where 0.85 is actually useful, per Fabio 2026-08-19** - he declined a
+full-length watch, having seen enough: *"I think it will be useful for certain
+things, maybe not others. Like animated pictures, cartoons, anime... It's
+probably going to clean things up a little bit and also just plainly regenerate
+certain parts."* So the top of the range is a content-dependent choice, not a
+defect to design away, and the UI should let a user reach it.
+
+### THE CARD BENCHED THE WRONG SOURCE CLASS
+
+Fabio, 2026-08-19: *"We've been working with a very degraded video of the lady
+dancing. The real application is most likely going to be AI-generated at a lower
+resolution that needs a bump in resolution."*
+
+Clip A is a degraded real-camera phone clip. It was the right choice for
+comparability with MPI-506, and it is NOT the footage this op will actually be
+pointed at. **Every number and every eye verdict on this card describes the
+hard case, not the real one**, and the two differ in the way that matters most:
+an AI-generated source has no sensor noise, no compression mush and clean
+synthetic edges, so there is far less for the model to "fix" and far less cover
+for invention.
+
+Clip B was supposed to close this and never landed - interrupted three times.
+
+#### THERE ARE TWO TARGETS, AND THE SECOND ONE MAY NOT FIT THE CARD
+
+Fabio named both, 2026-08-19:
+
+1. **Low-res AI generation -> a bump.** *"not 100% the target, but I'd like to
+   see if it can fix it, because it would be one of the targets."* Supplied:
+   `ref2v_ms_006.mp4` from the `cowboys` project, staged as
+   `G:/ComfyUi/ComfyUI/input/mpi568_ai_cowboys.mp4`.
+2. **High-res AI finished generation -> even higher, for a finished product.**
+   *"quite important as well."* Clip to follow.
+
+**Target 2 is the one to worry about, and this card already knows why.** MPI-506
+died on a VRAM ceiling and clip A's 2x arm peaks at 97% of a 16 GB card from a
+0.82 Mpx source. A "high-resolution finished generation" is the opposite end of
+that axis.
+
+**Do NOT settle this from the x1.5 result.** That measurement - 43% fewer output
+pixels peaking HIGHER - was taken with the SOURCE held constant and only the
+upscaler swapped, so it says peak is insensitive to the OUTPUT resolution. It
+says nothing about the SOURCE resolution, which sets the latent size at encode,
+upsample, sample and decode alike. Extrapolating it to target 2 would be reading
+a same-source comparison as a general law.
+
+**The cowboys clip gives that second data point for free.** Its source is
+0.41 Mpx against clip A's 0.82, so if peak VRAM drops materially below clip A's
+15.3-15.9 GB, source size drives peak and target 2 is in real trouble at 2x on
+this card. If peak barely moves, the transformer dominates and target 2 may be
+reachable. Read the `cb_*` peaks with that question in mind - it was not what the
+run was for, but it is the cheapest answer available.
+
+#### The ladder on target 1
+
+`cowboys_ladder.py`, 4 arms: 0.15 / 0.30 / 0.50 / 0.85, `img_compression` 0,
+neutral prompt (`a covered wagon pulled by two horses on a desert road`), full
+73 frames, `out_fps` 24. Baseline `cb_lanczos2x.mp4`.
+
+The clip gets two things clip A never did, both by luck: **73 frames is already
+8n+1** and **864x480 is already divisible by 32**, so there is no decimation, no
+crop and no fit - the model sees the generation exactly as it was made. It also
+carries FAST LATERAL MOTION with real motion blur (galloping legs, spinning
+wheels), which stresses the swim harder than clip A's dancing did.
+
+**One thing the bench drops that a product could not:** the source has an AAC
+audio track and `VHS_LoadVideo` takes video only, so every output here is silent.
+Irrelevant to the quality question, not irrelevant to shipping.
+
+#### TARGET 1 RESULT - the ladder on the AI source, and a default to argue with
+
+Four arms, 73 frames, full clip (`cb_s015/030/050/085`), baseline
+`cb_lanczos2x.mp4`. Sheets: `CB_ladder_f36.png` (wide), `CB_face_f36.png` (4x on
+her face), `CB_horses_f60.png` (3x on the harness, fast motion).
+
+| arm | time | peak VRAM |
+|---|---:|---:|
+| `cb_s015` | 97s (incl. model load) | 15142 MB |
+| `cb_s030` | 61s | 15228 MB |
+| `cb_s050` | 86s | 15283 MB |
+| `cb_s085` | 86s | 15423 MB |
+
+**What the ladder shows, and it is NOT clip A's shape:**
+
+1. **Every sampled arm beats lanczos decisively on faces and static detail.** The
+   baseline is mush; even 0.15 resolves her face and finds hair strands.
+2. **0.15 / 0.30 / 0.50 cluster tightly**, far closer than on clip A. The
+   hypothesis held: a clean synthetic source needs less regeneration, so the low
+   end is already most of the way there.
+3. **In FAST MOTION the sampled arms are SOFTER THAN LANCZOS** (`CB_horses_f60`,
+   the galloping harness). This is the VAE round trip's cost landing where the
+   source had hard edges, and it is the one region where the op currently loses
+   to doing nothing. **Checked for the obvious confound first:** `align.py` gives
+   BEST OFFSET +0 at 0.0739, against 0.16 at +/-1, so it is not a frame shift -
+   which fast motion would have exaggerated into exactly this appearance.
+4. **0.85 overcomes the softening by regenerating** and is sharpest everywhere.
+   It invents structure - the wagon canopy gains cross-braces and bolts, and the
+   shawl becomes a tailored jacket with buttons - **but it does NOT replace the
+   person**, which is the failure that killed 0.85 on clip A. The source class
+   changes 0.85's cost, exactly as Fabio predicted when he called it useful for
+   animation and cartoons.
+
+**RECOMMENDED DEFAULT: `sigmas 0.50`, range exposed 0.15 - 0.85.** Reasoning, so
+it can be argued with rather than inherited: 0.50 is the top of the
+identity-safe range on degraded footage (Fabio's own verdict), it sits inside
+the tight cluster on AI footage so it costs nothing there, and it buys the most
+margin against the VAE softening in motion. 0.30 is defensible and slightly
+faster; below 0.30 is not worth the VAE round trip. **This is a recommendation,
+not a measurement - the card is `user-ux` and Fabio picks.**
+
+**The variant now running, and it is the literal form of his ask** (zero GPU):
+`transfer_clip.py` takes any src/gen pair, so the base does not have to be the
+lanczos source. **Use `nb_s050_x2` as the base and `nb_s085_x2` as the detail
+donor** - 0.50's identity and grade, 0.85's texture, on a dial, adjustable after
+the fact without re-running anything. Every earlier transfer arm used the lanczos
+source as base, which was strictly weaker: it threw away the reconstruction 0.50
+had already earned. Rendering at 0.35 and 0.70 as `T50from85_*.mp4`.
+
+Risk to watch, and it is the op's known failure mode: 0.85 renders a different
+face at a different scale, so its high frequencies may be misaligned against
+0.50's, and a misaligned transfer degenerates into an unsharp mask - crunch and
+halos. The earlier lanczos-based arms carried a drift-matched unsharp control for
+exactly this reason and passed it. **This variant has NOT been checked against
+one yet, and that is the first thing to do if Fabio likes the look.**
+
+It rendered, and **on a still the ladder reads correctly** (`KNOB_f65.png`, 3x
+on the face): 0.50 base softest, +35 sharper, +70 sharper again, the woman
+staying the 0.50 woman at every rung. **That still was wrong, the same way every
+still on this card has been wrong.**
+
+#### THE DETAIL TRANSFER IS CLOSED NEGATIVE - and Fabio's words name the mechanism
+
+Watched in motion, 2026-08-19: *"35 has a bit of morphing in her mouth at a
+certain part of the video. 70 has even more prominent morphing in her eyes.
+There are parts where her eyes are open and closed at the same time, like a bad
+interpolation or two frames fighting over each other. On 70, her face just looks
+weird. Almost like it was stamped on it on the video."*
+
+**"Eyes open and closed at the same time" is the root cause stated exactly.** The
+op is `out = base + s * (highpass(donor) - highpass(base))`, and it rests on an
+assumption nobody wrote down: that the donor re-rendered TEXTURE while leaving
+the PERFORMANCE alone. It does not. At sigma 0.85 the model regenerates motion
+and expression, so donor frame `i` and base frame `i` are not the same moment of
+the performance - the donor can be mid-blink where the base is open-eyed.
+Transferring the donor's high frequencies then stamps a closed eyelid's edges
+onto an open eye. Two expressions in one frame. That is the "bad interpolation"
+percept, and "stamped on" is the same observation about the whole face.
+
+**This retro-explains the evidence gate's verdict from earlier today** -
+*"expressions were lost"* and *"feels like bad interpolation"* - which the plan
+recorded as NOT predicted by the gate's design, on the grounds that expression is
+low-frequency and comes from the source untouched. That reasoning was wrong.
+Expression has high-frequency EDGES (lash line, lid crease, lip edge), the donor
+moved them, and the transfer imports them. The gate never had a flickering-mask
+problem; it had this one. **Drop the temporal-smoothing test - it was chasing the
+wrong hypothesis.**
+
+**Why the stills could never show it.** A still shows one frame of the donor
+stamped on one frame of the base, and if both happen to be mid-expression it
+looks like clean added detail. The defect only exists as a disagreement ACROSS
+frames. Six instruments and a dozen sheets missed it; one watch found it.
+
+**Consequences, all of them:**
+- The detail transfer is dead as a product control, at every strength and with or
+  without the gate. Not a tuning problem - the op's premise is false whenever the
+  donor regenerates the performance, which is exactly when it is worth using.
+- The evidence gate dies with it. It was a refinement of a broken op.
+- The split-radius sweep, `band_split.py` and the gate's whole measurement stack
+  were all built on top of it. They stay closed.
+- **The product keeps ONE control: `sigmas`.** No post-pass dial. Fabio: *"if we
+  can just land that slider in its best position, I think it's better, because
+  changing it is not proving anything better."*
+
+#### THE RE-BASELINE LANDED, AND THE SPECKLES ARE GONE AT SOURCE
+
+Two full-length arms on the neutral prompt, 81 frames, `img_compression` 0, x2
+(`full_arms.py nb_s050_x2 nb_s085_x2`, one lease):
+
+| arm | time | peak VRAM |
+|---|---:|---:|
+| `nb_s050_x2` | 294s | 15868 MB |
+| `nb_s085_x2` | 258s | 15481 MB |
+
+`nb_s085_x2_00001.mp4` is the direct twin of `full_s085_x2_00001.mp4` - same
+seed, same source, same everything except the prompt string. Compared at the
+face on two independent frames (`REBASE_face_f40.png`, `REBASE_face_f65.png`):
+
+**The old arm's cheeks carry a field of small dark marks; the new arm's cheeks
+are clean.** f65 is the plain one - the freckle-prompt panel has speckles across
+both cheeks plus a distinct mole, and the neutral panel has smooth skin. f40
+agrees.
+
+**So the artifact this card spent its middle section building filters for was
+being ordered by the conditioning, and deleting six words removed it with no
+post-processing at all.** The detail transfer, the radius sweep and the evidence
+gate were all aimed at it.
+
+**What this does NOT change**, stated so the re-baseline is not over-read:
+- Sigma 0.85 still replaces the person. The neutral arm is still a different
+  woman with a button placket where the zipper is. 0.85 stays off the slider.
+- The fabric speckles are unresolved here. `REBASE_fabric_f40.png` landed on the
+  button placket rather than the flat panel, and both arms look alike on it. The
+  three red dots were reported on the ungated detail-100 output, not on raw 0.85,
+  so that question belongs to the transfer re-run on the new base.
+- The swim, the VAE damage and the identity boundary are all untouched by this.
+
+**Consequence for the downstream work:** the evidence gate was bought at a real
+price - expressions lost, plus the interpolation-like artifact - to suppress
+invention on flat skin. Most of what it was suppressing was prompt-ordered and is
+now absent. **Re-look before spending anything more on the gate, its temporal
+smoothing, or the split radius.** They may have no job left.
+
+#### SEVENTH INSTRUMENT-HONESTY TRAP - three high-pass measures, all blind
+
+**No number on this card may be quoted for the speckle question.** Three were
+built and every one failed its own control:
+
+1. **Whole-face high-pass** (`prompt_sensitivity.py`). An injected, plainly
+   visible 16-grey-level speckle rash moves it **+0.147** against a **+/-0.3**
+   spread between the arms. Lashes, nostrils, lip line and hair edges dominate
+   the band and drown cheek texture.
+2. **Flat cheek / forehead patches** (`prompt_cheek.py`). Worse: within a SINGLE
+   arm, `cheek R` reads 15.19 / 3.72 / 5.72 across frames 2/12/22, because the
+   subject moves and a fixed box drifts off skin. Instrument noise is ~30x the
+   between-arm spread of 0.21-0.40.
+3. **The first sensitivity control was itself wrong**, and is worth recording
+   because both bugs are easy to write again: `energy()` compared a float array
+   against a low-pass built from a QUANTISED copy, leaving a constant ~0.1
+   residual that swamped the signal; and the speckle mask was blurred as uint8
+   then divided by 255, so an isolated pixel peaked near 0.1 and the injected
+   amplitude was ~10x below its label. **The tell was that the deltas refused to
+   scale with amplitude** (+0.104 at 1 grey level, +0.086 at 16). Both fixed;
+   the fixed version is what produced the +0.147 above.
+
+The finding that closed this question was two moles visible at 3x zoom, which no
+mean-over-a-box statistic was ever going to see. That is the sixth time on this
+card that the eye beat the instrument, and the reason `Verify mode: user-ux` is
+the right setting for it.
+
 ### THE WAVY DISTORTION IS THE VAE, NOT THE INTERPOLATION - root-caused 2026-08-19
 
 Fabio saw it on `real_temporal_gt_00001.mp4` and all three instruments scored
@@ -882,6 +1271,66 @@ fixing FPS at this point"* - not until an upscaler is chosen. Both readings stay
 products when one is (49 frames at 60 = smooth doubling, at 30 = half speed),
 and neither is automatic.
 
+### LTX 2.5 - RESEARCHED, AND ITS VAE IS THE PART THAT MATTERS HERE
+
+Sub-agent research, 2026-08-19, on Fabio's request. **Treat the 2.5 facts as
+sourced-but-unverified-locally; the compatibility claim in particular is
+inference, and the agent said so itself.**
+
+**LTX 2.5 exists** - released 2026-08-11, `Lightricks/LTX-2.5` on HF (gated),
+22B, ComfyUI core support merged the same day.
+
+**It ships two latent upscalers, and drops the x1.5:**
+
+| file | size | type |
+|---|---:|---|
+| `ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors` | 996 MB | spatial x2 |
+| `ltx-2.5-latent-temporal-upscaler-x2-bf16-1.0.safetensors` | 262 MB | temporal x2 |
+
+Both sizes match our 2.3 x2 files byte-for-byte within rounding (ours are
+995,743,560 and 261,944,000 bytes), which is the agent's main compatibility
+evidence. **Note the unit trap that nearly produced a false discrepancy here:
+this plan quoted 0.99 / 0.24 / 1.02 GB, which are GiB; the agent quoted 996 MB /
+262 MB / 1.09 GB, which are decimal. Same files.** Repo layout changed - 2.5 puts
+them under `latent_upscale_models/` rather than the repo root.
+
+**NOT verified and worth 30 seconds on the bench before adopting:** whether the
+state-dict still carries `post_upsample_res_blocks.0.conv2.bias` and whether the
+`config` metadata fields are unchanged. Read the safetensors header directly.
+
+**Do not confuse it with `Lightricks/LTX-2.5-22b-IC-LoRA-Pixel-Spatial-Upscaler`**
+- that is an IC-LoRA pixel-space mechanism, NOT a latent upsampler, and it does
+not load through `LatentUpscaleModelLoader` / `LTXVLatentUpsampler`.
+
+#### THE 2.5 VAE MAY INVALIDATE THIS CARD'S CENTRAL NEGATIVE FINDING
+
+2.5 ships a new **DiffVAE** (`ltx-2.5-video-vae-bf16.safetensors`, 1.47 GB) plus
+a cheaper conv VAE (1.45 GB) and an audio VAE (365 MB). Lightricks describe it as
+"Diffusion Fidelity Rendering" - an extra diffusion-based decode stage explicitly
+targeting sharper faces and **less smearing during fast motion**.
+
+**That is the exact symptom class this card root-caused to the 2.3 VAE round
+trip** - the swim, measured at ~13x a codec floor with no upscaler in the graph
+at all, and the thing Fabio saw when he said the VAE "messed up parts of the
+face". So **the swim finding does not automatically carry to 2.5**, in either
+direction: DFR may fix it, or may merely move it. Re-run `warp_arms.py`'s
+VAE-round-trip-only arm on the 2.5 VAE before quoting any swim number against
+2.5. Nothing about that is settled by the 2.3 measurements.
+
+#### SHIPPING DECISION - v1 on 2.3, 2.5 is a later bump
+
+Fabio, 2026-08-19: *"we could release the first version of our upscaler in 2.3
+and, at a later release, bump it to 2.5 once we have bumped ComfyUI."* Adopted.
+So this card's deliverable stays a 2.3 op and does not block on the engine.
+
+**Two different bumps, do not conflate them** (CLAUDE.md Context Router):
+- Evaluating the 2.5 upscalers on the BENCH needs `/mpi-bump-local-comfy`
+  (standalone `G:\ComfyUi`, currently ComfyUI 0.31.0). Never reaches a user.
+- Shipping 2.5 to users needs `/mpi-bump-engine` and its playbook, including the
+  smoke evidence `npm run release:check` refuses to ship without.
+
+Neither belongs to MPI-568. This card records the finding and hands it on.
+
 ## Phase 1: Correct the brief's premises
 
 Three claims in `brief.md` were checked against `/object_info` on 2026-08-19 and
@@ -995,24 +1444,37 @@ arm and one open question that outranks the rest.
    0, and watch it - the swim is invisible on a still by construction. This also
    discharges the uncontended re-time the card owes, since it needs an exclusive
    GPU anyway (97% of 16 GB).
-1b. **THE NEXT ACTION - re-run sigma 0.85 with a NEUTRAL and an EMPTY positive
-   prompt.** The graph has been conditioned on `"...natural skin texture,
-   freckles, sharp eyes"` on every arm of this card. Fix the upstream cause
-   before tuning anything else downstream. Also decide what to do about `cfg: 1`
-   making the negative prompt inert. ~1 min of GPU per arm, shared card, ask.
-1c. **Temporal stability of the gate** - zero GPU. The gate is recomputed per
-   frame, so it can flicker and make the detail layer pulse, which is the
-   leading explanation for Fabio's "feels like bad interpolation". Average the
-   gate over 3-5 frames (or hold it from one) and re-render.
+1b. ~~Re-run sigma 0.85 with a NEUTRAL and an EMPTY positive prompt~~ **DONE,
+   POSITIVE, and fixed at source.** The prompt was rendering as two moles on
+   flat cheek skin; neutral and empty are clean. See the A/B section. Left open
+   deliberately: neutral vs empty as the shipped default (a product call for the
+   app card), and `cfg: 1` still makes the negative prompt inert - raising cfg to
+   use it is its own change to the arm and has not been tried.
+1d. **RE-BASELINE, in flight** - `nb_s050_x2` and `nb_s085_x2`, 81 frames,
+   `img_compression` 0, neutral prompt. The first is the ship/no-ship arm in
+   motion (folds item 1 into it); the second replaces `full_s085_x2_00001.mp4`
+   as the base for anything downstream. **Until these land, the detail transfer,
+   the radius sweep and the evidence gate are all measured against contaminated
+   conditioning** - re-look before spending any more on them, and expect the
+   gate's job to have shrunk.
+1c. ~~Temporal stability of the gate~~ **DROPPED - wrong hypothesis.** The
+   "bad interpolation" percept is not a flickering mask; it is the donor's
+   expression being stamped onto the base's. The gate and the transfer are both
+   closed negative. Do not smooth anything.
 2. ~~Fabio's eyes on the evidence gate~~ **DONE - partial pass.** Veins gone,
    speckles only partly, expressions lost, plus a new interpolation-like face
    artifact. See the verdict section.
 2b. **Ground-truth test for invented texture.** Downscale the source 2x, upscale
    it back, compare the invented high frequencies against the withheld real
-   frames. It is the only way to separate "resolved real detail" (the nose stud)
-   from "made-up detail" (the veins) - and it is now doubly needed, because it is
-   the only INDEPENDENT check on the gate: `band_split.py` shares the gate's own
-   statistic and cannot score it. ~1 minute of GPU.
+   frames. Separates "resolved real detail" (the nose stud) from "made-up
+   detail". ~1 minute of GPU. **Demoted** - it was doubly needed as the gate's
+   only independent check, and the gate is now closed. It is worth running on the
+   AI source, where invention matters more, not on clip A.
+2d. **THE REAL NEXT ARM - the sigma ladder on an AI-GENERATED source.** Fabio is
+   supplying the clip; it goes in `G:/ComfyUi/ComfyUI/input/`. Run the same rungs
+   (0.15 / 0.30 / 0.50 / 0.85, `img_compression` 0, neutral prompt) and let him
+   pick the default. This supersedes item 3 - it IS the clip B cross-check, with
+   footage that matches the real application instead of a substitute.
 2c. ~~Sweep the detail-transfer split radius~~ **DONE, NEGATIVE.** Radius is
    strength in disguise and lowering it is strictly worse; leave it at 10. The
    luma-only arm is negative too. See the radius-sweep section.
@@ -1077,3 +1539,21 @@ the uncontended re-time (97 s per second of footage at 2x).
 - 2026-08-19: MPI-506's AI-generated source clip no longer exists on disk, so
   clip B is a substitute (a non-LTX WAN clip) rather than the same footage.
   Clip A is unchanged, so the headline comparison still holds.
+- 2026-08-19 (later): **the card spent its whole middle section tuning filters
+  against an artifact its own conditioning was ordering.** The positive prompt
+  asked for freckles, the model drew moles, and the detail dial, the radius
+  sweep and the evidence gate were each built to remove them downstream. Fixed
+  at source and re-baselining. The transferable lesson is not "check the
+  prompt" - it is that this card had an UNCONTROLLED VARIABLE upstream of every
+  measurement for its entire life, written once at graph-build time and never
+  revisited, and nothing in the method surfaced it. Fabio found it by asking
+  whether the graph even took a prompt.
+- 2026-08-19 (later): **the GPU is no longer arbitrated by asking.**
+  `/mpi-project-refresh` (908343a0) turned on `guard-gpu` with
+  `gpu_command_patterns`, so a sampler run is wrapped in the machine-global
+  lease (`<mpi-lib>/scripts/gpu_lease.py run --`) and queues behind whoever
+  holds the slot, in any repo on this box. The card's old "ASK before any
+  sampler run" constraint is superseded - wrap it and background it instead.
+  Note the regex would NOT have fired on `python prompt_arms.py` (the URL is
+  inside the file, not the command line); wrapping it was a judgement call, and
+  the right one, because the arm peaks at ~15.8 GB of 16.4.
