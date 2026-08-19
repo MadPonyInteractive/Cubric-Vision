@@ -150,3 +150,67 @@ default is unsettled until then.
   still ladder and a short portrait clip; flat or slow footage is the untested
   case.
 - Every timing on this card was measured on a GPU shared with the app engine.
+
+## THE BENCH QUESTION IS ANSWERED - 2026-08-19
+
+Both product controls are specified, and every value in them is Fabio's, not a
+metric's. That is what closes a `user-ux` card.
+
+- **`sigmas` 0.50 - 0.85, default 0.675.** Range narrowed by Fabio after 0.15 and
+  0.30 were rejected by eye on all three source classes; default picked by him
+  2026-08-19. Evidence: the target-1 and target-2 ladders, the in-between rungs
+  (0.675 sits 41% of the way to 0.85 on BOTH source classes, so a slider value
+  means the same thing on different footage), and the schedule-shape confound
+  measured and deflated at 1.209 against 9.538.
+- **`cfg` (prompt strength) 1 - 3.** Fabio 2026-08-19: *"1 to 3 sounds like the
+  appropriate range, which is what I was already leaning towards before the
+  tests, so that's settled."* Evidence: `cfg_range.py` (cfg 2/5/7 at sigma 0.85
+  with the contradictory red-biker clause) plus `cfg_base.py` (cfg 5/7, base
+  prompt). Sheets `CFGR_wide_f36.png`, `CFGR_driver_f36.png`,
+  `CFGR_driver_f60.png`, `CFGR_base_f36.png` in `D:/WORK/Images/Outputs/mpi568/`.
+
+**The range rests on the base-prompt control, not on the red series.** Prompt
+influence measured at fixed cfg climbs 3.869 -> 9.231 -> 15.948 -> 21.158 with no
+knee, so steering never saturates and the stop is not a diminishing-returns
+point. It is damage: cfg 5 shows cyan/green speckle, blown contrast and a
+made-up face on two separate frames, and cfg 7 turns the driver into a mask. The
+red clause is deliberately contradictory, so a range set from it alone would be
+set from the worst case - `cb_s085_cfg5base` and `cb_s085_cfg7base` carry the
+SAME damage on a prompt that agrees with the footage, which is what makes cfg
+itself the ceiling. Whole-frame diffs agree: base 17.063/23.720 vs red
+17.672/25.383.
+
+**Cross-session consistency check passed:** prompt influence at cfg 3 re-measured
+at 9.231, reproducing the earlier session's figure exactly across a re-run.
+
+**cfg is free.** Peak VRAM 15163-15528 MB flat across the ladder, time 86-91s
+warm. The user picks a strength, not a cost - same shape as `sigmas`.
+
+**What is NOT closed by this, and belongs elsewhere:** audio pass-through
+(app-side, whichever card ships the op), turning the op into a real Flow (out of
+this card's brief by its own scope line, needs its own card), the ground-truth
+invented-texture test (demoted), and the `cfg` DEFAULT - recommended 3, since the
+graph's current pin of 1 is no guidance at all and would ship a prompt-strength
+slider that does nothing until moved. Fabio has not picked it.
+
+## FABIO CLOSED THE BENCH AND SPECIFIED THE UI - 2026-08-19
+
+*"The video upscale is finished, as far as I can understand."* Both sliders are
+fully specified and no value on this card is open.
+
+- **`cfg` default is 1.0, overruling this card's recommendation of 3.** *"1.0 is
+  the correct call for the default of CFG. Most upscaling jobs do not want too
+  much change anyway."* The recommendation argued that defaulting to the
+  no-guidance end ships a control that does nothing until moved; he is treating
+  that as the point. An upscale is a fidelity job by default, steering is opt-in.
+- **Both sliders display 0 - 1 and the mapping is hidden.** *"The slider itself
+  should display a value from 0 to 1. Same thing with the denoise slider. The
+  mapping should be occulted from the user, as per usual."* denoise 0-1 -> sigmas
+  0.50-0.85, default UI 0.5 (0.675 is exactly mid-range); prompt strength 0-1 ->
+  cfg 1-3, default UI 0.
+
+**Next stage is UI implementation, and it is NOT this card** - out of scope by the
+brief's own scope line. See the implementation card for the shape Fabio
+specified: a new entry in the video-workspace upscale-model dropdown, named
+**LTX Video upscaler**, shipping as a PLUGIN like the image describer, showing
+its two sliders plus a prompt box when selected.

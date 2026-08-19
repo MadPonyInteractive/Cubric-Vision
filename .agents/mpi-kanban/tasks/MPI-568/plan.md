@@ -9,6 +9,20 @@ iris is almost square"*, not by a number.
 
 ## Current State
 
+**2026-08-19, latest: BOTH SLIDERS ARE FULLY SPECIFIED AND THE BENCH QUESTION IS
+ANSWERED.** `sigmas` 0.50-0.85, default **0.675**. `cfg` (prompt strength)
+**1-3**, default recommended 3 and the only value still open. The cfg ladder ran
+with a base-prompt control and put the break at cfg **5**, not 7, on ANY prompt -
+see THE CFG LADDER. Nothing on this card is now waiting on a measurement.
+
+**The single next action is close-out, not more bench work.** What remains is
+explicitly other cards' work: audio pass-through and turning the op into a real
+Flow both sit outside this card's brief, and the ground-truth invented-texture
+test is demoted. Move to `validating` and close on Fabio's verdicts, which are
+what a `user-ux` card closes on.
+
+Earlier state, still true:
+
 2026-08-19, later session. Both blockers cleared: Fabio's eye verdict is in and
 the wavy distortion is root-caused (LTX VAE round trip, ~2x amplified by the
 temporal upscaler). The temporal arm is CLOSED NEGATIVE. x1.5 does NOT solve the
@@ -66,19 +80,22 @@ round trip softens hard edges.
 arms are in (512/478/680/732s, peak 14921-15555 MB) - **the VRAM ceiling is
 closed, 4.13 Mpx fits in one pass with room**. See TARGET 2 RESULT.
 
-### HANDOFF NOTE, 2026-08-19 15:19 - the cfg range run NEVER STARTED
+### THE CFG RANGE RAN - both sliders are now DECIDED (2026-08-19)
 
-`cfg_range.py` (cfg 2 / 5 / 7 at sigma 0.85, red-biker clause) was launched under
-the GPU lease and **never acquired a slot** - a peer session holds GPU 0 running
-a krea2 batch for MPI-504. It was still printing `all 1 GPU slots busy, waiting`
-at handoff, so it is reaped with this session and **nothing was queued to
-ComfyUI**. Re-launch it; do not go looking for `cb_s085_cfg2/5/7` outputs first.
+`cfg_range.py` re-launched and completed: `cb_s085_cfg2` 122s / 15290 MB,
+`cfg5` 86s / 15235 MB, `cfg7` 86s / 15195 MB. A base-prompt control
+(`cfg_base.py` -> `cb_s085_cfg5base` 116s, `cb_s085_cfg7base` 86s) was added on
+top, and it is the arm that decides the range. Full result: **THE CFG LADDER**
+below.
 
-**This is the second time on this card that a background runner died at a session
-boundary**, and the first time it was silent: the previous session's ladder had
-posted `hi_s050` and was reaped before posting `hi_s085`, which read as "the
-ladder finished" because three of four arms were on disk. **Check the queue and
-the arm list against the script's ARMS, not the output directory.**
+**Fabio settled both sliders on the result:** `sigmas` default **0.675**, `cfg`
+range **1 - 3**. See THE SHIPPING SHAPE.
+
+*(The runner it replaced died waiting for the GPU lease at a session boundary -
+the second silent reap on this card. The lesson stands and is why the arms above
+were checked against the script's `ARMS` list, never the output directory:
+`hi_s050` once posted and `hi_s085` did not, which read as a finished ladder
+because three of four arms were on disk.)*
 
 ## THE SHIPPING SHAPE - decided 2026-08-19
 
@@ -93,23 +110,42 @@ not the same door.
 
 | control | range | default | status |
 |---|---|---|---|
-| `sigmas` (detail / reconstruction) | **0.50 - 0.85** | 0.675 recommended | **range DECIDED by Fabio; default still his to confirm** |
-| `cfg` (exposed as **prompt strength**) | to be measured | to be measured | **DECIDED in principle by Fabio**; `cfg_range.py` is mapping where it breaks |
+| `sigmas` (detail / reconstruction) | **0.50 - 0.85** | **0.675** | **FULLY DECIDED by Fabio 2026-08-19** |
+| `cfg` (exposed as **prompt strength**) | **1 - 3** | **1.0** | **FULLY DECIDED by Fabio 2026-08-19** |
+
+**BOTH SLIDERS ARE FULLY SPECIFIED. Nothing here is open.**
+
+**The user never sees these numbers.** Fabio, 2026-08-19: *"The slider itself
+should display a value from 0 to 1. Same thing with the denoise slider. The
+mapping should be occulted from the user, as per usual."* So both sliders are
+**0 - 1 in the UI** and the app maps them onto the ranges above:
+
+| slider | UI 0 - 1 | maps to | UI default |
+|---|---|---|---|
+| denoise (`sigmas`) | 0 -> 1 | 0.50 -> 0.85 | **0.5** (0.675 lands exactly mid-range) |
+| prompt strength (`cfg`) | 0 -> 1 | 1 -> 3 | **0** (cfg 1.0) |
+
+**cfg defaults to 1.0, NOT the 3 this plan recommended.** Fabio overruled it:
+*"1.0 is the correct call for the default of CFG. Most upscaling jobs do not want
+too much change anyway."* The recommendation argued a slider defaulting to no
+guidance "does nothing until the user moves it" - he is treating that as the
+POINT, not a defect. An upscale is a fidelity job by default and steering is
+opt-in. Do not re-argue this from the measurement; the measurement only bounds
+the range, it never said where to sit inside it.
 
 **The range narrowed from 0.15-0.85 to 0.50-0.85** because 0.15 and 0.30 were
 rejected by eye on all three source classes, with a failure mode - temporal smear
 that reads as fake motion blur - that a still cannot show. Nothing below 0.50 has
 ever won on this card.
 
-**0.675 is the recommended default and is NOT yet Fabio's pick.** It is the same
-person on both source classes, sits 41% of the way to 0.85 on both, and adds only
-speckle-scale invention. 0.75 is the last rung before a face starts to move. Do
-not let a descriptor default get written from this line without asking him.
+**0.675 IS THE DEFAULT - Fabio picked it 2026-08-19.** It is the same person on
+both source classes, sits 41% of the way to 0.85 on both, and adds only
+speckle-scale invention. 0.75 is the last rung before a face starts to move.
 
-**`cfg` needs its range before it can be specified.** It is known at exactly two
-points - 1 (pinned, no guidance) and 3 (works, 2.4x steering, clean). Two points
-do not define a slider. `cfg_range.py` runs 2 / 5 / 7 at sigma 0.85 to find the
-useful floor, whether steering saturates, and where a distilled model breaks.
+**`cfg`'s range is MEASURED and DECIDED at 1 - 3** (was: known at two points and
+unspecifiable). The ladder found the floor, answered the saturation question in
+the negative, and put the break two stops lower than expected - see THE CFG
+LADDER.
 
 **Still open, and not decided by the above:**
 
@@ -1452,6 +1488,65 @@ is NOT one of this card's closed-negative post-pass dials** - those were all
 post-processing on a finished frame. Whether it ships is a separate question from
 whether it works: a second slider costs the "one slider is the product"
 simplicity this card has been defending. **Undecided, and Fabio's call.**
+*(Decided since: he approved it, and THE CFG LADDER below set its range at 1-3.)*
+
+#### THE CFG LADDER - the range is 1-3, and DAMAGE sets the stop, not saturation
+
+Five arms at sigma 0.85 on target 1, all carrying the contradictory red-biker
+clause (`cfg_range.py`: 2 / 5 / 7; cfg 1 and 3 already on disk), plus a
+**base-prompt control at 5 and 7** (`cfg_base.py`) that is the arm the range
+actually rests on. Sheets: `CFGR_wide_f36.png`, `CFGR_driver_f36.png`,
+`CFGR_driver_f60.png`, `CFGR_base_f36.png`.
+
+| arm | time | peak MB | vs cfg-1 base | prompt influence at fixed cfg |
+|---|---:|---:|---:|---:|
+| red, cfg 1 (the graph's pin) | - | - | 3.869 | 3.869 |
+| red, cfg 2 | 122s | 15290 | 6.569 | - |
+| red, cfg 3 | 91s | 15163 | 9.891 | 9.231 |
+| red, cfg 5 | 86s | 15235 | 17.672 | 15.948 |
+| red, cfg 7 | 86s | 15195 | 25.383 | 21.158 |
+| base, cfg 5 | 116s | 15528 | 17.063 | - |
+| base, cfg 7 | 86s | 15185 | 23.720 | - |
+
+**1. Steering never saturates.** Prompt influence measured at fixed cfg -
+base-prompt arm against red arm at the SAME cfg, so cfg's own move is divided out
+- climbs 3.869 -> 9.231 -> 15.948 -> 21.158 with no knee. The cfg-3 figure
+reproduces the earlier session's 9.231 exactly, across a re-run, which is the
+cross-session consistency check this number needed. **So the slider's stop is not
+set by diminishing returns. It is set by the image falling apart.**
+
+**2. The break is at 5, not 7.** cfg 7 was the predicted stop and it is
+catastrophic - the driver's face becomes a white mask with a red mouth, colour
+fringing throughout, structure tearing. But cfg 5 is already failed: cyan/green
+speckle across the wagon body, blown contrast, dark rims on the tarp hoops, and a
+face that has acquired rendered makeup. Two frames (36 and 60) show the same
+thing, so it is not a one-frame read.
+
+**3. THE DAMAGE IS cfg's, NOT THE CONTRADICTORY PROMPT'S** - and this is the arm
+that decides the range. The red clause is deliberately something the footage
+argues against, so a range set from that series alone would be set from the worst
+case, not from what a shipped slider normally sees. The base-prompt control
+settles it: `cb_s085_cfg5base` carries the *same* cyan speckle, the same hoop
+rims and the same white blobs as its red twin, and `cb_s085_cfg7base` is broken
+the same way. **A distilled transformer at cfg 5 breaks on any prompt.** The
+whole-frame numbers agree - base 17.063 / 23.720 against red 17.672 / 25.383, so
+nearly all of the movement above cfg 3 belongs to cfg itself.
+
+**4. What the prompt actually does, refined.** The card said "steers cut, not
+colour". The ladder sharpens that: at cfg 2-3 the jacket gains lapels, a defined
+collar, gold cord and studs, and **a red collar/scarf appears underneath** - the
+model *adds a red garment element* rather than repainting the blue jacket it was
+handed. Raising cfg does not eventually recolour it; it just adds more, harder,
+until the additions are artifacts.
+
+**5. cfg is free.** Peak VRAM is flat across the whole ladder (15163-15528 MB)
+and time is flat once warm (86-91s; the two 116-122s arms are first-after-lease
+model loads). The user picks a strength, not a cost - the same shape `sigmas`
+has.
+
+**Fabio's call on the result, 2026-08-19: range 1-3** - *"which is what I was
+already leaning towards before the tests, so that's settled"* - and **`sigmas`
+default 0.675**, closing the last question the previous handoff left open.
 
 #### THE DETAIL TRANSFER IS CLOSED NEGATIVE - and Fabio's words name the mechanism
 

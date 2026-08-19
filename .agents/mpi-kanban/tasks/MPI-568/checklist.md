@@ -74,13 +74,21 @@ Derived from `plan.md` phase titles.
       replacement and object deletion are trades a user picks at the top of a
       denoise range; identity LoRAs are another flow's job, out of scope here.
       Range ships 0.15-0.85; he expects 0.85 to suit animation/cartoons/anime
-- [ ] **THE SIGMA LADDER ON AN AI-GENERATED SOURCE** - the card benched a
-      degraded phone clip and the real application is low-res AI footage needing
-      a resolution bump. Fabio is supplying the video; it goes in
-      `G:/ComfyUi/ComfyUI/input/`. Supersedes the clip B cross-check. **The
-      slider default is unsettled until this runs**
-- [ ] Decide neutral vs EMPTY as the shipped default, and whether to raise `cfg`
-      so the negative prompt does anything. Product call, belongs on the app card
+- [x] **THE SIGMA LADDER ON AN AI-GENERATED SOURCE - DONE.** Ran on
+      `mpi568_ai_cowboys.mp4` (target 1) and on the 4.13 Mpx production upscale
+      (target 2). Fabio picked 0.85 on target 1, 0.50-or-0.85 on target 2, and
+      **narrowed the shipped range to 0.50-0.85**; the in-between ladder put
+      0.675 at 41% of the way on BOTH source classes. **Default settled at 0.675
+      by Fabio 2026-08-19**
+- [x] **`cfg` raised, mapped and ranged - DONE.** It is not just "does the
+      negative prompt do anything": unpinning cfg amplifies prompt steering 2.4x
+      and became the card's SECOND slider. Range **1-3**, Fabio 2026-08-19, set
+      by where the image breaks (cfg 5) and not by saturation. Neutral-vs-EMPTY
+      as the shipped positive default is still the app card's product call
+- [x] **THE CFG LADDER + ITS BASE-PROMPT CONTROL - DONE.** `cfg_range.py`
+      (2/5/7, red-biker clause) and `cfg_base.py` (5/7, base prompt). Steering
+      never saturates; the break is at cfg 5, not the predicted 7; and the base
+      control proves the damage is cfg's, not the contradictory prompt's
 - [ ] Temporally smooth the gate (average over 3-5 frames or hold from one) and
       re-render - the leading explanation for the interpolation-like artifact.
       Zero GPU

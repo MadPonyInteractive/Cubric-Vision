@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-19T15:07:54Z",
+  "updated_at": "2026-08-19T16:12:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -10,6 +10,13 @@
       "role": "implementer",
       "status": "active",
       "heartbeat_at": "2026-08-19T15:01:40Z"
+    },
+    {
+      "id": "350fcf8d-6c9e-4132-bd3c-ceae58c79647",
+      "path": ".agents/mpi-kanban/state/sessions/350fcf8d-6c9e-4132-bd3c-ceae58c79647.json",
+      "role": "implementer",
+      "status": "active",
+      "heartbeat_at": "2026-08-19T16:12:00Z"
     }
   ],
   "active_tasks": [],
