@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-19T16:12:00Z",
+  "updated_at": "2026-08-19T15:22:47Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -77,9 +77,9 @@
       "id": "51bc0782-fab5-4e29-8c09-6c25fad693e5",
       "path": ".agents/mpi-kanban/state/handoffs/51bc0782-fab5-4e29-8c09-6c25fad693e5.json",
       "task_card": "MPI-568",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-19T15:19:00Z",
-      "note": "Range NARROWED to 0.50-0.85 and cfg approved as a second prompt-strength slider, reversing the one-slider headline. Target 2 measured, VRAM ceiling closed. cfg_range.py never got the GPU - re-launch it."
+      "note": "Superseded by 04c19785-9c74-41bf-ae82-bd4c8643c87c - the cfg range ran, both sliders are fully specified, and the work moved from the bench to UI implementation on MPI-580 + MPI-579."
     },
     {
       "id": "2b4f4f52-b714-4236-81de-97f42688024a",
@@ -88,6 +88,14 @@
       "status": "open",
       "created_at": "2026-08-19T15:10:00Z",
       "note": "Rear-hair thread CLOSED as a test-rig artefact (turbo, not resolution). Turbo established as a product axis: locks the character, suits stylised; non-turbo varies it, suits realistic. Head branch redesigned to a SAM3 hair+face+hat union with the face detect kept as the area selector. Next is the unrun v4.1 recipe regression."
+    },
+    {
+      "id": "04c19785-9c74-41bf-ae82-bd4c8643c87c",
+      "path": ".agents/mpi-kanban/state/handoffs/04c19785-9c74-41bf-ae82-bd4c8643c87c.json",
+      "task_card": "MPI-568",
+      "status": "open",
+      "created_at": "2026-08-19T15:22:47Z",
+      "note": "Bench CLOSED - sigmas 0.50-0.85 default 0.675 and cfg 1-3 default 1.0, both shown as 0-1 with the mapping hidden. Implementation split: MPI-580 owns the plugin mechanism, MPI-579 the LTX Video upscaler. Neither has a plan yet."
     }
   ]
 }

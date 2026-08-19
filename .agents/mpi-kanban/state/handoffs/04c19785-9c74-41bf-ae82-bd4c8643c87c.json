@@ -1,0 +1,76 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "04c19785-9c74-41bf-ae82-bd4c8643c87c",
+  "generated_at": "2026-08-19T15:22:47Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-568 closed on the bench; the plugin mechanism split onto its own card",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Finish the LTX spatial upscaler bench, then implement it into the UI as an entry in the History workspace upscale dropdown - shipped as a plugin named 'LTX Video upscaler'.",
+    "status": "in_progress",
+    "summary": "THE BENCH IS CLOSED. Both sliders are fully specified from Fabio's calls and no measurement is outstanding. The work is now UI implementation, and it split into two cards after reading the code rather than the board: MPI-580 owns the plugin mechanism, MPI-579 owns the LTX Video upscaler that consumes it. MPI-557 is a second consumer. Neither new card has a plan.md yet - that is the next session's first job."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-568/plan.md",
+    "completed": [
+      "THE CFG LADDER RAN, plus a base-prompt control that is what actually set the range. cb_s085_cfg2 122s/15290MB, cfg5 86s/15235MB, cfg7 86s/15195MB; cb_s085_cfg5base 116s/15528MB, cfg7base 86s/15185MB",
+      "STEERING NEVER SATURATES - prompt influence at FIXED cfg climbs 3.869 -> 9.231 -> 15.948 -> 21.158 with no knee, and the cfg-3 figure reproduced the earlier session's 9.231 exactly across a re-run",
+      "THE BREAK IS cfg 5, NOT THE PREDICTED 7, and it is CFG's doing, not the contradictory prompt's - cb_s085_cfg5base carries the same cyan speckle, hoop rims and white blobs as its red twin. A distilled transformer at cfg 5 breaks on ANY prompt. So the slider's stop is DAMAGE, not diminishing returns",
+      "THE PROMPT ADDS, IT DOES NOT REPAINT - at cfg 2-3 a red collar/scarf appears UNDER the blue jacket alongside lapels, gold cord and studs. Refines the card's 'steers cut, not colour'",
+      "BOTH SLIDERS DECIDED BY FABIO: sigmas 0.50-0.85 default 0.675, cfg 1-3 default 1.0, BOTH displayed 0-1 with the mapping hidden. cfg defaults to the no-guidance end on purpose - an upscale is a fidelity job, steering is opt-in",
+      "MPI-568 moved to validating with the evidence in validation.md; board validator passes",
+      "MPI-580 CREATED - the plugin mechanism, MPI-553 phase 1, split out of MPI-579 over the objection that a mechanism must not ride on a product card",
+      "MPI-579 AMENDED on Fabio's corrections and blocked on MPI-580; MPI-557 unblocked from MPI-568 and re-blocked on MPI-579; MPI-553's plan healed"
+    ],
+    "pending": [
+      "PLAN MPI-580 - it has a thorough description and NO plan.md. Start here",
+      "PRODUCT ANSWER OWED BY FABIO: what does the LTX Video upscaler's Library row say for a user WITHOUT LTX? Its deps are effectively the whole LTX stack, so 'install the upscaler' costs tens of GB. Do not invent an answer",
+      "GC ON A SHARED DEP - a dep owned by BOTH a plugin and a ModelDef must survive either owner and be reclaimable when neither remains. pluginRequiredDepIds() is an unconditional union; its server twin _pluginRequiredDepIds has two call sites in routes/downloadManager.js next to the _orphanedDepIds sweep. Fix both twins in one pass",
+      "IN-APP VRAM IS A GO/NO-GO, not a footnote - the bench peaks at 97% of 16 GB on NORMAL_VRAM/int8 and the app runs --lowvram/bf16, so it is UNKNOWN whether this runs in the app at all, or alongside a loaded engine. Measure before designing the UI around it",
+      "AUDIO PASS-THROUGH IS UNBUILT - Fabio's call is whatever comes in goes out; the bench drops it because VHS_LoadVideo is video-only",
+      "FLOW-REQUIRES-PLUGIN has no expression today - nothing in PluginDef, flowsRegistry.js or the Flow install path says a Flow needs a plugin, so MPI-557 could install and run with its plugin absent",
+      "MPI-568 stays in validating for mpi-end-session - do NOT close it here; the session continues until the upscaler is in the UI"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-568",
+    "title": "LTX spatial upscaler - bench evaluation as the SeedVR2 successor",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-568/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-568/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-568/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-568/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Start MPI-580 (the plugin mechanism) - read its card description, which is thorough and current, then write its plan.md. It has no plan yet and it blocks MPI-579. Design the contribution point for BOTH dropdown kinds at once, because MPI-507 reuses it unchanged and generalising later is the build-it-twice failure the umbrella exists to prevent. Three extensions, not one: a plugin contributes an ENTRY to the EXISTING MpiToolOptionsUpscale dropdown; a selected entry contributes its own CONTROLS with a hidden 0-1 mapping; and a plugin can be required by a Flow and share deps with a ModelDef. Surface the product question to Fabio early - what the Library row says for a user without LTX - because it shapes the install UI and only he can answer it.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "A MECHANISM MUST NOT RIDE ON A PRODUCT CARD, and this repo has the scar: MPI-506 owned 'SeedVR2 as three plugins AND the mechanism'; SeedVR2 was dropped, MPI-506 closed `complete`, the mechanism was never built, and MPI-507 went on sitting `blocked` on a closed card. Verified in code, not inferred - pluginsRegistry.js holds one plugin and MpiToolOptionsUpscale has no plugin awareness. Hence MPI-580.",
+      "IT IS NOT A NEW DROPDOWN. Fabio corrected the first write-up: the History workspace Upscale tool ALREADY has a model dropdown (MpiToolOptionsUpscale, shared by image and video via `kind`, listing None + loaded assets). The work is an ENTRY in it, and the controls that appear when it is selected.",
+      "BOTH SLIDERS SHOW 0-1 AND THE MAPPING IS HIDDEN - 'occulted from the user, as per usual'. denoise 0-1 -> sigmas 0.50-0.85, default UI 0.5 (0.675 is exactly mid-range); prompt strength 0-1 -> cfg 1-3, default UI 0. cfg defaults to the no-guidance end deliberately: 'Most upscaling jobs do not want too much change anyway.' A recommendation of 3 was overruled - do not restore it.",
+      "THERE IS NOTHING TO DOWNLOAD. ltx23-spatial-upscaler is already in assetDeps.js, already on R2, and already in the `dependencies` of BOTH LTX 2.3 tiers in models.js - so an LTX user is satisfied for free and pluginAvailability() gives that with no new code. Fabio predicted it. The corollary is the open product question: a non-LTX user faces a plugin whose install is the whole LTX stack.",
+      "MPI-557 ADOPTS THE UPSCALER - 'the plug-in will be a requirement for it, as it is a flow'. So the plugin has a second consumer before it ships, and Flow-requires-plugin became a phase-1 requirement rather than a later idea."
+    ],
+    "constraints": [
+      "A PEER SESSION IS LIVE IN THIS TREE and owns MPI-504 plus js/data/modelConstants/models.js - never stage them. guard-claim blocks a write to a bare shared filename (a `cd` into a task folder made `validation.md` ambiguous and it blocked); write repo-root-relative paths, and claim under state/files/ when editing a card file whose basename a peer also holds.",
+      "EVENT RECORDS ARE {schema, id, type, at, actor, summary} - writing {at, actor, task, type, summary} passes json.load and fails the board validator on two counts per line. Run <mpi-lib>/scripts/validate_board.py after any board or event write.",
+      "THE GPU LEASE IS MACHINE-GLOBAL and the peer holds it for krea2 batches. Wrap sampler runs: python <mpi-lib>/scripts/gpu_lease.py run -- <cmd>, as a BACKGROUND Bash call - a foreground wait dies with the session and reads as success. Bench is :8188; no bench work should be needed now.",
+      "The Bash tool BLOCKS heredocs and backslash-newline continuations - write python with the Write tool and run it by path. ${CLAUDE_PLUGIN_ROOT} is EMPTY in Bash; use the absolute plugin path.",
+      "NEVER take Fabio's app instance - `npm run app:isolated` spins your own on a free port with its own profile. :3000 is his live session."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-580/task.json",
+      ".agents/mpi-kanban/tasks/MPI-579/task.json",
+      ".agents/mpi-kanban/tasks/MPI-553/plan.md",
+      "js/data/pluginsRegistry.js",
+      "js/components/Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js"
+    ]
+  },
+  "resume_prompt": "Continue the LTX Video upscaler work in Cubric-Vision. Read .agents/mpi-kanban/state/handoffs/04c19785-9c74-41bf-ae82-bd4c8643c87c.json first, then the MPI-580 and MPI-579 card descriptions - they are current and thorough, do not re-derive them from the MPI-568 plan. THE BENCH IS FINISHED: MPI-568 is in `doing`/`validating` with both sliders fully specified by Fabio (sigmas 0.50-0.85 default 0.675, cfg 1-3 default 1.0, both shown to the user as 0-1 with the mapping hidden), and it must NOT be closed here - mpi-end-session closes it once the upscaler is in the UI. The work now is UI implementation, split across two cards: MPI-580 owns the plugin mechanism (a plugin contributes an ENTRY to the EXISTING History-workspace upscale dropdown, a selected entry contributes its own CONTROLS, and a plugin can be required by a Flow or share deps with a ModelDef), and MPI-579 owns the LTX Video upscaler that consumes it. NEITHER HAS A plan.md - writing MPI-580's is the first job. Note the mechanism was split out deliberately: MPI-506 carried it alongside SeedVR2, SeedVR2 was dropped, and the mechanism died with it while MPI-507 stayed blocked on a closed card. A peer session is live in this tree and owns MPI-504 and js/data/modelConstants/models.js - never stage them."
+}
