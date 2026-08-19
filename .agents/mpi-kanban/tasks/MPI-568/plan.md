@@ -42,7 +42,7 @@ the freckle prompt and is contaminated by it** - including
 `full_s085_x2_00001.mp4`, which is the base the detail transfer, the radius
 sweep and the evidence gate were all measured against.
 
-**THE PRODUCT IS ONE SLIDER AND EVERY POST-PASS CONTROL IS DEAD.** Three things
+**THE PRODUCT IS ONE SLIDER AND EVERY POST-PASS CONTROL IS DEAD.** *(Superseded 2026-08-19 - see THE SHIPPING SHAPE above. The POST-PASS half of this stands and is still closed; the "one slider" half does not, because `cfg` is a sampler parameter that was never tried, not a post-pass dial that failed.)* Three things
 closed today, in order:
 
 1. **The prompt was ordering the speckles.** Confirmed by eye, fixed at source.
@@ -62,13 +62,67 @@ low end compresses (0.15-0.50 cluster tightly), 0.85 no longer replaces the
 person, and the one place the op loses to lanczos is fast motion, where the VAE
 round trip softens hard edges.
 
-**Next action: TARGET 2 IS MID-RUN.** `hi_s015` landed at **516s, peak 14921 MB**
-from a 1.03 Mpx source to 4.13 Mpx out - **it FITS, and with more headroom than
-clip A's 3.27 Mpx did (15301-15898 MB)**. So peak is set by the transformer, not
-the source, across 0.41 -> 1.03 Mpx. `hi_s030` / `hi_s050` / `hi_s085` were still
-running at handoff; outputs land as `D:/WORK/Images/Outputs/mpi568/hi_s0*.mp4`.
-Read them, build the same three sheets, and get Fabio's pick for the
-production-upscale case.
+**BOTH TARGETS ARE MEASURED AND BOTH HAVE FABIO'S VERDICT.** Target 2's four
+arms are in (512/478/680/732s, peak 14921-15555 MB) - **the VRAM ceiling is
+closed, 4.13 Mpx fits in one pass with room**. See TARGET 2 RESULT.
+
+### HANDOFF NOTE, 2026-08-19 15:19 - the cfg range run NEVER STARTED
+
+`cfg_range.py` (cfg 2 / 5 / 7 at sigma 0.85, red-biker clause) was launched under
+the GPU lease and **never acquired a slot** - a peer session holds GPU 0 running
+a krea2 batch for MPI-504. It was still printing `all 1 GPU slots busy, waiting`
+at handoff, so it is reaped with this session and **nothing was queued to
+ComfyUI**. Re-launch it; do not go looking for `cb_s085_cfg2/5/7` outputs first.
+
+**This is the second time on this card that a background runner died at a session
+boundary**, and the first time it was silent: the previous session's ladder had
+posted `hi_s050` and was reaped before posting `hi_s085`, which read as "the
+ladder finished" because three of four arms were on disk. **Check the queue and
+the arm list against the script's ARMS, not the output directory.**
+
+## THE SHIPPING SHAPE - decided 2026-08-19
+
+**THE PRODUCT IS TWO SLIDERS NOW, NOT ONE. This reverses the card's headline
+decision, deliberately and with Fabio's call on the record.** "One slider is the
+product" was written when every candidate second control was a POST-PASS dial on
+a finished frame, and every one of those is still closed negative. `cfg` is not
+one of them - it is a sampler parameter the graph had pinned at 1, which is no
+guidance at all, and unpinning it measurably amplifies prompt steering 2.4x
+without breaking the distilled transformer. A closed door and an untried door are
+not the same door.
+
+| control | range | default | status |
+|---|---|---|---|
+| `sigmas` (detail / reconstruction) | **0.50 - 0.85** | 0.675 recommended | **range DECIDED by Fabio; default still his to confirm** |
+| `cfg` (exposed as **prompt strength**) | to be measured | to be measured | **DECIDED in principle by Fabio**; `cfg_range.py` is mapping where it breaks |
+
+**The range narrowed from 0.15-0.85 to 0.50-0.85** because 0.15 and 0.30 were
+rejected by eye on all three source classes, with a failure mode - temporal smear
+that reads as fake motion blur - that a still cannot show. Nothing below 0.50 has
+ever won on this card.
+
+**0.675 is the recommended default and is NOT yet Fabio's pick.** It is the same
+person on both source classes, sits 41% of the way to 0.85 on both, and adds only
+speckle-scale invention. 0.75 is the last rung before a face starts to move. Do
+not let a descriptor default get written from this line without asking him.
+
+**`cfg` needs its range before it can be specified.** It is known at exactly two
+points - 1 (pinned, no guidance) and 3 (works, 2.4x steering, clean). Two points
+do not define a slider. `cfg_range.py` runs 2 / 5 / 7 at sigma 0.85 to find the
+useful floor, whether steering saturates, and where a distilled model breaks.
+
+**Still open, and not decided by the above:**
+
+1. **Audio pass-through** - Fabio's call is whatever comes in goes out. The
+   bench drops it (`VHS_LoadVideo` is video-only). App-side, needs to exist in
+   whichever card ships the op.
+2. **The op is still bench-only.** Turning it into a real Flow/op is out of this
+   card's scope by its own brief, so it needs its own card.
+
+**In flight, both cheap:** `cb_s085_pdress` / `cb_s085_pred` test Fabio's claim
+that 0.85's inventions are prompt-steerable (with a contradictory-garment
+sensitivity control), and `hi_s085_p` re-runs target 2's top rung with a prompt
+that actually matches its footage, to close the ladder's one known confound.
 
 **MPI-578 created** for the LTX 2.5 upscaler bump, `todo` / `blocked` on the
 ComfyUI engine bump. v1 ships on 2.3 - Fabio's call.
@@ -978,6 +1032,62 @@ margin against the VAE softening in motion. 0.30 is defensible and slightly
 faster; below 0.30 is not worth the VAE round trip. **This is a recommendation,
 not a measurement - the card is `user-ux` and Fabio picks.**
 
+#### FABIO'S VERDICT ON TARGET 1, 2026-08-19 - HE PICKED 0.85, NOT 0.50
+
+*"85 is a much better result, with clean output. Obviously, the clothes changed,
+and the character changed quite a bit. It is hard to figure out what the
+character was, considering it was actually a blob at the beginning, but most
+things can be changed by prompt, I believe, like prompting what type of clothing
+she was wearing."*
+
+**The recommendation above is overruled and stays on the page as the argument
+that lost.** Two things in his verdict are the reasoning, and neither is a
+preference:
+
+1. **On a low-res AI source there is no identity to preserve.** The woman was a
+   blob at 864x480. "Preserve identity" was the whole case for capping at 0.50,
+   and it was carried over from clip A, where there WAS a real person in the
+   source to lose. It does not transfer to a source that never resolved a face.
+2. **Invention is only a defect when it cannot be directed.** He reads the
+   changed clothing as steerable rather than as damage. That is a testable
+   claim, not an opinion - see the prompt-steer test below.
+
+**THE DEFAULT IS NOW A PRODUCT FORK, and it is the one thing this verdict does
+not settle.** The two source classes want opposite ends of the same slider:
+
+| source | best | why |
+|---|---|---|
+| low-res AI generation (target 1) | **0.85** | nothing to preserve, and it is the only rung that beats the VAE softening in motion |
+| degraded real camera footage (clip A) | **0.50** | 0.85 renders a different woman - Fabio's own ship/no-ship verdict was that 0.50 "holds up motion" |
+
+One `sigmas` default cannot serve both. Three ways out, and it is Fabio's call:
+default 0.85 and accept that phone footage gets a stranger; default 0.50 and
+make the AI case reach for the top of the slider; or let the Flow pick the
+default from the source, which is more machinery than a one-slider op was
+supposed to need. **Not decided - do not let this be settled by whichever number
+someone types into a descriptor first.**
+
+#### THE PROMPT-STEER TEST - Fabio's clothing claim, with its own sensitivity control
+
+His claim is that 0.85's inventions can be directed by prompt. This card has
+already proved the prompt has causal power in this graph at `cfg: 1`: the
+default positive was ordering the skin speckles that four post-pass dials were
+built to remove. So the claim is plausible, which is exactly why it needs the
+control.
+
+Two arms at 0.85 on the cowboys clip, both appending a garment clause to the
+same base prompt so clothing is the only variable (`finish568.py`):
+
+- `cb_s085_pdress` - a PLAUSIBLE garment (brown wool shawl, long grey prairie
+  dress). Does the output follow?
+- `cb_s085_pred` - a CONTRADICTORY garment (bright red leather biker jacket).
+  **This one is not optional.** 0.85 already renders something shawl-shaped
+  unprompted, so a plausible prompt appearing to work proves nothing on its own;
+  only a prompt the footage argues against can separate steering from
+  coincidence. Seven instruments on this card passed until they were asked to
+  fail on purpose.
+
+
 **The variant now running, and it is the literal form of his ask** (zero GPU):
 `transfer_clip.py` takes any src/gen pair, so the base does not have to be the
 lanczos source. **Use `nb_s050_x2` as the base and `nb_s085_x2` as the detail
@@ -997,6 +1107,351 @@ It rendered, and **on a still the ladder reads correctly** (`KNOB_f65.png`, 3x
 on the face): 0.50 base softest, +35 sharper, +70 sharper again, the woman
 staying the 0.50 woman at every rung. **That still was wrong, the same way every
 still on this card has been wrong.**
+
+#### THE PROMPT DOES STEER THE CLOTHING - Fabio was right, and the first read here was wrong
+
+**This section replaces a wrong conclusion, kept as a lesson rather than
+quietly deleted.** The first pass reported the prompt-steer test as NEGATIVE -
+"the prompt is not inert, it is unaimed" - on the strength of a garment-box mean
+RGB and a crop that sat too low to include her collar. **A mean RGB can only see
+colour.** The thing the prompt actually changed was the garment's STRUCTURE, and
+the crop that would have shown it was 40 px higher up the frame. Eighth
+instrument-honesty trap on this card, and the first one where the instrument was
+mine and the eye it fooled was mine too.
+
+**What the arms actually show** (`STEER_shape_f36.png`, 3.4x at frame 36, three
+arms at sigma 0.85, same seed, garment clause the only variable):
+
+| prompt | what she is wearing |
+|---|---|
+| base ("a covered wagon pulled by two horses...") | an ambiguous draped blue garment |
+| `+ brown wool shawl over a long grey prairie dress` | **a shawl** - soft, wrapped over the shoulders, no structure |
+| `+ bright red leather biker jacket` | **a structured jacket** - notched lapel, collar, studs, and a red garment at the neck |
+
+Three prompts, three garments, each matching its words. **The prompt steers
+garment TYPE and SHAPE.** What it does not do is repaint the jacket red: the
+dominant colour stays blue in every arm, and the red the biker clause bought
+shows up as a shirt at the neckline rather than as the jacket itself.
+
+**So the split is by spatial frequency, and the mechanism survives - with its
+prediction corrected.** At sigma 0.85 the sampler starts from the SOURCE latent.
+It rebuilds high-frequency content, so texture (the old prompt's skin speckles)
+and now garment structure (lapels, drape, collar) follow the text. It cannot move
+the lowest-frequency content - the large flat colour field of the jacket - which
+survives the round trip from the source. The earlier prediction that "no prompt
+changes her jacket" was too strong; the correct one is **no prompt changes her
+jacket's COLOUR, while its cut is fair game.**
+
+**Prompt POSITION is ruled out as a factor.** `cb_s085_front` puts the same red
+clause at the head of the prompt instead of appended, and lands at mean|diff|
+4.174 against the appended arm's 3.869 and the shawl arm's 3.765 - the same
+magnitude. The clause was never buried.
+
+**`cfg` IS THE AMPLIFIER, and the graph has it pinned at 1.** The `CFGGuider`
+runs `cfg: 1`, which is no guidance at all - the negative is ignored and the
+positive is unamplified. At `cfg: 3` the same red-biker prompt moves **9.891**
+from the cfg-1 base against the cfg-1 red arm's 3.869, the lapels become
+pronounced, the red neckline reads clearly (`STEER_cfg_f36.png`), and the
+DISTILLED transformer did not break, which was the risk worth expecting.
+
+**Not yet reportable as steering.** Raising cfg changes the sampler trajectory
+whether or not the prompt is doing any work, so `cb_s085_cfg3base` runs cfg 3
+with the BASE prompt and no garment clause. Close to the cfg-1 base means the
+9.891 belongs to the prompt and cfg is a real product lever this graph has been
+suppressing; nearly as far means cfg changes the image by itself and the lapels
+are what cfg 3 does to a jacket.
+
+**Product consequence, and it restores the ground Fabio chose 0.85 on.** His case
+was that 0.85's inventions can be directed. For wardrobe cut that is true at cfg
+1 already and stronger at cfg 3. It remains false for large flat colour. So 0.85
+is not "undirected invention" as the earlier draft of this section claimed - it
+is invention that follows the prompt in shape and resists it in colour.
+
+#### TARGET 2 PROMPT CONFOUND - CLOSED, the ladder's verdicts stand
+
+`hi_s085_p` re-ran target 2's top rung with a prompt matching its actual footage
+(the hi ladder had inherited target 1's wagon prompt). 701s, peak 14768 MB. The
+rider's face at 0.85 is the same transformed face under both prompts
+(`HI2_promptface_f50.png`):
+
+| change | mean\|diff\| |
+|---|---:|
+| correcting the prompt | **2.864** |
+| dropping sigma 0.85 -> 0.50 | **7.812** |
+| doing nothing at all (lanczos) | 10.907 |
+
+The prompt is worth about a quarter of what the sigma is worth, and a correct
+prompt does NOT restore an identity that 0.85 replaced. Wardrobe is steerable;
+a face is not.
+
+#### THE LADDER IS NOT ONE PARAMETER - a confound in every arm on this card
+
+Found while answering Fabio's ask for a rung between 0.50 and 0.85. The four arms
+differ in step COUNT and schedule SHAPE as well as in start sigma:
+
+| arm | schedule | steps | ratios of first |
+|---|---|---:|---|
+| `s015` | 0.15, 0.075, 0 | 2 | 1, 0.50 |
+| `s030` | 0.30, 0.15, 0 | 2 | 1, 0.50 |
+| `s050` | 0.50, 0.30, 0.15, 0 | 3 | 1, **0.60**, 0.30 |
+| `s085` | 0.85, 0.7250, 0.4219, 0 | 3 | 1, **0.853**, 0.496 |
+
+0.85 does not merely start higher, it STAYS high - its second step is at 85% of
+the first against 0.50's 60%. **So "0.85 replaces the identity" is a claim about
+an arm, not yet about a number**, and the two rungs Fabio is choosing between
+differ in two ways at once. Nothing measured is invalidated; the parameter it is
+attributed to is.
+
+`between.py` runs both readings of "in between" on target 1 (86s an arm against
+target 2's 12 minutes):
+
+- **A - same shape, lower start.** The shipped 0.85 ratios scaled: `cb_x060`,
+  `cb_x0675`, `cb_x075`, plus **`cb_s050shape`** (0.50 with the 0.85 shape),
+  which is the control that separates start sigma from shape against the
+  existing `cb_s050`.
+- **B - low start, deeper tail.** `cb_s050deep` = `0.50, 0.40, 0.30, 0.20, 0.10,
+  0`. The FIRST step is where the model re-decides global structure, which is
+  where an identity goes; the low-noise steps are where texture is built. If that
+  holds, B buys 0.85's crispness at 0.50's identity risk - not a compromise
+  between the two rungs but a different trade entirely.
+
+If B wins, the slider stays one control with a fixed schedule behind it. If only
+A wins, the slider is genuinely continuous and 0.675 becomes the default
+candidate. The winner gets confirmed on target 2, where the rider's face is big
+enough to judge identity properly.
+
+#### TARGET 2 RESULT - the production upscale, and the low end is dead everywhere
+
+Four arms, 121 frames, 1344x768 -> **2688x1536 (4.13 Mpx)**, `img_compression` 0,
+one pass, no chunking. Baseline `hi_lanczos2x.mp4` (built here - target 2 had
+none). Sheets: `HI2_wide_f50.png`, `HI2_face_f50.png` (1.9x on the rider),
+`HI2_motion_f30.png` (2x on the flying mane), plus `HI_eye2_f50.png` at 5x.
+
+| arm | time | s per s of footage | peak VRAM |
+|---|---:|---:|---:|
+| `hi_s015` | 512s | 102 | 14921 MB |
+| `hi_s030` | 478s | 95 | not sampled |
+| `hi_s050` | 680s | 135 | not sampled |
+| `hi_s085` | 732s | 145 | 15555 MB |
+
+The two missing peaks are missing because the previous session's runner was
+reaped at handoff and its stdout went with it; the sampler here started after
+those arms had finished. Do not backfill them by guessing - the two that ARE
+measured bracket the answer.
+
+**THE VRAM CEILING QUESTION IS CLOSED. It fits, with room.** 4.13 Mpx out peaks
+at 14921-15555 MB against clip A's 15301-15898 MB at **3.27** Mpx. A 26% bigger
+output cost *less* peak, so **peak is set by the transformer, not by the source**,
+across 0.41 -> 1.03 Mpx of input. MPI-506's ceiling was not a property of this
+op.
+
+**FABIO'S VERDICT, 2026-08-19** - on the rider in motion: *"The 15 had a lot of
+motion blur. It looked like motion blur. It's not real motion blur. The 30 had a
+bit less. The 50 was spot-on, much better."* On the woman (target 1): *"I would
+either choose 50 or 85, depending on if I wanted to keep her face more consistent
+or not. 15 and 30 again proved to be not enough."*
+
+**1. The low rungs' failure mode is SMEAR, not softness, and that is why the
+stills undersold it.** `HI2_motion_f30` is the picture of his words: at 0.15 the
+flying mane is one black blob, at 0.30 it is a blob with edges, at 0.50 the
+strands separate, at 0.85 they are individually crisp. A still of a static region
+reads 0.15 as "slightly soft" and hides this completely - the eighth time on this
+card that a still has been the wrong instrument.
+
+**2. NOTHING BELOW 0.50 HAS EVER WON, ON ANY SOURCE CLASS.** Degraded real
+footage picked 0.50; low-res AI picked 0.85; high-res AI picked 0.50 or 0.85.
+0.15 and 0.30 have now been rejected by eye on all three. **The shipped range
+0.15-0.85 has a dead bottom half** and that is a product question, not a bench
+one - see the open decisions.
+
+**3. On a source that HAS an identity, 0.85 still replaces it.** `HI2_face_f50`:
+the rider at 0.85 is a younger, cleaner, differently-bearded man. This is clip
+A's failure returning on a *high-res* source, and it confirms the split is about
+whether the source resolved a face at all, not about resolution: target 1's woman
+was a blob so nothing was lost; target 2's rider is fully resolved so 0.85 costs
+him. **0.85 is an identity trade on every source with a real face.**
+
+**4. 0.85 invents on textures too, visibly.** Same motion sheet: the wagon canvas
+behind the mane gains rope, stitching and rust spots that are in no other arm.
+Consistent with target 1's cross-braces and buttons.
+
+**5. Grade drift is real, small, monotonic with sigma, and NEUTRAL** (mean level
+over 60 frames vs the lanczos baseline, out of 255):
+
+| arm | R | G | B | luma |
+|---|---:|---:|---:|---:|
+| `hi_s015` | -3.35 | -3.64 | -3.59 | **-3.53** |
+| `hi_s030` | -4.10 | -4.22 | -4.32 | **-4.21** |
+| `hi_s050` | -5.03 | -4.95 | -5.32 | **-5.10** |
+| `hi_s085` | -4.41 | -5.26 | -6.48 | **-5.38** |
+
+Everything comes back darker, and up to 0.50 the channels move together within
+0.4 levels, so it is an exposure offset an app-side lift corrects - not a colour
+cast. 0.85 is the one arm that skews (B falls 2.1 more than R), which is
+regeneration changing the grade rather than the round trip losing level.
+
+**6. In fast motion target 2 does NOT lose to lanczos** - the opposite of target
+1, where the galloping harness at 864x480 came back softer than doing nothing.
+At 1344x768 the source detail sits above what the VAE round trip costs. One clip
+each, so this is an observation about the two sources, not a resolution law.
+
+**Alignment was checked before any of the above, both ways**: temporal offset
+**+0** (0.0607 against 0.198 at +/-1, `align.py`) and spatial shift **(0,0)** on
+all three arms tested (`spatial.py`, +/-8 px search). A first read of the face at
+1.6x said the sampled arms were softer than lanczos and that read was WRONG - at
+5x lanczos is a stair-stepped block grid and 0.50 has a defined eyelid crease,
+directional brow hairs and real skin grain (`HI_eye2_f50.png`). **On this card the
+eye usually beats the instrument; this is the one time the instrument beat the
+eye, and only because the eye was working at too low a zoom.**
+
+**Confound, being measured rather than argued:** the whole hi ladder ran the
+TARGET 1 prompt ("a covered wagon pulled by two horses on a desert road") while
+target 2 is a different clip - one rider on a grey dappled horse beside a wagon.
+Uniform across all four arms, so the ladder is internally comparable, but at
+`cfg: 1` the positive is the only steer and it lands hardest at 0.85.
+`hi_prompt.py` re-runs 0.85 alone with a matching prompt: if little changes
+there, the mismatch is closed for every lower rung too.
+
+#### THE IN-BETWEEN LADDER - Fabio's ask, answered, and one of my hypotheses died
+
+Fabio, after seeing the 0.50/0.85 pair: *"is there anything that we can do
+between 50 and 85, because at 85 we start seeing identity loss?"* Two readings
+of "in between" were run on target 1 (86s an arm), plus the shape control the
+existing ladder never had.
+
+**FIRST, THE SHAPE CONFOUND IS REAL BUT SMALL, and it was overstated when it was
+found.** `cb_s050shape` is 0.50 carrying the 0.85 schedule shape (second step at
+85% of the first instead of 60%). Against the original `cb_s050`:
+
+| change | mean\|diff\| |
+|---|---:|
+| schedule SHAPE alone, at the same 0.50 start | **1.209** |
+| 0.50 -> 0.30 | 2.965 |
+| 0.50 -> 0.85 | 9.538 |
+| doing nothing (lanczos) | 6.144 |
+
+Shape is worth about 13% of the start-sigma gap. **So the slider is effectively
+the start sigma after all**, every earlier verdict on this card stands, and a
+single continuous control is well defined. The confound was worth measuring and
+was not worth the alarm it was raised with.
+
+**A - SAME SHAPE, LOWER START: this is the answer.** The rungs interpolate
+smoothly and monotonically (`BTW_face_f36.png`, 4.2x on her face):
+
+| rung | schedule | distance from 0.50 | % of the way to 0.85 |
+|---|---|---:|---:|
+| `cb_x060` | 0.6000, 0.5118, 0.2978, 0 | 2.507 | 26% |
+| `cb_x0675` | 0.6750, 0.5757, 0.3350, 0 | 3.947 | 41% |
+| `cb_x075` | 0.7500, 0.6397, 0.3723, 0 | 5.691 | 60% |
+| `cb_s085` | 0.8500, 0.7250, 0.4219, 0 | 9.538 | 100% |
+
+Features sharpen at every rung and **she stays recognisably the same woman
+through 0.75**; at 0.85 the hair changes volume and the face rounds.
+
+**STRUCTURAL INVENTION ONSET IS BETWEEN 0.75 AND 0.85.**
+`BTW_canopy_f36.png`: the wagon canopy is plain at 0.50, 0.60, 0.675 and 0.75,
+and grows dark cross-braces at 0.85 - the same rung at which she becomes a
+different woman.
+
+**That looked like one threshold and it is not - target 2 disproves it, see
+INVENTION HAS A SCALE LADDER below.** On this clip structural invention and
+identity replacement happen to coincide at 0.85; on target 2 fine texture
+invention starts three rungs earlier. Reading "invention begins at 0.85" off
+target 1 alone would have been a one-clip law.
+
+**B - LOW START, DEEPER TAIL: DEAD.** `cb_s050deep` (`0.50, 0.40, 0.30, 0.20,
+0.10, 0`, six steps, all the extra ones at low noise) is visually identical to
+plain 0.50 and measures **1.181** away - the same magnitude as changing nothing
+but the schedule shape. The hypothesis was that identity is decided in the first
+high-noise step while texture is built in the low-noise tail, so a deeper tail
+would buy 0.85's crispness at 0.50's risk. **It does not.** Reconstruction happens
+at high noise; the low-noise tail adds nothing but time (132s against 86s).
+
+**Consequence, and it is the honest shape of the trade: crispness and identity
+are the SAME axis.** There is no free lunch and no clever schedule that separates
+them. The only way between 0.50 and 0.85 is to sit between them.
+
+**RECOMMENDED: 0.675 conservative, 0.75 as the last rung before invention
+starts.** `hi_x0675` / `hi_x075` confirm this on target 2, where the rider's face
+is big enough to judge an identity properly - target 1's woman was a blob in the
+source and is the weaker evidence for exactly the question being asked.
+
+#### TARGET 2 CONFIRMS THE IN-BETWEEN RUNGS - and a slider value MEANS the same thing on both clips
+
+`hi_x0675` (714s, peak 14970 MB) and `hi_x075` (678s, peak 15427 MB), same
+shaped schedules, on the clip whose rider is big enough in frame to judge an
+identity properly (`HIBTW_face_f50.png`, 1.9x).
+
+| rung | distance from 0.50 | % of the way to 0.85 | target 1's % |
+|---|---:|---:|---:|
+| 0.675 | 3.179 | **41%** | 41% |
+| 0.75 | 4.746 | **61%** | 60% |
+| 0.85 | 7.812 | 100% | 100% |
+
+**The fractional positions match target 1 to within a point.** The absolute
+distances differ (7.812 against 9.538 to reach 0.85) because the sources differ,
+but where a rung sits BETWEEN 0.50 and 0.85 does not. That is what makes a single
+number on a slider mean something across footage - a user who learns "0.675" on
+one clip has learned it for the next.
+
+**By eye:** 0.675 is unmistakably the same weathered man, sharper - deeper lines,
+grey stubble resolved. 0.75 is sharper still and still him, with the moustache
+starting to fill. 0.85 is a younger, smoother, fuller-moustached man under a
+differently-creased hat. **0.675 is safe, 0.75 is the last rung before the face
+starts to go, 0.85 is gone.**
+
+#### INVENTION HAS A SCALE LADDER - fine texture first, structure and identity last
+
+`HIBTW_canvas_f30.png` puts the lanczos baseline beside the arms on the wagon
+canvas behind the flying mane, and it separates two things this card had been
+calling one:
+
+| sigma | what appears on a flat canvas the source renders smooth |
+|---|---|
+| lanczos / 0.50 | faint creases only - what is actually in the source |
+| **0.675** | **rust/dirt speckles that are in no source frame** |
+| 0.75 | the same speckles, more of them |
+| 0.85 | speckles PLUS invented rope and stitching lines |
+
+So invention does not switch on at one sigma. **Its SCALE grows with sigma:**
+fine texture from about 0.675, discrete structures and identity replacement at
+0.85. That reconciles the two clips rather than contradicting either, and it
+refines the earlier "structure invention and identity replacement switch on
+together" reading, which was true of target 1's canopy and is not a law.
+
+**Product consequence:** 0.675 is not "invention-free", it is free of the
+invention anyone would notice. Speckles on a canvas are not a changed face. The
+rung to defend is the identity one.
+
+#### `cfg` IS A SECOND LEVER, AND THE CONTROL SETTLED IT
+
+`cb_s085_cfg3base` runs cfg 3 with the BASE prompt - no garment clause - and it
+is the arm that decides whether cfg steers or merely changes.
+
+| comparison | mean\|diff\| |
+|---|---:|
+| cfg 3, base prompt, vs cfg 1, base prompt | **8.702** |
+| cfg 1: base prompt vs red-biker prompt | 3.869 |
+| **cfg 3: base prompt vs red-biker prompt** | **9.231** |
+
+**Both things are true, and only the control could separate them.** Raising cfg
+does change the image substantially on its own (8.702). But the PROMPT'S OWN
+influence, measured at fixed cfg on both sides, grows from **3.869 to 9.231 -
+2.4x**. So cfg genuinely amplifies steering; the earlier 9.891 headline was
+mostly cfg's own move and would have been the wrong number to quote.
+
+**cfg 3 does not break the distilled transformer** (`CFG_wide_f36.png`): the
+frame is clean, slightly more contrasty and saturated, no artifacts, 91s at
+15163 MB. That was the risk worth expecting and it did not happen. It is not
+free, though - the cfg-3 wagon carries more invented structure than the cfg-1
+one, which is consistent with guidance pushing harder on everything the prompt
+implies, not only on the clause someone added.
+
+**This is a real product lever the graph currently pins shut at `cfg: 1`, and it
+is NOT one of this card's closed-negative post-pass dials** - those were all
+post-processing on a finished frame. Whether it ships is a separate question from
+whether it works: a second slider costs the "one slider is the product"
+simplicity this card has been defending. **Undecided, and Fabio's call.**
 
 #### THE DETAIL TRANSFER IS CLOSED NEGATIVE - and Fabio's words name the mechanism
 

@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "f3f9d6b3-5f22-4017-9c80-2e520ad1f9be",
   "generated_at": "2026-08-19T13:45:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-568: the prompt was ordering the artifact, the detail transfer died in motion, and the card was benching the wrong source class",
     "branch": "master"

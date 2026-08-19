@@ -1,0 +1,76 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "51bc0782-fab5-4e29-8c09-6c25fad693e5",
+  "generated_at": "2026-08-19T15:19:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-568: both targets measured, the range narrowed to 0.50-0.85, and cfg became a second slider",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Bench-evaluate the LTX spatial upscaler as the SeedVR2 successor: does it reconstruct rather than sharpen, does it keep an eye an eye, and does it clear the 16 GB ceiling that killed MPI-506.",
+    "status": "in_progress",
+    "summary": "The bench half is essentially answered. Target 2 measured and the VRAM ceiling is CLOSED (4.13 Mpx, one pass, 14921-15555 MB). Fabio picked 0.85 on target 1 and 0.50-or-0.85 on target 2, rejected 0.15/0.30 on every source class, and NARROWED THE SHIPPED RANGE TO 0.50-0.85. The in-between rungs were built and 0.675 is the recommended default, not yet his pick. His clothing-steer claim was tested, first reported WRONG as negative, then corrected: the prompt steers garment cut, not colour. cfg was found pinned at 1 and unpinning it amplifies steering 2.4x, so FABIO APPROVED cfg AS A SECOND, PROMPT-STRENGTH SLIDER - which reverses this card's 'one slider is the product' headline."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-568/plan.md",
+    "completed": [
+      "TARGET 2 MEASURED, VRAM CEILING CLOSED. 121 frames 1344x768 -> 2688x1536 (4.13 Mpx), ONE pass, no chunking: hi_s015 512s/14921MB, hi_s030 478s, hi_s050 680s, hi_s085 732s/15555MB. A 26% BIGGER output than clip A peaked LOWER, so peak is set by the transformer, not the source",
+      "FABIO'S VERDICTS. Target 1: 0.85, overruling the 0.50 recommendation - on a low-res AI source there is no identity to preserve. Target 2: 0.50 or 0.85 on the identity trade. Both: 0.15 'a lot of motion blur, not real motion blur', 0.30 'a bit less', 0.50 'spot-on'. NOTHING BELOW 0.50 HAS EVER WON",
+      "RANGE NARROWED TO 0.50-0.85 (Fabio, 2026-08-19). The low rungs' failure mode is temporal SMEAR that a still cannot show - the eighth time a still was the wrong instrument on this card",
+      "THE IN-BETWEEN LADDER, both readings. A (same shape, lower start) WORKS: 0.60 / 0.675 / 0.75 sit 26% / 41% / 60% of the way from 0.50 to 0.85 on target 1 AND 41% / 61% on target 2 - the fractional positions match across clips, so a slider value means the same thing on different footage. B (low start, deeper tail, 6 steps) is DEAD - identical to plain 0.50. Crispness and identity are the SAME axis",
+      "SCHEDULE-SHAPE CONFOUND found, measured, and DEFLATED: shape alone is worth 1.209 against 9.538 for 0.50->0.85. The slider is effectively the start sigma and every earlier verdict stands",
+      "INVENTION HAS A SCALE LADDER, correcting an earlier 'one threshold' claim: fine texture (invented rust speckles) from ~0.675, discrete structures and identity replacement at 0.85",
+      "THE PROMPT-STEER RESULT WAS REPORTED WRONG AND CORRECTED. First read said negative, off a garment-box mean RGB (colour-only) and a crop below the collar. The prompt DOES steer garment cut - shawl prompt gives a shawl, biker prompt gives lapels+collar+studs - and does NOT repaint the jacket. Prompt POSITION has no effect (4.174 vs 3.869)",
+      "cfg IS A SECOND LEVER AND THE CONTROL SETTLED IT. cfg3-vs-cfg1 on the base prompt is 8.702 (cfg moves the image by itself), but prompt influence measured at FIXED cfg grows 3.869 -> 9.231, a 2.4x amplification. cfg 3 does NOT break the distilled transformer. Fabio approved exposing it as prompt strength",
+      "TARGET 2 PROMPT CONFOUND CLOSED: correcting the prompt moves 2.864 against the sigma's 7.812, and does not restore a replaced identity"
+    ],
+    "pending": [
+      "RE-LAUNCH cfg_range.py - IT NEVER RAN. Queued under the GPU lease, never got a slot (a peer session holds GPU 0 for an MPI-504 krea2 batch), reaped with the session. cfg 2 / 5 / 7 at sigma 0.85 with the red-biker clause, to find the useful floor, whether steering saturates, and where a distilled model breaks. ~90s an arm on target 1",
+      "FABIO'S PICK ON THE DEFAULT. Recommendation is 0.675 (same person on both source classes, 41% of the way to 0.85, only speckle-scale invention); 0.75 is the last rung before a face moves. RECOMMENDED, NOT PICKED - do not let a descriptor default be written from it",
+      "Audio pass-through: whatever comes in goes out (Fabio's call). The bench drops it - VHS_LoadVideo is video-only. App-side, needs an owner in whichever card ships",
+      "The op is still BENCH ONLY. Turning it into a real Flow/op is out of this card's scope by its own brief and needs its own card",
+      "Ground-truth invented-texture test - demoted, and worth running on the AI source"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-568",
+    "title": "LTX spatial upscaler - bench evaluation as the SeedVR2 successor",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-568/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-568/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-568/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-568/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Re-launch cfg_range.py - it never acquired the GPU and nothing was queued, so do NOT go looking for cb_s085_cfg2/5/7 outputs first. It maps cfg 2 / 5 / 7 at sigma 0.85 with the contradictory red-biker clause, ~90s an arm, to give the new prompt-strength slider a range: the useful floor, whether steering saturates, and where the distilled transformer breaks (cfg 7 is the likely stop). Then sheet them with sheet2.py and get Fabio's read. Also still owed: his pick on the sigmas default, where the recommendation is 0.675.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE PRODUCT IS TWO SLIDERS NOW: `sigmas` 0.50-0.85 (range DECIDED) and `cfg` exposed as PROMPT STRENGTH (approved in principle, range unmeasured). This REVERSES the card's 'one slider is the product' headline, deliberately - every closed-negative control on this card was a POST-PASS dial on a finished frame, and cfg is a sampler parameter that was never tried. A closed door and an untried door are not the same door. The old headline is annotated as superseded, not deleted. The post-pass dials stay dead: detail transfer, evidence gate, split radius, luma-only, temporal upscaler.",
+      "0.675 IS RECOMMENDED, NOT PICKED. Fabio owes the default. He has picked the RANGE and the cfg direction, nothing more.",
+      "CRISPNESS AND IDENTITY ARE THE SAME AXIS. The deeper-tail schedule was the hypothesis that they could be separated and it is dead: reconstruction happens at HIGH noise and the low-noise tail adds nothing but time. There is no clever schedule - the only way between 0.50 and 0.85 is to sit between them.",
+      "THE PROMPT STEERS CUT, NOT COLOUR. At 0.85 the sampler starts from the source latent, so it rebuilds high-frequency content (texture, garment structure) and cannot move the largest flat colour fields. A correct prompt also does NOT restore an identity 0.85 replaced.",
+      "TIME IS FLAT ACROSS THE SHIPPED RANGE - 680/714/678/732s for 0.50/0.675/0.75/0.85 on target 2, ~135-145s per second of footage at 4.13 Mpx. The user picks a look, not a cost.",
+      "THE EYE BEATS THE INSTRUMENT ON THIS CARD - but not always, and both directions cost time this session. A 1.6x zoom said the arms were softer than lanczos and 5x showed lanczos was a block grid; a mean RGB said the prompt was inert and the collar showed it was not. Match the instrument to the claim, and zoom before judging."
+    ],
+    "constraints": [
+      "BACKGROUND RUNNERS DIE AT SESSION BOUNDARIES AND IT READS AS SUCCESS. Twice now: the previous session's ladder posted hi_s050 and was reaped before hi_s085, which looked like a finished ladder because 3 of 4 arms were on disk; and cfg_range.py was reaped while still waiting for the lease. Check the ComfyUI queue and the script's ARMS list, never the output directory.",
+      "THE GPU LEASE IS MACHINE-GLOBAL AND A PEER SESSION USES IT. Wrap sampler runs: python \"C:/Users/Fabio/.claude/plugins/cache/mad-pony-interactive/mpi-kanban/1.2.0/skills/mpi-lib/scripts/gpu_lease.py\" run -- <cmd>, as a BACKGROUND Bash call. ${CLAUDE_PLUGIN_ROOT} is EMPTY in the Bash tool - use the absolute path.",
+      "The Bash tool BLOCKS heredocs AND backslash-newline continuations - write python with the Write tool and run it by path, one command per call. No ffmpeg on PATH: use C:/AI/Mpi/Cubric-Vision/node_modules/ffmpeg-static/ffmpeg.exe (no ffprobe). No cv2; numpy + PIL only.",
+      "A peer session owns MPI-504 and js/data/modelConstants/models.js in this tree - never stage them. board.json is CO-OWNED: dump with ensure_ascii=False.",
+      "Bench is :8188 (G:/ComfyUi, ComfyUI 0.31.0, NORMAL_VRAM, int8 transformer); the app runs --lowvram on bf16. No number on this card is an app number.",
+      "Every LTX frame count must be 8n+1 and every dimension /32."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-568/plan.md",
+      "C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/455ca407-0c4b-49cd-8edd-d75b8960be72/scratchpad/cfg_range.py",
+      "C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/455ca407-0c4b-49cd-8edd-d75b8960be72/scratchpad/between.py",
+      "C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/455ca407-0c4b-49cd-8edd-d75b8960be72/scratchpad/sheet2.py"
+    ]
+  },
+  "resume_prompt": "Continue MPI-568, the LTX upscaler bench evaluation in Cubric-Vision. Read .agents/mpi-kanban/state/handoffs/51bc0782-fab5-4e29-8c09-6c25fad693e5.json and .agents/mpi-kanban/tasks/MPI-568/plan.md first - the plan carries every measurement and both of this session's corrected readings, do not re-derive them. The card is in `doing` and its verify mode is `user-ux`: no metric closes it, Fabio's eyes do. THE PRODUCT IS NOW TWO SLIDERS: `sigmas`, range DECIDED at 0.50-0.85 with 0.675 recommended but NOT yet picked, and `cfg` exposed as PROMPT STRENGTH, approved in principle with its range unmeasured. Every POST-PASS control (detail transfer, evidence gate, split radius, temporal upscaler) is still closed negative and must not be revived. Bench scripts live in two scratchpads: this session's at C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/455ca407-0c4b-49cd-8edd-d75b8960be72/scratchpad/ (cfg_range.py, cfg_test.py, between.py, hi_between.py, sheet2.py, fdiff.py, drift.py, spatial.py) and the earlier one at .../e9f7dc25-31bc-42c2-bfff-8c95ae748b48/scratchpad/ (build_v2v.py, cowboys_ladder.py, align.py); outputs are in D:/WORK/Images/Outputs/mpi568/. The GPU is arbitrated by a machine-global lease shared with a live peer session - wrap sampler runs in gpu_lease.py and background them. THE NEXT ACTION is to re-launch cfg_range.py, which never acquired the GPU and queued nothing, so do not look for cb_s085_cfg2/5/7 outputs first: it maps cfg 2/5/7 at sigma 0.85 to give the prompt-strength slider a range, then sheet the arms and get Fabio's read, plus his still-owed pick on the sigmas default."
+}

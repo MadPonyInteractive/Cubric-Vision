@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-19T13:45:00Z",
+  "updated_at": "2026-08-19T15:19:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [],
@@ -13,7 +13,7 @@
       "id": "f3f9d6b3-5f22-4017-9c80-2e520ad1f9be",
       "path": ".agents/mpi-kanban/state/handoffs/f3f9d6b3-5f22-4017-9c80-2e520ad1f9be.json",
       "task_card": "MPI-568",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-19T13:45:00Z",
       "note": "One slider is the product (sigmas 0.15-0.85); every post-pass control is closed negative. Prompt was ordering the speckles - fixed at source. Target 1 measured (default rec 0.50); target 2 mid-run and it FITS at 14921 MB."
     },
@@ -48,6 +48,14 @@
       "status": "open",
       "created_at": "2026-08-19T13:20:00Z",
       "note": "Sheet prompt wired into krea2_t2i_only.json and proven live - four generations, layout correct in all. Open thread is the rear panel's hair; Fabio's call is to name the hair ONCE in the main clause, and the 'texture cannot be steered' note is withdrawn as never established."
+    },
+    {
+      "id": "51bc0782-fab5-4e29-8c09-6c25fad693e5",
+      "path": ".agents/mpi-kanban/state/handoffs/51bc0782-fab5-4e29-8c09-6c25fad693e5.json",
+      "task_card": "MPI-568",
+      "status": "open",
+      "created_at": "2026-08-19T15:19:00Z",
+      "note": "Range NARROWED to 0.50-0.85 and cfg approved as a second prompt-strength slider, reversing the one-slider headline. Target 2 measured, VRAM ceiling closed. cfg_range.py never got the GPU - re-launch it."
     }
   ]
 }
