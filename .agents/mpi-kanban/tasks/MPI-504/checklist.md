@@ -61,11 +61,26 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       i.e. the two repeating arms (B `0.161`, F `0.165`) are the only two that ever moved.
       **Fabio's "saying it twice confuses it" reading is disconfirmed** — repetition helps mildly.
       Reversing his call needs him, so nothing is adopted
-- [x] **Rear-view texture IS a model limit — now established, not assumed.** `straight` has been
-      stated in the main clause, the rear clause, both at once and in the template; the rear view
-      came back wavy in all six runs across three seeds, while the portrait renders straight
-      iron-grey hair correctly in the same image. Effect size of any wording is ~0.02 saturation
-      against a ~0.05-0.07 rear-to-portrait gap: the best arm narrows it, nothing closes it
+- [x] **Rear-view texture IS a model limit** — wavy in every run, at every seed, under every
+      wording, while the portrait renders it straight in the same frame. Four seeds, ~a dozen
+      wordings. (Stated, withdrawn, re-established on arm K, withdrawn again when K failed to
+      reproduce — both flips caused by n=1 at one seed. This version is the one to trust)
+- [x] **Seed noise floor — Fabio's catch, and it invalidates the arm ranking.** Every arm was n=1
+      at seed `504504`. F vs K over three fresh seeds: per-seed wins **2-2**, within-arm range
+      (`-0.119…0.103`) an order of magnitude wider than the between-arm mean difference
+      (`0.009` vs `0.014`). K's win is withdrawn; so is the whole G/I/K/L/M/N ranking. The metric
+      also does not survive a seed change — composition shifts move the fixed sample boxes, and
+      `F123123`'s portrait box landed on the red shirt (`0.289`), which is why its gap went negative
+- [x] **The F shape DOES fix rear-panel colour, replicated at three seeds.** At `777001` control
+      wording renders the rear brown, F wording renders it grey; same at `909090` and `123123`.
+      **Seed `504504` is an unusually hard seed** and it is the only one the investigation ran on,
+      which made a solved problem look unsolved for eleven arms
+- [x] **Dead levers, do not retest:** the sheet template (arm D global clause AND arm G concrete
+      panel-local clause, both no-ops), the negative prompt at 1k turbo (`72`/`162` are cfg `1.0`
+      so `Input_Negative` is inert; only the quality path `311` at cfg `2.0` makes it live), and
+      stronger texture words (`poker-straight` reads identically to `straight`)
+- [ ] **Standing rule for this flow: one seed is a pilot, not a result.** Any wording verdict needs
+      3-4 seeds compared per seed, visual verdict primary, numbers as support
 - [ ] Gate #1: neutral-pronoun A/B against Fabio's original wording, same seed
 - [ ] Head branch: face detect → `ImpactSEGSOrderedFilter` area ascending take 1 → bbox grown
       upward → head mask → grow 24 @ 2k. Confirm `face_yolov8n` sees the small face at 1k

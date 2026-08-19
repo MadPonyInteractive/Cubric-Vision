@@ -121,9 +121,9 @@ LENGTH: aim for 70 words. 90 words is a hard ceiling - stop there even if someth
 
 Describe only these four things, in this order:
 1. Who they are. Age, build, height, sex, and origin or ethnicity where the user implied one.
-2. The face and head. Face shape, skin, hair colour, hair length and how it is worn, facial hair, eye colour, lines, scars, tattoos, marks.
+2. The face and head. Face shape, skin, hair colour, hair length, hair texture and how it is worn, facial hair, eye colour, lines, scars, tattoos, marks. Name the hair in full here - colour, length and texture together in one clause.
 3. The wardrobe and worn gear, head to foot. Headwear, each garment in the order it is worn, colours, fabrics, wear and dirt, belts, jewellery, footwear - and any weapon, tool, bag or kit the character keeps ON THE BODY: holstered, sheathed, slung, quivered, belted or shouldered. Say where each piece sits and how large it reads against the body, so the sheet doubles as the scale reference for that item.
-4. How the wardrobe and gear read FROM BEHIND. The back of the outer garment, how the hair falls or is tied at the back, anything slung or quivered across the back. The sheet carries a rear view and the model has to know what belongs there.
+4. How the wardrobe and gear read FROM BEHIND. The back of the outer garment, how the hair falls or is tied at the back, anything slung or quivered across the back. The sheet carries a rear view and the model has to know what belongs there. Restate the hair's colour and texture here, in the rear clause itself, not only where the hair was first described - the rear view is rendered from this clause.
 
 Leave all of this out:
 - Any location, background, ground, sky, weather, building, loose prop or furniture, and any second person or animal. The character stands on a plain grey studio backdrop.
@@ -228,7 +228,9 @@ copied into the research file.
 
 **So the amendment below is reinstated as the best-measured shape**, and arm F is its strongest form: name the hair in full in the main clause AND repeat colour and texture in the rear clause. **Not adopted — this reverses Fabio's explicit call and needs his go.**
 
-**Also corrected, then re-established:** the claim that hair TEXTURE does not respond to wording was withdrawn as premature, and arms E and F have now supplied the evidence it lacked. `straight` has been stated in the main clause, the rear clause, both at once and in the template; the rear view came back wavy in all six runs across three seeds, while the portrait renders it straight correctly in the same image. **Rear-view texture is a model limit.** Wording buys ~0.02 saturation against a ~0.05-0.07 rear-to-portrait gap: the best arm narrows the disagreement, nothing closes it.
+**Rear-view texture is a model limit** — wavy in every run, at every seed, under every wording, while the portrait renders it straight in the same frame. Four seeds, ~a dozen wordings. (This claim was stated, withdrawn as premature, re-established on arm K, and withdrawn again when K failed to reproduce across seeds. Both flips came from n=1 at seed `504504`. The four-seed version is the one to trust.)
+
+**The F shape's real win is COLOUR, and it replicates.** At seed `777001` the control renders the rear panel brown and F renders it grey; same at `909090` and `123123`. Seed `504504` — the only seed the investigation ran on — is an unusually hard one where F only partly fixes it, which made a solved problem look unsolved. **No wording variant beyond F is established:** a six-run noise floor put F against K at 2-2 per-seed wins with the within-arm spread an order of magnitude wider than the between-arm difference. See validation.md, the noise-floor entry.
 
 ### Rear clause — restate the hair COLOUR, measured 2026-08-19 (v4.1 — REINSTATED, see above)
 

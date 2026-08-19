@@ -230,6 +230,12 @@ and *then* it is established, on evidence rather than by assumption.
 
 ## 2026-08-19 · arms E and F — the single-mention arm is NEGATIVE, and the repeat is reinstated
 
+> **READ THE NOISE-FLOOR ENTRY AT THE END OF THIS FILE BEFORE TRUSTING THE NUMBERS BELOW.** Every
+> arm here is n=1 at seed `504504`, and a later six-run test showed the within-arm spread across
+> seeds is an order of magnitude larger than the between-arm differences ranked below. The
+> **conclusion** survives — the F shape is right, and it replicates at three further seeds — but
+> the saturation *ranking* does not, and the "one wording beat another by 0.02" readings are noise.
+
 **Ran:** two generations under the GPU lease, both 1280×768, turbo ON, Photoreal, seed `504504`
 held, every node byte-identical to run 1 except `112 Input_Positive` (asserted in the builder, not
 assumed). Arm E `129315bb`, 45.1s, `execution_cached []`. Arm F `6c9f5c5b`, 36.1s, cached only the
@@ -302,3 +308,77 @@ right hip, the scar on the left cheekbone, catch-light in both pupils.
 **Needs Fabio, because it reverses his call:** the recipe's hair rule. The evidence says name the
 hair in full in the main clause **and** repeat it in the rear clause (arm F's shape); his call was
 to name it once. Recorded, not adopted — the sheet template and `raw/` are untouched.
+
+## 2026-08-19 · THE SEED NOISE FLOOR — it invalidates the arm ranking above, and rescues the finding underneath it
+
+**Fabio asked whether these arms had been run on one seed or several.** They had been run on one:
+run 1, B, D, E, F, G, I, K, L, M and N are all seed `504504`, n=1 each. Only arm C used a second
+seed, and it carried control wording. So every wording verdict above rests on a single sample at a
+single seed.
+
+**Why "seed held, so wording is the only variable" was weaker than it kept being written.** The
+seed fixes the initial noise tensor; it does not fix the outcome, because editing the prompt
+changes the conditioning and the sampler takes a different path. Same seed + edited prompt is a
+fresh draw, not a controlled one. Holding the seed removes one source of variance, not the
+sampling variance the edit itself introduces.
+
+**Ran:** arms F and K at three fresh seeds each — `777001`, `123123`, `909090` — six generations,
+1280×768, turbo ON, Photoreal, one lease. Plus arms G, I, K, L, M, N at `504504` before them.
+
+### Result 1 — F and K are not separable, and K's win is withdrawn
+
+Primary statistic is the rear-to-portrait **gap**, not rear saturation alone: both samples come
+from one frame, so exposure cancels.
+
+| seed | F gap | K gap |
+|---|---|---|
+| `504504` | 0.035 | 0.029 |
+| `777001` | 0.077 | **0.103** |
+| `123123` | −0.119 | **−0.123** |
+| `909090` | 0.044 | 0.048 |
+
+Per-seed wins **2–2**. Mean gap F `0.009`, K `0.014`; within-arm range F `−0.119…0.077`, K
+`−0.123…0.103`. **The spread inside one arm is an order of magnitude larger than the difference
+between the arms.** `worn loose` → `hanging straight down` is not an established effect, and
+neither is anything else in the G/I/K/L/M/N ranking. All of it was one seed, n=1.
+
+### Result 2 — the metric itself does not survive a seed change
+
+Composition shifts between seeds, so the fixed sample boxes drift off target. `F123123` reports
+portrait saturation `0.289` because the box landed on the **red shirt**, not hair — which is why
+that gap is negative. **Cross-seed numeric comparison with fixed boxes is invalid.** Only
+within-seed comparisons mean anything, and the visual read is what carries across seeds.
+
+### Result 3 — the F shape DOES fix rear-panel colour, and this one replicates
+
+At seed `777001`, control wording (arm C) renders the rear panel brown and wavy; **F wording
+renders it grey.** Same at `909090` and `123123`. Three independent seeds, one wording change.
+
+**Seed `504504` is an unusually hard seed** — it is the one where F only partly fixes the colour,
+and it is the only seed the whole investigation ran on. Testing exclusively there made a solved
+problem look unsolved and sent eleven arms chasing it.
+
+### Result 4 — rear-view texture IS a model limit, now on four seeds
+
+The rear hair is wavy in every run, at every seed, under every wording, while the portrait renders
+long straight iron-grey hair correctly in the same frame. This claim was made, withdrawn as
+premature, re-established on arm K, and withdrawn again when K failed to reproduce. It now rests on
+four seeds and roughly a dozen wordings rather than one, and **that is the version to trust**. Both
+earlier flips had the same cause: single samples at one seed.
+
+### What is dead as a lever, and does not need retesting
+
+- **The sheet template.** Arm D (global identity clause) and arm G (concrete panel-local clause on
+  the rear view) are both no-ops. Two different positions, both negative — stop editing the
+  template for this.
+- **The negative prompt, on this rig.** The turbo path is `72` cfg `1.0` → `162` cfg `1.0`, so
+  `Input_Negative` is **inert**. It only becomes live on the quality path (`311`, cfg `2.0`). Do
+  not spend a run on a negative-prompt arm at 1k turbo.
+- **Stronger texture words.** `poker-straight` reads identically to `straight` (arm I).
+
+### The rule this leaves behind
+
+**One seed is a pilot, not a result.** Any wording verdict on this flow needs the same wording at
+3-4 seeds, compared per seed, with the visual verdict as primary and the numbers as support. A
+tidy-looking gradient across single samples — which is exactly what the F/L/M/N/K ranking looked
+like — is what noise produces when you sort n=1 draws.

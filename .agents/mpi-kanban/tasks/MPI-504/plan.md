@@ -137,10 +137,36 @@ iron-grey hair correctly in the same frame. Effect size of any wording is ~0.02 
 a rear-to-portrait gap of ~0.05-0.07 — the best arm narrows the disagreement, nothing closes it.
 Revisit at the 10/10 stress test, where it either survives contact with real shots or does not.
 
-Next action: **Fabio's call on the hair rule** (adopt arm F's shape, or accept the mismatch and
-move on), then gate #1 (neutral pronouns) and the head branch. Open calls 1-5 still stand; all need
-the GPU, and the GPU now needs the lease (`mpi-lib/scripts/gpu_lease.py run -- <cmd>`,
-machine-global, one slot).
+**F ADOPTED (Fabio, 2026-08-19)** — his single-mention call was an observation carried over from
+other models, not a verdict, and he asked to keep testing wording until it lands. Recipe categories
+2 and 4 in prompts.md §2 now carry the F shape, which makes the recipe **v4.1 and owing a text-only
+regression pass** over the four inputs.
+
+**Then the seed noise floor, on Fabio's catch, and it invalidated the arm ranking.** Every arm to
+that point was n=1 at seed `504504`. F against K over three fresh seeds came out **2-2 on per-seed
+wins**, with the within-arm range (`-0.119…0.103`) an order of magnitude wider than the between-arm
+mean difference (`0.009` vs `0.014`). K's win is withdrawn, and so is the whole G/I/K/L/M/N
+ranking. The metric does not survive a seed change either — composition shifts move the fixed
+sample boxes, and `F123123`'s portrait box landed on the red shirt. **Only within-seed comparisons
+are valid; the visual verdict is what carries across seeds.**
+
+**What survived, and it is the useful half.** The F shape fixes rear-panel COLOUR, replicated at
+`777001`, `909090` and `123123` — control renders the rear brown, F renders it grey. Seed `504504`
+is an unusually hard seed and it is the only one the investigation ran on, which made a solved
+problem look unsolved for eleven arms. Rear-view TEXTURE stays wavy at every seed under every
+wording while the portrait renders it straight in the same frame: a model limit, now on four seeds.
+
+**Standing rule for this flow: one seed is a pilot, not a result.** Wording verdicts need 3-4 seeds
+compared per seed. Dead levers, do not retest: the sheet template (arms D and G), the negative
+prompt at 1k turbo (`72`/`162` are cfg `1.0`, so `Input_Negative` is inert — only the quality path
+`311` at cfg `2.0` makes it live), and stronger texture words.
+
+Next action: the **v4.1 recipe regression** (text-only, four inputs, needs the LLM so it needs the
+lease), then gate #1 (neutral pronouns) and the head branch — both now run at 3-4 seeds, not one.
+The open texture question, if it is worth more GPU: does the rear hair resolve straighter at 2k
+than at 1k? That is a resolution hypothesis, not a wording one, and it is the last untested
+mechanism. Open calls 1-5 still stand; all need the GPU, and the GPU needs the lease
+(`mpi-lib/scripts/gpu_lease.py run -- <cmd>`, machine-global, one slot).
 
 Recorded in validation.md and not to be lost again: **the character phrases of all six arms,
 verbatim.** This session had to rebuild the four earlier ones from the bench's `/history` because
