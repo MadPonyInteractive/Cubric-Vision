@@ -92,14 +92,29 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
 - [x] **Rig decision** (Fabio): realistic → **turbo OFF + 2k**; turbo → mainly the stylised styles;
       **both controls stay user-facing regardless** (low-VRAM users). Costs: 1k-turbo 33s ·
       2k-turbo 85s · 1k-quality ~105s · 2k-quality 328s
-- [ ] **Anime / cyberpunk style check** — Recipe_Anime across all three rigs x three seeds, heavy
-      wardrobe and gear, black hair with pink ends, pupil catch-lights. Tests Fabio's read that
-      turbo is fine for stylised. NOTE the phrase is ~105 words, above the recipe's own 90-word
-      ceiling, so it stresses length (open call #4) at the same time and a failure is not cleanly
-      attributable to style alone
+- [x] **Anime / cyberpunk style check — PASS at turbo, and it is the best sheet this card has made.**
+      Nine runs, Recipe_Anime, three rigs x three seeds. 2k-turbo: crisp cel line art, continuous
+      backdrop, every garment and gear item consistent across panels, circuit motif on the jacket
+      back, hair straight black with pink ends in the REAR panel, catch-lights present — **and the
+      turbo wave artefact does not appear at all**, so it is not universal. 2k-quality: sketchy line
+      art AND **the rear panel put the hood up, hiding the hair** — a functional failure for a
+      reference sheet. **Anime takes turbo ON** (Fabio). The ~105-word phrase overran the recipe's
+      90-word ceiling with no failure, so length (open call #4) has a null result in its favour
+- [x] **Turbo LOCKS the character, non-turbo VARIES it** (Fabio's observation, confirmed on this
+      card's own runs): photoreal F wording at three seeds gives the SAME man under turbo and three
+      visibly DIFFERENT men without it. So non-turbo is a **variation lever**, not merely a quality
+      setting — it is how a user hunts for a face. This also partly explains the small between-arm
+      deltas above: every wording arm ran under turbo, i.e. against a locked character
 - [ ] Gate #1: neutral-pronoun A/B against Fabio's original wording, same seed
-- [ ] Head branch: face detect → `ImpactSEGSOrderedFilter` area ascending take 1 → bbox grown
-      upward → head mask → grow 24 @ 2k. Confirm `face_yolov8n` sees the small face at 1k
+- [ ] Head branch: face detect → `ImpactSEGSOrderedFilter` area ascending take 1 — **unchanged, and
+      it stays: its output SELECTS the area to inpaint (which head), it is not the mask** — then
+      **SAM3 `hair` + `face` + `hat` union builds the mask that gets filled** → grow 24 @ 2k.
+      Confirm `face_yolov8n` sees the small face at 1k.
+      **Only the bbox-AS-MASK is RETIRED** (Fabio 2026-08-19): a
+      face-only mask fails on a hatted character (measured on the cowboy-movie work), hair over
+      clothing needs a precise hair mask, and a box stamped on the head makes the inpaint model
+      destroy and reinvent the clothing detail inside it. Must degrade to hair+face when the
+      character has no hat
 - [ ] Klein removal A/B — baked prompt vs the no-prompt remove op + crop/stitch
 - [ ] All four styles return their medium and keep the pupil catch-light
 - [ ] 10/10 stress test: ten generations, varied pose and light, next to a second character

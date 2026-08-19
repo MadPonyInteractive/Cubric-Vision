@@ -435,3 +435,72 @@ The F hair shape stays adopted. It fixed rear-panel **colour**, which replicated
 is a separate axis from the texture artefact — the rear panel went brown under control wording and
 grey under F wording in the same rig. Recipe categories 2 and 4 carry it, and the v4.1 text-only
 regression is still owed.
+
+## 2026-08-19 · ANIME / CYBERPUNK — turbo WINS for stylised, and turbo vs quality is a real product axis
+
+**Ran:** nine generations, `Recipe_Anime` (`Input_Recipe 3`), one hand-written cyberpunk phrase in
+the adopted F shape (hair named in full in the main clause, restated in the rear clause), three
+rigs × three seeds (`504504`, `777001`, `909090`). Phrase deliberately heavy on wardrobe and gear,
+**~105 words — above the recipe's own 90-word ceiling**, so it stresses the length band (open call
+#4) at the same time; a failure here would not be cleanly attributable to style alone. No failure
+occurred, so the length overrun is a null result rather than a confound.
+
+### Anime at 2k-turbo — PASS, and it is the best sheet this card has produced
+
+Crisp cel-shaded line art, layout correct, **one continuous backdrop** (no seams — the seam is a
+quality-path effect, not a resolution one). Everything the phrase asked for is present and
+consistent across all three panels: cropped black techwear jacket with magenta piping, high collar,
+charcoal mesh top, ribbed grey cargo trousers with thigh straps, holstered pistol at the right hip,
+coiled data-cable at the left, fingerless gloves, black boots with pink laces, chrome data-jack
+behind the left ear. **The rear panel shows the printed magenta circuit motif on the jacket back
+and the hair straight, black with vivid pink ends** — the rear reference the sheet exists to
+provide. Pupil catch-lights present.
+
+**And the wave artefact does not appear.** The rear hair is straight under turbo here, where the
+photoreal character's was wavy under the same setting. So the turbo wave defect is not universal —
+it did not survive the move to a stylised recipe.
+
+### Anime at 2k-quality — WORSE, and Fabio called it before the images were read
+
+Line art turns sketchy and rough — concept-sketch quality rather than model-sheet clarity, which is
+the one thing the Anime style block explicitly asks for. **And the rear panel put the character's
+HOOD UP, hiding the hair completely.** For a reference sheet whose whole job is to show the hair
+from behind, that is a functional failure, not a style preference.
+
+**Fabio's verdict, 2026-08-19: anime takes turbo ON.** Non-turbo is a downside here — "the quality
+of the character is not up to par, looks much better with turbo". This is the exact inverse of the
+photoreal verdict, and it is why the rig has to stay a user-facing control rather than a baked
+policy.
+
+### The real axis: turbo LOCKS the character, non-turbo VARIES it
+
+**Fabio's observation, and this session's own runs confirm it.** The photoreal F wording at three
+seeds:
+
+- **turbo** → the same man three times. Same bone structure, same hairline, same build; the seeds
+  barely move him.
+- **non-turbo** → three visibly different men. Different faces, hairlines and builds at the same
+  three seeds.
+
+So the two modes do different jobs:
+
+| | turbo ON | turbo OFF |
+|---|---|---|
+| character across seeds | **locked** — same person | **varied** — real candidate spread |
+| use | you have the character, you want it held | you are still hunting for the face |
+| photoreal rear hair | wavy (artefact) | straight |
+| anime | **crisp, correct** | sketchy, hood up, hair hidden |
+| seams | none | three plates (accepted) |
+| cost at 2k | 85s | 328s |
+
+**This also partly explains the seed-noise result above.** Every wording arm ran under turbo, which
+locks the character — so the prompt had less room to move the image than an unlocked rig would give
+it, and the between-arm deltas were correspondingly small. The noise floor measured a locked model.
+
+### Rig policy (Fabio, 2026-08-19)
+
+- **Realistic → turbo OFF, 2k.**
+- **Stylised (anime, cartoon) → turbo ON.** 2k preferable, 1k simply lower resolution.
+- **Non-turbo stays valid as a VARIATION lever for any style**, not just as a quality setting —
+  it is how a user gets candidate faces to choose between.
+- **Both controls stay exposed to the user regardless**, because low-VRAM users need the choice.

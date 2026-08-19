@@ -10,6 +10,17 @@ prompt) is in [prompts.md](prompts.md). This file is the build.
 
 ## Current State
 
+**2026-08-19, session 3 — the rig questions are CLOSED, the flow is in good shape.** Roughly 30
+generations this session settled three things and produced no code change: the F hair shape is
+adopted into the recipe (v4.1, text-only regression still owed), **the rear-hair defect was the
+test rig rather than the prompt** (turbo, not resolution — 2×2 grid at three seeds), and **turbo vs
+non-turbo is a product axis, not a quality dial**: turbo locks the character across seeds and suits
+the stylised styles, non-turbo varies the character and suits realistic. Anime at 2k-turbo is the
+best sheet the card has produced. The head branch was redesigned by Fabio on the way past: the face
+detection stays as the area SELECTOR, and the mask that gets filled becomes a SAM3 union of `hair` +
+`face` + `hat`. Next is the v4.1 recipe regression, then gate #1 and the head branch. Details in
+validation.md, newest entries last.
+
 **2026-08-19, session 2.** Two graphs exist in `comfy_workflows/raw/`, exported by Fabio from the
 bench editor and **verified offline** (no generation):
 
@@ -172,9 +183,18 @@ Eleven wording arms chased an artefact of the rig. The 1k+turbo rig was right fo
 is what it was picked for — it is simply not valid for texture, which nothing before this grid
 could have told us.
 
-**Fabio's rig decision, 2026-08-19:** realistic characters → **turbo OFF + 2k**; turbo → mainly the
-stylised styles (anime, cartoon); **both controls stay user-facing regardless**, because low-VRAM
-users need the choice. 2k preferable where the card fits. The **seams at 2k-quality are ACCEPTED,
+**Fabio's rig decision, 2026-08-19:** realistic characters → **turbo OFF + 2k**; **stylised (anime,
+cartoon) → turbo ON** — measured, nine runs: anime at 2k-turbo is the best sheet this card has
+produced (and the wave artefact does not appear there at all), while anime at 2k-quality turns
+sketchy AND puts the character's hood up, hiding the hair from behind, which is a functional
+failure for a reference sheet. **Both controls stay user-facing regardless**, because low-VRAM
+users need the choice.
+
+**Turbo LOCKS the character; non-turbo VARIES it.** Fabio's observation, confirmed on this card's
+runs: photoreal F wording at three seeds gives the SAME man under turbo and three visibly DIFFERENT
+men without it. So non-turbo is a **variation lever** — how a user hunts for a face — not just a
+quality setting, and that is a second reason it stays exposed. It also partly explains the small
+between-arm wording deltas: every arm ran under turbo, against a locked character. 2k preferable where the card fits. The **seams at 2k-quality are ACCEPTED,
 not a defect** — the sheet splits into three plates there where turbo keeps one continuous
 backdrop, and Fabio's call is that the sheets still work as a reference, so that spec line is a
 preference rather than a gate. Costs: 1k-turbo 33s · 2k-turbo 85s · 1k-quality ~105s ·
@@ -345,12 +365,33 @@ longer exists, so each resolves to a deletion, not a re-wire:
      R2), and it emits SEGS directly, which is what the ordered filter eats. Fallback if it
      misses the small face: `SAM3_Detect` text `face` → `MaskToSEGS` (the two faces are
      spatially disjoint, so connected components separate them without `individual_masks`).
-   - **Stage 2, face → head.** Grow the picked SEG's bbox, mostly **upward** (hair sits above
-     the face). Then either feed that box to `SAM3_Detect`'s **box** branch for an exact
-     head+hair mask, or crop to it and run SAM3 text `head` on the crop and paste back.
+   - **Stage 2, face → head. REVISED BY FABIO 2026-08-19 — the mask is a UNION OF THREE
+     SEMANTIC MASKS: `hair` + `face` + `hat`.**
+
+     **Stage 1 is unchanged and still required — its output is a SELECTOR, not a mask.** The
+     `face_yolov8n` detection plus the ordered filter still pick WHICH head is being operated on
+     (the front body's, not the portrait's), and that picked region is what tells the pass where
+     to inpaint. SAM3 then detects `hair`, `face` and `hat` to build the mask that is actually
+     filled. So the face SEG selects the AREA; SAM3 produces the SHAPE. An earlier revision of
+     this line implied the face detection was replaced — it is not.
+
+     What is retired is using the face's **grown bbox as the mask itself**, and any box stamped
+     over the head. Fabio's reasons, both from experience rather than theory:
+     - **A face-only mask fails on any character wearing a hat.** Measured on the cowboy-movie
+       work: inpainting a face under a hat required the hat in the mask too, or the edit fought
+       the brim.
+     - **Hair falling over clothing needs a PRECISE hair mask.** The anime character now on the
+       bench has hair over the jacket, so anything coarser takes garment with it.
+     - **Why not just stamp a square on the head:** the inpaint model rewrites everything inside
+       the mask, so a box over the shoulders **destroys the clothing detail it covers and invents
+       new detail in its place** — which breaks the one thing the sheet exists to hold constant.
+     The three names are what SAM3's open-vocabulary text branch takes directly, so this is a
+     three-detection union rather than new machinery — but that mapping is an inference to
+     confirm at the bench, not Fabio's instruction. A character with no hat must degrade to
+     hair+face without the empty detection zeroing the union.
      **Text and box are mutually exclusive on one `SAM3_Detect`** (`docs/masking-sam3.md`), so
-     "head, inside this box" is never one node. Bare `head`, never `head:1` — `:1` detects
-     nothing (the `name:N` trap).
+     "head, inside this box" is never one node. Bare `hair` / `face` / `hat`, never `hair:1` —
+     `:1` detects nothing (the `name:N` trap).
    - `GrowMask` — expand `24` at 2k, `12` at 1k.
    - Klein `klein-4b` inpaint, prompt fixed (prompts.md §3), mask-composited back so the rest
      of the sheet is never re-rendered (Higgsfield: an image never runs through a model twice).
