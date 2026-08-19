@@ -121,13 +121,30 @@ twice is what confuses the model. This REVERSES the v4.1 proposal in prompts.md 
 the rear clause to restate the colour); that proposal stays as the record of what arm B measured,
 unadopted.
 
-Next action: one run — `long straight iron-grey hair worn loose past the shoulders` in the MAIN
-clause, rear clause untouched, seed `504504` held so it compares straight against run 1, B and D.
-Panels agree → description gap, and the recipe rule takes Fabio's single-mention shape. Panels
-still disagree → texture consistency is a model limit, established on evidence. Then gate #1
-(neutral pronouns) and the head branch. After that, gate #1 (neutral pronouns) and the head branch. Open calls 1-5 still
-stand; all need the GPU, and the GPU now needs the lease
-(`mpi-lib/scripts/gpu_lease.py run -- <cmd>`, machine-global, one slot).
+**RAN — arms E and F, 2026-08-19, and the single-mention shape is NEGATIVE.** Arm E (colour and
+texture in the main clause, nothing repeated) put the rear panel at sat `0.181` against the
+control's `0.182` at the same seed — no movement at all. Arm F then ran the one cell nobody had
+tried, the full main clause AND arm B's rear repeat together: `0.165`. So the two *repeating* arms
+(B `0.161`, F `0.165`) are the only two that have ever moved the rear panel, and **Fabio's reading
+is disconfirmed — repetition helps mildly rather than confusing the model.** The v4.1 rear-clause
+repeat in prompts.md §2 is reinstated as the best-measured shape, with arm F its strongest form.
+Reversing his explicit call needs him, so nothing is adopted and `raw/` is untouched.
+
+**Rear-view texture IS a model limit, and now it is established rather than assumed.** `straight`
+has been stated in the main clause, the rear clause, both at once and in the template; the rear
+view came back wavy in all six runs across three seeds, while the portrait renders long straight
+iron-grey hair correctly in the same frame. Effect size of any wording is ~0.02 saturation against
+a rear-to-portrait gap of ~0.05-0.07 — the best arm narrows the disagreement, nothing closes it.
+Revisit at the 10/10 stress test, where it either survives contact with real shots or does not.
+
+Next action: **Fabio's call on the hair rule** (adopt arm F's shape, or accept the mismatch and
+move on), then gate #1 (neutral pronouns) and the head branch. Open calls 1-5 still stand; all need
+the GPU, and the GPU now needs the lease (`mpi-lib/scripts/gpu_lease.py run -- <cmd>`,
+machine-global, one slot).
+
+Recorded in validation.md and not to be lost again: **the character phrases of all six arms,
+verbatim.** This session had to rebuild the four earlier ones from the bench's `/history` because
+only their outcomes were ever written down, and that history dies on a bench restart.
 
 ## The flow
 

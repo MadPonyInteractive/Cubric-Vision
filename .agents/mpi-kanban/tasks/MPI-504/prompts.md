@@ -220,15 +220,17 @@ call at the review step, not a check.
 Runner: `scratchpad/enhancer-regression2.mjs <sysprompt file> <use_default_template> <label>`,
 copied into the research file.
 
-### Hair — name it ONCE, in full (Fabio, 2026-08-19). SUPERSEDES the v4.1 proposal below
+### Hair — name it ONCE, in full (Fabio, 2026-08-19). RAN AND DISCONFIRMED — the v4.1 proposal below stands
 
-**The shape to test and, if it holds, to adopt:** the main hair clause carries the whole description — colour AND texture together, e.g. `long straight iron-grey hair worn loose past the shoulders` — and the rear clause names only how it falls or is tied at the back, repeating no attribute. Fabio's reasoning: saying the same thing twice is the likelier source of the confusion.
+**The shape tested:** the main hair clause carries the whole description — colour AND texture together, `long straight iron-grey hair worn loose past the shoulders` — and the rear clause names only how it falls, repeating no attribute. Fabio's reasoning: saying the same thing twice is the likelier source of the confusion.
 
-**This reverses the direction of the amendment written below**, which asked the rear clause to restate the colour. Keep that text as the record of what was measured — it is real evidence, arm B did improve by repeating — but do not adopt it without running the single-reference arm first; the two readings predict different outcomes and one run separates them.
+**Measured 2026-08-19 (arms E and F, validation.md), and it does not hold.** Removing the repeat changed nothing — arm E's rear panel sits on the control to three decimals. The two arms that DO repeat are the only two that ever moved the rear panel (B `0.161`, F `0.165` against a `0.181`-`0.184` control band). Repetition is mildly helpful, not harmful.
 
-**Also corrected:** the claim that hair TEXTURE does not respond to wording was never established. The character phrase never asked for a texture at all, so the wavy back view violated no instruction; the defect is that the panels disagree. See validation.md, the correction entry.
+**So the amendment below is reinstated as the best-measured shape**, and arm F is its strongest form: name the hair in full in the main clause AND repeat colour and texture in the rear clause. **Not adopted — this reverses Fabio's explicit call and needs his go.**
 
-### Rear clause — restate the hair COLOUR, measured 2026-08-19 (v4.1 proposal, SUPERSEDED above)
+**Also corrected, then re-established:** the claim that hair TEXTURE does not respond to wording was withdrawn as premature, and arms E and F have now supplied the evidence it lacked. `straight` has been stated in the main clause, the rear clause, both at once and in the template; the rear view came back wavy in all six runs across three seeds, while the portrait renders it straight correctly in the same image. **Rear-view texture is a model limit.** Wording buys ~0.02 saturation against a ~0.05-0.07 rear-to-portrait gap: the best arm narrows the disagreement, nothing closes it.
+
+### Rear clause — restate the hair COLOUR, measured 2026-08-19 (v4.1 — REINSTATED, see above)
 
 Rule 4 currently asks for *"how the hair falls or is tied at the back"*. Measured on the sheet,
 that is not enough: with the rear clause naming only how the hair falls, Krea2 rendered the back
@@ -244,9 +246,11 @@ Proposed amendment to rule 4, appended to its existing sentence:
 Two things this does NOT fix, both measured:
 
 - **Hair texture.** An arm that said `the same straight iron-grey hair` in the REAR clause still
-  returned wavy hair at the back. This was first written up as "texture does not respond to
-  wording" — **withdrawn**: the main hair clause named no texture at all, so the attribute was
-  never stated where every panel reads it. Untested, not a limitation.
+  returned wavy hair at the back. That was first written up as "texture does not respond to
+  wording", withdrawn as premature (the main clause named no texture, so the attribute was never
+  stated where every panel reads it) — and then **re-established on evidence** by arms E and F,
+  which stated it in the main clause and in both clauses at once. Wavy in all six runs, three
+  seeds. It is a limitation, and now a measured one.
 - **A template-side instruction.** Naming the invariant in the sheet template's global identity
   clause (`identical hair colour, hair length and hair texture in all three views`) did nothing at
   all — arm D, validation.md. The words have to be in the character phrase.

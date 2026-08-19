@@ -54,11 +54,18 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       texture stayed wavy). Colour responds, texture does not. Next: name colour AND texture in
       the TEMPLATE's global identity clause — RAN, NEGATIVE (arm D: no better than control).
       Settled: the knob is the character phrase's rear clause, so the fix is recipe payload and
-      the template stays as written. Texture never responded to any wording = known v1 limit
-- [ ] **Hair named ONCE, in full** (Fabio's call, supersedes the v4.1 rear-clause repeat): one run,
-      `long straight iron-grey hair worn loose past the shoulders` in the MAIN clause, rear clause
-      untouched, seed 504504 held. Settles whether panel disagreement is a description gap or a
-      model limit — the "texture is a limitation" claim was withdrawn as never established
+      the template stays as written
+- [x] **Hair named ONCE, in full** (Fabio's call) — RAN, **NEGATIVE**. Arm E put colour and texture
+      in the MAIN clause with no repeat: rear sat `0.181` against the control's `0.182` at the same
+      seed. Arm F then ran the untested cell (main clause in full AND arm B's rear repeat): `0.165`,
+      i.e. the two repeating arms (B `0.161`, F `0.165`) are the only two that ever moved.
+      **Fabio's "saying it twice confuses it" reading is disconfirmed** — repetition helps mildly.
+      Reversing his call needs him, so nothing is adopted
+- [x] **Rear-view texture IS a model limit — now established, not assumed.** `straight` has been
+      stated in the main clause, the rear clause, both at once and in the template; the rear view
+      came back wavy in all six runs across three seeds, while the portrait renders straight
+      iron-grey hair correctly in the same image. Effect size of any wording is ~0.02 saturation
+      against a ~0.05-0.07 rear-to-portrait gap: the best arm narrows it, nothing closes it
 - [ ] Gate #1: neutral-pronoun A/B against Fabio's original wording, same seed
 - [ ] Head branch: face detect → `ImpactSEGSOrderedFilter` area ascending take 1 → bbox grown
       upward → head mask → grow 24 @ 2k. Confirm `face_yolov8n` sees the small face at 1k

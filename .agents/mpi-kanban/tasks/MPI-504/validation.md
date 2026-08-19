@@ -227,3 +227,78 @@ clause, the rear clause left exactly as it was (no colour, no texture), seed `50
 compares against run 1, B and D directly. If the panels agree, this was a description gap and the
 recipe rule follows Fabio's shape. If they still disagree, texture consistency is a model limit —
 and *then* it is established, on evidence rather than by assumption.
+
+## 2026-08-19 · arms E and F — the single-mention arm is NEGATIVE, and the repeat is reinstated
+
+**Ran:** two generations under the GPU lease, both 1280×768, turbo ON, Photoreal, seed `504504`
+held, every node byte-identical to run 1 except `112 Input_Positive` (asserted in the builder, not
+assumed). Arm E `129315bb`, 45.1s, `execution_cached []`. Arm F `6c9f5c5b`, 36.1s, cached only the
+loaders and constants — no sampler or encoder node in that list, so it executed fresh.
+
+- **Arm E — the single full mention, Fabio's shape.** Main clause `long straight iron-grey hair
+  worn loose past the shoulders`; rear clause left exactly as run 1, repeating nothing.
+- **Arm F — the untested cell.** Arm E's main clause AND arm B's rear repeat together
+  (`with the same straight iron-grey hair falling between the shoulder blades`). B repeated colour
+  with no texture in the main clause; E stated both with no repeat; the combination had never run,
+  and it is the cell that decides whether "model limit" is established or merely asserted.
+
+**Result: the rear panel is brown and wavy in all six runs.** No wording position has ever produced
+a rear view that agrees with the other two panels.
+
+| arm | where the hair words went | seed | rear sat | rear lum | portrait sat |
+|---|---|---|---|---|---|
+| run 1 | control — colour in the main clause only | `504504` | 0.182 | 61.3 | 0.110 |
+| **B** | + rear clause repeats colour | `504504` | **0.161** | 64.0 | 0.116 |
+| C | control wording, fresh seed | `777001` | 0.244 | 66.2 | 0.122 |
+| D | template's global identity clause | `504504` | 0.184 | 60.9 | 0.117 |
+| **E** | colour + texture, main clause ONLY | `504504` | 0.181 | 65.3 | 0.121 |
+| **F** | colour + texture in main clause + rear repeat | `504504` | **0.165** | 66.7 | 0.130 |
+
+**What this settles, and it reverses Fabio's reading.** Removing the repeat changed nothing — arm E
+sits on the control to three decimals. The two arms that *repeat* (B `0.161`, F `0.165`) are the
+two lowest rear saturations, and they are the only two that ever moved. So "saying it twice is what
+confuses the model" is **disconfirmed**: repetition is mildly helpful, not harmful. The v4.1
+rear-clause repeat in prompts.md §2 goes back to being the best-measured shape.
+
+**And texture is now a real finding rather than an assumption.** `straight` has been stated in the
+main clause (E), the rear clause (B), both at once (F) and in the template (D). The rear view came
+back wavy every time, across three seeds. The portrait renders long straight iron-grey hair
+correctly in the same image, so this is not a prompt the model cannot parse — it is the rear view
+specifically not inheriting it. **That is the claim the earlier withdrawal was waiting for, and it
+is now supported: six runs, four wording positions, three seeds.**
+
+**Honest limits on that.** The effect size the wording does buy is small — the whole spread across
+six arms is ~0.02 saturation, against a rear-to-portrait gap of ~0.05-0.07 in every arm. Nothing
+tested closes the gap; the best arm narrows it. And this is one character, one wardrobe, at 1k
+turbo. A different character with a more distinctive hairstyle has not been tried.
+
+**A measurement mistake worth recording, because it produced a confident backwards number.** The
+first metric sampled the darkest 30% of a head box — that is *shadow*, not hair, and it reported
+the grey front-body hair as more saturated (0.386) than the brown rear hair (0.283), which is the
+wrong way round. The numbers above come from hand-picked hair-only boxes restricted to mid-tone
+pixels (luminance 45-170), so shadow cores and highlights are both excluded. The front-body head is
+only ~70 px tall and its box catches collar and skin at some seeds, so **front-body numbers are not
+trustworthy at this resolution** — the rear-vs-portrait comparison is the one carrying the weight,
+and both are large clean hair regions (2 600-5 500 sampled pixels).
+
+**The character phrases, recorded verbatim so no future arm has to recover them from `/history`.**
+This session had to reconstruct all four earlier arms from the bench's history because only their
+*outcomes* were ever written down — and history dies on a bench restart.
+
+- Control (run 1, C, D): `a broad-shouldered man in his late fifties, weathered sun-darkened skin,
+  deep lines around narrow brown eyes, long iron-grey hair worn loose past the shoulders,
+  clean-shaven, a pale scar across the left cheekbone, wearing a fringed buckskin coat over a faded
+  red trade shirt, dark wool trousers and knee-high moccasins, a wide leather belt with a brass
+  buckle and a sheathed knife at the right hip, the coat hanging plain across the back with the
+  hair falling between the shoulder blades`
+- Arm B: control, with the tail replaced by `…with the same straight iron-grey hair falling between
+  the shoulder blades`
+- Arm E: control, with `long iron-grey hair` → `long straight iron-grey hair`
+- Arm F: both of the above at once
+
+**Everything else held on both arms:** layout, one continuous backdrop, wardrobe, the knife at the
+right hip, the scar on the left cheekbone, catch-light in both pupils.
+
+**Needs Fabio, because it reverses his call:** the recipe's hair rule. The evidence says name the
+hair in full in the main clause **and** repeat it in the rear clause (arm F's shape); his call was
+to name it once. Recorded, not adopted — the sheet template and `raw/` are untouched.

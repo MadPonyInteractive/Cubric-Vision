@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "cbf47af6-60a6-4790-899a-cceed36f2c59",
   "generated_at": "2026-08-19T13:20:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-504 Character Sheet - sheet prompt wired into the graph and proven live; four sheets generated; the hair thread measured, then corrected",
     "branch": "master"
@@ -68,5 +68,9 @@
       ".agents/mpi-kanban/tasks/MPI-504/prompts.md"
     ]
   },
-  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/cbf47af6-60a6-4790-899a-cceed36f2c59.json first, then plan.md, validation.md and prompts.md in .agents/mpi-kanban/tasks/MPI-504/. The card is in doing. The sheet prompt is WIRED into comfy_workflows/raw/krea2_t2i_only.json (62 nodes, 77 links: four recipe templates behind an MpiAnySwitch on Input_Recipe, a StringReplace putting Input_Positive verbatim into the [CHARACTER PROMPT] hole, and a PreviewAny titled Output_prompt on the assembled result) and it is PROVEN LIVE - four generations at 1280x768 turbo ON, layout correct in every one, Output_prompt returning the assembled prompt as node text. The open thread is the rear panel's hair, which drifts from the other two views: it is systematic across seeds, it improved when the character phrase's rear clause named the colour, and it was unmoved by a template-side identity clause. Fabio has called the direction - name the hair ONCE, in full, in the main clause - and an earlier note claiming hair texture cannot be steered by wording has been WITHDRAWN as never established. Next is one run of that single-mention arm at held seed 504504. raw/ is user-owned so any further graph edit needs Fabio's go, and the GPU now needs the lease wrapper (gpu_lease.py run -- <cmd>, machine-global, one slot)."
+  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/cbf47af6-60a6-4790-899a-cceed36f2c59.json first, then plan.md, validation.md and prompts.md in .agents/mpi-kanban/tasks/MPI-504/. The card is in doing. The sheet prompt is WIRED into comfy_workflows/raw/krea2_t2i_only.json (62 nodes, 77 links: four recipe templates behind an MpiAnySwitch on Input_Recipe, a StringReplace putting Input_Positive verbatim into the [CHARACTER PROMPT] hole, and a PreviewAny titled Output_prompt on the assembled result) and it is PROVEN LIVE - four generations at 1280x768 turbo ON, layout correct in every one, Output_prompt returning the assembled prompt as node text. The open thread is the rear panel's hair, which drifts from the other two views: it is systematic across seeds, it improved when the character phrase's rear clause named the colour, and it was unmoved by a template-side identity clause. Fabio has called the direction - name the hair ONCE, in full, in the main clause - and an earlier note claiming hair texture cannot be steered by wording has been WITHDRAWN as never established. Next is one run of that single-mention arm at held seed 504504. raw/ is user-owned so any further graph edit needs Fabio's go, and the GPU now needs the lease wrapper (gpu_lease.py run -- <cmd>, machine-global, one slot).",
+  "resolution": {
+    "at": "2026-08-19T12:01:05Z",
+    "note": "Next action ran. Arm E (single full mention in the main clause) is NEGATIVE - rear sat 0.181 vs the control 0.182 at the same seed - and arm F, the untested main-clause-plus-rear-repeat cell, came in at 0.165, so the two repeating arms are the only two that ever moved the rear panel. Fabio reading is disconfirmed and the v4.1 rear repeat is reinstated as best-measured but NOT adopted, since reversing his explicit call needs him. Rear-view texture is now an established model limit: wavy in all six runs, three seeds, four wording positions. Detail in validation.md."
+  }
 }
