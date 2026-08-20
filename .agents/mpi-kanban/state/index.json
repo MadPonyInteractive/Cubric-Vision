@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-20T12:35:21Z",
+  "updated_at": "2026-08-20T12:51:52Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -24,19 +24,7 @@
       "heartbeat_at": "2026-08-20T05:35:00Z"
     }
   ],
-  "open_messages": [
-    {
-      "id": "ddac93e1-110c-444d-9ee4-a838f70edb44",
-      "path": ".agents/mpi-kanban/state/messages/ddac93e1-110c-444d-9ee4-a838f70edb44.json",
-      "status": "open",
-      "to": {
-        "selector": "task",
-        "value": "MPI-585"
-      },
-      "subject": "character-sheet declares NO `result.compare`, on your own omission rule",
-      "updated_at": "2026-08-20T09:20:00Z"
-    }
-  ],
+  "open_messages": [],
   "active_handoffs": [
     {
       "id": "0ec5f9fe-d66e-44c6-8587-c4e47b4c325d",

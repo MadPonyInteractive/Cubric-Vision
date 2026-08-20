@@ -38,8 +38,12 @@ Gallery → (dev-gated) Ctrl+Tab dev radial "Flows" | Landing "Flows" nav → fl
 
 ## The result pane: `result.compare` (MPI-585)
 
-A flow that **improves media the user supplied** declares its before/after instead of coding
-one:
+**A comparison belongs to a flow that CHANGES ITS INPUT, and to no other kind** (Fabio,
+2026-08-20). That is the whole test, and it is a positive one — not "does this flow take an
+input", but "does the output modify one". Of the flows shipped today only `ltx-upscale` and
+`head-swap` pass it.
+
+Such a flow declares its before/after instead of coding one:
 
 ```js
 inputSchema: { media: [{ type: 'video', mode: 'upto', max: 1, roles: ['inputVideo'], … }] },
@@ -59,9 +63,16 @@ Head Swap takes two images but compares against `image1`, the plate it keeps —
 donates a head and shares no framing, so a bar between them would show two unrelated pictures.
 
 **Omit it when a comparison would say nothing.** Foley returns the same pixels; an extend's
-output is LONGER than its source, so a reveal bar between them compares two different moments.
-Both omissions are pinned by `tests/flow-result-compare.test.cjs` so a later "every flow should
-have one" sweep has to argue with a test. This is a per-flow judgement, not a default.
+output is LONGER than its source, so a reveal bar between them compares two different moments;
+the character sheet takes a description and no input media at all, so the bar's left half would
+be empty. All three omissions are pinned by `tests/flow-result-compare.test.cjs` so a later
+"every flow should have one" sweep has to argue with a test.
+
+The character sheet is the case worth remembering, because it was nearly decided the other way:
+an earlier note read "upscale, head swap AND the character sheet get it", and the flow that
+would have been given one has no BEFORE to reveal against. Fabio settled it on 2026-08-20 —
+**no input to change means no comparison.** Adding one where it misleads is worse than leaving
+it off.
 
 The frame falls back to the plain element by itself when the named media is gone (a Reuse across
 a restart), when the run produced several outputs (there is no single "after"), or when the pair

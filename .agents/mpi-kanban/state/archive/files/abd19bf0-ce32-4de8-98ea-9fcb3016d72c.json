@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "abd19bf0-ce32-4de8-98ea-9fcb3016d72c",
+  "paths": [
+    "tests/flow-result-compare.test.cjs",
+    "docs/playbooks/add-flow/04-overlay-and-shell.md"
+  ],
+  "status": "complete",
+  "claim_kind": "write",
+  "task_card": "MPI-585",
+  "owner_session": ".agents/mpi-kanban/state/sessions/45a29ed9-e930-4996-aa17-e605a4438c72.json",
+  "heartbeat_at": "2026-08-20T12:50:19Z",
+  "note": "Fabio's 2026-08-20 ruling: a comparison belongs to a flow that CHANGES ITS INPUT and to no other kind. Pinning character-sheet as a deliberate omission and stating the positive test in the playbook.",
+  "released_at": "2026-08-20T12:51:52Z"
+}

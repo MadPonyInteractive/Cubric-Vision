@@ -108,11 +108,18 @@ test('a video control bar the user cannot see does not answer the keyboard', () 
 });
 
 test('the flows that deliberately DECLINE a comparison still do', async () => {
-    // Not bookkeeping: both are cases where a reveal bar actively misleads, so a
+    // Not bookkeeping: each is a case where a reveal bar actively misleads, so a
     // future "every flow should have one" sweep has to argue with this test first.
     // ltx-extend's output is LONGER than its source (the bar would compare two
-    // different moments); ltx-foley returns the same pixels and only adds audio.
-    for (const id of ['ltx-extend', 'ltx-foley']) {
+    // different moments); ltx-foley returns the same pixels and only adds audio;
+    // character-sheet takes a description and no input media at all, so the bar's
+    // left half would be empty.
+    //
+    // Fabio's ruling, 2026-08-20, which supersedes the earlier "upscale, head swap
+    // AND the character sheet get it": a comparison belongs to a flow that CHANGES
+    // ITS INPUT, and to no other kind. That is the positive test — not "does this
+    // flow have an input", but "does the output modify one".
+    for (const id of ['ltx-extend', 'ltx-foley', 'character-sheet']) {
         const flow = (await flows()).find(f => f.id === id);
         assert.ok(flow, `${id} flow must exist`);
         assert.strictEqual(
