@@ -61,7 +61,7 @@
       "ASK BEFORE USING THE GPU. Fabio runs the bench (8188) WITHOUT taking the mpi-kanban lease, so a free lease is NOT evidence the GPU is free. Nothing this session needed it; the graphics may.",
       "A desktop spec CANNOT click or fill inside a Flow overlay with no project open - the landing page hides main-area, so synthetic gestures time out with 'element is not visible'. Drive the real handler in-page instead; locator ASSERTIONS read hidden elements fine. Slide 0 is ALWAYS the inputs slide, so a declared `fields` step is slide 1. Written up in docs/testing.md.",
       "The heredoc/backslash guards are real: Git Bash halves backslashes and mangles heredocs, and the guard-shell hook blocks both. Write a script with the Write tool and run it by path.",
-      "The repo carries pre-existing bare-form-control lint debt OUTSIDE this card - 29 warnings across MpiQueuePanel, MpiSlideOver, MpiPromptBox and MpiToolOptionsPrompt. Untouched here and uncarded. Any commit touching one of those files hits the same wall MpiBaseFlow.js just did."
+      "The repo carries pre-existing bare-form-control lint debt OUTSIDE this card - 29 warnings across 13 files (MpiMediaPicker 6, MpiEngineInstall 4, MpiPromptBox 4, MpiModelManager 3, then nine more). CARDED AS MPI-588 on 2026-08-20. Any commit touching one of those files hits the same wall MpiBaseFlow.js did, because pre-commit runs eslint --max-warnings=0 over staged js/**/*.js. f28825ee is the worked example of clearing one."
     ],
     "files_to_read_first": [
       ".agents/mpi-kanban/tasks/MPI-504/plan.md",
@@ -71,5 +71,5 @@
     ]
   },
   "resume_prompt": "Resuming MPI-504 in Cubric Vision (c:/AI/Mpi/Cubric-Vision, master). Read .agents/mpi-kanban/state/handoffs/30b5a47a-dde7-4cf6-8c42-caeb68d37664.json first. THE WORK IS DONE, VERIFIED AND COMMITTED (f28825ee) - the commit that earlier handoffs describe as blocked has LANDED, and the blocker (five pre-existing bare <button>s in MpiBaseFlow.js) was fixed at the root: they are ghost MpiButtons now, the pre-commit hook passes with no --no-verify, and #flow-prev / #flow-next still answer .click(). Do NOT re-do any of that, and do NOT re-open the Enhance fix, the toggle change or the LoRA wiring. The ONE thing left on this card is the graphics, which Fabio wants done as ONE session across TWO cards: /mpi-flow-graphics for MPI-504 (flow-character-sheet.webp + hero clip) AND for MPI-584 (flow-ltx-upscale.webp + .mp4). The throwaway project \"MPI-504 sheet verify\" in his real Projects folder is KEPT ON PURPOSE as graphics source. Check whether f28825ee has been pushed before doing anything that assumes it has. Do NOT re-run mpi-end-session's knowledge passes; they all ran.",
-  "updated_at": "2026-08-20T12:37:45Z"
+  "updated_at": "2026-08-20T12:57:34Z"
 }

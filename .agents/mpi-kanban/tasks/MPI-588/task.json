@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-588",
+  "title": "Clear the bare-form-control lint debt — 29 warnings across 13 files",
+  "description": "MPI-582 added the `mpi/no-bare-form-control` ESLint rule but cleared only the files it touched. 29 warnings remain across 13 files. Because the pre-commit hook runs `eslint --max-warnings=0` over staged `js/**/*.js`, EVERY ONE of these files is a commit landmine: any change to it is rejected on warnings the author did not write. MPI-504 hit this on MpiBaseFlow.js and lost a session to it.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-20T12:57:12Z",
+  "updated_at": "2026-08-20T12:57:12Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
