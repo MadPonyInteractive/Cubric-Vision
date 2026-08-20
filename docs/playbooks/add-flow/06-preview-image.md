@@ -25,13 +25,15 @@ instant read, and a grid of autoplaying clips is noise.
 
 ## `preview` — the 4/5 still
 
-- **896 × 1120** (or 512 × 640). `.webp` q≈82, **100–250 KB**.
+- **896 × 1120** (or 512 × 640). `.webp` q≈90, **≤ 250 KB** (the shipped pair are
+  47 KB and 79 KB — quality first, the number is a ceiling not a target).
 - Must read at **~220 px wide** — the grid is `repeat(auto-fill, minmax(220px, 1fr))`.
   Fine detail, thin type and two-panel diptychs die at that size.
 - Tiles render **desaturated and dimmed** until hover. Compose with contrast to spare.
 - Keep anything load-bearing out of the outer 10% on every edge.
-- **A simple, immediate statement of the flow.** One subject, one idea. This is not
-  where the transformation gets explained — that is the hero's job.
+- **One subject, one idea, read in a glance.** A still CAN carry the transformation
+  when it is the right *instant* of it — Head Swap's tile is its hero's wipe frozen
+  where the seam bisects the face — but it must never need a second look.
 - Name it for the flow, not the model: `flow-head-swap.webp`.
 
 ## `video` — the hero loop
@@ -58,26 +60,31 @@ one. Pick the device by what actually changes:
 
 | The flow changes… | Device | Example |
 |---|---|---|
-| The **content of the frame** | Real before → after, wiped or dissolved, with the seam visible | **Head Swap** — the two source images, then the result |
+| The **content of the frame** | Real before → after, wiped with the seam visible | **Head Swap** (shipped) — one plate wipes to the other, only the head changes |
 | The **length or motion** | Play the original, mark where it ended, let the extension run past the mark | **Extend Video** — a progress rail that keeps going |
-| Something **not visible at all** | Animate the channel that changed, over an unchanged frame | **Add Foley** — the frame plays untouched while a waveform draws itself in sync, impact by impact |
+| Something **not visible at all** | Animate the channel that changed, over an unchanged frame | **Add Foley** (shipped) — the picture plays untouched while the waveform draws itself in sync, impact by impact |
 
-**The rule behind the third row:** when the output looks identical to the input,
-a before/after is a lie — two identical panels. Show the *added channel* instead.
-For audio that means a waveform, a level meter, or beat markers landing on the
-events that made the sound. It is the only honest device, and because the hero is
-muted it is also the only one that communicates anything at all.
+Two rules the shipped pair proved:
 
-Real before/after material is the strongest input where it exists, so use it —
-just do not force it onto a flow whose change is invisible.
+- **A before/after wipe needs plates from ONE run.** Head Swap's two plates are
+  pixel-identical outside the head (check with an ffmpeg `blend=all_mode=difference`
+  before building), so the scene holds rock-steady and the eye goes straight to
+  what changed. Plates from two different generations make everything shimmer and
+  the device collapses into noise.
+- **Punch in until the change is legible at 446 px.** Head Swap full-frame left the
+  head ~45 px and read as "nothing happened"; a head-and-shoulders crop made it
+  obvious. Model output is often 1344 × 768 with no higher-res original, so expect
+  a ~2× upscale — acceptable on a shallow-DOF plate, and far better than an
+  unreadable hero. Check the crop as a still at 446 px BEFORE building the video.
 
-Rules for all three:
-
+- **When the output looks identical to the input, a before/after is a lie** — two
+  identical panels. Show the *added channel*: a waveform, a level meter, beat
+  markers on the events that made the sound. Because the hero is muted, that is
+  the only device that communicates anything at all. Real before/after material is
+  the strongest input where it exists — just never force it onto an invisible change.
 - **Accent marks use the app tokens** from `styles/01_base.css`: `--accent-heat`
   `oklch(0.76 0.17 355)`, `--accent-frost` `oklch(0.82 0.13 220)`. Never invent a colour.
-- **Loop seamlessly** — first and last frame must match, or the restart reads as a glitch.
-- **No baked UI.** A screenshot of the app inside the hero ages the moment the UI moves.
-- **Legible at 460 px.** Any type in the loop is small type.
+- **Loop seamlessly**, keep any type large, and bake **no app UI** into the frame.
 
 ## Making them
 
@@ -111,47 +118,75 @@ await sharp('plate.png')
 `position: 'attention'` crops toward the salient region instead of the centre.
 Read `~/.claude/memory/tools/sharp.md` before any mask or `joinChannel` work.
 
-### 3. The hero loop — HyperFrames
+**Run it from the repo, not the scratchpad** — `sharp` resolves against the
+script's own location, so a scratchpad script dies with `ERR_MODULE_NOT_FOUND`
+for a package that is installed. `node -e '…'` from the repo root is the shortest
+form that works.
 
-**This is what HyperFrames is for**, and where it beats every lighter option: an
-HTML composition with a real GSAP timeline, brand fonts, and an MP4 out. Tool at
-`C:/AI/Mpi/video-tool`; the authoring contract — root element, `data-duration`,
-`class="clip"`, the timeline registration, and the gotchas that cost time — is
-`MadPony-Identity/playbooks/hyperframes-authoring.md`. **Read it before authoring**,
-and note two deltas for a hero:
+Where the tile and hero share a subject, **derive one from the other** rather than
+composing twice: the Head Swap tile is its hero's wipe frozen where the seam
+bisects the face, and the Add Foley tile is the hero's band with the waveform
+fully drawn. One asset, one language, half the work.
 
-- Its scaffold assumes **1080 × 1920** (9:16 shorts). A hero is **1280 × 800** or
-  **1280 × 720** — set `data-width` / `data-height` on `#root` and the matching
-  explicit `width` / `height` in CSS, or the root collapses silently.
-- Render **silent** (include no `<audio>` element), which is what we want anyway.
+### 3. The hero loop — ffmpeg first
 
-`hyperframes remove-background` cuts a subject to a transparent PNG — useful for
-floating a head or a subject over a graphic plate in the before/after device.
+**ffmpeg alone built both shipped heroes.** A hero driven by *plates and data* — a
+before/after wipe, a waveform, a playhead, a progress rail — needs no HTML, no
+GSAP and no scaffold. There is **no ffmpeg on PATH here**; use `video-tool`'s
+(`C:/AI/Mpi/video-tool/node_modules/ffmpeg-static/ffmpeg.exe`, `ffprobe-static`
+beside it). There is no `bc` on this box either — precompute derived numbers.
 
-Then transcode to the budget and verify the loop:
+**Before/after wipe** (Head Swap). `xfade` does the transition; the seam is a
+separate overlay so it stays visible:
 
 ```bash
-ffmpeg -i renders/hero.mp4 -c:v libx264 -crf 26 -preset slow -an \
-       -vf scale=1280:-2 -movflags +faststart comfy_workflows/display/flow-head-swap.mp4
+"$FF" -y -loop 1 -t 4 -r 24 -i before.png -loop 1 -t 4 -r 24 -i after.png \
+  -f lavfi -t 5 -i "color=c=0xFF5FA2:s=3x720:r=24" -filter_complex "
+[0:v]${CROP},format=yuv420p[a]; [1:v]${CROP},format=yuv420p[b];
+[a][b]xfade=transition=wiperight:duration=3:offset=1[x];
+[x][2:v]overlay=x='1280*(t-1)/3':y=0:eval=frame[out]" -map "[out]" -an …
 ```
 
-There is **no ffmpeg on PATH here** — use the one in `video-tool`
-(`node_modules/ffmpeg-static/ffmpeg.exe`).
+**A channel drawing itself in sync** (Add Foley). `showwavespic` for the shape,
+an opaque cover sliding right to reveal it, its leading edge carrying the playhead:
 
-Simpler heroes that are just a cut between two stills do not need HyperFrames;
-ffmpeg alone will do it. Escalate only when the loop wants real animated graphics.
+```bash
+[0:a]volume=14dB,showwavespic=s=1280x64:colors=0xFF5FA2:scale=sqrt:filter=peak:draw=full[wave];
+[band][cover]overlay=x='1280*t/5.042':y=0:eval=frame[drawn]
+```
+
+Three things here each cost a rebuild, and none of them error:
+
+- **`drawbox` does NOT animate its `w`/`h` expressions** in this build. A reveal
+  built that way renders the FULL waveform from frame 1 and looks like it worked.
+  `overlay`'s `x` IS per-frame (`eval=frame`) — build reveals as a sliding cover.
+- **The cover must be OPAQUE.** A translucent one still shows the un-played
+  waveform through it, which kills the device entirely.
+- **`showwavespic` renders flat without gain and a non-linear scale.** Foley sits
+  around −42 dB mean, so a linear waveform is invisible. `volume=14dB` +
+  `scale=sqrt:filter=peak:draw=full` is the proven recipe. And its background is
+  transparent — a white waveform on it reads as a blank image.
+
+**HyperFrames is for a hero made of TYPE and GRAPHICS**, not plates and data: real
+brand fonts, a GSAP timeline, designed motion. Tool at `C:/AI/Mpi/video-tool`;
+authoring contract in `MadPony-Identity/playbooks/hyperframes-authoring.md` — read
+it first, and note its scaffold assumes 1080 × 1920, so a hero must set
+`data-width`/`data-height` on `#root` **and** matching explicit CSS or the root
+collapses silently. `hyperframes remove-background` cuts a subject to a
+transparent PNG, useful for floating one over a plate whichever tool draws it.
 
 ## Checklist
 
-- [ ] `preview`: 4/5, 896×1120 (or 512×640), `.webp`, 100–250 KB
-- [ ] Reads at **220 px** — the flow is identifiable at tile size
+- [ ] `preview`: 4/5, 896×1120 (or 512×640), `.webp` q≈90, ≤ 250 KB
+- [ ] Rendered at **220 px** and checked there — the flow is identifiable at tile size
 - [ ] Nothing load-bearing in the outer 10%
 - [ ] Distinct from every other flow's still (two flows on one model must not share one)
 - [ ] `video`: 8:5 or 16:9, 1280 wide, `.mp4` H.264, **≤ 2 MB**, 4–8 s, loops seamlessly
 - [ ] Hero device matches what actually changes — invisible change → animate the channel, never a fake before/after
-- [ ] Hero verified **muted** (it always is) and legible at 460 px
+- [ ] Rendered at **446 px** and checked there — the change reads without a second look
 - [ ] Accent marks use `--accent-heat` / `--accent-frost`
 - [ ] Both fields set in `flowsRegistry.js`, placeholder comment deleted
+- [ ] Both assets return **200 with the right byte count** from a running instance
 
 ## Traps
 
@@ -161,7 +196,12 @@ ffmpeg alone will do it. Escalate only when the loop wants real animated graphic
 | Composing the still for the hero | The hero is uncropped, the tile is 4/5 `cover` — off-ratio art gets centre-cropped with no warning anywhere |
 | A before/after on an audio-only flow | Two identical panels. Animate the added channel instead |
 | Expecting the hero to be heard | Autoplay demands `muted`. Audio must be drawn |
-| Reusing a model preview | It is the current state of all three flows, and it makes two of them one card |
+| Reusing a model preview | How Head Swap ended up wearing a lingerie portrait, and how Extend Video and Add Foley ended up as the same card |
+| `drawbox` with an animated `w` | It does not animate in this ffmpeg build, renders the full graphic from frame 1, and exits 0 — the reveal looks built and is not. Use `overlay`'s `x` with `eval=frame` |
+| A translucent reveal cover | The un-played half shows straight through it. Opaque, in the band's own ground colour |
+| Judging a hero from a contact sheet | Everything reads at 620 px. Render at **446 px** — the real hero width — before believing it |
+| Running the `sharp` snippet from the scratchpad | `ERR_MODULE_NOT_FOUND` for an installed package; it resolves from the script's own location. Run from the repo root |
+| Before/after plates from two different runs | Everything shimmers, not just the head, and the device collapses. Diff them first |
 | Forgetting the idle filter | Tiles render at `saturate(.92) brightness(.92)`; art that is just contrasty enough in isolation reads flat in the grid |
 | Generating into `:3000` | That is normally the user's live session |
 | A GIF | An order of magnitude larger than the same clip as H.264, and it bands on the dark UI |
