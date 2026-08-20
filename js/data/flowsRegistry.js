@@ -567,6 +567,7 @@ export const FLOWS = [
         id: 'character-sheet',
         title: 'Character Sheet',
         preview: 'flow-character-sheet.webp',
+        video: 'flow-character-sheet.mp4',
         description: 'Describe a character and get a reference sheet back: a large three-quarter portrait, plus full-body front and back views, on a plain grey studio backdrop. Built to be fed to a video model, so the front body comes back headless — that leaves the portrait as the only place a face can come from.',
         requiredModels: ['krea2', 'klein-4b'],
         operation: 'flowCharacterSheet',

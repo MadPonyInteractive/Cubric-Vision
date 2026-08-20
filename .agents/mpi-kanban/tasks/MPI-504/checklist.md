@@ -221,9 +221,28 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       weight 400, disabled arrow `opacity: 0` with no grayscale filter). File claim `62a1b83a`
       is released. `js/data/modelConstants/models.js` was correctly left out — still another
       session's uncommitted work.
-- [ ] **Graphics** — `/mpi-flow-graphics` (playbook 06); `flow-character-sheet.webp` + hero.
-      > **PAIRED WITH MPI-584 (Fabio, 2026-08-20).** One session covers BOTH flows' art — this
+- [x] **Graphics** — `/mpi-flow-graphics` (playbook 06); `flow-character-sheet.webp` (129 KB,
+      896×1120) + `flow-character-sheet.mp4` (672 KB, 1280×800, 4.96 s), and the `video` field
+      the FlowDef never had. Both cut from Fabio's own sheets in `MPI-504 sheet verify` — 001
+      (photoreal) for the tile, 001 + 003 + 007 for the hero; 005 was rejected for a ghost-head
+      artifact on its front body.
+      > **PAIRED WITH MPI-584 (Fabio, 2026-08-20).** One session covered BOTH flows' art — this
       > card's, and MPI-584's `flow-ltx-upscale.webp` + `.mp4`. The throwaway project
       > `MPI-504 sheet verify` in Fabio's real Projects folder is KEPT ON PURPOSE as graphics
       > source (two proof sheets) — do not delete it.
+      >
+      > THE TILE IS A RECOMPOSITION, not a crop, and that is forced: the sheet is 8:5 with three
+      > panels, so a 4/5 `cover` keeps the portrait alone and the flow becomes indistinguishable
+      > from a model preview. The shipped tile is the portrait with both body views as a left
+      > rail, each rail cell given the body panel's own aspect so nothing floats in grey (the
+      > first attempt, portrait over a row of two bodies, did float — visible in the live grid).
+      >
+      > THE HERO HAS NO BEFORE/AFTER because nothing is transformed — the flow CREATES. It
+      > teaches the LAYOUT instead: the three panels fade in one at a time over the studio grey,
+      > then whole sheets crossfade so the grid holds while the character changes, and it starts
+      > and ends on bare grey so the loop point is invisible. New device row in playbook 06.
+      >
+      > LIVE-VERIFIED on my own isolated instance: both assets 200 with exact byte counts, and
+      > the hero `paused:false` `muted` `loop` with `currentTime` rising at a measured 444 px
+      > wide — a real visible mount, not the hidden-overlay false pass the playbook warns about.
 - [ ] Decide the `krea2-nsfw`-only install case

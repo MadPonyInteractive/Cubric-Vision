@@ -6,6 +6,7 @@
     "docs/playbooks/add-flow/existing-flows/ltx-upscale.md",
     "comfy_workflows/display/flow-ltx-upscale.webp",
     "comfy_workflows/display/flow-ltx-upscale.mp4",
-    ".agents/mpi-kanban/tasks/MPI-584/**"
+    ".agents/mpi-kanban/tasks/MPI-584/**",
+    "docs/playbooks/add-flow/06-preview-image.md"
   ]
 }

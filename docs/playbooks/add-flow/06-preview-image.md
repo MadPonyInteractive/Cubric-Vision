@@ -63,6 +63,7 @@ one. Pick the device by what actually changes:
 | The **content of the frame** | Real before → after, wiped with the seam visible | **Head Swap** (shipped) — one plate wipes to the other, only the head changes |
 | The **length or motion** | Play the RESULT straight through under a progress rail, marked where the source ended, the rail running past the mark in `--accent-heat` | **Extend Video** (shipped) — the added seconds are the only thing wearing the accent |
 | Something **not visible at all** | Animate the channel that changed, over an unchanged frame | **Add Foley** (shipped) — the picture plays untouched while the waveform draws itself in sync, impact by impact |
+| **Nothing** — the flow CREATES rather than transforms | Build the LAYOUT a piece at a time, then swap the subject under it | **Character Sheet** (shipped) — the three views arrive one by one over the studio grey, then the character changes while the grid holds |
 
 Two rules the shipped pair proved:
 
@@ -77,6 +78,13 @@ Two rules the shipped pair proved:
   a ~2× upscale — acceptable on a shallow-DOF plate, and far better than an
   unreadable hero. Check the crop as a still at 446 px BEFORE building the video.
 
+- **A flow with no BEFORE gets no wipe at all.** Character Sheet takes a description
+  and returns a sheet, so there is no earlier frame to reveal against — a two-panel
+  device there is invented, not observed. What it does have is a LAYOUT (front body,
+  back body, portrait), and the hero teaches it: each panel fades in on the studio
+  grey in turn, then whole sheets crossfade so the grid holds while the character
+  changes. Starting and ending on bare grey also makes the loop point invisible,
+  which is the one thing a slideshow of stills otherwise gets wrong.
 - **When the output looks identical to the input, a before/after is a lie** — two
   identical panels. Show the *added channel*: a waveform, a level meter, beat
   markers on the events that made the sound. Because the hero is muted, that is
@@ -165,7 +173,31 @@ an opaque cover sliding right to reveal it, its leading edge carrying the playhe
 [band][cover]overlay=x='1280*t/5.042':y=0:eval=frame[drawn]
 ```
 
-Three things here each cost a rebuild, and none of them error:
+**A before/after on MOVING footage is not the still recipe.** Upscale Video's plates
+are two clips, not two stills, and that changes both halves of the device:
+
+```bash
+[3:v]format=gray,geq=lum='if(lt(X,1280*(T-0.7)/2.2),255,0)'[mask];
+[b]format=yuva420p[bs]; [bs][mask]alphamerge[bm]; [a][bm]overlay=0:0[v1]
+```
+
+- **`xfade` DESYNCS two moving clips.** Its output runs `len_a + len_b - duration`,
+  which means B is played shifted by `offset` — so during the wipe the left half is
+  at time `t` and the right half is at `t - offset`, and the subject appears twice in
+  two positions. Fine for Head Swap's stills, wrong for video. Overlay B on A instead,
+  both on the same `t`.
+- **`crop`'s `w`/`h` are evaluated ONCE at config time** — only `x`/`y` are per-frame.
+  A reveal built as a growing crop width renders the full frame from frame 1 and exits
+  0, exactly like the `drawbox` trap below. A `geq` alpha mask + `alphamerge` is the
+  shortest thing that does animate.
+- **Prove the pair before building.** `psnr` of the source scaled 2x against the
+  result: the shipped pair reads **y 26.3 dB** — the same shot re-rendered. A plain
+  re-encode lands 30–42, a different clip under 15.
+- **A 2x upscale is nearly invisible at 446 px full-frame.** Judge candidate crops as
+  stills first (`sharp` two extracts, same box, stacked) — full-frame read as "nothing
+  happened"; a crop at ~2x of the frame made the detail obvious.
+
+Three things in the Add Foley recipe each cost a rebuild, and none of them error:
 
 - **`drawbox` does NOT animate its `w`/`h` expressions** in this build. A reveal
   built that way renders the FULL waveform from frame 1 and looks like it worked.
@@ -208,6 +240,10 @@ transparent PNG, useful for floating one over a plate whichever tool draws it.
 | Expecting the hero to be heard | Autoplay demands `muted`. Audio must be drawn |
 | Reusing a model preview | How Head Swap ended up wearing a lingerie portrait, and how Extend Video and Add Foley ended up as the same card |
 | `drawbox` with an animated `w` | It does not animate in this ffmpeg build, renders the full graphic from frame 1, and exits 0 — the reveal looks built and is not. Use `overlay`'s `x` with `eval=frame` |
+| `crop` with an animated `w` | Same failure, different filter: only `x`/`y` are per-frame, so the crop stays full width and the wipe never happens. `geq` alpha + `alphamerge` |
+| `xfade` between two moving clips | It shifts B by `offset`, so the subject is at two different moments either side of the seam. Stills only |
+| Centre-cropping a multi-panel product to 4/5 | The Character Sheet is 8:5 with three panels — a 4/5 crop throws two of them away and the tile becomes an ordinary portrait. Recompose from the panels, and give each cell the panel's OWN aspect or the figures float in mismatched grey |
+| A colon in an ffmpeg filter option value | `stats_file=C:/…` is parsed as an option separator and dies as `Invalid argument` on an unrelated option. Read `psnr` off stderr instead |
 | A translucent reveal cover | The un-played half shows straight through it. Opaque, in the band's own ground colour |
 | Judging a hero from a contact sheet | Everything reads at 620 px. Render at **446 px** — the real hero width — before believing it |
 | Running the `sharp` snippet from the scratchpad | `ERR_MODULE_NOT_FOUND` for an installed package; it resolves from the script's own location. Run from the repo root |

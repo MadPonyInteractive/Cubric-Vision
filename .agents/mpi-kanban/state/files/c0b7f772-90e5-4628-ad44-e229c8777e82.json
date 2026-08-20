@@ -1,0 +1,36 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "c0b7f772-90e5-4628-ad44-e229c8777e82",
+  "task_card": "MPI-504",
+  "task": ".agents/mpi-kanban/tasks/MPI-504/",
+  "paths": [
+    "comfy_workflows/display/flow-character-sheet.webp",
+    "comfy_workflows/display/flow-character-sheet.mp4",
+    "comfy_workflows/display/flow-ltx-upscale.webp",
+    "comfy_workflows/display/flow-ltx-upscale.mp4",
+    "js/data/flowsRegistry.js",
+    ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+    ".agents/mpi-kanban/tasks/MPI-504/files.json",
+    ".agents/mpi-kanban/tasks/MPI-584/checklist.md",
+    "docs/playbooks/add-flow/06-preview-image.md",
+    ".agents/mpi-kanban/tasks/MPI-584/files.json"
+  ],
+  "status": "complete",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/6b366931-dba7-46c1-93d1-980f6fe845f8.json",
+  "owner_role": "implementer",
+  "claimed_at": "2026-08-20T13:20:00Z",
+  "heartbeat_at": "2026-08-20T13:36:00Z",
+  "note": "The graphics session for BOTH flows (MPI-504 + MPI-584): the two tiles and the two heroes, plus the `video` field the character-sheet FlowDef never had. flowsRegistry.js taken from claim fa51ee7f, which is needs_verification (provenance, not a write lock).",
+  "recent_events": [
+    {
+      "at": "2026-08-20T13:20:00Z",
+      "event": "files_claimed"
+    },
+    {
+      "at": "2026-08-20T13:36:00Z",
+      "event": "editing_complete",
+      "note": "Four assets shipped, flowsRegistry video field added, live-verified on an isolated instance; committing now."
+    }
+  ]
+}

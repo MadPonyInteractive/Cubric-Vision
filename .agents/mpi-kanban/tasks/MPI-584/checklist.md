@@ -12,8 +12,23 @@ Playbook: `docs/playbooks/add-flow/` (hub read first, sections on demand).
 - [x] `node --check`, eslint, `npm test` (631 pass), `release:check`
 - [x] Live render verified on my own isolated instance (tile, availability, fields, mapping, empty-run guard)
 - [x] Flow's playbook page written — `docs/playbooks/add-flow/existing-flows/ltx-upscale.md`
-- [ ] **Fabio:** one real upscale through the Flow (media hop + gallery commit)
-- [ ] **Fabio:** `/mpi-flow-graphics` — `flow-ltx-upscale.webp` + `.mp4`, cut from that run
+- [x] **Fabio:** one real upscale through the Flow (media hop + gallery commit) — DONE, seven
+      of them in the `cowboys` project on 2026-08-20. `ltxVideoUpscale_002` is the one the art
+      is cut from: sidecar `flowId: 'ltx-upscale'`, role `inputVideo`, denoise 0.675, source
+      `ref2v_ms_005.mp4` 864×480 → 1728×960, audio through.
+- [x] **Fabio:** `/mpi-flow-graphics` — `flow-ltx-upscale.webp` (70 KB, 896×1120) + `.mp4`
+      (1.38 MB, 1280×720, 4.14 s), cut from that run.
+      > SOURCE↔RESULT PROVEN BEFORE BUILDING, per the playbook: `psnr` of the source scaled 2x
+      > against the result reads **y 26.3 dB** — the same shot re-rendered (a re-encode lands
+      > 30–42, a different clip under 15).
+      > THE WIPE IS AN ALPHA MASK, NOT `xfade`. `xfade` shifts B by `offset`, so on moving
+      > footage the wagon appears twice either side of the seam; and a growing `crop` width does
+      > not animate (only `x`/`y` are per-frame), which renders the full frame and exits 0. Both
+      > now in playbook 06's trap table.
+      > Full-frame at 446 px read as "nothing happened" — the shipped crop is punched in on the
+      > driver, chosen off stacked before/after stills at the real hero width.
+      > LIVE-VERIFIED: both assets 200 with exact byte counts; hero `paused:false` `muted` `loop`,
+      > `currentTime` rising, measured 444 px wide.
       > **PAIRED WITH MPI-504 (Fabio, 2026-08-20).** The graphics for BOTH flows are one
       > session: this card's `flow-ltx-upscale.webp`/`.mp4` and MPI-504's
       > `flow-character-sheet.webp` + hero clip. Do them together in a single
