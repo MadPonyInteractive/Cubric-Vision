@@ -1,0 +1,73 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "5b538e8e-2d5a-4d08-9773-d04ccb81aa7c",
+  "generated_at": "2026-08-20T04:05:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-504 - Fabio's three Enhance-button changes shipped; he then merged the full sheet graph and left an empty Masking group to fill",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Make Fabio's three changes to the Enhance button.",
+    "status": "in_progress",
+    "summary": "The three button changes are DONE, verified with screenshots on all four run slides, and pushed as 25a96d14. Mid-session the card moved on: Fabio RETIRED krea2_t2i_only.json and merged t2i + Klein inpaint + the Input_Remove_Head gate into comfy_workflows/raw/flow_character_sheet.json (127 nodes), leaving an EMPTY `Masking` group with four wired anchors for the detection/mask logic. Filling that group is the next job and it is bounded - the boundary contract is already read off the file and recorded in plan.md's top block."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    "completed": [
+      "THE THREE BUTTON CHANGES SHIPPED - 25a96d14. Enhance is an MpiButton in TEXT mode, variant primary, enhance icon left of the label; measured 255,126,182 fill, identical to Generate, moving to 255,119,164 on a real hover. On the run slide it sits directly under its prompt box",
+      "ICON MODE IS A DEAD END, worse than the old trap note said: MpiButton DEFAULTS icon mode to primary and then maps everything except danger/ghost down to secondary, so ~20 buttons app-wide already pass primary with an icon and render grey. Widening that mapping repaints all of them. Text mode + icon in `children` gets pink, hover-on-background and icon-left with the primitive untouched",
+      "`--stale` DELETED, not recoloured - _paintEnhance toggles the primitive's own mpi-btn--primary / mpi-btn--secondary, never both (--secondary is declared last and wins)",
+      "The run-slide fix was the --work fix ONE SELECTOR UP: --work is always applied on top of --stacked, so moving the flex undo onto --stacked fixed the run slide and deleted the duplicate. Only Extend Video shares that surface - the earlier handoff was WRONG that Add Foley moves (it declares its texts on a STEP, so it is the row layout)",
+      "MpiButton imported /js/utils/icons.js by ABSOLUTE path, alone among the Primitives - it would have broken tests/declared-fields.test.cjs in bare Node. Made relative",
+      "THE BOUNDARY CONTRACT FOR THE MASKING GROUP IS READ AND RECORDED (plan.md top block) - anchors, group bbox, taken Set/Get names, and confirmation that every node the branch needs is already pinned"
+    ],
+    "pending": [
+      "FILL THE `Masking` GROUP in comfy_workflows/raw/flow_character_sheet.json - the next job. IN: 736 GetNode 'sheet output' (IMAGE), 743 Get_W, 744 Get_H. OUT: 733 SetNode 'inpaint mask', a plain MASK. Detection SELECTS (face_yolov8n + ImpactSEGSOrderedFilter ordered by AREA), SAM3 SHAPES (hair + face + hat union, degrading to hair+face with no hat)",
+      "ASK FABIO whether the Input_Remove_Head gate should move IN FRONT of the Masking group - it currently sits after it (741 -> 742 MpiIfElse), so YOLO + SAM3 run on every sheet even when the toggle is off. raw/ is his; do not move it unilaterally",
+      "THE ENHANCER OP - raw/qwen3vl_4b_prompt_enhancer.json needs `Input_Seed` (MpiInt) added by FABIO, then convert + register in the 4 files with outputKind: 'text'. Until it exists Enhance warns and no-ops by design",
+      "Bench proofs, all needing the GPU: does face_yolov8n see a 20-40px face at 8:5; Klein A/B (baked removal prompt vs the no-prompt remove op); all four styles keeping medium and catch-light; the 10/10 stress test",
+      "THEN /mpi-add-flow end to end: convert both graphs, register two ops, write the FlowDef with the full field set, live run"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-504",
+    "title": "Character Sheet flow - a description in, a video-reference sheet out (front body HEADLESS)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-504/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Fill the empty `Masking` group in comfy_workflows/raw/flow_character_sheet.json. Read plan.md `## Current State` TOP BLOCK first - it carries the whole boundary contract, read off the file, so do not re-derive it. IN: `736 GetNode` name 'sheet output' (IMAGE, currently UNLINKED - it is yours), plus `743 Get_W` and `744 Get_H` (INT). OUT: `733 SetNode` name 'inpaint mask', a PLAIN MASK, also unlinked. Group bbox is [-463.6, 4787.1, 2960.0, 1411.1]; free canvas is roughly x -200..2200, y 4790..6190. Build: face_yolov8n via UltralyticsDetectorProvider + BboxDetectorSEGS -> ImpactSEGSOrderedFilter ordered by AREA ascending, take_start 0 take_count 1 (NEVER by detection index - SAM3 sorts by confidence, so 'face two' is a race a third weak hit reorders) to pick the FRONT body's head; then SAM3_Detect on hair + face + hat, unioned, as the mask that actually gets filled, degrading to hair+face when the character has no hat. Do NOT bake a grow: 735 Get_inpaint mask already feeds 690 GrowMaskWithBlur, and 734 feeds 721 MpiMaskSquareBbox + 718 InpaintCropImproved. Prefix every new Set/Get name (mask_*) - names are matched by NAME and a collision cross-wires SILENTLY while link integrity still passes. Read docs/masking-sam3.md BEFORE authoring the SAM3 half: positive_coords/negative_coords are forceInput STRING wired from MpiText (never MpiString, which is media-staged), and the text branch feeds SAM3 through CLIPTextEncode off the SAM3 checkpoint's own CLIP. Verify offline the way the earlier patches were verified - link integrity, Set/Get orphan check, reachability from the outputs, unique Input_/Output_ titles - then node scripts/workflow-to-api.mjs against live /object_info.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "ONE GRAPH, ONE OP, gated by a boolean - not two graphs chained. Flows dispatch a single operation, so a separate inpaint workflow would mean two queue jobs and two gallery cards for one sheet.",
+      "FABIO OWNS THE MERGE, THE AGENT OWNS THE GROUP. He merged t2i + inpaint himself and left a walled garden, which removes the one failure mode a scripted merge has here: SetNode/GetNode pairs match by NAME, so a collision cross-wires silently and link integrity still passes.",
+      "The enhanced phrase is injected into `Input_Positive`, NOT `Input_Character`. That name only ever existed in the scratch fixture and is wrong against this graph.",
+      "`--accent-frost` IS A COLOUR TO MOVE AWAY FROM (Fabio, 2026-08-20): used in ~3% of the app and 'should be a colour that shouldn't be used anywhere'. Do not reach for it as a signal colour. Every declared field's :focus-visible ring is still frost - noted, app-wide, its own job.",
+      "Storing a seed stays rejected. The enhanced TEXT is stored and injected verbatim; the enhancer seed is load-bearing INSIDE the run and the frame drives a fresh one per press."
+    ],
+    "constraints": [
+      "comfy_workflows/raw/ IS USER-OWNED. The Masking group is the one place in that file the agent may author. Anything else - moving the Input_Remove_Head gate, adding Input_Seed to the enhancer - is Fabio's edit to make; ask, do not do.",
+      "THE CHARACTER-SHEET FlowDef IS NOT IN THE REPO, deliberately - no op, no graph yet. The scratch fixture is recorded VERBATIM in validation.md; paste it into js/data/flowsRegistry.js to drive the UI and DELETE IT before committing. Driving it: Events.emit('flow:open', {flowId:'character-sheet'}) from a playwright-cli eval, and A PROJECT MUST BE OPEN FIRST - on Landing the overlay mounts but is not visible, which reads as a broken flow and is not one.",
+      "A PEER SESSION IS LIVE IN THIS TREE and edits the same files. 25a96d14 swept Fabio's in-flight conversion of the remaining declared-field types onto Primitives (MpiInput/MpiProgressBar in declaredFields.js) along with the button work - healthy at lint + 630/630 when committed, but he may want to amend or split it. Assume any co-owned file may be committed out from under you.",
+      "NEVER take the user's app on :3000. Spin your own with `npm run app:isolated` - it prints `READY <url>`. DO NOT pipe it through head/tail: the buffer swallows the READY line, a working launch reads as a hang, and the orphan then holds the profile so the NEXT launch dies at exit 0. Stopping it needs the process TREE, and `taskkill /PID` from the Bash tool is mangled by Git Bash into 'C:/Program Files/Git/PID' - drive it through powershell instead.",
+      "A FIRST RUN of app:isolated leaves an orphan .mpi-modal-backdrop after the 18+ gate: the changelog dialog mounts behind it and the backdrop eats every click, so the landing page reads as frozen. Remove the node and carry on. Not a card, but it will cost ten minutes if unexpected.",
+      "A SCREENSHOT IS PART OF VERIFYING THIS UI, not a nicety - every DOM assertion passed once while the step was visibly broken. And computed colours serialise as oklch(), so a regex 'rgb' parse returns a plausible wrong number; go through a 1x1 canvas instead.",
+      "THE GPU NEEDS THE LEASE for anything that executes a generation: python \"${CLAUDE_PLUGIN_ROOT}/skills/mpi-lib/scripts/gpu_lease.py\" run -- <command>. Machine-global, one slot. Read-only probes are not matched."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "comfy_workflows/raw/flow_character_sheet.json",
+      "docs/masking-sam3.md",
+      ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    ]
+  },
+  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/5b538e8e-2d5a-4d08-9773-d04ccb81aa7c.json first, then plan.md `## Current State` (the TOP block is the boundary contract and is authoritative - it was read off the graph, not reasoned), then comfy_workflows/raw/flow_character_sheet.json and docs/masking-sam3.md. The card is in doing. Last session shipped Fabio's three Enhance-button changes (25a96d14, verified with screenshots and measured colour). Then the card moved: Fabio RETIRED krea2_t2i_only.json and merged text-to-image + Klein inpaint + the Input_Remove_Head gate into flow_character_sheet.json himself, leaving an EMPTY `Masking` group with four wired anchors. Your job is to fill that group and nothing else in the file - detection selects the front body's head, SAM3 shapes the mask, and the result goes into the 'inpaint mask' SetNode as a plain MASK. Standing rules learned the hard way: raw/ is USER-OWNED so ask before touching anything outside the group, Set/Get names collide SILENTLY so prefix everything, never bake a grow because his chain already grows and blurs, screenshot the UI as well as asserting on the DOM, never take the user's app on :3000, and the character-sheet FlowDef is a scratch fixture in validation.md that must never be committed."
+}

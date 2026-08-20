@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-20T02:00:00Z",
+  "updated_at": "2026-08-20T04:05:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -147,9 +147,9 @@
       "id": "06623c29-2e2a-401c-acac-9d1d6eef91b9",
       "path": ".agents/mpi-kanban/state/handoffs/06623c29-2e2a-401c-acac-9d1d6eef91b9.json",
       "task_card": "MPI-504",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-20T00:30:00Z",
-      "note": "Prompt UI frame half shipped (604d523d) with no new component; Fabio reviewed and asked for three Enhance-button changes: MpiButton, pink with the enhance icon, hover background, and directly under the prompt on the run slide."
+      "note": "Superseded by 5b538e8e-2d5a-4d08-9773-d04ccb81aa7c - the three button changes shipped in 25a96d14, and the card moved on to filling the Masking group in the merged flow_character_sheet.json."
     },
     {
       "id": "89bc642b-8f8f-4c0b-bd97-171d1118cf63",
@@ -173,6 +173,14 @@
       "status": "open",
       "created_at": "2026-08-20T02:00:00Z",
       "note": "MPI-579 is FINISHED and signed off - close-out is the next action. The slider/prompt-box component fix shipped; the rest of that sweep is MPI-582, which Fabio takes himself."
+    },
+    {
+      "id": "5b538e8e-2d5a-4d08-9773-d04ccb81aa7c",
+      "path": ".agents/mpi-kanban/state/handoffs/5b538e8e-2d5a-4d08-9773-d04ccb81aa7c.json",
+      "task_card": "MPI-504",
+      "status": "open",
+      "created_at": "2026-08-20T04:05:00Z",
+      "note": "Enhance button done and pushed. Next job is bounded: fill the empty `Masking` group in flow_character_sheet.json - IN 736 Get 'sheet output', OUT 733 Set 'inpaint mask' as a plain MASK. Contract is in plan.md's top block."
     }
   ]
 }
