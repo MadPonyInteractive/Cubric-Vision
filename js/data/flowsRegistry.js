@@ -174,7 +174,12 @@ export const FLOWS = [
     {
         id: 'head-swap',
         title: 'Head Swap',
-        preview: 'sdxl-real-05.webp',   // placeholder — swap for a head-swap sample
+        // Both cut from ONE real run of this flow. The two plates are pixel-identical
+        // outside the head, so the hero's wipe holds the whole scene steady and only
+        // the head changes; the tile is that same wipe frozen where the seam bisects
+        // the face, which is what makes a STILL read as a swap at tile size.
+        preview: 'flow-head-swap.webp',
+        video: 'flow-head-swap.mp4',
         description: 'Swap a head from one image onto another. Upload the image you want to keep, the image with the head you want, mark each head, and run.',
         requiredModels: ['qwen-edit'],
         requiredDeps: ['qwen-lora-headswap', 'comfyui-inpaint-cropandstitch'],
