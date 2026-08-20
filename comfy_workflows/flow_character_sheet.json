@@ -1185,7 +1185,7 @@
       "preresize_max_width": 16384,
       "preresize_max_height": 16384,
       "mask_fill_holes": false,
-      "mask_expand_pixels": 6,
+      "mask_expand_pixels": 40,
       "mask_invert": false,
       "mask_blend_pixels": 32,
       "mask_hipass_filter": 0.1,
@@ -1481,7 +1481,7 @@
   },
   "754": {
     "inputs": {
-      "text": "hair, face, hat",
+      "text": "hair, face, hat, neck",
       "clip": [
         "753",
         1
