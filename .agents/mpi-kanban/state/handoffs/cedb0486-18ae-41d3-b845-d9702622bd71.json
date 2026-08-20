@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "cedb0486-18ae-41d3-b845-d9702622bd71",
   "generated_at": "2026-08-20T02:00:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-579 shipped and signed off - the Library row aggregates requiredModels, and the declared-field sliders became real components",
     "branch": "master"
