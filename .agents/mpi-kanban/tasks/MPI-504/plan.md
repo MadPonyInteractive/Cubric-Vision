@@ -10,22 +10,86 @@ prompt) is in [prompts.md](prompts.md). This file is the build.
 
 ## Current State
 
-**2026-08-20 — FABIO MERGED THE GRAPH. `comfy_workflows/raw/flow_character_sheet.json` now
-EXISTS (127 nodes, 150 links, 5 groups) and the next job is ONE bounded thing: fill the empty
-`Masking` group.** `krea2_t2i_only.json` is retired. He built t2i + Klein inpaint + the
-`Input_Remove_Head` gate himself and left a walled garden for the detection/mask logic.
+**2026-08-20 — THE GRAPH IS DONE AND FABIO RAN IT LIVE. It succeeded on 3-4 outputs and he
+called it ready to implement. The next job is the ENHANCER OP, then `/mpi-add-flow`.**
 
-**The boundary contract, read off the file — do NOT re-derive it, and do NOT wire by node id
-anywhere else in the graph:**
+`comfy_workflows/raw/flow_character_sheet.json` is Fabio's re-export: **146 nodes / 180 links**.
+The `Masking` group holds the 14 nodes I authored (`745`–`758`) plus **his fix**; my 14 came back
+from his editor with **type, widgets and titles byte-identical** (only positions/order moved, and
+the group slid to `y 3870.5`).
+
+```
+736 sheet ─ 759 MpiBlocker ←(760 Get_is remove head)
+              ├─ 745 face_yolov8n → 746 BboxDetectorSEGS → 747 OrderedFilter(area ASC, take 1)
+              │        └─ 748 SegsToCombinedMask ← the face BOX, geometry only
+              │             ├─ 749 SquareBbox(pad 0) ─ size ─ 750 MpiMath "a * 4 // 5"
+              │             └─ 751 SquareBbox(pad←750) ─ x, y, size
+              └─ 758 MpiBoxCrop ←(752 MpiBox) → 755 SAM3_Detect(individual_masks FALSE)
+753 SAM3 ckpt ─CLIP─ 754 CLIPTextEncode "hair, face, hat"
+743 W, 744 H ─ 756 SolidMask(0,W,H) ─ 757 MaskComposite(add) → 733 Set_inpaint mask
+```
+
+**THE ONE REAL BUG, AND ITS ROOT CAUSE — do not lose this.** With `Input_Remove_Head` OFF the
+head branch ran anyway: YOLO, the 1.75 GB SAM3 checkpoint, the Klein inpaint. **`MpiIfElse` being
+lazy was never the issue.** An output node is an **execution ROOT**, and `688 PreviewImage` was
+left UNMUTED with an upstream closure of **84 nodes** — all 14 Masking nodes and the whole inpaint
+chain. One debug preview dragged the entire gated branch into every run. Fabio's fix is both
+halves, and both are needed:
+
+- **`759 MpiBlocker` at the SOURCE**, driven by `760 Get_is remove head` — it blocks the image
+  before `746`/`758`, so no root anywhere can pull the branch. This is the half that survives
+  someone adding a preview later.
+- **`688` MUTED** (mode 2), along with three new debug previews he added muted from the start
+  (`765`/`767 MaskPreview`, `766 PreviewImage`).
+
+Written up generally in `docs/workflow-authoring/mpi-nodes.md` § "A preview node defeats a lazy
+gate" — the symptom is "a gated branch's models load every run and the gate looks correctly
+wired", and the answer is to grep for unmuted output nodes, NOT to re-check the gate.
+
+**Six things in the mask chain that are load-bearing and non-obvious:**
+
+- **The face box is GEOMETRY, never the mask.** `748` only gives `749`/`751` something to measure;
+  SAM3 shapes what gets filled. The retired-bbox-as-mask decision, made structural.
+- **`individual_masks: false` IS the union.** One mask over hair + face + hat, and a hatless
+  character contributes nothing — the degradation needs zero extra nodes. Categories stay BARE:
+  `:1` detects NOTHING (`docs/masking-sam3.md`).
+- **The crop is scale-free.** `Input_Width`/`Input_Height` are user-adjustable (1088×896 today),
+  so a pixel constant would have broken silently. `750` makes the head box 2.6× the face box at
+  any resolution. Floordiv, not `* 0.8`: `safe_math` has no `int()`, and `*` out is not a cast.
+- **The crop is `MpiBox` + `MpiBoxCrop`, NOT `ImageCrop`.** Core `ImageCrop` is **deprecated**
+  and `ImageCropV2` cannot replace it here (its `crop_region` is a socketless UI widget). Only
+  LOADING the graph in a browser surfaced that — conversion and every offline check passed it.
+- **`MpiMaskSquareBbox` clamps x/y/size inside the image itself**, which is why `MaskComposite`'s
+  `x/y ≥ 0` floor and the crop's bounds hold with no clamp node.
+- **`SolidMask(W, H)` cannot misalign** — `560 EmptyLatentImage` takes width/height straight from
+  `676`/`677`, so the render is exactly `Input_Width × Input_Height`.
+
+**NO new Set/Get names were added by me**; Fabio's `760` is a second `Get_is remove head`, which
+is legal (many Gets, one Set).
+
+**FABIO'S NEW ASK, 2026-08-20: `Input_Recipe` needs a DROPDOWN in the Flow UI.** It is the
+1-indexed `MpiAnySwitch` over the four style templates (`671 Input_Recipe` MpiInt). The frame
+already has the field type — `type: 'select'` in `js/utils/declaredFields.js:154` mounts
+`MpiDropdown`, portals its list to `document.body` (a step row clips overflow), and **emits the
+option's ORIGINAL `v`, never the DOM string**, so the int reaches `MpiAnySwitch` intact. Shape it
+like `Input_Tier` in `flowsRegistry.js:268` but `select` rather than `radio`:
+`{ id: 'Input_Recipe', type: 'select', label: 'Style', default: 1, options: [{v:1,label:'Photoreal'}, {v:2,label:'3D animation'}, {v:3,label:'Anime'}, {v:4,label:'Cartoon'}] }`
+with an `info` per option. Labels/order come from `prompts.md` § The four styles. This lands at
+`/mpi-add-flow`, in the FlowDef — **not** in the graph.
+
+**Pre-existing, NOT mine, flagged not fixed:** `709 Get_steps` has no `SetNode` anywhere in the
+file — the graph's one unreachable node, in the Generation half. `raw/` is his.
+
+**The boundary contract, read off the file — kept for the record, all four anchors now wired:**
 
 | | node | name | type |
 |---|---|---|---|
-| **IN** | `736 GetNode` | `sheet output` | IMAGE — the generated sheet. Currently **unlinked**; it is yours |
+| **IN** | `736 GetNode` | `sheet output` | IMAGE — the generated sheet. Now feeds `759 MpiBlocker` |
 | **IN** | `743 GetNode` | `W` | INT |
 | **IN** | `744 GetNode` | `H` | INT |
-| **OUT** | `733 SetNode` | `inpaint mask` | **plain MASK.** Currently unlinked |
+| **OUT** | `733 SetNode` | `inpaint mask` | **plain MASK.** Now fed by `757 MaskComposite` |
 
-`Masking` group bbox `[-463.6, 4787.1, 2960.0, 1411.1]` — every node you add goes inside it.
+`Masking` group bbox is now `[-508.6, 3870.5, 2960.0, 1411.1]` (Fabio moved it) — anything added goes inside it.
 Free canvas is roughly x `-200 … 2200`, y `4790 … 6190`; the four anchors sit at the far left
 (x ≈ -450) and far right (x ≈ 2240).
 
@@ -35,10 +99,9 @@ Free canvas is roughly x `-200 … 2200`, y `4790 … 6190`; the four anchors si
   `734` feeds `721 MpiMaskSquareBbox` + `718 InpaintCropImproved`. So do **not** bake a grow
   into the Masking group — the plan's "grow 24 @ 2k" is already someone else's job. Emit a
   clean union and let his chain shape it.
-- **The gate is HIS and it sits AFTER this group** (`739 Set_is remove head` → `741 Get` →
-  `742 MpiIfElse`). So YOLO + SAM3 run on every sheet even when the toggle is off. Cheap-ish,
-  but it is waste — **ask Fabio whether he wants the gate moved in front of the group**, do
-  not move it unilaterally; `raw/` is his.
+- **The gate at `742 MpiIfElse` is NOT sufficient on its own — SETTLED BY A LIVE RUN.** Its
+  inputs are lazy, but an unmuted output node is an execution ROOT and pulls the branch anyway.
+  That is what `759 MpiBlocker` + muting `688` fixes. Full account in the top block.
 - **Set/Get names are matched by NAME and a collision cross-wires SILENTLY** — link integrity
   still passes. Taken already: `clip`, `vae`, `seed`, `model`, `Models`, `turbo`, `steps`,
   `W`, `H`, `positive text`, `negative text`, `klein clip`, `klein vae`, `klein model`,

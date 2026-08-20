@@ -811,3 +811,137 @@ the declaration being obeyed, but it is a visible difference from what shipped.
   dialog mounts behind it and the backdrop intercepts every click, so the landing page reads as
   frozen. Removing the node let the app through. Unrelated to this card; reproducible on a first
   run of `app:isolated`.
+
+## 2026-08-20 · the `Masking` group is filled — 13 nodes, offline-verified, converts clean
+
+**What shipped.** `comfy_workflows/raw/flow_character_sheet.json`, the `Masking` group only:
+nodes `745`–`758`, links `1532`–`1556`, `last_node_id 758` / `last_link_id 1556`. The graph went
+127 nodes / 150 links → **141 / 175**.
+
+```
+736 Get_sheet output ─┬─ 745 UltralyticsDetectorProvider  bbox/face_yolov8n.pt
+                      │    └─ 746 BboxDetectorSEGS        thr .5, dilation 0, crop_factor 3.0
+                      │         └─ 747 ImpactSEGSOrderedFilter  area(=w*h), ASCENDING, 0, 1
+                      │              └─ 748 SegsToCombinedMask       ← the face BOX
+                      │                   ├─ 749 MpiMaskSquareBbox(pad 0) ─ size
+                      │                   │    └─ 750 MpiMath  "a * 4 // 5"
+                      │                   └─ 751 MpiMaskSquareBbox(pad ← 750) ─ x, y, size
+                      └─ 752 MpiBox(size, size, x, y) ─ 758 MpiBoxCrop(pad false)
+                           └─ 755 SAM3_Detect  .5 / refine 2 / individual_masks FALSE
+753 CheckpointLoaderSimple  sam3.1_multiplex_fp16 ─CLIP─ 754 CLIPTextEncode  "hair, face, hat"
+743 Get_W, 744 Get_H ─ 756 SolidMask(0.0, W, H) ─┐
+                                     757 MaskComposite(dest, src, x, y, "add") → 733 Set_inpaint mask
+```
+
+**Why it is shaped this way** (each of these was checked, not assumed):
+
+- **The face box never becomes the mask.** `748` exists only to give `749`/`751` something to
+  measure. SAM3 shapes what gets filled — the retired-bbox-as-mask decision made structural.
+- **Ascending area picks the right head.** `prompts.md` puts one LARGE head-and-shoulders portrait
+  in the right half and two narrow full bodies (front + back) in the left. YOLO sees two faces;
+  the smaller is the front body's. Ordering by area, never by detection index.
+- **`individual_masks: false` IS the union** (`docs/masking-sam3.md`: off, SAM3 unions
+  everything). One mask over hair + face + hat, and a hatless character contributes no hat — the
+  degradation needs no extra nodes. Categories BARE, because `:1` detects nothing.
+- **The crop is resolution-independent.** `676`/`677` (`Input_Width`/`Input_Height`) are
+  user-adjustable, so a pixel padding constant would silently break at any other size. `750`
+  computes `pad = 0.8 × face`, making the head box **2.6× the face box at any resolution**.
+  Floordiv, not `* 0.8`: `safe_math` (`ComfyUi-MpiNodes/help_funcs.py`) exposes only `math.*` and
+  has **no `int()`**, and a float into an INT socket is the kind of thing that only fails at run
+  time.
+- **No clamp node is needed.** `MpiMaskSquareBbox` clamps x/y/size inside the image itself
+  (`img.py:728`), which satisfies `MaskComposite`'s `x/y ≥ 0` floor and the crop's bounds.
+- **The crop is `MpiBox` + `MpiBoxCrop`.** Core `ImageCrop` is **deprecated**; `ImageCropV2`'s
+  `crop_region` is a socketless UI bounding-box widget and cannot be driven from INT sockets, so
+  the first-party pair is the replacement. See the browser evidence below — this is the one defect
+  that survived every offline check.
+- **`SolidMask(W, H)` cannot misalign** — `560 EmptyLatentImage` takes width/height straight from
+  `676`/`677`, so the render is exactly `Input_Width × Input_Height`. Checked in the converted
+  graph rather than assumed.
+- **No grow baked in.** `757` feeds `733`, and the existing `735 → 690 GrowMaskWithBlur` /
+  `734 → 721 + 718` chain does the shaping, confirmed resolved in the converted API below.
+- **No new Set/Get names**, so the silent-collision failure mode does not apply at all.
+
+**Evidence.**
+
+- **Surgical diff** — a pre-edit copy compared node-by-node: 14 added (`745`–`758`), 0 removed,
+  25 links added, 0 removed, exactly 4 pre-existing nodes modified (`733`, `736`, `743`, `744` —
+  the anchors), `groups` and `extra` byte-identical, only `last_node_id`/`last_link_id` changed at
+  the top level. `json.dumps(indent=2)` round-trips Fabio's file **byte-identically**, so the
+  formatting is his, not the script's.
+- **Offline graph check** — duplicate ids, link-endpoint integrity both directions, slot ranges,
+  dead links, Set/Get orphans and collisions, reachability from the three output nodes
+  (`494`, `673`, `688`) through Set/Get teleports, unique `Input_`/`Output_` titles, group-bbox
+  containment for all 13, counters. **PASS**; all 13 new nodes reachable.
+**Proved it opens in the ComfyUI editor, not just that it converts** — loaded into a
+browser at the bench (`:8188`) off a temp CORS server, never touching Fabio's own tab:
+**141 nodes / 175 links, no Missing Node dialog, no new console errors, every widget value on
+the right widget, every intended socket linked.** That load is what caught the one thing every
+offline check passed: **core `ImageCrop` is DEPRECATED** (`/object_info` `deprecated: true`,
+`[DEPR]` on the node in the editor). `ImageCropV2` is not the replacement here — its
+`crop_region` is a socketless UI bounding-box widget that cannot be driven from these INTs —
+so the crop is the first-party pair **`752 MpiBox` + `758 MpiBoxCrop`**. Re-verified after the
+swap: no `[DEPR]`, no missing nodes, no unwired required sockets.
+- **Converts against the LIVE engine** (`COMFY_URL=http://127.0.0.1:48188 node
+  scripts/workflow-to-api.mjs …`) → 96 API nodes, no error. The converter's own self-check
+  (every required input satisfied) is the thing that would have caught a widget-mapping slip.
+- **Teleports resolve correctly in the API output**: `690 GrowMaskWithBlur`, `721
+  MpiMaskSquareBbox` and `718 InpaintCropImproved` all read `["757", 0]`; `746`/`758` read
+  `["730", 0]` (the reroute behind `Set_sheet output`); `756` reads `["676", 0]` / `["677", 0]`.
+- **`node scripts/validate-injection-rules.mjs`** on the converted API → clean, exit 0.
+- **`npm test` → 631/631 pass**, 0 fail (re-run after the crop swap).
+
+**Still GPU-gated** (nothing here proves pixels): does `face_yolov8n` see the ~70px front-body
+face at 1088×896; does ascending-area pick that one and not the portrait; does the 2.6× crop stay
+clear of the neighbouring panel; does the SAM3 union actually cover a hat.
+
+### Noticed, not actioned
+
+- **`709 Get_steps` has no `SetNode`** anywhere in the file — the graph's one unreachable node,
+  in Fabio's Generation half. Pre-existing (confirmed against the pre-edit copy). `raw/` is his.
+- **Zero-face runs will error**, not degrade: `MpiMaskSquareBbox` returns `size 0` and an empty
+  crop fails downstream. Left unhandled deliberately — a sheet with no detectable face has no head to
+  remove, and a guard written before the bench proves detection would be guesswork.
+
+## 2026-08-20 · FABIO RAN IT — the branch works, and one real bug came out of the live test
+
+**Result: 3-4 outputs, all succeeded, "ready to be implemented"** (Fabio). He re-exported the
+graph with his fixes; `comfy_workflows/raw/flow_character_sheet.json` is now **146 nodes / 180
+links** (`last_node_id 767`, `last_link_id 1570`).
+
+**The bug, and why it was not the gate.** With `Input_Remove_Head` OFF the head branch executed
+anyway — YOLO, the SAM3 checkpoint, the Klein inpaint. `MpiIfElse` laziness was correct and
+irrelevant: **an output node is an execution ROOT**, and `688 PreviewImage` sat UNMUTED with an
+upstream closure of **84 nodes** — measured, not guessed: all 14 `Masking` nodes plus `690`,
+`718`, `721`, `733`, `734`, `735`. One debug preview pulled the whole gated branch into every run.
+
+**Fabio's fix, both halves:**
+
+- **`759 MpiBlocker`** between `736 Get_sheet output` and both consumers (`746 BboxDetectorSEGS`,
+  `758 MpiBoxCrop`), driven by a new **`760 Get_is remove head`**. Blocking at the SOURCE is the
+  half that survives someone adding a preview later.
+- **`688` muted** (mode 0 → 2), plus three debug previews added muted from the start
+  (`765`/`767 MaskPreview` on `718`'s cropped mask and on `757`'s output, `766 PreviewImage` on
+  the blocker output).
+
+Generalised into `docs/workflow-authoring/mpi-nodes.md` § "A preview node defeats a lazy gate",
+because the symptom ("models load every run, gate looks correctly wired") sends you to re-check
+the gate, which is exactly the wrong place.
+
+**Re-verified against his re-export, not just mine:**
+
+- My 14 nodes returned from his editor with **`type`, `widgets_values` and `title` identical** —
+  0 substantive changes. Only `pos`/`order` moved, and the `Masking` group slid to `y 3870.5`.
+- Offline check → **PASS** (146 nodes / 180 links, 141 reachable; the 5 unreachable are the
+  pre-existing `709 Get_steps` and the four muted debug previews).
+- `workflow-to-api.mjs` vs live `/object_info` → clean.
+- `validate-injection-rules.mjs` → clean, exit 0.
+
+### Open, and now product work rather than graph work
+
+- **`Input_Recipe` wants a DROPDOWN in the Flow UI** (Fabio, 2026-08-20). `type: 'select'` already
+  exists in `js/utils/declaredFields.js:154` — it mounts `MpiDropdown`, portals the list to
+  `document.body` because a step row clips overflow, and emits the option's ORIGINAL `v` rather
+  than the DOM string, so the 1-indexed int reaches `MpiAnySwitch` intact. Model it on
+  `Input_Tier` (`flowsRegistry.js:268`) but `select`, four options from `prompts.md` § The four
+  styles, default 1 = Photoreal. FlowDef work, at `/mpi-add-flow`.

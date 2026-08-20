@@ -118,10 +118,25 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       character, 3 seeds at 1k-turbo + the shipping 2k-quality rig, 8 generations. Visually
       indistinguishable in all four cells; the `man`/`woman`-token fallback is NOT needed.
       Wording verified reaching the sampler per cell (8/8) via `673 Output_prompt`
-- [ ] Head branch: face detect → `ImpactSEGSOrderedFilter` area ascending take 1 — **unchanged, and
-      it stays: its output SELECTS the area to inpaint (which head), it is not the mask** — then
-      **SAM3 `hair` + `face` + `hat` union builds the mask that gets filled** → grow 24 @ 2k.
-      Confirm `face_yolov8n` sees the small face at 1k.
+- [x] **Head branch BUILT 2026-08-20** — the `Masking` group in `raw/flow_character_sheet.json` is
+      filled, 14 nodes (`745`–`758`), nothing else in the file touched. `face_yolov8n` →
+      `BboxDetectorSEGS` → `ImpactSEGSOrderedFilter` (area **ascending**, take 1 = the front body's
+      head, never the big portrait) → the face box is **geometry only**, it sizes a scale-free crop
+      (`MpiMaskSquareBbox` ×2 + one `MpiMath` `a * 4 // 5`, so the head box is 2.6× the face box at
+      ANY `Input_Width`/`Input_Height`) → `SAM3_Detect` on `"hair, face, hat"` with
+      `individual_masks: false` (**the union**; a hatless character just contributes no hat) →
+      `SolidMask(0, W, H)` + `MaskComposite(add)` pastes it back full-size into `733 Set_inpaint
+      mask`. No grow baked in — `690 GrowMaskWithBlur` and `721`/`718` already read it. The crop is
+      `MpiBox` + `MpiBoxCrop`, because core `ImageCrop` is deprecated — caught by LOADING the graph
+      in a browser, which every offline check had passed. Offline-verified, converts clean against
+      live `/object_info`, loads clean in the editor; 631/631 tests
+- [x] **Head branch RUNS — Fabio tested it live 2026-08-20**, 3-4 outputs, all succeeded, called
+      ready to implement. He fixed one real bug in the process: with `Input_Remove_Head` OFF the
+      branch ran anyway, because `688 PreviewImage` was UNMUTED and an output node is an execution
+      ROOT (84-node upstream closure). Fix = `759 MpiBlocker` at the source + mute `688`. My 14
+      nodes came back from his editor byte-identical in type/widgets/titles
+- [ ] Head branch, remaining GPU questions (not blockers — it works): does the 2.6× crop ever reach
+      a neighbouring panel on an unusual layout, and does the SAM3 union cover a tall hat
       **Only the bbox-AS-MASK is RETIRED** (Fabio 2026-08-19): a
       face-only mask fails on a hatted character (measured on the cowboy-movie work), hair over
       clothing needs a precise hair mask, and a box stamped on the head makes the inpaint model

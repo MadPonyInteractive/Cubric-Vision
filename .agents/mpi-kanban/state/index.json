@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-20T03:20:00Z",
+  "updated_at": "2026-08-20T05:30:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -17,6 +17,13 @@
       "role": "implementer",
       "status": "active",
       "heartbeat_at": "2026-08-20T00:40:04Z"
+    },
+    {
+      "id": "5a261c2b-18c9-420b-9357-ad1cc9bcdf5c",
+      "path": ".agents/mpi-kanban/state/sessions/5a261c2b-18c9-420b-9357-ad1cc9bcdf5c.json",
+      "role": "implementer",
+      "status": "active",
+      "heartbeat_at": "2026-08-20T03:35:00Z"
     }
   ],
   "active_tasks": [],
@@ -28,11 +35,27 @@
       "status": "claimed",
       "owner_session": ".agents/mpi-kanban/state/sessions/8322d5de-60dd-4aa0-9f72-230e94c8a36d.json",
       "heartbeat_at": "2026-08-20T00:40:04Z"
+    },
+    {
+      "id": "e1c74b90-3a55-4c1f-9a0b-6f2d81c4a7e3",
+      "path": ".agents/mpi-kanban/state/files/e1c74b90-3a55-4c1f-9a0b-6f2d81c4a7e3.json",
+      "task_card": "MPI-504",
+      "status": "complete",
+      "owner_session": ".agents/mpi-kanban/state/sessions/5a261c2b-18c9-420b-9357-ad1cc9bcdf5c.json",
+      "heartbeat_at": "2026-08-20T03:35:00Z"
     }
   ],
   "pending_file_states": [],
   "open_messages": [],
   "active_handoffs": [
+    {
+      "id": "0ec5f9fe-d66e-44c6-8587-c4e47b4c325d",
+      "path": ".agents/mpi-kanban/state/handoffs/0ec5f9fe-d66e-44c6-8587-c4e47b4c325d.json",
+      "task_card": "MPI-584",
+      "status": "open",
+      "created_at": "2026-08-20T05:00:00Z",
+      "note": "Upscale Video shipped as a Flow (cf0cec4a); next session takes MPI-585 (the shared Flow compare widget, Fabio's stated priority) then MPI-584's graphics from his own run pair."
+    },
     {
       "id": "15c0f3cc-6e28-42ca-9793-19c64aa06d7a",
       "path": ".agents/mpi-kanban/state/handoffs/15c0f3cc-6e28-42ca-9793-19c64aa06d7a.json",
@@ -100,9 +123,17 @@
       "id": "5b538e8e-2d5a-4d08-9773-d04ccb81aa7c",
       "path": ".agents/mpi-kanban/state/handoffs/5b538e8e-2d5a-4d08-9773-d04ccb81aa7c.json",
       "task_card": "MPI-504",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-20T04:05:00Z",
       "note": "Enhance button done and pushed. Next job is bounded: fill the empty `Masking` group in flow_character_sheet.json - IN 736 Get 'sheet output', OUT 733 Set 'inpaint mask' as a plain MASK. Contract is in plan.md's top block."
+    },
+    {
+      "id": "9a19f9e2-fcb4-40f8-879c-3f3a0ebcb47c",
+      "path": ".agents/mpi-kanban/state/handoffs/9a19f9e2-fcb4-40f8-879c-3f3a0ebcb47c.json",
+      "task_card": "MPI-504",
+      "status": "open",
+      "created_at": "2026-08-20T05:30:00Z",
+      "note": "Masking group SHIPPED and Fabio live-tested it (3-4 outputs, all succeeded). Graph is finished. Next is the enhancer op, blocked on his Input_Seed edit, then /mpi-add-flow incl. an Input_Recipe dropdown."
     }
   ]
 }

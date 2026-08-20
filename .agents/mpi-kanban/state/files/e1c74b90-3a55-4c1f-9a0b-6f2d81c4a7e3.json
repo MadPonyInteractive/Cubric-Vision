@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "e1c74b90-3a55-4c1f-9a0b-6f2d81c4a7e3",
+  "paths": [
+    "comfy_workflows/raw/flow_character_sheet.json",
+    ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+    ".agents/mpi-kanban/tasks/MPI-504/validation.md",
+    "docs/workflow-authoring/mpi-nodes.md"
+  ],
+  "status": "complete",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/5a261c2b-18c9-420b-9357-ad1cc9bcdf5c.json",
+  "task_card": "MPI-504",
+  "heartbeat_at": "2026-08-20T03:35:00Z",
+  "note": "Masking group filled (nodes 745-757). Edit complete, uncommitted."
+}

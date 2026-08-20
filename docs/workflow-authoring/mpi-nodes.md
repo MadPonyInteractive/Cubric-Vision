@@ -34,12 +34,41 @@ precisely so the app has a clean, titled seam to write into.
 | Node | Why the app cares |
 |---|---|
 | `MpiFloat` / `MpiInt` / `MpiString` / `MpiText` / `MpiSimpleBoolean` | Titled pass-throughs. The app injects a scalar by titling one of these `Input_<Name>`. This is the primary injection target. |
-| `MpiIfElse` | Boolean gate — the app bakes/injects the boolean to pick a branch (t2v/i2v, i2i on/off, enhance on/off). |
+| `MpiIfElse` | Boolean gate — the app bakes/injects the boolean to pick a branch (t2v/i2v, i2i on/off, enhance on/off). Lazy, but see § A preview node defeats a lazy gate. |
+| `MpiBlocker` | Hard stop at the SOURCE of a branch. Use when laziness is not enough — it blocks the value itself, so nothing downstream can be pulled by anything. |
 | `MpiMath` | Evaluates `b if a == N else 0.0` etc. — drives the style-LoRA rack from one injected int. |
 | `MpiAnySwitch` | N-to-1 any-type router; the app injects `select` (1-indexed). Runtime in-workflow selectors (PiD VAE/size) use it. Subclass it for new any-type switches. |
 | `MpiLoraModel` / `MpiLoraModelClip` | LoRA apply with strength; the app injects the `{lora_name, strength_model, strength_clip}` object into the user LoRA slots. |
 | `MpiPromptList` / `MpiPromptProcessor` | Trigger-phrase list driven by the same int that picks the LoRA — keeps LoRA choice and trigger text from drifting. |
 | `MpiSaveVideo` | Fast single-pass mp4 encode on the engine; remote gens transfer only the final mp4. |
+| `MpiBox` + `MpiBoxCrop` | **The only socket-driven image crop left.** Core `ImageCrop` is deprecated (`/object_info` `deprecated: true`, `[DEPR]` in the editor) and its successor `ImageCropV2` takes `crop_region` as a *socketless UI bounding-box widget* — so nothing upstream can drive it. Feed `MpiBox` four INTs, hand the `MPI_BOX` to `MpiBoxCrop`. `pad` off = the crop is the intersection with the image; on = edge pixels replicate out to the requested size. |
+
+## A preview node defeats a lazy gate (2026-08-20)
+
+`MpiIfElse` inputs are lazy, so the unselected branch is not pulled — that is true, and it is
+why the points/text mask branches never run each other's models. **It is not enough on its
+own.** An output node — `PreviewImage`, `MaskPreview`, `PreviewAny`, `SaveImage` — is an
+**execution ROOT**, not a leaf. ComfyUI walks back from every unmuted output and executes
+everything it finds. So one debug preview left unmuted anywhere downstream of a gated branch
+drags that whole branch into every run, gate or no gate.
+
+Measured on `flow_character_sheet.json` (MPI-504): with `Input_Remove_Head` off, the head
+branch ran anyway — YOLO, the SAM3 checkpoint, the Klein inpaint. Cause: one unmuted
+`PreviewImage` (`688`) whose upstream closure was **84 nodes**, including all 14 of the
+`Masking` group and the whole inpaint chain. The `MpiIfElse` was never wrong; it was simply not
+the only root.
+
+Two fixes, and the branch wants both:
+
+- **Mute the debug previews** (mode 2). A muted output is not a root. Keep them in the graph —
+  they are how the branch gets inspected — just never shipped unmuted.
+- **`MpiBlocker` at the SOURCE of the branch**, driven by the same boolean as the gate. It
+  blocks the value the branch starts from, so no root anywhere can pull it. This is the durable
+  half: it survives someone adding a preview later.
+
+Symptom to recognise: a gated branch's models load on every run and the gate looks correctly
+wired. Do not re-check the gate — grep the graph for unmuted output nodes and walk their
+upstream.
 
 ## `MpiMath` — what the expression may contain (2026-08-10)
 
@@ -51,10 +80,15 @@ precisely so the app has a clean, titled seam to write into.
 return a bool usable as 0/1), ternaries (`x if cond else y`), and **`math.*`
 functions called bare** — `floor(...)`, `ceil(...)`, `sqrt(...)`.
 
-**Not allowed — and this is the one that bites:** `min()` and `max()` are *builtins*,
-not `math.*`, so they raise `disallowed call`. Use a ternary (`a if a>b else b`) or
-**`MpiClamp`**, which takes `value` / `min_value` / `max_value` and mirrors `INT in →
-INT out`.
+**Not allowed — and this is the one that bites:** `min()`, `max()` and **`int()`** are
+*builtins*, not `math.*`, so they raise `disallowed call`. For clamping use a ternary
+(`a if a>b else b`) or **`MpiClamp`**, which takes `value` / `min_value` / `max_value`
+and mirrors `INT in → INT out`.
+
+**`*` out is not a cast.** Nothing coerces the result, so `a * 0.8` into an `INT`
+widget socket delivers a **float** and fails inside the consuming node, not at
+validation. Keep it integral at the source: floordiv (`a * 4 // 5`) or `floor(...)` /
+`ceil(...)`. (`flow_character_sheet.json` node `750` sizes a crop this way.)
 
 Worked examples from `ltx_v2v_template.json`, all snapping a frame count onto LTX's
 8n+1 latent lattice:

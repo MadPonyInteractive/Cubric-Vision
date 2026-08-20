@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "5b538e8e-2d5a-4d08-9773-d04ccb81aa7c",
   "generated_at": "2026-08-20T04:05:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-504 - Fabio's three Enhance-button changes shipped; he then merged the full sheet graph and left an empty Masking group to fill",
     "branch": "master"
