@@ -1,8 +1,8 @@
 {
   "id": "8c903c85-8d5e-4c32-82d9-491dd4cd89e3",
   "revision": 0,
-  "last_node_id": 767,
-  "last_link_id": 1570,
+  "last_node_id": 772,
+  "last_link_id": 1576,
   "nodes": [
     {
       "id": 136,
@@ -2604,7 +2604,7 @@
         {
           "name": "INT",
           "type": "INT",
-          "link": 1447
+          "link": 1571
         }
       ],
       "outputs": [
@@ -2646,7 +2646,7 @@
         {
           "name": "INT",
           "type": "INT",
-          "link": 1448
+          "link": 1572
         }
       ],
       "outputs": [
@@ -6079,8 +6079,8 @@
       "id": 676,
       "type": "MpiInt",
       "pos": [
-        -2802.9268222321357,
-        6262.232278611539
+        -3400,
+        6260
       ],
       "size": [
         210,
@@ -6099,7 +6099,7 @@
           ]
         }
       ],
-      "title": "Input_Width",
+      "title": "W_1k",
       "properties": {
         "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
@@ -6115,8 +6115,8 @@
       "id": 677,
       "type": "MpiInt",
       "pos": [
-        -2805.584177540772,
-        6392.516174750123
+        -3400,
+        6460
       ],
       "size": [
         210,
@@ -6135,14 +6135,14 @@
           ]
         }
       ],
-      "title": "Input_Height",
+      "title": "H_1k",
       "properties": {
         "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
       },
       "widgets_values": [
-        768
+        800
       ],
       "color": "#432",
       "bgcolor": "#653"
@@ -6882,6 +6882,271 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 768,
+      "type": "MpiInt",
+      "pos": [
+        -3400,
+        6360
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 146,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            1573
+          ]
+        }
+      ],
+      "title": "W_2k",
+      "properties": {
+        "Node name for S&R": "MpiInt",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
+      },
+      "widgets_values": [
+        1792
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 769,
+      "type": "MpiInt",
+      "pos": [
+        -3400,
+        6560
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 147,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            1574
+          ]
+        }
+      ],
+      "title": "H_2k",
+      "properties": {
+        "Node name for S&R": "MpiInt",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
+      },
+      "widgets_values": [
+        1120
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 770,
+      "type": "MpiInt",
+      "pos": [
+        -3760,
+        6360
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 148,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            1575,
+            1576
+          ]
+        }
+      ],
+      "title": "Input_Quality",
+      "properties": {
+        "Node name for S&R": "MpiInt",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
+      },
+      "widgets_values": [
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 771,
+      "type": "MpiAnySwitch",
+      "pos": [
+        -3060,
+        6260
+      ],
+      "size": [
+        270,
+        138
+      ],
+      "flags": {},
+      "order": 149,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any_1",
+          "shape": 7,
+          "type": "*",
+          "link": 1447
+        },
+        {
+          "name": "any_2",
+          "shape": 7,
+          "type": "*",
+          "link": 1573
+        },
+        {
+          "name": "any_3",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "any_4",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "any_5",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "select",
+          "type": "INT",
+          "widget": {
+            "name": "select"
+          },
+          "link": 1575
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            1571
+          ]
+        },
+        {
+          "name": "index",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "Width_Select",
+      "properties": {
+        "Node name for S&R": "MpiAnySwitch",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
+      },
+      "widgets_values": [
+        1
+      ]
+    },
+    {
+      "id": 772,
+      "type": "MpiAnySwitch",
+      "pos": [
+        -3060,
+        6460
+      ],
+      "size": [
+        270,
+        138
+      ],
+      "flags": {},
+      "order": 150,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any_1",
+          "shape": 7,
+          "type": "*",
+          "link": 1448
+        },
+        {
+          "name": "any_2",
+          "shape": 7,
+          "type": "*",
+          "link": 1574
+        },
+        {
+          "name": "any_3",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "any_4",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "any_5",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "select",
+          "type": "INT",
+          "widget": {
+            "name": "select"
+          },
+          "link": 1576
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            1572
+          ]
+        },
+        {
+          "name": "index",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "Height_Select",
+      "properties": {
+        "Node name for S&R": "MpiAnySwitch",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
+      },
+      "widgets_values": [
+        1
+      ]
     }
   ],
   "links": [
@@ -7465,7 +7730,7 @@
       1447,
       676,
       0,
-      674,
+      771,
       0,
       "INT"
     ],
@@ -7473,7 +7738,7 @@
       1448,
       677,
       0,
-      675,
+      772,
       0,
       "INT"
     ],
@@ -8324,6 +8589,54 @@
       767,
       0,
       "MASK"
+    ],
+    [
+      1571,
+      771,
+      0,
+      674,
+      0,
+      "INT"
+    ],
+    [
+      1572,
+      772,
+      0,
+      675,
+      0,
+      "INT"
+    ],
+    [
+      1573,
+      768,
+      0,
+      771,
+      1,
+      "INT"
+    ],
+    [
+      1574,
+      769,
+      0,
+      772,
+      1,
+      "INT"
+    ],
+    [
+      1575,
+      770,
+      0,
+      771,
+      5,
+      "INT"
+    ],
+    [
+      1576,
+      770,
+      0,
+      772,
+      5,
+      "INT"
     ]
   ],
   "groups": [
