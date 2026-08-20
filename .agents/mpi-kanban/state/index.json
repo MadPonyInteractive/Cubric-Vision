@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-20T04:05:00Z",
+  "updated_at": "2026-08-20T02:55:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -63,6 +63,14 @@
   "pending_file_states": [],
   "open_messages": [],
   "active_handoffs": [
+    {
+      "id": "15c0f3cc-6e28-42ca-9793-19c64aa06d7a",
+      "path": ".agents/mpi-kanban/state/handoffs/15c0f3cc-6e28-42ca-9793-19c64aa06d7a.json",
+      "task_card": "MPI-582",
+      "status": "open",
+      "created_at": "2026-08-20T02:55:00Z",
+      "note": "Card scope SHIPPED and Fabio-verified (78e7dd7a). Only leftover is Extend Video's missing middle step, shaped like Add Foley's."
+    },
     {
       "id": "f3f9d6b3-5f22-4017-9c80-2e520ad1f9be",
       "path": ".agents/mpi-kanban/state/handoffs/f3f9d6b3-5f22-4017-9c80-2e520ad1f9be.json",

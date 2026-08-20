@@ -1,0 +1,64 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "15c0f3cc-6e28-42ca-9793-19c64aa06d7a",
+  "generated_at": "2026-08-20T02:55:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-582 - declared fields mount Primitives; the component law written down",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Every UI element is a component - declared fields hand-roll bare inputs, and the docs say that is fine.",
+    "status": "in_progress",
+    "summary": "All four phases of the card shipped and Fabio verified them in the running app (\"okay, it looks good\"). In the same message he asked for one more UI fix, which is the ONLY thing left: the Extend Video flow has no middle step and should have one shaped exactly like Add Foley's."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-582/plan.md",
+    "completed": [
+      "Phase 1 - select -> MpiDropdown, toggle -> MpiCheckbox, number -> MpiInput; all seven field types now mount a Primitive",
+      "Phase 2 - both accent-color blocks and both :focus-visible blocks DELETED; consumer blocks stop restating primitive chrome; the text field regained its field-text class",
+      "Phase 3 - MpiToolOptionsMaskAdjust and MpiMaskStrip onto MpiProgressBar; no bare type=range left in js/ or styles/",
+      "Phase 4 - add-flow playbook, FlowStepField typedef, declaredFields.js header, and .claude/rules/components.md now state the law",
+      "Verified: 630 node tests, 18 desktop tests, eslint clean, live probe on app:isolated, plus Fabio's own visual pass"
+    ],
+    "pending": [
+      "Add the missing MIDDLE STEP to the ltx-extend FlowDef, shaped like ltx-foley's",
+      "Rewrite ltx-extend's comment that argues FOR having no middle step",
+      "Ask Fabio where Input_Duration belongs - step or run slide"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-582",
+    "title": "Every UI element is a component - declared fields hand-roll bare inputs, and the docs say that is fine",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-582/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-582/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-582/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-582/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "In js/data/flowsRegistry.js, give the `ltx-extend` FlowDef a middle step matching `ltx-foley`'s: { kind: 'preview', role: 'video1', tickerLabel: 'Describe', title: ..., fields: [positive rows 3, negative rows 2] }, turning its 2-step carousel (supply -> run) into 3 (supply -> describe -> run). Rewrite the comment above `steps: []` that argues for having none. Then ask Fabio whether Input_Duration stays on the run slide or moves onto the new step.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Fabio closed card item 3 (revise every Flow) by inspection on 2026-08-20 - all three Flows already use components. No audit is owed.",
+      "Fabio gave explicit go for .claude/rules/components.md (CLAUDE.md cardinal rule 5). That go did NOT extend to CLAUDE.md itself, which is still untouched.",
+      "accent-frost is a colour to move AWAY from (Fabio, via MPI-504's plan) - both focus-ring blocks were deleted rather than recoloured."
+    ],
+    "constraints": [
+      "ltx-extend's EXISTING comment argues FOR having no middle step (\"nothing here is marked on the clip itself\"). ltx-foley's comment is the rebuttal: step 0 loads media at thumbnail size, so a preview step is the first place the user can judge the take. Change the comment or the next agent reverts the fix.",
+      "Declaring the SAME field on a step AND on the flow shares one value (MPI-504's enhance pattern), so Input_Duration can live on either surface. Fabio said \"exactly like the foley flow\", but foley has no third field - ask rather than guess.",
+      "MPI-504 is a LIVE peer session on this tree. It committed 25a96d14 mid-work and swept in this card's uncommitted MpiBaseFlow.css and flowsRegistry.js edits - nothing was lost, but never `git add -A` here, and re-check `git log` before assuming an edit is uncommitted.",
+      "js/data/flowsRegistry.js is owned by MPI-582's files.json, so the Extend Video edit needs no new claim."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-582/plan.md",
+      "js/data/flowsRegistry.js",
+      "docs/playbooks/add-flow/ui/carousel-frame.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/15c0f3cc-6e28-42ca-9793-19c64aa06d7a.json and use mpi-continue to resume MPI-582, which is in `doing` on the master branch of c:/AI/Mpi/Cubric-Vision. The card's original scope - every declared field type mounting an app Primitive, one slider in the app, and the documentation that said a Flow needs no component - is SHIPPED, verified by tests and by Fabio in the running app, and committed as 78e7dd7a. One follow-up remains, which Fabio asked for in the same message: the Extend Video flow (`ltx-extend` in js/data/flowsRegistry.js) declares `steps: []`, so its carousel is only supply -> run. It needs a middle step shaped exactly like the Add Foley flow's (`ltx-foley` in the same file): a `preview` step on role video1 carrying the positive and negative prompt fields. Read the card's plan.md § Current State first - it names the trap (extend's own comment argues for having no middle step and must be rewritten) and the one open question (whether Input_Duration moves onto the step or stays on the run slide, which is Fabio's call)."
+}
