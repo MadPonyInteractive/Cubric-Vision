@@ -10,6 +10,15 @@ prompt) is in [prompts.md](prompts.md). This file is the build.
 
 ## Current State
 
+**2026-08-20, session 8 — BOTH OPEN DECISIONS ANSWERED AND SHIPPED; THE FLOW RAN LIVE.** The
+1k/2k control is the `Input_Quality` switch bank (`70dc98cb` raw, `96c5b410` app+docs), proven at
+both arms in my own instance — `Input_Quality 1 -> 1280x800`, `2 -> 1792x1120`, read off the
+dispatched graph AND the files on disk (`475083cb`). The other four FLUX ratio rows are
+**DECLINED** with the provenance traced (SDXL training buckets). 638/638, `release:check`, eslint
+clean. **Three things are now open, all in `## Plan Drift` below:** the Enhance DOM-write bug
+(root-caused to one line, NOT fixed), toggles-as-buttons, and the LoRA panel + its route. The
+graphics have still not been made. Session 7's record follows.
+
 **2026-08-20, session 7 — THE FLOW IS WIRED. `/mpi-add-flow` is done bar the live run and the
 graphics.** What landed:
 
@@ -835,6 +844,69 @@ longer exists, so each resolves to a deletion, not a re-wire:
    node if Fabio wants it.
 
 ## Plan Drift
+
+**2026-08-20, session 8 — THE ENHANCE BUTTON BUG, ROOT-CAUSED, NOT YET FIXED.** Fabio: "when I
+press enhance, nothing happens... upon reusing the flow, I noticed that the character phrase box
+gets filled." Both halves are the SAME defect, and the enhancer itself is innocent — it runs, the
+op succeeds, `onText` fires and `_fieldValues[d.to]` receives the text. Only the LIVE DOM write
+fails.
+
+**The cause is one line.** `_writeFieldValue` (`MpiBaseFlow.js:763`) does:
+
+```js
+const inp = qs('.mpi-base-flow__field-text', wrap);
+if (inp) inp.value = text;
+```
+
+But `.mpi-base-flow__field-text` is the **mount HOST `<div>`** (`declaredFields.js:340`), not the
+control — the editable element is the `<textarea>` MpiInput renders inside it
+(`.mpi-input__field--textarea`, confirmed live off the running app). So `inp.value = text` sets an
+**expando property on a div**: no error, no exception, no log line, no repaint, clean exit. The
+purest form of the silent-skip trap this repo keeps rediscovering.
+
+**Every symptom falls out of that one line:**
+- the phrase box stays empty after Enhance, while the value is really there;
+- **the ENHANCE button goes GREY** — `_paintEnhance` computes `stale` off `_fieldValues[d.to]`,
+  which IS filled, so it correctly switches to `--secondary`. The grey button was evidence the
+  enhance SUCCEEDED, and it read as evidence of the opposite;
+- reopening or reusing the flow shows the text, because the field is then rebuilt seeded from
+  `_fieldValues` / `state.s_flowInputs`;
+- **and the clear-on-edit path is broken the same way** — `_setFlowField` blanks `_fieldValues[to]`
+  and calls the same `_writeFieldValue`, so a stale enhanced phrase stays on screen after the
+  source prompt is edited. One fix, two behaviours restored.
+
+**How to fix, and the design call to make first.** Do NOT just widen the selector to
+`.mpi-base-flow__field-text textarea` — writing `textarea.value` behind MpiInput's back desyncs the
+Primitive's own state, which is the same class of mistake one layer down. The right fix is to reach
+the PRIMITIVE: keep the mounted instance (or expose `setValue` on the mounted `el`) so
+`_writeFieldValue` calls the component's API. `_liveFields` stores the wrapper element today, so it
+is the thing that has to change. Check what `MpiInput` already exposes before adding anything.
+
+**Guard it.** A real-pixel probe is the only thing that catches this class: assert the TEXTAREA's
+rendered value after a programmatic write, never that `_fieldValues` holds it — the state was right
+the whole time. `tests/` cannot see the DOM, so this belongs in a desktop spec or a documented
+playwright probe.
+
+**2026-08-20, session 8 — TWO UI CHANGES REQUESTED BY FABIO, both approved, neither built.**
+
+1. **Toggles become BUTTONS.** "Can we have MPI buttons for the toggles instead? Similar to how we
+   have it in other places. The difference being you can actually use an icon and the name, so that
+   you don't need labels on the top like you have now." Today `type: 'toggle'` mounts an
+   `MpiCheckbox` plus a `field-label` span above it (`declaredFields.js:147-152`, 248-258). Change
+   the `toggle` TYPE ITSELF rather than adding a second type — one vocabulary, one renderer — and
+   make the icon OPTIONAL so ltx-extend / foley / upscale keep working label-only until someone
+   gives them icons. Suppress the top label for `toggle` the way `button` already is
+   (`f.type !== 'button'` at line 148 becomes a set).
+2. **A LoRA button that opens a LoRA panel.** Fabio: "an extra button that opens the LoRAS panel,
+   and perhaps add a new route for flow LoRAS." The graph ALREADY carries `Input_Lora_1..6`
+   (`MpiLoraModel` nodes, present in the converted 101-node graph) and `comfyController` already
+   routes `Input_Lora_N` through its dedicated LoRA-object branch (the MPI-219 case,
+   `comfyController.js:1424`). What is missing is entirely UI: **`declaredFields.js` has no `lora`
+   type — grepped, and NO shipped Flow declares a rack.** plan.md's older claim that
+   `flow_ltx_extend` and `flow_ltx_foley` "already ship the same six-slot rack" is **WRONG**: they
+   carry the graph nodes, not the FlowDef fields. `MpiModelSettings` has a rack (slots, strengths,
+   bypass) but it is a Compound bound to model state, not liftable as a field. Open sub-decisions:
+   how many slots show by default, and whether each slot exposes `strength_model`.
 
 **2026-08-20, session 8 — BOTH open decisions are ANSWERED. Neither is open any more.**
 
