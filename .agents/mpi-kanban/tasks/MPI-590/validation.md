@@ -19,17 +19,17 @@ only.** Other models in other flows are a later card — the shape is generic (a
 Live probe ran on an isolated instance (`npm run app:isolated`, own port + profile), with
 `s_installedModelIds` staged to hold both Krea 2 cards. The user's app was never touched.
 
-## The one residual
+## The residual — CLOSED by the user, 2026-08-20
 
-**Not proven from Comfy `/history`.** The checklist asked for a dispatched-graph read, which
-needs a real engine and a real sheet run; the isolated instance has no engine, and running one
-on the user's live app is off limits. Every hop up to the POST is verified — resolved params →
-`config.injectionParams` (flowService) → `runCommand` whitelist → `Object.assign(params,
-injectionParams)` → title match → `unet_name` write — so what is unproven is the last hop only.
+Fabio installed `krea2-nsfw` on his own engine and ran it: the picker appeared with both
+options, he ran several sheets on the NSFW arm and cancelled several mid-run. All good. That is
+the end-to-end proof the local harness could not give — a graph that loaded the wrong
+transformer would not have produced NSFW-bake output, and cancels exercised the queue path too.
 
-**To close it:** with `krea2-nsfw` installed, pick it in the Character Sheet drawer, run the
-sheet, then read `/history` for the newest prompt and confirm node 55's `unet_name` is
-`lustify-v10-krea-raw-int8_convrot.safetensors` and node 245's `strength_model` is 0.
+**One finding, not a bug:** the NSFW bake is materially weaker at **anime / stylised** subjects.
+Lustify is trained heavily on photoreal source. Fabio's call: "it is what it is." Recorded in
+`docs/models/krea2/README.md` (Cards row) so the next person does not re-diagnose it as a
+wiring fault — steer a stylised prompt to `krea2`.
 
 ## Also in this commit
 

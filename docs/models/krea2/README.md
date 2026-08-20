@@ -11,7 +11,7 @@ Do not reason about it as a Flux model.
 
 | | |
 |---|---|
-| Cards | **2**: `krea2` (SFW) · `krea2-nsfw`. Content variants, installable side by side — **not** tiers, so neither carries an H/B/L letter |
+| Cards | **2**: `krea2` (SFW) · `krea2-nsfw`. Content variants, installable side by side — **not** tiers, so neither carries an H/B/L letter. The NSFW bake (lustify) is trained heavily on **photoreal** source, so it is materially weaker at **anime / stylised** subjects than the SFW card — a bake limitation, not a wiring bug (Fabio, live runs 2026-08-20, MPI-590). Steer a stylised prompt to `krea2` |
 | Workflows | **ONE file per card** since MPI-365: `krea2_t2i_<sfw\|nsfw>.json` serves all six ops, branch picked by `Input_wf_type` (1 t2i · 2 i2i · 3 depth · 4 edit · 5 unused · 6 detail · 7 upscale). `krea2_detailer_*` / `krea2_upscaler_*` are **deleted** — see [injection.md](injection.md) |
 | Ops | `t2i` · `i2i` · `control` · `krea2Edit` · `detail` · `upscale`. Edit takes an **optional mask** (empty = whole-image), which is why branch 5 is dead. `control` is the op formerly called `poseReference`, then briefly `depth`; Krea2 declares `controlTypes: ['depth']`, so it shows no type picker |
 | Speed tiers | Runtime toggle, **not** separate cards (MPI-316). `krea2Turbo` → `Input_is_Turbo` (a BOOLEAN since MPI-365; was the `Input_Tier` int) — false = quality, true = fast |
