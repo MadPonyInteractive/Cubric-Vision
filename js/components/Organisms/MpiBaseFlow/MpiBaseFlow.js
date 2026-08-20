@@ -14,7 +14,9 @@ import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
-import { getStepKind, stepValueToParam } from './stepKinds.js';
+import { getStepKind, stepValueToParam, isFrameKind } from './stepKinds.js';
+import { enqueueGeneration } from '../../../services/generationService.js';
+import { getCommand } from '../../../data/commandRegistry.js';
 import { buildField, mapDeclaredValue, isInjectionParam } from '../../../utils/declaredFields.js';
 
 /**
@@ -108,7 +110,7 @@ function _getMediaGroups(flow) {
 function _getSteps(flow) {
     const steps = Array.isArray(flow?.steps) ? flow.steps : [];
     return steps.filter((s) => {
-        if (getStepKind(s?.kind)) return true;
+        if (getStepKind(s?.kind) || isFrameKind(s?.kind)) return true;
         clientLogger.warn('MpiBaseFlow', `unknown step kind "${s?.kind}" — skipping`);
         return false;
     });
@@ -292,6 +294,18 @@ export const MpiBaseFlow = ComponentFactory.create({
         _fields.forEach((f) => {
             const v = _seedField(f);
             if (v !== undefined) _fieldValues[f.id] = v;
+        });
+
+        // A `fields` step has no role, so its values belong to the FLOW store, not
+        // a role-keyed step scope — see stepKinds.js § FRAME_KINDS. Seeding them
+        // here rather than in the role loop below is what makes one prompt edited
+        // on the step and on the run slide a SINGLE value.
+        (flow.steps || []).forEach((step) => {
+            if (!isFrameKind(step?.kind) || !Array.isArray(step.fields)) return;
+            step.fields.forEach((f) => {
+                const v = _seedField(f);
+                if (v !== undefined) _fieldValues[f.id] = v;
+            });
         });
 
         // A STEP's fields seed through the same helper — one path, so a fix to one
@@ -678,6 +692,174 @@ export const MpiBaseFlow = ComponentFactory.create({
         const _buildField = (f, cur, onChange, unsubs) =>
             buildField(f, cur, onChange, unsubs, { namespace: flow.id });
 
+        // ── Enhance: a declared ACTION on a button field (MPI-504) ─────────────
+        /**
+         * Every enhance action this flow declares, wherever it was declared. One
+         * declaration carries all three behaviours — it fills `to`, editing `from`
+         * clears `to`, and the button reports which of those is true — so the three
+         * can never disagree the way three separate flags would.
+         * @type {Array<Object>}
+         */
+        const _enhanceDecls = [
+            ...(_fields || []),
+            ...(flow.steps || []).flatMap(st => st?.fields || []),
+        ].filter(f => f?.action === 'enhance' && f.from && f.to);
+
+        /**
+         * Field wrappers currently in the DOM, keyed by field id. Cleared on every
+         * slide rebuild. A field declared on two surfaces (the prompt step AND the
+         * run slide) is one VALUE but two nodes over the flow's life — only the
+         * mounted one is in here, which is exactly what "write it back where the
+         * user can see it" needs.
+         * @type {Map<string, HTMLElement>}
+         */
+        const _liveFields = new Map();
+
+        /** Field id of the enhance in flight, or null. */
+        let _enhancing = null;
+
+        /** Push a value into a mounted text field, so a programmatic write shows. */
+        function _writeFieldValue(id, text) {
+            const wrap = _liveFields.get(id);
+            if (!wrap) return;
+            const inp = qs('.mpi-base-flow__field-text', wrap);
+            if (inp) inp.value = text;
+        }
+
+        /**
+         * Repaint every mounted enhance button. `--stale` means "the current prompt
+         * is not enhanced" — on the run slide the enhanced prompt is NOT SHOWN, so
+         * the button is the only place that can be said (plan.md § The prompt UI,
+         * rule 3). Same class on both surfaces: one signal, learned once.
+         */
+        function _paintEnhance() {
+            _enhanceDecls.forEach((d) => {
+                const wrap = _liveFields.get(d.id);
+                if (!wrap) return;
+                const btn = qs('.mpi-base-flow__field-button', wrap);
+                if (!btn) return;
+                const busy = _enhancing === d.id;
+                btn.classList.toggle(
+                    'mpi-base-flow__field-button--stale',
+                    !String(_fieldValues[d.to] || '').trim(),
+                );
+                btn.disabled = !!_enhancing;
+                btn.textContent = busy ? 'Enhancing…' : (d.label || 'Enhance');
+            });
+        }
+
+        /**
+         * Run the declared enhancer op on `from` and write its text into `to`.
+         *
+         * A TEXT op (`outputKind: 'text'`), so it ends with no history item and
+         * reports through `onText` — the same path Describe Image uses. Enhance is
+         * the ONLY writer of `to`: Generate never enhances on its own, and an
+         * untouched `to` means the raw prompt is what runs (see `_collectInputs`).
+         *
+         * @param {Object} d  the enhance field declaration
+         */
+        function _runEnhance(d) {
+            if (_enhancing) return;
+            const source = String(_fieldValues[d.from] || '').trim();
+            if (!source) {
+                Events.emit('ui:warning', { message: 'Write a prompt first, then Enhance.' });
+                return;
+            }
+            // The op is a separate registration from the flow's own; a flow shipped
+            // ahead of it would otherwise fail deep inside the queue.
+            if (!getCommand(d.op)) {
+                clientLogger.warn('MpiBaseFlow', `enhance field "${d.id}" names unregistered op "${d.op}"`);
+                Events.emit('ui:warning', { message: 'The prompt enhancer is not available in this build.' });
+                return;
+            }
+            const done = () => { _enhancing = null; _paintEnhance(); };
+            _enhancing = d.id;
+            _paintEnhance();
+            enqueueGeneration(
+                {
+                    operation: d.op,
+                    model: { id: d.model || null, mediaType: 'image' },
+                    positive: source,
+                    negative: '',
+                    // The enhancer seed is DRIVEN, never a user field, and never
+                    // stored: step 3's loop is Enhance → Generate → Enhance, and a
+                    // fixed seed returns the same phrase on every press. What the
+                    // sidecar keeps is the enhanced TEXT, which is why storing the
+                    // seed as well was considered and rejected.
+                    injectionParams: { Input_Seed: Math.floor(Math.random() * 2 ** 31) },
+                },
+                {
+                    // A text op never fires onComplete — GenerationCallbacks.onText.
+                    onText: (text) => {
+                        const out = String(text || '').trim();
+                        if (out) {
+                            _fieldValues[d.to] = out;
+                            _writeFieldValue(d.to, out);
+                        }
+                        done();
+                    },
+                    onError: (err) => {
+                        done();
+                        clientLogger.error('MpiBaseFlow', 'prompt enhance failed', err);
+                    },
+                    onCancel: done,
+                },
+                { scope: 'gallery' },
+            );
+        }
+
+        /**
+         * Write one FLOW-level field value. Used by the run slide and by a `fields`
+         * step alike — that shared store is what makes the prompt a single value
+         * edited from two places.
+         */
+        function _setFlowField(id, val) {
+            _fieldValues[id] = val;
+            // Editing the source prompt DISCARDS the enhancement: the enhanced text
+            // was written for the old wording, so keeping it would generate from a
+            // description the user just changed. Visible immediately where the
+            // enhanced box is shown; signalled by the button where it is not.
+            _enhanceDecls.forEach((d) => {
+                if (d.from !== id || !_fieldValues[d.to]) return;
+                _fieldValues[d.to] = '';
+                _writeFieldValue(d.to, '');
+            });
+            _paintEnhance();
+        }
+
+        /** onChange for a flow-level field: an `action` runs, everything else stores. */
+        function _onFlowField(f, val) {
+            if (f.action === 'enhance') { _runEnhance(f); return; }
+            _setFlowField(f.id, val);
+        }
+
+        /**
+         * Render flow-level declared fields as a stacked column. Both surfaces that
+         * carry them use this — the run slide's control column and a `fields` step —
+         * so they cannot drift into two dialects.
+         *
+         * @param {Array<Object>} fields
+         * @param {Array<Function>} unsubs
+         * @returns {HTMLElement}
+         */
+        function _buildFlowFields(fields, unsubs) {
+            const stack = ce('div', {
+                className: 'mpi-base-flow__fields mpi-base-flow__fields--stacked',
+            });
+            fields.forEach((f) => {
+                const node = _buildField(
+                    f,
+                    _fieldValues[f.id] ?? f.default,
+                    (val) => _onFlowField(f, val),
+                    unsubs,
+                );
+                if (!node) return;
+                _liveFields.set(f.id, node);
+                stack.appendChild(node);
+            });
+            return stack;
+        }
+
         /**
          * Render a step's declared `fields` as a single row between canvas and hint.
          * THE FRAME renders this, not the gizmo, so every gizmo's controls match for
@@ -789,6 +971,25 @@ export const MpiBaseFlow = ComponentFactory.create({
             title.textContent = step.title || '';
             work.appendChild(title);
 
+            // A FRAME-NATIVE step (stepKinds.js § FRAME_KINDS) has no gizmo and no
+            // media role — its declared fields ARE the work, stacked where the
+            // canvas would be. Returning early keeps the media guard below from
+            // demanding an image a prompt-only flow never had a slot for.
+            if (isFrameKind(step.kind)) {
+                const stack = _buildFlowFields(
+                    Array.isArray(step.fields) ? step.fields : [], unsubs,
+                );
+                stack.classList.add('mpi-base-flow__fields--work');
+                work.appendChild(stack);
+                if (step.hint) {
+                    const hint = ce('p', { className: 'mpi-base-flow__work-hint' });
+                    hint.textContent = step.hint;
+                    work.appendChild(hint);
+                }
+                _paintEnhance();
+                return work;
+            }
+
             const media = _mediaForRole(step.role);
             const canvas = ce('div', { className: 'mpi-base-flow__canvas' });
 
@@ -859,19 +1060,8 @@ export const MpiBaseFlow = ComponentFactory.create({
             // Flow-level declared fields (MPI-531) — stacked, because this column is
             // 236px of vertical stack, not the step row's one-row cap.
             if (_fields.length) {
-                const declared = ce('div', {
-                    className: 'mpi-base-flow__fields mpi-base-flow__fields--stacked',
-                });
-                _fields.forEach((f) => {
-                    const node = _buildField(
-                        f,
-                        _fieldValues[f.id] ?? f.default,
-                        (val) => { _fieldValues[f.id] = val; },
-                        unsubs,
-                    );
-                    if (node) declared.appendChild(node);
-                });
-                contentSlot.appendChild(declared);
+                contentSlot.appendChild(_buildFlowFields(_fields, unsubs));
+                _paintEnhance();
             }
 
             const genWrap = ce('div', { className: 'mpi-base-flow__gen' });
@@ -945,6 +1135,10 @@ export const MpiBaseFlow = ComponentFactory.create({
             _stepInstances.clear();
             _slideUnsubs.forEach(list => list.forEach(fn => fn?.()));
             _slideUnsubs.clear();
+            // Field nodes die with the slide; the VALUES live on in _fieldValues.
+            // Keeping the map would leave `_writeFieldValue` writing into detached
+            // nodes — a cleared enhancement that silently never cleared.
+            _liveFields.clear();
             // These live on the run slide only; drop the stale references.
             _runBtn = null; _resultMediaEl = null; _statusEl = null;
             _pendingNote = null; _gaugeEl = null;
@@ -1299,6 +1493,24 @@ export const MpiBaseFlow = ComponentFactory.create({
                 if (!step?.param || !step.role) return;
                 const v = stepValueToParam(step.kind, _stepValues[step.role]);
                 if (v !== null) declaredParams[step.param] = v;
+            });
+
+            // No Enhance pressed → the RAW prompt is what runs. There is no silent
+            // enhancement (plan.md § The prompt UI, rule 2), and the fallback is
+            // derived from the enhance declaration rather than declared a second
+            // time, so the pair can never be wired one-way.
+            _enhanceDecls.forEach((d) => {
+                const bin = isInjectionParam(d.to) ? declaredParams : declared;
+                if (String(bin[d.to] || '').trim()) return;
+                const src = isInjectionParam(d.from) ? declaredParams[d.from] : declared[d.from];
+                if (String(src || '').trim()) bin[d.to] = src;
+            });
+            // A button is an ACTION, not a value — a click must not reach the op as
+            // `enhance: true`.
+            _decls.forEach((f, id) => {
+                if (f?.type !== 'button') return;
+                delete declared[id];
+                delete declaredParams[id];
             });
 
             return {

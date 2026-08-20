@@ -10,6 +10,67 @@ prompt) is in [prompts.md](prompts.md). This file is the build.
 
 ## Current State
 
+**2026-08-20 — FABIO REVIEWED THE BUILT UI AND ASKED FOR THREE CHANGES. This is the next work,
+before the enhancer op.** He looked at both surfaces in his own app; the behaviour is right, the
+button is not:
+
+1. **The Enhance button must be an `MpiButton`, pink (`variant: 'primary'` = `--accent-heat`) with
+   the `enhance` icon** (already in `js/utils/icons.js:37`), and it must change BACKGROUND on hover
+   the way the rest of the app does. My `--accent-frost` outline was wrong twice over: Fabio's
+   words — *"a colour that is only used in 3% of the app… it actually should be a colour that
+   shouldn't be used anywhere. We end up using it for some reason."* Treat `--accent-frost` as
+   a colour to move AWAY from, not a signal to reach for.
+2. **On the run slide the Enhance button must sit directly UNDER the prompt box**, not down beside
+   Generate. This is the `--stacked` flex-growth already noted below under "Open"; Fabio's answer
+   to that open question is: put them together.
+3. Its size/placement otherwise stay as they are.
+
+**Three traps for whoever does it** (all checked, none guessed):
+
+- **`MpiButton` in ICON MODE FORCES `secondary`.** `MpiButton.js:70` maps every variant except
+  `danger`/`ghost` down to `secondary`, so `{icon:'enhance', label:'Enhance', variant:'primary'}`
+  comes out grey, not pink. Decide deliberately: widen that mapping, or use text mode and put the
+  icon in the label. Do NOT just pass `primary` and assume.
+- **The `button` branch is in `js/utils/declaredFields.js`, which is SHARED** with MPI-580's plugin
+  dropdown. Swapping the raw `<button>` for a mounted Primitive changes both surfaces and needs a
+  teardown — copy the `radio` branch's `unsubs.push(() => inst?.el?.destroy?.())`, it is the only
+  other mounted Primitive there and it exists for exactly this reason.
+- **`_paintEnhance()` currently repaints by `qs`-ing `.mpi-base-flow__field-button`** and setting
+  `textContent`/`disabled`/`--stale`. On an MpiButton that becomes the instance API, and the
+  `--stale` + `--work` button CSS blocks in `MpiBaseFlow.css` change with it. Whatever replaces
+  `--stale`, it must still be readable on the run slide, where the enhanced prompt is invisible and
+  the button is the ONLY thing that can say "not enhanced".
+
+Also: fixing (2) touches `--stacked`, which Extend Video and Add Foley also use — check both run
+slides after, and say if they moved.
+
+**2026-08-20, session 5 — the prompt UI's FRAME HALF IS BUILT and verified in a running app.**
+All six of Fabio's rules hold, and it took **no new component** — a Flow carries no JS, so the
+capability is two declarations the frame understands (`docs/playbooks/add-flow/ui/prompt-enhance.md`
+is the portable record):
+
+- **`kind: 'fields'`** — a frame-native, media-less step whose declared fields ARE the work,
+  stacked where the canvas would be (`FRAME_KINDS`, `MpiBaseFlow/stepKinds.js`). It has no `role`,
+  so its values live in the FLOW-level store — which is what makes one prompt a single value
+  edited from the step AND the run slide.
+- **`action: 'enhance'` on a `button` field** (`op` / `from` / `to`) — the frame runs the text op
+  and writes `to`. That ONE declaration also drives edit-clears, the `--stale` button state, and
+  the raw-prompt fallback, so they cannot disagree.
+
+**Rules 5 and 6 turned out to be FREE.** `flowInputs` already snapshots the whole collected payload
+at Run and Reuse seeds it back, so both prompts store and inject verbatim with no new storage path,
+and no seed is stored because nothing declares one. Verified live, not reasoned: with Enhance
+unpressed the payload was `{positive: "a rain-soaked dock worker, forties", injectionParams:
+{Input_Character: "a rain-soaked dock worker, forties"}}`; with the box filled, `Input_Character`
+became the enhanced text and `positive` stayed the user's own.
+
+**NEXT: the enhancer OP.** The UI is wired to an op that does not exist yet — `getCommand` misses,
+so Enhance warns and no-ops (proven; the button does not hang). That op is `raw/qwen3vl_4b_prompt_
+enhancer.json` converted to an API workflow + registered in the 4 files with `outputKind: 'text'`.
+The weight is **already shipped** (`qwen3vl-abliterated-clip`, shared with krea2 and the
+image-describer plugin) — no new download. One open dependency: the enhancer graph needs an
+`Input_Seed` node for per-press variation, and `raw/` is Fabio's.
+
 **2026-08-20 — the prompt UI is DECIDED, and it is the next build.** Fabio settled the shape in
 conversation: a **three-step Flow** with the enhancer promoted out of hiding into two user-facing
 fields. Step 2 is the refine surface (user box → Enhance → editable enhanced box), step 3 is the

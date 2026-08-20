@@ -17,6 +17,7 @@ overlay / Flow Library. The procedure for wiring a flow is the numbered sections
 |---|---|---|
 | [carousel-frame.md](carousel-frame.md) | **THE flow frame** — step carousel, steps-as-data, results-not-real-until-Apply | Head Swap (MPI-299) |
 | [box-gizmo.md](box-gizmo.md) | Ratio-locked box selector over an image; coord contract into the graph | Head Swap (MPI-299) |
+| [prompt-enhance.md](prompt-enhance.md) | **The prompt pair** — a user prompt, an `action: 'enhance'` button, an editable enhanced prompt; the media-less `fields` step that hosts them | Character Sheet (MPI-504) |
 
 ## Baseline rules
 

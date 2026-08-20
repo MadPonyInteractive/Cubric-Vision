@@ -133,8 +133,14 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
 
 ## App wiring — after the graph proves out
 
+- [x] **The prompt UI's FRAME half** (2026-08-20) — `kind: 'fields'` step + `action: 'enhance'`
+      button field in `MpiBaseFlow`. No new component (a Flow carries no JS). All six of Fabio's
+      rules verified in a running app; both prompts reach `flowInputs` and no seed is stored.
+      Portable record: `docs/playbooks/add-flow/ui/prompt-enhance.md`
+- [ ] **The enhancer OP** — `raw/qwen3vl_4b_prompt_enhancer.json` → API workflow + registered in
+      the 4 files with `outputKind: 'text'`. Until it exists Enhance warns and no-ops. Weight is
+      already shipped (`qwen3vl-abliterated-clip`). NEEDS an `Input_Seed` node in the graph for
+      per-press variation — `raw/` is user-owned
 - [ ] `/mpi-add-flow` from the top: `FlowDef`, the op in 4 files, `sync-raw-workflows.mjs`,
       `validate-injection-rules.mjs`, live run
-- [ ] Second op for the PROMPT REVIEW step (`outputKind: 'text'`, the Describe Image shape) —
-      returns the enhanced character description into the prompt box for the user to edit
 - [ ] Decide the `krea2-nsfw`-only install case

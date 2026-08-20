@@ -628,3 +628,119 @@ workspace as-is.
 
 **Fabio's eyes still own the call**, per the standing rule that these sheets are judged by eye. The
 read above is mine; if he sees a layout difference I missed, the gate reopens.
+
+---
+
+## 2026-08-20, session 5 — the prompt UI's FRAME half, built and verified live
+
+**What was built.** No new component. A Flow carries no JS (MPI-572), so the whole capability is
+two things the frame understands, both declarable by a third-party manifest:
+
+| | |
+|---|---|
+| `kind: 'fields'` | Frame-native, media-less step — declared fields ARE the work, stacked where the canvas would be. `FRAME_KINDS` in `MpiBaseFlow/stepKinds.js`. No `role`, so its values live in the FLOW-level store |
+| `action: 'enhance'` | On a `button` field, with `op` / `from` / `to`. The frame runs the text op and writes `to` |
+
+Files: `MpiBaseFlow.js` (+`.css`), `stepKinds.js`, `flowsRegistry.js` (typedefs only),
+`docs/playbooks/add-flow/ui/prompt-enhance.md` (new, the portable record).
+
+**Two design calls worth keeping.**
+
+1. **A step kind was the wrong shape and a `fields` step was the right one.** A bespoke `prompt`
+   gizmo would have needed the `{media, value, onChange}` contract on a flow that has NO media at
+   all, and its value would have landed in `stepValues[role]` — a *different store* from the run
+   slide's, which is exactly the divergence rule 4 forbids. A `fields` step has no role, so
+   flow-level is the only coherent place for its values, and rule 4 falls out for free rather than
+   being enforced by a flag.
+2. **One declaration drives all three behaviours.** Fill, clear-on-edit and the button's state all
+   read the same `from`/`to` pair, and the Run fallback derives from it too. Declaring the fallback
+   separately (`fallbackFrom:`) was the first draft and was dropped: a pair wired one way is a bug
+   that only shows up on the one run nobody edited.
+
+**Rules 5 and 6 were already free.** `flowInputs` snapshots the whole collected payload at Run
+(`03-storage-and-reuse.md`) and Reuse seeds it back, so storing both prompts and injecting the
+enhanced one verbatim needed NO new storage path — and no seed is stored because nothing declares
+one. This was checked, not assumed.
+
+### Verified in a running app (own `app:isolated` instance, `:51955`, user's `:3000` untouched)
+
+| Check | Result |
+|---|---|
+| 3-step carousel, step 1 media-free | `01 Inputs · 02 Prompt · 03 Generate`; step 1 reads *"This flow needs no input media."* |
+| Step 2 composition | 3-row user box → full-width Enhance → 10-row enhanced box, all 620px, title above, hint below |
+| Enhance button initial state | `--stale` (accent). Not-enhanced is the ACTIONABLE state, so it is the loud one |
+| Enhanced box filled → button | modifier drops, button goes quiet |
+| Edit the user prompt | enhanced box **visibly cleared to `''`** AND button flips back to `--stale` — rule 3, both halves |
+| Step 3 | ONE box (the user prompt, value carried), Enhance `--stale`, Generate. Enhanced prompt NOT shown |
+| Shared value across surfaces | filled on step 2 → step 3's button quiet → back on step 2, both values intact |
+| Run with NO enhancement | payload `{positive: "a rain-soaked dock worker, forties", injectionParams: {Input_Character: "a rain-soaked dock worker, forties"}}` — raw prompt, rule 2 |
+| Run WITH enhancement | `Input_Character: "THE ENHANCED PHRASE, verbatim"`, `positive` still the user's own — both stored, rule 5 |
+| No seed anywhere in the payload | confirmed — rule 6 |
+| Enhance on an unregistered op | warns *"The prompt enhancer is not available in this build"*, button stays enabled, no crash |
+
+`npm run lint` clean, `npm test` 630/630.
+
+### One real bug the screenshot caught that the DOM did not
+
+The first render put the prompt **260px above** the Enhance button and the boxes narrower than it.
+Cause: `.mpi-base-flow__fields .mpi-base-flow__field:has(.mpi-base-flow__field-text)` carries
+`flex: 1 1 320px; max-width: 480px` — written for the ONE-ROW layout, where those mean *width*. In
+a column they mean **a 320px-tall box that grows**. Fixed with a `--work`-scoped override, and it
+needed the same `:has()` shape to win on specificity (a plain `.--work .field` loses to it).
+
+**This is why the step was screenshotted and not just measured.** Every DOM assertion passed while
+the layout was visibly broken.
+
+### The scratch fixture — REVERTED, kept here to re-mount
+
+The flow itself does not exist (no op, no graph), so the smoke ran against a temporary `FLOWS`
+entry that was removed before the session ended. Paste it back into `js/data/flowsRegistry.js` to
+re-drive the UI, and drop it again afterwards:
+
+```js
+{
+    id: 'character-sheet', title: 'Character Sheet',
+    preview: 'ltx23_balanced_preview.webp',
+    description: 'Describe a character and get a locked reference sheet back.',
+    requiredModels: [], operation: 'flowCharacterSheet',
+    workflow: 'flow_character_sheet.json', mediaType: 'image',
+    inputSchema: { media: [] },
+    steps: [{
+        kind: 'fields', tickerLabel: 'Prompt', title: 'Describe the character',
+        hint: 'Enhance rewrites your description into the phrase the sheet needs. Edit it freely — what is in the box is what generates.',
+        fields: [
+            { id: 'positive', type: 'text', rows: 3, label: 'Your character',
+              placeholder: 'Who they are, wardrobe, age, hair, eyes, marks…' },
+            { id: 'enhance', type: 'button', label: 'Enhance', action: 'enhance',
+              op: 'flowCharacterEnhance', from: 'positive', to: 'Input_Character' },
+            { id: 'Input_Character', type: 'text', rows: 10, label: 'The character phrase',
+              placeholder: 'Press Enhance, or write the phrase yourself.' },
+        ],
+    }],
+    fields: [
+        { id: 'positive', type: 'text', rows: 3, label: 'Your character',
+          placeholder: 'Who they are, wardrobe, age, hair, eyes, marks…' },
+        { id: 'enhance', type: 'button', label: 'Enhance', action: 'enhance',
+          op: 'flowCharacterEnhance', from: 'positive', to: 'Input_Character' },
+    ],
+}
+```
+
+Driving it: `Events.emit('flow:open', {flowId:'character-sheet'})` from a `playwright-cli eval`.
+**A project must be open first** — on Landing the overlay mounts into the DOM but is not visible,
+which reads as a broken flow and is not one.
+
+### Open — Fabio's call
+
+**The run slide separates Enhance from the prompt it acts on.** Same `flex: 1 1 320px` growth as
+the bug above, but on `--stacked`, which every flow's run slide uses: the prompt box sits at the
+top of the 236px column and Enhance ends up ~260px below it, next to Generate. The one-line fix is
+the same override on `--stacked` — **but that also changes Extend Video's and Add Foley's run
+slides**, so it was left alone rather than restyled under this card.
+
+### Noticed, not actioned
+
+`carousel-frame.md` § *Results are not real until Apply* says hold-until-Apply SHIPPED (commit
+`bcbe161f`). `flowService.js` says the opposite in a code comment: *"Phase 3 was built, then
+REMOVED after the UX pass — an Apply step the user never wanted to skip is friction."* The code has
+no Apply. The doc is stale; not this card's to fix.

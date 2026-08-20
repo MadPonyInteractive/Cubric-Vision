@@ -2,6 +2,15 @@
   "schema": "mpi-kanban/files/v1",
   "files": [
     ".agents/mpi-kanban/tasks/MPI-504/**",
-    "comfy_workflows/raw/flow_character_sheet.json"
+    "comfy_workflows/raw/flow_character_sheet.json",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
+    "js/components/Organisms/MpiBaseFlow/stepKinds.js",
+    "js/components/Organisms/MpiStepFields/MpiStepFields.js",
+    "js/components/Organisms/MpiStepFields/MpiStepFields.css",
+    "js/utils/declaredFields.js",
+    "js/shell/preloadStyles.js",
+    "js/components/types.js",
+    "docs/playbooks/add-flow/ui/prompt-enhance.md"
   ]
 }

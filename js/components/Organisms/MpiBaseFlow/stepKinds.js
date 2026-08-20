@@ -28,6 +28,34 @@ export const STEP_KINDS = {
 };
 
 /**
+ * FRAME-NATIVE kinds — a step the frame draws itself, with NO component and NO
+ * media role (MPI-504).
+ *
+ * `fields` is the media-less step: its declared `fields` ARE the work, stacked in
+ * the canvas position. It exists because a prompt-only flow has no media at all,
+ * so every gizmo kind's `{ media, value, onChange }` contract is unsatisfiable —
+ * `_buildStepSlide` would render "Add the image for this step on the first step."
+ * on a flow that has no first-step slots to add it to.
+ *
+ * The one-row cap on a step's `fields` (carousel-frame.md) does NOT apply here:
+ * that cap exists because the row is a MODIFIER on a canvas. With no canvas there
+ * is nothing to modify — so these stack, exactly like the run slide's column.
+ *
+ * A `fields` step has no role, therefore no step-scoped identity, so its values
+ * live in the FLOW-level store rather than `stepValues`. That is not a flag; it
+ * is the only coherent place for them, and it is what lets one prompt be edited
+ * on this step and on the run slide as a single shared value.
+ *
+ * @type {Set<string>}
+ */
+export const FRAME_KINDS = new Set(['fields']);
+
+/** @param {string} kind @returns {boolean} */
+export function isFrameKind(kind) {
+    return FRAME_KINDS.has(kind);
+}
+
+/**
  * @param {string} kind
  * @returns {Object|null} the step-kind blueprint, or null if unregistered.
  */

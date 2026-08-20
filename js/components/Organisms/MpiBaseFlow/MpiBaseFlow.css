@@ -550,6 +550,57 @@
 .mpi-base-flow__fields--stacked .mpi-base-flow__field-input {
     width: 100%;
 }
+
+/* ── The `fields` STEP — the declared fields ARE the work (MPI-504) ─────── */
+/* A prompt-only flow has no media, so this step has no canvas. It reuses the
+   stacked layout and only widens it: the run slide's 236px column is a sidebar
+   beside a result, this is the middle of the slide with nothing else in it.
+   `rows` still sets each box's height here — a small prompt over a large
+   enhanced box is exactly the difference the step is drawing. */
+.mpi-base-flow__fields--work {
+    max-width: 620px;
+    margin: 0 auto;
+    gap: var(--s-4);
+}
+/* Undo the ROW sizing a text field carries. `flex: 1 1 320px` + `max-width: 480px`
+   are written for the one-row layout, where they mean WIDTH — in this column they
+   mean a 320px-tall box that grows, which left the prompt stranded 260px above the
+   button and the boxes narrower than it. Each field here is its own height, set by
+   `rows`. */
+.mpi-base-flow__fields--work .mpi-base-flow__field,
+.mpi-base-flow__fields--work .mpi-base-flow__field:has(.mpi-base-flow__field-text) {
+    flex: 0 0 auto;
+    max-width: none;
+}
+.mpi-base-flow__fields--work .mpi-base-flow__field-text {
+    font-size: var(--t-xs);
+    line-height: 1.6;
+    padding: var(--s-3);
+}
+/* The button between the two boxes is the step's verb — it gets the width the
+   boxes have, not a row control's padding. */
+.mpi-base-flow__fields--work .mpi-base-flow__field-button {
+    width: 100%;
+    font-size: var(--t-xs);
+    padding: var(--s-3);
+}
+/* STALE = the current prompt is NOT enhanced, which is the ACTIONABLE state, so
+   it is the loud one. On the run slide the enhanced prompt is not shown at all,
+   so this is the only place that fact can be read (plan.md § The prompt UI).
+   Quiet once enhanced: the work is done, the button is no longer the point. */
+.mpi-base-flow__field-button--stale {
+    color: var(--accent-frost);
+    border-color: var(--accent-frost);
+}
+.mpi-base-flow__field-button--stale:hover {
+    color: var(--ink-1);
+    border-color: var(--accent-frost);
+}
+.mpi-base-flow__field-button:disabled {
+    color: var(--ink-4);
+    border-color: var(--line);
+    cursor: default;
+}
 /* A radio stacks its group over its note in BOTH layouts — the note annotates the
    whole choice, so it never sits beside one button. */
 .mpi-base-flow__field-radio {
