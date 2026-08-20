@@ -1,0 +1,69 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "abc43d05-5fc9-44b4-ae35-64414a43b5b4",
+  "generated_at": "2026-08-20T00:42:24Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-581 - flow preview art: playbook, hero mechanism, and two of three flows' assets",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Give Flows purpose-built graphics instead of borrowed model previews - a playbook first, then real assets for each flow.",
+    "status": "in_progress",
+    "summary": "Playbook written and made callable as /mpi-flow-graphics. FlowDef gained an optional `video` and MpiBaseFlow renders it as a wide autoplaying hero. Add Foley and Head Swap both have purpose-built tile + hero, verified live. Extend Video is the last placeholder and its source material is already on disk."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "docs/playbooks/add-flow/06-preview-image.md written, routed from the add-flow README, docs/flows.md and CLAUDE.md",
+      "Healed 01-descriptor-and-ops.md, which told authors to 'reuse any existing webp' - the instruction that produced every placeholder",
+      "FlowDef.video typedef + MpiBaseFlow hero renders <video> autoplay/muted/loop/playsInline, poster = the 4/5 still, error falls back to the still",
+      "Add Foley: tile + hero from a real run (waveform draws itself in sync over untouched picture)",
+      "Head Swap: tile + hero from Fabio's group A plates (wipe with visible seam; tile is that wipe frozen mid-face)",
+      "/mpi-flow-graphics skill created and registered in CLAUDE.md's Procedures table + skills table"
+    ],
+    "pending": [
+      "Extend Video graphics - the last flow still wearing a model preview (ltx23_balanced_preview.webp)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-581",
+    "title": "Flow preview art - a playbook, then real images for the three shipped flows",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-581/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-581/checklist.md",
+      "validation": null
+    }
+  },
+  "next_action": {
+    "description": "Run /mpi-flow-graphics for the Extend Video flow (id `ltx-extend` in js/data/flowsRegistry.js). Fabio supplied both clips in C:\\Users\\Fabio\\Downloads\\Exetnd (note: folder name is misspelled 'Exetnd'): i2v_ms_005.mp4 is the SOURCE (864x480, 2.334s) and flowLtxExtend_002.mp4 is the EXTENDED RESULT (864x480, 4.042s) - so the extension adds 1.708s and the source ends at 57.7% of the result. Proposed device, agreed but NOT yet built: play the result straight through with a progress rail beneath it, a marker at 57.7% where the source ended, and the rail continuing past that marker in --accent-heat so the added length is the visible payload. Confirm the two clips really are source and extension of each other (compare the first 2.334s) before building on that assumption.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "A flow ships TWO assets: `preview` (4/5 still, tile + slide-over thumb + hero poster/fallback) and `video` (wide 8:5 or 16:9 autoplaying hero, first slide only). A flow's `video` does NOT make it a video tile the way a ModelDef's does - MpiFlowLibrary.js hardcodes media:'image' on purpose.",
+      "Hero device is chosen by WHAT CHANGES: frame content -> before/after wipe; length/motion -> show the extension running past a marker; nothing visible -> animate the changed channel. Add Foley proved the third case (a before/after there would be two identical panels).",
+      "ffmpeg alone built both shipped heroes. HyperFrames is now scoped in the playbook to heroes made of TYPE and GRAPHICS, not plates and data - it was not needed once.",
+      "Hero budget is HARD at 2MB because it autoplays on open, unlike model tiles which only play on hover (ltx23_high_preview.mp4 is 38MB). Shipped heroes are 114KB and 481KB.",
+      "GIF was rejected: the codebase already settled this at MpiOpHelpDialog.js:32 ('media is treated as a GIF that compresses better')."
+    ],
+    "constraints": [
+      "ffmpeg `drawbox` does NOT animate its w/h expressions in this build - it renders the full graphic from frame 1, exits 0, and looks like it worked. Build reveals with `overlay`'s x and eval=frame. A reveal cover must also be OPAQUE; a translucent one shows the un-played half straight through.",
+      "There is NO ffmpeg or ffprobe on PATH and no `bc` on this box. Use C:/AI/Mpi/video-tool/node_modules/ffmpeg-static/ffmpeg.exe and the ffprobe-static beside it, and precompute derived numbers.",
+      "Judge every asset at its REAL display width - 220px tile, 446px hero. A 620px contact sheet flatters everything and twice sent an unreadable asset forward. Model output is often low-res (864x480 here) so expect an upscale; that is fine, an unreadable hero is not.",
+      "Run the `sharp` snippet from the repo root, never the scratchpad - it resolves from the script's own location and dies with ERR_MODULE_NOT_FOUND for an installed package.",
+      "NEVER drive :3000, that is Fabio's live app. Use `npm run app:isolated`. A forced taskkill leaves the isolated profile LOCKED (EPERM, splash fails, exit 0) - relaunch with CUBRIC_AGENT_PROFILE pointing at a fresh path. Kill only your own tree, found via the port's PID and its grandparent.",
+      "js/data/flowsRegistry.js is CO-OWNED with live peer sessions. Check `git diff` before committing it; a peer scratch entry marked NOT SHIPPABLE was in there this session and had to be excluded by staging a single hunk with `git apply --cached`.",
+      "NOT OURS, seen in passing: tests/shared-dep-uninstall-direction.test.cjs fails on master - 'MPI-258 B1 regression: 5 tier-family deps stranded'. It is an LTX dep-family assertion belonging to MPI-579/MPI-580. Everything else is 630/630."
+    ],
+    "files_to_read_first": [
+      "docs/playbooks/add-flow/06-preview-image.md",
+      ".claude/skills/mpi-flow-graphics/SKILL.md",
+      ".agents/mpi-kanban/tasks/MPI-581/checklist.md",
+      "js/data/flowsRegistry.js"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/abc43d05-5fc9-44b4-ae35-64414a43b5b4.json and use mpi-continue to carry on MPI-581 (Flow preview art), which stays in `doing`. Two of the three flows now have purpose-built graphics; Extend Video is the last one still wearing a model preview. Run /mpi-flow-graphics for it - the skill enforces docs/playbooks/add-flow/06-preview-image.md, which carries every measurement, the art direction, the ffmpeg recipes and the traps that cost rebuilds without erroring. Fabio has already supplied both clips in C:\\Users\\Fabio\\Downloads\\Exetnd (folder name misspelled 'Exetnd'): i2v_ms_005.mp4 is the source at 2.334s and flowLtxExtend_002.mp4 is the extended result at 4.042s, both 864x480. Do not drive :3000 - that is his live app; spin your own with npm run app:isolated."
+}

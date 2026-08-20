@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-20T00:30:00Z",
+  "updated_at": "2026-08-20T00:42:24Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -17,6 +17,13 @@
       "role": "implementer",
       "status": "active",
       "heartbeat_at": "2026-08-19T16:12:00Z"
+    },
+    {
+      "id": "8322d5de-60dd-4aa0-9f72-230e94c8a36d",
+      "path": ".agents/mpi-kanban/state/sessions/8322d5de-60dd-4aa0-9f72-230e94c8a36d.json",
+      "role": "implementer",
+      "status": "active",
+      "heartbeat_at": "2026-08-20T00:40:04Z"
     }
   ],
   "active_tasks": [],
@@ -28,6 +35,14 @@
       "status": "claimed",
       "owner_session": ".agents/mpi-kanban/state/sessions/9fee70c0-7f0f-4824-abc1-b2da9305e03e.json",
       "heartbeat_at": "2026-08-19T15:01:40Z"
+    },
+    {
+      "id": "548dfdb3-348b-4aa7-86ec-61b2e395adc6",
+      "path": ".agents/mpi-kanban/state/files/548dfdb3-348b-4aa7-86ec-61b2e395adc6.json",
+      "task_card": "MPI-504",
+      "status": "claimed",
+      "owner_session": ".agents/mpi-kanban/state/sessions/8322d5de-60dd-4aa0-9f72-230e94c8a36d.json",
+      "heartbeat_at": "2026-08-20T00:40:04Z"
     }
   ],
   "pending_file_states": [],
@@ -101,9 +116,9 @@
       "id": "ab2cec72-0b12-48e6-aba1-a01ab254a6bd",
       "path": ".agents/mpi-kanban/state/handoffs/ab2cec72-0b12-48e6-aba1-a01ab254a6bd.json",
       "task_card": "MPI-580",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-19T23:38:00Z",
-      "note": "Plugin mechanism DONE and verified (630 tests + a real-app probe): a plugin contributes an entry to the existing upscale dropdown, its own declared controls, and a hidden 0-1 mapping via mapTo. Next is MPI-579, the LTX Video upscaler that consumes it."
+      "note": "Superseded by 89bc642b-8f8f-4c0b-bd97-171d1118cf63 - MPI-579 is built and proven in the app."
     },
     {
       "id": "1a513284-13ea-4fb6-b552-eae123a13de2",
@@ -120,6 +135,21 @@
       "status": "open",
       "created_at": "2026-08-20T00:30:00Z",
       "note": "Prompt UI frame half shipped (604d523d) with no new component; Fabio reviewed and asked for three Enhance-button changes: MpiButton, pink with the enhance icon, hover background, and directly under the prompt on the run slide."
+    },
+    {
+      "id": "89bc642b-8f8f-4c0b-bd97-171d1118cf63",
+      "path": ".agents/mpi-kanban/state/handoffs/89bc642b-8f8f-4c0b-bd97-171d1118cf63.json",
+      "task_card": "MPI-579",
+      "status": "open",
+      "created_at": "2026-08-20T01:05:00Z",
+      "note": "The upscaler RUNS in the app - 73f to 2816x1600, 375s, peak 15724 MB, audio intact. Left: _pluginTile installs from requiredDeps alone, now empty because the plugin correctly declares requiredModels. GC research is closed: do not re-propose gating plugin protection on dep presence."
+    },
+    {
+      "id": "abc43d05-5fc9-44b4-ae35-64414a43b5b4",
+      "path": ".agents/mpi-kanban/state/handoffs/abc43d05-5fc9-44b4-ae35-64414a43b5b4.json",
+      "task": "MPI-581",
+      "generated_at": "2026-08-20T00:42:24Z",
+      "status": "open"
     }
   ]
 }
