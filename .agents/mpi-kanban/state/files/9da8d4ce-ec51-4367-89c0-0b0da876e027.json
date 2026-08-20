@@ -1,0 +1,26 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "9da8d4ce-ec51-4367-89c0-0b0da876e027",
+  "paths": [
+    "js/components/Compounds/MpiCompareView/MpiCompareView.js",
+    "js/components/Compounds/MpiCompareView/MpiCompareView.css",
+    "js/components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js",
+    "js/components/Compounds/MpiCompareOverlay/MpiCompareOverlay.css",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
+    "js/data/flowsRegistry.js",
+    "js/shell/preloadStyles.js",
+    "js/components/types.js",
+    ".agents/mpi-kanban/tasks/MPI-585/plan.md",
+    ".agents/mpi-kanban/tasks/MPI-585/checklist.md",
+    ".agents/mpi-kanban/tasks/MPI-585/validation.md",
+    ".agents/mpi-kanban/tasks/MPI-585/files.json"
+  ],
+  "status": "needs_verification",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/bd3eb945-b562-47e0-b77a-860facbe5c8d.json",
+  "owner_role": "implementer",
+  "task_card": "MPI-585",
+  "heartbeat_at": "2026-08-20T04:50:00Z",
+  "note": "Edits complete and self-verified, UNCOMMITTED - awaiting the user's UI check."
+}

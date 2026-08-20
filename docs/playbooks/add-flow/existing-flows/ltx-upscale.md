@@ -15,6 +15,7 @@
 | workflow | `ltx_video_upscale.json` (29 nodes) — **reused** |
 | inputs | one video slot, role **`inputVideo`**; 3 run-slide fields; no steps |
 | output | `video`, 2x the source's /32 fit, **audio passed through** |
+| result | `result: { compare: 'inputVideo' }` — the first consumer of the shared before/after surface (MPI-585) |
 
 Because the op, the graph, the injector and both registry mappings already existed, this
 Flow is **one FlowDef plus one test case**. No op registration, no `appVersionIntroduced`,
@@ -43,6 +44,18 @@ report as one. Both ranges were measured and closed by Fabio on 2026-08-19 (MPI-
 `Input_Denoise` names no node. `ltxSigmasInjector` consumes it
 (`LTX_SIGMAS_CONSUMES`) and writes `Input_Sigmas`, which is why the title test pins
 `input_sigmas` and not `input_denoise`.
+
+## The result is shown against its source
+
+An upscale improves footage the user already had, so the result pane declares a comparison
+(`result: { compare: 'inputVideo' }`) rather than painting a lone `<video>`: source left,
+upscaled right, draggable reveal bar, both clips frame-locked. The role names which INPUT is
+the "before" — one line, no flow code, and the same surface the History workspace uses on two
+selected entries. Contract: [04](../04-overlay-and-shell.md) § The result pane.
+
+The 2x output and its 1x source are **different resolutions on purpose**, and that is handled:
+`MpiCanvas._drawComparisonLayer` cover-fits the after into the before's frame, so the reveal bar
+crosses one picture rather than two mismatched ones.
 
 ## No middle step, unlike extend and foley
 

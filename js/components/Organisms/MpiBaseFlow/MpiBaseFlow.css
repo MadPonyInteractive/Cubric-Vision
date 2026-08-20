@@ -660,6 +660,16 @@
     touch-action: none;
 }
 .mpi-base-flow__result-frame:active { cursor: grabbing; }
+/* Compare mode: MpiCanvas owns the pointer — its own ViewManager pans and zooms,
+   and the reveal bar is dragged with the same gesture. The frame's grab cursor
+   would promise a pan this surface no longer performs. */
+.mpi-base-flow__result-frame--compare,
+.mpi-base-flow__result-frame--compare:active { cursor: default; }
+/* Host for the shared compare surface — it states no size of its own. */
+.mpi-base-flow__result-compare {
+    position: absolute;
+    inset: 0;
+}
 /* ViewManager emits absolute offsets, so the origin must be the frame's corner. */
 .mpi-base-flow__result-media {
     position: absolute;

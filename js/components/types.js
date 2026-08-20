@@ -1432,13 +1432,30 @@
  */
 
 /**
+ * @typedef {Object} MpiCompareViewProps (Compound — js/components/Compounds/MpiCompareView)
+ * No props required at mount time.
+ *
+ * The ONE before/after surface: two labels, an MpiCanvas in `compare` mode and the
+ * shared `compare.*` video transport. It states no size — it fills its host, which
+ * is what lets the History overlay and a Flow's result frame share it (MPI-585).
+ *
+ * Instance methods (on instance.el):
+ *   open(itemA, itemB) — load the pair; itemA = left/before, itemB = right/after.
+ *                        Resolves false when the pair could not be loaded, so a
+ *                        caller with a fallback can show it instead of a blank frame.
+ *   destroy()          — unbind the hotkeys and destroy the canvas
+ */
+
+/**
  * @typedef {Object} MpiCompareOverlayProps (Compound — js/components/Compounds/MpiCompareOverlay)
  * No props required at mount time.
+ *
+ * The History TAKEOVER around MpiCompareView — it owns the overlay and nothing else.
  *
  * Instance methods (on instance.el):
  *   open(itemA, itemB) — load two MediaItems and show the overlay
  *                        itemA = left/before, itemB = right/after
- *   hide()             — close the overlay and destroy the canvas
+ *   hide()             — close the overlay and destroy the compare surface
  *
  * Emits:
  *   'close' {} — overlay closed

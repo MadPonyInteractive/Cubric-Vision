@@ -1,6 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════
-   MpiCompareOverlay — Side-by-side comparison overlay
-   Fills the MpiOverlay container slot.
+   MpiCompareOverlay — the History takeover around MpiCompareView.
+
+   This file SIZES the shared surface and adjusts the MpiOverlay
+   chrome around it. The labels, the canvas fill and the compare
+   colours live in MpiCompareView.css — do not restate them here.
 ═══════════════════════════════════════════════════════════════ */
 
 /* ── Override MpiOverlay container — comparison needs full width, no max-width ── */
@@ -13,7 +16,7 @@
 /* ── Override MpiOverlay surrounding chrome — match centre viewer dark ──────── */
 .mpi-overlay--tool:has(.mpi-compare-overlay),
 .mpi-overlay--body:has(.mpi-compare-overlay) {
-    background: oklch(0.20 0.020 350);
+    background: var(--surface-viewer);
 }
 
 /* ── Root ─────────────────────────────────────────────────────── */
@@ -23,53 +26,12 @@
     /* Fill the viewport height minus titlebar + statusbar; let MpiOverlay handle scroll */
     height: calc(100vh - 10rem);
     min-height: 320px;
-    display: flex;
-    flex-direction: column;
-    background: oklch(0.20 0.020 350);
     border-radius: var(--r-2);
     overflow: hidden;
 }
 
-/* ── Canvas wrapper — fills remaining space ──────────────────── */
-.mpi-compare-overlay__canvas-wrap {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-}
-
-/* MpiCanvas wrapper must fill the slot — the <canvas> pixel size is set by JS */
-.mpi-compare-overlay__canvas-wrap .mpi-canvas {
+/* The shared surface states no size of its own — it fills what it is given. */
+.mpi-compare-overlay__view {
     width: 100%;
     height: 100%;
-}
-
-/* ── Before / After labels ───────────────────────────────────── */
-.mpi-compare-overlay__labels {
-    position: absolute;
-    top: 0.75rem;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: space-between;
-    padding: 0 1rem;
-    pointer-events: none;
-    z-index: 10;
-}
-
-.mpi-compare-overlay__label {
-    font-size: var(--t-2xs);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    padding: 6px 12px;
-    background: oklch(0.30 0.02 350 / 0.85);
-    border: 1px solid var(--line);
-    color: var(--ink-1);
-    max-width: 45%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.mpi-compare-overlay__label--after {
-    text-align: right;
 }

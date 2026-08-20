@@ -39,7 +39,12 @@ is outstanding, which does not block this flow.
 - **Model:** `qwen-edit` — already shipped, with `tierSelect` driving `qwenTier → Input_Tier`.
   This flow's tier switch mirrors it exactly (no new tier work).
 - **Extra dependency:** a head-swap LoRA, flow-only. See § Dependency below.
-- **Output:** `mediaType: 'image'`, single output.
+- **Output:** `mediaType: 'image'`, single output, shown on the shared before/after surface —
+  `result: { compare: 'image1' }` (MPI-585). The BEFORE is the plate being KEPT, never `image2`:
+  the head donor shares no framing with the output, so comparing against it would put two
+  unrelated pictures either side of the bar. Outside the head the two plates are pixel-identical
+  — the same property the hero's wipe is built on — so the reveal crosses one steady scene.
+  Contract: [../04-overlay-and-shell.md](../04-overlay-and-shell.md) § The result pane.
 - **No component (MPI-572).** The tier is a declared `radio` field (`Input_Tier`, 1/2/3) on the
   run slide; the boxes are carousel STEPS (`kind:'box'`) that declare `param: 'box1'` / `'box2'`.
   `MpiFlowHeadSwap` was deleted — those two declarations are all it ever was. See

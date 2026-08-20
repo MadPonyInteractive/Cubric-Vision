@@ -1,0 +1,75 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "6f8924ee-2b3e-49d8-b747-b4dd873863e7",
+  "generated_at": "2026-08-20T06:20:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-504 - the Character Sheet wired as a Flow; Input_Seed proven live; 8:5 corrected",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Run /mpi-add-flow for the Character Sheet, end to end.",
+    "status": "in_progress",
+    "summary": "The flow is WIRED and every automated check passes. The op is in the four files, the graph is converted and validated, the FlowDef carries the three-step prompt UI, and the enhancer's Input_Seed is proven live rather than assumed. Two decisions remain, both Fabio's: how the 1k/2k control reaches the graph's two size nodes, and whether the other four FLUX ratio rows get the same correction 8:5 just had. Then a live run and the graphics."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    "completed": [
+      "INPUT_SEED EXISTS AND WORKS. An MpiInt titled Input_Seed (node 14) linked into 3 TextGenerate's NESTED sampling_mode.seed (link 16) in raw/qwen3vl_4b_prompt_enhancer.json. Fabio handed the raw/ edit over ('you can do that yourself by editing the RAW workflow') - raw/ is otherwise user-owned and that rule still stands. Committed by sync-raw-workflows.mjs as 345bbdf8.",
+      "THE SEED IS PROVEN LIVE, NOT INFERRED. Seeds 0/42/7777 on 'a gunslinger' returned three different men, and execution_cached covered ['5','6','7','8','9','10'] but NOT 3 TextGenerate - a node only re-executes when an input changed, so the cache list is positive proof the link reached the sampler. This settles the one question conversion cannot answer: the ComfyUI backend DOES accept a link on a nested dynamic-combo key.",
+      "flowCharacterSheet REGISTERED IN THE 4 FILES - commandRegistry.js (mediaType IMAGE, requiresImages 0, NO mediaInputs, promptRequired true, universal true), operationRegistry.js + operation_registry.json at 1.5.0, universal_workflows.js.",
+      "comfy_workflows/flow_character_sheet.json converted off the live bench - 96 nodes from the raw 146 (muted + virtual dropped), validate-injection-rules clean.",
+      "THE FlowDef IS WRITTEN at the end of FLOWS: a `kind: 'fields'` refine step (positive -> Enhance -> Input_Positive at rows 10) and a run slide with the condensed pair plus Input_Recipe (select, 4 styles, 1-indexed, default 1 Photoreal), Input_is_Turbo off and Input_Remove_Head on. No inputSchema at all - step 0 renders its own 'This flow needs no input media.' beside the hero, which is the existing media-free path.",
+      "NO requiredDeps, and plan.md's proposal of ['face-yolov8n'] was WRONG. getUniversalWorkflowDepIds() (routes/shared.js:704) returns every custom_nodes dep PLUS every engineAsset, and those install with the ENGINE. face-yolov8n, sam3-multiplex and Impact-Subpack are all engine-installed; head-swap's LoRA is neither, which is why IT needs declaring. Declaring it anyway would make the flow read unavailable on open, because _flowDepStatusCache fails CLOSED until the first sync.",
+      "THE 8:5 RATIO CORRECTED APP-WIDE, at Fabio's call. FLUX_RATIOS landscape 8:5 is now 1280x800 (was 1280x768 = 5:3) and portrait 5:8 is 800x1280 - fixed TOGETHER because the two lists are index-mirrors and the flip maps by index, so one alone would return a different aspect instead of the transpose. Reaches flux, chroma, klein and krea2's 1k tier (KREA2_RATIOS['1k'] IS FLUX_RATIOS, shared by reference). Old cards unaffected - nearestNamedRatio reads CROP_RATIOS (pure aspects) and still calls 1280x768 '8:5'. Docs swept: krea2/resolution.md (/16 verification line + both table rows) and a user-facing note in docs/releases/UNRELEASED.md.",
+      "GUARDS ADDED to tests/inject-params-titles.test.cjs: the sheet's six injected titles + output_image, and the enhancer's input_seed PLUS an assertion that it is actually LINKED into a sampling_mode.seed. A titled-but-dangling seed node passes a title check and still freezes the phrase, which is the exact failure that shipped unnoticed.",
+      "MPI-586 CREATED - the Prop Sheet flow, split out at Fabio's call.",
+      "VERIFIED: npm test 638/638, npm run release:check passed, eslint clean on the four registry files, board validation passed. Shipped in ea156935 and pushed."
+    ],
+    "pending": [
+      "THE 1k/2k QUALITY CONTROL - undecided. One declared field emits ONE value; the graph needs TWO nodes. Three options in plan.md `## Plan Drift`. Flow runs at the baked 1280x768 until then, and that value should become 1280x800 whichever option wins.",
+      "THE OTHER FOUR FLUX RATIO ROWS - offered to Fabio, not answered. 3:4 is really 7:9, 4:3 is 9:7, 4:5 is 14:17, 9:16 is 4:7. Each has an exact /16-clean ~1MP value.",
+      "LIVE RUN of the flow end to end (playbook 05) in your OWN app:isolated instance.",
+      "GRAPHICS - /mpi-flow-graphics for flow-character-sheet.webp + the hero clip. The FlowDef already names the preview; ltx-upscale is in the same state, so this is the normal order rather than a gap.",
+      "THE LoRA RACK IS NOT BUILDABLE TODAY - Input_Lora_1..6 exist in the graph but the declared-field vocabulary has no lora type and no shipped Flow has a rack. That is a Flow-vocabulary feature (a new Primitive + a new type), not a Character Sheet one.",
+      "Still open from earlier sessions: the krea2-nsfw-only install case (a user with just that card fails requiredModels: ['krea2']), and the bench open calls in plan.md."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-504",
+    "title": "Character Sheet flow - a description in, a video-reference sheet out (front body HEADLESS)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-504/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Two things are open on MPI-504 and BOTH are Fabio's calls, so ask before building. (1) THE 1k/2k QUALITY CONTROL. One declared field emits ONE value; the graph needs TWO nodes (676 Input_Width + 677 Input_Height, feeding EmptyLatentImage AND SolidMask). mapTo does not help - it is a linear range map. Three options are written up in plan.md `## Plan Drift`: an Input_Quality MpiInt behind two MpiAnySwitch banks (the Input_Recipe pattern, three nodes away, zero app code, needs a raw/ edit); a new field type whose option carries a param MAP (portable, but it is frame work in MpiBaseFlow._collectInputs, which a peer holds); or ship without it, which is where it stands - baked 1280x768. Fabio handed over the last raw/ edit rather than doing it himself, so OFFER to do it. Use 1280x800 for 1k, not 1280x768 - the ratio fix this session makes 1280x800 the true 8:5, and it makes both quality options the same shape. (2) THE OTHER FOUR FLUX RATIO ROWS. 8:5/5:8 were corrected; 3:4 is really 7:9 (3.70% off), 4:3 is 9:7, 4:5 is 14:17, 9:16 is 4:7 (1.59%). Each has an exact /16-clean value at ~1MP (864x1152, 896x1120, 720x1280; 1:1 is already exact). Offered, not answered. Then: the LIVE RUN of the flow in your own `npm run app:isolated` instance (playbook 05), and `/mpi-flow-graphics` for the tile + hero.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE 8:5 FIX IS FABIO'S, AND HIS REASONING IS THE RULE: 'if 1280x800 is true 8:5, then we're lying to the user, and we should fix that.' The labels across ratios.js are otherwise nominal - 61 of 74 labelled rows deviate by >=0.5% - so the principle, if extended, reaches far past the row that was fixed. That extension is OFFERED and UNANSWERED; do not assume either way.",
+      "THE PROP SHEET IS A SEPARATE FLOW, NOT A MODE on the Character Sheet. Fabio: 'I think it's best to have a separate flow for it.' MPI-586 carries the spec - animals and props, no headless pass (so krea2 only, no klein-4b and no SAM3 chain), 8:5 AND 16:9 user-chosen, and a PLACEMENT axis with per-option guidance because the right placement is object-dependent. It hits the SAME two-nodes-one-field ratio gap, so it must reuse whatever MPI-504 settles rather than inventing a second answer.",
+      "Input_Recipe is a SELECT, not a radio - four equal looks rather than a cost ladder. The type emits the option's original `v`, so the int reaches MpiAnySwitch as a number.",
+      "The enhanced phrase is a PRODUCT, not an intermediate. It goes to Input_Positive, which beats the top-level `positive` because _buildParams assigns injectionParams LAST (commandExecutor.js:610-655). An untouched box sends the raw prompt instead."
+    ],
+    "constraints": [
+      "ASK BEFORE USING THE GPU. Fabio runs generations on the bench (8188) WITHOUT taking the mpi-kanban lease, because he is the admin - so `gpu_lease.py status` reading free is NOT evidence the GPU is free. A probe was killed mid-run this session for exactly this. Check the bench /queue for a running job as well, and never clear a queue you did not fill.",
+      "js/data/flowsRegistry.js IS CO-OWNED and still dirty. It holds the live MPI-585 session's `result: {compare}` JSDoc + two flow entries alongside this card's FlowDef. It was committed this session by FILTERING HUNKS on content (.claude/rules/git.md s Safe recipe for a co-owned file) and committing the INDEX with a bare `git commit -n` - a plain pathspec would have swept their work in. Do the same next time.",
+      "A pending file state is PROVENANCE, NOT A WRITE LOCK. MPI-585 had released flowsRegistry.js from `claimed` to `needs_verification`, which is why taking it was legitimate. Only a fresh `claimed` record blocks a write - read both `path` and `paths` on every record.",
+      "The console errors in Fabio's screenshots are NOT this card: 18 x 404 on comfy_workflows/display/flow-ltx-upscale.webp/.mp4 (MPI-584's pending graphics), cascading into [canvas] and [MpiCompareView] clientLogger errors. The compare view erroring rather than falling back quietly looks like MPI-585's to judge."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "js/data/flowsRegistry.js",
+      "docs/playbooks/add-flow/ui/prompt-enhance.md",
+      ".agents/mpi-kanban/tasks/MPI-586/task.json"
+    ]
+  },
+  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/6f8924ee-2b3e-49d8-b747-b4dd873863e7.json first, then .agents/mpi-kanban/tasks/MPI-504/plan.md - its `## Current State` block is authoritative and was written while the details were fresh, so do not re-derive it. The card is in doing. THREE THINGS ARE DONE AND MUST NOT BE RE-OPENED: the ComfyUI graph (146 nodes, Fabio ran it live), the `promptEnhance` op, and THE WHOLE APP WIRING - flowCharacterSheet is registered in the four files, comfy_workflows/flow_character_sheet.json is converted (96 nodes) and validated, and the FlowDef is written in js/data/flowsRegistry.js with a `kind: 'fields'` refine step and a four-option Input_Recipe select. The enhancer's Input_Seed node exists and is PROVEN LIVE (three seeds, three different men; execution_cached covered nodes 5-10 but not 3 TextGenerate). FLUX_RATIOS 8:5 was corrected to 1280x800 (5:8 to 800x1280) with docs and an UNRELEASED.md note. All of it shipped in ea156935; 638/638 and release:check pass. YOUR JOB is the two open decisions in the handoff's next_action, then a live run and the graphics. Standing rules: a peer session (MPI-585, the shared Flow compare widget) is live in this tree and its files are uncommitted, and js/data/flowsRegistry.js is CO-OWNED - it holds their `result: {compare}` hunks alongside my FlowDef, so commit it by filtering hunks (.claude/rules/git.md), never with a plain pathspec. Never take the user's app on :3000 - spin your own with `npm run app:isolated`. And ASK before using the GPU: Fabio runs generations on the bench (8188) without taking the mpi-kanban lease, so a free lease does not mean a free GPU."
+}

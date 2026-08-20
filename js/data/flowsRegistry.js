@@ -61,6 +61,17 @@
  *                                       PRIMITIVE (MPI-582); the declaration chooses which one, it
  *                                       does not replace it. See FlowStepField below.
  * @property {Object}   inputSchema    - What the flow collects → injected into the workflow
+ * @property {{compare?: string}} [result] - How the RESULT is presented. `compare` names the media
+ *                                       ROLE holding the BEFORE — the frame then shows the result
+ *                                       on the shared before/after surface (MpiCompareView) with a
+ *                                       draggable reveal bar instead of a plain element (MPI-585).
+ *                                       Declare it on any flow that IMPROVES media the user
+ *                                       supplied; one declaration covers video and image alike.
+ *                                       OMIT when a comparison would say nothing — a flow that
+ *                                       returns the same pixels (foley) or whose output is not the
+ *                                       same footage (an extend is LONGER than its source). The
+ *                                       frame falls back to the plain element on its own when the
+ *                                       named media is gone or the run produced several outputs.
  * @property {FlowStep[]} [steps]       - Declared MIDDLE steps of the flow's carousel (MPI-306).
  *                                       Step 0 (inputs) and the last step (run) are IMPLICIT —
  *                                       the frame renders them from inputSchema + the flow's
@@ -215,6 +226,12 @@ export const FLOWS = [
                 },
             ],
         },
+        // The BEFORE is `image1`, the plate being kept — NOT `image2`, which only
+        // donates a head and shares no framing with the output. Outside the head the
+        // two plates are pixel-identical (the same property the hero's wipe is built
+        // on), so the reveal bar crosses one steady scene and only the head changes,
+        // which is the clearest possible read of what this flow did (MPI-585).
+        result: { compare: 'image1' },
         // The two boxes look identical but MEAN different things, so their copy
         // carries the whole distinction: step 1 marks WHERE the head goes (mask),
         // step 2 marks WHICH head to take (crop). ratio 1 because the pipeline
@@ -457,6 +474,10 @@ export const FLOWS = [
                 { type: 'video', mode: 'upto', max: 1, roles: ['inputVideo'], labels: ['Video to upscale'] },
             ],
         },
+        // An upscale IMPROVES media the user supplied, so the result is worth seeing
+        // against its source (MPI-585). The role names which input is the BEFORE; the
+        // shared surface handles the rest, video and image alike.
+        result: { compare: 'inputVideo' },
         // Run-slide fields, no middle step. Unlike extend and foley the prompt here is
         // OPTIONAL and secondary (an upscale is a fidelity job), so there is nothing the
         // user has to watch the clip to write.

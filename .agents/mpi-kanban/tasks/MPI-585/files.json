@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/components/Compounds/MpiCompareView/MpiCompareView.js",
+    "js/components/Compounds/MpiCompareView/MpiCompareView.css",
+    "js/components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js",
+    "js/components/Compounds/MpiCompareOverlay/MpiCompareOverlay.css",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
+    "js/data/flowsRegistry.js",
+    "js/shell/preloadStyles.js",
+    "js/components/types.js",
+    ".agents/mpi-kanban/tasks/MPI-585/plan.md",
+    ".agents/mpi-kanban/tasks/MPI-585/checklist.md",
+    ".agents/mpi-kanban/tasks/MPI-585/validation.md",
+    ".agents/mpi-kanban/tasks/MPI-585/files.json"
+  ]
+}

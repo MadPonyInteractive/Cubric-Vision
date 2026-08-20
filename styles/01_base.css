@@ -56,6 +56,11 @@
   --surface-3:       oklch(0.55 0.024 350);  /* hover */
   --surface-bar:     oklch(0.34 0.022 350);  /* status, quiet zones */
   --surface-canvas:  oklch(0.28 0.020 350);  /* editor canvas, vignette base */
+  /* Darker than every other surface ON PURPOSE: a compare/preview surround must
+     lose to the media, so the eye judges the footage and not the frame. This
+     value shipped hardcoded in MpiCompareOverlay long before it had a name
+     (MPI-585) — keep it a token so the next surface that needs it agrees. */
+  --surface-viewer:  oklch(0.20 0.020 350);  /* media compare/preview surround */
 
   /* Ink — warm whites */
   --ink-1:           oklch(0.98 0.008 80);   /* primary text */

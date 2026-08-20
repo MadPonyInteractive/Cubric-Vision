@@ -1,0 +1,76 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d0ba037e-7fa9-47e1-beb7-c4528109bda3",
+  "generated_at": "2026-08-20T06:10:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-585 - the shared Flow compare surface shipped; next is a real video player in the result pane",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Build ONE before/after compare surface shared by every Flow that improves media the user supplied, with no duplicated code, then Fabio widened it: the Flow result pane also needs a proper video preview (canvas + transport controls) instead of a bare <video controls>.",
+    "status": "in_progress",
+    "summary": "The compare half is DONE, verified and committed: MpiCompareView is the one surface, MpiCompareOverlay was refactored onto it, and ltx-upscale + head-swap declare `result.compare`. Fabio then hit a real bug on a live run (compare fell back to a plain player) - root-caused and fixed in the same commit. He has since chosen OPTION B for the next step: every video result gets the real MpiVideoViewer + MpiVideoControlBar, with compare as a toggle on top. That work has NOT started."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-585/plan.md",
+    "completed": [
+      "MpiCompareView Compound - labels, MpiCanvas in `compare` mode, the shared `compare.*` transport, destroy(). Registered in preloadStyles.js + types.js",
+      "MpiCompareOverlay refactored onto it (197 -> 96 lines, overlay chrome only) - the History surface and the Flow surface can no longer drift",
+      "MpiBaseFlow._showResults() honours `result.compare`; `_paintPlainResults` split out as the fallback; teardown wired through _teardownSlide",
+      "ltx-upscale -> `result: { compare: 'inputVideo' }`; head-swap -> `result: { compare: 'image1' }` (the plate KEPT, not the head donor)",
+      "BUG FIXED (Fabio's live run): a Flow media slot stores the picked file as `url`, NOT `filePath` (MpiBaseFlow `_openMediaPicker`). MpiCompareView's private resolver read only `filePath`, so the URL was empty, the video errored and the plain player showed. Now uses the SHARED resolveMediaUrl + a `_pathOf` helper reading both keys",
+      "Fabio's colour call (option c): added the missing `--surface-viewer` token to styles/01_base.css and pointed both compare surfaces at it - his original dark restored AND the no-hardcoded-colour rule holds",
+      "tests/flow-result-compare.test.cjs - 5 cases, mutation-tested. Pins both declarations AND the two deliberate omissions",
+      "Docs: add-flow 04 section 'The result pane', the README checklist line, and both existing-flows docs",
+      "Verified live on Fabio's real pair (864x480 vs 1728x960) AND an image pair; both consumers proven; 638/638 tests; eslint clean on every touched file"
+    ],
+    "pending": [
+      "OPTION B, Fabio's decision and the ONLY open build item: the Flow result pane shows every VIDEO result on the real MpiVideoViewer + MpiVideoControlBar instead of a bare `<video controls>`, with the compare surface as a toggle on top. Reuse, do not rebuild - see key_decisions",
+      "Fabio's remaining UI check on the compare itself (verify mode is user-ux): the feel of the reveal bar on a real run",
+      "MPI-584's graphics (flow-ltx-upscale.webp + .mp4) - explicitly deferred to another session; their absence is the 404 storm in Fabio's console, nothing else"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-585",
+    "title": "A shared before/after CompareWidget for Flow results - declared, not per-flow code",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-585/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-585/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-585/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-585/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Build OPTION B. In MpiBaseFlow's result pane, replace the bare `<video controls>` for video results with MpiVideoViewer + MpiVideoControlBar, and make the declared compare surface a toggle on top of it. REUSE - the architecture already supports this: MpiVideoViewer's own header says the control bar is deliberately NOT owned by the viewer so other surfaces can reuse it, and MpiGroupHistoryBlock.js:416 wires the pair in two lines. Keep `showTrim: true` (the seek bar IS MpiTrimBar; Fabio confirmed the in/out handles riding along is fine). Ask Fabio before widening scope further, and decide with him whether this stays on MPI-585 or becomes its own card.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "The compare engine was NOT rebuilt. ComparisonManager + MpiCanvas activeMode 'compare' already did the reveal bar, the dual-video RAF sync and every image/video pairing; what was duplicated-in-waiting was the transport living inside MpiCompareOverlay, and that is what got lifted into MpiCompareView.",
+      "OPTION B is Fabio's pick over A (player only when no compare) and C (an adapter so the control bar also drives the compare pair). C stays a possible follow-up - it needs a shim from the bar's surface contract (_play/seek/frameStep/getVideoElement) onto MpiCanvas's playCompare/frameStepCompare, and it touches a shared Compound.",
+      "The control bar already has everything asked for: play, frame back/forward, current/duration time, the seek track with playhead, loop, mute + volume slider, fullscreen, and a time-vs-frames toggle. `showTrim: false` exists but REMOVES THE SEEK BAR TOO (MpiTrimBar is track + in/out handles + playhead in one) - so keep it true.",
+      "Scope, per Fabio 2026-08-20: upscale video, head swap AND the character sheet get a comparison. ltx-extend and ltx-foley deliberately do NOT (an extend's output is longer than its source; foley returns the same pixels), and a test pins those omissions so a later sweep has to argue with it.",
+      "The character sheet Flow is being built in ANOTHER session, so it was not edited here. The declaration contract went to it as an mpi-message (6ce69667-...), including the caution that a sheet generated from scratch may deserve no comparison at all.",
+      "No dev gallery entry for MpiCompareView - Fabio explicitly waived the components.md rule-4 ask."
+    ],
+    "constraints": [
+      "js/data/flowsRegistry.js is CO-OWNED and was committed by the patch-filter recipe in .claude/rules/git.md - only hunks 0-2 (the typedef + the two `result.compare` lines) were staged. Hunk 3, the live MPI-504 session's 121-line character-sheet FlowDef, is still uncommitted BY DESIGN: it references `flowCharacterSheet`, an op that exists only in their uncommitted commandRegistry.js / operationRegistry.js / universal_workflows.js, so committing it would have landed a broken tree. Do NOT 'tidy' it in.",
+      "The commit used the SCRATCH-INDEX fallback because a peer had comfy_workflows/qwen3vl_4b_prompt_enhancer.json staged in the real index. `git reset HEAD -- <paths>` was run straight afterwards per git.md MPI-564. If `git diff --cached` ever shows this session's files as staged DELETIONS, that reset was missed - re-run it, do not commit.",
+      "board.json, .agents/mpi-kanban/events.jsonl and state/index.json are deliberately UNCOMMITTED - all three interleave with the live MPI-504 session (they created MPI-586 in board.json). They are that session's to sweep. Consequence: board.json still lists MPI-585 in `todo` while its task.json says `doing`; the card files are committed, the board move is not.",
+      "NEVER take the user's app on :3000 - it is his live session and he is running real generations on it. `npm run app:isolated` picks its own port and profile; kill the process TREE afterwards and confirm :3000 is still listening. taskkill from Git Bash mangles `/PID` into a path - drive it through PowerShell.",
+      "MPI-584's flow-ltx-upscale.webp/.mp4 do not exist yet, so the Flow Library 404s on every mount. That is the deferred graphics job, NOT a bug in this work - do not chase it."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-585/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-585/validation.md",
+      "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+      "js/components/Organisms/MpiVideoViewer/MpiVideoViewer.js",
+      "js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.js",
+      "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+      "docs/video-player.md"
+    ]
+  },
+  "resume_prompt": "Continuing Cubric Vision work handed off from a previous session. Read .agents/mpi-kanban/state/handoffs/d0ba037e-7fa9-47e1-beb7-c4528109bda3.json. MPI-585 (a shared before/after compare surface for Flow results) is BUILT, verified and committed: MpiCompareView is the single surface, MpiCompareOverlay was refactored onto it so History and Flows cannot drift, ltx-upscale and head-swap declare `result.compare`, and a live-run bug (a Flow media slot stores `url`, not `filePath`) is fixed. The card is in doing/validating. The open build job is Fabio's OPTION B: in MpiBaseFlow's result pane, show every VIDEO result on the real MpiVideoViewer + MpiVideoControlBar instead of a bare `<video controls>`, with the compare surface as a toggle on top. This is REUSE, not new code - the control bar is deliberately not owned by the viewer, and MpiGroupHistoryBlock.js:416 wires the pair in two lines; keep `showTrim: true` because the seek bar IS the trim bar. Read the handoff's constraints before touching js/data/flowsRegistry.js or the board files - both are co-owned with a live MPI-504 session."
+}

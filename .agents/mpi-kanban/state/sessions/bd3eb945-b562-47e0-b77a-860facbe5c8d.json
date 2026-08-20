@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "bd3eb945-b562-47e0-b77a-860facbe5c8d",
+  "role": "implementer",
+  "claude_session_id": "bd3eb945-b562-47e0-b77a-860facbe5c8d",
+  "started_at": "2026-08-20T04:07:13Z",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "status": "active",
+  "heartbeat_at": "2026-08-20T04:50:00Z",
+  "name": "MPI-585 - shared Flow CompareWidget",
+  "task": "MPI-585",
+  "recent_events": [
+    {
+      "at": "2026-08-20T04:20:00Z",
+      "event": "task_claimed",
+      "note": "MPI-585 todo -> doing; 13 paths claimed"
+    },
+    {
+      "at": "2026-08-20T04:50:00Z",
+      "event": "validation_ready",
+      "note": "MPI-585 built + self-verified; 634/634; both compare consumers proven live"
+    }
+  ]
+}

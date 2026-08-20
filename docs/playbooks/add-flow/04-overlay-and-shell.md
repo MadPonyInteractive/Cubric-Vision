@@ -36,6 +36,43 @@ Gallery → (dev-gated) Ctrl+Tab dev radial "Flows" | Landing "Flows" nav → fl
           → result lands as gallery card(s) (also shown in the Flow's result pane)
 ```
 
+## The result pane: `result.compare` (MPI-585)
+
+A flow that **improves media the user supplied** declares its before/after instead of coding
+one:
+
+```js
+inputSchema: { media: [{ type: 'video', mode: 'upto', max: 1, roles: ['inputVideo'], … }] },
+result: { compare: 'inputVideo' },   // ← which INPUT role is the BEFORE
+```
+
+The frame then paints the result on `MpiCompareView` — source left, result right, draggable
+reveal bar — instead of a plain `<video>`/`<img>`. **One declaration covers video and image**,
+because MpiCanvas's comparison mode already does image+image, image+video, video+image and
+video+video. Video pairs stay frame-locked and take the shared `compare.*` hotkeys (space
+play/pause both, ←/→ frame step, `l` loop); they are inert while the user is typing in a field.
+
+Declared today: `ltx-upscale` (`inputVideo`) and `head-swap` (`image1`).
+
+**Name the role whose FRAMING the output shares**, not merely an input that fed the run.
+Head Swap takes two images but compares against `image1`, the plate it keeps — `image2` only
+donates a head and shares no framing, so a bar between them would show two unrelated pictures.
+
+**Omit it when a comparison would say nothing.** Foley returns the same pixels; an extend's
+output is LONGER than its source, so a reveal bar between them compares two different moments.
+Both omissions are pinned by `tests/flow-result-compare.test.cjs` so a later "every flow should
+have one" sweep has to argue with a test. This is a per-flow judgement, not a default.
+
+The frame falls back to the plain element by itself when the named media is gone (a Reuse across
+a restart), when the run produced several outputs (there is no single "after"), or when the pair
+will not decode. So a declaration can never leave an empty pane — but a role that does not match
+`inputSchema.media[].roles` falls back **silently**, which reads as "compare is broken". That
+pairing is pinned by `tests/flow-result-compare.test.cjs`.
+
+`MpiCompareView` is a shared Compound: the History workspace's `MpiCompareOverlay` is the same
+surface wrapped in a full-screen takeover. **Change the compare behaviour in the view, never in
+one of the two consumers** — that is the whole reason it was lifted out.
+
 ## Install progress (multi-model)
 
 The detail footer has three states: **Install models** (missing, idle) → **aggregated % bar +

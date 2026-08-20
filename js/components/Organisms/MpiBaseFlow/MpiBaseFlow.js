@@ -3,6 +3,7 @@ import { MpiOverlay } from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiMediaPicker } from '../../Compounds/MpiMediaPicker/MpiMediaPicker.js';
+import { MpiCompareView } from '../../Compounds/MpiCompareView/MpiCompareView.js';
 import { Events } from '../../../events.js';
 import { state, AUTO_PIXEL_THRESHOLD } from '../../../state.js';
 import { ViewManager } from '../../Primitives/MpiCanvas/managers/ViewManager.js';
@@ -365,6 +366,15 @@ export const MpiBaseFlow = ComponentFactory.create({
         let _resultMediaEl = null;
         let _resultEmptyEl = null;
         let _resultFrameEl = null;
+        /**
+         * The shared before/after surface, live only while a declaring flow is
+         * showing a comparable result (MPI-585). Held so the empty-state copy, the
+         * frame's pan/zoom and the slide teardown can all see that the pane is in
+         * compare mode rather than empty.
+         * @type {?Object}
+         */
+        let _compareView = null;
+        let _compareHost = null;
         /** Pan/zoom state for the result pane — the shared MpiCanvas view model. */
         const _resultView = new ViewManager();
         let _statusEl = null;
@@ -1148,6 +1158,9 @@ export const MpiBaseFlow = ComponentFactory.create({
             // nodes — a cleared enhancement that silently never cleared.
             _liveFields.clear();
             // These live on the run slide only; drop the stale references.
+            // Before the refs are nulled — _teardownCompare needs the frame to strip
+            // its modifier class, and the canvas holds a RAF loop that must stop.
+            _teardownCompare();
             _runBtn = null; _resultMediaEl = null; _statusEl = null;
             _pendingNote = null; _gaugeEl = null;
             _resultFrameEl = null;
@@ -1201,7 +1214,10 @@ export const MpiBaseFlow = ComponentFactory.create({
             // latent the pane holds no media yet, and leaving the copy up would put
             // "Your result appears here." under the scanline — the frame claiming
             // nothing is happening while it sweeps.
-            if (_resultEmptyEl) _resultEmptyEl.hidden = !!_resultMediaEl?.firstChild || _running;
+            // `|| _compareView` — a declared comparison paints on a CANVAS, not into
+            // the media layer, so testing that layer alone put "Your result appears
+            // here." on top of the result the user is looking at.
+            if (_resultEmptyEl) _resultEmptyEl.hidden = !!_resultMediaEl?.firstChild || !!_compareView || _running;
         }
 
         // ── Result zoom / pan ───────────────────────────────────────────────────
@@ -1327,6 +1343,9 @@ export const MpiBaseFlow = ComponentFactory.create({
         /** Paint a single URL (a live latent preview) into the result pane. */
         function _paintResult(url, { blurring = false } = {}) {
             if (!url || !_resultMediaEl) return;
+            // A re-run's first latent arrives while the PREVIOUS run's comparison is
+            // still up; without this it would paint underneath a canvas.
+            _teardownCompare();
             _resultMediaEl.innerHTML = '';
             const img = ce('img', { src: url, alt: 'result', draggable: false });
             // Live latents carry a light blur — honest about a half-computed image,
@@ -1358,6 +1377,7 @@ export const MpiBaseFlow = ComponentFactory.create({
             // Always clear first: the pane may still hold a live-latent preview whose
             // blob: URL is revoked the moment the gen ends. Leaving it in the DOM logs
             // a GET blob:… ERR_FILE_NOT_FOUND.
+            _teardownCompare();
             _resultMediaEl.innerHTML = '';
             // The run is over — the sweep now lives on the frame, so clearing the
             // media layer no longer takes it with it. Guarded on _running: a slide
@@ -1366,6 +1386,22 @@ export const MpiBaseFlow = ComponentFactory.create({
             // authority now).
             if (!_running) _setScanline(false);
             if (!withPath.length) { _syncResultEmpty(); return; }
+            // A flow that DECLARES a comparison shows one — source under the reveal
+            // bar, result over it. Only for a single result: N outputs have no one
+            // "after" the bar could reveal.
+            if (withPath.length === 1 && _mountCompare(withPath[0].it)) {
+                _syncResultEmpty();
+                return;
+            }
+            _paintPlainResults(withPath);
+            _syncResultEmpty();
+        }
+
+        /**
+         * The default result painting — one plain element per output.
+         * @param {Array<{it:Object, path:string}>} withPath
+         */
+        function _paintPlainResults(withPath) {
             for (const { it, path } of withPath) {
                 const url = resolveMediaUrl(path);
                 const isVideo = it?.type === 'video' || it?.mediaType === 'video';
@@ -1382,7 +1418,71 @@ export const MpiBaseFlow = ComponentFactory.create({
                 _resultMediaEl.appendChild(media);
                 _fitWhenReady(media);
             }
-            _syncResultEmpty();
+        }
+
+        /**
+         * The BEFORE half of a declared comparison: the live media item filling the
+         * slot whose role the flow named in `result.compare`.
+         *
+         * Read off the live slots rather than the run snapshot, so the pair on screen
+         * is the pair the run actually used even after a slide rebuild reseeded them.
+         * @returns {?Object}
+         */
+        function _compareBefore() {
+            const role = flow.result?.compare;
+            if (!role) return null;
+            for (const { items } of _mediaGroups) {
+                const hit = items.find(m => m && m.role === role);
+                if (hit) return hit;
+            }
+            return null;
+        }
+
+        /**
+         * Mount the shared compare surface over the result frame.
+         *
+         * The frame's own wheel-zoom and drag-pan need no disabling: every handler in
+         * `_bindResultView` returns early on an empty `_resultMediaEl`, and compare
+         * leaves it empty. MpiCanvas brings its own ViewManager, so the pane keeps
+         * zoom and pan — they just come from the canvas, which is also what keeps the
+         * reveal-bar drag from fighting a second pan implementation.
+         *
+         * @param {Object} resultItem the AFTER half
+         * @returns {boolean} false when the flow declares no comparison or the before
+         *   media is gone (reuse across a restart, a run with no input) — the caller
+         *   then paints the plain element.
+         */
+        function _mountCompare(resultItem) {
+            const before = _compareBefore();
+            if (!before || !_resultFrameEl) return false;
+
+            _compareHost = ce('div', { className: 'mpi-base-flow__result-compare' });
+            _resultFrameEl.appendChild(_compareHost);
+            _resultFrameEl.classList.add('mpi-base-flow__result-frame--compare');
+            _compareView = MpiCompareView.mount(_compareHost);
+
+            const host = _compareHost;
+            _compareView.el.open(before, resultItem).then((ok) => {
+                // A pair that will not decode must not leave a blank frame where the
+                // result was — fall back to the plain element. Guarded on identity:
+                // the load is async and the slide may already have been rebuilt.
+                if (ok || _compareHost !== host || !_resultMediaEl) return;
+                _teardownCompare();
+                _paintPlainResults([{ it: resultItem, path: resultItem?.filePath || resultItem?.url }]);
+                _syncResultEmpty();
+            });
+            return true;
+        }
+
+        /** Drop the compare surface and hand the frame back to the media layer. */
+        function _teardownCompare() {
+            if (_compareView) {
+                _compareView.el.destroy();
+                _compareView = null;
+            }
+            _compareHost?.remove();
+            _compareHost = null;
+            _resultFrameEl?.classList.remove('mpi-base-flow__result-frame--compare');
         }
 
         /**

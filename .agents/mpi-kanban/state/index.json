@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-20T05:35:00Z",
+  "updated_at": "2026-08-20T06:20:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -182,9 +182,17 @@
       "id": "d39e8d8d-9bc7-4145-a134-472b54a15c04",
       "path": ".agents/mpi-kanban/state/handoffs/d39e8d8d-9bc7-4145-a134-472b54a15c04.json",
       "task_card": "MPI-504",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-20T04:41:44Z",
-      "note": "promptEnhance op shipped + verified; next session runs /mpi-add-flow. Fabio owes the Input_Seed node (Option A)."
+      "note": "Superseded by 6f8924ee-2b3e-49d8-b747-b4dd873863e7 - the flow is wired, the seed is proven live and the 8:5 ratio was corrected."
+    },
+    {
+      "id": "6f8924ee-2b3e-49d8-b747-b4dd873863e7",
+      "path": ".agents/mpi-kanban/state/handoffs/6f8924ee-2b3e-49d8-b747-b4dd873863e7.json",
+      "task_card": "MPI-504",
+      "status": "open",
+      "created_at": "2026-08-20T06:20:00Z",
+      "note": "Character Sheet wired + Input_Seed proven live + FLUX 8:5 corrected to 1280x800; MPI-586 opened. Two decisions pending for Fabio."
     }
   ]
 }
