@@ -14,7 +14,7 @@
 'use strict';
 
 import { enqueueGeneration } from './generationService.js';
-import { getFlowById, flowAvailability } from '../data/flowsRegistry.js';
+import { getFlowById, flowAvailability, flowModelParams, flowSettingsModel } from '../data/flowsRegistry.js';
 import { state } from '../state.js';
 import { Events } from '../events.js';
 
@@ -70,11 +70,17 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
         positive: inputs.positive || '',
         negative: inputs.negative || '',
         mediaItems,
-        injectionParams: inputs.injectionParams || {},
+        // MPI-590: the params that identify WHICH member of an any-of set is running go
+        // in FIRST, so a collected field of the same name still wins. Empty `{}` for every
+        // flow that declares no `modelParams`. This is the hop that makes the picker real
+        // — the same hop `loraModelId` was missing in MPI-504, where the panel saved real
+        // slots and the image came back identical.
+        injectionParams: { ...flowModelParams(flow), ...(inputs.injectionParams || {}) },
         // Whose LoRA rack fills this flow's `Input_Lora_N` nodes, or null. NOT a model
         // selection: it never reaches model resolution or workflow lookup, which stay
-        // driven by `operation`.
-        loraModelId: flow.settingsModel || null,
+        // driven by `operation`. Resolved through the any-of sets so the rack follows the
+        // member actually running (MPI-590), not the id the descriptor happens to name.
+        loraModelId: flowSettingsModel(flow),
         // Additive, threaded to the sidecar save path (Phase 2 item 4) so Reuse can
         // reopen this Flow with its inputs restored.
         flowId: flow.id,

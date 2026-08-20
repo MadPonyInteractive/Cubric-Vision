@@ -30,7 +30,23 @@
  *                                       `video`, this never turns the tile into a video tile: the
  *                                       tile stays the 4/5 still. Omit and the hero shows `preview`.
  * @property {string}   description    - Slide-over copy
- * @property {string[]} requiredModels - MODEL ids (NOT dep ids); drives the availability badge
+ * @property {Array<string|string[]>} requiredModels - MODEL ids (NOT dep ids); drives the
+ *                                       availability badge. An entry that is itself an ARRAY is
+ *                                       an ANY-OF SET: the flow runs on whichever member the user
+ *                                       has, and the badge is satisfied by any one of them
+ *                                       (MPI-590). A plain string entry behaves exactly as before,
+ *                                       which is every flow but Character Sheet. Resolve the list
+ *                                       through `flowModelIds()` — never read the raw array, or a
+ *                                       set reaches a consumer as a nested array.
+ * @property {Object<string, Object>} [modelParams] - Per-MODEL injection params, merged into the
+ *                                       run's `injectionParams` for whichever member of an any-of
+ *                                       set is running (MPI-590). This is what makes the picker
+ *                                       REAL: without it the choice changes the badge and nothing
+ *                                       else, because the graph's loader is baked. Keys are
+ *                                       ordinary injection keys, so `Title.widget` addressing
+ *                                       works. Flow-local on purpose — the two Krea2 cards differ
+ *                                       by a transformer file and a bypass strength, and that is
+ *                                       knowledge about THIS graph, not a registry concept.
  * @property {string[]} [requiredDeps] - DEP ids (dependencies.js facade) this flow needs on top
  *                                       of its models — flow-only weights/nodes that no model
  *                                       requires. Filed in the dep file for their KIND, never
@@ -72,6 +88,10 @@
  *                                       the same LoRA whether the flow or the prompt box runs it.
  *                                       Flat-slot models only; a `loraStages` model warns and is
  *                                       skipped rather than injected in the wrong shape.
+ *                                       When the named model belongs to an any-of set, the rack
+ *                                       FOLLOWS the picked member (`flowSettingsModel()`, MPI-590)
+ *                                       — otherwise a user running the NSFW arm edits the SFW
+ *                                       card's rack and gets no LoRAs at all, silently.
  * @property {Object}   inputSchema    - What the flow collects → injected into the workflow
  * @property {{compare?: string}} [result] - How the RESULT is presented. `compare` names the media
  *                                       ROLE holding the BEFORE — the frame then shows the result
@@ -569,7 +589,33 @@ export const FLOWS = [
         preview: 'flow-character-sheet.webp',
         video: 'flow-character-sheet.mp4',
         description: 'Describe a character and get a reference sheet back: a large three-quarter portrait, plus full-body front and back views, on a plain grey studio backdrop. Built to be fed to a video model, so the front body comes back headless — that leaves the portrait as the only place a face can come from.',
-        requiredModels: ['krea2', 'klein-4b'],
+        // ANY-OF (MPI-590): the sheet samples Krea 2, and the SFW and NSFW cards are the
+        // SAME architecture with a different bake — so a user holding either one can run
+        // it, and is never asked for a second 12.25GB download of the other. Both members
+        // stay listed so the install button still has something to install for a user who
+        // has neither; `flowModelIds` picks whichever is present, and `modelParams` below
+        // is what makes the pick reach the graph.
+        //
+        // NOT `modelFamily` — MPI-316 removed that field from both krea2 cards on purpose:
+        // it drives the H/B/L tier letter, and these two are CONTENT variants, not tiers.
+        requiredModels: [['krea2', 'krea2-nsfw'], 'klein-4b'],
+        // The two things that differ between the arms, as injection params. The graph is
+        // the SFW one, so `krea2` restates its own baked values — cheap, and it keeps the
+        // pair readable as a pair instead of "the default plus an override".
+        //
+        // `Input_Bypass_Filter_Lora` is not optional trim: the NSFW twin workflow bakes
+        // that strength at 0 (krea2_t2i_nsfw.json node 245), so leaving it at 1 runs the
+        // lustify transformer with the SFW bypass still applied.
+        modelParams: {
+            'krea2': {
+                'Input_Base_Model': 'krea2_raw_int8_convrot.safetensors',
+                'Input_Bypass_Filter_Lora.strength_model': 1,
+            },
+            'krea2-nsfw': {
+                'Input_Base_Model': 'lustify-v10-krea-raw-int8_convrot.safetensors',
+                'Input_Bypass_Filter_Lora.strength_model': 0,
+            },
+        },
         operation: 'flowCharacterSheet',
         workflow: 'flow_character_sheet.json',
         mediaType: 'image',
@@ -579,6 +625,8 @@ export const FLOWS = [
         // (Fabio, MPI-504). This names WHOSE rack fills those nodes — krea2 is the
         // model this flow samples — and it is the only reason the LoRA button and the
         // injection in commandExecutor do anything.
+        // Names the SET, not one card: `flowSettingsModel()` resolves it to whichever
+        // member is actually running, so the NSFW arm opens the NSFW rack (MPI-590).
         settingsModel: 'krea2',
         // No `inputSchema` at all: this flow collects no media, so step 0 renders its
         // own "This flow needs no input media." beside the hero. No `result.compare`
@@ -802,11 +850,115 @@ export function getFlowDependencies(flowOrId) {
     return flowDepIds(flow).map(depId => DEPS[depId]).filter(Boolean);
 }
 
+// ── Any-of model sets (MPI-590) ───────────────────────────────────────────────
+//
+// The user's pick, flowId → model id. SESSION-ONLY, deliberately: a pick that
+// outlived the app would silently run a later sheet on the NSFW bake because of a
+// click made days ago — the whole reason option 1 (treat the NSFW card as
+// satisfying the SFW one) was rejected. Every session starts on the first
+// INSTALLED member, and a user holding one member never sees a picker at all.
+const _modelChoice = new Map();
+
 /**
- * Availability = every requiredModel id installed AND every requiredDep present.
+ * `requiredModels` as SLOTS: every entry normalised to an array of candidates.
+ * A plain string entry becomes a one-member slot, so callers have one shape.
+ * @param {FlowDef} flow
+ * @returns {string[][]}
+ */
+export function flowModelSlots(flow) {
+    return (flow?.requiredModels || []).map(entry => (Array.isArray(entry) ? entry : [entry]));
+}
+
+/**
+ * ONE resolved model id per slot — the id that actually runs, and the id every
+ * consumer (badge, install keys, required-models list, install progress) must use.
+ *
+ * Order: the user's pick if it names an INSTALLED member of this slot, else the first
+ * installed member, else the first member (so a user with NEITHER is offered the default
+ * to install rather than an empty row). The pick must still be installed, or uninstalling
+ * the picked member would leave the flow permanently demanding it back.
+ *
+ * @param {FlowDef|string} flowOrId
+ * @returns {string[]}
+ */
+export function flowModelIds(flowOrId) {
+    const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
+    if (!flow) return [];
+    const installed = state.s_installedModelIds || [];
+    const pick = _modelChoice.get(flow.id);
+    return flowModelSlots(flow).map(slot =>
+        (pick && slot.includes(pick) && installed.includes(pick) && pick)
+        || slot.find(id => installed.includes(id))
+        || slot[0]);
+}
+
+/**
+ * The INSTALLED members of every slot that has more than one candidate — i.e. exactly
+ * what the slide-over's picker should offer. A slot with 0 or 1 installed members
+ * yields nothing: there is no choice to make.
+ * @param {FlowDef|string} flowOrId
+ * @returns {string[][]}
+ */
+export function flowModelChoices(flowOrId) {
+    const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
+    if (!flow) return [];
+    const installed = state.s_installedModelIds || [];
+    return flowModelSlots(flow)
+        .filter(slot => slot.length > 1)
+        .map(slot => slot.filter(id => installed.includes(id)))
+        .filter(members => members.length > 1);
+}
+
+/**
+ * Record the user's pick for this session. Ignored unless the id is a member of one
+ * of the flow's slots — nothing else can be picked, and a stale id would otherwise
+ * shadow the installed-member fallback forever.
+ * @param {string} flowId
+ * @param {string} modelId
+ */
+export function setFlowModel(flowId, modelId) {
+    const flow = getFlowById(flowId);
+    if (!flow || !flowModelSlots(flow).some(slot => slot.includes(modelId))) return;
+    _modelChoice.set(flowId, modelId);
+}
+
+/**
+ * The injection params the RESOLVED models contribute — what makes a pick reach the
+ * graph instead of only the badge (MPI-590). Empty for every flow that declares no
+ * `modelParams`, which is every flow but Character Sheet.
+ * @param {FlowDef|string} flowOrId
+ * @returns {Object}
+ */
+export function flowModelParams(flowOrId) {
+    const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
+    if (!flow?.modelParams) return {};
+    return Object.assign({}, ...flowModelIds(flow).map(id => flow.modelParams[id] || {}));
+}
+
+/**
+ * `settingsModel`, resolved through the any-of sets: if the declared model is a member
+ * of a slot, the RUNNING member of that slot is the one whose LoRA rack fills the graph
+ * and whose settings panel the flow's settings button opens.
+ * @param {FlowDef|string} flowOrId
+ * @returns {string|null}
+ */
+export function flowSettingsModel(flowOrId) {
+    const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
+    if (!flow?.settingsModel) return null;
+    const slots = flowModelSlots(flow);
+    const i = slots.findIndex(slot => slot.includes(flow.settingsModel));
+    return i === -1 ? flow.settingsModel : flowModelIds(flow)[i];
+}
+
+/**
+ * Availability = every requiredModel SLOT satisfied AND every requiredDep present.
  *
  * requiredModels are MODEL ids; s_installedModelIds is already partial-aware
  * (populated via isModelUsable, modelRegistry.js) so ≥1-op-installed models count.
+ * A slot is an ANY-OF SET (MPI-590), and `flowModelIds` already resolves each slot to
+ * an installed member when it has one — so filtering its output IS the any-of test,
+ * and `missing` still names ONE id per unsatisfied slot, which is what the install
+ * callers need.
  * requiredDeps are DEP ids (MPI-304) — flow-only weights/nodes no model requires;
  * their disk status comes from the flow dep-status cache above. Both gate the same
  * badge and the same Run guard: the user cannot open a flow until it has BOTH.
@@ -822,7 +974,7 @@ export function flowAvailability(flowOrId) {
     const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
     if (!flow) return { available: false, missing: [], missingDeps: [] };
     const installed = state.s_installedModelIds || [];
-    const missing = (flow.requiredModels || []).filter(id => !installed.includes(id));
+    const missing = flowModelIds(flow).filter(id => !installed.includes(id));
     const depStatus = _flowDepStatusCache.get(flow.id);
     const missingDeps = flowDepIds(flow).filter(id => depStatus?.get(id) !== true);
     return { available: missing.length === 0 && missingDeps.length === 0, missing, missingDeps };

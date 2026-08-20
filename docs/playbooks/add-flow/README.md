@@ -36,6 +36,7 @@ model, image-in→image-out) are the other worked examples.
 | File | Covers |
 |---|---|
 | [01-descriptor-and-ops.md](01-descriptor-and-ops.md) | The `FlowDef` in `flowsRegistry.js`; the op in **4 files**; no-model vs multi-model flows; DECLARED `fields`, a step's `param` bind, and why no BESPOKE component (every field still mounts a Primitive) |
+| [any-of-models.md](any-of-models.md) | A flow that runs on ANY of a set of models and lets the user pick (MPI-590) — the resolver helpers, `modelParams` (what carries the pick into the graph), and why `modelFamily` is the wrong field |
 | [02-media-io.md](02-media-io.md) | Polymorphic media slots; **path-reading input nodes** (MpiLoadImageFromPath / MpiString-video / MpiLoadAudioFromPath); injection routing; self-gating outputs; multi-output capture; the **audio-slot mediaType + filter traps** |
 | [03-storage-and-reuse.md](03-storage-and-reuse.md) | Flow input files → **`.preview-assets`** store (not the gallery); sidecar `flowId`/`flowInputs`; reuse routing |
 | [04-overlay-and-shell.md](04-overlay-and-shell.md) | `MpiBaseFlow` / `MpiFlowLibrary`; install progress; Ctrl+Enter runs the open flow; overlay z-order + the spared status bar; dev-gate |
@@ -63,6 +64,9 @@ Three forks decide everything downstream:
      A pure utility (stitch/resize/mux) that runs on VHS/Mpi nodes with no diffusion.
    - **Single/multi model** — list MODEL ids. Availability = every id installed; the Flow
      Library Install button drives each model's own dep download. See [01](01-descriptor-and-ops.md).
+   - **Any-of** — an ARRAY entry means the flow runs on whichever member is installed, and the
+     user picks in the slide-over when they hold more than one. It needs `modelParams` too, or
+     the pick reaches nothing. See [any-of-models.md](any-of-models.md).
 2. **Inputs.** Flows are input-agnostic: a prompt, image(s), video(s), audio, a gizmo, or
    **nothing** (just Run). Declared in `inputSchema` — media slots in `inputSchema.media`,
    other controls DECLARED in `fields` (never a JS component). Media is NEVER a hard requirement in v1, but

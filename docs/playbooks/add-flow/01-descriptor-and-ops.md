@@ -77,7 +77,8 @@ cargo-cult install-sync machinery from modelRegistry).
   title,          // card + slide-over
   preview,        // filename under comfy_workflows/display/ — its OWN 4/5 webp, see 06
   description,    // slide-over copy
-  requiredModels, // MODEL ids (NOT dep ids) — [] for a no-model flow
+  requiredModels, // MODEL ids (NOT dep ids) — [] for a no-model flow; an ARRAY entry = any-of
+  modelParams,    // optional — per-model injection params for an any-of set (see below)
   operation,      // the universal-op key from commandRegistry.js
   workflow,       // the workflow filename from universal_workflows.js
   fields,         // declared run-slide controls (MPI-531) — the SAME `fields` a step declares
@@ -157,6 +158,20 @@ one job only JS could do, and is what makes a FlowDef fully expressible as a man
 Install button drives each missing model's OWN dep download (`getModelDependencies(id)` →
 `downloadService.start(id, deps)`). Flows declare **models, never deps** (zero dep duplication).
 See [04](04-overlay-and-shell.md) for the install-progress UI.
+
+### Any-of models — the flow runs on EITHER, and the user picks (MPI-590, SHIPPED)
+
+An entry in `requiredModels` that is itself an **array** is an **any-of set** — the flow runs
+on whichever member is installed, and an `MpiDropdown` in the slide-over lets the user pick when
+they hold more than one. Character Sheet declares the only one:
+`[['krea2', 'krea2-nsfw'], 'klein-4b']`.
+
+**Never read `flow.requiredModels` directly** (a set arrives as a nested array), and never ship
+the set without the `modelParams` that carries the pick into the graph — a picker that changes
+only the badge is the failure mode this was built against.
+
+→ **[any-of-models.md](any-of-models.md)** — the resolver helpers, `modelParams`, and why
+`modelFamily` is the wrong field.
 
 ### A GATED model in `requiredModels` brings obligations the Flow Library does not carry yet
 

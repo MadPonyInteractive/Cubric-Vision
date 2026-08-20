@@ -110,3 +110,20 @@
 .mpi-detail__install-prog {
     width: 100%;
 }
+
+/* MPI-588 — this drawer's close control is an MpiButton (the Model Library's twin is
+   still a bare <button>, so the shared `.mpi-detail__close` rule in MM.css cannot own
+   the Primitive's chrome). `.mpi-btn--icon-only` carries its own width and 14px side
+   padding, which renders 30px against the twin's 28. Scoped past the Primitive's own
+   specificity rather than relying on stylesheet load order. */
+#flow-detail-panel .mpi-detail__close.mpi-btn {
+    width: 28px;
+    min-width: 28px;
+    padding: 0;
+}
+/* Same reason for the glyph: MM.css's `.mpi-detail__close .mpi-icon` (13px) loses to the
+   Primitive's own 16px icon rule, and the two drawers sit side by side in one app. */
+#flow-detail-panel .mpi-detail__close.mpi-btn .mpi-icon {
+    width: 13px;
+    height: 13px;
+}

@@ -10,6 +10,7 @@ import { Events } from '../../../events.js';
 import { state, AUTO_PIXEL_THRESHOLD } from '../../../state.js';
 import { ViewManager } from '../../Primitives/MpiCanvas/managers/ViewManager.js';
 import { submitFlowGeneration } from '../../../services/flowService.js';
+import { flowSettingsModel } from '../../../data/flowsRegistry.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { createPreviewClipPlayer } from '../../../services/previewClipPlayer.js';
@@ -943,12 +944,15 @@ export const MpiBaseFlow = ComponentFactory.create({
          * same LoRA whether the sheet or the prompt box runs it.
          */
         function _openSettings() {
-            if (!flow.settingsModel) {
+            // Resolved through the any-of sets (MPI-590) — the panel must open on the
+            // member that will actually run, or the user edits a rack the graph ignores.
+            const modelId = flowSettingsModel(flow);
+            if (!modelId) {
                 clientLogger.warn('MpiBaseFlow',
                     `flow "${flow.id}" declares a settings button but no settingsModel`);
                 return;
             }
-            Events.emit('ui:open-model-settings', { modelId: flow.settingsModel });
+            Events.emit('ui:open-model-settings', { modelId });
         }
 
         /**

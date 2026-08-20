@@ -4,13 +4,16 @@ import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { MpiTileSheet } from '../../../Primitives/MpiTileSheet/MpiTileSheet.js';
 import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
-import { listFlows, flowAvailability, getFlowDependencies, flowDepKey } from '../../../../data/flowsRegistry.js';
+import {
+    listFlows, flowAvailability, getFlowDependencies, flowDepKey,
+    flowModelIds, flowModelChoices, setFlowModel,
+} from '../../../../data/flowsRegistry.js';
+import { MpiDropdown } from '../../../Primitives/MpiDropdown/MpiDropdown.js';
 import { getModelById, getModelDependencies } from '../../../../data/modelRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
 import { sizeToGb } from '../../../../data/modelConstants/footprint.js';
 import { PAGE_GALLERY } from '../../../../router.js';
 import { qs, ce, on } from '../../../../utils/dom.js';
-import { renderIcon } from '/js/utils/icons.js';
 
 /**
  * MpiFlowLibrary — the Flow Library overlay (MPI-256).
@@ -52,7 +55,9 @@ export const MpiFlowLibrary = ComponentFactory.create({
             <aside class="mpi-detail" id="flow-detail-panel">
                 <div class="mpi-detail__head">
                     <h2 class="mpi-detail__head-title">Flow</h2>
-                    <button class="mpi-detail__close" id="flow-detail-close" type="button" aria-label="Close">${renderIcon('close', 'md')}</button>
+                    <!-- close button mounted in setup (MPI-588): ComponentFactory.mount REPLACES
+                         its container's innerHTML, so a Primitive landing beside siblings is
+                         mounted into a throwaway div and appended here. -->
                 </div>
                 <div class="mpi-detail__body" id="flow-detail-body"></div>
                 <div class="mpi-detail__actions" id="flow-detail-actions"></div>
@@ -118,7 +123,10 @@ export const MpiFlowLibrary = ComponentFactory.create({
         // collide with a model id). Install/cancel/progress all iterate this same list,
         // so the flow-deps row participates in the aggregated bar exactly like a model.
         function _installKeys(flow) {
-            const keys = (flow.requiredModels || []).slice();
+            // Resolved ids (MPI-590): an any-of slot contributes the member that is
+            // installed — or the default to install — never both, so the aggregated bar
+            // and Cancel-all keep counting one job per slot exactly as before.
+            const keys = flowModelIds(flow);
             if ((flow.requiredDeps || []).length) keys.push(flowDepKey(flow.id));
             return keys;
         }
@@ -201,6 +209,43 @@ export const MpiFlowLibrary = ComponentFactory.create({
             return _rowHtml(label, done);
         }
 
+        // MPI-590 — the model picker. A flow whose `requiredModels` carries an any-of set
+        // runs on whichever member the user has; when they have MORE THAN ONE, they choose,
+        // BEFORE the flow opens (Fabio's placement). One mount point per choosable slot —
+        // in practice exactly one, Character Sheet's Krea 2 pair.
+        //
+        // Nothing renders when the choice is already made for them: one installed member is
+        // not a decision, it is the answer.
+        function _modelChoiceHtml(flow) {
+            return flowModelChoices(flow)
+                .map((_, i) => `
+                <div class="mpi-detail__field">
+                    <span class="mpi-detail__field-label">Model</span>
+                    <div id="flow-detail-model-${i}"></div>
+                </div>`)
+                .join('');
+        }
+
+        function _mountModelChoice(flow) {
+            const resolved = flowModelIds(flow);
+            flowModelChoices(flow).forEach((members, i) => {
+                const host = qs(`#flow-detail-model-${i}`, detailBody);
+                if (!host) return;
+                const dd = MpiDropdown.mount(host, {
+                    options: members.map(id => ({ value: id, label: getModelById(id)?.name || id })),
+                    value: members.find(id => resolved.includes(id)) || members[0],
+                });
+                dd.on('change', ({ value }) => {
+                    setFlowModel(flow.id, value);
+                    // Re-render: the resolved id feeds the required-models rows, the install
+                    // keys and the footer, so a pick that only moved the dropdown label would
+                    // leave the panel describing the other model.
+                    openDetail(flow);
+                });
+                _detailBtns.push(dd);
+            });
+        }
+
         function openDetail(flow) {
             _destroyDetailBtns();
             _activeDetail = flow;
@@ -212,13 +257,16 @@ export const MpiFlowLibrary = ComponentFactory.create({
                     <div><div class="mpi-detail__name">${flow.title}</div></div>
                 </div>
                 ${flow.description ? `<p class="mpi-detail__desc">${flow.description}</p>` : ''}
+                ${_modelChoiceHtml(flow)}
                 <div class="mpi-detail__field">
                     <span class="mpi-detail__field-label">Required models</span>
                     <ul class="mpi-detail__models">
-                        ${(flow.requiredModels || []).map(_modelRowHtml).join('')}
+                        ${flowModelIds(flow).map(_modelRowHtml).join('')}
                         ${_flowDepsRowHtml(flow)}
                     </ul>
                 </div>`;
+
+            _mountModelChoice(flow);
 
             const thumb = qs('#flow-detail-thumb', detailBody);
             if (flow.preview) {
@@ -273,6 +321,16 @@ export const MpiFlowLibrary = ComponentFactory.create({
             _activeDetail = null;
             _destroyDetailBtns();
         }
+        // MPI-588 — the drawer's close control as a Primitive. It keeps `.mpi-detail__close`
+        // (the 28px chrome shared with the Model Library drawer) and its id, so the CSS and
+        // the listener below both still find it.
+        const closeBtn = MpiButton.mount(ce('div'), {
+            icon: 'close', size: 'sm', variant: 'ghost', extraClasses: 'mpi-detail__close',
+        });
+        closeBtn.el.id = 'flow-detail-close';
+        closeBtn.el.setAttribute('aria-label', 'Close');
+        qs('.mpi-detail__head', el).appendChild(closeBtn.el);
+
         _unsubs.push(on(scrim, 'click', _closeDetail));
         _unsubs.push(on(qs('#flow-detail-close', el), 'click', _closeDetail));
         _unsubs.push(Events.on('ui:close-all-popups', () => { _closeDetail(); }));
@@ -368,6 +426,7 @@ export const MpiFlowLibrary = ComponentFactory.create({
             _unsubs.forEach(fn => fn());
             _destroyAllTiles();
             _destroyDetailBtns();
+            closeBtn?.el?.destroy?.();
             overlay?.el?.destroy?.();
         };
     },

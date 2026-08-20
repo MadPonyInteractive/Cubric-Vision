@@ -1379,7 +1379,8 @@
         "default"
       ],
       "color": "#323",
-      "bgcolor": "#535"
+      "bgcolor": "#535",
+      "title": "Input_Base_Model"
     },
     {
       "id": 69,

@@ -31,9 +31,13 @@ const read = p => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
 
 test('flowService puts the declared settingsModel into the config', () => {
     const src = read('js/services/flowService.js');
+    // MPI-590 made this a RESOLVER call rather than a raw field read: `settingsModel` may
+    // name a member of an any-of set, and the rack has to follow whichever member is
+    // actually running. The assertion that matters is unchanged — the config must carry
+    // loraModelId, or the rack never leaves the descriptor.
     assert.match(
         src,
-        /loraModelId:\s*flow\.settingsModel \|\| null/,
+        /loraModelId:\s*flowSettingsModel\(flow\)/,
         'the flow config must carry loraModelId, or the rack never leaves the descriptor',
     );
     assert.match(
