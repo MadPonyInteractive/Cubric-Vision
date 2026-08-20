@@ -1,0 +1,73 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "c6d903f6-90c6-41ad-9966-65ba09e2e1a7",
+  "generated_at": "2026-08-20T08:30:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-504 - quality switch bank shipped + live-verified; FLUX ratio rows declined on provenance; Enhance dead-box root-caused",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Close the two open decisions on MPI-504 (the 1k/2k control and the other FLUX ratio rows), then run the flow live and make its graphics.",
+    "status": "in_progress",
+    "summary": "Both decisions are answered and shipped, and the flow ran end to end at both quality arms in an isolated instance. Fabio then drove it himself and found the Enhance button appears to do nothing - that is now ROOT-CAUSED to a single line and is NOT fixed. He also asked for two UI changes. The graphics are still not made."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    "completed": [
+      "THE 1k/2k CONTROL SHIPPED as the switch bank, Fabio's call ('MpiAnySwitch sounds good because the next workflow for creating props and animals will need four different resolutions'). raw/flow_character_sheet.json: 676/677 retitled W_1k (1280) / H_1k (800, was 768), new 768 W_2k (1792), 769 H_2k (1120), 770 Input_Quality (MpiInt), 771 Width_Select + 772 Height_Select (MpiAnySwitch) feeding Set_W/Set_H. Banks built at any_1..any_5 deliberately so MPI-586 gets four arms off the same shape. Converted 96 -> 101 nodes, validate-injection-rules clean. FlowDef gained an Input_Quality radio (columns 2, default 1). ZERO app code. Commits 70dc98cb (raw) + 96c5b410.",
+      "THE OTHER FOUR FLUX RATIO ROWS: DECLINED, and my earlier recommendation to fix them was WRONG. Fabio pushed back on provenance grounds and asked for investigation; it confirms him. EIGHT OF THE NINE FLUX_RATIOS VALUES ARE EXACT ENTRIES IN SDXL's 40-PAIR TRAINING-BUCKET LIST (SDXL paper Appendix I, all /64, ~1024^2), including the 1280x768 pair that had been corrected. The labels were fitted to the buckets afterwards - that is why 3:4 is really 7:9. SDXL_RATIOS is a different hand-pick from the same list, which proves it. Every proposed 'fix' leaves the bucket set and 1280x720 is not even /32, which BFL's own FLUX API requires. The 8:5 pair KEEPS 1280x800 (Fabio confirmed) because it is the one row where the bucket bought nothing. Recorded in the ratios.js comment so it cannot be reopened as a bug.",
+      "THE LIVE RUN IS DONE (playbook 05). Own instance on 49251 under a held GPU lease, throwaway project. Flow READY with both models INSTALLED; media-free step 0 renders 'This flow needs no input media.'; every declared field renders. BOTH ARMS PROVEN from the dispatched graph AND the files on disk: Input_Quality 1 -> 1280x800, 2 -> 1792x1120, every other control identical. Sheet correct at 1K (headless front body, back view, three-quarter portrait with the pupil catch-light). Raw-prompt fallback proven - Enhance was never pressed. Commit 475083cb, evidence in validation.md.",
+      "VERIFIED: npm test 638/638, npm run release:check passed, eslint clean, the new input_quality title guard proven to bite (the pre-edit graph lacks it). GPU lease released, no orphan processes, Fabio's app on :3000 untouched throughout.",
+      "THE PORTABLE HALF IS A DOC - docs/playbooks/add-flow/ui/switch-bank-fields.md, indexed in ui/README.md and pointed at from 01-descriptor-and-ops.md.",
+      "THE ENHANCE BUG IS ROOT-CAUSED (not fixed) - see next_action."
+    ],
+    "pending": [
+      "FIX THE ENHANCE DEAD-BOX. One line, but the fix needs a small design call - reach the Primitive's API, do not write textarea.value behind MpiInput's back. Details in plan.md ## Plan Drift.",
+      "TOGGLES BECOME BUTTONS - Fabio's ask. Change the `toggle` TYPE ITSELF in declaredFields.js (icon + name in an MpiButton, no label above), icon OPTIONAL so ltx-extend/foley/upscale keep working.",
+      "THE LoRA PANEL - Fabio: 'an extra button that opens the LoRAS panel, and perhaps add a new route for flow LoRAS.' declaredFields.js has NO lora type and no shipped Flow declares a rack. The graph and comfyController are already ready.",
+      "GRAPHICS - /mpi-flow-graphics for flow-character-sheet.webp + the hero clip. Still not made; the 404s in Fabio's console are this, plus MPI-584's.",
+      "The 2K headless A/B (confounded by seed) - folds into the existing Klein removal A/B checklist item.",
+      "Still open from earlier sessions: the krea2-nsfw-only install case, and the bench open calls in plan.md."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-504",
+    "title": "Character Sheet flow - a description in, a video-reference sheet out (front body HEADLESS)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-504/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "FIX THE ENHANCE DEAD-BOX FIRST - it is root-caused, do not re-investigate. The enhancer is INNOCENT: the op runs, onText fires, _fieldValues[d.to] receives the text. `_writeFieldValue` (MpiBaseFlow.js:763) does `qs('.mpi-base-flow__field-text', wrap)` then `inp.value = text`, but `.mpi-base-flow__field-text` is the MOUNT HOST DIV (declaredFields.js:340), not the textarea MpiInput renders inside it. Assigning `.value` on a div sets an expando: no error, no log, no repaint, clean exit. Every symptom falls out of that one line - the box stays empty, the ENHANCE button correctly goes GREY (because _paintEnhance's `stale` reads _fieldValues, which IS filled - the grey button was evidence of SUCCESS and read as failure), reopening/reusing the flow shows the text, and clear-on-edit is broken the same way. DO NOT just widen the selector to `.mpi-base-flow__field-text textarea` - writing textarea.value behind MpiInput's back desyncs the Primitive. Reach the component API: check what MpiInput exposes, and change `_liveFields` (it stores the wrapper element today) to keep the instance or expose setValue on the mounted el. Guard it with a real-pixel probe asserting the TEXTAREA's rendered value after a programmatic write - never that _fieldValues holds it, because the state was right the whole time; tests/ cannot see the DOM so this is a desktop spec or a documented playwright probe. THEN the two UI asks, both approved by Fabio and neither built: (1) toggles become icon+label MpiButtons - change the `toggle` type itself in declaredFields.js, icon optional, suppress the top label the way `button` already is at line 148; (2) a LoRA button that opens a LoRA panel, plus a new route for flow LoRAs - the graph already carries Input_Lora_1..6 and comfyController already routes them, what is missing is entirely UI (declaredFields.js has NO lora type and NO shipped Flow declares a rack - plan.md's older claim that ltx-extend and foley ship one is WRONG and is corrected). Ask Fabio how many slots show by default and whether each exposes strength_model. THEN /mpi-flow-graphics.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE FLUX RATIO ROWS ARE DECLINED ON EVIDENCE, NOT PREFERENCE. Do not re-propose 'fixing' the nominal labels. Eight of the nine values are exact SDXL training buckets and the labels were fitted to them afterwards; every truthful replacement leaves the bucket set, and 1280x720 is not even /32 which BFL's FLUX API requires. The 8:5 pair keeps 1280x800. What the investigation does NOT establish: the buckets are SDXL's and this table feeds flux/chroma/klein/krea2, none of them SDXL - nobody has measured whether a bucket value beats a non-bucket one on any of the four. Both sides rest on an unmeasured assumption; the pixels simply have the better provenance.",
+      "THE SWITCH BANK IS THE ANSWER TO 'ONE FIELD, N GRAPH VALUES' AND MPI-586 MUST REUSE IT, not invent a second. That is why the banks carry any_1..any_5 rather than a boolean. Portable record: docs/playbooks/add-flow/ui/switch-bank-fields.md.",
+      "CONSTANTS BEHIND A SWITCH GET NON-`Input_` TITLES. In this codebase `Input_*` means 'the app may inject this', and a constant that only takes effect on one arm is a trap - injecting it succeeds, changes nothing on the other arms, and reports nothing. That is why 676/677 were retitled W_1k/H_1k. Free here because smoke-workflows.mjs never executes a flow_*.json (its own comment, line 1068).",
+      "A MISSING SWITCH SELECTOR IS THE WORST SILENT SKIP - it does not break the graph, it pins every run to any_1 while the control still renders and the run still succeeds. input_quality is pinned in tests/inject-params-titles.test.cjs for exactly that."
+    ],
+    "constraints": [
+      "ASK BEFORE USING THE GPU. Fabio runs generations on the bench (8188) WITHOUT taking the mpi-kanban lease, so a free lease is NOT evidence the GPU is free. He granted it explicitly this session; that grant does not carry over. Also: `gpu_lease.py run -- npm ...` DIES on Windows (FileNotFoundError - npm is npm.cmd and subprocess.call has no shell). Use `run -- node scripts/launch-instance.mjs` instead. And the guard-gpu hook blocks a read-only grep whose text merely CONTAINS `scripts/smoke-workflows.mjs`, and blocks curl to `:48188/prompt` - use the Grep/Read tools for the first, and /queue + /history for the second.",
+      "OPEN in the Flow Library does NOTHING with no project loaded - it is Gallery-only (types.js:953) and fails with NO console entry. Open a project first, then Events.emit('flow:open', { flowId: 'character-sheet' }) from js/events.js.",
+      "A THROWAWAY PROJECT LANDS IN FABIO'S REAL PROJECTS FOLDER - C:/Users/Fabio/Documents/Cubric Vision/Projects/ is the only root the app has. This session left 'MPI-504 sheet verify' there with the two proof sheets in it; Fabio has NOT said whether to delete it, so ASK before removing it.",
+      "A RELOAD IS ENOUGH FOR THIS CARD'S CHANGES, NOT A RESTART - no bundler, ES modules served by express.static with etag revalidation, and the graph JSON is fetched at DISPATCH time (comfyController.js:1231), never cached at server boot. Nothing under routes/ changed.",
+      "js/data/flowsRegistry.js and js/components/Organisms/MpiBaseFlow/* ARE CO-OWNED with the MPI-585 session. Both were clean at this session's end, but check `git status` and filter hunks (.claude/rules/git.md) before committing either.",
+      "THE 404s IN FABIO'S CONSOLE ARE NOT BUGS - flow-character-sheet.webp is this card's unmade graphics, flow-ltx-upscale.webp/.mp4 are MPI-584's."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+      "js/utils/declaredFields.js",
+      "docs/playbooks/add-flow/ui/switch-bank-fields.md",
+      ".agents/mpi-kanban/tasks/MPI-504/checklist.md"
+    ]
+  },
+  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/c6d903f6-90c6-41ad-9966-65ba09e2e1a7.json first, then .agents/mpi-kanban/tasks/MPI-504/plan.md - its `## Current State` and `## Plan Drift` were written while the details were fresh, so do not re-derive them. The card is in doing. WHAT IS DONE AND MUST NOT BE RE-OPENED: the graph, the promptEnhance op, the whole app wiring, the Input_Quality switch bank (proven live at both arms - 1 -> 1280x800, 2 -> 1792x1120), and the decision to DECLINE correcting the other four FLUX ratio rows (they are exact SDXL training buckets; the provenance is traced in the ratios.js comment and in plan.md - do not re-propose fixing them). YOUR JOB is, in order: (1) fix the Enhance dead-box, which is already root-caused to `_writeFieldValue` in MpiBaseFlow.js:763 querying the mount HOST DIV instead of MpiInput's textarea - reach the Primitive's API rather than widening the selector, and guard it with a real-pixel probe on the rendered textarea value; (2) Fabio's two approved UI asks - toggles become icon+label MpiButtons (change the `toggle` type itself in declaredFields.js, icon optional), and a LoRA button opening a LoRA panel with a new route for flow LoRAs (declaredFields.js has NO lora type today and NO shipped Flow declares a rack, despite an older wrong claim in plan.md); (3) /mpi-flow-graphics for the tile + hero. Standing rules: ASK before using the GPU - Fabio runs the bench without taking the lease, so a free lease proves nothing. Never take the user's app on :3000 - spin your own with `node scripts/launch-instance.mjs` (NOT via npm under gpu_lease, which dies on Windows). js/data/flowsRegistry.js and MpiBaseFlow.* are co-owned with the live MPI-585 session."
+}
