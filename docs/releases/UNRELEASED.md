@@ -40,6 +40,13 @@ _(none yet)_
 
 ## Fixes
 
+- Scrolling a gallery full of videos is smooth again. Dragging the scroll bar through a project
+  with many video cards stuttered, and the more videos were on screen the worse it got. Every
+  scroll movement was rewinding every video in the gallery back to its first frame — including
+  the ones already parked on it — and the wasted work piled up faster than scrolling could
+  produce it. A video already sitting on its first frame is now left alone. Hovering, playback
+  and the silence-while-scrolling behaviour are unchanged.
+
 - The first engine start no longer looks frozen. Setting up a new engine installs a large set of
   Python packages before ComfyUI can start, and for the minutes that took, the window only said
   "Starting ComfyUI Engine…" — no progress, no explanation, so it read as a hang. That step now

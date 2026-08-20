@@ -26,6 +26,12 @@ import { createPreviewClipPlayer } from '../../../services/previewClipPlayer.js'
 function _stopOtherGalleryMedia(except) {
     qsa('audio[data-src], video.mpi-group-card__thumb--video').forEach((m) => {
         if (m === except) return;
+        // Already stopped — skip. The scroll handler calls this on EVERY scroll
+        // event, and `currentTime = 0` is NOT a no-op at position 0: Blink fires a
+        // real seek (measured 1000 `seeking` events for 10 sweeps over 100 videos),
+        // each queuing a demux+decode of frame 0. A scrollbar drag at ~60-100
+        // events/s turned that into thousands of seeks/s = the scroll jank.
+        if (m.paused && !m.currentTime) return;
         m.pause();
         try { m.currentTime = 0; } catch (_) {}
         if (m.tagName === 'VIDEO') m.muted = true;

@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-583",
+  "title": "Gallery scroll lag: the per-scroll stop-sweep re-seeks every video",
+  "description": "_stopOtherGalleryMedia runs on every scroll event and used to pause+seek+re-mute every video unconditionally. Blink does not short-circuit a seek to the current position, so an idle gallery took thousands of frame-0 decodes per second while scrolling. Guarded with an already-stopped early-out.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "complete",
+  "created_at": "2026-08-20T01:47:29Z",
+  "updated_at": "2026-08-20T01:47:30Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl"
+  }
+}
