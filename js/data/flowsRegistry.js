@@ -416,6 +416,85 @@ export const FLOWS = [
             },
         ],
     },
+    // MPI-584 — the FLOW half of the LTX Video upscaler. The capability ships TWICE
+    // on purpose (memory `project_flows_are_the_beginner_surface`): MPI-579 shipped it
+    // as a PLUGIN entry in the History video Upscale dropdown, and this is the same
+    // capability behind the Flow Library, so a beginner never has to leave it.
+    //
+    // NOTHING HERE IS NEW WORK. The op (`ltxVideoUpscale`, universal, injector
+    // `ltxSigmas`), the graph (`ltx_video_upscale.json`, 29 nodes, audio pass-through
+    // proven) and both registry mappings were built and verified by MPI-579 — this
+    // descriptor is the only file the second surface needed. The three fields below are
+    // the plugin's `upscale.fields` VERBATIM, which is what keeps the two surfaces from
+    // drifting apart: change one, change the other.
+    //
+    // Same line as ltx-foley / ltx-extend: `requiredModels: ['ltx-23-balanced']` and NO
+    // requiredDeps. It owns no weight — every one the graph loads is that tier's, and the
+    // spatial upscaler is already in both LTX tiers' `dependencies`. Balanced specifically
+    // because the graph bakes the int8 transformer.
+    //
+    // NO frame or resolution cap, and that is a decision rather than an oversight: the
+    // graph has no knob to cap (its only Input_* nodes are the ones below), so a cap means
+    // a new node plus a control — a card of its own. Measured cost is 12752 MB at 25
+    // frames and 14721 MB at 73 on a 16380 MB card (MPI-579 validation Phase 5), so the
+    // ceiling is real and grows with length. Until a cap exists the description is what
+    // warns the user, because an OOM lands minutes deep.
+    {
+        id: 'ltx-upscale',
+        title: 'Upscale Video',
+        preview: 'flow-ltx-upscale.webp',
+        video: 'flow-ltx-upscale.mp4',
+        description: 'Double a video’s resolution and rebuild its detail. Drop a clip and LTX 2.3 re-renders it at 2x — the audio comes through untouched. Short clips first: cost grows with length, and a long one can exhaust the GPU.',
+        requiredModels: ['ltx-23-balanced'],
+        operation: 'ltxVideoUpscale',
+        workflow: 'ltx_video_upscale.json',
+        mediaType: 'video',
+        inputSchema: {
+            media: [
+                // Role MATCHES the op's `mediaInputs` key (`inputVideo`), NOT the `video1`
+                // its sibling flows use — that op predates them and is shared with the
+                // plugin, so the flow bends to the op.
+                { type: 'video', mode: 'upto', max: 1, roles: ['inputVideo'], labels: ['Video to upscale'] },
+            ],
+        },
+        // Run-slide fields, no middle step. Unlike extend and foley the prompt here is
+        // OPTIONAL and secondary (an upscale is a fidelity job), so there is nothing the
+        // user has to watch the clip to write.
+        //
+        // Both ranges are MPI-568's, measured and closed by Fabio 2026-08-19. The user
+        // sees 0–1 on both and the mapping is hidden — his words: "The mapping should be
+        // occulted from the user, as per usual."
+        fields: [
+            {
+                id: 'positive', type: 'text', rows: 3, label: 'Prompt', default: '',
+                placeholder: 'Optional — describe the shot to steer the detail',
+                // EMPTY by default, and load-bearing. MPI-568's most expensive finding:
+                // the bench's own default prompt ("natural skin texture, freckles, sharp
+                // eyes") was ordering the artifact every downstream dial had been built to
+                // remove — the model rendered those freckles as MOLES on flat cheek skin.
+                // A suggestion belongs in the placeholder, never in the value.
+            },
+            {
+                id: 'Input_Denoise', type: 'slider', label: 'Denoise',
+                min: 0, max: 1, step: 0.01, default: 0.5,
+                // -> start sigma 0.50–0.85; UI 0.5 lands on 0.675, Fabio's default. The
+                // whole four-value schedule is derived from this one number by
+                // ltxSigmasInjector, not by the graph.
+                mapTo: [0.50, 0.85],
+                note: 'Higher reconstructs more detail and drifts further from the source.',
+            },
+            {
+                id: 'Input_Prompt_Strength', type: 'slider', label: 'Prompt strength',
+                min: 0, max: 1, step: 0.01, default: 0,
+                // -> cfg 1–3. Defaults to the NO-GUIDANCE end on purpose. Fabio,
+                // overruling a plan recommendation of 3: "Most upscaling jobs do not want
+                // too much change anyway." Steering is opt-in; the measurement bounds the
+                // range, not the default. Do not re-argue it.
+                mapTo: [1, 3],
+                note: 'Only has an effect once you write a prompt.',
+            },
+        ],
+    },
 ];
 
 /** @returns {FlowDef[]} All flow descriptors. */

@@ -3,11 +3,11 @@
   "id": "MPI-584",
   "title": "Video upscale as a Flow - the LTX upscaler's second surface, for the Flow Library",
   "description": "The LTX Video upscaler shipped as a PLUGIN only (MPI-579): an entry in the History workspace video upscale dropdown. Per the product shape, a capability ships TWICE - once as a workspace tool, once as a Flow - so a non-technical user never has to leave the Flow Library. This card builds the Flow half. REUSE, DO NOT REBUILD: the workflow (comfy_workflows/ltx_video_upscale.json, 29 nodes, audio pass-through proven), the universal op ltxVideoUpscale (commandRegistry + UNIVERSAL_WORKFLOWS + operationRegistry 1.5.0 + operation_registry.json, universal:true), and the ltxSigmasInjector all exist and are verified. PROCEDURE IS /mpi-add-flow (docs/playbooks/add-flow/), never /mpi-add-model - no ModelDef, no dep entries; it runs on the already-wired LTX 2.3 Balanced checkpoint. THE FlowDef DRAWS THE SAME LINE THE PLUGIN DOES: requiredModels ['ltx-23-balanced'], requiredDeps [] - it owns no weight of its own, exactly like ltx-foley and ltx-extend. CONTROLS ARE ALREADY DECIDED AND CLOSED BY FABIO (MPI-568): denoise, UI 0-1, maps to start sigma 0.50-0.85, default 0.5; prompt strength, UI 0-1, maps to cfg 1-3, default 0 (the no-guidance end, ON PURPOSE - a plan recommendation of 3 was overruled); the positive prompt MUST default EMPTY. Declared fields mount real components now (MpiProgressBar / MpiInput). ALSO OWED: the two preview assets via /mpi-flow-graphics (4/5 tile + wide autoplaying hero). OPEN RISK THIS SURFACE INHERITS: the VRAM ceiling. Graph cost measured 12752 MB at 25 frames and 14721 MB at 73 on a 16380 MB card, so headroom was 656 MB and it grows with frame count; nothing caps frames or resolution anywhere today, and a failure is a ComfyUI OOM minutes deep. Numbers in tasks/MPI-579/validation.md Phase 5. A Flow is the surface where a cap would be most visible to a beginner - decide whether this card carries one.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-20T03:00:00Z",
-  "updated_at": "2026-08-20T03:00:00Z",
+  "updated_at": "2026-08-20T03:40:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -17,5 +17,6 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
-  }
+  },
+  "activeSessionTitle": "MPI-584 - Video upscale as a Flow"
 }

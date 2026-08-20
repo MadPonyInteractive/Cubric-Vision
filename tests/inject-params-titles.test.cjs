@@ -214,6 +214,28 @@ test('the LTX foley Flow carries its I/O titles (MPI-536)', () => {
     assert.ok(have.has('output_video'), `${file} must carry a capture node titled "output_video"`);
 });
 
+test('the LTX upscale Flow + plugin carry their I/O and control titles (MPI-579/MPI-584)', () => {
+    // ONE graph, TWO surfaces: the History Upscale dropdown entry (the plugin, MPI-579)
+    // and the `ltx-upscale` Flow (MPI-584). Both address the SAME titles, so one missing
+    // node breaks both at once — and breaks them silently: `input_prompt_strength` and
+    // `input_denoise` are DECLARED controls, so a missing node means the slider moves,
+    // the run succeeds, and the value the user chose is the graph's baked default.
+    //
+    // `input_denoise` is the exception and is deliberately NOT in this list: no node
+    // carries that title. It is consumed by ltxSigmasInjector (LTX_SIGMAS_CONSUMES),
+    // which turns it into `input_sigmas`' schedule string — so `input_sigmas` is what
+    // has to exist, and the injector throws by itself when it does not.
+    const file = 'ltx_video_upscale.json';
+    const have = titlesOf(file);
+    for (const title of [
+        'input_positive', 'input_seed', 'input_video',
+        'input_sigmas', 'input_prompt_strength',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_video'), `${file} must carry a capture node titled "output_video"`);
+});
+
 test('every media slot a model can actually see exists in that model\'s workflow', () => {
     // Same silent-skip class as the injectParams sweep above, on the OTHER injection
     // source. A `mediaInputs` slot whose title matches no node gives the user a chip well
