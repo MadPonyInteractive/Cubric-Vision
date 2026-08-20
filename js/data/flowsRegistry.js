@@ -66,7 +66,14 @@
  *
  * @typedef {Object} FlowStep
  * @property {string}  kind    - STEP_KINDS registry key (MpiBaseFlow/stepKinds.js), e.g. 'box'.
- *                               A new gizmo = one component + one registry line.
+ *                               A new gizmo = one component + one registry line. The FRAME-NATIVE
+ *                               kinds (FRAME_KINDS, same file) are the exception: `fields` has no
+ *                               component, no gizmo and NO `role` — its declared `fields` ARE the
+ *                               work, stacked where the canvas would be, and its values live in
+ *                               the FLOW-level store so one prompt can be edited on the step and
+ *                               on the run slide as a single value (MPI-504). The one-row cap does
+ *                               not apply to it: that cap exists because the row is a modifier on
+ *                               a canvas, and this step has no canvas.
  * @property {string}  role    - The MEDIA ROLE this step operates on ('image1', 'image2'…) —
  *                               the same vocabulary the op's mediaInputs uses, so a box for
  *                               `image1` reaches `Input_Box` with no new mapping.
@@ -107,6 +114,24 @@
  * @property {number}  [rows]  - For `text`. `> 1` renders a textarea (the prompt case).
  * @property {string}  [placeholder] - For `text`.
  * @property {*}       [default]
+ * @property {'enhance'} [action] - Makes a `button` an ACTION rather than a value (MPI-504). It
+ *                               runs `op` on the `from` field's text and writes the result into
+ *                               the `to` field. ONE declaration carries all three behaviours —
+ *                               Enhance fills `to`, editing `from` CLEARS `to`, and the button
+ *                               reports which of those is true (`--stale` = not enhanced) — so
+ *                               they cannot disagree. Two more consequences fall out of it: an
+ *                               empty `to` at Run sends `from` RAW (there is no silent
+ *                               enhancement), and the action's own id never reaches the op.
+ *                               Declare the pair on BOTH surfaces to get the run slide's
+ *                               condensed form; the value is shared either way.
+ * @property {string}  [op]    - For `action: 'enhance'`: the universal-op key to run. It must be
+ *                               an `outputKind: 'text'` op — it reports through `onText` and
+ *                               lands no history item. An unregistered key warns and no-ops.
+ * @property {string}  [from]  - For `action: 'enhance'`: id of the field supplying the text.
+ * @property {string}  [to]    - For `action: 'enhance'`: id of the field the result is written
+ *                               into. Enhance is its ONLY writer besides the user.
+ * @property {string}  [model] - For `action: 'enhance'`: optional model id for the run. Omit for
+ *                               an op whose weights are a dep rather than a ModelDef.
  */
 
 'use strict';
@@ -298,7 +323,12 @@ export const FLOWS = [
     {
         id: 'ltx-foley',
         title: 'Add Foley',
-        preview: 'ltx23_balanced_preview.webp',
+        // Both cut from a real run of this flow (prompt: footsteps on gravel coming
+        // from the right and leaving to the left). The hero cannot be a before/after
+        // — this flow returns the SAME pixels — so it plays the picture untouched
+        // while the waveform of the generated foley draws itself in sync.
+        preview: 'flow-ltx-foley.webp',
+        video: 'flow-ltx-foley.mp4',
         description: 'Give a silent clip a soundtrack. Drop a video, describe what it should sound like, and LTX 2.3 generates matching foley across the whole clip — the picture comes back untouched.',
         requiredModels: ['ltx-23-balanced'],
         operation: 'flowLtxFoley',
