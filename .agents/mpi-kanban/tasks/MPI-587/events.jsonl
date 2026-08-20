@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-587", "type": "task.created", "at": "2026-08-20T07:20:00Z", "actor": "claude", "maturity": "idea", "column": "todo", "note": "Found while closing MPI-585: a completed Flow result does not survive reopening the flow (_lastResults is component-scoped)."}
