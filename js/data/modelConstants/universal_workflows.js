@@ -55,4 +55,10 @@ export const UNIVERSAL_WORKFLOWS = {
     flowLtxFoley: {
         workflow: 'flow_ltx_foley.json',
     },
+    // MPI-504 — text-only, like imageDescribe. Its encoder weight is
+    // `qwen3vl-abliterated-clip`, already shipped for krea2 and the image-describer
+    // plugin, so this op adds no download of its own.
+    promptEnhance: {
+        workflow: 'qwen3vl_4b_prompt_enhancer.json',
+    },
 };

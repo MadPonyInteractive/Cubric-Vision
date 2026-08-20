@@ -945,3 +945,75 @@ the gate, which is exactly the wrong place.
   than the DOM string, so the 1-indexed int reaches `MpiAnySwitch` intact. Model it on
   `Input_Tier` (`flowsRegistry.js:268`) but `select`, four options from `prompts.md` § The four
   styles, default 1 = Photoreal. FlowDef work, at `/mpi-add-flow`.
+
+---
+
+## 2026-08-20, session 6 — the `promptEnhance` op, verified
+
+**Verdict: PASSES.** Registered, executes, returns text. The remaining gap is `Input_Seed`,
+which is Fabio's graph edit and needs no app change once it exists.
+
+**What ran, and what it proved:**
+
+| check | result |
+|---|---|
+| `workflow-to-api.mjs` on `raw/qwen3vl_4b_prompt_enhancer.json` vs live `/object_info` (:8188) | exit 0, 12 nodes, `_meta.title` intact on every injectable |
+| `validate-injection-rules.mjs comfy_workflows/qwen3vl_4b_prompt_enhancer.json` | clean, 1/1 conform |
+| `node --check` on the 3 edited JS files + `json.load` on the JSON mirror | clean |
+| `npm run release:check` | **passed** (this is the gate that catches a forgotten `operation_registry.json` entry) |
+| `npm test` | **634/634** |
+| `POST /prompt` with the converted API graph | 200, `completed: true`, `status: success` |
+| `execution_cached` on that run | `["7","9"]` — recipe + CLIP loader ONLY, so `TextGenerate` ran fresh. Not the caching trap |
+| `Output_prompt` (node 4) | returned the phrase — the MPI-242 contract holds through conversion |
+
+**`tests/text-op-completion.test.cjs` FIRED, and it was right to.** Its assertion reads
+*"exactly one text op today — a new one must be added here deliberately"*. It was extended, not
+loosened: the expected list is now `['imageDescribe', 'promptEnhance']`, and a new assertion pins
+`promptEnhance.mediaInputs === undefined`, because a media slot appearing there would make the
+empty-run guard demand an image this flow never has.
+
+**The op needed NO new app code.** `getUniversalWorkflow` wins over model resolution
+(`commandExecutor.js:1413`) and `generationService`'s `outputKind === 'text'` branch (`:913`)
+already ends a zero-media job and calls `onText`. The frame's payload
+(`model: { id: null, mediaType: 'image' }`) is byte-for-byte the shape `describeAction.js:57`
+already sends.
+
+### `Input_Seed` — Option A chosen, and why the alternative was rejected
+
+`Input_Seed` is **silently skipped today** — proven, not assumed: the probe ports
+`comfyController._inject` and prints every title that matches no node, and `Input_Seed` printed
+as a miss on every run.
+
+**Fabio's call: add an `MpiInt` titled `Input_Seed`** into `3 TextGenerate`'s `sampling_mode.seed`.
+The reason is a project-wide STANDARD — every workflow should carry an `Input_Seed` so that
+exposing seed as a user control later is a UI change, never a graph change. **Option B** (retitle
+the node and inject the dotted `Title.sampling_mode.seed`, which the first-dot split at
+`comfyController.js:1404` resolves — and which drove every seed run below) works but makes this
+graph a one-off, so it was rejected.
+
+### The seed measurement — and why "the seed does nothing" will be a false report
+
+Seed variance scales with what the user LEFT OUT. Same recipe (v4.2), same node, same bench:
+
+- **`a gunslinger`** (vague) — seeds 0 / 42 / 7777 gave three different men: 32 / 35 / 32,
+  sun-bleached vs dark brown hair, rough knot vs low ponytail vs tight braid, amber eyes only at
+  42, wardrobe moving across all three.
+- **`a retired lighthouse keeper on the Hebrides, sixties`** (role + place + age all stated) —
+  seeds 0 / 42 / 111 / 999 / 7777 gave **one man five times**, differing only in adjectives
+  (`sturdy`/`heavy` belt, `rusted`/`worn` buckle, `worn`/`heavy` satchel).
+
+So a collapsed sample is the recipe obeying an over-specified prompt, not a dead knob. Test the
+seed on a VAGUE input or the result is meaningless. (Sex did not vary in either arm; the earlier
+"different ethnicity" note is not reproduced and should not be relied on.)
+
+### The trap that produced a confident wrong answer
+
+**`MpiText`'s widget is `string`, not `value`.** A probe that writes `.value` adds a key ComfyUI
+ignores, the node keeps its BAKED default, and **the run succeeds** — returning a fluent,
+plausible description of an entirely different character with no error anywhere. Here the baked
+default is a nude-woman test string, so the first run read as the recipe being broken when the
+graph was fine and the probe was wrong.
+
+The rule that avoids it: inject the way `comfyController._inject` does — overwrite only keys that
+ALREADY exist on the node, never invent one, and PRINT every title that matched nothing. That
+print is what turned `Input_Seed`'s absence from an assumption into a measurement.

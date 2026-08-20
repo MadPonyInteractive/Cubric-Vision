@@ -1014,6 +1014,31 @@ export const commands = {
         universal: true,
     },
 
+    // MPI-504. The text-only prompt enhancer, `qwen3vl_4b_prompt_enhancer.json` — text
+    // in, a rewritten phrase out via the Output_prompt contract, so `outputKind: 'text'`
+    // exactly like `imageDescribe`. It saves no file and takes no media.
+    //
+    // UNIVERSAL BY DESIGN, not character-sheet-specific. The graph's recipe and both
+    // RegexReplace scrub patterns are INJECTED by the caller (Input_System_Prompt,
+    // Input_Scrub_Negation.regex_pattern, Input_Tidy.regex_pattern); the baked values
+    // only exist so it still runs standalone at the bench. Proven live 2026-08-19 — a
+    // translator recipe injected over the defaults came back in French. A second flow
+    // wanting a different rewrite reuses this op with its own recipe rather than
+    // registering a twin.
+    //
+    // No `short`, so it never reaches the op strip: this is a button inside a Flow, not
+    // a user-pickable operation.
+    promptEnhance: {
+        label: 'Enhance Prompt',
+        info: 'Enhance Prompt — rewrite a short description into a fuller prompt',
+        progressLabel: 'Enhancing',
+        mediaType: MEDIA_TYPE.IMAGE,
+        requiresImages: 0,
+        promptRequired: true,       // the text IS the input; there is nothing else
+        outputKind: 'text',
+        universal: true,
+    },
+
     // ── Future Stubs ──────────────────────────────────────────────────────────
     // Registered so the registry is complete; disabled in UI until implemented.
 

@@ -11,6 +11,13 @@
     "js/utils/declaredFields.js",
     "js/shell/preloadStyles.js",
     "js/components/types.js",
-    "docs/playbooks/add-flow/ui/prompt-enhance.md"
+    "docs/playbooks/add-flow/ui/prompt-enhance.md",
+    "comfy_workflows/qwen3vl_4b_prompt_enhancer.json",
+    "comfy_workflows/flow_character_sheet.json",
+    "js/data/commandRegistry.js",
+    "js/core/operationRegistry.js",
+    "operation_registry.json",
+    "js/data/modelConstants/universal_workflows.js",
+    "js/data/flowsRegistry.js"
   ]
 }

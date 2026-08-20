@@ -10,6 +10,71 @@ prompt) is in [prompts.md](prompts.md). This file is the build.
 
 ## Current State
 
+**2026-08-20, session 6 — THE ENHANCER OP IS SHIPPED AND VERIFIED. Next is `/mpi-add-flow`
+for the sheet itself.** The op is `promptEnhance`, and it is registered **universal, not
+character-sheet-specific** — the recipe and BOTH scrub patterns are injected by the caller, so
+a later flow reuses it with its own recipe instead of registering a twin. Landed in the four
+files (`commandRegistry.js` · `js/core/operationRegistry.js` · `operation_registry.json` ·
+`universal_workflows.js`), `outputKind: 'text'`, `universal: true`, `requiresImages: 0`, **no
+`mediaInputs` at all** — text in, text out. `appVersionIntroduced: '1.5.0'`, ahead of the
+released 1.4.2, same reasoning as `ltxVideoUpscale`.
+
+`comfy_workflows/qwen3vl_4b_prompt_enhancer.json` is the converted API graph (12 nodes, off the
+live bench `/object_info`), `validate-injection-rules` clean. **`npm test` 634/634 and
+`release:check` passed.**
+
+**No new app code was needed** beyond the registration. The generic path already carries it:
+`getUniversalWorkflow` wins over model resolution (`commandExecutor.js:1413`), and
+`generationService`'s `outputKind === 'text'` branch (`:913`) ends the job with no history item
+and hands the string to `onText` — the same route `imageDescribe` takes, with the identical
+`model: { id: null, mediaType: 'image' }` payload the frame already sends.
+
+**Proven by RUNNING it, not by converting it:** `POST /prompt` 200, `execution_cached: ["7","9"]`
+(recipe + loader only, so `TextGenerate` ran fresh), `Output_prompt` returned the phrase.
+
+**`Input_Seed` — FABIO CHOSE OPTION A, 2026-08-20.** Add an **`MpiInt` node titled `Input_Seed`**
+to `raw/qwen3vl_4b_prompt_enhancer.json`, wired into `3 TextGenerate`'s `sampling_mode.seed`.
+His reason is a STANDARD, not this graph: *every* workflow should carry an `Input_Seed`, so that
+exposing seed as a user control later is a UI change and never a graph change. The frame already
+sends the plain key `Input_Seed` (`MpiBaseFlow.js:797`), so **when the node exists the only work
+left is one re-convert — no app edit.** Until then the key is **silently skipped** (measured, not
+assumed) and every Enhance press returns the same phrase.
+
+**Option B was measured working and REJECTED on that standard.** `3 TextGenerate` already carries
+the widget `sampling_mode.seed`, and the `Title.widget` injector splits on the FIRST dot
+(`comfyController.js:1404`), so `Input_Enhancer.sampling_mode.seed` resolves and drives it — every
+seed run below went through that path. It needs no new node, but it makes this graph's seed a
+one-off. Recorded so nobody re-derives it.
+
+**THE SEED MEASUREMENT, AND THE TRAP IN READING IT.** The seed moves the phrase, but **how much
+depends entirely on how much the user left unspecified** — so a future "the seed does nothing"
+report is most likely an over-specified test input, not a dead knob. Both arms are n≥3 on the
+bench, same recipe (v4.2), same node:
+
+- **Vague input (`a gunslinger`)** — seeds 0 / 42 / 7777 returned three different men: age 32/35/32,
+  sun-bleached vs dark brown hair, rough knot vs low ponytail vs tight braid, amber eyes appearing
+  only at 42, and the wardrobe shifting across all three. (Sex did not vary in this sample; the
+  earlier "different ethnicity" note is not reproduced here and is not load-bearing.)
+- **Over-specified input (`a retired lighthouse keeper on the Hebrides, sixties` — role, place AND
+  age all given)** — seeds 0 / 42 / 111 / 999 / 7777 returned **one man five times**, differing only
+  in adjectives (`sturdy`/`heavy` belt, `rusted`/`worn` buckle, `worn`/`heavy` satchel). That is the
+  recipe obeying the user, not the seed failing.
+
+**A PROBE TRAP THAT MANUFACTURES A CONFIDENT WRONG ANSWER.** `MpiText`'s widget is **`string`**, not
+`value`. Writing `.value` on it adds a stray key, ComfyUI ignores it, the node keeps its BAKED
+default and the run **succeeds** — so the graph returns a fluent, plausible description of a
+completely different character and nothing anywhere reports an error. It cost one wrong reading
+here (the baked default is a nude-woman test string, which read as the recipe being broken). Any
+hand-rolled probe must inject the way `comfyController._inject` does: overwrite only keys that
+ALREADY exist on the node, never invent one. Working probe kept at
+`scratchpad/run_enhancer2.mjs` in the session log — it ports `_inject` and PRINTS every silent
+skip, which is how `Input_Seed`'s absence was proven rather than assumed.
+
+**Noticed, not actioned:** `getToolCommands()` in `commandRegistry.js:1296` has **zero callers**
+app-wide. It is the only reader of `cmd.universal` for UI purposes, so a new universal op adds no
+button anywhere — which is why `promptEnhance` needs no gate to stay off the History rail. Dead
+export, pre-existing, left alone.
+
 **2026-08-20 — THE GRAPH IS DONE AND FABIO RAN IT LIVE. It succeeded on 3-4 outputs and he
 called it ready to implement. The next job is the ENHANCER OP, then `/mpi-add-flow`.**
 

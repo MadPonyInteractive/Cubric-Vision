@@ -29,13 +29,24 @@ const imp = (p) => import(pathToFileURL(path.resolve(p)).href);
     // Default must stay 'media': every pre-existing op relies on the absent field
     // meaning "produces files". If this flipped, real generations would take the
     // text branch and never write a gallery card.
+    const TEXT_OPS = ['imageDescribe', 'promptEnhance'];
     const textOps = Object.entries(commands).filter(([, c]) => c.outputKind === 'text');
-    assert.deepStrictEqual(textOps.map(([k]) => k), ['imageDescribe'],
-        'exactly one text op today — a new one must be added here deliberately');
+    assert.deepStrictEqual(textOps.map(([k]) => k), TEXT_OPS,
+        'two text ops today — a new one must be added here deliberately');
     for (const [key, cmd] of Object.entries(commands)) {
-        if (key === 'imageDescribe') continue;
+        if (TEXT_OPS.includes(key)) continue;
         assert.notStrictEqual(cmd.outputKind, 'text', `${key} must not be text`);
     }
+
+    // MPI-504 — the enhancer takes NO media at all, which is the shape that separates
+    // it from the captioner: it is text in, text out. A `mediaInputs` slot appearing
+    // here would mean the empty-run guard starts demanding an image the flow never has.
+    const enhance = commands.promptEnhance;
+    assert.ok(enhance, 'promptEnhance must be registered');
+    assert.strictEqual(enhance.outputKind, 'text');
+    assert.strictEqual(enhance.universal, true);
+    assert.strictEqual(enhance.requiresImages, 0);
+    assert.strictEqual(enhance.mediaInputs, undefined, 'text in, text out — no media slots');
 
     // Registry sync — nothing enforced this before, and the JSON twin is hand-edited
     // (regenerating it strips the `universal` flags).

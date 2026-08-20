@@ -1,0 +1,68 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d39e8d8d-9bc7-4145-a134-472b54a15c04",
+  "generated_at": "2026-08-20T04:41:44Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-504 - the promptEnhance op: converted, registered in the 4 files, verified live",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Wire the Character Sheet flow's app half: the enhancer op, then /mpi-add-flow.",
+    "status": "in_progress",
+    "summary": "The enhancer op is SHIPPED and VERIFIED. `promptEnhance` is registered universal with outputKind:'text' in all 4 files, the API graph is converted and validated, npm test is 634/634 and release:check passes, and the graph EXECUTES (POST /prompt 200, Output_prompt returned text, execution_cached covered only the recipe + loader). It needed no new app code - the generic universal + text-op path already carried it. What remains is /mpi-add-flow for the sheet itself, plus Fabio's one-node Input_Seed edit."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    "completed": [
+      "`promptEnhance` REGISTERED IN THE 4 FILES - js/data/commandRegistry.js (outputKind:'text', universal:true, requiresImages:0, NO mediaInputs), js/core/operationRegistry.js (appVersionIntroduced 1.5.0, ahead of the released 1.4.2 like ltxVideoUpscale), operation_registry.json (hand-edited, never regenerated), and js/data/modelConstants/universal_workflows.js -> qwen3vl_4b_prompt_enhancer.json.",
+      "REGISTERED UNIVERSAL, NOT CHARACTER-SHEET-SPECIFIC. The recipe and BOTH RegexReplace scrub patterns are injected by the caller (Input_System_Prompt, Input_Scrub_Negation.regex_pattern, Input_Tidy.regex_pattern); the baked values only exist so the graph runs standalone at the bench. A later flow reuses this op with its own recipe instead of registering a twin.",
+      "comfy_workflows/qwen3vl_4b_prompt_enhancer.json converted off the LIVE bench /object_info (12 nodes), validate-injection-rules clean.",
+      "NO NEW APP CODE WAS NEEDED. getUniversalWorkflow wins over model resolution (commandExecutor.js:1413) and generationService's outputKind==='text' branch (:913) already ends a zero-media job and calls onText. The frame's payload {id:null, mediaType:'image'} is byte-for-byte what describeAction.js:57 already sends.",
+      "VERIFIED, not assumed: npm test 634/634, npm run release:check passed, POST /prompt 200 / completed:true, execution_cached ['7','9'] (recipe + CLIP loader only, so TextGenerate ran FRESH), Output_prompt returned the phrase.",
+      "tests/text-op-completion.test.cjs FIRED as designed ('a new one must be added here deliberately') and was EXTENDED, not loosened - expected list is now ['imageDescribe','promptEnhance'] plus a new assertion that promptEnhance declares NO mediaInputs.",
+      "THE SEED IS MEASURED. It moves the phrase, but only as far as the user left room: 'a gunslinger' across seeds 0/42/7777 gave three different men (age, hair colour, hairstyle, eyes, wardrobe all moved), while an over-specified input (role + place + age stated) gave ONE man across FIVE seeds with only adjective jitter. A future 'the seed does nothing' report is almost certainly an over-specified test input."
+    ],
+    "pending": [
+      "FABIO ADDS `Input_Seed` (MpiInt) to raw/qwen3vl_4b_prompt_enhancer.json, into `3 TextGenerate`'s `sampling_mode.seed`. Option A, his call, and the reason is a project STANDARD: every workflow should carry an Input_Seed so exposing seed later is a UI change, never a graph change. Option B (retitle the node, inject the dotted Title.sampling_mode.seed - measured WORKING) was rejected for making this graph a one-off. raw/ is user-owned: ask, never edit. Until the node exists the key is SILENTLY SKIPPED and every Enhance press returns the same phrase.",
+      "/mpi-add-flow END TO END for the sheet: convert flow_character_sheet.json, register `flowCharacterSheet`, write the FlowDef (three steps per plan.md's `## The prompt UI`), live run.",
+      "Input_Recipe as a DROPDOWN in the FlowDef - type:'select', four options from prompts.md § The four styles, 1-indexed, default 1 = Photoreal, an `info` per option. Model on Input_Tier (flowsRegistry.js:268) but select rather than radio.",
+      "Remaining GPU questions, NOT blockers: does the 2.6x crop ever reach a neighbouring panel; does the SAM3 union cover a tall hat. Plus the Klein removal A/B, all four styles keeping medium + catch-light, and the 10/10 stress test."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-504",
+    "title": "Character Sheet flow - a description in, a video-reference sheet out (front body HEADLESS)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-504/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Run /mpi-add-flow for the Character Sheet, end to end. The enhancer op is DONE - `promptEnhance` is registered in the 4 files, the API graph is converted and it RUNS (verified live). Two things carry over. (1) FABIO CHOSE OPTION A for the seed: he adds an `MpiInt` node titled `Input_Seed` to comfy_workflows/raw/qwen3vl_4b_prompt_enhancer.json, wired into `3 TextGenerate`'s `sampling_mode.seed`, because EVERY workflow should carry an Input_Seed so exposing seed later is a UI change and never a graph change. raw/ is his - ASK, never edit it. When the node exists the ONLY work left is re-running `node scripts/workflow-to-api.mjs comfy_workflows/raw/qwen3vl_4b_prompt_enhancer.json` into comfy_workflows/ - no app edit, because the frame already sends the plain `Input_Seed` key. (2) Input_Recipe must be a DROPDOWN in the FlowDef: `type: 'select'`, four style options from prompts.md, 1-indexed, default 1 = Photoreal. The field type already exists at js/utils/declaredFields.js:154 and emits the option's original `v`, so the int reaches MpiAnySwitch intact; model it on Input_Tier at flowsRegistry.js:268 but select rather than radio.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE GRAPH IS FINISHED AND LIVE-PROVEN (146 nodes / 180 links, Fabio's own run, 3-4 good outputs). Do NOT re-open or re-verify it - read plan.md's `## Current State` instead.",
+      "The enhancer op is UNIVERSAL (`promptEnhance`), not character-sheet-specific, because the recipe and both scrub patterns are caller-injected. Proven live 2026-08-19 by injecting a translator recipe and getting French back.",
+      "Input_Seed = OPTION A (a real MpiInt node), chosen by Fabio for a project-wide standard: every workflow carries one, so exposing seed later never touches a graph.",
+      "A PROBE THAT WRITES THE WRONG WIDGET KEY SUCCEEDS AND LIES. MpiText's widget is `string`, NOT `value` - writing `.value` adds a key ComfyUI ignores, the node keeps its BAKED default, and the run returns a fluent description of a completely different character with no error. It cost one wrong reading here. Inject the way comfyController._inject does: overwrite only keys that ALREADY exist, never invent one, and PRINT every title that matched nothing."
+    ],
+    "constraints": [
+      "comfy_workflows/raw/ IS USER-OWNED. Input_Seed is Fabio's edit - ask, never do it yourself.",
+      "A PEER SESSION IS LIVE IN THIS TREE (MPI-585, the shared Flow compare widget). It currently holds js/data/flowsRegistry.js, MpiBaseFlow.js/.css, MpiCompareOverlay, types.js, preloadStyles.js, models.js and the add-flow playbook docs. flowsRegistry.js is CO-OWNED and the next session needs it - commit by explicit pathspec only, never `git add -A`.",
+      "getToolCommands() in commandRegistry.js:1296 has ZERO callers app-wide, so a new universal op adds no button anywhere - which is why promptEnhance needs no gate to stay off the History rail. Dead export, pre-existing, left alone (close-out's call, not a handoff edit)."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-504/validation.md",
+      "docs/playbooks/add-flow/README.md",
+      "js/data/flowsRegistry.js"
+    ]
+  },
+  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/d39e8d8d-9bc7-4145-a134-472b54a15c04.json first, then .agents/mpi-kanban/tasks/MPI-504/plan.md - its `## Current State` top block is authoritative and was written while the details were fresh, so do not re-derive it. The card is in doing. TWO THINGS ARE ALREADY DONE AND MUST NOT BE RE-OPENED: the ComfyUI graph (comfy_workflows/raw/flow_character_sheet.json, 146 nodes, Fabio ran it live with 3-4 good outputs), and the ENHANCER OP - `promptEnhance` is registered universal with outputKind:'text' in all four files, comfy_workflows/qwen3vl_4b_prompt_enhancer.json is converted and validated, and the graph EXECUTES (POST /prompt 200, Output_prompt returned text). npm test 634/634, release:check passes. YOUR JOB is /mpi-add-flow end to end for the sheet: convert flow_character_sheet.json, register `flowCharacterSheet`, write the three-step FlowDef, live run. Input_Recipe must be a DROPDOWN (type:'select', four styles from prompts.md, 1-indexed, default 1 = Photoreal; the field type exists at js/utils/declaredFields.js:154 and emits the option's original `v`). Fabio still owes ONE graph edit - an MpiInt titled `Input_Seed` into `3 TextGenerate`'s `sampling_mode.seed` in raw/qwen3vl_4b_prompt_enhancer.json - and raw/ is USER-OWNED, so ask him, never edit it. When it lands the only work is one re-convert; no app change, because the frame already sends the plain `Input_Seed` key. Standing rules: a peer session is live in this tree and holds flowsRegistry.js among others, so commit by explicit pathspec only; converting a graph does not prove it opens (load it in a browser); and never take the user's app on :3000 - spin your own with `npm run app:isolated`."
+}
