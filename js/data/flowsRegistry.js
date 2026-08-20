@@ -272,7 +272,15 @@ export const FLOWS = [
     {
         id: 'ltx-extend',
         title: 'Extend Video',
-        preview: 'ltx23_balanced_preview.webp',
+        // Both cut from a real extend run and its kept source (2.334s in, 4.042s out —
+        // verified as the same shot by PSNR before building on it). What this flow
+        // changes is LENGTH, so the hero plays the RESULT straight through under a
+        // progress rail: the source's 57.7% in `--ink-3`, a mark where it ended, and
+        // the rail running past it in `--accent-heat` — the added seconds are the
+        // payload, so they are the only thing wearing the accent. The tile is that
+        // rail complete, over the walk it bought.
+        preview: 'flow-ltx-extend.webp',
+        video: 'flow-ltx-extend.mp4',
         description: 'Continue a video past its last frame. Drop a clip, describe what happens next, and LTX 2.3 generates the new seconds — with matching audio — onto the end of it.',
         requiredModels: ['ltx-23-balanced'],
         operation: 'flowLtxExtend',

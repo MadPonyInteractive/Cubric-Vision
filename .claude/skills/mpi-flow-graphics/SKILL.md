@@ -1,6 +1,6 @@
 ---
 name: mpi-flow-graphics
-description: Make the two preview assets a Flow ships — the 4/5 tile still and the wide autoplaying hero clip. Use when the user says "flow graphics", "make the images for the <name> flow", "the flow needs art", "tile and hero for <name>", "flow preview image", "give <flow> a proper preview", "/mpi-flow-graphics", or hands over before/after material for a flow. NOT for wiring a flow (that is /mpi-add-flow) and NOT for model previews. This skill ENFORCES docs/playbooks/add-flow/06-preview-image.md — it does not replace it.
+description: Make the two preview assets a Flow ships — the 4/5 tile still and the wide autoplaying hero clip. Use when the user says "flow graphics", "create graphics for <flow>", "let's do the graphics for <flow>", "make the images for the <name> flow", "the flow needs art", "tile and hero for <name>", "flow preview image", "give <flow> a proper preview", "art for the new flow", "/mpi-flow-graphics", or hands over clips/plates for a flow. NOT for wiring a flow (that is /mpi-add-flow) and NOT for model previews. This skill ENFORCES docs/playbooks/add-flow/06-preview-image.md — it does not replace it.
 user-invocable: true
 ---
 

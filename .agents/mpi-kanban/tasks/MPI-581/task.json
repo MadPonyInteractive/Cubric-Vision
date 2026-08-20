@@ -3,11 +3,11 @@
   "id": "MPI-581",
   "title": "Flow preview art - a playbook, then real images for the three shipped flows",
   "description": "Flow preview art has no procedure, so all three shipped flows wear a MODEL's preview. Head Swap shows sdxl-real-05.webp (a lingerie portrait that says nothing about swapping a head); Extend Video and Add Foley both show ltx23_balanced_preview.webp, so two different flows are visually the same card. flowsRegistry.js:138 carries the admission in a comment - 'placeholder - swap for a head-swap sample'.\n\nWHAT THE SLOT ACTUALLY IS (measured, not assumed). ONE field, not two: FlowDef.preview, a filename under comfy_workflows/display/. It feeds THREE placements - the Flow Library tile (MpiTileSheet.css:56, aspect-ratio 4/5, object-fit cover, idle filter saturate(.92) brightness(.92)), the slide-over detail thumb (MpiModelManager.css:300, also 4/5 cover), and the hero pane inside the open flow (MpiBaseFlow.js:735, width 100% height auto - NATURAL aspect, no crop). So one asset must read as a 4/5 crop at roughly 213px wide AND hold up full-width uncropped. House convention from the existing 59 display assets: webp, 4/5-ish, 896x1120 or 512x640, 100-250 KB.\n\nTHE TOOLS THAT EXIST. (1) Krea2 through POST /connector/generate in the cubric-vision skill - real gallery card, injectionParams Width/Height, returns filePath. That is the photographic plate. (2) sharp ^0.34.5, already a direct dependency and installed - composite, crop, webp encode, no new dep. That is the compositor. (3) playwright-cli screenshot - only when the design needs real text layout in brand fonts. (4) HyperFrames at C:/AI/Mpi/video-tool (playbook at MadPony-Identity/playbooks/hyperframes-authoring.md) can emit stills via `hyperframes snapshot --at`, and `remove-background` cuts a subject to transparent PNG - but a project scaffold + GSAP timeline for one still is ceremony sharp does not need. HyperFrames earns its keep the day a flow tile wants MOTION.\n\nOPEN, AND FABIO'S CALL - the art direction. Three candidates: (a) pure outcome still, like a model preview; (b) before/after diptych, which is what a flow IS but turns to mush at 213px; (c) outcome-forward still with ONE legible mark of the transformation (recommended). Nothing is generated until he picks.\n\nNOT IN SCOPE. A separate `hero` field (one 4/5 asset covers both placements). An mp4 hover clip for flow tiles - MpiTileSheet supports .mpi-tile--video, but MpiFlowLibrary.js:104 hardcodes media:'image', so that is a wiring change nobody asked for.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "complete",
   "created_at": "2026-08-19T23:10:00Z",
-  "updated_at": "2026-08-19T23:10:00Z",
+  "updated_at": "2026-08-20T02:29:00Z",
   "labels": [
     "flows",
     "art",
@@ -23,6 +23,5 @@
     "checklist": "checklist.md",
     "validation": "validation.md",
     "files": "files.json"
-  },
-  "activeSessionTitle": "MPI-581 - flow preview art playbook"
+  }
 }

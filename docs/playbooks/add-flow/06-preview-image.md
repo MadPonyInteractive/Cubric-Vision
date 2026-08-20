@@ -61,7 +61,7 @@ one. Pick the device by what actually changes:
 | The flow changes… | Device | Example |
 |---|---|---|
 | The **content of the frame** | Real before → after, wiped with the seam visible | **Head Swap** (shipped) — one plate wipes to the other, only the head changes |
-| The **length or motion** | Play the original, mark where it ended, let the extension run past the mark | **Extend Video** — a progress rail that keeps going |
+| The **length or motion** | Play the RESULT straight through under a progress rail, marked where the source ended, the rail running past the mark in `--accent-heat` | **Extend Video** (shipped) — the added seconds are the only thing wearing the accent |
 | Something **not visible at all** | Animate the channel that changed, over an unchanged frame | **Add Foley** (shipped) — the picture plays untouched while the waveform draws itself in sync, impact by impact |
 
 Two rules the shipped pair proved:
@@ -83,7 +83,16 @@ Two rules the shipped pair proved:
   the only device that communicates anything at all. Real before/after material is
   the strongest input where it exists — just never force it onto an invisible change.
 - **Accent marks use the app tokens** from `styles/01_base.css`: `--accent-heat`
-  `oklch(0.76 0.17 355)`, `--accent-frost` `oklch(0.82 0.13 220)`. Never invent a colour.
+  `oklch(0.76 0.17 355)` = **`0xFF7EB6`**, `--accent-frost` `oklch(0.82 0.13 220)` =
+  **`0x48D7FE`**. Never invent a colour — and never eyeball the hex either. ffmpeg and
+  `sharp` both want sRGB, so the token has to be converted, and `--accent-heat` is
+  fractionally OUT of sRGB gamut (linear red 1.026), which is exactly where a hand
+  conversion drifts. Get it from the browser that renders it: `playwright-cli eval` a
+  1×1 canvas with `fillStyle` set to the `oklch()` string and read the pixel back —
+  a computed style serialises as `oklch()`, so parsing it as "rgb" returns a plausible
+  wrong number. Add Foley and Head Swap shipped with `0xFF5FA2`, an invented
+  pink that is neither token. Fabio APPROVED both as they are on 2026-08-20 — leave them
+  alone, this is not drift to repair. Every hero from Extend Video on uses `0xFF7EB6`.
 - **Loop seamlessly**, keep any type large, and bake **no app UI** into the frame.
 
 ## Making them
@@ -106,7 +115,8 @@ Ask, or run `npm run app:isolated` and use the port it prints.
 `sharp ^0.34.5` is already a direct dependency. Crop, inset, encode:
 
 ```js
-// ponytail: inline until it survives 3 flows unchanged, then promote to scripts/
+// ponytail: stays inline. Three flows in (MPI-581), the heroes' filtergraphs are all
+// bespoke and only this webp encode repeats — nothing to extract. Do not re-litigate.
 import sharp from 'sharp';
 const W = 896, H = 1120;
 await sharp('plate.png')
@@ -141,7 +151,7 @@ separate overlay so it stays visible:
 
 ```bash
 "$FF" -y -loop 1 -t 4 -r 24 -i before.png -loop 1 -t 4 -r 24 -i after.png \
-  -f lavfi -t 5 -i "color=c=0xFF5FA2:s=3x720:r=24" -filter_complex "
+  -f lavfi -t 5 -i "color=c=0xFF7EB6:s=3x720:r=24" -filter_complex "
 [0:v]${CROP},format=yuv420p[a]; [1:v]${CROP},format=yuv420p[b];
 [a][b]xfade=transition=wiperight:duration=3:offset=1[x];
 [x][2:v]overlay=x='1280*(t-1)/3':y=0:eval=frame[out]" -map "[out]" -an …
@@ -151,7 +161,7 @@ separate overlay so it stays visible:
 an opaque cover sliding right to reveal it, its leading edge carrying the playhead:
 
 ```bash
-[0:a]volume=14dB,showwavespic=s=1280x64:colors=0xFF5FA2:scale=sqrt:filter=peak:draw=full[wave];
+[0:a]volume=14dB,showwavespic=s=1280x64:colors=0xFF7EB6:scale=sqrt:filter=peak:draw=full[wave];
 [band][cover]overlay=x='1280*t/5.042':y=0:eval=frame[drawn]
 ```
 
@@ -205,3 +215,6 @@ transparent PNG, useful for floating one over a plate whichever tool draws it.
 | Forgetting the idle filter | Tiles render at `saturate(.92) brightness(.92)`; art that is just contrasty enough in isolation reads flat in the grid |
 | Generating into `:3000` | That is normally the user's live session |
 | A GIF | An order of magnitude larger than the same clip as H.264, and it bands on the dark UI |
+| Probing the hero without a project open ON the Gallery page | `MpiFlowLibrary` gates its Open button on `state.currentPage === PAGE_GALLERY`, and a bare `Events.emit('flow:open')` mounts `MpiBaseFlow` into an overlay that never becomes visible. The `<video>` still reports `paused:false`, `muted`, `loop` and a RISING `currentTime`, so the probe passes while nothing is on screen. Assert `getBoundingClientRect().width` too — a real hero measures ~446 px, a hidden one measures 0 |
+| Hand-converting an `oklch()` token to hex | `--accent-heat` is fractionally out of sRGB gamut, so a hand conversion drifts and a computed style serialises back as `oklch()`. Read it off a 1x1 canvas instead — see the accent bullet above |
+| Assuming the two clips you were handed really are source and extension | Cheap to prove, expensive to be wrong about: trim the result to the source frame count and run ffmpeg `psnr`. The same shot re-encoded lands ~30–42 dB; a different clip lands under 15. Every number in the device — the marker percentage above all — is a lie if this was never checked |

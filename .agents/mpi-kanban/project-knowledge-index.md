@@ -59,12 +59,16 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/flows.md` (the dev-gated outcome flows and how a descriptor becomes one)
 - **Playbook:** `docs/playbooks/add-flow/` — enforced by the `/mpi-add-flow` skill
+- **A flow's ART is its own step:** `docs/playbooks/add-flow/06-preview-image.md`, enforced
+  by `/mpi-flow-graphics`. Two assets, not one — a 4/5 tile still (`preview`) and a wide
+  autoplaying hero clip (`video`). All three shipped flows carry purpose-built art as of
+  2026-08-20; a new flow must not borrow a model preview.
 - **Memory:** none
 
 ### Adding a model or a Flow
 
 - **Read first:** `docs/playbooks/add-model/` (README hub + `01`–`06`) — every known trap; enforced by `/mpi-add-model`. Models are NOT version-bumped.
-- **For a Flow instead:** `docs/playbooks/add-flow/` (README hub + `01`–`05`), enforced by `/mpi-add-flow`
+- **For a Flow instead:** `docs/playbooks/add-flow/` (README hub + `01`–`06`), enforced by `/mpi-add-flow` — plus `/mpi-flow-graphics` for step `06`, the tile and hero
 - **Notes:** a handoff or a `docs/models/<model>/` doc ASSUMES the playbook — read both. `node scripts/compile-node-deps.mjs` is mandatory when a new custom node declares requirements.
 
 ### Bumping the ComfyUI engine / smoke-testing models
