@@ -35,7 +35,7 @@ model, image-in→image-out) are the other worked examples.
 
 | File | Covers |
 |---|---|
-| [01-descriptor-and-ops.md](01-descriptor-and-ops.md) | The `FlowDef` in `flowsRegistry.js`; the op in **4 files**; no-model vs multi-model flows; DECLARED `fields`, a step's `param` bind, and why no component |
+| [01-descriptor-and-ops.md](01-descriptor-and-ops.md) | The `FlowDef` in `flowsRegistry.js`; the op in **4 files**; no-model vs multi-model flows; DECLARED `fields`, a step's `param` bind, and why no BESPOKE component (every field still mounts a Primitive) |
 | [02-media-io.md](02-media-io.md) | Polymorphic media slots; **path-reading input nodes** (MpiLoadImageFromPath / MpiString-video / MpiLoadAudioFromPath); injection routing; self-gating outputs; multi-output capture; the **audio-slot mediaType + filter traps** |
 | [03-storage-and-reuse.md](03-storage-and-reuse.md) | Flow input files → **`.preview-assets`** store (not the gallery); sidecar `flowId`/`flowInputs`; reuse routing |
 | [04-overlay-and-shell.md](04-overlay-and-shell.md) | `MpiBaseFlow` / `MpiFlowLibrary`; install progress; Ctrl+Enter runs the open flow; overlay z-order + the spared status bar; dev-gate |
@@ -123,7 +123,7 @@ Flow-specific additions:
 - [ ] Register the op in **4 files**: `commandRegistry.js` (`universal:true`, mediaType, mediaInputs with `Input_*` titles + correct per-slot mediaType — **audio = `'audio'`**), `universal_workflows.js`, `operationRegistry.js`, `operation_registry.json` (hand-maintained superset) — [01](01-descriptor-and-ops.md)
 - [ ] Add the `FlowDef` in `flowsRegistry.js` (`requiredModels` = MODEL ids or `[]`; `inputSchema.media` slot groups; `mediaType`) — [01](01-descriptor-and-ops.md)
 - [ ] Media roles in `inputSchema.media[].roles` MATCH the op's `mediaInputs` keys — [02](02-media-io.md)
-- [ ] Controls: declare `fields: [...]` on the FlowDef (MPI-531/MPI-572) — the SAME `fields` a step declares, placed on the run slide — the frame renders them, `Input_*` ids route into `injectionParams`. **There is no component surface** (MPI-572 deleted it); a JS component is what a third-party Flow can never have. If a control is not expressible, add the FIELD TYPE — [ui/carousel-frame.md](ui/carousel-frame.md) § `fields` is the ONE control surface
+- [ ] Controls: declare `fields: [...]` on the FlowDef (MPI-531/MPI-572) — the SAME `fields` a step declares, placed on the run slide — the frame renders them, `Input_*` ids route into `injectionParams`. **There is no BESPOKE component surface** (MPI-572 deleted the per-Flow `uiComponent` Organism, which a third-party Flow can never ship) — but every declared field MOUNTS an app Primitive (MPI-582), so a Flow is nothing but components. If a control is not expressible, add a PRIMITIVE plus the FIELD TYPE, never a bare input — [ui/carousel-frame.md](ui/carousel-frame.md) § `fields` is the ONE control surface
 - [ ] Add a case to `tests/inject-params-titles.test.cjs` (assert every `Input_*`/`Output_*` title exists) — [05](05-verify.md)
 - [ ] Verify: inject test green, `node --check`, live run (each media type + multi-output), reuse across restart — [05](05-verify.md)
 - [ ] `preview` image: its OWN 4/5 webp under `comfy_workflows/display/`, named for the flow — never a reused model preview, never shared with another flow — [06](06-preview-image.md)

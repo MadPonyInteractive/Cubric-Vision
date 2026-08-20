@@ -189,8 +189,8 @@ form.
 ## `fields` is the ONE control surface — placement is the only variable (MPI-531 / MPI-572)
 
 The run slide used to have exactly one source of controls: the flow's `uiComponent`, a JS
-Organism. **A third party can never have a JS component**, so every Flow authored that way is
-a Flow that must be ported when community packages land. A flow declares `fields` instead —
+Organism. **A third party can never ship a bespoke JS Organism**, so every Flow authored that way
+is a Flow that must be ported when community packages land. A flow declares `fields` instead —
 the same `fields` a step declares:
 
 ```js
@@ -209,6 +209,15 @@ steps: [
 **Where you declare it is the only thing that changes.** One vocabulary, one renderer
 (`_buildField`), one seeding path (`_seedField`), one payload law. On the run slide they are
 stacked into the 236px control column; on a step they obey the one-row cap.
+
+**Every type here mounts an app Primitive** (`js/utils/declaredFields.js`, MPI-582) —
+`select`→MpiDropdown, `radio`→MpiRadioGroup, `button`→MpiButton, `toggle`→MpiCheckbox,
+`number`/`text`→MpiInput, `slider`→MpiProgressBar. `type` NAMES a component; it does not
+replace one. So a consumer block sizes these into its layout and never restates their fill,
+border, hover, focus or disabled treatment — anything chrome-like in a consumer stylesheet is a
+bug. A control this vocabulary cannot express is a new Primitive plus a new `type`, never a bare
+input. The five that were hand-rolled shipped Chromium's native widgets into every Flow until
+MPI-582; `.claude/rules/components.md` § Every UI element is a component holds the law.
 
 This was two surfaces until 2026-08-16 — a flow-level `controls` beside a step's `fields` —
 and the split cost three bugs the day foley's prompts moved from one to the other: step fields

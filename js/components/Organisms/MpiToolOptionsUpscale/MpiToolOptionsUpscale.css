@@ -79,46 +79,35 @@
     text-transform: uppercase;
 }
 
+/* EVERY field type is a mounted Primitive now (js/utils/declaredFields.js, MPI-582):
+   select=MpiDropdown, radio=MpiRadioGroup, button=MpiButton, toggle=MpiCheckbox,
+   number/text=MpiInput, slider=MpiProgressBar. Their fill, border, hover, focus and
+   disabled states are the primitives' — this block restates NONE of them and only
+   sizes them into the panel's narrow column. The raw-button block that used to sit
+   here is gone with them: it was already dead (no plugin declares a `button`) and
+   it would have fought MpiButton the moment one did. */
 .mpi-tool-options-upscale__field-select,
 .mpi-tool-options-upscale__field-input,
 .mpi-tool-options-upscale__field-text {
-    font-family: inherit;
-    font-size: var(--t-2xs);
-    color: var(--ink-1);
-    background: oklch(0.26 0.018 350 / 0.6);
-    border: 1px solid var(--line);
-    padding: 4px var(--s-2);
     width: 100%;
     min-width: 0;
 }
 
 /* Nothing in this app is user-resizable — the drag grip is a control the rest of
    the product does not have (MPI-572). */
-.mpi-tool-options-upscale__field-text {
+.mpi-tool-options-upscale__field-text .mpi-input__field {
     resize: none;
 }
 
-.mpi-tool-options-upscale__field-button {
-    font-family: inherit;
-    font-size: var(--t-2xs);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-    background: none;
-    border: 1px solid var(--line);
-    padding: 4px var(--s-3);
-    cursor: pointer;
-    transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
-}
-
-.mpi-tool-options-upscale__field-button:hover {
-    color: var(--ink-1);
-    border-color: var(--ink-3);
+/* MpiInput's `sm` size is a narrow 6ch box for a number beside a label. This panel
+   is a stacked column, so the control takes the width — the size variant's width is
+   the one thing overridden, never its chrome. */
+.mpi-tool-options-upscale__field-input .mpi-input,
+.mpi-tool-options-upscale__field-input .mpi-input__field {
+    width: 100%;
 }
 
 .mpi-tool-options-upscale__field-range {
-    accent-color: var(--accent-frost);
-    cursor: pointer;
     flex: 1;
     min-width: 0;
 }
@@ -148,12 +137,7 @@
     color: var(--ink-4);
 }
 
-.mpi-tool-options-upscale__field-select:focus-visible,
-.mpi-tool-options-upscale__field-button:focus-visible,
-.mpi-tool-options-upscale__field-toggle:focus-visible,
-.mpi-tool-options-upscale__field-input:focus-visible,
-.mpi-tool-options-upscale__field-text:focus-visible,
-.mpi-tool-options-upscale__field-range:focus-visible {
-    outline: 1px solid var(--accent-frost);
-    outline-offset: 1px;
-}
+/* The focus ring used to be restated here for all six field classes in
+   `--accent-frost`. Both halves were wrong: the primitives already carry the app's
+   focus treatment, and `--accent-frost` is a colour to move AWAY from, not one to
+   reach for (Fabio, MPI-504). Deleted, not recoloured. */

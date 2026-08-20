@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/utils/declaredFields.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
+    "js/components/Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.css",
+    "js/components/Organisms/MpiToolOptionsMaskAdjust/MpiToolOptionsMaskAdjust.css",
+    "js/components/Organisms/MpiToolOptionsMaskAdjust/MpiToolOptionsMaskAdjust.js",
+    "js/components/Compounds/MpiMaskStrip/MpiMaskStrip.css",
+    "js/components/Compounds/MpiMaskStrip/MpiMaskStrip.js",
+    "js/data/flowsRegistry.js",
+    "docs/playbooks/add-flow/01-descriptor-and-ops.md",
+    ".claude/rules/components.md",
+    "docs/playbooks/add-flow/README.md",
+    "docs/playbooks/add-flow/ui/carousel-frame.md"
+  ]
+}

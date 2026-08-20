@@ -34,24 +34,11 @@
     letter-spacing: 0.06em;
 }
 
-.mpi-tool-options-mask-adjust input[type="range"] {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 100%;
-    height: 4px;
-    background: var(--line);
-    border-radius: var(--r-1);
-    outline: none;
-    cursor: pointer;
-}
-
-.mpi-tool-options-mask-adjust input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: var(--ink-1);
-    border: none;
-    cursor: pointer;
+/* The rail and thumb that used to be written out here are MpiProgressBar's now
+   (MPI-582) — this panel was one of four places drawing the same slider longhand.
+   The panel is a narrow column, so the primitive's 160px floor is the one thing
+   overridden. */
+.mpi-tool-options-mask-adjust .mpi-progress {
+    min-width: 0;
+    height: 20px;
 }

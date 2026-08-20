@@ -42,11 +42,12 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiButton }        from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiColorPicker }   from '../../Primitives/MpiColorPicker/MpiColorPicker.js';
 import { MpiRadioGroup }    from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { MpiProgressBar }   from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiMaskStrip }     from '../../Compounds/MpiMaskStrip/MpiMaskStrip.js';
 import { Events }           from '../../../events.js';
 import { state }            from '../../../state.js';
 import { getToolSettings }  from '../../../data/projectModel.js';
-import { qs, on }           from '../../../utils/dom.js';
+import { qs }               from '../../../utils/dom.js';
 
 /** Slider bound in layer px — mask-px at MASK_MAX_EDGE, image-px for paint. */
 const MAX_R = 50;
@@ -108,7 +109,7 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
                     <span>Shrink / Grow</span>
                     <span id="grow-val"></span>
                 </div>
-                <input type="range" id="grow-input" min="-${MAX_R}" max="${MAX_R}" step="1" value="0" />
+                <div id="grow-slot"></div>
             </div>
 
             <div class="mpi-tool-options-mask-adjust__slider-row" id="out-row" hidden>
@@ -116,7 +117,7 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
                     <span>Outward</span>
                     <span id="out-val"></span>
                 </div>
-                <input type="range" id="out-input" min="0" max="${MAX_R}" step="1" value="0" />
+                <div id="out-slot"></div>
             </div>
 
             <div class="mpi-tool-options-mask-adjust__slider-row" id="in-row" hidden>
@@ -128,7 +129,7 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
                      leftward, so the pair reads outward-right / inward-left about the mask
                      edge. Done with a negative range rather than a CSS flip — a transform
                      would leave the keyboard arrows running backwards. -->
-                <input type="range" id="in-input" min="-${MAX_R}" max="0" step="1" value="0" />
+                <div id="in-slot"></div>
             </div>
 
             <div class="mpi-tool-options-mask-adjust__row" id="commit-slot"></div>
@@ -140,7 +141,6 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
         const { viewer } = props;
         const dest = DEST[props.mode] || DEST.maskAdjust;
         const _children = [];
-        const _offs = [];
 
         viewer.el.enterMode?.(dest.viewerMode);
         // Entering Adjust from Points must give the right mouse button back. A no-op
@@ -148,9 +148,30 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
         viewer.el.setMaskPointsMode?.(false);
         dest.begin(viewer);
 
-        const growInput = qs('#grow-input', el);
-        const outInput  = qs('#out-input', el);
-        const inInput   = qs('#in-input', el);
+        // The three sliders are MpiProgressBar, the app's ONE slider (MPI-582). They
+        // used to be bare `<input type="range">` styled longhand here — the same 4px
+        // rail and round thumb written out a third time, next to an identical copy in
+        // MpiMaskStrip and a fourth in the flow frame. The value lives in `vals`
+        // rather than being read back off the DOM: the primitive owns its input, and
+        // `_reset` has to move the thumb WITHOUT firing a preview, which is exactly
+        // what `setValueQuiet` is for.
+        const vals = { grow: 0, out: 0, in: 0 };
+        const mkSlider = (slot, key, min, max) => {
+            const inst = MpiProgressBar.mount(qs(slot, el), {
+                min, max, step: 1, value: 0,
+                interactive: true, handle: true, wheel: true,
+                // The row's own label already prints the value in px — a status-bar
+                // echo of the same number is noise.
+                info: '',
+            });
+            inst.on('input', ({ value }) => {
+                vals[key] = value;
+                _syncLabels();
+                _schedule();
+            });
+            _children.push(inst);
+            return inst;
+        };
         const rows = {
             grow: qs('#grow-row', el),
             out:  qs('#out-row', el),
@@ -169,8 +190,8 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
                 _raf = 0;
                 dest.preview(viewer, edgeMode
                     // Inward's track is mirrored, so its raw value is negative.
-                    ? { edge: true, outward: +outInput.value, inward: -inInput.value }
-                    : { grow: +growInput.value });
+                    ? { edge: true, outward: vals.out, inward: -vals.in }
+                    : { grow: vals.grow });
             });
         };
 
@@ -200,22 +221,25 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
         }
 
         const _syncLabels = () => {
-            qs('#grow-val', el).textContent = `${+growInput.value > 0 ? '+' : ''}${growInput.value} px`;
-            qs('#out-val', el).textContent  = `${outInput.value} px`;
-            qs('#in-val', el).textContent   = `${Math.abs(+inInput.value)} px`;
+            qs('#grow-val', el).textContent = `${vals.grow > 0 ? '+' : ''}${vals.grow} px`;
+            qs('#out-val', el).textContent  = `${vals.out} px`;
+            qs('#in-val', el).textContent   = `${Math.abs(vals.in)} px`;
         };
 
+        const growSlider = mkSlider('#grow-slot', 'grow', -MAX_R, MAX_R);
+        const outSlider  = mkSlider('#out-slot',  'out',  0,      MAX_R);
+        const inSlider   = mkSlider('#in-slot',   'in',   -MAX_R, 0);
+
         const _reset = () => {
-            growInput.value = '0';
-            outInput.value  = '0';
-            inInput.value   = '0';
+            vals.grow = 0; vals.out = 0; vals.in = 0;
+            // Quiet: moving the thumb must not emit `input`, or every reset would
+            // schedule a preview from inside the handler that asked for the reset.
+            growSlider.el.setValueQuiet(0);
+            outSlider.el.setValueQuiet(0);
+            inSlider.el.setValueQuiet(0);
             _syncLabels();
             _schedule();
         };
-
-        for (const input of [growInput, outInput, inInput]) {
-            _offs.push(on(input, 'input', () => { _syncLabels(); _schedule(); }));
-        }
 
         // ── Mode — GATES the sliders; only the live row is on screen ─────────
 
@@ -297,7 +321,6 @@ export const MpiToolOptionsMaskAdjust = ComponentFactory.create({
             // re-publishing would misreport what the op strip is gated on.
             if (!dest.color) viewer.el.evaluateMask?.();
             viewer.el.exitMode?.();
-            _offs.forEach(fn => fn?.());
             _children.forEach(c => c.destroy?.());
         };
     },

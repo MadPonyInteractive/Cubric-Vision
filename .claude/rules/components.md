@@ -2,6 +2,31 @@
 
 > **AI INSTRUCTION:** Read this file carefully before creating or modifying any component in Cubric Vision.
 
+## Every UI element is a component — THE LAW (Fabio, 2026-08-20)
+
+**Every single UI element in the app is a COMPONENT.** If nothing exists that covers the use, **a NEW COMPONENT IS CREATED** — that is the answer, not a bare `<input>`, `<select>`, `<button>`, or a hand-rolled div pretending to be a control.
+
+**FLOWS ARE NO EXCEPTION.** A Flow is more flexible in that it can carry all sorts of different components, but they are all components. The same holds for a plugin's controls, a tool panel, a step row — there is no surface in this app where a raw form control is the right answer.
+
+**There is ONE of each control.** Before writing a widget, find the Primitive that already is it:
+
+| Control | The component | Notes |
+|---|---|---|
+| slider / range | **`MpiProgressBar`** (`interactive: true`, `handle`, `wheel`) | its own header: "the single source of truth for sliders" |
+| select / dropdown | `MpiDropdown` | portals its list to `document.body`, so it survives `overflow: hidden` |
+| checkbox / switch | `MpiCheckbox` | renders its own `<label>` — never nest it inside another one |
+| text / textarea / number | `MpiInput` | `type: 'number'` owns its own clamp, wheel and decimals |
+| segmented choice | `MpiRadioGroup` | use over a dropdown when the point is to COMPARE the options |
+| action | `MpiButton` | icon mode maps every variant except danger/ghost down to `secondary` — for a coloured icon button use TEXT mode with the icon in `children` |
+
+**Declared fields are not an exception — they are the mechanism.** A Flow's or plugin's `fields: [...]` declaration NAMES a component (`js/utils/declaredFields.js` maps every `type` onto a Primitive above); it has never replaced one. A control that vocabulary cannot express is **a new Primitive plus a new field type**, never a bare input.
+
+**A consumer block never restates a Primitive's chrome.** Fill, border, hover, focus and disabled belong to the component. A consumer stylesheet may only SIZE it into the layout — anything chrome-like in one is a bug, and `accent-color` in one is proof a native widget got through.
+
+**Why this is a rule and not a preference (MPI-582).** The add-flow docs used to say a Flow "needs no JS component". Agents read that as "no component", so five of seven declared field types shipped as raw DOM — and a declared slider rendered Chromium's *native* range widget, tinted `--accent-frost`, in every Flow and in the History upscale panel. The app carried FOUR independent drawings of one slider. Fabio caught it on sight. That is what the wrong words cost.
+
+---
+
 ## Stage design baseline (post-redesign)
 
 Stage redesign (PORTING.md phases 0–10.2) **merged to master**. Tokens, type scale, and motion timings live in `styles/01_base.css` — that file is canonical. Key rules:
@@ -31,6 +56,7 @@ Stage redesign (PORTING.md phases 0–10.2) **merged to master**. Tokens, type s
 ## Sub-Agent Briefing
 > Copy this section verbatim into any sub-agent prompt that involves creating or modifying components.
 
+- **EVERY UI ELEMENT IS A COMPONENT.** Never write a bare `<input>`, `<select>`, `<button>` or hand-rolled control. Use the Primitive that already is it — slider/range = `MpiProgressBar` (`interactive: true`), select = `MpiDropdown`, checkbox = `MpiCheckbox`, text/number/textarea = `MpiInput`, segmented choice = `MpiRadioGroup`, action = `MpiButton`. If nothing covers the use, **create a new component** — that is the answer. **Flows are no exception**: a Flow's declared `fields` NAME these components, they do not replace them. A consumer block may only SIZE a Primitive, never restate its fill, border, hover, focus or disabled treatment (`accent-color` in a consumer stylesheet means a native widget got through).
 - **All components MUST use `ComponentFactory.create()`** — never build a component by hand.
 - **NEVER modify `js/components/factory.js`** — it is locked. Fix your component, not the factory.
 - **4-Tier hierarchy (never import up):** Primitives → Compounds → Organisms → Blocks. Primitives import nothing. Compounds import Primitives only. Organisms import Primitives + Compounds. Blocks import all tiers. Primitives may own multi-canvas DOM trees (e.g. `MpiCanvas` owns base + overlay + screen-UI canvases).
@@ -42,6 +68,7 @@ Stage redesign (PORTING.md phases 0–10.2) **merged to master**. Tokens, type s
 - **All state management, hotkeys, and overlay mounting MUST happen inside `setup()`.** Callers must never import `overlayManager`, `hotkeyManager`, or `Events` to manage a component.
 
 ## CRITICAL "NEVER FORGET" RULES
+0. **Every UI element is a component.** No bare inputs anywhere, Flows included. Nothing covers the use → create a new component. See § Every UI element is a component.
 1. **Preload CSS:** You MUST add the `.css` path to `js/shell/preloadStyles.js` when creating a component.
 2. **JSDocs:** You MUST document the component's `props` in `js/components/types.js`.
 3. **CSS Source of Truth:** ALWAYS use `styles/01_base.css` variables, do not hardcode colors.

@@ -86,12 +86,21 @@ cargo-cult install-sync machinery from modelRegistry).
 }
 ```
 
-**A flow declares `fields`. There is no component surface — it was removed in MPI-572.** A
-component is a thing a third-party Flow can never have, so every knob written as JS was debt
-the community-package work would have had to port. `fields` is the same vocabulary a step's
-`fields` uses, rendered by the frame on the run slide; an id prefixed `Input_` routes into
-`injectionParams` instead of the top level. **If a control cannot be expressed, add the field
-type — do not reach for a component.** Full contract + the id-routing table:
+**A flow declares `fields` instead of authoring its own JS Organism — that BESPOKE surface was
+removed in MPI-572.** A per-Flow JS component is a thing a third-party Flow can never have, so
+every knob written that way was debt the community-package work would have had to port.
+`fields` is the same vocabulary a step's `fields` uses, rendered by the frame on the run slide;
+an id prefixed `Input_` routes into `injectionParams` instead of the top level.
+
+**This does NOT mean a Flow has no components — it has nothing BUT components.** Every declared
+field mounts an app Primitive (`js/utils/declaredFields.js`): `select` is an MpiDropdown,
+`slider` an MpiProgressBar, `text` and `number` an MpiInput, `toggle` an MpiCheckbox, `radio` an
+MpiRadioGroup, `button` an MpiButton. The declaration chooses WHICH component; it has never
+replaced one. **If a control cannot be expressed, the answer is a new PRIMITIVE plus a new field
+type — never a bare `<input>`, and never a Flow-owned Organism.** A Flow is more flexible in that
+it can carry all sorts of different components, but they are all components
+(`.claude/rules/components.md` § Every UI element is a component). Full contract + the
+id-routing table:
 [ui/carousel-frame.md](ui/carousel-frame.md) § `fields` is the ONE control surface. Worked
 examples: [existing-flows/ltx-extend.md](existing-flows/ltx-extend.md) (run slide),
 [existing-flows/head-swap.md](existing-flows/head-swap.md) (a `radio` + two step `param` binds).

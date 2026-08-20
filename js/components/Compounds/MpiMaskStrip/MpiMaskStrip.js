@@ -40,8 +40,9 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiButton }       from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiDropdown }     from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiRadioGroup }   from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { MpiProgressBar }  from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { BRUSH_PRESETS, DEFAULT_BRUSH_PRESET } from '../../Primitives/MpiCanvas/managers/brushDab.js';
-import { qs, on }          from '../../../utils/dom.js';
+import { qs }              from '../../../utils/dom.js';
 import { Hotkeys }         from '../../../managers/hotkeyManager.js';
 import { Events }          from '../../../events.js';
 import { state }           from '../../../state.js';
@@ -143,9 +144,7 @@ export const MpiMaskStrip = ComponentFactory.create({
                     <span>Opacity</span>
                     <span id="opacity-val"></span>
                 </div>
-                <div class="mpi-mask-strip__slider">
-                    <input type="range" id="opacity-input" min="0" max="100" step="1" />
-                </div>
+                <div class="mpi-mask-strip__slider" id="opacity-slot"></div>
             </div>
         </div>
     `,
@@ -261,10 +260,8 @@ export const MpiMaskStrip = ComponentFactory.create({
         // ONE teardown for both shapes of the strip, declared before the early exit
         // below so a later unbind cannot be added to only one of them.
         /** @type {(() => void)|null} */
-        let _offOpacity = null;
         el.destroy = () => {
             _unbinds.forEach(fn => fn?.());
-            _offOpacity?.();
             // filter(Boolean): the mask-only toggles are null on the paint and
             // composite destinations, and `null.destroy?.()` throws — the optional
             // chain is on `destroy`, not on the child.
@@ -276,17 +273,25 @@ export const MpiMaskStrip = ComponentFactory.create({
             return;
         }
 
-        const opacityInput = qs('#opacity-input', el);
         const opacityVal   = qs('#opacity-val', el);
         const initialOpacity = typeof settings.opacity === 'number' ? settings.opacity : DEFAULTS.opacity;
         const _applyOpacity = (pct) => {
             viewer.el[dest.setOpacity]?.(Math.max(0, Math.min(1, pct / 100)));
             opacityVal.textContent = `${Math.round(pct)}%`;
         };
-        opacityInput.value = String(Math.round(initialOpacity * 100));
-        _applyOpacity(Number(opacityInput.value));
-        _offOpacity = on(opacityInput, 'input', () => {
-            const pct = Number(opacityInput.value);
+        // MpiProgressBar, the app's ONE slider (MPI-582). This strip used to draw its
+        // own 4px rail and round thumb longhand, byte-identical to the copy in
+        // MpiToolOptionsMaskAdjust — four implementations of one control.
+        const opacitySlider = MpiProgressBar.mount(qs('#opacity-slot', el), {
+            min: 0, max: 100, step: 1,
+            value: Math.round(initialOpacity * 100),
+            interactive: true, handle: true, wheel: true,
+            // The row's own label already prints the percentage.
+            info: '',
+        });
+        _children.push(opacitySlider);
+        _applyOpacity(Math.round(initialOpacity * 100));
+        opacitySlider.on('input', ({ value: pct }) => {
             _applyOpacity(pct);
             Events.emit('settings:tool:update', { toolKey: dest.settingsKey, key: 'opacity', value: pct / 100 });
         });
@@ -301,7 +306,12 @@ export const MpiMaskStrip = ComponentFactory.create({
             viewer.el.setMaskBwView?.(v);
             bwBtn.el.classList.toggle('is-active', v);
             bwBtn.el.classList.toggle('mpi-mask-strip__bw--on', v);
-            opacityInput.disabled = v;
+            // The row is already inert through `--bw` in CSS (opacity + pointer-events);
+            // this disables the primitive's own range so the KEYBOARD cannot drive a
+            // slider the user is being told does nothing. MpiProgressBar exposes no
+            // setter for it, so the inner input is set directly.
+            const range = qs('.mpi-progress__input', opacitySlider.el);
+            if (range) range.disabled = v;
             el.classList.toggle('mpi-mask-strip--bw', v);
         };
         _applyBw(!!settings.bwView);
