@@ -1014,6 +1014,29 @@ export const commands = {
         universal: true,
     },
 
+    // MPI-504. Krea2 t2i character reference sheet: three panels in one 8:5 frame — a
+    // large 3/4 close-up, full body front and full body back — in the layout that reads
+    // as a VIDEO reference. v1 takes a PROMPT AND NOTHING ELSE; the reference-photo path
+    // is deferred whole to v2, because head-swap already covers "make it look like this
+    // person" as a second pass on the finished sheet.
+    //
+    // No `mediaInputs` at all — declaring a slot the graph has no node for is the silent
+    // -skip trap, and there is nothing to load. The sheet's own knobs (Input_Recipe,
+    // Input_Width/Height, Input_is_Turbo, Input_Remove_Head, the LoRA rack) are DECLARED
+    // fields on the FlowDef, not op config.
+    //
+    // The graph also carries a `PreviewAny` titled `Output_prompt` over the ASSEMBLED
+    // prompt. That is a debug/provenance read, NOT a second output: `mediaType` is IMAGE
+    // and `outputKind` is left unset, so the job ends on Output_Image the normal way.
+    flowCharacterSheet: {
+        label: 'Flow: Character Sheet',
+        progressLabel: 'Drawing the sheet',
+        mediaType: MEDIA_TYPE.IMAGE,        // OUTPUT type
+        requiresImages: 0,                  // no media at the op layer, and none in v1
+        promptRequired: true,               // the character description IS the input
+        universal: true,
+    },
+
     // MPI-504. The text-only prompt enhancer, `qwen3vl_4b_prompt_enhancer.json` — text
     // in, a rewritten phrase out via the Output_prompt contract, so `outputKind: 'text'`
     // exactly like `imageDescribe`. It saves no file and takes no media.

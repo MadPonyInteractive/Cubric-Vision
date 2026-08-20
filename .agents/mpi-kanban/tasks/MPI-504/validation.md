@@ -1017,3 +1017,55 @@ graph was fine and the probe was wrong.
 The rule that avoids it: inject the way `comfyController._inject` does — overwrite only keys that
 ALREADY exist on the node, never invent one, and PRINT every title that matched nothing. That
 print is what turned `Input_Seed`'s absence from an assumption into a measurement.
+
+
+## Session 7 — the flow wiring (2026-08-20)
+
+**VERIFIED, by running the check and reading the result:**
+
+- `npm test` **638/638 pass** (was 636 before the two new guards).
+- `npm run release:check` **passed**.
+- `npx eslint` clean on `flowsRegistry.js`, `commandRegistry.js`, `operationRegistry.js`,
+  `universal_workflows.js`.
+- `validate-injection-rules.mjs` clean on BOTH converted graphs.
+- `flow_character_sheet.json` converts off the live bench `/object_info`: **96 nodes** from the
+  raw 146 (muted + virtual dropped). Its six injected titles and `output_image` all exist.
+- The converted enhancer graph emits `"sampling_mode.seed": ["14", 0]` — a LINK, not the baked
+  `0` — and no other widget value shifted, so the nested positional decode did not slip.
+
+**NOT VERIFIED, and named as such:**
+
+- **The seed does not reach the sampler until a live run says so.** The converter's self-check
+  only asserts required inputs are PRESENT; whether ComfyUI accepts a link on a nested
+  dynamic-combo key (`sampling_mode.seed`) is a backend question conversion cannot answer. The
+  probe was killed mid-run when Fabio asked for the GPU. One run at three seeds on a VAGUE input
+  settles it.
+- **Nothing has been generated through the Flow overlay.** No live run, so playbook 05's list is
+  entirely open.
+
+**A guard was added for the failure that already happened once.** The seed test does not merely
+check that a node titled `Input_Seed` exists — a titled node wired to nothing passes that and
+still freezes the phrase. It resolves the node id and asserts some node's `sampling_mode.seed`
+points AT it.
+
+
+### The seed link is PROVEN LIVE (2026-08-20, session 7)
+
+`POST /prompt` x3 on the bench, `Input_Positive: "a gunslinger"` (the VAGUE arm), seeds
+0 / 42 / 7777 -> **three distinct descriptions**. So the ComfyUI backend DOES accept a link on a
+nested dynamic-combo key (`sampling_mode.seed`) — which conversion alone could never have shown,
+and which was the one open question the converter's own self-check cannot answer.
+
+- seed 0 — 32, sun-bleached hair in a rough knot, brown leather coat
+- seed 42 — 35, dark brown hair in a low ponytail, deep-set amber eyes, black leather coat
+- seed 7777 — 32, dark brown hair in a tight braid, worn leather coat
+
+**The second and stronger proof is in `execution_cached`.** Runs 2 and 3 cached
+`['5','6','7','8','9','10']` — the whole string-assembly chain plus the CLIP loader — and did
+**NOT** cache `3 TextGenerate`. A node only re-executes when an input actually changed, so the
+cache list is positive evidence that the seed reached the sampler, rather than an inference from
+the text merely differing.
+
+This also reproduces the session-6 bench arm exactly (32 / 35 / 32, the same three hairstyles,
+amber eyes only at seed 42), which independently confirms the injected path and the bench path
+drive the same knob.

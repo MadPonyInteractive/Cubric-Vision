@@ -44,7 +44,7 @@ Two factors stack:
 the opposite edge — generated, then cropped. It works; one edge is subtly wrong.
 
 ✅ **All nine `FLUX_RATIOS` values are ÷16-clean** (verified: 1024×1024, 896×1152, 896×1088,
-768×1280, 768×1344, 1152×896, 1088×896, 1280×768, 1344×768 — zero padding on every one).
+800×1280, 768×1344, 1152×896, 1088×896, 1280×800, 1344×768 — zero padding on every one).
 Copying them onto the Krea2 ModelDef needs **no guard**. Any *new* size must be ÷16.
 
 Per MPI-174, a new `type` declares `ratios` on its ModelDef. **Copy the values onto the Krea2
@@ -77,14 +77,21 @@ unique within a tier and shared across tiers, or switching `1k`↔`2k` loses the
 | 1:1 | 1024×1024 | 1472×1472 |
 | 3:4 | 896×1152 | 1248×1664 |
 | 4:5 | 896×1088 | 1280×1600 |
-| 5:8 | 768×1280 | 1120×1792 |
+| 5:8 | 800×1280 | 1120×1792 |
 | 9:16 | 768×1344 | 1088×1936 |
 | 4:3 | 1152×896 | 1664×1248 |
 | 5:4 | 1088×896 | 1600×1280 |
-| 8:5 | 1280×768 | 1792×1120 |
+| 8:5 | 1280×800 | 1792×1120 |
 | 16:9 | 1344×768 | 1936×1088 |
 
-All values are ÷16-clean (zero circular padding). The 2K tier is 1.91–2.07 MP. `1472×1472`
+All values are ÷16-clean (zero circular padding). The 2K tier is 1.91–2.07 MP.
+
+> **2026-08-20 — the 1k 8:5 / 5:8 pair was CORRECTED** (MPI-504). It read 1280×768 /
+> 768×1280, which is 5:3 / 3:5 — 4% off the label the picker shows. 1280×800 is ÷16-clean
+> (80 × 50) at 1.02 MP, so nothing ever forced the wrong value; the 2k column beside it was
+> exact all along, because that table was authored fresh rather than inherited from
+> `FLUX_RATIOS`. The other four named rows are still nominal (3:4 is really 7:9, 9:16 is
+> 4:7) and were deliberately left alone. `1472×1472`
 deliberately matches LTX's 2K square for cross-model visual consistency.
 
 > The live test was `1024×2048` = **1:2** (0.5000), *not* 9:16 (0.5625). It proved the **2 MP

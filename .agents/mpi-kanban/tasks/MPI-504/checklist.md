@@ -156,10 +156,24 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       Generate (measured identical: `255,126,182`), `enhance` icon left of the label, hovering to
       a new background; on the run slide it now sits directly UNDER the prompt box. `--accent-frost`
       is gone from the button. Screenshotted on all four run slides
-- [ ] **The enhancer OP** — `raw/qwen3vl_4b_prompt_enhancer.json` → API workflow + registered in
-      the 4 files with `outputKind: 'text'`. Until it exists Enhance warns and no-ops. Weight is
-      already shipped (`qwen3vl-abliterated-clip`). NEEDS an `Input_Seed` node in the graph for
-      per-press variation — `raw/` is user-owned
-- [ ] `/mpi-add-flow` from the top: `FlowDef`, the op in 4 files, `sync-raw-workflows.mjs`,
-      `validate-injection-rules.mjs`, live run
+- [x] **The enhancer OP** (2026-08-20) — `promptEnhance`, registered universal with
+      `outputKind: 'text'` in the 4 files; graph converted, validated and RUN live.
+- [x] **`Input_Seed` in the enhancer graph** (2026-08-20) — Option A: an `MpiInt` titled
+      `Input_Seed` (node 14) linked into `3 TextGenerate`'s nested `sampling_mode.seed`
+      (link 16). Fabio handed the raw/ edit over rather than doing it himself. Committed by
+      `sync-raw-workflows.mjs` as `345bbdf8`; the API graph now reads
+      `"sampling_mode.seed": ["14", 0]`. **Not yet proven LIVE** — see below.
+- [x] **`/mpi-add-flow` — the wiring** (2026-08-20). `flowCharacterSheet` in the 4 files;
+      `flow_character_sheet.json` converted (96 nodes off 146 raw) and validated; the
+      `FlowDef` written with a `fields` refine step + the run slide, `Input_Recipe` as a
+      4-option `select`. `npm test` 638/638, `release:check` passed, eslint clean.
+- [x] **THE SEED IS PROVEN LIVE** (2026-08-20) — seeds 0/42/7777 on `a gunslinger` returned
+      three distinct descriptions, and `execution_cached` covered nodes 5-10 but NOT
+      `3 TextGenerate`, so the sampler re-ran because its seed input changed. Evidence in
+      validation.md.
+- [ ] **Decide the 1k/2k quality control** — one declared field cannot set the graph's TWO
+      nodes (`Input_Width` + `Input_Height`). Three options in plan.md `## Plan Drift`.
+      Flow runs at the baked `1280x768` until then.
+- [ ] **Live run** of the flow end to end in an isolated app instance (playbook 05).
+- [ ] **Graphics** — `/mpi-flow-graphics` (playbook 06); `flow-character-sheet.webp` + hero.
 - [ ] Decide the `krea2-nsfw`-only install case

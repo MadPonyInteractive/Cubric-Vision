@@ -51,6 +51,13 @@ _(none yet)_
 
 ## Fixes
 
+- The 8:5 shape now really is 8:5. Picking 8:5 (or 5:8 in portrait) on FLUX, Chroma,
+  FLUX.2 Klein or Krea 2 at 1K produced 1280×768 — which is 5:3, about 4% wider than the
+  shape the button named. It is now 1280×800, and 800×1280 in portrait, so the picture
+  matches the label. Krea 2's 2K band was already exact and has not moved. Images you
+  generated before this are unaffected and still read as 8:5 on their History card; only
+  new generations at that setting change size, by 32 pixels of height.
+
 - Scrolling a gallery full of videos is smooth again. Dragging the scroll bar through a project
   with many video cards stuttered, and the more videos were on screen the worse it got. Every
   scroll movement was rewinding every video in the gallery back to its first frame — including

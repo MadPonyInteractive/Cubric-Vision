@@ -22,7 +22,6 @@
       "sampling_mode.top_p": 0.95,
       "sampling_mode.min_p": 0.05,
       "sampling_mode.repetition_penalty": 1.05,
-      "sampling_mode.seed": 0,
       "sampling_mode.presence_penalty": 0,
       "thinking": false,
       "use_default_template": true,
@@ -32,6 +31,10 @@
       ],
       "prompt": [
         "6",
+        0
+      ],
+      "sampling_mode.seed": [
+        "14",
         0
       ]
     },
@@ -164,6 +167,15 @@
     "class_type": "MpiClearVram",
     "_meta": {
       "title": "Mpi Clear Vram"
+    }
+  },
+  "14": {
+    "inputs": {
+      "int": 0
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
     }
   }
 }

@@ -18,6 +18,8 @@
     "js/core/operationRegistry.js",
     "operation_registry.json",
     "js/data/modelConstants/universal_workflows.js",
-    "js/data/flowsRegistry.js"
+    "js/data/flowsRegistry.js",
+    "tests/inject-params-titles.test.cjs",
+    "comfy_workflows/raw/qwen3vl_4b_prompt_enhancer.json"
   ]
 }

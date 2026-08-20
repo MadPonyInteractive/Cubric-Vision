@@ -10,6 +10,81 @@ prompt) is in [prompts.md](prompts.md). This file is the build.
 
 ## Current State
 
+**2026-08-20, session 7 — THE FLOW IS WIRED. `/mpi-add-flow` is done bar the live run and the
+graphics.** What landed:
+
+- **`Input_Seed` EXISTS** in `raw/qwen3vl_4b_prompt_enhancer.json` — Option A, an `MpiInt`
+  titled `Input_Seed` (node 14) linked into `3 TextGenerate`'s nested `sampling_mode.seed`
+  (link 16). **Fabio handed this edit over rather than doing it himself** ("you can do that
+  yourself by editing the RAW workflow"), so raw/ was touched WITH his say-so — the rule
+  otherwise stands. Committed by `sync-raw-workflows.mjs` as `345bbdf8`, re-converted, and
+  `validate-injection-rules` clean. The API graph now reads `"sampling_mode.seed": ["14", 0]`
+  instead of a baked `0`.
+- **`flowCharacterSheet` REGISTERED IN THE 4 FILES** — `commandRegistry.js` (`mediaType: IMAGE`,
+  `requiresImages: 0`, **no `mediaInputs`**, `promptRequired: true`, `universal: true`),
+  `operationRegistry.js` + `operation_registry.json` (`1.5.0`, `universal: true`),
+  `universal_workflows.js` → `flow_character_sheet.json`.
+- **`comfy_workflows/flow_character_sheet.json` converted** off the live bench — **96 nodes**
+  from the raw 146 (muted + virtual dropped), `validate-injection-rules` clean.
+- **The `FlowDef` is written** at the end of `FLOWS`: a `fields` step carrying the prompt pair
+  (`positive` → Enhance → `Input_Positive`, rows 10) and a run slide carrying the condensed
+  pair plus `Input_Recipe` (**`select`**, 4 styles, 1-indexed, default 1 Photoreal),
+  `Input_is_Turbo` (off) and `Input_Remove_Head` (on).
+- **Guards added** — `tests/inject-params-titles.test.cjs` gained two cases: the sheet's six
+  injected titles + `output_image`, and the enhancer's `input_seed` **plus an assertion that it
+  is actually LINKED into a `sampling_mode.seed`**. A titled-but-dangling seed node would pass a
+  title check and still freeze the phrase.
+- `npm test` **636/636**, `eslint` clean on all four registry files.
+
+**THE SEED IS PROVEN LIVE** (2026-08-20). Seeds 0 / 42 / 7777 on `a gunslinger` returned three
+different men, and `execution_cached` covered nodes 5-10 but **not** `3 TextGenerate` — a node only
+re-executes when an input changed, so the cache list is positive proof the link reaches the sampler.
+The backend DOES accept a link on a nested dynamic-combo key. Evidence in validation.md.
+
+**THE 8:5 RATIO WAS CORRECTED APP-WIDE** (2026-08-20, Fabio's call: *"if 1280x800 is true 8:5, then
+we're lying to the user, and we should fix that"*). `FLUX_RATIOS` landscape `8:5` is now
+**1280x800** (was 1280x768 = 5:3) and portrait `5:8` is **800x1280** — both fixed together because
+the two orientation lists are index-mirrors and the flip maps by index, so changing one alone would
+make the flip return a different aspect rather than the transpose. Reaches `flux`, `chroma`,
+`klein` and `krea2`'s 1k tier (`KREA2_RATIOS['1k']` IS `FLUX_RATIOS`, shared by reference).
+`nearestNamedRatio` reads CROP_RATIOS (pure aspects), so **old cards still label 8:5** and history
+stays coherent. Docs swept: `docs/models/krea2/resolution.md` (the /16 verification line AND both
+table rows) + a user-facing note in `docs/releases/UNRELEASED.md`. 638/638, release:check passed.
+
+**The other four FLUX rows are still nominal and were left alone** — 3:4 is really 7:9 (3.70% off),
+4:3 is 9:7, 4:5 is 14:17, 9:16 is 4:7 (1.59%). Each has an exact /16-clean value in the same ~1 MP
+class (`864x1152` · `896x1120` · `720x1280` · `1024x1024` unchanged), so fixing them is a decision
+not a constraint. **Offered to Fabio and not yet answered.**
+
+**MPI-586 CREATED** — the Prop Sheet flow, split out at Fabio's call ("I think it's best to have a
+separate flow for it"). Animals and props, no headless pass (so krea2 only — no klein-4b, no SAM3
+chain), 8:5 AND 16:9 user-chosen, plus a PLACEMENT axis with per-option guidance. It inherits this
+card's prompt-pair UI and `promptEnhance` op with its own recipe, and it **hits the same
+two-nodes-one-field ratio gap**, so it must reuse whatever this card settles rather than inventing a
+second answer. Should not start before this flow has had a live run.
+
+**NOT DONE, and both need Fabio:**
+
+1. ~~THE SEED IS STILL UNPROVEN LIVE~~ — **DONE, see above.** Kept for the reading trap: The converter emits the link and the self-check passes,
+   but **whether the ComfyUI backend accepts a link on a nested dynamic-combo key has not been
+   demonstrated** — that is the one thing conversion cannot tell you. A probe was written
+   (`scratchpad/probe_seed.py`, a faithful `_inject` port that prints every silent skip) and
+   killed mid-run when Fabio asked for the GPU. Re-run it at seeds 0/42/7777 on `a gunslinger`
+   (the measured VAGUE arm — an over-specified input returns one man five times and reads as a
+   dead knob). Different text across seeds = proven.
+2. **THERE IS NO QUALITY CONTROL, and it is not expressible today** — see `## Plan Drift`.
+   The flow runs at the graph's baked `1280x768` until that is decided.
+
+**Also unbuilt, deliberately: the LoRA rack.** `Input_Lora_1..6` exist in the graph, but the
+declared-field vocabulary has **no lora type** (`select` / `radio` / `button` / `toggle` /
+`number` / `slider` / `text`, and that list is the law — a control it cannot express is a NEW
+PRIMITIVE plus a new type, never a bare input). No shipped Flow has a rack. Out of scope for
+this pass; it is a Flow-vocabulary feature, not a Character Sheet one.
+
+**Graphics not made** — `preview: 'flow-character-sheet.webp'` / no `video` yet. That is
+`/mpi-flow-graphics` (playbook 06), and `ltx-upscale` is in the same state, so it is the normal
+order, not a gap.
+
 **2026-08-20, session 6 — THE ENHANCER OP IS SHIPPED AND VERIFIED. Next is `/mpi-add-flow`
 for the sheet itself.** The op is `promptEnhance`, and it is registered **universal, not
 character-sheet-specific** — the recipe and BOTH scrub patterns are injected by the caller, so
@@ -760,6 +835,38 @@ longer exists, so each resolves to a deletion, not a re-wire:
    node if Fabio wants it.
 
 ## Plan Drift
+
+**2026-08-20 — `requiredDeps: ['face-yolov8n']` is WRONG and was dropped.** `## The flow` declared
+it "the way head-swap declares its LoRA". The analogy fails: `getUniversalWorkflowDepIds()`
+(`routes/shared.js:704`) returns **every `type:'custom_nodes'` dep PLUS every `engineAsset:true`
+weight**, and those install with the ENGINE, belonging to no model. `face-yolov8n` is
+`engineAsset: true` (and `bakedOnPod: true`); so are `sam3-multiplex` and — checked because
+nothing declares it anywhere — `ComfyUI-Impact-Subpack`, which owns `UltralyticsDetectorProvider`.
+Head-swap's `qwen-lora-headswap` is neither a custom_node nor an engineAsset, which is exactly why
+it DOES need declaring. Declaring it anyway is not harmless: `_flowDepStatusCache` is empty until
+the first sync and `flowAvailability` fails CLOSED, so the flow would read unavailable on open for
+a weight the engine already guarantees. **Every node pack the 96-node graph uses is covered**:
+RES4LYF + Impact-Pack via krea2, `comfyui-inpaint-cropandstitch` via klein-4b, Impact-Subpack and
+the detectors via the engine.
+
+**2026-08-20 — the 1k / 2k quality control CANNOT BE DECLARED, and this was not foreseen.**
+`## The flow` lists `Input_Quality` as a radio x2. The graph has **two** nodes — `676 Input_Width`
+and `677 Input_Height` (both feeding `560 EmptyLatentImage` AND `756 SolidMask`) — and a declared
+field emits exactly **one** value into **one** param. `mapTo` does not help: it is a linear range
+map, one number in, one number out (`declaredFields.js:83`). So one choice cannot set two nodes.
+Three ways out, none of them free, and the choice is Fabio's:
+  1. **One graph node** — an `Input_Quality` `MpiInt` behind two `MpiAnySwitch` banks for W and H,
+     which is the pattern `Input_Recipe` ALREADY uses three nodes away. Zero app code. Needs a
+     raw/ edit.
+  2. **A new field type** that lets an option carry a param MAP rather than a scalar. Portable —
+     every later Flow wanting a resolution gets it — but it is frame work in `_collectInputs`
+     (`MpiBaseFlow.js`), which a peer session holds.
+  3. **Ship without it**, which is where the flow stands now: baked `1280x768`.
+**And a real discrepancy inside the same row:** `1280x768` is **5:3 (1.667)**, not the 8:5 the card
+is built on; `1792x1120` IS 8:5 (1.600). `js/utils/ratios.js:30` mislabels the 1k pair "8:5" and
+plan.md copied that label. So the two quality options would return **different shapes**, on a
+three-panel layout proven at one. A true 8:5 1k is `1280x800` (both /16-clean). Not fixed here —
+`ratios.js` is shared and out of this card's blast radius.
 
 **2026-08-19 — "adopted into the recipe" was not the same as "the recipe produces it".** The F hair
 shape was adopted, applied to prompts.md §2 categories 2 and 4, and the plan then carried it as

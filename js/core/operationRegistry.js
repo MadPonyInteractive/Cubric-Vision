@@ -67,8 +67,10 @@ export const OPERATION_REGISTRY = {
     flowHeadSwap: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
     flowLtxExtend: { latestVersion: '1.0', appVersionIntroduced: '1.4.2' },
     flowLtxFoley: { latestVersion: '1.0', appVersionIntroduced: '1.4.2' },
-    // MPI-504 — the text-only prompt enhancer any flow can call. A new KEY, stamped
-    // ahead of APP_VERSION (1.4.2, released) for the same reason as `ltxVideoUpscale`.
+    // MPI-504 — the Character Sheet flow and the text-only prompt enhancer any flow can
+    // call. Both are new KEYS, stamped ahead of APP_VERSION (1.4.2, released) for the
+    // same reason as `ltxVideoUpscale`.
+    flowCharacterSheet: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
     promptEnhance: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
 };
 

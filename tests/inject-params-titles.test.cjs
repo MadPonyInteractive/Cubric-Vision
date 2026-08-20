@@ -236,6 +236,56 @@ test('the LTX upscale Flow + plugin carry their I/O and control titles (MPI-579/
     assert.ok(have.has('output_video'), `${file} must carry a capture node titled "output_video"`);
 });
 
+test('the Character Sheet Flow carries its I/O and declared control titles (MPI-504)', () => {
+    // flowCharacterSheet runs flow_character_sheet.json with model:{id:null} on the
+    // installed krea2 + klein-4b weights. It declares NO media at all, so the pinned
+    // set is the prompt/seed titles the injector always writes plus THREE declared
+    // controls — and a declared control whose node is missing is the worst silent skip
+    // there is: the dropdown opens, the toggle flips, the run succeeds, and what the
+    // user chose is the graph's baked default.
+    //
+    // `input_positive` is pinned twice over: it is both the injector's always-written
+    // prompt title AND the `to` of the flow's enhance pair, so the enhanced phrase and
+    // the raw fallback land on the same node.
+    const file = 'flow_character_sheet.json';
+    const have = titlesOf(file);
+    for (const title of [
+        'input_positive', 'input_negative', 'input_seed',
+        'input_recipe', 'input_is_turbo', 'input_remove_head',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_image'), `${file} must carry a capture node titled "output_image"`);
+});
+
+test('the prompt enhancer graph carries the seed node its caller drives (MPI-504)', () => {
+    // MpiBaseFlow._runEnhance sends `injectionParams: { Input_Seed: <random> }` on every
+    // press, because step 3's loop is Enhance -> Generate -> Enhance and a fixed seed
+    // returns the SAME phrase every time. The node was missing until 2026-08-20: the key
+    // was silently skipped, every press returned the identical phrase, and nothing
+    // anywhere reported it. Pinning it here is what stops that regressing.
+    //
+    // `input_seed` is an MpiInt wired into TextGenerate's NESTED `sampling_mode.seed`
+    // widget. Option A, Fabio's standard: every workflow carries an Input_Seed, so
+    // exposing seed as a user control later is a UI change and never a graph change.
+    const file = 'qwen3vl_4b_prompt_enhancer.json';
+    const have = titlesOf(file);
+    for (const title of ['input_positive', 'input_system_prompt', 'input_seed']) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_prompt'), `${file} must carry a capture node titled "output_prompt"`);
+
+    // The seed only does anything if it reaches the sampler. A titled node that feeds
+    // nothing would pass the title check above and still leave the phrase frozen.
+    const wf = JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8'));
+    const seedId = Object.keys(wf).find(
+        id => (wf[id]._meta?.title || '').toLowerCase() === 'input_seed');
+    const wired = Object.values(wf).some(n => Array.isArray(n.inputs?.['sampling_mode.seed'])
+        && n.inputs['sampling_mode.seed'][0] === seedId);
+    assert.ok(wired, `${file}: Input_Seed must be LINKED into a node's sampling_mode.seed, `
+        + 'not left dangling — an unwired seed node freezes the enhanced phrase');
+});
+
 test('every media slot a model can actually see exists in that model\'s workflow', () => {
     // Same silent-skip class as the injectParams sweep above, on the OTHER injection
     // source. A `mediaInputs` slot whose title matches no node gives the user a chip well

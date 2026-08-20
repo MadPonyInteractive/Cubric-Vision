@@ -495,6 +495,127 @@ export const FLOWS = [
             },
         ],
     },
+
+    // MPI-504 — the Character Sheet. A description in, a three-panel video-reference
+    // sheet out: a large 3/4 close-up, full body front and full body back, in the
+    // layout a video model reads best. v1 takes a PROMPT AND NOTHING ELSE — the
+    // reference-photo path is deferred whole to v2, because Head Swap already covers
+    // "make it look like this person" as a second pass on the finished sheet.
+    //
+    // The FRONT BODY IS HEADLESS on purpose, and it is a MASK op, not a prompt: SAM3
+    // text-selects hair+face+hat as one union, the box is squared and grown, and Klein
+    // 4B inpaints the head away. On a wide shot the model otherwise sources the face
+    // from the tiny blurry full-body figure; remove that head and it has exactly one
+    // place to take a face from. Toggleable, on by default.
+    //
+    // NO requiredDeps. Every weight and node this graph needs is either a MODEL dep of
+    // krea2/klein-4b (RES4LYF, Impact-Pack, inpaint-cropandstitch, MpiNodes) or an
+    // engine-installed universal — `getUniversalWorkflowDepIds()` (routes/shared.js)
+    // returns EVERY `type:'custom_nodes'` dep plus EVERY `engineAsset`, so
+    // face-yolov8n, sam3-multiplex and Impact-Subpack all install with the engine and
+    // belong to no model. Declaring face-yolov8n here (as plan.md first proposed, by
+    // analogy with head-swap's LoRA) would be wrong twice: the analogy fails because a
+    // LoRA is neither of those things, and an undeclared dep-status cache reads
+    // NOT-installed until the first sync, so the flow would show unavailable on open
+    // for a weight the engine already guarantees.
+    {
+        id: 'character-sheet',
+        title: 'Character Sheet',
+        preview: 'flow-character-sheet.webp',
+        description: 'Describe a character and get a reference sheet back: a large three-quarter portrait, plus full-body front and back views, on a plain grey studio backdrop. Built to be fed to a video model, so the front body comes back headless — that leaves the portrait as the only place a face can come from.',
+        requiredModels: ['krea2', 'klein-4b'],
+        operation: 'flowCharacterSheet',
+        workflow: 'flow_character_sheet.json',
+        mediaType: 'image',
+        // No `inputSchema` at all: this flow collects no media, so step 0 renders its
+        // own "This flow needs no input media." beside the hero. No `result.compare`
+        // either — there is no BEFORE to reveal against.
+        //
+        // The refine step. Media-less, so `kind: 'fields'` (FRAME_KINDS) — its fields
+        // ARE the work, stacked where a canvas would be. No `role`, so its values live
+        // in the FLOW-level store, which is what makes the prompt ONE value edited from
+        // here and from the run slide.
+        steps: [
+            {
+                kind: 'fields',
+                tickerLabel: 'Describe',
+                title: 'Describe your character',
+                hint: 'Enhance rewrites your description into the phrase the sheet is generated from. Edit it freely — whatever is in the lower box is what runs. Leave it empty and your own words run raw.',
+                fields: [
+                    {
+                        id: 'positive', type: 'text', rows: 3, label: 'Your character',
+                        placeholder: 'Who they are, wardrobe, age, hair, eyes, scars and marks…',
+                    },
+                    {
+                        id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance',
+                        action: 'enhance', op: 'promptEnhance',
+                        from: 'positive', to: 'Input_Positive',
+                    },
+                    {
+                        // The enhanced phrase, shown ONLY here. It is the product as much
+                        // as the picture is: an asset is a PAIR of image plus a phrase
+                        // reused word for word, and a phrase the user cannot see is a
+                        // phrase they cannot repair. `Input_*`, so it reaches the graph's
+                        // MpiText#112 as an injection param — which beats the top-level
+                        // `positive` because _buildParams assigns injectionParams LAST.
+                        id: 'Input_Positive', type: 'text', rows: 10,
+                        label: 'The character phrase',
+                        placeholder: 'Press Enhance, or write the full phrase yourself.',
+                    },
+                ],
+            },
+        ],
+        // The run slide carries the SAME prompt pair minus the enhanced box (declaring
+        // the pair on both surfaces is what gives the condensed form), then the knobs.
+        // Rule 3 of the decided UI lives here: with the enhanced text hidden, the
+        // button's heat is the only thing that can say "this prompt is not enhanced".
+        fields: [
+            {
+                id: 'positive', type: 'text', rows: 3, label: 'Your character',
+                placeholder: 'Who they are, wardrobe, age, hair, eyes, scars and marks…',
+            },
+            {
+                id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance',
+                action: 'enhance', op: 'promptEnhance',
+                from: 'positive', to: 'Input_Positive',
+            },
+            {
+                // Four sheet templates behind one MpiAnySwitch, 1-indexed like
+                // head-swap's Input_Tier — but a `select`, because these are four
+                // equal LOOKS rather than a cost ladder worth spending a radio row on.
+                // The dropdown emits the option's original `v`, so the int reaches
+                // MpiAnySwitch as a number and not as "1".
+                //
+                // The templates differ in five marked spans and NOTHING else, and every
+                // one of them keeps the pupil catch-light: without it the face is dead
+                // and no video model can act with it. None of them names a lens, a grain
+                // or a grade — the sheet stays boring on purpose, or the character
+                // carries that look into every scene it is ever used in.
+                id: 'Input_Recipe', type: 'select', label: 'Style', default: 1,
+                options: [
+                    { v: 1, label: 'Photoreal',
+                      info: 'Photographed as a real actor — visible pores, natural hair, 85mm.' },
+                    { v: 2, label: '3D animation',
+                      info: 'Hero character for a feature animation — subsurface skin, groomed hair.' },
+                    { v: 3, label: 'Anime',
+                      info: 'Key character for an animated feature — crisp line art, flat cel shading.' },
+                    { v: 4, label: 'Cartoon',
+                      info: 'Hero character for an animated series — bold outlines, flat colour fills.' },
+                ],
+            },
+            {
+                id: 'Input_is_Turbo', type: 'toggle', label: 'Turbo', default: false,
+                // The krea2 accelerator LoRA. OFF by default: a sheet is a keystone
+                // asset every later shot inherits, so it is the wrong place to trade
+                // fidelity for speed.
+            },
+            {
+                id: 'Input_Remove_Head', type: 'toggle', label: 'Headless front body', default: true,
+                // ON by default — it is the whole reason this layout works as a video
+                // reference. Off is for inspecting the sheet the model actually drew.
+            },
+        ],
+    },
 ];
 
 /** @returns {FlowDef[]} All flow descriptors. */

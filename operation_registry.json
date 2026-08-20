@@ -143,6 +143,11 @@
     "appVersionIntroduced": "1.4.2",
     "universal": true
   },
+  "flowCharacterSheet": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.5.0",
+    "universal": true
+  },
   "promptEnhance": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.5.0",

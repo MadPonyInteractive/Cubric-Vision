@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-586", "type": "task.created", "at": "2026-08-20T06:05:00Z", "actor": "claude", "column": "todo", "note": "Prop Sheet flow split out of MPI-504 at Fabio's call - a separate flow, not a mode."}

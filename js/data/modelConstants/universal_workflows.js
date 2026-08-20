@@ -55,6 +55,12 @@ export const UNIVERSAL_WORKFLOWS = {
     flowLtxFoley: {
         workflow: 'flow_ltx_foley.json',
     },
+    // MPI-504 — Krea2 t2i, plus a SAM3 + Klein 4B pass that removes the head from the
+    // front body panel. Both run on models the flow declares in `requiredModels`, so
+    // this op adds no download of its own beyond the `face-yolov8n` dep.
+    flowCharacterSheet: {
+        workflow: 'flow_character_sheet.json',
+    },
     // MPI-504 — text-only, like imageDescribe. Its encoder weight is
     // `qwen3vl-abliterated-clip`, already shipped for krea2 and the image-describer
     // plugin, so this op adds no download of its own.

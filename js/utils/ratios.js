@@ -20,14 +20,32 @@ export const FLUX_RATIOS = {
         { label: "1:1", w: 1024, h: 1024, icon: "rect_1_1" },
         { label: "3:4", w: 896, h: 1152, icon: "rect_3_4" },
         { label: "4:5", w: 896, h: 1088, icon: "rect_4_5" },
-        { label: "5:8", w: 768, h: 1280, icon: "rect_5_8" },
+        // 5:8 is EXACT — 800/1280 = 0.625. It was 768×1280 until 2026-08-20, which is
+        // 3:5 (0.600), 4% off the label. See its landscape twin below.
+        { label: "5:8", w: 800, h: 1280, icon: "rect_5_8" },
         { label: "9:16", w: 768, h: 1344, icon: "rect_9_16" }
     ],
     landscape: [
         { label: "1:1", w: 1024, h: 1024, icon: "rect_1_1" },
         { label: "4:3", w: 1152, h: 896, icon: "rect_4_3" },
         { label: "5:4", w: 1088, h: 896, icon: "rect_5_4" },
-        { label: "8:5", w: 1280, h: 768, icon: "rect_8_5" },
+        // 8:5 is EXACT — 1280/800 = 1.600. It was 1280×768 until 2026-08-20, which is
+        // 5:3 (1.667): the picker said one shape and produced another, on the one row
+        // where nothing forced it. 1280×800 is ÷16-clean (80 × 50) at 1.02 MP, so the
+        // grid never required the wrong value — `KREA2_RATIOS['2k']` proves the point
+        // by being exact at 1792×1120, because that table was authored fresh instead of
+        // inherited. Fixed with its portrait twin above: the two orientation lists are
+        // index-mirrors and the flip maps by index, so changing one alone would make
+        // the flip return a different ASPECT rather than the transpose.
+        //
+        // Old cards are unaffected: `nearestNamedRatio` matches against CROP_RATIOS
+        // (pure aspects), and 1280×768 still resolves to "8:5" as its nearest name.
+        //
+        // The OTHER four rows here are still nominal — 3:4 is 7:9 (3.7% off), 4:3 is
+        // 9:7, 4:5 is 14:17, 9:16 is 4:7 (1.6%). Every one of them has an exact
+        // ÷16-clean value in the same ~1 MP class (864×1152 · 896×1120 · 720×1280), so
+        // this is a decision not to fix them yet, not a constraint.
+        { label: "8:5", w: 1280, h: 800, icon: "rect_8_5" },
         { label: "16:9", w: 1344, h: 768, icon: "rect_16_9" }
     ]
 };

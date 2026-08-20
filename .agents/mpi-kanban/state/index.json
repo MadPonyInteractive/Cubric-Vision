@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-20T04:41:44Z",
+  "updated_at": "2026-08-20T05:35:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -23,7 +23,7 @@
       "path": ".agents/mpi-kanban/state/sessions/bd3eb945-b562-47e0-b77a-860facbe5c8d.json",
       "role": "implementer",
       "status": "active",
-      "heartbeat_at": "2026-08-20T04:20:00Z"
+      "heartbeat_at": "2026-08-20T04:50:00Z"
     },
     {
       "id": "2c5616e3-bd5d-4a7b-8946-f59efafedf80",
@@ -31,6 +31,13 @@
       "role": "implementer",
       "status": "handoff_ready",
       "heartbeat_at": "2026-08-20T04:20:11Z"
+    },
+    {
+      "id": "dc6fe1e5-cc35-45f1-982f-59f7c2ba13df",
+      "path": ".agents/mpi-kanban/state/sessions/dc6fe1e5-cc35-45f1-982f-59f7c2ba13df.json",
+      "role": "implementer",
+      "status": "active",
+      "heartbeat_at": "2026-08-20T05:35:00Z"
     }
   ],
   "active_tasks": [],
@@ -42,14 +49,6 @@
       "status": "complete",
       "owner_session": ".agents/mpi-kanban/state/sessions/5a261c2b-18c9-420b-9357-ad1cc9bcdf5c.json",
       "heartbeat_at": "2026-08-20T03:35:00Z"
-    },
-    {
-      "id": "9da8d4ce-ec51-4367-89c0-0b0da876e027",
-      "path": ".agents/mpi-kanban/state/files/9da8d4ce-ec51-4367-89c0-0b0da876e027.json",
-      "task_card": "MPI-585",
-      "status": "claimed",
-      "owner_session": ".agents/mpi-kanban/state/sessions/bd3eb945-b562-47e0-b77a-860facbe5c8d.json",
-      "heartbeat_at": "2026-08-20T04:20:00Z"
     }
   ],
   "pending_file_states": [
@@ -60,9 +59,37 @@
       "status": "complete",
       "owner_session": ".agents/mpi-kanban/state/sessions/2c5616e3-bd5d-4a7b-8946-f59efafedf80.json",
       "heartbeat_at": "2026-08-20T04:41:44Z"
+    },
+    {
+      "id": "9da8d4ce-ec51-4367-89c0-0b0da876e027",
+      "path": ".agents/mpi-kanban/state/files/9da8d4ce-ec51-4367-89c0-0b0da876e027.json",
+      "task_card": "MPI-585",
+      "status": "needs_verification",
+      "owner_session": ".agents/mpi-kanban/state/sessions/bd3eb945-b562-47e0-b77a-860facbe5c8d.json",
+      "heartbeat_at": "2026-08-20T04:50:00Z"
+    },
+    {
+      "id": "fa51ee7f-2398-4911-8d75-402c61f462d5",
+      "path": ".agents/mpi-kanban/state/files/fa51ee7f-2398-4911-8d75-402c61f462d5.json",
+      "task_card": "MPI-504",
+      "status": "needs_verification",
+      "owner_session": ".agents/mpi-kanban/state/sessions/dc6fe1e5-cc35-45f1-982f-59f7c2ba13df.json",
+      "heartbeat_at": "2026-08-20T05:35:00Z"
     }
   ],
-  "open_messages": [],
+  "open_messages": [
+    {
+      "id": "6ce69667-31c5-4d45-8a1e-13821976ce06",
+      "path": ".agents/mpi-kanban/state/messages/6ce69667-31c5-4d45-8a1e-13821976ce06.json",
+      "status": "open",
+      "to": {
+        "selector": "task",
+        "value": "MPI-504"
+      },
+      "subject": "Character sheet Flow: declare `result.compare` - the compare surface is shared",
+      "updated_at": "2026-08-20T05:05:00Z"
+    }
+  ],
   "active_handoffs": [
     {
       "id": "0ec5f9fe-d66e-44c6-8587-c4e47b4c325d",
