@@ -22,6 +22,11 @@ export const UNIVERSAL_WORKFLOWS = {
     imageUpscale: {
         workflow: 'image_upscale.json',
     },
+    // MPI-579. Universal by wiring, but its weights belong to the LTX 2.3 Balanced
+    // stack, not the universal DEPS set — the plugin's availability gate owns that.
+    ltxVideoUpscale: {
+        workflow: 'ltx_video_upscale.json',
+    },
     removeBackground: {
         workflow: 'remove_background.json',
     },

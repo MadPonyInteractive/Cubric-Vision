@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/data/pluginsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/data/modelConstants/universal_workflows.js",
+    "comfy_workflows/ltx_video_upscale.json",
+    "js/components/types.js",
+    ".agents/mpi-kanban/tasks/MPI-579/**",
+    "js/core/operationRegistry.js",
+    "js/services/workflowInjectors/**",
+    "tests/plugin-dep-gc.test.cjs",
+    "operation_registry.json"
+  ]
+}

@@ -1,5 +1,6 @@
 import { injectResize, RESIZE_CONSUMES } from './resizeInjector.js';
 import { injectHeadSwap, HEAD_SWAP_CONSUMES } from './headSwapInjector.js';
+import { injectLtxSigmas, LTX_SIGMAS_CONSUMES } from './ltxSigmasInjector.js';
 
 /**
  * Each entry pairs the mutation with the param keys it CONSUMES. commandExecutor
@@ -10,4 +11,5 @@ import { injectHeadSwap, HEAD_SWAP_CONSUMES } from './headSwapInjector.js';
 export const INJECTORS = {
     resize: { inject: injectResize, consumes: RESIZE_CONSUMES },
     headSwap: { inject: injectHeadSwap, consumes: HEAD_SWAP_CONSUMES },
+    ltxSigmas: { inject: injectLtxSigmas, consumes: LTX_SIGMAS_CONSUMES },
 };

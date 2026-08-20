@@ -22,7 +22,17 @@
  * @property {string}   id            Stable id, used for dep-queue keys.
  * @property {string}   title         Human label (context menus, install prompts).
  * @property {string}   description   One line, shown under the title in the Library row.
- * @property {string[]} requiredDeps  assetDeps ids this plugin owns.
+ * @property {string[]} requiredDeps  dep ids THIS PLUGIN OWNS — weights no model
+ *                                   provides. NOT "every weight the graph loads": a
+ *                                   dep that belongs to a model must be required
+ *                                   through `requiredModels` instead. See the note on
+ *                                   `requiredModels` for what declaring it here costs.
+ * @property {string[]} [requiredModels]  MODEL ids this plugin runs on (MPI-579).
+ *                                   Same split `FlowDef` already ships: `ltx-foley`
+ *                                   and `ltx-extend` declare only `requiredModels`
+ *                                   because they run entirely on a tier's weights,
+ *                                   while `head-swap` declares a model PLUS the LoRA
+ *                                   and node pack that are its own.
  * @property {string}   operation     commandRegistry op key this plugin runs.
  * @property {PluginUpscaleEntry} [upscale]  Contributes an ENTRY to the EXISTING History
  *                                   Upscale dropdown (MPI-580). Omit and the plugin is
@@ -45,6 +55,8 @@
  *                                   owns the numbers.
  */
 
+import { state } from '../state.js';
+
 /** @type {PluginDef[]} */
 export const PLUGINS = [
     {
@@ -53,6 +65,74 @@ export const PLUGINS = [
         description: 'Unlocks "Describe image" on the gallery and history right-click menus.',
         requiredDeps: ['qwen3vl-abliterated-clip'],
         operation: 'imageDescribe',
+    },
+    // MPI-579 — the first consumer of the `upscale` contribution point (MPI-580).
+    //
+    // IT DECLARES A MODEL, NOT THAT MODEL'S WEIGHTS, AND THAT IS LOAD-BEARING.
+    // An earlier draft listed the six LTX weights the graph loads. That is wrong twice
+    // over. It broke MPI-258 B1 outright — `_pluginRequiredDepIds` protects a plugin's
+    // deps UNCONDITIONALLY, so with both LTX transformers gone the plugin still pinned
+    // the five shared support weights and a user could never reclaim them; the same
+    // circularity stranded ~19GB once already. And the proposed cure — protect only
+    // while every dep is present — is precisely the `fullyInstalled` gate that MPI-310
+    // then proved destroys weights (5.24GB of Krea2's encoder), because a shared dep
+    // that is an input to its own protection stops defending itself the instant it goes
+    // missing. Both cycles are documented in docs/download-manager.md § exclusive deps.
+    //
+    // `requiredModels` sidesteps both: the tier's own exclusive-dep machinery already
+    // answers "is this installed" and already protects these weights, so the plugin adds
+    // no protection edge at all. Identical to the `ltx-foley` / `ltx-extend` Flows, which
+    // run on this same tier and declare no deps of their own.
+    //
+    // BALANCED rather than HIGH because the graph names the int8 transformer — the weight
+    // every MPI-568 verdict was measured on, and 20GB against bf16's 39GB.
+    {
+        id: 'ltx-video-upscaler',
+        title: 'LTX Video upscaler',
+        description: 'Adds "LTX Video upscaler" to the Upscale tool on video, with a prompt and two controls.',
+        // Nothing of its own: every weight the graph loads is LTX 2.3 Balanced's.
+        requiredDeps: [],
+        requiredModels: ['ltx-23-balanced'],
+        operation: 'ltxVideoUpscale',
+        upscale: {
+            kinds: ['video'],
+            label: 'LTX Video upscaler',
+            // Both ranges are MPI-568's, measured and closed by Fabio 2026-08-19. The
+            // user sees 0-1 on both and the mapping is hidden, his words: "The mapping
+            // should be occulted from the user, as per usual."
+            fields: [
+                {
+                    id: 'positive', type: 'text', rows: 3, label: 'Prompt', default: '',
+                    placeholder: 'Optional — describe the shot to steer the detail',
+                    // EMPTY by default, and this is load-bearing. MPI-568's most
+                    // expensive finding: the bench's own default prompt ("natural skin
+                    // texture, freckles, sharp eyes") was ordering the artifact every
+                    // downstream dial had been built to remove — the model rendered
+                    // those freckles as MOLES on flat cheek skin. A suggestion belongs
+                    // in the placeholder, never in the value.
+                },
+                {
+                    id: 'Input_Denoise', type: 'slider', label: 'Denoise',
+                    min: 0, max: 1, step: 0.01, default: 0.5,
+                    // -> start sigma 0.50-0.85; UI 0.5 lands on 0.675, the default
+                    // Fabio picked. The full schedule is derived from this one value by
+                    // ltxSigmasInjector, not by the graph.
+                    mapTo: [0.50, 0.85],
+                    note: 'Higher reconstructs more detail and drifts further from the source.',
+                },
+                {
+                    id: 'Input_Prompt_Strength', type: 'slider', label: 'Prompt strength',
+                    min: 0, max: 1, step: 0.01, default: 0,
+                    // -> cfg 1-3. Defaults to the NO-GUIDANCE end on purpose. Fabio,
+                    // overruling a plan recommendation of 3: "Most upscaling jobs do
+                    // not want too much change anyway." An upscale is a fidelity job by
+                    // default; steering is opt-in. Do not re-argue this from the
+                    // measurement — the measurement bounds the range, not the default.
+                    mapTo: [1, 3],
+                    note: 'Only has an effect once you write a prompt.',
+                },
+            ],
+        },
     },
 ];
 
@@ -106,10 +186,20 @@ export const pluginDepUniverse = () =>
  */
 export function pluginAvailability(pluginOrId) {
     const plugin = typeof pluginOrId === 'string' ? getPlugin(pluginOrId) : pluginOrId;
-    if (!plugin) return { installed: false, missing: [] };
+    if (!plugin) return { installed: false, missing: [], missingModels: [] };
     const status = getPluginDepStatus(plugin.id);
     const missing = (plugin.requiredDeps || []).filter(id => status?.get(id) !== true);
-    return { installed: missing.length === 0, missing };
+    // MPI-579 — a plugin may run on a MODEL rather than on weights of its own, exactly
+    // as `flowAvailability` already reads `requiredModels`. Read from the renderer's
+    // installed-model list, which is the same source the Flow Library uses; the backend
+    // never reads it (invariant 1, MPI-276).
+    const installedModels = state.s_installedModelIds || [];
+    const missingModels = (plugin.requiredModels || []).filter(id => !installedModels.includes(id));
+    return {
+        installed: missing.length === 0 && missingModels.length === 0,
+        missing,
+        missingModels,
+    };
 }
 
 /** The plugin that owns an op, if any. Lets a context-menu action find its

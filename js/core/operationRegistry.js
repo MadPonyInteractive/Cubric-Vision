@@ -55,6 +55,10 @@ export const OPERATION_REGISTRY = {
     interpolate:  { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     videoUpscale: { latestVersion: '1.1', appVersionIntroduced: '0.0.1' },
     imageUpscale: { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },
+    // MPI-579 — the LTX Video upscaler plugin's op. A new KEY, so nothing before
+    // 1.5.0 could have written it; stamped ahead of APP_VERSION (1.4.2, released)
+    // until the release bump lands, the same way `ref2v_ms` was.
+    ltxVideoUpscale: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
     removeBackground: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
     imageDescribe: { latestVersion: '1.0', appVersionIntroduced: '1.1.0' },
     autoMaskImg:  { latestVersion: '1.0', appVersionIntroduced: '0.0.1' },

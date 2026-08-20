@@ -851,6 +851,28 @@ export const commands = {
         promptRequired: false,
         universal: true,
     },
+    // MPI-579 — the LTX Video upscaler PLUGIN's op (js/data/pluginsRegistry.js).
+    // Universal like its siblings, but its weights are NOT the universal set: it runs
+    // on the LTX 2.3 Balanced stack, and the plugin's own availability gate is what
+    // keeps it off the dropdown when those are absent. Same shape as `imageDescribe`,
+    // whose encoder is likewise a plugin's rather than the engine's.
+    //
+    // The `ltxSigmas` injector turns the one mapped `Input_Denoise` value into
+    // ManualSigmas' whole schedule string — see ltxSigmasInjector.js for why that
+    // cannot be done inside the graph.
+    ltxVideoUpscale: {
+        label: 'LTX Video Upscale',
+        progressLabel: 'Upscaling',
+        mediaType: MEDIA_TYPE.VIDEO,
+        requiresImages: 0,
+        requiresVideo: 1,
+        mediaInputs: [
+            { key: 'inputVideo', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video', required: true },
+        ],
+        promptRequired: false,
+        universal: true,
+        injector: 'ltxSigmas',
+    },
     imageUpscale: {
         label: 'Image Upscale',
         progressLabel: 'Upscaling',

@@ -1,5 +1,5 @@
 {
-  "_comment": "Do not edit manually — maintained by /mpi-version-bump skill. Source of truth: js/core/operationRegistry.js",
+  "_comment": "Do not edit manually \u2014 maintained by /mpi-version-bump skill. Source of truth: js/core/operationRegistry.js",
   "t2i": {
     "latestVersion": "1.0",
     "appVersionIntroduced": "0.0.1"
@@ -97,6 +97,10 @@
     "latestVersion": "1.0",
     "appVersionIntroduced": "0.0.1",
     "universal": true
+  },
+  "ltxVideoUpscale": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.5.0"
   },
   "removeBackground": {
     "latestVersion": "1.0",

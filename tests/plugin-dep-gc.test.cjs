@@ -10,9 +10,15 @@ const imp = (p) => import(pathToFileURL(path.resolve(p)).href);
 
 (async () => {
     const reg = await imp('js/data/pluginsRegistry.js');
-    const depsMod = await imp('js/data/modelConstants/assetDeps.js');
-    const ASSET = depsMod.ASSET_DEPS || depsMod.assetDeps || depsMod.default;
-    assert.ok(ASSET, 'could not resolve the asset-dep map export');
+    // MPI-579: resolve against the FULL union, not `assetDeps` alone. The dep
+    // entries were split into four siblings (modelDeps / assetDeps / loraDeps /
+    // nodesDeps) and `dependencies.js` re-merges them. While the only plugin dep
+    // was a support weight, assetDeps happened to be enough; the LTX Video
+    // upscaler needs a transformer, which lives in modelDeps, so the narrower map
+    // reported a real dep as unknown.
+    const depsMod = await imp('js/data/modelConstants/dependencies.js');
+    const ASSET = depsMod.DEPS;
+    assert.ok(ASSET, 'could not resolve the dep union export');
 
     const protectedIds = reg.pluginRequiredDepIds();
     assert.ok(protectedIds.has('qwen3vl-abliterated-clip'),
