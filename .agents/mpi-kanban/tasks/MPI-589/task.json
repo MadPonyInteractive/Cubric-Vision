@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-589",
+  "title": "Flows leave the dev gate - a quick-access button in the gallery and a three-way Tab ring",
+  "description": "FABIO, 2026-08-20: 'DevGate can now be removed from the flows. Flows will be available on the next release.' The Flow Library has been dev-gated since MPI-256 with a stated trigger of >=4 flows; there are now five (Head Swap, Extend Video, Add Foley, Upscale Video, Character Sheet) and all five have their art, so the trigger is met and the gate comes off. THREE PARTS. (1) UN-GATE: the only emitters of `flows:open` are themselves APP_CONFIG.dev_mode-gated - the landing hero nav entry in js/shell/projectUI.js and the gallery radial - so removing the gate is what makes Flows reachable in a staged build at all. shell.js's `flows:open` listener carries a comment stating the dev-gating as the reason a staged build never opens it; that comment becomes false the moment the gate goes and must be healed with it. (2) THE BUTTON, his placement: 'between the asset count in the gallery and the project name, right at the centre top of the gallery' - MpiProjectName's layout is `back-link | project name > group | ___ | N ASSETS`, so the button takes the empty centre. It must be a real MpiButton (MPI-582), and the file carries TWO pre-existing bare <button> warnings (back link, gallery breadcrumb) that will block any commit touching it at --max-warnings=0 - the same wall MpiBaseFlow.js hit. Fix them at the root as ghost MpiButtons rather than bypassing, and strike those two off MPI-588's 29-warning debt. (3) THE TAB RING: Tab today flips gallery <-> last-used card (MPI-378, workspace.flip). Fabio: 'the tab key now cycles between last history entry, gallery, and flows' - so it becomes a three-state ring in that order. Two things make this more than a counter: the Flow Library opens as a BODY OVERLAY, not a page, and workspace.flip's when-gate blocks on `qs('.mpi-overlay--body')`, so Tab is dead the moment Flows is open - the gate has to except the Flow Library's own overlay while still blocking for the Model Library and the rest. A project with no cards has no third state (resolveFlipTarget returns null), so the ring must degrade to gallery <-> flows rather than dead-end. RELEASE-VISIBLE: this is the first release in which a user can reach Flows at all, so it is release-note-owed and a 2nd-digit feature bump, unlike everything else on MPI-504/584 which was invisible behind the gate.",
+  "column": "doing",
+  "maturity": "in_progress",
+  "status": "active",
+  "created_at": "2026-08-20T14:00:00Z",
+  "updated_at": "2026-08-20T14:00:00Z",
+  "links": {
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  },
+  "activeSessionTitle": "MPI-589 - Flows un-gated, gallery button, Tab ring"
+}

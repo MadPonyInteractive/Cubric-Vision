@@ -1231,6 +1231,14 @@
  * Emits:
  *   'up'      {} — up-arrow clicked (navigate up one level: group→gallery, gallery→landing)
  *   'gallery' {} — gallery breadcrumb segment clicked
+ *   'flows'   {} — the centred Flows button (MPI-589). The bar only announces the
+ *                  click; the shell decides what opening Flows means.
+ *
+ * Every control here is a ghost-mounted MpiButton (MPI-582) — the back link, the
+ * gallery segment and the Flows button alike. `setGalleryLabel` therefore goes
+ * through MpiButton's `setLabel`, and the segment is mounted with a non-empty
+ * `text` even when it starts hidden: MpiButton only renders the span setLabel
+ * writes into when `props.text` is truthy at mount.
  */
 
 /**

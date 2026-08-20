@@ -470,18 +470,25 @@ async function _bootApp() {
   });
 
   // Flow Library — same lazy-singleton pattern as the Model Library (MPI-256).
-  // Dev-gated: the only emitters of flows:open (Gallery radial + Landing nav) are
-  // themselves APP_CONFIG.dev_mode-gated, so a staged build never opens it.
+  // NO LONGER DEV-GATED (MPI-589): a user reaches it from the Flows button at the
+  // centre of the gallery bar, the Landing nav, or Tab. The dev-only Ctrl+Tab radial
+  // keeps its own entry, but it is no longer the only door.
   let _flowLibrary = null;
   // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
   Events.on('flows:open', async () => {
     // MPI-390: Flows have no PromptBox — just a Generate button — so nothing
-    // inside would surface the no-engine state. Dev-gated today, but the gate
-    // belongs here before that changes.
+    // inside would surface the no-engine state, which is why the guard lives here.
+    // Written while the library was still dev-gated, and load-bearing now that it is not.
     if (await blockedByNoEngine()) return;
     if (!_flowLibrary) _flowLibrary = MpiFlowLibrary.mount(document.createElement('div'));
     _flowLibrary.el.open();
   });
+
+  // ui:close-flows — the Tab ring's way out of the library (MPI-589). Deliberately
+  // narrower than `ui:close-all-popups`, which would also shut whatever else the
+  // user has open on the way past.
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('ui:close-flows', () => _flowLibrary?.el.close());
 
   // flow:open {flowId} — the Flow Library's Open button. Mount MpiBaseFlow with the
   // resolved descriptor, and nothing else: a Flow is DATA (MPI-572). The per-flow

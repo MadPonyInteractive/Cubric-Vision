@@ -3,9 +3,11 @@
 // and that nothing threw — deliberately shallow, because the point is coverage
 // of the places nobody clicks before shipping, not depth on any one of them.
 //
-// Not covered here, on purpose: the Model Library needs installed models and the
-// Flow Library is dev-gated, so neither mounts meaningfully on an empty E2E user
-// data dir. They need their own fixtures before they can join this sweep.
+// Not covered here, on purpose: the Model Library needs installed models, so it
+// does not mount meaningfully on an empty E2E user data dir and needs its own
+// fixture before it can join this sweep. The Flow Library was excluded for the
+// same reason plus its dev gate — that gate is gone (MPI-589) and the library now
+// has real coverage of its own in flows-tab-ring.spec.js.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('@playwright/test');

@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-589/**",
+    "js/shell/projectUI.js",
+    "js/shell/navigation.js",
+    "js/shell.js",
+    "js/managers/hotkeyRegistry.js",
+    "js/components/Compounds/MpiProjectName/MpiProjectName.js",
+    "js/components/Compounds/MpiProjectName/MpiProjectName.css",
+    "js/components/types.js",
+    "docs/shell.md",
+    "js/data/releaseNotes.js",
+    "tests/desktop/flows-tab-ring.spec.js",
+    "docs/events.md",
+    "tests/desktop/workspace-sweep.spec.js"
+  ]
+}

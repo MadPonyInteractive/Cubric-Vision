@@ -1,5 +1,16 @@
 import { ComponentFactory } from '../../factory.js';
 import { ce } from '/js/utils/dom.js';
+import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+
+/**
+ * Ghost-mount an MpiButton and hand back its <button>, so a bare element is never
+ * written into this bar (MPI-582). Same helper shape as MpiBaseFlow's.
+ * @param {object} props
+ * @returns {HTMLElement}
+ */
+function _mountButton(props) {
+    return MpiButton.mount(ce('div'), props).el;
+}
 
 /**
  * MpiProjectName — Project title bar with 2-level breadcrumb + right-side stats.
@@ -45,17 +56,18 @@ export const MpiProjectName = ComponentFactory.create({
 
         // ── Back link (← PREVIOUS_WORKSPACE) ────────────────────────────────────
 
-        const backBtn = ce('button', {
-            className: 'mpi-project-name__back',
-            type: 'button',
-            title: 'Go up',
+        const backBtn = _mountButton({
+            variant: 'ghost',
+            extraClasses: 'mpi-project-name__back',
+            info: 'Go up',
         });
+        backBtn.title = 'Go up';
         const backArrow = ce('span', { className: 'mpi-project-name__back-arrow', textContent: '←', 'aria-hidden': 'true' });
         const backLabelEl = ce('span', {
             className: 'mpi-project-name__back-label',
             textContent: (props.backLabel || '').toUpperCase(),
         });
-        backBtn.append(backArrow, backLabelEl);
+        backBtn.replaceChildren(backArrow, backLabelEl);
         backBtn.addEventListener('click', () => emit('up', {}));
 
         // ── Text block ──────────────────────────────────────────────────────────
@@ -72,10 +84,13 @@ export const MpiProjectName = ComponentFactory.create({
         const breadcrumb = ce('div', { className: 'mpi-project-name__breadcrumb' });
 
         // Gallery segment — clickable link, hidden when at gallery root
-        const galleryEl = ce('button', {
-            className: 'mpi-project-name__segment mpi-project-name__segment--link',
-            type: 'button',
-            textContent: (props.galleryLabel || '').toUpperCase(),
+        // `text` is deliberately never empty at mount: MpiButton only renders its
+        // `.mpi-btn__text` span when `props.text` is truthy, and `setLabel` writes into
+        // that span — mount it blank and every later setGalleryLabel would land nowhere.
+        const galleryEl = _mountButton({
+            text: (props.galleryLabel || '').toUpperCase() || ' ',
+            variant: 'ghost',
+            extraClasses: 'mpi-project-name__segment mpi-project-name__segment--link',
         });
         galleryEl.addEventListener('click', () => emit('gallery', {}));
 
@@ -93,6 +108,18 @@ export const MpiProjectName = ComponentFactory.create({
 
         breadcrumb.append(galleryEl, sepEl, groupEl);
         textBlock.append(projectNameEl, breadcrumb);
+
+        // ── Flows (centre) ──────────────────────────────────────────────────────
+        // MPI-589, Fabio's placement: "between the asset count in the gallery and the
+        // project name, right at the centre top of the gallery". Absolutely centred on
+        // the bar rather than flex-centred, so a long project name cannot shove it off
+        // the middle. Emits — the shell decides what opening Flows means.
+        const flowsBtn = _mountButton({
+            icon: 'layers', label: 'Flows', size: 'sm', variant: 'ghost',
+            extraClasses: 'mpi-project-name__flows',
+            info: 'Open the Flow Library',
+        });
+        flowsBtn.addEventListener('click', () => emit('flows', {}));
 
         // ── Stats (right-aligned: rule + count + label · size) ─────────────────
         const statsEl = ce('div', { className: 'mpi-project-name__stats' });
@@ -122,7 +149,7 @@ export const MpiProjectName = ComponentFactory.create({
         }
         _renderStats();
 
-        el.append(backBtn, textBlock, statsEl);
+        el.append(backBtn, textBlock, flowsBtn, statsEl);
 
         // ── Visibility ──────────────────────────────────────────────────────────
 
@@ -150,7 +177,7 @@ export const MpiProjectName = ComponentFactory.create({
 
         /** @param {string} label — pass '' to hide (we are at gallery root) */
         el.setGalleryLabel = (label) => {
-            galleryEl.textContent = label.toUpperCase();
+            galleryEl.setLabel(label.toUpperCase() || ' ');
             _update();
         };
 

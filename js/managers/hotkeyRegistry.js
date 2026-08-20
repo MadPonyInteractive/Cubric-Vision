@@ -272,17 +272,23 @@ export const HOTKEY_REGISTRY = [
     // while a full-page body overlay (e.g. the Model Library) is open. Native
     // Tab focus-traversal is suppressed globally in hotkeyManager regardless,
     // so Tab can never walk cards / enter the slide-over.
+    //
+    // MPI-589 made it a THREE-state ring — last card → gallery → Flows → … — which
+    // is why the body-overlay gate now has an exception. The Flow Library IS a body
+    // overlay, so the old blanket `!qs('.mpi-overlay--body')` killed Tab the instant
+    // Flows opened, leaving the ring with no way back out. Every OTHER body overlay
+    // (Model Library above all) still blocks.
     {
         id:               'workspace.flip',
         key:              'tab',
         type:             KEY_TYPE.DOWN,
         category:         'workspace',
         scopeLabel:       'Workspace',
-        description:      'Flip between the gallery and the last-used card',
+        description:      'Cycle the last-used card, the gallery and Flows',
         allowWhileTyping: false,
         when: ({ state }) =>
             (state.currentPage === 'gallery' || state.currentPage === 'group-history') &&
-            !qs('.mpi-overlay--body'),
+            (!qs('.mpi-overlay--body') || !!qs('.mpi-overlay--body .mpi-flow-library')),
     },
 
     // ── Radial Menu ───────────────────────────────────────────────────────────

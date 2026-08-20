@@ -6,11 +6,23 @@
 ═══════════════════════════════════════════════════════════ */
 
 .mpi-project-name {
+    position: relative;   /* anchors the centred Flows button */
     display: flex;
     align-items: center;
     gap: 0.75rem;
     width: 100%;
     /* No background — floats over canvas */
+}
+
+/* ── Flows (dead centre of the bar) ─────────────────────── */
+/* Absolute, not flex-centred: the name on the left and the stats on the right are
+   both variable width, so any flex arrangement drifts off the middle as they change.
+   Geometry only — the Primitive owns its own chrome. */
+
+.mpi-project-name__flows {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 /* ── Back link (← PREVIOUS_WORKSPACE) ──────────────────── */

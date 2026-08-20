@@ -37,5 +37,10 @@ Playbook: `docs/playbooks/add-flow/` (hub read first, sections on demand).
       > handoff `state/handoffs/30b5a47a-dde7-4cf6-8c42-caeb68d37664.json` carries the full
       > context, including the throwaway project `MPI-504 sheet verify` that Fabio kept ON
       > PURPOSE as graphics source.
-- [ ] **Fabio:** decide whether a frame/resolution cap gets its own card
-- [ ] **Fabio:** dev gate — 4th flow now exists, the gate's stated trigger
+- [x] **Fabio:** decide whether a frame/resolution cap gets its own card - NO CAP, closed
+      2026-08-20. His words: the user hits OOM, he knows his card cannot handle it, it is that
+      simple. The description already warns that cost grows with length. Do not re-open this as
+      a card; the ceiling is documented in MPI-579 validation Phase 5.
+- [x] **Fabio:** dev gate — REMOVED ENTIRELY, 2026-08-20. Flows ship to users in the next
+      release, so this stopped being a per-card question. Carried by MPI-589, with the
+      quick-access button and the Tab cycle.

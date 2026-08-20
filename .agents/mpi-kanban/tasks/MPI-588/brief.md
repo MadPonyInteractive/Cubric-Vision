@@ -23,7 +23,7 @@ rule quietly stops meaning anything.
 | `js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js` | 4 | button | 43 (×4, one template literal) |
 | `js/components/Organisms/MpiPromptBox/MpiPromptBox.js` | 4 | 3 button, 1 textarea | 881, 888, 1153, 1212 |
 | `js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js` | 3 | 2 button, 1 input | 56, 184, 923 |
-| `js/components/Compounds/MpiProjectName/MpiProjectName.js` | 2 | button | 48, 75 |
+| ~~`js/components/Compounds/MpiProjectName/MpiProjectName.js`~~ | ~~2~~ | button | **DONE - cleared by MPI-589**, which had to touch this file for the gallery Flows button and root-fixed both sites (back link + gallery breadcrumb) as ghost MpiButtons rather than bypassing the hook. 27 warnings left, not 29. |
 | `js/components/Compounds/MpiQueuePanel/MpiQueuePanel.js` | 2 | button | 19, 242 |
 | `js/components/Organisms/MpiToolOptionsPrompt/MpiToolOptionsPrompt.js` | 2 | button | 36, 119 |
 | `js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js` | 1 | button | 43 |

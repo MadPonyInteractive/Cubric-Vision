@@ -6,18 +6,19 @@
  *   PAGE_GALLERY      → main gallery (grid of ItemGroups); default on project open
  *   PAGE_GROUP_HISTORY → history view for a single ItemGroup (params: { groupId })
  *
- * Tab is the workspace flipper (MPI-378): gallery → the last card you opened in
- * this project, card → gallery, nothing at all when the project has no cards.
- * The remembered card lives in project.json (`lastGroupId`) so it survives a
- * restart. The workspace radial is GONE — the ring survives only as the
- * dev-gated Ctrl+Tab menu; Models is reached from the prompt box's model button.
+ * Tab is the workspace flipper (MPI-378, widened to three states in MPI-589):
+ * last card → gallery → Flows → last card. The remembered card lives in
+ * project.json (`lastGroupId`) so it survives a restart; a project with no cards
+ * simply rings between the gallery and Flows. The workspace radial is GONE — it
+ * survives only as the dev-gated Ctrl+Tab menu; Models is reached from the prompt
+ * box's model button.
  */
 
 import { state } from '../state.js';
 import { Events } from '../events.js';
 import { refreshProject as refreshProjectStats, refreshGroup as refreshGroupStats } from '../services/projectStatsService.js';
 import { APP_CONFIG } from '../../dev_configs/app_config.js';
-import { gid } from '../utils/dom.js';
+import { gid, qs } from '../utils/dom.js';
 import { navigate, back, clearHistory, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../router.js';
 import { MpiRadialMenu } from '../components/Primitives/MpiRadialMenu/MpiRadialMenu.js';
 import { Hotkeys } from '../managers/hotkeyManager.js';
@@ -67,6 +68,11 @@ export function initNavigation(refs) {
 
     // Gallery breadcrumb — always goes to main gallery
     _projectNameInst.on('gallery', () => navigate(PAGE_GALLERY));
+
+    // MPI-589: the quick route to Flows, now that the library is no longer dev-gated.
+    // The bar emits; opening is the shell's business, and `flows:open` already carries
+    // the no-engine guard.
+    _projectNameInst.on('flows', () => Events.emit('flows:open'));
 }
 
 // ── Tab flipper (MPI-378) ───────────────────────────────────────────────────
@@ -78,18 +84,27 @@ export function initNavigation(refs) {
 let _unbindFlip = null;
 
 /**
- * Gallery → the last card opened in this project; card → gallery.
- * Does nothing at all — no navigation, no toast — when there is nothing to
- * flip to (project with no cards, or a remembered card that was deleted).
+ * The Tab ring: card → gallery → Flows → card.
+ * A project with no cards (or a remembered card that was deleted) has no third
+ * state, so it rings between the gallery and Flows instead of dead-ending.
  */
 function _flipWorkspace() {
+    // MPI-589 — a three-state ring, in Fabio's order: last history entry → gallery →
+    // Flows → back to the last history entry. Flows is an OVERLAY rather than a page,
+    // so its leg is "is the library on screen?", not a `state.currentPage` value.
+    if (qs('.mpi-overlay--body .mpi-flow-library')) {
+        Events.emit('ui:close-flows');
+        const groupId = resolveFlipTarget(state.currentProject);
+        if (groupId) navigate(PAGE_GROUP_HISTORY, { groupId });
+        return;
+    }
     if (state.currentPage === PAGE_GROUP_HISTORY) {
         navigate(PAGE_GALLERY);
         return;
     }
-    const groupId = resolveFlipTarget(state.currentProject);
-    if (!groupId) return;
-    navigate(PAGE_GROUP_HISTORY, { groupId });
+    // On the gallery. A project with no cards has no third state, so the ring
+    // degrades to gallery ↔ Flows rather than dead-ending on a Tab that does nothing.
+    Events.emit('flows:open');
 }
 
 /**

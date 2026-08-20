@@ -15,7 +15,6 @@ import { clientLogger } from '../services/clientLogger.js';
 import { formatBytes } from '../utils/formatBytes.js';
 import { gid } from '../utils/dom.js';
 import { APP_VERSION } from '../core/appVersion.js';
-import { APP_CONFIG } from '../../dev_configs/app_config.js';
 import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
@@ -77,8 +76,9 @@ export function initProjectUI() {
   if (navSlot) {
     const defs = [
       { label: 'Models',   handler: () => Events.emit('models:open') },
-      // Flows (Flow Library) — dev-gated until ≥4 flows exist (MPI-256).
-      ...(APP_CONFIG.dev_mode ? [{ label: 'Flows', handler: () => Events.emit('flows:open') }] : []),
+      // Flows (Flow Library) — MPI-256 gated this on dev_mode until ≥4 flows existed.
+      // Five now ship with their art, so MPI-589 took the gate off: this is a user route.
+      { label: 'Flows',    handler: () => Events.emit('flows:open') },
       { label: 'Settings', handler: () => Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings }) },
       { label: 'Hotkeys',  handler: () => Events.emit('slide-over:open', { title: 'Hotkeys',  component: MpiHotkeys  }) },
       { label: 'About',    handler: () => Events.emit('slide-over:open', { title: 'About',    component: MpiAbout    }) },
