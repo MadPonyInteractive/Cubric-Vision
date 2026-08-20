@@ -19,17 +19,22 @@
     "tests/desktop/workspace-sweep.spec.js",
     ".agents/mpi-kanban/tasks/MPI-588/brief.md"
   ],
-  "status": "claimed",
+  "status": "complete",
   "claim_kind": "write",
   "owner_session": ".agents/mpi-kanban/state/sessions/6b366931-dba7-46c1-93d1-980f6fe845f8.json",
   "owner_role": "implementer",
   "claimed_at": "2026-08-20T14:00:00Z",
-  "heartbeat_at": "2026-08-20T14:00:00Z",
+  "heartbeat_at": "2026-08-20T15:00:00Z",
   "note": "Flows un-gate + gallery button + Tab ring. MpiProjectName.js is taken to ROOT-FIX its two pre-existing bare <button>s, which overlaps MPI-588's debt list by exactly those two sites - that card keeps the other 27.",
   "recent_events": [
     {
       "at": "2026-08-20T14:00:00Z",
       "event": "files_claimed"
+    },
+    {
+      "at": "2026-08-20T15:00:00Z",
+      "event": "editing_complete",
+      "note": "Committed in 88cfb6f9; claim released."
     }
   ]
 }

@@ -43,7 +43,12 @@ the span always exists; `_update()` still trims it to zero length and hides the 
 
 ## Not done here
 
-- **The release note is owed and NOT written.** `releaseNotes.js` is keyed by `APP_VERSION`
+- ~~The release note is owed and NOT written.~~ **WRITTEN**, at close-out, with Fabio's yes:
+  one `What's new` entry in `docs/releases/UNRELEASED.md`. The earlier claim that it had to
+  wait for the bump was HALF WRONG and the project close-out steps caught it: `releaseNotes.js`
+  IS frozen per shipped version (v1.4.2 is latest), but user-facing work goes to
+  `UNRELEASED.md`, which `/mpi-version-bump` folds into the next version. Still a 2nd-digit
+  bump. Original wording of this item: `releaseNotes.js` is keyed by `APP_VERSION`
   and the next version does not exist yet — `/mpi-version-bump` mints the entry. Copy it
   must carry: *Flows are out of preview — a Flow Library of five outcome flows (Head Swap,
   Extend Video, Add Foley, Upscale Video, Character Sheet), reachable from the Flows button

@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "0ec5f9fe-d66e-44c6-8587-c4e47b4c325d",
   "generated_at": "2026-08-20T05:00:00Z",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "MPI-584 - Upscale Video shipped as a Flow; MPI-585 raised for the shared compare widget",
     "branch": "master"
@@ -66,5 +66,7 @@
       "docs/playbooks/add-flow/existing-flows/ltx-upscale.md"
     ]
   },
-  "resume_prompt": "Continuing Cubric Vision work handed off from a previous session. Read .agents/mpi-kanban/state/handoffs/0ec5f9fe-d66e-44c6-8587-c4e47b4c325d.json. MPI-584 (Upscale Video as a Flow) shipped and is committed as cf0cec4a, sitting in doing/validating with only graphics and two of Fabio's own calls outstanding. The next job is MPI-585, Fabio's explicit priority: a SHARED before/after compare widget for Flow results — source left, result right, draggable reveal bar, the same thing the History workspace gives for two selected video entries — reusable by every Flow that improves a supplied video OR image, with no duplicated code. Its card description already carries the reuse map (ComparisonManager + MpiCanvas compare mode + MpiCompareOverlay), the proposed declared FlowDef shape, four traps and a live file-claim collision on MpiBaseFlow.js; read it before writing anything. Move MPI-585 todo -> doing with a files.json first. After it, MPI-584's two preview assets via /mpi-flow-graphics, cut from Fabio's own run pair in C:\\Users\\Fabio\\Downloads\\video upscale."
+  "resume_prompt": "Continuing Cubric Vision work handed off from a previous session. Read .agents/mpi-kanban/state/handoffs/0ec5f9fe-d66e-44c6-8587-c4e47b4c325d.json. MPI-584 (Upscale Video as a Flow) shipped and is committed as cf0cec4a, sitting in doing/validating with only graphics and two of Fabio's own calls outstanding. The next job is MPI-585, Fabio's explicit priority: a SHARED before/after compare widget for Flow results — source left, result right, draggable reveal bar, the same thing the History workspace gives for two selected video entries — reusable by every Flow that improves a supplied video OR image, with no duplicated code. Its card description already carries the reuse map (ComparisonManager + MpiCanvas compare mode + MpiCompareOverlay), the proposed declared FlowDef shape, four traps and a live file-claim collision on MpiBaseFlow.js; read it before writing anything. Move MPI-585 todo -> doing with a files.json first. After it, MPI-584's two preview assets via /mpi-flow-graphics, cut from Fabio's own run pair in C:\\Users\\Fabio\\Downloads\\video upscale.",
+  "updated_at": "2026-08-20T15:00:00Z",
+  "closed_note": "Consumed 2026-08-20. The graphics it was waiting on shipped in d6a622c3 (both flows' tile + hero, live-verified); MPI-584 then closed outright. MPI-504's remaining work is bench/GPU verification and is described in its own checklist, NOT here - this record's next_action is spent."
 }

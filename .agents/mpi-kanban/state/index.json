@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-20T14:00:00Z",
+  "updated_at": "2026-08-20T15:25:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -12,25 +12,8 @@
       "heartbeat_at": "2026-08-20T12:05:06Z"
     }
   ],
-  "active_tasks": [
-    {
-      "id": "MPI-589",
-      "path": ".agents/mpi-kanban/tasks/MPI-589/",
-      "column": "doing",
-      "status": "active",
-      "heartbeat_at": "2026-08-20T14:00:00Z"
-    }
-  ],
-  "active_file_claims": [
-    {
-      "id": "3f404349-7540-400a-8bb4-15c591616244",
-      "path": ".agents/mpi-kanban/state/files/3f404349-7540-400a-8bb4-15c591616244.json",
-      "task_card": "MPI-589",
-      "status": "claimed",
-      "owner_session": ".agents/mpi-kanban/state/sessions/6b366931-dba7-46c1-93d1-980f6fe845f8.json",
-      "heartbeat_at": "2026-08-20T14:00:00Z"
-    }
-  ],
+  "active_tasks": [],
+  "active_file_claims": [],
   "pending_file_states": [
     {
       "id": "fa51ee7f-2398-4911-8d75-402c61f462d5",
@@ -41,24 +24,24 @@
       "heartbeat_at": "2026-08-20T05:35:00Z"
     },
     {
-      "id": "c0b7f772-90e5-4628-ad44-e229c8777e82",
-      "path": ".agents/mpi-kanban/state/files/c0b7f772-90e5-4628-ad44-e229c8777e82.json",
-      "task_card": "MPI-504",
+      "id": "3f404349-7540-400a-8bb4-15c591616244",
+      "path": ".agents/mpi-kanban/state/files/3f404349-7540-400a-8bb4-15c591616244.json",
+      "task_card": "MPI-589",
       "status": "complete",
       "owner_session": ".agents/mpi-kanban/state/sessions/6b366931-dba7-46c1-93d1-980f6fe845f8.json",
-      "heartbeat_at": "2026-08-20T13:36:00Z"
+      "heartbeat_at": "2026-08-20T15:00:00Z"
+    },
+    {
+      "id": "0b71c23c-5297-4e32-a90f-2cff8b752267",
+      "path": ".agents/mpi-kanban/state/files/0b71c23c-5297-4e32-a90f-2cff8b752267.json",
+      "task_card": "MPI-589",
+      "status": "complete",
+      "owner_session": ".agents/mpi-kanban/state/sessions/6b366931-dba7-46c1-93d1-980f6fe845f8.json",
+      "heartbeat_at": "2026-08-20T15:25:00Z"
     }
   ],
   "open_messages": [],
   "active_handoffs": [
-    {
-      "id": "0ec5f9fe-d66e-44c6-8587-c4e47b4c325d",
-      "path": ".agents/mpi-kanban/state/handoffs/0ec5f9fe-d66e-44c6-8587-c4e47b4c325d.json",
-      "task_card": "MPI-584",
-      "status": "open",
-      "created_at": "2026-08-20T05:00:00Z",
-      "note": "Upscale Video shipped as a Flow (cf0cec4a); next session takes MPI-585 (the shared Flow compare widget, Fabio's stated priority) then MPI-584's graphics from his own run pair."
-    },
     {
       "id": "584f6547-fe3c-4f0d-afac-22daeee351b4",
       "path": ".agents/mpi-kanban/state/handoffs/584f6547-fe3c-4f0d-afac-22daeee351b4.json",
@@ -66,14 +49,6 @@
       "status": "open",
       "created_at": "2026-08-10T06:10:41Z",
       "note": "Card was parked back to todo by 9a92c0ff - the handoff still records the SeedVR2 root-cause and the PiD Flow blocker."
-    },
-    {
-      "id": "30b5a47a-dde7-4cf6-8c42-caeb68d37664",
-      "path": ".agents/mpi-kanban/state/handoffs/30b5a47a-dde7-4cf6-8c42-caeb68d37664.json",
-      "task_card": "MPI-504",
-      "status": "open",
-      "created_at": "2026-08-20T11:35:00Z",
-      "note": "Three UI items shipped and verified but UNCOMMITTED - the pre-commit hook rejects MpiBaseFlow.js on 4 pre-existing bare-<button> warnings. Land the commit, then do the graphics for MPI-504 AND MPI-584 in one /mpi-flow-graphics pass."
     }
   ]
 }

@@ -50,7 +50,7 @@ history entry, gallery, and flows."*
 - [x] `npm test`, `npm run test:desktop`, eslint `--max-warnings=0` on every touched js file,
       `release:check`
 - [x] Desktop spec: the button opens the library, and Tab walks all three states
-- [ ] **Release note owed — NOT written here, deliberately.** `releaseNotes.js` is keyed by
+- [x] **Release note WRITTEN at close-out** (was: owed, deliberately deferred — wrong, see validation.md). `releaseNotes.js` is keyed by
       `APP_VERSION`, and the next version does not exist yet; `/mpi-version-bump` mints the
       entry. Copy + digit are recorded in validation.md so the bump cannot water it down.
       ORIGINAL ITEM: — this is the first release where a user can reach Flows at all, so

@@ -32,6 +32,12 @@ _(none yet)_
 
 ## What's new
 
+- Flows are out of preview. The Flow Library is a set of outcome-shaped jobs you run without
+  assembling a workspace: Head Swap, Extend Video, Add Foley, Upscale Video and Character
+  Sheet. Open it from the Flows button at the top of the gallery, from the landing page, or
+  with Tab — which now cycles your last card, the gallery and Flows. Each flow says which
+  models it needs and installs them for you; none of them download weights of their own.
+
 - Videos can be upscaled with LTX, sound and all. The Upscale tool in the History workspace
   has a new option on video — "LTX Video upscaler" — which doubles a clip's resolution using
   the LTX 2.3 Balanced model, and the audio track comes through untouched. Two controls come
