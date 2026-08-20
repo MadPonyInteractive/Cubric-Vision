@@ -38,7 +38,7 @@ the pre-commit hook blocks any commit touching the file otherwise, which is exac
 MPI-588 was carded for. It is now a ghost MpiButton mounted in setup, keeping its id and the
 shared `.mpi-detail__close` class; two scoped CSS rules hold it at the Model Library twin's 28px
 box and 13px glyph (measured live — the Primitive's icon-only rules win otherwise). MPI-588's
-table should drop this file: **27 → 26 warnings, 12 files.**
+table should drop this file: **26 warnings across 11 files** (measured at close-out with `npx eslint js/ -f json`, not derived from the card table — that table still counts MpiProjectName, which MPI-589 cleared).
 
 ## Release note owed
 
