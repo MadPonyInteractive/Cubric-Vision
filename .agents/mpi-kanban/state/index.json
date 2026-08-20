@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-20T00:42:24Z",
+  "updated_at": "2026-08-20T02:00:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -24,6 +24,13 @@
       "role": "implementer",
       "status": "active",
       "heartbeat_at": "2026-08-20T00:40:04Z"
+    },
+    {
+      "id": "9dbe8a34-2ad3-4b0a-98af-52da1825dae1",
+      "path": ".agents/mpi-kanban/state/sessions/9dbe8a34-2ad3-4b0a-98af-52da1825dae1.json",
+      "role": "implementer",
+      "status": "active",
+      "heartbeat_at": "2026-08-20T00:51:00Z"
     }
   ],
   "active_tasks": [],
@@ -43,6 +50,14 @@
       "status": "claimed",
       "owner_session": ".agents/mpi-kanban/state/sessions/8322d5de-60dd-4aa0-9f72-230e94c8a36d.json",
       "heartbeat_at": "2026-08-20T00:40:04Z"
+    },
+    {
+      "id": "f11d53fd-b9f7-4d27-b147-db9538f3a8f3",
+      "path": ".agents/mpi-kanban/state/files/f11d53fd-b9f7-4d27-b147-db9538f3a8f3.json",
+      "task_card": "MPI-579",
+      "status": "claimed",
+      "owner_session": ".agents/mpi-kanban/state/sessions/9dbe8a34-2ad3-4b0a-98af-52da1825dae1.json",
+      "heartbeat_at": "2026-08-20T00:51:00Z"
     }
   ],
   "pending_file_states": [],
@@ -140,9 +155,9 @@
       "id": "89bc642b-8f8f-4c0b-bd97-171d1118cf63",
       "path": ".agents/mpi-kanban/state/handoffs/89bc642b-8f8f-4c0b-bd97-171d1118cf63.json",
       "task_card": "MPI-579",
-      "status": "open",
+      "status": "resolved",
       "created_at": "2026-08-20T01:05:00Z",
-      "note": "The upscaler RUNS in the app - 73f to 2816x1600, 375s, peak 15724 MB, audio intact. Left: _pluginTile installs from requiredDeps alone, now empty because the plugin correctly declares requiredModels. GC research is closed: do not re-propose gating plugin protection on dep presence."
+      "note": "Superseded by cedb0486-18ae-41d3-b845-d9702622bd71 - the Library row shipped, Fabio signed off Phase 6, and the declared-field sliders became components."
     },
     {
       "id": "abc43d05-5fc9-44b4-ae35-64414a43b5b4",
@@ -150,6 +165,14 @@
       "task": "MPI-581",
       "generated_at": "2026-08-20T00:42:24Z",
       "status": "open"
+    },
+    {
+      "id": "cedb0486-18ae-41d3-b845-d9702622bd71",
+      "path": ".agents/mpi-kanban/state/handoffs/cedb0486-18ae-41d3-b845-d9702622bd71.json",
+      "task_card": "MPI-579",
+      "status": "open",
+      "created_at": "2026-08-20T02:00:00Z",
+      "note": "MPI-579 is FINISHED and signed off - close-out is the next action. The slider/prompt-box component fix shipped; the rest of that sweep is MPI-582, which Fabio takes himself."
     }
   ]
 }

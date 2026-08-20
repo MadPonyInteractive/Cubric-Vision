@@ -7,7 +7,7 @@ import { MpiPopup } from '../../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiBadge } from '../../../Primitives/MpiBadge/MpiBadge.js';
 import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
-import { MODELS, reSyncInstalledModels, getModelDepStatus } from '../../../../data/modelRegistry.js';
+import { MODELS, reSyncInstalledModels, getModelDepStatus, getModelDependencies } from '../../../../data/modelRegistry.js';
 import { DEPS } from '../../../../data/modelConstants/dependencies.js';
 import { PLUGINS, pluginDepKey, pluginAvailability } from '../../../../data/pluginsRegistry.js';
 import {
@@ -22,7 +22,7 @@ import { qs, qsa, ce, on } from '../../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
 import { openExternal } from '../../../../utils/openExternal.js';
 import { formatBytes } from '../../../../utils/formatBytes.js';
-import { tradeTable } from '../../../../data/modelConstants/footprint.js';
+import { tradeTable, sizeToGb } from '../../../../data/modelConstants/footprint.js';
 
 /**
  * MpiModelManager — the Model Library (MPI-215).
@@ -1047,8 +1047,14 @@ export const MpiModelManager = ComponentFactory.create({
                 // would leave the button reading "Install" until something unrelated
                 // moved the model list.
                 + '##plugins:' + PLUGINS.map((p) => {
-                    const job = state.downloadJobs.find(j => j.modelId === pluginDepKey(p.id));
-                    return `${p.id}:${pluginAvailability(p).installed ? 1 : 0}:${job ? job.status : 'idle'}`;
+                    // MPI-579 — EVERY install key, not just the plugin's own dep job: a
+                    // plugin that runs on a MODEL is installed by that model's job, so
+                    // sigging only `plugin:<id>` left its row frozen on "Install".
+                    const jobSigs = _pluginInstallKeys(p).map((key) => {
+                        const job = state.downloadJobs.find(j => j.modelId === key);
+                        return job ? job.status : 'idle';
+                    }).join('+') || 'idle';
+                    return `${p.id}:${pluginAvailability(p).installed ? 1 : 0}:${jobSigs}`;
                 }).join(',');
         }
 
@@ -1149,12 +1155,48 @@ export const MpiModelManager = ComponentFactory.create({
         // They live here rather than behind a bespoke install prompt because the Library
         // already owns install, uninstall, progress, the completion toast and the
         // unfocused-app OS notification. Anywhere else means reimplementing all five.
+        // Every download key a plugin installs under: one per required MODEL — each
+        // drives its own dep download through the shared model install flow — plus ONE
+        // for the plugin's own deps under `plugin:<id>`, which can never collide with a
+        // model id. Size, busy state and install all iterate this same list. It is the
+        // Flow Library's `_installKeys` (MpiFlowLibrary.js, MPI-304) ported: a Flow and
+        // a plugin both require MODELS they do not own, and aggregate identically.
+        function _pluginInstallKeys(plugin) {
+            const keys = (plugin.requiredModels || []).slice();
+            if ((plugin.requiredDeps || []).length) keys.push(pluginDepKey(plugin.id));
+            return keys;
+        }
+
+        // Download size of everything a plugin needs: its own deps PLUS every required
+        // model's full universe, deduped by dep id (two models can name one weight).
+        // MPI-579 — sizing from `requiredDeps` alone rendered `Install ()` for the LTX
+        // Video upscaler, which correctly declares a MODEL rather than that model's
+        // weights (see js/data/pluginsRegistry.js for why listing them is wrong).
+        function _pluginGb(plugin) {
+            const ids = new Set(plugin.requiredDeps || []);
+            for (const modelId of plugin.requiredModels || []) {
+                const model = MODELS.find(m => m.id === modelId);
+                if (model) resolveFullUniverse(model).forEach(id => ids.add(id));
+            }
+            let gb = 0;
+            for (const id of ids) gb += sizeToGb(DEPS[id]?.size);
+            return gb;
+        }
+
+        /** Live (non-terminal) download jobs across every key this plugin installs under. */
+        function _pluginJobs(plugin) {
+            const jobs = state.downloadJobs || [];
+            return _pluginInstallKeys(plugin)
+                .map(key => jobs.find(j => j.modelId === key))
+                .filter(job => job && !['complete', 'failed', 'cancelled'].includes(job.status));
+        }
+
         function _pluginTile(plugin) {
             const { installed } = pluginAvailability(plugin);
-            const job = state.downloadJobs.find(j => j.modelId === pluginDepKey(plugin.id));
-            const busy = !!job && !['complete', 'failed', 'cancelled'].includes(job.status);
-            const size = (plugin.requiredDeps || [])
-                .map(id => DEPS[id]?.size).filter(Boolean).join(' + ');
+            const live = _pluginJobs(plugin);
+            const busy = live.length > 0;
+            const gb = _pluginGb(plugin);
+            const size = gb ? `${gb.toFixed(1)}GB` : '';
 
             const tile = ce('div', { className: 'mpi-plugin-row' });
             const info = ce('div', { className: 'mpi-plugin-row__info' });
@@ -1173,18 +1215,25 @@ export const MpiModelManager = ComponentFactory.create({
                 // the row only needs to stop offering a second install.
                 actions.appendChild(ce('span', {
                     className: 'mpi-plugin-row__state',
-                    textContent: job.status === 'queued' ? 'Queued' : 'Installing…',
+                    textContent: live.every(j => j.status === 'queued') ? 'Queued' : 'Installing…',
                 }));
             } else if (installed) {
                 const chip = ce('span', { className: 'mpi-plugin-row__state mpi-plugin-row__state--on' });
                 chip.innerHTML = `${renderIcon('check', 'sm')}Installed`;
                 actions.appendChild(chip);
-                const btn = MpiButton.mount(ce('div'), { text: 'Uninstall', variant: 'ghost', size: 'sm' });
-                btn.on('click', () => _uninstallPlugin(plugin));
-                _pluginBtns.push(btn);
-                actions.appendChild(btn.el);
+                // Uninstall frees the plugin's OWN deps. A plugin that runs entirely on
+                // a MODEL owns nothing to free — those weights are the model's, and the
+                // Model Library is where they come off. Offering the button here would
+                // be dead (_uninstallPlugin returns on an empty dep list) and, worse,
+                // reads as an offer to remove the model itself.
+                if ((plugin.requiredDeps || []).length) {
+                    const btn = MpiButton.mount(ce('div'), { text: 'Uninstall', variant: 'ghost', size: 'sm' });
+                    btn.on('click', () => _uninstallPlugin(plugin));
+                    _pluginBtns.push(btn);
+                    actions.appendChild(btn.el);
+                }
             } else {
-                const btn = MpiButton.mount(ce('div'), { text: `Install (${size})`, variant: 'primary', size: 'sm' });
+                const btn = MpiButton.mount(ce('div'), { text: size ? `Install (${size})` : 'Install', variant: 'primary', size: 'sm' });
                 btn.on('click', () => _installPlugin(plugin));
                 _pluginBtns.push(btn);
                 actions.appendChild(btn.el);
@@ -1194,13 +1243,21 @@ export const MpiModelManager = ComponentFactory.create({
         }
 
         async function _installPlugin(plugin) {
+            // A required MODEL installs through the shared model flow — the plugin owns
+            // no dep resolution of its own. Exactly MpiFlowLibrary's `_installMissing`.
+            for (const modelId of pluginAvailability(plugin).missingModels) {
+                const deps = getModelDependencies(modelId);
+                if (deps.length) await downloadService.start(modelId, deps);
+            }
+            // The plugin's own deps go under pluginDepKey so the job can never collide
+            // with a model id. The backend passes unknown ids straight through
+            // (_filterDepsForEngine), and the existing download:complete handler gives
+            // us the toast / OS notification for free.
             const dependencies = (plugin.requiredDeps || []).map(id => DEPS[id]).filter(Boolean);
-            if (!dependencies.length) return;
-            // Keyed by pluginDepKey so the job can never collide with a model id. The
-            // backend passes unknown ids straight through (_filterDepsForEngine), and
-            // the existing download:complete handler gives us the toast / OS notification
-            // for free.
-            await downloadService.start(pluginDepKey(plugin.id), dependencies);
+            if (dependencies.length) await downloadService.start(pluginDepKey(plugin.id), dependencies);
+            // No repaint here: start() emits download:started synchronously and that
+            // handler owns the one sig-guarded rebuild (adding a second one here is the
+            // start-of-download flash again).
         }
 
         function _uninstallPlugin(plugin) {
@@ -1390,7 +1447,15 @@ export const MpiModelManager = ComponentFactory.create({
         _unsubs.push(Events.on('download:started', () => { _pumpBackstop(); }));
         _unsubs.push(Events.on('download:snapshot', () => { _pumpBackstop(); }));
 
-        _unsubs.push(Events.on('download:started', ({ modelId }) => { _patchTile(modelId); }));
+        _unsubs.push(Events.on('download:started', ({ modelId }) => {
+            _patchTile(modelId);
+            // MPI-579 — a plugin row's install state rides on the jobs of EVERY key it
+            // installs under (its own deps, and any MODEL it requires), and _patchTile
+            // only knows model tiles. Rebuild — sig-guarded, so exactly once — when the
+            // job that started belongs to a plugin, or that row keeps offering an
+            // Install that would queue a second copy of the download already running.
+            if (PLUGINS.some(p => _pluginInstallKeys(p).includes(modelId))) renderList();
+        }));
 
         _unsubs.push(Events.on('download:installing', ({ modelId }) => { _patchTile(modelId); }));
 

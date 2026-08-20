@@ -18,8 +18,10 @@
  * block. Nothing moves into a shared stylesheet.
  */
 
-import { ce, on } from './dom.js';
+import { ce, on, qs } from './dom.js';
 import { MpiRadioGroup } from '../components/Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { MpiProgressBar } from '../components/Primitives/MpiProgressBar/MpiProgressBar.js';
+import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
 import { clientLogger } from '../services/clientLogger.js';
 
 /**
@@ -202,33 +204,62 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
         }));
         wrap.appendChild(inp);
     } else if (f.type === 'slider') {
-        const rng = ce('input', { type: 'range', className: cls('field-range') });
-        rng.min = String(f.min ?? 0);
-        rng.max = String(f.max ?? 100);
-        if (f.step != null) rng.step = String(f.step);
-        rng.value = String(fieldNumber(cur ?? f.min ?? 0, f));
+        // MpiProgressBar IS the app's slider — its own header says so: "Absorbs all
+        // MpiSlider capabilities — this is the single source of truth for sliders."
+        // This branch used to build a bare `<input type="range">`, which renders
+        // Chromium's NATIVE widget: wrong rail, wrong thumb, a colour that matched
+        // nothing else on screen, and the same control drawn four different ways
+        // across the app. Every UI element is a component; where none fits, a new
+        // one gets made. The host keeps `field-range` so each block's existing
+        // flex sizing still applies (MPI-582).
+        const value = fieldNumber(cur ?? f.min ?? 0, f);
+        const host = ce('div', { className: cls('field-range') });
+        const inst = MpiProgressBar.mount(host, {
+            min: f.min ?? 0,
+            max: f.max ?? 100,
+            step: f.step ?? 1,
+            value,
+            interactive: true,
+            wheel: true,
+            handle: true,
+            info: `${f.label || f.id}: {value}`,
+        });
         // A slider with no readout is a guess. The number IS the control. It shows
         // the DECLARED value, never the mapped one — `mapTo` is hidden by design.
         const out = ce('span', { className: cls('field-value') });
-        out.textContent = rng.value;
-        unsubs.push(on(rng, 'input', () => {
-            out.textContent = rng.value;
-            onChange(Number(rng.value));
-        }));
-        // Range + readout share one line in BOTH layouts — the stacked column would
+        out.textContent = String(value);
+        inst.on('input', ({ value: v }) => {
+            out.textContent = String(v);
+            onChange(v);
+        });
+        unsubs.push(() => inst?.el?.destroy?.());
+        // Slider + readout share one line in BOTH layouts — the stacked column would
         // otherwise drop the number onto its own row.
         const bar = ce('div', { className: cls('field-slider') });
-        bar.appendChild(rng);
+        bar.appendChild(host);
         bar.appendChild(out);
         wrap.appendChild(bar);
     } else if (f.type === 'text') {
+        // MpiInput is the app's text box — the same Primitive MpiPromptBox, the
+        // notes editor and the error dialog all mount, so a declared prompt looks
+        // like every other prompt instead of like a raw browser field. `rows` is
+        // set on the textarea after mount (MpiPromptBox reaches in the same way);
+        // MpiInput owns the rest of the chrome.
         const multi = Number(f.rows) > 1;
-        const inp = ce(multi ? 'textarea' : 'input', { className: cls('field-text') });
-        if (multi) inp.rows = Number(f.rows); else inp.type = 'text';
-        if (f.placeholder) inp.placeholder = f.placeholder;
-        inp.value = cur != null ? String(cur) : '';
-        unsubs.push(on(inp, 'input', () => onChange(inp.value)));
-        wrap.appendChild(inp);
+        const host = ce('div');
+        host.style.width = '100%';
+        const inst = MpiInput.mount(host, {
+            type: multi ? 'textarea' : 'text',
+            placeholder: f.placeholder || '',
+            value: cur != null ? String(cur) : '',
+        });
+        if (multi) {
+            const ta = qs('textarea', inst.el);
+            if (ta) ta.rows = Number(f.rows);
+        }
+        inst.on('input', ({ value }) => onChange(value));
+        unsubs.push(() => inst?.el?.destroy?.());
+        wrap.appendChild(host);
     } else {
         clientLogger.warn('declaredFields', `unknown field type "${f.type}" — skipping`);
         return null;

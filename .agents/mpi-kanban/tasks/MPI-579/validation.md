@@ -310,4 +310,96 @@ Consequences for the UI, to settle before Phase 6 is designed around them:
 3. The `MpiClearVram` node runs before save, not before the sampler, so a resident
    app-side model is not unloaded by this graph.
 
-## Phase 6 — not started
+## The Library row — PASS (2026-08-20)
+
+`_pluginTile` sized and installed from `plugin.requiredDeps` alone. The plugin
+correctly declares `requiredModels: ['ltx-23-balanced']` and no deps of its own, so a
+user without LTX 2.3 Balanced was shown **`Install ()`** on a button that then called
+`downloadService.start` with an empty list and returned: a dead row, and the only path
+by which that user could ever get the dropdown entry.
+
+Fixed by porting `MpiFlowLibrary`'s aggregation (`_installKeys` / `_installMissing` /
+`_installProgress`, MPI-304) — a Flow and a plugin both require MODELS they do not own,
+so they aggregate identically. In `MpiModelManager.js`:
+
+- `_pluginInstallKeys(plugin)` — one key per required MODEL plus, when the plugin owns
+  deps, `plugin:<id>`. Size, busy state and install iterate this one list.
+- `_pluginGb(plugin)` — own deps ∪ every required model's `resolveFullUniverse`,
+  **deduped by dep id** (two models can name one weight), summed through `sizeToGb`.
+- `_pluginJobs(plugin)` — the live (non-terminal) jobs across those keys; `busy` and the
+  Queued/Installing… label now read from all of them, not just the plugin's own key.
+- `_installPlugin` — each missing model installs through the shared model flow
+  (`getModelDependencies` → `downloadService.start(modelId, deps)`), then the plugin's own
+  deps under `pluginDepKey` exactly as before.
+- **Uninstall is now gated on the plugin owning deps.** A plugin that runs entirely on a
+  model has nothing to free — those weights are the model's, and the Model Library is
+  where they come off. The button was dead anyway (`_uninstallPlugin` returns on an empty
+  list) and read as an offer to remove LTX 2.3 Balanced.
+- `_listSignature` sigs **every** install key, not just `plugin:<id>`, and
+  `download:started` triggers the one sig-guarded rebuild when the job that started
+  belongs to a plugin. Without both, installing LTX from its own model tile left the row
+  reading `Install (39.0GB)` — and clicking it would have queued a second copy of the
+  download already running.
+
+**Measured in the live app** (own `app:isolated` instance, port 57009, real DOM):
+
+| row | meta | actions |
+|---|---|---|
+| Image Describer | `4.9GB` | Installed + Uninstall |
+| LTX Video upscaler | `39.0GB` | Installed *(no Uninstall — owns no deps)* |
+
+39.0GB = the 14-dep LTX 2.3 Balanced universe (int8 transformer 20.03GB, gemma clip
+8.8GB, merged LoRA 3.6GB, text projection 2.15GB, video VAE 1.35GB, spatial upscaler
+949.62MB, talkvid 1.08GB, audio VAE 347.95MB, transition 372.15MB, foley 216.21MB,
+taehv 22.44MB, + 3 node packs). `getModelDependencies('ltx-23-balanced')` returns those
+same 14 — the exact list the Install button hands to `downloadService.start`.
+
+Image Describer's meta reads `4.9GB` where it used to read `4.88 GB`: one number in the
+Flow Library's `(X.XGB)` shape, because a row that must sum a model's universe cannot
+keep joining raw dep strings with ` + `.
+
+630/630 tests pass; ESLint clean on the file.
+
+## Phase 6 — mechanics verified in the app, Fabio's eyes pending (2026-08-20)
+
+Own instance, `npm run app:isolated` → `READY http://127.0.0.1:57009` (`:3000` left
+alone — the launcher said so itself). The first launch of the session exited 0 with a
+splash `ERR_FAILED -2`, the previous session's instance still tearing down; the
+immediate relaunch came up clean. Not a bug — the collision signature in memory
+`tool_electron_launch_run_as_node`.
+
+Probed live in the running renderer:
+
+- `pluginAvailability('ltx-video-upscaler')` → `{ installed: true, missing: [],
+  missingModels: [] }` — LTX 2.3 Balanced is on this machine, so the entry is offered.
+- `upscalePluginsFor('video')` → `['ltx-video-upscaler']`;
+  `upscalePluginsFor('image')` → `[]`. **The `kinds` gate holds: video only.**
+- The three declared fields are exactly the spec — prompt (text, default `''`), Denoise
+  (slider 0–1, default 0.5), Prompt strength (slider 0–1, default 0).
+- `splitDeclaredValues` at the defaults → `inputs { positive: '' }`,
+  `injectionParams { Input_Denoise: 0.675, Input_Prompt_Strength: 1 }`. Both sliders at
+  1 → `0.85` / `3`. **The 0–1 UI lands on MPI-568's sigma and cfg, and the routing law
+  holds** (bare id → run input, `Input_` → injectionParams).
+
+**PASS - Fabio, 2026-08-20: "The upscale was successful in the History Workspace."**
+He drove it himself in the running instance: the entry is in the video dropdown, selecting
+it revealed the prompt and both controls, and a real upscale ran. Card scope is closed.
+
+**One defect found by his eye, and it is NOT this card's.** The two sliders render as
+Chromium's NATIVE range widget tinted `accent-color: var(--accent-frost)` - wrong geometry,
+wrong thumb, wrong colour beside every other slider in the app. Cause: `buildField`
+(`js/utils/declaredFields.js`) hand-rolls a bare `<input type="range">` instead of mounting
+`MpiProgressBar`, whose own docstring reads *"Absorbs all MpiSlider capabilities - this is
+the single source of truth for sliders"*. Five of its seven field types do the same
+(`select`/`toggle`/`text`/`number`/`slider`), and `MpiBaseFlow.css:501` carries the identical
+line, so every Flow's sliders look this way too. Introduced 2026-08-14 (`55461326`,
+*"declared controls, so a Flow needs no JS component"*) and multiplied by MPI-580's
+extraction (`0a18c242`).
+
+Fabio's law, stated 2026-08-20: **every single UI element in the app is a component; if
+nothing covers the use, a new component is created. Flows are no exception.** The docs
+currently say the opposite, which is why agents keep putting foreign controls into Flows.
+
+**Carded as MPI-582** at his instruction, to be run in its own session. Not folded into this
+card: it is the surface MPI-579 shipped onto, not MPI-579's work, and it reaches every Flow.
+

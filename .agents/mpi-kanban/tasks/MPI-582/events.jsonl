@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-582", "type": "task.created", "at": "2026-08-20T01:20:00Z", "actor": "claude", "summary": "Every UI element must be a component - buildField hand-rolls 5 of 7 field types; the add-flow docs say a Flow needs no component. Surfaced by MPI-579"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-582", "type": "task.updated", "at": "2026-08-20T01:55:00Z", "actor": "claude", "summary": "slider -> MpiProgressBar and text -> MpiInput shipped at Fabio's request; select/toggle/number, the longhand sweep, the Flow audit and the doc fix remain"}

@@ -20,10 +20,25 @@ orientation found something it could not know.
 the `ltxSigmas` injector and the PluginDef are wired. Evidence for every phase is in
 `validation.md`.
 
-**Next action: `_pluginTile`'s Install button** (`MpiModelManager.js:1152`), which sizes
-and installs from `requiredDeps` alone and now renders `Install ()` for a user without
-LTX 2.3 Balanced. Port the Flow Library's `_installKeys` / `_installMissing` /
-`_installProgress` (`MpiFlowLibrary.js:118-175`). Then Phase 6, the user-ux check.
+**The Library row is DONE (2026-08-20).** `_pluginTile` aggregated over `requiredDeps`
+alone and rendered `Install ()`; it now sizes, installs and reports progress over every
+key the plugin installs under — `requiredModels` ∪ its own deps — ported from
+`MpiFlowLibrary`'s `_installKeys` / `_installMissing` / `_installProgress`. Measured live:
+the row reads **39.0GB / Installed**, and Uninstall is gated on the plugin owning deps
+(a plugin that runs on a MODEL has nothing of its own to free). 630/630, ESLint clean.
+Evidence: `validation.md` § The Library row.
+
+**Phase 6 PASSED (2026-08-20).** Fabio: *"The upscale was successful in the History Workspace."* Every phase of this card is green; what is left is close-out (`mpi-end-session`), which also closes MPI-580 and MPI-568.
+
+**His eye caught a defect that is NOT this card's** and it is now MPI-582: the declared-field renderer hand-rolled bare inputs, so the two sliders drew as Chromium's native range widget. At his instruction the SLIDER and TEXT branches were fixed in this session - `buildField` mounts `MpiProgressBar` and `MpiInput` - and he confirmed the result on screen. The rest of MPI-582 (select/toggle/number, the longhand range sweep, the Flow audit, the doc fix) is his next session.
+
+**(superseded) Next action was: Phase 6 is with FABIO.** Everything machine-checkable passed in my own
+`app:isolated` instance (`READY http://127.0.0.1:57009`, `:3000` untouched):
+`upscalePluginsFor('video')` returns the plugin and `('image')` returns nothing, the three
+declared fields are exactly the spec, and the defaults split to
+`Input_Denoise 0.675` / `Input_Prompt_Strength 1`. What is left is his eyes on the
+History video workspace — the dropdown entry, the controls revealing, Upscale Factor
+hiding, and one real upscale with its audio.
 
 Two things NOT to redo, both expensive to relearn: the GC declaration (`validation.md`
 § RESOLVED — listing the tier's weights breaks MPI-258 B1, and the obvious cure is the
