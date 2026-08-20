@@ -1,8 +1,8 @@
 {
   "id": "8c903c85-8d5e-4c32-82d9-491dd4cd89e3",
   "revision": 0,
-  "last_node_id": 772,
-  "last_link_id": 1576,
+  "last_node_id": 773,
+  "last_link_id": 1577,
   "nodes": [
     {
       "id": 136,
@@ -5556,7 +5556,7 @@
           "name": "filtered_SEGS",
           "type": "SEGS",
           "links": [
-            1535
+            1577
           ]
         },
         {
@@ -5565,7 +5565,7 @@
           "links": []
         }
       ],
-      "title": "smallest face = the front body head",
+      "title": "drop the portrait (the largest face)",
       "properties": {
         "Node name for S&R": "ImpactSEGSOrderedFilter",
         "cnr_id": "comfyui-impact-pack",
@@ -5573,9 +5573,9 @@
       },
       "widgets_values": [
         "area(=w*h)",
-        false,
-        0,
-        1
+        true,
+        1,
+        999
       ]
     },
     {
@@ -7148,6 +7148,54 @@
       "widgets_values": [
         1
       ]
+    },
+    {
+      "id": 773,
+      "type": "ImpactSEGSOrderedFilter",
+      "pos": [
+        727.5288426235065,
+        4215.357714150404
+      ],
+      "size": [
+        320,
+        150
+      ],
+      "flags": {},
+      "order": 91,
+      "mode": 0,
+      "title": "the frontal body head, not the rear",
+      "inputs": [
+        {
+          "name": "segs",
+          "type": "SEGS",
+          "link": 1577
+        }
+      ],
+      "outputs": [
+        {
+          "name": "filtered_SEGS",
+          "type": "SEGS",
+          "links": [
+            1535
+          ]
+        },
+        {
+          "name": "remained_SEGS",
+          "type": "SEGS",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImpactSEGSOrderedFilter",
+        "cnr_id": "comfyui-impact-pack",
+        "ver": "8.22.0"
+      },
+      "widgets_values": [
+        "confidence",
+        true,
+        0,
+        1
+      ]
     }
   ],
   "links": [
@@ -8369,7 +8417,7 @@
     ],
     [
       1535,
-      747,
+      773,
       0,
       748,
       0,
@@ -8638,6 +8686,14 @@
       772,
       5,
       "INT"
+    ],
+    [
+      1577,
+      747,
+      0,
+      773,
+      0,
+      "SEGS"
     ]
   ],
   "groups": [
