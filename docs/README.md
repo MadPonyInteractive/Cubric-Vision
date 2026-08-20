@@ -76,6 +76,7 @@ NOT mechanically split these):
 | **Per-component behavioral contracts** (PromptBox, MpiToast, MpiPopup, MpiInput, …) | [component-contracts.md](component-contracts.md) |
 | **Video player** (frame-accurate hybrid: `<video>` plays / mediabunny canvas owns paused-step; color matrix rule; frame-index coordinate law; sub-range loop) | [video-player.md](video-player.md) |
 | Flows (Flow Library + Flow overlays; add-a-flow procedure) | [playbooks/add-flow/README.md](playbooks/add-flow/README.md) |
+| **Plugins** (the third entity; `requiredDeps` vs `requiredModels`, the unconditional GC protection, Upscale-dropdown entries, the Library row) | [plugins.md](plugins.md) |
 
 ### ComfyUI / generation
 | Topic | Doc |

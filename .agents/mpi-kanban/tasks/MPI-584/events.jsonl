@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-584", "type": "task.created", "at": "2026-08-20T03:00:00Z", "actor": "claude", "summary": "Video upscale ships twice - the plugin landed in MPI-579, the Flow Library half is this card. Reuses the existing workflow, op and injector; /mpi-add-flow, not /mpi-add-model."}

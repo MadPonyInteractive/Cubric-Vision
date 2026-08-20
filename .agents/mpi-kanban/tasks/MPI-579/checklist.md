@@ -16,3 +16,8 @@ Phase 0 + Phase 1 closed 2026-08-19T23:58:00Z - evidence in validation.md.
 The Library row closed 2026-08-20T01:05:00Z - evidence in validation.md. Phase 6 machine-checkable half verified the same run; the visual half is Fabio's.
 
 Phase 6 PASSED 2026-08-20 - Fabio ran the upscale in the History workspace. Slider RENDERING defect he spotted is carded as MPI-582 (every UI element must be a component), deliberately not folded in here.
+
+CLOSED 2026-08-20 - every item green. `npm test` 630/630, `release:check` green after
+fixing an `operation_registry.json` mirror that was missing `universal: true`, claim
+auditor 10/10 PROVEN. MPI-580 and MPI-568 closed alongside; the Flow half of video
+upscale is MPI-584.

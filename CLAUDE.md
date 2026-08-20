@@ -98,6 +98,7 @@ it turned off before staging weights to R2.
 | Composite (the two front ends, the SCRATCH cut, the inverted brush meaning, cover-fit on client AND server, pasted slots) | `docs/composite.md` |
 | Crop (resolution types, cropping past the image edge, snapping, pad-then-extract) | `docs/crop.md` |
 | Model Library UI (install-state display, tile patching, featured) | `docs/model-library.md` |
+| **Plugins** — the THIRD entity beside models and Flows (`pluginsRegistry.js`, dropdown entries, the plugin Library row). **`requiredDeps` = what it OWNS, `requiredModels` = what it RUNS ON** — listing a model's weights as deps was tried and reverted, and the obvious cure is the gate that destroyed 5.24GB | `docs/plugins.md` |
 | Events & cross-component communication | `.claude/rules/events.md` |
 | Application state | `.claude/rules/state.md` |
 | Workspaces / routing / dev component gallery | `.claude/rules/workspaces.md` |

@@ -403,3 +403,50 @@ currently say the opposite, which is why agents keep putting foreign controls in
 **Carded as MPI-582** at his instruction, to be run in its own session. Not folded into this
 card: it is the surface MPI-579 shipped onto, not MPI-579's work, and it reaches every Flow.
 
+
+## Close-out — 2026-08-20
+
+**Card CLOSED. MPI-580 and MPI-568 closed with it**; the Flow half of the same
+capability is split out to **MPI-584**, at Fabio's instruction, for its own session.
+
+| gate | result |
+|---|---|
+| `npm test` | **630/630 pass**, 0 fail |
+| `npm run release:check` | **FAILED, then fixed** — see below |
+| `validate_board.py` | passed |
+| `scripts/overtaken-cards.py` | 0 candidates |
+| claim auditor (10 claims) | **10/10 PROVEN**, 0 FALSE |
+
+### `release:check` caught drift this card shipped
+
+`operation_registry.json entry ltxVideoUpscale must include universal: true`. The op
+was stamped `universal: true` in `commandRegistry.js` and mapped in
+`UNIVERSAL_WORKFLOWS`, but the JSON mirror carried only `latestVersion` +
+`appVersionIntroduced`. Landed in `0b42e4af` and survived every test — the suite does
+not gate the mirror, only `release:check` does. Added and re-run: **passes**.
+
+### The claim auditor's two useful returns
+
+- **"No GC guard was touched" is PROVEN, precisely.** `git show <sha> -- routes/downloadManager.js`
+  is EMPTY for all three commits (`0a18c242`, `0b42e4af`, `e81a1e9a`). Neither
+  circularity can have been reintroduced.
+- **The 23-vs-29 node discrepancy is not a discrepancy.** Both numbers are right about
+  different graphs: the bench builder emits **23** (`VHS_LoadVideo`, no audio), the
+  shipped `comfy_workflows/ltx_video_upscale.json` is **29** (`MpiLoadVideo`/`MpiSaveVideo`
+  plus the AV-latent chain). The Phase 0 "correction" above was comparing the two.
+
+### Knowledge healed
+
+The plugin entity had **zero** coverage in `docs/` and `.claude/rules/` — MPI-580 built
+the mechanism, this card consumed it, and nothing routed to it. Written up as
+**`docs/plugins.md`** (the two laws, availability, the dropdown contribution, the
+Library-row aggregation), with a map row in `docs/README.md` and a Context Router row
+in `CLAUDE.md`. The user-facing feature is in `docs/releases/UNRELEASED.md` § What's new
+(v1.4.2 is Latest, so `releaseNotes.js` would have been archival).
+
+### Still open, and now owned by MPI-584
+
+The VRAM ceiling. Nothing caps frames or resolution; graph cost grows with frame count
+(12752 MB @ 25 → 14721 MB @ 73 on a 16380 MB card). Phase 5 above has the numbers. A
+Flow is the surface where a cap would be most visible to a beginner, so the decision
+travels with that card rather than staying uncarded.

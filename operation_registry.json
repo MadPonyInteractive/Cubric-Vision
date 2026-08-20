@@ -100,7 +100,8 @@
   },
   "ltxVideoUpscale": {
     "latestVersion": "1.0",
-    "appVersionIntroduced": "1.5.0"
+    "appVersionIntroduced": "1.5.0",
+    "universal": true
   },
   "removeBackground": {
     "latestVersion": "1.0",

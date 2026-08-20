@@ -32,6 +32,17 @@ _(none yet)_
 
 ## What's new
 
+- Videos can be upscaled with LTX, sound and all. The Upscale tool in the History workspace
+  has a new option on video — "LTX Video upscaler" — which doubles a clip's resolution using
+  the LTX 2.3 Balanced model, and the audio track comes through untouched. Two controls come
+  with it: Denoise, how freely it may repaint detail, and Prompt strength, how hard an
+  optional prompt steers it. The prompt starts empty on purpose, and for most clips that is
+  the right setting — describing skin or texture tends to make the model add what you named
+  rather than sharpen what is there. It appears in the Library as its own row and installs
+  LTX 2.3 Balanced for you if you do not have it; it downloads no weights of its own, so if
+  you already run LTX there is nothing to install. Video only, and a long or large clip can
+  still exhaust graphics memory — a short clip is the safe first try.
+
 - Head Swap boxes can now leave the picture, and grow past it. The square you draw around a
   head may sit beyond the image edge and stretch up to the picture's longest side, so a head
   near a border — or tall hair, or a neck tattoo — can be taken in without the box swallowing
