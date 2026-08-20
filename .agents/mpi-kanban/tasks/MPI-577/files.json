@@ -1,0 +1,6 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    ".claude/hooks/handoff-index-drift.py"
+  ]
+}

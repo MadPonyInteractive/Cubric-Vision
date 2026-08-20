@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "b93cafd2-9d66-4a0e-94b9-4b41da9604e6",
+  "paths": [
+    ".claude/hooks/handoff-index-drift.py",
+    ".agents/mpi-kanban/tasks/MPI-577/**"
+  ],
+  "status": "complete",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/0545bed0-917a-4493-b8c4-dee39412b877.json",
+  "task_card": "MPI-577",
+  "heartbeat_at": "2026-08-20T17:20:00Z",
+  "created_at": "2026-08-20T17:05:00Z",
+  "completed_at": "2026-08-20T17:20:00Z"
+}
