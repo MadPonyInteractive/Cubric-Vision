@@ -836,6 +836,41 @@ longer exists, so each resolves to a deletion, not a re-wire:
 
 ## Plan Drift
 
+**2026-08-20, session 8 — BOTH open decisions are ANSWERED. Neither is open any more.**
+
+**(1) The 1k/2k control SHIPPED as option 1, the switch bank.** Fabio: "MpiAnySwitch sounds
+good because the next workflow for creating props and animals will need four different
+resolutions." So the banks are built at `any_1..any_5`, not as a boolean — MPI-586 gets four
+arms off the same shape with no second answer. In `raw/flow_character_sheet.json`: `676`/`677`
+retitled `W_1k` (1280) / `H_1k` (**800**, was 768), new `768 W_2k` (1792), `769 H_2k` (1120),
+`770 Input_Quality` (MpiInt, 1), `771 Width_Select` + `772 Height_Select` (MpiAnySwitch) feeding
+`Set_W`/`Set_H`. Converted 96 → **101 nodes**, `validate-injection-rules` clean, raw committed by
+`sync-raw-workflows.mjs` as `70dc98cb`. FlowDef gained an `Input_Quality` `radio` (columns 2,
+default 1). The portable half is now a doc: [ui/switch-bank-fields.md](../../../docs/playbooks/add-flow/ui/switch-bank-fields.md).
+Retitling `Input_Width`/`Input_Height` is free here — `smoke-workflows.mjs` snaps those titles
+down for a smoke run, but its own comment (line 1068) says **no `flow_*.json` is ever reachable
+by its matrix**, so the snap never applied to this graph.
+
+**(2) The other four FLUX ratio rows: DECLINED, and the earlier recommendation was WRONG.**
+Fabio pushed back — "if the resolutions we have for Flux are indeed the best image-producing
+ones and we are now changing them to something else, then we are changing a commodity for a
+worse output" — and asked for the investigation. It confirms him: **eight of the nine
+`FLUX_RATIOS` values are exact entries in SDXL's 40-pair training-bucket list** (SDXL paper
+Appendix I, all ÷64, all ≈1024²), including the `1280×768` / `768×1280` pair that was corrected.
+The LABELS were fitted to the buckets afterwards, which is the whole reason 3:4 is really 7:9.
+`SDXL_RATIOS` is a different hand-pick from the same list, which is what proves the provenance.
+Worse, the proposed "fixes" all leave the bucket set and **`1280×720` is not even ÷32**, which
+[BFL's own FLUX API](https://docs.bfl.ai/api-reference/tasks/generate-an-image-with-flux1-%5Bdev%5D)
+requires (÷32, 256–1440). The 8:5 pair KEEPS `1280×800` — Fabio's call once the provenance was
+known — because it is the one row where the bucket bought nothing (5:3 is not a shape anyone
+asks for) and 1280×800 is ÷32-clean at 1.02 MP. Recorded in the `ratios.js` comment so this
+cannot be re-opened as a "bug".
+
+**The one thing the investigation does NOT establish:** the buckets are SDXL's, and this table
+feeds flux, chroma, klein and krea2 — none of them SDXL. Nobody has measured whether a bucket
+value beats a non-bucket one on any of those four. Both the labels and the pixels rest on an
+unmeasured assumption; the pixels simply have the better provenance.
+
 **2026-08-20 — `requiredDeps: ['face-yolov8n']` is WRONG and was dropped.** `## The flow` declared
 it "the way head-swap declares its LoRA". The analogy fails: `getUniversalWorkflowDepIds()`
 (`routes/shared.js:704`) returns **every `type:'custom_nodes'` dep PLUS every `engineAsset:true`

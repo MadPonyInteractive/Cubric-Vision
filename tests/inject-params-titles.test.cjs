@@ -239,10 +239,14 @@ test('the LTX upscale Flow + plugin carry their I/O and control titles (MPI-579/
 test('the Character Sheet Flow carries its I/O and declared control titles (MPI-504)', () => {
     // flowCharacterSheet runs flow_character_sheet.json with model:{id:null} on the
     // installed krea2 + klein-4b weights. It declares NO media at all, so the pinned
-    // set is the prompt/seed titles the injector always writes plus THREE declared
+    // set is the prompt/seed titles the injector always writes plus FOUR declared
     // controls — and a declared control whose node is missing is the worst silent skip
     // there is: the dropdown opens, the toggle flips, the run succeeds, and what the
     // user chose is the graph's baked default.
+    //
+    // `input_quality` is the one that cannot be caught any other way: it selects TWO
+    // MpiAnySwitch banks rather than driving a widget, so losing it does not break the
+    // graph — it silently pins the sheet at the 1k arm whatever the user picked.
     //
     // `input_positive` is pinned twice over: it is both the injector's always-written
     // prompt title AND the `to` of the flow's enhance pair, so the enhanced phrase and
@@ -251,7 +255,7 @@ test('the Character Sheet Flow carries its I/O and declared control titles (MPI-
     const have = titlesOf(file);
     for (const title of [
         'input_positive', 'input_negative', 'input_seed',
-        'input_recipe', 'input_is_turbo', 'input_remove_head',
+        'input_recipe', 'input_quality', 'input_is_turbo', 'input_remove_head',
     ]) {
         assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
     }

@@ -41,10 +41,18 @@ export const FLUX_RATIOS = {
         // Old cards are unaffected: `nearestNamedRatio` matches against CROP_RATIOS
         // (pure aspects), and 1280×768 still resolves to "8:5" as its nearest name.
         //
-        // The OTHER four rows here are still nominal — 3:4 is 7:9 (3.7% off), 4:3 is
-        // 9:7, 4:5 is 14:17, 9:16 is 4:7 (1.6%). Every one of them has an exact
-        // ÷16-clean value in the same ~1 MP class (864×1152 · 896×1120 · 720×1280), so
-        // this is a decision not to fix them yet, not a constraint.
+        // THE OTHER SEVEN ROWS ARE NOMINAL ON PURPOSE — do NOT "fix" them. Traced
+        // 2026-08-20 (MPI-504): every value in this table except this pair is an exact
+        // entry in SDXL's 40-pair training-bucket list (SDXL paper, Appendix I — all
+        // ÷64, all ≈1024²), and the LABELS were fitted to those pixels afterwards. That
+        // is the whole reason 3:4 is really 7:9, 4:5 is 14:17 and 16:9 is 7:4.
+        // `SDXL_RATIOS` below is a DIFFERENT hand-pick from the same list, which is what
+        // confirms the provenance. Truthful replacements do exist (864×1152 · 896×1120 ·
+        // 1280×720) but every one leaves the bucket set, and 1280×720 is not even ÷32 —
+        // which Black Forest Labs' own FLUX API requires (docs.bfl.ai: ÷32, 256–1440).
+        // This pair was the one row where the bucket bought nothing: 5:3 is not a shape
+        // anyone asks for, and 1280×800 is ÷32-clean at 1.02 MP. Fabio's call, twice —
+        // once for the fix, once to decline the other rows once the provenance was known.
         { label: "8:5", w: 1280, h: 800, icon: "rect_8_5" },
         { label: "16:9", w: 1344, h: 768, icon: "rect_16_9" }
     ]

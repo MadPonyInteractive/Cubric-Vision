@@ -488,11 +488,11 @@
     "inputs": {
       "batch_size": 1,
       "width": [
-        "676",
+        "771",
         0
       ],
       "height": [
-        "677",
+        "772",
         0
       ]
     },
@@ -658,16 +658,16 @@
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Input_Width"
+      "title": "W_1k"
     }
   },
   "677": {
     "inputs": {
-      "int": 768
+      "int": 800
     },
     "class_type": "MpiInt",
     "_meta": {
-      "title": "Input_Height"
+      "title": "H_1k"
     }
   },
   "680": {
@@ -1519,11 +1519,11 @@
     "inputs": {
       "value": 0,
       "width": [
-        "676",
+        "771",
         0
       ],
       "height": [
-        "677",
+        "772",
         0
       ]
     },
@@ -1588,6 +1588,73 @@
     "class_type": "MpiBlocker",
     "_meta": {
       "title": "Mpi Blocker"
+    }
+  },
+  "768": {
+    "inputs": {
+      "int": 1792
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "W_2k"
+    }
+  },
+  "769": {
+    "inputs": {
+      "int": 1120
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "H_2k"
+    }
+  },
+  "770": {
+    "inputs": {
+      "int": 1
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Quality"
+    }
+  },
+  "771": {
+    "inputs": {
+      "any_1": [
+        "676",
+        0
+      ],
+      "any_2": [
+        "768",
+        0
+      ],
+      "select": [
+        "770",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Width_Select"
+    }
+  },
+  "772": {
+    "inputs": {
+      "any_1": [
+        "677",
+        0
+      ],
+      "any_2": [
+        "769",
+        0
+      ],
+      "select": [
+        "770",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Height_Select"
     }
   }
 }

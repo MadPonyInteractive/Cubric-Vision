@@ -105,6 +105,13 @@ id-routing table:
 examples: [existing-flows/ltx-extend.md](existing-flows/ltx-extend.md) (run slide),
 [existing-flows/head-swap.md](existing-flows/head-swap.md) (a `radio` + two step `param` binds).
 
+**One field emits ONE value into ONE param** (`mapTo` is a linear range map, not a fan-out).
+A control that means two or more graph values — a resolution is width AND height — is
+expressed in the GRAPH, by one `MpiInt` selecting `MpiAnySwitch` banks:
+[ui/switch-bank-fields.md](ui/switch-bank-fields.md). Zero app code, and the selector title
+must be pinned in `tests/inject-params-titles.test.cjs` or a lost switch silently pins every
+run to `any_1`.
+
 **A step may also bind its gizmo to a graph param**: `{ kind:'box', role:'image1', param:'box1' }`.
 The flow declares WHICH role feeds WHICH node — that stays flow knowledge — while the shape the
 graph wants belongs to the step KIND (`stepValueToParam`, `stepKinds.js`). That pair replaced the

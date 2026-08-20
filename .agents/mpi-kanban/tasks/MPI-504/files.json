@@ -20,6 +20,10 @@
     "js/data/modelConstants/universal_workflows.js",
     "js/data/flowsRegistry.js",
     "tests/inject-params-titles.test.cjs",
-    "comfy_workflows/raw/qwen3vl_4b_prompt_enhancer.json"
+    "comfy_workflows/raw/qwen3vl_4b_prompt_enhancer.json",
+    "js/utils/ratios.js",
+    "docs/playbooks/add-flow/01-descriptor-and-ops.md",
+    "docs/playbooks/add-flow/ui/README.md",
+    "docs/playbooks/add-flow/ui/switch-bank-fields.md"
   ]
 }

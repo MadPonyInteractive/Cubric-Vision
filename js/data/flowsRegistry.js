@@ -625,6 +625,32 @@ export const FLOWS = [
                 ],
             },
             {
+                // The output size, 1-indexed into the graph's TWO `MpiAnySwitch` banks
+                // (`Width_Select` / `Height_Select`, both selected by `Input_Quality`).
+                // A declared field emits exactly ONE value into ONE param and `mapTo` is
+                // a linear range map, so a resolution can never be one field driving a
+                // width node and a height node — the switch bank is the answer, and it
+                // is the pattern `Input_Recipe` already uses three nodes away. The banks
+                // carry `any_1..any_5` rather than a boolean because MPI-586's Prop Sheet
+                // needs FOUR arms off this same shape.
+                //
+                // Both values are TRUE 8:5 and ÷32-clean — 1280×800 is `FLUX_RATIOS`' 8:5
+                // row (corrected this card) and 1792×1120 is `KREA2_RATIOS['2k']`'s, which
+                // was exact all along. Krea2's time scales LINEARLY in pixels
+                // (`docs/models/krea2/resolution.md`), so 1.96× the pixels is ~2× the wait,
+                // not the 4× an attention-cost intuition predicts.
+                //
+                // 1K is the default: three panels across 1280 is ~426 px of face each —
+                // enough to judge the sheet, cheap enough to iterate. 2K is for the keeper.
+                id: 'Input_Quality', type: 'radio', label: 'Quality', columns: 2, default: 1,
+                options: [
+                    { v: 1, label: '1K', note: '1280 × 800',
+                      info: 'Baseline. ~426 px per panel — enough to judge pose, wardrobe and face before committing.' },
+                    { v: 2, label: '2K', note: '1792 × 1120 · ~2× time',
+                      info: '~2× the time for 1.96× the pixels — ~597 px per panel. For the sheet you are keeping.' },
+                ],
+            },
+            {
                 id: 'Input_is_Turbo', type: 'toggle', label: 'Turbo', default: false,
                 // The krea2 accelerator LoRA. OFF by default: a sheet is a keystone
                 // asset every later shot inherits, so it is the wrong place to trade
