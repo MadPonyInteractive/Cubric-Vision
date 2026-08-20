@@ -37,6 +37,7 @@ NOT mechanically split these):
 - `versioning.md` — coherent single-subject contract (APP/SCHEMA/COMFY versioning + op registry)
 - `preview-bus.md` — coherent single-subject contract (the whole latent-preview path: bus, attribution, the one shared consumer, blob ownership). Its decoder half WAS split out to `preview-decoders.md` (MPI-571); what is left is one contract and splitting it further would scatter "who paints this frame, and who frees it" across files.
 - `toasts.md` — coherent single-subject contract (the full toast/notification call-site map: `ui:*`, `StatusBar.notify`, `notificationService`, the sound model, and which events must NOT toast). Splitting it would scatter "does this fire a toast?" across files, which is the one question the doc exists to answer in one place.
+- `playbooks/add-flow/06-preview-image.md` — coherent single-subject contract, marginally over (a flow's preview media end to end: the two assets, their three placements, the art direction, and the ffmpeg/sharp build recipes). Splitting "which asset / what shape / how to build it" would mean nobody making one has the whole answer in front of them.
 - `models/ltx/audio-input.md` — research lab notebook (evidence log)
 - `playbooks/add-model/` — end-to-end procedure split into a README hub + numbered section files; the README carries the mandatory step ordering
 - `playbooks/bump-engine/` — same shape, plus `01-smoke-run.md` is an append-only fault log: one section per live run, and the value is that the classes repeat across them. Splitting it by run would hide exactly that.
