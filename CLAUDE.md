@@ -130,6 +130,7 @@ it turned off before staging weights to R2.
 | Bump the SHIPPED ComfyUI engine, or smoke-test models ("test all the models") | `/mpi-bump-engine` | `docs/playbooks/bump-engine/` (README hub + `01-smoke-run.md` + `02-local-upgrade.md`). **NOT `/mpi-bump-local-comfy`** (bench-only, never reaches a user). Smoke-only is valid with no bump — after a node bump or a new model |
 | Wire a NEW model end-to-end | `/mpi-add-model` | `docs/playbooks/add-model/` (README hub + `01`–`06`) — holds every known trap. Models are NOT version-bumped. A handoff or `docs/models/<model>/` doc ASSUMES the playbook — read both |
 | Wire a NEW Flow (dev-gated Flow-Library outcome flow — NOT a model) | `/mpi-add-flow` | `docs/playbooks/add-flow/` (README hub + `01`–`05`). Worked examples: Video Stitch, SDXL 4K, Image Regen |
+| Make a Flow's **graphics** — its 4/5 tile still + its wide autoplaying hero clip | `/mpi-flow-graphics` | `docs/playbooks/add-flow/06-preview-image.md`. Worked examples: Add Foley (waveform draws in sync), Head Swap (before/after wipe) |
 | Add or change a node in the first-party pack `ComfyUi-MpiNodes`, or the app pin drifted | `/mpi-nodes-sync` | The SIBLING repo owns the procedures — `c:\AI\Mpi\ComfyUi-MpiNodes\.claude\commands\` (`new-node.md`, `update-node.md`, `release.md`). They do NOT load in a Vision session (additionalDirectories grants files, not config), so READ the file and follow it inline; `/comfy-*` cannot be invoked. A node change ships only when **committed → pushed → pinned** in `dev_configs/node_lock.json`. The app engine is a **USER REPLICA** — it installs the pinned commit and drift-checks it like any other node, on a dev run too (the junction and the dev skip were both deleted; `.claude/rules/comfy_engine.md` § Engine Split). The symlink is on the standalone BENCH only. Registry release ONLY when the user explicitly asks |
 
 ---
@@ -153,6 +154,7 @@ Human-in-the-loop execution system, shipped as the **Mpi-Kanban plugin** (`/plug
 | `/mpi-brief-rule` | Return a rule file's Sub-Agent Briefing for dispatch |
 | `/mpi-add-model` | Wire a NEW model (enforces `docs/playbooks/add-model/`) |
 | `/mpi-add-flow` | Wire a NEW Flow (enforces `docs/playbooks/add-flow/`) |
+| `/mpi-flow-graphics` | Make a Flow's tile + hero (enforces `docs/playbooks/add-flow/06-preview-image.md`) |
 
 ---
 

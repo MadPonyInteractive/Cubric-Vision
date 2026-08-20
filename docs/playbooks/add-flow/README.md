@@ -40,7 +40,7 @@ model, image-in→image-out) are the other worked examples.
 | [03-storage-and-reuse.md](03-storage-and-reuse.md) | Flow input files → **`.preview-assets`** store (not the gallery); sidecar `flowId`/`flowInputs`; reuse routing |
 | [04-overlay-and-shell.md](04-overlay-and-shell.md) | `MpiBaseFlow` / `MpiFlowLibrary`; install progress; Ctrl+Enter runs the open flow; overlay z-order + the spared status bar; dev-gate |
 | [05-verify.md](05-verify.md) | Definition of Done — inject test, node --check, live run (video/audio/multi-output), reuse |
-| [06-preview-image.md](06-preview-image.md) | The flow's `preview` image — **ONE asset, THREE placements**; the 4/5 rule; plate (Krea2) → composite (`sharp`) → webp; when playwright/HyperFrames earn their keep |
+| [06-preview-image.md](06-preview-image.md) | The flow's graphics — the 4/5 tile still + the wide autoplaying hero clip; which device to use for which kind of change; the ffmpeg/`sharp` recipes and their silent traps. **Run `/mpi-flow-graphics`**, which enforces it |
 
 Two folders sit alongside the numbered sections:
 
