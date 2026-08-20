@@ -727,10 +727,13 @@ export const MpiBaseFlow = ComponentFactory.create({
         }
 
         /**
-         * Repaint every mounted enhance button. `--stale` means "the current prompt
-         * is not enhanced" — on the run slide the enhanced prompt is NOT SHOWN, so
-         * the button is the only place that can be said (plan.md § The prompt UI,
-         * rule 3). Same class on both surfaces: one signal, learned once.
+         * Repaint every mounted enhance button. STALE means "the current prompt is
+         * not enhanced" — on the run slide the enhanced prompt is NOT SHOWN, so the
+         * button is the only place that can be said (plan.md § The prompt UI, rule
+         * 3). Same signal on both surfaces: one thing, learned once.
+         *
+         * The button is an MpiButton, so its state is the primitive's own API and
+         * its own variants — no bespoke `--stale` class, no restated colours.
          */
         function _paintEnhance() {
             _enhanceDecls.forEach((d) => {
@@ -739,12 +742,17 @@ export const MpiBaseFlow = ComponentFactory.create({
                 const btn = qs('.mpi-base-flow__field-button', wrap);
                 if (!btn) return;
                 const busy = _enhancing === d.id;
-                btn.classList.toggle(
-                    'mpi-base-flow__field-button--stale',
-                    !String(_fieldValues[d.to] || '').trim(),
-                );
-                btn.disabled = !!_enhancing;
-                btn.textContent = busy ? 'Enhancing…' : (d.label || 'Enhance');
+                const stale = !String(_fieldValues[d.to] || '').trim();
+                // Heat while the prompt is NOT enhanced: that is the actionable
+                // state, so it is the loud one, and it is the same pink as Generate.
+                // Surface once it is enhanced — the work is done, the button is no
+                // longer the point. Both hover on BACKGROUND, like the rest of the
+                // app; only one variant class is ever present at a time, which
+                // matters because `--secondary` is declared after `--primary`.
+                btn.classList.toggle('mpi-btn--primary', stale);
+                btn.classList.toggle('mpi-btn--secondary', !stale);
+                btn.setDisabled?.(!!_enhancing);
+                btn.setLabel?.(busy ? 'Enhancing…' : (d.label || 'Enhance'));
             });
         }
 

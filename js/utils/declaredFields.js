@@ -16,12 +16,34 @@
  * BEM stays with the consumer: `block` prefixes every class, so MpiBaseFlow keeps
  * `mpi-base-flow__field*` and its CSS untouched, and a new consumer styles its own
  * block. Nothing moves into a shared stylesheet.
+ *
+ * EVERY FIELD TYPE MOUNTS AN APP PRIMITIVE (MPI-582). A declaration NAMES a
+ * component; it has never replaced one:
+ *   select -> MpiDropdown · radio -> MpiRadioGroup · button -> MpiButton ·
+ *   toggle -> MpiCheckbox · number, text -> MpiInput · slider -> MpiProgressBar
+ *
+ * This file used to hand-roll five of those seven as raw DOM, and the framing that
+ * allowed it was written down: commit 55461326, "declared controls, so a Flow needs
+ * no JS component". A Flow needs no BESPOKE component — it never needed no
+ * component. The cost was visible on screen: a declared slider rendered Chromium's
+ * native range widget with an `accent-color` tint in every Flow and in the History
+ * upscale panel, and the app carried FOUR independent drawings of one slider.
+ *
+ * So: a consumer block SIZES these into its layout and never restates their fill,
+ * border, hover, focus or disabled treatment — anything in a consumer stylesheet
+ * that looks like chrome is a bug. A control this vocabulary cannot express is a new
+ * Primitive plus a new type in here, never a bare input.
+ * `.claude/rules/components.md` § Every UI element is a component.
  */
 
-import { ce, on, qs } from './dom.js';
+import { ce, qs } from './dom.js';
 import { MpiRadioGroup } from '../components/Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../components/Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
+import { MpiDropdown } from '../components/Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiCheckbox } from '../components/Primitives/MpiCheckbox/MpiCheckbox.js';
+import { renderIcon } from './icons.js';
 import { clientLogger } from '../services/clientLogger.js';
 
 /**
@@ -118,7 +140,11 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
     const namespace = opts.namespace || 'field';
     const cls = (el) => `${block}__${el}`;
 
-    const wrap = ce('label', { className: cls('field') });
+    // A `<label>` for every type but `toggle`: the other controls own a real focusable
+    // field, so the wrapper forwards a click on the caption into it. `MpiCheckbox`
+    // renders its OWN `<label>`, and nested labels double-fire the activation — the
+    // box would tick and untick on one click. That type gets a plain div.
+    const wrap = ce(f.type === 'toggle' ? 'div' : 'label', { className: cls('field') });
     if (f.label && f.type !== 'button') {
         const lbl = ce('span', { className: cls('field-label') });
         lbl.textContent = f.label;
@@ -126,15 +152,34 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
     }
 
     if (f.type === 'select') {
-        const sel = ce('select', { className: cls('field-select') });
-        (f.options || []).forEach((o) => {
-            const opt = ce('option', { value: String(o.v) });
-            opt.textContent = o.label ?? String(o.v);
-            sel.appendChild(opt);
+        // MpiDropdown, not a raw `<select>`: the native control paints itself from the
+        // OS, so it was the one widget on a Flow step that could not be themed at all.
+        // The Primitive also portals its list to `document.body`, which the raw select
+        // did not need but the flow frame does — a step row clips its overflow.
+        const opts_ = f.options || [];
+        const find = v => opts_.find(o => String(o.v) === String(v));
+        // Same fallback law as `radio`: a seeded value comes off a PERSISTED card and
+        // may name an option this build no longer has. Fall back rather than render a
+        // trigger showing the placeholder while quietly sending the stale value.
+        const sel = find(cur) ? cur : (f.default ?? opts_[0]?.v);
+        if (sel !== cur) onChange(sel);
+        const host = ce('div', { className: cls('field-select') });
+        const inst = MpiDropdown.mount(host, {
+            options: opts_.map(o => ({
+                label: o.label ?? String(o.v), value: String(o.v), info: o.info,
+            })),
+            value: String(sel ?? ''),
         });
-        if (cur != null) sel.value = String(cur);
-        unsubs.push(on(sel, 'change', () => onChange(sel.value)));
-        wrap.appendChild(sel);
+        inst.on('change', ({ value }) => {
+            const o = find(value);
+            if (!o) return;
+            // Emit the option's ORIGINAL `v`, never the DOM string — a graph param like
+            // Input_Tier is an int, and "1" reaching MpiAnySwitch as text is a silent
+            // wrong-branch. Identical to the `radio` branch, and for the same reason.
+            onChange(o.v);
+        });
+        unsubs.push(() => inst?.el?.destroy?.());
+        wrap.appendChild(host);
     } else if (f.type === 'radio') {
         // The only mounted Primitive among the field types, so it is the only one
         // needing a host and a destroy. Worth it: a tier choice read as a <select>
@@ -180,29 +225,71 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
         if (opts_.some(o => o.note)) col.appendChild(note);
         wrap.appendChild(col);
     } else if (f.type === 'button') {
-        const btn = ce('button', { className: cls('field-button'), type: 'button' });
-        btn.textContent = f.label || f.id;
-        unsubs.push(on(btn, 'click', () => onChange(true)));
-        wrap.appendChild(btn);
+        // The second mounted Primitive here, and for the same reason as `radio`: a
+        // declared ACTION is a real button, so it takes the app's variant, hover
+        // fill, press and disabled treatment rather than each consumer block
+        // restating them on a bare `<button>` and drifting.
+        //
+        // TEXT mode deliberately, not icon mode: `MpiButton` maps every icon-mode
+        // variant except danger/ghost down to `secondary`, so `primary` + an icon
+        // renders grey — and widening that mapping would repaint ~20 icon buttons
+        // across the app. The icon rides in `children` so it sits LEFT of the
+        // label, where the rest of the app puts it.
+        const host = ce('div');
+        const icon = f.icon ? renderIcon(f.icon, 'sm') : '';
+        const inst = MpiButton.mount(host, {
+            variant: 'primary',
+            size: 'sm',
+            extraClasses: cls('field-button'),
+        }, `${icon}<span class="mpi-btn__text">${f.label || f.id}</span>`);
+        inst.on('click', () => onChange(true));
+        unsubs.push(() => inst?.el?.destroy?.());
+        wrap.appendChild(host);
     } else if (f.type === 'toggle') {
-        const box = ce('input', { type: 'checkbox', className: cls('field-toggle') });
-        box.checked = Boolean(cur);
-        unsubs.push(on(box, 'change', () => onChange(box.checked)));
-        wrap.appendChild(box);
+        // MpiCheckbox, not a raw `<input type=checkbox>`: the bare box was drawn by
+        // Chromium and tinted with `accent-color`, which is why it matched nothing
+        // else on screen. The Primitive is the same box the rest of the app ticks.
+        const host = ce('div', { className: cls('field-toggle') });
+        const inst = MpiCheckbox.mount(host, {
+            checked: Boolean(cur),
+            name: `${namespace}-${f.id}`,
+        });
+        inst.on('change', ({ checked }) => onChange(checked));
+        unsubs.push(() => inst?.el?.destroy?.());
+        wrap.appendChild(host);
     } else if (f.type === 'number') {
-        const inp = ce('input', { type: 'number', className: cls('field-input') });
-        if (f.min != null) inp.min = String(f.min);
-        if (f.max != null) inp.max = String(f.max);
-        if (f.step != null) inp.step = String(f.step);
-        if (cur != null) inp.value = String(cur);
-        unsubs.push(on(inp, 'change', () => {
-            const n = fieldNumber(inp.value, f);
-            // Write the clamped value back: a field that silently sends a different
+        // MpiInput in number mode. It renders `type=text` + `inputmode=decimal` on
+        // purpose so it owns parsing, clamping and stepping rather than inheriting
+        // the browser's `type=number` quirks (NaN out of range, float dust off
+        // `step`), and it adds wheel-to-adjust for free.
+        const host = ce('div', { className: cls('field-input') });
+        const value = fieldNumber(cur ?? f.default ?? f.min ?? 0, f);
+        // `decimals` only matters below a whole step — without it a step of 0.1 walks
+        // into 0.30000000000000004 in the box. Read the precision off the declaration
+        // rather than guessing one.
+        const dp = f.step != null && Number(f.step) < 1
+            ? (String(f.step).split('.')[1] || '').length
+            : undefined;
+        const inst = MpiInput.mount(host, {
+            type: 'number',
+            // `sm` is the primitive's own narrow numeric treatment — a 6ch centred
+            // field. That is what the hand-rolled `width: 5.5em` was reaching for.
+            size: 'sm',
+            value,
+            ...(f.min != null ? { min: Number(f.min) } : {}),
+            ...(f.max != null ? { max: Number(f.max) } : {}),
+            ...(f.step != null ? { step: Number(f.step) } : {}),
+            ...(dp !== undefined ? { decimals: dp } : {}),
+        });
+        inst.on('change', ({ value: v }) => {
+            // `fieldNumber` stays the authority even though MpiInput clamps too: it is
+            // the one place that also falls back to the declared default on a value
+            // that is not a number at all. A field that silently sends a different
             // number than it shows is worse than a rejected run.
-            inp.value = String(n);
-            onChange(n);
-        }));
-        wrap.appendChild(inp);
+            onChange(fieldNumber(v, f));
+        });
+        unsubs.push(() => inst?.el?.destroy?.());
+        wrap.appendChild(host);
     } else if (f.type === 'slider') {
         // MpiProgressBar IS the app's slider — its own header says so: "Absorbs all
         // MpiSlider capabilities — this is the single source of truth for sliders."
@@ -246,8 +333,11 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
         // set on the textarea after mount (MpiPromptBox reaches in the same way);
         // MpiInput owns the rest of the chrome.
         const multi = Number(f.rows) > 1;
-        const host = ce('div');
-        host.style.width = '100%';
+        // The host keeps `field-text` so each consumer block's existing layout still
+        // finds it — the row's `:has()` column, its 120px height and the `--work`
+        // step's type scale all key off this class, and an inline width instead of
+        // the class silently unhooks all three.
+        const host = ce('div', { className: cls('field-text') });
         const inst = MpiInput.mount(host, {
             type: multi ? 'textarea' : 'text',
             placeholder: f.placeholder || '',

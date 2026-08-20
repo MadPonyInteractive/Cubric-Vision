@@ -30,7 +30,7 @@ Two `text` fields and one `button`, declared as a group:
     placeholder: 'Who they are, wardrobe, age, hair, eyes, marks…',
 },
 {
-    id: 'enhance', type: 'button', label: 'Enhance',
+    id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance',
     action: 'enhance', op: 'flowCharacterEnhance',
     from: 'positive', to: 'Input_Character',
 },
@@ -54,12 +54,24 @@ The three behaviours come off the ONE `action` declaration, so they cannot disag
 |---|---|
 | **Enhance is the only writer of `to`** (besides the user typing in it). Generate never enhances. | `_runEnhance` is the only caller that writes `to` |
 | **Editing `from` CLEARS `to`.** The enhanced text was written for the old wording. | `_setFlowField` — visible immediately where `to` is shown |
-| **The button reports which of those is true.** `--stale` = the current prompt is not enhanced. | `_paintEnhance` — the only readable signal on a surface that hides `to` |
+| **The button reports which of those is true.** Heat = the current prompt is not enhanced. | `_paintEnhance` — the only readable signal on a surface that hides `to` |
 | **No Enhance pressed → the RAW prompt runs.** There is no silent enhancement. | `_collectInputs` fills an empty `to` from `from` |
 
-**`--stale` is the LOUD state, deliberately.** Not-enhanced is the actionable state, so it takes
-the accent; enhanced goes quiet. A first-open flow therefore starts loud, which is correct — the
-button is the call to action, not a warning.
+**NOT-ENHANCED is the LOUD state, deliberately.** It is the actionable one, so it takes the heat
+fill — the same pink as Generate. Enhanced goes quiet on the secondary surface. A first-open flow
+therefore starts loud, which is correct: the button is the call to action, not a warning.
+
+**Both states are `MpiButton`'s own variants**, toggled by `_paintEnhance` — `mpi-btn--primary`
+against `mpi-btn--secondary`, never both, since `--secondary` is declared after `--primary` and
+would win. There is no bespoke state class and no consumer-block button CSS; a `button` field is
+a mounted Primitive (`js/utils/declaredFields.js`), so restyling it from a block is how the two
+surfaces drift apart again.
+
+> **Do not reach for icon mode to get the icon.** `MpiButton` defaults icon mode to `primary` and
+> then maps every variant except `danger`/`ghost` down to `secondary`, so ~20 buttons across the
+> app pass `variant: 'primary'` with an icon today and render grey. Widening that mapping repaints
+> all of them. The `button` field uses TEXT mode with the icon in `children`, which gets the heat
+> fill, the hover-on-background and an icon to the LEFT of the label with the primitive untouched.
 
 ## What is deliberately NOT stored
 

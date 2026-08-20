@@ -447,50 +447,31 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
 }
+/* EVERY field type is a mounted Primitive now (js/utils/declaredFields.js, MPI-582):
+   select=MpiDropdown, radio=MpiRadioGroup, button=MpiButton, toggle=MpiCheckbox,
+   number/text=MpiInput, slider=MpiProgressBar. Their fill, border, hover, focus and
+   disabled states are the primitives' — this block restates NONE of them and only
+   sizes them into the row. Anything below that looks like chrome is a bug. */
 .mpi-base-flow__field-select {
-    font-family: inherit;
-    font-size: var(--t-2xs);
-    color: var(--ink-1);
-    background: oklch(0.26 0.018 350 / 0.6);
-    border: 1px solid var(--line);
-    padding: 4px var(--s-2);
-    cursor: pointer;
-}
-.mpi-base-flow__field-button {
-    font-family: inherit;
-    font-size: var(--t-2xs);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-    background: none;
-    border: 1px solid var(--line);
-    padding: 4px var(--s-3);
-    cursor: pointer;
-    transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
-}
-.mpi-base-flow__field-button:hover {
-    color: var(--ink-1);
-    border-color: var(--ink-3);
+    min-width: 9em;
 }
 .mpi-base-flow__field-input,
 .mpi-base-flow__field-text {
-    font-family: inherit;
-    font-size: var(--t-2xs);
-    color: var(--ink-1);
-    background: oklch(0.26 0.018 350 / 0.6);
-    border: 1px solid var(--line);
-    padding: 4px var(--s-2);
     min-width: 0;
-}
-.mpi-base-flow__field-input {
-    width: 5.5em;
 }
 /* NOTHING in this app is user-resizable, so a drag grip here is a control the rest
    of the product does not have — and the box it resizes is the one thing on the
    slide the user is already meant to be looking past, at the preview. MPI-572. */
 .mpi-base-flow__field-text {
-    resize: none;
     width: 100%;
+}
+.mpi-base-flow__field-text .mpi-input,
+.mpi-base-flow__field-text .mpi-input__wrapper {
+    height: 100%;
+}
+.mpi-base-flow__field-text .mpi-input__field {
+    resize: none;
+    height: 100%;
 }
 /* A textarea is not a row control. On a STEP row every other field is a short
    label-beside-control pair, but a prompt box needs its label above it and real
@@ -512,10 +493,6 @@
 .mpi-base-flow__fields:not(.mpi-base-flow__fields--stacked) .mpi-base-flow__field-text {
     height: 120px;
 }
-.mpi-base-flow__field-range {
-    accent-color: var(--accent-frost);
-    cursor: pointer;
-}
 /* The readout is the control — a slider without its number is a guess. Tabular
    digits so the row does not jitter as the value changes width. */
 .mpi-base-flow__field-value {
@@ -524,15 +501,10 @@
     min-width: 3ch;
     text-align: right;
 }
-.mpi-base-flow__field-select:focus-visible,
-.mpi-base-flow__field-button:focus-visible,
-.mpi-base-flow__field-toggle:focus-visible,
-.mpi-base-flow__field-input:focus-visible,
-.mpi-base-flow__field-text:focus-visible,
-.mpi-base-flow__field-range:focus-visible {
-    outline: 1px solid var(--accent-frost);
-    outline-offset: 1px;
-}
+/* The focus ring used to be restated here for all six field classes in
+   `--accent-frost`. Both halves were wrong: the primitives already carry the app's
+   focus treatment, and `--accent-frost` is a colour to move AWAY from, not one to
+   reach for (Fabio, MPI-504). Deleted, not recoloured. */
 
 /* Stacked — the run slide's declared controls (MPI-531). Same fields, but this
    column is 236px of vertical stack, so the label sits ABOVE its control and each
@@ -547,8 +519,24 @@
     align-items: stretch;
     gap: var(--s-2);
 }
-.mpi-base-flow__fields--stacked .mpi-base-flow__field-input {
+/* MpiInput's `sm` size is deliberately narrow (6ch, centred) for a number beside a
+   label on a ROW. In the stacked column the control takes the column, so the size
+   variant's width is the one thing overridden — never its chrome. */
+.mpi-base-flow__fields--stacked .mpi-base-flow__field-input,
+.mpi-base-flow__fields--stacked .mpi-base-flow__field-input .mpi-input,
+.mpi-base-flow__fields--stacked .mpi-base-flow__field-input .mpi-input__field {
     width: 100%;
+}
+/* Undo the ROW sizing a text field carries. `flex: 1 1 320px` + `max-width: 480px`
+   are written for the one-row layout, where they mean WIDTH — in a COLUMN they mean
+   a 320px-tall box that grows, which pushed the Enhance button ~260px below the
+   prompt it acts on, down beside Generate (MPI-504). Each field here is its own
+   height, set by `rows`. The `:has()` twin is needed because the row rule that sets
+   this carries the same specificity and would otherwise win on source order. */
+.mpi-base-flow__fields--stacked .mpi-base-flow__field,
+.mpi-base-flow__fields--stacked .mpi-base-flow__field:has(.mpi-base-flow__field-text) {
+    flex: 0 0 auto;
+    max-width: none;
 }
 
 /* ── The `fields` STEP — the declared fields ARE the work (MPI-504) ─────── */
@@ -562,44 +550,19 @@
     margin: 0 auto;
     gap: var(--s-4);
 }
-/* Undo the ROW sizing a text field carries. `flex: 1 1 320px` + `max-width: 480px`
-   are written for the one-row layout, where they mean WIDTH — in this column they
-   mean a 320px-tall box that grows, which left the prompt stranded 260px above the
-   button and the boxes narrower than it. Each field here is its own height, set by
-   `rows`. */
-.mpi-base-flow__fields--work .mpi-base-flow__field,
-.mpi-base-flow__fields--work .mpi-base-flow__field:has(.mpi-base-flow__field-text) {
-    flex: 0 0 auto;
-    max-width: none;
-}
-.mpi-base-flow__fields--work .mpi-base-flow__field-text {
+/* The row-sizing undo this step also needs lives on `--stacked` above — `--work` is
+   always applied ON TOP of it, and the run slide needed the identical fix. */
+.mpi-base-flow__fields--work .mpi-base-flow__field-text .mpi-input__field {
     font-size: var(--t-xs);
     line-height: 1.6;
     padding: var(--s-3);
 }
-/* The button between the two boxes is the step's verb — it gets the width the
-   boxes have, not a row control's padding. */
-.mpi-base-flow__fields--work .mpi-base-flow__field-button {
+/* In a stacked column the button is the surface's VERB — it gets the width the
+   boxes have, on the run slide as well as in the step. Everything else about it is
+   the primitive's. A step ROW is the other case: there it is one control among
+   several and keeps its own width. */
+.mpi-base-flow__fields--stacked .mpi-base-flow__field-button {
     width: 100%;
-    font-size: var(--t-xs);
-    padding: var(--s-3);
-}
-/* STALE = the current prompt is NOT enhanced, which is the ACTIONABLE state, so
-   it is the loud one. On the run slide the enhanced prompt is not shown at all,
-   so this is the only place that fact can be read (plan.md § The prompt UI).
-   Quiet once enhanced: the work is done, the button is no longer the point. */
-.mpi-base-flow__field-button--stale {
-    color: var(--accent-frost);
-    border-color: var(--accent-frost);
-}
-.mpi-base-flow__field-button--stale:hover {
-    color: var(--ink-1);
-    border-color: var(--accent-frost);
-}
-.mpi-base-flow__field-button:disabled {
-    color: var(--ink-4);
-    border-color: var(--line);
-    cursor: default;
 }
 /* A radio stacks its group over its note in BOTH layouts — the note annotates the
    whole choice, so it never sits beside one button. */

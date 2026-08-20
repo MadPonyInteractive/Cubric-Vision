@@ -54,9 +54,12 @@
  *                                       prefixed `Input_`, which names a graph node and is routed
  *                                       into `injectionParams` instead. So
  *                                       `{ id: 'positive', type: 'text', rows: 3 }` is the whole of
- *                                       what a prompt-collecting component used to be. There is NO
- *                                       component surface left (MPI-572): a FlowDef is DATA, which
- *                                       is what makes it expressible as a third-party manifest.
+ *                                       what a prompt-collecting component used to be. A FlowDef is
+ *                                       DATA (MPI-572), which is what makes it expressible as a
+ *                                       third-party manifest — but declaring a field does NOT mean
+ *                                       there is no component. Every declared field MOUNTS AN APP
+ *                                       PRIMITIVE (MPI-582); the declaration chooses which one, it
+ *                                       does not replace it. See FlowStepField below.
  * @property {Object}   inputSchema    - What the flow collects → injected into the workflow
  * @property {FlowStep[]} [steps]       - Declared MIDDLE steps of the flow's carousel (MPI-306).
  *                                       Step 0 (inputs) and the last step (run) are IMPLICIT —
@@ -94,6 +97,17 @@
  *                               means the step should SPLIT.
  *
  * @typedef {Object} FlowStepField
+ *
+ * EVERY TYPE BELOW MOUNTS AN APP PRIMITIVE (`js/utils/declaredFields.js`, MPI-582).
+ * `type` names a component, it does not replace one:
+ *   select -> MpiDropdown · radio -> MpiRadioGroup · button -> MpiButton ·
+ *   toggle -> MpiCheckbox · number, text -> MpiInput · slider -> MpiProgressBar
+ * So a consumer block sizes these into its layout and NEVER restates their fill,
+ * border, hover, focus or disabled treatment. A control this vocabulary cannot
+ * express is a NEW PRIMITIVE plus a new `type` here — never a bare input, in a Flow
+ * or anywhere else. See `.claude/rules/components.md` § Every UI element is a
+ * component.
+ *
  * @property {string}  id      - Key the value lands under, and it is the SAME key wherever the
  *                               field was declared: `id: 'positive'` reaches the op as `positive`,
  *                               `Input_*` reaches it inside `injectionParams`. A step's fields are
@@ -111,6 +125,9 @@
  *                               the value is clamped before it reaches the graph.
  * @property {number}  [max]   - For `number` / `slider`.
  * @property {number}  [step]  - For `number` / `slider`.
+ * @property {string}  [icon]  - For `button`: an `js/utils/icons.js` key, rendered to the LEFT of
+ *                               the label. The button itself is an MpiButton in the app's
+ *                               primary variant — never restyle it from a consumer block.
  * @property {number}  [rows]  - For `text`. `> 1` renders a textarea (the prompt case).
  * @property {string}  [placeholder] - For `text`.
  * @property {*}       [default]
@@ -118,7 +135,7 @@
  *                               runs `op` on the `from` field's text and writes the result into
  *                               the `to` field. ONE declaration carries all three behaviours —
  *                               Enhance fills `to`, editing `from` CLEARS `to`, and the button
- *                               reports which of those is true (`--stale` = not enhanced) — so
+ *                               reports which of those is true (heat = not enhanced) — so
  *                               they cannot disagree. Two more consequences fall out of it: an
  *                               empty `to` at Run sends `from` RAW (there is no silent
  *                               enhancement), and the action's own id never reaches the op.

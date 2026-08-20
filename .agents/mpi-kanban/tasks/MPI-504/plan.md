@@ -10,9 +10,90 @@ prompt) is in [prompts.md](prompts.md). This file is the build.
 
 ## Current State
 
-**2026-08-20 — FABIO REVIEWED THE BUILT UI AND ASKED FOR THREE CHANGES. This is the next work,
-before the enhancer op.** He looked at both surfaces in his own app; the behaviour is right, the
-button is not:
+**2026-08-20 — FABIO MERGED THE GRAPH. `comfy_workflows/raw/flow_character_sheet.json` now
+EXISTS (127 nodes, 150 links, 5 groups) and the next job is ONE bounded thing: fill the empty
+`Masking` group.** `krea2_t2i_only.json` is retired. He built t2i + Klein inpaint + the
+`Input_Remove_Head` gate himself and left a walled garden for the detection/mask logic.
+
+**The boundary contract, read off the file — do NOT re-derive it, and do NOT wire by node id
+anywhere else in the graph:**
+
+| | node | name | type |
+|---|---|---|---|
+| **IN** | `736 GetNode` | `sheet output` | IMAGE — the generated sheet. Currently **unlinked**; it is yours |
+| **IN** | `743 GetNode` | `W` | INT |
+| **IN** | `744 GetNode` | `H` | INT |
+| **OUT** | `733 SetNode` | `inpaint mask` | **plain MASK.** Currently unlinked |
+
+`Masking` group bbox `[-463.6, 4787.1, 2960.0, 1411.1]` — every node you add goes inside it.
+Free canvas is roughly x `-200 … 2200`, y `4790 … 6190`; the four anchors sit at the far left
+(x ≈ -450) and far right (x ≈ 2240).
+
+**Three things that fall out of the contract:**
+
+- **Downstream ALREADY grows and blurs.** `735 Get_inpaint mask → 690 GrowMaskWithBlur`, and
+  `734` feeds `721 MpiMaskSquareBbox` + `718 InpaintCropImproved`. So do **not** bake a grow
+  into the Masking group — the plan's "grow 24 @ 2k" is already someone else's job. Emit a
+  clean union and let his chain shape it.
+- **The gate is HIS and it sits AFTER this group** (`739 Set_is remove head` → `741 Get` →
+  `742 MpiIfElse`). So YOLO + SAM3 run on every sheet even when the toggle is off. Cheap-ish,
+  but it is waste — **ask Fabio whether he wants the gate moved in front of the group**, do
+  not move it unilaterally; `raw/` is his.
+- **Set/Get names are matched by NAME and a collision cross-wires SILENTLY** — link integrity
+  still passes. Taken already: `clip`, `vae`, `seed`, `model`, `Models`, `turbo`, `steps`,
+  `W`, `H`, `positive text`, `negative text`, `klein clip`, `klein vae`, `klein model`,
+  `sheet output`, `inpaint mask`, `is remove head`. Prefix everything new, e.g. `mask_*`.
+
+**Every node the branch needs is already pinned** (checked 2026-08-20, `dev_configs/node_lock.json`):
+`UltralyticsDetectorProvider` + `BboxDetectorSEGS` → ComfyUI-Impact-**Subpack**;
+`ImpactSEGSOrderedFilter` → ComfyUI-Impact-Pack; `SAM3_Detect` → **core ComfyUI 0.28** (weight
+is a shipped `engineAsset`); `face_yolov8n.pt` → the `face-yolov8n` dep, already on R2. Nothing
+new to download, nothing new to pin.
+
+**The enhancer graph still needs `Input_Seed` (`MpiInt`) — Fabio's edit, `raw/` is his.**
+Confirmed absent 2026-08-20: `raw/qwen3vl_4b_prompt_enhancer.json` has 12 nodes and node `3
+TextGenerate` carries a baked seed widget. Everything else that op needs is there
+(`10 MpiText Input_Positive`, `7 Input_System_Prompt`, `11`/`12 RegexReplace` scrubs,
+`4 PreviewAny Output_prompt`). `13 MpiClearVram` stays — MPI-157 tried removing it and was
+disproven live.
+
+**When wiring the app, the enhanced phrase goes to `Input_Positive`, NOT `Input_Character`.**
+That name only ever existed in the scratch fixture and is wrong against this graph.
+
+**2026-08-20 — THE THREE BUTTON CHANGES ARE MADE AND SCREENSHOTTED. Next is the enhancer OP.**
+Enhance is now an `MpiButton`, pink, icon left of the label, and on the run slide it sits directly
+under the prompt box. What it cost, and what is worth knowing next time:
+
+- **Icon mode was the wrong door, and the trap below understates it.** `MpiButton` defaults icon
+  mode to `primary` and then maps everything except danger/ghost down to `secondary` — so ~20
+  buttons across the app pass `variant: 'primary'` today and render GREY. Widening that mapping
+  would have repainted every one of them. **TEXT mode with the icon in `children`** gets pink,
+  hover-on-background and icon-LEFT with no primitive change at all.
+- **The two states are the primitive's own variants, not a bespoke class.** `--stale` is gone:
+  `_paintEnhance` toggles `mpi-btn--primary` (not enhanced — loud, and the SAME pink as Generate,
+  measured `255,126,182` on both) against `mpi-btn--secondary` (enhanced — quiet). Only ever one
+  class at a time, because `--secondary` is declared after `--primary` and would otherwise win.
+- **The run-slide fix was the `--work` fix, one selector up.** `--work` is always applied ON TOP
+  of `--stacked`, so moving the `flex: 0 0 auto; max-width: none` undo onto `--stacked` fixed the
+  run slide and deleted the duplicate in one edit.
+- **`MpiButton.js` imported `/js/utils/icons.js` by ABSOLUTE path** — the only Primitive that did
+  (its sibling `MpiRadioGroup` is relative). `declaredFields.js` is imported by
+  `tests/declared-fields.test.cjs` in bare Node, so pulling MpiButton in would have broken that
+  test with `ERR_MODULE_NOT_FOUND` on `C:\js\utils\icons.js`. Made relative.
+- **The handoff was wrong that Add Foley moves.** Foley declares its two text fields on a STEP
+  (row layout), not on the flow, so only **Extend Video** has flow-level text fields and only its
+  run slide changed. Head Swap's radio is untouched. Verified by screenshot on all four.
+- **Extend Video's run slide DID change and Fabio should look**: its boxes now hug `rows` (3 and
+  2) instead of stretching to 320px, so the long baked negative is clipped to two rows and
+  scrolls. That is the declaration being obeyed, but it is a visible difference.
+
+**Still open, both flagged not fixed:** `MpiToolOptionsUpscale.css` carries a twin raw-button block
+that would now fight the primitive — dead today (no plugin declares a `button` field) and it belongs
+to live card MPI-580. And every declared field's `:focus-visible` ring is still `--accent-frost`,
+app-wide; re-colouring those is its own job.
+
+**2026-08-20 — Fabio's three changes, as he asked for them** (kept for the record; all three are
+now done):
 
 1. **The Enhance button must be an `MpiButton`, pink (`variant: 'primary'` = `--accent-heat`) with
    the `enhance` icon** (already in `js/utils/icons.js:37`), and it must change BACKGROUND on hover

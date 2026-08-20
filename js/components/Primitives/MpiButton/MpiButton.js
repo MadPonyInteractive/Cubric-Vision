@@ -1,5 +1,5 @@
 import { ComponentFactory } from '../../factory.js';
-import { renderIcon } from '/js/utils/icons.js';
+import { renderIcon } from '../../../utils/icons.js';
 import { qs } from '../../../utils/dom.js';
 
 /**

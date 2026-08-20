@@ -711,7 +711,7 @@ re-drive the UI, and drop it again afterwards:
         fields: [
             { id: 'positive', type: 'text', rows: 3, label: 'Your character',
               placeholder: 'Who they are, wardrobe, age, hair, eyes, marks…' },
-            { id: 'enhance', type: 'button', label: 'Enhance', action: 'enhance',
+            { id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance', action: 'enhance',
               op: 'flowCharacterEnhance', from: 'positive', to: 'Input_Character' },
             { id: 'Input_Character', type: 'text', rows: 10, label: 'The character phrase',
               placeholder: 'Press Enhance, or write the phrase yourself.' },
@@ -720,7 +720,7 @@ re-drive the UI, and drop it again afterwards:
     fields: [
         { id: 'positive', type: 'text', rows: 3, label: 'Your character',
           placeholder: 'Who they are, wardrobe, age, hair, eyes, marks…' },
-        { id: 'enhance', type: 'button', label: 'Enhance', action: 'enhance',
+        { id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance', action: 'enhance',
           op: 'flowCharacterEnhance', from: 'positive', to: 'Input_Character' },
     ],
 }
@@ -736,7 +736,7 @@ which reads as a broken flow and is not one.
 the bug above, but on `--stacked`, which every flow's run slide uses: the prompt box sits at the
 top of the 236px column and Enhance ends up ~260px below it, next to Generate. The one-line fix is
 the same override on `--stacked` — **but that also changes Extend Video's and Add Foley's run
-slides**, so it was left alone rather than restyled under this card.
+slides**, so it was left alone rather than restyled under this card. **RESOLVED 2026-08-20** — Fabio said put them together; done, and only Extend Video actually moved (see the newest entry).
 
 ### Noticed, not actioned
 
@@ -744,3 +744,70 @@ slides**, so it was left alone rather than restyled under this card.
 `bcbe161f`). `flowService.js` says the opposite in a code comment: *"Phase 3 was built, then
 REMOVED after the UX pass — an Apply step the user never wanted to skip is friction."* The code has
 no Apply. The doc is stale; not this card's to fix.
+
+## 2026-08-20 · the Enhance button, Fabio's three changes — screenshotted on all four run slides
+
+**Ran:** `npx eslint` on the four changed files (clean), `npm test` (**630/630**, before and after
+the scratch fixture went in and came out), then the UI on my own `npm run app:isolated` instance
+at `127.0.0.1:60667` with the scratch FlowDef pasted back in — driven with `playwright-cli`, a real
+project open, and a screenshot at every step, not just DOM assertions.
+
+**All three changes verified:**
+
+1. **Pink `MpiButton` with the `enhance` icon.** Measured through a 1×1 canvas so the `oklch()`
+   serialisation cannot lie: the Enhance fill is **`255,126,182`** and Generate's is
+   **`255,126,182`** — the same pink, not a near miss. A real `playwright-cli hover` moved it to
+   **`255,119,164`**, so it changes BACKGROUND on hover like the rest of the app. Icon renders to
+   the LEFT of the label. `--accent-frost` is gone from the button entirely.
+2. **The run slide puts Enhance directly UNDER the prompt box.** Screenshotted: prompt, Enhance,
+   then Generate, in one column. Was ~260px away, beside Generate.
+3. **Size/placement otherwise unchanged** — full width in the `fields` step between the two boxes,
+   same 236px column on the run slide.
+
+**The two states, live.** Filling `Input_Character` flipped the button to `mpi-btn--secondary`
+(quiet: the work is done); editing the source prompt cleared `to` and flipped it back to
+`mpi-btn--primary` (loud: the prompt is not enhanced). Both read clearly on the run slide, which is
+the surface that hides the enhanced text.
+
+**What the other three flows did — this is the part the handoff got wrong.**
+
+| flow | run slide | why |
+|---|---|---|
+| **Extend Video** | **CHANGED** — boxes now hug `rows` (3 and 2) instead of stretching to 320px | the only flow with flow-level `text` fields |
+| **Add Foley** | unchanged | declares its two texts on a STEP, so it is the ROW layout, not `--stacked` |
+| **Head Swap** | unchanged | flow-level field is a `radio`; the `:has(text)` rule cannot match it |
+| **Character Sheet** | fixed, as asked | — |
+
+**Fabio should look at Extend Video.** Its long baked negative is now clipped to two rows and
+scrolls, because `rows: 2` is what the flow declares and the column no longer overrides it. That is
+the declaration being obeyed, but it is a visible difference from what shipped.
+
+**Three things worth carrying forward:**
+
+- **Icon mode was a dead end, worse than the trap note said.** `MpiButton` defaults icon mode to
+  `primary` and then maps everything except danger/ghost down to `secondary`, so ~20 buttons across
+  the app pass `variant: 'primary'` today and render GREY. Widening that mapping repaints all of
+  them. TEXT mode with the icon in `children` gets pink, hover-on-background and icon-left with the
+  primitive untouched.
+- **`--stale` is gone, not replaced.** `_paintEnhance` toggles the primitive's own
+  `mpi-btn--primary` / `mpi-btn--secondary`. Only ever one at a time — `--secondary` is declared
+  after `--primary` in `MpiButton.css` and would win if both were present.
+- **`MpiButton.js` imported `/js/utils/icons.js` by ABSOLUTE path**, alone among the Primitives
+  (its sibling `MpiRadioGroup` is relative). `tests/declared-fields.test.cjs` imports
+  `declaredFields.js` in bare Node, so pulling MpiButton in through it would have died with
+  `ERR_MODULE_NOT_FOUND` on `C:\js\utils\icons.js`. Made relative; that is why the test still
+  passes.
+
+### Noticed, not actioned (2026-08-20)
+
+- **`MpiToolOptionsUpscale.css` carries a twin raw-`<button>` block** (`background: none`, ink-3,
+  `--line` border) that would now fight the primitive. Dead today — nothing in the repo declares a
+  `type: 'button'` field except this card's scratch fixture — and the file belongs to live card
+  **MPI-580**, so it was left alone rather than edited across cards.
+- **Every declared field's `:focus-visible` ring is still `--accent-frost`**, in both consumer
+  blocks. Fabio wants that colour gone app-wide; re-colouring the focus rings is its own job, not
+  this card's.
+- **An orphan `.mpi-modal-backdrop` survives the 18+ gate** on a fresh profile: the changelog
+  dialog mounts behind it and the backdrop intercepts every click, so the landing page reads as
+  frozen. Removing the node let the app through. Unrelated to this card; reproducible on a first
+  run of `app:isolated`.

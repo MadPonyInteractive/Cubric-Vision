@@ -137,6 +137,10 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       button field in `MpiBaseFlow`. No new component (a Flow carries no JS). All six of Fabio's
       rules verified in a running app; both prompts reach `flowInputs` and no seed is stored.
       Portable record: `docs/playbooks/add-flow/ui/prompt-enhance.md`
+- [x] **Fabio's three button changes** (2026-08-20) — Enhance is an `MpiButton`, pink like
+      Generate (measured identical: `255,126,182`), `enhance` icon left of the label, hovering to
+      a new background; on the run slide it now sits directly UNDER the prompt box. `--accent-frost`
+      is gone from the button. Screenshotted on all four run slides
 - [ ] **The enhancer OP** — `raw/qwen3vl_4b_prompt_enhancer.json` → API workflow + registered in
       the 4 files with `outputKind: 'text'`. Until it exists Enhance warns and no-ops. Weight is
       already shipped (`qwen3vl-abliterated-clip`). NEEDS an `Input_Seed` node in the graph for
