@@ -1379,9 +1379,9 @@
   "747": {
     "inputs": {
       "target": "area(=w*h)",
-      "order": false,
-      "take_start": 0,
-      "take_count": 1,
+      "order": true,
+      "take_start": 1,
+      "take_count": 999,
       "segs": [
         "746",
         0
@@ -1389,13 +1389,13 @@
     },
     "class_type": "ImpactSEGSOrderedFilter",
     "_meta": {
-      "title": "smallest face = the front body head"
+      "title": "drop the portrait (the largest face)"
     }
   },
   "748": {
     "inputs": {
       "segs": [
-        "747",
+        "773",
         0
       ]
     },
@@ -1655,6 +1655,22 @@
     "class_type": "MpiAnySwitch",
     "_meta": {
       "title": "Height_Select"
+    }
+  },
+  "773": {
+    "inputs": {
+      "target": "confidence",
+      "order": true,
+      "take_start": 0,
+      "take_count": 1,
+      "segs": [
+        "747",
+        0
+      ]
+    },
+    "class_type": "ImpactSEGSOrderedFilter",
+    "_meta": {
+      "title": "the frontal body head, not the rear"
     }
   }
 }
