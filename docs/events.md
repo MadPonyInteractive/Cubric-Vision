@@ -47,6 +47,7 @@ Defined in `js/events.js` as `MpiEventMap`. Key events:
 | `media:imported` | File imported via PromptBox drop `{ url, filename, mediaType }` |
 | `workspace:set-operation` | Op change from the prompt-box strip `{ operation }` — the workspace Block validates and calls back into `PromptBox.setOperation`. The radial no longer carries ops (MPI-356) |
 | `ui:open-model-picker` | Open the model overlay (MPI-356) `{}` — fired by the prompt box's model button, the ONLY emitter since MPI-378 dropped the workspace radial; the workspace Block owns the `MpiModelPicker` instance and the model list it shows |
+| `ui:open-model-settings` | Open the Model Settings overlay on a named model `{ modelId }` (MPI-504) — fired by a Flow's `action: 'settings'` button so a flow reuses the app's own LoRA rack instead of building one. BOTH workspace Blocks listen: each mounts its OWN `MpiModelSettings`, so wiring one leaves the button dead in the other workspace. A missing/undefined `modelId` opens nothing and logs nothing |
 | `workspace:inject-prompts` | Reuse button injects prompt into PromptBox `{ positive, negative }` |
 | `slide-over:open` | Open a shell-owned right panel `{ title, component, extraClasses?, panelId? }` |
 | `slide-over:toggle` | Toggle a shell-owned right panel `{ title, component, extraClasses?, panelId? }` |

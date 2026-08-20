@@ -782,6 +782,14 @@
  * @property {boolean} [autoHeight=false] - textarea only: auto-resize to content height
  * @property {string} [error=''] - Error message
  * @property {string} [info=''] - Info Bar description
+ *
+ * Instance methods (on instance.el):
+ *   setValue(v) — imperatively set the field's value. Emits NOTHING: a programmatic
+ *                 write is not user input, so an `input`/`change` echo would run the
+ *                 caller's own onChange against the value it just wrote. Re-runs the
+ *                 auto-height measure when `autoHeight` is on. Use this rather than
+ *                 reaching for `.mpi-input__field` — a caller that guesses at the DOM
+ *                 can miss it and fail silently (MPI-504).
  */
 
 /**

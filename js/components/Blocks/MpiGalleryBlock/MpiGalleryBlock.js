@@ -1520,6 +1520,13 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _modelPicker.el.open({ models: installedAllModels, modelId: activeModelId });
         }));
         _modelPicker.on('settings', ({ model }) => _settingsOverlay.el.open({ modelId: model.id }));
+        // A Flow's LoRA button opens this same panel (MPI-504). The flow names the
+        // model whose rack fills its `Input_Lora_N` nodes and emits; the overlay is
+        // ours, so opening it is ours — the same ownership split as the picker above.
+        // MpiGroupHistoryBlock carries the identical listener for its own overlay.
+        _unsubs.push(Events.on('ui:open-model-settings', ({ modelId } = {}) => {
+            if (modelId) _settingsOverlay.el.open({ modelId });
+        }));
         _modelPicker.on('select', ({ model }) => {
             if (!model || model.id === activeModelId) return;
             setSelectedModelId(model.mediaType, model.id);

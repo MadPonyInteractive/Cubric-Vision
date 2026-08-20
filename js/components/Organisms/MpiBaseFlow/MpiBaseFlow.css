@@ -85,23 +85,22 @@
 /* Balances the left group so the ticker stays optically centred. */
 .mpi-base-flow__topbar-right { width: 96px; }
 
+/* A ghost MpiButton. Only what the Primitive does NOT own is restated here —
+   geometry and typography. Chrome (background, border, cursor, the ink-1 hover
+   shift, the uppercase) is the Primitive's, and the hover comes free. */
 .mpi-base-flow__back {
-    display: inline-flex;
-    align-items: center;
     gap: var(--s-2);
-    background: none;
-    border: 0;
-    color: var(--ink-4);
+    padding: 0;
     font-family: inherit;
+    font-weight: inherit;
     font-size: var(--t-2xs);
     letter-spacing: 0.16em;
-    text-transform: uppercase;
-    cursor: pointer;
-    padding: 0;
-    transition: color var(--t-fast) var(--ease);
 }
-.mpi-base-flow__back:hover { color: var(--ink-1); }
-.mpi-base-flow__back .mpi-icon { width: 12px; height: 12px; }
+/* Beats `.mpi-btn.mpi-ibtn.mpi-btn--ghost` (0,3,0), which paints ghost icon
+   buttons ink-3 at a size it picks from the size class. The back link sits one
+   shade quieter than that, and its icon is smaller than a `sm` button's. */
+.mpi-base-flow .mpi-btn.mpi-ibtn.mpi-base-flow__back { color: var(--ink-4); }
+.mpi-base-flow .mpi-btn.mpi-base-flow__back .mpi-icon { width: 12px; height: 12px; }
 
 .mpi-base-flow__topbar-sep {
     width: 1px;
@@ -120,22 +119,23 @@
     align-items: center;
     gap: var(--s-1);
 }
+/* A ghost MpiButton. `text-transform` and `font-weight` are reset because a tick
+   reads as a label, not as a button caption — everything else the Primitive owns
+   is left to it. */
 .mpi-base-flow__tick {
-    display: flex;
     align-items: baseline;
     gap: 7px;
     padding: 5px var(--s-3);
-    background: none;
-    border: 0;
     font-family: inherit;
+    font-weight: inherit;
     font-size: var(--t-2xs);
     letter-spacing: 0.08em;
+    text-transform: none;
     color: var(--ink-4);
-    cursor: pointer;
-    transition: color var(--t-fast) var(--ease),
-                background-color var(--t-fast) var(--ease);
 }
-.mpi-base-flow__tick:hover {
+/* Beats `.mpi-btn--ghost:hover:not(:disabled)` (0,3,0), which fills with
+   --surface-2. The ticker carries its own hover wash. */
+.mpi-base-flow .mpi-base-flow__tick:hover:not(:disabled) {
     color: var(--ink-2);
     background: oklch(0.55 0.024 350 / 0.28);
 }
@@ -174,28 +174,35 @@
 .mpi-base-flow__slide[data-active="true"] { opacity: 1; }
 
 /* Arrows — vertically centred, OUTSIDE the content */
+/* Ghost MpiButtons. The glyph is a `‹` / `›`, so the type is reset to the app
+   font and sized here; the Primitive keeps the rest. */
 .mpi-base-flow__arrow {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
     width: 40px;
     height: 64px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: none;
-    border: 0;
+    padding: 0;
     color: var(--ink-4);
     font-family: inherit;
     font-size: 26px;
     line-height: 1;
-    cursor: pointer;
     z-index: 10;
-    transition: color var(--t-fast) var(--ease);
 }
-.mpi-base-flow__arrow:hover:not(:disabled) { color: var(--accent-heat); }
+/* Beats `.mpi-btn--ghost:hover:not(:disabled)` (0,3,0): an arrow is a glyph, not
+   a box — it shifts colour on hover and never fills. */
+.mpi-base-flow .mpi-base-flow__arrow:hover:not(:disabled) {
+    background: none;
+    color: var(--accent-heat);
+}
 .mpi-base-flow__arrow:focus-visible { outline: 1px solid var(--accent-frost); }
-.mpi-base-flow__arrow:disabled { opacity: 0; pointer-events: none; }
+/* Beats `.mpi-btn:disabled` (0,2,0), which greys out and desaturates. An arrow
+   with nowhere to go LEAVES instead — greying it out reads as a broken control. */
+.mpi-base-flow .mpi-base-flow__arrow:disabled {
+    opacity: 0;
+    pointer-events: none;
+    filter: none;
+}
 .mpi-base-flow__arrow--prev { left: var(--s-3); }
 .mpi-base-flow__arrow--next { right: var(--s-3); }
 
@@ -349,19 +356,23 @@
     right: 5px;
     width: 19px;
     height: 19px;
-    display: grid;
-    place-items: center;
-    background: oklch(0.24 0.018 350 / 0.82);
-    border: 0;
-    color: var(--ink-2);
-    cursor: pointer;
-    opacity: 0;
     padding: 0;
+    opacity: 0;
     transition: opacity var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
 }
 .mpi-base-flow__slot--filled:hover .mpi-base-flow__slot-clear { opacity: 1; }
-.mpi-base-flow__slot-clear:hover { color: var(--accent-heat); }
-.mpi-base-flow__slot-clear .mpi-icon { width: 10px; height: 10px; }
+/* Beats the ghost icon rules (0,3,0 base, 0,4,0 hover). This is the one button
+   here that DOES carry chrome: a scrim, so the × stays legible over any image it
+   lands on, and heat rather than ink-1 on hover because it destroys something. */
+.mpi-base-flow .mpi-btn.mpi-ibtn.mpi-base-flow__slot-clear {
+    background: oklch(0.24 0.018 350 / 0.82);
+    color: var(--ink-2);
+}
+.mpi-base-flow .mpi-btn.mpi-ibtn.mpi-base-flow__slot-clear:hover:not(:disabled) {
+    background: oklch(0.24 0.018 350 / 0.82);
+    color: var(--accent-heat);
+}
+.mpi-base-flow .mpi-btn.mpi-base-flow__slot-clear .mpi-icon { width: 10px; height: 10px; }
 
 /* ── Right pane (step 0) ────────────────────────────────────────────────── */
 .mpi-base-flow__flow-title {
@@ -571,6 +582,12 @@
    the primitive's. A step ROW is the other case: there it is one control among
    several and keeps its own width. */
 .mpi-base-flow__fields--stacked .mpi-base-flow__field-button {
+    width: 100%;
+}
+/* A `toggle` IS an MpiButton now (MPI-504), so it takes the column like every other
+   control here. Its fill, its active treatment and its icon/label spacing are the
+   primitive's — this only sizes it. */
+.mpi-base-flow__fields--stacked .mpi-base-flow__field-toggle-btn {
     width: 100%;
 }
 /* A radio stacks its group over its note in BOTH layouts — the note annotates the

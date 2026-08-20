@@ -1124,3 +1124,89 @@ The controlled test is a fixed seed dispatched straight to the engine at both ar
 same seed, only `Input_Quality` differing. **Not run** (it needs the GPU again). This belongs to
 the already-open "Klein removal A/B" checklist item, not to the switch bank, which did exactly
 what it declares.
+
+
+## 2026-08-20 · session 9 — the Enhance dead-box and the toggle buttons (no GPU)
+
+**Ran:** `npm test` → **640/640**. `npm run test:desktop` → **20/20**. `npx eslint` on every
+touched file → **0 errors** (4 warnings, all pre-existing bare `<button>`s in MpiBaseFlow's own
+template at 172/445/518, untouched by this session). `npm run release:check` → passed.
+
+**Two new desktop specs, and each was MUTATION-TESTED — a guard nobody has watched fail is not a
+guard.** Both mutations were applied and reverted by a script whose restore sits in `finally`, so
+a crash could not leave a source file broken.
+
+| spec | mutation applied | result |
+|---|---|---|
+| `flow-enhance-writes-textarea.spec.js` | `_writeFieldValue` put back to `qs('.mpi-base-flow__field-text', wrap)` + `inp.value = text` | **FAILED** at the clear-on-edit assertion, then restored byte-identical |
+| `flow-toggle-is-a-button.spec.js` | `inst.on('toggle', ({ active }) => onChange(active))` → `inst.on('toggle', () => {})` | **FAILED** at the round-trip assertion, then restored byte-identical |
+
+**What the enhance spec asserts, and why it is shaped that way.** The rendered `<textarea>`'s
+value, never `_fieldValues` — that state was correct for the entire life of the bug, which is
+precisely why it went unnoticed for a session. Both directions of the one broken line are covered
+with no GPU: text IN through `MpiInput.setValue` on the live field, and text OUT through
+clear-on-edit, which runs the same `_writeFieldValue`.
+
+**What the toggle spec asserts.** That the button renders in icon mode, that the caption appears
+ONCE (no `field-label` span above it), that declared defaults paint (Turbo off, headless on) —
+and then the flip is round-tripped through a slide rebuild. `is-active` alone proves nothing:
+MpiButton flips that class internally whether or not anyone listened. `state.s_flowInputs` cannot
+be the witness either — a live flow never writes it while the user edits; its only writers are the
+RUN path (`MpiBaseFlow._doRun`, at dispatch) and `flowService.openFlowFromReuse`, which SEEDS it
+from a history card before the flow mounts. A spec opening the flow with `flow:open` therefore
+reads `undefined` no matter what it touched. The slide rebuild reseeds every field from
+`_fieldValues[id] ?? f.default`, so a lost `onChange` comes back as the declared default.
+
+**CORRECTED after the claim auditor ran.** The first version of this section said
+`s_flowInputs` is "written only at DISPATCH", which is FALSE — `flowService.js:148` writes it too.
+The spec's behaviour and its conclusion are unaffected (that writer only fires on Reuse, which this
+spec does not use), but the stated reason was wrong, and it had been copied into `docs/testing.md`
+as guidance for the next spec author. Both fixed. The auditor's other two findings: the
+"ONLY driveable Primitive with no write API" claim was overstated and I had already corrected it
+mid-close-out after pre-verifying it; the caller COUNT was wrong and is now recounted line by line
+(seven modules, eleven sites — see plan.md `## Plan Drift`).
+
+**Two constraints these specs had to work around, both worth reusing.** With no project open the
+Flow overlay mounts into a main-area the landing page keeps hidden, so nothing inside it is
+clickable or fillable to a synthetic Playwright gesture — every interaction goes through the real
+handler in-page instead, and only the ASSERTIONS use locators (they read fine on hidden elements).
+And slide 0 is always the INPUTS slide even for a media-free flow, so the `fields` step is slide
+1 and the run slide is slide 2.
+
+**NOT verified here:** how it looks. Both changes are visual and Fabio's app needs a reload (no
+bundler, ES modules off `express.static`, nothing under `routes/` changed). A screenshot was
+attempted and abandoned — the overlay is not renderable without a project, and forcing it visible
+was not worth more machinery than the check is worth.
+
+
+## 2026-08-20 · session 9 — the LoRA panel (no GPU)
+
+**Ran:** `npm test` → **646/646** (6 new). `npm run test:desktop` → **21/21** (1 new). eslint on
+every touched file → **0 errors**. `npm run release:check` → passed.
+
+**What is proven, and what is deliberately not.** The flow's own half is a real desktop probe:
+`flow-lora-button.spec.js` opens character-sheet, walks to the run slide, asserts the LoRAs
+button renders with no duplicate caption, subscribes to `ui:open-model-settings`, presses the
+button, and asserts the payload is exactly `{ modelId: 'krea2' }`. The payload IS the assertion —
+an event firing with `undefined` opens nothing and logs nothing, which is the same dead-button
+shape this card started with.
+
+The OPEN itself is not reachable from that spec: `MpiModelSettings` is mounted by
+MpiGalleryBlock and MpiGroupHistoryBlock, and with no project open neither Block is mounted. So
+`tests/flow-lora-rack.test.cjs` pins the listener in **both** — the twin trap, since each Block
+mounts its own overlay and wiring one leaves the button dead in the other workspace.
+
+**The injection chain is pinned by source assertions**, the same call `flow-defer-commit` makes
+about `deferCommit`: the chain is three browser modules deep and standing it up costs more than
+it proves. What the assertions guard is a chain where **every hop drops an unknown key in
+silence** — `runCommand` takes an explicit whitelist, so a key not named there simply never
+arrives. Nothing throws: the panel opens, the slots save, the run succeeds, and the image has no
+LoRA in it. Four assertions cover the three hops plus the gate being the explicit
+`payload.loraModelId` rather than `payload.operation` (which would have switched LoRA injection
+on for every universal tool in the app).
+
+**NOT verified — and this one needs the GPU, so it is Fabio's or a later session's.** That a
+LoRA picked in the panel visibly changes the sheet. Everything above proves the params are BUILT
+and carry the right values; nothing here proves ComfyUI loaded the weight. The graph's
+`Input_Lora_1..6` nodes were already present and `comfyController`'s dedicated LoRA-object
+branch (MPI-219) already routes them, so the remaining risk is small — but it is untested.

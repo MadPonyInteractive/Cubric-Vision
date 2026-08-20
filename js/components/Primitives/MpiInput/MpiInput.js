@@ -82,14 +82,33 @@ export const MpiInput = ComponentFactory.create({
         const type = props.type || 'text';
 
         // Auto-height for textareas
+        let resize = null;
         if (input.tagName === 'TEXTAREA' && input.hasAttribute('data-auto-height')) {
-            const resize = () => {
+            resize = () => {
                 input.style.height = 'auto';
                 input.style.height = `${input.scrollHeight}px`;
             };
             resize();
             input.addEventListener('input', resize);
         }
+
+        // Programmatic write. The Primitives that get driven from outside expose one of
+        // these — `MpiRadioGroup.setValue`, `MpiCheckbox.setChecked`,
+        // `MpiButton.setLabel`, `MpiTileSheet.setSelected`. MpiInput did not, despite
+        // being the app's most-written control: SEVEN other modules reach past it for
+        // `.mpi-input__field` by hand, at eleven sites. One more (MPI-504) reached the
+        // MOUNT HOST div instead — `.value` on a div is an expando, so the write
+        // vanished with no error, no log and no repaint.
+        // (`MpiTreePicker` and `MpiStylePicker` still have no setter; they are the same
+        // gap, not counter-examples.)
+        //
+        // No event is emitted. This is not user input, and echoing it back would run
+        // the caller's own onChange against the value it has just written.
+        el.setValue = (val) => {
+            input.value = val ?? '';
+            props.value = input.value;
+            resize?.();
+        };
 
         if (type === 'number') {
             const step = props.step ?? 1;

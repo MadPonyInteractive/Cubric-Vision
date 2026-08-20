@@ -1038,6 +1038,12 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             });
         }));
         _modelPicker.on('settings', ({ model }) => _settingsOverlay.el.open({ modelId: model.id }));
+        // A Flow's LoRA button opens this same panel (MPI-504) — the twin of the
+        // listener in MpiGalleryBlock. Both Blocks mount their OWN overlay, so a
+        // listener in only one of them leaves the button dead in the other workspace.
+        _unsubs.push(Events.on('ui:open-model-settings', ({ modelId } = {}) => {
+            if (modelId) _settingsOverlay.el.open({ modelId });
+        }));
         _modelPicker.on('select', ({ model }) => {
             if (!model || model.id === activeModelId) return;
             // setModel picks the op that fits the staged frames, then Block-side

@@ -60,6 +60,18 @@
  *                                       there is no component. Every declared field MOUNTS AN APP
  *                                       PRIMITIVE (MPI-582); the declaration chooses which one, it
  *                                       does not replace it. See FlowStepField below.
+ * @property {string}   [settingsModel] - The model whose USER LoRA RACK fills this flow's
+ *                                       `Input_Lora_1..6` nodes, and the model a `settings` action
+ *                                       button opens the Model Settings panel on. It is NOT a
+ *                                       model selection — a flow still dispatches as an operation
+ *                                       with `model.id: null`, and this never reaches model
+ *                                       resolution or workflow lookup. OPT-IN: a flow that omits
+ *                                       it injects no LoRAs at all, which is how every flow ran
+ *                                       before MPI-504. The rack is the model's OWN settings,
+ *                                       shared with its ordinary generations — the same LoRA is
+ *                                       the same LoRA whether the flow or the prompt box runs it.
+ *                                       Flat-slot models only; a `loraStages` model warns and is
+ *                                       skipped rather than injected in the wrong shape.
  * @property {Object}   inputSchema    - What the flow collects → injected into the workflow
  * @property {{compare?: string}} [result] - How the RESULT is presented. `compare` names the media
  *                                       ROLE holding the BEFORE — the frame then shows the result
@@ -112,7 +124,8 @@
  * EVERY TYPE BELOW MOUNTS AN APP PRIMITIVE (`js/utils/declaredFields.js`, MPI-582).
  * `type` names a component, it does not replace one:
  *   select -> MpiDropdown · radio -> MpiRadioGroup · button -> MpiButton ·
- *   toggle -> MpiCheckbox · number, text -> MpiInput · slider -> MpiProgressBar
+ *   toggle -> MpiButton (icon mode, toggleable) · number, text -> MpiInput ·
+ *   slider -> MpiProgressBar
  * So a consumer block sizes these into its layout and NEVER restates their fill,
  * border, hover, focus or disabled treatment. A control this vocabulary cannot
  * express is a NEW PRIMITIVE plus a new `type` here — never a bare input, in a Flow
@@ -136,13 +149,24 @@
  *                               the value is clamped before it reaches the graph.
  * @property {number}  [max]   - For `number` / `slider`.
  * @property {number}  [step]  - For `number` / `slider`.
- * @property {string}  [icon]  - For `button`: an `js/utils/icons.js` key, rendered to the LEFT of
- *                               the label. The button itself is an MpiButton in the app's
- *                               primary variant — never restyle it from a consumer block.
+ * @property {string}  [icon]  - For `button` and `toggle`: an `js/utils/icons.js` key, rendered to
+ *                               the LEFT of the label. The button itself is an MpiButton in the
+ *                               app's primary variant — never restyle it from a consumer block.
+ *                               OPTIONAL on a `toggle`, which falls back to a tick; a `toggle`
+ *                               shows its label on its own face either way, so neither type ever
+ *                               gets a caption printed above it.
  * @property {number}  [rows]  - For `text`. `> 1` renders a textarea (the prompt case).
  * @property {string}  [placeholder] - For `text`.
  * @property {*}       [default]
- * @property {'enhance'} [action] - Makes a `button` an ACTION rather than a value (MPI-504). It
+ * @property {'enhance'|'settings'} [action] - Makes a `button` an ACTION rather than a value
+ *                               (MPI-504). An action's own id never reaches the op, and it stores
+ *                               nothing.
+ *                               `settings` opens the app's Model Settings panel on the flow's
+ *                               `settingsModel` — the SAME panel the model picker opens, with the
+ *                               six-slot LoRA rack already in it. The flow builds no LoRA UI: it
+ *                               names a model and emits `ui:open-model-settings`. Needs
+ *                               `settingsModel` on the FlowDef, or it warns and no-ops.
+ *                               `enhance`
  *                               runs `op` on the `from` field's text and writes the result into
  *                               the `to` field. ONE declaration carries all three behaviours —
  *                               Enhance fills `to`, editing `from` CLEARS `to`, and the button
@@ -548,6 +572,13 @@ export const FLOWS = [
         operation: 'flowCharacterSheet',
         workflow: 'flow_character_sheet.json',
         mediaType: 'image',
+        // The graph carries `Input_Lora_1..6`, so the user's own LoRAs can ride along:
+        // the LoRA carries identity, the sheet carries the layout, and someone who has
+        // already trained a character describes only the wardrobe and face on top
+        // (Fabio, MPI-504). This names WHOSE rack fills those nodes — krea2 is the
+        // model this flow samples — and it is the only reason the LoRA button and the
+        // injection in commandExecutor do anything.
+        settingsModel: 'krea2',
         // No `inputSchema` at all: this flow collects no media, so step 0 renders its
         // own "This flow needs no input media." beside the hero. No `result.compare`
         // either — there is no BEFORE to reveal against.
@@ -651,15 +682,29 @@ export const FLOWS = [
                 ],
             },
             {
-                id: 'Input_is_Turbo', type: 'toggle', label: 'Turbo', default: false,
+                // A `toggle` is an icon+label MpiButton (MPI-504), so `icon` is what it
+                // shows when there is no room to read the caption. Optional — omit it
+                // and the type falls back to a tick.
+                id: 'Input_is_Turbo', type: 'toggle', label: 'Turbo', icon: 'bolt',
+                default: false,
                 // The krea2 accelerator LoRA. OFF by default: a sheet is a keystone
                 // asset every later shot inherits, so it is the wrong place to trade
                 // fidelity for speed.
             },
             {
-                id: 'Input_Remove_Head', type: 'toggle', label: 'Headless front body', default: true,
+                id: 'Input_Remove_Head', type: 'toggle', label: 'Headless front body',
+                icon: 'eraser', default: true,
                 // ON by default — it is the whole reason this layout works as a video
                 // reference. Off is for inspecting the sheet the model actually drew.
+            },
+            {
+                // Opens the app's OWN Model Settings panel on `settingsModel` — the
+                // six-slot rack, strengths, bypass and drop zones, already built. An
+                // `action` button, so it holds no value and never reaches the payload;
+                // what the user picks there is saved against the model, and
+                // commandExecutor injects it into `Input_Lora_1..6` at dispatch.
+                id: 'loras', type: 'button', label: 'LoRAs', icon: 'layers',
+                action: 'settings',
             },
         ],
     },

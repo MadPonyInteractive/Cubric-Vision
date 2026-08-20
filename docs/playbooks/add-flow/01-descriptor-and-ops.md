@@ -94,8 +94,9 @@ an id prefixed `Input_` routes into `injectionParams` instead of the top level.
 
 **This does NOT mean a Flow has no components — it has nothing BUT components.** Every declared
 field mounts an app Primitive (`js/utils/declaredFields.js`): `select` is an MpiDropdown,
-`slider` an MpiProgressBar, `text` and `number` an MpiInput, `toggle` an MpiCheckbox, `radio` an
-MpiRadioGroup, `button` an MpiButton. The declaration chooses WHICH component; it has never
+`slider` an MpiProgressBar, `text` and `number` an MpiInput, `toggle` an MpiButton (icon mode,
+`toggleable`), `radio` an MpiRadioGroup, `button` an MpiButton. The declaration chooses WHICH
+component; it has never
 replaced one. **If a control cannot be expressed, the answer is a new PRIMITIVE plus a new field
 type — never a bare `<input>`, and never a Flow-owned Organism.** A Flow is more flexible in that
 it can carry all sorts of different components, but they are all components
@@ -111,6 +112,12 @@ expressed in the GRAPH, by one `MpiInt` selecting `MpiAnySwitch` banks:
 [ui/switch-bank-fields.md](ui/switch-bank-fields.md). Zero app code, and the selector title
 must be pinned in `tests/inject-params-titles.test.cjs` or a lost switch silently pins every
 run to `any_1`.
+
+**A graph carrying `Input_Lora_1..6` does NOT need a LoRA control.** Declare `settingsModel` on
+the FlowDef plus an `{ action: 'settings' }` button and the flow reuses the app's own Model
+Settings panel — the six-slot rack, strengths, bypass, drop zones, all already built. The catch
+is that opening it is only half: a flow dispatches with `model.id: null`, so without the
+`loraModelId` chain the rack saves fine and injects nothing. [ui/lora-rack.md](ui/lora-rack.md).
 
 **A step may also bind its gizmo to a graph param**: `{ kind:'box', role:'image1', param:'box1' }`.
 The flow declares WHICH role feeds WHICH node — that stays flow knowledge — while the shape the

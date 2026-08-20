@@ -20,7 +20,8 @@
  * EVERY FIELD TYPE MOUNTS AN APP PRIMITIVE (MPI-582). A declaration NAMES a
  * component; it has never replaced one:
  *   select -> MpiDropdown · radio -> MpiRadioGroup · button -> MpiButton ·
- *   toggle -> MpiCheckbox · number, text -> MpiInput · slider -> MpiProgressBar
+ *   toggle -> MpiButton (icon mode, toggleable) · number, text -> MpiInput ·
+ *   slider -> MpiProgressBar
  *
  * This file used to hand-roll five of those seven as raw DOM, and the framing that
  * allowed it was written down: commit 55461326, "declared controls, so a Flow needs
@@ -42,9 +43,22 @@ import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
 import { MpiProgressBar } from '../components/Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
 import { MpiDropdown } from '../components/Primitives/MpiDropdown/MpiDropdown.js';
-import { MpiCheckbox } from '../components/Primitives/MpiCheckbox/MpiCheckbox.js';
 import { renderIcon } from './icons.js';
 import { clientLogger } from '../services/clientLogger.js';
+
+/**
+ * Types whose control already shows the label on its own face, so the wrapper must
+ * not print it a second time above.
+ */
+const LABEL_IN_CONTROL = new Set(['button', 'toggle']);
+
+/**
+ * The `toggle` icon when a declaration names none. Icon MODE is not optional here —
+ * it is the only MpiButton mode that carries `toggleable`, the `is-active` treatment
+ * and a label beside an icon — so a toggle with no icon still renders in it, with a
+ * tick standing in. Declaring `icon` is how a toggle says what it turns on.
+ */
+const TOGGLE_FALLBACK_ICON = 'check';
 
 /**
  * A declared field's numeric value, coerced and held inside its declared bounds.
@@ -141,11 +155,13 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
     const cls = (el) => `${block}__${el}`;
 
     // A `<label>` for every type but `toggle`: the other controls own a real focusable
-    // field, so the wrapper forwards a click on the caption into it. `MpiCheckbox`
-    // renders its OWN `<label>`, and nested labels double-fire the activation — the
-    // box would tick and untick on one click. That type gets a plain div.
+    // field, so the wrapper forwards a click on the caption into it. A `toggle` is a
+    // `<button>`, and a label wrapping a button re-fires the click — the toggle would
+    // flip and flip back on one press. That type gets a plain div.
     const wrap = ce(f.type === 'toggle' ? 'div' : 'label', { className: cls('field') });
-    if (f.label && f.type !== 'button') {
+    // `button` and `toggle` CARRY their own caption — the button's face IS the label.
+    // A caption above it would say the same word twice (Fabio, MPI-504).
+    if (f.label && !LABEL_IN_CONTROL.has(f.type)) {
         const lbl = ce('span', { className: cls('field-label') });
         lbl.textContent = f.label;
         wrap.appendChild(lbl);
@@ -246,15 +262,31 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
         unsubs.push(() => inst?.el?.destroy?.());
         wrap.appendChild(host);
     } else if (f.type === 'toggle') {
-        // MpiCheckbox, not a raw `<input type=checkbox>`: the bare box was drawn by
-        // Chromium and tinted with `accent-color`, which is why it matched nothing
-        // else on screen. The Primitive is the same box the rest of the app ticks.
+        // A toggleable MpiButton in ICON MODE, carrying its own icon and name —
+        // Fabio's call, MPI-504: "MPI buttons for the toggles instead, so that you
+        // don't need labels on the top like you have now." It replaces the type
+        // rather than joining it, so there is one on/off vocabulary and not two.
+        //
+        // Icon mode is the mode that HAS this: `toggleable`, the `is-active`
+        // treatment, and a label beside an icon. Text mode has none of them — its
+        // click handler ignores `toggleable` and every `is-active` rule in
+        // MpiButton.css is scoped to `.mpi-ibtn` — so an icon-less declaration falls
+        // back to a tick rather than dropping out of icon mode, where it would flip
+        // a class that paints nothing.
+        //
+        // `toggle`, not `click`: the primitive owns the flip and reports the state it
+        // landed on, so this never re-derives it from the class list.
         const host = ce('div', { className: cls('field-toggle') });
-        const inst = MpiCheckbox.mount(host, {
-            checked: Boolean(cur),
-            name: `${namespace}-${f.id}`,
+        const inst = MpiButton.mount(host, {
+            icon: f.icon || TOGGLE_FALLBACK_ICON,
+            label: f.label || f.id,
+            size: 'sm',
+            toggleable: true,
+            active: Boolean(cur),
+            info: f.info || '',
+            extraClasses: cls('field-toggle-btn'),
         });
-        inst.on('change', ({ checked }) => onChange(checked));
+        inst.on('toggle', ({ active }) => onChange(active));
         unsubs.push(() => inst?.el?.destroy?.());
         wrap.appendChild(host);
     } else if (f.type === 'number') {

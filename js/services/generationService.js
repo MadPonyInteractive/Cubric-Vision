@@ -804,6 +804,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         mediaItems,
         maskDataUrl,
         injectionParams,
+        // A Flow that declares `settingsModel` fills its user LoRA rack from THAT
+        // model's settings while still running as an operation with `model.id: null`
+        // (flowService.js). Threaded explicitly because this payload is a whitelist —
+        // a key not named here never reaches the executor.
+        loraModelId: config.loraModelId ?? null,
         previewOnly: config.previewOnly === true,
         historyMode: config.historyMode === true,
         isStage2: config.isStage2 === true,

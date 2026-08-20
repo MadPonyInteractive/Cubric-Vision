@@ -175,6 +175,35 @@ deliberately left alone.
   Model Library (needs installed models) and the Flow Library (dev-gated) are not in
   it yet — they need fixtures first.
 
+### Specs that drive a FLOW overlay (MPI-504)
+
+Three things cost a failing run each before the three `flow-*.spec.js` specs worked:
+
+1. **Nothing inside a Flow overlay is clickable or fillable with no project open.** It mounts
+   into a `main-area` the landing page keeps hidden, so `.click()` / `.fill()` time out with
+   "element is not visible" — which reads as a broken flow and is not one.
+   `flow-close-destroys-instance.spec.js` hit this first. Drive the real handler in-page
+   instead (`window.evaluate(() => document.querySelector('#flow-next').click())`); locator
+   ASSERTIONS are fine, they read hidden elements happily.
+2. **Slide 0 is ALWAYS the inputs slide**, even for a flow that collects no media — it renders
+   "This flow needs no input media." So a declared `fields` step is slide **1** and the run
+   slide is the last. A spec that looks for a declared control without navigating finds zero
+   elements.
+3. **`state.s_flowInputs` cannot witness that a control's value reached the flow.** A live flow
+   never writes it while the user edits: the only writers are the RUN path
+   (`MpiBaseFlow._doRun`, at dispatch) and `flowService.openFlowFromReuse`, which SEEDS it from
+   a history card before the flow mounts. So a spec that opens a flow with `flow:open` and reads
+   that key back gets `undefined` however many controls it has touched. To prove a value landed,
+   navigate away and back: every slide rebuilds its fields from `_fieldValues[id] ?? f.default`,
+   so a lost `onChange` comes back as the declared default. Asserting the control's own class
+   instead proves only that the Primitive toggled itself — it does that whether or not anyone
+   listened.
+
+**And mutation-test the guard.** Both MPI-504 specs were run against the bug they cover (the
+old host-div write; the toggle's `onChange` cut) and confirmed RED before being kept. Do the
+mutation from a script that restores in `finally` — a crash mid-run otherwise leaves a real
+source file broken, and the mutant then reads as your own bad edit.
+
 ### Four traps these specs paid for
 
 1. **Assert the trigger toggled (`is-open`) BEFORE asserting the popup.** In the real

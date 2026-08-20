@@ -211,8 +211,9 @@ steps: [
 stacked into the 236px control column; on a step they obey the one-row cap.
 
 **Every type here mounts an app Primitive** (`js/utils/declaredFields.js`, MPI-582) —
-`select`→MpiDropdown, `radio`→MpiRadioGroup, `button`→MpiButton, `toggle`→MpiCheckbox,
-`number`/`text`→MpiInput, `slider`→MpiProgressBar. `type` NAMES a component; it does not
+`select`→MpiDropdown, `radio`→MpiRadioGroup, `button`→MpiButton, `toggle`→MpiButton (icon mode,
+`toggleable`, icon optional — MPI-504), `number`/`text`→MpiInput, `slider`→MpiProgressBar.
+`type` NAMES a component; it does not
 replace one. So a consumer block sizes these into its layout and never restates their fill,
 border, hover, focus or disabled treatment — anything chrome-like in a consumer stylesheet is a
 bug. A control this vocabulary cannot express is a new Primitive plus a new `type`, never a bare

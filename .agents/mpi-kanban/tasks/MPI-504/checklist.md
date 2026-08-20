@@ -189,5 +189,38 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       rather than a clean hollow collar, but the seeds differed, so resolution and seed are
       confounded. Needs one fixed-seed dispatch at both arms. Folds into the Klein removal A/B
       item above rather than standing alone.
+- [x] **The Enhance dead-box — FIXED** (2026-08-20, session 9). `MpiInput` gained `el.setValue`,
+      the write API it had never had while the driven Primitives all do; `_writeFieldValue` calls it
+      instead of setting `.value` on the mount host div. Guarded by
+      `tests/desktop/flow-enhance-writes-textarea.spec.js`, MUTATION-TESTED red against the old
+      line. Fixes the empty phrase box AND clear-on-edit in one change.
+- [x] **Toggles are icon+label MpiButtons** (2026-08-20, session 9). The `toggle` TYPE changed, so
+      there is one on/off vocabulary; icon optional (tick fallback); no caption above. Turbo →
+      `bolt`, Headless front body → `eraser`. Guarded by
+      `tests/desktop/flow-toggle-is-a-button.spec.js`, mutation-tested red with `onChange` cut.
+- [x] **The LoRA panel — DONE** (2026-08-20, session 9). Fabio's correction: open the app's WHOLE
+      Model Settings panel, not lift its rack. `settingsModel: 'krea2'` + an `action: 'settings'`
+      button; the flow emits `ui:open-model-settings` and the owning Block opens its overlay (BOTH
+      Blocks wired — each mounts its own). No new field type, no `lora` type, no extraction.
+      **Plus the half that made it real:** a flow injected NO LoRAs at all, so `loraModelId` now
+      crosses flowService → the `runCommand` whitelist → `Lora_N` → `Input_Lora_N`. Guarded by
+      `tests/flow-lora-rack.test.cjs` (6 assertions on the chain + the twin Blocks) and
+      `tests/desktop/flow-lora-button.spec.js` (the button emits with the right model id).
+      Portable record: `docs/playbooks/add-flow/ui/lora-rack.md`. "A new route for flow LoRAs" was
+      NOT built — unnecessary under the shared-model-settings reading; see plan.md.
+- [ ] **ON PICKUP, BEFORE ANYTHING ELSE: land the commit.** ~500 lines across 26 files are
+      DONE, VERIFIED and staged but UNCOMMITTED — the husky pre-commit hook rejects
+      `MpiBaseFlow.js` on FOUR **pre-existing** bare-`<button>` warnings (172 ×2, 445, 518;
+      HEAD's own copy trips the same four, my hunks are at 761+/890+). MPI-582 added that rule
+      without clearing the file, so any commit touching it is blocked. Fabio declined all three
+      offered options and asked the next agent to fix it: convert those four to `MpiButton`,
+      KEEPING the `#flow-prev` / `#flow-next` ids that three desktop specs drive. Then commit by
+      pathspec (EXCLUDE `js/data/modelConstants/models.js` — another session's work), push, and
+      release file claim `62a1b83a`, held `claimed` to protect the uncommitted tree.
+      Full detail: `state/handoffs/30b5a47a-dde7-4cf6-8c42-caeb68d37664.json`.
 - [ ] **Graphics** — `/mpi-flow-graphics` (playbook 06); `flow-character-sheet.webp` + hero.
+      > **PAIRED WITH MPI-584 (Fabio, 2026-08-20).** One session covers BOTH flows' art — this
+      > card's, and MPI-584's `flow-ltx-upscale.webp` + `.mp4`. The throwaway project
+      > `MPI-504 sheet verify` in Fabio's real Projects folder is KEPT ON PURPOSE as graphics
+      > source (two proof sheets) — do not delete it.
 - [ ] Decide the `krea2-nsfw`-only install case

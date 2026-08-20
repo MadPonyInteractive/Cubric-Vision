@@ -10,6 +10,64 @@ prompt) is in [prompts.md](prompts.md). This file is the build.
 
 ## Current State
 
+**2026-08-20, session 9 — ALL THREE UI ITEMS ARE DONE, AND THE WORK IS UNCOMMITTED. Landing the
+commit is the next action, not the graphics.** The husky pre-commit hook rejects
+`MpiBaseFlow.js` on **four PRE-EXISTING** bare-`<button>` warnings (172 ×2, 445, 518) — proven not
+mine: my hunks are at 761+/890+ and HEAD's own copy trips the identical four. MPI-582 added the
+rule (`7d7100da`) without clearing this file, so ANY commit touching it is blocked; `e1f4f056`
+(MPI-585, same day) committed it anyway, so that session bypassed the hook. Fabio was offered
+fix-the-four / `--no-verify` / `--no-verify` + a card, declined all three, and asked the next agent
+to fix it. **Handoff: `state/handoffs/30b5a47a-dde7-4cf6-8c42-caeb68d37664.json`.** File claim
+`62a1b83a` is deliberately left `claimed` over 14 paths so a peer session cannot write ~500
+uncommitted lines. **The graphics are PAIRED with MPI-584** — one `/mpi-flow-graphics` session
+covers both flows, Fabio's call; the throwaway project `MPI-504 sheet verify` is KEPT as graphics
+source. Everything below is guarded, and the two mutation-tested specs were each PROVEN to fail
+against the bug they cover. What landed:
+
+- **The LoRA button opens the app's OWN Model Settings panel** — `settingsModel: 'krea2'` on the
+  FlowDef plus an `{ id:'loras', type:'button', action:'settings' }` field. The flow builds NO
+  LoRA UI: it emits `ui:open-model-settings` and the owning Block opens its overlay, the same
+  split `ui:open-model-picker` uses. Fabio's clarification is what made this small — he meant
+  reuse the settings panel whole, not lift its rack out.
+- **And the half that was NOT decoration:** a flow dispatches with `model.id: null`, and
+  `commandExecutor` injects LoRAs only under `payload.modelId` — so a flow injected **no LoRAs at
+  all**, and the button alone would have opened a panel that changed nothing. `loraModelId` now
+  rides flowService → the `runCommand` WHITELIST → `params.Lora_N` → `Input_Lora_N`. This
+  deliberately reverses the "RUN CLEAN, no project LoRAs" rule that stood in flowService, which
+  Fabio had already reversed in session 7; the comment there was the stale side. **Opt-in per
+  flow**, so nothing else changes.
+- Portable record: `docs/playbooks/add-flow/ui/lora-rack.md`, indexed in `ui/README.md` and
+  pointed at from `01-descriptor-and-ops.md`.
+
+- **`MpiInput` gained `el.setValue`**, and that is the real finding: it had no programmatic-write
+  API at all, while the Primitives that get driven from outside all do (`MpiRadioGroup.setValue`,
+  `MpiCheckbox.setChecked`, `MpiButton.setLabel`, `MpiTileSheet.setSelected`,
+  `MpiColorPicker.setHex`). That absence is why SIX call sites reach past it for
+  `.mpi-input__field` by hand — and why a seventh could reach the mount host instead and fail
+  silently. `_writeFieldValue` now calls `qs('.mpi-input', wrap)?.setValue?.(text)`.
+  **Corrected mid-close-out:** I first wrote "the ONLY driveable Primitive without one", which is
+  FALSE — `MpiTreePicker` and `MpiStylePicker` have no setter either and `MpiDropdown` exposes
+  only `setOptions`. They are the same gap unpaid, not counter-examples.
+- **`toggle` IS an MpiButton now** — icon mode, `toggleable`, icon OPTIONAL (falls back to a
+  tick), caption on the button's face only. `Input_is_Turbo` → `bolt`, `Input_Remove_Head` →
+  `eraser`. Icon mode is not a preference: text mode ignores `toggleable` outright and every
+  `is-active` rule in MpiButton.css is scoped to `.mpi-ibtn`, so a text-mode toggle would flip a
+  class that paints nothing. Attempted widening the Primitive's gate instead, and REVERTED it for
+  exactly that reason.
+- **Two desktop specs, both mutation-tested**: `flow-enhance-writes-textarea.spec.js` (red against
+  the old `field-text` line) and `flow-toggle-is-a-button.spec.js` (red with `onChange` cut). The
+  toggle spec round-trips through a slide rebuild rather than asserting `is-active`, because the
+  primitive flips that class whether or not anyone listened — and `state.s_flowInputs` is only
+  written at DISPATCH, so it cannot be the witness without a GPU.
+- Verified: `npm test` **646/646**, `npm run test:desktop` **21/21**, eslint 0 errors (the 4
+  warnings are pre-existing bare `<button>`s at MpiBaseFlow.js:172/445/518), `release:check`
+  passed.
+- **`result.compare` needed NO work** — the FlowDef already omits it deliberately with the reason
+  written in, which is exactly what MPI-585's message asks for a from-scratch output. Replied and
+  resolved.
+
+Session 8's record follows.
+
 **2026-08-20, session 8 — BOTH OPEN DECISIONS ANSWERED AND SHIPPED; THE FLOW RAN LIVE.** The
 1k/2k control is the `Input_Quality` switch bank (`70dc98cb` raw, `96c5b410` app+docs), proven at
 both arms in my own instance — `Input_Quality 1 -> 1280x800`, `2 -> 1792x1120`, read off the
@@ -844,6 +902,78 @@ longer exists, so each resolves to a deletion, not a re-wire:
    node if Fabio wants it.
 
 ## Plan Drift
+
+**2026-08-20, session 9 — THE ENHANCE FIX LANDED ONE LAYER LOWER THAN THE DIAGNOSIS SAID.**
+Session 8 wrote "reach the PRIMITIVE… check what `MpiInput` already exposes". It exposes
+**nothing**: 133 lines, `setup` attaches no methods at all, while `MpiRadioGroup.setValue`,
+`MpiCheckbox.setChecked` and `MpiButton.setLabel/setActive/setIcon/setDisabled` have existed all
+along — as do `MpiTileSheet.setSelected` and `MpiColorPicker.setHex`. So MpiInput had no write
+API while the Primitives that get driven from outside all did, and **seven other modules push a
+value into one at eleven sites**: `MpiSettings` ×2, `MpiRunpodSettings`, `MpiEngineInstall` ×3,
+`MpiErrorDialog`, `MpiNewProject` ×2, `MpiToolOptionsResize` ×2. All eleven resolve a REAL control
+(`.mpi-input__field`, or `input` inside the instance), so none of them is broken — but they are
+the habit that let one more caller guess wrong. **The fix was to add the missing API, not to fix
+one call site**; `_liveFields` did not need to change at all. The eleven hand-reaches are NOT
+swept — they work, they are outside this card, and they are logged here so the next person sees
+the pattern rather than rediscovering it.
+
+**Both halves of that paragraph were wrong when first written, and the claim auditor caught the
+count** (the "ONLY driveable Primitive" half I caught myself, pre-verifying it during close-out).
+First draft said "six callers" and named a set that included two modules whose cited lines only
+READ a field. The auditor over-corrected in turn — it concluded those two "neither pushes", but
+`MpiRunpodSettings.js:1740` and `MpiErrorDialog.js:172` do both, clearing the field after use;
+what it got right is that the list was incomplete, missing `MpiToolOptionsResize` entirely. Recount
+verified line by line.
+
+Blast radius, checked: `MpiBaseFlow.js:765` was the ONLY JS reader of `.mpi-base-flow__field-text`
+anywhere in `js/` — every other reference is CSS.
+
+**2026-08-20, session 9 — TOGGLES ARE BUTTONS, AND THE "ICON OPTIONAL" HALF FORCED THE MODE.**
+The obvious build (an MpiButton with `toggleable`, icon only when declared) does not work: the
+Primitive's toggle branch is gated `props.icon && (props.toggleable || props.iconActive)`, and
+every `is-active` rule in `MpiButton.css` is scoped to `.mpi-ibtn`. **Widening that gate was tried
+and reverted** — it would have let an icon-less toggle flip a class with no styling behind it,
+which is the same silent-no-op class of bug as the one this session fixed. So `toggle` always
+mounts in ICON MODE and an undeclared icon falls back to a tick (`TOGGLE_FALLBACK_ICON`).
+`declaredFields.js` no longer imports `MpiCheckbox`.
+
+**Also corrected, same shape as the LoRA-rack claim below:** the handoff said ltx-extend, foley and
+upscale ship toggles that must keep working label-only. **They do not.** `type: 'toggle'` appears
+exactly TWICE in the whole app, both in character-sheet. The icon stays optional anyway — MPI-586's
+Prop Sheet will declare toggles — but nothing existing was at risk.
+
+**2026-08-20, session 9 — THE LoRA PANEL: I PROPOSED THE WRONG THING AND FABIO CORRECTED IT.**
+I read "the same UI used beside regular models" as *the rack*, and put two options to him —
+extract `_mountLoraSlots()` into a shared `MpiLoraRack` Compound, or build a Flow-side rack in
+`declaredFields.js`. Both were wrong. He meant the **whole settings panel**: "a button that opens
+up the LoRA panel, which is the same panel as the models have, which is called the settings panel,
+which has everything already built in." No extraction, no new field type, no `lora` type at all —
+the flow names a model and emits, and `MpiModelSettings` opens as it already does for the picker.
+**The correction made the job about a third the size.** Worth remembering as a pattern: when the
+ask names an existing surface, check whether it can be opened whole before deciding which piece of
+it to lift out.
+
+**What actually took the work was the half nobody had looked at: the LoRAs did not RUN.**
+`flowService` dispatches with `model: { id: null }` and the comment "the Flow IS the recipe — RUN
+CLEAN, no project LoRAs", and `commandExecutor` gates its LoRA injection on `payload.modelId`. So
+every flow injected zero LoRAs, and a button on its own would have opened a real panel, saved real
+slots, and produced an identical image. The fix is one key carried across three boundaries —
+`flowService` (`loraModelId`) → `generationService`'s `runCommand` **whitelist** → the executor's
+universal-op branch, gated on the explicit id so no other tool changes — and it lands as
+`params.Lora_N`, which the existing `Input_` canonicalization pass renames to `Input_Lora_N`. A key
+not named in that whitelist reaches nothing, silently; that is what
+`tests/flow-lora-rack.test.cjs` pins.
+
+**Two decisions taken and stated rather than asked:**
+- The rack is the **model's own settings**, shared with ordinary krea2 generations — a LoRA loaded
+  for krea2 is the same LoRA whether the sheet or the prompt box runs it. That is what "the same
+  panel the models have" means, and it is why this needed no new persistence.
+- **"A new route for flow LoRAs" was not built and is not needed** under that reading. It was
+  Fabio's own tentative "perhaps", and it only becomes a question if he wants flow-scoped LoRAs
+  isolated from the model's — which would mean a settings key the panel has no context for today.
+
+**Staged-LoRA models are refused, not guessed.** A `loraStages` model needs its stage prefixes; the
+injection warns and skips rather than writing flat slots into a staged graph.
 
 **2026-08-20, session 8 — THE ENHANCE BUTTON BUG, ROOT-CAUSED, NOT YET FIXED.** Fabio: "when I
 press enhance, nothing happens... upon reusing the flow, I noticed that the character phrase box

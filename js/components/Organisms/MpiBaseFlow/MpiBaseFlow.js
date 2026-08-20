@@ -165,6 +165,22 @@ function _mediaName(url) {
     return (p.split(/[/\\]/).pop() || '').replace(/\.[^.\s]+$/, '');
 }
 
+/**
+ * An MpiButton the caller places itself. `mount()` REPLACES its container's
+ * innerHTML, and every button here lands in a tree that already has siblings —
+ * the arrows are absolutely positioned inside the stage, the ticks sit in a flex
+ * row the ticker rebuilds, the slot clear sits over an image. So mount into a
+ * throwaway div and hand back the real `<button>` to place.
+ *
+ * Returning the element (not the instance) is what lets the ids survive:
+ * `#flow-prev` / `#flow-next` / `#flow-back` must stay on something a
+ * `document.querySelector(...).click()` actually activates — three desktop specs
+ * drive the carousel that way, and a click on a mount HOST div does nothing.
+ */
+function _mountButton(props, children = '') {
+    return MpiButton.mount(ce('div'), props, children).el;
+}
+
 export const MpiBaseFlow = ComponentFactory.create({
     name: 'MpiBaseFlow',
     css: ['js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css'],
@@ -172,10 +188,7 @@ export const MpiBaseFlow = ComponentFactory.create({
     template: (props) => `
         <div class="mpi-base-flow">
             <div class="mpi-base-flow__topbar">
-                <div class="mpi-base-flow__topbar-left">
-                    <button class="mpi-base-flow__back" id="flow-back" type="button">
-                        ${renderIcon('back', 'sm')}<span>Flows</span>
-                    </button>
+                <div class="mpi-base-flow__topbar-left" id="flow-topbar-left">
                     <span class="mpi-base-flow__topbar-sep"></span>
                     <span class="mpi-base-flow__flow-name">${props.flow?.title || 'Flow'}</span>
                 </div>
@@ -183,10 +196,6 @@ export const MpiBaseFlow = ComponentFactory.create({
                 <div class="mpi-base-flow__topbar-right"></div>
             </div>
             <div class="mpi-base-flow__stage" id="flow-stage">
-                <button class="mpi-base-flow__arrow mpi-base-flow__arrow--prev" id="flow-prev"
-                        type="button" aria-label="Previous step">&#8249;</button>
-                <button class="mpi-base-flow__arrow mpi-base-flow__arrow--next" id="flow-next"
-                        type="button" aria-label="Next step">&#8250;</button>
                 <div class="mpi-base-flow__slides" id="flow-slides"></div>
             </div>
         </div>`,
@@ -211,8 +220,33 @@ export const MpiBaseFlow = ComponentFactory.create({
 
         const tickerEl = qs('#flow-ticker', el);
         const slidesEl = qs('#flow-slides', el);
-        const prevBtn = qs('#flow-prev', el);
-        const nextBtn = qs('#flow-next', el);
+
+        // ── Chrome buttons ──────────────────────────────────────────────────────
+        // Mounted rather than written into the template: every UI element is a
+        // component (.claude/rules/components.md). The ids move onto the mounted
+        // `<button>` itself, so `#flow-prev` / `#flow-next` / `#flow-back` keep
+        // working for the specs and for `qs()` below.
+        const backBtn = _mountButton({
+            icon: 'back', label: 'Flows', size: 'sm', variant: 'ghost',
+            extraClasses: 'mpi-base-flow__back',
+        });
+        backBtn.id = 'flow-back';
+        qs('#flow-topbar-left', el).prepend(backBtn);
+
+        const _arrow = (dir, glyph, aria) => {
+            const btn = _mountButton({
+                text: glyph, variant: 'ghost',
+                extraClasses: `mpi-base-flow__arrow mpi-base-flow__arrow--${dir}`,
+            });
+            btn.id = `flow-${dir}`;
+            btn.setAttribute('aria-label', aria);
+            return btn;
+        };
+        // The same single angle quotes the template drew, as literals rather than
+        // `&#8249;` / `&#8250;` — an entity reads as a hardcoded hex colour to the linter.
+        const prevBtn = _arrow('prev', '‹', 'Previous step');
+        const nextBtn = _arrow('next', '›', 'Next step');
+        qs('#flow-stage', el).prepend(prevBtn, nextBtn);
 
         const mediaGroupDefs = _getMediaGroups(flow);
         const middleSteps = _getSteps(flow);
@@ -442,7 +476,9 @@ export const MpiBaseFlow = ComponentFactory.create({
         function _buildTicker() {
             tickerEl.innerHTML = '';
             _tickerLabels().forEach((label, i) => {
-                const btn = ce('button', { className: 'mpi-base-flow__tick', type: 'button' });
+                const btn = _mountButton({
+                    variant: 'ghost', size: 'sm', extraClasses: 'mpi-base-flow__tick',
+                });
                 const num = ce('span', { className: 'mpi-base-flow__tick-num' });
                 num.textContent = String(i + 1).padStart(2, '0');
                 const text = ce('span');
@@ -515,10 +551,10 @@ export const MpiBaseFlow = ComponentFactory.create({
                     name.textContent = _mediaName(item.url);
                     slot.appendChild(name);
                 }
-                const clear = ce('button', {
-                    className: 'mpi-base-flow__slot-clear', type: 'button', title: 'Remove',
+                const clear = _mountButton({
+                    icon: 'close', size: 'sm', variant: 'ghost', info: 'Remove',
+                    extraClasses: 'mpi-base-flow__slot-clear',
                 });
-                clear.innerHTML = renderIcon('close', 'xs');
                 unsubs.push(on(clear, 'click', (e) => {
                     e.stopPropagation();
                     // Clear THIS slot only — never splice, or every later image would
@@ -758,12 +794,21 @@ export const MpiBaseFlow = ComponentFactory.create({
         /** Field id of the enhance in flight, or null. */
         let _enhancing = null;
 
-        /** Push a value into a mounted text field, so a programmatic write shows. */
+        /**
+         * Push a value into a mounted text field, so a programmatic write shows.
+         *
+         * Through `MpiInput.setValue`, on the Primitive's ROOT — not the raw
+         * `<textarea>`, and not the mount host. `.mpi-base-flow__field-text` is the
+         * HOST div (`declaredFields.js` § text), so the earlier `host.value = text`
+         * set an expando on a div and vanished: no error, no log, no repaint. The
+         * enhanced phrase never appeared and the enhance button greyed out anyway,
+         * because the VALUE was always right — only this write was lost (MPI-504).
+         * Same reach as `_paintEnhance` uses for MpiButton, one layer down.
+         */
         function _writeFieldValue(id, text) {
             const wrap = _liveFields.get(id);
             if (!wrap) return;
-            const inp = qs('.mpi-base-flow__field-text', wrap);
-            if (inp) inp.value = text;
+            qs('.mpi-input', wrap)?.setValue?.(text);
         }
 
         /**
@@ -878,7 +923,32 @@ export const MpiBaseFlow = ComponentFactory.create({
         /** onChange for a flow-level field: an `action` runs, everything else stores. */
         function _onFlowField(f, val) {
             if (f.action === 'enhance') { _runEnhance(f); return; }
+            if (f.action === 'settings') { _openSettings(); return; }
             _setFlowField(f.id, val);
+        }
+
+        /**
+         * Open the app's Model Settings panel on the model whose LoRA rack fills this
+         * flow's `Input_Lora_N` nodes.
+         *
+         * The panel is NOT rebuilt here — it is the same `MpiModelSettings` the model
+         * picker opens, with the same six slots, strengths, bypass and drop zones
+         * (Fabio, MPI-504: "the same panel as the models have, which has everything
+         * already built in"). So the flow owns no LoRA UI: it names a model and emits.
+         * Whoever mounted the overlay opens it, exactly as `ui:open-model-picker`
+         * already works — the frame never reaches into another Block's component.
+         *
+         * The rack it edits is that model's OWN settings, shared with its ordinary
+         * generations. That is the point: a character LoRA loaded for krea2 is the
+         * same LoRA whether the sheet or the prompt box runs it.
+         */
+        function _openSettings() {
+            if (!flow.settingsModel) {
+                clientLogger.warn('MpiBaseFlow',
+                    `flow "${flow.id}" declares a settings button but no settingsModel`);
+                return;
+            }
+            Events.emit('ui:open-model-settings', { modelId: flow.settingsModel });
         }
 
         /**

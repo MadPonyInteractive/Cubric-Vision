@@ -51,9 +51,18 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
     }
 
     // Build config from the descriptor + inputs. Positive/negative stay empty unless
-    // the flow declares them (the Flow IS the recipe — RUN CLEAN, no project LoRAs;
-    // the universal model:{id:null} path already injects none, getModelSettings is keyed
-    // by model.id).
+    // the flow declares them.
+    //
+    // A flow still runs with `model.id: null` — it is an OPERATION, not a model, and
+    // that null is what keeps `getModelSettings` (keyed by model id) out of the path.
+    // `settingsModel` is the deliberate exception: a flow that DECLARES one is saying
+    // "my graph carries a user LoRA rack, and these are the settings that fill it".
+    //
+    // This reverses the "RUN CLEAN, no project LoRAs" rule that stood here — Fabio's
+    // call on MPI-504: a user who already has a character LoRA should be able to load
+    // it and describe only the wardrobe and face on top. The LoRA carries identity, the
+    // sheet carries the layout. It stays OPT-IN per flow, so every flow that declares
+    // nothing still runs exactly as clean as before.
     const mediaItems = Array.isArray(inputs.mediaItems) ? inputs.mediaItems : [];
     const config = {
         operation: flow.operation,
@@ -62,6 +71,10 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
         negative: inputs.negative || '',
         mediaItems,
         injectionParams: inputs.injectionParams || {},
+        // Whose LoRA rack fills this flow's `Input_Lora_N` nodes, or null. NOT a model
+        // selection: it never reaches model resolution or workflow lookup, which stay
+        // driven by `operation`.
+        loraModelId: flow.settingsModel || null,
         // Additive, threaded to the sidecar save path (Phase 2 item 4) so Reuse can
         // reopen this Flow with its inputs restored.
         flowId: flow.id,

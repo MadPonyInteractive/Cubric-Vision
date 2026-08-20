@@ -829,6 +829,33 @@ function _buildParams(payload) {
             const settings = getToolSettings(project, payload.operation);
             const upscaleFilename = _resolveUpscaleFilename(settings.upscaleModel);
             if (upscaleFilename) params['Upscale_Model'] = _resolveUpscaleParam(upscaleFilename);
+
+            // …plus the user LoRA rack, but ONLY for a Flow that declared which model's
+            // rack fills it (`settingsModel` → config.loraModelId, flowService.js). The
+            // gate is that explicit id, not the operation: nothing else in the app sets
+            // it, so every other universal op keeps injecting no LoRAs at all.
+            //
+            // The rack is the model's OWN settings — the same slots the Model Settings
+            // panel edits for a normal generation, which is what "open the panel the
+            // models have" means (Fabio, MPI-504). A flow does not get a private copy.
+            //
+            // Flat slots only. A `loraStages` model reaching here would need its stage
+            // prefixes, and no flow declares one — so bail loudly rather than silently
+            // injecting the wrong shape.
+            if (payload.loraModelId) {
+                const loraDef = getModelById(payload.loraModelId);
+                if (loraDef?.loraStages?.length) {
+                    clientLogger.warn('commandExecutor',
+                        `flow lora rack: "${payload.loraModelId}" is a staged-LoRA model; skipped (flat slots only)`);
+                } else {
+                    const loraSettings = getModelSettings(project, payload.loraModelId);
+                    const flatLoras = Array.isArray(loraSettings.loras) ? loraSettings.loras : [];
+                    flatLoras.forEach((slot, i) => {
+                        const param = _loraSlotParam(slot);
+                        if (param) params[`Lora_${i + 1}`] = param;
+                    });
+                }
+            }
         }
     }
 

@@ -1,0 +1,38 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "40dc8b82-a960-4dd8-9057-91f75b5cb08d",
+  "role": "implementer",
+  "claude_session_id": "40dc8b82-a960-4dd8-9057-91f75b5cb08d",
+  "started_at": "2026-08-20T07:32:37Z",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "status": "closed",
+  "heartbeat_at": "2026-08-20T12:03:44Z",
+  "task_card": "MPI-504",
+  "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+  "name": "MPI-504 session 9 - Enhance dead-box fix, toggles as buttons, LoRA rack",
+  "recent_events": [
+    {
+      "at": "2026-08-20T08:45:00Z",
+      "event": "heartbeat_renewed"
+    },
+    {
+      "at": "2026-08-20T10:45:00Z",
+      "event": "session_closed",
+      "note": "Close-out ran; three UI items shipped and verified. Card stays in doing for the graphics."
+    },
+    {
+      "at": "2026-08-20T11:30:00Z",
+      "event": "handoff_ready",
+      "note": "Work done and verified; commit blocked on pre-existing lint debt. Handoff written."
+    },
+    {
+      "at": "2026-08-20T12:03:44Z",
+      "event": "session_closed"
+    }
+  ]
+}
