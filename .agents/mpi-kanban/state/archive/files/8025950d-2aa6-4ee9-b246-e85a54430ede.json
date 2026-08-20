@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "8025950d-2aa6-4ee9-b246-e85a54430ede",
+  "paths": [
+    ".agents/mpi-kanban/tasks/MPI-504/**"
+  ],
+  "status": "complete",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/523b5e07-0a84-4feb-b2aa-5ad305aab110.json",
+  "heartbeat_at": "2026-08-19T14:42:19Z",
+  "note": "MPI-504 session 3 written up and handed off. Released."
+}

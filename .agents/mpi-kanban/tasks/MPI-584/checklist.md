@@ -14,5 +14,13 @@ Playbook: `docs/playbooks/add-flow/` (hub read first, sections on demand).
 - [x] Flow's playbook page written — `docs/playbooks/add-flow/existing-flows/ltx-upscale.md`
 - [ ] **Fabio:** one real upscale through the Flow (media hop + gallery commit)
 - [ ] **Fabio:** `/mpi-flow-graphics` — `flow-ltx-upscale.webp` + `.mp4`, cut from that run
+      > **PAIRED WITH MPI-504 (Fabio, 2026-08-20).** The graphics for BOTH flows are one
+      > session: this card's `flow-ltx-upscale.webp`/`.mp4` and MPI-504's
+      > `flow-character-sheet.webp` + hero clip. Do them together in a single
+      > `/mpi-flow-graphics` pass rather than one card at a time — they are the two flows
+      > with no art, and they are the 404s in Fabio's console (neither is a bug). MPI-504's
+      > handoff `state/handoffs/30b5a47a-dde7-4cf6-8c42-caeb68d37664.json` carries the full
+      > context, including the throwaway project `MPI-504 sheet verify` that Fabio kept ON
+      > PURPOSE as graphics source.
 - [ ] **Fabio:** decide whether a frame/resolution cap gets its own card
 - [ ] **Fabio:** dev gate — 4th flow now exists, the gate's stated trigger

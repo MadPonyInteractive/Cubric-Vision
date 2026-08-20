@@ -1,73 +1,20 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-20T11:35:00Z",
+  "updated_at": "2026-08-20T12:35:21Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
     {
-      "id": "350fcf8d-6c9e-4132-bd3c-ceae58c79647",
-      "path": ".agents/mpi-kanban/state/sessions/350fcf8d-6c9e-4132-bd3c-ceae58c79647.json",
+      "id": "45a29ed9-e930-4996-aa17-e605a4438c72",
+      "path": ".agents/mpi-kanban/state/sessions/45a29ed9-e930-4996-aa17-e605a4438c72.json",
       "role": "implementer",
       "status": "active",
-      "heartbeat_at": "2026-08-19T16:12:00Z"
-    },
-    {
-      "id": "5a261c2b-18c9-420b-9357-ad1cc9bcdf5c",
-      "path": ".agents/mpi-kanban/state/sessions/5a261c2b-18c9-420b-9357-ad1cc9bcdf5c.json",
-      "role": "implementer",
-      "status": "active",
-      "heartbeat_at": "2026-08-20T03:35:00Z"
-    },
-    {
-      "id": "2c5616e3-bd5d-4a7b-8946-f59efafedf80",
-      "path": ".agents/mpi-kanban/state/sessions/2c5616e3-bd5d-4a7b-8946-f59efafedf80.json",
-      "role": "implementer",
-      "status": "handoff_ready",
-      "heartbeat_at": "2026-08-20T04:20:11Z"
-    },
-    {
-      "id": "dc6fe1e5-cc35-45f1-982f-59f7c2ba13df",
-      "path": ".agents/mpi-kanban/state/sessions/dc6fe1e5-cc35-45f1-982f-59f7c2ba13df.json",
-      "role": "implementer",
-      "status": "active",
-      "heartbeat_at": "2026-08-20T05:35:00Z"
-    },
-    {
-      "id": "40dc8b82-a960-4dd8-9057-91f75b5cb08d",
-      "path": ".agents/mpi-kanban/state/sessions/40dc8b82-a960-4dd8-9057-91f75b5cb08d.json",
-      "role": "implementer",
-      "status": "handoff_ready",
-      "heartbeat_at": "2026-08-20T11:30:00Z"
+      "heartbeat_at": "2026-08-20T12:05:06Z"
     }
   ],
   "active_tasks": [],
-  "active_file_claims": [
-    {
-      "id": "e1c74b90-3a55-4c1f-9a0b-6f2d81c4a7e3",
-      "path": ".agents/mpi-kanban/state/files/e1c74b90-3a55-4c1f-9a0b-6f2d81c4a7e3.json",
-      "task_card": "MPI-504",
-      "status": "complete",
-      "owner_session": ".agents/mpi-kanban/state/sessions/5a261c2b-18c9-420b-9357-ad1cc9bcdf5c.json",
-      "heartbeat_at": "2026-08-20T03:35:00Z"
-    },
-    {
-      "id": "62a1b83a-a189-4de1-8924-b86d590e86d1",
-      "path": ".agents/mpi-kanban/state/files/62a1b83a-a189-4de1-8924-b86d590e86d1.json",
-      "task_card": "MPI-504",
-      "status": "claimed",
-      "owner_session": ".agents/mpi-kanban/state/sessions/40dc8b82-a960-4dd8-9057-91f75b5cb08d.json",
-      "heartbeat_at": "2026-08-20T11:30:00Z"
-    }
-  ],
+  "active_file_claims": [],
   "pending_file_states": [
-    {
-      "id": "1c246024-8ba6-4757-8943-af86db111832",
-      "path": ".agents/mpi-kanban/state/files/1c246024-8ba6-4757-8943-af86db111832.json",
-      "task_card": "MPI-504",
-      "status": "complete",
-      "owner_session": ".agents/mpi-kanban/state/sessions/2c5616e3-bd5d-4a7b-8946-f59efafedf80.json",
-      "heartbeat_at": "2026-08-20T04:41:44Z"
-    },
     {
       "id": "fa51ee7f-2398-4911-8d75-402c61f462d5",
       "path": ".agents/mpi-kanban/state/files/fa51ee7f-2398-4911-8d75-402c61f462d5.json",
@@ -100,100 +47,12 @@
       "note": "Upscale Video shipped as a Flow (cf0cec4a); next session takes MPI-585 (the shared Flow compare widget, Fabio's stated priority) then MPI-584's graphics from his own run pair."
     },
     {
-      "id": "15c0f3cc-6e28-42ca-9793-19c64aa06d7a",
-      "path": ".agents/mpi-kanban/state/handoffs/15c0f3cc-6e28-42ca-9793-19c64aa06d7a.json",
-      "task_card": "MPI-582",
-      "status": "resolved",
-      "created_at": "2026-08-20T02:55:00Z",
-      "note": "Resolved - the middle step shipped and Fabio verified the carousel; Input_Duration stays on the run slide by his call. MPI-582 is closed."
-    },
-    {
       "id": "584f6547-fe3c-4f0d-afac-22daeee351b4",
       "path": ".agents/mpi-kanban/state/handoffs/584f6547-fe3c-4f0d-afac-22daeee351b4.json",
       "task_card": "MPI-507",
       "status": "open",
       "created_at": "2026-08-10T06:10:41Z",
       "note": "Card was parked back to todo by 9a92c0ff - the handoff still records the SeedVR2 root-cause and the PiD Flow blocker."
-    },
-    {
-      "id": "a8609f95-286f-4fdc-8b35-e0b2c489fc9f",
-      "path": ".agents/mpi-kanban/state/handoffs/a8609f95-286f-4fdc-8b35-e0b2c489fc9f.json",
-      "task_card": "MPI-504",
-      "status": "resolved",
-      "created_at": "2026-08-19T16:40:00Z",
-      "note": "Superseded by cbf47af6-60a6-4790-899a-cceed36f2c59 - the sheet prompt is wired and proven live over four generations, and the hair thread has been measured and its wrong write-up corrected."
-    },
-    {
-      "id": "cbf47af6-60a6-4790-899a-cceed36f2c59",
-      "path": ".agents/mpi-kanban/state/handoffs/cbf47af6-60a6-4790-899a-cceed36f2c59.json",
-      "task_card": "MPI-504",
-      "status": "resolved",
-      "created_at": "2026-08-19T13:20:00Z",
-      "note": "Sheet prompt wired into krea2_t2i_only.json and proven live - four generations, layout correct in all. Open thread is the rear panel's hair; Fabio's call is to name the hair ONCE in the main clause, and the 'texture cannot be steered' note is withdrawn as never established."
-    },
-    {
-      "id": "2b4f4f52-b714-4236-81de-97f42688024a",
-      "path": ".agents/mpi-kanban/state/handoffs/2b4f4f52-b714-4236-81de-97f42688024a.json",
-      "task_card": "MPI-504",
-      "status": "resolved",
-      "created_at": "2026-08-19T15:10:00Z",
-      "note": "Superseded by 1a513284-13ea-4fb6-b552-eae123a13de2 - the v4.1 regression ran (recipe is now v4.2), bench gate #1 passed, and Fabio decided the prompt UI."
-    },
-    {
-      "id": "1a513284-13ea-4fb6-b552-eae123a13de2",
-      "path": ".agents/mpi-kanban/state/handoffs/1a513284-13ea-4fb6-b552-eae123a13de2.json",
-      "task_card": "MPI-504",
-      "status": "resolved",
-      "created_at": "2026-08-20T09:05:00Z",
-      "note": "Recipe is v4.2 - the adopted F hair shape was NOT reaching the output until a slot template fixed rule 4. Gate #1 PASSED, neutralisation is safe. Next work is the DECIDED three-step prompt UI (plan.md `## The prompt UI`)."
-    },
-    {
-      "id": "06623c29-2e2a-401c-acac-9d1d6eef91b9",
-      "path": ".agents/mpi-kanban/state/handoffs/06623c29-2e2a-401c-acac-9d1d6eef91b9.json",
-      "task_card": "MPI-504",
-      "status": "resolved",
-      "created_at": "2026-08-20T00:30:00Z",
-      "note": "Superseded by 5b538e8e-2d5a-4d08-9773-d04ccb81aa7c - the three button changes shipped in 25a96d14, and the card moved on to filling the Masking group in the merged flow_character_sheet.json."
-    },
-    {
-      "id": "abc43d05-5fc9-44b4-ae35-64414a43b5b4",
-      "path": ".agents/mpi-kanban/state/handoffs/abc43d05-5fc9-44b4-ae35-64414a43b5b4.json",
-      "task": "MPI-581",
-      "generated_at": "2026-08-20T00:42:24Z",
-      "status": "open"
-    },
-    {
-      "id": "5b538e8e-2d5a-4d08-9773-d04ccb81aa7c",
-      "path": ".agents/mpi-kanban/state/handoffs/5b538e8e-2d5a-4d08-9773-d04ccb81aa7c.json",
-      "task_card": "MPI-504",
-      "status": "resolved",
-      "created_at": "2026-08-20T04:05:00Z",
-      "note": "Enhance button done and pushed. Next job is bounded: fill the empty `Masking` group in flow_character_sheet.json - IN 736 Get 'sheet output', OUT 733 Set 'inpaint mask' as a plain MASK. Contract is in plan.md's top block."
-    },
-    {
-      "id": "9a19f9e2-fcb4-40f8-879c-3f3a0ebcb47c",
-      "path": ".agents/mpi-kanban/state/handoffs/9a19f9e2-fcb4-40f8-879c-3f3a0ebcb47c.json",
-      "task_card": "MPI-504",
-      "status": "resolved",
-      "created_at": "2026-08-20T05:30:00Z",
-      "note": "Superseded by d39e8d8d-9bc7-4145-a134-472b54a15c04 - the promptEnhance op shipped and verified."
-    },
-    {
-      "id": "d39e8d8d-9bc7-4145-a134-472b54a15c04",
-      "path": ".agents/mpi-kanban/state/handoffs/d39e8d8d-9bc7-4145-a134-472b54a15c04.json",
-      "task_card": "MPI-504",
-      "status": "resolved",
-      "created_at": "2026-08-20T04:41:44Z",
-      "note": "Superseded by 6f8924ee-2b3e-49d8-b747-b4dd873863e7 - the flow is wired, the seed is proven live and the 8:5 ratio was corrected."
-    },
-    {
-      "id": "6f8924ee-2b3e-49d8-b747-b4dd873863e7",
-      "path": ".agents/mpi-kanban/state/handoffs/6f8924ee-2b3e-49d8-b747-b4dd873863e7.json",
-      "task_card": "MPI-504",
-      "status": "resolved",
-      "created_at": "2026-08-20T06:20:00Z",
-      "note": "Character Sheet wired + Input_Seed proven live + FLUX 8:5 corrected to 1280x800; MPI-586 opened. Two decisions pending for Fabio.",
-      "resolved_at": "2026-08-20T08:30:00Z"
     },
     {
       "id": "30b5a47a-dde7-4cf6-8c42-caeb68d37664",

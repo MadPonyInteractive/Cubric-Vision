@@ -1,0 +1,75 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "30b5a47a-dde7-4cf6-8c42-caeb68d37664",
+  "generated_at": "2026-08-20T11:35:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-504 - Enhance dead-box fixed, toggles are buttons, LoRA panel wired; COMMITTED (f28825ee), graphics still owed",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Fix the Enhance dead-box, then Fabio's two UI asks (toggles as buttons, a LoRA panel), then the graphics.",
+    "status": "in_progress",
+    "summary": "All three UI items are DONE, verified and now COMMITTED as f28825ee. The commit blocker (five pre-existing bare <button>s in MpiBaseFlow.js) was cleared at the root, not bypassed - they are ghost MpiButtons now and the pre-commit hook passes. The ONLY thing still owed on this card is the graphics, which Fabio deferred to a session covering MPI-504 AND MPI-584 together."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    "completed": [
+      "THE ENHANCE DEAD-BOX IS FIXED. `MpiInput` had NO programmatic-write API at all - `setup` attached no methods - while every Primitive that gets driven from outside has one (MpiRadioGroup.setValue, MpiCheckbox.setChecked, MpiButton.setLabel/setActive/setIcon/setDisabled, MpiTileSheet.setSelected, MpiColorPicker.setHex). That absence is WHY seven other modules reach past it for `.mpi-input__field` by hand at eleven sites, and why an eighth caller could reach the mount HOST div instead and vanish silently. Added `el.setValue` (emits nothing - a programmatic write is not user input) and pointed `_writeFieldValue` at `qs('.mpi-input', wrap)?.setValue?.(text)`. `_liveFields` never needed to change. Fixes the empty phrase box AND clear-on-edit in one line.",
+      "TOGGLES ARE ICON+LABEL MpiButtons - the `toggle` TYPE itself, so one on/off vocabulary. Caption on the button face only; icon OPTIONAL (tick fallback). Turbo -> `bolt`, Headless front body -> `eraser`. Icon MODE is forced, not preferred: MpiButton's text mode ignores `toggleable` outright and every `is-active` rule in MpiButton.css is scoped to `.mpi-ibtn`. Widening that gate was TRIED AND REVERTED - it would have let an icon-less toggle flip a class that paints nothing.",
+      "THE LoRA PANEL. Fabio corrected my proposal mid-session and it made the job a third the size: he meant open the app's WHOLE Model Settings panel, NOT extract its rack. `settingsModel: 'krea2'` on the FlowDef + an `{ id:'loras', type:'button', action:'settings' }` field; MpiBaseFlow emits `ui:open-model-settings` and the owning Block opens its own overlay. BOTH Blocks wired - each mounts its own. No `lora` field type, no extraction.",
+      "AND THE HALF THAT MADE THE LoRA BUTTON MORE THAN DECORATION: a flow dispatches with `model.id: null` and commandExecutor gated LoRA injection on `payload.modelId`, so EVERY FLOW INJECTED ZERO LoRAs. The panel would have opened, saved real slots, and produced an identical image. `loraModelId` now crosses flowService -> the `runCommand` WHITELIST -> `params.Lora_N` -> `Input_Lora_N`, gated on the explicit id so no other universal op changes. Opt-in per flow. Reverses the 'RUN CLEAN, no project LoRAs' comment, which Fabio had already reversed in session 7.",
+      "VERIFIED: npm test 646/646, npm run test:desktop 21/21, eslint 0 errors, release:check passed, board validates clean, overtaken-cards 0. Four new test files. The two specs covering a SILENT failure were MUTATION-TESTED - put the old host-div write back, or cut the toggle onChange, and each goes red.",
+      "DOCS: docs/playbooks/add-flow/ui/lora-rack.md (new, indexed + linked from 01-descriptor-and-ops.md), the MpiInput setValue contract in docs/component-contracts.md, the flow-overlay spec traps in docs/testing.md, the `ui:open-model-settings` row in docs/events.md, and BOTH Block entries in .claude/rules/component-events-blocks.md (Fabio approved that rule edit explicitly).",
+      "CLAIM AUDITOR RAN: 17 claims proven, 3 flagged, all three fixed - see `## Plan Drift` and validation.md. One was genuinely FALSE and had been copied into three files.",
+      "COMMIT LANDED: f28825ee, 33 files, hook PASSED with no --no-verify. The blocker was MPI-582 adding `mpi/no-bare-form-control` without clearing MpiBaseFlow.js, so any commit touching that file was rejected on four warnings that predate this work. Fixed at the root as Fabio asked: the back link, both carousel arrows, the ticker tick and the slot clear are ghost MpiButtons, mounted via a local `_mountButton` helper rather than written into the `template:` string. The ids move onto the mounted <button> itself - a click on a mount HOST div does nothing, and #flow-prev / #flow-next are what three desktop specs drive. Their stylesheets shrank to geometry and typography; the four deliberate overrides (the arrow LEAVES rather than greying out, the ticker keeps its own hover wash, a tick is a label so it is not uppercased, the slot clear keeps its scrim) are scoped past the Primitive's own selectors rather than relying on stylesheet order. Verified: eslint 0 warnings on all 10 committed js files at --max-warnings=0, npm test 646/646, test:desktop 21/21 (including the three specs that click the arrows), release:check, and a pixel probe on a real renderer - all four read back as BUTTON, back icon still 12px, tick lowercase at weight 400, disabled arrow at opacity 0 with no grayscale filter. The inherited 1px border and mono face are inert: box-sizing is border-box globally and body was already JetBrains Mono.",
+      "File claim 62a1b83a RELEASED and archived - the tree it was guarding is committed.",
+      "mpi-cleanup swept the coordination state: 88 closed records (38 sessions, 37 handoffs, 11 file states, 2 messages) moved to state/archive/, 6 live records kept, state/index.json healed against disk. Board validates."
+    ],
+    "pending": [
+      "THE GRAPHICS FOR BOTH FLOWS - Fabio deferred them to one dedicated session covering MPI-504 (flow-character-sheet.webp + hero clip) AND MPI-584 (flow-ltx-upscale.webp + .mp4). Run /mpi-flow-graphics. These are the 404s in his console; neither is a bug.",
+      "MpiTreePicker and MpiStylePicker still have NO programmatic-write API - the same gap MpiInput just paid for. Noticed, not actioned, not carded.",
+      "MPI-504's other open items are untouched: the 2K headless A/B (confounded by seed), the krea2-nsfw-only install case, and the bench open calls in plan.md."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-504",
+    "title": "Character Sheet flow - a description in, a video-reference sheet out (front body HEADLESS)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-504/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "THE COMMIT IS LANDED (f28825ee) AND THE LINT BLOCKER IS GONE - do not re-do either, and do not re-open the Enhance fix, the toggle change or the LoRA wiring; all three are verified and mutation-tested. What is left on this card is THE GRAPHICS, and Fabio wants it as ONE session across TWO cards: /mpi-flow-graphics for MPI-504 (flow-character-sheet.webp + its hero clip) AND for MPI-584 (flow-ltx-upscale.webp + .mp4). These are the 404s in his console; neither is a bug. The throwaway project \"MPI-504 sheet verify\" in his real Projects folder is KEPT ON PURPOSE - two proof sheets he expects to use as graphics source. Do not delete it. NOTE: the f28825ee commit has NOT been pushed - push is a user-authorized op in this repo and Fabio had not been asked at the time of writing. Check `git status` against origin/master before assuming either way. MPI-504's other open items are untouched: the 2K headless A/B (confounded by seed), the krea2-nsfw-only install case, the enhancer residual in checklist.md, and the bench open calls in plan.md.",
+    "command": "mpi-flow-graphics"
+  },
+  "context": {
+    "key_decisions": [
+      "REUSE THE WHOLE SURFACE, DO NOT EXTRACT A PIECE OF IT. Fabio's correction this session, and it generalises: 'the same panel as the models have, which has everything already built in.' I had proposed extracting MpiModelSettings' LoRA rack into a shared Compound. Wrong, and three times the work. Written up as memory feedback_open_the_existing_surface_whole.",
+      "A FLOW'S LoRAs ARE THE MODEL'S OWN SETTINGS, shared with its ordinary generations - a LoRA loaded for krea2 is the same LoRA whether the sheet or the prompt box runs it. That is what made this need no new persistence. 'Perhaps add a new route for flow LoRAs' was Fabio's own tentative aside and was NOT built; it only becomes a question if he wants flow LoRAs isolated from the model's.",
+      "NO RELEASE NOTE IS OWED and this was checked, not assumed: v1.4.2 is released so its notes are frozen, but the Flow Library is dev-gated, `action: enhance` exists only on character-sheet, and both toggles plus the `settingsModel` opt-in are character-sheet-only. Nothing here is perceivable in a build a user can install.",
+      "STAGED-LoRA MODELS ARE REFUSED, NOT GUESSED. A `loraStages` model needs its stage prefixes; the injection warns and skips rather than writing flat slots into a staged graph."
+    ],
+    "constraints": [
+      "THE TREE IS CLEAN AND THE WORK IS COMMITTED (f28825ee). The old \"the work is uncommitted and that is the main risk\" constraint is retired, and file claim 62a1b83a with it. js/components/Organisms/MpiBaseFlow/* and js/data/flowsRegistry.js are still CO-OWNED with the MPI-585 and MPI-531 sessions, so keep committing as you go. js/data/modelConstants/models.js is STILL another session's uncommitted work - leave it out of any pathspec.",
+      "DO NOT re-run the whole close-out. Sections 0-7 of mpi-end-session all ran this session: coordination reads, knowledge healing, memory, board check, overtaken-cards (0), release awareness, and the claim auditor. Only the commit and push did not.",
+      "NEVER take Fabio's app on :3000. Spin your own: `node scripts/launch-instance.mjs`. `npm run test:desktop` is safe alongside his app - it takes its own free port.",
+      "ASK BEFORE USING THE GPU. Fabio runs the bench (8188) WITHOUT taking the mpi-kanban lease, so a free lease is NOT evidence the GPU is free. Nothing this session needed it; the graphics may.",
+      "A desktop spec CANNOT click or fill inside a Flow overlay with no project open - the landing page hides main-area, so synthetic gestures time out with 'element is not visible'. Drive the real handler in-page instead; locator ASSERTIONS read hidden elements fine. Slide 0 is ALWAYS the inputs slide, so a declared `fields` step is slide 1. Written up in docs/testing.md.",
+      "The heredoc/backslash guards are real: Git Bash halves backslashes and mangles heredocs, and the guard-shell hook blocks both. Write a script with the Write tool and run it by path.",
+      "The repo carries pre-existing bare-form-control lint debt OUTSIDE this card - 29 warnings across MpiQueuePanel, MpiSlideOver, MpiPromptBox and MpiToolOptionsPrompt. Untouched here and uncarded. Any commit touching one of those files hits the same wall MpiBaseFlow.js just did."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "docs/playbooks/add-flow/06-preview-image.md",
+      "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js"
+    ]
+  },
+  "resume_prompt": "Resuming MPI-504 in Cubric Vision (c:/AI/Mpi/Cubric-Vision, master). Read .agents/mpi-kanban/state/handoffs/30b5a47a-dde7-4cf6-8c42-caeb68d37664.json first. THE WORK IS DONE, VERIFIED AND COMMITTED (f28825ee) - the commit that earlier handoffs describe as blocked has LANDED, and the blocker (five pre-existing bare <button>s in MpiBaseFlow.js) was fixed at the root: they are ghost MpiButtons now, the pre-commit hook passes with no --no-verify, and #flow-prev / #flow-next still answer .click(). Do NOT re-do any of that, and do NOT re-open the Enhance fix, the toggle change or the LoRA wiring. The ONE thing left on this card is the graphics, which Fabio wants done as ONE session across TWO cards: /mpi-flow-graphics for MPI-504 (flow-character-sheet.webp + hero clip) AND for MPI-584 (flow-ltx-upscale.webp + .mp4). The throwaway project \"MPI-504 sheet verify\" in his real Projects folder is KEPT ON PURPOSE as graphics source. Check whether f28825ee has been pushed before doing anything that assumes it has. Do NOT re-run mpi-end-session's knowledge passes; they all ran.",
+  "updated_at": "2026-08-20T12:37:45Z"
+}

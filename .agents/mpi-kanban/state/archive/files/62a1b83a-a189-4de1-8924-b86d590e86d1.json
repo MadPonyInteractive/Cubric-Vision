@@ -1,7 +1,7 @@
 {
   "schema": "mpi-kanban/file-claim/v1",
   "id": "62a1b83a-a189-4de1-8924-b86d590e86d1",
-  "status": "claimed",
+  "status": "complete",
   "claim_kind": "write",
   "task_card": "MPI-504",
   "owner_session": ".agents/mpi-kanban/state/sessions/40dc8b82-a960-4dd8-9057-91f75b5cb08d.json",
@@ -46,5 +46,7 @@
       "note": "Re-armed after the commit was blocked; protects uncommitted work."
     }
   ],
-  "outcome": "Enhance dead-box fixed, toggles are MpiButtons, LoRA panel wired end to end. npm test 646/646, test:desktop 21/21, eslint 0 errors, release:check passed. Card stays in doing - graphics still owed."
+  "outcome": "Enhance dead-box fixed, toggles are MpiButtons, LoRA panel wired end to end. npm test 646/646, test:desktop 21/21, eslint 0 errors, release:check passed. Card stays in doing - graphics still owed.",
+  "released_at": "2026-08-20T12:35:21Z",
+  "release_note": "Released by mpi-cleanup: the work it guarded is committed (f28825ee)."
 }

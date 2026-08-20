@@ -208,16 +208,19 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       `tests/desktop/flow-lora-button.spec.js` (the button emits with the right model id).
       Portable record: `docs/playbooks/add-flow/ui/lora-rack.md`. "A new route for flow LoRAs" was
       NOT built — unnecessary under the shared-model-settings reading; see plan.md.
-- [ ] **ON PICKUP, BEFORE ANYTHING ELSE: land the commit.** ~500 lines across 26 files are
-      DONE, VERIFIED and staged but UNCOMMITTED — the husky pre-commit hook rejects
-      `MpiBaseFlow.js` on FOUR **pre-existing** bare-`<button>` warnings (172 ×2, 445, 518;
-      HEAD's own copy trips the same four, my hunks are at 761+/890+). MPI-582 added that rule
-      without clearing the file, so any commit touching it is blocked. Fabio declined all three
-      offered options and asked the next agent to fix it: convert those four to `MpiButton`,
-      KEEPING the `#flow-prev` / `#flow-next` ids that three desktop specs drive. Then commit by
-      pathspec (EXCLUDE `js/data/modelConstants/models.js` — another session's work), push, and
-      release file claim `62a1b83a`, held `claimed` to protect the uncommitted tree.
-      Full detail: `state/handoffs/30b5a47a-dde7-4cf6-8c42-caeb68d37664.json`.
+- [x] **LANDED — `f28825ee`, 33 files. Do NOT re-do this.** The commit that was blocked is in.
+      The blocker was cleared at the root rather than bypassed: the five bare `<button>`s in
+      `MpiBaseFlow.js` (back link, both carousel arrows, ticker tick, slot clear) are now ghost
+      `MpiButton`s, mounted rather than written into the `template:` string, with the ids moved
+      onto the mounted `<button>` so `#flow-prev` / `#flow-next` still answer a spec's `.click()`.
+      Their CSS shrank to geometry + typography; the four deliberate overrides are scoped past
+      the Primitive's selectors instead of relying on stylesheet load order. The hook PASSED —
+      no `--no-verify`. Verified: eslint 0 warnings on all 10 committed js files at
+      `--max-warnings=0`, npm test 646/646, test:desktop 21/21, release:check, plus a pixel probe
+      on a real renderer (all four read back as `BUTTON`, back icon 12px, tick lowercase at
+      weight 400, disabled arrow `opacity: 0` with no grayscale filter). File claim `62a1b83a`
+      is released. `js/data/modelConstants/models.js` was correctly left out — still another
+      session's uncommitted work.
 - [ ] **Graphics** — `/mpi-flow-graphics` (playbook 06); `flow-character-sheet.webp` + hero.
       > **PAIRED WITH MPI-584 (Fabio, 2026-08-20).** One session covers BOTH flows' art — this
       > card's, and MPI-584's `flow-ltx-upscale.webp` + `.mp4`. The throwaway project

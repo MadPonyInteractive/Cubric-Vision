@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "2b15acc5-6b86-4977-993d-3f61e239f460",
+  "role": "implementer",
+  "claude_session_id": "2b15acc5-6b86-4977-993d-3f61e239f460",
+  "started_at": "2026-08-19T10:31:28Z",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "status": "active",
+  "heartbeat_at": "2026-08-20T12:04:03Z",
+  "recent_events": [
+    {
+      "at": "2026-08-19T10:31:36Z",
+      "event": "session_closed"
+    },
+    {
+      "at": "2026-08-20T11:37:13Z",
+      "event": "session_closed"
+    },
+    {
+      "at": "2026-08-20T12:03:50Z",
+      "event": "session_closed"
+    }
+  ]
+}

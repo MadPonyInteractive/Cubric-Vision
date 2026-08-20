@@ -10,8 +10,8 @@
     "verify",
     "implement"
   ],
-  "status": "active",
-  "heartbeat_at": "2026-08-20T04:55:00Z",
+  "status": "closed",
+  "heartbeat_at": "2026-08-20T05:46:12Z",
   "task_card": "MPI-504",
   "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
   "name": "MPI-504 - Input_Seed node, then /mpi-add-flow for the Character Sheet",
@@ -19,6 +19,10 @@
     {
       "at": "2026-08-20T04:55:00Z",
       "event": "session_started"
+    },
+    {
+      "at": "2026-08-20T05:46:12Z",
+      "event": "session_closed"
     }
   ]
 }
