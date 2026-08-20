@@ -5388,7 +5388,7 @@
         16384,
         16384,
         false,
-        6,
+        40,
         false,
         32,
         0.1,
@@ -6385,7 +6385,7 @@
         "ver": "0.28.0"
       },
       "widgets_values": [
-        "hair, face, hat"
+        "hair, face, hat, neck"
       ]
     },
     {
