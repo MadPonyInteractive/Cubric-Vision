@@ -171,9 +171,23 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       three distinct descriptions, and `execution_cached` covered nodes 5-10 but NOT
       `3 TextGenerate`, so the sampler re-ran because its seed input changed. Evidence in
       validation.md.
-- [ ] **Decide the 1k/2k quality control** — one declared field cannot set the graph's TWO
-      nodes (`Input_Width` + `Input_Height`). Three options in plan.md `## Plan Drift`.
-      Flow runs at the baked `1280x768` until then.
-- [ ] **Live run** of the flow end to end in an isolated app instance (playbook 05).
+- [x] **The 1k/2k quality control — SHIPPED as the switch bank** (2026-08-20). One declared
+      field cannot set two nodes, so the fan-out went in the GRAPH: `770 Input_Quality`
+      (`MpiInt`) selects `771 Width_Select` + `772 Height_Select` (`MpiAnySwitch`), whose
+      arms are `W_1k` 1280 / `W_2k` 1792 and `H_1k` 800 / `H_2k` 1120. Fabio's call —
+      banks at `any_1..any_5` so MPI-586 gets four arms off the same shape. Zero app code.
+      Portable record: `docs/playbooks/add-flow/ui/switch-bank-fields.md`. Commits
+      `70dc98cb` (raw) + `96c5b410`.
+- [x] **Live run — DONE** (2026-08-20, session 8). Own instance on 49251, project
+      `MPI-504 sheet verify`. Flow READY, media-free step 0 renders, every declared field
+      renders, both quality arms dispatch and land: `Input_Quality 1 -> 1280x800`,
+      `2 -> 1792x1120`, verified off `/history` AND off the files on disk. Sheet correct at 1K
+      (headless front, back, portrait with catch-light). Raw-prompt fallback proven — Enhance
+      never pressed. Evidence + the one open observation (the 2K headless pass, confounded by
+      seed) in validation.md.
+- [ ] **The 2K headless A/B** — at 2K the front body came back with a pale head-shaped fill
+      rather than a clean hollow collar, but the seeds differed, so resolution and seed are
+      confounded. Needs one fixed-seed dispatch at both arms. Folds into the Klein removal A/B
+      item above rather than standing alone.
 - [ ] **Graphics** — `/mpi-flow-graphics` (playbook 06); `flow-character-sheet.webp` + hero.
 - [ ] Decide the `krea2-nsfw`-only install case

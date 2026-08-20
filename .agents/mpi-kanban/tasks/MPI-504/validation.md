@@ -1069,3 +1069,58 @@ the text merely differing.
 This also reproduces the session-6 bench arm exactly (32 / 35 / 32, the same three hairstyles,
 amber eyes only at seed 42), which independently confirms the injected path and the bench path
 drive the same knob.
+
+
+### The LIVE RUN — the flow works end to end (2026-08-20, session 8)
+
+Own instance (`node scripts/launch-instance.mjs` under a held GPU lease,
+`CUBRIC_MODELS_ROOT=G:/CubricModels`), port 49251, throwaway project `MPI-504 sheet verify`.
+RTX 4060 Ti 16 GB, local engine 48188. Fabio's app on :3000 untouched.
+
+**What the UI proved, in order:**
+
+- Flow Library: **Character Sheet · READY**, "5 ready · 0 need models"; detail pane lists Krea 2
+  INSTALLED + FLUX.2 Klein INSTALLED, which confirms the `requiredDeps: []` call.
+- **`OPEN` on the LANDING does nothing with no project loaded** — the button is Gallery-only
+  (`types.js:953`). Not a bug, and not obvious: it fails silently with no console entry. Open a
+  project first, then `Events.emit('flow:open', { flowId: 'character-sheet' })`.
+- Overlay: three ticks — **01 Inputs / 02 Describe / 03 Generate**. Step 0 renders
+  **"This flow needs no input media."** beside the hero: the media-free path with no `inputSchema`.
+- Run slide renders every declared field — YOUR CHARACTER, ENHANCE, STYLE (Photoreal),
+  **QUALITY 1K|2K**, TURBO, HEADLESS FRONT BODY — and the status/result pane reaches
+  "Done — saved to your gallery."
+- `FLUX_RATIOS` read out of the LIVE page: `8:5=1280x800`, `5:8=800x1280`, the other seven
+  untouched. The corrected row is what the running app serves.
+
+**The switch bank is proven at BOTH arms, from the DISPATCHED graph rather than inferred:**
+
+| run | UI note | dispatched `770 Input_Quality` | file on disk |
+|---|---|---|---|
+| 1K | `1280 × 800` | `1` | `flowCharacterSheet_001.png` — **1280 x 800** |
+| 2K | `1792 × 1120 · ~2× time` | `2` | `flowCharacterSheet_002.png` — **1792 x 1120** |
+
+Both graphs read back off `/queue` and `/history`, with
+`560 EmptyLatentImage {width: ["771",0], height: ["772",0]}` and the switches resolving
+`any_1 -> 676/677`, `any_2 -> 768/769`. The radio's `note` swapped with the arm, so label and
+graph moved together. Every other control was identical across the two runs
+(`remove_head=True turbo=False recipe=1`).
+
+**The sheet itself is correct at 1K.** Prompt: a weathered desert scavenger, shaved head, scar on
+the left cheek, goggles pushed up, patched canvas coat. Output: full-body front **HEADLESS** (a
+clean hollow collar), full-body back with the head, and a three-quarter portrait carrying the
+scar, the goggles, the amber eyes and the pupil catch-light, on a plain grey backdrop.
+
+**Enhance was never pressed**, so this also proves the raw-prompt fallback: an untouched enhanced
+box sends the user's own words to `Input_Positive`, exactly as `_collectInputs` documents.
+
+#### OPEN OBSERVATION — the headless pass looked different at 2K, and it is NOT isolated
+
+At 2K the front body came back with a **pale head-shaped fill** where 1K gave a clean hollow
+collar. Tempting to call it a resolution bug; it is not established. **The two runs had different
+seeds** (`2263222034277` vs `8958563981589`) because the flow injects a fresh `Input_Seed` per
+press, so seed and resolution moved together and one run cannot separate them.
+
+The controlled test is a fixed seed dispatched straight to the engine at both arms — two runs,
+same seed, only `Input_Quality` differing. **Not run** (it needs the GPU again). This belongs to
+the already-open "Klein removal A/B" checklist item, not to the switch bank, which did exactly
+what it declares.
