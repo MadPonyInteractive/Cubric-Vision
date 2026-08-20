@@ -285,6 +285,22 @@ export const MpiVideoControlBar = ComponentFactory.create({
         });
 
         const _activeRange = () => ({ rangeIn: _in, rangeOut: _out, loop: _loopIntent });
+
+        /**
+         * A bar the user cannot see must not answer the keyboard.
+         *
+         * hotkeyManager buckets handlers by KEY, not by registry id (`_mapKey`), so
+         * EVERY handler bound to `space` fires — including one belonging to a surface
+         * an overlay has stashed. MpiOverlay stashes into a `display: none` node
+         * instead of destroying, so a Group History video bar stays attached under an
+         * open Flow: reproduced live (MPI-585) as one space press playing the Flow's
+         * result AND a hidden History clip, audibly.
+         *
+         * `getClientRects()` is empty exactly when the bar (or an ancestor) is
+         * `display: none` or detached, and non-empty for a fixed/fullscreen bar — so
+         * it gates on "on screen", not on layout position.
+         */
+        const _canDrive = () => !!_surface && el.isConnected && el.getClientRects().length > 0;
         frameBackBtn.on('click', () => _surface?.frameStep(-1, _activeRange()));
         frameFwdBtn.on('click',  () => _surface?.frameStep(+1, _activeRange()));
 
@@ -418,41 +434,41 @@ export const MpiVideoControlBar = ComponentFactory.create({
                 }),
             );
 
-            // Bind hotkeys (unbind on detach)
-            _hotkeyUnsubs.push(Hotkeys.bind('video.playPause',     () => _togglePlay()));
-            _hotkeyUnsubs.push(Hotkeys.bind('video.frame.back',    () => _surface.frameStep(-1, _activeRange())));
-            _hotkeyUnsubs.push(Hotkeys.bind('video.frame.forward', () => _surface.frameStep(+1, _activeRange())));
-            _hotkeyUnsubs.push(Hotkeys.bind('video.volume.up',     () => _adjustVolume(+10)));
-            _hotkeyUnsubs.push(Hotkeys.bind('video.volume.down',   () => _adjustVolume(-10)));
-            _hotkeyUnsubs.push(Hotkeys.bind('video.loop',          () => loopBtn.el.click()));
-            _hotkeyUnsubs.push(Hotkeys.bind('video.mute',          () => muteBtn.el.click()));
-            _hotkeyUnsubs.push(Hotkeys.bind('video.frame.first',   () => {
-                if (!_surface) return;
+            // Bind hotkeys (unbind on detach), each gated on _canDrive().
+            const hk = (id, fn) => _hotkeyUnsubs.push(
+                Hotkeys.bind(id, () => { if (_canDrive()) fn(); }),
+            );
+
+            hk('video.playPause',     () => _togglePlay());
+            hk('video.frame.back',    () => _surface.frameStep(-1, _activeRange()));
+            hk('video.frame.forward', () => _surface.frameStep(+1, _activeRange()));
+            hk('video.volume.up',     () => _adjustVolume(+10));
+            hk('video.volume.down',   () => _adjustVolume(-10));
+            hk('video.loop',          () => loopBtn.el.click());
+            hk('video.mute',          () => muteBtn.el.click());
+            hk('video.frame.first',   () => {
                 _surface.getVideoElement().pause();
                 _surface.seek(_in);
-            }));
-            _hotkeyUnsubs.push(Hotkeys.bind('video.frame.last',    () => {
-                if (!_surface) return;
+            });
+            hk('video.frame.last',    () => {
                 const v = _surface.getVideoElement();
                 v.pause();
                 const { lastFrame } = _frameBounds();
                 _seekFrame(lastFrame);
-            }));
+            });
 
             if (trim) {
-                _hotkeyUnsubs.push(Hotkeys.bind('video.trim.in', () => {
-                    if (!_surface) return;
+                hk('video.trim.in', () => {
                     const cur = _surface.getVideoElement().currentTime || 0;
                     trim.el.setRange(cur, _out > cur ? _out : _duration);
-                }));
-                _hotkeyUnsubs.push(Hotkeys.bind('video.trim.out', () => {
-                    if (!_surface) return;
+                });
+                hk('video.trim.out', () => {
                     const cur = _surface.getVideoElement().currentTime || 0;
                     trim.el.setRange(_in < cur ? _in : 0, cur);
-                }));
-                _hotkeyUnsubs.push(Hotkeys.bind('video.trim.clear', () => {
+                });
+                hk('video.trim.clear', () => {
                     trim.el.setRange(0, _duration);
-                }));
+                });
             }
         };
 

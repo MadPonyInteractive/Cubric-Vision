@@ -4,6 +4,8 @@ import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiMediaPicker } from '../../Compounds/MpiMediaPicker/MpiMediaPicker.js';
 import { MpiCompareView } from '../../Compounds/MpiCompareView/MpiCompareView.js';
+import { MpiVideoViewer } from '../MpiVideoViewer/MpiVideoViewer.js';
+import { MpiVideoControlBar } from '../../Compounds/MpiVideoControlBar/MpiVideoControlBar.js';
 import { Events } from '../../../events.js';
 import { state, AUTO_PIXEL_THRESHOLD } from '../../../state.js';
 import { ViewManager } from '../../Primitives/MpiCanvas/managers/ViewManager.js';
@@ -375,6 +377,34 @@ export const MpiBaseFlow = ComponentFactory.create({
          */
         let _compareView = null;
         let _compareHost = null;
+        /**
+         * The REAL video player for a video result (MPI-585 option B) — the same
+         * MpiVideoViewer + MpiVideoControlBar pair the History workspace runs, not a
+         * bare `<video controls>`. The bar is deliberately not owned by the viewer
+         * (see MpiVideoViewer's header), which is the whole reason this surface can
+         * borrow it: the viewer fills the frame, the bar spans the pane below it.
+         * @type {?Object}
+         */
+        let _videoViewer = null;
+        let _videoBar = null;
+        let _playerHost = null;
+        let _barHost = null;
+        /** The pane (frame + bar + note) — the bar mounts here, under the frame. */
+        let _resultPaneEl = null;
+        /**
+         * Which surface the single result is on: 'compare' | 'player' | 'plain'.
+         * Held with the item so the toggle can rebuild the other one.
+         */
+        let _resultMode = 'plain';
+        /** @type {?{it: Object, path: string}} */
+        let _resultSingle = null;
+        let _surfaceToggle = null;
+        /**
+         * The surface the user last CHOSE with the toggle. Component-scoped like
+         * `_lastResults` — it outlives a slide rebuild and dies with the flow.
+         * @type {?'compare'|'player'}
+         */
+        let _preferredResultMode = null;
         /** Pan/zoom state for the result pane — the shared MpiCanvas view model. */
         const _resultView = new ViewManager();
         let _statusEl = null;
@@ -1097,6 +1127,7 @@ export const MpiBaseFlow = ComponentFactory.create({
 
             const right = ce('div', { className: 'mpi-base-flow__col-right' });
             const pane = ce('div', { className: 'mpi-base-flow__result' });
+            _resultPaneEl = pane;
             const frame = ce('div', { className: 'mpi-base-flow__result-frame' });
             _resultFrameEl = frame;
             _resultMediaEl = ce('div', { className: 'mpi-base-flow__result-media' });
@@ -1158,12 +1189,13 @@ export const MpiBaseFlow = ComponentFactory.create({
             // nodes — a cleared enhancement that silently never cleared.
             _liveFields.clear();
             // These live on the run slide only; drop the stale references.
-            // Before the refs are nulled — _teardownCompare needs the frame to strip
-            // its modifier class, and the canvas holds a RAF loop that must stop.
-            _teardownCompare();
+            // Before the refs are nulled — the teardowns need the frame to strip
+            // their modifier classes, and both the compare canvas and the video
+            // viewer hold RAF loops that must stop.
+            _teardownResultSurfaces();
             _runBtn = null; _resultMediaEl = null; _statusEl = null;
             _pendingNote = null; _gaugeEl = null;
-            _resultFrameEl = null;
+            _resultFrameEl = null; _resultPaneEl = null;
         }
 
         /** Build and show the current step. One slide is live at a time. */
@@ -1214,10 +1246,14 @@ export const MpiBaseFlow = ComponentFactory.create({
             // latent the pane holds no media yet, and leaving the copy up would put
             // "Your result appears here." under the scanline — the frame claiming
             // nothing is happening while it sweeps.
-            // `|| _compareView` — a declared comparison paints on a CANVAS, not into
-            // the media layer, so testing that layer alone put "Your result appears
+            // `|| _compareView || _videoViewer` — a declared comparison paints on a
+            // CANVAS and a video result paints in its own viewer, neither into the
+            // media layer, so testing that layer alone put "Your result appears
             // here." on top of the result the user is looking at.
-            if (_resultEmptyEl) _resultEmptyEl.hidden = !!_resultMediaEl?.firstChild || !!_compareView || _running;
+            if (_resultEmptyEl) {
+                _resultEmptyEl.hidden =
+                    !!_resultMediaEl?.firstChild || !!_compareView || !!_videoViewer || _running;
+            }
         }
 
         // ── Result zoom / pan ───────────────────────────────────────────────────
@@ -1343,9 +1379,9 @@ export const MpiBaseFlow = ComponentFactory.create({
         /** Paint a single URL (a live latent preview) into the result pane. */
         function _paintResult(url, { blurring = false } = {}) {
             if (!url || !_resultMediaEl) return;
-            // A re-run's first latent arrives while the PREVIOUS run's comparison is
-            // still up; without this it would paint underneath a canvas.
-            _teardownCompare();
+            // A re-run's first latent arrives while the PREVIOUS run's comparison or
+            // video player is still up; without this it would paint underneath one.
+            _teardownResultSurfaces();
             _resultMediaEl.innerHTML = '';
             const img = ce('img', { src: url, alt: 'result', draggable: false });
             // Live latents carry a light blur — honest about a half-computed image,
@@ -1377,7 +1413,7 @@ export const MpiBaseFlow = ComponentFactory.create({
             // Always clear first: the pane may still hold a live-latent preview whose
             // blob: URL is revoked the moment the gen ends. Leaving it in the DOM logs
             // a GET blob:… ERR_FILE_NOT_FOUND.
-            _teardownCompare();
+            _teardownResultSurfaces();
             _resultMediaEl.innerHTML = '';
             // The run is over — the sweep now lives on the frame, so clearing the
             // media layer no longer takes it with it. Guarded on _running: a slide
@@ -1386,14 +1422,64 @@ export const MpiBaseFlow = ComponentFactory.create({
             // authority now).
             if (!_running) _setScanline(false);
             if (!withPath.length) { _syncResultEmpty(); return; }
-            // A flow that DECLARES a comparison shows one — source under the reveal
-            // bar, result over it. Only for a single result: N outputs have no one
-            // "after" the bar could reveal.
-            if (withPath.length === 1 && _mountCompare(withPath[0].it)) {
-                _syncResultEmpty();
+            // ONE result gets a real surface — a comparison, or the video player.
+            // N outputs keep the plain elements: there is no single "after" a reveal
+            // bar could show, and N players would be N decoders and N control bars.
+            if (withPath.length === 1) {
+                const { it, path } = withPath[0];
+                _showSingleResult(it, path, _defaultResultMode(it));
                 return;
             }
             _paintPlainResults(withPath);
+            _syncResultEmpty();
+        }
+
+        /** A result item that should play rather than be shown as a still. */
+        function _isVideoResult(it) {
+            return it?.type === 'video' || it?.mediaType === 'video';
+        }
+
+        /**
+         * Which surface a single result opens on.
+         *
+         * A declared comparison wins — that is the point of declaring it, and the
+         * player is one click away. Otherwise a video gets the real player and an
+         * image the plain element. An explicit toggle beats both, but only while it
+         * is still POSSIBLE: the same pane replays across slide rebuilds and later
+         * runs, and a remembered 'player' must not be handed an image.
+         * @returns {'compare'|'player'|'plain'}
+         */
+        function _defaultResultMode(it) {
+            const canCompare = !!(flow.result?.compare && _compareBefore());
+            const canPlay = _isVideoResult(it);
+            if (_preferredResultMode === 'player' && canPlay) return 'player';
+            if (_preferredResultMode === 'compare' && canCompare) return 'compare';
+            if (canCompare) return 'compare';
+            return canPlay ? 'player' : 'plain';
+        }
+
+        /**
+         * Put the single result on one surface, and offer the other one when both
+         * are available. Re-entrant: the toggle and the compare-load fallback both
+         * call it, and every call tears the previous surface down first.
+         *
+         * @param {Object} it     the result item
+         * @param {string} path   its filePath/url
+         * @param {'compare'|'player'|'plain'} mode
+         */
+        function _showSingleResult(it, path, mode) {
+            _teardownResultSurfaces();
+            _resultMediaEl.innerHTML = '';
+            _resultSingle = { it, path };
+            if (mode === 'compare' && _mountCompare(it)) {
+                _resultMode = 'compare';
+            } else if (mode === 'player' && _mountPlayer(it, path)) {
+                _resultMode = 'player';
+            } else {
+                _paintPlainResults([{ it, path }]);
+                _resultMode = 'plain';
+            }
+            _mountSurfaceToggle(it);
             _syncResultEmpty();
         }
 
@@ -1404,7 +1490,7 @@ export const MpiBaseFlow = ComponentFactory.create({
         function _paintPlainResults(withPath) {
             for (const { it, path } of withPath) {
                 const url = resolveMediaUrl(path);
-                const isVideo = it?.type === 'video' || it?.mediaType === 'video';
+                const isVideo = _isVideoResult(it);
                 // NOT muted: a Flow whose whole output is the audio (foley) played
                 // silent until the user found the speaker button. `muted` is normally
                 // the autoplay-policy guard, but this element never autoplays — the
@@ -1464,14 +1550,94 @@ export const MpiBaseFlow = ComponentFactory.create({
             const host = _compareHost;
             _compareView.el.open(before, resultItem).then((ok) => {
                 // A pair that will not decode must not leave a blank frame where the
-                // result was — fall back to the plain element. Guarded on identity:
-                // the load is async and the slide may already have been rebuilt.
+                // result was — fall back to the surface the result would have had on
+                // its own. Guarded on identity: the load is async and the slide may
+                // already have been rebuilt.
                 if (ok || _compareHost !== host || !_resultMediaEl) return;
-                _teardownCompare();
-                _paintPlainResults([{ it: resultItem, path: resultItem?.filePath || resultItem?.url }]);
-                _syncResultEmpty();
+                const path = resultItem?.filePath || resultItem?.url;
+                _showSingleResult(resultItem, path, _isVideoResult(resultItem) ? 'player' : 'plain');
             });
             return true;
+        }
+
+        /**
+         * Mount the REAL video player over the result frame — MpiVideoViewer in the
+         * frame, MpiVideoControlBar spanning the pane below it, wired the same two
+         * lines MpiGroupHistoryBlock uses. A bare `<video controls>` gave the native
+         * chrome: no frame stepping, no loop button, no frame-accurate seek.
+         *
+         * `showTrim: true` because MpiTrimBar IS the seek bar — track, playhead and
+         * in/out handles are one component, so `showTrim: false` would take the seek
+         * bar with it.
+         *
+         * Same frame contract as compare: the media layer stays empty, which is what
+         * leaves every `_bindResultView` handler inert, and the viewer brings its own
+         * zoom/pan.
+         *
+         * @param {Object} it   the result item
+         * @param {string} path its filePath/url
+         * @returns {boolean} false when there is nothing to load — the caller then
+         *   paints the plain element.
+         */
+        function _mountPlayer(it, path) {
+            const url = resolveMediaUrl(path);
+            if (!url || !_resultFrameEl || !_resultPaneEl) return false;
+            const fps = it?.fps || 24;
+
+            _playerHost = ce('div', { className: 'mpi-base-flow__result-player' });
+            _resultFrameEl.appendChild(_playerHost);
+            _resultFrameEl.classList.add('mpi-base-flow__result-frame--player');
+            _videoViewer = MpiVideoViewer.mount(_playerHost, { fps });
+
+            // The bar goes under the SPLIT, spanning the slide — not inside the result
+            // column. Its fixed chrome (transport + time + volume + fullscreen) is
+            // ~740px on its own, so in a ~520px column the flexible part, the seek
+            // bar, was squeezed to exactly 0px wide.
+            _barHost = ce('div', { className: 'mpi-base-flow__result-bar' });
+            (_resultFrameEl.closest('.mpi-base-flow__slide') || _resultPaneEl).appendChild(_barHost);
+            _videoBar = MpiVideoControlBar.mount(_barHost, { fps, showTrim: true });
+            _videoViewer.el.attachControlBar(_videoBar);
+
+            _videoViewer.el.loadVideo(url, {
+                fps,
+                duration:   it?.duration,
+                frameCount: it?.frameCount,
+                hasAudio:   it?.hasAudio,
+            });
+            return true;
+        }
+
+        /**
+         * The compare/player switch — mounted only when BOTH surfaces exist for this
+         * result, i.e. the flow declares a comparison AND the result is a video. One
+         * surface is live at a time: two decoding video pairs behind one frame is
+         * four videos for a picture nobody is looking at.
+         * @param {Object} it the result item
+         */
+        function _mountSurfaceToggle(it) {
+            if (!_resultFrameEl) return;
+            const canCompare = !!(flow.result?.compare && _compareBefore());
+            if (!canCompare || !_isVideoResult(it)) return;
+
+            const host = ce('div', { className: 'mpi-base-flow__result-toggle' });
+            _resultFrameEl.appendChild(host);
+            const showingCompare = _resultMode === 'compare';
+            _surfaceToggle = MpiButton.mount(host, {
+                icon:  showingCompare ? 'play' : 'compare',
+                label: showingCompare ? 'Player' : 'Compare',
+                size:  'sm',
+                info:  showingCompare
+                    ? 'Play the result on its own'
+                    : 'Compare the result against your source',
+            });
+            _surfaceToggle.on('click', () => {
+                const single = _resultSingle;
+                if (!single) return;
+                // Remembered so a slide rebuild replays the surface the user chose,
+                // the same way _lastResults replays the result itself.
+                _preferredResultMode = _resultMode === 'compare' ? 'player' : 'compare';
+                _showSingleResult(single.it, single.path, _preferredResultMode);
+            });
         }
 
         /** Drop the compare surface and hand the frame back to the media layer. */
@@ -1483,6 +1649,31 @@ export const MpiBaseFlow = ComponentFactory.create({
             _compareHost?.remove();
             _compareHost = null;
             _resultFrameEl?.classList.remove('mpi-base-flow__result-frame--compare');
+        }
+
+        /** Drop the video player and its control bar. */
+        function _teardownPlayer() {
+            // Viewer first: its destroy detaches the bar's surface (and with it the
+            // bar's video hotkeys) before the bar itself goes.
+            _videoViewer?.destroy?.();
+            _videoViewer = null;
+            _videoBar?.destroy?.();
+            _videoBar = null;
+            _playerHost?.remove();
+            _playerHost = null;
+            _barHost?.remove();
+            _barHost = null;
+            _resultFrameEl?.classList.remove('mpi-base-flow__result-frame--player');
+        }
+
+        /** Drop every result surface — the state `_showResults` starts from. */
+        function _teardownResultSurfaces() {
+            _teardownCompare();
+            _teardownPlayer();
+            _surfaceToggle?.destroy?.();
+            _surfaceToggle = null;
+            _resultMode = 'plain';
+            _resultSingle = null;
         }
 
         /**

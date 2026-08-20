@@ -73,6 +73,40 @@ test('head-swap compares against the plate it KEEPS, not the head donor', async 
     assert.strictEqual(swap.result?.compare, 'image1');
 });
 
+// ── Option B: the result pane's video surface (MPI-585) ─────────────────────
+// These pin WIRING, not behaviour — the surfaces are DOM-only and a node test
+// cannot mount them (they were proven live instead, see the card's validation.md).
+// What they catch is the silent revert: drop either import and the pane falls back
+// to a bare `<video controls>` with no frame stepping, seek bar, loop or volume,
+// and nothing anywhere says so.
+
+const fs = require('node:fs');
+const read = p => fs.readFileSync(repo(p), 'utf8');
+
+test('the Flow result pane shows video on the REAL player, not a bare <video controls>', () => {
+    const src = read('js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js');
+    assert.match(src, /import \{ MpiVideoViewer \}/,
+        'MpiBaseFlow must mount MpiVideoViewer for a video result');
+    assert.match(src, /import \{ MpiVideoControlBar \}/,
+        'MpiBaseFlow must mount MpiVideoControlBar — the viewer deliberately does not own it');
+    // The bar's seek track IS MpiTrimBar, so showTrim:false would remove the seek
+    // bar along with the in/out handles.
+    assert.match(src, /MpiVideoControlBar\.mount\([^)]*showTrim:\s*true/s,
+        'the Flow player must keep showTrim:true — the seek bar is the trim bar');
+});
+
+test('a video control bar the user cannot see does not answer the keyboard', () => {
+    const src = read('js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.js');
+    // hotkeyManager buckets handlers by KEY, not by registry id, so every bar bound
+    // to `space` fires at once. MpiOverlay stashes rather than destroys, so a Group
+    // History bar survives under an open Flow: without this gate one space press
+    // played the Flow's result AND a hidden History clip (reproduced live).
+    assert.match(src, /const _canDrive = \(\) =>/,
+        'MpiVideoControlBar must gate its hotkeys on being on screen');
+    assert.match(src, /Hotkeys\.bind\(id, \(\) => \{ if \(_canDrive\(\)\)/,
+        'every video hotkey must go through the _canDrive gate');
+});
+
 test('the flows that deliberately DECLINE a comparison still do', async () => {
     // Not bookkeeping: both are cases where a reveal bar actively misleads, so a
     // future "every flow should have one" sweep has to argue with this test first.

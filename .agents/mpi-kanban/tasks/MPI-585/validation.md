@@ -75,15 +75,85 @@ extend and foley do not.
   `flowsRegistry.js` is claimed and uncommitted, and the caution that a sheet generated from
   scratch may deserve NO comparison at all.
 
-## Outstanding — needs Fabio
+## Third pass — OPTION B, the real video player in the result pane (2026-08-20)
 
-1. **The feel in a real run.** A reveal bar is a judgement, not an assertion.
-2. **Cosmetic call A:** the overlay chrome behind the History compare was a hardcoded
-   `oklch(0.20 0.020 350)`; it is now `var(--surface-canvas)` (0.28) per the no-hardcoded-colour
-   rule. Slightly lighter backdrop. Say the word and it goes back to a one-off token.
-3. **Cosmetic call B:** in the Flow pane the video letterboxes inside the 60vh frame, so the
-   reveal bar and labels span dead space above and below it. The bar is deliberately
-   container-space (it stays fixed while the image pans/zooms), so clipping it to the media box
-   would change shared canvas behaviour and hit History too — his call, not a silent fix.
-4. **Gallery demo:** `.claude/rules/components.md` § 4 requires asking whether `MpiCompareView`
-   should get an entry in `js/pages/components.js`. Not added.
+Isolated instance `:65442` (own profile + port; killed by process tree afterwards, and
+`:3000` verified still listening). A temporary `__probeShowResults` / `__probeResultState`
+hook drove the pane because a result otherwise only arrives from a real generation —
+**removed; `grep -rn "__probe" js/ tests/` is clean.**
+
+**The player, on Fabio's own upscaled clip (1728x960, 3.042s, readyState 4)**
+- Toggle from compare mounts `MpiVideoViewer` + `MpiVideoControlBar`; frame gains
+  `--player`; the media layer stays **empty (0 children)**, which is what leaves every
+  `_bindResultView` handler inert, exactly as compare does.
+- Transport driven by CLICKING the real buttons, not by calling the surface: play
+  advanced 0 → 0.628s; play again paused it; **frame-back moved exactly -0.0417s = 1/24**.
+  (Frame-FORWARD reads +0.0486 because the decode path falls back to the native seek with
+  the documented `+0.25·fs` bias — `docs/video-player.md` — the same behaviour History has.)
+- **Seek bar real:** clicking the trim track at 50% seeked to 1.542s (half = 1.521, snapped
+  to frame 37) and the time display followed. Track measures **300px**.
+- Loop button → `is-active` + native `video.loop` true. Mute → `video.muted` true.
+  Frames/time toggle flips `0037` ⇄ `00:01.54`. Fullscreen + volume slider present.
+
+**Every branch, not just the happy one**
+- `ltx-extend` (declares NO compare) + a video result → **player, no toggle**. This is the
+  headline: a video result gets the real player whether or not a comparison exists.
+- `head-swap` (declares compare) + an IMAGE result → compare, **no toggle, no player**.
+- TWO video results → plain elements, 0 control bars, 2 `<video>` in the media layer.
+- Slide navigation away and back → 0 bars, 0 surface videos, 0 bar hosts; the result
+  replays. `el.close()` → 0 bars, 0 videos, 0 flows.
+
+**The hidden-bar hotkey bug — reproduced, then fixed, then re-proved**
+- BEFORE: a second attached `MpiVideoControlBar` + one `space` keydown → **both** videos
+  playing (`flowPlaying: true, bgPlaying: true`), 2 handlers in the `down:space` bucket.
+- AFTER `_canDrive()`: same setup with the peer bar inside a `display:none` stash →
+  `flowPlaying: true, bgPlaying: false`, `bgRects: 0`, still 2 handlers bound. The gate
+  discriminates, it does not unbind.
+
+**Layout**
+- The bar in the result column left the seek bar at **exactly 0px** (measured
+  `__trim: 0`, ends needing 736px in a 518px column). Moved to the slide → 300px.
+- No layout jump: `.mpi-base-flow__col-left` measures **236px in compare and 236px in
+  player**, frame 518px in both.
+- `MpiViewerCorners` empty strip: was a 26x14 box at (1121,144); now `display: none`,
+  `childNodes: 0`.
+
+**Automated**
+- `npm test` — **640/640**, 0 fail (was 638 before the 2 new cases).
+- `npx eslint` on all three touched JS files — **0 errors**; the same 4 pre-existing
+  `no-bare-form-control` warnings in `MpiBaseFlow.js` (lines 172/445/518), none added.
+- **4 mutants, 4 killed:** removing the `MpiVideoViewer` import; flipping `showTrim` to
+  `false`; dropping the `_canDrive()` guard from the bind wrapper; renaming `_canDrive`.
+  All restored and re-verified green. (One mutation run died on the known cp1252 trap
+  mid-case and left the file mutated — caught and restored by hand, then re-run with a
+  `finally` restore and byte-decoding fixed.)
+
+## RESOLVED — Fabio verified, 2026-08-20
+
+**"yeah, it's fine, verified."** Accepted WITHOUT a live GPU run, deliberately: he was waiting
+on an agent for the GPU and declined the offer of a driven demo window on an isolated instance.
+So the user-ux gate is closed on his say-so plus the evidence above, **not** on him having
+watched a real upscale land in the pane. Worth knowing if the feel turns out wrong later.
+
+Carried to closed with it:
+
+1. **The feel in a real run** — accepted unseen, as above.
+2. **Cosmetic call A** (History compare backdrop moved from a hardcoded `oklch(0.20 0.020 350)`
+   to `var(--surface-canvas)`, slightly lighter) — accepted as-is.
+3. **Cosmetic call B** (in the Flow pane the video letterboxes inside the 60vh frame, so the
+   reveal bar and labels span dead space above and below it) — accepted as-is. Clipping the bar
+   to the media box would change shared canvas behaviour and hit History too, so it stays a
+   deliberate non-fix, not an oversight.
+4. **Gallery demo entry for `MpiCompareView`** — already waived by Fabio earlier in the card
+   (`.claude/rules/components.md` § 4 ask). This line was stale; not an open question.
+
+## Still open, but NOT this card
+
+- **MPI-584's graphics** (`flow-ltx-upscale.webp` + `.mp4`) — deferred to its own session. Their
+  absence is the 404 storm in the Flow Library console, nothing else.
+- **Option C** (an adapter so `MpiVideoControlBar` also drives the COMPARE pair, via a shim onto
+  MpiCanvas's `playCompare`/`frameStepCompare`) — a live follow-up, recorded in `plan.md`
+  § Plan Drift. Not needed for Option B.
+- **A finished result does not survive reopening the flow.** `_lastResults` is component-scoped
+  and shell destroys the instance on close, so Upscale Video comes back with an empty pane after
+  a completed run (the result is in the gallery). Pre-existing, predates Option B, uncarded.

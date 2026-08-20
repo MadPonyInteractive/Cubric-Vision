@@ -26,6 +26,13 @@
 .mpi-viewer-corners__top-right { right: var(--s-4); }
 .mpi-viewer-corners__top-left  { left:  var(--s-4); }
 
+/* A strip with no chips still painted its box + border — a 26x14 grey tab floating
+   over the picture. Invisible in History (which always sets chips), visible the
+   moment a surface mounts the viewer without them, as the Flow result pane does
+   (MPI-585). Hide the box, not the chips. */
+.mpi-viewer-corners__top-right:empty,
+.mpi-viewer-corners__top-left:empty { display: none; }
+
 /* ── Dot separator between chips ──────────────────────────────────────── */
 .mpi-viewer-corners__sep {
     margin: 0 8px;

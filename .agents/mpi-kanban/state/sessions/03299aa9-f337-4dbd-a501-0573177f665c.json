@@ -1,0 +1,34 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "03299aa9-f337-4dbd-a501-0573177f665c",
+  "role": "implementer",
+  "claude_session_id": "03299aa9-f337-4dbd-a501-0573177f665c",
+  "started_at": "2026-08-20T05:45:22Z",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "status": "closed",
+  "heartbeat_at": "2026-08-20T07:05:00Z",
+  "name": "MPI-585 - Option B: real video player in the Flow result pane",
+  "task": "MPI-585",
+  "recent_events": [
+    {
+      "at": "2026-08-20T05:52:00Z",
+      "event": "session_started",
+      "note": "Resumed MPI-585 from handoff d0ba037e; building Option B (MpiVideoViewer + MpiVideoControlBar in MpiBaseFlow's result pane)"
+    },
+    {
+      "at": "2026-08-20T06:50:00Z",
+      "event": "validation_verified",
+      "note": "MPI-585 Option B verified by the user; awaiting commit via mpi-end-session"
+    },
+    {
+      "at": "2026-08-20T07:05:00Z",
+      "event": "session_closed",
+      "note": "MPI-585 closed on evidence + user verification"
+    }
+  ]
+}

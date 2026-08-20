@@ -73,6 +73,31 @@ pairing is pinned by `tests/flow-result-compare.test.cjs`.
 surface wrapped in a full-screen takeover. **Change the compare behaviour in the view, never in
 one of the two consumers** — that is the whole reason it was lifted out.
 
+## The result pane: every video result gets the real player (MPI-585)
+
+A **single video** result mounts `MpiVideoViewer` + `MpiVideoControlBar` — the same pair the
+Group History workspace runs — not a `<video controls>`. That gives frame stepping, a
+frame-accurate seek bar, loop, mute + volume, fullscreen and the time/frames toggle. Nothing to
+declare: it is what a video result does.
+
+- **Where they go.** The viewer fills the result FRAME; the bar is a sibling of the `__split`,
+  spanning the whole slide beneath it. Inside the result column instead, the bar's ~740px of
+  fixed chrome squeezed the flexible part — the seek bar — to exactly 0px.
+- **`showTrim: true`, always.** `MpiTrimBar` is track + in/out handles + playhead in ONE
+  component, so `showTrim: false` removes the seek bar along with the trim handles.
+- **The frame contract is compare's.** The media layer stays empty, which is what leaves every
+  `_bindResultView` handler inert; the viewer brings its own zoom/pan.
+- **Compare wins the first paint** when the flow declares one, and a `MpiButton` in the frame's
+  bottom-right toggles the two. The toggle appears only when BOTH surfaces exist — a declared
+  compare AND a video result — and only one is mounted at a time. The choice is remembered
+  across slide rebuilds, but never applied to a result it cannot serve.
+- **Unchanged:** images, and runs with several outputs, keep the plain elements. N players would
+  be N decoders and N control bars, and there is no single "after" for a reveal bar.
+
+A Flow is an overlay over a workspace that may have its OWN video bar, and video hotkeys are
+bucketed by key — so a bar the user cannot see must not answer the keyboard. That gate lives in
+the player, not here: `docs/video-player.md` § A bar you cannot see.
+
 ## Install progress (multi-model)
 
 The detail footer has three states: **Install models** (missing, idle) → **aggregated % bar +

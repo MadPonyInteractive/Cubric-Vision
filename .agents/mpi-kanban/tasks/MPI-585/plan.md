@@ -2,10 +2,32 @@
 
 ## Current State
 
-**Built and self-verified; waiting on Fabio's eyes (verify mode is `user-ux`).**
-Both consumers run the same shared surface and were proven live on his own upscale
-pair. **Nothing is committed yet.** The single next action is his verdict on
-`validation.md` § Outstanding, then commit, then MPI-584's graphics.
+**DONE and verified by Fabio (2026-08-20). The single next action is `mpi-end-session`
+— nothing is left to build.**
+
+Option B's 8 files are **UNCOMMITTED**; that is the only reason the card is not in
+`done` yet. Fabio verified without a live GPU run (he was waiting on an agent and
+declined a driven demo window) — see `validation.md` § RESOLVED.
+
+The COMPARE half is already committed (inside peer commit `b35a3fe6`, wrong subject,
+pointer commit `34043e14`; do NOT rewrite that history). Option B's 8 files are
+UNCOMMITTED.
+
+Three things found while building Option B that the plan could not have predicted:
+
+1. **The bar cannot live in the result column.** MpiVideoControlBar carries ~740px of
+   fixed chrome (transport + time + volume + fullscreen); the result column is ~518px,
+   so the flexible part — the seek bar — was squeezed to **exactly 0px**. It now mounts
+   as a sibling of `__split`, spanning the slide, which is the placement MpiVideoViewer's
+   own header says the bar exists for. Seek bar measures 300px.
+2. **A hidden control bar was answering the keyboard.** `hotkeyManager` buckets handlers
+   by KEY, not by registry id, and `MpiOverlay` stashes into a `display:none` node instead
+   of destroying — so a Group History video bar stays attached under an open Flow.
+   Reproduced live: one space press played the Flow result AND a hidden clip, audibly.
+   Fixed at the root in `MpiVideoControlBar._canDrive()`. This bug predates Option B
+   (`compare.playPause` shares the same `space` bucket).
+3. **An empty `MpiViewerCorners` strip painted its box** — a 26x14 grey tab over the
+   picture. Invisible in History, which always sets chips. `:empty { display: none }`.
 
 Card picked up 2026-08-20 from handoff `0ec5f9fe`. The card description is the
 spec; this plan records only what the description could not know because it had
@@ -66,11 +88,28 @@ fps detection, load the pair, loop on) and the `compare.*` hotkey bind/unbind.
 7. Verified — 634/634, eslint clean on every touched file, and BOTH consumers proven
    live on Fabio's real 864x480 / 1728x960 pair. Full evidence in `validation.md`.
 
+## Completed — Option B (2026-08-20)
+
+8. `MpiBaseFlow`: a single VIDEO result mounts `MpiVideoViewer` + `MpiVideoControlBar`
+   (`showTrim: true`) instead of `<video controls>`. `_showSingleResult` /
+   `_defaultResultMode` / `_mountPlayer` / `_mountSurfaceToggle` / `_teardownPlayer`;
+   `_teardownResultSurfaces` replaces `_teardownCompare` at every call site.
+9. Compare stays the first paint for a declaring flow; an `MpiButton` bottom-right in
+   the frame toggles the two, ONE mounted at a time. Toggle appears only when both
+   exist (declared compare AND a video result). The choice is remembered across slide
+   rebuilds and never applied to a result it cannot serve.
+10. `MpiVideoControlBar._canDrive()` — the hidden-bar hotkey gate (see Current State §2).
+11. `MpiViewerCorners.css` — `:empty` strips do not paint.
+12. Layout: bar hosted on the SLIDE, `.mpi-base-flow__result-bar` matching the split's
+    max-width + side padding; `--player` joins `--compare` on the frame's cursor rule.
+13. Docs: `docs/video-player.md` § A bar you cannot see (the gate's home) + add-flow
+    `04` § every video result gets the real player + the README checklist line.
+14. `tests/flow-result-compare.test.cjs` +2 cases, both mutation-tested (4 mutants, 4
+    killed). They pin WIRING, not behaviour — the surfaces are DOM-only.
+
 ## Remaining Work
 
-Fabio's check only — the four items under `validation.md` § Outstanding: the feel of
-the bar in a real run, two cosmetic calls, and whether `MpiCompareView` gets a dev
-gallery entry.
+None. `mpi-end-session` to commit and close.
 
 ## Verification
 
@@ -82,4 +121,15 @@ the 2x/1x pair lines up are things only the app shows. Automated checks
 
 ## Plan Drift
 
-- 2026-08-20: none yet.
+- 2026-08-20: **scope widened by Fabio after the compare half landed** — the result pane
+  also needed a real video player, not a bare `<video controls>`. He chose OPTION B (every
+  video result on MpiVideoViewer + MpiVideoControlBar, compare as a toggle on top) over
+  A (player only when there is no compare) and C (an adapter so the bar also drives the
+  compare pair). **C is still a live follow-up**: it needs a shim from the bar's surface
+  contract (`_play`/`seek`/`frameStep`/`getVideoElement`) onto MpiCanvas's
+  `playCompare`/`frameStepCompare`, and it touches a shared Compound.
+- 2026-08-20: the plan assumed the bar would sit under the frame inside the result
+  column. It cannot — see Current State §1. Corrected to a slide-level mount.
+- 2026-08-20: two defects found that are NOT Option B's, fixed at the root because Option
+  B is the first surface that exposes them (Current State §2 and §3). `MpiVideoControlBar`
+  and `MpiViewerCorners.css` were added to this card's claim.

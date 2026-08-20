@@ -209,6 +209,15 @@
     max-width: 1180px;
     padding: var(--s-6) var(--s-7);
 }
+/* The RUN step's slide stacks: the split, then the video transport bar spanning the
+   whole slide beneath it — the placement MpiVideoControlBar is built for ("lets the
+   bar span the full app window like the prompt box", MpiVideoViewer's header) and
+   the one History uses. Inside the result column instead, the bar's ~740px of fixed
+   chrome left the seek bar exactly 0px wide (MPI-585). */
+.mpi-base-flow__slide:has(.mpi-base-flow__result) {
+    flex-direction: column;
+    gap: var(--s-4);
+}
 
 /* The divider: INSET top and bottom — it never touches the chrome, and it is
    quiet --line, never an accent. A full-height accent rule is the decorative
@@ -660,15 +669,39 @@
     touch-action: none;
 }
 .mpi-base-flow__result-frame:active { cursor: grabbing; }
-/* Compare mode: MpiCanvas owns the pointer — its own ViewManager pans and zooms,
-   and the reveal bar is dragged with the same gesture. The frame's grab cursor
-   would promise a pan this surface no longer performs. */
+/* Compare and player modes: the mounted surface owns the pointer — MpiCanvas and
+   MpiVideoViewer each bring their own ViewManager, and the reveal bar is dragged
+   with the same gesture. The frame's grab cursor would promise a pan neither
+   surface routes through `_bindResultView`. */
 .mpi-base-flow__result-frame--compare,
-.mpi-base-flow__result-frame--compare:active { cursor: default; }
-/* Host for the shared compare surface — it states no size of its own. */
-.mpi-base-flow__result-compare {
+.mpi-base-flow__result-frame--compare:active,
+.mpi-base-flow__result-frame--player,
+.mpi-base-flow__result-frame--player:active { cursor: default; }
+/* Hosts for the shared compare surface and the video viewer — they state no size
+   of their own, so the frame's box is the box they fill. */
+.mpi-base-flow__result-compare,
+.mpi-base-flow__result-player {
     position: absolute;
     inset: 0;
+}
+/* MpiVideoControlBar's host — a sibling of the SPLIT, not a child of the result
+   column, so the bar gets the slide's full measure. It lines its edges up with the
+   split above it (same max-width, same side padding). */
+.mpi-base-flow__result-bar {
+    width: 100%;
+    max-width: 1180px;
+    padding: 0 var(--s-7);
+}
+/* The compare/player switch. On the FRAME, above both surfaces — appended last, so
+   the z-index only guards against a surface promoting itself into its own layer.
+   BOTTOM-right, not top-right: MpiCompareView puts its AFTER label in the top-right
+   corner and the toggle landed on top of it. */
+.mpi-base-flow__result-toggle {
+    position: absolute;
+    bottom: var(--s-2);
+    right: var(--s-2);
+    z-index: 2;
+    line-height: normal;
 }
 /* ViewManager emits absolute offsets, so the origin must be the frame's corner. */
 .mpi-base-flow__result-media {

@@ -89,6 +89,28 @@ play-start in-seek is handled by `_seekRangeStartIfNeeded`. Native `video.loop`
 is used only for the full range; sub-ranges emulate the wrap in the frame-watch
 / `timeupdate` / `ended` handlers.
 
+## A bar you cannot see must not answer the keyboard
+
+`hotkeyManager._mapKey` buckets handlers by **key + type, not by registry id**, so
+every handler bound to `space` fires on every press — `video.playPause` and
+`compare.playPause` share one bucket, and so do two live `MpiVideoControlBar`s.
+
+`MpiOverlay` **stashes** the children it covers into a `display: none` node rather
+than destroying them, so a Group History video bar stays attached under an open
+Flow. Result, reproduced live (MPI-585): one space press played the Flow's result
+**and** a hidden History clip, audibly.
+
+`MpiVideoControlBar._canDrive()` gates every video hotkey on
+`_surface && el.isConnected && el.getClientRects().length > 0` — empty exactly when
+the bar or an ancestor is `display: none` or detached, non-empty for a fixed or
+fullscreen bar. Pinned by `tests/flow-result-compare.test.cjs`.
+
+> Second consumer of the viewer+bar pair since MPI-585: the **Flow result pane**
+> (`MpiBaseFlow`), where every single-video result mounts them —
+> `docs/playbooks/add-flow/04-overlay-and-shell.md` § The result pane. The bar is
+> not owned by the viewer precisely so a second surface can borrow it; give it the
+> full width of its slide, or the seek bar is squeezed to nothing.
+
 ## Known non-bug
 
 `frame0 == frame1` on Wan/LTX clips is **content**, DaVinci-confirmed: the model

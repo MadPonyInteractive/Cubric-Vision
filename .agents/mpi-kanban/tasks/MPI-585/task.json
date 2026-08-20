@@ -3,11 +3,11 @@
   "id": "MPI-585",
   "title": "A shared before/after CompareWidget for Flow results - declared, not per-flow code",
   "description": "Every Flow that IMPROVES media the user supplied needs a before/after compare, and it must be ONE piece of code shared by all of them - Fabio, 2026-08-20: \"These will happen for other flows as well, so keep that in mind so that we don't have to repeat code. Any flow where there is an improvement to a video ... we will need a CompareWidget. The same thing for any flow for an image that has an improvement or change to an image.\" First consumer is `ltx-upscale` (MPI-584): source on the LEFT, upscaled on the RIGHT, the draggable reveal bar between them - the same thing the History workspace gives you when two video entries are selected.\n\nDO NOT BUILD A COMPARE ENGINE. It exists twice over and both halves are shipped:\n  - `ComparisonManager` + MpiCanvas `activeMode: 'compare'` (js/components/Primitives/MpiCanvas/MpiCanvas.js) owns the reveal bar, `imgAfter`, `sliderPos`, `loadComparisonImage(url)`, `loadComparisonVideo(url,{fps})`, the dual-video RAF sync and the loop flag. It already supports image+image, image+video, video+image and video+video.\n  - `MpiCompareOverlay` (js/components/Compounds/MpiCompareOverlay/) is the HISTORY surface: a full #tool-container takeover on MpiOverlay, opened with `open(itemA,itemB)`, labels, and the hotkey transport (space play/pause both, arrowleft/right frame step, l loop).\n\nSO THE JOB IS THE THIRD SURFACE, NOT A THIRD ENGINE. The Flow result pane cannot reuse MpiCompareOverlay as-is: it is a full-screen MpiOverlay takeover with the Stash Pattern, and a Flow is ALREADY an overlay - stacking one inside the other fights the z-order floor and the stash. What is genuinely shared is (a) the canvas compare mode, which is already a Primitive, and (b) the video transport + hotkey block, which today lives INSIDE MpiCompareOverlay and would be the duplicated code Fabio is warning about. PROPOSAL to confirm at pickup: lift that transport/hotkey block into a small shared piece (a Compound `MpiCompareView`, or a util both surfaces call) and make MpiCompareOverlay consume it too, so the History surface and the Flow surface can never drift. Sweep BOTH consumers in one pass - a one-consumer change on a shared primitive is a false done.\n\nTHE FLOW SIDE STAYS DATA (MPI-572 law: a FlowDef is data a third-party manifest could carry, and MPI-582: every UI element is a component). So the flow DECLARES the compare rather than shipping a component: which media role is the BEFORE. Shape to confirm, e.g. `result: { compare: 'inputVideo' }` on the FlowDef - `inputVideo` for ltx-upscale, `image1` for a future image-improvement flow, ABSENT for a flow with nothing to compare (ltx-foley returns the same pixels; ltx-extend's output is LONGER than its source, so decide deliberately whether a reveal bar means anything there - probably not). One declaration covers video AND image because the canvas mode already does.\n\nWHERE IT RENDERS: `_showResults()` in MpiBaseFlow.js currently appends a bare `<video controls loop>` or `<img>` into `.mpi-base-flow__result-media`. A declaring flow swaps that for the compare surface when BOTH the result and the before-media exist, and falls back to the plain element when the before is missing (reuse across restart, or a run with no input). The before-media is already to hand: `_collectInputs()` keeps `mediaItems` and the run snapshot is persisted in `state.s_flowInputs[flowId]`.\n\nTRAPS TO CHECK, NOT ASSUME: (1) the upscale output is 2x the input, so the pair has DIFFERENT resolutions - confirm ComparisonManager scales the before into the after's frame rather than comparing at native size (the History overlay compares arbitrary pairs, so it probably does; prove it on Fabio's own pair). (2) The two videos must stay frame-locked; that sync is MpiCanvas's `_compareVideoHandlers` RAF loop, so the flow surface has to drive the same play/pause path, not a stray `<video controls>`. (3) Hotkeys go through `Hotkeys.bind` with a `hotkeyRegistry.js` id, and the Flow overlay already owns Ctrl+Enter - do not introduce a second raw keydown listener. (4) Any `Events.on` / observer added in the flow's result pane needs its unsub in the existing `_unsubs` teardown.\n\nFILE OWNERSHIP COLLISION - READ BEFORE PICKUP: `js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js` + `.css` are CLAIMED by a live MPI-504 session (.agents/mpi-kanban/state/files/548dfdb3-*.json, heartbeat 2026-08-20T00:40Z). guard-claim will block the write. Check whether that session is still live, and if it is, coordinate with mpi-message instead of editing.\n\nVERIFY IN A REAL APP, not a unit test: spin your own (npm run app:isolated), never the user's :3000. Fabio's own run pair is on disk for this - C:\\Users\\Fabio\\Downloads\\video upscale\\ref2v_ms_005.mp4 (source) and ltxVideoUpscale_002.mp4 (upscaled).",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "complete",
   "created_at": "2026-08-20T04:55:00Z",
-  "updated_at": "2026-08-20T04:50:00Z",
+  "updated_at": "2026-08-20T07:05:00Z",
   "labels": [
     "flows",
     "ui",
@@ -24,10 +24,9 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/"
   },
-  "activeSessionTitle": "MPI-585 - shared Flow CompareWidget",
   "attention": {
-    "state": "required",
-    "reason": "Self-verified (634/634, both consumers proven live). Needs Fabio's eyes on the reveal-bar feel plus 3 calls in validation.md - two cosmetic, one gallery-demo.",
-    "updated_at": "2026-08-20T04:50:00Z"
+    "state": "cleared",
+    "reason": "Verified by Fabio 2026-08-20 and committed. Claim auditor: 10/10 claims proven, 0 findings.",
+    "updated_at": "2026-08-20T07:05:00Z"
   }
 }
