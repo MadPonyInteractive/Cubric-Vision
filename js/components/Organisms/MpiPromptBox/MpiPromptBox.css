@@ -365,21 +365,27 @@
     z-index: 3;
 }
 
-.mpi-prompt-box__ref-picker-item {
+/* A picker row, not a labelled button: sentence-case, left-aligned. The `.mpi-btn`
+   prefixes beat the Primitive's own single-class rules without depending on
+   stylesheet order, and the type resets undo its uppercase/600/tracking (MPI-588). */
+.mpi-btn.mpi-prompt-box__ref-picker-item {
     display: flex;
     align-items: baseline;
     gap: var(--s-2);
     padding: var(--s-1) var(--s-2);
     background: none;
     border: 0;
+    border-radius: 0;
     text-align: left;
-    cursor: pointer;
     color: var(--ink-1);
     font-size: var(--t-xs);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
 }
 
-.mpi-prompt-box__ref-picker-item:hover,
-.mpi-prompt-box__ref-picker-item--active {
+.mpi-btn.mpi-btn--ghost.mpi-prompt-box__ref-picker-item:hover:not(:disabled),
+.mpi-btn.mpi-btn--ghost.mpi-prompt-box__ref-picker-item--active {
     background: var(--accent-heat);
     color: var(--surface-0);
 }
@@ -512,6 +518,28 @@
     color: var(--surface-0);
 }
 
+/* The toggle variant is a mounted MpiButton; the read-only variant is still a span,
+   so the shared `__role` rule above stays at one class and both keep the same pill.
+   These two carry the `.mpi-btn` prefix only where they must outrank the Primitive
+   (MPI-588). */
+.mpi-btn.mpi-prompt-box-media-strip__role {
+    padding: var(--s-1) 0;
+    border: 0;
+    border-radius: 0;
+    background: color-mix(in oklch, var(--surface-0) 72%, transparent);
+    color: var(--ink-1);
+    font-size: var(--t-2xs);
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+    line-height: 1;
+}
+
+.mpi-btn.mpi-prompt-box-media-strip__role--end {
+    background: color-mix(in oklch, var(--accent-heat) 82%, transparent);
+    color: var(--surface-0);
+}
+
 .mpi-prompt-box-media-strip__role--toggle {
     cursor: pointer;
     display: flex;
@@ -520,7 +548,7 @@
     gap: var(--s-1);
 }
 
-.mpi-prompt-box-media-strip__role--toggle:hover {
+.mpi-btn.mpi-btn--ghost.mpi-prompt-box-media-strip__role--toggle:hover:not(:disabled) {
     background: color-mix(in oklch, var(--accent-heat) 92%, transparent);
     color: var(--surface-0);
 }
@@ -585,7 +613,9 @@
     color: var(--ink-1);
 }
 
-.mpi-prompt-box-media-strip__remove {
+/* A 16px chip on the chip's corner — the ghost icon button paints no background at
+   all, hovered or not, so both states are pinned here (MPI-588). */
+.mpi-btn.mpi-ibtn.mpi-prompt-box-media-strip__remove {
     position: absolute;
     top: -6px;
     right: -6px;
@@ -595,18 +625,15 @@
     background: var(--surface-1);
     border: 1px solid var(--line-soft);
     color: var(--ink-1);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
     transition: background var(--t-base) var(--ease), border-color var(--t-base) var(--ease);
     padding: 0;
     z-index: 5;
 }
 
-.mpi-prompt-box-media-strip__remove:hover {
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.mpi-prompt-box-media-strip__remove:hover:not(:disabled) {
     background: var(--accent-heat);
     border-color: var(--accent-heat);
+    color: var(--ink-1);
 }
 
 /* ── Cue button — hold-to-loop charge fill + armed state ───────────────── */

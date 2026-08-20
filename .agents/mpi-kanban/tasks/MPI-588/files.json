@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/components/Primitives/MpiButton/MpiButton.js",
+    "js/components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.js",
+    "js/components/Compounds/MpiAutoMaskThumbs/MpiAutoMaskThumbs.css",
+    "js/components/Compounds/MpiContextMenu/MpiContextMenu.js",
+    "js/components/Compounds/MpiContextMenu/MpiContextMenu.css",
+    "js/components/Compounds/MpiLicenceGate/MpiLicenceGate.js",
+    "js/components/Compounds/MpiLicenceGate/MpiLicenceGate.css",
+    "js/components/Compounds/MpiModelSettings/MpiModelSettings.js",
+    "js/components/Compounds/MpiModelSettings/MpiModelSettings.css",
+    "js/components/Compounds/MpiSlideOver/MpiSlideOver.js",
+    "js/components/Compounds/MpiSlideOver/MpiSlideOver.css",
+    "js/components/Compounds/MpiQueuePanel/MpiQueuePanel.js",
+    "js/components/Compounds/MpiQueuePanel/MpiQueuePanel.css",
+    "js/components/Organisms/MpiToolOptionsPrompt/MpiToolOptionsPrompt.js",
+    "js/components/Organisms/MpiToolOptionsPrompt/MpiToolOptionsPrompt.css",
+    "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
+    "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.css",
+    "js/components/Compounds/MpiEngineInstall/MpiEngineInstall.js",
+    "js/components/Compounds/MpiEngineInstall/MpiEngineInstall.css",
+    "js/components/Compounds/MpiMediaPicker/MpiMediaPicker.js",
+    "js/components/Compounds/MpiMediaPicker/MpiMediaPicker.css",
+    "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+    "js/components/Organisms/MpiPromptBox/MpiPromptBox.css",
+    ".agents/mpi-kanban/tasks/MPI-588/**"
+  ]
+}

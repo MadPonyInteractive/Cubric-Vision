@@ -1,6 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { Events } from '../../../events.js';
 import { on, qs } from '../../../utils/dom.js';
+import { mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 
 /**
  * MpiSlideOver — Right-edge slide-over panel (Stage Phase 8).
@@ -33,11 +34,6 @@ export const MpiSlideOver = ComponentFactory.create({
         <div class="mpi-slide-over" aria-expanded="false" role="dialog" aria-modal="true">
             <div class="mpi-slide-over__header">
                 <span class="mpi-slide-over__title"></span>
-                <button class="mpi-slide-over__close" aria-label="Close" type="button">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-                        <line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/>
-                    </svg>
-                </button>
             </div>
             <div class="mpi-slide-over__body"></div>
             <div class="mpi-slide-over__footer"></div>
@@ -45,8 +41,18 @@ export const MpiSlideOver = ComponentFactory.create({
 
     setup: (el, props, emit) => {
         const titleEl = qs('.mpi-slide-over__title', el);
-        const closeBtn = qs('.mpi-slide-over__close', el);
         const bodyEl = qs('.mpi-slide-over__body', el);
+
+        // Appended rather than mounted in place: the header already holds the title
+        // span, and mount() would replace it (MPI-588).
+        const closeBtn = mountButton({
+            icon: 'close',
+            size: 'sm',
+            variant: 'ghost',
+            extraClasses: 'mpi-slide-over__close',
+        });
+        closeBtn.setAttribute('aria-label', 'Close');
+        qs('.mpi-slide-over__header', el).appendChild(closeBtn);
 
         titleEl.textContent = props.title || '';
         if (props.extraClasses) {

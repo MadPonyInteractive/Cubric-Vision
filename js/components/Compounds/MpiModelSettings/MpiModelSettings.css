@@ -123,24 +123,26 @@
    Pressed = neutralise this LoRA at generation (inject at zero strength)
    WITHOUT changing its saved name/values. The dropdown + strengths grey out
    but stay readable so the user sees what is being bypassed. (MPI-223) */
-.mpi-model-settings__lora-bypass {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+/* Geometry + the pressed accent; MpiButton (ghost icon) owns the rest. Prefixed
+   with `.mpi-btn` so it beats the Primitive's own single-class rules rather than
+   depending on stylesheet order (MPI-588). */
+.mpi-btn.mpi-model-settings__lora-bypass {
     padding: 4px;
-    background: transparent;
     border: 1px solid var(--line);
     border-radius: var(--r-2);
-    color: var(--ink-3);
-    cursor: pointer;
 }
 
-.mpi-model-settings__lora-bypass:hover {
+.mpi-btn.mpi-model-settings__lora-bypass:hover:not(:disabled) {
     color: var(--ink-1);
     border-color: var(--ink-3);
 }
 
-.mpi-model-settings__lora-bypass[aria-pressed="true"] {
+/* Must outrank `.mpi-btn.mpi-ibtn.mpi-btn--ghost:hover:not(:disabled)`, which blanks
+   the background. That selector scores (0,5,0) — `:not(:disabled)` contributes its
+   argument's specificity, which is the part easy to miscount — so this one carries
+   four classes AND `:not(:disabled)` to reach (0,6,0). Measured: without it, hovering
+   a bypassed slot dropped the warn tint. */
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.mpi-model-settings__lora-bypass[aria-pressed="true"]:not(:disabled) {
     color: var(--accent-warn);
     border-color: var(--accent-warn);
     background: color-mix(in oklch, var(--accent-warn) 14%, var(--surface-1));

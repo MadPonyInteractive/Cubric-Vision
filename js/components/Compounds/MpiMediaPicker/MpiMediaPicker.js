@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
-import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiButton, mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { state } from '../../../state.js';
 import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
@@ -124,6 +124,11 @@ export const MpiMediaPicker = ComponentFactory.create({
         //    filter as the slot behind it so the two never disagree ──
         let importInput = null;
         if (props.onImport) {
+            // The one control here with no component answer: it is never rendered
+            // (hidden), never styled, and exists only so a click can open the OS file
+            // dialog. MpiInput has no file type and a Primitive for an invisible
+            // handle would be a component that draws nothing (MPI-582 / MPI-588).
+            // eslint-disable-next-line mpi/no-bare-form-control -- hidden OS file-dialog handle, never rendered
             importInput = ce('input', {
                 type: 'file',
                 accept: slotType === 'image' ? 'image/*' : slotType === 'video' ? 'video/*' : 'audio/*',
@@ -161,12 +166,13 @@ export const MpiMediaPicker = ComponentFactory.create({
                 inner.appendChild(ce('img', { src: resolveMediaUrl(item.filePath), alt: '' }));
             }
 
-            const close = ce('button', {
-                className: 'mpi-media-picker__preview-close',
-                type: 'button',
-                title: 'Close preview',
+            const close = mountButton({
+                icon: 'close',
+                size: 'sm',
+                variant: 'ghost',
+                extraClasses: 'mpi-media-picker__preview-close',
             });
-            close.innerHTML = renderIcon('close', 'sm');
+            close.title = 'Close preview';
             _unsubs.push(on(close, 'click', _closePreview));
             inner.appendChild(close);
 
@@ -186,11 +192,12 @@ export const MpiMediaPicker = ComponentFactory.create({
         el.closePreview = _closePreview;
 
         function _buildUploadCard() {
-            const card = ce('button', {
-                className: 'mpi-media-picker__tile mpi-media-picker__tile--upload',
-                type: 'button',
-                title: 'Upload a file',
+            const card = mountButton({
+                variant: 'ghost',
+                size: 'sm',
+                extraClasses: 'mpi-media-picker__tile mpi-media-picker__tile--upload',
             });
+            card.title = 'Upload a file';
             const icon = ce('span', { className: 'mpi-media-picker__upload-icon' });
             icon.innerHTML = renderIcon('upload', 'lg');
             const label = ce('span', { className: 'mpi-media-picker__upload-label' });
@@ -207,11 +214,12 @@ export const MpiMediaPicker = ComponentFactory.create({
 
             const tile = ce('div', { className: 'mpi-media-picker__tile' });
 
-            const media = ce('button', {
-                className: 'mpi-media-picker__tile-media',
-                type: 'button',
-                title: name,
+            const media = mountButton({
+                variant: 'ghost',
+                size: 'sm',
+                extraClasses: 'mpi-media-picker__tile-media',
             });
+            media.title = name;
 
             // A project thumb wins for a still frame — cheaper than decoding the clip.
             // Video also gets a real <video>, hidden until hover, so hovering PLAYS it
@@ -255,13 +263,14 @@ export const MpiMediaPicker = ComponentFactory.create({
             // Expand: preview large WITHOUT choosing. Deliberately a sibling of the
             // pick button, not a child — a button inside a button is invalid and the
             // click would pick the item on its way out.
-            const expand = ce('button', {
-                className: 'mpi-media-picker__expand',
-                type: 'button',
-                title: 'Preview',
-                'aria-label': `Preview ${name}`,
+            const expand = mountButton({
+                icon: 'fullscreen',
+                size: 'sm',
+                variant: 'ghost',
+                extraClasses: 'mpi-media-picker__expand',
             });
-            expand.innerHTML = renderIcon('fullscreen', 'sm');
+            expand.title = 'Preview';
+            expand.setAttribute('aria-label', `Preview ${name}`);
             _unsubs.push(on(expand, 'click', (e) => {
                 e.stopPropagation();
                 _openPreview(entry);
@@ -296,12 +305,13 @@ export const MpiMediaPicker = ComponentFactory.create({
         const filtersSlot = qs('#filters-slot', el);
         const _tabs = new Map();
         FILTERS.forEach(({ id, label }) => {
-            const tab = ce('button', {
-                className: 'mpi-media-picker__filter',
-                type: 'button',
-                role: 'tab',
+            const tab = mountButton({
+                text: label,
+                variant: 'ghost',
+                size: 'sm',
+                extraClasses: 'mpi-media-picker__filter',
             });
-            tab.textContent = label;
+            tab.setAttribute('role', 'tab');
             _unsubs.push(on(tab, 'click', () => {
                 if (_filter === id) return;
                 _filter = id;

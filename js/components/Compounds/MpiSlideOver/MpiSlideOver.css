@@ -42,24 +42,21 @@
     margin: 0;
 }
 
+/* Geometry only — MpiButton (ghost) owns background, border, cursor and colour. */
 .mpi-slide-over__close {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     width: 28px;
     height: 28px;
-    background: none;
-    border: none;
-    border-radius: var(--r-2);
-    color: var(--ink-3);
-    cursor: pointer;
     padding: 0;
-    transition: color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+    border-radius: var(--r-2);
 }
 
-.mpi-slide-over__close:hover {
-    color: var(--ink-1);
+/* The ghost ICON button deliberately never fills on hover, but this one always has —
+   kept so the header reads the same. Four classes plus `:not(:disabled)` scores
+   (0,6,0), which outranks `.mpi-btn.mpi-ibtn.mpi-btn--ghost:hover:not(:disabled)`
+   (0,5,0) outright instead of tying it and leaving stylesheet order to decide. */
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.mpi-slide-over__close:hover:not(:disabled) {
     background: var(--surface-3);
+    color: var(--ink-1);
 }
 
 /* ── Body ────────────────────────────────────────────────────── */

@@ -89,7 +89,11 @@
     margin-top: var(--s-1);
 }
 
-.mpi-engine-install__choice {
+/* A decision card, not a labelled button: a stacked block of copy. The `.mpi-btn`
+   prefix beats the Primitive's own single-class rules without depending on
+   stylesheet order, and `font: inherit` already undoes its uppercase/600/tracking
+   in one line (MPI-588). */
+.mpi-btn.mpi-engine-install__choice {
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -97,6 +101,8 @@
     width: 100%;
     padding: var(--s-3);
     font: inherit;
+    text-transform: none;
+    letter-spacing: normal;
     text-align: left;
     color: var(--ink-2);
     /* Canvas, not surface-1 — surface-1 sits ABOVE the modal's own surface-2, so
@@ -114,9 +120,10 @@
 /* A small lift, not a full step to --surface-bar: that lightens the fill enough to
    take the 11px fact lines back under 4.5:1, which is the wash-out this card was
    darkened to fix. The border and the sliding chevron carry the rest of the hover. */
-.mpi-engine-install__choice:hover {
+.mpi-btn.mpi-btn--ghost.mpi-engine-install__choice:hover:not(:disabled) {
     background: color-mix(in oklch, var(--surface-canvas) 75%, var(--surface-bar));
     border-color: var(--line);
+    color: var(--ink-2);
 }
 
 .mpi-engine-install__choice:focus-visible {
@@ -127,11 +134,11 @@
 /* Recommended is the local path — a 1px heat edge and a heat dot, no badge
    plate. Enough to lead the eye, quiet enough that the other card still reads
    as a real option rather than a consolation prize. */
-.mpi-engine-install__choice--recommended {
+.mpi-btn.mpi-engine-install__choice--recommended {
     border-color: color-mix(in oklch, var(--accent-heat) 45%, transparent);
 }
 
-.mpi-engine-install__choice--recommended:hover {
+.mpi-btn.mpi-btn--ghost.mpi-engine-install__choice--recommended:hover:not(:disabled) {
     border-color: var(--accent-heat);
 }
 
@@ -278,9 +285,9 @@
 }
 
 /* ── Back (setup phase → choice phase) ───────────────────────────────────── */
-.mpi-engine-install__back {
-    display: inline-flex;
-    align-items: center;
+/* A back link, not a button: no plate, no uppercase. `.mpi-btn` prefix beats the
+   Primitive's single-class rules without depending on stylesheet order (MPI-588). */
+.mpi-btn.mpi-engine-install__back {
     gap: 5px;
     align-self: flex-start;
     margin-bottom: var(--s-1);
@@ -289,12 +296,14 @@
     background: none;
     font: inherit;
     font-size: var(--t-xs);
+    text-transform: none;
+    letter-spacing: normal;
     color: var(--ink-3);
-    cursor: pointer;
     transition: color var(--t-fast) var(--ease);
 }
 
-.mpi-engine-install__back:hover {
+.mpi-btn.mpi-btn--ghost.mpi-engine-install__back:hover:not(:disabled) {
+    background: none;
     color: var(--ink-1);
 }
 
@@ -376,17 +385,25 @@
     line-height: 1.4;
 }
 
-.mpi-engine-install__hatch-action {
+/* Reads as a link. `.mpi-btn` prefix beats the Primitive's single-class rules
+   without depending on stylesheet order (MPI-588). */
+.mpi-btn.mpi-engine-install__hatch-action {
     padding: 0;
     border: none;
     background: none;
     font: inherit;
     font-size: var(--t-sm);
     font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
     color: var(--accent-heat);
     text-decoration: underline;
     text-underline-offset: 2px;
-    cursor: pointer;
+}
+
+.mpi-btn.mpi-btn--ghost.mpi-engine-install__hatch-action:hover:not(:disabled) {
+    background: none;
+    color: var(--accent-heat);
 }
 
 .mpi-engine-install__hatch-action:hover {

@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { qs } from '../../../utils/dom.js';
+import { ce, qs } from '../../../utils/dom.js';
 
 /**
  * MpiButton — Atomic Button Primitive
@@ -180,4 +180,27 @@ export const MpiButton = ComponentFactory.create({
         };
     }
 });
+
+/**
+ * Mount an MpiButton and hand back its `<button>` for the caller to place itself.
+ *
+ * `ComponentFactory.mount()` REPLACES its container's innerHTML, so a button that
+ * lands in a tree which already has siblings — a row the caller rebuilds, an
+ * overlay on an image, an absolutely-positioned arrow — cannot be mounted in
+ * place. Mounting into a throwaway div and returning the real element is the way
+ * round that, and it is also what lets an id or a `data-*` hook survive: a click
+ * on a mount HOST div does nothing, silently.
+ *
+ * Returns the ELEMENT, not the instance. Every public API the Primitive exposes
+ * (`setActive`, `setLabel`, `setIcon`, `setDisabled`) hangs off the element, so
+ * nothing is lost — and `on(btn, 'click', …)` works because the element IS the
+ * `<button>`. MPI-582 / MPI-588.
+ *
+ * @param {object} props            MpiButton props
+ * @param {string} [children='']    Extra inner HTML, appended after the label
+ * @returns {HTMLElement}           The mounted `<button>`
+ */
+export function mountButton(props, children = '') {
+    return MpiButton.mount(ce('div'), props, children).el;
+}
 

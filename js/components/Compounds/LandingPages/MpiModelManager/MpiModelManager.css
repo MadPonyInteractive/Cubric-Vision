@@ -109,21 +109,25 @@
 }
 
 /* Filter tag — text-only toggle. Selected = ink-1 + heat dot. */
-.mpi-model-library__tag {
+/* A text toggle, not a filled button: keeps its own tracking and 4px-vertical
+   padding, and never fills on hover. `.mpi-btn` prefix beats the Primitive's
+   single-class rules without depending on stylesheet order (MPI-588). */
+.mpi-btn.mpi-model-library__tag {
     font-size: var(--t-xs);
+    font-weight: 400;
     letter-spacing: 0.14em;
-    text-transform: uppercase;
     color: var(--ink-3);
-    cursor: pointer;
     background: none;
     border: 0;
-    font-family: inherit;
     padding: 4px 0;
     transition: color var(--t-base) var(--ease);
 }
 
-.mpi-model-library__tag:hover { color: var(--ink-1); }
-.mpi-model-library__tag[aria-selected="true"] { color: var(--ink-1); }
+.mpi-btn.mpi-model-library__tag:hover:not(:disabled) {
+    background: none;
+    color: var(--ink-1);
+}
+.mpi-btn.mpi-model-library__tag[aria-selected="true"] { color: var(--ink-1); }
 .mpi-model-library__tag[aria-selected="true"]::after {
     content: " ●";
     color: var(--accent-heat);
@@ -145,16 +149,28 @@
     min-width: 200px;
 }
 
-.mpi-model-library__search input {
+.mpi-model-library__search-slot {
+    flex: 1;
+    display: flex;
+    min-width: 0;
+}
+
+/* The field is an MpiInput, but this one sits UNDER the label's own bottom rule and
+   draws no box of its own — so the Primitive's surface, border and inset shadow are
+   stripped back here rather than inherited (MPI-588). */
+.mpi-model-library__search .mpi-input__field,
+.mpi-model-library__search .mpi-input__field:focus {
     background: none;
     border: 0;
+    border-radius: 0;
+    box-shadow: none;
     outline: none;
+    padding: 0;
     color: var(--ink-1);
-    font-family: inherit;
     font-size: var(--t-sm);
     width: 100%;
 }
-.mpi-model-library__search input::placeholder { color: var(--ink-4); }
+.mpi-model-library__search .mpi-input__field::placeholder { color: var(--ink-4); }
 .mpi-model-library__search .mpi-icon { color: var(--ink-4); width: 14px; height: 14px; }
 
 .mpi-model-library__refresh { flex: none; }
@@ -259,19 +275,19 @@
     color: var(--ink-4);
     margin: 0;
 }
-.mpi-detail__close {
+/* Geometry + the square outline; MpiButton (ghost icon) owns the rest. The prefixes
+   beat the Primitive's own rules — including its size-class icon sizing, which would
+   otherwise overrule the 13px glyph this drawer has always used (MPI-588). */
+.mpi-btn.mpi-detail__close {
     width: 28px;
     height: 28px;
-    display: grid;
-    place-items: center;
+    padding: 0;
     border: 1px solid var(--line);
-    background: none;
-    color: var(--ink-3);
-    cursor: pointer;
+    border-radius: 0;
     transition: color var(--t-base) var(--ease), border-color var(--t-base) var(--ease);
 }
-.mpi-detail__close:hover { color: var(--ink-1); border-color: var(--ink-2); }
-.mpi-detail__close .mpi-icon { width: 13px; height: 13px; }
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.mpi-detail__close:hover:not(:disabled) { color: var(--ink-1); border-color: var(--ink-2); }
+.mpi-btn.mpi-ibtn.mpi-detail__close .mpi-icon { width: 13px; height: 13px; }
 
 .mpi-detail__body {
     flex: 1;
@@ -426,16 +442,22 @@
     flex-wrap: wrap;
     gap: var(--s-3);
 }
-.mpi-detail__licence-link {
-    background: none;
-    border: none;
+/* Reads as a link, not a button — the Primitive's padding, uppercase and 600 weight
+   are undone here. `.mpi-btn` prefix beats its single-class rules without depending
+   on stylesheet order (MPI-588). */
+.mpi-btn.mpi-detail__licence-link {
     padding: 0;
     font-size: var(--t-xs);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
     color: var(--accent-frost);
     text-decoration: underline;
-    cursor: pointer;
 }
-.mpi-detail__licence-link:hover { color: var(--ink-1); }
+.mpi-btn.mpi-detail__licence-link:hover:not(:disabled) {
+    background: transparent;
+    color: var(--ink-1);
+}
 
 /* VRAM → RAM table (inline, video/tiered models) */
 .mpi-detail__vram {

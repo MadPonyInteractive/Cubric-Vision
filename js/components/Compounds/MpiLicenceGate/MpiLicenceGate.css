@@ -143,17 +143,23 @@
     gap: var(--s-3);
 }
 
-.mpi-licence-gate__link {
-    background: none;
-    border: none;
+/* Reads as a link, not a button — so the Primitive's padding, uppercase and 600
+   weight are undone here. `.mpi-btn` prefix beats its single-class rules without
+   depending on stylesheet order (MPI-588). */
+.mpi-btn.mpi-licence-gate__link {
     padding: 0;
     font-size: var(--t-xs);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
     color: var(--accent-frost);
     text-decoration: underline;
-    cursor: pointer;
 }
 
-.mpi-licence-gate__link:hover { color: var(--ink-1); }
+.mpi-btn.mpi-licence-gate__link:hover:not(:disabled) {
+    background: transparent;
+    color: var(--ink-1);
+}
 
 /* Actions */
 .mpi-licence-gate__actions {

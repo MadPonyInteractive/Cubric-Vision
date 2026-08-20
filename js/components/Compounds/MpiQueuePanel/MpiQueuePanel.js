@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { Events } from '../../../events.js';
 import { ce, on, qs } from '../../../utils/dom.js';
 import { renderIcon } from '../../../utils/icons.js';
+import { mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 import {
     cancelPendingCueJob,
     cancelRunningCueJob,
@@ -25,8 +26,6 @@ export const MpiQueuePanel = ComponentFactory.create({
                 </div>
                 <div class="mpi-queue-panel__head-actions">
                     <span class="mpi-queue-panel__count"><b data-role="job-count">0</b> jobs</span>
-                    <button class="mpi-queue-panel__icon-btn" data-action="clear" type="button" aria-label="Clear pending queue"></button>
-                    <button class="mpi-queue-panel__icon-btn" data-action="close" type="button" aria-label="Close queue"></button>
                 </div>
             </div>
             <div class="mpi-queue-panel__list"></div>
@@ -39,15 +38,27 @@ export const MpiQueuePanel = ComponentFactory.create({
     setup: (el, props, emit) => {
         const countEl = qs('[data-role="job-count"]', el);
         const listEl = qs('.mpi-queue-panel__list', el);
-        const clearBtn = qs('[data-action="clear"]', el);
-        const closeBtn = qs('[data-action="close"]', el);
         const depthEl = qs('[data-role="queue-depth"]', el);
         const nextEl = qs('[data-role="next-up"]', el);
         const _unsubs = [];
         let _destroyed = false;
 
-        clearBtn.innerHTML = renderIcon('trash', 'xs');
-        closeBtn.innerHTML = renderIcon('close', 'xs');
+        // Appended, not mounted in place: the head already holds the count span,
+        // and mount() replaces its container's contents (MPI-588).
+        const _headBtn = (icon, action, label) => {
+            const btn = mountButton({
+                icon,
+                size: 'sm',
+                variant: 'ghost',
+                extraClasses: 'mpi-queue-panel__icon-btn',
+            });
+            btn.dataset.action = action;
+            btn.setAttribute('aria-label', label);
+            qs('.mpi-queue-panel__head-actions', el).appendChild(btn);
+            return btn;
+        };
+        const clearBtn = _headBtn('trash', 'clear', 'Clear pending queue');
+        const closeBtn = _headBtn('close', 'close', 'Close queue');
 
         const _mediaUrl = (item) => item?.thumbPath || item?.url || item?.filePath || '';
 
@@ -239,11 +250,13 @@ export const MpiQueuePanel = ComponentFactory.create({
         };
 
         const _renderAction = (job) => {
-            const button = ce('button', {
-                className: `mpi-queue-panel__action mpi-queue-panel__action--${job.canStop ? 'stop' : 'cancel'}`,
-                type: 'button',
-                innerHTML: `${renderIcon(job.canStop ? 'stop' : 'close', 'xs')}<span>${job.canStop ? 'Stop' : 'Cancel'}</span>`,
-            });
+            // Text mode with the icon as children, not icon mode: icon mode derives
+            // `data-info` from the label, and this button never had an Info Bar hint.
+            const button = mountButton({
+                size: 'sm',
+                variant: 'ghost',
+                extraClasses: `mpi-queue-panel__action mpi-queue-panel__action--${job.canStop ? 'stop' : 'cancel'}`,
+            }, `${renderIcon(job.canStop ? 'stop' : 'close', 'xs')}<span>${job.canStop ? 'Stop' : 'Cancel'}</span>`);
             button.dataset.queueJobId = job.queueJobId || '';
             button.dataset.queueAction = job.canStop ? 'stop' : 'cancel';
             button.setAttribute('aria-label', job.canStop ? 'Stop current job' : 'Cancel queued job');
@@ -330,7 +343,7 @@ export const MpiQueuePanel = ComponentFactory.create({
             const items = snapshot.items || [];
             const pendingCount = snapshot.pendingCount || 0;
             countEl.textContent = String(items.length);
-            clearBtn.disabled = pendingCount === 0;
+            clearBtn.setDisabled(pendingCount === 0);
             depthEl.textContent = items.length
                 ? `${snapshot.runningCount || 0} running / ${pendingCount} queued`
                 : 'Idle';

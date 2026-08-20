@@ -33,20 +33,30 @@
     gap: var(--s-1);
 }
 
-.mpi-media-picker__filter {
+/* Sentence-case tabs, not labelled buttons. The `.mpi-btn` prefixes beat the
+   Primitive's own single-class rules without depending on stylesheet order, and the
+   type resets undo its uppercase/600/tracking (MPI-588). */
+.mpi-btn.mpi-media-picker__filter {
     padding: var(--s-2) var(--s-3);
     background: transparent;
     border: 1px solid transparent;
+    border-radius: 0;
     color: var(--ink-3);
     font-size: 13px;
-    cursor: pointer;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
 }
 
-.mpi-media-picker__filter:hover {
+.mpi-btn.mpi-btn--ghost.mpi-media-picker__filter:hover:not(:disabled) {
+    background: transparent;
     color: var(--ink-1);
 }
 
-.mpi-media-picker__filter--active {
+/* Both selectors, so the active plate survives a hover — the ghost hover rule
+   (0,3,1) would otherwise blank its background. */
+.mpi-btn.mpi-btn--ghost.mpi-media-picker__filter--active,
+.mpi-btn.mpi-btn--ghost.mpi-media-picker__filter--active:hover:not(:disabled) {
     background: var(--surface-2);
     border-color: var(--line);
     color: var(--ink-1);
@@ -80,7 +90,7 @@
 
 /* Square: the grid holds every aspect the project does — a 9:16 vertical next to
    a 16:9 clip — and a square is the only cell that crops both of them evenly. */
-.mpi-media-picker__tile-media {
+.mpi-btn.mpi-media-picker__tile-media {
     position: relative;
     display: block;
     width: 100%;
@@ -90,11 +100,12 @@
     border: 1px solid var(--line);
     border-radius: 6px;
     overflow: hidden;
-    cursor: pointer;
 }
 
-.mpi-media-picker__tile-media:hover,
-.mpi-media-picker__tile-media:focus-visible {
+/* Keeps the canvas fill on hover — the ghost rule (0,2,1) would tint it. */
+.mpi-btn.mpi-btn--ghost.mpi-media-picker__tile-media:hover:not(:disabled),
+.mpi-btn.mpi-btn--ghost.mpi-media-picker__tile-media:focus-visible {
+    background: var(--surface-canvas);
     border-color: var(--accent-heat);
     outline: none;
 }
@@ -142,21 +153,25 @@
 }
 
 /* ── expand ────────────────────────────────────────────────────────────── */
-.mpi-media-picker__expand {
+/* A scrim chip over the tile — the ghost icon button paints no background at all,
+   hovered or not, so both states are pinned here (MPI-588). */
+.mpi-btn.mpi-ibtn.mpi-media-picker__expand,
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.mpi-media-picker__expand:hover:not(:disabled) {
     position: absolute;
     top: var(--s-2);
     right: var(--s-2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     padding: var(--s-1);
     background: oklch(0.15 0 0 / 0.62);
     border: 1px solid var(--line-soft);
     border-radius: 4px;
     color: var(--ink-1);
-    cursor: pointer;
-    opacity: 0;
     transition: opacity var(--t-fast) var(--ease);
+}
+
+/* Left at one class on purpose: nothing in the Primitive sets opacity, and the
+   reveal rule below must still outrank it. */
+.mpi-media-picker__expand {
+    opacity: 0;
 }
 
 .mpi-media-picker__tile:hover .mpi-media-picker__expand,
@@ -165,21 +180,23 @@
 }
 
 /* ── upload card ───────────────────────────────────────────────────────── */
-.mpi-media-picker__tile--upload {
+.mpi-btn.mpi-media-picker__tile--upload {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: var(--s-2);
     aspect-ratio: 1;
+    padding: 0;
     background: var(--surface-canvas);
     border: 1px dashed var(--line);
     border-radius: 6px;
     color: var(--ink-3);
-    cursor: pointer;
 }
 
-.mpi-media-picker__tile--upload:hover {
+/* Keeps the canvas fill on hover — the ghost rule (0,2,1) would tint it. */
+.mpi-btn.mpi-btn--ghost.mpi-media-picker__tile--upload:hover:not(:disabled) {
+    background: var(--surface-canvas);
     border-color: var(--accent-heat);
     color: var(--ink-1);
 }
@@ -219,17 +236,18 @@
     object-fit: contain;
 }
 
-.mpi-media-picker__preview-close {
+/* A scrim chip over the preview — the ghost icon button paints no background at
+   all, hovered or not, so both states are pinned here (MPI-588). */
+.mpi-btn.mpi-ibtn.mpi-media-picker__preview-close,
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.mpi-media-picker__preview-close:hover:not(:disabled) {
     position: absolute;
     top: var(--s-2);
     right: var(--s-2);
-    display: flex;
     padding: var(--s-1);
     background: oklch(0.15 0 0 / 0.72);
     border: 1px solid var(--line-soft);
     border-radius: 4px;
     color: var(--ink-1);
-    cursor: pointer;
 }
 
 .mpi-media-picker__actions {

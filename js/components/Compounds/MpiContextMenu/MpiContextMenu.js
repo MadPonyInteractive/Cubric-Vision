@@ -1,7 +1,8 @@
 import { ComponentFactory } from '../../factory.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { on } from '../../../utils/dom.js';
+import { ce, on } from '../../../utils/dom.js';
+import { mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 
 // ── Singleton guard — only one menu visible at a time ────────────────────────
@@ -34,21 +35,30 @@ function show({ x, y, items, onSelect }) {
     const menuEl = document.createElement('div');
     menuEl.className = 'mpi-ctx-menu';
 
-    const sepHtml = '<div class="mpi-ctx-menu__sep"></div>';
-    menuEl.innerHTML = items.map(item => {
-        if (item.separator) return sepHtml;
-        return `<button
-            class="mpi-ctx-menu__item${item.danger ? ' mpi-ctx-menu__item--danger' : ''}${item.disabled ? ' mpi-ctx-menu__item--disabled' : ''}"
-            data-key="${item.key}"
-            ${item.disabled ? 'disabled' : ''}
-            ${item.info ? `data-info="${item.info}"` : ''}
-            type="button"
-        >
+    // Appended one at a time rather than joined into innerHTML: each row is a
+    // mounted MpiButton, and mount() replaces its container's contents (MPI-588).
+    items.forEach(item => {
+        if (item.separator) {
+            menuEl.appendChild(ce('div', { className: 'mpi-ctx-menu__sep' }));
+            return;
+        }
+        const row = mountButton({
+            variant: 'ghost',
+            size: 'sm',
+            disabled: !!item.disabled,
+            info: item.info || '',
+            extraClasses: [
+                'mpi-ctx-menu__item',
+                item.danger ? 'mpi-ctx-menu__item--danger' : '',
+                item.disabled ? 'mpi-ctx-menu__item--disabled' : '',
+            ].filter(Boolean).join(' '),
+        }, `
             <span class="mpi-ctx-menu__icon">${item.icon ? renderIcon(item.icon, 'sm') : ''}</span>
             <span class="mpi-ctx-menu__label">${item.label}</span>
-            <span class="mpi-ctx-menu__kbd">${item.kbd ?? ''}</span>
-        </button>`;
-    }).join('');
+            <span class="mpi-ctx-menu__kbd">${item.kbd ?? ''}</span>`);
+        row.dataset.key = item.key;
+        menuEl.appendChild(row);
+    });
 
     document.body.appendChild(menuEl);
 

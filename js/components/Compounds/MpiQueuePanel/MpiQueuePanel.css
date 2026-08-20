@@ -59,29 +59,32 @@
     font-weight: 700;
 }
 
-.mpi-queue-panel__icon-btn {
+/* Geometry + the square outline; MpiButton (ghost icon) owns the rest. `.mpi-btn`
+   prefix beats the Primitive's single-class rules without depending on stylesheet
+   order (MPI-588). */
+.mpi-btn.mpi-queue-panel__icon-btn {
     width: 28px;
     height: 28px;
-    display: grid;
-    place-items: center;
     padding: 0;
-    color: var(--ink-3);
-    background: transparent;
     border: 1px solid var(--line-soft);
     border-radius: 0;
-    cursor: pointer;
     transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
 }
 
-.mpi-queue-panel__icon-btn:hover:not(:disabled) {
+/* Outranks `.mpi-btn.mpi-ibtn.mpi-btn--ghost:hover:not(:disabled)` (0,5,0), which
+   blanks the background — this button has always filled on hover. Four classes take
+   it to (0,6,0); three would only tie and leave stylesheet order deciding. */
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.mpi-queue-panel__icon-btn:hover:not(:disabled) {
     color: var(--ink-1);
     border-color: var(--line);
     background: var(--surface-2);
 }
 
-.mpi-queue-panel__icon-btn:disabled {
+/* No grayscale, and a plain cursor — `.mpi-btn:disabled` sets both otherwise. */
+.mpi-btn.mpi-queue-panel__icon-btn:disabled {
     opacity: 0.38;
     cursor: default;
+    filter: none;
 }
 
 .mpi-queue-panel__list {
@@ -346,13 +349,13 @@
     text-transform: uppercase;
 }
 
-.mpi-queue-panel__action {
+/* Geometry, the heat outline and the tighter type; MpiButton (ghost) owns the rest.
+   `.mpi-btn` prefix beats the Primitive's single-class rules without depending on
+   stylesheet order (MPI-588). */
+.mpi-btn.mpi-queue-panel__action {
     justify-self: start;
     min-width: 80px;
     height: 26px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     gap: var(--s-1);
     padding: 0 var(--s-3);
     color: var(--accent-heat);
@@ -362,19 +365,24 @@
     font-size: var(--t-2xs);
     font-weight: 700;
     letter-spacing: 0.12em;
-    text-transform: uppercase;
-    cursor: pointer;
 }
 
-.mpi-queue-panel__action--stop {
+.mpi-btn.mpi-queue-panel__action--stop {
     color: var(--surface-bar);
-    background: var(--accent-heat);
     border-color: var(--accent-heat);
 }
 
-.mpi-queue-panel__action:hover {
+/* Both hover rules outrank `.mpi-btn--ghost:hover` (0,2,1), which would otherwise
+   tint the cancel button and wipe the stop button's heat fill. */
+.mpi-btn.mpi-btn--ghost.mpi-queue-panel__action:hover:not(:disabled) {
     color: var(--ink-1);
     border-color: var(--ink-1);
+    background: transparent;
+}
+
+.mpi-btn.mpi-btn--ghost.mpi-queue-panel__action--stop,
+.mpi-btn.mpi-btn--ghost.mpi-queue-panel__action--stop:hover:not(:disabled) {
+    background: var(--accent-heat);
 }
 
 .mpi-queue-panel__empty {

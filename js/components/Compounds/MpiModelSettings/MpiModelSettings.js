@@ -30,6 +30,7 @@ import { MpiTreePicker } from '../../Primitives/MpiTreePicker/MpiTreePicker.js';
 import { MpiFolderDrop } from '../../Primitives/MpiFolderDrop/MpiFolderDrop.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { renderIcon } from '../../../utils/icons.js';
+import { mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { qs, on } from '../../../utils/dom.js';
 import { Events } from '../../../events.js';
 import { state } from '../../../state.js';
@@ -136,12 +137,17 @@ function _buildStrengthsRow(slot, kinds, onModel, onClip) {
  * boolean. (MPI-223)
  */
 function _buildBypassBtn(bypassed, onToggle) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'mpi-model-settings__lora-bypass';
+    // Not `toggleable`: the pressed state is published as aria-pressed, which is
+    // what the CSS and assistive tech both read here — the Primitive's own
+    // `is-active` class would be a second, silent source of truth (MPI-588).
+    const btn = mountButton({
+        icon: 'negative',
+        size: 'sm',
+        variant: 'ghost',
+        extraClasses: 'mpi-model-settings__lora-bypass',
+    });
     btn.title = 'Bypass this LoRA (inject at zero strength)';
     btn.setAttribute('aria-pressed', String(Boolean(bypassed)));
-    btn.innerHTML = renderIcon('negative', 'sm');
     on(btn, 'click', () => {
         const next = btn.getAttribute('aria-pressed') !== 'true';
         btn.setAttribute('aria-pressed', String(next));

@@ -28,6 +28,7 @@ import { uploadMediaFile } from '../../../services/mediaUploadService.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { ce, qs, on } from '../../../utils/dom.js';
 import { renderIcon } from '../../../utils/icons.js';
+import { mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 
 export const MpiToolOptionsPrompt = ComponentFactory.create({
     name: 'MpiToolOptionsPrompt',
@@ -40,9 +41,6 @@ export const MpiToolOptionsPrompt = ComponentFactory.create({
                     <div class="mpi-tool-options-prompt__label">Start frame</div>
                     <div class="mpi-tool-options-prompt__thumb" id="thumb-start"></div>
                 </div>
-                <button type="button" class="mpi-tool-options-prompt__swap" id="swap-btn" title="Swap start/end frames">
-                    ${renderIcon('swap', 'sm')}
-                </button>
                 <div class="mpi-tool-options-prompt__slot mpi-tool-options-prompt__slot--end" data-role="endFrame">
                     <div class="mpi-tool-options-prompt__label">End frame</div>
                     <div class="mpi-tool-options-prompt__thumb" id="thumb-end"></div>
@@ -64,8 +62,21 @@ export const MpiToolOptionsPrompt = ComponentFactory.create({
 
         const thumbStart = qs('#thumb-start', el);
         const thumbEnd   = qs('#thumb-end',   el);
-        const swapBtn    = qs('#swap-btn',    el);
         const actionsEl  = qs('#actions-slot', el);
+
+        // Inserted between the two frame slots rather than mounted in place: mount()
+        // replaces its container's contents, and this button sits mid-row (MPI-588).
+        // The id stays on the real <button> so a querySelector().click() still fires.
+        const swapBtn = mountButton({
+            icon: 'swap',
+            size: 'sm',
+            variant: 'ghost',
+            extraClasses: 'mpi-tool-options-prompt__swap',
+        });
+        swapBtn.id = 'swap-btn';
+        swapBtn.title = 'Swap start/end frames';
+        qs('.mpi-tool-options-prompt__slot--end', el)
+            .insertAdjacentElement('beforebegin', swapBtn);
 
         function _fitThumbFrame(frameEl, width, height) {
             const w = Number(width) || 0;
@@ -116,12 +127,13 @@ export const MpiToolOptionsPrompt = ComponentFactory.create({
             const offLoad = on(img, 'load', () => _fitThumbFrame(frame, img.naturalWidth, img.naturalHeight));
             if (img.complete && img.naturalWidth > 0) _fitThumbFrame(frame, img.naturalWidth, img.naturalHeight);
             _unsubs.push(offLoad);
-            const clearBtn = ce('button', {
-                type: 'button',
-                className: 'mpi-tool-options-prompt__thumb-clear',
-                title: 'Remove',
-                innerHTML: renderIcon('close', 'xs'),
+            const clearBtn = mountButton({
+                icon: 'close',
+                size: 'sm',
+                variant: 'ghost',
+                extraClasses: 'mpi-tool-options-prompt__thumb-clear',
             });
+            clearBtn.title = 'Remove';
             frame.appendChild(img);
             frame.appendChild(clearBtn);
             slotEl.appendChild(frame);

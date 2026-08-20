@@ -12,7 +12,11 @@
     flex-direction: column;
 }
 
-.mpi-ctx-menu__item {
+/* A menu row, not a labelled button: a 3-column grid with sentence-case text. The
+   `.mpi-btn` prefix beats the Primitive's own single-class rules rather than relying
+   on stylesheet order, and the type resets undo `.mpi-btn`'s uppercase/600/mono —
+   the three that would visibly rewrite every menu label (MPI-588). */
+.mpi-btn.mpi-ctx-menu__item {
     display: grid;
     grid-template-columns: 18px 1fr auto;
     gap: 10px;
@@ -21,33 +25,38 @@
     padding: 8px 14px;
     background: transparent;
     border: none;
+    border-radius: 0;
     color: var(--ink-2);
     font-family: inherit;
     font-size: var(--t-sm);
-    cursor: pointer;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
     text-align: left;
     transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
     white-space: nowrap;
 }
 
-.mpi-ctx-menu__item:hover:not(:disabled) {
+.mpi-btn.mpi-ctx-menu__item:hover:not(:disabled) {
     background: var(--surface-2);
     color: var(--ink-1);
 }
 
-.mpi-ctx-menu__item--danger {
+.mpi-btn.mpi-ctx-menu__item--danger {
     color: var(--accent-heat);
 }
 
-.mpi-ctx-menu__item--danger:hover:not(:disabled) {
+.mpi-btn.mpi-ctx-menu__item--danger:hover:not(:disabled) {
     background: color-mix(in oklch, var(--accent-heat) 12%, transparent);
     color: var(--accent-heat);
 }
 
-.mpi-ctx-menu__item--disabled,
-.mpi-ctx-menu__item:disabled {
+/* No grayscale — `.mpi-btn:disabled` adds one, and it drains the danger accent. */
+.mpi-btn.mpi-ctx-menu__item--disabled,
+.mpi-btn.mpi-ctx-menu__item:disabled {
     opacity: 0.4;
     cursor: not-allowed;
+    filter: none;
 }
 
 .mpi-ctx-menu__icon {

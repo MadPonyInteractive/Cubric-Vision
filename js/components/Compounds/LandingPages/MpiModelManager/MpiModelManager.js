@@ -1,7 +1,8 @@
 import { ComponentFactory } from '../../../factory.js';
 import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiOkCancel } from '../../MpiOkCancel/MpiOkCancel.js';
-import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
+import { MpiButton, mountButton } from '../../../Primitives/MpiButton/MpiButton.js';
+import { MpiInput } from '../../../Primitives/MpiInput/MpiInput.js';
 import { MpiTileSheet } from '../../../Primitives/MpiTileSheet/MpiTileSheet.js';
 import { MpiPopup } from '../../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiBadge } from '../../../Primitives/MpiBadge/MpiBadge.js';
@@ -71,7 +72,7 @@ export const MpiModelManager = ComponentFactory.create({
                     </div>
                     <label class="mpi-model-library__search">
                         ${renderIcon('search', 'sm')}
-                        <input type="text" id="lib-search" placeholder="Search models…" autocomplete="off">
+                        <span class="mpi-model-library__search-slot" id="lib-search-slot"></span>
                     </label>
                     <div class="mpi-model-library__refresh" id="refresh-btn-slot"></div>
                 </div>
@@ -82,7 +83,7 @@ export const MpiModelManager = ComponentFactory.create({
             <aside class="mpi-detail" id="detail-panel">
                 <div class="mpi-detail__head">
                     <h2 class="mpi-detail__head-title">Model</h2>
-                    <button class="mpi-detail__close" id="detail-close" type="button" aria-label="Close">${renderIcon('close', 'md')}</button>
+                    <span class="mpi-detail__close-slot" id="detail-close-slot"></span>
                 </div>
                 <div class="mpi-detail__body" id="detail-body"></div>
                 <div class="mpi-detail__dlstats" id="detail-dlstats" hidden></div>
@@ -94,7 +95,25 @@ export const MpiModelManager = ComponentFactory.create({
         const bodySlot = qs('#body-slot', el);
         const refreshSlot = qs('#refresh-btn-slot', el);
         const subEl = qs('#lib-sub', el);
-        const searchInput = qs('#lib-search', el);
+
+        // The search field is an MpiInput mounted into a slot inside the label, so the
+        // leading icon survives — mount() replaces its container's contents (MPI-588).
+        // The id stays on the real <input>, which is what the listener below binds to.
+        const _searchInst = MpiInput.mount(qs('#lib-search-slot', el), {
+            type: 'text',
+            placeholder: 'Search models…',
+        });
+        const searchInput = qs('.mpi-input__field', _searchInst.el);
+        searchInput.id = 'lib-search';
+        searchInput.setAttribute('autocomplete', 'off');
+
+        const _detailCloseBtn = MpiButton.mount(qs('#detail-close-slot', el), {
+            icon: 'close',
+            size: 'md',
+            variant: 'ghost',
+            extraClasses: 'mpi-detail__close',
+        }).el;
+        _detailCloseBtn.setAttribute('aria-label', 'Close');
 
         const _unsubs = [];
 
@@ -181,10 +200,11 @@ export const MpiModelManager = ComponentFactory.create({
         // flips membership in its Set and force-rebuilds the grid (the filter change
         // IS the sig change).
         const _mkTag = (label, isActive, onToggle) => {
-            const btn = ce('button', {
-                className: 'mpi-model-library__tag',
-                type: 'button',
-                textContent: label,
+            const btn = mountButton({
+                text: label,
+                variant: 'ghost',
+                size: 'sm',
+                extraClasses: 'mpi-model-library__tag',
             });
             btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
             _unsubs.push(on(btn, 'click', () => {
@@ -920,7 +940,7 @@ export const MpiModelManager = ComponentFactory.create({
                 }
                 const links = ce('div', { className: 'mpi-detail__licence-links' });
                 const linkTo = (text, url) => {
-                    const b = ce('button', { className: 'mpi-detail__licence-link', type: 'button', textContent: text });
+                    const b = mountButton({ text, variant: 'ghost', size: 'sm', extraClasses: 'mpi-detail__licence-link' });
                     _unsubs.push(on(b, 'click', () => openExternal(url)));
                     return b;
                 };
@@ -987,7 +1007,7 @@ export const MpiModelManager = ComponentFactory.create({
             _destroyDetailToggles();
         }
         _unsubs.push(on(scrim, 'click', _closeDetail));
-        _unsubs.push(on(qs('#detail-close', el), 'click', _closeDetail));
+        _unsubs.push(on(_detailCloseBtn, 'click', _closeDetail));
         // Escape closes the drawer first (leaving the overlay open); the overlay's
         // own Escape handling still closes the whole Library when the drawer is shut.
         _unsubs.push(on(detailPanel, 'keydown', () => {})); // no-op host for focus

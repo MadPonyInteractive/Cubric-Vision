@@ -109,44 +109,43 @@
     pointer-events: none;
 }
 
-.mpi-tool-options-prompt__thumb-clear {
+/* Geometry + the scrim these two paint over the image; MpiButton (ghost icon) owns
+   the rest. The ghost icon button paints no background at all, hovered or not, and
+   both of these have always had one — so every hover rule below carries four classes
+   plus `:not(:disabled)` to reach (0,6,0) and outrank
+   `.mpi-btn.mpi-ibtn.mpi-btn--ghost:hover:not(:disabled)` (0,5,0) outright, rather
+   than tying it and letting stylesheet order decide (MPI-588). */
+.mpi-btn.mpi-ibtn.mpi-tool-options-prompt__thumb-clear {
     position: absolute;
     top: 0;
     right: 0;
     width: 1.25rem;
     height: 1.25rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    padding: 0;
     background: color-mix(in oklch, var(--surface-bar) 72%, var(--surface-1));
     color: var(--ink-1);
     border: 1px solid var(--line);
     border-radius: 0;
-    cursor: pointer;
-    padding: 0;
 }
 
-.mpi-tool-options-prompt__thumb-clear:hover {
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.mpi-tool-options-prompt__thumb-clear:hover:not(:disabled) {
     background: var(--accent-heat);
     color: var(--ink-on-accent, var(--surface-1));
 }
 
-.mpi-tool-options-prompt__swap {
+.mpi-btn.mpi-ibtn.mpi-tool-options-prompt__swap {
     width: 2rem;
     height: 2rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    padding: 0;
     background: var(--surface-1);
     color: var(--ink-2);
     border: 1px solid var(--line);
     border-radius: 0;
-    cursor: pointer;
-    padding: 0;
     align-self: center;
 }
 
-.mpi-tool-options-prompt__swap:hover {
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.mpi-tool-options-prompt__swap:hover:not(:disabled) {
+    background: var(--surface-1);
     color: var(--accent-heat);
     border-color: var(--accent-heat);
 }

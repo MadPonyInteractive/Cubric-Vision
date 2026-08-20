@@ -28,6 +28,7 @@
  */
 
 import { ComponentFactory } from '../../factory.js';
+import { mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 
 export const MpiAutoMaskThumbs = ComponentFactory.create({
     name: 'MpiAutoMaskThumbs',
@@ -48,9 +49,11 @@ export const MpiAutoMaskThumbs = ComponentFactory.create({
             _picks.clear();
 
             urls.forEach((url, idx) => {
-                const item = document.createElement('button');
-                item.type = 'button';
-                item.className = 'mpi-auto-mask-thumbs__item';
+                const item = mountButton({
+                    variant: 'ghost',
+                    size: 'sm',
+                    extraClasses: 'mpi-auto-mask-thumbs__item',
+                });
                 item.setAttribute('aria-label', `Segment ${idx + 1}`);
 
                 const img = document.createElement('img');

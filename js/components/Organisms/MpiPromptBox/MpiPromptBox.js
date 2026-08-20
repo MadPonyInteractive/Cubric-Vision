@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
-import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiButton, mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
@@ -876,21 +876,38 @@ export const MpiPromptBox = ComponentFactory.create({
                 // else in the app floats one, and a hover hint in the status bar would
                 // fire the notify channel on a mouse move. aria-label is for the screen
                 // reader only and paints nothing.
-                const roleHtml = (_hasEndSlot && item.mediaType === 'image' && _imageCount <= 2)
-                    ? (_imageCount === 1
-                        ? `<button class="mpi-prompt-box-media-strip__role mpi-prompt-box-media-strip__role--toggle${_isEnd ? ' mpi-prompt-box-media-strip__role--end' : ''}"
-                                   aria-pressed="${_isEnd}"
-                                   aria-label="${_isEnd ? 'Use as start frame' : 'Use as last frame'}"
-                           >${renderIcon('swap', 'xs')}<span>${_isEnd ? 'Last frame' : 'Start frame'}</span></button>`
-                        : `<span class="mpi-prompt-box-media-strip__role${_isEnd ? ' mpi-prompt-box-media-strip__role--end' : ''}"
-                           >${_isEnd ? 'Last frame' : 'Start frame'}</span>`)
+                const _rolePill = _hasEndSlot && item.mediaType === 'image' && _imageCount <= 2;
+                const _roleToggle = _rolePill && _imageCount === 1;
+                const roleHtml = (_rolePill && !_roleToggle)
+                    ? `<span class="mpi-prompt-box-media-strip__role${_isEnd ? ' mpi-prompt-box-media-strip__role--end' : ''}"
+                       >${_isEnd ? 'Last frame' : 'Start frame'}</span>`
                     : '';
                 chip.innerHTML = `
                     ${indexHtml}
                     ${mediaHtml}
                     ${roleHtml}
-                    <button class="mpi-prompt-box-media-strip__remove" title="Remove">${renderIcon('close', 'xs')}</button>
                 `;
+                // The two buttons are appended, not written into the innerHTML above:
+                // both are mounted MpiButtons now, and both are absolutely positioned,
+                // so DOM order among the chip's children does not move them (MPI-588).
+                if (_roleToggle) {
+                    const rolePill = mountButton({
+                        variant: 'ghost',
+                        size: 'sm',
+                        extraClasses: `mpi-prompt-box-media-strip__role mpi-prompt-box-media-strip__role--toggle${_isEnd ? ' mpi-prompt-box-media-strip__role--end' : ''}`,
+                    }, `${renderIcon('swap', 'xs')}<span>${_isEnd ? 'Last frame' : 'Start frame'}</span>`);
+                    rolePill.setAttribute('aria-pressed', String(_isEnd));
+                    rolePill.setAttribute('aria-label', _isEnd ? 'Use as start frame' : 'Use as last frame');
+                    chip.appendChild(rolePill);
+                }
+                const removePill = mountButton({
+                    icon: 'close',
+                    size: 'sm',
+                    variant: 'ghost',
+                    extraClasses: 'mpi-prompt-box-media-strip__remove',
+                });
+                removePill.title = 'Remove';
+                chip.appendChild(removePill);
                 if (items.length > 1) _makeChipReorderable(chip, item.id);
                 // Belt + suspenders: kill any drag that escapes draggable=false
                 // (browsers ignore the attr on some media elements during specific
@@ -1150,6 +1167,10 @@ export const MpiPromptBox = ComponentFactory.create({
         // content mismatch). Mirror is offscreen, gets the same width + text
         // styling at measure time, then we read its scrollHeight as ground
         // truth for current value.
+        // Not a control: offscreen, aria-hidden, untabbable, and never painted. Its
+        // only job is to report a scrollHeight, so mounting an MpiInput here would be
+        // a visible component standing in for a ruler (MPI-582 / MPI-588).
+        // eslint-disable-next-line mpi/no-bare-form-control -- offscreen measuring mirror, never rendered
         const _heightProbe = document.createElement('textarea');
         _heightProbe.setAttribute('aria-hidden', 'true');
         _heightProbe.tabIndex = -1;
@@ -1209,14 +1230,20 @@ export const MpiPromptBox = ComponentFactory.create({
         }
 
         function _paintRefPicker() {
-            _refPicker.innerHTML = _refMatches.map((entry, i) => `
-                <button type="button"
-                        class="mpi-prompt-box__ref-picker-item${i === _refActive ? ' mpi-prompt-box__ref-picker-item--active' : ''}"
-                        data-idx="${i}">
+            // Appended one at a time rather than joined into innerHTML: each row is a
+            // mounted MpiButton, and mount() replaces its container's contents (MPI-588).
+            _refPicker.innerHTML = '';
+            _refMatches.forEach((entry, i) => {
+                const row = mountButton({
+                    variant: 'ghost',
+                    size: 'sm',
+                    extraClasses: `mpi-prompt-box__ref-picker-item${i === _refActive ? ' mpi-prompt-box__ref-picker-item--active' : ''}`,
+                }, `
                     <span class="mpi-prompt-box__ref-picker-tag">${entry.tag}</span>
-                    <span class="mpi-prompt-box__ref-picker-name">${_labelFor(entry)}</span>
-                </button>
-            `).join('');
+                    <span class="mpi-prompt-box__ref-picker-name">${_labelFor(entry)}</span>`);
+                row.dataset.idx = String(i);
+                _refPicker.appendChild(row);
+            });
         }
 
         /** Replaces the `@partial` under the caret with the chosen tag. */

@@ -1,7 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
-import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiButton, mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { Storage } from '../../../core/storage.js';
 import { state } from '../../../state.js';
@@ -10,6 +10,45 @@ import { renderIcon } from '../../../utils/icons.js';
 import { Events } from '../../../events.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { downloadService } from '../../../services/downloadService.js';
+
+/* The two Phase-0 cards' faces. They live outside the template because each card is
+   a mounted MpiButton the setup places, not markup — see `_mountRef` (MPI-588). */
+const CHOICE_LOCAL_FACE = `
+    <span class="mpi-engine-install__choice-head">
+        <span class="mpi-engine-install__choice-mark">${renderIcon('laptop', 'md')}</span>
+        <span class="mpi-engine-install__choice-flag">Recommended</span>
+    </span>
+    <span class="mpi-engine-install__choice-title">Local + Remote</span>
+    <span class="mpi-engine-install__choice-body">
+        Install ComfyUI here and generate on your own GPU.
+        A cloud GPU stays available for what it can't take.
+    </span>
+    <span class="mpi-engine-install__choice-facts">
+        <span>Installs once, then free to run</span>
+        <span>Works offline — models stay on your disk</span>
+        <span>Needs a capable GPU</span>
+    </span>
+    <span class="mpi-engine-install__choice-go">
+        Install ComfyUI ${renderIcon('chevronRight', 'sm')}
+    </span>`;
+
+const CHOICE_REMOTE_FACE = `
+    <span class="mpi-engine-install__choice-head">
+        <span class="mpi-engine-install__choice-mark">${renderIcon('cloud', 'md')}</span>
+    </span>
+    <span class="mpi-engine-install__choice-title">Remote only</span>
+    <span class="mpi-engine-install__choice-body">
+        Skip the local install and run everything on a RunPod cloud GPU.
+        Nothing downloads to this machine now.
+    </span>
+    <span class="mpi-engine-install__choice-facts">
+        <span>Nothing to install — straight into the app</span>
+        <span>Runs on any machine, GPU or not</span>
+        <span>Needs a RunPod account, billed while a Pod runs</span>
+    </span>
+    <span class="mpi-engine-install__choice-go">
+        Set up RunPod ${renderIcon('chevronRight', 'sm')}
+    </span>`;
 
 /**
  * MpiEngineInstall — Engine provisioning modal for first install and upgrades (Compound)
@@ -56,47 +95,13 @@ export const MpiEngineInstall = ComponentFactory.create({
                     <h2 class="mpi-engine-install__title">Where should Cubric generate?</h2>
                     <p class="mpi-engine-install__subtitle">Two ways to run ComfyUI. Change this later in Settings.</p>
 
+                    <!-- The four controls in this template are mounted MpiButtons, not
+                         markup: _mountRef swaps each placeholder for the real button in
+                         setup, keeping the data-ref the wiring below already reads
+                         (MPI-588). Their faces are the CHOICE_* consts above. -->
                     <div class="mpi-engine-install__choices">
-                        <button type="button"
-                                class="mpi-engine-install__choice mpi-engine-install__choice--recommended"
-                                data-ref="chooseLocal">
-                            <span class="mpi-engine-install__choice-head">
-                                <span class="mpi-engine-install__choice-mark">${renderIcon('laptop', 'md')}</span>
-                                <span class="mpi-engine-install__choice-flag">Recommended</span>
-                            </span>
-                            <span class="mpi-engine-install__choice-title">Local + Remote</span>
-                            <span class="mpi-engine-install__choice-body">
-                                Install ComfyUI here and generate on your own GPU.
-                                A cloud GPU stays available for what it can't take.
-                            </span>
-                            <span class="mpi-engine-install__choice-facts">
-                                <span>Installs once, then free to run</span>
-                                <span>Works offline — models stay on your disk</span>
-                                <span>Needs a capable GPU</span>
-                            </span>
-                            <span class="mpi-engine-install__choice-go">
-                                Install ComfyUI ${renderIcon('chevronRight', 'sm')}
-                            </span>
-                        </button>
-
-                        <button type="button" class="mpi-engine-install__choice" data-ref="chooseRemote">
-                            <span class="mpi-engine-install__choice-head">
-                                <span class="mpi-engine-install__choice-mark">${renderIcon('cloud', 'md')}</span>
-                            </span>
-                            <span class="mpi-engine-install__choice-title">Remote only</span>
-                            <span class="mpi-engine-install__choice-body">
-                                Skip the local install and run everything on a RunPod cloud GPU.
-                                Nothing downloads to this machine now.
-                            </span>
-                            <span class="mpi-engine-install__choice-facts">
-                                <span>Nothing to install — straight into the app</span>
-                                <span>Runs on any machine, GPU or not</span>
-                                <span>Needs a RunPod account, billed while a Pod runs</span>
-                            </span>
-                            <span class="mpi-engine-install__choice-go">
-                                Set up RunPod ${renderIcon('chevronRight', 'sm')}
-                            </span>
-                        </button>
+                        <div data-mount="chooseLocal"></div>
+                        <div data-mount="chooseRemote"></div>
                     </div>
 
                     <p class="mpi-engine-install__foot">
@@ -109,9 +114,7 @@ export const MpiEngineInstall = ComponentFactory.create({
             <!-- Phase 1: Setup (path picker) -->
             <div class="mpi-engine-install__phase" data-phase="setup">
                 <div class="mpi-engine-install__content">
-                    <button type="button" class="mpi-engine-install__back" data-ref="backToChoose">
-                        ${renderIcon('back', 'sm')} Back
-                    </button>
+                    <div data-mount="backToChoose"></div>
 
                     <h2 class="mpi-engine-install__title">Install ComfyUI</h2>
                     <p class="mpi-engine-install__subtitle">Pick where your models live. Expect this folder to grow — models are large, and they stay on your disk.</p>
@@ -170,9 +173,7 @@ export const MpiEngineInstall = ComponentFactory.create({
                          Retry, forever, with no way to reach even Settings. Shown in
                          repairing mode only; _setError does the reveal. -->
                     <div class="mpi-engine-install__hatch" data-ref="repairEscape" style="display: none;">
-                        <button type="button" class="mpi-engine-install__hatch-action" data-ref="continueAnyway">
-                            Continue without them
-                        </button>
+                        <div data-mount="continueAnyway"></div>
                         <p class="mpi-engine-install__hatch-hint">
                             Some features will be unavailable until these finish installing.
                         </p>
@@ -208,6 +209,43 @@ export const MpiEngineInstall = ComponentFactory.create({
         const upgradeMessage = qs('[data-ref="upgradeMessage"]', el);
         const errorMessage = qs('[data-ref="errorMessage"]', el);
         const repairEscape = qs('[data-ref="repairEscape"]', el);
+
+        /**
+         * Swap a `[data-mount]` placeholder for a real mounted MpiButton, carrying the
+         * data-ref the wiring further down reads. Replacing the node rather than
+         * mounting into it keeps the button itself in the flex/grid flow its CSS
+         * targets — a wrapper div would take the layout instead (MPI-588).
+         */
+        const _mountRef = (ref, btnProps, face = '') => {
+            const host = qs(`[data-mount="${ref}"]`, el);
+            if (!host) return null;
+            const btn = mountButton(btnProps, face);
+            btn.dataset.ref = ref;
+            host.replaceWith(btn);
+            return btn;
+        };
+
+        _mountRef('chooseLocal', {
+            variant: 'ghost',
+            size: 'sm',
+            extraClasses: 'mpi-engine-install__choice mpi-engine-install__choice--recommended',
+        }, CHOICE_LOCAL_FACE);
+        _mountRef('chooseRemote', {
+            variant: 'ghost',
+            size: 'sm',
+            extraClasses: 'mpi-engine-install__choice',
+        }, CHOICE_REMOTE_FACE);
+        _mountRef('backToChoose', {
+            variant: 'ghost',
+            size: 'sm',
+            extraClasses: 'mpi-engine-install__back',
+        }, `${renderIcon('back', 'sm')} Back`);
+        _mountRef('continueAnyway', {
+            text: 'Continue without them',
+            variant: 'ghost',
+            size: 'sm',
+            extraClasses: 'mpi-engine-install__hatch-action',
+        });
 
         // Mount primitives in Phase 1 (setup)
         const pathInputMount = qs('[data-ref="pathInputMount"]', el);

@@ -13,7 +13,11 @@
 }
 
 /* ── Individual thumbnail button ─────────────────────────────── */
-.mpi-auto-mask-thumbs__item {
+/* A thumbnail tile, not a labelled button: it draws its OWN 2px frame and its own
+   hover/selected accent, so the ghost Primitive's transparent chrome is overridden
+   here rather than inherited. `.mpi-btn` prefix beats `.mpi-btn--ghost` on
+   specificity instead of relying on stylesheet order (MPI-588). */
+.mpi-btn.mpi-auto-mask-thumbs__item {
     position: relative;
     width: 56px;
     height: 56px;
@@ -21,7 +25,6 @@
     border: 2px solid var(--line);
     border-radius: var(--r-2);
     background: var(--surface-1);
-    cursor: pointer;
     overflow: hidden;
     transition:
         border-color var(--t-fast) var(--ease),
@@ -29,12 +32,13 @@
     flex-shrink: 0;
 }
 
-.mpi-auto-mask-thumbs__item:hover {
+.mpi-btn.mpi-auto-mask-thumbs__item:hover:not(:disabled) {
     border-color: var(--accent-heat);
+    background: var(--surface-1);
     transform: scale(1.06);
 }
 
-.mpi-auto-mask-thumbs__item--selected {
+.mpi-btn.mpi-auto-mask-thumbs__item--selected {
     border-color: var(--accent-heat);
     box-shadow: 0 0 0 2px var(--accent-heat);
 }

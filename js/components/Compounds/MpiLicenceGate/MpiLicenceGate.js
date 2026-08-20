@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
-import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiButton, mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiCheckbox } from '../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '../../../utils/icons.js';
@@ -201,7 +201,7 @@ export const MpiLicenceGate = ComponentFactory.create({
         };
 
         function _link(text, url) {
-            const a = ce('button', { className: 'mpi-licence-gate__link', type: 'button', textContent: text });
+            const a = mountButton({ text, variant: 'ghost', size: 'sm', extraClasses: 'mpi-licence-gate__link' });
             _unsubs.push(on(a, 'click', () => openExternal(url)));
             return a;
         }
