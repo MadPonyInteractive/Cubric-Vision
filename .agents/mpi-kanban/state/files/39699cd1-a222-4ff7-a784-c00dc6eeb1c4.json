@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "39699cd1-a222-4ff7-a784-c00dc6eeb1c4",
+  "task_card": "MPI-590",
+  "task": ".agents/mpi-kanban/tasks/MPI-590/",
+  "paths": [
+    ".agents/mpi-kanban/tasks/MPI-590/**",
+    "js/data/flowsRegistry.js",
+    "js/services/flowService.js",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.css",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "comfy_workflows/flow_character_sheet.json",
+    "comfy_workflows/raw/flow_character_sheet.json",
+    "tests/flow-lora-rack.test.cjs",
+    "tests/flow-model-choice.test.cjs",
+    "docs/playbooks/add-flow/01-descriptor-and-ops.md",
+    "docs/playbooks/add-flow/any-of-models.md",
+    "docs/playbooks/add-flow/README.md"
+  ],
+  "status": "complete",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/35bb3ad0-54b6-4c61-9124-868bd514dbd7.json",
+  "heartbeat_at": "2026-08-20T15:12:38Z",
+  "updated_at": "2026-08-20T15:09:14Z",
+  "released_at": "2026-08-20T15:35:00Z"
+}

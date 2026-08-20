@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-590/**",
+    "js/data/flowsRegistry.js",
+    "js/services/flowService.js",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.css",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "comfy_workflows/flow_character_sheet.json",
+    "comfy_workflows/raw/flow_character_sheet.json",
+    "tests/flow-lora-rack.test.cjs",
+    "tests/flow-model-choice.test.cjs",
+    "docs/playbooks/add-flow/01-descriptor-and-ops.md",
+    "docs/playbooks/add-flow/any-of-models.md",
+    "docs/playbooks/add-flow/README.md"
+  ]
+}

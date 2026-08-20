@@ -1,0 +1,47 @@
+# MPI-590 — validation
+
+Commit `492f2a95`. Scoped by Fabio on dispatch: **Character Sheet only, Krea 2 vs Krea 2 NSFW
+only.** Other models in other flows are a later card — the shape is generic (any-of set +
+`modelParams`), but only one FlowDef declares one.
+
+## What was proven, and how
+
+| Claim | Evidence |
+|---|---|
+| An any-of set is satisfied by EITHER member | `tests/flow-model-choice.test.cjs`, real modules imported bare with `state.s_installedModelIds` staged |
+| Every other flow gates exactly as before | Same file — every plain-string entry across `listFlows()` resolves to itself |
+| The picker appears only with >1 installed member | Same file, plus live: with only `krea2` the drawer showed no dropdown |
+| The pick reaches the injection params AND the LoRA rack | Same file; live click on "Krea 2 NSFW" flipped the required row, the resolved ids, `flowModelParams` (lustify + bypass 0) and `flowSettingsModel` |
+| The picked weight can actually be INJECTED | Node 55 is titled `Input_Base_Model`; the test asserts the title exists in the graph, that `unet_name` is on the injector's spray list, that the `Title.widget` branch exists, and that both target widgets are widgets (not links) |
+| The guard is load-bearing | **Mutation-checked**: node 55's title restored to `Load Diffusion Model` → 2 tests red, exit 1. File restored in `finally` |
+| Nothing else regressed | 655/655 node, 24/24 desktop, eslint `--max-warnings=0` on every touched file, `release:check` |
+
+Live probe ran on an isolated instance (`npm run app:isolated`, own port + profile), with
+`s_installedModelIds` staged to hold both Krea 2 cards. The user's app was never touched.
+
+## The one residual
+
+**Not proven from Comfy `/history`.** The checklist asked for a dispatched-graph read, which
+needs a real engine and a real sheet run; the isolated instance has no engine, and running one
+on the user's live app is off limits. Every hop up to the POST is verified — resolved params →
+`config.injectionParams` (flowService) → `runCommand` whitelist → `Object.assign(params,
+injectionParams)` → title match → `unet_name` write — so what is unproven is the last hop only.
+
+**To close it:** with `krea2-nsfw` installed, pick it in the Character Sheet drawer, run the
+sheet, then read `/history` for the newest prompt and confirm node 55's `unet_name` is
+`lustify-v10-krea-raw-int8_convrot.safetensors` and node 245's `strength_model` is 0.
+
+## Also in this commit
+
+MpiFlowLibrary's single MPI-588 warning (the drawer close `<button>`) is cleared, not bypassed —
+the pre-commit hook blocks any commit touching the file otherwise, which is exactly the landmine
+MPI-588 was carded for. It is now a ghost MpiButton mounted in setup, keeping its id and the
+shared `.mpi-detail__close` class; two scoped CSS rules hold it at the Model Library twin's 28px
+box and 13px glyph (measured live — the Primitive's icon-only rules win otherwise). MPI-588's
+table should drop this file: **27 → 26 warnings, 12 files.**
+
+## Release note owed
+
+User-visible now that Flows are un-gated (MPI-589). Copy for whichever version ships next:
+*"Character Sheet now runs on either Krea 2 or Krea 2 NSFW — pick which one in the Flows panel
+before you open it. If you only have one of them installed, it just uses that one."*
