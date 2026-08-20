@@ -81,3 +81,23 @@ models".
    16380 MB card.
 4. **The dev gate.** This is the 4th flow, and the gate was set to stay "until ≥4 flows
    exist (user decision)". His call, not mine.
+
+## Fabio ran it — the graphics material is on disk (2026-08-20)
+
+He ran an upscale himself and dropped both halves of the pair in
+`C:\Users\Fabio\Downloads\video upscale\`:
+
+| file | what it is |
+|---|---|
+| `ref2v_ms_005.mp4` (2.3 MB) | the SOURCE — a MiniMax H3 ref2v clip |
+| `ltxVideoUpscale_002.mp4` (3.8 MB) | the upscale of it |
+
+So owed item (1) — a real run — has happened, and (2) the two preview assets is
+unblocked: this is the pair `/mpi-flow-graphics` cuts the 4/5 tile and the wide hero
+from. Probe both files' real resolution/fps/duration before designing the hero; do not
+assume the 2x from the smoke run.
+
+Still open: the VRAM-cap call and the dev-gate call, both Fabio's. And the graphics
+themselves, which move to the next session alongside MPI-585 (the Flow compare widget he
+asked for in the same breath — the result pane should show source-left / upscaled-right
+with the reveal bar).

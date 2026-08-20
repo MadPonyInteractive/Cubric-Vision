@@ -1,0 +1,70 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "0ec5f9fe-d66e-44c6-8587-c4e47b4c325d",
+  "generated_at": "2026-08-20T05:00:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-584 - Upscale Video shipped as a Flow; MPI-585 raised for the shared compare widget",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Ship the LTX video upscaler's second surface as a Flow (MPI-584), then make its graphics — and, per Fabio mid-session, give Flow results a shared before/after compare widget first.",
+    "status": "in_progress",
+    "summary": "The Flow itself is DONE and committed (cf0cec4a): FlowDef + one test, reusing MPI-579's op/graph/injector wholesale. 631 tests, eslint, release:check pass, and a live isolated instance proved tile, availability, all three fields mounting Primitives, the 0.675 sigma schedule, cfg 1, and the empty-run guard. Fabio then ran a real upscale and left the before/after pair on disk, so the graphics are unblocked — but he asked for the compare widget first and for a fresh session to do both."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-584: ltx-upscale FlowDef in js/data/flowsRegistry.js — requiredModels ['ltx-23-balanced'], no requiredDeps, media role inputVideo, three declared fields copied verbatim from the plugin's upscale.fields",
+      "MPI-584: title pin for ltx_video_upscale.json in tests/inject-params-titles.test.cjs (covers the plugin surface too — MPI-579 shipped without one)",
+      "MPI-584: docs/playbooks/add-flow/existing-flows/ltx-upscale.md",
+      "MPI-584: verified — 631/631 node tests, eslint clean, release:check pass, live render + mapping + guard on my own app:isolated instance (:51691)",
+      "MPI-585 raised: the shared Flow CompareWidget, scoped in full in its card description (engine to reuse, surface to build, declared shape, four traps, the file-claim collision)"
+    ],
+    "pending": [
+      "MPI-585: build the shared compare surface — Flow result pane shows source LEFT / upscaled RIGHT with the reveal bar, and MpiCompareOverlay is refactored onto the same shared piece so the two cannot drift",
+      "MPI-584: /mpi-flow-graphics — flow-ltx-upscale.webp (4/5 tile) + flow-ltx-upscale.mp4 (wide hero), cut from Fabio's own run pair now on disk",
+      "MPI-584: Fabio's two calls — whether a frame/resolution cap gets its own card, and whether the dev gate lifts now that a 4th flow exists"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-584",
+    "title": "Video upscale as a Flow - the LTX upscaler's second surface, for the Flow Library",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-584/",
+    "links": {
+      "plan": null,
+      "checklist": ".agents/mpi-kanban/tasks/MPI-584/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-584/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Pick up MPI-585 first (Fabio's explicit order: the compare widget before the graphics). Read its card description end to end — it already carries the reuse map, the proposed declared shape and the traps, so do not re-derive them. Move it todo -> doing with a files.json BEFORE editing, and check the live claim on MpiBaseFlow.js first. Then MPI-584's graphics via /mpi-flow-graphics.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "MPI-584 registered NO new op and bumped NO version: ltxVideoUpscale, ltx_video_upscale.json and ltxSigmasInjector already existed and were verified by MPI-579. The Flow is one descriptor plus one test.",
+      "The Flow's media slot role is `inputVideo`, matching the shared op's mediaInputs key — NOT the `video1` its sibling flows use. The flow bends to the op because the op is shared with the plugin.",
+      "The three controls are the plugin's `upscale.fields` VERBATIM (prompt empty, denoise UI 0.5 -> sigma 0.675, prompt strength UI 0 -> cfg 1). Two surfaces of one capability with different defaults is a bug nobody reports as one.",
+      "No VRAM/frame cap shipped: the graph exposes no knob to cap, so a cap needs a new node plus a control — its own card. The description carries the warning instead.",
+      "MPI-585 must NOT build a third compare engine. ComparisonManager + MpiCanvas activeMode 'compare' already do image/video pairs in both directions; MpiCompareOverlay is the History surface. What is duplicated-in-waiting is the video transport + hotkey block living inside that overlay — lift it, and sweep BOTH consumers."
+    ],
+    "constraints": [
+      "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js + .css are CLAIMED by a live MPI-504 session (.agents/mpi-kanban/state/files/548dfdb3-*.json, heartbeat 2026-08-20T00:40Z). guard-claim will block the write — check whether that session is still live and coordinate with mpi-message rather than editing over it.",
+      "The board's .agents/mpi-kanban/events.jsonl and state/index.json are left UNCOMMITTED on purpose: my lines interleave with the live MPI-504 session's inside one hunk, so that file is theirs to sweep. My card files and board.json are committed.",
+      "A Flow is already an MpiOverlay, so MpiCompareOverlay (a full #tool-container takeover with the Stash Pattern) cannot be reused as-is inside one — that is why MPI-585 builds a third surface rather than calling the overlay.",
+      "Never take the user's app on :3000. npm run app:isolated picks its own port and profile; kill the process TREE afterwards (TaskStop leaves the Electron running). The isolated instance still shares APP_DOCUMENTS, so a completed Flow run commits a card into a REAL project — that is why the live upscale was left to Fabio.",
+      "Graphics material is at C:\\Users\\Fabio\\Downloads\\video upscale\\ — ref2v_ms_005.mp4 is the SOURCE, ltxVideoUpscale_002.mp4 the upscale. Probe their real resolution/fps/duration; do not assume the 2x from the smoke run. No ffmpeg on PATH here."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-585/task.json",
+      ".agents/mpi-kanban/tasks/MPI-584/validation.md",
+      "js/components/Compounds/MpiCompareOverlay/MpiCompareOverlay.js",
+      "js/components/Primitives/MpiCanvas/MpiCanvas.js",
+      "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+      "docs/playbooks/add-flow/existing-flows/ltx-upscale.md"
+    ]
+  },
+  "resume_prompt": "Continuing Cubric Vision work handed off from a previous session. Read .agents/mpi-kanban/state/handoffs/0ec5f9fe-d66e-44c6-8587-c4e47b4c325d.json. MPI-584 (Upscale Video as a Flow) shipped and is committed as cf0cec4a, sitting in doing/validating with only graphics and two of Fabio's own calls outstanding. The next job is MPI-585, Fabio's explicit priority: a SHARED before/after compare widget for Flow results — source left, result right, draggable reveal bar, the same thing the History workspace gives for two selected video entries — reusable by every Flow that improves a supplied video OR image, with no duplicated code. Its card description already carries the reuse map (ComparisonManager + MpiCanvas compare mode + MpiCompareOverlay), the proposed declared FlowDef shape, four traps and a live file-claim collision on MpiBaseFlow.js; read it before writing anything. Move MPI-585 todo -> doing with a files.json first. After it, MPI-584's two preview assets via /mpi-flow-graphics, cut from Fabio's own run pair in C:\\Users\\Fabio\\Downloads\\video upscale."
+}
