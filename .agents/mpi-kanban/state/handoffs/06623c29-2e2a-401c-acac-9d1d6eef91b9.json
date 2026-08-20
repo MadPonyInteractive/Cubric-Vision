@@ -1,0 +1,76 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "06623c29-2e2a-401c-acac-9d1d6eef91b9",
+  "generated_at": "2026-08-20T00:30:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-504 Character Sheet - the prompt UI's frame half was built, verified live and reviewed by Fabio, who asked for three changes to the Enhance button",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Start building the decided prompt UI - the three-step Flow with two prompt boxes.",
+    "status": "in_progress",
+    "summary": "The frame half SHIPPED in 604d523d and needed NO new component: `kind: 'fields'` (a media-less step whose declared fields are the work) plus `action: 'enhance'` on a button field. All six of Fabio's rules were verified in a running app. He then reviewed it and rejected the button's LOOK - it must be an MpiButton, pink, with the existing `enhance` icon, hovering to a new background, and on the run slide it must sit directly under the prompt box. Behaviour is right; only the button is wrong."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    "completed": [
+      "THE PROMPT UI'S FRAME HALF IS BUILT AND PUSHED - commit 604d523d. Two declarations, no component (a Flow carries no JS): `kind: 'fields'` in FRAME_KINDS (MpiBaseFlow/stepKinds.js) and `action: 'enhance'` on a button field (op/from/to) in MpiBaseFlow.js",
+      "A `fields` step has NO role, so its values live in the FLOW-level store - that is what makes one prompt a single value edited from the step AND the run slide. It is not a flag; it is the only coherent place for them",
+      "ONE enhance declaration drives fill, clear-on-edit, the button's stale state AND the raw-prompt fallback at Run, so they cannot disagree",
+      "RULES 5 AND 6 WERE ALREADY FREE - `flowInputs` snapshots the whole collected payload at Run and Reuse seeds it back, so both prompts store and inject verbatim with no new storage path, and no seed is stored because nothing declares one. Checked live, not reasoned",
+      "VERIFIED IN A RUNNING APP - 3-step carousel, media-free step 1, step 2 composition, edit-clears-visibly, step 3 hides the enhanced prompt and shares the value both ways, payload raw-vs-enhanced, unregistered op warns without hanging. lint clean, 630/630 tests, board validation passes",
+      "A SCREENSHOT CAUGHT A LAYOUT BUG EVERY DOM ASSERTION HAD PASSED - `flex: 1 1 320px` on a text field means WIDTH in the one-row layout and a GROWING 320px-tall box in a column. Fixed `--work`-scoped, and it needed the same `:has()` shape to win on specificity",
+      "FABIO REVIEWED IT (2026-08-20) and asked for three changes - see pending"
+    ],
+    "pending": [
+      "THE THREE BUTTON CHANGES - full detail and three checked traps in plan.md `## Current State`, top block. (a) Enhance becomes an MpiButton, pink (`--accent-heat`), with the `enhance` icon, hovering to a new background. (b) On the run slide it sits directly UNDER the prompt box. (c) Size/placement otherwise unchanged",
+      "THE ENHANCER OP - raw/qwen3vl_4b_prompt_enhancer.json converted to an API workflow + registered in the 4 files with `outputKind: 'text'`. Until it exists Enhance warns and no-ops. Weight already ships (`qwen3vl-abliterated-clip`). NEEDS an `Input_Seed` node in the graph for per-press variation, and raw/ is Fabio's",
+      "Head branch: face detect SELECTS the area, then a SAM3 union of hair + face + hat builds the mask",
+      "Klein A/B: baked removal prompt vs the no-prompt remove op + crop/stitch",
+      "All four styles return their medium and keep the catch-light (Anime and Photoreal proven; 3D and Cartoon untested)",
+      "Generate a sheet from a v4.2 enhancer output - the 8-of-8 rear colour is measured in TEXT only, never in an image",
+      "Residual, Fabio's call: ~2 in 8 v4.2 outputs write `dark brown` in the main clause and `black` at the back",
+      "10/10 stress test, then /mpi-add-flow for the app wiring"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-504",
+    "title": "Character Sheet flow - a description in, a video-reference sheet out (front body HEADLESS)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-504/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Make Fabio's three changes to the Enhance button - read plan.md `## Current State` top block first, it carries the detail and three traps that are already checked. (1) The button becomes an `MpiButton`, PINK (`variant: 'primary'` = `--accent-heat`, what Generate uses) with the `enhance` icon that already exists at js/utils/icons.js:37, and it must change BACKGROUND on hover the way the rest of the app does. `--accent-frost` was wrong: Fabio's words are that it is used in ~3% of the app and should not be used anywhere. (2) On the RUN SLIDE the Enhance button must sit directly UNDER the prompt box, not down beside Generate - that is the `--stacked` flex-growth, and fixing it also moves Extend Video's and Add Foley's run slides, so check both after. (3) Size and placement otherwise stay. The three traps: MpiButton in ICON MODE forces `secondary` (MpiButton.js:70 maps everything except danger/ghost down), so passing `primary` with an icon comes out grey; the `button` branch lives in the SHARED js/utils/declaredFields.js (MPI-580's plugin dropdown uses it too) and a mounted Primitive there needs the `radio` branch's destroy; and `_paintEnhance()` currently repaints by qs-ing the raw button, which becomes the instance API. To SEE any of it, paste the scratch FlowDef from validation.md back into flowsRegistry.js and delete it again before committing.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "NO NEW COMPONENT, and that was the right call for a reason that is not laziness: a Flow carries no JS (MPI-572), so a `prompt` step KIND would have needed the `{media, value, onChange}` contract on a flow with no media at all, and its value would have landed in `stepValues[role]` - a DIFFERENT store from the run slide's, which is exactly the divergence rule 4 forbids. A `fields` step has no role, so flow-level is the only coherent store and rule 4 falls out for free.",
+      "ONE declaration drives three behaviours. Fill, clear-on-edit and the button's state all read the same from/to pair, and the Run fallback derives from it too. A separate `fallbackFrom:` was drafted and dropped - a pair wired one way is a bug that only shows on the run nobody edited.",
+      "`--accent-frost` IS A COLOUR TO MOVE AWAY FROM (Fabio, 2026-08-20): 'only used in 3% of the app... it actually should be a colour that shouldn't be used anywhere. We end up using it for some reason.' 63 occurrences across styles/ and js/. Do not reach for it as a signal colour again.",
+      "The user-visible signal that a prompt is NOT enhanced must survive whatever replaces `--stale`. On the run slide the enhanced prompt is invisible, so the button is the only thing that can say it.",
+      "Storing a seed stays rejected. The enhanced text is stored and injected verbatim, so a seed adds nothing - but the enhancer seed IS load-bearing inside the run, and the frame drives a fresh one per press."
+    ],
+    "constraints": [
+      "THE SCRATCH FlowDef IS NOT IN THE REPO, deliberately. The character-sheet flow has no op and no graph, so the UI was smoked against a temporary FLOWS entry that is recorded VERBATIM in validation.md and was removed before committing. Paste it back to drive the UI, delete it before committing. Driving it: `Events.emit('flow:open', {flowId:'character-sheet'})` from a playwright-cli eval, and A PROJECT MUST BE OPEN FIRST - on Landing the overlay mounts into the DOM but is not visible, which reads as a broken flow and is not one.",
+      "A PEER SESSION IS LIVE IN THIS TREE (MPI-579, the LTX video upscale plugin; MPI-581 just landed four commits). It edits js/data/flowsRegistry.js, js/data/commandRegistry.js, js/core/operationRegistry.js, universal_workflows.js, pluginsRegistry.js, workflowInjectors/ and the root events.jsonl. This session's flowsRegistry.js typedef additions were SWEPT INTO THEIR MPI-581 commit - nothing was lost, but assume any co-owned file may be committed out from under you. Two of this session's MPI-504 lines in the ROOT events.jsonl are still uncommitted for that reason, and they use `task` where the schema wants `id` (harmless - the root log does not require it - but worth normalising at close-out).",
+      "THE ENHANCER OP DOES NOT EXIST, so Enhance warns and no-ops by design (`getCommand` misses). That is not a bug to chase while working on the button.",
+      "A SCREENSHOT IS PART OF VERIFYING THIS UI, not a nicety. Every DOM assertion passed while the step was visibly broken - the prompt sat 260px above the button and the boxes were narrower than it. Measure AND look.",
+      "THE GPU NEEDS THE LEASE for anything that executes a generation: python \"${CLAUDE_PLUGIN_ROOT}/skills/mpi-lib/scripts/gpu_lease.py\" run -- <command>. Machine-global, one slot. Read-only probes are not matched.",
+      "NEVER take the user's app on :3000. Spin your own with `npm run app:isolated` - it prints `READY <url>`. DO NOT pipe that command through `head`/`tail`: the buffer swallows the READY line and a working launch reads as a hang, then the orphaned Electron holds the profile and the NEXT launch dies at exit 0 with an EPERM on cubric-agent-profile. Stopping it needs the process TREE (`taskkill /PID <parent> /T /F`); TaskStop leaves the Electron running.",
+      "comfy_workflows/raw/ is USER-OWNED. The enhancer graph's `Input_Seed` node is Fabio's edit to make, not an app-side workaround."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-504/validation.md",
+      "docs/playbooks/add-flow/ui/prompt-enhance.md"
+    ]
+  },
+  "resume_prompt": "Resuming MPI-504, the Character Sheet flow in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/06623c29-2e2a-401c-acac-9d1d6eef91b9.json first, then plan.md `## Current State` (top block is the pending work), validation.md (newest entries LAST) and docs/playbooks/add-flow/ui/prompt-enhance.md. The card is in doing. Last session BUILT the prompt UI's frame half and pushed it as 604d523d: `kind: 'fields'` (a media-less step whose declared fields are the work, values in the flow-level store) plus `action: 'enhance'` on a button field - no new component, because a Flow carries no JS. All six of Fabio's rules were verified in a running app, and two of them turned out to need no code at all because flowInputs already snapshots the payload. Fabio then reviewed it and asked for three changes, all to the Enhance BUTTON: make it an MpiButton, pink like Generate, with the `enhance` icon that already exists, hovering to a new background; and on the run slide put it directly under the prompt box. Standing rules learned the hard way: screenshot the UI as well as asserting on the DOM (every assertion passed while the layout was visibly broken), never take the user's app on :3000 and never pipe `app:isolated` through head/tail, a peer session is live in this tree so assume a co-owned file may be committed out from under you, and the character-sheet FlowDef is a scratch fixture recorded in validation.md that must never be committed."
+}
