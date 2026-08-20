@@ -38,6 +38,24 @@ _(none yet)_
   with Tab — which now cycles your last card, the gallery and Flows. Each flow says which
   models it needs and installs them for you; none of them download weights of their own.
 
+- Character Sheet turns a description into a reference sheet for a character. Describe who they
+  are — wardrobe, age, hair, scars — and you get back one picture holding a large three-quarter
+  portrait plus full-body front and back views on a plain grey studio backdrop, in the layout a
+  video model reads best. The front body comes back headless on purpose: a face taken from a
+  small, soft full-body figure is what makes a character drift, so removing that head leaves the
+  portrait as the only place a face can come from. It is a toggle if you want the head. Enhance
+  rewrites your description into the full phrase the sheet is generated from and shows it to you
+  — edit it freely, whatever is in that box is what runs. Four styles (Photoreal, 3D animation,
+  Anime, Cartoon), 1K or 2K, a Turbo speed toggle, and your own LoRAs ride along if you have
+  them, so someone who has already trained a character can describe only the wardrobe on top.
+
+- Character Sheet runs on either Krea 2 or Krea 2 NSFW. If you have both installed, a Model
+  dropdown appears in the Flows panel when you select the flow — pick which one before you open
+  it. With only one of them installed there is no choice to make and it simply uses that one, so
+  owning one of the two is enough to run the flow. Krea 2 is the stronger choice for stylised
+  work; the NSFW model is trained mostly on photographic source and is weaker at Anime and
+  Cartoon.
+
 - Videos can be upscaled with LTX, sound and all. The Upscale tool in the History workspace
   has a new option on video — "LTX Video upscaler" — which doubles a clip's resolution using
   the LTX 2.3 Balanced model, and the audio track comes through untouched. Two controls come
