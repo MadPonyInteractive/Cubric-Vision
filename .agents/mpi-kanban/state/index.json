@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-20T16:36:37Z",
+  "updated_at": "2026-08-20T17:05:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -13,7 +13,9 @@
     }
   ],
   "active_tasks": [],
-  "active_file_claims": [],
+  "active_file_claims": [
+    ".agents/mpi-kanban/state/files/b93cafd2-9d66-4a0e-94b9-4b41da9604e6.json"
+  ],
   "pending_file_states": [
     {
       "id": "fa51ee7f-2398-4911-8d75-402c61f462d5",

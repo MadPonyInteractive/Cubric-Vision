@@ -1,0 +1,5 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-592", "at": "2026-08-20T17:02:00Z", "actor": "claude", "column": "todo"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-592", "at": "2026-08-20T17:02:00Z", "actor": "claude", "from": "todo", "to": "doing", "reason": "Implementation started."}
+{"schema": "mpi-kanban/event/v1", "type": "validation.updated", "id": "MPI-592", "at": "2026-08-20T17:14:00Z", "actor": "claude", "note": "Relay + route + skill docs landed; state switch and both error paths verified on an isolated instance. Generation leg still needs Fabio's GPU."}
+{"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "id": "MPI-592", "at": "2026-08-20T17:14:00Z", "actor": "claude", "note": "Relay + route + skill docs landed; state switch and both error paths verified on an isolated instance. Generation leg still needs Fabio's GPU."}
+{"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-592", "at": "2026-08-20T17:14:00Z", "actor": "claude", "note": "Relay + route + skill docs landed; state switch and both error paths verified on an isolated instance. Generation leg still needs Fabio's GPU."}

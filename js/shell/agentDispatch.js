@@ -16,9 +16,17 @@
  * blocks and `flowService` — and like flowService it goes THROUGH
  * `enqueueGeneration`, never around it, so the dispatch guards and the lane/store
  * contract hold exactly as they do for a Cue press.
+ *
+ * MPI-592 adds a second capability, `project.open`, for the same reason dispatch
+ * is here: `openProject` reconciles and hydrates through the renderer's state.
+ * A submit runs in `state.currentProject` and nothing server-side can change it,
+ * so without this an agent that created a project generated into the PREVIOUS
+ * one — successfully, with `ok: true`, into the wrong gallery.
  */
 
 import { enqueueGeneration } from '../services/generationService.js';
+import { openProject } from '../services/projectService.js';
+import { navigate, PAGE_GALLERY } from '../router.js';
 import { getModelById, isOperationInstalled } from '../data/modelRegistry.js';
 import { getCommandMediaInputs } from '../data/commandRegistry.js';
 import { getSharedSettings } from '../data/projectModel.js';
@@ -179,6 +187,43 @@ function _submitGeneration(jobId, input = {}) {
 }
 
 /**
+ * Run one `project.open` job — the same pair of calls every project row in
+ * `projectUI.js` makes, because opening a project IS `openProject` + navigate.
+ * `openProject` needs only `folderPath`; it migrates, reconciles and hydrates the
+ * record itself, so a stale or partial one from the caller cannot get in.
+ *
+ * No guard against switching mid-generation: the landing rows have none either,
+ * and inventing one here would make the agent path stricter than the click.
+ */
+async function _openProject(jobId, input = {}) {
+    const { folderPath } = input;
+    if (!folderPath) {
+        return _fail(jobId, 'BAD_REQUEST', 'No folderPath given.');
+    }
+    try {
+        await openProject({ folderPath });
+    } catch (err) {
+        return _fail(jobId, 'NO_SUCH_PROJECT',
+            `Could not open "${folderPath}": ${err?.message || 'unknown error'}.`);
+    }
+    navigate(PAGE_GALLERY);
+    return _report(jobId, {
+        ok: true,
+        output: {
+            folderPath: state.currentProject?.folderPath,
+            name: state.currentProject?.name,
+            groupCount: state.currentProject?.itemGroups?.length ?? 0,
+        },
+    });
+}
+
+/** Capability name → handler. The relay carries nothing else. */
+const _HANDLERS = {
+    'generation.submit': _submitGeneration,
+    'project.open': _openProject,
+};
+
+/**
  * Subscribe to the relay. Idempotent, and safe in the browser dev build — a
  * failed EventSource just retries; nothing else in the app depends on it.
  */
@@ -195,17 +240,19 @@ export function initAgentDispatch() {
             clientLogger.error('connector', 'Malformed agent job frame', err);
             return;
         }
-        if (job.capability !== 'generation.submit') {
+        const handler = _HANDLERS[job.capability];
+        if (!handler) {
             _fail(job.jobId, 'UNSUPPORTED_CAPABILITY', `Unknown capability "${job.capability}".`);
             return;
         }
-        clientLogger.info('connector', `Agent job ${job.jobId}: ${job.input?.modelId} / ${job.input?.operation}`);
-        try {
-            _submitGeneration(job.jobId, job.input);
-        } catch (err) {
+        clientLogger.info('connector', `Agent job ${job.jobId}: ${job.capability}`);
+        // Through a promise so an async handler's rejection reports too — a bare
+        // try/catch only sees a synchronous throw, and an unreported job hangs the
+        // caller until the route's timeout.
+        Promise.resolve().then(() => handler(job.jobId, job.input)).catch((err) => {
             clientLogger.error('connector', `Agent job ${job.jobId} threw`, err);
-            _fail(job.jobId, 'RUNTIME_ERROR', err?.message || 'Submit threw.');
-        }
+            _fail(job.jobId, 'RUNTIME_ERROR', err?.message || 'The job threw.');
+        });
     });
 
     // EventSource reconnects on its own; log once so a permanently dead relay is

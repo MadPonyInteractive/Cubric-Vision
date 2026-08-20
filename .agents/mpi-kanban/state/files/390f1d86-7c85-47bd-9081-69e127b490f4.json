@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "390f1d86-7c85-47bd-9081-69e127b490f4",
+  "paths": [
+    ".claude/skills/cubric-vision/SKILL.md"
+  ],
+  "status": "complete",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/89ae6b10-5bed-4756-939b-22a90e6566da.json",
+  "heartbeat_at": "2026-08-20T16:56:00Z"
+}

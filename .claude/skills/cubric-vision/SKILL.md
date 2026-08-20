@@ -69,6 +69,68 @@ Say what changed in one line *after* the blocks, never instead of them.
 
 Start with `/list-projects` to get an id, then `/get-project` for its contents.
 
+### Creating a project
+
+```bash
+curl -s -X POST "$CUBRIC_URL/create-project" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Rider Study"}'
+```
+
+Body: `name` (defaults to `Untitled`), plus an optional `folderPath` naming the
+**parent** directory. With no `folderPath` the project lands in the default
+projects root — `Documents/Cubric Vision/Projects` unless the install overrides
+it — which is the only root `/list-projects` scans for free.
+
+Returns `{"success": true, "project": {...}}`. Keep `project.folderPath`: it is
+the key every other project endpoint takes, not the id. The route creates
+`Media/`, `project.json` and `project.md`, strips `<>:"/\|?*` out of the name,
+and on a folder-name collision appends `_<first 8 of the id>` rather than
+merging into the existing project.
+
+Two things it does **not** do:
+
+- **A custom `folderPath` is not registered.** `/list-projects` scans the default
+  root plus a durable registry, so a project made anywhere else is invisible to
+  the picker until you `POST /add-project-path` with its **parent** dir.
+- **A running app does not notice.** The project exists on disk, but an open
+  Vision window keeps its old list until it re-lists (back to the landing
+  screen), and the new project does not become the open one.
+
+### Creating a project, then generating into it
+
+`/connector/generate` runs in **whatever project the app currently has open** —
+creating a project does not make it that project. Open it explicitly:
+
+```bash
+curl -s -X POST "$CUBRIC_URL/connector/open-project" \
+  -H 'Content-Type: application/json' \
+  -d '{"folderPath":"C:/Users/me/Documents/Cubric Vision/Projects/Rider Study"}'
+```
+
+`folderPath` is the key, the same one `/create-project` and `/list-projects` hand
+back. It opens the project for real — the app navigates to its gallery, exactly
+as if the user had clicked the row — so it is a **visible change to what is on
+their screen**. Returns `{"ok": true, "output": {folderPath, name, groupCount}}`
+read back from the app's live state, so `groupCount` is a cheap confirmation you
+landed where you meant to.
+
+The full sequence:
+
+1. `POST /create-project` → keep `folderPath`.
+2. `POST /add-project-path` with the parent dir, if you passed a custom `folderPath`.
+3. `POST /connector/open-project` with the `folderPath`.
+4. `GET /connector/capabilities`, confirm `generationSubmit`.
+5. `POST /connector/generate`.
+
+**Do not skip step 3 and hope.** `NO_PROJECT` is the good outcome; the bad one is
+the user having something open, in which case the run succeeds into the wrong
+project and the response says `"ok": true` either way.
+
+Errors: `BAD_REQUEST` (no `folderPath`), `NO_SUCH_PROJECT` (nothing readable
+there — the message carries the underlying reason), `APP_UNAVAILABLE` (no window
+listening).
+
 ## Media
 
 | Verb | Path | Purpose |
@@ -401,8 +463,10 @@ listening before submitting.
 
 - **No media inputs.** Text-to-image and text-to-video only — an op with a
   required image/video slot is rejected by name with `MEDIA_UNSUPPORTED`.
-- **No project switching.** Open the project in the app first.
 - **No job status or cancellation.** One submit, one result.
+
+Project switching is no longer on this list — `POST /connector/open-project`
+covers it (see Creating a project, then generating into it).
 
 ### Still true: do not POST a graph to `/proxy/prompt`
 

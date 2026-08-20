@@ -1,0 +1,8 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "routes/connector.js",
+    "js/shell/agentDispatch.js",
+    ".claude/skills/cubric-vision/SKILL.md"
+  ]
+}

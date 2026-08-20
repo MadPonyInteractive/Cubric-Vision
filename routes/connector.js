@@ -17,6 +17,11 @@
  *   GET  /connector/jobs/stream     -> SSE, the renderer subscribes once at boot
  *   POST /connector/jobs/:id/result -> the renderer reports a job's outcome
  *
+ * MPI-592 adds the one thing a submit could not express:
+ *   POST /connector/open-project    -> make a project the open one, then generate
+ * A submit runs in whatever project the app has open, so an agent that created a
+ * project used to generate into the previous one and be told `ok: true`.
+ *
  * `POST /connector/generate` IS THE CONTRACT. Dispatch lives in the renderer
  * (`generationService` / `commandExecutor` import components and the DOM), so v1
  * relays the job there over SSE — but callers never see that. If dispatch is ever
@@ -193,6 +198,32 @@ router.post('/connector/generate', async (req, res) => {
 
   if (!result.ok) {
     logger.warn('system', `connector generate failed: ${result.error?.code} ${result.error?.message}`);
+  }
+  res.json(result);
+});
+
+/**
+ * POST /connector/open-project — make a project the one the app has open, so the
+ * next `/connector/generate` lands there.
+ *
+ * `folderPath` is the key, matching every other project route; ids are not
+ * resolvable without a scan. `/list-projects` and `/create-project` both return
+ * it ready to pass straight in.
+ */
+router.post('/connector/open-project', async (req, res) => {
+  const { folderPath } = req.body || {};
+
+  if (!folderPath) {
+    return res.status(400).json({
+      ok: false,
+      error: { code: 'BAD_REQUEST', message: 'body.folderPath is required.' },
+    });
+  }
+
+  const result = await _dispatchToRenderer('project.open', { folderPath: String(folderPath) });
+
+  if (!result.ok) {
+    logger.warn('system', `connector open-project failed: ${result.error?.code} ${result.error?.message}`);
   }
   res.json(result);
 });
