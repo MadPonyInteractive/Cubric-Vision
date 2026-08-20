@@ -1,8 +1,8 @@
 {
   "id": "6ad99f3a-47e0-4ecc-a025-7ebfa878afa1",
   "revision": 0,
-  "last_node_id": 13,
-  "last_link_id": 15,
+  "last_node_id": 14,
+  "last_link_id": 16,
   "nodes": [
     {
       "id": 1,
@@ -95,6 +95,14 @@
             "name": "prompt"
           },
           "link": 5
+        },
+        {
+          "name": "sampling_mode.seed",
+          "type": "INT",
+          "widget": {
+            "name": "sampling_mode.seed"
+          },
+          "link": 16
         }
       ],
       "outputs": [
@@ -563,6 +571,43 @@
         "ver": "2d409b54dc5b2e81bed15519ab653f61580f9f08"
       },
       "widgets_values": []
+    },
+    {
+      "id": 14,
+      "type": "MpiInt",
+      "pos": [
+        -3633.158742119252,
+        4840.0
+      ],
+      "size": [
+        253.5164346041356,
+        58.91996868586102
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "slot_index": 0,
+          "links": [
+            16
+          ]
+        }
+      ],
+      "title": "Input_Seed",
+      "properties": {
+        "Node name for S&R": "MpiInt",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d"
+      },
+      "widgets_values": [
+        0
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -653,6 +698,14 @@
       1,
       0,
       "STRING"
+    ],
+    [
+      16,
+      14,
+      0,
+      3,
+      5,
+      "INT"
     ]
   ],
   "groups": [
