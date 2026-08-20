@@ -7,6 +7,7 @@ const noRawConsole = require('./.eslint-rules/no-raw-console');
 const requireDestroyOnEvents = require('./.eslint-rules/require-destroy-on-events');
 const noSameTierComponentImport = require('./.eslint-rules/no-same-tier-component-import');
 const noHardcodedHexColor = require('./.eslint-rules/no-hardcoded-hex-color');
+const noBareFormControl = require('./.eslint-rules/no-bare-form-control');
 
 const mpiPlugin = {
   rules: {
@@ -18,6 +19,7 @@ const mpiPlugin = {
     'require-destroy-on-events': requireDestroyOnEvents,
     'no-same-tier-component-import': noSameTierComponentImport,
     'no-hardcoded-hex-color': noHardcodedHexColor,
+    'no-bare-form-control': noBareFormControl,
   },
 };
 
@@ -44,6 +46,7 @@ module.exports = [
       'mpi/require-destroy-on-events': 'warn',
       'mpi/no-same-tier-component-import': 'warn',
       'mpi/no-hardcoded-hex-color': 'warn',
+      'mpi/no-bare-form-control': 'warn',
     },
   },
 ];
