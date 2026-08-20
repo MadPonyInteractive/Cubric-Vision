@@ -308,25 +308,39 @@ export const FLOWS = [
                 { type: 'video', mode: 'upto', max: 1, roles: ['video1'], labels: ['Video to extend'] },
             ],
         },
-        // No middle steps: nothing here is marked on the clip itself, so the flow is
-        // a 2-step carousel (supply → run).
-        steps: [],
+        // Nothing is MARKED on the clip, but the user still has to see it: step 0
+        // loads media at thumbnail size, so a `preview` step is the first point at
+        // which they can judge the take they are about to continue — and the prompts
+        // belong with it, written while watching the last seconds they are describing
+        // past. 3-step carousel (supply → describe → run).
+        //
+        // A step's fields reach the op exactly as a flow-level one does (MpiBaseFlow
+        // `_collectInputs` folds `stepValues[role].fields` into the same `declared` /
+        // `injectionParams` bins), so this is a placement change, not a payload one.
+        steps: [
+            {
+                kind: 'preview', role: 'video1',
+                tickerLabel: 'Describe',
+                title: 'Describe what happens next',
+                fields: [
+                    {
+                        id: 'positive', type: 'text', rows: 3, label: 'What happens next',
+                        placeholder: 'Describe the new seconds — action, camera, sound…',
+                    },
+                    {
+                        id: 'negative', type: 'text', rows: 2, label: 'Avoid',
+                        // The bench-proven negative, kept as the default because it is what
+                        // the approved runs used — an empty box here is a different graph.
+                        default: 'letterbox, black bars, cinematic bars, pillarbox, border, vignette, blurry, low quality, still frame, frames, watermark, overlay, titles, unrealistic, plastic, fake, out-of-focus, low-detail, slow motion',
+                    },
+                ],
+            },
+        ],
         // Declared fields — rendered by MpiBaseFlow on the run slide (that is what
         // declaring them HERE rather than on a step means), each value reaching the op
-        // under its own id. `positive`/`negative` are read by submitFlowGeneration;
-        // `Input_Duration` is an injection param, so it is named for the graph node
-        // it writes.
+        // under its own id. `Input_Duration` is an injection param, so it is named for
+        // the graph node it writes.
         fields: [
-            {
-                id: 'positive', type: 'text', rows: 3, label: 'What happens next',
-                placeholder: 'Describe the new seconds — action, camera, sound…',
-            },
-            {
-                id: 'negative', type: 'text', rows: 2, label: 'Avoid',
-                // The bench-proven negative, kept as the default because it is what
-                // the approved runs used — an empty box here is a different graph.
-                default: 'letterbox, black bars, cinematic bars, pillarbox, border, vignette, blurry, low quality, still frame, frames, watermark, overlay, titles, unrealistic, plastic, fake, out-of-focus, low-detail, slow motion',
-            },
             {
                 // Seconds of NEW video, snapped to whole latent frames by the graph
                 // (MpiMath `floor((a*b+0.5)/8)*8/b` off the source's own fps). A

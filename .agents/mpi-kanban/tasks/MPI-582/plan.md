@@ -75,8 +75,30 @@ Everything needed is in `js/data/flowsRegistry.js`, which this card already owns
   — ask Fabio rather than guessing, since "exactly like the foley flow" speaks to
   the two prompt boxes, not to the duration slider.
 
-**Next action:** add the middle step to `ltx-extend`, then have Fabio look at the
-carousel.
+**2026-08-20 — THE MIDDLE STEP IS IN.** `ltx-extend` now declares one `preview`
+step on role `video1` (tickerLabel `Describe`, title "Describe what happens next")
+carrying `positive` (rows 3) and `negative` (rows 2) verbatim, so the carousel is
+supply → describe → run. The old comment that argued FOR `steps: []` is gone,
+replaced by foley's rebuttal plus the reason the move is safe: `_collectInputs`
+folds `stepValues[role].fields` into the same `declared` / `injectionParams` bins
+as a flow-level field, so this is a PLACEMENT change and not a payload one. Proved
+by import (`getFlowById('ltx-extend').steps`), 630/630 tests, ESLint clean;
+`preview` is a registered kind in `stepKinds.js`, so `isFrameKind` will not drop it.
+
+**One known cosmetic cost, not fixed:** a previously-saved `s_flowInputs.ltx-extend`
+holds `positive`/`negative` at flow level, and seeding for a step field reads
+`seeded.stepValues.video1.fields.*` — so an old snapshot re-opens with empty prompt
+boxes. Dev-gated flow, one re-type, not worth a migration.
+
+**DECIDED 2026-08-20 (Fabio):** `Input_Duration` stays on the LAST stage, beside
+Generate — "only at the last stage so that the second stage equals the Foley flow".
+So the describe step carries the two prompt boxes and nothing else, exactly like
+`ltx-foley`. That is what shipped; no further edit was needed. Do not move the
+duration slider onto the step in a later pass.
+
+**Next action:** Fabio's eyes on the carousel (Flow Library → Extend Video: three
+dots, clip at full size on the middle slide with the two prompt boxes, Seconds to
+add on the run slide).
 
 
 ## Phases

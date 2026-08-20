@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "15c0f3cc-6e28-42ca-9793-19c64aa06d7a",
   "generated_at": "2026-08-20T02:55:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-582 - declared fields mount Primitives; the component law written down",
     "branch": "master"
@@ -60,5 +60,7 @@
       "docs/playbooks/add-flow/ui/carousel-frame.md"
     ]
   },
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/15c0f3cc-6e28-42ca-9793-19c64aa06d7a.json and use mpi-continue to resume MPI-582, which is in `doing` on the master branch of c:/AI/Mpi/Cubric-Vision. The card's original scope - every declared field type mounting an app Primitive, one slider in the app, and the documentation that said a Flow needs no component - is SHIPPED, verified by tests and by Fabio in the running app, and committed as 78e7dd7a. One follow-up remains, which Fabio asked for in the same message: the Extend Video flow (`ltx-extend` in js/data/flowsRegistry.js) declares `steps: []`, so its carousel is only supply -> run. It needs a middle step shaped exactly like the Add Foley flow's (`ltx-foley` in the same file): a `preview` step on role video1 carrying the positive and negative prompt fields. Read the card's plan.md § Current State first - it names the trap (extend's own comment argues for having no middle step and must be rewritten) and the one open question (whether Input_Duration moves onto the step or stays on the run slide, which is Fabio's call)."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/15c0f3cc-6e28-42ca-9793-19c64aa06d7a.json and use mpi-continue to resume MPI-582, which is in `doing` on the master branch of c:/AI/Mpi/Cubric-Vision. The card's original scope - every declared field type mounting an app Primitive, one slider in the app, and the documentation that said a Flow needs no component - is SHIPPED, verified by tests and by Fabio in the running app, and committed as 78e7dd7a. One follow-up remains, which Fabio asked for in the same message: the Extend Video flow (`ltx-extend` in js/data/flowsRegistry.js) declares `steps: []`, so its carousel is only supply -> run. It needs a middle step shaped exactly like the Add Foley flow's (`ltx-foley` in the same file): a `preview` step on role video1 carrying the positive and negative prompt fields. Read the card's plan.md § Current State first - it names the trap (extend's own comment argues for having no middle step and must be rewritten) and the one open question (whether Input_Duration moves onto the step or stays on the run slide, which is Fabio's call).",
+  "resolved_at": "2026-08-20T03:20:00Z",
+  "resolution": "Resolved - the middle step shipped and Fabio verified the carousel; Input_Duration stays on the run slide by his call. MPI-582 is closed."
 }

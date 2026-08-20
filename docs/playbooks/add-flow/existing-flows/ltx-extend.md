@@ -30,18 +30,30 @@
   model — deliberately not built for a dev-gated surface).
 - **Input:** one video slot (`video1` → `Input_Video`, `MpiLoadVideo`, path-reading + self-gating).
 - **Output:** `mediaType: 'video'`; one capture, `Output_Video`.
-- **Steps:** none. Nothing is marked on the clip, so it is a 2-step carousel (supply → run).
+- **Steps:** one `preview` middle step (MPI-582, 2026-08-20) — a 3-step carousel
+  (supply → describe → run). Nothing is MARKED on the clip, but step 0 loads media at
+  thumbnail size, so the preview is the first point at which the user can judge the take
+  they are about to continue. Same shape as foley's; it replaced the original `steps: []`.
 
 ## The controls, and why each is what it is
 
 ```js
+steps: [
+  { kind: 'preview', role: 'video1', tickerLabel: 'Describe', title: 'Describe what happens next',
+    fields: [
+      { id: 'positive', type: 'text', rows: 3, label: 'What happens next', placeholder: '…' },
+      { id: 'negative', type: 'text', rows: 2, label: 'Avoid', default: '<the bench negative>' },
+    ] },
+],
 fields: [
-  { id: 'positive', type: 'text', rows: 3, label: 'What happens next', placeholder: '…' },
-  { id: 'negative', type: 'text', rows: 2, label: 'Avoid', default: '<the bench negative>' },
   { id: 'Input_Duration', type: 'slider', label: 'Seconds to add', min: 1, max: 10, step: 1, default: 4 },
 ]
 ```
 
+- **The prompts sit on the step, the duration on the run slide** — Fabio's call (2026-08-20):
+  the length knob belongs beside Generate, so the describe step is exactly foley's two boxes.
+  Placement changes nothing about the payload: `_collectInputs` folds `stepValues[role].fields`
+  into the same `declared` / `injectionParams` bins as a flow-level field.
 - **`positive` / `negative` are top-level run inputs** — `submitFlowGeneration` reads
   `inputs.positive` / `inputs.negative` and the executor writes them to `Input_Positive` /
   `Input_Negative`. The prompt describes the NEW seconds, not the whole clip.
@@ -68,6 +80,10 @@ DELETED because they fed only the encode and never the delivered pixels. Here #2
 the delivered clip. Same family, opposite call (`MPI-536` brief § Deliberately NOT exposed).
 
 ## Verification (2026-08-14, isolated app on its own port + profile)
+
+> Records the ORIGINAL 2-step shape. The carousel gained its describe step on 2026-08-20
+> (MPI-582); everything below still holds except the step count and where the two prompt
+> boxes render.
 
 1. `flow:open` mounts a 2-step carousel with **no** component — `_flowComponents[undefined]`
    resolves to `null`, which is a supported path, not a hole.

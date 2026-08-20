@@ -66,6 +66,29 @@ What he checked:
       an `--accent-heat` FILL and a 16px handle, where the longhand was a `--line`
       rail, no fill, 14px thumb. That is the cost of there being one slider.
 
+## Where this card's work actually lives (claim-auditor, 2026-08-20)
+
+**MPI-582 is split across TWO commits, and the second one's message overstates
+what it carries.** Anyone auditing this card later needs both:
+
+- `25a96d14` — titled for MPI-504, but it swept in this card's uncommitted edits
+  to `js/utils/declaredFields.js`, `js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css`
+  and `js/data/flowsRegistry.js`. That is where the `select`/`toggle`/`number`
+  branches, the `field-text` rehook, and MpiBaseFlow's deleted `accent-color` and
+  `:focus-visible` blocks are.
+- `78e7dd7a` — titled for MPI-582. Carries the mask-tool sweep, the upscale panel
+  CSS, `.claude/rules/components.md`, the playbook, and the card workspace. Its
+  message describes the three changes above as if it carried them; it does not.
+
+The message was not amended — it is pushed on a shared tree with live peer
+sessions, and rewriting published history to fix an attribution line is a worse
+trade than recording it here. Every change is real at HEAD; the auditor confirmed
+16 claims PROVEN, this one OVERSTATED, and two UNVERIFIABLE because their evidence
+was runtime-only (the 18-test desktop count and the `label=70%` probe reading).
+
+Cause: a live MPI-504 session committed while this one was mid-work. Known
+hazard, already recorded in memory `feedback_concurrent_sessions_same_file`.
+
 ## Closed without work
 
 Card item 3, "REVISE THE FLOWS": Fabio, 2026-08-20 — "I already had a look at all
@@ -78,3 +101,23 @@ audit was run and none is owed.
 Extend Video has no middle step and should have one shaped like Add Foley's.
 Carried into `plan.md` § Current State and handed to a fresh session; the
 card stays in `doing` for it.
+
+## The follow-up - Extend Video's middle step - VERIFIED 2026-08-20
+
+**"looks good. This is verified."** - Fabio, after looking at the carousel in the
+running app. That closes the card's last item.
+
+Automated half, run before he looked:
+
+- `npm test` -> 630/630 pass.
+- `npx eslint js/data/flowsRegistry.js` -> clean.
+- Import probe: `getFlowById('ltx-extend').steps` reads
+  `[{preview, video1, tickerLabel Describe, fields [positive:text:3, negative:text:2]}]`
+  and flow-level `fields` reads `['Input_Duration']` - the same shape as `ltx-foley`.
+- `preview` is registered in `stepKinds.js`, so `isFrameKind` cannot drop the step.
+- `npm run release:check` -> passed. `validate_board.py` -> passed.
+  `scripts/overtaken-cards.py` -> 0 candidates.
+
+Placement is not a payload change: `_collectInputs` folds `stepValues[role].fields`
+into the same `declared` / `injectionParams` bins as a flow-level field, which is
+why foley's prompts already reach the op from a step.
