@@ -32,6 +32,13 @@ _(none yet)_
 
 ## What's new
 
+- Place puts one picture inside another. Open an image, pick Place from the Composite tools, and
+  drop in a second image — a logo, a product, a person cut out of another shot. Drag it where you
+  want it, scale and rotate it with the handles, and Apply stamps it down as a new entry with both
+  originals untouched. Remove background cuts the object out first, so what lands is the object and
+  not its rectangle. The button beside Apply puts the picture back to its own size if you have
+  scaled it somewhere you did not mean to, without moving it.
+
 - Flows are out of preview. The Flow Library is a set of outcome-shaped jobs you run without
   assembling a workspace: Head Swap, Extend Video, Add Foley, Upscale Video, Character
   Sheet and Outpaint. Open it from the Flows button at the top of the gallery, from the

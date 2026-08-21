@@ -183,6 +183,29 @@ prints `READY <url>`. Drive that URL, never 3000.
   (`POST /delete-project {"folderPath": …, "deleteFiles": true}`, and note it wants `folderPath`
   at the top level, not a nested `project` object). Measured MPI-592: two probe projects written
   straight into the live root, both removed by hand.
+- **Driving it from a BROWSER (`playwright-cli`) has three traps that each read as a broken app.**
+  (1) The viewer mounts NO `<canvas>` until a canvas tool is armed — before that it is an `<img>`,
+  so a `querySelectorAll('canvas')` poll returns 0 and looks like a failed load. Arm the tool
+  first, then query. (2) `playwright-cli drop` cannot reach the file-drop target: it is
+  `MpiMediaDropOverlay`, which only becomes the top element after a `dragenter`, so `drop` has
+  nothing to resolve and dropping on the canvas underneath does nothing at all. Build the sequence
+  in-page instead — canvas → `toBlob` → `new File` → `new DataTransfer`, dispatch `dragenter` on
+  `window`, then `drop` on `.mpi-media-drop-overlay`. Whether the overlay went visible on
+  `dragenter` is itself the assertion for a branch that is supposed to SUPPRESS the drop (the
+  video-prompt short-circuit). (3) Managers are not reachable: `MpiCanvas` binds its `_methods`
+  allowlist to the core, so `el.hasShape` has no retrievable `this` and there is no handle on
+  `ShapeManager`. Measure the OVERLAY CANVAS ALPHA BBOX instead — `getImageData` gives x/y/w/h and
+  centre of whatever is drawn, and the OPAQUE-PIXEL COUNT is the load-bearing half, because a
+  400×160 placement rotated 45° has a 396×397 bbox that no aspect test can tell from a square
+  while its 64000 opaque px separates it from a square's 78400 outright (MPI-454).
+- **A COPIED project is still not isolated, and grep will not show you why.** Copying a project
+  folder to get a disposable one leaves every `Media/.meta/<uuid>.json` `filePath` pointing at the
+  ORIGINAL — they hold a full absolute path inside a `/project-file?path=…` query string
+  ([project-integrity.md](project-integrity.md) § Sidecar Files), and it is URL-ENCODED, so a grep
+  for `My Project` misses `My%20Project` and the copy reads as clean. The tell is the live
+  `canvas[data-role="base"]`'s `data-media-url` naming the source project. Rewrite both spellings
+  across `Media/.meta/` and `Media/.preview-assets/` and reload, or the probe is driving the
+  user's real files.
 - **Never pipe the launch into `head` / `grep -m1`** — the consumer exits, stdout dies, and the
   third-party electron npm wrapper throws an EPIPE that takes the app with it (MPI-514). Read the
   URL out of the background task's output file.
