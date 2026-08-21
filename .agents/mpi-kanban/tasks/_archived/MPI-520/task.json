@@ -1,0 +1,24 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-520",
+  "title": "LTX 2.3 v2v extend - wire the proven bench workflow into the app as a Flow",
+  "description": "CLOSED 2026-08-21. The card's one open gate was 'the user's live generation - the app-side dispatch has never produced a clip'. It has: `flowLtxExtend_001.mp4` is a real app-dispatched extend output, and it is the SOURCE clip of the foley run read back from the app engine's /history in MPI-531's validation (prompt 45f7b18c, 53 nodes). That same readback records an extend run of its own the day before, carrying Fabio's continuation sentence in MpiText #12 and the seeded negative in #13 - dispatched values, not the graph's baked defaults. Two further commits consumed real extend output afterwards: MPI-581 built the Extend Video hero from a generated clip (44a4843d) and MPI-582 added the describe step the live flow was missing (db17b39c).\n\nSTILL DEFERRED, deliberately, and NOT a reason to keep this open: Input_Width / Input_Height as MpiInt. It needs a bench re-export and the flow is coherent without them - #28 takes width and height from Input_Video's own outputs. Detail and the 'do not copy foley's opposite decision' warning are in docs/playbooks/add-flow/existing-flows/ltx-extend.md.\n\nUMBRELLA: MPI-560 - The Flow track (merge of MPI-529 + MPI-552 + MPI-560, 2026-08-16). Members and phase order: tasks/MPI-560/plan.md.\n\nSHIPPED app-side 2026-08-14 as the Flow `ltx-extend` - the FIRST Flow with no uiComponent, its controls declared as data (FlowDef.controls, unblocked by MPI-531 item 1 the same session). Workflow renamed raw/ltx_v2v_template.json -> raw/flow_ltx_extend.json (a bare name converts straight to a runtime file; the _template suffix would have routed it to a generator that does not exist for flows) and converted against the APP engine 48188. Op flowLtxExtend registered in all 4 files. Evidence: tasks/MPI-520/validation.md. Doc: docs/playbooks/add-flow/existing-flows/ltx-extend.md.\n\nOPEN: the user's live generation - the playbook puts the real run with the user, and the app-side dispatch has never produced a clip. Needs the ltx-23-balanced card installed (the graph bakes the int8 transformer).\n\nDEFERRED: Input_Width/Input_Height as MpiInt. Needs a bench re-export (agents never hand-edit a workflow JSON) and the flow is coherent without them - #28 takes width and height from Input_Video's own outputs, so the output matches the source. Do NOT copy foley's opposite decision (MPI-536 deleted its width/height because they fed only the encode).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "closed",
+  "created_at": "2026-08-10T20:30:00Z",
+  "updated_at": "2026-08-21T06:23:26Z",
+  "links": {
+    "brief": "brief.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "tags": [
+    "video",
+    "ltx"
+  ],
+  "priority": "high"
+}

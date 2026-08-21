@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-591",
+  "title": "Extend Video takes MiniMax H3 as well as LTX 2.3, and the user picks which",
+  "description": "FABIO, 2026-08-20: 'let's card that as an option in the extend video flow. We already added a dropdown for selecting a model in the character sheet, so we shall do the same later on for extend video so that the user can select either minimax or LTX.' DEFERRED ON PURPOSE - not the next version, the one after, because it is BLOCKED ON AN ENGINE BUMP. THE BLOCKER, verified with gh 2026-08-20: the two core nodes an H3 extend needs are on comfyanonymous/ComfyUI MASTER ONLY and in no tagged release - PR 15439 MiniMaxH3AddGuide (merged 2026-08-13, comfy_extras/nodes_minimax_h3.py) and PR 15375 per-stream H3 video/audio latent noise masks (merged 2026-08-18). Latest tag is v0.33.1 (2026-08-13) and it carries NEITHER; dev_configs/node_lock.json pins v0.31.0 (43cb4ff, 2026-08-07). So this card cannot start until /mpi-bump-engine lands a core that has both - check the tags again first, do not assume master is still the only home. HALF THE WORK IS ALREADY DONE: MPI-590 shipped the reusable any-of mechanism - requiredModels entries may be arrays (flowsRegistry.js flowModelSlots/flowModelIds/flowModelChoices), the slide-over MpiDropdown lists only INSTALLED members, settingsModel resolves through the set, and per-member modelParams merge into injectionParams. So the gate and the picker are NOT this card. THE ONE NEW THING: FlowDef.workflow is a SINGLE string ('flow_ltx_extend.json'), and modelParams swaps PARAMS inside one graph, not the graph itself. LTX extend and H3 extend are different node sets end to end (LTXVAudioVideoMask + LTXVConcatAVLatent + LTXVSeparateAVLatent vs an H3 nested-tensor AV latent + MiniMaxH3AddGuide), so this is the first Flow whose picked model must select a DIFFERENT WORKFLOW FILE. Decide that contract (per-member workflow map on the FlowDef vs a resolver hop) before writing any graph - it is the part that outlives the card. requiredModels becomes [['ltx-23-balanced', 'minimax-h3']]. H3's licence consent gate already exists (MPI-451, keyed by licence id in licences.js) so an H3-only user who accepted during an fl2va install gets no second dialog. The H3 seam math, the two continuation strategies and the silent traps are in brief.md - read it before touching a graph, the grid rules fail SILENTLY as a bad-looking generation. PROCEDURE: docs/playbooks/add-flow/ (01-descriptor-and-ops.md owns the FlowDef contract this changes) plus docs/workflow-authoring/ for the graph.",
+  "column": "todo",
+  "maturity": "blocked",
+  "status": "active",
+  "created_at": "2026-08-20T16:34:45Z",
+  "updated_at": "2026-08-20T16:34:45Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}

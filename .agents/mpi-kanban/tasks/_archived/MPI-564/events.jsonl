@@ -1,0 +1,4 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "at": "2026-08-14T05:10:00Z", "actor": "opus", "id": "MPI-564", "note": "created in doing - gallery card notes indicator"}
+{"schema": "mpi-kanban/event/v1", "type": "validation.updated", "at": "2026-08-14T05:30:00Z", "actor": "opus", "id": "MPI-564", "note": "marker verified live in an isolated instance (order, conditional display, click emits card-notes only), 592/592 tests; visual judgement left to the user."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "at": "2026-08-14T05:45:00Z", "actor": "opus", "id": "MPI-564", "note": "doing -> done; user confirmed the marker live in the cowboys project."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-564", "type": "task.deleted", "at": "2026-08-21T07:07:57Z", "actor": "session:2f655b5f", "summary": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-564/ (workspace preserved intact). mpi-archive run 2026-08-21."}

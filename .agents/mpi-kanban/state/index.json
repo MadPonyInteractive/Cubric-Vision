@@ -1,37 +1,12 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-21T12:40:00Z",
+  "updated_at": "2026-08-21T07:06:01Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
-  "active_sessions": [
-    {
-      "id": "45a29ed9-e930-4996-aa17-e605a4438c72",
-      "path": ".agents/mpi-kanban/state/sessions/45a29ed9-e930-4996-aa17-e605a4438c72.json",
-      "role": "implementer",
-      "status": "active",
-      "heartbeat_at": "2026-08-20T12:05:06Z"
-    }
-  ],
+  "active_sessions": [],
   "active_tasks": [],
-  "active_file_claims": [
-    {
-      "id": "1f3ae78d-5f6b-4796-a802-c8177e0ffe5d",
-      "path": ".agents/mpi-kanban/state/files/1f3ae78d-5f6b-4796-a802-c8177e0ffe5d.json",
-      "task_card": "MPI-594",
-      "status": "claimed",
-      "owner_session": ".agents/mpi-kanban/state/sessions/9685b71b-3bbc-4fa7-a54f-5bea18a077e3.json",
-      "heartbeat_at": "2026-08-21T03:35:00Z"
-    }
-  ],
+  "active_file_claims": [],
   "pending_file_states": [
-    {
-      "id": "3d80a1e1-f599-4eed-8d3e-f35fe33f6e8f",
-      "path": ".agents/mpi-kanban/state/files/3d80a1e1-f599-4eed-8d3e-f35fe33f6e8f.json",
-      "task_card": "MPI-588",
-      "status": "complete",
-      "owner_session": ".agents/mpi-kanban/state/sessions/ec266fab-846c-41fd-aee2-45992de3cd8f.json",
-      "heartbeat_at": "2026-08-21T02:05:00Z"
-    },
     {
       "id": "fa51ee7f-2398-4911-8d75-402c61f462d5",
       "path": ".agents/mpi-kanban/state/files/fa51ee7f-2398-4911-8d75-402c61f462d5.json",
@@ -39,41 +14,8 @@
       "status": "needs_verification",
       "owner_session": ".agents/mpi-kanban/state/sessions/dc6fe1e5-cc35-45f1-982f-59f7c2ba13df.json",
       "heartbeat_at": "2026-08-20T05:35:00Z"
-    },
-    {
-      "id": "3f404349-7540-400a-8bb4-15c591616244",
-      "path": ".agents/mpi-kanban/state/files/3f404349-7540-400a-8bb4-15c591616244.json",
-      "task_card": "MPI-589",
-      "status": "complete",
-      "owner_session": ".agents/mpi-kanban/state/sessions/6b366931-dba7-46c1-93d1-980f6fe845f8.json",
-      "heartbeat_at": "2026-08-20T15:00:00Z"
-    },
-    {
-      "id": "0b71c23c-5297-4e32-a90f-2cff8b752267",
-      "path": ".agents/mpi-kanban/state/files/0b71c23c-5297-4e32-a90f-2cff8b752267.json",
-      "task_card": "MPI-589",
-      "status": "complete",
-      "owner_session": ".agents/mpi-kanban/state/sessions/6b366931-dba7-46c1-93d1-980f6fe845f8.json",
-      "heartbeat_at": "2026-08-20T15:25:00Z"
     }
   ],
   "open_messages": [],
-  "active_handoffs": [
-    {
-      "id": "584f6547-fe3c-4f0d-afac-22daeee351b4",
-      "path": ".agents/mpi-kanban/state/handoffs/584f6547-fe3c-4f0d-afac-22daeee351b4.json",
-      "task_card": "MPI-507",
-      "status": "open",
-      "created_at": "2026-08-10T06:10:41Z",
-      "note": "Card was parked back to todo by 9a92c0ff - the handoff still records the SeedVR2 root-cause and the PiD Flow blocker."
-    },
-    {
-      "id": "b825e15e-e317-40b0-9f73-92753353ad3e",
-      "path": ".agents/mpi-kanban/state/handoffs/b825e15e-e317-40b0-9f73-92753353ad3e.json",
-      "task_card": "MPI-504",
-      "status": "open",
-      "created_at": "2026-08-21T12:40:00Z",
-      "note": "Stress test passed 10/10; the head-branch redesign is decided and needs raw/ edited."
-    }
-  ]
+  "active_handoffs": []
 }

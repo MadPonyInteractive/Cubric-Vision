@@ -1,0 +1,71 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "b825e15e-e317-40b0-9f73-92753353ad3e",
+  "generated_at": "2026-08-21T12:40:00Z",
+  "status": "closed",
+  "session": {
+    "name": "MPI-504 - the 10/10 stress test passed, and the head branch was redesigned in conversation",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Run MPI-504's owed 10/10 stress test, then act on what it found.",
+    "status": "in_progress",
+    "summary": "The stress test is DONE and it passes on the thing it was scoped to prove. It also surfaced a failure that is not a mispick, and Fabio used that to redesign the head branch across three changes. NOTHING IN THE GRAPH WAS CHANGED - he had flow_character_sheet open and dirty in the bench editor all session. The next session edits raw/ and implements the redesign."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    "completed": [
+      "THE 10/10 STRESS TEST - PASSES. Scope settled by Fabio first: prove the branch never picks the BACK OF THE HEAD, not the brief's 'ten poses ten lights' (that is a character-asset test and this flow emits one fixed thing). Ten characters, ten seeds, all four recipes, 2k-quality on the bench, ~250s a sheet. The back of the head was never picked. face_yolov8n as stage 1 IS the guarantee - a back-of-head presents no face - and the one case that could defeat it, a rear figure turned far enough to show a face, did not occur once.",
+      "9 OF 10 ON THE REMOVAL, and the failure is the EMPTY-DETECTION case. On a flat cartoon render the detector found ZERO faces, so 751 returned size 0, and MpiBoxCrop PASSES THE FULL IMAGE THROUGH on a zero box by design (ComfyUi-MpiNodes/img.py:618). SAM3 then masked every head on the sheet and Klein destroyed the portrait. Fabio hit the same thing independently at 1k.",
+      "CORRECTED: the head-box SQUARE does not affect what is removed. 751 feeds only 752 -> 758 -> 755, so it bounds where SAM3 SEARCHES. My earlier handoff blamed the geometry for the clothing damage; that is a dead end and is now written down as one.",
+      "CORRECTED: Klein's growth is BOUNDED BY THE STITCH and is three surfaces, not one - 718 (expand 40 / blend 32, stitched by 696), 689 (expand 6 / blend 32, stitched by 680), and 682 MaskDetailerPipe's own feather 6 / noise_mask_feather 20. So 'expand 6 and 40 measured near-identical' means the coif sits within ~38px of the head mask, not that the growth swamps the difference.",
+      "CORRECTED: the portrait sat on the RIGHT in 10 of 10 across all four recipes. The '3 of 4 styles mirror the layout' measurement that ruled out a leftmost rule does NOT replicate at 2K.",
+      "MEASURED for the redesign: front figure ends by ~20% of sheet width INCLUDING a top hat (02), antlers (10) and a fedora (08); rear body starts ~24%; rear HEAD starts ~29%.",
+      "Commits ea1f457e, c5ce77e0, f87b1bad - validation.md and the previous handoff only. No code, no graph."
+    ],
+    "pending": [
+      "IMPLEMENT THE THREE CHANGES IN raw/flow_character_sheet.json - see next_action. This is the whole job for the fresh session.",
+      "UNCHECKED: `head, hat` against WAIST-LENGTH hair (05-swordswoman's braid) and TWIN TAILS (07-idol). The remnant is larger there and whether the panel still reads as a usable reference is Fabio's judgement, not mine.",
+      "NEW, NOT CARDED: Cartoon and Anime WASH OUT at 2K. Runs 07, 08 and 10 came back near-greyscale with flat wardrobe while every Photoreal and 3D sheet held its colour. Upstream of the head branch entirely. Worth its own card.",
+      "plan.md's open calls 2 and 4. (The krea2-nsfw-only install case was CLOSED by Fabio 2026-08-21 - do not re-open it.)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-504",
+    "title": "Character Sheet flow - a description in, a video-reference sheet out (front body HEADLESS)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-504/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "IMPLEMENT THE HEAD-BRANCH REDESIGN in raw/flow_character_sheet.json, then sync-raw-workflows.mjs. CONFIRM WITH FABIO FIRST that he has saved and closed the bench editor - he had the graph open and DIRTY all of the previous session, which is why nothing was changed then. Three changes, all his calls, all recorded in validation.md with their evidence: (1) RESTRICT THE MASKING TO THE FAR-LEFT REGION. The mechanism is already in the node: `755 SAM3_Detect` has an optional `bboxes` input of type BOUNDING_BOX whose tooltip is 'Bounding boxes to segment within' - a REGION RESTRICTION, not an object selector. So pass the FULL sheet as `image` plus a left-hand box, and the mask returns in sheet coordinates. Core node `PrimitiveBoundingBox` (comfy_extras.nodes_images) supplies it - x=0, y=0, width = a quarter of the sheet width, height = the sheet height, driven off the existing `771 Width_Select` / `772 Height_Select` through an MpiMath. Its INT widgets accept links, exactly as `751.padding` and `720.value` already do. ~25% is the measured-safe cut. (2) DELETE STAGE 1 - `745` / `746` face_yolov8n, `747` and `773` exist only to locate the front head, and the box machinery `749`/`750`/`751`/`752`/`758` plus the `756`/`757` paste-back all exist only to crop to it and paste it home. Feeding SAM3 a bbox against the full sheet removes the need for every one of them, AND removes the zero-face failure, because no detector remains to return nothing. (3) `754` VOCABULARY BECOMES `head, hat`. Verify after: npm test, and validate-injection-rules.mjs on both graphs.",
+    "command": "mpi-continue MPI-504"
+  },
+  "context": {
+    "key_decisions": [
+      "THE VOCABULARY IS `head, hat` (Fabio, 2026-08-21, on his own 1k evidence). Front body returns with no head, no hat and NO BEARD, and its collar, tie, waistcoat and coat intact. The hair left on the shoulders is the mask boundary and is exactly what keeps Klein off the garment - `hair` is the term that dragged the mask onto the clothing and cost 06-knight its mail coif. This REVERSES his own objection to `head` raised earlier the same day (trailing hair IS left behind; he re-judged that acceptable once it became clear the same property protects the wardrobe). `face` does not bind a moustache - run 08 left one floating over an erased face.",
+      "STILL NO `neck` IN THE VOCABULARY. Unchanged. Klein grows past whatever mask it is handed, so a neck in the mask destroys what is behind it.",
+      "THE FAR-LEFT FIGURE IS THE FRONT BODY - Fabio's observation, confirmed 10 of 10. That is what makes stage 1 deletable rather than merely reducible.",
+      "SUBTRACTION (`head` minus `clothes`) was raised and is NOT the chosen path - `head, hat` achieved the same protection with no second SAM3 pass. Keep it as the fallback if the hair remnant proves unacceptable on long-haired characters."
+    ],
+    "constraints": [
+      "ASK BEFORE USING THE GPU. A free lease is not evidence Fabio is idle - he drives the bench himself and did so for most of this session. The APP ENGINE (48188) IS HIS; the BENCH (8188) is the right target, and it must be handed back explicitly. Killing a python harness does NOT stop a queued ComfyUI job - POST /interrupt AND POST /queue {\"clear\":true}, then confirm running 0 pending 0.",
+      "`raw/` IS USER-OWNED and Fabio had flow_character_sheet OPEN AND DIRTY in the bench editor. Confirm he has saved and closed before editing. Always go through sync-raw-workflows.mjs; it REFUSES while a generated workflow is uncommitted, so commit the API file first.",
+      "OTHER SESSIONS ARE LIVE IN THIS TREE - MPI-531, MPI-587, MPI-591, plus a staged comfy_workflows/flow_outpaint.json that is FABIO'S, and uncommitted work across MpiBaseFlow.js, flowsRegistry.js, operationRegistry.js, commandRegistry.js and more. Commit by explicit pathspec only, never git add -A.",
+      "NOTHING IS PUSHED and push was deliberately not run despite push_policy: auto - the branch carries six commits from the previous session plus three from this one plus other sessions' work, and publishing all of that is not this card's call to make.",
+      "The stress-test harness, all 10 sheets, the contact sheet and the column-measurement sheet are in the session scratchpad under `headpick/` - they are NOT in the repo and will be gone. Every number taken off them is already written into validation.md."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-504/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "comfy_workflows/raw/flow_character_sheet.json"
+    ]
+  },
+  "resume_prompt": "Resuming MPI-504 (Character Sheet flow) in Cubric Vision, master. Read .agents/mpi-kanban/state/handoffs/b825e15e-e317-40b0-9f73-92753353ad3e.json first, then the LAST FIVE sections of tasks/MPI-504/validation.md - they carry the previous session's measurements and three corrections. The owed 10/10 stress test is DONE and PASSES: the head branch never picks the back of the head, 10 of 10 at 2k-quality across all four recipes. The one failure was not a mispick but the EMPTY-DETECTION case - zero faces detected means MpiBoxCrop passes the full sheet to SAM3, which then masks every head and destroys the portrait. Fabio used that to redesign the head branch and settled three changes, NONE of them implemented because he had the graph open and dirty in the bench editor: restrict the masking to the far-left region via SAM3_Detect's `bboxes` input, delete stage 1 (face_yolov8n and both SEGS filters, plus the whole crop/paste-back box machinery), and change the SAM3 vocabulary to `head, hat`. YOUR JOB IS TO IMPLEMENT THAT in raw/ and sync it - confirm with Fabio that he has saved and closed the bench editor first. DO NOT add `neck` to the vocabulary, and do not chase the head-box geometry for the clothing damage - both are recorded dead ends. ASK BEFORE USING THE GPU.",
+  "closed_at": "2026-08-21T07:06:01Z",
+  "closed_note": "Closed by mpi-cleanup 2026-08-21T07:06:01Z - stale leftover, the session that opened it is long gone."
+}

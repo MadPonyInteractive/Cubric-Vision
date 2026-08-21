@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-595",
+  "title": "1.5 release readiness umbrella - clear the gates before cutting 1.5.0",
+  "description": "UMBRELLA - the 1.5 gate list. There is no pre-release tier in this project (one GitHub-only release flow, see the mpi-release skill), so this card IS the pre-release: what must read clear before /mpi-version-bump stamps 1.5.0. Same shape as MPI-450, which did this for 1.4. Like MPI-450 it RE-PARENTS NOTHING - every member keeps its own umbrella (MPI-553, MPI-560, MPI-527, MPI-559). Gate list, not a fold.\n\nMEASURED 2026-08-21: version on disk 1.4.2, 163 commits since v1.4.2, 3 unpushed, release:check passed, UNRELEASED.md holds 5 whatIsNew + 0 importantChanges + 7 fixes (feature bullets -> second digit -> 1.5.0). Board: 3 doing, 65 todo.\n\nTHE RISK IS IN TWO PLACES. (1) The Flow surface goes from dev-gated to the headline feature in one version. (2) The release pipeline itself - a CI-red build guard and a stale update manifest have sat in todo since the 1.4 close-out.\n\nGATE A must-fix: MPI-507 -> MPI-515 (the only card labelled 1.5 BLOCKER), MPI-531 (Flow authoring shape, its own text says RELEASE BLOCKER), MPI-522 + MPI-523 (artifacts that lie about themselves), MPI-516 (a destroyed prompt hangs forever - Fabio deferred it TO 1.5 on 2026-08-10), MPI-575 (LTX preview junk frames on foley and extend, two Flows this release headlines). GATE B must-verify: MPI-520 out of validating, MPI-594's graphics, MPI-559 phase 1 on the Linux box (NOT blocked), both test suites, smoke evidence only if the engine pin moved. GATE C must-decide: the UNRELEASED claim audit, the frozen Flow list, MPI-515's outcome, macOS, the three toast cards. GATE D hygiene: push, commit, overtaken-cards.py, three stale-blocked cards, the bump.\n\nANY GATE A CARD THAT DOES NOT CLEAR BECOMES A KNOWN-ISSUE LINE IN THE NOTES. Silently open is not an option - that is the whole point of this card.\n\nFOUND BY THIS SWEEP, not gates but fix them here: MPI-557 is stale-blocked (both MPI-579 and MPI-580 are done), MPI-518 is stale-blocked on the 1.4 release which shipped, and SIX Flow cards sit outside MPI-560 whose own text claims every Flow card lives in one place (MPI-594, MPI-586, MPI-567, MPI-591, MPI-557, MPI-355).\n\nFull gate table with the reasoning per member: brief.md. Tick-list: checklist.md.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "priority": "high",
+  "created_at": "2026-08-21T06:04:55Z",
+  "updated_at": "2026-08-21T06:04:55Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "events": "events.jsonl"
+  }
+}

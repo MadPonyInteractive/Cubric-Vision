@@ -1,9 +1,0 @@
-{"schema": "mpi-kanban/event/v1", "type": "task.created", "at": "2026-08-12T07:58:00Z", "actor": "claude", "id": "MPI-546", "note": "filed from MadPony-Identity while producing the Cubric western film"}
-{"schema": "mpi-kanban/event/v1", "type": "task.moved", "at": "2026-08-12T08:34:17Z", "actor": "claude", "id": "MPI-546", "from": "todo", "to": "doing", "note": "Implementation started."}
-{"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "at": "2026-08-12T08:34:17Z", "actor": "claude", "id": "MPI-546", "note": "Derived 5 items from plan.md phases."}
-{"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "at": "2026-08-12T08:43:45Z", "actor": "claude", "id": "MPI-546", "note": "Phases 1-4 done; Live smoke outstanding."}
-{"schema": "mpi-kanban/event/v1", "type": "validation.updated", "at": "2026-08-12T08:43:45Z", "actor": "claude", "id": "MPI-546", "note": "npm test 575/575 + lint clean; live smoke not run (needs engine + model)."}
-{"schema": "mpi-kanban/event/v1", "type": "task.updated", "at": "2026-08-12T08:43:45Z", "actor": "claude", "id": "MPI-546", "note": "maturity -> validating"}
-{"schema": "mpi-kanban/event/v1", "type": "validation.updated", "at": "2026-08-12T09:22:36Z", "actor": "claude", "id": "MPI-546", "note": "Live smoke PASSED: real gallery card + sidecar + project.json group."}
-{"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "at": "2026-08-12T09:22:36Z", "actor": "claude", "id": "MPI-546", "note": "All 5 phases complete."}
-{"schema": "mpi-kanban/event/v1", "type": "task.moved", "at": "2026-08-12T09:22:36Z", "actor": "claude", "id": "MPI-546", "from": "doing", "to": "done", "note": "Verified live on isolated instance :50478 with CUBRIC_MODELS_ROOT=G:/CubricModels."}

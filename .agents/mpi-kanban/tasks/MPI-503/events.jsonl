@@ -1,1 +1,0 @@
-{"schema": "mpi-kanban/event/v1", "id": "MPI-503", "type": "task.created", "at": "2026-08-09T08:10:00Z", "actor": "claude", "summary": "Created and closed in one pass: scripts/overtaken-cards.py plus the close-out step that runs it. Came out of the 2026-08-09 claim audit, which found two todo cards whose work had already shipped under another card id."}

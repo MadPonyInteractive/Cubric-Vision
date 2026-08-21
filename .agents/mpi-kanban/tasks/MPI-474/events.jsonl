@@ -1,6 +1,0 @@
-{"schema":"mpi-kanban/event/v1","type":"task.created","at":"2026-08-07T07:19:49Z","actor":"claude","id":"MPI-474","title":"Prompt box cycles three fields: positive, negative, negative audio"}
-{"schema":"mpi-kanban/event/v1","type":"task.moved","at":"2026-08-07T07:19:49Z","actor":"claude","id":"MPI-474","title":"Prompt box cycles three fields: positive, negative, negative audio","from":"todo","to":"doing","reason":"Implementation started."}
-{"schema":"mpi-kanban/event/v1","type":"validation.updated","at":"2026-08-07T14:10:00Z","actor":"claude","id":"MPI-474"}
-{"schema":"mpi-kanban/event/v1","type":"task.updated","at":"2026-08-07T14:10:00Z","actor":"claude","id":"MPI-474","maturity":"validating"}
-{"schema":"mpi-kanban/event/v1","type":"attention.required","at":"2026-08-07T14:10:00Z","actor":"claude","id":"MPI-474","reason":"Code complete; needs live proof that Input_Negative_Audio reaches the dispatched graph."}
-{"schema": "mpi-kanban/event/v1", "id": "MPI-474", "type": "task.moved", "at": "2026-08-08T04:10:00Z", "actor": "opus", "from": "doing", "to": "done", "summary": "Closed on the user's call 2026-08-08."}
