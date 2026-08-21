@@ -56,10 +56,21 @@ The cause is arithmetic, and it is the trap worth remembering: **`:not(:disabled
 its argument's specificity.** `.mpi-btn.mpi-ibtn.mpi-btn--ghost:hover:not(:disabled)` is
 therefore **(0,5,0)**, not the (0,3,1) it looks like — three classes plus `:hover` plus
 `:disabled`. Every consumer override that merely "added a class" was tying it, not beating it,
-and only won by stylesheet load order. Seven rules were re-scored to (0,6,0) — four classes plus
-`:not(:disabled)` — so they outrank it outright: the bypass toggle, the queue head button, the
-slide-over close, the drawer close, both ToolOptionsPrompt chips, the media-picker expand and
-preview-close, and the prompt-box chip remove.
+and only won by stylesheet load order.
+
+**Nine rules were re-scored, and they split into two kinds** — the first write-up of this said
+"seven" and then listed nine, which the close-out claim audit caught. Counted off the committed
+diff:
+
+- **Eight hover selectors** taken to four classes plus `:not(:disabled)` = **(0,6,0)**, so they
+  outrank `.mpi-btn.mpi-ibtn.mpi-btn--ghost:hover:not(:disabled)` (0,5,0) outright: the queue head
+  button, the slide-over close, the drawer close, both ToolOptionsPrompt chips (thumb-clear and
+  swap), the media-picker expand and preview-close, and the prompt-box chip remove.
+- **One is not a hover re-score at all.** The LoRA bypass keeps a two-class hover rule at (0,4,0);
+  what was bumped is its *pressed* rule,
+  `.mpi-btn.mpi-ibtn.mpi-btn--ghost.mpi-model-settings__lora-bypass[aria-pressed="true"]:not(:disabled)`,
+  so the warn tint survives being hovered. That is the regression this pass found, and lumping it
+  in with the hover eight is what made the count wrong.
 
 Re-hovered after the fix, all correct: bypass keeps its warn color-mix; the queue button fills
 `--surface-2`; the swap keeps `--surface-1` and turns heat; the thumb clear turns heat with
@@ -74,5 +85,15 @@ background-free with an ink-2 edge.
    = 16px), so a few icons move by ~2px from their old hand-set size. Two places that had an
    explicit pin keep it: the drawer close at 13px, and the queue action's `xs` glyph.
 2. **Every hover the consumer had is preserved**, including the ones the ghost Primitive would
-   not paint. Dropping them would align the app with the ghost vocabulary and delete ~30 lines
-   of override — but it is a visual decision, not a lint fix, so it was not taken here.
+   not paint. This was first written up as a deferred visual decision — "dropping them would
+   align the app with the ghost vocabulary and delete ~30 lines" — and that framing was wrong.
+   Reading all ~20 overrides back, most are load-bearing, and dropping them would regress real
+   behaviour: the media-picker's active tab **is** `--surface-2`, so hovering an inactive tab
+   would read as selected; the queue's Stop would lose its heat fill; the thumb-clear and chip
+   remove would lose the heat that **is** the destructive-action warning; the expand and
+   preview-close chips would lose the scrim that keeps their glyph readable over imagery; and the
+   EngineInstall choice cards' custom hover exists to keep the 11px fact lines above 4.5:1, which
+   `--surface-2` breaks. Genuinely redundant: three — the ordinary context-menu row (the override
+   sets the same `--surface-2` the Primitive gives), the drawer close (colour matches; only the
+   border brighten differs), and the auto-mask tile (covered by its `<img>`). Verdict: the
+   overrides stay. Fabio closed the card on that.
