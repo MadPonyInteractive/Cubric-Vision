@@ -1612,6 +1612,7 @@
           ]
         }
       ],
+      "title": "Input_Base_Model",
       "properties": {
         "cnr_id": "comfy-core",
         "ver": "0.25.0",
