@@ -102,12 +102,12 @@ Three findings from the user's own testing of the sibling card, all of which bea
       questions answered; the graph, the answers and the green trap are written up in
       [`docs/playbooks/add-flow/existing-flows/scribble-to-object.md`](../../../../docs/playbooks/add-flow/existing-flows/scribble-to-object.md).
       **AWAITING Fabio's sign-off by eye** — that gate is still shut, no app work until it opens.
-- [ ] **Bench: prove the model swap.** BLOCKED — the bench holds only `SDXL_Realistic.safetensors`
-      (`/object_info/CheckpointLoaderSimple`: SDXL Realistic, sam3.1, sdpose). The loader is
-      already titled `Input_Base_Model` in the bench graph; a second SDXL checkpoint must be
-      installed before the swap can be confirmed. **Verify:** the two runs differ in the way the
-      checkpoints differ — a silently-dropped title looks like a working run, so confirm the swap
-      POSITIVELY, do not infer it from the absence of an error.
+- [x] **Bench: prove the model swap.** DONE 2026-08-21 — Fabio installed ILL Anime, and the same
+      graph ran on both arms with only `ckpt_name` changed. Both produced the SAME watchtower
+      geometry (the hint survives the swap) rendered as the checkpoints differ: photoreal timber
+      on SDXL Realistic, cel-shaded Illustrious lineart on ILL Anime. Mean abs diff 17.5/255,
+      57.5% of pixels differing, byte-identical `False` — the POSITIVE confirmation, since a
+      dropped title yields an identical pair rather than an error.
 - [ ] **Wire the flow** via `/mpi-add-flow`: the `FlowDef` (image input; the paint step; the
       preprocessor choice as a declared `radio`; the prompt field; `Input_Control_strength` as a
       slider), the op in its 4 files, and the any-of `requiredModels` + `modelParams` above.
@@ -128,11 +128,18 @@ Three findings from the user's own testing of the sibling card, all of which bea
   [`docs/playbooks/add-flow/existing-flows/scribble-to-object.md`](../../../../docs/playbooks/add-flow/existing-flows/scribble-to-object.md).
 - **brief.md's stale "why no umbrella" board note healed** — MPI-529/552/530 → MPI-560, and the
   brief's open-questions section now points at the answers doc.
+- **Model swap proven on two arms, 2026-08-21** (SDXL Realistic + ILL Anime). Evidence:
+  `mpi567_arm_realistic_object_*.png` vs `mpi567_arm_illanime_object_*.png`; runner
+  `<scratchpad>/run_swap.py`.
+- **New trap filed** in `docs/workflow-authoring/bench-editing.md` § The traps: a part-downloaded
+  weight is listed in `/object_info` under its final name and dies with a shape `RuntimeError`
+  that reads like a corrupt checkpoint. Cost one wasted arm here. Gate on byte count + the
+  absence of the `.cubricdl` sidecar, never on the dropdown.
 
 ## Remaining Work
 
-- **Fabio's sign-off on the bench output by eye** — the gate on everything below.
-- The model-swap arm (blocked on a second SDXL checkpoint being installed on the bench).
+- **Fabio's sign-off on the bench output by eye** — the ONLY thing left in the bench half, and
+  the gate on everything below.
 - Wire the flow via `/mpi-add-flow`; live-run + reuse per `05-verify.md`.
 - Graphics (tile + hero) — a separate `/mpi-flow-graphics` pass once the flow runs.
 

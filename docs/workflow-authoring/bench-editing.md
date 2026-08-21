@@ -107,6 +107,15 @@ Getting this wrong turns a six-node change into a 2400-line diff that no one can
 - **Convert against `48188`, not the bench.** `8188` is the authoring bench and has run ahead
   of the shipped engine before, shifting a widget silently. Anything the app will ship gets
   converted against the engine.
+- **A PART-DOWNLOADED weight is indistinguishable from a finished one in `/object_info`.** The
+  app's downloader writes the partial **in place under the final name** (with a `.cubricdl`
+  resume sidecar beside it), so the file appears in the loader's COMBO list the moment the
+  download starts. Loading it dies inside `CheckpointLoaderSimple` with
+  `RuntimeError: shape '[10240, 1280]' is invalid for input of size 38303` — which reads as a
+  corrupt or architecture-mismatched checkpoint, not as an incomplete file. Measured 2026-08-21
+  (MPI-567) at 84% of `ILL_Anime.safetensors`. **Never gate a bench run on the name appearing in
+  `/object_info`**; gate on the exact byte count from `modelDeps.js` AND the absence of the
+  `.cubricdl` sidecar.
 - **A template authored elsewhere names weights we do not have.** Community and upstream
   graphs reference the checkpoints *they* ran. Converting succeeds — the converter only reads
   `/object_info` for widget *names* — and then `/api/prompt` returns `400

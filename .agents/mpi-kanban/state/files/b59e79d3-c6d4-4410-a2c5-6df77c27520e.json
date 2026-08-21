@@ -12,19 +12,25 @@
     "js/core/operationRegistry.js",
     "operation_registry.json",
     "js/data/modelConstants/universal_workflows.js",
-    "tests/flow-model-choice.test.cjs"
+    "tests/flow-model-choice.test.cjs",
+    "docs/workflow-authoring/bench-editing.md"
   ],
   "status": "claimed",
   "claim_kind": "write",
   "owner_session": ".agents/mpi-kanban/state/sessions/08e67e1e-0ee6-4183-9768-04b113765997.json",
   "owner_role": "implementer",
   "claimed_at": "2026-08-21T14:52:30Z",
-  "heartbeat_at": "2026-08-21T14:52:30Z",
+  "heartbeat_at": "2026-08-21T15:05:40Z",
   "note": "Bench pass proven on 8188; writing up the findings doc, then the app wiring via /mpi-add-flow.",
   "recent_events": [
     {
       "at": "2026-08-21T14:52:30Z",
       "event": "files_claimed"
+    },
+    {
+      "at": "2026-08-21T15:05:40Z",
+      "event": "claim_extended",
+      "note": "bench-editing.md - the partial-download /object_info trap belongs in its traps list"
     }
   ]
 }

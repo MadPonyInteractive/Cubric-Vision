@@ -15,7 +15,7 @@
 | Pipeline proven end to end | **DONE** 2026-08-21 | 40-node API graph run on the standalone bench (8188). The FIRST run produced a correct object AND a correct stitch |
 | Both preprocessor arms proven | **DONE** 2026-08-21 | scribble and canny each produce a different, on-brief object from the same seed and prompt |
 | White-vs-green hint background | **DECIDED — WHITE** | green is a silent total failure, see § The green trap |
-| Model swap on two arms | **BLOCKED** | the bench holds only `SDXL_Realistic.safetensors`; a second SDXL checkpoint must be installed before the swap can be confirmed POSITIVELY |
+| Model swap on two arms | **DONE** 2026-08-21 | `Input_Base_Model` swapped between SDXL Realistic and ILL Anime — see § The model swap |
 | App wiring (`/mpi-add-flow`) | **NOT STARTED** | gated on Fabio approving the bench output by eye |
 
 ## Shape — the flow DRIVES the shipped SDXL ControlNet-Union branch
@@ -81,6 +81,33 @@ That is the worst failure mode this flow can have: it looks like it worked. Keep
 background white, and if the hint ever changes, **look at the preprocessor output** before
 judging the result — a black hint is the tell.
 
+## The model swap — confirmed POSITIVELY, 2026-08-21
+
+`Input_Base_Model` is the `CheckpointLoaderSimple` title, and it was proven by swapping only
+`ckpt_name` — same seed, same prompt, same preprocessor, same everything else — between
+`SDXL_Realistic.safetensors` and `ILL_Anime.safetensors`:
+
+- **Both arms produced the same watchtower geometry** — tapered legs, X-brace, horizontal rail,
+  cabin, pitched roof, pennant. The ControlNet hint survives the swap intact.
+- **The render differs exactly as the checkpoints differ**: SDXL Realistic returned photoreal
+  weathered timber; ILL Anime returned flat cel-shaded lineart with an outline, which is what an
+  Illustrious anime checkpoint is for.
+- Measured: **mean abs diff 17.5/255, 57.5% of pixels differing**, byte-identical `False`.
+
+That last point is the one that matters. **An unmatched title is dropped in silence**
+([../any-of-models.md](../any-of-models.md)), and a dropped title produces a run that succeeds
+and looks fine — so "no error" proves nothing. Two arms must be shown to differ. A byte-identical
+pair is the failure signature, not a crash.
+
+> Evidence: `D:\WORK\Images\Outputs\mpi567_arm_realistic_object_*.png` vs
+> `mpi567_arm_illanime_object_*.png`.
+
+**Watch the download, not the dropdown.** The first attempt at this ran against an
+`ILL_Anime.safetensors` that was 84% downloaded and died inside `CheckpointLoaderSimple` with a
+shape `RuntimeError` that reads like a corrupt model. The trap is written up in
+[../../../workflow-authoring/bench-editing.md](../../../workflow-authoring/bench-editing.md)
+§ The traps.
+
 ## Carried in from MPI-454 (Place tool)
 
 - **No feather on the cut-out.** Ruled closed by Fabio: the detailing pass is what blends, and
@@ -98,9 +125,12 @@ judging the result — a black hint is the tell.
   photo resolution — not the composite. `docs/painting.md` owns per-entry paint persistence;
   the flow's media I/O hangs off that.
 - **The model picker.** `requiredModels: [[…five SDXL ids…]]` plus a `modelParams` arm per
-  member swapping `Input_Base_Model`. Read [../any-of-models.md](../any-of-models.md) first — an
-  unmatched title is dropped in **silence**, so the swap must be confirmed positively on two
-  arms, which needs a second SDXL checkpoint installed.
+  member swapping `Input_Base_Model` — the graph side of that is already proven (§ The model
+  swap). Read [../any-of-models.md](../any-of-models.md) before writing the descriptor, and note
+  the picker only renders when **more than one** member is installed (`flowModelChoices`).
+  Filenames verified against `modelDeps.js` 2026-08-21: `SDXL_Realistic.safetensors`,
+  `SDXL_NSFW.safetensors`, `ILL_Anime.safetensors`, `ILL_Anime_Beauty.safetensors`,
+  `PONY_Mix.safetensors`.
 - **The preprocessor radio.** A declared `radio` field driving `Input_Control_Net` (1 = Scribble
   for a loose doodle, 2 = Canny for a clean structured drawing). The step copy says which to
   pick, in those words.
