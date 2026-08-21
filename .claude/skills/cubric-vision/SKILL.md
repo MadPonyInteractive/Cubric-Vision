@@ -84,9 +84,14 @@ it — which is the only root `/list-projects` scans for free.
 
 Returns `{"success": true, "project": {...}}`. Keep `project.folderPath`: it is
 the key every other project endpoint takes, not the id. The route creates
-`Media/`, `project.json` and `project.md`, strips `<>:"/\|?*` out of the name,
-and on a folder-name collision appends `_<first 8 of the id>` rather than
-merging into the existing project.
+`Media/`, `project.json` and `project.md`, and on a folder-name collision
+appends `_<first 8 of the id>` rather than merging into the existing project.
+
+**The folder name is not always the project name.** Each of `<>:"/\|?*` is
+replaced with `_` — replaced, not removed — and only in the folder, while
+`project.name` keeps exactly what you sent. So `"Rider: Dusk"` is a project
+*named* `Rider: Dusk` living in a folder called `Rider_ Dusk`. Never rebuild a
+path out of the name you sent; use the returned `folderPath`.
 
 Two things it does **not** do:
 

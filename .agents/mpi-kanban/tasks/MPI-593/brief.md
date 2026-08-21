@@ -47,11 +47,18 @@ every agent can run a shell command — not every agent speaks MCP.
 this as "Fabio's call": it emits a Click package on PyPI, and Vision is
 Node/Electron with no Python in the user story. It is answerable now —
 
-The portable build **already executes `electron.exe` as node**
-([build-portable.mjs:87](scripts/build-portable.mjs#L87)). A JS CLI therefore
-ships *inside* the app at zero runtime cost, and the same source publishes as
-`@cubric/cli` for `npx`. Python would mean asking every end user to install a
-second runtime to talk to a desktop app they already have.
+**The shipped artifact is already used as a Node runtime.** The Windows online
+updater runs `win-update.cjs` *through `CubricVision.exe` as node* — the in-app
+update button and `update.bat` both take that path, deliberately, so no blocked
+script sits in the chain ([build-portable.mjs:555-556](scripts/build-portable.mjs#L555-L556)).
+So a JS CLI ships *inside* the app at zero runtime cost, and the same source
+publishes as `@cubric/cli` for `npx`. Python would mean asking every end user to
+install a second runtime to talk to a desktop app they already have.
+
+> Cited as `build-portable.mjs:87` when this card was written, corrected
+> 2026-08-21 by the close-out claim audit. Line 87 is a comment about why the
+> *old update applier* cannot delete `app/` — true, and about the updater, not
+> about the shipped app. The conclusion is unchanged; only the evidence moved.
 
 Still worth running `/cli-anything` against the finished surface as a **draft
 generator** — it will name endpoints and flags worth stealing. Treat the output
