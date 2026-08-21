@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-593",
+  "title": "Agent interface for end users - a small Node CLI, not MCP, not a 531-line skill",
+  "description": "BACKLOG, agreed with Fabio 2026-08-21, not started. GOAL: a user with an agentic workflow (Gemini CLI, Codex, Claude, anything) tells their agent 'generate me an image in Cubric Vision' and it just works - against an INSTALLED build, not a dev checkout. THE FRAMING THAT UNLOCKS IT: three consumers, not one. Sibling apps (Prompt, later Studio) go through the broker envelope - built, working, LEAVE IT ALONE. Coding agents in this repo read .claude/skills/cubric-vision/SKILL.md - fine where it is. End users' agents have NOTHING, because '.claude' is in APP_COPY_EXCLUDES (scripts/build-portable.mjs:104) so no installed app carries the guide. Only the third consumer is an open problem and it needs a different shape. MCP IS REJECTED and the reason is concrete: it loads every tool schema at session start whether used or not, which across 137 routes is permanent per-conversation overhead; --help is pay-per-use, and every agent can run a shell command. THE ANSWER: a small Node CLI (~10 verbs, NOT 137 routes) as the act layer; 'cubric skill' printing its own agent guide to stdout as the know layer - one command, any agent, no vendor file format; and the docs site's EXISTING llms.txt as the discovery layer, which today says nothing about the API. NODE NOT PYTHON, and this settles the one open question in MPI-546's research doc: the portable build already executes electron.exe as node (build-portable.mjs:87), so a JS CLI ships inside the app at zero runtime cost. CLI-Anything emits Python/Click on PyPI - run it as a DRAFT GENERATOR and port the output, never ship a second runtime to an end user. SEQUENCE: (1) split the 531-line SKILL.md - worth doing even if the CLI never ships; (2) the CLI; (3) ship + discover. Full plan in brief.md. Four questions still open at the bottom of it.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-21T03:05:00Z",
+  "updated_at": "2026-08-21T03:05:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}
