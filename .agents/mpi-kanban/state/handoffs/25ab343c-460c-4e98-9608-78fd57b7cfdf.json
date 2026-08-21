@@ -2,14 +2,14 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "25ab343c-460c-4e98-9608-78fd57b7cfdf",
   "generated_at": "2026-08-21T16:52:10Z",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "Open-source image-edit model survey -> MPI-357 licence gate",
     "branch": "master"
   },
   "goal": {
     "original": "Survey new open-source image EDIT models, then settle the licensing gate that blocks the non-commercial ones.",
-    "status": "in_progress",
+    "status": "complete",
     "summary": "Survey done: nothing released since March beats what Vision already ships (Qwen-Image-Edit-2511 and Klein 4B sit at #2/#3 on GEditBench v2 open weights). Klein 9B is the one real step up and is blocked only by the FLUX Non-Commercial Licence, so work moved to MPI-357. Card is in doing with a claim and a grounded plan; no code written yet."
   },
   "plan": {

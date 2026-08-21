@@ -2,6 +2,8 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { MpiButton, mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiCheckbox } from '../../Primitives/MpiCheckbox/MpiCheckbox.js';
+import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
+import { licenceAccessUrl, HF_TOKEN_URL } from '../../../data/modelConstants/licences.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '../../../utils/icons.js';
 import { openExternal } from '../../../utils/openExternal.js';
@@ -22,6 +24,13 @@ import { clientLogger } from '../../../services/clientLogger.js';
  *   1. the restrictions pane has been scrolled to the end,
  *   2. every acknowledgement checkbox is ticked (they stay disabled until 1),
  *   3. — that's it. There is no timer and no "I have read" theatre.
+ *
+ * A descriptor carrying `verify` adds a FOURTH thing, and it is the only one that is
+ * evidence rather than consent (MPI-357). Those licences are granted by the licensor to
+ * a person, through an access request on the licensor's own model page — so the dialog
+ * also asks for an access token and PROVES the grant against Hugging Face before it
+ * resolves. Accept then means "checked, and it passed", not "ticked a box". The token is
+ * used for that one request and never stored; see `routes/licences.js`.
  *
  * The scroll gate covers the RESTRICTIONS PANE only, not the whole agreement. The
  * pane is the text the licence actually obliges us to put in front of the user, and
@@ -57,6 +66,7 @@ export const MpiLicenceGate = ComponentFactory.create({
             <div class="mpi-licence-gate__scroller" id="scroller-slot" tabindex="0"></div>
             <div class="mpi-licence-gate__hint" id="hint-slot"></div>
             <div class="mpi-licence-gate__acks" id="acks-slot"></div>
+            <div class="mpi-licence-gate__verify" id="verify-slot"></div>
             <div class="mpi-licence-gate__links" id="links-slot"></div>
             <div class="mpi-licence-gate__actions" id="actions-slot"></div>
         </div>
@@ -140,6 +150,46 @@ export const MpiLicenceGate = ComponentFactory.create({
             return cb;
         });
 
+        // ── The proof step — `verify` descriptors only (MPI-357) ─────────────
+        // Everything above this line is consent: the user telling us they accept. This
+        // block is the only part that is EVIDENCE, and it exists because these licences
+        // are granted somewhere we do not control — the licensor's own model page, to
+        // the user's own account. A checkbox cannot stand in for that grant, so we ask
+        // Hugging Face whether it happened.
+        const verifySlot = qs('#verify-slot', el);
+        const verify = licence.verify || null;
+        let token = '';
+        let tokenInput = null;
+        let verifyMsg = null;
+
+        if (verify) {
+            verifySlot.append(ce('div', {
+                className: 'mpi-licence-gate__verify-text',
+                textContent: `${licence.modelName} is released behind an access request. Request it on `
+                           + 'the model page under your own Hugging Face account, then paste a read '
+                           + 'token here so we can confirm it was granted. The token is used once and '
+                           + 'never stored.',
+            }));
+
+            const verifyLinks = ce('div', { className: 'mpi-licence-gate__verify-links' });
+            verifyLinks.append(_link('Request access on Hugging Face', licenceAccessUrl(licence)));
+            verifyLinks.append(_link('Create a read token', HF_TOKEN_URL));
+            verifySlot.append(verifyLinks);
+
+            tokenInput = MpiInput.mount(document.createElement('div'), {
+                type: 'password',
+                label: 'Hugging Face access token',
+                placeholder: 'hf_…',
+            });
+            tokenInput.on('input', (e) => { token = (e.value || '').trim(); _refresh(); });
+            verifySlot.appendChild(tokenInput.el);
+
+            verifyMsg = ce('div', { className: 'mpi-licence-gate__verify-msg' });
+            verifySlot.append(verifyMsg);
+        } else {
+            verifySlot.style.display = 'none';
+        }
+
         // ── Links ────────────────────────────────────────────────────────────
         const linksSlot = qs('#links-slot', el);
         linksSlot.append(_link('Read the full licence', licence.licenceUrl));
@@ -154,12 +204,24 @@ export const MpiLicenceGate = ComponentFactory.create({
         actionsSlot.appendChild(cancelBtn.el);
 
         const acceptBtn = MpiButton.mount(document.createElement('div'), {
-            text: 'Accept and install', variant: 'primary', size: 'md', disabled: true,
+            text: verify ? 'Verify and install' : 'Accept and install',
+            variant: 'primary', size: 'md', disabled: true,
         });
-        acceptBtn.on('click', () => {
+        acceptBtn.on('click', async () => {
             if (!_allTicked()) return;   // belt: setDisabled already blocks the click
-            emit('accept', {});
-            el.hide();
+            // Ungated-by-proof licences settle here, exactly as they did before.
+            if (!verify) { emit('accept', {}); el.hide(); return; }
+
+            _setMsg('Checking with Hugging Face…', false);
+            acceptBtn.el.setDisabled(true);
+            const result = await _probe();
+            if (result.ok) { emit('accept', {}); el.hide(); return; }
+
+            // A failed probe must leave the dialog OPEN. Resolving false here would read
+            // to the caller as "declined", and the user would be back on a tile with no
+            // idea which of the two fixable things went wrong.
+            _setMsg(_failureText(result), true);
+            _refresh();
         });
         actionsSlot.appendChild(acceptBtn.el);
 
@@ -180,7 +242,9 @@ export const MpiLicenceGate = ComponentFactory.create({
         // scroll" genuinely is "already read".
         const _atEnd = () => scroller.clientHeight > 0
             && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4;
-        const _allTicked = () => readToEnd && checkboxes.every(cb => cb.el.isChecked());
+        const _allTicked = () => readToEnd
+            && checkboxes.every(cb => cb.el.isChecked())
+            && (!verify || token.length > 0);
 
         function _refresh() {
             if (!readToEnd && _atEnd()) {
@@ -204,6 +268,54 @@ export const MpiLicenceGate = ComponentFactory.create({
             const a = mountButton({ text, variant: 'ghost', size: 'sm', extraClasses: 'mpi-licence-gate__link' });
             _unsubs.push(on(a, 'click', () => openExternal(url)));
             return a;
+        }
+
+        function _setMsg(text, isError) {
+            if (!verifyMsg) return;
+            verifyMsg.textContent = text;
+            verifyMsg.classList.toggle('mpi-licence-gate__verify-msg--error', !!isError);
+        }
+
+        // The probe runs SERVER-SIDE. Not squeamishness: Hugging Face answers
+        // `Access-Control-Allow-Origin: https://huggingface.co`, so a fetch straight from
+        // here cannot read the status at all — and going through our own server keeps the
+        // token out of the renderer's network pane and out of clientLogger.
+        async function _probe() {
+            try {
+                const res = await fetch('/licences/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repoId: verify.repoId, probePath: verify.probePath, token }),
+                });
+                return await res.json();
+            } catch (err) {
+                clientLogger.warn('licence-gate', `verify request failed: ${err.message}`);
+                return { ok: false, reason: 'offline' };
+            }
+        }
+
+        // Two failures, two different fixes — and the user cannot tell them apart from a
+        // status code. Say which one it is, and what to do about it.
+        function _failureText(result) {
+            switch (result.reason) {
+                case 'not-granted':
+                    // The last clause is not padding. Klein 9B's repo is `gated: "auto"`, so
+                    // accepting is one button and the grant is instant — but a licensor may
+                    // instead run a form (email, affiliation, intended use) and approve by
+                    // hand. Without this, a user on one of those reads "try again" as "it
+                    // should work now" and hammers a button that cannot pass for days.
+                    return 'Hugging Face has not granted your account access to this model yet. '
+                         + 'Open the model page, complete the access request, then try again. '
+                         + 'Most are granted the moment you accept, but some licensors review '
+                         + 'requests by hand — if yours does, come back once it is approved.';
+                case 'bad-token':
+                    return 'That token was rejected. Check you pasted a current token with read access.';
+                case 'offline':
+                    return 'Could not reach Hugging Face. Check your connection and try again.';
+                default:
+                    return result.message
+                        || `Hugging Face answered ${result.status || 'nothing'}. Try again in a moment.`;
+            }
         }
     },
 });

@@ -155,13 +155,96 @@ test('every descriptor carries what the gate renders', async () => {
         assert.ok(Array.isArray(l.acknowledgements) && l.acknowledgements.length,
             `${modelId}: at least one checkbox, or Accept unlocks on scroll alone`);
         // §V.5 of the H3 agreement requires a reachable misuse-reporting mechanism, and
-        // the gate is where we make it reachable.
-        assert.match(l.report.url, /^https:\/\//, `${modelId}: report url`);
+        // the gate is where we make it reachable. Not every licence asks for one — the
+        // FLUX NCL does not — so it is optional, but a present one must be reachable.
+        if (l.report) assert.match(l.report.url, /^https:\/\//, `${modelId}: report url`);
         if (l.territory) {
             assert.ok(l.territory.territories.length, `${modelId}: territory list`);
             // The whole point of the territory branch: route to the licensor's own
             // authorization, never disclaim the restriction onto the user.
             assert.match(l.territory.authorizationUrl, /^https:\/\//, `${modelId}: authorizationUrl`);
         }
+    }
+});
+
+// ── MPI-357 — the proof half ─────────────────────────────────────────────────
+//
+// A `verify` descriptor says the licensor grants access to a PERSON, on their own model
+// page, and that we prove it before the weights move. Both halves of that fail silently:
+// a receipt that satisfies the gate without the probe, and a probe aimed at a file the
+// gate does not actually cover. Neither errors; both just quietly let everyone through.
+
+const VERIFIED = 'klein-9b';
+
+test('a verify licence is not satisfied by consent alone', async () => {
+    const { getModelLicence, hasAcceptedLicence, recordLicenceAcceptance } = await licences();
+    assert.ok(getModelLicence(VERIFIED).verify, 'this test is meaningless without a verify block');
+
+    // The exact shape of a receipt written before the proof step existed, and of one
+    // written by a consent-only path that forgot to pass `verified`. Either must NOT
+    // unlock the install — otherwise the probe is decoration.
+    store.clear();
+    recordLicenceAcceptance(VERIFIED);
+    assert.strictEqual(hasAcceptedLicence(VERIFIED), false, 'consent without proof must re-prompt');
+
+    store.clear();
+    recordLicenceAcceptance(VERIFIED, { verified: true });
+    assert.strictEqual(hasAcceptedLicence(VERIFIED), true, 'a proven acceptance must stick');
+
+    // And the token is not in there. It is used for one request and dropped; a receipt
+    // that carried it would put a live credential in localStorage and into any portable
+    // build copied to another machine.
+    const receipt = JSON.parse(store.get([...store.keys()][0]))[getModelLicence(VERIFIED).id];
+    assert.deepStrictEqual(Object.keys(receipt).sort(), ['acceptedVia', 'at', 'verified', 'version']);
+});
+
+test('an unproven verify licence does not block the ungated ones', async () => {
+    const { hasAcceptedLicence, recordLicenceAcceptance } = await licences();
+    // The `verified` requirement is per-descriptor. H3 has no verify block and must keep
+    // clearing on consent alone — a blanket `r.verified === true` would silently start
+    // re-prompting every H3 user who already accepted.
+    store.clear();
+    recordLicenceAcceptance(GATED);
+    assert.strictEqual(hasAcceptedLicence(GATED), true, 'a non-verify licence still clears on consent');
+    assert.strictEqual(hasAcceptedLicence(VERIFIED), false);
+});
+
+test('every verify descriptor names a probe target that could be gated', async () => {
+    const { MODEL_LICENCES } = await licences();
+    for (const [modelId, l] of Object.entries(MODEL_LICENCES)) {
+        if (!l.verify) continue;
+        assert.match(l.verify.repoId, /^[A-Za-z0-9][\w.-]*\/[A-Za-z0-9][\w.-]*$/, `${modelId}: repoId`);
+        assert.ok(l.verify.probePath, `${modelId}: probePath`);
+        assert.ok(!l.verify.probePath.startsWith('/') && !l.verify.probePath.includes('..'),
+            `${modelId}: probePath must stay inside the repo`);
+        // The measured trap this whole card turned on. Hugging Face serves LICENSE.md and
+        // README.md unauthenticated ON PURPOSE — you must be able to read terms before
+        // accepting them — so either as a probe target returns 200 for a user who has
+        // accepted nothing. The live check below is the real proof; this one runs offline
+        // and in CI, and catches the mistake at the moment someone writes it.
+        assert.ok(!/^(LICENSE|LICENCE|README)\.md$/i.test(l.verify.probePath),
+            `${modelId}: ${l.verify.probePath} is served without a token — it would pass every user`);
+    }
+});
+
+// Live, and therefore skipped on CI. The offline test above pins what we BELIEVE about
+// the probe target; only Hugging Face can say whether it is still true. Run it whenever
+// a verify descriptor is added or a licensor changes their gate.
+test('the probe target is really gated, and the licence really is not', {
+    skip: process.env.CI ? 'network test — run locally' : false,
+}, async (t) => {
+    const { MODEL_LICENCES } = await licences();
+    const seen = new Set();
+    for (const l of Object.values(MODEL_LICENCES)) {
+        if (!l.verify || seen.has(l.verify.repoId)) continue;
+        seen.add(l.verify.repoId);
+        const base = `https://huggingface.co/${l.verify.repoId}/resolve/main`;
+
+        const probe = await fetch(`${base}/${l.verify.probePath}`, { method: 'HEAD', redirect: 'manual' });
+        assert.ok(probe.status === 401 || probe.status === 403,
+            `${l.verify.repoId}/${l.verify.probePath} answered ${probe.status} with NO token — the gate is open`);
+
+        const licenceDoc = await fetch(`${base}/LICENSE.md`, { method: 'HEAD', redirect: 'manual' });
+        t.diagnostic(`${l.verify.repoId}: probe ${probe.status}, LICENSE.md ${licenceDoc.status}`);
     }
 });

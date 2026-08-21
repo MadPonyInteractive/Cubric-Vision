@@ -1,0 +1,53 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "0748d344-eb77-4449-84da-33718a9c3b7e",
+  "task_card": "MPI-357",
+  "task": ".agents/mpi-kanban/tasks/MPI-357/",
+  "paths": [
+    "js/data/modelConstants/licences.js",
+    "js/components/Compounds/MpiLicenceGate/MpiLicenceGate.js",
+    "js/components/Compounds/MpiLicenceGate/MpiLicenceGate.css",
+    "js/services/downloadService.js",
+    "js/core/storage.js",
+    "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
+    "routes/licences.js",
+    "server.js",
+    "licences/flux2-klein-9b/LICENSE.txt",
+    "licences/flux2-klein-9b/NOTICE.txt",
+    "docs/model-library.md",
+    "tests/licence-gate.test.cjs",
+    "docs/download-manager.md"
+  ],
+  "status": "verified",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/8aae0c15-e6cd-47b6-9a00-b3ab1f63211f.json",
+  "owner_role": "implementer",
+  "claimed_at": "2026-08-21T16:58:00Z",
+  "heartbeat_at": "2026-08-21T18:18:00Z",
+  "note": "Verified end to end: route harness across all four probe branches, and the real dialog driven through downloadService.start() with a granted token.",
+  "recent_events": [
+    {
+      "at": "2026-08-21T16:58:00Z",
+      "event": "files_claimed"
+    },
+    {
+      "at": "2026-08-21T17:15:00Z",
+      "event": "claim_extended",
+      "note": "tests/licence-gate.test.cjs - the verify-receipt and probe-target pins land there"
+    },
+    {
+      "at": "2026-08-21T17:32:00Z",
+      "event": "claim_extended",
+      "note": "docs/download-manager.md owns the descriptor contract - the verify block belongs in it"
+    },
+    {
+      "at": "2026-08-21T17:26:00Z",
+      "event": "files_need_verification",
+      "note": "passing-probe branch unproven - needs Fabio's HF token"
+    },
+    {
+      "at": "2026-08-21T18:18:00Z",
+      "event": "files_verified"
+    }
+  ]
+}

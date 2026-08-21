@@ -61,6 +61,7 @@ const { router: remoteEngineRoutes } = require('./routes/remoteEngine');
 const { router: remoteProxyRoutes } = require('./routes/remoteProxy');
 const { cleanComfyUITempFiles } = require('./routes/shared');
 const connectorRoutes = require('./routes/connector');
+const licenceRoutes = require('./routes/licences');
 
 console.log('[server.js] App initialization started');
 logger.info('system', 'Server initialization started');
@@ -81,6 +82,7 @@ app.use(downloadManagerRoutes);
 app.use(runpodRemoteRoutes);
 app.use(remoteEngineRoutes);
 app.use(connectorRoutes);
+app.use(licenceRoutes);
 
 process.on('SIGTERM', () => { cancelAllDownloads(); cleanComfyUITempFiles(); process.exit(0); });
 process.on('SIGINT', () => { cancelAllDownloads(); cleanComfyUITempFiles(); process.exit(0); });

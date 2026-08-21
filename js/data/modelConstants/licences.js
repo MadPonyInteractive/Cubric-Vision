@@ -53,7 +53,32 @@
  *   must scroll before they can accept, so keep it to what the licence actually
  *   obliges us to show — not the whole agreement, which is `licenceUrl`.
  * @property {string[]} acknowledgements - Checkbox labels. ALL are required.
- * @property {{label: string, url: string}} report - Misuse-reporting route (§V.5).
+ * @property {{label: string, url: string}} [report] - Misuse-reporting route, when the
+ *   licence obliges us to keep one (H3 §V.5). Absent = no such obligation.
+ * @property {{repoId: string, probePath: string}} [verify]
+ *   Present only when the licensor gates the weights behind an access request of their
+ *   own — a form on the model page, granted to a Hugging Face ACCOUNT. Ticking our
+ *   checkboxes then proves nothing on its own: the licence relationship is user-to-
+ *   licensor, established over there, and we are only a distributor passing on a copy.
+ *   So the gate additionally asks for an HF access token and PROVES the grant before
+ *   the download unlocks — see `POST /licences/verify` in `routes/licences.js`.
+ *
+ *   `probePath` MUST name a file the gate actually covers. Measured against the live
+ *   API 2026-08-21 on `black-forest-labs/FLUX.2-klein-9B`, unauthenticated:
+ *
+ *     GET /api/models/<repoId>            → 200   public metadata, `gated: "auto"`
+ *     resolve/main/LICENSE.md             → 200   18,158 bytes
+ *     resolve/main/README.md              → 200
+ *     resolve/main/model_index.json       → 401   X-Error-Code: GatedRepo
+ *     resolve/main/<weights>.safetensors  → 401   X-Error-Code: GatedRepo
+ *
+ *   Hugging Face serves the licence and the card unauthenticated ON PURPOSE — you must
+ *   be able to read terms before accepting them — so a probe aimed at the repo, its
+ *   metadata or its LICENSE would return 200 for a user who accepted nothing, and the
+ *   gate would be decorative. Everything else in a gated repo is behind the grant.
+ *
+ *   Prefer a small NON-LFS file (a config JSON) over a weight: same gate, but an
+ *   authorised HEAD answers 200 directly instead of a 302 into the CDN.
  */
 
 import { Storage } from '../../core/storage.js';
@@ -140,11 +165,96 @@ const MINIMAX_H3 = {
     report: CUBRIC_DISCORD,
 };
 
+// FLUX.2 Klein 9B — FLUX Non-Commercial License v2.1 (MPI-357).
+//
+// The first descriptor carrying `verify`, and the reason that block exists. Black Forest
+// Labs gate the weights behind an access request on their own model page, granted to a
+// Hugging Face ACCOUNT. That grant IS the licence relationship — user to BFL, direct,
+// per §3.a — and it happens somewhere we do not control. A checkbox here cannot stand in
+// for it, so the gate asks for a token and proves it.
+//
+// Two readings of this licence are commonly wrong and both are settled against the real
+// text (read 2026-07-26, re-fetched 2026-08-21, bundled below at 18,158 bytes):
+//   - OUTPUTS ARE COMMERCIALLY USABLE. §2.d: "You may use Output for any purpose
+//     (including for commercial purposes)". The non-commercial bar is on USING the
+//     MODEL, not on selling what you make with it.
+//   - REDISTRIBUTION IS PERMITTED. §3 lets us ship the weights on conditions: pass on a
+//     copy of the licence, display the Attribution Notice. That is what `licences/
+//     flux2-klein-9b/` is. We are a distributor under §3, never a sublicensor — which is
+//     why the user still has to take the grant from BFL themselves.
+/** @type {LicenceDescriptor} */
+const FLUX2_KLEIN_9B = {
+    id: 'flux-non-commercial-v2.1',
+    version: 1,
+    name: 'FLUX Non-Commercial License v2.1',
+    modelName: 'FLUX.2 Klein 9B',
+    summary: 'FLUX.2 Klein 9B is not open-weight. Black Forest Labs license it for '
+           + 'non-commercial use only, and only to people who have requested access under '
+           + 'their own Hugging Face account. This step shows you the terms and then proves '
+           + 'that access before the download starts.',
+    // BUNDLED, not linked. §3.a obliges us to "make available a copy of this License to
+    // third-party recipients". A link to huggingface.co names a copy; it does not provide
+    // one, and it dies when the file moves or the user is offline. Byte-identical to what
+    // the repo serves (18,158 bytes, fetched 2026-08-21). NOTICE.txt beside it carries the
+    // §3.b Attribution Notice verbatim.
+    licenceUrl: '/licences/flux2-klein-9b/LICENSE.txt',
+    // §3.b — the Attribution Notice must be displayed "prominently ... alongside the
+    // Distribution". The Model Library detail drawer is where the model is presented.
+    poweredBy: 'Licensed by Black Forest Labs Inc. under the FLUX Non-Commercial License',
+    verify: {
+        repoId: 'black-forest-labs/FLUX.2-klein-9B',
+        // Gated exactly like the weights, and not an LFS pointer — so an authorised HEAD
+        // is a plain 200 rather than a 302 into the CDN. NEVER LICENSE.md or README.md:
+        // both answer 200 with no token at all. See the typedef for the measurements.
+        probePath: 'model_index.json',
+    },
+    sections: [
+        {
+            heading: 'Section 2 — What you may and may not do',
+            items: [
+                '“Non-Commercial Purpose” means any of the following uses, but only so far as you do not receive any direct or indirect payment arising from the use of the FLUX Model, Derivatives, or Content Filters: (i) personal use for research, experimentation, and testing for the benefit of public knowledge, personal study, private entertainment, hobby projects, or otherwise not directly or indirectly connected to any commercial activities, business operations, or employment responsibilities; (ii) use by commercial or for-profit entities for testing, evaluation, or non-commercial research and development in a non-production environment; and (iii) use by any charitable organization for charitable purposes, or for testing or evaluation. For clarity, use (a) for revenue-generating activity, (b) in direct interactions with or that has impact on end users, or (c) to train, fine tune, or distill other models for commercial use, in each case, is not a Non-Commercial Purpose.',
+                'You may only access, use, Distribute, or create Derivatives of the FLUX Model or Derivatives for Non-Commercial Purposes. If you want to use a FLUX Model or a Derivative for any purpose that is not expressly authorized under this License, such as for a commercial activity, you must request a license from Company, which Company may grant to you in Company’s sole discretion and which additional use may be subject to a fee, royalty or other revenue share.',
+                'We claim no ownership rights in and to the Outputs. You are solely responsible for the Outputs you generate and their subsequent uses in accordance with this License. You may use Output for any purpose (including for commercial purposes), except as expressly prohibited herein. You may not use the Output to train, fine-tune, or distill a model that is competitive with a FLUX Model.',
+                'You may access, use, Distribute, or create Output of the FLUX Model or Derivatives if you: (i) (A) implement and maintain content filtering measures for your use of the FLUX Model or Derivatives to prevent the creation, display, transmission, generation, or dissemination of unlawful or infringing content, or (B) ensure Output undergoes review for unlawful or infringing content before public or non-public distribution, display, transmission or dissemination; and (ii) ensure Output includes disclosure (or other indication) that the Output was generated or modified using artificial intelligence technologies to the extent required under applicable law.',
+                'You must make available a copy of this License to third-party recipients of the FLUX Model and/or Derivatives you Distribute, and specify that any rights to use the FLUX Model and/or Derivatives shall be directly granted by Company to said third-party recipients pursuant to this License.',
+            ],
+        },
+        {
+            heading: 'Section 4 — Restrictions',
+            intro: 'You will not, and will not permit, assist or cause any third party to:',
+            items: [
+                'use, modify, copy, reproduce, create Derivatives of, or Distribute the FLUX Model (or any Derivative thereof, or any data produced by the FLUX Model), in whole or in part, (i) for any commercial or production purposes, (ii) military purposes, (iii) purposes of surveillance, including any research or development relating to surveillance, (iv) biometric processing, (v) in any manner that infringes, misappropriates, or otherwise violates (or is likely to infringe, misappropriate, or otherwise violate) any third party’s legal rights, including rights of publicity or “digital replica” rights, (vi) in any unlawful, fraudulent, defamatory, or abusive activity, (vii) to generate unlawful content, including child sexual abuse material, or non-consensual intimate images; or (viii) in any manner that violates any applicable law and any privacy or security laws, rules, regulations, directives, or governmental requirements;',
+                'alter or remove copyright and other proprietary notices which appear on or in any portion of the FLUX Model;',
+                'utilize any equipment, device, software, or other means to circumvent or remove any security or protection used by Company in connection with the FLUX Model, or to circumvent or remove any usage restrictions, or to enable functionality disabled by FLUX Model;',
+                'offer or impose any terms on the FLUX Model that alter, restrict, or are inconsistent with the terms of this License;',
+                'violate any applicable U.S. and non-U.S. export control and trade sanctions laws (“Export Laws”) in connection with your use or Distribution of any FLUX Model;',
+                'directly or indirectly Distribute, export, or otherwise transfer FLUX Model (i) to any individual, entity, or country prohibited by Export Laws; (ii) to anyone on U.S. or non-U.S. government restricted parties lists; (iii) for any purpose prohibited by Export Laws, including nuclear, chemical or biological weapons, or missile technology applications; (iv) use or download FLUX Model if you or they are (a) located in a comprehensively sanctioned jurisdiction, (b) currently listed on any U.S. or non-U.S. restricted parties list, or (c) for any purpose prohibited by Export Laws; and (v) will not disguise your location through IP proxying or other methods.',
+            ],
+        },
+    ],
+    acknowledgements: [
+        'I will use FLUX.2 Klein 9B only for Non-Commercial Purposes as defined above. I understand the Outputs I generate with it are mine to use commercially; the model itself is not.',
+        'I accept the Restrictions in Section 4, and I understand my licence is granted directly by Black Forest Labs — Cubric only distributes the weights under Section 3.',
+    ],
+};
+
 /** @type {Record<string, LicenceDescriptor>} */
 export const MODEL_LICENCES = {
     'minimax-h3':        MINIMAX_H3,   // first/last-frame to video+audio
     'minimax-h3-ref2va': MINIMAX_H3,   // reference to video+audio — different weights, same agreement
+    // No ModelDef yet — MPI-357 ships the GATE, not the model (`klein-9b` is the id the
+    // 9B entry will take beside the existing `klein-4b`). Until it lands the lookup
+    // simply misses, exactly as it does for every ungated model.
+    'klein-9b':          FLUX2_KLEIN_9B,
 };
+
+/** Where a user requests access to a `verify` licence — the licensor's own model page. */
+export function licenceAccessUrl(licence) {
+    return licence?.verify ? `https://huggingface.co/${licence.verify.repoId}` : null;
+}
+
+/** Where a user mints the read token the probe needs. */
+export const HF_TOKEN_URL = 'https://huggingface.co/settings/tokens';
 
 /**
  * The licence descriptor gating this id, or null when the model is ungated.
@@ -174,20 +284,36 @@ export function hasAcceptedLicence(modelId) {
     const licence = getModelLicence(modelId);
     if (!licence) return true;   // ungated — nothing to accept
     const r = Storage.getLicenceReceipts()[licence.id];
-    return !!r && Number(r.version) >= licence.version;
+    if (!r || Number(r.version) < licence.version) return false;
+    // A `verify` licence is accepted only once the PROBE passed. Without this line a
+    // receipt written by the consent half alone would satisfy the gate, and the proof
+    // step would be decoration — including any receipt filed before `verify` was added.
+    return licence.verify ? r.verified === true : true;
 }
 
 /**
  * Record acceptance. Survives a restart; scoped to the app's user-data partition.
  * `modelId` is kept on the receipt as provenance — which install prompted it — but the
  * receipt is filed under the licence, so it covers every model that agreement governs.
+ *
+ * THE TOKEN IS NEVER PART OF THIS. A `verify` licence writes `verified: true` and the
+ * timestamp it happened, and nothing else: the HF token is used for one HEAD request and
+ * dropped. No safeStorage, no IPC, no credential at rest, nothing to leak into a log or a
+ * portable build. On a later 403 at download time the gate simply asks again.
+ *
  * @param {string} modelId
- * @param {string} [at] - ISO timestamp; defaults to now.
+ * @param {{at?: string, verified?: boolean}} [opts]
+ *        `at` — ISO timestamp, defaults to now. `verified` — the probe passed.
  */
-export function recordLicenceAcceptance(modelId, at) {
+export function recordLicenceAcceptance(modelId, opts = {}) {
     const licence = getModelLicence(modelId);
     if (!licence) return;
     const all = Storage.getLicenceReceipts();
-    all[licence.id] = { version: licence.version, at: at || new Date().toISOString(), acceptedVia: modelId };
+    all[licence.id] = {
+        version: licence.version,
+        at: opts.at || new Date().toISOString(),
+        acceptedVia: modelId,
+        ...(opts.verified ? { verified: true } : {}),
+    };
     Storage.setLicenceReceipts(all);
 }

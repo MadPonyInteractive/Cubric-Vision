@@ -98,7 +98,11 @@ const downloadService = {
         if (licence && !hasAcceptedLicence(modelId)) {
             return showLicenceGate(licence).then((accepted) => {
                 if (!accepted) return undefined;
-                recordLicenceAcceptance(modelId);
+                // MPI-357 — for a `verify` licence the gate resolves true ONLY after the
+                // probe passed, so `verified` is a fact by then, not an assumption. The
+                // receipt carries it because `hasAcceptedLicence` demands it on the next
+                // install: consent alone must never unlock a proof-gated model.
+                recordLicenceAcceptance(modelId, { verified: !!licence.verify });
                 return this._start(modelId, dependencies, opts);
             });
         }

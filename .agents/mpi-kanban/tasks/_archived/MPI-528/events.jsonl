@@ -1,0 +1,4 @@
+{"schema": "mpi-kanban/event/v1", "id": "mpi-528-created", "type": "task.created", "at": "2026-08-10T22:10:00Z", "task": "MPI-528", "summary": "Umbrella created by the consolidation sweep over MPI-357, MPI-358."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-528","type":"task.updated","at":"2026-08-14T00:33:00Z","actor":"claude","summary":"MPI-534 added as a member by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-528","type":"task.moved","at":"2026-08-21T17:55:00Z","actor":"claude","from":"todo","to":"done","summary":"Umbrella dissolved - MPI-534 rejected, MPI-357 shipped, MPI-358 continues solo."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-528","type":"task.deleted","at":"2026-08-21T17:58:00Z","actor":"claude","summary":"Umbrella dissolved and archived to .agents/mpi-kanban/tasks/_archived/MPI-528/. MPI-534 rejected, MPI-357 shipped, MPI-358 continues as a solo card."}

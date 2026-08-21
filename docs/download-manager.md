@@ -294,6 +294,16 @@ case; Flux is the next known consumer.
   sits where they converge, not on the tile a user usually clicks.
 - **Receipt:** `localStorage` `mpi_model_licence_accepted` → `{ [licenceId]: { version,
   at, acceptedVia } }`, written by `start()` on accept, never by the dialog.
+- **Proof, for a descriptor carrying `verify` (MPI-357):** some licences are granted by
+  the licensor to a PERSON, on the licensor's own model page — FLUX.2 Klein 9B is the
+  first. Consent cannot stand in for that grant, so `verify: { repoId, probePath }` makes
+  the dialog ask for a Hugging Face token and prove it through `POST /licences/verify`
+  (`routes/licences.js`) before it resolves `true`. The receipt then also carries
+  `verified: true`, and `hasAcceptedLicence` DEMANDS it for such a licence — consent
+  alone re-prompts. The token is used for one HEAD request and never stored. `probePath`
+  must name a file the gate actually covers: `LICENSE.md` and `README.md` are served
+  publicly by design and would pass every user. Install state → `docs/model-library.md`
+  § "Licence required".
 
 **Receipts are keyed by LICENCE id, not model id** — several models can share one
 descriptor object. H3 ships as two ModelDefs (`minimax-h3` fl2va and

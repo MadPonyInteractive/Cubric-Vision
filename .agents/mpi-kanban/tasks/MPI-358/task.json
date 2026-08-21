@@ -1,27 +1,27 @@
 {
- "schema": "mpi-kanban/task-card/v1",
- "id": "MPI-358",
- "title": "Attribution sweep: credit every shipped LoRA whose creator asks for it",
- "description": "UMBRELLA: MPI-528 - The licensing surface (consolidation sweep 2026-08-10). Members and phase order: tasks/MPI-528/plan.md.\n\nWe ship community LoRAs (Klein styles + turbo + NSFW, Krea2 styles, Qwen-Edit Lightning, LTX, SDXL). Most carry permissive CivitAI flags; some set allowNoCredit:false, i.e. the creator wants attribution. Sweep every LoRA dep we host, find those, and credit them in the app.\n\nMETHOD (proven on MPI-354, 2026-07-26): CivitAI resolves ANY file by hash - GET https://civitai.com/api/v1/model-versions/by-hash/<sha256> returns modelId, then GET /api/v1/models/<id> returns allowNoCredit, allowCommercialUse, allowDerivatives, allowDifferentLicense and the creator username. Every dep in loraDeps.js already carries a real sha256, so the whole sweep is one script over DEPS - no page hunting, no guessing. Non-CivitAI weights (fal, HF, our own) 404 on the hash lookup; list them separately for a manual pass.\n\nKNOWN HIT ALREADY: klein-style-anime (civitai.com/models/2227157, New Mecha style) has allowNoCredit:false. Expect more across Krea2/Qwen/LTX.\n\nSURFACE: the app has NO About/credits screen today (grepped 2026-07-26 - nothing in js/workspaces or the shell). Deciding where credits live is part of this card: an About panel, a Settings section, or a per-model line in the Model Library sidebar. Simplest shippable version wins - a static generated markdown/HTML list is fine, it does not need to be live-fetched.\n\nNOT A BLOCKER for any model wiring. Baking LoRAs into checkpoints without credit is endemic in this ecosystem; we credit because we choose to, not because a ship gate demands it.",
- "column": "todo",
- "maturity": "idea",
- "created_at": "2026-07-26T20:30:00Z",
- "updated_at": "2026-08-10T22:12:00Z",
- "labels": [
-  "licensing",
-  "model-library",
-  "ui"
- ],
- "acceptance": [
-  "One script walks every LoRA dep in DEPS, resolves it on CivitAI by sha256, and reports allowNoCredit / creator / model URL",
-  "Non-CivitAI weights are listed separately as a manual pass, never silently skipped",
-  "Output committed as a checked-in list so the sweep can be re-run and diffed after new models land",
-  "Credits surface exists in the app and names every creator whose LoRA sets allowNoCredit:false",
-  "klein-style-anime (2227157) appears in it - the known hit"
- ],
- "links": {
-  "brief": "brief.md",
-  "events": "events.jsonl",
-  "research": "research/"
- }
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-358",
+  "title": "Attribution sweep: credit every shipped LoRA whose creator asks for it",
+  "description": "We ship community LoRAs (Klein styles + turbo + NSFW, Krea2 styles, Qwen-Edit Lightning, LTX, SDXL). Most carry permissive CivitAI flags; some set allowNoCredit:false, i.e. the creator wants attribution. Sweep every LoRA dep we host, find those, and credit them in the app.\n\nMETHOD (proven on MPI-354, 2026-07-26): CivitAI resolves ANY file by hash - GET https://civitai.com/api/v1/model-versions/by-hash/<sha256> returns modelId, then GET /api/v1/models/<id> returns allowNoCredit, allowCommercialUse, allowDerivatives, allowDifferentLicense and the creator username. Every dep in loraDeps.js already carries a real sha256, so the whole sweep is one script over DEPS - no page hunting, no guessing. Non-CivitAI weights (fal, HF, our own) 404 on the hash lookup; list them separately for a manual pass.\n\nKNOWN HIT ALREADY: klein-style-anime (civitai.com/models/2227157, New Mecha style) has allowNoCredit:false. Expect more across Krea2/Qwen/LTX.\n\nSURFACE: the app has NO About/credits screen today (grepped 2026-07-26 - nothing in js/workspaces or the shell). Deciding where credits live is part of this card: an About panel, a Settings section, or a per-model line in the Model Library sidebar. Simplest shippable version wins - a static generated markdown/HTML list is fine, it does not need to be live-fetched.\n\nNOT A BLOCKER for any model wiring. Baking LoRAs into checkpoints without credit is endemic in this ecosystem; we credit because we choose to, not because a ship gate demands it.\n\nSOLO CARD since 2026-08-21: umbrella MPI-528 was dissolved (MPI-534 rejected and archived, MPI-357 shipped), leaving this as the only live member. Two constraints the umbrella carried and this card now owns:\n(1) The CivitAI by-hash sweep needs Fabio's VPN ON — CivitAI region-blocks the UK. Ask, wait, run, then tell him so he can turn it off. Check for REGION_BLOCKED before concluding an API changed; the block reads as intermittent.\n(2) The VPN skews the system clock by HOURS, so derive the offset once from `gh api rate_limit -i` (the Date: header) before writing any timestamp — a 14h skew flips the calendar date near midnight and silently corrupts a card.\nMethod proven on MPI-354, 2026-07-26: GET /api/v1/model-versions/by-hash/<sha256> → modelId → the model endpoint for the permission flags. Land the result as DATA in the repo, never a live lookup — the app must never need the VPN. Display half: read docs/model-library.md first.",
+  "column": "todo",
+  "maturity": "idea",
+  "created_at": "2026-07-26T20:30:00Z",
+  "updated_at": "2026-08-21T17:56:00Z",
+  "labels": [
+    "licensing",
+    "model-library",
+    "ui"
+  ],
+  "acceptance": [
+    "One script walks every LoRA dep in DEPS, resolves it on CivitAI by sha256, and reports allowNoCredit / creator / model URL",
+    "Non-CivitAI weights are listed separately as a manual pass, never silently skipped",
+    "Output committed as a checked-in list so the sweep can be re-run and diffed after new models land",
+    "Credits surface exists in the app and names every creator whose LoRA sets allowNoCredit:false",
+    "klein-style-anime (2227157) appears in it - the known hit"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "research": "research/"
+  }
 }

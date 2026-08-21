@@ -5,7 +5,7 @@
 .mpi-licence-gate {
     display: flex;
     flex-direction: column;
-    /* Eight rows, so the gap is worth ~100px of the height budget at --s-3. Every pixel
+    /* Nine rows, so the gap is worth ~110px of the height budget at --s-3. Every pixel
        spent here comes straight out of the pane the user has to read. */
     gap: var(--s-2);
     padding: var(--s-4);
@@ -135,6 +135,40 @@
     flex-direction: column;
     gap: var(--s-2);
 }
+
+/* The proof step (MPI-357) — `verify` licences only. Frost-toned rather than warn:
+   the warnings are above, this row is the thing that unlocks the install. */
+.mpi-licence-gate__verify {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    padding: var(--s-3);
+    background: var(--surface-2);
+    border-left: 2px solid var(--accent-frost);
+    border-radius: var(--r-2);
+}
+
+.mpi-licence-gate__verify-text {
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+    line-height: 1.5;
+}
+
+.mpi-licence-gate__verify-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-3);
+}
+
+.mpi-licence-gate__verify-msg:empty { display: none; }
+
+.mpi-licence-gate__verify-msg {
+    font-size: var(--t-xs);
+    color: var(--ink-3);
+    line-height: 1.5;
+}
+
+.mpi-licence-gate__verify-msg--error { color: var(--accent-warn); }
 
 /* Links row */
 .mpi-licence-gate__links {

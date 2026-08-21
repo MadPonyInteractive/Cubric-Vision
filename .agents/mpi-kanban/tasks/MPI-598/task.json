@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-598",
+  "title": "Wire FLUX.2 Klein 9B: the model, its turbo LoRA, and the turbo on/off settings",
+  "description": "Wire FLUX.2 Klein 9B into the Model Library as a real model — the entry MPI-357 built its licence gate against but deliberately did NOT create.\n\nRUN /mpi-add-model. It enforces docs/playbooks/add-model/, which holds every known trap. Do not freehand this.\n\nTHREE THINGS THIS CARD OWES:\n1. The MODEL — the 9B transformer as a dep + a ModelDef beside klein-4b (models.js). The id klein-9b is already reserved: MODEL_LICENCES in js/data/modelConstants/licences.js keys the FLUX Non-Commercial descriptor to exactly that string, so the gate arms itself the moment the ModelDef lands. Nothing to wire on the licence side.\n2. The TURBO LoRA — 9B ships one, and we host none. It must be sourced, hashed and staged to R2 like any other weight. 4B and 9B LoRAs are NOT interchangeable (different dims), so 4B's rack cannot be reused. BUT MEASURE BEFORE WIRING: 4B's turbo LoRA was DROPPED on 2026-07-27 after live step measurement — the distilled weight at cfg 1.0 / 4 steps beat the base+turbo pair, so both the base checkpoint and klein-lora-turbo were reversed rather than shipped (see the Klein 4B block in modelDeps.js). turboToggle:false on 4B is that decision, not an oversight. Run the same experiment on 9B before assuming the LoRA earns its place.\n3. The SETTINGS for turbo ON and turbo OFF — steps and cfg for each. This is the real unknown and it is a BENCH job, not a code job: run both regimes on the standalone bench and measure.\n\nTHE WORKFLOW IS ALREADY READY, which is why this is smaller than it looks. comfy_workflows/klein_t2i.json carries Input_is_Turbo (node 52, MpiSimpleBoolean) and it already drives the whole turbo branch — node 203 (steps), node 204 (cfg), plus MpiIfElse 57/212/222 and MpiMath 417/418/437/439. The plumbing is built and parameterised; it needs the two number sets, not new graph work.\n\nTHE APP SIDE IS THE GAP: klein-4b's ModelDef has capabilities.turboToggle FALSE, so the switch the graph supports is never exposed. Decide whether 9B ships turboToggle: true (krea2 and minimax-h3 are the precedents — both make the accelerator a REQUIRED dep, not an opt-in extra, because turbo is a per-run toggle and the weight must be on disk before the user can flip it), and whether 4B should gain it too.\n\nGATED ON A PRODUCT CALL (Fabio, 2026-08-21): another session is bench-testing 4B as an edit model. The longer-term intent is a Flow offering 4B or 9B as a user choice, traded on speed vs licence. Wiring 9B before that bench lands means guessing which one wins.\n\nLicence context: FLUX Non-Commercial Licence v2.1. Outputs ARE commercially usable; the bar is on using the MODEL. Redistribution is permitted under section 3 and licences/flux2-klein-9b/ already carries the copy + Attribution Notice. Users prove their own grant at Hugging Face through the MPI-357 gate before our R2 hands them the weights.",
+  "column": "todo",
+  "maturity": "idea",
+  "status": "active",
+  "created_at": "2026-08-21T18:00:00Z",
+  "updated_at": "2026-08-21T18:12:00Z",
+  "labels": [
+    "model-library",
+    "klein",
+    "models",
+    "licensing"
+  ],
+  "acceptance": [
+    "The 9B transformer is a dep (hashed, staged to R2) and klein-9b is a real ModelDef beside klein-4b",
+    "The 9B turbo LoRA is benched against the distilled weight FIRST (4B's came back the other way and was dropped), and wired only if it wins — sourced, hashed, staged, not reused from 4B",
+    "Turbo ON and turbo OFF each have measured steps + cfg, benched not guessed, and Input_is_Turbo drives them",
+    "capabilities.turboToggle is decided for 9B on measured evidence, and negativePrompt is re-checked if 9B ends up cfg-1 only (the reason 4B has it false)",
+    "Installing klein-9b raises the MPI-357 licence gate and only proceeds on a passing Hugging Face probe",
+    "Smoke-tested per docs/playbooks/bump-engine/01-smoke-run.md — a real generation per supported op"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "research": "research/"
+  }
+}

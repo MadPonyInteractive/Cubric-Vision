@@ -18,7 +18,7 @@ import {
 import { downloadService } from '../../../../services/downloadService.js';
 import { remoteEngineClient } from '../../../../services/remoteEngineClient.js';
 import { mountPodDiskBar } from '../../../../services/podDiskBar.js';
-import { getModelLicence } from '../../../../data/modelConstants/licences.js';
+import { getModelLicence, hasAcceptedLicence } from '../../../../data/modelConstants/licences.js';
 import { qs, qsa, ce, on } from '../../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
 import { openExternal } from '../../../../utils/openExternal.js';
@@ -676,7 +676,7 @@ export const MpiModelManager = ComponentFactory.create({
         // Preview thumb (image still / hover-play video) + name + category·tier +
         // media badge + a FIXED-HEIGHT inline state row (chip OR live progress bar).
         // A recently-installed heat dot rides absolute on the thumb. Click → detail.
-        function _tileState(st) {
+        function _tileState(st, model) {
             // A LIVE download must win over anyInstalled (MPI-273): an Update on an
             // already-installed model (add an op/arch to Wan 2.2 Smooth) else downloads
             // with the "Installed" chip up and no progress bar — bytes stream to disk
@@ -721,7 +721,23 @@ export const MpiModelManager = ComponentFactory.create({
                 const pct = Math.min(Math.round((st.partial.progress || 0) * 100), 100);
                 return `<span class="mpi-tile__chip mpi-tile__chip--partial">${pct}% on disk</span>`;
             }
+            // MPI-357 — a model whose licence still needs PROVING says so before the
+            // click, not after. Install is not wrong here (the gate fires either way),
+            // but it promises a download and delivers a legal wall plus a trip to
+            // Hugging Face for an access request. Naming it is the whole affordance;
+            // the chip is otherwise the ordinary available chip.
+            if (_needsLicenceProof(model)) {
+                return `<span class="mpi-tile__chip mpi-tile__chip--available">Licence required</span>`;
+            }
             return `<span class="mpi-tile__chip mpi-tile__chip--available">Install</span>`;
+        }
+
+        // Gated by a licence the licensor grants elsewhere, and not yet proven on this
+        // machine. Descriptor-driven: a licence with no `verify` block never matches, so
+        // every model in the library today is untouched.
+        function _needsLicenceProof(model) {
+            const licence = model && getModelLicence(model.id);
+            return !!(licence?.verify) && !hasAcceptedLicence(model.id);
         }
 
         // Tile item for the shared MpiTileSheet (MPI-356). The sheet owns the thumb,
@@ -746,7 +762,7 @@ export const MpiModelManager = ComponentFactory.create({
                 // Queued-install waiting mascot (MPI-284) — hidden until the job sits
                 // 'queued', dropped the moment it starts downloading (see _patchTile).
                 waiting: st.downloadState === 'queued',
-                state: _tileState(st),
+                state: _tileState(st, model),
                 source: model,
             };
         }
@@ -991,7 +1007,13 @@ export const MpiModelManager = ComponentFactory.create({
                 cancel.on('click', () => downloadService.cancel(model.id));
                 detailActions.appendChild(cancel.el); _detailActionBtns.push(cancel);
             } else {
-                const install = MpiButton.mount(ce('div'), { text: 'Install', variant: 'primary', size: 'md' });
+                // Same button, same path — `downloadService.start()` is the chokepoint and
+                // it raises the gate either way. Only the promise changes: this one opens
+                // a licence and a trip to the licensor, not a download (MPI-357).
+                const install = MpiButton.mount(ce('div'), {
+                    text: _needsLicenceProof(model) ? 'Verify licence' : 'Install',
+                    variant: 'primary', size: 'md',
+                });
                 install.on('click', () => { _install(model); });
                 detailActions.appendChild(install.el); _detailActionBtns.push(install);
             }
@@ -1402,7 +1424,7 @@ export const MpiModelManager = ComponentFactory.create({
             if (model) {
                 const st = _modelState(model);
                 _sheets.forEach((s) => {
-                    s.el.patchState(modelId, _tileState(st));
+                    s.el.patchState(modelId, _tileState(st, model));
                     // MPI-284: waiting mascot only while queued — drop it once the
                     // job starts downloading (or any other transition).
                     s.el.setWaiting(modelId, st.downloadState === 'queued');

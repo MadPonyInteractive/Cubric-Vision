@@ -97,12 +97,68 @@ vs licence — that comes later. `models.js` and `modelDeps.js` are therefore le
 `js/components/types.js` (the `MpiLicenceGateProps` typedef, line 1830) is held by a live
 MPI-454 claim. If the gate's props change, file an `mpi-message` — do not edit it.
 
+## Completed (2026-08-21, session 8aae0c15)
+
+All six design steps shipped. Evidence → [`validation.md`](validation.md).
+
+1. `licences.js` — `verify` block on the typedef, `FLUX2_KLEIN_9B` descriptor,
+   `licenceAccessUrl` / `HF_TOKEN_URL`, and the two receipt functions taught the
+   difference between consent and proof (`hasAcceptedLicence` demands `verified` for a
+   `verify` licence; `recordLicenceAcceptance(id, {verified})`).
+2. `routes/licences.js` + one mount line in `server.js` — `POST /licences/verify`.
+3. `MpiLicenceGate` — token step + probe, rendered only when `licence.verify` exists;
+   resolves `true` only on a passing probe, stays OPEN on a failure.
+4. `licences/flux2-klein-9b/{LICENSE.txt,NOTICE.txt}` — the §3.a copy (18,158 bytes,
+   byte-identical to the repo) and the §3.b Attribution Notice verbatim.
+5. `MpiModelManager` — `Licence required` chip and a `Verify licence` primary button,
+   both off `_needsLicenceProof(model)`.
+6. `docs/model-library.md` § "Licence required" + the `verify` bullet in
+   `docs/download-manager.md` § the licence gate.
+
+Plus `tests/licence-gate.test.cjs` — four new tests, including a live one (skipped on CI)
+that re-measures the gate rather than trusting this plan.
+
+## Plan Drift
+
+- **2026-08-21 — the 401/403 split is REAL, and this plan had it right.** A detour worth
+  recording, because the wrong conclusion was reached confidently and from real data.
+  Measuring with junk tokens only, a gated repo answers **401 `GatedRepo`** to a bad token
+  exactly as it does to no token — from which the session concluded the two failures were
+  indistinguishable and added a `GET /api/whoami-v2` fallback to separate them. Then
+  Fabio's real token was tried: **403**. A valid credential without the grant is a
+  different status, which is what this plan assumed from the start. The `whoami` call was
+  deleted; the route classifies on status alone. **The lesson is not about Hugging Face:
+  every token available was fake, so only one side of the split could ever appear, and
+  "measured" felt like proof.**
+  Now verified in BOTH directions — junk → 401 → *"That token was rejected"*; real token
+  without the grant → 403 → *"Hugging Face has not granted your account access yet"*.
+- **2026-08-21 — probe target moved from the weight to `model_index.json`.** Same gate
+  (measured 401 `GatedRepo`), but it is not an LFS pointer, so an authorised HEAD answers
+  200 directly instead of a 302 into the CDN. `LICENSE.md`/`README.md` remain the trap and
+  are now banned by a test.
+- **2026-08-21 — no separate sidebar verification button** (card criterion 3). The
+  existing Install button relabels to `Verify licence` and runs the same
+  `downloadService.start()` chokepoint. A second entry point would be a second gate to
+  keep correct, for no user gain.
+- **2026-08-21 — `report` is now optional on a descriptor.** The FLUX NCL has no
+  misuse-reporting obligation; H3 §V.5 does. The unconditional assert in
+  `tests/licence-gate.test.cjs` would otherwise have failed on the new descriptor.
+
 ## Current State
 
-Card moved `todo → doing` 2026-08-21, claim written, plan written. **No code yet.**
-The design above is settled and grounded in a live probe of the Hugging Face API taken
-the same day; nothing in it is assumed. Next session implements, starting at
-`licences.js`.
+**Shipped and verified except one thing, which needs Fabio.** `npm test` 667/668 — the one
+failure is `tests/orphan-sweep.test.cjs`, pre-existing on master and in no module this card
+touches. Every FAILURE path of the gate is proven live (route harness on a spare port, and
+the real dialog driven in an own-profile app instance on :62237). The token is never
+stored; a failed probe writes no receipt.
+
+**Next action: a real Hugging Face token from an account BFL has granted.** That is the
+only unproven branch — expected `{ok:true, status:200, reason:'granted'}`, receipt with
+`verified: true`, install proceeds from R2. Everything else is done.
+
+At close-out: **rewrite acceptance criterion 4** (it describes a probe that passes every
+user) and note that criterion 8 is deliberately unmet — the Klein 9B ModelDef is out of
+scope by Fabio's direction, so the `Licence required` chip has no model to render on yet.
 
 Fabio, 2026-08-21, two directions that bound this card:
 

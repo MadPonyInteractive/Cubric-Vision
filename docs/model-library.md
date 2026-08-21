@@ -147,6 +147,39 @@ is the home for it because it is already where a user goes to read what a model 
 tile has no room for it. Gate + descriptor contract: `docs/download-manager.md`
 § The licence gate.
 
+## "Licence required" — the install state for a licence granted elsewhere (MPI-357)
+
+A descriptor carrying a `verify` block (`js/data/modelConstants/licences.js`) marks a
+model whose licence is granted by the licensor to a PERSON, on the licensor's own model
+page — FLUX.2 Klein 9B behind the FLUX Non-Commercial Licence is the first. Ticking our
+checkboxes proves nothing about that grant, so the gate also asks for a Hugging Face
+access token and probes the gated repo before the install unlocks.
+
+Two surfaces change, both driven off `_needsLicenceProof(model)` (`getModelLicence(id)
+.verify && !hasAcceptedLicence(id)`), so a model with no `verify` block is untouched:
+
+- **Tile state row** — `Licence required` in place of `Install`, same
+  `.mpi-tile__chip--available` chip. It is only a promise correction: Install would fire
+  the same code path, but it promises a download and delivers a legal wall plus a trip
+  to Hugging Face to request access.
+- **Detail drawer** — the primary button reads `Verify licence`, same `_install(model)`
+  handler. `downloadService.start()` stays the one chokepoint.
+
+The state is derived, never stored: it disappears the moment the receipt carries
+`verified: true`. `hasAcceptedLicence` requires that flag for a `verify` licence, so
+consent alone — including any receipt written before the proof step existed — re-prompts
+rather than silently unlocking. The probe itself is `POST /licences/verify`
+(`routes/licences.js`); the token is used once and never stored.
+
+**A repo that stops being gated fails OPEN, deliberately.** If Black Forest Labs ungate
+the weights, the probe returns 2xx/3xx for any token and the install proceeds — there is
+nothing left to prove. What must NOT happen is the reverse: `probePath` naming a file
+Hugging Face serves publicly. `LICENSE.md` and `README.md` both answer 200 with no token
+at all (they have to — you must be able to read terms before accepting them), so either
+as a probe target passes every user and the gate becomes decoration. That was the card's
+own original acceptance criterion, and `tests/licence-gate.test.cjs` now pins both halves
+— offline, and live against Hugging Face when not on CI.
+
 ## Uninstall has no "keep files" state — install-state IS files-on-disk (2026-07-14)
 
 `model.installed` is derived by statting disk (`syncModelInstalled` → `/comfy/models/check`), not stored. So a "keep files but forget install" uninstall is unrepresentable: keep the weights → resync re-flags the model INSTALLED → card never leaves the Installed section, no install button. The old `MpiOkCancel` "Also delete model files from disk" checkbox (`deleteFiles=false`) was exactly this dead no-op (starkest on SDXL, whose only non-universal dep is its checkpoint; the other 3 deps are always-kept universals). Removed from the Uninstall dialog — `on('ok')` now passes `deleteFiles=true` unconditionally. Backend `deleteFiles` param + all guards (universal / shared / outside-managed-root / pip) left intact; it just always receives `true`. Don't re-add a keep-files toggle without a real persisted install record separate from disk-stat.
