@@ -10,6 +10,17 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 
 ## Current State
 
+**2026-08-21, end of session 1.** Bench half is PROVEN — pipeline, both preprocessor arms, and
+the `Input_Base_Model` swap. Fabio has not yet signed off by eye, and reviewing the output he
+raised the thing the bench half does not do: **the stamped object does not sit in the photo.**
+
+**That changes the scope, and it is not a nice-to-have.** Fabio, 2026-08-21: *"Flows should give
+the user a finished product, which is different from the history workspace tools."* The user must
+not have to go into the History workspace to fix the seam. So the blend pass is **IN this card**,
+not deferred to MPI-596. He is installing **Boogu ImageEdit** to find a prompt that generalises.
+
+Everything below the blend question is settled and needs no re-litigating. See § The blend pass.
+
 Project mode: `scalable-foundation`. Card was `idea`; this plan makes it `planned`.
 
 ### The bench half is far smaller than the brief assumes
@@ -138,8 +149,10 @@ Three findings from the user's own testing of the sibling card, all of which bea
 
 ## Remaining Work
 
-- **Fabio's sign-off on the bench output by eye** — the ONLY thing left in the bench half, and
-  the gate on everything below.
+- **The blend pass** — see § The blend pass. Now IN scope for this card, and the gate on wiring.
+  Starts with the online investigation into Boogu multi-image support.
+- **Fabio's sign-off on the bench output by eye** — pending, and he has already named the blend
+  as what is missing.
 - Wire the flow via `/mpi-add-flow`; live-run + reuse per `05-verify.md`.
 - Graphics (tile + hero) — a separate `/mpi-flow-graphics` pass once the flow runs.
 
@@ -153,6 +166,74 @@ Three findings from the user's own testing of the sibling card, all of which bea
 - **Sampling is a fixed 1024x1024**, with the object scaled back down to the bbox `size` before
   the stitch, rather than sampling at the bbox size directly — a drawn region is an arbitrary
   side length and SDXL degrades below ~768.
+
+## The blend pass — the open design question for session 2
+
+The bench pipeline stamps a clean cut-out at the right place and scale. It does **not** make the
+object belong to the photo: flat lighting, no contact shadow, no scene colour. Fabio's ruling is
+that a Flow owes the user a **finished product**, so this is in scope here.
+
+History: the brief said a *detailing* pass; MPI-454 moved that to an **edit model**; Fabio has now
+confirmed the edit-model direction and is installing Boogu ImageEdit.
+
+### The two candidate shapes
+
+**A — stamp, then a localised edit over the region.** This is the pattern the app ALREADY runs for
+localised edits, and `comfy_workflows/boogu_edit_balanced.json` already implements it:
+`MpiMaskSquareBbox(padding 64)` → `InpaintCropImproved` → the edit sampler →
+`InpaintStitchImproved`, gated by `MpiAnyChecker` on whether `Input_Mask` carries a path. Note that
+graph uses the **same `MpiMaskSquareBbox`** this flow already uses, so the two compose naturally —
+the square bbox is computed once and serves the crop, the stamp and the edit. Needs one
+general-purpose blend prompt. Lowest new machinery by a wide margin.
+
+**B — hand the edit model TWO images** — the region crop from the photo, and the stamp on its own
+image — and ask it to place one into the other. Fabio's read is this gives the better result. It
+also removes the "edit a thing that is already pasted badly" framing, which is a harder ask than
+"put this object in this scene".
+
+### What is actually known about Boogu and two images
+
+- **Structurally it takes up to 16.** `TextEncodeBooguEdit.images` is a `COMFY_AUTOGROW_V3` input
+  with slots `image_1`…`image_16`, `min: 0` (probed live on the bench, 2026-08-21).
+- **Behaviourally it did NOT work.** Fabio tested two images when Boogu was first installed: *"It
+  always messes up."* Its own tooltip agrees — *"Boogu focuses on one reference per sample; more
+  are allowed."*
+- The app's own graph wires **`images.image_1` only**.
+
+So the slot count proves nothing, and shape **B** is **not** unblocked. That test was a while ago.
+
+### Open questions — answer these FIRST in session 2
+
+1. **ONLINE INVESTIGATION (do this first, it gates everything else): has Boogu gained real
+   multi-image support since?** Upstream model/node updates, a different encode node, a community
+   node, or a documented technique. If it has, Fabio's position is that Boogu then **beats Krea and
+   Qwen outright and we simply use Boogu**. If it has not, shape **B** must run on Qwen Edit Plus
+   (`TextEncodeQwenImageEditPlus`, already wired in `flow_head_swap.json` with two
+   `MpiLoadImageFromPath` inputs and `FluxKontextMultiReferenceLatentMethod`) — which is the
+   proven two-image path in this repo.
+2. **A or B**, decided on bench output, not on argument.
+3. **The general-purpose blend prompt.** Whichever shape wins, one prompt must work across most
+   objects and scenes without per-case tuning. Starting points are below.
+4. **Which model** carries the pass: Boogu, Qwen Edit, or Krea2.
+5. **Ambiguity to resolve with Fabio:** he said *"Move all workflows that have added capabilities
+   of this"* — dictation, meaning unclear. Best reading is "we already have workflows carrying this
+   capability" (true: the Boogu and Qwen edit graphs). Ask before acting on it.
+
+### Prompt starting points for the blend pass
+
+Untested — bench them, do not ship them. Shape A (edit the stamped region):
+
+- `blend the pasted object into the scene: match the scene's lighting direction, colour temperature and contrast, add a natural contact shadow where it meets the ground, keep the object's shape and identity unchanged`
+- `make the inserted object look photographed in this scene, not pasted: correct its exposure and white balance to the surroundings, add grounding shadow and subtle atmospheric haze at matching depth, do not redesign the object`
+- Terser, for a turbo/low-step tier: `integrate the object into the scene with matching light, shadow and colour grade`
+
+Shape B (two images, place one into the other):
+
+- `place the object from the second image into the first image at the same position and scale, matching the scene's lighting, colour and perspective, with a natural contact shadow`
+
+The identity clause (*keep the object's shape unchanged* / *do not redesign*) is the part most
+likely to be load-bearing — an edit model asked to "blend" will happily re-imagine the object, and
+then the flow has thrown away the user's drawing, which is the one thing it must not do.
 
 ## Verification
 
@@ -168,6 +249,12 @@ Bench = standalone ComfyUI on port **8188**; the app engine is **48188**. Drive 
 
 ## Preservation Notes
 
+- **The bench graph is STAGED and openable.** ComfyUI workflow browser →
+  `MPI-567_scribble_to_object` (posted to the bench's own store in API format, which frontend
+  1.48.7 imports and auto-lays-out). Fixtures baked in at `D:\WORK\Images\Outputs\mpi567\`, so it
+  runs as-is; three previews wired (hint / pre-stitch object / final). Repo copy of the same
+  graph: `bench-graph.json` beside this plan. It is NOT yet a `raw/` template — that is part of
+  the `/mpi-add-flow` step, and `raw/` is the user's to export.
 - **`brief.md` § "Board note — why no umbrella" is STALE and will mislead whoever picks this
   up.** It lists MPI-552, MPI-560 and MPI-529 as three separate flow umbrellas; MPI-529 and
   MPI-552 (and MPI-530) were **merged into MPI-560 on 2026-08-16** at Fabio's request, which is

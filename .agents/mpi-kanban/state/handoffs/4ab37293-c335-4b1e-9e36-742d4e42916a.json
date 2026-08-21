@@ -1,0 +1,74 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "4ab37293-c335-4b1e-9e36-742d4e42916a",
+  "generated_at": "2026-08-21T15:22:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-567 scribble-to-object bench pass",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue MPI-567: prove the scribble-to-object Flow at the bench before any app wiring.",
+    "status": "in_progress",
+    "summary": "The bench half is PROVEN - the whole pipeline end to end, both preprocessor arms (scribble/canny), and the Input_Base_Model swap on two arms. Reviewing the output, Fabio named what is missing: the stamped object does not sit in the photo. He ruled that a Flow owes the user a FINISHED product, so the blend pass is now IN this card rather than deferred, and he is installing Boogu ImageEdit for it. Session 2 decides the blend shape, starting with an online investigation."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+    "completed": [
+      "Bench pipeline proven end to end (36-node API graph, 3 runs, ~18s cold / ~9s warm)",
+      "All four of the brief's open questions answered, with evidence",
+      "Both preprocessor arms proven (scribble and canny produce different, on-brief objects)",
+      "Input_Base_Model swap proven POSITIVELY on two arms (SDXL Realistic vs ILL Anime)",
+      "Findings doc written: docs/playbooks/add-flow/existing-flows/scribble-to-object.md",
+      "New bench trap filed in docs/workflow-authoring/bench-editing.md (partial download)",
+      "brief.md's stale 'why no umbrella' board note healed",
+      "Graph staged on the bench as MPI-567_scribble_to_object, fixtures baked in"
+    ],
+    "pending": [
+      "ONLINE INVESTIGATION: has Boogu ImageEdit gained real multi-image support?",
+      "Decide the blend shape: A (stamp then localised edit) vs B (two images to an edit model)",
+      "Find a general-purpose blend prompt that works across most objects and scenes",
+      "Fabio's sign-off by eye on the complete result (blend included)",
+      "Wire the flow via /mpi-add-flow, then live-run + reuse per 05-verify.md"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-567",
+    "title": "Scribble-to-object Flow - user draws on the image, ControlNet + SDXL renders it in",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-567/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      "brief": ".agents/mpi-kanban/tasks/MPI-567/brief.md",
+      "bench_graph": ".agents/mpi-kanban/tasks/MPI-567/bench-graph.json"
+    }
+  },
+  "next_action": {
+    "description": "Run the online investigation into Boogu ImageEdit multi-image support - upstream model or node updates, a different encode node, a community node, or a documented technique. It gates the blend-shape decision. Then bench the blend pass and settle a general-purpose prompt with Fabio.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "The blend pass is IN this card, not deferred to MPI-596. Fabio: 'Flows should give the user a finished product, which is different from the history workspace tools.' The user must not have to fix the seam in the History workspace.",
+      "The blend is an EDIT MODEL pass, not the plain detail path (carried from MPI-454, now confirmed by Fabio).",
+      "InpaintCrop/StitchImproved is NOT the carrier for the STAMP - a plain ImageCompositeMasked at the recorded x,y is. It may still be the carrier for the BLEND pass, which is a different question.",
+      "NO feather on the cut-out (MPI-454 ruling). The blend pass is what blends.",
+      "White, never green, behind the scribble hint - green silently zeroes the preprocessor.",
+      "Base is SDXL Realistic with an any-of set over all five SDXL models; the graph-side swap is already proven."
+    ],
+    "constraints": [
+      "BOOGU MULTI-IMAGE IS NOT PROVEN. TextEncodeBooguEdit.images is a COMFY_AUTOGROW_V3 with slots image_1..image_16, min 0 - but Fabio ALREADY TESTED two images when Boogu was installed and 'it always messes up'. Its own tooltip says 'Boogu focuses on one reference per sample; more are allowed.' The slot count proves nothing. If the investigation finds it still does not work, shape B must run on Qwen Edit Plus (TextEncodeQwenImageEditPlus, already wired two-image in flow_head_swap.json). If it DOES work now, Fabio's position is Boogu beats Krea and Qwen and we simply use Boogu.",
+      "A part-downloaded weight is listed in /object_info under its FINAL name and dies in CheckpointLoaderSimple with a shape RuntimeError that reads like a corrupt model. Gate on the byte count from modelDeps.js plus the absence of the .cubricdl sidecar - never on the name appearing in a dropdown. This cost a wasted run.",
+      "comfy_workflows/boogu_edit_balanced.json ALREADY implements the localised-edit path (MpiMaskSquareBbox padding 64 -> InpaintCropImproved -> sampler -> InpaintStitchImproved, gated by MpiAnyChecker on Input_Mask) and wires images.image_1 only. It uses the SAME MpiMaskSquareBbox node this flow uses, so the two compose naturally. Do not author a new localised-edit path.",
+      "Bench is port 8188, app engine is 48188. Never drive the user's app on :3000.",
+      "AMBIGUOUS, ask Fabio: he said 'Move all workflows that have added capabilities of this' - dictation, meaning unclear. Best reading is 'we already have workflows carrying this capability'. Do not act on it unasked."
+    ],
+    "files_to_read_first": [
+      "docs/playbooks/add-flow/existing-flows/scribble-to-object.md",
+      ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-567/bench-graph.json",
+      "comfy_workflows/boogu_edit_balanced.json"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/4ab37293-c335-4b1e-9e36-742d4e42916a.json and use mpi-continue to resume MPI-567 (Scribble-to-object Flow), which is in `doing`. The bench half is proven - pipeline, both preprocessor arms, and the Input_Base_Model swap - and written up in docs/playbooks/add-flow/existing-flows/scribble-to-object.md. What is left is the BLEND PASS: the stamped object does not sit in the photo, and Fabio ruled that a Flow owes the user a finished product, so it is in scope here rather than deferred. Start with the online investigation into whether Boogu ImageEdit has gained real multi-image support - it has 16 structural slots but Fabio already measured that two images 'always messes up', so the slot count proves nothing. That answer picks the blend shape. The bench graph is open-able in ComfyUI on port 8188 as `MPI-567_scribble_to_object` with fixtures baked in."
+}
