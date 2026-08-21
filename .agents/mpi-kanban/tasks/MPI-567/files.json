@@ -1,4 +1,18 @@
 {
   "schema": "mpi-kanban/task-files/v1",
-  "files": []
+  "files": [
+    "comfy_workflows/raw/flow_scribble_object.json",
+    "comfy_workflows/flow_scribble_object.json",
+    "js/data/flowsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/core/operationRegistry.js",
+    "operation_registry.json",
+    "js/data/modelConstants/universal_workflows.js",
+    "docs/playbooks/add-flow/existing-flows/scribble-to-object.md",
+    "tests/flow-model-choice.test.cjs",
+    ".agents/mpi-kanban/tasks/MPI-567/brief.md",
+    ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+    ".agents/mpi-kanban/tasks/MPI-567/files.json",
+    ".agents/mpi-kanban/tasks/MPI-567/bench-graph.json"
+  ]
 }

@@ -1,0 +1,569 @@
+{
+  "1": {
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
+    },
+    "inputs": {
+      "string": "C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/08e67e1e-0ee6-4183-9768-04b113765997/scratchpad/mpi567_photo.png",
+      "channel": "alpha",
+      "block_if_empty": true
+    }
+  },
+  "2": {
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Paint"
+    },
+    "inputs": {
+      "string": "C:/Users/Fabio/AppData/Local/Temp/claude/c--AI-Mpi-Cubric-Vision/08e67e1e-0ee6-4183-9768-04b113765997/scratchpad/mpi567_paint.png",
+      "channel": "alpha",
+      "block_if_empty": true
+    }
+  },
+  "3": {
+    "class_type": "InvertMask",
+    "_meta": {
+      "title": "Drawn Region"
+    },
+    "inputs": {
+      "mask": [
+        "2",
+        1
+      ]
+    }
+  },
+  "4": {
+    "class_type": "MpiMaskSquareBbox",
+    "_meta": {
+      "title": "Drawing Bbox"
+    },
+    "inputs": {
+      "mask": [
+        "3",
+        0
+      ],
+      "padding": 48
+    }
+  },
+  "5": {
+    "class_type": "EmptyImage",
+    "_meta": {
+      "title": "Flat Background"
+    },
+    "inputs": {
+      "width": [
+        "2",
+        2
+      ],
+      "height": [
+        "2",
+        3
+      ],
+      "batch_size": 1,
+      "color": 16777215
+    }
+  },
+  "6": {
+    "class_type": "ImageCompositeMasked",
+    "_meta": {
+      "title": "Paint On Flat"
+    },
+    "inputs": {
+      "destination": [
+        "5",
+        0
+      ],
+      "source": [
+        "2",
+        0
+      ],
+      "x": 0,
+      "y": 0,
+      "resize_source": false,
+      "mask": [
+        "3",
+        0
+      ]
+    }
+  },
+  "7": {
+    "class_type": "ImageCrop",
+    "_meta": {
+      "title": "Crop Hint To Bbox"
+    },
+    "inputs": {
+      "image": [
+        "6",
+        0
+      ],
+      "width": [
+        "4",
+        3
+      ],
+      "height": [
+        "4",
+        3
+      ],
+      "x": [
+        "4",
+        1
+      ],
+      "y": [
+        "4",
+        2
+      ]
+    }
+  },
+  "8": {
+    "class_type": "AIO_Preprocessor",
+    "_meta": {
+      "title": "AIO Aux Preprocessor"
+    },
+    "inputs": {
+      "image": [
+        "7",
+        0
+      ],
+      "preprocessor": "ScribblePreprocessor",
+      "resolution": 1024
+    }
+  },
+  "9": {
+    "class_type": "AIO_Preprocessor",
+    "_meta": {
+      "title": "AIO Aux Preprocessor"
+    },
+    "inputs": {
+      "image": [
+        "7",
+        0
+      ],
+      "preprocessor": "CannyEdgePreprocessor",
+      "resolution": 1024
+    }
+  },
+  "10": {
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Control_Net"
+    },
+    "inputs": {
+      "int": 1
+    }
+  },
+  "11": {
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Hint"
+    },
+    "inputs": {
+      "any_1": [
+        "8",
+        0
+      ],
+      "any_2": [
+        "9",
+        0
+      ],
+      "select": [
+        "10",
+        0
+      ]
+    }
+  },
+  "12": {
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Input_Base_Model"
+    },
+    "inputs": {
+      "ckpt_name": "SDXL_Realistic.safetensors"
+    }
+  },
+  "13": {
+    "class_type": "ControlNetLoader",
+    "_meta": {
+      "title": "Load ControlNet Model"
+    },
+    "inputs": {
+      "control_net_name": "ControlNet-Union-ProMax-SDXL.safetensors"
+    }
+  },
+  "14": {
+    "class_type": "SetUnionControlNetType",
+    "_meta": {
+      "title": "Set Union ControlNet Type"
+    },
+    "inputs": {
+      "control_net": [
+        "13",
+        0
+      ],
+      "type": "hed/pidi/scribble/ted"
+    }
+  },
+  "15": {
+    "class_type": "SetUnionControlNetType",
+    "_meta": {
+      "title": "Set Union ControlNet Type"
+    },
+    "inputs": {
+      "control_net": [
+        "13",
+        0
+      ],
+      "type": "canny/lineart/anime_lineart/mlsd"
+    }
+  },
+  "16": {
+    "class_type": "MpiAnySwitch",
+    "_meta": {
+      "title": "Control Net"
+    },
+    "inputs": {
+      "any_1": [
+        "14",
+        0
+      ],
+      "any_2": [
+        "15",
+        0
+      ],
+      "select": [
+        "10",
+        0
+      ]
+    }
+  },
+  "17": {
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Input_Positive"
+    },
+    "inputs": {
+      "value": "a rickety wooden watchtower with a red pennant flag, weathered timber, medieval siege camp"
+    }
+  },
+  "18": {
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Append Clean Background"
+    },
+    "inputs": {
+      "string_a": [
+        "17",
+        0
+      ],
+      "string_b": "isolated object on a plain white background, centered, full object in frame, product shot, no scenery, no ground, no shadow",
+      "delimiter": ", "
+    }
+  },
+  "19": {
+    "class_type": "PrimitiveStringMultiline",
+    "_meta": {
+      "title": "Input_Negative"
+    },
+    "inputs": {
+      "value": "blurry, low quality, watermark, text, multiple objects, cropped"
+    }
+  },
+  "20": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    },
+    "inputs": {
+      "clip": [
+        "12",
+        1
+      ],
+      "text": [
+        "18",
+        0
+      ]
+    }
+  },
+  "21": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    },
+    "inputs": {
+      "clip": [
+        "12",
+        1
+      ],
+      "text": [
+        "19",
+        0
+      ]
+    }
+  },
+  "22": {
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Control_strength"
+    },
+    "inputs": {
+      "float": 0.8
+    }
+  },
+  "23": {
+    "class_type": "MpiNormalizeValue",
+    "_meta": {
+      "title": "Mpi Normalize Value"
+    },
+    "inputs": {
+      "value": [
+        "22",
+        0
+      ],
+      "input_min": 0,
+      "input_max": 1,
+      "output_min": 0,
+      "output_max": 1,
+      "clamp": true,
+      "mode": "linear"
+    }
+  },
+  "24": {
+    "class_type": "ControlNetApplyAdvanced",
+    "_meta": {
+      "title": "Apply ControlNet"
+    },
+    "inputs": {
+      "positive": [
+        "20",
+        0
+      ],
+      "negative": [
+        "21",
+        0
+      ],
+      "control_net": [
+        "16",
+        0
+      ],
+      "image": [
+        "11",
+        0
+      ],
+      "vae": [
+        "12",
+        2
+      ],
+      "strength": [
+        "23",
+        0
+      ],
+      "start_percent": 0,
+      "end_percent": 1
+    }
+  },
+  "25": {
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    },
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    }
+  },
+  "26": {
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    },
+    "inputs": {
+      "int": 573110285
+    }
+  },
+  "27": {
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    },
+    "inputs": {
+      "model": [
+        "12",
+        0
+      ],
+      "positive": [
+        "24",
+        0
+      ],
+      "negative": [
+        "24",
+        1
+      ],
+      "latent_image": [
+        "25",
+        0
+      ],
+      "seed": [
+        "26",
+        0
+      ],
+      "steps": 7,
+      "cfg": 1.5,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
+      "denoise": 1.0
+    }
+  },
+  "28": {
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    },
+    "inputs": {
+      "samples": [
+        "27",
+        0
+      ],
+      "vae": [
+        "12",
+        2
+      ]
+    }
+  },
+  "29": {
+    "class_type": "LoadBackgroundRemovalModel",
+    "_meta": {
+      "title": "Load Background Removal Model"
+    },
+    "inputs": {
+      "bg_removal_name": "birefnet.safetensors"
+    }
+  },
+  "30": {
+    "class_type": "RemoveBackground",
+    "_meta": {
+      "title": "Remove Background"
+    },
+    "inputs": {
+      "bg_removal_model": [
+        "29",
+        0
+      ],
+      "image": [
+        "28",
+        0
+      ]
+    }
+  },
+  "31": {
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Object To Bbox Scale"
+    },
+    "inputs": {
+      "image": [
+        "28",
+        0
+      ],
+      "upscale_method": "lanczos",
+      "width": [
+        "4",
+        3
+      ],
+      "height": [
+        "4",
+        3
+      ],
+      "crop": "disabled"
+    }
+  },
+  "32": {
+    "class_type": "MaskToImage",
+    "_meta": {
+      "title": "Mask To Image"
+    },
+    "inputs": {
+      "mask": [
+        "30",
+        0
+      ]
+    }
+  },
+  "33": {
+    "class_type": "ImageScale",
+    "_meta": {
+      "title": "Matte To Bbox Scale"
+    },
+    "inputs": {
+      "image": [
+        "32",
+        0
+      ],
+      "upscale_method": "bilinear",
+      "width": [
+        "4",
+        3
+      ],
+      "height": [
+        "4",
+        3
+      ],
+      "crop": "disabled"
+    }
+  },
+  "34": {
+    "class_type": "ImageToMask",
+    "_meta": {
+      "title": "Image To Mask"
+    },
+    "inputs": {
+      "image": [
+        "33",
+        0
+      ],
+      "channel": "red"
+    }
+  },
+  "35": {
+    "class_type": "ImageCompositeMasked",
+    "_meta": {
+      "title": "Stitch"
+    },
+    "inputs": {
+      "destination": [
+        "1",
+        0
+      ],
+      "source": [
+        "31",
+        0
+      ],
+      "x": [
+        "4",
+        1
+      ],
+      "y": [
+        "4",
+        2
+      ],
+      "resize_source": false,
+      "mask": [
+        "34",
+        0
+      ]
+    }
+  },
+  "36": {
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Output_Image"
+    },
+    "inputs": {
+      "images": [
+        "35",
+        0
+      ],
+      "filename_prefix": "mpi567_final"
+    }
+  }
+}

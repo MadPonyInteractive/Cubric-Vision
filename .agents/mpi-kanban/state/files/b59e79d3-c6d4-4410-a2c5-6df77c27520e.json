@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "b59e79d3-c6d4-4410-a2c5-6df77c27520e",
+  "task_card": "MPI-567",
+  "task": ".agents/mpi-kanban/tasks/MPI-567/",
+  "paths": [
+    "docs/playbooks/add-flow/existing-flows/scribble-to-object.md",
+    "comfy_workflows/raw/flow_scribble_object.json",
+    "comfy_workflows/flow_scribble_object.json",
+    "js/data/flowsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/core/operationRegistry.js",
+    "operation_registry.json",
+    "js/data/modelConstants/universal_workflows.js",
+    "tests/flow-model-choice.test.cjs"
+  ],
+  "status": "claimed",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/08e67e1e-0ee6-4183-9768-04b113765997.json",
+  "owner_role": "implementer",
+  "claimed_at": "2026-08-21T14:52:30Z",
+  "heartbeat_at": "2026-08-21T14:52:30Z",
+  "note": "Bench pass proven on 8188; writing up the findings doc, then the app wiring via /mpi-add-flow.",
+  "recent_events": [
+    {
+      "at": "2026-08-21T14:52:30Z",
+      "event": "files_claimed"
+    }
+  ]
+}

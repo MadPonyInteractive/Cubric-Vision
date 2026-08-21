@@ -2,17 +2,31 @@
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-567",
   "title": "Scribble-to-object Flow - user draws on the image, ControlNet + SDXL renders it in",
-  "description": "Fabio, 2026-08-16. A Flow that turns the user's own DRAWING on top of their image into a rendered object stitched back into that image - a special inpaint driven by a scribble, not by a prompt alone. BENCH FIRST: author and prove the whole graph in the node graph, THEN wire it with /mpi-add-flow. No app work until the bench half is user-approved. Spec, open questions and the model/preprocessor choices: tasks/MPI-567/brief.md.",
-  "column": "todo",
-  "maturity": "idea",
+  "description": "Fabio, 2026-08-16. A Flow that turns the user's own DRAWING on top of their image into a rendered object stitched back into that image - a special inpaint driven by a scribble, not by a prompt alone. BENCH FIRST: author and prove the whole graph in the node graph, THEN wire it with /mpi-add-flow. No app work until the bench half is user-approved. Spec, open questions and the model/preprocessor choices: tasks/MPI-567/brief.md. MODEL CHOICE DECIDED 2026-08-21 (Fabio): base is SDXL Realistic and the user may pick any SDXL-family model - an any-of requiredModels set (MPI-590) over all five, with modelParams swapping Input_Base_Model. The bench half is much smaller than the brief assumes: every SDXL model already ships controlTypes depth/pose/scribble/canny behind ONE ControlNet-Union checkpoint switched by Input_Control_Net, so the flow DRIVES an existing branch rather than authoring one. Plan: plan.md.",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-16T00:00:00Z",
-  "updated_at": "2026-08-16T00:00:00Z",
+  "updated_at": "2026-08-21T14:40:12Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
     "files": "files.json",
     "events": "events.jsonl",
     "handoffs": "handoffs/"
-  }
+  },
+  "acceptance": [
+    "BENCH FIRST: the entire graph is authored and proven in the node graph, and Fabio approves real output BEFORE any app work",
+    "The flow drives the EXISTING SDXL ControlNet-Union branch via Input_Control_Net - it does not author a new ControlNet path (all five SDXL models already declare controlTypes depth/pose/scribble/canny)",
+    "The user picks the preprocessor - Scribble for a loose doodle, Canny for a clean structured drawing - and the step copy says which to pick in those words",
+    "The paint layer ALONE (not the composite) becomes the ControlNet hint on a flat background",
+    "SDXL samples only the region the drawing occupies, not the whole frame, and the result is stitched back at the recorded coordinates",
+    "The base model is SDXL Realistic, and the user may pick any installed SDXL-family model: an any-of requiredModels set with a modelParams arm per member, the default arm restated",
+    "The checkpoint loader is titled Input_Base_Model in the flow graph, and the swap is confirmed POSITIVELY on two arms - injection drops an unmatched title in silence",
+    "Consumers resolve the set through flowModelIds / flowModelChoices / setFlowModel / flowModelParams / flowSettingsModel - never by reading flow.requiredModels directly",
+    "tests/flow-model-choice.test.cjs is extended to cover this flow",
+    "No feather is added to the stitched object - the detailing pass is what blends (ruled on MPI-454, 2026-08-21)",
+    "brief.md's stale 'why no umbrella' board note is healed - MPI-529, MPI-552 and MPI-530 were merged into MPI-560 on 2026-08-16",
+    "Live-run and reuse both pass per docs/playbooks/add-flow/05-verify.md, with the picker exercised at two installed SDXL models"
+  ]
 }

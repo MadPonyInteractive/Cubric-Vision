@@ -41,6 +41,13 @@ and only then wire the app half via `/mpi-add-flow`. This card is not app work y
 
 ## Open questions for the bench pass
 
+> **ALL FOUR ANSWERED at the bench 2026-08-21** — the answers, with the evidence, are in
+> [`docs/playbooks/add-flow/existing-flows/scribble-to-object.md`](../../../../docs/playbooks/add-flow/existing-flows/scribble-to-object.md).
+> Short form: rembg's MASK is directly usable and already the right polarity; **white**, and
+> green is a silent total failure; `MpiMaskSquareBbox` gives x/y/size as INTs that never leave
+> the graph; and `InpaintCrop/StitchImproved` is **not** the carrier — a plain
+> `ImageCompositeMasked` is. Read the doc rather than re-running the bench.
+
 - Does the remove-background node already emit a usable MASK, or does the stitch need a
   separate matte? Fabio: *"I believe our remove background tool also generates masks, so
   we can use that mask, probably, maybe. I don't know, or maybe you stitch."*
@@ -54,17 +61,20 @@ and only then wire the app half via `/mpi-add-flow`. This card is not app work y
 
 ## Board note — why no umbrella
 
-Fabio asked for this to go under "the flows umbrella". There isn't one. Three flow
-umbrellas exist and none covers flow CONTENT:
+**HEALED 2026-08-21.** The restructuring this note said had not happened, has: **MPI-529,
+MPI-552 and MPI-530 were merged into MPI-560 on 2026-08-16**, at Fabio's request and on the
+same day this brief was written. There is now ONE flow umbrella — **MPI-560** — so the
+original reason for keeping this card unparented is gone.
 
-- **MPI-552** — LTX 2.3 v2v trio (foley / extend / lipsync). Model-specific.
-- **MPI-560** — Community Flows: 1.5 authoring shape, 1.6 package format. FORMAT, not content.
-- **MPI-529** — Flow Library v2: library paths, ripping the test flows. Plumbing.
+Fabio, 2026-08-16, which drove that merge: *"three flow umbrellas exist to me. That's just
+ridiculous. Flows are one thing, so there should be only one umbrella. That's all improperly
+set up at the moment."*
 
-Unparented flow-content cards already on the board: **MPI-355** (4K/8K localized-edit
-Flow), **MPI-504** (Character Sheet flow, sits under the bench umbrella MPI-530).
+This card still ships **standalone**: MPI-560 is FORMAT (community flow authoring shape and
+package format), not flow CONTENT, so it is not this card's parent either. Re-parent only if
+a content umbrella is ever created. The other unparented flow-content cards are the same
+case: **MPI-355** (4K/8K localized-edit Flow) and **MPI-596** (Object Stamp Flow, the sibling
+whose bench questions are answered here).
 
-Fabio, 2026-08-16: *"three flow umbrellas exist to me. That's just ridiculous. Flows are
-one thing, so there should be only one umbrella. That's all improperly set up at the
-moment."* Restructuring is a separate session's job. This card ships standalone and gets
-re-parented when that happens.
+> The stale version of this note listed MPI-552, MPI-560 and MPI-529 as three live umbrellas.
+> Do not restore it — it would send the next reader looking for boards that no longer exist.
