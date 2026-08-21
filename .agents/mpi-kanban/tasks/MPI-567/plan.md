@@ -10,6 +10,21 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 
 ## Current State
 
+**2026-08-21, end of session 2.** Boogu multi-image is ANSWERED (no). The blend was benched on
+Klein 4B across five lighting plates driven end to end from Fabio's own drawing, and the
+**localised crop/stitch path is BLOCKED**: it leaves a visible rectangular re-grade patch on
+every plate. Fabio's ruling: that is a **Boogu/Klein** behaviour and **Qwen Edit does not
+usually do it** — so the next measurement is Qwen, not a bigger Klein. Klein 9B is unproven,
+licence-gated and being explored in another session; do not design around it.
+
+**Next action (both approved by Fabio, neither run):**
+1. Whole-image relight → composite-back across all five plates — confirm the rectangle is
+   absent everywhere, not just the two tried. This is the shape decision. ~30s/plate.
+2. Re-run the anime plate on the **ILL Anime** arm — confirms medium is model choice, and
+   exercises the `Input_Base_Model` swap live.
+
+Then, if the rectangle survives (1): the same five plates on **Qwen Edit**.
+
 **2026-08-21, end of session 1.** Bench half is PROVEN — pipeline, both preprocessor arms, and
 the `Input_Base_Model` swap. Fabio has not yet signed off by eye, and reviewing the output he
 raised the thing the bench half does not do: **the stamped object does not sit in the photo.**
@@ -218,6 +233,167 @@ So the slot count proves nothing, and shape **B** is **not** unblocked. That tes
 5. **Ambiguity to resolve with Fabio:** he said *"Move all workflows that have added capabilities
    of this"* — dictation, meaning unclear. Best reading is "we already have workflows carrying this
    capability" (true: the Boogu and Qwen edit graphs). Ask before acting on it.
+
+### Session 2 result — ANSWERED: shape B is dead, the winner is relight-then-composite
+
+**Open question 1 answered: Boogu has NOT gained multi-image support.** Upstream model card
+(Edit and Edit-Turbo, both re-read 2026-08-21) still says *"Only support 1 reference image for
+now."* The NODE is innocent — `nodes_boogu.py` encodes every slot into vision tokens AND a ref
+latent, dropping nothing. The real mechanism, which the MPI-257 research did not have: **Boogu
+has no per-image addressing.** Qwen and Klein write `"Picture {i}: <|vision_start|>…"` into the
+prompt per image (`nodes_qwen.py:100`); Boogu passes the list bare. There is no token for "the
+second one", so no prompt can fix it. The "up to 4 refs" claim circulating online traces to
+`dheeai/dhee-runner-boogu`, which 404s. So shape B could only run on Qwen or Klein.
+
+**Klein two-image duplicated the object — because it was given no MASK.** `kleinEdit` with
+Image 1 = stamped composite, Image 2 = the object cut-out produced a **SECOND tower**
+(`mpi567_blend_p1_00001_.png`, 24.2s). ~~Klein's multi-ref is additive by design, do not
+re-propose~~ — **that conclusion was WRONG and is struck.** It came from a matrix with a hole:
+ref2 and mask were each tested alone, never together. Fabio named the real cause — with the
+whole image and no localised area, "place this object" has nowhere to place it, so it adds one.
+**Adding `Input_Mask` removes the duplication entirely** (`mpi567_place_place/fixperp`, 18.1s):
+one object, photo preserved. Klein's multi-ref is usable here; it just needs a WHERE.
+
+**What works — three findings that only make sense together:**
+
+1. **Whole-image relight fixes the object but re-grades the whole photo** (`solo`, 12.2s). The
+   tower relit correctly; the entire scene also went golden. Unshippable alone — a Flow may not
+   restyle the user's photo.
+2. **The masked crop/stitch path destroys the object** (`masked`, 10.4s). Photo preserved
+   perfectly, but the tower came back a glowing blob. **Cropping removes the very scene the
+   relight is supposed to match** — the model cannot match a grade it cannot see. This is the
+   general law: *relighting is a global-reference op and cannot be done inside a crop.* It is
+   also why `boogu_edit_balanced.json`'s existing localised-edit path is NOT the carrier here.
+3. **So: relight whole-image, then composite only the region back.** Mask = where the composite
+   differs from the source photo (exact, no bookkeeping), grown 48px to carry the cast shadow,
+   feathered 24px. Result: `mpi567_BLEND_WINNER_klein_noglow_composite.png`. This feathers the
+   BLEND REGION, not the cut-out edge — the MPI-454 no-feather ruling is about the cut-out and
+   still holds.
+
+**The prompt is load-bearing, and "add a shadow" backfires.** The first prompts asked for "warm
+sunset light" + "add a cast shadow" and the model added a *lit dust cloud* at the base — a warm
+halo that survived every mask size, because it was CONTENT, not a seam. Tightening the mask made
+it worse. The fix was naming the shadow as dark and forbidding the glow outright:
+
+> `relight the wooden watchtower to match the scene it stands in: darken it into the surrounding shade, cool its midtones to match the muddy ground, keep only a warm rim of sunset light on its right edge, and lay a soft dark cast shadow on the ground to its left. Do not add glow, haze, dust or light around it. Keep its shape, structure and proportions exactly as they are`
+
+**THE FIXTURE WAS THE BIGGEST PROBLEM, and it invalidated half of the above.** Session 1's
+battlefield plate is a steep **3/4-from-above** shot; the object SDXL renders is a **front
+elevation**. No blend pass can reconcile a camera mismatch — every "it still doesn't sit"
+finding on that plate was measuring the fixture, not the pipeline. Fabio caught it and supplied
+a representative plate (an **eye-level** forest path), which is what a user actually produces
+when they draw on their own photo: they draw in the photo's own perspective, so a front-view
+object is the CORRECT projection. Re-run there, the blend works.
+
+**Second correction from Fabio, and it relaxes the hardest constraint: the SDXL intermediate
+does NOT need to survive the edit.** The user never sees it. So identity preservation is not
+the bar — the bar is that the object lands at the drawn LOCATION in the scene's camera angle.
+The earlier "identity drift is a blocker" note is downgraded accordingly.
+
+**Result on the realistic fixture** (`mpi567_FOREST_WINNER.png`): the tower is darkened into
+the forest shade, ferns and undergrowth overlap the legs, flag and structure intact, and the
+photo — god-rays, lit path, dappled light — is untouched. It reads as photographed there.
+Fixture builder: `<scratchpad>/make_forest_fixture.py`; runs: `run_forest.py`, `compose_forest.py`.
+
+**Asking for OCCLUSION is what sells it.** *"let ferns and leaves overlap in front of the base"*
+produced real foliage crossing the legs. A pure relight prompt never generates occlusion, and
+occlusion is the strongest "this is really there" cue in a cluttered scene.
+
+**The mask must be a FILLED RECT over the area, not the object silhouette** (Fabio, 2026-08-21
+— the app's own localised-edit shape). A silhouette mask confines the denoise to the outline, so
+the model can neither cast a shadow onto the ground nor let scene light fall across the object.
+Note the Klein graph already squares the mask it is given (node 264 `MpiMaskSquareBbox`,
+padding 64) — but squaring the CROP is not the same as filling the DENOISE region, which is why
+the silhouette runs came back flatly lit. With a filled rect the forest result gains sunlight
+across the roof, shade on the far face, and real leg shadows on the path.
+
+**The prompt GENERALISES — no object noun, no scene noun.** Every earlier prompt hand-named the
+tower and the scene, which is not shippable. This one line ran unchanged on both plates and
+broke neither:
+
+> `Place the object into the scene so it looks photographed there rather than pasted: match the scene's lighting direction, colour temperature, contrast and depth of field, let the scene's light and shadows fall across it, cast a natural shadow onto whatever it rests on, and let nearby foreground elements overlap its edges. Keep the object's shape and design.`
+
+Evidence: `mpi567_gen_forest_00001_.png` (14.1s), `mpi567_gen_battle_00001_.png` (10.1s).
+**Not yet proven** — two plates, one seed each. Fabio's stated expectation is that it will break
+on other images, and that is the next thing to measure, not to assume either way.
+
+**The predicted crop/stitch re-grade did NOT bite at this padding** (56px, 15-29% of frame) on
+either plate — no rectangular seam. It remains the known risk of this path; sample more before
+calling it absent.
+
+### Break-test, 5 plates, Fabio's own drawing (2026-08-21) — the localised path FAILS
+
+Driven end to end: his line drawing of a seated figure → the session-1 bench graph → the
+blend. Plates chosen to break a single prompt: hard sun, overcast, night/sodium, interior
+window light, and a **cel-shaded anime** plate (his point that "photographed" does not
+translate to animated scenes — the wording was changed to *"looks like it was always part of
+it"* + *"match the scene's art style"*).
+
+**BLOCKER — the crop/stitch re-grades the patch, exactly as Fabio predicted.** Every blended
+plate carries a visible lighter RECTANGLE around the object. It is worst where the background
+is large and uniform — the dirt road and the anime rooftop make it blatant — and it appears on
+BOTH preprocessor arms, so it is the stitch, not the render. **The localised
+`InpaintCrop/Stitch` path is therefore not shippable for this flow as it stands.** Note the
+earlier whole-image-relight-then-composite-back route did NOT show it, because the region is
+returned by a feathered composite instead of a model-graded stitch. That is one candidate.
+
+**THE RE-GRADE IS MODEL-SPECIFIC, and that reframes the whole model choice (Fabio,
+2026-08-21).** It is a **Boogu and Klein** behaviour. **Qwen Edit does NOT usually do it.** So
+the axis is not "which model is fastest" but "which model returns a patch that still matches
+its surroundings" — and on that axis Qwen, previously ruled out for being slow, comes back into
+contention. **Klein 9B is a HOPE, not a plan:** Fabio hopes it does not re-grade, but it is
+unproven, another session is still working out whether it is even possible, and it is
+**licence-gated (MPI-357) — verification is a real pain for most users**, which is a product
+cost on top of the technical one. Do not design around 9B landing.
+
+**Next measurement, in this order:** (1) whole-image relight → composite-back across all five
+plates, confirming the rectangle is absent everywhere rather than on the two tried; (2) the
+same five plates on **Qwen Edit**, to test Fabio's read that it does not re-grade — that is the
+cheapest way to buy a shippable localised path without waiting on 9B.
+
+**CANNY IS THE WRONG ARM FOR FLAT LINE ART — but it is NOT wrong in general.** With
+`Input_Control_Net = 2` (canny) the user's ink outline SURVIVES into the render and the figure
+reads as a coloured-in drawing. `= 1` (scribble) removes it completely and returns a clean
+photoreal figure with the pose intact. Mechanism: canny detects EDGES and a drawn stroke has
+TWO of them, so a 3px line becomes two parallel contours the model renders as an outline;
+scribble thins the stroke to a centreline, so the model renders a FORM.
+
+**Fabio's ruling on where canny DOES belong (2026-08-21): a SHADED PENCIL SKETCH** — a drawing
+carrying tonal hatching and interior modelling, not flat contour lines (he supplied a graphite
+figure study as the reference case). There the edges are real tonal structure and canny is the
+right reader. So the acceptance line *"Canny for a clean structured drawing"* stands, but
+"structured" means TONAL, not TIDY — and the step copy must say so, or a user with clean line
+art will pick canny and get outlines. **Untested: the pencil-sketch case itself. Run it.**
+
+**"Match the scene's art style" does NOT restyle the object.** On the anime plate the figure
+came back fully photoreal on a cel-shaded rooftop. Root cause is upstream: stage 1 rendered on
+`SDXL_Realistic`. **Fabio: "If you want anime, you gotta use ILL Anime. SDXL Realistic is
+probably gonna have a real hard time doing it."** So medium is a MODEL-SELECTION problem, not a
+prompt problem — which is precisely what the any-of picker is for, and it makes the picker
+load-bearing for correctness rather than a convenience. The blend pass cannot rescue a medium
+mismatch. **Untested: the anime plate re-run on the ILL Anime arm** — approved by Fabio, not
+yet run; it doubles as a live exercise of the `Input_Base_Model` swap.
+
+Runner: `<scratchpad>/run_e2e.py` (`MPI_CN=1` scribble / `2` canny), plates from
+`make_plates.py`. Outputs `mpi567_e2e_{stamp,blend}_{arm}_{plate}_00001_.png`.
+
+**Three traps for the wiring step:**
+
+- **The session-1 `cutout` preview's ALPHA IS NOT A SILHOUETTE.** ~90% opaque, corners at 254,
+  so `getbbox()` returns the whole frame and a crop silently does nothing (it cost two wrong
+  fixtures here). The object is recoverable from the RGB as non-white pixels. The real pipeline
+  stamps correctly, so it has a proper mask internally — but nothing downstream may read that
+  preview file's alpha.
+
+- **The edit pass CHANGES THE DIMENSIONS.** 896x1200 in → 880x1184 out (Klein snaps to ÷32), and
+  the two axes do not scale by the same factor. Any composite-back must handle the resize, or the
+  region lands a few pixels off.
+- **Identity drift is NOT fully solved.** *"Keep its shape, structure and proportions exactly"*
+  held the tower, but the pony lost its pennant and some barding detail. The identity clause needs
+  strengthening before this ships — this is the open item, not a finished result.
+
+Runners: `<scratchpad>/run_blend.py` (two-image), `run_blend2.py` (solo/masked/noglow),
+`compose_blend.py` (the composite-back).
 
 ### Prompt starting points for the blend pass
 
