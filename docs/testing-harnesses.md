@@ -176,6 +176,13 @@ prints `READY <url>`. Drive that URL, never 3000.
 - **It copies NOTHING, and that is the safety property** — see
   [runpod-remote-engine.md](runpod-remote-engine.md) § the orphan sweep for what a copied profile
   did to another agent's live Pod.
+- **The isolation is the PROFILE, not the project data.** `APP_DOCUMENTS` is not profile-scoped,
+  so `getProjectsRoot()` still resolves to the user's real `Documents/Cubric Vision/Projects`. A
+  project your instance creates lands in THEIR project root and shows up in THEIR landing list on
+  the next re-list — it is not sandboxed anywhere. Delete a probe project when you are done
+  (`POST /delete-project {"folderPath": …, "deleteFiles": true}`, and note it wants `folderPath`
+  at the top level, not a nested `project` object). Measured MPI-592: two probe projects written
+  straight into the live root, both removed by hand.
 - **Never pipe the launch into `head` / `grep -m1`** — the consumer exits, stdout dies, and the
   third-party electron npm wrapper throws an EPIPE that takes the app with it (MPI-514). Read the
   URL out of the background task's output file.

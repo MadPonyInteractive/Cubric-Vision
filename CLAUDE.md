@@ -88,6 +88,7 @@ it turned off before staging weights to R2.
 | **Any code at all** (baseline — universal CSS/icon/utility/logging/import rules) | `.claude/rules/dos_and_donts.md` |
 | Components / UI (build, move, style, debug) | `.claude/rules/components.md`; per-component fine print (PromptBox/Toast/Popup/Input/StylePicker…) → `docs/component-contracts.md` |
 | Generation lifecycle (dispatch, Stop/cancel, lanes, queue drain, progress bar) | `docs/generation-lifecycle.md` |
+| **Driving the RUNNING app from an agent over HTTP** — projects, media, dispatching a generation, engine + pod control, recovering a prompt from a sidecar | `.claude/skills/cubric-vision/SKILL.md` (the endpoint surface + the house rules), then `docs/generation-lifecycle.md` § "An agent is the THIRD producer" for the seam. **No auth on loopback, and almost every endpoint is a POST — including the read-only ones.** A submit runs in whatever project the app has OPEN, so `/connector/open-project` first or the output lands elsewhere behind an `ok: true` (MPI-592) |
 | Gallery (cards, thumbnails, selection, drag-drop, hover media) | `docs/gallery.md` |
 | Masking (layer model, overlay draw, mask storage) | `docs/masking.md` |
 | Canvas tool family (adding/changing a canvas tool, **the preview contract**, Add/Subtract, PromptBox contract) | `docs/masking-tools.md` |
