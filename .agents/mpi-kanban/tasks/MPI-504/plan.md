@@ -32,8 +32,9 @@ and the runtime API is converted. Evidence in `validation.md` (session 12 sectio
 - **NEXT:** run `sync-raw-workflows.mjs` once Fabio's staged `comfy_workflows/flow_outpaint.json`
   is committed - its guard refuses while any generated workflow is uncommitted. The direct
   converter was used instead; for a runtime (non-template) workflow that is the same output.
-- **Still open:** open calls 1-4 below, and the cartoon/anime colour wash-out (NOT a 2K effect -
-  reproduced at 1k turbo in run B), which wants its own card.
+- **Still open:** open calls 1-4 below. The cartoon/anime colour wash-out is CLOSED with NO card
+  (Fabio, 2026-08-21) - known Krea behaviour, an in-colour prompt fixes it, and it reproduces at
+  1k too, so it is not a 2K effect. Do not re-raise it.
 
 ### Session 9 (previous)
 

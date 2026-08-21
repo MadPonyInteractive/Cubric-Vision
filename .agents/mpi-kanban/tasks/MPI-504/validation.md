@@ -1681,7 +1681,9 @@ selects `730` the raw sheet over `681` the inpaint output). `MpiCompare` and
   reproduced deliberately. Consistent with Klein growing past the mask.
 - **Cartoon and Anime wash out at 2K.** 07, 08 and 10 came back near-greyscale with flat,
   under-described wardrobe, while every Photoreal and 3D sheet held its colour. Not a head
-  branch fault — it is upstream of the whole branch. Worth its own card.
+  branch fault — it is upstream of the whole branch. ~~Worth its own card.~~ **NO CARD — CLOSED
+  by Fabio 2026-08-21:** known Krea behaviour, a colour word in the prompt fixes it, and it
+  reproduces at 1k too (session 12, run B), so it is not resolution-linked either.
 
 ### THE GROWTH IS BOUNDED BY THE STITCH, AND IT IS THREE SURFACES — corrects this file, 2026-08-21
 
@@ -1897,10 +1899,14 @@ the drape on the shoulders is untouched. That is the exact trade Fabio ranked fo
    being left behind. What the earlier 1k run saw is one outcome, not the rule. **This also closes
    the open long-hair question** the previous handoff left for Fabio's judgement: the braid and the
    hair are removed cleanly, so there is no oversized remnant to judge.
-2. **"Cartoon and Anime wash out at 2K" is not a 2K effect.** Run B is 1k turbo and came back
-   near-greyscale with a "loud checked scarf" rendered flat grey. The finding is real but its
-   cause is the cartoon recipe, not the resolution. Still deserves its own card; the card should
-   not say 2K.
+2. **"Cartoon and Anime wash out at 2K" is not a 2K effect — and it is NOT A DEFECT.**
+   Run B is 1k turbo and came back near-greyscale with a "loud checked scarf" rendered flat grey,
+   so the resolution is not the cause. **CLOSED by Fabio, 2026-08-21: "we've seen this with KREA
+   before, a simple in-colour prompt fixes it. If the user gets results like this, the user is
+   smart enough to ask for colour."** No card, no recipe change, no colour clause baked into the
+   templates. Do not re-raise it — this is Krea's known behaviour and the user's own prompt is
+   the fix. Consistent with [[project_the_users_gpu_is_the_limit]]: a describable, self-evident
+   outcome the user can steer is not the flow's problem to solve.
 3. **The ghost head is still present and is unrelated to this change.** Run C shows a faint
    face-shaped ghost floating above the front body's neckline — the same artifact `05` was
    rejected for during the graphics session, and the "strong hair-silhouette ghost" noted on

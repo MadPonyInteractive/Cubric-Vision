@@ -1346,128 +1346,22 @@
       "title": "Mpi If Else"
     }
   },
-  "745": {
-    "inputs": {
-      "model_name": "bbox/face_yolov8n.pt"
-    },
-    "class_type": "UltralyticsDetectorProvider",
-    "_meta": {
-      "title": "face_yolov8n"
-    }
-  },
-  "746": {
-    "inputs": {
-      "threshold": 0.5,
-      "dilation": 0,
-      "crop_factor": 3,
-      "drop_size": 10,
-      "labels": "all",
-      "bbox_detector": [
-        "745",
-        0
-      ],
-      "image": [
-        "759",
-        0
-      ]
-    },
-    "class_type": "BboxDetectorSEGS",
-    "_meta": {
-      "title": "every face on the sheet"
-    }
-  },
-  "747": {
-    "inputs": {
-      "target": "area(=w*h)",
-      "order": true,
-      "take_start": 1,
-      "take_count": 999,
-      "segs": [
-        "746",
-        0
-      ]
-    },
-    "class_type": "ImpactSEGSOrderedFilter",
-    "_meta": {
-      "title": "drop the portrait (the largest face)"
-    }
-  },
-  "748": {
-    "inputs": {
-      "segs": [
-        "773",
-        0
-      ]
-    },
-    "class_type": "SegsToCombinedMask",
-    "_meta": {
-      "title": "SEGS to MASK (combined)"
-    }
-  },
-  "749": {
-    "inputs": {
-      "padding": 0,
-      "mask": [
-        "748",
-        0
-      ]
-    },
-    "class_type": "MpiMaskSquareBbox",
-    "_meta": {
-      "title": "measure the face"
-    }
-  },
-  "750": {
-    "inputs": {
-      "math_expression": "a * 4 // 5",
-      "a": [
-        "749",
-        3
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "pad = 0.8 x face (hair + hat headroom)"
-    }
-  },
-  "751": {
-    "inputs": {
-      "mask": [
-        "748",
-        0
-      ],
-      "padding": [
-        "750",
-        0
-      ]
-    },
-    "class_type": "MpiMaskSquareBbox",
-    "_meta": {
-      "title": "head box, clamped inside the sheet"
-    }
-  },
   "752": {
     "inputs": {
+      "x": 0,
+      "y": 0,
       "width": [
-        "751",
-        3
+        "774",
+        0
       ],
       "height": [
-        "751",
-        3
-      ],
-      "x": [
-        "751",
-        1
-      ],
-      "y": [
-        "751",
-        2
+        "772",
+        0
       ]
     },
     "class_type": "MpiBox",
     "_meta": {
-      "title": "the head box"
+      "title": "the far-left region (front body only)"
     }
   },
   "753": {
@@ -1481,7 +1375,7 @@
   },
   "754": {
     "inputs": {
-      "text": "hair, face, hat",
+      "text": "head, hat",
       "clip": [
         "753",
         1
@@ -1512,7 +1406,7 @@
     },
     "class_type": "SAM3_Detect",
     "_meta": {
-      "title": "hair + face + hat, unioned"
+      "title": "head + hat, unioned"
     }
   },
   "756": {
@@ -1534,6 +1428,8 @@
   },
   "757": {
     "inputs": {
+      "x": 0,
+      "y": 0,
       "operation": "add",
       "destination": [
         "756",
@@ -1542,14 +1438,6 @@
       "source": [
         "755",
         0
-      ],
-      "x": [
-        "751",
-        1
-      ],
-      "y": [
-        "751",
-        2
       ]
     },
     "class_type": "MaskComposite",
@@ -1571,7 +1459,7 @@
     },
     "class_type": "MpiBoxCrop",
     "_meta": {
-      "title": "crop to the head"
+      "title": "crop to the far-left region"
     }
   },
   "759": {
@@ -1657,20 +1545,17 @@
       "title": "Height_Select"
     }
   },
-  "773": {
+  "774": {
     "inputs": {
-      "target": "confidence",
-      "order": true,
-      "take_start": 0,
-      "take_count": 1,
-      "segs": [
-        "747",
+      "math_expression": "a // 4",
+      "a": [
+        "771",
         0
       ]
     },
-    "class_type": "ImpactSEGSOrderedFilter",
+    "class_type": "MpiMath",
     "_meta": {
-      "title": "the frontal body head, not the rear"
+      "title": "left 25% of the sheet width"
     }
   }
 }
