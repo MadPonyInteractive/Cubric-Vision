@@ -1713,3 +1713,41 @@ set by these nodes.
 Minor caveat, unmeasured: both crops run `output_resize_to_target_size: True`, so the
 stitch-back resamples and the boundary can smear a pixel or two. Not enough to explain
 a removed coif.
+
+### THE FAR-LEFT FIGURE IS THE FRONT BODY IN 10 OF 10 — measured, 2026-08-21
+
+Fabio's question, and it is the one that decides whether stage 1 can be deleted:
+*has any generation put the far-left figure with its back to camera?* Measured across
+the whole 2k-quality stress batch (all four recipes, ten seeds): **no. The far-left
+figure faces the camera in 10 of 10, and is never the rear view.** The head-box probes
+agree independently — every chosen head sat at `x <= 146` with a right edge `<= 471` on
+a 1792 px sheet, inside the left 26%.
+
+Column positions, as a fraction of sheet width (rules drawn at 26/30/34/38% over the
+left 45% of every sheet; `headpick/_columns.jpg` in the session scratchpad):
+
+| | position |
+|---|---|
+| front figure, including a top hat (02), antlers (10) and a fedora (08) | ends by **~20%** |
+| rear figure's body edge | starts **~24%** |
+| rear figure's **head** | starts **~29%** |
+
+**So a cut at ~25% of sheet width** — 448 px at 1792, 320 px at 1280 — contains the whole
+front figure and clips no rear head, with ~5% of width (~90 px at 2K) of margin either
+side. Nothing crossed the 26% rule in either direction in ten sheets.
+
+**What this buys: stage 1 becomes deletable.** `745`/`746` (`face_yolov8n`), `747` (drop
+the largest face) and `773` (highest confidence) exist only to locate the front body's
+head. If the crop itself guarantees only the front body is in frame, none of them is
+needed — and the zero-face failure (run 08, and Fabio hit the same thing at 1K) cannot
+happen, because there is no detector left to return nothing.
+
+**The caveat, stated so nobody treats 25% as a law:** the recipe templates prescribe the
+left half holds *"two narrow full-body standing views of equal width"* but do NOT pin
+their x. So a percentage cut is a heuristic with measured margin, not a guarantee, and a
+sheet that centres the pair differently would clip.
+
+**A variant that does not depend on the panels landing at a particular x:** `755
+SAM3_Detect` already carries `individual_masks`, currently `false` (unioned). Set it
+`true`, feed it the left **HALF** — a slack, safe cut — and take the **leftmost** mask.
+Same rule, same node, one flag, and it still deletes stage 1. Untested.
