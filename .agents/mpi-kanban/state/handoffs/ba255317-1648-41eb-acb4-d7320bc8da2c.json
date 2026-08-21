@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "ba255317-1648-41eb-acb4-d7320bc8da2c",
   "generated_at": "2026-08-21T00:05:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-504 - the GPU session: two head-branch faults fixed, the enhancer's real recipe shipped, the 10/10 stress test still owed",
     "branch": "master"
@@ -67,5 +67,6 @@
     ]
   },
   "resume_prompt": "Resuming MPI-504 (Character Sheet flow) in Cubric Vision, master. Read .agents/mpi-kanban/state/handoffs/ba255317-1648-41eb-acb4-d7320bc8da2c.json first, then the LAST FOUR sections of tasks/MPI-504/validation.md - they carry this session's measurements. The GPU session fixed and shipped two head-branch faults (the wrong head was being removed; the ghost was a mask-coverage remnant) and found that the Enhance button had been running a recipe two revisions old. Four items closed on evidence, four leads DISPROVED and written down - do not retry the Klein instance prompt, the mask softness knobs, pass-2 denoise, or a 'leftmost face' pick rule. TWO THINGS ARE OWED: the 10/10 stress test (never started, and its SCOPE needs Fabio first - see next_action), and clothing damage on high-necked characters, which is PRE-EXISTING rather than a regression and is the more valuable problem. DO NOT ADD 'neck' TO THE SAM3 VOCABULARY - it was tried, it destroys clothing that reaches the jaw, and Fabio reverted it. ASK BEFORE USING THE GPU: a free lease does not mean Fabio is idle.",
-  "updated_at": "2026-08-21T09:00:00Z"
+  "updated_at": "2026-08-21T12:40:00Z",
+  "superseded_by": "b825e15e-e317-40b0-9f73-92753353ad3e"
 }

@@ -10,6 +10,34 @@ prompt) is in [prompts.md](prompts.md). This file is the build.
 
 ## Current State
 
+**2026-08-21, session 11 - THE 10/10 STRESS TEST PASSED AND THE HEAD BRANCH IS BEING REDESIGNED.
+Nothing in the graph was changed; the next session edits `raw/`.** The stress test's scope was
+settled by Fabio first (prove the branch never picks the BACK OF THE HEAD, not "ten poses ten
+lights") and it passes 10 of 10 at 2k-quality across all four recipes. 9 of 10 on the removal
+overall - the one failure is the EMPTY-DETECTION case, not a mispick. Evidence, measurements and
+three corrections are in `validation.md`; commits `ea1f457e`, `c5ce77e0`, `f87b1bad`.
+
+Fabio then drove the redesign himself on the bench and settled three changes, none implemented:
+
+- **Crop the masking to the FAR-LEFT region.** Measured over the batch: the far-left figure faces
+  camera in 10 of 10 and is never the rear view; the front figure ends by ~20% of sheet width even
+  with a top hat or antlers, the rear body starts ~24% and its head ~29%. So ~25% is safe with
+  ~90px of margin at 2K.
+- **Delete stage 1.** `745`/`746` `face_yolov8n`, `747` and `773` exist only to locate the front
+  head. The crop does that, and deleting them deletes the zero-face failure with them.
+- **`754` vocabulary becomes `head, hat`.** Proven on his own 1k run: no head, no hat, NO BEARD,
+  and the collar/tie/waistcoat/coat intact. The hair left on the shoulders is the mask boundary
+  and is exactly what keeps Klein off the garment.
+
+**And the mechanism to implement it with:** `755 SAM3_Detect` takes an optional `bboxes`
+(`BOUNDING_BOX`), tooltip *"Bounding boxes to segment within"* - a REGION RESTRICTION, so the full
+sheet can be passed with a left-hand box and the mask returns in sheet coordinates. Core node
+`PrimitiveBoundingBox` (`comfy_extras.nodes_images`) supplies it; its INT widgets take links, as
+`751.padding` and `720.value` already do. That deletes the crop/paste machinery too.
+
+### Session 9 (previous)
+
+
 **2026-08-20, session 9 — ALL THREE UI ITEMS ARE DONE, AND THE WORK IS UNCOMMITTED. Landing the
 commit is the next action, not the graphics.** The husky pre-commit hook rejects
 `MpiBaseFlow.js` on **four PRE-EXISTING** bare-`<button>` warnings (172 ×2, 445, 518) — proven not

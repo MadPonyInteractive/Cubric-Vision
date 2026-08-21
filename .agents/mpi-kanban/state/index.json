@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-21T03:50:00Z",
+  "updated_at": "2026-08-21T12:40:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -13,7 +13,16 @@
     }
   ],
   "active_tasks": [],
-  "active_file_claims": [],
+  "active_file_claims": [
+    {
+      "id": "1f3ae78d-5f6b-4796-a802-c8177e0ffe5d",
+      "path": ".agents/mpi-kanban/state/files/1f3ae78d-5f6b-4796-a802-c8177e0ffe5d.json",
+      "task_card": "MPI-594",
+      "status": "claimed",
+      "owner_session": ".agents/mpi-kanban/state/sessions/9685b71b-3bbc-4fa7-a54f-5bea18a077e3.json",
+      "heartbeat_at": "2026-08-21T03:35:00Z"
+    }
+  ],
   "pending_file_states": [
     {
       "id": "3d80a1e1-f599-4eed-8d3e-f35fe33f6e8f",
@@ -57,6 +66,14 @@
       "status": "open",
       "created_at": "2026-08-10T06:10:41Z",
       "note": "Card was parked back to todo by 9a92c0ff - the handoff still records the SeedVR2 root-cause and the PiD Flow blocker."
+    },
+    {
+      "id": "b825e15e-e317-40b0-9f73-92753353ad3e",
+      "path": ".agents/mpi-kanban/state/handoffs/b825e15e-e317-40b0-9f73-92753353ad3e.json",
+      "task_card": "MPI-504",
+      "status": "open",
+      "created_at": "2026-08-21T12:40:00Z",
+      "note": "Stress test passed 10/10; the head-branch redesign is decided and needs raw/ edited."
     }
   ]
 }
