@@ -1,61 +1,64 @@
 # MPI-592 Validation
 
-Ran 2026-08-20 against a private instance (`npm run app:isolated`, port 52823,
-`cubric-agent-profile`). The user's app on :3000 was left alone.
+PASSED end to end, 2026-08-21, on a private instance (`npm run app:isolated`,
+port 59727, `cubric-agent-profile`, GPU 0 leased). Fabio confirmed the GPU was
+free and no app was open.
 
-## What passed
-
-Probe project created, opened over HTTP, then deleted:
-
-```
-POST /create-project {"name":"MPI-592 Probe"}
-  -> 03c1da23-97be-41f7-960d-b9d55d665267
-     C:/Users/Fabio/Documents/Cubric Vision/Projects/MPI-592 Probe
-
-POST /connector/open-project {"folderPath":".../MPI-592 Probe"}
-  -> {"ok":true,"output":{"folderPath":"C:/Users/Fabio/Documents/Cubric Vision/Projects/MPI-592 Probe",
-      "name":"MPI-592 Probe","groupCount":0}}
-```
-
-That `output` is read back off `state.currentProject` after the call, so it is
-the switch itself being reported, not an echo of the request. And it is the same
-value `_submitGeneration` reads - the `NO_PROJECT` guard and every downstream
-save go through that one field.
-
-`navigate(PAGE_GALLERY)` runs before the report, so the `ok: true` also proves
-navigate did not throw; a throw there rejects into the relay's catch and comes
-back `RUNTIME_ERROR`.
-
-Both error paths, same run:
+## The run
 
 ```
-POST /connector/open-project {}
-  -> BAD_REQUEST  "body.folderPath is required."
-POST /connector/open-project {"folderPath":"C:/nope/not/a/project"}
-  -> NO_SUCH_PROJECT  "... ENOENT ... 'C:\nope\not\a\project\project.json'."
+POST /comfy/start                      -> engine ready
+POST /create-project {"name":"MPI-592 E2E"}
+  -> 7acb5161-5749-426c-838e-00e48f9f79a2
+     C:/Users/Fabio/Documents/Cubric Vision/Projects/MPI-592 E2E
+POST /connector/open-project {"folderPath": <that>}
+  -> {"ok":true,"output":{"folderPath":".../MPI-592 E2E","name":"MPI-592 E2E","groupCount":0}}
+POST /connector/generate {"modelId":"krea2","operation":"t2i",
+      "positive":"a lone rider at dusk, wide desert, warm rim light",
+      "injectionParams":{"Width":768,"Height":768}}
+  -> {"ok":true,"output":{"itemId":"648ce3b3-...","groupId":"ecfd7622-...","type":"image",
+      "filePath":"/project-file?path=...%5CMPI-592%20E2E%5CMedia%5Ct2i_001.png",
+      "pixelDimensions":{"w":768,"h":768},"generationMs":57726}}
+```
+
+The check that closes this card:
+
+```
+filePath   : C:\Users\Fabio\Documents\Cubric Vision\Projects\MPI-592 E2E\Media\t2i_001.png
+new project: C:/Users/Fabio/Documents/Cubric Vision/Projects/MPI-592 E2E
+LANDED IN NEW PROJECT: True
+itemGroups in new project.json: 1
+```
+
+The image is a real render of the prompt (1.06 MB, a rider at dusk), not a black
+frame, and `Media/.meta/` carries its sidecar. `Prompt executed in 57.73 seconds`
+in the engine log matches the route's `generationMs`, so the run went through the
+normal queue rather than any shortcut.
+
+**Fabio watched it live** and confirmed both halves on screen: the project
+opening, and the generation running in it. That is the part a state read cannot
+stand in for - the app navigating and the grid drawing the placeholder in the
+right project - so the card closes on visual confirmation, not just file paths.
+
+Before the fix this same sequence returned the identical `ok: true` shape with the
+file under whatever project was open - which is exactly why the file path, not the
+response, is the assertion.
+
+## Error paths
+
+Verified in the earlier session on port 52823, unchanged since:
+
+```
+POST /connector/open-project {}                            -> BAD_REQUEST
+POST /connector/open-project {"folderPath":"C:/nope/..."}  -> NO_SUCH_PROJECT (ENOENT, path in the message)
 ```
 
 `npx eslint js/shell/agentDispatch.js routes/connector.js` - clean.
 
-Cleanup: probe project deleted with `deleteFiles: true` (it was written into the
-real `Documents/Cubric Vision/Projects` root, since `APP_DOCUMENTS` is not
-profile-scoped), folder confirmed gone, isolated instance killed by process tree,
-0 electron processes left on that profile.
+## Cleanup
 
-## What is NOT proven, and needs Fabio
-
-**No generation was run.** The isolated instance reports `comfy/status
-{running:true, ready:true}` because the engine is shared - firing a generation
-would spend the user's GPU unattended, and it needs a lease.
-
-So the last leg is one cheap t2i, by hand, with the app open:
-
-1. `POST /create-project` with a throwaway name.
-2. `POST /connector/open-project` with its `folderPath`.
-3. `POST /connector/generate` (krea2 / t2i, anything).
-4. The card must land in the NEW project's gallery, and its `filePath` must be
-   under that project's `Media/`.
-
-Step 4 is the part a state read cannot stand in for: it is the visible half -
-the app navigating, the grid drawing the placeholder in the right project. The
-mechanism underneath it is proven above.
+Probe project deleted with `deleteFiles: true` and its folder confirmed gone (it
+was written into the real `Documents/Cubric Vision/Projects` root - `APP_DOCUMENTS`
+is not profile-scoped). Engine stopped, isolated instance killed by process tree,
+0 electron processes left on that profile, GPU lease released. The `G:\ComfyUi`
+python still running is the standalone bench, pre-existing and untouched.

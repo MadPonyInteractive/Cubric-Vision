@@ -3,17 +3,16 @@
   "id": "MPI-592",
   "title": "Agent relay can open a project, so create-then-generate lands in the right one",
   "description": "An agent driving Vision over the connector can CREATE a project (POST /create-project) but cannot OPEN it, so /connector/generate always runs in whatever project the human has open on screen. Create-then-generate therefore lands the output in the PREVIOUS project behind an ok:true response - a silent wrong-project run on paid GPU. FIX: add a project.open op to the agent relay. openProject() in js/services/projectService.js is already headless-safe (it migrates, reconciles, sets state.currentProject, registers the parent dir, emits project:changed); the two UI callers in js/shell/projectUI.js just pair it with navigate(PAGE_GALLERY). So this is a new POST /connector/open-project {folderPath} in routes/connector.js relaying through _dispatchToRenderer, plus a project.open case in js/shell/agentDispatch.js. agentDispatch.js is the DISPOSABLE half of MPI-546 - keep it dumb, one job in one result out; the HTTP route is the contract. Then flip step 3 of the 'Creating a project, then generating into it' sequence in .claude/skills/cubric-vision/SKILL.md from 'ask the user to open it' to the endpoint, and drop 'No project switching' from its What it does not do yet list.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-20T17:02:00Z",
-  "updated_at": "2026-08-20T17:14:00Z",
+  "updated_at": "2026-08-21T02:15:00Z",
   "links": {
     "brief": "brief.md",
     "checklist": "checklist.md",
     "validation": "validation.md",
     "files": "files.json",
     "events": "events.jsonl"
-  },
-  "activeSessionTitle": "Connector project.open"
+  }
 }
