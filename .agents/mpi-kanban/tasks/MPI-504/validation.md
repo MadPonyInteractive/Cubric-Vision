@@ -1915,3 +1915,29 @@ narrow full-body standing views of equal width"* on the left but do not pin thei
 either side, but a sheet that centres the pair differently would clip. The fallback if it ever
 does is already written down — feed the left HALF with `755.individual_masks true` and take the
 leftmost mask.
+
+### THE CARD'S `at` STAMPS ARE HAND-TYPED — ALREADY KNOWN, RE-DERIVED ANYWAY
+
+The previous session's handoff carries `generated_at: 2026-08-21T12:40:00Z`, ~8h50m ahead of the
+commit that created it (`74bc8d73`, `2026-08-21T04:49:47+01:00` = `03:49:47Z`). I first read that
+as the documented VPN skew. **It is not.** Fabio has not touched the VPN in three to four days, the
+machine clock matches GitHub's `Date` header to one second (local `05:42:58 +0100` vs
+`04:42:59 GMT`), and every git commit timestamp on this card is correct.
+
+**The mechanism: agents type the `at` field instead of reading a clock.** The tell is in the data —
+every stamp on this card ends in `:00` seconds (`:50:00`, `:25:00`, `:40:00`). A clock read never
+lands on round seconds. Git is right precisely because git reads the clock; the JSON field is
+whatever the agent believed the time to be.
+
+**This was already written down in this file on 2026-08-19** — see the aside under the first bench
+gate ("this card's earlier event stamps are wrong, and not because of the clock"), where the same
+conclusion was reached with Fabio confirming the VPN off. It has now cost three sessions. It is
+recorded here again only because the handoff routes a fresh session to the LAST few sections of a
+1900-line file, so the earlier aside is not on the path anyone reads.
+
+**The rule, for anyone stamping a kanban record on this card:** derive `at` from
+`gh api rate_limit -i` (or `date -u`, which agrees) at the moment of writing, and do not round it
+to whole minutes — the round seconds are what makes a guessed stamp indistinguishable from a real
+one. Treat every existing `at` on this card as narrative; the append order is the only reliable
+ordering. My own session-12 events (`04:25:00Z`) are the same practice: clock-derived, but
+hand-rounded a few minutes fast.
