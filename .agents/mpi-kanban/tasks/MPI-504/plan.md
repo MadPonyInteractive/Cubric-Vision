@@ -20,7 +20,7 @@ and the runtime API is converted. Evidence in `validation.md` (session 12 sectio
   widget 0,0; `757` pastes back at 0,0. `754` is now `head, hat`. Raw diff 62+/542-.
 - **THE HANDOFF'S MECHANISM WAS WRONG and was NOT used.** `SAM3_Detect.bboxes` is a detector
   PROMPT, not a region restriction - with text conditioning the dedicated box path is skipped
-  (`nodes_sam3.py:192`) and the boxes are concatenated onto the text embeddings
+  (`nodes_sam3.py:194` (`SAM3_Detect.execute`, the `not has_text` gate)) and the boxes are concatenated onto the text embeddings
   (`detector.py:436-450`). A left-hand box would have BIASED the pick, not confined it. The
   shipped fix keeps the crop and drives it from a fixed left-25% box, so the portrait is absent
   from the tensor SAM3 sees. Do not re-try the `bboxes` route on the tooltip's word.
@@ -936,7 +936,7 @@ longer exists, so each resolves to a deletion, not a re-wire:
   The plan (and the handoff) specified restricting the masking via `SAM3_Detect`'s optional
   `bboxes` input, on its tooltip *"Bounding boxes to segment within"*. Reading the source before
   implementing showed that is not what it does: with text conditioning present the dedicated box
-  path is skipped (`comfy_extras/nodes_sam3.py:192`) and the boxes are encoded by
+  path is skipped (`comfy_extras/nodes_sam3.py:194` (`SAM3_Detect.execute`, the `not has_text` gate)) and the boxes are encoded by
   `geometry_encoder` and concatenated onto the text embeddings (`comfy/ldm/sam3/detector.py:299,
   :436-450`), so they bias detection rather than confining it. Implemented as a fixed left-25%
   crop reusing the `MpiBox` / `MpiBoxCrop` / paste-back machinery already in the graph instead -

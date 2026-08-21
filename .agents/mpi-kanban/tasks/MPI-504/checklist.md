@@ -186,7 +186,7 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       height, and the crop/paste-back sit at 0,0. `754` vocabulary is `head, hat`.
       > **NOT via `SAM3_Detect.bboxes`, and do not re-try it on the tooltip's word.** That input
       > is a detector PROMPT, not a region restriction — with text conditioning the dedicated box
-      > path is skipped (`nodes_sam3.py:192`) and the boxes are concatenated onto the text
+      > path is skipped (`nodes_sam3.py:194` (`SAM3_Detect.execute`, the `not has_text` gate)) and the boxes are concatenated onto the text
       > embeddings (`detector.py:436-450`). It would have biased the pick, not confined it.
       >
       > 4 bench runs, 4 of 4, portrait and rear figure intact in all: the cartoon zero-face case

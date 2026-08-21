@@ -163,18 +163,48 @@ When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):
     one-shot cost (a VPN window, one trip to a Mac). The pack's "3+" is a floor for THEME
     clustering, not for these.
 
-## Timestamps across sessions are NOT comparable — the VPN skews clocks
+## Timestamps across sessions are NOT comparable — and it is usually NOT the VPN
 
 Concurrent sessions in this tree stamp kanban times **hours** apart (seen 2026-07-29: one
-session at `07:10Z` while a peer wrote `08:25Z` and `14:47Z`). The cause is the CivitAI VPN's
-exit node — CLAUDE.md § "VPN + the skewed clock" has the offset-derivation recipe. Three
-consequences, each of which cost real time before the cause was known:
+session at `07:10Z` while a peer wrote `08:25Z` and `14:47Z`; again 2026-08-21, MPI-504, a
+handoff stamped `12:40:00Z` by a session whose own commit reads `03:49:47Z`).
 
-1. **Do not "correct" a peer's timestamp.** It is not corruption; their clock reads differently.
+**This section used to name the CivitAI VPN's exit node as THE cause. That was wrong, and the
+wrong cause is expensive** — it sends you to check a VPN instead of the data, and MPI-504 paid
+for it three times (2026-08-19, and again 2026-08-21 in both directions).
+
+**The usual cause is that agents TYPE the `at` field instead of reading a clock.** The tell is
+in the data and takes one look:
+
+- **Round `:00` seconds.** `:25:00Z`, `:40:00Z`, `:05:00Z`. A clock read essentially never
+  lands on a whole minute. A log where *every* stamp does was written from memory, not measured.
+- **Git disagrees.** `git log --format=%cI` reads the system clock, so a commit timestamp is
+  ground truth for when a session actually ran. Diff it against the `at` inside the same commit.
+
+**Diagnose before blaming the VPN**, which also skews clocks for real (CLAUDE.md § "VPN + the
+skewed clock" has the offset-derivation recipe) but is the rarer case and is trivially ruled out:
+
+```bash
+gh api rate_limit -i | grep -i '^date:'   # GitHub's clock — unaffected by this machine
+date -u +'%Y-%m-%dT%H:%M:%SZ'             # ours. Agree to the second => the clock is FINE
+```
+
+Clocks agree and the stamps are still hours out → hand-typed, not skew. Ask the user whether the
+VPN is even on before asserting it is; on 2026-08-21 it had been off for three to four days.
+
+**When you write a stamp:** derive it from the commands above at the moment of writing, and do
+**not** round to a whole minute — the round seconds are precisely what makes a guessed stamp
+indistinguishable from a measured one.
+
+Three consequences, unchanged and each of which cost real time:
+
+1. **Do not "correct" a peer's timestamp.** Whether it is skew or a typed guess, rewriting a
+   peer's record is not yours to do. Append a correction event instead.
 2. **Do not regress `board.json` `updated_at`.** A blind write can push it hours backwards past
    a peer's value — when building a `board.json` blob, keep the LATER timestamp, not yours.
 3. **Event logs are not ordered by `at`.** Append order is truth. Never sort or dedupe an
-   `events.jsonl` on that field.
+   `events.jsonl` on that field, and expect a correct stamp to sit *earlier* than the guessed
+   one above it.
 
 Distinct from a genuine read race, which shows as two reads of the same file disagreeing about
 column CONTENTS and is settled by re-reading (`git.md` § "A READ can race a write too"). A pure

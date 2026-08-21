@@ -1813,10 +1813,10 @@ The previous session's plan was to pass the FULL sheet as `image` plus a left-ha
 optional `bboxes` input, on the strength of its tooltip: *"Bounding boxes to segment within"*.
 **The source does not do that.** Traced before implementing:
 
-- `comfy_extras/nodes_sam3.py:192` — the dedicated box path (`forward_segment(box_inputs=…)`) is
+- `comfy_extras/nodes_sam3.py:194` (`SAM3_Detect.execute`, the `not has_text` gate) — the dedicated box path (`forward_segment(box_inputs=…)`) is
   guarded `if b_boxes is not None and **not has_text**`. With text conditioning present — which
   is this branch's whole design — it never runs.
-- `nodes_sam3.py:206` — instead the boxes go to `sam3_model(frame, text_embeddings=…, boxes=b_boxes, …)`.
+- `nodes_sam3.py:209-211` (the `sam3_model(...)` call) — instead the boxes go to `sam3_model(frame, text_embeddings=…, boxes=b_boxes, …)`.
 - `comfy/ldm/sam3/detector.py:299` + `:436-450` — there the boxes are run through
   `geometry_encoder` and **concatenated onto the text embeddings** as extra prompt tokens.
   Nothing masks the image features spatially; the detector still scores queries over the whole

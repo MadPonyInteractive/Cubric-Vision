@@ -140,6 +140,15 @@ widget — which is also why no `MpiText` relay is needed here: the encoder is n
 - **Text and box are mutually exclusive.** `SAM3_Detect.execute` gates the box branch on
   `not has_text`. Never wire bboxes into the text node — and never hang conditioning on the
   POINTS node, which would make every points run `has_text`. Hence two `SAM3_Detect` nodes.
+  - **`bboxes` IS NOT A REGION RESTRICTION, whatever its tooltip says.** The socket reads
+    *"Bounding boxes to segment within"*, which invites exactly the wrong design: pass the whole
+    image plus a box and get back only what is inside it. With text present the box never even
+    reaches the SAM decoder — the boxes are run through `geometry_encoder` and **concatenated
+    onto the text embeddings** as extra prompt tokens (`comfy/ldm/sam3/detector.py` `_encode_boxes`
+    → `_detect`), so the detector still scores over the whole frame. It BIASES the pick; it does
+    not confine it. To confine a text detect to a region, **crop the image** and offset the mask
+    back (MPI-504's head branch: `MpiBox` → `MpiBoxCrop` → SAM3 → `SolidMask` + `MaskComposite`).
+    Cost of trusting the tooltip: a whole redesign specced against it, twice, 2026-08-21.
 - **`individual_masks: true`** is what gives one chip per object; off, SAM3 unions everything
   and the chip strip collapses to a single thumb.
 - Text uses the detector's **normal detect-then-pick** flow (N results to choose between),

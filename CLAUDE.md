@@ -67,6 +67,13 @@ true time was `15:29Z` — ~14 hours off, inside one session. While the VPN is o
 `date`, the session's "today", file mtimes and `git commit` timestamps are all
 untrustworthy.
 
+- **CHECK THE CLOCK BEFORE BLAMING THE VPN — the reflex this section trains is wrong more
+  often than it is right.** Compare `gh api rate_limit -i`'s `Date:` against `date -u`. Agree to
+  the second → the clock is FINE and a bad timestamp has another cause; the common one is an
+  agent TYPING an `at` field rather than reading a clock, whose tell is round `:00` seconds
+  (`.claude/rules/kanban.md` § Timestamps). Ask whether the VPN is even on before asserting it
+  is: on 2026-08-21 a session blamed an 8h50m gap on skew while the VPN had been off for three
+  to four days and the clock was accurate to one second.
 - **Ground truth is `gh api rate_limit -i` → the `Date:` header** — GitHub's
   clock, unaffected by this machine.
 - Derive the offset **once** at the start of a VPN session and apply it to every
