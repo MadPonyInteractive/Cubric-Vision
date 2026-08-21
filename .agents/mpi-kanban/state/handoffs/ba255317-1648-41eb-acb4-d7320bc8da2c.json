@@ -1,0 +1,70 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "ba255317-1648-41eb-acb4-d7320bc8da2c",
+  "generated_at": "2026-08-21T00:05:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-504 - the GPU session: two head-branch faults fixed, the enhancer's real recipe shipped, the 10/10 stress test still owed",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Spend the freed GPU on MPI-504's open bench items.",
+    "status": "in_progress",
+    "summary": "Four items closed on evidence, two graph faults fixed and shipped, four leads disproved and written down. What is left is the 10/10 stress test (never started) and one PRE-EXISTING fault this session surfaced but did not cause: high-necked clothing gets damaged by the head branch at the shipped settings."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+    "completed": [
+      "THE ENHANCE BUTTON WAS RUNNING A RECIPE TWO REVISIONS OLD. The graph carried 3885 chars, prompts.md ships v4.2 at 4239 - both v4.x hair edits missing. Nothing injects the recipe (`_runEnhance` sends only `Input_Seed`), so the BAKED text is what users get: the measured 8-of-8 rear-colour fix had never reached a single generation. Re-synced from prompts.md. 796060bf (raw) + be846724 (API).",
+      "THE HEAD BRANCH PICKED THE WRONG HEAD. `747` area-ascending 'smallest face = the front body's head' inverts when the rear figure's head turns to profile: face_yolov8n sees a real face with a SMALLER box, and the sheet comes back with its REAR view decapitated. Measured: head box origin x=559 at 2K vs x=20 at 1K, same seed. Fixed with rule B (Fabio's call): `747` area DESCENDING take_start 1 drops the portrait, new `773` takes highest CONFIDENCE of the rest. Verified live 3 of 3 seeds at 2K. 1e6ba5cc (raw) + 48ec4344 (API).",
+      "THE GHOST WAS A REMNANT, and `718.mask_expand_pixels` 6 -> 40 fixes it: the SAM3 union left a rim of head outside threshold 0.5, so the green plate never destroyed it and the model repainted what it could still see. Clean in 6 of 6 sheets across both rigs (2k-quality scavenger, 1k-turbo hatted undertaker) against a control that produced zero. 49d9fc37.",
+      "THE NECK HALF OF THAT FIX WAS REVERTED, ca4fdc0d - Fabio's call with his own evidence. Adding 'neck' to `754` cleared skin left in an OPEN collar, but every character I tested it on had a bare throat. Where clothing reaches the jaw there is no bare neck to bind to and the nearest match is the GARMENT, which puts clothing in the mask. HIS RANKING, worth keeping: a leftover neck and a faint head rim are ACCEPTABLE; changed CLOTHING is not.",
+      "CLOSED ON EVIDENCE: the enhancer regression end to end through the built graph (scrub nodes carry positive-phrasing 8 of 8 LIVE, every other number replicating); the rear clause reaches the rendered PANEL 3 of 3; the main/rear colour contradiction is INERT in pixels so the open call resolves to ACCEPT; all four styles return their medium and keep the catch-light 8 of 8; a tall hat IS covered and the 2.6x crop never reached a neighbouring panel.",
+      "DISPROVED AND RECORDED so nobody retries them: the Klein instance prompt REBUILDS the head (3 of 3, both step counts); mask_blend_pixels 32->4 and mask_hipass_filter 0.1->0.9 are both WORSE (binarising SHARPENS the ghost, which is what ruled the feather out); pass-2 denoise 0.25/0.15 changes nothing (which is what proved the collar leftover a remnant); 'take the leftmost face' dies because 3 of 4 styles mirror the layout and the mirroring varies by SEED.",
+      "npm test 655/655 after every graph change; both graphs pass validate-injection-rules.mjs."
+    ],
+    "pending": [
+      "THE 10/10 STRESS TEST - the last definition-of-done item, NOT STARTED. Ten generations, varied pose and light, recognisable 10 out of 10, tested next to a second character. See `next_action` for the scoping question that needs Fabio before it runs.",
+      "CLOTHING DAMAGE ON HIGH-NECKED CHARACTERS at the shipped settings - a scarf wound to the jaw and a turtleneck's throat are both removed, at `expand: 6` as well as 40, with the neck word OUT. Fabio hit it on a cyberpunk character. PRE-EXISTING, not caused by this session, and now the most valuable open problem on the card.",
+      "The card's own remaining bench items: the krea2-nsfw-only install case, and plan.md's open calls 2 and 4."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-504",
+    "title": "Character Sheet flow - a description in, a video-reference sheet out (front body HEADLESS)",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-504/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-504/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-504/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "TWO THINGS, and the second needs Fabio before any GPU is spent. (1) CLOTHING DAMAGE is the valuable problem: the head box is a SQUARE sized off the face bbox (`749`/`750`/`751`, 2.6x the face), so a garment reaching the jaw falls inside it whatever the SAM3 vocabulary says - a standing collar, a scarf, a gorget, cyberpunk armour. The vocabulary cannot fix this; the geometry or the composite has to. Reproduce with the specs in this session's scratchpad (turtleneck / gorget / scarf prompts, 1k-turbo, ~50s a run, and the t2i caches so arms after the first cost ~5s). (2) THE 10/10 STRESS TEST needs its scope agreed first: the brief's test is written for a CHARACTER ASSET (ten poses, ten lights, does the face hold), but this flow makes one fixed thing - same three panels, same flat light, same pose, every time. Ten seeds of one character measures whether the SHEET is stable; whether the CHARACTER survives being used needs the sheet fed into t2i/i2v, which is a different flow and arguably MPI-560's phase. Ask Fabio which he wants before spending ~45 minutes of 2k-quality GPU.",
+    "command": "mpi-continue MPI-504"
+  },
+  "context": {
+    "key_decisions": [
+      "NO NECK IN THE SAM3 VOCABULARY (Fabio, 2026-08-20, reversing my change). A leftover neck and a faint head rim are acceptable - the sheet still works as a reference. Changed CLOTHING is not, because the sheet's job is to be the wardrobe's scale-and-detail reference.",
+      "RULE B FOR THE PICK, not 'leftmost' (Fabio). Both stages rest on something INTRINSIC - the template prescribes the portrait's half, and face_yolov8n IS a frontal-face detector - rather than on the model's habit of ordering panels, which it does not keep.",
+      "THE ENHANCER CONTRADICTION IS ACCEPTED, not fixed. Measured inert in pixels. Do NOT attempt another wording fix; v4.3 already proved that road ends with an instruction example leaking into the output.",
+      "`718.mask_expand_pixels: 40` STAYS - measured against the clothing risk on three high-necked characters, where 6 and 40 are near-identical, so it adds no damage while clearing the ghost."
+    ],
+    "constraints": [
+      "ASK BEFORE USING THE GPU, and this session got it wrong: Fabio was running a generation to validate another agent's work while I was still dispatching batches. `gpu_lease.py status` says the lease is free but that is NOT evidence Fabio is idle - he drives the app without taking the lease.",
+      "THE APP ENGINE (48188) IS FABIO'S. Installing a model restarts it, which killed a batch mid-run this session. The BENCH (8188) is the right target for arm work; it has every node and weight (preflight passed).",
+      "THE T2I CACHES PER SEED on a given engine, so a second arm at the same seed and prompt costs ~5s instead of 250s. Order arms to exploit it: same seed, vary only the branch knob.",
+      "`raw/` is user-owned but this branch is an exception by precedent - the Masking group's 14 nodes were built by an agent. Always go through `sync-raw-workflows.mjs` (it commits raw, converts, validates); it REFUSES to run while a generated workflow is uncommitted, so commit the API file first.",
+      "Nothing is pushed. Six commits sit on master unpushed: 796060bf, be846724, 1e6ba5cc, 48ec4344, 49d9fc37, ca4fdc0d, plus 8460bd53/87b3f45a (raw) and 28564972 (docs).",
+      "Other sessions are live in this tree - MPI-587, MPI-588, MPI-591 and js/data/modelConstants/models.js all have uncommitted work that is NOT this card's. Commit by explicit pathspec only."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-504/checklist.md",
+      ".agents/mpi-kanban/tasks/MPI-504/validation.md",
+      "docs/models/klein/removal.md"
+    ]
+  },
+  "resume_prompt": "Resuming MPI-504 (Character Sheet flow) in Cubric Vision, master. Read .agents/mpi-kanban/state/handoffs/ba255317-1648-41eb-acb4-d7320bc8da2c.json first, then the LAST FOUR sections of tasks/MPI-504/validation.md - they carry this session's measurements. The GPU session fixed and shipped two head-branch faults (the wrong head was being removed; the ghost was a mask-coverage remnant) and found that the Enhance button had been running a recipe two revisions old. Four items closed on evidence, four leads DISPROVED and written down - do not retry the Klein instance prompt, the mask softness knobs, pass-2 denoise, or a 'leftmost face' pick rule. TWO THINGS ARE OWED: the 10/10 stress test (never started, and its SCOPE needs Fabio first - see next_action), and clothing damage on high-necked characters, which is PRE-EXISTING rather than a regression and is the more valuable problem. DO NOT ADD 'neck' TO THE SAM3 VOCABULARY - it was tried, it destroys clothing that reaches the jaw, and Fabio reverted it. ASK BEFORE USING THE GPU: a free lease does not mean Fabio is idle.",
+  "updated_at": "2026-08-21T00:05:00Z"
+}
