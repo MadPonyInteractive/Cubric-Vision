@@ -2,14 +2,14 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "16933233-5482-4da9-be02-ffea108367c3",
   "generated_at": "2026-08-21T13:34:00Z",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "MPI-454 Place - built, verified live, then user-reviewed",
     "branch": "master"
   },
   "goal": {
     "original": "Build Place: a third Composite front end that stamps an image onto the current entry, with a gizmo, three slot origins and a Remove Background toggle. Absorbs MPI-377.",
-    "status": "in_progress",
+    "status": "complete",
     "summary": "Place shipped in 3eb09d26 and was verified live on a private app instance (663 node + 24 desktop tests, seven registry guards mutation-proved RED, preview and written file agreeing to the pixel). The user then drove it and gave four rulings; three needed no code and one was a real bug - the re-centre button seeded a SQUARE and squashed the photo. That is now restorePlaceSize(), guarded three ways, but NOT yet driven in the running app. That verification plus one manual video-group drop are all that stand between this card and done."
   },
   "plan": {
@@ -19,18 +19,15 @@
       "Live verification on a private instance; evidence in tasks/MPI-454/validation.md",
       "Fixed a bug found live: Apply reloads the entry it creates, which cleared the gizmo and left Apply enabled over nothing",
       "User review 2026-08-21: undo stays as built, group keeps the name Composite, no feather",
-      "Re-centre -> resizer change (restorePlaceSize) plus its three-way guard"
+      "Re-centre -> resizer change (restorePlaceSize) plus its three-way guard",
+      "Live-verified restorePlaceSize() and the video-group chip path on a private instance; MPI-454 closed"
     ],
-    "pending": [
-      "Live-verify restorePlaceSize() in the running app - the only thing shipped unverified",
-      "One manual image drop on a VIDEO group (chip path is unchanged code and test-guarded, never exercised live)",
-      "Close MPI-454"
-    ]
+    "pending": []
   },
   "task_card": {
     "id": "MPI-454",
     "title": "Place - a composite tool that stamps an image onto the current entry",
-    "column": "doing",
+    "column": "done",
     "workspace": ".agents/mpi-kanban/tasks/MPI-454/",
     "links": {
       "plan": ".agents/mpi-kanban/tasks/MPI-454/plan.md",
@@ -65,5 +62,6 @@
       "docs/composite-place.md"
     ]
   },
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/16933233-5482-4da9-be02-ffea108367c3.json and use mpi-continue to pick up MPI-454 (Place - a composite tool that stamps an image onto the current entry), which is in `doing`. The tool is built, committed as 3eb09d26 plus a follow-up, and verified live except for one change: the panel's second button was a re-centre that seeded a SQUARE and distorted the placed photo, and it is now `restorePlaceSize()` - restore the image's own pixel dimensions in place, keeping position and rotation. Verify that in a private app instance (`npm run app:isolated`, never :3000), also drop an image on a VIDEO group to confirm it still becomes a PromptBox chip, then close the card. Three user rulings are already settled and must not be reopened: undo stays as the paint-Apply contract, the group keeps the name Composite, and the cut-out is never feathered. One note belongs to the SIBLING card MPI-596 (Object Stamp Flow), not this one: the user's detailing test says an edit model is preferable for the pass after a stamp."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/16933233-5482-4da9-be02-ffea108367c3.json and use mpi-continue to pick up MPI-454 (Place - a composite tool that stamps an image onto the current entry), which is in `doing`. The tool is built, committed as 3eb09d26 plus a follow-up, and verified live except for one change: the panel's second button was a re-centre that seeded a SQUARE and distorted the placed photo, and it is now `restorePlaceSize()` - restore the image's own pixel dimensions in place, keeping position and rotation. Verify that in a private app instance (`npm run app:isolated`, never :3000), also drop an image on a VIDEO group to confirm it still becomes a PromptBox chip, then close the card. Three user rulings are already settled and must not be reopened: undo stays as the paint-Apply contract, the group keeps the name Composite, and the cut-out is never feathered. One note belongs to the SIBLING card MPI-596 (Object Stamp Flow), not this one: the user's detailing test says an edit model is preferable for the pass after a stamp.",
+  "closed_at": "2026-08-21T14:11:41Z"
 }

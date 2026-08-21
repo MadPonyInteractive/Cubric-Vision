@@ -23,8 +23,9 @@
     "docs/masking-tools.md",
     "docs/README.md"
   ],
-  "status": "claimed",
+  "status": "complete",
   "claim_kind": "write",
   "owner_session": ".agents/mpi-kanban/state/sessions/546ab3d0-bc26-42fc-92b5-8f2aae131fd8.json",
-  "heartbeat_at": "2026-08-21T13:27:51Z"
+  "heartbeat_at": "2026-08-21T14:11:41Z",
+  "completed_at": "2026-08-21T14:11:41Z"
 }

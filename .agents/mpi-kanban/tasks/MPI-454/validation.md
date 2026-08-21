@@ -74,12 +74,66 @@ Giving Place a transform history the shape gizmo does not have would make the ap
 diverge, which is the one thing sharing `ShapeManager` exists to prevent. **If Ctrl+Z over a
 gizmo drag is actually wanted, it is its own card and should cover both gizmos.**
 
+## The resize button and video mode, live — 2026-08-21, second session
+
+The two things the first pass shipped unverified. Private instance (`npm run app:isolated`, port
+63034, own profile) against `mpi-454-proof`, a throwaway copy of `Video Tests` whose `.meta`
+sidecars were repointed at the copy so nothing resolved back to the original; deleted afterwards.
+The user's app on `:3000` was never driven and still answered 200 after the teardown.
+
+Measurement is the **overlay canvas alpha bounding box** in image space (1024×1024), not a
+screenshot: `w`/`h` are the placement's real dimensions and `px` its opaque area — which is what
+tells a 400×160 rect apart from a rotated square carrying the same bbox.
+
+### `restorePlaceSize()` — the resizer, unrotated
+
+Source image 400×160, dropped on the History workspace (which armed Place, as acceptance 4 says).
+
+| Step | bbox w×h | aspect | centre | opaque px |
+|---|---|---|---|---|
+| seeded by the drop | 540×216 | 2.500 | 512, 512 | 116640 |
+| after a drag | 541×217 | 2.493 | 614.5, 580.5 | 117397 |
+| after a free corner scale | 298×399 | **0.747** | 494, 672.5 | 118902 |
+| **after the resize button** | **400×160** | **2.500** | **494, 672** | **64000** |
+
+The image's own pixel size to the pixel, `px` exactly 400·160, the centre unmoved, and **not
+square** — the square is the bug this button used to be.
+
+### `restorePlaceSize()` — rotation survives
+
+ALT-rotated ≈45.2°, solved off the bbox itself (400c + 160s = 396, 400s + 160c = 397).
+
+| Step | bbox w×h | centre | opaque px |
+|---|---|---|---|
+| rotated, still own size | 396×397 | 522, 573.5 | 64637 |
+| after a free corner scale | 477×477 | 562.5, 616.5 | 81809 |
+| **after the resize button** | **396×397** | **562, 616.5** | **64432** |
+
+Back to the same rotated 400×160: identical bbox, `px` ≈ 400·160 rather than the 78400 a rotated
+square of that bbox would carry, centre unchanged within the bbox's own half pixel. The button
+restores SIZE and leaves position and angle alone, which is the ruling.
+
+### Video mode keeps the chip — both halves of the `isVideo` split
+
+Group `i2v_ms_019`, an LTX 2.3 i2v video group.
+
+| Case | Path taken | Result |
+|---|---|---|
+| video + **prompt** tool active | `_isVideoPromptToolActive()` short-circuits the window drag handlers | drop overlay stayed **hidden** on `dragenter`; the drop reached `.mpi-prompt-box` → chip, role `startFrame`, `imageCount` 0→1 |
+| video + **crop** tool active | overlay shows, so `_dropOverlay.onDrop` runs with `isVideo` true | chip, role `endFrame`, `imageCount` 1→2 |
+
+`hasPlaceImage` is not even defined on the video viewer — Place is registered for image mode only,
+so no drop on a video group can arm it. The chip loop the first pass could only assert statically
+is now exercised on a real video group, in both the tool states that reach it.
+
+**Preview contract, re-confirmed:** after the whole Place session the project record still read 3
+groups × 1 entry. The only disk writes were the slot imports the fill gestures are supposed to
+make (`imported_003`, `imported_004`).
+
+`node --test tests/mask-tool-registry.test.cjs` — **44 pass, 0 fail**, run before the live pass.
+
 ## Not verified
 
-- **Video mode was not exercised on a live video group** (the proof project has no video). The
-  branch is `if (!isVideo) { …place… return; } <the original chip loop>` — the video half is
-  unchanged code, and a test asserts both branches and the `isVideo` split survive. Worth one
-  manual drop on a video group before release.
 - **A base entry above 8192px** was not tested. `PLACE_MAX_EDGE` is 8192 and `compositeOverlay`
   stretches with `fit: 'fill'`, so beyond that the object resamples up. Ceiling and upgrade path
   are written into `docs/composite-place.md` rather than left to be discovered.

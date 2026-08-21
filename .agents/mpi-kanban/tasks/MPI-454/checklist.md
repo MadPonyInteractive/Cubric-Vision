@@ -45,15 +45,20 @@ Design and the seven implementation items live in [plan.md](plan.md); evidence i
       in `docs/composite-place.md`.
 - [x] **The re-centre button was a bug** — it seeded a SQUARE and squashed the photo. Replaced by
       `restorePlaceSize()`: the image's own pixel dimensions, in place, position and rotation
-      kept. Guarded three ways, all mutation-proved RED. **Not yet driven in the app.**
+      kept. Guarded three ways, all mutation-proved RED, and **driven in the app** — see below.
 
 ## Carried to the sibling card
 
 - **MPI-596 (Object Stamp Flow):** the user's detailing test says an **edit model** is preferable
   for the pass after a stamp. Design input for that card, not a change to this one.
 
-## Left for the next session
+## Closed in the second session, 2026-08-21
 
-1. Live-verify `restorePlaceSize()` in the running app — the only thing shipped unverified.
-2. One manual drop on a VIDEO group (unchanged code, test-guarded, never exercised live).
-3. Then close the card.
+- [x] **`restorePlaceSize()` driven in the running app** — private instance on port 63034. A
+      400×160 image free-scaled to 298×399 (aspect 0.747) came back **400×160, 64000 opaque px,
+      centre unmoved**; rotated ≈45° and scaled to a 477×477 bbox it came back to its own
+      396×397 rotated bbox with the angle kept. Never square. Numbers in [validation.md](validation.md).
+- [x] **A drop on a live VIDEO group still becomes a chip** — both halves of the `isVideo` split:
+      with the prompt tool up the overlay never shows and the PromptBox takes it (`startFrame`),
+      with a canvas tool up `_dropOverlay.onDrop` takes the chip loop (`endFrame`). `hasPlaceImage`
+      is undefined on the video viewer, so Place cannot arm there at all.
