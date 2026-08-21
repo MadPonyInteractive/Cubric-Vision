@@ -23,8 +23,10 @@ not there.
 A source-analysis pipeline pointed at this repo finds `/proxy/prompt`, correctly reads
 it as "submits a prompt to ComfyUI", and emits `cubric-vision generate`. That command
 runs the graph on the engine and **produces nothing in the UI** — precisely the failure
-this card exists to fix. The gap is written down in `.claude/skills/cubric-vision/SKILL.md`
-§ "Known gap", but nothing guarantees the pipeline weighs that over the source.
+this card exists to fix. The warning is written down in `.claude/skills/cubric-vision/SKILL.md`
+§ "Still true: do not POST a graph to `/proxy/prompt`" — it was § "Known gap" when this was
+written, renamed once MPI-546 closed the gap it named — but nothing guarantees the pipeline
+weighs that over the source.
 
 Order matters: route first, generate second.
 
