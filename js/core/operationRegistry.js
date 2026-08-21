@@ -71,6 +71,8 @@ export const OPERATION_REGISTRY = {
     // call. Both are new KEYS, stamped ahead of APP_VERSION (1.4.2, released) for the
     // same reason as `ltxVideoUpscale`.
     flowCharacterSheet: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
+    // MPI-594 — the Outpaint flow. Same stamping reason as the two above.
+    flowOutpaint: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
     promptEnhance: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
 };
 

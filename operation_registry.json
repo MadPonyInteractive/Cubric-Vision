@@ -152,5 +152,10 @@
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.5.0",
     "universal": true
+  },
+  "flowOutpaint": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.5.0",
+    "universal": true
   }
 }

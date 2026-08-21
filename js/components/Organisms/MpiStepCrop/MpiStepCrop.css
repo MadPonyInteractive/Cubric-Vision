@@ -1,0 +1,55 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiStepCrop — the `crop` step kind (MPI-594)
+
+   A canvas stage the image is FITTED into (not hugged, unlike
+   MpiStepBox): the rect is expected to leave the source, so the
+   stage has to hold image ∪ rect and the component re-fits the view
+   as the box grows. Everything visible is painted in JS — the fill,
+   the source, and CropManager's overlay.
+═══════════════════════════════════════════════════════════════ */
+
+.mpi-step-crop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-3);
+    width: 100%;
+}
+
+/* Fixed box: a stage that resized with the rect would move the ratio bar
+   under the cursor mid-drag. The view scales inside it instead. */
+.mpi-step-crop__stage {
+    position: relative;
+    width: 100%;
+    /* Shorter than MpiStepBox's 52vh: this step carries a two-row ratio grid AND
+       the frame's hint under it, and at 52vh the hint clipped off the slide. */
+    height: min(42vh, 460px);
+    border: 1px solid var(--line);
+    background: var(--surface-canvas);
+    touch-action: none;
+    line-height: 0;
+}
+
+.mpi-step-crop__canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: default;
+}
+
+/* The gizmo's own controls — orientation, then the ratio grid. */
+.mpi-step-crop__bar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--s-4);
+    flex-wrap: wrap;
+}
+
+.mpi-step-crop__dims {
+    font-size: var(--t-2xs);
+    color: var(--accent-heat);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.05em;
+    min-height: 14px;
+}

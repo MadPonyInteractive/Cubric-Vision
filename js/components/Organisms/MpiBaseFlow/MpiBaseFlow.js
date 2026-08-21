@@ -18,7 +18,7 @@ import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
-import { getStepKind, stepValueToParam, isFrameKind } from './stepKinds.js';
+import { getStepKind, stepValueToParam, stepValueToMedia, isFrameKind } from './stepKinds.js';
 import { enqueueGeneration } from '../../../services/generationService.js';
 import { getCommand } from '../../../data/commandRegistry.js';
 import { buildField, mapDeclaredValue, isInjectionParam } from '../../../utils/declaredFields.js';
@@ -1970,7 +1970,38 @@ export const MpiBaseFlow = ComponentFactory.create({
             };
         }
 
-        const _run = () => {
+        /**
+         * Derive the media the RUN uses, where a step kind changes the picture
+         * rather than a widget (`stepValueToMedia`, MPI-594 — the outpaint crop
+         * is the first). The derived file is placed in the same preview-asset
+         * store a dropped file goes to, so it dedupes and Cleanup GCs it.
+         *
+         * Returns null when a derivation was needed and FAILED. That aborts the
+         * run: falling back to the original would generate from an un-padded
+         * image, which comes back looking like the model ignored the request.
+         *
+         * @param {Array<Object>} mediaItems
+         * @returns {Promise<Array<Object>|null>}
+         */
+        async function _deriveRunMedia(mediaItems) {
+            const steps = (flow.steps || []).filter(s => s?.kind && s.role);
+            if (!steps.length) return mediaItems;
+
+            let out = mediaItems;
+            for (const step of steps) {
+                const media = out.find(m => m?.role === step.role);
+                if (!media) continue;
+                const file = await stepValueToMedia(step.kind, _stepValues[step.role], media);
+                if (!file) continue;   // this kind derives nothing, or nothing changed
+                const project = state.currentProject;
+                const url = project ? await _placePreviewAsset(file, 'image', project) : null;
+                if (!url) return null;
+                out = out.map(m => (m === media ? { ...m, url, source: 'flow-derived' } : m));
+            }
+            return out;
+        }
+
+        const _run = async () => {
             if (_running) return;
 
             const inputs = _collectInputs();
@@ -2003,7 +2034,27 @@ export const MpiBaseFlow = ComponentFactory.create({
             _setStatus('Generating…');
             _myTempId = null;
 
-            const res = submitFlowGeneration(flow, inputs, {
+            // A step kind may have to REDRAW the input before anything samples it
+            // (the outpaint crop). Derived here, never in `inputs`: the snapshot
+            // above is what Reuse restores, and it must stay the user's own image
+            // plus the rect that produced this one.
+            let runMediaItems;
+            try {
+                runMediaItems = await _deriveRunMedia(mediaItems);
+            } catch (err) {
+                clientLogger.error('MpiBaseFlow', `step media derivation failed: ${err?.message || err}`);
+                runMediaItems = null;
+            }
+            if (!runMediaItems) {
+                _setRunning(false);
+                _setStatus('');
+                Events.emit('ui:warning', {
+                    message: `${flow.title} could not prepare its image — nothing was generated.`,
+                });
+                return;
+            }
+
+            const res = submitFlowGeneration(flow, { ...inputs, runMediaItems }, {
                 onComplete: ({ item, items } = {}) => {
                     _setRunning(false);
                     _myTempId = null;

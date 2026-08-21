@@ -55,6 +55,11 @@ export const UNIVERSAL_WORKFLOWS = {
     flowLtxFoley: {
         workflow: 'flow_ltx_foley.json',
     },
+    // MPI-594 — Krea 2 edit. The image it loads is ALREADY padded by the app, so the
+    // graph has no rect, no mask and no fill colour of its own.
+    flowOutpaint: {
+        workflow: 'flow_outpaint.json',
+    },
     // MPI-504 — Krea2 t2i, plus a SAM3 + Klein 4B pass that removes the head from the
     // front body panel. Both run on models the flow declares in `requiredModels`, so
     // this op adds no download of its own beyond the `face-yolov8n` dep.

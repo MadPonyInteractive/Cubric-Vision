@@ -63,7 +63,16 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
     // it and describe only the wardrobe and face on top. The LoRA carries identity, the
     // sheet carries the layout. It stays OPT-IN per flow, so every flow that declares
     // nothing still runs exactly as clean as before.
-    const mediaItems = Array.isArray(inputs.mediaItems) ? inputs.mediaItems : [];
+    //
+    // WHAT RUNS vs WHAT REUSE RESTORES — they are not always the same media (MPI-594).
+    // A step kind may redraw the input before the graph sees it (the outpaint crop
+    // composes source + black bars into one file). That derived file is a RUN detail:
+    // the snapshot has to keep the user's own image plus the rect, or a reuse would
+    // outpaint an already-outpainted picture. So `runMediaItems` is stripped here and
+    // never reaches `flowInputs`.
+    const { runMediaItems, ...snapshot } = inputs;
+    const mediaItems = Array.isArray(runMediaItems) ? runMediaItems
+        : Array.isArray(snapshot.mediaItems) ? snapshot.mediaItems : [];
     const config = {
         operation: flow.operation,
         model: { id: null, mediaType: flow.mediaType || 'image' },
@@ -84,7 +93,7 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
         // Additive, threaded to the sidecar save path (Phase 2 item 4) so Reuse can
         // reopen this Flow with its inputs restored.
         flowId: flow.id,
-        flowInputs: inputs,
+        flowInputs: snapshot,
     };
 
     // No gallery placeholder (MPI-306): a flow run is not pending in the gallery

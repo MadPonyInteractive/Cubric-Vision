@@ -75,10 +75,17 @@ order, so chaining them extracts from the unpadded image and dies with
 passes `Infinity` because an overshoot is filled rather than clipped, but the bound stays in the
 helper for the callers that cannot pad.
 
-## Video and Apps use a different cropper
+## Video uses a different cropper — Flows do not
 
 `js/utils/cropTool.js` (normalized 0–1, used by `MpiVideoViewer` and `MpiStepBox`) is
 **unchanged**: still clamped to the content, no fill, no exact-size family. The video crop route
 crops with ffmpeg and cannot pad, so the panel hides the fill colour and the `resolution` type
-for `kind: 'video'`. Bringing extension to Apps means porting the same three pieces (unclamp,
-snap, fill) into `cropTool.js`.
+for `kind: 'video'`.
+
+**Flows do NOT port any of this** (MPI-594). The Outpaint flow's `crop` step mounts
+`CropManager` itself — the class needs only a 2D context, an `{offsetX, offsetY, scale}` view
+and the image size — so unclamp, snap and fill are the ONE implementation on both surfaces.
+A change to how a crop rect behaves goes here, in `CropManager`, and both get it. The step's
+two deliberate divergences (a ratio CONTAINS the image instead of inscribing it; the fill is
+hardcoded black) are documented in
+`docs/playbooks/add-flow/ui/crop-gizmo.md`.

@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-594/**",
+    "comfy_workflows/raw/flow_outpaint.json",
+    "comfy_workflows/flow_outpaint.json",
+    "js/components/Organisms/MpiStepCrop/MpiStepCrop.js",
+    "js/components/Organisms/MpiStepCrop/MpiStepCrop.css",
+    "js/components/Organisms/MpiBaseFlow/stepKinds.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/data/flowsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/data/modelConstants/universal_workflows.js",
+    "js/core/operationRegistry.js",
+    "operation_registry.json",
+    "js/shell/preloadStyles.js",
+    "js/components/types.js",
+    "tests/inject-params-titles.test.cjs",
+    "docs/playbooks/add-flow/ui/crop-gizmo.md",
+    "docs/playbooks/add-flow/existing-flows/outpaint.md"
+  ]
+}

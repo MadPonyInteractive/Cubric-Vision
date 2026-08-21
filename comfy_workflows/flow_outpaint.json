@@ -1,0 +1,591 @@
+{
+  "51": {
+    "inputs": {
+      "clip": [
+        "69",
+        0
+      ],
+      "text": [
+        "112",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "55": {
+    "inputs": {
+      "unet_name": "krea2_raw_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "56": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "57": {
+    "inputs": {
+      "conditioning": [
+        "51",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "69": {
+    "inputs": {
+      "clip_name": "qwen3vl_4b_abliterated_fp8_scaled.safetensors",
+      "type": "krea2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "72": {
+    "inputs": {
+      "eta": 0.5,
+      "sampler_name": "linear/euler",
+      "scheduler": "beta",
+      "steps": 8,
+      "steps_to_run": -1,
+      "denoise": 1,
+      "cfg": 1,
+      "sampler_mode": "standard",
+      "bongmath": true,
+      "model": [
+        "440",
+        0
+      ],
+      "positive": [
+        "77",
+        3
+      ],
+      "negative": [
+        "77",
+        4
+      ],
+      "latent_image": [
+        "572",
+        0
+      ],
+      "seed": [
+        "503",
+        0
+      ]
+    },
+    "class_type": "ClownsharKSampler_Beta",
+    "_meta": {
+      "title": "ClownsharKSampler"
+    }
+  },
+  "77": {
+    "inputs": {
+      "basic_pipe": [
+        "621",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
+    }
+  },
+  "112": {
+    "inputs": {
+      "string": "fill the back areas with the rest of the image"
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "143": {
+    "inputs": {
+      "model": [
+        "408",
+        0
+      ],
+      "clip": [
+        "69",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ],
+      "positive": [
+        "294",
+        0
+      ],
+      "negative": [
+        "302",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "High"
+    }
+  },
+  "160": {
+    "inputs": {
+      "samples": [
+        "72",
+        1
+      ],
+      "vae": [
+        "77",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "245": {
+    "inputs": {
+      "lora_name": "krea-2\\extra\\krea2filterbypass3.safetensors",
+      "strength_model": 1,
+      "model": [
+        "55",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Bypass_Filter_Lora"
+    }
+  },
+  "265": {
+    "inputs": {
+      "lora_name": "krea-2\\edit\\krea2_identity_edit_v1_2_r128.safetensors",
+      "strength_model": 1,
+      "model": [
+        "245",
+        0
+      ]
+    },
+    "class_type": "LoraLoaderModelOnly",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "282": {
+    "inputs": {
+      "clip": [
+        "69",
+        0
+      ],
+      "text": [
+        "283",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "283": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Negative"
+    }
+  },
+  "290": {
+    "inputs": {
+      "model": [
+        "408",
+        0
+      ],
+      "clip": [
+        "69",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ],
+      "positive": [
+        "294",
+        0
+      ],
+      "negative": [
+        "57",
+        0
+      ]
+    },
+    "class_type": "ToBasicPipe",
+    "_meta": {
+      "title": "Balanced"
+    }
+  },
+  "294": {
+    "inputs": {
+      "true": [
+        "300",
+        0
+      ],
+      "false": [
+        "51",
+        0
+      ],
+      "boolean": [
+        "542",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "pos"
+    }
+  },
+  "299": {
+    "inputs": {
+      "grounding_px": 1024,
+      "system_prompt": "",
+      "clip": [
+        "69",
+        0
+      ],
+      "image": [
+        "573",
+        0
+      ],
+      "prompt": [
+        "283",
+        0
+      ]
+    },
+    "class_type": "Krea2EditGroundedEncode",
+    "_meta": {
+      "title": "Krea2 Edit (grounded encode)"
+    }
+  },
+  "300": {
+    "inputs": {
+      "grounding_px": 1024,
+      "system_prompt": "",
+      "clip": [
+        "69",
+        0
+      ],
+      "image": [
+        "573",
+        0
+      ],
+      "prompt": [
+        "112",
+        0
+      ]
+    },
+    "class_type": "Krea2EditGroundedEncode",
+    "_meta": {
+      "title": "Krea2 Edit (grounded encode)"
+    }
+  },
+  "302": {
+    "inputs": {
+      "true": [
+        "299",
+        0
+      ],
+      "false": [
+        "282",
+        0
+      ],
+      "boolean": [
+        "542",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "neg"
+    }
+  },
+  "311": {
+    "inputs": {
+      "eta": 0.5,
+      "sampler_name": "linear/euler",
+      "scheduler": "beta",
+      "steps": 25,
+      "steps_to_run": -1,
+      "denoise": 1,
+      "cfg": 2,
+      "sampler_mode": "standard",
+      "bongmath": true,
+      "model": [
+        "77",
+        0
+      ],
+      "positive": [
+        "77",
+        3
+      ],
+      "negative": [
+        "77",
+        4
+      ],
+      "latent_image": [
+        "572",
+        0
+      ],
+      "seed": [
+        "503",
+        0
+      ]
+    },
+    "class_type": "ClownsharKSampler_Beta",
+    "_meta": {
+      "title": "ClownsharKSampler"
+    }
+  },
+  "312": {
+    "inputs": {
+      "samples": [
+        "436",
+        0
+      ],
+      "vae": [
+        "77",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "408": {
+    "inputs": {
+      "ref_boost": 2,
+      "ref_boost_a": 1,
+      "fit_mode": "fit",
+      "model": [
+        "265",
+        0
+      ],
+      "source_latent": [
+        "572",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ],
+      "source_image": [
+        "573",
+        0
+      ]
+    },
+    "class_type": "Krea2EditModelPatch",
+    "_meta": {
+      "title": "Krea2 Edit (source patch)"
+    }
+  },
+  "436": {
+    "inputs": {
+      "eta": 0.5,
+      "sampler_name": "linear/euler",
+      "scheduler": "beta",
+      "steps": 2,
+      "steps_to_run": -1,
+      "denoise": 0.3,
+      "cfg": 1,
+      "sampler_mode": "standard",
+      "bongmath": true,
+      "model": [
+        "440",
+        0
+      ],
+      "positive": [
+        "77",
+        3
+      ],
+      "negative": [
+        "77",
+        4
+      ],
+      "latent_image": [
+        "311",
+        0
+      ],
+      "seed": [
+        "503",
+        0
+      ]
+    },
+    "class_type": "ClownsharKSampler_Beta",
+    "_meta": {
+      "title": "ClownsharKSampler"
+    }
+  },
+  "440": {
+    "inputs": {
+      "lora_name": "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
+      "strength_model": 1,
+      "model": [
+        "77",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Accelerator Lora"
+    }
+  },
+  "493": {
+    "inputs": {
+      "passthrough": [
+        "619",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "494": {
+    "inputs": {
+      "images": [
+        "493",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "503": {
+    "inputs": {
+      "int": 976866873950
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "542": {
+    "inputs": {
+      "boolean": true
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Mpi Simple Bool"
+    }
+  },
+  "553": {
+    "inputs": {
+      "string": "",
+      "channel": "alpha",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadImageFromPath",
+    "_meta": {
+      "title": "Input_Image"
+    }
+  },
+  "572": {
+    "inputs": {
+      "pixels": [
+        "573",
+        0
+      ],
+      "vae": [
+        "56",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "573": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "megapixels": 1,
+      "resolution_steps": 16,
+      "image": [
+        "553",
+        0
+      ]
+    },
+    "class_type": "ImageScaleToTotalPixels",
+    "_meta": {
+      "title": "Scale Image to Total Pixels"
+    }
+  },
+  "617": {
+    "inputs": {
+      "boolean": true
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_is_Turbo"
+    }
+  },
+  "619": {
+    "inputs": {
+      "true": [
+        "160",
+        0
+      ],
+      "false": [
+        "312",
+        0
+      ],
+      "boolean": [
+        "617",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "621": {
+    "inputs": {
+      "true": [
+        "290",
+        0
+      ],
+      "false": [
+        "143",
+        0
+      ],
+      "boolean": [
+        "617",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  }
+}

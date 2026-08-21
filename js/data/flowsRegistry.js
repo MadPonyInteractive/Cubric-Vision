@@ -757,6 +757,65 @@ export const FLOWS = [
             },
         ],
     },
+
+    // MPI-594 — OUTPAINT. One image in, the same picture back inside a bigger frame.
+    //
+    // The graph is a Krea 2 EDIT that fills flat colour, and it never learns a rect:
+    // the `crop` step composes source + black bars into a single file and that file
+    // is what `Input_Image` loads (stepKinds.js § STEP_MEDIA). So there is no mask,
+    // no fill input and no box param here — deliberately, and the same reason the
+    // History crop tool has no auto-mask (docs/crop.md § The rect is not confined to
+    // the image): prompting an edit model to fill "the black area" beats handing it a
+    // painted mask.
+    //
+    // NO PROMPT. `Input_Positive` is baked ("fill the back areas with the rest of the
+    // image"), which is the whole instruction — describing new content is a different
+    // feature, not an outpaint.
+    //
+    // NO `result.compare`. The output is a DIFFERENT SHAPE from the input, so a wipe
+    // between them compares two framings rather than two versions of one picture. The
+    // honest before/after here is the black the step already showed.
+    {
+        id: 'outpaint',
+        title: 'Outpaint',
+        // preview/video: the tile still + hero clip land with /mpi-flow-graphics
+        // (docs/playbooks/add-flow/06-preview-image.md) as `flow-outpaint.webp` /
+        // `.mp4`. Left undeclared rather than pointed at a file that 404s.
+        description: 'Extend an image past its edges. Choose the shape you want, drag the frame out '
+            + 'over the sides you want filled, and Krea 2 paints the new area in. Works best in SMALL '
+            + 'steps — a narrow strip on one or two sides comes back seamless, while a big extension '
+            + 'leaves the model inventing most of the picture and it shows. To go a long way, run it '
+            + 'twice on the result rather than once on the original.',
+        requiredModels: ['krea2'],
+        operation: 'flowOutpaint',
+        workflow: 'flow_outpaint.json',
+        mediaType: 'image',
+        inputSchema: {
+            media: [
+                { type: 'image', mode: 'upto', max: 1, roles: ['image1'], labels: ['Image'] },
+            ],
+        },
+        steps: [
+            {
+                // No `param`: this gizmo's value changes the PICTURE, not a widget —
+                // it binds through STEP_MEDIA instead (stepKinds.js).
+                kind: 'crop', role: 'image1',
+                tickerLabel: 'Frame',
+                title: 'Choose the frame you want',
+                hint: 'Pick a shape, then drag the frame past the edges — black is what gets painted '
+                    + 'in. Keep it modest: small extensions come back seamless.',
+            },
+        ],
+        fields: [
+            {
+                // Baked `true` in the graph, and kept as the default: an outpaint fills
+                // flat colour next to real pixels it can copy from, which is the case
+                // the accelerator LoRA costs least on. Off for a keeper.
+                id: 'Input_is_Turbo', type: 'toggle', label: 'Turbo', icon: 'bolt',
+                default: true,
+            },
+        ],
+    },
 ];
 
 /** @returns {FlowDef[]} All flow descriptors. */

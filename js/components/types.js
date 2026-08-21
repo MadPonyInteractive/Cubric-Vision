@@ -1056,6 +1056,38 @@
  */
 
 /**
+ * @typedef {Object} MpiStepCropProps (Organism — js/components/Organisms/MpiStepCrop)
+ * @property {Object}   media      - The media item this step operates on ({url, …}).
+ * @property {Object}   step       - The FlowStep declaration (`orientation` seeds the bar).
+ * @property {Object|null} [value] - Restored value ({crop:{x,y,w,h}, ratio:{orientation,label}}).
+ * @property {Function} onChange   - (value) => void; called as the frame is dragged.
+ *
+ * The `crop` STEP KIND (MPI-594) — the OUTPAINT gizmo, `box`'s opposite number:
+ * a rect that is EXPECTED to leave the image, whose overhang becomes the flat
+ * area an edit model fills. Mounts `CropManager` (the History crop tool's own
+ * rect/handle/snap engine) on a plain canvas stage, so the drag behaviour,
+ * edge snapping and dashed source bounds are the one implementation, not a
+ * lookalike. Reports `{crop:{x,y,w,h}}` in ABSOLUTE SOURCE PIXELS, top-left
+ * anchored and free to be negative.
+ *
+ * Two deliberate differences from the History tool: a ratio CONTAINS the image
+ * rather than inscribing it (picking a shape only ever adds bars), and the view
+ * frames image ∪ rect, re-fitting on mouse-up but never mid-drag.
+ *
+ * Its ratio + orientation bar is the gizmo's own (two MpiRadioGroups over
+ * CROP_RATIOS) rather than declared `fields`, because flipping orientation
+ * rewrites the option list and a declared field's options are static.
+ *
+ * Binds to the run through STEP_MEDIA, not `param`: `composePaddedImage` draws
+ * source + fill into the reported rect and the frame swaps that file in for the
+ * step's role (docs/playbooks/add-flow/ui/crop-gizmo.md).
+ *
+ * Instance methods (on instance.el):
+ *   getValue() — returns {crop:{x,y,w,h}, ratio:{orientation,label}}.
+ *   destroy()  — disconnects the ResizeObserver, destroys CropManager + both radios.
+ */
+
+/**
  * @typedef {Object} MpiCheckboxProps (Primitive — js/components/Primitives/MpiCheckbox)
  * @property {boolean} [checked=false]   - Initial checked state.
  * @property {string}  [label='']        - Optional label text; omit for a standalone checkbox.

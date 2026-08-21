@@ -262,6 +262,25 @@ test('the Character Sheet Flow carries its I/O and declared control titles (MPI-
     assert.ok(have.has('output_image'), `${file} must carry a capture node titled "output_image"`);
 });
 
+test('the Outpaint Flow carries its I/O and declared control titles (MPI-594)', () => {
+    // flowOutpaint runs flow_outpaint.json on krea2 with model:{id:null}. Its ONE
+    // media slot is `image1` -> `input_image`, and the image it loads is already
+    // padded by the app, so there is no box, mask or fill title to pin — the crop
+    // step binds through STEP_MEDIA, not injection.
+    //
+    // `input_is_turbo` is the declared control, and the silent-skip case: the toggle
+    // flips, the run succeeds, and the accelerator LoRA branch stays on the graph's
+    // baked value whatever the user chose.
+    const file = 'flow_outpaint.json';
+    const have = titlesOf(file);
+    for (const title of [
+        'input_image', 'input_positive', 'input_negative', 'input_seed', 'input_is_turbo',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_image'), `${file} must carry a capture node titled "output_image"`);
+});
+
 test('the prompt enhancer graph carries the seed node its caller drives (MPI-504)', () => {
     // MpiBaseFlow._runEnhance sends `injectionParams: { Input_Seed: <random> }` on every
     // press, because step 3's loop is Enhance -> Generate -> Enhance and a fixed seed

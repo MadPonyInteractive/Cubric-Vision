@@ -1,5 +1,6 @@
 import { MpiStepBox } from '../MpiStepBox/MpiStepBox.js';
 import { MpiStepPreview } from '../MpiStepPreview/MpiStepPreview.js';
+import { MpiStepCrop, composePaddedImage } from '../MpiStepCrop/MpiStepCrop.js';
 
 /**
  * STEP_KINDS — the step-kind registry (MPI-306 Phase 1).
@@ -24,6 +25,11 @@ export const STEP_KINDS = {
     // exists because step 0 loads media at thumbnail size — a flow whose input
     // is a video had nowhere the user could actually see it before running.
     preview: MpiStepPreview,
+    // `crop` is the outpaint gizmo: a rect that LEAVES the image, whose overhang
+    // becomes the flat area the model fills. It reports a rect like `box` does,
+    // but binds through STEP_MEDIA below rather than `param` — what it changes is
+    // the picture the flow runs on, not a widget in the graph.
+    crop: MpiStepCrop,
     // mask, light, mood… as they are built.
 };
 
@@ -103,4 +109,41 @@ const STEP_PARAMS = {
  */
 export function stepValueToParam(kind, value) {
     return STEP_PARAMS[kind]?.(value) ?? null;
+}
+
+/**
+ * KIND → MEDIA adapters (MPI-594) — the second way a step can reach the run.
+ *
+ * `STEP_PARAMS` covers a gizmo whose value is a NUMBER the graph reads. Some
+ * gizmos instead change the PICTURE: an outpaint rect is not a widget anywhere,
+ * it describes a bigger frame the source has to be redrawn into before anything
+ * samples it. Such a kind returns a FILE, and the frame swaps it in for that
+ * role's media at dispatch.
+ *
+ * Deliberately kind-shaped, exactly like `STEP_PARAMS`: a flow declares
+ * `kind: 'crop'` and needs no JS, so this stays expressible as a manifest. And
+ * deliberately PIXELS-ONLY — the returned file is placed by the frame, which
+ * owns the project and the preview-asset store.
+ *
+ * The swap NEVER touches the persisted snapshot. `flowInputs` keeps the user's
+ * own image plus the rect, so Reuse restores what they supplied and re-derives
+ * the padded file; persisting the derived one instead would re-pad a padded
+ * picture on every reuse.
+ *
+ * @type {Record<string, function(Object|null, Object|null): Promise<File|null>>}
+ */
+const STEP_MEDIA = {
+    crop: (value, media) => composePaddedImage(media, value),
+};
+
+/**
+ * @param {string} kind
+ * @param {Object|null} value - the step's reported value, `_stepValues[role]`.
+ * @param {Object|null} media - the media item the step is bound to.
+ * @returns {Promise<File|null>} a replacement file for that role, or null when
+ *   the kind derives no media (every kind but `crop`) or there is nothing to
+ *   change (a rect identical to the source).
+ */
+export function stepValueToMedia(kind, value, media) {
+    return STEP_MEDIA[kind]?.(value, media) ?? Promise.resolve(null);
 }

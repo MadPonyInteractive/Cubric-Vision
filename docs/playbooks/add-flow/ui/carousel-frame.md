@@ -147,6 +147,25 @@ nothing else. **Coords pass through unconverted**; arithmetic there is the centr
 A `null` is **omitted**, never sent: an unmarked step leaves the node on its baked default. A
 kind that reports nothing (`preview`) has no adapter and can carry no `param`.
 
+### …or its value may change the PICTURE — `STEP_MEDIA` (MPI-594)
+
+Some gizmos do not feed a widget at all. An outpaint rect is not a number anywhere in the
+graph: it describes a bigger frame the source has to be redrawn into before anything samples
+it. Such a kind registers in `STEP_MEDIA` instead of `STEP_PARAMS`, returns a **File**, and
+the frame swaps it in for that role's media at dispatch (`_deriveRunMedia`).
+
+Still declaration-only for the flow — `kind: 'crop'` and nothing else — so it stays
+manifest-expressible, and the graph needs no node for it. Two rules the frame enforces:
+
+- **The derived file never enters the snapshot.** `submitFlowGeneration` strips
+  `runMediaItems` before writing `flowInputs`, so Reuse restores what the user supplied plus
+  the step value, and re-derives. Persisting the derived file would re-apply the step to its
+  own output on every reuse.
+- **A failed derivation aborts the run** with a warning. Running on the original media would
+  produce a result that looks like the model ignored the request.
+
+→ [crop-gizmo.md](crop-gizmo.md).
+
 The reported value's own shape is deliberately NOT renamed to match — `stepValues` is persisted
 for Reuse, so renaming at the source would strand every card already saved with `w`/`h`.
 
