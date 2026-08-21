@@ -778,9 +778,8 @@ export const FLOWS = [
     {
         id: 'outpaint',
         title: 'Outpaint',
-        // preview/video: the tile still + hero clip land with /mpi-flow-graphics
-        // (docs/playbooks/add-flow/06-preview-image.md) as `flow-outpaint.webp` /
-        // `.mp4`. Left undeclared rather than pointed at a file that 404s.
+        preview: 'flow-outpaint.webp',
+        video: 'flow-outpaint.mp4',
         description: 'Extend an image past its edges. Choose the shape you want, drag the frame out '
             + 'over the sides you want filled, and Krea 2 paints the new area in. Works best in SMALL '
             + 'steps — a narrow strip on one or two sides comes back seamless, while a big extension '

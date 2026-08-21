@@ -65,7 +65,16 @@ one. Pick the device by what actually changes:
 | Something **not visible at all** | Animate the channel that changed, over an unchanged frame | **Add Foley** (shipped) — the picture plays untouched while the waveform draws itself in sync, impact by impact |
 | **Nothing** — the flow CREATES rather than transforms | Build the LAYOUT a piece at a time, then swap the subject under it | **Character Sheet** (shipped) — the three views arrive one by one over the studio grey, then the character changes while the grid holds |
 
-Two rules the shipped pair proved:
+Three rules the shipped flows proved:
+
+- **A wipe across the WHOLE frame is dead air when only the EDGES change.** Outpaint's
+  two plates are identical between the black strips — same source pixels — so a full-frame
+  `xfade wiperight` spent a third of its clip travelling a seam over content that never
+  moved. Built, watched, thrown away. Reveal only the regions that actually changed: the
+  shipped hero keeps the FILLED result on screen for the whole clip and slides two black
+  boxes outward off frame, so the strips are the only thing that ever moves, and both sides
+  animate at once instead of one-then-a-pause-then-the-other. Ask which pixels differ
+  before picking the device, not after.
 
 - **A before/after wipe needs plates from ONE run.** Head Swap's two plates are
   pixel-identical outside the head (check with an ffmpeg `blend=all_mode=difference`
@@ -246,7 +255,11 @@ transparent PNG, useful for floating one over a plate whichever tool draws it.
 | A colon in an ffmpeg filter option value | `stats_file=C:/…` is parsed as an option separator and dies as `Invalid argument` on an unrelated option. Read `psnr` off stderr instead |
 | A translucent reveal cover | The un-played half shows straight through it. Opaque, in the band's own ground colour |
 | Judging a hero from a contact sheet | Everything reads at 620 px. Render at **446 px** — the real hero width — before believing it |
-| Running the `sharp` snippet from the scratchpad | `ERR_MODULE_NOT_FOUND` for an installed package; it resolves from the script's own location. Run from the repo root |
+| Running the `sharp` snippet from the scratchpad | `ERR_MODULE_NOT_FOUND` for an installed package; it resolves from the script's own location. Run from the repo root, or keep the script in the scratchpad and pass `NODE_PATH=<repo>/node_modules` |
+| `sharp` `.composite()` then `.extract()` in one chain | Pipeline order is FIXED and `extract` runs FIRST, so the base shrinks out from under the overlay. It dies with `Image to composite must have same dimensions or smaller`, naming the OVERLAY while the base is at fault. Two pipelines, the first ending `.png().toBuffer()` |
+| Saving an already-encoded webp buffer through `sharp` again | It re-encodes at the DEFAULT quality instead of copying bytes: a `quality: 90` tile written at 49,674 B came back 26,682 B, no error, no warning. Encode ONCE straight to the destination; the only symptom is a suspiciously small file |
+| `sharp(f).extract({...}).stats()` | `.stats()` reads the INPUT file and ignores the chain, so six patches at six offsets return byte-identical means. Reads as "the region is flat"; it is "you measured the whole image six times". Use `.raw().toBuffer()` |
+| Judging a strip width by eye on a contact sheet | Estimated ~12px twice for bands that measured 31px and 47px — a 2-4x error, in the direction that would have thrown away the better composition. Measure the run of dark pixels at the real 220px |
 | Before/after plates from two different runs | Everything shimmers, not just the head, and the device collapses. Diff them first |
 | Forgetting the idle filter | Tiles render at `saturate(.92) brightness(.92)`; art that is just contrasty enough in isolation reads flat in the grid |
 | Generating into `:3000` | That is normally the user's live session |

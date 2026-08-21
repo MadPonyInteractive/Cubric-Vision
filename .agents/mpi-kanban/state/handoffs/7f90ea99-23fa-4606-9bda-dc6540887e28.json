@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "7f90ea99-23fa-4606-9bda-dc6540887e28",
   "generated_at": "2026-08-21T04:50:00Z",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "MPI-594 — build the Outpaint flow end to end (crop gizmo + Krea 2 fill)",
     "branch": "master"

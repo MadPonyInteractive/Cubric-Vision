@@ -40,4 +40,8 @@ decisions go in `docs/playbooks/add-flow/ui/crop-gizmo.md`; the flow's in
 - [x] Live run in an isolated app instance: pad lands in `.preview-assets`, generation
       returns a filled frame (TWO runs, 2026-08-21) — caught and fixed the baked-prompt
       clobber. Reuse across restart still untested
-- [ ] Preview art (`/mpi-flow-graphics`) — separate pass, tracked here until it lands
+- [x] Preview art (`/mpi-flow-graphics`) — `flow-outpaint.webp` (4/5 tile, 896x1120, 49,674 B)
+      + `flow-outpaint.mp4` (8:5 hero, 1280x800, 5.00s, 178,453 B); `preview`/`video`
+      declared on the FlowDef, placeholder comment deleted
+- [x] Reuse across restart — fresh process, card reused from its sidecar restores the
+      ORIGINAL image + rect, not the padded file

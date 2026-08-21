@@ -33,10 +33,11 @@ _(none yet)_
 ## What's new
 
 - Flows are out of preview. The Flow Library is a set of outcome-shaped jobs you run without
-  assembling a workspace: Head Swap, Extend Video, Add Foley, Upscale Video and Character
-  Sheet. Open it from the Flows button at the top of the gallery, from the landing page, or
-  with Tab — which now cycles your last card, the gallery and Flows. Each flow says which
-  models it needs and installs them for you; none of them download weights of their own.
+  assembling a workspace: Head Swap, Extend Video, Add Foley, Upscale Video, Character
+  Sheet and Outpaint. Open it from the Flows button at the top of the gallery, from the
+  landing page, or with Tab — which now cycles your last card, the gallery and Flows. Each
+  flow says which models it needs and installs them for you; none of them download weights
+  of their own.
 
 - Character Sheet turns a description into a reference sheet for a character. Describe who they
   are — wardrobe, age, hair, scars — and you get back one picture holding a large three-quarter
@@ -55,6 +56,14 @@ _(none yet)_
   owning one of the two is enough to run the flow. Krea 2 is the stronger choice for stylised
   work; the NSFW model is trained mostly on photographic source and is weaker at Anime and
   Cartoon.
+
+- Outpaint extends a picture past its edges. Drop an image, pick the shape you want — or drag
+  the frame freely — and pull it out over the sides you want filled; the new area shows as black,
+  and Krea 2 paints it in. It works best in small steps: a narrow strip on one or two sides comes
+  back seamless, while a big extension leaves the model inventing most of the picture and it
+  shows. To go a long way, run it again on the result rather than asking for it all at once.
+  Like Character Sheet, it runs on either Krea 2 or Krea 2 NSFW, and downloads no weights of its
+  own.
 
 - Videos can be upscaled with LTX, sound and all. The Upscale tool in the History workspace
   has a new option on video — "LTX Video upscaler" — which doubles a clip's resolution using

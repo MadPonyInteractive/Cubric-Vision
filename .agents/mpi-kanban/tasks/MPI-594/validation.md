@@ -108,14 +108,78 @@ Both runs landed real gallery cards. Run 2's completion arrived LATE (the page h
 reloaded mid-session, `[concat] SSE stream errored (will auto-reconnect)`) and the backstop
 recovered it — app-level, nothing to do with this flow.
 
+## Preview art (2026-08-21, `/mpi-flow-graphics`)
+
+Built from the run-2 plates already on disk — no new GPU pass. Provenance proved before
+building: the result scaled into the pad's own frame reads **32.4 dB PSNR** against the
+source, i.e. the same shot re-rendered, so both plates share one geometry and nothing
+shimmers. Black strips measured on the plate, not assumed: `[0,187]` and `[1093,1279]`.
+
+| asset | spec | result |
+|---|---|---|
+| `comfy_workflows/display/flow-outpaint.webp` | 4/5 tile, <= 250 KB | **896 x 1120, 49,674 B** |
+| `comfy_workflows/display/flow-outpaint.mp4` | 8:5 hero, <= 2 MB, 4-8 s | **1280 x 800, 5.00 s, 178,453 B** |
+
+**The hero device is NOT a before/after wipe, and that was a deliberate reversal.** A
+full-frame `xfade wiperight` was built first and rejected on inspection: between the two
+strips the pad and the result are the same source pixels, so ~2.1 s of a 6 s clip was a
+seam travelling over content that never changed. The shipped hero instead has **both black
+strips painting outward at once** from the picture's edges (1.2 s hold, 1.8 s paint, 2.0 s
+hold). The filled result is the base for the whole clip and the strips are black boxes
+SLIDING off frame, so the only thing that ever changes is the strips themselves.
+
+Tile is composed for 4/5 in its own right, not cropped from the hero: filled picture, right
+strip still the pad's black, `--accent-heat` seam between. Chosen by measuring at the real
+220 px grid size, not by eye — full-frame put the band at 31 px with a small figure, the
+punch-in puts it at **47 px** with a face that reads like the shipped tiles.
+
+### Live proof (isolated instance, own profile + port; `:3000` left alone)
+
+| check | result |
+|---|---|
+| both assets over HTTP | **200**, `49674` / `178453` B — byte-exact vs disk, correct MIME |
+| tile decoded in the real grid | `complete`, 896 x 1120 natural, rendered at 278 px |
+| hero element | `paused:false`, `muted`, `loop`, `autoplay`, `readyState 4`, 1280 x 800 |
+| hero actually advancing | `currentTime` 1.10 -> 2.30 across 1.2 s, having wrapped from 3.45 — loop confirmed |
+| hero actually VISIBLE | `getBoundingClientRect().width` = **444** (a hidden overlay measures 0 and passes every other assertion) |
+| `npm test` | **657 pass, 0 fail** |
+| `node --check` + `npx eslint` on `flowsRegistry.js` | clean |
+
+Fabio confirmed both in his own app on 2026-08-21: "all good, this is verified".
+
+## Reuse across restart — VERIFIED (2026-08-21)
+
+The last open item. Driven in a **fresh process** (new isolated instance, project loaded
+from disk), reusing `flowOutpaint_003` through `openFlowFromReuse(item)` — the real Gallery/
+History reuse entry point, reading the item hydrated from its sidecar:
+
+```
+handled: true, flowId: "outpaint"
+s_flowInputs.outpaint.mediaItems[0].url -> ...\Media\flowOutpaint_001.png     <- the ORIGINAL
+s_flowInputs.outpaint.stepValues.image1.crop  -> {x: 0, y: -123, w: 1515, h: 1136}
+s_flowInputs.outpaint.stepValues.image1.ratio -> {orientation: "landscape", label: "4:3"}
+s_flowInputs.outpaint.injectionParams         -> {Input_is_Turbo: true}
+```
+
+No `.preview-assets` path anywhere in the restored inputs — the padded PNG is re-derived at
+Run, exactly as `flowService` intends. `MpiBaseFlow` mounted from it (visible, 1280 px wide,
+titled Outpaint, three steps).
+
+## A BIG extension, and a second pass on a result — both work
+
+`flowOutpaint_003` (Fabio's own run, 2026-08-21) closes two gaps this file previously listed
+as unmeasured, and it did so by accident:
+
+- Its input was **`flowOutpaint_001.png`, a previous outpaint result** — the "to go a long
+  way, run it twice on the result" path the description recommends. It works.
+- The rect was `{x: 0, y: -123, w: 1515, h: 1136}` on a 928 x 1136 source: **+63% width**,
+  three times the 21% both proof runs used. It came back clean.
+
+So the copy's warning that a large extension degrades is still Fabio's editorial call, but
+it is no longer true that no big extension has ever been run.
+
 ## NOT verified — outstanding
 
-- **Reuse across restart** — the code path is the shared one (`flowInputs` keeps the
-  original image + rect, `runMediaItems` is stripped in `flowService`), but no restart test
-  has been run.
 - **The NSFW arm has never RUN through this flow** — only its resolution is proven (right
   filename, bypass 0). Fabio: the lustify weight has been run against this same edit shape and
   prompt style before, so this is not a gap worth a GPU pass.
-- **A big extension** — both runs added 21%. The copy's claim that a large one degrades is
-  Fabio's, not measured here.
-- **Preview art** — no `preview`/`video` on the FlowDef until `/mpi-flow-graphics` runs.

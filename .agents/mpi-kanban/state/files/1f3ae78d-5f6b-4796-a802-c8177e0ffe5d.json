@@ -24,10 +24,12 @@
     "docs/crop.md",
     "docs/playbooks/add-flow/01-descriptor-and-ops.md",
     "tests/flow-model-choice.test.cjs",
-    "docs/playbooks/add-flow/README.md"
+    "docs/playbooks/add-flow/README.md",
+    "comfy_workflows/display/flow-outpaint.webp",
+    "comfy_workflows/display/flow-outpaint.mp4"
   ],
-  "status": "claimed",
+  "status": "released",
   "claim_kind": "write",
-  "owner_session": ".agents/mpi-kanban/state/sessions/9685b71b-3bbc-4fa7-a54f-5bea18a077e3.json",
-  "heartbeat_at": "2026-08-21T04:35:00Z"
+  "owner_session": ".agents/mpi-kanban/state/sessions/87018060-8d6c-4682-a055-ec6a36883ab3.json",
+  "heartbeat_at": "2026-08-21T06:22:29Z"
 }
