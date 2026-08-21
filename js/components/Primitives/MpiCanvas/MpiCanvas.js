@@ -1354,7 +1354,39 @@ class _CanvasCore {
     getShapeKind()       { return this.shape.kind; }
     hasShape()           { return this.shape.isActive && this.shape.hasShape; }
     /** Re-centre the gizmo — the panel's way back when it has been dragged off screen. */
-    resetShape()         { this.shape.seed(); this.draw(); }
+    resetShape() {
+        // Place (MPI-454) re-seeds at the placed image's OWN aspect. `seed()` with no
+        // argument is a SQUARE, which for a placed image is a distortion rather than a
+        // re-centre — it is exactly what the Place panel's button did until 2026-08-21,
+        // and the user watched it squash a photo. Place has `restorePlaceSize()` now, but
+        // the default has to be right here too or the next re-centre repeats it.
+        const img = this.shape.shapeMode === 'place' ? this.comp.placeImage : null;
+        this.shape.seed(img?.width ? img.width / img.height : 1);
+        this.draw();
+    }
+
+    /**
+     * Place: put the placed image back to its OWN pixel dimensions, where it is.
+     *
+     * A RESIZER, not a re-centre (user, 2026-08-21). The shape tools' button exists to
+     * rescue a gizmo dragged off screen, so re-centring is the whole point there; a
+     * placement is a picture, and what the user wants back is its real size and shape —
+     * moving it as a side effect would undo the placement they were happy with.
+     *
+     * Rotation is deliberately kept: this restores SIZE, and throwing away an angle the
+     * user set would be a second thing the button did without being asked.
+     *
+     * @returns {boolean} false when Place is not armed or the slot is empty
+     */
+    restorePlaceSize() {
+        const img = this.comp.placeImage;
+        if (this.shape.shapeMode !== 'place' || !img?.width) return false;
+        this.shape.halfW = img.width / 2;
+        this.shape.halfH = img.height / 2;
+        this.shape.hasShape = true;
+        this.draw();
+        return true;
+    }
     /** Drop the gizmo. Not an edit: no pixels change, so no undo entry. */
     clearShape()         { const had = this.shape.clear(); this.draw(); return had; }
 
@@ -1568,7 +1600,7 @@ export const MpiCanvas = ComponentFactory.create({
             'refreshCompositeHoleFromMask','setCompositeBrushSize','setCompositeBrushType',
             'setCompositeEnabled','hasCompositeUnderlay','hasCompositeHole','getCompositeURL',
             'clearComposite','resetComposite','setOnCompositeChange',
-            'setPlaceImage','hasPlaceImage','getPlaceURL',
+            'setPlaceImage','hasPlaceImage','getPlaceURL','restorePlaceSize',
             'setProcessedImage','clearProcessedImage'
         ];
         _methods.forEach(name => { el[name] = core[name].bind(core); });

@@ -35,12 +35,25 @@ Design and the seven implementation items live in [plan.md](plan.md); evidence i
       `docs/composite.md` records from 2026-08-04. Fixed at the cause (re-seed in `loadImage`),
       which also gives Place the shape tools' "the gizmo survives its commit" rule. Guarded.
 
-## Open for the user
+## Answered by the user, 2026-08-21 — all closed
 
-- **Acceptance 12 (undo/redo) is built as the paint-Apply contract, not a transform history** —
-  reasoning in [validation.md](validation.md) § Deviation. Needs a ruling.
-- **Brief question 4** — three tools in the group, two hole-cutters and one placer: does the group
-  still deserve the name *"Composite"*? Deliberately not renamed; it is a user call.
-- **Brief question 2** — a 1–2px feather on the cut-out. `compositeOverlay` takes alpha as given.
-  BiRefNet's own alpha was not judged by eye against a real photographic cut-out; worth a look
-  before deciding it needs one.
+- [x] **Acceptance 12 (undo)** — stays as built, the paint-Apply contract. *"We can leave the
+      undo as is. If I find it to be annoying, I'll create a card later."*
+- [x] **Brief question 4** — the group keeps the name **Composite**.
+- [x] **Brief question 2** — **no feather**. The detailing pass the user runs afterwards is what
+      blends the object, and a blanket feather would hurt images that do not want one. Recorded
+      in `docs/composite-place.md`.
+- [x] **The re-centre button was a bug** — it seeded a SQUARE and squashed the photo. Replaced by
+      `restorePlaceSize()`: the image's own pixel dimensions, in place, position and rotation
+      kept. Guarded three ways, all mutation-proved RED. **Not yet driven in the app.**
+
+## Carried to the sibling card
+
+- **MPI-596 (Object Stamp Flow):** the user's detailing test says an **edit model** is preferable
+  for the pass after a stamp. Design input for that card, not a change to this one.
+
+## Left for the next session
+
+1. Live-verify `restorePlaceSize()` in the running app — the only thing shipped unverified.
+2. One manual drop on a VIDEO group (unchanged code, test-guarded, never exercised live).
+3. Then close the card.

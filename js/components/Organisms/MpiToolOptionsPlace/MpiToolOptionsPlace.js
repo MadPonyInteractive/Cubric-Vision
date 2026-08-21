@@ -241,14 +241,18 @@ export const MpiToolOptionsPlace = ComponentFactory.create({
         _children.push(applyBtn);
         applyBtn.on('click', () => viewer.el.applyPlace?.());
 
-        // Dragged off screen, the gizmo has no handle left to grab — the same dead end
-        // MpiToolOptionsShapes buys its way out of with one button.
-        const centreBtn = MpiButton.mount(document.createElement('div'), {
-            icon: 'crop', size: 'sm', variant: 'secondary', info: 'Re-centre the image',
+        // A RESIZER, not the shape tools' re-centre (user, 2026-08-21). It shipped as
+        // `resetShape()`, which seeds a SQUARE — so the button meant to rescue a placement
+        // squashed the photo instead, which the user caught immediately. A placement is a
+        // picture: what you want back is its real size and shape, in the spot you already
+        // chose, so this moves nothing and keeps any rotation.
+        const sizeBtn = MpiButton.mount(document.createElement('div'), {
+            icon: 'resize_stroke', size: 'sm', variant: 'secondary',
+            info: 'Restore the image to its original size',
         });
-        centreBtn.on('click', () => viewer.el.resetShape?.());
-        commitRow.appendChild(centreBtn.el);
-        _children.push(centreBtn);
+        sizeBtn.on('click', () => viewer.el.restorePlaceSize?.());
+        commitRow.appendChild(sizeBtn.el);
+        _children.push(sizeBtn);
 
         /**
          * Apply needs an image in the slot that the canvas actually accepted, and no

@@ -1742,6 +1742,8 @@ export const MpiCanvasViewer = ComponentFactory.create({
          */
         el.setPlaceImage = (url, opts) => canvas.setPlaceImage?.(url, opts) ?? Promise.resolve(false);
         el.hasPlaceImage = () => !!canvas.hasPlaceImage?.();
+        /** Put the placed image back to its own pixel dimensions, where it is. */
+        el.restorePlaceSize = () => !!canvas.restorePlaceSize?.();
 
         /**
          * Flatten the placement onto the current entry as ONE new history entry. The SAME

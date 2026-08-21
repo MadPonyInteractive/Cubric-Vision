@@ -145,6 +145,13 @@ Three behaviours the toggle owes the user, all guarded by the panel holding both
 it swaps the pixels of the *same* object for a cut-out of identical dimensions, and
 re-centring there would throw the user's placement away as a side effect of a checkbox.
 
+**The cut-out is NOT feathered, and that is a decision** (user, 2026-08-21). `compositeOverlay`
+takes alpha as given, and a 1–2px feather was considered so a stamp does not read as a sticker.
+It was rejected on two grounds: the **detailing pass the user runs afterwards is what blends the
+object** — that is the whole reason Place is followed by mask-and-detail — and a blanket feather
+would damage images that do not want one. Do not add one globally; if a specific case ever needs
+it, it is a control, not a default.
+
 ## Apply, and what undo means here
 
 Apply rasterises the placement into a full-frame RGBA plane at the entry's own resolution and
@@ -182,3 +189,12 @@ differently, which is the one thing sharing the manager is meant to prevent.
 - **Apply is dead-gated, not silent.** An empty slot renders Apply disabled with the reason
   on the hint line, which doubles as the error surface for a slot the canvas could not load
   and for a failed background removal.
+- **The second control is a RESIZER, not the shape tools' re-centre.** `restorePlaceSize()`
+  puts the image back to its own pixel dimensions **where it is**, keeping position and
+  rotation. It shipped as `resetShape()`, whose `seed()` takes no argument and therefore seeds
+  a square — so the button meant to rescue a placement squashed the photo to 1:1, caught by the
+  user on the day. A placement is a picture: what you want back is its real size and shape, and
+  moving it would undo a placement you were already happy with.
+- **The group keeps the name `Composite`** (user, 2026-08-21), three tools and two meanings
+  notwithstanding. The artifact is the same — a blended image — which is what the MPI-424
+  taxonomy groups by.

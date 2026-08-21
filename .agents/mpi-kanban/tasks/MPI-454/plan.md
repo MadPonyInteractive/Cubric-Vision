@@ -111,15 +111,51 @@ exists to prevent. Close that gap in this card.
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] **All seven implementation items.** Shipped in `3eb09d26`; evidence in
+      [validation.md](validation.md), state in [checklist.md](checklist.md).
+- [x] **User review, 2026-08-21.** Four rulings taken — see Plan Drift.
+- [x] **The re-centre → RESIZER change** from that review, plus its guard. Not yet driven in
+      the running app.
 
 ## Remaining Work
 
-- All seven implementation items above.
+1. **Live-verify `restorePlaceSize()`** — place an image, drag and scale it, press the resize
+   button: it must come back to its own pixel dimensions **without moving or unrotating**, and
+   never square. This is the one thing shipped unverified in the app.
+2. **One manual drop on a VIDEO group** — the chip path is unchanged code and test-guarded, but
+   it was never exercised live (the proof project had no video).
+3. **Close MPI-454** once 1 and 2 pass. Everything else on the card is done and evidenced.
 
 ## Plan Drift
 
-- None yet.
+**User review 2026-08-21, after driving the shipped tool. Four rulings:**
+
+- **Undo (acceptance 12) stays as built** — the paint-Apply contract, no gizmo transform
+  history. *"We can leave the undo as is. If I find it to be annoying, I'll create a card
+  later."* Acceptance 12 is satisfied as delivered; do not reopen it.
+- **The group keeps the name `Composite`** (brief question 4, closed).
+- **NO feather on the cut-out** (brief question 2, closed). The detailing pass the user runs
+  after Place is what blends the object, and a blanket feather would damage images that do not
+  want one. Recorded in `docs/composite-place.md`; do not add one globally.
+- **The re-centre button was a BUG and became a resizer.** It called `resetShape()`, whose
+  `seed()` takes no argument and therefore seeds a SQUARE — so the control meant to rescue a
+  placement squashed the photo to 1:1. Now `restorePlaceSize()`: back to the image's own pixel
+  dimensions, **in place**, keeping position and rotation. Three mutations of that guard proved
+  RED.
+
+**One bug found during validation and fixed at the cause** (before the review): Apply reloads
+the entry it creates, so `loadImage` → `shape.init()` cleared the gizmo and left Apply enabled
+over an empty canvas — the same shape as `docs/composite.md`'s 2026-08-04 cut bug. Re-seeded in
+`loadImage`, which also gives Place the shape tools' "the gizmo survives its commit" rule.
+
+**Note for the SIBLING card MPI-596 (Object Stamp Flow), from the user's own detailing test:**
+the detail pass after a stamp is better served by an **edit model** than by the plain detail
+path. Carry that into MPI-596's design; it is not a change to this card.
+
+**Two plan assumptions turned out better than written.** The plan's `PAINT_MAX_EDGE` 4096
+ceiling does not apply — Place rasterises only at Apply, straight at the base entry's own size,
+because it needs no working layer at all. And `deferCommit` had NOT bit-rotted: it is live and
+correct, with Place its first consumer since MPI-306.
 
 ## Verification
 

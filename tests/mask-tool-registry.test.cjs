@@ -488,6 +488,34 @@ test('the place gizmo survives the reload its own Apply triggers', () => {
         + 'a canvas with nothing on it — the next press warns instead of placing');
 });
 
+// THE SECOND BUG THE USER CAUGHT (2026-08-21): the panel's reset button called
+// `resetShape()`, whose `seed()` takes no argument and therefore seeds a SQUARE — so the
+// control meant to rescue a placement squashed the photo to 1:1 instead. Place gets a
+// RESIZER, and `seed()`'s square default must never reach a placed image again.
+test('restoring a placement never squares it', () => {
+    const canvas = read('js/components/Primitives/MpiCanvas/MpiCanvas.js');
+    const panel = read('js/components/Organisms/MpiToolOptionsPlace/MpiToolOptionsPlace.js');
+
+    assert.ok(!/viewer\.el\.resetShape/.test(panel),
+        'the Place panel calls resetShape() — that seeds a square and distorts the placed '
+        + 'image; it wants restorePlaceSize()');
+    assert.match(panel, /viewer\.el\.restorePlaceSize\?\.\(\)/,
+        'the Place panel has no restore-size control');
+
+    const restore = canvas.match(/ {4}restorePlaceSize\(\) \{[\s\S]*?\n {4}\}/);
+    assert.ok(restore, 'MpiCanvas.restorePlaceSize not found');
+    assert.match(restore[0], /img\.width \/ 2/,
+        'restorePlaceSize does not restore the image\'s own pixel dimensions');
+    assert.ok(!/this\.shape\.cx =|this\.shape\.rot =/.test(restore[0]),
+        'restorePlaceSize moves or unrotates the placement — it is a resizer, and doing '
+        + 'either would undo a placement the user was happy with');
+
+    const reset = canvas.match(/ {4}resetShape\(\) \{[\s\S]*?\n {4}\}/);
+    assert.ok(reset, 'MpiCanvas.resetShape not found');
+    assert.match(reset[0], /shapeMode === 'place'[\s\S]*?img\.width \/ img\.height/,
+        'resetShape still seeds a bare square for a placement — the squash bug');
+});
+
 test('a placement is dropped by the same preview seam the cut is', () => {
     const reset = read('js/components/Primitives/MpiCanvas/managers/CompositeManager.js')
         .match(/ {4}reset\(\) \{[\s\S]*?\n {4}\}/);
