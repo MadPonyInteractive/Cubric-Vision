@@ -1799,3 +1799,119 @@ Three changes, all decided by Fabio, none implemented yet:
 The graph was NOT touched for any of this — Fabio has `flow_character_sheet` open and dirty
 in the bench editor, and `raw/` is his. It goes through `sync-raw-workflows.mjs` when he
 hands it back.
+
+## 2026-08-21 · session 12 — THE HEAD-BRANCH REDESIGN IS IMPLEMENTED AND VERIFIED, 4 OF 4
+
+Fabio confirmed he never saved the bench tab (opened to test only), so `raw/` was free to edit,
+and he reaffirmed `head, hat` as the vocabulary.
+
+### THE HANDOFF'S MECHANISM WAS WRONG — `SAM3_Detect.bboxes` DOES NOT RESTRICT A REGION
+
+The previous session's plan was to pass the FULL sheet as `image` plus a left-hand box on the
+optional `bboxes` input, on the strength of its tooltip: *"Bounding boxes to segment within"*.
+**The source does not do that.** Traced before implementing:
+
+- `comfy_extras/nodes_sam3.py:192` — the dedicated box path (`forward_segment(box_inputs=…)`) is
+  guarded `if b_boxes is not None and **not has_text**`. With text conditioning present — which
+  is this branch's whole design — it never runs.
+- `nodes_sam3.py:206` — instead the boxes go to `sam3_model(frame, text_embeddings=…, boxes=b_boxes, …)`.
+- `comfy/ldm/sam3/detector.py:299` + `:436-450` — there the boxes are run through
+  `geometry_encoder` and **concatenated onto the text embeddings** as extra prompt tokens.
+  Nothing masks the image features spatially; the detector still scores queries over the whole
+  frame and `results["boxes"]` can land anywhere.
+
+So `bboxes` **biases** detection toward a region, it does not confine it. The portrait would have
+stayed a candidate. The tooltip is misleading; it describes the no-text box-prompt path.
+
+### WHAT SHIPPED INSTEAD — the same restriction, made structural
+
+Keep the crop that was already in the graph; drive it from a fixed left-25% box instead of a face
+detector. The portrait is then not merely deprioritised, it is **absent from the tensor SAM3 sees**.
+
+| | |
+|---|---|
+| Deleted (8) | `745` `UltralyticsDetectorProvider` · `746` `BboxDetectorSEGS` · `747` + `773` `ImpactSEGSOrderedFilter` · `748` `SegsToCombinedMask` · `749` + `751` `MpiMaskSquareBbox` · `750` `MpiMath` |
+| Added (1) | `774 MpiMath`, expression `a // 4`, `a` ← `743 Get_W` — "left 25% of the sheet width" |
+| Rewired | `752 MpiBox` → `width ← 774`, `height ← 744 Get_H`, `x`/`y` back to widget `0,0`; `757 MaskComposite` → `x`/`y` back to widget `0,0` (the crop is at the origin, so the paste-back is too) |
+| Unchanged | `758` crop · `755` SAM3 (`bboxes` left null) · `756` sheet-sized canvas · `759` blocker |
+| Widget | `754` → **`head, hat`** |
+
+`743 Get_W` / `744 Get_H` already carried the quality-selected size — they resolve through
+`674`/`675` to `771 Width_Select` / `772 Height_Select`, so no new wiring off the switches was
+needed. The converted API confirms it: `774.a ← ["771",0]`, `752.height ← ["772",0]`.
+
+**Stage 1 is gone, and the zero-face failure with it** — there is no detector left to return
+nothing, so `MpiBoxCrop`'s pass-the-full-image-through-on-a-zero-box behaviour is unreachable
+from this branch.
+
+### OFFLINE PROOF, before any GPU was spent
+
+- Serialiser round-trip asserted byte-exact on the ORIGINAL file first (`JSON.stringify(obj,null,2)+'\n'`,
+  LF, trailing newline) — the edit refuses to write otherwise.
+- `pos`/`size` asserted byte-identical on every surviving node; every link checked against its
+  target's back-pointer; no dangling `inputs[].link` or `outputs[].links`.
+- Raw diff **62 insertions / 542 deletions** — the 8 deleted nodes and 1 added node, nothing else.
+  No accidental re-layout.
+- Every changed class checked against **48188** (the app engine, not the bench) `/object_info`:
+  classes present, widget order matches `widgets_values`, `MpiMath` output `*` → `MpiBox.width`
+  INT passes `validate_node_input`.
+- Converted with `COMFY_URL=http://127.0.0.1:48188 node scripts/workflow-to-api.mjs`. API diff vs
+  the committed runtime file: removed `745,746,747,748,749,750,751,773`, added `774`, changed
+  `752,754,755,757,758`. **Zero dangling references.**
+- `validate-injection-rules.mjs` ✓ · `npm test` **657/657 pass**.
+
+> **`sync-raw-workflows.mjs` could not be used** and this is not a fault: its guard refuses while
+> any GENERATED workflow under `comfy_workflows/` is uncommitted, and Fabio's
+> `comfy_workflows/flow_outpaint.json` is staged from his own sync (step 6 leaves generated files
+> staged for close-out). Committing his file was not this card's call. For a RUNTIME workflow —
+> no `_template` suffix — the direct converter is the identical path minus orchestrate.py's global
+> template rebuild, which this graph does not feed. Run the full sync once `flow_outpaint.json`
+> is committed.
+
+### FOUR BENCH RUNS, 4 OF 4 — bench 8188, `Input_Remove_Head true`, queue handed back empty
+
+The `774` probe read **320 at 1k** (1280/4) and **448 at 2k** (1792/4), matching the measured
+safe cut exactly.
+
+| # | character | recipe | rig | front body | portrait | rear figure |
+|---|---|---|---|---|---|---|
+| A | Victorian undertaker, shoulder hair, top hat, full beard | Photoreal | 1k turbo, 45 s | head, hat, beard **and the shoulder hair** all gone; collar, tie, waistcoat, coat and watch chain intact | intact | hat + hair intact |
+| B | cartoon detective, fedora, moustache, pipe | Cartoon | 1k turbo, 45 s | headless; fedora and moustache gone; small dark pipe remnant at the left shoulder | **intact** | intact |
+| C | swordswoman, **waist-length braid** | 3D | 1k turbo, 45 s | head and the **whole braid** gone; pauldrons, red tunic, bracers, belts intact | intact | braid intact |
+| D | crusader knight, **mail coif over head and neck** | Photoreal | **2k quality**, 256 s | head and beard gone; **the coif's shoulder drape SURVIVES** with the surcoat, red cross and gauntlets | intact | coif intact |
+
+**Run B is the one that mattered.** It is the same failure class as stress-test run 08 — a flat
+cartoon render, zero faces to `face_yolov8n` — which previously escalated to a whole-sheet mask and
+destroyed the portrait. The portrait now survives because the branch cannot reach it.
+
+**Run D is the second.** Stress-test run 06 lost its mail coif outright under `hair, face, hat`.
+Under `head, hat` the crown of the coif goes with the head — correct, it covered the head — and
+the drape on the shoulders is untouched. That is the exact trade Fabio ranked for.
+
+### THREE CORRECTIONS THIS BATCH FORCES ON THIS FILE
+
+1. **The `head, hat` hair remnant is not guaranteed.** Recorded earlier as *"long hair remains
+   draped over the shoulders and chest"* and treated as the mechanism that keeps Klein off the
+   garment. In run A the shoulder hair went WITH the head, and in run C the entire waist-length
+   braid did — and the wardrobe still survived in both. So the protection does not depend on hair
+   being left behind. What the earlier 1k run saw is one outcome, not the rule. **This also closes
+   the open long-hair question** the previous handoff left for Fabio's judgement: the braid and the
+   hair are removed cleanly, so there is no oversized remnant to judge.
+2. **"Cartoon and Anime wash out at 2K" is not a 2K effect.** Run B is 1k turbo and came back
+   near-greyscale with a "loud checked scarf" rendered flat grey. The finding is real but its
+   cause is the cartoon recipe, not the resolution. Still deserves its own card; the card should
+   not say 2K.
+3. **The ghost head is still present and is unrelated to this change.** Run C shows a faint
+   face-shaped ghost floating above the front body's neckline — the same artifact `05` was
+   rejected for during the graphics session, and the "strong hair-silhouette ghost" noted on
+   stress-test run 10. It survives the redesign because it is Klein's reconstruction, not the
+   mask's shape.
+
+### THE CAVEAT THAT STAYS
+
+The 25% cut is a **measured heuristic, not a guarantee**: the recipe templates prescribe *"two
+narrow full-body standing views of equal width"* on the left but do not pin their x. Five
+2k sheets (ten in the stress batch, plus run D) have never crossed it, with ~5% of width in hand
+either side, but a sheet that centres the pair differently would clip. The fallback if it ever
+does is already written down — feed the left HALF with `755.individual_masks true` and take the
+leftmost mask.

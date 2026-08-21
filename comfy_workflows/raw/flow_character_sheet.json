@@ -1,8 +1,8 @@
 {
   "id": "8c903c85-8d5e-4c32-82d9-491dd4cd89e3",
   "revision": 0,
-  "last_node_id": 773,
-  "last_link_id": 1577,
+  "last_node_id": 774,
+  "last_link_id": 1580,
   "nodes": [
     {
       "id": 136,
@@ -5425,7 +5425,8 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            1550
+            1550,
+            1578
           ]
         }
       ],
@@ -5460,7 +5461,8 @@
           "name": "INT",
           "type": "INT",
           "links": [
-            1551
+            1551,
+            1580
           ]
         }
       ],
@@ -5474,269 +5476,6 @@
       ],
       "color": "#1b4669",
       "bgcolor": "#29699c"
-    },
-    {
-      "id": 746,
-      "type": "BboxDetectorSEGS",
-      "pos": [
-        347.52884262350625,
-        4025.357714150404
-      ],
-      "size": [
-        320,
-        224
-      ],
-      "flags": {},
-      "order": 83,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "bbox_detector",
-          "type": "BBOX_DETECTOR",
-          "link": 1532
-        },
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 1560
-        },
-        {
-          "name": "detailer_hook",
-          "shape": 7,
-          "type": "DETAILER_HOOK",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "SEGS",
-          "type": "SEGS",
-          "links": [
-            1534
-          ]
-        }
-      ],
-      "title": "every face on the sheet",
-      "properties": {
-        "Node name for S&R": "BboxDetectorSEGS",
-        "cnr_id": "comfyui-impact-subpack",
-        "ver": "1.3.5"
-      },
-      "widgets_values": [
-        0.5,
-        0,
-        3,
-        10,
-        "all"
-      ]
-    },
-    {
-      "id": 747,
-      "type": "ImpactSEGSOrderedFilter",
-      "pos": [
-        727.5288426235065,
-        4025.357714150404
-      ],
-      "size": [
-        320,
-        150
-      ],
-      "flags": {},
-      "order": 91,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "segs",
-          "type": "SEGS",
-          "link": 1534
-        }
-      ],
-      "outputs": [
-        {
-          "name": "filtered_SEGS",
-          "type": "SEGS",
-          "links": [
-            1577
-          ]
-        },
-        {
-          "name": "remained_SEGS",
-          "type": "SEGS",
-          "links": []
-        }
-      ],
-      "title": "drop the portrait (the largest face)",
-      "properties": {
-        "Node name for S&R": "ImpactSEGSOrderedFilter",
-        "cnr_id": "comfyui-impact-pack",
-        "ver": "8.22.0"
-      },
-      "widgets_values": [
-        "area(=w*h)",
-        true,
-        1,
-        999
-      ]
-    },
-    {
-      "id": 748,
-      "type": "SegsToCombinedMask",
-      "pos": [
-        1107.5288426235065,
-        4025.357714150404
-      ],
-      "size": [
-        240,
-        46
-      ],
-      "flags": {},
-      "order": 100,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "segs",
-          "type": "SEGS",
-          "link": 1535
-        }
-      ],
-      "outputs": [
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": [
-            1536,
-            1537
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "SegsToCombinedMask",
-        "cnr_id": "comfyui-impact-pack",
-        "ver": "8.22.0"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 750,
-      "type": "MpiMath",
-      "pos": [
-        174.22736658155986,
-        4439.305149619616
-      ],
-      "size": [
-        295.386328125,
-        128
-      ],
-      "flags": {},
-      "order": 112,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "a",
-          "type": "*",
-          "link": 1538
-        },
-        {
-          "name": "b",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        },
-        {
-          "name": "c",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "result",
-          "type": "*",
-          "links": [
-            1539
-          ]
-        }
-      ],
-      "title": "pad = 0.8 x face (hair + hat headroom)",
-      "properties": {
-        "Node name for S&R": "MpiMath",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec"
-      },
-      "widgets_values": [
-        "a * 4 // 5"
-      ]
-    },
-    {
-      "id": 751,
-      "type": "MpiMaskSquareBbox",
-      "pos": [
-        464.2273665815598,
-        4439.305149619616
-      ],
-      "size": [
-        274.5162109375,
-        118
-      ],
-      "flags": {},
-      "order": 116,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "mask",
-          "type": "MASK",
-          "link": 1537
-        },
-        {
-          "name": "padding",
-          "type": "INT",
-          "widget": {
-            "name": "padding"
-          },
-          "link": 1539
-        }
-      ],
-      "outputs": [
-        {
-          "name": "square_mask",
-          "type": "MASK",
-          "links": []
-        },
-        {
-          "name": "x",
-          "type": "INT",
-          "links": [
-            1542,
-            1554
-          ]
-        },
-        {
-          "name": "y",
-          "type": "INT",
-          "links": [
-            1543,
-            1555
-          ]
-        },
-        {
-          "name": "size",
-          "type": "INT",
-          "links": [
-            1540,
-            1541
-          ]
-        }
-      ],
-      "title": "head box, clamped inside the sheet",
-      "properties": {
-        "Node name for S&R": "MpiMaskSquareBbox",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec"
-      },
-      "widgets_values": [
-        0
-      ]
     },
     {
       "id": 752,
@@ -5759,7 +5498,7 @@
           "widget": {
             "name": "width"
           },
-          "link": 1540
+          "link": 1579
         },
         {
           "name": "height",
@@ -5767,23 +5506,7 @@
           "widget": {
             "name": "height"
           },
-          "link": 1541
-        },
-        {
-          "name": "x",
-          "type": "INT",
-          "widget": {
-            "name": "x"
-          },
-          "link": 1542
-        },
-        {
-          "name": "y",
-          "type": "INT",
-          "widget": {
-            "name": "y"
-          },
-          "link": 1543
+          "link": 1580
         }
       ],
       "outputs": [
@@ -5795,7 +5518,7 @@
           ]
         }
       ],
-      "title": "the head box",
+      "title": "the far-left region (front body only)",
       "properties": {
         "Node name for S&R": "MpiBox",
         "cnr_id": "ComfyUi-MpiNodes",
@@ -5875,7 +5598,7 @@
           "links": []
         }
       ],
-      "title": "hair + face + hat, unioned",
+      "title": "head + hat, unioned",
       "properties": {
         "Node name for S&R": "SAM3_Detect",
         "cnr_id": "comfy-core",
@@ -6149,100 +5872,6 @@
       "bgcolor": "#653"
     },
     {
-      "id": 749,
-      "type": "MpiMaskSquareBbox",
-      "pos": [
-        -145.77263341844014,
-        4439.305149619616
-      ],
-      "size": [
-        270,
-        118
-      ],
-      "flags": {},
-      "order": 108,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "mask",
-          "type": "MASK",
-          "link": 1536
-        }
-      ],
-      "outputs": [
-        {
-          "name": "square_mask",
-          "type": "MASK",
-          "links": []
-        },
-        {
-          "name": "x",
-          "type": "INT",
-          "links": []
-        },
-        {
-          "name": "y",
-          "type": "INT",
-          "links": []
-        },
-        {
-          "name": "size",
-          "type": "INT",
-          "links": [
-            1538
-          ]
-        }
-      ],
-      "title": "measure the face",
-      "properties": {
-        "Node name for S&R": "MpiMaskSquareBbox",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec"
-      },
-      "widgets_values": [
-        0
-      ]
-    },
-    {
-      "id": 745,
-      "type": "UltralyticsDetectorProvider",
-      "pos": [
-        -52.471157376493665,
-        4025.357714150404
-      ],
-      "size": [
-        340,
-        78
-      ],
-      "flags": {},
-      "order": 43,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "BBOX_DETECTOR",
-          "type": "BBOX_DETECTOR",
-          "links": [
-            1532
-          ]
-        },
-        {
-          "name": "SEGM_DETECTOR",
-          "type": "SEGM_DETECTOR",
-          "links": []
-        }
-      ],
-      "title": "face_yolov8n",
-      "properties": {
-        "Node name for S&R": "UltralyticsDetectorProvider",
-        "cnr_id": "comfyui-impact-subpack",
-        "ver": "1.3.5"
-      },
-      "widgets_values": [
-        "bbox/face_yolov8n.pt"
-      ]
-    },
-    {
       "id": 733,
       "type": "SetNode",
       "pos": [
@@ -6385,7 +6014,7 @@
         "ver": "0.28.0"
       },
       "widgets_values": [
-        "hair, face, hat"
+        "head, hat"
       ]
     },
     {
@@ -6474,7 +6103,7 @@
           "links": []
         }
       ],
-      "title": "crop to the head",
+      "title": "crop to the far-left region",
       "properties": {
         "Node name for S&R": "MpiBoxCrop",
         "cnr_id": "ComfyUi-MpiNodes",
@@ -6518,7 +6147,6 @@
           "name": "output",
           "type": "*",
           "links": [
-            1560,
             1561,
             1569
           ]
@@ -6596,22 +6224,6 @@
           "name": "source",
           "type": "MASK",
           "link": 1553
-        },
-        {
-          "name": "x",
-          "type": "INT",
-          "widget": {
-            "name": "x"
-          },
-          "link": 1554
-        },
-        {
-          "name": "y",
-          "type": "INT",
-          "widget": {
-            "name": "y"
-          },
-          "link": 1555
         }
       ],
       "outputs": [
@@ -7150,51 +6762,55 @@
       ]
     },
     {
-      "id": 773,
-      "type": "ImpactSEGSOrderedFilter",
+      "id": 774,
+      "type": "MpiMath",
       "pos": [
-        727.5288426235065,
-        4215.357714150404
+        174.22736658155986,
+        4439.305149619616
       ],
       "size": [
-        320,
-        150
+        295.386328125,
+        128
       ],
       "flags": {},
-      "order": 91,
+      "order": 112,
       "mode": 0,
-      "title": "the frontal body head, not the rear",
       "inputs": [
         {
-          "name": "segs",
-          "type": "SEGS",
-          "link": 1577
+          "name": "a",
+          "type": "*",
+          "link": 1578
+        },
+        {
+          "name": "b",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "c",
+          "shape": 7,
+          "type": "*",
+          "link": null
         }
       ],
       "outputs": [
         {
-          "name": "filtered_SEGS",
-          "type": "SEGS",
+          "name": "result",
+          "type": "*",
           "links": [
-            1535
+            1579
           ]
-        },
-        {
-          "name": "remained_SEGS",
-          "type": "SEGS",
-          "links": []
         }
       ],
+      "title": "left 25% of the sheet width",
       "properties": {
-        "Node name for S&R": "ImpactSEGSOrderedFilter",
-        "cnr_id": "comfyui-impact-pack",
-        "ver": "8.22.0"
+        "Node name for S&R": "MpiMath",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec"
       },
       "widgets_values": [
-        "confidence",
-        true,
-        0,
-        1
+        "a // 4"
       ]
     }
   ],
@@ -8400,94 +8016,6 @@
       "IMAGE"
     ],
     [
-      1532,
-      745,
-      0,
-      746,
-      0,
-      "BBOX_DETECTOR"
-    ],
-    [
-      1534,
-      746,
-      0,
-      747,
-      0,
-      "SEGS"
-    ],
-    [
-      1535,
-      773,
-      0,
-      748,
-      0,
-      "SEGS"
-    ],
-    [
-      1536,
-      748,
-      0,
-      749,
-      0,
-      "MASK"
-    ],
-    [
-      1537,
-      748,
-      0,
-      751,
-      0,
-      "MASK"
-    ],
-    [
-      1538,
-      749,
-      3,
-      750,
-      0,
-      "*"
-    ],
-    [
-      1539,
-      750,
-      0,
-      751,
-      1,
-      "*"
-    ],
-    [
-      1540,
-      751,
-      3,
-      752,
-      0,
-      "INT"
-    ],
-    [
-      1541,
-      751,
-      3,
-      752,
-      1,
-      "INT"
-    ],
-    [
-      1542,
-      751,
-      1,
-      752,
-      2,
-      "INT"
-    ],
-    [
-      1543,
-      751,
-      2,
-      752,
-      3,
-      "INT"
-    ],
-    [
       1545,
       752,
       0,
@@ -8560,22 +8088,6 @@
       "MASK"
     ],
     [
-      1554,
-      751,
-      1,
-      757,
-      2,
-      "INT"
-    ],
-    [
-      1555,
-      751,
-      2,
-      757,
-      3,
-      "INT"
-    ],
-    [
       1556,
       757,
       0,
@@ -8590,14 +8102,6 @@
       759,
       0,
       "*"
-    ],
-    [
-      1560,
-      759,
-      0,
-      746,
-      1,
-      "IMAGE"
     ],
     [
       1561,
@@ -8688,12 +8192,28 @@
       "INT"
     ],
     [
-      1577,
-      747,
+      1578,
+      743,
       0,
-      773,
+      774,
       0,
-      "SEGS"
+      "INT"
+    ],
+    [
+      1579,
+      774,
+      0,
+      752,
+      0,
+      "*"
+    ],
+    [
+      1580,
+      744,
+      0,
+      752,
+      1,
+      "INT"
     ]
   ],
   "groups": [

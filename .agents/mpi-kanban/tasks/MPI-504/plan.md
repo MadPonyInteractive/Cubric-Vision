@@ -10,30 +10,30 @@ prompt) is in [prompts.md](prompts.md). This file is the build.
 
 ## Current State
 
-**2026-08-21, session 11 - THE 10/10 STRESS TEST PASSED AND THE HEAD BRANCH IS BEING REDESIGNED.
-Nothing in the graph was changed; the next session edits `raw/`.** The stress test's scope was
-settled by Fabio first (prove the branch never picks the BACK OF THE HEAD, not "ten poses ten
-lights") and it passes 10 of 10 at 2k-quality across all four recipes. 9 of 10 on the removal
-overall - the one failure is the EMPTY-DETECTION case, not a mispick. Evidence, measurements and
-three corrections are in `validation.md`; commits `ea1f457e`, `c5ce77e0`, `f87b1bad`.
+**2026-08-21, session 12 - THE HEAD-BRANCH REDESIGN IS IMPLEMENTED AND VERIFIED 4 OF 4.**
+Fabio never saved the bench tab, so `raw/` was free. The three decided changes are in the graph
+and the runtime API is converted. Evidence in `validation.md` (session 12 section).
 
-Fabio then drove the redesign himself on the bench and settled three changes, none implemented:
-
-- **Crop the masking to the FAR-LEFT region.** Measured over the batch: the far-left figure faces
-  camera in 10 of 10 and is never the rear view; the front figure ends by ~20% of sheet width even
-  with a top hat or antlers, the rear body starts ~24% and its head ~29%. So ~25% is safe with
-  ~90px of margin at 2K.
-- **Delete stage 1.** `745`/`746` `face_yolov8n`, `747` and `773` exist only to locate the front
-  head. The crop does that, and deleting them deletes the zero-face failure with them.
-- **`754` vocabulary becomes `head, hat`.** Proven on his own 1k run: no head, no hat, NO BEARD,
-  and the collar/tie/waistcoat/coat intact. The hair left on the shoulders is the mask boundary
-  and is exactly what keeps Klein off the garment.
-
-**And the mechanism to implement it with:** `755 SAM3_Detect` takes an optional `bboxes`
-(`BOUNDING_BOX`), tooltip *"Bounding boxes to segment within"* - a REGION RESTRICTION, so the full
-sheet can be passed with a left-hand box and the mask returns in sheet coordinates. Core node
-`PrimitiveBoundingBox` (`comfy_extras.nodes_images`) supplies it; its INT widgets take links, as
-`751.padding` and `720.value` already do. That deletes the crop/paste machinery too.
+- **What shipped:** deleted `745`/`746` face_yolov8n, `747`/`773` the SEGS filters, `748`,
+  `749`/`751` MpiMaskSquareBbox and `750` MpiMath - 8 nodes. Added `774 MpiMath` (`a // 4`,
+  fed by `743 Get_W`) driving `752 MpiBox` width, with height from `744 Get_H` and x/y back to
+  widget 0,0; `757` pastes back at 0,0. `754` is now `head, hat`. Raw diff 62+/542-.
+- **THE HANDOFF'S MECHANISM WAS WRONG and was NOT used.** `SAM3_Detect.bboxes` is a detector
+  PROMPT, not a region restriction - with text conditioning the dedicated box path is skipped
+  (`nodes_sam3.py:192`) and the boxes are concatenated onto the text embeddings
+  (`detector.py:436-450`). A left-hand box would have BIASED the pick, not confined it. The
+  shipped fix keeps the crop and drives it from a fixed left-25% box, so the portrait is absent
+  from the tensor SAM3 sees. Do not re-try the `bboxes` route on the tooltip's word.
+- **Verified:** 4 bench runs, all four with the portrait and rear figure intact. The cartoon
+  zero-face case that destroyed a portrait now passes; the mail coif that `hair, face, hat`
+  destroyed now survives; the waist-length braid is removed cleanly, which closes the open
+  long-hair question. Offline: byte-exact round trip, pos/size unmoved, 48188 schema check,
+  `validate-injection-rules` clean, `npm test` 657/657.
+- **NEXT:** run `sync-raw-workflows.mjs` once Fabio's staged `comfy_workflows/flow_outpaint.json`
+  is committed - its guard refuses while any generated workflow is uncommitted. The direct
+  converter was used instead; for a runtime (non-template) workflow that is the same output.
+- **Still open:** open calls 1-4 below, and the cartoon/anime colour wash-out (NOT a 2K effect -
+  reproduced at 1k turbo in run B), which wants its own card.
 
 ### Session 9 (previous)
 
@@ -931,6 +931,17 @@ longer exists, so each resolves to a deletion, not a re-wire:
 
 ## Plan Drift
 
+- **2026-08-21, session 12 - the head-branch redesign landed by a DIFFERENT mechanism than planned.**
+  The plan (and the handoff) specified restricting the masking via `SAM3_Detect`'s optional
+  `bboxes` input, on its tooltip *"Bounding boxes to segment within"*. Reading the source before
+  implementing showed that is not what it does: with text conditioning present the dedicated box
+  path is skipped (`comfy_extras/nodes_sam3.py:192`) and the boxes are encoded by
+  `geometry_encoder` and concatenated onto the text embeddings (`comfy/ldm/sam3/detector.py:299,
+  :436-450`), so they bias detection rather than confining it. Implemented as a fixed left-25%
+  crop reusing the `MpiBox` / `MpiBoxCrop` / paste-back machinery already in the graph instead -
+  8 nodes deleted, 1 added, and the restriction is structural. `PrimitiveBoundingBox` was never
+  added. Verified 4 of 4 on the bench; details in `validation.md`.
+
 **2026-08-20, session 9 — THE ENHANCE FIX LANDED ONE LAYER LOWER THAN THE DIAGNOSIS SAID.**
 Session 8 wrote "reach the PRIMITIVE… check what `MpiInput` already exposes". It exposes
 **nothing**: 133 lines, `setup` attaches no methods at all, while `MpiRadioGroup.setValue`,
@@ -1269,11 +1280,10 @@ double-enhance. This is why the sheet graph needs no `241 MpiIfElse`.
 ## Open calls — bench, when the GPU frees
 
 1. **Neutral pronouns** (prompts.md §1 diff). The one unproven edit to a prompt Fabio has run.
-2. **Does `face_yolov8n` see the small face at all?** At 8:5 the two body panels are narrow, so
-   the front face lands around 20-40 px at 1k. **Fabio, 2026-08-19: expects this to be fine —
-   he has seen the detector pick up smaller.** Logged as a confirm-in-passing, not a risk. If
-   it ever does miss, run the detection pass at 2k or fall back to the SAM3 text route.
-   Front-vs-back itself needs no classifier: only the front body has a face.
+2. ~~**Does `face_yolov8n` see the small face at all?**~~ **CLOSED 2026-08-21, session 12 -
+   THE QUESTION NO LONGER EXISTS.** The detector was deleted with stage 1; the head branch now
+   crops to a fixed left-25% box and hands that straight to SAM3. Nothing measures a face, so
+   nothing can miss one.
 3. **Klein prompt vs the no-prompt remove op** (`docs/models/klein/removal.md`) — A/B in the
    same pass.
 4. **Length.** Template ~215 words + character 45-80 = ~280, over the 60-180 the krea2 recipe

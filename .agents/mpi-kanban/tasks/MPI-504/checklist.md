@@ -174,7 +174,29 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       styles at seed 820001 put the portrait on the LEFT and both bodies on the right, and 3D
       then came back un-mirrored at seed 820002. The template's "right half … portrait" is a
       preference the model takes or leaves, so no rule may assume panel ORDER
-- [ ] 10/10 stress test: ten generations, varied pose and light, next to a second character
+- [x] **10/10 stress test — RUN 2026-08-21 AND PASSED** on the scope Fabio set (prove the branch
+      never picks the BACK OF THE HEAD, not the brief's "ten poses ten lights"; this flow emits one
+      fixed thing). Ten characters, ten seeds, all four recipes at 2k-quality: the back of the head
+      was never picked, and the far-left figure faced camera 10 of 10. The single removal failure
+      was the EMPTY-DETECTION case, not a mispick.
+- [x] **Head branch REDESIGNED and VERIFIED 2026-08-21, session 12** — the stress test's one
+      failure drove it. Stage 1 deleted (`745`/`746` face_yolov8n, `747`/`773` SEGS filters,
+      `748`, `749`/`751` MpiMaskSquareBbox, `750` MpiMath — 8 nodes); `774 MpiMath` (`a // 4`
+      off `743 Get_W`) now drives `752 MpiBox` to a fixed left-25% region, `744 Get_H` gives the
+      height, and the crop/paste-back sit at 0,0. `754` vocabulary is `head, hat`.
+      > **NOT via `SAM3_Detect.bboxes`, and do not re-try it on the tooltip's word.** That input
+      > is a detector PROMPT, not a region restriction — with text conditioning the dedicated box
+      > path is skipped (`nodes_sam3.py:192`) and the boxes are concatenated onto the text
+      > embeddings (`detector.py:436-450`). It would have biased the pick, not confined it.
+      >
+      > 4 bench runs, 4 of 4, portrait and rear figure intact in all: the cartoon zero-face case
+      > that previously destroyed a portrait passes; the mail coif that `hair, face, hat` destroyed
+      > survives; a waist-length braid is removed cleanly (closing the open long-hair question);
+      > 2k verified. Offline: byte-exact round trip, pos/size unmoved, 48188 schema check,
+      > `validate-injection-rules` clean, `npm test` 657/657. Detail in `validation.md` § session 12.
+- [ ] Run `sync-raw-workflows.mjs` — blocked only by Fabio's staged `comfy_workflows/flow_outpaint.json`
+      (its guard refuses while any generated workflow is uncommitted). The direct converter produced
+      the runtime API in the meantime; for a non-template workflow that is the same output.
 
 ## App wiring — after the graph proves out
 
