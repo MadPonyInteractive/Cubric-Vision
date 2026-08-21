@@ -1751,3 +1751,51 @@ sheet that centres the pair differently would clip.
 SAM3_Detect` already carries `individual_masks`, currently `false` (unioned). Set it
 `true`, feed it the left **HALF** — a slack, safe cut — and take the **leftmost** mask.
 Same rule, same node, one flag, and it still deletes stage 1. Untested.
+
+### THE VOCABULARY IS `head, hat` — Fabio's call on his own evidence, 2026-08-21
+
+Run at 1k on a long-haired, heavily bearded Victorian in a top hat. The front body comes
+back with **no head, no hat and no beard**, and its **collar, tie, waistcoat and coat are
+intact and sharp**. Long hair remains draped over the shoulders and chest.
+
+**That remnant is the point, not a defect.** It marks where the mask stopped, which is why
+Klein never had to grow into the coat. `hair` is the term that dragged the mask down onto
+the garment; drop it and the mask ends at the head, so the growth starts further from the
+clothing. Set against `06-knight` under `hair, face, hat`, which lost its mail coif
+outright, the trade is: **a hair remnant on the shoulders instead of destroyed wardrobe.**
+Fabio's standing ranking already decides that one — a leftover is acceptable, changed
+clothing is not.
+
+**It also fixes the facial-hair hole.** `face` does not bind a moustache or a beard: run 08
+left a moustache and a pipe floating over an erased face. `head` takes them, demonstrated
+on this generation.
+
+**This reverses the objection raised against `head` earlier the same day** — that a braid
+or twin tails falling on a jacket sit outside a head-shape mask and would be left behind.
+They are left behind. That was re-judged as acceptable once it became clear the same
+property is what protects the clothing.
+
+**Not yet checked, worth one run when the bench is next free:** hair that falls much
+further than the shoulders — `05-swordswoman`'s waist-length braid and `07-idol`'s twin
+tails. The remnant is larger there, and whether it still reads as a usable reference panel
+is a judgement only Fabio can make.
+
+**No neck damage in this run.** The cut sits clean at the collar line, so `head` did not
+reach into the neck — the risk that made `neck` unusable does not appear to transfer.
+One generation, not a measurement.
+
+### WHERE THE HEAD BRANCH NOW LANDS
+
+Three changes, all decided by Fabio, none implemented yet:
+
+1. **Crop the masking to the far-left region** — the front body is the only figure in
+   frame, so the portrait and the rear view cannot be candidates. ~25% of sheet width, or
+   the left half plus `individual_masks` and a leftmost pick.
+2. **Delete stage 1** — `745`/`746` `face_yolov8n`, `747` and `773` exist only to locate
+   the front head. The crop does that. Deleting them also deletes the zero-face failure,
+   because no detector remains to return nothing.
+3. **`754` vocabulary becomes `head, hat`.**
+
+The graph was NOT touched for any of this — Fabio has `flow_character_sheet` open and dirty
+in the bench editor, and `raw/` is his. It goes through `sync-raw-workflows.mjs` when he
+hands it back.
