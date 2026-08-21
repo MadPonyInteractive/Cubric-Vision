@@ -70,6 +70,12 @@ const _state = {
                                // Flow overlay restores its controls on close→reopen. Session-only,
                                // NOT persisted (across-restart restore comes from the sidecar, not
                                // here). ALWAYS top-level replace: state.s_flowInputs = { ...state.s_flowInputs, [id]: {...} }.
+    s_flowResults: {},          // { [flowId]: { items, mode, status, pending } } — the LAST completed
+                               // result of that Flow (MPI-587). The twin of s_flowInputs, and for the
+                               // same reason: shell.js destroys the MpiBaseFlow on every open/close, so
+                               // without this a reopened Flow showed its restored inputs beside an EMPTY
+                               // frame and the finished run read as lost. Last result only, replaced per
+                               // run. Session-only, same top-level replace discipline.
 
     // ── Download Manager ───────────────────────────────────────────────────────
     downloadJobs: [],            // DownloadJob[] — persisted for shutdown recovery

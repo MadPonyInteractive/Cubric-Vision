@@ -101,13 +101,43 @@ declare: it is what a video result does.
 - **Compare wins the first paint** when the flow declares one, and a `MpiButton` in the frame's
   bottom-right toggles the two. The toggle appears only when BOTH surfaces exist — a declared
   compare AND a video result — and only one is mounted at a time. The choice is remembered
-  across slide rebuilds, but never applied to a result it cannot serve.
+  across slide rebuilds **and across close→reopen** (MPI-587, below), but never applied to a
+  result it cannot serve.
 - **Unchanged:** images, and runs with several outputs, keep the plain elements. N players would
   be N decoders and N control bars, and there is no single "after" for a reveal bar.
 
 A Flow is an overlay over a workspace that may have its OWN video bar, and video hotkeys are
 bucketed by key — so a bar the user cannot see must not answer the keyboard. That gate lives in
 the player, not here: `docs/video-player.md` § A bar you cannot see.
+
+## The result pane survives close→reopen (MPI-587)
+
+**A finished result is session state, not instance state.** The shell destroys the
+`MpiBaseFlow` on every `flow:open` and on close (MPI-345 — that destroy is correct and stays),
+so anything held only in the closure dies with it. Inputs already travelled in
+`state.s_flowInputs[flowId]`; the result did not, which is why a reopened flow used to show its
+restored inputs beside an EMPTY frame and a finished run read as lost.
+
+`state.s_flowResults[flowId]` is the twin — same session-only lifetime, same top-level-replace
+discipline, **last result only** (a run's N outputs are one result; there is no history here):
+
+```js
+{ items, mode, status, pending }   // mode = the surface the user CHOSE; pending = the note
+```
+
+- **Four write sites, and that is the complete set.** `_persistResult()` is called from
+  `_showResults`'s `remember` branch (a finished run and the error/cancel clear are the same
+  branch), the surface toggle, the reset at the top of `_run` — the only path that drops the
+  result *without* repainting, so it cannot ride on the first — and `_forgetResult`. Before adding
+  a fifth, check whether the path already goes through `_showResults`: that is why the flag
+  `onComplete` sets moved ABOVE its paint rather than gaining its own persist call.
+- **A remembered path can be dead** — item deleted, media cleaned, another project loaded. One
+  `fetch(url, { method: 'HEAD' })` at mount decides it (`/project-file` 404s a missing file); on
+  failure the snapshot is forgotten and the pane paints empty. **One probe, not three `error`
+  handlers**: the replay fans out to plain / compare / player and two of those swallow the event.
+  Same discipline as `_mountCompare`'s fallback — never paint a dead `src`.
+- **Across a RESTART is a different mechanism** and stays that way: `openFlowFromReuse` rebuilds
+  a flow from the card's sidecar. This key is session-only, like the inputs it mirrors.
 
 ## Install progress (multi-model)
 

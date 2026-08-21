@@ -385,20 +385,33 @@ export const MpiBaseFlow = ComponentFactory.create({
         const _previewPlayer = createPreviewClipPlayer({
             paint: (url) => _paintResult(url, { blurring: true }),
         });
-        let _hasPending = false;
         /**
-         * The last completed result, held so it survives step navigation.
+         * The last completed result of THIS flow, carried across the instance
+         * (MPI-587) — `state.s_flowResults[flow.id]`, written by `_persistResult`.
+         *
+         * The INSTANCE cannot hold it: shell.js destroys the MpiBaseFlow on every
+         * `flow:open` and on close (MPI-345, and that destroy is correct). The inputs
+         * already travelled in session state (`s_flowInputs`), the result did not, so
+         * a reopened flow showed its restored inputs beside an empty frame and a
+         * finished run read as lost. This is deliberately the inputs' twin.
+         * @type {?{items:Array<Object>, mode:?string, status:string, pending:boolean}}
+         */
+        const _seededResult = state.s_flowResults?.[flow.id] || null;
+        let _hasPending = !!_seededResult?.pending;
+        /**
+         * The last completed result, held so it survives step navigation AND the
+         * flow being closed and reopened.
          *
          * `_hasPending` (the "Saved to your gallery" note) already outlived a slide
          * rebuild, but the IMAGE did not — _teardownSlide() drops the DOM and nulls
          * the pane refs, and nothing kept the items to repaint from, so the pane came
-         * back claiming a save with nothing on screen. Component-scoped ON PURPOSE:
-         * it lives until the flow closes and is deliberately not persisted to state.
+         * back claiming a save with nothing on screen. Seeded from `_seededResult`,
+         * which is what carries it past the instance as well (MPI-587).
          * @type {Array<Object>|null}
          */
-        let _lastResults = null;
+        let _lastResults = _seededResult?.items || null;
         /** Last status-line copy, replayed when the run slide is rebuilt. */
-        let _statusText = '';
+        let _statusText = _seededResult?.status || '';
         let _runBtn = null;
         let _resultMediaEl = null;
         let _resultEmptyEl = null;
@@ -435,16 +448,35 @@ export const MpiBaseFlow = ComponentFactory.create({
         let _resultSingle = null;
         let _surfaceToggle = null;
         /**
-         * The surface the user last CHOSE with the toggle. Component-scoped like
-         * `_lastResults` — it outlives a slide rebuild and dies with the flow.
+         * The surface the user last CHOSE with the toggle. Persisted beside
+         * `_lastResults` (MPI-587) — a restored result comes back on the surface the
+         * user picked for it, not on the flow's default.
          * @type {?'compare'|'player'}
          */
-        let _preferredResultMode = null;
+        let _preferredResultMode = _seededResult?.mode || null;
         /** Pan/zoom state for the result pane — the shared MpiCanvas view model. */
         const _resultView = new ViewManager();
         let _statusEl = null;
         let _pendingNote = null;
         let _gaugeEl = null;
+
+        // A remembered result names a file that can be GONE by the time the flow is
+        // reopened — the item deleted from the gallery, the media cleaned, another
+        // project loaded. Probe it ONCE, here, instead of wiring an `error` handler
+        // into all three result surfaces (plain / compare / player), two of which
+        // swallow it: `/project-file` already 404s a missing file. Same fallback
+        // discipline as `_mountCompare` — fall back to the empty pane, never paint a
+        // dead src. The pane is not built yet at mount (the flow opens on step 0), so
+        // this has resolved long before the run slide replays anything.
+        if (_seededResult) {
+            const probePath = _lastResults?.[0]?.filePath || _lastResults?.[0]?.url;
+            if (!probePath) _forgetResult();
+            else {
+                fetch(resolveMediaUrl(probePath), { method: 'HEAD' })
+                    .then(res => { if (!res.ok) _forgetResult(); })
+                    .catch(() => _forgetResult());
+            }
+        }
 
         /** Total steps = implicit inputs + declared middle steps + implicit run. */
         const _stepCount = () => middleSteps.length + 2;
@@ -1473,6 +1505,41 @@ export const MpiBaseFlow = ComponentFactory.create({
         }
 
         /**
+         * Remember the current result in session state, so it survives the flow being
+         * closed and reopened (MPI-587).
+         *
+         * Four callers, and they are the complete set — every path that changes what
+         * the flow should come back to:
+         *   1. `_showResults`'s remember branch — a finished run AND the error/cancel
+         *      clear (`_showResults([])`), which is the same branch;
+         *   2. the surface toggle, so the chosen surface comes back with the result;
+         *   3. the reset at the top of `_run` — the one path that drops the result
+         *      WITHOUT repainting, so it cannot ride on (1);
+         *   4. `_forgetResult`, when the mount probe finds the file gone.
+         * It reads the component vars rather than taking arguments, so no caller can
+         * persist a snapshot that disagrees with what is on screen.
+         */
+        function _persistResult() {
+            const items = (_lastResults || []).filter(Boolean);
+            const snap = items.length
+                ? { items, mode: _preferredResultMode, status: _statusText, pending: _hasPending }
+                : null;
+            state.s_flowResults = { ...state.s_flowResults, [flow.id]: snap };
+        }
+
+        /** Forget the remembered result — its file is gone. Repaints if the pane is live. */
+        function _forgetResult() {
+            _lastResults = null;
+            _hasPending = false;
+            _statusText = '';
+            _persistResult();
+            if (!_resultMediaEl) return;
+            _showResults(null, { remember: false });
+            _paintPending();
+            if (_statusEl) _statusEl.textContent = '';
+        }
+
+        /**
          * Paint ALL final results (multi-output flows produce N items — MPI-259).
          *
          * @param {Object|Array<Object>} items
@@ -1480,7 +1547,12 @@ export const MpiBaseFlow = ComponentFactory.create({
          *   stored (a slide rebuild) rather than recording a new result.
          */
         function _showResults(items, { remember = true } = {}) {
-            if (remember) _lastResults = items == null ? null : items;
+            if (remember) {
+                // Normalised to an array so the persisted snapshot has ONE shape —
+                // `onComplete` hands a single item for a one-output flow.
+                _lastResults = items == null ? null : (Array.isArray(items) ? items : [items]);
+                _persistResult();
+            }
             if (!_resultMediaEl) return;
             const list = (Array.isArray(items) ? items : [items]).filter(Boolean);
             const withPath = list.map(it => ({ it, path: it?.filePath || it?.url })).filter(x => x.path);
@@ -1708,9 +1780,11 @@ export const MpiBaseFlow = ComponentFactory.create({
                 const single = _resultSingle;
                 if (!single) return;
                 // Remembered so a slide rebuild replays the surface the user chose,
-                // the same way _lastResults replays the result itself.
+                // the same way _lastResults replays the result itself — and persisted
+                // with it, so a reopened flow comes back on that surface too.
                 _preferredResultMode = _resultMode === 'compare' ? 'player' : 'compare';
                 _showSingleResult(single.it, single.path, _preferredResultMode);
+                _persistResult();
             });
         }
 
@@ -1919,8 +1993,11 @@ export const MpiBaseFlow = ComponentFactory.create({
             _setRunning(true);
             _hasPending = false;
             // Drop the previous result NOW: navigating away mid-run would otherwise
-            // replay the last image over the top of the run in progress.
+            // replay the last image over the top of the run in progress. Persisted
+            // too, so CLOSING mid-run does not bring the superseded result back
+            // (MPI-587) — this path never reaches `_showResults`.
             _lastResults = null;
+            _persistResult();
             _paintPending();
             _setGauge(0);
             _setStatus('Generating…');
@@ -1933,8 +2010,11 @@ export const MpiBaseFlow = ComponentFactory.create({
                     _setGauge(100);
                     // Already in the gallery — the run path commits on completion.
                     _setStatus('Done — saved to your gallery.');
-                    _showResults(items || item);
+                    // Set BEFORE the paint: on THIS path `_showResults` is what
+                    // persists the result (MPI-587), and the note belongs in that
+                    // snapshot. Nothing in the paint path reads the flag.
                     _hasPending = true;
+                    _showResults(items || item);
                     _paintPending();
                     _syncRunUi();
                 },

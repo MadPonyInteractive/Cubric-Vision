@@ -1002,8 +1002,11 @@
  * inputs). A step that declares `param` binds its gizmo's value to that injection
  * param (e.g. Head Swap's box1/box2) — the flow says which role feeds which node,
  * the kind says what shape it takes, and the frame still never learns what a role
- * MEANS (MPI-572). Seeds/writes state.s_flowInputs[flow.id]
- * (top-level replace) so inputs survive close→reopen and Overlays.reset(). Back =
+ * MEANS (MPI-572). Seeds/writes state.s_flowInputs[flow.id] AND
+ * state.s_flowResults[flow.id] (top-level replace) so both the inputs and the last
+ * RESULT survive close→reopen and Overlays.reset() — MPI-587; the result snapshot
+ * carries its surface, status line and pending note, and is dropped by a HEAD probe
+ * at mount when its file is gone. Back =
  * el.close() then Events.emit('flows:open'). Mid-run navigation is allowed; closing
  * with an unapplied result does NOT prompt (there is no Discard — see
  * docs/playbooks/add-flow/ui/carousel-frame.md).
@@ -1019,7 +1022,8 @@
  * The shell DESTROYS the instance on it (MPI-345): a closed flow that stays alive
  * keeps its listeners, and the global `generation.run` hotkey among them queued a
  * phantom flow job on the next Ctrl+Enter. Every open mounts a fresh instance, so
- * nothing is lost — inputs live in state.s_flowInputs.
+ * nothing is lost — inputs live in state.s_flowInputs, the last result in
+ * state.s_flowResults.
  *
  * Instance methods (on instance.el):
  *   open()/close() — show/hide the overlay (alias onOpen).

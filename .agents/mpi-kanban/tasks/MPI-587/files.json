@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/state.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/types.js",
+    "docs/playbooks/add-flow/04-overlay-and-shell.md"
+  ]
+}

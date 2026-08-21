@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task/v1",
+  "id": "b1d7c4e2-5a83-4f19-9c60-2ef4a7d1b508",
+  "title": "Persist the last Flow result across reopen",
+  "task_card": "MPI-587",
+  "plan": ".agents/mpi-kanban/tasks/MPI-587/plan.md",
+  "status": "closed",
+  "owner_session": ".agents/mpi-kanban/state/sessions/03600a9c-0631-4770-884d-b99febfc2c0b.json",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "created_at": "2026-08-20T17:10:00Z",
+  "heartbeat_at": "2026-08-21T02:10:00Z"
+}
