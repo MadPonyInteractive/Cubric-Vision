@@ -71,6 +71,17 @@ describing a delta against something that never shipped. (2026-08-07: proposed
 three lines about MiniMax H3's size tier and VRAM floor — for a model that has
 never appeared in `releaseNotes.js`.)
 
+**The grep HITTING is not the test — read what the hit says.** A feature whose
+first appearance is in `UNRELEASED.md` is still unreleased, so a **fix** to it owes
+no entry either: no released build ever had the bug, and a user reading the notes
+cannot have experienced it. **Flows are the standing example** — `UNRELEASED.md`
+announces them ("Flows are out of preview"), which makes every Flow grep hit, and
+§ Fixes already carries a Flow-result-pane line that is the same mistake sitting
+in the file as precedent. **An existing entry is not authority; this rule is.**
+(2026-08-21, MPI-587: a Flow result pane that came back empty on reopen — real bug,
+correctly fixed, no entry owed. Fabio: "flows haven't been released yet, so any
+fixes to them are not gonna end up in an unreleased file or the released log.")
+
 ### Versioning
 
 Did the change touch anything the version system tracks? Read
