@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/data/modelConstants/licences.js",
+    "js/components/Compounds/MpiLicenceGate/MpiLicenceGate.js",
+    "js/components/Compounds/MpiLicenceGate/MpiLicenceGate.css",
+    "js/services/downloadService.js",
+    "js/core/storage.js",
+    "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
+    "routes/licences.js",
+    "server.js",
+    "licences/flux2-klein-9b/LICENSE.txt",
+    "licences/flux2-klein-9b/NOTICE.txt",
+    "docs/model-library.md",
+    ".agents/mpi-kanban/tasks/MPI-357/plan.md",
+    ".agents/mpi-kanban/tasks/MPI-357/checklist.md",
+    ".agents/mpi-kanban/tasks/MPI-357/validation.md",
+    ".agents/mpi-kanban/tasks/MPI-357/files.json"
+  ]
+}
