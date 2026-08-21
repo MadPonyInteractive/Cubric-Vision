@@ -20,9 +20,23 @@ loads. So the graph carries no rect, no mask, no pad node and no fill input, and
 Fabio proved in the browser runs in the app unchanged. The mechanism is the step kind's
 (`STEP_MEDIA`), not this flow's — any flow declaring `kind: 'crop'` gets it.
 
-**No prompt.** `Input_Positive` is baked: *"fill the back areas with the rest of the image"*.
+**No prompt.** The instruction is baked: *"fill the back areas with the rest of the image"*.
 That IS the instruction. A prompt box here would invite "add a dragon", which is a different
 feature (an edit) and would need a different graph.
+
+**So the node holding it is NOT titled `Input_Positive`** — it is `Outpaint instruction
+(baked)`. `_buildParams` emits `Input_Positive: positive || ''` on **every** run, so a flow
+that declares no prompt sends an empty string and the injector cheerfully writes it over the
+bake. Caught in the first live run (MPI-594): the dispatched graph showed
+`112 MpiText | Input_Positive | {"string": ""}` — the instruction gone, and the fill happening
+only because the Krea 2 edit branch is forgiving.
+
+**Do not "fix" this by making the app skip an empty prompt.** Nearly every graph in
+`comfy_workflows/` carries a leftover authoring prompt (`chroma_t2i`: *"Two women sitting on
+chairs…"*, `klein_t2i`, `wan5b_i2v`, `qwen_edit`…), and the always-injected empty string is
+exactly what stops those from running. Head Swap solved the same problem the same way: a
+fixed-prompt flow does not title its prompt node. `inject-params-titles.test.cjs` pins the
+ABSENCE of the title for this graph.
 
 **No mask, deliberately.** Same reasoning the History crop tool records: prompting an edit
 model to fill the flat area beats handing it a painted mask (`docs/crop.md`).

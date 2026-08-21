@@ -105,6 +105,7 @@ Flow-specific notes:
 | Ctrl+Enter must run the OPEN flow, not the PromptBox behind it. Both handlers fire (bind is all-handlers) → the PromptBox's own `generation.run` bails while `.mpi-base-flow` is live | [04](04-overlay-and-shell.md) |
 | A modal opened over an open flow (error dialog) gets a z-floor above `--main-overlay-z` or its backdrop renders UNDER the flow overlay | [04](04-overlay-and-shell.md) |
 | The `main-area` Flow overlay spares `#shell-info-bar` but stashing `#tool-container` collapses the sticky bar to the top — pin it `absolute; bottom:0` while `.main-area--overlay` is set | [04](04-overlay-and-shell.md) |
+| **A flow with NO prompt must not TITLE its prompt node `Input_Positive`.** `_buildParams` emits `Input_Positive: positive \|\| ''` on every run, so a promptless flow silently injects an empty string over the graph's baked instruction. Head Swap and Outpaint both leave the node untitled; do NOT instead teach the app to skip an empty prompt — nearly every other graph relies on that empty string to wipe a leftover authoring prompt | [existing-flows/outpaint.md](existing-flows/outpaint.md) |
 | `operation_registry.json` is a hand-maintained superset — **never regenerate** (strips `universal` flags) | [01](01-descriptor-and-ops.md) |
 | `preview` is **ONE field feeding THREE placements** — tile and detail thumb crop it `4/5 cover`, the in-flow hero shows it at natural aspect. Art composed for the hero gets centre-cropped in the grid with no warning | [06](06-preview-image.md) |
 

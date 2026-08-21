@@ -23,10 +23,11 @@
     "docs/playbooks/add-flow/ui/carousel-frame.md",
     "docs/crop.md",
     "docs/playbooks/add-flow/01-descriptor-and-ops.md",
-    "tests/flow-model-choice.test.cjs"
+    "tests/flow-model-choice.test.cjs",
+    "docs/playbooks/add-flow/README.md"
   ],
   "status": "claimed",
   "claim_kind": "write",
   "owner_session": ".agents/mpi-kanban/state/sessions/9685b71b-3bbc-4fa7-a54f-5bea18a077e3.json",
-  "heartbeat_at": "2026-08-21T04:05:00Z"
+  "heartbeat_at": "2026-08-21T04:35:00Z"
 }

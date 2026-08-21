@@ -37,6 +37,7 @@ decisions go in `docs/playbooks/add-flow/ui/crop-gizmo.md`; the flow's in
 ## Verify
 
 - [x] `npm test` green, `node --check` on every touched JS
-- [ ] Live run in an isolated app instance: pad lands in `.preview-assets`, generation
-      returns a filled frame, reuse restores image + rect
+- [x] Live run in an isolated app instance: pad lands in `.preview-assets`, generation
+      returns a filled frame (TWO runs, 2026-08-21) — caught and fixed the baked-prompt
+      clobber. Reuse across restart still untested
 - [ ] Preview art (`/mpi-flow-graphics`) — separate pass, tracked here until it lands

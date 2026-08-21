@@ -278,12 +278,22 @@ test('the Outpaint Flow carries its I/O and declared control titles (MPI-594)', 
     const file = 'flow_outpaint.json';
     const have = titlesOf(file);
     for (const title of [
-        'input_image', 'input_positive', 'input_negative', 'input_seed', 'input_is_turbo',
+        'input_image', 'input_seed', 'input_is_turbo',
         'input_base_model', 'input_bypass_filter_lora',
     ]) {
         assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
     }
     assert.ok(have.has('output_image'), `${file} must carry a capture node titled "output_image"`);
+
+    // …and the ABSENCE of one title is load-bearing here (MPI-594, caught in a live run).
+    // The outpaint instruction is BAKED and the flow declares no prompt, so `_buildParams`
+    // sends `Input_Positive: ''` on every run — which the injector happily writes, wiping
+    // the instruction. Head Swap has the same shape and solves it the same way: a
+    // fixed-prompt graph does not TITLE its prompt node. Do not "fix" this by re-adding
+    // the title; the empty string that clobbers it is deliberate everywhere else (nearly
+    // every graph carries a leftover authoring prompt that must be overwritten).
+    assert.ok(!have.has('input_positive'),
+        `${file}'s prompt is baked — titling it Input_Positive lets the run inject '' over it`);
 });
 
 test('the prompt enhancer graph carries the seed node its caller drives (MPI-504)', () => {

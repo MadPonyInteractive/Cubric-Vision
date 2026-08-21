@@ -2844,7 +2844,7 @@
           ]
         }
       ],
-      "title": "Input_Positive",
+      "title": "Outpaint instruction (baked)",
       "properties": {
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",

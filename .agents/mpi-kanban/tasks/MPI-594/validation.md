@@ -66,12 +66,53 @@ With BOTH weights on disk (`krea2_raw_int8_convrot` 13.5GB, `lustify-v10-krea-ra
 2. Handles on the union's edge were flush against the stage. `_refit` now insets by
    `HANDLE_SLACK` (14px).
 
+## Live — TWO REAL GENERATIONS (2026-08-21, Fabio's go-ahead, engine idle first)
+
+Source `mpi-546-smoke/Media/t2i_004.png` (768 × 1344), rect `{x: -160, y: 0, w: 1088, h: 1344}`
+— a 160px strip added each side (+21% width). Project `mpi-594-outpaint-proof`.
+
+**Run 1 — and it caught a real bug.** The dispatched graph (read from `/queue`) carried the
+padded `.preview-assets` PNG on `Input_Image` ✓, `Input_is_Turbo: true` ✓,
+`Input_Base_Model: krea2_raw_int8_convrot.safetensors` ✓ — and
+`112 MpiText | Input_Positive | {"string": ""}` ✗. `_buildParams` emits
+`Input_Positive: positive || ''` on EVERY run, so a flow with no prompt field injects an empty
+string over the graph's baked instruction. It still filled (Krea 2's edit branch is forgiving),
+which is exactly why this would have shipped unnoticed.
+
+Fixed the Head Swap way: node 112 re-titled `Outpaint instruction (baked)` in the raw graph, so
+injection cannot reach it. **NOT** by teaching the app to skip an empty prompt — a scan of
+`comfy_workflows/*.json` shows ~20 graphs carrying a leftover authoring prompt
+(`chroma_t2i`, `klein_t2i`, `wan5b_i2v`, `qwen_edit`…) that the empty string is what erases.
+`inject-params-titles.test.cjs` now pins the ABSENCE of the title.
+
+The sync script refused (a peer session's `flow_character_sheet.json` was dirty), so the
+runtime graph got the one-line title change directly — verified first by converting the raw
+file independently (`COMFY_URL=…:48188 node scripts/workflow-to-api.mjs`) and diffing: **34
+nodes, one difference, that title.** `validate-injection-rules.mjs` passes.
+
+**Run 2 — with the instruction intact.** Dispatched graph:
+`112 MpiText | Outpaint instruction (baked) | {"string": "fill the back areas with the rest of
+the image"}` ✓. Same padded input hash `884259df…` as run 1 — the content-addressed store
+deduped rather than writing a second copy.
+
+| | run 1 (no instruction) | run 2 (instruction) |
+|---|---|---|
+| output | `flowOutpaint_001.png`, 928 × 1136 | `flowOutpaint_002.png`, 928 × 1136 |
+| the added strips | filled, seamless | filled, seamless — street and building line continue better on the left |
+
+Output is 928 × 1136 rather than 1088 × 1344 because the graph's `ImageScaleToTotalPixels`
+normalises to ~1 MP. Expected, not a crop.
+
+Both runs landed real gallery cards. Run 2's completion arrived LATE (the page had been
+reloaded mid-session, `[concat] SSE stream errored (will auto-reconnect)`) and the backstop
+recovered it — app-level, nothing to do with this flow.
+
 ## NOT verified — outstanding
 
-- **A real generation.** Everything up to dispatch is proven; the end-to-end run is the
-  user's to fire on their GPU (playbook `05-verify.md`). Nothing has yet confirmed the
-  padded path reaching `Input_Image` inside ComfyUI, the turbo boolean, or output capture.
 - **Reuse across restart** — the code path is the shared one (`flowInputs` keeps the
   original image + rect, `runMediaItems` is stripped in `flowService`), but no restart test
   has been run.
+- **The NSFW arm has never RUN** — only its resolution is proven (right filename, bypass 0).
+- **A big extension** — both runs added 21%. The copy's claim that a large one degrades is
+  Fabio's, not measured here.
 - **Preview art** — no `preview`/`video` on the FlowDef until `/mpi-flow-graphics` runs.
