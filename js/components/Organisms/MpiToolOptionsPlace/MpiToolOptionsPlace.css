@@ -1,0 +1,28 @@
+.mpi-tool-options-place {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+}
+
+.mpi-tool-options-place__hint {
+    font-size: var(--t-2xs);
+    line-height: 1.4;
+    color: var(--ink-3);
+}
+
+/* One slot, laid out as a grid for the same reason the sibling panel's is: it is the
+   seam a second media input would land on, and auto-fit already handles that with no
+   modifier to add. */
+.mpi-tool-options-place__slots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: var(--s-2);
+}
+
+.mpi-tool-options-place__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+    align-items: center;
+    justify-content: center;
+}

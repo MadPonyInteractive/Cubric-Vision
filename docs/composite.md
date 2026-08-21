@@ -1,4 +1,4 @@
-# Composite — one operation, two front ends (MPI-373)
+# Composite — the hole-cutters (MPI-373)
 
 Blend two entries by cutting a hole through the top one. The selected entry is **image 1** and
 sits on top; a slot holds **image 2**, underneath. `paintComp` cuts the hole live with the brush;
@@ -8,6 +8,10 @@ The last card of the MPI-424 umbrella. Related:
 [masking-tools.md](masking-tools.md) (the taxonomy and the preview contract this obeys) ·
 [masking.md](masking.md) (the layer model) · [masking-undo.md](masking-undo.md) (the entries a
 cut records) · [painting.md](painting.md) (the brush engine it borrows).
+
+> **A THIRD front end inverts this stack — `placeComp`, in
+> [composite-place.md](composite-place.md) (MPI-454), split out at this doc's 200-line cap.**
+> Everything below is the two hole-cutters; the shared parts (slot, PromptBox, preview) cover all three.
 
 ## Why it replaced the modal
 
@@ -110,8 +114,21 @@ you want underneath is usually the one you are looking at. It writes `_composite
 `MpiGroupHistoryBlock` — app-local, workspace-lifetime, deliberately not the OS clipboard,
 because a slot needs a project-file URL the canvas can load. The panel seeds the slot from it on
 mount and sees it through a `clipboard` accessor object passed by `mountOptions()` — accessors,
-not values, because the panel mounts once and the buffer changes under it. **`Copy image` in the
-history list was the first source and came back out**; a filled slot has one origin, not two.
+not values, because the panel mounts once and the buffer changes under it (Place's own drop
+buffer is a SECOND accessor bundle, so a drop cannot overwrite this one). **`Copy image` in the
+history list was the first source and came back out.**
+
+**What that removal decided is narrower than it reads.** `Copy image` was a *redundant second
+gesture for the same origin* — two ways to put a project entry the user was already looking at
+into the slot. That is what came out, and no gesture may reintroduce it. It is **not** a law
+that a slot may only ever be filled one way: a genuinely different origin (a file from outside
+the app, project media the user is not currently viewing) is a different question and was never
+ruled on here. **MPI-454 answered it for `placeComp`, which takes THREE origins** — a drop,
+`MpiMediaPicker` on an empty-slot click, and the paste above ([composite-place.md](composite-place.md)
+§ Three gestures) — and the picker, settled with the user 2026-08-16 as *the* single entry point
+for filling a slot, is what keeps that from becoming a second gesture again. **The hole-cutters
+still take the buffer only**: their slot means "the image underneath", nearly always the one just
+looked at.
 
 **There is no mask slot.** `maskComp` reads the mask already on the selected entry. The pasted
 one was a second, worse way to produce the same pixels — the user already has the whole mask
@@ -120,7 +137,8 @@ layer is fine; *writing* into it is what the scratch-layer decision above rules 
 
 `MpiMediaSlot` stays a dumb one-media drop point: a label, a thumbnail URL, a right-click
 Paste / Clear whose rows are conditional rather than greyed, a left-click paste shortcut, and
-`setValue()` for the mount-time seed. What a filled value MEANS belongs to the panel.
+`setValue()` for the mount-time seed, plus Place's one optional `onEmptyClick` that outranks
+that shortcut. What a filled value MEANS belongs to the panel.
 
 ### The hole is an ALPHA layer, and the mask export has two flavours
 
@@ -167,9 +185,9 @@ the new entry's mask would replace strokes the user made.
   each one.
 - **`composite` is a canvas MODE, not a flag.** It needs its own brush ownership, exactly as
   `paint` does — that is what `activeMode` decides. (The shape gizmo could be a mere flag
-  because it is not a brush and never competes for the pointer.) Adding it meant `CANVAS_MODES`
-  in `MpiCanvasViewer` **and** `_viewerModeFor()` in the Block; MPI-375's dead-tool bug was
-  exactly one of those two being missed.
+  because it is not a brush and never competes for the pointer, which is also why Place can
+  borrow it inside this mode.) Adding it meant `CANVAS_MODES` in `MpiCanvasViewer` **and**
+  `_viewerModeFor()` in the Block; MPI-375's dead-tool bug was exactly one of those two missed.
 - **It is the one group that DROPS the PromptBox.** `_COMPOSITE_TOOLS` is in `_isCanvasTool` (for
   teardown and the mode bridge) but absent from `_modeKeepsPromptBox`. Those two predicates must
   not be collapsed into one — the shortcut hands the box straight back.

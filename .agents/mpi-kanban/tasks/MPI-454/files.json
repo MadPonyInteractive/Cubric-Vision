@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+    "js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js",
+    "js/components/Compounds/MpiMediaSlot/MpiMediaSlot.js",
+    "js/components/Organisms/MpiToolOptionsPlace/MpiToolOptionsPlace.js",
+    "js/components/Organisms/MpiToolOptionsPlace/MpiToolOptionsPlace.css",
+    "js/components/Organisms/MpiCanvasViewer/MpiCanvasViewer.js",
+    "js/components/Primitives/MpiCanvas/MpiCanvas.js",
+    "js/components/Primitives/MpiCanvas/managers/CompositeManager.js",
+    "js/components/Primitives/MpiCanvas/managers/ShapeManager.js",
+    "js/components/types.js",
+    "js/shell/preloadStyles.js",
+    "js/utils/icons.js",
+    "routes/projects.js",
+    "tests/mask-tool-registry.test.cjs",
+    "docs/composite.md",
+    "docs/composite-place.md",
+    "docs/masking-tools.md",
+    "docs/README.md"
+  ]
+}

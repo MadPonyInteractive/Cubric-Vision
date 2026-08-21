@@ -1,4 +1,4 @@
-# The shape gizmo — one geometry, two destinations (MPI-368)
+# The shape gizmo — one geometry, three destinations (MPI-368)
 
 Rectangle / triangle / ellipse dropped straight onto the canvas and committed into either the
 binary mask layers or the RGBA paint layer. Pure geometry: no model, no ComfyUI round trip, no
@@ -33,14 +33,23 @@ into the wrong layer while the rail still looked right.
 
 ## Armed like `pointsMode`, not as a canvas mode
 
-`shapeMode` (`null | 'mask' | 'paint'`) is a FLAG inside the canvas' existing `'mask'` / `'paint'`
-mode. Adding a fourth `activeMode` would have meant re-deciding brush ownership, the undo gate,
-the opacity slider and the paint layer's render pass; points mode already showed that a
-brushless sub-behaviour does not need one. So `CANVAS_MODES` and `_enterMode` are untouched by
-this card, and `shapeMode` decides one thing only: where a commit lands.
+`shapeMode` (`null | 'mask' | 'paint' | 'place'`) is a FLAG inside the canvas' existing `'mask'` /
+`'paint'` / `'composite'` mode. Adding a fourth `activeMode` would have meant re-deciding brush
+ownership, the undo gate, the opacity slider and the paint layer's render pass; points mode
+already showed that a brushless sub-behaviour does not need one. So `CANVAS_MODES` and
+`_enterMode` are untouched by this card, and `shapeMode` decides one thing only: where a commit
+lands.
 
 Both panels mount `MpiMaskStrip` with `brush: false`, which also calls the destination's
 `setEnabled(false)` — without it a drag off the gizmo would paint instead of panning.
+
+**A THIRD destination joined in MPI-454 and it owns no layer.** `'place'` says *"this rectangle
+is where the placed image goes"*; its commit is Place's own Apply, which writes a new history
+entry server-side, so `MpiCanvas.commitShape()` **refuses** it rather than falling through to the
+mask. Two more consequences live there rather than here —
+[composite-place.md](composite-place.md) § What it is made of: `setMode('place')` forces
+`kind = 'rect'` because `kind` is shared with these two mounts, and `seed(aspect)` opens the
+gizmo at the placed image's own proportions instead of a square.
 
 ## Handles, and why hit-testing runs in shape-local space
 

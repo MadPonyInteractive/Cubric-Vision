@@ -23,6 +23,7 @@ import { MpiToolOptionsMaskText } from '../../Organisms/MpiToolOptionsMaskText/M
 import { MpiToolOptionsPaint } from '../../Organisms/MpiToolOptionsPaint/MpiToolOptionsPaint.js';
 import { MpiToolOptionsShapes } from '../../Organisms/MpiToolOptionsShapes/MpiToolOptionsShapes.js';
 import { MpiToolOptionsComposite } from '../../Organisms/MpiToolOptionsComposite/MpiToolOptionsComposite.js';
+import { MpiToolOptionsPlace } from '../../Organisms/MpiToolOptionsPlace/MpiToolOptionsPlace.js';
 import { MpiToolOptionsUpscale } from '../../Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.js';
 import { MpiToolOptionsRemoveBg } from '../../Organisms/MpiToolOptionsRemoveBg/MpiToolOptionsRemoveBg.js';
 import { MpiToolOptionsInterpolate } from '../../Organisms/MpiToolOptionsInterpolate/MpiToolOptionsInterpolate.js';
@@ -103,6 +104,10 @@ const TOOL_OPTIONS_REGISTRY = {
     // `maskComp` takes the cut from a pasted mask, `paintComp` cuts it live.
     maskComp:     MpiToolOptionsComposite,
     paintComp:    MpiToolOptionsComposite,
+    // The THIRD front end (MPI-454) — its OWN component, not a third row in the table
+    // above: it inverts the stack (slot image on top, its own alpha as the cut) and
+    // shares no control with the two hole-cutters.
+    placeComp:    MpiToolOptionsPlace,
     videoUpscale: MpiToolOptionsUpscale,
     imageUpscale: MpiToolOptionsUpscale,
     removeBackground: MpiToolOptionsRemoveBg,
@@ -127,12 +132,13 @@ const _PAINT_TOOLS = new Set(['paint', 'paintShapes', 'paintAdjust']);
 const _isPaintTool = (mode) => _PAINT_TOOLS.has(mode);
 
 /** The COMPOSITE family (MPI-373) — the third and last group of the MPI-424
- *  taxonomy. Its artifact is a blended IMAGE: one operation with two front ends,
- *  `maskComp` taking the cut from a pasted mask and `paintComp` cutting it live.
+ *  taxonomy. Its artifact is a blended IMAGE: `maskComp` takes the cut from the
+ *  entry's own mask and `paintComp` cuts it live, and `placeComp` (MPI-454) inverts
+ *  the stack — the slot image goes ON TOP and its own alpha is the cut.
  *  It is the one group that does NOT keep the PromptBox, so it is deliberately
  *  absent from `_modeKeepsPromptBox` below while still being a canvas tool for
  *  teardown and the viewer-mode bridge. */
-const _COMPOSITE_TOOLS = new Set(['maskComp', 'paintComp']);
+const _COMPOSITE_TOOLS = new Set(['maskComp', 'paintComp', 'placeComp']);
 const _isCompositeTool = (mode) => _COMPOSITE_TOOLS.has(mode);
 
 /** Any canvas-resident tool — mask, paint OR composite. Teardown and the viewer-mode
@@ -211,6 +217,27 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const _clipboard = {
             hasImage: () => !!_compositeImage,
             getImage: () => (_compositeImage ? { ..._compositeImage } : null),
+        };
+
+        // Place (MPI-454): { url, name }. SEPARATE from `_compositeImage` on purpose —
+        // that buffer is the `Send to Composite` clipboard and a drop must not overwrite
+        // it, or dropping a photo would silently empty the underlay a Mask Comp session
+        // was set up with. This one is the Place slot's own last value, so a rail switch
+        // away and back shows the same image instead of an empty slot.
+        let _placeImage = null;
+
+        /**
+         * What the Place panel is allowed to see and do. Accessors for the same reason
+         * `_clipboard` above is: the panel mounts once per rail switch, and a DROP changes
+         * the buffer under it. `removeBackground` and `importFile` live here rather than in
+         * the panel because both are Block jobs — one dispatches a generation, the other
+         * writes a file into the project.
+         */
+        const _place = {
+            getImage: () => (_placeImage ? { ..._placeImage } : null),
+            setImage: (v) => { _placeImage = v?.url ? { url: v.url, name: v.name || null } : null; },
+            removeBackground: (url) => _cutOutSlotImage(url),
+            importFile: (file) => _fillPlaceSlotFromFile(file),
         };
 
         if (!_group) {
@@ -547,6 +574,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 // buffer that already backs Copy mask. Handed in as accessors rather
                 // than values — the panel mounts once and the buffer changes under it.
                 clipboard: _clipboard,
+                // MPI-454: Place's own buffer, plus the two jobs its panel cannot do for
+                // itself — dispatching Remove Background, and importing a file.
+                place: _place,
             });
 
             // GIF export owns no source resolution — inject the encoder so its
@@ -636,6 +666,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             maskBrush: 'Mask Brush', maskAdjust: 'Mask Adjust', maskDetect: 'Mask Detect',
             maskPoints: 'Mask Points', maskText: 'Mask Text',
             paint: 'Paint', paintAdjust: 'Paint Adjust',
+            placeComp: 'Place',
             videoUpscale: 'Upscale', imageUpscale: 'Upscale',
             removeBackground: 'Remove Background',
             interpolate: 'Interpolate',
@@ -961,11 +992,70 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
         // ── OS-file drop overlay ───────────────────────────────────────────────
 
+        /**
+         * Put an image into the Place slot and make sure the tool is looking at it.
+         *
+         * The two halves are separate because re-activating the live mode is a NO-OP
+         * (`MpiHistoryTools._activate` returns early), so a second drop while Place is
+         * already open would never remount the panel and would land nowhere. That was the
+         * shape of MPI-377's original bug, one layer down.
+         *
+         * @param {{url: string, name?: string}} value
+         */
+        function _armPlaceWith(value) {
+            _place.setImage(value);
+            if (historyTools.el.getActiveMode?.() === 'placeComp') _options?.el?.setSlotImage?.(_place.getImage());
+            else historyTools.el.setMode?.('placeComp');
+        }
+
+        /**
+         * Ingest one file into the project and hand it to Place. Shared by the workspace
+         * drop and by `MpiMediaPicker`'s upload card, so a file arrives identically
+         * whichever surface brought it in.
+         *
+         * `uploadMediaFile` writes the media and its sidecar and returns a project-file
+         * URL — it creates NO history entry, which is the whole of MPI-377's rejected
+         * design. An imported photo is not a generation; the entry is written at Apply,
+         * where it is a composite and a legitimate history artifact.
+         *
+         * @param {File} file
+         */
+        async function _fillPlaceSlotFromFile(file) {
+            const project = state.currentProject;
+            if (!project?.folderPath || !project?.id) {
+                clientLogger.warn('MpiGroupHistoryBlock', 'No current project on drop');
+                return null;
+            }
+            const uploaded = await uploadMediaFile(file, 'image', project.folderPath, project.id);
+            if (!uploaded?.filePath) { _showToast('Could not import that image', 'error'); return null; }
+            _armPlaceWith({ url: uploaded.filePath, name: file.name || null });
+            return uploaded;
+        }
+
         const _dropOverlay = MpiMediaDropOverlay.mount(document.createElement('div'), {
             onDrop: async ({ files }) => {
                 const project = state.currentProject;
                 if (!project?.folderPath || !project?.id) {
                     clientLogger.warn('MpiGroupHistoryBlock', 'No current project on drop');
+                    return;
+                }
+                // IMAGE groups: the drop fills the Place slot and arms the tool (MPI-454,
+                // absorbing MPI-377). It used to stage a PromptBox chip here, which was the
+                // bug — the box is not even up in half the tools, so the file vanished.
+                //
+                // VIDEO groups keep the chip path UNTOUCHED, deliberately: dropping a
+                // start/end frame is how a user unlocks the frame-driven i2v ops when no
+                // media is staged. Do not collapse these two into one branch to tidy it up.
+                if (!isVideo) {
+                    const images = files.filter(f => f.mediaType === 'image');
+                    if (!images.length) { _showToast('Place takes an image', 'error'); return; }
+                    await _fillPlaceSlotFromFile(images[0].file);
+                    // A slot holds ONE media, so the rest are ignored — but never SILENTLY.
+                    // A file that disappears on drop reads as a broken app.
+                    const ignored = files.length - 1;
+                    if (ignored > 0) {
+                        _showToast(`Placed ${images[0].file.name || 'the first image'} — ${ignored} other file${ignored > 1 ? 's' : ''} ignored`, 'warning');
+                    }
                     return;
                 }
                 for (const { file, mediaType } of files) {
@@ -1515,6 +1605,60 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 { existingGroup: _group, scope: 'groupHistory', groupId: _group.id }
             );
             _activeExec = null; // Cue dispatcher manages exec lifecycle.
+        }
+
+        /**
+         * Run Remove Background on the PLACE SLOT's image and commit nothing (MPI-454).
+         *
+         * A SIBLING of `_runImageTool`, deliberately not a flag on it. That function means
+         * "run an image op on the CURRENT ENTRY and append the result to this group" — it
+         * hardwires `_group.history[_currentIdx]` as the source and dispatches
+         * `scope: 'groupHistory'` with `existingGroup`, so its result is a new history
+         * entry. Place needs the opposite of both halves: an arbitrary URL in, and nothing
+         * written to the project. Parameterising it would force a re-check of every
+         * existing consumer (imageUpscale, removeBackground, the plugin ops) against a code
+         * path none of them wants.
+         *
+         * `deferCommit` is MPI-306's HOLD-UNTIL-APPLY: the media and its sidecar land on
+         * disk and the item carries a real project-file URL the canvas can load, but the
+         * project RECORD is withheld — so no gallery card and no history entry appears.
+         * The cut-out is then either flattened into a placement by Apply, or simply
+         * dropped; the orphaned file is the existing `.preview-assets` + Cleanup GC path's
+         * job (MPI-277/227), not a new mechanism.
+         *
+         * @param {string} url the slot image, as a project-file URL
+         * @returns {Promise<{url: string, name: string|null}|null>} null on any failure
+         */
+        function _cutOutSlotImage(url) {
+            if (!url) return Promise.resolve(null);
+            return new Promise((resolve) => {
+                const started = enqueueGeneration(
+                    {
+                        operation: 'removeBackground',
+                        model: { id: null, mediaType: 'image' },
+                        positive: '', negative: '',
+                        mediaItems: [{ url: resolveMediaUrl(url), mediaType: 'image', source: 'history' }],
+                        // Transparent, not a flat colour: the alpha IS the cut here, which
+                        // is the whole reason Place needs no mask.
+                        injectionParams: { Input_Bg_Use_Color: false },
+                    },
+                    {
+                        onCancel:   () => resolve(null),
+                        onError:    () => resolve(null),
+                        onComplete: ({ item }) => resolve(
+                            item?.filePath ? { url: item.filePath, name: item.displayName || null } : null,
+                        ),
+                    },
+                    // No `existingGroup` — that is what selects the gallery branch, which is
+                    // the only one `deferCommit` is honoured in. No `tempId` either, so no
+                    // placeholder card is created for a run the gallery must never show.
+                    { deferCommit: true },
+                );
+                // A rejected enqueue (a missing required slot, a mask guard) returns null
+                // and fires onCancel, but an early return before either would leave the
+                // panel's switch stuck mid-flight.
+                if (!started) resolve(null);
+            });
         }
 
         // ── Video snapshot / crop helpers ────────────────────────────────────
@@ -2353,6 +2497,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             };
             viewer.on('crop-applied',  ({ item }) => _appendViewerEntry(item));
             viewer.on('paint-applied', ({ item }) => _appendViewerEntry(item));
+            // MPI-454. Same append: Place flattens through the same route paint's Apply
+            // does, so the server hands back a finished file the same way. A distinct
+            // event rather than reusing 'paint-applied' — the payload is identical but the
+            // name would be a lie, and this file already routes three of these.
+            viewer.on('place-applied', ({ item }) => _appendViewerEntry(item));
 
             viewer.on('entry-loaded', ({ idx, hasMask }) => {
                 _currentIdx = idx;

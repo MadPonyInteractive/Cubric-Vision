@@ -105,6 +105,10 @@ export const ICONS = {
     // Square + circle, offset diagonally. Three shapes at 24×24 with a 2px stroke
     // read as a blob (measured in the app 2026-08-04) — two is the legible limit.
     'shapes_stroke': '<rect x="2.5" y="10" width="11.5" height="11.5" rx="1"/><circle cx="15.5" cy="8.5" r="6"/>',
+    /* Place (MPI-454): corner brackets = the entry's frame, the inner rect = the image
+       being stamped into it. Deliberately not `layers`/`copy` — Mask Comp already owns
+       `layers`, and the three Composite buttons have to be told apart at 24px. */
+    'place_stroke': '<path d="M3 8V4a1 1 0 0 1 1-1h4"/><path d="M16 3h4a1 1 0 0 1 1 1v4"/><path d="M21 16v4a1 1 0 0 1-1 1h-4"/><path d="M8 21H4a1 1 0 0 1-1-1v-4"/><rect x="7.5" y="7.5" width="9" height="9" rx="1"/>',
     'shape_rect_stroke': '<rect x="3.5" y="5.5" width="17" height="13" rx="1"/>',
     'shape_triangle_stroke': '<path d="M12 4l8.5 15h-17z"/>',
     'shape_ellipse_stroke': '<ellipse cx="12" cy="12" rx="8.5" ry="6.5"/>',

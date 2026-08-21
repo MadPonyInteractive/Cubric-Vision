@@ -1,7 +1,13 @@
-# MPI-454 — Composite Place: a transform gizmo for the pasted image
+# MPI-454 — Place: a composite tool that stamps an image onto the current entry
 
-**Blocked by MPI-377.** Read [docs/composite.md](../../../../docs/composite.md) and
+**UNBLOCKED 2026-08-21.** Read [docs/composite.md](../../../../docs/composite.md),
+[docs/masking-tools.md](../../../../docs/masking-tools.md) and
 [docs/masking-shapes.md](../../../../docs/masking-shapes.md) before planning this.
+
+> **Redesigned with the user, 2026-08-21** (brainstorm opened against umbrella MPI-562).
+> This card now ABSORBS MPI-377, and MPI-562 is closed. Everything below the
+> "How the slot gets filled" section is the ORIGINAL brief and still holds — the build
+> guidance did not change, only the framing did.
 
 ## What the user asked for
 
@@ -26,14 +32,77 @@ inverted stack and a gizmo instead of a brush.
 
 Name it `placeComp` and add it to `_COMPOSITE_TOOLS` alongside the other two.
 
-## Why MPI-377 blocks it
+## How the slot gets filled — MPI-377 absorbed (2026-08-21)
 
-The headline flow is *grab an object from the internet → Remove Background → place it*. Step
-one is dragging a downloaded file into the History workspace, and today that drop silently
-becomes a **prompt chip** — no entry, no project-file URL. `MpiMediaSlot` needs a URL the
-canvas can load (docs/composite.md § One slot), and Remove Background needs an entry to run
-on. MPI-377 is what makes the dropped file a real entry. Without it the user can only place
-images that came out of the app's own generations, which is half the feature.
+**MPI-377's original fix was REJECTED by the user.** It proposed turning the dropped file into
+a history entry. An imported photo is not a generation, so that pollutes the group history.
+The drop fills a **tool slot** instead, and an entry is written only at Apply — a composite,
+which is a legitimate history artifact.
+
+`uploadMediaFile` already returns a project-file URL the canvas can load, so the slot never
+needed an entry in the first place. That was the whole of the blocking argument, and it was
+wrong.
+
+**Three gestures, two controls:**
+
+| Gesture | Result |
+|---|---|
+| Drop an image file on the History workspace | selects `placeComp`, fills the slot |
+| Click the empty slot | `MpiMediaPicker` — project media **and** import-from-disk |
+| Right-click slot → Paste | the existing `_compositeImage` buffer, already seeded by *Send to Composite* — **free**, no new context row |
+
+`MpiMediaPicker` is what makes this two controls instead of three: *"it IS the single entry
+point for filling a slot: the upload card is the first cell of the grid, so the user has ONE
+button to reach both their own media and the filesystem (settled with the user 2026-08-16,
+replacing an earlier two-button split)"* — `MpiMediaPicker.js:14-21`. Adding it is one prop on
+`MpiMediaSlot`, which stays dumb: the panel owns the picker.
+
+**This widens a standing decision, deliberately.** `docs/composite.md` says *"`Copy image` in
+the history list was the first source and came back out; a filled slot has one origin, not
+two."* That killed a **redundant** gesture — two ways to paste the same project entry. A drop
+and the picker are different *origins*, not a redundant gesture, and the picker was itself
+settled as the unifier. **Update that doc line as part of this card** or the next agent reads
+this as a violation.
+
+## The panel
+
+`MpiMediaSlot` (label *"Image to place"*) · **Remove Background** toggle · **Apply**.
+
+**No Cancel.** `MpiToolOptionsComposite` has Apply and nothing else
+(`MpiToolOptionsComposite.js:161-178`), and rail-switching away already discards the preview
+by contract. Match the sibling.
+
+**Remove Background is a toggle in the panel, not a forced step on ingest.** It runs the
+existing `removeBackground` universal op — BiRefNet, an `engineAsset` that installs with the
+engine, no download gate (`assetDeps.js:333-346`). Auto-running it on drop was considered and
+rejected by the user: it is a **dispatch**, so every drop would pay a queue round-trip, and
+the cases that need the full image with its background — filling a monitor screen, swapping a
+painting on a wall, a cut-out that arrived already cut out — would pay it for nothing and
+have no way back. Toggling it off must restore the original slot pixels with **no second
+dispatch**.
+
+## Drop routing — the load-bearing half
+
+- **Image mode** → select `placeComp`, fill the slot.
+- **Video mode / video prompt tool active** → today's chip path, **untouched**. Dropping a
+  start/end frame is how a user unlocks the frame-driven i2v ops when no media is staged
+  (`_isVideoPromptToolActive()`, and the comments at ~217 and ~919 in the Block). Do not strip
+  the chip globally to fix an image-mode bug.
+- **Multi-file drop** → first file fills the slot, toast names the rest as ignored. MPI-377's
+  old *"one entry per file"* acceptance is dead — a slot holds one media.
+
+## Transient was considered and rejected
+
+An earlier turn of the brainstorm had this as a *temporary* mode with no rail button, entered
+only by a drop. A registered tool turned out to be **cheaper**: every canvas tool lives in
+`_MASK_TOOLS` / `_PAINT_TOOLS` / `_COMPOSITE_TOOLS` folded into `_isCanvasTool`, and
+`docs/masking-tools.md` says plainly *"a miss is silent"* — so an unregistered mode means
+hand-wiring teardown, `discardPreview` and undo that a normal tool gets for free. Drop-only
+entry also locked out project media, which is what surfaced the picker.
+
+Consequence to know: **the Composite group drops the PromptBox** (`_modeKeepsPromptBox`).
+Entering Place hides it; it returns when the user leaves to mask and detail. That matches the
+intended sequence — place, Apply, *then* mask and detail.
 
 ## The lazy build — do not invent a new server route
 
@@ -74,8 +143,18 @@ MPI-375's bug).
 2. **Does the placed image keep a soft edge?** `compositeThroughMask` feathers; `compositeOverlay`
    does not, it takes the alpha as given. A cut-out from Remove Background usually wants a
    1–2px feather to not read as a sticker — check what BiRefNet's alpha already gives.
-3. **Where does the second image come from besides the slot?** The slot is seeded by right-click
-   → *Send to Composite*. Keep that as the ONE origin (the doc records `Copy image` being
-   removed for being a second one).
+3. ~~**Where does the second image come from besides the slot?**~~ **ANSWERED 2026-08-21** —
+   three gestures, see § How the slot gets filled.
 4. **Does the toolbar group need a name change?** Three tools in the Composite group, two of
    them hole-cutters and one a placer.
+5. **Does the Remove Background toggle need to survive a slot change?** Toggling it off must
+   restore original pixels with no second dispatch (acceptance 7), which means the panel holds
+   both versions. Swapping the slot image should reset the toggle rather than carry it — cheap,
+   and the alternative is a second BiRefNet run the user did not ask for.
+
+## Sibling card
+
+**MPI-596 — Object Stamp Flow.** The same capability on the Flow surface: SAM3 text extract,
+a `kind: 'box'` placement step, a Krea2 detail pass, one dispatch. Deliberate duplication
+(`project_flows_are_the_beginner_surface`) — shared control vocabulary, **zero shared code**.
+This card is the workspace tool with a real drag gizmo; that one is a form.

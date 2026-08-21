@@ -354,11 +354,46 @@
  */
 
 /**
+ * @typedef {Object} MpiToolOptionsPlaceProps (Organism — js/components/Organisms/MpiToolOptionsPlace)
+ * @property {Object} viewer - MpiCanvasViewer instance
+ * @property {'placeComp'} mode - which mount this is
+ * @property {Object} [clipboard] - the Send to Composite buffer: { hasImage, getImage }
+ * @property {Object} [place] - the Block's Place accessors:
+ *   { getImage, setImage, removeBackground, importFile }
+ *
+ * The THIRD composite front end (MPI-454), and the one that INVERTS the stack: the slot
+ * image goes ON TOP at a size and angle a gizmo decides, and its OWN ALPHA is the cut —
+ * no hole, no mask, nothing to brush. Its own component rather than a third row in
+ * MpiToolOptionsComposite's `MOUNTS` table, because it shares no control with the two
+ * hole-cutters.
+ *
+ * The slot has THREE ORIGINS, not three ways to do one thing: a file dropped on the
+ * History workspace, MpiMediaPicker on an empty-slot click (project media plus the
+ * filesystem), and right-click Paste off the Send to Composite buffer.
+ *
+ * The gizmo is the SHAPE gizmo with a third destination (`setShapeMode('place')`), so
+ * Shift's aspect lock and Alt-rotate are inherited rather than reimplemented. Remove
+ * Background is a TOGGLE, run on the slot image with `deferCommit` so the cut-out is
+ * never committed to the project; toggling it off restores the original pixels from
+ * memory with no second dispatch.
+ *
+ * Requires viewer.el: enterMode('composite'), exitMode(), setCompositeEnabled(),
+ *   setShapeMode(), clearShape(), resetShape(), setPlaceImage(), hasPlaceImage(),
+ *   applyPlace()
+ * Instance methods (on instance.el): setSlotImage(v) — a drop while the tool is ALREADY
+ *   open does not remount the panel, so this is how the second drop lands.
+ * No 'apply' emitted — Apply calls the viewer directly, exactly as the Paint tool's does.
+ */
+
+/**
  * @typedef {Object} MpiMediaSlotProps (Compound — js/components/Compounds/MpiMediaSlot)
  * @property {string} label - shown when empty, e.g. 'Image underneath'
  * @property {string} [empty] - hint under the label; defaults to the paste hint
  * @property {()=>boolean} canPaste - is there something on the copy buffer
  * @property {()=>{url: string, name?: string}|null} readPaste - take it off the buffer
+ * @property {Function} [onEmptyClick] - clicking the EMPTY slot calls this INSTEAD of the
+ *   shortcut paste (MPI-454). Place passes it to open MpiMediaPicker; omit it and the
+ *   shortcut is unchanged, which is what the two hole-cutting front ends want.
  *
  * A one-media drop point (MPI-373) — the Composite group's slot. Right-click opens
  * Paste / Clear (rows are conditional, never greyed); a left click on an empty slot

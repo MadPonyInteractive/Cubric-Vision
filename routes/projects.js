@@ -2408,17 +2408,26 @@ router.post('/project/composite-media', async (req, res) => {
  *   paintDataUrl    {string} — data:image/png;base64,... RGBA layer
  *   opacity         {number} — optional 0..1, defaults to 1; the canvas sends the
  *                              slider so the bake matches what was on screen
+ *   operation       {string} — optional, defaults to 'paint'. Names the sidecar's
+ *                              operation AND the filename prefix. MPI-454's Place tool
+ *                              sends 'composite': it is the same flatten, but filing a
+ *                              stamped image as `paint_007` would be false provenance,
+ *                              and provenance is what the .meta sidecar is FOR.
  *
  * Response:
  *   { success, itemId, filename, filePath, displayName, pixelDimensions, thumbPath }
  */
 router.post('/project/apply-paint', async (req, res) => {
     try {
-        const { folderPath, itemId, sourceFilePath, paintDataUrl, opacity } = req.body;
+        const { folderPath, itemId, sourceFilePath, paintDataUrl, opacity, operation } = req.body;
 
         if (!folderPath)     return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!sourceFilePath) return res.status(400).json({ success: false, error: 'sourceFilePath required' });
         if (!paintDataUrl)   return res.status(400).json({ success: false, error: 'paintDataUrl required' });
+
+        // Allowlisted, not taken as given: it becomes a FILENAME prefix, so a free-form
+        // string from the client would be a path-traversal seam on a route that has none.
+        const op = ['paint', 'composite'].includes(operation) ? operation : 'paint';
 
         const id = itemId || uuidv4();
         const baseAbs = decodeProjectFilePath(sourceFilePath) || sourceFilePath;
@@ -2432,7 +2441,7 @@ router.post('/project/apply-paint', async (req, res) => {
         await fs.ensureDir(metaDir);
 
         const ext = path.extname(baseAbs).slice(1).toLowerCase() || 'png';
-        const filename = await nextSequence(folderPath, mediaDir, 'paint', ext);
+        const filename = await nextSequence(folderPath, mediaDir, op, ext);
         const filePath = path.join(mediaDir, filename);
 
         const overlayBuffer = Buffer.from(String(paintDataUrl).replace(/^data:[^;]+;base64,/, ''), 'base64');
@@ -2448,7 +2457,7 @@ router.post('/project/apply-paint', async (req, res) => {
             id,
             type: 'image',
             filePath: projectFileUrlBusted(filePath),
-            operation: 'paint',
+            operation: op,
             displayName: filename.replace(/\.[^.]+$/, ''),
             prompt: '',
             negativePrompt: '',
@@ -2457,7 +2466,7 @@ router.post('/project/apply-paint', async (req, res) => {
             createdAt: new Date().toISOString(),
             name: null,
             uploaded: false,
-            flowId: null,   // Flow provenance parity (MPI-256) — paint is never a Flow gen
+            flowId: null,   // Flow provenance parity (MPI-256) — neither flatten is a Flow gen
             flowInputs: null,
             pixelDimensions: { w: width, h: height },
             generationMs: null,

@@ -18,13 +18,27 @@ const RAIL = read('js/components/Compounds/MpiHistoryTools/MpiHistoryTools.js');
 const BLOCK = read('js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js');
 
 /**
- * The COMPOSITE family (MPI-373) is named `maskComp` / `paintComp`, so it matches
- * both prefix scrapes below and has to be subtracted from them — it belongs to
- * `_COMPOSITE_TOOLS`, not to `_MASK_TOOLS` or `_PAINT_TOOLS`. Listed explicitly
- * rather than pattern-matched: if a fourth family ever collides the same way, the
- * mask/paint guards must go red and make someone decide, not quietly skip it.
+ * The COMPOSITE family, SCRAPED FROM THE RAIL rather than hardcoded (MPI-454).
+ *
+ * It used to be the literal `['maskComp', 'paintComp']`, and that left a hole exactly
+ * where this file is supposed to be strongest. The list existed only to be SUBTRACTED
+ * from the mask/paint prefix scrapes below, so it caught a composite tool only while its
+ * name happened to start with `mask` or `paint`. `placeComp` collides with neither — so
+ * every guard in this file would have stayed green whether or not it was registered at
+ * all, which is precisely the silent-failure class the suite exists to catch.
+ *
+ * Reading the rail's own Composite group instead means the family is whatever the rail
+ * offers, and a fourth front end is guarded the day someone adds the button.
  */
-const COMPOSITE_MODES = ['maskComp', 'paintComp'];
+const COMPOSITE_MODES = (() => {
+    const group = RAIL.match(/mode:\s*'composite',[\s\S]*?group:\s*\[([\s\S]*?)\n {8}\]/);
+    assert.ok(group, 'the rail has no Composite group — MPI-373/MPI-424 taxonomy is gone?');
+    const modes = [...group[1].matchAll(/mode:\s*'([A-Za-z]+)'/g)].map(m => m[1]);
+    assert.ok(modes.length >= 3,
+        `the Composite group offers ${modes.length} tool(s) (${modes.join(', ')}) — expected at `
+        + 'least the three front ends: two hole-cutters and Place');
+    return modes;
+})();
 
 /** Every `mode: 'maskXxx'` the image rail offers. Since MPI-425 some of these are
  *  nested inside a collapse entry's `sub: []` rather than sitting directly in the
@@ -439,6 +453,98 @@ test('discardPreview drops the whole composite preview', () => {
         'reset() keeps the underlay — the next tool would still be showing the slot image');
 });
 
+// MPI-454. Place is the third front end and the one that inverts the stack: the slot
+// image goes ON TOP and its own alpha is the cut. It borrows the SHAPE gizmo for geometry
+// and the COMPOSITE manager for pixels, and each of those seams fails silently on its own —
+// a gizmo whose destination falls through commits a rectangle into the mask, and a preview
+// the manager's reset() forgets is drawn over the next tool's entry.
+test('Place borrows the gizmo without being able to commit into a layer', () => {
+    const canvas = read('js/components/Primitives/MpiCanvas/MpiCanvas.js');
+    const commit = canvas.match(/ {4}commitShape\(op\) \{[\s\S]*?\n {4}\}/);
+    assert.ok(commit, 'MpiCanvas.commitShape not found');
+    assert.match(commit[0], /dest === 'place'/,
+        'commitShape has no branch for the place destination, so it falls through to the '
+        + 'mask — a placement would silently rasterise its rectangle into the entry\'s mask');
+
+    const shape = read('js/components/Primitives/MpiCanvas/managers/ShapeManager.js');
+    const setMode = shape.match(/ {4}setMode\(dest\) \{[\s\S]*?\n {4}\}/);
+    assert.ok(setMode, 'ShapeManager.setMode not found');
+    assert.match(setMode[0], /this\.kind = 'rect'/,
+        '`kind` is shared with the shape tools, so arming Place after an ellipse would draw '
+        + 'an ellipse outline round a rectangular image — setMode must force rect');
+});
+
+// THE BUG THIS TOOL SHIPPED WITH, caught on the live app 2026-08-21 and the exact shape of
+// the cut bug above: Apply RELOADS the entry it just created, `loadImage` -> `shape.init()`
+// clears the gizmo, and Place went dead on its own primary action — image still in the slot,
+// Apply still enabled, nothing on the canvas to apply. The re-seed also gives Place the shape
+// tools' rule that the gizmo survives its commit.
+test('the place gizmo survives the reload its own Apply triggers', () => {
+    const canvas = read('js/components/Primitives/MpiCanvas/MpiCanvas.js');
+    const load = canvas.match(/this\.comp\.init\([\s\S]{0,2000}?await this\.resetView\(\)/);
+    assert.ok(load, 'the comp.init() call in loadImage was not found');
+    assert.match(load[0], /shapeMode === 'place'[\s\S]*?this\.shape\.seed\(/,
+        'loadImage does not re-seed the place gizmo, so Apply leaves the tool enabled over '
+        + 'a canvas with nothing on it — the next press warns instead of placing');
+});
+
+test('a placement is dropped by the same preview seam the cut is', () => {
+    const reset = read('js/components/Primitives/MpiCanvas/managers/CompositeManager.js')
+        .match(/ {4}reset\(\) \{[\s\S]*?\n {4}\}/);
+    assert.ok(reset, 'CompositeManager.reset not found');
+    assert.match(reset[0], /this\.placeImage = null/,
+        'reset() keeps the placed image — it would stay drawn over the next tool\'s entry, '
+        + 'which is exactly what the preview contract forbids');
+});
+
+test('every Place method the panel calls is allowlisted on MpiCanvas', () => {
+    const methods = read('js/components/Primitives/MpiCanvas/MpiCanvas.js').match(/const _methods = \[([\s\S]*?)\n {8}\];/);
+    assert.ok(methods, '_methods allowlist not found in MpiCanvas');
+    for (const name of ['setPlaceImage', 'hasPlaceImage', 'getPlaceURL']) {
+        assert.match(methods[1], new RegExp(`'${name}'`),
+            `${name} is missing from the _methods allowlist — el.${name} would be undefined and swallowed`);
+    }
+});
+
+// The cut-out must not become a gallery card or a history entry — that pollution is the
+// whole reason MPI-377's original design was rejected. `deferCommit` is honoured ONLY in
+// the gallery branch, which is selected by the ABSENCE of `existingGroup`; passing one
+// would commit the cut-out with no error anywhere.
+test('Place removes a background without committing anything', () => {
+    const run = BLOCK.match(/function _cutOutSlotImage\([\s\S]*?\n {8}\}/);
+    assert.ok(run, '_cutOutSlotImage not found in MpiGroupHistoryBlock');
+    // Comments stripped first: this function EXPLAINS why it passes no `existingGroup`, so
+    // a naive scan of the body finds the word in the prose that warns against it.
+    const code = run[0].replace(/\/\/[^\n]*/g, '');
+    assert.match(code, /deferCommit:\s*true/,
+        'the slot cut-out is dispatched without deferCommit — it would land as a real '
+        + 'gallery card for an image the user only wanted in a tool slot');
+    assert.ok(!/existingGroup/.test(code),
+        'passing existingGroup selects the groupHistory branch, where deferCommit is never '
+        + 'read — the cut-out would be appended to the group as a history entry');
+
+    const gen = read('js/services/generationService.js');
+    assert.match(gen, /if \(!opts\.deferCommit\) \{/,
+        'generationService no longer honours deferCommit — Place\'s Remove Background '
+        + 'toggle is built on it (MPI-306 HOLD-UNTIL-APPLY)');
+});
+
+// The drop is the load-bearing half of MPI-377. An IMAGE drop fills the tool slot; a VIDEO
+// drop keeps the chip path, because that is how a start/end frame unlocks the frame-driven
+// i2v ops when no media is staged. Collapsing the two is how the video half gets broken
+// while fixing the image one.
+test('an image drop fills the Place slot and a video drop still stages a chip', () => {
+    const drop = BLOCK.match(/const _dropOverlay = MpiMediaDropOverlay\.mount\([\s\S]*?\n {8}\}\);/);
+    assert.ok(drop, 'the drop overlay mount was not found in MpiGroupHistoryBlock');
+    assert.match(drop[0], /_fillPlaceSlotFromFile\(/,
+        'a dropped image no longer reaches the Place slot — MPI-377\'s bug is back');
+    assert.match(drop[0], /injectMedia/,
+        'the video chip path was stripped out of the drop handler — a start/end-frame drop '
+        + 'is how the frame-driven i2v ops are unlocked with no media staged');
+    assert.match(drop[0], /if \(!isVideo\)/,
+        'the two drop destinations are not split on group type, so one of them is wrong');
+});
+
 // The composite mask never round-trips as base64 and the route it feeds does NOT
 // fill holes any more (MPI-437). A `fillHoles: true` creeping in here would turn an
 // edge-band cut into a solid disc — the exact defect that card removed.
@@ -464,7 +570,10 @@ test('every path that empties the composite cut announces it', () => {
     // `\r?\n` — the working tree is CRLF and a bare `\n` anchor matches nothing,
     // which reads as "the method was renamed" rather than as a line-ending bug. It
     // cost a red test here once already (see _viewerModeFor above).
-    const load = canvas.match(/this\.comp\.init\([\s\S]{0,1200}?await this\.resetView\(\)/);
+    // The window is a proximity bound, not a size limit: the announce has to sit in the
+    // same block as `comp.init`, not somewhere else in loadImage. Widened from 1200 for
+    // MPI-454, which added the place-gizmo re-seed to that block (measured span 1532).
+    const load = canvas.match(/this\.comp\.init\([\s\S]{0,2000}?await this\.resetView\(\)/);
     assert.ok(load, 'the comp.init() call in loadImage was not found');
     assert.match(load[0], /this\._onCompositeChange\?\.\(\)/,
         'loadImage clears the cut without announcing it — Apply would stay enabled over an '

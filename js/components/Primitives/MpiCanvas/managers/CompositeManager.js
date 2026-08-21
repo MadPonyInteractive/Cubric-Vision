@@ -21,6 +21,14 @@
  * The dab geometry is `brushDab.js`, same as the mask and paint brushes — MPI-424's
  * thesis is that a new destination never means a new engine.
  *
+ * PLACE IS THE THIRD FRONT END, AND IT INVERTS THE STACK (MPI-454). The two above put
+ * the slot image UNDERNEATH and cut a hole through the entry; Place puts it ON TOP at a
+ * size and angle the user drags, and its own alpha is the cut — no hole, no mask, nothing
+ * to brush. It carries no brush and no scratch layer (see `drawPlaced`), so all it adds
+ * here is one image reference and the two methods that draw and rasterise it. It lives in
+ * this file rather than a manager of its own because `reset()` is the preview contract's
+ * ONE seam and a placement has to be dropped through it.
+ *
  * UNDO: the shared `UndoStack`, injected by MpiCanvas, exactly as the other two
  * layers do it. `docs/masking-undo.md`'s enumerated mutation set is load-bearing —
  * an unlisted mutation is a silent hole in Ctrl+Z.
@@ -36,6 +44,22 @@ import { stampDab, strokeDabs } from './brushDab.js';
  */
 const COMP_MAX_EDGE = 1536;
 
+/**
+ * Place's rasterise cap (MPI-454). NOT the working size of a layer — there is no place
+ * layer. Nothing is rasterised until Apply, and then straight at the BASE entry's own
+ * pixel size, so a 2048 entry costs a 2048 canvas and loses nothing. This is only the
+ * ceiling above which that stops being free.
+ *
+ * Higher than the paint layer's 4096 on purpose, and affordable for the same reason a
+ * paint layer is: the plane is mostly transparent, and PNG collapses transparent runs to
+ * near nothing, so the data URL that crosses the wire is small even at this size. Above
+ * it the object is resampled up by `compositeOverlay`'s `fit: 'fill'`; the upgrade path
+ * if a user ever hits that is to send the placement RECT and let Sharp `composite` the
+ * source at its own resolution with `left`/`top`, which needs a route change this card
+ * deliberately does not make.
+ */
+const PLACE_MAX_EDGE = 8192;
+
 /** White, because the server reads the mask by LUMINANCE (white = take the overlay). */
 // eslint-disable-next-line mpi/no-hardcoded-hex-color -- mask luminance value, not a themeable color
 const HOLE_FILL = '#ffffff';
@@ -50,6 +74,20 @@ export class CompositeManager {
 
         /** @type {HTMLImageElement|null} image 2 — what the hole reveals. */
         this.underlay = null;
+
+        /**
+         * @type {HTMLImageElement|null} PLACE (MPI-454) — the INVERTED stack. The hole
+         * front ends put the slot image UNDERNEATH and cut through the entry; Place puts
+         * it ON TOP, at its own size, at a position the user drags, and its own alpha is
+         * the cut. Same subsystem, same slot, same Apply-makes-one-entry contract.
+         *
+         * It lives here rather than in a manager of its own for the reason that matters
+         * most in this file: `reset()` is already the preview contract's ONE seam, so a
+         * placement is dropped by leaving the tool with no new wiring at all. The two are
+         * mutually exclusive by construction — Place never fills `underlay`, so `isActive`
+         * stays false and the reveal branch never runs for it.
+         */
+        this.placeImage = null;
 
         this.isCompositeMode = false;
         this.isDrawing = false;
@@ -82,6 +120,11 @@ export class CompositeManager {
      */
     get isActive() {
         return this.isCompositeMode && !!this.underlay && !!this.holeCanvas.width;
+    }
+
+    /** True when Place has something to draw. The gizmo's geometry is the caller's. */
+    get isPlacing() {
+        return this.isCompositeMode && !!this.placeImage?.width;
     }
 
     /**
@@ -169,6 +212,75 @@ export class CompositeManager {
     }
 
     /**
+     * Point PLACE at the image to stamp (MPI-454). Same `img.onload` discipline as
+     * `setUnderlay` above and for the same reason — one race, in the manager that owns
+     * the pixels.
+     * @param {string|null} url
+     * @returns {Promise<boolean>} false when the image could not be loaded
+     */
+    setPlaceImage(url) {
+        return new Promise((resolve) => {
+            if (!url) { this.placeImage = null; resolve(false); return; }
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => { this.placeImage = img; resolve(true); };
+            img.onerror = () => { this.placeImage = null; resolve(false); };
+            img.src = url;
+        });
+    }
+
+    /**
+     * Draw the placed image inside the gizmo's rotated rectangle.
+     *
+     * NO SCRATCH LAYER, and that is the whole shortcut (MPI-454). A hole is scratch pixels
+     * because a brush builds it up stroke by stroke; a placement is four numbers and an
+     * image, so it can be re-drawn from scratch every frame for the cost of one
+     * `drawImage`. That is also why Place has no `PAINT_MAX_EDGE`-shaped working cap —
+     * there is no working layer to cap.
+     *
+     * The image keeps its OWN alpha: a background-removed PNG shows the entry through its
+     * transparent pixels with no mask involved, which is what makes this the inverted
+     * stack rather than another hole-cutter.
+     *
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {import('./ShapeManager.js').ShapeManager} shape geometry in IMAGE px
+     * @param {number} scale destination px per image px — the overlay canvas is clamped to
+     *   the GPU's max texture size, so this is not always 1
+     */
+    drawPlaced(ctx, shape, scale = 1) {
+        const img = this.placeImage;
+        if (!img?.width || !shape?.hasShape) return;
+        ctx.save();
+        ctx.translate(shape.cx * scale, shape.cy * scale);
+        ctx.rotate(shape.rot);
+        ctx.drawImage(img,
+            -shape.halfW * scale, -shape.halfH * scale,
+            shape.halfW * 2 * scale, shape.halfH * 2 * scale);
+        ctx.restore();
+    }
+
+    /**
+     * The placement as a full-frame RGBA PNG at the BASE entry's own resolution — exactly
+     * the shape `POST /project/apply-paint` already takes, which is why Place needs no
+     * server route of its own.
+     *
+     * @param {import('./ShapeManager.js').ShapeManager} shape
+     * @param {number} width  base entry px
+     * @param {number} height
+     * @returns {string|null} null when there is nothing placed
+     */
+    rasterisePlace(shape, width, height) {
+        if (!this.placeImage?.width || !shape?.hasShape) return null;
+        if (!width || !height) return null;
+        const s = Math.min(1, PLACE_MAX_EDGE / Math.max(width, height));
+        const out = document.createElement('canvas');
+        out.width = Math.max(1, Math.round(width * s));
+        out.height = Math.max(1, Math.round(height * s));
+        this.drawPlaced(out.getContext('2d'), shape, s);
+        return out.toDataURL('image/png');
+    }
+
+    /**
      * Fill the hole from a mask PNG (Mask Comp reads the entry's own mask). A LOAD
      * of a decision the user already made elsewhere, so it records no undo entry —
      * the same reasoning as `PaintManager.setFromDataURL`.
@@ -244,8 +356,12 @@ export class CompositeManager {
      * @returns {boolean} true when there was a preview to drop
      */
     reset() {
-        const had = !!this.underlay || !this.isEmpty();
+        const had = !!this.underlay || !!this.placeImage || !this.isEmpty();
         this.underlay = null;
+        // MPI-454: a placement is the same kind of uncommitted preview as a cut, so it goes
+        // through the same seam. Missing it here would leave the stamped image drawn over
+        // the next tool's entry — the exact class of bug the preview contract exists for.
+        this.placeImage = null;
         this.followMask = false;
         this.clear(false);
         return had;
@@ -288,6 +404,7 @@ export class CompositeManager {
     destroy() {
         this.undo = null;
         this.underlay = null;
+        this.placeImage = null;
         this._strokeBox = null;
     }
 }

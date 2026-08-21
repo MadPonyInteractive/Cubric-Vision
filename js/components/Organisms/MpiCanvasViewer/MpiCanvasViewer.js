@@ -20,11 +20,13 @@
  *   el.clearMaskPoints() / el.getMaskPointCount()
  *   el.bakeAutoPicks('manual'|'subtract') — Add / Subtract the detected mask
  *   el.applyPaint()                   — flatten the paint layer into a new entry
+ *   el.applyPlace()                   — flatten the PLACED image into a new entry (MPI-454)
  *
  * Emits:
  *   'mode-changed'    { mode }        — tool mode changed (from any source)
  *   'crop-applied'    { item }        — crop completed; item is the new HistoryItem
  *   'paint-applied'   { item }        — paint flattened; item is the new HistoryItem
+ *   'place-applied'   { item }        — a placement flattened; item is the new HistoryItem
  *   'mask-ready'      { hasMask }     — mask painted or cleared
  *   'entry-loaded'    { idx, hasMask } — image loaded for index
  *   'compare-clicked'               — user clicked the Compare overlay button
@@ -1426,12 +1428,36 @@ export const MpiCanvasViewer = ComponentFactory.create({
          * server-side, so overlapping dabs in one stroke cannot bake darker than
          * the rest of it.
          */
-        el.applyPaint = async () => {
-            const paintDataUrl = canvas.getPaintURL?.();
-            if (!paintDataUrl) { StatusBar.notify('Nothing painted yet', 'warning'); return; }
+        el.applyPaint = () => _flattenOverlay({
+            dataUrl:   canvas.getPaintURL?.(),
+            opacity:   canvas.getPaintOpacity?.() ?? 1,
+            operation: 'paint',
+            empty:     'Nothing painted yet',
+            busy:      'Applying paint...',
+            done:      'Paint applied!',
+            event:     'paint-applied',
+        });
+
+        /**
+         * Flatten an RGBA overlay onto the current entry as ONE new history entry.
+         *
+         * TWO callers, ONE round trip (MPI-454). Paint's Apply and Place's Apply are the
+         * same operation on the same route — an RGBA plane carrying its own alpha, blended
+         * onto the entry by Sharp — and the only things that differ are where the pixels
+         * came from and what the result is called. Splitting them into two copies would
+         * mean two places to fix the next time the route's contract moves.
+         *
+         * `operation` reaches the SERVER, not just the item: it names the sidecar's
+         * operation and the filename prefix, so a placement is not filed as a paint.
+         *
+         * @param {{dataUrl: string|null, opacity?: number, operation: string, empty: string,
+         *          busy: string, done: string, event: string}} o
+         */
+        async function _flattenOverlay(o) {
+            if (!o.dataUrl) { StatusBar.notify(o.empty, 'warning'); return; }
             if (!_currentItem?.filePath || !state.currentProject?.folderPath) return;
 
-            StatusBar.progress.start('Applying paint...');
+            StatusBar.progress.start(o.busy);
             try {
                 const res = await fetch('/project/apply-paint', {
                     method: 'POST',
@@ -1440,8 +1466,9 @@ export const MpiCanvasViewer = ComponentFactory.create({
                         folderPath:     state.currentProject.folderPath,
                         itemId:         crypto.randomUUID(),
                         sourceFilePath: _resolveUrl(_currentItem.filePath),
-                        paintDataUrl,
-                        opacity:        canvas.getPaintOpacity?.() ?? 1,
+                        paintDataUrl:   o.dataUrl,
+                        opacity:        o.opacity ?? 1,
+                        operation:      o.operation,
                     }),
                 });
                 const data = await res.json().catch(() => null);
@@ -1450,19 +1477,19 @@ export const MpiCanvasViewer = ComponentFactory.create({
                 const newItem = createImageItem({
                     id:              data.itemId,
                     filePath:        `/project-file?path=${encodeURIComponent(data.filePath)}`,
-                    operation:       'paint',
+                    operation:       o.operation,
                     displayName:     data.displayName || data.filename.replace(/\.[^.]+$/, ''),
                     pixelDimensions: data.pixelDimensions || { w: 0, h: 0 },
                     ...(data.thumbPath ? { thumbPath: data.thumbPath } : {}),
                 });
 
-                emit('paint-applied', { item: newItem });
-                StatusBar.progress.complete('Paint applied!');
+                emit(o.event, { item: newItem });
+                StatusBar.progress.complete(o.done);
             } catch (err) {
-                clientLogger.warn('MpiCanvasViewer', `apply paint failed: ${err?.message || err}`);
+                clientLogger.warn('MpiCanvasViewer', `apply ${o.operation} failed: ${err?.message || err}`);
                 StatusBar.progress.cancel();
             }
-        };
+        }
 
         /**
          * Commit the manual mask: exits mask mode, emits 'mask-ready' if paint
@@ -1699,6 +1726,41 @@ export const MpiCanvasViewer = ComponentFactory.create({
         el.clearComposite            = () => !!canvas.clearComposite?.();
         /** Claim "the cut changed" — ONE slot, cleared by the panel's destroy(). */
         el.setOnCompositeChange      = (fn) => canvas.setOnCompositeChange?.(fn);
+
+        // ── Place (MPI-454) ──────────────────────────────────────────────────
+        // The third composite front end, and the one that inverts the stack: the slot
+        // image goes ON TOP at a size and angle the gizmo decides, and its own alpha is
+        // the cut. It needs no discardPreview branch of its own — `resetComposite()` and
+        // `clearShape()` are already on that seam, and Place is made of exactly those two.
+
+        /**
+         * Point Place at the image to stamp.
+         * @param {string|null} url
+         * @param {{reseed?: boolean}} [opts] `reseed: false` keeps the placement the user
+         *   has already dragged — what the Remove Background toggle needs.
+         * @returns {Promise<boolean>} false when the image could not be loaded
+         */
+        el.setPlaceImage = (url, opts) => canvas.setPlaceImage?.(url, opts) ?? Promise.resolve(false);
+        el.hasPlaceImage = () => !!canvas.hasPlaceImage?.();
+
+        /**
+         * Flatten the placement onto the current entry as ONE new history entry. The SAME
+         * route paint's Apply uses — the placed image is rasterised into a full-frame RGBA
+         * plane at the entry's own resolution, so the transform never crosses the wire and
+         * the server needs no knowledge of it at all.
+         */
+        el.applyPlace = () => _flattenOverlay({
+            dataUrl:   canvas.getPlaceURL?.(),
+            // Always 1: a placement is a hard stamp. The opacity slider belongs to the
+            // paint layer, and the composite group has never offered one — a display alpha
+            // would make the preview disagree with the file Sharp writes.
+            opacity:   1,
+            operation: 'composite',
+            empty:     'Nothing placed yet',
+            busy:      'Placing image...',
+            done:      'Image placed!',
+            event:     'place-applied',
+        });
 
         /**
          * THE PREVIEW CONTRACT (MPI-382) — the ONE seam every canvas tool drops its

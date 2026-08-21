@@ -415,6 +415,17 @@ class _CanvasCore {
             // over a hole that no longer exists, so the next press returns silently
             // with no error anywhere. Every path that empties the cut must say so.
             this._onCompositeChange?.();
+            // MPI-454: `shape.init()` above cleared the gizmo because a new image is a new
+            // shape — but Place's Apply RELOADS the entry it just created, so the tool
+            // would go dead on its own primary action: the image still in the slot, Apply
+            // still enabled, and nothing on the canvas to apply. Measured 2026-08-21, and
+            // it is the same shape as the cut bug two lines up. Re-seed instead, which
+            // also gives Place the shape tools' rule — the gizmo SURVIVES its commit, so
+            // stamping an object twice is two drags rather than two trips to the slot.
+            if (this.shape.shapeMode === 'place' && this.comp.placeImage?.width) {
+                const img = this.comp.placeImage;
+                this.shape.seed(img.width / img.height);
+            }
             // mask.init() already cleared the shared stack; paint.init() must NOT
             // clear it again or it would wipe history the mask just re-established.
             // Both are loads, and a load is never an undoable edit.
@@ -849,6 +860,17 @@ class _CanvasCore {
             ctx.restore();
         }
 
+        // 0b. Place (MPI-454) — the INVERTED stack, so it draws ON TOP of the entry
+        // rather than being clipped into it. Mutually exclusive with the branch above by
+        // construction: Place never fills `underlay`, so `isActive` is false whenever this
+        // one runs. Drawn here on the image-sized overlay rather than on the screen canvas
+        // with the gizmo, so the placed pixels sit UNDER the handles and under the mask,
+        // which is the stacking the user is judging. `this.img.width` rather than `W`
+        // because the overlay is clamped to the GPU's max texture size on a large entry.
+        if (this.comp.isPlacing && this.shape.shapeMode === 'place') {
+            this.comp.drawPlaced(ctx, this.shape, W / (this.img.width || W));
+        }
+
         // 1. Comparison clip layer (image-px math; overlay ctx un-transformed)
         if (this.comparison.isComparisonMode && this.comparison.afterWidth) {
             this._drawComparisonLayer();
@@ -1276,11 +1298,48 @@ class _CanvasCore {
         return did;
     }
 
-    /** Drop the WHOLE preview — cut and underlay. The preview contract's entry point. */
+    /** Drop the WHOLE preview — cut, underlay AND placement. The preview contract's entry point. */
     resetComposite() {
         const had = this.comp.reset();
         if (had) this.draw();
         return had;
+    }
+
+    // ── Place API (MPI-454) ───────────────────────────────────────────────────
+    // The third composite front end. It reuses the SHAPE gizmo for geometry and the
+    // composite manager for pixels, so everything here is two lines of glue between
+    // things that already existed. Every name MUST also be in `_methods`.
+
+    /**
+     * Point Place at the image to stamp, and open the gizmo at its proportions.
+     *
+     * @param {string|null} url
+     * @param {{reseed?: boolean}} [opts] `reseed: false` keeps the placement the user has
+     *   already dragged. The Remove Background toggle needs that — it swaps the PIXELS of
+     *   the same object for a cut-out of identical dimensions, so re-centring there would
+     *   throw away the placement as a side effect of a checkbox.
+     * @returns {Promise<boolean>} false when the image could not be loaded
+     */
+    async setPlaceImage(url, opts = {}) {
+        const ok = await this.comp.setPlaceImage(url);
+        if (ok && opts.reseed !== false) {
+            const img = this.comp.placeImage;
+            this.shape.seed(img.width / img.height);
+        }
+        this.draw();
+        return ok;
+    }
+
+    hasPlaceImage() { return !!this.comp.placeImage; }
+
+    /**
+     * The placement as a full-frame RGBA PNG at the entry's own resolution, ready for
+     * `POST /project/apply-paint`. Null when there is nothing to apply, which is what
+     * gates Apply.
+     * @returns {string|null}
+     */
+    getPlaceURL() {
+        return this.comp.rasterisePlace(this.shape, this.img?.width || 0, this.img?.height || 0);
     }
 
     // ── Shape gizmo API (MPI-368) ─────────────────────────────────────────────
@@ -1315,6 +1374,11 @@ class _CanvasCore {
     commitShape(op) {
         const dest = this.shape.shapeMode;
         if (!dest) return false;
+        // Place (MPI-454) borrows the gizmo but owns no LAYER — its commit is Apply, which
+        // writes a new history entry server-side. Falling through would rasterise the
+        // rectangle into the MASK, silently, which is the one thing the destination split
+        // exists to prevent.
+        if (dest === 'place') return false;
         const buildPath = (scale) => this.shape.buildPath(scale);
 
         if (dest === 'paint') {
@@ -1504,6 +1568,7 @@ export const MpiCanvas = ComponentFactory.create({
             'refreshCompositeHoleFromMask','setCompositeBrushSize','setCompositeBrushType',
             'setCompositeEnabled','hasCompositeUnderlay','hasCompositeHole','getCompositeURL',
             'clearComposite','resetComposite','setOnCompositeChange',
+            'setPlaceImage','hasPlaceImage','getPlaceURL',
             'setProcessedImage','clearProcessedImage'
         ];
         _methods.forEach(name => { el[name] = core[name].bind(core); });

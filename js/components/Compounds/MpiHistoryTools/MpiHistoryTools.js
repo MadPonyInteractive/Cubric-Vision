@@ -131,12 +131,20 @@ const IMAGE_TOOLS = [
         // The THIRD and last group of the MPI-424 taxonomy (MPI-373). Its artifact is
         // a blended IMAGE, so it is a group rather than another Mask button, and it is
         // the only group that drops the PromptBox — it ends at its own Apply and needs
-        // the column for its slots. Two buttons, ONE panel: same operation, two ways
-        // of supplying the cut. NOT a collapse: they are different jobs, not the same
-        // job with different engines, which is the rule Detect is on the other side of.
+        // the column for its slots. THREE buttons, TWO panels: the first two are one
+        // operation with two ways of supplying the cut. NOT a collapse: they are different
+        // jobs, not the same job with different engines, which is the rule Detect is on
+        // the other side of.
         group: [
             { mode: 'paintComp', icon: 'brush',  info: 'Paint Comp' },
             { mode: 'maskComp',  icon: 'layers', info: 'Mask Comp' },
+            // Place (MPI-454) inverts the stack the other two share: the slot image goes
+            // ON TOP at a size and angle a gizmo decides, and its own alpha is the cut —
+            // no hole, no mask, nothing to brush. Same group because the artifact is the
+            // same (a blended image), its own panel because nothing about the controls
+            // overlaps. LAST, in the order the work happens: place the object, then cut
+            // and blend.
+            { mode: 'placeComp', icon: 'place_stroke', info: 'Place' },
         ],
     },
 ];

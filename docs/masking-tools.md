@@ -84,12 +84,12 @@ destination never means a new engine. Order + cards: `tasks/MPI-424/brief.md`.
 |---|---|---|---|---|
 | `Mask` | binary mask layers | brush · detect · adjust · shapes | brush, gizmo | keeps it |
 | `Paint` | RGBA paint layer — **[painting.md](painting.md)** | brush · shapes · adjust | the SAME two, plus the distance field | keeps it |
-| `Composite` — **[composite.md](composite.md)** | blended image | mask comp · paint comp | one op, two front ends | **no** |
+| `Composite` — **[composite.md](composite.md)** | blended image | mask comp · paint comp · **place** | two hole-cutters sharing one op, plus the gizmo | **no** |
 
 `Paint` keeps the box because paint → mask → detail is one operation; `Composite` ends at its own
 Apply and needs the column for its slots. **All three engines are shared for real** — MPI-375's
-brush mounts in all three groups, MPI-368's gizmo in two, and MPI-436 gave the distance field its
-second destination with ONE panel under both `maskAdjust` and `paintAdjust`. Each family has its OWN set:
+brush mounts in all three groups, MPI-368's gizmo in **three** since Place ([composite-place.md](composite-place.md)),
+and MPI-436 gave the distance field a second destination with ONE panel under both `maskAdjust` and `paintAdjust`. Each family has its OWN set:
 `_MASK_TOOLS`, `_PAINT_TOOLS`, `_COMPOSITE_TOOLS`, all three folded into `_isCanvasTool` for
 teardown and the mode bridge. **`_modeKeepsPromptBox` is the one that must NOT delegate to
 `_isCanvasTool`** — that shortcut would hand the box back to Composite, the single group whose

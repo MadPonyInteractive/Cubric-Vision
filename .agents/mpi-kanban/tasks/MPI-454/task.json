@@ -1,30 +1,40 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-454",
-  "title": "Composite Place - a transform gizmo that scales and positions an image ON TOP of the current entry",
-  "column": "todo",
-  "maturity": "blocked",
+  "title": "Place - a composite tool that stamps an image onto the current entry",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-05T07:20:00Z",
-  "updated_at": "2026-08-14T00:27:00Z",
+  "updated_at": "2026-08-21T13:03:08Z",
   "labels": [
     "feature",
     "canvas",
     "composite",
     "gizmo"
   ],
-  "description": "UMBRELLA: MPI-562 - Dropping media onto History: the half-built handler and Composite Place (consolidation sweep 2026-08-14). Members and phase order: tasks/MPI-562/plan.md.\n\nBLOCKED BY MPI-377. Third composite front end: the slot image sits ON TOP of the selected entry, moved / scaled / rotated by a gizmo with handles like the shape gizmo, then flattened into a new history entry. Cut-out object from another generation or a photo, dropped onto an existing image, then detailed to blend.",
+  "description": "Third composite front end, redesigned with the user 2026-08-21 (brainstorm on MPI-562). placeComp sits in the Composite toolbar group. Its panel is one MpiMediaSlot, a Remove Background toggle and Apply. The slot fills three ways: dropping an image file on the History workspace (which also auto-selects the tool - this is the MPI-377 bug, absorbed), clicking the empty slot to open MpiMediaPicker, or right-click Paste off the existing _compositeImage buffer. A gizmo moves/scales/rotates the placed image over the selected entry; Apply flattens it into ONE new history entry. Video mode keeps its chip behaviour untouched. Full design: brief.md. ABSORBS MPI-377; umbrella MPI-562 closed as no longer needed.",
   "acceptance": [
-    "A third composite tool (placeComp) sits in the Composite toolbar group and opens with the slot image drawn on top of the selected entry, scaled to fit and centred",
-    "A gizmo with the shape gizmo's handle set moves, scales and rotates the placed image; SHIFT locks its aspect ratio and ALT scales about the centre, same as MpiToolOptionsShapes",
+    "A third composite tool placeComp sits in the Composite toolbar group beside mask comp and paint comp, and is registered in _COMPOSITE_TOOLS so teardown, the PromptBox gate and _viewerModeFor() all cover it",
+    "The panel is exactly three things: one MpiMediaSlot labelled \"Image to place\", a Remove Background toggle, and Apply. No Cancel - MpiToolOptionsComposite has none, and a rail switch already discards the preview",
+    "The slot fills from three gestures: a file dropped on the History workspace, a click on the empty slot opening MpiMediaPicker (project media plus its upload card), and right-click Paste off the _compositeImage buffer Send to Composite already seeds",
+    "Dropping an image on the History workspace in IMAGE mode selects placeComp and fills its slot - it no longer only stages a PromptBox chip (the MPI-377 bug)",
+    "Video mode is untouched: while the video prompt tool is active a drop still becomes a chip, and start/end-frame drops still unlock the frame-driven i2v ops",
+    "A multi-file drop fills the slot from the first file and raises a toast naming the rest as ignored - no file is ever dropped silently",
+    "Remove Background runs the existing removeBackground universal op (BiRefNet, an engineAsset) on the slot image, and is reversible: toggling it off restores the original slot pixels with no second dispatch",
+    "A gizmo with the shape gizmo's handle set moves, scales and rotates the placed image over the selected entry; SHIFT locks aspect ratio and ALT scales about the centre, same as MpiToolOptionsShapes",
     "The placed image keeps its own alpha - a background-removed PNG shows the entry through its transparent pixels, with no mask involved",
     "Apply writes ONE new history entry at the base entry's full resolution; both sources are untouched",
-    "Leaving the tool restores the single-entry canvas and writes nothing to disk (the preview contract in docs/masking-tools.md)",
+    "Leaving the tool restores the single-entry canvas and writes nothing to disk (the preview contract) - discardPreview is EXTENDED, never the call site",
     "Undo / redo covers a placement the same way a shape commit is covered",
-    "The tool is dead-gated, not silent: no slot image = the Apply button renders disabled with a hint, never a click that swallows itself"
+    "Apply is dead-gated, not silent: an empty slot renders Apply disabled with a hint, never a click that swallows itself",
+    "docs/composite.md is updated, in particular its \"a filled slot has one origin, not two\" line - this card widens it deliberately, because a drop and the picker are different ORIGINS rather than a redundant gesture"
   ],
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "plan": "plan.md",
+    "events": "events.jsonl",
+    "checklist": "checklist.md",
+    "validation": "validation.md"
   }
 }

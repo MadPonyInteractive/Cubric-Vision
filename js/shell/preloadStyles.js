@@ -87,6 +87,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Organisms/MpiToolOptionsPaint/MpiToolOptionsPaint.css',
   'js/components/Organisms/MpiToolOptionsShapes/MpiToolOptionsShapes.css',
   'js/components/Organisms/MpiToolOptionsComposite/MpiToolOptionsComposite.css',
+  'js/components/Organisms/MpiToolOptionsPlace/MpiToolOptionsPlace.css',
   'js/components/Compounds/MpiMediaSlot/MpiMediaSlot.css',
   'js/components/Organisms/MpiToolOptionsUpscale/MpiToolOptionsUpscale.css',
   'js/components/Organisms/MpiToolOptionsRemoveBg/MpiToolOptionsRemoveBg.css',

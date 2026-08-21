@@ -64,7 +64,12 @@ const HANDLE_UNITS = {
 
 export class ShapeManager {
     constructor() {
-        /** @type {null|'mask'|'paint'} which destination a commit lands in — null = disarmed */
+        /** @type {null|'mask'|'paint'|'place'} which destination a commit lands in — null = disarmed.
+         *  `place` (MPI-454) is the odd one: it owns no layer and never commits pixels, it only
+         *  says "this rectangle is where the placed image goes". Reusing this manager for it is
+         *  the point — a placed image IS a rotated rectangle with a texture, so the handles, the
+         *  shape-local hit testing, SHIFT's aspect lock and ALT-rotate all come for free, and the
+         *  two gizmos in the app can never drift apart. */
         this.shapeMode = null;
 
         /** @type {'rect'|'triangle'|'ellipse'} */
@@ -107,22 +112,35 @@ export class ShapeManager {
 
     /**
      * Arm or disarm the gizmo.
-     * @param {null|'mask'|'paint'} dest
+     * @param {null|'mask'|'paint'|'place'} dest
      */
     setMode(dest) {
         this.shapeMode = dest || null;
+        // A placed image is always a rectangle, and `kind` is SHARED with the shape tools —
+        // arm Place after drawing an ellipse and the outline round the image would be an
+        // ellipse. Forced here rather than at the call site because every caller would have
+        // to remember; the shape tools re-set their own kind from project settings on mount,
+        // so nothing of theirs is lost.
+        if (this.shapeMode === 'place') this.kind = 'rect';
         if (!this.shapeMode) this.endDrag();
         else if (!this.hasShape) this.seed();
     }
 
-    /** Centre the shape at a third of the image's short edge. */
-    seed() {
+    /**
+     * Centre the shape at a third of the image's short edge.
+     * @param {number} [aspect] width/height the seeded shape should have. 1 (square) for the
+     *   shape tools, whose kind decides its own proportions; Place (MPI-454) passes the placed
+     *   image's own aspect so it opens undistorted, and the area stays the same either way so
+     *   a wide image and a tall one seed at the same visual size.
+     */
+    seed(aspect = 1) {
         if (!this._imgW || !this._imgH) return;
         const half = Math.max(MIN_HALF, Math.min(this._imgW, this._imgH) * SEED_FRACTION);
+        const a = Number.isFinite(aspect) && aspect > 0 ? Math.sqrt(aspect) : 1;
         this.cx = this._imgW / 2;
         this.cy = this._imgH / 2;
-        this.halfW = half;
-        this.halfH = half;
+        this.halfW = Math.max(MIN_HALF, half * a);
+        this.halfH = Math.max(MIN_HALF, half / a);
         this.rot = 0;
         this.hasShape = true;
     }

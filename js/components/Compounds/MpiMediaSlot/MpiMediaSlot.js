@@ -15,6 +15,12 @@
  * @param {string}          [empty]    - hint under the label; defaults to the paste hint
  * @param {() => boolean}   canPaste   - is there something on the buffer to paste
  * @param {() => {url: string, name?: string}|null} readPaste - take it off the buffer
+ * @param {Function}        [onEmptyClick] - clicking the EMPTY slot calls this instead of
+ *        taking the shortcut paste. Place (MPI-454) passes it to open `MpiMediaPicker`,
+ *        which is the single entry point for both project media and the filesystem. Still
+ *        dumb: the slot knows only that the click has an owner, and the panel decides what
+ *        opens. Omit it and the paste shortcut is unchanged, which is what the two
+ *        hole-cutting front ends want — their only origin IS the buffer.
  *
  * Emits:
  *   'change' { url: string|null, name: string|null } — filled or cleared
@@ -91,8 +97,15 @@ export const MpiMediaSlot = ComponentFactory.create({
         // Left-click pastes too when the slot is empty and something is on the
         // buffer. The right-click menu is still the full contract; this is the
         // shortcut for the only thing an empty slot can do.
+        //
+        // `onEmptyClick` OUTRANKS that shortcut when a panel supplies one (MPI-454): a
+        // slot with a picker has more than one thing an empty click could mean, and the
+        // picker is the one that reaches every origin. Paste is still on the right-click
+        // menu, where it always was.
         _offs.push(on(el, 'click', () => {
-            if (_value || !props.canPaste?.()) return;
+            if (_value) return;
+            if (props.onEmptyClick) { props.onEmptyClick(); return; }
+            if (!props.canPaste?.()) return;
             _set(props.readPaste?.() || null);
         }));
 
