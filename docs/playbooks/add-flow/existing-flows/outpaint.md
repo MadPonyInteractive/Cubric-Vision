@@ -45,6 +45,14 @@ model to fill the flat area beats handing it a painted mask (`docs/crop.md`).
 them compares two framings rather than two versions of one picture. The honest before/after
 is the black the step already showed.
 
+## The output is ~1 MP, and that is the OOM guard
+
+`ImageScaleToTotalPixels` normalises the padded image to ~1 MP before it is encoded, so a
+768 × 1344 source with 160px added each side comes back **928 × 1136** — slightly smaller
+than the original in height. **Deliberate** (Fabio, 2026-08-21): a user who drops a 4K plate
+gets a result instead of an OOM. Do not remove it to "preserve resolution"; the answer for a
+big source is an upscale pass afterwards, not an unbounded latent.
+
 ## Copy carries the one real limitation
 
 Small extensions come back seamless; big ones leave the model inventing most of the picture
@@ -73,6 +81,10 @@ Both members qualify on their own merits, not by analogy: each declares `krea2Ed
 `supportedOps` and ships `krea2-lora-identity-edit`, which is the LoRA this graph loads. The
 test asserts both, because a member that gates green and dies inside ComfyUI is the expensive
 version of this mistake.
+
+The NSFW arm has never been run *through this flow*, and does not need to be: Fabio has run
+the lustify weight against this same edit shape and prompt style before. What was new here was
+the pick reaching the graph, and that is verified.
 
 **The `UNETLoader` was UNTITLED as authored.** Node 55 was titled `Input_Base_Model` in the raw
 graph on 2026-08-21 (a one-line diff, then re-synced) with the user's go-ahead — the playbook's

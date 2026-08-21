@@ -101,7 +101,8 @@ deduped rather than writing a second copy.
 | the added strips | filled, seamless | filled, seamless — street and building line continue better on the left |
 
 Output is 928 × 1136 rather than 1088 × 1344 because the graph's `ImageScaleToTotalPixels`
-normalises to ~1 MP. Expected, not a crop.
+normalises to ~1 MP. Expected, not a crop — and DELIBERATE: Fabio put it there so a 4K input
+returns a result instead of an OOM.
 
 Both runs landed real gallery cards. Run 2's completion arrived LATE (the page had been
 reloaded mid-session, `[concat] SSE stream errored (will auto-reconnect)`) and the backstop
@@ -112,7 +113,9 @@ recovered it — app-level, nothing to do with this flow.
 - **Reuse across restart** — the code path is the shared one (`flowInputs` keeps the
   original image + rect, `runMediaItems` is stripped in `flowService`), but no restart test
   has been run.
-- **The NSFW arm has never RUN** — only its resolution is proven (right filename, bypass 0).
+- **The NSFW arm has never RUN through this flow** — only its resolution is proven (right
+  filename, bypass 0). Fabio: the lustify weight has been run against this same edit shape and
+  prompt style before, so this is not a gap worth a GPU pass.
 - **A big extension** — both runs added 21%. The copy's claim that a large one degrades is
   Fabio's, not measured here.
 - **Preview art** — no `preview`/`video` on the FlowDef until `/mpi-flow-graphics` runs.
