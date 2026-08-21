@@ -22,13 +22,25 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       arms. The four v3 guarantees survive; category 4 did NOT land as prose (rear colour 2 of 8),
       a slot template fixed it (**v4.2**, 8 of 8) and is now the shipped recipe; **v4.3 disproved**
       (instruction example leaked, duplicate clauses) → research/enhancer-regression-2026-08-19.md
-- [ ] Residual, Fabio's call: ~2 in 8 v4.2 outputs write `dark brown` in the main clause and
-      `black` at the back. Accept the drift, or move the invariant out of the recipe — NOT more
-      wording (v4.3 is the evidence)
-- [ ] Generate a sheet from a v4.2 enhancer output — the 8-of-8 rear colour is measured in TEXT
-      only; whether it moves the rendered rear panel is still open
-- [ ] Re-run the regression against the built graph once the scrub nodes are in it, to confirm
-      the whole chain end to end rather than the recipe alone
+- [x] **Residual — ACCEPT the drift. Settled on evidence 2026-08-20, no recipe change.** The
+      contradicting phrase was rendered at three seeds and its rear panel is indistinguishable
+      from its own portrait: the two colours the recipe confuses (`dark brown` / `black`) are the
+      two that look the same, so the drift is real in the text and invisible in the image.
+      Caveat kept: every contradiction v4.2 has produced is dark-brown → black in 16 samples; a
+      `red` → `black` one WOULD show and this verdict would not cover it
+- [x] **The rear clause MOVES THE RENDERED PANEL — 3 of 3** (2026-08-20). Fed the enhancer's
+      own v4.2 output (`red hair long and wavy … the red wavy hair hangs loose at the back`) at
+      1k-quality: the rear panel comes back a copper braid at every seed, matching its portrait.
+      The 8-of-8 rear colour measured in TEXT carries through to pixels
+- [x] **Re-run against the BUILT graph — DONE 2026-08-20**, and it found the reason the item
+      mattered: `qwen3vl_4b_prompt_enhancer.json` was carrying the **pre-v4.1 recipe** (3885
+      chars against prompts.md's 4239), missing both v4.x hair edits. Nothing injects the
+      recipe — `_runEnhance` sends only `Input_Seed` — so the BAKED text is what the Enhance
+      button runs, and users were getting v3-era phrasing. Re-synced from prompts.md (raw
+      `796060bf`). The regression then ran through the shipped file, 4 inputs × 2 seeds:
+      **positive-phrasing-only 8 of 8** (the scrub nodes carry it live; the recipe alone has
+      never once managed it), 45-90 words 8 of 8, rear colour 8 of 8, colour AND texture 5 of 8,
+      contradiction 2 of 8 — every number replicating the recipe-only measurements
 
 ## Bench — needs the GPU (Fabio, `raw/` is user-owned)
 
@@ -135,15 +147,33 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       branch ran anyway, because `688 PreviewImage` was UNMUTED and an output node is an execution
       ROOT (84-node upstream closure). Fix = `759 MpiBlocker` at the source + mute `688`. My 14
       nodes came back from his editor byte-identical in type/widgets/titles
-- [ ] Head branch, remaining GPU questions (not blockers — it works): does the 2.6× crop ever reach
-      a neighbouring panel on an unusual layout, and does the SAM3 union cover a tall hat
+- [x] **Head branch open questions — BOTH ANSWERED 2026-08-20.** A full stovepipe top hat IS
+      covered: three seeds on a frock-coated undertaker at 1k-turbo, head and hat gone together,
+      collar and waistcoat intact, and the 2.6× crop cleared the crown with room. The crop never
+      reached a neighbouring panel in any run. **But a third question nobody had asked turned out
+      to be the real one — see the 2K headless A/B below: the DETECTOR picks the wrong head**
       **Only the bbox-AS-MASK is RETIRED** (Fabio 2026-08-19): a
       face-only mask fails on a hatted character (measured on the cowboy-movie work), hair over
       clothing needs a precise hair mask, and a box stamped on the head makes the inpaint model
       destroy and reinvent the clothing detail inside it. Must degrade to hair+face when the
       character has no hat
-- [ ] Klein removal A/B — baked prompt vs the no-prompt remove op + crop/stitch
-- [ ] All four styles return their medium and keep the pupil catch-light
+- [x] **Klein removal A/B — RUN, and the "no prompt" half is DISPROVED. Do not retry it**
+      (2026-08-20). 2×2 of prompt × steps, three seeds, hat character at 1k-turbo. Swapping
+      `712` to the outpaint LoRA's instance prompt `"Fill the green spaces according to the
+      image"` makes the model **paint a whole new head back**, green plate still showing, at
+      BOTH 2 and 4 steps, 3 of 3 seeds. `docs/models/klein/removal.md` is right for generic
+      object removal and does not transfer here: the surround is a person with a collar, so
+      "fill according to the image" reads as *reconstruct the head*. The shipped sentence is
+      the only thing saying BACKDROP. `712` keeps its text, `704` keeps `steps: 2` (4 was
+      indistinguishable). Full table in validation.md
+- [x] **All four styles return their medium and keep the catch-light — 2026-08-20.** One
+      character (a copper-braided ranger), each style at its shipping rig, two seeds each:
+      Photoreal 2k-quality (pores, film-real), 3D 2k-turbo (subsurface skin, groomed hair),
+      Anime 2k-turbo (cel line art), Cartoon 2k-turbo (bold outlines, flat fills). Catch-light
+      present in all eight. **Incidental and load-bearing: the LAYOUT MIRRORS** — 3 of the 4
+      styles at seed 820001 put the portrait on the LEFT and both bodies on the right, and 3D
+      then came back un-mirrored at seed 820002. The template's "right half … portrait" is a
+      preference the model takes or leaves, so no rule may assume panel ORDER
 - [ ] 10/10 stress test: ten generations, varied pose and light, next to a second character
 
 ## App wiring — after the graph proves out
@@ -185,10 +215,29 @@ Build detail in [plan.md](plan.md); prompt payload in [prompts.md](prompts.md).
       (headless front, back, portrait with catch-light). Raw-prompt fallback proven — Enhance
       never pressed. Evidence + the one open observation (the 2K headless pass, confounded by
       seed) in validation.md.
-- [ ] **The 2K headless A/B** — at 2K the front body came back with a pale head-shaped fill
-      rather than a clean hollow collar, but the seeds differed, so resolution and seed are
-      confounded. Needs one fixed-seed dispatch at both arms. Folds into the Klein removal A/B
-      item above rather than standing alone.
+- [x] **The 2K headless A/B — RAN, and it was TWO faults wearing one symptom** (2026-08-20).
+      Fixed seed at both arms, three seeds. **Fault 1, the PICK, is fixed and shipped.**
+      `747`'s area-ascending "smallest face = the front body's head" inverts whenever the rear
+      figure's head is turned enough for `face_yolov8n` to see a face — its box is SMALLER than
+      the true frontal one, so the sheet comes back with the REAR view decapitated (measured at
+      seed `504504`: head box origin x=559 at 2K against x=20 at 1K). Replaced with **rule B**
+      (Fabio's call): `747` area DESCENDING take_start 1 drops the portrait, new node `773`
+      takes the highest CONFIDENCE of what remains. Both halves are intrinsic — the template
+      does prescribe the portrait's half, and `face_yolov8n` IS a frontal-face detector.
+      "Leftmost" was considered and killed by evidence: 3 of the 4 styles mirror the layout.
+      Raw `1e6ba5cc`; verified live at 2K, `504504` moved rear → front, `8958563981589` stayed
+      correct. **Fault 2, the FILL, is still open** — see the mask-edge item below.
+- [x] **The FILL ghost — FIXED and shipped** (2026-08-20, `49d9fc37`). It was TWO REMNANTS, not
+      a bad fill. (1) `718.mask_expand_pixels` 6 → **40**: the SAM3 union left a rim of head
+      outside `threshold 0.5`, so the green plate never destroyed it and the model repainted the
+      head it could still see. (2) `754` SAM3 vocabulary `"hair, face, hat"` → **`"hair, face,
+      hat, neck"`** — there was no NECK in it, so on an open collar the neck survived as skin in
+      the collar. Verified at BOTH rigs against matched controls: 2k-quality scavenger 3 of 3
+      clean, 1k-turbo hatted undertaker 3 of 3 clean, collar and shoulders intact in all six;
+      the control produced zero clean sheets. **Dead ends, do not re-derive:** `mask_blend_pixels`
+      32→4 and `mask_hipass_filter` 0.1→0.9 (both WORSE — binarising sharpens the ghost, which is
+      what ruled out the feather), pass-2 denoise 0.25/0.15 (no change, which is what proved it a
+      remnant), `expand: 56` (works, wastes headroom)
 - [x] **The Enhance dead-box — FIXED** (2026-08-20, session 9). `MpiInput` gained `el.setValue`,
       the write API it had never had while the driven Primitives all do; `_writeFieldValue` calls it
       instead of setting `.value` on the mount host div. Guarded by

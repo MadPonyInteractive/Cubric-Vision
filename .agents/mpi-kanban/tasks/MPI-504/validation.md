@@ -1210,3 +1210,346 @@ LoRA picked in the panel visibly changes the sheet. Everything above proves the 
 and carry the right values; nothing here proves ComfyUI loaded the weight. The graph's
 `Input_Lora_1..6` nodes were already present and `comfyController`'s dedicated LoRA-object
 branch (MPI-219) already routes them, so the remaining risk is small — but it is untested.
+
+
+## 2026-08-20 · session 10 — the GPU sweep: the recipe that never shipped, and where the head branch breaks
+
+Fabio freed the GPU for this card. Everything below is a real dispatch on the **app engine
+(48188)** — the user-replica engine, deliberately, because the open observation this session
+had to settle was made there. Each batch ran under `gpu_lease.py run`, serially.
+
+### THE SHIPPED ENHANCER WAS RUNNING A RECIPE TWO REVISIONS OLD — found before any GPU spun
+
+`comfy_workflows/qwen3vl_4b_prompt_enhancer.json` carried a **3885-character** recipe.
+prompts.md § 2 — the source of truth, and what every measurement in this card was made
+against — is **4239 characters**. The two v4.x edits were missing from the graph in full:
+
+- category 2's *"Name the hair in full here — colour, length and texture together in one clause"*
+- category 4's rear-clause slot template, *"the &lt;colour&gt; &lt;texture&gt; hair &lt;worn how at the back&gt;"*,
+  which is the whole reason v4.2 took rear-clause colour from 2 of 8 to 8 of 8
+
+**This was not cosmetic, because nothing injects the recipe.** `MpiBaseFlow._runEnhance` sends
+exactly one injection param — `Input_Seed` — so the BAKED text is what the Enhance button runs.
+The commandRegistry comment says the recipe *"is INJECTED by the caller"* and describes the
+baked value as existing *"only so it still runs standalone at the bench"*; for this flow that is
+aspiration, not fact. Users were getting v3-era phrasing, and the one measured fix this card
+made to the enhancer had never reached a single generation.
+
+How it happened is ordinary drift: the graph got its recipe in `27217516` (2026-08-19), v4.1 →
+v4.2 landed in prompts.md later the same day (`b56727f5`), and three later commits touched the
+graph without re-syncing the text.
+
+**Fixed at the source.** The v4.2 block is now extracted from prompts.md programmatically and
+baked into `comfy_workflows/raw/qwen3vl_4b_prompt_enhancer.json` as a text substitution on the
+two changed lines, so Fabio's export formatting survives byte for byte — a one-line diff.
+`node scripts/sync-raw-workflows.mjs` then committed raw (`796060bf`), converted, and passed
+`validate-injection-rules.mjs`. Nothing in the app changed: the recipe was already in the right
+place, it was simply the wrong text.
+
+### THE ENHANCER REGRESSION, RE-RUN END TO END THROUGH THE BUILT GRAPH
+
+The owed checklist item. Every prior v4.x measurement ran against a hand-rebuilt chain; this run
+is the shipped file — baked v4.2 → the three `StringConcatenate` ChatML hops → `TextGenerate` →
+`Input_Scrub_Negation` → `Input_Tidy` → `Output_prompt`. Four regression inputs × seeds 0 and 1,
+16-20s each.
+
+| guarantee | end to end, 8 runs | recipe-only, v4.2 |
+|---|---|---|
+| lower-case noun phrase | 8 of 8 | — |
+| no trailing full stop | 8 of 8 | — |
+| 45-90 words (49-71) | 8 of 8 | 8 of 8 |
+| nothing held | 8 of 8 | 7 of 8 |
+| no place / light / camera | 8 of 8 | 7 of 8 |
+| **positive phrasing only** | **8 of 8** | 0 of 8 |
+| rear clause restates COLOUR | 8 of 8 | 8 of 8 |
+| rear clause restates colour AND texture | 5 of 8 | 5 of 8 |
+| main/rear colour contradiction | **2 of 8** | 2 of 8 |
+
+Two readings matter. **The scrub nodes carry the whole positive-phrasing guarantee, live** —
+the recipe has never once achieved it and the graph achieves it every time, which is exactly
+what they were added for. And **the numbers replicate**, so the recipe-only measurements can be
+trusted for the rest of this card rather than re-run.
+
+Three "failures" the automatic checks raised are false positives, kept here so the next reader
+does not re-chase them: *"a heavy brass belt **holding** a holstered revolver"* (worn, not held),
+*"street"* inside the user's own words *"a cyberpunk street medic"*, and *"the back of the coat
+hangs **plain**"* — which is the recipe's own prescribed phrase.
+
+**The contradiction residual has a shape.** Both failures are the same one: the main clause says
+`dark brown`, the rear clause says `black`. It is not random drift between arbitrary colours, it
+is dark-brown collapsing to black in the rear clause. That is Fabio's open call and it is now
+narrower than "accept the drift or move the invariant".
+
+### THE 2K HEADLESS PASS — RESOLUTION, NOT SEED. AND IT IS TWO FAULTS, NOT ONE
+
+The controlled test session 8 could not run: the same prompt and the same seed dispatched at both
+`Input_Quality` arms, three seeds, `remove_head` on, turbo off, Photoreal.
+
+| seed | 1K quality | 2K quality |
+|---|---|---|
+| `8958563981589` | clean hollow collar | **pale head-shaped fill** on the front body |
+| `2263222034277` | faint ghost silhouette | faint ghost + a smeared collar |
+| `504504` | clean, correct panel | **the REAR head was removed and the front kept its head** |
+
+Seed is ruled out — `8958563981589` and `2263222034277` are session 8's own two seeds, now run
+at both arms. 2K is worse in 3 of 3, and the third seed is a different failure altogether:
+
+1. **The fill degrades.** Klein leaves a pale head silhouette instead of backdrop. Present in
+   weak form at 1K too, so this is a matter of degree, not a 2K-only bug.
+2. **The wrong head is picked** (seed `504504` at 2K only). `747 ImpactSEGSOrderedFilter` takes
+   the smallest-area face on the sheet, which stands in for "the front body's head, never the big
+   portrait". It holds while the detector sees exactly two faces. At 2K it evidently fires on the
+   rear head as well, with a smaller box than the true front face, and the proxy inverts — the
+   sheet comes back with its rear view decapitated and its front view intact, which is the exact
+   opposite of the spec.
+
+The second is the more serious: 2K + turbo off is the **shipping realistic rig**, so the failure
+lives on the default path for the style most users will reach for first.
+
+### A TALL HAT IS COVERED — the open head-branch question, answered
+
+`"hair, face, hat"` through `SAM3_Detect` with `individual_masks: false` takes a full stovepipe
+top hat with the head, and the 2.6× crop clears its crown with room to spare. Three seeds at
+1K turbo on a deliberately hat-heavy character (a frock-coated undertaker); the front body comes
+back with collar, shirt and waistcoat intact and no hat. The crop never reached a neighbouring
+panel in any of the three.
+
+What it also shows: **the ghost silhouette is not a 2K artefact.** At 1K turbo the removed
+head-and-hat leaves a clearly visible lighter shape in the backdrop, hat brim and crown and all.
+So the ghost tracks the FILL, which is the same fault as (1) above, and 2K only makes it opaque.
+
+### THE FOUR STYLES — ALL PASS, and the batch killed a rule before it shipped
+
+One character (a copper-braided ranger), each style at the rig it ships on, two seeds each.
+**Medium and catch-light hold in 8 of 8:** Photoreal at 2k-quality (pores, film-real skin), 3D at
+2k-turbo (subsurface skin, groomed hair), Anime at 2k-turbo (cel line art), Cartoon at 2k-turbo
+(bold outlines, flat colour fills). Wardrobe, knife at the left hip and the quiver across the
+back survive every panel, and the rear panel carries the copper-red braid in all eight.
+
+**The incidental finding is the load-bearing one: THE LAYOUT MIRRORS, and it does so per SEED.**
+At seed `820001` three of the four styles put the big portrait on the LEFT and both bodies on the
+right; at `820002` the same 3D and Anime recipes came back the other way round. The template says
+*"The right half of the image is filled by a head and shoulders portrait"* and *"The left half
+holds two narrow full-body standing views"* — the model treats that as a preference, not a
+constraint, and nothing in the prompt orders the two body panels against each other at all.
+
+**No pick rule may assume panel position.** This is written here because it killed the obvious
+fix for the section below: "take the LEFT-most face" reads as the natural repair for a mispick,
+and it would have picked the PORTRAIT on three of the four styles.
+
+### THE MISPICK — ROOT-CAUSED, FIXED, AND VERIFIED
+
+**The rule that was there.** `747 ImpactSEGSOrderedFilter`, area ASCENDING, take 1 — "the smallest
+face on the sheet is the front body's head, never the big portrait". It is a proxy, and it holds
+only while the detector finds exactly two faces.
+
+**Why it breaks.** The rear body is not always a clean back view. At seed `504504` the rear figure's
+head is turned to profile with the face visible, `face_yolov8n` detects it, and its box is SMALLER
+than the true frontal face. Area-ascending then takes the rear head, and the sheet comes back with
+its rear view decapitated and its front view intact — the exact inverse of the spec.
+
+**Enumerated with a detector-only probe** — three pre-removal 2K sheets uploaded to the engine and
+run through detection alone, no sampler, ~2s a prompt, so every candidate rule was compared without
+regenerating anything:
+
+| sheet | detections (x, size) | shipped rule | rule A (leftmost) | rule B |
+|---|---|---|---|---|
+| `2263222034277` | front 142/121 · portrait 998/641 | front | front | front |
+| **`504504`** | **rear 636/97** · front 149/106 · portrait 1006/452 | **rear ✗** | front | **front ✓** |
+| `8958563981589` | front 162/122 · portrait 1050/618 | front | front | front |
+
+Two numbers decided it. At `504504` the confidence order is **portrait → front face → rear profile**,
+so the frontal face outranks the turned-away head even on the sheet built to break that assumption.
+And the portrait is the largest face by a factor of four (452-641 against 97-122), so "drop the
+largest" is not a marginal call.
+
+**Rule B, shipped (Fabio's call, 2026-08-20):**
+
+```
+747  drop the portrait (the largest face)   area · DESCENDING · take_start 1 · take_count 999
+773  the frontal body head, not the rear    confidence · DESCENDING · take 1
+748  SegsToCombinedMask  <- 773
+```
+
+Both stages rest on something intrinsic rather than incidental: the template *does* prescribe that
+the portrait fills a half of the frame, and `face_yolov8n` *is* a frontal-face detector, so a
+frontal face outscoring the back of a head is its job description. Rule A rested on the model's
+habit of putting the front body first, which the styles batch proved it does not keep.
+
+**Verified live at 2K, 3 of 3 seeds**: at `504504` the removal moved from the rear body to the
+FRONT body and the rear kept its head; at `8958563981589` and `2263222034277`, both already
+correct under the old rule, it stayed correct — so the fix carries no regression on the sheets the
+area rule happened to get right. (The third seed was re-run after an engine restart killed it
+mid-batch; Fabio installed a model, which restarts the app engine.) Raw `1e6ba5cc`, converts clean through
+`validate-injection-rules.mjs`, `npm test` 655/655.
+
+**The hole this leaves, stated rather than hidden.** With only ONE detection, `take_start: 1`
+selects nothing and the branch errors instead of producing a sheet. That case is already broken
+today — one detection means the portrait is the only face found, and every area rule then removes
+the PORTRAIT's head — so B turns a silently ruined sheet into a loud failure. Accepted knowingly.
+
+### THE FILL IS A SEPARATE FAULT, AND IT IS NOT MAINLY ABOUT RESOLUTION
+
+**Correcting this session's own earlier entry.** The 2K headless table above reads as "2K degrades
+the fill". The wider evidence does not carry that:
+
+- 7 of the 8 style runs left a head-shaped ghost at 2K, under BOTH turbo and quality — `threed_s1`
+  was the only clean one
+- the tall-hat runs ghosted at **1K turbo**, hat brim and crown legible in the backdrop
+- only 1K-quality has produced consistently clean collars, and only on 2 of 3 seeds
+- both rule-B verification sheets still ghost, with the pick now provably correct — so the fill
+  fault is independent of the pick fault, which is what those two runs establish
+
+The honest statement: **the fill is unreliable generally**. The resolution reading rests on a single
+clean same-seed pair (`8958563981589` at 1K against 2K) and one pair is a pilot, not a result — this
+card's own standing rule. What IS established is that Klein leaves a pale head-shaped silhouette
+instead of backdrop across rigs, resolutions and styles.
+
+**The lead worth testing, from `docs/models/klein/removal.md`:** the outpaint LoRA's instance prompt
+is `"Fill the green spaces according to the image"`, removal *"takes no prompt — the instance prompt
+alone is enough"*, and the measured removal config is **4 steps**. The sheet graph sends node `712`
+the sentence *"Remove the head, leaving only the clothes behind."* at `704 Flux2Scheduler steps: 2`.
+So the branch may never be hitting the trigger the LoRA was trained on, and it is running at half
+the measured step count.
+
+### THE KLEIN INSTANCE PROMPT — RUN AND DISPROVED. DO NOT RETRY IT
+
+`docs/models/klein/removal.md` says the outpaint LoRA's instance prompt is
+`"Fill the green spaces according to the image"`, that removal *"takes no prompt — the instance
+prompt alone is enough"*, and that the measured removal config is **4 steps**. The sheet's head
+branch sends `712` the sentence *"Remove the head, leaving only the clothes behind."* at
+`704 Flux2Scheduler steps: 2`, so it looked like the branch was missing its own trigger and
+running at half the step count. **Both leads are wrong, and the first is dangerously wrong.**
+
+2×2, prompt × steps, three seeds, on the hat character at 1k-turbo (45-70s a run — the cheap rig
+that reproduces the ghost, chosen over 2k-quality at 250s because the fault shows at both):
+
+| arm | prompt | steps | result, 3 of 3 seeds |
+|---|---|---|---|
+| **A** shipped | the description | 2 | head removed, faint ghost |
+| **B** | the instance prompt | 2 | **a whole new head painted back**, green plate still showing through |
+| **C** | the description | 4 | indistinguishable from A |
+| **D** | the instance prompt | 4 | **same rebuild** |
+
+**Why the doc's rule does not transfer.** It is written for generic object removal, where "fill the
+green according to the image" means *continue the surrounding surface*. Here the surrounding image
+is a person with a collar and shoulders, so the same sentence reads as *reconstruct the head* — and
+the LoRA obliges, complete with hair and ears. The shipped description is doing real work: it is the
+only thing telling the model that what belongs there is BACKDROP, not a face.
+
+**Settled, and neither needs re-running:** `712` keeps its sentence, `704` keeps `steps: 2`.
+
+**Where the fill fault actually points now.** The ghost is a head-shaped LIGHTER patch, not a failed
+fill — the model paints a faint head rather than nothing. `718 InpaintCropImproved` runs
+`mask_expand_pixels: 6`, `mask_blend_pixels: 32` and `mask_hipass_filter: 0.1` against the RAW SAM3
+mask (`757`; the grow at `690` feeds only the second pass). A 32-pixel feather on a ~220-pixel crop
+is an enormous soft band, so `713 ImageCompositeMasked` never fully destroys the head — it blends
+green over a still-visible one — and the model reconstructs what it can still see underneath. Next
+batch: blend 32→4, expand 6→24, both, and hipass 0.1→0.9, three seeds each against the A control.
+
+### THE REAR CLAUSE REACHES THE RENDERED PANEL — and the contradiction residual is INERT
+
+Two questions in one batch, both fed by the enhancer's OWN v4.2 output rather than hand-written
+wording, three seeds each at 1k-quality (turbo off, the realistic path):
+
+**1. Does the rear clause move the rear PANEL, or only the text? It moves the panel, 3 of 3.**
+The agreeing phrase — `a tired schoolteacher … red hair long and wavy, tied back in a loose braid
+… the red wavy hair hangs loose at the back` — renders a copper braid in the rear panel at every
+seed, matching its own portrait. The 8-of-8 rear-colour figure measured in TEXT does carry through
+to pixels. That closes the checklist item that had this open.
+
+**2. Does the 2-in-8 main/rear contradiction matter? NO — and this settles Fabio's open call.**
+The contradicting phrase — `dark brown hair cut short and slicked back` … `the black hair tied
+tightly at the back` — renders a rear panel indistinguishable from its own portrait at all three
+seeds. **The two colours the recipe confuses are the two that look the same.** Dark brown and
+black are visually adjacent, so the drift is real in the text and invisible in the image.
+
+**The call: ACCEPT the drift.** No recipe change, and specifically not another wording attempt —
+v4.3 already proved that road ends in an instruction example leaking into the output. The
+invariant does not need moving out of the recipe either, because there is nothing to fix in the
+render.
+
+**The one caveat, stated so it is not lost:** every contradiction v4.2 has ever produced is
+dark-brown → black. A `red` → `black` contradiction WOULD show, and nothing has produced one in
+16 samples across v4.1 and v4.2. If one ever appears, this verdict is void for that case.
+
+### THE GHOST IS MASK COVERAGE, NOT MASK SOFTNESS — `mask_expand_pixels` 6 → 40
+
+Four candidate edge knobs on `718 InpaintCropImproved`, three seeds each, hat character at
+1k-turbo, against the `A_desc_2_*` control from the batch above (same seeds, same rig):
+
+| arm | change | s1 | s2 | s3 |
+|---|---|---|---|---|
+| A control | — | ghost | strong ghost | faint ghost |
+| E | `mask_blend_pixels` 32 → 4 | ghost, slightly worse | strong ghost | worse |
+| **F** | **`mask_expand_pixels` 6 → 24** | **cleanest** | softest of the five | **cleanest** |
+| G | both | clean-ish, but a **red patch inside the collar** | strong ghost | ghost |
+| H | `mask_hipass_filter` 0.1 → 0.9 | worse, sharp hat outline | strong ghost | worse, sharp outline |
+
+**The softness knobs do nothing or hurt, and H is the diagnostic one:** binarising the mask makes
+the ghost SHARPER rather than removing it. That rules out the feather as the cause — a soft edge
+was the obvious suspect and it is not what is happening.
+
+**What is happening: the SAM3 mask UNDER-COVERS the head.** Hair edge and the hat's soft boundary
+sit outside the `threshold 0.5` union, so a rim of the original head survives `713`'s green plate,
+the model can still see a head under the green, and it paints a faint one back. Every arm that
+destroys more of the head helps; every arm that only changes the edge profile does not.
+
+**The ladder, same three seeds:**
+
+| `mask_expand_pixels` | s1 | s2 (the stubborn seed) | s3 | collar / shoulders |
+|---|---|---|---|---|
+| 6 (shipped) | ghost | strong ghost | ghost | intact |
+| 24 | clean | faint ghost | clean | intact |
+| **40** | **clean** | **clean** | **clean** | **intact** |
+| 56 | clean | clean | clean | intact |
+
+**40 is the pick, not 56.** It is the smallest value clean at every seed, which matters because
+the expansion is in CROP pixels and `718` resizes the crop to the head box — 56 on a ~220px crop
+is a quarter of the frame, and on a character whose head box sits lower or tighter that is the
+value that reaches the collar first. 40 buys the same result with headroom.
+
+**Do not re-derive the two dead knobs.** `mask_blend_pixels` and `mask_hipass_filter` were both
+tested at three seeds and both make it worse; the green plate's soft edge is a symptom of the
+under-coverage, not its cause.
+
+### THE SECOND REMNANT: THERE WAS NO NECK IN THE VOCABULARY — FIXED, 3 OF 3 AT BOTH RIGS
+
+Expanding the mask to 40 cleared the backdrop ghost but at 2K seed `504504` it left something
+new: an eye-shaped piece of skin sitting **inside the collar**. The obvious suspect was
+`682 MaskDetailerPipe`, which repaints the region at `denoise: 0.4` with an EMPTY prompt — a
+wider mask hands it more room to invent, and with nothing saying *backdrop* what it invents
+would be face-shaped.
+
+**Wrong, and the test that killed it is worth keeping.** Denoise `0.4 → 0.25 → 0.15` left the
+fragment unchanged, and `mask_expand_pixels: 32` did too. A thing that does not respond to
+denoise is not being invented — **it is a remnant.**
+
+**`754 SAM3 vocabulary` reads `"hair, face, hat"`. There is no NECK in it.** On any seed where
+the coat collar stands open, the neck and the underside of the chin are never masked, so removing
+the head leaves skin behind in the collar. It also explains the "fleshy neck stump" visible in
+several earlier control images, and why the high-collared undertaker at 1k-turbo looked clean —
+his collar hid the neck outright.
+
+`"hair, face, hat"` → `"hair, face, hat, neck"`, and with `mask_expand_pixels: 40`:
+
+| seed (2k-quality) | shipped | expand 40 | expand 40 + neck |
+|---|---|---|---|
+| `504504` | head fill + ghost | eye fragment in the collar | **clean hollow collar** |
+| `8958563981589` | strong pale head fill | neck stump remains | **clean, inner collar visible** |
+| `2263222034277` | ghost + fleshy stump | pale stump remains | **clean, collar closes over** |
+
+**Regression-checked at the other rig too:** the hatted undertaker at 1k-turbo, same three seeds,
+**3 of 3 clean** — hat ghost gone, collar, shirt and waistcoat intact. Six clean sheets against a
+control that produced zero.
+
+**So the ghost was two remnants wearing one symptom, exactly as the pick fault was:** the mask
+under-covered the head (a rim outside `threshold 0.5`), and the vocabulary omitted the neck
+entirely. Expanding fixed the first and, by clearing the fog, made the second visible.
+
+**Dead ends, measured, do not re-derive:** `mask_blend_pixels` 32→4 and `mask_hipass_filter`
+0.1→0.9 (both worse at three seeds — binarising makes the ghost SHARPER, which is what ruled the
+feather out), pass-2 denoise at 0.25 and 0.15 (no change), `mask_expand_pixels: 56` (works, but
+spends headroom for nothing), and the Klein instance prompt (rebuilds the head — see above).
+
+Shipped: raw + `49d9fc37`. `npm test` 655/655.
