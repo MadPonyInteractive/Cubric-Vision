@@ -1,1 +1,2 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-562","type":"task.created","at":"2026-08-14T00:27:00Z","actor":"claude","summary":"Umbrella created by the consolidation sweep."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-562","type":"task.moved","at":"2026-08-21T11:04:19Z","actor":"claude","from":"todo","to":"done","summary":"Closed as no longer needed - the umbrella only sequenced MPI-377 before MPI-454, and those two collapsed into one job in the 2026-08-21 brainstorm."}

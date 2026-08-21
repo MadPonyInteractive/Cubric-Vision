@@ -786,6 +786,17 @@ class _CanvasCore {
 
     resize() {
         const rect = this.container.getBoundingClientRect();
+        // A 0x0 container is NOT a resize — it is "not rendered". The Model Library
+        // overlay stashes the whole workspace under a display:none div (MpiOverlay's
+        // Stash Pattern), which fires this observer with an empty rect; a panned view
+        // then took `handleResize(realW, realH, 0, 0)` and lost half the viewport,
+        // while the matching pass on restore was skipped by that method's `oldW > 0`
+        // guard — so the image came back displaced by -(w/2, h/2), pinned to the top
+        // left corner (MPI-597). Measuring a hidden box is meaningless in both
+        // branches: `refit` already bails on it, and the last real size has to stay in
+        // `screenUICanvas` for the restore to compare against. Same guard as
+        // `_refitForCrop`.
+        if (!rect.width || !rect.height) return;
         // Base + overlay buffers locked to image-px in loadImage; do NOT touch here.
         const oldW = this.screenUICanvas.width;
         const oldH = this.screenUICanvas.height;

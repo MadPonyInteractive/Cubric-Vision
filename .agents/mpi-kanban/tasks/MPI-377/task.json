@@ -1,19 +1,19 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-377",
-  "title": "Media dropped into the History workspace vanishes - it must become a history entry",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "title": "Media dropped into the History workspace vanishes (absorbed into MPI-454)",
+  "column": "done",
+  "maturity": "rejected",
+  "status": "done",
   "created_at": "2026-07-28T13:38:00Z",
-  "updated_at": "2026-08-14T00:50:00Z",
+  "updated_at": "2026-08-21T11:04:19Z",
   "labels": [
     "bug",
     "ux",
     "history",
     "drag-drop"
   ],
-  "description": "UMBRELLA: MPI-562 - Dropping media onto History: the half-built handler and Composite Place (consolidation sweep 2026-08-14). Members and phase order: tasks/MPI-562/plan.md.\n\nDrag an image into the History workspace and nothing visible happens: no new entry, nothing loads on the canvas. The file is not lost - it silently became a PROMPT CHIP, which the user only discovers after running an op and seeing their dropped image come out of the latents. Reported by the user as 'works as a bug'.\n\nROOT CAUSE, already located: MpiGroupHistoryBlock.js:913-921. The drop overlay's onDrop uploads the file and then does exactly one thing - `_pb?.el?.injectMedia?.(...)`. It never creates an item, never appends to history, never touches the history list, never loads the canvas. The drop overlay itself is fine; the handler is simply half a feature.\n\nFIX: after uploadMediaFile, build the item (createImageItem / createVideoItem), appendToHistory, persist the group, historyList.appendEntry, viewer.loadEntry - the same sequence _runComposite already runs at 1881-1894 for its result. Copy that path rather than inventing one.\n\nTHE DESIGN CALL - entry AND chip, or entry only? The chip behaviour is LOAD-BEARING in video mode: dropping a start/end frame is how a user unlocks the frame-driven i2v ops when no media is staged (see the comments at ~217 and ~919), and `_isVideoPromptToolActive()` deliberately hands drops to the PromptBox while the video prompt tool is active. Do not strip the chip globally to fix an image-mode bug. Most likely answer: image drops create an entry AND stage the chip; video-mode prompt-tool drops keep today's chip-only behaviour.",
+  "description": "CLOSED 2026-08-21 as absorbed into MPI-454 - not built under this card. The brainstorm that redesigned MPI-454 into the Place tool made the drop one of THREE slot sources, so the drop routing became acceptance lines on that card rather than a job of its own. The fix this card originally proposed (build a history entry from the dropped file) was REJECTED by the user: an imported photo is not a generation and would pollute the group history. See tasks/MPI-454/brief.md. Original text preserved in brief.md.",
   "acceptance": [
     "Dropping an image into the History workspace appends a visible history entry and loads it on the canvas",
     "The dropped file still reaches generation as before - no regression to the existing chip staging",

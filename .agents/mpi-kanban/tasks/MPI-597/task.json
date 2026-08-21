@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-597",
+  "title": "A panned canvas jumps to the top-left after the Model Library closes",
+  "description": "MpiCanvas.resize() measures a container that is display:none (0x0) while the Model Library overlay stashes the workspace, so ViewManager.handleResize subtracts half the viewport on the way out and its oldW>0 guard skips the matching add on the way back. Net: a panned or zoomed view is displaced by -(w/2, h/2) and reads as 'the canvas is at the top left'. Reported by the user 2026-08-21.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
+  "created_at": "2026-08-21T13:35:12Z",
+  "updated_at": "2026-08-21T13:44:03Z",
+  "labels": [
+    "bug",
+    "canvas",
+    "history-workspace"
+  ],
+  "links": {
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "events": "events.jsonl"
+  },
+  "acceptance": [
+    "A panned/zoomed canvas keeps its exact framing across an open+close of the Model Library overlay",
+    "The fix is in the measurement, not a re-centre on overlay close - a hidden container is not a resize",
+    "A managed (unpanned) view still refits to the container after a real resize",
+    "Verified live in a browser harness that hides and restores the canvas container"
+  ]
+}
