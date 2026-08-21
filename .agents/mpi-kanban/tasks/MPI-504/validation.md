@@ -1513,7 +1513,7 @@ value that reaches the collar first. 40 buys the same result with headroom.
 tested at three seeds and both make it worse; the green plate's soft edge is a symptom of the
 under-coverage, not its cause.
 
-### THE SECOND REMNANT: THERE WAS NO NECK IN THE VOCABULARY — FIXED, 3 OF 3 AT BOTH RIGS
+### THE SECOND REMNANT: THERE WAS NO NECK IN THE VOCABULARY — FIXED, 3 OF 3 AT BOTH RIGS [REVERTED — see 2026-08-21 below]
 
 Expanding the mask to 40 cleared the backdrop ghost but at 2K seed `504504` it left something
 new: an eye-shaped piece of skin sitting **inside the collar**. The obvious suspect was
@@ -1553,3 +1553,163 @@ feather out), pass-2 denoise at 0.25 and 0.15 (no change), `mask_expand_pixels: 
 spends headroom for nothing), and the Klein instance prompt (rebuilds the head — see above).
 
 Shipped: raw + `49d9fc37`. `npm test` 655/655.
+
+### THE NECK WAS REVERTED — AND THE SECTION ABOVE RECORDS THE WRONG MECHANISM (2026-08-21, `ca4fdc0d`)
+
+`754` is back to `"hair, face, hat"`. The section above still reads FIXED; it is not. Two wrong
+explanations die here, and the second one is mine.
+
+**WRONG — "the head box is a square 2.6× the face, so a garment reaching the jaw falls inside it,
+and only the geometry or the composite can fix it."** That was in the session handoff and it is
+false. `751 MpiMaskSquareBbox` feeds `752 MpiBox` → `758 MpiBoxCrop` → `755 SAM3_Detect` **and
+nothing else**. The square is the crop SAM3 SEARCHES; it is not the region that gets destroyed.
+What gets destroyed is SAM3's own mask, pasted back at full size by `757` and expanded by `718`.
+A collar sitting inside that square is untouched unless something puts it in the MASK. **Do not
+go chasing the head-box geometry — there is nothing there.**
+
+**RIGHT (Fabio, 2026-08-21): Klein grows the region it rebuilds well beyond the mask it is
+handed.** That growth is not a defect — it is what stops hair strands and ear edges surviving as
+ghosts, and it is why `mask_expand_pixels: 40` reads as sufficient rather than excessive. But it
+means **anything admitted to the mask propagates outward from there**. Put the neck in and Klein
+destroys what is BEHIND and AROUND the neck: collar, shoulders, the background between them.
+The earlier theory — that SAM3 binds `neck` to the garment when no bare throat exists — is
+superseded; it may also be true, but it is not what makes this unsafe.
+
+**Consequence for the open "clothing damage on high-necked characters" item:** it is the same
+mechanism at reduced scale, not a separate bug. A scarf or turtleneck wound to the jaw sits
+immediately outside a mask Klein is already growing past. Expand 6 vs 40 barely moved it because
+Klein's growth dominates the 34px difference. So the lever is Klein's growth or what is fed to
+it — NOT the SAM3 vocabulary (adding words makes it worse) and NOT the crop square (it changes
+nothing that is removed).
+
+**Fabio's ranking, unchanged:** a leftover neck and a faint head rim are ACCEPTABLE. Changed
+CLOTHING is not.
+
+### THE 10/10 STRESS TEST — SCOPE SETTLED (Fabio, 2026-08-21)
+
+**What it must prove: the branch NEVER picks the back of the head.** Not "does the face hold
+across ten poses and ten lights" — that is a CHARACTER-ASSET test from the brief, and this flow
+emits one fixed thing (same three panels, same flat light, same pose) so it cannot answer it.
+Feeding the sheet into t2i/i2v is a different flow's job.
+
+**Why the design already resists it:** `745` is `face_yolov8n` — a FACE detector, deliberately
+not a head detector. A true back-of-head presents no face, so it cannot be picked at all. That
+is the structural guarantee, and it is why the first detection must stay a face detector.
+
+**So the residual risk is exactly one thing:** a rear figure turned far enough to show a face.
+That is the 2K fault already measured — `face_yolov8n` fires on the rear profile, and before
+`773` the area rule handed it the smaller box and decapitated the rear view. The test must
+therefore MAXIMISE rear-head turn, not vary pose and light.
+
+**Pass criterion, binary, 10 of 10:** portrait panel intact, front-body panel headless, rear-body
+panel head INTACT.
+
+### KREA2-NSFW-ONLY INSTALL CASE — CLOSED, NOT INVESTIGATED (Fabio, 2026-08-21)
+
+"Krea2 NSFW. Leave it alone." Off the card's remaining bench items. Do not re-open it.
+
+## 2026-08-21 · THE 10/10 STRESS TEST — RUN, AND IT PASSES ON THE THING IT PROVES
+
+**Rig:** 2k-quality (`Input_Quality 2` = 1792×1120, `Input_is_Turbo false`),
+`Input_Remove_Head true`, bench 8188. Ten characters, ten seeds, all four recipes.
+~250 s a sheet, ~42 min for the batch. Harness + sheets in the session scratchpad
+(`headpick/`, `_contact.jpg` is the whole batch as one image).
+
+Each run carried three `PreviewAny` probes on `751` (x, y, size), so the verdict has the
+chosen head box behind it and not only my eyes.
+
+### THE RESULT: THE BACK OF THE HEAD WAS NEVER PICKED. 10 OF 10.
+
+| # | character | recipe | head box (x,y,size) | pick | note |
+|---|---|---|---|---|---|
+| 01 | desert scavenger | Photoreal | 66, 53, 270 | OK | neck stump in the open collar — the accepted leftover |
+| 02 | Victorian undertaker | Photoreal | 64, 67, 264 | OK | faint hat ghost over the front body |
+| 03 | cyberpunk medic | Anime | 125, 0, 224 | OK | clean |
+| 04 | dock worker | Photoreal | 88, 0, 263 | OK | clean |
+| 05 | swordswoman (braid) | 3D | 76, 11, 329 | OK | rear braid intact |
+| 06 | crusader knight | 3D | 60, 0, 348 | OK | **mail coif REMOVED from the front body** |
+| 07 | pop idol (twin tails) | Anime | 13, 0, 400 | OK | clean |
+| 08 | cartoon detective | Cartoon | **0, 0, 0** | **FAIL** | zero faces — see below |
+| 09 | salvage diver | Photoreal | 29, 0, 309 | OK | clean |
+| 10 | swamp sorcerer | Cartoon | 146, 170, 325 | OK | strong hair-silhouette ghost |
+
+`face_yolov8n` as stage 1 held exactly as designed. **The face detector IS the guarantee**
+— a true back-of-head presents nothing to detect — and the only case that could defeat it,
+a rear figure turned far enough to show a face, did not occur once in ten 2K sheets.
+
+### THE PORTRAIT WAS ON THE RIGHT IN 10 OF 10 — the mirroring objection does NOT replicate
+
+Recorded because it reverses a disproved lead. The earlier session ruled out a
+"leftmost face" pick with *"3 of 4 styles mirror the layout and the mirroring varies by
+SEED"*. **At 2k-quality, across all four recipes and ten seeds, the layout never
+mirrored:** two full-body views left, portrait filling the right half, exactly as every
+recipe template prescribes. Every chosen head box landed at x ≤ 146 with size ≤ 400, so
+the whole head branch stayed inside the left ~30% of a 1792 px sheet.
+
+That is what makes **restricting the masking branch to the left half** (Fabio's call) a
+supportable change rather than a bet — the portrait then cannot be a candidate at all,
+and `747`'s "drop the largest face" heuristic stops being load-bearing. The earlier
+mirroring measurement was presumably taken on the 1k-turbo rig; it is not what 2K does.
+
+### RUN 08 IS NOT A PICK FAULT — IT IS THE EMPTY-DETECTION CASE, AND IT IS UNGUARDED
+
+`face_yolov8n` found **zero faces** on the flat cartoon render. What follows is not a
+graceful degradation:
+
+1. `748` produces an empty mask, so `751 MpiMaskSquareBbox` returns `size 0`.
+2. `752 MpiBox` is therefore `(0, 0, 0, 0)`.
+3. **`MpiBoxCrop` passes the FULL IMAGE THROUGH on a zero box** — by design, and the
+   intent is written on the line: `img.py:618`, *"ponytail: empty intersection passes
+   through rather than erroring mid-graph"*.
+4. So `755 SAM3_Detect` receives the **entire sheet** instead of a head crop, masks the
+   heads it finds across all three panels, and Klein destroys the portrait.
+
+**This corrects an earlier note in this file** (the `Zero-face runs will error, not
+degrade` line): they do not error. They silently escalate to a whole-sheet removal, which
+is the worst possible outcome — the portrait is the one panel a user cannot lose.
+
+Cropping the branch to the left half CONTAINS this (the portrait becomes unreachable) but
+does not fix it: the same run would then destroy both full-body views instead. The empty
+case needs its own guard — the natural one is to fall back to the untouched sheet, which
+is what `Input_Remove_Head false` already does, so the wiring exists (`742 MpiIfElse`
+selects `730` the raw sheet over `681` the inpaint output). `MpiCompare` and
+`MpiBooleanCompare` are both in the node pack.
+
+### TWO FINDINGS THE BATCH SURFACED THAT ARE NOT THIS TEST'S SUBJECT
+
+- **06 lost the mail coif.** The high-neck clothing damage, caught in the wild rather than
+  reproduced deliberately. Consistent with Klein growing past the mask.
+- **Cartoon and Anime wash out at 2K.** 07, 08 and 10 came back near-greyscale with flat,
+  under-described wardrobe, while every Photoreal and 3D sheet held its colour. Not a head
+  branch fault — it is upstream of the whole branch. Worth its own card.
+
+### THE GROWTH IS BOUNDED BY THE STITCH, AND IT IS THREE SURFACES — corrects this file, 2026-08-21
+
+Written earlier today: *"Klein grows the region it rebuilds well beyond the mask it is
+handed"* and *"expand 6 vs 40 barely moved it because Klein's growth dominates the 34 px
+difference."* **The wiring does not support that.** Traced through the graph:
+
+- **Pass 1** — `718 InpaintCropImproved` (`mask_expand_pixels 40`, `mask_blend_pixels 32`),
+  green plate via `713 ImageCompositeMasked` off `718`'s cropped image + cropped mask,
+  stitched back by `696 InpaintStitchImproved` whose stitcher IS `718`.
+- **Pass 2** — `689 InpaintCropImproved` (`mask_expand_pixels 6`, `mask_blend_pixels 32`),
+  stitched back by `680`.
+
+The sampler does repaint the whole crop, but **the stitch composites it back through the
+expanded/blended mask**, so pixels outside that mask are restored from the original. The
+damaged region is therefore bounded by `expand + blend`, which is ~72 px on pass 1 and
+~38 px on pass 2 at 2K — a real, tunable number, not an unbounded model behaviour.
+
+**So the correct reading of "expand 6 and 40 measured near-identical" is that the coif
+sits within ~38 px of the head mask, not that the growth swamps the difference.** The
+mechanism Fabio described is right — anything admitted to the mask propagates outward, and
+that is why `neck` was unusable — but the propagation has a ceiling and the ceiling is
+set by these nodes.
+
+**A third growth surface that is in neither InpaintCrop**, and easy to miss when tuning:
+`682 MaskDetailerPipe` — `feather 6`, `noise_mask_feather 20`, `crop_factor 1.8`,
+`denoise 0.4`. It runs inside pass 2 and feathers on its own terms.
+
+Minor caveat, unmeasured: both crops run `output_resize_to_target_size: True`, so the
+stitch-back resamples and the boundary can smear a pixel or two. Not enough to explain
+a removed coif.

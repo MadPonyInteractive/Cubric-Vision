@@ -24,9 +24,9 @@
       "npm test 655/655 after every graph change; both graphs pass validate-injection-rules.mjs."
     ],
     "pending": [
-      "THE 10/10 STRESS TEST - the last definition-of-done item, NOT STARTED. Ten generations, varied pose and light, recognisable 10 out of 10, tested next to a second character. See `next_action` for the scoping question that needs Fabio before it runs.",
-      "CLOTHING DAMAGE ON HIGH-NECKED CHARACTERS at the shipped settings - a scarf wound to the jaw and a turtleneck's throat are both removed, at `expand: 6` as well as 40, with the neck word OUT. Fabio hit it on a cyberpunk character. PRE-EXISTING, not caused by this session, and now the most valuable open problem on the card.",
-      "The card's own remaining bench items: the krea2-nsfw-only install case, and plan.md's open calls 2 and 4."
+      "THE 10/10 STRESS TEST - scope now settled (see next_action): prove the pick never lands on the back of the head. NOT STARTED.",
+      "CLOTHING DAMAGE ON HIGH-NECKED CHARACTERS - pre-existing. Root cause is Klein's own outward growth past the mask, not the vocabulary and not the crop square.",
+      "plan.md's open calls 2 and 4. (The krea2-nsfw-only install case was CLOSED by Fabio 2026-08-21 - do not re-open it.)"
     ]
   },
   "task_card": {
@@ -41,12 +41,13 @@
     }
   },
   "next_action": {
-    "description": "TWO THINGS, and the second needs Fabio before any GPU is spent. (1) CLOTHING DAMAGE is the valuable problem: the head box is a SQUARE sized off the face bbox (`749`/`750`/`751`, 2.6x the face), so a garment reaching the jaw falls inside it whatever the SAM3 vocabulary says - a standing collar, a scarf, a gorget, cyberpunk armour. The vocabulary cannot fix this; the geometry or the composite has to. Reproduce with the specs in this session's scratchpad (turtleneck / gorget / scarf prompts, 1k-turbo, ~50s a run, and the t2i caches so arms after the first cost ~5s). (2) THE 10/10 STRESS TEST needs its scope agreed first: the brief's test is written for a CHARACTER ASSET (ten poses, ten lights, does the face hold), but this flow makes one fixed thing - same three panels, same flat light, same pose, every time. Ten seeds of one character measures whether the SHEET is stable; whether the CHARACTER survives being used needs the sheet fed into t2i/i2v, which is a different flow and arguably MPI-560's phase. Ask Fabio which he wants before spending ~45 minutes of 2k-quality GPU.",
+    "description": "CORRECTED 2026-08-21 by Fabio - the previous text here blamed the head-box GEOMETRY and that is wrong. `751 MpiMaskSquareBbox` feeds only `752 MpiBox` -> `758 MpiBoxCrop` -> `755 SAM3_Detect`: the square bounds where SAM3 LOOKS, it is not what gets destroyed. What gets destroyed is SAM3's mask (`754` = 'hair, face, hat'), pasted back by `757`, expanded by `718`, and then GROWN OUTWARD BY KLEIN ITSELF - deliberately, because that growth is what stops hair and ear ghosts surviving. (1) CLOTHING DAMAGE on high-necked characters is that same growth reaching a collar/scarf/gorget that sits just outside the mask, which is why expand 6 and 40 measured near-identical. The lever is Klein's growth or what is fed to it - NOT the SAM3 vocabulary (more words is worse, the neck proved it) and NOT the crop square (it changes nothing that is removed). (2) THE 10/10 STRESS TEST scope is SETTLED: it must prove the branch NEVER PICKS THE BACK OF THE HEAD. Not ten poses and ten lights - that is a character-asset test and this flow emits one fixed thing. `745` is face_yolov8n, a FACE detector and not a head detector, on purpose: a true back-of-head shows no face and cannot be picked, so the only residual risk is a rear figure turned far enough to show a face. Maximise rear-head turn. Pass = 10 of 10 with portrait intact, front body headless, rear body head INTACT. (3) The krea2-nsfw-only install case is CLOSED on Fabio's call - leave it alone.",
     "command": "mpi-continue MPI-504"
   },
   "context": {
     "key_decisions": [
       "NO NECK IN THE SAM3 VOCABULARY (Fabio, 2026-08-20, reversing my change). A leftover neck and a faint head rim are acceptable - the sheet still works as a reference. Changed CLOTHING is not, because the sheet's job is to be the wardrobe's scale-and-detail reference.",
+      "THE REASON THE NECK CANNOT GO IN THE VOCABULARY (Fabio, 2026-08-21): Klein grows the region it rebuilds well past the mask it is handed - on purpose, so no hair or ear ghosts survive. So anything in the mask propagates outward, and a neck in the mask means Klein destroys what is BEHIND the neck. It is not a SAM3 binding accident, and the head-box square has nothing to do with what is removed.",
       "RULE B FOR THE PICK, not 'leftmost' (Fabio). Both stages rest on something INTRINSIC - the template prescribes the portrait's half, and face_yolov8n IS a frontal-face detector - rather than on the model's habit of ordering panels, which it does not keep.",
       "THE ENHANCER CONTRADICTION IS ACCEPTED, not fixed. Measured inert in pixels. Do NOT attempt another wording fix; v4.3 already proved that road ends with an instruction example leaking into the output.",
       "`718.mask_expand_pixels: 40` STAYS - measured against the clothing risk on three high-necked characters, where 6 and 40 are near-identical, so it adds no damage while clearing the ghost."
@@ -66,5 +67,5 @@
     ]
   },
   "resume_prompt": "Resuming MPI-504 (Character Sheet flow) in Cubric Vision, master. Read .agents/mpi-kanban/state/handoffs/ba255317-1648-41eb-acb4-d7320bc8da2c.json first, then the LAST FOUR sections of tasks/MPI-504/validation.md - they carry this session's measurements. The GPU session fixed and shipped two head-branch faults (the wrong head was being removed; the ghost was a mask-coverage remnant) and found that the Enhance button had been running a recipe two revisions old. Four items closed on evidence, four leads DISPROVED and written down - do not retry the Klein instance prompt, the mask softness knobs, pass-2 denoise, or a 'leftmost face' pick rule. TWO THINGS ARE OWED: the 10/10 stress test (never started, and its SCOPE needs Fabio first - see next_action), and clothing damage on high-necked characters, which is PRE-EXISTING rather than a regression and is the more valuable problem. DO NOT ADD 'neck' TO THE SAM3 VOCABULARY - it was tried, it destroys clothing that reaches the jaw, and Fabio reverted it. ASK BEFORE USING THE GPU: a free lease does not mean Fabio is idle.",
-  "updated_at": "2026-08-21T00:05:00Z"
+  "updated_at": "2026-08-21T09:00:00Z"
 }
