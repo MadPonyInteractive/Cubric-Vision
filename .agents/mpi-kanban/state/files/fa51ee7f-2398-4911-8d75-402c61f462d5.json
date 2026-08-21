@@ -18,7 +18,7 @@
     "js/data/flowsRegistry.js",
     "tests/inject-params-titles.test.cjs"
   ],
-  "status": "needs_verification",
+  "status": "verified",
   "claim_kind": "write",
   "owner_session": ".agents/mpi-kanban/state/sessions/dc6fe1e5-cc35-45f1-982f-59f7c2ba13df.json",
   "owner_role": "implementer",
@@ -34,6 +34,12 @@
       "at": "2026-08-20T05:35:00Z",
       "event": "editing_complete",
       "note": "needs live-run verification"
+    },
+    {
+      "at": "2026-08-21T14:34:09Z",
+      "event": "verified",
+      "note": "User confirmed the live run 2026-08-21; MPI-504 is done/complete and its validation.md carries the evidence. Record was left on needs_verification after the card closed."
     }
-  ]
+  ],
+  "verified_at": "2026-08-21T14:34:09Z"
 }
