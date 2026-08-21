@@ -271,10 +271,15 @@ test('the Outpaint Flow carries its I/O and declared control titles (MPI-594)', 
     // `input_is_turbo` is the declared control, and the silent-skip case: the toggle
     // flips, the run succeeds, and the accelerator LoRA branch stays on the graph's
     // baked value whatever the user chose.
+    //
+    // `input_base_model` + `input_bypass_filter_lora` are the any-of arms (both Krea 2
+    // cards run this flow). The UNETLoader was UNTITLED as authored — lose the title
+    // again and the model picker changes the badge while krea2 SFW keeps loading.
     const file = 'flow_outpaint.json';
     const have = titlesOf(file);
     for (const title of [
         'input_image', 'input_positive', 'input_negative', 'input_seed', 'input_is_turbo',
+        'input_base_model', 'input_bypass_filter_lora',
     ]) {
         assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
     }

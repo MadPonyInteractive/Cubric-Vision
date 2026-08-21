@@ -27,8 +27,10 @@ decisions go in `docs/playbooks/add-flow/ui/crop-gizmo.md`; the flow's in
 
 - [x] Op `flowOutpaint` in the 4 registries (`commandRegistry.js`,
       `universal_workflows.js`, `operationRegistry.js`, `operation_registry.json`)
-- [x] `FlowDef` in `flowsRegistry.js` — `requiredModels: ['krea2']`, one image slot,
-      the crop step, `fields: [Input_is_Turbo toggle]`
+- [x] `FlowDef` in `flowsRegistry.js` — one image slot, the crop step,
+      `fields: [Input_is_Turbo toggle]`
+- [x] Any-of `[['krea2','krea2-nsfw']]` + `modelParams` — node 55 titled `Input_Base_Model`
+      in the raw graph (user's go-ahead), re-synced, picker verified live
 - [x] Copy warns that small extensions work best (description + step hint)
 - [x] `tests/inject-params-titles.test.cjs` case
 

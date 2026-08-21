@@ -22,7 +22,7 @@
     },
     "class_type": "UNETLoader",
     "_meta": {
-      "title": "Load Diffusion Model"
+      "title": "Input_Base_Model"
     }
   },
   "56": {

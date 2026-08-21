@@ -8,7 +8,7 @@ afterwards. Source image: `comfy_workflows/display/flow-head-swap.webp`, 896 × 
 
 | check | result |
 |---|---|
-| `npm test` | **656 pass, 0 fail** (includes the new `flow_outpaint.json` inject-title case) |
+| `npm test` | **657 pass, 0 fail** (includes the new `flow_outpaint.json` inject-title case and the outpaint any-of arms) |
 | `npx eslint` on every touched JS | clean |
 | `node --check` on every touched JS + `json.load` on `operation_registry.json` | clean |
 | `node scripts/sync-raw-workflows.mjs` | `raw/flow_outpaint.json` → `comfy_workflows/flow_outpaint.json`, injection rules pass |
@@ -16,6 +16,20 @@ afterwards. Source image: `comfy_workflows/display/flow-head-swap.webp`, 896 × 
 Runtime graph's injection surface (34 nodes): `Input_Image` (`MpiLoadImageFromPath`,
 `block_if_empty: true`), `Input_Positive`, `Input_Negative`, `Input_Seed`,
 `Input_is_Turbo`, `Input_Bypass_Filter_Lora`, `Output_Image`.
+
+## Live — the model picker (added 2026-08-21, after titling node 55)
+
+With BOTH weights on disk (`krea2_raw_int8_convrot` 13.5GB, `lustify-v10-krea-raw-int8_convrot`
+13.1GB in `G:/CubricModels/diffusion_models`):
+
+- `flowAvailability` → available, `missing: []`; `flowModelChoices` → `[['krea2','krea2-nsfw']]`.
+- Library drawer renders the picker, options **"Krea 2" / "Krea 2 NSFW"**.
+- `setFlowModel('outpaint', 'krea2')` → `Input_Base_Model: krea2_raw_int8_convrot.safetensors`,
+  `Input_Bypass_Filter_Lora.strength_model: 1`.
+- `setFlowModel('outpaint', 'krea2-nsfw')` →
+  `Input_Base_Model: lustify-v10-krea-raw-int8_convrot.safetensors`, bypass strength `0`.
+- Tile renders with NO preview art and degrades to a plain gradient — nothing broken while the
+  graphics session is pending.
 
 ## Live — the flow
 

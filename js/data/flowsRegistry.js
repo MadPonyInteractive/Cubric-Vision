@@ -786,7 +786,34 @@ export const FLOWS = [
             + 'steps — a narrow strip on one or two sides comes back seamless, while a big extension '
             + 'leaves the model inventing most of the picture and it shows. To go a long way, run it '
             + 'twice on the result rather than once on the original.',
-        requiredModels: ['krea2'],
+        // ANY-OF (MPI-590 mechanism, MPI-594 second user): the two Krea 2 cards are the
+        // same architecture with a different bake, and both ship `krea2Edit` plus the
+        // identity-edit LoRA this graph loads — so a user holding either one can outpaint,
+        // and is never asked for a second 12.25GB download. Both stay listed so the
+        // Install button has something to install for a user who has neither.
+        requiredModels: [['krea2', 'krea2-nsfw']],
+        // What differs between the arms, as injection params. The graph is the SFW one,
+        // so `krea2` restates its own baked values — cheap, and it keeps the pair readable
+        // as a pair rather than "the default plus an override".
+        //
+        // `Input_Bypass_Filter_Lora.strength_model` is not optional trim: the NSFW twin
+        // graph bakes that strength at 0 (`krea2_t2i_nsfw.json` node 245), so leaving it
+        // at 1 runs the lustify transformer with the SFW bypass still applied.
+        //
+        // The UNETLoader was UNTITLED in Fabio's export — titled `Input_Base_Model` in the
+        // raw graph 2026-08-21 so the pick has a node to land on. Without the title the
+        // dropdown would change the badge and nothing else, which is the exact failure
+        // any-of exists to avoid.
+        modelParams: {
+            'krea2': {
+                'Input_Base_Model': 'krea2_raw_int8_convrot.safetensors',
+                'Input_Bypass_Filter_Lora.strength_model': 1,
+            },
+            'krea2-nsfw': {
+                'Input_Base_Model': 'lustify-v10-krea-raw-int8_convrot.safetensors',
+                'Input_Bypass_Filter_Lora.strength_model': 0,
+            },
+        },
         operation: 'flowOutpaint',
         workflow: 'flow_outpaint.json',
         mediaType: 'image',

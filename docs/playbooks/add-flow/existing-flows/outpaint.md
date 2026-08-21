@@ -8,7 +8,7 @@ file is what is specific to THIS flow.
 |---|---|
 | id / op | `outpaint` / `flowOutpaint` |
 | graph | `comfy_workflows/flow_outpaint.json` (raw: `raw/flow_outpaint.json`, Fabio's) |
-| models | `krea2` (SFW only — see § NSFW below) |
+| models | any-of `[['krea2', 'krea2-nsfw']]` |
 | steps | 01 Inputs · 02 Frame (`kind: 'crop'`) · 03 Generate |
 | controls | one `Input_is_Turbo` toggle, default ON |
 
@@ -48,14 +48,23 @@ pixels it can copy from — the case the accelerator LoRA costs least on. Off is
 (Character Sheet defaults it OFF for the opposite reason: a keystone asset every later shot
 inherits is the wrong place to trade fidelity for speed.)
 
-## NSFW twin — one rename away, not built
+## Either Krea 2 card runs it
 
-Character Sheet runs any-of `[['krea2', 'krea2-nsfw']]` with `modelParams` swapping the
-transformer file and the bypass-LoRA strength ([../any-of-models.md](../any-of-models.md)).
-This graph cannot: its `UNETLoader` (node 55) is **untitled**, so there is no
-`Input_Base_Model` to inject. Title that node in the raw graph, re-sync, and the flow can take
-the same `requiredModels` array + `modelParams` pair with no other change. Until then a user
-holding only Krea 2 NSFW sees "Get models".
+Second user of the any-of mechanism ([../any-of-models.md](../any-of-models.md)), same pair
+and same two differences as Character Sheet: the transformer file, and the bypass LoRA's
+strength (`1` SFW, `0` NSFW — the NSFW twin graph bakes 0, and leaving it at 1 runs lustify
+with the SFW bypass still applied).
+
+Both members qualify on their own merits, not by analogy: each declares `krea2Edit` in
+`supportedOps` and ships `krea2-lora-identity-edit`, which is the LoRA this graph loads. The
+test asserts both, because a member that gates green and dies inside ComfyUI is the expensive
+version of this mistake.
+
+**The `UNETLoader` was UNTITLED as authored.** Node 55 was titled `Input_Base_Model` in the raw
+graph on 2026-08-21 (a one-line diff, then re-synced) with the user's go-ahead — the playbook's
+"never hand-edit a workflow" rule is about drift from the ComfyUI canvas, and the raw file IS
+what ComfyUI opens, so the two stay in step. Lose that title again and the picker changes the
+badge while krea2 SFW keeps loading; `inject-params-titles.test.cjs` pins it.
 
 ## Still open
 

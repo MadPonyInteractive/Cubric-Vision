@@ -168,6 +168,53 @@ test('the Character Sheet arms match the weights and the twin graph', async () =
     );
 });
 
+test('the Outpaint arms match the weights and the twin graph (MPI-594)', async () => {
+    // Second any-of flow, same pair, same two differences — and the same silent failure
+    // if either half drifts. Its UNETLoader was UNTITLED in the authored export, so this
+    // also pins the title that was added to the raw graph for the pick to land on:
+    // without it the dropdown changes the badge and the graph still loads krea2 SFW.
+    const { state, registry } = await load();
+    const flow = registry.getFlowById('outpaint');
+    const { DEPS } = await import('../js/data/modelConstants/dependencies.js');
+    const basename = depId => path.basename(DEPS[depId].filename);
+
+    const graph = readJson('comfy_workflows/flow_outpaint.json');
+    const loader = Object.values(graph).find(n => n?._meta?.title === 'Input_Base_Model');
+    assert.ok(loader && loader.class_type === 'UNETLoader',
+        'outpaint must carry ONE injectable UNETLoader — hardcoded, it cannot follow a pick');
+    assert.equal(typeof loader.inputs.unet_name, 'string', 'unet_name must be a widget, not a link');
+
+    state.s_installedModelIds = [SFW, NSFW];
+
+    registry.setFlowModel('outpaint', SFW);
+    assert.equal(registry.flowModelParams(flow).Input_Base_Model, basename('krea2-raw-transformer'));
+    assert.equal(registry.flowModelParams(flow).Input_Base_Model, loader.inputs.unet_name,
+        'the SFW arm must restate the graph\'s own baked weight, or the default silently changes');
+
+    registry.setFlowModel('outpaint', NSFW);
+    const params = registry.flowModelParams(flow);
+    assert.equal(params.Input_Base_Model, basename('krea2-raw-transformer-nsfw'));
+
+    const twin = readJson('comfy_workflows/krea2_t2i_nsfw.json');
+    const twinBypass = Object.values(twin).find(n => n?._meta?.title === 'Input_Bypass_Filter_Lora');
+    assert.equal(
+        params['Input_Bypass_Filter_Lora.strength_model'],
+        twinBypass.inputs.strength_model,
+        'running lustify with the SFW bypass still applied is a half-switched model',
+    );
+
+    // Both members must actually be able to run THIS graph: it is an edit, and it loads
+    // the identity-edit LoRA. A member missing either would gate green and fail inside
+    // ComfyUI.
+    const { MODELS } = await import('../js/data/modelConstants/models.js');
+    for (const id of [SFW, NSFW]) {
+        const model = MODELS.find(m => m.id === id);
+        assert.ok(model.supportedOps.includes('krea2Edit'), `${id} cannot edit`);
+        assert.ok(model.dependencies.includes('krea2-lora-identity-edit'),
+            `${id} does not ship the identity-edit LoRA this graph loads`);
+    }
+});
+
 test('the injector can actually WRITE both arms', () => {
     // A title that exists is only half of it: the spray walks a fixed list of widget
     // names and writes nothing when the node's widget is not on it, and the
