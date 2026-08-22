@@ -1,0 +1,69 @@
+/* MpiLevelMeter — dBFS level meter (MPI-573).
+   The zone gradient is painted twice: a dim copy under the whole track, a lit
+   copy clipped to the level. Colour positions are therefore fixed to dB, not to
+   the signal. */
+
+.mpi-level-meter {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    min-width: 0;
+}
+
+/* Track above, number below. Height comes from the consumer — a vertical meter
+   is only as tall as whatever it is sized into. */
+.mpi-level-meter--vertical {
+    flex-direction: column;
+    height: 100%;
+}
+
+.mpi-level-meter__track {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface-2);
+    border-radius: var(--r-pill);
+}
+
+.mpi-level-meter--horizontal .mpi-level-meter__track {
+    flex: 1 1 auto;
+    height: 8px;
+}
+
+.mpi-level-meter--vertical .mpi-level-meter__track {
+    flex: 1 1 auto;
+    width: 8px;
+    min-height: 6rem;
+}
+
+.mpi-level-meter__zones {
+    position: absolute;
+    inset: 0;
+    /* The dim copy is the scale itself — the user can see where amber and rose
+       begin before ever hitting them. */
+    opacity: 0.18;
+}
+
+/* No transition on clip-path: the meter is sampled per frame, and easing a peak
+   meter turns it into a laggy average — the one thing it must not be. */
+.mpi-level-meter__zones--lit {
+    opacity: 1;
+}
+
+/* Fixed width in BOTH orientations, and tabular figures. A level readout changes
+   every frame, so anything that lets its width follow the digits makes the meter —
+   and in a vertical strip the whole column — twitch on every sample. */
+.mpi-level-meter__value {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    white-space: nowrap;
+    flex-shrink: 0;
+    /* Room for the widest string the scale can produce: "-70.0 dB". */
+    min-width: 4.5rem;
+    text-align: right;
+}
+
+.mpi-level-meter--vertical .mpi-level-meter__value {
+    text-align: center;
+}

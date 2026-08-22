@@ -117,14 +117,67 @@ collected `Output_Audio` URL is only ever muxed into a video.
 
 ---
 
-## Current State (2026-08-22)
+## Current State (2026-08-22, after the placement + format pass)
 
 **A and C are built, verified and committed** — `9cf4fc90`, `a7bc9de5`. Evidence
-table in `validation.md`; do not re-derive it. `npm test` 680 ✓ (+8 new),
-`npm run test:desktop` 24 ✓ (+1 new).
+table in `validation.md`; do not re-derive it.
+
+**Both of Fabio's post-build notes are now closed** — the Record button moved to
+the grid toolbar beside the volume, and the recording rate dropped to 48 kHz mono.
+Evidence in `validation.md` § "Placement + format pass". `npm test` 680 ✓,
+`npm run test:desktop` 25 ✓.
 
 **B is static-only and stays open.** No workflow emits audio as its primary
 output, so the save path has never run. Unblocks with the first audio Flow.
+
+**A third pass landed the same day: `MpiLevelMeter` + a testable Audio Input
+section.** Fabio, on seeing the shipped settings: an input-gain slider with no way
+to test it and no number is a guess. Evidence in `validation.md` § "MpiLevelMeter +
+the mic test".
+
+- **New Primitive `js/components/Primitives/MpiLevelMeter/`** — horizontal or
+  vertical, dBFS scale with fixed colour zones and a numeric readout. Built as a
+  Primitive rather than inline in Settings because the Flows Fabio is heading for
+  (TTS, voice clone, music) all need a meter, and a meter that reads differently
+  where you set the gain than where you record is worse than none.
+- **Zones: green < -12, amber -12…0, rose ≥ 0, top of scale +12.** Fabio suggested
+  amber 0…+6 and rose +6…+12; moved down one step because **0 dBFS is the digital
+  clip point** — amber starting at 0 would paint "already distorting" as the safe
+  colour. The +12 headroom is kept, and is what shows HOW far past.
+- **`getFloatTimeDomainData`, not Byte.** Byte data clamps at ±1, so a boosted
+  signal reads exactly 0.0 dB and the rose zone is unreachable — the meter would
+  have silently lied about the one case it exists for.
+- **The gain slider is now in dB (-6…+12) with a visible readout**, stored value
+  still the linear multiplier every consumer already reads. Applies on `input` so
+  dragging moves the live meter.
+- **Test microphone plate** — a toggling button running the recorder's own graph.
+  Nothing connects to the destination: monitoring an open mic through the speakers
+  is a feedback loop, and "am I being heard, and how hot" needs no sound.
+- **Dev component gallery card** (`templates/tpl-components.html` Primitives section
+  + `js/pages/components.js`) — both orientations plus the no-readout variant, off
+  one driving slider. A real meter only reaches the rose band while clipping, so
+  without a driver the zones cannot be inspected without deliberately distorting.
+  Reached through the dev radial menu; gated on `dev_mode`, NOT `test_styles`
+  (that flag only drives dev page-restore, so it stays `false`).
+
+**Meter defect found by Fabio and fixed:** the vertical readout carried
+`min-width: 0`, so the whole column resized between `-4.0 dB` and `-30.0 dB` — a
+strip that twitches on every sample. Both orientations now hold a fixed 4.5rem plus
+`tabular-nums`; measured constant across the full scale.
+
+**Fader vs meter — the distinction that came out of it (2026-08-22).** Fabio asked
+whether green should run to 0 with amber only above it. That is the FADER scale
+(0 dB = unity, the neutral middle), not the METER scale (0 dBFS = full scale, the
+ceiling). Green-to-zero on a level meter would mean no warning until the signal is
+already clipped. Zones stay as built. What the exchange really surfaced is that
+**`MpiFader` does not exist** — and it is what Fabio's planned vocals+foley mixing
+Flow needs, two of them, beside two meters. Decided: build the **fader Primitive**
+next (dB scale, unity detent, snap tolerance), and let the channel-strip Compound
+be shaped by the Flow rather than guessed now. `MpiProgressBar` has no snap and no
+dB semantics; adding them there would need a sweep of every consumer in the app.
+
+**Next action:** `MpiFader` in a fresh session (Fabio, 2026-08-22). On MPI-573
+itself, nothing but B, which is a Flow away.
 
 ## Plan Drift
 
@@ -139,9 +192,64 @@ output, so the save path has never run. Unblocks with the first audio Flow.
 3. **The planned entry point was unreachable** (no Flow has an audio slot; the
    PromptBox is drag-only). Fabio chose the gallery. Both entry points now share
    `recordAudioIntoProject()`.
-4. **The gallery Record button is in the wrong place** — see below.
+4. **The gallery Record button is in the wrong place** — fixed, see below.
+5. **The 96 kHz recording was an UPSAMPLE, not a capture** (2026-08-22). Opus always
+   encodes at 48 kHz, so the webm MediaRecorder produced was 48 kHz whatever the mic
+   ran at. `_toWavFile` then decoded it through a live `new AudioContext()`, which
+   runs at the HARDWARE rate — 96 kHz on this machine — so `decodeAudioData`
+   resampled the 48 kHz opus UP to 96 kHz and `encodeWav` wrote it. Four times the
+   bytes carrying no extra information. Measured again in the browser this session:
+   the page's default AudioContext also reports 96000, and a 2.16 s take that would
+   have been 829,440 B came out 207,404 B. **The size complaint was never about the
+   container.**
 
-## Open — settle these first, in order
+## Settled 2026-08-22 — both of Fabio's notes are closed
+
+### 1. Move the Record button — DONE
+
+Landed **next to the volume**, Fabio's recommended home. `MpiGalleryGrid` mounts the
+button into a new `__record-slot` in `zone--center` after `__volume-wrap` and emits
+`'record'`; `MpiGalleryBlock` handles that emit and still owns `recordAudioIntoProject`.
+The grid owning the button and the block owning the action is the shape the other 20
+`grid.on(...)` handlers already use — the floating bar was the anomaly.
+`.mpi-gallery-block__actions` is deleted from both block files, and the `mountButton` /
+`on` imports it orphaned went with it (`ce` was dead BEFORE MPI-573 and is left as it
+was — do not "fix" it here).
+
+Measured in the running app: Record spans x 603–700, the volume ends at 591, the filter
+zone starts at 866. No overlap with the filters or the grid.
+
+**Not chosen: the FLOWS top bar.** It is app chrome, so Record would render outside the
+gallery where there is no project media context to record into.
+
+### 2. WAV vs a compressed format — RESOLVED, and the premise was wrong
+
+**Kept WAV. Cut the rate instead.** `_toWavFile` now decodes through
+`OfflineAudioContext(1, …, 48000)` and renders mono: `decodeAudioData` resamples to the
+context's rate, rendering into a 1-channel destination downmixes. Five lines, no new
+dependency, no container change, so the `.webm`-retype bug stays fixed.
+
+**48 kHz / 1 ch / 16-bit — 94 KB/s, 5.5 MB/min. Verified off the RIFF header of a real
+recording, not computed.** Was 96 kHz stereo = 22 MB/min. **4x, losslessly.**
+
+Why not MP3/m4a, so this is not re-litigated:
+
+- **The RAM argument does not hold.** ComfyUI decodes audio to float32 PCM before any
+  node sees it, so a reference clip costs the same RAM whatever the container — MP3
+  slightly more, for the decoder. Compression only buys disk and the per-generation Pod
+  upload (`_uploadRemoteMedia`).
+- A 10 s voice-clone reference is now ~960 KB. MP3 would make it ~160 KB and cost a new
+  dependency (Chromium's MediaRecorder cannot emit MP3) plus a lossy round trip in front
+  of a voice clone — the one workflow the recorder exists for.
+- `.m4a`/AAC is the zero-dependency compressed route if it is ever wanted: check
+  `MediaRecorder.isTypeSupported('audio/mp4')` first. Not chased; 960 KB is not a problem.
+- **No settings toggle.** Nobody has measured a case where lossy wins, and the graphs trim
+  the reference anyway (`TrimAudioDuration` in the foley flow). Add one when a real
+  workflow asks for it.
+
+---
+
+## Historic — the note as Fabio raised it
 
 ### 1. Move the Record button (Fabio, 2026-08-22, with a screenshot)
 

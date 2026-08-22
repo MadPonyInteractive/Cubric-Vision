@@ -18,6 +18,7 @@ import { ICONS } from '../utils/icons.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { MpiSpinner } from '../components/Primitives/MpiSpinner/MpiSpinner.js';
 import { MpiProgressBar } from '../components/Primitives/MpiProgressBar/MpiProgressBar.js';
+import { MpiLevelMeter } from '../components/Primitives/MpiLevelMeter/MpiLevelMeter.js';
 import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
 import { MpiDropdown } from '../components/Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiRadioGroup } from '../components/Primitives/MpiRadioGroup/MpiRadioGroup.js';
@@ -311,6 +312,36 @@ function mountAll() {
             radial.el.setContext(CONTEXTS[ctxIndex]);
             radial.el.show();
         });
+    });
+
+    // ── MpiLevelMeter (Primitive) ────────────────────────────────────────────────
+    // Driven by a slider rather than a mic so the zones can actually be inspected:
+    // an audio meter only enters the rose band when you are clipping, which is not
+    // something you want to reproduce on purpose to check a colour.
+    mount('preview-level-meter', () => {
+        const host = slot('preview-level-meter');
+        host.innerHTML = `
+            <div style="display:flex;width:100%;gap:2rem;align-items:stretch;">
+                <div data-dev-mount="vertical" style="height:200px;"></div>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1.25rem;justify-content:center;">
+                    <div data-dev-mount="horizontal"></div>
+                    <div data-dev-mount="bare"></div>
+                    <div data-dev-mount="drive"></div>
+                </div>
+            </div>
+        `;
+        const meters = [
+            MpiLevelMeter.mount(qs('[data-dev-mount="vertical"]', host), { orientation: 'vertical' }),
+            MpiLevelMeter.mount(qs('[data-dev-mount="horizontal"]', host), {}),
+            // showValue:false is how the recorder mounts it — a glance, not a number.
+            MpiLevelMeter.mount(qs('[data-dev-mount="bare"]', host), { showValue: false }),
+        ];
+        const drive = MpiProgressBar.mount(qs('[data-dev-mount="drive"]', host), {
+            min: -70, max: 12, step: 0.5, value: -70,
+            interactive: true, wheel: true, handle: true,
+            info: 'Drive the meters: {value} dB',
+        });
+        drive.on('input', ({ value }) => meters.forEach(m => m.el.setDb(value)));
     });
 
     // ── MpiVideoSurface + MpiVideoControlBar (split player) ──────────────────────

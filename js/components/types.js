@@ -851,6 +851,19 @@
 */
 
 /**
+ * @typedef {Object} MpiLevelMeterProps (Primitive — js/components/Primitives/MpiLevelMeter)
+ * @property {'horizontal'|'vertical'} [orientation='horizontal'] - Bar direction
+ * @property {number} [min=-70] - dBFS at the empty end
+ * @property {number} [max=12] - dBFS at the full end
+ * @property {number} [warn=-12] - dBFS where the amber zone starts
+ * @property {number} [danger=0] - dBFS where the rose zone starts (the digital clip point)
+ * @property {boolean} [showValue=true] - Show the numeric dB readout beside the bar
+ *
+ * Instance methods: setDb(db), setPeak(linear), reset(). Feed it FLOAT analyser
+ * data — byte data clamps at ±1 and can never reach the rose zone.
+ */
+
+/**
  * @typedef {Object} MpiSpinnerProps
  * @property {'sm'|'md'|'lg'} [size='md'] - Spinner size
  * @property {'primary'|'secondary'|'light'|'dark'} [variant='primary'] - Color variant

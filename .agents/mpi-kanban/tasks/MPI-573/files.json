@@ -27,6 +27,13 @@
     "js/data/flowsRegistry.js",
     "js/components/types.js",
     "js/core/storage.js",
-    "tests/desktop/audio-permission.spec.js"
+    "tests/desktop/audio-permission.spec.js",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css",
+    "js/components/Primitives/MpiLevelMeter/MpiLevelMeter.js",
+    "js/components/Primitives/MpiLevelMeter/MpiLevelMeter.css",
+    "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css",
+    "js/pages/components.js",
+    "templates/tpl-components.html"
   ]
 }

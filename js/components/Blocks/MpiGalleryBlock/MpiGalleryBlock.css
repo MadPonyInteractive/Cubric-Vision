@@ -8,24 +8,6 @@
     position: relative;
 }
 
-/* ── Gallery actions (MPI-573) ───────────────────────────────────────────────
-   Floats over the grid's top-right rather than sitting in the header below —
-   that header never reaches the DOM (the grid's mount overwrites the block's
-   innerHTML), so this bar owns its own position. `.mpi-gallery-block` is already
-   position:relative, so the inset is against the block, not the page. */
-
-.mpi-gallery-block__actions {
-    position: absolute;
-    top: var(--s-2);
-    right: var(--s-3);
-    display: flex;
-    align-items: center;
-    gap: var(--s-2);
-    /* Above the grid, below MpiModal's portal (which lives on <body> anyway) and
-       below the sticky header's z-index:10 if it is ever revived. */
-    z-index: 5;
-}
-
 /* ── Sticky top header (crumb / filters / sort) ──────────────────────────── */
 
 .mpi-gallery-block__header {

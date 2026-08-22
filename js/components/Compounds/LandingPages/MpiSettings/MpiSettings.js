@@ -5,6 +5,7 @@ import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiDropdown } from '../../../Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiProgressBar } from '../../../Primitives/MpiProgressBar/MpiProgressBar.js';
+import { MpiLevelMeter, meterAnalyser } from '../../../Primitives/MpiLevelMeter/MpiLevelMeter.js';
 import { MpiFolderDrop } from '../../../Primitives/MpiFolderDrop/MpiFolderDrop.js';
 import { MpiRunpodSettings } from '../MpiRunpodSettings/MpiRunpodSettings.js';
 import { state } from '../../../../state.js';
@@ -111,9 +112,22 @@ export const MpiSettings = ComponentFactory.create({
                     <div class="mpi-settings__plate mpi-settings__plate--stack">
                         <div class="mpi-settings__plate-main">
                             <span class="mpi-settings__plate-label">Input gain</span>
-                            <span class="mpi-settings__plate-desc">Boost a quiet microphone. The level meter in the recorder shows the result — keep peaks out of the red.</span>
+                            <span class="mpi-settings__plate-desc">Boost a quiet microphone. Test below and keep peaks out of the red — above 0 dB the recording is clipped.</span>
                         </div>
-                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsAudioGainSlot"></div>
+                        <div class="mpi-settings__plate-ctrl mpi-settings__audio-gain">
+                            <div class="mpi-settings__audio-gain-slider" id="mpiSettingsAudioGainSlot"></div>
+                            <span class="mpi-settings__audio-gain-value" id="mpiSettingsAudioGainValue">0.0 dB</span>
+                        </div>
+                    </div>
+                    <div class="mpi-settings__plate mpi-settings__plate--stack">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Test microphone</span>
+                            <span class="mpi-settings__plate-desc">Watch the level while you speak. Peaks reaching the amber are healthy; red is distortion.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl mpi-settings__audio-test">
+                            <div id="mpiSettingsAudioTestSlot"></div>
+                            <div class="mpi-settings__audio-test-meter" id="mpiSettingsAudioMeterSlot"></div>
+                        </div>
                     </div>
                 </section>
 
@@ -184,6 +198,13 @@ export const MpiSettings = ComponentFactory.create({
         let _syncReuseControls = null;
         let _syncReuseSource = null;
         let _extraFolders = { loras: [], upscale_models: [] };
+        // Live mic-test handles (MPI-573). Null whenever the test is off.
+        let _monitor = null;
+        let _testMeter = null;
+        // Closing the slide-over destroys this component, and a mic left open keeps the
+        // OS recording indicator lit long after the panel is gone. Registered once at
+        // setup, not per open — the panel re-inits its fields on every open.
+        _unsubs.push(() => _stopMicTest());
         const _extraFolderControls = [];
         let _ipcRenderer = null;
 
@@ -237,16 +258,35 @@ export const MpiSettings = ComponentFactory.create({
             const deviceSlot = qs('#mpiSettingsAudioDeviceSlot', root);
             const gainSlot = qs('#mpiSettingsAudioGainSlot', root);
 
+            // The slider is in dB, the stored value stays the linear multiplier every
+            // consumer already reads. A linear 0.5–4x scale spends three quarters of
+            // its travel above unity, so the useful part is unusably cramped; dB is
+            // how the number is thought about anyway, and it is what the meter reads.
+            const gainValueEl = qs('#mpiSettingsAudioGainValue', root);
+            const _showGainDb = (db) => {
+                if (gainValueEl) gainValueEl.textContent = `${db > 0 ? '+' : ''}${db.toFixed(1)} dB`;
+            };
             if (gainSlot) {
                 gainSlot.innerHTML = '';
+                const startDb = 20 * Math.log10(Storage.getAudioInputGain() || 1);
+                _showGainDb(startDb);
                 const gainInst = MpiProgressBar.mount(gainSlot, {
-                    min: 0.5, max: 4, step: 0.1,
-                    value: Storage.getAudioInputGain(),
+                    min: -6, max: 12, step: 0.5,
+                    value: Math.max(-6, Math.min(12, startDb)),
                     interactive: true, handle: true,
-                    info: 'Input gain: {value}x',
+                    info: 'Input gain: {value} dB',
                 });
-                gainInst.on('change', ({ value }) => Storage.setAudioInputGain(value));
+                gainInst.on('input', ({ value }) => {
+                    _showGainDb(value);
+                    // Live, not on release: the whole point of the test below is to
+                    // hear the slider move the meter as you drag it.
+                    const linear = 10 ** (value / 20);
+                    if (_monitor) _monitor.gain.gain.value = linear;
+                });
+                gainInst.on('change', ({ value }) => Storage.setAudioInputGain(10 ** (value / 20)));
             }
+
+            _initMicTest(root);
 
             if (!deviceSlot) return;
             deviceSlot.innerHTML = '';
@@ -266,6 +306,71 @@ export const MpiSettings = ComponentFactory.create({
                 placeholder: 'System default',
             });
             deviceInst.on('change', ({ value }) => Storage.setAudioInputDevice(value));
+            // A device change mid-test would keep metering the OLD mic, which reads as
+            // the new one being dead. Drop the monitor and let the user press again.
+            deviceInst.on('change', () => _stopMicTest());
+        }
+
+        /**
+         * The mic test (MPI-573): a toggling button and a live meter.
+         *
+         * An input-gain slider with nothing to check it against is a guess — the user
+         * turns it up, records, and finds out afterwards. This is the check, and it
+         * runs the SAME graph the recorder does (source → gain → analyser) so the
+         * level shown here is the level that will be written.
+         *
+         * Nothing is connected to the destination on purpose: an open mic monitored
+         * through the speakers is a feedback loop, and this answers "am I being
+         * heard, and how hot" without needing to be audible.
+         */
+        function _initMicTest(root) {
+            const btnSlot = qs('#mpiSettingsAudioTestSlot', root);
+            const meterSlot = qs('#mpiSettingsAudioMeterSlot', root);
+            if (!btnSlot || !meterSlot) return;
+
+            // The panel re-inits on every open; a monitor from the last one would be
+            // metering into an element that is about to be replaced.
+            _stopMicTest();
+            btnSlot.innerHTML = '';
+            meterSlot.innerHTML = '';
+            _testMeter = MpiLevelMeter.mount(meterSlot, { orientation: 'horizontal' });
+            const testBtn = MpiButton.mount(btnSlot, {
+                icon: 'mic', label: 'Test', variant: 'secondary', size: 'sm',
+                toggleable: true,
+            });
+
+            testBtn.on('click', async () => {
+                if (_monitor) { _stopMicTest(); return; }
+                const deviceId = Storage.getAudioInputDevice();
+                let stream;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia({
+                        audio: deviceId ? { deviceId: { ideal: deviceId } } : true,
+                    });
+                } catch (err) {
+                    clientLogger.warn('settings', `[MpiSettings] mic test failed: ${err?.name || err}`);
+                    testBtn.el.setActive?.(false);
+                    return;
+                }
+                const ctx = new AudioContext();
+                const gain = ctx.createGain();
+                gain.gain.value = Storage.getAudioInputGain();
+                const analyser = ctx.createAnalyser();
+                analyser.fftSize = 1024;
+                ctx.createMediaStreamSource(stream).connect(gain);
+                gain.connect(analyser);
+                _monitor = { stream, ctx, gain, btn: testBtn, stop: meterAnalyser(analyser, _testMeter.el) };
+            });
+        }
+
+        /** Drop the test mic. Idempotent — toggle, device change and teardown all call it. */
+        function _stopMicTest() {
+            if (!_monitor) return;
+            _monitor.stop();
+            _monitor.stream.getTracks().forEach(t => t.stop());
+            _monitor.ctx.close().catch(() => {});
+            _monitor.btn?.el?.setActive?.(false);
+            _monitor = null;
         }
 
         function _initFields(root) {

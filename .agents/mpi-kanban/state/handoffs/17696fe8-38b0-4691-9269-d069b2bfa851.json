@@ -1,0 +1,74 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "17696fe8-38b0-4691-9269-d069b2bfa851",
+  "generated_at": "2026-08-22T14:49:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-573 - Record button moved, recording rate cut, MpiLevelMeter built",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Close the two notes Fabio raised on the shipped mic recorder: the gallery Record button overlapping the filter row, and WAV questioned as the recording format.",
+    "status": "in_progress",
+    "summary": "Both notes are closed and verified. The Record button now lives in the grid toolbar beside the volume; the recording is 48 kHz mono WAV (4x smaller, losslessly). Reviewing the settings then produced a third piece of work - MpiLevelMeter, a testable Audio Input section, and a dev-gallery card - all built and measured. The next session builds MpiFader, which is a NEW piece of work and probably wants its own card."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-573/plan.md",
+    "completed": [
+      "Record button moved to MpiGalleryGrid's __tabs row (zone--center, after the volume); grid emits 'record', block owns recordAudioIntoProject. .mpi-gallery-block__actions deleted from JS and CSS",
+      "_toWavFile decodes through OfflineAudioContext(1, .., 48000) - 48 kHz mono, verified off the RIFF header (was 96 kHz stereo, 4x)",
+      "MpiLevelMeter Primitive - horizontal/vertical, dBFS zones as one gradient painted dim + clipped-lit, numeric readout, setDb/setPeak/reset, plus the shared meterAnalyser() rAF loop",
+      "Settings Audio Input: dB gain slider (-6..+12) with a visible readout, and a Test microphone plate driving a live meter. Mic released on toggle-off, device change and panel close",
+      "Recorder switched to the component; getFloatTimeDomainData replaces Byte so the rose zone is reachable at all",
+      "Dev component gallery card with a driving slider (templates/tpl-components.html + js/pages/components.js)",
+      "Vertical readout width pinned (was jittering between -4.0 and -30.0 dB)",
+      "npm test 680, npm run test:desktop 25, eslint clean on the touched components"
+    ],
+    "pending": [
+      "BUILD MpiFader - the next session's job. dB scale, unity (0 dB) detent with snap tolerance, for Fabio's planned vocals+foley mixing Flow",
+      "MPI-573 half B - the MEDIA_TYPE.AUDIO save path is static-only and stays open until a Flow emits audio",
+      "Fabio has not yet eyeballed the meter, the Audio Input section or the Record button placement",
+      "Delete by hand: Documents\\Cubric Vision\\Projects\\Untitled - a throwaway test project; the recursive delete is blocked by the shell guard"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-573",
+    "title": "Audio in Vision: mic recorder popup + audio as an output media type",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-573/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-573/plan.md",
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-573/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Build the MpiFader Primitive. It is NEW work, not MPI-573 - ask Fabio whether to card it before editing, since MPI-573 is 'mic recorder + audio output type' and a fader belongs to the vocals+foley mixing Flow he plans next. Shape: a dB gain control, unity (0 dB) detent that SNAPS within a tolerance (Fabio: 'driving sliders for volume should snap at zero'), sized to sit beside an MpiLevelMeter in a channel strip. Do NOT add snap to MpiProgressBar instead - it is a shared primitive used across the whole app and would need a full consumer sweep, and it still would not own the dB/unity semantics. Do NOT build the MpiMixerStrip Compound yet: it should be shaped by the foley Flow's real requirements, not guessed. Read MpiLevelMeter first - the fader is its counterpart and should match its prop shape (orientation, showValue) so a strip can mount both the same way.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "FADER and METER are different dB scales, and conflating them is what prompted the fader. A fader is 0 dB = unity, the neutral middle. A level meter is 0 dBFS = full scale, the ceiling every normal signal sits below. Fabio asked whether green should run to 0 with amber only above it - that is fader thinking; on a meter it would mean no warning until the signal is ALREADY clipped. Meter zones stay green < -12, amber -12..0, rose 0..+12.",
+      "WAV was KEPT and the sample rate cut instead. The old 96 kHz was an UPSAMPLE: opus always encodes at 48 kHz, and decoding through a live AudioContext at the hardware rate resampled it up, so 4x the bytes carried no extra information. MP3/m4a were declined - ComfyUI decodes to float32 PCM either way, so the container buys nothing in RAM, only disk and the per-generation Pod upload; and a lossy round trip in front of a voice clone costs quality in the exact workflow the recorder exists for.",
+      "The meter feeds on getFloatTimeDomainData. Byte data clamps at +/-1, so a boosted signal reads exactly 0.0 dB and the rose zone can never be reached - the meter would silently lie about the only case it exists to warn about.",
+      "meterAnalyser() lives in MpiLevelMeter.js, not in each caller: the recorder and the Settings test must read identically, or the gain you set in one place does not match what the other records.",
+      "The Record button lives in the GRID (which owns the toolbar and emits) while the block owns the action - matching the 20 existing grid.on(...) handlers. Not the FLOWS top bar: that is app chrome, so Record would appear outside the gallery with no project to record into."
+    ],
+    "constraints": [
+      "MpiGalleryBlock's own header is DEAD MARKUP - MpiGalleryGrid.mount(el) sets el.innerHTML and wipes the block's template, so its crumb/filters/sort slots render nothing while their CSS is live. Pre-existing, left alone, worth its own card.",
+      "The dev component gallery is gated on APP_CONFIG.dev_mode (true for any source run), NOT on test_styles - that flag only drives dev page-restore persistence. Do not flip it; it stays false. Reach the gallery through the dev radial menu -> Components.",
+      "js/components/types.js and js/shell/preloadStyles.js are also on MPI-599's and MPI-567's file lists. Both peer claims were hours past the index's own 120-minute timeout and both edits here were one appended line; check for drift before touching them again.",
+      "getUserMedia is refused in a playwright browser and granted in real Electron. Stub navigator.mediaDevices.getUserMedia with a MediaStreamAudioDestinationNode to drive the whole real path offline - and return a FRESH destination per call, or the second test gets a stream whose track was already stopped. A KNOWN source level (0.25 linear = -12.04 dBFS) is what makes the dB readings assertions rather than impressions.",
+      "playwright-cli eval must be ONE line - a multi-line file expanded with $(cat ...) dies with SyntaxError at line 2. Collapse it first (strip // comments, join). Heredocs are blocked by the shell guard; write scripts to the scratchpad and run them by path.",
+      "A consumer may only SIZE a Primitive, never restate its chrome. The vertical meter needs height:100% on the component and a sized parent from the consumer - it was collapsing to the track's 6rem minimum, and its readout needs a FIXED width or the column twitches on every sample."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-573/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-573/validation.md",
+      "js/components/Primitives/MpiLevelMeter/MpiLevelMeter.js",
+      "js/components/Primitives/MpiProgressBar/MpiProgressBar.js",
+      "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/17696fe8-38b0-4691-9269-d069b2bfa851.json and use mpi-continue to continue from where we left off. Last session closed both notes Fabio raised on the mic recorder (MPI-573): the gallery Record button moved into MpiGalleryGrid's toolbar beside the volume, and the recording dropped to 48 kHz mono WAV - the old 96 kHz was an upsample of 48 kHz opus, so it was 4x the bytes for no information, and the container was never the problem. Reviewing that shipped a third piece: MpiLevelMeter (a dBFS level meter Primitive, horizontal and vertical), a Test microphone plate in Settings, a dB gain slider, and a dev-gallery card. All verified live and by suite. The NEXT job is a new one: build MpiFader - a dB gain control with a unity (0 dB) snapping detent - for Fabio's planned vocals+foley mixing Flow. Ask him whether to card it separately first, since MPI-573 is the recorder card and this is not it. The distinction that produced it matters and is in the plan: a fader is 0 dB = unity, a level meter is 0 dBFS = the ceiling, and the meter's zones are correct as built."
+}

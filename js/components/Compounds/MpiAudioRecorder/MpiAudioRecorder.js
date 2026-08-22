@@ -1,6 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { MpiButton, mountButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiLevelMeter, meterAnalyser } from '../../Primitives/MpiLevelMeter/MpiLevelMeter.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { Storage } from '../../../core/storage.js';
 import { clientLogger } from '../../../services/clientLogger.js';
@@ -51,9 +52,7 @@ export const MpiAudioRecorder = ComponentFactory.create({
             <div class="mpi-audio-recorder__title">Record audio</div>
             <div class="mpi-audio-recorder__stage">
                 <div class="mpi-audio-recorder__mic" id="mic-slot"></div>
-                <div class="mpi-audio-recorder__meter" id="meter-slot">
-                    <div class="mpi-audio-recorder__meter-fill" id="meter-fill"></div>
-                </div>
+                <div class="mpi-audio-recorder__meter" id="meter-slot"></div>
                 <div class="mpi-audio-recorder__time" id="time-slot">0:00</div>
             </div>
             <div class="mpi-audio-recorder__playback" id="playback-slot"></div>
@@ -73,7 +72,6 @@ export const MpiAudioRecorder = ComponentFactory.create({
         let _analyser = null;
         let _recorder = null;
         let _chunks = [];
-        let _raf = 0;
         let _tick = 0;
         let _startedAt = 0;
         let _blob = null;
@@ -90,7 +88,8 @@ export const MpiAudioRecorder = ComponentFactory.create({
         el.show = () => modal.el.show();
         el.hide = () => modal.el.hide();
 
-        const meterFill = qs('#meter-fill', el);
+        const meter = MpiLevelMeter.mount(qs('#meter-slot', el), { showValue: false });
+        let _stopMeter = null;
         const timeSlot  = qs('#time-slot', el);
         const hintSlot  = qs('#hint-slot', el);
         const playSlot  = qs('#playback-slot', el);
@@ -202,35 +201,15 @@ export const MpiAudioRecorder = ComponentFactory.create({
             _startedAt = Date.now();
             _state = 'recording';
             _render();
-            _meterLoop();
+            _stopMeter = meterAnalyser(_analyser, meter.el);
             _tick = setInterval(_renderTime, 200);
         }
 
         function _stop() {
             if (_recorder?.state === 'recording') _recorder.stop();
-            cancelAnimationFrame(_raf);
+            _stopMeter?.();
+            _stopMeter = null;
             clearInterval(_tick);
-            meterFill.style.width = '0%';
-        }
-
-        function _meterLoop() {
-            if (!_analyser) return;
-            const buf = new Uint8Array(_analyser.fftSize);
-            const step = () => {
-                if (_state !== 'recording' || !_analyser) return;
-                _analyser.getByteTimeDomainData(buf);
-                // Peak, not RMS: the meter's job is to show the user they are being
-                // heard and to warn about clipping, and RMS under-reads both on speech.
-                let peak = 0;
-                for (let i = 0; i < buf.length; i++) {
-                    const v = Math.abs(buf[i] - 128) / 128;
-                    if (v > peak) peak = v;
-                }
-                meterFill.style.width = `${Math.min(100, peak * 140).toFixed(1)}%`;
-                meterFill.classList.toggle('mpi-audio-recorder__meter-fill--hot', peak > 0.92);
-                _raf = requestAnimationFrame(step);
-            };
-            _raf = requestAnimationFrame(step);
         }
 
         function _renderTime() {
@@ -254,7 +233,7 @@ export const MpiAudioRecorder = ComponentFactory.create({
             _chunks = [];
             _state = 'idle';
             timeSlot.textContent = '0:00';
-            meterFill.style.width = '0%';
+            meter.el.reset();
             _render();
         }
 
@@ -283,7 +262,8 @@ export const MpiAudioRecorder = ComponentFactory.create({
 
         /** Drop the mic. Idempotent — every exit path calls it. */
         function _releaseCapture() {
-            cancelAnimationFrame(_raf);
+            _stopMeter?.();
+            _stopMeter = null;
             clearInterval(_tick);
             _stream?.getTracks().forEach(t => t.stop());
             _stream = null;
@@ -308,17 +288,37 @@ export const MpiAudioRecorder = ComponentFactory.create({
 });
 
 /**
- * Decode whatever MediaRecorder produced and re-mux it as a 16-bit WAV File.
- * See the component's header for why the container is changed rather than kept.
+ * Voice capture is mono, and no audio model in the app is fed above 48 kHz.
+ * Anything the mic offers beyond this is bytes on disk and bytes uploaded to the
+ * Pod on every generation, for nothing.
+ */
+const WAV_RATE = 48000;
+
+/**
+ * Decode whatever MediaRecorder produced and re-mux it as a 16-bit 48 kHz mono
+ * WAV File. See the component's header for why the container is changed rather
+ * than kept.
+ *
+ * The rate and the downmix are the point of the OfflineAudioContext (MPI-573):
+ * `decodeAudioData` resamples to the context's own rate, and rendering into a
+ * 1-channel destination downmixes. A live `new AudioContext()` decodes at the
+ * HARDWARE rate instead — measured 96 kHz stereo on this machine, 23 MB/min, four
+ * times the bytes with nothing a mic can put in them. WAV is kept deliberately:
+ * a lossy round trip before a voice clone costs quality in the one workflow the
+ * recorder exists for, and ComfyUI's audio loaders take WAV with no transcode.
  * @param {Blob} blob
  * @returns {Promise<File|null>} null if the blob could not be decoded.
  */
 async function _toWavFile(blob) {
     try {
-        const ctx = new AudioContext();
-        const audio = await ctx.decodeAudioData(await blob.arrayBuffer());
-        await ctx.close().catch(() => {});
-        return new File([encodeWav(audio)], 'recording.wav', { type: 'audio/wav' });
+        const decoded = await new OfflineAudioContext(1, 1, WAV_RATE)
+            .decodeAudioData(await blob.arrayBuffer());
+        const off = new OfflineAudioContext(1, decoded.length, WAV_RATE);
+        const src = off.createBufferSource();
+        src.buffer = decoded;
+        src.connect(off.destination);
+        src.start();
+        return new File([encodeWav(await off.startRendering())], 'recording.wav', { type: 'audio/wav' });
     } catch (err) {
         clientLogger.warn('audio-recorder', `wav encode failed: ${err?.message || err}`);
         return null;

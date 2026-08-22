@@ -78,6 +78,13 @@
     min-width: 0;
 }
 
+/* The two sliders flex; Record must not (MPI-573). */
+.mpi-gallery-grid__record-slot {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+}
+
 /* MpiProgressBar ships min-width:160px — two of them plus the icon blow past
    the center track and overlap. Toolbar sliders are deliberately short. */
 .mpi-gallery-grid__zone--center .mpi-progress {

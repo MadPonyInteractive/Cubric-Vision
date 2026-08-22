@@ -93,6 +93,33 @@
     margin-top: var(--s-3);
 }
 
+/* ── Audio Input (MPI-573) ──────────────────────────────────────────
+   Layout only. The bar is MpiLevelMeter's chrome and the slider is
+   MpiProgressBar's — neither is restated here. */
+.mpi-settings__audio-gain,
+.mpi-settings__audio-test {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+}
+
+.mpi-settings__audio-gain-slider,
+.mpi-settings__audio-test-meter {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.mpi-settings__audio-gain-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--t-2xs);
+    color: var(--ink-2);
+    white-space: nowrap;
+    flex-shrink: 0;
+    /* Fixed width so the slider does not resize as the number changes. */
+    min-width: 4.5rem;
+    text-align: right;
+}
+
 /* Multi-choice reuse grid sits inside a stacked plate. */
 .mpi-settings__reuse-grid {
     display: grid;

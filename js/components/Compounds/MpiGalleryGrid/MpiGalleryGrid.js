@@ -101,6 +101,7 @@ function _addDownloadUrl(e, item) {
  *   'preview:continue'    { group, item } — preview-stage card Continue clicked (branches into new card)
  *   'preview:finish'      { group, item } — preview-stage card Finish clicked (replaces preview with final)
  *   'preview:pop-continue'{ group, item } — Pop clicked while card is queued for Finish
+ *   'record'      {}                     — Record button clicked (block owns the recorder)
  */
 export const MpiGalleryGrid = ComponentFactory.create({
     name: 'MpiGalleryGrid',
@@ -119,6 +120,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     <div class="mpi-gallery-grid__slider-wrap"></div>
                     <span class="mpi-gallery-grid__slider-icon mpi-gallery-grid__volume-icon"></span>
                     <div class="mpi-gallery-grid__volume-wrap"></div>
+                    <div class="mpi-gallery-grid__record-slot"></div>
                 </div>
                 <div class="mpi-gallery-grid__zone mpi-gallery-grid__zone--right">
                     <div class="mpi-gallery-grid__tab-slot" data-filter="all"></div>
@@ -421,6 +423,18 @@ export const MpiGalleryGrid = ComponentFactory.create({
             _paintVolumeIcon();
             qsa('audio[data-src], video.mpi-group-card__thumb--video', el).forEach(_applyVolume);
         });
+
+        // ── Record (MPI-573) ──────────────────────────────────────────────────
+        // Sits in the media-controls zone beside the volume, not in the filter
+        // zone it used to overlap. The button lives here because this row is the
+        // only toolbar that reaches the DOM — MpiGalleryBlock's own header is
+        // wiped by this component's mount — but the recorder itself stays in the
+        // block, which owns the project and the media:imported round trip.
+        const recordBtn = MpiButton.mount(qs('.mpi-gallery-grid__record-slot', el), {
+            icon: 'mic', label: 'Record', size: 'sm', variant: 'ghost',
+            info: 'Record a clip from your microphone into this project',
+        });
+        recordBtn.on('click', () => emit('record', {}));
 
         // ── Card rendering helper ─────────────────────────────────────────────
 
