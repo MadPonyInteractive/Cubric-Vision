@@ -12,7 +12,8 @@
 
 | Control | The component | Notes |
 |---|---|---|
-| slider / range | **`MpiProgressBar`** (`interactive: true`, `handle`, `wheel`) | its own header: "the single source of truth for sliders" |
+| slider / range | **`MpiProgressBar`** (`interactive: true`, `handle`, `wheel`) | the single source of truth for sliders — EXCEPT a gain fader, see the row below |
+| gain / volume fader | **`MpiFader`** (`orientation`, `unity`, `snap`) | dB scale with a unity (0 dB) detent. NOT `MpiProgressBar` with a dB suffix: 0 dB is the neutral MIDDLE, the fill anchors there so its length is the cut or boost, and `getGain()` returns the linear multiplier (0 at the floor, so it can mute). Pairs with `MpiLevelMeter`, whose 0 dBFS is the CEILING — do not give either one the other's scale |
 | select / dropdown | `MpiDropdown` | portals its list to `document.body`, so it survives `overflow: hidden` |
 | checkbox / switch | `MpiCheckbox` | renders its own `<label>` — never nest it inside another one |
 | text / textarea / number | `MpiInput` | `type: 'number'` owns its own clamp, wheel and decimals |
@@ -56,7 +57,7 @@ Stage redesign (PORTING.md phases 0–10.2) **merged to master**. Tokens, type s
 ## Sub-Agent Briefing
 > Copy this section verbatim into any sub-agent prompt that involves creating or modifying components.
 
-- **EVERY UI ELEMENT IS A COMPONENT.** Never write a bare `<input>`, `<select>`, `<button>` or hand-rolled control. Use the Primitive that already is it — slider/range = `MpiProgressBar` (`interactive: true`), select = `MpiDropdown`, checkbox = `MpiCheckbox`, text/number/textarea = `MpiInput`, segmented choice = `MpiRadioGroup`, action = `MpiButton`. If nothing covers the use, **create a new component** — that is the answer. **Flows are no exception**: a Flow's declared `fields` NAME these components, they do not replace them. A consumer block may only SIZE a Primitive, never restate its fill, border, hover, focus or disabled treatment (`accent-color` in a consumer stylesheet means a native widget got through).
+- **EVERY UI ELEMENT IS A COMPONENT.** Never write a bare `<input>`, `<select>`, `<button>` or hand-rolled control. Use the Primitive that already is it — slider/range = `MpiProgressBar` (`interactive: true`), **gain/volume fader = `MpiFader`** (dB scale, unity detent — never `MpiProgressBar` with a dB suffix), select = `MpiDropdown`, checkbox = `MpiCheckbox`, text/number/textarea = `MpiInput`, segmented choice = `MpiRadioGroup`, action = `MpiButton`. If nothing covers the use, **create a new component** — that is the answer. **Flows are no exception**: a Flow's declared `fields` NAME these components, they do not replace them. A consumer block may only SIZE a Primitive, never restate its fill, border, hover, focus or disabled treatment (`accent-color` in a consumer stylesheet means a native widget got through).
 - **All components MUST use `ComponentFactory.create()`** — never build a component by hand.
 - **NEVER modify `js/components/factory.js`** — it is locked. Fix your component, not the factory.
 - **4-Tier hierarchy (never import up):** Primitives → Compounds → Organisms → Blocks. Primitives import nothing. Compounds import Primitives only. Organisms import Primitives + Compounds. Blocks import all tiers. Primitives may own multi-canvas DOM trees (e.g. `MpiCanvas` owns base + overlay + screen-UI canvases).

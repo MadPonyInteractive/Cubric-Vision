@@ -108,7 +108,9 @@ structured file (`board.json`: adjacent `doing`/`done` arrays) your edit and the
 ONE hunk, so no hunk-level filter separates them. Reconstruct the file you want to commit from
 `HEAD` and stage it directly, bypassing the working tree entirely:
 `git show HEAD:<file> > tmp` → apply ONLY your changes to `tmp` as **textual** replacements
-(never `JSON.parse`/`stringify` — it reformats the whole file: `board.json` is 2-space, but its
+(never `JSON.parse`/`stringify` — it reformats the whole file, and the INDENT is not one house
+style: `board.json` is 2-space but **`state/index.json` is 1-SPACE** (MPI-604, 2026-08-22 — a
+`JSON.stringify(idx, null, 2)` rewrite turned a one-field change into a whole-file diff), and its
 LINE ENDINGS vary with who wrote it last — `core.autocrlf=true` gives CRLF to a file git checked
 out, while an agent's own rewrite lands LF and stays LF (measured 2026-08-02: LF in both the tree
 and the HEAD blob). `task.json` VARIES per card — measure both, and see `kanban.md` § "Detect
