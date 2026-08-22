@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "feb13ce7-74db-456d-9661-f2b8f74fe0dc",
   "generated_at": "2026-08-22T05:03:10Z",
-  "status": "open",
+  "status": "superseded",
   "session": {
     "name": "Klein 9B research -> MPI-600 bench card, weights pulled, bench workflow built",
     "branch": "master"

@@ -45,6 +45,7 @@ Model chain, always-on path:
 | 5 | 99 `Input_Lora_1` | `lora_name: "None"`, `strength_model: 1.0` | the turbo-LoRA slot, set per arm |
 | 6 | 203, 204 | expressions → literals `"4"` / `"1.0"` | per-run steps/cfg, no boolean juggling |
 | 7 | 111 | `PreviewImage` → **`SaveImage`**, prefix `klein_9b/distilled/run` | Preview does not persist; prefix is relative to the bench output root `D:\WORK\Images\Outputs` |
+| 8 | 254, 278 | `.model` rewired `259` → `100` | **bypasses the 4B outpaint LoRA** on the `wf_type` 5 branch — see the trap below |
 
 15 `VAELoader` left at `flux2-vae.safetensors` — already on disk, and the only one of the two
 template VAEs we have.
@@ -58,13 +59,24 @@ strength 0**, so a prompt-gated strength does not save you.
   (`1.0 if a else 0.0`). **Bypassed** in the copy (edit 3). This one would have fired on every
   single run.
 - **101 / 102 style LoRAs** — eight 4B files. **Cleared** (edit 4).
-- **143 refcontrol depth** and **259 outpaint** — 4B, but only on the control and fill branches.
-  The bench runs `Input_wf_type` **1** (t2i) and **4** (kleinEdit), so they should never execute.
-  Left in place; if a control run is ever added, clear them first.
+- **259 outpaint** — 4B, `strength 1.1`. **This one WAS live.** It was described here as
+  sitting on a branch the bench does not run, but the bench now runs `Input_wf_type` **5**
+  (the localised, masked edit) and **that branch reaches 259 unconditionally**. **Bypassed** in
+  the copy by edit #8. Never re-wire it back on a 9B arm.
+- **143 refcontrol depth** — 4B, feeds CFGGuider 125. Verified **not** reachable from `wf_type`
+  1, 4 or 5. Left in place; clear it first if a control run is ever added.
+
+Reachability was checked by walking each branch's output back through its inputs, not by reading
+the graph by eye. After edit #8 all three branches the bench runs reach **zero**
+`LoraLoaderModelOnly`, and every `Input_Lora` and style-LoRA slot is `None`.
 
 ## Per-arm settings
 
-`Input_wf_type`: **1** = t2i, **4** = kleinEdit (the edit branch — scenarios 1–4 all use it).
+`Input_wf_type`: **1** = t2i, **4** = kleinEdit (whole-image edit), **5** = the **localised,
+masked edit** — crop around the mask, green-fill it, regenerate, stitch back. Scenario 3 is a
+`wf_type` 5 run; it takes `Input_Mask` (node **298**) alongside `Input_Image` (node **474**), and
+the character it places is described in the **prompt**, since that branch chains no image
+reference of its own.
 
 | Arm | 27 `unet_name` | 99 `lora_name` | 99 strength | 203 steps | 204 cfg | 111 prefix |
 |---|---|---|---|---|---|---|
@@ -90,3 +102,17 @@ Turbo-LoRA rows come from anyMODE's own recommendation and community reports (se
    do not let it near the t2i path. If it fails with `timestep_zero_index`, that is the known
    upstream issue, not a bad download.
 3. **Verify the graph runs at all on 9B** before scoring anything — one t2i at 1024², warm.
+
+
+## Bench tooling (this card's own scripts)
+
+| Script | What it does |
+|---|---|
+| `run.py` | Queues this graph on :8188. Every knob is `--set NODE.input=value`. Samples GPU memory through the run and reports peak, wall clock, `execution_cached` and the files that landed. |
+| `make_mask.py` | Draws a 1-bit mask (`--ellipse`/`--rect x0,y0,x1,y1`) for a `wf_type` 5 run. |
+| `seam.py` | `seam.py BASE RESULT MASK` — scores seam / lighting integrity by measurement: outside-mask delta, distance rings outward from the mask edge, inside-mask delta. This is how scenario 3 is scored. |
+
+**Read a VRAM number only after freeing the bench first** — `POST /free
+{"unload_models":true,"free_memory":true}`, sample the floor, then run. The bench retains its
+`cudaMallocAsync` pool between runs, so an un-freed baseline reports the *previous* run's pool as
+this run's idle. Detail in `format.md`.

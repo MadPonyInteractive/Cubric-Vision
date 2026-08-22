@@ -1,0 +1,74 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "28977ce3-0c13-4028-9db8-73f3bcdc72b6",
+  "generated_at": "2026-08-22T06:05:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-600 Leg 0 - INT8 9B proven on the 4060 Ti, a live 4B-LoRA trap fixed, scenarios locked",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Bench FLUX.2 Klein 9B - base vs turbo LoRA vs distilled vs KV - and pick the weight MPI-598 ships.",
+    "status": "in_progress",
+    "summary": "Leg 0 is closed: INT8 ConvRot runs natively at 1024x1024 on the 16380 MiB card, peak ~14.1 GB, CLIP and VAE fixed. The scenarios are locked into research/scenarios.md (3, not 4 - Fabio dropped object/character replacement). Three bench scripts now exist. Legs A, B and C have not started; not one scored run exists."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-600/plan.md",
+    "completed": [
+      "MPI-600 moved todo -> doing with checklist.md and files.json written",
+      "Leg 0 CLOSED - INT8 ConvRot runs natively on ComfyUI 0.31.0, no custom node, fp8 not needed",
+      "Peak VRAM measured: ~14.1 GB attributable against 16380 MiB (~690 MiB headroom) - NOT the ~9.5 GB the plan predicted",
+      "CLIP fixed to qwen_3_8b_int8_convrot.safetensors (type flux2); VAE fixed to flux2-vae.safetensors (the other VAE is not on disk, so the template ambiguity settles itself)",
+      "FluxKVCache confirmed already registered on the bench - Leg C needs no node install",
+      "LIVE 4B-LoRA TRAP FOUND AND FIXED - wf_type 5 reached node 259 (flux2-klein-4b-outpaint @1.1) unconditionally; bypassed as edit #8; README corrected",
+      "wf_type 5 (localised masked edit) proven end to end - character placed through a mask, casting its own shadow",
+      "THE COLOURING QUESTION IS ANSWERED - seam.py shows byte-identical output past 128 px from the mask; no colour cast, the failure is a seam step at 0-32 px",
+      "Scenarios LOCKED into research/scenarios.md - 3 scenarios x 3 seeds = 9 runs per candidate",
+      "Bench tooling written: research/run.py, research/make_mask.py, research/seam.py"
+    ],
+    "pending": [
+      "Leg A - base vs base+turbo swept by strength (1.0, 0.7, 0.25-0.5). ITS FIRST RUN answers the one open question: does rank-128 klein_9B_Turbo_r128 apply to an INT8 ConvRot base at all?",
+      "Leg B - base+turbo@1.0 vs distilled; and do intermediate strengths reach quality distilled cannot (that decides one checkpoint or two)",
+      "Leg C - 9b-kv vs the leg-B winner, edit scenarios only, recording ref count and output resolution on every row",
+      "research/results.md - create it from the row format at the end of scenarios.md",
+      "research/verdict.md answering the four deliverable questions, then post it onto MPI-598"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-600",
+    "title": "Bench FLUX.2 Klein 9B: base vs turbo LoRA vs distilled vs KV - pick the shipped weight",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-600/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-600/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-600/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-600/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Run Leg A on the standalone bench at :8188. Start with the ONE open question - set node 99 lora_name to klein_9B_Turbo_r128.safetensors on the base arm (flux-2-klein-base-9b-int8-ConvRot.safetensors) and confirm a rank-128 LoRA applies to an INT8 ConvRot base at all. If it loads, sweep strength 1.0 / 0.7 / 0.25-0.5 across S1, S2 and S3 at seeds 101, 202, 303, recording every row into research/results.md. Read research/scenarios.md and research/README.md first - scenarios.md holds the locked inputs and the exact run.py command shape, README.md holds the per-arm settings table and every node id.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Fabio 2026-08-22: scenario 1 (object / character replacement) is DROPPED - a wf_type 5 localised edit IS a character being placed into a plate, so it already covers that area. 3 scenarios x 3 seeds = 9 runs per candidate, not 12. task.json's acceptance array still says 4 scenarios; that is stale BY DECISION and research/scenarios.md is the source of truth.",
+      "Fabio 2026-08-22: the localised edit is wf_type 5 - the same workflow taking a MASK, which selects where the edit happens. It is the test for whether the model shifts colouring. Answered: it does not.",
+      "S2 is scored on the 0-32 px SIGNED step from seam.py, never the global mean - the global mean reads ~0 for every candidate because there is no colour cast, so it separates nothing. Baseline to beat: -3.135/255 at ring 0-8, +1.280 by 16-32.",
+      "INT8 ConvRot for every arm; fp8 only if a 9B INT8 arm fails. Leg 0 confirms it runs, so fp8 stays off the table."
+    ],
+    "constraints": [
+      "THE 4B-LoRA TRAP MOVED AND WILL MOVE AGAIN. research/README.md used to say node 259 (flux2-klein-4b-outpaint, strength 1.1) sat on a branch the bench never runs; adding wf_type 5 made that false and it was firing unconditionally. Fixed as edit #8 (254.model and 278.model -> node 100). Node 143 (refcontrol depth, 4B) is still in the graph and is NOT reached by branches 1, 4 or 5 - if you ever add a control run, clear it first. Re-run the reachability walk after ANY branch you add: walk each branch's output back through its inputs and assert zero LoraLoaderModelOnly.",
+      "A VRAM READING IS A LIE UNLESS YOU FREE THE BENCH FIRST. nvidia-smi per-process is [N/A] on Windows/WDDM, and the bench retains its cudaMallocAsync pool between runs, so an un-freed baseline reports the PREVIOUS run's pool as this run's idle - the first Leg 0 attempt reported a 904 MiB delta, pure garbage. POST /free {\"unload_models\":true,\"free_memory\":true} to :8188, sample the floor, then run. The floor also contains Fabio's app engine on :48188 - never free THAT one.",
+      "MpiClearVram (node 570) does NOT force a cold run (Fabio's correction, 2026-08-22). It offloads VRAM->RAM and leaves the weights in RAM, so the next run reloads from RAM not disk. Runs stay warm and every arm pays the same constant transfer. Leave it in the chain; do not 'fix' it.",
+      "The board is co-owned and a peer WILL commit your board.json move for you - it happened this session (commit 9f2201c3 for MPI-567 swept up MPI-600's todo -> doing). Do not treat that as a clobber; just make sure your own half (the task workspace files) is committed so the board never references an untracked card. Recipes in .claude/rules/git.md.",
+      "Bench is :8188, the app engine is :48188 - do not confuse them, and never drive :3000, which is Fabio's live app."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-600/research/scenarios.md",
+      ".agents/mpi-kanban/tasks/MPI-600/research/README.md",
+      ".agents/mpi-kanban/tasks/MPI-600/research/format.md",
+      ".agents/mpi-kanban/tasks/MPI-600/plan.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/28977ce3-0c13-4028-9db8-73f3bcdc72b6.json and use mpi-continue to pick up MPI-600, the FLUX.2 Klein 9B bench. The card is in `doing`. Leg 0 is closed: INT8 ConvRot runs natively at 1024x1024 on the RTX 4060 Ti with a ~14.1 GB peak against 16380 MiB, the CLIP is fixed to qwen_3_8b_int8_convrot.safetensors and the VAE to flux2-vae.safetensors, and FluxKVCache is already on the bench so Leg C needs no node install. The scenarios are LOCKED in research/scenarios.md - three of them, not four, because Fabio dropped object/character replacement as already covered by the localised masked edit - run against a fixed plate and mask under D:\\WORK\\Images\\Outputs\\klein_9b\\plates\\ at seeds 101, 202 and 303. Three bench scripts exist in research/: run.py queues the graph on :8188 with --set NODE.input=value knobs and samples VRAM, make_mask.py draws a mask, and seam.py scores seam/lighting integrity by measurement. Nothing scored has been run yet. Start Leg A, and start it with the one open question in the card: set node 99's lora_name to klein_9B_Turbo_r128.safetensors on the base arm and find out whether a rank-128 LoRA applies to an INT8 ConvRot base at all - if it only loads on fp8, Leg A is forced to fp8 and that asymmetry must be recorded. Read research/scenarios.md and research/README.md before touching the graph: every LoRA baked into it is a 4B LoRA, and one of them (node 259) was firing unconditionally on the wf_type 5 branch until it was bypassed this session."
+}

@@ -244,3 +244,109 @@ Then post the verdict onto **MPI-598** as an event + a brief section, and move t
 - R2 staging / hashing the winning weight. MPI-598 owns that once a winner exists.
 - Turbo plumbing in the graph. Already built (`Input_is_Turbo`, node 52) — this card supplies
   the numbers it needs, not the wiring.
+
+
+---
+
+## Completed
+
+- **Leg 0 (2026-08-22)** - INT8 ConvRot confirmed running at 1024x1024 on the 4060 Ti, both
+  branches (t2i and kleinEdit). Peak VRAM, the fixed CLIP and the fixed VAE are in
+  `research/format.md`. fp8 is not needed; the format question stays closed.
+- `research/run.py` written - the bench runner for every remaining leg. Queues
+  `klein_9b_bench.json` on :8188 with `--set NODE.input=value` knobs, samples GPU memory
+  through the run, and reports peak, wall clock, `execution_cached` and the files that landed.
+
+## Current State
+
+Leg 0 is closed and the bench is proven end to end. Three images exist under
+`D:\WORK\Images\Outputs\klein_9b\leg0\`: two t2i plates and one edit off the second plate.
+
+**The next action is the scenarios**: write the 4 stress scenarios + 3 fixed seeds into
+`research/scenarios.md`, then run Leg A. `t2i_00002_.png` is already a usable **scenario 3**
+plate - harsh directional light, a long hard shadow, and a flat unforgiving dirt ground, which
+is exactly the shape the plan asks for. Reuse it rather than generating another.
+
+Things found this leg that are not obvious from the diff:
+
+- **Peak VRAM is ~14.1 GB, not the ~9.5 GB this plan predicted.** It fits a 16380 MiB card with
+  roughly 690 MiB spare. Shippable, but the margin is thin - a note MPI-598 owes its users.
+- **A VRAM read is a lie unless you free the bench first.** `nvidia-smi` per-process is `[N/A]`
+  on Windows/WDDM, and the bench keeps its `cudaMallocAsync` pool between runs, so the previous
+  run's pool shows up in the next run's "idle" baseline. `POST /free` -> sample the floor -> run.
+  Full write-up in `research/format.md`.
+- **`MpiClearVram` (node 570) does NOT force a cold run** (Fabio, 2026-08-22). It offloads
+  VRAM->RAM and leaves the weights in RAM, so the next run reloads from RAM rather than disk.
+  Runs stay warm and every arm pays the same constant transfer. Leave it in the chain.
+- **`FluxKVCache` is already registered** on the bench - Leg C needs no node install.
+- **`MpiAnySwitch10` is genuinely lazy**, so `Input_wf_type` executes exactly one branch and a
+  t2i run cannot touch the 4B LoRAs sitting on the control and fill branches.
+
+## Plan Drift
+
+- **2026-08-22** - Leg 0's predicted "~9.5 GB peak, because the encoder unloads before the
+  transformer loads" is **wrong as measured**: 14181 MiB on t2i and 14074 MiB on the edit. The
+  overlap is partial, not absent. The leg's exit condition is still met (INT8 runs at 1024 on
+  this card) - only the predicted figure was off.
+- **2026-08-22** - Leg 0 ran as *two* runs rather than one: a t2i at 1024 to prove the graph
+  executes on 9B (README's owed item #3) and to produce an edit source, then the plan's 1024
+  edit off that output. No scenario plates existed yet, so the t2i had to come first.
+- **2026-08-22** - two of README's three "still owed" items closed for free: `FluxKVCache` is
+  present, and the CLIP/VAE ambiguity settles itself because
+  `full_encoder_small_decoder.safetensors` is not on disk. Only "does the turbo LoRA apply to an
+  INT8 base" is still owed, and that is Leg A's first run.
+
+
+## Plan Drift (cont.)
+
+- **2026-08-22, scenario 3 reshaped by Fabio** - the localised edit is not a `wf_type` 4 run with
+  a small prompt. It is **`wf_type` 5**, which takes a **mask**, green-fills the masked region and
+  stitches the regenerated patch back. One good use is **placing a character into a base plate**,
+  which is also the cleanest test of whether the model shifts the colouring around it. Scenario 3
+  is therefore a masked run, and `Input_Mask` (node 298) joins the fixed inputs.
+- **2026-08-22, the 4B-LoRA trap moved** - `research/README.md` claimed node 259
+  (`flux2-klein-4b-outpaint`, strength 1.1) sat on a branch the bench does not run. Adding
+  `wf_type` 5 made that false: the inpaint branch reaches 259 unconditionally. Bypassed as edit #8
+  (`254.model` and `278.model` -> node 100). All three branches now reach zero
+  `LoraLoaderModelOnly`. The README has been corrected.
+- **2026-08-22, scenario 3 is now scored by measurement** - `research/seam.py` replaces an opinion
+  with numbers. First result: past 128 px from the mask the output is **byte-identical** to the
+  plate, so **the model does not change the image's colouring**. The visible rectangle is a
+  **seam**, not a cast: the patch edge runs -3.1/255 darker at 0-8 px and flips to +1.3 lighter by
+  16-32 px. The axis to score is the **0-32 px signed step**, not the global mean.
+
+
+## Plan Drift (cont. 2)
+
+- **2026-08-22, scenario 1 dropped (Fabio).** "Object / character replacement" is cut: a
+  `wf_type` 5 localised edit *is* a character being placed into a plate, so scenario 2 in the old
+  numbering already covers it and scoring it twice buys nothing. The bench is **3 scenarios x 3
+  seeds = 9 runs per candidate**, not 12. `task.json`'s `acceptance` array still says "all 4
+  scenarios x 3 seeds" - that line is **stale by decision**, not by oversight; `research/
+  scenarios.md` is the source of truth and the card description records the call.
+- **2026-08-22, scenarios LOCKED** into `research/scenarios.md`: S1 clothing replacement
+  (`wf_type` 4), S2 localised masked edit (`wf_type` 5, the seam axis), S3 pose change
+  (`wf_type` 4). Fixed plate `plates/plate_dirt_road.png`, fixed mask
+  `plates/mask_standing_left.png`, fixed seeds 101 / 202 / 303. Do not edit mid-bench.
+- **2026-08-22, S2 is scored on the 0-32 px SIGNED step, not the global mean.** Leg 0 proved
+  there is no colour cast (byte-identical past 128 px), so a global number reads ~0 for every
+  candidate and separates nothing. Baseline to beat: -3.135/255 at ring 0-8, +1.280 by 16-32.
+
+
+## Current State (2026-08-22, handoff)
+
+**Leg 0 is closed and the scenarios are locked. Legs A, B and C have not started - not one
+scored run exists yet.**
+
+On disk under `D:\WORK\Images\Outputs\klein_9b\`: `plates/plate_dirt_road.png` and
+`plates/mask_standing_left.png` (the fixed inputs), plus four Leg 0 proof runs in `leg0/`.
+
+**Next action: Leg A.** Run S1/S2/S3 x seeds 101/202/303 on the `base` arm, then on
+`base+turbo` at 1.0, 0.7 and the 0.25-0.5 band. Per-arm weight / LoRA / steps / cfg are in
+`research/README.md` § Per-arm settings; the exact command shape is at the bottom of
+`research/scenarios.md`. **Leg A's very first run is the one open question in the whole card:
+does `klein_9B_Turbo_r128` (rank 128) even apply to an INT8 ConvRot base?** If it only loads on
+fp8, Leg A is forced to fp8 and that asymmetry must be recorded.
+
+Record each run into `research/results.md` (that file does not exist yet - create it from the row
+format in `scenarios.md`).
