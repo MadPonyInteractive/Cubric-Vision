@@ -1,0 +1,76 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "bd9d95e7-07b9-41af-90ea-a4a33e290ddf",
+  "generated_at": "2026-08-22T16:05:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-567 session 7 - LanPaint measured: the tail dies, the box edge does not",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Weigh the inpaint node Fabio found (and the open Klein 9B thread) before writing any of the Flow, then wire the app half if the pipeline survives.",
+    "status": "in_progress",
+    "summary": "It did not survive - it got smaller. LanPaint replaces the whole-image relight AND the ~25-node composite-back tail, measured on all five plates, and Klein 9B beats 4B on every one. But Fabio's eye caught a defect every metric here missed: the BOX EDGE is visible. Fixing that comes before any app wiring."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+    "completed": [
+      "THE ROUTE IS MEASURED AND IT WORKS (commit d484257c). stamped composite + a BOX mask -> InpaintCropImproved (optional_context_mask = MpiMaskSquareBbox(mask,64)) -> ImageScaleToTotalPixels(1MP, steps 16) -> VAEEncode -> ReferenceLatent -> FluxGuidance 4.0 -> SetLatentNoiseMask(cropped_mask) -> LanPaint_KSampler(4 steps, cfg 1.0, euler/simple, denoise 1.0, NumSteps 2, 'Image First', 'Image Inpainting') -> VAEDecode -> InpaintStitchImproved. Wiring COPIED from Fabio's two bench workflows, not invented.",
+      "IT DELETES the whole-image Klein relight AND the ~25-node tail (ImageBlend x2 + screen, ImageToMask, both ThresholdMask, both GrowMaskWithBlur, MaskComposite, the 100px proximity gate, the full-frame ImageCompositeMasked). The tail only ever repaired a global re-grade and there is no longer one.",
+      "MOVEMENT IN THE USER'S PHOTO OUTSIDE THE BOX: 0.04-0.36, against session 3's bg_mean 3.45 (silhouette) / 10.34 (shadow-aware). Structural - the stitch returns the original outside the box.",
+      "SPEED: 4B 16.1s, the SAME wall clock as session 5's 74-node merged graph. 9B 30.1s (1.9x) and BETTER ON ALL FIVE PLATES by eye - clearest on indoor (shadow aligns with the window beam) and overcast (grass crosses the legs). Confirms Fabio's read positively.",
+      "BOX SIZE IS THE WHOLE CONTROL, both ways. A tight box STRUCTURALLY CANNOT cast a shadow (shadow_ratio 0.015-0.054); auto (+25% out, +60% down) wins on all five; generous (+60%/+120%) RE-GRADES what it contains (far_frac 0.68 sun / 0.66 overcast / 0.43 anime).",
+      "DECIDED WITH FABIO: the flow gains a `box` step. MpiStepBox ALREADY EXISTS and already feeds Mpi Box Mask / Mpi Box Crop, so it is a data line, not a component. Its `hint` asks for ROOM, never light direction - the model reads the scene's light itself. Crop-stitch is IN (it also answers small-subject-in-a-big-image).",
+      "Evidence, runners and every number: .agents/mpi-kanban/tasks/MPI-567/research/lanpaint/verdict.md. Sheets at D:/WORK/Images/Outputs/mpi567/lp/."
+    ],
+    "pending": [
+      "FIRST, BEFORE ANY APP WIRING: FIX THE VISIBLE BOX EDGE. edge_step up to 30.84 (sun, auto) against an invisibility bar of 2, and present on `auto`, not just `generous`. Four candidates, cheapest first: (1) mask_blend_pixels 32 -> 96/128; (2) denoise < 1.0; (3) ImageCompositeMasked(destination = the ORIGINAL cropped_image, source = decoded, mask = feathered cropped_mask) BEFORE the stitch; (4) separate the regions - crop bounds generous for resolution/context, denoise mask smaller. Shrinking the box is NOT a fix: it trades the seam for the shadow.",
+      "Then sweep the auto-seed properly. +25% out / +60% down is a GUESS that happened to win, not a measurement. Sweep it on sun/overcast/anime - the three that re-grade - never on night or indoor, which under-report.",
+      "Untested and worth one run: shape B, the stage-1 render passed as a REFERENCE image rather than stamped in. That is what Fabio's own road/woman test did, and it drops the stamp chain entirely.",
+      "Then the app half: the op in its 4 files, the FlowDef with the TWO-slot requiredModels + modelParams, the declared fields incl. the MANDATORY Input_Control_strength slider (0.45-0.60, NOT the bench's 0.8 - stage 1 is untouched by all of this), the paint step as { kind: 'paint', role: <photo>, mediaRole: <layer> }, the NEW box step, and step copy saying TONAL plus the ~80-96px minimum-ink warning.",
+      "THE FLOW MUST STILL GUARD THE NO-DRAWING CASE. An unpainted step reports paint: null, STEP_MEDIA derives nothing, and MpiLoadImageFromPath runs on its baked authoring path - a confident wrong result with no error. The frame cannot guard it.",
+      "Extend tests/flow-model-choice.test.cjs to this flow; consider tests/flow-step-paint.test.cjs pinning STEP_KINDS.paint + the STEP_MEDIA row (session 6's live probe was throwaway).",
+      "At close-out: heal blending-into-a-photo.md - its headline conclusion and its whole graph-tail section are now HISTORY. The three laws behind it all SURVIVED (filled rect not silhouette; shadow physics conditional never ordered; never calibrate on the dark plate) and still bind. Also heal the card's acceptance list (still says 'Canny for a clean structured drawing'; canny's niche is a TONAL drawing)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-567",
+    "title": "Scribble-to-object Flow - user draws on the image, ControlNet + SDXL renders it in",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-567/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      "brief": ".agents/mpi-kanban/tasks/MPI-567/brief.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-567/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Fix the visible box edge - it is the one thing between this route and the app wiring. Work the four candidates in research/lanpaint/verdict.md cheapest-first (mask_blend_pixels 32->96/128, then denoise<1.0, then ImageCompositeMasked against the ORIGINAL cropped_image before the stitch, then splitting crop bounds from denoise mask), re-running seamzoom.py after each. The bar is edge_step under 2 on sun/overcast/anime; never judge it on night or indoor, which under-report. Do NOT start the FlowDef until the edge is gone.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE RE-GRADE DID NOT GO AWAY - IT BECAME A UI PROBLEM. Sessions 2-5 fought it in the graph with a 25-node tail. LanPaint's noise mask removes the premise (unmasked latents survive the denoise), but an over-large box still re-invents the photo inside it. Better place for it - but it is now one drag-handle away at all times, which is why the auto-seed and the step's hint are load-bearing rather than cosmetic.",
+      "EVERY METRIC IN THE VERDICT MISSED THE SEAM, AND THE FAILURE MODE IS INSTRUCTIVE. `outside` looks BEYOND the box, where the stitch guarantees the original - it can never see this defect. `far_frac` returned None for `auto` because that box has no area far from the object, and that None was read as 'cannot re-grade'. It cannot re-grade AT DISTANCE; it can still shift tone across the whole box. Fabio's eye beat the instrumentation. Add edge_step (seamzoom.py) to any future judgement of this route.",
+      "PROBABLE CAUSE OF THE SEAM IS NOT THE SAMPLER. InpaintStitchImproved pastes back the WHOLE inpainted crop, and that crop was VAE round-tripped and rescaled to 1024x1024 (output_resize_to_target_size: True). Every pixel inside the box drifts, hidden only by mask_blend_pixels: 32 - enough for a small step, not an 11. LanPaint preserves the LATENT, not the decoded pixels.",
+      "`ring` MEASURED ON THE CHANGED REGION'S OWN BBOX IS INVALID FOR THIS ROUTE and must not be quoted. The noise mask is a rectangle, so that bbox hugs the box and the ring band lands on real content (object, shadow), reading 7-20 on visually clean results. Session 3's numbers were valid because its changed region was a feathered blob well inside its bbox. Use edge_step and far_frac.",
+      "9B NEEDS qwen_3_8b_int8_convrot.safetensors, not 4B's qwen_3_4b. The mismatch dies with `mat1 and mat2 shapes cannot be multiplied (512x7680 and 12288x4096)`, which reads as a LanPaint bug and is not one. Already documented in MPI-600 research/format.md; re-derived here at the cost of one wasted sweep - read that file before touching 9B.",
+      "SCOPE ESCAPED THIS CARD. LanPaint is landing in the SHIPPED klein_t2i_template, not this flow's private graph, so the node_lock.json pin reaches every Klein op in the app. Fabio has a separate agent on 9B + the new 4B template, and the CHARACTER SHEET flow rides the same 4B inpaint route. MPI-567 CONSUMES that template; it must not be the card that pins a third-party sampler into every Klein path. Overlaps MPI-598 and MPI-600."
+    ],
+    "constraints": [
+      "HEREDOCS ARE BLOCKED by a guard hook and HANG until the 2-minute timeout - cost two minutes again this session despite the last handoff warning. Write a .py file and run it by path. Windows python also needs sys.stdout.reconfigure(encoding='utf-8') or it dies on cp1252 mid-script, and json.load on a board file needs encoding='utf-8-sig'.",
+      "THE BENCH IS 8188 AND FABIO SAID THE GPU IS FREE - that authorization was for this session; ask again. LanPaint is installed there (LanPaint_KSampler + 11 siblings) but is NOT yet in the app engine on 48188, so this route cannot be gated against the shipping engine until his other session lands the pin.",
+      "PUSH IS USER-AUTHORIZED despite project-profile.md frontmatter saying push_policy: auto. CLAUDE.md Git and Commits wins. This session's 1 commit (d484257c) is UNPUSHED. A peer session pushes on its own schedule and had already carried everything up before this one started, so check `git rev-list --count origin/master..HEAD` rather than assuming.",
+      "A SECOND SESSION IS LIVE IN THIS TREE and owns models.js, icons.js, MpiAudioRecorder, the Gallery components, MPI-573, MPI-598 and MPI-600. Do NOT stage any of them. Because it owns icons.js, a new icon is unavailable - MpiStepPaint's Undo/Clear are text buttons for exactly that reason.",
+      "THE COMFYUI EDITOR QUANTISES FLOAT WIDGETS. Fabio has NOT opened comfy_workflows/raw/flow_scribble_object.json, so the restored 12/255 and 40/255 thresholds are still exact - but they revert to 0.05/0.16 the moment that file is reopened and saved. Also: the bench-store copy of that graph is 74 nodes with debug previews; the repo copy is 70 and is what ships."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-567/research/lanpaint/verdict.md",
+      ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-567/research/lanpaint/seamzoom.py",
+      "docs/playbooks/add-flow/ui/carousel-frame.md",
+      "docs/playbooks/add-flow/blending-into-a-photo.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/bd9d95e7-07b9-41af-90ea-a4a33e290ddf.json and use mpi-continue to resume MPI-567 (Scribble-to-object Flow), which is in `doing`. Session 7 answered the question the last handoff blocked on: Fabio's inpaint node is scraed/LanPaint, and it is already wired into his bench copy of klein_t2i_template behind an MpiIfElse on has_mask, crop-stitched. Measured on all five plates against session 3's own stamped composites, it DELETES the whole-image relight and the ~25-node composite-back tail, drops movement in the untouched photo from 3.45/10.34 to 0.04-0.36, costs the same 16.1s on Klein 4B as the old 74-node graph, and Klein 9B beats 4B on every plate at 30.1s. It also turns the box into load-bearing UI: a tight box structurally cannot cast a shadow, a generous one re-grades what it contains. THEN FABIO SPOTTED WHAT THE METRICS MISSED - the BOX EDGE IS VISIBLE, edge_step up to 30.84 against an invisibility bar of 2, on the winning `auto` box and not only on `generous`. Your first job is to fix that, cheapest-first, per the four candidates in research/lanpaint/verdict.md, re-running seamzoom.py after each; do NOT start the FlowDef until the edge is gone. Three traps that will cost you if rediscovered: heredocs HANG the shell for two minutes so write .py files and run them by path; 9B needs qwen_3_8b_int8_convrot and pairing it with 4B's qwen_3_4b throws a shape error that reads like a LanPaint bug; and `ring` on the changed region's own bbox is meaningless for this route - it reads 7-20 on visually clean frames. LanPaint is on the bench (8188) but NOT on the app engine (48188); Fabio's other session owns that pin, and it reaches every Klein op plus the Character Sheet flow, so this card consumes that template rather than pinning anything itself. A peer session is live in this tree and owns models.js, icons.js, MpiAudioRecorder, the Gallery components, MPI-573, MPI-598 and MPI-600 - do not stage those. Push is user-authorized; commit d484257c is unpushed."
+}
