@@ -117,6 +117,86 @@ collected `Output_Audio` URL is only ever muxed into a video.
 
 ---
 
+## Current State (2026-08-22)
+
+**A and C are built, verified and committed** — `9cf4fc90`, `a7bc9de5`. Evidence
+table in `validation.md`; do not re-derive it. `npm test` 680 ✓ (+8 new),
+`npm run test:desktop` 24 ✓ (+1 new).
+
+**B is static-only and stays open.** No workflow emits audio as its primary
+output, so the save path has never run. Unblocks with the first audio Flow.
+
+## Plan Drift
+
+1. **The recorder re-muxes to WAV** (`js/utils/wavEncoder.js`) — not in the plan.
+   MediaRecorder here yields `audio/webm;codecs=opus` (measured), and `.webm` is
+   VIDEO by extension in five server lists, so a native-container recording would
+   be re-typed to video on the first project reload. **Fabio has questioned WAV —
+   see the open question below. This is the first thing to settle next session.**
+2. **The permission handler needed two more entries.** Installing one at all
+   inverts Electron's default; `fullscreen` and `pointerLock` were riding that
+   default and both fail silently. Swept and allowlisted.
+3. **The planned entry point was unreachable** (no Flow has an audio slot; the
+   PromptBox is drag-only). Fabio chose the gallery. Both entry points now share
+   `recordAudioIntoProject()`.
+4. **The gallery Record button is in the wrong place** — see below.
+
+## Open — settle these first, in order
+
+### 1. Move the Record button (Fabio, 2026-08-22, with a screenshot)
+
+It currently overlaps the filter row (`ALL / IMAGES / VIDEOS / AUDIO / PREVIEWS /
+FAVS`) at the grid's top-right. Fabio: *"needs to go next to the flows. I think
+either there or next to the volume."*
+
+The visible toolbar is **`MpiGalleryGrid`'s `__tabs` row**, not
+`MpiGalleryBlock`'s header — that one never reaches the DOM at all, because
+`MpiGalleryGrid.mount(el, …)` sets `el.innerHTML` and wipes the block's template
+(its crumb / filters / sort slots are dead markup with live CSS; pre-existing,
+worth its own card). That mistake is what put the button in a floating bar.
+
+Two candidate homes:
+
+- **Next to the volume** — `MpiGalleryGrid.js:117-122`,
+  `.mpi-gallery-grid__zone--center`, after `__volume-wrap`. **Recommended:** it is
+  already the media-controls zone, it has room, and it cannot collide with the
+  filters. Costs a claim on the shared `MpiGalleryGrid`.
+- **Next to FLOWS** — the app top bar, `js/shell/projectUI.js:81` /
+  `js/shell/navigation.js:340`. App-level chrome, so Record would show outside the
+  gallery too, which may or may not be wanted.
+
+Then delete `.mpi-gallery-block__actions` (JS + CSS) — it exists only for the
+placement being replaced.
+
+### 2. WAV vs a compressed format (Fabio, 2026-08-22)
+
+*"I'm not entirely sure that is the best format for the workflows at hand,
+considering it's a lot bigger than an MP3. That could influence timing for voice
+clone workflows and for video workflows that use audio as reference."*
+
+What is already known, so next session does not re-derive it:
+
+- **Size:** WAV 48 kHz/16-bit mono ≈ 96 KB/s (5.8 MB/min). MP3 128 kbps ≈ 16 KB/s.
+  ~6x. The upload is base64, which inflates another 33% on the wire.
+- **The constraint that forced the change of container was the EXTENSION, not the
+  codec.** `mp3`, `m4a`, `ogg`, `flac`, `aac`, `opus` are all in the server audio
+  lists — any of them is equally safe from the video-retype bug. Only `webm` is not.
+- **`.m4a` is the zero-dependency compressed option**: check
+  `MediaRecorder.isTypeSupported('audio/mp4')` in this Electron — if true, AAC comes
+  out natively with no transcode and no encoder library. Verify before designing on it.
+- **MP3 needs a new dependency** (Chromium's MediaRecorder cannot emit it; lamejs
+  or equivalent). Weigh against the ladder.
+- **Argument for keeping WAV:** ComfyUI audio loaders take it without a transcode,
+  and a lossy round-trip before a voice clone costs quality in exactly the workflow
+  Fabio named. Reference clips are also short — seconds, not minutes.
+- **Not yet measured:** whether decode time on the Pod actually differs enough to
+  matter. That is the number that should decide this, and nobody has it.
+
+If the format changes, the pieces to touch are `wavEncoder.js`, `_toWavFile` in
+the recorder, and the two format assertions in `tests/audio-media-type.test.cjs`.
+
+---
+
 ## Verification
 
 Own instance only — never the user's `:3000`:
