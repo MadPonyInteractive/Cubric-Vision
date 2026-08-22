@@ -1,0 +1,71 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "934a0e0b-65b1-4c0d-9ab2-3c7cbbb16b22",
+  "generated_at": "2026-08-22T22:06:00Z",
+  "status": "open",
+  "session": {
+    "name": "Correct the Inpaint help copy for the LanPaint path, and write the Klein 9B style + inpaint entries into UNRELEASED.md",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue MPI-598 (Klein 9B) toward its Pod smoke, and fix the Inpaint prompt guide, which Fabio reported as false.",
+    "status": "in_progress",
+    "summary": "Two cards moved. MPI-367 corrected the Inpaint help - LanPaint means the model now SEES under the mask and an empty prompt is a no-op, so every claim the old copy made reversed; Detail was swept in the same pass. MPI-598 gained its release notes: the Klein 9B styles landed from a peer agent while this session ran, so UNRELEASED.md now names all seven and the 'Style LoRAs are 4B-only' line is gone. What remains on MPI-598 is ONLY the Pod smoke for four unproven ops - Fabio wants to be present and has to pick the evidence-file route first."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-367 (todo -> doing): the Inpaint entry in js/data/commandRegistry.js rewritten from Fabio's own runs. The model DOES see under the mask (ReferenceLatent #172 puts the full unmasked source latent #163 on the positive conditioning); an empty prompt is a NO-OP; removal is an instruction that must NAME its target - 'remove the tattoo', 'remove the head'. The bare word 'remove' does nothing, and it is what the app used to inject on an empty prompt. promptRequired false -> true",
+      "Blast radius swept: the Detail entry claimed 'unlike Inpaint the model CAN see what is under your mask' and is now false too. Rewritten so the difference between the two ops is the STARTING LATENT, not visibility. tests/op-strip-availability.test.cjs asserted the dead contract and was updated with why it flipped",
+      "UNRELEASED.md: inpaint bullet gained the new truth; the two-sizes bullet's 'Style LoRAs are 4B-only for now' replaced; a NEW bullet names all seven 9B styles and states they are a DIFFERENT set, not 4B's renamed",
+      "Gate 0 run PER BULLET against v1.4.2 rather than assumed - it ships InpaintStitchImproved x3 with zero LanPaint, node 367 is literally MpiString {'string': 'Remove'}, and 4B's eight styles are at models.js:933",
+      "Peer agent's style message (a310315f) verified independently then RESOLVED: four commits resolve, seven labels match models.js, seven dep entries exist, eight picker webps on disk, Input_is_9b gone",
+      "models.js styleLoraImages comment corrected - it still claimed the webps were 'Not yet produced'; all eight are on disk, RIFF/WEBP, 28-104KB",
+      "npm test 684 pass / 0 fail. Commits: c7493555, 29ac3f47, 8333c5ad"
+    ],
+    "pending": [
+      "THE ONLY THING LEFT ON MPI-598: the Pod smoke for i2i, control, detail and upscale. Fabio wants to be PRESENT - rent no GPU until he says go - and he must first choose Klein-only against a FRESH evidence file, or the full matrix",
+      "MPI-367 STAYS IN DOING and must NOT be closed alongside MPI-598. Only Inpaint and Detail are corrected; its 'Remaining ops' pass, the byModel overrides and the assets/help/ imagery are all untouched",
+      "docs/models/klein/README.md is 205 lines vs the 200 convention - either an exemption entry in docs/README.md or split its 'Which checkpoint ships' history. Fabio's call, still not taken",
+      "Nothing is pushed - master is several commits ahead of origin"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-598",
+    "title": "Wire FLUX.2 Klein 9B and update 4B alongside it",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-598/",
+    "links": {
+      "brief": "brief.md",
+      "checklist": "checklist.md",
+      "files": "files.json"
+    }
+  },
+  "next_action": {
+    "description": "ASK FABIO WHICH WAY TO RUN THE POD SMOKE, then run it with him present - Klein-only against a FRESH dev_configs/smoke-evidence.json, or the full matrix. A --models subset REFUSES to run: the evidence file is from 2026-08-10 while node_lock.json last moved 2026-08-17 in 846dc777 (MPI-325, not this card), and a scoped run may not merge into another engine's evidence. Klein-only is the cheaper route and the 35 stale rows are safe in 21d61f69; the full matrix would smoke a Character Sheet flow Fabio has said needs updating first. RENT NO GPU UNTIL HE SAYS GO. Four ops are unproven: i2i, control, detail, upscale. t2i, inpaint and kleinEdit are already proven in his own app. Back up dev_configs/smoke-run.txt before ANY invocation, --plan included.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Klein 9B doodle STAYS ON v1. Fabio closed it 2026-08-22: a v2 exists at the same size and is un-A/B'd, but swapping moves the dep filename, sha256, bytes, the baked graph string in klein_9b_t2i.json AND generate_klein.py, plus a fresh R2+HF upload and a re-shot picker card - all for an unknown gain. 'It's a doodle anyway.' Do not re-open it.",
+      "The 9B STYLE QUESTION IS CLOSED - the styles SHIPPED from a peer agent (commits 86e3f59c, 3b9daf43, a19c3458, 443d04aa) and Fabio has tested them; the picker cards ARE his test images. The old handoff's 'is the styleless posture still valid' question is dead, and Input_is_9b is DELETED. Seven styles, NOT 4B's eight, and the labels differ on purpose - never write them up as renamed 4B styles.",
+      "The Inpaint copy came from Fabio's own runs, not from doc reading. MPI-367's acceptance says the user is the authority; head removal is the proven case and a Character Sheet prerequisite."
+    ],
+    "constraints": [
+      "IS_REMOVE IS STILL LIVE IN THE GRAPH AND IS NOW UNREACHABLE. MpiBooleanCompare #375 (wf_type == 5 AND empty prompt) ORs into #310 -> #44 -> the NSFW LoRA's strength_model. It was the old erase path letting the fill render skin under removed clothing. On LanPaint its trigger can never fire, and a removal that NEEDS the LoRA - 'remove her top' - misses both it and the MpiTextContains #43 word list. NOT fixed: it is Fabio's graph. Recorded in docs/models/klein/9b.md.",
+      "state/index.json USES indent=1, not 2. Rewriting it with json.dumps(indent=2) reformats all 378 lines and buries the real change; this session did exactly that and had to amend. board.json is indent=2.",
+      "BOARD FILES ARE RACED. A peer created MPI-605 and committed board.json between this session's read and its write, silently clobbering their updated_at and truncating their note. Rebuild from `git show HEAD:<path>` and re-apply your own change on top rather than writing a version you read minutes ago.",
+      "MPI-367 maturity must be `in-progress` with a HYPHEN. `in_progress` fails validate_board.py as an invalid card.",
+      "PRE-EXISTING and not yours: ~8 MPI-573 lines in .agents/mpi-kanban/events.jsonl use `event`/`task` keys instead of `type`/`id`, so validate_board.py rejects them. Leave them; they are not from this work.",
+      "EVERY smoke-workflows.mjs INVOCATION REWRITES dev_configs/smoke-run.txt, --plan INCLUDED, and a GPU LEASE HOOK blocks any Bash command merely NAMING the script unless --plan or --self-check also appears. Use the Grep tool to read it and gpu_lease.py run -- for anything real.",
+      "CLAUDE.md § Git says push is user-authorized even though project-profile.md carries push_policy: auto. The stricter rule has been followed all along - ask Fabio before pushing."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-598/checklist.md",
+      "docs/models/klein/9b.md",
+      "docs/releases/UNRELEASED.md",
+      ".agents/mpi-kanban/tasks/MPI-367/checklist.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/934a0e0b-65b1-4c0d-9ab2-3c7cbbb16b22.json and use mpi-continue to continue MPI-598 (Wire FLUX.2 Klein 9B and update 4B alongside it), which is in `doing`. Everything on that card has shipped except one thing: the Pod smoke. Klein 9B is committed, on R2, styled (seven 9B style LoRAs landed from a peer agent and Fabio has tested them - the picker cards are his test images), and t2i / inpaint / kleinEdit are proven in his own app. UNRELEASED.md now carries the 9B two-sizes, licence-gate, styles and inpaint bullets. The previous session's two open questions are both CLOSED: the styles shipped, and Klein 9B's doodle stays on v1. START by asking Fabio which way to run the smoke for the four unproven ops (i2i, control, detail, upscale) - Klein-only against a FRESH dev_configs/smoke-evidence.json, or the full matrix - because a --models subset refuses to run against the stale evidence file (2026-08-10, while node_lock.json moved 2026-08-17 in 846dc777). He wants to be PRESENT, so rent no GPU until he says go, and back up dev_configs/smoke-run.txt before any invocation including --plan. Note MPI-367 is ALSO in `doing` and must not be closed with MPI-598 - only its Inpaint and Detail entries are done. Nothing is pushed."
+}
