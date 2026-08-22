@@ -71,13 +71,31 @@ authoring: `D:/WORK/Images/Outputs/mpi567/runners/` (`run_models.py` drives a lo
 `measure.py` scores it), the five plates, and the stamps. **Under ~2 ring is invisible; Klein 4B
 localised scored 21.45 on sun.** Do that ONE run before touching the graph.
 
-**THE APP HALF IS BLOCKED: there is no `paint` step kind.** `STEP_KINDS` registers `box`,
-`preview`, `crop` and frame-native `fields` — its own comment reads *"mask, light, mood… as they
-are built"*. This flow's premise is the user DRAWING on their photo, so it cannot be declared
-today. Shape: a `paint` kind binding through `STEP_MEDIA` (as `crop` does) returning the RGBA
-layer as a File, reusing the existing painting system rather than a second brush
-(`docs/painting.md`, and `docs/masking-undo.md` — an unwired mutation is a silent hole in Ctrl+Z).
-That is a new Organism and a briefing-sized decision, not a wiring step.
+**2026-08-22, session 6 — THE `paint` STEP KIND IS BUILT AND PROVEN LIVE. The app half is
+unblocked; the next action is the wiring itself.**
+
+`MpiStepPaint` mounts `PaintManager` + `brushDab.js` — the History paint tool's own layer and
+dab — on a plain canvas stage, exactly the relationship `MpiStepCrop` has with `CropManager`.
+No second brush. It binds through `STEP_MEDIA` and returns the layer ALONE as an RGBA PNG at the
+SOURCE's natural size. Contract: [`docs/playbooks/add-flow/ui/paint-gizmo.md`](../../../docs/playbooks/add-flow/ui/paint-gizmo.md).
+
+**One frame change was unavoidable, and the handoff had not seen it: the graph takes TWO images.**
+`Input_Image` (the photo) *and* `Input_Paint` (the layer). `_deriveRunMedia` could only REPLACE a
+role's media, so a paint step bound to `image1` would have eaten the photo. A step may now declare
+`mediaRole` — where its derived file lands — and the frame appends when that role has no media
+yet. Omit it and nothing changes (`crop` still replaces). One word on the step, still no JS, still
+manifest-expressible.
+
+**Verified live in an isolated instance**, not by inspection — see `validation.md`. The load-bearing
+numbers: layer comes back at the source's 1200×800 (not the layer's own working size), undo
+restores a stroke to the byte (19529 opaque px → 32893 → 19529), Clear and undo-after-Clear both
+hold, a fresh mount seeded with the value restores the identical drawing (the Reuse path), and an
+unpainted step reports `paint: null` and derives no file.
+
+**The last item leaves ONE obligation on the wiring**, and it is silent when got wrong: with no
+drawing there is no `Input_Paint` file, so `MpiLoadImageFromPath` runs on its baked authoring path
+and returns a confident wrong result. The frame cannot guard it — a null from `STEP_MEDIA`
+legitimately means "nothing changed" for `crop` — so this flow must.
 
 **2026-08-22, session 4 — nothing was wired. The session went to MPI-599 instead, and that was
 deliberate: the picker this flow needs did not exist yet.** Fabio asked for a model picker per
@@ -295,6 +313,10 @@ Three findings from the user's own testing of the sibling card, all of which bea
 - **Model swap proven on two arms, 2026-08-21** (SDXL Realistic + ILL Anime). Evidence:
   `mpi567_arm_realistic_object_*.png` vs `mpi567_arm_illanime_object_*.png`; runner
   `<scratchpad>/run_swap.py`.
+- **The `paint` step kind, 2026-08-22 (session 6).** `MpiStepPaint` + its CSS, registered in
+  `STEP_KINDS` and `STEP_MEDIA`; `FlowStep.mediaRole` in the frame and the FlowDef typedef;
+  `docs/playbooks/add-flow/ui/paint-gizmo.md` (+ index and `carousel-frame.md` pointers).
+  Proven live in an isolated instance — evidence in `validation.md`.
 - **New trap filed** in `docs/workflow-authoring/bench-editing.md` § The traps: a part-downloaded
   weight is listed in `/object_info` under its final name and dies with a shape `RuntimeError`
   that reads like a corrupt checkpoint. Cost one wasted arm here. Gate on byte count + the
@@ -303,11 +325,14 @@ Three findings from the user's own testing of the sibling card, all of which bea
 ## Remaining Work
 
 Both bench gates are CLOSED: the blend pass is settled (§ Session 3) and Fabio signed off by eye
-on 2026-08-22. What is left is app wiring only.
+on 2026-08-22. The `paint` step kind is BUILT (§ Current State). What is left is app wiring only.
 
 - Wire the flow via `/mpi-add-flow` — FlowDef, the op in its 4 files, the two-slot
   `requiredModels` + `modelParams`, the declared fields (incl. the mandatory
   `Input_Control_strength` slider), the step copy's TONAL wording and its minimum-ink warning.
+  The paint step is `{ kind: 'paint', role: 'image1', mediaRole: 'image2' }` (role names to match
+  whatever the op's `mediaInputs` declares for `Input_Image` / `Input_Paint`), and the flow MUST
+  guard the no-drawing case — see § Current State.
 - Extend `tests/flow-model-choice.test.cjs` to this flow — it already pins that every
   `modelParams` key names a title that EXISTS in the flow's graph, which is the assertion that
   catches a five-arm `Input_Base_Model` typo.
@@ -323,6 +348,17 @@ flow-agnostic for exactly that reason.
 
 ## Plan Drift
 
+- **The frame gained `FlowStep.mediaRole` (2026-08-22, session 6).** Not in any plan or handoff:
+  the merged graph takes TWO images (`Input_Image` + `Input_Paint`) and `_deriveRunMedia` could
+  only REPLACE a role's media, so a paint step would have eaten the photo. `mediaRole` names where
+  a `STEP_MEDIA` kind's file lands and the frame APPENDS when that role is empty. Absent, the old
+  behaviour is byte-identical, so `crop` is untouched.
+- **The drawing IS persisted, as a PNG data URL in `stepValues`** — the opposite of `crop`, whose
+  derived file is deliberately stripped from the snapshot. The distinction is not arbitrary: a
+  padded outpaint image is DERIVED (re-deriving it from the rect is correct, persisting it would
+  outpaint an outpainted picture), while a drawing is an INPUT the user made by hand and there is
+  nothing to re-derive it from. Cost is base64 pixels in the snapshot — 42 KB for the probe's
+  scribble, marked `ponytail:` with the preview-asset upgrade path named.
 - **`InpaintCropImproved` / `InpaintStitchImproved` are NOT used.** The plan carried them in as
   a candidate carrier from the brief; the bench settled that the paste belongs outside them (a
   plain `ImageCompositeMasked` at the recorded x/y). Reason in the answers doc, § question 4.

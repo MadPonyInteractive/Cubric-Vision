@@ -1123,6 +1123,43 @@
  */
 
 /**
+ * @typedef {Object} MpiStepPaintProps (Organism — js/components/Organisms/MpiStepPaint)
+ * @property {Object}   media      - The media item this step operates on ({url, …}).
+ * @property {Object}   step       - The FlowStep declaration.
+ * @property {Object|null} [value] - Restored value ({paint, size, color, brushSize, mode}).
+ * @property {Function} onChange   - (value) => void; called on stroke end and on any
+ *                                   control change.
+ *
+ * The `paint` STEP KIND (MPI-567) — the DRAWING gizmo. The user draws on their own
+ * photo and what the run receives is the drawing ALONE: an RGBA PNG at the photo's
+ * resolution, transparent everywhere unpainted. Never the composite — a graph reads
+ * such a layer twice (its RGB as a ControlNet hint, its ALPHA as a crop rect), and a
+ * flattened photo makes the alpha the whole frame.
+ *
+ * Mounts `PaintManager` + `brushDab.js` — the History paint tool's own RGBA layer
+ * and dab geometry — on a plain canvas stage, the same relationship MpiStepCrop has
+ * with CropManager. There is no second brush, and stroke behaviour changes belong in
+ * those two (docs/painting.md).
+ *
+ * Every mutation records into its own `UndoStack`: a stroke as a gesture, Clear as
+ * PaintManager's own layer-wide one-shot (docs/masking-undo.md § The contract).
+ * Ctrl+Z / Ctrl+Shift+Z are bound on the shared `mask.undo.canvas` registry ids.
+ *
+ * Its control row is the gizmo's own (brush/eraser, colour, Undo, Clear) rather than
+ * declared `fields`, because those controls are INTRINSIC to any paint step and a
+ * manifest that omitted them would leave a canvas the user cannot erase on. Brush
+ * SIZE is the mouse wheel, matching InputController on the History canvas.
+ *
+ * Binds through STEP_MEDIA, not `param`, and declares `mediaRole` on the step so the
+ * layer lands in its OWN slot — the photo has to survive beside it
+ * (docs/playbooks/add-flow/ui/paint-gizmo.md).
+ *
+ * Instance methods (on instance.el):
+ *   getValue() — returns {paint, size:{w,h}, color, brushSize, mode}.
+ *   destroy()  — disconnects the ResizeObserver, destroys the UndoStack and every control.
+ */
+
+/**
  * @typedef {Object} MpiCheckboxProps (Primitive — js/components/Primitives/MpiCheckbox)
  * @property {boolean} [checked=false]   - Initial checked state.
  * @property {string}  [label='']        - Optional label text; omit for a standalone checkbox.

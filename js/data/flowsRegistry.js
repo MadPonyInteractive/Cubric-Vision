@@ -141,6 +141,14 @@
  * @property {string}  title   - Shown above the canvas.
  * @property {string}  [hint]  - Guidance shown below the canvas (and below any fields row).
  * @property {string}  [tickerLabel] - Short label for the step ticker; falls back to `title`.
+ * @property {string}  [mediaRole] - Where a STEP_MEDIA kind's derived FILE lands, when that
+ *                               is not the role it operates on (MPI-567). Omit and the file
+ *                               REPLACES the step's own media, which is what `crop` wants — a
+ *                               padded picture supersedes the picture it padded. `paint`
+ *                               wants the opposite: the user draws on the photo and the graph
+ *                               needs BOTH, so the layer is declared into its own slot and
+ *                               the frame APPENDS it. The named role must be one the op's
+ *                               `mediaInputs` declares, or the file reaches no node.
  * @property {string}  [param] - Bind this step's GIZMO value to an injection param (MPI-572).
  *                               The flow says WHICH role feeds WHICH node (that is flow
  *                               knowledge); the KIND supplies the shape the graph wants

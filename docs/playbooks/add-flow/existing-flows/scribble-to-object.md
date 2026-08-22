@@ -24,7 +24,7 @@
 | Model swap on two arms | **DONE** 2026-08-21 | `Input_Base_Model` swapped between SDXL Realistic and ILL Anime — see § The model swap |
 | Blend pass | **DONE** 2026-08-22 | whole-image relight → composite back, five plates + a tiny ladder. [../blending-into-a-photo.md](../blending-into-a-photo.md) |
 | **Merged runtime graph** | **BUILT + PROVEN** 2026-08-22 | stage 1 + relight + tail as ONE graph, 74 nodes, one dispatch, ~16s. Beats the three-step route's seam on all five plates. Bench store `MPI-567_scribble_to_object_BLEND`; repo copy `bench-graph-blend.json`. **`raw/` is still Fabio's to export** |
-| `paint` step kind | **DOES NOT EXIST — BLOCKS the app half** | `STEP_KINDS` has `box` / `preview` / `crop` / `fields` only. This flow's premise is the user DRAWING, so it needs one. See § The paint layer |
+| `paint` step kind | **BUILT + PROVEN LIVE** 2026-08-22 | `MpiStepPaint`, mounting `PaintManager` + `brushDab.js`; binds through `STEP_MEDIA` and returns the layer ALONE at source resolution. The step declares `mediaRole` so the photo survives beside it. [../ui/paint-gizmo.md](../ui/paint-gizmo.md) |
 | `Input_Control_strength` default | **DECIDED — 0.45–0.60** | 0.8 renders the user's ink as garment detail. See § Control strength |
 | Which arm for which drawing | **DECIDED** | scribble for flat line art, canny for a TONAL drawing. See § Which preprocessor arm |
 | Fabio's sign-off by eye | **GIVEN** 2026-08-22 | *"Compared to what we had previously, these look very good."* |
@@ -176,16 +176,15 @@ copy**, rather than auto-raising strength for a small drawing (which fights § C
 
 ## What the app half still has to settle
 
-- **The paint layer needs a step kind that does not exist.** The graph wants the paint layer
-  ALONE as an RGBA PNG at photo resolution — not the composite. `STEP_KINDS`
-  (`js/components/Organisms/MpiBaseFlow/stepKinds.js`) registers `box`, `preview`, `crop` and the
-  frame-native `fields`; its own comment says *"mask, light, mood… as they are built"*. **A flow
-  whose premise is the user DRAWING cannot be declared today.** The shape is a `paint` kind
-  binding through `STEP_MEDIA` (like `crop` does) and returning the layer as a File, so the flow
-  stays manifest-expressible. Do NOT build a second brush: `docs/painting.md` owns the RGBA paint
-  layer, the shared brush dab and the `UndoStack` contract — reuse them, and read
-  `docs/masking-undo.md` first, because any new code mutating a paint layer must record an undo
-  entry or it is a silent hole in Ctrl+Z.
+- **~~The paint layer needs a step kind that does not exist.~~ SETTLED 2026-08-22** — `paint` is
+  registered in `STEP_KINDS` and proven live. What the FlowDef has to declare:
+  `{ kind: 'paint', role: '<the photo>', mediaRole: '<the layer's own slot>' }`, and the op's
+  `mediaInputs` must declare BOTH roles or the layer reaches no node. Full contract:
+  [../ui/paint-gizmo.md](../ui/paint-gizmo.md).
+  **One obligation lands on the wiring, not on the gizmo:** an unpainted step reports
+  `paint: null`, `STEP_MEDIA` then derives nothing, and `MpiLoadImageFromPath` runs on its baked
+  authoring path — a confident wrong result with no error. The frame cannot guard it (a null
+  legitimately means "nothing changed" for `crop`), so this flow must.
 - **The model picker.** TWO slots, resolved independently (MPI-599):
   `{ label: 'Image model', models: [the five SDXL ids] }` and
   `{ label: 'Edit model', models: ['klein-4b'] }`, plus a `modelParams` arm per candidate. The

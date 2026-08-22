@@ -1,0 +1,28 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "7c1d5a02-9e64-4b8f-a3d7-5b0e18c6f2a4",
+  "task_card": "MPI-567",
+  "task": ".agents/mpi-kanban/tasks/MPI-567/",
+  "paths": [
+    "js/components/Organisms/MpiStepPaint/MpiStepPaint.js",
+    "js/components/Organisms/MpiStepPaint/MpiStepPaint.css",
+    "js/components/Organisms/MpiBaseFlow/stepKinds.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/shell/preloadStyles.js",
+    "docs/playbooks/add-flow/ui/paint-gizmo.md",
+    "docs/playbooks/add-flow/ui/carousel-frame.md"
+  ],
+  "status": "claimed",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/1483d706-377f-4819-b33a-b3e154366826.json",
+  "owner_role": "implementer",
+  "claimed_at": "2026-08-22T06:57:00Z",
+  "heartbeat_at": "2026-08-22T06:57:00Z",
+  "note": "The paint step kind (handoff 53efd5be). flowsRegistry.js and types.js are NOT claimed here - MPI-599 holds them; edits there are a re-read-then-append, by explicit pathspec.",
+  "recent_events": [
+    {
+      "at": "2026-08-22T06:57:00Z",
+      "event": "files_claimed"
+    }
+  ]
+}

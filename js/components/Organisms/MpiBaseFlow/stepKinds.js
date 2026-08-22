@@ -1,6 +1,7 @@
 import { MpiStepBox } from '../MpiStepBox/MpiStepBox.js';
 import { MpiStepPreview } from '../MpiStepPreview/MpiStepPreview.js';
 import { MpiStepCrop, composePaddedImage } from '../MpiStepCrop/MpiStepCrop.js';
+import { MpiStepPaint, composePaintLayer } from '../MpiStepPaint/MpiStepPaint.js';
 
 /**
  * STEP_KINDS — the step-kind registry (MPI-306 Phase 1).
@@ -30,6 +31,12 @@ export const STEP_KINDS = {
     // but binds through STEP_MEDIA below rather than `param` — what it changes is
     // the picture the flow runs on, not a widget in the graph.
     crop: MpiStepCrop,
+    // `paint` is the drawing gizmo: the user draws on the photo and what the run
+    // gets is the DRAWING ALONE — an RGBA PNG at the photo's resolution, the layer
+    // and not the composite. Like `crop` it binds through STEP_MEDIA rather than
+    // `param`, and like `crop` it mounts the History tool's own engine whole
+    // (`PaintManager` + `brushDab.js`) rather than growing a second brush.
+    paint: MpiStepPaint,
     // mask, light, mood… as they are built.
 };
 
@@ -130,10 +137,19 @@ export function stepValueToParam(kind, value) {
  * the padded file; persisting the derived one instead would re-pad a padded
  * picture on every reuse.
  *
+ * A kind here may deliver its file to a role OTHER than the one it drew on — the
+ * step declares `mediaRole` and the frame appends rather than replaces
+ * (`_deriveRunMedia`). `crop` does not: a padded picture REPLACES the picture it
+ * was padded from. `paint` does: the graph wants the photo AND the drawing, so
+ * swapping the photo out for the layer would throw the photo away.
+ *
  * @type {Record<string, function(Object|null, Object|null): Promise<File|null>>}
  */
 const STEP_MEDIA = {
     crop: (value, media) => composePaddedImage(media, value),
+    // The value already carries the layer and the source's natural size, so this
+    // needs no media — the argument is kept for the shared signature.
+    paint: value => composePaintLayer(value),
 };
 
 /**
@@ -141,8 +157,8 @@ const STEP_MEDIA = {
  * @param {Object|null} value - the step's reported value, `_stepValues[role]`.
  * @param {Object|null} media - the media item the step is bound to.
  * @returns {Promise<File|null>} a replacement file for that role, or null when
- *   the kind derives no media (every kind but `crop`) or there is nothing to
- *   change (a rect identical to the source).
+ *   the kind derives no media (every kind but `crop` and `paint`) or there is
+ *   nothing to change (a rect identical to the source, an unpainted layer).
  */
 export function stepValueToMedia(kind, value, media) {
     return STEP_MEDIA[kind]?.(value, media) ?? Promise.resolve(null);

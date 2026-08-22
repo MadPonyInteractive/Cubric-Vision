@@ -1,0 +1,56 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiStepPaint — the `paint` step kind (MPI-567)
+
+   A canvas stage the photo is FITTED into, drawn on, and reported
+   from. Everything visible is painted in JS — the photo, the RGBA
+   paint layer over it, and the brush ring — so this sheet only
+   sizes the stage and lays the control row out. The row's controls
+   are Primitives and their chrome is theirs (MpiRadioGroup,
+   MpiColorPicker, MpiButton); nothing here restates it.
+═══════════════════════════════════════════════════════════════ */
+
+.mpi-step-paint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-3);
+    width: 100%;
+}
+
+/* Fixed box, like MpiStepCrop's: a stage that resized with its content would
+   move the control row under the cursor mid-stroke. The view scales inside it. */
+.mpi-step-paint__stage {
+    position: relative;
+    width: 100%;
+    /* One row of controls under it, against the crop step's two — but the hint
+       below carries a minimum-ink warning worth reading, so this stays short. */
+    height: min(46vh, 500px);
+    border: 1px solid var(--line);
+    background: var(--surface-canvas);
+    touch-action: none;
+    line-height: 0;
+}
+
+.mpi-step-paint__canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    /* The brush ring drawn on the canvas IS the cursor — a second arrow beside it
+       reads as two pointers and hides the ring at small brush sizes. */
+    cursor: none;
+}
+
+/* The gizmo's own row: brush/eraser, colour, then the actions. */
+.mpi-step-paint__bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-4);
+    flex-wrap: wrap;
+}
+
+.mpi-step-paint__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}

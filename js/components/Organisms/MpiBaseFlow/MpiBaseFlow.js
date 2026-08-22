@@ -1980,6 +1980,13 @@ export const MpiBaseFlow = ComponentFactory.create({
          * run: falling back to the original would generate from an un-padded
          * image, which comes back looking like the model ignored the request.
          *
+         * A step may declare `mediaRole` to deliver its file to a DIFFERENT role
+         * than the one it operates on (MPI-567). `crop` does not want that — a
+         * padded picture replaces the picture it padded — but `paint` does: the
+         * user draws on the photo and the graph wants BOTH, so the layer lands in
+         * its own slot and the photo survives beside it. Still declaration-only,
+         * so it stays manifest-expressible.
+         *
          * @param {Array<Object>} mediaItems
          * @returns {Promise<Array<Object>|null>}
          */
@@ -1996,7 +2003,16 @@ export const MpiBaseFlow = ComponentFactory.create({
                 const project = state.currentProject;
                 const url = project ? await _placePreviewAsset(file, 'image', project) : null;
                 if (!url) return null;
-                out = out.map(m => (m === media ? { ...m, url, source: 'flow-derived' } : m));
+                const dest = step.mediaRole || step.role;
+                const target = out.find(m => m?.role === dest);
+                out = target
+                    ? out.map(m => (m === target ? { ...m, url, source: 'flow-derived' } : m))
+                    : [...out, {
+                        url,
+                        mediaType: media.mediaType || 'image',
+                        source: 'flow-derived',
+                        role: dest,
+                    }];
             }
             return out;
         }

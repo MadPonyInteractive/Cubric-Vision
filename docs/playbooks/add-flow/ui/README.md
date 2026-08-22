@@ -18,6 +18,7 @@ overlay / Flow Library. The procedure for wiring a flow is the numbered sections
 | [carousel-frame.md](carousel-frame.md) | **THE flow frame** — step carousel, steps-as-data, results-not-real-until-Apply | Head Swap (MPI-299) |
 | [box-gizmo.md](box-gizmo.md) | Ratio-locked box selector over an image; coord contract into the graph | Head Swap (MPI-299) |
 | [crop-gizmo.md](crop-gizmo.md) | **The FRAME the picture sits in** — the History crop tool's own `CropManager` in a step, contain-not-inscribe ratios, and a kind that returns a FILE instead of a param | Outpaint (MPI-594) |
+| [paint-gizmo.md](paint-gizmo.md) | **The user DRAWS** — the History paint tool's own `PaintManager` + `brushDab.js` in a step, the undo contract, and a kind returning the LAYER ALONE into its own media slot (`mediaRole`) | Scribble-to-object (MPI-567) |
 | [prompt-enhance.md](prompt-enhance.md) | **The prompt pair** — a user prompt, an `action: 'enhance'` button, an editable enhanced prompt; the media-less `fields` step that hosts them | Character Sheet (MPI-504) |
 | [switch-bank-fields.md](switch-bank-fields.md) | **One field, N graph values** — an `MpiInt` selecting `MpiAnySwitch` banks, for a preset (resolution, duration) one field cannot otherwise reach | Character Sheet (MPI-504) |
 | [lora-rack.md](lora-rack.md) | **The user's own LoRAs in a flow** — `settingsModel` + an `action: 'settings'` button reuse the app's Model Settings panel, and the three-hop injection chain that makes them actually run | Character Sheet (MPI-504) |

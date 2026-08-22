@@ -55,6 +55,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Organisms/MpiStepBox/MpiStepBox.css',
   'js/components/Organisms/MpiStepPreview/MpiStepPreview.css',
   'js/components/Organisms/MpiStepCrop/MpiStepCrop.css',
+  'js/components/Organisms/MpiStepPaint/MpiStepPaint.css',
   'js/components/Compounds/MpiSlideOver/MpiSlideOver.css',
   'js/components/Compounds/MpiQueuePanel/MpiQueuePanel.css',
   'js/components/Compounds/MpiStartingComfy/MpiStartingComfy.css',

@@ -164,7 +164,14 @@ manifest-expressible, and the graph needs no node for it. Two rules the frame en
 - **A failed derivation aborts the run** with a warning. Running on the original media would
   produce a result that looks like the model ignored the request.
 
-→ [crop-gizmo.md](crop-gizmo.md).
+A kind may deliver its file to a role OTHER than the one it operates on, by declaring
+**`mediaRole`** on the step (MPI-567). Omit it and the file REPLACES the step's own media, which
+is what `crop` wants — a padded picture supersedes the picture it padded. `paint` wants the
+opposite: the user draws on the photo and the graph needs BOTH, so the layer is declared into its
+own slot and the frame APPENDS it. Still one word, still no JS. The named role must be one the
+op's `mediaInputs` declares, or the file reaches no node.
+
+→ [crop-gizmo.md](crop-gizmo.md) · [paint-gizmo.md](paint-gizmo.md).
 
 The reported value's own shape is deliberately NOT renamed to match — `stepValues` is persisted
 for Reuse, so renaming at the source would strand every card already saved with `w`/`h`.

@@ -16,6 +16,15 @@
     ".agents/mpi-kanban/tasks/MPI-567/bench-graph.json",
     "docs/playbooks/add-flow/blending-into-a-photo.md",
     ".agents/mpi-kanban/tasks/MPI-567/bench-graph-blend.json",
-    "js/components/Organisms/MpiBaseFlow/stepKinds.js"
+    "js/components/Organisms/MpiBaseFlow/stepKinds.js",
+    "js/components/Organisms/MpiStepPaint/MpiStepPaint.js",
+    "js/components/Organisms/MpiStepPaint/MpiStepPaint.css",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/shell/preloadStyles.js",
+    "js/components/types.js",
+    "docs/playbooks/add-flow/ui/paint-gizmo.md",
+    "docs/playbooks/add-flow/ui/carousel-frame.md",
+    "docs/playbooks/add-flow/ui/README.md",
+    ".agents/mpi-kanban/tasks/MPI-567/validation.md"
   ]
 }
