@@ -56,7 +56,7 @@ const isTemplate = (name) => /_template\.json$/i.test(name);
 function assertNotInRaw(outPath) {
   const inRaw = !path.relative(RAW_DIR, outPath).startsWith('..');
   if (inRaw) {
-    throw new Error(`REFUSING to write inside raw/ (user-owned source): ${rel(outPath)}`);
+    throw new Error(`REFUSING to write inside raw/ (LiteGraph source, never converter output): ${rel(outPath)}`);
   }
   return outPath;
 }

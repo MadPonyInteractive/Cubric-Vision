@@ -173,7 +173,8 @@ Miss one and you ship a dangling ref or a stale card. Order (MPI-266 dropped Boo
 fp8_scaled Balanced tier, collapsed 3→2):
 
 1. **Generator + template** — remove the tier's row from `MODEL_VARIANTS`; edit the
-   template (user-owned, never hand-edit JSON) to drop that tier's loader/sampler chain.
+   template (edit it in the ComfyUI graph and re-sync — never the converted API file) to drop
+   that tier's loader/sampler chain.
    Renumber remaining `Input_Tier` values if the count changed; keep the generator's baked
    tier ints in sync.
 2. **Regen + delete stale runtime JSON** — rerun the generator, then `git rm` the runtime

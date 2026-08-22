@@ -7,7 +7,7 @@
 ## 0a. Author & prove the workflow in the LOCAL ComfyUI FIRST
 
 The raw→API sync procedure (author locally first, `sync-raw-workflows.mjs`, the
-`validate-injection-rules.mjs` gate, `raw/` is user-owned, staged output) is
+`validate-injection-rules.mjs` gate, `raw/` writable but LiteGraph-only, staged output) is
 **[shared] — canonical in [../common/workflow-authoring-entry.md](../common/workflow-authoring-entry.md).**
 For a model, the raw source carries the `_template.json` suffix
 (`comfy_workflows/raw/<Name>_template.json`) so it routes to a generator. The
@@ -63,9 +63,10 @@ different regime. **Do not copy the base-gen `cfg` into a detailer.**
   suspect cfg first.
 - Distilled/turbo/lcm detailers already run `cfg 1–1.4` (correct — leave them). Only the
   non-distilled (raw) detailers carry a base-gen cfg that is too high.
-- Same edit mechanic as any workflow: `raw/` is user-owned — change cfg live in the ComfyUI
-  graph + live-save, or patch the raw JSON then re-sync. A widget change on a `_template`
-  re-syncs the runtime.
+- Same edit mechanic as any workflow: change cfg live in the ComfyUI graph + live-save, or
+  patch the raw JSON then re-sync (`raw/` is agent-writable since 2026-08-22). A widget change
+  on a `_template` re-syncs the runtime. Patching the raw JSON by hand means ONE scalar located
+  by its value — never a hand-written node, and never the converted API file.
 
 ## Files & where they live
 

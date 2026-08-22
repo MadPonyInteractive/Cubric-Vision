@@ -11,8 +11,9 @@
  * Exit 0 = all clean. Exit 1 = at least one violation (printed per file, per node).
  * On any violation the caller (sync-raw-workflows.mjs) STOPS before orchestrate.
  *
- * Checks (all report the offending node + tell the user to re-title in ComfyUI —
- * agents NEVER edit workflow JSON, per the injection rules):
+ * Checks (all report the offending node and say to re-title in ComfyUI. Agents MAY
+ * author workflow JSON since 2026-08-22, but a converted API file is BUILD OUTPUT —
+ * patch the raw graph and re-convert, or the next convert silently reverts you):
  *   1. Capture node: >=1 node titled Output_* (media captures are Output_Image /
  *      Output_Video / Output_Preview; a text workflow captures e.g. Output_prompt).
  *   2. Seed convention (MPI-257): if any node exposes a noise_seed widget, a node
@@ -209,7 +210,7 @@ async function main() {
     }
   }
   if (bad) {
-    console.error(`\n${bad} file(s) violate the injection rules. Fix in the ComfyUI graph editor and re-export — agents never edit workflow JSON.`);
+    console.error(`\n${bad} file(s) violate the injection rules. Fix in the raw graph and re-convert — a converted API file is build output, so patching it here is reverted by the next convert.`);
     process.exit(1);
   }
   console.log(`\nAll ${files.length} file(s) conform to the injection rules.`);

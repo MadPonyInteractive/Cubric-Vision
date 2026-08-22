@@ -296,7 +296,7 @@ async function main() {
   const RAW_DIR = path.resolve(REPO_ROOT, 'comfy_workflows/raw');
   const relToRaw = path.relative(RAW_DIR, outDir);
   if (!relToRaw.startsWith('..')) {  // '' (== raw) or a subdir of raw → refuse
-    throw new Error(`REFUSING to write into raw/ (user-owned LiteGraph source): ${outDir}`);
+    throw new Error(`REFUSING to write into raw/ (LiteGraph source, never API output): ${outDir}`);
   }
   await fs.mkdir(outDir, { recursive: true });
 
