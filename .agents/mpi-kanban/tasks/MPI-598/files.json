@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-598/**",
+    "comfy_workflows/scripts/workflow_generation/generate_klein.py",
+    "comfy_workflows/scripts/workflow_generation/klein_t2i_template.json",
+    "comfy_workflows/raw/klein_t2i_template.json",
+    "comfy_workflows/klein_t2i.json",
+    "comfy_workflows/display/klein-9b.webp",
+    "js/data/modelConstants/models.js",
+    "js/data/modelConstants/modelDeps.js",
+    "js/data/modelConstants/loraDeps.js",
+    "js/data/modelConstants/assetDeps.js",
+    "js/data/progressStages.js",
+    "docs/models/klein/README.md",
+    "docs/releases/UNRELEASED.md",
+    "dev_configs/node_lock.json",
+    "js/data/modelConstants/nodesDeps.js"
+  ]
+}

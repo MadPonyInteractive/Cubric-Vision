@@ -878,6 +878,10 @@ export const MODELS = [
         sizeTier: 'low',
         featured: true,
         name: 'FLUX.2 Klein',
+        // Gained the family key with the 9B card (MPI-598) — the two ARE size tiers of one
+        // model, which is what this field is for. UI-only, no resolver effect, and the L/B
+        // letter only renders once both are installed, so a 4B-only user sees no change.
+        modelFamily: 'FLUX.2-Klein',
         dropdownMeta: 'PHOTO',
         mediaType: 'image',
         image: 'klein-4b.webp',
@@ -970,8 +974,104 @@ export const MODELS = [
             'comfyui-kjnodes',               // ImageResizeKJv2, GrowMaskWithBlur
             'ComfyUI-Impact-Pack',           // MaskDetailerPipe, ToBasicPipe
             'ComfyUI-UltimateSDUpscale',     // UltimateSDUpscale (upscale op)
-            'comfyui-inpaint-cropandstitch', // InpaintCropImproved/StitchImproved (removal)
+            'comfyui-inpaint-cropandstitch', // InpaintCropImproved/StitchImproved (still one pair)
             'comfyui_controlnet_aux',        // DepthAnythingV2Preprocessor (+ its own weight)
+            'LanPaint',                      // LanPaint_KSampler — REAL mask-conditioned inpaint (MPI-598)
+        ],
+    },
+    // ── FLUX.2 Klein 9B (MPI-598) ──────────────────────────────────────────
+    // The SAME graph as klein-4b at a bigger size. generate_klein.py bakes both runtime
+    // files from the one template (klein_t2i_template.json), swapping four weight names
+    // plus the `Input_is_9b` gate — so there is no 9B twin template to keep in sync, and
+    // any graph change lands on both sizes at once. Do not hand-author a 9B graph.
+    //
+    // THE LICENCE GATE ARMS ITSELF. `MODEL_LICENCES` in licences.js already keys the FLUX
+    // Non-Commercial descriptor to the exact string 'klein-9b' (reserved by MPI-357), so
+    // this ModelDef landing is what makes the proof step reachable for the first time —
+    // the user requests access at Black Forest Labs and pastes a Hugging Face token before
+    // the download unlocks. Nothing to wire here; do not add a `licence` field.
+    // Outputs are commercially usable (NCL §2.d) — the bar is on using the MODEL.
+    //
+    // STYLELESS ON PURPOSE. `Input_is_9b` routes around BOTH halves of the styles system
+    // (the prompt concat and the style LoRA stack) because no 9B style LoRAs exist yet.
+    // The rack nodes are still IN the graph, so styles become a value change, not a
+    // rebuild — hence `styleLoras: false` + empty `styleOps` and no styleLora* arrays,
+    // rather than a fork.
+    //
+    // WHAT IS STILL OUTSTANDING before this can ship: `klein-9b.webp` does not exist yet
+    // (a real 9B generation, per add-model playbook step "display webp"), and the four
+    // weights are not on R2. Both are ship-prep, not test-prep — the app tests locally.
+    {
+        id: 'klein-9b',
+        // 'balanced' against 4B's 'low' — the two are genuine SIZE TIERS of one model, the
+        // case modelFamily exists for. (MPI-316 rejected the family field for Krea2 because
+        // those siblings are CONTENT variants; that reasoning does not reach here.) The
+        // L/B badge only renders once 2+ tiers of the family are installed, so a 4B-only
+        // user sees no change from 4B gaining the family key.
+        sizeTier: 'balanced',
+        featured: false,          // 4B carries the featured slot for the family
+        name: 'FLUX.2 Klein',
+        modelFamily: 'FLUX.2-Klein',
+        dropdownMeta: 'PHOTO',
+        mediaType: 'image',
+        image: 'klein-9b.webp',
+        defaultUpscale: '4x-NMKD-Siax',
+        type: 'klein',            // NOT a new type — reuses 4B's, so no consumer sweep
+        enhanceRecipe: 'flux',
+        supportedOps: ['t2i', 'i2i', 'control', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
+        loraStrengths: ['model'],
+        capabilities: {
+            multiStage: false, audio: false, negativePrompt: false, styleLoras: false,
+            promptEnhance: true, batch: false, turboToggle: false,
+            depthSubject: true,
+            depthSubject3: true,
+            controlStrength: true,
+        },
+        // `negativePrompt: false` for the same measured reason as 4B: at cfg 1.0 the
+        // negative is bit-identical, and the template no longer carries Input_Negative.
+        // `turboToggle: false` because there is nothing to toggle — MPI-600 benched the
+        // 9B turbo LoRA and the KV variant and rejected both, so one checkpoint ships.
+        opInject: {
+            t2i:           { Input_wf_type: 1 },
+            i2i:           { Input_wf_type: 2 },
+            control:       { Input_wf_type: 3 },
+            kleinEdit:     { Input_wf_type: 4 },
+            inpaint:       { Input_wf_type: 5 },
+            detail:        { Input_wf_type: 6 },
+            upscale:       { Input_wf_type: 7 },
+        },
+        controlTypes: ['depth'],
+        styleOps: [],             // see STYLELESS above
+        imageSizedOps: ['control', 'kleinEdit'],
+        gen_speed: 'balanced',
+        description: 'FLUX.2 Klein at 9B — the same seven operations as the 4B card with more detail and stronger prompt adherence, traded against speed and a non-commercial model licence you confirm before downloading (the IMAGES you make stay commercially usable). Needs roughly 15GB of video memory at peak, so on a 16GB card the margin is thin; the 4B card is the one to use if you hit out-of-memory. Style LoRAs are 4B-only for now. Reference-driven placement lands about two times in three on every 9B weight tested, and it fails quietly — if it places the wrong person, or nobody, run it again.',
+        workflows: {
+            // ONE file for all seven ops, baked by generate_klein.py from the shared template.
+            t2i:           'klein_9b_t2i.json',
+            i2i:           'klein_9b_t2i.json',
+            control:       'klein_9b_t2i.json',
+            kleinEdit:     'klein_9b_t2i.json',
+            inpaint:       'klein_9b_t2i.json',
+            detail:        'klein_9b_t2i.json',
+            upscale:       'klein_9b_t2i.json',
+        },
+        dependencies: [
+            'klein-9b-transformer',
+            'qwen3-8b-clip',                 // Qwen3-8B TEXT-ONLY at CLIPLoader type flux2 —
+                                             // NOT qwen3-4b-clip (4B) and NOT the Qwen3-VL 8B
+            'vae-flux2',                     // shared with 4B
+            'klein-9b-lora-refcontrol-depth',// baked on the depth branch; IS the depth op
+            'klein-9b-lora-nsfw',            // baked + PROMPT-gated; never loads on a clean prompt
+            // NO outpaint LoRA: none exists for 9B, and the 4B one is deprecated (MPI-603).
+            // NO style LoRAs: 9B is styleless until 9B-trained styles exist.
+            '4x-NMKD-Siax',                  // shared engineAsset (upscale op)
+            'ComfyUI-MpiNodes',
+            'comfyui-kjnodes',
+            'ComfyUI-Impact-Pack',
+            'ComfyUI-UltimateSDUpscale',
+            'comfyui-inpaint-cropandstitch',
+            'comfyui_controlnet_aux',
+            'LanPaint',                      // LanPaint_KSampler — REAL mask-conditioned inpaint
         ],
     },
     // ── Boogu-Image-Edit (MPI-257) ─────────────────────────────────────────

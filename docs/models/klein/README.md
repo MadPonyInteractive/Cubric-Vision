@@ -2,7 +2,12 @@
 
 Settled facts for the Klein wiring (MPI-354); raw eval history in MPI-353. The
 model-agnostic *how* lives in `docs/playbooks/add-model/`. Siblings:
-`removal.md`, `refcontrol.md`, `licences.md`.
+`9b.md`, `removal.md`, `refcontrol.md`, `licences.md`.
+
+> **Klein ships at TWO sizes; this is the 4B half.** 9B (MPI-598) is the SAME graph — one
+> template, `generate_klein.py` bakes both runtimes — so everything below applies to both.
+> **`9b.md` holds every difference, AND what is now 4B-history here** (inpaint is LanPaint;
+> the outpaint LoRA has left both graphs but its dep and R2 object stay — MPI-603).
 
 ## What it is
 

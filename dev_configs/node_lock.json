@@ -110,6 +110,13 @@
       "commit": "3617559bcb9d15ff60b24c6800701402eb2cd478",
       "filename": "comfyui-inpaint-cropandstitch",
       "installRequirements": false
+    },
+    "LanPaint": {
+      "source": "git-commit",
+      "repo": "scraed/LanPaint",
+      "commit": "9fe919558f3ff085daca921ee8401dc1832a1258",
+      "filename": "LanPaint",
+      "installRequirements": false
     }
   }
 }

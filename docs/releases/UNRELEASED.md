@@ -32,6 +32,22 @@ _(none yet)_
 
 ## What's new
 
+- FLUX.2 Klein now comes in two sizes. The 9B card sits beside the 4B one and does the same
+  seven things — generate, reshape, follow a depth reference, edit with up to three reference
+  images, inpaint, detail and upscale — with more detail and closer prompt following, traded
+  against speed. It wants about 15GB of video memory at its peak, so on a 16GB card the margin
+  is thin and 4B stays the one to reach for if you run out. Style LoRAs are 4B-only for now.
+
+- Some models now ask you to accept their licence before they download. Klein 9B is the first:
+  it is free to use and the pictures you make with it are yours to sell, but the model itself
+  is licensed for non-commercial use, so you request access at the people who made it and paste
+  a Hugging Face token to prove it. Vision checks the token against your grant and unlocks the
+  download only once it passes.
+
+- Klein inpaints properly now. Painting over part of a picture used to regenerate the whole
+  patch and hope it blended; it now samples with the mask as a real constraint, on both the 4B
+  and 9B cards. Removing something is no longer implicit — say what you want gone.
+
 - Place puts one picture inside another. Open an image, pick Place from the Composite tools, and
   drop in a second image — a logo, a product, a person cut out of another shot. Drag it where you
   want it, scale and rotate it with the handles, and Apply stamps it down as a new entry with both

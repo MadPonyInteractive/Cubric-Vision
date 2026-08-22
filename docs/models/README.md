@@ -16,10 +16,11 @@ preview/taesd landmine, int8-quant candidates. Hub: [krea2/README.md](krea2/READ
 Slot semantics: [slot-order.md](krea2/slot-order.md) — scene chip 1 / subject chip 2 is
 load-bearing, plus the 2-reference face wall and its ruled-out list.
 
-### [klein/](klein/) — FLUX.2 Klein 4B (Apache-2.0, fastest image model we ship)
+### [klein/](klein/) — FLUX.2 Klein 4B + 9B (one graph, two sizes; 4B Apache-2.0, 9B FLUX NCL)
 | File | Holds |
 |---|---|
-| [README.md](klein/README.md) | Hub: what ships (distilled int8, ONE tier), weights, the ONE-master-template `Input_wf_type` architecture, step counts, known limits. |
+| [README.md](klein/README.md) | Hub: what ships (distilled int8, ONE tier), weights, the ONE-master-template `Input_wf_type` architecture, step counts, known limits. The 4B half — applies to both sizes. |
+| [9b.md](klein/9b.md) | The 9B delta: the 5-value swap the generator bakes, its weights (and why BOTH filenames lie about the quantisation), the licence gate it makes visible, why it is styleless, and the turbo/KV results that were benched and rejected. |
 | [removal.md](klein/removal.md) | The object-removal op — green plate, crop/stitch, 4 steps, the two traps. Klein's headline capability. |
 | [refcontrol.md](klein/refcontrol.md) | The depth op — the grayscale root cause (cost a day, do NOT re-derive) and the style×depth exclusivity rule. |
 | [licences.md](klein/licences.md) | Community-LoRA licence method + table. Klein's Apache-2.0 does NOT extend to them. |

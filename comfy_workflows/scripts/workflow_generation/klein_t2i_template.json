@@ -125,7 +125,7 @@
   },
   "14": {
     "inputs": {
-      "clip_name": "qwen_3_4b.safetensors",
+      "clip_name": "qwen_3_8b_int8_convrot.safetensors",
       "type": "flux2",
       "device": "default"
     },
@@ -211,7 +211,7 @@
   },
   "27": {
     "inputs": {
-      "unet_name": "flux-2-klein-4b-int8-convrot.safetensors",
+      "unet_name": "flux-2-klein-9b-int8-convrot.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
@@ -254,23 +254,7 @@
         0
       ],
       "text": [
-        "88",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "30": {
-    "inputs": {
-      "clip": [
-        "14",
-        0
-      ],
-      "text": [
-        "47",
+        "661",
         0
       ]
     },
@@ -282,7 +266,7 @@
   "31": {
     "inputs": {
       "steps": [
-        "203",
+        "646",
         0
       ],
       "width": [
@@ -310,11 +294,11 @@
         0
       ],
       "negative": [
-        "57",
+        "17",
         0
       ],
       "cfg": [
-        "204",
+        "647",
         0
       ]
     },
@@ -375,62 +359,6 @@
       "title": "Mpi Math"
     }
   },
-  "47": {
-    "inputs": {
-      "string_b": "malformed anatomy: hands with the wrong number of fingers, limbs that are missing, duplicated, or bent the wrong way, animals missing a head or legs\n",
-      "delimiter": "",
-      "string_a": [
-        "92",
-        0
-      ]
-    },
-    "class_type": "StringConcatenate",
-    "_meta": {
-      "title": "Negative Text"
-    }
-  },
-  "52": {
-    "inputs": {
-      "boolean": true
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Input_is_Turbo"
-    }
-  },
-  "53": {
-    "inputs": {
-      "math_expression": "1.0 if a else 0.0",
-      "a": [
-        "52",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "57": {
-    "inputs": {
-      "true": [
-        "17",
-        0
-      ],
-      "false": [
-        "30",
-        0
-      ],
-      "boolean": [
-        "52",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
   "88": {
     "inputs": {
       "delimiter": "",
@@ -448,18 +376,9 @@
       "title": "Concatenate Text"
     }
   },
-  "92": {
-    "inputs": {
-      "string": ""
-    },
-    "class_type": "MpiText",
-    "_meta": {
-      "title": "Input_Negative"
-    }
-  },
   "93": {
     "inputs": {
-      "string": "photo of Cute girl at school wearing a school uniform, friends in the background"
+      "string": "place the fox from image 2 on the staircase from image 1 "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -527,8 +446,8 @@
       "lora_name": "None",
       "strength_model": 1,
       "model": [
-        "101",
-        1
+        "662",
+        0
       ]
     },
     "class_type": "MpiLoraModel",
@@ -719,11 +638,11 @@
         0
       ],
       "negative": [
-        "212",
+        "139",
         0
       ],
       "cfg": [
-        "204",
+        "647",
         0
       ]
     },
@@ -735,7 +654,7 @@
   "126": {
     "inputs": {
       "steps": [
-        "203",
+        "646",
         0
       ],
       "width": [
@@ -831,7 +750,7 @@
       "string_a": "refcontrol, color",
       "delimiter": ", ",
       "string_b": [
-        "88",
+        "661",
         0
       ]
     },
@@ -944,7 +863,7 @@
         0
       ],
       "text": [
-        "88",
+        "661",
         0
       ]
     },
@@ -1000,7 +919,7 @@
   "166": {
     "inputs": {
       "samples": [
-        "185",
+        "656",
         0
       ],
       "vae": [
@@ -1051,11 +970,11 @@
         0
       ],
       "negative": [
-        "222",
+        "161",
         0
       ],
       "cfg": [
-        "204",
+        "647",
         0
       ]
     },
@@ -1092,7 +1011,7 @@
   "173": {
     "inputs": {
       "steps": [
-        "203",
+        "646",
         0
       ],
       "width": [
@@ -1267,244 +1186,6 @@
       "title": "Mpi If Else"
     }
   },
-  "203": {
-    "inputs": {
-      "math_expression": "4 if a else 20",
-      "a": [
-        "52",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "steps"
-    }
-  },
-  "204": {
-    "inputs": {
-      "math_expression": "1.0 if a else 5.0",
-      "a": [
-        "52",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "cfg"
-    }
-  },
-  "212": {
-    "inputs": {
-      "true": [
-        "139",
-        0
-      ],
-      "false": [
-        "218",
-        0
-      ],
-      "boolean": [
-        "52",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "215": {
-    "inputs": {
-      "clip": [
-        "14",
-        0
-      ],
-      "text": [
-        "47",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Positive Prompt)"
-    }
-  },
-  "216": {
-    "inputs": {
-      "conditioning": [
-        "215",
-        0
-      ],
-      "latent": [
-        "135",
-        0
-      ]
-    },
-    "class_type": "ReferenceLatent",
-    "_meta": {
-      "title": "Set Reference Latent"
-    }
-  },
-  "217": {
-    "inputs": {
-      "conditioning": [
-        "216",
-        0
-      ],
-      "latent": [
-        "129",
-        0
-      ]
-    },
-    "class_type": "ReferenceLatent",
-    "_meta": {
-      "title": "Set Reference Latent"
-    }
-  },
-  "218": {
-    "inputs": {
-      "true": [
-        "217",
-        0
-      ],
-      "false": [
-        "216",
-        0
-      ],
-      "boolean": [
-        "231",
-        1
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "222": {
-    "inputs": {
-      "true": [
-        "161",
-        0
-      ],
-      "false": [
-        "228",
-        0
-      ],
-      "boolean": [
-        "52",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "223": {
-    "inputs": {
-      "clip": [
-        "14",
-        0
-      ],
-      "text": [
-        "47",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "225": {
-    "inputs": {
-      "conditioning": [
-        "223",
-        0
-      ],
-      "latent": [
-        "163",
-        0
-      ]
-    },
-    "class_type": "ReferenceLatent",
-    "_meta": {
-      "title": "Set Reference Latent 1"
-    }
-  },
-  "226": {
-    "inputs": {
-      "conditioning": [
-        "225",
-        0
-      ],
-      "latent": [
-        "165",
-        0
-      ]
-    },
-    "class_type": "ReferenceLatent",
-    "_meta": {
-      "title": "Set Reference Latent 2"
-    }
-  },
-  "227": {
-    "inputs": {
-      "true": [
-        "226",
-        0
-      ],
-      "false": [
-        "225",
-        0
-      ],
-      "boolean": [
-        "231",
-        1
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "228": {
-    "inputs": {
-      "true": [
-        "229",
-        0
-      ],
-      "false": [
-        "227",
-        0
-      ],
-      "boolean": [
-        "232",
-        1
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "229": {
-    "inputs": {
-      "conditioning": [
-        "227",
-        0
-      ],
-      "latent": [
-        "175",
-        0
-      ]
-    },
-    "class_type": "ReferenceLatent",
-    "_meta": {
-      "title": "Set Reference Latent 3"
-    }
-  },
   "231": {
     "inputs": {
       "any": [
@@ -1575,530 +1256,6 @@
       "title": "Input_Image_2"
     }
   },
-  "251": {
-    "inputs": {
-      "sampler_name": "euler"
-    },
-    "class_type": "KSamplerSelect",
-    "_meta": {
-      "title": "KSamplerSelect"
-    }
-  },
-  "252": {
-    "inputs": {
-      "noise": [
-        "288",
-        0
-      ],
-      "guider": [
-        "254",
-        0
-      ],
-      "sampler": [
-        "251",
-        0
-      ],
-      "sigmas": [
-        "267",
-        0
-      ],
-      "latent_image": [
-        "257",
-        0
-      ]
-    },
-    "class_type": "SamplerCustomAdvanced",
-    "_meta": {
-      "title": "SamplerCustomAdvanced"
-    }
-  },
-  "254": {
-    "inputs": {
-      "cfg": 1,
-      "model": [
-        "259",
-        0
-      ],
-      "positive": [
-        "263",
-        0
-      ],
-      "negative": [
-        "266",
-        0
-      ]
-    },
-    "class_type": "CFGGuider",
-    "_meta": {
-      "title": "CFG Guider"
-    }
-  },
-  "257": {
-    "inputs": {
-      "pixels": [
-        "261",
-        0
-      ],
-      "vae": [
-        "15",
-        0
-      ]
-    },
-    "class_type": "VAEEncode",
-    "_meta": {
-      "title": "VAE Encode"
-    }
-  },
-  "258": {
-    "inputs": {
-      "batch_size": 1,
-      "color": 65280,
-      "width": [
-        "386",
-        0
-      ],
-      "height": [
-        "386",
-        0
-      ]
-    },
-    "class_type": "EmptyImage",
-    "_meta": {
-      "title": "Empty Image"
-    }
-  },
-  "259": {
-    "inputs": {
-      "lora_name": "flux2-klein\\flux2-klein-4b-outpaint.safetensors",
-      "strength_model": 1.1,
-      "model": [
-        "100",
-        0
-      ]
-    },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "Load LoRA"
-    }
-  },
-  "261": {
-    "inputs": {
-      "x": 0,
-      "y": 0,
-      "resize_source": true,
-      "destination": [
-        "276",
-        1
-      ],
-      "source": [
-        "258",
-        0
-      ],
-      "mask": [
-        "276",
-        2
-      ]
-    },
-    "class_type": "ImageCompositeMasked",
-    "_meta": {
-      "title": "Image Composite Masked"
-    }
-  },
-  "263": {
-    "inputs": {
-      "conditioning": [
-        "293",
-        0
-      ],
-      "latent": [
-        "257",
-        0
-      ]
-    },
-    "class_type": "ReferenceLatent",
-    "_meta": {
-      "title": "Set Reference Latent"
-    }
-  },
-  "264": {
-    "inputs": {
-      "padding": 64,
-      "mask": [
-        "296",
-        1
-      ]
-    },
-    "class_type": "MpiMaskSquareBbox",
-    "_meta": {
-      "title": "Mpi Mask Square Bbox"
-    }
-  },
-  "266": {
-    "inputs": {
-      "conditioning": [
-        "263",
-        0
-      ]
-    },
-    "class_type": "ConditioningZeroOut",
-    "_meta": {
-      "title": "Conditioning Zero Out"
-    }
-  },
-  "267": {
-    "inputs": {
-      "steps": 2,
-      "width": [
-        "387",
-        0
-      ],
-      "height": [
-        "387",
-        0
-      ]
-    },
-    "class_type": "Flux2Scheduler",
-    "_meta": {
-      "title": "Flux2Scheduler"
-    }
-  },
-  "274": {
-    "inputs": {
-      "samples": [
-        "252",
-        0
-      ],
-      "vae": [
-        "15",
-        0
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
-    }
-  },
-  "275": {
-    "inputs": {
-      "stitcher": [
-        "286",
-        0
-      ],
-      "inpainted_image": [
-        "285",
-        0
-      ]
-    },
-    "class_type": "InpaintStitchImproved",
-    "_meta": {
-      "title": "✂️ Inpaint Stitch"
-    }
-  },
-  "276": {
-    "inputs": {
-      "downscale_algorithm": "bilinear",
-      "upscale_algorithm": "bicubic",
-      "preresize": false,
-      "preresize_mode": "ensure minimum resolution",
-      "preresize_min_width": 1024,
-      "preresize_min_height": 1024,
-      "preresize_max_width": 16384,
-      "preresize_max_height": 16384,
-      "mask_fill_holes": false,
-      "mask_expand_pixels": 6,
-      "mask_invert": false,
-      "mask_blend_pixels": 32,
-      "mask_hipass_filter": 0.1,
-      "extend_for_outpainting": false,
-      "extend_up_factor": 1,
-      "extend_down_factor": 1,
-      "extend_left_factor": 1,
-      "extend_right_factor": 1,
-      "context_from_mask_extend_factor": 1.2,
-      "output_resize_to_target_size": true,
-      "output_padding": "32",
-      "device_mode": "gpu (much faster)",
-      "image": [
-        "641",
-        0
-      ],
-      "mask": [
-        "296",
-        1
-      ],
-      "optional_context_mask": [
-        "264",
-        0
-      ],
-      "output_target_width": [
-        "389",
-        0
-      ],
-      "output_target_height": [
-        "389",
-        0
-      ]
-    },
-    "class_type": "InpaintCropImproved",
-    "_meta": {
-      "title": "✂️ Inpaint Crop"
-    }
-  },
-  "277": {
-    "inputs": {
-      "stitcher": [
-        "276",
-        0
-      ],
-      "inpainted_image": [
-        "274",
-        0
-      ]
-    },
-    "class_type": "InpaintStitchImproved",
-    "_meta": {
-      "title": "✂️ Inpaint Stitch"
-    }
-  },
-  "278": {
-    "inputs": {
-      "model": [
-        "259",
-        0
-      ],
-      "clip": [
-        "14",
-        0
-      ],
-      "vae": [
-        "15",
-        0
-      ],
-      "positive": [
-        "294",
-        0
-      ],
-      "negative": [
-        "378",
-        0
-      ]
-    },
-    "class_type": "ToBasicPipe",
-    "_meta": {
-      "title": "ToBasicPipe"
-    }
-  },
-  "280": {
-    "inputs": {
-      "min_value": 0,
-      "max_value": 1024,
-      "value": [
-        "264",
-        3
-      ]
-    },
-    "class_type": "MpiClamp",
-    "_meta": {
-      "title": "Mpi Clamp"
-    }
-  },
-  "281": {
-    "inputs": {
-      "channel": "red",
-      "image": [
-        "282",
-        0
-      ]
-    },
-    "class_type": "ImageToMask",
-    "_meta": {
-      "title": "Convert Image to Mask"
-    }
-  },
-  "282": {
-    "inputs": {
-      "batch_size": 1,
-      "color": 16777215,
-      "width": [
-        "283",
-        0
-      ],
-      "height": [
-        "283",
-        1
-      ]
-    },
-    "class_type": "EmptyImage",
-    "_meta": {
-      "title": "Empty Image"
-    }
-  },
-  "283": {
-    "inputs": {
-      "image": [
-        "286",
-        1
-      ]
-    },
-    "class_type": "GetImageSize",
-    "_meta": {
-      "title": "Get Image Size"
-    }
-  },
-  "285": {
-    "inputs": {
-      "guide_size": 512,
-      "guide_size_for": true,
-      "max_size": 1024,
-      "mask_mode": true,
-      "steps": 2,
-      "cfg": 1,
-      "sampler_name": "euler",
-      "scheduler": "simple",
-      "denoise": 0.4,
-      "feather": 6,
-      "crop_factor": 1.8,
-      "drop_size": 10,
-      "refiner_ratio": 0.2,
-      "batch_size": 1,
-      "cycle": 1,
-      "inpaint_model": true,
-      "noise_mask_feather": 20,
-      "bbox_fill": false,
-      "contour_fill": false,
-      "image": [
-        "286",
-        1
-      ],
-      "mask": [
-        "281",
-        0
-      ],
-      "basic_pipe": [
-        "278",
-        0
-      ],
-      "seed": [
-        "33",
-        0
-      ]
-    },
-    "class_type": "MaskDetailerPipe",
-    "_meta": {
-      "title": "MaskDetailer (pipe)"
-    }
-  },
-  "286": {
-    "inputs": {
-      "downscale_algorithm": "bilinear",
-      "upscale_algorithm": "bicubic",
-      "preresize": false,
-      "preresize_mode": "ensure maximum resolution",
-      "preresize_min_width": 1024,
-      "preresize_min_height": 1024,
-      "preresize_max_width": 16384,
-      "preresize_max_height": 16384,
-      "mask_fill_holes": false,
-      "mask_expand_pixels": 6,
-      "mask_invert": false,
-      "mask_blend_pixels": 32,
-      "mask_hipass_filter": 0.1,
-      "extend_for_outpainting": false,
-      "extend_up_factor": 1,
-      "extend_down_factor": 1,
-      "extend_left_factor": 1,
-      "extend_right_factor": 1,
-      "context_from_mask_extend_factor": 1.2,
-      "output_resize_to_target_size": true,
-      "output_padding": "32",
-      "device_mode": "gpu (much faster)",
-      "image": [
-        "277",
-        0
-      ],
-      "mask": [
-        "290",
-        0
-      ],
-      "optional_context_mask": [
-        "264",
-        0
-      ],
-      "output_target_width": [
-        "388",
-        0
-      ],
-      "output_target_height": [
-        "388",
-        0
-      ]
-    },
-    "class_type": "InpaintCropImproved",
-    "_meta": {
-      "title": "✂️ Inpaint Crop"
-    }
-  },
-  "288": {
-    "inputs": {
-      "noise_seed": [
-        "33",
-        0
-      ]
-    },
-    "class_type": "RandomNoise",
-    "_meta": {
-      "title": "RandomNoise"
-    }
-  },
-  "290": {
-    "inputs": {
-      "expand": 32,
-      "incremental_expandrate": 0,
-      "tapered_corners": true,
-      "flip_input": false,
-      "blur_radius": 16,
-      "lerp_alpha": 1,
-      "decay_factor": 1,
-      "fill_holes": false,
-      "mask": [
-        "296",
-        1
-      ]
-    },
-    "class_type": "GrowMaskWithBlur",
-    "_meta": {
-      "title": "Grow Mask With Blur"
-    }
-  },
-  "293": {
-    "inputs": {
-      "clip": [
-        "14",
-        0
-      ],
-      "text": [
-        "380",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "294": {
-    "inputs": {
-      "text": "",
-      "clip": [
-        "14",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "override"
-    }
-  },
   "296": {
     "inputs": {
       "channel": "red",
@@ -2136,7 +1293,7 @@
   },
   "304": {
     "inputs": {
-      "int": 3
+      "int": 5
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -2179,7 +1336,7 @@
         0
       ],
       "any_5": [
-        "355",
+        "354",
         0
       ],
       "any_6": [
@@ -2333,31 +1490,7 @@
     },
     "class_type": "MpiReroute",
     "_meta": {
-      "title": "edit"
-    }
-  },
-  "355": {
-    "inputs": {
-      "any": [
-        "356",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "inpaint"
-    }
-  },
-  "356": {
-    "inputs": {
-      "any": [
-        "275",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "inpaint"
+      "title": "edit/inpaint"
     }
   },
   "357": {
@@ -2420,15 +1553,6 @@
       "title": "t2i/i2i"
     }
   },
-  "367": {
-    "inputs": {
-      "string": "Remove"
-    },
-    "class_type": "MpiString",
-    "_meta": {
-      "title": "Mpi String"
-    }
-  },
   "374": {
     "inputs": {
       "any": [
@@ -2456,100 +1580,6 @@
     "class_type": "MpiBooleanCompare",
     "_meta": {
       "title": "Mpi Boolean Compare"
-    }
-  },
-  "378": {
-    "inputs": {
-      "conditioning": [
-        "294",
-        0
-      ]
-    },
-    "class_type": "ConditioningZeroOut",
-    "_meta": {
-      "title": "Conditioning Zero Out"
-    }
-  },
-  "380": {
-    "inputs": {
-      "string_a": "Fill the green spaces according to the image. ",
-      "delimiter": "",
-      "string_b": [
-        "642",
-        0
-      ]
-    },
-    "class_type": "StringConcatenate",
-    "_meta": {
-      "title": "Concatenate Text"
-    }
-  },
-  "381": {
-    "inputs": {
-      "true": [
-        "367",
-        0
-      ],
-      "false": [
-        "88",
-        0
-      ],
-      "boolean": [
-        "375",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "386": {
-    "inputs": {
-      "any": [
-        "389",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "W + H"
-    }
-  },
-  "387": {
-    "inputs": {
-      "any": [
-        "389",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "W + H"
-    }
-  },
-  "388": {
-    "inputs": {
-      "any": [
-        "389",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "W + H"
-    }
-  },
-  "389": {
-    "inputs": {
-      "any": [
-        "280",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "W + H"
     }
   },
   "391": {
@@ -2642,6 +1672,8 @@
   },
   "405": {
     "inputs": {
+      "steps": 2,
+      "cfg": 1,
       "sampler_name": "euler",
       "scheduler": "beta",
       "mode_type": "Linear",
@@ -2668,7 +1700,7 @@
         0
       ],
       "negative": [
-        "444",
+        "649",
         0
       ],
       "vae": [
@@ -2685,14 +1717,6 @@
       ],
       "seed": [
         "33",
-        0
-      ],
-      "steps": [
-        "439",
-        0
-      ],
-      "cfg": [
-        "437",
         0
       ],
       "denoise": [
@@ -2719,6 +1743,8 @@
       "guide_size_for": true,
       "max_size": 1024,
       "mask_mode": true,
+      "steps": 2,
+      "cfg": 1,
       "sampler_name": "euler",
       "scheduler": "beta",
       "feather": 5,
@@ -2747,14 +1773,6 @@
         "33",
         0
       ],
-      "steps": [
-        "418",
-        0
-      ],
-      "cfg": [
-        "417",
-        0
-      ],
       "denoise": [
         "330",
         0
@@ -2763,32 +1781,6 @@
     "class_type": "MaskDetailerPipe",
     "_meta": {
       "title": "MaskDetailer"
-    }
-  },
-  "417": {
-    "inputs": {
-      "math_expression": "1.0 if a else 1.5",
-      "a": [
-        "52",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "418": {
-    "inputs": {
-      "math_expression": "2 if a else 10",
-      "a": [
-        "52",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
     }
   },
   "433": {
@@ -2827,32 +1819,6 @@
       "title": "upscale"
     }
   },
-  "437": {
-    "inputs": {
-      "math_expression": "1.0 if a else 1.5",
-      "a": [
-        "52",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
-  "439": {
-    "inputs": {
-      "math_expression": "2 if a else 10",
-      "a": [
-        "52",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
-    }
-  },
   "442": {
     "inputs": {
       "clip": [
@@ -2860,25 +1826,13 @@
         0
       ],
       "text": [
-        "88",
+        "661",
         0
       ]
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
       "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "444": {
-    "inputs": {
-      "conditioning": [
-        "442",
-        0
-      ]
-    },
-    "class_type": "ConditioningZeroOut",
-    "_meta": {
-      "title": "Conditioning Zero Out"
     }
   },
   "452": {
@@ -2912,7 +1866,7 @@
         0
       ],
       "negative": [
-        "467",
+        "648",
         0
       ]
     },
@@ -2928,23 +1882,7 @@
         0
       ],
       "text": [
-        "88",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "467": {
-    "inputs": {
-      "clip": [
-        "14",
-        0
-      ],
-      "text": [
-        "47",
+        "661",
         0
       ]
     },
@@ -3127,64 +2065,6 @@
       "title": "Mpi If Else"
     }
   },
-  "612": {
-    "inputs": {
-      "images": [
-        "286",
-        1
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
-    }
-  },
-  "639": {
-    "inputs": {
-      "operator": "==",
-      "b_value": 5,
-      "a": [
-        "304",
-        0
-      ]
-    },
-    "class_type": "MpiCompare",
-    "_meta": {
-      "title": "is inpaint"
-    }
-  },
-  "641": {
-    "inputs": {
-      "input": [
-        "474",
-        0
-      ],
-      "boolean": [
-        "639",
-        0
-      ]
-    },
-    "class_type": "MpiBlocker",
-    "_meta": {
-      "title": "Mpi Blocker"
-    }
-  },
-  "642": {
-    "inputs": {
-      "input": [
-        "381",
-        0
-      ],
-      "boolean": [
-        "639",
-        0
-      ]
-    },
-    "class_type": "MpiBlocker",
-    "_meta": {
-      "title": "Mpi Blocker"
-    }
-  },
   "644": {
     "inputs": {
       "float": 1
@@ -3192,6 +2072,189 @@
     "class_type": "MpiFloat",
     "_meta": {
       "title": "Input_Control_strength"
+    }
+  },
+  "646": {
+    "inputs": {
+      "int": 4
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Mpi Int"
+    }
+  },
+  "647": {
+    "inputs": {
+      "float": 1
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Mpi Float"
+    }
+  },
+  "648": {
+    "inputs": {
+      "conditioning": [
+        "463",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "649": {
+    "inputs": {
+      "conditioning": [
+        "442",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "651": {
+    "inputs": {
+      "guidance": 4,
+      "conditioning": [
+        "201",
+        0
+      ]
+    },
+    "class_type": "FluxGuidance",
+    "_meta": {
+      "title": "FluxGuidance"
+    }
+  },
+  "652": {
+    "inputs": {
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "LanPaint_NumSteps": 2,
+      "LanPaint_PromptMode": "Image First",
+      "LanPaint_Info": "LanPaint KSampler. For more info, visit https://github.com/scraed/LanPaint. If you find it useful, please give a star ⭐️!",
+      "Inpainting_mode": "🖼️ Image Inpainting",
+      "model": [
+        "100",
+        0
+      ],
+      "positive": [
+        "651",
+        0
+      ],
+      "negative": [
+        "161",
+        0
+      ],
+      "latent_image": [
+        "653",
+        0
+      ],
+      "seed": [
+        "33",
+        0
+      ],
+      "steps": [
+        "646",
+        0
+      ],
+      "cfg": [
+        "647",
+        0
+      ]
+    },
+    "class_type": "LanPaint_KSampler",
+    "_meta": {
+      "title": "LanPaint KSampler"
+    }
+  },
+  "653": {
+    "inputs": {
+      "samples": [
+        "163",
+        0
+      ],
+      "mask": [
+        "581",
+        2
+      ]
+    },
+    "class_type": "SetLatentNoiseMask",
+    "_meta": {
+      "title": "Set Latent Noise Mask"
+    }
+  },
+  "656": {
+    "inputs": {
+      "true": [
+        "652",
+        0
+      ],
+      "false": [
+        "185",
+        0
+      ],
+      "boolean": [
+        "297",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "660": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_is_9b"
+    }
+  },
+  "661": {
+    "inputs": {
+      "true": [
+        "8",
+        0
+      ],
+      "false": [
+        "88",
+        0
+      ],
+      "boolean": [
+        "660",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "is 9b"
+    }
+  },
+  "662": {
+    "inputs": {
+      "true": [
+        "27",
+        0
+      ],
+      "false": [
+        "101",
+        1
+      ],
+      "boolean": [
+        "660",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "is 9b"
     }
   }
 }

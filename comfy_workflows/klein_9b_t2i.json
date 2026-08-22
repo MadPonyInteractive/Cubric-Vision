@@ -125,7 +125,7 @@
   },
   "14": {
     "inputs": {
-      "clip_name": "qwen_3_4b.safetensors",
+      "clip_name": "qwen_3_8b_int8_convrot.safetensors",
       "type": "flux2",
       "device": "default"
     },
@@ -211,7 +211,7 @@
   },
   "27": {
     "inputs": {
-      "unet_name": "flux-2-klein-4b-int8-convrot.safetensors",
+      "unet_name": "flux-2-klein-9b-int8-convrot.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
@@ -318,7 +318,7 @@
   },
   "38": {
     "inputs": {
-      "lora_name": "flux2-klein\\NSFW_party_time_v2.0_klein4b.safetensors",
+      "lora_name": "flux2-klein\\NSFW_party_time_v2.0_klein9b.safetensors",
       "model": [
         "27",
         0
@@ -841,7 +841,7 @@
   },
   "143": {
     "inputs": {
-      "lora_name": "flux2-klein\\flux2_klein_4b_refcontrol_depth.safetensors",
+      "lora_name": "flux2-klein\\flux2_klein_9b_refcontrol_depth.safetensors",
       "model": [
         "100",
         0
@@ -2210,7 +2210,7 @@
   },
   "660": {
     "inputs": {
-      "boolean": false
+      "boolean": true
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {

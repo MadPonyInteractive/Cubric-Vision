@@ -367,6 +367,36 @@ export const modelDeps = {
         bytes: 4074445184,
         sha256: 'ac629fa69e0700ae689bce6b694ac0fc90ba5c24de15bd6c47195ad0c16fe90e',
     },
+    // Klein 9B transformer (MPI-598) — the DISTILLED weight, 4 steps at cfg 1.0.
+    // One checkpoint ships. MPI-600 benched and REJECTED both alternatives: the
+    // `klein_9B_Turbo_r128` LoRA (the base arm it rides is ~6-7x slower AND scores 0/3
+    // on reference-driven placement; strengths 0.7/0.35 score WORSE than 1.0, so there
+    // is no quality/speed axis to expose) and the KV variant (a real 2.4-3.2x SAMPLER
+    // win but only 1.27-1.46x end to end, for a SECOND 9.4GB weight and +600-800 MiB on
+    // a card with ~340 MiB spare). Neither weight is hosted; do not re-add either on the
+    // strength of a benchmark that measures the sampler alone.
+    //
+    // THE FILENAME LIES — do not describe this as ConvRot anywhere. Header read
+    // 2026-08-22: `{"format": "int8_tensorwise"}` with a SCALAR `weight_scale` (shape
+    // []). The shipped 4B weight above is genuinely different — rowwise, `weight_scale`
+    // shape [3072, 1] — despite the near-identical name. 9B is the COARSER scheme.
+    // Loads on core ComfyUI 0.31.0 with no custom node (node_lock pins zero INT8 nodes
+    // and six int8_convrot weights already ship) — that question is CLOSED.
+    //
+    // ~15GB peak on a 16380 MiB card, ~500-800 MiB spare. It fits; the margin is not
+    // comfortable, and per `project_the_users_gpu_is_the_limit` the ModelDef description
+    // warning is the whole obligation.
+    'klein-9b-transformer': {
+        id: 'klein-9b-transformer',
+        name: 'FLUX.2 Klein 9B Transformer (distilled, int8 tensorwise)',
+        origin: 'Winnougan/Klein9b-Distilled-Base-INT8-Convrot (distilled; int8_tensorwise despite the repo name)',
+        filename: 'diffusion_models/flux-2-klein-9b-int8-convrot.safetensors',
+        url: 'https://models.cubric.studio/vision/models/diffusion_models/flux-2-klein-9b-int8-convrot.safetensors',
+        mirrorUrl: 'https://huggingface.co/Winnougan/Klein9b-Distilled-Base-INT8-Convrot/resolve/main/flux-2-klein-9b-int8-convrot.safetensors',
+        size: '8.79GB',
+        bytes: 9433065664,
+        sha256: '8daaac4f1e869cea35a051fcc619c515b7ba003d319667c1db6ae798fa1e6db2',
+    },
     // ── LTX-2.3 transformers (MPI-127) ─────────────────────────────────────────
     // Ship deps = exactly what LTX_i2v_t2v_template.json references (workflow scan
     // 2026-06-25). Support weights (video/audio VAE, gemma clip, text projection,

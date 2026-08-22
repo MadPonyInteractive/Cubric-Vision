@@ -509,6 +509,47 @@ export const loraDeps = {
         bytes: 188756968,
         sha256: '0c4aea1ba041985d2d7e6ce655b865e0fe22ea37575b3310c4619ad57dc80a00',
     },
+    // ── Klein 9B baked LoRAs (MPI-598) ─────────────────────────────────────────
+    // The 9B twins of the two entries above. 4B and 9B LoRAs are NOT interchangeable —
+    // the rank dims differ (lora_A [.,4096] on 9B vs [.,3072] on 4B), which is also the
+    // proof each file really is 9B. Both keep the SAME key prefix as their 4B twin
+    // (`diffusion_model.*` for depth, `transformer.*` for NSFW), so neither needs the
+    // comfy-conversion step the outpaint LoRA did.
+    // Hashes verified three ways 2026-08-22: local sha256, the HF `lfs.oid` from
+    // `POST /api/models/{repo}/paths-info/main`, and MPI-598's research file. Read the
+    // oid, never a `resolve/` ETag — that is a CDN etag and makes a good download look
+    // corrupt.
+    // NOTE there is NO 9B outpaint LoRA. The 4B one is deprecated under MPI-603 and must
+    // not be deleted or stripped here — it has a shipped second consumer in the Character
+    // Sheet flow (flow_character_sheet.json #708).
+    'klein-9b-lora-refcontrol-depth': {
+        id: 'klein-9b-lora-refcontrol-depth',
+        name: 'FLUX.2 Klein 9B Depth RefControl LoRA (baked)',
+        origin: 'thedeoxen/refcontrol-FLUX.2-klein-9B-reference-depth-lora (Apache-2.0)',
+        filename: 'loras/flux2-klein/flux2_klein_9b_refcontrol_depth.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/flux2_klein_9b_refcontrol_depth.safetensors',
+        mirrorUrl: 'https://huggingface.co/thedeoxen/refcontrol-FLUX.2-klein-9B-reference-depth-lora/resolve/main/flux2_klein_9b_refcontrol_depth.safetensors',
+        size: '158.03MB',
+        bytes: 165704480,
+        sha256: 'd627631d39a6a7c7b2951b029a1a0c72b40809b27d4049b708129e1832c9bb8d',
+    },
+    // Same creator as the 4B depth LoRA (CivitAI 2657241, already cleared in
+    // docs/models/klein/licences.md) but published to Hugging Face under Apache-2.0 —
+    // so this one needs no VPN and carries no credit obligation.
+    // The NSFW twin below is CivitAI-only (model 2458332, version 3028788, creator
+    // `whoforscuba`, licence badge NONE — cleared on creator flags alone, the identical
+    // posture to the 4B weight we already ship). CivitAI region-blocks the UK, so it has
+    // no mirrorUrl, exactly like its 4B twin; Fabio pulled it over the VPN 2026-08-22.
+    'klein-9b-lora-nsfw': {
+        id: 'klein-9b-lora-nsfw',
+        name: 'FLUX.2 Klein 9B NSFW LoRA (prompt-gated)',
+        origin: 'CivitAI 2458332 v3028788 (Party Time, v2.0_klein9b)',
+        filename: 'loras/flux2-klein/NSFW_party_time_v2.0_klein9b.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/NSFW_party_time_v2.0_klein9b.safetensors',
+        size: '304.02MB',
+        bytes: 318784864,
+        sha256: 'cc369cda4370cde8244e5934ac7323b9d39f0797d729c1931c8c0621692ce91c',
+    },
     // ── Klein style LoRAs (MPI-354) ────────────────────────────────────────────
     // 8 style LoRAs behind Input_Style_Selector 1..8 (index 0 = No Style, model passes through).
     // Same runtime shape as the Krea2 rack above: MUTUALLY EXCLUSIVE, an MpiMath

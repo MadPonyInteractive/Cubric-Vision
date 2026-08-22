@@ -235,6 +235,26 @@ export const assetDeps = {
         bytes: 8044982048,
         sha256: '6c671498573ac2f7a5501502ccce8d2b08ea6ca2f661c458e708f36b36edfc5a',
     },
+    // Klein 9B's text encoder (MPI-598). A BRAND-NEW dep — nothing we host could be
+    // promoted, and the near-miss candidates are the trap here: `qwen3-4b-clip` above is
+    // Qwen3-**4B** (a different parameter count, Klein 4B's encoder) and
+    // `boogu-qwen3vl-8b-clip` is Qwen3-**VL**-8B, a vision-language model loaded at type
+    // `boogu`. Klein 9B wants text-only Qwen3-8B at CLIPLoader type `flux2`. This roughly
+    // DOUBLES 9B's encoder footprint against 4B — the 8B encoder is a second ~8.8GB
+    // resident, though ComfyUI encodes then unloads, so peak is not the sum.
+    // Same filename lie as the 9B transformer: header read 2026-08-22 is
+    // `{"format": "int8_tensorwise"}` with a SCALAR `weight_scale`, not ConvRot.
+    'qwen3-8b-clip': {
+        id: 'qwen3-8b-clip',
+        name: 'FLUX.2 Klein 9B Text Encoder (Qwen3-8B, int8 tensorwise)',
+        origin: 'Winnougan/Klein9b-Distilled-Base-INT8-Convrot (qwen_3_8b_int8_convrot)',
+        filename: 'text_encoders/qwen_3_8b_int8_convrot.safetensors',
+        url: 'https://models.cubric.studio/vision/models/text_encoders/qwen_3_8b_int8_convrot.safetensors',
+        mirrorUrl: 'https://huggingface.co/Winnougan/Klein9b-Distilled-Base-INT8-Convrot/resolve/main/qwen_3_8b_int8_convrot.safetensors',
+        size: '8.79GB',
+        bytes: 9435828164,
+        sha256: '531c547aedd19e119a6089ab3614cb871af40160763a0b3d51719ff1ec8db9af',
+    },
     'pid-gemma': {
         id: 'pid-gemma',
         name: 'PiD Gemma text encoder',
