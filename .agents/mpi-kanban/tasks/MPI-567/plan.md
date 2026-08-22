@@ -51,6 +51,26 @@ untouched photo (sun `bg_mean` 10.34 vs the silhouette's 3.45). **The 100px prox
 resolves it** — it keeps the shadow fix Fabio valued AND beats the silhouette route's seam. That is
 what shipped in the graph; if he wants the photo protected harder, the gate drops to 60.
 
+**OPEN THREAD FROM FABIO, 2026-08-22 (end of session 5): Klein 9B's LOCALISED edit does NOT
+re-grade the image.** Results were coming in from the MPI-600 / 9B line as this session closed
+(`e1b667a7` — "9B INT8 fits"). **This contradicts the headline conclusion in
+`docs/playbooks/add-flow/blending-into-a-photo.md`** — *"Four model configurations, one
+conclusion: stop looking for a model that returns a clean patch"* — which was measured on Boogu,
+Klein **4B**, and Qwen at three tiers. 9B was never in that matrix (it was licence-gated and
+explicitly out of scope: *"do not design around it"*).
+
+If it holds, it is a genuine simplification, not a tweak: the localised crop/stitch route needs
+**none** of the whole-image relight or the ~25-node composite-back tail this session built, and
+`Input_Edit_Model`'s slot simply gains `klein-9b` as a candidate (which is MPI-598's job anyway).
+
+**Do NOT swap the route on the eye call alone** — that is the exact mistake the doc's § Measuring
+the rectangle exists to prevent: `border` coverage reads 0.034 on the WORST rectangle, and the
+night plate under-reports because it is dark. Measure it with `ring_step` + `fill`, on the same
+five plates, against the same stamps. Everything needed is already on disk and costs no new
+authoring: `D:/WORK/Images/Outputs/mpi567/runners/` (`run_models.py` drives a localised arm,
+`measure.py` scores it), the five plates, and the stamps. **Under ~2 ring is invisible; Klein 4B
+localised scored 21.45 on sun.** Do that ONE run before touching the graph.
+
 **THE APP HALF IS BLOCKED: there is no `paint` step kind.** `STEP_KINDS` registers `box`,
 `preview`, `crop` and frame-native `fields` — its own comment reads *"mask, light, mood… as they
 are built"*. This flow's premise is the user DRAWING on their photo, so it cannot be declared
