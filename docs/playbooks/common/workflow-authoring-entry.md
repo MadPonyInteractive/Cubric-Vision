@@ -19,7 +19,10 @@ hand-convert or hand-edit the API JSON.
   `validate-injection-rules.mjs`** (STOPS + names the node on a title/capture/seed/
   integrity violation — fix in the ComfyUI graph and re-export, never hand-patch the
   API), runs `orchestrate.py`, and leaves the generated output **staged** for `/mpi-end-session`.
-- `raw/` is USER-OWNED — tooling reads it, never writes it.
+- **`raw/` is writable by agents** (Fabio, 2026-08-22 — the old user-owned rule is lifted; it is
+  committed, so a bad write is recoverable). It holds **LiteGraph, never API JSON**, and the
+  converter scripts still refuse to write into it — that guard stops generated output landing in
+  the authoring source and is unrelated to the lifted rule.
 
 **Playbook overrides (divergences live inline in each playbook):**
 - **Model** — the converter-staleness trap (`--all` after any converter change) and

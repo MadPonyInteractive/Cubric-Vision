@@ -1,11 +1,15 @@
 # The conversion scripts — browser (LiteGraph) → API workflow JSON
 
-The user authors in the ComfyUI browser and drops the export in `comfy_workflows/raw/`; agents
-convert. Three scripts do it. Read this before running any of them — two of the three have a
-default mode that writes files you did not ask for.
+A graph is authored in the ComfyUI browser and lands in `comfy_workflows/raw/` as LiteGraph;
+these scripts convert it. Three of them. Read this before running any — two have a default mode
+that writes files you did not ask for.
 
-`raw/` is user-owned and read-only to us — that rule and the authoring loop live in
-[README.md](README.md). This file is only the tooling contract.
+**Agents may author `raw/` files themselves** (Fabio, 2026-08-22 — the old read-only rule is
+lifted). What did NOT change: `raw/` is LiteGraph, never API JSON, and **these scripts still
+hard-refuse to write inside it**. That refusal is not the lifted rule; it stops a converter
+scattering generated output into the authoring source, which is what cost 17 files on 2026-08-07.
+The rule and the authoring loop live in [README.md](README.md); this file is only the tooling
+contract.
 
 ## `scripts/sync-raw-workflows.mjs` — the one you almost always want
 

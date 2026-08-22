@@ -23,7 +23,7 @@
 | White-vs-green hint background | **DECIDED — WHITE** | green is a silent total failure, see § The green trap |
 | Model swap on two arms | **DONE** 2026-08-21 | `Input_Base_Model` swapped between SDXL Realistic and ILL Anime — see § The model swap |
 | Blend pass | **DONE** 2026-08-22 | whole-image relight → composite back, five plates + a tiny ladder. [../blending-into-a-photo.md](../blending-into-a-photo.md) |
-| **Merged runtime graph** | **BUILT + PROVEN** 2026-08-22 | stage 1 + relight + tail as ONE graph, 74 nodes, one dispatch, ~16s. Beats the three-step route's seam on all five plates. Bench store `MPI-567_scribble_to_object_BLEND`; repo copy `bench-graph-blend.json`. **`raw/` is still Fabio's to export** |
+| **Merged runtime graph** | **BUILT + PROVEN** 2026-08-22 | stage 1 + relight + tail as ONE graph, 74 nodes, one dispatch, ~16s. Beats the three-step route's seam on all five plates. Bench store `MPI-567_scribble_to_object_BLEND` (LiteGraph); repo copy `bench-graph-blend.json` is **API format**. `raw/` is agent-writable since 2026-08-22, so the LiteGraph copy is round-tripped off the bench, never synthesised from the API graph |
 | `paint` step kind | **BUILT + PROVEN LIVE** 2026-08-22 | `MpiStepPaint`, mounting `PaintManager` + `brushDab.js`; binds through `STEP_MEDIA` and returns the layer ALONE at source resolution. The step declares `mediaRole` so the photo survives beside it. [../ui/paint-gizmo.md](../ui/paint-gizmo.md) |
 | `Input_Control_strength` default | **DECIDED — 0.45–0.60** | 0.8 renders the user's ink as garment detail. See § Control strength |
 | Which arm for which drawing | **DECIDED** | scribble for flat line art, canny for a TONAL drawing. See § Which preprocessor arm |

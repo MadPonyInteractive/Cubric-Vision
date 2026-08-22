@@ -7,7 +7,7 @@ file is what is specific to THIS flow.
 | | |
 |---|---|
 | id / op | `outpaint` / `flowOutpaint` |
-| graph | `comfy_workflows/flow_outpaint.json` (raw: `raw/flow_outpaint.json`, Fabio's) |
+| graph | `comfy_workflows/flow_outpaint.json` (raw: `raw/flow_outpaint.json`) |
 | models | any-of `[['krea2', 'krea2-nsfw']]` |
 | steps | 01 Inputs · 02 Frame (`kind: 'crop'`) · 03 Generate |
 | controls | one `Input_is_Turbo` toggle, default ON |

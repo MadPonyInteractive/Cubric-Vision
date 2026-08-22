@@ -80,7 +80,7 @@ Three forks decide everything downstream:
 ## 0a. Author & prove the workflow in the LOCAL ComfyUI FIRST
 
 The raw→API sync procedure (author locally first, `sync-raw-workflows.mjs`, the
-`validate-injection-rules.mjs` gate, `raw/` is user-owned, staged output) is
+`validate-injection-rules.mjs` gate, `raw/` writable but LiteGraph-only, staged output) is
 **[shared] — canonical in [../common/workflow-authoring-entry.md](../common/workflow-authoring-entry.md).**
 Flow-specific notes:
 

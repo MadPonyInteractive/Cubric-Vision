@@ -34,7 +34,23 @@ that EXISTS in the flow's graph.
 The Klein arm is faithful, confirmed positively: its relight moves the frame 18.08 mean abs
 against session 3's 17.88 on the same plate. Staged on the bench as
 `MPI-567_scribble_to_object_BLEND` (previews wired: stamped / relit / region); repo copy
-`bench-graph-blend.json`. **`raw/` is still Fabio's to export** — that is the hard rule.
+`bench-graph-blend.json`.
+
+**THE `raw/` RULE IS LIFTED (Fabio, 2026-08-22).** Agents may create and update
+`comfy_workflows/raw/`. It was never really an ownership problem: the incident that hardened it
+(MPI-272) was a user **Export (API)** mis-click, and the agent-side hazard — a bare
+`workflow-to-api.mjs` run — was fixed in code by `assertNotInRaw()` (`f918c907`). What survives is
+a FORMAT law: `raw/` is LiteGraph, never API JSON. Docs healed in
+`docs/workflow-authoring/README.md`, `converters.md`,
+`docs/playbooks/common/workflow-authoring-entry.md`, `docs/playbooks/add-flow/README.md`.
+
+**But this card has NO LiteGraph copy of the merged graph, anywhere.** Both copies are API format
+— `bench-graph-blend.json` in the repo, and the bench-store copy too (§ Preservation Notes records
+it was POSTed to the bench store in API format, which the 1.48.7 frontend imports and auto-lays-
+out for viewing). So `raw/` cannot be filled by round-tripping something that already exists, and
+`bench-editing.md` forbids hand-writing LiteGraph nodes for good reason — implicit
+widget-to-input ordering shifts silently and yields a file that loads and misbehaves. See
+§ Remaining Work for the fork.
 
 **Three translation traps, each silent and each returning a plausible wrong result** — all now
 written up in `docs/playbooks/add-flow/blending-into-a-photo.md` so MPI-596 does not re-pay them:

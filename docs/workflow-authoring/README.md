@@ -69,15 +69,33 @@ GENERATED and a hand-edit to either is thrown away by the next sync:
 | `comfy_workflows/scripts/workflow_generation/` | generated API template (named keys) |
 | `comfy_workflows/*.json` | generated runtime, what the app fetches |
 
-**`raw/` is READ-ONLY to everything but the user.** Never write, move, convert-in-place or
-`git checkout` a file under it. Overwriting a raw file with API JSON is unrecoverable without
-a backup, and it has happened: MPI-272 found `raw/krea2_turbo_t2i_template.json` in API format
-after a manual **Export (API)** mis-click in ComfyUI (that button only appears in dev mode — the
-user-side prevention is to turn dev mode off). No script did it — the converters hard-refuse any
-output resolving inside `raw/` (`assertNotInRaw()` in sync, the outDir check in
-`workflow-to-api.mjs`, commit `f918c907`); do not weaken those guards. The ComfyUI browser's own
-library (`engine/.../user/default/workflows/`) is stale junk, not a source of truth: the user
-Exports to `raw/` rather than Saving to the library.
+**Agents MAY create and update files in `raw/`** (Fabio, 2026-08-22). The old rule — *"read-only
+to everything but the user"* — is **lifted**. It rested on a recovery worry that no longer holds:
+`raw/` is committed, so a bad write is one `git` command away from being undone.
+
+**What survives is a FORMAT law, not an ownership one: `raw/` holds LiteGraph.** Never put API
+JSON in it. That is the actual damage, and it has happened — MPI-272 found
+`raw/krea2_turbo_t2i_template.json` in API format after a manual **Export (API)** mis-click in
+ComfyUI (that button only appears in dev mode; turning dev mode off is the user-side prevention).
+**No script did it, and no agent did it either** — which is exactly why banning agents was aimed at
+the wrong target.
+
+**The converter guards stay, and do not weaken them.** `assertNotInRaw()` in sync and the outDir
+check in `workflow-to-api.mjs` (commit `f918c907`) refuse any *generated* output resolving inside
+`raw/`. That is a different thing from authoring a raw file on purpose: a deliberate write is a
+decision, a converter writing there is a bug — the 2026-08-07 bare run that clobbered 7 runtime
+workflows is what those guards are for.
+
+Two practical rules when you do write one:
+
+- **Prefer round-tripping the real thing over hand-authoring.** A graph proven on the bench already
+  exists as LiteGraph in the bench's own store; read it back from there
+  ([bench-editing.md](bench-editing.md) § 4) rather than synthesising a LiteGraph file from an API
+  graph. Node positions, link ids and `widgets_values` ordering are all things a hand-built file
+  gets subtly wrong, and the failure shows up later as a graph nobody can open and edit.
+- **The bench's browser library is not automatically the source of truth.**
+  `engine/.../user/default/workflows/` accumulates stale junk; the copy to trust is the one you
+  just verified, named and dated.
 
 Then `node scripts/sync-raw-workflows.mjs` — it converts the git-changed raw files,
 gates on `validate-injection-rules.mjs`, bakes the runtime files via `orchestrate.py`,
