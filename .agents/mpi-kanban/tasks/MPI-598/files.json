@@ -8,6 +8,7 @@
     "comfy_workflows/klein_t2i.json",
     "comfy_workflows/klein_9b_t2i.json",
     "comfy_workflows/display/klein-9b.webp",
+    "comfy_workflows/display/klein-9b-style-*.webp",
     "js/data/modelConstants/models.js",
     "js/data/modelConstants/modelDeps.js",
     "js/data/modelConstants/loraDeps.js",
