@@ -177,3 +177,149 @@ ground plane with a large mask, that same step is exactly the box that got scree
 Consequence for the bench: **scenario 3 is scored from `seam.py` numbers, not from an opinion**,
 and the axis to watch is the 0–32 px signed step, not the global mean. A candidate that keeps
 `|signed|` small across rings 0–32 wins the axis.
+
+
+---
+
+# Leg A preamble — the base weight had to be CONVERTED, and the LoRA question is answered
+
+Run 2026-08-22, same bench, same card.
+
+## USE `flux-2-klein-base-9b-int8-convrot-comfy.safetensors` — NOT the file the brief names
+
+The downloaded base weight, `flux-2-klein-base-9b-int8-ConvRot.safetensors`
+(`bertbobson/ComfyUI-INT8_ConvRot`), **cannot be loaded by native ComfyUI at all**. Node 27 dies
+instantly:
+
+```
+ValueError: Unknown quantization format for layer double_blocks.0.img_attn.qkv
+```
+
+**This is not a bad download and not a 9B/INT8 problem** — the distilled weight loads fine. The
+two files come from *different uploaders with different quantisation pipelines*, and only the
+marker differs:
+
+| | distilled / KV (`Winnougan`) | base (`bertbobson`) | 4B shipped (works) |
+|---|---|---|---|
+| key prefix | bare | `model.diffusion_model.` | `model.diffusion_model.` |
+| `comfy_quant` payload | `{"format": "int8_tensorwise"}` | `{"convrot": true}` | `{"format":"int8_tensorwise","convrot":true,"convrot_groupsize":256}` |
+| `weight_scale` | **scalar `[]`** | per-row `[4096,1]` | per-row `[3072,1]` |
+
+`comfy/ops.py:1163` reads `layer_conf.get("format", None)` and raises when it is `None`
+(`ops.py:1166`). Line 1194 shows `convrot` is a **modifier on** `int8_tensorwise`, never a format
+in its own right — so the base file declared the modifier and omitted the format. The uploader's
+own README says so outright: *"These models do not work with native ComfyUI INT8, and will need
+to be converted"*.
+
+**Fixed with the upstream tool**, `convert_to_comfy.py` from `BobJohnson24/ComfyUI-INT8-Fast`
+(vendored as `research/convert_to_comfy.py`). It rewrites the 114 `comfy_quant` marker tensors
+and copies every other tensor unchanged — verified: 429 tensors in and out, 114/114 markers now
+`{"format":"int8_tensorwise","convrot":true}`, 0 wrong, weights still `I8 [4096,4096]` with
+per-row `F32 [4096,1]` scales. Output is +2940 bytes, sitting beside the original in
+`G:\CubricModels\diffusion_models\`. The original is kept and is still unloadable.
+
+## THE FILENAMES LIE — distilled and KV are NOT ConvRot
+
+Both `flux-2-klein-9b-int8-convrot.safetensors` and `flux-2-klein-9b-kv_int8_convrot.safetensors`
+carry `{"format": "int8_tensorwise"}` with a **scalar** `weight_scale`. That is plain tensorwise
+INT8. Only the base arm is genuinely ConvRot (per-row scales, like the shipped 4B).
+
+**Leg B and Leg C must record this as a confound**: base-vs-distilled is not only
+base-vs-distilled, it is also per-row-ConvRot-vs-tensorwise quantisation. Any quality gap has two
+possible parents. For MPI-598 it also means "9B INT8 ConvRot" is not one thing.
+
+## The open question is CLOSED: rank 128 applies to an INT8 ConvRot base
+
+Two independent proofs, same seed / prompt / plate, base weight both times:
+
+1. **The log counts the patches.** `Model Flux2 prepared for dynamic VRAM loading. 8970MB
+   Staged. **N patches attached**` — `0` with node 99 at `None`, **`121`** with
+   `klein_9B_Turbo_r128.safetensors` at strength 1.0. No `lora key not loaded` warning anywhere.
+2. **The pixels differ** — different md5, and the LoRA render carries visibly crisper fabric and
+   ground detail.
+
+So **fp8 is not forced on Leg A and there is no asymmetry to record.** `patches attached` is the
+instrument for this — read it off `/internal/logs/raw` on any run where LoRA application is in
+doubt.
+
+Peak VRAM on the base arm is **higher** than distilled: 15637–15662 MiB peak against a 16380 MiB
+card (~14.7 GB attributable, ~720 MiB headroom), with or without the LoRA. Distilled measured
+15692 peak / 14181 attributable in Leg 0 off a higher floor.
+
+**Reading the log ASCII-safe matters:** `/internal/logs/raw` carries the tqdm bar, and printing it
+through Windows `cp1252` dies with `UnicodeEncodeError: 'charmap' codec can't encode`. Encode with
+`.encode('ascii','replace')` before printing.
+
+
+---
+
+# Leg A pass 1 — TWO SETTINGS TRAPS THAT INVALIDATE ROWS WHILE THE NUMBERS LOOK FINE
+
+Both were found by **opening the PNGs**, after a full 36-run matrix had already been recorded with
+plausible wall-clock, VRAM and seam numbers. Neither produced an error, a warning, or an outlier
+in any column. Fabio's instruction stands: **look at the outputs as they land, not just the
+numbers** — a bench that only reads its own table will bank a matrix of invalid runs.
+
+## TRAP 1 — node 52 zeroes the NEGATIVE, so any arm at cfg > 1 blows out
+
+`Input_is_Turbo` (node **52**) is not just a numbers switch. It drives `MpiIfElse` **57 / 212 /
+222**, which swap the negative conditioning between `ConditioningZeroOut` (when `true`) and the
+real `CLIPTextEncode` (when `false`).
+
+Left at `true` — its bench default — an arm running **cfg 5.0 (base)**, **3.5 (turbo@0.35)** or
+**1.5 (turbo@0.7)** amplifies against a *zero* negative. The result is not subtle: neon-green
+grass, cyan sky, posterised edges, crushed blacks. It reads as "the model is bad at this" and it
+is nothing of the sort.
+
+**Rule: `--set 52.boolean=false` on every arm whose cfg > 1.** At cfg 1.0 it is irrelevant (no CFG
+is applied), which is why the `turbo-100` arm alone survived pass 1.
+
+Node 52 also feeds 417/418 (`MaskDetailerPipe`) and 437/439 (`UltimateSDUpscale`) — neither is
+reachable from branches 1, 4 or 5, so the negative swap is its entire effect here. 203/204 read
+`a` from it too but are literals now.
+
+## TRAP 2 — the `wf_type` 5 branch IGNORES nodes 203/204 and always runs 2 steps / cfg 1
+
+Per-branch sampler map, walked from each branch's output:
+
+| branch | sampler | sigmas | guider | honours 203/204? |
+|---|---|---|---|---|
+| `wf_type` 1 (t2i) | 28 | 31 ← **203** | 32 ← **204** | yes |
+| `wf_type` 4 (edit) | 185 | 173 ← **203** | 170 ← **204** | yes |
+| `wf_type` 5 (localised) | **252** | **267, `steps: 2` HARDCODED** | **254, `cfg: 1` HARDCODED** | **NO** |
+
+The tell is wall clock: base S1 at 20 steps took **82 s**, base S2 "at 20 steps" took **16 s** —
+the same 16 s as an 8-step turbo arm. A steps knob that changes nothing to the clock is not
+connected.
+
+**Consequence — every Leg A S2 output is a failed edit, and it fails VISIBLY.** Branch 5 paints
+the masked region **pure green** (`ImageCompositeMasked`, colour 65280) and regenerates it. At 2
+steps an undistilled base cannot, so the fill survives into the saved PNG: `base` leaves a smeared
+green ghost, `turbo-100` leaves a solid saturated green ellipse with no character generated.
+Distilled did this correctly in Leg 0 — it is a 4-step model, so 2 steps is within reach.
+
+So `seam.py` on those rows scores **the edge of a green blob**, not a seam. Compare nothing to the
+Leg 0 baseline from them.
+
+**To test an arm's own regime on this branch**, drive the hardcoded nodes directly — no graph
+edit needed, `run.py --set` reaches any input:
+
+```
+--set 267.steps=<arm steps> --set 254.cfg=<arm cfg>
+```
+
+`sweep.py --s2-regime` does exactly this and writes the outputs as `S2R_*`. **It has not been run
+yet** — it is the first thing Leg A pass 2 owes, because it decides whether base/turbo can do a
+localised edit at all, or whether the hardcoded 2 steps is a shipping blocker for MPI-598.
+
+## What pass 1 still bought
+
+- `turbo-100` (cfg 1.0) is **valid** across all 9 runs and looks clean by eye on S1 and S3.
+- Wall clock is linear in steps at 1024²: **8 steps 32 s, 10 steps 48 s, 20 steps 82 s**, plus
+  ~8 s of constant load. cfg > 1 adds the uncond pass — `turbo-035` costs 40 s at the same 8 steps
+  `turbo-100` runs in 32 s.
+- VRAM is flat across every arm and both branches: **~14.3–15.0 GB attributable, 15.2–15.8 GB
+  peak against 16380 MiB.** The turbo LoRA costs nothing measurable in VRAM.
+- The bench is **exactly reproducible** — the same seed and graph reproduced a seam triple
+  (`-18.905 / -3.409 / +1.304`) to three decimals across two separate invocations. Arm-to-arm
+  differences are real signal, not sampling noise.

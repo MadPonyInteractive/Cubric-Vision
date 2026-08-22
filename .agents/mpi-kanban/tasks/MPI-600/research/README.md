@@ -80,8 +80,8 @@ reference of its own.
 
 | Arm | 27 `unet_name` | 99 `lora_name` | 99 strength | 203 steps | 204 cfg | 111 prefix |
 |---|---|---|---|---|---|---|
-| base | `flux-2-klein-base-9b-int8-ConvRot.safetensors` | `None` | — | `20` | `5.0` | `klein_9b/base/run` |
-| base+turbo @1.0 | `flux-2-klein-base-9b-int8-ConvRot.safetensors` | `klein_9B_Turbo_r128.safetensors` | `1.0` | `8` | `1.0` | `klein_9b/base-turbo-100/run` |
+| base | `flux-2-klein-base-9b-int8-convrot-comfy.safetensors` | `None` | — | `20` | `5.0` | `klein_9b/base/run` |
+| base+turbo @1.0 | `flux-2-klein-base-9b-int8-convrot-comfy.safetensors` | `klein_9B_Turbo_r128.safetensors` | `1.0` | `8` | `1.0` | `klein_9b/base-turbo-100/run` |
 | base+turbo @0.7 | same | same | `0.7` | `10` | `1.5` | `klein_9b/base-turbo-070/run` |
 | base+turbo @0.25–0.5 | same | same | `0.25`–`0.5` | `8` | `3.5` | `klein_9b/base-turbo-035/run` |
 | distilled | `flux-2-klein-9b-int8-convrot.safetensors` | `None` | — | `4` | `1.0` | `klein_9b/distilled/run` |
@@ -96,8 +96,13 @@ Turbo-LoRA rows come from anyMODE's own recommendation and community reports (se
 
 ## Still owed before the first real run
 
-1. **Confirm the LoRA loads on an INT8 ConvRot base at all.** Rank 128 on a quantised base is
-   unproven. If it only loads on fp8, leg A is forced to fp8 — record the asymmetry.
+1. ~~Confirm the LoRA loads on an INT8 ConvRot base at all.~~ **CLOSED 2026-08-22 — it does.**
+   `klein_9B_Turbo_r128` attaches **121 patches** to the base arm (`0` without it), no unmatched
+   keys, and the pixels differ. fp8 is not forced and there is no asymmetry to record.
+   **But the base weight had to be CONVERTED first** — the downloaded
+   `flux-2-klein-base-9b-int8-ConvRot.safetensors` cannot be loaded by native ComfyUI at all.
+   Every arm above now names `…-convrot-comfy.safetensors`. See `format.md` § Leg A preamble,
+   which also records that **distilled and KV are not actually ConvRot** despite their filenames.
 2. **The KV arm needs `FluxKVCache`**, which is not in this graph. Add it on the KV arm only, and
    do not let it near the t2i path. If it fails with `timestep_zero_index`, that is the known
    upstream issue, not a bad download.
