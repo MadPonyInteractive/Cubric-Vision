@@ -22,12 +22,19 @@ import sys
 import time
 import urllib.request
 
+import numpy as np
+from PIL import Image
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 PY = sys.executable
 HOST = "http://127.0.0.1:8188"
 PLATES = "D:/WORK/Images/Outputs/klein_9b/plates"
 PLATE = PLATES + "/plate_dirt_road.png"
-MASK = PLATES + "/mask_standing_left.png"
+# A BOX, not an oval (Fabio, 2026-08-22). A rectangular mask proves two things at once - that
+# the model does not shift the colour, and that it can place a character properly - because a
+# hard straight edge shows a seam an oval hides. It also tends to produce better localised
+# edits. Same footprint as the old ellipse (x175-395, y300-905), 12.8% of frame vs 10.0%.
+MASK = PLATES + "/mask_standing_box.png"
 RESULTS = os.path.join(HERE, "results.md")
 
 BASE_W = "flux-2-klein-base-9b-int8-convrot-comfy.safetensors"
@@ -50,10 +57,27 @@ LEGS = {
 }
 
 # scenario -> (wf_type, prompt, uses_mask)
+#
+# THE MASK is what makes an edit localised - wf_type 4 with a mask is the localised edit, wf_type
+# 4 without one is the whole-image edit (Fabio, 2026-08-22). Branch 4 feeds Input_Mask to 581
+# InpaintCropImproved / 584 MpiMaskSquareBbox, gated by 297 MpiAnyChecker on node 298.
+#
+# S2 ran as wf_type 5 until 2026-08-22 and every one of those rows is void. wf_type 5 is the
+# INPAINT branch: it green-fills the mask (261 ImageCompositeMasked, colour 65280) and relies on
+# node 259, the flux2-klein-4b-OUTPAINT LoRA at strength 1.1, to regenerate the fill. That LoRA is
+# 4B and cannot apply to a 9B base, so the bench bypassed it (README edit #8) - which left the
+# branch running without the component the fill depends on. The surviving green was that missing
+# LoRA, not a weight verdict. Never bench a 9B arm on branch 5.
+# S2 is a REFERENCE-DRIVEN placement, not text inpainting: the man comes from image 2 (node 236
+# Input_Image_2) and is placed into the masked region of image 1 (node 474, the plate). Fabio,
+# 2026-08-22. Testing "inpaint a man from a prompt" was never the ask.
+#
+# scenario -> (wf_type, prompt, uses_mask, ref2)
 SCENARIOS = {
-    "S1": (4, "change the woman's grey t-shirt to a bright red long-sleeve blouse", False),
-    "S2": (5, "a man in a blue denim jacket and jeans standing on the dirt road", True),
-    "S3": (4, "the woman is now sitting cross-legged on the dirt road", False),
+    "S1": (4, "change the woman's grey t-shirt to a bright red long-sleeve blouse", False, ""),
+    "S2": (4, "place the man from the second image standing on the dirt road beside the woman",
+           True, PLATES + "/ref_man_00001_.png"),
+    "S3": (4, "the woman is now sitting cross-legged on the dirt road", False, ""),
 }
 
 SEEDS = [101, 202, 303]
@@ -81,14 +105,37 @@ def seam_signed(result_path):
     return " / ".join(rings.get(k, "?") for k in ("0-8", "8-16", "16-32"))
 
 
-def run_one(arm, scen, seed, dry=False, s2_regime=False):
+def guard(path):
+    """Cheap sanity read of the image itself - both Leg A pass 1 faults show up here.
+
+    green = the pure-green fill branch 5 paints into the mask and then fails to regenerate.
+    clip  = channel-clipped pixels, the tell of amplifying against a ZEROED negative (node 52).
+    Neither fault raised an error or moved a timing/VRAM number in pass 1.
+    """
+    im = Image.open(path)
+    a = np.asarray(im.convert("RGB")).astype(int)
+    # GREEN DOMINANCE, not "near pure green". A first attempt tested g>200 & r<80 & b<80 and
+    # scored a visibly half-green frame at 0.00% - a partly-denoised fill reads (125,192,64),
+    # which fails r<80 while still being green to any eye. Dominance catches both.
+    green = ((a[..., 1] - np.maximum(a[..., 0], a[..., 2])) > 60).mean() * 100
+    clip = ((a == 255) | (a == 0)).mean() * 100
+    return "%dx%d" % im.size, "green %.2f%% / clip %.1f%%" % (green, clip)
+
+
+def run_one(arm, scen, seed, dry=False, tag=""):
     unet, lora, strength, steps, cfg, slug = ARMS[arm]
-    wf, prompt, uses_mask = SCENARIOS[scen]
+    wf, prompt, uses_mask, ref2 = SCENARIOS[scen]
     label = "%s %s seed %d" % (arm, scen, seed)
+    # Node 52 (Input_is_Turbo) drives MpiIfElse 57/212/222, which swap the NEGATIVE between
+    # ConditioningZeroOut (true) and the real CLIPTextEncode (false). Left true, any arm at
+    # cfg > 1 amplifies against a zero negative and blows out. At cfg 1.0 it is irrelevant.
+    real_neg = float(cfg) > 1.0
+    prefix = "klein_9b/%s/%s_%d%s" % (slug, scen, seed, ("_" + tag) if tag else "")
     cmd = [PY, os.path.join(HERE, "run.py"), "--label", label,
            "--set", "27.unet_name=" + unet,
            "--set", "99.lora_name=" + lora,
            "--set", "99.strength_model=%s" % strength,
+           "--set", "52.boolean=%s" % ("false" if real_neg else "true"),
            "--set", "203.math_expression=" + steps,
            "--set", "204.math_expression=" + cfg,
            "--set", "304.int=%d" % wf,
@@ -96,14 +143,8 @@ def run_one(arm, scen, seed, dry=False, s2_regime=False):
            "--set", "474.string=" + PLATE,
            "--set", "93.string=" + prompt,
            "--set", "298.string=" + (MASK if uses_mask else ""),
-           "--set", "111.filename_prefix=klein_9b/%s/%s_%d" % (slug, scen, seed)]
-    if s2_regime:
-        # The wf_type 5 branch samples through 252, whose sigmas come from 267 (steps HARDCODED
-        # to 2) and whose guider 254 has cfg HARDCODED to 1 - nodes 203/204 never reach it. This
-        # variant drives 267/254 directly so S2 runs in the ARM'S OWN regime. No graph edit.
-        cmd += ["--set", "267.steps=" + steps, "--set", "254.cfg=" + cfg]
-        cmd[cmd.index("111.filename_prefix=klein_9b/%s/%s_%d" % (slug, scen, seed))] = \
-            "111.filename_prefix=klein_9b/%s/%sR_%d" % (slug, scen, seed)
+           "--set", "236.string=" + ref2,
+           "--set", "111.filename_prefix=" + prefix]
     if dry:
         print(" ".join(cmd))
         return None
@@ -125,11 +166,11 @@ def run_one(arm, scen, seed, dry=False, s2_regime=False):
 
     seam = seam_signed(result) if (scen == "S2" and result) else "-"
     attributable = (int(peak) - int(idle)) if peak.isdigit() and idle.isdigit() else "?"
+    res, checks = guard(result) if result and os.path.exists(result) else ("-", "-")
 
-    shown_steps, shown_cfg = (steps, cfg) if (scen != "S2" or s2_regime) else ("2*", "1.0*")
-    row = "| %s | int8+convrot | %s | %d | %s | %s | %s | %ss | %s MiB (%s peak) | %s | %s |" % (
-        arm, scen + ("R" if s2_regime else ""), seed, shown_steps, shown_cfg, "1024x1024",
-        wall, attributable, peak, seam,
+    row = "| %s | %s | %s | %d | %s | %s | %s | %ss | %s MiB (%s peak) | %s | %s | %s |" % (
+        arm, "real" if real_neg else "zeroed", scen, seed,
+        steps, cfg, res, wall, attributable, peak, checks, seam,
         os.path.basename(result) or "**FAILED %s**" % status)
     with io.open(RESULTS, "a", encoding="utf-8", newline="\n") as f:
         f.write(row + "\n")
@@ -144,12 +185,11 @@ def main():
     ap.add_argument("--scenario", default=None)
     ap.add_argument("--seed", type=int, default=None)
     ap.add_argument("--dry", action="store_true")
-    ap.add_argument("--s2-regime", action="store_true",
-                    help="S2 only: drive the hardcoded 267.steps / 254.cfg with the arm's own regime")
+    ap.add_argument("--tag", default="", help="suffix on the output prefix, e.g. p2 for pass 2")
     args = ap.parse_args()
 
-    arms = [args.arm] if args.arm else LEGS[args.leg]
-    scens = [args.scenario] if args.scenario else list(SCENARIOS)
+    arms = args.arm.split(",") if args.arm else LEGS[args.leg]
+    scens = args.scenario.split(",") if args.scenario else list(SCENARIOS)
     seeds = [args.seed] if args.seed else SEEDS
 
     total = len(arms) * len(scens) * len(seeds)
@@ -161,7 +201,7 @@ def main():
             for seed in seeds:
                 n += 1
                 print("\n[%d/%d  %.1f min elapsed] %s %s %d" % (n, total, (time.time() - t0) / 60, arm, scen, seed))
-                run_one(arm, scen, seed, dry=args.dry, s2_regime=args.s2_regime)
+                run_one(arm, scen, seed, dry=args.dry, tag=args.tag)
     print("\n=== done, %.1f min ===" % ((time.time() - t0) / 60))
 
 

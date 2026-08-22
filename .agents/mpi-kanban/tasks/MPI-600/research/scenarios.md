@@ -15,7 +15,7 @@ steps and the cfg.
 | | |
 |---|---|
 | **Plate** | `D:\WORK\Images\Outputs\klein_9b\plates\plate_dirt_road.png` (1024×1024) |
-| **Mask** (S2 only) | `D:\WORK\Images\Outputs\klein_9b\plates\mask_standing_left.png` (1024×1024, 10.0% of frame) |
+| **Mask** (S2 only) | `D:\WORK\Images\Outputs\klein_9b\plates\mask_standing_box.png` (1024×1024, **a BOX**, 12.8% of frame) |
 | **Seeds** | `101`, `202`, `303` — node **33** |
 | **Output resolution** | 1024×1024. Confirm from the PNG header per series, never from the width/height inputs |
 | **CLIP / VAE** | `qwen_3_8b_int8_convrot.safetensors` (type `flux2`) / `flux2-vae.safetensors` — never change these, see `format.md` |
@@ -34,25 +34,45 @@ Garment swap on a held identity.
 **Pass:** face, hair, pose and body proportions untouched; fabric follows the real body and the
 scene's light direction.
 
-## S2 — Localised edit, seam + lighting integrity · `wf_type` **5** ← the axis this card exists for
+## S2 - Localised placement from a REFERENCE image . `wf_type` **4** + a mask <- the axis this card exists for
 
-A character placed into the plate through a mask. This is the one Fabio screenshotted a failure
-on, and it is scored **by measurement**, not by eye.
+**Corrected 2026-08-22 (Fabio), twice.** Two things were wrong in the first definition:
 
-- `304` = `5`, `474` = the plate, `298` = the mask
-- `93` = `a man in a blue denim jacket and jeans standing on the dirt road`
+1. **It used `wf_type` 5. It must be `wf_type` 4 with a mask supplied.** The MASK is what makes
+   an edit localised - branch 4 with a mask is the localised edit, branch 4 without one is the
+   whole-image edit. `wf_type` 5 is the INPAINT branch, and it is unusable for benching a 9B
+   weight: it green-fills the mask (`261 ImageCompositeMasked`, colour 65280) and depends on
+   node `259`, the **flux2-klein-4b-outpaint LoRA at strength 1.1**, to regenerate that fill.
+   That LoRA is 4B, cannot apply to a 9B base, and was bypassed by the bench (README edit #8) -
+   so every wf5 run was the branch minus the component it is built around. The green surviving
+   in those outputs was the missing LoRA, never a weight verdict.
+2. **It inpainted a man from a prompt. That was never the ask.** The test is placing the man
+   from **image 2** into **image 1** (the plate, which carries the mask).
 
-**Scored with `seam.py PLATE RESULT MASK`.** The number that matters is the **0–32 px signed
-step** — the patch edge running darker or lighter than the plate. Leg 0 measured the baseline at
-**−3.135/255 at ring 0–8 px, flipping to +1.280 by 16–32 px**; a candidate wins this axis by
-keeping `|signed|` smaller than that across rings 0–32.
+- `304` = `4`, `474` = the plate, `298` = the mask, `236` (`Input_Image_2`) = the man reference
+- The mask is a **BOX** (`mask_standing_box.png`, x175-395 y300-905), not an ellipse. Fabio,
+  2026-08-22: a rectangle proves two things at once - that the model does not shift the colour,
+  and that it can place a character properly - because a hard straight edge shows a seam an oval
+  hides. It also tends to produce better localised edits. The ellipse it replaced covered the
+  same footprint at 10.0% of frame; every ellipse-mask S2 row is superseded.
+- `93` = `place the man from the second image standing on the dirt road beside the woman`
 
-**Do not score the global mean.** Leg 0 already proved there is no colour cast: past 128 px the
-output is byte-identical to the plate. A global number therefore reads ~0 for every candidate and
-separates nothing.
+Reference: `plates/ref_man_00001_.png` - a full-body man in a blue denim jacket and jeans on a
+plain light-grey studio background, generated on this bench (distilled, seed 7001, 1024x1024).
+It is a FIXED input shared by every arm, so it carries no per-arm confound. Swap it freely for a
+real character asset; re-run every arm if you do.
 
-**Pass:** no visible box; the 0–32 px signed step no worse than the Leg 0 baseline; the placed
-character casts a shadow in the plate's own light direction, at a plausible scale.
+**Scored with `seam.py PLATE RESULT MASK`** plus the `guard` column (green % / clip %) that
+`sweep.py` measures off the saved PNG. The number that matters is the **0-32 px signed step**.
+Do NOT score the global mean - Leg 0 proved there is no colour cast past 128 px, so a global
+number reads ~0 for every candidate and separates nothing.
+
+**The failure mode this scenario actually surfaces** (seen on the distilled probe): the
+reference's plain studio background leaks into the plate as a pale halo around the placed
+subject. That, not a rectangle, is the visible seam here.
+
+**Pass:** the man from image 2 is recognisably the same person; no halo or box; the 0-32 px
+signed step small; he casts a shadow in the plate's own light direction, at a plausible scale.
 
 ## S3 — Character pose change · `wf_type` **4**
 
@@ -86,7 +106,7 @@ python run.py --label "<arm> S2 seed 101" \
   --set 203.math_expression=<steps> --set 204.math_expression=<cfg> \
   --set 304.int=5 --set 33.int=101 \
   --set 474.string=D:/WORK/Images/Outputs/klein_9b/plates/plate_dirt_road.png \
-  --set 298.string=D:/WORK/Images/Outputs/klein_9b/plates/mask_standing_left.png \
+  --set 298.string=D:/WORK/Images/Outputs/klein_9b/plates/mask_standing_box.png \
   --set 111.filename_prefix=klein_9b/<arm>/S2
 ```
 

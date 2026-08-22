@@ -323,3 +323,104 @@ localised edit at all, or whether the hardcoded 2 steps is a shipping blocker fo
 - The bench is **exactly reproducible** — the same seed and graph reproduced a seam triple
   (`-18.905 / -3.409 / +1.304`) to three decimals across two separate invocations. Arm-to-arm
   differences are real signal, not sampling noise.
+
+
+---
+
+# Leg A pass 2 - THE SCENARIO ITSELF WAS WRONG, and both pass-1 "traps" partly dissolve with it
+
+Corrected 2026-08-22 by Fabio, mid-sweep. Everything in the pass-1 section above that concerns
+**S2** is void, and so is the S2R re-run this handoff was written to perform.
+
+## S2 was benched on `wf_type` 5. It must be `wf_type` 4 WITH A MASK.
+
+**The mask is what makes an edit localised.** Branch 4 with a mask supplied is the localised
+edit; branch 4 with no mask is the whole-image edit. The graph says so plainly - `297
+MpiAnyChecker` gates on node 298, and branch 4 feeds the mask to `581 InpaintCropImproved` and
+`584 MpiMaskSquareBbox`. Confirmed by a reachability walk, not by eye.
+
+`wf_type` 5 is the **inpaint** branch and must never be used to bench a 9B weight:
+
+| | |
+|---|---|
+| what it does | green-fills the mask (`261 ImageCompositeMasked`, colour 65280) and regenerates it |
+| what makes that work | node **259**, `flux2-klein-4b-outpaint.safetensors` at **strength 1.1** |
+| why it cannot work here | that LoRA is **4B**. It cannot apply to a 9B base, and the bench bypassed it (README edit #8, `254.model`/`278.model` rewired 259 -> 100) |
+
+So every wf5 run was **the branch with the component it is built around removed**. The green that
+survived into those PNGs was the missing outpaint LoRA - not a weight verdict, not a seed effect,
+not a step count. No cfg, seed or step setting was ever going to fix it. Measured before the
+correction landed, across five weights x three seeds, the fill survived on 13 of 15 runs
+including distilled; the two that cleared it did so by luck of the noise draw.
+
+## And the scenario was the wrong TEST anyway
+
+It inpainted a man from a text prompt. The ask is a **reference-driven placement**: take the man
+from **image 2** (`236 Input_Image_2`) and place him into **image 1** (`474`, the plate carrying
+the mask). S2 is now exactly that. See `scenarios.md` SS S2.
+
+## What this does to the two pass-1 "traps"
+
+| pass-1 claim | status now |
+|---|---|
+| **Trap 1** - node 52 zeroes the negative, so any arm at cfg > 1 blows out | **STANDS, and is confirmed.** Re-running base S1 seed 101 with `52.boolean=false` turned pass 1s cyan sky / neon grass / posterised frame into a clean, correct edit at the same seed. `sweep.py` now sets node 52 from the arms cfg, so it is no longer a default anyone can forget. |
+| **Trap 2** - the wf5 branch hardcodes 2 steps / cfg 1 at nodes 267/254 | **TRUE OF BRANCH 5, AND IRRELEVANT.** Branch 4 samples through 185/173/170, which honour nodes 203/204. On the correct branch the steps and cfg knobs work normally. The `--s2-regime` flag written to drive 267/254 has been deleted from `sweep.py`. |
+
+## A third fault, in the instrument rather than the graph
+
+The `guard` column added this pass first tested green as `g>200 and r<80 and b<80`. A frame that
+was plainly half green scored **0.00%** - a partly-denoised fill reads `(125,192,64)`, which
+fails `r<80` while being green to any eye. It now tests **green dominance**
+(`g - max(r,b) > 60`), which catches both. Worth stating because it is the same class of mistake
+as the two traps: a number that looks fine and is measuring the wrong thing. The instrument needs
+looking at as much as the output does.
+
+## Fixed inputs added this pass
+
+`plates/ref_man_00001_.png` - the S2 reference. Full-body man, blue denim jacket and jeans, plain
+light-grey studio background, generated on this bench (distilled, seed 7001, 1024x1024, wf1).
+A fixed input shared by every arm, so it carries no per-arm confound.
+
+**The failure mode the corrected S2 surfaces** (distilled probe, seed 101): the man is placed with
+his identity intact - same face, jacket, jeans, shoes - at plausible scale and casting his own
+shadow, but the reference's plain grey background leaks into the plate as a **pale halo around his
+head and shoulders**. That halo, not a rectangle, is the seam to score on this axis.
+
+## The mask must be a BOX, not an oval
+
+Fabio, 2026-08-22, mid-sweep. A rectangular mask **proves two things at once**:
+
+1. that the model does not shift the colour, and
+2. that it can place a character into another image properly,
+
+because a hard straight edge shows a seam an oval hides. It also tends to produce better
+localised edits. `mask_standing_box.png` replaces `mask_standing_left.png` over the same
+footprint (x175-395, y300-905): 12.8% of frame against the ellipses 10.0%.
+
+**It immediately paid.** Same weight, same seed, same reference - distilled, seed 101:
+
+| mask | what the seam looked like |
+|---|---|
+| ellipse | a soft pale "halo" around the placed mans head - easy to read as a lighting artifact |
+| **box** | a **hard rectangular patch** of the references grey studio background sitting above his head, with the horizon visibly stepping at the boxs left and right edges |
+
+Same defect, same magnitude. The oval disguised it; the box named it. The `seam.py` 0-8 px figure
+barely moved (+4.206 -> +6.880), which is the point: **the number did not surface this and the
+picture did.**
+
+It also corrects an under-call in this file: the placed subject does not merely pick up a halo,
+**the scene behind it changes** - road, horizon and shadow all shift inside the masked region.
+That is a preservation failure, scored on axis 2, and it is far easier to see against a straight
+edge.
+
+## Every S2 row from before the box is superseded
+
+Three successive corrections landed on S2, so read the `output` filename to know what a row is:
+
+| suffix | branch | mask | reference | valid? |
+|---|---|---|---|---|
+| none / `_p2` (`S2`, `S2R`) | wf5 inpaint | ellipse | none - prompt only | **VOID** - 4B outpaint LoRA bypassed |
+| `_v2` | wf4 + mask | ellipse | image 2 | **superseded** - oval hides the seam |
+| `_box` | wf4 + mask | **box** | image 2 | **current** |
+
+S1 and S3 use no mask, so `_v2` rows on those two scenarios are unaffected and stand.
