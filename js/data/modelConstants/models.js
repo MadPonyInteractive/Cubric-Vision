@@ -178,6 +178,10 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-anime-08.webp',
         type: 'sdxl',
+        enhanceRecipe: 'illustrious',   // Prompt's Illustrious tag-grammar recipe (MPI-25,
+                                       // Stage 1 green 24/24). WITHOUT this line the bare
+                                       // type 'sdxl' matches Prompt's SDXL PHOTOGRAPHY
+                                       // recipe exactly, so no alias can reach here.
         supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
         // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
         // samples it. This CHANGED with the master template (MPI-365): the old graph
@@ -245,6 +249,10 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-anime-06.webp',
         type: 'sdxl',
+        enhanceRecipe: 'illustrious',   // Prompt's Illustrious tag-grammar recipe (MPI-25,
+                                       // Stage 1 green 24/24). WITHOUT this line the bare
+                                       // type 'sdxl' matches Prompt's SDXL PHOTOGRAPHY
+                                       // recipe exactly, so no alias can reach here.
         supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
         // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
         // samples it. This CHANGED with the master template (MPI-365): the old graph
@@ -312,6 +320,10 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-pony-13.webp',
         type: 'sdxl',
+        enhanceRecipe: 'pony',   // Prompt's Pony V6 XL tag-grammar recipe (MPI-25,
+                                 // Stage 1 green 24/24). WITHOUT this line the bare
+                                 // type 'sdxl' matches Prompt's SDXL PHOTOGRAPHY
+                                 // recipe exactly, so no alias can reach here.
         supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
         // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
         // samples it. This CHANGED with the master template (MPI-365): the old graph
@@ -982,7 +994,7 @@ export const MODELS = [
     // ── FLUX.2 Klein 9B (MPI-598) ──────────────────────────────────────────
     // The SAME graph as klein-4b at a bigger size. generate_klein.py bakes both runtime
     // files from the one template (klein_t2i_template.json), swapping four weight names
-    // plus the `Input_is_9b` gate — so there is no 9B twin template to keep in sync, and
+    // plus the whole style rack — so there is no 9B twin template to keep in sync, and
     // any graph change lands on both sizes at once. Do not hand-author a 9B graph.
     //
     // THE LICENCE GATE ARMS ITSELF. `MODEL_LICENCES` in licences.js already keys the FLUX
@@ -992,15 +1004,23 @@ export const MODELS = [
     // the download unlocks. Nothing to wire here; do not add a `licence` field.
     // Outputs are commercially usable (NCL §2.d) — the bar is on using the MODEL.
     //
-    // STYLELESS ON PURPOSE. `Input_is_9b` routes around BOTH halves of the styles system
-    // (the prompt concat and the style LoRA stack) because no 9B style LoRAs exist yet.
-    // The rack nodes are still IN the graph, so styles become a value change, not a
-    // rebuild — hence `styleLoras: false` + empty `styleOps` and no styleLora* arrays,
-    // rather than a fork.
+    // ITS OWN SEVEN STYLES, not 4B's eight. Three are the same creator's 9B build of the
+    // weight 4B ships (anime/chibi/doodle); muppets and jojo have no 9B weight in
+    // existence; the rest are substitutes by other creators, so the LABELS differ from
+    // 4B's rather than mirroring them — 'Comic' is a pulp comic LoRA, not JoJo. Do not
+    // "restore parity" with the 4B list: it would rename a weight after a style it does
+    // not produce. Provenance + licences: loraDeps.js § Klein 9B style LoRAs.
     //
-    // WHAT IS STILL OUTSTANDING before this can ship: `klein-9b.webp` does not exist yet
-    // (a real 9B generation, per add-model playbook step "display webp"), and the four
-    // weights are not on R2. Both are ship-prep, not test-prep — the app tests locally.
+    // `Input_is_9b` is GONE. It existed only to route around both halves of the styles
+    // system while 9B had none, and a filename swap could never have expressed a 7-vs-8
+    // difference in labels and trigger text — so generate_klein.py bakes the whole rack
+    // (slots + trigger lines) per size instead, from the same single template.
+    //
+    // WHAT IS STILL OUTSTANDING before this can ship: the nine `klein-9b-style-*.webp`
+    // picker cards do not exist yet (a missing image renders a placeholder card, so the
+    // rack is testable without them), and neither the four weights nor the seven style
+    // LoRAs are on R2. Both are ship-prep, not test-prep — the app tests locally against
+    // whatever is already in the models root.
     {
         id: 'klein-9b',
         // 'balanced' against 4B's 'low' — the two are genuine SIZE TIERS of one model, the
@@ -1021,7 +1041,7 @@ export const MODELS = [
         supportedOps: ['t2i', 'i2i', 'control', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
         loraStrengths: ['model'],
         capabilities: {
-            multiStage: false, audio: false, negativePrompt: false, styleLoras: false,
+            multiStage: false, audio: false, negativePrompt: false, styleLoras: true,
             promptEnhance: true, batch: false, turboToggle: false,
             depthSubject: true,
             depthSubject3: true,
@@ -1041,10 +1061,28 @@ export const MODELS = [
             upscale:       { Input_wf_type: 7 },
         },
         controlTypes: ['depth'],
-        styleOps: [],             // see STYLELESS above
+        // Same reach as 4B: the rack lives in the ONE graph both sizes are baked from, so
+        // it is live on every op including detail and upscale.
+        styleOps: ['t2i', 'i2i', 'control', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
         imageSizedOps: ['control', 'kleinEdit'],
+        // Index-aligned with the 9B graph's trigger lines and its MpiStyleLoras banks
+        // (bank 1 = cartoon/comic/anime/chibi/doodle, bank 2 = vintage/aesthetic + three
+        // empty slots). Index 0 = no style, selector 0. SEVEN styles — the labels are NOT
+        // 4B's, see the header comment.
+        styleLoraLabels: [
+            'None', 'Cartoon', 'Comic', 'Anime',
+            'Chibi', 'Doodle', 'Vintage', 'Aesthetic',
+        ],
+        // Not yet produced — every entry renders a placeholder card until the webp lands,
+        // which is why the rack is testable now. Ship all eight from the SAME prompt so
+        // the grid reads as a comparison, index 0 being that prompt with the rack off.
+        styleLoraImages: [
+            'klein-9b-style-none.webp', 'klein-9b-style-cartoon.webp', 'klein-9b-style-comic.webp',
+            'klein-9b-style-anime.webp', 'klein-9b-style-chibi.webp', 'klein-9b-style-doodle.webp',
+            'klein-9b-style-vintage.webp', 'klein-9b-style-aesthetic.webp',
+        ],
         gen_speed: 'balanced',
-        description: 'FLUX.2 Klein at 9B — the same seven operations as the 4B card with more detail and stronger prompt adherence, traded against speed and a non-commercial model licence you confirm before downloading (the IMAGES you make stay commercially usable). Needs roughly 15GB of video memory at peak, so on a 16GB card the margin is thin; the 4B card is the one to use if you hit out-of-memory. Style LoRAs are 4B-only for now. Reference-driven placement lands about two times in three on every 9B weight tested, and it fails quietly — if it places the wrong person, or nobody, run it again.',
+        description: 'FLUX.2 Klein at 9B — the same seven operations as the 4B card with more detail and stronger prompt adherence, traded against speed and a non-commercial model licence you confirm before downloading (the IMAGES you make stay commercially usable). Needs roughly 15GB of video memory at peak, so on a 16GB card the margin is thin; the 4B card is the one to use if you hit out-of-memory. Seven style LoRAs are available on every operation — a different set from the 4B card, because most styles have no 9B version at all. Reference-driven placement lands about two times in three on every 9B weight tested, and it fails quietly — if it places the wrong person, or nobody, run it again.',
         workflows: {
             // ONE file for all seven ops, baked by generate_klein.py from the shared template.
             t2i:           'klein_9b_t2i.json',
@@ -1063,7 +1101,14 @@ export const MODELS = [
             'klein-9b-lora-refcontrol-depth',// baked on the depth branch; IS the depth op
             'klein-9b-lora-nsfw',            // baked + PROMPT-gated; never loads on a clean prompt
             // NO outpaint LoRA: none exists for 9B, and the 4B one is deprecated (MPI-603).
-            // NO style LoRAs: 9B is styleless until 9B-trained styles exist.
+            // Seven styles, NOT the 4B eight — different weights, different labels.
+            'klein-9b-style-cartoon',
+            'klein-9b-style-comic',
+            'klein-9b-style-anime',
+            'klein-9b-style-chibi',
+            'klein-9b-style-doodle',
+            'klein-9b-style-vintage',
+            'klein-9b-style-aesthetic',
             '4x-NMKD-Siax',                  // shared engineAsset (upscale op)
             'ComfyUI-MpiNodes',
             'comfyui-kjnodes',

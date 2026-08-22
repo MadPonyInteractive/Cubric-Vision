@@ -14,6 +14,7 @@
     "js/data/modelConstants/assetDeps.js",
     "js/data/progressStages.js",
     "docs/models/klein/README.md",
+    "docs/models/klein/9b.md",
     "docs/releases/UNRELEASED.md",
     "dev_configs/node_lock.json",
     "js/data/modelConstants/nodesDeps.js"
