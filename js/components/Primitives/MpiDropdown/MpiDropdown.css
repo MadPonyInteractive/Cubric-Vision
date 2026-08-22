@@ -153,6 +153,16 @@
     transition: color var(--t-base) var(--ease);
 }
 
+/* A meta carrying an icon is a FLAG, not a detail — "Recommended" is 11 characters
+   and the base cap plus 0.18em tracking clips it. Sized to its content instead. */
+.mpi-dropdown__option-meta--flag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-1);
+    max-width: none;
+    color: var(--accent-heat);
+}
+
 .mpi-dropdown__option:hover {
     background: var(--surface-2);
     color: var(--ink-1);
@@ -170,6 +180,13 @@
 
 .mpi-dropdown__option.is-active .mpi-dropdown__option-meta {
     color: var(--ink-2);
+}
+
+/* The two state rules above dim a plain meta on purpose; a flag keeps its accent in
+   every state, or the star greys out exactly when the row is being considered. */
+.mpi-dropdown__option:hover .mpi-dropdown__option-meta--flag,
+.mpi-dropdown__option.is-active .mpi-dropdown__option-meta--flag {
+    color: var(--accent-heat);
 }
 
 .mpi-dropdown__option.is-disabled {

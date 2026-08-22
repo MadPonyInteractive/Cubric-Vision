@@ -77,8 +77,9 @@ cargo-cult install-sync machinery from modelRegistry).
   title,          // card + slide-over
   preview,        // filename under comfy_workflows/display/ — its OWN 4/5 webp, see 06
   description,    // slide-over copy
-  requiredModels, // MODEL ids (NOT dep ids) — [] for a no-model flow; an ARRAY entry = any-of
-  modelParams,    // optional — per-model injection params for an any-of set (see below)
+  requiredModels, // MODEL SLOTS (NOT dep ids) — [] for a no-model flow; a { label, models }
+                  //   entry is a slot the user picks a model for (see below)
+  modelParams,    // optional — per-model injection params for a choosable slot (see below)
   operation,      // the universal-op key from commandRegistry.js
   workflow,       // the workflow filename from universal_workflows.js
   fields,         // declared run-slide controls (MPI-531) — the SAME `fields` a step declares
@@ -159,19 +160,24 @@ Install button drives each missing model's OWN dep download (`getModelDependenci
 `downloadService.start(id, deps)`). Flows declare **models, never deps** (zero dep duplication).
 See [04](04-overlay-and-shell.md) for the install-progress UI.
 
-### Any-of models — the flow runs on EITHER, and the user picks (MPI-590, SHIPPED)
+### Model slots — the flow declares a ROLE, the user picks which model fills it (MPI-590/599)
 
-An entry in `requiredModels` that is itself an **array** is an **any-of set** — the flow runs
-on whichever member is installed, and an `MpiDropdown` in the slide-over lets the user pick when
-they hold more than one. Character Sheet declares the only one:
-`[['krea2', 'krea2-nsfw'], 'klein-4b']`.
+An entry in `requiredModels` written as `{ label, models }` is a **choosable slot** — one role
+the graph plays a model in, with interchangeable candidates for it. The flow runs on whichever
+one resolves, and an `MpiDropdown` per slot in the slide-over lets the user pick, whether or not
+anything is installed yet. Character Sheet:
+`[{ label: 'Base model', models: ['krea2', 'krea2-nsfw'] }, 'klein-4b']`.
 
-**Never read `flow.requiredModels` directly** (a set arrives as a nested array), and never ship
-the set without the `modelParams` that carries the pick into the graph — a picker that changes
-only the badge is the failure mode this was built against.
+A flow may declare several, and they resolve independently — an image model for one phase of the
+graph, an edit model for another. `models[0]` is the recommended candidate; declaration order is
+preference order.
 
-→ **[any-of-models.md](any-of-models.md)** — the resolver helpers, `modelParams`, and why
-`modelFamily` is the wrong field.
+**Never read `flow.requiredModels` directly** (a slot arrives as an object), and never ship a
+choosable slot without the `modelParams` that carries the pick into the graph — a picker that
+changes only the badge is the failure mode this was built against.
+
+→ **[any-of-models.md](any-of-models.md)** — the resolver helpers, `modelParams`, why the picker
+offers uninstalled candidates, and why `modelFamily` is the wrong field.
 
 ### A GATED model in `requiredModels` brings obligations the Flow Library does not carry yet
 

@@ -209,18 +209,22 @@ export const MpiFlowLibrary = ComponentFactory.create({
             return _rowHtml(label, done);
         }
 
-        // MPI-590 — the model picker. A flow whose `requiredModels` carries an any-of set
-        // runs on whichever member the user has; when they have MORE THAN ONE, they choose,
-        // BEFORE the flow opens (Fabio's placement). One mount point per choosable slot —
-        // in practice exactly one, Character Sheet's Krea 2 pair.
+        // MPI-590/599 — the model pickers. One labelled dropdown per CHOOSABLE SLOT: a role
+        // the flow's graph plays a model in, with more than one candidate for it. A flow can
+        // have several (an image model for one phase, an edit model for another), so the
+        // slot's own label is the field label — two fields both reading "Model" say nothing.
+        // They sit BEFORE the flow opens (Fabio's placement), above the required-models list
+        // the pick drives.
         //
-        // Nothing renders when the choice is already made for them: one installed member is
-        // not a decision, it is the answer.
+        // Candidates are offered whether or not they are INSTALLED (MPI-599). The picker
+        // used to appear only once two were on disk, which meant the one user who most needed
+        // it — the user with none — silently downloaded the first candidate and was never
+        // told there had been a choice.
         function _modelChoiceHtml(flow) {
             return flowModelChoices(flow)
-                .map((_, i) => `
+                .map((slot, i) => `
                 <div class="mpi-detail__field">
-                    <span class="mpi-detail__field-label">Model</span>
+                    <span class="mpi-detail__field-label">${slot.label}</span>
                     <div id="flow-detail-model-${i}"></div>
                 </div>`)
                 .join('');
@@ -228,12 +232,26 @@ export const MpiFlowLibrary = ComponentFactory.create({
 
         function _mountModelChoice(flow) {
             const resolved = flowModelIds(flow);
-            flowModelChoices(flow).forEach((members, i) => {
+            const installed = state.s_installedModelIds || [];
+            flowModelChoices(flow).forEach((slot, i) => {
                 const host = qs(`#flow-detail-model-${i}`, detailBody);
                 if (!host) return;
                 const dd = MpiDropdown.mount(host, {
-                    options: members.map(id => ({ value: id, label: getModelById(id)?.name || id })),
-                    value: members.find(id => resolved.includes(id)) || members[0],
+                    options: slot.models.map(id => ({
+                        value: id,
+                        label: getModelById(id)?.name || id,
+                        // The recommendation is the flow author's, and it is the candidate an
+                        // untouched picker resolves to — so it has to be visible, or a user
+                        // choosing blind between four SDXL checkpoints is guessing. Same
+                        // sparkle the Model Library flags Featured with (MPI-514), and the
+                        // word rather than a hover: a dropdown row has space for it.
+                        ...(id === slot.recommended ? { icon: 'sparkle', meta: 'Recommended' } : {}),
+                        // Not `disabled` — an uninstalled candidate is pickable ON PURPOSE.
+                        // Picking it is how the user says "install that one instead", which
+                        // the Required-models row and the Install button below then follow.
+                        ...(installed.includes(id) ? {} : { info: `${getModelById(id)?.name || id} — not installed yet` }),
+                    })),
+                    value: slot.models.find(id => resolved.includes(id)) || slot.recommended,
                 });
                 dd.on('change', ({ value }) => {
                     setFlowModel(flow.id, value);

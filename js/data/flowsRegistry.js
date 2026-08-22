@@ -30,23 +30,32 @@
  *                                       `video`, this never turns the tile into a video tile: the
  *                                       tile stays the 4/5 still. Omit and the hero shows `preview`.
  * @property {string}   description    - Slide-over copy
- * @property {Array<string|string[]>} requiredModels - MODEL ids (NOT dep ids); drives the
- *                                       availability badge. An entry that is itself an ARRAY is
- *                                       an ANY-OF SET: the flow runs on whichever member the user
- *                                       has, and the badge is satisfied by any one of them
- *                                       (MPI-590). A plain string entry behaves exactly as before,
- *                                       which is every flow but Character Sheet. Resolve the list
- *                                       through `flowModelIds()` — never read the raw array, or a
- *                                       set reaches a consumer as a nested array.
+ * @property {Array<string|{label: string, models: string[]}>} requiredModels - MODEL ids (NOT dep
+ *                                       ids); drives the availability badge. Each entry is a SLOT
+ *                                       — one ROLE the graph plays a model in. The object form
+ *                                       makes that role choosable: `models` are interchangeable
+ *                                       candidates for it, the flow runs on whichever one resolves,
+ *                                       and the badge is satisfied by any of them (MPI-590,
+ *                                       generalised to N slots x N candidates in MPI-599). A plain
+ *                                       string is the one-candidate shorthand, which is most flows.
+ *                                       `models[0]` is the RECOMMENDED candidate — declaration
+ *                                       order is preference order, and the picker stars it.
+ *                                       A flow may declare SEVERAL choosable slots; the scribble
+ *                                       flow picks an SDXL checkpoint for its render phase and an
+ *                                       edit model for its blend phase, independently.
+ *                                       Resolve the list through `flowModelIds()` — never read the
+ *                                       raw array, or a slot reaches a consumer as an object.
  * @property {Object<string, Object>} [modelParams] - Per-MODEL injection params, merged into the
- *                                       run's `injectionParams` for whichever member of an any-of
- *                                       set is running (MPI-590). This is what makes the picker
+ *                                       run's `injectionParams` for whichever candidate of each
+ *                                       slot is running (MPI-590). This is what makes the picker
  *                                       REAL: without it the choice changes the badge and nothing
- *                                       else, because the graph's loader is baked. Keys are
- *                                       ordinary injection keys, so `Title.widget` addressing
- *                                       works. Flow-local on purpose — the two Krea2 cards differ
- *                                       by a transformer file and a bypass strength, and that is
- *                                       knowledge about THIS graph, not a registry concept.
+ *                                       else, because the graph's loader is baked. Every resolved
+ *                                       slot contributes, so a two-slot flow injects both phases'
+ *                                       models from one merge. Keys are ordinary injection keys,
+ *                                       so `Title.widget` addressing works. Flow-local on purpose
+ *                                       — the two Krea2 cards differ by a transformer file and a
+ *                                       bypass strength, and that is knowledge about THIS graph,
+ *                                       not a registry concept.
  * @property {string[]} [requiredDeps] - DEP ids (dependencies.js facade) this flow needs on top
  *                                       of its models — flow-only weights/nodes that no model
  *                                       requires. Filed in the dep file for their KIND, never
@@ -589,16 +598,19 @@ export const FLOWS = [
         preview: 'flow-character-sheet.webp',
         video: 'flow-character-sheet.mp4',
         description: 'Describe a character and get a reference sheet back: a large three-quarter portrait, plus full-body front and back views, on a plain grey studio backdrop. Built to be fed to a video model, so the front body comes back headless — that leaves the portrait as the only place a face can come from.',
-        // ANY-OF (MPI-590): the sheet samples Krea 2, and the SFW and NSFW cards are the
-        // SAME architecture with a different bake — so a user holding either one can run
-        // it, and is never asked for a second 12.25GB download of the other. Both members
-        // stay listed so the install button still has something to install for a user who
-        // has neither; `flowModelIds` picks whichever is present, and `modelParams` below
-        // is what makes the pick reach the graph.
+        // A CHOOSABLE SLOT (MPI-590): the sheet samples Krea 2, and the SFW and NSFW cards
+        // are the SAME architecture with a different bake — so a user holding either one
+        // can run it, and is never asked for a second 12.25GB download of the other. Both
+        // candidates stay listed so a user who has NEITHER picks which one downloads
+        // instead of silently getting the first; `flowModelIds` resolves it, and
+        // `modelParams` below is what makes the pick reach the graph.
         //
         // NOT `modelFamily` — MPI-316 removed that field from both krea2 cards on purpose:
         // it drives the H/B/L tier letter, and these two are CONTENT variants, not tiers.
-        requiredModels: [['krea2', 'krea2-nsfw'], 'klein-4b'],
+        requiredModels: [
+            { label: 'Base model', models: ['krea2', 'krea2-nsfw'] },
+            'klein-4b',
+        ],
         // The two things that differ between the arms, as injection params. The graph is
         // the SFW one, so `krea2` restates its own baked values — cheap, and it keeps the
         // pair readable as a pair instead of "the default plus an override".
@@ -785,12 +797,12 @@ export const FLOWS = [
             + 'steps — a narrow strip on one or two sides comes back seamless, while a big extension '
             + 'leaves the model inventing most of the picture and it shows. To go a long way, run it '
             + 'twice on the result rather than once on the original.',
-        // ANY-OF (MPI-590 mechanism, MPI-594 second user): the two Krea 2 cards are the
-        // same architecture with a different bake, and both ship `krea2Edit` plus the
-        // identity-edit LoRA this graph loads — so a user holding either one can outpaint,
-        // and is never asked for a second 12.25GB download. Both stay listed so the
-        // Install button has something to install for a user who has neither.
-        requiredModels: [['krea2', 'krea2-nsfw']],
+        // A CHOOSABLE SLOT (MPI-590 mechanism, MPI-594 second user): the two Krea 2 cards
+        // are the same architecture with a different bake, and both ship `krea2Edit` plus
+        // the identity-edit LoRA this graph loads — so a user holding either one can
+        // outpaint, and is never asked for a second 12.25GB download. Both stay listed so a
+        // user who has neither picks which one the Install button downloads.
+        requiredModels: [{ label: 'Base model', models: ['krea2', 'krea2-nsfw'] }],
         // What differs between the arms, as injection params. The graph is the SFW one,
         // so `krea2` restates its own baked values — cheap, and it keeps the pair readable
         // as a pair rather than "the default plus an override".
@@ -935,33 +947,56 @@ export function getFlowDependencies(flowOrId) {
     return flowDepIds(flow).map(depId => DEPS[depId]).filter(Boolean);
 }
 
-// ── Any-of model sets (MPI-590) ───────────────────────────────────────────────
+// ── Model slots (MPI-590, generalised MPI-599) ────────────────────────────────
 //
-// The user's pick, flowId → model id. SESSION-ONLY, deliberately: a pick that
-// outlived the app would silently run a later sheet on the NSFW bake because of a
-// click made days ago — the whole reason option 1 (treat the NSFW card as
-// satisfying the SFW one) was rejected. Every session starts on the first
-// INSTALLED member, and a user holding one member never sees a picker at all.
+// The user's picks, flowId → model ids, at most one per slot. SESSION-ONLY,
+// deliberately: a pick that outlived the app would silently run a later sheet on the
+// NSFW bake because of a click made days ago — the whole reason option 1 (treat the
+// NSFW card as satisfying the SFW one) was rejected.
+//
+// One ARRAY per flow, not one id: a flow may have SEVERAL choosable slots (the
+// scribble flow picks an SDXL checkpoint for its render phase AND an edit model for
+// its blend phase), and a single-id store made the second pick overwrite the first.
+// The picked id names its own slot — a model appears in one role, never two — so
+// nothing has to carry a slot index around.
 const _modelChoice = new Map();
 
 /**
- * `requiredModels` as SLOTS: every entry normalised to an array of candidates.
- * A plain string entry becomes a one-member slot, so callers have one shape.
+ * `requiredModels` as SLOTS: every entry normalised to `{ label, models }`.
+ *
+ * A slot is one ROLE the flow's graph plays a model in — "Image model", "Edit model" —
+ * and its `models` are the interchangeable candidates for that role. A plain string
+ * entry is the one-candidate shorthand, which is most flows.
+ *
+ * `models[0]` is the RECOMMENDED candidate: declaration order is preference order, and
+ * it is what an empty install resolves to. The bare-array form MPI-590 shipped is still
+ * accepted — it predates labels and reads as the generic "Model" slot.
+ *
  * @param {FlowDef} flow
- * @returns {string[][]}
+ * @returns {{label: string, models: string[]}[]}
  */
 export function flowModelSlots(flow) {
-    return (flow?.requiredModels || []).map(entry => (Array.isArray(entry) ? entry : [entry]));
+    return (flow?.requiredModels || []).map((entry) => {
+        if (typeof entry === 'string') return { label: 'Model', models: [entry] };
+        if (Array.isArray(entry)) return { label: 'Model', models: entry };
+        return { label: entry.label || 'Model', models: entry.models || [] };
+    });
 }
 
 /**
  * ONE resolved model id per slot — the id that actually runs, and the id every
  * consumer (badge, install keys, required-models list, install progress) must use.
  *
- * Order: the user's pick if it names an INSTALLED member of this slot, else the first
- * installed member, else the first member (so a user with NEITHER is offered the default
- * to install rather than an empty row). The pick must still be installed, or uninstalling
- * the picked member would leave the flow permanently demanding it back.
+ * Order: the user's pick for this slot, else the first installed candidate, else the
+ * recommended one (so a user with NONE of them installed is offered a real default to
+ * install rather than an empty row).
+ *
+ * The pick wins even when it is NOT installed, and that is the point (MPI-599): the
+ * picker is how a user chooses what to DOWNLOAD, so a pick that only counted once the
+ * weight was on disk could never express "install that one instead". The cost is that
+ * picking an uninstalled candidate while another is installed flips the flow to
+ * unavailable until it downloads — correct (they asked for it), session-only, and one
+ * click back.
  *
  * @param {FlowDef|string} flowOrId
  * @returns {string[]}
@@ -970,41 +1005,48 @@ export function flowModelIds(flowOrId) {
     const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
     if (!flow) return [];
     const installed = state.s_installedModelIds || [];
-    const pick = _modelChoice.get(flow.id);
-    return flowModelSlots(flow).map(slot =>
-        (pick && slot.includes(pick) && installed.includes(pick) && pick)
-        || slot.find(id => installed.includes(id))
-        || slot[0]);
+    const picks = _modelChoice.get(flow.id) || [];
+    return flowModelSlots(flow).map(({ models }) =>
+        models.find(id => picks.includes(id))
+        || models.find(id => installed.includes(id))
+        || models[0]);
 }
 
 /**
- * The INSTALLED members of every slot that has more than one candidate — i.e. exactly
- * what the slide-over's picker should offer. A slot with 0 or 1 installed members
- * yields nothing: there is no choice to make.
+ * Every slot the user actually gets a say in — more than one candidate — as
+ * `{ label, models, recommended }`, in declaration order, for the slide-over to mount
+ * one dropdown per entry.
+ *
+ * Candidates are listed whether or not they are installed (MPI-599). Offering only what
+ * is on disk meant a user with NOTHING installed silently got `models[0]`: the flow
+ * downloaded the safe default and never mentioned there had been a choice.
+ *
  * @param {FlowDef|string} flowOrId
- * @returns {string[][]}
+ * @returns {{label: string, models: string[], recommended: string}[]}
  */
 export function flowModelChoices(flowOrId) {
     const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
     if (!flow) return [];
-    const installed = state.s_installedModelIds || [];
     return flowModelSlots(flow)
-        .filter(slot => slot.length > 1)
-        .map(slot => slot.filter(id => installed.includes(id)))
-        .filter(members => members.length > 1);
+        .filter(slot => slot.models.length > 1)
+        .map(slot => ({ ...slot, recommended: slot.models[0] }));
 }
 
 /**
- * Record the user's pick for this session. Ignored unless the id is a member of one
+ * Record the user's pick for this session. Ignored unless the id is a candidate in one
  * of the flow's slots — nothing else can be picked, and a stale id would otherwise
- * shadow the installed-member fallback forever.
+ * shadow the resolution order forever. Replaces any earlier pick in the SAME slot and
+ * leaves the other slots' picks alone.
  * @param {string} flowId
  * @param {string} modelId
  */
 export function setFlowModel(flowId, modelId) {
     const flow = getFlowById(flowId);
-    if (!flow || !flowModelSlots(flow).some(slot => slot.includes(modelId))) return;
-    _modelChoice.set(flowId, modelId);
+    if (!flow) return;
+    const slot = flowModelSlots(flow).find(s => s.models.includes(modelId));
+    if (!slot) return;
+    const kept = (_modelChoice.get(flowId) || []).filter(id => !slot.models.includes(id));
+    _modelChoice.set(flowId, [...kept, modelId]);
 }
 
 /**
@@ -1031,7 +1073,7 @@ export function flowSettingsModel(flowOrId) {
     const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
     if (!flow?.settingsModel) return null;
     const slots = flowModelSlots(flow);
-    const i = slots.findIndex(slot => slot.includes(flow.settingsModel));
+    const i = slots.findIndex(slot => slot.models.includes(flow.settingsModel));
     return i === -1 ? flow.settingsModel : flowModelIds(flow)[i];
 }
 

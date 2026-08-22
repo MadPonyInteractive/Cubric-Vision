@@ -36,7 +36,7 @@ model, image-in→image-out) are the other worked examples.
 | File | Covers |
 |---|---|
 | [01-descriptor-and-ops.md](01-descriptor-and-ops.md) | The `FlowDef` in `flowsRegistry.js`; the op in **4 files**; no-model vs multi-model flows; DECLARED `fields`, a step's `param` bind, and why no BESPOKE component (every field still mounts a Primitive) |
-| [any-of-models.md](any-of-models.md) | A flow that runs on ANY of a set of models and lets the user pick (MPI-590) — the resolver helpers, `modelParams` (what carries the pick into the graph), and why `modelFamily` is the wrong field |
+| [any-of-models.md](any-of-models.md) | Model SLOTS — a flow declares a role and the user picks which model fills it (MPI-590/599). The resolver helpers, `modelParams` (what carries the pick into the graph), why the picker offers models the user has not installed, and why `modelFamily` is the wrong field |
 | [blending-into-a-photo.md](blending-into-a-photo.md) | **Any flow that puts a generated thing into the user's own photo** (MPI-567, MPI-596) — why relighting cannot happen inside a crop, why every localised crop/stitch leaves a visible rectangle whatever the model, the whole-image-relight → composite-back route that fixes it, how to MEASURE the rectangle, and the generic blend prompt with its conditional shadow physics |
 | [02-media-io.md](02-media-io.md) | Polymorphic media slots; **path-reading input nodes** (MpiLoadImageFromPath / MpiString-video / MpiLoadAudioFromPath); injection routing; self-gating outputs; multi-output capture; the **audio-slot mediaType + filter traps** |
 | [03-storage-and-reuse.md](03-storage-and-reuse.md) | Flow input files → **`.preview-assets`** store (not the gallery); sidecar `flowId`/`flowInputs`; reuse routing |
@@ -65,9 +65,10 @@ Three forks decide everything downstream:
      A pure utility (stitch/resize/mux) that runs on VHS/Mpi nodes with no diffusion.
    - **Single/multi model** — list MODEL ids. Availability = every id installed; the Flow
      Library Install button drives each model's own dep download. See [01](01-descriptor-and-ops.md).
-   - **Any-of** — an ARRAY entry means the flow runs on whichever member is installed, and the
-     user picks in the slide-over when they hold more than one. It needs `modelParams` too, or
-     the pick reaches nothing. See [any-of-models.md](any-of-models.md).
+   - **Choosable slot** — a `{ label, models }` entry means the user picks which model fills
+     that role, from a labelled dropdown in the slide-over, installed or not. A flow may have
+     several, resolved independently. It needs `modelParams` too, or the pick reaches nothing.
+     See [any-of-models.md](any-of-models.md).
 2. **Inputs.** Flows are input-agnostic: a prompt, image(s), video(s), audio, a gizmo, or
    **nothing** (just Run). Declared in `inputSchema` — media slots in `inputSchema.media`,
    other controls DECLARED in `fields` (never a JS component). Media is NEVER a hard requirement in v1, but
@@ -127,7 +128,7 @@ Flow-specific additions:
 - [ ] Decide shape: model / no-model; inputs (media/prompt/gizmo/none); output mediaType — this file
 - [ ] Author + prove the workflow in LOCAL ComfyUI. All input/output nodes path-reading + `Input_*`/`Output_*` titled — [02](02-media-io.md)
 - [ ] Register the op in **4 files**: `commandRegistry.js` (`universal:true`, mediaType, mediaInputs with `Input_*` titles + correct per-slot mediaType — **audio = `'audio'`**), `universal_workflows.js`, `operationRegistry.js`, `operation_registry.json` (hand-maintained superset) — [01](01-descriptor-and-ops.md)
-- [ ] Add the `FlowDef` in `flowsRegistry.js` (`requiredModels` = MODEL ids or `[]`; `inputSchema.media` slot groups; `mediaType`) — [01](01-descriptor-and-ops.md)
+- [ ] Add the `FlowDef` in `flowsRegistry.js` (`requiredModels` = MODEL ids, `{ label, models }` slots, or `[]`; `inputSchema.media` slot groups; `mediaType`) — [01](01-descriptor-and-ops.md)
 - [ ] Media roles in `inputSchema.media[].roles` MATCH the op's `mediaInputs` keys — [02](02-media-io.md)
 - [ ] Controls: declare `fields: [...]` on the FlowDef (MPI-531/MPI-572) — the SAME `fields` a step declares, placed on the run slide — the frame renders them, `Input_*` ids route into `injectionParams`. **There is no BESPOKE component surface** (MPI-572 deleted the per-Flow `uiComponent` Organism, which a third-party Flow can never ship) — but every declared field MOUNTS an app Primitive (MPI-582), so a Flow is nothing but components. If a control is not expressible, add a PRIMITIVE plus the FIELD TYPE, never a bare input — [ui/carousel-frame.md](ui/carousel-frame.md) § `fields` is the ONE control surface
 - [ ] Does the flow IMPROVE media the user supplied? Declare `result: { compare: '<input role>' }` for the shared before/after surface. Omit when a comparison says nothing (same pixels, or an output that is not the same footage) — [04](04-overlay-and-shell.md) § The result pane

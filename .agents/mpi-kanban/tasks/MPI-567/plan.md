@@ -102,10 +102,16 @@ free knob (`Input_Control_strength` → `MpiNormalizeValue` → `ControlNetApply
 
 ### The model picker — decided, and the mechanism is shipped
 
-`requiredModels` entries may be **arrays** = an **any-of set**: the flow runs on whichever member
-is installed and the badge is satisfied by any one. Shipped as MPI-590; read
+`requiredModels` entries are **slots**: `{ label, models }` declares a ROLE the graph plays a
+model in, the flow runs on whichever candidate resolves, and the badge is satisfied by any one.
+Shipped as MPI-590, generalised to N slots x N candidates by **MPI-599** — read
 [`docs/playbooks/add-flow/any-of-models.md`](../../../../docs/playbooks/add-flow/any-of-models.md)
 before writing a line of it.
+
+**MPI-599 is what unblocked this flow's two-slot shape**, and it changed three things the table
+below predates: slots are OBJECTS with a `label` (not bare arrays), the picker renders with
+NOTHING installed (so Fabio installing one SDXL model no longer hides it — the note at the end of
+this section is obsolete), and `models[0]` is the recommended candidate, starred in the dropdown.
 
 The five SDXL-family models, all five carrying scribble + canny:
 
@@ -121,12 +127,19 @@ Shape to write (verify each filename against `modelDeps.js` at implementation ti
 trusting this table):
 
 ```js
-requiredModels: [['sdxl-realistic', 'sdxl-nsfw', 'ill-anime', 'ill-anime-beauty', 'pony-mix']],
+requiredModels: [
+  { label: 'Image model', models: ['sdxl-realistic', 'sdxl-nsfw', 'ill-anime', 'ill-anime-beauty', 'pony-mix'] },
+  { label: 'Edit model',  models: ['klein-4b'] },   // grows to klein-9b (MPI-598)
+],
 modelParams: {
   'sdxl-realistic':   { 'Input_Base_Model': 'SDXL_Realistic.safetensors' },
-  // …one arm per member, INCLUDING the default arm — restate its baked value
+  // …one arm per candidate, INCLUDING the recommended one — restate its baked value
 },
 ```
+
+The edit slot is written as a slot rather than the plain string `'klein-4b'` because it BECOMES
+choosable the moment MPI-598 lands 9B: the shape is then already right and only the array grows.
+A one-candidate slot renders no dropdown, so it costs the user nothing today.
 
 **Four rules from `any-of-models.md`, each one a shipped bug:**
 
@@ -143,10 +156,11 @@ modelParams: {
 `tests/flow-model-choice.test.cjs` already asserts every `modelParams` key names a title that
 exists in that flow's graph — extend it to cover this flow.
 
-**Ordering note:** the picker renders only when **more than one** member is installed
-(`flowModelChoices`). Fabio is installing SDXL Realistic now, so a single-model bench run shows
-no picker — that is correct behaviour, not a bug. Install a second SDXL model before judging the
-picker.
+**~~Ordering note:~~ OBSOLETE — MPI-599 removed the install gate.** It used to read: *the picker
+renders only when more than one member is installed, so a single-model bench run shows no picker.*
+That is no longer true, and it was the bug MPI-599 was opened for. The dropdown now lists all five
+SDXL candidates whether or not any is on disk, so the picker can be judged on a machine holding
+one model — or none.
 
 ### Carried in from MPI-454 (Place tool, shipped `3eb09d26`)
 

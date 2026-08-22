@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "cc220246-356a-456b-9351-12b2c750e199",
   "generated_at": "2026-08-22T04:01:00Z",
-  "status": "open",
+  "status": "adopted",
   "session": {
     "name": "MPI-567 session 3 - the blend pass settled, signed off, and documented",
     "branch": "master"
@@ -75,5 +75,7 @@
       "docs/playbooks/add-flow/any-of-models.md"
     ]
   },
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/cc220246-356a-456b-9351-12b2c750e199.json and use mpi-continue to resume MPI-567 (Scribble-to-object Flow), which is in `doing`. The BENCH HALF IS FINISHED AND SIGNED OFF by Fabio on 2026-08-22 - do not re-litigate it. Session 3 settled the blend pass: whole-image relight then composite the region back (every localised crop/stitch re-grades the patch and leaves a visible rectangle, on Boogu, Klein AND Qwen at all three tiers), the BLEND_PHYSICS2 prompt with conditional shadow physics and an anti-glow guard, Input_Control_strength at 0.45-0.60 exposed as a mandatory slider, and a ~80-96px minimum on DRAWN ink below which stage 1 invents extra subjects. All of it is written up in docs/playbooks/add-flow/blending-into-a-photo.md (flow-agnostic, also serves MPI-596) and docs/playbooks/add-flow/existing-flows/scribble-to-object.md - READ BOTH FIRST; plan.md now points at them rather than repeating them. The next action is to wire the flow with /mpi-add-flow using the settings table in plan.md. Note another session is live in this tree and owns js/data/modelConstants/models.js - do not stage it."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/cc220246-356a-456b-9351-12b2c750e199.json and use mpi-continue to resume MPI-567 (Scribble-to-object Flow), which is in `doing`. The BENCH HALF IS FINISHED AND SIGNED OFF by Fabio on 2026-08-22 - do not re-litigate it. Session 3 settled the blend pass: whole-image relight then composite the region back (every localised crop/stitch re-grades the patch and leaves a visible rectangle, on Boogu, Klein AND Qwen at all three tiers), the BLEND_PHYSICS2 prompt with conditional shadow physics and an anti-glow guard, Input_Control_strength at 0.45-0.60 exposed as a mandatory slider, and a ~80-96px minimum on DRAWN ink below which stage 1 invents extra subjects. All of it is written up in docs/playbooks/add-flow/blending-into-a-photo.md (flow-agnostic, also serves MPI-596) and docs/playbooks/add-flow/existing-flows/scribble-to-object.md - READ BOTH FIRST; plan.md now points at them rather than repeating them. The next action is to wire the flow with /mpi-add-flow using the settings table in plan.md. Note another session is live in this tree and owns js/data/modelConstants/models.js - do not stage it.",
+  "adopted_at": "2026-08-22T04:12:40Z",
+  "adopted_by": ".agents/mpi-kanban/state/sessions/0b9af612-fe6d-49e8-9abf-486247115a48.json"
 }

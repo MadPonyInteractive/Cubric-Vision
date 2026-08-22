@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/data/flowsRegistry.js",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js",
+    "js/components/Primitives/MpiDropdown/MpiDropdown.js",
+    "js/components/Primitives/MpiDropdown/MpiDropdown.css",
+    "js/components/types.js",
+    "tests/flow-model-choice.test.cjs",
+    "docs/playbooks/add-flow/any-of-models.md",
+    ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+    "docs/playbooks/add-flow/README.md",
+    "docs/playbooks/add-flow/01-descriptor-and-ops.md",
+    ".agents/mpi-kanban/tasks/MPI-599/brief.md",
+    ".agents/mpi-kanban/tasks/MPI-599/plan.md",
+    ".agents/mpi-kanban/tasks/MPI-599/files.json"
+  ]
+}

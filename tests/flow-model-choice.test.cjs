@@ -1,12 +1,18 @@
 /**
  * flow-model-choice.test.cjs — MPI-590.
  *
- * A Flow may declare an ANY-OF SET of models (`requiredModels: [['krea2','krea2-nsfw'], …]`)
- * and the user picks which installed member runs it. The failure mode this guards is a
- * picker that RENDERS, SAVES, and CHANGES NOTHING: the badge flips, the dropdown remembers,
- * and the graph still loads the baked transformer — because injection matches node TITLES
- * and silently skips a param with no matching node. That is the same silent shape as the
+ * A Flow declares its models as SLOTS — one role its graph plays a model in
+ * (`requiredModels: [{ label: 'Base model', models: ['krea2','krea2-nsfw'] }, 'klein-4b']`) —
+ * and the user picks a candidate per slot. The failure mode this guards is a picker that
+ * RENDERS, SAVES, and CHANGES NOTHING: the badge flips, the dropdown remembers, and the
+ * graph still loads the baked transformer — because injection matches node TITLES and
+ * silently skips a param with no matching node. That is the same silent shape as the
  * MPI-504 LoRA rack (slots saved, image identical) and MPI-242's `Input_Batch` typo.
+ *
+ * MPI-599 widened it to N slots x N candidates and made the picker appear with NOTHING
+ * installed, so the user chooses what downloads. Two of its assertions deliberately
+ * REVERSE MPI-590 behaviour — an uninstalled candidate is offered, and a pick outlives its
+ * candidate being uninstalled — so a failure there is a contract change, not a bug.
  *
  * So the assertions come in two halves:
  *   1. BEHAVIOUR — the real modules, imported bare (docs/testing-harnesses.md): does an
@@ -64,7 +70,7 @@ test('a single-id flow gates exactly as before', async () => {
     const { state, registry } = await load();
     state.s_installedModelIds = [];
     for (const flow of registry.listFlows()) {
-        const plain = (flow.requiredModels || []).filter(e => !Array.isArray(e));
+        const plain = (flow.requiredModels || []).filter(e => typeof e === 'string');
         assert.deepEqual(
             registry.flowModelIds(flow).filter(id => plain.includes(id)),
             plain,
@@ -73,19 +79,68 @@ test('a single-id flow gates exactly as before', async () => {
     }
 });
 
-test('the picker only offers a choice when there IS one', async () => {
+test('every slot is labelled, and a one-candidate slot needs no picker', async () => {
+    const { state, registry } = await load();
+    state.s_installedModelIds = [];
+    for (const flow of registry.listFlows()) {
+        for (const slot of registry.flowModelSlots(flow)) {
+            assert.ok(slot.label, `${flow.id}: a slot with no label renders a blank field label`);
+            assert.ok(Array.isArray(slot.models) && slot.models.length,
+                `${flow.id}: an empty slot resolves to undefined and gates on nothing`);
+        }
+        // A choosable slot is a slot with a real choice in it. Everything else is answered.
+        assert.deepEqual(
+            registry.flowModelChoices(flow).map(s => s.models.length > 1),
+            registry.flowModelChoices(flow).map(() => true),
+            `${flow.id}: a one-candidate slot must not produce a dropdown`,
+        );
+    }
+});
+
+test('the picker offers UNINSTALLED candidates too — that is how the user picks what downloads', async () => {
+    // MPI-599. The old contract filtered to installed members, so the user with NOTHING
+    // installed got no picker and silently downloaded models[0]. That user is the one the
+    // picker is for: the choice only exists before the 12.25GB lands.
     const { state, registry } = await load();
     const flow = registry.getFlowById(FLOW_ID);
 
-    state.s_installedModelIds = [SFW, 'klein-4b'];
-    assert.deepEqual(registry.flowModelChoices(flow), [],
-        'one installed member is not a decision — no dropdown');
+    state.s_installedModelIds = [];
+    assert.deepEqual(registry.flowModelChoices(flow),
+        [{ label: 'Base model', models: [SFW, NSFW], recommended: SFW }],
+        'nothing installed must still offer both, with the recommendation named');
 
-    state.s_installedModelIds = [SFW, NSFW, 'klein-4b'];
-    assert.deepEqual(registry.flowModelChoices(flow), [[SFW, NSFW]]);
+    state.s_installedModelIds = [SFW, 'klein-4b'];
+    assert.deepEqual(registry.flowModelChoices(flow).map(s => s.models), [[SFW, NSFW]],
+        'holding one candidate must not hide the other — that is how the second gets installed');
+
+    // The recommendation is declaration order, not install state: it must not drift to
+    // whatever the user happens to have.
+    state.s_installedModelIds = [NSFW, 'klein-4b'];
+    assert.equal(registry.flowModelChoices(flow)[0].recommended, SFW);
 });
 
-test('the pick reaches the params, the LoRA rack, and self-heals on uninstall', async () => {
+test('a pick for an UNINSTALLED candidate drives the install, not just the label', async () => {
+    // The pick has to reach flowModelIds, or the Required-models row, the install keys and
+    // the Install button all keep describing the candidate the user just rejected.
+    const { state, registry } = await load();
+    const flow = registry.getFlowById(FLOW_ID);
+
+    state.s_installedModelIds = ['klein-4b'];
+    registry.setFlowModel(FLOW_ID, NSFW);
+    assert.deepEqual(registry.flowModelIds(flow), [NSFW, 'klein-4b']);
+    assert.deepEqual(registry.flowAvailability(flow).missing, [NSFW],
+        'the Install button must fetch the PICKED candidate, not the default');
+
+    // And picking one you do not have while holding the other is the deliberate trade
+    // (MPI-599): the flow goes unavailable until it downloads. Session-only, one click back.
+    state.s_installedModelIds = [SFW, 'klein-4b'];
+    registry.setFlowModel(FLOW_ID, NSFW);
+    assert.equal(registry.flowAvailability(flow).available, false);
+    registry.setFlowModel(FLOW_ID, SFW);
+    assert.equal(registry.flowAvailability(flow).available, true);
+});
+
+test('the pick reaches the params and the LoRA rack', async () => {
     const { state, registry } = await load();
     const flow = registry.getFlowById(FLOW_ID);
     state.s_installedModelIds = [SFW, NSFW, 'klein-4b'];
@@ -101,15 +156,60 @@ test('the pick reaches the params, the LoRA rack, and self-heals on uninstall', 
         'if both arms resolve to the same params the picker is a no-op');
     assert.equal(registry.flowSettingsModel(flow), SFW);
 
-    // An id that is not a member of any slot must not shadow the fallback.
+    // An id that is not a candidate in any slot must not shadow the resolution order.
     registry.setFlowModel(FLOW_ID, 'qwen-edit');
     assert.equal(registry.flowSettingsModel(flow), SFW);
+});
 
-    // Picked, then uninstalled: fall back rather than demand it back forever.
+test('picks are PER SLOT — a second pick must not overwrite the first', async () => {
+    // MPI-599. The store was one id per flow, which worked only while exactly one slot was
+    // choosable. A flow that picks a render model AND an edit model needs both picks to
+    // survive, and the failure is silent: the graph quietly runs the other phase on its
+    // baked default. No shipped flow has two choosable slots yet — the scribble flow is the
+    // first — so the fixture is registered for the duration of this test and removed in
+    // `finally`, or a throw here leaves every later test running against a phantom flow.
+    const { state, registry } = await load();
+    const FIXTURE = {
+        id: 'two-slot-fixture',
+        requiredModels: [
+            { label: 'Image model', models: [SFW, NSFW] },
+            { label: 'Edit model', models: ['klein-4b', 'qwen-edit'] },
+        ],
+    };
+    assert.equal(registry.getFlowById(FIXTURE.id), null, 'fixture id must not collide with a real flow');
+    registry.FLOWS.push(FIXTURE);
+    try {
+        state.s_installedModelIds = [SFW, NSFW, 'klein-4b', 'qwen-edit'];
+        assert.deepEqual(registry.flowModelIds(FIXTURE), [SFW, 'klein-4b'],
+            'an untouched picker resolves every slot to its recommendation');
+        assert.deepEqual(registry.flowModelChoices(FIXTURE).map(s => s.label), ['Image model', 'Edit model'],
+            'each slot carries its own field label — two fields reading "Model" say nothing');
+
+        registry.setFlowModel(FIXTURE.id, NSFW);
+        registry.setFlowModel(FIXTURE.id, 'qwen-edit');
+        assert.deepEqual(registry.flowModelIds(FIXTURE), [NSFW, 'qwen-edit'],
+            'the second pick overwrote the first — the image-model phase silently reverted');
+
+        // Re-picking within ONE slot replaces that slot's pick and leaves the other alone.
+        registry.setFlowModel(FIXTURE.id, SFW);
+        assert.deepEqual(registry.flowModelIds(FIXTURE), [SFW, 'qwen-edit']);
+    } finally {
+        registry.FLOWS.splice(registry.FLOWS.indexOf(FIXTURE), 1);
+    }
+});
+
+test('a pick survives its candidate being uninstalled, per slot', async () => {
+    const { state, registry } = await load();
+    const flow = registry.getFlowById(FLOW_ID);
+    state.s_installedModelIds = [SFW, NSFW, 'klein-4b'];
+
     registry.setFlowModel(FLOW_ID, NSFW);
     state.s_installedModelIds = [SFW, 'klein-4b'];
+    // Deliberate reversal of the MPI-590 behaviour: the pick is a statement of intent, so
+    // it holds and the flow asks for the model back. The user un-asks by picking the other.
+    assert.deepEqual(registry.flowModelIds(flow), [NSFW, 'klein-4b']);
+    registry.setFlowModel(FLOW_ID, SFW);
     assert.deepEqual(registry.flowModelIds(flow), [SFW, 'klein-4b']);
-    assert.equal(registry.flowAvailability(flow).available, true);
 });
 
 test('every modelParams title EXISTS in the flow workflow', async () => {
@@ -120,7 +220,7 @@ test('every modelParams title EXISTS in the flow workflow', async () => {
         const titles = new Set(Object.values(graph)
             .map(n => (n?._meta?.title || '').toLowerCase())
             .filter(Boolean));
-        const members = new Set(registry.flowModelSlots(flow).flat());
+        const members = new Set(registry.flowModelSlots(flow).flatMap(s => s.models));
 
         for (const [modelId, params] of Object.entries(flow.modelParams)) {
             assert.ok(members.has(modelId),
@@ -239,13 +339,23 @@ test('the Flow Library renders the picker and reads RESOLVED ids', () => {
     // Source assertions, like flow-lora-rack: standing the drawer up in Node costs more
     // than it proves, and the render half was probed live instead. What must not rot is
     // the wiring — a drawer that stops mounting the picker silently pins every user to
-    // the first member, and one that reads `flow.requiredModels` raw renders a nested
-    // array as a model row.
+    // the first candidate, and one that reads `flow.requiredModels` raw renders a slot
+    // object as a model row.
     const src = read('js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js');
     assert.match(src, /_mountModelChoice\(flow\);/, 'the picker is declared but never mounted');
     assert.match(src, /setFlowModel\(flow\.id, value\)/, 'the pick must be recorded, not just displayed');
     assert.ok(!/flow\.requiredModels/.test(src),
-        'the drawer must resolve through flowModelIds — a raw read renders an any-of set as a nested array');
+        'the drawer must resolve through flowModelIds — a raw read renders a slot object as a model row');
+
+    // MPI-599: each dropdown wears its slot's own label, and the recommended candidate is
+    // flagged. Both are silent when they rot — two fields reading "Model", or four SDXL
+    // checkpoints with nothing to choose between them.
+    assert.match(src, /mpi-detail__field-label">\$\{slot\.label\}/,
+        'a slot must label its own field, or a multi-slot flow shows two identical "Model" rows');
+    assert.match(src, /id === slot\.recommended \? \{ icon: 'sparkle', meta: 'Recommended' \}/,
+        'the recommendation must be visible in the list, not just be the default value');
+    assert.ok(!/disabled: !installed/.test(src),
+        'an uninstalled candidate is pickable ON PURPOSE — disabling it removes the whole point');
 });
 
 test('flowService carries the resolved model into the run', () => {

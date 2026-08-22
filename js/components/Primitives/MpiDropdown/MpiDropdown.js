@@ -1,6 +1,7 @@
 import { ComponentFactory } from '../../factory.js';
 import { qs, qsa, on } from '../../../utils/dom.js';
 import { Events } from '../../../events.js';
+import { renderIcon } from '../../../utils/icons.js';
 
 const escapeHtml = (value) => String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -22,8 +23,12 @@ const renderOption = (opt, value) => {
     const infoAttr = (typeof opt === 'object' && opt.info)
         ? ` data-info="${escapeHtml(opt.info)}"`
         : '';
-    const metaHtml = meta
-        ? `<span class="mpi-dropdown__option-meta">${escapeHtml(meta)}</span>`
+    // `icon` turns the meta into a FLAG — a short standing label like "Recommended",
+    // not a truncatable detail — so it drops the meta's 11ch ellipsis cap (MPI-599).
+    const icon = (typeof opt === 'object' && opt.icon) ? opt.icon : '';
+    const metaHtml = (meta || icon)
+        ? `<span class="mpi-dropdown__option-meta${icon ? ' mpi-dropdown__option-meta--flag' : ''}">`
+            + `${icon ? renderIcon(icon, 'sm') : ''}${escapeHtml(meta)}</span>`
         : '';
 
     return `
@@ -44,7 +49,7 @@ const renderOption = (opt, value) => {
  * ancestor overflow:hidden and CSS transform stacking-context issues.
  *
  * Props:
- * @param {Array<string|{label:string,value:string,meta?:string,description?:string,detail?:string,info?:string}>} [options=[]] - Option list
+ * @param {Array<string|{label:string,value:string,meta?:string,description?:string,detail?:string,info?:string,icon?:string}>} [options=[]] - Option list
  * @param {string} [value=''] - Currently selected value
  * @param {string} [placeholder='Select...'] - Placeholder shown when nothing is selected
  * @param {boolean} [disabled=false] - Disabled state

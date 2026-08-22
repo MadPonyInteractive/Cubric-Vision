@@ -1,49 +1,84 @@
-# Any-of models — the flow runs on EITHER, and the user picks
+# Model slots — the flow declares a ROLE, the user picks which model fills it
 
-**MPI-590, SHIPPED.** Read with [01-descriptor-and-ops.md](01-descriptor-and-ops.md), which owns
-the rest of the `FlowDef` contract.
+**MPI-590, SHIPPED. Generalised by MPI-599.** Read with
+[01-descriptor-and-ops.md](01-descriptor-and-ops.md), which owns the rest of the `FlowDef`
+contract.
 
-An entry in `requiredModels` that is itself an **array** is an **any-of set**: the flow runs on
-whichever member is installed, and the badge is satisfied by any one of them. Character Sheet is
-the only flow that declares one — the two Krea 2 cards are the same architecture with a different
-bake, so demanding both means asking a user for a **second 12.25GB** download of a model they
-effectively already have.
+Each entry in `requiredModels` is a **slot** — one role the flow's graph plays a model in. The
+object form makes that role choosable: `models` are interchangeable candidates for it, the flow
+runs on whichever one resolves, and the badge is satisfied by any of them. A plain string is the
+one-candidate shorthand, which is most flows.
 
 ```js
-requiredModels: [['krea2', 'krea2-nsfw'], 'klein-4b'],   // any-of Krea 2, AND Klein
+requiredModels: [
+    { label: 'Base model', models: ['krea2', 'krea2-nsfw'] },   // choosable
+    'klein-4b',                                                  // fixed
+],
 modelParams: {
   'krea2':      { 'Input_Base_Model': 'krea2_raw_int8_convrot.safetensors',            'Input_Bypass_Filter_Lora.strength_model': 1 },
   'krea2-nsfw': { 'Input_Base_Model': 'lustify-v10-krea-raw-int8_convrot.safetensors', 'Input_Bypass_Filter_Lora.strength_model': 0 },
 },
 ```
 
+Character Sheet and Outpaint declare the Krea 2 pair — the same architecture with a different
+bake, so demanding both means asking for a **second 12.25GB** download of a model the user
+effectively already has.
+
+**A flow may declare SEVERAL choosable slots, and they resolve independently.** The scribble flow
+picks an SDXL checkpoint for its render phase and an edit model for its blend phase; each gets its
+own dropdown, its own pick, and its own `modelParams` contribution to the one merged
+`injectionParams`. `label` is what the picker shows — two fields both reading "Model" tell the
+user nothing, which is why the label is not optional in the object form.
+
+**`models[0]` is the RECOMMENDED candidate.** Declaration order is preference order: it is what an
+untouched picker resolves to, and the picker stars it. There is no separate `recommended` field —
+if you find yourself wanting one, reorder the list instead.
+
 ## Never read `flow.requiredModels` directly
 
-A set reaches a plain consumer as a nested array. Resolve it through `flowsRegistry.js`:
+A slot reaches a plain consumer as an object. Resolve it through `flowsRegistry.js`:
 
 | Helper | Returns |
 |---|---|
-| `flowModelIds(flow)` | ONE id per slot — the pick, else the first installed member, else the first. This is what the badge, the install keys, the required-models rows and the progress bar all use. |
-| `flowModelChoices(flow)` | The installed members of every slot with **more than one** installed — i.e. exactly what needs a picker. Empty means no picker: one installed member is not a decision. |
-| `setFlowModel(flowId, id)` | Records the pick. **Session-only** — a pick that outlived the app would silently run a later sheet on the NSFW bake because of a click made days ago. It is also ignored once the picked member is uninstalled, so the flow never demands back a model the user removed. |
-| `flowModelParams(flow)` | The resolved members' `modelParams`, merged. `flowService` puts these into `injectionParams` FIRST, so a collected field of the same name still wins. |
-| `flowSettingsModel(flow)` | `settingsModel` resolved through the sets, so the LoRA rack — and the settings button — follow the member that actually runs. |
+| `flowModelSlots(flow)` | Every slot normalised to `{ label, models }`, including the one-candidate ones. The shape helpers below are built on. |
+| `flowModelIds(flow)` | ONE id per slot — the pick, else the first installed candidate, else the recommended one. This is what the badge, the install keys, the required-models rows and the progress bar all use. |
+| `flowModelChoices(flow)` | The slots with a real choice in them, as `{ label, models, recommended }` — one dropdown each. Empty means no picker. |
+| `setFlowModel(flowId, id)` | Records the pick. **Session-only** — a pick that outlived the app would silently run a later sheet on the NSFW bake because of a click made days ago. Replaces any earlier pick in the SAME slot and leaves the other slots alone. |
+| `flowModelParams(flow)` | Every resolved candidate's `modelParams`, merged. `flowService` puts these into `injectionParams` FIRST, so a collected field of the same name still wins. |
+| `flowSettingsModel(flow)` | `settingsModel` resolved through the slots, so the LoRA rack — and the settings button — follow the candidate that actually runs. |
+
+## The picker offers candidates the user has NOT installed
+
+This is the MPI-599 change, and it reverses two MPI-590 behaviours on purpose:
+
+- **A slot with nothing installed still shows its dropdown.** The old rule filtered candidates to
+  what was on disk, so the user who most needed the choice — the one about to download 12.25GB —
+  never saw it, and silently got `models[0]`. The choice only exists *before* the weight lands.
+- **A pick holds even when its candidate is uninstalled.** It is a statement of intent, so the
+  Required-models row flips to "Install" and the Install button fetches *that* candidate. The cost
+  is that picking an uninstalled candidate while holding another takes the flow to unavailable
+  until it downloads. That is correct — the user asked for it — and it is session-only and one
+  click back.
+
+Both are pinned in `tests/flow-model-choice.test.cjs`, so a failure there is a contract change
+rather than a bug.
 
 ## `modelParams` is what makes the picker REAL
 
-A graph bakes ONE loader. Without an injection param the pick changes the badge, the dropdown
-label and nothing else — and injection drops an unmatched title in **silence**, so nothing
-anywhere reports the dead pick. It is the same shape as the MPI-504 LoRA rack (slots saved, image
-identical) and MPI-242's `Input_Batch` typo (batch N rendered 1 image, in two models).
+A graph bakes ONE loader per role. Without an injection param the pick changes the badge, the
+dropdown label and nothing else — and injection drops an unmatched title in **silence**, so
+nothing anywhere reports the dead pick. It is the same shape as the MPI-504 LoRA rack (slots
+saved, image identical) and MPI-242's `Input_Batch` typo (batch N rendered 1 image, in two models).
 
 So:
 
-- The node the arms differ on must be `Input_*`-titled in the workflow. Character Sheet's
-  UNETLoader became `Input_Base_Model`; its filter-bypass LoRA was already titled, and takes the
-  `Title.widget` form (`Input_Bypass_Filter_Lora.strength_model`) because only one of its widgets
-  moves.
-- Restate the **default** arm's own baked values too. A pair reads as a pair, and it catches a
-  graph re-export that quietly moves the default.
+- The node each slot's candidates differ on must be `Input_*`-titled in the workflow. Character
+  Sheet's UNETLoader became `Input_Base_Model`; its filter-bypass LoRA was already titled, and
+  takes the `Title.widget` form (`Input_Bypass_Filter_Lora.strength_model`) because only one of its
+  widgets moves. A multi-slot flow needs one such title **per slot** — two slots writing the same
+  title is one slot with extra steps.
+- Restate the **recommended** candidate's own baked values too. A set reads as a set, and it
+  catches a graph re-export that quietly moves the default.
 - `tests/flow-model-choice.test.cjs` asserts every `modelParams` key names a title that EXISTS in
   that flow's graph, that the arms differ, and that the widgets are on the injector's spray list.
   Mutation-checked: restoring node 55's generic title turns it red.
@@ -56,7 +91,10 @@ exact bug MPI-316 fixed.
 
 ## The picker
 
-An `MpiDropdown` (never a bare `<select>` — MPI-582) in the Flow Library slide-over, **above** the
-required-models list because the pick drives that list, and **before** the flow opens. It renders
-only when a slot has more than one installed member; a change re-renders the whole drawer, since
-the resolved id feeds the rows, the install keys and the footer button.
+One `MpiDropdown` per choosable slot (never a bare `<select>` — MPI-582) in the Flow Library
+slide-over, labelled with the slot's own `label`, **above** the required-models list because the
+pick drives that list, and **before** the flow opens. The recommended candidate carries
+`icon: 'sparkle', meta: 'Recommended'` — the same sparkle the Model Library flags Featured with
+(MPI-514), and the word rather than a hover tooltip, because a dropdown row has room for it. A
+change re-renders the whole drawer, since the resolved id feeds the rows, the install keys and the
+footer button.

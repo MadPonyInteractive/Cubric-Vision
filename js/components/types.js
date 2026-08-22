@@ -463,7 +463,7 @@
 
 /**
  * @typedef {Object} MpiDropdownProps (Primitive — js/components/Primitives/MpiDropdown)
- * @property {Array<string|{label:string,value:string,meta?:string,description?:string,detail?:string,disabled?:boolean}>} [options=[]] - Option list
+ * @property {Array<string|{label:string,value:string,meta?:string,description?:string,detail?:string,disabled?:boolean,info?:string,icon?:string}>} [options=[]] - Option list. `meta` is the right-hand detail, ellipsised at 11ch. An option's `icon` (an icons.js key) turns that meta into a standing FLAG instead — accent-coloured, sized to its content, never dimmed by hover or selection — for a short label the row must always carry, e.g. the Flow model picker's `icon: 'sparkle', meta: 'Recommended'` (MPI-599)
  * @property {string} [value=''] - Currently selected value
  * @property {string} [placeholder='Select...'] - Placeholder text (empty/unselected label)
  * @property {boolean} [disabled=false] - Disabled state
