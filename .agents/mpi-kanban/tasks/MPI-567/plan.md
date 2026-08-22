@@ -44,13 +44,40 @@ a FORMAT law: `raw/` is LiteGraph, never API JSON. Docs healed in
 `docs/workflow-authoring/README.md`, `converters.md`,
 `docs/playbooks/common/workflow-authoring-entry.md`, `docs/playbooks/add-flow/README.md`.
 
-**But this card has NO LiteGraph copy of the merged graph, anywhere.** Both copies are API format
-— `bench-graph-blend.json` in the repo, and the bench-store copy too (§ Preservation Notes records
-it was POSTed to the bench store in API format, which the 1.48.7 frontend imports and auto-lays-
-out for viewing). So `raw/` cannot be filled by round-tripping something that already exists, and
-`bench-editing.md` forbids hand-writing LiteGraph nodes for good reason — implicit
-widget-to-input ordering shifts silently and yields a file that loads and misbehaves. See
-§ Remaining Work for the fork.
+**…and the graph is now IN the repo, both halves — no export was ever needed.** There was no
+LiteGraph anywhere (both copies were API), so one was made by loading the API graph into the
+ComfyUI frontend — which auto-lays-out an API import — and reading `app.graph.serialize()` out of
+memory. Nothing written to the bench, nothing queued. Shipped as
+`comfy_workflows/raw/flow_scribble_object.json` (LiteGraph, 70 nodes / 109 links) and
+`comfy_workflows/flow_scribble_object.json` (converted against the ENGINE on 48188,
+`validate-injection-rules.mjs` clean). Commit `9c552cc6`.
+
+**Two things the value-level diff caught, both invisible to a node/class comparison:**
+
+1. **The bench-store copy is NOT the repo copy.** Bench = **74** nodes, 4 `PreviewImage` debug
+   taps, `Output_Image` sitting on a *PreviewImage*. Repo = **70** nodes, `Output_Image` on a
+   `SaveImage`. The repo copy is what produced the measured results and what ships. **Every "74
+   nodes" in this plan and in every handoff refers to the bench copy** — do not correct the repo
+   copy to match it.
+2. **The ComfyUI editor QUANTISES float widgets.** `ThresholdMask` declares `step: 0.01`, so the
+   round trip rounded the signed-off region thresholds `12/255 = 0.047058…` → `0.05` and
+   `40/255 = 0.156862…` → `0.16`. Converts clean, validates clean, runs — on a threshold 6% off
+   the one § Session 3's measurements were made against. Restored exactly in the raw file (nodes
+   150 / 151), located by matching the rounded value rather than a hardcoded `widgets_values`
+   index. **It comes back if anyone reopens that raw file in ComfyUI and saves.** Written up in
+   `docs/workflow-authoring/bench-editing.md`.
+
+Remaining input diffs against the proven graph: two `GrowMaskWithBlur.fill_holes` the converter
+makes explicit at the engine's own default (`False`, confirmed against `/object_info`) —
+behaviour-identical.
+
+**🔴 HOLD — DO NOT WRITE THE FLOW (Fabio, 2026-08-22, end of session 6).** He has found an
+**inpaint node** that looks strong and *may change the pipeline this card is built on*. Nothing
+about the FlowDef, the op, or the two-slot `requiredModels` should be written until he has
+described it. The graph and the step kind are both safe work regardless — they are inputs the new
+node would reuse or replace, not commitments. **Ask him what the node is before planning around
+it**, and note it may interact with the still-open Klein 9B thread above: both are candidates for
+deleting the composite-back tail.
 
 **Three translation traps, each silent and each returning a plausible wrong result** — all now
 written up in `docs/playbooks/add-flow/blending-into-a-photo.md` so MPI-596 does not re-pay them:
@@ -340,8 +367,10 @@ Three findings from the user's own testing of the sibling card, all of which bea
 
 ## Remaining Work
 
-Both bench gates are CLOSED: the blend pass is settled (§ Session 3) and Fabio signed off by eye
-on 2026-08-22. The `paint` step kind is BUILT (§ Current State). What is left is app wiring only.
+Both bench gates are CLOSED, the `paint` step kind is BUILT, and the graph is in the repo in both
+formats (§ Current State). What is left is app wiring only — **but it is ON HOLD**: Fabio's
+inpaint-node find may change the pipeline, so the first move next session is to ask him what it is,
+not to write the FlowDef.
 
 - Wire the flow via `/mpi-add-flow` — FlowDef, the op in its 4 files, the two-slot
   `requiredModels` + `modelParams`, the declared fields (incl. the mandatory

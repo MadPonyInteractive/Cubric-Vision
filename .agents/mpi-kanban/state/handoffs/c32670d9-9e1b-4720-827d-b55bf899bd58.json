@@ -1,0 +1,79 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "c32670d9-9e1b-4720-827d-b55bf899bd58",
+  "generated_at": "2026-08-22T10:36:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-567 session 6 - the paint step kind, and the raw/ rule that was blocking nothing",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Build the `paint` step kind, the blocker on the app half of the Scribble-to-object Flow.",
+    "status": "in_progress",
+    "summary": "The paint step kind is BUILT and proven live, and the graph is now in the repo in BOTH formats - so nothing external blocks the wiring any more. But the wiring is deliberately NOT started: Fabio has found an inpaint node that may change the pipeline this card is built on, and asked to hold."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+    "completed": [
+      "THE `paint` STEP KIND (commit 67f0de71). MpiStepPaint mounts PaintManager + brushDab.js - the History paint tool's own RGBA layer and dab - on a plain canvas stage, the same relationship MpiStepCrop has with CropManager. No second brush. Binds through STEP_MEDIA, returns the layer ALONE as an RGBA PNG at the SOURCE's natural size. Controls are the gizmo's own one row (brush/eraser, colour, Undo, Clear); brush SIZE is the mouse wheel, matching InputController.",
+      "FlowStep.mediaRole added to the frame - the one change no handoff had foreseen. The merged graph takes TWO images (Input_Image AND Input_Paint) while _deriveRunMedia could only REPLACE a role's media, so a paint step bound to the photo would have eaten the photo. A step now names where its derived file lands and the frame APPENDS when that role is empty. Omit it and crop's behaviour is byte-identical.",
+      "VERIFIED LIVE in an isolated instance on :58669, not by inspection: layer back at the source's 1200x800, undo restoring a stroke to the pixel (19529 -> 32893 -> 19529), Clear and undo-after-Clear holding, the eraser's undo restoring 25274 exactly, wheel sizing clamped 2..400, a fresh mount seeded with the value restoring the identical drawing (the Reuse path), an unpainted step reporting null and deriving no file, 0 bare form controls. Numbers in validation.md.",
+      "THE raw/ RULE IS LIFTED (Fabio; commits 21987a71 + e7d11f1c). Agents may author comfy_workflows/raw/. Swept across workflow-authoring/README.md + converters.md, playbooks/common/{README,workflow-authoring-entry}.md, playbooks/add-flow/README.md, playbooks/add-model/{README,01-workflow-split}.md, the two existing-flows files, .claude/rules/comfy_injection.md, and the blurbs + failure message in validate-injection-rules.mjs. The assertNotInRaw guards in both converters are UNCHANGED - only their error text.",
+      "THE GRAPH IS IN THE REPO, both halves (commit 9c552cc6): comfy_workflows/raw/flow_scribble_object.json (LiteGraph, 70 nodes / 109 links) and comfy_workflows/flow_scribble_object.json (converted against the ENGINE on 48188, validate-injection-rules.mjs clean). No export from Fabio was needed - see key_decisions.",
+      "docs/playbooks/add-flow/ui/paint-gizmo.md written, indexed in ui/README.md, and pointed to from carousel-frame.md; scribble-to-object.md's status table healed."
+    ],
+    "pending": [
+      "🔴 FIRST: ASK FABIO WHAT THE INPAINT NODE IS. He found one that looks strong and said it may change the pipeline. Do not write the FlowDef, the op, or the two-slot requiredModels until he has described it.",
+      "Fabio is going to look at comfy_workflows/raw/flow_scribble_object.json - it was produced by an agent, not exported by him, so it is the first raw file of its kind in this repo.",
+      "Klein 9B thread, still open and still unmeasured: 9B's LOCALISED edit reportedly does not re-grade, which would delete the relight AND the whole composite-back tail. Measure ring_step + fill on the same five plates before believing it; runners are on disk at D:/WORK/Images/Outputs/mpi567/runners/. NOTE it and the inpaint node are candidates for the SAME simplification - weigh them together.",
+      "Then the app half, if the pipeline survives: the op in its 4 files, the FlowDef with the TWO-slot requiredModels + modelParams, the declared fields incl. the MANDATORY Input_Control_strength slider (default 0.45-0.60, NOT the bench's 0.8), the paint step as { kind: 'paint', role: <photo>, mediaRole: <layer> }, and step copy saying TONAL (not 'structured') plus the ~80-96px minimum-ink warning.",
+      "THE FLOW MUST GUARD THE NO-DRAWING CASE. An unpainted step reports paint: null, STEP_MEDIA derives nothing, and MpiLoadImageFromPath runs on its baked authoring path - a confident wrong result with no error. The frame cannot guard it (a null legitimately means 'nothing changed' for crop).",
+      "Extend tests/flow-model-choice.test.cjs to this flow, and consider a small tests/flow-step-paint.test.cjs pinning STEP_KINDS.paint + the STEP_MEDIA row - the live probe was throwaway, so no repeatable check landed for the kind.",
+      "Live-run + reuse round trip per docs/playbooks/add-flow/05-verify.md; then graphics via /mpi-flow-graphics.",
+      "At close-out: heal the card's acceptance list (still says 'Canny for a clean structured drawing'; canny's niche is a TONAL drawing), and heal blending-into-a-photo.md if the 9B or inpaint-node finding lands."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-567",
+    "title": "Scribble-to-object Flow - user draws on the image, ControlNet + SDXL renders it in",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-567/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      "brief": ".agents/mpi-kanban/tasks/MPI-567/brief.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-567/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Ask Fabio to describe the INPAINT NODE he found before writing anything. He ended session 6 saying it looks very good and might change what the pipeline currently does, and explicitly asked not to write the flow yet. Weigh it together with the open Klein 9B thread - both are candidates for deleting the relight and the whole composite-back tail, and neither has been measured. Only after that is settled does the app wiring start.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE raw/ BAN WAS AIMED AT THE WRONG TARGET, and lifting it cost nothing. The incident it cited (MPI-272, an API-format file in raw/) was a USER 'Export (API)' mis-click - the doc's own words are 'No script did it', and no agent did either. The real agent-side hazard, a bare workflow-to-api.mjs run that clobbered 7 runtime files on 2026-08-07, was already fixed in code by assertNotInRaw() (f918c907). What replaces the ban is a FORMAT law: raw/ is LiteGraph, never API JSON; comfy_workflows/*.json is BUILD OUTPUT, so hand-patching it is still wrong because the next convert reverts you.",
+      "THE AGENT HAD ALREADY MADE THE GRAPH - the card was never really waiting on Fabio. Session 5 BUILT it (build_graph.py) and POSTed it to /prompt, which is how the images were generated; it just left API format behind, because the old rule forbade writing raw/. Nothing was missing except the editable twin.",
+      "THE LITEGRAPH WAS OBTAINED FROM THE FRONTEND, NOT SYNTHESISED. There was no LiteGraph anywhere (bench-graph-blend.json AND the bench-store copy are both API). The ComfyUI frontend auto-lays-out an API import, so `await app.loadApiJson(api, name)` then `app.graph.serialize()` reads a real LiteGraph out of memory - no write to the bench, nothing queued. bench-editing.md forbids hand-writing LiteGraph nodes and it is right to: widget-to-input ordering is implicit and shifts silently.",
+      "THE BENCH-STORE COPY IS NOT THE REPO COPY, and every handoff has been quoting the wrong one. Bench = 74 nodes with 4 PreviewImage debug taps and Output_Image on a PreviewImage. Repo = 70 nodes with Output_Image on a SaveImage. The repo copy produced the measured results and is what ships. 'The 74-node graph' in this plan means the bench copy.",
+      "THE COMFYUI EDITOR QUANTISES FLOAT WIDGETS - a new trap, filed in bench-editing.md. ThresholdMask declares step 0.01, so the round trip rounded the signed-off thresholds 12/255 (0.047058...) and 40/255 (0.156862...) to 0.05 and 0.16. Converts clean, validates clean, runs - 6% off the value the region measurements were made against. Restored exactly in the raw file, located by matching round(target, 2) rather than a hardcoded widgets_values index. IT COMES BACK if anyone reopens that raw file in ComfyUI and saves.",
+      "The drawing IS persisted, as a PNG data URL in stepValues - the opposite of crop, whose derived file is stripped from the snapshot. Not arbitrary: a padded outpaint image is DERIVED and re-derivable from the rect, while a drawing is an INPUT made by hand with nothing to re-derive it from. 42 KB for a test scribble. Marked `ponytail:` with the preview-asset upgrade path named."
+    ],
+    "constraints": [
+      "🔴 DO NOT WRITE THE FLOW. Fabio's explicit instruction at the end of session 6. The inpaint node comes first.",
+      "PUSH IS USER-AUTHORIZED, despite project-profile.md frontmatter saying push_policy: auto. CLAUDE.md § Git and Commits wins. This session's 4 commits are UNPUSHED. A peer session pushes on its own schedule and has carried this card's commits up before, so check `git rev-list --count origin/master..HEAD` rather than assuming.",
+      "A SECOND SESSION IS LIVE IN THIS TREE and owns js/data/modelConstants/models.js, js/utils/icons.js, js/components/Compounds/MpiAudioRecorder/, js/components/Blocks/MpiGalleryBlock/, js/components/Compounds/MpiGalleryGrid/, MPI-573 and MPI-600. Do NOT stage any of them. Because it also owns icons.js, a new icon is not available to you - MpiStepPaint's Undo/Clear are text buttons for exactly that reason.",
+      "playwright-cli in this build CANNOT run a MULTI-LINE eval - it dies with `SyntaxError: Unexpected token ')'` at 2:38 on a trivial two-line IIFE, which reads as a bug in your probe and is not one. Single line only. And the command line caps out around 8KB, so a large payload has to be chunked into `window.__x` across several evals (5 x 5000 chars worked) rather than passed as one argument.",
+      "Heredocs are blocked by a guard hook and HANG until the 2-minute timeout - twice this session. Write a .py or .js FILE and run it by path. Windows python also needs sys.stdout.reconfigure(encoding='utf-8') or it dies on a cp1252 charmap error mid-script.",
+      "Both ComfyUI instances were UP this session - bench on 8188 (Fabio's, do not queue on it) and the app engine on 48188. Convert and gate against 48188: the bench runs ahead of what ships.",
+      "taskkill /PID from the Bash tool is mangled by Git Bash into 'C:/Program Files/Git/PID' and fails. Run it through `powershell -NoProfile -Command`. Kill an app instance by the PID you launched, verified up its parent chain - an agent instance and the user's app share a byte-identical `electron.exe .`.",
+      "BOARD VALIDATION FAILS AND IT IS NOT YOURS. state/files/ab0f51bf-095f-4c37-9c54-90f90844b263.json carries schema mpi-kanban/file/v1 where validate_board.py demands mpi-kanban/file-claim/v1. It belongs to MPI-573, owned by the LIVE peer session (...722c5b8ab418), and claims the Gallery + MpiAudioRecorder paths. Do not repair another live session's claim record - report it or let that session fix it. Everything else validated clean."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-567/validation.md",
+      "docs/playbooks/add-flow/ui/paint-gizmo.md",
+      "docs/playbooks/add-flow/existing-flows/scribble-to-object.md",
+      "docs/workflow-authoring/bench-editing.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/c32670d9-9e1b-4720-827d-b55bf899bd58.json and use mpi-continue to resume MPI-567 (Scribble-to-object Flow), which is in `doing`. Session 6 built the thing that was blocking the app half - the `paint` step kind (MpiStepPaint, mounting the History paint tool's own PaintManager + brushDab.js, binding through STEP_MEDIA and returning the drawing ALONE as an RGBA PNG at the photo's resolution), proved it live in an isolated instance, and added one frame change no handoff had foreseen: FlowStep.mediaRole, because the graph takes TWO images and _deriveRunMedia could previously only REPLACE a role's media. Fabio then lifted the rule that said agents may not write comfy_workflows/raw/, which turned out to have been blocking nothing real - session 5's agent had already BUILT the graph and POSTed it to /prompt, it just left API format behind. So the graph is now in the repo in both formats and gated against the engine. DO NOT START THE FLOW WIRING. Fabio ended the session saying he has found an inpaint node that looks very good and may change what the pipeline does, and asked to hold - so your first action is to ASK HIM WHAT THE NODE IS, and to weigh it against the still-unmeasured Klein 9B thread, since both could delete the relight and the whole composite-back tail. Two traps found this session that will cost you if rediscovered: the bench-store copy of the graph is NOT the repo copy (74 nodes with debug previews vs the 70-node shipping one, so 'the 74-node graph' in the plan means the bench copy), and the ComfyUI editor QUANTISES float widgets - it silently rounded the signed-off 12/255 and 40/255 thresholds to 0.05 and 0.16, and will do it again if that raw file is reopened and saved. A peer session is live in this tree and owns models.js, icons.js, MpiAudioRecorder and the Gallery components - do not stage those. Push is user-authorized despite push_policy: auto."
+}
