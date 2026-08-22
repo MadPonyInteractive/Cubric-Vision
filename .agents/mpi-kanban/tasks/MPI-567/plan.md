@@ -38,11 +38,31 @@ a TRADE".
   14.44/12.50/13.87 vs `g096`'s 10.39/6.31/2.48. Best edge-per-photo-moved is `s096`. Still not
   under 2.
 
-**Next action: ASK FABIO, do not keep tuning.** Reaching the bar needs the photo RESTORED where
-the model only shifted tone — a real change mask compositing decoded over the original crop, which
-is what the deleted ~25-node tail did. That is a structural call (THE ROOT-CAUSE RULE step 4), and
-the alternatives are: accept a softer bar, or accept `s096`-class residual. **Do not start the
-FlowDef until this is decided.**
+**✅ RESOLVED — THE SEAM IS FIXED BY ONE NODE, and the "trade" above was an artefact of the
+wrong metric.** Fabio asked why some edges seam and others do not; `edge_step` (mean |diff|)
+cannot answer that, because it sums two different things. `seamvis.py` splits them:
+
+- **directional offset** (`dir = signed/abs → ±1`) = a tonal step the eye reads as a line;
+- **texture churn** (`dir → 0`) = the model redrew gravel/grass at the same average tone,
+  invisible at any magnitude.
+
+Visibility is `cnr = |signed| / std(photo in that band)`. Sun's top edge scores `abs` 10.98 and
+is INVISIBLE (dir 0.10, std 51.6); overcast's top scores a lower 9.26 and is the worst seam in
+the set (dir 1.00, std 10.9, cnr 0.85). So the defect was never "the box edge" — it was **a DC
+offset landing on a low-variance region**. This also inverts the ranking: `g192` "cleared the
+bar" only by moving its edge into smooth SKY, where its residual is a pure DC lift at cnr 0.53.
+
+**Ship `f096`:** `GrowMaskWithBlur(expand -96, blur_radius 96)` between
+`InpaintCropImproved.cropped_mask` and `SetLatentNoiseMask`. Session 7's `auto` box is unchanged.
+Worst cnr 0.85 -> 0.15, `far_mean` slightly BELOW baseline, same 16.1s, one node.
+
+**`shadow_ratio` was crediting the defect** — overcast base's 1.04 is largely the re-grade (a
+lighter rectangle in the grass, plain in `SHEET_object_base_f096_s096.png`). `f096`'s 0.48 is the
+re-grade removed with a real cast shadow still present on all three plates. Judge the shadow by
+`objsheet.py`, never by that ratio.
+
+**Next action: the FlowDef is unblocked.** Add the one node to the graph, then proceed to the app
+half per the pending list.
 
 ---
 

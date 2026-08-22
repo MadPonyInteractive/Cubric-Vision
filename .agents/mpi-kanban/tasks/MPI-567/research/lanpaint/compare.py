@@ -60,7 +60,15 @@ def main():
         if not common:
             print("no edge live in all configs for", tag)
             continue
-        edge = max(common, key=lambda e: runs[0]["edge_step"][e])
+        forced = sys.argv[2] if len(sys.argv) > 2 else None
+        if forced and forced in common:
+            edge = forced
+        elif forced:
+            print("%s: %s is not a live edge in every config (live: %s)"
+                  % (tag, forced, ",".join(sorted(common))))
+            continue
+        else:
+            edge = max(common, key=lambda e: runs[0]["edge_step"][e])
         base_box = tuple(runs[0]["box"])
         size = Image.open("%s/%s" % (O, runs[0]["file"])).size
         rect = crop_rect(base_box, edge, size)
@@ -91,7 +99,8 @@ def main():
         cx, cy = (i % cols) * (Z + 8), (i // cols) * (Z + 26)
         d.text((cx + 4, cy + 6), name, fill=(255, 255, 255))
         sheet.paste(im, (cx + 4, cy + 22))
-    out = L.LP + "/SHEET_compare_%s.png" % "_".join(names)
+    suffix = "_".join(names) + (("_" + sys.argv[2]) if len(sys.argv) > 2 else "")
+    out = L.LP + "/SHEET_compare_%s.png" % suffix
     sheet.save(out)
     print(out, sheet.size, "  magenta ticks = box edge (same crop in every column), 1:1")
 

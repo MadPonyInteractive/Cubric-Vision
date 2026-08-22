@@ -98,6 +98,13 @@ CONFIGS = {
     "gc":       {"grow_only": 96, "feather": 96, "passes": 2},
     "s000":     {"core_frac": (0.12, 0.12)},
     "s096":     {"core_frac": (0.12, 0.12), "grow": 96},
+    # 9B was judged better by eye on all five plates in session 7, but its SEAM was never
+    # measured. It needs qwen_3_8b_int8_convrot -- pairing it with 4B's qwen_3_4b dies
+    # with a shape error that reads as a LanPaint bug and is not one (MPI-600).
+    "b9":       {"unet": "flux-2-klein-9b-int8-convrot.safetensors",
+                 "clip": "qwen_3_8b_int8_convrot.safetensors"},
+    "b9g096":   {"unet": "flux-2-klein-9b-int8-convrot.safetensors",
+                 "clip": "qwen_3_8b_int8_convrot.safetensors", "grow": 96},
     "keeprest": {"prompt_keep": True},
     "norescale": {"rescale": False},
 }

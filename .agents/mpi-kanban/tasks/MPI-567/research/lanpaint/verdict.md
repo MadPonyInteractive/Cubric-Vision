@@ -189,9 +189,9 @@ hard-mask control at the identical grown box (`g096hard`) scores 14.44 / 12.50 /
 is `s096` (tight +12% core, grown 96, feathered 96): worst edge 11.18 / 7.00 / 3.12 at `far_mean`
 0.227 / 0.137 / 0.081, i.e. base-level quiet. Still not under 2.
 
-**Conclusion: this route cannot reach the bar by tuning.** Reaching it needs the change RESTORED
-where the model only shifted tone — a real change mask compositing decoded over the original crop,
-which is what the deleted ~25-node tail did. That is a structural decision for Fabio, not a knob.
+**~~Conclusion: this route cannot reach the bar by tuning.~~ WRONG — the bar was wrong, not the
+route. See § "Why some edges are visible" below. `edge_step` is mean |diff|, which cannot tell a
+tonal STEP from redrawn TEXTURE, and the fix is one node.**
 
 **Two traps this cost, both of which return a confident wrong answer with no error:**
 
@@ -207,6 +207,63 @@ which is what the deleted ~25-node tail did. That is a structural decision for F
   box carelessly and it overlaps the object — the first attempt put the grown box 47px into the
   object's head, which read as "the feather made the bottom edge worse" and was nothing of the
   kind. `blankbox.py` now asserts against both.
+
+## Why some box edges are visible and others are not — and the ONE-NODE fix
+
+Fabio asked the question that broke this open: the observations never explained *why* some edges
+seam and some do not. They could not, because `edge_step` is mean **|diff|**, and that single
+number is produced by two things the eye treats completely differently:
+
+- **A directional tonal offset.** The whole band moved one way. `signed ≈ abs`, so `dir = signed
+  / abs → ±1`. The eye sees a brightness step along a straight line. **This is a seam.**
+- **Texture churn.** The model redrew the gravel/grass/foliage differently at the same average
+  tone. The changes cancel, so `signed ≈ 0` while `abs` is large. **There is no line to see**, at
+  any magnitude.
+
+And a tonal step is only visible against the photo's own local variation, so what matters is
+`cnr = |signed| ÷ std(photo in that band)`. `seamvis.py` computes all of it. Baseline:
+
+| plate | edge | signed | abs | dir | photo std | cnr | reads as |
+|---|---|---|---|---|---|---|---|
+| sun | top | +1.06 | 10.98 | 0.10 | 51.60 | 0.02 | texture only |
+| sun | left | +2.39 | 8.76 | 0.27 | 64.26 | 0.04 | texture only |
+| sun | right | −19.29 | 30.76 | −0.63 | 54.54 | **0.35** | SEAM (the clipped shadow) |
+| overcast | top | +9.26 | 9.26 | **1.00** | 10.87 | **0.85** | SEAM |
+| overcast | left | +9.71 | 11.36 | 0.86 | 29.47 | **0.33** | SEAM |
+| overcast | right | +7.66 | 11.63 | 0.66 | 30.76 | **0.25** | SEAM |
+| anime | top | −2.03 | 4.34 | −0.47 | 57.34 | 0.02 | texture only |
+| anime | right | −8.05 | 9.18 | −0.88 | 41.05 | 0.20 | faint |
+
+**Sun's top edge scores 10.98 and is invisible; overcast's top scores a LOWER 9.26 and is the
+worst seam in the set.** Sun's dirt has std 51.6 and the change does not point anywhere;
+overcast's grass has std 10.9 and every pixel lifted by the same +9.26. Confirmed by eye at 1:1
+(`SHEET_compare_base_s096_top.png`). So the real defect was never "the box edge" in general — it
+was **a DC offset landing on a low-variance region**, which is why it hit overcast on all three
+edges, hit sun only where the shadow was clipped, and never really hit anime at all.
+
+**This also inverts the ranking `edge_step` gave.** `g192`, the config that "cleared the bar" at
+0.40/1.13/0.86, puts the box top edge up in the SKY — the smoothest region in the frame (std
+2.64) — where its residual +1.39 is a pure DC lift at `cnr` **0.53**, the second-worst seam
+measured. Its low `edge_step` is an artefact. Do not ship it.
+
+**The fix is `f096`: one node.** `GrowMaskWithBlur(expand −96, blur_radius 96)` between
+`InpaintCropImproved`'s `cropped_mask` and `SetLatentNoiseMask`. Keep session 7's `auto` box
+exactly as decided. It is better than baseline on every axis that matters:
+
+| | worst cnr | far_mean (sun/over/anime) | shadow | cost |
+|---|---|---|---|---|
+| base | **0.85** (overcast top) | 0.154 / 0.223 / 0.248 | re-grade counted as shadow | 16.1s |
+| **f096** | **0.15** (overcast top, "faint") | 0.138 / 0.157 / 0.159 | real, slightly softer | 16.1s |
+
+**`shadow_ratio` was crediting the defect.** It counts changed pixels outside the object bbox, so
+overcast `base`'s 1.04 is largely the re-grade itself — visible in `SHEET_object_base_f096_s096.png`
+as a lighter rectangle in the grass. `f096`'s 0.48 and `s096`'s 0.34 are not lost shadow; they are
+the re-grade removed, with a genuine cast shadow still on the ground in all three plates. Never
+judge the shadow by that ratio alone — look at `objsheet.py`.
+
+`s096` (tight +12% core, grown 96, feathered 96) is the runner-up: worst cnr 0.18, `far_mean`
+0.227/0.137/0.081, and the best-looking sun shadow of the three. It changes the box seeding as
+well as the mask, so `f096` is the smaller change for the same result.
 
 ## A metric that does NOT work on this route
 
