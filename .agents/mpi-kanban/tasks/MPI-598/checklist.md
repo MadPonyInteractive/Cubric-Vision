@@ -74,14 +74,23 @@ are downloaded and hash-verified. Playbook Phase 0 was already satisfied.
 ## Verify (playbook 06)
 
 - [x] Parse cross-ref — every loader path in BOTH runtimes maps to a hosted dep
-- [~] **App launch + a real generation.** `t2i` PROVEN end to end in Fabio's own app
-      2026-08-22: the sidecar records `model: klein-9b`, `operation: t2i`, prompt "A woman
-      walking a tiger on a beach", 896x1088. That single run exercised the ModelDef, the
-      licence gate, dep resolution against `G:/CubricModels`, the LanPaint install into the
-      app engine, and the generated `klein_9b_t2i.json` — the whole chain this card wired.
-      **The other six ops (i2i, control, kleinEdit, inpaint, detail, upscale) are NOT yet
-      exercised** — they share the one graph but take different `wf_type` branches
-- [ ] Smoke per `docs/playbooks/bump-engine/01-smoke-run.md` — covers the six remaining ops
+- [~] **App launch + real generations. THREE of seven ops PROVEN** in Fabio's own app
+      2026-08-22, all 896x1088, all recorded in their sidecars as `modelId: klein-9b`
+      (the field is `modelId`, NOT `model` — a direct `d.get('model')` reads None):
+
+      | op | ms | note |
+      |---|---|---|
+      | `t2i` | 6064–6283 warm, 11591 cold | ×5 |
+      | `inpaint` | 31785 | **the new LanPaint path** — the one that most needed proving |
+      | `kleinEdit` | 30981 | localised edit survived the template consolidation |
+
+      That exercised the ModelDef, the MPI-357 licence gate live, dep resolution against
+      `G:/CubricModels`, the LanPaint install into the app engine from the pinned commit,
+      and the generated `klein_9b_t2i.json`. The model button renders **"FLUX.2 KLEIN B"** —
+      the family + tier badge working.
+      **STILL UNPROVEN: `i2i`, `control`, `detail`, `upscale`** — same graph, different
+      `wf_type` branches, so the three passes say nothing about them
+- [ ] Smoke per `docs/playbooks/bump-engine/01-smoke-run.md` — covers the four remaining ops
 - [x] **`klein-9b.webp`** — placed. Converted from Fabio's t2i at native 896x1088 (the fleet
       convention, matching klein-4b and krea2), webp q85, 95,878 bytes — in range against
       klein-4b's 83,216. Encoded from the PNG source, never from an encoded buffer. Verified
