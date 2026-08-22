@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-602",
+  "title": "LanPaint: real mask-conditioned inpainting across every supported model",
+  "description": "Replace the regenerate-the-whole-crop localised edit with InpaintCropImproved -> LanPaint_KSampler -> InpaintStitchImproved. LanPaint (scraed/LanPaint, GPL-3.0) makes the sampler condition on the surrounding known pixels instead of generating the crop blind, which is the root of the mask-shaped tone patch documented in docs/models/krea2/injection.md. PROVEN on the bench 2026-08-22 on Klein 4B distilled - the checkpoint we ship - and on 9B. Ships as a pinned third-party dep plus a MadPonyInteractive fork; LTX 2.5 (release 1.6) is the one model that needs an upstream code contribution.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-22T14:26:37Z",
+  "updated_at": "2026-08-22T14:26:37Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

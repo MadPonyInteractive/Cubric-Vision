@@ -3,6 +3,11 @@
 Created 2026-08-21, out of the MPI-357 close-out. MPI-357 built the licence gate this
 model needs and deliberately stopped short of the model itself.
 
+> **ALSO READ `research/session-2026-08-22-assets-and-lanpaint.md`** - both 9B LoRAs are
+> now downloaded and hash-verified, Fabio added an `Input_is_9b` gate to the bench template
+> that bypasses the whole styles system, the converter has a 5-row swap table, and inpaint
+> changed meaning (removals are now user-specified, so the op help copy is stale).
+
 ## THE WEIGHT IS DECIDED - MPI-600, 2026-08-22. Read this before the turbo section below.
 
 **Ship exactly two files:**
