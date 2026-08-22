@@ -10,6 +10,42 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 
 ## Current State
 
+**2026-08-22, session 8 — THE SEAM IS A TRADE, NOT A TUNABLE BUG. All four candidate fixes ran;
+none works. Blocked on a decision from Fabio before any further graph work.**
+
+17 configs on sun/overcast/anime, runner `research/lanpaint/seamfix.py`, numbers in
+`seamfix_results.json`, write-up in **[verdict.md](research/lanpaint/verdict.md)** § "The seam is
+a TRADE".
+
+- **Session 7's stated cause was wrong.** It guessed VAE round-trip + rescale drift.
+  `edge_profile.py` disproves it: drift has no direction, but the signed diff is large and GROWS
+  with depth into the box (sun right −19 → −33, overcast +9 → +14 on every edge). The model
+  **re-grades everything the noise mask lets it touch**. `norescale` is byte-identical to base, so
+  the rescale half of that guess was a no-op all along.
+- **All four candidates are dead.** `mask_blend_pixels` caps at 64 (96/128 do not exist) and does
+  nothing at 64; `denoise` is quantised away at 4 steps (`int(steps/denoise)`) and the values that
+  bite destroy the shadow; the `ImageCompositeMasked` candidate is a **no-op by construction** —
+  its mask is the box, which is what the stitch already blends with; and splitting crop from
+  denoise mask is the right family but every variant lands on one trade curve.
+- **The trade, quantified.** Confine the change → clean photo, sharp boundary, no shadow room.
+  Spread it → soft boundary, re-graded photograph. `g192` is the ONLY config under the bar of 2
+  (0.40 / 1.13 / 0.86) and it moves **21× more of the photo** (`far_mean` 3.2 vs base 0.15). Its
+  low `edge_step` must not be quoted as a fix.
+- **Three metrics flatter a big box and one does not.** `edge_step` is sampled at the box edge,
+  `shadow_ratio` counts a re-graded field as shadow (overcast `g192` reads 2.05 on a green field),
+  `outside` shrinks as the box grows. Use **`far_mean`** (`farglobal.py`), anchored to the object.
+- **The feather mechanism itself is real** — a hard-mask control at the identical box scores
+  14.44/12.50/13.87 vs `g096`'s 10.39/6.31/2.48. Best edge-per-photo-moved is `s096`. Still not
+  under 2.
+
+**Next action: ASK FABIO, do not keep tuning.** Reaching the bar needs the photo RESTORED where
+the model only shifted tone — a real change mask compositing decoded over the original crop, which
+is what the deleted ~25-node tail did. That is a structural call (THE ROOT-CAUSE RULE step 4), and
+the alternatives are: accept a softer bar, or accept `s096`-class residual. **Do not start the
+FlowDef until this is decided.**
+
+---
+
 **2026-08-22, session 7 — THE RELIGHT AND THE WHOLE COMPOSITE-BACK TAIL ARE DELETED. LanPaint
 replaces them, measured on all five plates. The pipeline this card was built on has changed
 shape, and it got smaller.**
@@ -50,10 +86,11 @@ answers the small-subject-in-a-big-image case that made Fabio ask for it.
 with `edge_step` up to **30.84** (sun, auto) against the "under 2 is invisible" bar, and present
 on `auto`, not just `generous`. **Every metric above missed it** — `outside` looks beyond the box
 where the stitch guarantees the original, and `far_frac` returned `None` for `auto` because that
-box has no far area, which I read as "cannot re-grade". Probable cause is not the sampler: the
+box has no far area, which I read as "cannot re-grade". ~~Probable cause is not the sampler: the
 whole crop is VAE round-tripped and rescaled to 1024², so tone drifts inside the box and
-`mask_blend_pixels: 32` is too narrow to hide it. Four candidate fixes, cheapest first, in the
-verdict — **fixing this is the next session's first job**, ahead of any app wiring.
+`mask_blend_pixels: 32` is too narrow to hide it.~~ **DISPROVEN in session 8 — see
+§ Current State. The cause is a directional re-grade of everything the noise mask allows,
+and all four candidate fixes were run; none works.**
 
 **Next action: NOT the app wiring.** Fix the seam first. Separately, Fabio has an agent
 implementing 9B and the new 4B template, and LanPaint is landing in the shipped

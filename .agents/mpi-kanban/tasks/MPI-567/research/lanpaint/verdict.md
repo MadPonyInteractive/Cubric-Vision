@@ -120,24 +120,93 @@ where the stitch guarantees the original — it can never see this. `far_frac` m
 re-grade". It cannot re-grade **at distance**; it can still shift tone across the whole box, and
 the box edge is where that shift meets untouched photo.
 
-**The probable cause is not the sampler.** `InpaintStitchImproved` pastes back the *whole*
-inpainted crop, and that crop has been VAE round-tripped and rescaled to 1024×1024
-(`output_resize_to_target_size: True`). So every pixel inside the box drifts a little in tone and
-texture, masked only by `mask_blend_pixels: 32` — enough to hide a small step, not an 11.
-LanPaint's noise mask preserves the *latent*, not the decoded pixels.
+**~~The probable cause is not the sampler.~~ DISPROVEN 2026-08-22 (session 8), see below.** The
+guess here was VAE round-trip + rescale drift hidden by `mask_blend_pixels: 32`. `edge_profile.py`
+killed it: round-trip drift has no direction, so its signed mean would sit at ~0, and instead the
+signed mean is large and *grows with depth* into the box (sun right edge −19 → −33; overcast +9 →
++14 on all three edges). The model **re-grades the whole crop**. Also `norescale` — dropping
+`ImageScaleToTotalPixels` entirely — is byte-identical to base, so the rescale half of that guess
+was a no-op the whole time (`resolution_steps: 16` rounds 1000 back to 1024).
 
-**Untested candidate fixes, cheapest first — this is the next session's first job:**
+**All four candidates were run 2026-08-22 (session 8). None of them works.** Detail in the next
+section; runner `seamfix.py`, 17 configs, every number in `seamfix_results.json`.
 
-1. `mask_blend_pixels` 32 → 96/128. One widget.
-2. `denoise` < 1.0. Less tone drift inside the box.
-3. `ImageCompositeMasked(destination = the ORIGINAL cropped_image, source = decoded,
-   mask = feathered cropped_mask)` before the stitch, so unmasked pixels stay byte-identical and
-   the stitch has nothing to step against. **This is the node I dropped earlier in the session
-   after reading `mask_blend_pixels: 32` as the cure — that was wrong.**
-4. Separate the two regions: crop bounds generous (resolution + context), denoise mask smaller.
-   Structural, most work, most likely to actually hold.
+1. `mask_blend_pixels` 32 → 96/128 — **impossible and useless.** The node caps it at 64; 96 and
+   128 make ComfyUI prune the branch and report `status_str: "success"` in 0.2s with nothing
+   sampled. At the legal max of 64 the edge is unmoved (30.43 vs 30.84) and `outside` LEAKS
+   worse (0.506 vs 0.308).
+2. `denoise` < 1.0 — **dead.** At `steps: 4` ComfyUI computes `int(steps/denoise)`, so 0.85 is
+   byte-identical to 1.0; the values that do bite destroy the feature (0.55 takes anime's shadow
+   to 8% of baseline) while sun's edge stays at 10.6.
+3. `ImageCompositeMasked` against the original `cropped_image` — **a no-op by construction**, and
+   this was worth catching before building it. The mask named is `cropped_mask`, which *is* the
+   box; compositing decoded-over-original through the box mask reproduces exactly what
+   `InpaintStitchImproved` already does with the same mask. It can only do something with a
+   DIFFERENT mask — a real change mask — which is the deleted tail, not this node.
+4. Separate crop bounds from denoise mask — **the right family, wrong direction.** Shrinking the
+   denoise mask inside the box (`f032`/`f096`) ramps the seam but pays for it out of the shadow
+   (overcast to 61%/46%). Growing the box and feathering outward (`g064`/`g096`/`g192`) keeps the
+   shadow and cuts the edge 3–27×, but only by moving the change into the photograph.
 
 Shrinking the box is NOT a fix — it trades the seam for the shadow, per the table above.
+
+## The seam is a TRADE, not a bug you can tune out — measured 2026-08-22 (session 8)
+
+The cause is that the model **re-grades everything it is allowed to touch**. `SetLatentNoiseMask`
++ `denoise: 1.0` means every pixel in the box is regenerated, and it comes back with a directional
+tonal offset. The box edge is simply where that offset meets untouched photo. So there are only
+two ways to hide the step, and the pipeline's knobs are all one or the other:
+
+- **Confine the change** (small box, low denoise, inward feather) → the photo stays clean but the
+  boundary is sharp, and the shadow has nowhere to fall.
+- **Spread the change** (big box, outward feather) → the boundary fades, but the re-grade is now
+  spread across the user's photograph.
+
+Every config lands on that one curve. `gc` — ramp centred on the box edge instead of outside it —
+scores within noise of `g096` on both axes, which is what makes it a curve rather than a knob.
+
+**The metric that shows it, and why the earlier ones could not.** `edge_step` is sampled AT the
+box edge, so widening the ramp fades it without shrinking the change. `shadow_ratio` counts
+changed pixels outside the OBJECT bbox, so a re-graded field reads as a better shadow — overcast
+`g192` scores 2.05, double baseline, on a plainly green field. `outside` is measured outside the
+BOX, so it shrinks toward zero as the box grows to fill the frame. All three flatter a big box.
+`far_mean` (`farglobal.py`) anchors to the OBJECT instead — mean |diff| across the whole image
+excluding the object bbox +150px — and cannot be improved by growing the box:
+
+| plate | | base | g064 | g096 | g192 | s096 | f096 |
+|---|---|---|---|---|---|---|---|
+| sun | edge / far | 30.84 / **0.154** | 11.10 / 1.112 | 10.39 / 2.500 | **0.40** / 3.219 | 11.18 / 0.227 | 10.44 / 0.138 |
+| overcast | edge / far | 12.82 / **0.223** | 6.43 / 0.784 | 6.31 / 1.739 | **1.13** / 3.636 | 7.00 / 0.137 | 6.64 / 0.157 |
+| anime | edge / far | 9.33 / **0.248** | 3.27 / 0.467 | 2.48 / 1.057 | **0.86** / 2.680 | 3.12 / 0.081 | 3.02 / 0.159 |
+
+`g192` is the only config that clears the invisibility bar of 2 — and it does so while moving
+**21× more of the photograph** than baseline. That is the generous-box failure from § "Box size is
+the whole control" made gradual. It is not a fix, and its low `edge_step` must not be quoted as one.
+
+**The feather mechanism is real, though** — it is the trade that is fatal, not the mechanism. A
+hard-mask control at the identical grown box (`g096hard`) scores 14.44 / 12.50 / 13.87 against
+`g096`'s 10.39 / 6.31 / 2.48, so the ramp itself is worth 1.4–5.6×. Best edge-per-unit-photo-moved
+is `s096` (tight +12% core, grown 96, feathered 96): worst edge 11.18 / 7.00 / 3.12 at `far_mean`
+0.227 / 0.137 / 0.081, i.e. base-level quiet. Still not under 2.
+
+**Conclusion: this route cannot reach the bar by tuning.** Reaching it needs the change RESTORED
+where the model only shifted tone — a real change mask compositing decoded over the original crop,
+which is what the deleted ~25-node tail did. That is a structural decision for Fabio, not a knob.
+
+**Two traps this cost, both of which return a confident wrong answer with no error:**
+
+- **An out-of-range widget is not an error.** `mask_blend_pixels: 96` (max 64) and
+  `GrowMaskWithBlur.blur_radius: 128` (max 100) both yield `status_str: "success"`, ~0.2–2s, and
+  the sampler branch never runs. The only outputs are the preview temps from
+  `MpiLoadImageFromPath` (it is an `OUTPUT_NODE`), so a runner that takes `files[-1]` picks up a
+  temp path from `<comfy>/temp` and dies somewhere unrelated. Assert your own `SaveImage` prefix
+  produced a file.
+- **A blank box cannot isolate the seam.** Inpainting an object-free box to measure the edge on
+  all four sides fails: with `denoise: 1.0` and a prompt that says "place the object into the
+  scene", the model INVENTS content in the empty box (anime bottom edge 32.32). And place that
+  box carelessly and it overlaps the object — the first attempt put the grown box 47px into the
+  object's head, which read as "the feather made the bottom edge worse" and was nothing of the
+  kind. `blankbox.py` now asserts against both.
 
 ## A metric that does NOT work on this route
 
