@@ -5,13 +5,15 @@ Klein is the first model where EVERY op lives in a single graph. There is no op 
 and no content axis, but there IS a size axis (4B / 9B) and it is handled HERE, in the
 script, deliberately:
 
-  * size     — 4B and 9B are the SAME graph. They differ only in which four weight files
-               the loaders name, plus the `Input_is_9b` gate that bypasses the styles
-               system while 9B has no style LoRAs. Every one of those differences is a
-               VALUE, so the template stays single and this script bakes each variant.
-               Maintaining two near-identical templates by hand was rejected for exactly
-               that reason (MPI-598) — and once 9B gains styles the gate goes too, leaving
-               nothing but the four filenames.
+  * size     — 4B and 9B are the SAME graph. They differ only in VALUES: the four weight
+               files the loaders name, plus the style rack — the ten lora slots and the
+               trigger lines. The rack is a DIFFERENT SET per size, not a renamed twin:
+               no muppets or jojo weight exists for 9B at all, so 9B ships 7 styles
+               against 4B's 8, with its own labels and its own trigger text. The template
+               stays single and this script bakes each variant; maintaining two
+               near-identical templates by hand was rejected for that reason (MPI-598).
+               The `Input_is_9b` gate that used to bypass the styles system on 9B is GONE
+               — it only ever existed because 9B had no styles to apply.
 
   * ops      — t2i / i2i / depth / edit / inpaint / detail / upscale all sit in the one
                graph and are selected by the injected `Input_wf_type` int (1..7), which
@@ -61,24 +63,53 @@ class KleinVariant(NamedTuple):
     user installs: the app downloads the dep it declares, and ComfyUI then cannot find
     the name baked into the graph. `_assert_weights` re-reads them after the swap.
     Subfoldered LoRAs are BACKSLASHED — that is how ComfyUI lists them (MPI-229 heal).
+
+    `styles` is a list of (lora_name, trigger_line) PAIRS, one per style, in picker order.
+    Pairs rather than two parallel lists on purpose: style N = trigger line N = the Nth
+    lora slot walking the bank chain = the Nth entry of the ModelDef's `styleLoraLabels`,
+    and that alignment is the whole contract. Two lists can drift by one and still build;
+    a pair cannot. Index 0 ("No Style") is not in here — it is the selector's own
+    pass-through, not a slot.
     """
     out_name: str
-    is_9b: bool
     unet: str
     clip: str
     nsfw_lora: str
     depth_lora: str
+    styles: tuple[tuple[str, str], ...]
 
+
+_S = "flux2-klein\\styles\\"   # every style LoRA lives here, backslashed (MPI-229 heal)
 
 MODEL_VARIANTS = {
     "klein_t2i_template.json": [
         KleinVariant(
             out_name="klein_t2i.json",
-            is_9b=False,
             unet="flux-2-klein-4b-int8-convrot.safetensors",
             clip="qwen_3_4b.safetensors",
             nsfw_lora="flux2-klein\\NSFW_party_time_v2.0_klein4b.safetensors",
             depth_lora="flux2-klein\\flux2_klein_4b_refcontrol_depth.safetensors",
+            # 8 styles (MPI-354). These are the values the authoring template already
+            # carries — they live here now so BOTH sizes are baked the same way and
+            # neither is the "default" one an edit can silently change.
+            styles=(
+                (_S + "flux2-klein-4b-lora-muppetshow-style.safetensors",
+                 "display the characters as Muppets, muppetshow style"),
+                (_S + "flux2-klein-4b-lora-Fluxtoon-Style.safetensors",
+                 "cartoon illustration, Fluxtoon Style"),
+                (_S + "flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors",
+                 "JojosoStyle"),
+                (_S + "Anime_new_mecha_klein4b.safetensors",
+                 "An anime-style digital illustration"),
+                (_S + "robloxchibidoll_lora_klein4b_000002200.safetensors",
+                 "chibi style"),
+                (_S + "klein4b-doodle_v1.safetensors",
+                 "Redraw this image in the most clumsy, scribbly, and utterly pathetic way possible."),
+                (_S + "vintage_photo.safetensors",
+                 "vintage photo 1920's style"),
+                (_S + "Flux-Klein-4B-Art_10.safetensors",
+                 "Artistic and aesthetic composition"),
+            ),
         ),
         # 9B (MPI-598). Distilled INT8 at 4 steps / cfg 1.0. NOTE the transformer and the
         # text encoder are both named `int8_convrot` and NEITHER is ConvRot — both are
@@ -87,17 +118,47 @@ MODEL_VARIANTS = {
         # as published, so do not "correct" these strings.
         KleinVariant(
             out_name="klein_9b_t2i.json",
-            is_9b=True,
             unet="flux-2-klein-9b-int8-convrot.safetensors",
             clip="qwen_3_8b_int8_convrot.safetensors",
             nsfw_lora="flux2-klein\\NSFW_party_time_v2.0_klein9b.safetensors",
             depth_lora="flux2-klein\\flux2_klein_9b_refcontrol_depth.safetensors",
+            # 7 styles, NOT 8, and NOT a renamed 4B set. Only three are the same creator's
+            # 9B build of the weight 4B ships (anime / chibi / doodle — hash-verified
+            # twins). Muppets and JoJo have NO 9B weight in existence: searched across
+            # CivArchive's full 1,179-record Klein-9B catalogue, Hugging Face, and
+            # CivitAI's own API. The other three slots are substitutes by a different
+            # creator, so their LABEL and trigger describe what the weight actually does —
+            # calling PULPKHOR "Jojo" or Disney-mid-century "Fluxtoon" would be a lie the
+            # picker tells the user. Research + licences:
+            # .agents/mpi-kanban/tasks/MPI-598/research/klein9b-style-loras.md
+            styles=(
+                (_S + "DisneyMidCenturyKlein9b.safetensors",
+                 "Disney Mid-Century Animation"),
+                (_S + "PULPKHOR.safetensors",
+                 "vintage comic illustration, PULPKHOR style, distressed paper textures, "
+                 "scratches, and faint halftone printing dots"),
+                (_S + "New_Mecha_Klein9B.safetensors",
+                 "An anime-style digital illustration"),
+                (_S + "robloxchibidoll_lora_klein9b.safetensors",
+                 "chibi style"),
+                (_S + "klein9b-doodle_v1.safetensors",
+                 "Redraw this image in the most clumsy, scribbly, and utterly pathetic way possible."),
+                # Renamed from the upstream `Vintage.safetensors` — far too generic a name
+                # to bake into a graph and a dep filename forever. Same bytes, sha256
+                # 7ec32ba728ee4b42fb68074e8da5f8d965813c2ff3f17186141257a265d32d92.
+                # NOTE the era differs from 4B's: this one is 1960s-80s, 4B's is 1920s.
+                (_S + "Real_Vintage_Photo_klein9b.safetensors",
+                 "vintage photo, 1960's style"),
+                (_S + "amano_flux_02.safetensors",
+                 "amano watercolor and ink sketch with loose, gestural brushwork"),
+            ),
         ),
     ],
 }
 
-IS_9B_TITLE = "Input_is_9b"
 NSFW_LORA_TITLE = "NSFW LoRA"
+STYLE_SELECTOR_TITLE = "Input_Style_Selector"
+STYLE_BANK_SLOTS = 5   # MpiStyleLoras exposes lora_1..lora_5
 
 # BOTH captures, not just the image. `Output_prompt` is the MPI-242 contract: a PreviewAny
 # whose string the app reads back as "what the encoder actually saw" (the enhancer output).
@@ -222,8 +283,60 @@ def _lora_ids(workflow: dict) -> tuple[str, str]:
     return nsfw, depth
 
 
+def _style_bank_chain(workflow: dict) -> tuple[str, list[str]]:
+    """(selector_id, bank_ids in chain order). Same walk `_assert_style_rack` validates.
+
+    Local rather than imported from generate_krea2: that module exposes the ASSERT, not
+    the walk, and widening its API would put Krea2's build in the blast radius of a Klein
+    change. The duplication is ten lines and the assert still runs over the result, so a
+    divergence between the two walks fails the build rather than shipping."""
+    sel = _find_id_by_title(workflow, STYLE_SELECTOR_TITLE)
+    if sel is None:
+        raise SystemExit(f"[FAIL] no node titled {STYLE_SELECTOR_TITLE!r} — the style rack "
+                         f"is baked per size, so without it neither size gets its styles")
+    by_upstream: dict[str, str] = {}
+    for nid, nd in workflow.items():
+        if isinstance(nd, dict) and nd.get("class_type") == "MpiStyleLoras":
+            src = nd["inputs"].get("style")
+            if isinstance(src, list):
+                by_upstream[src[0]] = nid
+    chain: list[str] = []
+    cur = sel
+    while cur in by_upstream:
+        cur = by_upstream.pop(cur)
+        chain.append(cur)
+    return sel, chain
+
+
+def _apply_styles(workflow: dict, v: KleinVariant) -> None:
+    """Write ONE size's style set: the lora slots walking the bank chain + the triggers.
+
+    The picker sends an INDEX (`Input_Style_Selector.selector`), never a filename, so the
+    slot order here IS the user-facing style order and must match the ModelDef's
+    `styleLoraLabels`. Unused tail slots are cleared to "None" — leaving the other size's
+    weight in slot 8 would give the 9B graph a 4B LoRA that no trigger line reaches, which
+    `_assert_style_rack` catches, but clearing is the fix, not the assert."""
+    sel_id, banks = _style_bank_chain(workflow)
+    slots = len(banks) * STYLE_BANK_SLOTS
+    if len(v.styles) > slots:
+        raise SystemExit(f"[FAIL] {v.out_name}: {len(v.styles)} styles but only {slots} lora "
+                         f"slots ({len(banks)} bank(s) x {STYLE_BANK_SLOTS}) — add a bank to "
+                         f"the template, the extra styles cannot be reached")
+    names = [lora for lora, _ in v.styles] + ["None"] * (slots - len(v.styles))
+    for b, bank_id in enumerate(banks):
+        for i in range(1, STYLE_BANK_SLOTS + 1):
+            workflow[bank_id]["inputs"][f"lora_{i}"] = names[b * STYLE_BANK_SLOTS + i - 1]
+
+    if isinstance(workflow[sel_id]["inputs"].get("triggers"), list):
+        raise SystemExit(f"[FAIL] {STYLE_SELECTOR_TITLE}.triggers is linked, not a widget — "
+                         f"this script bakes it per size, so a link makes both sizes append "
+                         f"whatever the upstream produces")
+    workflow[sel_id]["inputs"]["triggers"] = "\n".join(t for _, t in v.styles)
+    print(f"  [STYLES] {len(v.styles)} styles baked into {len(banks)} bank(s)")
+
+
 def _apply_variant(workflow: dict, v: KleinVariant) -> None:
-    """Bake the four weight names + the styles gate for ONE size.
+    """Bake the four weight names + the style rack for ONE size.
 
     This is the whole 4B/9B difference. Everything else in the graph is shared, which is
     the point: one authored template, two runtime files, no hand-maintained twin.
@@ -244,16 +357,7 @@ def _apply_variant(workflow: dict, v: KleinVariant) -> None:
         raise SystemExit(f"[FAIL] CLIPLoader.type is {clip_type!r}, expected 'flux2' — "
                          f"both Klein sizes load their text encoder at that type")
 
-    gate_id = _find_id_by_title(workflow, IS_9B_TITLE)
-    if gate_id is None:
-        raise SystemExit(f"[FAIL] no node titled {IS_9B_TITLE!r} — it gates the styles "
-                         f"system off for 9B (prompt concat AND style LoRA stack); without "
-                         f"it the 9B graph would try to apply 4B style LoRAs")
-    if isinstance(workflow[gate_id]["inputs"].get("boolean"), list):
-        raise SystemExit(f"[FAIL] {IS_9B_TITLE}.boolean is linked, not a widget — this "
-                         f"script bakes it per variant, so a link makes both sizes run "
-                         f"whatever the upstream produces")
-    workflow[gate_id]["inputs"]["boolean"] = v.is_9b
+    _apply_styles(workflow, v)
 
 
 def _assert_weights(workflow: dict, v: KleinVariant) -> None:
@@ -297,15 +401,18 @@ def build(source_path: Path, out_dir: Path) -> list[Path]:
         _assert_and_bake_wf_type(workflow)
         _apply_variant(workflow, v)
         _assert_weights(workflow, v)
-        # The style rack is asserted on BOTH sizes even though 9B gates it off: the nodes
-        # are still in the 9B graph (Input_is_9b routes around them, it does not delete
-        # them), so a broken rack would still be a broken 9B graph the day styles land.
+        # Re-read the rack AFTER _apply_styles wrote it. This is the check that catches a
+        # size whose style count and trigger-line count disagree, or a leftover weight in
+        # a slot past the last trigger line — both of which produce a plausible wrong
+        # image rather than an error.
         n_styles = _assert_style_rack(workflow)
+        if n_styles != len(v.styles):
+            raise SystemExit(f"[FAIL] {v.out_name}: baked {len(v.styles)} styles but the rack "
+                             f"reads {n_styles} — the slots and the trigger lines disagree")
 
         out_path = out_dir / v.out_name
         out_path.write_text(json.dumps(workflow, indent=2), encoding="utf-8")
-        print(f"  [OK]   {v.out_name} ({len(workflow)} nodes, {n_styles} style LoRAs, "
-              f"is_9b={v.is_9b})")
+        print(f"  [OK]   {v.out_name} ({len(workflow)} nodes, {n_styles} style LoRAs)")
         written.append(out_path)
     return written
 

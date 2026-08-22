@@ -254,7 +254,7 @@
         0
       ],
       "text": [
-        "661",
+        "88",
         0
       ]
     },
@@ -446,8 +446,8 @@
       "lora_name": "None",
       "strength_model": 1,
       "model": [
-        "662",
-        0
+        "101",
+        1
       ]
     },
     "class_type": "MpiLoraModel",
@@ -471,9 +471,9 @@
   },
   "101": {
     "inputs": {
-      "lora_1": "flux2-klein\\styles\\klein4b-doodle_v1.safetensors",
-      "lora_2": "flux2-klein\\styles\\vintage_photo.safetensors",
-      "lora_3": "flux2-klein\\styles\\Flux-Klein-4B-Art_10.safetensors",
+      "lora_1": "flux2-klein\\styles\\Real_Vintage_Photo_klein9b.safetensors",
+      "lora_2": "flux2-klein\\styles\\amano_flux_02.safetensors",
+      "lora_3": "None",
       "lora_4": "None",
       "lora_5": "None",
       "style": [
@@ -488,11 +488,11 @@
   },
   "102": {
     "inputs": {
-      "lora_1": "flux2-klein\\styles\\flux2-klein-4b-lora-muppetshow-style.safetensors",
-      "lora_2": "flux2-klein\\styles\\flux2-klein-4b-lora-Fluxtoon-Style.safetensors",
-      "lora_3": "flux2-klein\\styles\\flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors",
-      "lora_4": "flux2-klein\\styles\\Anime_new_mecha_klein4b.safetensors",
-      "lora_5": "flux2-klein\\styles\\robloxchibidoll_lora_klein4b_000002200.safetensors",
+      "lora_1": "flux2-klein\\styles\\DisneyMidCenturyKlein9b.safetensors",
+      "lora_2": "flux2-klein\\styles\\PULPKHOR.safetensors",
+      "lora_3": "flux2-klein\\styles\\New_Mecha_Klein9B.safetensors",
+      "lora_4": "flux2-klein\\styles\\robloxchibidoll_lora_klein9b.safetensors",
+      "lora_5": "flux2-klein\\styles\\klein9b-doodle_v1.safetensors",
       "style": [
         "103",
         0
@@ -506,7 +506,7 @@
   "103": {
     "inputs": {
       "selector": 0,
-      "triggers": "display the characters as Muppets, muppetshow style\ncartoon illustration, Fluxtoon Style\nJojosoStyle\nAn anime-style digital illustration\nchibi style\nRedraw this image in the most clumsy, scribbly, and utterly pathetic way possible.\nvintage photo 1920's style\nArtistic and aesthetic composition",
+      "triggers": "Disney Mid-Century Animation\nvintage comic illustration, PULPKHOR style, distressed paper textures, scratches, and faint halftone printing dots\nAn anime-style digital illustration\nchibi style\nRedraw this image in the most clumsy, scribbly, and utterly pathetic way possible.\nvintage photo, 1960's style\namano watercolor and ink sketch with loose, gestural brushwork",
       "strength_model": 1,
       "strength_clip": 0,
       "model": [
@@ -750,7 +750,7 @@
       "string_a": "refcontrol, color",
       "delimiter": ", ",
       "string_b": [
-        "661",
+        "88",
         0
       ]
     },
@@ -863,7 +863,7 @@
         0
       ],
       "text": [
-        "661",
+        "88",
         0
       ]
     },
@@ -1826,7 +1826,7 @@
         0
       ],
       "text": [
-        "661",
+        "88",
         0
       ]
     },
@@ -1882,7 +1882,7 @@
         0
       ],
       "text": [
-        "661",
+        "88",
         0
       ]
     },
@@ -2206,55 +2206,6 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Mpi If Else"
-    }
-  },
-  "660": {
-    "inputs": {
-      "boolean": true
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Input_is_9b"
-    }
-  },
-  "661": {
-    "inputs": {
-      "true": [
-        "8",
-        0
-      ],
-      "false": [
-        "88",
-        0
-      ],
-      "boolean": [
-        "660",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "is 9b"
-    }
-  },
-  "662": {
-    "inputs": {
-      "true": [
-        "27",
-        0
-      ],
-      "false": [
-        "101",
-        1
-      ],
-      "boolean": [
-        "660",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "is 9b"
     }
   }
 }

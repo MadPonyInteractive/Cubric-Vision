@@ -6,6 +6,7 @@
     "comfy_workflows/scripts/workflow_generation/klein_t2i_template.json",
     "comfy_workflows/raw/klein_t2i_template.json",
     "comfy_workflows/klein_t2i.json",
+    "comfy_workflows/klein_9b_t2i.json",
     "comfy_workflows/display/klein-9b.webp",
     "js/data/modelConstants/models.js",
     "js/data/modelConstants/modelDeps.js",

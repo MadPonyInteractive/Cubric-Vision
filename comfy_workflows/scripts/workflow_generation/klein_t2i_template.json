@@ -254,7 +254,7 @@
         0
       ],
       "text": [
-        "661",
+        "88",
         0
       ]
     },
@@ -446,8 +446,8 @@
       "lora_name": "None",
       "strength_model": 1,
       "model": [
-        "662",
-        0
+        "101",
+        1
       ]
     },
     "class_type": "MpiLoraModel",
@@ -750,7 +750,7 @@
       "string_a": "refcontrol, color",
       "delimiter": ", ",
       "string_b": [
-        "661",
+        "88",
         0
       ]
     },
@@ -863,7 +863,7 @@
         0
       ],
       "text": [
-        "661",
+        "88",
         0
       ]
     },
@@ -1826,7 +1826,7 @@
         0
       ],
       "text": [
-        "661",
+        "88",
         0
       ]
     },
@@ -1882,7 +1882,7 @@
         0
       ],
       "text": [
-        "661",
+        "88",
         0
       ]
     },
@@ -2206,55 +2206,6 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Mpi If Else"
-    }
-  },
-  "660": {
-    "inputs": {
-      "boolean": false
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Input_is_9b"
-    }
-  },
-  "661": {
-    "inputs": {
-      "true": [
-        "8",
-        0
-      ],
-      "false": [
-        "88",
-        0
-      ],
-      "boolean": [
-        "660",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "is 9b"
-    }
-  },
-  "662": {
-    "inputs": {
-      "true": [
-        "27",
-        0
-      ],
-      "false": [
-        "101",
-        1
-      ],
-      "boolean": [
-        "660",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "is 9b"
     }
   }
 }
