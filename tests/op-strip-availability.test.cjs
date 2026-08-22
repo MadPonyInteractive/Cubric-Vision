@@ -37,13 +37,15 @@ test('every strip-eligible op has a short, and every short is a known verb', asy
         'every short must appear in OP_ORDER or it sorts to the end of the strip');
 });
 
-test('inpaint replaces change/remove: mask-gated, prompt-optional, one op', async () => {
+test('inpaint replaces change/remove: mask-gated, instruction-driven, one op', async () => {
     const { commands } = await import('../js/data/commandRegistry.js');
     assert.ok(!commands.change && !commands.remove,
         'change/remove are retired — inpaint covers both (deprecated in operationRegistry, not here)');
-    // Prompt-optional is what lets ONE op do both jobs: with a prompt it replaces
-    // the masked area, empty it erases and fills. Flip this and removal is gone.
-    assert.strictEqual(commands.inpaint.promptRequired, false);
+    // Both jobs go through ONE door now: an instruction. This asserted `false` until
+    // MPI-598 put inpaint on LanPaint — the model sees the source through
+    // ReferenceLatent, so the empty-prompt erase path has nothing to act on and was
+    // measured doing nothing. Removal is a prompt ("remove the tattoo"), not an absence.
+    assert.strictEqual(commands.inpaint.promptRequired, true);
     assert.strictEqual(commands.inpaint.requiresMask, true);
 });
 

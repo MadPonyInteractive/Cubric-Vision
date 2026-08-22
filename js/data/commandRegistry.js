@@ -532,13 +532,18 @@ export const commands = {
         // Denoise is the whole story here and the copy has to say so (MPI-367): the
         // op is localised img2img, not a fixed "refiner". At the 0.30 default it
         // polishes what is under the mask; past ~0.50 it drifts far enough to add or
-        // replace, which is Inpaint's job done with the source still visible. The
+        // replace, which is Inpaint's job done on a brake. Since MPI-598 Inpaint sees
+        // the source too (LanPaint + ReferenceLatent), so the difference between the
+        // two ops is the STARTING LATENT, not what the model can see: Detail keeps the
+        // masked pixels and denoise decides how far off them it goes, Inpaint noises
+        // them out entirely and rebuilds against the reference. The
+
         // resolution and multi-mask lines are the user's own hard-won practice, not
         // theory — a small mask on a small image has too few pixels to rebuild, and
         // bare nouns are what stops a multi-mask run hallucinating.
         help: {
             body: [
-                'Localised image-to-image: only the masked area is regenerated, and unlike Inpaint the model CAN see what is under your mask. How far it strays from that is set by Denoise, not by the prompt.',
+                'Localised image-to-image: only the masked area is regenerated, and the masked pixels are KEPT as the starting point. How far it strays from them is set by Denoise, not by the prompt — that Denoise brake is what separates this from Inpaint, which always rebuilds the masked area in full.',
                 'Around the 0.30 default it refines what is already there. Above 0.50 it replaces — paint a bare area and it will put your prompt there even if nothing like it is in the picture.',
                 'The prompt is OPTIONAL, and empty is the safe choice when you have masked several things at a low denoise. If you do prompt with several masks, just NAME each masked thing — "chair, tree, pen". Bare nouns keep every area on its own subject; sentences invite the model to invent.',
                 'It needs pixels to work with. A small mask on a small image has too little to rebuild and comes out weak — upscale first if you want a big change there. Size also sets how much denoise you need: a small image moves far on a modest denoise, a big one needs more to move as far. Small image + big mask = big changes; big image + small mask = refinement.',
@@ -572,31 +577,35 @@ export const commands = {
     // Masked regeneration. Replaces the old `change` + `remove` pair, which were
     // never wired to a workflow or a model's supportedOps (deprecated in
     // operationRegistry rather than deleted, so a legacy history item still
-    // validates). One op covers both jobs: with a prompt it replaces the masked
-    // area, with an EMPTY prompt it erases and fills from the surroundings — hence
-    // promptRequired:false. First wired by FLUX.2 Klein 4B; the other flux editors
+    // validates). One op covers both jobs, but since MPI-598 swapped the fake-inpaint
+    // crop path for LanPaint both go through the SAME door: an instruction. The
+    // empty-prompt erase contract is DEAD — the model now sees the source through
+    // ReferenceLatent, so an empty prompt has nothing to act on and the area comes
+    // back roughly as it was. First wired by FLUX.2 Klein 4B; the other flux editors
     // plug into the same op.
     inpaint: {
         label: 'Inpaint',
         short: 'inpaint',
-        info: 'Inpaint — regenerate the masked area; leave the prompt empty to erase it',
-        // The prompt is the ROUTER for this op, not a flavour knob: an empty prompt runs
-        // the erase path, any text runs the fill path. That makes this guide load-bearing
-        // — a user who never reads it can still paint-and-go (empty = erase), but the
-        // "never write an instruction to delete" line is the one that stops the classic
-        // failure of "remove the tattoo" painting a tattoo. If a model ever routes on
-        // trigger WORDS rather than emptiness (Klein's MpiTextContains plan), the word
-        // list belongs in a `byModel` override here, beside the behaviour it describes.
+        info: 'Inpaint — regenerate the masked area from an instruction',
+        // Rewritten from the user's own runs (MPI-367), and every claim here reverses
+        // the pre-LanPaint copy: the model DOES see under the mask, an empty prompt does
+        // NOTHING, and a delete instruction is now the CORRECT way to erase rather than
+        // the classic failure. The one that is easy to lose: the bare word "remove" is
+        // not enough either — it was what the app used to inject on an empty prompt, and
+        // it was measured doing nothing on the LanPaint path. The instruction has to name
+        // its target. Head removal is the proven case (a Character Sheet prerequisite).
         help: {
             body: [
-                'The model can NOT see what is under your mask. It generates that area from scratch, using only the pixels around it for context.',
-                'Leave the prompt EMPTY to remove the masked object, or write what you would like to see there instead.',
-                'Never write an instruction to delete something. The model reads your words as things to DRAW — "remove the tattoo" risks painting a tattoo.',
+                'The model DOES see what is under your mask. It gets the whole picture as reference and regenerates only the masked pixels, so the new content lands in the lighting, style and perspective already there.',
+                'It needs an INSTRUCTION. Write what you want in the masked area, or tell it what to take out — both are prompts, and an empty one leaves it with nothing to do.',
+                'To erase, NAME the thing: "remove the tattoo", "remove the arm". The bare word "remove" is not enough — it has to know what.',
             ],
             examples: [
-                { prompt: '', note: 'Removes the masked object, filling from the surrounding area.' },
+                { prompt: 'remove the tattoo', note: 'Erases it and fills from what surrounds the mask.' },
+                { prompt: 'remove the head', note: 'Whole body parts go too — this is the proven case.' },
                 { prompt: 'hat', note: 'Generates a hat in the masked area.' },
-                { prompt: 'remove the tattoo', bad: true, note: 'Reads as "draw a tattoo". Use an empty prompt to erase.' },
+                { prompt: '', bad: true, note: 'No instruction, nothing to do. The area comes back much as it was.' },
+                { prompt: 'remove', bad: true, note: 'Remove WHAT? On its own the word does nothing.' },
             ],
         },
         progressLabel: 'Inpainting',
@@ -606,11 +615,15 @@ export const commands = {
             { key: 'inputImage', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         requiresMask: true,
-        promptRequired: false,
+        // TRUE since MPI-367: the LanPaint path has no empty-prompt behaviour left to
+        // offer, so an empty prompt is a no-op rather than a second way to run the op.
+        // Metadata only — nothing in the UI gates on this flag — but it is read as the
+        // record of whether empty is a supported path, and here it no longer is.
+        promptRequired: true,
         // Style rack, gated per model as everywhere else (modelShowsStyleRack). Klein's
         // master graph carries it on this branch too. NOTE it styles the PATCH, not the
-        // picture: useful when inpainting new content, unhelpful on a plain erase where
-        // the fill should match its surroundings — so leave it on None to remove.
+        // picture: useful when inpainting new content, unhelpful on a removal where the
+        // fill should match its surroundings — so leave it on None to take something out.
         components: ['styleSelect', 'stylization'],
     },
     // NVIDIA PiD generative upscaler. One workflow, internal 4-path VAE selector
