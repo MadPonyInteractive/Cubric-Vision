@@ -864,6 +864,24 @@
  */
 
 /**
+ * @typedef {Object} MpiFaderProps (Primitive — js/components/Primitives/MpiFader)
+ * @property {'horizontal'|'vertical'} [orientation='horizontal'] - Travel direction
+ * @property {number} [min=-60] - dB at the bottom of the travel (the off position)
+ * @property {number} [max=12] - dB at the top of the travel
+ * @property {number} [step=0.1] - Fader resolution in dB
+ * @property {number} [value=0] - Initial dB
+ * @property {number} [unity=0] - dB the detent snaps to, and the fill's anchor
+ * @property {number} [snap=1] - Snap tolerance in dB either side of unity; 0 disables
+ * @property {boolean} [showValue=true] - Show the numeric dB readout
+ *
+ * A FADER scale, not a meter scale: 0 dB is unity, the neutral middle, with cut
+ * below and boost above — where MpiLevelMeter's 0 dBFS is the ceiling. The
+ * detent applies to pointer drags only; keyboard steps are exact requests.
+ * Emits input/change with { db, gain }. Instance methods: setDb(db) (quiet),
+ * getDb(), getGain() — 0 at the bottom of the scale, else 10^(dB/20).
+ */
+
+/**
  * @typedef {Object} MpiSpinnerProps
  * @property {'sm'|'md'|'lg'} [size='md'] - Spinner size
  * @property {'primary'|'secondary'|'light'|'dark'} [variant='primary'] - Color variant

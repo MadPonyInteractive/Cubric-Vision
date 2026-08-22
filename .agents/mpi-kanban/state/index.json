@@ -144,7 +144,7 @@
    "id": "17696fe8-38b0-4691-9269-d069b2bfa851",
    "path": ".agents/mpi-kanban/state/handoffs/17696fe8-38b0-4691-9269-d069b2bfa851.json",
    "task_card": "MPI-573",
-   "status": "open",
+   "status": "closed",
    "generated_at": "2026-08-22T14:49:00Z"
   },
   {

@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "17696fe8-38b0-4691-9269-d069b2bfa851",
   "generated_at": "2026-08-22T14:49:00Z",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "MPI-573 - Record button moved, recording rate cut, MpiLevelMeter built",
     "branch": "master"
@@ -70,5 +70,7 @@
       "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js"
     ]
   },
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/17696fe8-38b0-4691-9269-d069b2bfa851.json and use mpi-continue to continue from where we left off. Last session closed both notes Fabio raised on the mic recorder (MPI-573): the gallery Record button moved into MpiGalleryGrid's toolbar beside the volume, and the recording dropped to 48 kHz mono WAV - the old 96 kHz was an upsample of 48 kHz opus, so it was 4x the bytes for no information, and the container was never the problem. Reviewing that shipped a third piece: MpiLevelMeter (a dBFS level meter Primitive, horizontal and vertical), a Test microphone plate in Settings, a dB gain slider, and a dev-gallery card. All verified live and by suite. The NEXT job is a new one: build MpiFader - a dB gain control with a unity (0 dB) snapping detent - for Fabio's planned vocals+foley mixing Flow. Ask him whether to card it separately first, since MPI-573 is the recorder card and this is not it. The distinction that produced it matters and is in the plan: a fader is 0 dB = unity, a level meter is 0 dBFS = the ceiling, and the meter's zones are correct as built."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/17696fe8-38b0-4691-9269-d069b2bfa851.json and use mpi-continue to continue from where we left off. Last session closed both notes Fabio raised on the mic recorder (MPI-573): the gallery Record button moved into MpiGalleryGrid's toolbar beside the volume, and the recording dropped to 48 kHz mono WAV - the old 96 kHz was an upsample of 48 kHz opus, so it was 4x the bytes for no information, and the container was never the problem. Reviewing that shipped a third piece: MpiLevelMeter (a dBFS level meter Primitive, horizontal and vertical), a Test microphone plate in Settings, a dB gain slider, and a dev-gallery card. All verified live and by suite. The NEXT job is a new one: build MpiFader - a dB gain control with a unity (0 dB) snapping detent - for Fabio's planned vocals+foley mixing Flow. Ask him whether to card it separately first, since MPI-573 is the recorder card and this is not it. The distinction that produced it matters and is in the plan: a fader is 0 dB = unity, a level meter is 0 dBFS = the ceiling, and the meter's zones are correct as built.",
+  "closed_at": "2026-08-22T15:59:05Z",
+  "closure_note": "MpiFader built, verified and closed as MPI-604 (Fabio confirmed in-app). MPI-573 half B (MEDIA_TYPE.AUDIO save path) stays open - still blocked on a Flow that emits audio."
 }

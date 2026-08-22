@@ -19,6 +19,7 @@ import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { MpiSpinner } from '../components/Primitives/MpiSpinner/MpiSpinner.js';
 import { MpiProgressBar } from '../components/Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiLevelMeter } from '../components/Primitives/MpiLevelMeter/MpiLevelMeter.js';
+import { MpiFader } from '../components/Primitives/MpiFader/MpiFader.js';
 import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
 import { MpiDropdown } from '../components/Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiRadioGroup } from '../components/Primitives/MpiRadioGroup/MpiRadioGroup.js';
@@ -342,6 +343,40 @@ function mountAll() {
             info: 'Drive the meters: {value} dB',
         });
         drive.on('input', ({ value }) => meters.forEach(m => m.el.setDb(value)));
+    });
+
+    // ── MpiFader (Primitive) ─────────────────────────────────────────────────────
+    // The meter's counterpart, and the other dB scale: 0 dB here is UNITY, the
+    // middle of the travel, not the ceiling. The live readout is what makes the
+    // detent demonstrable — the value it reports is the snapped one, so parking
+    // the handle near zero shows an exact 0.0, not a 0.3 that merely looks right.
+    mount('preview-fader', () => {
+        const host = slot('preview-fader');
+        host.innerHTML = `
+            <div style="display:flex;width:100%;gap:2rem;align-items:stretch;">
+                <div data-dev-mount="vertical" style="height:200px;"></div>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1.5rem;justify-content:center;">
+                    <div data-dev-mount="horizontal"></div>
+                    <div data-dev-mount="bare"></div>
+                    <div data-dev-mount="nosnap"></div>
+                    <div data-dev-mount="readout"
+                         style="font-family:'JetBrains Mono',monospace;font-size:var(--t-xs);color:var(--ink-3);">
+                        move a fader
+                    </div>
+                </div>
+            </div>
+        `;
+        const readout = qs('[data-dev-mount="readout"]', host);
+        const report = (which) => ({ db, gain }) => {
+            readout.textContent = `${which}: ${db.toFixed(1)} dB  ·  gain ${gain.toFixed(3)}`;
+        };
+        [
+            [MpiFader.mount(qs('[data-dev-mount="vertical"]', host), { orientation: 'vertical' }), 'vertical'],
+            [MpiFader.mount(qs('[data-dev-mount="horizontal"]', host), {}), 'horizontal'],
+            [MpiFader.mount(qs('[data-dev-mount="bare"]', host), { showValue: false }), 'no readout'],
+            // snap:0 is the control case — same fader, no detent, to feel the difference.
+            [MpiFader.mount(qs('[data-dev-mount="nosnap"]', host), { snap: 0 }), 'snap off'],
+        ].forEach(([fader, which]) => fader.on('input', report(which)));
     });
 
     // ── MpiVideoSurface + MpiVideoControlBar (split player) ──────────────────────

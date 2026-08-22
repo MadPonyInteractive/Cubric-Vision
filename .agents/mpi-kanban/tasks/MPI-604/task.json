@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-604",
+  "title": "MpiFader Primitive - a dB gain control with a unity (0 dB) snapping detent",
+  "description": "The counterpart to MpiLevelMeter, split out of MPI-573. Fader scale is 0 dB = unity; meter scale is 0 dBFS = ceiling. Needed by the planned vocals+foley mixing Flow, but ships as a standalone Primitive.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-22T15:15:09Z",
+  "updated_at": "2026-08-22T15:57:01Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

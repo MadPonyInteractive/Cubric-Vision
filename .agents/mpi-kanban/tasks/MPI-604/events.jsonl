@@ -1,0 +1,9 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-604","at":"2026-08-22T15:15:09Z","actor":"claude","type":"task.created","summary":"MpiFader Primitive - split out of MPI-573; the fader is the level meter's counterpart and a different dB scale."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-604","at":"2026-08-22T15:15:09Z","actor":"claude","type":"task.moved","from":"todo","to":"doing","summary":"Implementation started."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-604","at":"2026-08-22T15:15:09Z","actor":"claude","type":"checklist.updated","summary":"Derived 4 items from plan.md phase titles."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-604","at":"2026-08-22T15:40:19Z","actor":"claude","type":"validation.updated","summary":"Built and measured: eslint clean, npm test 680 pass, 11 live probe assertions on a real mouse drag. Two native-range thumb-inset defects caught and fixed."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-604","at":"2026-08-22T15:40:19Z","actor":"claude","type":"checklist.updated","summary":"All four phases checked off; Fabio's eyes added as the remaining item."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-604","at":"2026-08-22T15:40:19Z","actor":"claude","type":"task.updated","summary":"maturity in-progress -> validating (verify mode user-ux)."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-604","at":"2026-08-22T15:40:19Z","actor":"claude","type":"attention.required","summary":"Needs Fabio to look at the fader in the dev component gallery."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-604","at":"2026-08-22T15:57:01Z","actor":"claude","type":"attention.cleared","summary":"Fabio reviewed the fader in the dev component gallery."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-604","at":"2026-08-22T15:57:01Z","actor":"claude","type":"task.moved","from":"doing","to":"done","summary":"Closed on Fabio's confirmation: \"looks good, clear separation from normal sliders\". Automated gates already passed."}

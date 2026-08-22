@@ -1,0 +1,211 @@
+/* MpiFader — dB gain fader (MPI-604).
+   Geometry comes from three custom properties JS writes per move:
+   --mpi-fader-pos (the handle), --mpi-fader-lo + --mpi-fader-len (the fill,
+   anchored at unity), plus the static --mpi-fader-unity (the tick). One set of
+   numbers drives both orientations; only the axis they map to changes. */
+
+.mpi-fader {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    min-width: 0;
+    user-select: none;
+}
+
+/* Track above, number below — same stacking as MpiLevelMeter, so a channel
+   strip can mount a fader and a meter side by side and their readouts line up.
+   Height comes from the consumer; a vertical fader is only as tall as whatever
+   it is sized into. */
+.mpi-fader--vertical {
+    flex-direction: column;
+    height: 100%;
+}
+
+.mpi-fader__track {
+    position: relative;
+    background: var(--surface-2);
+    border-radius: var(--r-pill);
+}
+
+.mpi-fader--horizontal .mpi-fader__track {
+    flex: 1 1 auto;
+    height: 6px;
+    min-width: 120px;
+}
+
+.mpi-fader--vertical .mpi-fader__track {
+    flex: 1 1 auto;
+    width: 6px;
+    min-height: 6rem;
+}
+
+/* ── Unity tick ───────────────────────────────────────────────────────────── */
+
+/* Marks a dB position, so it is static — it must no more follow the value than
+   the meter's colour boundaries do. It sits UNDER the handle: at rest the cap
+   covers it, which is the "parked at unity" read. */
+.mpi-fader__tick {
+    position: absolute;
+    background: var(--ink-4);
+    pointer-events: none;
+}
+
+.mpi-fader--horizontal .mpi-fader__tick {
+    left: var(--mpi-fader-unity);
+    top: -3px;
+    bottom: -3px;
+    width: 1px;
+    transform: translateX(-50%);
+}
+
+.mpi-fader--vertical .mpi-fader__tick {
+    bottom: var(--mpi-fader-unity);
+    left: -3px;
+    right: -3px;
+    height: 1px;
+    transform: translateY(50%);
+}
+
+/* ── Fill ─────────────────────────────────────────────────────────────────── */
+
+/* Anchored at unity and drawn toward the value, so its LENGTH is the amount of
+   cut or boost. A fill from the bottom of the scale would make a fader at unity
+   look most-of-the-way full, which says nothing about the gain. */
+.mpi-fader__fill {
+    position: absolute;
+    background: var(--accent-heat);
+    border-radius: var(--r-pill);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.mpi-fader--horizontal .mpi-fader__fill {
+    top: 0;
+    bottom: 0;
+    left: var(--mpi-fader-lo);
+    width: var(--mpi-fader-len);
+}
+
+.mpi-fader--vertical .mpi-fader__fill {
+    left: 0;
+    right: 0;
+    bottom: var(--mpi-fader-lo);
+    height: var(--mpi-fader-len);
+}
+
+/* ── Handle ───────────────────────────────────────────────────────────────── */
+
+/* A fader cap: narrow along the travel axis, wide across it. A round dot reads
+   as a generic slider; the axis of the cap is what says which way this moves. */
+.mpi-fader__handle {
+    position: absolute;
+    background: var(--ink-1);
+    border-radius: var(--r-2);
+    box-shadow: 0 0 0 0.5px oklch(0 0 0 / 0.35);
+    pointer-events: none;
+    z-index: 3;
+    transition: transform var(--t-fast) var(--ease);
+}
+
+.mpi-fader--horizontal .mpi-fader__handle {
+    top: 50%;
+    left: var(--mpi-fader-pos);
+    width: 10px;
+    height: 22px;
+    transform: translate(-50%, -50%);
+}
+
+.mpi-fader--vertical .mpi-fader__handle {
+    left: 50%;
+    bottom: var(--mpi-fader-pos);
+    width: 22px;
+    height: 10px;
+    transform: translate(-50%, 50%);
+}
+
+.mpi-fader--horizontal:hover .mpi-fader__handle {
+    transform: translate(-50%, -50%) scale(1.12);
+}
+
+.mpi-fader--vertical:hover .mpi-fader__handle {
+    transform: translate(-50%, 50%) scale(1.12);
+}
+
+/* ── Input surface ────────────────────────────────────────────────────────── */
+
+/* Transparent, on top, sized past the track so the whole cap is grabbable. The
+   native control is the input surface only — everything visible above is ours,
+   which is what lets one set of percentages drive both orientations. */
+.mpi-fader__input {
+    -webkit-appearance: none;
+    appearance: none;
+    position: absolute;
+    background: transparent;
+    outline: none;
+    cursor: pointer;
+    margin: 0;
+    z-index: 4;
+}
+
+.mpi-fader--horizontal .mpi-fader__input {
+    inset: -10px 0;
+    width: 100%;
+}
+
+/* Vertical drag needs a vertical control: `writing-mode` is the supported way
+   since `appearance: slider-vertical` was removed. `direction: rtl` puts the
+   minimum at the BOTTOM, which is where the fill and handle above expect it. */
+.mpi-fader--vertical .mpi-fader__input {
+    inset: 0 -12px;
+    height: 100%;
+    writing-mode: vertical-lr;
+    direction: rtl;
+}
+
+/* Zero on BOTH axes, and both zeros are load-bearing. A native range reserves
+   half a thumb at each end, so its 0-100% spans (track - thumb): the drawn cap
+   and the unity tick then sit up to 12px from the value the pointer actually
+   set, and at unity the cap misses the detent mark it is meant to be parked on.
+   The inset is along the TRAVEL axis, which is the thumb's width when
+   horizontal and its HEIGHT under `writing-mode: vertical-lr` — so zeroing one
+   fixes one orientation and leaves the other silently wrong. Measured both
+   ways: at 24px, clicking 12px in read -60 dB horizontally, and a quarter-way
+   up read -45 dB instead of -42 with the cap 7px off the pointer.
+   Dragging does not depend on the thumb having a size; the input's own box is
+   the hit target. */
+.mpi-fader__input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0;
+    height: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+/* The handle precedes the input in the DOM, so a sibling combinator cannot
+   reach it; :has() on the track can. */
+.mpi-fader__track:has(.mpi-fader__input:focus-visible) .mpi-fader__handle {
+    box-shadow: 0 0 0 2px var(--accent-frost);
+}
+
+/* ── Readout ──────────────────────────────────────────────────────────────── */
+
+/* Fixed width and tabular figures in BOTH orientations. Dragging changes this
+   every frame, and a readout whose width follows its digits makes the fader —
+   and in a strip the whole column — twitch under the hand. */
+.mpi-fader__value {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    white-space: nowrap;
+    flex-shrink: 0;
+    /* Room for the widest string the scale can produce: "-60.0 dB". */
+    min-width: 4.5rem;
+    text-align: right;
+}
+
+.mpi-fader--vertical .mpi-fader__value {
+    text-align: center;
+}

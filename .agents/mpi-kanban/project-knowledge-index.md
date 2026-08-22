@@ -180,7 +180,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 
 - **Read first:** `docs/PROJECT.md`
 - **Memory:** `project_product_scope.md`, `project_madpony_identity_folder.md`, `project_release_model_github_only.md`, plus the *Cubric Studio hub end-state* and *Connector ownership* bullets in `MEMORY.md` § Cross-project (both were standalone files until the 2026-08-10 prune, MPI-521; the hub's own `c:/AI/Mpi/Cubric-Studio/README.md` is the source of truth)
-- **Notes:** Vision = image/video only; audio + prompt-gen are sibling Cubric apps.
+- **Notes:** Vision = image, video **and audio**. Audio folds in as Flows, not as a sibling app (MPI-573, 2026-08-17) — LTX 2.3 already emits video+audio jointly and takes reference audio in. Cubric Audio, if it is ever built, is a **DAW supporting Vision's audio**, not a general audio app. Prompt-gen is the one capability that does live in a sibling (Cubric Prompt).
 
 ### Conventions / gotchas
 
@@ -247,7 +247,7 @@ Topic-to-files map. Match the topic closest to the current task and read the lis
 - `CLAUDE.md`, `AGENTS.md`
 - `docs/PROJECT.md` — orientation hub
 - `.claude/rules/dos_and_donts.md` — universal baseline
-- **Memory:** `project_product_scope.md` (Vision = image/video only; audio + prompt-gen are sibling apps)
+- **Memory:** `project_product_scope.md` + `project_audio_folds_into_vision.md` (Vision = image/video/audio; audio ships as Flows. Cubric Audio = a DAW supporting Vision, if built at all. Prompt-gen is the sibling app)
 
 ### Agent workflow & coordination (kanban, claims, close-out, sub-agents)
 

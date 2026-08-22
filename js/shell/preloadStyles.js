@@ -12,6 +12,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Primitives/MpiSpinner/MpiSpinner.css',
   'js/components/Primitives/MpiProgressBar/MpiProgressBar.css',
   'js/components/Primitives/MpiLevelMeter/MpiLevelMeter.css',
+  'js/components/Primitives/MpiFader/MpiFader.css',
   'js/components/Primitives/MpiInput/MpiInput.css',
   'js/components/Primitives/MpiFolderDrop/MpiFolderDrop.css',
   'js/components/Primitives/MpiDropdown/MpiDropdown.css',
