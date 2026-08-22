@@ -350,3 +350,68 @@ fp8, Leg A is forced to fp8 and that asymmetry must be recorded.
 
 Record each run into `research/results.md` (that file does not exist yet - create it from the row
 format in `scenarios.md`).
+
+---
+
+## Plan Drift (cont. 3) - 2026-08-22, THE SCENARIO WAS WRONG THREE TIMES
+
+The single largest drift on this card. S2 - the axis the card exists for - was corrected three
+times by Fabio while the bench was running, and each correction voided the runs before it.
+
+1. **`wf_type` 5 -> `wf_type` 4 with a mask.** The mask is what makes an edit localised. wf5 is
+   the INPAINT branch: it green-fills the mask and depends on node **259**, a
+   `flux2-klein-4b-outpaint` LoRA at strength 1.1, to regenerate that fill. 4B cannot apply to a
+   9B base and the bench had bypassed it (README edit #8), so every wf5 run was the branch minus
+   the component it is built around. The surviving green was the missing LoRA - not a weight
+   verdict, not seed fragility, not a step count. The whole inherited "fault 2" story was an
+   artifact of benching the wrong branch.
+2. **Text inpainting -> REFERENCE placement.** Placing a man described by a prompt was never the
+   ask. The test is placing the man from **image 2** (node 236) into the plate carrying the mask.
+3. **Ellipse -> BOX mask.** A rectangle proves two things at once (no colour shift AND correct
+   placement) because a straight edge shows a seam an oval hides. It immediately turned what the
+   oval showed as a soft halo into a hard rectangular patch of the reference background.
+
+A fourth fault was in the INSTRUMENT: the `guard` green test required `r<80` and scored a visibly
+half-green frame at 0.00%. It now tests green dominance (`g - max(r,b) > 60`).
+
+## Current State (2026-08-22, handoff 2)
+
+**Legs A, B and C are all RUN on the corrected scenario.** 48 rows in
+`research/results.md` SS CURRENT MATRIX (6 arms x 3 scenarios x 3 seeds), sectioned
+CURRENT / SUPERSEDED / VOID so a voided row cannot be read as a verdict.
+`research/verdict.md` exists and answers Q1, Q2, Q3.
+
+Measured and settled:
+
+- **Q1 format** - INT8 ships, fp8 not needed, 9B fits: 14.2-15.9 GB peak on a 16380 MiB card,
+  FLAT across all six arms. The turbo LoRA costs nothing measurable in VRAM.
+- **Q2 turboToggle is DEAD.** `base` is 6-7x slower than distilled (115 s vs 20 s on a
+  whole-image edit, 192 s vs 28 s on a placement) AND scores 0/3 on reference placement - it
+  ignores image 2 and copies the plate own subject into the mask. LoRA strengths 0.7 and 0.35
+  score WORSE than 1.0, so there is no monotonic quality/speed axis to expose as a slider.
+- **Q3** - one checkpoint, not two. base+turbo@1.0 ties distilled at 2/3 placement but needs
+  8 steps / 32-48 s against 4 steps / 20-28 s, plus a second file to host and version.
+- **Q4 KV - NOT ANSWERED, and deliberately not banked.** `FluxKVCache` is not in the graph, so
+  the KV arm ran with no caching path active; the measured 1.00x is what a disabled cache
+  predicts. The `kv` WEIGHT is fine - 2/3 placement, same VRAM, same wall clock as distilled.
+
+Reference placement is **~2/3 at best on every 9B weight tested** and the failure is SILENT:
+the `guard` column reads `green 0.00% / clip 0.1%` on all 18 S2 rows, including the nine where
+the arm placed the wrong person or nothing at all. Placement was scored by EYE off
+`research/S2_contact_sheet.png`. A rectangular seam is present on essentially every arm, so it
+is a workflow property, not a weight discriminator.
+
+## Plan Drift (cont. 4) - the verdict is ON HOLD, and base is NOT discarded
+
+Fabio, 2026-08-22, after reading the verdict:
+
+- **Do not act on the recommendation yet.** `verdict.md` carries a STATUS banner saying so.
+- **Base stays a candidate** pending two repos he found - an inpainting approach for Klein 9B,
+  unproven, but on the repo own claims broadly applicable across the app.
+- **Q4 is re-scoped, not dropped.** Install the KV node and retest KV SPEED, but only in a shape
+  where KV can show: **edit only (`wf_type` 4, NO mask), MULTIPLE references.** Agreed shape is
+  THREE images - an empty background plate plus two different people - placing both people into
+  the plate, `distilled` vs `kv`, a few runs. A single-reference test is not worth running.
+- **The localised edit is finished** and is not part of the KV leg.
+
+**Next action: create the KV leg, then ask Fabio for THE Ripple** (the repos to review).

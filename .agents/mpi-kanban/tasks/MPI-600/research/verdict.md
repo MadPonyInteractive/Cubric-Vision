@@ -10,6 +10,26 @@ corrections landed on the S2 scenario mid-bench, each of which voided the runs b
 
 ---
 
+## STATUS: PROVISIONAL — do NOT act on this yet (Fabio, 2026-08-22)
+
+The recommendation below is **not final and base is NOT discarded**, on Fabio's call after the
+first draft. Two things must land first:
+
+1. **The KV leg has to be re-run properly, and with MORE THAN ONE reference image.** `FluxKVCache`
+   was never in the graph, so KV's caching path has never executed. A single-reference test is not
+   worth running — KV caches *reference* tokens, so the speedup scales with reference count.
+   Shape agreed with Fabio: **edit only (`wf_type` 4, NO mask — the localised edit is not part of
+   this), three images — an empty background plate plus two different people — placing both people
+   into the plate.** `distilled` vs `kv`, a few runs. That is where KV is supposed to shine and it
+   is the only shape that shows the difference clearly.
+2. **Two repos Fabio found — an inpainting approach for Klein 9B — have to be reviewed.** They are
+   unproven but, on the repo's own claims, could apply broadly across the app. They may change the
+   weight picture entirely, which is precisely why **base stays on the table until they are read**.
+
+Everything in §1–§3 below is measured and stands as data. What is on hold is the *decision*.
+
+---
+
 ## 1. Which format ships — INT8 ConvRot or fp8? Does 9B fit a 16 GB card?
 
 **INT8 ships. fp8 is not needed. It fits, with ~500–800 MiB of headroom, and the margin is the
@@ -108,11 +128,16 @@ carries **two** images (plate + reference), so the applicable BFL figure may be 
 
 ---
 
-## Recommendation for MPI-598
+## Recommendation for MPI-598 — PROVISIONAL, see the STATUS banner at the top
 
-**Ship one checkpoint: `flux-2-klein-9b-int8-convrot.safetensors` (distilled), 4 steps, cfg 1.0.**
-No turbo LoRA, no `turboToggle`, no base weight. INT8, natively loadable, ~15 GB peak on a 16 GB
-card.
+**On the evidence gathered so far:** ship one checkpoint,
+`flux-2-klein-9b-int8-convrot.safetensors` (distilled), 4 steps, cfg 1.0. No turbo LoRA, no
+`turboToggle`. INT8, natively loadable, ~15 GB peak on a 16 GB card.
+
+**But do not wire this yet.** `base` is deliberately still a candidate pending the two repos, and
+the KV leg still has to run for real with multiple references. What is settled is that the
+**`turboToggle` shape is dead** — that conclusion rests on base and the three LoRA strengths being
+measured against each other, and no repo or KV result changes it.
 
 Open items MPI-598 should carry, none of which block the weight choice:
 
