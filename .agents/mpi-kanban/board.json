@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 605,
+  "next_id": 606,
   "columns": {
     "todo": [
+      "MPI-605",
       "MPI-603",
       "MPI-602",
       "MPI-596",
@@ -101,8 +102,15 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-22T15:57:01Z",
+  "updated_at": "2026-08-22T20:00:42Z",
   "events": [
+    {
+      "at": "2026-08-22T19:48:36Z",
+      "type": "task.created",
+      "task": "MPI-605",
+      "actor": "opus",
+      "note": "Created in todo (blocked). Evaluate core's ModelAttentionBackend / comfy kitchen attention as the installable replacement for the four times SageAttention was rejected - Vision never had Sage at all, and most of its models are int8. Absent from pinned core v0.31.0 - blocked until the next engine bump."
+    },
     {
       "at": "2026-08-16T04:20:25Z",
       "type": "task.moved",
