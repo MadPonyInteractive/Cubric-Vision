@@ -10,7 +10,7 @@
   "goal": {
     "original": "Evaluate LanPaint as a replacement for the fake-inpainting localised edit, then implement Klein 9B and update Klein 4B alongside it.",
     "status": "in_progress",
-    "summary": "LanPaint is evaluated and PROVEN on Klein 4B distilled (the shipped checkpoint) and on 9B - carded as MPI-602, not started. MpiNodes shipped AGPL-3.0 as registry 1.2.7 (MPI-601, effectively finished, sitting at validating). The 9B assets are all downloaded and hash-verified. What remains is MPI-598 itself: wire the 9B checkpoint and update 4B in the same pass."
+    "summary": "LanPaint is evaluated and PROVEN on Klein 4B distilled (the shipped checkpoint) and on 9B - carded as MPI-602, not started. MpiNodes shipped AGPL-3.0 as registry 1.2.7 (MPI-601, effectively finished, sitting at validating). The 9B assets are all downloaded and hash-verified. What remains is MPI-598 itself: wire the 9B checkpoint and update 4B in the same pass. Fabio also deprecated the outpaint LoRA this session; the delete is authorised but blocked on ordering - see the first constraint."
   },
   "plan": {
     "file": null,
@@ -28,7 +28,8 @@
       "Converter: the 5-row 9B swap table in the research file",
       "Update Klein 4B in the same pass",
       "Op help copy: removals are now user-specified (see MPI-367)",
-      "Decide what outpaint does on 9B - no 9B outpaint LoRA exists"
+      "Decide what outpaint does on 9B - no 9B outpaint LoRA exists",
+      "Deprecate flux2-klein-4b-outpaint properly: remove from all four in-repo consumers, keep the dep entry marked DEPRECATED, ship, THEN delete from R2/HF (Fabio has authorised the eventual delete - the ordering is the constraint, not the decision)"
     ]
   },
   "task_card": {
@@ -54,11 +55,12 @@
       "Turbo and KV are both dead (MPI-600). The bench template no longer contains any turbo node."
     ],
     "constraints": [
+      "OUTPAINT LoRA IS DEPRECATED BUT MUST NOT BE DELETED YET. Fabio deprecated flux2-klein-4b-outpaint (LanPaint replaces the fill/removal path it existed for) and removed it from his BENCH template. It is still live in the repo in four places: comfy_workflows/klein_t2i.json #259, comfy_workflows/flow_character_sheet.json #708 (strength 1.1), and both raw/ twins. flow_character_sheet is a SECOND consumer unrelated to inpainting - the Character Sheet flow (MPI-504, shipped) needs a real answer, not a deletion. models.js:969 still lists klein-lora-outpaint as 'baked; mandatory for the fill/removal path' and Klein shipped in 1.4.0, so deleting the R2 object turns every released user's Klein install into a 404 (add-model playbook step 8 names this exact failure). Correct order: strip every in-repo consumer -> mark the dep '// DEPRECATED' but KEEP the entry (step 3: _orphanedDepIds iterates DEPS, so deleting the entry strands the weight on existing disks forever) -> ship a release -> only then delete from R2 and HF.",
       "The saved bench template klein_t2i_template.json is a 4B template MID-EDIT - UNETLoader and CLIPLoader already hold 9B weights while Input_is_9b is false and both LoRA loaders still point at 4B files. Do not read it as a finished 9B template.",
-      "There is NO 9B outpaint LoRA. flux2-klein-4b-outpaint has no identified equivalent, and a 4B LoRA cannot apply to a 9B model. LoraLoaderModelOnly loads the file even at strength 0.",
       "On HuggingFace the resolve-URL ETag is a CDN etag, NOT the LFS sha256. Use POST /api/models/{repo}/paths-info/main and read lfs.oid, or a good download reads as corrupt.",
       "CivitAI is UK-region-blocked (HTTP 000 bare). Anything from there needs the VPN on, and the VPN also skews the system clock - check gh api rate_limit Date before trusting timestamps.",
-      "MPI-601 is finished but still sits in doing at validating - it needs mpi-end-session to close, not more work."
+      "MPI-601 is finished but still sits in doing at validating - it needs mpi-end-session to close, not more work.",
+      "There is still NO 9B outpaint LoRA, and with the 4B one deprecated the 9B arm simply has no outpaint weight. Decide what outpaint does on 9B rather than assuming a swap exists."
     ],
     "files_to_read_first": [
       ".agents/mpi-kanban/tasks/MPI-598/brief.md",
