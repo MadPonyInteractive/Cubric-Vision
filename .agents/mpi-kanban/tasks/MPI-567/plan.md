@@ -44,6 +44,17 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 - **683 tests pass.** 3 new assertions; the CLIP title and the empty-path guard are both
   mutation-checked RED, with the file restored byte-for-byte and the suite re-run clean.
 
+**🔴 `/mpi-add-flow` WAS NEVER INVOKED, AND THAT IS PROBABLY WHY THERE ARE BUGS (2026-08-22).**
+The wiring was done by reading the playbook by hand, and only part of it. **READ:** `README.md`,
+`01-descriptor-and-ops.md`, `any-of-models.md`, `ui/paint-gizmo.md`, this flow's own
+`existing-flows/` doc. **NEVER OPENED:** `02-media-io.md` (media slot routing, path-reading input
+nodes, self-gating outputs, multi-output capture), `03-storage-and-reuse.md` (input files into the
+`.preview-assets` store, the sidecar `flowId`/`flowInputs`, reuse routing),
+`04-overlay-and-shell.md` (`MpiBaseFlow` / `MpiFlowLibrary`, install progress, Ctrl+Enter, overlay
+z-order, the dev gate) and `05-verify.md` (the Definition of Done itself). **Anything those four
+require is undone and unchecked.** Run the skill and treat its checklist as the bug list before
+debugging any individual symptom.
+
 **🔴 FABIO HAS SEEN THE LIVE UI AND HAS MORE FEEDBACK — ASK HIM FIRST (2026-08-22).** He opened
 the Flow Library, reported *"a few issues with the UI, something's missing, and some bugs"*, and
 deferred the detail to a fresh session because context was high. **The specifics were never
