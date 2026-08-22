@@ -1,0 +1,83 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "53efd5be-bdeb-4b28-8c5c-a843faa135c0",
+  "generated_at": "2026-08-22T07:20:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-567 session 5 - the blend was never a graph; built and proved it",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Wire the scribble-to-object Flow with /mpi-add-flow, using the settings table in plan.md.",
+    "status": "blocked",
+    "summary": "The wiring did not start, and could not have. The previous handoff said 'wiring only', but bench-graph.json is stage 1 ALONE - the blend had only ever run as a Python harness over a SEPARATE klein_t2i dispatch. This session merged them into one 74-node graph and proved it beats the three-step bench route on all five plates. The app half is now blocked on a different thing: STEP_KINDS has no `paint` kind, and this flow's whole premise is the user drawing on their photo."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+    "completed": [
+      "MERGED RUNTIME GRAPH BUILT AND PROVEN - scribble stage 1 + the Klein relight arm + the composite-back tail, 74 nodes, ONE dispatch, ~16s. Staged on the bench as `MPI-567_scribble_to_object_BLEND` (previews: stamped / relit / region); repo copy `.agents/mpi-kanban/tasks/MPI-567/bench-graph-blend.json`",
+      "Beats the three-step bench route's seam on EVERY plate: sun 0.42 (was 0.91), overcast 1.03 (1.13), night 0.45 (0.33), indoor 1.09 (2.53), anime 0.93 (1.93). All under the ~2 'invisible' line, and the blend measurably moves the object on all five (objdelta 7.13-25.58)",
+      "Klein arm confirmed faithful POSITIVELY - its relight moves the frame 18.08 mean abs vs session 3's 17.88 on the same plate. The arm was extracted from klein_t2i.json's wf_type=4 path using the execution_cached two-run trick, not by guessing at 14 MpiIfElse switches",
+      "Three silent translation traps found and written into docs/playbooks/add-flow/blending-into-a-photo.md so MPI-596 does not re-pay them (see key_decisions)",
+      "Found that the published ring/fill table came from the SILHOUETTE region, not the shadow-aware one the settings table names - the two were never crossed. Resolved with a 100px proximity gate",
+      "Session 5 runners preserved in D:/WORK/Images/Outputs/mpi567/runners/ (build_graph.py, prove.py, gated.py, metric.py, regions.py, repro_s3.py, stage_bench.py, sheet.py, diag.py)"
+    ],
+    "pending": [
+      "BUILD THE `paint` STEP KIND - a new Organism + a STEP_MEDIA adapter. This is the blocker; everything below waits on it",
+      "Fabio's 9B thread: measure whether Klein 9B's localised edit really does not re-grade. If it holds, the relight AND the whole composite-back tail become unnecessary - see constraints",
+      "Then the app half: the op in its 4 files, the FlowDef with the TWO-slot requiredModels + modelParams, the declared fields incl. the MANDATORY Input_Control_strength slider, step copy saying TONAL (not 'structured') plus the ~80-96px minimum-ink warning",
+      "Extend tests/flow-model-choice.test.cjs to this flow - it pins that every modelParams key names a title that EXISTS in the graph, which is what catches a five-arm Input_Base_Model typo",
+      "Fabio exports comfy_workflows/raw/flow_scribble_object.json from the staged bench graph - `raw/` is HIS, that is the hard rule",
+      "Live-run + reuse round trip per docs/playbooks/add-flow/05-verify.md",
+      "Graphics (tile + hero) via /mpi-flow-graphics once the flow runs",
+      "At close-out: heal the card's acceptance list - it still says 'Canny for a clean structured drawing', and canny's niche is a TONAL drawing",
+      "THEN MPI-596 (Object Stamp Flow) - the other consumer of blending-into-a-photo.md"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-567",
+    "title": "Scribble-to-object Flow - user draws on the image, ControlNet + SDXL renders it in",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-567/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      "brief": ".agents/mpi-kanban/tasks/MPI-567/brief.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-567/validation.md",
+      "bench_graph": ".agents/mpi-kanban/tasks/MPI-567/bench-graph-blend.json"
+    }
+  },
+  "next_action": {
+    "description": "Build the `paint` step kind. STEP_KINDS (js/components/Organisms/MpiBaseFlow/stepKinds.js) registers box / preview / crop / fields only - its own comment says 'mask, light, mood... as they are built'. Bind through STEP_MEDIA exactly as `crop` does, returning the paint layer as a File (RGBA PNG at photo resolution, the layer ALONE, not the composite), so the FlowDef stays manifest-expressible. Do NOT build a second brush - docs/painting.md owns the RGBA paint layer and the shared brush dab, and docs/masking-undo.md is mandatory reading because any new code mutating a paint layer MUST record an UndoStack entry or it is a silent hole in Ctrl+Z. Read docs/playbooks/add-flow/ui/carousel-frame.md and crop-gizmo.md first - crop is the worked example of a kind that returns media rather than a param.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "TRAP 1, and it cost the indoor plate its entire composite: ComfyUI's ImageBlend `difference` is `img1 - img2` CLAMPED at 0, NOT abs(). A single call returns an EMPTY mask wherever image2 is brighter, and the flow reads as though the blend simply did nothing (indoor came back changed by 0.18/255). Screen both directions together - one of the pair is zero at every pixel-channel and screen(x,0)==x, so it IS abs().",
+      "TRAP 2: session 3's Python thresholds LUMINANCE (convert('L')); a graph can only threshold a CHANNEL. Max-of-three-channels OR'd is strictly more permissive and drags the global re-grade in (sun bg_mean 11.24 vs luminance 10.34, night 6.53 vs 4.52). GREEN alone carries 0.587 of luminance and tracked it to two decimals on every plate - so the signed-off 12/40 thresholds keep meaning what they meant.",
+      "TRAP 3: a high threshold does NOT separate shadow from re-grade. The doc's rule says the object and its shadow are a large LOCAL change, but the threshold only encodes 'large'. Klein also makes large changes far from the object - on the sun plate bg_mean plateaus at 8.3 even at threshold 150, so no threshold rejects it. The missing half is LOCAL: intersect strong-change with a 100px dilation of the silhouette. Ungated sun ring 11.09; gated 0.71.",
+      "The published ring/fill table in blending-into-a-photo.md is the SILHOUETTE region (compose_back). The settings table names the SHADOW-AWARE region, which was only ever judged BY EYE on shadow quality. Nobody crossed them. Ungated shadow-aware costs 2-3x more movement in the user's untouched photo (sun bg_mean 10.34 vs 3.45). The 100px gate is what makes shadow-aware shippable; drop it to 60 if Fabio wants the photo protected harder, and it is ONE constant.",
+      "No median filter in the graph. The only median on the bench is RES4LYF's `Image Median Blur`, which asserts on a float 3-channel image (ksize%2==1 && dims<=2) AND is a custom node the app does not pin. A core ImageBlur before the threshold despeckles the same way.",
+      "The blend instruction node is deliberately NOT titled Input_*. The flow HAS a user prompt (Input_Positive, the object), and _buildParams emits Input_Positive on every run - titling the blend text node the same way would silently overwrite the baked BLEND_PHYSICS2 with the user's object prompt.",
+      "Klein's relight arm was reduced faithfully, not guessed: all six Input_Lora_* are None, style selector 0, NSFW LoRA strength resolves to 0 for a fixed prompt with no NSFW words, and is_Turbo=True gives steps 4 / cfg 1.0. Node 167 ImageScaleToTotalPixels(1.0MP, /16) is the real cause of the documented 'Klein snaps to /32' dimension change, which is why the tail rescales to base size before compositing."
+    ],
+    "constraints": [
+      "FABIO'S OPEN THREAD: Klein 9B's LOCALISED edit reportedly does NOT re-grade (results arriving from the MPI-600 / 9B line, commit e1b667a7 '9B INT8 fits'). This CONTRADICTS blending-into-a-photo.md's headline - 'stop looking for a model that returns a clean patch' - which was measured on Boogu, Klein 4B and Qwen x3; 9B was never in that matrix. If it holds, the relight and the entire composite-back tail become unnecessary and Input_Edit_Model just gains klein-9b (MPI-598's job). DO NOT swap the route on the eye call: `border` coverage reads 0.034 on the WORST rectangle and the night plate under-reports because it is dark. Measure ring_step + fill on the same five plates against the same stamps - everything needed is already on disk in D:/WORK/Images/Outputs/mpi567/runners/. Under ~2 ring is invisible; Klein 4B localised scored 21.45 on sun. ONE run settles it.",
+      "The doc edit for that 9B finding was deliberately NOT made - mpi-handoff forbids touching rules/docs/memory. blending-into-a-photo.md currently states the opposite conclusion emphatically, so heal it at close-out once the measurement exists.",
+      "`raw/` IS FABIO'S TO EXPORT - hard rule, never hand-author comfy_workflows/raw/. The proven graph is staged on the bench store as `MPI-567_scribble_to_object_BLEND` for him to open and save; the repo copy bench-graph-blend.json is a record, not the shipping file.",
+      "A SECOND SESSION IS LIVE IN THIS TREE and owns js/data/modelConstants/models.js, js/utils/icons.js, MPI-573, MPI-600 and js/components/Compounds/MpiAudioRecorder/. Do NOT stage any of them. It also pushes - it carried this session's commit up with its own, so check `git rev-list --count origin/master..HEAD` before assuming anything is unpushed.",
+      "Push is USER-AUTHORIZED here (CLAUDE.md, Git and Commits) even though project-profile.md frontmatter says push_policy: auto. CLAUDE.md wins - do not push unless asked.",
+      "Windows Python from the Bash tool: write a .py FILE and run it by path. Heredocs AND backslash-newline continuations are both blocked by a guard hook, and printing non-ASCII needs sys.stdout.reconfigure(encoding='utf-8') or it dies mid-script with a cp1252 charmap error.",
+      "Bench is 8188 (it was free and is where all of this ran), app engine is 48188, and :3000 is the USER's app - never drive it. Use `npm run app:isolated` for your own instance.",
+      "tests/orphan-sweep.test.cjs:48 FAILS on this machine and is NOT yours - localModelsCheck reads real machine state rather than the fixture root. Full suite is 671/672 because of it; do not chase it."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      "js/components/Organisms/MpiBaseFlow/stepKinds.js",
+      "docs/playbooks/add-flow/ui/carousel-frame.md",
+      "docs/playbooks/add-flow/ui/crop-gizmo.md",
+      "docs/painting.md",
+      "docs/masking-undo.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/53efd5be-bdeb-4b28-8c5c-a843faa135c0.json and use mpi-continue to resume MPI-567 (Scribble-to-object Flow), which is in `doing`. Session 5 discovered the previous handoff's 'wiring only' was wrong: bench-graph.json was stage 1 ALONE, and the blend had only ever run as a Python harness over a separate klein_t2i dispatch. That is now FIXED - a single merged 74-node graph (scribble stage 1 + the Klein relight arm + the composite-back tail, one dispatch, ~16s) is built, proven on all five plates, and beats the old three-step route's seam on every one (sun 0.42, overcast 1.03, night 0.45, indoor 1.09, anime 0.93). Do not rebuild or re-litigate it; it is staged on the bench as `MPI-567_scribble_to_object_BLEND` and copied to bench-graph-blend.json, and exporting comfy_workflows/raw/ from it is FABIO'S step, not yours. Your next action is to build the `paint` step kind, which is what now blocks the app half: STEP_KINDS registers only box / preview / crop / fields, and this flow's premise is the user DRAWING on their photo. Bind it through STEP_MEDIA the way `crop` does, returning the paint layer alone as an RGBA File, and reuse the existing painting system rather than writing a second brush - docs/painting.md and docs/masking-undo.md are mandatory, because an unwired paint-layer mutation is a silent hole in Ctrl+Z. Separately, Fabio reports Klein 9B's LOCALISED edit does not re-grade, which would make the relight and the whole composite tail unnecessary - it contradicts blending-into-a-photo.md and must be settled with ring_step + fill on the five plates before anything changes, not on an eye call. A second session is live in this tree and owns models.js, icons.js, MPI-573, MPI-600 and MpiAudioRecorder/ - do not stage those, and note it pushes, so check origin before assuming your commits are unpushed."
+}

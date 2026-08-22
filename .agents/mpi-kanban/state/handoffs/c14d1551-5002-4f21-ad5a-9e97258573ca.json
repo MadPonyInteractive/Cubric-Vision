@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "c14d1551-5002-4f21-ad5a-9e97258573ca",
   "generated_at": "2026-08-22T05:02:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-599 session - the per-slot model picker the scribble flow was blocked on",
     "branch": "master"
