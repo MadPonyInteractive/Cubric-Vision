@@ -1,0 +1,76 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "feb13ce7-74db-456d-9661-f2b8f74fe0dc",
+  "generated_at": "2026-08-22T05:03:10Z",
+  "status": "open",
+  "session": {
+    "name": "Klein 9B research -> MPI-600 bench card, weights pulled, bench workflow built",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Work out what to integrate for FLUX.2 Klein 9B - base vs turbo LoRA vs distilled vs the new KV variant - and set up a bench to decide it.",
+    "status": "in_progress",
+    "summary": "MPI-600 created with brief, plan and a ready bench workflow. All five weights are on disk (INT8 ConvRot: base 9B, distilled 9B, 9b-kv, Qwen3-8B encoder, plus the turbo LoRA). Nothing has been generated yet - the bench itself is the next session's job, starting at Leg 0."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-600/plan.md",
+    "completed": [
+      "MPI-600 carded with brief.md + plan.md (3 legs x 4 stress scenarios x 3 seeds)",
+      "Format decided: INT8 ConvRot, not fp8 or bf16 - the custom-node question is closed, six int8_convrot weights already run in production and node_lock pins no INT8 node",
+      "All four INT8 weights downloaded to G:\\CubricModels (37.7GB)",
+      "Turbo LoRA sourced from anyMODE's own HF repo (no Civitai, no VPN), sha256 verified against CivArchive",
+      "KV weight identity resolved by measurement: same size, DIFFERENT sha256 from distilled - a real variant, not a repackage",
+      "Bench workflow built from the shipped Klein 4B template: research/klein_9b_bench.json + research/README.md",
+      "Trap found and fixed in the copy: node 38's 4B NSFW LoRA is unconditional in the model chain and loads even at strength 0"
+    ],
+    "pending": [
+      "Leg 0 - confirm INT8 9B loads and runs 1024x1024 on the 4060 Ti, record peak VRAM, fix the CLIP and VAE choice",
+      "Confirm klein_9B_Turbo_r128 applies to an INT8 ConvRot base at all (rank 128 on a quantised base is unproven)",
+      "Build the 4 stress scenarios + 3 fixed seeds into research/scenarios.md",
+      "Leg A - base vs base+turbo swept by strength (1.0, 0.7, 0.25-0.5)",
+      "Leg B - base+turbo vs distilled",
+      "Leg C - 9b-kv vs the leg-B winner, edit ops only, needs the FluxKVCache node added",
+      "research/verdict.md, then post it onto MPI-598"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-600",
+    "title": "Bench FLUX.2 Klein 9B: base vs turbo LoRA vs distilled vs KV - pick the shipped weight",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-600/",
+    "links": {
+      "brief": ".agents/mpi-kanban/tasks/MPI-600/brief.md",
+      "plan": ".agents/mpi-kanban/tasks/MPI-600/plan.md",
+      "research": ".agents/mpi-kanban/tasks/MPI-600/research/"
+    }
+  },
+  "next_action": {
+    "description": "Move MPI-600 todo -> doing (it needs checklist.md + files.json), start the standalone bench on port 8188, load research/klein_9b_bench.json and run Leg 0: one 1024x1024 edit on flux-2-klein-9b-int8-convrot + qwen_3_8b_int8_convrot, recording peak VRAM. Read research/README.md first - it holds every node id and the 4B-LoRA trap.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "INT8 ConvRot for everything, decided by Fabio - fp8 only as a fallback if 9B INT8 fails where five other models do not.",
+      "Reuse the shipped Klein 4B template rather than author a new graph (Fabio). The copy is research/klein_9b_bench.json.",
+      "bf16 is off the bench entirely - ~29GB against a 16380 MiB RTX 4060 Ti, and not a format we would ship.",
+      "Do not bench on a rented 5090; a 5090 number describes a card our users do not have.",
+      "Klein 4B is out of scope as a control - different model, different licence, already shipped."
+    ],
+    "constraints": [
+      "EVERY LoRA baked into klein_t2i.json is a 4B LoRA, and LoraLoaderModelOnly loads the file even at strength 0. Node 38 (NSFW) is unconditional in the model chain - already bypassed in the bench copy, but never re-enable it on a 9B arm.",
+      "Input_is_Turbo (node 52) drives NUMBERS ONLY - steps/cfg/negative-conditioning. There is no turbo-LoRA loader node. The turbo LoRA rides Input_Lora_1 (node 99), which is a free MpiLoraModel slot already in the model chain.",
+      "The turbo LoRA is the DISTILLATION DELTA (Klein-distilled minus Klein-base, LoRA-decomposed), so strength is a continuous base-to-distilled dial and 'base+turbo@1.0 = distilled' is the premise, not a finding. Leg A sweeps strength rather than toggling.",
+      "KV only helps ops carrying a REFERENCE image - t2i gains nothing. BFL's 2.5x is 4 refs at 512; single-ref at 1024 is 1.40x, so record ref count and output resolution on every KV row.",
+      "No Qwen3-8B dependency exists and none can be promoted - qwen3-4b-clip is a different size, boogu-qwen3vl-8b-clip is a vision-language model at type 'boogu'. MPI-598 owes a brand-new ~9.4GB dep.",
+      "Outputs go to D:\\WORK\\Images\\Outputs\\klein_9b, sub-foldered per arm. The bench's SaveImage prefix is relative to D:\\WORK\\Images\\Outputs, NOT <ComfyUI>\\output.",
+      "Timing traps: execution_cached makes same-seed+same-graph wall clocks a lie; run 1 after a weight swap is not warm; confirm the resolution per series.",
+      "The board is co-owned right now - peer sessions are live on MPI-567, MPI-573 and MPI-599. board.json and events.jsonl need the build-the-blob recipe in .claude/rules/git.md, not `git commit --only`."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-600/research/README.md",
+      ".agents/mpi-kanban/tasks/MPI-600/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-600/brief.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/feb13ce7-74db-456d-9661-f2b8f74fe0dc.json and use mpi-continue to pick up MPI-600, the FLUX.2 Klein 9B bench. The card is still in todo and nothing has been generated yet - the previous session did the research, pulled every weight, and built the bench workflow. All five weights are on disk in G:\\CubricModels (INT8 ConvRot: flux-2-klein-base-9b-int8-ConvRot, flux-2-klein-9b-int8-convrot, flux-2-klein-9b-kv_int8_convrot, text_encoders/qwen_3_8b_int8_convrot, and loras/klein_9B_Turbo_r128). The bench graph is .agents/mpi-kanban/tasks/MPI-600/research/klein_9b_bench.json, a copy of the shipped Klein 4B template with the 9B swaps applied; its operating manual is research/README.md and you must read that before editing the JSON, because every LoRA baked into the original is a 4B LoRA. Move MPI-600 todo -> doing (writing checklist.md and files.json), then run Leg 0 on the standalone bench at port 8188: one 1024x1024 edit to confirm INT8 9B loads and to record peak VRAM on the 16380 MiB RTX 4060 Ti. Outputs go to D:\\WORK\\Images\\Outputs\\klein_9b."
+}
