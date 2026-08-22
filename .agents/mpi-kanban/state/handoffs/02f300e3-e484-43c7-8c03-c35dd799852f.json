@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "02f300e3-e484-43c7-8c03-c35dd799852f",
   "generated_at": "2026-08-22T18:40:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-567 session 8 - the box seam is a DC offset on smooth ground, and one node fixes it",
     "branch": "master"
