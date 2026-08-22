@@ -1,7 +1,9 @@
 # Klein 9B style LoRAs — candidate shortlist + download manifest
 
-Research for the styles gap `9b.md` § "Styleless, on purpose" leaves open. **Nothing here is
-wired yet** — this is the search result plus everything needed to download without a VPN.
+Research behind the Klein 9B style rack. **All seven SHIPPED** — wired, baked into
+`klein_9b_t2i.json`, on R2 and mirrored to HF. What survives here is the provenance: how each
+weight was found without a VPN, its licence, and its hash. Current state lives in
+[`docs/models/klein/9b.md`](../../../../../docs/models/klein/9b.md) § Seven styles.
 
 > **No dates in this file.** It was compiled with the VPN on, so the clock is untrustworthy
 > (`CLAUDE.md` → "VPN + the skewed clock"). Stamp it from a trusted clock if it ever matters.
@@ -128,4 +130,8 @@ Per `9b.md`, the style rack NODES are already in the 9B graph — `Input_is_9b` 
 Shipping styles is a value change plus dep entries, not a rebuild: flip `styleLoras`, populate
 `styleOps` / `styleLoraLabels` / `styleLoraImages`, and keep the index alignment contract in
 `loraDeps.js` (dep ↔ label ↔ image ↔ the `MpiMath` gate ↔ the `MpiPromptList` trigger line).
-An R2 upload is still required — these URLs are for the authoring bench, not for users.
+**Uploaded and verified 2026-08-22.** All seven are on R2 at
+`vision/models/loras/flux2-klein/styles/` and mirrored to the HF backstop repo
+`Mad-Pony-Interactive/cubric-studio` (flat, at root) — R2 Content-Length byte-exact and
+every HF LFS oid equal to the dep sha256. The URLs above are the upstream SOURCES; the
+deps ship the R2 url + the HF mirrorUrl.

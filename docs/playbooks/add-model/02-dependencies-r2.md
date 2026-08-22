@@ -224,6 +224,15 @@ rclone --config "$CONF" lsf -R "cubric-r2:cubric-models/vision/models/<type>/" -
 curl -sIL "https://models.cubric.studio/vision/models/<type>/file.safetensors" | grep -i content-length
 ```
 
+**TRAP — a COMMENT is not evidence that something is or is not hosted.** That same HEAD is
+the answer months later, not only at upload time. On 2026-08-22 a ModelDef comment saying
+Klein 9B's "four weights are not on R2" was repeated to the user as fact and then carried
+forward into a freshly written comment — while all four had been up for some time, every
+`Content-Length` byte-exact. Hosting state changes without the note beside it changing, so
+a doc, a code comment or a handoff claiming EITHER direction is a prompt to check, never
+the check. One `curl -sI` per URL settles it, and a byte-exact `Content-Length` also tells
+a complete upload from a truncated one.
+
 **TRAP — every KILLED upload leaves an orphaned multipart session in R2.** Each
 time you stop + restart an rclone upload (e.g. to re-apply `--bwlimit`), the
 aborted run leaves an incomplete multipart upload behind. These are NOT the final

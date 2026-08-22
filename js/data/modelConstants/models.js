@@ -1016,11 +1016,10 @@ export const MODELS = [
     // difference in labels and trigger text — so generate_klein.py bakes the whole rack
     // (slots + trigger lines) per size instead, from the same single template.
     //
-    // WHAT IS STILL OUTSTANDING before this can ship: the nine `klein-9b-style-*.webp`
-    // picker cards do not exist yet (a missing image renders a placeholder card, so the
-    // rack is testable without them), and neither the four weights nor the seven style
-    // LoRAs are on R2. Both are ship-prep, not test-prep — the app tests locally against
-    // whatever is already in the models root.
+    // HOSTING: the four weights ARE on R2 — verified by HEAD, every Content-Length
+    // byte-exact against its dep `bytes` (2026-08-22). The seven style LoRAs went up in
+    // the same pass. Do not trust a comment for this; the check is one `curl -sI` per URL
+    // and this note was wrong once already.
     {
         id: 'klein-9b',
         // 'balanced' against 4B's 'low' — the two are genuine SIZE TIERS of one model, the

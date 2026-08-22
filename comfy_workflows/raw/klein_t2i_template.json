@@ -10308,8 +10308,8 @@
         1,
         2,
         "Image First",
-        "LanPaint KSampler. For more info, visit https://github.com/scraed/LanPaint. If you find it useful, please give a star ⭐️!",
-        "🖼️ Image Inpainting",
+        "LanPaint KSampler. For more info, visit https://github.com/scraed/LanPaint. If you find it useful, please give a star \u2b50\ufe0f!",
+        "\ud83d\uddbc\ufe0f Image Inpainting",
         "lanpaint_star_button"
       ]
     },
@@ -11186,18 +11186,18 @@
         628.945134826994
       ],
       "size": [
-        210,
-        165.07350138973413
+        430,
+        430
       ],
       "flags": {},
       "order": 103,
       "mode": 0,
       "inputs": [],
       "outputs": [],
-      "title": "4b Styles Mapping",
+      "title": "Styles Mapping (4B + 9B)",
       "properties": {},
       "widgets_values": [
-        "0 = No Style\n1 = Muppets\n2 = Cartoon\n3 = Jojo\n4 = Anime\n5 = Chibi\n6 = Doodle\n7 = Vintage\n8 = Aesthetic"
+        "STYLES ARE BAKED PER SIZE - this rack is NOT what ships.\n\ngenerate_klein.py writes both the lora slots and the trigger lines for whichever\nsize it is building, so whatever sits here is only the shape. Editing a slot by\nhand changes nothing in klein_t2i.json / klein_9b_t2i.json. Edit the `styles`\ntuples in generate_klein.py instead, then re-run it.\n\n4B (8 styles)          9B (7 styles - DIFFERENT SET)\n0 = No Style           0 = No Style\n1 = Muppets            1 = Storybook   (Disney mid-century)\n2 = Cartoon            2 = Comic       (pulp/vintage, not Jojo)\n3 = Jojo               3 = Anime\n4 = Anime              4 = Chibi\n5 = Chibi              5 = Doodle\n6 = Doodle             6 = Vintage     (1960s-80s, 4B's is 1920s)\n7 = Vintage            7 = Watercolour\n8 = Aesthetic\n\nDo NOT assume 9B mirrors 4B. Only anime/chibi/doodle are the same creator's 9B\nbuild; muppets and jojo have no 9B weight in existence, and the rest are other\ncreators' weights, which is why the labels differ.\n\nThere is exactly ONE Input_Style_Selector, deliberately. Injection matches the\ntitle EXACTLY, so a second selector (or one renamed _2) is never driven and the\npicker silently does nothing; _assert_style_rack refuses to build such a graph.\nDetails: docs/models/klein/9b.md"
       ],
       "color": "#432",
       "bgcolor": "#653"
