@@ -23,6 +23,8 @@
 | White-vs-green hint background | **DECIDED — WHITE** | green is a silent total failure, see § The green trap |
 | Model swap on two arms | **DONE** 2026-08-21 | `Input_Base_Model` swapped between SDXL Realistic and ILL Anime — see § The model swap |
 | Blend pass | **DONE** 2026-08-22 | whole-image relight → composite back, five plates + a tiny ladder. [../blending-into-a-photo.md](../blending-into-a-photo.md) |
+| **Merged runtime graph** | **BUILT + PROVEN** 2026-08-22 | stage 1 + relight + tail as ONE graph, 74 nodes, one dispatch, ~16s. Beats the three-step route's seam on all five plates. Bench store `MPI-567_scribble_to_object_BLEND`; repo copy `bench-graph-blend.json`. **`raw/` is still Fabio's to export** |
+| `paint` step kind | **DOES NOT EXIST — BLOCKS the app half** | `STEP_KINDS` has `box` / `preview` / `crop` / `fields` only. This flow's premise is the user DRAWING, so it needs one. See § The paint layer |
 | `Input_Control_strength` default | **DECIDED — 0.45–0.60** | 0.8 renders the user's ink as garment detail. See § Control strength |
 | Which arm for which drawing | **DECIDED** | scribble for flat line art, canny for a TONAL drawing. See § Which preprocessor arm |
 | Fabio's sign-off by eye | **GIVEN** 2026-08-22 | *"Compared to what we had previously, these look very good."* |
@@ -174,14 +176,24 @@ copy**, rather than auto-raising strength for a small drawing (which fights § C
 
 ## What the app half still has to settle
 
-- **Where the paint layer comes from.** The graph wants the paint layer ALONE as an RGBA PNG at
-  photo resolution — not the composite. `docs/painting.md` owns per-entry paint persistence;
-  the flow's media I/O hangs off that.
-- **The model picker.** `requiredModels: [[…the five SDXL ids…]]` plus a `modelParams` arm per
-  member swapping `Input_Base_Model`; the graph side is proven (§ The model swap). Read
-  [../any-of-models.md](../any-of-models.md) first, verify each filename against `modelDeps.js`
-  at implementation time, and note the picker renders only when **more than one** member is
-  installed (`flowModelChoices`).
+- **The paint layer needs a step kind that does not exist.** The graph wants the paint layer
+  ALONE as an RGBA PNG at photo resolution — not the composite. `STEP_KINDS`
+  (`js/components/Organisms/MpiBaseFlow/stepKinds.js`) registers `box`, `preview`, `crop` and the
+  frame-native `fields`; its own comment says *"mask, light, mood… as they are built"*. **A flow
+  whose premise is the user DRAWING cannot be declared today.** The shape is a `paint` kind
+  binding through `STEP_MEDIA` (like `crop` does) and returning the layer as a File, so the flow
+  stays manifest-expressible. Do NOT build a second brush: `docs/painting.md` owns the RGBA paint
+  layer, the shared brush dab and the `UndoStack` contract — reuse them, and read
+  `docs/masking-undo.md` first, because any new code mutating a paint layer must record an undo
+  entry or it is a silent hole in Ctrl+Z.
+- **The model picker.** TWO slots, resolved independently (MPI-599):
+  `{ label: 'Image model', models: [the five SDXL ids] }` and
+  `{ label: 'Edit model', models: ['klein-4b'] }`, plus a `modelParams` arm per candidate. The
+  merged graph titles a node for each — `Input_Base_Model` (`CheckpointLoaderSimple`) and
+  `Input_Edit_Model` (`UNETLoader`) — which is the one-title-per-slot rule in
+  [../any-of-models.md](../any-of-models.md). Read that first and verify each filename against
+  `modelDeps.js` at implementation time. The old "renders only when more than one is installed"
+  note is OBSOLETE — MPI-599 removed that gate.
 - **The preprocessor radio.** A declared `radio` driving `Input_Control_Net` — 1 = Scribble for a
   loose doodle or flat line art, 2 = Canny for a **shaded pencil sketch**. The step copy must say
   TONAL, not "structured" (§ Which preprocessor arm).

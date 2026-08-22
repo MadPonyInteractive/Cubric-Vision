@@ -155,6 +155,51 @@ So stage 1, the relight and the composite tail fit in **one graph, one dispatch*
 `capabilities.multiStage` stays false. Confirm each node's input names when authoring — the
 table records existence, not signatures.
 
+### BUILT AND PROVEN, 2026-08-22 — and the translation has three traps of its own
+
+The single merged graph exists (scribble stage 1 + the Klein relight arm + this tail, 74 nodes,
+one dispatch, ~16s). It beats the three-step bench route's published seam on **every** plate:
+
+| plate | merged, one graph | session 3, three steps |
+|---|---|---|
+| sun | **0.42** | 0.91 |
+| overcast | **1.03** | 1.13 |
+| night | 0.45 | 0.33 |
+| indoor | **1.09** | 2.53 |
+| anime | **0.93** | 1.93 |
+
+Each trap below returned a plausible, silent, WRONG result — none errored:
+
+**1. `ImageBlend`'s `difference` is `img1 - img2` CLAMPED at 0, not `abs()`.** So a single call
+returns an EMPTY mask wherever `image2` is the brighter one. This cost the indoor plate its whole
+composite: the region came back changed by 0.18/255 and the flow read as if the blend simply had
+no effect. Screen the two directions together — `screen(x, 0) == x` and one of the pair is zero at
+every pixel-channel, so `ImageBlend(A,B,difference)` → `ImageBlend(B,A,difference)` → `screen` IS
+`abs()`.
+
+**2. The Python thresholds LUMINANCE (`convert("L")`); a graph can only threshold a CHANNEL.**
+Max-of-three-channels (three `ImageToMask` OR'd) is strictly more permissive and drags the global
+re-grade in — sun `bg_mean` 11.24 against luminance's 10.34, night 6.53 against 4.52. **Use the
+GREEN channel alone**: it carries 0.587 of luminance and tracked it to two decimal places on every
+plate, so the calibrated thresholds keep meaning what they meant. Red-only or max does not.
+
+**3. A high threshold alone does NOT separate the shadow from the re-grade.** The rule above says
+the object and its shadow are a *large local* change and the grade a small one — but the threshold
+only encodes "large". Klein also makes large changes far from the object (on the sun plate
+`bg_mean` plateaus at 8.3 even at threshold 150, so no threshold rejects it). The missing half is
+LOCAL: intersect strong-change with a dilation of the silhouette. Gate 100px measured best —
+ungated the sun seam is ring 11.09, gated 0.71.
+
+> **The published ring/fill table above is the SILHOUETTE region** (`compose_back`), not the
+> shadow-aware one. The shadow-aware region was only ever judged by eye, on shadow quality, and
+> the two were never crossed. Measured on session 3's own frames, ungated shadow-aware costs 2–3×
+> more movement in the user's untouched photo (sun `bg_mean` 10.34 vs 3.45). The proximity gate is
+> what makes the shadow-aware region shippable; without it, pick the silhouette.
+
+No median filter. The only median here is RES4LYF's `Image Median Blur`, which asserts on a float
+3-channel image (`ksize % 2 == 1 && dims <= 2`) **and** is a custom node the app does not pin —
+a core `ImageBlur` before the threshold despeckles the same way.
+
 ## Two traps that cost real time
 
 **The edit pass CHANGES DIMENSIONS.** Klein snaps to ÷32 and the two axes do not scale by the

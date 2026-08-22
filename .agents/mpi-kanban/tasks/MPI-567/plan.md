@@ -10,6 +10,55 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 
 ## Current State
 
+**2026-08-22, session 5 — the MERGED RUNTIME GRAPH is built and proven; the app half is BLOCKED
+on a step kind that does not exist.**
+
+Session 4's handoff said "wiring only". That was wrong in a material way, and finding out cost
+this session: **`bench-graph.json` is stage 1 ONLY** (36 nodes, ending at `SaveImage`). The blend
+half had been proven with a PYTHON harness driving a *separate* graph (`klein_t2i.json` at
+`Input_wf_type: 4`) plus PIL compositing. The two halves had never run as one graph — which
+§ Session 3 requires ("ONE dispatch, `multiStage` stays false"), and which the app half cannot be
+tested without, since `flow-model-choice.test.cjs` asserts every `modelParams` key names a title
+that EXISTS in the flow's graph.
+
+**Built it. 74 nodes, one dispatch, ~16s — and it beats the three-step route on every plate:**
+
+| plate | merged (1 graph) | session 3 (3 steps) |
+|---|---|---|
+| sun | **0.42** | 0.91 |
+| overcast | **1.03** | 1.13 |
+| night | 0.45 | 0.33 |
+| indoor | **1.09** | 2.53 |
+| anime | **0.93** | 1.93 |
+
+The Klein arm is faithful, confirmed positively: its relight moves the frame 18.08 mean abs
+against session 3's 17.88 on the same plate. Staged on the bench as
+`MPI-567_scribble_to_object_BLEND` (previews wired: stamped / relit / region); repo copy
+`bench-graph-blend.json`. **`raw/` is still Fabio's to export** — that is the hard rule.
+
+**Three translation traps, each silent and each returning a plausible wrong result** — all now
+written up in `docs/playbooks/add-flow/blending-into-a-photo.md` so MPI-596 does not re-pay them:
+`ImageBlend`'s `difference` CLAMPS at 0 rather than `abs()` (it cost the indoor plate its entire
+composite — the flow read as if the blend did nothing); max-of-channels is not luminance and
+over-selects (green alone tracks it); and a high threshold does NOT separate shadow from re-grade
+without a PROXIMITY gate.
+
+**One finding contradicts the settings table, and it is Fabio's call.** The published ring/fill
+table came from `compose_back` — the SILHOUETTE region — while the settings table names the
+SHADOW-AWARE region, which was only ever judged by eye on shadow quality. They were never crossed.
+Measured on session 3's own frames, ungated shadow-aware costs 2-3x more movement in the user's
+untouched photo (sun `bg_mean` 10.34 vs the silhouette's 3.45). **The 100px proximity gate is what
+resolves it** — it keeps the shadow fix Fabio valued AND beats the silhouette route's seam. That is
+what shipped in the graph; if he wants the photo protected harder, the gate drops to 60.
+
+**THE APP HALF IS BLOCKED: there is no `paint` step kind.** `STEP_KINDS` registers `box`,
+`preview`, `crop` and frame-native `fields` — its own comment reads *"mask, light, mood… as they
+are built"*. This flow's premise is the user DRAWING on their photo, so it cannot be declared
+today. Shape: a `paint` kind binding through `STEP_MEDIA` (as `crop` does) returning the RGBA
+layer as a File, reusing the existing painting system rather than a second brush
+(`docs/painting.md`, and `docs/masking-undo.md` — an unwired mutation is a silent hole in Ctrl+Z).
+That is a new Organism and a briefing-sized decision, not a wiring step.
+
 **2026-08-22, session 4 — nothing was wired. The session went to MPI-599 instead, and that was
 deliberate: the picker this flow needs did not exist yet.** Fabio asked for a model picker per
 PHASE of a flow's graph, and the shipped any-of mechanism could not express it — one pick per

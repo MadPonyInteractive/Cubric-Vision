@@ -13,6 +13,9 @@
     ".agents/mpi-kanban/tasks/MPI-567/brief.md",
     ".agents/mpi-kanban/tasks/MPI-567/plan.md",
     ".agents/mpi-kanban/tasks/MPI-567/files.json",
-    ".agents/mpi-kanban/tasks/MPI-567/bench-graph.json"
+    ".agents/mpi-kanban/tasks/MPI-567/bench-graph.json",
+    "docs/playbooks/add-flow/blending-into-a-photo.md",
+    ".agents/mpi-kanban/tasks/MPI-567/bench-graph-blend.json",
+    "js/components/Organisms/MpiBaseFlow/stepKinds.js"
   ]
 }
