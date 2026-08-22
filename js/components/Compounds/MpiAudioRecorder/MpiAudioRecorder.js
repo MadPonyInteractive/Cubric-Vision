@@ -5,6 +5,9 @@ import { qs, ce, on } from '../../../utils/dom.js';
 import { Storage } from '../../../core/storage.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { encodeWav } from '../../../utils/wavEncoder.js';
+import { uploadMediaFile } from '../../../services/mediaUploadService.js';
+import { state } from '../../../state.js';
+import { Events } from '../../../events.js';
 
 /**
  * MpiAudioRecorder — record the user's microphone into a project audio file (Compound, MPI-573)
@@ -350,4 +353,45 @@ export function showAudioRecorder() {
         rec.el.show();
         observer.observe(document.body, { childList: true, subtree: true });
     });
+}
+
+/**
+ * Record, and land the clip in the current project as a normal audio card.
+ *
+ * A recording is NOT an import: it exists nowhere else, so it takes the same route
+ * a gallery drop takes — `uploadMediaFile` writes the file and its sidecar,
+ * `media:imported` builds the card — rather than a Flow slot's place-and-hash path,
+ * which would fill the slot and leave nothing behind.
+ *
+ * Both entry points (the gallery's Record button and the media picker's mic card)
+ * go through here, so a recording is saved identically whichever surface reached it.
+ *
+ * @returns {Promise<{filePath:string, filename:string, itemId:string, duration:number|null}|null>}
+ *          null if the user backed out, there is no open project, or the save failed.
+ */
+export async function recordAudioIntoProject() {
+    const file = await showAudioRecorder();
+    if (!file) return null;
+
+    const project = state.currentProject;
+    if (!project?.folderPath || !project?.id) {
+        clientLogger.warn('audio-recorder', 'No current project — cannot save the recording');
+        return null;
+    }
+
+    const uploaded = await uploadMediaFile(file, 'audio', project.folderPath, project.id, {
+        filenamePrefix: 'recording', operation: 'recorded',
+    });
+    if (!uploaded) return null;
+
+    Events.emit('media:imported', {
+        url: uploaded.filePath,
+        filename: uploaded.filename,
+        itemId: uploaded.itemId,
+        thumbPath: uploaded.thumbPath,
+        pixelDimensions: uploaded.pixelDimensions,
+        duration: uploaded.duration,
+        mediaType: 'audio',
+    });
+    return uploaded;
 }

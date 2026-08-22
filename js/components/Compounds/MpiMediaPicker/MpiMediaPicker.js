@@ -2,13 +2,10 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { MpiButton, mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { state } from '../../../state.js';
-import { Events } from '../../../events.js';
 import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
-import { showAudioRecorder } from '../MpiAudioRecorder/MpiAudioRecorder.js';
-import { uploadMediaFile } from '../../../services/mediaUploadService.js';
-import { clientLogger } from '../../../services/clientLogger.js';
+import { recordAudioIntoProject } from '../MpiAudioRecorder/MpiAudioRecorder.js';
 
 /**
  * MpiMediaPicker — pick media the project ALREADY holds, or bring one in (Compound)
@@ -217,10 +214,9 @@ export const MpiMediaPicker = ComponentFactory.create({
          *
          * It does NOT go through `onImport`. A recording is not an imported file: the
          * user just made it, it exists nowhere else, and it has to survive as project
-         * media so any later slot (or Flow) can reach it. So it takes the same route a
-         * gallery drop takes — `uploadMediaFile` writes the file and its sidecar,
-         * `media:imported` gives it a gallery card — and only then does it resolve as
-         * a normal PICK, which is what it now is.
+         * media so any later slot (or Flow) can reach it. `recordAudioIntoProject`
+         * saves it exactly as a gallery drop would; only then does it resolve as a
+         * normal PICK, which is what it has become.
          */
         function _buildMicCard() {
             const card = mountButton({
@@ -236,26 +232,8 @@ export const MpiMediaPicker = ComponentFactory.create({
             card.appendChild(icon);
             card.appendChild(label);
             _unsubs.push(on(card, 'click', async () => {
-                const file = await showAudioRecorder();
-                if (!file) return;
-                const project = state.currentProject;
-                if (!project?.folderPath || !project?.id) {
-                    clientLogger.warn('MpiMediaPicker', 'No current project — cannot save recording');
-                    return;
-                }
-                const uploaded = await uploadMediaFile(file, 'audio', project.folderPath, project.id, {
-                    filenamePrefix: 'recording', operation: 'recorded',
-                });
+                const uploaded = await recordAudioIntoProject();
                 if (!uploaded) return;
-                Events.emit('media:imported', {
-                    url: uploaded.filePath,
-                    filename: uploaded.filename,
-                    itemId: uploaded.itemId,
-                    thumbPath: uploaded.thumbPath,
-                    pixelDimensions: uploaded.pixelDimensions,
-                    duration: uploaded.duration,
-                    mediaType: 'audio',
-                });
                 const picked = { filePath: uploaded.filePath, mediaType: 'audio' };
                 props.onPick?.(picked);
                 emit('pick', picked);

@@ -19,6 +19,14 @@
     "docs/component-contracts.md",
     ".agents/mpi-kanban/tasks/MPI-573/plan.md",
     ".agents/mpi-kanban/tasks/MPI-573/files.json",
-    ".agents/mpi-kanban/tasks/MPI-573/validation.md"
+    ".agents/mpi-kanban/tasks/MPI-573/validation.md",
+    "js/utils/wavEncoder.js",
+    "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+    "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.css",
+    "js/services/generationService.js",
+    "js/data/flowsRegistry.js",
+    "js/components/types.js",
+    "js/core/storage.js",
+    "tests/desktop/audio-permission.spec.js"
   ]
 }

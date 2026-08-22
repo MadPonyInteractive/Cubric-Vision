@@ -57,14 +57,32 @@ Per the DoD rule an unrun path is not done. **This half stays `validating` until
 the first audio Flow exercises it** — the music / TTS / voice-clone Flows Fabio
 named on 2026-08-22, none of which are carded yet.
 
-## OPEN — the entry point is not reachable yet
+## Entry points — RESOLVED
 
 The plan put the mic in `MpiMediaPicker` on the grounds that the picker is "the
 single entry point for filling a slot". That is true for **Flow** slots, and no
-Flow declares an audio media group today. The PromptBox's audio slots
-(`inputAudio` on the LTX ops) are filled by DRAG only — the box has no
-click-to-add affordance and never opens the picker.
+Flow declares an audio media group today; the PromptBox's audio slots
+(`inputAudio` on the LTX ops) are filled by DRAG only and never open the picker.
+So as planned, the recorder would have shipped unreachable.
 
-So the recorder is built, wired and proven, but a user cannot reach it yet. A
-second entry point on a surface that exists today is needed, and where it goes is
-Fabio's call — raised with him 2026-08-22.
+Fabio chose the **gallery toolbar** (2026-08-22). A clip lands as an ordinary
+audio card, which the user drags into an LTX audio slot — the workflow audio
+already has. Both entry points funnel through one `recordAudioIntoProject()`, so
+a recording is saved identically whichever surface reached it.
+
+Proven on a second instance (`:50545`), gallery workspace:
+
+| Check | Result |
+|---|---|
+| Record button in the gallery | present, `RECORD`, mic glyph, 97x34 at the grid's top-right |
+| Inside the viewport | yes |
+| `elementFromPoint` at its centre | hits the button — nothing overlays it |
+| Click | recorder dialog opens, one backdrop, idle hint correct |
+
+**Found on the way (pre-existing, left alone):** `.mpi-gallery-block__header`
+never reaches the DOM. `MpiGalleryGrid.mount(el, …)` sets `el.innerHTML`, so the
+block's own template — crumb, filters and sort slots — is wiped at mount. That is
+why the Record bar is its own absolutely-positioned element mounted AFTER the
+grid, rather than the `__sort` slot that looks like it was made for it. Worth a
+card of its own: three header controls exist in markup and CSS and render
+nothing.

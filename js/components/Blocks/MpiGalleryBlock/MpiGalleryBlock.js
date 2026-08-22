@@ -26,7 +26,9 @@ import { state } from '../../../state.js';
 import { Events } from '../../../events.js';
 import { openFlowFromReuse } from '../../../services/flowService.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
-import { ce, qs, gid } from '../../../utils/dom.js';
+import { ce, qs, gid, on } from '../../../utils/dom.js';
+import { mountButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { recordAudioIntoProject } from '../../Compounds/MpiAudioRecorder/MpiAudioRecorder.js';
 import { navigate, PAGE_LANDING, PAGE_GALLERY, PAGE_GROUP_HISTORY } from '../../../router.js';
 import { extractFilenameFromPath, extractAbsPath, downloadMediaFiles, deleteMediaFiles, resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { describeItem } from '../../../utils/describeAction.js';
@@ -75,6 +77,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         const crumbEl = qs('.mpi-gallery-block__crumb', el);
         if (crumbEl) crumbEl.textContent = state.currentProject?.name || '';
 
+
         let groups = state.currentProject?.itemGroups || [];
 
         const _queuePanelPayload = {
@@ -114,6 +117,37 @@ export const MpiGalleryBlock = ComponentFactory.create({
             : [];
 
         const grid   = MpiGalleryGrid.mount(el, { groups: [..._placeholderGroups, ...groups] });
+
+        // ── Record (MPI-573) ──────────────────────────────────────────────────
+        // AFTER the grid mount, never before: `ComponentFactory.mount(el, …)` sets
+        // `el.innerHTML`, so the grid wipes whatever this block's own template put
+        // there. That is also why the header in the template above renders nothing —
+        // pre-existing, left alone, and the reason this bar is its own element rather
+        // than the `__sort` slot that looks like it was meant for it.
+        //
+        // The gallery is where a recording belongs and the only place it can be
+        // reached today: a clip is project media like any other, and from a card the
+        // user drags it into an LTX audio slot — which is the only way audio reaches
+        // the PromptBox at all. Deliberately NOT gated on the current model's audio
+        // capability; capturing a voice line is worth doing before choosing what will
+        // consume it. `recordAudioIntoProject` fires the same `media:imported` this
+        // block already listens for, so the card is built by the path that exists.
+        const _recordBar = ce('div', { className: 'mpi-gallery-block__actions' });
+        const _recordBtn = mountButton({
+            icon: 'mic',
+            label: 'Record',
+            size: 'sm',
+            variant: 'ghost',
+            info: 'Record a clip from your microphone into this project',
+        });
+        _unsubs.push(on(_recordBtn, 'click', () => {
+            recordAudioIntoProject().catch((err) => {
+                clientLogger.warn('MpiGalleryBlock', `recording failed: ${err?.message || err}`);
+            });
+        }));
+        _recordBar.appendChild(_recordBtn);
+        el.appendChild(_recordBar);
+
         const _deletingGroupIds = new Set();
         const _visibleProjectGroups = () =>
             (state.currentProject?.itemGroups || []).filter(group => !_deletingGroupIds.has(group.id));
