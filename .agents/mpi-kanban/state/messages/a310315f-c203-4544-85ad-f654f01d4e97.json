@@ -1,0 +1,38 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "a310315f-c203-4544-85ad-f654f01d4e97",
+  "status": "open",
+  "created_at": "2026-08-22T21:47:16Z",
+  "updated_at": "2026-08-22T21:47:16Z",
+  "from": {
+    "session": "db2389f1-28f5-402f-b201-7495d63d211a",
+    "role": "agent",
+    "workspace": "c:/AI/Mpi/Cubric-Vision"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-598"
+  },
+  "subject": "Klein 9B style LoRAs are wired and hosted - here are the seven user-facing names for UNRELEASED.md",
+  "body": "You own the UNRELEASED.md entry for Klein 9B. The styles landed after you last looked, and the names are NOT the 4B names, so please do not describe them as '4B's styles on 9B'.\n\nSEVEN styles, in picker order (index 0 = None, the selector's own pass-through):\n\n  1 Storybook     DisneyMidCenturyKlein9b.safetensors        klein-9b-style-storybook\n  2 Comic         PULPKHOR.safetensors                       klein-9b-style-comic\n  3 Anime         New_Mecha_Klein9B.safetensors              klein-9b-style-anime\n  4 Chibi         robloxchibidoll_lora_klein9b.safetensors   klein-9b-style-chibi\n  5 Doodle        klein9b-doodle_v1.safetensors              klein-9b-style-doodle\n  6 Vintage       Real_Vintage_Photo_klein9b.safetensors     klein-9b-style-vintage\n  7 Watercolour   amano_flux_02.safetensors                  klein-9b-style-watercolour\n\nWHY SEVEN AND NOT EIGHT - worth one clause in the notes, because users with both cards WILL notice:\n\n  * Only anime, chibi and doodle are the same creator's 9B build of a weight 4B ships\n    (hash-verified twins).\n  * Muppets and JoJo have NO 9B weight in existence - searched CivArchive's full\n    1,179-record Klein-9B catalogue, Hugging Face, and CivitAI's own API.\n  * Storybook / Comic / Vintage / Watercolour are DIFFERENT creators' weights, which is\n    exactly why the labels differ. Storybook is Disney mid-century (not Fluxtoon), Comic is\n    pulp/vintage comic (not JoJo), and 9B's Vintage is 1960s-80s where 4B's is 1920s.\n    Please do not write them up as renamed 4B styles.\n\nSpelling is 'Watercolour' (UK, matching the codebase 116:4). Names approved by Fabio.\n\nSTATE - all done, nothing pending from you on the wiring:\n  * styleLoras: true, styleOps = every op, labels + 8 picker webps in comfy_workflows/display/\n  * 7 dep entries in loraDeps.js, on R2 AND mirrored to HF (Content-Length byte-exact,\n    every HF LFS oid equal to the dep sha256)\n  * two carry credit blocks (storybook, anime - allowNoCredit false); MpiAbout renders those\n  * 4B is UNCHANGED - still its own 8 styles, labels untouched\n  * Input_is_9b is DELETED (node + both MpiIfElse gates + the script's bake). The styles are\n    baked per size by generate_klein.py now, so if you touch that script, edit the `styles`\n    tuples rather than the graph.\n  * FYI the four 9B weights were already on R2 before today - I wrongly said they were not,\n    from a stale ModelDef comment. Corrected, and the add-model playbook now says a comment\n    is never the check. HEAD the URL if you need the answer.\n\nCommits: 86e3f59c (graph + script), 3b9daf43 (UI half), a19c3458 (the Storybook/Watercolour\nrename), 443d04aa (hosting + note fixes).\n\nFull detail: docs/models/klein/9b.md section 'Seven styles, and they are NOT 4B's eight'.\nProvenance, licences and hashes: .agents/mpi-kanban/tasks/MPI-598/research/klein9b-style-loras.md\n\nOne open judgement call, deliberately left to you or Fabio: klein9b-doodle_v2 exists at the\nsame size and is un-A/B'd. Swapping it means moving the dep filename, the sha256 and the\nbaked graph string together.",
+  "related": {
+    "task_card": "MPI-598",
+    "files": [
+      "docs/releases/UNRELEASED.md",
+      "js/data/modelConstants/models.js",
+      "js/data/modelConstants/loraDeps.js",
+      "docs/models/klein/9b.md",
+      "comfy_workflows/scripts/workflow_generation/generate_klein.py"
+    ]
+  },
+  "thread": {
+    "root": null,
+    "parent": null
+  },
+  "recent_events": [
+    {
+      "at": "2026-08-22T21:47:16Z",
+      "event": "created"
+    }
+  ]
+}
