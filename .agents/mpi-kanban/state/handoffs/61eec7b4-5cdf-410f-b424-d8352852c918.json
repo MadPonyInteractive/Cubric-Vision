@@ -1,0 +1,69 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "61eec7b4-5cdf-410f-b424-d8352852c918",
+  "generated_at": "2026-08-22T07:03:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-573 - built the mic recorder and the audio media type end to end",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Address the microphone input pop-up card - the enabling layer for the audio track (MiniMax music, TTS, TTS-cloning Flows are coming and none are carded yet).",
+    "status": "in_progress",
+    "summary": "The recorder, both entry points, the settings section and the audio media type are built, verified and pushed (9cf4fc90, a7bc9de5, f68ee9b4). Two things Fabio raised after seeing it running are open: the gallery Record button overlaps the filter row and must move, and WAV is questioned as the wrong format for voice-clone and video-reference workflows. The audio-OUTPUT half is static-only and stays open until a Flow produces audio."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-573/plan.md",
+    "completed": [
+      "MpiAudioRecorder compound - idle / recording (elapsed + live peak meter) / review, mic released on every exit path",
+      "js/utils/wavEncoder.js - import-free, unit-tested against the real ffprobe",
+      "Two entry points sharing one recordAudioIntoProject(): the gallery Record button and the mic card on any audio slot",
+      "Electron permission handlers in main.js - media, fullscreen, pointerLock (the last two were riding the absent default and fail silently)",
+      "MEDIA_TYPE.AUDIO + the audio-primary branch in save-generation + probeAudio in services/ffprobeVideo.js",
+      "Settings -> Audio Input (device dropdown + gain slider), Storage accessors, storage keys",
+      "tests/audio-media-type.test.cjs (8) and tests/desktop/audio-permission.spec.js (1). npm test 680 pass, npm run test:desktop 24 pass"
+    ],
+    "pending": [
+      "MOVE the Record button out of the floating bar - Fabio: next to FLOWS, or next to the volume",
+      "SETTLE the recording format - WAV vs m4a/mp3, on voice-clone and video-reference timing",
+      "The audio-OUTPUT save path has no producer, so it has never run - stays open until the first audio Flow"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-573",
+    "title": "Audio in Vision: mic recorder popup + audio as an output media type",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-573/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-573/plan.md",
+      "checklist": null,
+      "validation": ".agents/mpi-kanban/tasks/MPI-573/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Move the gallery Record button off the filter row. The visible toolbar is MpiGalleryGrid's __tabs row (js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js:111-131), NOT MpiGalleryBlock's header - that one never reaches the DOM. Fabio named two homes: next to the volume (zone--center, after __volume-wrap - recommended, it is already the media-controls zone and cannot collide with the filters) or next to FLOWS in the app top bar (js/shell/projectUI.js:81). Then delete .mpi-gallery-block__actions from MpiGalleryBlock.js and .css. After that, settle the WAV question - plan.md holds the full trade-off, do not re-derive it.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "The recorder re-muxes to WAV because `.webm` is VIDEO by extension in five server lists, so a native-container recording is re-typed to video on the first project reload. The EXTENSION forced this, not the codec - so mp3/m4a/ogg/flac/aac/opus are all equally safe, and switching format does not reopen the bug.",
+      "A recording is NOT an import: it skips onImport and takes the gallery-drop route (uploadMediaFile then media:imported), so it lands as a real audio card rather than only filling a slot.",
+      "MEDIA_TYPE.AUDIO promotion is gated on the OP declaring audio output, never on 'no urls but an audio one' - a video run that saved its soundtrack and then failed is also empty-with-audio, and promoting that turns a broken generation into a card.",
+      "Fabio chose the gallery as the entry point (2026-08-22) because the planned picker-only route was unreachable: no Flow declares an audio media group and the PromptBox's LTX audio slots are drag-only."
+    ],
+    "constraints": [
+      "MpiGalleryBlock's own header is DEAD MARKUP - MpiGalleryGrid.mount(el) sets el.innerHTML and wipes the block's template, so its crumb/filters/sort slots render nothing while their CSS is live. Pre-existing, left alone, worth its own card. This is what put the Record button in a floating bar.",
+      "Installing an Electron permission handler INVERTS the default for every permission. fullscreen (video control bar, focus mode) and pointerLock (MpiRadialMenu) were being granted by the absent default and both fail silently - they are in the allowlist and asserted by the desktop spec. Desktop notifications are main-process and must NOT be added.",
+      "js/data/commandRegistry.js, js/data/flowsRegistry.js and js/components/types.js are also on MPI-567's and MPI-599's file lists. Edits here were additive (one enum key, one typedef block, one props block); check for drift before touching them again.",
+      "Verification split by environment on purpose: getUserMedia is NotAllowedError in a playwright browser and granted in real Electron, so the mic permission is only provable through tests/desktop/. Use `npm run app:isolated` and drive the printed READY url - never :3000."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-573/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-573/validation.md",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+      "docs/component-contracts.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/61eec7b4-5cdf-410f-b424-d8352852c918.json and use mpi-continue to pick MPI-573 back up. The mic recorder, both entry points, the settings section and MEDIA_TYPE.AUDIO are built, tested and pushed (9cf4fc90, a7bc9de5, f68ee9b4); the card is still in doing because two things Fabio raised are unsettled. First: the gallery Record button overlaps the filter row and must move - the visible toolbar is MpiGalleryGrid's __tabs row, not MpiGalleryBlock's header, which never reaches the DOM at all. Second: Fabio questions WAV as the recording format for voice-clone and video-reference workflows on size grounds; plan.md holds the whole trade-off already, including that the extension rather than the codec forced WAV, so do not re-derive it. The audio-OUTPUT save path is static-only and stays open until a Flow actually produces audio."
+}
