@@ -36,7 +36,17 @@ _(none yet)_
   seven things — generate, reshape, follow a depth reference, edit with up to three reference
   images, inpaint, detail and upscale — with more detail and closer prompt following, traded
   against speed. It wants about 15GB of video memory at its peak, so on a 16GB card the margin
-  is thin and 4B stays the one to reach for if you run out. Style LoRAs are 4B-only for now.
+  is thin and 4B stays the one to reach for if you run out. Each size brings its own styles.
+
+- Klein 9B brings seven styles of its own. Storybook, Comic, Anime, Chibi, Doodle, Vintage and
+  Watercolour, available on everything the card does — generating, editing, inpainting, all of
+  it. They are a different set from the 4B card's eight, not the same styles carried across:
+  only Anime, Chibi and Doodle are the same artists' 9B versions of ones you already have. The
+  others are different artists' work, which is why the names changed rather than the pictures —
+  Storybook is mid-century storybook illustration, Comic is pulp comic rather than manga, and
+  9B's Vintage is 1960s-80s where the 4B one is 1920s. Muppets and Jojo simply have no 9B
+  version in existence yet, from anyone, which is why the count is seven. Chibi is trained
+  hard and looks best with Stylization pulled back a little.
 
 - Some models now ask you to accept their licence before they download. Klein 9B is the first:
   it is free to use and the pictures you make with it are yours to sell, but the model itself
@@ -46,7 +56,10 @@ _(none yet)_
 
 - Klein inpaints properly now. Painting over part of a picture used to regenerate the whole
   patch and hope it blended; it now samples with the mask as a real constraint, on both the 4B
-  and 9B cards. Removing something is no longer implicit — say what you want gone.
+  and 9B cards, and it can see the picture underneath the mask — so what comes back sits in the
+  light, style and perspective of everything around it. Removing something is no longer implicit:
+  leaving the prompt empty used to mean erase, and now it means nothing at all. Say what you want
+  gone and name it — "remove the tattoo", not just "remove".
 
 - Place puts one picture inside another. Open an image, pick Place from the Composite tools, and
   drop in a second image — a logo, a product, a person cut out of another shot. Drag it where you

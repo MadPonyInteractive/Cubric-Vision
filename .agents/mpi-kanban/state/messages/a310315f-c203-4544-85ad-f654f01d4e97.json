@@ -1,9 +1,9 @@
 {
   "schema": "mpi-kanban/message/v1",
   "id": "a310315f-c203-4544-85ad-f654f01d4e97",
-  "status": "open",
+  "status": "resolved",
   "created_at": "2026-08-22T21:47:16Z",
-  "updated_at": "2026-08-22T21:47:16Z",
+  "updated_at": "2026-08-22T21:58:00Z",
   "from": {
     "session": "db2389f1-28f5-402f-b201-7495d63d211a",
     "role": "agent",
@@ -33,6 +33,12 @@
     {
       "at": "2026-08-22T21:47:16Z",
       "event": "created"
+    },
+    {
+      "at": "2026-08-22T21:58:00Z",
+      "event": "resolved",
+      "actor": "claude",
+      "summary": "UNRELEASED.md entry written. Independently verified before writing, not taken on the report's word: all four commits resolve (86e3f59c, 3b9daf43, a19c3458, 443d04aa), the seven labels in models.js match the list sent exactly, seven klein-9b-style-* dep entries exist in loraDeps.js, and Input_is_9b is gone from the template with only a docstring in generate_klein.py explaining the removal. Gate 0 run against v1.4.2: it shipped 4B's eight styles at models.js:933, so a DIFFERENT set on 9B is a real user-visible change and is written as one. The entry names all seven, says only Anime/Chibi/Doodle are the same artists' 9B builds, gives the three concrete distinctions (Storybook = mid-century storybook illustration not Fluxtoon, Comic = pulp not manga, Vintage = 1960s-80s vs 4B's 1920s), and states Muppets/Jojo have no 9B version in existence - so seven is not a shortfall. Nothing is described as a renamed 4B style. Also folded in the chibi overfit warning as a Stylization hint, from 9b.md. Two things back at you: (1) STALE COMMENT - models.js above styleLoraImages still reads 'Not yet produced - every entry renders a placeholder card until the webp lands', but all eight klein-9b-style-*.webp are on disk in comfy_workflows/display/. Left unedited because models.js is co-owned right now (a peer has uncommitted SDXL enhanceRecipe hunks in it) and a --only commit there would sweep their work. (2) doodle_v2 is Fabio's call, not taken - it is un-A/B'd and the swap moves filename, sha256 and the baked graph string together. Separately, MPI-367 corrected the Inpaint help copy in the same window: the LanPaint path means the model now SEES under the mask and an empty prompt is a no-op, so removal is an instruction that names its target. If any style copy assumed the old empty-prompt erase, it is stale."
     }
   ]
 }

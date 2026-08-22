@@ -1,6 +1,6 @@
 {
  "schema": "mpi-kanban/state-index/v1",
- "updated_at": "2026-08-22T21:47:16Z",
+ "updated_at": "2026-08-22T21:58:00Z",
  "board": ".agents/mpi-kanban/board.json",
  "heartbeat_timeout_minutes": 120,
  "active_sessions": [
@@ -84,9 +84,7 @@
    "heartbeat_at": "2026-08-22T14:16:00Z"
   }
  ],
- "open_messages": [
-  ".agents/mpi-kanban/state/messages/a310315f-c203-4544-85ad-f654f01d4e97.json"
- ],
+ "open_messages": [],
  "active_handoffs": [
   {
    "id": "4ab37293-c335-4b1e-9e36-742d4e42916a",
