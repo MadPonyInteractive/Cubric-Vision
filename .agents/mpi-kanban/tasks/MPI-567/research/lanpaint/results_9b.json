@@ -1,0 +1,117 @@
+[
+ {
+  "tag": "sun",
+  "variant": "auto",
+  "box": [
+   118,
+   585,
+   811,
+   1152
+  ],
+  "file": "mpi567_lp9b_sun_auto_00001_.png",
+  "auto": {
+   "fill": 0.39,
+   "ring": 8.02,
+   "bg_mean": 0.02,
+   "bbox": [
+    105,
+    574,
+    825,
+    1152
+   ]
+  },
+  "secs": 42.6
+ },
+ {
+  "tag": "overcast",
+  "variant": "auto",
+  "box": [
+   118,
+   585,
+   811,
+   1152
+  ],
+  "file": "mpi567_lp9b_overcast_auto_00001_.png",
+  "auto": {
+   "fill": 0.416,
+   "ring": 8.4,
+   "bg_mean": 0.05,
+   "bbox": [
+    107,
+    580,
+    823,
+    1152
+   ]
+  },
+  "secs": 30.1
+ },
+ {
+  "tag": "night",
+  "variant": "auto",
+  "box": [
+   118,
+   585,
+   811,
+   1152
+  ],
+  "file": "mpi567_lp9b_night_auto_00001_.png",
+  "auto": {
+   "fill": 0.429,
+   "ring": 3.8,
+   "bg_mean": 0.02,
+   "bbox": [
+    105,
+    576,
+    824,
+    1152
+   ]
+  },
+  "secs": 30.1
+ },
+ {
+  "tag": "indoor",
+  "variant": "auto",
+  "box": [
+   118,
+   585,
+   811,
+   1152
+  ],
+  "file": "mpi567_lp9b_indoor_auto_00001_.png",
+  "auto": {
+   "fill": 0.435,
+   "ring": 4.92,
+   "bg_mean": 0.06,
+   "bbox": [
+    120,
+    580,
+    821,
+    1152
+   ]
+  },
+  "secs": 30.1
+ },
+ {
+  "tag": "anime",
+  "variant": "auto",
+  "box": [
+   118,
+   585,
+   811,
+   1152
+  ],
+  "file": "mpi567_lp9b_anime_auto_00001_.png",
+  "auto": {
+   "fill": 0.381,
+   "ring": 5.29,
+   "bg_mean": 0.03,
+   "bbox": [
+    111,
+    575,
+    823,
+    1152
+   ]
+  },
+  "secs": 28.3
+ }
+]

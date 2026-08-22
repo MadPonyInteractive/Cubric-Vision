@@ -1,0 +1,332 @@
+[
+ {
+  "tag": "sun",
+  "variant": "tight",
+  "box": [
+   224,
+   659,
+   705,
+   993
+  ],
+  "file": "mpi567_lp_sun_tight_00001_.png",
+  "auto": {
+   "fill": 0.458,
+   "ring": 10.69,
+   "bg_mean": 0.01,
+   "bbox": [
+    214,
+    648,
+    717,
+    1006
+   ]
+  }
+ },
+ {
+  "tag": "sun",
+  "variant": "auto",
+  "box": [
+   118,
+   585,
+   811,
+   1152
+  ],
+  "file": "mpi567_lp_sun_auto_00001_.png",
+  "auto": {
+   "fill": 0.403,
+   "ring": 7.8,
+   "bg_mean": 0.02,
+   "bbox": [
+    106,
+    574,
+    825,
+    1152
+   ]
+  }
+ },
+ {
+  "tag": "sun",
+  "variant": "generous",
+  "box": [
+   0,
+   472,
+   896,
+   1152
+  ],
+  "file": "mpi567_lp_sun_generous_00001_.png",
+  "auto": {
+   "fill": 0.716,
+   "ring": 19.39,
+   "bg_mean": 0.02,
+   "bbox": [
+    0,
+    462,
+    896,
+    1152
+   ]
+  }
+ },
+ {
+  "tag": "overcast",
+  "variant": "tight",
+  "box": [
+   224,
+   659,
+   705,
+   993
+  ],
+  "file": "mpi567_lp_overcast_tight_00001_.png",
+  "auto": {
+   "fill": 0.45,
+   "ring": 8.31,
+   "bg_mean": 0.02,
+   "bbox": [
+    215,
+    654,
+    714,
+    1005
+   ]
+  }
+ },
+ {
+  "tag": "overcast",
+  "variant": "auto",
+  "box": [
+   118,
+   585,
+   811,
+   1152
+  ],
+  "file": "mpi567_lp_overcast_auto_00001_.png",
+  "auto": {
+   "fill": 0.68,
+   "ring": 9.47,
+   "bg_mean": 0.04,
+   "bbox": [
+    108,
+    579,
+    823,
+    1152
+   ]
+  }
+ },
+ {
+  "tag": "overcast",
+  "variant": "generous",
+  "box": [
+   0,
+   472,
+   896,
+   1152
+  ],
+  "file": "mpi567_lp_overcast_generous_00001_.png",
+  "auto": {
+   "fill": 0.792,
+   "ring": 17.18,
+   "bg_mean": 0.82,
+   "bbox": [
+    0,
+    538,
+    896,
+    1152
+   ]
+  }
+ },
+ {
+  "tag": "night",
+  "variant": "tight",
+  "box": [
+   224,
+   659,
+   705,
+   993
+  ],
+  "file": "mpi567_lp_night_tight_00001_.png",
+  "auto": {
+   "fill": 0.499,
+   "ring": 7.28,
+   "bg_mean": 0.01,
+   "bbox": [
+    213,
+    648,
+    716,
+    1006
+   ]
+  }
+ },
+ {
+  "tag": "night",
+  "variant": "auto",
+  "box": [
+   118,
+   585,
+   811,
+   1152
+  ],
+  "file": "mpi567_lp_night_auto_00001_.png",
+  "auto": {
+   "fill": 0.358,
+   "ring": 3.25,
+   "bg_mean": 0.02,
+   "bbox": [
+    106,
+    575,
+    824,
+    1152
+   ]
+  }
+ },
+ {
+  "tag": "night",
+  "variant": "generous",
+  "box": [
+   0,
+   472,
+   896,
+   1152
+  ],
+  "file": "mpi567_lp_night_generous_00001_.png",
+  "auto": {
+   "fill": 0.293,
+   "ring": 2.76,
+   "bg_mean": 0.02,
+   "bbox": [
+    0,
+    462,
+    896,
+    1152
+   ]
+  }
+ },
+ {
+  "tag": "indoor",
+  "variant": "tight",
+  "box": [
+   224,
+   659,
+   705,
+   993
+  ],
+  "file": "mpi567_lp_indoor_tight_00001_.png",
+  "auto": {
+   "fill": 0.403,
+   "ring": 9.65,
+   "bg_mean": 0.04,
+   "bbox": [
+    224,
+    665,
+    708,
+    1003
+   ]
+  }
+ },
+ {
+  "tag": "indoor",
+  "variant": "auto",
+  "box": [
+   118,
+   585,
+   811,
+   1152
+  ],
+  "file": "mpi567_lp_indoor_auto_00001_.png",
+  "auto": {
+   "fill": 0.262,
+   "ring": 2.96,
+   "bg_mean": 0.05,
+   "bbox": [
+    119,
+    580,
+    821,
+    1152
+   ]
+  }
+ },
+ {
+  "tag": "indoor",
+  "variant": "generous",
+  "box": [
+   0,
+   472,
+   896,
+   1152
+  ],
+  "file": "mpi567_lp_indoor_generous_00001_.png",
+  "auto": {
+   "fill": 0.191,
+   "ring": 3.9,
+   "bg_mean": 0.05,
+   "bbox": [
+    2,
+    473,
+    896,
+    1152
+   ]
+  }
+ },
+ {
+  "tag": "anime",
+  "variant": "tight",
+  "box": [
+   224,
+   659,
+   705,
+   993
+  ],
+  "file": "mpi567_lp_anime_tight_00001_.png",
+  "auto": {
+   "fill": 0.396,
+   "ring": 13.96,
+   "bg_mean": 0.03,
+   "bbox": [
+    220,
+    651,
+    712,
+    994
+   ]
+  }
+ },
+ {
+  "tag": "anime",
+  "variant": "auto",
+  "box": [
+   118,
+   585,
+   811,
+   1152
+  ],
+  "file": "mpi567_lp_anime_auto_00001_.png",
+  "auto": {
+   "fill": 0.505,
+   "ring": 7.04,
+   "bg_mean": 0.03,
+   "bbox": [
+    108,
+    576,
+    822,
+    1152
+   ]
+  }
+ },
+ {
+  "tag": "anime",
+  "variant": "generous",
+  "box": [
+   0,
+   472,
+   896,
+   1152
+  ],
+  "file": "mpi567_lp_anime_generous_00001_.png",
+  "auto": {
+   "fill": 0.5,
+   "ring": 10.7,
+   "bg_mean": 0.0,
+   "bbox": [
+    0,
+    461,
+    896,
+    1152
+   ]
+  }
+ }
+]

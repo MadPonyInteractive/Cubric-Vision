@@ -10,6 +10,59 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 
 ## Current State
 
+**2026-08-22, session 7 — THE RELIGHT AND THE WHOLE COMPOSITE-BACK TAIL ARE DELETED. LanPaint
+replaces them, measured on all five plates. The pipeline this card was built on has changed
+shape, and it got smaller.**
+
+Fabio brought [scraed/LanPaint](https://github.com/scraed/LanPaint) — a training-free inpainting
+sampler — and two bench workflows using it (`LanPaint.json`, and `klein_t2i_template.json` with
+LanPaint already wired behind an `MpiIfElse` on `has_mask`, crop-stitched). Measured verdict, the
+runners and the numbers: **[research/lanpaint/verdict.md](research/lanpaint/verdict.md)**.
+
+- **The route:** stamped composite + a BOX mask → `InpaintCropImproved` (context =
+  `MpiMaskSquareBbox(mask, 64)`) → `SetLatentNoiseMask` → `LanPaint_KSampler` (4 steps, cfg 1.0,
+  euler/simple, `NumSteps` 2, "Image First", "🖼️ Image Inpainting") → `InpaintStitchImproved`.
+  Wiring copied from Fabio's two bench graphs, not invented.
+- **Deleted:** the whole-image Klein relight AND the ~25-node tail (`ImageBlend`×2 + screen,
+  `ImageToMask`, both `ThresholdMask`, both `GrowMaskWithBlur`, `MaskComposite`, the 100px
+  proximity gate, the full-frame `ImageCompositeMasked`). The tail only ever repaired a global
+  re-grade; there is no longer one.
+- **The user's photo stops moving:** `outside` 0.04–0.36 against session 3's `bg_mean` 3.45
+  (silhouette) / 10.34 (shadow-aware). Structural, not tuned — the stitch returns the original
+  everywhere outside the box.
+- **Speed is unchanged on 4B** (16.1s, same as the 74-node merged graph). **9B is better on all
+  five plates at 1.9×** (30.1s) and needs `qwen_3_8b_int8_convrot.safetensors`, not 4B's
+  `qwen_3_4b` — the mismatch dies with a shape error that reads as a LanPaint bug.
+- **The box is now load-bearing UI, and it cuts both ways.** A tight box structurally cannot make
+  a shadow (`shadow_ratio` 0.015–0.054); a generous box re-grades everything it contains
+  (`far_frac` 0.68/0.66/0.43 on sun/overcast/anime). `auto` = +25% out, +60% down wins on all
+  five. **The re-grade did not disappear — it moved under the user's control.**
+- **`ring` on the changed region's own bbox is INVALID for this route** and must not be quoted;
+  see the verdict's last section. Use `outside` and `far_frac`.
+
+**Decided with Fabio the same day:** the flow gains a **`box` step** — `MpiStepBox` already
+exists and already feeds `Mpi Box Mask` / `Mpi Box Crop`, so it is a data line, not a component.
+Its `hint` asks for ROOM, never light direction (the model reads the scene's light itself; his
+own road/woman test proved it). Auto-seed from the drawing's bbox. Crop-stitch is IN — it also
+answers the small-subject-in-a-big-image case that made Fabio ask for it.
+
+**🔴 OPEN DEFECT — THE BOX EDGE IS VISIBLE.** Fabio spotted seams in the sheets; confirmed at 1:1
+with `edge_step` up to **30.84** (sun, auto) against the "under 2 is invisible" bar, and present
+on `auto`, not just `generous`. **Every metric above missed it** — `outside` looks beyond the box
+where the stitch guarantees the original, and `far_frac` returned `None` for `auto` because that
+box has no far area, which I read as "cannot re-grade". Probable cause is not the sampler: the
+whole crop is VAE round-tripped and rescaled to 1024², so tone drifts inside the box and
+`mask_blend_pixels: 32` is too narrow to hide it. Four candidate fixes, cheapest first, in the
+verdict — **fixing this is the next session's first job**, ahead of any app wiring.
+
+**Next action: NOT the app wiring.** Fix the seam first. Separately, Fabio has an agent
+implementing 9B and the new 4B template, and LanPaint is landing in the shipped
+`klein_t2i_template` — which means the node pin reaches every Klein op in the app, not just this
+flow. The character-sheet flow also rides the 4B inpaint route, so that template is shared. See
+§ Plan Drift.
+
+---
+
 **2026-08-22, session 5 — the MERGED RUNTIME GRAPH is built and proven; the app half is BLOCKED
 on a step kind that does not exist.**
 
@@ -393,6 +446,26 @@ flow-agnostic for exactly that reason.
 
 ## Plan Drift
 
+- **THE BLEND HALF WAS REPLACED WHOLESALE (2026-08-22, session 7).** Sessions 2–5 spent their
+  whole budget on one problem — a localised edit re-grades its crop, so the route had to relight
+  whole-image and repair the collateral with a ~25-node difference-mask tail. LanPaint's noise
+  mask removes the premise: unmasked latents survive the denoise, so there is nothing to repair.
+  Everything sessions 2–5 measured about the tail is now **history, not guidance** — kept in this
+  plan because the laws behind it (filled rect not silhouette; shadow physics conditional, never
+  ordered; never calibrate on the dark plate) all survived the change and still bind. Evidence:
+  [research/lanpaint/verdict.md](research/lanpaint/verdict.md).
+- **THE RE-GRADE DID NOT GO AWAY — IT BECAME A UI PROBLEM.** An over-large box re-invents the
+  photo inside it (`far_frac` 0.68 on sun). Sessions 2–5 fought this in the graph; it is now
+  fought in the step's default box size and its `hint`. That is a better place for it, but it is
+  the same failure and it is one drag-handle away at all times.
+- **`Input_Control_strength` is unaffected** — it belongs to stage 1 (ControlNet), which this
+  change does not touch. The 0.45–0.60 default and the ~80–96px ink floor both stand.
+- **SCOPE ESCAPED THIS CARD.** LanPaint is being wired into the shipped `klein_t2i_template`, not
+  into this flow's private graph, so the custom-node pin (`dev_configs/node_lock.json`) reaches
+  **every Klein op in the app**. Fabio has a separate session doing 9B + the new 4B template.
+  This card may CONSUME that template; it must not be the card that silently pins a third-party
+  sampler into every Klein path. Overlaps MPI-598 and MPI-600 — MPI-600's verdict is explicitly
+  held open pending "two repos Fabio found", which are this.
 - **The frame gained `FlowStep.mediaRole` (2026-08-22, session 6).** Not in any plan or handoff:
   the merged graph takes TWO images (`Input_Image` + `Input_Paint`) and `_deriveRunMedia` could
   only REPLACE a role's media, so a paint step would have eaten the photo. `mediaRole` names where
