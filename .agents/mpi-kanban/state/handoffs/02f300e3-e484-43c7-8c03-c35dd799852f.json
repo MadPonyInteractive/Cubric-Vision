@@ -1,0 +1,74 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "02f300e3-e484-43c7-8c03-c35dd799852f",
+  "generated_at": "2026-08-22T18:40:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-567 session 8 - the box seam is a DC offset on smooth ground, and one node fixes it",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Fix the visible box edge before any app wiring, working the four candidates in research/lanpaint/verdict.md cheapest-first.",
+    "status": "in_progress",
+    "summary": "The seam is FIXED and the app half is unblocked. All four candidates failed, but so did the bar they were judged against: `edge_step` is mean |diff| and cannot tell a tonal STEP from redrawn TEXTURE. Splitting those apart showed the real defect is a DC offset landing on a low-variance region, and one node removes it. The next session rebuilds the graph (it still holds the OLD route) and then does the app half."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+    "completed": [
+      "ROOT CAUSE CORRECTED. Session 7 guessed VAE round-trip + rescale drift. `edge_profile.py` disproves it: drift has no direction, but the signed diff is large and GROWS with depth into the box (sun right -19 -> -33; overcast +9 -> +14 on every edge). The model re-grades everything the noise mask lets it touch. `norescale` is byte-identical to base, so the rescale half of that guess was a no-op all along.",
+      "ALL FOUR CANDIDATES RUN AND DEAD (17 configs, `seamfix.py`, numbers in `seamfix_results.json`). (1) `mask_blend_pixels` caps at 64 - 96/128 do not exist; at 64 the edge is unmoved and `outside` leaks WORSE. (2) `denoise` is quantised away at 4 steps (`int(steps/denoise)` makes 0.85 byte-identical to 1.0) and values that bite take anime's shadow to 8%. (3) `ImageCompositeMasked` vs the original crop is a NO-OP BY CONSTRUCTION - its mask is the box, which is what the stitch already blends with. (4) Splitting crop from denoise mask is the right family but every variant lands on one trade curve.",
+      "THE BAR ITSELF WAS WRONG, and this is the session's real finding. `edge_step` is mean |diff|, which sums two things the eye treats differently: a DIRECTIONAL offset (`dir = signed/abs -> +-1`, the band moved as a block = a seam) and TEXTURE CHURN (`dir -> 0`, the model redrew gravel/grass at the same average tone = invisible at any magnitude). Visibility is `cnr = |signed| / std(photo in that band)`. `seamvis.py` computes all of it.",
+      "THE NUMBERS THAT PROVE IT: sun's top edge scores `abs` 10.98 and is INVISIBLE (dir 0.10, photo std 51.6, cnr 0.02); overcast's top scores a LOWER 9.26 and is the worst seam in the set (dir 1.00, photo std 10.9, cnr 0.85). Verified by eye at 1:1 in `SHEET_compare_base_s096_top.png`. So the defect was never 'the box edge' - it is a DC offset on a low-variance region, which is why it hit overcast on all three edges, hit sun only where the shadow was clipped, and never really hit anime.",
+      "THE FIX IS ONE NODE - `f096`: `GrowMaskWithBlur(expand -96, blur_radius 96)` between `InpaintCropImproved`'s `cropped_mask` (output 2) and `SetLatentNoiseMask`. Session 7's `auto` box (+25% out, +60% down) is UNCHANGED. Worst cnr 0.85 -> 0.15, `far_mean` 0.138/0.157/0.159 vs base 0.154/0.223/0.248 (it moves LESS of the photo than baseline), same 16.1s. Runner-up `s096` (tight +12% core, grown 96, feathered 96) scores cnr 0.18 and has the best-looking sun shadow, but it changes box seeding too, so `f096` is the smaller change.",
+      "9B IS NOT THE LEVER. Measured for the first time: base 24.80/10.36/8.71 vs 4B's 30.84/12.82/9.33, and with the feather it lands on 4B's numbers (10.71/6.68/2.79 vs 10.39/6.31/2.48). The seam is a property of the route, not the checkpoint. 9B still wins on quality per session 7."
+    ],
+    "pending": [
+      "FIRST: REBUILD THE GRAPH. Both `comfy_workflows/raw/flow_scribble_object.json` and `comfy_workflows/flow_scribble_object.json` are still the OLD 70-node route - 0x LanPaint, 0x InpaintCropImproved, and the whole deleted tail still present (3x ImageCompositeMasked, 2x ThresholdMask, 2x MaskComposite, 2x GrowMaskWithBlur). The LanPaint route has ONLY ever existed in the python runners. Port it from `seamfix.py` `build()`, which is the authoritative, measured wiring, and add the `f096` feather node.",
+      "Then sweep the auto-seed properly. +25% out / +60% down is a GUESS that happened to win, not a measurement. Sweep it on sun/overcast/anime - and judge with `cnr`/`objsheet.py`, NOT `edge_step`/`shadow_ratio`, or the sweep will pick the wrong winner exactly as this session's first ranking did.",
+      "Untested and worth one run: shape B, the stage-1 render passed as a REFERENCE image rather than stamped in. That is what Fabio's own road/woman test did, and it drops the stamp chain entirely.",
+      "Then the app half: the op in its 4 files, the FlowDef with the TWO-slot requiredModels + modelParams, the declared fields incl. the MANDATORY Input_Control_strength slider (0.45-0.60, NOT the bench's 0.8 - stage 1 is untouched by all of this), the paint step as { kind: 'paint', role: <photo>, mediaRole: <layer> }, the NEW box step, and step copy saying TONAL plus the ~80-96px minimum-ink warning.",
+      "THE FLOW MUST STILL GUARD THE NO-DRAWING CASE. An unpainted step reports paint: null, STEP_MEDIA derives nothing, and MpiLoadImageFromPath runs on its baked authoring path - a confident wrong result with no error. The frame cannot guard it.",
+      "Extend tests/flow-model-choice.test.cjs to this flow; consider tests/flow-step-paint.test.cjs pinning STEP_KINDS.paint + the STEP_MEDIA row (session 6's live probe was throwaway).",
+      "At close-out: heal `docs/playbooks/add-flow/blending-into-a-photo.md` - its headline conclusion and its whole graph-tail section are now HISTORY, and its 'under ~2 is invisible' rule needs replacing with the `dir`/`cnr` split (an abs threshold called sun's invisible 11.06 a failure and overcast g192's visible 1.39 a pass). The three laws behind it all SURVIVED (filled rect not silhouette; shadow physics conditional never ordered; never calibrate on the dark plate). Also heal the card's acceptance list (still says 'Canny for a clean structured drawing'; canny's niche is a TONAL drawing)."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-567",
+    "title": "Scribble-to-object Flow - user draws on the image, ControlNet + SDXL renders it in",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-567/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      "brief": ".agents/mpi-kanban/tasks/MPI-567/brief.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-567/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Rebuild comfy_workflows/raw/flow_scribble_object.json (and its runtime twin) onto the measured LanPaint route, porting the wiring from research/lanpaint/seamfix.py build() and adding the f096 feather node - GrowMaskWithBlur(expand -96, blur_radius 96) between InpaintCropImproved cropped_mask and SetLatentNoiseMask. Both repo copies are still the OLD 70-node relight+tail route. Then proceed to the app half per plan.md.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "JUDGE THE SEAM WITH `cnr`, NEVER `edge_step`. `seamvis.py` splits mean |diff| into a directional component and texture churn. An abs threshold ranks configs WRONG in both directions: it called sun's invisible top edge (10.98) a failure, and crowned `g192` at 0.40/1.13/0.86 when `g192` is actually the second-worst seam measured (overcast cnr 0.53) because growing the box moved its top edge into smooth SKY (std 2.64), where a 1.39 DC lift is plainly visible. DO NOT SHIP g192.",
+      "JUDGE THE SHADOW WITH `objsheet.py`, NEVER `shadow_ratio`. That ratio counts changed pixels outside the object bbox, so it credits the re-grade as shadow: overcast base scores 1.04 largely because the whole box is a visibly lighter rectangle in the grass. `f096`'s 0.48 is that rectangle REMOVED with a real cast shadow still on the ground in all three plates. The apparent 'shadow loss' of every clean config is mostly re-grade removal.",
+      "SEAM VISIBILITY IS SCENE-DEPENDENT, and that is a product fact, not just a measurement one. The same DC offset is invisible in gravel (std 51.6) and glaring in smooth grass or sky (std 10.9 / 2.6). So this defect will hit users on plain backgrounds - skies, still water, plain walls - and effectively never on textured ones. Worth remembering when the box step's copy is written.",
+      "SCOPE ESCAPED THIS CARD (unchanged from session 7). LanPaint is landing in the SHIPPED klein_t2i_template, so the node_lock.json pin reaches every Klein op plus the Character Sheet flow. Fabio has a separate agent on 9B + the new 4B template. MPI-567 CONSUMES that template; it must not be the card that pins a third-party sampler into every Klein path. Overlaps MPI-598 and MPI-600."
+    ],
+    "constraints": [
+      "AN OUT-OF-RANGE WIDGET IS NOT AN ERROR. `mask_blend_pixels: 96` (max 64) and `GrowMaskWithBlur.blur_radius: 128` (max 100) both make ComfyUI prune the branch and still report status_str 'success' in ~0.2-2s with the sampler never run. The only outputs are preview temps from MpiLoadImageFromPath (it is an OUTPUT_NODE), so a runner taking files[-1] picks up a <comfy>/temp path and dies somewhere unrelated. ALWAYS assert your own SaveImage prefix produced a file - seamfix.py does.",
+      "HEREDOCS ARE BLOCKED by a guard hook that fires on `<<`. Two slipped through this session and two were blocked, so do not rely on either outcome: write a .py file and run it by path. Windows python also needs sys.stdout.reconfigure(encoding='utf-8') or it dies on cp1252 mid-script, and json.load on a board file needs encoding='utf-8-sig'.",
+      "THE BENCH IS 8188 AND THE GPU WAS AUTHORIZED FOR THIS SESSION ONLY - ask again. LanPaint is installed there (LanPaint_KSampler + siblings) but is NOT yet on the app engine at 48188, so this route cannot be gated against the shipping engine until Fabio's other session lands the pin. 9B needs qwen_3_8b_int8_convrot.safetensors; pairing it with 4B's qwen_3_4b dies with a shape error that reads as a LanPaint bug and is not one.",
+      "A SECOND SESSION IS LIVE IN THIS TREE and owns models.js, icons.js, MpiAudioRecorder, the Gallery components, MPI-573, MPI-598 and MPI-600. Do NOT stage any of them. Because it owns icons.js, a new icon is unavailable - MpiStepPaint's Undo/Clear are text buttons for exactly that reason.",
+      "PUSH IS USER-AUTHORIZED even though project-profile.md frontmatter says push_policy: auto - CLAUDE.md Git and Commits wins. This session's 2 commits (8131dc8c, 0b049919) are unpushed; a peer session pushes on its own schedule, so check `git rev-list --count origin/master..HEAD` rather than assuming.",
+      "THE COMFYUI EDITOR QUANTISES FLOAT WIDGETS. Fabio has NOT opened comfy_workflows/raw/flow_scribble_object.json, so the restored 12/255 and 40/255 thresholds are still exact - but they revert to 0.05/0.16 the moment that file is reopened and saved. Relevant because the rebuild will touch that file."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-567/research/lanpaint/verdict.md",
+      ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-567/research/lanpaint/seamfix.py",
+      ".agents/mpi-kanban/tasks/MPI-567/research/lanpaint/seamvis.py",
+      "docs/playbooks/add-flow/ui/carousel-frame.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/02f300e3-e484-43c7-8c03-c35dd799852f.json and use mpi-continue to resume MPI-567 (Scribble-to-object Flow), which is in `doing`. Session 8 fixed the visible box edge that was blocking the app wiring. All four candidate fixes in research/lanpaint/verdict.md failed, but so did the bar they were judged against: `edge_step` is mean |diff|, which cannot tell a tonal STEP from redrawn TEXTURE. Splitting those apart (seamvis.py: dir = signed/abs, and cnr = |signed| / local photo std) showed the real defect is a DC offset landing on a low-variance region - sun's top edge scores 10.98 and is invisible, overcast's scores a LOWER 9.26 and is the worst seam in the set. The fix is ONE node: GrowMaskWithBlur(expand -96, blur_radius 96) between InpaintCropImproved's cropped_mask and SetLatentNoiseMask, keeping session 7's auto box unchanged; it takes worst cnr from 0.85 to 0.15 while moving LESS of the photo than baseline, at the same 16.1s. Your FIRST job is not the app half: both comfy_workflows/raw/flow_scribble_object.json and comfy_workflows/flow_scribble_object.json are STILL the old 70-node relight+tail route with zero LanPaint nodes - the measured route has only ever existed in the python runners, so port it from seamfix.py build() and add that feather node. Then do the app half per plan.md. Four traps that will cost you if rediscovered: an out-of-range widget value makes ComfyUI report success with the sampler never run (assert your SaveImage prefix produced a file); heredocs are blocked by a guard hook, so write .py files and run them by path; never judge this route with edge_step or shadow_ratio (the first crowned g192, which is actually the second-worst seam because growing the box put its edge in smooth sky; the second credits the re-grade as shadow); and 9B needs qwen_3_8b_int8_convrot, not 4B's qwen_3_4b. The bench is 8188 and GPU authorization expired with session 8 - ask again. LanPaint is NOT yet on the app engine at 48188; a peer session owns that pin and also owns models.js, icons.js, MpiAudioRecorder, the Gallery components, MPI-573, MPI-598 and MPI-600 - do not stage those. Push is user-authorized; commits 8131dc8c and 0b049919 are unpushed."
+}
