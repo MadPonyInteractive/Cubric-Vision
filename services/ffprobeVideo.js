@@ -72,4 +72,44 @@ async function probeVideo(inputPath) {
     }
 }
 
-module.exports = { probeVideo };
+/**
+ * Probe an AUDIO file. Separate from probeVideo because that one returns null
+ * whenever there is no video stream — correct for its callers, and the reason an
+ * audio card had no length to show until now (MPI-573).
+ *
+ * @param {string} inputPath
+ * @returns {Promise<{duration:number, sampleRate:number, channels:number, codecName:string}|null>}
+ *          null on failure, so the caller decides the fallback.
+ */
+async function probeAudio(inputPath) {
+    try {
+        const args = [
+            '-v', 'error',
+            '-print_format', 'json',
+            '-show_streams',
+            '-show_format',
+            inputPath,
+        ];
+        const { stdout } = await execFileP(ffprobePath, args, { maxBuffer: 4 * 1024 * 1024 });
+        const data = JSON.parse(stdout);
+
+        const aStream = (data.streams || []).find(s => s.codec_type === 'audio');
+        if (!aStream) return null;
+
+        // The stream's own duration is missing on some containers (a raw WAV among
+        // them reports it only at format level), so fall back rather than read 0.
+        const duration = Number(aStream.duration || data.format?.duration || 0) || 0;
+
+        return {
+            duration:   Number(duration.toFixed(3)),
+            sampleRate: Number(aStream.sample_rate) || 0,
+            channels:   Number(aStream.channels)    || 0,
+            codecName:  aStream.codec_name || '',
+        };
+    } catch (err) {
+        logger.warn('project', `ffprobe (audio) failed for ${inputPath}: ${err.message}`);
+        return null;
+    }
+}
+
+module.exports = { probeVideo, probeAudio };

@@ -1,4 +1,24 @@
 {
   "schema": "mpi-kanban/task-files/v1",
-  "files": []
+  "files": [
+    "js/components/Compounds/MpiAudioRecorder/MpiAudioRecorder.js",
+    "js/components/Compounds/MpiAudioRecorder/MpiAudioRecorder.css",
+    "js/components/Compounds/MpiMediaPicker/MpiMediaPicker.js",
+    "js/components/Compounds/MpiMediaPicker/MpiMediaPicker.css",
+    "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+    "js/shell/preloadStyles.js",
+    "js/utils/icons.js",
+    "js/core/storageKeys.js",
+    "js/services/mediaUploadService.js",
+    "js/services/commandExecutor.js",
+    "js/data/commandRegistry.js",
+    "main.js",
+    "routes/projects.js",
+    "services/ffprobeVideo.js",
+    "tests/audio-media-type.test.cjs",
+    "docs/component-contracts.md",
+    ".agents/mpi-kanban/tasks/MPI-573/plan.md",
+    ".agents/mpi-kanban/tasks/MPI-573/files.json",
+    ".agents/mpi-kanban/tasks/MPI-573/validation.md"
+  ]
 }

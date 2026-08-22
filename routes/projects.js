@@ -32,7 +32,7 @@ const logger = require('./logger');
 const { v4: uuidv4 } = require('uuid');
 const { getProjectsRoot, COMFYUI_PORT, streamDownload, stripImageMetadata, readProjectPathsRegistry, addProjectPathToRegistry, removeProjectPathFromRegistry } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
-const { probeVideo } = require('../services/ffprobeVideo');
+const { probeVideo, probeAudio } = require('../services/ffprobeVideo');
 const { extractVideoThumb, extractImageThumb } = require('../services/ffmpegThumb');
 const { ffmpegPath, ffprobePath, quote } = require('../services/ffmpegBinary');
 const { muxAudioIntoVideo } = require('../services/ffmpegMux');
@@ -1424,9 +1424,12 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
                 metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
             }
         } else if (mediaType === 'audio') {
-            // Audio: no frames/dimensions/thumb — render an icon card.
-            // ponytail: no duration probe — probeVideo returns null without a
-            // video stream; add a dedicated audio probe if the card must show length.
+            // Audio: no frames/dimensions/thumb — render an icon card. Duration is
+            // the one thing the card CAN show, and it comes from probeAudio rather
+            // than probeVideo, which returns null when there is no video stream
+            // (MPI-573).
+            const a = await probeAudio(filePath);
+            if (a) metaContent.duration = a.duration;
             metaContent.thumbPath = null;
         } else {
             // Image: downscale to a gallery thumb so scrolling 100+ 4K cards
@@ -1751,6 +1754,11 @@ router.post('/project/save-generation', async (req, res) => {
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
         const isVideo = mediaType === 'video';
+        // MPI-573: an operation whose PRIMARY output is audio. Distinct from the
+        // `audioViewUrl` side channel above, which is a video's soundtrack on its way
+        // to the mux — here the audio IS the generation, so there is no video to be
+        // master of, nothing to strip, no frame to thumbnail and no pixel dimensions.
+        const isAudio = mediaType === 'audio';
 
         // Normalize path to use backslashes on Windows
         const normalizedFolderPath = path.normalize(folderPath);
@@ -1812,7 +1820,9 @@ router.post('/project/save-generation', async (req, res) => {
 
         // ComfyUI stamps the full API graph into the PNG's `prompt` tEXt chunk.
         // Every user-facing output funnels through this one save, so scrub here.
-        if (!isVideo) await stripImageMetadata(filePath);
+        // Audio is excluded with video: this is a sharp round-trip, and running one
+        // over a WAV would either fail or rewrite it as an image.
+        if (!isVideo && !isAudio) await stripImageMetadata(filePath);
 
         // Split video/audio output (B3): a video workflow saves VIDEO (no audio)
         // + AUDIO as two separate files (the single "Output" VHS_VideoCombine,
@@ -1879,6 +1889,7 @@ router.post('/project/save-generation', async (req, res) => {
         // — operations with no ratio control → no Width/Height injection params).
         let resolvedDims = pixelDimensions;
         let videoInfo = null;
+        let audioInfo = null;
         if (isVideo) {
             videoInfo = await probeVideo(filePath);
             if (videoInfo) {
@@ -1889,6 +1900,11 @@ router.post('/project/save-generation', async (req, res) => {
             } else {
                 resolvedDims = resolvedDims ?? { w: 0, h: 0 };
             }
+        } else if (isAudio) {
+            // Audio has no pixels — 0x0 is the honest answer, not a failed probe.
+            // Duration is the one measurement its card can show.
+            audioInfo = await probeAudio(filePath);
+            resolvedDims = { w: 0, h: 0 };
         } else if (!resolvedDims || !resolvedDims.w || !resolvedDims.h) {
             try {
                 const sharp = require('sharp');
@@ -1905,7 +1921,7 @@ router.post('/project/save-generation', async (req, res) => {
         // Write UUID-keyed sidecar to .meta/<uuid>.json (single source of truth)
         const metaContent = {
             id,
-            type: isVideo ? 'video' : 'image',
+            type: isVideo ? 'video' : isAudio ? 'audio' : 'image',
             filePath: projectFileUrlBusted(filePath),
             operation,
             displayName:    filename.replace(/\.[^.]+$/, ''),
@@ -1941,6 +1957,10 @@ router.post('/project/save-generation', async (req, res) => {
             if (thumbed) {
                 metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
             }
+        } else if (isAudio) {
+            // No thumb — the gallery renders an icon card for audio (MPI-132).
+            if (audioInfo) metaContent.duration = audioInfo.duration;
+            metaContent.thumbPath = null;
         } else {
             // Image gens get a gallery thumb too (MPI-319) so the gallery grid
             // renders a small JPG, not the full-res output.

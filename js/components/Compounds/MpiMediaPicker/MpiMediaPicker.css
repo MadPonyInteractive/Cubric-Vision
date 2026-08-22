@@ -180,7 +180,10 @@
 }
 
 /* ── upload card ───────────────────────────────────────────────────────── */
-.mpi-btn.mpi-media-picker__tile--upload {
+/* The mic card (MPI-573) is the upload card wearing a different icon - same
+   affordance, same dashed-tile language, so they read as one row of sources. */
+.mpi-btn.mpi-media-picker__tile--upload,
+.mpi-btn.mpi-media-picker__tile--mic {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -195,7 +198,8 @@
 }
 
 /* Keeps the canvas fill on hover — the ghost rule (0,2,1) would tint it. */
-.mpi-btn.mpi-btn--ghost.mpi-media-picker__tile--upload:hover:not(:disabled) {
+.mpi-btn.mpi-btn--ghost.mpi-media-picker__tile--upload:hover:not(:disabled),
+.mpi-btn.mpi-btn--ghost.mpi-media-picker__tile--mic:hover:not(:disabled) {
     background: var(--surface-canvas);
     border-color: var(--accent-heat);
     color: var(--ink-1);

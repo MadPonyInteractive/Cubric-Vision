@@ -14,6 +14,12 @@ export const STORAGE_KEYS = {
   GALLERY_VOLUME:      'mpi_gallery_volume',
   TOAST_SOUND:         'mpi_toast_sound',
 
+  // MPI-573: microphone capture. Device is a deviceId from enumerateDevices (empty
+  // = system default); gain is a linear multiplier applied to the recorded signal,
+  // not just to the meter.
+  AUDIO_INPUT_DEVICE:  'mpi_audio_input_device',
+  AUDIO_INPUT_GAIN:    'mpi_audio_input_gain',
+
   // RunPod remote engine — NON-secret prefs only. The API key and wrapper
   // token live in the main process (safeStorage via secrets:* IPC), never here.
   RUNPOD_CONFIG:       'mpi_runpod_config',

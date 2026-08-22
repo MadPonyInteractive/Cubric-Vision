@@ -3,6 +3,8 @@ import { MpiInput } from '../../../Primitives/MpiInput/MpiInput.js';
 import { MpiCheckbox } from '../../../Primitives/MpiCheckbox/MpiCheckbox.js';
 import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
+import { MpiDropdown } from '../../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiProgressBar } from '../../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiFolderDrop } from '../../../Primitives/MpiFolderDrop/MpiFolderDrop.js';
 import { MpiRunpodSettings } from '../MpiRunpodSettings/MpiRunpodSettings.js';
 import { state } from '../../../../state.js';
@@ -94,6 +96,24 @@ export const MpiSettings = ComponentFactory.create({
                             <span class="mpi-settings__plate-desc">Auto shows individual pixels past 300% zoom. Pixel-perfect always shows pixels; Smooth never does.</span>
                         </div>
                         <div class="mpi-settings__plate-ctrl" id="mpiSettingsPixelModeSlot"></div>
+                    </div>
+                </section>
+
+                <section class="mpi-settings__section">
+                    <h3 class="mpi-settings__section-title">Audio Input</h3>
+                    <div class="mpi-settings__plate mpi-settings__plate--stack">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Microphone</span>
+                            <span class="mpi-settings__plate-desc">Used by the Record button on any audio slot.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsAudioDeviceSlot"></div>
+                    </div>
+                    <div class="mpi-settings__plate mpi-settings__plate--stack">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Input gain</span>
+                            <span class="mpi-settings__plate-desc">Boost a quiet microphone. The level meter in the recorder shows the result — keep peaks out of the red.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsAudioGainSlot"></div>
                     </div>
                 </section>
 
@@ -199,6 +219,55 @@ export const MpiSettings = ComponentFactory.create({
             return inst;
         }
 
+        /**
+         * Microphone device + input gain (MPI-573).
+         *
+         * `enumerateDevices` only returns real device LABELS once the page holds a
+         * media permission — before that every entry comes back as an empty string,
+         * which would render a list of identical blank rows. So the list falls back
+         * to "System default" alone until the user has recorded once and granted it;
+         * the recorder itself works on the default device meanwhile.
+         *
+         * The stored id is deliberately NOT validated against the list on load: a
+         * device unplugged today is usually back tomorrow, and clearing the setting
+         * silently would lose a choice the user made. `getUserMedia` asks with
+         * `ideal`, so a missing device degrades to the default instead of throwing.
+         */
+        async function _initAudioInput(root) {
+            const deviceSlot = qs('#mpiSettingsAudioDeviceSlot', root);
+            const gainSlot = qs('#mpiSettingsAudioGainSlot', root);
+
+            if (gainSlot) {
+                gainSlot.innerHTML = '';
+                const gainInst = MpiProgressBar.mount(gainSlot, {
+                    min: 0.5, max: 4, step: 0.1,
+                    value: Storage.getAudioInputGain(),
+                    interactive: true, handle: true,
+                    info: 'Input gain: {value}x',
+                });
+                gainInst.on('change', ({ value }) => Storage.setAudioInputGain(value));
+            }
+
+            if (!deviceSlot) return;
+            deviceSlot.innerHTML = '';
+            let inputs = [];
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                inputs = devices.filter(d => d.kind === 'audioinput' && d.label);
+            } catch (err) {
+                clientLogger.warn('settings', `[MpiSettings] enumerateDevices failed: ${err?.message || err}`);
+            }
+            const deviceInst = MpiDropdown.mount(deviceSlot, {
+                options: [
+                    { label: 'System default', value: '' },
+                    ...inputs.map(d => ({ label: d.label, value: d.deviceId })),
+                ],
+                value: Storage.getAudioInputDevice(),
+                placeholder: 'System default',
+            });
+            deviceInst.on('change', ({ value }) => Storage.setAudioInputDevice(value));
+        }
+
         function _initFields(root) {
             // ── Auto-start toggle ────────────────────────────────────────────
             _mountSwitchPlate('#mpiSettingsAutoStartSlot', Storage.getAutoStartComfy(),
@@ -239,6 +308,9 @@ export const MpiSettings = ComponentFactory.create({
                 });
                 pixelInst.on('select', ({ value }) => { state.pixelMode = value; });
             }
+
+            // ── Audio input (MPI-573) ────────────────────────────────────────
+            _initAudioInput(root);
 
             // ── Reuse Prompt behavior ───────────────────────────────────────
             const reusePartsSlot = qs('#mpiSettingsReusePartsSlot', root);

@@ -2,9 +2,13 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { MpiButton, mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { state } from '../../../state.js';
+import { Events } from '../../../events.js';
 import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
+import { showAudioRecorder } from '../MpiAudioRecorder/MpiAudioRecorder.js';
+import { uploadMediaFile } from '../../../services/mediaUploadService.js';
+import { clientLogger } from '../../../services/clientLogger.js';
 
 /**
  * MpiMediaPicker — pick media the project ALREADY holds, or bring one in (Compound)
@@ -208,6 +212,58 @@ export const MpiMediaPicker = ComponentFactory.create({
             return card;
         }
 
+        /**
+         * The mic card — audio slots only (MPI-573).
+         *
+         * It does NOT go through `onImport`. A recording is not an imported file: the
+         * user just made it, it exists nowhere else, and it has to survive as project
+         * media so any later slot (or Flow) can reach it. So it takes the same route a
+         * gallery drop takes — `uploadMediaFile` writes the file and its sidecar,
+         * `media:imported` gives it a gallery card — and only then does it resolve as
+         * a normal PICK, which is what it now is.
+         */
+        function _buildMicCard() {
+            const card = mountButton({
+                variant: 'ghost',
+                size: 'sm',
+                extraClasses: 'mpi-media-picker__tile mpi-media-picker__tile--mic',
+            });
+            card.title = 'Record from your microphone';
+            const icon = ce('span', { className: 'mpi-media-picker__upload-icon' });
+            icon.innerHTML = renderIcon('mic', 'lg');
+            const label = ce('span', { className: 'mpi-media-picker__upload-label' });
+            label.textContent = 'Record';
+            card.appendChild(icon);
+            card.appendChild(label);
+            _unsubs.push(on(card, 'click', async () => {
+                const file = await showAudioRecorder();
+                if (!file) return;
+                const project = state.currentProject;
+                if (!project?.folderPath || !project?.id) {
+                    clientLogger.warn('MpiMediaPicker', 'No current project — cannot save recording');
+                    return;
+                }
+                const uploaded = await uploadMediaFile(file, 'audio', project.folderPath, project.id, {
+                    filenamePrefix: 'recording', operation: 'recorded',
+                });
+                if (!uploaded) return;
+                Events.emit('media:imported', {
+                    url: uploaded.filePath,
+                    filename: uploaded.filename,
+                    itemId: uploaded.itemId,
+                    thumbPath: uploaded.thumbPath,
+                    pixelDimensions: uploaded.pixelDimensions,
+                    duration: uploaded.duration,
+                    mediaType: 'audio',
+                });
+                const picked = { filePath: uploaded.filePath, mediaType: 'audio' };
+                props.onPick?.(picked);
+                emit('pick', picked);
+                modal.el.hide();
+            }));
+            return card;
+        }
+
         function _buildTile(entry) {
             const { item, type } = entry;
             const name = _stripExt(item.displayName || _basename(item.filePath));
@@ -289,6 +345,10 @@ export const MpiMediaPicker = ComponentFactory.create({
             const entries = _collect();
 
             if (importInput) grid.appendChild(_buildUploadCard());
+            // Gated on the SLOT's type, not the active filter: widening the filter to
+            // "All media" is the user looking around, not a change of what the slot
+            // takes, and a Record card under an image slot would be a dead end.
+            if (slotType === 'audio') grid.appendChild(_buildMicCard());
 
             if (!entries.length) {
                 const empty = ce('div', { className: 'mpi-media-picker__empty' });

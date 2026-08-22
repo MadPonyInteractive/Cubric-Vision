@@ -11,7 +11,8 @@ import { measureMediaDimensions } from '../utils/mediaDimensions.js';
 
 /**
  * @param {File} file
- * @param {'image'|'video'} mediaType
+ * @param {'image'|'video'|'audio'} mediaType — audio has no dimensions and no thumb;
+ *        the server probes its duration instead (MPI-573).
  * @param {string} projectFolderPath
  * @param {string} projectId
  * @param {Object} [opts]

@@ -375,6 +375,33 @@ function createWindow() {
     }
   );
 
+  // Renderer permissions (MPI-573). Installing a handler at all is what the mic
+  // recorder needs: Electron answers permission requests itself, and a denied
+  // getUserMedia({audio}) comes back with no prompt, no dialog and nothing in the
+  // log — the recorder simply never arms, which reads as a broken component.
+  //
+  // Installing one also INVERTS the default for everything else, so this list is
+  // not just `media`: until now there was no handler, and the two permissions the
+  // app already relies on were being granted by that default. Both are silent when
+  // refused, which is why they are named here rather than discovered later —
+  //   fullscreen  → the video control bar's fullscreen button + focus mode,
+  //   pointerLock → MpiRadialMenu, i.e. the primary operation picker.
+  // Desktop notifications are NOT in this list and must not be: they are raised by
+  // the main process (`new Notification` below), which never asks the renderer's
+  // session. Anything else is denied and logged — a future miss surfaces as a log
+  // line instead of a feature that quietly stops working.
+  const ALLOWED_PERMISSIONS = new Set(['media', 'fullscreen', 'pointerLock']);
+  session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
+    const allowed = ALLOWED_PERMISSIONS.has(permission);
+    if (!allowed) logger.warn('main', `permission denied to renderer: ${permission}`);
+    callback(allowed);
+  });
+  // The synchronous twin. Chromium consults this one for `navigator.permissions.query`
+  // and for enumerateDevices' labels; without it the Settings device list comes back
+  // as unlabelled "Microphone" entries the user cannot tell apart.
+  session.defaultSession.setPermissionCheckHandler((_wc, permission) =>
+    ALLOWED_PERMISSIONS.has(permission));
+
   loadWindowState();
 
   const { width, height, x, y } = windowState;

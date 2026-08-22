@@ -13,9 +13,17 @@
 
 // ── Media Types ───────────────────────────────────────────────────────────────
 
+/**
+ * AUDIO is an OUTPUT type as of MPI-573. Audio has always been a legal INPUT —
+ * audio gallery cards, audio media slots, an audio filter in the picker — but no
+ * operation could ever produce one: a collected `Output_Audio` was only ever muxed
+ * into a video. The music / TTS / voice-clone Flows coming next emit audio and
+ * nothing else, so the enum has to admit it before any of them can be wired.
+ */
 export const MEDIA_TYPE = Object.freeze({
     IMAGE: 'image',
     VIDEO: 'video',
+    AUDIO: 'audio',
 });
 
 // ── Command Definitions ───────────────────────────────────────────────────────

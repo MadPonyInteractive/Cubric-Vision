@@ -101,6 +101,12 @@
  *                                       FOLLOWS the picked member (`flowSettingsModel()`, MPI-590)
  *                                       — otherwise a user running the NSFW arm edits the SFW
  *                                       card's rack and gets no LoRAs at all, silently.
+ * @property {'image'|'video'|'audio'} mediaType - What the flow PRODUCES. Decides the gallery
+ *                                       card, the save path and the group type. `'audio'` became
+ *                                       legal in MPI-573, for the music / TTS / voice-clone flows
+ *                                       — such a flow's graph names its SaveAudio node
+ *                                       `Output_Audio`, the same title a video's soundtrack uses,
+ *                                       and the declared mediaType is what tells the two apart.
  * @property {Object}   inputSchema    - What the flow collects → injected into the workflow
  * @property {{compare?: string}} [result] - How the RESULT is presented. `compare` names the media
  *                                       ROLE holding the BEFORE — the frame then shows the result

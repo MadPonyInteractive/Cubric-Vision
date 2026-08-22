@@ -183,6 +183,17 @@ export const Storage = {
   getToastSound:       () => get(STORAGE_KEYS.TOAST_SOUND, true),
   setToastSound:       (v) => set(STORAGE_KEYS.TOAST_SOUND, v),
 
+  // MPI-573 — mic capture. '' means the system default device: a stored deviceId
+  // is only valid for the machine that wrote it, so the recorder asks for it with
+  // `ideal` rather than `exact` and silently falls back when the device is gone.
+  getAudioInputDevice: () => String(get(STORAGE_KEYS.AUDIO_INPUT_DEVICE, '') || ''),
+  setAudioInputDevice: (v) => set(STORAGE_KEYS.AUDIO_INPUT_DEVICE, String(v || '')),
+
+  // Linear gain on the recorded signal. Capped at 4x — past that a quiet mic is
+  // amplifying its own noise floor, not the voice.
+  getAudioInputGain:   () => Math.min(4, Math.max(0, Number(get(STORAGE_KEYS.AUDIO_INPUT_GAIN, 1)) || 1)),
+  setAudioInputGain:   (v) => set(STORAGE_KEYS.AUDIO_INPUT_GAIN, Math.min(4, Math.max(0, Number(v) || 1))),
+
   getExtraProjectPaths: () => get(STORAGE_KEYS.EXTRA_PROJECT_PATHS, []),
   setExtraProjectPaths: (v) => set(STORAGE_KEYS.EXTRA_PROJECT_PATHS, v),
 

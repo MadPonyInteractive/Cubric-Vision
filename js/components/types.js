@@ -1222,6 +1222,29 @@
  */
 
 /**
+ * @typedef {Object} MpiAudioRecorderProps (Compound — js/components/Compounds/MpiAudioRecorder)
+ *
+ * No props. The input device and gain come from Settings (Storage.getAudioInputDevice /
+ * getAudioInputGain), not from the caller — a recorder that took them as props would let
+ * two surfaces disagree about which microphone the app uses.
+ *
+ * Prefer the promise helper over mounting by hand:
+ *   const file = await showAudioRecorder();   // File(.wav) | null
+ *
+ * The result is a 16-bit WAV, re-muxed from MediaRecorder's WebM: `.webm` is classified
+ * as VIDEO by extension in five places on the server, so keeping the native container
+ * would make the first project reload silently re-type the card to video.
+ *
+ * Instance methods (on instance.el):
+ *   show() — Self-portals a backdrop + centred dialog to document.body (via MpiModal).
+ *   hide() — Removes backdrop/wrapper, releases OverlayManager queue.
+ *
+ * Emits:
+ * 'accept' { file: File } — Accept pressed; a WAV File.
+ * 'cancel' {}             — Discard, Escape or backdrop.
+ */
+
+/**
  * @typedef {Object} MpiMediaPickerProps (Compound — js/components/Compounds/MpiMediaPicker)
  * @property {'image'|'video'|'audio'} [mediaType='image'] - Only history items of this type are listed.
  * @property {Function} [onPick] - (item: {filePath: string, mediaType: string}) => void.
@@ -1236,6 +1259,11 @@
  *
  * Two sources, one surface (settled with the user 2026-08-16): the project's own
  * media AND the filesystem. Still not a file manager — no cross-project browsing.
+ *
+ * On an AUDIO slot there is a THIRD source: a Record card opening MpiAudioRecorder
+ * (MPI-573). It takes no prop — the picker owns that wiring, because a recording is
+ * not an imported file and does not go through `onImport`: it is saved as project
+ * media first and then resolves as an ordinary `pick`.
  *
  * Instance methods (on instance.el):
  *   show() — Self-portals a backdrop + centred dialog to document.body (via MpiModal).

@@ -8,7 +8,7 @@
 
 import { runCommand } from './commandExecutor.js';
 import { saveGeneration, addGroup, updateGroup } from './projectService.js';
-import { createImageItem, createVideoItem, createItemGroup, appendToHistory, getModelSettings, getSharedSettings, getOpSettings, replaceHistoryItemById } from '../data/projectModel.js';
+import { createImageItem, createVideoItem, createAudioItem, createItemGroup, appendToHistory, getModelSettings, getSharedSettings, getOpSettings, replaceHistoryItemById } from '../data/projectModel.js';
 import { Events } from '../events.js';
 import { generationStore } from './generationStore.js';
 import { remoteEngineClient } from './remoteEngineClient.js';
@@ -786,6 +786,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     let samplingStartTime = null;
     const itemId = crypto.randomUUID();
     const isVideo = model.mediaType === 'video';
+    const isAudio = model.mediaType === 'audio';   // MPI-573 — audio-primary output
 
     // Generate the gen id UP FRONT so it flows into BOTH the store job record
     // (payload.genId → store.register, MPI-208 Phase 4) and the activeGenerations
@@ -930,6 +931,20 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 Events.emit('ui:warning', { message: 'No description was returned.' });
             }
             return;
+        }
+
+        // MPI-573 — an AUDIO-output op's product is the `Output_Audio` file, which the
+        // executor has always collected into a side channel because the only consumer
+        // until now was the video mux (video is master; audio rides along). An op that
+        // declares `mediaType: 'audio'` has no video to be master, so its side channel
+        // IS the primary output and is promoted here.
+        //
+        // Gated on the OP's declared type, not on "urls is empty and audio isn't" —
+        // the same reasoning as the text branch above. A VIDEO run that saved its audio
+        // and then failed to save the video is also empty-with-audio, and promoting
+        // that one would turn a broken generation into an audio card.
+        if (model.mediaType === 'audio' && !urls.length && outputInfo.audioUrl) {
+            urls = [outputInfo.audioUrl];
         }
 
         if (!urls.length) {
@@ -1157,7 +1172,10 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 if (savedData?.loraSnapshot) baseProps.loraSnapshot = savedData.loraSnapshot;
                 if (savedData?.previewAssets) baseProps.previewAssets = savedData.previewAssets;
             }
-            const item = isVideo ? createVideoItem(baseProps) : createImageItem(baseProps);
+            if (isAudio) baseProps.duration = savedData?.duration ?? 0;
+            const item = isVideo
+                ? createVideoItem(baseProps)
+                : isAudio ? createAudioItem(baseProps) : createImageItem(baseProps);
             builtItems.push(item);
         }
 
