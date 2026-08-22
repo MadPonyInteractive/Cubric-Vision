@@ -681,9 +681,9 @@ export const loraDeps = {
     // the Credits list from those, so the obligation is discharged in data.
     // Research, hashes and download provenance:
     // .agents/mpi-kanban/tasks/MPI-598/research/klein9b-style-loras.md
-    'klein-9b-style-cartoon': {
-        id: 'klein-9b-style-cartoon',
-        name: 'Klein 9B Style — Cartoon',
+    'klein-9b-style-storybook': {
+        id: 'klein-9b-style-storybook',
+        name: 'Klein 9B Style — Storybook',
         origin: 'CivitAI 2001580 (Disney Mid-Century Animation, Klein9B)',
         filename: 'loras/flux2-klein/styles/DisneyMidCenturyKlein9b.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/DisneyMidCenturyKlein9b.safetensors',
@@ -767,9 +767,9 @@ export const loraDeps = {
         bytes: 700395928,
         sha256: '7ec32ba728ee4b42fb68074e8da5f8d965813c2ff3f17186141257a265d32d92',
     },
-    'klein-9b-style-aesthetic': {
-        id: 'klein-9b-style-aesthetic',
-        name: 'Klein 9B Style — Aesthetic',
+    'klein-9b-style-watercolour': {
+        id: 'klein-9b-style-watercolour',
+        name: 'Klein 9B Style — Watercolour',
         origin: 'CivitAI 2600302 (Amano Watercolor Sketch Style, Klein 9B)',
         filename: 'loras/flux2-klein/styles/amano_flux_02.safetensors',
         url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/amano_flux_02.safetensors',

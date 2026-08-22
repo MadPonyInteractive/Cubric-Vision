@@ -1070,16 +1070,16 @@ export const MODELS = [
         // empty slots). Index 0 = no style, selector 0. SEVEN styles — the labels are NOT
         // 4B's, see the header comment.
         styleLoraLabels: [
-            'None', 'Cartoon', 'Comic', 'Anime',
-            'Chibi', 'Doodle', 'Vintage', 'Aesthetic',
+            'None', 'Storybook', 'Comic', 'Anime',
+            'Chibi', 'Doodle', 'Vintage', 'Watercolour',
         ],
         // Not yet produced — every entry renders a placeholder card until the webp lands,
         // which is why the rack is testable now. Ship all eight from the SAME prompt so
         // the grid reads as a comparison, index 0 being that prompt with the rack off.
         styleLoraImages: [
-            'klein-9b-style-none.webp', 'klein-9b-style-cartoon.webp', 'klein-9b-style-comic.webp',
+            'klein-9b-style-none.webp', 'klein-9b-style-storybook.webp', 'klein-9b-style-comic.webp',
             'klein-9b-style-anime.webp', 'klein-9b-style-chibi.webp', 'klein-9b-style-doodle.webp',
-            'klein-9b-style-vintage.webp', 'klein-9b-style-aesthetic.webp',
+            'klein-9b-style-vintage.webp', 'klein-9b-style-watercolour.webp',
         ],
         gen_speed: 'balanced',
         description: 'FLUX.2 Klein at 9B — the same seven operations as the 4B card with more detail and stronger prompt adherence, traded against speed and a non-commercial model licence you confirm before downloading (the IMAGES you make stay commercially usable). Needs roughly 15GB of video memory at peak, so on a 16GB card the margin is thin; the 4B card is the one to use if you hit out-of-memory. Seven style LoRAs are available on every operation — a different set from the 4B card, because most styles have no 9B version at all. Reference-driven placement lands about two times in three on every 9B weight tested, and it fails quietly — if it places the wrong person, or nobody, run it again.',
@@ -1102,13 +1102,13 @@ export const MODELS = [
             'klein-9b-lora-nsfw',            // baked + PROMPT-gated; never loads on a clean prompt
             // NO outpaint LoRA: none exists for 9B, and the 4B one is deprecated (MPI-603).
             // Seven styles, NOT the 4B eight — different weights, different labels.
-            'klein-9b-style-cartoon',
+            'klein-9b-style-storybook',
             'klein-9b-style-comic',
             'klein-9b-style-anime',
             'klein-9b-style-chibi',
             'klein-9b-style-doodle',
             'klein-9b-style-vintage',
-            'klein-9b-style-aesthetic',
+            'klein-9b-style-watercolour',
             '4x-NMKD-Siax',                  // shared engineAsset (upscale op)
             'ComfyUI-MpiNodes',
             'comfyui-kjnodes',
