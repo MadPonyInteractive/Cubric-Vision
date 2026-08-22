@@ -10,6 +10,19 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 
 ## Current State
 
+**2026-08-22, session 4 — nothing was wired. The session went to MPI-599 instead, and that was
+deliberate: the picker this flow needs did not exist yet.** Fabio asked for a model picker per
+PHASE of a flow's graph, and the shipped any-of mechanism could not express it — one pick per
+flow, one unlabelled dropdown, and candidates offered only once two were already installed.
+MPI-599 landed the slot shape (`740a8ef2`, `847d9978`, card in `doing/validating`), so this
+card's wiring now writes the FINAL form and does not get rewritten later. § The model picker in
+this plan is healed to match; its old "install a second SDXL model before judging the picker"
+note is struck, because that gate is gone.
+
+One open thread on MPI-599 belongs to Fabio, not to this card: he asked for a star + hover
+tooltip on the recommended model and what shipped is the sparkle + the WORD inline. Cosmetic,
+does not change anything this card writes.
+
 **2026-08-21, session 3 — the shape decision is SETTLED: composite-back wins, on all five
 plates and on the tiny case.** Two new constraints arrived from Fabio mid-session and both are
 now measured, not assumed. Detail in § Session 3.
@@ -220,12 +233,24 @@ Three findings from the user's own testing of the sibling card, all of which bea
 
 ## Remaining Work
 
-- **The blend pass** — see § The blend pass. Now IN scope for this card, and the gate on wiring.
-  Starts with the online investigation into Boogu multi-image support.
-- **Fabio's sign-off on the bench output by eye** — pending, and he has already named the blend
-  as what is missing.
-- Wire the flow via `/mpi-add-flow`; live-run + reuse per `05-verify.md`.
+Both bench gates are CLOSED: the blend pass is settled (§ Session 3) and Fabio signed off by eye
+on 2026-08-22. What is left is app wiring only.
+
+- Wire the flow via `/mpi-add-flow` — FlowDef, the op in its 4 files, the two-slot
+  `requiredModels` + `modelParams`, the declared fields (incl. the mandatory
+  `Input_Control_strength` slider), the step copy's TONAL wording and its minimum-ink warning.
+- Extend `tests/flow-model-choice.test.cjs` to this flow — it already pins that every
+  `modelParams` key names a title that EXISTS in the flow's graph, which is the assertion that
+  catches a five-arm `Input_Base_Model` typo.
+- Live-run + reuse round trip per `docs/playbooks/add-flow/05-verify.md`. The picker no longer
+  needs two SDXL models installed to be exercised (MPI-599), but a real ARM swap still does.
 - Graphics (tile + hero) — a separate `/mpi-flow-graphics` pass once the flow runs.
+- At close-out, heal the card's acceptance list: it still says *"Canny for a clean structured
+  drawing"*, and canny's real niche is a TONAL/shaded drawing.
+
+**Then MPI-596** (Fabio, 2026-08-22) — the next card after this one proves out. It is the other
+consumer of `docs/playbooks/add-flow/blending-into-a-photo.md`, which session 3 wrote
+flow-agnostic for exactly that reason.
 
 ## Plan Drift
 
