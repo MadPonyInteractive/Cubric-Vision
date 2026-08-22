@@ -77,6 +77,7 @@ NOT mechanically split these):
 | **Per-component behavioral contracts** (PromptBox, MpiToast, MpiPopup, MpiInput, …) | [component-contracts.md](component-contracts.md) |
 | **Video player** (frame-accurate hybrid: `<video>` plays / mediabunny canvas owns paused-step; color matrix rule; frame-index coordinate law; sub-range loop) | [video-player.md](video-player.md) |
 | Flows (Flow Library + Flow overlays; add-a-flow procedure) | [playbooks/add-flow/README.md](playbooks/add-flow/README.md) |
+| **Blending a generated object into the user's photo** (relight cannot happen inside a crop; EVERY localised crop/stitch leaves a visible rectangle whatever the model; the relight→composite-back route; measuring the rectangle; the generic conditional-shadow prompt) | [playbooks/add-flow/blending-into-a-photo.md](playbooks/add-flow/blending-into-a-photo.md) |
 | **Plugins** (the third entity; `requiredDeps` vs `requiredModels`, the unconditional GC protection, Upscale-dropdown entries, the Library row) | [plugins.md](plugins.md) |
 
 ### ComfyUI / generation

@@ -10,6 +10,48 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 
 ## Current State
 
+**2026-08-21, session 3 — the shape decision is SETTLED: composite-back wins, on all five
+plates and on the tiny case.** Two new constraints arrived from Fabio mid-session and both are
+now measured, not assumed. Detail in § Session 3.
+
+- **Composite-back leaves no rectangle anywhere** (fill 0.37–0.56 across five plates) while the
+  localised crop/stitch rectangles on the same stamps (fill 0.94 / 0.92 / 0.88, one suspect at
+  0.81, one under threshold on the dark night plate). Sheet: `mpi567_s3_SHEET_routes.png`.
+- **`Input_Control_strength` 0.8 is TOO HIGH and must ship as a user control** (Fabio: *"this
+  looks a lot, maybe too much, like the drawing itself"*). Measured default: **0.45–0.6**.
+- **The tiny case passes on composite-back**, contradicting the prediction that a whole-frame
+  relight would ignore a small subject. The localised route rectangles even there.
+- **ILL Anime arm confirmed live** — cel-shaded figure on the anime plate vs photoreal on SDXL
+  Realistic, from the same drawing. `Input_Base_Model` swap exercised positively.
+
+- **The blend prompt is settled as `BLEND_PHYSICS2`** — conditional shadow physics plus an
+  anti-glow guard, after v1's rim clause re-created session 2's halo failure.
+- **The shadow-aware composite region fixes the clipped-shadow problem** Fabio thought was
+  unfixable.
+- **Qwen is OUT at all three tiers** (Hyper / Turbo / Quality). Turbo is its best arm and still
+  re-grades, plate-dependently, at ~105s against Klein's 10-16s.
+- **A floor exists and it is in STAGE 1:** below ~80-96px of DRAWN ink the render invents extra
+  figures. Fabio's call, 2026-08-22: **warn in the step copy** (not auto-raise strength).
+- **The shaded-pencil-sketch case is RUN and canny's niche is confirmed** — no ink outline on
+  tonal input, and canny carries interior structure slightly better than scribble.
+
+**SIGN-OFF GIVEN 2026-08-22** — *"Compared to what we had previously, these look very good."*
+The bench gate is OPEN. Also decided in the same exchange: the shadow is **not** a user toggle
+(the prompt already makes it conditional on the light, so a toggle re-introduces the
+unconditional instruction this session removed), and the blend pass is **always on** (a Flow owes
+a finished product).
+
+**Session 3's findings are now DOCUMENTED, not just carded** — Fabio, 2026-08-22: *"cards get
+deleted, I don't want to lose the information."*
+- **[`docs/playbooks/add-flow/blending-into-a-photo.md`](../../../../docs/playbooks/add-flow/blending-into-a-photo.md)** — NEW, flow-agnostic: the three
+  laws, the model comparison, how to measure the rectangle (and the two metrics that fail), the
+  shadow-aware region, the shipping prompt, the graph tail. Written so **MPI-596 does not
+  re-derive any of it**. Routed from `docs/README.md` and the add-flow README.
+- **[`existing-flows/scribble-to-object.md`](../../../../docs/playbooks/add-flow/existing-flows/scribble-to-object.md)** — the flow-specific half: status, control
+  strength, which preprocessor arm, the size floor.
+
+**Next action: wire the flow** via `/mpi-add-flow`, using § Settings this session settled.
+
 **2026-08-21, end of session 2.** Boogu multi-image is ANSWERED (no). The blend was benched on
 Klein 4B across five lighting plates driven end to end from Fabio's own drawing, and the
 **localised crop/stitch path is BLOCKED**: it leaves a visible rectangular re-grade patch on
@@ -376,6 +418,244 @@ yet run; it doubles as a live exercise of the `Input_Base_Model` swap.
 
 Runner: `<scratchpad>/run_e2e.py` (`MPI_CN=1` scribble / `2` canny), plates from
 `make_plates.py`. Outputs `mpi567_e2e_{stamp,blend}_{arm}_{plate}_00001_.png`.
+
+### Session 3 (2026-08-21) — composite-back WINS, and strength becomes a shipped control
+
+Runners: `<scratchpad>/bench.py` (shared), `run_shape.py`, `run_tiny.py`, `run_strength.py`,
+`run_models.py`, `run_ladder.py`, `measure.py`, `crops.py`, `contact.py`.
+
+**The seam is now a NUMBER, not an eye call — and the first metric was wrong.** A column-profile
+step ratio could not tell the routes apart (0.246 vs 0.280) because the object's own pixels
+dominate any whole-frame profile. Two measures do work, and both are in `measure.py`:
+
+- **`fill`** — changed-pixel count over the area of the changed region's own bbox. A stitched
+  rectangle returns the whole crop, so it FILLS its box (~0.9+); a feathered composite changes a
+  round blob inside a square box (~0.4-0.55).
+- **`ring_step`** — mean |difference| in a 12px band just inside that bbox edge. This is the one
+  that matches the eye: the rectangle is visible precisely because that band is re-graded while
+  the pixels immediately outside it are untouched. **Under ~2 is invisible.**
+
+`border` was tried and is NOT usable — the localised rectangle scored 0.034 because the outermost
+ring of the returned crop matches its surroundings even when everything inside it is re-graded.
+
+**RUN (1) ANSWERED — the rectangle is absent on all five plates via composite-back.** Same
+stamps, same prompt, same seed, only the route differs:
+
+| plate | Klein localised | Qwen Hyper localised | composite-back |
+|---|---|---|---|
+| sun | ring 21.45 / fill 0.943 | ring 13.71 / fill 0.723 | **ring 0.91** / fill 0.425 |
+| overcast | ring 15.56 / fill 0.916 | ring 14.06 / fill 0.926 | **ring 1.13** / fill 0.545 |
+| night | ring 6.22 / fill 0.657 | ring 5.76 / fill 0.645 | **ring 0.33** / fill 0.368 |
+| indoor | ring 11.01 / fill 0.811 | ring 10.68 / fill 0.735 | **ring 2.53** / fill 0.517 |
+| anime | ring 10.74 / fill 0.875 | ring 8.78 / fill 0.455 | **ring 1.93** / fill 0.563 |
+
+Sheet: `mpi567_s3_SHEET_routes.png` (localised row boxes on every plate; composite-back row does
+not). Note the **night plate is the one that under-reports** — it is dark and low-contrast, so
+the re-grade sits under the visible threshold there. Do not calibrate on night.
+
+**QWEN DOES RE-GRADE — Fabio's read is NOT supported, and Quality is the WORST arm.** This was
+the cheapest thing that could have unblocked the localised route, and it does not.
+
+| tier | sun | overcast | note |
+|---|---|---|---|
+| Klein (reference) | ring 21.45 | ring 15.56 | |
+| Qwen 3 = Hyper, 4-step, CFG 1.0 | ring 13.71 | ring 14.06 | melts the figure's legs on all five plates |
+| Qwen 2 = Turbo, 8-step | ring 10.39 | ring 20.43 | best Qwen arm — figure intact, but plate-dependent |
+| Qwen 1 = Quality, ~20-step, CFG 2.5 | **ring 22.94** | **ring 16.36** | fill 0.954 / 0.960 — a blatant box |
+
+**Turbo was worth running and Fabio was right about it** — *"we also have the turbo tier for Qwen,
+which sometimes fixes issues that the hyper tier has"*. It does: the melted legs are a Hyper
+artifact and Turbo returns an intact figure with a far weaker box than Quality
+(`mpi567_s3_QWENTIERS_sun.png`). It still does not remove the re-grade, and it is
+**plate-dependent** — ring 10.4 on sun but 20.4 on overcast, against composite-back's 0.91 / 1.13.
+**And it costs ~105s per plate against Klein's 10-16s**, which is a Flow-level cost on its own.
+
+`mpi567_s3_SHEET_qwen_t1.png` shows the overcast Quality run as a hard brown rectangle over green
+grass, worse than Klein's. **Tier is a runtime radio in this graph, not a model variant**
+(`Input_Tier`: 1 Quality / 2 Turbo 8-step / 3 Hyper 4-step) and it **ships baked at 3**, so any
+run that does not set it is measuring the fastest arm. Fabio asked for Turbo too — *"we also have
+the turbo tier for Qwen, which sometimes fixes issues that the hyper tier has"* — queued.
+`MPI_TIER=<n> python run_models.py qwen <plates>`.
+
+**The takeaway is bigger than Qwen: the re-grade is not a model quirk to shop around for.** Three
+models (Boogu, Klein, Qwen at two tiers) all return a re-graded patch. Stop treating "find a model
+that does not re-grade" as a live path; the composite-back route is the answer because it never
+asks a model to return a patch at all.
+
+**The composite-back is a GRAPH TAIL, not an app-side step — checked against the bench's live
+`/object_info`, 2026-08-21.** This matters for the wiring step: the bench proved the route with a
+Python composite, which would otherwise imply a second dispatch, a `multiStage` op, or a new
+server-side image service. None of that is needed. Every piece is a core node already registered:
+
+| step | node |
+|---|---|
+| difference of the plate and the stamped composite | `ImageBlend` (blend_mode `difference`) |
+| difference → mask | `ImageToMask` |
+| binarise | `ThresholdMask` |
+| grow + feather in one | `GrowMaskWithBlur` |
+| take the region back | `ImageCompositeMasked` |
+
+The shadow-aware variant adds one more: `MaskComposite` to union the silhouette mask with the
+high-threshold "what the relight changed" mask. **So the whole flow stays ONE dispatch** — SDXL
+stage 1, the Klein relight, and the composite tail in a single graph — and `capabilities.multiStage`
+stays false. Verify each node's exact input names against `/object_info` when authoring; this
+table records existence, not signatures.
+
+### The shadow, and why the prompt must not ORDER one (Fabio, 2026-08-21)
+
+Two separate faults, raised on the sun composite:
+
+1. **The prompt ORDERS a shadow.** The session-2 wording ends *"cast a natural shadow onto
+   whatever it rests on"*. An ordered shadow has no reason to agree with the scene's light, which
+   is the wrong-direction shadow Fabio caught: *"the composite with the back sun shadow is not
+   right at all"*.
+2. **A shadow is not always correct at all.** *"Shadows aren't present in every image. If a
+   subject is backlit right from behind them, it won't cast any shadows, it will just have a light
+   silhouette around it. If the scene is lit from where the camera is, or the sun is at 12:00, the
+   shadow might not be visible — it will be under the character."* So the clause has to encode
+   **conditional physics**, not an instruction. Three arms are under test in `variants.py`:
+   `withshadow` (session-2 wording), `noshadow` (silent), `physics` (the rule plus its exceptions,
+   including the backlit rim case).
+
+3. **The composite box CLIPS long shadows** — *"the box cutting shadows off, which is a known
+   issue with long shadows with this technique. There's not much we can do about that, I think."*
+   There is one thing: `compose_back` derives its region from the object SILHOUETTE grown 48px, so
+   anything the relight drew beyond that is cut mid-shadow. `variants.compose_shadow_aware`
+   derives it from **what the relight actually changed**, at a high threshold — the object and its
+   cast shadow are a large local change, the global re-grade is a small one, so the threshold
+   separates them and the shadow travels with the region.
+
+#### RESULT — `physics2` + the shadow-aware mask. Both halves were needed.
+
+Four prompt arms x two composite regions, on sun / indoor / night (chosen for their LIGHT, not
+their look). `mpi567_s3_PR2_{sun,indoor,night}.png`.
+
+- **The shadow-aware mask fixes the clipping.** Shadows now run out of the region instead of
+  fading at its boundary. This is worth having even though Fabio expected nothing could be done.
+- **`physics` v1 over-applied the rim and brought the GLOW BACK.** Asked for *"a rim of light"*,
+  Klein drew a luminous OUTLINE around the figure on both night and indoor — and on indoor a
+  plain cast shadow to the lower-right was the correct answer, which both other arms got. **This
+  is session 2's dust-cloud failure from the opposite direction:** name a light effect and the
+  model draws a halo. Session 2 cured it by forbidding glow outright; v1 re-introduced it by
+  asking for one.
+- **`physics2` fixes it** with two changes: edge light is described as something the object's OWN
+  EDGES do rather than something added around it, and session 2's anti-glow guard is restored
+  (*"Do not add glow, haze, or an outline of light around it"*). Indoor loses the halo and gets
+  the correct lower-right shadow; night loses the outline and gains subtle warm edge light off
+  the road reflections; sun keeps a grounded shadow.
+
+**The shipping prompt** (`variants.BLEND_PHYSICS2`) — still no object noun and no scene noun:
+
+> `Place the object into the scene so it looks like it was always part of it, not pasted on: match the scene's lighting direction, colour temperature, contrast and art style, and let the scene's light and shadows fall across it. Ground it with contact shading where it meets the surface. Any cast shadow must follow the scene's own light in direction, length and softness; if the light is overhead or comes from behind the camera, keep the shadow small and directly beneath it, and if the light comes from behind the object, let its own edges catch that light instead of casting a shadow toward the camera. Do not add glow, haze, or an outline of light around it. Let nearby foreground elements overlap its edges. Keep the object's shape and design.`
+
+**Fabio's read of the sheets, 2026-08-22 — `physics2` CONFIRMED:** *"the best light shadow is
+number 2 and 4 ... number three: the rim also looks good, but obviously it's a special case on
+very special images where the light is behind the character. Compared to what we had previously,
+these look very good."* Panels are 1 stamp / 2 `withshadow` / 3 `physics` v1 / 4 `physics2`.
+
+So panels 2 and 4 are both acceptable on shadow quality, and v1's rim is only right for a truly
+backlit subject. **`physics2` is the pick because it is the only arm that does BOTH** — it lands
+the same shadow as `withshadow` where the scene calls for one, and switches to edge light when
+the light is behind. `withshadow` cannot: it orders a shadow unconditionally. v1 is the same
+behaviour with the rim turned up too far, which is what produced the halo.
+
+**Why the conditional wording is load-bearing** (Fabio): *"shadows aren't present in every image.
+If a subject is backlit right from behind them, it won't cast any shadows, it will just have a
+light silhouette around it. If the scene is lit from where the camera is, or the sun is at 12:00,
+the shadow might not be visible."* The session-2 prompt ORDERED a shadow, so it produced one
+whether or not the scene called for it — including the wrong-direction shadow on the sun plate,
+whose own grass tufts and stones cast SHORT shadows to the LEFT (sun high, slightly right of
+camera) while the blend drew a long one to the right.
+
+### The shaded-pencil-sketch case — RUN, and Fabio's canny ruling HOLDS
+
+The last untested item from session 2. Same plate, same seed, same strength (0.5), same subject
+prompt; the only difference is `Input_Control_Net`. Input is a **graphite study with tonal
+hatching**, not flat line art. `mpi567_s3_PENCIL_sun.png`, runner `run_pencil.py`.
+
+**Both arms return a clean photoreal figure and NEITHER leaves an ink outline.** That is the
+finding: the flat-line-art failure — a 3px stroke read as two parallel contours and rendered as
+an outline — **does not occur on tonal input**, because a shaded drawing's edges are real form
+boundaries rather than the two sides of a drawn line. Canny is safe here.
+
+**Canny is also the better arm on this input**, mildly: it carries more interior structure
+through (denim folds, and the shirt graphic renders as a structured motif where scribble
+flattens it to a plain shape). That is exactly what "reads tonal structure" should look like.
+
+So the acceptance line *"Canny for a clean structured drawing"* stands, and the step copy must
+say **TONAL, not TIDY** — a user with clean line art who reads "structured" as "neat" will pick
+canny and get their own ink back.
+
+**Fixture caveat:** no real graphite study was available in this tree, so stage 0 renders one on
+the bench with a minimal 7-node SDXL t2i graph. The flow graph itself CANNOT stand in for that —
+with no paint layer the drawn bbox is empty and `AIO_Preprocessor` dies with
+`ZeroDivisionError: float division by zero`. Worth re-running once against a real user sketch.
+
+### Settings this session settled — carry these into `/mpi-add-flow`
+
+| setting | value | why |
+|---|---|---|
+| `Input_Control_strength` default | **0.45-0.60** (not the bench's 0.8) | at 0.8 the ink renders as garment seams; at 1.0 as straps |
+| `Input_Control_strength` exposure | **user-facing slider, mandatory** | correctness, not convenience — Fabio's "same as the original workflow" |
+| blend route | **whole-image relight -> composite back** | the only route with no rectangle, on every plate and every object size |
+| composite region | **shadow-aware** (silhouette UNION strong-change) | the silhouette-grown region clips long shadows |
+| blend prompt | **`BLEND_PHYSICS2`** | conditional shadow physics, anti-glow guard |
+| blend model | **Klein 4B** | 10-16s vs Qwen's 105s, and Qwen re-grades at all three tiers |
+| minimum drawn height | **~80-96px of ink**, **warned in the step copy** | below it stage 1 invents extra figures; Fabio chose the warning over auto-raising strength, 2026-08-22 |
+
+**THE TINY CASE PASSES on composite-back, against the prediction.** Fabio, 2026-08-21: *"you
+would be able to draw two characters in this scene at the far corner of the building, very tiny
+characters, which obviously would need a localised edit."* The prediction was that a whole-frame
+relight would have too few pixels to work with. At **8.4% of frame height (97px)** it did not:
+composite-back fill 0.63 (anime) / 0.49 (sun), no rectangle, real cast shadows, figures grounded
+— while the localised route rectangled even there (fill 0.914 / 0.916). `mpi567_s3_TINYCROP_*`.
+**…but there IS a floor, and it is in STAGE 1, not the blend — the opposite of the prediction.**
+The ladder (8.4 → 5.5 → 3.5 → 2.2% of frame height, `mpi567_s3_LADCROP_sun_*.png`) never produced
+a rectangle at any size (fill 0.49 → 0.25), so the composite-back route holds. What fails is the
+render:
+
+| drawn height | stage 1 | blend |
+|---|---|---|
+| 96px (8.4%) | correct — two figures, clean | grounded, real shadows |
+| 63px (5.5%) | **distorted, plus a spurious third figure** | shadows added to the wrong shapes |
+| 40px (3.5%) | **three figures where two were drawn** | a fourth dark shape merges in |
+| 25px (2.2%) | flat, cut-out | **hallucinates a third figure with its own shadow** |
+
+**Mechanism:** stage 1 crops the drawn bbox and samples it at a fixed 1024. That is what makes a
+small drawing render at high resolution — but it also means the CONTROL HINT is upscaled from
+whatever the user drew, so a 25px-tall figure becomes a blurred hint at 1024 and SDXL invents to
+fill it. The floor is therefore set by **how much ink the user actually drew**, not by the
+object's share of the frame.
+
+**Working floor ≈ 80-96px of drawn height.** This is a real limit on Fabio's "very tiny
+characters at the far corner" case and it needs a product answer — the honest options are a
+minimum-ink warning in the step copy, or raising `Input_Control_strength` automatically for a
+small drawing (untested). **Do not claim the tiny case works without this caveat.**
+
+**`Input_Control_strength` — measured, and it must be a user control.** Fabio, 2026-08-21, on
+the sun result: *"this looks a lot, maybe too much, like the drawing itself. The strength control
+that we have on the original workflow needs to be the same for this flow."* Swept 0.30 / 0.45 /
+0.60 / 0.80 / 1.00 on one plate, everything else fixed (`mpi567_s3_STRENGTH_sun.png`):
+
+- **0.30-0.60 — correct.** Photoreal figure, plain garment, pose held.
+- **0.80 (the bench default) — the ink starts becoming CLOTHING.** The drawn neckline renders as
+  a real V-neck seam and the sleeve strokes as garment edges.
+- **1.00 — worst.** The drawn lines come through as straps across the chest.
+
+**Ship 0.45-0.60 as the default, not 0.8.** The mechanism is worth stating because it is not
+obvious: the drawing's SHAPE survives far below the strength at which its LINES start being
+rendered as objects — the pose is still correct at 0.30. So a lower default costs nothing and a
+high one silently converts ink into detail. The knob already exists (`Input_Control_strength` →
+`MpiNormalizeValue` → `ControlNetApplyAdvanced.strength`, `capabilities.controlStrength: true`);
+this makes exposing it a CORRECTNESS requirement, not a convenience.
+
+**ILL Anime arm confirmed live (RUN 2).** Same drawing, same plate, `Input_Base_Model` swapped to
+`ILL_Anime.safetensors`: a cel-shaded figure that matches the plate's art style, against the
+photoreal one SDXL Realistic returns (`mpi567_s3_ARMCROP_anime.png`). frac=0.060 of the FRAME
+changed — which reads low only because the object occupies ~16% of it; 0.000 is what a dropped
+title looks like, so this is the positive confirmation. Fabio's ruling stands: **medium is model
+selection, and the blend pass preserves the medium it is given.** Minor: the ILL Anime shirt
+carries gibberish lettering, an SDXL-family text artifact, not a pipeline fault.
 
 **Three traps for the wiring step:**
 
