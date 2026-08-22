@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-601",
+  "title": "MpiNodes: AGPL-3.0 licence + Cubric Vision funnel, and an upstream-contribution playbook",
+  "description": "ComfyUi-MpiNodes ships with NO licence file while pyproject.toml points at a nonexistent LICENSE - the Comfy registry currently serves license {\"text\": \"LICENSE\"} for 928 downloads. Land AGPL-3.0 to match Cubric-Vision (compatible with ComfyUI GPL-3.0 via GPLv3 s13), fix the pyproject pointer, and add a README line naming the pack as Cubric Vision first-party so the registry listing becomes a funnel instead of an orphan. Second half: a playbook for contributing to THIRD-PARTY upstream repos (first case: a LanPaint fork for LTX 2.5), whose load-bearing rule is that the PR is authored and pushed under Fabio, not an agent.",
+  "column": "doing",
+  "maturity": "implementing",
+  "status": "active",
+  "created_at": "2026-08-22T13:02:32Z",
+  "updated_at": "2026-08-22T13:02:32Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

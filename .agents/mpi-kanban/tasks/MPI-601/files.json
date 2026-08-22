@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "c:/AI/Mpi/ComfyUi-MpiNodes/LICENSE",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/pyproject.toml",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/README.md",
+    "docs/playbooks/upstream-contributions/README.md",
+    ".agents/mpi-kanban/tasks/MPI-601/brief.md",
+    ".agents/mpi-kanban/tasks/MPI-601/files.json"
+  ]
+}
