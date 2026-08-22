@@ -1066,6 +1066,34 @@ export const commands = {
         universal: true,
     },
 
+    // MPI-567. The user draws on their own photo; SDXL renders the drawing as an object
+    // through the shipped ControlNet-Union branch, it is stamped back at the drawing's own
+    // bbox, and a LanPaint inpaint over a BOX the user places blends it into the scene.
+    //
+    // TWO images, and only the first is the user's. `image2` is the paint LAYER ALONE, an
+    // RGBA PNG the paint step derives at the photo's resolution — declared here because the
+    // op needs the slot, but never offered in `inputSchema.media`, since there is nothing
+    // for the user to upload into it.
+    flowScribbleObject: {
+        label: 'Flow: Scribble to Object',
+        progressLabel: 'Rendering the object',
+        mediaType: MEDIA_TYPE.IMAGE,        // OUTPUT type
+        requiresImages: 0,                  // media is never a hard requirement at the op layer
+        mediaInputs: [
+            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: false },
+            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Paint', required: false },
+        ],
+        // The object description IS the input — without it SDXL renders the scribble as
+        // whatever the ControlNet hint alone suggests.
+        promptRequired: true,
+        universal: true,
+        // ONE box, the region the blend pass may re-render. Same reason as Head Swap: an
+        // MpiBox carries four widgets and the generic title injector would match the node
+        // and silently write nothing, so `box1` -> `Input_Box` goes through this injector.
+        // The name is historical; the mapping is generic.
+        injector: 'headSwap',
+    },
+
     flowCharacterSheet: {
         label: 'Flow: Character Sheet',
         progressLabel: 'Drawing the sheet',

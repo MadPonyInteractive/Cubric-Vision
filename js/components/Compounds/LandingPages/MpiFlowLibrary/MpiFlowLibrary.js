@@ -9,7 +9,7 @@ import {
     flowModelIds, flowModelChoices, setFlowModel,
 } from '../../../../data/flowsRegistry.js';
 import { MpiDropdown } from '../../../Primitives/MpiDropdown/MpiDropdown.js';
-import { getModelById, getModelDependencies } from '../../../../data/modelRegistry.js';
+import { getModelById, getModelDependencies, sizeTierLetter } from '../../../../data/modelRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
 import { sizeToGb } from '../../../../data/modelConstants/footprint.js';
 import { PAGE_GALLERY } from '../../../../router.js';
@@ -236,10 +236,24 @@ export const MpiFlowLibrary = ComponentFactory.create({
             flowModelChoices(flow).forEach((slot, i) => {
                 const host = qs(`#flow-detail-model-${i}`, detailBody);
                 if (!host) return;
+                // Two candidates in ONE slot can share a display name — FLUX.2 Klein 4B and
+                // 9B are both literally "FLUX.2 Klein" — which renders two identical rows the
+                // user cannot choose between (MPI-567). Append the tier letter when, and only
+                // when, this slot is actually ambiguous, matching the prompt box's own L/B
+                // convention. `sizeTierLetter`, not `tierLetterFor`: the latter is install-
+                // gated, and this picker exists to choose BEFORE anything is installed, so the
+                // gate would blank the letter exactly when it is needed.
+                const _label = (id) => {
+                    const name = getModelById(id)?.name || id;
+                    const clashes = slot.models.some(other => other !== id
+                        && (getModelById(other)?.name || other) === name);
+                    const letter = clashes ? sizeTierLetter(id) : '';
+                    return letter ? `${name} ${letter}` : name;
+                };
                 const dd = MpiDropdown.mount(host, {
                     options: slot.models.map(id => ({
                         value: id,
-                        label: getModelById(id)?.name || id,
+                        label: _label(id),
                         // The recommendation is the flow author's, and it is the candidate an
                         // untouched picker resolves to — so it has to be visible, or a user
                         // choosing blind between four SDXL checkpoints is guessing. Same
@@ -249,7 +263,7 @@ export const MpiFlowLibrary = ComponentFactory.create({
                         // Not `disabled` — an uninstalled candidate is pickable ON PURPOSE.
                         // Picking it is how the user says "install that one instead", which
                         // the Required-models row and the Install button below then follow.
-                        ...(installed.includes(id) ? {} : { info: `${getModelById(id)?.name || id} — not installed yet` }),
+                        ...(installed.includes(id) ? {} : { info: `${_label(id)} — not installed yet` }),
                     })),
                     value: slot.models.find(id => resolved.includes(id)) || slot.recommended,
                 });

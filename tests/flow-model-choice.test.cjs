@@ -371,3 +371,153 @@ test('flowService carries the resolved model into the run', () => {
         'the rack must follow the picked member, not the id the descriptor names',
     );
 });
+
+test('the Scribble to Object arms match the weights, on BOTH slots (MPI-567)', async () => {
+    // The first flow with two INDEPENDENT choosable slots: an SDXL checkpoint for the
+    // render phase and a Klein edit model for the blend. Both resolve separately, and a
+    // drifted filename in either is silent — the title matches, the value is a name no
+    // loader has, and ComfyUI reports "not in list" only if it is lucky.
+    const { state, registry } = await load();
+    const flow = registry.getFlowById('scribble-object');
+    const { DEPS } = await import('../js/data/modelConstants/dependencies.js');
+    const basename = depId => path.basename(DEPS[depId].filename);
+    const graph = readJson('comfy_workflows/flow_scribble_object.json');
+    const byTitle = t => Object.values(graph).find(n => n?._meta?.title === t);
+
+    const SDXL = ['sdxl-realistic', 'sdxl-nsfw', 'ill-anime-beauty', 'ill-anime', 'pony-mix'];
+    state.s_installedModelIds = [...SDXL, 'klein-4b', 'klein-9b'];
+
+    // Slot 1 — the render checkpoint. Every candidate's arm must name its OWN weight.
+    const ckpt = byTitle('Input_Base_Model');
+    assert.ok(ckpt && ckpt.class_type === 'CheckpointLoaderSimple',
+        'the render phase must carry ONE injectable CheckpointLoaderSimple');
+    assert.equal(typeof ckpt.inputs.ckpt_name, 'string', 'ckpt_name must be a widget, not a link');
+    for (const id of SDXL) {
+        registry.setFlowModel('scribble-object', id);
+        assert.equal(registry.flowModelParams(flow).Input_Base_Model, basename(id),
+            `${id}'s arm does not name its own checkpoint`);
+    }
+    registry.setFlowModel('scribble-object', 'sdxl-realistic');
+    assert.equal(registry.flowModelParams(flow).Input_Base_Model, ckpt.inputs.ckpt_name,
+        'the recommended arm must restate the graph\'s baked checkpoint, or the default silently moves');
+
+    // Slot 2 — the blend model, and the reason this test exists. Klein 9B needs
+    // qwen_3_8b_int8_convrot and 4B needs qwen_3_4b; pairing 9B with 4B's encoder dies
+    // with a shape error that reads as a LanPaint bug (MPI-600). So the CLIP must move
+    // WITH the checkpoint, on every arm.
+    const unet = byTitle('Input_Edit_Model');
+    const clip = byTitle('Input_Edit_Clip');
+    assert.ok(unet && unet.class_type === 'UNETLoader', 'the blend phase needs an injectable UNETLoader');
+    assert.ok(clip && clip.class_type === 'CLIPLoader',
+        'the CLIPLoader must be TITLED — untitled, the 9B arm keeps 4B\'s encoder and dies on a shape error');
+    assert.equal(typeof clip.inputs.clip_name, 'string', 'clip_name must be a widget, not a link');
+
+    for (const [model, unetDep, clipDep] of [
+        ['klein-4b', 'klein-4b-transformer', 'qwen3-4b-clip'],
+        ['klein-9b', 'klein-9b-transformer', 'qwen3-8b-clip'],
+    ]) {
+        registry.setFlowModel('scribble-object', model);
+        const params = registry.flowModelParams(flow);
+        assert.equal(params.Input_Edit_Model, basename(unetDep), `${model}: wrong transformer`);
+        assert.equal(params['Input_Edit_Clip.clip_name'], basename(clipDep),
+            `${model}: the encoder must move with the checkpoint, or the arm dies on a shape error`);
+    }
+
+    registry.setFlowModel('scribble-object', 'klein-4b');
+    const baked = registry.flowModelParams(flow);
+    assert.equal(baked.Input_Edit_Model, unet.inputs.unet_name);
+    assert.equal(baked['Input_Edit_Clip.clip_name'], clip.inputs.clip_name);
+
+    // Picking in one slot must leave the other alone — that is what makes them slots.
+    registry.setFlowModel('scribble-object', 'ill-anime');
+    const both = registry.flowModelParams(flow);
+    assert.equal(both.Input_Base_Model, basename('ill-anime'));
+    assert.equal(both.Input_Edit_Model, basename('klein-4b-transformer'),
+        'a render-slot pick must not disturb the blend slot');
+});
+
+test('the CLIP arm has to be DOTTED, and the box has to go through its injector (MPI-567)', () => {
+    // Two asymmetries in this flow that look untidy and are load-bearing. Both fail
+    // silently if "cleaned up", which is exactly why they are pinned here.
+    const src = read('js/services/comfyController.js');
+    const targets = src.slice(src.indexOf('const targets = ['), src.indexOf("'filename'"));
+    assert.ok(!/'clip_name'/.test(targets),
+        'if clip_name JOINS the spray list this test is stale — but until it does, a plain '
+        + 'Input_Edit_Clip matches the node and writes nothing');
+    assert.match(src, /const dot = key\.indexOf\('\.'\);/,
+        'Input_Edit_Clip.clip_name needs the Title.widget branch, or it matches no node');
+});
+
+test('two candidates sharing a NAME are told apart in the picker (MPI-567)', async () => {
+    // Both Klein cards are literally named "FLUX.2 Klein", so the slot rendered two
+    // identical rows and the user could not tell 4B from 9B — reported from the running
+    // app. The prompt box already solves this with a tier letter; the picker now appends
+    // the same one, but only when its own slot is ambiguous.
+    const { registry } = { registry: await import('../js/data/flowsRegistry.js') };
+    const { sizeTierLetter, tierLetterFor, getModelById } =
+        await import('../js/data/modelRegistry.js');
+    const flow = registry.getFlowById('scribble-object');
+    // `flowModelChoices`, not `flowModelSlots`: only the choices rows carry `recommended`,
+    // and only a slot with a real choice in it gets a dropdown to disambiguate at all.
+    const blend = registry.flowModelChoices(flow).find(s => s.models.includes('klein-9b'));
+
+    // The clash is real, so the disambiguating branch is actually exercised. If someone
+    // renames one card this flips and the letter becomes unnecessary — which is a
+    // deliberate signal, not a failure of the picker.
+    assert.equal(getModelById('klein-9b').name, getModelById('klein-4b').name,
+        'the two Klein cards no longer share a name — the picker letter can go');
+
+    // Every ambiguous candidate must yield a NON-EMPTY letter, or the rows stay identical.
+    for (const [id, letter] of [['klein-9b', 'B'], ['klein-4b', 'L']]) {
+        assert.equal(sizeTierLetter(id), letter, `${id} must carry a tier letter`);
+    }
+
+    // The install gate is the trap `sizeTierLetter` exists for: `tierLetterFor` blanks the
+    // letter for a model that is not usable yet, and this picker exists to choose BEFORE
+    // anything is installed. That gate is NOT asserted here on purpose — it reads
+    // `model.installed` and the dep-status cache, neither of which a bare-Node harness
+    // stages, so `tierLetterFor` answers 'B' here and an assertion would be testing the
+    // harness. The source check below is what actually holds the line.
+    void tierLetterFor;
+
+    const src = read('js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js');
+    assert.match(src, /sizeTierLetter\(id\)/,
+        'the picker must append the tier letter, or two Klein rows read identically');
+    // A CALL, not a mention — the comment beside `_label` names `tierLetterFor` to explain
+    // why it is the wrong one, and a bare substring test flags its own documentation.
+    assert.ok(!/[^e]tierLetterFor\s*\(/.test(src),
+        'the install-gated helper here would hide the letter for the uninstalled candidate');
+
+    // Fabio, 2026-08-22: 9B blends better and is the recommendation, even though the graph
+    // is baked 4B. Declaration order IS preference order.
+    assert.equal(blend.models[0], 'klein-9b', 'the blend slot must recommend 9B');
+    assert.equal(blend.recommended, 'klein-9b');
+});
+
+test('an unpainted run FAILS CLOSED, and the box reaches Input_Box (MPI-567)', async () => {
+    // The one obligation the frame cannot carry: with nothing drawn, the paint step
+    // reports null, STEP_MEDIA derives no file, and Input_Paint keeps whatever its
+    // `string` is baked to. Baked to an authoring path that would be a confident wrong
+    // result with no error anywhere — so both loaders must bake EMPTY and block.
+    const graph = readJson('comfy_workflows/flow_scribble_object.json');
+    for (const title of ['Input_Image', 'Input_Paint']) {
+        const node = Object.values(graph).find(n => n?._meta?.title === title);
+        assert.ok(node && node.class_type === 'MpiLoadImageFromPath', `${title} missing`);
+        assert.equal(node.inputs.string, '',
+            `${title} bakes a path — an unsupplied run would silently use the author's fixture`);
+        assert.equal(node.inputs.block_if_empty, true,
+            `${title} must block on empty, or the graph runs on a blank 1x1 image`);
+    }
+
+    // The box: an MpiBox carries four widgets, none on the spray list, so the flow's
+    // `param: 'box1'` only lands because the op names the injector that knows the map.
+    const box = Object.values(graph).find(n => n?._meta?.title === 'Input_Box');
+    assert.ok(box && box.class_type === 'MpiBox', 'Input_Box must be an MpiBox');
+    const { COMMANDS } = await import('../js/data/commandRegistry.js');
+    assert.equal(COMMANDS.flowScribbleObject.injector, 'headSwap',
+        'without an injector the box param matches the node and writes nothing');
+    const { registry } = { registry: await import('../js/data/flowsRegistry.js') };
+    const step = registry.getFlowById('scribble-object').steps.find(s => s.kind === 'box');
+    assert.equal(step.param, 'box1',
+        'box1 is the key headSwapInjector maps to input_box; box2 would reach nothing here');
+});

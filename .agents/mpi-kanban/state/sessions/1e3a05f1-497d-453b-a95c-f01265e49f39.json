@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "1e3a05f1-497d-453b-a95c-f01265e49f39",
+  "role": "implementer",
+  "claude_session_id": "1e3a05f1-497d-453b-a95c-f01265e49f39",
+  "started_at": "2026-08-22T19:16:51Z",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "status": "active",
+  "heartbeat_at": "2026-08-22T19:28:00Z",
+  "name": "MPI-567 session 9 - rebuild the flow graph onto the measured LanPaint route",
+  "task": ".agents/mpi-kanban/state/tasks/18204563-f4a9-4be9-a3e3-355e7da15844.json",
+  "recent_events": [
+    {
+      "at": "2026-08-22T19:28:00Z",
+      "event": "session_started"
+    }
+  ]
+}

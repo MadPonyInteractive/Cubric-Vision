@@ -2,8 +2,9 @@
 
 > The user draws on top of their own photo; the Flow replaces the drawing with a rendered
 > object stitched back into the photo at the same place and scale, **and blends it in so it
-> belongs there**. Card: **MPI-567**. **BENCH PROVEN AND SIGNED OFF 2026-08-22, NOT YET
-> WIRED** — no `FlowDef`, no op, no runtime graph in `comfy_workflows/` yet.
+> belongs there**. Card: **MPI-567**. **BENCH PROVEN AND SIGNED OFF 2026-08-22; WIRED THE
+> SAME DAY** — `FlowDef`, op in its four files, runtime graph in `comfy_workflows/`, tests.
+> **Not yet run once inside the app** — that is the open gate, not the wiring.
 > Spec: `.agents/mpi-kanban/tasks/MPI-567/brief.md`.
 >
 > **The blend pass is generic and lives in its own doc:**
@@ -28,7 +29,11 @@
 | `Input_Control_strength` default | **DECIDED — 0.45–0.60** | 0.8 renders the user's ink as garment detail. See § Control strength |
 | Which arm for which drawing | **DECIDED** | scribble for flat line art, canny for a TONAL drawing. See § Which preprocessor arm |
 | Fabio's sign-off by eye | **GIVEN** 2026-08-22 | *"Compared to what we had previously, these look very good."* |
-| App wiring (`/mpi-add-flow`) | **NOT STARTED** | unblocked — the gate is now open |
+| Blend route replaced by LanPaint | **DONE** 2026-08-22 | the whole-image relight and its ~25-node repair tail are DELETED. `InpaintCropImproved` → `SetLatentNoiseMask` → `LanPaint_KSampler` → `InpaintStitchImproved`, 70 nodes → 55 |
+| The box seam | **FIXED** 2026-08-22 | one node — `GrowMaskWithBlur(expand −96, blur_radius 96)` on the noise mask. Worst `cnr` 0.85 → 0.15. § The seam below |
+| **App wiring** (`/mpi-add-flow`) | **DONE** 2026-08-22 | `flowScribbleObject` in the four op files, `scribble-object` `FlowDef`, two choosable slots, paint + box steps, two declared fields. 683 tests green, both new assertions mutation-checked |
+| First live run in the app | **NOT DONE** | the remaining gate. `05-verify.md`'s Definition of Done: a live run and a reuse round trip |
+| Graphics (tile + hero) | **NOT DONE** | `preview`/`video` are declared and the files do not exist yet — `/mpi-flow-graphics` |
 
 ## Shape — the flow DRIVES the shipped SDXL ControlNet-Union branch
 
@@ -185,19 +190,56 @@ copy**, rather than auto-raising strength for a small drawing (which fights § C
   `paint: null`, `STEP_MEDIA` then derives nothing, and `MpiLoadImageFromPath` runs on its baked
   authoring path — a confident wrong result with no error. The frame cannot guard it (a null
   legitimately means "nothing changed" for `crop`), so this flow must.
-- **The model picker.** TWO slots, resolved independently (MPI-599):
-  `{ label: 'Image model', models: [the five SDXL ids] }` and
-  `{ label: 'Edit model', models: ['klein-4b'] }`, plus a `modelParams` arm per candidate. The
-  merged graph titles a node for each — `Input_Base_Model` (`CheckpointLoaderSimple`) and
-  `Input_Edit_Model` (`UNETLoader`) — which is the one-title-per-slot rule in
-  [../any-of-models.md](../any-of-models.md). Read that first and verify each filename against
-  `modelDeps.js` at implementation time. The old "renders only when more than one is installed"
-  note is OBSOLETE — MPI-599 removed that gate.
-- **The preprocessor radio.** A declared `radio` driving `Input_Control_Net` — 1 = Scribble for a
-  loose doodle or flat line art, 2 = Canny for a **shaded pencil sketch**. The step copy must say
-  TONAL, not "structured" (§ Which preprocessor arm).
-- **The strength slider**, defaulting to 0.45–0.60 — mandatory, § Control strength.
-- **A minimum-drawing warning** in the step copy, § The size floor.
+- **The model picker — SHIPPED, two slots, both choosable.** Fabio, 2026-08-22: the SDXL
+  checkpoint *and* the Klein edit model are the user's to pick. `{ label: 'Render model' }` over
+  all five SDXL ids and `{ label: 'Blend model' }` over `klein-4b` / `klein-9b`; the graph titles
+  a node per slot — `Input_Base_Model` (`CheckpointLoaderSimple`) and `Input_Edit_Model`
+  (`UNETLoader`). Recommendations are `sdxl-realistic` and **`klein-9b`** (Fabio, 2026-08-22):
+  9B was judged better by eye on all five plates in session 7, and with the feather it *matches*
+  4B's seam numbers rather than trading them away, at ~1.9× the time. Note this makes the
+  recommendation and the BAKE disagree on purpose — the graph still loads 4B standing alone at
+  the bench, and the 4B arm is the one that catches a re-export moving that default.
+- **BOTH KLEIN CARDS ARE NAMED "FLUX.2 Klein", so the picker had two identical rows** — caught by
+  Fabio on the first live look. The prompt box solves this with a tier letter; the Flow Library
+  now does the same, appending it **only when a slot is actually ambiguous** (so the five SDXL
+  candidates stay bare). It calls the ungated `sizeTierLetter()`, NOT `tierLetterFor()`: the
+  latter is install-gated, and this picker exists to choose *before* anything is installed, so
+  the gate would blank the letter exactly when it is needed. There is still one letter map —
+  `tierLetterFor` sits on top of the new helper.
+- **THE BLEND SLOT SWAPS TWO NODES, NOT ONE — and the second one is why the CLIPLoader got a
+  title.** Klein 9B needs `qwen_3_8b_int8_convrot` and 4B needs `qwen_3_4b`; pairing 9B with 4B's
+  encoder dies with a shape error that reads as a LanPaint bug and is not one (MPI-600). So node
+  100 was retitled `Input_Edit_Clip` and each Klein arm carries both weights. Its param is the
+  **dotted** `Input_Edit_Clip.clip_name` while the other two are plain, and that asymmetry is
+  load-bearing: `ckpt_name` and `unet_name` are on `comfyController._inject`'s spray list and
+  `clip_name` is **not**, so a plain key would match the node and silently write nothing. Pinned
+  in `tests/flow-model-choice.test.cjs`, mutation-checked both ways.
+- **The preprocessor radio — SHIPPED.** `Input_Control_Net`, 1 = *Line drawing* (flat line art),
+  2 = *Shaded sketch* (tonal). The copy says TONAL, never "structured" (§ Which preprocessor arm).
+- **The strength slider — SHIPPED**, full 0–1 range at Fabio's instruction, default **0.5**, with
+  a `note` naming ~0.6 as where strokes start rendering as real detail. § Control strength.
+- **The minimum-drawing warning** is in the paint step's `hint` (~96px). § The size floor.
+- **The no-drawing case fails CLOSED, structurally.** Both `MpiLoadImageFromPath` loaders bake an
+  empty `string` with `block_if_empty: true`, so an unpainted run blocks instead of silently
+  loading an authoring fixture. That is now an assertion, because the guard is a *baked value* and
+  nothing about editing the graph protects it.
+
+### OPEN — the box step's default is the whole image
+
+`MpiStepBox` with no saved value seeds the **maximal box** (`enable()`), which for this flow is
+the worst possible default: everything inside the box is re-rendered, and a whole-image box is the
+`far_frac` 0.68 re-grade session 7 measured. The plan calls for auto-seeding from the drawing's own
+bbox (+25% out, +60% down), and nothing in the frame can do that today — `_stepValues` is keyed by
+`step.role`, so the box step *does* already receive the paint step's value (both declare
+`role: 'image1'`, and the frame merges), but no kind reads another kind's half of it.
+
+The small version: have `MpiStepPaint` report the layer's alpha `bbox` (it owns the canvas, so it
+is a few lines and needs no PNG decode), add a kind→seed adapter beside `STEP_PARAMS`/`STEP_MEDIA`
+in `stepKinds.js`, and have `MpiStepBox` use it when there is no restored rect. Additive and
+opt-in, exactly like `mediaRole` — a step that declares nothing behaves identically, so Head Swap
+is untouched. **Not built: it is a new shared-frame contract, and it wants Fabio's yes first.**
+The grow factors are provisional anyway — they are a guess that happened to win, and the sweep that
+would tune them is still pending.
 
 ## Sibling
 

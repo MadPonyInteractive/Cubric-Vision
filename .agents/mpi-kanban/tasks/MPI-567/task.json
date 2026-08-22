@@ -7,7 +7,7 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-16T00:00:00Z",
-  "updated_at": "2026-08-22T07:12:00Z",
+  "updated_at": "2026-08-22T19:38:31Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -28,5 +28,6 @@
     "No feather is added to the stitched object - the detailing pass is what blends (ruled on MPI-454, 2026-08-21)",
     "brief.md's stale 'why no umbrella' board note is healed - MPI-529, MPI-552 and MPI-530 were merged into MPI-560 on 2026-08-16",
     "Live-run and reuse both pass per docs/playbooks/add-flow/05-verify.md, with the picker exercised at two installed SDXL models"
-  ]
+  ],
+  "activeSessionTitle": "MPI-567 session 9 - the graph is rebuilt onto the LanPaint route"
 }

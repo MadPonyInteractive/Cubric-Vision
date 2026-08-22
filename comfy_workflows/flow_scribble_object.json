@@ -561,7 +561,7 @@
     },
     "class_type": "CLIPLoader",
     "_meta": {
-      "title": "Load CLIP"
+      "title": "Input_Edit_Clip"
     }
   },
   "101": {
@@ -626,8 +626,8 @@
       "megapixels": 1,
       "resolution_steps": 16,
       "image": [
-        "35",
-        0
+        "163",
+        1
       ]
     },
     "class_type": "ImageScaleToTotalPixels",
@@ -667,109 +667,194 @@
       "title": "Set Reference Latent 1"
     }
   },
-  "109": {
+  "146": {
+    "inputs": {
+      "filename_prefix": "mpi567_merged",
+      "images": [
+        "169",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Output_Image"
+    }
+  },
+  "160": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "x": 256,
+      "y": 256
+    },
+    "class_type": "MpiBox",
+    "_meta": {
+      "title": "Input_Box"
+    }
+  },
+  "161": {
     "inputs": {
       "image": [
-        "106",
-        0
-      ]
-    },
-    "class_type": "GetImageSize",
-    "_meta": {
-      "title": "Get Relight Size"
-    }
-  },
-  "110": {
-    "inputs": {
-      "steps": 4,
-      "width": [
-        "109",
+        "35",
         0
       ],
-      "height": [
-        "109",
-        1
+      "mpi_box": [
+        "160",
+        0
       ]
     },
-    "class_type": "Flux2Scheduler",
+    "class_type": "MpiBoxMask",
     "_meta": {
-      "title": "Flux2Scheduler"
+      "title": "Box Mask"
     }
   },
-  "111": {
+  "162": {
     "inputs": {
+      "padding": 64,
+      "mask": [
+        "161",
+        0
+      ]
+    },
+    "class_type": "MpiMaskSquareBbox",
+    "_meta": {
+      "title": "Box Context"
+    }
+  },
+  "163": {
+    "inputs": {
+      "downscale_algorithm": "bilinear",
+      "upscale_algorithm": "bicubic",
+      "preresize": false,
+      "preresize_mode": "ensure minimum resolution",
+      "preresize_min_width": 1024,
+      "preresize_min_height": 1024,
+      "preresize_max_width": 16384,
+      "preresize_max_height": 16384,
+      "mask_fill_holes": false,
+      "mask_expand_pixels": 6,
+      "mask_invert": false,
+      "mask_blend_pixels": 32,
+      "mask_hipass_filter": 0.1,
+      "extend_for_outpainting": false,
+      "extend_up_factor": 1,
+      "extend_down_factor": 1,
+      "extend_left_factor": 1,
+      "extend_right_factor": 1,
+      "context_from_mask_extend_factor": 1,
+      "output_resize_to_target_size": true,
+      "output_target_width": 1024,
+      "output_target_height": 1024,
+      "output_padding": "32",
+      "device_mode": "gpu (much faster)",
+      "image": [
+        "35",
+        0
+      ],
+      "mask": [
+        "161",
+        0
+      ],
+      "optional_context_mask": [
+        "162",
+        0
+      ]
+    },
+    "class_type": "InpaintCropImproved",
+    "_meta": {
+      "title": "Crop To Box"
+    }
+  },
+  "164": {
+    "inputs": {
+      "expand": -96,
+      "incremental_expandrate": 0,
+      "tapered_corners": true,
+      "flip_input": false,
+      "blur_radius": 96,
+      "lerp_alpha": 1,
+      "decay_factor": 1,
+      "fill_holes": false,
+      "mask": [
+        "163",
+        2
+      ]
+    },
+    "class_type": "GrowMaskWithBlur",
+    "_meta": {
+      "title": "Feather Noise Mask"
+    }
+  },
+  "165": {
+    "inputs": {
+      "samples": [
+        "107",
+        0
+      ],
+      "mask": [
+        "164",
+        0
+      ]
+    },
+    "class_type": "SetLatentNoiseMask",
+    "_meta": {
+      "title": "Set Latent Noise Mask"
+    }
+  },
+  "166": {
+    "inputs": {
+      "guidance": 4,
+      "conditioning": [
+        "108",
+        0
+      ]
+    },
+    "class_type": "FluxGuidance",
+    "_meta": {
+      "title": "Flux Guidance"
+    }
+  },
+  "167": {
+    "inputs": {
+      "steps": 4,
       "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "LanPaint_NumSteps": 2,
+      "LanPaint_PromptMode": "Image First",
+      "LanPaint_Info": "LanPaint KSampler.",
+      "Inpainting_mode": "🖼️ Image Inpainting",
       "model": [
         "102",
         0
       ],
       "positive": [
-        "108",
+        "166",
         0
       ],
       "negative": [
         "105",
         0
-      ]
-    },
-    "class_type": "CFGGuider",
-    "_meta": {
-      "title": "CFGGuider"
-    }
-  },
-  "112": {
-    "inputs": {
-      "noise_seed": [
+      ],
+      "latent_image": [
+        "165",
+        0
+      ],
+      "seed": [
         "26",
         0
       ]
     },
-    "class_type": "RandomNoise",
+    "class_type": "LanPaint_KSampler",
     "_meta": {
-      "title": "RandomNoise"
+      "title": "LanPaint KSampler"
     }
   },
-  "113": {
-    "inputs": {
-      "sampler_name": "euler"
-    },
-    "class_type": "KSamplerSelect",
-    "_meta": {
-      "title": "KSamplerSelect"
-    }
-  },
-  "114": {
-    "inputs": {
-      "noise": [
-        "112",
-        0
-      ],
-      "guider": [
-        "111",
-        0
-      ],
-      "sampler": [
-        "113",
-        0
-      ],
-      "sigmas": [
-        "110",
-        0
-      ],
-      "latent_image": [
-        "107",
-        0
-      ]
-    },
-    "class_type": "SamplerCustomAdvanced",
-    "_meta": {
-      "title": "SamplerCustomAdvanced"
-    }
-  },
-  "115": {
+  "168": {
     "inputs": {
       "samples": [
-        "114",
+        "167",
         0
       ],
       "vae": [
@@ -779,329 +864,23 @@
     },
     "class_type": "VAEDecode",
     "_meta": {
-      "title": "VAEDecode"
+      "title": "VAE Decode"
     }
   },
-  "120": {
+  "169": {
     "inputs": {
-      "image": [
-        "35",
-        0
-      ]
-    },
-    "class_type": "GetImageSize",
-    "_meta": {
-      "title": "Get Base Size"
-    }
-  },
-  "121": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "crop": "disabled",
-      "image": [
-        "115",
+      "stitcher": [
+        "163",
         0
       ],
-      "width": [
-        "120",
-        0
-      ],
-      "height": [
-        "120",
-        1
-      ]
-    },
-    "class_type": "ImageScale",
-    "_meta": {
-      "title": "Relit To Base Size"
-    }
-  },
-  "122": {
-    "inputs": {
-      "blend_factor": 1,
-      "blend_mode": "difference",
-      "image1": [
-        "1",
-        0
-      ],
-      "image2": [
-        "35",
+      "inpainted_image": [
+        "168",
         0
       ]
     },
-    "class_type": "ImageBlend",
+    "class_type": "InpaintStitchImproved",
     "_meta": {
-      "title": "Object Difference A"
-    }
-  },
-  "123": {
-    "inputs": {
-      "blend_factor": 1,
-      "blend_mode": "difference",
-      "image1": [
-        "35",
-        0
-      ],
-      "image2": [
-        "1",
-        0
-      ]
-    },
-    "class_type": "ImageBlend",
-    "_meta": {
-      "title": "Object Difference B"
-    }
-  },
-  "124": {
-    "inputs": {
-      "blend_factor": 1,
-      "blend_mode": "screen",
-      "image1": [
-        "122",
-        0
-      ],
-      "image2": [
-        "123",
-        0
-      ]
-    },
-    "class_type": "ImageBlend",
-    "_meta": {
-      "title": "Object Abs Difference"
-    }
-  },
-  "126": {
-    "inputs": {
-      "channel": "green",
-      "image": [
-        "124",
-        0
-      ]
-    },
-    "class_type": "ImageToMask",
-    "_meta": {
-      "title": "Object Magnitude"
-    }
-  },
-  "131": {
-    "inputs": {
-      "blend_factor": 1,
-      "blend_mode": "difference",
-      "image1": [
-        "121",
-        0
-      ],
-      "image2": [
-        "35",
-        0
-      ]
-    },
-    "class_type": "ImageBlend",
-    "_meta": {
-      "title": "Relight Change Difference A"
-    }
-  },
-  "132": {
-    "inputs": {
-      "blend_factor": 1,
-      "blend_mode": "difference",
-      "image1": [
-        "35",
-        0
-      ],
-      "image2": [
-        "121",
-        0
-      ]
-    },
-    "class_type": "ImageBlend",
-    "_meta": {
-      "title": "Relight Change Difference B"
-    }
-  },
-  "133": {
-    "inputs": {
-      "blend_factor": 1,
-      "blend_mode": "screen",
-      "image1": [
-        "131",
-        0
-      ],
-      "image2": [
-        "132",
-        0
-      ]
-    },
-    "class_type": "ImageBlend",
-    "_meta": {
-      "title": "Relight Change Abs Difference"
-    }
-  },
-  "134": {
-    "inputs": {
-      "blur_radius": 2,
-      "sigma": 1,
-      "image": [
-        "133",
-        0
-      ]
-    },
-    "class_type": "ImageBlur",
-    "_meta": {
-      "title": "Relight Change Despeckle"
-    }
-  },
-  "135": {
-    "inputs": {
-      "channel": "green",
-      "image": [
-        "134",
-        0
-      ]
-    },
-    "class_type": "ImageToMask",
-    "_meta": {
-      "title": "Relight Change Magnitude"
-    }
-  },
-  "143": {
-    "inputs": {
-      "x": 0,
-      "y": 0,
-      "operation": "or",
-      "destination": [
-        "150",
-        0
-      ],
-      "source": [
-        "153",
-        0
-      ]
-    },
-    "class_type": "MaskComposite",
-    "_meta": {
-      "title": "Shadow Aware Region"
-    }
-  },
-  "144": {
-    "inputs": {
-      "expand": 20,
-      "incremental_expandrate": 0,
-      "tapered_corners": true,
-      "flip_input": false,
-      "blur_radius": 24,
-      "lerp_alpha": 1,
-      "decay_factor": 1,
-      "fill_holes": false,
-      "mask": [
-        "143",
-        0
-      ]
-    },
-    "class_type": "GrowMaskWithBlur",
-    "_meta": {
-      "title": "Grow And Feather"
-    }
-  },
-  "145": {
-    "inputs": {
-      "x": 0,
-      "y": 0,
-      "resize_source": false,
-      "destination": [
-        "35",
-        0
-      ],
-      "source": [
-        "121",
-        0
-      ],
-      "mask": [
-        "144",
-        0
-      ]
-    },
-    "class_type": "ImageCompositeMasked",
-    "_meta": {
-      "title": "Composite Region Back"
-    }
-  },
-  "146": {
-    "inputs": {
-      "filename_prefix": "mpi567_merged",
-      "images": [
-        "145",
-        0
-      ]
-    },
-    "class_type": "SaveImage",
-    "_meta": {
-      "title": "Output_Image"
-    }
-  },
-  "150": {
-    "inputs": {
-      "value": 0.047058823529411764,
-      "mask": [
-        "126",
-        0
-      ]
-    },
-    "class_type": "ThresholdMask",
-    "_meta": {
-      "title": "Object Silhouette"
-    }
-  },
-  "151": {
-    "inputs": {
-      "value": 0.1568627450980392,
-      "mask": [
-        "135",
-        0
-      ]
-    },
-    "class_type": "ThresholdMask",
-    "_meta": {
-      "title": "Strong Change"
-    }
-  },
-  "152": {
-    "inputs": {
-      "expand": 100,
-      "incremental_expandrate": 0,
-      "tapered_corners": true,
-      "flip_input": false,
-      "blur_radius": 0,
-      "lerp_alpha": 1,
-      "decay_factor": 1,
-      "fill_holes": false,
-      "mask": [
-        "150",
-        0
-      ]
-    },
-    "class_type": "GrowMaskWithBlur",
-    "_meta": {
-      "title": "Shadow Reach"
-    }
-  },
-  "153": {
-    "inputs": {
-      "x": 0,
-      "y": 0,
-      "operation": "and",
-      "destination": [
-        "151",
-        0
-      ],
-      "source": [
-        "152",
-        0
-      ]
-    },
-    "class_type": "MaskComposite",
-    "_meta": {
-      "title": "Strong Change Near Object"
+      "title": "Stitch Back"
     }
   }
 }

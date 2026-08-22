@@ -60,6 +60,13 @@ export const UNIVERSAL_WORKFLOWS = {
     flowOutpaint: {
         workflow: 'flow_outpaint.json',
     },
+    // MPI-567 — SDXL renders the user's drawing through the shipped ControlNet-Union
+    // branch, then a LanPaint inpaint blends the stamped object into the photo. Both
+    // phases run on models the flow declares as choosable slots, so this op adds no
+    // download of its own.
+    flowScribbleObject: {
+        workflow: 'flow_scribble_object.json',
+    },
     // MPI-504 — Krea2 t2i, plus a SAM3 + Klein 4B pass that removes the head from the
     // front body panel. Both run on models the flow declares in `requiredModels`, so
     // this op adds no download of its own beyond the `face-yolov8n` dep.

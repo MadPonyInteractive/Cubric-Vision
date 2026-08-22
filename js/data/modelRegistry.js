@@ -312,6 +312,25 @@ export function getModelById(id) {
  * @returns {'H'|'B'|'L'|''}
  */
 const _TIER_LETTER = { low: 'L', balanced: 'B', high: 'H' };
+
+/**
+ * The bare letter for a model's tier, with NO disambiguation and NO install gate.
+ *
+ * `tierLetterFor` below is the one to reach for almost everywhere: it decides FOR
+ * you whether the letter earns its place. This one is for a caller that has
+ * already decided — the Flow Library's model picker, whose whole job is choosing
+ * between candidates BEFORE any of them is installed, so the install gate would
+ * hide the letter exactly when it is needed and leave two rows both reading
+ * "FLUX.2 Klein" (MPI-567). It exists so there is still only ONE letter map.
+ *
+ * @param {ModelDef|string|null} modelOrId
+ * @returns {'H'|'B'|'L'|''}
+ */
+export function sizeTierLetter(modelOrId) {
+    const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
+    return (model && _TIER_LETTER[model.sizeTier]) || '';
+}
+
 export function tierLetterFor(modelOrId) {
     const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
     if (!model || !model.sizeTier) return '';

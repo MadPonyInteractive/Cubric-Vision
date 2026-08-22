@@ -10,6 +10,99 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 
 ## Current State
 
+**2026-08-22, session 9b — THE APP HALF IS WIRED. Everything but a live run is done.**
+
+- **Op + FlowDef shipped.** `flowScribbleObject` in all four op files at
+  `appVersionIntroduced: '1.5.0'` (the four sibling flow ops in this dev cycle use it; released
+  `APP_VERSION` is 1.4.2). `scribble-object` in `flowsRegistry.js`.
+- **TWO choosable slots, both Fabio's call** (2026-08-22): `Render model` over all five SDXL ids,
+  `Blend model` over `klein-9b` / `klein-4b`, resolving independently. Recommendations
+  `sdxl-realistic` / **`klein-9b`** — Fabio's call after seeing the live picker; 9B was judged
+  better by eye on all five plates in session 7 and with the feather it matches 4B's seam numbers.
+  The recommendation and the BAKE now disagree on purpose (the graph still loads 4B at the bench),
+  and the 4B arm is what catches a re-export moving that default.
+- **The picker showed TWO IDENTICAL ROWS** — both Klein cards are literally named "FLUX.2 Klein".
+  Caught by Fabio on the first live look, and a real gap rather than a flow bug: the prompt box
+  disambiguates with a tier letter and the Flow Library never rendered one. It now appends it, but
+  ONLY when a slot is genuinely ambiguous, via a new ungated `sizeTierLetter()` in
+  `modelRegistry.js` — `tierLetterFor()` is install-gated and this picker chooses BEFORE anything
+  is installed, so the gate would blank the letter exactly when it matters. One letter map still.
+- **The blend slot swaps TWO nodes, and node 100 had no title.** 9B needs
+  `qwen_3_8b_int8_convrot`, 4B needs `qwen_3_4b`, and the mismatch dies with a shape error that
+  reads as a LanPaint bug (MPI-600). The CLIPLoader is now `Input_Edit_Clip` and each Klein arm
+  carries both weights. Its param is the **dotted** `Input_Edit_Clip.clip_name` because
+  `clip_name` is NOT on `comfyController._inject`'s spray list while `ckpt_name` and `unet_name`
+  are — a plain key would match the node and silently write nothing.
+- **Steps:** `paint` (`role: 'image1'`, `mediaRole: 'image2'` so the drawing does not eat the
+  photo) and `box` (`param: 'box1'` through the `headSwap` injector, no `ratio`, `overflow:
+  'allow'`). **Fields:** the `Input_Control_Net` radio whose copy says TONAL, and the mandatory
+  `Input_Control_strength` slider at full 0–1, default 0.5.
+- **The no-drawing case already fails CLOSED** — both `MpiLoadImageFromPath` loaders bake
+  `string: ''` with `block_if_empty: true`, returning an `ExecutionBlocker`. The handoff's worry
+  was a baked authoring path; there is none. Now asserted, because nothing else defends a baked
+  value.
+- **683 tests pass.** 3 new assertions; the CLIP title and the empty-path guard are both
+  mutation-checked RED, with the file restored byte-for-byte and the suite re-run clean.
+
+**🔴 FABIO HAS SEEN THE LIVE UI AND HAS MORE FEEDBACK — ASK HIM FIRST (2026-08-22).** He opened
+the Flow Library, reported *"a few issues with the UI, something's missing, and some bugs"*, and
+deferred the detail to a fresh session because context was high. **The specifics were never
+stated, so do not guess and do not start from this plan's next action — ask him what he saw.**
+Two items from that same look ARE already fixed (the identical Klein rows, and 9B as the
+recommendation); whatever remains is new and unrecorded.
+
+**Next action after that — ONE decision, then one live run.** The box step still defaults to the WHOLE IMAGE,
+which for this flow is the measured worst case. The auto-seed from the drawing's bbox is designed
+and NOT built because it is a new shared-frame contract (`MpiStepPaint` reports an alpha `bbox`, a
+kind→seed adapter beside `STEP_PARAMS`/`STEP_MEDIA`, `MpiStepBox` uses it when there is no restored
+rect — additive and opt-in exactly like `mediaRole`, so Head Swap is untouched). Ask Fabio. Then
+the first live run + reuse round trip in an isolated instance, which needs the GPU.
+
+---
+
+**2026-08-22, session 9 — THE GRAPH IS REBUILT. Both repo copies now hold the measured LanPaint
+route with the `f096` feather. 70 nodes → 55. Next action is the app half.**
+
+- **Stage 2 replaced wholesale.** Deleted the whole-image Klein relight and the difference-mask
+  tail (nodes 109–115, 120–126, 131–135, 143–145, 150–153 — 25 nodes). Stage 1 (1–35, scribble →
+  object → stamped stitch) is untouched, and so are the Klein loaders 100–105 and `SaveImage` 146.
+- **The new route, ported from `seamfix.py` `build()`:** `35 Stitch` + `MpiBoxMask(Input_Box)` →
+  `MpiMaskSquareBbox(64)` as context → `InpaintCropImproved` → `cropped_mask` →
+  **`GrowMaskWithBlur(expand −96, blur_radius 96)`** → `SetLatentNoiseMask`; `cropped_image` →
+  106 → 107 `VAEEncode` → 108 `ReferenceLatent` → `FluxGuidance(4.0)` → `LanPaint_KSampler`
+  (4 steps, cfg 1.0, euler/simple, NumSteps 2, Image First, 🖼️ Image Inpainting) → `VAEDecode` →
+  `InpaintStitchImproved` → 146. New ids 160–169.
+- **`Input_Box` is the flow's new injection point** — an `MpiBox` feeding `MpiBoxMask`, the same
+  shape `flow_head_swap` uses. Its baked 512/512/256/256 is a placeholder; the `box` step supplies
+  the real rect at dispatch.
+- **PARITY IS PROVEN, not asserted.** `research/lanpaint/graph_parity.py` calls
+  `seamfix.build(feather=96)` in-process and diffs it against the shipped twin node-for-node,
+  input-for-input. It passes with only the deviations listed below. Re-run it after ANY edit to
+  this graph — a positionally shifted widget is silent, and this is the only thing that catches it.
+  Also verified: no orphan nodes (all 55 reachable from an OUTPUT node), LiteGraph link table and
+  back-references consistent, and the 10 workflow-reading tests (53 assertions) still pass.
+- **LanPaint IS on the app engine (48188) now** — the handoff said it was not. The peer session's
+  pin landed, so the conversion ran against the engine as `converters.md` requires, not the bench.
+- **The float-quantisation trap is MOOT.** It applied to `ThresholdMask` 150/151 (12/255 and
+  40/255); both are deleted. Nothing in this graph now carries a hand-restored exact float, so
+  Fabio can open and re-save `raw/` freely.
+- **Two deliberate deviations from `seamfix.build()`**, both encoded in the parity script's ALLOW
+  list rather than left implicit: LanPaint's `seed` is wired to `Input_Seed` (node 26) instead of a
+  literal — that is what the deleted `RandomNoise` did — and node 106 `ImageScaleToTotalPixels`
+  survives. 106 is a proven no-op (`resolution_steps: 16` snaps 1024² straight back to 1024²,
+  which is why session 8's `norescale` was byte-identical to base), so keeping it is the smaller
+  diff, not a second variable.
+- **RUN LIVE AND PIXEL-IDENTICAL.** Fabio authorized the GPU; `research/lanpaint/graph_liverun.py`
+  pulled stage 2 straight out of the shipped twin (not a hand-copy), fed it the same stamped
+  plates on the same auto box at seamfix's seed, and got back **`mean abs 0.0, max 0, 0 px
+  differ`** against session 8's `f096` files on BOTH sun and overcast. 24.1s cold, **16.0s warm**
+  — session 8's 16.1s. Gate on PIXELS, never bytes: ComfyUI bakes the dispatched prompt into a PNG
+  `tEXt` chunk, so the same picture hashes differently whenever node ids differ, which they do here
+  by construction. The first run reported `DIFFERS` on the sha alone and that read as a failure it
+  was not.
+
+---
+
 **2026-08-22, session 8 — THE SEAM IS A TRADE, NOT A TUNABLE BUG. All four candidate fixes ran;
 none works. Blocked on a decision from Fabio before any further graph work.**
 
@@ -443,11 +536,20 @@ Three findings from the user's own testing of the sibling card, all of which bea
       on SDXL Realistic, cel-shaded Illustrious lineart on ILL Anime. Mean abs diff 17.5/255,
       57.5% of pixels differing, byte-identical `False` — the POSITIVE confirmation, since a
       dropped title yields an identical pair rather than an error.
-- [ ] **Wire the flow** via `/mpi-add-flow`: the `FlowDef` (image input; the paint step; the
-      preprocessor choice as a declared `radio`; the prompt field; `Input_Control_strength` as a
-      slider), the op in its 4 files, and the any-of `requiredModels` + `modelParams` above.
-      **Verify:** the inject test and `node --check` from `05-verify.md`; extend
-      `tests/flow-model-choice.test.cjs` to this flow.
+- [x] **Bench: rebuild the graph onto the measured route.** DONE 2026-08-22 (session 9) — both
+      `comfy_workflows/raw/flow_scribble_object.json` and its runtime twin now carry the LanPaint
+      route + the `f096` feather, 70 nodes → 55, ported from `research/lanpaint/seamfix.py`
+      `build()`. **Verify:** `python .agents/mpi-kanban/tasks/MPI-567/research/lanpaint/graph_parity.py`
+      → PARITY OK; no orphans; LiteGraph link table consistent; the 10 workflow-reading tests pass
+      (53 assertions); and `graph_liverun.py` ran the shipped twin's own stage 2 on the bench →
+      **pixel-identical to session 8's `f096`** on sun and overcast, 16.0s warm.
+- [x] **Wire the flow.** DONE 2026-08-22 (session 9) — `flowScribbleObject` in all four op files
+      at `appVersionIntroduced: '1.5.0'`, the `scribble-object` `FlowDef` with TWO choosable slots
+      (Fabio: the SDXL checkpoint AND the Klein edit model are both the user's to pick), the paint
+      + box steps, and the `Input_Control_Net` radio + mandatory `Input_Control_strength` slider.
+      **Verify:** `npm test` → 683 pass, 0 fail; `node --check` + `npx eslint` clean on all five
+      files; 3 new assertions in `tests/flow-model-choice.test.cjs`, two mutation-checked RED with
+      the graph restored byte-for-byte.
 - [ ] **Live-run in the app**, including the picker with two SDXL models installed and one
       uninstalled, plus a reuse round trip. **Verify:** `05-verify.md`'s Definition of Done — a
       live run and a reuse, not a validation pass.
@@ -470,6 +572,12 @@ Three findings from the user's own testing of the sibling card, all of which bea
   `STEP_KINDS` and `STEP_MEDIA`; `FlowStep.mediaRole` in the frame and the FlowDef typedef;
   `docs/playbooks/add-flow/ui/paint-gizmo.md` (+ index and `carousel-frame.md` pointers).
   Proven live in an isolated instance — evidence in `validation.md`.
+- **The graph rebuild, 2026-08-22 (session 9).** Both `raw/` and the runtime twin now hold the
+  measured LanPaint route + the `f096` feather; 70 nodes → 55. Parity against
+  `seamfix.build(feather=96)` proven by `research/lanpaint/graph_parity.py`; no orphans; LiteGraph
+  link table consistent; 53 workflow-test assertions green; and the shipped twin's own stage 2 run
+  live on the bench came back PIXEL-IDENTICAL to session 8's `f096` on sun and overcast
+  (`research/lanpaint/graph_liverun.py`). Details in § Current State.
 - **New trap filed** in `docs/workflow-authoring/bench-editing.md` § The traps: a part-downloaded
   weight is listed in `/object_info` under its final name and dies with a shape `RuntimeError`
   that reads like a corrupt checkpoint. Cost one wasted arm here. Gate on byte count + the
@@ -477,17 +585,29 @@ Three findings from the user's own testing of the sibling card, all of which bea
 
 ## Remaining Work
 
-Both bench gates are CLOSED, the `paint` step kind is BUILT, and the graph is in the repo in both
-formats (§ Current State). What is left is app wiring only — **but it is ON HOLD**: Fabio's
-inpaint-node find may change the pipeline, so the first move next session is to ask him what it is,
-not to write the FlowDef.
+Both bench gates are CLOSED, the `paint` step kind is BUILT, and the graph in both formats is now
+the measured LanPaint route (§ Current State, session 9). The hold is LIFTED — the inpaint-node
+find WAS LanPaint, and it has landed. What is left is app wiring, plus two bench jobs that are
+worth doing but do not block it.
 
+- **Sweep the auto box seed.** +25% out / +60% down is a GUESS that happened to win. Judge with
+  `cnr`/`objsheet.py`, NEVER `edge_step`/`shadow_ratio`. Does not block the FlowDef — it changes a
+  default in the step, not the graph.
+- Untested and worth one run: shape B, the stage-1 render passed as a REFERENCE image rather than
+  stamped in. That is what Fabio's own road/woman test did, and it drops the stamp chain entirely.
 - Wire the flow via `/mpi-add-flow` — FlowDef, the op in its 4 files, the two-slot
   `requiredModels` + `modelParams`, the declared fields (incl. the mandatory
   `Input_Control_strength` slider), the step copy's TONAL wording and its minimum-ink warning.
   The paint step is `{ kind: 'paint', role: 'image1', mediaRole: 'image2' }` (role names to match
   whatever the op's `mediaInputs` declares for `Input_Image` / `Input_Paint`), and the flow MUST
   guard the no-drawing case — see § Current State.
+  **Plus the `box` step**, added in session 7 and now wired in the graph: `{ kind: 'box', role:
+  <photo>, param: <name> }` → `Input_Box` (`MpiBox` node 160). `STEP_PARAMS.box` already renames
+  `w`/`h` → `width`/`height` and passes absolute top-left source pixels through unconverted, so no
+  arithmetic belongs in the FlowDef. Auto-seed +25% out / +60% down off the drawing bbox, and the
+  step's `hint` asks for ROOM, never light direction. Its copy carries the scene-dependence
+  finding: this seam shows on PLAIN backgrounds (sky, still water, flat walls) and effectively
+  never on textured ones.
 - Extend `tests/flow-model-choice.test.cjs` to this flow — it already pins that every
   `modelParams` key names a title that EXISTS in the flow's graph, which is the assertion that
   catches a five-arm `Input_Base_Model` typo.
@@ -534,9 +654,19 @@ flow-agnostic for exactly that reason.
   outpaint an outpainted picture), while a drawing is an INPUT the user made by hand and there is
   nothing to re-derive it from. Cost is base64 pixels in the snapshot — 42 KB for the probe's
   scribble, marked `ponytail:` with the preview-asset upgrade path named.
-- **`InpaintCropImproved` / `InpaintStitchImproved` are NOT used.** The plan carried them in as
-  a candidate carrier from the brief; the bench settled that the paste belongs outside them (a
-  plain `ImageCompositeMasked` at the recorded x/y). Reason in the answers doc, § question 4.
+- ~~**`InpaintCropImproved` / `InpaintStitchImproved` are NOT used.**~~ **REVERSED in session 7,
+  and as of session 9 they are IN THE GRAPH.** The original note was about STAGE 1 and still holds
+  there: the object paste is a plain `ImageCompositeMasked` at the recorded x/y (answers doc,
+  § question 4). Stage 2 is the opposite — the crop/stitch pair IS the blend route, and it is what
+  structurally guarantees the user's photo outside the box never moves.
+- **The graph gained its own injection point (session 9): `Input_Box`.** Until now every injectable
+  title in this flow belonged to stage 1. `MpiBox` 160 → `MpiBoxMask` 161 is the `box` step's
+  landing site, and the box is load-bearing UI — too tight and there is no room for a shadow, too
+  generous and the model re-grades everything inside it.
+- **Two handoff facts went stale within hours (session 9).** LanPaint was said to be missing from
+  the app engine at 48188 — it is there, so the conversion took the normal engine-schema route. And
+  the ComfyUI float-quantisation warning about `raw/`'s exact 12/255 and 40/255 thresholds is moot:
+  those `ThresholdMask` nodes were deleted with the tail.
 - **`Input_Control_strength` normalises 0-1 → 0-1 here, not 0-0.5** as the SDXL master template
   does. Here the scribble IS the subject, not a hint over an existing composition.
 - **Sampling is a fixed 1024x1024**, with the object scaled back down to the bbox `size` before

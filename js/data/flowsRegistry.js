@@ -606,6 +606,152 @@ export const FLOWS = [
     // LoRA is neither of those things, and an undeclared dep-status cache reads
     // NOT-installed until the first sync, so the flow would show unavailable on open
     // for a weight the engine already guarantees.
+    // MPI-567. Two phases, two models, and the user picks BOTH (Fabio, 2026-08-22):
+    // SDXL renders the drawing as an object through the shipped ControlNet-Union
+    // branch, then a LanPaint inpaint over a user-placed box blends it into the photo.
+    // Bench-proven end to end; the blend route and its seam fix are written up in
+    // ../blending-into-a-photo.md and tasks/MPI-567/research/lanpaint/verdict.md.
+    {
+        id: 'scribble-object',
+        title: 'Scribble to Object',
+        // Not made yet — `/mpi-flow-graphics` runs once the flow is live (06).
+        preview: 'flow-scribble-object.webp',
+        video: 'flow-scribble-object.mp4',
+        description: 'Draw what you want on top of your own photo, describe it, and the flow renders it as a real object and blends it into the scene — matching the light, and casting a shadow on the ground.',
+        // TWO choosable slots, resolved independently (any-of-models.md). The render
+        // phase samples an SDXL checkpoint; the blend phase runs a Klein edit model.
+        // Every SDXL-family card already declares controlTypes scribble + canny behind
+        // the ONE ControlNet-Union loader this graph drives, so all five are genuine
+        // candidates — the choice is a style choice, which is exactly what the user
+        // should be making. `models[0]` is the recommendation: SDXL Realistic is the
+        // base the flow was proven on, and **Klein 9B** blends better — session 7 judged
+        // it better by eye on all five plates, and with the feather it matches 4B's seam
+        // numbers rather than trading them away. It costs ~1.9x the time (30s vs 16s) and
+        // a larger text encoder; 4B stays as the cheaper arm. Fabio's call, 2026-08-22.
+        //
+        // The two Klein cards are BOTH named "FLUX.2 Klein", so the picker appends their
+        // tier letter (9B = B, 4B = L). That is the picker's job, not this list's — see
+        // MpiFlowLibrary `_label`.
+        requiredModels: [
+            {
+                label: 'Render model',
+                models: ['sdxl-realistic', 'sdxl-nsfw', 'ill-anime-beauty', 'ill-anime', 'pony-mix'],
+            },
+            { label: 'Blend model', models: ['klein-9b', 'klein-4b'] },
+        ],
+        // The graph is baked SDXL Realistic + Klein 4B, so every arm names its own
+        // weights explicitly — a set reads as a set, and the arm that DOES match the
+        // bake (sdxl-realistic, klein-4b) catches a re-export quietly moving a default.
+        // Note the recommendation and the bake deliberately disagree on the blend slot:
+        // 9B is recommended, 4B is what the graph loads standing alone at the bench.
+        //
+        // THE CLIP ARM IS NOT OPTIONAL TRIM. Klein 9B needs
+        // `qwen_3_8b_int8_convrot` and 4B needs `qwen_3_4b`; pairing 9B with 4B's
+        // encoder dies with a shape error that reads as a LanPaint bug and is not one
+        // (MPI-600). So the text encoder moves WITH the checkpoint or the 9B arm is
+        // broken on arrival.
+        //
+        // `Input_Edit_Clip.clip_name` uses the dotted `Title.widget` form (MPI-359)
+        // while the other two are plain, and that asymmetry is load-bearing rather
+        // than untidy: `ckpt_name` and `unet_name` are on `comfyController._inject`'s
+        // spray list and `clip_name` is NOT, so a plain `Input_Edit_Clip` would match
+        // the node and silently write nothing.
+        modelParams: {
+            'sdxl-realistic':   { 'Input_Base_Model': 'SDXL_Realistic.safetensors' },
+            'sdxl-nsfw':        { 'Input_Base_Model': 'SDXL_NSFW.safetensors' },
+            'ill-anime-beauty': { 'Input_Base_Model': 'ILL_Anime_Beauty.safetensors' },
+            'ill-anime':        { 'Input_Base_Model': 'ILL_Anime.safetensors' },
+            'pony-mix':         { 'Input_Base_Model': 'PONY_Mix.safetensors' },
+            'klein-4b': {
+                'Input_Edit_Model': 'flux-2-klein-4b-int8-convrot.safetensors',
+                'Input_Edit_Clip.clip_name': 'qwen_3_4b.safetensors',
+            },
+            'klein-9b': {
+                'Input_Edit_Model': 'flux-2-klein-9b-int8-convrot.safetensors',
+                'Input_Edit_Clip.clip_name': 'qwen_3_8b_int8_convrot.safetensors',
+            },
+        },
+        operation: 'flowScribbleObject',
+        workflow: 'flow_scribble_object.json',
+        mediaType: 'image',
+        inputSchema: {
+            // The object description. `promptRequired: true` on the op — without it
+            // SDXL renders whatever the ControlNet hint alone suggests.
+            positive: 'string',
+            // ONE user slot. `image2` (Input_Paint) is the op's second slot but is
+            // never offered here: the paint step DERIVES that file, there is nothing
+            // to upload into it, and a visible empty slot would invite a wrong one.
+            media: [
+                {
+                    type: 'image', mode: 'upto', max: 1,
+                    roles: ['image1'],
+                    labels: ['Photo'],
+                },
+            ],
+        },
+        // The BEFORE is the user's own photo, and the flow's whole claim is that only
+        // the drawn region changed — so the reveal bar crosses a steady scene.
+        result: { compare: 'image1' },
+        steps: [
+            {
+                // `mediaRole` sends the derived layer to `image2` instead of replacing
+                // `image1`: the graph wants the photo AND the drawing (paint-gizmo.md).
+                // Omit it and the drawing would eat the photo.
+                kind: 'paint', role: 'image1', mediaRole: 'image2',
+                tickerLabel: 'Draw it',
+                title: 'Draw what you want to add',
+                // The ~80-96px floor is measured, not a guess: below it the render
+                // has too little ink to read and invents the object's detail.
+                hint: 'Draw roughly where and how big it should be. Keep it at least ~96px tall — smaller and the render invents the detail.',
+            },
+            {
+                // The blend region. `param: 'box1'` -> `Input_Box` through the box
+                // injector (an MpiBox carries four widgets, which the generic title
+                // injector would match and silently not write). No `ratio`: this box
+                // wraps an object AND the ground its shadow falls on, which is not
+                // square. `overflow: 'allow'` because both consumers clip — MpiBoxMask
+                // clamps to the image and the crop takes the clamped mask — and a
+                // subject near an edge otherwise cannot be given room below it.
+                kind: 'box', role: 'image1', param: 'box1', overflow: 'allow',
+                tickerLabel: 'Blend area',
+                title: 'Box the area to blend',
+                // Asks for ROOM, never light direction — the model reads the scene's
+                // own light, and telling it where the light is makes it worse
+                // (blending-into-a-photo.md). The seam warning is scene-dependent on
+                // purpose: a plain background is where a tonal step is visible.
+                hint: 'Include the object plus room on the ground for its shadow. Keep it tight — everything inside gets re-rendered, and on a plain background (sky, water, a flat wall) a big box can leave a visible edge.',
+            },
+        ],
+        fields: [
+            {
+                // 1 = scribble, 2 = canny, matching the graph's MpiAnySwitch banks.
+                // The copy says TONAL, never "structured": a user with clean line art
+                // who reads "structured" as "neat" picks canny and gets their own ink
+                // back as an outline, because canny sees a drawn stroke's TWO edges.
+                id: 'Input_Control_Net', type: 'radio', label: 'Drawing type',
+                columns: 2, default: 1,
+                options: [
+                    { v: 1, label: 'Line drawing', note: 'flat lines',
+                      info: 'For flat line art. Thins each stroke to a centreline, so the model renders a form rather than tracing your ink.' },
+                    { v: 2, label: 'Shaded sketch', note: 'tonal',
+                      info: 'For a shaded pencil drawing with hatching. Carries interior structure — folds, a motif on a shirt — that the line arm flattens.' },
+                ],
+            },
+            {
+                // MANDATORY, and a correctness requirement rather than a convenience.
+                // Swept 2026-08-22: 0.30-0.60 correct; 0.80 (the bench's old baked
+                // value) renders the INK AS CLOTHING, a drawn neckline becoming a real
+                // V-neck seam; 1.00 puts the drawn lines through as straps. A drawing's
+                // SHAPE survives far below the strength at which its LINES start being
+                // rendered as objects. Full 0-1 range on purpose — Fabio: "The strength
+                // control that we have on the original workflow needs to be the same
+                // for this flow." The range is his; the default is the measurement's.
+                id: 'Input_Control_strength', type: 'slider', label: 'Follow the drawing',
+                min: 0, max: 1, step: 0.05, default: 0.5,
+                note: 'Above ~0.6 your strokes start being rendered as real detail — a drawn line becomes a seam.',
+            },
+        ],
+    },
     {
         id: 'character-sheet',
         title: 'Character Sheet',
