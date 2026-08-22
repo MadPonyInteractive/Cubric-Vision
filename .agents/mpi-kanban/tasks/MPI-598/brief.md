@@ -3,6 +3,70 @@
 Created 2026-08-21, out of the MPI-357 close-out. MPI-357 built the licence gate this
 model needs and deliberately stopped short of the model itself.
 
+## THE WEIGHT IS DECIDED - MPI-600, 2026-08-22. Read this before the turbo section below.
+
+**Ship exactly two files:**
+
+| role | file |
+|---|---|
+| transformer | `flux-2-klein-9b-int8-convrot.safetensors` (distilled INT8) |
+| text encoder | `qwen_3_8b_int8_convrot.safetensors`, `CLIPLoader` type **`flux2`** |
+
+VAE `flux2-vae.safetensors` (already on disk). **4 steps, cfg 1.0.** ~15 GB peak on a 16380 MiB
+card. Full evidence: `.agents/mpi-kanban/tasks/MPI-600/research/verdict.md`.
+
+### THIS CARD'S TITLE IS NOW WRONG IN TWO OF ITS THREE PARTS
+
+"Wire FLUX.2 Klein 9B: **the model**, its ~~turbo LoRA~~, and the ~~turbo on/off settings~~".
+
+- **There is no turbo LoRA.** `klein_9B_Turbo_r128` was benched at strengths 1.0 / 0.7 / 0.35 and
+  rejected. The base arm it rides on is ~6-7x slower than distilled AND scores 0/3 on
+  reference-driven placement. Strengths 0.7 and 0.35 score WORSE than 1.0, so there is no
+  monotonic quality/speed axis to expose. **The file has been deleted from `G:\CubricModels\`.**
+- **There is no `turboToggle`.** It has nothing left to switch between - one checkpoint ships.
+  Note `Input_is_Turbo` (node 52) still exists in the graph and still swaps the NEGATIVE
+  conditioning between `ConditioningZeroOut` and the real `CLIPTextEncode`. At cfg 1.0 that is
+  irrelevant. **Any 9B arm running cfg > 1 with node 52 left `true` blows out** - neon grass, cyan
+  sky, crushed blacks - and it reads as a bad model rather than a bad setting.
+- **KV is rejected too.** `flux-2-klein-9b-kv_int8_convrot` + `FluxKVCache` is a real 2.4-3.2x
+  *sampler* speedup but only **1.27-1.46x end to end**, needs a SECOND 9.4 GB weight to stay
+  correct, and costs +600-800 MiB on a card with ~340 MiB of headroom. Fabio tested it
+  independently on a pose request inside painting and was not impressed. Weight deleted.
+
+So this card is now **"wire one 9B checkpoint"** - materially smaller than it was written to be.
+
+### What MPI-598 still owes, that MPI-600 could not do
+
+1. **A brand-new dependency for `qwen_3_8b_int8_convrot.safetensors` (~9.4 GB).** Nothing existing
+   can be promoted: `qwen3-4b-clip` is Qwen3-**4B** (different parameter count) and
+   `boogu-qwen3vl-8b-clip` is Qwen3-**VL**-8B, a vision-language model loaded at type `boogu`.
+   Klein wants text-only Qwen3-8B at type `flux2`. This roughly DOUBLES 9B's encoder footprint
+   against 4B.
+2. **A thin-headroom note for users.** 9B fits a 16 GB card with ~500-800 MiB spare. It fits; the
+   margin is not comfortable. Per `project_the_users_gpu_is_the_limit` a description warning is
+   the whole obligation.
+3. **Reference-driven placement is ~2/3 at best on EVERY 9B weight tested, and it fails SILENTLY** -
+   the output looks clean, it just placed the wrong person or nobody. Whatever flow consumes it
+   must expect a retry.
+4. **The 4B LoRA trap.** Every LoRA baked into `klein_t2i.json` is a **4B** LoRA, and
+   `LoraLoaderModelOnly` loads the file even at strength 0. Node 38 (NSFW) is unconditional in the
+   model chain; node 259 (`flux2-klein-4b-outpaint`, strength 1.1) sits on the `wf_type` 5 inpaint
+   branch. Neither can apply to a 9B model. MPI-600's bench bypassed both in its own copy - the
+   SHIPPED graph still has them, so 9B needs a real answer here, not a copy of the bench hack.
+5. **`wf_type` 5 is unusable for 9B as it stands** - that branch green-fills the mask and depends
+   on node 259 (a 4B LoRA) to regenerate the fill. The localised edit is **`wf_type` 4 WITH a
+   mask supplied**, not branch 5.
+
+### Two model facts that will otherwise be re-derived
+
+- **The filenames lie.** `flux-2-klein-9b-int8-convrot.safetensors` is
+  `{"format": "int8_tensorwise"}` with a **scalar** `weight_scale` - plain tensorwise INT8, **not**
+  ConvRot, despite the name. Do not describe it as ConvRot in a dep entry or a doc.
+- INT8 loads on **core ComfyUI 0.31.0 with no custom node**. `node_lock.json` pins zero INT8
+  nodes and six int8_convrot weights already ship. That question is closed.
+
+---
+
 ## Run the playbook
 
 `/mpi-add-model` — it enforces `docs/playbooks/add-model/` (README hub + 01–06). Model

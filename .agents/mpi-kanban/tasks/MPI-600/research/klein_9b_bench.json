@@ -1779,7 +1779,7 @@
   },
   "class_type": "InpaintStitchImproved",
   "_meta": {
-   "title": "✂️ Inpaint Stitch"
+   "title": "\u2702\ufe0f Inpaint Stitch"
   }
  },
  "276": {
@@ -1829,7 +1829,7 @@
   },
   "class_type": "InpaintCropImproved",
   "_meta": {
-   "title": "✂️ Inpaint Crop"
+   "title": "\u2702\ufe0f Inpaint Crop"
   }
  },
  "277": {
@@ -1845,7 +1845,7 @@
   },
   "class_type": "InpaintStitchImproved",
   "_meta": {
-   "title": "✂️ Inpaint Stitch"
+   "title": "\u2702\ufe0f Inpaint Stitch"
   }
  },
  "278": {
@@ -2023,7 +2023,7 @@
   },
   "class_type": "InpaintCropImproved",
   "_meta": {
-   "title": "✂️ Inpaint Crop"
+   "title": "\u2702\ufe0f Inpaint Crop"
   }
  },
  "288": {
@@ -3051,7 +3051,7 @@
   },
   "class_type": "InpaintCropImproved",
   "_meta": {
-   "title": "✂️ Inpaint Crop"
+   "title": "\u2702\ufe0f Inpaint Crop"
   }
  },
  "582": {
@@ -3067,7 +3067,7 @@
   },
   "class_type": "InpaintStitchImproved",
   "_meta": {
-   "title": "✂️ Inpaint Stitch"
+   "title": "\u2702\ufe0f Inpaint Stitch"
   }
  },
  "584": {
@@ -3168,6 +3168,18 @@
   "class_type": "MpiFloat",
   "_meta": {
    "title": "Input_Control_strength"
+  }
+ },
+ "900": {
+  "inputs": {
+   "model": [
+    "100",
+    0
+   ]
+  },
+  "class_type": "FluxKVCache",
+  "_meta": {
+   "title": "KV Cache (KV arms only - rewire 170.model here)"
   }
  }
 }

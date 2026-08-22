@@ -24,17 +24,39 @@ Derived from `plan.md` (the legs), 2026-08-22.
 - [~] Leg C - 9b-kv vs the Leg B winner. **The weight was benched; KV ITSELF WAS NOT.**
       - [x] `kv` loads, runs, and is quality- and VRAM-indistinguishable from distilled (2/3
             placement, same wall clock).
-      - [ ] **`FluxKVCache` is not in the bench graph**, so no caching path was active and the
-            measured 1.00x is meaningless as a speedup. Wire it on the KV arm only, keep it off
-            the t2i path, and record ref count + output resolution per row. Note our S2 shape
-            carries TWO images (plate + reference), so BFL's 2-ref row (1.77x) may apply rather
-            than the 1-ref row (1.40x).
+      - [x] **Superseded by Leg D below**, which put `FluxKVCache` in the graph. Leg C's 1.00x
+            was the correct reading of a graph with no cache node in it - not a KV measurement.
+- [x] Leg D - the KV MULTI-REFERENCE speed leg, re-scoped by Fabio (`wf_type` 4, NO mask, an
+      empty plate + two different people). 16 rows in `research/results_kv.md`. (2026-08-22)
+      - [x] `FluxKVCache` wired as node **900**, inert until an arm opts in via
+            `run.py --link 170.model=900,0`. Reaches branch 4 only; never the t2i path.
+      - [x] Fixed inputs made on the bench: `plates/plate_empty_road_00001_.png` (empty) and
+            `plates/ref_woman_00001_.png`, plus the existing `ref_man_00001_.png`.
+      - [x] **KV is 2.40x at 2 refs and 3.18x at 3**, 1024x1024, sampler-only, both seeds within
+            1 s. It scales with reference count. Ref count and resolution are on every row.
+      - [x] **The speedup is the NODE - the `kv` weight alone is 1.00x.**
+      - [x] **But the node needs the KV weight to be CORRECT.** `distilled+node` posts identical
+            timings and VRAM and produces the wrong picture (plate replaced, references drift).
+            `kv+node` holds both. Only visible in `research/kv_contact_sheet.png` - no column in
+            the table separates them.
+      - [x] VRAM is the binding constraint: cache costs +600-800 MiB, worst peak
+            **16037 / 16380 MiB** at 3 refs (343 MiB headroom).
 - [x] `research/results.md` - one row per run, sectioned CURRENT / SUPERSEDED / VOID so a
       voided row cannot be read as a verdict. Placement scored by eye off
       `research/S2_contact_sheet.png`, because the `guard` column reads a clean
       `green 0.00% / clip 0.1%` on all 18 S2 rows including every failed one.
-- [x] `research/verdict.md` - answers Q1, Q2, Q3. **Q4 (KV multiplier) is explicitly NOT
-      answered**, with the reason, rather than a 1.00x being banked as a finding.
+- [x] `research/verdict.md` - **all four questions now answered.** SS4 and the Recommendation
+      were rewritten after Leg D; the STATUS banner's item 1 is struck through.
+- [x] **DECIDED 2026-08-22 (Fabio).** Ship `flux-2-klein-9b-int8-convrot.safetensors` + CLIP
+      `qwen_3_8b_int8_convrot.safetensors`. One transformer, one text encoder, no LoRA, no
+      toggle, **no KV**. `base` dropped; the Ripple review no longer gates the weight.
+      - [x] **KV rejected.** The Leg D headline was corrected: 3.18x is the SAMPLER slice, but
+            **1.27-1.46x end to end** (38.2 s -> 26.2 s at 3 refs). It also needs a SECOND 9.4 GB
+            weight to stay correct and costs +600-800 MiB on a card with ~340 MiB of headroom.
+            Fabio tested it independently on a pose request inside painting - same conclusion.
+      - [x] Rejected weights deleted from `G:\CubricModels\`, ~27.6 GiB freed: the `kv` weight,
+            both `base` copies, and `klein_9B_Turbo_r128`. Production weights untouched. All
+            re-downloadable from the HF repos in `brief.md`.
+      - [x] **Legs A/B/C/D can no longer be re-run** - those arms' weights are gone. `results.md`,
+            `results_kv.md` and the contact sheets are the surviving record.
 - [ ] Post the verdict onto MPI-598 as an event + brief section, then close this card.
-      **Blocked on Fabio's call:** run the KV leg properly first, or hand Q4 to MPI-598 as an
-      open item? The weight recommendation does not depend on it.

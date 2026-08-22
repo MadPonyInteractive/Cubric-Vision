@@ -415,3 +415,111 @@ Fabio, 2026-08-22, after reading the verdict:
 - **The localised edit is finished** and is not part of the KV leg.
 
 **Next action: create the KV leg, then ask Fabio for THE Ripple** (the repos to review).
+
+---
+
+## Leg D — the KV multi-reference speed leg. RUN 2026-08-22.
+
+Q4 is answered. 16 rows in `research/results_kv.md`; driver `kv_leg.py`, ratios `kv_ratios.py`,
+contact sheet `kv_contact_sheet.png`.
+
+**Built:** `FluxKVCache` added to the bench graph as node **900** (model from node 100). It has
+no consumer by default, so ComfyUI never executes it — an arm opts in with the new
+`run.py --link 170.model=900,0`, which reaches branch 4's `CFGGuider` only and cannot touch t2i.
+Three fixed inputs made on the bench: `plates/plate_empty_road_00001_.png` (empty, seed 8001),
+`plates/ref_woman_00001_.png` (seed 8002), plus the existing `ref_man_00001_.png`.
+
+**The matrix is 2×2, not "distilled vs kv".** `FluxKVCache` is a plain MODEL→MODEL patch with
+nothing weight-specific in it, and a safetensors *header* diff of the two 9B weights shows an
+identical key set (425 tensors, same shapes/dtypes, no `__index_timestep_zero__` marker) — only
+the values differ. So the node is required either way, and only crossing weight × node answers
+whether the second 9.4 GB file earns its place.
+
+**Results:**
+
+- **KV is a 2.40x speedup at 2 refs and 3.18x at 3**, 1024², sampler-only, both seeds within 1 s.
+  It scales with reference count as claimed. Bigger than the card's "expect ~1.40x", because that
+  assumed 1 reference and **a Klein edit feeds the plate in as a reference too** — the cheapest
+  real edit already carries 2.
+- **The speedup is the NODE. The `kv` weight alone is 1.00x** — identical to distilled at both ref
+  counts. Leg C's earlier 1.00x was correct for a graph with no cache node in it.
+- **But the node needs the KV weight to be CORRECT.** `distilled+node` posts the *same* 8.5 s and
+  *same* VRAM, and produces the wrong picture: the plate is replaced and the references drift
+  (denim jacket → denim shirt; long yellow raincoat → yellow shirt + olive skirt). `kv+node` keeps
+  both. Both seeds, both ref counts. **No column in the table shows this** — it is only in the
+  images, which is this card's failure mode for the fifth time.
+- **VRAM is the binding constraint.** The cache costs +600–800 MiB; worst peak **16037 / 16380 MiB
+  — 343 MiB of headroom** at 3 refs. Tighter than Leg 0's ~690 MiB.
+
+**Two things found that are instrument lessons, not results:**
+
+- Wall clock is useless for a speed ratio here — ~73% of a run is constant RAM→VRAM load, because
+  the bench is freed before every run to keep VRAM honest. `run.py` now reads the sampler's own
+  tqdm bar and `Prompt executed in X seconds` off `/internal/logs/raw`.
+- **Mark that log by TIMESTAMP, not by index.** The endpoint keeps only the last 300 entries, so
+  `len()`-before / slice-after silently returns an empty list and the timing reads `None` — which
+  reads as a broken parser and is not one. Cost one run to find.
+
+## Current State (2026-08-22, after Leg D)
+
+**All four deliverable questions are now answered.** `verdict.md` §4 and its Recommendation are
+rewritten; the STATUS banner's item 1 is struck through.
+
+**The verdict is still PROVISIONAL, and for one reason only:** THE Ripple — the two Klein 9B
+inpainting repos. Fabio said 2026-08-22 that he is running that review in a **separate session**,
+so this card must not chase it. `base` stays a candidate until that review lands.
+
+**What Leg D changes about the recommendation**, for whoever finalises it: "one checkpoint,
+distilled" was written when KV looked like a 1.00x no-op. It is not — a reference edit is 2.4–3.2x
+faster with `kv` + the node, and the node on `distilled` is not a substitute. So MPI-598 may want
+**two files after all** (distilled for t2i / no-reference work, `kv` + node for reference edits),
+or `kv` + node everywhere — which needs a t2i and single-reference check **this leg did not run**.
+
+## DECIDED 2026-08-22 — the weight question is closed, and KV is rejected
+
+Fabio, same day, after running his own KV test — **a pose request inside painting**:
+*"I think this is decided in terms of models. Let's delete all diffusion models and keep int8
+distilled only."* Plus the CLIP.
+
+**Ship: `flux-2-klein-9b-int8-convrot.safetensors` + `qwen_3_8b_int8_convrot.safetensors`.**
+One transformer, one text encoder, no LoRA, no toggle, no KV.
+
+**A CORRECTION I OWED, and it lands on Fabio's side of the argument.** The Leg D headline was
+framed as "3.18x", which is the **sampler slice**. End to end it is **1.27–1.46x** (38.2 s ->
+26.2 s at 3 refs). Sampling is only ~27–45% of a run — the rest is text encode, three VAE
+encodes, decode, save, and a RAM->VRAM reload this bench pays every run because it frees first to
+keep the VRAM column honest. Both figures were always in the table as separate columns; leading
+with the larger one was the error, and it made KV look better than a user would find it. The app,
+warm, would land somewhere between 1.46x and 3.18x — **not measured, so not claimed.**
+
+With that framing corrected, KV loses on every axis that costs something:
+
+- **1.27–1.46x end to end**, not 3.18x.
+- **Needs a SECOND 9.4 GB weight** to stay correct — `FluxKVCache` on plain distilled is the same
+  speed and the wrong picture.
+- **+600–800 MiB VRAM**, worst peak 16037 / 16380 MiB — ~340 MiB of headroom.
+- Fabio's independent test on a different shape (masked paint + pose) agreed.
+
+**Weights deleted from `G:\CubricModels\`, ~27.6 GiB freed** (2026-08-22, on instruction, bench
+freed first so no handle was held):
+
+- `diffusion_models/flux-2-klein-9b-kv_int8_convrot.safetensors`
+- `diffusion_models/flux-2-klein-base-9b-int8-ConvRot.safetensors`
+- `diffusion_models/flux-2-klein-base-9b-int8-convrot-comfy.safetensors`
+- `loras/klein_9B_Turbo_r128.safetensors`
+
+Kept: the distilled 9B and the Qwen3-8B CLIP. **Nothing in production was touched** — the 4B
+Klein, krea2, LTX, lustify, minimax and qwen-image-edit weights are all untouched. All four
+deleted files are re-downloadable from the HF repos recorded in `brief.md`.
+
+**The bench can no longer re-run Legs A, B or C** — those arms' weights are gone. Leg D's KV arms
+are gone too. `results.md`, `results_kv.md` and the contact sheets are the surviving record.
+
+## Current State (2026-08-22, DECIDED)
+
+All four questions answered, decision taken, rejected weights deleted. `verdict.md` STATUS banner
+now reads DECIDED and names the two files that ship.
+
+**Next action:** post the verdict onto MPI-598 as an event + brief section and close this card.
+No longer blocked on anything — THE Ripple review continues in Fabio's separate session and
+concerns the inpainting *approach*, not which transformer ships.

@@ -10,23 +10,39 @@ corrections landed on the S2 scenario mid-bench, each of which voided the runs b
 
 ---
 
-## STATUS: PROVISIONAL — do NOT act on this yet (Fabio, 2026-08-22)
+## STATUS: DECIDED (Fabio, 2026-08-22). The weight question is closed.
 
-The recommendation below is **not final and base is NOT discarded**, on Fabio's call after the
-first draft. Two things must land first:
+**Ship `flux-2-klein-9b-int8-convrot.safetensors` (distilled INT8) with CLIP
+`qwen_3_8b_int8_convrot.safetensors`. That is the whole model answer — one transformer, one text
+encoder, no LoRA, no toggle, no KV.**
 
-1. **The KV leg has to be re-run properly, and with MORE THAN ONE reference image.** `FluxKVCache`
-   was never in the graph, so KV's caching path has never executed. A single-reference test is not
-   worth running — KV caches *reference* tokens, so the speedup scales with reference count.
-   Shape agreed with Fabio: **edit only (`wf_type` 4, NO mask — the localised edit is not part of
-   this), three images — an empty background plate plus two different people — placing both people
-   into the plate.** `distilled` vs `kv`, a few runs. That is where KV is supposed to shine and it
-   is the only shape that shows the difference clearly.
-2. **Two repos Fabio found — an inpainting approach for Klein 9B — have to be reviewed.** They are
-   unproven but, on the repo's own claims, could apply broadly across the app. They may change the
-   weight picture entirely, which is precisely why **base stays on the table until they are read**.
+The earlier PROVISIONAL hold is lifted. What closed each open item:
 
-Everything in §1–§3 below is measured and stands as data. What is on hold is the *decision*.
+1. ~~**The KV leg has to be re-run properly, with MORE THAN ONE reference image.**~~ **RUN — §4
+   and `results_kv.md`.** It found a real 2.4–3.2× *sampler* speedup, but **1.27–1.46× end to
+   end**, at a cost of +600–800 MiB on a card with ~340 MiB left, and only if a *second* 9.4 GB
+   weight ships (the node on plain distilled produces the wrong picture). **Fabio ran his own KV
+   test the same day — a pose request inside painting — and was not impressed.** The two readings
+   agree: the end-to-end number is the one a user feels, and it does not justify the cost.
+   **KV is rejected.**
+2. ~~**Two repos — an inpainting approach for Klein 9B — have to be reviewed, so base stays on the
+   table.**~~ **The model decision no longer waits on them** (Fabio, 2026-08-22). That review is
+   running in a **separate session** and concerns the inpainting *approach*, not which transformer
+   ships. `base` is dropped.
+
+**Weights deleted from `G:\CubricModels\` on Fabio's instruction, 2026-08-22** — ~27.6 GiB freed:
+
+| file | why |
+|---|---|
+| `flux-2-klein-9b-kv_int8_convrot.safetensors` | KV rejected — see §4 |
+| `flux-2-klein-base-9b-int8-ConvRot.safetensors` | base rejected; this copy could not be loaded by native ComfyUI at all |
+| `flux-2-klein-base-9b-int8-convrot-comfy.safetensors` | the converted base — rejected with base |
+| `loras/klein_9B_Turbo_r128.safetensors` | turbo LoRA rejected — see §2 |
+
+All four are re-downloadable from the HF repos named in `brief.md` if a decision is ever revisited.
+Nothing in production was touched.
+
+§1–§4 below are the measured record behind that decision.
 
 ---
 
@@ -106,43 +122,103 @@ tested does better.
 
 ---
 
-## 4. Is KV a free speedup on our edit shape — what is the honest multiplier at 1 ref / 1024²?
+## 4. Is KV a free speedup on our edit shape — what is the honest multiplier?
 
-**NOT ANSWERED. The KV leg did not test KV.**
+**ANSWERED 2026-08-22. Yes — 2.40x at 2 references and 3.18x at 3, at 1024x1024 — but only with
+the KV weight underneath it.** Full leg in `results_kv.md`, 16 rows, sampler-only seconds, two
+seeds per cell agreeing to within 1 s.
 
-`FluxKVCache` is **not in the bench graph**. The KV arm therefore ran the `kv` weight as an
-ordinary checkpoint with **no caching path active**. The measured parity — distilled 28.2 s vs kv
-28.1 s on S2, 20.2 s vs 20.2 s on S1 — is exactly what a disabled cache predicts, so it is **not
-a measurement of KV's speedup and must not be quoted as one**. `research/README.md` § "Still
-owed" item 2 flagged this and it was not closed.
+Shape, as Fabio scoped it: `wf_type` 4, **no mask**, an empty background plate plus two different
+people, both placed into the plate. `FluxKVCache` added to the bench graph as node **900**, fed
+from node 100 and reached only when an arm rewires `170.model` to it — so it is inert on every
+other arm and never touches the t2i path.
 
-What the leg *does* establish: the `kv` weight **loads, runs and produces comparable quality** —
-2/3 on placement, same VRAM, same wall clock as distilled. It is a viable weight; its headline
-feature is simply untested.
+### The multiplier, with its ref count and resolution attached
 
-To answer this properly: add `FluxKVCache` on the KV arm only, keep it off the t2i path, and
-record **ref count and output resolution on every row** (BFL's own table gives 1.40× at 1 ref /
-1024², and the number scales with refs and *inversely* with resolution). Also note our S2 shape
-carries **two** images (plate + reference), so the applicable BFL figure may be the 2-ref row
-(1.77×), not the 1-ref one.
+| refs | uncached | cached | speedup |
+|---|---|---|---|
+| 2 (plate + 1 person) | 18.0 s | 7.0–7.5 s | **2.40–2.57x** |
+| 3 (plate + 2 people) | 27.0 s | 8.5 s | **3.18x** |
+
+It **scales with reference count**, which is the whole claim: 2 -> 3 refs costs the uncached arms
+50% more sampling and the cached arms ~13%. This beats the card's own "expect ~1.40x" estimate,
+because that estimate assumed 1 reference — and a Klein edit feeds the **plate in as a reference
+too**, so the cheapest real edit already carries 2.
+
+Wall clock would have hidden most of this: ~73% of a run here is constant RAM->VRAM load (the
+bench is freed before every run so the VRAM column stays honest). The instrument is the sampler's
+own progress bar, read off `/internal/logs/raw`.
+
+### The speedup is the NODE, not the weight
+
+`kv` with the node **off** is **1.00x** against `distilled` — 18.0 s and 27.0 s, matching to the
+second. So Leg C's earlier 1.00x was not a bad measurement; it was the correct measurement of a
+graph with no cache node in it.
+
+### But the node needs the KV weight to stay CORRECT — and no number shows this
+
+`distilled+node` and `kv+node` post the **same 8.5 s and the same VRAM**. Only the images
+separate them, on both seeds and both reference counts:
+
+- **`distilled+node` breaks.** The plate is replaced (different road, blue sky instead of golden,
+  farm buildings appear, the tyre tracks and long shadow gone), and the references drift — the
+  denim jacket becomes a denim shirt with a belt, the long yellow raincoat becomes a yellow shirt
+  with an olive skirt.
+- **`kv+node` holds.** Plate preserved down to the tyre tracks and the cast shadow; both people
+  arrive wearing what the reference images show. Against `kv` with the node off it is
+  near-indistinguishable.
+
+**So quality parity passes for `kv` + node and fails for `distilled` + node.** The weight and the
+node are a matched pair — which is presumably why a separate KV checkpoint exists at all rather
+than just a node. The extra 9.4 GB earns its place on *correctness*, not on speed.
+
+Worth stating plainly because it is this card's recurring failure mode: `status: success`,
+plausible timings, plausible VRAM, invalid image. Contact sheet: `kv_contact_sheet.png`.
+
+### The cost is VRAM, and it is the binding constraint
+
+The cache holds the reference k/v tensors: **+600–800 MiB attributable**. Worst peak across the
+leg is **16037 / 16380 MiB — 343 MiB of headroom** (`distilled+node`, 3 refs; `kv+node` is
+16011). Uncached 3-ref arms sit at 15334–15856.
+
+That is tighter than the ~690 MiB Leg 0 recorded, and it is what MPI-598 should carry as the 9B
+note. A fourth reference, or an output above 1024, has nowhere to go on a 16 GB card.
+
+**Not measured:** resolutions above 1024x1024 (the multiplier falls as target tokens grow), 4+
+references (where BFL's 2.5x headline sits, and where the VRAM ceiling above may block us
+anyway), and the masked/localised edit (finished on this card, deliberately out of scope).
 
 ---
 
 ## Recommendation for MPI-598 — PROVISIONAL, see the STATUS banner at the top
 
-**On the evidence gathered so far:** ship one checkpoint,
-`flux-2-klein-9b-int8-convrot.safetensors` (distilled), 4 steps, cfg 1.0. No turbo LoRA, no
-`turboToggle`. INT8, natively loadable, ~15 GB peak on a 16 GB card.
+**Ship `flux-2-klein-9b-int8-convrot.safetensors` (distilled), 4 steps, cfg 1.0, CLIP
+`qwen_3_8b_int8_convrot.safetensors`, VAE `flux2-vae.safetensors`.** One transformer. No turbo
+LoRA, no `turboToggle`, no KV weight, no `FluxKVCache`. INT8, natively loadable, ~15 GB peak on a
+16 GB card.
 
-**But do not wire this yet.** `base` is deliberately still a candidate pending the two repos, and
-the KV leg still has to run for real with multiple references. What is settled is that the
+**Leg D briefly reopened "one checkpoint or two" and then closed it again.** KV is a genuine
+2.4–3.2× *sampler* speedup, but **1.27–1.46× end to end**, it needs a second 9.4 GB weight to stay
+correct, and it costs +600–800 MiB on a card with ~340 MiB of headroom. Fabio's own test the same
+day (a pose request inside painting) reached the same conclusion independently. Rejected.
+
+What is also settled is that the
 **`turboToggle` shape is dead** — that conclusion rests on base and the three LoRA strengths being
 measured against each other, and no repo or KV result changes it.
 
 Open items MPI-598 should carry, none of which block the weight choice:
 
-1. **KV is unmeasured** (Q4). If a reference-heavy edit op is on the roadmap, wire `FluxKVCache`
-   and measure before deciding between `9b` and `9b-kv` — they are otherwise indistinguishable here.
+1. **KV was measured and REJECTED** (Q4, `results_kv.md`). Kept here because the reasoning matters
+   if anyone proposes it again:
+   - The speedup is real but the honest figure is **1.27–1.46× end to end**, not the 2.4–3.2×
+     sampler slice. Sampling is only ~27–45% of a run.
+   - It needs **both** halves — the node **and** the separate 9.4 GB `kv` weight. `FluxKVCache` on
+     plain distilled runs at the same speed and produces the wrong picture: the plate is rebuilt
+     (border delta 40.9/255 against 9.3 for the baseline) and the referenced garments drift.
+   - It costs **+600–800 MiB**, putting a 3-reference 1024² edit **~340 MiB under a 16 GB card's
+     ceiling** — the tightest figure on this card.
+   - Fabio tested it independently on a pose request inside painting and was not impressed.
+   - The weights are deleted. Re-download from the repos in `brief.md` if this is ever revisited.
 2. **Reference-driven placement is ~2/3 at best on 9B.** Whatever flow consumes it needs to expect
    a retry, and the failure is silent — the output looks clean, it just did the wrong thing.
 3. **A rectangular seam is present on essentially every localised placement** — a patch of the

@@ -103,9 +103,12 @@ Turbo-LoRA rows come from anyMODE's own recommendation and community reports (se
    `flux-2-klein-base-9b-int8-ConvRot.safetensors` cannot be loaded by native ComfyUI at all.
    Every arm above now names `…-convrot-comfy.safetensors`. See `format.md` § Leg A preamble,
    which also records that **distilled and KV are not actually ConvRot** despite their filenames.
-2. **The KV arm needs `FluxKVCache`**, which is not in this graph. Add it on the KV arm only, and
-   do not let it near the t2i path. If it fails with `timestep_zero_index`, that is the known
-   upstream issue, not a bad download.
+2. ~~**The KV arm needs `FluxKVCache`**, which is not in this graph.~~ **CLOSED 2026-08-22.**
+   Added as node **900** (`FluxKVCache`, `model` from node **100**). It has **no consumer by
+   default**, and ComfyUI never executes an unreferenced node — so it is inert on every arm until
+   one opts in with `run.py --link 170.model=900,0`, which reaches only branch 4's `CFGGuider`.
+   The t2i path (`125 CFGGuider`, model from 143) cannot see it. No `timestep_zero_index` failure
+   occurred. Leg D is in `results_kv.md`; driver is `kv_leg.py`.
 3. **Verify the graph runs at all on 9B** before scoring anything — one t2i at 1024², warm.
 
 
@@ -116,6 +119,15 @@ Turbo-LoRA rows come from anyMODE's own recommendation and community reports (se
 | `run.py` | Queues this graph on :8188. Every knob is `--set NODE.input=value`. Samples GPU memory through the run and reports peak, wall clock, `execution_cached` and the files that landed. |
 | `make_mask.py` | Draws a 1-bit mask (`--ellipse`/`--rect x0,y0,x1,y1`) for a `wf_type` 5 run. |
 | `seam.py` | `seam.py BASE RESULT MASK` — scores seam / lighting integrity by measurement: outside-mask delta, distance rings outward from the mask edge, inside-mask delta. This is how scenario 3 is scored. |
+| `kv_leg.py` | Leg D — the KV multi-reference speed matrix (weight × `FluxKVCache`, 2 and 3 refs). Appends to `results_kv.md`. |
+| `kv_ratios.py` | Turns those rows into the speedup per reference count. |
+| `kv_sheet.py` | Leg D contact sheet — arms down, (cell × seed) across. **The leg's headline is only visible here**: `distilled+node` and `kv+node` post identical timings and VRAM, and only one of them keeps the plate and the references. |
+
+`run.py` gained two things for Leg D: `--link NODE.input=SRC,IDX` (rewire a link, not just a
+value) and a **sampler-only** timing read off `/internal/logs/raw`. Wall clock on this bench is
+~73% constant RAM→VRAM load — fine for the quality legs, useless for a speed ratio. Mark that log
+**by timestamp**, never by index: the endpoint keeps only the last 300 entries, so an index mark
+silently returns an empty list and the timing reads `None`.
 
 **Read a VRAM number only after freeing the bench first** — `POST /free
 {"unload_models":true,"free_memory":true}`, sample the floor, then run. The bench retains its
