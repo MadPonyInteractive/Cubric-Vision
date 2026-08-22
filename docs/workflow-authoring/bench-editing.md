@@ -45,6 +45,26 @@ Only when an experiment is *settled* does it go into the file. In place, never r
 5. **Re-convert and re-run.** A rename or a rewire that converts clean can still fail to
    queue — see the loader trap below.
 
+### 🔴 The editor QUANTISES float widgets — a programmatic graph loses precision in it
+
+Found 2026-08-22 (MPI-567). A graph built in Python and POSTed to `/prompt` can carry any float;
+the ComfyUI **editor** stores what its widget shows, at the widget's declared `step`. Round-trip
+such a graph through the frontend and every sub-step value is silently rounded.
+
+Measured: `ThresholdMask` declares `step: 0.01`, so the flow's signed-off region thresholds —
+`12/255 = 0.047058…` and `40/255 = 0.156862…` — came back as **`0.05`** and **`0.16`**. Nothing
+errored. The graph converts clean, validates clean, and runs; it just runs on a threshold 6% off
+the one the measurements were made against.
+
+- **Diff the round trip against the graph that actually RAN**, input by input, before shipping
+  it. Class counts and node counts match on a quantised graph, so only a value-level diff finds it.
+- **Repair it in the raw file**, one scalar at a time, located by matching `round(target, step)`
+  rather than by a hardcoded `widgets_values` index — the index is precisely what a hand-edit gets
+  silently wrong.
+- **It comes back if the file is reopened and saved in ComfyUI.** Any raw file carrying
+  deliberate sub-step precision needs that noted next to the value, or the next Save undoes it.
+  `comfy_workflows/raw/flow_scribble_object.json` is one such file (nodes 150 / 151).
+
 ## Prove a graph correct without spending a generation — three checks, in this order
 
 **There is NO validate-only endpoint.** `/prompt` validates and then QUEUES, so it is not a dry
