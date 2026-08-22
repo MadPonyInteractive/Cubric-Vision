@@ -1072,9 +1072,10 @@ export const MODELS = [
             'None', 'Storybook', 'Comic', 'Anime',
             'Chibi', 'Doodle', 'Vintage', 'Watercolour',
         ],
-        // Not yet produced — every entry renders a placeholder card until the webp lands,
-        // which is why the rack is testable now. Ship all eight from the SAME prompt so
-        // the grid reads as a comparison, index 0 being that prompt with the rack off.
+        // All eight produced and on disk in comfy_workflows/display/ (2026-08-22), index 0
+        // being the no-style baseline: the same prompt with the rack off, so the grid reads
+        // as a comparison. A missing entry falls back to a placeholder card — which is what
+        // let the rack ship testable before the art existed.
         styleLoraImages: [
             'klein-9b-style-none.webp', 'klein-9b-style-storybook.webp', 'klein-9b-style-comic.webp',
             'klein-9b-style-anime.webp', 'klein-9b-style-chibi.webp', 'klein-9b-style-doodle.webp',
