@@ -10,7 +10,7 @@
   "goal": {
     "original": "Evaluate LanPaint as a replacement for the fake-inpainting localised edit, then implement Klein 9B and update Klein 4B alongside it.",
     "status": "in_progress",
-    "summary": "LanPaint is evaluated and PROVEN on Klein 4B distilled (the shipped checkpoint) and on 9B - carded as MPI-602, not started. MpiNodes shipped AGPL-3.0 as registry 1.2.7 (MPI-601, effectively finished, sitting at validating). The 9B assets are all downloaded and hash-verified. What remains is MPI-598 itself: wire the 9B checkpoint and update 4B in the same pass. Fabio also deprecated the outpaint LoRA this session; the delete is authorised but blocked on ordering - see the first constraint."
+    "summary": "LanPaint is evaluated and PROVEN on Klein 4B distilled (the shipped checkpoint) and on 9B - carded as MPI-602, not started. MpiNodes shipped AGPL-3.0 as registry 1.2.7 (MPI-601, effectively finished, sitting at validating). The 9B assets are all downloaded and hash-verified. What remains is MPI-598 itself: wire the 9B checkpoint and update 4B in the same pass. Fabio also deprecated the outpaint LoRA this session - that retirement is carded separately as MPI-603, because it has a shipped second consumer in the Character Sheet flow. For MPI-598 the only live question is what outpaint does on 9B, since no 9B outpaint weight exists."
   },
   "plan": {
     "file": null,
@@ -29,7 +29,7 @@
       "Update Klein 4B in the same pass",
       "Op help copy: removals are now user-specified (see MPI-367)",
       "Decide what outpaint does on 9B - no 9B outpaint LoRA exists",
-      "Deprecate flux2-klein-4b-outpaint properly: remove from all four in-repo consumers, keep the dep entry marked DEPRECATED, ship, THEN delete from R2/HF (Fabio has authorised the eventual delete - the ordering is the constraint, not the decision)"
+      "NOT this card: outpaint LoRA retirement is MPI-603, LanPaint integration is MPI-602. Both are in todo and neither blocks the 9B wiring."
     ]
   },
   "task_card": {
@@ -55,7 +55,7 @@
       "Turbo and KV are both dead (MPI-600). The bench template no longer contains any turbo node."
     ],
     "constraints": [
-      "OUTPAINT LoRA IS DEPRECATED BUT MUST NOT BE DELETED YET. Fabio deprecated flux2-klein-4b-outpaint (LanPaint replaces the fill/removal path it existed for) and removed it from his BENCH template. It is still live in the repo in four places: comfy_workflows/klein_t2i.json #259, comfy_workflows/flow_character_sheet.json #708 (strength 1.1), and both raw/ twins. flow_character_sheet is a SECOND consumer unrelated to inpainting - the Character Sheet flow (MPI-504, shipped) needs a real answer, not a deletion. models.js:969 still lists klein-lora-outpaint as 'baked; mandatory for the fill/removal path' and Klein shipped in 1.4.0, so deleting the R2 object turns every released user's Klein install into a 404 (add-model playbook step 8 names this exact failure). Correct order: strip every in-repo consumer -> mark the dep '// DEPRECATED' but KEEP the entry (step 3: _orphanedDepIds iterates DEPS, so deleting the entry strands the weight on existing disks forever) -> ship a release -> only then delete from R2 and HF.",
+      "The outpaint LoRA (flux2-klein-4b-outpaint) is deprecated and its retirement is MPI-603 - do NOT delete it, and do not strip it from any workflow as a side effect of the 9B work. It has a second consumer that has nothing to do with inpainting (flow_character_sheet.json #708) and released builds still list it as mandatory, so pulling it early breaks a shipped flow and 404s every released Klein install. Read tasks/MPI-603/brief.md if the 9B wiring brings you anywhere near it.",
       "The saved bench template klein_t2i_template.json is a 4B template MID-EDIT - UNETLoader and CLIPLoader already hold 9B weights while Input_is_9b is false and both LoRA loaders still point at 4B files. Do not read it as a finished 9B template.",
       "On HuggingFace the resolve-URL ETag is a CDN etag, NOT the LFS sha256. Use POST /api/models/{repo}/paths-info/main and read lfs.oid, or a good download reads as corrupt.",
       "CivitAI is UK-region-blocked (HTTP 000 bare). Anything from there needs the VPN on, and the VPN also skews the system clock - check gh api rate_limit Date before trusting timestamps.",
@@ -67,7 +67,8 @@
       ".agents/mpi-kanban/tasks/MPI-598/research/session-2026-08-22-assets-and-lanpaint.md",
       ".agents/mpi-kanban/tasks/MPI-600/research/verdict.md",
       "docs/playbooks/add-model/README.md",
-      "docs/models/klein/README.md"
+      "docs/models/klein/README.md",
+      ".agents/mpi-kanban/tasks/MPI-603/brief.md"
     ]
   },
   "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/d8294c2e-61be-4e6d-b976-2a6d72a58799.json and use mpi-continue to continue MPI-598 - wire FLUX.2 Klein 9B and update Klein 4B in the same pass. The weight is already decided (distilled INT8 transformer + qwen_3_8b_int8_convrot text encoder at CLIPLoader type flux2, 4 steps, cfg 1.0) and both 9B LoRAs are downloaded and hash-verified in G:/CubricModels/loras/flux2-klein/. Read tasks/MPI-598/brief.md and its research/session-2026-08-22-assets-and-lanpaint.md before touching anything: they carry the 5-row converter swap table, the Input_is_9b gate map, and the traps MPI-600 measured. Move the card to doing with a files.json, then run /mpi-add-model. Separately, MPI-601 is finished and parked in doing at validating - it needs mpi-end-session to close, and MPI-602 (LanPaint integration) is carded in todo, not started."
