@@ -399,3 +399,69 @@ session proved `nvidia_pid` returns a *cropped* image (a second defect underneat
 validation fix), so a matrix run before that fix would spend a GPU re-recording a broken PiD as
 PASS — media count and wall-clock both look healthy. Fix the graph, re-export through
 `sync-raw-workflows.mjs`, let gate 9 re-verify for free on `--plan`, then rent.
+
+---
+
+## Seventh pass — 2026-08-22. A scoped run was the ONLY run that proved anything.
+
+Klein 9B (MPI-598), `--models klein-9b --volume 88oys2kpie --keep-volume`. **PASS 7 · SKIP 0 ·
+FAIL 0** on an L4, engine proven `0.31.0`. Nothing here was found by running — all of it came out
+of `--plan`, for free, and the first one would have wasted a whole matrix.
+
+### 1. THE FULL MATRIX CANNOT PROVE A MODEL THAT SHARES A CHEAPER SIBLING'S GRAPH
+
+The `--models` section above argues one direction only: *a scoped run still covers its family.*
+The inverse is equally true and is the expensive one. `resolveSmokeSet` fingerprints by
+class_type set and keeps the **lowest `sizeTier`** member. `klein_t2i.json` and
+`klein_9b_t2i.json` are byte-identical at 56 class_types (the 9B swap is loader VALUES, not node
+classes), and each model maps all seven ops to its one file — so a full matrix resolves
+
+```
+12.7 GB  klein-4b  tier=low  ops=7  covers klein-9b
+```
+
+and lists every 9B weight under *NOT loaded by this set*. **A 288 GB matrix would have rented a
+GPU, gone green, and executed klein-9b zero times.** The dedupe's own documented residual risk —
+"a break tied to the weight FORMAT under the same loader node" — IS this case: 9B is int8
+**tensorwise**, 4B **rowwise**, same `UNETLoader`.
+
+**The rule:** before smoking a NEW model, run `--plan` and read whether it appears as a set MEMBER
+or only inside a `covers` list. In a `covers` list, only `--models <id>` executes it. The dedupe
+premise is about a broken NODE; it was never a claim about weights.
+
+### 2. A covered model is invisible to the coverage warning too
+
+`scope.unproven` lists models "in no family this run touches". A covered model IS in a family the
+run touches, so it never appears there — while still never executing. Both reports are correct and
+together read as coverage. Only the `covers` line tells them apart.
+
+### 3. `checkPodLock()` over-reports: it demands a rebuild for nodes that are never baked
+
+It refused this run with `POD LOCK IS BEHIND — ComfyUI-MpiNodes, LanPaint` and printed the
+`/build-pod-image` recipe. **No rebuild was needed.** It compares the two lock files wholesale on
+`commit`, without the discriminator MPI-222 introduced: the Dockerfile bakes **only**
+`installRequirements: true` entries, and both drifted nodes are `false`. All seven baked packs were
+already byte-identical and `python_deps.txt` was in sync. Code-only nodes install to the
+/workspace volume at connect from the **app's** pin — `start.sh` says it directly: *"A MpiNodes
+commit bump in node_lock therefore triggers a normal volume reinstall … with NO image rebuild."*
+
+Syncing the lock into the pod repo was the whole fix (mpi-ci `72451ef`), and `inpaint` passing on
+the LanPaint path is the positive proof the volume install works. **Until the gate learns the
+discriminator, check `installRequirements` on every drifted node before believing it:** all
+`false` → sync the lock, do not rebuild.
+
+### 4. `--plan` is NOT free when it is scoped and the evidence file is stale
+
+`main()` resolves the merge base at the `--models` branch **before** the `PLAN_ONLY` return, so
+`--plan --models <id>` dies on the same staleness guard as a real scoped run — the free dry run is
+unavailable exactly when you most want it. Move `dev_configs/smoke-evidence.json` aside first:
+`loadMergeBase()` returns null when the file is absent, and the old matrix is in git anyway.
+
+### 5. The gate-9 transcript dies if you restore the pin before the paid run
+
+Gate 9 refuses unless the local `ComfyUi-MpiNodes` checkout equals the `node_lock` pin, so it runs
+in its own `--plan` with that repo detached. Restore `main`, run the matrix, and `_transcribe`'s
+mode-`'w'` truncation replaces the green gate-9 transcript with one reading `NOT CHECKED` — which
+a later auditor correctly reports as a FALSE claim, because the surviving artifact contradicts the
+write-up. **Copy the gate-9 `--plan` transcript out before the paid run**, or record its stdout in
+the evidence and say plainly that the artifact is missing rather than the check.
