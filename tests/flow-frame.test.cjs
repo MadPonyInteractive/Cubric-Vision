@@ -37,10 +37,14 @@ const frame = () => read('js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js');
 test('the session snapshot has ONE writer, and it is not _run', () => {
     const src = frame();
 
+    // Scoped to THIS FILE deliberately. `flowService.js:163` also assigns the key —
+    // it seeds a saved snapshot on the Reuse path before the flow opens, which is a
+    // legitimate second writer and not what this pins. What must stay singular is the
+    // frame's own live-state writer; two of those is how it drifted into being
+    // dispatch-only. (The card text called it the only site in the codebase. It is not.)
     const writes = src.match(/state\.s_flowInputs\s*=/g) || [];
     assert.strictEqual(writes.length, 1,
-        'exactly one assignment, inside _persistInputs — a second write site is how '
-        + 'this drifted into being dispatch-only in the first place');
+        'MpiBaseFlow.js must hold exactly one assignment, inside _persistInputs');
     assert.match(src, /function _persistInputs\(inputs\) \{[\s\S]*?state\.s_flowInputs = \{\s*\n\s*\.\.\.state\.s_flowInputs,/,
         'top-level replace — s_flowInputs is a Proxy key, mutating the sub-object fires nothing');
     assert.match(src, /_persistInputs\(inputs\);/,
