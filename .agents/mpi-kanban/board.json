@@ -70,7 +70,6 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-610",
       "MPI-603",
       "MPI-608",
       "MPI-607",
@@ -80,6 +79,7 @@
       "MPI-567"
     ],
     "done": [
+      "MPI-610",
       "MPI-609",
       "MPI-611",
       "MPI-606",
@@ -111,8 +111,17 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-23T16:10:39Z",
+  "updated_at": "2026-08-23T16:35:53Z",
   "events": [
+    {
+      "at": "2026-08-23T16:35:53Z",
+      "type": "task.moved",
+      "task": "MPI-610",
+      "actor": "claude",
+      "from": "doing",
+      "to": "done",
+      "note": "validating -> complete, doing -> done. Closed on Fabios own confirmation (\"I can confirm the test. The second test showed the difference in the output with LoRAs connected\") plus the /history read of prompt 998b97a2, which shows BOTH racks reaching the graph - Input_Lora_Phase1_1 and Input_Lora_Phase2_1 each carrying a real filename alongside Input_Edit_Model/Input_Edit_Clip. That is the cards whole contract: two labelled model slots, two LoRA racks, each injecting into its own phase. Verified besides: structural+type PASS on 94 nodes vs 48188, validate-injection-rules clean, live graphToPrompt 0 semantic diffs, npm test 727/727, desktop 26/26 (and the rewritten flow-lora-button spec passed on the CI runner too, run for 89f4665f). RESIDUAL, recorded in validation.md and NOT blocking: the klein-9b blend arm has still never been run here, and phase 2s rack has not been seen to CHANGE an image - the one phase-2 LoRA tried was a 9B weight on the 4B transformer, every key rejected while the run reported success, which is carded as MPI-614. The injection path is identical for both phases and phase 1 demonstrably moved the picture, so the untested step belongs to ComfyUI applying a correctly-paired weight, not to this cards wiring. Placement feedback from the same test is MPI-613."
+    },
     {
       "at": "2026-08-23T16:10:39Z",
       "type": "task.created",

@@ -53,8 +53,8 @@ js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js:1134
 Each mounts its **own** `MpiModelSettings` overlay, which is why both need the listener. But
 the **landing page mounts neither** — they are mounted by the workspace router
 (`js/shell/navigation.js:389/393`), and the Flow Library is reachable straight from the
-landing page (`js/shell/projectUI.js:81` "Flows", and the radial menu at
-`navigation.js:368`).
+landing page (`js/shell/projectUI.js:81` "Flows", and the radial menu whose entry is defined
+at `navigation.js:358` and emits at `:368`).
 
 So a cogwheel pressed with no project open emits into nothing: no panel, no error, no log.
 MPI-504's own desktop spec recorded this as a known limitation. **Moving the control to the

@@ -7,7 +7,7 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-22T14:50:06Z",
-  "updated_at": "2026-08-23T12:47:23Z",
+  "updated_at": "2026-08-23T16:35:53Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -21,7 +21,7 @@
   "activeSessionTitle": "MPI-603 - retire the outpaint LoRA from the Character Sheet head-removal branch (LanPaint re-author)",
   "attention": {
     "state": "required",
-    "reason": "Needs one live run: Character Sheet with Remove Head ON. Everything else is proven.",
-    "updated_at": "2026-08-23T12:47:23Z"
+    "reason": "One question for Fabio: does the head come off CLEANLY on the LanPaint branch? The branch demonstrably ran (prompt 998b97a2, Remove Head true, image out of Output_Image) but nobody has judged the result. Separately, brief steps 3-5 are open implementation: drop the dep from Klein in models.js (live-claimed by MPI-607), ship a build without it, then delete from R2/HF.",
+    "updated_at": "2026-08-23T16:35:53Z"
   }
 }
