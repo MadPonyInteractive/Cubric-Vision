@@ -3,16 +3,15 @@
   "id": "MPI-611",
   "title": "Tab ring: gallery -> latest card -> the OPEN Flow (restored), not the Flow Library",
   "description": "Tab from inside a running Flow opens the Flow Library instead of leaving the flow, and there is no way back into the flow with its state intact. Ring becomes gallery -> latest history entry -> the suspended Flow -> gallery; the Library stays only as the fallback third stop when no Flow is open.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-23T09:18:00Z",
-  "updated_at": "2026-08-23T09:52:00Z",
+  "updated_at": "2026-08-23T10:12:00Z",
   "links": {
     "checklist": "checklist.md",
     "validation": "validation.md",
     "files": "files.json",
     "events": "events.jsonl"
-  },
-  "activeSessionTitle": "Tab ring - suspend/restore the open Flow"
+  }
 }

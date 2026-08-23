@@ -5,4 +5,4 @@
 - [x] Restored flow keeps its step/inputs/result (same DOM node)
 - [x] Library still reachable by Tab when no flow is open
 - [x] Parked flow's hotkeys go inert (no phantom Ctrl+Enter run)
-- [ ] Fabio confirms the order feels right in daily use
+- [x] Fabio confirms the order feels right in daily use (2026-08-23: "this is verified, I just verified it")

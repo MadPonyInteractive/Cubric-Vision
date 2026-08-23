@@ -47,7 +47,7 @@ function where(window) {
   });
 }
 
-test('Tab rings gallery → Flows → last card, and the Flows button opens the library', async ({}, testInfo) => {
+test('Tab rings gallery → last card → Flows, and the Flows button opens the library', async ({}, testInfo) => {
   test.setTimeout(90000);
   const { app, window, consoleErrors, pageErrors } = await launchApp(testInfo);
   try {
@@ -61,12 +61,14 @@ test('Tab rings gallery → Flows → last card, and the Flows button opens the 
     await expect(flowsBtn).toBeVisible();
     expect(await flowsBtn.evaluate(el => el.tagName)).toBe('BUTTON');
 
+    // MPI-611 re-ordered the ring: the card comes before Flows, and Flows is only the
+    // third stop when NO flow is open (see the parked-flow test below).
     expect(await where(window)).toBe('gallery');
     await window.keyboard.press('Tab');
-    await expect(window.locator('.mpi-overlay--body .mpi-flow-library')).toBeVisible({ timeout: 5000 });
+    await expect.poll(() => where(window), { timeout: 5000 }).toBe('group-history');
 
     await window.keyboard.press('Tab');
-    await expect.poll(() => where(window), { timeout: 5000 }).toBe('group-history');
+    await expect(window.locator('.mpi-overlay--body .mpi-flow-library')).toBeVisible({ timeout: 5000 });
 
     await window.keyboard.press('Tab');
     await expect.poll(() => where(window), { timeout: 5000 }).toBe('gallery');
@@ -93,6 +95,48 @@ test('a project with no cards rings between the gallery and Flows instead of dea
     await expect(window.locator('.mpi-overlay--body .mpi-flow-library')).toBeVisible({ timeout: 5000 });
     await window.keyboard.press('Tab');
     await expect.poll(() => where(window), { timeout: 5000 }).toBe('gallery');
+
+    expect(pageErrors, `page errors: ${pageErrors.join(' | ')}`).toHaveLength(0);
+    expect(consoleErrors, `console errors: ${consoleErrors.join(' | ')}`).toHaveLength(0);
+  } finally {
+    await closeApp(app);
+  }
+});
+
+// MPI-611: the third stop is the flow you are IN. Tab parks it — hidden, not destroyed —
+// and the ring comes back to the SAME instance, which is the half a re-mount would fake.
+test('Tab parks an open flow and comes back to the same instance', async ({}, testInfo) => {
+  test.setTimeout(90000);
+  const { app, window, consoleErrors, pageErrors } = await launchApp(testInfo);
+  try {
+    await releaseBootGate(window);
+    await openGallery(window, makeProject(testInfo, [
+      { id: 'grp1', name: 'Group 1', type: 'image', history: [], selectedIndex: 0 },
+    ]));
+
+    // Straight through the event the Library's Open button emits — the flow's own
+    // availability gate lives in the Library, and this spec is about the RING.
+    await window.evaluate(async () => {
+      const { Events } = await import('/js/events.js');
+      Events.emit('flow:open', { flowId: 'outpaint' });
+      await new Promise(r => setTimeout(r, 800));
+      // Stamp the live node so a re-mount cannot pass as a restore.
+      document.querySelector('.mpi-base-flow').dataset.ringMark = 'same-instance';
+    });
+    await expect(window.locator('.mpi-base-flow')).toBeVisible();
+
+    // Out of the flow → the gallery, and NOT the library.
+    await window.keyboard.press('Tab');
+    await expect(window.locator('.mpi-base-flow')).toHaveCount(0);
+    await expect.poll(() => where(window), { timeout: 5000 }).toBe('gallery');
+
+    await window.keyboard.press('Tab');
+    await expect.poll(() => where(window), { timeout: 5000 }).toBe('group-history');
+
+    // Back in — same node, so the step, the inputs and any running job survived.
+    await window.keyboard.press('Tab');
+    await expect(window.locator('.mpi-base-flow')).toBeVisible({ timeout: 5000 });
+    expect(await window.locator('.mpi-base-flow').getAttribute('data-ring-mark')).toBe('same-instance');
 
     expect(pageErrors, `page errors: ${pageErrors.join(' | ')}`).toHaveLength(0);
     expect(consoleErrors, `console errors: ${consoleErrors.join(' | ')}`).toHaveLength(0);

@@ -75,7 +75,8 @@
 - Flows are out of preview. The Flow Library is a set of outcome-shaped jobs you run without
   assembling a workspace: Head Swap, Extend Video, Add Foley, Upscale Video, Character
   Sheet and Outpaint. Open it from the Flows button at the top of the gallery, from the
-  landing page, or with Tab — which now cycles your last card, the gallery and Flows. Each
+  landing page, or with Tab — which now cycles the gallery, your last card and the flow you
+  have open, so you can step out to check a picture and land back where you left off. Each
   flow says which models it needs and installs them for you; none of them download weights
   of their own.
 
