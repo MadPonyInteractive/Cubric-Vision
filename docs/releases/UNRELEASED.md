@@ -124,6 +124,12 @@
 
 ## Fixes
 
+- The colour picker no longer opens off the bottom of the screen. Clicking the colour swatch
+  in the Paint, Crop, Resize, Remove Background or Adjust tool options while the panel sat low
+  in the window put the picker's HEX field below the edge of the app, so you could see the
+  saturation square and the hue bar but not read or type the hex value. It now opens upward
+  when there is no room below it.
+
 - The 8:5 shape now really is 8:5. Picking 8:5 (or 5:8 in portrait) on FLUX, Chroma,
   FLUX.2 Klein or Krea 2 at 1K produced 1280×768 — which is 5:3, about 4% wider than the
   shape the button named. It is now 1280×800, and 800×1280 in portrait, so the picture
