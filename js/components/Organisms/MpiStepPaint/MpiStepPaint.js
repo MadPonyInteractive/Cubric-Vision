@@ -2,7 +2,12 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiColorPicker } from '../../Primitives/MpiColorPicker/MpiColorPicker.js';
+import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { PaintManager } from '../../Primitives/MpiCanvas/managers/PaintManager.js';
+import { ViewManager } from '../../Primitives/MpiCanvas/managers/ViewManager.js';
+import {
+    BRUSH_PRESETS, DEFAULT_BRUSH_PRESET, drawBrushRing,
+} from '../../Primitives/MpiCanvas/managers/brushDab.js';
 import { UndoStack } from '../../Primitives/MpiCanvas/managers/UndoStack.js';
 import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
@@ -23,7 +28,7 @@ import { qs, on } from '../../../utils/dom.js';
  *   el.getValue() → the reported value
  *
  * Value shape: `{ paint: <PNG data URL>|null, size: {w,h}, color, brushSize,
- * mode }` — `size` is the SOURCE image's natural pixel size, which is what
+ * brush, mode }` — `size` is the SOURCE image's natural pixel size, which is what
  * `composePaintLayer` redraws into. See § Resolution below for why that is not
  * the same as the layer's own size.
  *
@@ -46,10 +51,19 @@ import { qs, on } from '../../../utils/dom.js';
  *
  * Same exception `MpiStepCrop`'s ratio bar takes, for the same kind of reason:
  * these controls are INTRINSIC — every paint step, in every flow ever written,
- * needs a brush/eraser pair, a colour and an undo. Making a flow declare them
- * would be error-prone boilerplate a manifest author could silently omit,
+ * needs a brush/eraser pair, a shape, a colour and an undo. Making a flow declare
+ * them would be error-prone boilerplate a manifest author could silently omit,
  * leaving a canvas the user cannot erase on. It is still one row and still
  * nothing but Primitives (carousel-frame.md § the one-row cap).
+ *
+ * BRUSH SHAPE IS THE SAME TEN `BRUSH_PRESETS` THE MASK BRUSH HAS (MPI-435), and
+ * it is a CONTROL, not new paint code: `PaintManager.brushPreset` already exists
+ * and the shared dab already reads it (`PaintManager` ~195). `MpiMaskStrip` mounts
+ * the identical dropdown for the History tools; this is the flow-step surface of
+ * the same setting, so a user who shapes a brush in one place meets it in the
+ * other. It opens UP, unlike the strip's — that row sits near the top of the
+ * sidebar, this one sits under a 46vh stage and a downward list would run off the
+ * bottom of the slide.
  *
  * BRUSH SIZE IS THE WHEEL, not a slider — the same gesture `InputController`
  * gives the History brush, so the two surfaces read identically and the row
@@ -75,6 +89,8 @@ const MIN_BRUSH = 2;
 const MAX_BRUSH = 400;
 /** Wheel step, matching `InputController`'s brush wheel. */
 const BRUSH_STEP = 5;
+/** Zoom per wheel unit — `InputController`'s own constant, so both zoom alike. */
+const ZOOM_SPEED = 0.001;
 
 /** Accent-adjacent, so a fresh stroke never reads as a mask overlay. */
 // eslint-disable-next-line mpi/no-hardcoded-hex-color -- color picker default value
@@ -166,6 +182,7 @@ export const MpiStepPaint = ComponentFactory.create({
             </div>
             <div class="mpi-step-paint__bar">
                 <div class="mpi-step-paint__mode" id="step-paint-mode"></div>
+                <div class="mpi-step-paint__brush" id="step-paint-brush"></div>
                 <div class="mpi-step-paint__color" id="step-paint-color"></div>
                 <div class="mpi-step-paint__actions" id="step-paint-actions"></div>
             </div>
@@ -176,6 +193,7 @@ export const MpiStepPaint = ComponentFactory.create({
         const stageEl = qs('#step-paint-stage', el);
         const canvasEl = /** @type {HTMLCanvasElement} */ (qs('#step-paint-canvas', el));
         const modeSlot = qs('#step-paint-mode', el);
+        const brushSlot = qs('#step-paint-brush', el);
         const colorSlot = qs('#step-paint-color', el);
         const actionSlot = qs('#step-paint-actions', el);
 
@@ -191,9 +209,16 @@ export const MpiStepPaint = ComponentFactory.create({
         paint.color = seeded.color || DEFAULT_COLOR;
         paint.brushSize = seeded.brushSize || DEFAULT_BRUSH;
         paint.brushType = seeded.mode === 'eraser' ? 'eraser' : 'brush';
+        // No validation on the way in: `brushDab.getPreset()` falls back to the hard
+        // round for an unknown id, so a stale value from an older snapshot degrades to
+        // the pre-MPI-435 brush rather than throwing.
+        paint.brushPreset = seeded.brush || DEFAULT_BRUSH_PRESET;
 
-        /** Screen-space view over image space. Recomputed by _refit. */
-        const view = { offsetX: 0, offsetY: 0, scale: 1 };
+        // The canvas family's OWN viewport, not a hand-rolled triple (MPI-567). It
+        // carries `minScale` (so a zoom-out cannot shrink past the fit) and
+        // `isManagedView` (so a resize stops re-fitting once the user has moved the
+        // view) — both of which a bare `{offsetX, offsetY, scale}` silently lacked.
+        const view = new ViewManager();
 
         const imgEl = new Image();
         let _loaded = false;
@@ -201,32 +226,61 @@ export const MpiStepPaint = ComponentFactory.create({
         let _drawing = false;
         /** Pointer in IMAGE px, for the brush ring. Null when off the canvas. */
         let _cursor = null;
+        /** Space held = the pointer pans instead of painting (MPI-567). */
+        let _spaceHeld = false;
+        /** Last pointer position in CANVAS px while panning, or null. */
+        let _panFrom = null;
 
         let _modeRadio = null;
+        let _brushPicker = null;
         let _picker = null;
         let _undoBtn = null;
 
         // ── Geometry ─────────────────────────────────────────────────────────
 
-        /** Fit the whole image into the stage. No pan, no zoom — a step is one gesture. */
+        /**
+         * Fit the whole image into the stage.
+         *
+         * An earlier version of this comment read *"No pan, no zoom — a step is one
+         * gesture"*, and that decision is REVERSED (Fabio, 2026-08-23): hold Space and
+         * the step pans and zooms exactly as the History canvas does. Drawing a ~96px
+         * object into a 4000px photo through a 46vh window is not one gesture, it is
+         * one gesture the user cannot see.
+         *
+         * `ViewManager.refit` fits into the box it is GIVEN and centres inside it, so
+         * the edge slack comes off the container and goes back onto the offset. Its
+         * `isManagedView` flag is what stops a resize from yanking the view back after
+         * the user has panned — the wheel handler clears it, as InputController's does.
+         */
         function _refit() {
             const cw = canvasEl.width;
             const ch = canvasEl.height;
             if (cw <= FIT_SLACK * 2 || ch <= FIT_SLACK * 2 || !_loaded) return;
-            view.scale = Math.min(
-                (cw - FIT_SLACK * 2) / _natural.w,
-                (ch - FIT_SLACK * 2) / _natural.h,
-            );
-            view.offsetX = (cw - _natural.w * view.scale) / 2;
-            view.offsetY = (ch - _natural.h * view.scale) / 2;
+            if (!view.isManagedView) return;
+            view.refit(cw - FIT_SLACK * 2, ch - FIT_SLACK * 2, _natural.w, _natural.h);
+            view.offsetX += FIT_SLACK;
+            view.offsetY += FIT_SLACK;
+        }
+
+        /**
+         * Client px → CANVAS px (the backing buffer). `view` lives in this space, so
+         * pan deltas and the zoom anchor must be measured here, not in CSS px — the
+         * canvas is sized to its box but the two only match at devicePixelRatio 1.
+         */
+        function _toCanvas(ev) {
+            const r = canvasEl.getBoundingClientRect();
+            return {
+                x: (ev.clientX - r.left) * (canvasEl.width / r.width),
+                y: (ev.clientY - r.top) * (canvasEl.height / r.height),
+            };
         }
 
         /** Canvas px → image px. */
         function _toImage(ev) {
-            const r = canvasEl.getBoundingClientRect();
+            const c = _toCanvas(ev);
             return {
-                x: ((ev.clientX - r.left) * (canvasEl.width / r.width) - view.offsetX) / view.scale,
-                y: ((ev.clientY - r.top) * (canvasEl.height / r.height) - view.offsetY) / view.scale,
+                x: (c.x - view.offsetX) / view.scale,
+                y: (c.y - view.offsetY) / view.scale,
             };
         }
 
@@ -248,19 +302,21 @@ export const MpiStepPaint = ComponentFactory.create({
             ctx.drawImage(imgEl, view.offsetX, view.offsetY, w, h);
             ctx.drawImage(paint.paintCanvas, view.offsetX, view.offsetY, w, h);
 
-            if (!_cursor) return;
-            const r = (paint.brushSize / 2) * view.scale;
-            ctx.save();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(
+            // No ring while Space is held: the pointer means PAN then, and the History
+            // canvas hides it for the same reason (`_drawBrushIndicator`).
+            if (!_cursor || _spaceHeld) return;
+            // THE SHARED RING (MPI-567). This used to be a solid 1px white circle drawn
+            // right here, identical for brush and eraser — a worse re-invention of a
+            // ring that had already been debugged, which is exactly what this file's
+            // header forbids for strokes. `brushDab` owns it now, so the eraser is
+            // frost-blue here as it is on the History canvas.
+            drawBrushRing(
+                ctx,
                 view.offsetX + _cursor.x * view.scale,
                 view.offsetY + _cursor.y * view.scale,
-                Math.max(1, r), 0, Math.PI * 2,
+                (paint.brushSize / 2) * view.scale,
+                { eraser: paint.brushType === 'eraser' },
             );
-            ctx.stroke();
-            ctx.restore();
         }
 
         /**
@@ -293,14 +349,19 @@ export const MpiStepPaint = ComponentFactory.create({
          * its path instead; that trades this line for an async write per stroke and
          * a GC question, so do it when a measured snapshot is actually too big.
          */
-        function _report() {
-            props.onChange?.({
+        function _value() {
+            return {
                 paint: _layerUrl(),
                 size: { ..._natural },
                 color: paint.color,
                 brushSize: paint.brushSize,
+                brush: paint.brushPreset,
                 mode: paint.brushType,
-            });
+            };
+        }
+
+        function _report() {
+            props.onChange?.(_value());
             if (_undoBtn) _undoBtn.disabled = !undo.canUndo();
         }
 
@@ -363,6 +424,21 @@ export const MpiStepPaint = ComponentFactory.create({
             _report();
         });
 
+        // The dab is shared with the History paint tool, so this is a setting, not a
+        // second brush engine — nothing below touches how a stroke is laid down.
+        _brushPicker = MpiDropdown.mount(brushSlot, {
+            options: BRUSH_PRESETS.map(p => ({ label: p.label, value: p.id })),
+            value: paint.brushPreset,
+            direction: 'up',
+            info: 'Brush shape — hardness, scatter and flow, generated per dab',
+        });
+        _brushPicker.on('change', ({ value }) => {
+            paint.brushPreset = value;
+            // Moves no pixel, so there is nothing to record on the UndoStack — the
+            // same reason the colour swap and the size wheel record nothing.
+            _report();
+        });
+
         _picker = MpiColorPicker.mount(colorSlot, {
             value: paint.color,
             info: 'Drawing colour',
@@ -394,16 +470,39 @@ export const MpiStepPaint = ComponentFactory.create({
         _unsubs.push(Hotkeys.bind('mask.undo.canvas', _undo));
         _unsubs.push(Hotkeys.bind('mask.redo.canvas', _redo));
 
+        // B / E, the same ids `MpiMaskStrip` binds (MPI-567). Routed THROUGH the radio
+        // rather than setting `paint.brushType` directly: `setValue` emits `select`, so
+        // the control and the manager cannot disagree about which tool is armed — a
+        // direct write would swap the brush while the row kept showing the old one.
+        // `allowWhileTyping: false` in the registry is what keeps them off the prompt
+        // field this step also carries.
+        _unsubs.push(Hotkeys.bind('mask.brush.toolbar', () => _modeRadio?.el?.setValue('brush')));
+        _unsubs.push(Hotkeys.bind('mask.eraser.toolbar', () => _modeRadio?.el?.setValue('eraser')));
+
         // ── Pointer ──────────────────────────────────────────────────────────
 
         _unsubs.push(on(canvasEl, 'mousedown', (ev) => {
             if (!_loaded || ev.button !== 0) return;
             ev.preventDefault();
+            // Space wins over the brush, exactly as InputController orders it: every
+            // one of its draw branches is guarded on `!this.isSpacePressed`.
+            if (_spaceHeld) {
+                _panFrom = _toCanvas(ev);
+                return;
+            }
             _beginStroke(_toImage(ev));
         }));
 
         _unsubs.push(on(window, 'mousemove', (ev) => {
             if (!_loaded) return;
+            if (_panFrom) {
+                const c = _toCanvas(ev);
+                view.offsetX += c.x - _panFrom.x;
+                view.offsetY += c.y - _panFrom.y;
+                _panFrom = c;
+                _draw();
+                return;
+            }
             const p = _toImage(ev);
             if (_drawing) {
                 paint.paint(p.x, p.y);
@@ -420,18 +519,58 @@ export const MpiStepPaint = ComponentFactory.create({
             _draw();
         }));
 
-        _unsubs.push(on(window, 'mouseup', _endStroke));
+        _unsubs.push(on(window, 'mouseup', () => {
+            _panFrom = null;
+            _endStroke();
+        }));
 
-        // Brush size is the WHEEL, exactly as InputController gives it on the
-        // History canvas — non-passive because the slide must not scroll under it.
+        // The wheel means two things, split by Space, exactly as InputController
+        // splits it on the History canvas: brush size normally, ZOOM while panning.
         _unsubs.push(on(canvasEl, 'wheel', (ev) => {
             if (!_loaded) return;
             ev.preventDefault();
+            if (_spaceHeld) {
+                // InputController's own constants and cursor-anchored maths, so the two
+                // surfaces zoom at the same rate under the same gesture.
+                view.isManagedView = false;
+                const factor = Math.exp(-ev.deltaY * ZOOM_SPEED);
+                const old = view.scale;
+                view.scale = Math.max(view.minScale, Math.min(view.maxScale, old * factor));
+                const c = _toCanvas(ev);
+                // Keep the image point under the cursor pinned across the scale change.
+                view.offsetX = c.x - ((c.x - view.offsetX) / old) * view.scale;
+                view.offsetY = c.y - ((c.y - view.offsetY) / old) * view.scale;
+                _draw();
+                return;
+            }
             const next = paint.brushSize + (ev.deltaY > 0 ? -BRUSH_STEP : BRUSH_STEP);
             paint.brushSize = Math.max(MIN_BRUSH, Math.min(MAX_BRUSH, next));
             _draw();
             _report();
         }, { passive: false }));
+
+        // ── Space = pan/zoom ─────────────────────────────────────────────────
+        // The canvas family's OWN registry ids, so the gesture is one thing app-wide
+        // and no new hotkey is invented for a step. InputController binds these too and
+        // every handler for an id fires — harmless here, because it only pans on a
+        // mousedown ITS container receives, and the flow overlay takes those.
+        _unsubs.push(Hotkeys.bind('canvas.pan.start', () => {
+            if (_spaceHeld) return;
+            _spaceHeld = true;
+            // Close any open stroke first, or the capture stays open and the NEXT
+            // commit swallows both — the reason InputController calls _endPaintStroke
+            // here rather than just setting the flag.
+            _endStroke();
+            canvasEl.style.cursor = 'move';
+            _draw();
+        }));
+        _unsubs.push(Hotkeys.bind('canvas.pan.end', () => {
+            _spaceHeld = false;
+            _panFrom = null;
+            // Back to the ring being the cursor.
+            canvasEl.style.cursor = '';
+            _draw();
+        }));
 
         // ── Sizing + load ────────────────────────────────────────────────────
 
@@ -470,18 +609,15 @@ export const MpiStepPaint = ComponentFactory.create({
         const url = props.media?.url ? resolveMediaUrl(props.media.url) : '';
         if (url) imgEl.src = url;
 
-        el.getValue = () => ({
-            paint: _layerUrl(),
-            size: { ..._natural },
-            color: paint.color,
-            brushSize: paint.brushSize,
-            mode: paint.brushType,
-        });
+        // One literal, two callers — the reported value and the pulled value cannot
+        // disagree about a key, which is how `brush` would have gone missing from one.
+        el.getValue = _value;
 
         el.destroy = () => {
             _ro.disconnect();
             undo.destroy();
             _modeRadio?.destroy?.();
+            _brushPicker?.destroy?.();
             _picker?.destroy?.();
             undoInst?.destroy?.();
             clearInst?.destroy?.();

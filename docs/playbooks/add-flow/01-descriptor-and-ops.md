@@ -319,14 +319,21 @@ that means the step, and changing the value before `Generate Again` costs one ti
 ## The op key becomes the OUTPUT FILENAME — keep it short (MPI-567)
 
 `routes/projects.js` (~1812) sanitises the op key and uses it as the sequenced filename prefix,
-capped at 24 chars: `flowScribbleObject` → `flowScribbleObject_001.png`, shown in the gallery as
-`FLOWSCRIBBLEDOBJECT_001`. Long op names produce unusable filenames, and the gallery badge is
-where the user meets them.
+capped at 24 chars: this flow's op shipped as `flowScribbleObject` → `flowScribbleObject_001.png`,
+badged in the gallery as `FLOWSCRIBBLEOBJECT_001`, and was renamed to `flowScribObj` →
+`FLOWSCRIBOBJ_001` before release for exactly that reason. Long op names produce unusable
+filenames, and the gallery badge is where the user meets them.
 
 **Renaming is free before release and expensive after.** Check `appVersionIntroduced` against the
 released `APP_VERSION`: an op introduced in an unreleased version has no files on any user's disk,
-so the rename is a pure find-and-replace across the four op files plus the FlowDef's `operation`.
-Once shipped, existing filenames and their `sequenceCounters` entry are user data — leave it.
+so the rename is a find-and-replace and nothing more. Once shipped, existing filenames and their
+`sequenceCounters` entry are user data — leave it.
+
+**It is more than the four op files.** The op key is matched BY NAME in the test suite as well, so
+sweep the whole repo rather than the playbook's file list: `flowScribObj`'s rename touched the four
+op files, the FlowDef's `operation`, and two tests — `flow-model-choice.test.cjs` asserts
+`COMMANDS.<op>.injector`, and `inject-params-titles.test.cjs` names it in prose. `npm test` is the
+gate that proves the sweep was complete.
 
 This is why the flow ops do **not** share one naming convention: `flowHeadSwap` (1.1.0) and the
 two LTX flows (1.4.2) shipped with long names and keep them. Do not "tidy" a released op key.

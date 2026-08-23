@@ -12,9 +12,9 @@
  * Values mirror the token block in styles/01_base.css — that is the source of
  * truth; update here when a token changes. (NOT docs/redesign/MAPPING.md §9:
  * it is a superseded wave-2.6 proposal whose table drifted from this file.) */
-const BRUSH_CURSOR         = 'oklch(0.76 0.17 355)';        /* --accent-heat — paint ring */
-const BRUSH_CURSOR_OUTLINE = 'oklch(0.16 0.02 350 / 0.9)';  /* --surface-canvas 90% — the DARK half of the ring */
-const BRUSH_ERASER         = 'oklch(0.78 0.14 220)';        /* --accent-frost — erase ring */
+/* BRUSH_CURSOR / BRUSH_CURSOR_OUTLINE / BRUSH_ERASER moved to `brushDab.js`
+ * alongside `drawBrushRing` (MPI-567) — the ring has a second destination now, a
+ * flow's `paint` step, and it had already been forked into a worse copy there. */
 const BRUSH_DOT            = 'oklch(0.76 0.17 355)';         /* --accent-heat */
 const SLIDER_ARROW         = 'oklch(0.66 0.014 80)';       /* --ink-3 */
 const GRID_LINE            = 'oklch(0.95 0.005 80 / 0.8)'; /* --ink-1 80% */
@@ -87,6 +87,8 @@ import { CropManager }       from './managers/CropManager.js';
 import { PaintManager }      from './managers/PaintManager.js';
 import { ShapeManager }      from './managers/ShapeManager.js';
 import { CompositeManager }  from './managers/CompositeManager.js';
+// BRUSH_CURSOR stays: the comparison slider is drawn in it too, not just the ring.
+import { drawBrushRing, BRUSH_CURSOR } from './managers/brushDab.js';
 import { UndoStack }         from './managers/UndoStack.js';
 import { InputController }   from './managers/InputController.js';
 
@@ -1108,36 +1110,11 @@ class _CanvasCore {
             : (this.comp.isCompositeMode ? this.comp : null);
         if (!brush || !brush.paintEnabled) return;
         if (x !== undefined && !this.input.isSpacePressed) {
-            const r = (brush.brushSize * scale) / 2;
-            const accent = brush.brushType === 'eraser' ? BRUSH_ERASER : BRUSH_CURSOR;
-            ctx.save();
-            // Two-tone ring, same trick as _drawGridOverlay(): one accent pass, one
-            // dark pass offset half a period, so the dashes interleave. A single
-            // colour is invisible against a background of its own hue — which is
-            // exactly how the eraser (drawn in --surface-canvas) vanished on black.
-            // Equal halves + offset = period/2 tiles the ring completely; change one
-            // and the other must follow or bare arcs open up.
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.lineWidth = 1.5;
-            ctx.setLineDash([4, 4]);
-            ctx.strokeStyle = accent;
-            ctx.stroke();
-            ctx.lineDashOffset = 4;
-            ctx.strokeStyle = BRUSH_CURSOR_OUTLINE;
-            ctx.stroke();
-            // Centre dot — accent fill inside a dark ring, as _drawMaskPoints() does,
-            // so it survives a light background too. Both dash settings must reset.
-            ctx.setLineDash([]);
-            ctx.lineDashOffset = 0;
-            ctx.beginPath();
-            ctx.arc(x, y, 2, 0, Math.PI * 2);
-            ctx.fillStyle = accent;
-            ctx.fill();
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = BRUSH_CURSOR_OUTLINE;
-            ctx.stroke();
-            ctx.restore();
+            // The ring itself is `brushDab.drawBrushRing` (MPI-567) — the same one a
+            // flow's `paint` step draws, so the two surfaces cannot drift again.
+            drawBrushRing(ctx, x, y, (brush.brushSize * scale) / 2, {
+                eraser: brush.brushType === 'eraser',
+            });
         }
     }
 

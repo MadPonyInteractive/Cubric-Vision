@@ -60,7 +60,7 @@ navigation, spacebar advancing a step, no arrow-key nav, the colour picker closi
 | Fabio's sign-off by eye | **GIVEN** 2026-08-22 | *"Compared to what we had previously, these look very good."* |
 | Blend route replaced by LanPaint | **DONE** 2026-08-22 | the whole-image relight and its ~25-node repair tail are DELETED. `InpaintCropImproved` → `SetLatentNoiseMask` → `LanPaint_KSampler` → `InpaintStitchImproved`, 70 nodes → 55 |
 | The box seam | **FIXED** 2026-08-22 | one node — `GrowMaskWithBlur(expand −96, blur_radius 96)` on the noise mask. Worst `cnr` 0.85 → 0.15. § The seam below |
-| **App wiring** (`/mpi-add-flow`) | **DONE** 2026-08-22 | `flowScribbleObject` in the four op files, `scribble-object` `FlowDef`, two choosable slots, paint + box steps, two declared fields. 683 tests green, both new assertions mutation-checked |
+| **App wiring** (`/mpi-add-flow`) | **DONE** 2026-08-22 | `flowScribObj` in the four op files (renamed from `flowScribbleObject` on 2026-08-23, free at 1.5.0 unreleased), `scribble-object` `FlowDef`, two choosable slots, paint + box steps, two declared fields. 683 tests green, both new assertions mutation-checked |
 | First live run in the app | **NOT DONE** | the remaining gate. `05-verify.md`'s Definition of Done: a live run and a reuse round trip |
 | Graphics (tile + hero) | **NOT DONE** | `preview`/`video` are declared and the files do not exist yet — `/mpi-flow-graphics` |
 

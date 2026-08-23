@@ -1,8 +1,8 @@
 {
   "id": "00000000-0000-0000-0000-000000000000",
   "revision": 0,
-  "last_node_id": 169,
-  "last_link_id": 239,
+  "last_node_id": 170,
+  "last_link_id": 240,
   "nodes": [
     {
       "id": 1,
@@ -1384,7 +1384,7 @@
         "Node name for S&R": "MpiFloat"
       },
       "widgets_values": [
-        0.5
+        1
       ]
     },
     {
@@ -1482,7 +1482,7 @@
         0,
         1,
         0,
-        1,
+        0.5,
         true,
         "linear"
       ]
@@ -1587,7 +1587,7 @@
       "widgets_values": [
         1,
         0,
-        1
+        0.569
       ]
     },
     {
@@ -2771,7 +2771,7 @@
           "localized_name": "images",
           "name": "images",
           "type": "IMAGE",
-          "link": 239
+          "link": 240
         },
         {
           "localized_name": "filename_prefix",
@@ -3764,6 +3764,41 @@
         "Node name for S&R": "InpaintStitchImproved"
       },
       "widgets_values": []
+    },
+    {
+      "id": 170,
+      "type": "MpiClearVram",
+      "pos": [
+        8400,
+        400
+      ],
+      "size": [
+        186.9140625,
+        26
+      ],
+      "flags": {},
+      "order": 55,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 239
+        }
+      ],
+      "outputs": [
+        {
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            240
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiClearVram"
+      }
     }
   ],
   "links": [
@@ -4434,6 +4469,14 @@
     [
       239,
       169,
+      0,
+      170,
+      0,
+      "IMAGE"
+    ],
+    [
+      240,
+      170,
       0,
       146,
       0,

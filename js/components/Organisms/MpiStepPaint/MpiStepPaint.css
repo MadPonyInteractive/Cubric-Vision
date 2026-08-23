@@ -40,7 +40,14 @@
     cursor: none;
 }
 
-/* The gizmo's own row: brush/eraser, colour, then the actions. */
+/* SIZING ONLY — the dropdown's chrome is MpiDropdown's. Without a width the
+   trigger collapses to its longest label and the row jumps between "Hard Round"
+   and "Calligraphy"; 9rem holds the widest of the ten without truncating. */
+.mpi-step-paint__brush {
+    width: 9rem;
+}
+
+/* The gizmo's own row: brush/eraser, shape, colour, then the actions. */
 .mpi-step-paint__bar {
     display: flex;
     align-items: center;

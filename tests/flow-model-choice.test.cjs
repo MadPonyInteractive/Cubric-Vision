@@ -514,10 +514,74 @@ test('an unpainted run FAILS CLOSED, and the box reaches Input_Box (MPI-567)', a
     const box = Object.values(graph).find(n => n?._meta?.title === 'Input_Box');
     assert.ok(box && box.class_type === 'MpiBox', 'Input_Box must be an MpiBox');
     const { COMMANDS } = await import('../js/data/commandRegistry.js');
-    assert.equal(COMMANDS.flowScribbleObject.injector, 'headSwap',
+    assert.equal(COMMANDS.flowScribObj.injector, 'headSwap',
         'without an injector the box param matches the node and writes nothing');
     const { registry } = { registry: await import('../js/data/flowsRegistry.js') };
     const step = registry.getFlowById('scribble-object').steps.find(s => s.kind === 'box');
     assert.equal(step.param, 'box1',
         'box1 is the key headSwapInjector maps to input_box; box2 would reach nothing here');
+
+    // The box step ghosts the drawing under its rectangle, and there is NO frame
+    // contract behind that: it works only because both steps declare the SAME role,
+    // so the frame's per-role merge (MpiBaseFlow ~1254) hands MpiStepBox a value that
+    // still carries `paint`. Give them separate roles and the ghost silently vanishes
+    // with every other assertion here still green — the user is back to boxing a
+    // region on a bare photo, which is the state Fabio reported (MPI-567).
+    const paintStep = registry.getFlowById('scribble-object').steps.find(s => s.kind === 'paint');
+    assert.equal(paintStep.role, step.role,
+        'paint and box must share a role or MpiStepBox never receives props.value.paint');
+});
+
+test('every ControlNet workflow shares ONE strength mapping (MPI-567)', () => {
+    // A ControlNet's strength reaches the graph through a fixed chain:
+    //   MpiFloat "Input_Control_strength" -> MpiNormalizeValue -> ControlNetApplyAdvanced
+    // and `promptControlDefaults.js` states the house rule outright - the remap to 0-0.5
+    // exists "because past ~0.5 those ControlNets artefact". The scribble flow shipped
+    // mapping 0-1 -> 0-1 at end_percent 1 instead, so its slider reached DOUBLE the app's
+    // maximum and held the steer to the final denoise step. Nothing failed; the renders
+    // just came back with the drawn strokes rendered as physical edges, and the user found
+    // it by eye. One knob that means two different things at the same number is the bug
+    // this pins, so the assertion is a SWEEP - a new flow that diverges fails here.
+    const dir = path.join(ROOT, 'comfy_workflows');
+    const checked = [];
+
+    for (const file of fs.readdirSync(dir).filter(f => f.endsWith('.json'))) {
+        let graph;
+        try { graph = readJson(path.join('comfy_workflows', file)); } catch { continue; }
+        if (!graph || typeof graph !== 'object') continue;
+
+        const nodes = Object.entries(graph).filter(([, n]) => n && typeof n === 'object');
+        const applies = nodes.filter(([, n]) => n.class_type === 'ControlNetApplyAdvanced');
+        if (!applies.length) continue;
+
+        for (const [id, apply] of applies) {
+            // ControlNet must RELEASE before the end. Steering through the final steps is
+            // what turns a stroke into a ridge - the model never gets to resolve texture.
+            assert.ok(apply.inputs.end_percent <= 0.6,
+                `${file} node ${id}: end_percent ${apply.inputs.end_percent} steers too late; `
+                + 'every other ControlNet workflow releases at ~0.569');
+
+            // Follow strength back; only assert where the user actually drives it.
+            const src = apply.inputs.strength;
+            if (!Array.isArray(src)) continue;
+            const norm = graph[src[0]];
+            if (!norm || norm.class_type !== 'MpiNormalizeValue') continue;
+            const from = norm.inputs.value;
+            const float = Array.isArray(from) ? graph[from[0]] : null;
+            if (float?._meta?.title !== 'Input_Control_strength') continue;
+
+            assert.equal(norm.inputs.output_max, 0.5,
+                `${file} node ${src[0]}: a user-driven Input_Control_strength must remap to `
+                + '0-0.5, or the same slider number means a different strength per workflow');
+            assert.equal(norm.inputs.input_max, 1,
+                `${file} node ${src[0]}: the slider is 0-1 everywhere`);
+            checked.push(file);
+        }
+    }
+
+    // The sweep is worthless if it silently matched nothing.
+    assert.ok(checked.includes('flow_scribble_object.json'),
+        'the scribble flow must be covered by this sweep - it is the one that diverged');
+    assert.ok(checked.length >= 6,
+        `expected the SDXL family plus chroma plus the flow, found ${checked.length}`);
 });

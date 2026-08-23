@@ -1074,7 +1074,7 @@ export const commands = {
     // RGBA PNG the paint step derives at the photo's resolution — declared here because the
     // op needs the slot, but never offered in `inputSchema.media`, since there is nothing
     // for the user to upload into it.
-    flowScribbleObject: {
+    flowScribObj: {
         label: 'Flow: Scribble to Object',
         progressLabel: 'Rendering the object',
         mediaType: MEDIA_TYPE.IMAGE,        // OUTPUT type

@@ -297,7 +297,7 @@ test('the Outpaint Flow carries its I/O and declared control titles (MPI-594)', 
 });
 
 test('the Scribble to Object Flow carries its I/O, both model arms and its box (MPI-567)', () => {
-    // flowScribbleObject runs flow_scribble_object.json on model:{id:null} with TWO
+    // flowScribObj runs flow_scribble_object.json on model:{id:null} with TWO
     // choosable slots, so it has more titled injection points than any other flow —
     // and every one of them fails SILENTLY. The injector skips a title with no node,
     // so a typo here is a control that moves, a run that succeeds, and a graph still

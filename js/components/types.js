@@ -1101,7 +1101,12 @@
  * @typedef {Object} MpiStepBoxProps (Organism — js/components/Organisms/MpiStepBox)
  * @property {Object}   media      - The media item this step operates on ({url, …}).
  * @property {Object}   step       - The FlowStep declaration (uses `ratio` if present).
- * @property {Object|null} [value] - Restored value ({box:{x,y,w,h}}) or null.
+ * @property {Object|null} [value] - Restored value ({box:{x,y,w,h}}) or null. May also
+ *                                   carry `paint` (a PNG data URL) when an earlier
+ *                                   `paint` step declares the SAME role — the frame
+ *                                   merges gizmo reports into one per-role entry, so
+ *                                   the drawing arrives here and is ghosted under the
+ *                                   box. Absent on a flow with no paint step (MPI-567).
  * @property {Function} onChange   - (value) => void; called as the box is dragged.
  *
  * The `box` STEP KIND (MPI-306) — a bounded image with a draggable/resizable
@@ -1157,7 +1162,8 @@
  * @typedef {Object} MpiStepPaintProps (Organism — js/components/Organisms/MpiStepPaint)
  * @property {Object}   media      - The media item this step operates on ({url, …}).
  * @property {Object}   step       - The FlowStep declaration.
- * @property {Object|null} [value] - Restored value ({paint, size, color, brushSize, mode}).
+ * @property {Object|null} [value] - Restored value ({paint, size, color, brushSize, brush, mode});
+ *                                   `brush` is a `BRUSH_PRESETS` id (MPI-435).
  * @property {Function} onChange   - (value) => void; called on stroke end and on any
  *                                   control change.
  *
@@ -1179,7 +1185,9 @@
  * Its control row is the gizmo's own (brush/eraser, colour, Undo, Clear) rather than
  * declared `fields`, because those controls are INTRINSIC to any paint step and a
  * manifest that omitted them would leave a canvas the user cannot erase on. Brush
- * SIZE is the mouse wheel, matching InputController on the History canvas.
+ * SIZE is the mouse wheel, matching InputController on the History canvas, and brush
+ * SHAPE is an MpiDropdown over the same ten `BRUSH_PRESETS` MpiMaskStrip offers —
+ * a setting on the shared dab, not a second brush engine.
  *
  * Binds through STEP_MEDIA, not `param`, and declares `mediaRole` on the step so the
  * layer lands in its OWN slot — the photo has to survive beside it

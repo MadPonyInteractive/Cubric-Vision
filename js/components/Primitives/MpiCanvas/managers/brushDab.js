@@ -273,3 +273,75 @@ export function strokeDabs(from, to, r, stamp, preset) {
     }
     stamp(to.x, to.y);
 }
+
+/* ── The brush cursor ─────────────────────────────────────────────────────────
+ *
+ * The ring drawn UNDER the pointer, which is the only thing telling the user how
+ * big the brush is and which tool is armed. It lives here for the same reason the
+ * dab does: it is one indicator with two destinations (the History canvas and a
+ * flow's `paint` step), and the header's rule above applies to it verbatim — if a
+ * change finds itself editing two ring implementations, the extraction has
+ * regressed.
+ *
+ * That is not hypothetical. `MpiStepPaint` shipped its own version — a solid 1px
+ * white circle, identical for brush and eraser, with no centre dot — and Fabio
+ * found it by eye: "the brush and the eraser have the same cursor display, which
+ * is just a white circle" (MPI-567, 2026-08-23). The step had quietly reinvented a
+ * worse copy of a ring that had already been debugged.
+ */
+
+/** `--accent-heat`. The paint ring, and the mask-point fill. */
+export const BRUSH_CURSOR = 'oklch(0.76 0.17 355)';
+/** `--surface-canvas` at 90%. The DARK half of every two-tone ring here. */
+export const BRUSH_CURSOR_OUTLINE = 'oklch(0.16 0.02 350 / 0.9)';
+/** `--accent-frost`. The erase ring — a tool change the user must see instantly. */
+export const BRUSH_ERASER = 'oklch(0.78 0.14 220)';
+
+/** Dash period. Equal halves, so an offset of one half tiles the ring completely. */
+const RING_DASH = 4;
+
+/**
+ * Draw the brush cursor at a point, in the DESTINATION canvas' own pixels.
+ *
+ * Two passes, one accent and one dark, offset half a dash period so they
+ * interleave. A single colour is invisible against a background of its own hue —
+ * which is exactly how the eraser, drawn in `--surface-canvas`, vanished on black.
+ * Equal halves plus a half-period offset is what makes the two passes tile; change
+ * one and the other must follow or bare arcs open up.
+ *
+ * The centre dot is accent fill inside a dark ring, the same construction
+ * `_drawMaskPoints` uses, so it survives a light background too.
+ *
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x                       centre, canvas px
+ * @param {number} y                       centre, canvas px
+ * @param {number} r                       RADIUS, canvas px — callers scale, as with the dab
+ * @param {{eraser?: boolean}} [opts]
+ */
+export function drawBrushRing(ctx, x, y, r, opts = {}) {
+    const accent = opts.eraser ? BRUSH_ERASER : BRUSH_CURSOR;
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(1, r), 0, TAU);
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([RING_DASH, RING_DASH]);
+    ctx.strokeStyle = accent;
+    ctx.stroke();
+    ctx.lineDashOffset = RING_DASH;
+    ctx.strokeStyle = BRUSH_CURSOR_OUTLINE;
+    ctx.stroke();
+
+    // Both dash settings must reset before the dot, or it strokes dashed too.
+    ctx.setLineDash([]);
+    ctx.lineDashOffset = 0;
+    ctx.beginPath();
+    ctx.arc(x, y, 2, 0, TAU);
+    ctx.fillStyle = accent;
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = BRUSH_CURSOR_OUTLINE;
+    ctx.stroke();
+
+    ctx.restore();
+}

@@ -45,6 +45,25 @@ import { qs, on } from '../../../utils/dom.js';
  *     comes back non-square.
  * Padding the SOURCE is never the answer for a masked slot: it would grow the
  * delivered image.
+ *
+ * ### The drawing ghost (MPI-567)
+ *
+ * When a `paint` step earlier in the same flow declares the SAME role, the two
+ * steps share one `_stepValues` entry — the frame merges gizmo reports rather
+ * than replacing them (`MpiBaseFlow` ~1254) — so this component simply receives
+ * the drawing as `props.value.paint` and draws it ghosted under the box. That is
+ * the whole mechanism: no frame contract changed, and a flow with no paint
+ * sibling (Head Swap) has an undefined `.paint`, so the node is removed and this
+ * is inert for it.
+ *
+ * It is not decoration. Without it the user boxes a region on a bare photo with
+ * no idea where the thing they drew actually sits, and the box is load-bearing —
+ * too tight and the object has no room for its shadow, too generous and the model
+ * re-grades the whole photo inside it.
+ *
+ * The layer is capped at `PAINT_MAX_EDGE` so it can be SMALLER than the photo, but
+ * `PaintManager.init` scales both axes by one factor, so stretching it onto the
+ * media's rendered box lands every stroke where the user put it.
  */
 
 /** Minimum box edge in source pixels — below this a crop is meaningless. */
@@ -139,6 +158,7 @@ export const MpiStepBox = ComponentFactory.create({
         <div class="mpi-step-box">
             <div class="mpi-step-box__stage" id="step-box-stage">
                 <img class="mpi-step-box__media" id="step-box-media" alt="" draggable="false" />
+                <img class="mpi-step-box__paint" id="step-box-paint" alt="" draggable="false" />
                 <canvas class="mpi-step-box__overlay" id="step-box-overlay"></canvas>
             </div>
             <span class="mpi-step-box__dims" id="step-box-dims"></span>
@@ -150,7 +170,14 @@ export const MpiStepBox = ComponentFactory.create({
         const stageEl = qs('#step-box-stage', el);
         const mediaEl = /** @type {HTMLImageElement} */ (qs('#step-box-media', el));
         const overlayEl = /** @type {HTMLCanvasElement} */ (qs('#step-box-overlay', el));
+        const ghostEl = /** @type {HTMLImageElement} */ (qs('#step-box-paint', el));
         const dimsEl = qs('#step-box-dims', el);
+
+        // REMOVED, not hidden: a class carrying `display` outranks the `hidden`
+        // attribute's UA rule (MPI-382), and an <img> with no src is a broken-image
+        // slot in some engines. A flow with no paint sibling gets no node at all.
+        if (props.value?.paint) ghostEl.src = props.value.paint;
+        else ghostEl.remove();
 
         /** Declared per step — see the file header for which consumers may opt in. */
         const _allowOverflow = step.overflow === 'allow';
@@ -210,6 +237,19 @@ export const MpiStepBox = ComponentFactory.create({
             overlayEl.height = h;
             overlayEl.style.width = `${w}px`;
             overlayEl.style.height = `${h}px`;
+
+            // AFTER the overflow padding is applied above: `offsetLeft/Top` are
+            // measured against the stage's padding box, which is the same origin an
+            // absolutely-positioned child resolves against — so this one assignment
+            // is exact in both the padded and unpadded case, with no arithmetic to
+            // keep in step with `_syncOverlaySize`'s own.
+            if (ghostEl.isConnected) {
+                ghostEl.style.left = `${mediaEl.offsetLeft}px`;
+                ghostEl.style.top = `${mediaEl.offsetTop}px`;
+                ghostEl.style.width = `${mediaEl.offsetWidth}px`;
+                ghostEl.style.height = `${mediaEl.offsetHeight}px`;
+            }
+
             _cropTool?.redraw();
         }
 

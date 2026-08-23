@@ -45,7 +45,7 @@ canvas gates its own handlers on `mask.isMaskingMode`, so an open flow cannot do
 ## What it sends: the LAYER ALONE, and never the composite
 
 ```
-value → { paint: <PNG data URL>, size: {w, h}, color, brushSize, mode }
+value → { paint: <PNG data URL>, size: {w, h}, color, brushSize, brush, mode }
 ```
 
 `composePaintLayer` turns that into an **RGBA PNG at `size`** — transparent everywhere the user
@@ -92,16 +92,36 @@ Same exception the crop gizmo's ratio bar takes, for a different reason. There t
 orientation-dynamic; here the controls are **intrinsic** — every paint step in every flow ever
 written needs a brush/eraser pair, a colour and an undo, and a manifest author who omitted them
 would ship a canvas the user cannot erase on. It is still ONE row and still nothing but
-Primitives: `MpiRadioGroup` (icon-only) · `MpiColorPicker` · two `MpiButton`s.
+Primitives: `MpiRadioGroup` (icon-only) · `MpiDropdown` · `MpiColorPicker` · two `MpiButton`s.
 
 **Brush SIZE is the mouse wheel**, not a slider — the gesture `InputController` already gives the
 History brush, so the two surfaces read identically and the row keeps a slot. The ring drawn under
 the cursor is what makes it legible, and it is why the canvas sets `cursor: none`: a system arrow
 beside the ring reads as two pointers.
 
-No brush-preset picker, no opacity slider. Layer opacity is pinned at **1** so what is on screen
-is byte-for-byte what the graph receives; display opacity would make the step lie about its own
-output. Add a preset picker when a measured case wants one, not because the History strip has one.
+**Brush SHAPE is an `MpiDropdown` of the ten `BRUSH_PRESETS`** (MPI-567). This section used to say
+*"No brush-preset picker — add one when a measured case wants one"*; the measured case was Fabio
+running the flow. It costs nothing to have: `PaintManager.brushPreset` already existed and the
+shared dab already read it, so the picker is a CONTROL over a setting, not new paint code. It opens
+UP, unlike the mask strip's, because this row sits under a 46vh stage rather than near the top of a
+sidebar. Persist it in the reported value beside `color`/`brushSize` or Reuse loses it.
+
+**Hold SPACE to pan, Space+wheel to zoom** (MPI-567). Also a reversal: the step originally fitted
+the image and refused to move, on the reasoning that *"a step is one gesture"*. Drawing a ~96px
+object into a 4000px photo through a 46vh window is one gesture the user cannot SEE. Mount
+`ViewManager` rather than a hand-rolled `{offsetX, offsetY, scale}` — it carries `minScale` (a
+zoom-out cannot shrink past the fit) and `isManagedView` (a resize stops re-fitting once the user
+has moved the view), both of which a bare triple silently lacks. Bind the EXISTING
+`canvas.pan.start` / `canvas.pan.end` registry ids; a step does not invent a hotkey.
+
+**The cursor ring is `brushDab.drawBrushRing`, never a local arc** (MPI-567). This step shipped its
+own — a solid 1px white circle, identical for brush and eraser, no centre dot — and Fabio caught it
+by eye. The shared one is a two-tone dashed ring (one accent pass, one dark pass offset half a
+period, so it survives a background of its own hue) with an accent centre dot, and the eraser is
+frost-blue against the brush's heat-pink. Hide it while Space is held, as the History canvas does.
+
+No opacity slider. Layer opacity is pinned at **1** so what is on screen is byte-for-byte what the
+graph receives; display opacity would make the step lie about its own output.
 
 ## Reuse persists the PIXELS
 

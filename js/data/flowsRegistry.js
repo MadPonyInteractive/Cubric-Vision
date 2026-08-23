@@ -671,7 +671,7 @@ export const FLOWS = [
                 'Input_Edit_Clip.clip_name': 'qwen_3_8b_int8_convrot.safetensors',
             },
         },
-        operation: 'flowScribbleObject',
+        operation: 'flowScribObj',
         workflow: 'flow_scribble_object.json',
         mediaType: 'image',
         inputSchema: {
@@ -778,16 +778,32 @@ export const FLOWS = [
             },
             {
                 // MANDATORY, and a correctness requirement rather than a convenience.
-                // Swept 2026-08-22: 0.30-0.60 correct; 0.80 (the bench's old baked
-                // value) renders the INK AS CLOTHING, a drawn neckline becoming a real
-                // V-neck seam; 1.00 puts the drawn lines through as straps. A drawing's
-                // SHAPE survives far below the strength at which its LINES start being
-                // rendered as objects. Full 0-1 range on purpose — Fabio: "The strength
-                // control that we have on the original workflow needs to be the same
-                // for this flow." The range is his; the default is the measurement's.
+                //
+                // THE MAPPING IS THE APP'S, NOT THIS FLOW'S (Fabio, 2026-08-23). The graph
+                // now matches `t2i_sdxl_realistic` node for node — MpiFloat(1) ->
+                // MpiNormalizeValue(0-1 -> 0-0.5) -> ControlNetApplyAdvanced(end_percent
+                // 0.569) — which is what all eight other ControlNet workflows in the repo
+                // do. It shipped mapping 0-1 -> 0-1 at end_percent 1 instead, so the slider
+                // reached DOUBLE the app's maximum strength and held it to the final
+                // denoise step. Fabio hit it immediately: "every time I go over a 50 I
+                // start getting these lines that look like poop." `promptControlDefaults`
+                // states the rule outright — the remap exists "because past ~0.5 those
+                // ControlNets artefact" — and holding the steer to the last step is what
+                // turns a stroke into a ridge rather than merely a stiff render.
+                // `default: 1` is `PROMPT_CONTROL_DEFAULTS.controlStrength`, so this knob
+                // now reads the same at the same number everywhere in the app.
+                //
+                // HISTORICAL, measured at the OLD mapping — the numbers below are RAW
+                // strength at end_percent 1, so they do NOT convert to slider positions
+                // now: 0.30-0.60 correct; 0.80 rendered the INK AS CLOTHING, a drawn
+                // neckline becoming a real V-neck seam; 1.00 put the drawn lines through
+                // as straps. The finding that OUTLIVES the remap is the shape of the
+                // failure: a drawing's SHAPE survives far below the strength at which its
+                // LINES start being rendered as objects. Where the band sits under the new
+                // mapping is UNMEASURED — re-sweep before quoting a number here.
                 id: 'Input_Control_strength', type: 'slider', label: 'Follow the drawing',
-                min: 0, max: 1, step: 0.05, default: 0.5,
-                note: 'Above ~0.6 your strokes start being rendered as real detail — a drawn line becomes a seam.',
+                min: 0, max: 1, step: 0.05, default: 1,
+                note: 'Turn it down if your strokes come through as real edges — a drawn line rendering as a seam means the drawing is being followed too literally.',
             },
         ],
     },

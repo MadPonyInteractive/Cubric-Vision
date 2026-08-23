@@ -90,6 +90,27 @@ region = grow(  silhouette(photo vs stamped, thresh 12)
               ∪ strong_change(relit vs stamped, thresh 40, median-5)  ) → feather
 ```
 
+## A shadow needs PIXELS, and the box is what supplies them
+
+Measured live 2026-08-23 (Fabio, MPI-567). A small object boxed tightly in a small source image
+came back with no usable contact shadow at all. Same drawing, same prompt, same strength on a
+**2x upscaled source**: the shadow appeared and read correctly.
+
+**The variable is the box's size in SOURCE pixels, not its size on screen or its fraction of the
+frame.** The blend pass samples the boxed region; a region only a few hundred pixels across has
+too little room for the model to resolve a soft gradient falling away from a contact point, so it
+either omits the shadow or renders a hard smudge. Upscaling the photo does not change the
+composition or the box's *relative* size — it changes how many pixels the sampler is given, which
+is the whole of it.
+
+This is the same failure the ~96px ink floor describes one stage earlier, moved down the pipeline:
+starve the model of pixels and it invents rather than resolves. Two distinct floors, one cause.
+
+**What this means in practice:** when a shadow is missing and the composition looks right, check
+the box's pixel dimensions before touching the prompt, the strength or the region maths. A
+shadow-less result on a small source is not a blend bug and no amount of prompt work fixes it.
+Upscaling the source first is the fix, and it is the user's move rather than the graph's.
+
 ## The blend prompt
 
 Four properties, each one a bug that was shipped and removed:

@@ -64,7 +64,7 @@ export const UNIVERSAL_WORKFLOWS = {
     // branch, then a LanPaint inpaint blends the stamped object into the photo. Both
     // phases run on models the flow declares as choosable slots, so this op adds no
     // download of its own.
-    flowScribbleObject: {
+    flowScribObj: {
         workflow: 'flow_scribble_object.json',
     },
     // MPI-504 — Krea2 t2i, plus a SAM3 + Klein 4B pass that removes the head from the

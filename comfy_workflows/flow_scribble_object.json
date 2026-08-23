@@ -302,7 +302,7 @@
   },
   "22": {
     "inputs": {
-      "float": 0.5
+      "float": 1
     },
     "class_type": "MpiFloat",
     "_meta": {
@@ -314,7 +314,7 @@
       "input_min": 0,
       "input_max": 1,
       "output_min": 0,
-      "output_max": 1,
+      "output_max": 0.5,
       "clamp": true,
       "mode": "linear",
       "value": [
@@ -330,7 +330,7 @@
   "24": {
     "inputs": {
       "start_percent": 0,
-      "end_percent": 1,
+      "end_percent": 0.569,
       "positive": [
         "20",
         0
@@ -671,7 +671,7 @@
     "inputs": {
       "filename_prefix": "mpi567_merged",
       "images": [
-        "169",
+        "170",
         0
       ]
     },
@@ -881,6 +881,18 @@
     "class_type": "InpaintStitchImproved",
     "_meta": {
       "title": "Stitch Back"
+    }
+  },
+  "170": {
+    "inputs": {
+      "passthrough": [
+        "169",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
     }
   }
 }

@@ -41,6 +41,25 @@
     height: auto;
 }
 
+/* The drawing from an earlier `paint` step sharing this step's role (MPI-567),
+   ghosted so the user can see WHAT they are boxing. Between the media and the
+   overlay in DOM order, which is the whole z-order: over the photo, under the
+   handles. Position and size are set in JS from the media's own offset box —
+   the `--overflow` padding moves the media, and offsetLeft/Top carry that. */
+.mpi-step-box__paint {
+    position: absolute;
+    pointer-events: none;
+    opacity: 0.55;
+    /* Zero until JS measures. The ResizeObserver fires on observe, BEFORE the photo
+       has loaded, and _syncOverlaySize() early-returns on a zero media rect — so
+       without this the ghost would decode first and flash at its own natural size,
+       out of place, until the photo arrived. */
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 0;
+}
+
 /* Handles and scrim are drawn here; it must not intercept nothing-clicks
    outside the image, hence exact-size sync in _syncOverlaySize(). */
 .mpi-step-box__overlay {
