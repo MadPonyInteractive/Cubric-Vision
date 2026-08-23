@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "88d295c5-4fac-4512-867e-ebef19a6030b",
   "generated_at": "2026-08-23T07:42:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-567 session 11b - the ControlNet mapping bug Fabio found by eye, plus five UI items, all validated on real renders",
     "branch": "master"

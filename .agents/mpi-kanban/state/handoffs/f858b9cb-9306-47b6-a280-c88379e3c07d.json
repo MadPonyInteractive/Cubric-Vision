@@ -1,0 +1,71 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "f858b9cb-9306-47b6-a280-c88379e3c07d",
+  "generated_at": "2026-08-23T13:45:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-567 session 12 - the style problem turned out to be a LoRA problem, and per-phase LoRA racks (MPI-608) shipped and were live-checked",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Scope style picking for the scribble flow's last phase with Fabio before building.",
+    "status": "in_progress",
+    "summary": "The scoping answer was that there was nothing to hook up: Klein's styles were ALREADY shipped for both 4B and 9B. Fabio's call was user-pickable LoRAs instead, which folds the style case in because style weights ARE LoRAs. That spawned three cards. MPI-609 (rename the 15 Klein style weights to their display names, split per size) SHIPPED in a peer session, commit 2e263c2f. MPI-608 (per-phase LoRA racks) is BUILT, live-checked by Fabio, and committed here. MPI-610 (character sheet onto a two-phase model selector) is running in another session right now. MPI-567 itself is unchanged on its own remaining list - the live run + reuse round trip is still what closes it."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+    "completed": [
+      "THE HANDOFF'S FRAMING WAS WRONG AND FABIO CORRECTED IT TWICE. 'Hook up the styles portion of Klein 4B and 9B' described work that was already done: klein_t2i.json carries 8 style LoRAs and klein_9b_t2i.json carries 7, both ModelDefs declare styleLoraLabels/Images/Ops, and only the raw/ template looks 4B-only because generate_klein.py bakes the rack PER SIZE (its Note node 86 says so). Nothing was missing except in the scribble flow, which carried no LoRA or style node at all. Do not re-scope this.",
+      "MPI-567 GRAPH HALF: twelve nodes into flow_scribble_object.json and its raw/ twin. Input_Lora_Phase1_1..6 (MpiLoraModelClip, model AND clip) between Input_Base_Model and the KSampler; Input_Lora_Phase2_1..6 (MpiLoraModel, model only) between Input_Edit_Model and LanPaint. Each variant matches what its own family ships. graph_parity.py FAILED on the Klein rewire - it working - and got an ALLOW entry with its reason, not a suppression.",
+      "MPI-608 SHIPPED AND LIVE-CHECKED. Slots declare `loras: true`; flowLoraPhases() resolves {phase, modelId} per slot through the any-of set; commandExecutor emits Lora_Phase<N>_<i>; the comfyController matcher took its one-character widening; settingsModel/_openSettings/loraModelId are retired everywhere; a cogwheel renders beside each rack-bearing model selector. Fabio confirmed on a real app: the panel stacks ABOVE the flow library and both cogwheels open their own rack.",
+      "ONE BUG FROM THE LIVE LOOK, FIXED AT ROOT. Opening the LoRA panel closed the Flow Library detail drawer. Overlays.open pulses ui:close-all-popups with reason 'overlay-open' on EVERY open so long-lived panels can ignore it (overlayManager.js ~44); MpiOverlay ~234 and MpiSlideOver ~116 both guard, the Flow Library drawer listened BARE. The pulse fires on OPEN, not close - it only reads as a close-time bug because that is when the missing drawer is visible.",
+      "MPI-609 SHIPPED IN A PEER SESSION (commit 2e263c2f): all 15 Klein style weights renamed to their display names and split into styles/4b/ and styles/9b/. Six consumers swept, both graphs regenerated. Verified on disk.",
+      "726 tests pass (703 at session start). Seven mutations RED across two runs, each restoring a value that shipped before, file restored and sha256-verified. Commit on master, UNPUSHED."
+    ],
+    "pending": [
+      "MPI-567's OWN LIST IS UNTOUCHED and still holds its Definition of Done: the live run + reuse round trip per docs/playbooks/add-flow/05-verify.md. Also still open: re-sweep the ControlNet strength band (the FlowDef's 0.30-0.60 numbers are HISTORICAL, measured at the old mapping), the tile+hero graphics (console spams 404s for flow-scribble-object.webp/.mp4, needs /mpi-flow-graphics), the box step's whole-image default, and the Output_Image SaveImage-vs-PreviewImage question that is Fabio's call.",
+      "MPI-608 END-TO-END IS UNPROVEN. Every hop is pinned by test and the UI is confirmed by eye, but nobody has watched a real dispatch carry TWO racks at once - a LoRA picked in each phase's panel actually reaching the graph. That wants the GPU and is the natural pairing with MPI-567's live run.",
+      "DROP THE FLAT-KEY FALLBACK once every flow graph is phase-titled. commandExecutor emits BOTH Lora_Phase1_<i> and flat Lora_<i> for phase 1, because flow_character_sheet is titled Input_Lora_1..6 and was being re-authored in another session. The line is commented as such.",
+      "MpiModelManager.js ~1036 carries the byte-identical bare close-all-popups listener for its own detail drawer. Latent only - nothing opens an overlay from that drawer today - so it was deliberately left alone. Give it the same guard the day anything does.",
+      "MPI-610 IS RUNNING IN ANOTHER SESSION and its card text was WRONG as first written: it said 'move off Krea2 onto a Klein 4B/9B selector' when Fabio's actual intent is the scribble shape - a model for the GENERATION phase and a different model for the EDIT phase. He has already told that agent. Do not re-read the old framing out of that brief."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-608",
+    "title": "Per-phase LoRA racks - every model a flow runs gets its own cogwheel, its own six slots and its own Input_Lora_PhaseN_i nodes",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-608/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-608/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-608/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Ask Fabio what to take next - there is no single forced move. The three real candidates: (a) prove MPI-608 end to end with a live run that carries a LoRA in BOTH phases, which pairs naturally with MPI-567's own live run + reuse round trip and closes both; (b) the /mpi-flow-graphics pass for the scribble tile and hero, which is unblocked and is what his console is 404ing on; (c) re-sweep the ControlNet strength band, which needs the GPU. MPI-608 can move to validating once (a) is done - its UI half is already confirmed by his own eye.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE RACK OPT-IN IS LOAD-BEARING, NOT CEREMONY. flow_ltx_extend and flow_ltx_foley both carry Input_Lora_1..6 nodes and deliberately declare NO rack. Gating on 'does the graph have the nodes' - the obvious simplification, and the one that will be proposed again - would silently start injecting the user's LTX LoRAs into two shipped flows. Hence `loras: true` per slot. A test names both flows.",
+      "PHASE-KEYED, NOT MODEL-KEYED. Fabio proposed Klein_/SDXL_ prefixes and revised it himself to phase. The revision is right: an any-of slot swaps klein-4b for klein-9b and the graph is never retitled. His literal string was phase1_input_lora_1, and that ORDERING was rejected against the code - commandExecutor ~869 force-prefixes Input_ onto any key not already carrying it, and the matcher never accepts a LEADING segment.",
+      "THE STYLE RACK WAS DELIBERATELY NOT USED. Adding Klein's MpiStyleLoras rack to the flow was fully scoped (one graph with injected lora_names, or two graphs) and Fabio chose user-pickable LoRAs instead, because it covers styles AND trained characters with one mechanism. MPI-609's rename is what makes picking one by hand possible at all.",
+      "MPI-610's SCOPE WAS RESTATED BY FABIO. Not 'Krea2 -> Klein 4B/9B' but the scribble shape: a generation-phase model and an edit-phase model, each selectable."
+    ],
+    "constraints": [
+      "HEREDOCS, BACKSLASH-NEWLINE CONTINUATIONS AND BACKTICKS INSIDE A DOUBLE-QUOTED INLINE SCRIPT are all blocked by guard hooks. Both fired this session. Write a .py with the Write tool and run it by path; git commit -F <file>. Also: a Windows path inside a python -c string silently ate its own backslashes and turned flux2-klein into a formfeed - use forward slashes.",
+      "A MUTATION THAT COMES BACK GREEN IS AS OFTEN A WEAK ASSERTION AS A CORRECT ONE. Two separate misreads this session. First: the runner parsed '# fail N' while node --test prints '<glyph> fail N', so three real RED mutations reported green and read as 'my tests are blind'. Cross-check any fail count against the EXIT CODE. Second, and the genuine one: an assertion matching a bare /continue;/ passed even with the guard flipped to break, because the same loop carried an earlier continue. Anchor to something unique.",
+      "git diff HEAD IS THE WRONG PROBE FOR A PEER AGENT'S WORK. MPI-609 was reported finished, and repo + disk both read untouched - correctly, at that moment. It later landed as commit 2e263c2f and the working tree was clean BECAUSE it was committed. Check git log --all --grep=<card> before concluding an agent produced nothing.",
+      "PUSH IS USER-AUTHORIZED even though project-profile.md says push_policy: auto - CLAUDE.md § Git and Commits wins. This session's commit is UNPUSHED, on top of earlier unpushed commits shared with peer sessions.",
+      "MASTER MOVES UNDER YOU. Three peer sessions committed during this one (MPI-606 docs, MPI-611, MPI-609). Re-check HEAD before assuming a file is as you left it.",
+      "MPI-610's WORKSPACE IS UNTRACKED AND OWNED BY A LIVE SESSION - it was deliberately not committed here. The board validator flags it for a missing checklist.md; that is theirs to write, not yours."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-608/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      "js/data/flowsRegistry.js",
+      "js/services/commandExecutor.js"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/f858b9cb-9306-47b6-a280-c88379e3c07d.json and use mpi-continue to resume. Two cards are in `doing`: MPI-608 (per-phase LoRA racks) and MPI-567 (Scribble-to-object Flow). The session that just ended started out scoping 'style picking' for the scribble flow and found the premise was wrong - Klein's style LoRAs were ALREADY shipped for both 4B and 9B, so there was nothing to hook up. Fabio's call was user-pickable LoRAs instead, which covers styles and trained characters with one mechanism. That produced three cards: MPI-609 (rename the 15 Klein style weights to their display names, split per size) SHIPPED in a peer session as commit 2e263c2f; MPI-608 is BUILT, live-checked by Fabio and committed; MPI-610 (character sheet gets a generation-phase model and an edit-phase model, the scribble shape - NOT the 'move off Krea2' framing its brief was first written with) is running in another session. MPI-608 gave every rack-bearing model slot its own cogwheel opening that model's six-slot rack, keyed by PHASE (Input_Lora_Phase<N>_<i>) so an any-of slot can swap klein-4b for klein-9b without retitling the graph. Fabio confirmed on a real app that the panel stacks correctly and both cogwheels work; one bug he found - opening the panel closed the library's detail drawer - was root-caused to a missing reason:'overlay-open' guard and fixed. 726 tests pass, commit UNPUSHED. YOUR NEXT ACTION IS TO ASK FABIO WHAT TO TAKE NEXT: proving MPI-608 end to end with a live run carrying a LoRA in both phases (which pairs with MPI-567's own live run + reuse round trip and would close both), the /mpi-flow-graphics pass the scribble flow's 404s are asking for, or the ControlNet band re-sweep. Three traps that will cost you: heredocs, backslash-newline continuations AND backticks inside a double-quoted inline script are all blocked by guard hooks, so write a .py and run it by path; when checking whether a peer agent actually shipped, use git log --all --grep=<card> and not git diff HEAD, because a committed change leaves the tree clean and reads as 'did nothing'; and cross-check any mutation-test fail count against the process EXIT CODE, because the obvious '# fail N' parse does not match what node --test prints and will report three real failures as green."
+}
