@@ -1,155 +1,154 @@
 {
- "schema": "mpi-kanban/state-index/v1",
- "updated_at": "2026-08-23T05:27:10Z",
- "board": ".agents/mpi-kanban/board.json",
- "heartbeat_timeout_minutes": 120,
- "active_sessions": [
-  ".agents/mpi-kanban/state/sessions/0f732631-9a3c-48ce-a887-4415135acaaa.json",
-  ".agents/mpi-kanban/state/sessions/21aeefb3-51d3-4cc5-afa4-2e31e7251c92.json",
-  ".agents/mpi-kanban/state/sessions/45480a85-ba91-42e7-adcf-143b2210d6a2.json",
-  ".agents/mpi-kanban/state/sessions/7956303e-9b67-41c9-9964-9964911e34c8.json"
- ],
- "active_tasks": [
-  ".agents/mpi-kanban/state/tasks/505d3c7b-baa1-466a-90c8-ad24cfafc0a7.json",
-  ".agents/mpi-kanban/state/tasks/18204563-f4a9-4be9-a3e3-355e7da15844.json"
- ],
- "active_file_claims": [
-  {
-   "id": "b59e79d3-c6d4-4410-a2c5-6df77c27520e",
-   "path": ".agents/mpi-kanban/state/files/b59e79d3-c6d4-4410-a2c5-6df77c27520e.json",
-   "task_card": "MPI-567",
-   "status": "claimed",
-   "owner_session": ".agents/mpi-kanban/state/sessions/0b9af612-fe6d-49e8-9abf-486247115a48.json",
-   "heartbeat_at": "2026-08-22T04:12:40Z"
-  },
-  {
-   "id": "a1f4c2d8-7b36-4e91-9c05-3d2e6f8a4b71",
-   "path": ".agents/mpi-kanban/state/files/a1f4c2d8-7b36-4e91-9c05-3d2e6f8a4b71.json",
-   "task_card": "MPI-599",
-   "status": "claimed",
-   "owner_session": ".agents/mpi-kanban/state/sessions/0b9af612-fe6d-49e8-9abf-486247115a48.json",
-   "heartbeat_at": "2026-08-22T04:12:40Z"
-  },
-  {
-   "id": "7c1d5a02-9e64-4b8f-a3d7-5b0e18c6f2a4",
-   "path": ".agents/mpi-kanban/state/files/7c1d5a02-9e64-4b8f-a3d7-5b0e18c6f2a4.json",
-   "task_card": "MPI-567",
-   "status": "claimed",
-   "owner_session": ".agents/mpi-kanban/state/sessions/1483d706-377f-4819-b33a-b3e154366826.json",
-   "heartbeat_at": "2026-08-22T06:57:00Z"
-  },
-  {
-   "id": "e4fc8a37-cea8-4ba5-b308-232cad3029cd",
-   "path": ".agents/mpi-kanban/state/files/e4fc8a37-cea8-4ba5-b308-232cad3029cd.json",
-   "task_card": "MPI-567",
-   "status": "claimed",
-   "owner_session": ".agents/mpi-kanban/state/sessions/0f732631-9a3c-48ce-a887-4415135acaaa.json",
-   "heartbeat_at": "2026-08-22T22:16:00Z"
-  }
- ],
- "pending_file_states": [
-  {
-   "id": "ab0f51bf-095f-4c37-9c54-90f90844b263",
-   "path": ".agents/mpi-kanban/state/files/ab0f51bf-095f-4c37-9c54-90f90844b263.json",
-   "task_card": "MPI-573",
-   "status": "needs_verification",
-   "owner_session": ".agents/mpi-kanban/state/sessions/97688895-332e-4cf6-8b6f-722c5b8ab418.json",
-   "heartbeat_at": "2026-08-22T14:16:00Z"
-  }
- ],
- "open_messages": [],
- "active_handoffs": [
-  {
-   "id": "4ab37293-c335-4b1e-9e36-742d4e42916a",
-   "path": ".agents/mpi-kanban/state/handoffs/4ab37293-c335-4b1e-9e36-742d4e42916a.json",
-   "task_card": "MPI-567",
-   "status": "superseded",
-   "generated_at": "2026-08-21T15:22:00Z"
-  },
-  {
-   "id": "6eb343d2-5589-40fc-ac0a-d613134b6f65",
-   "path": ".agents/mpi-kanban/state/handoffs/6eb343d2-5589-40fc-ac0a-d613134b6f65.json",
-   "task_card": "MPI-567",
-   "status": "superseded",
-   "generated_at": "2026-08-21T18:35:00Z"
-  },
-  {
-   "id": "cc220246-356a-456b-9351-12b2c750e199",
-   "path": ".agents/mpi-kanban/state/handoffs/cc220246-356a-456b-9351-12b2c750e199.json",
-   "task_card": "MPI-567",
-   "status": "superseded",
-   "generated_at": "2026-08-22T04:01:00Z"
-  },
-  {
-   "id": "feb13ce7-74db-456d-9661-f2b8f74fe0dc",
-   "path": ".agents/mpi-kanban/state/handoffs/feb13ce7-74db-456d-9661-f2b8f74fe0dc.json",
-   "task_card": "MPI-600",
-   "status": "superseded",
-   "generated_at": "2026-08-22T05:03:10Z"
-  },
-  {
-   "id": "28977ce3-0c13-4028-9db8-73f3bcdc72b6",
-   "path": ".agents/mpi-kanban/state/handoffs/28977ce3-0c13-4028-9db8-73f3bcdc72b6.json",
-   "task_card": "MPI-600",
-   "status": "superseded",
-   "generated_at": "2026-08-22T06:05:00Z"
-  },
-  {
-   "id": "53efd5be-bdeb-4b28-8c5c-a843faa135c0",
-   "path": ".agents/mpi-kanban/state/handoffs/53efd5be-bdeb-4b28-8c5c-a843faa135c0.json",
-   "task_card": "MPI-567",
-   "status": "resolved",
-   "generated_at": "2026-08-22T07:20:00Z"
-  },
-  {
-   "id": "61eec7b4-5cdf-410f-b424-d8352852c918",
-   "path": ".agents/mpi-kanban/state/handoffs/61eec7b4-5cdf-410f-b424-d8352852c918.json",
-   "task_card": "MPI-573",
-   "status": "superseded",
-   "generated_at": "2026-08-22T07:03:00Z"
-  },
-  {
-   "id": "7e7eabb8-91ac-4b79-bbe5-cd6a459e5d60",
-   "path": ".agents/mpi-kanban/state/handoffs/7e7eabb8-91ac-4b79-bbe5-cd6a459e5d60.json",
-   "task_card": "MPI-600",
-   "status": "superseded",
-   "generated_at": "2026-08-22T06:50:00Z"
-  },
-  {
-   "id": "c32670d9-9e1b-4720-827d-b55bf899bd58",
-   "path": ".agents/mpi-kanban/state/handoffs/c32670d9-9e1b-4720-827d-b55bf899bd58.json",
-   "task_card": "MPI-567",
-   "status": "superseded",
-   "generated_at": "2026-08-22T10:36:00Z"
-  },
-  {
-   "id": "17696fe8-38b0-4691-9269-d069b2bfa851",
-   "path": ".agents/mpi-kanban/state/handoffs/17696fe8-38b0-4691-9269-d069b2bfa851.json",
-   "task_card": "MPI-573",
-   "status": "closed",
-   "generated_at": "2026-08-22T14:49:00Z"
-  },
-  {
-   "id": "bd9d95e7-07b9-41af-90ea-a4a33e290ddf",
-   "path": ".agents/mpi-kanban/state/handoffs/bd9d95e7-07b9-41af-90ea-a4a33e290ddf.json",
-   "task_card": "MPI-567",
-   "status": "resolved",
-   "generated_at": "2026-08-22T16:05:00Z"
-  },
-  {
-   "id": "02f300e3-e484-43c7-8c03-c35dd799852f",
-   "path": ".agents/mpi-kanban/state/handoffs/02f300e3-e484-43c7-8c03-c35dd799852f.json",
-   "task_card": "MPI-567",
-   "status": "resolved",
-   "generated_at": "2026-08-22T18:40:00Z"
-  },
-  {
-   "id": "8f4c6968-cef7-41fe-9dde-ef3d1d02fd6b",
-   "path": ".agents/mpi-kanban/state/handoffs/8f4c6968-cef7-41fe-9dde-ef3d1d02fd6b.json",
-   "task_card": "MPI-567",
-   "status": "open",
-   "generated_at": "2026-08-22T22:02:10Z"
-  }
- ],
- "index": {}
+  "schema": "mpi-kanban/state-index/v1",
+  "updated_at": "2026-08-23T06:02:00Z",
+  "board": ".agents/mpi-kanban/board.json",
+  "heartbeat_timeout_minutes": 120,
+  "active_sessions": [
+    ".agents/mpi-kanban/state/sessions/0f732631-9a3c-48ce-a887-4415135acaaa.json",
+    ".agents/mpi-kanban/state/sessions/21aeefb3-51d3-4cc5-afa4-2e31e7251c92.json",
+    ".agents/mpi-kanban/state/sessions/45480a85-ba91-42e7-adcf-143b2210d6a2.json",
+    ".agents/mpi-kanban/state/sessions/7956303e-9b67-41c9-9964-9964911e34c8.json"
+  ],
+  "active_tasks": [
+    ".agents/mpi-kanban/state/tasks/505d3c7b-baa1-466a-90c8-ad24cfafc0a7.json",
+    ".agents/mpi-kanban/state/tasks/18204563-f4a9-4be9-a3e3-355e7da15844.json"
+  ],
+  "active_file_claims": [
+    {
+      "id": "b59e79d3-c6d4-4410-a2c5-6df77c27520e",
+      "path": ".agents/mpi-kanban/state/files/b59e79d3-c6d4-4410-a2c5-6df77c27520e.json",
+      "task_card": "MPI-567",
+      "status": "claimed",
+      "owner_session": ".agents/mpi-kanban/state/sessions/0b9af612-fe6d-49e8-9abf-486247115a48.json",
+      "heartbeat_at": "2026-08-22T04:12:40Z"
+    },
+    {
+      "id": "a1f4c2d8-7b36-4e91-9c05-3d2e6f8a4b71",
+      "path": ".agents/mpi-kanban/state/files/a1f4c2d8-7b36-4e91-9c05-3d2e6f8a4b71.json",
+      "task_card": "MPI-599",
+      "status": "claimed",
+      "owner_session": ".agents/mpi-kanban/state/sessions/0b9af612-fe6d-49e8-9abf-486247115a48.json",
+      "heartbeat_at": "2026-08-22T04:12:40Z"
+    },
+    {
+      "id": "7c1d5a02-9e64-4b8f-a3d7-5b0e18c6f2a4",
+      "path": ".agents/mpi-kanban/state/files/7c1d5a02-9e64-4b8f-a3d7-5b0e18c6f2a4.json",
+      "task_card": "MPI-567",
+      "status": "claimed",
+      "owner_session": ".agents/mpi-kanban/state/sessions/1483d706-377f-4819-b33a-b3e154366826.json",
+      "heartbeat_at": "2026-08-22T06:57:00Z"
+    },
+    {
+      "id": "e4fc8a37-cea8-4ba5-b308-232cad3029cd",
+      "path": ".agents/mpi-kanban/state/files/e4fc8a37-cea8-4ba5-b308-232cad3029cd.json",
+      "task_card": "MPI-567",
+      "status": "claimed",
+      "owner_session": ".agents/mpi-kanban/state/sessions/0f732631-9a3c-48ce-a887-4415135acaaa.json",
+      "heartbeat_at": "2026-08-22T22:16:00Z"
+    }
+  ],
+  "pending_file_states": [
+    {
+      "id": "ab0f51bf-095f-4c37-9c54-90f90844b263",
+      "path": ".agents/mpi-kanban/state/files/ab0f51bf-095f-4c37-9c54-90f90844b263.json",
+      "task_card": "MPI-573",
+      "status": "needs_verification",
+      "owner_session": ".agents/mpi-kanban/state/sessions/97688895-332e-4cf6-8b6f-722c5b8ab418.json",
+      "heartbeat_at": "2026-08-22T14:16:00Z"
+    }
+  ],
+  "open_messages": [],
+  "active_handoffs": [
+    {
+      "id": "4ab37293-c335-4b1e-9e36-742d4e42916a",
+      "path": ".agents/mpi-kanban/state/handoffs/4ab37293-c335-4b1e-9e36-742d4e42916a.json",
+      "task_card": "MPI-567",
+      "status": "superseded",
+      "generated_at": "2026-08-21T15:22:00Z"
+    },
+    {
+      "id": "6eb343d2-5589-40fc-ac0a-d613134b6f65",
+      "path": ".agents/mpi-kanban/state/handoffs/6eb343d2-5589-40fc-ac0a-d613134b6f65.json",
+      "task_card": "MPI-567",
+      "status": "superseded",
+      "generated_at": "2026-08-21T18:35:00Z"
+    },
+    {
+      "id": "cc220246-356a-456b-9351-12b2c750e199",
+      "path": ".agents/mpi-kanban/state/handoffs/cc220246-356a-456b-9351-12b2c750e199.json",
+      "task_card": "MPI-567",
+      "status": "superseded",
+      "generated_at": "2026-08-22T04:01:00Z"
+    },
+    {
+      "id": "feb13ce7-74db-456d-9661-f2b8f74fe0dc",
+      "path": ".agents/mpi-kanban/state/handoffs/feb13ce7-74db-456d-9661-f2b8f74fe0dc.json",
+      "task_card": "MPI-600",
+      "status": "superseded",
+      "generated_at": "2026-08-22T05:03:10Z"
+    },
+    {
+      "id": "28977ce3-0c13-4028-9db8-73f3bcdc72b6",
+      "path": ".agents/mpi-kanban/state/handoffs/28977ce3-0c13-4028-9db8-73f3bcdc72b6.json",
+      "task_card": "MPI-600",
+      "status": "superseded",
+      "generated_at": "2026-08-22T06:05:00Z"
+    },
+    {
+      "id": "53efd5be-bdeb-4b28-8c5c-a843faa135c0",
+      "path": ".agents/mpi-kanban/state/handoffs/53efd5be-bdeb-4b28-8c5c-a843faa135c0.json",
+      "task_card": "MPI-567",
+      "status": "resolved",
+      "generated_at": "2026-08-22T07:20:00Z"
+    },
+    {
+      "id": "61eec7b4-5cdf-410f-b424-d8352852c918",
+      "path": ".agents/mpi-kanban/state/handoffs/61eec7b4-5cdf-410f-b424-d8352852c918.json",
+      "task_card": "MPI-573",
+      "status": "superseded",
+      "generated_at": "2026-08-22T07:03:00Z"
+    },
+    {
+      "id": "7e7eabb8-91ac-4b79-bbe5-cd6a459e5d60",
+      "path": ".agents/mpi-kanban/state/handoffs/7e7eabb8-91ac-4b79-bbe5-cd6a459e5d60.json",
+      "task_card": "MPI-600",
+      "status": "superseded",
+      "generated_at": "2026-08-22T06:50:00Z"
+    },
+    {
+      "id": "c32670d9-9e1b-4720-827d-b55bf899bd58",
+      "path": ".agents/mpi-kanban/state/handoffs/c32670d9-9e1b-4720-827d-b55bf899bd58.json",
+      "task_card": "MPI-567",
+      "status": "superseded",
+      "generated_at": "2026-08-22T10:36:00Z"
+    },
+    {
+      "id": "17696fe8-38b0-4691-9269-d069b2bfa851",
+      "path": ".agents/mpi-kanban/state/handoffs/17696fe8-38b0-4691-9269-d069b2bfa851.json",
+      "task_card": "MPI-573",
+      "status": "closed",
+      "generated_at": "2026-08-22T14:49:00Z"
+    },
+    {
+      "id": "bd9d95e7-07b9-41af-90ea-a4a33e290ddf",
+      "path": ".agents/mpi-kanban/state/handoffs/bd9d95e7-07b9-41af-90ea-a4a33e290ddf.json",
+      "task_card": "MPI-567",
+      "status": "resolved",
+      "generated_at": "2026-08-22T16:05:00Z"
+    },
+    {
+      "id": "02f300e3-e484-43c7-8c03-c35dd799852f",
+      "path": ".agents/mpi-kanban/state/handoffs/02f300e3-e484-43c7-8c03-c35dd799852f.json",
+      "task_card": "MPI-567",
+      "status": "resolved",
+      "generated_at": "2026-08-22T18:40:00Z"
+    },
+    {
+      "id": "0c17e204-e49f-498f-990d-cd48f5085049",
+      "path": ".agents/mpi-kanban/state/handoffs/0c17e204-e49f-498f-990d-cd48f5085049.json",
+      "task_card": "MPI-567",
+      "status": "open"
+    }
+  ],
+  "index": {}
 }

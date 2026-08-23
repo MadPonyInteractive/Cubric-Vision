@@ -34,7 +34,7 @@ can backfill it for you):
 ```
 js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js
 js/components/Primitives/MpiColorPicker/MpiColorPicker.js
-js/data/hotkeyRegistry.js
+js/managers/hotkeyRegistry.js
 docs/playbooks/add-flow/ui/carousel-frame.md
 tests/…  (whatever you add)
 ```
