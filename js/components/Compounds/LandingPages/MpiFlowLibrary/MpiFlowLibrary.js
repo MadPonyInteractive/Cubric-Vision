@@ -225,7 +225,10 @@ export const MpiFlowLibrary = ComponentFactory.create({
                 .map((slot, i) => `
                 <div class="mpi-detail__field">
                     <span class="mpi-detail__field-label">${slot.label}</span>
-                    <div id="flow-detail-model-${i}"></div>
+                    <div class="mpi-detail__model-pick">
+                        <div id="flow-detail-model-${i}"></div>
+                        ${slot.loras ? `<div id="flow-detail-loras-${i}"></div>` : ''}
+                    </div>
                 </div>`)
                 .join('');
         }
@@ -275,6 +278,32 @@ export const MpiFlowLibrary = ComponentFactory.create({
                     openDetail(flow);
                 });
                 _detailBtns.push(dd);
+
+                // A cogwheel PER MODEL SLOT, opening the app's own Model Settings panel on
+                // whichever member of THIS slot is running — the six-slot LoRA rack,
+                // strengths, bypass and drop zones, already built (Fabio, MPI-608: "each
+                // model has its own separate cogwheel that opens its own separate 6 LoRA
+                // selector"). A third model in a future flow costs a third cogwheel and no
+                // new UI, which is the whole reason this is per-slot rather than per-flow.
+                //
+                // The panel is NOT rebuilt here: this emits and whoever mounted the overlay
+                // opens it, exactly as `ui:open-model-picker` already works. The rack it
+                // edits is that model's OWN settings, shared with its ordinary generations
+                // — the same LoRA is the same LoRA whether the flow or the prompt box runs
+                // it (MPI-504), and that is deliberate, not an oversight.
+                if (!slot.loras) return;
+                const cogHost = qs(`#flow-detail-loras-${i}`, detailBody);
+                if (!cogHost) return;
+                const runningId = slot.models.find(id => resolved.includes(id)) || slot.recommended;
+                const cog = MpiButton.mount(cogHost, {
+                    icon: 'settings',
+                    label: 'LoRAs',
+                    size: 'sm',
+                    info: `LoRAs for ${_label(runningId)} — the same rack this model uses everywhere`,
+                    extraClasses: 'mpi-detail__loras-btn',
+                });
+                cog.on('click', () => Events.emit('ui:open-model-settings', { modelId: runningId }));
+                _detailBtns.push(cog);
             });
         }
 
@@ -365,7 +394,20 @@ export const MpiFlowLibrary = ComponentFactory.create({
 
         _unsubs.push(on(scrim, 'click', _closeDetail));
         _unsubs.push(on(qs('#flow-detail-close', el), 'click', _closeDetail));
-        _unsubs.push(Events.on('ui:close-all-popups', () => { _closeDetail(); }));
+        // …EXCEPT when the pulse came from an overlay OPENING on top of us. `Overlays.open`
+        // fires `{ reason: 'overlay-open' }` on every open specifically so long-lived panels
+        // can ignore it (overlayManager.js ~44), and this detail drawer is one — the LoRA
+        // cogwheel opens Model Settings from inside it, and without this guard that open
+        // pulse closed the drawer underneath, so returning from the panel dropped the user
+        // back on the grid with nothing selected (Fabio, MPI-608). Same guard MpiOverlay
+        // (~234) and MpiSlideOver (~116) already carry, and for the same reason.
+        //
+        // Escape and Overlays.reset() still fire this BARE, so the drawer still closes on
+        // those — which is the behaviour that made the bare listener look correct.
+        _unsubs.push(Events.on('ui:close-all-popups', (payload) => {
+            if (payload?.reason === 'overlay-open') return;
+            _closeDetail();
+        }));
 
         // ── Render the contact sheet ────────────────────────────────────────
         function _destroyAllTiles() {

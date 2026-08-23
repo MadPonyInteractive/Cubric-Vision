@@ -69,6 +69,13 @@ ALLOW = {
     # is an app-side release of the transformer's VRAM before the image is handed
     # back, and seamfix has no reason to know about it.
     ("18", "images"): "output is fed through MpiClearVram 170, as every other workflow does",
+    # MPI-567, 2026-08-23 (Fabio): the flow now carries a SIX-SLOT USER LoRA RACK per
+    # model phase - Input_Lora_Phase2_1..6 (nodes 177-182, MpiLoraModel) chained between
+    # Input_Edit_Model (102) and the sampler, exactly as klein_t2i.json does it. Every
+    # slot bakes lora_name "None" and passes the model through untouched, so the bench
+    # route is bit-identical until a user picks one; seamfix has no user and therefore no
+    # rack. The params that fill these land with MPI-608.
+    ("15", "model"): "model passes through the Input_Lora_Phase2_1..6 rack (nodes 177-182)",
 }
 
 expected = seamfix.build("STAMPED", "MASKPNG", "PREFIX", feather=96)

@@ -830,10 +830,13 @@ function _buildParams(payload) {
             const upscaleFilename = _resolveUpscaleFilename(settings.upscaleModel);
             if (upscaleFilename) params['Upscale_Model'] = _resolveUpscaleParam(upscaleFilename);
 
-            // …plus the user LoRA rack, but ONLY for a Flow that declared which model's
-            // rack fills it (`settingsModel` → config.loraModelId, flowService.js). The
-            // gate is that explicit id, not the operation: nothing else in the app sets
-            // it, so every other universal op keeps injecting no LoRAs at all.
+            // …plus a user LoRA rack PER MODEL PHASE, but ONLY for the Flow slots that
+            // declared `loras: true` (→ config.loraPhases, flowService.js). The gate is
+            // that explicit declaration, not the operation: nothing else in the app sets
+            // it, so every other universal op keeps injecting no LoRAs at all — and two
+            // shipped flows (`flow_ltx_extend`, `flow_ltx_foley`) carry `Input_Lora_1..6`
+            // nodes while deliberately declaring no rack, so an opt-OUT gate would start
+            // injecting the user's LTX LoRAs into both of them in silence.
             //
             // The rack is the model's OWN settings — the same slots the Model Settings
             // panel edits for a normal generation, which is what "open the panel the
@@ -842,19 +845,29 @@ function _buildParams(payload) {
             // Flat slots only. A `loraStages` model reaching here would need its stage
             // prefixes, and no flow declares one — so bail loudly rather than silently
             // injecting the wrong shape.
-            if (payload.loraModelId) {
-                const loraDef = getModelById(payload.loraModelId);
+            for (const { phase, modelId } of (payload.loraPhases || [])) {
+                if (!modelId) continue;
+                const loraDef = getModelById(modelId);
                 if (loraDef?.loraStages?.length) {
                     clientLogger.warn('commandExecutor',
-                        `flow lora rack: "${payload.loraModelId}" is a staged-LoRA model; skipped (flat slots only)`);
-                } else {
-                    const loraSettings = getModelSettings(project, payload.loraModelId);
-                    const flatLoras = Array.isArray(loraSettings.loras) ? loraSettings.loras : [];
-                    flatLoras.forEach((slot, i) => {
-                        const param = _loraSlotParam(slot);
-                        if (param) params[`Lora_${i + 1}`] = param;
-                    });
+                        `flow lora rack: "${modelId}" is a staged-LoRA model; skipped (flat slots only)`);
+                    continue;
                 }
+                const loraSettings = getModelSettings(project, modelId);
+                const flatLoras = Array.isArray(loraSettings.loras) ? loraSettings.loras : [];
+                flatLoras.forEach((slot, i) => {
+                    const param = _loraSlotParam(slot);
+                    if (!param) return;
+                    params[`Lora_Phase${phase}_${i + 1}`] = param;
+                    // Phase 1 ALSO emits the flat key, because the graphs that predate
+                    // per-phase racks are titled `Input_Lora_1..6` — `flow_character_sheet`
+                    // is one, and it is being re-authored in another session right now, so
+                    // retitling it here would collide. Injection silently skips a title with
+                    // no node, so a graph carrying only one of the two forms takes only that
+                    // one, and a graph carrying both takes the same rack twice over. Drop
+                    // this line once every flow graph is phase-titled.
+                    if (phase === 1) params[`Lora_${i + 1}`] = param;
+                });
             }
         }
     }

@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "c608a1b2-3d4e-4f50-8a1b-2c3d4e5f6071",
+  "task_card": "MPI-608",
+  "task": ".agents/mpi-kanban/tasks/MPI-608/",
+  "paths": [
+    "js/data/flowsRegistry.js",
+    "js/services/flowService.js",
+    "js/services/commandExecutor.js",
+    "js/services/comfyController.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.css",
+    "tests/flow-lora-rack.test.cjs"
+  ],
+  "status": "claimed",
+  "claim_kind": "write",
+  "owner_session": ".agents/mpi-kanban/state/sessions/68a9910e-2358-41c7-b4e9-584d48656912.json",
+  "owner_role": "implementer",
+  "claimed_at": "2026-08-23T09:34:00Z",
+  "heartbeat_at": "2026-08-23T09:34:00Z",
+  "note": "Taken into MPI-567's session deliberately. flowsRegistry.js is the most contested file on the board - MPI-567 (live), MPI-599 (stale, session closed) and MPI-573 all hold or list it - so 608 cannot be a parallel session. MPI-609 is disjoint and runs elsewhere.",
+  "recent_events": [
+    {
+      "at": "2026-08-23T09:34:00Z",
+      "event": "files_claimed"
+    }
+  ]
+}

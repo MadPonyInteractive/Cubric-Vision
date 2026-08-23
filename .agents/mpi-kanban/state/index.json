@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-23T07:42:00Z",
+  "updated_at": "2026-08-23T11:58:00Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
@@ -46,7 +46,8 @@
       "status": "claimed",
       "owner_session": ".agents/mpi-kanban/state/sessions/47f5ad77-9dc0-47ce-86a2-d79f1dfe0dea.json",
       "heartbeat_at": "2026-08-23T07:03:49Z"
-    }
+    },
+    "files/c608a1b2-3d4e-4f50-8a1b-2c3d4e5f6071.json"
   ],
   "pending_file_states": [
     {

@@ -14,7 +14,7 @@
 'use strict';
 
 import { enqueueGeneration } from './generationService.js';
-import { getFlowById, flowAvailability, flowModelParams, flowSettingsModel } from '../data/flowsRegistry.js';
+import { getFlowById, flowAvailability, flowModelParams, flowLoraPhases } from '../data/flowsRegistry.js';
 import { state } from '../state.js';
 import { Events } from '../events.js';
 
@@ -55,14 +55,16 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
     //
     // A flow still runs with `model.id: null` — it is an OPERATION, not a model, and
     // that null is what keeps `getModelSettings` (keyed by model id) out of the path.
-    // `settingsModel` is the deliberate exception: a flow that DECLARES one is saying
-    // "my graph carries a user LoRA rack, and these are the settings that fill it".
+    // A `requiredModels` slot marked `loras: true` is the deliberate exception: it says
+    // "this phase of my graph carries a user LoRA rack, and the running model's settings
+    // are what fill it".
     //
     // This reverses the "RUN CLEAN, no project LoRAs" rule that stood here — Fabio's
     // call on MPI-504: a user who already has a character LoRA should be able to load
     // it and describe only the wardrobe and face on top. The LoRA carries identity, the
-    // sheet carries the layout. It stays OPT-IN per flow, so every flow that declares
-    // nothing still runs exactly as clean as before.
+    // sheet carries the layout. It stays OPT-IN per SLOT, so every flow that declares
+    // nothing still runs exactly as clean as before — which two shipped LTX flows rely
+    // on, since both carry Input_Lora nodes they deliberately never fill (MPI-608).
     //
     // WHAT RUNS vs WHAT REUSE RESTORES — they are not always the same media (MPI-594).
     // A step kind may redraw the input before the graph sees it (the outpaint crop
@@ -85,11 +87,16 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
         // — the same hop `loraModelId` was missing in MPI-504, where the panel saved real
         // slots and the image came back identical.
         injectionParams: { ...flowModelParams(flow), ...(inputs.injectionParams || {}) },
-        // Whose LoRA rack fills this flow's `Input_Lora_N` nodes, or null. NOT a model
-        // selection: it never reaches model resolution or workflow lookup, which stay
-        // driven by `operation`. Resolved through the any-of sets so the rack follows the
-        // member actually running (MPI-590), not the id the descriptor happens to name.
-        loraModelId: flowSettingsModel(flow),
+        // Which model's LoRA rack fills which PHASE of this flow's graph — one
+        // `{ phase, modelId }` per `requiredModels` slot that declared `loras: true`, and
+        // `[]` for every flow that declared none. NOT a model selection: it never reaches
+        // model resolution or workflow lookup, which stay driven by `operation`. Each id is
+        // resolved through its any-of set so the rack follows the member actually running
+        // (MPI-590), not the id the descriptor happens to list first.
+        //
+        // Was a single `loraModelId` string (MPI-504). One string named one rack, so a flow
+        // picking a model PER PHASE could fill neither correctly (MPI-608).
+        loraPhases: flowLoraPhases(flow),
         // Additive, threaded to the sidecar save path (Phase 2 item 4) so Reuse can
         // reopen this Flow with its inputs restored.
         flowId: flow.id,

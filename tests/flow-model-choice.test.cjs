@@ -105,8 +105,11 @@ test('the picker offers UNINSTALLED candidates too — that is how the user pick
     const flow = registry.getFlowById(FLOW_ID);
 
     state.s_installedModelIds = [];
+    // `index` is the slot's ORIGINAL position in requiredModels, carried through the
+    // single-candidate filter because the phase number is that index (MPI-608). `loras`
+    // is the per-slot rack opt-in.
     assert.deepEqual(registry.flowModelChoices(flow),
-        [{ label: 'Base model', models: [SFW, NSFW], recommended: SFW }],
+        [{ label: 'Base model', models: [SFW, NSFW], loras: true, index: 0, recommended: SFW }],
         'nothing installed must still offer both, with the recommendation named');
 
     state.s_installedModelIds = [SFW, 'klein-4b'];
@@ -145,20 +148,23 @@ test('the pick reaches the params and the LoRA rack', async () => {
     const flow = registry.getFlowById(FLOW_ID);
     state.s_installedModelIds = [SFW, NSFW, 'klein-4b'];
 
+    // The rack is keyed by PHASE now, not by a flow-level `settingsModel` (MPI-608), but
+    // the property under test is unchanged: it must follow the PICKED member, or the user
+    // on the NSFW arm edits the SFW card's rack and gets no LoRAs at all, silently.
     registry.setFlowModel(FLOW_ID, NSFW);
-    assert.equal(registry.flowSettingsModel(flow), NSFW,
-        'settingsModel must follow the pick, or the NSFW arm edits the SFW rack and gets no LoRAs');
+    assert.deepEqual(registry.flowLoraPhases(flow), [{ phase: 1, modelId: NSFW }],
+        'the phase-1 rack must follow the pick, or the NSFW arm edits the SFW rack');
     const nsfwParams = registry.flowModelParams(flow);
 
     registry.setFlowModel(FLOW_ID, SFW);
     const sfwParams = registry.flowModelParams(flow);
     assert.notDeepEqual(nsfwParams, sfwParams,
         'if both arms resolve to the same params the picker is a no-op');
-    assert.equal(registry.flowSettingsModel(flow), SFW);
+    assert.deepEqual(registry.flowLoraPhases(flow), [{ phase: 1, modelId: SFW }]);
 
     // An id that is not a candidate in any slot must not shadow the resolution order.
     registry.setFlowModel(FLOW_ID, 'qwen-edit');
-    assert.equal(registry.flowSettingsModel(flow), SFW);
+    assert.deepEqual(registry.flowLoraPhases(flow), [{ phase: 1, modelId: SFW }]);
 });
 
 test('picks are PER SLOT — a second pick must not overwrite the first', async () => {
@@ -367,8 +373,8 @@ test('flowService carries the resolved model into the run', () => {
     );
     assert.match(
         src,
-        /loraModelId:\s*flowSettingsModel\(flow\)/,
-        'the rack must follow the picked member, not the id the descriptor names',
+        /loraPhases:\s*flowLoraPhases\(flow\)/,
+        'each phase\'s rack must follow the picked member, not the id the descriptor names',
     );
 });
 

@@ -10,7 +10,6 @@ import { Events } from '../../../events.js';
 import { state, AUTO_PIXEL_THRESHOLD } from '../../../state.js';
 import { ViewManager } from '../../Primitives/MpiCanvas/managers/ViewManager.js';
 import { submitFlowGeneration } from '../../../services/flowService.js';
-import { flowSettingsModel } from '../../../data/flowsRegistry.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { createPreviewClipPlayer } from '../../../services/previewClipPlayer.js';
@@ -1039,36 +1038,15 @@ export const MpiBaseFlow = ComponentFactory.create({
         /** onChange for a flow-level field: an `action` runs, everything else stores. */
         function _onFlowField(f, val) {
             if (f.action === 'enhance') { _runEnhance(f); return; }
-            if (f.action === 'settings') { _openSettings(); return; }
             _writeDeclaredField(f.id, val);
         }
 
-        /**
-         * Open the app's Model Settings panel on the model whose LoRA rack fills this
-         * flow's `Input_Lora_N` nodes.
-         *
-         * The panel is NOT rebuilt here — it is the same `MpiModelSettings` the model
-         * picker opens, with the same six slots, strengths, bypass and drop zones
-         * (Fabio, MPI-504: "the same panel as the models have, which has everything
-         * already built in"). So the flow owns no LoRA UI: it names a model and emits.
-         * Whoever mounted the overlay opens it, exactly as `ui:open-model-picker`
-         * already works — the frame never reaches into another Block's component.
-         *
-         * The rack it edits is that model's OWN settings, shared with its ordinary
-         * generations. That is the point: a character LoRA loaded for krea2 is the
-         * same LoRA whether the sheet or the prompt box runs it.
-         */
-        function _openSettings() {
-            // Resolved through the any-of sets (MPI-590) — the panel must open on the
-            // member that will actually run, or the user edits a rack the graph ignores.
-            const modelId = flowSettingsModel(flow);
-            if (!modelId) {
-                clientLogger.warn('MpiBaseFlow',
-                    `flow "${flow.id}" declares a settings button but no settingsModel`);
-                return;
-            }
-            Events.emit('ui:open-model-settings', { modelId });
-        }
+        // The `settings` action and its `_openSettings()` lived here (MPI-504) and are GONE
+        // (MPI-608). They opened the rack for the flow's single `settingsModel`, which
+        // cannot express a flow choosing a model PER PHASE. The cogwheel beside each model
+        // selector in the Flow Library slide-over replaces it — the same `MpiModelSettings`
+        // panel and the same `ui:open-model-settings` emit, addressed per phase and sitting
+        // where the model it belongs to is actually chosen.
 
         /**
          * Render flow-level declared fields as a stacked column. Both surfaces that

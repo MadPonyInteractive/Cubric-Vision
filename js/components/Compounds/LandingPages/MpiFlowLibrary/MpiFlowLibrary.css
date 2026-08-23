@@ -90,6 +90,24 @@
     flex-direction: column;
     gap: var(--s-2);
 }
+/* One model slot's controls: the candidate dropdown, plus a LoRA cogwheel when that
+   slot declares `loras: true` (MPI-608). LAYOUT ONLY — the dropdown takes the width and
+   the button sits beside it. Neither control's fill, border, hover or focus is restated
+   here: they are Primitives and they own their own chrome, so anything that looks like
+   chrome in this rule is a bug (.claude/rules/components.md). Deliberately NOT
+   .mpi-detail__model-row, which already means a row in the required-models list and
+   carries that list's type size and colour. */
+.mpi-detail__model-pick {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+
+.mpi-detail__model-pick > :first-child {
+    flex: 1;
+    min-width: 0;
+}
+
 .mpi-detail__model-row {
     display: flex;
     align-items: center;

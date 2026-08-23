@@ -29,6 +29,8 @@
     "docs/playbooks/add-flow/01-descriptor-and-ops.md",
     "tests/inject-params-titles.test.cjs",
     "js/components/Primitives/MpiCanvas/MpiCanvas.js",
-    "js/components/Primitives/MpiCanvas/managers/brushDab.js"
+    "js/components/Primitives/MpiCanvas/managers/brushDab.js",
+    "tests/flow-lora-rack.test.cjs",
+    ".agents/mpi-kanban/tasks/MPI-567/research/lanpaint/graph_parity.py"
   ]
 }

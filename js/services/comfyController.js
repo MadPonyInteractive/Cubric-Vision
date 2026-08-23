@@ -1426,7 +1426,14 @@ function createEngine({ engine, alwaysLocal }) {
                 // titled Input_Lora_N (Chroma, LTX) fall to _inject, which writes the
                 // whole {lora_name,…} object into node.inputs.lora_name → ComfyUI
                 // "Value not in list: lora_name: {dict}" 400. (MPI-219)
-                if (/^(?:Input_)?Lora_(?:[A-Za-z]+_)?\d+$/i.test(key) && typeof val === 'object' && val !== null &&
+                // The optional middle segment accepts DIGITS as well as letters, because a
+                // Flow's rack is keyed by PHASE and a phase carries one: `Lora_Phase1_1`,
+                // `Lora_Phase2_1` (MPI-608). Wan's `Lora_High_1` / `Lora_Low_1` are the
+                // letters-only case and still match. Getting this wrong is not a miss that
+                // reports itself — a key that fails here falls through to `_inject`, which
+                // writes the whole {lora_name, strength_model, strength_clip} OBJECT into
+                // node.inputs.lora_name and dies with ComfyUI "Value not in list" (MPI-219).
+                if (/^(?:Input_)?Lora_(?:[A-Za-z0-9]+_)?\d+$/i.test(key) && typeof val === 'object' && val !== null &&
                     'lora_name' in val && 'strength_model' in val && 'strength_clip' in val) {
                     const node = workflow[id];
                     if (node && node.inputs) {

@@ -85,22 +85,22 @@
  *                                       there is no component. Every declared field MOUNTS AN APP
  *                                       PRIMITIVE (MPI-582); the declaration chooses which one, it
  *                                       does not replace it. See FlowStepField below.
- * @property {string}   [settingsModel] - The model whose USER LoRA RACK fills this flow's
- *                                       `Input_Lora_1..6` nodes, and the model a `settings` action
- *                                       button opens the Model Settings panel on. It is NOT a
- *                                       model selection — a flow still dispatches as an operation
- *                                       with `model.id: null`, and this never reaches model
- *                                       resolution or workflow lookup. OPT-IN: a flow that omits
- *                                       it injects no LoRAs at all, which is how every flow ran
- *                                       before MPI-504. The rack is the model's OWN settings,
- *                                       shared with its ordinary generations — the same LoRA is
- *                                       the same LoRA whether the flow or the prompt box runs it.
- *                                       Flat-slot models only; a `loraStages` model warns and is
- *                                       skipped rather than injected in the wrong shape.
- *                                       When the named model belongs to an any-of set, the rack
- *                                       FOLLOWS the picked member (`flowSettingsModel()`, MPI-590)
- *                                       — otherwise a user running the NSFW arm edits the SFW
- *                                       card's rack and gets no LoRAs at all, silently.
+ * A `requiredModels` SLOT may carry `loras: true` — see `flowLoraPhases()`. That slot's
+ * running model then contributes its USER LoRA RACK to the graph's
+ * `Input_Lora_Phase<N>_<i>` nodes, where N is the slot's 1-based position, and the slide-over
+ * shows a cogwheel opening that model's Model Settings panel. It is NOT a model selection —
+ * a flow still dispatches as an operation with `model.id: null`, and this never reaches
+ * model resolution or workflow lookup.
+ *
+ * OPT-IN, and it must stay that way: `flow_ltx_extend` and `flow_ltx_foley` both carry
+ * `Input_Lora_1..6` nodes while deliberately declaring no rack, so filling every slot whose
+ * graph HAS the nodes would silently start injecting the user's LTX LoRAs into two shipped
+ * flows. The rack is the model's OWN settings, shared with its ordinary generations — the
+ * same LoRA is the same LoRA whether the flow or the prompt box runs it. Flat-slot models
+ * only; a `loraStages` model warns and is skipped rather than injected in the wrong shape.
+ *
+ * This replaced a single `settingsModel` string (MPI-504 → MPI-608). One string could name
+ * only one rack, so a flow choosing a model PER PHASE could never fill both of them.
  * @property {'image'|'video'|'audio'} mediaType - What the flow PRODUCES. Decides the gallery
  *                                       card, the save path and the group type. `'audio'` became
  *                                       legal in MPI-573, for the music / TTS / voice-clone flows
@@ -201,14 +201,14 @@
  * @property {number}  [rows]  - For `text`. `> 1` renders a textarea (the prompt case).
  * @property {string}  [placeholder] - For `text`.
  * @property {*}       [default]
- * @property {'enhance'|'settings'} [action] - Makes a `button` an ACTION rather than a value
+ * @property {'enhance'} [action] - Makes a `button` an ACTION rather than a value
  *                               (MPI-504). An action's own id never reaches the op, and it stores
  *                               nothing.
- *                               `settings` opens the app's Model Settings panel on the flow's
- *                               `settingsModel` — the SAME panel the model picker opens, with the
- *                               six-slot LoRA rack already in it. The flow builds no LoRA UI: it
- *                               names a model and emits `ui:open-model-settings`. Needs
- *                               `settingsModel` on the FlowDef, or it warns and no-ops.
+ *                               A `settings` action existed here and is GONE (MPI-608): it opened
+ *                               the rack for the flow's single `settingsModel`, which cannot
+ *                               express a flow with a model per phase. The cogwheel beside each
+ *                               model selector in the slide-over replaces it — same panel, same
+ *                               `ui:open-model-settings` event, addressed per phase.
  *                               `enhance`
  *                               runs `op` on the `from` field's text and writes the result into
  *                               the `to` field. ONE declaration carries all three behaviours —
@@ -636,8 +636,21 @@ export const FLOWS = [
             {
                 label: 'Render model',
                 models: ['sdxl-realistic', 'sdxl-nsfw', 'ill-anime-beauty', 'ill-anime', 'pony-mix'],
+                // PHASE 1 — fills `Input_Lora_Phase1_1..6` (MpiLoraModelClip, model AND clip)
+                // on the SDXL render chain. This is also the answer to the style problem the
+                // flow shipped with: the object came back in its own style rather than the
+                // photo's, widening the box so the model could infer one was TRIED and
+                // failed, and a user-picked style LoRA declares it instead of inferring it.
+                loras: true,
             },
-            { label: 'Blend model', models: ['klein-9b', 'klein-4b'] },
+            {
+                label: 'Blend model',
+                models: ['klein-9b', 'klein-4b'],
+                // PHASE 2 — fills `Input_Lora_Phase2_1..6` (MpiLoraModel, model only, which
+                // is what klein_t2i ships). Keyed by PHASE and not by family on purpose: this
+                // slot swaps klein-4b for klein-9b and the graph is never retitled.
+                loras: true,
+            },
         ],
         // The graph is baked SDXL Realistic + Klein 4B, so every arm names its own
         // weights explicitly — a set reads as a set, and the arm that DOES match the
@@ -823,7 +836,14 @@ export const FLOWS = [
         // NOT `modelFamily` — MPI-316 removed that field from both krea2 cards on purpose:
         // it drives the H/B/L tier letter, and these two are CONTENT variants, not tiers.
         requiredModels: [
-            { label: 'Base model', models: ['krea2', 'krea2-nsfw'] },
+            // `loras: true` — the graph carries a user LoRA rack, so the user's own LoRAs
+            // ride along: the LoRA carries identity, the sheet carries the layout, and
+            // someone who has already trained a character describes only the wardrobe and
+            // face on top (Fabio, MPI-504). Declared on the SLOT rather than as a
+            // flow-level `settingsModel`, so the rack follows whichever member of the
+            // any-of set is running — the NSFW arm opens the NSFW rack (MPI-590) — and so a
+            // flow with more than one model phase can give each of them one (MPI-608).
+            { label: 'Base model', models: ['krea2', 'krea2-nsfw'], loras: true },
             'klein-4b',
         ],
         // The two things that differ between the arms, as injection params. The graph is
@@ -846,15 +866,6 @@ export const FLOWS = [
         operation: 'flowCharacterSheet',
         workflow: 'flow_character_sheet.json',
         mediaType: 'image',
-        // The graph carries `Input_Lora_1..6`, so the user's own LoRAs can ride along:
-        // the LoRA carries identity, the sheet carries the layout, and someone who has
-        // already trained a character describes only the wardrobe and face on top
-        // (Fabio, MPI-504). This names WHOSE rack fills those nodes — krea2 is the
-        // model this flow samples — and it is the only reason the LoRA button and the
-        // injection in commandExecutor do anything.
-        // Names the SET, not one card: `flowSettingsModel()` resolves it to whichever
-        // member is actually running, so the NSFW arm opens the NSFW rack (MPI-590).
-        settingsModel: 'krea2',
         // No `inputSchema` at all: this flow collects no media, so step 0 renders its
         // own "This flow needs no input media." beside the hero. No `result.compare`
         // either — there is no BEFORE to reveal against.
@@ -973,15 +984,11 @@ export const FLOWS = [
                 // ON by default — it is the whole reason this layout works as a video
                 // reference. Off is for inspecting the sheet the model actually drew.
             },
-            {
-                // Opens the app's OWN Model Settings panel on `settingsModel` — the
-                // six-slot rack, strengths, bypass and drop zones, already built. An
-                // `action` button, so it holds no value and never reaches the payload;
-                // what the user picks there is saved against the model, and
-                // commandExecutor injects it into `Input_Lora_1..6` at dispatch.
-                id: 'loras', type: 'button', label: 'LoRAs', icon: 'layers',
-                action: 'settings',
-            },
+            // The `loras` action button that used to sit here is GONE (MPI-608). It opened
+            // the rack for the flow's one `settingsModel`, which cannot express a flow with
+            // a model per phase. The cogwheel beside each model selector in the slide-over
+            // replaces it — same panel, same event, but addressed per phase and visible
+            // where the model it belongs to is chosen.
         ],
     },
 
@@ -1192,9 +1199,17 @@ const _modelChoice = new Map();
  */
 export function flowModelSlots(flow) {
     return (flow?.requiredModels || []).map((entry) => {
-        if (typeof entry === 'string') return { label: 'Model', models: [entry] };
-        if (Array.isArray(entry)) return { label: 'Model', models: entry };
-        return { label: entry.label || 'Model', models: entry.models || [] };
+        if (typeof entry === 'string') return { label: 'Model', models: [entry], loras: false };
+        if (Array.isArray(entry)) return { label: 'Model', models: entry, loras: false };
+        return {
+            label: entry.label || 'Model',
+            models: entry.models || [],
+            // OPT-IN, and it must stay opt-in (MPI-608). `flow_ltx_extend` and
+            // `flow_ltx_foley` both carry `Input_Lora_1..6` nodes and deliberately declare
+            // no rack, so filling every slot that HAS the nodes would silently start
+            // injecting the user's LTX LoRAs into two shipped flows.
+            loras: entry.loras === true,
+        };
     });
 }
 
@@ -1242,9 +1257,41 @@ export function flowModelIds(flowOrId) {
 export function flowModelChoices(flowOrId) {
     const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
     if (!flow) return [];
+    // `index` is the slot's position in `requiredModels`, kept because filtering loses it
+    // and the PHASE number is that original index — a cogwheel or a rack keyed off the
+    // filtered index would address the wrong phase the moment a single-candidate slot
+    // sits before a multi-candidate one (MPI-608).
     return flowModelSlots(flow)
+        .map((slot, index) => ({ ...slot, index }))
         .filter(slot => slot.models.length > 1)
         .map(slot => ({ ...slot, recommended: slot.models[0] }));
+}
+
+/**
+ * Every model phase that carries a USER LoRA RACK, as `{ phase, modelId }`.
+ *
+ * `phase` is 1-based and matches the graph's `Input_Lora_Phase<N>_<i>` titles; `modelId`
+ * is the id that will actually run in that slot, resolved through the any-of set by
+ * `flowModelIds` so the rack follows the picked member (MPI-590) rather than whichever
+ * id the descriptor happens to list first.
+ *
+ * This replaced the single `settingsModel` string (MPI-504). One string could only ever
+ * name one rack, so a flow choosing a model PER PHASE — scribble-to-object picks an SDXL
+ * render model AND a Klein blend model — could never fill both. Keyed by phase and not by
+ * model family on purpose: an any-of slot swaps klein-4b for klein-9b without the graph
+ * being retitled.
+ *
+ * @param {FlowDef|string} flowOrId
+ * @returns {{phase: number, modelId: string}[]}
+ */
+export function flowLoraPhases(flowOrId) {
+    const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
+    if (!flow) return [];
+    const resolved = flowModelIds(flow);
+    return flowModelSlots(flow)
+        .map((slot, i) => ({ phase: i + 1, modelId: resolved[i], loras: slot.loras }))
+        .filter(entry => entry.loras && entry.modelId)
+        .map(({ phase, modelId }) => ({ phase, modelId }));
 }
 
 /**
@@ -1275,21 +1322,6 @@ export function flowModelParams(flowOrId) {
     const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
     if (!flow?.modelParams) return {};
     return Object.assign({}, ...flowModelIds(flow).map(id => flow.modelParams[id] || {}));
-}
-
-/**
- * `settingsModel`, resolved through the any-of sets: if the declared model is a member
- * of a slot, the RUNNING member of that slot is the one whose LoRA rack fills the graph
- * and whose settings panel the flow's settings button opens.
- * @param {FlowDef|string} flowOrId
- * @returns {string|null}
- */
-export function flowSettingsModel(flowOrId) {
-    const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
-    if (!flow?.settingsModel) return null;
-    const slots = flowModelSlots(flow);
-    const i = slots.findIndex(slot => slot.models.includes(flow.settingsModel));
-    return i === -1 ? flow.settingsModel : flowModelIds(flow)[i];
 }
 
 /**

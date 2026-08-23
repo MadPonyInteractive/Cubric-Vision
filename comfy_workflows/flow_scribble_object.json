@@ -271,7 +271,7 @@
   "20": {
     "inputs": {
       "clip": [
-        "12",
+        "176",
         1
       ],
       "text": [
@@ -287,7 +287,7 @@
   "21": {
     "inputs": {
       "clip": [
-        "12",
+        "176",
         1
       ],
       "text": [
@@ -389,7 +389,7 @@
       "scheduler": "simple",
       "denoise": 1,
       "model": [
-        "12",
+        "176",
         0
       ],
       "positive": [
@@ -826,7 +826,7 @@
       "LanPaint_Info": "LanPaint KSampler.",
       "Inpainting_mode": "🖼️ Image Inpainting",
       "model": [
-        "102",
+        "182",
         0
       ],
       "positive": [
@@ -893,6 +893,204 @@
     "class_type": "MpiClearVram",
     "_meta": {
       "title": "Mpi Clear Vram"
+    }
+  },
+  "171": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "12",
+        0
+      ],
+      "clip": [
+        "12",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_Phase1_1"
+    }
+  },
+  "172": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "171",
+        0
+      ],
+      "clip": [
+        "171",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_Phase1_2"
+    }
+  },
+  "173": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "172",
+        0
+      ],
+      "clip": [
+        "172",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_Phase1_3"
+    }
+  },
+  "174": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "173",
+        0
+      ],
+      "clip": [
+        "173",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_Phase1_4"
+    }
+  },
+  "175": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "174",
+        0
+      ],
+      "clip": [
+        "174",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_Phase1_5"
+    }
+  },
+  "176": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "strength_clip": 1,
+      "model": [
+        "175",
+        0
+      ],
+      "clip": [
+        "175",
+        1
+      ]
+    },
+    "class_type": "MpiLoraModelClip",
+    "_meta": {
+      "title": "Input_Lora_Phase1_6"
+    }
+  },
+  "177": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "102",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_Phase2_1"
+    }
+  },
+  "178": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "177",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_Phase2_2"
+    }
+  },
+  "179": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "178",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_Phase2_3"
+    }
+  },
+  "180": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "179",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_Phase2_4"
+    }
+  },
+  "181": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "180",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_Phase2_5"
+    }
+  },
+  "182": {
+    "inputs": {
+      "lora_name": "None",
+      "strength_model": 1,
+      "model": [
+        "181",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Input_Lora_Phase2_6"
     }
   }
 }

@@ -10,6 +10,103 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 
 ## Current State
 
+**2026-08-23, session 12b — MPI-608 IS BUILT AND LIVE-CHECKED. The scribble flow's twelve
+rack nodes are now actually filled.**
+
+The wiring landed on [MPI-608](../MPI-608/) (its `validation.md` is the record, not this
+file). What matters HERE: the flow's two model phases each carry a user LoRA rack, declared
+as `loras: true` on the `requiredModels` slot, and the Flow Library slide-over shows a
+cogwheel beside both Render model and Blend model. Fabio confirmed on a real app: the panel
+stacks correctly and both cogwheels open their own rack.
+
+**The style problem this card opened with is now ANSWERED, and not the way the handoff
+framed it.** Klein's style LoRAs were already shipped for both sizes; nothing needed hooking
+up. Fabio's call was user-pickable LoRAs instead, which folds the style case in because the
+style weights ARE LoRAs. [MPI-609](../MPI-609/) renamed all fifteen to their display names
+and split them per size (SHIPPED, commit `2e263c2f`), so picking one by hand is now possible.
+
+**One bug found in the live look and fixed:** opening the LoRA panel closed the detail
+drawer underneath it. `Overlays.open` pulses `ui:close-all-popups { reason: 'overlay-open' }`
+on EVERY open so long-lived panels can ignore it; the Flow Library drawer listened bare
+while `MpiOverlay` and `MpiSlideOver` both guard. Guard added, mutation-checked.
+
+**726 tests pass.** Nothing on this card's own remaining list moved — the re-sweep, the
+graphics, the box auto-seed, the `SaveImage` question and the live run + reuse round trip
+are all still open, and that round trip is still what closes this card.
+
+---
+
+**2026-08-23, session 12 — THE STYLE PROBLEM WAS NOT A STYLE PROBLEM. Fabio corrected the
+handoff's framing twice, and the answer landed somewhere else entirely: user-pickable LoRAs, one
+rack per model phase. The GRAPH half is built and pinned here; the wiring is [MPI-608](../MPI-608/).**
+
+**🔴 DO NOT RE-SCOPE "hook up the styles portion of Klein 4B and 9B" — THE STYLES ARE ALREADY
+DONE.** The handoff's next action was wrong. `klein_t2i.json` carries 8 style LoRAs and
+`klein_9b_t2i.json` carries 7, both as `MpiStyleLoras` banks behind one `Input_Style_Selector`,
+and both ModelDefs already declare `styleLoraLabels` + `styleLoraImages` + `styleOps`. Only the
+`raw/` template looks 4B-only, and its own Note node 86 says why: *"STYLES ARE BAKED PER SIZE —
+this rack is NOT what ships"*, because `generate_klein.py` writes the slots and the trigger lines
+per size. Nothing was missing except in THIS flow, which carried no LoRA or style node at all.
+
+**THE DECISION (Fabio): skip the style rack, ship USER-PICKABLE LoRAs instead.** The character
+sheet already proves the shape, and a user who has trained a character can bring their own. It
+also folds the style case in, since the style weights ARE LoRAs. Two consequences he named:
+
+- The style weights have to be RENAMED — the picker lists raw filenames off disk, and Klein's
+  fifteen are `cifk9001` / `PULPKHOR` / `amano_flux_02` with 4B and 9B interleaved in one flat
+  folder. That is **[MPI-609](../MPI-609/)**, and Krea2 is explicitly out of scope (its names
+  already match its labels). He also spotted a THIRD Doodle in the picker; DEPS ships two, so the
+  extra is unmanaged and the card garbage-collects it.
+- **A flow's LoRA rack cannot stay flow-level.** `settingsModel` is ONE string and
+  `payload.loraModelId` ONE id, so a flow that picks a model PER PHASE could never fill both.
+  Fabio's shape: a small cogwheel beside EACH model selector opening Model Settings on that
+  model, so a future three-model flow costs nothing. That is **[MPI-608](../MPI-608/)**;
+  **[MPI-610](../MPI-610/)** moves the character sheet onto a Klein 4B/9B selector afterwards.
+
+**🟢 THE GRAPH HALF SHIPPED HERE: twelve nodes, six per phase.** `Input_Lora_Phase1_1..6`
+(`MpiLoraModelClip`, nodes 171–176) chained between `Input_Base_Model` and the KSampler, carrying
+CLIP as well as MODEL; `Input_Lora_Phase2_1..6` (`MpiLoraModel`, nodes 177–182) between
+`Input_Edit_Model` and LanPaint. Each variant matches what its own family already ships —
+`t2i_sdxl_realistic` uses the ModelClip pair, `klein_t2i` the model-only one. Every slot bakes
+`lora_name: "None"`, so the graph is bit-identical in behaviour until MPI-608 fills it.
+
+**THE NAMING IS SETTLED AND THE ORDERING IS NOT COSMETIC.** Fabio first proposed model-keyed
+(`Klein_Input_Lora_1`), then revised it himself to phase-keyed — right, because an any-of slot
+swaps klein-4b for klein-9b without the graph being retitled. His literal string was
+`phase1_input_lora_1`; that ORDERING was rejected against the code, and it is worth not
+re-deriving:
+
+1. `commandExecutor.js` ~869 force-prefixes `Input_` onto any param key not already starting
+   `Input_`/`Output_`, so `phase1_…` arrives as `Input_phase1_input_lora_1` and matches no node.
+2. The LoRA-object branch in `comfyController.js` ~1429 is
+   `/^(?:Input_)?Lora_(?:[A-Za-z]+_)?\d+$/i` — a LEADING segment never matches, and a param that
+   misses that branch falls to `_inject`, which writes the whole `{lora_name, …}` object into
+   `node.inputs.lora_name` and dies with a ComfyUI 400. That is MPI-219 exactly.
+
+`Input_Lora_Phase1_1` rides both for free. MPI-608 needs **one character** in that regex:
+`[A-Za-z]+` → `[A-Za-z0-9]+`, because `Phase1` carries a digit.
+
+**Verified, not assumed.** `graph_parity.py` FAILED on the Klein rewire (`167.model`) — it working
+— and was given an ALLOW entry with the reason, not a suppression; parity now OK. Both formats
+cross-checked in one pass: link ids unique, every link resolves to a real node AND slot, every
+`input.link` / `output.links` back-reference agrees, the two formats agree on node ids, titles and
+class types, all 68 nodes reachable from an output, and every `Input_*` title unique. **706 tests
+pass** (703 + 3 new in `tests/flow-lora-rack.test.cjs`), all three mutation-checked RED — chain
+broken, title reverted to the flat `Input_Lora_6`, encoder re-pointed at the loader — with the
+file restored and verified by sha256 each time.
+
+**⚠️ THE MUTATION HARNESS LIED ONCE, AND THE LIE READ AS "MY TESTS ARE BLIND".** All three
+mutations reported `fails=0` while the stderr underneath carried a real `ERR_ASSERTION`. The tests
+were fine; the PARSER matched `# fail N`, and `node --test` prints `<glyph> fail N`. Any future
+mutation runner here must cross-check the parse against the **exit code** — a summary parser that
+can disagree with the process result is a harness that reports green for a broken test.
+
+**⚠️ MPI-608 CANNOT BE DISPATCHED IN PARALLEL WITH THIS CARD.** It must edit
+`js/data/flowsRegistry.js`, which MPI-567 claims, and it also lands in
+`tests/flow-lora-rack.test.cjs`, now claimed here too. MPI-609 IS disjoint from both.
+
+---
+
 **2026-08-23, session 11b — EVERYTHING THIS SESSION SHIPPED IS VALIDATED BY FABIO ON REAL RENDERS
 ("Your changes are all validated, by the way"). The flow now produces good output. The next
 action is STYLE PICKING — see § Remaining Work — plus the reuse round trip and the graphics.**

@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/data/flowsRegistry.js",
+    "js/services/flowService.js",
+    "js/services/commandExecutor.js",
+    "js/services/comfyController.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.css",
+    "tests/flow-lora-rack.test.cjs"
+  ]
+}
