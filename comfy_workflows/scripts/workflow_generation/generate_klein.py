@@ -93,21 +93,21 @@ MODEL_VARIANTS = {
             # carries — they live here now so BOTH sizes are baked the same way and
             # neither is the "default" one an edit can silently change.
             styles=(
-                (_S + "flux2-klein-4b-lora-muppetshow-style.safetensors",
+                (_S + "4b\\Muppets.safetensors",
                  "display the characters as Muppets, muppetshow style"),
-                (_S + "flux2-klein-4b-lora-Fluxtoon-Style.safetensors",
+                (_S + "4b\\Cartoon.safetensors",
                  "cartoon illustration, Fluxtoon Style"),
-                (_S + "flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors",
+                (_S + "4b\\Jojo.safetensors",
                  "JojosoStyle"),
-                (_S + "Anime_new_mecha_klein4b.safetensors",
+                (_S + "4b\\Anime.safetensors",
                  "An anime-style digital illustration"),
-                (_S + "robloxchibidoll_lora_klein4b_000002200.safetensors",
+                (_S + "4b\\Chibi.safetensors",
                  "chibi style"),
-                (_S + "klein4b-doodle_v1.safetensors",
+                (_S + "4b\\Doodle.safetensors",
                  "Redraw this image in the most clumsy, scribbly, and utterly pathetic way possible."),
-                (_S + "vintage_photo.safetensors",
+                (_S + "4b\\Vintage.safetensors",
                  "vintage photo 1920's style"),
-                (_S + "Flux-Klein-4B-Art_10.safetensors",
+                (_S + "4b\\Aesthetic.safetensors",
                  "Artistic and aesthetic composition"),
             ),
         ),
@@ -132,24 +132,24 @@ MODEL_VARIANTS = {
             # picker tells the user. Research + licences:
             # .agents/mpi-kanban/tasks/MPI-598/research/klein9b-style-loras.md
             styles=(
-                (_S + "DisneyMidCenturyKlein9b.safetensors",
+                (_S + "9b\\Storybook.safetensors",
                  "Disney Mid-Century Animation"),
-                (_S + "PULPKHOR.safetensors",
+                (_S + "9b\\Comic.safetensors",
                  "vintage comic illustration, PULPKHOR style, distressed paper textures, "
                  "scratches, and faint halftone printing dots"),
-                (_S + "New_Mecha_Klein9B.safetensors",
+                (_S + "9b\\Anime.safetensors",
                  "An anime-style digital illustration"),
-                (_S + "robloxchibidoll_lora_klein9b.safetensors",
+                (_S + "9b\\Chibi.safetensors",
                  "chibi style"),
-                (_S + "klein9b-doodle_v1.safetensors",
+                (_S + "9b\\Doodle.safetensors",
                  "Redraw this image in the most clumsy, scribbly, and utterly pathetic way possible."),
                 # Renamed from the upstream `Vintage.safetensors` — far too generic a name
                 # to bake into a graph and a dep filename forever. Same bytes, sha256
                 # 7ec32ba728ee4b42fb68074e8da5f8d965813c2ff3f17186141257a265d32d92.
                 # NOTE the era differs from 4B's: this one is 1960s-80s, 4B's is 1920s.
-                (_S + "Real_Vintage_Photo_klein9b.safetensors",
+                (_S + "9b\\Vintage.safetensors",
                  "vintage photo, 1960's style"),
-                (_S + "amano_flux_02.safetensors",
+                (_S + "9b\\Watercolour.safetensors",
                  "amano watercolor and ink sketch with loose, gestural brushwork"),
             ),
         ),

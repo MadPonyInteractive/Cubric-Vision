@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-612",
+  "title": "Garbage collect the PRE-rename Klein style LoRAs: 15 old keys in R2, 7 on HF, and up to 0.72 GB stranded on every 4B user's disk",
+  "description": "Follow-up to MPI-609, which renamed the 15 Klein style weights to their display names and split them into styles/4b/ and styles/9b/. The OLD copies were deliberately left standing everywhere, because the app released at the time still resolves the old URLs and deleting them would have 404'd a style-LoRA install for anyone who had not updated. Fabio, 2026-08-23: run this two or three releases after the release that carries MPI-609, by which point nobody is on a build that wants the old paths.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-23T11:52:10Z",
+  "updated_at": "2026-08-23T11:52:10Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -32,7 +32,7 @@ and the only proven path to **object removal**.
 | `flux2_klein_4b_refcontrol_depth.safetensors` | 0.092 GB | `loras/flux2-klein/` | `klein-lora-refcontrol-depth` |
 | `flux2-klein-4b-outpaint.safetensors` | 0.076 GB | `loras/flux2-klein/` | `klein-lora-outpaint` |
 | `NSFW_party_time_v2.0_klein4b.safetensors` | 0.18 GB | `loras/flux2-klein/` | `klein-lora-nsfw` |
-| 8 style LoRAs | 0.77 GB | `loras/flux2-klein/styles/` | `klein-style-*` |
+| 8 style LoRAs | 0.77 GB | `loras/flux2-klein/styles/4b/` | `klein-style-*` |
 
 Total **+13.6 GB** (14 deps). Two more weights the graph loads are NOT Klein deps:
 `4x_NMKD-Siax_200k.pth` is the shared `4x-NMKD-Siax` engineAsset (already hosted, also

@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/data/modelConstants/loraDeps.js",
+    "comfy_workflows/scripts/workflow_generation/generate_klein.py",
+    "comfy_workflows/scripts/workflow_generation/klein_t2i_template.json",
+    "comfy_workflows/raw/klein_t2i_template.json",
+    "comfy_workflows/klein_t2i.json",
+    "comfy_workflows/klein_9b_t2i.json",
+    "docs/models/klein/9b.md",
+    "docs/models/klein/README.md",
+    "docs/models/klein/licences.md",
+    ".agents/mpi-kanban/tasks/MPI-609/brief.md",
+    ".agents/mpi-kanban/tasks/MPI-609/task.json",
+    ".agents/mpi-kanban/tasks/MPI-609/files.json",
+    ".agents/mpi-kanban/tasks/MPI-609/validation.md"
+  ]
+}

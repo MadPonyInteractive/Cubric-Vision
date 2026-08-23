@@ -813,11 +813,11 @@
         "Node name for S&R": "MpiStyleLoras"
       },
       "widgets_values": [
-        "flux2-klein\\styles\\flux2-klein-4b-lora-muppetshow-style.safetensors",
-        "flux2-klein\\styles\\flux2-klein-4b-lora-Fluxtoon-Style.safetensors",
-        "flux2-klein\\styles\\flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors",
-        "flux2-klein\\styles\\Anime_new_mecha_klein4b.safetensors",
-        "flux2-klein\\styles\\robloxchibidoll_lora_klein4b_000002200.safetensors"
+        "flux2-klein\\styles\\4b\\Muppets.safetensors",
+        "flux2-klein\\styles\\4b\\Cartoon.safetensors",
+        "flux2-klein\\styles\\4b\\Jojo.safetensors",
+        "flux2-klein\\styles\\4b\\Anime.safetensors",
+        "flux2-klein\\styles\\4b\\Chibi.safetensors"
       ]
     },
     {
@@ -11255,9 +11255,9 @@
         "Node name for S&R": "MpiStyleLoras"
       },
       "widgets_values": [
-        "flux2-klein\\styles\\klein4b-doodle_v1.safetensors",
-        "flux2-klein\\styles\\vintage_photo.safetensors",
-        "flux2-klein\\styles\\Flux-Klein-4B-Art_10.safetensors",
+        "flux2-klein\\styles\\4b\\Doodle.safetensors",
+        "flux2-klein\\styles\\4b\\Vintage.safetensors",
+        "flux2-klein\\styles\\4b\\Aesthetic.safetensors",
         "None",
         "None"
       ]

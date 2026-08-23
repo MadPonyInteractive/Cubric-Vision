@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-609",
+  "title": "Klein style LoRAs: rename the 15 weights to their display names, split 4B from 9B into their own folders, sweep R2/HF, delete the orphans",
+  "description": "Fabio, 2026-08-23: the LoRA picker lists RAW FILENAMES off disk, and Klein's fifteen style weights are named nothing like the styles they produce ('cifk9001', 'PULPKHOR', 'amano_flux_02') with 4B and 9B mixed in one flat `flux2-klein/styles/` folder. Once the user picks style LoRAs by hand (see the per-phase rack card), there is no way to tell which file is which style, and no way to tell a 4B weight from a 9B one. Krea2 is NOT affected - its filenames already match its labels. Rename to the display names, split into per-size subfolders, sweep the five consumers plus R2 and HF, and garbage collect the unmanaged files on disk (Fabio spotted a THIRD Doodle in the picker; DEPS ships only two).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
+  "created_at": "2026-08-23T08:56:00Z",
+  "updated_at": "2026-08-23T12:04:30Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

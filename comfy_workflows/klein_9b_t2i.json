@@ -471,8 +471,8 @@
   },
   "101": {
     "inputs": {
-      "lora_1": "flux2-klein\\styles\\Real_Vintage_Photo_klein9b.safetensors",
-      "lora_2": "flux2-klein\\styles\\amano_flux_02.safetensors",
+      "lora_1": "flux2-klein\\styles\\9b\\Vintage.safetensors",
+      "lora_2": "flux2-klein\\styles\\9b\\Watercolour.safetensors",
       "lora_3": "None",
       "lora_4": "None",
       "lora_5": "None",
@@ -488,11 +488,11 @@
   },
   "102": {
     "inputs": {
-      "lora_1": "flux2-klein\\styles\\DisneyMidCenturyKlein9b.safetensors",
-      "lora_2": "flux2-klein\\styles\\PULPKHOR.safetensors",
-      "lora_3": "flux2-klein\\styles\\New_Mecha_Klein9B.safetensors",
-      "lora_4": "flux2-klein\\styles\\robloxchibidoll_lora_klein9b.safetensors",
-      "lora_5": "flux2-klein\\styles\\klein9b-doodle_v1.safetensors",
+      "lora_1": "flux2-klein\\styles\\9b\\Storybook.safetensors",
+      "lora_2": "flux2-klein\\styles\\9b\\Comic.safetensors",
+      "lora_3": "flux2-klein\\styles\\9b\\Anime.safetensors",
+      "lora_4": "flux2-klein\\styles\\9b\\Chibi.safetensors",
+      "lora_5": "flux2-klein\\styles\\9b\\Doodle.safetensors",
       "style": [
         "103",
         0
