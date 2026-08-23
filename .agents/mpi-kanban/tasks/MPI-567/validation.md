@@ -184,3 +184,45 @@ because it is a baked value and nothing about editing the graph defends it.
   Done (a live run + a reuse round trip, `docs/playbooks/add-flow/05-verify.md`) is what closes it.
 - `mediaRole`'s append path was read and reasoned, not executed — it needs a flow declaring two
   media roles, which is the wiring step.
+
+## 2026-08-23 — session 10: the prompt, and two closed 05-verify gates
+
+**Automated, all green.** `npm test` → **686 pass / 0 fail** (684 before; +2 new tests).
+`node --check js/data/flowsRegistry.js` clean.
+
+**Mutation-checked, not merely green.** Every new assertion was proven to fail on a mutant, each
+restored in a `finally` block and verified byte-for-byte by sha256:
+
+| mutant | result |
+|---|---|
+| `Input_Positive` retitled in `flow_scribble_object.json` | RED — named its own assertion |
+| `result: { compare: 'image1' }` deleted from the FlowDef | RED — named `scribble-object` |
+| paint step `role: 'image1'` → `'imageX'` | RED — named the MPI-531 role sweep |
+
+`git diff --stat comfy_workflows/` clean against HEAD afterwards, so the mutation run left the
+graph untouched.
+
+**What this does NOT verify.** Nothing live. There has been no in-app run since the prompt was
+added, and no reuse round trip — that is `05-verify.md`'s Definition of Done and it is still open.
+The prompt chain is verified by reading only: field id `positive` → `_collectInputs` top-level run
+input → `commandExecutor` ~610 `Input_Positive` → graph node 17 → `StringConcatenate` 18 →
+`CLIPTextEncode` 20. Every hop exists; none has been exercised end to end.
+
+**Deliberately not tested.** That `inputSchema.positive` is inert — proving a key is ignored means
+asserting on absence across the whole frame, and the reading (`MpiBaseFlow` ~103 is the only
+`inputSchema` consumer, and it takes `.media`) is what holds that line.
+
+**Correction, same session — the prompt is declared on ONE surface, not two.**
+
+It was first written on the paint step *and* in the flow's `fields`. That silently drops edits
+from the second run onward: gizmo-step fields are role-keyed in `_stepValues[role].fields`, flow
+fields live in `_fieldValues`, and `_collectInputs` applies the flow store LAST. A fresh open is
+safe (`_seedField` → `undefined` with no `default` and no persisted root, so the key is absent),
+but after one run `s_flowInputs` carries `positive` at the payload root, the flow-level copy seeds
+from it, and the value typed on the drawing step is overwritten at collection. Wrong picture, no
+error, second run only.
+
+Caught by READING, not by a test — and no test here would have caught it either, since it needs a
+persisted `s_flowInputs` from a prior run. That is the honest limit of this session's automated
+evidence. Reverted to a single declaration; 686 tests still pass. The store unification is
+[MPI-606](../MPI-606/) bug 6.

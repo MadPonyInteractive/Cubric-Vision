@@ -10,6 +10,111 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 
 ## Current State
 
+**2026-08-23, session 10 — FABIO'S FEEDBACK IS IN, AND THE EVERY-FLOW HALF IS NOW [MPI-606](../MPI-606/).**
+
+He ran the flow end to end (it works — the blend is good) and found nine things. **Five are in
+shared flow-frame code, not in this flow**, so at his instruction they were split into
+**MPI-606** to run in a parallel session while this card keeps the scribble-contained half.
+MPI-606's `plan.md` carries every root cause traced to the line; do not re-derive them here, and
+**do not edit `MpiBaseFlow.js`, `MpiColorPicker.js` or `hotkeyRegistry.js` from this card.**
+
+**🟢 THE MISSING PROMPT IS FIXED — and it was a BUG, not a missing feature.** Fabio drew a blob
+meaning "an old lady", got an unidentifiable object rendered onto his tiger, and asked for a
+prompt box "we've never spoken about". We had: this FlowDef declared `positive: 'string'` inside
+`inputSchema` since the day it was wired. **`inputSchema.positive` is read by nothing.** The frame
+reads `inputSchema.media` and nothing else (`MpiBaseFlow` ~103 is the only consumer in the repo);
+a prompt reaches the run by being a declared FIELD whose id is `positive`, which
+`_collectInputs` promotes to a top-level run input and `commandExecutor` (~610) maps to
+`Input_Positive`. So the flow shipped with no prompt box at all, and the dead key is exactly what
+made a whole session believe otherwise. It is deleted, with a comment saying why.
+
+- **Declared on the paint step and NOWHERE ELSE** — Fabio's ask (the words belong beside the
+  drawing, because an unlabelled shape is exactly what you cannot describe from the next step).
+- **It was first written on BOTH surfaces and that was reverted before it shipped**, because it
+  silently drops edits from the second run onward. Worth recording, because restating the field on
+  the run slide is the obvious next thought and it looks supported: a gizmo step's fields are
+  role-keyed in `_stepValues[role].fields`, flow fields live in `_fieldValues`, and
+  `_collectInputs` applies the flow store LAST. Fresh open is harmless — `_seedField` returns
+  `undefined` for a flow-level field with no `default` and no persisted root, so the key is absent
+  and cannot overwrite. After one run, `s_flowInputs` carries `positive` at the payload root, the
+  flow-level copy seeds from it, and from then on a prompt edited on the drawing step is
+  overwritten at collection by the stale run-slide value. Wrong picture, no error anywhere.
+  `character-sheet` genuinely does declare its prompt twice and is **not** a counter-example: its
+  prompt step is `kind: 'fields'`, a FRAME kind with no role whose values seed into the FLOW store
+  by design (`stepKinds.js` § `FRAME_KINDS`) — one store, one value. A gizmo step cannot borrow
+  that. **Unifying the two stores is frame work; noted on MPI-606.**
+- Cost of the single surface: changing a word before `Generate Again` means one click on "Draw it"
+  in the ticker. If Fabio wants it on the run slide too, MPI-606 has to land the store fix first.
+- The graph was already ready: node 17 `Input_Positive` → 18 `StringConcatenate` (appends the
+  isolate-on-white suffix) → 20 `CLIPTextEncode`. Nothing in the workflow changed.
+
+**🔴 `promptRequired` IS DECLARED 15+ TIMES AND ENFORCED NOWHERE — handed to MPI-606.** This op
+declares `promptRequired: true`; grep `js/` and the flag has no consumer at all. That is why an
+empty-prompt run was never stopped. The frame's empty-run guard aborts only when there is
+*neither* media *nor* prompt, so a photo with no words runs. The fix is frame code, so it went to
+MPI-606 as its fifth bug rather than across the claim boundary.
+
+**Two 05-verify gates that were missing are now closed** (both mutation-checked RED, files
+restored byte-for-byte, verified by sha256):
+
+- `tests/inject-params-titles.test.cjs` had **no case for this flow** — the flow with more titled
+  injection points than any other, every one of which fails silently. Added: all ten `Input_*`
+  plus `Output_Image`, and a positive assertion that `Input_Positive` **stays** titled. That last
+  one is the deliberate inverse of Outpaint and Head Swap, which leave their prompt node UNtitled
+  so the run's empty string cannot clobber a baked instruction.
+- `tests/flow-result-compare.test.cjs` now pins `compare: 'image1'`, for parity with its two
+  siblings. The generic sweep already rejected a role the flow does not collect; with one slot,
+  deleting `result` outright was the only failure it could not see.
+
+**686 tests pass** (684 → +2).
+
+**Answered, not a bug — the free-ratio box (Fabio asked "isn't that an issue?").** No. The box
+wraps an object *plus the ground its shadow falls on*, which is never square, and the graph squares
+it up anyway at `MpiMaskSquareBbox(64)` before the crop. Locking a ratio would only stop a subject
+being given shadow room. Leave it free.
+
+**📌 THE DURABLE FINDINGS ARE IN `docs/`, NOT HERE — cards get deleted (Fabio, 2026-08-23).**
+Three reusable traps went into
+[`01-descriptor-and-ops.md`](../../../docs/playbooks/add-flow/01-descriptor-and-ops.md): a prompt
+is a FIELD and `inputSchema` reads only `media`; a shared field id on a GIZMO step plus the run
+slide drops edits from run 2; the op key becomes the output filename, and renaming is free only
+before release. The flow-specific record and every decision below are in
+[`existing-flows/scribble-to-object.md`](../../../docs/playbooks/add-flow/existing-flows/scribble-to-object.md),
+whose stale "app half is not started" status is healed. **MPI-596 and future flows should read
+those, not this card.**
+
+**Still open on THIS card — all three questions are now ANSWERED, none is blocking:**
+
+1. **Rename the op → `flowScribObj`** (Fabio wrote `FlowScribObj`; camelCase to match
+   `flowHeadSwap`, and it yields the same `FLOWSCRIBOBJ_001` badge). Mechanical, five files, all
+   ours: `commandRegistry.js`, `js/core/operationRegistry.js`, `operation_registry.json`,
+   `universal_workflows.js`, and the FlowDef's `operation`. Free — the op is unreleased (1.5.0 vs
+   released 1.4.2), so no user has a file named after it. **Re-run `npm test` after: the op key is
+   matched by name in several test sweeps.**
+2. **Brush types = the ten `BRUSH_PRESETS` as a dropdown.** He meant the History control, and it is
+   `MpiMaskStrip`'s (`options: BRUSH_PRESETS.map(p => ({ label: p.label, value: p.id }))`) — the
+   History *paint* tool does not have one. **Cheap: `PaintManager.brushPreset` already exists (~73)
+   and the shared dab already honours it (~195–203)**, so this is a control on `MpiStepPaint`, not
+   new paint code. Persist it in the step's reported value beside `color`/`brushSize`/`mode` so
+   Reuse restores it.
+3. **Show the doodle on the box step — ghost or stamped, his call is "either".** **Much cheaper
+   than first scoped: no frame-contract change at all.** Both steps declare `role: 'image1'`, so
+   they share ONE `_stepValues` entry — `MpiStepBox` already receives the paint layer as
+   `props.value.paint` and simply does not draw it. Head Swap has no paint sibling, so its
+   `value.paint` is undefined and it is untouched. Take `MpiStepBox` into this card's claim first;
+   it is not in it yet.
+4. **Hold-space = zoom/pan on the paint step.** Overrides an explicit `MpiStepPaint` ~211 decision
+   (*"Fit the whole image into the stage. No pan, no zoom — a step is one gesture"*). Heal that
+   comment rather than leaving it contradicting the code. NOTE: spacebar currently advances a step
+   — that is MPI-606's bug 2, so **this one is blocked behind it**, or the two will fight.
+5. Already open: the box still defaults to the WHOLE IMAGE (auto-seed designed, not built), no
+   reuse round trip, and **the tile/hero graphics do not exist** — confirmed live in Fabio's
+   console, which spams repeating 404s for `flow-scribble-object.webp` and `.mp4`. All six other
+   flows have both files in `comfy_workflows/display/`. That is the gradient placeholder and his
+   "something's missing". Separate `/mpi-flow-graphics` pass.
+
+---
+
 **2026-08-22, session 9b — THE APP HALF IS WIRED. Everything but a live run is done.**
 
 - **Op + FlowDef shipped.** `flowScribbleObject` in all four op files at
