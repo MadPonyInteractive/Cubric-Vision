@@ -391,6 +391,122 @@ export const assetDeps = {
         sha256: '6a8a825ab2750558bdd20dcced386fd82b7222c7ba58c11d3b611d9c44f1be63',
         engineAsset: true,
     },
+    // Chatterbox TTS + VC weights (MPI-607) --------------------------------
+    // SAME SHAPE AS RIFE ABOVE, same reason. ComfyUI_Fill-ChatterBox resolves its weights
+    // with `get_chatterbox_models_dir()`, which computes `<ComfyUI>/models/chatterbox/`
+    // from `__file__` and never touches folder_paths — so extra_model_paths.yaml is
+    // invisible to it and these cannot live in mpi_models/. `targetPath` pins them where
+    // the pack looks; `filename` is the bare basename, as the resolver requires.
+    //
+    // The stake is higher than RIFE's 20MB: each loader ends in
+    // `download_chatterbox_models(...)`, which hf_hub_downloads any file it does not find.
+    // Get the path wrong and the pack silently pulls 4.25GB from HuggingFace outside the
+    // download manager — no progress UI, no sha check, no GC, and it re-pulls on every
+    // engine reinstall. Getting it right costs nothing: the pack's own
+    // `if not local_path.exists()` sees our files and prints "Using cached".
+    //
+    // NOT engineAsset — unlike RIFE these are a MODEL's weights, not universal engine
+    // furniture, so they install with the Chatterbox model and GC with it. Install,
+    // status-check and uninstall all take the same engine-anchored `targetPath` branch
+    // (downloadManager.js), so nothing about that depends on the engineAsset flag.
+    //
+    // HF-primary URL, no R2 copy yet — the same call MiniMax H3 and the FLUX ControlNet
+    // already ship with. `noMirror: true` on each entry is therefore a STATEMENT, not an
+    // oversight: check-dep-urls.mjs would otherwise report seven "no second origin" deps
+    // and they would read as forgotten. Mirroring 4.25GB to R2 is a separate, VPN-off job
+    // (the VPN throttles R2 ~15x, MPI-354) — do it and these become url=R2 + mirrorUrl=HF
+    // like their neighbours, and the flags come off.
+    // ponytail: HF-primary until a measured failure justifies the upload.
+    //
+    // `conds.pt` is BYTE-IDENTICAL in both folders (sha 6552d705…) — one upstream file
+    // that the pack expects to find beside each model. 107KB, so it is duplicated rather
+    // than shared; do not try to dedupe it into one dep, the two loaders read two paths.
+    'chatterbox-ve': {
+        id: 'chatterbox-ve',
+        name: 'Chatterbox voice encoder',
+        origin: 'ResembleAI/chatterbox',
+        filename: 've.safetensors',
+        targetPath: 'models/chatterbox/chatterbox',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/ve.safetensors',
+        size: '5.43MB',
+        bytes: 5695784,
+        sha256: 'f0921cab452fa278bc25cd23ffd59d36f816d7dc5181dd1bef9751a7fb61f63c',
+        noMirror: true,
+    },
+    'chatterbox-t3': {
+        id: 'chatterbox-t3',
+        name: 'Chatterbox T3 (text-to-token)',
+        origin: 'ResembleAI/chatterbox',
+        filename: 't3_cfg.safetensors',
+        targetPath: 'models/chatterbox/chatterbox',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/t3_cfg.safetensors',
+        size: '1.98GB',
+        bytes: 2129653744,
+        sha256: '914cb1696f47527fe8852ca8f1fe1fa63cb34f76f9c715e84e067b744dd0da81',
+        noMirror: true,
+    },
+    'chatterbox-s3gen': {
+        id: 'chatterbox-s3gen',
+        name: 'Chatterbox S3Gen (token-to-audio)',
+        origin: 'ResembleAI/chatterbox',
+        filename: 's3gen.safetensors',
+        targetPath: 'models/chatterbox/chatterbox',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/s3gen.safetensors',
+        size: '1007.55MB',
+        bytes: 1056484620,
+        sha256: '2b78103c654207393955e4900aac14a12de8ef25f4b09424f1ef91941f161d4e',
+        noMirror: true,
+    },
+    'chatterbox-tokenizer': {
+        id: 'chatterbox-tokenizer',
+        name: 'Chatterbox tokenizer',
+        origin: 'ResembleAI/chatterbox',
+        filename: 'tokenizer.json',
+        targetPath: 'models/chatterbox/chatterbox',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/tokenizer.json',
+        size: '24.87KB',
+        bytes: 25470,
+        sha256: 'd71e3a44eabb1784df9a68e9f95b251ecbf1a7af6a9f50835856b2ca9d8c14a5',
+        noMirror: true,
+    },
+    'chatterbox-conds': {
+        id: 'chatterbox-conds',
+        name: 'Chatterbox default conditionals',
+        origin: 'ResembleAI/chatterbox',
+        filename: 'conds.pt',
+        targetPath: 'models/chatterbox/chatterbox',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/conds.pt',
+        size: '104.86KB',
+        bytes: 107374,
+        sha256: '6552d70568833628ba019c6b03459e77fe71ca197d5c560cef9411bee9d87f4e',
+        noMirror: true,
+    },
+    // Voice conversion. `s3gen.pt` is NOT a copy of `s3gen.safetensors` above — different
+    // bytes, different serialisation, and vc.py's VC_MODEL_FILES demands the `.pt`.
+    'chatterbox-vc-s3gen': {
+        id: 'chatterbox-vc-s3gen',
+        name: 'Chatterbox VC S3Gen',
+        origin: 'ResembleAI/chatterbox',
+        filename: 's3gen.pt',
+        targetPath: 'models/chatterbox/chatterbox_vc',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/s3gen.pt',
+        size: '1008.20MB',
+        bytes: 1057165844,
+        sha256: '9b9ff07e60b20c136e2b1b3d7563a24604e8d2c4c267888d1ee929dd0151d2a3',
+        noMirror: true,
+    },
+    'chatterbox-vc-conds': {
+        id: 'chatterbox-vc-conds',
+        name: 'Chatterbox VC conditionals',
+        origin: 'ResembleAI/chatterbox',
+        filename: 'conds.pt',
+        targetPath: 'models/chatterbox/chatterbox_vc',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/conds.pt',
+        size: '104.86KB',
+        bytes: 107374,
+        sha256: '6552d70568833628ba019c6b03459e77fe71ca197d5c560cef9411bee9d87f4e',
+        noMirror: true,
+    },
     // Detectors + SAM (engine assets) --------------------------------------
     'face-yolov8n': {
         id: 'face-yolov8n',

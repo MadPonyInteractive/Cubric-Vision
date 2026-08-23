@@ -74,11 +74,13 @@ opencv-contrib-python-headless==5.0.0.93
 # gets one chosen set, and a node bump can move them without a hand edit.
 addict
 albumentations
+conformer
 diffusers
 filelock
 ftfy
 fvcore
 huggingface_hub>=0.25.2
+librosa
 # imageio-ffmpeg — NOT a transitive, and NOT the same package as `imageio` (which the
 # lock already pins and which bundles no binary). It ships the ffmpeg executable, and
 # OUR MpiSaveVideo hard-requires one: help_funcs.py find_ffmpeg() tries
@@ -98,8 +100,20 @@ piexif
 python-dateutil
 pywavelets
 pyyaml
+# resemble-perth — NOT declared by any node, and REQUIRED anyway. ComfyUI_Fill-ChatterBox
+# ships it COMMENTED OUT of its requirements.txt, and tts.py / vc.py / mtl_tts.py each do
+# `try: import perth / except: PERTH_AVAILABLE = False`, print one warning line, and then
+# generate UNMARKED audio for ever. EU AI Act Art. 50 has been in force since 2026-08-02
+# and Vision is the provider of the synthetic audio, so the marking is not optional and
+# the failure mode is silent — which is exactly why it is pinned HERE rather than left to
+# the node. Removing this line does not break a build; it ships unmarked audio (MPI-607).
+resemble-perth
+resampy
+s3tokenizer
+safetensors
 scikit-learn
 segment-anything
+soundfile
 tqdm
 trimesh[easy]
 yacs

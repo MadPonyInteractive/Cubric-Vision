@@ -425,6 +425,14 @@ It also carries params plain `FL_ChatterboxTTS` does not: `repetition_penalty` (
 
 ### ACCENT must be baked in at DESIGN time — Chatterbox cannot be asked for one
 
+> **SUPERSEDED 2026-08-23 (session 13) — this section's CONCLUSION is wrong. Fabio drove
+> `FL_ChatterboxMultilingualTTS` and its `language` selector imposes an ACCENT on the cloned
+> voice at RUNTIME.** See "Accent IS a runtime parameter" below. The reasoning here is still
+> correct for plain `FL_ChatterboxTTS`, which genuinely has no voice prompt — the error was
+> generalising from it to the whole model family when the multilingual sibling has a control
+> surface plain TTS does not. Read this section as "accent cannot be requested from PLAIN
+> TTS", nothing wider.
+
 Chatterbox has **no text prompt describing the voice**; the reference clip is the only
 control surface. So an accent can only reach the output by already being in the reference.
 That makes the accent list a **library authoring requirement**, not a runtime feature.
@@ -771,3 +779,505 @@ Taxonomy and count: gender x age x delivery-type, ~60 voices, tags-not-folders (
 legitimately female + forties + narration, and folders force one ordering). **No accent
 axis** -- closed negative above. That design conversation is `mpi-brainstorm` shaped and
 has not happened yet.
+
+
+## 2026-08-23 -- Step 3 Gate 1: Chatterbox engine onboarding (FIRST Vision repo code)
+
+Everything before this entry was bench + card workspace. This is the first commit-shaped
+work in the app itself. **Gate 1 is the engine side only** -- the pack, its python deps and
+its weights. The Flow is Gate 2 and is not built yet.
+
+### Step 3 is NOT a pure `/mpi-add-flow`, and the handoff's next_action understated it
+
+Nothing was wired: `chatter` matched nothing in `node_lock.json`, `dependencies.js` or
+`python_deps.in`. The add-flow playbook assumes the model a Flow runs on is ALREADY
+installed (`ltx-foley` / `ltx-extend` declare `requiredModels: ['ltx-23-balanced']` and own
+no weight). Chatterbox owns everything it needs, so a node pack, 8 python leaves and 4.25GB
+of weights had to land before a FlowDef could reference them.
+
+### Chatterbox is a FLOW WITH `requiredDeps`, not a ModelDef and not a Plugin
+
+Checked all three entities before writing anything:
+
+- **Not a ModelDef.** A ModelDef forces `supportedOps` / `workflows` / `capabilities` /
+  `gen_speed` / ratio tables and puts the entry in the model picker. A TTS engine is none
+  of that.
+- **Not a Plugin.** `pluginsRegistry.js` defines a plugin as "a capability other surfaces
+  call, NOT a thing the user generates with and NOT a tile in the Flow Library". The TTS
+  Flow is exactly a Flow Library tile the user generates with.
+- **A FlowDef with `requiredDeps`.** `head-swap` is the precedent (`requiredDeps:
+  ['qwen-lora-headswap', 'comfyui-inpaint-cropandstitch']`) -- a flow declaring the weights
+  and node pack that are ITS OWN rather than a model's. Chatterbox goes further: it
+  declares `requiredModels: []` and owns all nine dep ids.
+
+**Consequence for Gate 2, and it is a GC hazard, not a nicety.** `flowRequiredDepIds()`
+(flowsRegistry.js) is what protects a flow's deps from the uninstall guards. Until the
+FlowDef lands, the seven `chatterbox-*` deps are owned by nobody. That is safe only
+because nothing installs them yet -- the moment anything does, an unowned dep is what
+MPI-310 destroyed 5.24GB over. Land the FlowDef in the same breath as the first install.
+
+### THE TRAP: the pack ignores `extra_model_paths.yaml` and self-downloads 4.25GB
+
+`get_chatterbox_models_dir()` computes `<ComfyUI>/models/chatterbox/` from `__file__` and
+never touches `folder_paths`. Every loader then ends in `download_chatterbox_models(...)`,
+which `hf_hub_download`s any file it does not find at that exact path.
+
+So a weight placed in `mpi_models/` (where every normal dep goes) is INVISIBLE to the pack,
+and the failure is not an error -- it is a silent 4.25GB HuggingFace pull outside the
+download manager, with no progress UI, no sha check, no GC, repeated on every engine
+reinstall.
+
+**Same class as RIFE/VFI (MPI-222), so the same cure: `targetPath`.** It pins a dep under
+the ComfyUI repo root regardless of the user's custom models root, with `filename` as a
+bare basename. Verified by resolution, not by reading:
+
+```
+chatterbox-t3        -> engine\ComfyUI_windows_portable\ComfyUI\models\chatterbox\chatterbox\t3_cfg.safetensors
+chatterbox-vc-s3gen  -> engine\ComfyUI_windows_portable\ComfyUI\models\chatterbox\chatterbox_vc\s3gen.pt
+```
+
+(passed a custom root of `D:/SomeCustomRoot`, correctly ignored). At those paths the pack's
+own `if not local_path.exists()` prints "Using cached" and downloads nothing.
+
+`targetPath` is handled identically by install, status-check and uninstall
+(`downloadManager.js` lines ~1592 / ~3199 / ~3008), so these are NOT `engineAsset: true`
+like RIFE -- they are a flow's weights, they install with it and GC with it.
+
+### THE SECOND TRAP: Perth watermarking is opt-in and fails SILENTLY
+
+`resemble-perth` is **commented out** of the pack's `requirements.txt`, and `tts.py`,
+`vc.py` and `mtl_tts.py` each do `try: import perth / except: PERTH_AVAILABLE = False`,
+print one warning line, and generate unmarked audio for ever after. EU AI Act Art. 50 has
+been in force since 2026-08-02 and Vision is the provider of the synthetic audio.
+
+So `resemble-perth` is a REQUIRED line in `dev_configs/python_deps.in`, carrying its own
+comment block explaining that deleting it breaks no build -- it just ships unmarked audio.
+`compile-node-deps.mjs --check` reports it as "curated but not declared by any node", which
+is the correct and intended state.
+
+**Still to prove at Gate 2:** that the marking is actually PRESENT on a generated file.
+Installed != applied, and the failure mode is one line on stdout.
+
+### Dependency coverage -- proven by import graph, not by hope
+
+`compile-node-deps.mjs --check` found 6 declared requirements missing: `resampy`,
+`librosa`, `s3tokenizer`, `conformer`, `safetensors`, `soundfile`. Added, plus
+`resemble-perth`. Re-check clean.
+
+Then the real question: the app installs ONE curated lock in a single `--no-deps` pass, so
+a transitive the resolver never saw would fail at import time, not install time. Parsed
+every `.py` in the pack with `ast` and diffed the top-level imports against the curated
+set. **Five are uncovered, and all five are lazy and unreachable on the shipped path:**
+
+| module | where | reachable? |
+|---|---|---|
+| `pykakasi` | `tokenizer.py:78` (indented) | Japanese branch, multilingual only |
+| `dicta_onnx` | `tokenizer.py:113` (indented) | Hebrew branch, multilingual only |
+| `russian_text_stresser` | `tokenizer.py:146` (indented) | Russian branch, multilingual only |
+| `spacy_pkuseg` | `tokenizer.py:189` (indented) | Chinese branch, multilingual only |
+| `pyloudnorm` | `tts_turbo.py:28` | inside a `try/except ImportError`, Turbo only |
+
+`tts_turbo.py` IS eagerly imported by `chatterbox_node.py:43`, so the `pyloudnorm` guard is
+load-bearing -- an unguarded import there would take the whole pack down at registration.
+It is guarded. Nothing else on the English TTS + VC path is missing.
+
+This closed a real ambiguity: the plan's leaf list
+(`librosa soundfile soxr sox s3tokenizer conformer pyloudnorm resemble-perth`) came from
+the `chatterbox-tts` PyPI package, but this pack VENDORS its own `local_chatterbox`, so
+that list was neither necessary nor sufficient. `sox`/`pysox` is NOT needed; `resampy`,
+`diffusers` and `omegaconf` are (the last two already pinned).
+
+### Lock diff worth knowing about
+
+The regenerated `python_deps.txt` gained 23 packages. Two are worth naming:
+
+- **`pre-commit` (+ `virtualenv`, `nodeenv`, `identify`, `cfgv`, `distlib`,
+  `python-discovery`) comes from `s3tokenizer`**, which declares dev tooling as a runtime
+  dependency. ~7 pure-python packages shipped to every user. Sloppy upstream, harmless,
+  and cheaper to accept than to fight the resolver.
+- **`protobuf` lost its `; sys_platform != 'darwin'` marker**, because the new `onnx` (also
+  from `s3tokenizer`) needs it unconditionally. Checked against PyPI before accepting,
+  because this is the exact shape of MPI-370: `onnx` publishes 4 macOS wheels and `soxr`
+  10; `s3tokenizer`, `resemble-perth`, `conformer` and `resampy` are pure-python. **No
+  platform is broken.**
+
+### A pre-existing bug found and fixed on the way
+
+`_buildBlock()` in `routes/yamlHelper.js` derived extra_model_paths folder keys from
+`dep.filename.split('/')[0]` for every non-custom-node dep. A `targetPath` dep's filename
+is a bare BASENAME, so RIFE has been emitting a junk `rife47.pth: rife47.pth/` key into
+every user's yaml, and the seven Chatterbox weights would have added seven more.
+
+Fixed at the root (skip `targetPath` in the derivation). Note the test in
+`tests/extra-model-folders.test.cjs` ALREADY modelled it correctly -- it filters
+`!d.targetPath` -- so the implementation was simply the half that lagged. Verified: junk
+keys now `NONE`, and no `chatterbox` key appears in the yaml (correct -- the pack cannot
+read it anyway).
+
+### What Gate 1 is and is NOT verified by
+
+**Verified:** `npm test` 726/726 pass; `compile-node-deps.mjs --check` clean; `release:deps`
+reports the seven as deliberate `noMirror` rather than "no second origin"; all 7 HF URLs
+return 200 with byte counts matching the bench files exactly; all 7 sha256 computed from
+the bench copies; `targetPath` resolution asserted against a custom root; eslint clean on
+the three changed JS files; import coverage as above.
+
+**NOT verified:** nothing has been installed or run on a real engine. Deliberate --
+port 3000, 8188 and 48188 were all live (the user's app, the bench, the app engine), and a
+scratch-engine install (`CUBRIC_ENGINE_ROOT`, ~7 min + 4.25GB) proves half a feature now or
+the whole feature at Gate 2 for the same cost. It belongs at Gate 2.
+
+### Deliberate deferrals
+
+- **No R2 mirror.** HF-primary, `noMirror: true` with a reason on each entry. Precedent is
+  MiniMax H3 and the FLUX ControlNet, both HF-primary today. Mirroring 4.25GB is its own
+  VPN-off job (the VPN throttles R2 ~15x, MPI-354).
+- **English TTS + VC only.** `chatterbox_multilingual` (another ~3GB) and
+  `chatterbox_turbo` are not wired. The settled architecture needs neither.
+- **`conds.pt` is duplicated** across the two folders (byte-identical, sha `6552d705...`,
+  107KB). Two loaders read two paths; not worth deduping.
+
+### Doc drift found
+
+`docs/playbooks/add-flow/README.md` section 0.3 says `mediaType` is `'image'|'video'`,
+while `flowsRegistry.js`'s own JSDoc already documents `'image'|'video'|'audio'` with the
+`Output_Audio` naming law. The registry is right. One-line fix, Gate 2.
+
+
+## 2026-08-23 (session 13) -- Fabio drove the all-nodes bench workflow. Four findings.
+
+All four came from HIM running the graph, not from me reading code. Two of them change the
+plan; one closes a model; one reopens an axis that was written off.
+
+### 1. TURBO IS A NO-GO -- closed, do not re-evaluate without new information
+
+`FL_ChatterboxTurboTTS` is a THIRD model (`ResembleAI/chatterbox-turbo`, 2.8GB, GPT2-based,
+English only) with its own weights in `models/chatterbox/chatterbox_turbo/`. It downloads on
+first run through `hf_hub_download` and relays NO progress, so the node parks at whatever
+percentage it last reported -- Fabio saw 8% and reasonably read it as a hang. It was not:
+all 9 files landed, 15:43-15:44.
+
+Its one distinctive capability is **paralinguistic tags** -- `[laugh]`, `[sigh]`, `[gasp]`,
+`[chuckle]`, `[cough]`, `[sniff]`, `[groan]`, `[shush]`, `[clear throat]` -- inline in the
+text. Plain `FL_ChatterboxTTS` ignores them. The README is explicit that they are Turbo-only
+and English-only.
+
+**Fabio's measurements killed it:**
+
+| test | result |
+|---|---|
+| 4s AI-voice reference | FAILED outright |
+| 13s reference (his own voice) | worked |
+| accent | gives nearly every voice a BRITISH accent |
+| accent stability | sometimes starts British and **changes to American mid-clip** |
+| emotion | none -- tags are discrete events, not a mood |
+
+**The accent drift is the disqualifier, not the reference-length floor.** The entire shipped
+architecture exists to hold speaker identity (gate: CAMPPlus cosine >= 0.70). A model that
+changes accent halfway through one utterance is not stable enough to gate, and no parameter
+sweep fixes a mid-sequence identity shift. Fabio: *"turbo key is a no-go."*
+
+Keep only this: paralinguistic tags EXIST in the Chatterbox family. If a future release
+brings them to the standard model, that is the moment to look again.
+
+### 2. ACCENT IS A RUNTIME PARAMETER -- the accent axis is reopened, from a new direction
+
+`FL_ChatterboxMultilingualTTS` exposes a `language` selector (23 entries: Arabic, Danish,
+German, Greek, English, Spanish, Finnish, French, Hebrew, Hindi, Italian, Japanese, Korean,
+Malay, Dutch, Norwegian, Polish, Portuguese, Russian, Swedish, Swahili, Turkish, Chinese),
+and **choosing a language imposes that accent on the cloned voice**. Fabio confirmed it on
+two references -- a synthetic voice and his own. `exaggeration` 0.8 gives a more pronounced
+accent than 0.5; both work.
+
+**This does not reopen the VoiceDesign accent finding, and must not be confused with it.**
+Authoring an accented voice through Qwen VoiceDesign is still a closed negative after 22
+generations -- do not retry it. What has changed is that accent no longer has to come from
+the reference at all. It is a knob at generation time.
+
+**Three consequences, and they all simplify the plan:**
+
+- **The library needs NO accent axis** -- which was already the plan, but for the opposite
+  reason. It was "we cannot author accents"; it is now "we do not have to".
+- **A user's own uploaded voice inherits every accent for free**, exactly as it already
+  inherits the full emotional range through VC. Same shape, same reason: the property lives
+  in the PIPELINE, not in the library entry.
+- **The old loose end is answered sideways.** "Does a genuinely accented reference survive
+  Chatterbox?" stops being the deciding question -- we can request the accent instead of
+  sourcing it.
+
+**Open, and it is the next test:** does the accent SURVIVE the VC stage, or does repainting
+onto the character clip strip it? The whole shipped pipeline ends in VC, so an accent that
+does not survive stage 2 is not shippable.
+
+### 3. Multilingual generates TRAILING NOISE -- one suspect, and it is a default
+
+Fabio: it *"most times comes out with a few extra seconds with some noise"*, and it is slow.
+This is the SAME defect already on the card as "multilingual clone durations are anomalous
+(22-30s for ~12 words)" -- the duration was the symptom, the trailing noise is its shape.
+
+**The asymmetry that names the suspect:** `repetition_penalty` exists ONLY on the
+multilingual model. `mtl_tts.py:293` defaults it to **2.0** (node default matches). Plain
+`tts.py` has no such parameter at all -- and plain TTS does not do this. Multilingual also
+carries `min_p` (0.05) and `top_p` (1.0), which plain TTS also lacks.
+
+2.0 is an aggressive penalty. The plausible mechanism is that it distorts the distribution
+enough near the end of the utterance that the model never lands a confident stop and keeps
+generating into noise until the token cap -- which is exactly "a few extra seconds of noise"
+AND "it takes quite a while", one cause for both.
+
+**The test, not yet run:** sweep `repetition_penalty` 1.2 / 1.5 / 2.0 with the seed,
+reference and sentence held fixed. If 1.2 stops cleanly, that is the whole fix and accents
+become shippable. If the noise survives all three it is a decode/trim problem and the Flow
+trims the tail instead.
+
+### 4. VC identity bleed -- the SAME tradeoff already measured, seen from the other end
+
+Fabio drove voice conversion properly and reported the limit honestly: *"if the voices are
+similar, sometimes it seems hard to distinguish if it's even picking up the target voice --
+it starts sounding a bit like the input voice."* And, testing his deep voice against a
+female target: it does produce the female voice, but he suspects he needs to raise his
+pitch. Critically: **with LESS performance in the input, the target voice comes through
+better** -- *"but that kind of kills performance, obviously."*
+
+**That is the exaggeration curve again, entered from the source side.** Already measured on
+the TTS side: VC-source `exaggeration` 1.2 holds identity at 0.79-0.87, 1.5 drops it to
+0.70, 2.0 to 0.61. Now confirmed by ear from the input side -- the harder the source
+performs, the less of the target survives. One curve, two ways in, and it is the central
+tension of the whole feature:
+
+> **Performance and identity trade against each other. There is no setting that maximises
+> both.** Every UI decision here is choosing a point on that curve for the user.
+
+Two further facts from his test worth keeping:
+
+- **Similar source and target = the conversion is hard to hear at all.** The bigger the
+  distance between the two voices, the more obviously it worked. So "it didn't do anything"
+  is a likely and misleading user report when they pick a target close to their own voice.
+- **A large PITCH gap is where it strains** (his deep voice -> female target). His instinct
+  to raise his pitch when performing for a distant target is worth testing as guidance.
+
+**Fabio's verdict: it works -- the gap is instruction, not capability.** *"It's just a
+matter of giving some instruction to the user on how to record his voice, and depending on
+the voice that he selects as a target."*
+
+**Product consequence, and we already own the tool for it.** `research/speaker_similarity.py`
+loads Chatterbox's own CAMPPlus encoder, so the app can score the VC OUTPUT against the
+chosen target and know objectively whether the conversion landed -- the same >= 0.70 gate
+built for library QA, pointed at a user's take. That turns "it didn't work" into "this came
+out at 0.61 -- try a flatter delivery, or a target further from your own voice." Not v1
+scope, but it is the reason the gate is worth keeping around.
+
+### PRODUCT DECISION: Voice Changer is its OWN Flow, and it ships FIRST
+
+Fabio's call, and it reorders Step 3: *"VC is a flow by itself. If you think about it, we
+already have a record button. All the user has to do is record the performance, choose a
+voice, and that voice comes out with his performance."*
+
+The recorder exists (MPI-573). So the Flow is: record -> pick a target voice -> VC -> audio
+card. **No text, no TTS model, no performance clips.**
+
+**It is the cheaper half in every dimension:**
+
+| | Voice Changer | Text to Speech |
+|---|---|---|
+| weights | `chatterbox_vc` only, **1.0GB** | + `chatterbox` TTS, **4.25GB total** |
+| needs the ~5-8 performance clips | **no** | yes -- they are the quality lever |
+| needs the ~60-voice library | no (v1: user supplies the target clip) | no, same |
+| user provides the performance | **yes, that is the point** | no, the clips do |
+
+The library upgrades Voice Changer (more characters to become) but does not gate it. That is
+what makes it shippable now: **the user's own recording IS the performance clip**, which is
+the exact asset TTS is still waiting on.
+
+So Gate 2 splits: **Flow A = Voice Changer** (VC only), **Flow B = Text to Speech**
+(TTS -> VC). Flow A first.
+
+### ROUTING DECISION: base model by DEFAULT, multilingual only when an accent is picked
+
+Fabio, same session: *"for accents we can use the multilingual one. But I don't think it
+should replace the base one because it takes a lot longer to generate, so unless the user
+selects an accent, we should choose the base one."*
+
+So the accent selector is not a parameter on one node -- **it selects which MODEL runs**:
+
+```
+accent == none   ->  FL_ChatterboxTTS              (base, fast)
+accent == <lang> ->  FL_ChatterboxMultilingualTTS  (slower, imposes the accent)
+```
+
+Both then feed the same `FL_ChatterboxVC` stage 2. The precedent for a graph that branches
+on a declared value is Qwen's `Input_wf_type` (`models.js` `opInject`) -- one workflow file,
+one switch, the value chosen by the descriptor rather than baked.
+
+**This has a real weight cost and it lands on Flow B, not Flow A.** Shipping accents means
+shipping `chatterbox_multilingual` as well:
+
+| set | size | needed for |
+|---|---|---|
+| `chatterbox_vc` | 1.0GB | Flow A (Voice Changer) -- and stage 2 of Flow B |
+| `chatterbox` | 3.2GB | Flow B, the fast default path |
+| `chatterbox_multilingual` | 3.0GB | Flow B, ONLY if the user wants an accent |
+| | **7.2GB** | all three |
+
+7.2GB for one feature is a lot, and the third set is dead weight for every user who never
+picks an accent. **Unresolved:** whether `requiredDeps` can express an OPTIONAL set, or
+whether accents want to be their own thing (a second Flow, or a separate install prompt).
+Decide it when Flow B is designed -- Flow A is unaffected either way, which is another
+reason it goes first.
+
+Note the trailing-noise defect (finding 3) is on the multilingual model specifically, so it
+gates the ACCENT path only. The fast default path is unaffected by it.
+
+
+## 2026-08-23 (session 13, later) -- VC guidance settled, and a Flow-A-exclusive capability
+
+Fabio's last round on the bench. Two findings change what Flow A IS, and two settle its
+user guidance.
+
+### NON-VERBAL SOUND PASSES THROUGH VC -- and it is exclusive to Flow A
+
+*"I shushed and I coughed, and it came through in VC."*
+
+Obvious in hindsight and easy to miss: **VC converts real audio, so whatever the user
+actually does with their mouth survives into the target voice.** A laugh, a sigh, a breath,
+a cough, a shush -- all of it arrives, in the character's voice, with no tag vocabulary, no
+enumeration and no model support required.
+
+**This retires the last reason to care about Turbo.** Turbo's one distinctive feature was
+its nine paralinguistic tags (`[laugh]`, `[sigh]`, `[gasp]`, ...). Flow A gets the same
+thing unbounded and for free, because the user simply performs it. A fixed tag list cannot
+compete with a microphone.
+
+**It does NOT transfer to Flow B, and the asymmetry is structural.** Flow B's stage 1 is
+`FL_ChatterboxTTS(text, audio_prompt=<performance clip>)` -- the clip transfers STYLE, it is
+not itself converted, and the spoken content comes from text. Only stage 2 (VC) converts
+real audio, and in Flow B stage 2's input is already-synthesised speech. So:
+
+| | Flow A (Voice Changer) | Flow B (Text to Speech) |
+|---|---|---|
+| source of the audio | the user's microphone | generated from text |
+| non-verbal sounds | **pass through natively** | only if TTS invents them (it will not) |
+
+That makes "your laugh, your breath, your timing -- in someone else's voice" a Flow A
+selling point that Flow B structurally cannot match. Worth saying in the Flow's own copy.
+
+### PITCH: match the target, and hold it steady. Both confirmed.
+
+**Matching helped -- Fabio's instinct was right.** *"Pitching my voice higher to match the
+girl did help."* His deep voice against a female target improved measurably by ear once he
+raised his delivery. The earlier note that this was untested is now closed positive.
+
+**And a second, independent rule: do not let pitch DRIFT across the take.** *"If you change
+your pitch throughout the performance, it can drift the output."* He has seen the same in
+other voice changers, so this is a property of the technique rather than of Chatterbox.
+
+**These two resolve an apparent contradiction in the guidance, and the resolution is the
+instruction.** Earlier we had "pick a target far from your own voice" (because similar
+voices make the conversion inaudible) alongside "match the target's pitch". Those only look
+opposed:
+
+- **Distance in TIMBRE/character is what you want** -- it is what makes the conversion
+  audible at all.
+- **Distance in PITCH is what you COMPENSATE for** -- by performing nearer the target's
+  register.
+
+So: pick a target that sounds nothing like you, then meet it at its pitch and stay there.
+
+### Flow A user guidance -- the four rules, all evidence-backed
+
+1. **Perform, but do not push.** A flat take converts more cleanly; a projected one bleeds
+   the source voice through. (Same curve as the measured exaggeration cap: 1.2 holds
+   identity 0.79-0.87, 1.5 -> 0.70, 2.0 -> 0.61.)
+2. **Pick a target that sounds nothing like you.** Similar voices make the conversion nearly
+   inaudible -- the likely shape of a "it didn't do anything" support report.
+3. **Meet the target's pitch.** Confirmed this round.
+4. **Hold that pitch steady.** Pitch drift within a take drifts the output.
+
+Rules 3 and 4 together are the closest thing this feature has to a skill, and they are
+cheap to teach -- which is exactly Fabio's read: *"it works, it's just a matter of giving
+some instruction to the user."*
+
+### Turbo -- the no-go STANDS, but the mechanism is now understood
+
+Fabio ran one more test, feeding Turbo a cheerful performance reference: **no British
+accent, no American accent, and the voice came out well.** So Turbo's accent invention is
+**reference-dependent, not unconditional**.
+
+His hypothesis for why his own voice triggered it: *"my voice is neutral -- it has a
+Portuguese kind of accent, but it's very neutral. Maybe that's why it started inventing
+accents."* Plausible: a reference the model cannot place is a reference it fills in from its
+prior, and a British prior is what it reaches for.
+
+**The verdict does not change.** Fabio: *"Either way, it's better not to use it. It's very
+unstable."* A model whose identity behaviour depends on whether it can place the user's
+accent is not shippable -- users with atypical or lightly-accented voices are not an edge
+case we get to exclude, and mid-clip drift was never explained away by this.
+
+**But keep the mechanism, because it may not be Turbo-specific.** Fabio's voice is a
+genuinely useful adversarial reference: neutral, lightly Portuguese-inflected, hard to
+place. If the BASE model or the VC stage ever misbehaves in a way we cannot reproduce, test
+with his voice before concluding it does not happen -- an atypical reference is exactly the
+input that surfaces this class of bug, and we now have a documented case of one model
+failing on it while succeeding on others.
+
+
+### TURBO CAVEAT -- the no-go was measured with both identity knobs pinned at ZERO
+
+Fabio flagged that Turbo carries parameters he did not touch. Checked the source, and it is
+worse than "untuned": **the node does not expose the two that matter, and never passes
+them.**
+
+`FL_ChatterboxTurboTTSNode.INPUT_TYPES` offers exactly `text`, `temperature` (0.8),
+`top_k` (1000), `top_p` (0.95), `repetition_penalty` (1.2), `seed`, and optionally
+`audio_prompt` / `use_cpu` / `keep_model_loaded`. It passes no `exaggeration` and no
+`cfg_weight`, so `tts_turbo.generate()` runs at its own signature defaults
+(`tts_turbo.py:264-265`):
+
+```
+exaggeration = 0.0
+cfg_weight   = 0.0
+```
+
+**`cfg_weight` is the central finding of this entire card**, and Turbo ran at 0. On the base
+model, 0.5 suppressed emotional transfer outright and 0.3 let it through. `cfg_weight` is
+classifier-free guidance toward the REFERENCE CLIP -- at 0 there is nothing pulling
+generation toward the user's voice at all, and the model free-runs on its training prior.
+
+**That is a single mechanism explaining both symptoms Fabio reported:**
+
+| symptom | explanation at exaggeration=0, cfg_weight=0 |
+|---|---|
+| no emotion | both intensity controls are at zero |
+| invents a British accent | no guidance toward the reference -> falls back to the prior |
+| mid-clip British -> American drift | nothing anchoring identity across the sequence |
+| a distinctive reference worked, a neutral one did not | a strong reference survives weak guidance; a neutral one does not |
+
+It also subsumes the reference-dependence hypothesis above rather than contradicting it.
+
+**THIS IS THE CARD'S OWN DOCUMENTED TRAP, for the fourth time.** The standing constraint
+from session 12: *"Three of four 'the model cannot do this' conclusions this session turned
+out to be MY PARAMETERS, not the model -- cfg_weight suppressing emotion, emotion prompt
+blocks rewriting acoustic identity lines, and VC fed an under-driven performance. Only the
+accent finding survived scrutiny. Measure against a tuned baseline before concluding a model
+is weak."* Turbo was judged on defaults. It has not been measured against a tuned baseline
+and no one should say it has.
+
+### The Turbo verdict STANDS -- on the correct reason
+
+The no-go survives, but the reasoning has to change, because "Turbo is unstable" is now
+unproven:
+
+1. **Turbo has no unique value left.** Its one differentiator was the nine paralinguistic
+   tags. Flow A gets laughs, sighs, coughs and shushes natively through VC, unbounded and
+   with no tag vocabulary -- see the passthrough finding above. There is nothing left for
+   Turbo to be the answer to.
+2. **Reaching a tuned baseline needs a NODE PATCH.** The knobs are unreachable from the
+   graph; exposing them means patching a pinned third-party pack or forking it into
+   `ComfyUi-MpiNodes`. That is real cost, for a model that -- per (1) -- would win nothing
+   even if the tuning worked.
+3. **It costs another 2.8GB** on top of a stack already at 4.25GB (7.2GB with accents).
+
+So: **not shipped, and not because it is bad -- because it is redundant, and proving it good
+would cost a fork.** If a future release exposes these parameters, or brings paralinguistic
+tags to the standard model, the question reopens with the evidence above as its starting
+point. Do not re-run the old test; run it at a tuned baseline or not at all.

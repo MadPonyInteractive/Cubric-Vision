@@ -117,6 +117,13 @@
       "commit": "9fe919558f3ff085daca921ee8401dc1832a1258",
       "filename": "LanPaint",
       "installRequirements": false
+    },
+    "ComfyUI_Fill-ChatterBox": {
+      "source": "git-commit",
+      "repo": "filliptm/ComfyUI_Fill-ChatterBox",
+      "commit": "596850bc61665e9318914841b41ee4154253f020",
+      "filename": "ComfyUI_Fill-ChatterBox",
+      "installRequirements": true
     }
   }
 }

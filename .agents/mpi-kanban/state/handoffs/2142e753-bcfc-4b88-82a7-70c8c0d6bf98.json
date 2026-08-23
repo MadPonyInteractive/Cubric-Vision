@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "2142e753-bcfc-4b88-82a7-70c8c0d6bf98",
   "generated_at": "2026-08-23T11:52:01Z",
-  "status": "open",
+  "status": "superseded",
   "session": {
     "name": "MPI-607 TTS: settled the architecture - Chatterbox only, TTS-then-VC, and a ~60+5 voice library",
     "branch": "master"

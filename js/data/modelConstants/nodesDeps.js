@@ -302,4 +302,42 @@ export const nodesDeps = {
         ],
         size: '42.7MB',
     },
+    // Chatterbox TTS + voice conversion (MPI-607). VENDORS its own `local_chatterbox`
+    // copy of Resemble's chatterbox package, so there is NO `chatterbox-tts` PyPI dep —
+    // only the leaf libraries in its requirements.txt. HAS a requirements.txt ⇒
+    // installRequirements:true ⇒ BAKED into the Pod image.
+    //
+    // ⚠ TWO traps this entry does NOT solve on its own — both are handled elsewhere and
+    // both fail SILENTLY if you drop them:
+    //
+    // 1. WEIGHTS IGNORE extra_model_paths.yaml. `get_chatterbox_models_dir()` computes
+    //    `<ComfyUI>/models/chatterbox/` from `__file__` and never touches folder_paths,
+    //    exactly like RIFE/VFI (MPI-222). Its loaders then hf_hub_download anything
+    //    missing — an untracked fetch outside the download manager. The five `chatterbox-*`
+    //    deps in assetDeps.js pin the files there via `targetPath`, which makes the pack's
+    //    own `if not local_path.exists()` skip the download. Move those weights into
+    //    mpi_models and the pack silently re-downloads 4.25GB from HuggingFace.
+    //
+    // 2. PERTH WATERMARKING IS OPT-IN AND FAILS SILENTLY. requirements.txt has
+    //    `resemble-perth` COMMENTED OUT, and tts.py/vc.py/mtl_tts.py each wrap
+    //    `import perth` in try/except → `PERTH_AVAILABLE = False`, one warning line to
+    //    stdout, and every generation ships UNMARKED. EU AI Act Art. 50 has been in force
+    //    since 2026-08-02 and Vision is the provider, so `resemble-perth` is a REQUIRED
+    //    entry in dev_configs/python_deps.in, not an optional one.
+    'ComfyUI_Fill-ChatterBox': {
+        id: 'ComfyUI_Fill-ChatterBox',
+        name: 'ComfyUI Fill-ChatterBox (TTS + voice conversion)',
+        type: 'custom_nodes',
+        filename: 'ComfyUI_Fill-ChatterBox',
+        url: lockUrl('ComfyUI_Fill-ChatterBox'),
+        installRequirements: true,
+        // Unpinned shared libs in its requirements.txt (numpy, transformers, diffusers,
+        // safetensors) — re-pin after the Pod bake so it cannot drag the engine off our
+        // curated versions, same hazard as comfyui_controlnet_aux above.
+        pipPins: [
+            'numpy==2.5.1', 'transformers==5.13.0', 'safetensors==0.8.0',
+            'diffusers==0.39.0',
+        ],
+        size: '2.6MB',
+    },
 };

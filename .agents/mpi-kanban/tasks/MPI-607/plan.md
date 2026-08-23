@@ -41,9 +41,88 @@ Project mode: scalable-foundation.
 > design conversation that has not happened. (2) **Step 3, ship Chatterbox** -- unblocked
 > since the start of the day and still not begun; it needs none of the library settled.
 
+> ### 2026-08-23 SESSION 13 -- STEP 3 STARTED. Gate 1 (engine onboarding) is DONE.
+>
+> **The first Vision repo code exists.** Read `validation.md` from
+> "Step 3 Gate 1" down before touching any of it -- it carries two traps that both fail
+> SILENTLY and one pre-existing bug that was fixed on the way.
+>
+> **Step 3 is two gates, not one `/mpi-add-flow` pass.** Nothing was wired, so a node pack,
+> 8 python leaves and 4.25GB of weights had to land first. Gate 1 is that. Gate 2 is the
+> Flow.
+>
+> **Gate 1, shipped:** `ComfyUI_Fill-ChatterBox` pinned at `596850bc` in `node_lock.json`
+> + `nodesDeps.js`; 6 declared leaves plus **`resemble-perth`** in `python_deps.in`, lock
+> regenerated; 7 weight deps in `assetDeps.js` as **`targetPath`** deps; a junk-folder-key
+> bug fixed in `routes/yamlHelper.js`.
+>
+> **The three facts that decide Gate 2's shape:**
+> 1. **Chatterbox is a FLOW WITH `requiredDeps`** -- not a ModelDef, not a Plugin. It
+>    declares `requiredModels: []` and owns all nine dep ids. `head-swap` is the precedent.
+> 2. **The weights MUST stay `targetPath`.** The pack ignores `extra_model_paths.yaml` and
+>    `hf_hub_download`s anything missing from `<ComfyUI>/models/chatterbox/` -- move them to
+>    `mpi_models/` and it silently pulls 4.25GB outside the download manager.
+> 3. **Perth is opt-in and fails silently.** `resemble-perth` is commented out of the pack's
+>    requirements and every import is wrapped in try/except. It is pinned in
+>    `python_deps.in` for Art. 50; Gate 2 must prove the marking is actually APPLIED.
+>
+> **Nothing has been installed or run on a real engine** -- deliberate, see validation.md
+> "What Gate 1 is and is NOT verified by". The live proof belongs at Gate 2, where one
+> scratch-engine run proves both halves for the price of one.
+>
+> **GATE 2 SPLIT IN TWO -- Fabio drove the bench workflow and it reordered the ship.**
+>
+> - **Flow A -- VOICE CHANGER. Ships FIRST.** Record a performance (the MPI-573 recorder
+>   already exists) -> pick a target voice -> `FL_ChatterboxVC` -> audio card. No text, no
+>   TTS model, **1.0GB** of weights, and it needs NEITHER the performance clips nor the
+>   ~60-voice library, because the user's own recording IS the performance clip. That is the
+>   asset Flow B is still waiting on, so Flow A is the one that can ship today.
+> - **Flow B -- TEXT TO SPEECH.** `FL_ChatterboxTTS` -> `FL_ChatterboxVC`, 4.25GB, needs the
+>   ~5-8 authored performance clips.
+>
+> **Accent routing (Fabio's call): the accent selector picks the MODEL, not a parameter.**
+> `accent == none -> FL_ChatterboxTTS` (fast default); `accent == <lang> ->
+> `FL_ChatterboxMultilingualTTS` (slower, imposes the accent). Both feed the same VC stage.
+> Adding accents means shipping a THIRD weight set (+3.0GB, 7.2GB total) -- whether that can
+> be optional is unresolved and belongs to Flow B, not Flow A.
+>
+> **TURBO IS NOT SHIPPED -- and the reason is REDUNDANCY, not weakness.** Read the caveat
+> before repeating the verdict: the node hides `exaggeration` AND `cfg_weight` and runs both
+> at **0.0**, so Turbo was never measured fairly -- `cfg_weight` is this card's central
+> finding and 0 means no guidance toward the reference at all, which explains the missing
+> emotion and the invented British accent in one stroke. It is dropped because **VC passes
+> laughs, coughs and shushes through natively**, so Turbo's nine paralinguistic tags win
+> nothing, and reaching a tuned baseline would need a node patch plus another 2.8GB.
+>
+> **VC PASSES NON-VERBAL SOUND THROUGH -- a Flow A exclusive.** Fabio shushed and coughed and
+> both arrived in the target voice. Flow B structurally cannot do this: its stage 1 generates
+> from TEXT, so only Flow A converts real mouth sounds. "Your laugh, your breath, your
+> timing, in someone else's voice" is Flow A's copy, and Flow B has no answer to it.
+>
+> **Flow A user guidance -- four rules, all evidence-backed:** perform but do not push · pick
+> a target that sounds nothing like you · meet its pitch · hold that pitch steady. Rules 3
+> and 4 are new this round (pitch matching confirmed; pitch DRIFT within a take drifts the
+> output). Rules 2 and 3 only look contradictory -- distance in TIMBRE is what makes the
+> conversion audible, distance in PITCH is what you compensate for.
+>
+> **ACCENT IS A RUNTIME PARAMETER after all** -- the multilingual `language` selector
+> imposes one on any reference. This does NOT reopen Qwen VoiceDesign (still a closed
+> negative). Two lines in this plan and `validation.md` said accent must be baked at design
+> time; both are corrected in place.
+>
+> **The core tension, now measured from BOTH ends: performance and identity trade against
+> each other.** Fabio by ear: a flatter input picks up the target voice better, a strong
+> performance bleeds the source through. That is the same curve as the measured
+> exaggeration cap (1.2 -> 0.79-0.87 identity, 1.5 -> 0.70, 2.0 -> 0.61). Similar
+> source/target voices make the conversion nearly inaudible; a large pitch gap strains it.
+> His verdict: it works, the gap is USER INSTRUCTION, not capability.
+>
+> Full detail on all of it: `validation.md` § "session 13 -- Fabio drove the all-nodes
+> bench workflow".
+
 Research session 2026-08-22/23 evaluated Chatterbox, Qwen3-TTS, DramaBox and VibeVoice.
-Nothing in the Vision repo was edited. All changes so far are on the standalone bench
-(`G:\ComfyUi`, port 8188) and in a session scratchpad.
+The bench work (`G:\ComfyUi`, port 8188) still stands; as of session 13 the Vision repo
+carries Gate 1 as well.
 
 > **2026-08-23 update — read `## Plan Drift`, `validation.md` and `research/voice-library-0*.md`
 > before the sections below.** The API-patching route is abandoned and Step 1 is
@@ -262,6 +341,56 @@ No weights downloaded yet. A ComfyUI-Manager update to the Qwen pack reverts the
 
 ## Plan Drift
 
+- **2026-08-23 (session 13) — VOICE CHANGER becomes its own Flow and ships FIRST.** Fabio's
+  call, after driving VC on the bench: *"VC is a flow by itself. We already have a record
+  button. All the user has to do is record the performance, choose a voice, and that voice
+  comes out with his performance."* It needs 1.0GB (not 4.25), no TTS model, no performance
+  clips and no library — the user's own recording IS the performance clip. Supersedes the
+  assumption running through this whole plan that TTS is the thing being shipped and VC is
+  merely its second stage. Flow B (TTS) is unchanged and follows.
+
+- **2026-08-23 (session 13) — TURBO closed NO-GO, and ACCENT reopened as a RUNTIME
+  parameter.** Both from Fabio driving the all-nodes bench graph. Turbo: 4s reference
+  fails, 13s works, British accent on nearly everything, and mid-clip British→American
+  drift — unstable identity, which is the one thing the pipeline exists to protect. Accent:
+  the multilingual `language` selector imposes an accent on any reference, so the library
+  needs no accent axis and a user's own voice inherits accents for free. **Two written
+  conclusions were falsified and are corrected in place** (this file's multilingual bullet
+  below, and `validation.md` § "ACCENT must be baked in at DESIGN time"). Qwen VoiceDesign
+  accent stays a closed negative — do not confuse the two.
+
+- **2026-08-23 (session 13) — the multilingual duration anomaly has a named suspect.** The
+  "22-30s for ~12 words" on the card is trailing NOISE, per Fabio. `repetition_penalty`
+  exists ONLY on the multilingual model (`mtl_tts.py:293`, default **2.0**); plain
+  `tts.py` has no such parameter and does not do this. Sweep 1.2/1.5/2.0 with seed,
+  reference and text fixed. Gates the accent path only.
+
+- **2026-08-23 (session 13) — Step 3 is TWO gates, and the plan's Step 3 text was wrong
+  about what it costs.** It reads "ship Chatterbox first regardless of the branch — it is
+  unblocked today", which is true, and then describes only the dialogue splitter. It never
+  said that NOTHING was wired: no node pack pin, no python deps, no weight deps. The
+  add-flow playbook assumes the model a Flow runs on is already installed (`ltx-foley` and
+  `ltx-extend` own no weight at all), so `/mpi-add-flow` alone could not have shipped this.
+  Gate 1 (engine onboarding) is now done; Gate 2 is the Flow. Detail in `validation.md`.
+
+- **2026-08-23 (session 13) — the leaf-dep list in `## Current State` was from the wrong
+  source and is superseded.** It named
+  `librosa soundfile soxr sox s3tokenizer conformer pyloudnorm resemble-perth`, which is the
+  closure of the `chatterbox-tts` PyPI package. `ComfyUI_Fill-ChatterBox` VENDORS its own
+  `local_chatterbox`, so that list was neither necessary nor sufficient: `sox`/`pysox` is
+  NOT needed (the earlier note insisting it was required is moot for this pack), `pyloudnorm`
+  is Turbo-only behind a try/except, and `resampy` + `diffusers` + `omegaconf` were missing
+  from it. The authority is `compile-node-deps.mjs --check` plus an `ast` pass over the
+  pack's imports, both recorded in `validation.md`.
+
+- **2026-08-23 (session 13) — Chatterbox is a FLOW WITH `requiredDeps`, not a ModelDef.**
+  All three entities were checked. A ModelDef forces dead fields and a model-picker entry;
+  a Plugin is by its own definition "not a tile in the Flow Library". `head-swap` already
+  ships the right shape — a FlowDef declaring the weights and node pack that are its own.
+  This closes the "does TTS need a ModelDef" question the plan never asked. Carries a GC
+  hazard: `flowRequiredDepIds()` is what protects a flow's deps, so the FlowDef must land
+  before anything installs those seven weights.
+
 - **2026-08-23 — ARCHITECTURE SETTLED: TTS-then-VC, and the library collapses to ~60 + ~5.**
   Fabio confirmed VC carries emotion at exaggeration 1.2. Pipeline is
   `FL_ChatterboxTTS(text, audio_prompt=<performance clip>, cfg_weight=0.3,
@@ -314,8 +443,10 @@ No weights downloaded yet. A ComfyUI-Manager update to the Qwen pack reverts the
   breaks on an engine bump. Branch A / option (b) is therefore closed for the shipped app,
   though the runtime itself is built, works, and stays useful on the bench.
   Three findings came with it: `FL_ChatterboxMultilingualTTS` gives Chatterbox 23
-  languages WITH a reference clip; accent cannot be requested at runtime (no voice prompt)
-  so it must be baked into the library at design time; and the multilingual clone
+  languages WITH a reference clip; ~~accent cannot be requested at runtime (no voice prompt)
+  so it must be baked into the library at design time~~ **— WRONG, corrected 2026-08-23
+  session 13: the multilingual node's `language` selector DOES impose an accent at runtime,
+  so no accent axis is baked anywhere. See `## Plan Drift` and `validation.md`** —; and the multilingual clone
   durations are anomalous and unverified.
 
 - **2026-08-23 — the hosting question narrowed to one option and stopped blocking.**

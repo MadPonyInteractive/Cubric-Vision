@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "354503f8-03c9-4c6e-b151-61ad7723e2df",
+  "role": "implementer",
+  "claude_session_id": "354503f8-03c9-4c6e-b151-61ad7723e2df",
+  "started_at": "2026-08-23T11:53:42Z",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "status": "active",
+  "heartbeat_at": "2026-08-23T12:05:00Z",
+  "name": "MPI-607 session 13 - ship Chatterbox (engine onboarding, then the Flow)",
+  "task": ".agents/mpi-kanban/state/tasks/006e14b7-b550-43ac-8936-366d7faa6aee.json",
+  "recent_events": [
+    {
+      "event": "heartbeat_renewed",
+      "at": "2026-08-23T12:05:00Z"
+    }
+  ]
+}

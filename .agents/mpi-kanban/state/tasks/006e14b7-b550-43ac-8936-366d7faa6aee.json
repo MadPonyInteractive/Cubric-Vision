@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task/v1",
+  "id": "006e14b7-b550-43ac-8936-366d7faa6aee",
+  "task_card": "MPI-607",
+  "title": "Ship Chatterbox into Vision - engine onboarding, then the TTS Flow",
+  "plan": ".agents/mpi-kanban/tasks/MPI-607/plan.md",
+  "status": "in_progress",
+  "owner_session": ".agents/mpi-kanban/state/sessions/354503f8-03c9-4c6e-b151-61ad7723e2df.json",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "created_at": "2026-08-23T12:05:00Z",
+  "heartbeat_at": "2026-08-23T12:05:00Z"
+}

@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "055e76ab-be49-4fd1-8051-096e265796df",
+  "task_card": "MPI-607",
+  "task": ".agents/mpi-kanban/state/tasks/006e14b7-b550-43ac-8936-366d7faa6aee.json",
+  "owner_session": ".agents/mpi-kanban/state/sessions/354503f8-03c9-4c6e-b151-61ad7723e2df.json",
+  "status": "claimed",
+  "paths": [
+    "dev_configs/node_lock.json",
+    "dev_configs/python_deps.in",
+    "dev_configs/python_deps.txt",
+    "js/data/modelConstants/dependencies.js",
+    "js/data/modelConstants/models.js",
+    ".agents/mpi-kanban/tasks/MPI-607/"
+  ],
+  "claimed_at": "2026-08-23T12:05:00Z",
+  "heartbeat_at": "2026-08-23T12:05:00Z",
+  "note": "Gate 1 - Chatterbox engine onboarding (node pack, python deps, weights). Flow registries claimed separately at Gate 2 to avoid MPI-567 overlap."
+}

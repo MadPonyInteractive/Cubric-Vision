@@ -14,4 +14,22 @@
 - [x] VC pipeline PASSES at exaggeration 1.2 - architecture settled: ~60 neutral + ~5 performance clips
 - [ ] Library taxonomy - ~60 voices, gender x age x type, tags not folders (brainstorm, not started)
 - [ ] Author the performance clips - the quality lever; iterate until each drives strong emotion
-- [ ] Step 3 SHIP CHATTERBOX - unblocked all day, not started, needs nothing above settled
+- [ ] Step 3 SHIP CHATTERBOX - unblocked all day, needs nothing above settled
+  - [x] Gate 1a - node pack pinned (ComfyUI_Fill-ChatterBox @ 596850bc, installRequirements true)
+  - [x] Gate 1b - python deps: 6 declared leaves + resemble-perth added, lock regenerated, --check clean
+  - [x] Gate 1c - 7 weight deps as targetPath (the RIFE mechanism), sha256 + byte counts verified against HF
+  - [x] Gate 1d - yamlHelper skips targetPath deps (killed 8 junk folder keys incl. the pre-existing rife47.pth)
+  - [x] Gate 1e - import coverage: every module the shipped TTS+VC path imports is in the curated set
+  - [ ] Gate 2 FLOW A - Voice Changer (record -> pick voice -> FL_ChatterboxVC). 1.0GB, no TTS, no library. SHIPS FIRST
+  - [ ] Gate 2 FLOW A verify - live run on a scratch engine (CUBRIC_ENGINE_ROOT), then Fabio listens
+  - [ ] Gate 2 FLOW A - user guidance copy, 4 rules: perform don't push / pick a target unlike you / meet its pitch / hold that pitch steady
+  - [ ] Gate 2 FLOW A - copy should SELL the passthrough: your laugh, breath and timing in someone else's voice (Flow B cannot do this)
+  - [ ] Gate 2 FLOW B - Text to Speech (FL_ChatterboxTTS -> VC). 4.25GB, needs the performance clips
+  - [ ] Gate 2 FLOW B - accent routing: none -> base model, <lang> -> multilingual (+3.0GB, optional-dep question OPEN)
+  - [ ] Prove Perth marking is APPLIED to a generated file (installed != applied; failure is one stdout line)
+- [x] Turbo - NOT SHIPPED. Reason is REDUNDANCY, not weakness: VC passes laughs/coughs/shushes through natively, so the tags win nothing, and a tuned baseline would need a node patch. NOT measured fairly - the node hides exaggeration + cfg_weight and runs both at 0.0
+- [x] VC passes NON-VERBAL sound through (cough, shush) - Flow A exclusive, Flow B structurally cannot
+- [x] Pitch: matching the target helps (confirmed); pitch DRIFT within a take drifts the output
+- [x] Accent IS a runtime parameter (multilingual `language` selector) - library needs no accent axis
+- [ ] Does the accent SURVIVE the VC stage? (pipeline ends in VC, so an accent stripped at stage 2 is unshippable)
+- [ ] Multilingual trailing noise - sweep repetition_penalty 1.2/1.5/2.0 (default 2.0, multilingual-only)

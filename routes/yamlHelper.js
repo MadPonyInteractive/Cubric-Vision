@@ -67,9 +67,16 @@ function _buildBlock(blockKey, normalizedBase, normalizedExtras) {
 
     // Derive unique folder keys from dep filenames (non-custom-node deps only).
     // First segment of filename = ComfyUI folder type = subfolder name.
+    //
+    // A `targetPath` dep is skipped: it is ENGINE-anchored (resolveComfyPath pins it
+    // under the ComfyUI repo, never the models root) and its `filename` is a bare
+    // basename, so the "first segment" is a FILE. Before MPI-607 this emitted a junk
+    // `rife47.pth: rife47.pth/` key into every user's yaml; the seven Chatterbox weights
+    // would have added seven more. The test in tests/extra-model-folders.test.cjs already
+    // modelled it this way (`!d.targetPath`) — the implementation was the half that lagged.
     const folderKeys = new Set();
     for (const dep of Object.values(DEPS)) {
-        if (dep.type === 'custom_nodes' || !dep.filename) continue;
+        if (dep.type === 'custom_nodes' || dep.targetPath || !dep.filename) continue;
         const firstSegment = dep.filename.split('/')[0];
         if (firstSegment) folderKeys.add(firstSegment);
     }

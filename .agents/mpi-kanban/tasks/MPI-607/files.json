@@ -3,6 +3,11 @@
   "files": [
     ".agents/mpi-kanban/tasks/MPI-607/**",
     "dev_configs/python_deps.in",
-    "dev_configs/python_deps.txt"
+    "dev_configs/python_deps.txt",
+    "dev_configs/node_lock.json",
+    "js/data/modelConstants/dependencies.js",
+    "js/data/modelConstants/models.js",
+    "comfy_workflows/raw/",
+    "docs/playbooks/add-flow/existing-flows/"
   ]
 }
