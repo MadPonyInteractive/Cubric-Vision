@@ -7,9 +7,10 @@
   "maturity": "planned",
   "status": "active",
   "created_at": "2026-08-23T06:13:13Z",
-  "updated_at": "2026-08-23T06:13:13Z",
+  "updated_at": "2026-08-23T06:19:15Z",
   "links": {
     "plan": "plan.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
   }
 }
