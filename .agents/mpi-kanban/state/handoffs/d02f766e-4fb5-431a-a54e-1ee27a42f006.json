@@ -1,0 +1,49 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "d02f766e-4fb5-431a-a54e-1ee27a42f006",
+  "generated_at": "2026-08-23T12:05:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-610 review catch: a wrong card brief built the wrong flow, reverted; MPI-603 sequenced next",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue MPI-610 - Character Sheet model selector.",
+    "status": "reverted_and_resequenced",
+    "summary": "MPI-610's brief was WRONG and this session built the wrong thing off it before Fabio caught it at review. Everything is reverted; nothing shipped. The brief, plan, checklist and validation are rewritten to the real design, and MPI-603 is corrected and sequenced in front. NEXT SESSION DOES MPI-603, THEN MPI-610 - Fabio's order."
+  },
+  "task_card": {
+    "id": "MPI-603",
+    "title": "Retire the outpaint LoRA - and give the Character Sheet flow its own answer",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-603/",
+    "links": {
+      "brief": ".agents/mpi-kanban/tasks/MPI-603/brief.md"
+    }
+  },
+  "next_action": {
+    "description": "Run MPI-603. It is now a SMALL, fully-specified card: re-author flow_character_sheet's head-removal branch onto LanPaint. That deletes node #708 (the outpaint LoRA), #716 (the green plate EmptyImage color 65280) and #713 (its ImageCompositeMasked). flow_scribble_object.json's blend phase is the exact shape to copy: InpaintCropImproved -> VAEEncode -> ReferenceLatent + SetLatentNoiseMask (fed by GrowMaskWithBlur) -> FluxGuidance -> LanPaint_KSampler -> VAEDecode -> InpaintStitchImproved. KEEP the prompt on #712 ('Remove the head, leaving only the clothes behind.') - MPI-367 established that LanPaint SEES under the mask and an empty prompt is a no-op, so a removal has to be an instruction that names its target. Then heal the klein-lora-outpaint comment in js/data/modelConstants/loraDeps.js, which still calls this flow a 'shipped second consumer' - that sentence is what has been blocking the R2/HF delete Fabio already authorised. THEN run MPI-610.",
+    "then": "MPI-610 - the Character Sheet's two model dropdowns. Read its rewritten brief.md FIRST; the original was wrong and is preserved only as history."
+  },
+  "context": {
+    "key_decisions": [
+      "MPI-610 is the TWO-SLOT shape scribble-object ships: a Render model dropdown (krea2 / krea2-nsfw, generation phase, UNCHANGED) and a Blend model dropdown (klein-4b / klein-9b, head-removal phase). NO Krea 2 machinery is removed. Both phases get their own six LoRAs. A previous reading - move the flow OFF Krea 2 onto a Klein base model - is WRONG and cost a full build-and-revert.",
+      "The outpaint LoRA needs NO replacement weight. Fabio, 2026-08-23: it was a workaround to do inpainting, and LanPaint replaced the workaround. flow_character_sheet is simply the LAST graph in the repo still on the old recipe.",
+      "MPI-608 IS DONE - shipped in e0173e5d, live-checked by Fabio. Its card still sits in `doing` because that session handed off rather than closing; it is not blocking anything. flowLoraPhases() exists, slots carry `loras: true`, settingsModel is retired, and scribble-object already renders two cogwheels. MPI-610's MPI-608 dependency is SATISFIED.",
+      "MPI-603 and MPI-610 edit the SAME nodes in the SAME branch. They are not parallel-safe. 603 first."
+    ],
+    "verified_this_session": [
+      "flow_character_sheet is the only graph left carrying klein-4b-outpaint. klein_t2i.json (node 259 is GONE), raw/klein_t2i_template.json and klein_9b_t2i.json are all already clean - MPI-603's consumer table said otherwise and has been corrected.",
+      "Node #55 is ALREADY titled Input_Base_Model with its krea2 arms, so MPI-610's render slot needs no graph change at all. The whole model-selector job is titling #726 -> Input_Edit_Model and #724 -> Input_Edit_Clip in the head-removal branch.",
+      "The graph threads KJNodes SetNode/GetNode named variables (Get_W, Get_H, Get_seed, Set_model) plus MpiReroute - tracing a wire is not just following links. The converter collapses all of them.",
+      "15 unconnected non-widget inputs in this graph are PRE-EXISTING, not damage.",
+      "Code tree is clean: both graphs and tests/inject-params-titles.test.cjs verified at HEAD by empty git diff, 33/33 on the two affected test files."
+    ],
+    "watch_out": [
+      "The API file comfy_workflows/flow_character_sheet.json is GENERATED. Edit raw/, then node scripts/workflow-to-api.mjs with the bench up on :8188. Never hand-edit it.",
+      "MPI-608's events.jsonl entries are stamped ~1h30m in the FUTURE (13:05 / 13:32 while the true UTC time was 11:57, verified against gh api rate_limit). Not corrected - another card's records - but do not trust that card's stamps for ordering.",
+      "js/data/flowsRegistry.js and tests/flow-model-choice.test.cjs are listed by MPI-567, MPI-599 and MPI-573. MPI-608's session committed and handed off, so they are free right now, but re-check the live claims before taking them."
+    ]
+  },
+  "resume_prompt": "You are picking up MPI-603 in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/d02f766e-4fb5-431a-a54e-1ee27a42f006.json, then .agents/mpi-kanban/tasks/MPI-603/brief.md - especially the sections 'Every in-repo consumer' (re-verified 2026-08-23, only ONE consumer left) and 'The answer for the Character Sheet'. Re-author flow_character_sheet's head-removal branch onto LanPaint, copying flow_scribble_object's blend phase, then heal the klein-lora-outpaint comment in loraDeps.js. AFTER that card ships, run MPI-610 - and read its brief.md before anything else, because the original brief was wrong and already caused one full build-and-revert."
+}

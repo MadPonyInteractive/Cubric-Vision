@@ -1,86 +1,59 @@
-# MPI-610 validation — graph half
+# MPI-610 validation
 
-Run 2026-08-23. All against the on-disk files, none taken on trust.
+**Nothing has been implemented, so there is nothing validated.** The card is in `todo`
+behind MPI-603 and MPI-608.
 
-## 1. Link-graph integrity (LiteGraph source)
+## The reverted attempt — 2026-08-23
 
-The same validator run against the PRE-surgery backup and the post-surgery file, so a
-pre-existing complaint could not be mistaken for damage.
+A session built the WRONG design off the original brief (it said the flow moves off Krea 2
+onto a Klein base-model selector) and re-authored the generation phase onto Klein: 29 nodes
+deleted, including the ClownsharKSampler ladder, both `ToBasicPipe`s, `Input_is_Turbo`,
+`Input_Negative`, `Input_Bypass_Filter_Lora`, the accelerator LoRA and the `qwen_image` VAE.
 
-| check | result |
+Fabio caught it at review. **Everything was reverted.** Kept here only so the revert is
+provably complete and nobody wonders whether a fragment survived:
+
+| file | state |
 |---|---|
-| duplicate link ids | none |
-| link → node/slot resolves both ends | all 138 |
-| `input.link` round-trips to a link naming that node+slot | all |
-| `output.links` round-trips to a link starting at that node+slot | all |
-| every `GetNode` variable has a `SetNode` | yes |
-| `last_node_id` / `last_link_id` ≥ max in use | 782 / 1597 |
-| duplicate `Input_*` titles | none |
-| unconnected non-widget inputs | **15, all pre-existing** — identical set in the backup (`MpiAnySwitch.any_3..5`, `SAM3_Detect` bbox/coords, `MaskDetailerPipe` opt inputs, `MpiMath.b/c`) |
+| `comfy_workflows/flow_character_sheet.json` | at HEAD — `git diff` empty |
+| `comfy_workflows/raw/flow_character_sheet.json` | at HEAD — `git diff` empty |
+| `tests/inject-params-titles.test.cjs` | at HEAD — `git diff` empty |
+| `js/data/flowsRegistry.js` | **never touched** (peer held it) |
+| `tests/flow-model-choice.test.cjs` | **never touched** (peer held it) |
+| the peer message to MPI-608 | withdrawn, `status: resolved`, do-not-act-on-it header |
+| the file claim | released |
+| commits | **none** |
 
-Node/link count 145/175 → 124/138.
+`node --test` on the two affected test files: 33/33 green after the revert.
 
-## 2. Conversion
+## What the attempt DID establish, and is worth keeping
 
-`node scripts/workflow-to-api.mjs comfy_workflows/raw/flow_character_sheet.json` — exit 0,
-no stderr. API 95 → 84 nodes. Diff is exactly the intended set:
+These were measured against the real graph and the live engine, and they still hold for
+whoever implements the card properly:
 
-```
-removed: 56 72 77 143 160 162 245 282 283 290 311 312 436 440 560 617 619 621
-added  : 775 776 777 778 779 780 781        (782 Get_klein vae is virtual, collapsed)
-```
+- **The render slot needs no graph change.** Node **#55 is already titled
+  `Input_Base_Model`** with its `krea2` / `krea2-nsfw` arms. The entire model-selector job
+  is the blend slot — titling **#726 → `Input_Edit_Model`** and **#724 → `Input_Edit_Clip`**
+  in the head-removal branch.
+- **This graph is the last one in the repo on the pre-LanPaint recipe.** Verified by grep
+  across every Klein graph: `klein_t2i`, `klein_9b_t2i` and `flow_scribble_object` all run
+  `LanPaint_KSampler` and carry no outpaint LoRA; `flow_character_sheet` has no LanPaint
+  node, carries outpaint LoRA **#708** and green plate **#716**. That is MPI-603's job and
+  it blocks this card's 9B arm.
+- **MPI-603's consumer table was stale** — `klein_t2i.json` node 259 no longer exists and
+  its raw template is clean. Corrected on that card.
+- **The graph uses KJNodes `SetNode`/`GetNode` named variables plus `MpiReroute`**, not
+  plain reroutes. `Get_W` / `Get_H` / `Get_seed` / `Set_model` carry the resolution, seed
+  and model chain across the canvas, so tracing a wire is not just following links. The
+  converter (`workflow-to-api.mjs`) collapses all of them.
+- **15 unconnected non-widget inputs are PRE-EXISTING** (`MpiAnySwitch.any_3..5`,
+  `SAM3_Detect` bbox/coords, `MaskDetailerPipe` optional inputs, `MpiMath.b/c`). A
+  validator run against this graph will report them; they are not damage.
+- **The API file is generated.** Edit `raw/`, then
+  `node scripts/workflow-to-api.mjs comfy_workflows/raw/flow_character_sheet.json`
+  with the bench up on :8188. Never hand-edit the API file.
 
-Spot-checks in the API output:
+## What will close the card
 
-```
-55  UNETLoader  Input_Edit_Model  {"unet_name": "flux-2-klein-4b-int8-convrot.safetensors", ...}
-69  CLIPLoader  Input_Edit_Clip   {"clip_name": "qwen_3_4b.safetensors", "type": "flux2", ...}
-141 Input_Lora_1                  {"model": ["55", 0]}
-777 CFGGuider                     {"cfg": 1, "model": ["139",0], "positive": ["51",0], "negative": ["57",0]}
-776 Flux2Scheduler                {"steps": 4, "width": ["771",0], "height": ["772",0]}
-493 MpiClearVram                  {"passthrough": ["781", 0]}
-```
-
-## 3. Injection rules
-
-```
-node scripts/validate-injection-rules.mjs comfy_workflows/flow_character_sheet.json
-✓ comfy_workflows/flow_character_sheet.json
-All 1 file(s) conform to the injection rules.
-```
-
-## 4. Engine validation (stand-in for ComfyUI's `validate_prompt`)
-
-84 nodes checked against the live `/object_info` on 127.0.0.1:8188:
-
-- every `class_type` installed
-- every REQUIRED input present
-- every link resolves to a node that really has that output slot
-- no node consumed by nothing that is not an output node
-
-`OK` on all four. This is static — it proves the graph is dispatchable, **not** that the
-sheet looks good.
-
-## 5. Test suite
-
-```
-node --test "tests/inject-params-titles.test.cjs"   14/14 pass
-node --test "tests/*.test.cjs"                      725 tests, 722 pass, 3 fail
-```
-
-The 3 failures are all in `tests/flow-model-choice.test.cjs`, all the DESCRIPTOR half's,
-and all in a file a live peer holds:
-
-1. `every modelParams title EXISTS in the flow workflow` — `flowsRegistry` still names
-   `Input_Base_Model`.
-2. `the Character Sheet arms match the weights and the twin graph` — hardcodes
-   `Input_Base_Model` + `Input_Bypass_Filter_Lora` + the `krea2_t2i_nsfw.json` twin.
-3. `the injector can actually WRITE both arms` — the same two titles.
-
-Nothing is committed; the graph must land with the descriptor or master goes red.
-
-## NOT validated
-
-**No sheet has been generated.** No Klein sheet has been compared against a Krea 2 sheet,
-at either size. That comparison is what closes this card and it is Fabio's, not a
-test's — Krea 2 was chosen for a reason and nobody has re-tested that choice.
+Fabio picks a render model and a blend model in the Flow Library panel, runs it, and judges
+real sheets — including one on the **9B blend arm**, which has never been run here.
