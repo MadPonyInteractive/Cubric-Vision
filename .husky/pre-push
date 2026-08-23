@@ -1,0 +1,57 @@
+#!/bin/bash
+# .husky/pre-push
+#
+# Refuses to push master while master's last CI run is RED.
+#
+# The failure this exists for (2026-08-23): MPI-567 shipped a Flow descriptor naming
+# preview art that was never made, the desktop suite went red on the resulting 404,
+# and EIGHT more pushes landed on top before anyone looked. This hook cannot catch
+# the push that BREAKS master — CI has not run on that commit yet — only the pile-up
+# afterwards, which is the part that cost a day.
+#
+# Deliberately NOT a GitHub branch-protection rule: a required status check rejects a
+# direct push to a protected branch, which would force every agent session through a
+# PR and break the direct-to-master workflow in CLAUDE.md § Git and Commits.
+#
+# Bypass, when you are the one pushing the fix:  git push --no-verify
+#
+# Fails OPEN. No gh, no auth, no network, no run found => the push proceeds. A gate
+# that blocks pushing because GitHub is unreachable is worse than the bug it guards.
+
+set -e
+
+# ponytail: master only. Release branches run the same CI but push rarely and are cut
+# from an already-green master; guard them too if that stops being true.
+pushing_master=false
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+    if [ "$remote_ref" = "refs/heads/master" ]; then
+        pushing_master=true
+    fi
+done
+
+[ "$pushing_master" = true ] || exit 0
+
+command -v gh >/dev/null 2>&1 || exit 0
+
+# Most recent COMPLETED run, so an in-flight run never blocks. `cancelled` is common
+# here (the workflow sets cancel-in-progress), so only an outright `failure` blocks.
+conclusion=$(gh run list --branch master --workflow tests.yml --status completed \
+    --limit 1 --json conclusion --jq '.[0].conclusion' 2>/dev/null) || exit 0
+
+[ "$conclusion" = "failure" ] || exit 0
+
+url=$(gh run list --branch master --workflow tests.yml --status completed \
+    --limit 1 --json url --jq '.[0].url' 2>/dev/null || echo '')
+
+echo ""
+echo "[pre-push] BLOCKED — master's last CI run FAILED."
+echo ""
+echo "    $url"
+echo ""
+echo "  Pushing now stacks another commit on a red master, which is how a broken"
+echo "  build survived 8 pushes on 2026-08-23. Fix the red run first, or:"
+echo ""
+echo "    gh run view --log-failed        # what is actually failing"
+echo "    git push --no-verify            # you ARE the fix, or you accept the red"
+echo ""
+exit 1
