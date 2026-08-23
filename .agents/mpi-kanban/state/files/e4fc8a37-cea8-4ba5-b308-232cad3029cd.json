@@ -13,14 +13,37 @@
     "tests/flow-model-choice.test.cjs",
     "docs/playbooks/add-flow/existing-flows/scribble-to-object.md",
     "js/data/modelRegistry.js",
-    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js"
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js",
+    "js/components/Organisms/MpiStepBox/MpiStepBox.js",
+    "js/components/Organisms/MpiStepBox/MpiStepBox.css",
+    "docs/playbooks/add-flow/01-descriptor-and-ops.md",
+    ".agents/mpi-kanban/tasks/MPI-567/validation.md",
+    "js/components/Primitives/MpiCanvas/MpiCanvas.js",
+    "js/components/Primitives/MpiCanvas/managers/brushDab.js"
   ],
   "status": "claimed",
   "claim_kind": "write",
   "task_card": "MPI-567",
   "task": ".agents/mpi-kanban/state/tasks/18204563-f4a9-4be9-a3e3-355e7da15844.json",
-  "owner_session": ".agents/mpi-kanban/state/sessions/1e3a05f1-497d-453b-a95c-f01265e49f39.json",
+  "owner_session": ".agents/mpi-kanban/state/sessions/47f5ad77-9dc0-47ce-86a2-d79f1dfe0dea.json",
   "owner_role": "implementer",
   "created_at": "2026-08-22T19:28:00Z",
-  "heartbeat_at": "2026-08-22T21:43:10Z"
+  "heartbeat_at": "2026-08-23T07:03:49Z",
+  "recent_events": [
+    {
+      "at": "2026-08-22T22:16:00Z",
+      "event": "claim_extended",
+      "note": "inherited from closed session 1e3a05f1 via handoff 8f4c6968"
+    },
+    {
+      "at": "2026-08-23T06:23:27Z",
+      "event": "claim_extended",
+      "note": "session 11 via handoff 0c17e204; +MpiStepBox js/css, +01-descriptor-and-ops.md, +validation.md"
+    },
+    {
+      "at": "2026-08-23T07:03:49Z",
+      "event": "claim_extended",
+      "note": "MpiCanvas.js + brushDab.js for the shared brush-ring extraction; prior claim was MPI-454, status complete"
+    }
+  ]
 }

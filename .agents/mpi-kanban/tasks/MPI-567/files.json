@@ -19,12 +19,16 @@
     "js/components/Organisms/MpiBaseFlow/stepKinds.js",
     "js/components/Organisms/MpiStepPaint/MpiStepPaint.js",
     "js/components/Organisms/MpiStepPaint/MpiStepPaint.css",
-    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
     "js/shell/preloadStyles.js",
     "js/components/types.js",
     "docs/playbooks/add-flow/ui/paint-gizmo.md",
-    "docs/playbooks/add-flow/ui/carousel-frame.md",
     "docs/playbooks/add-flow/ui/README.md",
-    ".agents/mpi-kanban/tasks/MPI-567/validation.md"
+    ".agents/mpi-kanban/tasks/MPI-567/validation.md",
+    "js/components/Organisms/MpiStepBox/MpiStepBox.js",
+    "js/components/Organisms/MpiStepBox/MpiStepBox.css",
+    "docs/playbooks/add-flow/01-descriptor-and-ops.md",
+    "tests/inject-params-titles.test.cjs",
+    "js/components/Primitives/MpiCanvas/MpiCanvas.js",
+    "js/components/Primitives/MpiCanvas/managers/brushDab.js"
   ]
 }

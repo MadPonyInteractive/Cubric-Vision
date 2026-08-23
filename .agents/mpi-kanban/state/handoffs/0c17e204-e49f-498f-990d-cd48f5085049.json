@@ -1,0 +1,77 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "0c17e204-e49f-498f-990d-cd48f5085049",
+  "generated_at": "2026-08-23T06:02:00Z",
+  "status": "resolved",
+  "session": {
+    "name": "MPI-567 session 10 - Fabio's live feedback triaged, the missing prompt fixed, the every-flow half split into MPI-606",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Ask Fabio what he saw in the live Flow Library, then run /mpi-add-flow properly - four of its sections were never opened.",
+    "status": "in_progress",
+    "summary": "He answered with nine items. SIX were shared flow-frame bugs, so at his instruction they became MPI-606 with every root cause traced to the line, and this card kept only the scribble-contained half. Shipped here: the missing prompt (a BUG - inputSchema.positive is read by nothing) and the two missing 05-verify test gates, all mutation-checked, 686 tests passing. THREE ANSWERED ITEMS ARE BUILT AND WAITING: rename the op to flowScribObj, add the brush-preset dropdown, show the doodle on the box step. None is blocked."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+    "completed": [
+      "TRIAGED FABIO'S NINE ITEMS to root causes, then SPLIT the shared half into MPI-606 (todo/planned, top of board) at his instruction so a separate session can run it in parallel. MPI-606's plan.md carries all six root causes traced to the line plus its file footprint, and names the files MPI-567 holds so neither session reaches across.",
+      "THE MISSING PROMPT WAS A BUG, NOT A MISSING FEATURE. The FlowDef carried `positive: 'string'` inside `inputSchema`, and inputSchema is read ONLY for `.media` - a prompt reaches a run by being a declared FIELD with id `positive`. So the flow shipped with no prompt box, and the dead key read as proof it was handled through a review, a green suite and a handoff. Fixed: a `text` field on the paint step, dead key deleted with a comment saying why. The graph needed nothing - node 17 Input_Positive -> StringConcatenate -> CLIPTextEncode was always there.",
+      "REVERTED A TWO-SURFACE PROMPT BEFORE IT SHIPPED. Declaring `positive` on the paint step AND the run slide drops edits from the SECOND run onward: gizmo-step fields are role-keyed in _stepValues, flow fields live in _fieldValues, _collectInputs applies the flow store LAST, and after one run s_flowInputs seeds the run-slide copy which then overwrites what the user typed on the step. character-sheet does declare its prompt twice and works ONLY because its prompt step is kind:'fields', a FRAME kind with no role that seeds into the flow store by design. Caught by reading; no test here would have caught it.",
+      "TWO MISSING 05-VERIFY GATES CLOSED. tests/inject-params-titles.test.cjs had NO case for this flow despite it carrying more titled injection points than any other; ten Input_* plus Output_Image now pinned, and Input_Positive asserted to STAY titled (the deliberate inverse of Outpaint/Head Swap, which leave that node untitled so an empty injected string cannot clobber a baked instruction). flow-result-compare pins compare:'image1'. Three mutants all RED, files restored byte-for-byte via sha256 in a finally block. 686 tests pass, up from 684.",
+      "THE REUSABLE FINDINGS ARE IN docs/, NOT ON THE CARD (Fabio's explicit instruction - cards get deleted, and MPI-596 plus future flows need them). docs/playbooks/add-flow/01-descriptor-and-ops.md gained three sections: a prompt is a FIELD and inputSchema reads only media; a shared field id on a GIZMO step plus the run slide drops edits on run 2; the op key becomes the output filename prefix so renaming is free only before release. existing-flows/scribble-to-object.md's stale 'app half is not started' status is healed and now records every decision below.",
+      "ANSWERED, NOT CHANGED: the free-ratio box is correct. It wraps an object PLUS the ground its shadow falls on, never square, and MpiMaskSquareBbox(64) squares it in the graph anyway. Locking a ratio would only deny a subject its shadow room.",
+      "Commits 759cac47 (code + docs) and 5127ba45 (board split). UNPUSHED."
+    ],
+    "pending": [
+      "RENAME THE OP TO `flowScribObj` (Fabio wrote FlowScribObj; use camelCase to match flowHeadSwap - it yields the same FLOWSCRIBOBJ_001 badge). Mechanical, five files, ALL OURS: js/data/commandRegistry.js, js/core/operationRegistry.js, operation_registry.json, js/data/modelConstants/universal_workflows.js, and the FlowDef's `operation`. FREE because the op is unreleased (appVersionIntroduced 1.5.0 vs released APP_VERSION 1.4.2) so no user has a file named after it - flowHeadSwap (1.1.0) and the two LTX flows (1.4.2) ARE released and must keep their long names. RE-RUN npm test after: the op key is matched by name in several sweeps.",
+      "BRUSH TYPES = the ten BRUSH_PRESETS as an MpiDropdown on MpiStepPaint. Fabio meant the History control, which is MpiMaskStrip's (options: BRUSH_PRESETS.map(...)) - the History PAINT tool has none. CHEAP: PaintManager.brushPreset already exists (~73) and the shared dab already honours it (~195-203), so this is a control, not new paint code. Persist it in the step's reported value beside color/brushSize/mode so Reuse restores it.",
+      "SHOW THE DOODLE ON THE BOX STEP - ghost or stamped, Fabio said either is fine. MUCH CHEAPER THAN FIRST SCOPED, and this is the finding to not re-derive: both steps declare role 'image1', so they SHARE one _stepValues entry - MpiStepBox already receives the paint layer as props.value.paint and simply does not draw it. NO frame-contract change. Head Swap has no paint sibling so its value.paint is undefined and it is untouched. TAKE MpiStepBox INTO THE CLAIM FIRST - it is not in it yet.",
+      "HOLD-SPACE = ZOOM/PAN on the paint step. Overrides an explicit MpiStepPaint ~211 decision ('Fit the whole image into the stage. No pan, no zoom - a step is one gesture') - heal that comment rather than leaving it contradicting the code. BLOCKED BEHIND MPI-606 bug 2: spacebar currently advances a step, so building this first means the two fight.",
+      "GRAPHICS DO NOT EXIST and it is not silent - Fabio's console spams repeating 404s for flow-scribble-object.webp and .mp4. All six other flows have both files in comfy_workflows/display/. That is the gradient placeholder and his 'something's missing'. Separate /mpi-flow-graphics pass, and note the filenames follow the flow ID, so do this AFTER the rename settles.",
+      "The box step still defaults to the WHOLE IMAGE (the measured worst case). Auto-seeding it from the drawing's alpha bbox is designed and NOT built; showing the doodle may make it unnecessary, so build the ghost first and re-ask.",
+      "No reuse round trip, and no live in-app run since the prompt landed - that is 05-verify.md's Definition of Done and it is what closes this card.",
+      "At close-out: heal docs/playbooks/add-flow/blending-into-a-photo.md - its headline conclusion and graph-tail section are HISTORY, and its 'under ~2 is invisible' rule needs the dir/cnr split. The three laws behind it all SURVIVED. Also heal this card's acceptance list: it still says 'Canny for a clean structured drawing', but canny's niche is a TONAL drawing."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-567",
+    "title": "Scribble-to-object Flow - user draws on the image, ControlNet + SDXL renders it in",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-567/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      "brief": ".agents/mpi-kanban/tasks/MPI-567/brief.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-567/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Rename the op to `flowScribObj` across the five files listed in plan.md (free - unreleased), re-run npm test, then add the BRUSH_PRESETS dropdown to MpiStepPaint and draw the doodle on MpiStepBox from props.value.paint. All three are decided, unblocked and scribble-contained. Do NOT touch MpiBaseFlow.js, MpiColorPicker.js or hotkeyRegistry.js - those are MPI-606's, running in a parallel session.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "THE EVERY-FLOW BUGS ARE MPI-606's, NOT THIS CARD's (Fabio, 2026-08-23). Six of them, each traced to the line in MPI-606/plan.md. Do not fix them here even when one blocks you - file an mpi-message and stop that line of work. MPI-606 owns MpiBaseFlow.js, MpiColorPicker.js, js/managers/hotkeyRegistry.js and docs/playbooks/add-flow/ui/carousel-frame.md.",
+      "DURABLE FINDINGS GO IN docs/, NOT ON THE CARD (Fabio, explicit). Cards get deleted; MPI-596 and future flows need this. The generic traps are in docs/playbooks/add-flow/01-descriptor-and-ops.md and the flow-specific record in existing-flows/scribble-to-object.md. Keep adding there, not to plan.md.",
+      "A PROMPT IS A FIELD, NOT AN inputSchema KEY. inputSchema is read ONLY for `.media`; any other key in it is decoration that survives review because it looks like the thing that was asked for. `promptRequired: true` does not save you either - it is declared on fifteen-odd ops and read by nothing (MPI-606 bug 5).",
+      "A SHARED FIELD ID MUST LIVE ON ONE SURFACE while the flow uses GIZMO steps. Two surfaces works for character-sheet only because its prompt step is kind:'fields', a FRAME kind with no role. Unifying the stores is MPI-606 bug 6; until it lands, one declaration.",
+      "The op key IS the output filename prefix (routes/projects.js ~1812, 24-char cap). Renaming is free before release and is user data after - check appVersionIntroduced against APP_VERSION before touching any op key."
+    ],
+    "constraints": [
+      "HEREDOCS AND BACKSLASH-NEWLINE CONTINUATIONS ARE BOTH BLOCKED by guard-shell. Write a .py or a message file with the Write tool and run/pass it by path; `git commit -F <file>` is how the commits here were made. Windows python also needs sys.stdout.reconfigure(encoding='utf-8'), and json.load on a board file needs encoding='utf-8-sig'.",
+      "A MUTATION TEST MUST RESTORE IN `finally` and verify by sha256, or the crash that kills it leaves a real repo file broken and the mutant reads as your own edit. All three mutation runs this session did, and comfy_workflows/ was re-confirmed clean against HEAD afterwards.",
+      "RE-RUN research/lanpaint/graph_parity.py AFTER ANY EDIT TO THE GRAPH. A positionally shifted widgets_values entry is silent - the converter shifts every later value and ComfyUI still validates. The graph was NOT edited this session.",
+      "PUSH IS USER-AUTHORIZED even though project-profile.md says push_policy: auto - CLAUDE.md § Git and Commits wins. Commits 759cac47 and 5127ba45 are UNPUSHED, on top of ~17 earlier unpushed commits shared with a peer session.",
+      "validate_board.py FAILS on ~16 PRE-EXISTING errors, all MPI-573's event log using the wrong shape (`event`/`task` instead of `type`/`id`/`schema`). Byte-identical in HEAD, another card's log - do not 'fix' it as part of this card, and do not read the failure as something you caused.",
+      "Input_Edit_Clip.clip_name must stay DOTTED while Input_Base_Model and Input_Edit_Model stay plain: clip_name is NOT on comfyController._inject's spray list, so a plain key matches the node and silently writes nothing."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-567/plan.md",
+      "docs/playbooks/add-flow/existing-flows/scribble-to-object.md",
+      "docs/playbooks/add-flow/01-descriptor-and-ops.md",
+      ".agents/mpi-kanban/tasks/MPI-606/plan.md",
+      "js/data/flowsRegistry.js"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/0c17e204-e49f-498f-990d-cd48f5085049.json and use mpi-continue to resume MPI-567 (Scribble-to-object Flow), which is in `doing`. Fabio ran the flow live and reported nine issues; SIX were shared flow-frame bugs and are now MPI-606 (todo/planned, top of board) running in a PARALLEL session - it owns MpiBaseFlow.js, MpiColorPicker.js, js/managers/hotkeyRegistry.js and ui/carousel-frame.md, so do NOT edit those from this card. Shipped last session: the missing prompt, which was a BUG not a feature - the FlowDef declared positive:'string' inside inputSchema and NOTHING reads that (inputSchema is consumed only for .media); a prompt reaches a run by being a declared FIELD with id 'positive'. It is now a text field on the paint step, declared on ONE surface only, because restating it on the run slide silently overwrites step edits from the second run onward. Also closed two missing 05-verify gates (inject-title case for this flow, and the compare pin), all three new assertions mutation-checked RED with files restored byte-for-byte; 686 tests pass. Commits 759cac47 and 5127ba45, UNPUSHED. YOUR NEXT ACTION, all three decided and unblocked: rename the op to `flowScribObj` across five files (free - unreleased at 1.5.0 vs released 1.4.2; re-run npm test, the key is matched by name in several sweeps), add the ten BRUSH_PRESETS as a dropdown on MpiStepPaint (PaintManager.brushPreset already exists and the shared dab already honours it, so it is a control not new paint code), and draw the doodle on the box step - which needs NO frame change, because both steps declare role 'image1' and therefore share one _stepValues entry, so MpiStepBox already receives the layer as props.value.paint and simply does not draw it; take MpiStepBox into the claim first. Durable findings go in docs/, never the card - Fabio's explicit instruction, because cards get deleted and MPI-596 needs them; the generic traps are already in docs/playbooks/add-flow/01-descriptor-and-ops.md. Three traps that will cost you: heredocs AND backslash-newline continuations are both blocked by guard-shell so write a file and run it by path; a mutation test must restore in `finally` and verify by sha256; and validate_board.py fails on ~16 PRE-EXISTING MPI-573 event-shape errors that are not yours."
+}

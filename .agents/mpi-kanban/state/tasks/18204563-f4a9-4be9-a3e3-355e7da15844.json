@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task/v1",
   "id": "18204563-f4a9-4be9-a3e3-355e7da15844",
-  "title": "MPI-567 - rebuild flow_scribble_object stage 2 onto the LanPaint route",
+  "title": "MPI-567 - scribble-to-object flow: add-flow playbook sweep + Fabio UI feedback",
   "task_card": "MPI-567",
   "plan": ".agents/mpi-kanban/tasks/MPI-567/plan.md",
   "status": "in_progress",
-  "owner_session": ".agents/mpi-kanban/state/sessions/1e3a05f1-497d-453b-a95c-f01265e49f39.json",
+  "owner_session": ".agents/mpi-kanban/state/sessions/47f5ad77-9dc0-47ce-86a2-d79f1dfe0dea.json",
   "created_at": "2026-08-22T19:28:00Z",
-  "updated_at": "2026-08-22T19:28:00Z",
+  "updated_at": "2026-08-23T06:23:27Z",
   "allowed_actions": [
     "read",
     "edit",

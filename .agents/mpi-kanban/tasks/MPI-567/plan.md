@@ -10,6 +10,126 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 
 ## Current State
 
+**2026-08-23, session 11b — EVERYTHING THIS SESSION SHIPPED IS VALIDATED BY FABIO ON REAL RENDERS
+("Your changes are all validated, by the way"). The flow now produces good output. The next
+action is STYLE PICKING — see § Remaining Work — plus the reuse round trip and the graphics.**
+
+**🟢 THE CONTROLNET FIX IS CONFIRMED IN THE APP.** He ran it repeatedly at slider 0.7 on the new
+mapping and got clean renders — a crab stamped into a beach scene, no ink-as-edges artifacts.
+`FLOWSCRIBOBJ_006` / `_007` in his gallery are the evidence.
+
+**🟢 THE SHADOW SCARE WAS A PIXEL FLOOR, NOT A BLEND BUG — and he diagnosed it himself.** A small
+object boxed in a small source came back with no usable contact shadow; the SAME drawing on a **2x
+upscaled source** produced a correct one. The variable is the box's size in SOURCE pixels, not its
+size on screen. Written up in
+[blending-into-a-photo.md](../../../docs/playbooks/add-flow/blending-into-a-photo.md)
+§ "A shadow needs PIXELS" — it is the same starvation the ~96px ink floor describes one stage
+earlier, so two floors, one cause. **Do not re-derive this by chasing the region maths.**
+
+**🔴 THE OPEN PROBLEM IS STYLE.** The rendered object comes back in a different style from the
+photo. Widening the box so the model can see the existing character as a reference **was tried and
+did not work**. Fabio's direction is a style picker on the last phase using Klein's style system;
+scope and open questions are in § Remaining Work, and it probably wants its own card.
+
+---
+
+**2026-08-23, session 11b — FABIO RAN IT AND FOUND THE CONTROLNET MAPPING BUG. Fixed, plus the
+two remaining UI items.**
+
+**🔴 THE CONTROLNET MAPPING WAS THIS FLOW'S, NOT THE APP'S — and it was producing bad renders.**
+Fabio: *"every time I go over a 50 I start getting these lines that look like poop."* He was right
+and it was worse than the strength range alone. Two axes diverged, and only the first had ever
+been written down anywhere:
+
+| | every other ControlNet workflow | this flow, as shipped |
+|---|---|---|
+| slider 0-1 maps to strength | 0 - **0.5** | 0 - **1.0** |
+| ControlNet released at | **56.9%** of the steps | **100%** |
+
+All eight other ControlNet workflows agree with each other (`0.569`, or `0.57` on the two chroma
+ones); this flow was the sole exception in the repo. `promptControlDefaults.js` states the rule
+outright — the 0-0.5 remap exists *"because past ~0.5 those ControlNets artefact"* — so slider 0.50
+here was **double the app's maximum, held to the final denoise step**. Strength alone makes a render
+stiff; steering through the last steps is what stops the model resolving texture and turns a stroke
+into a physical ridge. Now byte-identical to `t2i_sdxl_realistic`: `MpiFloat(1) ->
+MpiNormalizeValue(0-1 -> 0-0.5) -> ControlNetApplyAdvanced(end_percent 0.569)`, in the runtime graph
+and its `raw/` twin, `graph_parity.py` still OK. Default moved to **1**, matching
+`PROMPT_CONTROL_DEFAULTS.controlStrength`. **The mapping is now swept by a test** that fails any
+workflow diverging on either axis — mutation-checked on both.
+
+**⚠️ THE MEASURED BAND IS NOW STALE.** The FlowDef's `0.30-0.60 correct / 0.80 ink-as-clothing /
+1.00 lines-as-straps` sweep was measured at the OLD mapping — those are RAW strengths at
+`end_percent` 1 and they do NOT convert to slider positions now. Marked historical in the FlowDef,
+and the field `note` rewritten to describe the symptom rather than quote a number. **Re-sweep
+before anyone quotes one again.** The finding that survives is the SHAPE of the failure: a
+drawing's shape survives far below the strength at which its lines start being rendered as objects.
+
+**HOLD-SPACE PAN/ZOOM AND THE CURSOR RING WERE THE SAME BUG TWICE: the step hand-rolled three
+things the canvas family already owned**, which is exactly what its own header forbids for strokes.
+The view is now `ViewManager` (bringing `minScale` and `isManagedView`, both of which a bare
+`{offsetX, offsetY, scale}` silently lacked), and the ring is now
+`brushDab.drawBrushRing`, called from BOTH `MpiCanvas` and the step — so the eraser is frost-blue
+here as it is on the History canvas, instead of the solid white circle both tools shared. Space
+binds the EXISTING `canvas.pan.start` / `canvas.pan.end` ids, so no hotkey was invented and
+`hotkeyRegistry.js` (MPI-606's) stayed untouched. Unblocked by MPI-606's commit `c4dacc0c`.
+
+Probed on a real instance off real pixels: the ring flips heat-pink -> frost-blue with the tool and
+vanishes under Space; a 60px Space-drag moves the image bbox by exactly 60; Space+wheel grows it
+250 -> 306 without touching brush size, which resumes on release. Full table in `validation.md`.
+
+---
+
+**2026-08-23, session 11 — THE THREE ANSWERED UI ITEMS ARE BUILT AND PROBE-VERIFIED IN A REAL
+BROWSER. The next action is Fabio's eye check, then the live run + reuse round trip.**
+
+Shipped this session, all three scribble-contained and none of them touching MPI-606's files:
+
+1. **The op is `flowScribObj`** (was `flowScribbleObject`), free because it is unreleased at
+   `appVersionIntroduced 1.5.0` against a released `APP_VERSION` 1.4.2. Badge is now
+   `FLOWSCRIBOBJ_001`. **It was SIX files, not the five the handoff listed** — the op key is
+   matched BY NAME in the test suite too (`flow-model-choice.test.cjs` asserts
+   `COMMANDS.<op>.injector`; `inject-params-titles.test.cjs` names it in prose). That correction
+   is now in `01-descriptor-and-ops.md` so the next rename sweeps the repo, not a file list.
+2. **Brush shape is an `MpiDropdown` of the ten `BRUSH_PRESETS`** on the paint step's control row,
+   persisted as a `brush` key in the step value so Reuse restores it. Pure control:
+   `PaintManager.brushPreset` already existed and the shared dab already read it (~195), so no
+   stroke behaviour changed and nothing new records on the UndoStack. Opens UP — the strip's
+   version opens down because it sits near the top of the sidebar, this row sits under a 46vh
+   stage. While adding the key, the reported value and `el.getValue()` were collapsed onto one
+   `_value()` literal; they were two copies of the same object and `brush` would have gone into
+   only one.
+3. **The box step ghosts the drawing under its rectangle** at opacity 0.55, `pointer-events:none`,
+   between the media and the overlay canvas so the handles stay on top. **No frame change** — both
+   steps declare role `image1`, the frame MERGES gizmo reports per role (`MpiBaseFlow` ~1254), so
+   `MpiStepBox` already received the layer as `props.value.paint` and simply did not draw it. A
+   box step with no paint sibling (Head Swap) has an undefined `.paint`, so the node is REMOVED
+   rather than hidden — a class carrying `display` outranks the `hidden` attribute (MPI-382), and
+   an `<img>` with no src is a broken-image slot.
+
+**Verified, not assumed** — 700/700 `npm test` (686 baseline + 14 from MPI-606's untracked
+`tests/flow-frame.test.cjs`), plus a live probe against this agent's OWN app instance on a fresh
+profile at :58176 (Fabio's :3000 confirmed alive and untouched afterwards):
+
+- all ten presets render in order, picking **Spray** moves `getValue().brush` to `'spray'` and the
+  trigger label to `Spray` — so the control is wired to `PaintManager`, not just drawn;
+- the ghost's rect is byte-equal to the media's (810,17,300,374) **while the stage carries
+  `overflow:'allow'` padding of `16px 53px`** — that padded case is exactly what a naive
+  `top:0;left:0` gets wrong, and it is why the position is read off `mediaEl.offsetLeft/Top`;
+- `ghostInBare: false` — a box step mounted with no paint value has no ghost node at all.
+
+**Three findings worth not re-deriving.** The staleness worry about the ghost is unfounded:
+`_teardownSlide()` destroys and rebuilds every gizmo on navigation, so redraw-then-forward
+re-reads `props.value`. `MpiDropdown` PORTALS its list to `document.body`, so a probe that queries
+inside the slot finds zero options and reads as a broken dropdown — it is not. And
+`resolveMediaUrl` rewrites any bare path to `/project-file?path=…`, so a probe feeding a static
+repo path gets a 404 and a zero-sized image that reads as a broken component.
+
+**Board hygiene done here:** MPI-567's claim listed `MpiBaseFlow.js` and `ui/carousel-frame.md`,
+which MPI-606 is editing right now — both released from this card's claim and `files.json`, and
+`MpiStepBox.js/.css` taken in. Nothing was edited across the line in either direction.
+
+---
+
 **2026-08-23, session 10 — FABIO'S FEEDBACK IS IN, AND THE EVERY-FLOW HALF IS NOW [MPI-606](../MPI-606/).**
 
 He ran the flow end to end (it works — the blend is good) and found nine things. **Five are in
@@ -117,7 +237,7 @@ those, not this card.**
 
 **2026-08-22, session 9b — THE APP HALF IS WIRED. Everything but a live run is done.**
 
-- **Op + FlowDef shipped.** `flowScribbleObject` in all four op files at
+- **Op + FlowDef shipped.** `flowScribObj` in all four op files at
   `appVersionIntroduced: '1.5.0'` (the four sibling flow ops in this dev cycle use it; released
   `APP_VERSION` is 1.4.2). `scribble-object` in `flowsRegistry.js`.
 - **TWO choosable slots, both Fabio's call** (2026-08-22): `Render model` over all five SDXL ids,
@@ -659,7 +779,7 @@ Three findings from the user's own testing of the sibling card, all of which bea
       → PARITY OK; no orphans; LiteGraph link table consistent; the 10 workflow-reading tests pass
       (53 assertions); and `graph_liverun.py` ran the shipped twin's own stage 2 on the bench →
       **pixel-identical to session 8's `f096`** on sun and overcast, 16.0s warm.
-- [x] **Wire the flow.** DONE 2026-08-22 (session 9) — `flowScribbleObject` in all four op files
+- [x] **Wire the flow.** DONE 2026-08-22 (session 9) — `flowScribObj` in all four op files
       at `appVersionIntroduced: '1.5.0'`, the `scribble-object` `FlowDef` with TWO choosable slots
       (Fabio: the SDXL checkpoint AND the Klein edit model are both the user's to pick), the paint
       + box steps, and the `Input_Control_Net` radio + mandatory `Input_Control_strength` slider.
@@ -700,6 +820,58 @@ Three findings from the user's own testing of the sibling card, all of which bea
   absence of the `.cubricdl` sidecar, never on the dropdown.
 
 ## Remaining Work
+
+**From Fabio's live look, in order (session 11 closed the first three):**
+
+- ~~Rename the op to `flowScribObj`~~ **DONE** session 11.
+- ~~Brush types as a dropdown on the paint step~~ **DONE** session 11.
+- ~~Show the doodle on the box step~~ **DONE** session 11.
+- ~~Hold-space = zoom/pan on the paint step~~ **DONE** session 11b, once MPI-606's `c4dacc0c`
+  freed the spacebar. The *"No pan, no zoom — a step is one gesture"* comment is healed rather
+  than deleted: it records the reversal and why (a ~96px object drawn into a 4000px photo through
+  a 46vh window is one gesture the user cannot SEE).
+- ~~Brush and eraser share one white-circle cursor~~ **DONE** session 11b — the ring is
+  `brushDab.drawBrushRing` now, shared with the History canvas.
+- ~~The ControlNet strength mapping diverges from every other workflow~~ **DONE** session 11b,
+  and it needs a **live re-sweep** to set the new usable band (see § Current State).
+- **🆕 STYLE PICKING ON THE LAST PHASE — the biggest open item, and probably its own card**
+  (Fabio, 2026-08-23). The rendered object comes back in a DIFFERENT STYLE from the photo it is
+  being placed into: he generated a crab into a flat-shaded cartoon beach scene and got a
+  semi-realistic crab. He tried widening the box so the model could see the existing character as
+  a style reference and **it did not work** — the crab still rendered in its own style. So the
+  style has to be DECLARED, not inferred from context.
+  His shape: *"we would benefit from using the styles in the editors for Klein in this case. The
+  user could pick a style in the last phase. We already have a style picker."* His own estimate of
+  the cost, and do not discount it: *"it's not easy either… we would need to hook up the styles
+  portion of the Klein 4B and 9B, which means we would need two different workflows, I think."*
+  Open questions for whoever picks this up: does `MpiStylePicker` (an INDEX-valued Primitive, not
+  an `MpiDropdown`) drop into a flow's declared `fields` at all, or is it workspace-only? Does the
+  blend stage's Klein arm already carry the style LoRA rack, or does the graph need a second arm?
+  And is "two workflows" really required, or does the existing `Input_Edit_Model` /
+  `Input_Edit_Clip` two-arm `modelParams` already cover 4B vs 9B? Read
+  `docs/models/krea2/`-style LoRA rack notes and `.claude/rules/comfy_injection.md` before scoping.
+- **Graphics do not exist and it is not silent** — Fabio's console spams repeating 404s for
+  `flow-scribble-object.webp` and `.mp4`; all six other flows have both in `comfy_workflows/display/`.
+  Separate `/mpi-flow-graphics` pass. The filenames follow the flow ID (`scribble-object`), which
+  the op rename did NOT change, so this is unblocked.
+- **The box step still defaults to the WHOLE IMAGE** (the measured worst case). Auto-seeding it
+  from the drawing's alpha bbox is designed and NOT built — the ghost may make it unnecessary, so
+  ask Fabio after he has seen the ghost before building it. **Note the tension with the shadow
+  finding below**: a tight auto-box is exactly what starves a shadow of pixels, so if this is ever
+  built it needs a pixel floor, not just a bbox.
+- **`Output_Image` is a `SaveImage` here and a `PreviewImage` in every other flow.** It writes an
+  extra copy into the engine's own output dir every run that nothing collects — looks like an
+  authoring leftover, but changing the Output node class touches how the result is collected, so
+  it is Fabio's call rather than a quiet fix.
+- **`flow_ltx_extend` and `flow_ltx_foley` have no `MpiClearVram`** either, and they run LTX 2.3.
+  Surfaced while giving this flow one; not this card's to fix.
+- **The live run + reuse round trip** per `05-verify.md`. That is this card's Definition of Done.
+- At close-out: heal `docs/playbooks/add-flow/blending-into-a-photo.md` (its headline conclusion
+  and graph-tail section are HISTORY; its "under ~2 is invisible" rule needs the dir/cnr split),
+  and heal this card's acceptance list — it still says *"Canny for a clean structured drawing"*
+  when canny's real niche is a TONAL drawing.
+
+**Bench / graph work, none of it blocking the above:**
 
 Both bench gates are CLOSED, the `paint` step kind is BUILT, and the graph in both formats is now
 the measured LanPaint route (§ Current State, session 9). The hold is LIFTED — the inpaint-node

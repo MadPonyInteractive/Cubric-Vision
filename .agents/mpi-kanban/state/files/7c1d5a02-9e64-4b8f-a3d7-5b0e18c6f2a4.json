@@ -7,22 +7,25 @@
     "js/components/Organisms/MpiStepPaint/MpiStepPaint.js",
     "js/components/Organisms/MpiStepPaint/MpiStepPaint.css",
     "js/components/Organisms/MpiBaseFlow/stepKinds.js",
-    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
     "js/shell/preloadStyles.js",
-    "docs/playbooks/add-flow/ui/paint-gizmo.md",
-    "docs/playbooks/add-flow/ui/carousel-frame.md"
+    "docs/playbooks/add-flow/ui/paint-gizmo.md"
   ],
   "status": "claimed",
   "claim_kind": "write",
-  "owner_session": ".agents/mpi-kanban/state/sessions/1483d706-377f-4819-b33a-b3e154366826.json",
+  "owner_session": ".agents/mpi-kanban/state/sessions/47f5ad77-9dc0-47ce-86a2-d79f1dfe0dea.json",
   "owner_role": "implementer",
   "claimed_at": "2026-08-22T06:57:00Z",
-  "heartbeat_at": "2026-08-22T06:57:00Z",
+  "heartbeat_at": "2026-08-23T06:23:27Z",
   "note": "The paint step kind (handoff 53efd5be). flowsRegistry.js and types.js are NOT claimed here - MPI-599 holds them; edits there are a re-read-then-append, by explicit pathspec.",
   "recent_events": [
     {
       "at": "2026-08-22T06:57:00Z",
       "event": "files_claimed"
+    },
+    {
+      "at": "2026-08-23T06:23:27Z",
+      "event": "claim_narrowed",
+      "note": "session 11 released MpiBaseFlow.js and ui/carousel-frame.md - MPI-606 owns both and is live"
     }
   ]
 }

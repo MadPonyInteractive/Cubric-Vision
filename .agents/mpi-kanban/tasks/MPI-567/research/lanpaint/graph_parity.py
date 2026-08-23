@@ -62,6 +62,13 @@ ALLOW = {
     ("9", "text"): "prompt is wired from the MpiText node, compared separately",
     ("15", "seed"): "wired to Input_Seed (node 26) - what the old graph did",
     ("18", "filename_prefix"): "flow keeps its own Output_Image prefix",
+    # MPI-567, 2026-08-23 (Fabio): the flow was the ONLY graph in comfy_workflows/
+    # with no MpiClearVram. Node 170 now sits between the stitch and the output,
+    # the same place Head Swap (115) and Outpaint (493) put theirs, so the output
+    # is fed by 170 rather than 169 directly. The bench route is unchanged - this
+    # is an app-side release of the transformer's VRAM before the image is handed
+    # back, and seamfix has no reason to know about it.
+    ("18", "images"): "output is fed through MpiClearVram 170, as every other workflow does",
 }
 
 expected = seamfix.build("STAMPED", "MASKPNG", "PREFIX", feather=96)
