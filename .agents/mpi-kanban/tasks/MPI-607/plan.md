@@ -8,6 +8,88 @@ Research session 2026-08-22/23 evaluated Chatterbox, Qwen3-TTS, DramaBox and Vib
 Nothing in the Vision repo was edited. All changes so far are on the standalone bench
 (`G:\ComfyUi`, port 8188) and in a session scratchpad.
 
+> **2026-08-23 update — read `## Plan Drift`, `validation.md` and `research/voice-library-0*.md`
+> before the sections below.** The API-patching route is abandoned and Step 1 is
+> withdrawn; the Qwen blocker described below is real but is no longer the thing being
+> solved. **Branch B is the chosen direction** (branch A parked as too risky to ship).
+> Four research agents have reported and the branch-B corpus question is ANSWERED.
+
+> ### 2026-08-23 LATER — Fabio changed the requirement. READ THIS BEFORE THE BLOCK BELOW.
+>
+> **The goal is a voice DESIGNER the user drives, not a library the user picks from.**
+> His reason: the objective is that a user creates their own characters in the character
+> sheet and then **voices them**. A picker limits them to our voices; a character deserves
+> an original voice. (Product thread: memory `project_lora_free_character_system` -- the
+> character sheet is the keystone artifact, and a voice is one more per-character asset.)
+>
+> **This reopens branch A in substance.** Offline authoring only works for a fixed
+> library. If the user designs a voice on demand, Qwen3-TTS has to run **at user request**
+> -- which is exactly what was parked as too risky to ship.
+>
+> **The likely resolution, NOT yet decided: run voice design on the RunPod Pod.**
+>
+> - **Voice design is text-in / audio-out. It sends NO reference clip.** So it carries no
+>   biometric data, and the GDPR/Pod concern in `research/voice-library-03` does not apply
+>   to it at all -- that concern is about *cloning*, which stays local.
+> - The Pod image can **bake** a `transformers==4.57.3` venv at build time. That removes
+>   every specific risk Fabio objected to: no self-provisioning venv on a user's machine,
+>   no `virtualenv`-on-embeddable gamble, no download-manager or progress plumbing, no
+>   second runtime in the portable archive.
+> - Cost: voice design becomes **remote-only** (needs a Pod). That is a product decision
+>   Fabio has not made. A local path can follow later via the branch-A vendor if wanted.
+>
+> **The library work is not wasted** -- offline-authored synthetic voices still make good
+> defaults/starters, cost nothing at runtime, and give the designer somewhere to start
+> from. It stops being the whole answer and becomes the seed set.
+>
+> **Step 2b's clone test still matters, unchanged**: if a Qwen-designed voice does not
+> clone well through Chatterbox, the whole design-then-speak chain breaks whatever the
+> hosting decision is. Do it first.
+
+**The answer for a LIBRARY, in one line: build it from SYNTHETIC voices, authored offline.**
+(Superseded as the primary goal by the block above; still correct for the seed set.)
+
+Both the legal research and the prior-art research converge on it from opposite
+directions:
+
+- A curated library of REAL voices puts Vision in the *Lehrman v. Lovo* posture -- the
+  entity that collected, held and commercially distributed voice profiles. Primary
+  liability moves from the user to us, per voice, for ever. A licence does not cure
+  right-of-publicity or GDPR Art. 9 biometric consent.
+- A library with **no real person in it** has no right-of-publicity subject, no biometric
+  data, no consent chain, no takedown surface. Independently corroborated: Kokoro v1.0
+  ships 54 voices commercially precisely because they are designed rather than cloned,
+  and ElevenLabs' own library is voice-design voices plus owner-verified clones -- never
+  third-party curation.
+
+**And it costs users nothing, because Qwen3-TTS VoiceDesign is an AUTHORING tool here,
+not a shipped dependency.** We run it once, offline, on the bench; we ship the resulting
+`.wav` files. The isolated transformers-4 runtime is fine on a bench that never reaches a
+user. So Fabio's "design a voice" Flow survives branch B intact -- it becomes
+browse-a-library-we-designed. A 50-voice library of 10s clips is **under 10 MB**.
+
+**One cheap gate before committing:** does a Qwen-generated clip clone well through
+Chatterbox? Synthetic audio may have spectral characteristics that degrade cloning.
+Test via the HF Space (`Qwen/Qwen3-TTS-Voice-Design`) -- no local install, no vendoring,
+one afternoon.
+
+**Fallback if it does not clone well:** VCTK (CC BY 4.0, 48kHz, 109 speakers, 11 accents,
+speakers anonymised as `p225`, and the corpus was purpose-built for voice cloning) is the
+lowest-exposure real-voice option, optionally widened with GLOBE (CC0, 23,519 speakers,
+164 accents).
+
+**Two compliance facts that are now live and are not optional:**
+
+1. **EU AI Act Art. 50 has been in force since 2026-08-02.** Vision is the *provider*;
+   synthetic audio output must carry machine-readable marking. Perth covers the shape;
+   conformance to the forthcoming Code of Practice is UNVERIFIED. Penalty EUR 15M / 3% of
+   turnover. Fabio's watermarking principle turns out to be a legal requirement.
+2. **The RunPod Pod is unresolved GDPR surface.** A user's reference clip sent to the
+   remote engine is biometric data leaving their machine. Local-only cloning keeps the
+   user as controller; the remote path may not. Resolve before any Flow ships.
+
+Chatterbox is unblocked today and ships first regardless.
+
 **Model verdicts.**
 
 | Model | Licence | Verdict |
@@ -72,18 +154,62 @@ No weights downloaded yet. A ComfyUI-Manager update to the Qwen pack reverts the
 
 ## Remaining Work
 
-- **Step 1 (blocking).** Restart the bench, run `TTS_Qwen3_voice-design.json`, measure the
-  silence ratio of the output. Use `volumedetect`, not `ebur128` -- integrated LUFS reports
-  the -70 floor on clips under ~10s (memory `tool_measure_generated_audio`). Everything
-  below depends on this number.
-- **Step 2, branch A (Qwen produces speech).** Vendor `qwen_tts/` from `QwenLM/Qwen3-TTS`
-  (Apache-2.0, NOT from 1038lab/GPL-3.0 or flybirdxx/unlicensed) into `ComfyUi-MpiNodes`
-  via `/mpi-nodes-sync`, carrying the 3 patches. Add the leaf deps to
-  `dev_configs/python_deps.in`, run `node scripts/compile-node-deps.mjs`, commit both files.
-- **Step 2, branch B (Qwen produces silence).** Do not vendor. Either run Qwen in an
-  isolated `transformers==4.57.3` runtime out-of-process (the TTS-Audio-Suite pattern:
-  "Legacy Transformers 4 engines use isolated runtimes"), or drop Qwen and cover both
-  Flows with Chatterbox cloning plus a voice-reference library (see open question below).
+- ~~**Step 1 (blocking).** Measure the Qwen silence ratio on the bench.~~ **WITHDRAWN
+  2026-08-23** -- wrong pack, abandoned route. See `## Plan Drift`. Superseded by the
+  TTS-Audio-Suite evaluation, which is DONE and recorded in `validation.md`.
+- ~~**Step 1' (blocking, a DECISION not a build).** Fabio picks between branch A and
+  branch B.~~ **DECIDED 2026-08-23: branch B.** Fabio's reason: branch A "still sounds a
+  bit dangerous to our app" -- a self-provisioning second Python runtime inside a shipped
+  desktop app is risk the feature does not justify. **Branch A is parked in the backlog,
+  not rejected**; it stays costed below and becomes live again only if branch B's corpus
+  question comes back negative.
+- ~~**Step 1'' (blocking, RESEARCH).**~~ **DONE 2026-08-23** -- four agents reported,
+  findings in `research/voice-library-01..04`, conclusion at the top of `## Current State`.
+  Original scope: settle branch B's viability:
+  can a licensed, redistributable, reasonably diverse voice-reference library exist at
+  all? Four parallel research agents dispatched, covering (1) the RVC hubs weights.gg /
+  voice-models.com, (2) permissively licensed speech corpora, (3) the voice-cloning legal
+  and regulatory landscape incl. whether a curated library changes our exposure versus
+  bring-your-own-clip, and (4) prior art -- existing voice packs, TTS-Audio-Suite's
+  `CharacterVoicesNode` data model, library UX metadata, and whether a **fully SYNTHETIC**
+  library sidesteps consent entirely. Findings land in `research/`.
+- **Step 2, branch A (keep Qwen voice design) -- BACKLOG, not active.** Kept costed so it
+  can be revived without redoing the work. Vendor NARROWLY from
+  `diodiogod/TTS-Audio-Suite` (MIT) into `ComfyUi-MpiNodes` via `/mpi-nodes-sync`: its
+  `utils/runtimes/` subsystem (`bootstrap.py`, `launcher.py`, `session.py`,
+  `protocol.py`, `profiles.py`, `qwen3_tts_proxy.py`, `workers/qwen3_tts_worker.py`) plus
+  the `qwen3_tts_transformers4_dedicated` profile. Do NOT take the pack's
+  `requirements.txt` or `install.py`. The ComfyUI process never imports transformers 4,
+  so an engine bump cannot break it -- that is the whole point. Open sub-questions, in
+  order: does `virtualenv` bootstrap correctly off the Windows **embeddable** interpreter
+  (no `venv` module, `python313._pth` disables `site`); how does the runtime reach the
+  Pod, which has no such bootstrap; and how does a runtime that installs itself at first
+  use surface in the download manager and progress UI instead of hanging silently.
+- **Step 2, branch B (drop Qwen) -- ACTIVE DIRECTION.** Cover both Flows with Chatterbox cloning plus a
+  voice-reference library. Retires the transformers 4-vs-5 problem permanently and adds
+  no second runtime. Gated on the licensing/consent question below, which becomes the
+  next research step if this branch is chosen. TTS-Audio-Suite's `CharacterVoicesNode` /
+  `RefreshVoiceCacheNode` are the reference implementation of the library shape and are
+  worth reading either way.
+- **Step 2b (NEW, blocking the library only).** The one gate: generate a voice via the
+  Qwen3-TTS VoiceDesign **HF Space**, feed the clip to Chatterbox on the bench, listen.
+  Proves or kills the synthetic-library route without installing Qwen anywhere.
+  If it holds: author 30-50 VoiceDesign prompts across
+  `{young, middle-aged, senior} x {male, female} x {American, British, Australian, Indian, neutral} x {conversational, narration, character, dramatic}`,
+  3 samples each, keep the most consistent (the model is NOT deterministic), store the
+  prompt as `description_prompt` so a voice can be regenerated or varied later.
+  If it fails: fall back to VCTK + GLOBE per `research/voice-library-02`.
+- **Step 2b' (NEW, blocking the DESIGNER -- the live question).** Decide where user-driven
+  voice design runs. Leading option: **bake a `transformers==4.57.3` venv into the Pod
+  image** and expose voice design as a remote op (`c:\AI\Mpi\mpi-ci\cubric-vision-pod\`,
+  see `docs/runpod-remote-engine.md`). Sub-questions: is remote-only acceptable for this
+  feature; does the wrapper need a new endpoint or does it fit an existing graph dispatch;
+  what does the UI do when no Pod is running. A local path stays available later via the
+  branch-A narrow vendor, now demoted to a follow-up rather than the primary route.
+- **Step 2c (NEW, compliance -- do not skip).** Confirm Perth marking is applied to every
+  audio output path (EU AI Act Art. 50, live since 2026-08-02, Vision is the provider),
+  and resolve whether reference audio may go to the RunPod Pod at all. Both are recorded
+  in `research/voice-library-03`.
 - **Step 3.** Ship Chatterbox first regardless of the branch -- it is unblocked today.
   Build the dialogue splitter as an MpiNode rather than reusing `FL_ChatterboxDialogTTS`:
   speaker count as a parameter not 4 branches, warn instead of silently dropping an
@@ -99,7 +225,32 @@ No weights downloaded yet. A ComfyUI-Manager update to the Qwen pack reverts the
 
 ## Plan Drift
 
-- None yet.
+- **2026-08-23 — the blocking Step 1 is withdrawn, not deferred.** It measured the wrong
+  pack down an abandoned route. Two things landed on the same day:
+  1. The bench run of `TTS_Qwen3_voice-design.json` never reached the forward pass. It
+     died at `TypeError: create_causal_mask() got an unexpected keyword argument
+     'input_embeds'` — transformers 4->5 break **#4**, with **#5** (`cache_position`
+     dropped from the signature entirely) waiting behind it. So PR #201's 67-99% silence
+     was never reproduced here, and API patching is an unbounded series against an
+     unresponsive upstream.
+  2. `1038lab/ComfyUI-QwenTTS` is the wrong pack regardless — GPL-3.0, already ruled out
+     for vendoring. Fourteen community packs wrap Qwen3-TTS; **none is from Comfy-Org**
+     (checked against ComfyUI-Manager's registry on the bench). Six share the name
+     `ComfyUI-Qwen3-TTS`, two flagged UNSAFE by Manager, one REMOVED.
+- **2026-08-23 — `diodiogod/TTS-Audio-Suite` evaluated instead.** MIT, 55 nodes, and it
+  covers Chatterbox, Qwen3 voice design, VibeVoice, a character-voice library, and RVC.
+  Verdict in `validation.md`: **not adoptable wholesale** (numpy `<2.3.0` vs Vision's
+  `==2.5.1` fails the compile; forcing Vision's pin still costs +113 packages, 21 version
+  moves, three rival opencv distributions, and `sentry-sdk`/`wandb`). Its
+  `utils/runtimes/` isolated-runtime subsystem IS validated prior art and is far cheaper
+  than this session first estimated: `inherit_base_site_packages=True` means torch is
+  shared, so the Qwen transformers-4 runtime is a **44-package** closure, not a ~3 GB
+  duplicate stack.
+- **2026-08-23 — a Vision-side fact worth keeping.** The Windows engine python is the
+  **embeddable** distribution and has no `venv` module (verified: `ModuleNotFoundError:
+  No module named 'venv'`, 3.13.12, `python313._pth`). Any isolated-runtime design has to
+  bootstrap through pip-installed `virtualenv`, which is what TTS-Audio-Suite already
+  does. Unverified against the embeddable interpreter.
 
 ## Verification
 

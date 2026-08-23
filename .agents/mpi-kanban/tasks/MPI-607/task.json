@@ -3,14 +3,18 @@
   "id": "MPI-607",
   "title": "TTS in Vision: resolve Qwen3-TTS viability, then wire Chatterbox + Qwen as Flows",
   "description": "Two planned Flows: voice design (text -> new voice) and dialogue (references + text -> speech, multi-speaker). Blocked on one measurement: whether Qwen3-TTS produces real audio or silence on transformers 5.13.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-23T06:13:13Z",
-  "updated_at": "2026-08-23T06:19:15Z",
+  "updated_at": "2026-08-23T06:44:12Z",
   "links": {
     "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
     "events": "events.jsonl",
     "handoffs": "handoffs/"
-  }
+  },
+  "activeSessionTitle": "TTS-Audio-Suite evaluation (licence / deps / isolated runtime)"
 }

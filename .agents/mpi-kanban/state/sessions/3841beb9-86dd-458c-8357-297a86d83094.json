@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "3841beb9-86dd-458c-8357-297a86d83094",
+  "role": "implementer",
+  "claude_session_id": "3841beb9-86dd-458c-8357-297a86d83094",
+  "started_at": "2026-08-23T06:19:23Z",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "status": "active",
+  "heartbeat_at": "2026-08-23T06:19:23Z"
+}

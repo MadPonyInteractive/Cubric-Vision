@@ -1,0 +1,71 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "e51c5058-c595-484b-9770-495dec41e021",
+  "generated_at": "2026-08-23T07:31:59Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-607 TTS: killed the transformers-patching route, evaluated TTS-Audio-Suite, researched the voice-library question, landed on a user-driven voice designer",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Resolve Qwen3-TTS viability, then wire Chatterbox + Qwen as Flows in Vision.",
+    "status": "in_progress",
+    "summary": "The original blocker (measure Qwen's silence ratio on transformers 5) is WITHDRAWN - wrong pack, abandoned route. Branch A (ship an isolated transformers-4 runtime inside the app) was parked as too risky. Four research agents settled the voice-library question. Fabio then changed the requirement: he wants a voice DESIGNER the user drives per character, not a library picker - which reopens the hosting question. Leading answer is to bake a transformers-4 venv into the RunPod Pod image and expose voice design as a remote op. Not decided. No Vision code has been written."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-607/plan.md",
+    "completed": [
+      "Diagnosed transformers 4->5 breaks #4 and #5 (create_causal_mask: input_embeds -> inputs_embeds, and cache_position removed from the signature entirely) - the bench run never reached the forward pass, so PR #201's 67-99% silence was never reproduced here",
+      "Established 1038lab/ComfyUI-QwenTTS is the wrong pack (GPL-3.0); 14 community packs wrap Qwen3-TTS and NONE is from Comfy-Org",
+      "Evaluated diodiogod/TTS-Audio-Suite: MIT pass; dependency closure FAILS (numpy<2.3.0 vs Vision's ==2.5.1; forcing Vision's pin still costs +113 packages, 21 version moves, three rival opencv distributions, sentry-sdk/wandb); isolated-runtime pattern validated and far cheaper than first estimated (inherit_base_site_packages=True shares torch, 44-package closure)",
+      "Verified the Windows engine python is the EMBEDDABLE distribution with no venv module",
+      "Four research agents on the voice-library question - findings in research/voice-library-01..04"
+    ],
+    "pending": [
+      "Step 2b (do first): does a Qwen-designed voice clone well through Chatterbox? Test via the HF Space Qwen/Qwen3-TTS-Voice-Design - no local install - then feed the clip to Chatterbox on the bench and listen. Blocks the whole design-then-speak chain.",
+      "Step 2b': decide where user-driven voice design runs. Leading option: bake transformers==4.57.3 into the Pod image and expose it as a remote op.",
+      "Step 2c: confirm Perth marking on every audio output path (EU AI Act Art. 50, live since 2026-08-02); resolve whether reference audio may go to the Pod at all.",
+      "Step 3: ship Chatterbox first - unblocked today."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-607",
+    "title": "TTS in Vision: resolve Qwen3-TTS viability, then wire Chatterbox + Qwen as Flows",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-607/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-607/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-607/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-607/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Run the Step 2b clone test: generate a voice with the Qwen3-TTS VoiceDesign HF Space (Qwen/Qwen3-TTS-Voice-Design), feed that clip to Chatterbox on the bench (G:/ComfyUi, port 8188, TTS_Chatterbox_all-nodes.json is already staged), and judge whether a synthetic reference clones acceptably. Fabio must HEAR it - the plan's verify mode is user-ux.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "API-patching Qwen onto transformers 5 is ABANDONED - it was break #4 and #5 of an unbounded series against an unresponsive upstream (PR #201 closed unmerged, #157 open since June, 100 forks/0 stars).",
+      "Branch A (ship a self-provisioning isolated runtime in the app) is PARKED, not rejected - Fabio: 'still sounds a bit dangerous to our app'. Kept fully costed in plan.md so it can be revived.",
+      "A curated library of REAL voices is the wrong shape: it puts Vision in the Lehrman v. Lovo posture (the entity that collected, held and distributed voice profiles). A licence does not cure right-of-publicity or GDPR Art. 9.",
+      "Fabio's LATEST direction (this is the live one): a voice DESIGNER driven per character, not a picker - because users create characters in the character sheet and each deserves an original voice. An offline-authored library becomes the seed set, not the answer.",
+      "Voice design sends TEXT only, no reference clip - so it carries no biometric data and can run remotely with none of the GDPR concern that attaches to cloning."
+    ],
+    "constraints": [
+      "Vision installs ONE curated lock in ONE --no-deps pass; a node's requirements.txt is never read, but `uv pip compile` DOES resolve the closure, so any dep conflict fails loudly. numpy==2.5.1 vs the suite's <2.3.0 is the proven hard conflict.",
+      "The Windows engine python is the EMBEDDABLE distribution (3.13.12, python313._pth) and has NO venv module - verified. Any local isolated runtime must bootstrap through pip-installed virtualenv, which is unverified against the ._pth that disables site.",
+      "EU AI Act Art. 50 has been IN FORCE since 2026-08-02. Vision is the provider; synthetic audio output must carry machine-readable marking. Perth covers the shape; Code of Practice conformance is UNVERIFIED. Penalty EUR 15M / 3% turnover.",
+      "ELVIS Act (TN) attaches civil AND criminal liability to distributing a tool whose 'primary purpose or function' is producing a particular identifiable individual's voice - this is a MARKETING trap: never describe the feature as celebrity or individual cloning.",
+      "The bench (G:/ComfyUi, port 8188) is on transformers 5.13.0 with a patched ComfyUI-QwenTTS. Those patches are now dead weight - do not spend more time on them. A ComfyUI-Manager update reverts them anyway. Rollback line in research/bench_rollback.txt.",
+      "Shell has NO network egress (curl returns 000 for every host); only agent WebFetch/WebSearch reach the internet. Do not conclude a site is down from a failed curl.",
+      "DAPS, Expresso, EARS and Emilia are all CC BY-NC - commercially unusable, despite being otherwise ideal. Same NC trap inside kyutai/tts-voices' expresso/ and ears/ subdirs."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-607/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-607/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-607/research/voice-library-04-prior-art-and-synthetic.md",
+      ".agents/mpi-kanban/tasks/MPI-607/research/voice-library-03-legal-landscape.md"
+    ]
+  },
+  "resume_prompt": "You are picking up MPI-607 in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/e51c5058-c595-484b-9770-495dec41e021.json, then .agents/mpi-kanban/tasks/MPI-607/plan.md (start at the boxed 2026-08-23 LATER block in ## Current State - it holds the live requirement), then run mpi-continue MPI-607. The card is already in doing/in-progress; no Vision repo code has been written - everything so far is the card workspace plus the standalone bench (G:/ComfyUi, port 8188). The route is settled: Chatterbox for text-to-speech, plus a Qwen3-TTS VoiceDesign voice DESIGNER so a user can give each character they build in the character sheet an original voice - not a library picker, which Fabio rejected as limiting. Two things are open. FIRST and blocking: does a Qwen-designed voice actually clone well through Chatterbox? Settle it with the HF Space (Qwen/Qwen3-TTS-Voice-Design) so nothing has to be installed, then run that clip through Chatterbox on the bench where TTS_Chatterbox_all-nodes.json is already staged - and let Fabio HEAR it, the plan's verify mode is user-ux. SECOND: decide where user-driven voice design runs, with baking a transformers==4.57.3 venv into the RunPod Pod image as the leading option, because shipping a self-provisioning runtime inside the desktop app was already parked as too risky. Do NOT resume patching qwen_tts onto transformers 5 - that route is abandoned, and the bench patches are dead weight."
+}

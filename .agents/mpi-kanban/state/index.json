@@ -1,13 +1,14 @@
 {
   "schema": "mpi-kanban/state-index/v1",
-  "updated_at": "2026-08-23T06:02:00Z",
+  "updated_at": "2026-08-23T07:31:59Z",
   "board": ".agents/mpi-kanban/board.json",
   "heartbeat_timeout_minutes": 120,
   "active_sessions": [
     ".agents/mpi-kanban/state/sessions/0f732631-9a3c-48ce-a887-4415135acaaa.json",
     ".agents/mpi-kanban/state/sessions/21aeefb3-51d3-4cc5-afa4-2e31e7251c92.json",
     ".agents/mpi-kanban/state/sessions/45480a85-ba91-42e7-adcf-143b2210d6a2.json",
-    ".agents/mpi-kanban/state/sessions/7956303e-9b67-41c9-9964-9964911e34c8.json"
+    ".agents/mpi-kanban/state/sessions/7956303e-9b67-41c9-9964-9964911e34c8.json",
+    ".agents/mpi-kanban/state/sessions/47f5ad77-9dc0-47ce-86a2-d79f1dfe0dea.json"
   ],
   "active_tasks": [
     ".agents/mpi-kanban/state/tasks/505d3c7b-baa1-466a-90c8-ad24cfafc0a7.json",
@@ -35,16 +36,16 @@
       "path": ".agents/mpi-kanban/state/files/7c1d5a02-9e64-4b8f-a3d7-5b0e18c6f2a4.json",
       "task_card": "MPI-567",
       "status": "claimed",
-      "owner_session": ".agents/mpi-kanban/state/sessions/1483d706-377f-4819-b33a-b3e154366826.json",
-      "heartbeat_at": "2026-08-22T06:57:00Z"
+      "owner_session": ".agents/mpi-kanban/state/sessions/47f5ad77-9dc0-47ce-86a2-d79f1dfe0dea.json",
+      "heartbeat_at": "2026-08-23T06:23:27Z"
     },
     {
       "id": "e4fc8a37-cea8-4ba5-b308-232cad3029cd",
       "path": ".agents/mpi-kanban/state/files/e4fc8a37-cea8-4ba5-b308-232cad3029cd.json",
       "task_card": "MPI-567",
       "status": "claimed",
-      "owner_session": ".agents/mpi-kanban/state/sessions/0f732631-9a3c-48ce-a887-4415135acaaa.json",
-      "heartbeat_at": "2026-08-22T22:16:00Z"
+      "owner_session": ".agents/mpi-kanban/state/sessions/47f5ad77-9dc0-47ce-86a2-d79f1dfe0dea.json",
+      "heartbeat_at": "2026-08-23T07:03:49Z"
     }
   ],
   "pending_file_states": [
@@ -148,6 +149,13 @@
       "path": ".agents/mpi-kanban/state/handoffs/0c17e204-e49f-498f-990d-cd48f5085049.json",
       "task_card": "MPI-567",
       "status": "open"
+    },
+    {
+      "id": "e51c5058-c595-484b-9770-495dec41e021",
+      "path": ".agents/mpi-kanban/state/handoffs/e51c5058-c595-484b-9770-495dec41e021.json",
+      "task_card": "MPI-607",
+      "status": "open",
+      "generated_at": "2026-08-23T07:31:59Z"
     }
   ],
   "index": {}
