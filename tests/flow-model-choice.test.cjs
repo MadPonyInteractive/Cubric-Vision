@@ -476,7 +476,7 @@ test('the Scribble to Object arms match the weights, on BOTH slots (MPI-567)', a
     const flow = registry.getFlowById('scribble-object');
     const { DEPS } = await import('../js/data/modelConstants/dependencies.js');
     const basename = depId => path.basename(DEPS[depId].filename);
-    const graph = readJson('comfy_workflows/flow_scribble_object.json');
+    const graph = readJson('comfy_workflows/flow_draw_it_in.json');
     const byTitle = t => Object.values(graph).find(n => n?._meta?.title === t);
 
     const SDXL = ['sdxl-realistic', 'sdxl-nsfw', 'ill-anime-beauty', 'ill-anime', 'pony-mix'];
@@ -594,7 +594,7 @@ test('an unpainted run FAILS CLOSED, and the box reaches Input_Box (MPI-567)', a
     // reports null, STEP_MEDIA derives no file, and Input_Paint keeps whatever its
     // `string` is baked to. Baked to an authoring path that would be a confident wrong
     // result with no error anywhere — so both loaders must bake EMPTY and block.
-    const graph = readJson('comfy_workflows/flow_scribble_object.json');
+    const graph = readJson('comfy_workflows/flow_draw_it_in.json');
     for (const title of ['Input_Image', 'Input_Paint']) {
         const node = Object.values(graph).find(n => n?._meta?.title === title);
         assert.ok(node && node.class_type === 'MpiLoadImageFromPath', `${title} missing`);
@@ -665,9 +665,38 @@ test('every ControlNet workflow shares ONE strength mapping (MPI-567)', () => {
             const float = Array.isArray(from) ? graph[from[0]] : null;
             if (float?._meta?.title !== 'Input_Control_strength') continue;
 
-            assert.equal(norm.inputs.output_max, 0.5,
+            // ONE documented exception, not a loosened rule.
+            //
+            // WHY 0.5 IS THE HOUSE NUMBER (Fabio, 2026-08-23): it is the minimum safe
+            // ceiling across EVERY control type an SDXL card offers — not just scribble
+            // and canny, but OPENPOSE and DEPTH, and those two are what set the floor.
+            // "Passing 50 starts giving a lot of issues on open pose and depth." A t2i
+            // workflow lets the user pick any of them behind one slider, so its ceiling
+            // has to satisfy the weakest.
+            //
+            // WHY THIS FLOW MAY EXCEED IT: its graph CANNOT drive openpose or depth. It
+            // hard-wires exactly two banks — `hed/pidi/scribble/ted` (node 14) and
+            // `canny/lineart/anime_lineart/mlsd` (node 15) — behind a two-option radio,
+            // and carries no pose or depth preprocessor anywhere. So it is not exempt
+            // from the rule; the constraint the rule encodes simply does not reach it.
+            //
+            // WHERE 0.6 CAME FROM, measured live 2026-08-23: at 0.5 the flow did not
+            // follow the drawing and Fabio had to force the subject through the prompt
+            // (runs 1c5dd5b6 / bbe85266). 0.65 overshot — the doodle itself came through
+            // in one generation, which is the old ink-as-edges failure. 0.6 is his call
+            // between the two. `end_percent` stays 0.569 and the slider stays 0-1.
+            //
+            // KEEP THIS A NAMED EXCEPTION. Deleting the assertion, or widening it to a
+            // range, is what this test exists to prevent: the bug it was written for was a
+            // flow diverging SILENTLY. A new flow that wants its own ceiling has to come
+            // here and say why — and the bar is the one above: show that its graph cannot
+            // reach the control types the 0.5 floor protects.
+            const CEILING = { 'flow_draw_it_in.json': 0.6 };
+            const expected = CEILING[file] ?? 0.5;
+
+            assert.equal(norm.inputs.output_max, expected,
                 `${file} node ${src[0]}: a user-driven Input_Control_strength must remap to `
-                + '0-0.5, or the same slider number means a different strength per workflow');
+                + `0-${expected}, or the same slider number means a different strength per workflow`);
             assert.equal(norm.inputs.input_max, 1,
                 `${file} node ${src[0]}: the slider is 0-1 everywhere`);
             checked.push(file);
@@ -675,7 +704,7 @@ test('every ControlNet workflow shares ONE strength mapping (MPI-567)', () => {
     }
 
     // The sweep is worthless if it silently matched nothing.
-    assert.ok(checked.includes('flow_scribble_object.json'),
+    assert.ok(checked.includes('flow_draw_it_in.json'),
         'the scribble flow must be covered by this sweep - it is the one that diverged');
     assert.ok(checked.length >= 6,
         `expected the SDXL family plus chroma plus the flow, found ${checked.length}`);

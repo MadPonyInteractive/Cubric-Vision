@@ -4,7 +4,7 @@ The parity check (graph_parity.py) proves the shipped twin CARRIES seamfix's f09
 wiring. This proves that wiring still RUNS after the raw -> API round trip, which
 is where a shifted widgets_values would finally bite.
 
-Method: take stage 2 straight out of `comfy_workflows/flow_scribble_object.json`
+Method: take stage 2 straight out of `comfy_workflows/flow_draw_it_in.json`
 (not a hand-copy), feed it the same stamped plate seamfix fed its own build(), set
 Input_Box to the same auto box and Input_Seed to seamfix's SEED, and compare the
 output against session 8's f096 file already on disk.
@@ -32,7 +32,7 @@ sys.path.insert(0, HERE)
 import lp_lib as L  # noqa: E402
 
 REPO = r"c:\AI\Mpi\Cubric-Vision"
-TWIN = os.path.join(REPO, "comfy_workflows", "flow_scribble_object.json")
+TWIN = os.path.join(REPO, "comfy_workflows", "flow_draw_it_in.json")
 O = L.O
 AUTO = (0.25, 0.60)
 SEED = 134002004938138          # the seed seamfix measured f096 on

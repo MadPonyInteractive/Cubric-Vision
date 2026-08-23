@@ -21,7 +21,7 @@ sys.path.insert(0, LPDIR)
 import seamfix  # noqa: E402
 
 CONVERTED = (sys.argv[1] if len(sys.argv) > 1
-             else os.path.join(REPO, "comfy_workflows", "flow_scribble_object.json"))
+             else os.path.join(REPO, "comfy_workflows", "flow_draw_it_in.json"))
 
 # seamfix node id -> flow graph node id
 MAP = {

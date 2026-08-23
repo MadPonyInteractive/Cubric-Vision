@@ -65,7 +65,7 @@ export const UNIVERSAL_WORKFLOWS = {
     // phases run on models the flow declares as choosable slots, so this op adds no
     // download of its own.
     flowScribObj: {
-        workflow: 'flow_scribble_object.json',
+        workflow: 'flow_draw_it_in.json',
     },
     // MPI-504 — Krea2 t2i, plus a SAM3 + Klein 4B pass that removes the head from the
     // front body panel. Both run on models the flow declares in `requiredModels`, so

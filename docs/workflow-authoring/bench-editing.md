@@ -63,7 +63,7 @@ the one the measurements were made against.
   silently wrong.
 - **It comes back if the file is reopened and saved in ComfyUI.** Any raw file carrying
   deliberate sub-step precision needs that noted next to the value, or the next Save undoes it.
-  `comfy_workflows/raw/flow_scribble_object.json` is one such file (nodes 150 / 151).
+  `comfy_workflows/raw/flow_draw_it_in.json` is one such file (nodes 150 / 151).
 
 ## Prove a graph correct without spending a generation — three checks, in this order
 

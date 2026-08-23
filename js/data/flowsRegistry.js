@@ -612,12 +612,30 @@ export const FLOWS = [
     // Bench-proven end to end; the blend route and its seam fix are written up in
     // ../blending-into-a-photo.md and tasks/MPI-567/research/lanpaint/verdict.md.
     {
+        // RENAMED 2026-08-23 (Fabio): "Scribble to Object" -> "Draw It In". "Object" was
+        // the broken word — he had been drawing characters, and the old title read as a
+        // promise the flow does not make. DISPLAY ONLY: `id`, `operation: 'flowScribObj'`
+        // and `workflow: 'flow_draw_it_in.json'` all deliberately stay, because
+        // cards already in users' galleries carry the `FLOWSCRIBOBJ_` prefix and their
+        // sidecars' `flowId`, so renaming the id breaks reuse on every existing item.
+        // The preview filenames DID move, and that was free exactly once: the assets do
+        // not exist yet (`/mpi-flow-graphics` has not run), and 06 names them for the
+        // flow by hand rather than deriving them from the id.
         id: 'scribble-object',
-        title: 'Scribble to Object',
-        // Not made yet — `/mpi-flow-graphics` runs once the flow is live (06).
-        preview: 'flow-scribble-object.webp',
-        video: 'flow-scribble-object.mp4',
-        description: 'Draw what you want on top of your own photo, describe it, and the flow renders it as a real object and blends it into the scene — matching the light, and casting a shadow on the ground.',
+        title: 'Draw It In',
+        // NO `preview` / `video` ON PURPOSE — DO NOT ADD THEM BACK UNTIL THE ART EXISTS.
+        // Both fields are optional and every consumer guards them (`MpiFlowLibrary.js`
+        // ~333 `if (flow.preview)`, `MpiTileSheet.js` ~137 with a placeholder for exactly
+        // this case), so the tile just shows the placeholder. Declaring a file that is not
+        // in `comfy_workflows/display/` makes the tile fetch it, 404, and land a console
+        // error — and `tests/desktop/flows-tab-ring.spec.js` asserts `consoleErrors` is
+        // empty, so it turned CI RED for a day and eight pushes (reported by a peer session
+        // 2026-08-23, verified here: no such file, three `toHaveLength(0)` assertions).
+        // The declaration shipped in `7c883d67` naming art that was never made.
+        // Restore BOTH when `/mpi-flow-graphics` has actually produced the pair — name them
+        // `flow-draw-it-in.webp` / `.mp4` (06 names them for the flow by hand, so they
+        // follow the DISPLAY name and not the id).
+        description: 'Draw what you want on top of your own photo, describe it, and the flow renders it — a person, an animal, an object — and blends it into the scene, matching the light and casting a shadow on the ground.',
         // TWO choosable slots, resolved independently (any-of-models.md). The render
         // phase samples an SDXL checkpoint; the blend phase runs a Klein edit model.
         // Every SDXL-family card already declares controlTypes scribble + canny behind
@@ -685,7 +703,7 @@ export const FLOWS = [
             },
         },
         operation: 'flowScribObj',
-        workflow: 'flow_scribble_object.json',
+        workflow: 'flow_draw_it_in.json',
         mediaType: 'image',
         inputSchema: {
             // ONLY `media` is read here. A `positive: 'string'` key sat in this object
@@ -814,6 +832,29 @@ export const FLOWS = [
                 // failure: a drawing's SHAPE survives far below the strength at which its
                 // LINES start being rendered as objects. Where the band sits under the new
                 // mapping is UNMEASURED — re-sweep before quoting a number here.
+                //
+                // RE-SWEPT UNDER THE NEW MAPPING, 2026-08-23 (Fabio, live). Three points:
+                // **0.5** did not follow the drawing at all — he had to force the subject
+                // through the prompt; **0.65** overshot, putting the doodle itself through
+                // in one generation, which is the same ink-as-edges failure the historical
+                // 0.80 entry above describes; **0.60 is the shipped value**, his call
+                // between them. `end_percent` stays 0.569 and the slider stays 0-1.
+                //
+                // AND HERE IS WHY 0.5 IS THE HOUSE NUMBER, which matters more than the
+                // band: it is the minimum safe ceiling across EVERY control type an SDXL
+                // card offers. Not just scribble and canny — **openpose and depth**, and
+                // those two are what set the floor ("passing 50 starts giving a lot of
+                // issues on open pose and depth"). A t2i workflow puts all of them behind
+                // one slider, so its ceiling must satisfy the weakest.
+                //
+                // THIS FLOW MAY EXCEED IT BECAUSE ITS GRAPH CANNOT REACH THEM: it
+                // hard-wires two banks, `hed/pidi/scribble/ted` and
+                // `canny/lineart/anime_lineart/mlsd`, behind the two-option radio above,
+                // and carries no pose or depth preprocessor at all. It is not an exemption
+                // from the rule — the constraint the rule encodes does not apply here.
+                // `flow-model-choice.test.cjs` carries this as a NAMED exception with that
+                // reasoning. Add to that list, never widen the assertion, and the bar for
+                // joining it is proving your graph cannot drive openpose or depth either.
                 id: 'Input_Control_strength', type: 'slider', label: 'Follow the drawing',
                 min: 0, max: 1, step: 0.05, default: 1,
                 note: 'Turn it down if your strokes come through as real edges — a drawn line rendering as a seam means the drawing is being followed too literally.',

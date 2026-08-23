@@ -314,7 +314,7 @@
       "input_min": 0,
       "input_max": 1,
       "output_min": 0,
-      "output_max": 0.5,
+      "output_max": 0.6,
       "clamp": true,
       "mode": "linear",
       "value": [

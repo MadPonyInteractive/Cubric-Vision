@@ -1,7 +1,19 @@
-# Scribble to Object
+# Draw It In
+
+> **Renamed 2026-08-23** — shipped as "Scribble to Object", and "object" was the wrong word:
+> Fabio had been drawing characters with it.
+>
+> **What moved:** the display name, and the workflow file — `flow_scribble_object.json` →
+> **`flow_draw_it_in.json`** (both twins, `git mv`, 18 references swept).
+>
+> **What deliberately did NOT:** the `id` (`scribble-object`), the op (`flowScribObj`), and
+> this file's own name. Gallery cards already carry the `FLOWSCRIBOBJ_` prefix and their
+> sidecars' `flowId`, so renaming the id breaks reuse on every item already generated. The
+> workflow filename is safe to move because nothing persists it — it is resolved per dispatch
+> from the FlowDef's `workflow` field.
 
 > The user draws on top of their own photo; the Flow replaces the drawing with a rendered
-> object stitched back into the photo at the same place and scale, **and blends it in so it
+> subject stitched back into the photo at the same place and scale, **and blends it in so it
 > belongs there**. Card: **MPI-567**. **BENCH PROVEN AND SIGNED OFF 2026-08-22; WIRED THE
 > SAME DAY** — `FlowDef`, op in its four files, runtime graph in `comfy_workflows/`, tests.
 > **Not yet run once inside the app** — that is the open gate, not the wiring.
@@ -62,7 +74,7 @@ navigation, spacebar advancing a step, no arrow-key nav, the colour picker closi
 | The box seam | **FIXED** 2026-08-22 | one node — `GrowMaskWithBlur(expand −96, blur_radius 96)` on the noise mask. Worst `cnr` 0.85 → 0.15. § The seam below |
 | **App wiring** (`/mpi-add-flow`) | **DONE** 2026-08-22 | `flowScribObj` in the four op files (renamed from `flowScribbleObject` on 2026-08-23, free at 1.5.0 unreleased), `scribble-object` `FlowDef`, two choosable slots, paint + box steps, two declared fields. 683 tests green, both new assertions mutation-checked |
 | First live run in the app | **NOT DONE** | the remaining gate. `05-verify.md`'s Definition of Done: a live run and a reuse round trip |
-| Graphics (tile + hero) | **NOT DONE** | `preview`/`video` are declared and the files do not exist yet — `/mpi-flow-graphics` |
+| Graphics (tile + hero) | **NOT DONE** | `preview`/`video` are now **UNDECLARED** — declaring art that does not exist 404s in the renderer and `tests/desktop/flows-tab-ring.spec.js` asserts zero console errors, so it held CI red for a day and eight pushes. Tile falls back to the placeholder. `/mpi-flow-graphics` makes `flow-draw-it-in.webp` + `.mp4`, and **only then** do both fields go back |
 
 ## Shape — the flow DRIVES the shipped SDXL ControlNet-Union branch
 

@@ -4,10 +4,10 @@
   "title": "Per-phase LoRA racks - every model a flow runs gets its own cogwheel, its own six slots and its own Input_Lora_PhaseN_i nodes",
   "description": "Fabio, 2026-08-23, scoping MPI-567's style problem. A flow can already choose a model PER PHASE (scribble-object picks an SDXL render model AND a Klein blend model), but the LoRA rack is flow-level and SINGULAR: `settingsModel` is one string on the FlowDef and `payload.loraModelId` is one id in commandExecutor, so one flow gets one rack. Fabio's shape: each model selector in the slide-over carries its own small cogwheel that opens Model Settings ON THAT MODEL - so a future three-model flow costs nothing and needs no new UI. Naming settled with him: `Input_Lora_Phase1_1..6`, `Input_Lora_Phase2_1..6`, phase-keyed rather than model-keyed so an any-of slot can swap 4B<->9B without retitling the graph. NOT the Wan `loraStages` shape - that is ONE model with two stacks in one panel, which is the opposite of what this needs.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-23T08:56:00Z",
-  "updated_at": "2026-08-23T09:34:00Z",
+  "updated_at": "2026-08-23T16:52:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

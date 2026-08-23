@@ -215,7 +215,7 @@ const PHASES = [
     { n: 2, loader: 'Input_Edit_Model', type: 'MpiLoraModel', consumer: '167', input: 'model' },
 ];
 
-const scribble = () => JSON.parse(read('comfy_workflows/flow_scribble_object.json'));
+const scribble = () => JSON.parse(read('comfy_workflows/flow_draw_it_in.json'));
 const idByTitle = (g, title) => Object.keys(g)
     .filter(k => (g[k]._meta || {}).title === title);
 
@@ -226,7 +226,7 @@ test('the scribble flow carries six LoRA slots for EACH of its two model phases'
             const title = `Input_Lora_Phase${n}_${i}`;
             const ids = idByTitle(g, title);
             assert.equal(ids.length, 1,
-                `flow_scribble_object.json must carry exactly one node titled "${title}" — ` +
+                `flow_draw_it_in.json must carry exactly one node titled "${title}" — ` +
                 'injection matches a title EXACTLY, so a duplicate is never driven');
             assert.equal(g[ids[0]].class_type, type,
                 `${title} must be a ${type}: the SDXL chain carries CLIP and the Klein chain ` +

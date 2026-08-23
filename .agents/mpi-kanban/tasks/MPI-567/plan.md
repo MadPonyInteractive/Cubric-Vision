@@ -10,6 +10,100 @@ selector — decide at the bench"); it is now decided, and the mechanism already
 
 ## Current State
 
+**2026-08-23, session 13 — FIRST FULL LIVE RUN LANDED. The flow works end to end; the
+ControlNet ceiling was the real complaint, and the LoRA proof is still owed.**
+
+Fabio ran the whole flow on a beach plate (`T2I_013` → `FLOWSCRIBOBJ_008`): drew a figure,
+prompted it, boxed it, ran it. **It rendered and it blended.** Both control arms work. His
+one complaint: it barely followed the drawing, and he had to force the subject through the
+prompt.
+
+**That was the ceiling, not the flow.** Read off the dispatched graph (`/history` on 48188,
+run `7cf23f25`): slider `Input_Control_strength` was already at **1**, `MpiNormalizeValue`
+maps `0-1 → 0-0.5` clamped, so ControlNet ran at strength **0.5** with `end_percent 0.569`.
+`output_max` is now **0.65** in both twins (one line each, `graph_parity.py` PARITY OK, the
+running app serves it with no restart). **This deliberately diverges from the house
+convention** — all five SDXL t2i workflows plus `raw/sdxl_t2i_template.json` use `0-0.5 @
+0.569`. Justification: every other consumer feeds ControlNet a machine-extracted edge map off
+a photo; this one feeds a human's rough drawing, which carries far less signal. The old
+"past ~0.5 I get lines that look like poop" was measured at `end_percent 1`, holding the
+steer into the final denoise — a different regime from 0.569, which is why the band was
+marked unmeasured rather than merely re-scaled.
+
+**THE LORA RUN CARRIED NO LORAS — and that is not a bug.** All twelve `Input_Lora_Phase*`
+nodes dispatched `lora_name="None"`, and the project's `modelSettings` confirms why: every
+`loras` array is empty and there is no `ill-anime` entry at all, which is the model that
+actually rendered. Fabio confirmed he forgot to set them (he had just tested the racks on the
+character sheet). Worth keeping as the negative half: twelve rack nodes present, no rack
+declared, **zero leakage**. The positive half is still owed.
+
+`G:/CubricModels/loras/sdxl/` was EMPTY — no SDXL-family LoRA was installed, so phase 1 had
+nothing correct to pick. `sd_xl_offset_example-lora_1.0.safetensors` is staged there now (app
+route and engine both list 49, up from 48, no restart needed).
+
+**RENAMED (Fabio, 2026-08-23): "Scribble to Object" → "Draw It In". APPLIED.** "Object" was
+the broken word — he has been drawing characters. **Display only** — `id`,
+`operation: 'flowScribObj'` and `workflow: 'flow_scribble_object.json'` all stay, because
+cards already carry the `FLOWSCRIBOBJ_` prefix and their sidecars' `flowId`, so an id rename
+breaks reuse on existing items. Four places changed: `flowsRegistry.js` (`title`,
+`description`, and both preview filenames), `commandRegistry.js` (`label` — user-visible via
+`cmd.label` at ~1659 — and `progressLabel`, which also said "object"), and the H1 of
+`docs/playbooks/add-flow/existing-flows/scribble-to-object.md` (file name kept, it tracks the
+id). **The preview assets moved while it was still free**: `flow-draw-it-in.webp/.mp4`, since
+the files do not exist yet and 06 names them by hand rather than deriving them from the id.
+Deliberately NOT touched: comments in `MpiBaseFlow.js` and `01-descriptor-and-ops.md` that
+recount past incidents by the old name — those are history, and `MpiBaseFlow.js` is claimed.
+
+**THE RAISED CEILING BROKE A GUARD, AND THE GUARD WAS RIGHT TO FIRE.**
+`flow-model-choice.test.cjs` § "every ControlNet workflow shares ONE strength mapping
+(MPI-567)" sweeps every graph and pins `output_max` to 0.5 — it exists *because* this flow
+diverged once before (0-1 at `end_percent` 1) and Fabio caught it by eye. Settled at
+**0.60** (0.5 too weak, 0.65 put the doodle through) as a **NAMED EXCEPTION**
+(`CEILING = { 'flow_scribble_object.json': 0.6 }`), never a widened assertion.
+
+**The justification is the load-bearing part, and the first version of it was wrong.** Not
+"edge map vs hand drawing" — Fabio corrected it: **0.5 is the minimum safe ceiling across
+every control type an SDXL card offers, and OPENPOSE and DEPTH are what set that floor.**
+A t2i workflow puts all of them behind one slider so it must satisfy the weakest; this flow's
+graph hard-wires only `hed/pidi/scribble/ted` and `canny/lineart/anime_lineart/mlsd` behind a
+two-option radio and carries no pose or depth preprocessor at all. The constraint does not
+reach it. **The bar for any future flow joining that list is the same proof**, and it is
+written into the test.
+
+**Mutation-checked, keyed by FILENAME not by value** — moving the scribble ceiling off 0.6
+goes RED, and giving `t2i_sdxl_realistic.json` that same 0.6 also goes RED. Files restored,
+sha256 verified each time. `graph_parity.py` PARITY OK.
+
+**THE WORKFLOW FILE MOVED TOO: `flow_scribble_object.json` → `flow_draw_it_in.json`**, both
+twins, by `git mv` so history follows, with **18 references swept** across `flowsRegistry.js`,
+`universal_workflows.js`, three test files, two docs, both `research/lanpaint/*.py` scripts and
+this card's `files.json`. `git grep` over `js/ tests/ docs/ comfy_workflows/` returns NONE.
+**Safe where an id rename is not**, and the distinction is the one to keep: nothing PERSISTS
+the workflow filename — it is resolved per dispatch from the FlowDef's `workflow` field —
+whereas `flowId` and the `FLOWSCRIBOBJ_` prefix are baked into every sidecar already written.
+
+**CI WAS RED FOR A DAY AND EIGHT PUSHES, AND IT WAS THIS CARD'S LINE.** A peer session
+(message `38698ec8`, now resolved) reported it; every claim was verified here before acting.
+`preview: 'flow-scribble-object.webp'` / `video:` were declared in `7c883d67` naming art that
+was never made, so the Flow Library tile fetched them, 404'd, and
+`tests/desktop/flows-tab-ring.spec.js` asserts `consoleErrors` is empty in three places.
+**Both fields are now DELETED** — they are optional and every consumer guards them
+(`MpiFlowLibrary.js` ~333, `MpiTileSheet.js` ~137 with a placeholder for exactly this) — and
+the FlowDef carries a comment naming the CI failure so nobody re-adds them before the art
+exists. **Restore both only when `/mpi-flow-graphics` has produced `flow-draw-it-in.webp` +
+`.mp4`.** The sender's follow-up: a new pre-push hook refuses a push while master is red, and
+`--no-verify` is the intended path for the fix push.
+
+**Test state: BOTH suites green — node 728/728, desktop 26/26**, `graph_parity.py` PARITY OK.
+(It read 727/728 mid-session; that one failure was `shared-dep-uninstall-direction.test.cjs`,
+MPI-607's stranded tier-family dep, and a peer session fixed it under us — HEAD moved several
+commits during this work.)
+
+**Also decided (Fabio): the LoRA racks move to the flow's FINAL STAGE**, off the Flow Library
+slide-over — he reached that after testing the character flow. Being done in another session.
+It does not affect what is owed here: the chain is `project.modelSettings → loraPhases →
+Lora_Phase<N>_<i>`, which does not care which component wrote the settings.
+
 **2026-08-23, session 12b — MPI-608 IS BUILT AND LIVE-CHECKED. The scribble flow's twelve
 rack nodes are now actually filled.**
 

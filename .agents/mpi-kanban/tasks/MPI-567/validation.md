@@ -426,3 +426,65 @@ rather than a decision, but changing the Output node class is not what was asked
 touches how the result is collected, so it is a question for Fabio rather than a quiet fix.
 
 **703 tests pass, 0 fail** after both changes.
+
+---
+
+## Session 13 — the live run + reuse round trip, and the rename (2026-08-23)
+
+**THE 05-VERIFY LIVE GATES ARE CLOSED.** Fabio ran the flow end to end on his own GPU,
+seven successful generations (`FLOWSCRIBOBJ_009`–`015`) plus eleven he interrupted, all read
+back off the app engine's `/history` rather than taken on trust.
+
+- **Live run — PASSED.** The flow renders and blends. Both control arms work (`line`
+  → `ScribblePreprocessor`, `shaded` → `CannyEdgePreprocessor`), confirmed per run in the
+  dispatched graph. Base `SDXL_Realistic`, edit `flux-2-klein-9b-int8-convrot`.
+- **Reuse round trip — PASSED.** Fabio verified reuse on two different flows; inputs
+  restore on reopen.
+- **The eleven non-success runs were `execution_interrupted`, not failures** — him hitting
+  Stop. No graph error occurred in any of the nineteen dispatches.
+
+**THE CONTROLNET BAND, RE-SWEPT — three points, and the house number finally explained.**
+The FlowDef's `0.30-0.60` numbers were historical (measured at `end_percent 1`) and the
+ceiling shipped at `output_max 0.5`. Measured live by Fabio:
+
+| raw ceiling | result |
+|---|---|
+| 0.50 (shipped) | does NOT follow the drawing — subject had to be forced through the prompt |
+| 0.65 | overshoots — the doodle itself came through in one generation (ink-as-edges) |
+| **0.60** | **shipped.** His call between the two |
+
+`end_percent` stays 0.569; the slider stays 0-1.
+
+**Why 0.5 is the house number, which is the part worth keeping.** It is the minimum safe
+ceiling across EVERY control type an SDXL card offers — not just scribble and canny but
+**openpose and depth**, and those two set the floor: *"passing 50 starts giving a lot of
+issues on open pose and depth"* (Fabio). A t2i workflow puts all of them behind one slider,
+so its ceiling must satisfy the weakest.
+
+**This flow may exceed it because its graph cannot reach them.** `flow_scribble_object.json`
+hard-wires exactly two banks — `hed/pidi/scribble/ted` (node 14) and
+`canny/lineart/anime_lineart/mlsd` (node 15) — behind a two-option radio, and carries no pose
+or depth preprocessor anywhere (verified by sweeping the graph). So this is not an exemption
+from the rule; the constraint the rule encodes does not reach this flow. Carried as a
+**named, mutation-checked exception** in `flow-model-choice.test.cjs`, keyed by filename —
+moving the scribble ceiling off 0.6 goes RED, and giving `t2i_sdxl_realistic.json` that same
+0.6 also goes RED.
+
+**THE SHADOW PROBLEM IS FRAMING, NOT THE LORA — and the evidence separates them.** Fabio's
+first read was that a style LoRA was suppressing the shadow. The graph record says otherwise:
+`011` and `012` ran WITH a LoRA and the old prompt, **`013` ran with NO LoRA and the same old
+prompt and was still not the good one**, and `015` — the good one — is the only run with the
+new prompt ("A full body far shot…"). `013` is the control, and it clears the LoRA.
+
+The mechanism is in the graph. Node `#18 Append Clean Background` bolts
+`"…full object in frame, product shot, no scenery, no ground, no shadow"` onto the user's
+prompt for the render phase — the render is deliberately told to produce **no shadow**, so
+every shadow comes from the blend phase (`#103`, which asks for contact shading). Contact
+shading needs a contact point; a prompt like "standing at the beach" gets framed cropped at
+the shins, there are no feet, and nothing grounds. `full object in frame` is already in that
+suffix and is simply too weak to beat SDXL's portrait-framing prior. **Open, not fixed:**
+strengthening `#18` so the flow stops requiring the user to know "full body far shot".
+
+**Shadow DIRECTION is a separate and known limit — do not chase it by prompting.**
+`blending-into-a-photo.md` already records that telling the model where the light is makes it
+worse, which is why the box step asks for room and never for light direction.

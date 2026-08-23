@@ -1075,8 +1075,12 @@ export const commands = {
     // op needs the slot, but never offered in `inputSchema.media`, since there is nothing
     // for the user to upload into it.
     flowScribObj: {
-        label: 'Flow: Scribble to Object',
-        progressLabel: 'Rendering the object',
+        // Display renamed 2026-08-23 (Fabio): the flow is "Draw It In" now — "object" was
+        // wrong, he had been drawing characters. The OP KEY stays `flowScribObj`: gallery
+        // cards already carry the `FLOWSCRIBOBJ_` prefix and their sidecars' `flowId`, so
+        // renaming it breaks reuse on every item already generated. See flowsRegistry.js.
+        label: 'Flow: Draw It In',
+        progressLabel: 'Rendering the drawing',
         mediaType: MEDIA_TYPE.IMAGE,        // OUTPUT type
         requiresImages: 0,                  // media is never a hard requirement at the op layer
         mediaInputs: [

@@ -103,3 +103,51 @@ listener for its own detail drawer. It has NO path that opens an overlay from in
 drawer today (no `Overlays.open`, no `ui:open-model-settings` emit), so the bug is latent
 rather than reproducing, and it is not this card's file. Worth the same guard the day
 anything opens a panel from the Model Library detail.
+
+---
+
+## END TO END — PROVEN ON A REAL DISPATCH, 2026-08-23
+
+**The last unproven claim on this card is now closed.** "A LoRA picked in each phase's
+panel reaches the graph in a real run" was pinned per hop by test and confirmed by eye in
+the UI, but nobody had watched one dispatch carry TWO racks at once. Fabio ran the
+scribble-to-object flow on his own GPU; the graph was read back off the app engine's
+`/history` (port 48188), which holds what the app actually injected rather than what it
+meant to.
+
+**Eleven consecutive dispatches carried both racks**, each with the correct node class for
+its own phase:
+
+| node | class | lora_name | strengths |
+|---|---|---|---|
+| `Input_Lora_Phase1_1` | `MpiLoraModelClip` | `SDXL\Models\S0F14_SDXL2025-09-21_04-09-22-save-2600-650-0.safetensors` | model 0.6 / clip 0.5 |
+| `Input_Lora_Phase2_1` | `MpiLoraModel` | `flux2-klein\styles\9b\Storybook.safetensors` | model 1 |
+
+Two different racks, two different families, two different node classes, one dispatch —
+which is the whole claim. The phase-1 node takes model AND clip and the phase-2 node takes
+model only, matching what each family ships. Run ids `1c5dd5b6`, `332c568c` and nine
+others; base `SDXL_Realistic.safetensors`, edit `flux-2-klein-9b-int8-convrot.safetensors`.
+
+**The negative half is pinned too, on the same day and the same flow.** An earlier run
+(`7cf23f25`) dispatched with all twelve `Input_Lora_Phase*` nodes at `lora_name="None"`,
+because no LoRA had been picked — and the project's `modelSettings` confirmed it, every
+`loras` array empty. Twelve rack nodes present in the graph, no rack declared, zero
+injected. That is the opt-in doing its job on live evidence rather than only in a test.
+
+**A trap worth keeping, because it cost the first attempt.** The rack is keyed by MODEL
+ID, not by slot. That run rendered with `ILL_Anime.safetensors` while the only
+`modelSettings` entries on the project were `sdxl-realistic`, `klein-9b` and `klein-4b` —
+so the rack read empty and injected nothing, with no warning anywhere. Pick the model
+first, then open that model's cogwheel.
+
+**Also found while setting the run up:** `G:/CubricModels/loras/sdxl/` was EMPTY — the app
+had 48 LoRAs installed and not one SDXL-family. `sd_xl_offset_example-lora_1.0.safetensors`
+was staged there to make phase 1 pickable at all (the app route and ComfyUI both went 48 →
+49 with no engine restart). Fabio used his own S0F14 LoRA in the end.
+
+**Noticed, not actioned — the rack does not scope by model type.** `_filterByType` exists
+in `MpiModelSettings.js` (~57) and is applied to upscale models (~370); the LoRA lists read
+`state.availableLoras` raw (~421, ~505). So an SDXL rack offers all 49 including every
+Klein, Qwen and LTX weight, and picking a wrong-family one fails at the loader. The
+`loras/<model.type>/` folder convention this would need already exists. Pre-existing, not
+introduced here, and it needs its own card.

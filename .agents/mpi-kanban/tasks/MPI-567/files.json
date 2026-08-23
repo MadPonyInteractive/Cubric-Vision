@@ -1,8 +1,8 @@
 {
   "schema": "mpi-kanban/task-files/v1",
   "files": [
-    "comfy_workflows/raw/flow_scribble_object.json",
-    "comfy_workflows/flow_scribble_object.json",
+    "comfy_workflows/raw/flow_draw_it_in.json",
+    "comfy_workflows/flow_draw_it_in.json",
     "js/data/flowsRegistry.js",
     "js/data/commandRegistry.js",
     "js/core/operationRegistry.js",
