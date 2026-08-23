@@ -88,15 +88,19 @@
   portrait as the only place a face can come from. It is a toggle if you want the head. Enhance
   rewrites your description into the full phrase the sheet is generated from and shows it to you
   — edit it freely, whatever is in that box is what runs. Four styles (Photoreal, 3D animation,
-  Anime, Cartoon), 1K or 2K, a Turbo speed toggle, and your own LoRAs ride along if you have
-  them, so someone who has already trained a character can describe only the wardrobe on top.
+  Anime, Cartoon), 1K or 2K, and a Turbo speed toggle.
 
-- Character Sheet runs on either Krea 2 or Krea 2 NSFW. If you have both installed, a Model
-  dropdown appears in the Flows panel when you select the flow — pick which one before you open
-  it. With only one of them installed there is no choice to make and it simply uses that one, so
-  owning one of the two is enough to run the flow. Krea 2 is the stronger choice for stylised
-  work; the NSFW model is trained mostly on photographic source and is weaker at Anime and
-  Cartoon.
+- Character Sheet uses two models, and you pick both. A **Render model** draws the sheet, and a
+  **Blend model** removes the head from the front body — two dropdowns in the Flows panel when
+  you select the flow, each with its own cogwheel opening that model's LoRA rack, so your own
+  LoRAs ride along on either stage. Someone who has already trained a character can load it on
+  the render side and describe only the wardrobe on top.
+
+- The Render model is Krea 2 or Krea 2 NSFW; the Blend model is FLUX.2 Klein 4B or 9B. Both
+  dropdowns appear whether or not anything is installed, so you choose which one downloads
+  rather than getting whichever came first, and owning one candidate per slot is enough to run
+  the flow. Krea 2 is the stronger choice for stylised work; the NSFW model is trained mostly on
+  photographic source and is weaker at Anime and Cartoon.
 
 - Outpaint extends a picture past its edges. Drop an image, pick the shape you want — or drag
   the frame freely — and pull it out over the sides you want filled; the new area shows as black,

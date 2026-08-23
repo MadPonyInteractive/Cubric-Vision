@@ -71,6 +71,16 @@ the one the measurements were made against.
 run: a 22B model loads before the graph's own `ExecutionBlocker` stops anything. Never point it at
 the user's bench to "check" a graph. Instead:
 
+**Checks 1 and 2 are a script — do not re-implement them by hand.** `node
+scripts/verify-workflow.mjs <api.json> …` runs both against `/object_info`, defaulting to
+**48188** (not the bench — see the convert trap below). `--self-check` exercises its own logic
+with no engine. `--strict` also fails on weights that are merely not installed here; by default
+those are notes, because a graph for an uninstalled model is uninstallable, not misauthored —
+that distinction was worth 21 false failures on the first sweep. It **pairs with**
+`validate-injection-rules.mjs` rather than replacing it: that one owns the `Input_*`/`Output_*`
+contract, this one owns what the engine rejects. Both were hand-written twice before being
+committed (MPI-603/MPI-610), which is why they are scripts now.
+
 1. **Structural** — the class exists on the engine, every *required* link-typed input is connected,
    every COMBO widget value is in the engine's list (`value_not_in_list` is the most common
    reject), and `widgets_values` covers every widget slot.
@@ -79,6 +89,14 @@ the user's bench to "check" a graph. Instead:
    REJECT.** Exception: a node whose `VALIDATE_INPUTS` takes an `input_types` argument (e.g.
    `MpiClamp`) makes ComfyUI skip the check for that node entirely — `execution.py` guards on
    `'input_types' not in validate_function_inputs`.
+
+   **The V3 schema needs three special cases, and a checker without them cries wolf on graphs
+   that already ship.** `COMFY_MATCHTYPE_V3` is a templated type — match against its
+   `template.allowed_types`, not against the literal string, and treat it as `*` on the OUTPUT
+   side. `COMFY_DYNAMICCOMBO_V3` and `COMFY_AUTOGROW_V3` both contribute **dotted** children
+   (`sampling_mode.temperature`, `images.image_1`) that are absent from the flat signature;
+   resolve them through the parent's options / `template.names`. `klein_t2i` and
+   `boogu_edit_*` alone produced 11 false positives before these were modelled.
 3. **Live** — playwright-cli against the bench: `app.loadGraphData(json)`, then read back `_nodes`
    length, `LiteGraph.registered_node_types` misses, `has_errors`, and dangling `inputs[].link`.
    Then `app.graphToPrompt()` and diff its output against your own API conversion. **0 diffs proves
