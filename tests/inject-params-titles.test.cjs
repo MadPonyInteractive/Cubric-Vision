@@ -296,6 +296,49 @@ test('the Outpaint Flow carries its I/O and declared control titles (MPI-594)', 
         `${file}'s prompt is baked — titling it Input_Positive lets the run inject '' over it`);
 });
 
+test('the Scribble to Object Flow carries its I/O, both model arms and its box (MPI-567)', () => {
+    // flowScribbleObject runs flow_scribble_object.json on model:{id:null} with TWO
+    // choosable slots, so it has more titled injection points than any other flow —
+    // and every one of them fails SILENTLY. The injector skips a title with no node,
+    // so a typo here is a control that moves, a run that succeeds, and a graph still
+    // on its baked value.
+    const file = 'flow_scribble_object.json';
+    const have = titlesOf(file);
+    for (const title of [
+        // Two images, and only the first is the user's: `input_paint` is the paint
+        // step's derived layer arriving through `mediaRole: 'image2'`. Lose that title
+        // and the drawing never reaches the graph — the ControlNet hint goes empty and
+        // SDXL renders from the prompt alone, which still produces a picture.
+        'input_image', 'input_paint',
+        // The box step's target. Newest of the lot (the LanPaint rebuild added it), and
+        // it goes through the `headSwap` injector because an MpiBox carries four widgets
+        // the generic title injector would match and silently not write.
+        'input_box',
+        'input_seed',
+        // The two declared fields.
+        'input_control_net', 'input_control_strength',
+        // Render slot: any of the five SDXL cards.
+        'input_base_model',
+        // Blend slot: klein-9b / klein-4b, and BOTH nodes swap together. The CLIPLoader
+        // was untitled as authored — without `input_edit_clip` a 9B pick keeps 4B's text
+        // encoder and dies with a shape error that reads as a LanPaint bug (MPI-600).
+        'input_edit_model', 'input_edit_clip',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_image'), `${file} must carry a capture node titled "output_image"`);
+
+    // …and unlike Outpaint and Head Swap, this flow's prompt title is REQUIRED.
+    // The two of them bake their instruction and deliberately leave the node untitled so
+    // the run's empty `Input_Positive` cannot clobber it. This flow is the opposite: the
+    // user's words ARE the subject, and node 17 feeds a StringConcatenate that appends the
+    // isolate-on-white suffix before the encoder. Shipping without it is what produced a
+    // blob rendered into something nobody asked for on the first live run (2026-08-23) —
+    // the drawing gives a silhouette, and a silhouette alone is not a subject.
+    assert.ok(have.has('input_positive'),
+        `${file} takes a user prompt, so its prompt node MUST stay titled Input_Positive`);
+});
+
 test('the prompt enhancer graph carries the seed node its caller drives (MPI-504)', () => {
     // MpiBaseFlow._runEnhance sends `injectionParams: { Input_Seed: <random> }` on every
     // press, because step 3's loop is Enhance -> Generate -> Enhance and a fixed seed

@@ -15,6 +15,35 @@
 > Portable UI decisions live in [../ui/](../ui/); the any-of model set lives in
 > [../any-of-models.md](../any-of-models.md).
 
+## Status — bench DONE, app half WIRED and run live, UI polish outstanding
+
+**2026-08-23.** The graph was rebuilt onto the measured LanPaint route (70 nodes → 55, pixel-
+identical to the `f096` reference) and the flow is registered end to end with two independently
+choosable model slots. **It has produced real output in the app.** What remains is UI.
+
+The first live run also taught the flow's sharpest lesson, now generalised into
+[01 § A PROMPT IS A FIELD](../01-descriptor-and-ops.md#a-prompt-is-a-field-inputschema-only-ever-reads-media-mpi-567):
+the flow shipped with **no prompt box**, because `positive: 'string'` sat in `inputSchema` where
+nothing reads it. A blob drawn to mean "an old lady" rendered as an unidentifiable object. A
+drawing gives the model a **silhouette**, and a silhouette is not a subject — a girl and a boy
+share one. **The prompt is not optional on this flow and never was.** It is now a `text` field on
+the paint step, and `tests/inject-params-titles.test.cjs` asserts the graph keeps its
+`Input_Positive` title — the deliberate inverse of Outpaint and Head Swap, which leave that node
+UNtitled so an empty injected string cannot clobber their baked instruction.
+
+Decided 2026-08-23, still to build (all user calls, none of them open questions any more):
+
+| Item | Decision |
+|---|---|
+| Op key / filename | **`flowScribObj`** → `flowScribObj_001.png`. Op is unreleased, so the rename is free — see [01 § The op key becomes the OUTPUT FILENAME](../01-descriptor-and-ops.md) |
+| Brush types on the paint step | **Yes — the ten `BRUSH_PRESETS` as a dropdown**, the same control `MpiMaskStrip` already renders. `PaintManager.brushPreset` exists and is already honoured by the shared dab, so this is a control, not new paint code |
+| The doodle on the box step | **Show it — ghost or stamped, either is fine.** Cheaper than it looks: both steps declare `role: 'image1'`, so they SHARE one `_stepValues` entry and `MpiStepBox` already receives the paint layer in `props.value.paint`. No frame-contract change. Head Swap has no paint sibling, so its `value.paint` is undefined and it is untouched |
+| Box ratio | **Stays free.** The box wraps an object *plus the ground its shadow falls on*, never square — and `MpiMaskSquareBbox(64)` squares it in the graph anyway. Locking a ratio would only deny a subject its shadow room |
+
+Not this flow's to fix — split into **MPI-606** because they affect EVERY flow: inputs lost on
+navigation, spacebar advancing a step, no arrow-key nav, the colour picker closing the overlay,
+`promptRequired` enforced nowhere, and the two-store field collision.
+
 ## Status — the bench half is settled and signed off, the app half is not started
 
 | Item | State | Notes |

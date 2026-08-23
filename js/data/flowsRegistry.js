@@ -675,9 +675,14 @@ export const FLOWS = [
         workflow: 'flow_scribble_object.json',
         mediaType: 'image',
         inputSchema: {
-            // The object description. `promptRequired: true` on the op — without it
-            // SDXL renders whatever the ControlNet hint alone suggests.
-            positive: 'string',
+            // ONLY `media` is read here. A `positive: 'string'` key sat in this object
+            // and did NOTHING — the frame reads `inputSchema.media` and nothing else,
+            // and a prompt reaches the run by being a declared FIELD whose id is
+            // `positive` (MpiBaseFlow `_collectInputs`). It read as a wired prompt, the
+            // flow shipped with no prompt box at all, and the first live run rendered a
+            // blob into something nobody asked for because the model had only the
+            // ControlNet hint to go on (MPI-567, 2026-08-23). Declare prompts BELOW.
+            //
             // ONE user slot. `image2` (Input_Paint) is the op's second slot but is
             // never offered here: the paint step DERIVES that file, there is nothing
             // to upload into it, and a visible empty slot would invite a wrong one.
@@ -700,9 +705,43 @@ export const FLOWS = [
                 kind: 'paint', role: 'image1', mediaRole: 'image2',
                 tickerLabel: 'Draw it',
                 title: 'Draw what you want to add',
+                // THE PROMPT BELONGS BESIDE THE DRAWING, and it is not optional
+                // (Fabio, 2026-08-23). A human reads a blob as the thing they had in
+                // their head; the model reads it as a silhouette, and a girl and a boy
+                // share one. Ask while the drawing is on screen — an unlabelled shape
+                // is exactly what the user cannot describe from the next step.
+                //
+                // DECLARED HERE AND NOWHERE ELSE. Restating it in the flow's own
+                // `fields` so it is also editable on the run slide is the obvious next
+                // thought, and it SILENTLY DROPS EDITS from the second run onward.
+                // The two surfaces are two different stores: a gizmo step's fields are
+                // role-keyed in `_stepValues[role].fields`, while flow fields live in
+                // `_fieldValues`, and `_collectInputs` applies the flow store LAST.
+                // On a fresh open that is harmless — `_seedField` returns undefined for
+                // a flow-level field with no default and no persisted root, so the key
+                // is absent and cannot overwrite. But after one run `s_flowInputs`
+                // carries `positive` at the payload root, the flow-level copy seeds
+                // from it, and thereafter editing the prompt HERE is overwritten at
+                // collection by the stale run-slide value. Wrong picture, no error.
+                //
+                // The character-sheet flow really does declare its prompt twice, and
+                // that is not a counter-example: its prompt step is `kind: 'fields'`, a
+                // FRAME kind with no role, whose values are seeded into the FLOW store
+                // on purpose (stepKinds.js § FRAME_KINDS) — one store, so one value.
+                // A gizmo step cannot borrow that. Unifying the two stores is frame
+                // work and belongs to MPI-606, not to a FlowDef.
+                //
+                // Cost of the single surface: changing a word before `Generate Again`
+                // means clicking "Draw it" in the ticker. One click, and correct.
+                fields: [
+                    {
+                        id: 'positive', type: 'text', rows: 2, label: 'What did you draw?',
+                        placeholder: 'An old lady riding the tiger, a stone bench, a red umbrella…',
+                    },
+                ],
                 // The ~80-96px floor is measured, not a guess: below it the render
                 // has too little ink to read and invents the object's detail.
-                hint: 'Draw roughly where and how big it should be. Keep it at least ~96px tall — smaller and the render invents the detail.',
+                hint: 'Draw roughly where and how big it should be, then say what it is — the drawing gives the shape, the words give the subject. Keep it at least ~96px tall.',
             },
             {
                 // The blend region. `param: 'box1'` -> `Input_Box` through the box

@@ -73,6 +73,20 @@ test('head-swap compares against the plate it KEEPS, not the head donor', async 
     assert.strictEqual(swap.result?.compare, 'image1');
 });
 
+test('scribble-object compares against the photo, which is its ONLY slot (MPI-567)', async () => {
+    const scribble = (await flows()).find(f => f.id === 'scribble-object');
+    assert.ok(scribble, 'scribble-object flow must exist');
+    // Passes the positive test in `04-overlay-and-shell.md` § result.compare: the output
+    // IS the input with one region re-rendered, so the bar crosses a steady scene and
+    // shows exactly what changed. The generic sweep above already rejects a role the flow
+    // does not collect; what this pins is that the declaration EXISTS — with one slot,
+    // deleting `result` entirely is the only failure the generic test cannot see.
+    //
+    // `image2` is not a candidate and never will be: the paint layer is derived by the
+    // step, never uploaded, so it is deliberately absent from `inputSchema.media`.
+    assert.strictEqual(scribble.result?.compare, 'image1');
+});
+
 // ── Option B: the result pane's video surface (MPI-585) ─────────────────────
 // These pin WIRING, not behaviour — the surfaces are DOM-only and a node test
 // cannot mount them (they were proven live instead, see the card's validation.md).

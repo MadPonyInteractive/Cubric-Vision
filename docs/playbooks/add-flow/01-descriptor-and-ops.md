@@ -261,6 +261,76 @@ zero consumer changes.
   `_flowRequiredDepIds()` — unconditionally, since a flow has no install state of its own to
   gate on. **If you add another dep-protection path, add the flow union there too.**
 
+## A PROMPT IS A FIELD. `inputSchema` only ever reads `media` (MPI-567)
+
+**`inputSchema.positive: 'string'` does nothing.** Not "less than you expect" — nothing. Grep the
+repo: the only consumer of `inputSchema` is `MpiBaseFlow`'s `_mediaGroups`, and it reads
+`.media`. Any other key in that object is decoration.
+
+A prompt reaches a run by being a **declared field whose id is `positive`**:
+
+```js
+fields: [{ id: 'positive', type: 'text', rows: 2, label: 'What did you draw?' }]
+```
+
+`_collectInputs` promotes any field id that is NOT `Input_*` to a top-level run input, and
+`commandExecutor` (~610) maps `positive` → the graph's `Input_Positive` node.
+
+**Why this is written down.** Scribble to Object carried `positive: 'string'` in `inputSchema`
+from the day it was wired, shipped with **no prompt box at all**, and the dead key read as proof
+the prompt was handled — through a code review, a full test suite and a handoff. The user drew a
+blob meaning "an old lady", got an unrecognisable object rendered into his photo, and reasonably
+concluded the flow needed a new feature. It needed a field.
+
+`promptRequired: true` on the op does **not** save you: it is declared on fifteen-odd ops and
+read by nothing (MPI-606). And the frame's empty-run guard aborts only when there is *neither*
+media *nor* prompt — so a flow with media and an empty prompt runs and returns a confident wrong
+picture.
+
+> **The general rule both cases teach:** a declaration that no code reads is worse than no
+> declaration. It survives review precisely because it looks like the thing that was asked for.
+> When you add a key to a FlowDef, grep for its consumer before you trust it.
+
+## A field declared on a GIZMO step AND the run slide drops edits on run 2 (MPI-567)
+
+Declaring one id on two surfaces looks supported, and `_collectInputs` even documents it —
+*"a flow declaring the same id in both places means the run slide's value is the one the user saw
+immediately before pressing Generate."* **That is true only for a frame-native step.**
+
+| step kind | where its `fields` values live |
+|---|---|
+| `kind: 'fields'` (FRAME_KIND, no role) | the **flow** store, `_fieldValues` — seeded there deliberately (`stepKinds.js` § `FRAME_KINDS`) |
+| a gizmo kind (`paint`, `box`, `crop` — has a `role`) | the **step** store, `_stepValues[role].fields` |
+
+`_collectInputs` applies step stores first and `_fieldValues` last. So for a **gizmo** step:
+
+- **Fresh open — fine.** `_seedField` returns `undefined` for a flow-level field with no
+  `default` and no persisted root, so the key is absent and cannot overwrite.
+- **After one run — broken.** `s_flowInputs` now carries the id at the payload root, the
+  flow-level copy seeds from it, and from then on the value the user edits **on the step** is
+  overwritten at collection by the stale run-slide one. Wrong output, no error, second run only.
+
+`character-sheet` really does declare its prompt twice and works — because its prompt step is
+`kind: 'fields'`. Copying that pattern onto a gizmo step is the trap.
+
+**Until MPI-606 unifies the stores: declare a shared id on ONE surface.** For a gizmo-step flow
+that means the step, and changing the value before `Generate Again` costs one ticker click.
+
+## The op key becomes the OUTPUT FILENAME — keep it short (MPI-567)
+
+`routes/projects.js` (~1812) sanitises the op key and uses it as the sequenced filename prefix,
+capped at 24 chars: `flowScribbleObject` → `flowScribbleObject_001.png`, shown in the gallery as
+`FLOWSCRIBBLEDOBJECT_001`. Long op names produce unusable filenames, and the gallery badge is
+where the user meets them.
+
+**Renaming is free before release and expensive after.** Check `appVersionIntroduced` against the
+released `APP_VERSION`: an op introduced in an unreleased version has no files on any user's disk,
+so the rename is a pure find-and-replace across the four op files plus the FlowDef's `operation`.
+Once shipped, existing filenames and their `sequenceCounters` entry are user data — leave it.
+
+This is why the flow ops do **not** share one naming convention: `flowHeadSwap` (1.1.0) and the
+two LTX flows (1.4.2) shipped with long names and keep them. Do not "tidy" a released op key.
+
 ## The run path — `submitFlowGeneration`
 
 `js/services/flowService.js` `submitFlowGeneration(flow, inputs, callbacks)`:
