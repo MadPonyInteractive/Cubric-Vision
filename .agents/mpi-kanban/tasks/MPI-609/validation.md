@@ -43,9 +43,21 @@ The brief missed both template copies. They are different formats of the same gr
 
 Plus `docs/models/klein/9b.md` and `docs/models/klein/README.md`.
 
-> **Pre-existing, NOT fixed (out of scope):** the two templates are different formats, and
-> the generator prefers the `scripts/` copy. Nothing keeps them in sync, so `raw/` can
-> silently diverge from what actually builds. Worth a card if it ever bites.
+> **Correction — an earlier note here was wrong.** It claimed nothing keeps the two templates
+> in sync. It does: `docs/workflow-authoring/README.md` § "Changing an EXISTING workflow"
+> documents `node scripts/sync-raw-workflows.mjs`, which converts changed `raw/` files into the
+> `scripts/` API template and bakes the runtime files. `raw/` is the only authoring source; a
+> hand-edit to either generated copy is thrown away by the next sync.
+>
+> **This session took the shortcut** — hand-edited both templates, then ran `generate_klein.py`
+> directly — rather than editing `raw/` and syncing. Verified equivalent rather than assumed:
+> converting `raw/klein_t2i_template.json` against the engine (`COMFY_URL=…:48188`, the
+> documented target, not the bench) yields a template **structurally identical** to the
+> committed one — 139 nodes, zero differing nodes, no key added or dropped. So the committed
+> state is exactly what the sync would have produced and the next sync is a no-op.
+>
+> The Context Router routes workflow-authoring work to that doc. Reading it first would have
+> given the shorter, correct route. No doc gap — a routing miss.
 
 ## Evidence
 
@@ -62,7 +74,7 @@ Plus `docs/models/klein/9b.md` and `docs/models/klein/README.md`.
 | HF mirror URLs | 7/7 HTTP 200 |
 | **Live engine loader enum** (`:48188/object_info/LoraLoaderModelOnly`) | lists exactly the 15 new backslashed names, no stale entries |
 | **Every baked rack value ∈ that enum** | yes — this is the exact set `value_not_in_list` fires against |
-| Full suite | `722 pass, 0 fail` |
+| Full suite | green at every measurement — `722/722` just before the commit, `725/725` after. **The number moves because the tree is shared:** MPI-567's session added three tests mid-session. A claim auditor sampling in between caught a transient `714 pass, 8 fail` while that session was part-way through editing `tests/flow-lora-rack.test.cjs` and `tests/flow-model-choice.test.cjs` — neither is in this commit, both assert on model **ids** (`klein-4b`), not on dep filenames, and both were green again on the next run. Treat "full suite green" here as *this commit breaks nothing*, not as a number that reproduces. |
 
 ## New test
 
@@ -70,7 +82,7 @@ Plus `docs/models/klein/9b.md` and `docs/models/klein/README.md`.
 name resolves to a real DEPS entry, which is precisely what a rename breaks silently (the
 picker sends an INDEX, the graph carries the FILENAME, and they only meet inside ComfyUI).
 Generic over `comfy_workflows/*.json`, so it also covers Chroma, Krea2 and Qwen for free —
-15 assertions.
+15 test cases.
 
 **Mutation-proven** (restore in `finally`, file confirmed byte-identical afterwards):
 
