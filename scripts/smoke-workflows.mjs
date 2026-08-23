@@ -1100,6 +1100,31 @@ async function checkRequiredInputs(set) {
     return false;
 }
 
+/**
+ * MPI-598: split node-lock drift by the SAME discriminator the Dockerfile bakes on.
+ * `drift` is what the IMAGE carries, so only it can demand a rebuild. `lockOnly` is drift
+ * the image cannot express: the Dockerfile clones `installRequirements: true` entries and
+ * skips the rest, and NOTHING reads /opt/node_lock.json at runtime — the wrapper takes the
+ * commit from the APP's pin per install (`body.get("commit")`), so a code-only node reaches
+ * the volume at the app's version whatever the pod repo says. Treating the two alike demanded
+ * an image rebuild for every code-only bump: it blocked the Klein 9B smoke over LanPaint +
+ * MpiNodes, both `installRequirements: false`, where syncing the file was the entire fix.
+ *
+ * Pure, so --self-check can exercise it. Exported for that reason only.
+ * @returns {{drift: string[], lockOnly: string[]}}
+ */
+export function classifyLockDrift(ours, theirs) {
+    const drift = [];       // image-affecting -> REBUILD
+    const lockOnly = [];    // pod lock is documentation for these -> just sync the file
+    const ourTag = ours.comfyui?.core?.tag, theirTag = theirs.comfyui?.core?.tag;
+    if (ourTag !== theirTag) drift.push(`core ${theirTag} -> ${ourTag}`);
+    for (const [id, n] of Object.entries(ours.nodes || {})) {
+        if (!n.commit || theirs.nodes?.[id]?.commit === n.commit) continue;
+        (n.installRequirements ? drift : lockOnly).push(id);
+    }
+    return { drift, lockOnly };
+}
+
 /** Warns on --plan, hard-fails before any spend. @returns {boolean} in sync */
 function checkPodLock() {
     const podLock = path.join(POD_REPO, 'node_lock.json');
@@ -1110,12 +1135,8 @@ function checkPodLock() {
     }
     const ours = JSON.parse(readFileSync(path.join(REPO, 'dev_configs/node_lock.json'), 'utf8'));
     const theirs = JSON.parse(readFileSync(podLock, 'utf8'));
-    const drift = [];
-    const ourTag = ours.comfyui?.core?.tag, theirTag = theirs.comfyui?.core?.tag;
-    if (ourTag !== theirTag) drift.push(`core ${theirTag} -> ${ourTag}`);
-    for (const [id, n] of Object.entries(ours.nodes || {})) {
-        if (n.commit && theirs.nodes?.[id]?.commit !== n.commit) drift.push(id);
-    }
+    const ourTag = ours.comfyui?.core?.tag;
+    const { drift, lockOnly } = classifyLockDrift(ours, theirs);
     // python_deps.txt is the SECOND half of the sync and drifts silently (MPI-413): the
     // Dockerfile COPYs both, a node bump moves both, and shipping one without the other
     // bakes a mismatched engine. Checking only the lock is how a "synced" pod still drifts.
@@ -1124,14 +1145,33 @@ function checkPodLock() {
     const norm = (p) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
     if (!existsSync(podDeps)) drift.push('python_deps.txt (missing)');
     else if (norm(path.join(REPO, 'dev_configs/python_deps.txt')) !== norm(podDeps)) drift.push('python_deps.txt');
-    if (!drift.length) { log(`\n  pod lock + python_deps in sync with ${ourTag} ✓`); return true; }
+    const syncLines = () => {
+        log(`    cp dev_configs/node_lock.json "${podLock}"`);
+        log(`    cp dev_configs/python_deps.txt "${podDeps}"`);
+        log(`    git -C "${POD_REPO}" commit --only node_lock.json python_deps.txt -m "chore(pod): sync node_lock to ComfyUI ${String(ourTag || '').replace(/^v/, '')}"`);
+    };
+
+    if (!drift.length && !lockOnly.length) { log(`\n  pod lock + python_deps in sync with ${ourTag} ✓`); return true; }
+
+    // Code-only drift alone does NOT block: the image cannot carry these nodes, so there is
+    // nothing stale to smoke. Still say it out loud — the two locks are meant to converge,
+    // and a silent skip here would be the "guard that reads as coverage" this file keeps
+    // relearning. Reported, not enforced.
+    if (!drift.length) {
+        log(`\n  ⚠ pod lock is behind on CODE-ONLY nodes — ${lockOnly.join(', ')}`);
+        log(`  NOT a blocker and NOT a rebuild: the Dockerfile bakes only installRequirements:true,`);
+        log(`  and the wrapper installs these to the volume at the APP's pin. The image is unaffected.`);
+        log(`  Sync the file so the two locks agree (no /build-pod-image):`);
+        syncLines();
+        log(`  Baked packs + python_deps are in sync with ${ourTag} ✓`);
+        return true;
+    }
 
     log(`\n  🛑 POD LOCK IS BEHIND — ${drift.join(', ')}`);
     log(`  The Pod image bakes nodes from those files, so smoking now measures the OLD engine.`);
+    if (lockOnly.length) log(`  (also behind, but code-only and NOT why this blocks: ${lockOnly.join(', ')})`);
     log(`  Sync them, rebuild the DEV image, then re-run:`);
-    log(`    cp dev_configs/node_lock.json "${podLock}"`);
-    log(`    cp dev_configs/python_deps.txt "${podDeps}"`);
-    log(`    git -C "${POD_REPO}" commit --only node_lock.json python_deps.txt -m "chore(pod): sync node_lock to ComfyUI ${String(ourTag || '').replace(/^v/, '')}"`);
+    syncLines();
     log(`    /build-pod-image   — DEV tag v<ver>-dev-<profile>, bump ONLY POD_IMAGE_VERSION_DEV/_CPU_DEV`);
     log(`  Never rebuild the user-facing image for a bump in flight.`);
     return false;
@@ -1577,6 +1617,36 @@ if (INVOKED_DIRECTLY && flag('self-check')) {
         'a model that does NOT declare the capability is left alone (klein/chroma carry these titles)');
     assert(applyFastTier({}, { capabilities: { turboToggle: true } })[0] === 'Input_is_Turbo=ABSENT',
         'a declared capability whose node is missing is reported ABSENT, never silently skipped');
+
+    // classifyLockDrift. The shape below IS MPI-598: LanPaint absent from the pod lock and
+    // MpiNodes behind, BOTH installRequirements:false, which blocked a smoke over a rebuild
+    // that was never needed. Baked drift must still block.
+    const tag = { core: { tag: 'v0.31.0' } };
+    const oursLock = {
+        comfyui: tag,
+        nodes: {
+            Baked:    { commit: 'aaa', installRequirements: true },
+            CodeOnly: { commit: 'bbb', installRequirements: false },
+            NewNode:  { commit: 'ccc', installRequirements: false },
+            Same:     { commit: 'ddd', installRequirements: true },
+        },
+    };
+    const podSame = { comfyui: tag, nodes: { Baked: { commit: 'aaa' }, CodeOnly: { commit: 'bbb' }, NewNode: { commit: 'ccc' }, Same: { commit: 'ddd' } } };
+    let cl = classifyLockDrift(oursLock, podSame);
+    assert(cl.drift.length === 0 && cl.lockOnly.length === 0, 'identical locks drift nowhere');
+
+    // MpiNodes-style bump + a brand-new LanPaint-style entry, both code-only.
+    cl = classifyLockDrift(oursLock, { comfyui: tag, nodes: { Baked: { commit: 'aaa' }, CodeOnly: { commit: 'OLD' }, Same: { commit: 'ddd' } } });
+    assert(cl.drift.length === 0, `code-only drift must NOT demand a rebuild, got ${cl.drift.join(',')}`);
+    assert(cl.lockOnly.join(',') === 'CodeOnly,NewNode', `both code-only entries reported, got ${cl.lockOnly.join(',')}`);
+
+    // A baked pack moving is still a hard block — that is the case the gate exists for.
+    cl = classifyLockDrift(oursLock, { comfyui: tag, nodes: { Baked: { commit: 'OLD' }, CodeOnly: { commit: 'bbb' }, NewNode: { commit: 'ccc' }, Same: { commit: 'ddd' } } });
+    assert(cl.drift.join(',') === 'Baked', `a baked pack bump must block, got ${cl.drift.join(',')}`);
+
+    // A core tag move blocks regardless of nodes.
+    cl = classifyLockDrift(oursLock, { comfyui: { core: { tag: 'v0.30.0' } }, nodes: podSame.nodes });
+    assert(cl.drift[0] === 'core v0.30.0 -> v0.31.0', `core tag drift must block, got ${cl.drift.join(',')}`);
 
     // node_errors: a 200 ack with a dropped output is NOT a pass (MPI-495).
     assert(summarizeNodeErrors(undefined) === null && summarizeNodeErrors({}) === null,
