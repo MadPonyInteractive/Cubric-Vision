@@ -28,7 +28,12 @@
 
 ## Important changes
 
-_(none yet)_
+- Inpainting no longer erases on an empty prompt — you have to say what you want removed.
+  Clearing the prompt and painting over something used to delete it, and that was the whole
+  erase gesture. Klein now samples with the mask as a real constraint, and an empty prompt is a
+  no-op — the same gesture hands the picture back unchanged. Name the thing instead: "remove the
+  tattoo", "remove the head". The bare word "remove" on its own does nothing either, and that is
+  exactly what Vision used to fill in for you behind the scenes. Both the 4B and 9B cards.
 
 ## What's new
 
@@ -57,9 +62,8 @@ _(none yet)_
 - Klein inpaints properly now. Painting over part of a picture used to regenerate the whole
   patch and hope it blended; it now samples with the mask as a real constraint, on both the 4B
   and 9B cards, and it can see the picture underneath the mask — so what comes back sits in the
-  light, style and perspective of everything around it. Removing something is no longer implicit:
-  leaving the prompt empty used to mean erase, and now it means nothing at all. Say what you want
-  gone and name it — "remove the tattoo", not just "remove".
+  light, style and perspective of everything around it. Removing something now has to be asked
+  for by name; see Important changes.
 
 - Place puts one picture inside another. Open an image, pick Place from the Composite tools, and
   drop in a second image — a logo, a product, a person cut out of another shot. Drag it where you
