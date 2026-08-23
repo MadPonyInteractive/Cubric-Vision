@@ -115,11 +115,13 @@ expressed in the GRAPH, by one `MpiInt` selecting `MpiAnySwitch` banks:
 must be pinned in `tests/inject-params-titles.test.cjs` or a lost switch silently pins every
 run to `any_1`.
 
-**A graph carrying `Input_Lora_1..6` does NOT need a LoRA control.** Declare `settingsModel` on
-the FlowDef plus an `{ action: 'settings' }` button and the flow reuses the app's own Model
-Settings panel — the six-slot rack, strengths, bypass, drop zones, all already built. The catch
-is that opening it is only half: a flow dispatches with `model.id: null`, so without the
-`loraModelId` chain the rack saves fine and injects nothing. [ui/lora-rack.md](ui/lora-rack.md).
+**A graph carrying `Input_Lora_Phase<N>_1..6` does NOT need a LoRA control.** Put `loras: true`
+on the model SLOT that runs that phase and the flow reuses the app's own Model Settings panel —
+the six-slot rack, strengths, bypass, drop zones, all already built — opened by a cogwheel
+beside that slot's dropdown. One rack per phase, so a flow choosing a model per phase fills both
+(MPI-608). The catch is that opening it is only half: a flow dispatches with `model.id: null`, so
+without the `loraPhases` chain the rack saves fine and injects nothing.
+`settingsModel` / `{ action: 'settings' }` are RETIRED — [ui/lora-rack.md](ui/lora-rack.md).
 
 **A step may also bind its gizmo to a graph param**: `{ kind:'box', role:'image1', param:'box1' }`.
 The flow declares WHICH role feeds WHICH node — that stays flow knowledge — while the shape the
@@ -165,8 +167,9 @@ See [04](04-overlay-and-shell.md) for the install-progress UI.
 An entry in `requiredModels` written as `{ label, models }` is a **choosable slot** — one role
 the graph plays a model in, with interchangeable candidates for it. The flow runs on whichever
 one resolves, and an `MpiDropdown` per slot in the slide-over lets the user pick, whether or not
-anything is installed yet. Character Sheet:
-`[{ label: 'Base model', models: ['krea2', 'krea2-nsfw'] }, 'klein-4b']`.
+anything is installed yet. Character Sheet, whose two phases are two different models
+(MPI-610): `[{ label: 'Render model', models: ['krea2','krea2-nsfw'], loras: true },
+{ label: 'Blend model', models: ['klein-4b','klein-9b'], loras: true }]`.
 
 A flow may declare several, and they resolve independently — an image model for one phase of the
 graph, an edit model for another. `models[0]` is the recommended candidate; declaration order is

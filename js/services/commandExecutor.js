@@ -859,13 +859,17 @@ function _buildParams(payload) {
                     const param = _loraSlotParam(slot);
                     if (!param) return;
                     params[`Lora_Phase${phase}_${i + 1}`] = param;
-                    // Phase 1 ALSO emits the flat key, because the graphs that predate
-                    // per-phase racks are titled `Input_Lora_1..6` — `flow_character_sheet`
-                    // is one, and it is being re-authored in another session right now, so
-                    // retitling it here would collide. Injection silently skips a title with
-                    // no node, so a graph carrying only one of the two forms takes only that
-                    // one, and a graph carrying both takes the same rack twice over. Drop
-                    // this line once every flow graph is phase-titled.
+                    // Phase 1 ALSO emits the flat key, for graphs that predate per-phase
+                    // racks and are titled `Input_Lora_1..6`. **No flow with a declared
+                    // rack is on that form any more** — `flow_character_sheet` was the last
+                    // and MPI-610 phase-titled it — so this line currently fires into
+                    // nothing. It is kept as the compatibility half, not as live wiring:
+                    // `flow_ltx_extend` and `flow_ltx_foley` still carry flat
+                    // `Input_Lora_1..6` nodes, and this is what would fill them the day one
+                    // of them declares `loras: true` without a retitle. Injection silently
+                    // skips a title with no node, so the dead key costs nothing — but a
+                    // graph carrying BOTH forms would take the same rack twice, so retitle
+                    // rather than add. Drop this line once no flow graph has flat nodes.
                     if (phase === 1) params[`Lora_${i + 1}`] = param;
                 });
             }

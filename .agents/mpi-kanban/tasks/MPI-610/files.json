@@ -1,11 +1,13 @@
 {
   "schema": "mpi-kanban/files/v1",
   "files": [
-    "comfy_workflows/flow_character_sheet.json",
     "comfy_workflows/raw/flow_character_sheet.json",
-    ".agents/mpi-kanban/tasks/MPI-610/brief.md",
-    ".agents/mpi-kanban/tasks/MPI-610/plan.md",
-    ".agents/mpi-kanban/tasks/MPI-610/checklist.md",
-    ".agents/mpi-kanban/tasks/MPI-610/files.json"
+    "comfy_workflows/flow_character_sheet.json",
+    "js/data/flowsRegistry.js",
+    "js/services/commandExecutor.js",
+    "tests/flow-model-choice.test.cjs",
+    "tests/inject-params-titles.test.cjs",
+    "tests/flow-lora-rack.test.cjs",
+    ".agents/mpi-kanban/tasks/MPI-610/"
   ]
 }

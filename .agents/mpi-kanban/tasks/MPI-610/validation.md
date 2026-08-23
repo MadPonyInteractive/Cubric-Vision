@@ -1,59 +1,102 @@
-# MPI-610 validation
+# MPI-610 Validation
 
-**Nothing has been implemented, so there is nothing validated.** The card is in `todo`
-behind MPI-603 and MPI-608.
+## What shipped 2026-08-23
 
-## The reverted attempt — 2026-08-23
+The Character Sheet now declares **two model slots and two LoRA racks**, the shape
+`scribble-object` ships. **No Krea 2 machinery was removed** — the ClownsharKSampler ladder
+(#72 #162 #311 #436), both its `ToBasicPipe`s, `Input_is_Turbo`, `Input_Negative`,
+`Input_Bypass_Filter_Lora`, the accelerator LoRA and the `qwen_image` VAE are all untouched,
+and the edit script asserts the ladder and the pipe count rather than trusting that.
 
-A session built the WRONG design off the original brief (it said the flow moves off Krea 2
-onto a Klein base-model selector) and re-authored the generation phase onto Klein: 29 nodes
-deleted, including the ClownsharKSampler ladder, both `ToBasicPipe`s, `Input_is_Turbo`,
-`Input_Negative`, `Input_Bypass_Filter_Lora`, the accelerator LoRA and the `qwen_image` VAE.
+| slot | phase | candidates | graph |
+|---|---|---|---|
+| **Render model** | sheet generation | `krea2`, `krea2-nsfw` | `Input_Base_Model` #55 — already titled, no graph change |
+| **Blend model** | head removal | `klein-4b` (recommended), `klein-9b` | #726 → `Input_Edit_Model`, #724 → `Input_Edit_Clip` |
 
-Fabio caught it at review. **Everything was reverted.** Kept here only so the revert is
-provably complete and nobody wonders whether a fragment survived:
+`models[0]` is `klein-4b`, deliberately unlike scribble-object which recommends 9B: 4B is what
+the graph bakes and what every sheet has ever been judged on, and **9B has never been run on
+this flow**. Re-order once someone has.
 
-| file | state |
-|---|---|
-| `comfy_workflows/flow_character_sheet.json` | at HEAD — `git diff` empty |
-| `comfy_workflows/raw/flow_character_sheet.json` | at HEAD — `git diff` empty |
-| `tests/inject-params-titles.test.cjs` | at HEAD — `git diff` empty |
-| `js/data/flowsRegistry.js` | **never touched** (peer held it) |
-| `tests/flow-model-choice.test.cjs` | **never touched** (peer held it) |
-| the peer message to MPI-608 | withdrawn, `status: resolved`, do-not-act-on-it header |
-| the file claim | released |
-| commits | **none** |
+### Graph
 
-`node --test` on the two affected test files: 33/33 green after the revert.
+- #726 UNETLoader → `Input_Edit_Model`; #724 CLIPLoader → `Input_Edit_Clip` (still the 4B
+  bake, `qwen_3_4b`, type `flux2`).
+- `Input_Lora_1..6` → `Input_Lora_Phase1_1..6` on the Krea 2 chain (renamed by TITLE, not by
+  id — the chain order is 1,4,2,5,3,6 and renaming by position would have scrambled them).
+- Six NEW `MpiLoraModel` → `Input_Lora_Phase2_1..6` (#778–#783), chained between
+  `Input_Edit_Model` and `Set_klein model`. Cloned from **this graph's own #141**, not
+  scribble's donor: same class, but the MpiNodes `ver` pin matches the rest of this file.
+- One node repositioned, `#729 Set_klein model` → x 2320, so the phase-2 chain reads
+  left→right instead of doubling a 2000px wire back over itself. Every other surviving node's
+  `pos`/`size` asserted byte-identical.
 
-## What the attempt DID establish, and is worth keeping
+Putting the rack before the `SetNode` (rather than after the `GetNode`) is what gives it to
+**both** Klein consumers — the `LanPaint_KSampler` that removes the head AND the
+`MaskDetailerPipe` refinement that follows it. Both resolve to #783 in the API twin.
 
-These were measured against the real graph and the live engine, and they still hold for
-whoever implements the card properly:
+### Descriptor + injection
 
-- **The render slot needs no graph change.** Node **#55 is already titled
-  `Input_Base_Model`** with its `krea2` / `krea2-nsfw` arms. The entire model-selector job
-  is the blend slot — titling **#726 → `Input_Edit_Model`** and **#724 → `Input_Edit_Clip`**
-  in the head-removal branch.
-- **This graph is the last one in the repo on the pre-LanPaint recipe.** Verified by grep
-  across every Klein graph: `klein_t2i`, `klein_9b_t2i` and `flow_scribble_object` all run
-  `LanPaint_KSampler` and carry no outpaint LoRA; `flow_character_sheet` has no LanPaint
-  node, carries outpaint LoRA **#708** and green plate **#716**. That is MPI-603's job and
-  it blocks this card's 9B arm.
-- **MPI-603's consumer table was stale** — `klein_t2i.json` node 259 no longer exists and
-  its raw template is clean. Corrected on that card.
-- **The graph uses KJNodes `SetNode`/`GetNode` named variables plus `MpiReroute`**, not
-  plain reroutes. `Get_W` / `Get_H` / `Get_seed` / `Set_model` carry the resolution, seed
-  and model chain across the canvas, so tracing a wire is not just following links. The
-  converter (`workflow-to-api.mjs`) collapses all of them.
-- **15 unconnected non-widget inputs are PRE-EXISTING** (`MpiAnySwitch.any_3..5`,
-  `SAM3_Detect` bbox/coords, `MaskDetailerPipe` optional inputs, `MpiMath.b/c`). A
-  validator run against this graph will report them; they are not damage.
-- **The API file is generated.** Edit `raw/`, then
-  `node scripts/workflow-to-api.mjs comfy_workflows/raw/flow_character_sheet.json`
-  with the bench up on :8188. Never hand-edit the API file.
+`requiredModels` gains the labelled blend slot with `loras: true`; `modelParams` gains the two
+Klein arms with `Input_Edit_Clip.clip_name` in the **dotted** form — `clip_name` is not on
+`comfyController._inject`'s spray list, so a plain key would match the node and write nothing.
+The encoder moves WITH the checkpoint: 9B on 4B's `qwen_3_4b` dies with a shape error that
+reads as a LanPaint bug (MPI-600).
 
-## What will close the card
+## Evidence
 
-Fabio picks a render model and a blend model in the Flow Library panel, runs it, and judges
-real sheets — including one on the **9B blend arm**, which has never been run here.
+| check | how | result |
+|---|---|---|
+| graph edit is surgical | node-level diff before/after | exactly the 6 retitles + 2 titles + 6 new + #729; nothing else |
+| structural + type | `validate_node_input` re-implemented against 48188 `/object_info` | **PASS**, 94 nodes |
+| injection rules | `node scripts/validate-injection-rules.mjs comfy_workflows/flow_character_sheet.json` | **PASS** |
+| live graph | raw loaded into the app engine's own frontend (48188, not the user's 8188 bench), `app.graphToPrompt()` | 144 nodes, **0 missing node types**, no node errors, **0 semantic diffs** vs the regenerated API twin |
+| node suite | `npm test` | **727/727** |
+| desktop suite | `npx playwright test --config=playwright.desktop.config.js` | **26/26** |
+| lint | `npx eslint js/ --max-warnings=0` | clean |
+
+New/changed tests:
+
+- `flow-model-choice.test.cjs` — the blend slot's two arms (transformer + dotted clip, per
+  arm), the 4B arm restating the bake, a blend pick not disturbing the render pick, and a new
+  test walking the phase-2 rack node-by-node from `Input_Edit_Model` through to
+  `LanPaint_KSampler`. Its two one-slot expectations were updated to two.
+- `inject-params-titles.test.cjs` — gains `input_base_model` / `input_edit_model` /
+  `input_edit_clip`, both phase racks, and asserts the flat `Input_Lora_N` form is GONE.
+- `flow-lora-button.spec.js` (desktop) — see below.
+
+## 🟡 A red release gate found and repaired — MPI-608's, not this card's
+
+`tests/desktop/flow-lora-button.spec.js` had been **failing since e0173e5d**. MPI-608 deleted
+the flow's `LoRAs` action button (one flow-level button cannot name two racks) and did not
+update the spec, which kept asserting it. The desktop suite gates the release AND runs in CI
+on every push, so it was red on master.
+
+Repaired rather than deleted, because the coverage it lost is exactly this card's contract:
+the spec now mounts the Flow Library, opens the Character Sheet's detail panel by clicking its
+tile, and asserts **two labelled slots, two cogwheels, and that they emit
+`{modelId:'krea2'}` and `{modelId:'klein-4b'}` respectively** — the new silent failure being
+both cogwheels naming the same model. It mounts the library directly rather than via
+`Events.emit('flows:open')`, which the shell gates on an installed engine the E2E profile
+deliberately lacks.
+
+Same sweep found and healed MPI-608's doc debt, since the character sheet is its worked
+example: `docs/playbooks/add-flow/ui/lora-rack.md` documented the fully retired
+`settingsModel` / `loraModelId` / `action: 'settings'` vocabulary end to end.
+
+## 🟡 The one check NOT done — a live run
+
+**No sheet has been generated.** Everything above proves the graph the server would receive,
+the params the pick resolves to, and the UI that collects it — none of it proves a picture.
+That is a GPU run and it was deliberately not taken: the bench reported **3.4 GB free of
+16 GB** with `torch_vram_free` at 24 MB, and the user's app is live on 48188.
+
+**What closes this card** (Fabio): Flow Library → Character Sheet → pick a Render model and a
+Blend model → run → judge real sheets, **including at least one on the `klein-9b` blend arm,
+which has never been run on this flow.** Also worth one pass with a LoRA loaded in the Blend
+model's rack, since phase 2 is new.
+
+If the 9B arm dies with a tensor-shape error, read `Input_Edit_Clip.clip_name` first — that is
+the MPI-600 failure and it reads as a LanPaint bug.
+
+Note this card sits on top of **MPI-603**, whose own live run is also still outstanding
+(`../MPI-603/validation.md`). One session at the app covers both.

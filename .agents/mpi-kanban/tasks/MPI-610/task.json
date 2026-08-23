@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-610",
-  "title": "Character Sheet moves off Krea2 onto a Klein 4B / 9B model selector",
+  "title": "Character Sheet gets two model slots and two LoRA racks (Render + Blend)",
   "description": "Fabio, 2026-08-23 (CORRECTED - the original card text was wrong): the Character Sheet adopts the TWO-SLOT shape Scribble to Object ships - a Render model dropdown (krea2 / krea2-nsfw, the generation phase, UNCHANGED) and a Blend model dropdown (klein-4b / klein-9b, the head-removal phase, today hardcoded to 4B). NO Krea 2 machinery is removed. Both phases get their own six LoRAs. Runs AFTER MPI-608, whose per-phase rack mechanism this consumes and which holds js/data/flowsRegistry.js.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-23T08:56:00Z",
-  "updated_at": "2026-08-23T12:10:00Z",
+  "updated_at": "2026-08-23T13:20:12Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -17,5 +17,11 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
+  },
+  "activeSessionTitle": "MPI-610 - two model slots + two LoRA racks on the Character Sheet",
+  "attention": {
+    "state": "required",
+    "reason": "Needs a live run: pick a Render and a Blend model and judge real sheets, including the never-run klein-9b blend arm. MPI-603 needs the same session.",
+    "updated_at": "2026-08-23T13:20:12Z"
   }
 }

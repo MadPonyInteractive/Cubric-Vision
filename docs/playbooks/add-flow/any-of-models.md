@@ -11,8 +11,8 @@ one-candidate shorthand, which is most flows.
 
 ```js
 requiredModels: [
-    { label: 'Base model', models: ['krea2', 'krea2-nsfw'] },   // choosable
-    'klein-4b',                                                  // fixed
+    { label: 'Render model', models: ['krea2', 'krea2-nsfw'] },   // choosable
+    'seedvr2',                                                     // fixed, one-candidate
 ],
 modelParams: {
   'krea2':      { 'Input_Base_Model': 'krea2_raw_int8_convrot.safetensors',            'Input_Bypass_Filter_Lora.strength_model': 1 },
@@ -22,7 +22,9 @@ modelParams: {
 
 Character Sheet and Outpaint declare the Krea 2 pair — the same architecture with a different
 bake, so demanding both means asking for a **second 12.25GB** download of a model the user
-effectively already has.
+effectively already has. Character Sheet's SECOND slot used to be exactly the fixed form
+above (`'klein-4b'`); MPI-610 opened it into a choosable `klein-4b` / `klein-9b` blend slot,
+which is the ordinary way a fixed slot grows up.
 
 **A flow may declare SEVERAL choosable slots, and they resolve independently.** The scribble flow
 picks an SDXL checkpoint for its render phase and an edit model for its blend phase; each gets its
@@ -45,7 +47,7 @@ A slot reaches a plain consumer as an object. Resolve it through `flowsRegistry.
 | `flowModelChoices(flow)` | The slots with a real choice in them, as `{ label, models, recommended }` — one dropdown each. Empty means no picker. |
 | `setFlowModel(flowId, id)` | Records the pick. **Session-only** — a pick that outlived the app would silently run a later sheet on the NSFW bake because of a click made days ago. Replaces any earlier pick in the SAME slot and leaves the other slots alone. |
 | `flowModelParams(flow)` | Every resolved candidate's `modelParams`, merged. `flowService` puts these into `injectionParams` FIRST, so a collected field of the same name still wins. |
-| `flowSettingsModel(flow)` | `settingsModel` resolved through the slots, so the LoRA rack — and the settings button — follow the candidate that actually runs. |
+| `flowLoraPhases(flow)` | `[{ phase, modelId }]` for every slot that opted in with `loras: true` — resolved, so each phase LoRA rack follows the candidate that actually runs (MPI-608). Replaced `flowSettingsModel()`, which could name only one rack. |
 
 ## The picker offers candidates the user has NOT installed
 

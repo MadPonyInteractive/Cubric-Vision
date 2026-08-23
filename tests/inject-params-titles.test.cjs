@@ -251,15 +251,33 @@ test('the Character Sheet Flow carries its I/O and declared control titles (MPI-
     // `input_positive` is pinned twice over: it is both the injector's always-written
     // prompt title AND the `to` of the flow's enhance pair, so the enhanced phrase and
     // the raw fallback land on the same node.
+    //
+    // `input_edit_model` / `input_edit_clip` are the BLEND slot (MPI-610) — the head-removal
+    // pass, which is a Klein edit and a separate model choice from the Krea 2 render. They
+    // are the same silent skip as the controls: the dropdown moves, the run succeeds, and
+    // the graph keeps loading 4B. The clip title is load-bearing on its own — 9B needs
+    // qwen_3_8b_int8_convrot and pairing it with 4B's encoder dies on a shape error
+    // that reads as a LanPaint bug (MPI-600).
     const file = 'flow_character_sheet.json';
     const have = titlesOf(file);
     for (const title of [
         'input_positive', 'input_negative', 'input_seed',
         'input_recipe', 'input_quality', 'input_is_turbo', 'input_remove_head',
+        'input_base_model', 'input_edit_model', 'input_edit_clip',
     ]) {
         assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
     }
     assert.ok(have.has('output_image'), `${file} must carry a capture node titled "output_image"`);
+
+    // Both LoRA racks, phase-titled (MPI-610). The flat `Input_Lora_N` form must be GONE:
+    // commandExecutor still emits `Lora_N` beside `Lora_Phase1_N` for graphs that predate
+    // the phase titles, so a graph carrying both takes the phase-1 rack twice over.
+    for (let i = 1; i <= 6; i += 1) {
+        assert.ok(have.has(`input_lora_phase1_${i}`), `${file} is missing Input_Lora_Phase1_${i}`);
+        assert.ok(have.has(`input_lora_phase2_${i}`), `${file} is missing Input_Lora_Phase2_${i}`);
+        assert.ok(!have.has(`input_lora_${i}`),
+            `${file} still carries the flat Input_Lora_${i} — phase 1 would be injected twice`);
+    }
 });
 
 test('the Outpaint Flow carries its I/O and declared control titles (MPI-594)', () => {

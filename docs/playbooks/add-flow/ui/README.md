@@ -21,7 +21,7 @@ overlay / Flow Library. The procedure for wiring a flow is the numbered sections
 | [paint-gizmo.md](paint-gizmo.md) | **The user DRAWS** — the History paint tool's own `PaintManager` + `brushDab.js` in a step, the undo contract, and a kind returning the LAYER ALONE into its own media slot (`mediaRole`) | Scribble-to-object (MPI-567) |
 | [prompt-enhance.md](prompt-enhance.md) | **The prompt pair** — a user prompt, an `action: 'enhance'` button, an editable enhanced prompt; the media-less `fields` step that hosts them | Character Sheet (MPI-504) |
 | [switch-bank-fields.md](switch-bank-fields.md) | **One field, N graph values** — an `MpiInt` selecting `MpiAnySwitch` banks, for a preset (resolution, duration) one field cannot otherwise reach | Character Sheet (MPI-504) |
-| [lora-rack.md](lora-rack.md) | **The user's own LoRAs in a flow** — `settingsModel` + an `action: 'settings'` button reuse the app's Model Settings panel, and the three-hop injection chain that makes them actually run | Character Sheet (MPI-504) |
+| [lora-rack.md](lora-rack.md) | **The user's own LoRAs in a flow** — `loras: true` on a model SLOT gives that phase a rack and a cogwheel that reuses the app's Model Settings panel, plus the injection chain that makes them actually run. One rack per phase; `settingsModel` is retired | Character Sheet (MPI-504 -> MPI-608/610) |
 
 ## Baseline rules
 

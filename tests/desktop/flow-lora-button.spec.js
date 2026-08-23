@@ -2,72 +2,81 @@ const { test, expect } = require('@playwright/test');
 const { launchApp, closeApp } = require('./launch');
 
 /**
- * MPI-504 — the Flow's LoRA button asks the app to open its OWN Model Settings panel.
+ * MPI-504 → MPI-608 → MPI-610 — a Flow's LoRA rack is opened by the app's OWN Model
+ * Settings panel, and a flow with a model PER PHASE gets one opener per phase.
  *
- * Fabio's ask: "a button that opens up the LoRA panel, which is the same panel as the
- * models have, which is called the settings panel, which has everything already built
- * in." So the flow builds no LoRA UI at all — it names a model and emits. This spec
- * covers the flow's whole half of that: the declaration renders as a button, pressing
- * it takes the `settings` action branch, and the event carries the RIGHT model id.
+ * Fabio's original ask: "a button that opens up the LoRA panel, which is the same panel
+ * as the models have, which is called the settings panel, which has everything already
+ * built in." So the flow builds no LoRA UI at all — it names a model and emits.
  *
- * The model id is the part worth pinning. An event that fires with `undefined` opens
- * nothing and logs nothing — the button would look wired and do exactly as much as the
- * Enhance button did before this card fixed it.
+ * WHAT MOVED. This spec used to press a `LoRAs` action button on the flow's RUN SLIDE and
+ * assert it emitted `{ modelId: 'krea2' }`. MPI-608 deleted that button: one flow-level
+ * button could only ever name one rack, and a flow choosing a model per phase needs one
+ * each. The opener is now a cogwheel beside EACH model dropdown in the Flow Library's
+ * detail panel. The spec was left asserting the deleted button and had been failing red
+ * since e0173e5d; rewritten here (MPI-610) onto the shape that shipped.
  *
- * What this cannot reach: the Blocks that own the overlay are not mounted with no
- * project open, so the OPEN itself is covered by tests/flow-lora-rack.test.cjs, which
- * pins the listener in BOTH Blocks (each mounts its own overlay — one is not enough).
+ * The model id is still the part worth pinning. An event that fires with `undefined`
+ * opens nothing and logs nothing — the cogwheel would look wired and do exactly as much
+ * as the Enhance button did before MPI-504 fixed it. And with two slots there is a new
+ * way to be silently wrong: BOTH cogwheels emitting the same id, which would send the
+ * blend phase's rack at the render model.
+ *
+ * The library is mounted directly rather than through `Events.emit('flows:open')` — the
+ * shell gates that door on an installed engine (`blockedByNoEngine`), and the E2E profile
+ * deliberately has none.
  */
 // Electron boot (splash → local server → shell) plus the settle wait runs past the
 // 30s default.
 test.setTimeout(90000);
 
-test('the LoRA button asks for the Model Settings panel on the flow\'s model', async ({}, testInfo) => {
+test('each model slot gets its OWN cogwheel, opening Model Settings on THAT slot\'s model', async ({}, testInfo) => {
   const { app, window } = await launchApp(testInfo);
 
   try {
     await window.waitForTimeout(6000);
 
     await window.evaluate(async () => {
-      const { Events } = await import('/js/events.js');
-      Events.emit('flow:open', { flowId: 'character-sheet' });
+      const { MpiFlowLibrary } = await import(
+        '/js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js');
+      const lib = MpiFlowLibrary.mount(document.createElement('div'));
+      window.__mpi610 = lib;
+      lib.el.open();
     });
-    await expect(window.locator('.mpi-base-flow')).toHaveCount(1);
 
-    // Walk to the run slide, where the controls live. Clicks go through the handler
-    // in-page: with no project the overlay's main-area is hidden, so nothing inside it
-    // is clickable to a synthetic gesture.
+    // Open the Character Sheet's detail panel by clicking its tile, the way a user does.
     await window.evaluate(() => {
-      document.querySelector('#flow-next').click();
-      document.querySelector('#flow-next').click();
+      const tile = [...document.querySelectorAll('.mpi-tile')]
+        .find(t => t.textContent.includes('Character Sheet'));
+      if (!tile) throw new Error('the Character Sheet tile is not in the library');
+      tile.click();
     });
 
-    const btn = window.locator(
-      '.mpi-base-flow__field-button:has(.mpi-btn__text:text-is("LoRAs"))',
-    );
-    await expect(btn).toHaveCount(1);
-    // An action button carries its own caption — no `field-label` above it, same as
-    // Enhance.
-    await expect(window.locator('.mpi-base-flow__field-label:text-is("LoRAs")')).toHaveCount(0);
+    // TWO labelled slots (MPI-610): the Krea 2 render phase and the Klein blend phase.
+    // Two fields both reading "Model" would say nothing, so each slot labels its own.
+    await expect(window.locator('.mpi-detail__field-label:text-is("Render model")')).toHaveCount(1);
+    await expect(window.locator('.mpi-detail__field-label:text-is("Blend model")')).toHaveCount(1);
+    await expect(window.locator('.mpi-detail__model-pick')).toHaveCount(2);
 
-    // Listen first, then press. The payload is the assertion: a bare emit would look
-    // identical from the outside and open nothing.
+    // …and a cogwheel in each, because both slots declare `loras: true`.
+    const cogs = window.locator('.mpi-detail__loras-btn');
+    await expect(cogs).toHaveCount(2);
+
+    // Listen first, then press. A bare emit would look identical from the outside.
     const asked = await window.evaluate(async () => {
       const { Events } = await import('/js/events.js');
-      return await new Promise((resolve) => {
-        const off = Events.on('ui:open-model-settings', (payload) => {
-          off?.();
-          resolve(payload ?? null);
-        });
-        setTimeout(() => { off?.(); resolve(null); }, 3000);
-        [...document.querySelectorAll('.mpi-base-flow__field-button')]
-          .find(b => b.querySelector('.mpi-btn__text')?.textContent === 'LoRAs')
-          .click();
-      });
+      const seen = [];
+      const off = Events.on('ui:open-model-settings', p => seen.push(p));
+      for (const btn of document.querySelectorAll('.mpi-detail__loras-btn')) btn.click();
+      await new Promise(r => setTimeout(r, 500));
+      off?.();
+      return seen;
     });
 
-    expect(asked).toEqual({ modelId: 'krea2' });
+    // Slot order is declaration order, so cogwheel 0 is the render model and 1 the blend.
+    expect(asked).toEqual([{ modelId: 'krea2' }, { modelId: 'klein-4b' }]);
   } finally {
+    await window.evaluate(() => { window.__mpi610?.el?.destroy?.(); }).catch(() => {});
     await closeApp(app);
   }
 });

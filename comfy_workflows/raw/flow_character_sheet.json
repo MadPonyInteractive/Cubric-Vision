@@ -1,8 +1,8 @@
 {
   "id": "8c903c85-8d5e-4c32-82d9-491dd4cd89e3",
   "revision": 0,
-  "last_node_id": 777,
-  "last_link_id": 1591,
+  "last_node_id": 783,
+  "last_link_id": 1597,
   "nodes": [
     {
       "id": 136,
@@ -44,7 +44,7 @@
           "links": null
         }
       ],
-      "title": "Input_Lora_2",
+      "title": "Input_Lora_Phase1_2",
       "properties": {
         "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
@@ -102,7 +102,7 @@
           "links": null
         }
       ],
-      "title": "Input_Lora_5",
+      "title": "Input_Lora_Phase1_5",
       "properties": {
         "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
@@ -160,7 +160,7 @@
           "links": null
         }
       ],
-      "title": "Input_Lora_3",
+      "title": "Input_Lora_Phase1_3",
       "properties": {
         "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
@@ -218,7 +218,7 @@
           "links": null
         }
       ],
-      "title": "Input_Lora_1",
+      "title": "Input_Lora_Phase1_1",
       "properties": {
         "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
@@ -276,7 +276,7 @@
           "links": null
         }
       ],
-      "title": "Input_Lora_6",
+      "title": "Input_Lora_Phase1_6",
       "properties": {
         "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
@@ -2298,7 +2298,7 @@
           "links": null
         }
       ],
-      "title": "Input_Lora_4",
+      "title": "Input_Lora_Phase1_4",
       "properties": {
         "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
@@ -3945,7 +3945,8 @@
         "default"
       ],
       "color": "#432",
-      "bgcolor": "#653"
+      "bgcolor": "#653",
+      "title": "Input_Edit_Clip"
     },
     {
       "id": 728,
@@ -4058,13 +4059,14 @@
         "default"
       ],
       "color": "#323",
-      "bgcolor": "#535"
+      "bgcolor": "#535",
+      "title": "Input_Edit_Model"
     },
     {
       "id": 729,
       "type": "SetNode",
       "pos": [
-        220.80416172108738,
+        2320,
         1965.3717232623042
       ],
       "size": [
@@ -4078,7 +4080,7 @@
         {
           "name": "MODEL",
           "type": "MODEL",
-          "link": 1517
+          "link": 1597
         }
       ],
       "outputs": [
@@ -6585,6 +6587,354 @@
         "LanPaint KSampler.",
         "🖼️ Image Inpainting"
       ]
+    },
+    {
+      "id": 778,
+      "type": "MpiLoraModel",
+      "pos": [
+        480,
+        1963.7567796765827
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 64,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1517
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            1592
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_Phase2_1",
+      "properties": {
+        "Node name for S&R": "MpiLoraModel",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 779,
+      "type": "MpiLoraModel",
+      "pos": [
+        780,
+        1963.7567796765827
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 65,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1592
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            1593
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_Phase2_2",
+      "properties": {
+        "Node name for S&R": "MpiLoraModel",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 780,
+      "type": "MpiLoraModel",
+      "pos": [
+        1080,
+        1963.7567796765827
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 66,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1593
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            1594
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_Phase2_3",
+      "properties": {
+        "Node name for S&R": "MpiLoraModel",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 781,
+      "type": "MpiLoraModel",
+      "pos": [
+        1380,
+        1963.7567796765827
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 67,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1594
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            1595
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_Phase2_4",
+      "properties": {
+        "Node name for S&R": "MpiLoraModel",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 782,
+      "type": "MpiLoraModel",
+      "pos": [
+        1680,
+        1963.7567796765827
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 68,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1595
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            1596
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_Phase2_5",
+      "properties": {
+        "Node name for S&R": "MpiLoraModel",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 783,
+      "type": "MpiLoraModel",
+      "pos": [
+        1980,
+        1963.7567796765827
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 69,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1596
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            1597
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_Phase2_6",
+      "properties": {
+        "Node name for S&R": "MpiLoraModel",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -7520,7 +7870,7 @@
       1517,
       726,
       0,
-      729,
+      778,
       0,
       "MODEL"
     ],
@@ -7899,6 +8249,54 @@
       698,
       0,
       "LATENT"
+    ],
+    [
+      1592,
+      778,
+      0,
+      779,
+      0,
+      "MODEL"
+    ],
+    [
+      1593,
+      779,
+      0,
+      780,
+      0,
+      "MODEL"
+    ],
+    [
+      1594,
+      780,
+      0,
+      781,
+      0,
+      "MODEL"
+    ],
+    [
+      1595,
+      781,
+      0,
+      782,
+      0,
+      "MODEL"
+    ],
+    [
+      1596,
+      782,
+      0,
+      783,
+      0,
+      "MODEL"
+    ],
+    [
+      1597,
+      783,
+      0,
+      729,
+      0,
+      "MODEL"
     ]
   ],
   "groups": [

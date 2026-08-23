@@ -4,7 +4,6 @@
   "columns": {
     "todo": [
       "MPI-612",
-      "MPI-610",
       "MPI-605",
       "MPI-602",
       "MPI-596",
@@ -69,6 +68,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-610",
       "MPI-603",
       "MPI-608",
       "MPI-607",
@@ -109,8 +109,31 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-23T12:47:23Z",
+  "updated_at": "2026-08-23T13:20:12Z",
   "events": [
+    {
+      "at": "2026-08-23T13:20:12Z",
+      "type": "validation.updated",
+      "task": "MPI-610",
+      "actor": "claude",
+      "note": "in-progress -> validating. Two model slots and two LoRA racks shipped, the scribble-object shape: Render (krea2/krea2-nsfw, UNCHANGED) + Blend (klein-4b recommended / klein-9b). Graph: #726 -> Input_Edit_Model, #724 -> Input_Edit_Clip, Input_Lora_1..6 renamed BY TITLE to Input_Lora_Phase1_1..6 (chain order is 1,4,2,5,3,6 so renaming by position would have scrambled the rack), and six new MpiLoraModel #778-783 as Input_Lora_Phase2_1..6 between the Klein loader and Set_klein model - which is what gives them to BOTH consumers, the LanPaint sampler and the MaskDetailer refinement. NO Krea 2 machinery removed; the ladder and pipe count are asserted in the edit script. Descriptor gains the labelled blend slot with loras:true and the two Klein arms with the DOTTED Input_Edit_Clip.clip_name. Proven: structural+type PASS on 94 nodes vs 48188, validate-injection-rules clean, live graphToPrompt 0 semantic diffs and 0 missing node types, npm test 727/727, desktop 26/26, eslint clean. ALSO REPAIRED A RED RELEASE GATE that was not this card: tests/desktop/flow-lora-button.spec.js had been failing since e0173e5d because MPI-608 deleted the button it asserted - rewritten onto the shipped two-cogwheel shape, which is this cards own UI contract. Same sweep healed MPI-608 doc debt in ui/lora-rack.md, which documented the fully retired settingsModel/loraModelId vocabulary. NOT proven: a live run - bench had 3.4GB of 16GB VRAM free and the app was live. Fabio to run it, including the klein-9b blend arm which has never been run on this flow."
+    },
+    {
+      "at": "2026-08-23T12:56:57Z",
+      "type": "task.updated",
+      "task": "MPI-610",
+      "actor": "claude",
+      "note": "title corrected: \"Character Sheet moves off Krea2 onto a Klein 4B / 9B model selector\" -> \"Character Sheet gets two model slots and two LoRA racks (Render + Blend)\". The old title was the wrong reading (nothing moves off Krea 2) and brief.md records it costing a full build-and-revert; leaving it on the card is how that reading comes back."
+    },
+    {
+      "at": "2026-08-23T12:56:57Z",
+      "type": "task.moved",
+      "task": "MPI-610",
+      "actor": "claude",
+      "from": "todo",
+      "to": "doing",
+      "note": "todo -> doing. Both gates cleared: MPI-608 shipped in e0173e5d (flowLoraPhases + loras-on-slot verified live in flowsRegistry.js/commandExecutor.js) and MPI-603 landed in 08dbde02, which took #708/#716/#713 out of the head-removal branch and made both blend arms symmetric. Building the TWO-SLOT shape scribble-object ships: Render (krea2/krea2-nsfw, UNCHANGED - no Krea 2 machinery removed) + Blend (klein-4b/klein-9b), each with its own six LoRAs. Also correcting this card TITLE - it still read \"moves off Krea2 onto a Klein 4B / 9B model selector\", which is the wrong framing that caused the reverted build."
+    },
     {
       "at": "2026-08-23T12:47:23Z",
       "type": "validation.updated",
