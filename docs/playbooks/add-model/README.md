@@ -232,3 +232,44 @@ Same list, but the model stays. Steps 1–3 and 7–9 apply unchanged; 4/6 do no
 - **Docs use the model as a worked example.** `docs/data.md`, `docs/generation-lifecycle.md`
   and `docs/model-library.md` all illustrated partial installs with "Wan 2.2 with only
   t2v". Mark the example historical rather than deleting the mechanism's docs.
+
+### RENAMING a weight that has already shipped
+
+Not the same job as removing one. A rename changes a dep's `filename`, so the app stops
+recognising the copy already on the user's disk — and, unlike a removal, **nothing in the
+app can ever find that copy again.** Worked example: MPI-609 (Klein's 15 style LoRAs) →
+MPI-612 (its deferred GC).
+
+1. **COPY on R2 and HF. Never move, never delete in the same pass.** A weight's URL is
+   baked into the app build that shipped with it, so dropping the old key 404s a download
+   for everyone who has not updated yet — the same reasoning as step 8 above, which is why
+   its default is also LEAVE THEM UP. Both hosts rename server-side for free: `rclone
+   copyto` inside one bucket, and one HF `create_commit` of `CommitOperationCopy`. No bytes
+   move, so the VPN's R2 throttle is irrelevant. **`rclone` needs `--s3-no-check-bucket`**
+   or every call 403s naming `CreateBucket` while write access is fine.
+2. **Card the deletion, two-three releases out** — old R2 keys, old HF files, and the stale
+   copies on user disks. Do it in the same session as the rename or it never gets written
+   down.
+3. **The orphan sweep cannot help you here.** `_orphanedDepIds` iterates
+   `Object.keys(DEPS)`, so once the old filename leaves `DEPS` the sweep is blind to it —
+   the opposite of the removal case, where keeping the entry is precisely what lets the
+   sweep reclaim the file. Renamed weights strand until something deletes them by name.
+   **Do NOT widen the sweep to delete unrecognised files**; MPI-310 destroyed 5.24 GB that
+   way, and `_orphanedDepIds`' own comment says a second notion of "orphan" is how.
+4. **Decide the re-download and say it out loud.** Users re-fetch the renamed weights. The
+   cheaper alternative is a one-shot rename migration in the local engine gate
+   (`routes/engine.js`, where the missing/drifted dep repair already runs), guarded on the
+   new file being absent and the old present. Either is fine — an unstated choice is not.
+   Scope the number honestly: only weights that actually shipped count (MPI-609's real cost
+   was 0.72 GB, not the 2.13 GB the whole set weighs, because Klein 9B had never shipped).
+5. **Sweep the graphs, and regenerate — never hand-edit.** A baked `lora_name` never passes
+   through the MPI-229 dropdown heal, so it must keep the `\` separator and must still name
+   a real dep. `tests/style-rack-deps-resolve.test.cjs` asserts exactly that for every
+   `MpiStyleLoras` rack; run it. Remember `raw/` is the only authoring source — edit it and
+   run `scripts/sync-raw-workflows.mjs` rather than touching either generated copy
+   (`docs/workflow-authoring/README.md`).
+6. **Verify the new URLs before closing** — HEAD each one and compare `content-length`
+   against the dep's `bytes`. rclone reporting success is not the same as the public domain
+   serving the object.
+
+No version bump (still a model change).
