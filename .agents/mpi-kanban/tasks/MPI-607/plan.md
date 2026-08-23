@@ -4,6 +4,43 @@
 
 Project mode: scalable-foundation.
 
+> **2026-08-23 STEP 2b PASSED — Fabio heard it: "the A to B clones are all really
+> good, spot-on".** A Qwen-designed synthetic voice clones through Chatterbox well
+> enough to build on, so the design-then-speak chain holds and the VCTK/GLOBE fallback
+> stays parked. Clips in `D:\WORK\Images\Outputs\mpi607\`; detail in `validation.md`.
+>
+> **2026-08-23 — Qwen3-TTS VoiceDesign now RUNS LOCALLY on the bench, and option B's
+> core gate PASSED with it.** `G:\ComfyUi\_qwen_tts_rt\` holds a transformers-4.57.3
+> venv built by `virtualenv` off the bench's EMBEDDABLE python, inheriting torch
+> 2.12.0+cu130 — 4 packages, ~13 MB, bench ComfyUI untouched on 5.13.0. Model loads in
+> 3.1s, generates in 6-33s on Fabio's GPU. Pack is
+> `flybirdxx/ComfyUI-Qwen-TTS` (**Apache-2.0**, `FB_Qwen3TTSVoiceDesign`), used for its
+> bundled `qwen_tts` only — its `transformers>=4.57.0,<5.0.0` ceiling means it can never
+> load in-process in the bench or the app engine. Detail + two gotchas in `validation.md`.
+>
+> **Options (a) Pod bake and (c) hosted DashScope are REJECTED by Fabio (2026-08-23).**
+> His lean: "a small voice library created by us is probably the best approach and safest
+> — voice library, chatterbox, done." Option (b) the local isolated runtime stays open and
+> is now much cheaper than costed, but the library does not depend on it: authoring runs
+> on the bench either way, and only the finished `.wav` files ship.
+>
+> **2026-08-23 — ARCHITECTURE SETTLED. Read `validation.md` from
+> "THE SETTLED ARCHITECTURE" down.** Vision ships **Chatterbox only** (Qwen is a bench
+> authoring tool, never shipped). Runtime pipeline is
+> `FL_ChatterboxTTS(text, audio_prompt=<performance clip>, cfg_weight=0.3,
+> exaggeration=1.2)` -> `FL_ChatterboxVC(target_voice=<character clip>)`.
+> **Library = ~60 neutral character clips + ~5-8 shared emotional performance clips.**
+>
+> Locked: `cfg_weight` 0.3 (default 0.5 kills emotion), VC-source `exaggeration` 1.2
+> (higher breaks identity), identity gate cosine >= 0.70 via
+> `research/speaker_similarity.py`. `exaggeration`/`cfg_weight` are COUPLED -- one
+> intensity control in the Flow, never two sliders. **No accent axis** (closed negative).
+>
+> **Two things remain, and neither blocks the other.** (1) The library taxonomy --
+> ~60 voices over gender x age x delivery-type, tags not folders; a `mpi-brainstorm`-shaped
+> design conversation that has not happened. (2) **Step 3, ship Chatterbox** -- unblocked
+> since the start of the day and still not begun; it needs none of the library settled.
+
 Research session 2026-08-22/23 evaluated Chatterbox, Qwen3-TTS, DramaBox and VibeVoice.
 Nothing in the Vision repo was edited. All changes so far are on the standalone bench
 (`G:\ComfyUi`, port 8188) and in a session scratchpad.
@@ -225,6 +262,75 @@ No weights downloaded yet. A ComfyUI-Manager update to the Qwen pack reverts the
 
 ## Plan Drift
 
+- **2026-08-23 — ARCHITECTURE SETTLED: TTS-then-VC, and the library collapses to ~60 + ~5.**
+  Fabio confirmed VC carries emotion at exaggeration 1.2. Pipeline is
+  `FL_ChatterboxTTS(text, audio_prompt=<performance clip>, cfg_weight=0.3,
+  exaggeration=1.2)` -> `FL_ChatterboxVC(target_voice=<character clip>)`. The library
+  becomes ~60 NEUTRAL character clips plus ~5-8 shared emotional performance clips, so
+  emotion is a pipeline property and not a library one -- a new emotion costs one clip, and
+  a user's own uploaded voice inherits the whole emotional range because it is only ever a
+  VC target. Supersedes the earlier 60 x N sizing worry entirely.
+
+- **2026-08-23 — speaker identity became MEASURABLE, and it reshapes the library plan.**
+  `research/speaker_similarity.py` loads Chatterbox's own CAMPPlus x-vector encoder out of
+  the s3gen checkpoint, so "same voice?" is now a cosine score in the exact space
+  Chatterbox clones from. That is the library's QA gate: score every authored emotion
+  variant against its neutral base, auto-reject under ~0.70. Findings: identity survives an
+  emotion change ONLY if `pitch`/`speed`/`volume`/`clarity`/`texture` are frozen and the
+  emotion lines alone vary, and even then it is voice-dependent (an ordinary timbre held at
+  0.68-0.88, an extreme gravelly bass fell to 0.45-0.61). The SEED barely matters -- the
+  prompt determines identity. Chatterbox VC carries a performance onto a character at
+  0.78-0.83 (level with no-VC) and sounds MORE natural than direct, but attenuates emotion;
+  pre-compensating by pushing the source is capped at exaggeration ~1.2 before identity
+  degrades.
+
+- **2026-08-23 — emotion works, and `cfg_weight` was the whole problem.** The node
+  default 0.5 suppresses emotional transfer; 0.3 lets it through, confirmed by ear across
+  sad, angry and cheerful. `exaggeration` and `cfg_weight` are COUPLED (the pack calls
+  cfg_weight "Pace/classifier-free guidance"), so raising intensity alone produces the
+  "fast and mechanical" artefact that made round 1 look like a model limit. Two product
+  consequences: the Flow must default cfg_weight to 0.3, and it must expose ONE coupled
+  intensity control rather than two independent sliders. Per-emotion sweet spots differ --
+  sad is most natural at exaggeration 0.5 and unnatural at 0.8, angry keeps improving to
+  1.2 -- so intensity defaults belong in the library metadata, per voice.
+
+- **2026-08-23 — accent cannot be authored with VoiceDesign. Closed after 22 generations;
+  do not reopen without new information.** Prose, the pack's own structured `accent:`
+  grammar, intensity wording, city anchors and phonetic traits were all tried. One
+  convincing British accent appeared and did not reproduce at three fresh seeds; two more
+  were "mild"; every non-British accent (Italian, Russian, French, German, Dutch, Spanish)
+  came back American. The model has a strong American English prior. **Gender, age and
+  delivery-type are unaffected and work well** -- only the accent axis fails, so the
+  library ships without author-designed accents. Still OPEN and now the deciding question:
+  whether a genuinely accented reference survives Chatterbox cloning, which would let
+  accents come from user-supplied clips or a licensed accented corpus instead.
+
+- **2026-08-23 — DECISION, and it closes the hosting question for good: Qwen is NOT
+  shipped.** Vision ships Chatterbox plus a self-authored voice library; Qwen3-TTS
+  VoiceDesign is demoted to a bench authoring tool at `G:\ComfyUi\_qwen_tts_rt\`.
+  Fabio's reason is architectural, not cost: a second Python environment inside an app
+  that swaps models constantly is a fragile ecosystem, and the isolated runtime is cheap
+  ONLY because it inherits torch from the engine -- which is precisely the coupling that
+  breaks on an engine bump. Branch A / option (b) is therefore closed for the shipped app,
+  though the runtime itself is built, works, and stays useful on the bench.
+  Three findings came with it: `FL_ChatterboxMultilingualTTS` gives Chatterbox 23
+  languages WITH a reference clip; accent cannot be requested at runtime (no voice prompt)
+  so it must be baked into the library at design time; and the multilingual clone
+  durations are anomalous and unverified.
+
+- **2026-08-23 — the hosting question narrowed to one option and stopped blocking.**
+  Fabio rejected the Pod bake and the hosted DashScope API outright, and leaned to a
+  self-authored voice library plus Chatterbox. Meanwhile the local isolated runtime
+  (plan branch A / "option (b)") was BUILT on the bench and works, so its cost is now
+  measured rather than estimated: 4 packages, ~13 MB, torch inherited, base env provably
+  untouchable by pip. Two findings that any future isolated-runtime design must carry:
+  `virtualenv --system-site-packages` **silently fails to inherit** off an embeddable
+  interpreter (the base `Lib\site-packages` never reaches `sys.path`, despite
+  `include-system-site-packages = true`) and needs an explicit `.pth`; and
+  `generate_voice_design(language=...)` wants `"english"`, not `"en"`.
+  **The library route does not depend on any of it** — authoring happens on the bench and
+  only `.wav` files ship, which is why it is the safe answer.
+
 - **2026-08-23 — the blocking Step 1 is withdrawn, not deferred.** It measured the wrong
   pack down an abandoned route. Two things landed on the same day:
   1. The bench run of `TTS_Qwen3_voice-design.json` never reached the forward pass. It
@@ -251,6 +357,26 @@ No weights downloaded yet. A ComfyUI-Manager update to the Qwen pack reverts the
   No module named 'venv'`, 3.13.12, `python313._pth`). Any isolated-runtime design has to
   bootstrap through pip-installed `virtualenv`, which is what TTS-Audio-Suite already
   does. Unverified against the embeddable interpreter.
+- **2026-08-23 — Step 2b RAN. The HF Space named in the plan is dead; a better one replaced it.**
+  `Qwen/Qwen3-TTS-Voice-Design` is a DashScope **API proxy** on `cpu-basic`, not a model
+  demo, and it errors instantly for everyone (browser UI included, not just the API).
+  Switched to **`Qwen/Qwen3-TTS`** — official, `zero-a10g`, running the real open weights.
+  Three voices designed, all cloned through Chatterbox on the bench against a real-human
+  control and a no-reference baseline. Numbers in `validation.md`; Fabio's listen pending.
+  Two facts worth carrying forward:
+  - **VoiceDesign open weights are real and Apache-2.0** —
+    `Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign` + `Qwen/Qwen3-TTS-Tokenizer-12Hz`. The bench
+    pack downloads and `from_pretrained`s them; it never calls DashScope. Step 2b' still
+    has something to host.
+  - **The official Space is a proven recipe for the Pod bake** — `transformers==4.57.3`
+    on `torch==2.8.0` + `accelerate==1.12.0` + `kernels`/`sox`/`onnxruntime`, serving
+    the 1.7B VoiceDesign model on an A10G today. That is the venv to bake, and it is no
+    longer a guess.
+  - **A hosted route exists as a third option** and was not on the board before:
+    DashScope's `qwen-voice-design` is a paid API needing no local runtime at all. It
+    trades a per-call cost and a hard dependency on Alibaba for zero hosting work. Not
+    recommended without a look at terms and pricing, but it should be named when 2b' is
+    decided rather than discovered later.
 
 ## Verification
 
@@ -261,6 +387,14 @@ measured numerically, but "is this a usable voice" is not. Both Flows also have 
 surface he must exercise in the running app.
 
 ## Preservation Notes
+
+- **Reference clips must be single-speaker — open, and it has a UI consequence.**
+  Step 2b's real-human control used a two-speaker conversation by mistake; Chatterbox
+  produced a voice matching neither speaker rather than picking one. Likely cause is
+  speaker count, but the clip was also 33.6s/44.1kHz so it is not isolated. If a user
+  can supply their own reference, the Flow probably has to reject or warn on
+  multi-speaker audio instead of silently returning a voice that is nobody. One
+  deliberate experiment before Step 3's UI is designed.
 
 - **Open question, worth resolving before Step 2 branch B:** downloadable voice-reference
   libraries. If users can browse and fetch reference clips, Flow A becomes browse-and-fetch
