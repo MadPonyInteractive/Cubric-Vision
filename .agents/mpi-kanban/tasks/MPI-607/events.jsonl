@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-607", "type": "task.created", "at": "2026-08-23T06:13:13Z", "actor": "claude", "to": "todo", "summary": "Carded from the TTS research session; plan attached."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-607", "type": "task.updated", "at": "2026-08-23T06:13:13Z", "actor": "claude", "summary": "Compact plan attached at plan.md; maturity planned."}

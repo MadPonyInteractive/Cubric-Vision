@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-607",
+  "title": "TTS in Vision: resolve Qwen3-TTS viability, then wire Chatterbox + Qwen as Flows",
+  "description": "Two planned Flows: voice design (text -> new voice) and dialogue (references + text -> speech, multi-speaker). Blocked on one measurement: whether Qwen3-TTS produces real audio or silence on transformers 5.13.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-23T06:13:13Z",
+  "updated_at": "2026-08-23T06:13:13Z",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl"
+  }
+}
