@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/shell/navigation.js",
+    "js/shell.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/managers/hotkeyRegistry.js",
+    "js/components/types.js",
+    "tests/flow-frame.test.cjs"
+  ]
+}

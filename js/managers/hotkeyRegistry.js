@@ -273,18 +273,19 @@ export const HOTKEY_REGISTRY = [
     // Tab focus-traversal is suppressed globally in hotkeyManager regardless,
     // so Tab can never walk cards / enter the slide-over.
     //
-    // MPI-589 made it a THREE-state ring — last card → gallery → Flows → … — which
-    // is why the body-overlay gate now has an exception. The Flow Library IS a body
-    // overlay, so the old blanket `!qs('.mpi-overlay--body')` killed Tab the instant
-    // Flows opened, leaving the ring with no way back out. Every OTHER body overlay
-    // (Model Library above all) still blocks.
+    // MPI-589 made it a THREE-state ring — which is why the body-overlay gate now has
+    // an exception. The Flow Library IS a body overlay, so the old blanket
+    // `!qs('.mpi-overlay--body')` killed Tab the instant Flows opened, leaving the ring
+    // with no way back out. Every OTHER body overlay (Model Library above all) still
+    // blocks. MPI-611 re-ordered the ring to gallery → last card → the OPEN flow; an
+    // open flow needs no exception here because it mounts `main-area`, not `body`.
     {
         id:               'workspace.flip',
         key:              'tab',
         type:             KEY_TYPE.DOWN,
         category:         'workspace',
         scopeLabel:       'Workspace',
-        description:      'Cycle the last-used card, the gallery and Flows',
+        description:      'Cycle the gallery, the last-used card and the open Flow',
         allowWhileTyping: false,
         when: ({ state }) =>
             (state.currentPage === 'gallery' || state.currentPage === 'group-history') &&

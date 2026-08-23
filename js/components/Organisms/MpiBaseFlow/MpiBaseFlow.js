@@ -220,7 +220,12 @@ export const MpiBaseFlow = ComponentFactory.create({
         // the PromptBox's, queueing a phantom generation from its persisted inputs.
         // Fires ONCE per close: MpiOverlay.hide() emits inside its `_isHiding` guard,
         // so the `el.close()` re-entry here can't loop back through it.
-        overlay.on('close', () => { el.close(); emit('close', {}); });
+        //
+        // `_suspending` is the ONE case that must not reach the shell: the Tab ring
+        // parks this flow to visit the gallery and comes back to it (MPI-611), so the
+        // outward emit — and the destroy it triggers — is suppressed for that hide only.
+        let _suspending = false;
+        overlay.on('close', () => { el.close(); if (!_suspending) emit('close', {}); });
 
         const tickerEl = qs('#flow-ticker', el);
         const slidesEl = qs('#flow-slides', el);
@@ -1453,8 +1458,8 @@ export const MpiBaseFlow = ComponentFactory.create({
         _unsubs.push(on(prevBtn, 'click', () => _goTo(_current - 1)));
         _unsubs.push(on(nextBtn, 'click', () => _goTo(_current + 1)));
 
-        _unsubs.push(Hotkeys.bind('flow.step.back', () => _goTo(_current - 1)));
-        _unsubs.push(Hotkeys.bind('flow.step.forward', () => _goTo(_current + 1)));
+        // The step hotkeys are bound per SHOW, not for the instance lifetime — see
+        // _bindKeys near el.open (MPI-611).
 
         // ── Result painting ─────────────────────────────────────────────────────
         /** Show the empty-state copy only while the pane holds nothing. */
@@ -2298,8 +2303,8 @@ export const MpiBaseFlow = ComponentFactory.create({
             if (entry) activeGenerations.cancel(entry.id);
         }
 
-        // Ctrl+Enter runs the OPEN flow, not the PromptBox behind it.
-        _unsubs.push(Hotkeys.bind('generation.run', _run));
+        // Ctrl+Enter runs the OPEN flow, not the PromptBox behind it — bound per
+        // SHOW, see _bindKeys near el.open (MPI-611).
 
         // ── Back to Library = close this overlay, reopen the Flow Library ────────
         _unsubs.push(on(qs('#flow-back', el), 'click', () => {
@@ -2311,9 +2316,39 @@ export const MpiBaseFlow = ComponentFactory.create({
         // Closing with an unapplied result does NOT prompt (decided 2026-07-18):
         // with no Discard, a re-run overwrites and closing drops — nothing unique
         // is destroyed, so a confirm would guard a non-decision.
-        el.open = () => { overlay.el.show(); };
-        el.close = () => { overlay.el.hide(); };
+        //
+        // HOTKEYS ARE PER-SHOW (MPI-611). A SUSPENDED flow — hidden by the Tab ring
+        // but deliberately NOT destroyed — keeps every listener this setup registered.
+        // Instance-lifetime binds would leave ArrowLeft/Right stepping an invisible
+        // carousel and Ctrl+Enter queueing a phantom flow run from the gallery: exactly
+        // the MPI-345 bug, in the shape a hidden-but-alive flow brings back.
+        let _keyBinds = [];
+        const _bindKeys = () => {
+            if (_keyBinds.length) return;
+            _keyBinds = [
+                Hotkeys.bind('flow.step.back', () => _goTo(_current - 1)),
+                Hotkeys.bind('flow.step.forward', () => _goTo(_current + 1)),
+                Hotkeys.bind('generation.run', _run),
+            ];
+        };
+        const _unbindKeys = () => { _keyBinds.forEach(fn => fn?.()); _keyBinds = []; };
+        _unsubs.push(_unbindKeys);
+
+        el.open  = () => { overlay.el.show(); _bindKeys(); };
+        el.close = () => { _unbindKeys(); overlay.el.hide(); };
         el.onOpen = el.open;
+
+        // Suspend = hide WITHOUT the outward `close`, so the shell keeps this instance
+        // alive (MPI-611). The Tab ring parks the flow here on its way to the gallery
+        // and re-shows it with el.open(); the DOM, the collected inputs, the current
+        // step and an in-flight run all survive, because nothing was torn down. A real
+        // close still destroys — only the outward emit is suppressed.
+        el.suspend = () => {
+            if (_suspending) return;
+            _suspending = true;
+            el.close();
+            _suspending = false;
+        };
 
         el.destroy = () => {
             // Flush a trailing persist before the closure dies — this IS the

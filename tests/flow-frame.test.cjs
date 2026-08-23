@@ -238,3 +238,23 @@ test('both onChange surfaces route through the fan-out writer', () => {
     assert.doesNotMatch(src, /\(fieldId, val\) => \{\s*\n\s*const prev = _stepValues\[step\.role\]/,
         'writing straight into the step store bypasses the flow copy');
 });
+
+// ── MPI-611 — the Tab ring PARKS the flow, so a hidden one must go inert ─────
+
+test('suspend hides without the outward close, and the hotkeys are per-show', () => {
+    const src = frame();
+
+    // Suppressing the emit is what keeps the shell from destroying the instance —
+    // the whole point of parking it (the ring comes back to this exact flow).
+    assert.match(src, /overlay\.on\('close', \(\) => \{ el\.close\(\); if \(!_suspending\) emit\('close', \{\}\); \}\);/);
+    assert.match(src, /el\.suspend = \(\) => \{/);
+
+    // A parked flow keeps its listeners. Binding the step arrows and Ctrl+Enter for
+    // the INSTANCE lifetime would leave them live while it is off screen — an
+    // invisible carousel stepping, and a phantom flow run queued from the gallery
+    // (MPI-345, in the shape a hidden-but-alive flow brings back).
+    assert.match(src, /el\.open {2}= \(\) => \{ overlay\.el\.show\(\); _bindKeys\(\); \};/);
+    assert.match(src, /el\.close = \(\) => \{ _unbindKeys\(\); overlay\.el\.hide\(\); \};/);
+    assert.match(src, /Hotkeys\.bind\('generation\.run', _run\),/,
+        'the run hotkey belongs INSIDE _bindKeys, not at setup scope');
+});

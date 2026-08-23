@@ -1092,7 +1092,14 @@
  * state.s_flowResults.
  *
  * Instance methods (on instance.el):
- *   open()/close() — show/hide the overlay (alias onOpen).
+ *   open()/close() — show/hide the overlay (alias onOpen). The flow hotkeys
+ *                    (ArrowLeft/Right, Ctrl+Enter) bind on open and unbind on close,
+ *                    NOT for the instance lifetime — see suspend().
+ *   suspend()      — hide WITHOUT emitting 'close', so the shell keeps the instance
+ *                    (MPI-611). This is the Tab ring parking the flow to visit the
+ *                    gallery; open() puts it back on the same step, with its inputs
+ *                    and any running job intact. Driven by Events 'flow:suspend' /
+ *                    'flow:restore'.
  *   destroy()      — tears down subs, the live slide (gizmos + listeners), the
  *                    per-flow component, and the overlay.
  */

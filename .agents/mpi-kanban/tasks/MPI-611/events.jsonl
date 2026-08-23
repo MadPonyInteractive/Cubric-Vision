@@ -1,0 +1,2 @@
+{"at": "2026-08-23T09:18:00Z", "type": "task.created", "task": "MPI-611", "actor": "claude", "detail": "Created in doing - Tab ring fix for the open Flow leg."}
+{"at": "2026-08-23T09:52:00Z", "type": "validation.updated", "task": "MPI-611", "actor": "claude", "detail": "Ring verified live on an isolated instance; maturity -> validating, pending Fabio's feel check."}

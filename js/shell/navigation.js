@@ -6,10 +6,11 @@
  *   PAGE_GALLERY      → main gallery (grid of ItemGroups); default on project open
  *   PAGE_GROUP_HISTORY → history view for a single ItemGroup (params: { groupId })
  *
- * Tab is the workspace flipper (MPI-378, widened to three states in MPI-589):
- * last card → gallery → Flows → last card. The remembered card lives in
- * project.json (`lastGroupId`) so it survives a restart; a project with no cards
- * simply rings between the gallery and Flows. The workspace radial is GONE — it
+ * Tab is the workspace flipper (MPI-378, widened to three states in MPI-589,
+ * re-ordered in MPI-611): gallery → last card → the open Flow → gallery. The
+ * remembered card lives in project.json (`lastGroupId`) so it survives a restart;
+ * the flow leg is the flow you are IN, parked rather than closed, and falls back to
+ * the Flow Library when nothing is open. The workspace radial is GONE — it
  * survives only as the dev-gated Ctrl+Tab menu; Models is reached from the prompt
  * box's model button.
  */
@@ -84,26 +85,43 @@ export function initNavigation(refs) {
 let _unbindFlip = null;
 
 /**
- * The Tab ring: card → gallery → Flows → card.
- * A project with no cards (or a remembered card that was deleted) has no third
- * state, so it rings between the gallery and Flows instead of dead-ending.
+ * The Tab ring: gallery → last card → the open Flow → gallery.
+ * A project with no cards simply skips that leg, and with no Flow open the third
+ * stop falls back to the Flow Library — so the ring never dead-ends.
  */
 function _flipWorkspace() {
-    // MPI-589 — a three-state ring, in Fabio's order: last history entry → gallery →
-    // Flows → back to the last history entry. Flows is an OVERLAY rather than a page,
-    // so its leg is "is the library on screen?", not a `state.currentPage` value.
+    // MPI-611 — the third stop is the FLOW YOU ARE IN, not the library that lists
+    // them. Tab parks the flow (hidden, NOT destroyed — `flow:suspend`), visits the
+    // gallery and the card, and the third Tab drops you back into it mid-step, with
+    // the inputs and any in-flight run untouched. Flows are OVERLAYS rather than
+    // pages, so their legs are "what is on screen?", not a `state.currentPage` value.
+    if (qs('.mpi-base-flow')) {
+        Events.emit('flow:suspend');
+        // Hiding the overlay already restored the gallery underneath — re-navigating
+        // to the page we are on would tear that down and rebuild it for nothing.
+        if (state.currentPage !== PAGE_GALLERY) navigate(PAGE_GALLERY);
+        return;
+    }
+    // The Library is not a stop on the ring (MPI-589 made it one; MPI-611 gave the
+    // slot to the flow itself). Tab leaves it the way it came in.
     if (qs('.mpi-overlay--body .mpi-flow-library')) {
         Events.emit('ui:close-flows');
+        if (state.currentPage !== PAGE_GALLERY) navigate(PAGE_GALLERY);
+        return;
+    }
+    if (state.currentPage === PAGE_GALLERY) {
         const groupId = resolveFlipTarget(state.currentProject);
-        if (groupId) navigate(PAGE_GROUP_HISTORY, { groupId });
-        return;
+        if (groupId) {
+            navigate(PAGE_GROUP_HISTORY, { groupId });
+            return;
+        }
+        // No card to show — fall through so the ring is still gallery ↔ third stop.
     }
-    if (state.currentPage === PAGE_GROUP_HISTORY) {
-        navigate(PAGE_GALLERY);
-        return;
-    }
-    // On the gallery. A project with no cards has no third state, so the ring
-    // degrades to gallery ↔ Flows rather than dead-ending on a Tab that does nothing.
+    // On a card (or a gallery with no card): back into the parked flow. The emit is
+    // a no-op when nothing is parked, and the shell shows synchronously, so the DOM
+    // is the answer to "did that work?" — no second flag to keep in sync.
+    Events.emit('flow:restore');
+    if (qs('.mpi-base-flow')) return;
     Events.emit('flows:open');
 }
 

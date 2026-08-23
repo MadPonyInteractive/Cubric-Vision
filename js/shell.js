@@ -516,6 +516,15 @@ async function _bootApp() {
     _activeFlow.el.open();
   });
 
+  // The Tab ring PARKS the open flow rather than closing it (MPI-611): suspend hides
+  // it without the outward `close`, so the destroy above never runs and restore puts
+  // the same instance back — same step, same inputs, same running job. Both are no-ops
+  // when no flow is live, which is what lets the ring ask without tracking a flag.
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('flow:suspend', () => _activeFlow?.el.suspend());
+  // eslint-disable-next-line mpi/require-destroy-on-events -- app-lifetime listener
+  Events.on('flow:restore', () => _activeFlow?.el.open());
+
   // ComfyUI Auto-start (optional). Local boot only here — when auto-connecting to a
   // Pod at start the remote path owns engine bring-up, so skip the local auto-start.
   // (MPI-85: gate on autoConnectOnStart, not `enabled` — an enabled-but-not-auto
