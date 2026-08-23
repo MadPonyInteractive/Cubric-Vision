@@ -187,10 +187,18 @@ export const MpiColorPicker = ComponentFactory.create({
             const rect = trigger.getBoundingClientRect();
             popup.style.top = `${rect.bottom + 8}px`;
             popup.style.left = `${rect.left}px`;
+            // Hold the node this frame is measuring. `popup` is an OUTER binding the
+            // callback re-reads, and any close between now and the next frame nulls
+            // it — a close-all pulse, `el.destroy()`, the trigger clicked twice — so
+            // the frame threw `Cannot read properties of null (reading
+            // 'getBoundingClientRect')` (MPI-606). Bail instead of measuring a popup
+            // that is already gone or already replaced.
+            const measured = popup;
             requestAnimationFrame(() => {
-                const popupRect = popup.getBoundingClientRect();
+                if (measured !== popup) return;
+                const popupRect = measured.getBoundingClientRect();
                 const overflow = popupRect.right - window.innerWidth + 8;
-                if (overflow > 0) popup.style.left = `${Math.max(8, rect.left - overflow)}px`;
+                if (overflow > 0) measured.style.left = `${Math.max(8, rect.left - overflow)}px`;
             });
         };
 
@@ -205,7 +213,15 @@ export const MpiColorPicker = ComponentFactory.create({
                 closePopup();
                 return;
             }
-            Events.emit('ui:close-all-popups');
+            // `reason: 'overlay-open'` — the established "I am opening ON TOP of you,
+            // do not close" contract (`overlayManager.js` request()). This emit is
+            // still needed: another dropdown/picker already open must go. But it was
+            // BARE, and MpiOverlay / MpiSlideOver / the PromptBox popup all close on a
+            // bare pulse — so opening this swatch inside a full-page Flow overlay took
+            // the whole flow down and dropped the user on the gallery behind it
+            // (MPI-606). Transient popups ignore the payload and still close, which is
+            // exactly what this emit is for.
+            Events.emit('ui:close-all-popups', { reason: 'overlay-open' });
             popup = document.createElement('div');
             popup.className = 'mpi-color-picker__popup mpi-popup is-active';
             popup.innerHTML = `

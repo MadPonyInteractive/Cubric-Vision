@@ -4,15 +4,16 @@
   "title": "Flow frame - five bugs that hit EVERY flow: inputs lost on navigation, spacebar jumps a stage, no arrow-key nav, colour picker closes the overlay, promptRequired enforced nowhere",
   "description": "Fabio, 2026-08-23, from the first live look at the Scribble to Object flow (MPI-567). All four are in SHARED flow-frame code, not in any one flow, so they were split out of MPI-567 to run in parallel. Root causes are already traced - see plan.md, do not re-derive. (1) INPUTS ARE LOST ON NAVIGATION: state.s_flowInputs is written in exactly ONE place, inside _run (MpiBaseFlow.js ~2038), so anything dropped or typed before pressing Generate is never persisted; the shell destroys MpiBaseFlow on navigation (MPI-345) and the reopen seeds from {}. Drop a photo, visit the gallery, come back - it is gone. (2) SPACEBAR JUMPS A STAGE: the prev/next arrows are real <button>s (MpiBaseFlow.js ~248) that keep focus after a click, so spacebar is NATIVE button activation - nobody wrote a handler. Fabio: this cannot happen. (3) ARROW KEYS SHOULD NAVIGATE: left/right = previous/next step. Deliberately absent today (MpiBaseFlow.js ~1342 says so and gives two reasons); Fabio's call overrides that comment, so heal it rather than leaving it contradicting the code. (4) THE COLOUR PICKER CLOSES THE WHOLE FLOW: MpiColorPicker.openPopup emits a BARE ui:close-all-popups (MpiColorPicker.js:208); MpiOverlay:234 exempts only {reason:'overlay-open'}, so the picker takes the full-page overlay down with it and the user lands back on the gallery. Shared Primitive with 6 consumers - sweep them all. (5) promptRequired IS DECLARED 15+ TIMES AND ENFORCED NOWHERE: commandRegistry.js sets promptRequired on fifteen-odd ops and its own JSDoc calls a prompt mandatory, but grepping js/ finds no consumer at all - so Fabio ran Scribble to Object with an EMPTY prompt and got a shape invented from the ControlNet hint. The frame's empty-run guard (MpiBaseFlow ~2029) only fires when there is NEITHER media NOR a prompt. Found while wiring MPI-567's prompt and handed here because the fix is frame code. Either honour the flag or delete it from all fifteen ops - a declaration that lies is worse than none. MPI-567 is running IN PARALLEL and owns js/data/flowsRegistry.js, commandRegistry.js, operationRegistry.js, operation_registry.json, universal_workflows.js, modelRegistry.js, MpiFlowLibrary.js, the two flow_scribble_object.json copies and tests/flow-model-choice.test.cjs. Do NOT edit those. This card owns the frame and the Primitive.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-23T05:33:32Z",
-  "updated_at": "2026-08-23T05:52:31Z",
+  "updated_at": "2026-08-23T06:38:00Z",
   "links": {
     "plan": "plan.md",
     "files": "files.json",
     "events": "events.jsonl",
-    "handoffs": "handoffs/"
+    "handoffs": "handoffs/",
+    "validation": "validation.md"
   },
   "acceptance": [
     "A flow input survives leaving the flow and coming back, WITHOUT a run: drop a photo, go to the gallery, reopen the flow, the photo is still in its slot",

@@ -9,7 +9,10 @@ Verify each one, then fix it — but start from the diagnosis, not from the symp
 
 ## Current State
 
-Not started. Root causes traced, nothing written.
+**All six shipped.** Five confirmed in a real running app, one (bug 6) has no live surface to
+click yet. 700 tests pass; every fix is mutation-checked RED. Card sits in `doing` /
+`validating` because verify mode is user-ux and two of Fabio's five checks need a photo and
+the History workspace — see [validation.md](validation.md) § Still needs Fabio's eyes.
 
 ## Ownership — READ THIS FIRST
 
@@ -280,3 +283,20 @@ Fabio's eyes, in the app:
 ## Plan Drift
 
 - 2026-08-23 — card created from MPI-567's live-look findings. Nothing implemented yet.
+- 2026-08-23 — all six implemented. Three things the plan left open, decided:
+  - **Bug 5 scope = the flow frame only**, stated in the code, the doc and validation.md. The
+    honest-but-wider `enqueueGeneration` option (beside its missing-media and missing-mask
+    siblings, which are the exact same shape) would start refusing `i2i` / `inpaint` / `edit` /
+    `promptEnhance` runs that ship today. The flag stays inert on the eleven non-flow ops —
+    **that residual is open, not closed.**
+  - **Bug 6 = unify the stores, not merely warn.** A warning would not have unblocked MPI-567,
+    which is what the plan actually asked for. `_writeDeclaredField` fans one write across every
+    store declaring the id.
+  - **Bug 3 needed a conflict rule the plan did not foresee.** `hotkeyManager._mapKey` keys
+    handlers by TYPE+KEY, not by id, so every handler on `down:arrowleft` fires together —
+    `video.frame.back` from the run slide's own control bar and `compare.frame.back` from the
+    compare view included. The step keys yield while either surface is live.
+  - Footprint grew by one file the plan did not list: `mpi-hotkeys.js`, whose HTML the registry's
+    own header requires updating alongside any new entry.
+  - `js/data/hotkeyRegistry.js` in the plan's footprint does not exist — it is
+    `js/managers/hotkeyRegistry.js`.

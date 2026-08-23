@@ -4,6 +4,7 @@
     "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
     "js/components/Primitives/MpiColorPicker/MpiColorPicker.js",
     "js/managers/hotkeyRegistry.js",
+    "js/components/Compounds/LandingPages/mpi-hotkeys/mpi-hotkeys.js",
     "docs/playbooks/add-flow/ui/carousel-frame.md",
     "tests/flow-frame.test.cjs"
   ]

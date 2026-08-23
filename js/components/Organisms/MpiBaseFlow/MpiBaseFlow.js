@@ -90,6 +90,9 @@ import { buildField, mapDeclaredValue, isInjectionParam } from '../../../utils/d
  *
  * State: seeds from and writes `state.s_flowInputs[flowId]` (top-level replace) so
  * inputs survive close→reopen AND the Overlays.reset() force-close on navigation.
+ * Written AS THE USER WORKS, not only at Run — see `_persistInputs`. It used to be
+ * written at dispatch alone, which meant nothing entered before the first Generate
+ * survived being destroyed on navigation (MPI-606 bug 1).
  *
  * Props: { flow: FlowDef, initialInputs?: Object }.
  */
@@ -222,6 +225,26 @@ export const MpiBaseFlow = ComponentFactory.create({
         const tickerEl = qs('#flow-ticker', el);
         const slidesEl = qs('#flow-slides', el);
 
+        /**
+         * Stop SPACE from activating a navigation button.
+         *
+         * Nobody wrote a spacebar handler — the browser did. Every piece of nav
+         * chrome here is a real `<button>` that keeps focus after a click, and Space
+         * on a focused button is NATIVE activation, so a click on the forward arrow
+         * turned the next space press into another step (MPI-606 bug 2). Fabio was
+         * holding it expecting pan.
+         *
+         * Swallowed at the nav chrome ONLY, never globally: the media slots' own
+         * `Enter || ' '` handlers are a real affordance and must keep working. Enter
+         * still activates these buttons, so keyboard navigation is intact.
+         * @param {HTMLElement} btn
+         */
+        const _killSpace = (btn) => {
+            _unsubs.push(on(btn, 'keydown', (e) => {
+                if (e.key === ' ' || e.code === 'Space') e.preventDefault();
+            }));
+        };
+
         // ── Chrome buttons ──────────────────────────────────────────────────────
         // Mounted rather than written into the template: every UI element is a
         // component (.claude/rules/components.md). The ids move onto the mounted
@@ -232,6 +255,7 @@ export const MpiBaseFlow = ComponentFactory.create({
             extraClasses: 'mpi-base-flow__back',
         });
         backBtn.id = 'flow-back';
+        _killSpace(backBtn);
         qs('#flow-topbar-left', el).prepend(backBtn);
 
         const _arrow = (dir, glyph, aria) => {
@@ -241,6 +265,7 @@ export const MpiBaseFlow = ComponentFactory.create({
             });
             btn.id = `flow-${dir}`;
             btn.setAttribute('aria-label', aria);
+            _killSpace(btn);
             return btn;
         };
         // The same single angle quotes the template drew, as literals rather than
@@ -358,6 +383,39 @@ export const MpiBaseFlow = ComponentFactory.create({
                     ...prev,
                     fields: { ...(prev.fields || {}), [f.id]: v },
                 };
+            });
+        });
+
+        /**
+         * WHICH STORE each declared field id lives in. Built once, from the
+         * declarations, so a write can reach every store that claims the id.
+         *
+         *   `_flowStoreIds`   — ids held in `_fieldValues`: the flow's own `fields`,
+         *                       plus any FRAME-kind step (stepKinds.js § FRAME_KINDS),
+         *                       which has no role and seeds into the flow store by design.
+         *   `_stepRolesById`  — id → the roles of the GIZMO steps declaring it, whose
+         *                       values live in `_stepValues[role].fields`.
+         *
+         * An id declared on BOTH surfaces used to be TWO stores holding two values,
+         * and `_collectInputs` applies the flow store LAST. A fresh open hid it
+         * (`_seedField` returns undefined with no default and no persisted root, so
+         * the key is absent), but after one run `s_flowInputs` carries the id at the
+         * payload root, the flow-level copy seeds from it, and from then on the value
+         * edited on the STEP was overwritten at collection by the stale run-slide one
+         * — wrong output, no error, second run onward (MPI-606 bug 6). Declaring a
+         * prompt on a draw step AND on the run slide is a thing flows want, so the
+         * stores are unified rather than the declaration forbidden.
+         */
+        const _flowStoreIds = new Set(_fields.map(f => f.id));
+        /** @type {Map<string, string[]>} */
+        const _stepRolesById = new Map();
+        (flow.steps || []).forEach((step) => {
+            (Array.isArray(step?.fields) ? step.fields : []).forEach((f) => {
+                if (!f?.id) return;
+                if (isFrameKind(step.kind) || !step.role) { _flowStoreIds.add(f.id); return; }
+                const roles = _stepRolesById.get(f.id) || [];
+                roles.push(step.role);
+                _stepRolesById.set(f.id, roles);
             });
         });
 
@@ -521,6 +579,7 @@ export const MpiBaseFlow = ComponentFactory.create({
                 // The ticker NAVIGATES. A row that indicates but refuses clicks reads
                 // as disabled, not informational (carousel-frame.md).
                 _unsubs.push(on(btn, 'click', () => _goTo(i)));
+                _killSpace(btn);
                 tickerEl.appendChild(btn);
             });
         }
@@ -953,11 +1012,30 @@ export const MpiBaseFlow = ComponentFactory.create({
             _paintEnhance();
         }
 
+        /**
+         * Write ONE declared field into EVERY store that declares its id
+         * (`_flowStoreIds` / `_stepRolesById` above). Both onChange surfaces route
+         * through here, so a shared id can never hold two values that disagree.
+         * @param {string} id
+         * @param {*} val
+         */
+        function _writeDeclaredField(id, val) {
+            if (_flowStoreIds.has(id)) _setFlowField(id, val);
+            (_stepRolesById.get(id) || []).forEach((role) => {
+                const prev = _stepValues[role] || {};
+                _stepValues[role] = {
+                    ...prev,
+                    fields: { ...(prev.fields || {}), [id]: val },
+                };
+            });
+            _touchInputs();
+        }
+
         /** onChange for a flow-level field: an `action` runs, everything else stores. */
         function _onFlowField(f, val) {
             if (f.action === 'enhance') { _runEnhance(f); return; }
             if (f.action === 'settings') { _openSettings(); return; }
-            _setFlowField(f.id, val);
+            _writeDeclaredField(f.id, val);
         }
 
         /**
@@ -1058,7 +1136,14 @@ export const MpiBaseFlow = ComponentFactory.create({
             }
             _mediaGroups.forEach((entry) => {
                 for (let i = 0; i < entry.group.max; i++) {
-                    left.appendChild(_buildSlot(entry, i, () => _renderSlide(), unsubs));
+                    // ONE choke point for every media mutation — a drop, a pick, a
+                    // slot cleared all reach `onDirty`. Persisted immediately rather
+                    // than trailed: these are rare, and losing a dropped photo to
+                    // navigation is the bug this exists to close (MPI-606 bug 1).
+                    left.appendChild(_buildSlot(entry, i, () => {
+                        _persistInputs();
+                        _renderSlide();
+                    }, unsubs));
                 }
             });
 
@@ -1167,6 +1252,7 @@ export const MpiBaseFlow = ComponentFactory.create({
                         // Preserve frame-owned fields across gizmo reports.
                         const prev = _stepValues[step.role] || {};
                         _stepValues[step.role] = { ...prev, ...val };
+                        _touchInputs();
                     },
                 });
                 _stepInstances.set(stepIdx, inst);
@@ -1180,11 +1266,10 @@ export const MpiBaseFlow = ComponentFactory.create({
                 step,
                 _stepValues[step.role],
                 (fieldId, val) => {
-                    const prev = _stepValues[step.role] || {};
-                    _stepValues[step.role] = {
-                        ...prev,
-                        fields: { ...(prev.fields || {}), [fieldId]: val },
-                    };
+                    // Through the fan-out writer, not straight into this step's own
+                    // store: an id this step shares with the run slide must be ONE
+                    // value (MPI-606 bug 6).
+                    _writeDeclaredField(fieldId, val);
                     // Let the gizmo react if it cares (e.g. a ratio lock).
                     _stepInstances.get(stepIdx)?.el?.onField?.(fieldId, val);
                 },
@@ -1339,11 +1424,38 @@ export const MpiBaseFlow = ComponentFactory.create({
             _renderSlide();
         }
 
-        // Arrows + the ticker are the navigation. No arrow-key hotkey: it would
-        // need new hotkeyRegistry ids AND would fight the box gizmo's drag on a
-        // middle step. Add it only if the flow proves it wants one.
+        // Arrows, the ticker AND the arrow keys are the navigation. The keys were
+        // deliberately absent until Fabio asked for them (MPI-606 bug 3); the two
+        // reasons that comment gave were real work, and both are now done:
+        //
+        //  - the registry ids exist (`flow.step.back` / `flow.step.forward`,
+        //    hotkeyRegistry.js § Flow) and are bound below through `Hotkeys`, never a
+        //    raw window keydown;
+        //  - they cannot fight a field: both are `allowWhileTyping: false` and
+        //    ArrowLeft/Right are in the manager's `isTextEditKey` list, so a focused
+        //    text field keeps them and the caret moves instead of the step. A gizmo
+        //    drag is pointer-driven and never sees them.
+        //
+        // The one surface they DON'T own is a video result — see `_stepKey`.
         _unsubs.push(on(prevBtn, 'click', () => _goTo(_current - 1)));
         _unsubs.push(on(nextBtn, 'click', () => _goTo(_current + 1)));
+
+        /**
+         * Arrow-key step navigation, inert while a video surface owns the arrows.
+         *
+         * `hotkeyManager._mapKey` keys handlers by TYPE+KEY, not by id, so every
+         * handler bound on `down:arrowleft` fires together — `video.frame.back` from
+         * the run slide's own control bar, `compare.frame.back` from the compare
+         * view. While a clip is on screen frame-stepping is the more specific
+         * meaning, and the arrows and the ticker still navigate.
+         * @param {number} delta
+         */
+        const _stepKey = (delta) => () => {
+            if (_videoBar || _compareView) return;
+            _goTo(_current + delta);
+        };
+        _unsubs.push(Hotkeys.bind('flow.step.back', _stepKey(-1)));
+        _unsubs.push(Hotkeys.bind('flow.step.forward', _stepKey(+1)));
 
         // ── Result painting ─────────────────────────────────────────────────────
         /** Show the empty-state copy only while the pane holds nothing. */
@@ -1924,9 +2036,11 @@ export const MpiBaseFlow = ComponentFactory.create({
             Object.values(_stepValues).forEach((v) => {
                 Object.entries(v?.fields || {}).forEach(_sort);
             });
-            // Flow-level last: a flow declaring the same id in both places means the
-            // run slide's value is the one the user saw immediately before pressing
-            // Generate.
+            // Flow-level last. An id declared on BOTH surfaces is written to both
+            // stores by `_writeDeclaredField`, so this order no longer decides
+            // anything for a shared id — the two hold the same value. Before that it
+            // did, and silently: the run slide's stale copy overwrote what the user
+            // edited on the step, from the second run onward (MPI-606 bug 6).
             Object.entries(_fieldValues).forEach(_sort);
 
             // A step that declares `param` binds its GIZMO's value to an injection
@@ -1968,6 +2082,45 @@ export const MpiBaseFlow = ComponentFactory.create({
                     ? { injectionParams: { ...declaredParams } }
                     : {}),
             };
+        }
+
+        // ── Session persistence ─────────────────────────────────────────────────
+        // `state.s_flowInputs[flow.id]` is SESSION SCRATCH: what the user was doing,
+        // so reopening the flow puts it back. It used to be written in exactly ONE
+        // place — inside `_run` — so anything dropped or typed BEFORE Generate died
+        // with the closure the shell destroys on navigation (MPI-345). Drop a photo,
+        // visit the gallery, come back: gone (MPI-606 bug 1).
+        //
+        // NOT the same thing as `flowInputs` on the sidecar, which stays frozen at
+        // Run so a mid-run edit cannot corrupt what Reuse restores
+        // (`03-storage-and-reuse.md` § "Snapshot at Run, never at completion"). Keep
+        // them separate — persisting THIS one live does not touch that rule.
+        /** @type {?number} */
+        let _persistTimer = null;
+
+        /**
+         * Persist the input snapshot. Top-level replace — `s_flowInputs` is a Proxy
+         * key and mutating the sub-object would not fire `state:changed`.
+         * @param {Object} [inputs]  a snapshot already collected by the caller
+         */
+        function _persistInputs(inputs) {
+            if (_persistTimer) { clearTimeout(_persistTimer); _persistTimer = null; }
+            state.s_flowInputs = {
+                ...state.s_flowInputs,
+                [flow.id]: inputs || _collectInputs(),
+            };
+        }
+
+        /**
+         * Persist SOON. A gizmo reports on every pointer move and a text field on
+         * every keystroke; each write replaces a top-level Proxy key and fires
+         * `state:changed` app-wide, so the frequent paths trail it instead of
+         * hammering it. Flushed in `destroy()`, which is the path that matters —
+         * navigation destroys this instance.
+         */
+        function _touchInputs() {
+            if (_persistTimer) clearTimeout(_persistTimer);
+            _persistTimer = setTimeout(() => { _persistTimer = null; _persistInputs(); }, 300);
         }
 
         /**
@@ -2034,8 +2187,31 @@ export const MpiBaseFlow = ComponentFactory.create({
                 return;
             }
 
+            // `promptRequired` is HONOURED HERE (MPI-606 bug 5). The flag has been
+            // declared on fifteen-odd ops since the registry was written and read by
+            // NOTHING — so Fabio ran Scribble to Object with an empty prompt and got
+            // a shape invented from the ControlNet hint alone, even though its op
+            // declares it. The guard above is not this one: it fires only when there
+            // is NEITHER media NOR a prompt, so a photo with no prompt sailed through.
+            //
+            // SCOPE, chosen deliberately: the FLOW FRAME ONLY. Every Flow declares
+            // its prompt as a field with id `positive`, so one check covers all of
+            // them. The honest-but-wider option was `enqueueGeneration`, beside its
+            // missing-media and missing-mask siblings — rejected because it would
+            // also start refusing `i2i` / `inpaint` / `edit` / `promptEnhance` runs
+            // that ship today, which is a behaviour change on surfaces nobody
+            // reported and no test covers. The flag therefore stays inert on the
+            // eleven non-flow ops that declare it; that residual is on the card.
+            if (getCommand(flow.operation)?.promptRequired && !hasPrompt) {
+                Events.emit('ui:warning', {
+                    message: `${flow.title} needs a prompt before it can run.`,
+                });
+                return;
+            }
+
             // Persist the input snapshot so Reuse/reopen restores media + controls.
-            state.s_flowInputs = { ...state.s_flowInputs, [flow.id]: inputs };
+            // Also written live as the user works — see `_persistInputs`.
+            _persistInputs(inputs);
 
             _setRunning(true);
             _hasPending = false;
@@ -2141,6 +2317,11 @@ export const MpiBaseFlow = ComponentFactory.create({
         el.onOpen = el.open;
 
         el.destroy = () => {
+            // Flush a trailing persist before the closure dies — this IS the
+            // navigation path (the shell destroys the flow on every `flow:open` and
+            // on close, MPI-345), so a keystroke inside the last 300ms would
+            // otherwise be the one thing the reopen could not restore.
+            if (_persistTimer) _persistInputs();
             _teardownSlide();
             _previewPlayer.stop();
             _unsubs.forEach(fn => fn?.());

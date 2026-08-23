@@ -409,6 +409,31 @@ export const HOTKEY_REGISTRY = [
         allowWhileTyping: true,
     },
 
+    // ── Flow ──────────────────────────────────────────────────────────────────
+    // Bound only while an MpiBaseFlow is mounted (it unbinds in destroy), so these
+    // do not reach the ordinary workspace. `allowWhileTyping: false` is what keeps
+    // the caret moving in a flow's prompt field instead of the step changing —
+    // ArrowLeft/Right are in the manager's `isTextEditKey` list, so a text field with
+    // focus blocks them (MPI-606).
+    {
+        id:               'flow.step.back',
+        key:              'arrowleft',
+        type:             KEY_TYPE.DOWN,
+        category:         'flow',
+        scopeLabel:       'Flow',
+        description:      'Previous step',
+        allowWhileTyping: false,
+    },
+    {
+        id:               'flow.step.forward',
+        key:              'arrowright',
+        type:             KEY_TYPE.DOWN,
+        category:         'flow',
+        scopeLabel:       'Flow',
+        description:      'Next step',
+        allowWhileTyping: false,
+    },
+
     // ── Video Player ──────────────────────────────────────────────────────────
     {
         id:               'video.playPause',

@@ -148,6 +148,15 @@ export const MpiHotkeys = ComponentFactory.create({
                             </ul>
                         </div>
 
+                        <!-- Flow -->
+                        <div class="mpi-hotkeys__shortcut-group">
+                            <h4>Flow</h4>
+                            <ul>
+                                <li><span>&larr;</span><span>Previous step</span></li>
+                                <li><span>&rarr;</span><span>Next step</span></li>
+                            </ul>
+                        </div>
+
                         <!-- Video Player -->
                         <div class="mpi-hotkeys__shortcut-group">
                             <h4>Video Player</h4>
