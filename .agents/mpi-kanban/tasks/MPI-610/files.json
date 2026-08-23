@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "comfy_workflows/flow_character_sheet.json",
+    "comfy_workflows/raw/flow_character_sheet.json",
+    ".agents/mpi-kanban/tasks/MPI-610/brief.md",
+    ".agents/mpi-kanban/tasks/MPI-610/plan.md",
+    ".agents/mpi-kanban/tasks/MPI-610/checklist.md",
+    ".agents/mpi-kanban/tasks/MPI-610/files.json"
+  ]
+}

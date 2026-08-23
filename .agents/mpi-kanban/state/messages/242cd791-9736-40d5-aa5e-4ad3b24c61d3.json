@@ -1,0 +1,44 @@
+{
+  "schema": "mpi-kanban/message/v1",
+  "id": "242cd791-9736-40d5-aa5e-4ad3b24c61d3",
+  "status": "resolved",
+  "created_at": "2026-08-23T11:30:00Z",
+  "updated_at": "2026-08-23T11:52:00Z",
+  "from": {
+    "session": "78386cf8-2d41-40d8-8cf7-7e593a4937c3",
+    "role": "agent",
+    "workspace": "c:/AI/Mpi/Cubric-Vision"
+  },
+  "to": {
+    "selector": "task",
+    "value": "MPI-608"
+  },
+  "subject": "WITHDRAWN - MPI-610 message was built on a WRONG card brief. Do NOT act on it.",
+  "body": "WITHDRAWN IN FULL. Ignore everything below the line - it is wrong and the work it described has been reverted off disk.\n\nFabio corrected the design 2026-08-23. MPI-610's brief said the Character Sheet moves OFF Krea 2 onto a Klein 4B/9B base-model selector. That is NOT the job. The real job is the TWO-SLOT shape Scribble to Object already ships - a Render model dropdown and a Blend model dropdown:\n\n  slot 1  RENDER (generation)   krea2 / krea2-nsfw   -> Input_Base_Model (UNCHANGED, node #55)\n  slot 2  BLEND  (head removal) klein-4b / klein-9b  -> Input_Edit_Model + Input_Edit_Clip\n\nNO Krea 2 machinery is removed. The generation phase keeps its Krea 2 core, its\nClownsharKSampler ladder, Input_is_Turbo, Input_Negative and Input_Bypass_Filter_Lora.\nThe 4B/9B selector applies to the INPAINT phase, which is the one already on Klein.\nBoth phases get their own six LoRAs (Input_Lora_Phase1_* / Input_Lora_Phase2_*).\n\nNOTHING IS OUTSTANDING FOR YOU. comfy_workflows/flow_character_sheet.json, its raw/ source and tests/inject-params-titles.test.cjs are all back at HEAD, and the suite is green. js/data/flowsRegistry.js and tests/flow-model-choice.test.cjs were never touched - you keep both, uncontested. The corrected design lives in .agents/mpi-kanban/tasks/MPI-610/brief.md.\n\nOne thing worth carrying into MPI-608 anyway: the Character Sheet wants per-phase racks on the SAME mechanism, so its Krea 2 phase needs Input_Lora_Phase1_1..6 and its Klein phase Input_Lora_Phase2_1..6.\n\n--- original message follows, DO NOT ACT ON IT ---\n\nMPI-610's GRAPH HALF IS DONE AND ON DISK, UNCOMMITTED. You hold the other half.\n\nflow_character_sheet.json + its raw/ source are re-authored from Krea 2 onto Klein. I did\nNOT touch js/data/flowsRegistry.js or tests/flow-model-choice.test.cjs - you hold both - so\nthe tree currently has 3 RED TESTS, all in flow-model-choice.test.cjs, all yours. Nothing is\ncommitted: committing the graph alone puts master red, so the two halves must land together.\n\nWHAT THE GRAPH NOW LOOKS LIKE\n\n  Input_Edit_Model  UNETLoader  flux-2-klein-4b-int8-convrot.safetensors   (was Input_Base_Model)\n  Input_Edit_Clip   CLIPLoader  qwen_3_4b.safetensors, type flux2         (was an untitled Load CLIP)\n\nSame names flow_scribble_object's blend slot uses, so one convention covers every Klein slot.\n\nTHE FlowDef DIFF YOU NEED (js/data/flowsRegistry.js, id 'character-sheet'):\n\n  requiredModels: [\n      { label: 'Base model', models: ['klein-4b', 'klein-9b'] },\n      'klein-4b',\n  ],\n  modelParams: {\n      'klein-4b': {\n          'Input_Edit_Model': 'flux-2-klein-4b-int8-convrot.safetensors',\n          'Input_Edit_Clip.clip_name': 'qwen_3_4b.safetensors',\n      },\n      'klein-9b': {\n          'Input_Edit_Model': 'flux-2-klein-9b-int8-convrot.safetensors',\n          'Input_Edit_Clip.clip_name': 'qwen_3_8b_int8_convrot.safetensors',\n      },\n  },\n  settingsModel: 'klein-4b',\n\nKeep the second slot 'klein-4b' hard-required: the head-removal phase is 4B-pinned (below).\nInput_Edit_Clip.clip_name MUST be the DOTTED key - clip_name is not on comfyController\n_inject's spray list the way ckpt_name/unet_name are, so a plain key matches the node and\nsilently writes nothing.\n\nTWO FIELDS MUST BE DELETED FROM `fields`, and this is not optional trim:\n\n  * Input_is_Turbo - its node is GONE. Klein ships DISTILLED as ONE tier with no accelerator\n    LoRA (docs/models/klein/README.md: \"ONE tier, no accelerator LoRA\"), so there is no\n    second speed to select. The graph samples at a flat 4 steps, which is the MEASURED t2i\n    number for this weight - 8 overcooks. Leaving the toggle declared ships a control that\n    flips, saves, and changes nothing.\n  * Input_Bypass_Filter_Lora - its node is GONE with the krea2 arms. It bypassed KREA 2's\n    baked safety filter; Klein bakes no filter, so there is nothing to bypass.\n\nInput_Negative also lost its node (Klein runs cfg 1.0, so the negative is bit-identical and\nthe graph zeroes it out of the positive). It was never a declared field - _buildParams emits\nit unconditionally and a graph without the node skips it in silence, exactly as head-swap\nalready does. I already updated tests/inject-params-titles.test.cjs for that and for\nInput_is_Turbo, and pinned input_edit_model + input_edit_clip there. That file is green.\n\nWHAT I DELIBERATELY DID NOT CHANGE\n\n  The head-removal branch (SAM3 -> crop -> Klein 4B + flux2-klein-4b-outpaint -> stitch,\n  nodes 680-726) is untouched and still loads its OWN klein-4b UNETLoader/CLIPLoader. There\n  is NO 9B outpaint LoRA - loraDeps.js says so explicitly and names this graph's node 708 as\n  the LoRA's shipped second consumer - so that phase stays 4B whichever size the sheet is\n  generated at. Do not repoint it at Input_Edit_Model: injecting klein-9b would take the\n  outpaint LoRA with it and there is no 9B weight to bind.\n\n  The `Input_Lora_1..6` rack is untouched and now hangs straight off Input_Edit_Model. When\n  MPI-608's per-phase mechanism lands, this flow's Klein phase wants Input_Lora_Phase1_1..6\n  the same way scribble-to-object got them. I did not add them - I only made sure nothing\n  forbids them.\n\nWHAT THE 3 RED TESTS WANT (tests/flow-model-choice.test.cjs, yours)\n\n  1. 'every modelParams title EXISTS in the flow workflow' - passes once modelParams names\n     Input_Edit_Model / Input_Edit_Clip.clip_name.\n  2. 'the Character Sheet arms match the weights and the twin graph' (~line 244) - hardcodes\n     Input_Base_Model + Input_Bypass_Filter_Lora + the krea2 twin graph krea2_t2i_nsfw.json.\n     Rewrite against the two Klein arms; the scribble-object assertion in the same file\n     (~line 405) is the shape to copy - it already checks a UNETLoader + a CLIPLoader whose\n     clip_name is a widget not a link.\n  3. 'the injector can actually WRITE both arms' (~line 324) - same two titles.\n\nVERIFIED HERE, not asserted\n\n  * Link graph: no dangling links, no duplicate ids, every input.link and output.links\n    round-trips, every GetNode resolves to a SetNode. The only unconnected inputs are the\n    15 optional ones that were already unconnected before the port.\n  * Every class_type exists on the live engine's /object_info, every REQUIRED input is\n    present, every link resolves to a real output slot, and no node is orphaned.\n  * node scripts/validate-injection-rules.mjs: clean.\n  * Full suite 722/725 - the 3 above and nothing else.\n\nNOT DONE, and it is Fabio's call, not mine: nobody has compared a Klein sheet against a\nKrea 2 sheet. Krea 2 was chosen for a reason and the card says his eye on real sheets is\nwhat closes this.",
+  "related": {
+    "task_card": "MPI-610",
+    "files": [
+      "comfy_workflows/flow_character_sheet.json",
+      "comfy_workflows/raw/flow_character_sheet.json",
+      "js/data/flowsRegistry.js",
+      "tests/flow-model-choice.test.cjs",
+      "tests/inject-params-titles.test.cjs"
+    ]
+  },
+  "thread": {
+    "root": null,
+    "parent": null
+  },
+  "recent_events": [
+    {
+      "at": "2026-08-23T11:30:00Z",
+      "event": "created"
+    },
+    {
+      "at": "2026-08-23T11:52:00Z",
+      "event": "resolved",
+      "actor": "claude",
+      "summary": "Withdrawn by its own sender. The message restated MPI-610's card brief, and Fabio confirmed the brief is wrong: the Character Sheet gains a SECOND model slot on the inpaint phase, it does not move its generation phase off Krea 2. Every file it described was reverted to HEAD before this was written; nothing is pending on the recipient."
+    }
+  ]
+}
