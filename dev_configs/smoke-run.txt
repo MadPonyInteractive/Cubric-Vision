@@ -1,183 +1,154 @@
-# RECOVERED TRANSCRIPT — run of 2026-08-10, engine 0.31.0, PASS 35 / SKIP 0 / FAIL 0.
-# The live tee was truncated by a later 'smoke-workflows.mjs --plan' (every invocation
-# rewrites this file, --plan included). Restored verbatim from the run's stdout, so the
-# per-line tee timestamps are gone but no content is. It is the record for
-# dev_configs/smoke-evidence.json of the same run.
-
-
+[2026-08-22T22:51:55.689Z] 
 ── Smoke set ── EU-RO-1 · arch=modern · engine=remote
-   49.4 GB  minimax-h3             tier=balanced  ops=2
-            t2v_ms             minimax_h3_fl2va.json
-            i2v_ms             minimax_h3_fl2va.json
-   49.4 GB  minimax-h3-ref2va      tier=balanced  ops=1
-            ref2v_ms           minimax_h3_r2va.json
-   38.7 GB  ltx-23-balanced        tier=balanced  ops=2  covers ltx-23
-            t2v_ms             ltx_i2v_t2v_int8.json
-            i2v_ms             ltx_i2v_t2v_int8.json
-   33.1 GB  wan-22                 tier=balanced  ops=1
-            i2v_ms             wan22_i2v.json
-   32.1 GB  qwen-edit              tier=balanced  ops=2
-            qwenEdit           qwen_edit.json
-            control            qwen_edit.json
-   24.1 GB  krea2-nsfw             tier=balanced  ops=6  covers krea2
-            t2i                krea2_t2i_nsfw.json
-            i2i                krea2_t2i_nsfw.json
-            control            krea2_t2i_nsfw.json
-            krea2Edit          krea2_t2i_nsfw.json
-            upscale            krea2_t2i_nsfw.json
-            detail             krea2_t2i_nsfw.json
-   23.0 GB  chroma-hyper           tier=low       ops=5  covers chroma-flash
-            t2i                chroma_hyper_t2i.json
-            i2i                chroma_hyper_t2i.json
-            control            chroma_hyper_t2i.json
-            upscale            chroma_hyper_t2i.json
-            detail             chroma_hyper_t2i.json
-   20.8 GB  boogu-edit-balanced    tier=balanced  ops=1  covers boogu-edit-high
-            edit               boogu_edit_balanced.json
-   17.2 GB  wan22-5b               tier=low       ops=2
-            t2v                wan5b_t2v.json
-            i2v                wan5b_i2v.json
-   16.0 GB  nvidia-pid             tier=low       ops=1
-            pid                nvidia_pid.json
-   12.7 GB  klein-4b               tier=low       ops=7
-            t2i                klein_t2i.json
-            i2i                klein_t2i.json
-            control            klein_t2i.json
-            kleinEdit          klein_t2i.json
-            inpaint            klein_t2i.json
-            detail             klein_t2i.json
-            upscale            klein_t2i.json
-    8.9 GB  sdxl-nsfw              tier=low       ops=5  covers sdxl-realistic, ill-anime-beauty, ill-anime, pony-mix
-            t2i                t2i_sdxl_nsfw.json
-            i2i                t2i_sdxl_nsfw.json
-            control            t2i_sdxl_nsfw.json
-            upscale            t2i_sdxl_nsfw.json
-            detail             t2i_sdxl_nsfw.json
-
-  models 12 · ops 35 · weights 287.9 GB · new volume would be 330 GB
-  budget: 1 step · 128px target · 1 frame(s) · seed 42
-
-  NOT loaded by this set (9) — a break tied to the weight FORMAT
-  under the same loader node would be missed:
+[2026-08-22T22:51:55.690Z]    19.8 GB  klein-9b               tier=balanced  ops=7  covers klein-4b
+[2026-08-22T22:51:55.690Z]             t2i                klein_9b_t2i.json
+[2026-08-22T22:51:55.690Z]             i2i                klein_9b_t2i.json
+[2026-08-22T22:51:55.691Z]             control            klein_9b_t2i.json
+[2026-08-22T22:51:55.691Z]             kleinEdit          klein_9b_t2i.json
+[2026-08-22T22:51:55.691Z]             inpaint            klein_9b_t2i.json
+[2026-08-22T22:51:55.691Z]             detail             klein_9b_t2i.json
+[2026-08-22T22:51:55.691Z]             upscale            klein_9b_t2i.json
+[2026-08-22T22:51:55.691Z] 
+  models 1 · ops 7 · weights 19.8 GB · new volume would be 60 GB
+[2026-08-22T22:51:55.691Z]   budget: 1 step · 128px target · 1 frame(s) · seed 42
+[2026-08-22T22:51:55.691Z] 
+  SCOPED RUN — 19 of 21 models are in no family this
+[2026-08-22T22:51:55.691Z]   run touches, so nothing here proves them:
+[2026-08-22T22:51:55.691Z]     sdxl-realistic, sdxl-nsfw, ill-anime-beauty, ill-anime, pony-mix, chroma-flash, chroma-hyper, krea2, krea2-nsfw, nvidia-pid, boogu-edit-high, boogu-edit-balanced, wan-22, ltx-23, ltx-23-balanced, minimax-h3, minimax-h3-ref2va, wan22-5b, qwen-edit
+[2026-08-22T22:51:55.691Z] 
+  NOT loaded by this set (94) — a break tied to the weight FORMAT
+[2026-08-22T22:51:55.691Z]   under the same loader node would be missed:
     sdxl-realistic(6.62GB)
+    sdxl-nsfw(6.46GB)
     ill-anime(6.46GB)
     ill-anime-beauty(6.46GB)
     pony-mix(6.62GB)
+    wan-22-i2v-high(13.32GB)
+    wan-22-i2v-low(13.32GB)
+    wan22-5b-model(9.31GB)
     chroma1-hd-flash(16.58GB)
+    chroma1-hd-hyper(8.57GB)
+    pid-flux1(2.54GB)
+    pid-sdxl(2.54GB)
+    pid-sd3(2.54GB)
+    pid-qwenimage(2.54GB)
     krea2-raw-transformer(12.57GB)
+    krea2-raw-transformer-nsfw(12.25GB)
     boogu-edit-transformer-high(19.17GB)
+    boogu-edit-transformer-balanced(10.59GB)
+    qwen-edit-transformer(19.09GB)
+    klein-4b-transformer(3.79GB)
     ltx23-transformer-bf16(39.13GB)
+    ltx23-transformer-int8(20.03GB)
+    minimax-h3-fl2va-transformer(19.53GB)
+    minimax-h3-ref2va-transformer(19.53GB)
+    wan2.2_vae(1.31GB)
+    wan_2.1_vae(242.06MB)
+    vae-flux-ae(319.77MB)
+    vae-sdxl(319.14MB)
+    vae-sd3(159.9MB)
+    vae-qwen-image(242.05MB)
+    ltx23-video-vae(1.35GB)
+    ltx23-audio-vae(347.95MB)
+    ltx23-preview-taehv(22.44MB)
+    taeh3-decoder(21.66MB)
+    qwen3vl-abliterated-clip(4.88GB)
+    boogu-qwen3vl-8b-clip(9.86GB)
+    qwen-edit-qwen25vl-7b-clip(8.74GB)
+    qwen3-4b-clip(7.49GB)
+    pid-gemma(4.87GB)
+    umt5_xxl_fp8_e4m3fn_scaled(6.27GB)
+    t5xxl-fp16(9.12GB)
+    ltx23-text-projection(2.15GB)
+    ltx23-gemma-clip(8.8GB)
+    ltx23-spatial-upscaler(949.62MB)
     4x-AnimeSharp(63.91MB)
-
+    controlnet-union-sdxl(2.34GB)
+    controlnet-union-flux(3.99GB)
+    h3-qwen3vl-32b-clip(24.55GB)
+    vae-minimax-h3-video-int8(2.95GB)
+    vae-minimax-h3-audio(577.22MB)
+    wan22-5b-turbo-lora(316.95MB)
+    minimax-h3-turbo-lora(1.82GB)
+    krea2-lora-filterbypass(160B)
+    krea2-lora-identity-edit(871.81MB)
+    krea2-lora-accelerator(893.54MB)
+    krea2-lora-depth-control(822.06MB)
+    krea2-style-darkbrush(447.55MB)
+    krea2-style-dotmatrix(447.55MB)
+    krea2-style-kidsdrawing(447.55MB)
+    krea2-style-neondrip(447.55MB)
+    krea2-style-rainywindow(447.55MB)
+    krea2-style-retroanime(447.55MB)
+    krea2-style-softwatercolor(447.55MB)
+    krea2-style-sunsetblur(447.55MB)
+    krea2-style-vintagetarot(447.55MB)
+    krea2-style-midjourney(218MB)
+    qwen-edit-lightning-4step(810.25MB)
+    qwen-edit-lightning-8step(810.25MB)
+    qwen-edit-style-illustration(562.72MB)
+    qwen-edit-style-anime3d(405.27MB)
+    qwen-edit-style-anime2d(225.18MB)
+    qwen-edit-style-zankuro(225.18MB)
+    qwen-edit-style-3d(337.68MB)
+    qwen-edit-style-caricature(562.72MB)
+    qwen-edit-style-snapshot(141.33MB)
+    ltx23-lora-merged(3.6GB)
+    ltx23-lora-transition(372.15MB)
+    ltx23-lora-talkvid(1.08GB)
+    ltx23-lora-foley(216.21MB)
+    klein-lora-outpaint(72.52MB)
+    klein-lora-refcontrol-depth(88.15MB)
+    klein-lora-nsfw(180.01MB)
+    klein-style-muppets(88.15MB)
+    klein-style-cartoon(88.15MB)
+    klein-style-jojo(88.15MB)
+    klein-style-anime(88.14MB)
+    klein-style-chibi(88.14MB)
+    klein-style-doodle(22.05MB)
+    klein-style-vintage(88.15MB)
+    klein-style-aesthetic(183.78MB)
+    chroma-style-bwsketch(213.83MB)
+    chroma-style-lenovo(106.93MB)
+    chroma-style-brushwork(213.83MB)
+    chroma-style-anime(427.78MB)
+[2026-08-22T22:51:55.699Z] 
   preflight (offline, free): all ops resolve a graph, a branch and a budget ✓
-
+[2026-08-22T22:51:55.701Z] 
   pod lock + python_deps in sync with v0.31.0 ✓
-
-  first-party nodes: every Mpi* class_type exists at MpiNodes fe812d47 OK
-
-  required inputs: 40 shipped graphs sweep clean — every Mpi* node supplies its required inputs ✓ (via http://127.0.0.1:8188, MpiNodes fe812d47)
-
+[2026-08-22T22:51:55.926Z] 
+  first-party nodes: every Mpi* class_type exists at MpiNodes 38b3a27a OK
+[2026-08-22T22:51:55.951Z] 
+  required inputs: NOT CHECKED — local MpiNodes is at 3e455e88, node_lock pins 38b3a27a — check out the pin (git -C c:/AI/Mpi/ComfyUi-MpiNodes checkout 38b3a27a) or run /mpi-nodes-sync
+[2026-08-22T22:51:55.951Z] 
 ── Live run ──
-  volume: pinned aghcuvg7nl (450 GB, cubric-smoke)
-
+[2026-08-22T22:51:56.517Z]   volume: pinned 88oys2kpie (80 GB, cubric-vision-EU-RO-1)
+[2026-08-22T22:51:56.517Z] 
   CPU download Pod: create (attempt 1/3)…
-..... remote mode active on irnu6uxpv9hnk2
-  volume: MEASURED used 327.3 GB of 450.0 GB - free 122.7 GB, still needed 0.0 GB (+5% +5.0 GB headroom = 5.0 GB) [volume holds MORE than this set weighs - still-needed is a floor]
-  installing 98 deps on a CPU Pod (download mode)…
-
-  [1/12] sdxl-nsfw
-......................
-  [2/12] chroma-hyper
-
-  [3/12] krea2-nsfw
-.
-  [4/12] nvidia-pid
-
-  [5/12] klein-4b
-...................
-  [6/12] boogu-edit-balanced
-
-  [7/12] wan-22
-....................
-  [8/12] ltx-23-balanced
-
-  [9/12] minimax-h3
-.....
-  [10/12] minimax-h3-ref2va
-
-  [11/12] wan22-5b
-
-  [12/12] qwen-edit
-  installs verified: no failed deps
-
+[2026-08-22T22:53:03.693Z]  remote mode active on c2fxplzw7qup5l
+[2026-08-22T22:53:05.683Z]   volume: MEASURED used 25.0 GB of 80.0 GB - free 55.0 GB, still needed 0.0 GB (+5% +5.0 GB headroom = 5.0 GB) [volume holds MORE than this set weighs - still-needed is a floor]
+[2026-08-22T22:53:05.683Z]   installing 20 deps on a CPU Pod (download mode)…
+[2026-08-22T22:53:05.683Z] 
+  [1/1] klein-9b
+[2026-08-22T22:53:55.310Z]   installs verified: no failed deps
+[2026-08-22T22:53:55.310Z] 
   deleting the CPU download Pod…
-  gpu: L4 (preferred #1)
-
+[2026-08-22T22:53:56.452Z]   gpu: L4 (preferred #1)
+[2026-08-22T22:53:56.452Z] 
   GPU Pod: create (attempt 1/2)…
-  ⚠ create refused: /remote/pod/create -> 502 {"error":"pod_create_failed","message":"There are no longer any instances available with the requested specifications. Please refresh and try again.","gpuUnsupported":false,"ramFloorMissed":true}
-  L4: refused a create already this run — next choice
-  gpu: RTX 3090 (preferred #2)
-  switching to RTX 3090 — nothing was rented, so this does not spend an attempt
-
-  GPU Pod: create (attempt 1/2)…
-  ⚠ create refused: /remote/pod/create -> 502 {"error":"pod_create_failed","message":"There are no longer any instances available with the requested specifications. Please refresh and try again.","gpuUnsupported":false,"ramFloorMissed":true}
-  L4: refused a create already this run — next choice
-  RTX 3090: refused a create already this run — next choice
-  gpu: RTX 4090 (preferred #3)
-  switching to RTX 4090 — nothing was rented, so this does not spend an attempt
-
-  GPU Pod: create (attempt 1/2)…
-..........................  engine: Pod image built from 0.31.0, matches node_lock ✓
-  probe image on the Pod: /workspace/comfyui/input/smoke-probe.png
-  hot-store: 2/2 file(s) on Pod disk
-  PASS sdxl-nsfw/t2i (8s, 1 out)
-  PASS sdxl-nsfw/i2i (4s, 2 out)
-  PASS sdxl-nsfw/control (17s, 2 out)
-  PASS sdxl-nsfw/upscale (8s, 2 out)
-  PASS sdxl-nsfw/detail (4s, 2 out)
-  hot-store: 8/8 file(s) on Pod disk
-  PASS chroma-hyper/t2i (13s, 1 out)
-  PASS chroma-hyper/i2i (8s, 2 out)
-  PASS chroma-hyper/control (21s, 2 out)
-  PASS chroma-hyper/upscale (8s, 2 out)
-  PASS chroma-hyper/detail (4s, 2 out)
-  hot-store: 16/16 file(s) on Pod disk
-  PASS krea2-nsfw/t2i (13s, 1 out)
-  PASS krea2-nsfw/i2i (9s, 2 out)
-  PASS krea2-nsfw/control (17s, 2 out)
-  PASS krea2-nsfw/krea2Edit (21s, 2 out)
-  PASS krea2-nsfw/upscale (8s, 2 out)
-  PASS krea2-nsfw/detail (4s, 2 out)
-  hot-store: 9/9 file(s) on Pod disk
-  PASS nvidia-pid/pid (21s, 2 out)
-  hot-store: 5/5 file(s) on Pod disk
-  PASS klein-4b/t2i (8s, 1 out)
-  PASS klein-4b/i2i (8s, 2 out)
-  PASS klein-4b/control (12s, 2 out)
-  PASS klein-4b/kleinEdit (8s, 2 out)
-  PASS klein-4b/inpaint (4s, 1 out)
-  PASS klein-4b/detail (4s, 1 out)
-  PASS klein-4b/upscale (4s, 2 out)
-  hot-store: 3/3 file(s) on Pod disk
-  PASS boogu-edit-balanced/edit (17s, 2 out)
-  hot-store: 4/4 file(s) on Pod disk
-  PASS wan-22/i2v_ms (17s, 2 out)
-  hot-store: 9/9 file(s) on Pod disk
-  PASS ltx-23-balanced/t2v_ms (34s, 1 out)
-  PASS ltx-23-balanced/i2v_ms (21s, 2 out)
-  hot-store: 4/4 file(s) on Pod disk
-  PASS minimax-h3/t2v_ms (124s, 1 out)
-  PASS minimax-h3/i2v_ms (124s, 2 out)
-  hot-store: 4/4 file(s) on Pod disk
-  PASS minimax-h3-ref2va/ref2v_ms (120s, 1 out)
-  hot-store: 4/4 file(s) on Pod disk
-  PASS wan22-5b/t2v (12s, 1 out)
-  PASS wan22-5b/i2v (8s, 2 out)
-  hot-store: 12/12 file(s) on Pod disk
-  PASS qwen-edit/qwenEdit (21s, 2 out)
-  PASS qwen-edit/control (30s, 2 out)
-
-PASS 35 · SKIP 0 · FAIL 0
-budget applied: 1 step · 128px target · seed 42
-Pod-green is NOT Windows-green — the local portable half is playbook gate 5.
-evidence: dev_configs/smoke-evidence.json
+[2026-08-22T22:56:03.117Z]   engine: Pod image built from 0.31.0, matches node_lock ✓
+[2026-08-22T22:56:03.786Z]   probe image on the Pod: /workspace/comfyui/input/smoke-probe.png
+[2026-08-22T22:56:52.322Z]   hot-store: 9/9 file(s) on Pod disk
+[2026-08-22T22:57:01.439Z]   PASS klein-9b/t2i (8s, 1 out)
+[2026-08-22T22:57:10.001Z]   PASS klein-9b/i2i (8s, 2 out)
+[2026-08-22T22:57:31.396Z]   PASS klein-9b/control (21s, 2 out)
+[2026-08-22T22:57:48.515Z]   PASS klein-9b/kleinEdit (17s, 2 out)
+[2026-08-22T22:58:06.001Z]   PASS klein-9b/inpaint (17s, 2 out)
+[2026-08-22T22:58:10.465Z]   PASS klein-9b/detail (4s, 1 out)
+[2026-08-22T22:58:19.413Z]   PASS klein-9b/upscale (9s, 2 out)
+[2026-08-22T22:58:19.413Z] 
+PASS 7 · SKIP 0 · FAIL 0
+[2026-08-22T22:58:19.413Z] budget applied: 1 step · 128px target · seed 42
+[2026-08-22T22:58:19.413Z] SCOPED — 19 of 21 models UNPROVEN: sdxl-realistic, sdxl-nsfw, ill-anime-beauty, ill-anime, pony-mix, chroma-flash, chroma-hyper, krea2, krea2-nsfw, nvidia-pid, boogu-edit-high, boogu-edit-balanced, wan-22, ltx-23, ltx-23-balanced, minimax-h3, minimax-h3-ref2va, wan22-5b, qwen-edit
+[2026-08-22T22:58:19.413Z] Pod-green is NOT Windows-green — the local portable half is playbook gate 5.
+[2026-08-22T22:58:19.414Z] evidence: dev_configs/smoke-evidence.json

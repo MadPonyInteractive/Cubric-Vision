@@ -1,5 +1,5 @@
 {
-  "at": "2026-08-10T15:19:44.217Z",
+  "at": "2026-08-22T22:58:19.413Z",
   "engine": {
     "want": "0.31.0",
     "got": "0.31.0",
@@ -8,8 +8,8 @@
   "datacenter": "EU-RO-1",
   "gpu": "L4",
   "volume": {
-    "id": "aghcuvg7nl",
-    "size": 450
+    "id": "88oys2kpie",
+    "size": 80
   },
   "budget": {
     "steps": 1,
@@ -19,7 +19,7 @@
   },
   "results": [
     {
-      "model": "sdxl-nsfw",
+      "model": "klein-9b",
       "op": "t2i",
       "status": "PASS",
       "secs": 8,
@@ -31,67 +31,7 @@
       ]
     },
     {
-      "model": "sdxl-nsfw",
-      "op": "i2i",
-      "status": "PASS",
-      "secs": 4,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "sdxl-nsfw",
-      "op": "control",
-      "status": "PASS",
-      "secs": 17,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "sdxl-nsfw",
-      "op": "upscale",
-      "status": "PASS",
-      "secs": 8,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "sdxl-nsfw",
-      "op": "detail",
-      "status": "PASS",
-      "secs": 4,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "chroma-hyper",
-      "op": "t2i",
-      "status": "PASS",
-      "secs": 13,
-      "media": 1,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "chroma-hyper",
+      "model": "klein-9b",
       "op": "i2i",
       "status": "PASS",
       "secs": 8,
@@ -103,7 +43,7 @@
       ]
     },
     {
-      "model": "chroma-hyper",
+      "model": "klein-9b",
       "op": "control",
       "status": "PASS",
       "secs": 21,
@@ -115,10 +55,10 @@
       ]
     },
     {
-      "model": "chroma-hyper",
-      "op": "upscale",
+      "model": "klein-9b",
+      "op": "kleinEdit",
       "status": "PASS",
-      "secs": 8,
+      "secs": 17,
       "media": 2,
       "budget": [
         "Input_Seed=42",
@@ -127,11 +67,23 @@
       ]
     },
     {
-      "model": "chroma-hyper",
+      "model": "klein-9b",
+      "op": "inpaint",
+      "status": "PASS",
+      "secs": 17,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ]
+    },
+    {
+      "model": "klein-9b",
       "op": "detail",
       "status": "PASS",
       "secs": 4,
-      "media": 2,
+      "media": 1,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
@@ -139,359 +91,157 @@
       ]
     },
     {
-      "model": "krea2-nsfw",
-      "op": "t2i",
-      "status": "PASS",
-      "secs": 13,
-      "media": 1,
-      "budget": [
-        "Input_is_Turbo=true",
-        "Input_Height=128",
-        "Input_Width=128",
-        "Input_Seed=42"
-      ]
-    },
-    {
-      "model": "krea2-nsfw",
-      "op": "i2i",
+      "model": "klein-9b",
+      "op": "upscale",
       "status": "PASS",
       "secs": 9,
       "media": 2,
       "budget": [
-        "Input_is_Turbo=true",
-        "Input_Height=128",
-        "Input_Width=128",
-        "Input_Seed=42"
-      ]
-    },
-    {
-      "model": "krea2-nsfw",
-      "op": "control",
-      "status": "PASS",
-      "secs": 17,
-      "media": 2,
-      "budget": [
-        "Input_is_Turbo=true",
-        "Input_Height=128",
-        "Input_Width=128",
-        "Input_Seed=42"
-      ]
-    },
-    {
-      "model": "krea2-nsfw",
-      "op": "krea2Edit",
-      "status": "PASS",
-      "secs": 21,
-      "media": 2,
-      "budget": [
-        "Input_is_Turbo=true",
-        "Input_Height=128",
-        "Input_Width=128",
-        "Input_Seed=42"
-      ]
-    },
-    {
-      "model": "krea2-nsfw",
-      "op": "upscale",
-      "status": "PASS",
-      "secs": 8,
-      "media": 2,
-      "budget": [
-        "Input_is_Turbo=true",
-        "Input_Height=128",
-        "Input_Width=128",
-        "Input_Seed=42"
-      ]
-    },
-    {
-      "model": "krea2-nsfw",
-      "op": "detail",
-      "status": "PASS",
-      "secs": 4,
-      "media": 2,
-      "budget": [
-        "Input_is_Turbo=true",
-        "Input_Height=128",
-        "Input_Width=128",
-        "Input_Seed=42"
-      ]
-    },
-    {
-      "model": "nvidia-pid",
-      "op": "pid",
-      "status": "PASS",
-      "secs": 21,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42"
-      ]
-    },
-    {
-      "model": "klein-4b",
-      "op": "t2i",
-      "status": "PASS",
-      "secs": 8,
-      "media": 1,
-      "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
-    },
-    {
-      "model": "klein-4b",
-      "op": "i2i",
-      "status": "PASS",
-      "secs": 8,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "klein-4b",
-      "op": "control",
-      "status": "PASS",
-      "secs": 12,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "klein-4b",
-      "op": "kleinEdit",
-      "status": "PASS",
-      "secs": 8,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "klein-4b",
-      "op": "inpaint",
-      "status": "PASS",
-      "secs": 4,
-      "media": 1,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "klein-4b",
-      "op": "detail",
-      "status": "PASS",
-      "secs": 4,
-      "media": 1,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "klein-4b",
-      "op": "upscale",
-      "status": "PASS",
-      "secs": 4,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "boogu-edit-balanced",
-      "op": "edit",
-      "status": "PASS",
-      "secs": 17,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42"
-      ]
-    },
-    {
-      "model": "wan-22",
-      "op": "i2v_ms",
-      "status": "PASS",
-      "secs": 17,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "ltx-23-balanced",
-      "op": "t2v_ms",
-      "status": "PASS",
-      "secs": 34,
-      "media": 1,
-      "budget": [
-        "Input_Duration=1",
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "ltx-23-balanced",
-      "op": "i2v_ms",
-      "status": "PASS",
-      "secs": 21,
-      "media": 2,
-      "budget": [
-        "Input_Duration=1",
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "minimax-h3",
-      "op": "t2v_ms",
-      "status": "PASS",
-      "secs": 124,
-      "media": 1,
-      "budget": [
-        "Input_Width=128",
-        "Input_Height=128",
-        "Input_seed=42",
-        "Input_Duration=1"
-      ]
-    },
-    {
-      "model": "minimax-h3",
-      "op": "i2v_ms",
-      "status": "PASS",
-      "secs": 124,
-      "media": 2,
-      "budget": [
-        "Input_Width=128",
-        "Input_Height=128",
-        "Input_seed=42",
-        "Input_Duration=1"
-      ]
-    },
-    {
-      "model": "minimax-h3-ref2va",
-      "op": "ref2v_ms",
-      "status": "PASS",
-      "secs": 120,
-      "media": 1,
-      "budget": [
-        "Input_Width=128",
-        "Input_Height=128",
-        "Input_seed=42"
-      ]
-    },
-    {
-      "model": "wan22-5b",
-      "op": "t2v",
-      "status": "PASS",
-      "secs": 12,
-      "media": 1,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "wan22-5b",
-      "op": "i2v",
-      "status": "PASS",
-      "secs": 8,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "qwen-edit",
-      "op": "qwenEdit",
-      "status": "PASS",
-      "secs": 21,
-      "media": 2,
-      "budget": [
-        "Input_Tier=3",
-        "Input_Seed=42"
-      ]
-    },
-    {
-      "model": "qwen-edit",
-      "op": "control",
-      "status": "PASS",
-      "secs": 30,
-      "media": 2,
-      "budget": [
-        "Input_Tier=3",
-        "Input_Seed=42"
       ]
     }
   ],
   "counts": {
-    "pass": 35,
+    "pass": 7,
     "skip": 0,
     "fail": 0,
-    "opsPlanned": 35
+    "opsPlanned": 7
   },
   "scope": {
-    "requested": "all",
+    "requested": [
+      "klein-9b"
+    ],
     "modelsRun": [
+      "klein-9b"
+    ],
+    "covers": [
+      "klein-4b"
+    ],
+    "unproven": [
+      "sdxl-realistic",
       "sdxl-nsfw",
+      "ill-anime-beauty",
+      "ill-anime",
+      "pony-mix",
+      "chroma-flash",
       "chroma-hyper",
+      "krea2",
       "krea2-nsfw",
       "nvidia-pid",
-      "klein-4b",
+      "boogu-edit-high",
       "boogu-edit-balanced",
       "wan-22",
+      "ltx-23",
       "ltx-23-balanced",
       "minimax-h3",
       "minimax-h3-ref2va",
       "wan22-5b",
       "qwen-edit"
     ],
-    "covers": [
-      "sdxl-realistic",
-      "ill-anime-beauty",
-      "ill-anime",
-      "pony-mix",
-      "chroma-flash",
-      "krea2",
-      "boogu-edit-high",
-      "ltx-23"
-    ],
-    "unproven": [],
-    "modelsInRegistry": 20
+    "modelsInRegistry": 21
   },
   "limits": [
     "Pod-green is not Windows-green: different OS, python, torch, CUDA.",
     "Deduped by class_type set — a break tied to weight FORMAT under the same loader node is not covered.",
-    "Proves a graph RUNS; does not judge output quality."
+    "Proves a graph RUNS; does not judge output quality.",
+    "SCOPED RUN: 19 of 21 models are in no family this run touched — sdxl-realistic, sdxl-nsfw, ill-anime-beauty, ill-anime, pony-mix, chroma-flash, chroma-hyper, krea2, krea2-nsfw, nvidia-pid, boogu-edit-high, boogu-edit-balanced, wan-22, ltx-23, ltx-23-balanced, minimax-h3, minimax-h3-ref2va, wan22-5b, qwen-edit."
   ],
   "skippedWeights": [
     "sdxl-realistic(6.62GB)",
+    "sdxl-nsfw(6.46GB)",
     "ill-anime(6.46GB)",
     "ill-anime-beauty(6.46GB)",
     "pony-mix(6.62GB)",
+    "wan-22-i2v-high(13.32GB)",
+    "wan-22-i2v-low(13.32GB)",
+    "wan22-5b-model(9.31GB)",
     "chroma1-hd-flash(16.58GB)",
+    "chroma1-hd-hyper(8.57GB)",
+    "pid-flux1(2.54GB)",
+    "pid-sdxl(2.54GB)",
+    "pid-sd3(2.54GB)",
+    "pid-qwenimage(2.54GB)",
     "krea2-raw-transformer(12.57GB)",
+    "krea2-raw-transformer-nsfw(12.25GB)",
     "boogu-edit-transformer-high(19.17GB)",
+    "boogu-edit-transformer-balanced(10.59GB)",
+    "qwen-edit-transformer(19.09GB)",
+    "klein-4b-transformer(3.79GB)",
     "ltx23-transformer-bf16(39.13GB)",
-    "4x-AnimeSharp(63.91MB)"
+    "ltx23-transformer-int8(20.03GB)",
+    "minimax-h3-fl2va-transformer(19.53GB)",
+    "minimax-h3-ref2va-transformer(19.53GB)",
+    "wan2.2_vae(1.31GB)",
+    "wan_2.1_vae(242.06MB)",
+    "vae-flux-ae(319.77MB)",
+    "vae-sdxl(319.14MB)",
+    "vae-sd3(159.9MB)",
+    "vae-qwen-image(242.05MB)",
+    "ltx23-video-vae(1.35GB)",
+    "ltx23-audio-vae(347.95MB)",
+    "ltx23-preview-taehv(22.44MB)",
+    "taeh3-decoder(21.66MB)",
+    "qwen3vl-abliterated-clip(4.88GB)",
+    "boogu-qwen3vl-8b-clip(9.86GB)",
+    "qwen-edit-qwen25vl-7b-clip(8.74GB)",
+    "qwen3-4b-clip(7.49GB)",
+    "pid-gemma(4.87GB)",
+    "umt5_xxl_fp8_e4m3fn_scaled(6.27GB)",
+    "t5xxl-fp16(9.12GB)",
+    "ltx23-text-projection(2.15GB)",
+    "ltx23-gemma-clip(8.8GB)",
+    "ltx23-spatial-upscaler(949.62MB)",
+    "4x-AnimeSharp(63.91MB)",
+    "controlnet-union-sdxl(2.34GB)",
+    "controlnet-union-flux(3.99GB)",
+    "h3-qwen3vl-32b-clip(24.55GB)",
+    "vae-minimax-h3-video-int8(2.95GB)",
+    "vae-minimax-h3-audio(577.22MB)",
+    "wan22-5b-turbo-lora(316.95MB)",
+    "minimax-h3-turbo-lora(1.82GB)",
+    "krea2-lora-filterbypass(160B)",
+    "krea2-lora-identity-edit(871.81MB)",
+    "krea2-lora-accelerator(893.54MB)",
+    "krea2-lora-depth-control(822.06MB)",
+    "krea2-style-darkbrush(447.55MB)",
+    "krea2-style-dotmatrix(447.55MB)",
+    "krea2-style-kidsdrawing(447.55MB)",
+    "krea2-style-neondrip(447.55MB)",
+    "krea2-style-rainywindow(447.55MB)",
+    "krea2-style-retroanime(447.55MB)",
+    "krea2-style-softwatercolor(447.55MB)",
+    "krea2-style-sunsetblur(447.55MB)",
+    "krea2-style-vintagetarot(447.55MB)",
+    "krea2-style-midjourney(218MB)",
+    "qwen-edit-lightning-4step(810.25MB)",
+    "qwen-edit-lightning-8step(810.25MB)",
+    "qwen-edit-style-illustration(562.72MB)",
+    "qwen-edit-style-anime3d(405.27MB)",
+    "qwen-edit-style-anime2d(225.18MB)",
+    "qwen-edit-style-zankuro(225.18MB)",
+    "qwen-edit-style-3d(337.68MB)",
+    "qwen-edit-style-caricature(562.72MB)",
+    "qwen-edit-style-snapshot(141.33MB)",
+    "ltx23-lora-merged(3.6GB)",
+    "ltx23-lora-transition(372.15MB)",
+    "ltx23-lora-talkvid(1.08GB)",
+    "ltx23-lora-foley(216.21MB)",
+    "klein-lora-outpaint(72.52MB)",
+    "klein-lora-refcontrol-depth(88.15MB)",
+    "klein-lora-nsfw(180.01MB)",
+    "klein-style-muppets(88.15MB)",
+    "klein-style-cartoon(88.15MB)",
+    "klein-style-jojo(88.15MB)",
+    "klein-style-anime(88.14MB)",
+    "klein-style-chibi(88.14MB)",
+    "klein-style-doodle(22.05MB)",
+    "klein-style-vintage(88.15MB)",
+    "klein-style-aesthetic(183.78MB)",
+    "chroma-style-bwsketch(213.83MB)",
+    "chroma-style-lenovo(106.93MB)",
+    "chroma-style-brushwork(213.83MB)",
+    "chroma-style-anime(427.78MB)"
   ]
 }

@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "d8294c2e-61be-4e6d-b976-2a6d72a58799",
   "generated_at": "2026-08-22T14:29:28Z",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "LanPaint evaluation + MpiNodes AGPL-3.0 release; handing the Klein 9B wiring on",
     "branch": "master"
@@ -71,5 +71,6 @@
       ".agents/mpi-kanban/tasks/MPI-603/brief.md"
     ]
   },
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/d8294c2e-61be-4e6d-b976-2a6d72a58799.json and use mpi-continue to continue MPI-598 - wire FLUX.2 Klein 9B and update Klein 4B in the same pass. The weight is already decided (distilled INT8 transformer + qwen_3_8b_int8_convrot text encoder at CLIPLoader type flux2, 4 steps, cfg 1.0) and both 9B LoRAs are downloaded and hash-verified in G:/CubricModels/loras/flux2-klein/. Read tasks/MPI-598/brief.md and its research/session-2026-08-22-assets-and-lanpaint.md before touching anything: they carry the 5-row converter swap table, the Input_is_9b gate map, and the traps MPI-600 measured. Move the card to doing with a files.json, then run /mpi-add-model. Separately, MPI-601 is finished and parked in doing at validating - it needs mpi-end-session to close, and MPI-602 (LanPaint integration) is carded in todo, not started."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/d8294c2e-61be-4e6d-b976-2a6d72a58799.json and use mpi-continue to continue MPI-598 - wire FLUX.2 Klein 9B and update Klein 4B in the same pass. The weight is already decided (distilled INT8 transformer + qwen_3_8b_int8_convrot text encoder at CLIPLoader type flux2, 4 steps, cfg 1.0) and both 9B LoRAs are downloaded and hash-verified in G:/CubricModels/loras/flux2-klein/. Read tasks/MPI-598/brief.md and its research/session-2026-08-22-assets-and-lanpaint.md before touching anything: they carry the 5-row converter swap table, the Input_is_9b gate map, and the traps MPI-600 measured. Move the card to doing with a files.json, then run /mpi-add-model. Separately, MPI-601 is finished and parked in doing at validating - it needs mpi-end-session to close, and MPI-602 (LanPaint integration) is carded in todo, not started.",
+  "closed_at": "2026-08-23T05:27:10Z"
 }

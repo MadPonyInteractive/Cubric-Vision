@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "c4fe3f20-75b3-4f40-8cbc-0390b078f767",
   "generated_at": "2026-08-22T20:41:18Z",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "Wire FLUX.2 Klein 9B end to end - deps, LanPaint pin, one-template-two-sizes converter, ModelDef, R2, docs, and three ops proven in the app",
     "branch": "master"
@@ -75,5 +75,6 @@
       ".agents/mpi-kanban/tasks/MPI-603/brief.md"
     ]
   },
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/c4fe3f20-75b3-4f40-8cbc-0390b078f767.json and use mpi-continue to continue MPI-598 (Wire FLUX.2 Klein 9B and update 4B alongside it), which is in `doing`. Klein 9B already SHIPS: committed in cfe81061 and 774820bf, one template baking both sizes via generate_klein.py, all four weights on R2 and verified, LanPaint pinned at scraed/LanPaint 9fe91955 and declared on both Klein cards, the ModelDef live and styleless, and t2i / inpaint / kleinEdit all PROVEN in Fabio's own app. Start by ASKING FABIO two things and do not act before he answers: (1) whether his LoRA-hunting agent found 9B style LoRAs and whether he has already changed the workflow to add them - if so the styleless posture (Input_is_9b bypassing both the styles prompt concat and the style LoRA stack, plus styleLoras:false / styleOps:[] on the ModelDef) has to be undone; and (2) how to run the Pod smoke for the four still-unproven ops (i2i, control, detail, upscale), because a --models subset currently REFUSES to run - smoke-evidence.json is stale since 846dc777 and cannot be merged into. He wants to be PRESENT for the smoke, so rent no GPU until he says go. Read tasks/MPI-598/checklist.md and docs/models/klein/9b.md first. Nothing is pushed."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/c4fe3f20-75b3-4f40-8cbc-0390b078f767.json and use mpi-continue to continue MPI-598 (Wire FLUX.2 Klein 9B and update 4B alongside it), which is in `doing`. Klein 9B already SHIPS: committed in cfe81061 and 774820bf, one template baking both sizes via generate_klein.py, all four weights on R2 and verified, LanPaint pinned at scraed/LanPaint 9fe91955 and declared on both Klein cards, the ModelDef live and styleless, and t2i / inpaint / kleinEdit all PROVEN in Fabio's own app. Start by ASKING FABIO two things and do not act before he answers: (1) whether his LoRA-hunting agent found 9B style LoRAs and whether he has already changed the workflow to add them - if so the styleless posture (Input_is_9b bypassing both the styles prompt concat and the style LoRA stack, plus styleLoras:false / styleOps:[] on the ModelDef) has to be undone; and (2) how to run the Pod smoke for the four still-unproven ops (i2i, control, detail, upscale), because a --models subset currently REFUSES to run - smoke-evidence.json is stale since 846dc777 and cannot be merged into. He wants to be PRESENT for the smoke, so rent no GPU until he says go. Read tasks/MPI-598/checklist.md and docs/models/klein/9b.md first. Nothing is pushed.",
+  "closed_at": "2026-08-23T05:27:10Z"
 }

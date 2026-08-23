@@ -88,9 +88,15 @@ are downloaded and hash-verified. Playbook Phase 0 was already satisfied.
       `G:/CubricModels`, the LanPaint install into the app engine from the pinned commit,
       and the generated `klein_9b_t2i.json`. The model button renders **"FLUX.2 KLEIN B"** —
       the family + tier badge working.
-      **STILL UNPROVEN: `i2i`, `control`, `detail`, `upscale`** — same graph, different
-      `wf_type` branches, so the three passes say nothing about them
-- [ ] Smoke per `docs/playbooks/bump-engine/01-smoke-run.md` — covers the four remaining ops
+      ~~**STILL UNPROVEN: `i2i`, `control`, `detail`, `upscale`**~~ — CLOSED by the Pod
+      smoke below, 2026-08-22. All seven ops now have a real generation behind them:
+      three in Fabio's app at 896x1088, four on an L4 at the smoke budget
+- [x] Smoke per `docs/playbooks/bump-engine/01-smoke-run.md` — **PASS 7 · SKIP 0 · FAIL 0**
+      on an L4 in EU-RO-1, 2026-08-22, engine proven 0.31.0 (gate 7 fired). The four
+      unproven ops are closed: `i2i` 8s, `control` 21s, `detail` 4s, `upscale` 9s — and
+      t2i / kleinEdit / inpaint re-proven on Pod. `covers klein-4b`, so 4B rides along.
+      Evidence + the two findings (the Pod lock was behind; `checkPodLock()` over-reports
+      for code-only nodes) → `validation.md`
 - [x] **`klein-9b.webp`** — placed. Converted from Fabio's t2i at native 896x1088 (the fleet
       convention, matching klein-4b and krea2), webp q85, 95,878 bytes — in range against
       klein-4b's 83,216. Encoded from the PNG source, never from an encoded buffer. Verified

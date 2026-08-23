@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "934a0e0b-65b1-4c0d-9ab2-3c7cbbb16b22",
   "generated_at": "2026-08-22T22:06:00Z",
-  "status": "open",
+  "status": "closed",
   "session": {
     "name": "Correct the Inpaint help copy for the LanPaint path, and write the Klein 9B style + inpaint entries into UNRELEASED.md",
     "branch": "master"
@@ -67,5 +67,6 @@
       ".agents/mpi-kanban/tasks/MPI-367/checklist.md"
     ]
   },
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/934a0e0b-65b1-4c0d-9ab2-3c7cbbb16b22.json and use mpi-continue to continue MPI-598 (Wire FLUX.2 Klein 9B and update 4B alongside it), which is in `doing`. Everything on that card has shipped except one thing: the Pod smoke. Klein 9B is committed, on R2, styled (seven 9B style LoRAs landed from a peer agent and Fabio has tested them - the picker cards are his test images), and t2i / inpaint / kleinEdit are proven in his own app. UNRELEASED.md now carries the 9B two-sizes, licence-gate, styles and inpaint bullets. The previous session's two open questions are both CLOSED: the styles shipped, and Klein 9B's doodle stays on v1. START by asking Fabio which way to run the smoke for the four unproven ops (i2i, control, detail, upscale) - Klein-only against a FRESH dev_configs/smoke-evidence.json, or the full matrix - because a --models subset refuses to run against the stale evidence file (2026-08-10, while node_lock.json moved 2026-08-17 in 846dc777). He wants to be PRESENT, so rent no GPU until he says go, and back up dev_configs/smoke-run.txt before any invocation including --plan. Note MPI-367 is ALSO in `doing` and must not be closed with MPI-598 - only its Inpaint and Detail entries are done. Nothing is pushed."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/934a0e0b-65b1-4c0d-9ab2-3c7cbbb16b22.json and use mpi-continue to continue MPI-598 (Wire FLUX.2 Klein 9B and update 4B alongside it), which is in `doing`. Everything on that card has shipped except one thing: the Pod smoke. Klein 9B is committed, on R2, styled (seven 9B style LoRAs landed from a peer agent and Fabio has tested them - the picker cards are his test images), and t2i / inpaint / kleinEdit are proven in his own app. UNRELEASED.md now carries the 9B two-sizes, licence-gate, styles and inpaint bullets. The previous session's two open questions are both CLOSED: the styles shipped, and Klein 9B's doodle stays on v1. START by asking Fabio which way to run the smoke for the four unproven ops (i2i, control, detail, upscale) - Klein-only against a FRESH dev_configs/smoke-evidence.json, or the full matrix - because a --models subset refuses to run against the stale evidence file (2026-08-10, while node_lock.json moved 2026-08-17 in 846dc777). He wants to be PRESENT, so rent no GPU until he says go, and back up dev_configs/smoke-run.txt before any invocation including --plan. Note MPI-367 is ALSO in `doing` and must not be closed with MPI-598 - only its Inpaint and Detail entries are done. Nothing is pushed.",
+  "closed_at": "2026-08-23T05:27:10Z"
 }
