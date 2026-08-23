@@ -1,10 +1,19 @@
 # Klein 4B — object removal & the fal LoRA family
 
+> **🔴 HISTORY, NOT THE RECIPE — nothing in this file ships any more.** The green plate and
+> the outpaint LoRA were a workaround for inpainting; **LanPaint replaced the workaround**
+> (MPI-602/MPI-367), and as of 2026-08-23 (MPI-603) **no graph in the repo loads either**.
+> The shipped removal path is `LanPaint_KSampler` + `SetLatentNoiseMask`, where the model
+> SEES under the mask and the prompt must NAME what to remove — read `9b.md` § "Inpaint is
+> LanPaint now" before acting on anything below. Kept because the measurements are still
+> the only characterisation of these two fal weights, and the weight itself is still a live
+> dep (see `loraDeps.js` `klein-lora-outpaint`).
+>
 > **MEASURED 2026-07-26 — the object-remove LoRA is NOT our removal path.** It is
 > object-specific: on a tattoo it lost to the **base model with no LoRA at all**. The
 > green-plate **outpaint** LoRA does removal *and* inpaint well, needs no user prompt for
 > removal, and survives crop/stitch. Read the red-box section below as a characterisation
-> of a LoRA we tested and set aside, not as a recipe. What ships is the green plate.
+> of a LoRA we tested and set aside, not as a recipe.
 
 Two fal LoRAs sit behind Klein's fill-shaped ops. They look interchangeable — same
 136 tensors, rank 16, `diffusion_model.` prefix, byte-identical size (76,038,936) — but

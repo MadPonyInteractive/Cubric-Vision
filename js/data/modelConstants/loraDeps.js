@@ -447,8 +447,19 @@ export const loraDeps = {
     // template BYPASSED and severed (nothing consumes it) purely so the two-tier wiring
     // is recoverable if Klein 9B ever lands — do NOT re-add the dep on the strength of
     // that node alone. 786MB nobody loads; the weight is never uploaded to R2.
-    // Klein outpaint LoRA (MPI-354) — BAKED at 1.1 in every Klein graph (LoraLoaderModelOnly,
-    // not a user slot). Mandatory for outpaint, harmless-to-helpful on inpaint/removal.
+    // Klein outpaint LoRA (MPI-354) — DEPRECATED (MPI-603), and NO GRAPH LOADS IT ANY MORE.
+    // It was a workaround for inpainting: destroy the pixels with a green plate and ask it to
+    // "fill the green spaces". LanPaint replaced the workaround (MPI-602/MPI-367), and
+    // 2026-08-23 flow_character_sheet's head-removal branch — the last graph still on the old
+    // recipe — was re-authored onto LanPaint, so the LoRA, the green plate and its composite
+    // all left the repo together. There is no 9B equivalent and none is needed.
+    // THE ENTRY STAYS ANYWAY, and must not be deleted here. `_orphanedDepIds`
+    // (routes/downloadManager.js) iterates DEPS to reclaim what no model protects — delete the
+    // entry and the 72MB strands on the disk of every user who already downloaded it,
+    // untracked, with nothing in the app able to remove it. Klein 4B still lists it in
+    // models.js, and released builds (1.4.0) fetch it, so the R2 and HF objects must also stay
+    // up until a build WITHOUT the dep has shipped: deleting them first turns every released
+    // install into a 404 rather than a clean skip. Remaining steps live on MPI-603.
     // MUST be the comfy-converted file (`diffusion_model.*` prefix, rank 16, all 68 target
     // keys bind) — the plain diffusers weight silently binds nothing in ComfyUI.
     'klein-lora-outpaint': {
@@ -519,9 +530,9 @@ export const loraDeps = {
     // `POST /api/models/{repo}/paths-info/main`, and MPI-598's research file. Read the
     // oid, never a `resolve/` ETag — that is a CDN etag and makes a good download look
     // corrupt.
-    // NOTE there is NO 9B outpaint LoRA. The 4B one is deprecated under MPI-603 and must
-    // not be deleted or stripped here — it has a shipped second consumer in the Character
-    // Sheet flow (flow_character_sheet.json #708).
+    // NOTE there is NO 9B outpaint LoRA, and none is needed. The 4B one is deprecated under
+    // MPI-603 and no longer loaded by any graph — but its entry must still not be deleted or
+    // stripped here; see the `klein-lora-outpaint` comment above for why.
     'klein-9b-lora-refcontrol-depth': {
         id: 'klein-9b-lora-refcontrol-depth',
         name: 'FLUX.2 Klein 9B Depth RefControl LoRA (baked)',

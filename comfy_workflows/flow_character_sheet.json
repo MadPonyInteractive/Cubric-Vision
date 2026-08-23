@@ -787,7 +787,7 @@
   "687": {
     "inputs": {
       "model": [
-        "708",
+        "726",
         0
       ],
       "clip": [
@@ -935,38 +935,10 @@
       "title": "✂️ Inpaint Stitch"
     }
   },
-  "697": {
-    "inputs": {
-      "noise": [
-        "702",
-        0
-      ],
-      "guider": [
-        "699",
-        0
-      ],
-      "sampler": [
-        "700",
-        0
-      ],
-      "sigmas": [
-        "704",
-        0
-      ],
-      "latent_image": [
-        "710",
-        0
-      ]
-    },
-    "class_type": "SamplerCustomAdvanced",
-    "_meta": {
-      "title": "SamplerCustomAdvanced"
-    }
-  },
   "698": {
     "inputs": {
       "samples": [
-        "697",
+        "777",
         0
       ],
       "vae": [
@@ -977,77 +949,6 @@
     "class_type": "VAEDecode",
     "_meta": {
       "title": "VAE Decode"
-    }
-  },
-  "699": {
-    "inputs": {
-      "cfg": 1,
-      "model": [
-        "708",
-        0
-      ],
-      "positive": [
-        "707",
-        0
-      ],
-      "negative": [
-        "706",
-        0
-      ]
-    },
-    "class_type": "CFGGuider",
-    "_meta": {
-      "title": "CFG Guider"
-    }
-  },
-  "700": {
-    "inputs": {
-      "sampler_name": "euler"
-    },
-    "class_type": "KSamplerSelect",
-    "_meta": {
-      "title": "KSamplerSelect"
-    }
-  },
-  "702": {
-    "inputs": {
-      "noise_seed": [
-        "503",
-        0
-      ]
-    },
-    "class_type": "RandomNoise",
-    "_meta": {
-      "title": "RandomNoise"
-    }
-  },
-  "704": {
-    "inputs": {
-      "steps": 2,
-      "width": [
-        "705",
-        0
-      ],
-      "height": [
-        "705",
-        0
-      ]
-    },
-    "class_type": "Flux2Scheduler",
-    "_meta": {
-      "title": "Flux2Scheduler"
-    }
-  },
-  "705": {
-    "inputs": {
-      "any": [
-        "719",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "W + H"
     }
   },
   "706": {
@@ -1078,25 +979,11 @@
       "title": "Set Reference Latent"
     }
   },
-  "708": {
-    "inputs": {
-      "lora_name": "flux2-klein\\flux2-klein-4b-outpaint.safetensors",
-      "strength_model": 1.1,
-      "model": [
-        "726",
-        0
-      ]
-    },
-    "class_type": "LoraLoaderModelOnly",
-    "_meta": {
-      "title": "Load LoRA"
-    }
-  },
   "710": {
     "inputs": {
       "pixels": [
-        "713",
-        0
+        "718",
+        1
       ],
       "vae": [
         "725",
@@ -1119,59 +1006,6 @@
     "class_type": "CLIPTextEncode",
     "_meta": {
       "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "713": {
-    "inputs": {
-      "x": 0,
-      "y": 0,
-      "resize_source": true,
-      "destination": [
-        "718",
-        1
-      ],
-      "source": [
-        "716",
-        0
-      ],
-      "mask": [
-        "718",
-        2
-      ]
-    },
-    "class_type": "ImageCompositeMasked",
-    "_meta": {
-      "title": "Image Composite Masked"
-    }
-  },
-  "716": {
-    "inputs": {
-      "batch_size": 1,
-      "color": 65280,
-      "width": [
-        "717",
-        0
-      ],
-      "height": [
-        "717",
-        0
-      ]
-    },
-    "class_type": "EmptyImage",
-    "_meta": {
-      "title": "Empty Image"
-    }
-  },
-  "717": {
-    "inputs": {
-      "any": [
-        "719",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "W + H"
     }
   },
   "718": {
@@ -1556,6 +1390,72 @@
     "class_type": "MpiMath",
     "_meta": {
       "title": "left 25% of the sheet width"
+    }
+  },
+  "775": {
+    "inputs": {
+      "samples": [
+        "710",
+        0
+      ],
+      "mask": [
+        "718",
+        2
+      ]
+    },
+    "class_type": "SetLatentNoiseMask",
+    "_meta": {
+      "title": "Set Latent Noise Mask"
+    }
+  },
+  "776": {
+    "inputs": {
+      "guidance": 4,
+      "conditioning": [
+        "707",
+        0
+      ]
+    },
+    "class_type": "FluxGuidance",
+    "_meta": {
+      "title": "FluxGuidance"
+    }
+  },
+  "777": {
+    "inputs": {
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "LanPaint_NumSteps": 2,
+      "LanPaint_PromptMode": "Image First",
+      "LanPaint_Info": "LanPaint KSampler.",
+      "Inpainting_mode": "🖼️ Image Inpainting",
+      "model": [
+        "726",
+        0
+      ],
+      "positive": [
+        "776",
+        0
+      ],
+      "negative": [
+        "706",
+        0
+      ],
+      "latent_image": [
+        "775",
+        0
+      ],
+      "seed": [
+        "503",
+        0
+      ]
+    },
+    "class_type": "LanPaint_KSampler",
+    "_meta": {
+      "title": "LanPaint KSampler"
     }
   }
 }

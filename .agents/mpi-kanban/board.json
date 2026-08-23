@@ -6,7 +6,6 @@
       "MPI-612",
       "MPI-610",
       "MPI-605",
-      "MPI-603",
       "MPI-602",
       "MPI-596",
       "MPI-595",
@@ -70,6 +69,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-603",
       "MPI-608",
       "MPI-607",
       "MPI-367",
@@ -109,8 +109,24 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-23T12:04:30Z",
+  "updated_at": "2026-08-23T12:47:23Z",
   "events": [
+    {
+      "at": "2026-08-23T12:47:23Z",
+      "type": "validation.updated",
+      "task": "MPI-603",
+      "actor": "claude",
+      "note": "in-progress -> validating. Head-removal branch re-authored onto LanPaint: #708 (outpaint LoRA), #716 (green plate 65280), #713 (its composite) and the SamplerCustomAdvanced/CFGGuider/KSamplerSelect/RandomNoise/Flux2Scheduler chain the plate needed are gone; #775 SetLatentNoiseMask, #776 FluxGuidance(4) and #777 LanPaint_KSampler (steps 4, cfg 1, euler/simple, NumSteps 2) replace them, donor-cloned from flow_scribble_object. NO GRAPH IN THE REPO LOADS flux2-klein-4b-outpaint ANY MORE. loraDeps.js second-consumer comment healed (the R2/HF delete blocker), plus docs/models/klein README/9b/removal. Proven without spending a generation: converter baseline 0 diffs, every surviving pos/size byte-identical, structural+type PASS on 88 nodes vs 48188 object_info, live graphToPrompt 0 semantic diffs and 0 missing node types, npm test 726/726. NOT proven: a live run - bench had 3.4GB of 16GB VRAM free and the app was live, so no generation was taken. Fabio to run Character Sheet with Remove Head ON; validation.md names the two likely failure shapes and their fixes. Brief steps 3-5 (drop the dep from Klein in models.js, ship, then delete R2/HF) stay open; models.js is live-claimed by MPI-607."
+    },
+    {
+      "at": "2026-08-23T12:26:31Z",
+      "type": "task.moved",
+      "task": "MPI-603",
+      "actor": "claude",
+      "from": "todo",
+      "to": "doing",
+      "note": "todo -> doing. Re-authoring flow_character_sheet head-removal branch onto LanPaint (deletes #708 outpaint LoRA, #716 green plate, #713 composite and the SamplerCustomAdvanced chain the plate needed), then healing the klein-lora-outpaint comment in loraDeps.js that blocks the authorised R2/HF delete. Scope is the graph + the comment only: brief steps 3-5 (drop the dep from Kleins list in models.js, ship, delete from R2/HF) stay open, and models.js is live-claimed by MPI-607."
+    },
     {
       "at": "2026-08-22T19:48:36Z",
       "type": "task.created",

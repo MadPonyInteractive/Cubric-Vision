@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "comfy_workflows/raw/flow_character_sheet.json",
+    "comfy_workflows/flow_character_sheet.json",
+    "js/data/modelConstants/loraDeps.js",
+    "docs/models/klein/README.md",
+    "docs/models/klein/9b.md",
+    "docs/models/klein/removal.md",
+    ".agents/mpi-kanban/tasks/MPI-603/"
+  ]
+}

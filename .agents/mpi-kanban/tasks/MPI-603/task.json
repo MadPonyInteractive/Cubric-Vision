@@ -3,11 +3,11 @@
   "id": "MPI-603",
   "title": "Retire the outpaint LoRA - and give the Character Sheet flow its own answer",
   "description": "flux2-klein-4b-outpaint is deprecated: LanPaint replaces the fill/removal path it was baked in for (MPI-602), and Fabio removed it from the bench template 2026-08-22. Retiring it is NOT one deletion. It has a second consumer with nothing to do with inpainting - flow_character_sheet.json node 708 loads it at strength 1.1 - and that flow (MPI-504, shipped) needs a real replacement, not a removal. Fabio has authorised the eventual R2 and HF delete; the ordering is the constraint. There is also no 9B equivalent of this weight, so the 9B arm has no outpaint LoRA at all.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-22T14:50:06Z",
-  "updated_at": "2026-08-23T12:10:00Z",
+  "updated_at": "2026-08-23T12:47:23Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -17,5 +17,11 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
+  },
+  "activeSessionTitle": "MPI-603 - retire the outpaint LoRA from the Character Sheet head-removal branch (LanPaint re-author)",
+  "attention": {
+    "state": "required",
+    "reason": "Needs one live run: Character Sheet with Remove Head ON. Everything else is proven.",
+    "updated_at": "2026-08-23T12:47:23Z"
   }
 }

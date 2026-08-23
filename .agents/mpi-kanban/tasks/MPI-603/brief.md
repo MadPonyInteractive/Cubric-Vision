@@ -110,3 +110,23 @@ skip."* Klein shipped in 1.4.0.
   9B arm needs a decision about outpaint regardless of what happens here.
 - `docs/models/klein/licences.md` line 88 - this weight is **not** a CivitAI weight; the
   by-hash lookup 404s. Check there before assuming a re-download path exists.
+
+---
+
+## OUTCOME — step 1 and step 2 are DONE, 2026-08-23
+
+The Character Sheet has its answer, and it is the one Fabio called: **nothing replaces the
+LoRA.** `flow_character_sheet`'s head-removal branch now runs `LanPaint_KSampler` +
+`SetLatentNoiseMask`, and #708 (the LoRA), #716 (the green plate) and #713 (its composite)
+left with the workaround, along with the `SamplerCustomAdvanced` chain the plate needed.
+**No graph in the repo loads `flux2-klein-4b-outpaint` any more.** The `loraDeps.js`
+comment that called this flow a "shipped second consumer" — the sentence blocking the
+authorised R2/HF delete — is healed, as are `docs/models/klein/{README,9b,removal}.md`.
+
+Evidence, and the ONE check that was not run (a live generation — the bench had 3.4 GB of
+16 GB VRAM free and the app was live), are in [validation.md](validation.md). **Read its
+🟡 section before closing this card**: the two most likely failure shapes and their fixes
+are named there.
+
+**Steps 3–5 above are still open and the ordering still holds.** Step 3 is additionally
+blocked right now: `js/data/modelConstants/models.js` is live-claimed by MPI-607.
