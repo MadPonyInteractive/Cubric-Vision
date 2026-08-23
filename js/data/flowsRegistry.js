@@ -623,18 +623,23 @@ export const FLOWS = [
         // flow by hand rather than deriving them from the id.
         id: 'scribble-object',
         title: 'Draw It In',
-        // NO `preview` / `video` ON PURPOSE — DO NOT ADD THEM BACK UNTIL THE ART EXISTS.
-        // Both fields are optional and every consumer guards them (`MpiFlowLibrary.js`
-        // ~333 `if (flow.preview)`, `MpiTileSheet.js` ~137 with a placeholder for exactly
-        // this case), so the tile just shows the placeholder. Declaring a file that is not
-        // in `comfy_workflows/display/` makes the tile fetch it, 404, and land a console
-        // error — and `tests/desktop/flows-tab-ring.spec.js` asserts `consoleErrors` is
-        // empty, so it turned CI RED for a day and eight pushes (reported by a peer session
-        // 2026-08-23, verified here: no such file, three `toHaveLength(0)` assertions).
-        // The declaration shipped in `7c883d67` naming art that was never made.
-        // Restore BOTH when `/mpi-flow-graphics` has actually produced the pair — name them
-        // `flow-draw-it-in.webp` / `.mp4` (06 names them for the flow by hand, so they
-        // follow the DISPLAY name and not the id).
+        // Both assets EXIST in `comfy_workflows/display/` as of 2026-08-23 — check
+        // before touching either name. `7c883d67` declared this pair before the art
+        // was made, the tile fetched it and 404'd, and because
+        // `tests/desktop/flows-tab-ring.spec.js` asserts `consoleErrors` is empty in
+        // three places, that held master's CI RED for a day and eight pushes. Both
+        // fields are optional and every consumer guards them (`MpiFlowLibrary.js` ~333,
+        // `MpiTileSheet.js` ~137), so the correct state while art is missing is ABSENT,
+        // never a name written ahead of the file.
+        //
+        // Built from run 015 of Fabio's own live session: the source photo, the
+        // drawing he painted, and what the flow returned. The tile is the hero's seam
+        // frozen at x=250 of 896 so the drawing leads and the red dress emerges past
+        // it; being portrait, it also carries the feet and contact shadow that the
+        // hero's 8:5 band has to cut (the figure is 652px tall and no 8:5 band off a
+        // 896-wide plate is taller than 560).
+        preview: 'flow-draw-it-in.webp',
+        video: 'flow-draw-it-in.mp4',
         description: 'Draw what you want on top of your own photo, describe it, and the flow renders it — a person, an animal, an object — and blends it into the scene, matching the light and casting a shadow on the ground.',
         // TWO choosable slots, resolved independently (any-of-models.md). The render
         // phase samples an SDXL checkpoint; the blend phase runs a Klein edit model.
