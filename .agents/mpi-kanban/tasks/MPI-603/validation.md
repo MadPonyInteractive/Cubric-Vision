@@ -77,3 +77,40 @@ Two things that would show up first if the port is wrong:
 
 Doing 5 before 4 turns every released install into a 404 instead of a clean skip. Klein
 shipped in 1.4.0.
+
+
+---
+
+## LIVE RUN — Fabio, 2026-08-23, prompt `998b97a2-bd28-4b80-b85a-c7569e43b752`
+
+Read back out of the app engine's `/history` rather than taken on trust:
+
+```
+Input_Remove_Head     true                                          Input_Recipe 3 · Input_Quality 1 · Input_is_Turbo true
+Input_Base_Model      krea2_raw_int8_convrot.safetensors
+Input_Edit_Model      flux-2-klein-4b-int8-convrot.safetensors
+Input_Edit_Clip       qwen_3_4b.safetensors
+Input_Lora_Phase1_1   krea-2\style\krea2_kidsdrawing.safetensors
+Input_Lora_Phase2_1   flux2-klein\styles\9b\Chibi.safetensors
+LanPaint_KSampler     #777   steps 4 · cfg 1 · euler/simple · LanPaint_NumSteps 2
+status                success · execution_success · outputs from 494 (Output_Image) and 673
+```
+
+**What this proves.** The LanPaint head-removal branch dispatched and executed with Remove
+Head ON and returned an image — the workaround branch is gone and the replacement runs. And
+**both LoRA racks reached the graph**, which is the whole of MPI-610's injection chain
+(`flowLoraPhases` → `config.loraPhases` → the `runCommand` whitelist →
+`Lora_Phase<N>_<i>` → the `Input_` alias pass → `comfyController`'s LoRA-object branch,
+whose regex `^(?:Input_)?Lora_(?:[A-Za-z0-9]+_)?\d+$` does match a phase key).
+
+**What this does NOT prove, and one of them is a real finding:**
+
+- **Phase 2's LoRA bound NOTHING on this run.** `styles\9b\Chibi` is a 9B weight and the
+  transformer was 4B; the engine log is a wall of
+  `ERROR lora diffusion_model.single_blocks.N... shape is invalid`, every key rejected, and
+  the run still finished green. So the visible difference in the output came from **phase 1**.
+  Carded as **MPI-614** — the picker offers cross-tier weights and nothing surfaces a LoRA
+  that binds nothing.
+- **The `klein-9b` blend arm still has not been run** — this run resolved to 4B.
+- **Nobody has confirmed the head comes off CLEANLY.** The branch executed and produced an
+  image; whether the removal reads well is a visual judgement.

@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-614",
+  "title": "A cross-tier LoRA binds NOTHING and the run still reports success",
+  "description": "Caught live 2026-08-23 while validating MPI-610. The Klein LoRA picker offered `flux2-klein\\styles\\9b\\Chibi.safetensors` for a phase running `flux-2-klein-4b-int8-convrot`. ComfyUI logged a wall of `ERROR lora diffusion_model.single_blocks.N.linear1.weight shape '[27648, 3072]' is invalid for input of size 150994944` - every key rejected, 4B rank 3072 vs 9B 4096 - and then finished `execution_success` with 2 outputs. So the LoRA silently did nothing and the user reads the unchanged image as 'the rack is not wired'. It cost exactly that misreading in the MPI-610 session. Pre-existing (the same picker feeds the prompt box), but MPI-610 made it far easier to hit by giving a Flow a second, Klein-side rack. Klein cards carry no `loraFolder` so nothing filters the list by size tier.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-23T16:10:39Z",
+  "updated_at": "2026-08-23T16:10:39Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -1,8 +1,10 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 613,
+  "next_id": 615,
   "columns": {
     "todo": [
+      "MPI-614",
+      "MPI-613",
       "MPI-612",
       "MPI-605",
       "MPI-602",
@@ -109,8 +111,22 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-23T13:20:12Z",
+  "updated_at": "2026-08-23T16:10:39Z",
   "events": [
+    {
+      "at": "2026-08-23T16:10:39Z",
+      "type": "task.created",
+      "task": "MPI-614",
+      "actor": "claude",
+      "note": "Created in todo. A cross-tier LoRA binds NOTHING and the run still reports success"
+    },
+    {
+      "at": "2026-08-23T16:10:39Z",
+      "type": "task.created",
+      "task": "MPI-613",
+      "actor": "claude",
+      "note": "Created in todo. The LoRA cogwheel belongs on the flow RUN stage, not the Library slide-over"
+    },
     {
       "at": "2026-08-23T13:20:12Z",
       "type": "validation.updated",
