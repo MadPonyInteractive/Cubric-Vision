@@ -199,6 +199,16 @@ export const MpiColorPicker = ComponentFactory.create({
                 const popupRect = measured.getBoundingClientRect();
                 const overflow = popupRect.right - window.innerWidth + 8;
                 if (overflow > 0) measured.style.left = `${Math.max(8, rect.left - overflow)}px`;
+                // Vertical was never handled, and it only became visible once the popup
+                // stopped hiding behind the overlay: the picker is ~354px tall, so a
+                // swatch in the lower half of the window put its HEX field off-screen
+                // (MPI-606). Flip above the trigger, and clamp when it fits neither way.
+                if (popupRect.bottom > window.innerHeight - 8) {
+                    const above = rect.top - popupRect.height - 8;
+                    measured.style.top = `${above >= 8
+                        ? above
+                        : Math.max(8, window.innerHeight - popupRect.height - 8)}px`;
+                }
             });
         };
 

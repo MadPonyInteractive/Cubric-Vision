@@ -1436,26 +1436,25 @@ export const MpiBaseFlow = ComponentFactory.create({
         //    text field keeps them and the caret moves instead of the step. A gizmo
         //    drag is pointer-driven and never sees them.
         //
-        // The one surface they DON'T own is a video result — see `_stepKey`.
+        // THE ARROWS ALWAYS NAVIGATE. They are not gated on the result surfaces, and
+        // a gate was tried and removed: `hotkeyManager._mapKey` keys handlers by
+        // TYPE+KEY rather than by id, so `video.frame.*` and `compare.frame.*` fire on
+        // the same press, and yielding to them looked like the careful thing. It cost
+        // the user the last step — a REPLAYED image result mounts `_compareView`
+        // (MPI-587), which is non-null but binds no hotkey at all (MpiCompareView only
+        // binds when a side is VIDEO), so ArrowLeft did nothing on the Generate slide.
+        //
+        // No gate is needed, because the collision is mostly not one. Result surfaces
+        // live on the run slide only, so a middle step has no rival. On the run slide
+        // ArrowRight is already a navigation no-op (`_goTo` clamps at the last index),
+        // so a video keeps forward frame-stepping; ArrowLeft goes back a step, which is
+        // what was asked for. The losing handler is harmless either way — the video
+        // bar's own `_canDrive()` sees the slide it lives on already torn down.
         _unsubs.push(on(prevBtn, 'click', () => _goTo(_current - 1)));
         _unsubs.push(on(nextBtn, 'click', () => _goTo(_current + 1)));
 
-        /**
-         * Arrow-key step navigation, inert while a video surface owns the arrows.
-         *
-         * `hotkeyManager._mapKey` keys handlers by TYPE+KEY, not by id, so every
-         * handler bound on `down:arrowleft` fires together — `video.frame.back` from
-         * the run slide's own control bar, `compare.frame.back` from the compare
-         * view. While a clip is on screen frame-stepping is the more specific
-         * meaning, and the arrows and the ticker still navigate.
-         * @param {number} delta
-         */
-        const _stepKey = (delta) => () => {
-            if (_videoBar || _compareView) return;
-            _goTo(_current + delta);
-        };
-        _unsubs.push(Hotkeys.bind('flow.step.back', _stepKey(-1)));
-        _unsubs.push(Hotkeys.bind('flow.step.forward', _stepKey(+1)));
+        _unsubs.push(Hotkeys.bind('flow.step.back', () => _goTo(_current - 1)));
+        _unsubs.push(Hotkeys.bind('flow.step.forward', () => _goTo(_current + 1)));
 
         // ── Result painting ─────────────────────────────────────────────────────
         /** Show the empty-state copy only while the pane holds nothing. */

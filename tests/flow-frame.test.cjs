@@ -109,14 +109,27 @@ test('the flow step hotkeys are registered, and cannot fire while typing', async
 test('the frame binds them through Hotkeys, never a raw window listener', () => {
     const src = frame();
 
-    assert.match(src, /Hotkeys\.bind\('flow\.step\.back', _stepKey\(-1\)\)/);
-    assert.match(src, /Hotkeys\.bind\('flow\.step\.forward', _stepKey\(\+1\)\)/);
+    assert.match(src, /Hotkeys\.bind\('flow\.step\.back', \(\) => _goTo\(_current - 1\)\)/);
+    assert.match(src, /Hotkeys\.bind\('flow\.step\.forward', \(\) => _goTo\(_current \+ 1\)\)/);
     assert.doesNotMatch(src, /window\.addEventListener\(\s*'keydown'/,
         'house rule: hotkeys go through the registry');
-    // Handlers are keyed by TYPE+KEY, not by id, so a live video surface would
-    // frame-step AND change step on the same press.
-    assert.match(src, /if \(_videoBar \|\| _compareView\) return;/,
-        'arrow-key nav yields to a video surface that owns the same key');
+});
+
+test('the arrows are NOT gated on the result surfaces', () => {
+    const src = frame();
+
+    // A gate on `_videoBar || _compareView` was written and removed. `_compareView`
+    // is non-null for an IMAGE compare too — MpiCompareView only BINDS a hotkey when
+    // a side is video — so a replayed image result (MPI-587) killed ArrowLeft on the
+    // Generate slide and the user could not go back. Re-adding it reintroduces that.
+    assert.doesNotMatch(src, /_videoBar \|\| _compareView/,
+        'the arrows must not yield to a surface that may bind nothing');
+});
+
+test('the compare view only claims the arrows for video, which is why the gate was wrong', () => {
+    const src = read('js/components/Compounds/MpiCompareView/MpiCompareView.js');
+    assert.match(src, /if \(isVideoA \|\| isVideoB\) \{\s*\n\s*_canvas\.el\.setCompareLoop\(true\);\s*\n\s*_bindHotkeys\(\);/,
+        'if this ever binds unconditionally the reasoning above changes');
 });
 
 test('the comment claiming there is deliberately no arrow-key hotkey is gone', () => {

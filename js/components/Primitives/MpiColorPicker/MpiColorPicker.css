@@ -47,9 +47,21 @@
     color: var(--ink-2);
 }
 
+/* The popup portals to document.body, so it shares a stacking context with every
+   full-page overlay and its z-index is the ONLY thing keeping it on top. 11000 is
+   the portal layer MpiDropdown / MpiTreePicker / MpiStylePicker already sit on:
+   above an overlay (overlayManager BASE_Z 10000, +10 per depth), below toasts
+   (20000). It was 9999 — ONE below BASE_Z — which never showed until a Flow
+   overlay hosted a picker, because until then opening the picker CLOSED the
+   overlay and there was nothing left to hide behind (MPI-606).
+   Double-class to beat `.mpi-popup` (also 9999) regardless of stylesheet load
+   order — the popup carries both classes and a single-class rule only ties. */
+.mpi-popup.mpi-color-picker__popup {
+    z-index: 11000;
+}
+
 .mpi-color-picker__popup {
     position: fixed;
-    z-index: 9999;
     width: 220px;
     display: flex;
     flex-direction: column;

@@ -59,9 +59,13 @@ do, best-practice pointers for that step).
   `flow.step.forward`, bound through `Hotkeys` and unbound with the instance, so they exist only
   while a flow is open. Both are `allowWhileTyping: false` and the arrows are in the hotkey
   manager's `isTextEditKey` list, so a focused text field keeps them and the caret moves instead
-  of the step. They yield to a live video result: `hotkeyManager._mapKey` keys handlers by
-  TYPE+KEY rather than by id, so `video.frame.*` and `compare.frame.*` fire on the same press,
-  and frame-stepping is the more specific meaning while a clip is on screen.
+  of the step. **They are not gated on the result surfaces**, and a gate was tried and removed:
+  `hotkeyManager._mapKey` keys handlers by TYPE+KEY rather than by id, so `video.frame.*` and
+  `compare.frame.*` fire on the same press and yielding to them looked careful — but
+  `_compareView` is non-null for an IMAGE compare too (MpiCompareView only *binds* when a side
+  is video), so a replayed image result killed ArrowLeft on the Generate slide. No gate is
+  needed: result surfaces are run-slide only, ArrowRight is already a navigation no-op there
+  (`_goTo` clamps), so a video keeps forward frame-stepping, and ArrowLeft goes back a step.
 - **Space never navigates.** Every piece of nav chrome is a real `<button>` that keeps focus
   after a click, and Space on a focused button is native activation — clicking the forward arrow
   turned the next space press into another step. `_killSpace` preventDefaults Space on the back
