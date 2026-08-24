@@ -10,7 +10,7 @@
     "js/shell/preloadStyles.js",
     "docs/playbooks/add-flow/ui/paint-gizmo.md"
   ],
-  "status": "claimed",
+  "status": "released",
   "claim_kind": "write",
   "owner_session": ".agents/mpi-kanban/state/sessions/47f5ad77-9dc0-47ce-86a2-d79f1dfe0dea.json",
   "owner_role": "implementer",
@@ -27,5 +27,6 @@
       "event": "claim_narrowed",
       "note": "session 11 released MpiBaseFlow.js and ui/carousel-frame.md - MPI-606 owns both and is live"
     }
-  ]
+  ],
+  "updated_at": "2026-08-24T12:52:00Z"
 }

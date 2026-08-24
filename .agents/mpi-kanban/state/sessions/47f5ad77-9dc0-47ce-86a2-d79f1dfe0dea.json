@@ -10,8 +10,9 @@
     "verify",
     "implement"
   ],
-  "status": "active",
+  "status": "closed",
   "heartbeat_at": "2026-08-23T07:03:49Z",
   "task_card": "MPI-567",
-  "title": "MPI-567 session 11 - op rename, brush presets, doodle ghost on the box step"
+  "title": "MPI-567 session 11 - op rename, brush presets, doodle ghost on the box step",
+  "closed_at": "2026-08-24T12:52:00Z"
 }

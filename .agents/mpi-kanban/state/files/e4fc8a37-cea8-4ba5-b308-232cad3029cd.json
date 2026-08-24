@@ -21,7 +21,7 @@
     "js/components/Primitives/MpiCanvas/MpiCanvas.js",
     "js/components/Primitives/MpiCanvas/managers/brushDab.js"
   ],
-  "status": "claimed",
+  "status": "released",
   "claim_kind": "write",
   "task_card": "MPI-567",
   "task": ".agents/mpi-kanban/state/tasks/18204563-f4a9-4be9-a3e3-355e7da15844.json",
@@ -45,5 +45,6 @@
       "event": "claim_extended",
       "note": "MpiCanvas.js + brushDab.js for the shared brush-ring extraction; prior claim was MPI-454, status complete"
     }
-  ]
+  ],
+  "updated_at": "2026-08-24T12:52:00Z"
 }

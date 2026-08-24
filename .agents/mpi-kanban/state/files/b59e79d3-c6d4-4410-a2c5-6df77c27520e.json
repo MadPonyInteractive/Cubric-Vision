@@ -13,7 +13,7 @@
     "js/data/modelConstants/universal_workflows.js",
     "docs/workflow-authoring/bench-editing.md"
   ],
-  "status": "claimed",
+  "status": "released",
   "claim_kind": "write",
   "owner_session": ".agents/mpi-kanban/state/sessions/0b9af612-fe6d-49e8-9abf-486247115a48.json",
   "owner_role": "implementer",
@@ -35,5 +35,6 @@
       "event": "claim_transferred",
       "note": "Owner session closed at handoff; adopted here. Two paths moved to MPI-599."
     }
-  ]
+  ],
+  "updated_at": "2026-08-24T12:52:00Z"
 }

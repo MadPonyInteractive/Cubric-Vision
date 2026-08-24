@@ -63,6 +63,38 @@ choosing nodes.
 4. **What happens when SAM3 finds nothing?** The named object may not be in `image2`. A flow
    that returns the untouched target with no explanation is the bad outcome.
 
+## What Draw It In (MPI-567) already paid for — read before starting
+
+Same family: a Flow with a `box` step, a blend/detail pass, art to make, and a live-run
+gate. These are POINTERS, not copies — the knowledge lives in the docs and moves with
+the code.
+
+- **Do the live run FIRST and keep its inputs.** `05-verify.md`'s Definition of Done is a
+  live run plus a reuse round trip, and that same run is where the tile and hero come
+  from — for free. A run's sidecar (`Media/.meta/<uuid>.json`) hands back every input
+  layer, and `Media/.preview-assets/` is content-addressed by sha256, so the exact source
+  images are recoverable months later. MPI-567's whole tile+hero came out of two runs
+  Fabio had already done; nothing was re-generated. Recipe: `06-preview-image.md` § Plates.
+- **NEVER write `preview` / `video` into the FlowDef before the files exist.** A declared
+  name that is not in `comfy_workflows/display/` 404s into the renderer, and
+  `tests/desktop/flows-tab-ring.spec.js` asserts the console is clean — it held master's
+  CI red for a day and eight pushes. The correct state while art is missing is ABSENT.
+- **Commit the art before anyone runs `scripts/sync-raw-workflows.mjs`.** Its guard
+  refuses on any dirty path under `comfy_workflows/` outside `raw/`, and `display/` is
+  where flow art lives, so an uncommitted tile blocks a peer's workflow sync with a
+  message that names neither your file nor art. Cost a peer a blocked sync 2026-08-24.
+- **`npm test` green is NOT the CI gate.** The suite was 728/728 for a whole day while
+  master was red, because the failure was in `npm run test:desktop`. Run both.
+- **Graphics traps worth reading before cutting anything:**
+  `docs/playbooks/add-flow/06-preview-image.md` gained four rows from MPI-567 — the
+  two-beat hero device (one beat only proves one subject, and beat 1 must match the tile
+  because the tile is the video's `poster`), the arithmetic that a portrait plate cannot
+  fill an 8:5 hero at any offset, and why `document.querySelector('video')` returns a
+  gallery card's video and reads exactly like a broken hero.
+- **The `box` step's whole-image default is an OPEN question shared with this card.**
+  MPI-567 left it unresolved; open question 1 above is the same question. Whoever answers
+  it should answer it for both.
+
 ## Sibling card
 
 **MPI-454 — the Place tool.** Same capability on the workspace surface, with a real drag

@@ -77,7 +77,11 @@ sha256 verified each time. `graph_parity.py` PARITY OK.
 **THE WORKFLOW FILE MOVED TOO: `flow_scribble_object.json` → `flow_draw_it_in.json`**, both
 twins, by `git mv` so history follows, with **18 references swept** across `flowsRegistry.js`,
 `universal_workflows.js`, three test files, two docs, both `research/lanpaint/*.py` scripts and
-this card's `files.json`. `git grep` over `js/ tests/ docs/ comfy_workflows/` returns NONE.
+this card's `files.json`. `git grep` over `js/ tests/ docs/ comfy_workflows/` returns exactly ONE
+match, and it is deliberate: `existing-flows/scribble-to-object.md:6`, the rename-changelog line
+recording `flow_scribble_object.json` → `flow_draw_it_in.json`. No live reference survives.
+(The claim auditor caught this stated as "returns NONE" on 2026-08-24 — overstated, since the
+grep exits 0, not 1.)
 **Safe where an id rename is not**, and the distinction is the one to keep: nothing PERSISTS
 the workflow filename — it is resolved per dispatch from the FlowDef's `workflow` field —
 whereas `flowId` and the `FLOWSCRIBOBJ_` prefix are baked into every sidecar already written.

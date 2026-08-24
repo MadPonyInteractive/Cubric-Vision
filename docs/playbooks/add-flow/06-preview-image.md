@@ -128,6 +128,25 @@ always a UI run.
 **`:3000` is normally Fabio's live app** — generating there lands in his project.
 Ask, or run `npm run app:isolated` and use the port it prints.
 
+**A run the user ALREADY did is the cheapest plate source, and its sidecar hands
+you every layer.** `Media/.meta/<uuid>.json` (find it with
+`grep -l "<outputName>" Media/.meta/*.json`) carries `generationSettings.mediaItems`
+with one entry per input role, and those point into `Media/.preview-assets/`, which
+is **content-addressed by sha256** — so the entry for `image1` really is the source
+photo the run ate, provable by hashing the original (`t2i_005.png`'s own sha256 IS
+its `.preview-assets` filename). Draw It In's whole tile+hero came out of two runs
+Fabio had already done: source photo, the drawing he painted as its own transparent
+PNG, and the render. No generation spent, and the plates are the real thing rather
+than a restaging. Ask before using them — they are the user's own pictures.
+
+**Commit the art before anyone runs `scripts/sync-raw-workflows.mjs`.** Its guard
+refuses on ANY dirty path under `comfy_workflows/` that is not under `raw/`, and
+`display/` is where flow art lives — so an uncommitted tile or hero blocks a peer's
+workflow sync with `Refusing: N uncommitted GENERATED workflow change(s)`, which
+names neither your file nor art. The art is not a generated workflow and
+`orchestrate.py` never touches it; the guard is simply broader than its reason.
+Cost a peer session a blocked sync on 2026-08-24.
+
 ### 2. The still — `sharp`
 
 `sharp ^0.34.5` is already a direct dependency. Crop, inset, encode:
