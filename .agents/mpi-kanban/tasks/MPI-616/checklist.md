@@ -7,7 +7,7 @@ It turned out not to be needed — a signature census answers the go/no-go with 
 SAC machine and no system changes. Superseded steps kept struck through so the
 reasoning survives.
 
-- [x] Census both trees with `Get-AuthenticodeSignature` — app 18/19 unsigned,
+- [x] Census both trees with `Get-AuthenticodeSignature` — app 17/19 unsigned,
       engine 563/638 unsigned (2026-08-24, `validation.md`)
 - [x] Establish which binaries can and cannot be signed by us
 - [x] Decide without renting or borrowing a SAC box

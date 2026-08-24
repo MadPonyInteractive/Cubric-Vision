@@ -11,13 +11,22 @@ SAC verdict — it is the input SAC's *signature* branch would read.
 ### The shipped app tree — 19 binaries
 
 ```
-NotSigned   18
-Valid        1    d3dcompiler_47.dll (Microsoft Corporation)
+NotSigned   17
+Valid        2    d3dcompiler_47.dll, dxil.dll (both Microsoft Corporation)
 ```
 
 `electron.exe`, `ffmpeg.dll`, `libEGL.dll`, `vk_swiftshader.dll`,
 `ffmpeg.exe`, `ffprobe.exe` — all `NotSigned`. Electron's npm prebuilts ship
 unsigned.
+
+> **Corrected 2026-08-24 by the close-out claim auditor.** This first read
+> "NotSigned 18 / Valid 1", which was wrong: the original pass hand-picked 8 files
+> and the 18/1 split was arithmetic on a 19-file set that had never been measured,
+> so `dxil.dll` — also validly Microsoft-signed — was missed. Re-derived across all
+> 19: **17 unsigned, 2 valid**. The commit messages on `eb059e72` and `24119430`
+> still carry the old 18/1 figure; this file is the correct record. The verdict is
+> unchanged — 17 binaries still need signing and the two Microsoft DLLs were never
+> ours to sign.
 
 ### The downloaded engine — 638 binaries (`.exe`/`.dll`/`.pyd`)
 
