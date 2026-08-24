@@ -56,9 +56,33 @@ rename.
 
 - Release wording — fixed 2026-08-24 in `docs/releases/github-release-checklist.md`
   (§ "The third outcome"). Independent of any signing spend.
-- Eligibility — UK. Public Trust **Individual** validation is US/Canada only, so the
-  individual route is closed; the **Organization / DBA** route is open to UK
-  businesses. Blocked on confirming MadPony Interactive's registration status.
+- Eligibility — **settled 2026-08-24, and it blocks the spend.** UK sole trader:
+  no Companies House entry, and not VAT registered (confirmed against the HMRC
+  business tax account — no VAT tile). Public Trust **Individual** validation is
+  US/Canada only, so that route is closed. The **Organization / DBA** route is open
+  to UK businesses but wants a *public* business identifier, and a sole trader with
+  no company number and no VAT number has none. A UTR is not one — it is not on any
+  public register, and it should not be handed to a third-party validator.
+  Unblocking needs either a **D-U-N-S number** (free, sole traders eligible, ~30
+  days) or **incorporation** (~GBP 50, next-day, but carries ongoing filing
+  obligations and a public registered address — a business decision, not an
+  engineering one). Domain is settled: `madponyinteractive.com`; two mailboxes on
+  it are required before validation either way.
+- **Not spending is a valid outcome for this card.** The unsigned build ships and
+  runs; SAC enforcement exists only on clean-installed Windows 11 and is not
+  universal. The release wording now covers the blocked user, which was the half
+  that was actually broken.
+
+### The identifier is tracked in the sibling repo
+
+The D-U-N-S application and its calendar follow-up are **MadPony-Identity MPI-75**:
+`c:\AI\Mpi\MadPony-Identity\.agents\mpi-kanban\tasks\MPI-75\` (commit `e34f8eb`).
+It lives there because that repo holds the Google Calendar capability and the
+reminder can only be dated from the real application day.
+
+**This card resumes when the D-U-N-S number arrives** — roughly 30 days from
+whenever MPI-75 is actioned. Nothing here is blocked in the meantime; the release
+wording landed independently of the signing spend.
 - Nothing signed yet. No SAC-enforced run on a Cubric build, before or after.
 
 ## Prior measurements (unchanged, now reinterpreted)
