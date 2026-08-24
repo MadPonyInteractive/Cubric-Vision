@@ -1,5 +1,5 @@
 {
-  "schema": "mpi-kanban/file/v1",
+  "schema": "mpi-kanban/file-claim/v1",
   "id": "ab0f51bf-095f-4c37-9c54-90f90844b263",
   "paths": [
     "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
