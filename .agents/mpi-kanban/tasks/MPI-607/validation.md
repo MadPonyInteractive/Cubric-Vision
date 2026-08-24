@@ -1535,3 +1535,44 @@ image at all.
 Cost of the recommended change is small, but it touches the remote engine path, so it wants
 either a `__cpu__` Pod check or an explicit logic-only sign-off. **Local is unaffected
 either way.**
+
+### 2026-08-24 -- REMOTE TWIN FIXED (Fabio approved the recommendation)
+
+`_isImageResident` (`routes/remoteModels.js`) narrowed from `dep.targetPath` to
+`dep.targetPath && dep.bakedOnPod`, and `rife47` (`assetDeps.js`) now carries
+`bakedOnPod: true`.
+
+The point, stated once so it is not re-derived: **`targetPath` says WHERE ON DISK a weight
+goes; `bakedOnPod` says WHETHER THE POD HAS IT.** They coincided while RIFE was the only
+targetPath dep in the registry, and reading the first as if it meant the second was luck,
+not logic -- the same shape as the `_localModelsCheck` bug fixed earlier this session, where
+two resolvers disagreed about the same field.
+
+Classification swept over EVERY dep in the registry, both directions:
+
+| dep | bakedOnPod | imageResident |
+|---|---|---|
+| rife47 | true | **true** (unchanged -- Dockerfile really bakes it) |
+| chatterbox-ve / -t3 / -s3gen / -tokenizer / -conds | false | **false** |
+| chatterbox-vc-s3gen / -vc-conds | false | **false** |
+| the 7 `bakedOnPod` weights with no targetPath (MPI-380, ~950MB) | true | **true** (undisturbed) |
+
+So a remote session now reports the chatterbox weights MISSING instead of claiming 1.0GB
+the image does not contain. That **fails closed**: a badge saying "get it" is recoverable, a
+Run that dies inside ComfyUI on a missing class is not.
+
+**What this does NOT do:** it does not make Flow A work on remote. The volume path still
+cannot install a `targetPath` weight (bare filename -> empty type -> wrapper reject) -- that
+limitation is precisely what the blanket rule was hiding -- and `FL_ChatterboxVC` is not in
+the Pod image either. Remote support needs a decision later: bake the pack + weights into
+the image, or teach the wrapper a targetPath destination. Honest-missing is the correct
+answer until one of those lands.
+
+Pinned in `tests/targetpath-dep-install-state.test.cjs`, which now covers all three faces of
+the same field (server resolution, the payload projection, and remote residency) and
+ASSERTS the export exists rather than skipping when it does not -- a `typeof fn ===
+'function'` guard would turn a rename into a silently-passing test. **`npm test` 729/729.**
+
+**Verified by logic + a full-registry sweep, NOT on a live Pod.** No Pod was rented. The
+change only ever moves a dep from "claimed present" to "reported missing", so the failure
+mode it can introduce is a redundant install prompt, never a destructive one.

@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "d92e6307-11ab-472e-995b-cae465d8ac76",
   "generated_at": "2026-08-23T16:02:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-607 session 13 - Gate 1 shipped (Chatterbox engine onboarding), and the bench session reordered Gate 2",
     "branch": "master"

@@ -390,6 +390,14 @@ export const assetDeps = {
         bytes: 21344827,
         sha256: '6a8a825ab2750558bdd20dcced386fd82b7222c7ba58c11d3b611d9c44f1be63',
         engineAsset: true,
+        // MPI-607: the Pod image really does bake this one — cubric-vision-pod/Dockerfile
+        // `dl "$RIFE_DIR" rife47.pth …`. It used to be reported image-resident merely for
+        // HAVING `targetPath`, which was true by coincidence while RIFE was the only
+        // targetPath dep. Now that the chatterbox weights share the field and are NOT in
+        // the image, `_isImageResident` demands this flag explicitly, so it has to be
+        // stated here rather than inferred. Do not remove it without also un-baking the
+        // weight from the Dockerfile.
+        bakedOnPod: true,
     },
     // Chatterbox TTS + VC weights (MPI-607) --------------------------------
     // SAME SHAPE AS RIFE ABOVE, same reason. ComfyUI_Fill-ChatterBox resolves its weights

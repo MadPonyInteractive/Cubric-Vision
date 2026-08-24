@@ -81,6 +81,43 @@ const ABSENT = { id: 'probe-absent', filename: 'nope.pt', targetPath: TARGET_PAT
                 + 'not-installed forever:\n  ' + p);
         }
 
+        // ── The REMOTE twin of the same confusion ────────────────────────────────
+        // `_isImageResident` used to return true for EVERY `targetPath` dep, so a remote
+        // session reported such a weight present without checking anything. That was true
+        // for RIFE by coincidence — the Pod Dockerfile really does bake rife47.pth — and
+        // reading `targetPath` as if it meant "the Pod has it" was luck, not logic.
+        // `targetPath` says WHERE ON DISK; `bakedOnPod` says WHETHER THE POD HAS IT.
+        //
+        // The chatterbox weights are targetPath and appear NOWHERE in the Pod image, so
+        // the blanket rule made remote claim 1.0GB it does not have and then die inside
+        // ComfyUI on a missing class. Honest-missing fails CLOSED and is the right answer
+        // until either the image bakes them or the wrapper learns a targetPath destination.
+        const remote = require('../routes/remoteModels');
+        const isResident = remote._isImageResident || remote.isImageResident;
+        // Assert, never skip: a `if (typeof fn === 'function')` guard around the block
+        // below would turn a rename into a silently-passing test that checks nothing.
+        assert.strictEqual(typeof isResident, 'function',
+            'routes/remoteModels no longer exports _isImageResident — this guard is blind');
+        {
+            const { DEPS: D } = await import('../js/data/modelConstants/dependencies.js');
+            assert.strictEqual(isResident(D.rife47), true,
+                'rife47 IS baked (cubric-vision-pod/Dockerfile `dl "$RIFE_DIR" rife47.pth`) '
+                + 'and carries bakedOnPod — it must stay image-resident');
+            for (const dep of Object.values(D)) {
+                if (!dep?.targetPath || dep.bakedOnPod) continue;
+                assert.strictEqual(isResident(dep), false,
+                    `${dep.id} is a targetPath weight the Pod image does NOT bake, so remote `
+                    + 'must report it MISSING rather than claim it is present');
+            }
+            // ...and narrowing the targetPath rule must not have disturbed the plain
+            // `bakedOnPod` weights that never had targetPath (MPI-380, ~950MB).
+            for (const dep of Object.values(D)) {
+                if (!dep?.bakedOnPod || dep.targetPath) continue;
+                assert.strictEqual(isResident(dep), true,
+                    `${dep.id} carries bakedOnPod and must remain image-resident`);
+            }
+        }
+
         console.log('ok — targetPath deps resolve against the engine root in models/check (MPI-607)');
     } finally {
         await fs.remove(SCRATCH).catch(() => {});

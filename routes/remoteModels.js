@@ -222,7 +222,23 @@ function _isImageResident(dep) {
   // ckpts/rife/), so on remote it is image-resident just like the node — the wrapper
   // can't see it on the volume and must not try to install it (bare filename → empty
   // type → wrapper reject). Report present; the Pod already has it.
-  if (dep.targetPath) return true;
+  //
+  // MPI-607: `bakedOnPod` is now REQUIRED alongside it, and rife47 carries the flag.
+  // `targetPath` says WHERE ON DISK a weight goes; `bakedOnPod` says WHETHER THE POD
+  // HAS IT. They coincided while RIFE was the only targetPath dep in the registry, and
+  // reading the first as if it meant the second was pure luck. The chatterbox weights
+  // (MPI-607, 1.0GB for VC and 4.25GB for TTS) are targetPath and appear NOWHERE in the
+  // Pod image — no node pack, no weights — so the blanket rule made a remote session
+  // report them present and then die inside ComfyUI on a missing class. Requiring the
+  // explicit flag makes them fall through and report MISSING, which fails CLOSED: a
+  // badge saying "get it" is recoverable, a Run that dies in the engine is not.
+  //
+  // Note the volume path still cannot install a targetPath weight (bare filename →
+  // empty type → wrapper reject) — that limitation is what the blanket rule was hiding.
+  // Supporting chatterbox on remote means either baking it into the image or teaching
+  // the wrapper a targetPath destination; until one of those lands, honest-missing is
+  // the correct answer.
+  if (dep.targetPath && dep.bakedOnPod) return true;
   // MPI-380: an `engineAsset` WEIGHT baked into the image by the Dockerfile `dl`
   // block (upscalers, yolo nano, sam_vit_b, birefnet). The wrapper only sees the
   // VOLUME, so without this it reports them missing and they get re-downloaded

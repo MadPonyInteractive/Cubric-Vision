@@ -25,7 +25,8 @@
   - [ ] Gate 2 FLOW A - user guidance copy, 4 rules: perform don't push / pick a target unlike you / meet its pitch / hold that pitch steady
   - [ ] Gate 2 FLOW A - copy should SELL the passthrough: your laugh, breath and timing in someone else's voice (Flow B cannot do this)
   - [x] Gate 2 FLOW A - install RAN from the app: 1.0GB landed byte-exact. Found+fixed a REAL bug - _localModelsCheck ignored dep.targetPath, so the weights read not-installed forever (stuck 100% bar). npm test 729/729
-  - [ ] REMOTE twin of that bug: _isImageResident returns true for EVERY targetPath dep, but the Pod bakes no chatterbox weights. Needs a policy call (bake vs volume-install). Flow A cannot ship remote until answered
+  - [x] REMOTE twin FIXED (Fabio approved): _isImageResident now needs targetPath AND bakedOnPod; rife47 carries the flag. Chatterbox reports MISSING on remote = fails closed. Logic + full-registry sweep, no Pod rented
+  - [ ] Flow A on REMOTE still unsupported: the wrapper cannot install a targetPath weight, and FL_ChatterboxVC is not in the Pod image. Decide later: bake, or teach the wrapper a targetPath destination
   - [ ] Gate 2 FLOW A - UI: record button (MPI-573 recorder) + voice selector from the library + custom-voice library item. NOT designed yet
   - [ ] Gate 2 FLOW B - Text to Speech (FL_ChatterboxTTS -> VC). 4.25GB, needs the performance clips
   - [ ] Gate 2 FLOW B - accent routing: none -> base model, <lang> -> multilingual (+3.0GB, optional-dep question OPEN)
