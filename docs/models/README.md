@@ -74,6 +74,14 @@ load-bearing, plus the 2-reference face wall and its ruled-out list.
 |---|---|
 | [depth-control.md](sdxl/depth-control.md) | The Depth op — reuses Krea2's `poseReference` key, but the mechanism is a real **ControlNet weight** (the app's first non-LoRA controlnet dep), the graph path, and why the yaml needs zero edits. |
 
+SDXL's `inpaint` op (MPI-615) is not SDXL-specific — it is the shared LanPaint branch,
+documented once in [lanpaint-inpaint.md](lanpaint-inpaint.md).
+
+### [lanpaint-inpaint.md](lanpaint-inpaint.md) — the shared `inpaint` op (Klein, SDXL x5, Krea 2 x2)
+One op key, one branch shape, three families: `Input_wf_type: 5` everywhere, the
+bbox-crop → LanPaint → stitch chain, why the op mounts no ratio/batch/denoise control, and
+where the three families diverge. Chroma is the one master-template family WITHOUT it.
+
 ### [community-merges-licences.md](community-merges-licences.md) — the nine picked community checkpoints
 Licence table + creators for `sdxl-realistic`, `sdxl-nsfw`, `ill-anime`, `ill-anime-beauty`,
 `pony-mix` and the four `wan-22-*`. No folder of their own — they are picked merges, not

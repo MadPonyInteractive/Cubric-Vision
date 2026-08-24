@@ -44,7 +44,7 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'sdxl-real-01.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'control', 'inpaint', 'upscale', 'detail'],
         // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
         // samples it. This CHANGED with the master template (MPI-365): the old graph
         // gated depth with Input_depth_reference and kept the empty latent; control now
@@ -64,12 +64,14 @@ export const MODELS = [
         capabilities: { controlStrength: true },
         // Op -> the Input_wf_type value selecting its branch. MUST cover every entry in
         // supportedOps: a gap does not error, it runs the graph default and returns a
-        // plausible image from the WRONG op. 4 and 5 are dead slots, numbered to match
-        // Klein/Krea2/Chroma.
+        // plausible image from the WRONG op. Slot 5 stopped being dead with the MPI-615
+        // re-export — it is a LanPaint inpaint branch now. 4 is still unused here, kept
+        // numbered to match Klein/Krea2/Chroma.
         opInject: {
             t2i:     { Input_wf_type: 1 },
             i2i:     { Input_wf_type: 2 },
             control: { Input_wf_type: 3 },
+            inpaint: { Input_wf_type: 5 },
             detail:  { Input_wf_type: 6 },
             upscale: { Input_wf_type: 7 },
         },
@@ -82,6 +84,7 @@ export const MODELS = [
             t2i:     't2i_sdxl_realistic.json',
             i2i:     't2i_sdxl_realistic.json',
             control: 't2i_sdxl_realistic.json',
+            inpaint: 't2i_sdxl_realistic.json',
             upscale: 't2i_sdxl_realistic.json',
             detail:  't2i_sdxl_realistic.json',
         },
@@ -100,6 +103,12 @@ export const MODELS = [
             // Canny and Scribble are weightless filters; OpenPose auto-downloads its
             // body/hand/face annotators on first use, DepthAnythingV2 its own.
             'comfyui_controlnet_aux',
+            // MPI-615, the inpaint branch (wf_type 5): a square-bbox crop around the
+            // mask, LanPaint over the crop, stitched back. Both packs are custom_nodes,
+            // so the engine installs them either way — declared so the graph's needs are
+            // readable here and the uninstall sweep never strands them.
+            'comfyui-inpaint-cropandstitch', // InpaintCropImproved/StitchImproved
+            'LanPaint',                      // LanPaint_KSampler — mask-conditioned sampling
         ],
     },
     {
@@ -111,7 +120,7 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         image: 'sdxl-real-05.webp',
         type: 'sdxl',
-        supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'control', 'inpaint', 'upscale', 'detail'],
         // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
         // samples it. This CHANGED with the master template (MPI-365): the old graph
         // gated depth with Input_depth_reference and kept the empty latent; control now
@@ -131,12 +140,14 @@ export const MODELS = [
         capabilities: { controlStrength: true },
         // Op -> the Input_wf_type value selecting its branch. MUST cover every entry in
         // supportedOps: a gap does not error, it runs the graph default and returns a
-        // plausible image from the WRONG op. 4 and 5 are dead slots, numbered to match
-        // Klein/Krea2/Chroma.
+        // plausible image from the WRONG op. Slot 5 stopped being dead with the MPI-615
+        // re-export — it is a LanPaint inpaint branch now. 4 is still unused here, kept
+        // numbered to match Klein/Krea2/Chroma.
         opInject: {
             t2i:     { Input_wf_type: 1 },
             i2i:     { Input_wf_type: 2 },
             control: { Input_wf_type: 3 },
+            inpaint: { Input_wf_type: 5 },
             detail:  { Input_wf_type: 6 },
             upscale: { Input_wf_type: 7 },
         },
@@ -149,6 +160,7 @@ export const MODELS = [
             t2i:     't2i_sdxl_nsfw.json',
             i2i:     't2i_sdxl_nsfw.json',
             control: 't2i_sdxl_nsfw.json',
+            inpaint: 't2i_sdxl_nsfw.json',
             upscale: 't2i_sdxl_nsfw.json',
             detail:  't2i_sdxl_nsfw.json',
         },
@@ -167,6 +179,12 @@ export const MODELS = [
             // Canny and Scribble are weightless filters; OpenPose auto-downloads its
             // body/hand/face annotators on first use, DepthAnythingV2 its own.
             'comfyui_controlnet_aux',
+            // MPI-615, the inpaint branch (wf_type 5): a square-bbox crop around the
+            // mask, LanPaint over the crop, stitched back. Both packs are custom_nodes,
+            // so the engine installs them either way — declared so the graph's needs are
+            // readable here and the uninstall sweep never strands them.
+            'comfyui-inpaint-cropandstitch', // InpaintCropImproved/StitchImproved
+            'LanPaint',                      // LanPaint_KSampler — mask-conditioned sampling
         ],
     },
     {
@@ -182,7 +200,7 @@ export const MODELS = [
                                        // Stage 1 green 24/24). WITHOUT this line the bare
                                        // type 'sdxl' matches Prompt's SDXL PHOTOGRAPHY
                                        // recipe exactly, so no alias can reach here.
-        supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'control', 'inpaint', 'upscale', 'detail'],
         // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
         // samples it. This CHANGED with the master template (MPI-365): the old graph
         // gated depth with Input_depth_reference and kept the empty latent; control now
@@ -202,12 +220,14 @@ export const MODELS = [
         capabilities: { controlStrength: true },
         // Op -> the Input_wf_type value selecting its branch. MUST cover every entry in
         // supportedOps: a gap does not error, it runs the graph default and returns a
-        // plausible image from the WRONG op. 4 and 5 are dead slots, numbered to match
-        // Klein/Krea2/Chroma.
+        // plausible image from the WRONG op. Slot 5 stopped being dead with the MPI-615
+        // re-export — it is a LanPaint inpaint branch now. 4 is still unused here, kept
+        // numbered to match Klein/Krea2/Chroma.
         opInject: {
             t2i:     { Input_wf_type: 1 },
             i2i:     { Input_wf_type: 2 },
             control: { Input_wf_type: 3 },
+            inpaint: { Input_wf_type: 5 },
             detail:  { Input_wf_type: 6 },
             upscale: { Input_wf_type: 7 },
         },
@@ -220,6 +240,7 @@ export const MODELS = [
             t2i:     't2i_ill_anime_beauty.json',
             i2i:     't2i_ill_anime_beauty.json',
             control: 't2i_ill_anime_beauty.json',
+            inpaint: 't2i_ill_anime_beauty.json',
             upscale: 't2i_ill_anime_beauty.json',
             detail:  't2i_ill_anime_beauty.json',
         },
@@ -238,6 +259,12 @@ export const MODELS = [
             // Canny and Scribble are weightless filters; OpenPose auto-downloads its
             // body/hand/face annotators on first use, DepthAnythingV2 its own.
             'comfyui_controlnet_aux',
+            // MPI-615, the inpaint branch (wf_type 5): a square-bbox crop around the
+            // mask, LanPaint over the crop, stitched back. Both packs are custom_nodes,
+            // so the engine installs them either way — declared so the graph's needs are
+            // readable here and the uninstall sweep never strands them.
+            'comfyui-inpaint-cropandstitch', // InpaintCropImproved/StitchImproved
+            'LanPaint',                      // LanPaint_KSampler — mask-conditioned sampling
         ],
     },
     {
@@ -253,7 +280,7 @@ export const MODELS = [
                                        // Stage 1 green 24/24). WITHOUT this line the bare
                                        // type 'sdxl' matches Prompt's SDXL PHOTOGRAPHY
                                        // recipe exactly, so no alias can reach here.
-        supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'control', 'inpaint', 'upscale', 'detail'],
         // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
         // samples it. This CHANGED with the master template (MPI-365): the old graph
         // gated depth with Input_depth_reference and kept the empty latent; control now
@@ -273,12 +300,14 @@ export const MODELS = [
         capabilities: { controlStrength: true },
         // Op -> the Input_wf_type value selecting its branch. MUST cover every entry in
         // supportedOps: a gap does not error, it runs the graph default and returns a
-        // plausible image from the WRONG op. 4 and 5 are dead slots, numbered to match
-        // Klein/Krea2/Chroma.
+        // plausible image from the WRONG op. Slot 5 stopped being dead with the MPI-615
+        // re-export — it is a LanPaint inpaint branch now. 4 is still unused here, kept
+        // numbered to match Klein/Krea2/Chroma.
         opInject: {
             t2i:     { Input_wf_type: 1 },
             i2i:     { Input_wf_type: 2 },
             control: { Input_wf_type: 3 },
+            inpaint: { Input_wf_type: 5 },
             detail:  { Input_wf_type: 6 },
             upscale: { Input_wf_type: 7 },
         },
@@ -291,6 +320,7 @@ export const MODELS = [
             t2i:     't2i_ill_anime.json',
             i2i:     't2i_ill_anime.json',
             control: 't2i_ill_anime.json',
+            inpaint: 't2i_ill_anime.json',
             upscale: 't2i_ill_anime.json',
             detail:  't2i_ill_anime.json',
         },
@@ -309,6 +339,12 @@ export const MODELS = [
             // Canny and Scribble are weightless filters; OpenPose auto-downloads its
             // body/hand/face annotators on first use, DepthAnythingV2 its own.
             'comfyui_controlnet_aux',
+            // MPI-615, the inpaint branch (wf_type 5): a square-bbox crop around the
+            // mask, LanPaint over the crop, stitched back. Both packs are custom_nodes,
+            // so the engine installs them either way — declared so the graph's needs are
+            // readable here and the uninstall sweep never strands them.
+            'comfyui-inpaint-cropandstitch', // InpaintCropImproved/StitchImproved
+            'LanPaint',                      // LanPaint_KSampler — mask-conditioned sampling
         ],
     },
     {
@@ -324,7 +360,7 @@ export const MODELS = [
                                  // Stage 1 green 24/24). WITHOUT this line the bare
                                  // type 'sdxl' matches Prompt's SDXL PHOTOGRAPHY
                                  // recipe exactly, so no alias can reach here.
-        supportedOps: ['t2i', 'i2i', 'control', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'control', 'inpaint', 'upscale', 'detail'],
         // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
         // samples it. This CHANGED with the master template (MPI-365): the old graph
         // gated depth with Input_depth_reference and kept the empty latent; control now
@@ -344,12 +380,14 @@ export const MODELS = [
         capabilities: { controlStrength: true },
         // Op -> the Input_wf_type value selecting its branch. MUST cover every entry in
         // supportedOps: a gap does not error, it runs the graph default and returns a
-        // plausible image from the WRONG op. 4 and 5 are dead slots, numbered to match
-        // Klein/Krea2/Chroma.
+        // plausible image from the WRONG op. Slot 5 stopped being dead with the MPI-615
+        // re-export — it is a LanPaint inpaint branch now. 4 is still unused here, kept
+        // numbered to match Klein/Krea2/Chroma.
         opInject: {
             t2i:     { Input_wf_type: 1 },
             i2i:     { Input_wf_type: 2 },
             control: { Input_wf_type: 3 },
+            inpaint: { Input_wf_type: 5 },
             detail:  { Input_wf_type: 6 },
             upscale: { Input_wf_type: 7 },
         },
@@ -362,6 +400,7 @@ export const MODELS = [
             t2i:     't2i_pony_mix.json',
             i2i:     't2i_pony_mix.json',
             control: 't2i_pony_mix.json',
+            inpaint: 't2i_pony_mix.json',
             upscale: 't2i_pony_mix.json',
             detail:  't2i_pony_mix.json',
         },
@@ -380,6 +419,12 @@ export const MODELS = [
             // Canny and Scribble are weightless filters; OpenPose auto-downloads its
             // body/hand/face annotators on first use, DepthAnythingV2 its own.
             'comfyui_controlnet_aux',
+            // MPI-615, the inpaint branch (wf_type 5): a square-bbox crop around the
+            // mask, LanPaint over the crop, stitched back. Both packs are custom_nodes,
+            // so the engine installs them either way — declared so the graph's needs are
+            // readable here and the uninstall sweep never strands them.
+            'comfyui-inpaint-cropandstitch', // InpaintCropImproved/StitchImproved
+            'LanPaint',                      // LanPaint_KSampler — mask-conditioned sampling
         ],
     },
     {
@@ -603,7 +648,7 @@ export const MODELS = [
         enhanceRecipe: 'krea-2',   // Prompt's own Krea 2 recipe (MPI-16). Note the id is
                                    // 'krea-2', NOT 'krea2' — Prompt matches on its exact
                                    // modelId and silently falls back to the FLUX recipe on a miss.
-        supportedOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'inpaint', 'upscale', 'detail'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
         capabilities: {
             multiStage: false, audio: false, negativePrompt: true, styleLoras: true,
@@ -622,9 +667,11 @@ export const MODELS = [
         // (MPI-365). MUST cover every entry in supportedOps — a gap does not error, it
         // runs the graph's DEFAULT branch (wf_type 1 = t2i) and returns a plausible image
         // from the wrong op; commandExecutor warns on the gap for exactly that reason.
-        // 1 t2i · 2 i2i · 3 depth · 4 edit · 5 unused · 6 detail · 7 upscale. Slot 5 is
-        // deliberately dead: edit now takes an optional Input_Mask, so Krea2 needs no
-        // separate inpaint branch.
+        // 1 t2i · 2 i2i · 3 depth · 4 edit · 5 inpaint · 6 detail · 7 upscale. Slot 5 was
+        // dead until MPI-615: edit takes an optional Input_Mask and re-renders the whole
+        // crop, which is a different job from holding everything outside the mask still.
+        // The re-export gave it a LanPaint branch that does the latter, and the branch
+        // reads Get_turbo for its own steps/cfg — hence krea2Turbo on the op.
         //
         // Declaring opInject makes commandExecutor REPLACE the op's own injectParams
         // rather than merge them. That mattered while the shared ops still carried
@@ -635,6 +682,7 @@ export const MODELS = [
             i2i:       { Input_wf_type: 2 },
             control:   { Input_wf_type: 3 },
             krea2Edit: { Input_wf_type: 4 },
+            inpaint:   { Input_wf_type: 5 },
             detail:    { Input_wf_type: 6 },
             upscale:   { Input_wf_type: 7 },
         },
@@ -644,7 +692,7 @@ export const MODELS = [
         // Depth is the only structure this graph can copy, so the type picker stays
         // hidden and the op reads exactly as the old single-purpose one did.
         controlTypes: ['depth'],
-        styleOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'detail', 'upscale'],
+        styleOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'inpaint', 'detail', 'upscale'],
         // MPI-365: every op EXCEPT t2i/i2i now derives its output shape from the input
         // image (ImageScaleToTotalPixels replaced ImageResizeKJv2), so the ratio picker
         // is hidden there. t2i/i2i still generate at our Input_Width/Height.
@@ -676,6 +724,7 @@ export const MODELS = [
             i2i:       'krea2_t2i_sfw.json',
             control:   'krea2_t2i_sfw.json',
             krea2Edit: 'krea2_t2i_sfw.json',
+            inpaint:   'krea2_t2i_sfw.json',
             upscale:   'krea2_t2i_sfw.json',
             detail:    'krea2_t2i_sfw.json',
         },
@@ -706,6 +755,12 @@ export const MODELS = [
             'ComfyUI-UltimateSDUpscale',
             'ComfyUI-Krea2-ControlNet',
             'comfyui_controlnet_aux',
+            // MPI-615, the inpaint branch (wf_type 5). InpaintCropImproved was already
+            // in the graph on the edit path and had never been declared; LanPaint is new
+            // with the branch. Both are custom_nodes, so the engine installs them either
+            // way — declared so the graph's needs are readable here.
+            'comfyui-inpaint-cropandstitch', // InpaintCropImproved/StitchImproved
+            'LanPaint',                      // LanPaint_KSampler — mask-conditioned sampling
             'comfyui-krea2edit',         // dual-conditioning edit nodes (Krea2EditModelPatch + GroundedEncode)
         ],
     },
@@ -724,7 +779,7 @@ export const MODELS = [
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
         enhanceRecipe: 'krea-2',   // see the SFW card
-        supportedOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'upscale', 'detail'],
+        supportedOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'inpaint', 'upscale', 'detail'],
         loraStrengths: ['model'],
         capabilities: {
             multiStage: false, audio: false, negativePrompt: true, styleLoras: true,
@@ -743,9 +798,11 @@ export const MODELS = [
         // (MPI-365). MUST cover every entry in supportedOps — a gap does not error, it
         // runs the graph's DEFAULT branch (wf_type 1 = t2i) and returns a plausible image
         // from the wrong op; commandExecutor warns on the gap for exactly that reason.
-        // 1 t2i · 2 i2i · 3 depth · 4 edit · 5 unused · 6 detail · 7 upscale. Slot 5 is
-        // deliberately dead: edit now takes an optional Input_Mask, so Krea2 needs no
-        // separate inpaint branch.
+        // 1 t2i · 2 i2i · 3 depth · 4 edit · 5 inpaint · 6 detail · 7 upscale. Slot 5 was
+        // dead until MPI-615: edit takes an optional Input_Mask and re-renders the whole
+        // crop, which is a different job from holding everything outside the mask still.
+        // The re-export gave it a LanPaint branch that does the latter, and the branch
+        // reads Get_turbo for its own steps/cfg — hence krea2Turbo on the op.
         //
         // Declaring opInject makes commandExecutor REPLACE the op's own injectParams
         // rather than merge them. That mattered while the shared ops still carried
@@ -756,6 +813,7 @@ export const MODELS = [
             i2i:       { Input_wf_type: 2 },
             control:   { Input_wf_type: 3 },
             krea2Edit: { Input_wf_type: 4 },
+            inpaint:   { Input_wf_type: 5 },
             detail:    { Input_wf_type: 6 },
             upscale:   { Input_wf_type: 7 },
         },
@@ -765,7 +823,7 @@ export const MODELS = [
         // Depth is the only structure this graph can copy, so the type picker stays
         // hidden and the op reads exactly as the old single-purpose one did.
         controlTypes: ['depth'],
-        styleOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'detail', 'upscale'],
+        styleOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'inpaint', 'detail', 'upscale'],
         // MPI-365: every op EXCEPT t2i/i2i now derives its output shape from the input
         // image (ImageScaleToTotalPixels replaced ImageResizeKJv2), so the ratio picker
         // is hidden there. t2i/i2i still generate at our Input_Width/Height.
@@ -792,6 +850,7 @@ export const MODELS = [
             i2i:       'krea2_t2i_nsfw.json',
             control:   'krea2_t2i_nsfw.json',
             krea2Edit: 'krea2_t2i_nsfw.json',
+            inpaint:   'krea2_t2i_nsfw.json',
             upscale:   'krea2_t2i_nsfw.json',
             detail:    'krea2_t2i_nsfw.json',
         },
@@ -822,6 +881,12 @@ export const MODELS = [
             'ComfyUI-UltimateSDUpscale',
             'ComfyUI-Krea2-ControlNet',
             'comfyui_controlnet_aux',
+            // MPI-615, the inpaint branch (wf_type 5). InpaintCropImproved was already
+            // in the graph on the edit path and had never been declared; LanPaint is new
+            // with the branch. Both are custom_nodes, so the engine installs them either
+            // way — declared so the graph's needs are readable here.
+            'comfyui-inpaint-cropandstitch', // InpaintCropImproved/StitchImproved
+            'LanPaint',                      // LanPaint_KSampler — mask-conditioned sampling
             'comfyui-krea2edit',
         ],
     },

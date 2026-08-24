@@ -333,6 +333,15 @@ internal. Backup `...pre-refaudio-20260624-131500.bak.json`.
 `[VISUAL]: scene + appearance + style` · `[SPEECH]: the literal words to be spoken (speaker-tagged)` ·
 `[SOUNDS]: voice tone + ambience`. All optional, all recommended. Words from [SPEECH]; voice from the ref clip.
 
+> **2026-08-24 (MPI-615) — the wiring this section describes is NO LONGER what ships.** A
+> re-export deleted `MpiReroute #160`, the tap that let stage 2 read the model *before* the
+> LoRA stack. Stage-2 guiders #32/#326 now take `MpiReroute #258 ← Transition Lora #191 ←
+> MpiIfElse #627`, i.e. the SAME fully-patched model stage 1 uses: `Merged Loras` #387
+> (SoftEnhance+Abliterated+Detailer), the six `Input_Lora_*` user slots, and NAG when it is
+> armed. That is the "better quality" in that export. The 2026-06-24 finding below stays
+> as the evidence trail for WHY low start sigmas were the cure at the time — but its claim
+> that "#258 ← raw UNETLoader #4, NO LoRA chain" is now false of the shipped graph.
+
 ### ⚠️ STAGE-2 DROPS IDENTITY — must reuse the ref-audio + LoRA on stage-2 (2026-06-24)
 Splicing `LTXVReferenceAudio` into stage-1 ONLY (matching the official template's layout) is NOT enough for OUR
 template. Running stage-2 changed voices completely + character FEATURES drifted — stage-2 ignored the identity.

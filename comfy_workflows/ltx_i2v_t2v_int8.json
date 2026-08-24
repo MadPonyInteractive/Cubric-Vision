@@ -72,7 +72,7 @@
   },
   "9": {
     "inputs": {
-      "string": "medium rear shot of a knight holding a sword on his shoulder, the camera orbits around into a close-up of his face as he says, \"I had enough\". He looks determined and has a little bit of blood coming out of his mouth. The location is a mediaeval battlefield. The style is cinematic and dark.  Background sound is a huge battle happening: clinking swords, man screaming, the sound of the wind and thunder.  "
+      "string": "a woman having a shower, naked, soaping her body. Sunlight from blinds paints her body. Sound of running water, Bathroom room noise.   "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -324,7 +324,7 @@
   },
   "77": {
     "inputs": {
-      "int": 984885689
+      "int": 984885690
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -582,18 +582,6 @@
       "title": "KSampler - STG2"
     }
   },
-  "160": {
-    "inputs": {
-      "any": [
-        "366",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Model"
-    }
-  },
   "168": {
     "inputs": {
       "strength": 1,
@@ -811,7 +799,7 @@
   "258": {
     "inputs": {
       "any": [
-        "160",
+        "191",
         0
       ]
     },
@@ -1446,7 +1434,7 @@
       "strength_model": 1,
       "strength_clip": 1,
       "model": [
-        "160",
+        "366",
         0
       ],
       "clip": [

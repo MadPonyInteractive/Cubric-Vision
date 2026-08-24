@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-615/**",
+    "comfy_workflows/raw/sdxl_t2i_template.json",
+    "comfy_workflows/raw/krea2_t2i_template.json",
+    "comfy_workflows/raw/ltx_i2v_t2v_template.json",
+    "comfy_workflows/scripts/workflow_generation/sdxl_t2i_template.json",
+    "comfy_workflows/scripts/workflow_generation/krea2_t2i_template.json",
+    "comfy_workflows/scripts/workflow_generation/ltx_i2v_t2v_template.json",
+    "comfy_workflows/t2i_sdxl_realistic.json",
+    "comfy_workflows/t2i_sdxl_nsfw.json",
+    "comfy_workflows/t2i_ill_anime_beauty.json",
+    "comfy_workflows/t2i_ill_anime.json",
+    "comfy_workflows/t2i_pony_mix.json",
+    "comfy_workflows/krea2_t2i_sfw.json",
+    "comfy_workflows/krea2_t2i_nsfw.json",
+    "comfy_workflows/ltx_i2v_t2v.json",
+    "comfy_workflows/ltx_i2v_t2v_int8.json",
+    "js/data/modelConstants/models.js",
+    "js/data/commandRegistry.js",
+    "docs/models/sdxl/",
+    "docs/models/krea2/",
+    "docs/models/ltx/",
+    "tests/inject-params-titles.test.cjs"
+  ]
+}

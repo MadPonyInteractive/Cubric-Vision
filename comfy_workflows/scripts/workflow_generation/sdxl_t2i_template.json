@@ -21,7 +21,7 @@
   },
   "1462": {
     "inputs": {
-      "ckpt_name": "SDXL_NSFW.safetensors"
+      "ckpt_name": "SDXL_Realistic.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
@@ -30,7 +30,7 @@
   },
   "1472": {
     "inputs": {
-      "value": "A woman wearing a red dress and smiling"
+      "value": "A baby monkey on the back of another monkey"
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -581,7 +581,7 @@
         0
       ],
       "any_5": [
-        "1551",
+        "1721",
         0
       ],
       "any_6": [
@@ -646,7 +646,7 @@
   },
   "1599": {
     "inputs": {
-      "int": 976866873951
+      "int": 976866873952
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -1285,6 +1285,234 @@
     "class_type": "FromBasicPipe",
     "_meta": {
       "title": "FromBasicPipe"
+    }
+  },
+  "1707": {
+    "inputs": {
+      "blend_overlap": 9,
+      "samples": [
+        "1731",
+        0
+      ],
+      "vae": [
+        "1716",
+        2
+      ],
+      "image": [
+        "1726",
+        1
+      ],
+      "mask": [
+        "1726",
+        2
+      ]
+    },
+    "class_type": "LanPaint_ImageDecode",
+    "_meta": {
+      "title": "LanPaint Image Decode"
+    }
+  },
+  "1708": {
+    "inputs": {
+      "steps": 7,
+      "cfg": 1,
+      "sampler_name": "euler_ancestral",
+      "scheduler": "simple",
+      "denoise": 1,
+      "LanPaint_NumSteps": 5,
+      "LanPaint_PromptMode": "Image First",
+      "LanPaint_Info": "LanPaint KSampler.",
+      "Inpainting_mode": "🖼️ Image Inpainting",
+      "model": [
+        "1716",
+        0
+      ],
+      "positive": [
+        "1716",
+        3
+      ],
+      "negative": [
+        "1716",
+        4
+      ],
+      "latent_image": [
+        "1710",
+        0
+      ],
+      "seed": [
+        "1599",
+        0
+      ]
+    },
+    "class_type": "LanPaint_KSampler",
+    "_meta": {
+      "title": "LanPaint KSampler"
+    }
+  },
+  "1710": {
+    "inputs": {
+      "image": [
+        "1726",
+        1
+      ],
+      "vae": [
+        "1716",
+        2
+      ],
+      "mask": [
+        "1726",
+        2
+      ]
+    },
+    "class_type": "LanPaint_ImageEncode",
+    "_meta": {
+      "title": "LanPaint Image Encode"
+    }
+  },
+  "1716": {
+    "inputs": {
+      "basic_pipe": [
+        "1584",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
+    }
+  },
+  "1721": {
+    "inputs": {
+      "stitcher": [
+        "1726",
+        0
+      ],
+      "inpainted_image": [
+        "1707",
+        0
+      ]
+    },
+    "class_type": "InpaintStitchImproved",
+    "_meta": {
+      "title": "✂️ Inpaint Stitch"
+    }
+  },
+  "1726": {
+    "inputs": {
+      "downscale_algorithm": "bilinear",
+      "upscale_algorithm": "bicubic",
+      "preresize": false,
+      "preresize_mode": "ensure minimum resolution",
+      "preresize_min_width": 1024,
+      "preresize_min_height": 1024,
+      "preresize_max_width": 16384,
+      "preresize_max_height": 16384,
+      "mask_fill_holes": false,
+      "mask_expand_pixels": 0,
+      "mask_invert": false,
+      "mask_blend_pixels": 16,
+      "mask_hipass_filter": 0.1,
+      "extend_for_outpainting": false,
+      "extend_up_factor": 1,
+      "extend_down_factor": 1,
+      "extend_left_factor": 1,
+      "extend_right_factor": 1,
+      "context_from_mask_extend_factor": 1,
+      "output_resize_to_target_size": true,
+      "output_target_width": 1024,
+      "output_target_height": 1024,
+      "output_padding": "16",
+      "device_mode": "gpu (much faster)",
+      "image": [
+        "1640",
+        0
+      ],
+      "mask": [
+        "1639",
+        1
+      ],
+      "optional_context_mask": [
+        "1728",
+        0
+      ]
+    },
+    "class_type": "InpaintCropImproved",
+    "_meta": {
+      "title": "✂️ Inpaint Crop"
+    }
+  },
+  "1728": {
+    "inputs": {
+      "padding": 64,
+      "mask": [
+        "1639",
+        1
+      ]
+    },
+    "class_type": "MpiMaskSquareBbox",
+    "_meta": {
+      "title": "Mpi Mask Square Bbox"
+    }
+  },
+  "1731": {
+    "inputs": {
+      "steps": 3,
+      "cfg": 1.5,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
+      "denoise": 0.4,
+      "model": [
+        "1734",
+        0
+      ],
+      "positive": [
+        "1734",
+        3
+      ],
+      "negative": [
+        "1734",
+        4
+      ],
+      "latent_image": [
+        "1737",
+        0
+      ],
+      "seed": [
+        "1599",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler (Hi-Res Fix)"
+    }
+  },
+  "1734": {
+    "inputs": {
+      "basic_pipe": [
+        "1584",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
+    }
+  },
+  "1737": {
+    "inputs": {
+      "upscale_method": "bicubic",
+      "width": 2048,
+      "height": 2048,
+      "stride": 16,
+      "samples": [
+        "1708",
+        0
+      ]
+    },
+    "class_type": "MpiLatentUpscale",
+    "_meta": {
+      "title": "Mpi Latent Upscale"
     }
   }
 }

@@ -624,7 +624,12 @@ export const commands = {
         // master graph carries it on this branch too. NOTE it styles the PATCH, not the
         // picture: useful when inpainting new content, unhelpful on a removal where the
         // fill should match its surroundings — so leave it on None to take something out.
-        components: ['styleSelect', 'stylization'],
+        //
+        // krea2Turbo joined in MPI-615, when SDXL and Krea 2 gained this op. It is gated
+        // by `capabilities.turboToggle`, so only Krea 2 ever renders it — and there it is
+        // REAL on this branch: the graph's LanPaint sampler reads Get_turbo for its own
+        // steps (8 vs 15) and cfg (1.0 vs 2.0), and swaps the accelerator LoRA in.
+        components: ['styleSelect', 'stylization', 'krea2Turbo'],
     },
     // NVIDIA PiD generative upscaler. One workflow, internal 4-path VAE selector
     // (pidVariant → Input_Type) + output-size selector (pidResolution → Input_Resolution),
