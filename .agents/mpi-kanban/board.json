@@ -1,8 +1,11 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 616,
+  "next_id": 619,
   "columns": {
     "todo": [
+      "MPI-618",
+      "MPI-617",
+      "MPI-616",
       "MPI-614",
       "MPI-613",
       "MPI-612",
@@ -112,7 +115,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-24T08:58:40Z",
+  "updated_at": "2026-08-24T13:20:00Z",
   "events": [
     {
       "at": "2026-08-23T16:35:53Z",
@@ -3796,6 +3799,13 @@
       "task": "MPI-549",
       "actor": "session:2f655b5f",
       "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-549/ (workspace preserved intact). mpi-archive run 2026-08-21."
+    },
+    {
+      "at": "2026-08-24T13:08:03Z",
+      "type": "task.created",
+      "task": "MPI-616",
+      "actor": "claude",
+      "note": "Smart App Control can hard-block an unsigned exe outright, not just prompt - measured on a sibling MadPony Electron build 2026-08-24. Contradicts the 2026-07-30 Cubric measurement; SAC decides per binary. Release checklist needs a hard-block branch; Azure Trusted Signing to be evaluated."
     }
   ]
 }
