@@ -640,7 +640,15 @@ export const FLOWS = [
         // 896-wide plate is taller than 560).
         preview: 'flow-draw-it-in.webp',
         video: 'flow-draw-it-in.mp4',
-        description: 'Draw what you want on top of your own photo, describe it, and the flow renders it — a person, an animal, an object — and blends it into the scene, matching the light and casting a shadow on the ground.',
+        // Two sentences on purpose. The second is CRAFT guidance rather than a
+        // description of the flow, and it lives here because `description` is the
+        // only copy the inputs slide renders — `_buildInputsSlide` builds the
+        // explainer as a single `<p>` off this field, and MpiBaseFlow.js is another
+        // card's file. Fabio asked for it on the first stage specifically: the point
+        // has to land BEFORE the drawing, not in the paint step's hint where the user
+        // has already committed to a shape. The hero demonstrates exactly this
+        // contrast — beat 1 is a filled blob, beat 2 a drawn outline.
+        description: 'Draw what you want on top of your own photo, describe it, and the flow renders it — a person, an animal, an object — and blends it into the scene, matching the light and casting a shadow on the ground. The better you draw it, the more detail carries through: an outline with a pose and a tail gives the model far more to work with than a filled blob, and the less you have to fight the prompt to get what you meant.',
         // TWO choosable slots, resolved independently (any-of-models.md). The render
         // phase samples an SDXL checkpoint; the blend phase runs a Klein edit model.
         // Every SDXL-family card already declares controlTypes scribble + canny behind

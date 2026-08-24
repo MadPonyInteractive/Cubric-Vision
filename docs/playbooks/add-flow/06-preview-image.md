@@ -64,6 +64,7 @@ one. Pick the device by what actually changes:
 | The **length or motion** | Play the RESULT straight through under a progress rail, marked where the source ended, the rail running past the mark in `--accent-heat` | **Extend Video** (shipped) — the added seconds are the only thing wearing the accent |
 | Something **not visible at all** | Animate the channel that changed, over an unchanged frame | **Add Foley** (shipped) — the picture plays untouched while the waveform draws itself in sync, impact by impact |
 | **Nothing** — the flow CREATES rather than transforms | Build the LAYOUT a piece at a time, then swap the subject under it | **Character Sheet** (shipped) — the three views arrive one by one over the studio grey, then the character changes while the grid holds |
+| The subject is **whatever the user brings** | TWO beats, two different subjects, concatenated. One beat only ever proves one subject, and a flow whose pitch is "a person, an animal, an object" is not shown by any single example | **Draw It In** (shipped) — a filled blob becomes a woman, then a drawn OUTLINE becomes a reptile. Beat order is load-bearing: beat 1 must match the tile, because the tile is the video's `poster` and a mismatch shows one image then cuts to another. Both beats fit in the 4–8s window at 4s each, and the whole thing is one ffmpeg command — two `xfade` chains into `concat=n=2:v=1:a=0`, no intermediate files |
 
 Three rules the shipped flows proved:
 
