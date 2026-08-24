@@ -74,7 +74,7 @@
 
 - Flows are out of preview. The Flow Library is a set of outcome-shaped jobs you run without
   assembling a workspace: Head Swap, Extend Video, Add Foley, Upscale Video, Character
-  Sheet and Outpaint. Open it from the Flows button at the top of the gallery, from the
+  Sheet, Draw It In and Outpaint. Open it from the Flows button at the top of the gallery, from the
   landing page, or with Tab — which now cycles the gallery, your last card and the flow you
   have open, so you can step out to check a picture and land back where you left off. Each
   flow says which models it needs and installs them for you; none of them download weights
@@ -101,6 +101,15 @@
   rather than getting whichever came first, and owning one candidate per slot is enough to run
   the flow. Krea 2 is the stronger choice for stylised work; the NSFW model is trained mostly on
   photographic source and is weaker at Anime and Cartoon.
+
+- Draw It In puts something new into a photo you already have — a person, an animal, an object.
+  Load the picture, draw roughly where the thing goes and how big it should be, say what you drew,
+  and box the area to blend. An SDXL model renders the subject from your drawing and FLUX.2 Klein
+  blends it into the scene, matching the light and casting a shadow on the ground. The drawing
+  carries the shape and the words carry the subject, so the better you draw it the more detail
+  survives and the less you have to fight the prompt — an outline with a pose and a tail gives the
+  model far more to work with than a filled blob. Two dropdowns pick the Render and Blend models,
+  each with its own LoRA rack, and it downloads no weights of its own.
 
 - Outpaint extends a picture past its edges. Drop an image, pick the shape you want — or drag
   the frame freely — and pull it out over the sides you want filled; the new area shows as black,
