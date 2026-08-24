@@ -10414,47 +10414,6 @@
       "bgcolor": "#535"
     },
     {
-      "id": 9,
-      "type": "MpiText",
-      "pos": [
-        -4644.539637930783,
-        4906.4664602243665
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 76,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "Text",
-          "type": "STRING",
-          "links": [
-            3
-          ]
-        }
-      ],
-      "title": "Input_Positive",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiText",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "a woman having a shower, naked, soaping her body. Sunlight from blinds paints her body. Sound of running water, Bathroom room noise.   "
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 38,
       "type": "LTXVSeparateAVLatent",
       "pos": [
@@ -10667,7 +10626,7 @@
         58
       ],
       "flags": {},
-      "order": 77,
+      "order": 76,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -10702,7 +10661,7 @@
         68.32596819981063
       ],
       "flags": {},
-      "order": 78,
+      "order": 77,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -10878,7 +10837,7 @@
         130
       ],
       "flags": {},
-      "order": 79,
+      "order": 78,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -10903,6 +10862,47 @@
       ],
       "color": "#323",
       "bgcolor": "#535"
+    },
+    {
+      "id": 9,
+      "type": "MpiText",
+      "pos": [
+        -4644.539637930783,
+        4906.4664602243665
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 79,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "title": "Input_Positive",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiText",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "a woman having a shower, soaping her body. Sunlight from blinds paints her body. Sound of running water, Bathroom room noise.   "
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -13236,10 +13236,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.1610510000000005,
+      "scale": 1.0834705943388436,
       "offset": [
-        10846.065286117857,
-        -2299.8734268861126
+        5363.351594895747,
+        -4464.331407182685
       ]
     },
     "frontendVersion": "1.48.7",
