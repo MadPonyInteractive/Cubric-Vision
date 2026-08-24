@@ -1,8 +1,8 @@
 {
   "id": "049534f2-e76a-484c-afe0-91f11f5832af",
   "revision": 0,
-  "last_node_id": 632,
-  "last_link_id": 1080,
+  "last_node_id": 639,
+  "last_link_id": 1103,
   "nodes": [
     {
       "id": 60,
@@ -113,7 +113,7 @@
         50
       ],
       "flags": {},
-      "order": 125,
+      "order": 128,
       "mode": 0,
       "inputs": [
         {
@@ -165,7 +165,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 110,
+      "order": 112,
       "mode": 0,
       "inputs": [
         {
@@ -287,7 +287,7 @@
         186
       ],
       "flags": {},
-      "order": 140,
+      "order": 136,
       "mode": 0,
       "inputs": [
         {
@@ -367,7 +367,7 @@
         186
       ],
       "flags": {},
-      "order": 152,
+      "order": 149,
       "mode": 0,
       "inputs": [
         {
@@ -447,7 +447,7 @@
         186
       ],
       "flags": {},
-      "order": 144,
+      "order": 141,
       "mode": 0,
       "inputs": [
         {
@@ -527,7 +527,7 @@
         186
       ],
       "flags": {},
-      "order": 156,
+      "order": 153,
       "mode": 0,
       "inputs": [
         {
@@ -607,7 +607,7 @@
         186
       ],
       "flags": {},
-      "order": 148,
+      "order": 145,
       "mode": 0,
       "inputs": [
         {
@@ -687,7 +687,7 @@
         100
       ],
       "flags": {},
-      "order": 130,
+      "order": 133,
       "mode": 0,
       "inputs": [
         {
@@ -750,7 +750,7 @@
         178
       ],
       "flags": {},
-      "order": 79,
+      "order": 80,
       "mode": 0,
       "inputs": [
         {
@@ -1048,7 +1048,7 @@
         100
       ],
       "flags": {},
-      "order": 139,
+      "order": 122,
       "mode": 0,
       "inputs": [
         {
@@ -1111,7 +1111,7 @@
         100
       ],
       "flags": {},
-      "order": 121,
+      "order": 124,
       "mode": 0,
       "inputs": [
         {
@@ -1174,7 +1174,7 @@
         100
       ],
       "flags": {},
-      "order": 149,
+      "order": 150,
       "mode": 0,
       "inputs": [
         {
@@ -1272,7 +1272,7 @@
         220
       ],
       "flags": {},
-      "order": 147,
+      "order": 148,
       "mode": 0,
       "inputs": [
         {
@@ -1383,65 +1383,6 @@
         "Node name for S&R": "PreviewAny"
       },
       "widgets_values": []
-    },
-    {
-      "id": 38,
-      "type": "LTXVSeparateAVLatent",
-      "pos": [
-        2.06737484049233,
-        7407.48443343247
-      ],
-      "size": [
-        220,
-        50
-      ],
-      "flags": {},
-      "order": 207,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "av_latent",
-          "type": "LATENT",
-          "link": 777
-        }
-      ],
-      "outputs": [
-        {
-          "name": "video_latent",
-          "type": "LATENT",
-          "links": [
-            577,
-            631
-          ]
-        },
-        {
-          "name": "audio_latent",
-          "type": "LATENT",
-          "links": [
-            630
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.5.1",
-        "Node name for S&R": "LTXVSeparateAVLatent",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "version": "7.5.2",
-          "input_ue_unconnectable": {}
-        },
-        "enableTabs": false,
-        "tabWidth": 65,
-        "tabXOffset": 10,
-        "hasSecondTab": false,
-        "secondTabText": "Send Back",
-        "secondTabOffset": 80,
-        "secondTabWidth": 65
-      },
-      "widgets_values": [],
-      "color": "#332922",
-      "bgcolor": "#593930"
     },
     {
       "id": 335,
@@ -1722,7 +1663,7 @@
         160
       ],
       "flags": {},
-      "order": 160,
+      "order": 164,
       "mode": 0,
       "inputs": [
         {
@@ -1767,86 +1708,6 @@
       ],
       "color": "#223",
       "bgcolor": "#335"
-    },
-    {
-      "id": 370,
-      "type": "MpiReroute",
-      "pos": [
-        -6304.319323705214,
-        4209.9977086526
-      ],
-      "size": [
-        174.40123568417766,
-        27.67810905776423
-      ],
-      "flags": {
-        "collapsed": false
-      },
-      "order": 80,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "link": 729
-        }
-      ],
-      "outputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "links": [
-            693
-          ]
-        }
-      ],
-      "title": "Clip_Connect",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
-      },
-      "widgets_values": [],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 408,
-      "type": "DualCLIPLoader",
-      "pos": [
-        -6817.500010767455,
-        4212.405347145392
-      ],
-      "size": [
-        429.69976564577246,
-        130
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "CLIP",
-          "type": "CLIP",
-          "links": [
-            729
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.27.0",
-        "Node name for S&R": "DualCLIPLoader"
-      },
-      "widgets_values": [
-        "gemma_3_12B_it_fp4_mixed.safetensors",
-        "ltx-2.3_text_projection_bf16.safetensors",
-        "ltxv",
-        "default"
-      ],
-      "color": "#323",
-      "bgcolor": "#535"
     },
     {
       "id": 155,
@@ -1915,7 +1776,7 @@
         112.77935876269294
       ],
       "flags": {},
-      "order": 3,
+      "order": 2,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1948,15 +1809,15 @@
       "id": 367,
       "type": "MpiReroute",
       "pos": [
-        -6307.128198249287,
-        3930.2649733524418
+        -5905.904473647011,
+        4013.8163034905183
       ],
       "size": [
         174.40123568417766,
         27.67810905776423
       ],
       "flags": {},
-      "order": 103,
+      "order": 102,
       "mode": 0,
       "inputs": [
         {
@@ -1996,7 +1857,7 @@
         58.98474402005377
       ],
       "flags": {},
-      "order": 4,
+      "order": 3,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2051,7 +1912,7 @@
         60
       ],
       "flags": {},
-      "order": 5,
+      "order": 4,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2099,7 +1960,7 @@
         78
       ],
       "flags": {},
-      "order": 165,
+      "order": 166,
       "mode": 0,
       "inputs": [
         {
@@ -2144,7 +2005,7 @@
         60
       ],
       "flags": {},
-      "order": 6,
+      "order": 5,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2234,82 +2095,6 @@
       "widgets_values": [],
       "color": "#332922",
       "bgcolor": "#593930"
-    },
-    {
-      "id": 39,
-      "type": "SamplerCustomAdvanced",
-      "pos": [
-        -247.93262515950715,
-        7387.48443343247
-      ],
-      "size": [
-        220,
-        697.9459459459459
-      ],
-      "flags": {},
-      "order": 206,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "noise",
-          "type": "NOISE",
-          "link": 27
-        },
-        {
-          "name": "guider",
-          "type": "GUIDER",
-          "link": 1007
-        },
-        {
-          "name": "sampler",
-          "type": "SAMPLER",
-          "link": 198
-        },
-        {
-          "name": "sigmas",
-          "type": "SIGMAS",
-          "link": 465
-        },
-        {
-          "name": "latent_image",
-          "type": "LATENT",
-          "link": 31
-        }
-      ],
-      "outputs": [
-        {
-          "name": "output",
-          "type": "LATENT",
-          "links": []
-        },
-        {
-          "name": "denoised_output",
-          "type": "LATENT",
-          "links": [
-            777
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.3.75",
-        "Node name for S&R": "SamplerCustomAdvanced",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "version": "7.5.2",
-          "input_ue_unconnectable": {}
-        },
-        "enableTabs": false,
-        "tabWidth": 65,
-        "tabXOffset": 10,
-        "hasSecondTab": false,
-        "secondTabText": "Send Back",
-        "secondTabOffset": 80,
-        "secondTabWidth": 65
-      },
-      "widgets_values": [],
-      "color": "#223",
-      "bgcolor": "#335"
     },
     {
       "id": 117,
@@ -2423,7 +2208,7 @@
         88
       ],
       "flags": {},
-      "order": 7,
+      "order": 6,
       "mode": 4,
       "inputs": [],
       "outputs": [],
@@ -2504,18 +2289,18 @@
         186
       ],
       "flags": {},
-      "order": 134,
+      "order": 129,
       "mode": 0,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 715
+          "link": 1102
         },
         {
           "name": "clip",
           "type": "CLIP",
-          "link": 693
+          "link": 1103
         }
       ],
       "outputs": [
@@ -2582,7 +2367,7 @@
         130
       ],
       "flags": {},
-      "order": 122,
+      "order": 125,
       "mode": 0,
       "inputs": [
         {
@@ -2646,7 +2431,7 @@
         82
       ],
       "flags": {},
-      "order": 8,
+      "order": 7,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2684,7 +2469,7 @@
         78
       ],
       "flags": {},
-      "order": 132,
+      "order": 135,
       "mode": 0,
       "inputs": [
         {
@@ -2737,7 +2522,7 @@
         60
       ],
       "flags": {},
-      "order": 9,
+      "order": 8,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2822,7 +2607,7 @@
         58
       ],
       "flags": {},
-      "order": 113,
+      "order": 115,
       "mode": 0,
       "inputs": [
         {
@@ -2862,7 +2647,7 @@
         58
       ],
       "flags": {},
-      "order": 100,
+      "order": 108,
       "mode": 0,
       "inputs": [
         {
@@ -2904,7 +2689,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 10,
+      "order": 9,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2941,7 +2726,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 11,
+      "order": 10,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2976,7 +2761,7 @@
         26
       ],
       "flags": {},
-      "order": 127,
+      "order": 130,
       "mode": 0,
       "inputs": [
         {
@@ -3011,7 +2796,7 @@
         26
       ],
       "flags": {},
-      "order": 128,
+      "order": 131,
       "mode": 0,
       "inputs": [
         {
@@ -3046,7 +2831,7 @@
         46
       ],
       "flags": {},
-      "order": 104,
+      "order": 103,
       "mode": 0,
       "inputs": [
         {
@@ -3090,7 +2875,7 @@
         58
       ],
       "flags": {},
-      "order": 116,
+      "order": 118,
       "mode": 0,
       "inputs": [
         {
@@ -3128,7 +2913,7 @@
         46
       ],
       "flags": {},
-      "order": 105,
+      "order": 104,
       "mode": 0,
       "inputs": [
         {
@@ -3174,7 +2959,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 12,
+      "order": 11,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3211,7 +2996,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 13,
+      "order": 12,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3248,7 +3033,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 135,
+      "order": 137,
       "mode": 0,
       "inputs": [
         {
@@ -3323,8 +3108,8 @@
       "id": 521,
       "type": "SetNode",
       "pos": [
-        -6250.888417586879,
-        4570.2915046150965
+        -5849.664692984603,
+        4653.842834753173
       ],
       "size": [
         210,
@@ -3360,46 +3145,6 @@
       "bgcolor": "#533"
     },
     {
-      "id": 520,
-      "type": "SetNode",
-      "pos": [
-        -6266.219334840279,
-        4433.542905435338
-      ],
-      "size": [
-        210,
-        58
-      ],
-      "flags": {},
-      "order": 107,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "VAE",
-          "type": "VAE",
-          "link": 887
-        }
-      ],
-      "outputs": [
-        {
-          "name": "VAE",
-          "type": "VAE",
-          "links": null
-        }
-      ],
-      "title": "Set_video vae",
-      "properties": {
-        "Node name for S&R": "SetNode",
-        "aux_id": "kijai/ComfyUI-KJNodes",
-        "previousName": "video vae"
-      },
-      "widgets_values": [
-        "video vae"
-      ],
-      "color": "#322",
-      "bgcolor": "#533"
-    },
-    {
       "id": 522,
       "type": "SetNode",
       "pos": [
@@ -3411,7 +3156,7 @@
         58
       ],
       "flags": {},
-      "order": 182,
+      "order": 180,
       "mode": 0,
       "inputs": [
         {
@@ -3451,7 +3196,7 @@
         60
       ],
       "flags": {},
-      "order": 178,
+      "order": 176,
       "mode": 0,
       "inputs": [
         {
@@ -3491,7 +3236,7 @@
         106
       ],
       "flags": {},
-      "order": 174,
+      "order": 172,
       "mode": 0,
       "inputs": [
         {
@@ -3555,7 +3300,7 @@
         60
       ],
       "flags": {},
-      "order": 14,
+      "order": 13,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3590,7 +3335,7 @@
         58
       ],
       "flags": {},
-      "order": 15,
+      "order": 14,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3618,15 +3363,15 @@
       "id": 2,
       "type": "VAELoaderKJ",
       "pos": [
-        -6825.301981881633,
-        4544.771368736651
+        -6424.078257279357,
+        4628.322698874727
       ],
       "size": [
         440,
         110
       ],
       "flags": {},
-      "order": 16,
+      "order": 15,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3668,7 +3413,7 @@
         58
       ],
       "flags": {},
-      "order": 17,
+      "order": 16,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3705,7 +3450,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 18,
+      "order": 17,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3740,7 +3485,7 @@
         58
       ],
       "flags": {},
-      "order": 19,
+      "order": 18,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3777,7 +3522,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 20,
+      "order": 19,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3814,7 +3559,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 145,
+      "order": 146,
       "mode": 0,
       "inputs": [
         {
@@ -3854,7 +3599,7 @@
         60
       ],
       "flags": {},
-      "order": 141,
+      "order": 142,
       "mode": 0,
       "inputs": [
         {
@@ -3907,7 +3652,7 @@
         58
       ],
       "flags": {},
-      "order": 146,
+      "order": 147,
       "mode": 0,
       "inputs": [
         {
@@ -3947,7 +3692,7 @@
         60
       ],
       "flags": {},
-      "order": 142,
+      "order": 143,
       "mode": 0,
       "inputs": [
         {
@@ -4002,7 +3747,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 21,
+      "order": 20,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4039,7 +3784,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 22,
+      "order": 21,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4077,7 +3822,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 23,
+      "order": 22,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4114,7 +3859,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 24,
+      "order": 23,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4152,7 +3897,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 25,
+      "order": 24,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4187,7 +3932,7 @@
         58
       ],
       "flags": {},
-      "order": 26,
+      "order": 25,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4222,7 +3967,7 @@
         58
       ],
       "flags": {},
-      "order": 27,
+      "order": 26,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4322,7 +4067,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 28,
+      "order": 27,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4359,7 +4104,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 29,
+      "order": 28,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4394,7 +4139,7 @@
         60
       ],
       "flags": {},
-      "order": 30,
+      "order": 29,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4429,7 +4174,7 @@
         60
       ],
       "flags": {},
-      "order": 31,
+      "order": 30,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4466,7 +4211,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 155,
+      "order": 156,
       "mode": 0,
       "inputs": [
         {
@@ -4518,7 +4263,7 @@
         58
       ],
       "flags": {},
-      "order": 32,
+      "order": 31,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4595,7 +4340,7 @@
         60
       ],
       "flags": {},
-      "order": 111,
+      "order": 113,
       "mode": 0,
       "inputs": [
         {
@@ -4633,7 +4378,7 @@
         60
       ],
       "flags": {},
-      "order": 33,
+      "order": 32,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4666,7 +4411,7 @@
         58
       ],
       "flags": {},
-      "order": 34,
+      "order": 33,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4699,7 +4444,7 @@
         58
       ],
       "flags": {},
-      "order": 35,
+      "order": 34,
       "mode": 2,
       "inputs": [],
       "outputs": [
@@ -4732,7 +4477,7 @@
         58
       ],
       "flags": {},
-      "order": 36,
+      "order": 35,
       "mode": 2,
       "inputs": [],
       "outputs": [
@@ -4807,7 +4552,7 @@
         58
       ],
       "flags": {},
-      "order": 37,
+      "order": 36,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4840,7 +4585,7 @@
         58
       ],
       "flags": {},
-      "order": 38,
+      "order": 37,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4873,7 +4618,7 @@
         58
       ],
       "flags": {},
-      "order": 39,
+      "order": 38,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4906,7 +4651,7 @@
         58
       ],
       "flags": {},
-      "order": 40,
+      "order": 39,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4939,7 +4684,7 @@
         58
       ],
       "flags": {},
-      "order": 41,
+      "order": 40,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4972,7 +4717,7 @@
         60
       ],
       "flags": {},
-      "order": 101,
+      "order": 100,
       "mode": 0,
       "inputs": [
         {
@@ -5012,7 +4757,7 @@
         58
       ],
       "flags": {},
-      "order": 102,
+      "order": 101,
       "mode": 0,
       "inputs": [
         {
@@ -5052,7 +4797,7 @@
         58
       ],
       "flags": {},
-      "order": 42,
+      "order": 41,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5087,7 +4832,7 @@
         58
       ],
       "flags": {},
-      "order": 43,
+      "order": 42,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5123,7 +4868,7 @@
         50
       ],
       "flags": {},
-      "order": 169,
+      "order": 171,
       "mode": 0,
       "inputs": [
         {
@@ -5182,7 +4927,7 @@
         60
       ],
       "flags": {},
-      "order": 158,
+      "order": 159,
       "mode": 0,
       "inputs": [
         {
@@ -5241,7 +4986,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 177,
+      "order": 179,
       "mode": 0,
       "inputs": [
         {
@@ -5357,7 +5102,7 @@
         58
       ],
       "flags": {},
-      "order": 44,
+      "order": 43,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5432,7 +5177,7 @@
         58
       ],
       "flags": {},
-      "order": 45,
+      "order": 44,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5470,7 +5215,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 46,
+      "order": 45,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5565,7 +5310,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 47,
+      "order": 46,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5700,7 +5445,7 @@
         60
       ],
       "flags": {},
-      "order": 181,
+      "order": 182,
       "mode": 0,
       "inputs": [
         {
@@ -5759,7 +5504,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 151,
+      "order": 152,
       "mode": 0,
       "inputs": [
         {
@@ -5811,7 +5556,7 @@
         60
       ],
       "flags": {},
-      "order": 48,
+      "order": 47,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5846,7 +5591,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 150,
+      "order": 151,
       "mode": 0,
       "inputs": [
         {
@@ -5910,7 +5655,7 @@
         60
       ],
       "flags": {},
-      "order": 154,
+      "order": 155,
       "mode": 0,
       "inputs": [
         {
@@ -5950,7 +5695,7 @@
         58
       ],
       "flags": {},
-      "order": 49,
+      "order": 48,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -5985,7 +5730,7 @@
         58
       ],
       "flags": {},
-      "order": 50,
+      "order": 49,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6035,7 +5780,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 51,
+      "order": 50,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6072,7 +5817,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 52,
+      "order": 51,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6166,7 +5911,7 @@
         60
       ],
       "flags": {},
-      "order": 157,
+      "order": 158,
       "mode": 0,
       "inputs": [
         {
@@ -6206,7 +5951,7 @@
         58
       ],
       "flags": {},
-      "order": 53,
+      "order": 52,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6239,7 +5984,7 @@
         78
       ],
       "flags": {},
-      "order": 153,
+      "order": 154,
       "mode": 0,
       "inputs": [
         {
@@ -6292,7 +6037,7 @@
         78
       ],
       "flags": {},
-      "order": 137,
+      "order": 139,
       "mode": 0,
       "inputs": [
         {
@@ -6341,7 +6086,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 173,
+      "order": 175,
       "mode": 0,
       "inputs": [
         {
@@ -6411,7 +6156,7 @@
         58
       ],
       "flags": {},
-      "order": 54,
+      "order": 53,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6447,7 +6192,7 @@
         60
       ],
       "flags": {},
-      "order": 55,
+      "order": 54,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6558,7 +6303,7 @@
         70
       ],
       "flags": {},
-      "order": 172,
+      "order": 174,
       "mode": 0,
       "inputs": [
         {
@@ -6634,7 +6379,7 @@
         58
       ],
       "flags": {},
-      "order": 56,
+      "order": 55,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6669,7 +6414,7 @@
         60
       ],
       "flags": {},
-      "order": 180,
+      "order": 181,
       "mode": 0,
       "inputs": [
         {
@@ -6711,7 +6456,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 176,
+      "order": 178,
       "mode": 0,
       "inputs": [
         {
@@ -6889,7 +6634,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 57,
+      "order": 56,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -6983,7 +6728,7 @@
         58
       ],
       "flags": {},
-      "order": 58,
+      "order": 57,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7016,7 +6761,7 @@
         58
       ],
       "flags": {},
-      "order": 59,
+      "order": 58,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7049,7 +6794,7 @@
         60
       ],
       "flags": {},
-      "order": 112,
+      "order": 114,
       "mode": 0,
       "inputs": [
         {
@@ -7133,7 +6878,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 60,
+      "order": 59,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7288,70 +7033,6 @@
       "bgcolor": "#593930"
     },
     {
-      "id": 600,
-      "type": "MpiPacker",
-      "pos": [
-        -1970.2124325192028,
-        7021.045951248842
-      ],
-      "size": [
-        140,
-        106
-      ],
-      "flags": {},
-      "order": 191,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "any_1",
-          "shape": 7,
-          "type": "*",
-          "link": 1016
-        },
-        {
-          "name": "any_2",
-          "shape": 7,
-          "type": "*",
-          "link": 1017
-        },
-        {
-          "name": "any_3",
-          "shape": 7,
-          "type": "*",
-          "link": 1018
-        },
-        {
-          "name": "any_4",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        },
-        {
-          "name": "any_5",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "pack",
-          "type": "MPI_PACK",
-          "links": [
-            1019
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "fd9bdcae56a6792cbc6d39756b7dfe51d20596e0",
-        "Node name for S&R": "MpiPacker"
-      },
-      "widgets_values": [],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 599,
       "type": "MpiPacker",
       "pos": [
@@ -7427,7 +7108,7 @@
         60
       ],
       "flags": {},
-      "order": 61,
+      "order": 60,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7753,7 +7434,7 @@
         186
       ],
       "flags": {},
-      "order": 120,
+      "order": 123,
       "mode": 0,
       "inputs": [
         {
@@ -7830,7 +7511,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 62,
+      "order": 61,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -7916,7 +7597,7 @@
         106
       ],
       "flags": {},
-      "order": 131,
+      "order": 134,
       "mode": 0,
       "inputs": [
         {
@@ -7980,7 +7661,7 @@
         58
       ],
       "flags": {},
-      "order": 63,
+      "order": 62,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -8013,7 +7694,7 @@
         106
       ],
       "flags": {},
-      "order": 124,
+      "order": 127,
       "mode": 0,
       "inputs": [
         {
@@ -8140,7 +7821,7 @@
         46
       ],
       "flags": {},
-      "order": 108,
+      "order": 110,
       "mode": 0,
       "inputs": [
         {
@@ -8194,7 +7875,7 @@
         220
       ],
       "flags": {},
-      "order": 123,
+      "order": 126,
       "mode": 0,
       "inputs": [
         {
@@ -8283,7 +7964,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 143,
+      "order": 144,
       "mode": 0,
       "inputs": [
         {
@@ -8346,7 +8027,7 @@
         78
       ],
       "flags": {},
-      "order": 138,
+      "order": 140,
       "mode": 0,
       "inputs": [
         {
@@ -8398,7 +8079,7 @@
         130
       ],
       "flags": {},
-      "order": 109,
+      "order": 111,
       "mode": 0,
       "inputs": [
         {
@@ -8476,7 +8157,7 @@
         62.426556160899736
       ],
       "flags": {},
-      "order": 64,
+      "order": 63,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -8521,7 +8202,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 136,
+      "order": 138,
       "mode": 0,
       "inputs": [
         {
@@ -8604,7 +8285,7 @@
         378
       ],
       "flags": {},
-      "order": 115,
+      "order": 117,
       "mode": 0,
       "inputs": [
         {
@@ -8664,7 +8345,7 @@
         378
       ],
       "flags": {},
-      "order": 117,
+      "order": 119,
       "mode": 0,
       "inputs": [
         {
@@ -8713,49 +8394,6 @@
       ]
     },
     {
-      "id": 77,
-      "type": "MpiInt",
-      "pos": [
-        -4425.1038410238825,
-        5701.046200523126
-      ],
-      "size": [
-        244.3366780735778,
-        68.32596819981063
-      ],
-      "flags": {},
-      "order": 65,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "int",
-          "type": "INT",
-          "links": [
-            854
-          ]
-        }
-      ],
-      "title": "Input_Seed",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiInt",
-        "ue_properties": {
-          "widget_ue_connectable": {
-            "int": true
-          },
-          "version": "7.7",
-          "input_ue_unconnectable": {}
-        }
-      },
-      "widgets_values": [
-        984885689
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 608,
       "type": "MpiString",
       "pos": [
@@ -8767,7 +8405,7 @@
         58
       ],
       "flags": {},
-      "order": 66,
+      "order": 64,
       "mode": 2,
       "inputs": [],
       "outputs": [
@@ -8803,7 +8441,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 167,
+      "order": 168,
       "mode": 0,
       "inputs": [
         {
@@ -8875,7 +8513,7 @@
         58
       ],
       "flags": {},
-      "order": 118,
+      "order": 120,
       "mode": 0,
       "inputs": [
         {
@@ -8915,7 +8553,7 @@
         60
       ],
       "flags": {},
-      "order": 129,
+      "order": 132,
       "mode": 0,
       "inputs": [
         {
@@ -8953,7 +8591,7 @@
         350
       ],
       "flags": {},
-      "order": 67,
+      "order": 65,
       "mode": 2,
       "inputs": [
         {
@@ -9033,8 +8671,8 @@
       "id": 368,
       "type": "Reroute",
       "pos": [
-        -6329.39426259111,
-        4111.288865876233
+        -5928.170537988834,
+        4194.840196014309
       ],
       "size": [
         208,
@@ -9065,45 +8703,6 @@
       }
     },
     {
-      "id": 160,
-      "type": "MpiReroute",
-      "pos": [
-        -5435.931413620072,
-        4086.3534568903865
-      ],
-      "size": [
-        140,
-        32.13741789848791
-      ],
-      "flags": {},
-      "order": 126,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "link": 1053
-        }
-      ],
-      "outputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "links": [
-            637,
-            715
-          ]
-        }
-      ],
-      "title": "Model",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiReroute"
-      },
-      "widgets_values": []
-    },
-    {
       "id": 88,
       "type": "MpiInt",
       "pos": [
@@ -9115,7 +8714,7 @@
         62.426556160899736
       ],
       "flags": {},
-      "order": 68,
+      "order": 66,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9158,7 +8757,7 @@
         62.426556160899736
       ],
       "flags": {},
-      "order": 69,
+      "order": 67,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9193,15 +8792,15 @@
       "id": 4,
       "type": "UNETLoader",
       "pos": [
-        -6817.484510836029,
-        3930.7595295282063
+        -6416.260786233753,
+        4014.310859666283
       ],
       "size": [
         440,
         90
       ],
       "flags": {},
-      "order": 70,
+      "order": 68,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9242,7 +8841,7 @@
         98
       ],
       "flags": {},
-      "order": 71,
+      "order": 69,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9293,7 +8892,7 @@
         470.30023435422845
       ],
       "flags": {},
-      "order": 72,
+      "order": 70,
       "mode": 2,
       "inputs": [],
       "outputs": [
@@ -9465,7 +9064,7 @@
         58
       ],
       "flags": {},
-      "order": 73,
+      "order": 71,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9501,7 +9100,7 @@
         58
       ],
       "flags": {},
-      "order": 74,
+      "order": 72,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -9614,13 +9213,13 @@
         26
       ],
       "flags": {},
-      "order": 133,
+      "order": 107,
       "mode": 0,
       "inputs": [
         {
           "name": "any",
           "type": "*",
-          "link": 637
+          "link": 1086
         }
       ],
       "outputs": [
@@ -9653,7 +9252,7 @@
         80
       ],
       "flags": {},
-      "order": 170,
+      "order": 169,
       "mode": 0,
       "inputs": [
         {
@@ -9719,7 +9318,7 @@
         26
       ],
       "flags": {},
-      "order": 166,
+      "order": 165,
       "mode": 0,
       "inputs": [
         {
@@ -9819,7 +9418,7 @@
         186
       ],
       "flags": {},
-      "order": 159,
+      "order": 157,
       "mode": 0,
       "inputs": [
         {
@@ -9903,7 +9502,7 @@
         78
       ],
       "flags": {},
-      "order": 175,
+      "order": 173,
       "mode": 0,
       "inputs": [
         {
@@ -9955,7 +9554,7 @@
         122
       ],
       "flags": {},
-      "order": 179,
+      "order": 177,
       "mode": 0,
       "inputs": [
         {
@@ -10021,7 +9620,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 162,
+      "order": 161,
       "mode": 0,
       "inputs": [
         {
@@ -10077,7 +9676,7 @@
         78
       ],
       "flags": {},
-      "order": 168,
+      "order": 167,
       "mode": 0,
       "inputs": [
         {
@@ -10132,7 +9731,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 163,
+      "order": 162,
       "mode": 0,
       "inputs": [
         {
@@ -10196,7 +9795,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 161,
+      "order": 160,
       "mode": 0,
       "inputs": [
         {
@@ -10298,7 +9897,7 @@
         46
       ],
       "flags": {},
-      "order": 106,
+      "order": 105,
       "mode": 0,
       "inputs": [
         {
@@ -10342,7 +9941,7 @@
         78
       ],
       "flags": {},
-      "order": 119,
+      "order": 121,
       "mode": 0,
       "inputs": [
         {
@@ -10388,7 +9987,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 171,
+      "order": 170,
       "mode": 0,
       "inputs": [
         {
@@ -10444,7 +10043,7 @@
         58
       ],
       "flags": {},
-      "order": 164,
+      "order": 163,
       "mode": 2,
       "inputs": [
         {
@@ -10484,7 +10083,7 @@
         112.77935876269294
       ],
       "flags": {},
-      "order": 75,
+      "order": 73,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -10655,59 +10254,18 @@
       "widgets_values": []
     },
     {
-      "id": 9,
-      "type": "MpiText",
-      "pos": [
-        -4644.539637930783,
-        4906.4664602243665
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 76,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "Text",
-          "type": "STRING",
-          "links": [
-            3
-          ]
-        }
-      ],
-      "title": "Input_Positive",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiText",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "medium rear shot of a knight holding a sword on his shoulder, the camera orbits around into a close-up of his face as he says, \"I had enough\". He looks determined and has a little bit of blood coming out of his mouth. The location is a mediaeval battlefield. The style is cinematic and dark.  Background sound is a huge battle happening: clinking swords, man screaming, the sound of the wind and thunder.  "
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
       "id": 1,
       "type": "VAELoader",
       "pos": [
-        -6829.355899009564,
-        4430.987037248377
+        -6428.132174407288,
+        4514.5383673864535
       ],
       "size": [
         440,
         60
       ],
       "flags": {},
-      "order": 77,
+      "order": 74,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -10734,57 +10292,6 @@
       ],
       "color": "#323",
       "bgcolor": "#535"
-    },
-    {
-      "id": 366,
-      "type": "LTX2SamplingPreviewOverride",
-      "pos": [
-        -6054.300842206852,
-        4091.2073108243735
-      ],
-      "size": [
-        316.7017578125,
-        98
-      ],
-      "flags": {},
-      "order": 114,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 750
-        },
-        {
-          "name": "latent_upscale_model",
-          "shape": 7,
-          "type": "LATENT_UPSCALE_MODEL",
-          "link": 661
-        },
-        {
-          "name": "vae",
-          "shape": 7,
-          "type": "VAE",
-          "link": 1079
-        }
-      ],
-      "outputs": [
-        {
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            1053
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfyui-kjnodes",
-        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
-        "Node name for S&R": "LTX2SamplingPreviewOverride"
-      },
-      "widgets_values": [
-        16
-      ]
     },
     {
       "id": 468,
@@ -10870,15 +10377,15 @@
       "id": 632,
       "type": "VAELoader",
       "pos": [
-        -6311.651629135975,
-        4312.125807694757
+        -5910.427904533699,
+        4395.677137832833
       ],
       "size": [
         210,
         62.23356315588444
       ],
       "flags": {},
-      "order": 78,
+      "order": 75,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -10902,6 +10409,497 @@
       },
       "widgets_values": [
         "taeltx2_3.safetensors"
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
+    },
+    {
+      "id": 9,
+      "type": "MpiText",
+      "pos": [
+        -4644.539637930783,
+        4906.4664602243665
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 76,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "title": "Input_Positive",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiText",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "a woman having a shower, naked, soaping her body. Sunlight from blinds paints her body. Sound of running water, Bathroom room noise.   "
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 38,
+      "type": "LTXVSeparateAVLatent",
+      "pos": [
+        42.20115440701103,
+        7410.4573059929535
+      ],
+      "size": [
+        220,
+        50
+      ],
+      "flags": {},
+      "order": 207,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "av_latent",
+          "type": "LATENT",
+          "link": 777
+        }
+      ],
+      "outputs": [
+        {
+          "name": "video_latent",
+          "type": "LATENT",
+          "links": [
+            577,
+            631
+          ]
+        },
+        {
+          "name": "audio_latent",
+          "type": "LATENT",
+          "links": [
+            630
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.5.1",
+        "Node name for S&R": "LTXVSeparateAVLatent",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        },
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [],
+      "color": "#332922",
+      "bgcolor": "#593930"
+    },
+    {
+      "id": 39,
+      "type": "SamplerCustomAdvanced",
+      "pos": [
+        -247.93262515950715,
+        7387.48443343247
+      ],
+      "size": [
+        245.26941676410434,
+        741.655207375748
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 206,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "noise",
+          "type": "NOISE",
+          "link": 27
+        },
+        {
+          "name": "guider",
+          "type": "GUIDER",
+          "link": 1007
+        },
+        {
+          "name": "sampler",
+          "type": "SAMPLER",
+          "link": 198
+        },
+        {
+          "name": "sigmas",
+          "type": "SIGMAS",
+          "link": 465
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 31
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "LATENT",
+          "links": []
+        },
+        {
+          "name": "denoised_output",
+          "type": "LATENT",
+          "links": [
+            777
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.75",
+        "Node name for S&R": "SamplerCustomAdvanced",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.5.2",
+          "input_ue_unconnectable": {}
+        },
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 600,
+      "type": "MpiPacker",
+      "pos": [
+        -1970.2124325192028,
+        7021.045951248842
+      ],
+      "size": [
+        140,
+        106
+      ],
+      "flags": {},
+      "order": 191,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any_1",
+          "shape": 7,
+          "type": "*",
+          "link": 1016
+        },
+        {
+          "name": "any_2",
+          "shape": 7,
+          "type": "*",
+          "link": 1017
+        },
+        {
+          "name": "any_3",
+          "shape": 7,
+          "type": "*",
+          "link": 1018
+        },
+        {
+          "name": "any_4",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "any_5",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pack",
+          "type": "MPI_PACK",
+          "links": [
+            1019
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "fd9bdcae56a6792cbc6d39756b7dfe51d20596e0",
+        "Node name for S&R": "MpiPacker"
+      },
+      "widgets_values": [],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 634,
+      "type": "GetNode",
+      "pos": [
+        -1814.5853299087917,
+        6983.961693918507
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 77,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            1086
+          ]
+        }
+      ],
+      "title": "Get_model",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
+      },
+      "widgets_values": [
+        "model"
+      ],
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 77,
+      "type": "MpiInt",
+      "pos": [
+        -4425.1038410238825,
+        5701.046200523126
+      ],
+      "size": [
+        244.3366780735778,
+        68.32596819981063
+      ],
+      "flags": {},
+      "order": 78,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            854
+          ]
+        }
+      ],
+      "title": "Input_Seed",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiInt",
+        "ue_properties": {
+          "widget_ue_connectable": {
+            "int": true
+          },
+          "version": "7.7",
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [
+        984885690
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 520,
+      "type": "SetNode",
+      "pos": [
+        -5864.995610238003,
+        4517.094235573414
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 106,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "link": 887
+        }
+      ],
+      "outputs": [
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": []
+        }
+      ],
+      "title": "Set_video vae",
+      "properties": {
+        "Node name for S&R": "SetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes",
+        "previousName": "video vae"
+      },
+      "widgets_values": [
+        "video vae"
+      ],
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 366,
+      "type": "LTX2SamplingPreviewOverride",
+      "pos": [
+        -5653.077117604576,
+        4174.758640962449
+      ],
+      "size": [
+        316.7017578125,
+        98
+      ],
+      "flags": {},
+      "order": 116,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 750
+        },
+        {
+          "name": "latent_upscale_model",
+          "shape": 7,
+          "type": "LATENT_UPSCALE_MODEL",
+          "link": 661
+        },
+        {
+          "name": "vae",
+          "shape": 7,
+          "type": "VAE",
+          "link": 1079
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            1102
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
+        "Node name for S&R": "LTX2SamplingPreviewOverride"
+      },
+      "widgets_values": [
+        16
+      ]
+    },
+    {
+      "id": 370,
+      "type": "MpiReroute",
+      "pos": [
+        -5512.802024999946,
+        4322.32644517615
+      ],
+      "size": [
+        174.40123568417766,
+        27.67810905776423
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 109,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "link": 729
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            1103
+          ]
+        }
+      ],
+      "title": "Clip_Connect",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
+        "Node name for S&R": "MpiReroute"
+      },
+      "widgets_values": [],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 408,
+      "type": "DualCLIPLoader",
+      "pos": [
+        -6425.26922566064,
+        4331.92843526531
+      ],
+      "size": [
+        429.69976564577246,
+        130
+      ],
+      "flags": {},
+      "order": 79,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            729
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "DualCLIPLoader"
+      },
+      "widgets_values": [
+        "gemma_3_12B_it_fp4_mixed.safetensors",
+        "ltx-2.3_text_projection_bf16.safetensors",
+        "ltxv",
+        "default"
       ],
       "color": "#323",
       "bgcolor": "#535"
@@ -11605,14 +11603,6 @@
       "LATENT"
     ],
     [
-      637,
-      160,
-      0,
-      258,
-      0,
-      "*"
-    ],
-    [
       660,
       125,
       0,
@@ -11653,14 +11643,6 @@
       "VHS_FILENAMES"
     ],
     [
-      693,
-      370,
-      0,
-      387,
-      1,
-      "CLIP"
-    ],
-    [
       712,
       387,
       0,
@@ -11675,14 +11657,6 @@
       264,
       1,
       "CLIP"
-    ],
-    [
-      715,
-      160,
-      0,
-      387,
-      0,
-      "MODEL"
     ],
     [
       729,
@@ -12965,14 +12939,6 @@
       "BOOLEAN"
     ],
     [
-      1053,
-      366,
-      0,
-      160,
-      0,
-      "MODEL"
-    ],
-    [
       1054,
       6,
       0,
@@ -13131,6 +13097,30 @@
       468,
       0,
       "IMAGE"
+    ],
+    [
+      1086,
+      634,
+      0,
+      258,
+      0,
+      "MODEL"
+    ],
+    [
+      1102,
+      366,
+      0,
+      387,
+      0,
+      "MODEL"
+    ],
+    [
+      1103,
+      370,
+      0,
+      387,
+      1,
+      "CLIP"
     ]
   ],
   "groups": [
@@ -13138,8 +13128,8 @@
       "id": 1,
       "title": "Balanced",
       "bounding": [
-        -6843.356439411329,
-        3790.0816594101616,
+        -6442.132714809053,
+        3873.632989548238,
         493.29931053234577,
         871.966941210525
       ],
@@ -13246,13 +13236,13 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.611590904484152,
+      "scale": 0.1610510000000005,
       "offset": [
-        7407.57480403638,
-        -3429.09737695856
+        10846.065286117857,
+        -2299.8734268861126
       ]
     },
-    "frontendVersion": "1.47.12",
+    "frontendVersion": "1.48.7",
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,
     "VHS_MetadataImage": true,
@@ -13278,16 +13268,6 @@
         ],
         "linkIds": [
           814
-        ]
-      },
-      {
-        "id": 3,
-        "pos": [
-          -3324.6429118961396,
-          7021.292055423207
-        ],
-        "linkIds": [
-          637
         ]
       },
       {
@@ -13323,10 +13303,6 @@
       }
     ],
     "linkExtensions": [
-      {
-        "id": 637,
-        "parentId": 3
-      },
       {
         "id": 746,
         "parentId": 6
