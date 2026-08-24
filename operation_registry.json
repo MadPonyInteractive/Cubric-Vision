@@ -162,5 +162,10 @@
     "latestVersion": "1.0",
     "appVersionIntroduced": "1.5.0",
     "universal": true
+  },
+  "flowVoiceChanger": {
+    "latestVersion": "1.0",
+    "appVersionIntroduced": "1.5.0",
+    "universal": true
   }
 }

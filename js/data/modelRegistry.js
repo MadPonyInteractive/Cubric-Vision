@@ -136,7 +136,7 @@ export async function syncModelInstalled() {
             id: model.id,
             deps: resolveFullUniverse(model, null, engine)
                 .map(depId => DEPS[depId]).filter(Boolean)
-                .map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
+                .map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename, targetPath: dep.targetPath })),
         }));
 
         // MPI-304 — app-only deps ride the SAME check. /comfy/models/check is
@@ -144,9 +144,16 @@ export async function syncModelInstalled() {
         // MODELS), so an `app:<id>` entry passes through unchanged and no second
         // endpoint is needed. Flows have no engine-split weights, so there is no
         // per-engine resolution to do here — the ids are the ids.
+        // MPI-607 — `targetPath` MUST ride along in all three projections above and
+        // below. It is not decoration: it is the only thing that tells the server the
+        // weight lives under the ENGINE (models/chatterbox/…) instead of the models
+        // root, and `_localModelsCheck` cannot resolve such a dep without it. Trimming
+        // it made every targetPath weight read not-installed forever — a flow that had
+        // just downloaded 1GB kept its Install button and its bar stuck at 100%.
+        // The server-side branch alone does NOT fix this; the field has to arrive.
         const flowPayload = flowDepUniverse().map(({ id, deps }) => ({
             id,
-            deps: deps.map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
+            deps: deps.map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename, targetPath: dep.targetPath })),
         }));
 
         // MPI-310 — plugin deps ride it too, same id-agnostic passthrough as flows.
@@ -154,7 +161,7 @@ export async function syncModelInstalled() {
         const pluginPayload = pluginDepUniverse().map(({ id, depIds }) => ({
             id,
             deps: depIds.map(depId => DEPS[depId]).filter(Boolean)
-                .map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename })),
+                .map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename, targetPath: dep.targetPath })),
         }));
 
         // R31: when remote-connected but the override forces LOCAL, hit the

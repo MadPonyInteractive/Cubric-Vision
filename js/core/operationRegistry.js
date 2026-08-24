@@ -76,6 +76,9 @@ export const OPERATION_REGISTRY = {
     promptEnhance: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
     // MPI-567 — the Scribble to Object flow. Same stamping reason as the three above.
     flowScribObj: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
+    // MPI-607 — the Voice Changer flow, the first op that OUTPUTS audio. Same
+    // stamping reason as the four above.
+    flowVoiceChanger: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
 };
 
 /**

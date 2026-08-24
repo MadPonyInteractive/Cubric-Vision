@@ -38,7 +38,7 @@ model, image-in→image-out) are the other worked examples.
 | [01-descriptor-and-ops.md](01-descriptor-and-ops.md) | The `FlowDef` in `flowsRegistry.js`; the op in **4 files**; no-model vs multi-model flows; DECLARED `fields`, a step's `param` bind, and why no BESPOKE component (every field still mounts a Primitive) |
 | [any-of-models.md](any-of-models.md) | Model SLOTS — a flow declares a role and the user picks which model fills it (MPI-590/599). The resolver helpers, `modelParams` (what carries the pick into the graph), why the picker offers models the user has not installed, and why `modelFamily` is the wrong field |
 | [blending-into-a-photo.md](blending-into-a-photo.md) | **Any flow that puts a generated thing into the user's own photo** (MPI-567, MPI-596) — why relighting cannot happen inside a crop, why every localised crop/stitch leaves a visible rectangle whatever the model, the whole-image-relight → composite-back route that fixes it, how to MEASURE the rectangle, and the generic blend prompt with its conditional shadow physics |
-| [02-media-io.md](02-media-io.md) | Polymorphic media slots; **path-reading input nodes** (MpiLoadImageFromPath / MpiString-video / MpiLoadAudioFromPath); injection routing; self-gating outputs; multi-output capture; the **audio-slot mediaType + filter traps** |
+| [02-media-io.md](02-media-io.md) | Polymorphic media slots; **path-reading input nodes** (MpiLoadImageFromPath / MpiString-video / MpiLoadAudio); injection routing; self-gating outputs; multi-output capture; the **audio-slot mediaType + filter traps** |
 | [03-storage-and-reuse.md](03-storage-and-reuse.md) | Flow input files → **`.preview-assets`** store (not the gallery); sidecar `flowId`/`flowInputs`; reuse routing |
 | [04-overlay-and-shell.md](04-overlay-and-shell.md) | `MpiBaseFlow` / `MpiFlowLibrary`; install progress; Ctrl+Enter runs the open flow; overlay z-order + the spared status bar; dev-gate |
 | [05-verify.md](05-verify.md) | Definition of Done — inject test, node --check, live run (video/audio/multi-output), reuse |
@@ -73,9 +73,14 @@ Three forks decide everything downstream:
    **nothing** (just Run). Declared in `inputSchema` — media slots in `inputSchema.media`,
    other controls DECLARED in `fields` (never a JS component). Media is NEVER a hard requirement in v1, but
    a flow that declares slots and gets none (and no prompt) is empty-run-guarded. See [02](02-media-io.md).
-3. **Output type.** `mediaType` on the `FlowDef` (`'image'|'video'`) — the OUTPUT type, always
-   required. Multi-output = N results of ONE mediaType (mixed image+video in one run is
+3. **Output type.** `mediaType` on the `FlowDef` (`'image'|'video'|'audio'`) — the OUTPUT type,
+   always required. Multi-output = N results of ONE mediaType (mixed image+video in one run is
    explicitly NOT supported). See [02](02-media-io.md).
+   - **`'audio'` (MPI-573, first shipped by Voice Changer in MPI-607)** — the graph titles its
+     SaveAudio node `Output_Audio`, which is the SAME title a video's soundtrack side-channel
+     uses; the declared `mediaType` is the only thing telling the two apart. `generationService`
+     promotes that side-channel to the run's primary output when, and only when, the op declares
+     audio. See [existing-flows/voice-changer.md](existing-flows/voice-changer.md).
 
 ## 0a. Author & prove the workflow in the LOCAL ComfyUI FIRST
 
@@ -97,9 +102,9 @@ Flow-specific notes:
 
 | trap | where |
 |---|---|
-| **Audio slot mediaType is the string `'audio'`**, NOT `MEDIA_TYPE.VIDEO` (the enum has no AUDIO). Wrong type → the role-first match fails → `Input_audio` never injected → output keeps the source's own audio | [02](02-media-io.md) |
+| **An audio slot's mediaType is `MEDIA_TYPE.AUDIO`**, NOT `MEDIA_TYPE.VIDEO`. Wrong type → the role-first match fails → `Input_audio` never injected → output keeps the source's own audio. (The enum HAS an AUDIO member since MPI-573; older notes saying it must be the bare string `'audio'` predate that and describe the same value) | [02](02-media-io.md) |
 | **`filterMediaInputsForModel` drops every `'audio'` slot** unless the model has `capabilities.audio`. A no-model Flow (`model:null`) would lose its audio slot — the filter now keeps ALL slots when there's no model | [02](02-media-io.md) |
-| Flow input nodes read a **filesystem PATH** (MpiLoadImageFromPath `.string`, MpiString-video `.string`, MpiLoadAudioFromPath `.string`), NOT a ComfyUI input-dir upload name. The injector routes them through the path-resolve branch by **title pattern** (`/^input_(video\|audio\|image)(_\d+)?$/i`) + class | [02](02-media-io.md) |
+| Flow input nodes read a **filesystem PATH** (MpiLoadImageFromPath `.string`, MpiString-video `.string`, MpiLoadAudio `.string`), NOT a ComfyUI input-dir upload name. The injector routes them through the path-resolve branch by **title pattern** (`/^input_(video\|audio\|image)(_\d+)?$/i`) + class | [02](02-media-io.md) |
 | Capture is **prefix-match** (`Output_Image*` / `Output_video*`) so numbered siblings qualify; `output_audio` + `output_preview` stay EXACT | [02](02-media-io.md) |
 | Outputs **self-gate in the workflow** (empty path → ExecutionBlocker) → capture-what-ran drops them → NO flow-side `outputSchema`. Placeholder count is ONE (real 1..N land on complete) | [02](02-media-io.md) |
 | Flow input files go to **`Media/.preview-assets/`** (content-addressed, deduped), NOT the gallery. Durable so Reuse resolves them; gallery stays clean | [03](03-storage-and-reuse.md) |

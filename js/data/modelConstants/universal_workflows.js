@@ -67,6 +67,11 @@ export const UNIVERSAL_WORKFLOWS = {
     flowScribObj: {
         workflow: 'flow_draw_it_in.json',
     },
+    // MPI-607 — Chatterbox voice conversion. Five nodes, no model loader: two
+    // MpiLoadAudio paths into FL_ChatterboxVC, out through a native SaveAudio.
+    flowVoiceChanger: {
+        workflow: 'flow_voice_changer.json',
+    },
     // MPI-504 — Krea2 t2i, plus a SAM3 + Klein 4B pass that removes the head from the
     // front body panel. Both run on models the flow declares in `requiredModels`, so
     // this op adds no download of its own beyond the `face-yolov8n` dep.

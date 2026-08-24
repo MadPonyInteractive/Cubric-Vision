@@ -1153,6 +1153,84 @@ export const FLOWS = [
             },
         ],
     },
+    // MPI-607 — Voice Changer, the FIRST audio-only flow: audio in, audio out, no
+    // picture anywhere in the run. `mediaType: 'audio'` is what routes the graph's
+    // `Output_Audio` to a real gallery card instead of a video's soundtrack
+    // side-channel (MPI-573 built that half; this is its first consumer).
+    //
+    // NO MODEL, but nine-tenths of a gigabyte of weights — so `requiredModels: []`
+    // with everything in `requiredDeps`, the head-swap shape. Chatterbox is a FLOW
+    // WITH DEPS, deliberately not a ModelDef (which would force dead fields and an
+    // entry in the model picker) and not a Plugin (which by its own definition is
+    // not a tile in the Flow Library).
+    //
+    // Only the VC half is declared. The five TTS weight ids in assetDeps
+    // (`chatterbox-ve` / `-t3` / `-s3gen` / `-tokenizer` / `-conds`, 4.25GB) belong
+    // to Flow B and stay unowned until it lands — declaring them here would make
+    // every Voice Changer user download a text-to-speech model they never run.
+    //
+    // THE WEIGHT DEPS ARE `targetPath` AND MUST STAY THAT WAY. The pack computes
+    // `<ComfyUI>/models/chatterbox/` from its own `__file__` and never reads
+    // extra_model_paths.yaml, so a weight filed under mpi_models/ is simply absent
+    // and `hf_hub_download` fetches it again — outside the download manager, with no
+    // progress, no sha check, no GC, on every engine reinstall. Same class as RIFE
+    // (MPI-222).
+    {
+        id: 'voice-changer',
+        title: 'Voice Changer',
+        // `preview`/`video` deliberately absent until /mpi-flow-graphics runs — the
+        // tile guards on `flow.preview`, so a missing asset renders no thumb rather
+        // than a broken image, and a placeholder would have to be un-shipped later.
+        description: 'Say it in someone else’s voice. Record yourself performing a line, pick the voice you want it in, and Chatterbox keeps every bit of your delivery — timing, breath, even a laugh or a cough — while swapping the voice itself.',
+        requiredModels: [],
+        // `ComfyUI-MpiNodes` is deliberately NOT declared, even though the graph runs
+        // MpiLoadAudio and MpiInt. `requiredDeps` means "flow-only weights/nodes that
+        // NO MODEL requires" — every model in the registry declares MpiNodes, so
+        // listing it here does not describe this flow, and the cost is real: a flow's
+        // deps are protected UNCONDITIONALLY in `_localSharedDepsMap` (a flow is
+        // always "present", unlike a model), so declaring a dep the whole registry
+        // shares pins it for every uninstall and breaks the MPI-258 B1 invariant that
+        // a tier family with neither transformer installed stays deletable. It
+        // reaches the engine anyway: `getUniversalWorkflowDepIds()` returns EVERY
+        // `type: 'custom_nodes'` dep, and the boot gate installs and drift-repairs
+        // that whole set independently of any model or flow.
+        requiredDeps: [
+            'chatterbox-vc-s3gen',          // 1008.20MB — the VC generator
+            'chatterbox-vc-conds',          // 104.86KB — its conditionals
+            // The one node pack that IS flow-only — no model declares it. Same
+            // reasoning as head-swap declaring comfyui-inpaint-cropandstitch.
+            'ComfyUI_Fill-ChatterBox',      // FL_ChatterboxVC
+        ],
+        operation: 'flowVoiceChanger',
+        workflow: 'flow_voice_changer.json',
+        mediaType: 'audio',
+        inputSchema: {
+            media: [
+                // ONE group, two roles, index-aligned labels — the head-swap shape.
+                // Which clip plays which part is the whole of this flow, so neither
+                // slot can be left to the frame's "Audio 1 / Audio 2" fallback.
+                {
+                    type: 'audio', mode: 'upto', max: 2,
+                    roles: ['audio1', 'audio2'],
+                    labels: ['Your performance', 'Target voice'],
+                },
+            ],
+        },
+        // No `result.compare`: the shared before/after surface is a draggable reveal
+        // bar over two images, and there is nothing to reveal between two waveforms.
+        //
+        // No `fields` and no `steps` either. The seed is filled by `_buildParams`
+        // from the run's own seed (the `Input_Seed` MpiInt convention), and the two
+        // knobs FL_ChatterboxVC does expose — `use_cpu`, `keep_model_loaded` — are
+        // engine plumbing, not choices a user should be making. What DOES decide the
+        // result is how the performance is recorded, and that guidance is measured,
+        // not tunable: perform but do not push; pick a target that sounds nothing
+        // like you (similar voices make the conversion nearly inaudible, which is
+        // what an "it did nothing" report usually is); meet the target's pitch; hold
+        // that pitch steady, because drift within a take drifts the output. Rules 2
+        // and 3 only look contradictory — distance in TIMBRE is what makes the
+        // conversion audible, distance in PITCH is what you compensate for.
+    },
 ];
 
 /** @returns {FlowDef[]} All flow descriptors. */

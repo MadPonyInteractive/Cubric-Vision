@@ -36,7 +36,7 @@ inputSchema: {
 |---|---|---|---|
 | image | `MpiLoadImageFromPath` | `.string` | empty path → `ExecutionBlocker` → its `Output_Image*` branch never runs |
 | video | `MpiString` → VHS `LoadVideoPath` | `.string` | empty → `MpiAnyChecker`/`MpiBlockIfEmpty`/`MpiIfElse` block the branch |
-| audio | `MpiLoadAudioFromPath` (MPI-259) | `.string` | empty → self-gates like the others |
+| audio | `MpiLoadAudio` (MPI-259) | `.string` | empty → self-gates like the others (`block_if_empty`) |
 
 This is why the flow injects a PATH, and why input nodes are NOT stock `LoadImage`/`LoadAudio`
 (those read an input-dir filename and can't self-gate). The old stock `LoadAudio` was the last
@@ -69,9 +69,10 @@ pattern tags it `'audio'`, the path resolves, `_inject` writes `.string`.
 The audio path never reaching `Input_audio` was TWO bugs in the op wiring, both flow-side (the
 browser run was fine — a flow-vs-browser divergence is ALWAYS a flow-side injection/routing bug):
 
-1. **Slot mediaType.** The `audio1` slot MUST be `mediaType: 'audio'` (the string), NOT
-   `MEDIA_TYPE.VIDEO`. `MEDIA_TYPE` only enumerates image + video. The flow's audio media item
-   carries `mediaType: 'audio'`, and `_buildParams` role-first match requires
+1. **Slot mediaType.** The `audio1` slot MUST be audio, NOT `MEDIA_TYPE.VIDEO`. Write it
+   `MEDIA_TYPE.AUDIO` — the enum gained that member in MPI-573, so the bare string `'audio'`
+   this section used to insist on is now just the same value spelled the long way. The flow's
+   audio media item carries `mediaType: 'audio'`, and `_buildParams` role-first match requires
    `item.mediaType === slot.mediaType`. With `VIDEO` on the slot the match failed silently →
    `Input_audio` never set → output kept the source's own audio.
 2. **`filterMediaInputsForModel`.** This helper DROPS every `'audio'` slot unless the model has
@@ -89,7 +90,7 @@ capture path keeps only what actually ran (`executed` events) — a gated-off ou
 | node | gates | how |
 |---|---|---|
 | `MpiLoadImageFromPath` | image | empty/missing path → `ExecutionBlocker` → its `Output_Image*` branch never runs |
-| `MpiLoadAudioFromPath` | audio | empty path → self-gates its branch |
+| `MpiLoadAudio` | audio | empty path → self-gates its branch (`block_if_empty`, default on) |
 | `MpiBlockIfEmpty` | any | passes a value through, blocks downstream if empty |
 | `MpiAnyChecker` | any | passes value + a `has_value` boolean to drive `MpiIfElse` |
 | `MpiHasAudio` | audio | boolean: does the loaded media carry an audio track |

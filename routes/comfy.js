@@ -839,7 +839,23 @@ async function _localModelsCheck(models) {
         for (const dep of model.deps) {
             if (!dep.filename) { depResults.push({ id: dep.id || null, installed: false }); continue; }
             let depPath;
-            if (dep.type === 'custom_nodes') {
+            // MPI-607: `targetPath` FIRST, exactly as resolveComfyPath (routes/shared.js)
+            // does. This branch was missing here, so this function and resolveComfyPath
+            // disagreed about the one dep kind whose whole purpose is to live OUTSIDE the
+            // models root — the download manager wrote the file to <engine>/<targetPath>/
+            // while this check looked for it under the models root, found nothing, and
+            // reported it not-installed FOREVER. Deterministic, so a restart never helped:
+            // the flow's badge never flipped and its install bar stuck at 100% with Cancel
+            // still showing (`depsDone` false while the finished job lingers).
+            //
+            // It stayed hidden because RIFE — the only targetPath dep until now — is an
+            // `engineAsset`, so its install state comes from the engine boot gate
+            // (checkUniversalWorkflowDepsStatus, which DOES use resolveComfyPath) and never
+            // reaches this function. The chatterbox weights are the first targetPath deps
+            // owned by a FLOW, and flow deps are resolved here.
+            if (dep.targetPath) {
+                depPath = getComfyPath(ENGINE_ROOT, ...dep.targetPath.split(/[\\/]+/), dep.filename);
+            } else if (dep.type === 'custom_nodes') {
                 // custom_nodes: YAML does not remap this type — always use engine default
                 depPath = path.join(defaultCustomNodesRoot, dep.filename);
             } else if (customRoot) {

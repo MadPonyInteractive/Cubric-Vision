@@ -357,6 +357,34 @@ test('the Scribble to Object Flow carries its I/O, both model arms and its box (
         `${file} takes a user prompt, so its prompt node MUST stay titled Input_Positive`);
 });
 
+test('the Voice Changer Flow carries its two audio inputs and the audio capture (MPI-607)', () => {
+    // The first audio-only graph in the fleet: two MpiLoadAudio paths into
+    // FL_ChatterboxVC, out through a native SaveAudio. Both inputs fail the same
+    // silent way — the injector skips a title with no node, and MpiLoadAudio's
+    // `block_if_empty` then stops the branch, so a typo here is a run that produces
+    // nothing at all rather than a run that errors.
+    const file = 'flow_voice_changer.json';
+    const have = titlesOf(file);
+    for (const title of [
+        // `input_audio` is the user's performance, `input_audio_2` the target voice.
+        // Swapping them is not a crash, it is a conversion in the wrong direction.
+        'input_audio', 'input_audio_2', 'input_seed',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    // `output_audio`, NOT output_video — this op's SaveAudio is the primary output.
+    // The executor matches this title EXACTLY (numbered siblings are an image/video
+    // affordance only), and generationService promotes it to the run's product on
+    // the strength of the op's declared `mediaType: 'audio'`.
+    assert.ok(have.has('output_audio'), `${file} must carry a capture node titled "output_audio"`);
+
+    // The graph has no text node anywhere, and it must stay that way. `_buildParams`
+    // emits `Input_Positive: ''` on every run whether or not the flow collects a
+    // prompt — same trap Outpaint and Head Swap dodge by leaving the node untitled.
+    assert.ok(!have.has('input_positive'),
+        `${file} takes no prompt — a node titled Input_Positive would be written with ''`);
+});
+
 test('the prompt enhancer graph carries the seed node its caller drives (MPI-504)', () => {
     // MpiBaseFlow._runEnhance sends `injectionParams: { Input_Seed: <random> }` on every
     // press, because step 3's loop is Enhance -> Generate -> Enhance and a fixed seed

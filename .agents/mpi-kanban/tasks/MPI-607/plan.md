@@ -1,5 +1,81 @@
 # TTS in Vision: resolve Qwen3-TTS viability, then wire Chatterbox + Qwen as Flows
 
+> ### 2026-08-23 SESSION 14 -- GATE 2 FLOW A IS BUILT. One gate left on it: Fabio listens.
+>
+> **The Voice Changer Flow exists in the repo and its GRAPH is proven on real audio.**
+> `npm test` 728/728. Read `validation.md` from "session 14" down before touching any of it.
+>
+> Shipped: `comfy_workflows/{raw/,}flow_voice_changer.json` (5 nodes), the `flowVoiceChanger`
+> op in all 4 registries (`appVersionIntroduced` 1.5.0), the `voice-changer` FlowDef
+> (`requiredModels: []`, `mediaType: 'audio'`, **1.057GB** of deps), an inject-titles test
+> case, and `docs/playbooks/add-flow/existing-flows/voice-changer.md`.
+>
+> **Proven live on the bench:** the SHIPPED runtime file, real clips, `status success`,
+> 12.1s, `execution_cached: []`, and node 5 `Output_Audio` emitted a real flac in exactly the
+> shape `_collectComfyAudioUrl` reads. **Perth marking is APPLIED** -- watermark 1.0 on the
+> output vs 0.0 on the source control, which closes that checklist item.
+>
+> **THE ONE THING NOT PROVEN: the APP path.** Install button -> 1.057GB download -> gallery
+> card -> save path -> group type. That is all MPI-573 machinery and none of it has ever run
+> for an audio-producing GENERATION (MPI-573 proved the RECORDER's upload path instead).
+> Nothing has been installed into any engine -- 1.057GB onto Fabio's disk is his call, and
+> his app engine ALREADY carries the node pack, so the cheap route is him pressing Install in
+> his own app rather than a scratch-engine build.
+>
+> **A HANDOFF INSTRUCTION WAS WRONG AND IS CORRECTED: do NOT declare `ComfyUI-MpiNodes` in
+> `requiredDeps`.** It turned the MPI-258 B1 GC test red. `requiredDeps` means "nodes/weights
+> NO MODEL requires" and every model declares MpiNodes; worse, a flow's deps are protected
+> UNCONDITIONALLY (a flow is always "present", unlike a model), so naming a registry-wide dep
+> pinned it for every uninstall. It installs anyway -- `getUniversalWorkflowDepIds()` returns
+> every `type: 'custom_nodes'` dep and the boot gate installs that whole set regardless of any
+> model or flow, which is why `ComfyUI_Fill-ChatterBox` is already in the app engine with
+> nothing declaring it. **Flow B must not declare it either.**
+>
+> **NEXT ACTION: Fabio listens** to `D:\WORK\Images\Outputs\audio\MPI607_VC_flowtest_00001.flac`
+> (his own expressive take -> the gravel senior-male character). Then either the app-side
+> install/run, or `/mpi-flow-graphics` for the tile + hero, then Flow B.
+>
+> Flow B is untouched and still waits on the ~5-8 performance clips. Do not start it here.
+>
+> **UPDATE -- Fabio INSTALLED it from his own app, and that surfaced TWO real bugs, both
+> now fixed. `npm test` 729/729.** The 1.0GB landed byte-exact, but the install bar stuck at
+> 100% with Cancel showing, then the button came back after a restart.
+>
+> ONE root cause in TWO halves, both about `dep.targetPath`:
+> 1. `_localModelsCheck` (`routes/comfy.js`) duplicated path resolution and omitted the
+>    `targetPath` branch that `resolveComfyPath` has -- so it hunted under the MODELS root,
+>    where a targetPath weight can never be. FIXED.
+> 2. `syncModelInstalled` (`js/data/modelRegistry.js`) projected deps to
+>    `{id,type,filename}` and **dropped `targetPath`**, so half 1 fired for nobody. FIXED in
+>    all THREE projections (models/flows/plugins).
+>
+> Hidden until now because RIFE -- the only prior targetPath dep -- is an `engineAsset`, so
+> its state comes from the engine boot gate (which DOES use `resolveComfyPath`) and never
+> reaches this path. The chatterbox weights are the first targetPath deps owned by a FLOW.
+> Guarded by `tests/targetpath-dep-install-state.test.cjs` (both halves, with a count
+> assertion so a drifted regex cannot silently stop checking).
+>
+> **METHOD LESSON, worth more than the bug: verifying a route with a hand-built payload
+> proves NOTHING about the caller.** My first fix verified green against full dep objects
+> and shipped a still-broken app, because the app sends a stripped projection. Reproduce the
+> caller's payload.
+>
+> **NEXT ACTION -- Fabio approved the remote recommendation. Implement it:**
+> `_isImageResident` (`routes/remoteModels.js:225`) returns true for EVERY `targetPath` dep.
+> Narrow it to `dep.targetPath && dep.bakedOnPod`, and add `bakedOnPod: true` to `rife47`
+> (true per `cubric-vision-pod/Dockerfile:376`). Verified facts behind it: chatterbox appears
+> NOWHERE in `c:\AI\Mpi\mpi-ci` (no node pack, no weights, neither image), and `bakedOnPod`
+> already exists on 7 engineAsset weights while rife47 carries only the blanket rule.
+> `targetPath` = WHERE ON DISK; `bakedOnPod` = WHETHER THE POD HAS IT. Chatterbox then reports
+> not-installed on remote, which fails CLOSED. Do not bake chatterbox into the image.
+>
+> Still open after that: Fabio has not LISTENED to the output yet, and the flow has no UI --
+> he wants a record button (MPI-573 recorder), a voice selector off the library, and a
+> custom-voice item. That is a `/mpi-brainstorm`, not a field list: the voice library does not
+> exist and Flow B needs the same picker. Preview art (`/mpi-flow-graphics`) also pending.
+
+
+
 ## Current State
 
 Project mode: scalable-foundation.

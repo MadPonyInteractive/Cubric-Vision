@@ -1,0 +1,28 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "f3f2a8a8-935f-4958-bd75-60cf08c936c6",
+  "task_card": "MPI-607",
+  "task": ".agents/mpi-kanban/state/tasks/006e14b7-b550-43ac-8936-366d7faa6aee.json",
+  "owner_session": ".agents/mpi-kanban/state/sessions/6ef5e1c8-a41e-4fa5-9ad4-1fe059fbb8d0.json",
+  "status": "claimed",
+  "paths": [
+    "comfy_workflows/raw/flow_voice_changer.json",
+    "comfy_workflows/flow_voice_changer.json",
+    "js/data/flowsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/core/operationRegistry.js",
+    "operation_registry.json",
+    "js/data/modelConstants/universal_workflows.js",
+    "tests/inject-params-titles.test.cjs",
+    "docs/playbooks/add-flow/existing-flows/voice-changer.md",
+    "docs/playbooks/add-flow/README.md",
+    "docs/playbooks/add-flow/02-media-io.md",
+    ".agents/mpi-kanban/tasks/MPI-607/",
+    "routes/comfy.js",
+    "tests/targetpath-dep-install-state.test.cjs",
+    "js/data/modelRegistry.js"
+  ],
+  "claimed_at": "2026-08-23T16:50:00Z",
+  "heartbeat_at": "2026-08-23T18:40:00Z",
+  "note": "Gate 2 Flow A - Voice Changer Flow. Registry edits are APPEND-ONLY: MPI-567 and MPI-573 hold stale claims (last heartbeat 07:03Z, 120min timeout) on flowsRegistry/commandRegistry/operationRegistry/operation_registry.json/universal_workflows. No existing entry is touched."
+}

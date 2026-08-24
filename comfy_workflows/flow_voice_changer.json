@@ -1,0 +1,66 @@
+{
+  "1": {
+    "inputs": {
+      "string": "",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Input_Audio"
+    }
+  },
+  "2": {
+    "inputs": {
+      "string": "",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Input_Audio_2"
+    }
+  },
+  "3": {
+    "inputs": {
+      "int": 0
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "4": {
+    "inputs": {
+      "use_cpu": false,
+      "keep_model_loaded": false,
+      "input_audio": [
+        "1",
+        0
+      ],
+      "target_voice": [
+        "2",
+        0
+      ],
+      "seed": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "FL_ChatterboxVC",
+    "_meta": {
+      "title": "FL Chatterbox VC"
+    }
+  },
+  "5": {
+    "inputs": {
+      "filename_prefix": "audio/VoiceChanger",
+      "audio": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "SaveAudio",
+    "_meta": {
+      "title": "Output_Audio"
+    }
+  }
+}

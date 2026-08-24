@@ -1098,6 +1098,32 @@ export const commands = {
         injector: 'headSwap',
     },
 
+    // MPI-607. The FIRST audio-only op: two clips in, one clip out, nothing visual
+    // anywhere in the run. `mediaType: AUDIO` is what promotes the graph's
+    // `Output_Audio` SaveAudio from the video mux's side-channel to the primary
+    // output (generationService, MPI-573) — a video op's soundtrack carries the SAME
+    // node title, and the declared type is the only thing telling the two apart.
+    //
+    // Both slots are `MEDIA_TYPE.AUDIO`, not VIDEO: the role-first match in
+    // `_buildParams` compares the media item's own `mediaType`, so a VIDEO slot never
+    // matches an audio item and the path silently never reaches the node (MPI-259).
+    flowVoiceChanger: {
+        label: 'Flow: Voice Changer',
+        progressLabel: 'Converting the voice',
+        mediaType: MEDIA_TYPE.AUDIO,        // OUTPUT type
+        requiresImages: 0,                  // media is never a hard requirement at the op layer
+        mediaInputs: [
+            { key: 'audio1', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio',   required: false },
+            { key: 'audio2', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio_2', required: false },
+        ],
+        // The graph has no text node at all — FL_ChatterboxVC converts a performance,
+        // it does not read one. Deliberately no node titled `Input_Positive`: a
+        // promptless flow still emits `Input_Positive: ''` on every run, which would
+        // wipe a baked instruction (the outpaint trap).
+        promptRequired: false,
+        universal: true,
+    },
+
     flowCharacterSheet: {
         label: 'Flow: Character Sheet',
         progressLabel: 'Drawing the sheet',

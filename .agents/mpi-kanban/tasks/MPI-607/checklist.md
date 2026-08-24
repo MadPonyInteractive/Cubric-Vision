@@ -20,13 +20,16 @@
   - [x] Gate 1c - 7 weight deps as targetPath (the RIFE mechanism), sha256 + byte counts verified against HF
   - [x] Gate 1d - yamlHelper skips targetPath deps (killed 8 junk folder keys incl. the pre-existing rife47.pth)
   - [x] Gate 1e - import coverage: every module the shipped TTS+VC path imports is in the curated set
-  - [ ] Gate 2 FLOW A - Voice Changer (record -> pick voice -> FL_ChatterboxVC). 1.0GB, no TTS, no library. SHIPS FIRST
-  - [ ] Gate 2 FLOW A verify - live run on a scratch engine (CUBRIC_ENGINE_ROOT), then Fabio listens
+  - [x] Gate 2 FLOW A - Voice Changer BUILT: graph (5 nodes) + op in 4 files + FlowDef, 1.057GB, requiredDeps x3. npm test 728/728
+  - [~] Gate 2 FLOW A verify - GRAPH proven live on the bench (12.1s, execution_cached [], real flac out). APP path (install button -> gallery card -> save path -> group type) still unrun; Fabio listens
   - [ ] Gate 2 FLOW A - user guidance copy, 4 rules: perform don't push / pick a target unlike you / meet its pitch / hold that pitch steady
   - [ ] Gate 2 FLOW A - copy should SELL the passthrough: your laugh, breath and timing in someone else's voice (Flow B cannot do this)
+  - [x] Gate 2 FLOW A - install RAN from the app: 1.0GB landed byte-exact. Found+fixed a REAL bug - _localModelsCheck ignored dep.targetPath, so the weights read not-installed forever (stuck 100% bar). npm test 729/729
+  - [ ] REMOTE twin of that bug: _isImageResident returns true for EVERY targetPath dep, but the Pod bakes no chatterbox weights. Needs a policy call (bake vs volume-install). Flow A cannot ship remote until answered
+  - [ ] Gate 2 FLOW A - UI: record button (MPI-573 recorder) + voice selector from the library + custom-voice library item. NOT designed yet
   - [ ] Gate 2 FLOW B - Text to Speech (FL_ChatterboxTTS -> VC). 4.25GB, needs the performance clips
   - [ ] Gate 2 FLOW B - accent routing: none -> base model, <lang> -> multilingual (+3.0GB, optional-dep question OPEN)
-  - [ ] Prove Perth marking is APPLIED to a generated file (installed != applied; failure is one stdout line)
+  - [x] Perth marking APPLIED - proven on this flow's own output: watermark 1.0 vs 0.0 on the source control
 - [x] Turbo - NOT SHIPPED. Reason is REDUNDANCY, not weakness: VC passes laughs/coughs/shushes through natively, so the tags win nothing, and a tuned baseline would need a node patch. NOT measured fairly - the node hides exaggeration + cfg_weight and runs both at 0.0
 - [x] VC passes NON-VERBAL sound through (cough, shush) - Flow A exclusive, Flow B structurally cannot
 - [x] Pitch: matching the target helps (confirmed); pitch DRIFT within a take drifts the output

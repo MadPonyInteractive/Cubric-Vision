@@ -1281,3 +1281,257 @@ So: **not shipped, and not because it is bad -- because it is redundant, and pro
 would cost a fork.** If a future release exposes these parameters, or brings paralinguistic
 tags to the standard model, the question reopens with the evidence above as its starting
 point. Do not re-run the old test; run it at a tuned baseline or not at all.
+
+## 2026-08-23 (session 14) -- GATE 2 FLOW A BUILT. Graph proven live; app path still unrun.
+
+The Voice Changer Flow exists in the repo. `npm test` 728/728.
+
+### What shipped
+
+| piece | where |
+|---|---|
+| graph, 5 nodes | `comfy_workflows/raw/flow_voice_changer.json` + `comfy_workflows/flow_voice_changer.json` |
+| op, 4 files | `flowVoiceChanger` in commandRegistry / universal_workflows / operationRegistry / operation_registry.json (`appVersionIntroduced` 1.5.0) |
+| descriptor | `voice-changer` FlowDef, `requiredModels: []`, 3 `requiredDeps`, `mediaType: 'audio'` |
+| test | `tests/inject-params-titles.test.cjs` -- pins both audio inputs, the audio capture, AND the absence of `input_positive` |
+| doc | `docs/playbooks/add-flow/existing-flows/voice-changer.md` |
+
+The graph was built IN the ComfyUI editor (playwright-cli driving `LiteGraph.createNode`),
+never hand-written -- so widget ordering is the editor's. The repo converter's output and
+the editor's own `graphToPrompt()` were diffed input-by-input: **0 diffs**.
+
+`sync-raw-workflows.mjs` REFUSED to run (MPI-567 has an uncommitted generated workflow and
+the script rebuilds all templates). The bare-name file routes straight to a runtime file
+with no orchestrate step, so the runtime copy was written from the same converter stdout
+the sync writes verbatim, then passed `validate-injection-rules.mjs`. MPI-567's file was
+not touched.
+
+### LIVE RUN -- the graph works (bench, 8188, under a GPU lease)
+
+The SHIPPED runtime file, real clips, real paths:
+
+- source `high_pitch_exp_fabio.wav` -> target `A3_REF_senior_male_gravel_character.wav`
+- `status: success`, **12.1s**, `execution_cached: []` (a real run, not a cache replay)
+- node 5 `Output_Audio` emitted `MPI607_VC_flowtest_00001.flac`, `subfolder: 'audio'`,
+  `type: 'output'` -- exactly the shape `_collectComfyAudioUrl` reads (`nodeOutput.audio[0]`)
+- output landed at `D:\WORK\Images\Outputs\audio\` (the bench's redirected output dir, NOT
+  `<ComfyUI>\output` -- the known trap)
+
+**Fabio has not listened to it yet.** That is the outstanding user-ux gate.
+
+### PERTH MARKING IS APPLIED -- checklist item CLOSED
+
+"Installed" is not "applied", so it was measured on this flow's own output:
+
+| file | `PerthImplicitWatermarker.get_watermark` |
+|---|---|
+| the VC output | **1.0** |
+| its source clip (control) | 0.0 |
+
+The control is load-bearing: a detector stuck at 1.0 would read as a pass without it.
+Bench log also shows `loaded PerthNet (Implicit) at step 250,000` on every VC call.
+
+### targetPath + byte counts CONFIRMED against a real install
+
+The bench's `models/chatterbox/chatterbox_vc/` holds `s3gen.pt` at **1,057,165,844** bytes
+and `conds.pt` at **107,374** -- byte-identical to the Gate 1 `assetDeps.js` entries, in the
+exact `targetPath` directory those entries name. Gate 1's weight wiring is verified by a
+real on-disk install, not just by reading HF.
+
+### A REAL BUG WAS FOUND AND FIXED: do NOT declare `ComfyUI-MpiNodes`
+
+The handoff's stated dep list included `ComfyUI-MpiNodes`. Declaring it turned
+`tests/shared-dep-uninstall-direction.test.cjs` RED -- MPI-258 B1, the invariant that a
+tier family with neither transformer installed stays deletable (it once stranded ~19GB).
+
+Root cause, not a test tweak:
+
+1. `requiredDeps` is documented as "flow-only weights/nodes that NO MODEL requires". EVERY
+   model declares `ComfyUI-MpiNodes`, so the declaration never described this flow.
+2. A flow's deps are protected **unconditionally** in `_localSharedDepsMap` -- a model must
+   have a disk footprint to defend its deps, but a flow is always "present". So naming a
+   registry-wide shared dep pinned it for every uninstall.
+3. It installs anyway: `getUniversalWorkflowDepIds()` returns EVERY `type: 'custom_nodes'`
+   dep, and the engine boot gate installs and drift-repairs that whole set independently of
+   any model or flow.
+
+Point 3 is confirmed empirically -- **`ComfyUI_Fill-ChatterBox` is already present in the
+app engine's `custom_nodes/`** (`engine/ComfyUI_windows_portable/ComfyUI/custom_nodes/`)
+with nothing declaring it and no flow installed, purely because Gate 1 added it as a
+`custom_nodes` dep. The chatterbox weights dir there is absent, which is correct: the
+weights are what the flow's Install button fetches.
+
+`ComfyUI_Fill-ChatterBox` IS declared -- no model requires it, the same reason head-swap
+declares `comfyui-inpaint-cropandstitch`.
+
+**Consequence for Flow B: do not put `ComfyUI-MpiNodes` in its `requiredDeps` either.**
+
+### Doc drift fixed (4 stale facts, all verified against the engine)
+
+- `MpiLoadAudioFromPath` **does not exist** -- `/object_info` has no such class; the real
+  one is `MpiLoadAudio` (what `flow_ltx_foley` uses). Fixed in `02-media-io.md` (x2) and
+  `add-flow/README.md` (x2).
+- `add-flow/README.md` section 0.3 said mediaType is `'image'|'video'` -- now documents `'audio'`.
+- Two places said "`MEDIA_TYPE` only enumerates image + video / the enum has no AUDIO".
+  `MEDIA_TYPE.AUDIO` has existed since MPI-573; both corrected in place.
+
+### What is NOT verified
+
+- **The APP path.** Install button -> download the 1.057GB -> gallery card -> save path ->
+  group type. All MPI-573 machinery, none of it exercised by an audio-producing GENERATION
+  (MPI-573 proved the RECORDER's upload path). This is the remaining risk and the reason
+  the flow is not called done.
+- Nothing was installed into any engine. `:3000`, `:8188` and `:48188` were all live and
+  the app engine was left alone -- 1.057GB onto the user's disk is his call.
+- **No preview art.** `preview`/`video` are deliberately absent from the FlowDef; the tile
+  guards on `flow.preview`, so it renders no thumb rather than a broken image.
+  `/mpi-flow-graphics` is the next pass.
+
+### 2026-08-23 (session 14, cont.) -- FIRST REAL INSTALL. Found and fixed a REAL BUG: `/comfy/models/check` ignored `targetPath`.
+
+Fabio installed the flow from his own app. The download worked, the toast fired, **and the
+progress bar stuck at 100% with Cancel still showing.** Root-caused and fixed.
+
+#### The symptom, and what it was NOT
+
+Not staleness, and **a restart would not have helped** -- the check is deterministic and
+would have answered the same way forever.
+
+Ground truth gathered before touching anything:
+
+- app.log ends at `node commit marker stamped for ComfyUI_Fill-ChatterBox`; the backend
+  reached `_setModelStatus(job,'complete')` + `_broadcast('download:complete')`
+  (downloadManager.js ~2752) -- those are simply not logged, which is why the log looked
+  truncated. The toast proves they fired.
+- The weights ARE on disk in the app engine, byte-exact:
+  `engine/ComfyUI_windows_portable/ComfyUI/models/chatterbox/chatterbox_vc/`
+  `s3gen.pt` 1,057,165,844 and `conds.pt` 107,374.
+- **The LIVE app's own `/comfy/models/check` reported both weights `installed: false`.**
+  That is the negative control for the fix below, taken from the real running system.
+
+#### Root cause
+
+`_localModelsCheck` (`routes/comfy.js`) DUPLICATES path resolution and omitted the
+`dep.targetPath` branch that `resolveComfyPath` (`routes/shared.js`) has. Two resolvers,
+one honouring `targetPath` and one not. For a `targetPath` weight the check looked under
+the MODELS root -- the one place such a weight is guaranteed never to be, since the entire
+purpose of `targetPath` is to pin it under the ENGINE where the node's hard-coded scan
+path looks (MPI-222).
+
+Chain to the stuck bar: dep reads missing -> `flowAvailability().missingDeps` non-empty ->
+`depsDone` false in `MpiFlowLibrary._installProgress` -> `installing` stays true while the
+finished job sits at `progress: 1` -> bar pinned at 100%, Cancel still rendered, badge
+never flips to READY.
+
+#### Why it never surfaced before
+
+**RIFE was the only `targetPath` dep in the registry, and it carries `engineAsset: true`.**
+`getUniversalWorkflowDepIds()` includes every `engineAsset`, so RIFE's install state comes
+from the engine BOOT GATE (`checkUniversalWorkflowDepsStatus`, which uses
+`resolveComfyPath` and therefore resolves it correctly) and never reaches
+`_localModelsCheck` at all. Confirmed live: RIFE returned `installed: true` from the same
+pre-fix endpoint that returned false for the chatterbox pair.
+
+**The chatterbox weights are the first `targetPath` deps owned by a FLOW**, and flow deps
+resolve through `_localModelsCheck`. Gate 1's targetPath decision was correct; it simply
+walked into an untested corner.
+
+#### The fix
+
+`routes/comfy.js` -- a `dep.targetPath` branch FIRST in `_localModelsCheck`'s dep loop,
+mirroring `resolveComfyPath` exactly. Nothing else changed.
+
+Verified in-process (no app restart, user's session untouched), with two controls:
+
+| case | result |
+|---|---|
+| the two chatterbox VC weights (on disk) | `installed: true` |
+| CONTROL rife47 (already worked) | `installed: true` -- no regression |
+| CONTROL chatterbox-t3 (genuinely absent) | `installed: false` -- the fix is not "say yes to everything" |
+
+Pinned by `tests/targetpath-dep-install-state.test.cjs`, which builds a throwaway engine
+root via `CUBRIC_ENGINE_ROOT` and asserts present-reads-installed AND absent-reads-missing.
+**`npm test` 729/729.**
+
+`routes/` is server-side, so **the running app must be restarted to pick this up.**
+
+#### 🔴 THE REMOTE TWIN HAS THE SAME FAMILY OF BUG -- NOT FIXED, NEEDS A DECISION
+
+`_isImageResident` (`routes/remoteModels.js:225`) returns `true` for **every** `targetPath`
+dep, unconditionally, so on a remote session every chatterbox weight is reported present
+without checking anything. That rule was written for RIFE, whose weight the Pod Dockerfile
+genuinely bakes into `comfyui-frame-interpolation/ckpts/rife/`. **The Pod image bakes no
+chatterbox weights**, so a remote-connected user would see the flow as installed and then
+fail inside ComfyUI.
+
+Not fixed here because it is not a one-line correction -- it needs a policy call: bake the
+chatterbox weights into the Pod image, or make them volume-installed and drop the blanket
+`targetPath -> image-resident` assumption in favour of the explicit `bakedOnPod` flag that
+already exists for exactly this distinction. **Flow A cannot ship remote until this is
+answered.** Local is unaffected.
+
+#### The fix above was only HALF of it -- the payload stripped the field
+
+After the restart the button was STILL there, and the reason is the other half of the same
+root cause. `syncModelInstalled` (`js/data/modelRegistry.js`) projects every dep down to a
+few fields before POSTing the check:
+
+```js
+.map(dep => ({ id: dep.id, type: dep.type, filename: dep.filename }))   // targetPath DROPPED
+```
+
+So the server-side branch fired for nobody -- the field never arrived. **My first
+verification missed this because I sent FULL dep objects; the app does not.** Measured
+against the live server, same endpoint, same weights on disk:
+
+| payload | result |
+|---|---|
+| OLD (id/type/filename) | `installed: false` -- both weights false |
+| NEW (+ targetPath) | `installed: true` |
+
+Fixed in all THREE projections (models, flows, plugins) -- a `targetPath` dep can be owned
+by any of the three entities. `tests/targetpath-dep-install-state.test.cjs` now guards BOTH
+halves: the server resolves targetPath against the engine root, AND the projections still
+carry the field (with a count assertion so a drifted regex cannot silently stop checking).
+**`npm test` 729/729.**
+
+**Lesson worth keeping: verifying a route with a hand-built payload proves nothing about
+the caller.** Reproduce the projection the app actually sends.
+
+### 🔴 THE REMOTE TWIN -- analysed, recommendation below, NOT implemented
+
+`_isImageResident` (`routes/remoteModels.js:225`) returns `true` for **every** `targetPath`
+dep, unconditionally. Verified facts:
+
+- RIFE genuinely IS baked: `cubric-vision-pod/Dockerfile:376`
+  `dl "$RIFE_DIR" rife47.pth ...` into `comfyui-frame-interpolation/ckpts/rife/`. The
+  blanket rule was written for it and is true FOR IT.
+- **Chatterbox appears NOWHERE in `c:\AI\Mpi\mpi-ci`** -- grep across both
+  `cubric-vision-pod/` and `cubric-vision-builder/` returns nothing. No node pack, no
+  weights, in neither image.
+- `bakedOnPod` already exists and is carried by 7 engineAsset weights; **rife47 does NOT
+  carry it** and relies purely on the blanket targetPath rule.
+
+So on a remote session the flow reports itself installed and then dies inside ComfyUI --
+and it would die even with the weights resolved, because `FL_ChatterboxVC` is not in the
+image at all.
+
+**Recommendation: do NOT bake chatterbox into the Pod image yet. Stop the lie instead.**
+
+1. Narrow the rule to `if (dep.targetPath && dep.bakedOnPod) return true;` and add
+   `bakedOnPod: true` to `rife47` (which is TRUE, per the Dockerfile line above).
+   `targetPath` describes WHERE ON DISK a weight goes; `bakedOnPod` describes WHETHER THE
+   POD HAS IT. Conflating two unrelated properties is the actual defect -- the same shape
+   as the `_localModelsCheck` bug this session already fixed.
+2. The chatterbox weights then fall through and report NOT installed on remote, which is
+   correct and **fails closed** -- a badge saying "get it" is recoverable, a Run that dies
+   inside ComfyUI is not (the principle already stated in `flowsRegistry.js`'s dep-cache
+   comment).
+3. Only when Flow A is proven and worth remote support: either bake the pack + the 1.0GB
+   into the image, or teach the wrapper a `targetPath` destination (today a bare filename
+   yields an empty type and the wrapper rejects it -- which is the real reason the blanket
+   rule existed).
+
+Cost of the recommended change is small, but it touches the remote engine path, so it wants
+either a `__cpu__` Pod check or an explicit logic-only sign-off. **Local is unaffected
+either way.**

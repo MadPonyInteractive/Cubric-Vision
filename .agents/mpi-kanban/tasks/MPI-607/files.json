@@ -8,6 +8,20 @@
     "js/data/modelConstants/dependencies.js",
     "js/data/modelConstants/models.js",
     "comfy_workflows/raw/",
-    "docs/playbooks/add-flow/existing-flows/"
+    "docs/playbooks/add-flow/existing-flows/",
+    "comfy_workflows/raw/flow_voice_changer.json",
+    "comfy_workflows/flow_voice_changer.json",
+    "js/data/flowsRegistry.js",
+    "js/core/operationRegistry.js",
+    "operation_registry.json",
+    "js/data/modelConstants/universal_workflows.js",
+    "tests/inject-params-titles.test.cjs",
+    "docs/playbooks/add-flow/existing-flows/voice-changer.md",
+    "docs/playbooks/add-flow/README.md",
+    "docs/playbooks/add-flow/02-media-io.md",
+    "js/data/commandRegistry.js",
+    "routes/comfy.js",
+    "tests/targetpath-dep-install-state.test.cjs",
+    "js/data/modelRegistry.js"
   ]
 }
