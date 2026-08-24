@@ -78,6 +78,10 @@ reg query "HKLM\SYSTEM\CurrentControlSet\Control\CI\Policy" /v VerifiedAndReputa
 ```
 `0x1` = Smart App Control **enforced** (what you need) · `0x0` = off · `0x2` = evaluation.
 
+An enforced box is necessary but not sufficient: while the build is unsigned, SAC's
+verdict is a per-binary cloud decision, so a pass here is one sample and not a
+general result. See § "The third outcome" below before writing it up as a pass.
+
 ```
 dir /r CubricVision.exe
 ```
@@ -132,6 +136,46 @@ makes the rest of the instructions read as wrong.
 Say plainly that the build is **not code-signed**. There is no certificate and no
 NSIS installer (user decision, 2026-07-29): signing starts SmartScreen's
 reputation clock, it does not skip it.
+
+### The third outcome: no prompt, no button, the app never opens
+
+There are **three** Windows outcomes, not two, and the release body only ever
+described two. Smart App Control can refuse an unsigned exe outright — no dialog,
+no **Run anyway**, nothing to click. The user double-clicks and nothing happens.
+
+Measured 2026-08-24 on a client Windows 11 laptop, SAC enforced, on a sibling
+MadPony Electron build (MPI Shop Assistant — same shape as Cubric):
+`CodeIntegrity/Operational` logged **3033 + 3077 + 3118**, *"did not meet the
+Enterprise signing level requirements"*. Three attempts, three blocks, no UI.
+
+**The 2026-07-30 pass above does not generalise, and neither does this block.**
+Microsoft's rule is: SAC allows *publicly trusted signed code* **or** *unsigned
+code the Intelligent Security Graph predicts to be safe*. An unsigned build is on
+the second branch — a cloud model's per-binary guess that can change over time.
+One box passing proves nothing about the next one, or about the same box next
+month. Do not write either result into the release body as the expected case.
+
+Two things that are **not** workarounds, so do not offer them:
+
+- **Clearing mark-of-the-web does nothing.** SAC judges signature and cloud
+  reputation, not MOTW. Unblocking the file only ever helped against SmartScreen.
+- **There is no per-app exception.** By design. The only user-side escape is
+  turning SAC off machine-wide, which is close to one-way (the Settings toggle
+  greys out afterwards). Never put that in a release body.
+
+When a user reports "it just doesn't open", have them run this — it is the only
+thing that separates a SAC block from an ordinary crash:
+
+```powershell
+Get-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -MaxEvents 20 |
+  Where-Object Id -in 3033,3076,3077,3118 | Select-Object TimeCreated, Id, Message | Format-List
+```
+
+Absence of a dialog is not evidence of success. The 2026-07-30 run looked like a
+clean pass and this log is what tells "allowed" from "blocked silently" apart.
+
+The standing fix is code signing, which moves the build onto the first branch and
+off the lottery — tracked in **MPI-616**, not decided here.
 
 **Windows users on a build older than 1.3.0 cannot be reached by an update** —
 Smart App Control blocks the update scripts too. They must download the full zip.

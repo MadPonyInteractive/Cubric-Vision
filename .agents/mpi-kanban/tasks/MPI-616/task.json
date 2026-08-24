@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-616",
+  "title": "Smart App Control can HARD-BLOCK an unsigned exe, not just prompt - the 2026-07-30 measurement does not generalise",
+  "description": "Measured 2026-08-24 on a client Windows 11 laptop: SAC with VerifiedAndReputablePolicyState=1 (enforced) refused to launch an unsigned Electron exe outright. CodeIntegrity/Operational logged 3033 + 3077 + 3118 - 'attempted to load ... MPI Shop Assistant.exe that did not meet the Enterprise signing level requirements or violated code integrity policy (Policy ID:{0283ac0f-fff1-49ae-ada1-8a933130cad6})'. No dialog with a 'Run anyway', no override, no allowlist - SAC has no per-app exception by design. Removing mark-of-the-web did nothing, because SAC judges signature + Microsoft cloud reputation, not MOTW. That app is a sibling MadPony Electron/electron-builder NSIS build, so its shape matches Cubric's. This CONTRADICTS what docs/releases/github-release-checklist.md records from 2026-07-30 (MPI-387 D): a MOTW-carrying unsigned CubricVision.exe under enforced SAC opened directly with no prompt at all. Both measurements are real, so the conclusion is that SAC's verdict is PER BINARY - a cloud model decision - and one passing box proves nothing about the next one. The checklist currently tells release authors to say 'Windows may show a prompt'; it has no branch for the case where the app simply never opens and the user has no button to press. Separately, grep across electron-builder.yml, package.json, workflows and scripts finds NO signing configuration anywhere in this repo. The 2026-07-29 decision not to sign was reasoned as 'signing starts SmartScreen's reputation clock, it does not skip it' - which is about SmartScreen, and does not answer SAC, where the failure mode is a hard block instead of a click-through. Worth re-opening with Azure Trusted Signing (~$9.99/mo, wires into electron-builder) as the candidate. NOT re-raising the solved half: SAC blocking .vbs/.bat/.cmd was fixed in 1.3.0 by taking scripts out of the launch and update chain.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-08-24T13:08:03Z",
+  "updated_at": "2026-08-24T13:41:47Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

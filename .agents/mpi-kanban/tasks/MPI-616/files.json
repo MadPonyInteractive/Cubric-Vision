@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "docs/releases/github-release-checklist.md",
+    ".agents/mpi-kanban/tasks/MPI-616/**"
+  ]
+}
