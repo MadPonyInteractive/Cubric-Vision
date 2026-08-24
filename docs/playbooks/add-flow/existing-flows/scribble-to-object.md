@@ -206,6 +206,66 @@ hallucinates a third figure with its own shadow.
 is a stage-1 limit, so the blend cannot repair it. Fabio's call, 2026-08-22: **warn in the step
 copy**, rather than auto-raising strength for a small drawing (which fights § Control strength).
 
+## The framing suffix — `full body` beats SDXL's portrait prior, `full object in frame` does not
+
+Node **#18 `Append Clean Background`** bolts a fixed suffix onto the user's text before the
+render phase encodes it. It shipped as:
+
+```
+isolated object on a plain white background, centered, full object in frame,
+product shot, no scenery, no ground, no shadow
+```
+
+`full object in frame` was the only clause asking for full-body framing and it **loses to SDXL's
+portrait prior**. *"a Latina in a red dress at the beach"* came back framed at the shins — so no
+feet, so no contact point, so `#103`'s contact shading had nothing to ground and **no shadow
+appeared at all**. The blend model was not refusing; it was never given a place to put one. The
+flow silently required the user to know to type *"A full body far shot of…"* themselves.
+
+Strengthened 2026-08-24 (MPI-618) to lead with the framing, in both twins:
+
+```
+full body far shot, entire subject in frame from head to toe, zoomed out with empty
+margin on all sides, isolated on a plain white background, centered, product shot,
+no scenery, no ground, no shadow
+```
+
+Three things about that edit are load-bearing:
+
+- **The framing clause moved to the FRONT of the suffix.** The suffix is appended *after* the
+  user's words, so its own tail is already the weakest position in the prompt — burying the one
+  clause that has to beat a prior at position 4 of 7 is most of why it lost.
+- **`subject`, not `object`.** The flow was renamed away from "object" because Fabio draws
+  *characters* with it, and "object" is exactly the word that does not read as a body.
+- **`no shadow` and `no ground` stay.** The render phase must return a clean cutout; every
+  shadow is the blend phase's job. Deleting them bakes a shadow into the cutout that then fights
+  the scene's real light.
+
+**It is FRAMING, not a LoRA.** The first read was that a style LoRA suppressed the shadow. The
+graph record from the 2026-08-23 live session disproves it — run `013` ran with **no LoRA** on
+the old prompt and was still wrong; only the prompt change (`015`) fixed it.
+
+**Test it on a HUMAN.** Run `008`'s reptile got a correct cast shadow on the sand under the old
+suffix: a creature on two legs with a tail reads as full-body to SDXL without being asked. The
+reptile passes either way and will hide a regression here.
+
+**Do not chase shadow DIRECTION by prompting** — [../../blending-into-a-photo.md](../../blending-into-a-photo.md)
+records that telling the model where the light is makes it *worse*, which is why the box step
+asks for room and never for light direction. Separate, known limit.
+
+### The baked negative is DEAD at runtime — found here, deliberately not changed
+
+Node **#19** is titled `Input_Negative` and carries a baked
+`blurry, low quality, watermark, text, multiple objects, cropped`. This flow declares **no**
+negative field, so `_buildParams` sends `Input_Negative: ''` on every run and `_inject` writes it
+— **the baked negative, `cropped` included, never reaches the sampler.** Same defect MPI-594
+found on Outpaint, whose fix was to leave the node untitled.
+
+It was **not** fixed under MPI-618, on purpose, and the reason is not squeamishness: the KSampler
+runs `lcm` at **cfg 1.5**, where the negative conditioning barely steers at all. Shipping the
+untitle in the same change would have bought little, and would have made the single live run a
+two-variable test of a prompt-behaviour fix. Card it separately if the negative is ever wanted.
+
 ## Carried in from MPI-454 (Place tool)
 
 - **No feather on the cut-out.** Ruled closed by Fabio: the detailing pass is what blends, and

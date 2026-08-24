@@ -1,0 +1,8 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "comfy_workflows/flow_draw_it_in.json",
+    "comfy_workflows/raw/flow_draw_it_in.json",
+    "docs/playbooks/add-flow/existing-flows/scribble-to-object.md"
+  ]
+}

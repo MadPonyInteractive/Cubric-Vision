@@ -3,10 +3,7 @@
   "next_id": 619,
   "columns": {
     "todo": [
-      "MPI-618",
       "MPI-617",
-      "MPI-616",
-      "MPI-614",
       "MPI-613",
       "MPI-612",
       "MPI-605",
@@ -73,6 +70,9 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-618",
+      "MPI-616",
+      "MPI-614",
       "MPI-615",
       "MPI-603",
       "MPI-608",
@@ -115,8 +115,17 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-24T13:20:00Z",
+  "updated_at": "2026-08-24T13:52:00Z",
   "events": [
+    {
+      "at": "2026-08-24T13:52:00Z",
+      "type": "task.moved",
+      "task": "MPI-618",
+      "actor": "claude",
+      "from": "todo",
+      "to": "doing",
+      "note": "todo -> doing. Strengthening node 18 framing suffix in both workflow twins."
+    },
     {
       "at": "2026-08-23T16:35:53Z",
       "type": "task.moved",

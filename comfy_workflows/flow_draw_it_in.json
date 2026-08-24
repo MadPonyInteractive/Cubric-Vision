@@ -247,7 +247,7 @@
   },
   "18": {
     "inputs": {
-      "string_b": "isolated object on a plain white background, centered, full object in frame, product shot, no scenery, no ground, no shadow",
+      "string_b": "full body far shot, entire subject in frame from head to toe, zoomed out with empty margin on all sides, isolated on a plain white background, centered, product shot, no scenery, no ground, no shadow",
       "delimiter": ", ",
       "string_a": [
         "17",
