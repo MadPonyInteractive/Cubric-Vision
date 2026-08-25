@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "comfy_workflows/raw/flow_draw_it_in.json",
+    "comfy_workflows/flow_draw_it_in.json",
+    "js/data/flowsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/data/modelConstants/universal_workflows.js",
+    "js/core/operationRegistry.js",
+    "operation_registry.json",
+    "tests/flow-model-choice.test.cjs",
+    "tests/inject-params-titles.test.cjs",
+    "tests/flow-result-compare.test.cjs",
+    "docs/playbooks/add-flow/existing-flows/scribble-to-object.md",
+    ".agents/mpi-kanban/tasks/MPI-621/",
+    "tests/flow-lora-rack.test.cjs",
+    "docs/playbooks/add-flow/blending-into-a-photo.md",
+    "docs/playbooks/add-flow/ui/paint-gizmo.md",
+    "docs/README.md"
+  ]
+}
