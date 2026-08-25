@@ -603,8 +603,70 @@ choose a voice without auditioning all sixty.
 
 #### Still worth one answer
 
-Does **file 1** — direct TTS from that same character clip, no VC — also sound 1930s New York?
-If yes, the voice simply is that and VC only passed it along. If file 1 sounds British and
-only the VC outputs sound New York, then the accent is coming from the VC SOURCE (Fabio's own
-denoised take, via the TTS stage) and is overriding the character's, which would be a stronger
-claim than the one recorded above.
+Answered in the next entry, and it is the stronger claim.
+
+---
+
+### 2026-08-25 — 🔴 VC REPLACES THE TARGET'S ACCENT. The character's own accent does not survive.
+
+Fabio on file 1 — direct TTS from the character clip, **no VC anywhere in the graph**:
+
+> *"That file does not have an accent. It's just got a normal American accent, I guess, a
+> modern one."*
+
+So the character voice, cloned directly, is neutral modern American. And files 2 and 3 — the
+same character through VC, and a completely different character through VC — both came out as
+1930s New York. **The accent is not the character's. It arrives with the VC stage.**
+
+| clip | route | accent heard |
+|---|---|---|
+| 1 | TTS from the character, **no VC** | modern American, neutral |
+| 2 | same character, **through VC** | 1930s New York |
+| 3 | gravel senior male, **through VC** | 1930s New York |
+
+Files 2 and 3 share one thing only: the VC **source**. So the source's accent is imposed on
+the output and the target's is **overwritten**, not blended. This is the earlier entry's
+conclusion confirmed against a target whose own accent had been measured directly — the
+version recorded there assumed the character was the 1930s voice, which was wrong.
+
+Fabio also closed the R question completely: *"this type of accent, the New York Italian
+mobster accent, they sometimes eat up the R's anyway, so on that kind of accent I think it's
+normal."* Nothing left to explain.
+
+#### Identity does not leak. ACCENT does. Those are different channels.
+
+MPI-607 measured that character consistency HOLDS across performers — two performance clips
+0.47 apart drove one character and Fabio still heard one actor. That still stands, and it is
+not in tension with this: **timbre/x-vector identity comes from the target, articulation and
+prosody come from the source.** VC transplants the voice and keeps the speech.
+
+#### 🔴 CONSEQUENCE FOR PHASE 2, and it is the biggest one on this card
+
+**Whoever records the performance clips sets the accent of every `character` voice in the
+library.** A character voice is only ever heard through the VC route, so its own accent — the
+thing a user picks it for — is never delivered. Sixty voices with sixty accent labels would
+all speak in the accent of the performance clip grid.
+
+Three consequences, in order of how much they cost:
+
+1. **The `accent` field is meaningless for `kind: 'character'`.** It describes the direct
+   route only. Either hide it in the picker for character voices, or label it as what it is.
+   This upgrades the earlier "the picker must not promise an accent the VC route will not
+   deliver" from an inference to a measured requirement.
+2. **The clip grid needs an accent decision before authoring starts.** If Fabio records all of
+   R1–R5, every character in the library inherits his articulation. That may be entirely fine
+   for v1 — it is one consistent house accent, and Flow A users hear their OWN accent anyway
+   because they are the source. But it is a decision, not an accident, and it is much cheaper
+   to make now than after 12–30 clips exist.
+3. **It is also an opportunity.** Accent could become a real axis of the grid — the same
+   emotion recorded by performers with different accents — which would give the library
+   something a per-voice `accent` label was never going to deliver on the character route.
+   Strictly a later card; noted so the option is not closed off by how Phase 2 is filed.
+
+#### 🟢 And it makes Flow A's copy honest
+
+Flow A's promise is "your laugh, your breath, your timing, in someone else's voice". The user
+IS the source there, so their accent surviving is the feature, not a bug. This measurement is
+the evidence for that copy — and simultaneously the evidence that the *character's* accent is
+not on offer. Both belong in the guidance rewrite already pending on
+`docs/playbooks/add-flow/existing-flows/voice-changer.md`.

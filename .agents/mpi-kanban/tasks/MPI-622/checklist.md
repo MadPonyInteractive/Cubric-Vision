@@ -33,15 +33,26 @@
 - [ ] 🔴 **Library requirement: sample/audition text must be PHONETICALLY COMPREHENSIVE.**
       The library set shares one text that never says a stop+/r/ onset, so a voice cannot
       demonstrate its own articulation. A pangram-style line, not a pretty one
-- [x] 🟢 **ANSWERS AN OPEN MPI-607 GATE**: accent SURVIVES VC and comes from the SOURCE - one
-      source into two cross-gender targets gave the same 1930s New York accent. Flow B's
-      accent gate opens. MPI-607 checklist item "Does the accent SURVIVE the VC stage?"
+- [x] 🟢 **ANSWERS AN OPEN MPI-607 GATE**: accent SURVIVES VC, comes from the SOURCE, and
+      **OVERWRITES the target's**. Proven against a target whose own accent was measured
+      directly: the character is neutral modern American on the no-VC route and 1930s New York
+      through VC, as is a completely different character from the same source. Flow B gate
+      opens. MPI-607 checklist item ticked
+- [ ] 🔴 **BLOCKS PHASE 2 - accent decision before any clip is authored.** Whoever records the
+      performance clips sets the accent of EVERY `character` voice, because a character voice
+      is only ever heard through VC. Sixty voices with sixty accent labels would all speak in
+      the clip grid's accent. Fabio recording R1-R5 = one consistent house accent, which may
+      be fine for v1 - but it is a decision, and it is far cheaper now than after 12-30 clips
+- [x] Identity does NOT leak but ACCENT does - different channels. Timbre comes from the
+      target, articulation and prosody from the source. Not in tension with MPI-607's
+      "character consistency holds across performers"
 - [ ] 🔴 **`accent` cannot be taken from the generation prompt or corpus metadata.** Asked
       for "refined British", got Al Capone - VoiceDesign's American prior again (MPI-607
       CLOSED NEGATIVE). Needs a human labelling pass, or ship the field EMPTY. A wrong accent
       label is worse than a missing one
-- [ ] For a `character` voice the accent the user hears is the PERFORMANCE CLIP's, not the
-      character's. The picker must not promise an accent the VC route will not deliver
+- [ ] `accent` is MEANINGLESS for `kind: character` - it describes the direct route only.
+      Hide it in the picker for character voices, or label it as what it is. Measured, no
+      longer an inference
 - [x] ~~Emotion set proposals (`Sarcastic`/`Dry`, `Menacing`/`Manic`)~~ **WITHDRAWN** - Fabio:
       they collapse into the low-affect cells the set already has, and there are too many
       emotions to cover. The six stand. Emotion MIXING (manic = happy+angry) is a real gap the
