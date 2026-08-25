@@ -143,3 +143,91 @@ is the project's stated bet. **Phase 2 — not this card.**
    man…"* into a photoreal scene).
 5. `npm test` **and** `npm run test:desktop`.
 6. Live run in the app.
+
+---
+
+## THE OPEN MEASUREMENT IS DONE — 2026-08-25. And it is not the extend factor.
+
+Seven Klein 9B edits, fixed seed 424242, one prompt (`Replace the drawn scribble with a man
+sitting on the sand.`), run straight at the local engine on 48188. Plate: `paint_001.png`,
+896×1088, scribble measured by diffing against `t2i_005.png` at **x 770..820, y 445..519 =
+51 × 75 px**, stroke median 3px.
+
+| rung | crop | MP | scribble after 1MP normalise | box region correct? |
+|---|---|---|---|---|
+| 1× | 66×118 | 0.008 | ~850px | ✓ man right — but crop IS the box, so a 10× upscale smear is returned |
+| 2× | 132×236 | 0.031 | ~425px | ✓ |
+| **3.5×** | 231×413 | 0.095 | **~243px** | ✓ **best** — sharpest, most scene preserved |
+| 4.25× | 281×502 | 0.141 | ~200px | ✓ (a tiger head invented at the crop edge — outside the box, discarded) |
+| 5× | 330×590 | 0.195 | ~170px | ✗ man far too big |
+| 6× | 396×708 | 0.280 | ~142px | ✗ too big and displaced, tiger regenerated larger |
+| whole | 896×1088 | 0.975 | ~76px | ✗✗ **destructive** — the woman deleted, the tiger fused into the man as a chimera |
+
+### The rule to build against
+
+**The governing variable is how many pixels the drawn scribble occupies after Klein's ~1MP
+normalisation — NOT the extend factor.** Threshold ≈ **200px**. Below it the scribble stops
+being an anchor and the model composes the subject freely, at whatever scale reads naturally
+for the frame.
+
+```
+scribble_after = scribble_source_px × sqrt(1.0 / crop_MP)
+→  crop_MP  ≤  (scribble_source_px / 200)²
+```
+
+Plate-independent and directly computable from the drawn bbox, which the graph already has.
+**So the crop must be sized from the drawing, not set to a fixed factor.** For this plate's
+75px scribble that is `crop_MP ≤ 0.141`; the qualitative sweet spot was ~243px (0.095 MP).
+Target band: **~240–425px after normalisation.**
+
+This maps straight onto the node already in the graph. `InpaintCropImproved` carries
+`output_resize_to_target_size: true` with `output_target_width/height: 1024`, so it *already*
+normalises the crop to ~1MP itself. The knob is `context_from_mask_extend_factor`, and it has
+to be **derived per run** so the resized crop leaves the scribble above threshold.
+
+### Only the BOX has to be correct, not the crop
+
+At 4.25× the model invented a whole enlarged tiger head from a sliver at the crop edge. That
+does not matter: the crop is context, the stitch returns only the box. **Judge every rung on
+the box region alone** — a wider crop hallucinating at its margins is free.
+
+### Two predictions in this brief were WRONG — corrected here
+
+**Law 1 does NOT transfer to this route.** No rung showed the glowing-blob signature, not even
+1× with almost no scene in frame. Law 1 was measured on a *relight* op — match an
+already-composited object to a scene, which genuinely needs global reference. Klein here
+**generates** the subject and only needs to know what light to render it under, which the sand
+colour and shadow direction inside a tight crop already carry. Different task, different
+requirement. Do not re-derive this; do not cite Law 1 against a tight crop on this route.
+
+**The failure direction is the opposite of what was predicted.** The brief expected legibility
+to break at the wide end. It never does — every rung produced a man. What breaks is
+**anchoring**: scale and position.
+
+### And there is no absolute minimum drawn size
+
+The crop manufactures resolution, so a 75px scribble with 3px strokes works fine — crop so it
+lands above threshold. **The ~96px ControlNet ink floor does not carry over**, because that
+floor came from stage 1 upscaling a starved control hint; there is no ControlNet here. The
+user-facing size hint on the paint step should be revisited rather than ported.
+
+### The one thing still unmeasured at the tight end
+
+At 1× the crop equals the box, so the ~10× upscale smear lands back in the photo. Whether it
+survives the downscale to 66×118 is **untested**. There is therefore a practical floor on crop
+size too, for a different reason than anchoring — upscale artefacts in the *returned* region.
+Measure before allowing the derived crop to collapse onto the box.
+
+### Harness
+
+`scratchpad/run.js` — loads `klein_9b_t2i.json`, injects `Input_wf_type: 4` (kleinEdit),
+`Input_Image`, `Input_Positive`, `Input_Seed`, POSTs to `127.0.0.1:48188/prompt`, polls
+`/history`, pulls the image. ~14s per run. Produces **no gallery card**, which is correct for a
+measurement — the skill's warning against `/proxy/prompt` is about user generations. Injection
+mirrors `comfyController._inject` and **throws on a title that matches no node**, so a typo
+cannot silently run the graph on its baked values.
+
+Note `/proxy/*` is the REMOTE forwarder and is wrong for a local engine; and both 8188 and
+48188 answer on this machine (8188 = standalone bench, 48188 = app engine) sharing one models
+root, so a probe must pick deliberately. 48188 was used so 9B stayed resident once rather than
+loading a second copy into a 16GB card.
