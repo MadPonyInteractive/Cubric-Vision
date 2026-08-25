@@ -143,3 +143,21 @@ test of a prompt-behaviour change. Fabio's call whether it earns its own card.
 `docs/playbooks/add-flow/existing-flows/scribble-to-object.md` was already 291 lines (over the
 200-line budget, and not on `docs/README.md`'s exemption list) before this change; it is now 351.
 Flagged, not split — splitting it is not this card's job.
+
+---
+
+## CLOSED 2026-08-25 — shipped, and SUPERSEDED before its live run
+
+The suffix change shipped in `fe525d8e` and stands. The live run (DoD item 2) was **never
+performed and is no longer owed**: MPI-621 rebuilds this flow on a single Klein edit and
+deletes the SDXL render phase that node #18 lives on. Validating the suffix would have been a
+live test of a phase being removed.
+
+**The card is not a waste, and its finding outlived it.** Chasing why the subject came back
+cropped is what surfaced the framing/prior interaction, which led to asking whether the render
+phase needed to exist at all. Fabio's own test answered that in one image: `kleinEdit_003`,
+one sentence, 15s, with the man's leg **behind** the tiger — the case this architecture could
+not do at all.
+
+The second defect this card documented — node #19's baked negative wiped by an injected empty
+string (MPI-594 class) — dies with the same graph. Not carried forward.

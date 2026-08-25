@@ -3,11 +3,11 @@
   "id": "MPI-618",
   "title": "Draw It In: node #18's suffix is too weak to beat SDXL's portrait prior, so the subject lands cropped and nothing casts a shadow",
   "description": "Root cause found and evidenced under MPI-567, deliberately not fixed there. The render phase's prompt suffix (node #18 `Append Clean Background`) says `full object in frame`, which loses to SDXL's portrait framing prior: a prompt like \"a Latina in a red dress at the beach\" comes back cropped at the shins, so there is no contact point, so the blend phase's contact shading (#103) has nothing to ground and no shadow appears. Today the user has to know to type \"full body far shot\" themselves. Strengthen #18 so the flow stops requiring that. Verify on a live run - this is a prompt-behaviour change, not a graph-wiring one.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-24T13:05:00Z",
-  "updated_at": "2026-08-24T14:02:00Z",
+  "updated_at": "2026-08-25T04:12:00Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl"

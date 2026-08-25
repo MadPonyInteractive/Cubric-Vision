@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-621",
+  "title": "Draw It In, rebuilt Klein-only: crop, edit, stitch - no render phase, no paste, no mask",
+  "description": "Replaces the SDXL render + rembg + paste + LanPaint architecture with a single Klein 9B edit on a cropped region. Proven live 2026-08-25: kleinEdit_003 put the man behind the tiger in 15s on one image and one sentence, against 38s and no interaction from the shipped flow. Crop-stitch stays (Klein resamples the whole input to a megapixel target); the feather stays (Law 2 re-grade). 9B only - 4B left the users ink in the output. Open measurement: context_from_mask_extend_factor vs Law 1. Supersedes MPI-618s live run and MPI-596s design. Design: brief.md.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-25T04:11:00Z",
+  "updated_at": "2026-08-25T04:11:00Z",
+  "labels": [
+    "feature",
+    "flow",
+    "klein",
+    "refactor"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}
