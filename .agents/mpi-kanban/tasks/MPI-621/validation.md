@@ -6,8 +6,8 @@
 
 | check | result |
 |---|---|
-| `node scripts/verify-workflow.mjs comfy_workflows/flow_draw_it_in.json` | ✓ 34 nodes, validates against the app engine on 48188 |
-| `npm test` | **729 / 729 pass**, 0 fail |
+| `node scripts/verify-workflow.mjs comfy_workflows/flow_draw_it_in.json` | ✓ 35 nodes, validates against the app engine on 48188 |
+| `npm test` | **737 / 737 pass**, 0 fail |
 | `npm run test:desktop` | **26 / 26 pass** |
 | `npm run lint` | clean (`--max-warnings=0`) |
 | `npm run release:check` | passed (op registry ↔ `operation_registry.json` mirror in sync at `1.1`) |

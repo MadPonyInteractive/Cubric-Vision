@@ -108,13 +108,15 @@
   photographic source and is weaker at Anime and Cartoon.
 
 - Draw It In puts something new into a photo you already have — a person, an animal, an object.
-  Load the picture, draw roughly where the thing goes and how big it should be, say what you drew,
-  and box the area to blend. An SDXL model renders the subject from your drawing and FLUX.2 Klein
-  blends it into the scene, matching the light and casting a shadow on the ground. The drawing
-  carries the shape and the words carry the subject, so the better you draw it the more detail
-  survives and the less you have to fight the prompt — an outline with a pose and a tail gives the
-  model far more to work with than a filled blob. Two dropdowns pick the Render and Blend models,
-  each with its own LoRA rack, and it downloads no weights of its own.
+  Load the picture, draw roughly where the thing goes, how big it is and what pose it holds, say
+  what you drew, and box the area to blend. FLUX.2 Klein 9B renders it straight into the scene,
+  matching the light, casting a shadow on the ground and letting whatever is already in front of
+  it overlap its edges — so it can stand behind things in the photo, not only on top of them. The
+  drawing carries the placement and the words carry the subject, so the better you draw it the
+  more detail survives and the less you have to fight the prompt: an outline with a pose and a
+  tail gives the model far more to work with than a filled blob. The words carry style too — ask
+  for a cartoon man and only he comes back a cartoon, the photo around him is untouched. Only the
+  area you box is ever re-rendered; the rest of your picture comes back exactly as it was.
 
 - Outpaint extends a picture past its edges. Drop an image, pick the shape you want — or drag
   the frame freely — and pull it out over the sides you want filled; the new area shows as black,

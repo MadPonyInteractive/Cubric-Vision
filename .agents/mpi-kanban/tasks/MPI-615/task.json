@@ -3,11 +3,11 @@
   "id": "MPI-615",
   "title": "SDXL + Krea 2 gain the Inpaint op (wf_type 5), and the re-exported LTX graph lands",
   "description": "Fabio re-exported three raw graphs: sdxl_t2i_template and krea2_t2i_template grew a LanPaint inpaint branch on Input_wf_type 5, and ltx_i2v_t2v_template was rebuilt for quality. Sync raw->API->runtime, then wire the shared `inpaint` op into all five SDXL cards and both Krea 2 cards.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-24T08:58:40Z",
-  "updated_at": "2026-08-24T09:18:42Z",
+  "updated_at": "2026-08-25T18:51:20Z",
   "links": {
     "plan": "plan.md",
     "checklist": "checklist.md",
@@ -15,6 +15,5 @@
     "files": "files.json",
     "events": "events.jsonl",
     "handoffs": "handoffs/"
-  },
-  "activeSessionTitle": "Inpaint wiring + the three re-exported graphs"
+  }
 }
