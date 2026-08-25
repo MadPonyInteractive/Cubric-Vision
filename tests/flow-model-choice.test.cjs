@@ -467,11 +467,14 @@ test('flowService carries the resolved model into the run', () => {
     );
 });
 
-test('the Scribble to Object arms match the weights, on BOTH slots (MPI-567)', async () => {
-    // The first flow with two INDEPENDENT choosable slots: an SDXL checkpoint for the
-    // render phase and a Klein edit model for the blend. Both resolve separately, and a
-    // drifted filename in either is silent — the title matches, the value is a name no
-    // loader has, and ComfyUI reports "not in list" only if it is lucky.
+test('the Draw It In arm matches the weights, and the encoder moves with it (MPI-567)', async () => {
+    // WAS two independent slots — an SDXL checkpoint for a render phase and a Klein model
+    // for a blend phase. MPI-621 deleted the render phase outright, so there is ONE slot
+    // and it is Klein 9B only. That is a correctness call, not a trim: under style load 4B
+    // left the user's own drawn ink in the output, which is the worst failure available.
+    //
+    // A drifted filename here is silent — the title matches, the value is a name no loader
+    // has, and ComfyUI reports "not in list" only if it is lucky.
     const { state, registry } = await load();
     const flow = registry.getFlowById('scribble-object');
     const { DEPS } = await import('../js/data/modelConstants/dependencies.js');
@@ -479,56 +482,33 @@ test('the Scribble to Object arms match the weights, on BOTH slots (MPI-567)', a
     const graph = readJson('comfy_workflows/flow_draw_it_in.json');
     const byTitle = t => Object.values(graph).find(n => n?._meta?.title === t);
 
-    const SDXL = ['sdxl-realistic', 'sdxl-nsfw', 'ill-anime-beauty', 'ill-anime', 'pony-mix'];
-    state.s_installedModelIds = [...SDXL, 'klein-4b', 'klein-9b'];
+    state.s_installedModelIds = ['klein-4b', 'klein-9b'];
 
-    // Slot 1 — the render checkpoint. Every candidate's arm must name its OWN weight.
-    const ckpt = byTitle('Input_Base_Model');
-    assert.ok(ckpt && ckpt.class_type === 'CheckpointLoaderSimple',
-        'the render phase must carry ONE injectable CheckpointLoaderSimple');
-    assert.equal(typeof ckpt.inputs.ckpt_name, 'string', 'ckpt_name must be a widget, not a link');
-    for (const id of SDXL) {
-        registry.setFlowModel('scribble-object', id);
-        assert.equal(registry.flowModelParams(flow).Input_Base_Model, basename(id),
-            `${id}'s arm does not name its own checkpoint`);
-    }
-    registry.setFlowModel('scribble-object', 'sdxl-realistic');
-    assert.equal(registry.flowModelParams(flow).Input_Base_Model, ckpt.inputs.ckpt_name,
-        'the recommended arm must restate the graph\'s baked checkpoint, or the default silently moves');
+    assert.deepEqual(flow.requiredModels.map(s => s.models), [['klein-9b']],
+        'ONE slot, 9B only — a second candidate here would reintroduce the ink-survival arm');
+    assert.ok(!byTitle('Input_Base_Model'),
+        'the SDXL render phase is deleted; a checkpoint loader left behind would be dead weight '
+        + 'that the model picker no longer feeds');
 
-    // Slot 2 — the blend model, and the reason this test exists. Klein 9B needs
-    // qwen_3_8b_int8_convrot and 4B needs qwen_3_4b; pairing 9B with 4B's encoder dies
-    // with a shape error that reads as a LanPaint bug (MPI-600). So the CLIP must move
-    // WITH the checkpoint, on every arm.
+    // Klein 9B needs qwen_3_8b_int8_convrot and 4B needs qwen_3_4b; pairing 9B with 4B's
+    // encoder dies with a shape error that reads as a sampler bug (MPI-600). So the CLIP
+    // moves WITH the checkpoint — on the arm AND in the bake.
     const unet = byTitle('Input_Edit_Model');
     const clip = byTitle('Input_Edit_Clip');
-    assert.ok(unet && unet.class_type === 'UNETLoader', 'the blend phase needs an injectable UNETLoader');
+    assert.ok(unet && unet.class_type === 'UNETLoader', 'the edit phase needs an injectable UNETLoader');
     assert.ok(clip && clip.class_type === 'CLIPLoader',
-        'the CLIPLoader must be TITLED — untitled, the 9B arm keeps 4B\'s encoder and dies on a shape error');
+        'the CLIPLoader must be TITLED — untitled, the arm cannot move the encoder at all');
     assert.equal(typeof clip.inputs.clip_name, 'string', 'clip_name must be a widget, not a link');
 
-    for (const [model, unetDep, clipDep] of [
-        ['klein-4b', 'klein-4b-transformer', 'qwen3-4b-clip'],
-        ['klein-9b', 'klein-9b-transformer', 'qwen3-8b-clip'],
-    ]) {
-        registry.setFlowModel('scribble-object', model);
-        const params = registry.flowModelParams(flow);
-        assert.equal(params.Input_Edit_Model, basename(unetDep), `${model}: wrong transformer`);
-        assert.equal(params['Input_Edit_Clip.clip_name'], basename(clipDep),
-            `${model}: the encoder must move with the checkpoint, or the arm dies on a shape error`);
-    }
+    registry.setFlowModel('scribble-object', 'klein-9b');
+    const params = registry.flowModelParams(flow);
+    assert.equal(params.Input_Edit_Model, basename('klein-9b-transformer'), 'wrong transformer');
+    assert.equal(params['Input_Edit_Clip.clip_name'], basename('qwen3-8b-clip'),
+        'the encoder must move with the checkpoint, or the arm dies on a shape error');
 
-    registry.setFlowModel('scribble-object', 'klein-4b');
-    const baked = registry.flowModelParams(flow);
-    assert.equal(baked.Input_Edit_Model, unet.inputs.unet_name);
-    assert.equal(baked['Input_Edit_Clip.clip_name'], clip.inputs.clip_name);
-
-    // Picking in one slot must leave the other alone — that is what makes them slots.
-    registry.setFlowModel('scribble-object', 'ill-anime');
-    const both = registry.flowModelParams(flow);
-    assert.equal(both.Input_Base_Model, basename('ill-anime'));
-    assert.equal(both.Input_Edit_Model, basename('klein-4b-transformer'),
-        'a render-slot pick must not disturb the blend slot');
+    // The arm and the bake must agree, or the default silently moves on a re-export.
+    assert.equal(params.Input_Edit_Model, unet.inputs.unet_name);
+    assert.equal(params['Input_Edit_Clip.clip_name'], clip.inputs.clip_name);
 });
 
 test('the CLIP arm has to be DOTTED, and the box has to go through its injector (MPI-567)', () => {
@@ -556,7 +536,11 @@ test('two candidates sharing a NAME are told apart in the picker (MPI-567)', asy
     const { registry } = { registry: await import('../js/data/flowsRegistry.js') };
     const { sizeTierLetter, tierLetterFor, getModelById, MODELS } =
         await import('../js/data/modelRegistry.js');
-    const flow = registry.getFlowById('scribble-object');
+    // MOVED OFF THE SCRIBBLE FLOW 2026-08-25 (MPI-621): Draw It In is Klein 9B ONLY now,
+    // and a slot with one candidate is not a choice, so it has no dropdown to
+    // disambiguate. The character sheet still picks between the two Klein cards for its
+    // head-removal phase, so the fixture moves there.
+    const flow = registry.getFlowById('character-sheet');
     // `flowModelChoices`, not `flowModelSlots`: only the choices rows carry `recommended`,
     // and only a slot with a real choice in it gets a dropdown to disambiguate at all.
     const blend = registry.flowModelChoices(flow).find(s => s.models.includes('klein-9b'));
@@ -603,10 +587,12 @@ test('two candidates sharing a NAME are told apart in the picker (MPI-567)', asy
     assert.ok(!/[^e]tierLetterFor\s*\(/.test(src),
         'the install-gated helper here would hide the letter for the uninstalled candidate');
 
-    // Fabio, 2026-08-22: 9B blends better and is the recommendation, even though the graph
-    // is baked 4B. Declaration order IS preference order.
-    assert.equal(blend.models[0], 'klein-9b', 'the blend slot must recommend 9B');
-    assert.equal(blend.recommended, 'klein-9b');
+    // Declaration order IS preference order. The character sheet recommends 4B — that is
+    // what the graph bakes and what every sheet has ever been judged on — so this asserts
+    // the mechanism carries the FIRST entry through, whichever it is, rather than
+    // hardcoding a preference this test does not own.
+    assert.equal(blend.recommended, blend.models[0],
+        'the recommendation must be the slot\'s first candidate');
 });
 
 test('an unpainted run FAILS CLOSED, and the box reaches Input_Box (MPI-567)', async () => {
@@ -685,7 +671,13 @@ test('every ControlNet workflow shares ONE strength mapping (MPI-567)', () => {
             const float = Array.isArray(from) ? graph[from[0]] : null;
             if (float?._meta?.title !== 'Input_Control_strength') continue;
 
-            // ONE documented exception, not a loosened rule.
+            // NO EXCEPTIONS LEFT — and read the history before adding one.
+            //
+            // `flow_draw_it_in.json` held the only one, at 0.6, until MPI-621 rebuilt it
+            // on a single Klein edit with no ControlNet at all. The exception is gone
+            // because the graph it described is gone, NOT because the rule was relaxed.
+            // The paragraphs below are kept whole: they are the bar a future flow has to
+            // clear to earn one, and the reasoning is what makes 0.5 defensible.
             //
             // WHY 0.5 IS THE HOUSE NUMBER (Fabio, 2026-08-23): it is the minimum safe
             // ceiling across EVERY control type an SDXL card offers — not just scribble
@@ -711,7 +703,7 @@ test('every ControlNet workflow shares ONE strength mapping (MPI-567)', () => {
             // flow diverging SILENTLY. A new flow that wants its own ceiling has to come
             // here and say why — and the bar is the one above: show that its graph cannot
             // reach the control types the 0.5 floor protects.
-            const CEILING = { 'flow_draw_it_in.json': 0.6 };
+            const CEILING = {};
             const expected = CEILING[file] ?? 0.5;
 
             assert.equal(norm.inputs.output_max, expected,
@@ -723,9 +715,11 @@ test('every ControlNet workflow shares ONE strength mapping (MPI-567)', () => {
         }
     }
 
-    // The sweep is worthless if it silently matched nothing.
-    assert.ok(checked.includes('flow_draw_it_in.json'),
-        'the scribble flow must be covered by this sweep - it is the one that diverged');
-    assert.ok(checked.length >= 6,
-        `expected the SDXL family plus chroma plus the flow, found ${checked.length}`);
+    // The sweep is worthless if it silently matched nothing. It used to anchor on the
+    // scribble flow by name, because that was the workflow that diverged; MPI-621 deleted
+    // its ControlNet, so the anchor is the SDXL family it was measured against.
+    assert.ok(checked.some(f => f.startsWith('t2i_sdxl')),
+        'the sweep must still reach the SDXL t2i workflows - they are where 0.5 was set');
+    assert.ok(checked.length >= 5,
+        `expected the SDXL family plus chroma, found ${checked.length}`);
 });

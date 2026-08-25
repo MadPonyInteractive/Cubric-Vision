@@ -74,8 +74,13 @@ export const OPERATION_REGISTRY = {
     // MPI-594 — the Outpaint flow. Same stamping reason as the two above.
     flowOutpaint: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
     promptEnhance: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
-    // MPI-567 — the Scribble to Object flow. Same stamping reason as the three above.
-    flowScribObj: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
+    // MPI-567 — the Draw It In flow. Same stamping reason as the three above.
+    // `1.1` (MPI-621, 2026-08-25): the Klein-only rebuild REMOVED two parameters,
+    // `Input_Control_Net` and `Input_Control_strength`, along with the ControlNet the
+    // graph no longer carries. Reuse of an older card degrades quietly rather than
+    // breaking — `comfyController._inject` no-ops on a title that matches no node — so
+    // the bump is the record of the removal, not a gate.
+    flowScribObj: { latestVersion: '1.1', appVersionIntroduced: '1.5.0' },
     // MPI-607 — the Voice Changer flow, the first op that OUTPUTS audio. Same
     // stamping reason as the four above.
     flowVoiceChanger: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },

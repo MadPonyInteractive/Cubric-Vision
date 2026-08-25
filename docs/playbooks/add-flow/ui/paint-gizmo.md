@@ -51,12 +51,14 @@ value → { paint: <PNG data URL>, size: {w, h}, color, brushSize, brush, mode }
 `composePaintLayer` turns that into an **RGBA PNG at `size`** — transparent everywhere the user
 did not paint.
 
-**The composite would be a silent, plausible failure.** Scribble-to-object's graph reads this one
-file TWICE: its RGB over flat white becomes the ControlNet hint, and its **ALPHA** becomes the
-crop rect (`InvertMask` → `MpiMaskSquareBbox`). Hand it a flattened photo and the alpha is the
-whole frame, so the crop selects everything and the object renders from a hint that is the entire
-picture — no error anywhere. The same trap in a different costume as the session-1 `cutout`
-preview whose alpha was ~90% opaque (scribble-to-object.md § Three traps).
+**The composite would be a silent, plausible failure.** Draw It In's graph reads this one file
+TWICE: its RGB is composited onto the user's photo to make the image the edit model sees, and its
+**ALPHA** is the drawn region — both the composite mask and, through `InvertMask` →
+`MpiMaskSquareBbox`, the measurement the context crop is derived from. Hand it a flattened photo
+and the alpha is the whole frame: the "drawing" replaces the photo entirely, and the derived crop
+factor clamps to 1.0 because the drawn bbox is the image. No error anywhere. The same trap in a
+different costume as the session-1 `cutout` preview whose alpha was ~90% opaque
+([../blending-into-a-photo.md](../blending-into-a-photo.md) § Two traps that cost real time).
 
 ### `size` is the SOURCE's size, not the layer's
 

@@ -35,7 +35,7 @@
   },
   "4": {
     "inputs": {
-      "padding": 48,
+      "padding": 0,
       "mask": [
         "3",
         0
@@ -46,31 +46,13 @@
       "title": "Drawing Bbox"
     }
   },
-  "5": {
-    "inputs": {
-      "batch_size": 1,
-      "color": 16777215,
-      "width": [
-        "2",
-        2
-      ],
-      "height": [
-        "2",
-        3
-      ]
-    },
-    "class_type": "EmptyImage",
-    "_meta": {
-      "title": "Flat Background"
-    }
-  },
   "6": {
     "inputs": {
       "x": 0,
       "y": 0,
       "resize_source": false,
       "destination": [
-        "5",
+        "1",
         0
       ],
       "source": [
@@ -84,156 +66,7 @@
     },
     "class_type": "ImageCompositeMasked",
     "_meta": {
-      "title": "Paint On Flat"
-    }
-  },
-  "7": {
-    "inputs": {
-      "image": [
-        "6",
-        0
-      ],
-      "width": [
-        "4",
-        3
-      ],
-      "height": [
-        "4",
-        3
-      ],
-      "x": [
-        "4",
-        1
-      ],
-      "y": [
-        "4",
-        2
-      ]
-    },
-    "class_type": "ImageCrop",
-    "_meta": {
-      "title": "Crop Hint To Bbox"
-    }
-  },
-  "8": {
-    "inputs": {
-      "preprocessor": "ScribblePreprocessor",
-      "resolution": 1024,
-      "image": [
-        "7",
-        0
-      ]
-    },
-    "class_type": "AIO_Preprocessor",
-    "_meta": {
-      "title": "AIO Aux Preprocessor"
-    }
-  },
-  "9": {
-    "inputs": {
-      "preprocessor": "CannyEdgePreprocessor",
-      "resolution": 1024,
-      "image": [
-        "7",
-        0
-      ]
-    },
-    "class_type": "AIO_Preprocessor",
-    "_meta": {
-      "title": "AIO Aux Preprocessor"
-    }
-  },
-  "10": {
-    "inputs": {
-      "int": 1
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Input_Control_Net"
-    }
-  },
-  "11": {
-    "inputs": {
-      "any_1": [
-        "8",
-        0
-      ],
-      "any_2": [
-        "9",
-        0
-      ],
-      "select": [
-        "10",
-        0
-      ]
-    },
-    "class_type": "MpiAnySwitch",
-    "_meta": {
-      "title": "Hint"
-    }
-  },
-  "12": {
-    "inputs": {
-      "ckpt_name": "SDXL_Realistic.safetensors"
-    },
-    "class_type": "CheckpointLoaderSimple",
-    "_meta": {
-      "title": "Input_Base_Model"
-    }
-  },
-  "13": {
-    "inputs": {
-      "control_net_name": "ControlNet-Union-ProMax-SDXL.safetensors"
-    },
-    "class_type": "ControlNetLoader",
-    "_meta": {
-      "title": "Load ControlNet Model"
-    }
-  },
-  "14": {
-    "inputs": {
-      "type": "hed/pidi/scribble/ted",
-      "control_net": [
-        "13",
-        0
-      ]
-    },
-    "class_type": "SetUnionControlNetType",
-    "_meta": {
-      "title": "Set Union ControlNet Type"
-    }
-  },
-  "15": {
-    "inputs": {
-      "type": "canny/lineart/anime_lineart/mlsd",
-      "control_net": [
-        "13",
-        0
-      ]
-    },
-    "class_type": "SetUnionControlNetType",
-    "_meta": {
-      "title": "Set Union ControlNet Type"
-    }
-  },
-  "16": {
-    "inputs": {
-      "any_1": [
-        "14",
-        0
-      ],
-      "any_2": [
-        "15",
-        0
-      ],
-      "select": [
-        "10",
-        0
-      ]
-    },
-    "class_type": "MpiAnySwitch",
-    "_meta": {
-      "title": "Control Net"
+      "title": "Paint On Photo"
     }
   },
   "17": {
@@ -247,129 +80,19 @@
   },
   "18": {
     "inputs": {
-      "string_b": "full body far shot, entire subject in frame from head to toe, zoomed out with empty margin on all sides, isolated on a plain white background, centered, product shot, no scenery, no ground, no shadow",
-      "delimiter": ", ",
+      "delimiter": " ",
       "string_a": [
+        "103",
+        0
+      ],
+      "string_b": [
         "17",
         0
       ]
     },
     "class_type": "StringConcatenate",
     "_meta": {
-      "title": "Append Clean Background"
-    }
-  },
-  "19": {
-    "inputs": {
-      "value": "blurry, low quality, watermark, text, multiple objects, cropped"
-    },
-    "class_type": "PrimitiveStringMultiline",
-    "_meta": {
-      "title": "Input_Negative"
-    }
-  },
-  "20": {
-    "inputs": {
-      "clip": [
-        "176",
-        1
-      ],
-      "text": [
-        "18",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "21": {
-    "inputs": {
-      "clip": [
-        "176",
-        1
-      ],
-      "text": [
-        "19",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "22": {
-    "inputs": {
-      "float": 1
-    },
-    "class_type": "MpiFloat",
-    "_meta": {
-      "title": "Input_Control_strength"
-    }
-  },
-  "23": {
-    "inputs": {
-      "input_min": 0,
-      "input_max": 1,
-      "output_min": 0,
-      "output_max": 0.6,
-      "clamp": true,
-      "mode": "linear",
-      "value": [
-        "22",
-        0
-      ]
-    },
-    "class_type": "MpiNormalizeValue",
-    "_meta": {
-      "title": "Mpi Normalize Value"
-    }
-  },
-  "24": {
-    "inputs": {
-      "start_percent": 0,
-      "end_percent": 0.569,
-      "positive": [
-        "20",
-        0
-      ],
-      "negative": [
-        "21",
-        0
-      ],
-      "control_net": [
-        "16",
-        0
-      ],
-      "image": [
-        "11",
-        0
-      ],
-      "vae": [
-        "12",
-        2
-      ],
-      "strength": [
-        "23",
-        0
-      ]
-    },
-    "class_type": "ControlNetApplyAdvanced",
-    "_meta": {
-      "title": "Apply ControlNet"
-    }
-  },
-  "25": {
-    "inputs": {
-      "width": 1024,
-      "height": 1024,
-      "batch_size": 1
-    },
-    "class_type": "EmptyLatentImage",
-    "_meta": {
-      "title": "Empty Latent Image"
+      "title": "Join Prompt"
     }
   },
   "26": {
@@ -381,181 +104,9 @@
       "title": "Input_Seed"
     }
   },
-  "27": {
-    "inputs": {
-      "steps": 7,
-      "cfg": 1.5,
-      "sampler_name": "lcm",
-      "scheduler": "simple",
-      "denoise": 1,
-      "model": [
-        "176",
-        0
-      ],
-      "positive": [
-        "24",
-        0
-      ],
-      "negative": [
-        "24",
-        1
-      ],
-      "latent_image": [
-        "25",
-        0
-      ],
-      "seed": [
-        "26",
-        0
-      ]
-    },
-    "class_type": "KSampler",
-    "_meta": {
-      "title": "KSampler"
-    }
-  },
-  "28": {
-    "inputs": {
-      "samples": [
-        "27",
-        0
-      ],
-      "vae": [
-        "12",
-        2
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
-    }
-  },
-  "29": {
-    "inputs": {
-      "bg_removal_name": "birefnet.safetensors"
-    },
-    "class_type": "LoadBackgroundRemovalModel",
-    "_meta": {
-      "title": "Load Background Removal Model"
-    }
-  },
-  "30": {
-    "inputs": {
-      "bg_removal_model": [
-        "29",
-        0
-      ],
-      "image": [
-        "28",
-        0
-      ]
-    },
-    "class_type": "RemoveBackground",
-    "_meta": {
-      "title": "Remove Background"
-    }
-  },
-  "31": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "crop": "disabled",
-      "image": [
-        "28",
-        0
-      ],
-      "width": [
-        "4",
-        3
-      ],
-      "height": [
-        "4",
-        3
-      ]
-    },
-    "class_type": "ImageScale",
-    "_meta": {
-      "title": "Object To Bbox Scale"
-    }
-  },
-  "32": {
-    "inputs": {
-      "mask": [
-        "30",
-        0
-      ]
-    },
-    "class_type": "MaskToImage",
-    "_meta": {
-      "title": "Mask To Image"
-    }
-  },
-  "33": {
-    "inputs": {
-      "upscale_method": "bilinear",
-      "crop": "disabled",
-      "image": [
-        "32",
-        0
-      ],
-      "width": [
-        "4",
-        3
-      ],
-      "height": [
-        "4",
-        3
-      ]
-    },
-    "class_type": "ImageScale",
-    "_meta": {
-      "title": "Matte To Bbox Scale"
-    }
-  },
-  "34": {
-    "inputs": {
-      "channel": "red",
-      "image": [
-        "33",
-        0
-      ]
-    },
-    "class_type": "ImageToMask",
-    "_meta": {
-      "title": "Image To Mask"
-    }
-  },
-  "35": {
-    "inputs": {
-      "resize_source": false,
-      "destination": [
-        "1",
-        0
-      ],
-      "source": [
-        "31",
-        0
-      ],
-      "mask": [
-        "34",
-        0
-      ],
-      "x": [
-        "4",
-        1
-      ],
-      "y": [
-        "4",
-        2
-      ]
-    },
-    "class_type": "ImageCompositeMasked",
-    "_meta": {
-      "title": "Stitch"
-    }
-  },
   "100": {
     "inputs": {
-      "clip_name": "qwen_3_4b.safetensors",
+      "clip_name": "qwen_3_8b_int8_convrot.safetensors",
       "type": "flux2",
       "device": "default"
     },
@@ -575,7 +126,7 @@
   },
   "102": {
     "inputs": {
-      "unet_name": "flux-2-klein-4b-int8-convrot.safetensors",
+      "unet_name": "flux-2-klein-9b-int8-convrot.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
@@ -585,11 +136,11 @@
   },
   "103": {
     "inputs": {
-      "string": "Place the object into the scene so it looks like it was always part of it, not pasted on: match the scene's lighting direction, colour temperature, contrast and art style, and let the scene's light and shadows fall across it. Ground it with contact shading where it meets the surface. Any cast shadow must follow the scene's own light in direction, length and softness; if the light is overhead or comes from behind the camera, keep the shadow small and directly beneath it, and if the light comes from behind the object, let its own edges catch that light instead of casting a shadow toward the camera. Do not add glow, haze, or an outline of light around it. Let nearby foreground elements overlap its edges. Keep the object's shape and design."
+      "string": "Replace the drawn scribble in this photo with"
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Blend Instruction"
+      "title": "Edit Instruction"
     }
   },
   "104": {
@@ -599,7 +150,7 @@
         0
       ],
       "text": [
-        "103",
+        "185",
         0
       ]
     },
@@ -669,7 +220,7 @@
   },
   "146": {
     "inputs": {
-      "filename_prefix": "mpi567_merged",
+      "filename_prefix": "mpi621_drawitin",
       "images": [
         "170",
         0
@@ -695,7 +246,7 @@
   "161": {
     "inputs": {
       "image": [
-        "35",
+        "6",
         0
       ],
       "mpi_box": [
@@ -710,7 +261,7 @@
   },
   "162": {
     "inputs": {
-      "padding": 64,
+      "padding": 0,
       "mask": [
         "161",
         0
@@ -718,7 +269,7 @@
     },
     "class_type": "MpiMaskSquareBbox",
     "_meta": {
-      "title": "Box Context"
+      "title": "Box Bbox"
     }
   },
   "163": {
@@ -741,22 +292,21 @@
       "extend_down_factor": 1,
       "extend_left_factor": 1,
       "extend_right_factor": 1,
-      "context_from_mask_extend_factor": 1,
       "output_resize_to_target_size": true,
       "output_target_width": 1024,
       "output_target_height": 1024,
       "output_padding": "32",
       "device_mode": "gpu (much faster)",
       "image": [
-        "35",
+        "6",
         0
       ],
       "mask": [
         "161",
         0
       ],
-      "optional_context_mask": [
-        "162",
+      "context_from_mask_extend_factor": [
+        "183",
         0
       ]
     },
@@ -765,96 +315,10 @@
       "title": "Crop To Box"
     }
   },
-  "164": {
-    "inputs": {
-      "expand": -96,
-      "incremental_expandrate": 0,
-      "tapered_corners": true,
-      "flip_input": false,
-      "blur_radius": 96,
-      "lerp_alpha": 1,
-      "decay_factor": 1,
-      "fill_holes": false,
-      "mask": [
-        "163",
-        2
-      ]
-    },
-    "class_type": "GrowMaskWithBlur",
-    "_meta": {
-      "title": "Feather Noise Mask"
-    }
-  },
-  "165": {
-    "inputs": {
-      "samples": [
-        "107",
-        0
-      ],
-      "mask": [
-        "164",
-        0
-      ]
-    },
-    "class_type": "SetLatentNoiseMask",
-    "_meta": {
-      "title": "Set Latent Noise Mask"
-    }
-  },
-  "166": {
-    "inputs": {
-      "guidance": 4,
-      "conditioning": [
-        "108",
-        0
-      ]
-    },
-    "class_type": "FluxGuidance",
-    "_meta": {
-      "title": "Flux Guidance"
-    }
-  },
-  "167": {
-    "inputs": {
-      "steps": 4,
-      "cfg": 1,
-      "sampler_name": "euler",
-      "scheduler": "simple",
-      "denoise": 1,
-      "LanPaint_NumSteps": 2,
-      "LanPaint_PromptMode": "Image First",
-      "LanPaint_Info": "LanPaint KSampler.",
-      "Inpainting_mode": "🖼️ Image Inpainting",
-      "model": [
-        "182",
-        0
-      ],
-      "positive": [
-        "166",
-        0
-      ],
-      "negative": [
-        "105",
-        0
-      ],
-      "latent_image": [
-        "165",
-        0
-      ],
-      "seed": [
-        "26",
-        0
-      ]
-    },
-    "class_type": "LanPaint_KSampler",
-    "_meta": {
-      "title": "LanPaint KSampler"
-    }
-  },
   "168": {
     "inputs": {
       "samples": [
-        "167",
+        "191",
         0
       ],
       "vae": [
@@ -874,7 +338,7 @@
         0
       ],
       "inpainted_image": [
-        "168",
+        "192",
         0
       ]
     },
@@ -895,202 +359,165 @@
       "title": "Mpi Clear Vram"
     }
   },
-  "171": {
+  "183": {
     "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model": [
-        "12",
+      "math_expression": "1.0 if b <= 0 else (4.267*a/b if 4.267*a/b > 1.0 else 1.0)",
+      "a": [
+        "4",
+        3
+      ],
+      "b": [
+        "162",
+        3
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Context Factor"
+    }
+  },
+  "184": {
+    "inputs": {
+      "string": "Keep every other part of the photograph exactly as it is. The drawn lines are only a guide to where the subject goes, how big it is and what pose it holds: erase them completely, leaving none of the drawn marks, colour or outline anywhere in the result. Render the subject as a real part of the scene, matching the photograph’s own lighting direction, colour temperature, contrast and grain, and ground it with contact shading where it meets the surface. If the scene’s own light casts shadows, give it a cast shadow that matches them in direction, length and softness; if the light is overhead or comes from behind the camera, keep the shadow small and directly beneath it, and if the light comes from behind the subject, let its edges catch that light instead of casting a shadow toward the camera. Do not add glow, haze, or an outline of light around it. Let nearby foreground elements overlap its edges."
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Edit Guardrails"
+    }
+  },
+  "185": {
+    "inputs": {
+      "delimiter": ". ",
+      "string_a": [
+        "18",
         0
       ],
-      "clip": [
-        "12",
+      "string_b": [
+        "184",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Join Guardrails"
+    }
+  },
+  "186": {
+    "inputs": {
+      "image": [
+        "106",
+        0
+      ]
+    },
+    "class_type": "GetImageSize",
+    "_meta": {
+      "title": "Crop Size"
+    }
+  },
+  "187": {
+    "inputs": {
+      "steps": 4,
+      "width": [
+        "186",
+        0
+      ],
+      "height": [
+        "186",
         1
       ]
     },
-    "class_type": "MpiLoraModelClip",
+    "class_type": "Flux2Scheduler",
     "_meta": {
-      "title": "Input_Lora_Phase1_1"
+      "title": "Flux2Scheduler"
     }
   },
-  "172": {
+  "188": {
     "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model": [
-        "171",
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "189": {
+    "inputs": {
+      "noise_seed": [
+        "26",
         0
-      ],
-      "clip": [
-        "171",
-        1
       ]
     },
-    "class_type": "MpiLoraModelClip",
+    "class_type": "RandomNoise",
     "_meta": {
-      "title": "Input_Lora_Phase1_2"
+      "title": "RandomNoise"
     }
   },
-  "173": {
+  "190": {
     "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model": [
-        "172",
-        0
-      ],
-      "clip": [
-        "172",
-        1
-      ]
-    },
-    "class_type": "MpiLoraModelClip",
-    "_meta": {
-      "title": "Input_Lora_Phase1_3"
-    }
-  },
-  "174": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model": [
-        "173",
-        0
-      ],
-      "clip": [
-        "173",
-        1
-      ]
-    },
-    "class_type": "MpiLoraModelClip",
-    "_meta": {
-      "title": "Input_Lora_Phase1_4"
-    }
-  },
-  "175": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model": [
-        "174",
-        0
-      ],
-      "clip": [
-        "174",
-        1
-      ]
-    },
-    "class_type": "MpiLoraModelClip",
-    "_meta": {
-      "title": "Input_Lora_Phase1_5"
-    }
-  },
-  "176": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "strength_clip": 1,
-      "model": [
-        "175",
-        0
-      ],
-      "clip": [
-        "175",
-        1
-      ]
-    },
-    "class_type": "MpiLoraModelClip",
-    "_meta": {
-      "title": "Input_Lora_Phase1_6"
-    }
-  },
-  "177": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
+      "cfg": 1,
       "model": [
         "102",
         0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_Lora_Phase2_1"
-    }
-  },
-  "178": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "model": [
-        "177",
+      ],
+      "positive": [
+        "108",
+        0
+      ],
+      "negative": [
+        "105",
         0
       ]
     },
-    "class_type": "MpiLoraModel",
+    "class_type": "CFGGuider",
     "_meta": {
-      "title": "Input_Lora_Phase2_2"
+      "title": "CFGGuider"
     }
   },
-  "179": {
+  "191": {
     "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "model": [
-        "178",
+      "noise": [
+        "189",
+        0
+      ],
+      "guider": [
+        "190",
+        0
+      ],
+      "sampler": [
+        "188",
+        0
+      ],
+      "sigmas": [
+        "187",
+        0
+      ],
+      "latent_image": [
+        "107",
         0
       ]
     },
-    "class_type": "MpiLoraModel",
+    "class_type": "SamplerCustomAdvanced",
     "_meta": {
-      "title": "Input_Lora_Phase2_3"
+      "title": "SamplerCustomAdvanced"
     }
   },
-  "180": {
+  "192": {
     "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "model": [
-        "179",
+      "method": "mkl",
+      "strength": 1,
+      "multithread": true,
+      "image_ref": [
+        "163",
+        1
+      ],
+      "image_target": [
+        "168",
         0
       ]
     },
-    "class_type": "MpiLoraModel",
+    "class_type": "ColorMatch",
     "_meta": {
-      "title": "Input_Lora_Phase2_4"
-    }
-  },
-  "181": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "model": [
-        "180",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_Lora_Phase2_5"
-    }
-  },
-  "182": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "model": [
-        "181",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_Lora_Phase2_6"
+      "title": "Match The Photo Grade"
     }
   }
 }

@@ -1,351 +1,227 @@
 # Draw It In
 
-> **Renamed 2026-08-23** — shipped as "Scribble to Object", and "object" was the wrong word:
-> Fabio had been drawing characters with it.
+> The user draws on top of their own photo, says what it is, and the flow renders that
+> subject into the scene — at the drawn place, scale and pose, lit by the photo's own light,
+> casting a shadow on its ground, with whatever is already in front of it overlapping its
+> edges. Cards: **MPI-567** (built), **MPI-621** (rebuilt Klein-only, 2026-08-25).
 >
-> **What moved:** the display name, and the workflow file — `flow_scribble_object.json` →
-> **`flow_draw_it_in.json`** (both twins, `git mv`, 18 references swept).
->
-> **What deliberately did NOT:** the `id` (`scribble-object`), the op (`flowScribObj`), and
-> this file's own name. Gallery cards already carry the `FLOWSCRIBOBJ_` prefix and their
-> sidecars' `flowId`, so renaming the id breaks reuse on every item already generated. The
-> workflow filename is safe to move because nothing persists it — it is resolved per dispatch
-> from the FlowDef's `workflow` field.
-
-> The user draws on top of their own photo; the Flow replaces the drawing with a rendered
-> subject stitched back into the photo at the same place and scale, **and blends it in so it
-> belongs there**. Card: **MPI-567**. **BENCH PROVEN AND SIGNED OFF 2026-08-22; WIRED THE
-> SAME DAY** — `FlowDef`, op in its four files, runtime graph in `comfy_workflows/`, tests.
-> **Not yet run once inside the app** — that is the open gate, not the wiring.
-> Spec: `.agents/mpi-kanban/tasks/MPI-567/brief.md`.
->
-> **The blend pass is generic and lives in its own doc:**
-> [../blending-into-a-photo.md](../blending-into-a-photo.md) — the route, the prompt, the
-> measurement, the model comparison. Read it before touching the blend half. This file holds
-> only what is specific to *this* flow.
+> **Renamed 2026-08-23** — "object" was the wrong word, Fabio had been drawing characters. The
+> display name and the workflow filename moved; the `id` (`scribble-object`), the op
+> (`flowScribObj`) and this file's name deliberately did NOT, because gallery cards already
+> carry the `FLOWSCRIBOBJ_` prefix and their sidecars' `flowId`.
 >
 > Portable UI decisions live in [../ui/](../ui/); the any-of model set lives in
 > [../any-of-models.md](../any-of-models.md).
 
-## Status — bench DONE, app half WIRED and run live, UI polish outstanding
+## The shape — one model, one pass
 
-**2026-08-23.** The graph was rebuilt onto the measured LanPaint route (70 nodes → 55, pixel-
-identical to the `f096` reference) and the flow is registered end to end with two independently
-choosable model slots. **It has produced real output in the app.** What remains is UI.
+```
+photo ──┬──────────────────────────────────┐
+        │  paint step: the user draws on it │
+        ↓                                   ↓
+   ImageCompositeMasked  (the drawing ONTO the photo — this is what Klein sees)
+        ↓
+   InpaintCropImproved   mask = the user's box; context = DERIVED from the drawing
+        ↓                                   (see "The two sizing rules")
+   Klein 9B edit         one image in, the instruction does the rest
+        ↓
+   ColorMatch            put the photo's own grade back on the patch (see below)
+        ↓
+   InpaintStitchImproved feathered, returns ONLY the box
+```
 
-The first live run also taught the flow's sharpest lesson, now generalised into
-[01 § A PROMPT IS A FIELD](../01-descriptor-and-ops.md#a-prompt-is-a-field-inputschema-only-ever-reads-media-mpi-567):
-the flow shipped with **no prompt box**, because `positive: 'string'` sat in `inputSchema` where
-nothing reads it. A blob drawn to mean "an old lady" rendered as an unidentifiable object. A
-drawing gives the model a **silhouette**, and a silhouette is not a subject — a girl and a boy
-share one. **The prompt is not optional on this flow and never was.** It is now a `text` field on
-the paint step, and `tests/inject-params-titles.test.cjs` asserts the graph keeps its
-`Input_Positive` title — the deliberate inverse of Outpaint and Head Swap, which leave that node
-UNtitled so an empty injected string cannot clobber their baked instruction.
+35 nodes. **No mask, no rembg, no silhouette, no `SetLatentNoiseMask`, no ControlNet, no
+second model.** The edit model does not need to be told which pixels to touch.
 
-Decided 2026-08-23, still to build (all user calls, none of them open questions any more):
+**The crop/stitch is a CORRECTNESS requirement, not an optimisation.** Klein's edit branch
+scales its input to a megapixel target and never reads the source size, so a whole-image pass
+on a 4000×3000 photo re-renders every face and every fine detail at ~1MP. Pixels outside the
+crop are never sent, so they come back bit-exact — **no prompt can promise that.** Run
+whole-image on the measured plate and it deleted a bystander and fused the tiger into the man.
 
-| Item | Decision |
+**The stitch keeps its feather** (`mask_blend_pixels: 32`). See "Law 2" below: the re-grade is
+real but mild here, so the feather is cheap insurance rather than the thing holding it up.
+
+## Why the SDXL architecture was deleted
+
+Fabio ran both himself, same scribble and same photo (2026-08-25). The 55-node two-model route
+took **38s** and left the man standing apart touching nothing; **one Klein 9B edit** took
+**15s** and put his hand on the tiger's back and his leg **behind** it — the case a flat paste
+could never do, because a paste lands on top. The old chain was six locally-correct steps
+downstream of one unasked question, and Klein 9B landed after it was designed. Full evidence:
+`.agents/mpi-kanban/tasks/MPI-621/brief.md`.
+
+## The two sizing rules — measured, do not re-derive
+
+Both derive from the drawn bbox. Neither is a constant. Seven Klein 9B runs at fixed seed on
+one plate, plus a no-GPU stitch simulation off the same renders (MPI-621).
+
+### 1. CROP (context) — how big a region Klein sees
+
+**The governing variable is how many pixels the scribble occupies AFTER Klein's ~1MP
+normalise**, not the extend factor. Threshold ≈ **200px**: below it the scribble stops being an
+anchor and the model composes the subject freely, at whatever scale reads for the frame. The
+failure at the wide end is **anchoring — scale and position — never legibility.** Every rung
+produced a man; the wide ones produced one that was too big, displaced, or fused with the
+scene.
+
+```
+crop_MP  ≤  (scribble_px / 200)²          target band ~240–425px after normalise
+```
+
+**Within that band, take the WIDEST crop that still anchors, not the tightest that fits** —
+seam tone improves with context. A 0.031MP crop stitched back showed a plainly visible lighter
+rectangle on sand; the 0.095MP crop at the same box did not.
+
+In the graph this is three nodes and **no new node type**:
+
+```
+MpiMaskSquareBbox(drawn region, padding 0) -> size S
+MpiMaskSquareBbox(box mask,     padding 0) -> size B
+MpiMath(a=S, b=B) -> InpaintCropImproved.context_from_mask_extend_factor
+```
+
+`4.267 = 1024 / 240`. `InpaintCropImproved` grows the **mask** bbox by the factor in every
+direction, then forces the region to the target ASPECT and resizes it to exactly
+1024 × 1024 — so the crop is square and its side is `factor × max(box_w, box_h)`. Feeding
+`4.267 × S / B` therefore lands the scribble at ~240px whatever the user drew.
+
+- **`max()` is NOT available to `MpiMath`.** `safe_math` allows `math.*` only, and an
+  unknown call is caught and returned as **0.0**, silently — a factor of 0 skips the growth
+  entirely and the crop collapses onto the box. The floor is written as a conditional
+  expression instead: `1.0 if b <= 0 else (4.267*a/b if 4.267*a/b > 1.0 else 1.0)`.
+- **`optional_context_mask` is deliberately unwired.** The crop node UNIONS it with the grown
+  bbox, so anything there re-widens the crop and defeats the derivation.
+- The `1.0` floor is honest, not defensive: a crop can never be smaller than the region that
+  has to be returned. A user who boxes far wider than they drew gets a subject rendered
+  larger than they drew it, and the box step's hint says so.
+
+### 2. RETURN BOX (stitch) — how much comes back
+
+**The model renders the subject AROUND and BEYOND the drawing.** The scribble is where and how
+big, not an outline the render stays inside. Stitching back the drawn bbox cut a hard vertical
+line through the man's torso.
+
+| return box vs drawn bbox | subject |
 |---|---|
-| Op key / filename | **`flowScribObj`** → `flowScribObj_001.png`. Op is unreleased, so the rename is free — see [01 § The op key becomes the OUTPUT FILENAME](../01-descriptor-and-ops.md) |
-| Brush types on the paint step | **Yes — the ten `BRUSH_PRESETS` as a dropdown**, the same control `MpiMaskStrip` already renders. `PaintManager.brushPreset` exists and is already honoured by the shared dab, so this is a control, not new paint code |
-| The doodle on the box step | **Show it — ghost or stamped, either is fine.** Cheaper than it looks: both steps declare `role: 'image1'`, so they SHARE one `_stepValues` entry and `MpiStepBox` already receives the paint layer in `props.value.paint`. No frame-contract change. Head Swap has no paint sibling, so its `value.paint` is undefined and it is untouched |
-| Box ratio | **Stays free.** The box wraps an object *plus the ground its shadow falls on*, never square — and `MpiMaskSquareBbox(64)` squares it in the graph anyway. Locking a ratio would only deny a subject its shadow room |
+| 1.0× | **sliced** |
+| 1.6× | complete |
+| 2.2× | complete, with margin |
 
-Not this flow's to fix — split into **MPI-606** because they affect EVERY flow: inputs lost on
-navigation, spacebar advancing a step, no arrow-key nav, the colour picker closing the overlay,
-`promptRequired` enforced nowhere, and the two-store field collision.
+**≥1.6× is the floor and shadow room is ON TOP of it** — and shadow room is scene-dependent (a
+low sun casts a long shadow), which is exactly why the user draws this box and the graph does
+not derive it. The box step's hint copy is load-bearing; keep it.
 
-## Status — the bench half is settled and signed off, the app half is not started
+### Predictions that were WRONG
 
-| Item | State | Notes |
-|---|---|---|
-| Pipeline proven end to end | **DONE** 2026-08-21 | 40-node API graph run on the standalone bench (8188). The FIRST run produced a correct object AND a correct stitch |
-| Both preprocessor arms proven | **DONE** 2026-08-21 | scribble and canny each produce a different, on-brief object from the same seed and prompt |
-| White-vs-green hint background | **DECIDED — WHITE** | green is a silent total failure, see § The green trap |
-| Model swap on two arms | **DONE** 2026-08-21 | `Input_Base_Model` swapped between SDXL Realistic and ILL Anime — see § The model swap |
-| Blend pass | **DONE** 2026-08-22 | whole-image relight → composite back, five plates + a tiny ladder. [../blending-into-a-photo.md](../blending-into-a-photo.md) |
-| **Merged runtime graph** | **BUILT + PROVEN** 2026-08-22 | stage 1 + relight + tail as ONE graph, 74 nodes, one dispatch, ~16s. Beats the three-step route's seam on all five plates. Bench store `MPI-567_scribble_to_object_BLEND` (LiteGraph); repo copy `bench-graph-blend.json` is **API format**. `raw/` is agent-writable since 2026-08-22, so the LiteGraph copy is round-tripped off the bench, never synthesised from the API graph |
-| `paint` step kind | **BUILT + PROVEN LIVE** 2026-08-22 | `MpiStepPaint`, mounting `PaintManager` + `brushDab.js`; binds through `STEP_MEDIA` and returns the layer ALONE at source resolution. The step declares `mediaRole` so the photo survives beside it. [../ui/paint-gizmo.md](../ui/paint-gizmo.md) |
-| `Input_Control_strength` default | **DECIDED — 0.45–0.60** | 0.8 renders the user's ink as garment detail. See § Control strength |
-| Which arm for which drawing | **DECIDED** | scribble for flat line art, canny for a TONAL drawing. See § Which preprocessor arm |
-| Fabio's sign-off by eye | **GIVEN** 2026-08-22 | *"Compared to what we had previously, these look very good."* |
-| Blend route replaced by LanPaint | **DONE** 2026-08-22 | the whole-image relight and its ~25-node repair tail are DELETED. `InpaintCropImproved` → `SetLatentNoiseMask` → `LanPaint_KSampler` → `InpaintStitchImproved`, 70 nodes → 55 |
-| The box seam | **FIXED** 2026-08-22 | one node — `GrowMaskWithBlur(expand −96, blur_radius 96)` on the noise mask. Worst `cnr` 0.85 → 0.15. § The seam below |
-| **App wiring** (`/mpi-add-flow`) | **DONE** 2026-08-22 | `flowScribObj` in the four op files (renamed from `flowScribbleObject` on 2026-08-23, free at 1.5.0 unreleased), `scribble-object` `FlowDef`, two choosable slots, paint + box steps, two declared fields. 683 tests green, both new assertions mutation-checked |
-| First live run in the app | **DONE** 2026-08-23 | Fabio ran it on his own GPU. Eleven consecutive dispatches, and the reuse round trip confirmed on two flows — `05-verify.md`'s Definition of Done, both halves |
-| Graphics (tile + hero) | **DONE** 2026-08-24 | `flow-draw-it-in.webp` (896×1120, 101KB) + `.mp4` (1280×800, 8.0s, 849KB), both declared. Built from runs 015 and 008 of that live session. **The hero is TWO beats** — a filled blob → a woman, then a drawn outline → a reptile — because one example only ever proves one subject and this flow's pitch is "a person, an animal, an object". Beat 1 matches the tile, since the tile is the video's `poster`. The earlier CI break is why the fields were absent, not an argument against them: declaring art that does not exist 404s into the renderer and `tests/desktop/flows-tab-ring.spec.js` asserts zero console errors, which held master red for a day and eight pushes |
+- **Law 1 (["Relighting is a GLOBAL-REFERENCE op"](../blending-into-a-photo.md)) does NOT
+  transfer to this route.** No rung showed the glowing-blob signature, not even a 0.008MP
+  crop. Law 1 was measured on a *relight* op — matching an already-composited object to a
+  scene genuinely needs global reference. Klein here **generates** the subject and only needs
+  to know what light to render it under, which the sand colour and shadow direction inside a
+  tight crop already carry. **Do not cite Law 1 against a tight crop on this route.**
+- **Law 2 looked much milder here — and that was a plate artefact.** A hard rectangular paste,
+  zero feather, on uniform sand measured ≈5.5/255 and was invisible. Then Fabio ran a
+  **vintage** plate and the seam was obvious. See the next section: the measurement was right
+  and the generalisation was wrong.
+- **The "upscale the source first" fix is redundant here.** The crab-with-a-detached-shadow
+  failure did not reproduce at any rung: the crop is normalised to ~1MP however small the
+  region is, so it manufactures the pixels per run instead of a blanket 2× upscale. What DID
+  survive from that instinct is rule 2 — the shadow is generated at 1MP and stitched at source
+  scale, so the box must contain it.
+- **A big crop upscale is fine on textured ground.** A 141px crop → 1024 (**7.3×**) stitched
+  back with no visible seam and no softness, the tiger's leg running through the box edge
+  unbroken. What showed instead was Law 2 over sky/water: the same figure over the horizon came
+  back as a lighter rectangle.
 
-## Shape — the flow DRIVES the shipped SDXL ControlNet-Union branch
+**Careful with edge metrics.** A luma step across the box boundary measures CONTENT as often as
+a seam — the big right-edge readings in the sweep were the man's dark body at the box edge, not
+a re-grade. Compare same-material bands (sand to sand), or zoom and look.
 
-There is **no new ControlNet path to author.** All five SDXL-family models already declare
-`controlTypes: ['depth', 'pose', 'scribble', 'canny']` behind ONE
-`ControlNet-Union-ProMax-SDXL.safetensors` loader, switched by `Input_Control_Net`
-(`models.js`). This flow uses arms 3 and 4 of that same switch.
+## The grade match — the model RESTORES the photo, and that is the seam
 
-The proven graph, in brief order:
+Found by Fabio's first run in the app, 2026-08-25, on a **vintage** plate: faded, warm, low
+contrast. The subject was right and the region came back as a visibly *cleaner* rectangle. His
+read was exactly right — **the model fixed what made the photo vintage.** Measured on his run:
 
-| Brief step | Nodes | What it does |
-|---|---|---|
-| 1–2 | `Input_Image`, `Input_Paint` (`MpiLoadImageFromPath`) | the photo, and the paint layer ALONE as an RGBA PNG at photo resolution |
-| 7 | `InvertMask` → `MpiMaskSquareBbox(padding=48)` | the drawing's own alpha becomes a **square** crop rect: `square_mask`, `x`, `y`, `size` |
-| 3 | `EmptyImage(color=0xFFFFFF)` → `ImageCompositeMasked` → `ImageCrop(x, y, size, size)` | paint RGB over flat white, cropped to that rect — the ControlNet hint |
-| 4 | 2× `AIO_Preprocessor` + 2× `SetUnionControlNetType`, both switched by `MpiAnySwitch(Input_Control_Net)` | `ScribblePreprocessor` + `hed/pidi/scribble/ted`, or `CannyEdgePreprocessor` + `canny/lineart/anime_lineart/mlsd` |
-| 5–6 | `Input_Positive` → `StringConcatenate` | the user's text, plus the "isolated object on a plain white background…" tail |
-| 8 | `ControlNetApplyAdvanced` → `KSampler` @ **1024×1024** → `VAEDecode` | SDXL samples the object, not the frame |
-| 9 | `LoadBackgroundRemovalModel('birefnet')` → `RemoveBackground` | → a **MASK**, foreground = 1 |
-| 10 | 2× `ImageScale` (+ `MaskToImage` / `ImageToMask` for the matte) → `ImageCompositeMasked(x, y)` | object and matte down to `size`, pasted at the recorded `x, y` |
+| | patch vs the source it replaced |
+|---|---|
+| mean | **+9.5 / +5.5 / +2.6** RGB — channel-uneven, i.e. a de-fade, not a brightness shift |
+| sd | **+5.9 / +4.8 / +4.4** — contrast restored |
+| top-edge luma step | **3.60**, where the photo's own step across that line is 0.39 |
 
-Sampling comes straight off the SDXL Realistic template — `lcm` / `simple`, 7 steps, cfg 1.5.
-A full run (preprocess + sample + rembg + stitch) is **~18s cold, ~9s warm** on the bench.
+**Two things this is NOT.** It is not lack of context — he tried a bigger box and it changed
+nothing, because the model is not missing the reference, it is *correcting* it. And it is not
+an edge artefact, so the feather cannot touch it: a feather softens a boundary, and this is a
+whole-patch shift.
 
-## The four open questions, answered at the bench
+**The fix is to put the grade back**, with `ColorMatch` (KJNodes, already in the shipped
+engine) between the decode and the stitch — `image_ref` = the ORIGINAL crop
+(`InpaintCropImproved` output 1), `image_target` = the Klein decode, `mkl`, strength 1.
+Verified live on the same plate: mean delta **−3.2/−3.2/−2.6** (uniform, so tone rather than
+restoration), sd delta down 3.7×, **top-edge step 3.60 → −0.20** — below the plate's own
+natural variation, and no rectangle to see.
 
-1. **Matte?** None needed. `RemoveBackground` returns a `MASK` directly, already the right
-   polarity (foreground = 1) for `ImageCompositeMasked.mask` — no `InvertMask`.
-2. **White or green behind the scribble?** **WHITE.** Green is a silent total failure — below.
-3. **Crop rect round trip?** `MpiMaskSquareBbox` emits `x`, `y`, `size` as plain INTs, and the
-   same three feed the crop at the front and the paste at the back — the coordinates never leave
-   the graph, so they cannot drift.
-4. **Is `InpaintCropImproved` / `InpaintStitchImproved` the right carrier?** **No — the paste
-   happens OUTSIDE it.** Inpaint-crop/stitch samples a region *of an existing image* and blends
-   the whole rectangle back; here SDXL generates the object on a clean background and only the
-   rembg matte should land. A plain `ImageCompositeMasked` at the recorded `x, y` is simpler and
-   inherits the **no-feather** ruling (MPI-454) for free — there is no `mask_blend_pixels` to
-   set. **That rectangle-blending behaviour is also exactly what makes the localised route
-   unusable for the BLEND pass** — see [../blending-into-a-photo.md](../blending-into-a-photo.md).
+Wire `image_ref` from the SAME crop node the stitch takes its stitcher from, and take the ref
+from the whole crop rather than a border ring: matching on a ring was tried and measured worse
+(−2.58), because the ring catches whatever else crosses the box edge. **Known ceiling:** the
+reference includes the subject's own new pixels, so a subject that FILLS the box drags its
+tone toward the background it replaced. It has not bitten yet; drop `strength` below 1 if it
+does. `tests/inject-params-titles.test.cjs` pins the wiring — deleting the node is silent,
+the run just succeeds with the seam back.
 
-## The green trap — a silent, plausible, completely wrong result
+## 9B only — a correctness call, not a quality preference
 
-Putting the scribble on a **green** (`0x00FF00`) background instead of white makes
-`ScribblePreprocessor` return a **fully black hint**. Nothing errors anywhere. ControlNet then
-contributes nothing at all and SDXL free-generates from the prompt alone: measured on the
-bench, the same seed and the same prompt produced a handsome 3/4-view watchtower with a
-ladder, railings and shingles that bears **no relationship to what the user drew** — different
-geometry, different perspective, off-centre.
+Under style load, **4B left the user's own ink in the output**: the drawn leash and head
+survived as a grey mechanical object while the tiger was corrupted into a cartoon dog. 9B under
+the same load degraded gracefully — scribble gone, composition intact. 4B follows the drawn
+shape more closely and integrates worse, which is the same axis the deleted "Follow the
+drawing" slider rode, reappearing as a model choice; its failure mode is the worst one
+available. Cost accepted: a 4B-only user downloads 9B, offset by dropping SDXL entirely.
 
-That is the worst failure mode this flow can have: it looks like it worked. Keep the
-background white, and if the hint ever changes, **look at the preprocessor output** before
-judging the result — a black hint is the tell.
+## The prompt
 
-**Second trap in the same node:** with an EMPTY paint layer the drawn bbox is empty and
-`AIO_Preprocessor` dies with `ZeroDivisionError: float division by zero`. This graph therefore
-cannot stand in as a plain t2i for building a fixture — use a minimal standalone SDXL graph.
+Built as `MpiText(prefix) + Input_Positive + MpiText(guardrails)` through two
+`StringConcatenate` nodes, so the user's words land inside the instruction rather than beside
+it. The guardrail half carries six properties, and **each one was a shipped bug** — see
+[../blending-into-a-photo.md § The blend prompt](../blending-into-a-photo.md):
 
-## The model swap — confirmed POSITIVELY, 2026-08-21
+1. **preservation guard** — change nothing but the drawn region
+2. **the replace** — with the user's own text, which is also where STYLE rides in
+3. **erase the ink explicitly** — ink survival is a measured failure mode, not a worry
+4. **conditional shadow physics, never an order** — a demanded shadow appears in scenes that
+   have none, pointing the wrong way
+5. **no glow, no haze, no rim** — bit from both directions and cost real time
+6. **ask for occlusion** — "let nearby foreground elements overlap its edges" is what sells it
 
-`Input_Base_Model` is the `CheckpointLoaderSimple` title. Swapping only `ckpt_name` between
-`SDXL_Realistic.safetensors` and `ILL_Anime.safetensors` — same seed, prompt and preprocessor —
-kept the **same geometry** (the hint survives the swap) rendered as the checkpoints differ:
-photoreal timber vs flat cel-shaded lineart. Measured 17.5/255 mean abs diff, 57.5% of pixels
-differing; re-confirmed on the figure fixture 2026-08-22.
+The old blend prompt does **not** transplant. `Keep the object's shape and design` and `Place
+the object into the scene` both describe a pasted object that no longer exists.
 
-Because an unmatched title is **dropped in silence** ([../any-of-models.md](../any-of-models.md)),
-a byte-identical pair — not a crash — is what failure looks like here. Always confirm the swap
-POSITIVELY by showing two arms differ.
+## What this flow deliberately does NOT have
 
-> Evidence: `mpi567_arm_realistic_object_*.png` vs `mpi567_arm_illanime_object_*.png`;
-> `mpi567_s3_ARMCROP_anime.png` (2026-08-22, with the blend applied).
+- **No style control and no LoRA rack.** Style rides in the user's own words — *"a cartoon man
+  wearing X"* styles only the inserted subject, where a style LoRA restyles the whole
+  photograph. An SDXL, Pony or Flux1 character LoRA will not load on Klein at all. Identity by
+  **reference image** is the route (the graph's `ReferenceLatent` chain already supports it)
+  and it is a later card.
+- **No light-direction field.** Considered and rejected 2026-08-25. It is the documented
+  "never an ORDER" shadow finding with an extra step, and worse here: the model is looking at
+  the actual photo and knows its light better than the user does. Anything typed either agrees
+  (no gain) or contradicts (active harm).
+- **No drawn-size floor.** The old "~96px tall" hint came from ControlNet starving on a small
+  hint. There is no ControlNet, and the crop is sized from the drawing, so a 75px scribble with
+  3px strokes rendered a grounded figure with contact shading.
+- **No ControlNet strength slider.** Its axis became the model choice; see 9B-only above.
 
-**Medium is a MODEL-SELECTION problem, not a prompt problem.** *"Match the scene's art style"*
-does not restyle a photoreal object onto a cel-shaded plate — asked to place a figure on an anime
-rooftop, SDXL Realistic returns a photoreal one. Fabio: *"If you want anime, you gotta use ILL
-Anime."* **This makes the any-of picker load-bearing for correctness, not a convenience**, and no
-blend pass can rescue a medium mismatch. The blend does preserve whichever medium it is given.
+## Siblings
 
-**Watch the download, not the dropdown.** The first attempt at this ran against an
-`ILL_Anime.safetensors` that was 84% downloaded and died inside `CheckpointLoaderSimple` with a
-shape `RuntimeError` that reads like a corrupt model. The trap is written up in
-[../../../workflow-authoring/bench-editing.md](../../../workflow-authoring/bench-editing.md)
-§ The traps.
+**MPI-620 (Scribble)** is where the deleted SDXL half goes — drawing on a *blank canvas*, where
+rendering in isolation is correct. Reusable measurements are in its brief; two worth naming so
+nobody re-measures them: control strength **0.60** at `end_percent 0.569` (0.5 did not follow
+the drawing, 0.65 put the doodle through), and the ~**96px** ink floor. The rest is in this
+file's pre-rebuild version — `git log -- <this file>`.
 
-## Control strength — 0.45–0.60, and the slider is MANDATORY
-
-`Input_Control_strength` → `MpiNormalizeValue` → `ControlNetApplyAdvanced.strength`, mapped
-0–1 → **0–1** here (the SDXL master template uses 0–0.5; this flow differs because the scribble
-IS the subject, not a hint over an existing composition). Swept on one plate, everything else
-fixed, 2026-08-22: **0.30–0.60** correct (photoreal, plain garment, pose held); **0.80** — the
-bench's old baked value — renders **the ink as CLOTHING**, a drawn neckline becoming a real
-V-neck seam; **1.00** puts the drawn lines through as straps across the chest.
-
-**The mechanism is what to keep: a drawing's SHAPE survives far below the strength at which its
-LINES start being rendered as objects** — the pose is still correct at 0.30. A low default costs
-nothing; a high one silently turns the user's ink into detail they never asked for.
-
-Fabio, 2026-08-21, on a 0.8 result: *"this looks a lot, maybe too much, like the drawing itself.
-The strength control that we have on the original workflow needs to be the same for this flow."*
-**Exposing the slider is therefore a correctness requirement, not a convenience.**
-
-## Which preprocessor arm — TONAL, not TIDY
-
-`Input_Control_Net`: **1 = scribble, 2 = canny.**
-
-- **Flat line art → scribble.** Canny detects EDGES, and a drawn stroke has TWO of them, so a
-  3px line becomes two parallel contours that the model renders as an OUTLINE — the user's ink
-  survives into the render and the figure reads as a coloured-in drawing. Scribble thins the
-  stroke to a centreline, so the model renders a FORM.
-- **A shaded pencil sketch → canny.** Verified 2026-08-22 on a graphite study with tonal
-  hatching: **neither arm leaves an outline**, because a shaded drawing's edges are real form
-  boundaries rather than the two sides of a drawn line. Canny is mildly *better* there — it
-  carries interior structure through (fabric folds, a shirt motif) where scribble flattens it.
-
-**So the step copy must say TONAL, not "structured".** A user with clean line art who reads
-"structured" as "neat" will pick canny and get their own ink back. Fabio's wording is a *shaded
-pencil sketch* — a drawing with tonal hatching and interior modelling.
-
-## The size floor — ~80–96px of DRAWN ink
-
-Stage 1 crops the drawn bbox and samples it at a fixed 1024. That is what lets a small object
-render at high resolution — but it also means the **control hint is upscaled from whatever the
-user drew**, so too little ink becomes a blurred hint and SDXL invents to fill it. Ladder on two
-figures, sun plate, 2026-08-22: **96px** correct; **63px** distorted plus a spurious third
-figure; **40px** three figures where two were drawn; **25px** flat cut-outs, and the blend then
-hallucinates a third figure with its own shadow.
-
-**The floor is set by how much the user DRAWS, not by the object's share of the frame** — and it
-is a stage-1 limit, so the blend cannot repair it. Fabio's call, 2026-08-22: **warn in the step
-copy**, rather than auto-raising strength for a small drawing (which fights § Control strength).
-
-## The framing suffix — `full body` beats SDXL's portrait prior, `full object in frame` does not
-
-Node **#18 `Append Clean Background`** bolts a fixed suffix onto the user's text before the
-render phase encodes it. It shipped as:
-
-```
-isolated object on a plain white background, centered, full object in frame,
-product shot, no scenery, no ground, no shadow
-```
-
-`full object in frame` was the only clause asking for full-body framing and it **loses to SDXL's
-portrait prior**. *"a Latina in a red dress at the beach"* came back framed at the shins — so no
-feet, so no contact point, so `#103`'s contact shading had nothing to ground and **no shadow
-appeared at all**. The blend model was not refusing; it was never given a place to put one. The
-flow silently required the user to know to type *"A full body far shot of…"* themselves.
-
-Strengthened 2026-08-24 (MPI-618) to lead with the framing, in both twins:
-
-```
-full body far shot, entire subject in frame from head to toe, zoomed out with empty
-margin on all sides, isolated on a plain white background, centered, product shot,
-no scenery, no ground, no shadow
-```
-
-Three things about that edit are load-bearing:
-
-- **The framing clause moved to the FRONT of the suffix.** The suffix is appended *after* the
-  user's words, so its own tail is already the weakest position in the prompt — burying the one
-  clause that has to beat a prior at position 4 of 7 is most of why it lost.
-- **`subject`, not `object`.** The flow was renamed away from "object" because Fabio draws
-  *characters* with it, and "object" is exactly the word that does not read as a body.
-- **`no shadow` and `no ground` stay.** The render phase must return a clean cutout; every
-  shadow is the blend phase's job. Deleting them bakes a shadow into the cutout that then fights
-  the scene's real light.
-
-**It is FRAMING, not a LoRA.** The first read was that a style LoRA suppressed the shadow. The
-graph record from the 2026-08-23 live session disproves it — run `013` ran with **no LoRA** on
-the old prompt and was still wrong; only the prompt change (`015`) fixed it.
-
-**Test it on a HUMAN.** Run `008`'s reptile got a correct cast shadow on the sand under the old
-suffix: a creature on two legs with a tail reads as full-body to SDXL without being asked. The
-reptile passes either way and will hide a regression here.
-
-**Do not chase shadow DIRECTION by prompting** — [../../blending-into-a-photo.md](../../blending-into-a-photo.md)
-records that telling the model where the light is makes it *worse*, which is why the box step
-asks for room and never for light direction. Separate, known limit.
-
-### The baked negative is DEAD at runtime — found here, deliberately not changed
-
-Node **#19** is titled `Input_Negative` and carries a baked
-`blurry, low quality, watermark, text, multiple objects, cropped`. This flow declares **no**
-negative field, so `_buildParams` sends `Input_Negative: ''` on every run and `_inject` writes it
-— **the baked negative, `cropped` included, never reaches the sampler.** Same defect MPI-594
-found on Outpaint, whose fix was to leave the node untitled.
-
-It was **not** fixed under MPI-618, on purpose, and the reason is not squeamishness: the KSampler
-runs `lcm` at **cfg 1.5**, where the negative conditioning barely steers at all. Shipping the
-untitle in the same change would have bought little, and would have made the single live run a
-two-variable test of a prompt-behaviour fix. Card it separately if the negative is ever wanted.
-
-## Carried in from MPI-454 (Place tool)
-
-- **No feather on the cut-out.** Ruled closed by Fabio: the detailing pass is what blends, and
-  a blanket feather damages images that do not want one. Satisfied by construction here.
-- **The stitched object reads as pasted** — flat lighting, no contact shadow, no scene colour.
-  **ANSWERED 2026-08-22.** MPI-454's finding that an EDIT MODEL serves the blend better than the
-  plain detail path held up: the pass runs on Klein's edit op. Route, prompt and measurement are
-  in [../blending-into-a-photo.md](../blending-into-a-photo.md). Detailing was reconsidered and
-  set aside — Fabio, 2026-08-21: *"detailing needs quite a few passes with different denoise
-  values to figure out which one comes up as a good pass, while the edit model can give us what
-  we want with one pass."* It returns only if a single denoise value can be locked.
-- **`deferCommit`** (`generationService.js`, MPI-306) is the mechanism if an intermediate must
-  exist on disk without landing in the project. Do not invent a second one.
-
-## What the app half still has to settle
-
-- **~~The paint layer needs a step kind that does not exist.~~ SETTLED 2026-08-22** — `paint` is
-  registered in `STEP_KINDS` and proven live. What the FlowDef has to declare:
-  `{ kind: 'paint', role: '<the photo>', mediaRole: '<the layer's own slot>' }`, and the op's
-  `mediaInputs` must declare BOTH roles or the layer reaches no node. Full contract:
-  [../ui/paint-gizmo.md](../ui/paint-gizmo.md).
-  **One obligation lands on the wiring, not on the gizmo:** an unpainted step reports
-  `paint: null`, `STEP_MEDIA` then derives nothing, and `MpiLoadImageFromPath` runs on its baked
-  authoring path — a confident wrong result with no error. The frame cannot guard it (a null
-  legitimately means "nothing changed" for `crop`), so this flow must.
-- **The model picker — SHIPPED, two slots, both choosable.** Fabio, 2026-08-22: the SDXL
-  checkpoint *and* the Klein edit model are the user's to pick. `{ label: 'Render model' }` over
-  all five SDXL ids and `{ label: 'Blend model' }` over `klein-4b` / `klein-9b`; the graph titles
-  a node per slot — `Input_Base_Model` (`CheckpointLoaderSimple`) and `Input_Edit_Model`
-  (`UNETLoader`). Recommendations are `sdxl-realistic` and **`klein-9b`** (Fabio, 2026-08-22):
-  9B was judged better by eye on all five plates in session 7, and with the feather it *matches*
-  4B's seam numbers rather than trading them away, at ~1.9× the time. Note this makes the
-  recommendation and the BAKE disagree on purpose — the graph still loads 4B standing alone at
-  the bench, and the 4B arm is the one that catches a re-export moving that default.
-- **BOTH KLEIN CARDS ARE NAMED "FLUX.2 Klein", so the picker had two identical rows** — caught by
-  Fabio on the first live look. The prompt box solves this with a tier letter; the Flow Library
-  now does the same, appending it **only when a slot is actually ambiguous** (so the five SDXL
-  candidates stay bare). It calls the ungated `sizeTierLetter()`, NOT `tierLetterFor()`: the
-  latter is install-gated, and this picker exists to choose *before* anything is installed, so
-  the gate would blank the letter exactly when it is needed. There is still one letter map —
-  `tierLetterFor` sits on top of the new helper.
-- **THE BLEND SLOT SWAPS TWO NODES, NOT ONE — and the second one is why the CLIPLoader got a
-  title.** Klein 9B needs `qwen_3_8b_int8_convrot` and 4B needs `qwen_3_4b`; pairing 9B with 4B's
-  encoder dies with a shape error that reads as a LanPaint bug and is not one (MPI-600). So node
-  100 was retitled `Input_Edit_Clip` and each Klein arm carries both weights. Its param is the
-  **dotted** `Input_Edit_Clip.clip_name` while the other two are plain, and that asymmetry is
-  load-bearing: `ckpt_name` and `unet_name` are on `comfyController._inject`'s spray list and
-  `clip_name` is **not**, so a plain key would match the node and silently write nothing. Pinned
-  in `tests/flow-model-choice.test.cjs`, mutation-checked both ways.
-- **The preprocessor radio — SHIPPED.** `Input_Control_Net`, 1 = *Line drawing* (flat line art),
-  2 = *Shaded sketch* (tonal). The copy says TONAL, never "structured" (§ Which preprocessor arm).
-- **The strength slider — SHIPPED**, full 0–1 range at Fabio's instruction, default **0.5**, with
-  a `note` naming ~0.6 as where strokes start rendering as real detail. § Control strength.
-- **The minimum-drawing warning** is in the paint step's `hint` (~96px). § The size floor.
-- **The no-drawing case fails CLOSED, structurally.** Both `MpiLoadImageFromPath` loaders bake an
-  empty `string` with `block_if_empty: true`, so an unpainted run blocks instead of silently
-  loading an authoring fixture. That is now an assertion, because the guard is a *baked value* and
-  nothing about editing the graph protects it.
-
-### OPEN — the box step's default is the whole image
-
-`MpiStepBox` with no saved value seeds the **maximal box** (`enable()`), which for this flow is
-the worst possible default: everything inside the box is re-rendered, and a whole-image box is the
-`far_frac` 0.68 re-grade session 7 measured. The plan calls for auto-seeding from the drawing's own
-bbox (+25% out, +60% down), and nothing in the frame can do that today — `_stepValues` is keyed by
-`step.role`, so the box step *does* already receive the paint step's value (both declare
-`role: 'image1'`, and the frame merges), but no kind reads another kind's half of it.
-
-The small version: have `MpiStepPaint` report the layer's alpha `bbox` (it owns the canvas, so it
-is a few lines and needs no PNG decode), add a kind→seed adapter beside `STEP_PARAMS`/`STEP_MEDIA`
-in `stepKinds.js`, and have `MpiStepBox` use it when there is no restored rect. Additive and
-opt-in, exactly like `mediaRole` — a step that declares nothing behaves identically, so Head Swap
-is untouched. **Not built: it is a new shared-frame contract, and it wants Fabio's yes first.**
-The grow factors are provisional anyway — they are a guess that happened to win, and the sweep that
-would tune them is still pending.
-
-## Sibling
-
-**MPI-596** (Object Stamp Flow) is the same problem in a simpler form — extract an object,
-stitch it in, blend the seam. Questions 1, 3 and 4 above are its questions too, and the answers
-transfer as they stand. **Its blend half is already solved** —
-[../blending-into-a-photo.md](../blending-into-a-photo.md) was written to be flow-agnostic
-precisely so MPI-596 does not re-derive it.
+**MPI-596 (Object Stamp)** is the same cut/paste/repair architecture disproven here and has not
+been built. Both are "target + reference + instruction", differing only in how the user says
+*where* — 596 a box, this a scribble, and a scribble carries position, scale AND pose. Read it
+against this flow first; they may not need to be two flows.

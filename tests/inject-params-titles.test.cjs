@@ -314,45 +314,75 @@ test('the Outpaint Flow carries its I/O and declared control titles (MPI-594)', 
         `${file}'s prompt is baked — titling it Input_Positive lets the run inject '' over it`);
 });
 
-test('the Scribble to Object Flow carries its I/O, both model arms and its box (MPI-567)', () => {
-    // flowScribObj runs flow_draw_it_in.json on model:{id:null} with TWO
-    // choosable slots, so it has more titled injection points than any other flow —
-    // and every one of them fails SILENTLY. The injector skips a title with no node,
-    // so a typo here is a control that moves, a run that succeeds, and a graph still
-    // on its baked value.
+test('the Draw It In Flow carries its I/O, its model arm and its box (MPI-567)', () => {
+    // flowScribObj runs flow_draw_it_in.json on model:{id:null}. Every injection point
+    // here fails SILENTLY: the injector skips a title with no node, so a typo is a
+    // control that moves, a run that succeeds, and a graph still on its baked value.
+    //
+    // MPI-621 rebuilt the graph on one Klein 9B edit, which DELETED four of these
+    // titles — `input_base_model` (the SDXL render slot) and the two ControlNet fields
+    // `input_control_net` / `input_control_strength` went with the render phase, and
+    // `input_negative` with them. The list below is deliberately the whole surface, so
+    // adding a title back means adding it here too.
     const file = 'flow_draw_it_in.json';
     const have = titlesOf(file);
     for (const title of [
         // Two images, and only the first is the user's: `input_paint` is the paint
         // step's derived layer arriving through `mediaRole: 'image2'`. Lose that title
-        // and the drawing never reaches the graph — the ControlNet hint goes empty and
-        // SDXL renders from the prompt alone, which still produces a picture.
+        // and the drawing never reaches the graph — the composite is then the bare
+        // photo, and Klein edits a scene with nothing drawn on it, which still produces
+        // a picture.
         'input_image', 'input_paint',
-        // The box step's target. Newest of the lot (the LanPaint rebuild added it), and
-        // it goes through the `headSwap` injector because an MpiBox carries four widgets
-        // the generic title injector would match and silently not write.
+        // The box step's target: the region that may change, and the only region
+        // stitched back. It goes through the `headSwap` injector because an MpiBox
+        // carries four widgets the generic title injector would match and silently not
+        // write.
         'input_box',
         'input_seed',
-        // The two declared fields.
-        'input_control_net', 'input_control_strength',
-        // Render slot: any of the five SDXL cards.
-        'input_base_model',
-        // Blend slot: klein-9b / klein-4b, and BOTH nodes swap together. The CLIPLoader
-        // was untitled as authored — without `input_edit_clip` a 9B pick keeps 4B's text
-        // encoder and dies with a shape error that reads as a LanPaint bug (MPI-600).
+        // The one model slot, and BOTH nodes swap together. The CLIPLoader was untitled
+        // as authored — without `input_edit_clip` a 9B pick keeps 4B's text encoder and
+        // dies with a shape error that reads as a sampler bug (MPI-600).
         'input_edit_model', 'input_edit_clip',
     ]) {
         assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
     }
     assert.ok(have.has('output_image'), `${file} must carry a capture node titled "output_image"`);
 
+    // The deleted render phase must not leave titled stumps behind. A node still titled
+    // `input_base_model` would be a checkpoint loader nothing feeds and nothing reads —
+    // and the model picker would have no slot pointing at it.
+    for (const gone of ['input_base_model', 'input_control_net', 'input_control_strength']) {
+        assert.ok(!have.has(gone),
+            `${file} still carries "${gone}" — the SDXL render phase it belonged to is deleted`);
+    }
+
+    // THE GRADE MATCH IS LOAD-BEARING, and it fails silently if it is dropped: the run
+    // still succeeds and the seam simply comes back. Found live 2026-08-25 on a VINTAGE
+    // plate — Klein renders the crop in its own clean modern look, so the patch returned
+    // de-faded and more contrasty (mean +9.5/+5.5/+2.6 RGB, top-edge luma step 3.60 where
+    // the photo's own step across that line was 0.39). A feather cannot hide a whole-patch
+    // shift, and a bigger box did not help either. So the stitch must read from the
+    // ColorMatch, never straight from the decode.
+    const graph = JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8'));
+    const [matchId, match] = Object.entries(graph)
+        .find(([, n]) => n?._meta?.title === 'Match The Photo Grade') || [];
+    assert.ok(match && match.class_type === 'ColorMatch',
+        `${file} must carry a ColorMatch titled "Match The Photo Grade"`);
+    const [, stitch] = Object.entries(graph)
+        .find(([, n]) => n?.class_type === 'InpaintStitchImproved');
+    assert.deepEqual(stitch.inputs.inpainted_image, [matchId, 0],
+        'the stitch must take the GRADE-MATCHED patch, or the vintage-plate seam returns');
+    assert.ok(Array.isArray(match.inputs.image_ref), 'ColorMatch image_ref must be wired');
+    assert.equal(match.inputs.image_ref[0], stitch.inputs.stitcher[0],
+        'image_ref must be the ORIGINAL crop from the same InpaintCropImproved the stitch uses');
+
     // …and unlike Outpaint and Head Swap, this flow's prompt title is REQUIRED.
     // The two of them bake their instruction and deliberately leave the node untitled so
     // the run's empty `Input_Positive` cannot clobber it. This flow is the opposite: the
-    // user's words ARE the subject, and node 17 feeds a StringConcatenate that appends the
-    // isolate-on-white suffix before the encoder. Shipping without it is what produced a
-    // blob rendered into something nobody asked for on the first live run (2026-08-23) —
-    // the drawing gives a silhouette, and a silhouette alone is not a subject.
+    // user's words ARE the subject, and the prompt node feeds a StringConcatenate that
+    // wraps it in the edit instruction before the encoder. Shipping without it is what
+    // produced a blob rendered into something nobody asked for on the first live run
+    // (2026-08-23) — the drawing gives a silhouette, and a silhouette is not a subject.
     assert.ok(have.has('input_positive'),
         `${file} takes a user prompt, so its prompt node MUST stay titled Input_Positive`);
 });

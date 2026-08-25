@@ -1071,9 +1071,12 @@ export const commands = {
         universal: true,
     },
 
-    // MPI-567. The user draws on their own photo; SDXL renders the drawing as an object
-    // through the shipped ControlNet-Union branch, it is stamped back at the drawing's own
-    // bbox, and a LanPaint inpaint over a BOX the user places blends it into the scene.
+    // MPI-567, rebuilt Klein-only in MPI-621. The user draws on their own photo; the
+    // drawing is composited onto it, a crop sized from the drawing is taken around it,
+    // Klein 9B edits that crop, and the BOX the user places is stitched back.
+    //
+    // The op layer did NOT change in the rebuild: same key, same two media slots, same
+    // box injector. Only the graph behind them did.
     //
     // TWO images, and only the first is the user's. `image2` is the paint LAYER ALONE, an
     // RGBA PNG the paint step derives at the photo's resolution — declared here because the
@@ -1092,8 +1095,8 @@ export const commands = {
             { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: false },
             { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Paint', required: false },
         ],
-        // The object description IS the input — without it SDXL renders the scribble as
-        // whatever the ControlNet hint alone suggests.
+        // The subject description IS the input — the drawing carries where, how big and
+        // what pose, and nothing else. A blob is a silhouette a girl and a boy share.
         promptRequired: true,
         universal: true,
         // ONE box, the region the blend pass may re-render. Same reason as Head Swap: an

@@ -60,10 +60,11 @@ export const UNIVERSAL_WORKFLOWS = {
     flowOutpaint: {
         workflow: 'flow_outpaint.json',
     },
-    // MPI-567 — SDXL renders the user's drawing through the shipped ControlNet-Union
-    // branch, then a LanPaint inpaint blends the stamped object into the photo. Both
-    // phases run on models the flow declares as choosable slots, so this op adds no
-    // download of its own.
+    // MPI-567, rebuilt Klein-only in MPI-621 — the drawing is composited onto the
+    // user's photo, a crop sized FROM the drawing is taken around it, Klein 9B edits
+    // that crop, and the user's box is stitched back. One model, one pass; the SDXL
+    // render, the background removal and the flat paste are gone. The model is a
+    // declared slot, so this op adds no download of its own.
     flowScribObj: {
         workflow: 'flow_draw_it_in.json',
     },

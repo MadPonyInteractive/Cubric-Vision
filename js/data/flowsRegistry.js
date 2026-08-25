@@ -606,11 +606,18 @@ export const FLOWS = [
     // LoRA is neither of those things, and an undeclared dep-status cache reads
     // NOT-installed until the first sync, so the flow would show unavailable on open
     // for a weight the engine already guarantees.
-    // MPI-567. Two phases, two models, and the user picks BOTH (Fabio, 2026-08-22):
-    // SDXL renders the drawing as an object through the shipped ControlNet-Union
-    // branch, then a LanPaint inpaint over a user-placed box blends it into the photo.
-    // Bench-proven end to end; the blend route and its seam fix are written up in
-    // ../blending-into-a-photo.md and tasks/MPI-567/research/lanpaint/verdict.md.
+    // MPI-567, REBUILT KLEIN-ONLY 2026-08-25 (MPI-621). One model, one pass: the
+    // drawing is composited onto the user's own photo, a crop is taken around it, Klein
+    // 9B edits that crop, and the user's box is stitched back. The old architecture —
+    // SDXL + ControlNet renders the drawing in isolation, rembg cuts it out, a flat
+    // paste lands it in the photo, LanPaint blends the seam — is DELETED. It was six
+    // locally-correct steps downstream of one unasked question, and by construction it
+    // could never produce interaction: a paste is always on top. Fabio's own live test,
+    // same scribble and same photo: the 55-node flow took 38s and left the man standing
+    // apart touching nothing; ONE Klein 9B edit took 15s and put his hand on the
+    // tiger's back and his leg BEHIND it. Evidence chain and both sizing measurements:
+    // tasks/MPI-621/brief.md. Nothing is lost by dropping the SDXL arms — that half
+    // becomes the Scribble flow (MPI-620).
     {
         // RENAMED 2026-08-23 (Fabio): "Scribble to Object" -> "Draw It In". "Object" was
         // the broken word — he had been drawing characters, and the old title read as a
@@ -618,9 +625,7 @@ export const FLOWS = [
         // and `workflow: 'flow_draw_it_in.json'` all deliberately stay, because
         // cards already in users' galleries carry the `FLOWSCRIBOBJ_` prefix and their
         // sidecars' `flowId`, so renaming the id breaks reuse on every existing item.
-        // The preview filenames DID move, and that was free exactly once: the assets do
-        // not exist yet (`/mpi-flow-graphics` has not run), and 06 names them for the
-        // flow by hand rather than deriving them from the id.
+        // The Klein-only rebuild changes none of that either — same op key, same file.
         id: 'scribble-object',
         title: 'Draw It In',
         // Both assets EXIST in `comfy_workflows/display/` as of 2026-08-23 — check
@@ -632,12 +637,9 @@ export const FLOWS = [
         // `MpiTileSheet.js` ~137), so the correct state while art is missing is ABSENT,
         // never a name written ahead of the file.
         //
-        // Built from run 015 of Fabio's own live session: the source photo, the
-        // drawing he painted, and what the flow returned. The tile is the hero's seam
-        // frozen at x=250 of 896 so the drawing leads and the red dress emerges past
-        // it; being portrait, it also carries the feet and contact shadow that the
-        // hero's 8:5 band has to cut (the figure is 652px tall and no 8:5 band off a
-        // 896-wide plate is taller than 560).
+        // Built from run 015 of Fabio's own live session on the OLD route. The art still
+        // holds — it shows a drawing becoming a figure in a photo, which is what the
+        // flow still does — so the rebuild does not invalidate it.
         preview: 'flow-draw-it-in.webp',
         video: 'flow-draw-it-in.mp4',
         // Two sentences on purpose. The second is CRAFT guidance rather than a
@@ -648,68 +650,42 @@ export const FLOWS = [
         // has to land BEFORE the drawing, not in the paint step's hint where the user
         // has already committed to a shape. The hero demonstrates exactly this
         // contrast — beat 1 is a filled blob, beat 2 a drawn outline.
-        description: 'Draw what you want on top of your own photo, describe it, and the flow renders it — a person, an animal, an object — and blends it into the scene, matching the light and casting a shadow on the ground. The better you draw it, the more detail carries through: an outline with a pose and a tail gives the model far more to work with than a filled blob, and the less you have to fight the prompt to get what you meant.',
-        // TWO choosable slots, resolved independently (any-of-models.md). The render
-        // phase samples an SDXL checkpoint; the blend phase runs a Klein edit model.
-        // Every SDXL-family card already declares controlTypes scribble + canny behind
-        // the ONE ControlNet-Union loader this graph drives, so all five are genuine
-        // candidates — the choice is a style choice, which is exactly what the user
-        // should be making. `models[0]` is the recommendation: SDXL Realistic is the
-        // base the flow was proven on, and **Klein 9B** blends better — session 7 judged
-        // it better by eye on all five plates, and with the feather it matches 4B's seam
-        // numbers rather than trading them away. It costs ~1.9x the time (30s vs 16s) and
-        // a larger text encoder; 4B stays as the cheaper arm. Fabio's call, 2026-08-22.
+        description: 'Draw what you want on top of your own photo, describe it, and the flow paints it into the scene — a person, an animal, an object — matching the light, casting a shadow on the ground, and letting whatever is already in front of it overlap its edges. The better you draw it, the more detail carries through: an outline with a pose and a tail gives the model far more to work with than a filled blob, and the less you have to fight the prompt to get what you meant.',
+        // ONE slot now, where the old route picked a render model AND a blend model.
         //
-        // The two Klein cards are BOTH named "FLUX.2 Klein", so the picker appends their
-        // tier letter (9B = B, 4B = L). That is the picker's job, not this list's — see
-        // MpiFlowLibrary `_label`.
+        // 9B ONLY, and it is a CORRECTNESS call rather than a quality preference. Under
+        // style load 4B LEFT THE USER'S OWN INK IN THE OUTPUT — the drawn leash and head
+        // survived as a grey mechanical object while the tiger was corrupted into a
+        // cartoon dog. 9B under the same load degraded gracefully: scribble gone,
+        // composition intact. 4B follows the drawn shape more closely and integrates
+        // worse, which is the same axis the deleted "Follow the drawing" slider rode,
+        // reappearing as a model choice — and its failure mode is the worst one
+        // available. Cost accepted: a 4B-only user now downloads 9B, offset by the SDXL
+        // checkpoint this flow no longer needs at all.
+        //
+        // NO LoRA RACK (no `loras: true`), and that is not trimming. Style rides in the
+        // user's own words — "a cartoon man wearing X" styles only the inserted subject,
+        // where a style LoRA restyles the whole photograph, which is exactly what a
+        // styled 9B run did. An SDXL, Pony or Flux1 character LoRA will not load on
+        // Klein at all, so the rack could not carry identity across even in principle;
+        // identity by REFERENCE IMAGE is the route (this graph's own ReferenceLatent
+        // chain already supports it) and it is a later card, not this one.
         requiredModels: [
-            {
-                label: 'Render model',
-                models: ['sdxl-realistic', 'sdxl-nsfw', 'ill-anime-beauty', 'ill-anime', 'pony-mix'],
-                // PHASE 1 — fills `Input_Lora_Phase1_1..6` (MpiLoraModelClip, model AND clip)
-                // on the SDXL render chain. This is also the answer to the style problem the
-                // flow shipped with: the object came back in its own style rather than the
-                // photo's, widening the box so the model could infer one was TRIED and
-                // failed, and a user-picked style LoRA declares it instead of inferring it.
-                loras: true,
-            },
-            {
-                label: 'Blend model',
-                models: ['klein-9b', 'klein-4b'],
-                // PHASE 2 — fills `Input_Lora_Phase2_1..6` (MpiLoraModel, model only, which
-                // is what klein_t2i ships). Keyed by PHASE and not by family on purpose: this
-                // slot swaps klein-4b for klein-9b and the graph is never retitled.
-                loras: true,
-            },
+            { label: 'Edit model', models: ['klein-9b'] },
         ],
-        // The graph is baked SDXL Realistic + Klein 4B, so every arm names its own
-        // weights explicitly — a set reads as a set, and the arm that DOES match the
-        // bake (sdxl-realistic, klein-4b) catches a re-export quietly moving a default.
-        // Note the recommendation and the bake deliberately disagree on the blend slot:
-        // 9B is recommended, 4B is what the graph loads standing alone at the bench.
+        // The graph bakes exactly this pair, and the arm restates it anyway: a re-export
+        // that quietly moves a default is caught here rather than in a live run.
         //
-        // THE CLIP ARM IS NOT OPTIONAL TRIM. Klein 9B needs
-        // `qwen_3_8b_int8_convrot` and 4B needs `qwen_3_4b`; pairing 9B with 4B's
-        // encoder dies with a shape error that reads as a LanPaint bug and is not one
-        // (MPI-600). So the text encoder moves WITH the checkpoint or the 9B arm is
-        // broken on arrival.
+        // THE CLIP ARM IS NOT OPTIONAL TRIM. Klein 9B needs `qwen_3_8b_int8_convrot`;
+        // pairing it with 4B's encoder dies with a shape error that reads as a sampler
+        // bug and is not one (MPI-600). The text encoder moves WITH the checkpoint.
         //
         // `Input_Edit_Clip.clip_name` uses the dotted `Title.widget` form (MPI-359)
-        // while the other two are plain, and that asymmetry is load-bearing rather
-        // than untidy: `ckpt_name` and `unet_name` are on `comfyController._inject`'s
-        // spray list and `clip_name` is NOT, so a plain `Input_Edit_Clip` would match
-        // the node and silently write nothing.
+        // while `Input_Edit_Model` is plain, and that asymmetry is load-bearing rather
+        // than untidy: `unet_name` is on `comfyController._inject`'s spray list and
+        // `clip_name` is NOT, so a plain `Input_Edit_Clip` would match the node and
+        // silently write nothing.
         modelParams: {
-            'sdxl-realistic':   { 'Input_Base_Model': 'SDXL_Realistic.safetensors' },
-            'sdxl-nsfw':        { 'Input_Base_Model': 'SDXL_NSFW.safetensors' },
-            'ill-anime-beauty': { 'Input_Base_Model': 'ILL_Anime_Beauty.safetensors' },
-            'ill-anime':        { 'Input_Base_Model': 'ILL_Anime.safetensors' },
-            'pony-mix':         { 'Input_Base_Model': 'PONY_Mix.safetensors' },
-            'klein-4b': {
-                'Input_Edit_Model': 'flux-2-klein-4b-int8-convrot.safetensors',
-                'Input_Edit_Clip.clip_name': 'qwen_3_4b.safetensors',
-            },
             'klein-9b': {
                 'Input_Edit_Model': 'flux-2-klein-9b-int8-convrot.safetensors',
                 'Input_Edit_Clip.clip_name': 'qwen_3_8b_int8_convrot.safetensors',
@@ -724,8 +700,8 @@ export const FLOWS = [
             // and a prompt reaches the run by being a declared FIELD whose id is
             // `positive` (MpiBaseFlow `_collectInputs`). It read as a wired prompt, the
             // flow shipped with no prompt box at all, and the first live run rendered a
-            // blob into something nobody asked for because the model had only the
-            // ControlNet hint to go on (MPI-567, 2026-08-23). Declare prompts BELOW.
+            // blob into something nobody asked for (MPI-567, 2026-08-23). Declare
+            // prompts BELOW.
             //
             // ONE user slot. `image2` (Input_Paint) is the op's second slot but is
             // never offered here: the paint step DERIVES that file, there is nothing
@@ -739,7 +715,7 @@ export const FLOWS = [
             ],
         },
         // The BEFORE is the user's own photo, and the flow's whole claim is that only
-        // the drawn region changed — so the reveal bar crosses a steady scene.
+        // the boxed region changed — so the reveal bar crosses a steady scene.
         result: { compare: 'image1' },
         steps: [
             {
@@ -783,96 +759,49 @@ export const FLOWS = [
                         placeholder: 'An old lady riding the tiger, a stone bench, a red umbrella…',
                     },
                 ],
-                // The ~80-96px floor is measured, not a guess: below it the render
-                // has too little ink to read and invents the object's detail.
-                hint: 'Draw roughly where and how big it should be, then say what it is — the drawing gives the shape, the words give the subject. Keep it at least ~96px tall.',
+                // NO SIZE FLOOR ANY MORE, and dropping it was measured rather than
+                // assumed (MPI-621). The old "~96px tall" came from ControlNet: stage 1
+                // upscaled a starved control hint, so a small drawing had too little ink
+                // to read. There is no ControlNet here, and the crop is sized FROM the
+                // drawing and normalised to ~1MP, so it manufactures the resolution — a
+                // 75px scribble with 3px strokes rendered a grounded figure with contact
+                // shading. What matters instead is that the strokes say where, how big
+                // and what pose, which is what this copy now asks for.
+                hint: 'Draw roughly where it goes, how big it is and what pose it holds, then say what it is — the drawing gives the placement, the words give the subject. It does not need to be large: the flow crops in around whatever you draw.',
             },
             {
-                // The blend region. `param: 'box1'` -> `Input_Box` through the box
+                // The return region. `param: 'box1'` -> `Input_Box` through the box
                 // injector (an MpiBox carries four widgets, which the generic title
                 // injector would match and silently not write). No `ratio`: this box
-                // wraps an object AND the ground its shadow falls on, which is not
+                // wraps a subject AND the ground its shadow falls on, which is not
                 // square. `overflow: 'allow'` because both consumers clip — MpiBoxMask
                 // clamps to the image and the crop takes the clamped mask — and a
                 // subject near an edge otherwise cannot be given room below it.
                 kind: 'box', role: 'image1', param: 'box1', overflow: 'allow',
                 tickerLabel: 'Blend area',
                 title: 'Box the area to blend',
-                // Asks for ROOM, never light direction — the model reads the scene's
-                // own light, and telling it where the light is makes it worse
-                // (blending-into-a-photo.md). The seam warning is scene-dependent on
-                // purpose: a plain background is where a tonal step is visible.
-                hint: 'Include the object plus room on the ground for its shadow. Keep it tight — everything inside gets re-rendered, and on a plain background (sky, water, a flat wall) a big box can leave a visible edge.',
+                // Asks for ROOM, never light direction — the model reads the scene's own
+                // light, and telling it where the light is makes it worse
+                // (blending-into-a-photo.md). MEASURED FLOOR (MPI-621): the model renders
+                // the subject AROUND and BEYOND the drawing, not inside it, so a box
+                // stitched at the drawn bbox cut a hard vertical line through the man's
+                // torso; 1.6x the drawing was enough and 2.2x had margin. Shadow room is
+                // ON TOP of that floor and is scene-dependent — a low sun casts a long
+                // shadow — which is exactly why the user draws this and the graph does
+                // not derive it.
+                //
+                // The "keep it tight" half has a SECOND reason now: the context crop is
+                // sized from the drawing but can never be smaller than this box, so a
+                // very large box under-anchors the render and the subject comes back
+                // bigger than it was drawn.
+                hint: 'Include the subject plus room on the ground for its shadow — it is rendered around your drawing, not inside it, so a box drawn tight to the strokes will slice it. Keep it close otherwise: everything inside gets re-rendered, and a very large box makes the subject come back bigger than you drew it.',
             },
         ],
-        fields: [
-            {
-                // 1 = scribble, 2 = canny, matching the graph's MpiAnySwitch banks.
-                // The copy says TONAL, never "structured": a user with clean line art
-                // who reads "structured" as "neat" picks canny and gets their own ink
-                // back as an outline, because canny sees a drawn stroke's TWO edges.
-                id: 'Input_Control_Net', type: 'radio', label: 'Drawing type',
-                columns: 2, default: 1,
-                options: [
-                    { v: 1, label: 'Line drawing', note: 'flat lines',
-                      info: 'For flat line art. Thins each stroke to a centreline, so the model renders a form rather than tracing your ink.' },
-                    { v: 2, label: 'Shaded sketch', note: 'tonal',
-                      info: 'For a shaded pencil drawing with hatching. Carries interior structure — folds, a motif on a shirt — that the line arm flattens.' },
-                ],
-            },
-            {
-                // MANDATORY, and a correctness requirement rather than a convenience.
-                //
-                // THE MAPPING IS THE APP'S, NOT THIS FLOW'S (Fabio, 2026-08-23). The graph
-                // now matches `t2i_sdxl_realistic` node for node — MpiFloat(1) ->
-                // MpiNormalizeValue(0-1 -> 0-0.5) -> ControlNetApplyAdvanced(end_percent
-                // 0.569) — which is what all eight other ControlNet workflows in the repo
-                // do. It shipped mapping 0-1 -> 0-1 at end_percent 1 instead, so the slider
-                // reached DOUBLE the app's maximum strength and held it to the final
-                // denoise step. Fabio hit it immediately: "every time I go over a 50 I
-                // start getting these lines that look like poop." `promptControlDefaults`
-                // states the rule outright — the remap exists "because past ~0.5 those
-                // ControlNets artefact" — and holding the steer to the last step is what
-                // turns a stroke into a ridge rather than merely a stiff render.
-                // `default: 1` is `PROMPT_CONTROL_DEFAULTS.controlStrength`, so this knob
-                // now reads the same at the same number everywhere in the app.
-                //
-                // HISTORICAL, measured at the OLD mapping — the numbers below are RAW
-                // strength at end_percent 1, so they do NOT convert to slider positions
-                // now: 0.30-0.60 correct; 0.80 rendered the INK AS CLOTHING, a drawn
-                // neckline becoming a real V-neck seam; 1.00 put the drawn lines through
-                // as straps. The finding that OUTLIVES the remap is the shape of the
-                // failure: a drawing's SHAPE survives far below the strength at which its
-                // LINES start being rendered as objects. Where the band sits under the new
-                // mapping is UNMEASURED — re-sweep before quoting a number here.
-                //
-                // RE-SWEPT UNDER THE NEW MAPPING, 2026-08-23 (Fabio, live). Three points:
-                // **0.5** did not follow the drawing at all — he had to force the subject
-                // through the prompt; **0.65** overshot, putting the doodle itself through
-                // in one generation, which is the same ink-as-edges failure the historical
-                // 0.80 entry above describes; **0.60 is the shipped value**, his call
-                // between them. `end_percent` stays 0.569 and the slider stays 0-1.
-                //
-                // AND HERE IS WHY 0.5 IS THE HOUSE NUMBER, which matters more than the
-                // band: it is the minimum safe ceiling across EVERY control type an SDXL
-                // card offers. Not just scribble and canny — **openpose and depth**, and
-                // those two are what set the floor ("passing 50 starts giving a lot of
-                // issues on open pose and depth"). A t2i workflow puts all of them behind
-                // one slider, so its ceiling must satisfy the weakest.
-                //
-                // THIS FLOW MAY EXCEED IT BECAUSE ITS GRAPH CANNOT REACH THEM: it
-                // hard-wires two banks, `hed/pidi/scribble/ted` and
-                // `canny/lineart/anime_lineart/mlsd`, behind the two-option radio above,
-                // and carries no pose or depth preprocessor at all. It is not an exemption
-                // from the rule — the constraint the rule encodes does not apply here.
-                // `flow-model-choice.test.cjs` carries this as a NAMED exception with that
-                // reasoning. Add to that list, never widen the assertion, and the bar for
-                // joining it is proving your graph cannot drive openpose or depth either.
-                id: 'Input_Control_strength', type: 'slider', label: 'Follow the drawing',
-                min: 0, max: 1, step: 0.05, default: 1,
-                note: 'Turn it down if your strokes come through as real edges — a drawn line rendering as a seam means the drawing is being followed too literally.',
-            },
-        ],
+        // NO `fields`. Both of the old ones were ControlNet knobs and the graph no
+        // longer carries a ControlNet: "Drawing type" chose between the scribble and
+        // canny preprocessor banks, and "Follow the drawing" set the control strength.
+        // Their axis did not disappear, it became the model choice — see the 4B note
+        // above. Do not reintroduce a strength slider here; there is nothing to steer.
     },
     {
         id: 'character-sheet',

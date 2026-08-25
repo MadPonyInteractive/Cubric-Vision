@@ -239,27 +239,32 @@ test('opening the LoRA panel does not close the slide-over underneath it', () =>
 
 // ── Per-phase racks (MPI-567 / MPI-608) ──────────────────────────────────────
 // A flow that runs more than one model needs more than one rack. `settingsModel`
-// is a single string, so scribble-to-object — which picks an SDXL render model AND
-// a Klein blend model — could never fill both. The GRAPH half lands here ahead of
-// the wiring: twelve nodes titled `Input_Lora_Phase<N>_<i>`, phase-keyed rather
-// than model-keyed so an any-of slot can swap klein-4b for klein-9b without the
-// graph being retitled (Fabio, 2026-08-23).
+// is a single string, so a flow that picks a render model AND an edit model could
+// never fill both. Twelve nodes titled `Input_Lora_Phase<N>_<i>`, phase-keyed
+// rather than model-keyed so an any-of slot can swap klein-4b for klein-9b without
+// the graph being retitled (Fabio, 2026-08-23).
 //
-// Until MPI-608 widens comfyController's matcher these nodes are INERT — every slot
-// bakes `lora_name: "None"` and passes the model straight through. That is exactly
-// why they need pinning now: an inert node that nothing fills is the one a bench
-// re-export drops without anybody noticing, and the failure then is a run that
-// succeeds with no LoRA in it.
+// These nodes are the ones a bench re-export drops without anybody noticing, and
+// the failure then is a run that succeeds with no LoRA in it — which is why the
+// graph half is pinned here and not left to the wiring tests.
+//
+// MOVED OFF THE SCRIBBLE FLOW 2026-08-25 (MPI-621): Draw It In was rebuilt on ONE
+// model with NO rack at all — style rides in the user's own words there, and a
+// character LoRA from another family will not load on Klein regardless. The
+// character sheet is now the two-phase flow (Krea 2 renders, Klein removes the
+// head), so it inherits the pin. Its phase 1 is `MpiLoraModel` and not
+// `MpiLoraModelClip`: Krea 2 comes off a `UNETLoader`, so there is no CLIP to carry
+// through the rack, which is why the old third test in this block is gone.
 const PHASES = [
-    { n: 1, loader: 'Input_Base_Model', type: 'MpiLoraModelClip', consumer: '27', input: 'model' },
-    { n: 2, loader: 'Input_Edit_Model', type: 'MpiLoraModel', consumer: '167', input: 'model' },
+    { n: 1, loader: 'Input_Base_Model', type: 'MpiLoraModel', consumer: '143', input: 'model' },
+    { n: 2, loader: 'Input_Edit_Model', type: 'MpiLoraModel', consumer: '777', input: 'model' },
 ];
 
-const scribble = () => JSON.parse(read('comfy_workflows/flow_draw_it_in.json'));
+const scribble = () => JSON.parse(read('comfy_workflows/flow_character_sheet.json'));
 const idByTitle = (g, title) => Object.keys(g)
     .filter(k => (g[k]._meta || {}).title === title);
 
-test('the scribble flow carries six LoRA slots for EACH of its two model phases', () => {
+test('a two-phase flow carries six LoRA slots for EACH of its model phases', () => {
     const g = scribble();
     for (const { n, type } of PHASES) {
         for (let i = 1; i <= 6; i++) {
@@ -280,43 +285,49 @@ test('the scribble flow carries six LoRA slots for EACH of its two model phases'
 test('each phase rack is CHAINED into its own model path, loader through to sampler', () => {
     // A titled node that is not in the path is the silent failure this pins. The
     // graph validates, the run succeeds, and the LoRA does nothing at all.
+    //
+    // Walked BACKWARDS from the consumer rather than forwards in slot order, because
+    // slot order is not chain order: the character sheet's phase 1 runs 1 -> 4 -> 2 ->
+    // 5 -> 3 -> 6, which is how the bench laid it out and is functionally fine. What
+    // must hold is that all six sit in one unbroken path between the loader and the
+    // sampler, and a permutation still satisfies that. A rack may also hang off an
+    // intermediate the graph bakes for itself (phase 1's filter-bypass LoRA), so the
+    // walk stops at the loader rather than demanding slot 1 read it directly.
     const g = scribble();
     for (const { n, loader, consumer, input } of PHASES) {
         const loaderId = idByTitle(g, loader)[0];
         assert.ok(loaderId, `${loader} must exist to feed phase ${n}`);
 
-        let prev = loaderId;
-        for (let i = 1; i <= 6; i++) {
-            const id = idByTitle(g, `Input_Lora_Phase${n}_${i}`)[0];
-            assert.deepEqual(g[id].inputs.model, [prev, 0],
-                `Input_Lora_Phase${n}_${i}.model must come from node ${prev} — ` +
-                'a break anywhere in the chain orphans every slot after it');
-            prev = id;
+        const want = new Set();
+        for (let i = 1; i <= 6; i++) want.add(`Input_Lora_Phase${n}_${i}`);
+
+        const link = g[consumer].inputs[input];
+        assert.ok(Array.isArray(link),
+            `node ${consumer}.${input} must be WIRED for phase ${n}, not a baked value`);
+
+        const seen = [];
+        let cur = link[0];
+        for (let hop = 0; hop < 20 && cur !== loaderId; hop++) {
+            const title = (g[cur]._meta || {}).title;
+            if (want.delete(title)) seen.push(title);
+            const up = g[cur].inputs.model;
+            assert.ok(Array.isArray(up),
+                `phase ${n}'s model path breaks at node ${cur} (${title}) before reaching ` +
+                `${loader} — every slot downstream of a break is orphaned`);
+            cur = up[0];
         }
 
-        assert.deepEqual(g[consumer].inputs[input], [prev, 0],
-            `node ${consumer} must read its model from the END of phase ${n}'s rack ` +
-            `(${prev}), not straight from ${loader}`);
+        assert.equal(cur, loaderId,
+            `phase ${n}'s model path must run back to ${loader}, not stop at node ${cur}`);
+        assert.equal(want.size, 0,
+            `these phase ${n} slots are NOT in the model path and do nothing: ` +
+            `${[...want].join(', ')} (found ${seen.length} of 6)`);
     }
 });
 
-test('phase 1 carries CLIP through its rack as well as MODEL', () => {
-    // SDXL LoRAs patch the text encoder too. `MpiLoraModelClip` outputs model on slot 0
-    // and clip on slot 1; leaving the encoders wired to the checkpoint means a style
-    // LoRA's trigger words are tokenised by an unpatched CLIP and half the LoRA does
-    // nothing — visible as a weak result, never as an error.
-    const g = scribble();
-    const loaderId = idByTitle(g, 'Input_Base_Model')[0];
-    let prev = loaderId;
-    for (let i = 1; i <= 6; i++) {
-        const id = idByTitle(g, `Input_Lora_Phase1_${i}`)[0];
-        assert.deepEqual(g[id].inputs.clip, [prev, 1],
-            `Input_Lora_Phase1_${i}.clip must come from node ${prev} slot 1`);
-        prev = id;
-    }
-    const encoders = Object.keys(g).filter(k => g[k].class_type === 'CLIPTextEncode'
-        && Array.isArray(g[k].inputs.clip) && g[k].inputs.clip[0] === loaderId);
-    assert.equal(encoders.length, 0,
-        'no CLIPTextEncode may read straight from Input_Base_Model — ' +
-        `all of them must sit behind the phase 1 rack (${prev})`);
-});
+// DELETED 2026-08-25 (MPI-621): 'phase 1 carries CLIP through its rack as well as
+// MODEL' pinned `MpiLoraModelClip` on the scribble flow's SDXL render phase, so that
+// a style LoRA's trigger words were tokenised by a PATCHED encoder. That phase no
+// longer exists — Draw It In is one Klein pass with no rack — and the flow that
+// inherited the pin runs Krea 2 off a `UNETLoader`, which carries no CLIP through the
+// rack at all. Restore it the day a flow puts a CLIP-carrying rack back on a phase.

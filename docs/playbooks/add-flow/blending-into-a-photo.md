@@ -23,9 +23,31 @@ is gone, so it returns a blown-out patch — measured: a tower came back a glowi
 the surrounding photo was untouched. This is also why `boogu_edit_balanced.json`'s existing
 localised-edit path is **not** the carrier for a blend pass.
 
+> **Law 1 is about RELIGHTING an already-composited object and does NOT generalise to an edit
+> model GENERATING one.** Measured 2026-08-25 (MPI-621): seven Klein 9B edits from 0.008MP to
+> whole-image, glowing-blob signature at **no** rung. Generating only needs to know what light
+> to render under, which a tight crop already carries. Do not cite Law 1 against a tight crop
+> on the Draw It In route — [existing-flows/scribble-to-object.md](existing-flows/scribble-to-object.md).
+
 **2. A localised crop/stitch RE-GRADES the returned patch, leaving a visible rectangle.**
 Every model tried does it. It is worst over large uniform backgrounds (a dirt road, an empty
 rooftop) where there is nothing to hide the box edge.
+
+> **Amended 2026-08-25 (MPI-621), and the amendment is the actionable half.** Severity tracks
+> **how far the photo's own grade sits from the model's default look**, not how uniform the
+> background is. On a modern-looking plate the step measured ~2/255 and was invisible; on a
+> **vintage** plate — faded, warm, low contrast — the same route returned the patch
+> *restored*: mean **+9.5/+5.5/+2.6 RGB**, sd **+5.9/+4.8/+4.4**, a top-edge luma step of
+> **3.60** where the photo's own step across that line was 0.39. It reads as a cleaned-up
+> rectangle. Two consequences:
+> - **More context does NOT fix it.** A bigger box was tried live and changed nothing. The
+>   model is not lacking reference; it is *correcting* what it sees. So this is not the
+>   "widest crop that still anchors" tradeoff, and a feather cannot hide it either — a
+>   feather softens a boundary, and this is a whole-patch shift.
+> - **The fix is to put the grade back.** KJNodes `ColorMatch` (`mkl`, strength 1) with
+>   `image_ref` = the original crop and `image_target` = the model's output, placed before
+>   the stitch: measured **3.60 → −0.20**, below the plate's own natural variation. Wired in
+>   Draw It In; see [existing-flows/scribble-to-object.md](existing-flows/scribble-to-object.md).
 
 **3. So: relight the WHOLE image, then composite only the region back.**
 The whole-image pass integrates the object correctly *and* re-grades the entire photo — which
@@ -233,8 +255,13 @@ object from non-white RGB instead. This produced two wrong fixtures before it wa
 
 ## Where the control strength sits, and the size floor
 
-Both are ControlNet-hint properties rather than blend properties, but they decide what the blend
-is handed — see [existing-flows/scribble-to-object.md](existing-flows/scribble-to-object.md)
-§ Control strength and § The size floor for the measured numbers. In short: a high hint strength
-renders the user's *ink* as object detail, and a hint drawn too small makes stage 1 invent extra
-subjects — neither is something the blend pass can repair.
+Both are ControlNet-hint properties rather than blend properties, but they decide what a
+render-then-blend flow hands the blend pass: a high hint strength renders the user's *ink* as
+object detail, and a hint drawn too small makes stage 1 invent extra subjects — neither is
+something the blend pass can repair.
+
+**Neither applies to Draw It In any more** — MPI-621 rebuilt it on a single Klein edit with no
+ControlNet and no size floor (the crop is sized from the drawing and normalised, so it
+manufactures the resolution). The numbers moved to the Scribble flow, summarised in
+[existing-flows/scribble-to-object.md](existing-flows/scribble-to-object.md) § What moved to
+MPI-620.
