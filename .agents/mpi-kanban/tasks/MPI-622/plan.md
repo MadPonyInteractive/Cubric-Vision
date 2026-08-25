@@ -38,21 +38,24 @@ App-side facts checked 2026-08-25, so no one re-discovers them:
 - Chatterbox weight deps are `targetPath` and **must stay that way** (the pack computes
   `<ComfyUI>/models/chatterbox/` from its own `__file__`). Same class as RIFE, MPI-222.
 
-### Decisions front-loaded (scalable-foundation) — resolve BEFORE Phase 1
+### Decisions front-loaded (scalable-foundation) — ANSWERED by Fabio 2026-08-25
 
-- **D1 — where the bundle lives.** Recommend **in-repo**, `voices/` beside
+- **D1 — where the bundle lives. DECIDED: in-repo.** Fabio, 2026-08-25: *"that's a good
+  place to place the voices, we can go with your recommendation."* Recommendation was **in-repo**, `voices/` beside
   `comfy_workflows/display/`, one `manifest.json` plus opus clips. ~60 voices x (sample +
   up to 2 auditions) at ~24 KB each is roughly **5 MB**; all 228 would be ~16 MB. The
   alternative is inventing an archive dep type for a few megabytes, which is a new download
   path, a new extract step and a new GC case for no measurable gain. User-supplied voices go
   to `userData`, never into the bundle — that split is durable and unaffected by D1.
-- **D2 — how many voices ship.** Recommend **curating ~60** of the 228 CC0 kyutai voices for
+- **D2 — how many voices ship. DECIDED: ~60 curated.** Fabio, 2026-08-25: *"60 voices is
+  fine. If anything is missing later on, we can work on it"* — so the count is a starting
+  point, not a cap, and the import pipeline must stay re-runnable to add more.
+  Recommendation was **curating ~60** of the 228 CC0 kyutai voices for
   v1, chosen for register spread and clip quality, rather than shipping all 228 unaudited. A
   picker of 228 unlabelled voices is worse product than 60 good ones, and every voice costs
   audition-generation time in Phase 4.
 
-Both are recorded as recommendations, not as done deals. Phase 1 does not start until they
-are answered.
+**Both are answered. Phase 1 is unblocked.**
 
 ## Completed
 

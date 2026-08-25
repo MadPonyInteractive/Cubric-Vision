@@ -96,4 +96,156 @@ it is supposed to be. **That is the disqualified-cosine problem again, and this 
 pitch half of the gate is what caught it** — the first live demonstration that the two-number
 gate from `brief.md` § 5 earns its keep.
 
-**Status: awaiting Fabio's ear on (b), and one angry take for (a).**
+**Status: (b) PASSED — see the next entry.**
+
+---
+
+### 2026-08-25 — ✅ QUESTION (b) PASSES. The shift survives VC. And two things came out of it.
+
+Fabio, cold, on A/B/C: *"the three samples do not have any issues like the one you
+mentioned."* **No chipmunk, no formant damage, no metallic texture — in the +12 run, the +7
+run or the control.** An offline formant-preserving shift is therefore a usable source of
+performance clips as far as artefacts are concerned, and the shifter can be trusted at least
+to +12 semitones.
+
+That is Phase 0 option 1's expensive half answered, and it did not need option 2 or 3.
+
+#### 🔴 Flow A's output loudness is not controlled — this ships TODAY
+
+Fabio, unprompted: *"C is very loud though."* He is right and it is not the shift's fault.
+Measured through the whole chain (`research/pitch_tools.py level`, RMS over active speech —
+EBU R128 is unusable here, its gating blocks report the −70 dB silence floor on anything
+under ~10 s):
+
+| stage | RMS | note |
+|---|---|---|
+| `recording_003` → +7 → +12 → +19 | −27.1 / −27.3 / −26.8 / −26.2 | **the shift changes level by under 1 dB** |
+| TTS out, all three | −13.8 / −13.9 / −14.4, peak **0.0 dBFS** | TTS normalises hard to a fixed loud level, ignoring its reference |
+| VC out A / B / C | −18.2 / −16.8 / **−14.3** | VC drags level partway toward the CHARACTER's level |
+
+C's character was the loudest of the three, so C's VC only came down **0.4 dB** where B came
+down 3.0 and A came down 4.2. The A→C spread is **3.9 dB**, well past the ~1 dB threshold of
+noticing, and C sits on **0.0 dBFS peak**.
+
+So the same flow, run with two different target voices, returns audibly different loudness
+and can land on the clipping ceiling. **This is a Flow A defect, not a library one** — Flow A
+ships today and has no output normalisation. Two consequences:
+
+1. Flow A needs output loudness normalisation (or at minimum a peak ceiling). Not carded yet.
+2. **Every listening test from here must be level-matched before it is played.** A louder
+   clip wins almost any question a listener is asked, so this one nearly cost a false result.
+   `pitch_tools.py norm` exists for it now.
+
+#### 🔴 The "do not push" objection was MINE and it was wrong
+
+I wrote that Fabio's expressive takes were ruled out as performance clips by guidance rule 1
+("perform, but do not push"). He pushed back: *"I can change my voice quite a bit. I've done
+some role play and done very different characters."*
+
+He is right and I over-applied the rule. Two separate things were conflated:
+
+- **Rule 1 is about `exaggeration`, the TTS parameter** — 1.2 holds identity at 0.79–0.87,
+  1.5 drops to 0.70, 2.0 to 0.61. That is a knob, not a description of anyone's voice.
+- **The 0.38–0.42 figure** (his pushed take vs his own natural takes) matters **in Flow A**,
+  where the product's promise is converting *him*, so a take that does not encode as him
+  starts the conversion from a distorted x-vector.
+
+**Neither applies to a performance clip.** In this role the clip is a TTS `audio_prompt` and
+nothing is trying to sound like Fabio. The card's own measured asymmetry — performer identity
+barely leaks, performer PITCH leaks hard — says the clip only has to carry emotion and sit in
+a register. A take of his that encodes as "a different speaker" is *irrelevant* here, and may
+even be an advantage.
+
+The one real risk is strain texture (fry, breathiness, wobble) riding through — which is the
+same question the shift just passed, so it is testable rather than assumable.
+
+**If a performed take is as good, the shift is not needed at all** and R3/R4 become natively
+authorable. `research/phase0_performed_vs_shifted.py` decides it head to head, and the
+registers line up almost exactly, which makes it controlled rather than two separate tests:
+
+| register | performed | shifted |
+|---|---|---|
+| R3 | `high_pitch_exp_fabio` 230.5 Hz | +12 → 201.8 Hz |
+| R4 | `high_pittch_fabio` 316.7 Hz | +19 → 305.9 Hz (**11 Hz apart**) |
+
+#### D1 and D2 answered
+
+- **D1 → in-repo `voices/`.** *"That's a good place to place the voices, we can go with your
+  recommendation."*
+- **D2 → ~60 curated.** *"60 voices is fine. If anything is missing later on, we can work on
+  it."* The count is a starting point, not a cap — so the import pipeline must stay
+  re-runnable, which it was already specified to be.
+
+**Phase 1 is unblocked.**
+
+**Still open on Phase 0:** question (a) — does anger survive — see the next entry.
+
+---
+
+### 2026-08-25 — 🔴 THE PHASE 0 PREMISE IS WRONG. He performs angry in R4 unaided.
+
+Phase 0 was written on Fabio's own statement, *"the only emotional performance I can do is
+with my own voice"*, read as R1 at ~100 Hz. He then supplied three angry takes:
+
+| take | median f0 | register | duration | voiced | chain |
+|---|---|---|---|---|---|
+| `recording_008` | 136.3 | R2 | 13.62 s | 32.3% | **denoised** |
+| `recording_009` | 166.8 | R2 | 8.76 s | 21.4% | **denoised** |
+| `recording_010` | **274.1** | **R4** | 7.08 s | 40.2% | raw |
+
+**`recording_010` is an angry performance natively in R4** (260–340 Hz). None of these is at
+his natural 101.5 Hz — anger itself carries him up, which matches the earlier note that *"when
+he was angry he was pitched up a little bit, which is natural"*.
+
+So the question Phase 0 exists to answer has changed shape. It was "where do R3–R5
+performances come from, since he can only do R1". It is now **"which registers can he not
+reach, and does the shift only need to cover those?"** He has demonstrated R2 and R4 angry.
+R3 sits between two he can hit. The real gap is **R5 (340 Hz+)**, and possibly sustained R3
+female.
+
+That makes the shift a **fallback for the top of the grid**, not the foundation of it — a
+much smaller dependency, and one the escape hatch already covers.
+
+#### 🔴 The 1.5 Hz "controlled pair" was not controlled — Fabio caught it
+
+`recording_008` shifted +12 lands on 277.3 Hz, **1.5 Hz from `recording_010`'s 274.1** —
+same speaker, same emotion, same register, one shifted and one performed. It looked like the
+cleanest possible test.
+
+Fabio, unprompted: *"Recording 8 and 9 pass through my AI Noise Cancellation Filter.
+Recording 10 is straight out of the microphone."*
+
+**So the pair varies two things at once** — denoised-and-shifted vs raw-and-performed — and
+any difference heard across it could be either. Comparing them would have produced a
+confident wrong answer about the shift, on a card whose entire history is confident wrong
+answers from measurements that agreed with each other.
+
+`research/phase0c_angry.py` is therefore split into two chains, each clean within itself:
+
+- **denoised chain**, all from 008: `+0` 136.3 / `+12` 277.3 / `+19` 399.0 (R5)
+- **raw chain**, all from 010: `+0` 274.1 / `−12` 141.9 — also the first **downward** shift
+  tested; every shift before this went up.
+
+A properly controlled performed-vs-shifted answer still needs one more take: **an angry line
+at his natural pitch, recorded RAW** (filter off).
+
+#### A clipping bug in the shifter, surfaced by the same clip
+
+`recording_008` peaks at 0.0 dBFS, and Change gender resynthesises to a slightly higher peak,
+so the save clipped — 9 samples at +12, **49 at +19** — reported only as a Praat warning that
+is easy to scroll past. `pitch_tools.shift` now attenuates to −6 dBFS *before* the shift.
+Costs nothing, since `normalize` sets final loudness afterwards anyway. Re-shifted clean:
+peaks −5.6 and −5.1 dBFS.
+
+#### Phase 0b (performed vs shifted, neutral content) ran but is now the lesser test
+
+Four runs, same character / text / seed, level-matched to −16.0 dB rms_active and staged at
+`C:/Users/Fabio/Desktop/MPI622_perf_vs_shift/`. Key: `research/phase0b_answer_key.md`.
+
+One number stands out without any listening: **the performed R3 arm's TTS stage ran 18.56 s
+for a line the other three deliver in 6.2–8.0 s**, at 18.6% voiced. `high_pitch_exp_fabio`
+is 32.6% voiced — a reference that is mostly not-speech gives the TTS stage little to lock
+onto. The R4 performed arm did not do it (6.60 s, 69.4% voiced), so this is not "performed
+clips break TTS". **The candidate authoring rule is voiced DENSITY, not performed-vs-shifted**,
+and it would apply to both. n=1; the angry takes will test it further (008 is 32.3% voiced,
+009 only 21.4%).

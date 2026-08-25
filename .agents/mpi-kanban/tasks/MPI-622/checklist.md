@@ -8,20 +8,27 @@
       (inside the 2 Hz gate)
 - [x] Shifts land on their target register, duration untouched (13.26s in all three):
       +7 -> 150.3 Hz R2, +12 -> 201.8 Hz R3, +19 -> 305.9 Hz R4
-- [ ] Question (b) ARTEFACTS - does the shift leave chipmunk/formant damage that rides
-      through the VC stage? `research/phase0_shift_pipeline.py`, +0 control vs +7 vs +12,
-      registers matched. Fabio's ear
-- [ ] Question (a) EMOTION - does a shifted clip still read as genuinely angry? BLOCKED:
-      no angry take of Fabio's exists on disk. `recording_003/004/005` are the only natural
-      ones and none is labelled emotional
+- [x] Question (b) ARTEFACTS **PASSED** 2026-08-25. No chipmunk or formant damage rides
+      through VC at +7 or +12. Fabio cold, on the blind A/B/C: "the three samples do not
+      have any issues like the one you mentioned". `research/phase0_shift_pipeline.py`
+- [~] Question (a) EMOTION - UNBLOCKED. Fabio supplied recording_008/009/010 (136.3 / 166.8 / 274.1 Hz).
+      `recording_010` is angry natively in R4, which BREAKS the phase premise - see validation.
+      `research/phase0c_angry.py` running
 - [ ] Only if (a) or (b) fails: research permissively-licensed emotional speech corpora
       (a real gap - the existing research covers IDENTITY corpora only)
 - [ ] Escape hatch if both fail: ship R1 only for v1, every other voice as `narration`
 
-## Decisions blocking Phase 1
+## Surfaced here, belongs elsewhere
 
-- [ ] D1 - bundle in-repo `voices/` (~5MB curated / ~16MB all 228) vs invent an archive dep type
-- [ ] D2 - curate ~60 of the 228 CC0 kyutai voices vs ship all 228
+- [ ] **Flow A output loudness is not normalised** - 3.9 dB spread across three target
+      voices and one output sitting on 0.0 dBFS peak. Flow A SHIPS TODAY. Not carded yet
+- [ ] Candidate authoring rule: voiced DENSITY, not performed-vs-shifted. A 32.6%-voiced
+      reference made the TTS stage run 18.56s for a 6s line. n=1, more evidence coming
+
+## Decisions (ANSWERED 2026-08-25 - Phase 1 unblocked)
+
+- [x] D1 DECIDED: in-repo. Was: bundle in-repo `voices/` (~5MB curated / ~16MB all 228) vs invent an archive dep type
+- [x] D2 DECIDED: ~60 curated, not a cap. Was: curate ~60 of the 228 CC0 kyutai voices vs ship all 228
 
 ## Phase 1 - the voice record and its loader
 
