@@ -69,7 +69,13 @@ entry. Both are read-only calls into a file this card does not own.
   heavier probe than the wiring warrants; the node test covers the wiring, and the placement
   itself needs Fabio's eyes, not an assertion.
 
-## Needs a human
+## Human check — DONE, 2026-08-25
 
-A UI placement is a judgement call. Fabio: open Character Sheet or Scribble to Object, go to
-the last step, and check the two cogwheels read right where they sit.
+Fabio: *"the placement is fine. You can call 613."* The last check this card was waiting on
+was a judgement only he could make, and he made it.
+
+**The Flow Library keeps its cogwheels.** He was asked whether they should move outright and
+answered by closing the card on what shipped, so the additive outcome stands: two surfaces,
+one resolver, the Library placement still right for choosing *before* a run. Recorded as
+resolved-by-shipping rather than as an explicit ruling — if it should be one surface only,
+that is a new card and a one-line removal.

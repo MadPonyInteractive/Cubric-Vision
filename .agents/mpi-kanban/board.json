@@ -1,10 +1,11 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 620,
+  "next_id": 622,
   "columns": {
     "todo": [
+      "MPI-621",
+      "MPI-620",
       "MPI-616",
-      "MPI-617",
       "MPI-612",
       "MPI-605",
       "MPI-602",
@@ -70,8 +71,6 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-613",
-      "MPI-618",
       "MPI-615",
       "MPI-603",
       "MPI-608",
@@ -81,6 +80,9 @@
       "MPI-599"
     ],
     "done": [
+      "MPI-617",
+      "MPI-613",
+      "MPI-618",
       "MPI-614",
       "MPI-619",
       "MPI-567",
@@ -116,8 +118,31 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-25T11:00:00Z",
+  "updated_at": "2026-08-25T12:40:00Z",
   "events": [
+    {
+      "at": "2026-08-25T04:12:00Z",
+      "type": "task.moved",
+      "task": "MPI-618",
+      "actor": "claude",
+      "from": "doing",
+      "to": "done",
+      "note": "doing -> done, complete. Suffix shipped and committed (fe525d8e), 729 node + 26 desktop tests green. Live run NOT owed: MPI-621 deletes the SDXL render phase the suffix lives on, so validating it would test a phase being removed."
+    },
+    {
+      "at": "2026-08-25T04:11:00Z",
+      "type": "task.created",
+      "task": "MPI-621",
+      "actor": "claude",
+      "note": "Draw It In, rebuilt Klein-only: crop, edit, stitch - no render phase, no paste, no mask"
+    },
+    {
+      "at": "2026-08-25T04:11:00Z",
+      "type": "task.created",
+      "task": "MPI-620",
+      "actor": "claude",
+      "note": "Scribble Flow - draw on a blank canvas, SDXL + ControlNet renders it"
+    },
     {
       "at": "2026-08-24T13:52:00Z",
       "type": "task.moved",

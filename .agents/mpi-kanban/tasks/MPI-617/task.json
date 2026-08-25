@@ -3,14 +3,15 @@
   "id": "MPI-617",
   "title": "The Klein LoRA rack: stop a cross-tier LoRA binding nothing, move the cogwheel to the run stage, and GC the pre-rename weights",
   "description": "Umbrella over MPI-614 (cross-tier LoRA binds NOTHING and the run still reports success), MPI-613 (the LoRA cogwheel belongs on the flow RUN stage), and MPI-612 (garbage collect the pre-rename Klein style LoRAs). All three are the Klein style-LoRA rack seen from three sides: correctness, iteration loop, and cleanup. Phases run in that order; phase 3 is release-gated and cannot start until the release carrying MPI-609 is two-three releases old.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "column": "done",
+  "maturity": "rejected",
+  "status": "closed",
   "created_at": "2026-08-24T13:20:00Z",
-  "updated_at": "2026-08-24T13:20:00Z",
+  "updated_at": "2026-08-25T12:40:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   }
 }

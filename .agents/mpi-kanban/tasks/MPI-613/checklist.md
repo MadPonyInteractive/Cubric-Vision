@@ -10,7 +10,7 @@
 - [x] `npm test` — 730/730
 - [x] `npx eslint js/ --max-warnings=0` — clean
 - [x] desktop suite green - 26/26
-- [ ] Fabio: does the Flow Library keep its cogwheels, or do they move outright?
+- [x] Fabio: does the Flow Library keep its cogwheels, or do they move outright?
       Kept for now — additive, nothing removed, and the Library placement is still
       right for *before* you run. One line to remove them if you want them gone.
-- [ ] Fabio: eyeball the run slide (a UI placement is a human judgement)
+- [x] Fabio: eyeball the run slide - APPROVED 2026-08-25, "the placement is fine"
