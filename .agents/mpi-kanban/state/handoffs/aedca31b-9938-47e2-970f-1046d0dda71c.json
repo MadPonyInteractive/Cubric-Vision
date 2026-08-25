@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "aedca31b-9938-47e2-970f-1046d0dda71c",
   "generated_at": "2026-08-25T12:55:00Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-607 session 15 - the VC quality question answered by listening test, the cosine disqualified, and the voice library carded as MPI-622",
     "branch": "master"
