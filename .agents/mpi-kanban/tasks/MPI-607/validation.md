@@ -1576,3 +1576,65 @@ ASSERTS the export exists rather than skipping when it does not -- a `typeof fn 
 **Verified by logic + a full-registry sweep, NOT on a live Pod.** No Pod was rented. The
 change only ever moves a dep from "claimed present" to "reported missing", so the failure
 mode it can introduce is a redundant install prompt, never a destructive one.
+
+### 2026-08-25 -- "It sounds like my original voice." It does not, and the measurement says why.
+
+Fabio listened to `MPI607_VC_flowtest_00001.flac` and reported it sounded like himself.
+Measured with the card's own CAMPPlus gate (`research/speaker_similarity.py`) rather than
+argued:
+
+| pair | cosine |
+|---|---|
+| output vs TARGET (gravel senior male) | **0.79** -- above the 0.70 gate |
+| output vs SOURCE (Fabio) | **0.19** -- different speaker |
+
+So the conversion worked. **The demo clip was badly chosen -- by me -- and it violated the
+card's own guidance rules 3 and 4.** Source `high_pitch_exp_fabio.wav` is a pushed
+high-pitch take at 200Hz median f0; the target sits at 125Hz. Output landed at 162Hz with
+the duration preserved to the centisecond (10.62s -> 10.64s). What Fabio heard was HIS
+delivery, HIS rhythm and a pitch still far above the character's -- wearing a different
+timbre. That reads as "my voice" instantly.
+
+**This is the "it did nothing" failure mode the guidance predicted, reproduced accidentally
+in our own first demo.** Worth keeping: the very thing that makes Flow A special (the
+performance passes through untouched) is also what makes a user think it failed.
+
+#### A second finding: a PUSHED take shifts the speaker's own identity
+
+`high_pitch_exp_fabio.wav` scores only **0.38-0.42** against Fabio's natural-pitch
+recordings (`recording_003/004/005`), which score 0.72 against each other. The encoder calls
+his own performed take a different speaker. That is rule 1 ("perform but do not push")
+appearing in the numbers, and it also means a pushed source gives VC a distorted x-vector to
+work against.
+
+#### The rule-obeying re-run
+
+Source `recording_003.wav` (Fabio, natural 106Hz), target the same gravel character (125Hz)
+-- timbre distance 0.23, pitch gap 19Hz. `MPI607_VC_GOOD_PAIR_00001.flac`, 16.7s,
+`execution_cached: []`:
+
+| pair | cosine |
+|---|---|
+| output vs TARGET | **0.84 -- SAME speaker** |
+| output vs SOURCE | 0.31 |
+
+#### 🔴 SHARPEN GUIDANCE RULE 3: VC TRANSPLANTS TIMBRE, NOT PITCH
+
+Measured across both runs: duration is preserved exactly, and the output largely follows the
+SOURCE's pitch contour -- 106Hz -> 106Hz unchanged in the good pair, and 200Hz -> 162Hz in
+the pushed pair, never reaching the target's 125Hz in either.
+
+So "meet the target's pitch" is not "match it and VC will meet you halfway". It is: **VC
+will NOT move your pitch to the target, so a large gap yields the target's timbre at a pitch
+that voice never uses** -- which is the unnatural result, and at the extreme is why a
+high-pitched take still sounds like the speaker. Rule 3 in
+`docs/playbooks/add-flow/existing-flows/voice-changer.md` states the WHAT but not this WHY;
+update it at close-out.
+
+#### Product consequence for the UI (feeds the /mpi-brainstorm)
+
+A user CANNOT be expected to discover this. The pairing decision -- timbre far, pitch near --
+is the whole difference between "spot on" and "it did nothing", and today nothing in the
+product says so. Whatever the voice selector becomes, it should surface the target's pitch
+range (and ideally flag a large gap against the recording just made), because that is the one
+number that predicts the outcome.

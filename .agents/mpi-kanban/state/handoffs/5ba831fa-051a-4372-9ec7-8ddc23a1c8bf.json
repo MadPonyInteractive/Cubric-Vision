@@ -1,39 +1,40 @@
 {
   "schema": "mpi-kanban/handoff/v1",
   "id": "5ba831fa-051a-4372-9ec7-8ddc23a1c8bf",
-  "generated_at": "2026-08-24T08:50:00Z",
+  "generated_at": "2026-08-25T05:40:00Z",
   "status": "open",
   "session": {
-    "name": "MPI-607 session 14 - Gate 2 Flow A shipped, and the targetPath install-state bug it uncovered",
+    "name": "MPI-607 session 14 - Gate 2 Flow A shipped, two targetPath bugs fixed, and VC quality now in doubt on Fabio's ear",
     "branch": "master"
   },
   "goal": {
     "original": "Resolve Qwen3-TTS viability, then wire Chatterbox + Qwen as Flows.",
     "status": "in_progress",
-    "summary": "GATE 2 FLOW A IS BUILT AND COMMITTED (d8f9f782). The graph is proven on real audio, Perth marking is proven APPLIED, and Fabio installed it from his own app - which surfaced a real two-half bug in targetPath install state, now fixed and tested. npm test 729/729. THE COMMIT IS NOT PUSHED: the new pre-push hook refuses a red master, and the --no-verify bypass was denied by the permission classifier. Next action is the remote-twin fix Fabio approved."
+    "summary": "Flow A (Voice Changer) is BUILT, COMMITTED and its graph proven live. Two real bugs found and fixed on the way. But the card's user-ux gate is NOT passed: Fabio listened twice and both times said it sounds like himself, while the CAMPPlus encoder says 0.84 to the target. His ear is the gate. Separately he judged that shipping Flow A before the voice library was the wrong order, and he is right about the target-voice side."
   },
   "plan": {
     "file": ".agents/mpi-kanban/tasks/MPI-607/plan.md",
     "completed": [
-      "GATE 2 FLOW A BUILT - flow_voice_changer graph (5 nodes, built IN the ComfyUI editor, converter vs graphToPrompt 0 diffs), flowVoiceChanger op in all 4 registries (appVersionIntroduced 1.5.0), voice-changer FlowDef (requiredModels [], mediaType 'audio', 1.057GB requiredDeps), inject-titles test case, existing-flows/voice-changer.md.",
-      "GRAPH PROVEN LIVE on the bench under a GPU lease: real clips, status success, 12.1s, execution_cached [], node 5 Output_Audio emitted a real flac in the exact shape _collectComfyAudioUrl reads.",
-      "PERTH MARKING PROVEN APPLIED (not merely installed): watermark 1.0 on the output vs 0.0 on the source control.",
-      "Gate 1's targetPath + byte counts confirmed against a real on-disk install (s3gen.pt 1,057,165,844 / conds.pt 107,374).",
+      "GATE 2 FLOW A BUILT + COMMITTED (d8f9f782): flow_voice_changer graph (5 nodes, built IN the ComfyUI editor, converter vs graphToPrompt 0 diffs), flowVoiceChanger op in all 4 registries, voice-changer FlowDef (requiredModels [], mediaType 'audio', 1.057GB deps), inject-titles case, existing-flows/voice-changer.md.",
+      "Graph proven live on the bench twice (12.1s and 16.7s, execution_cached [] both times, real flac out).",
+      "Perth watermarking proven APPLIED, not merely installed: 1.0 on the output vs 0.0 on the source control.",
+      "Fabio INSTALLED it from his own app - 1.057GB landed byte-exact.",
+      "BUG 1 FIXED (both halves): targetPath install state. _localModelsCheck omitted the targetPath branch resolveComfyPath has, AND syncModelInstalled's dep projection dropped the field, so a downloaded weight read missing forever (bar stuck at 100%, badge never flipped, restart could not help).",
+      "BUG 2 FIXED (f03e558c): the remote twin. _isImageResident now needs targetPath AND bakedOnPod; rife47 carries the flag. Chatterbox reports MISSING on remote = fails closed.",
       "CORRECTED A HANDOFF INSTRUCTION: ComfyUI-MpiNodes must NOT be in requiredDeps (broke the MPI-258 B1 GC test).",
-      "FOUND + FIXED a two-half targetPath install-state bug (see constraints). Both halves pinned by tests/targetpath-dep-install-state.test.cjs. npm test 729/729.",
-      "Fixed 4 stale facts in the add-flow playbook, all verified against the live engine.",
-      "COMMITTED d8f9f782, 23 files, eslint gate passed."
+      "Four stale facts fixed in the add-flow playbook, all verified against the live engine.",
+      "npm test 729/729."
     ],
     "pending": [
-      "THE NEXT ACTION - the remote-twin fix Fabio APPROVED: narrow _isImageResident (routes/remoteModels.js:225) from `dep.targetPath` to `dep.targetPath && dep.bakedOnPod`, and add `bakedOnPod: true` to rife47 in assetDeps.js.",
-      "PUSH IS BLOCKED - decide with Fabio. Commit d8f9f782 is local-only. See constraints.",
-      "Fabio has still NOT LISTENED to the flow's output. That is the outstanding user-ux gate (plan verify mode is user-ux).",
-      "THE FLOW HAS NO UI. Fabio wants: a record button firing the MPI-573 recorder, a voice selector off the library, and a custom-voice library item. He agreed this is a /mpi-brainstorm, not a field list - the voice library does not exist and Flow B needs the same picker.",
-      "No preview art - preview/video deliberately absent from the FlowDef. /mpi-flow-graphics is a separate pass.",
+      "THE BLOCKER: Fabio has listened TWICE and both times heard himself. The encoder disagrees (0.84 = same speaker as target). Resolve this before anything else - see constraints. His ear decides.",
+      "PUSH IS BLOCKED - two commits are local-only. See constraints.",
+      "THE VOICE LIBRARY IS THE REAL NEXT PIECE (Fabio's call this session). Flow A's second input is a voice to convert INTO, and with no library the user must already own a suitable clip. Each library voice needs its PITCH RANGE stored - see constraints.",
+      "Flow A has NO UI: Fabio wants a record button (MPI-573 recorder), a voice selector off the library, and a custom-voice item. Agreed to be a /mpi-brainstorm, not a field list.",
+      "Sharpen guidance rule 3 in docs/playbooks/add-flow/existing-flows/voice-changer.md - VC transplants TIMBRE, NOT PITCH (measured; see constraints).",
+      "No preview art - preview/video deliberately absent. /mpi-flow-graphics is a separate pass.",
       "GATE 2 FLOW B - Text to Speech (TTS -> VC, 4.25GB), still waiting on the ~5-8 authored performance clips.",
       "Flow B accent routing: none -> base model, <lang> -> multilingual (+3.0GB). Whether requiredDeps can express an OPTIONAL set is UNRESOLVED.",
-      "Does the accent SURVIVE the VC stage? Still open, and it gates Flow B only.",
-      "Library taxonomy (~60 voices) and the performance clips - both unstarted. Flow A needs NEITHER."
+      "Does the accent SURVIVE the VC stage? Open, gates Flow B only."
     ]
   },
   "task_card": {
@@ -48,34 +49,35 @@
     }
   },
   "next_action": {
-    "description": "Implement the remote-twin fix Fabio approved: in routes/remoteModels.js:225 narrow `if (dep.targetPath) return true;` to `if (dep.targetPath && dep.bakedOnPod) return true;`, and add `bakedOnPod: true` to the rife47 entry in js/data/modelConstants/assetDeps.js. Rationale, all verified: rife47 IS baked (cubric-vision-pod/Dockerfile:376) but carries only the blanket rule; chatterbox appears NOWHERE in c:/AI/Mpi/mpi-ci (no node pack, no weights, neither image); bakedOnPod already exists on 7 engineAsset weights. targetPath = WHERE ON DISK, bakedOnPod = WHETHER THE POD HAS IT - conflating them is the defect. Chatterbox then reports not-installed on remote, which fails CLOSED. Do NOT bake chatterbox into the Pod image. Then resolve the blocked push with Fabio.",
+    "description": "DO NOT write code first. Resolve the quality question: Fabio has listened to two VC outputs and both times said it sounds like him with a different pitch, while the CAMPPlus gate says 0.84 to the target (same speaker). Play him a BLIND A/B - the target character clip itself against the VC output - and ask which is which; if he can pick his own voice out of the pair, VC is not shipping-grade at these settings and the whole Chatterbox architecture needs re-examining before the library is authored. Clips: D:\\WORK\\Images\\Outputs\\audio\\MPI607_VC_GOOD_PAIR_00001.flac (output), G:\\ComfyUi\\ComfyUI\\input\\A3_REF_senior_male_gravel_character.wav (target), G:\\ComfyUi\\ComfyUI\\input\\recording_003.wav (his source). Only after that: the voice-library /mpi-brainstorm, and the blocked push.",
     "command": "mpi-continue"
   },
   "context": {
     "key_decisions": [
-      "ComfyUI-MpiNodes is NOT in requiredDeps, and Flow B must not declare it either. `requiredDeps` means nodes/weights NO MODEL requires; every model declares MpiNodes; and a flow's deps are protected UNCONDITIONALLY in _localSharedDepsMap (a flow is always 'present', unlike a model), so naming a registry-wide dep pinned it for every uninstall and broke MPI-258 B1. It installs anyway - getUniversalWorkflowDepIds() returns EVERY type:'custom_nodes' dep and the boot gate installs that whole set regardless of any model or flow.",
-      "REMOTE: do NOT bake chatterbox into the Pod image. Stop the lie instead (see next_action). Fabio approved this.",
-      "The FlowDef deliberately declares NO preview/video. The tile guards on flow.preview so it renders no thumb rather than a broken image - and a flow naming art that does not exist is exactly what kept CI red for a day (MPI-567's flow-scribble-object.webp 404 in the desktop suite).",
-      "No fields, no steps, no result.compare: seed comes from _buildParams via the Input_Seed MpiInt convention, use_cpu/keep_model_loaded are engine plumbing, and a reveal bar between two waveforms says nothing.",
-      "The four user-guidance rules are copy, not configuration: perform but do not push / pick a target that sounds nothing like you / meet its pitch / hold that pitch steady."
+      "FABIO'S EAR IS THE GATE, NOT THE COSINE. The plan's verify mode is user-ux. A 0.84 CAMPPlus score is evidence the pipeline runs, NOT evidence the product is good. Do not use the measurement to talk him out of what he heard.",
+      "Fabio judged that building Flow A before the voice library was the wrong order, and he is right about the TARGET side: the flow needs a voice to convert INTO and there is no library to pick from. The flow's code is nonetheless done, correct, and flushed out both bugs above.",
+      "REMOTE: do NOT bake chatterbox into the Pod image. Honest-missing fails closed. Already implemented in f03e558c.",
+      "ComfyUI-MpiNodes is NOT in requiredDeps, and Flow B must not declare it either - every model declares it, and a flow's deps are protected UNCONDITIONALLY, so naming a registry-wide dep pinned it for every uninstall. It installs anyway via the boot gate, which installs every type:'custom_nodes' dep.",
+      "The FlowDef deliberately declares NO preview/video - a flow naming art that does not exist is what kept CI red for a day (MPI-567)."
     ],
     "constraints": [
-      "PUSH IS BLOCKED AND NEEDS FABIO'S DECISION. Commit d8f9f782 is LOCAL ONLY. The new .husky/pre-push hook (b1ca2984) refuses a push while master's last CI run is failing; master is red on MPI-567's flow-scribble-object.webp 404. The fix for that red IS in the local stack (d7ca048f + 1048c0dd, both unpushed), so `git push --no-verify` is legitimate per the hook's own message - but the permission classifier DENIED it. Do not work around it; ask Fabio.",
-      "THE targetPath BUG, both halves, because it will bite any future targetPath dep: (1) _localModelsCheck (routes/comfy.js) duplicated path resolution and omitted the targetPath branch resolveComfyPath has, so it searched the models root - the one place such a weight can never be; (2) syncModelInstalled (js/data/modelRegistry.js) projected deps to {id,type,filename} and DROPPED targetPath, so half 1 fired for nobody. Either half alone reports a downloaded weight missing forever: badge never flips, install bar sticks at 100% with Cancel showing, and a restart cannot help because the answer is deterministic.",
-      "METHOD LESSON worth more than the bug: VERIFYING A ROUTE WITH A HAND-BUILT PAYLOAD PROVES NOTHING ABOUT THE CALLER. The first fix verified green against full dep objects and shipped a still-broken app, because the app sends a stripped projection. Reproduce the caller's payload.",
-      "THE WEIGHTS MUST STAY targetPath. The pack computes <ComfyUI>/models/chatterbox/ from its own __file__ and never reads extra_model_paths.yaml, so a weight filed under mpi_models/ is simply absent and hf_hub_download refetches 4.25GB outside the download manager. Same class as RIFE (MPI-222).",
-      "PEER SESSIONS ARE LIVE IN THIS TREE. MPI-567 renamed its flow to 'Draw It In' and made its art mid-session; MPI-608 is also active. Uncommitted files NOT mine and deliberately left: comfy_workflows/raw/{krea2_t2i,ltx_i2v_t2v,sdxl_t2i}_template.json and dev_configs/smoke-run.txt. Commit by explicit pathspec only.",
-      "sync-raw-workflows.mjs REFUSES to run while any generated workflow is uncommitted (it rebuilds all templates). flow_voice_changer.json is a BARE name so it routes straight to a runtime file with no orchestrate step - it was written from the same converter stdout the sync writes verbatim, then passed validate-injection-rules.mjs.",
-      "Bench output does NOT land in <ComfyUI>/output - it is redirected to D:\\WORK\\Images\\Outputs\\. The flow's proof clip is D:\\WORK\\Images\\Outputs\\audio\\MPI607_VC_flowtest_00001.flac.",
-      "Any /prompt POST to 8188 or 48188 needs the GPU lease: python C:/Users/Fabio/.claude/plugins/cache/mad-pony-interactive/mpi-kanban/1.2.0/skills/mpi-lib/scripts/gpu_lease.py run -- <cmd>. $CLAUDE_PLUGIN_ROOT is UNSET in the Bash tool, and a bare /skills/... path gets rewritten to C:\\Program Files\\Git\\... - use the absolute path.",
-      "Heredocs are BLOCKED by guard-shell (Git Bash mangles them). Write a script file to the scratchpad and run it by path, or use single-quoted python -c on one line.",
+      "THE QUALITY DOUBT, stated fairly. Run 1 (source high_pitch_exp_fabio 200Hz -> target gravel 125Hz): 0.79 to target, 0.19 to Fabio, output 162Hz. Run 2, obeying the guidance rules (source recording_003 at natural 106Hz, timbre distance 0.23, pitch gap 19Hz): 0.84 to target = SAME speaker, 0.31 to source. Fabio's verdict on BOTH: 'sounds like me with lower pitch'. Either the encoder and the ear measure different things, or VC is weaker than the research concluded. UNRESOLVED and it gates the library.",
+      "VC TRANSPLANTS TIMBRE, NOT PITCH - measured. Duration is preserved exactly (13.26s -> 13.28s) and the output follows the SOURCE's pitch contour: 106Hz -> 106Hz unchanged in run 2, and 200Hz -> 162Hz in run 1, never reaching the target's 125Hz either time. So guidance rule 3 is not 'match pitch and VC meets you' - it is 'VC will NOT move your pitch, so a large gap gives the target's timbre at a pitch that voice never uses'. This is very likely WHY Fabio hears himself. The doc states the WHAT but not this WHY.",
+      "A PUSHED TAKE SHIFTS THE SPEAKER'S OWN IDENTITY: high_pitch_exp_fabio scores 0.38-0.42 against Fabio's natural recordings, which score 0.72 to each other. The encoder calls his performed take a different speaker, so a pushed source hands VC a distorted x-vector.",
+      "LIBRARY DESIGN INPUT: store each voice's PITCH RANGE, not just tags. Timbre-far/pitch-near is the difference between 'spot on' and 'it did nothing', and no user will guess it. The selector should ideally flag a large gap against the recording just made.",
+      "PUSH IS BLOCKED AND NEEDS FABIO. Commits d8f9f782 and f03e558c are LOCAL ONLY. .husky/pre-push (b1ca2984) refuses a red master; master is red on MPI-567's flow-scribble-object.webp 404. The fix for that red IS in the local stack (d7ca048f + 1048c0dd, also unpushed), so `git push --no-verify` is legitimate per the hook's own message - but the permission classifier DENIED it. Do not work around it; ask Fabio.",
+      "THE targetPath BUG, both halves, because it will bite any future targetPath dep: (1) _localModelsCheck duplicated path resolution and omitted the targetPath branch; (2) syncModelInstalled projected deps to {id,type,filename} and DROPPED targetPath, so half 1 fired for nobody. Either half alone reports a downloaded weight missing forever.",
+      "METHOD LESSON: VERIFYING A ROUTE WITH A HAND-BUILT PAYLOAD PROVES NOTHING ABOUT THE CALLER. The first fix verified green against full dep objects and shipped a still-broken app, because the app sends a stripped projection. Reproduce the caller's payload.",
+      "THE WEIGHTS MUST STAY targetPath. The pack computes <ComfyUI>/models/chatterbox/ from its own __file__ and never reads extra_model_paths.yaml, so filing them under mpi_models/ makes it refetch 4.25GB outside the download manager. Same class as RIFE (MPI-222).",
+      "PEER SESSIONS ARE LIVE IN THIS TREE (MPI-567, MPI-608). Uncommitted files NOT mine, deliberately left: comfy_workflows/raw/{krea2_t2i,ltx_i2v_t2v,sdxl_t2i}_template.json and dev_configs/smoke-run.txt. Commit by explicit pathspec only.",
+      "TOOLING: any /prompt POST to 8188/48188 needs the GPU lease - `python C:/Users/Fabio/.claude/plugins/cache/mad-pony-interactive/mpi-kanban/1.2.0/skills/mpi-lib/scripts/gpu_lease.py run -- <cmd>`. $CLAUDE_PLUGIN_ROOT is UNSET in the Bash tool and a bare /skills/... path becomes C:\\Program Files\\Git\\... - use absolute paths. Heredocs are BLOCKED by guard-shell; write a script to the scratchpad and run it by path. The bench writes output to D:\\WORK\\Images\\Outputs\\, NOT <ComfyUI>/output. Similarity tool: research/speaker_similarity.py, run with G:/ComfyUi/python_embeded/python.exe over a DIRECTORY of clips.",
       "83 pre-existing board-validation errors (malformed old event lines) - none from this session. Noticed, not actioned."
     ],
     "files_to_read_first": [
-      ".agents/mpi-kanban/tasks/MPI-607/plan.md",
       ".agents/mpi-kanban/tasks/MPI-607/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-607/plan.md",
       "docs/playbooks/add-flow/existing-flows/voice-changer.md"
     ]
   },
-  "resume_prompt": "You are picking up MPI-607 in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/5ba831fa-051a-4372-9ec7-8ddc23a1c8bf.json, then the SESSION 14 block at the top of .agents/mpi-kanban/tasks/MPI-607/plan.md, then run mpi-continue MPI-607. The card is in doing/in-progress. GATE 2 FLOW A (the Voice Changer Flow) IS BUILT AND COMMITTED as d8f9f782 - graph proven live on the bench, Perth watermarking proven APPLIED, npm test 729/729 - and installing it from the real app uncovered a two-half bug in targetPath install state that is also fixed and tested. TWO THINGS NEED FABIO: (1) the commit is NOT PUSHED, because the new pre-push hook refuses a red master and the --no-verify bypass was denied by the permission classifier, even though the fix for that red is in the local stack; (2) he has not LISTENED to the flow's output yet, which is the card's user-ux gate. THE NEXT CODE ACTION, which he already approved: narrow _isImageResident in routes/remoteModels.js:225 from `dep.targetPath` to `dep.targetPath && dep.bakedOnPod`, and add `bakedOnPod: true` to rife47 in assetDeps.js - because rife47 really is baked into the Pod image but chatterbox appears nowhere in mpi-ci, so the blanket rule makes remote LIE about 1GB it does not have. Do NOT bake chatterbox into the Pod image. Settled and not to be relitigated: Qwen3-TTS is never shipped, Turbo is dropped for REDUNDANCY (not proven unstable), the chatterbox weights MUST stay targetPath deps, and ComfyUI-MpiNodes must never be declared in a flow's requiredDeps. Do NOT start Flow B - it waits on performance clips that do not exist. The flow also has no UI yet; Fabio wants a record button, a voice selector and a custom-voice item, and agreed that is a /mpi-brainstorm because the voice library does not exist and Flow B needs the same picker."
+  "resume_prompt": "You are picking up MPI-607 in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/5ba831fa-051a-4372-9ec7-8ddc23a1c8bf.json, then validation.md from '2026-08-25' upward, then run mpi-continue MPI-607. The card is in doing/in-progress. Flow A (the Voice Changer Flow) is BUILT and COMMITTED (d8f9f782), its graph is proven live twice, Perth watermarking is proven APPLIED, and two real bugs were found and fixed on the way - a two-half targetPath install-state bug (d8f9f782) and its remote twin (f03e558c). npm test 729/729. DO NOT START NEW CODE. Two things block: (1) THE QUALITY QUESTION - Fabio has listened to two outputs and both times said it sounds like himself with a different pitch, while the CAMPPlus gate says 0.84 to the target; his ear is the gate on this card, so run a BLIND A/B of the output against the target character clip before trusting the numbers, and if he can pick his own voice out, the Chatterbox architecture needs re-examining before any library is authored. (2) THE PUSH IS BLOCKED - both commits are local-only because the pre-push hook refuses a red master and the --no-verify bypass was denied by the permission classifier, even though the fix for that red is in the local stack. Fabio also decided this session that building Flow A before the VOICE LIBRARY was the wrong order, and he is right about the target side: the flow needs a voice to convert INTO and none exists to pick from. When the library is designed (a /mpi-brainstorm), store each voice's PITCH RANGE - measurement showed VC transplants TIMBRE but NOT PITCH, so timbre-far/pitch-near is the difference between 'spot on' and 'it did nothing'. Settled, do not relitigate: Qwen3-TTS is never shipped, Turbo is dropped for REDUNDANCY, the chatterbox weights MUST stay targetPath deps, and ComfyUI-MpiNodes must never appear in a flow's requiredDeps. Do NOT start Flow B."
 }
