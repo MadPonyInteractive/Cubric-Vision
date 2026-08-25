@@ -348,3 +348,87 @@ I asked for "an angry line at your natural pitch". Pitch was never the variable 
 recording chain is**. What is needed is one angry take with the **noise-cancellation filter
 OFF**, at whatever pitch anger takes him to, so a raw shifted clip can be compared against a
 raw performed one without the denoiser sitting in the middle.
+
+---
+
+### 2026-08-25 — 🔴 THE VC STAGE CORRUPTS PHONEMES. Isolated to `FL_ChatterboxVC`.
+
+Fabio ran the three-file isolation: ***"Number three still has it, the twain. Number one and
+number two don't."*** And: ***"it was only F."***
+
+| stage | R's intact? |
+|---|---|
+| `lib_f_midage_narration.wav` — the character clip itself | ✅ clean |
+| `TTS_angry_R2_plus0` — the TTS stage, before VC | ✅ clean |
+| `VC_angry_R2_plus0` — after VC | ❌ **"twain" for "train"** |
+
+**`FL_ChatterboxVC` introduces an /r/ → /w/ substitution that neither of its inputs has.**
+This is categorically different from the "lands halfway" behaviour already recorded on
+MPI-607: that is the model under-converting, this is the model *corrupting*. It affects
+**Flow A, which ships today**, and it would affect Flow B.
+
+Not non-rhoticity — a non-rhotic accent drops post-vocalic R ("car") and leaves the /tr/
+cluster alone. This is the Elmer Fudd substitution, in an initial cluster.
+
+#### It hit exactly one of five runs, and that one is not arbitrary
+
+| run | TTS source f0 | character | direction VC had to move pitch |
+|---|---|---|---|
+| D `+19` | 383.2 | 218.8 | down |
+| E performed | 290.4 | 218.8 | down |
+| **F `+0`** | **206.5** | 218.8 | **UP** ← the broken one |
+| G `−12` | 229.2 | 218.8 | down |
+| H `+12` | 365.9 | 218.8 | down |
+
+**F is the only arm whose source sat BELOW the target voice's pitch.** Hypothesis: VC damages
+consonants when it has to *raise* pitch to reach the target. That would hand guidance rule 3
+("meet the target's pitch") the mechanism it currently lacks, plus an asymmetry it does not
+currently state — **under the target would be worse than over it**.
+
+`research/phase0d_vc_rhotic.py` tests it by deleting the TTS stage as a variable: every arm
+feeds VC the **same** TTS output, pitch-shifted to a different distance from the same
+character. `plus0` is left deliberately unshifted so the shifter cannot be blamed for the
+known result.
+
+| arm | source f0 | vs character |
+|---|---|---|
+| `plus0` | 206.5 | −1.0 st (known broken, unshifted reference) |
+| `minus4` | 173.7 | −4.0 st |
+| `plus2` | 242.8 | +1.8 st |
+| `plus4` | 267.8 | +3.5 st |
+| `plus7` | 314.9 | +6.3 st |
+
+#### 🟢 Sarcasm resolves the register/emotion problem better than either option I offered
+
+Fabio: *"angry can also have a natural tone, but with a hint of sarcasm. That's usually me
+when I'm angry at people... That's a natural tone without exaggeration, but I'm angry."*
+Then the load-bearing half: ***"But if in a case like that the user wouldn't ask for angry,
+it would ask for a natural tone."***
+
+**The emotion labels are DELIVERIES the user selects, not the performer's internal state.**
+That reframes the whole orthogonality problem recorded above:
+
+- "Angry" as a selectable label means the loud, elevated, obvious delivery. It living higher
+  in pitch than "Flat" is not a defect in the grid — **that is what angry sounds like.**
+- A low-pitched angry delivery is not "R1 × Angry". It is a **different label**, and it has
+  no cell in `brief.md` § 2's set at all.
+
+So the earlier claim that "R1 × Angry is empty" was right about the fact and wrong about the
+conclusion. The cell is empty because that delivery has its own name, not because the grid is
+broken.
+
+**Refined proposal, replacing readings 1 and 2 from the previous entry:**
+
+1. **`register` names the PERFORMER'S BASELINE, not the clip's measured pitch.** A clip for
+   (R1, Angry) is recorded by an R1 performer and will measure higher than R1 — that is
+   expected and correct. `median_f0` and `f0_p10_p90` are already stored per clip, so nothing
+   in the record changes; only the definition of `register` needs pinning down, and it needs
+   pinning down anyway.
+2. **Add `Sarcastic` (or `Dry`) to the emotion set.** It is the low-register expressive
+   delivery the current set has no slot for, Fabio can perform it natively, and by his own
+   account it is how anger usually actually sounds in conversation.
+
+This also demotes the shifter again — the grid does not need it to stay rectangular, so it
+returns to being what Phase 0 validated it as: a way to reach registers a given performer
+cannot cover. Both entries above overstated its role in opposite directions; this is the
+settled reading.

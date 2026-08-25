@@ -21,15 +21,17 @@
 
 ## Open, raised by the Phase 0c listen
 
-- [ ] **Rhotic defect: "twain" for "train"** in F. Isolation staged at
-      `Desktop/MPI622_the_R_thing/` - character clip vs TTS stage vs VC stage. Also: is it
-      in all five of D-H, or only F?
-- [ ] **`brief.md` § 2 assumes register and emotion are independent. They are not** - anger
-      moved Fabio +5 to +17 semitones off his natural pitch. Proposal: register means where
-      the CHARACTER sits and the clip is shifted to meet it, which makes the shifter
-      load-bearing rather than a fallback. Needs Fabio's call
-- [ ] **Emotion set proposal**: `Menacing` / `Manic` over `Angry` for a character library -
-      he can deliver those ("I am not an angry person"). Needs Fabio's call
+- [~] **Rhotic defect ISOLATED TO `FL_ChatterboxVC`** 2026-08-25. Character clip clean, TTS
+      stage clean, defect appears only after VC. Only F of the five. VC CORRUPTS a phoneme
+      that neither input has - not the known "lands halfway" behaviour. **Hits Flow A, which
+      ships today.** Sweep staged at `Desktop/MPI622_R_sweep/` to test whether it tracks
+      VC having to RAISE pitch to reach the target (F was the only arm sourced BELOW it)
+- [ ] **`brief.md` § 2 refinement** - emotion labels are DELIVERIES the user selects, not
+      the performer's state (Fabio's sarcasm point). So (a) `register` should name the
+      PERFORMER'S BASELINE, not the clip's measured f0, and (b) add `Sarcastic`/`Dry` - the
+      low-register expressive delivery the set has no slot for. Needs Fabio's call
+- [ ] **Emotion set proposal**: add `Menacing` / `Manic` for a character library - he can
+      deliver those ("I am not an angry person"). Needs Fabio's call
 - [ ] One angry take with the **noise filter OFF** - the only missing piece for a clean
       performed-vs-shifted verdict
 
