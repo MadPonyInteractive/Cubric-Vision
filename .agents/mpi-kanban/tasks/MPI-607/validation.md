@@ -1638,3 +1638,235 @@ is the whole difference between "spot on" and "it did nothing", and today nothin
 product says so. Whatever the voice selector becomes, it should surface the target's pitch
 range (and ideally flag a large gap against the recording just made), because that is the one
 number that predicts the outcome.
+
+### 2026-08-25 -- 🔴 GATE FAILED. VC lands HALFWAY, the cosine is not a perceptual gate, and iteration cannot push it.
+
+Fabio had said "it sounds like me" twice. The handoff's proposed test -- a blind A/B of the
+output against the target clip -- **could not have settled it**: VC preserves the source's
+words, rhythm and duration exactly, so he identifies the output by CONTENT in one second
+and never makes a timbre judgement at all. Replaced with a test that removes his bias
+instead of arguing with his verdict.
+
+#### The decisive clip: a STRANGER's voice, converted, described cold
+
+`vd_young_male_us_warm.wav` -> `A3_REF_senior_male_gravel_character.wav`, played with no
+references in earshot and no idea what it was. He has no stake in either voice, so there is
+no delivery of his own to recognise.
+
+| clip | what he said, cold |
+|---|---|
+| the SOURCE (`ref_A`) | "young guy, 25, forcing a cartoon-type voice" |
+| the TARGET (`ref_B`) | "older gentleman, 50+, raspy low, good for trailers" |
+| **the OUTPUT** | **"male, 35-ish, deep but not too deep"** |
+
+**The output landed almost exactly halfway between source and target.** CAMPPlus scored
+that same output **0.92** against the target -- the highest number in the entire matrix and
+"same speaker, confidently" on the tool's own published scale.
+
+#### What this rules out
+
+1. **NOT self-recognition bias.** That was the one explanation that would have saved the
+   architecture. The stranger clip has no voice of Fabio's in it and still failed to arrive.
+2. **NOT a bad pairing.** Three targets from his voice -- gravel senior male (0.84), midage
+   UK female (0.82), young US male (0.75) -- every one still "sounds like me" to him:
+   "me with a pitch-down effect", "me injecting female hormones", "me younger with a cold".
+   Deliberately far targets, including cross-gender. The timbre-far/pitch-near thesis from
+   2026-08-24 does not rescue it.
+3. **NOT fixable by iteration.** `FL_ChatterboxVC` exposes no strength dial (only `use_cpu`,
+   `keep_model_loaded`, `seed`), so the only lever is feeding the output back in. Chained
+   3 passes in one graph:
+
+   | | pass 1 | pass 2 | pass 3 | target |
+   |---|---|---|---|---|
+   | stranger, median f0 | 115.9 Hz | 116.6 | 121.4 | 125.7 |
+   | Fabio, median f0 | 95.8 Hz | 101.5 | 103.3 | 125.7 |
+   | cosine to target (Fabio) | 0.87 | 0.90 | 0.92 | -- |
+
+   Fabio on the stranger's three passes: **"S1, S2 and S3 sound exactly the same. I even put
+   on my headphones to make sure I wasn't hallucinating."** The encoder agrees -- S1 vs S2
+   = 1.00, S2 vs S3 = 1.00. On his own voice pass 3 IS "further away from my voice" -- but
+   it is **hallucinating: rumbling noises and pitch variations that are not in the source**.
+   The only distance iteration buys is bought by the model inventing signal, which is
+   degradation, not conversion. Pass 1 is still "my voice pitched down".
+
+#### 🔴 THE CAMPPlus COSINE IS DISQUALIFIED AS A QUALITY GATE
+
+This is the durable lesson and it invalidates earlier conclusions on this card, not just
+this test. 0.92 = "same speaker, confidently" for a clip a listener with no stake places
+15-20 years and a whole texture away from the target. The encoder measures x-vector
+distance, which is what Chatterbox CLONES from -- it is a legitimate check that the pipeline
+RAN, and it is not evidence the product is good. Every identity claim on this card that
+rests only on a cosine needs re-judging by ear.
+
+A second reason to distrust the scale here: `ref_A` vs `ref_D` -- two different library
+voices, different genders -- scores **0.75**, which the tool labels "same-ish". The band is
+compressed for these voices, so anything under ~0.8 carries almost no information.
+
+#### What VC actually does, stated correctly
+
+It moves timbre roughly halfway toward the target and stops, and it preserves accent,
+mannerism, rhythm and pitch contour -- every cue a listener actually uses to identify a
+speaker. Pitch does move a little toward the target (101.8 -> 94.2 Hz on one pair, 128.6 ->
+115.9 on another) but never arrives, which refines the 2026-08-24 note: it is not that VC
+leaves pitch untouched, it is that VC moves *everything* part of the way.
+
+#### Consequences
+
+- **Flow A does not deliver its promise.** "Convert your voice into a library character"
+  returns the user, altered. The code is correct and it flushed out two real bugs, but the
+  card's `user-ux` gate is FAILED.
+- **The voice library is NOT the missing piece.** The 2026-08-24 plan was that pairing
+  guidance plus a pitch-annotated library would fix this. Finding 2 kills that. Authoring
+  library voices now would build on a floor that does not hold. Testing before authoring
+  saved that work.
+- **Open for Flow B:** its source is Chatterbox TTS output, not the user, so there is no
+  user identity to leak -- but a halfway VC still means the character comes out halfway.
+  Worth re-testing whether direct TTS cloning from a character clip is good enough on the
+  EAR, since round 1's "identity survives VC, level with no-VC" verdict rests entirely on
+  the cosine now disqualified above.
+
+**Evidence:** `Desktop/MPI607_listen/` (round 1, blind) and `Desktop/MPI607_listen_2/`
+(round 2, iterated). Scripts in the session scratchpad: `vc_blind.py`, `vc_iterate.py`.
+Six bench generations, `execution_cached` empty on every VC node.
+
+### 2026-08-25 -- REGISTER decides whether VC is wanted, and it retires "direct sounds robotic"
+
+The 2026-08-23 note *"Direct is very neutral... sounds weird and robotic"* is **scoped to the
+emotion tests and must not be generalised.** Fabio, 2026-08-25:
+
+> "I've done some tests with TTS with my voice and just straight out of TTS with no VC.
+> What I supplied is the way I talk, for example, in my tutorials, and what came out is
+> exactly the same thing... for my tutorials it will be excellent."
+
+So plain `FL_ChatterboxTTS` cloning, with **no VC stage at all**, is already excellent for
+DICTATION register -- tutorial, narration, explainer, the way someone actually speaks. The
+"robotic" verdict came from asking direct TTS to carry a pushed emotion, which is the one
+job it cannot do.
+
+**The axis is REGISTER, not quality:**
+
+| register | route | evidence |
+|---|---|---|
+| dictation / tutorial / narration | TTS only, no VC | "exactly the same thing... excellent" (2026-08-25) |
+| performance / emotion | TTS (perf clip, cfg 0.3, exag 1.2) -> VC (character) | "push does carry emotion" (2026-08-23) |
+
+This **confirms Fabio's design instinct** that a `neutral` emotion should bypass the VC
+stage: neutral is the dictation register, and in that register VC is not merely optional,
+it is unnecessary. The concern that bypassing VC would land users on the worst-sounding
+mode was based on the mis-scoped 23rd note and is withdrawn.
+
+It also reframes today's halfway finding. VC's job in the settled architecture is to carry
+a PERFORMANCE onto a character, and Fabio's own successful VC results ("it depends on what
+I do to the pitch of my voice and my performance") say the transform is usable when the
+user knows what to aim for. **The product obligation is truthful guidance, not a better
+model** -- tell the user what VC does to a voice and what makes a pairing work, and let
+them iterate. Flow A is NOT dropped and the library IS being built (Fabio, 2026-08-25).
+
+What today's finding still constrains: the output is a BLEND, so any copy promising "become
+this character" is false, and the guidance must say the result carries the user's own pitch,
+accent, rhythm and mannerisms.
+
+### 2026-08-25 -- CHARACTER CONSISTENCY HOLDS. But the VC route does NOT land on the character, and that breaks the neutral bypass.
+
+Same character target (`A3_REF` gravel), same text, two performance clips that are
+different speakers (`e1_angry` vs `e2_sad`, cosine 0.47). Only the performer varied.
+
+| clip | driven by | median f0 | cosine to target | Fabio |
+|---|---|---|---|---|
+| `A` | angry performer (307.7 Hz) | 223.9 Hz | 0.82 | same character as B |
+| `B` | sad performer (256.5 Hz) | 130.9 Hz | 0.90 | same character as A |
+| `C_direct` | the character clip, NO VC | 116.6 Hz | 0.95 | **"sounds like target"** |
+| `TARGET` | -- | 125.7 Hz | -- | -- |
+
+**1. The library collapse SURVIVES.** A and B are 93 Hz apart -- close to an octave -- and
+Fabio still hears one character: *"A and B seem like the same character. The only thing is
+that when he was angry he was pitched up a little bit, which is natural."* The predicted
+performer-drift did not happen perceptually; the pitch spread reads as emotion, not as a
+second actor. **~60 neutral character clips + ~5-8 shared performance clips still holds.**
+
+**2. 🔴 But neither A nor B sounds like the character.** Fabio: *"They do not sound like
+Target at all, by the way. C_direct sounds like target."* So the VC route produces a
+CONSISTENT voice that is not the one the user picked. Same halfway behaviour as the rest of
+today, now measured inside the shipping pipeline.
+
+#### 🔴 THE ROUTE DECIDES THE VOICE -- so the neutral bypass creates a mismatch
+
+| register | route | what the user hears |
+|---|---|---|
+| dictation / neutral | TTS direct from the character clip | **the character** (verified by ear) |
+| performance / emotion | TTS(performer) -> VC(character) | a consistent OTHER voice |
+
+A script mixing neutral and emotional lines would therefore switch actors mid-scene. The
+proposed `neutral` dropdown value that BYPASSES the VC stage is exactly this mismatch, so
+the bypass cannot ship as a bare bypass. Three ways out, for the brainstorm to choose:
+
+- **One route always.** Send neutral through VC too, driven by a neutral performance clip
+  (`ctl_vc_neutral` already exists). Consistent across every emotion, and the cost is that
+  no route ever reaches the library's own preview voice -- which the next bullet fixes.
+- **Preview what ships.** Generate every library tile's audition clip THROUGH the shipping
+  pipeline rather than playing the raw character clip. What you hear when selecting is then
+  what you get. Needed for either route.
+- **Two voices, declared.** Keep the bypass, and treat neutral and performance as two
+  distinct presets of a character rather than one voice. Cheapest to build, worst to
+  explain.
+
+**3. Why the encoder never saw any of this.** CAMPPlus x-vectors are trained to be pitch-
+and prosody-invariant -- that is what makes them good at speaker verification. Human
+identity perception is largely pitch and prosody. The cosine is blind to exactly the cue
+Fabio is judging on, which is the mechanism behind every disagreement recorded today.
+**Replacement gate: cosine for timbre AND median-f0 delta for pitch.** Both are already
+scripted (`research/speaker_similarity.py`; f0 via `librosa.pyin`, see the session
+scratchpad). Cosine alone is not a gate.
+
+**4. Performance clips are pitched wrong for male characters.** The current set sits at
+256-307 Hz. Driving a 125 Hz male character from a 300 Hz performer is what produced A's
+223.9 Hz. Performance clips need authoring per PITCH REGISTER, not one shared set -- a
+direct requirement on the library.
+
+**5. Emotion labels are approximate.** Fabio: *"performance A is angry, and performance B is
+not really sad, it's a sad-angry kind of thing, but B did come out sad for some reason."*
+The emotion the pipeline delivers is not reliably the label on the source clip, which is
+another reason the performance clips are the quality lever worth auditioning by ear.
+
+**Evidence:** `Desktop/MPI607_listen_3/`, scripts `vc_consistency.py` / `prep_round3.py` in
+the session scratchpad. Three bench generations, VC and TTS nodes executed (only `LoadAudio`
+cached).
+
+### 2026-08-25 -- 🔴 TEXT CANNOT SELECT EMOTION. The library needs performance clips after all.
+
+The `mpi607_emotion3` clips generated 2026-08-23 and left "unconfirmed" were finally
+judged. A NEUTRAL reference (`e0_neutral.wav`) speaking angry and sad WORDS at
+`cfg_weight 0.3` -- the cell that decides whether the library is 60 voices or 60 x N.
+
+| clip | words | exaggeration | median f0 | Fabio |
+|---|---|---|---|---|
+| 1 control | neutral | 0.5 | 210.8 Hz | "empty shell... works for dictation" |
+| 2 | angry | 0.5 | 215.1 Hz | monotonous, no emotion |
+| 4 | sad | 0.5 | 215.1 Hz | monotonous, no emotion |
+| 3 | angry | 1.0 | 254.3 Hz | **"more sad than angry... disappointed"** |
+| 5 | sad | 1.0 | 248.5 Hz | **"sounds upset and disappointed"**, angrier than 3 |
+
+**Two failures, and the second is the fatal one.**
+
+1. At exaggeration 0.5 the words do nothing at all: *"Numbers 1, 2 and 4 sound like
+   somebody took their soul away and they just became an empty shell."*
+2. At 1.0 emotion appears but it is **the wrong emotion** -- the ANGRY text read as sad and
+   disappointed, and the SAD text read as the more upset of the two. The dial produces
+   generic INTENSITY, uncorrelated with what the script says.
+
+**Conclusion: emotion cannot come from the text.** It has to come from a performance clip
+through the VC stage, which confirms the 2026-08-23 settled architecture and closes the
+question that was open since then. The library is 60 neutral character clips PLUS a set of
+performance clips; the "60 voices, emotion free at runtime" collapse is dead.
+
+**Product consequence: the emotion dropdown IS the performance-clip set.** The emotions the
+product can offer are exactly the performance clips that get authored -- there is no
+text-driven path to a new emotion.
+
+**Silver lining, and it is real:** exaggeration 0.5 + `cfg_weight` 0.3 is precisely the flat,
+even delivery the DICTATION register wants. Fabio: *"which works for dictation, I guess"* --
+matching his own tutorial-voice result from earlier today. The flat setting is not a bug to
+fix, it is the dictation preset.
+
+**Evidence:** `Desktop/MPI607_listen_4/`, clips from `research/emotion_text_c03.py`
+(generated 2026-08-23, judged 2026-08-25). No GPU spent -- the clips already existed.

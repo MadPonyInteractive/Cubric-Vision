@@ -80,6 +80,36 @@
 
 Project mode: scalable-foundation.
 
+> **2026-08-25 — THE VC QUALITY QUESTION IS ANSWERED, and the library is now MPI-622.**
+> Chatterbox VC moves a voice roughly HALFWAY and stops. Proven bias-free: a stranger's
+> clip converted into the gravel character was described cold as "35, deep but not too
+> deep", between the 25-year-old source and the 50+ target. Not self-recognition, not a
+> bad pairing (three targets incl. cross-gender all still read as Fabio), and not fixable
+> by iteration (three passes perceptually identical on the unbiased pair; on Fabio's voice
+> pass 3 only hallucinated rumble). **The CAMPPlus cosine is DISQUALIFIED as a perceptual
+> gate** — it scored that clip 0.92, because x-vectors are pitch/prosody-invariant by
+> construction, which is exactly what a listener judges on. New gate: cosine AND median-f0
+> delta.
+>
+> **Two long-open questions closed the same day.** Text CANNOT select emotion (neutral
+> reference + angry words = soulless at exaggeration 0.5, and the WRONG emotion at 1.0),
+> so emotion needs performance clips and the "60 voices, emotion free at runtime" collapse
+> is dead. Character consistency across performers HOLDS (two performers 0.47 apart drove
+> one character 93 Hz apart and still read as one actor), so the shared-clip collapse
+> survives. **Route decides the voice:** direct TTS lands on the character, TTS->VC lands
+> on a consistent other voice — so a per-line neutral-bypass would switch actor mid-scene.
+>
+> **Flow A is NOT dropped** (Fabio's call): the obligation is truthful guidance, not a
+> better model. Direct TTS with no VC is already excellent for the DICTATION register —
+> his tutorial voice came back "exactly the same thing" — which retires the earlier
+> "direct sounds robotic" note as emotion-scoped only.
+>
+> **The library moved to its own card: MPI-622 "Voice library"**, `todo`/`planned`, with an
+> approved design in its `brief.md` and a 5-phase plan. Its Phase 0 is a sourcing gate:
+> Fabio can only perform emotion in his own voice (~100 Hz), and **a live voice changer
+> cannot carry emotion — it mangles pitch, which is what emotion rides on.** MPI-607 keeps
+> the VC/TTS findings, Flow A's UI, and Flow B.
+
 > **2026-08-23 STEP 2b PASSED — Fabio heard it: "the A to B clones are all really
 > good, spot-on".** A Qwen-designed synthetic voice clones through Chatterbox well
 > enough to build on, so the design-then-speak chain holds and the VCTK/GLOBE fallback
