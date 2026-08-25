@@ -287,3 +287,52 @@ They are independent and both derive from the drawn bbox. Neither is a fixed con
 
 Artefacts for all of it are in the session scratchpad (`law1/`, `law1out/`, `stitched/`); the
 end-to-end proof is `STITCHED_rung_3p5x` at a 2.2× box.
+
+## The crab / "upscale the source first" question — answered 2026-08-25
+
+Fabio's earlier finding, already recorded in `blending-into-a-photo.md` § *"A shadow needs
+PIXELS, and the box is what supplies them"*: a small crab drawn on sand came back with its
+shadow detached, as if mid-air; upscaling the source 2× and drawing the same crab fixed it.
+The proposal was to do that automatically — upscale, draw, downscale back.
+
+**On this route it is redundant, and the measurement says so.** `InpaintCropImproved` carries
+`output_resize_to_target_size` with a 1024 target, so the crop is normalised to ~1MP *however
+small the source region is*. The pixel starvation the old blend pass suffered cannot occur —
+the crop manufactures the pixels, per run, sized to the drawing rather than by a blanket 2×.
+
+Evidence from the sweep above: a **75px** scribble in a **0.008MP** crop (the 1× rung, a ~10×
+upscale) still produced a grounded figure with contact shading. Every working rung did. **The
+crab failure did not reproduce at any of them.** That failure was a property of the old route.
+
+### But the instinct points at something real that MOVED
+
+The shadow is generated at 1MP, then the **return box is stitched at source scale** — so the
+box must actually *contain* the shadow, or it is cut off at the boundary.
+
+On this plate a 1.6× box held it, but **this scene has short shadows**. A low sun casting long
+shadows needs a bigger box, and that is scene-dependent, not derivable from the drawn bbox.
+Which is exactly why the user draws the box and the step hint asks for *"the object plus room
+on the ground for its shadow"*. Keep that copy; it is load-bearing.
+
+So the measured `≥1.6×` floor is for **the subject not being sliced**, and it is a floor, not a
+target. Shadow room is on top of it.
+
+## Seam visibility is CONTEXT-dependent — prefer the wide end of the window
+
+Stitching the **2×** render (0.031MP crop, ~3× upscale) at a 1.6× box shows a plainly visible
+lighter rectangle against the sand. The **3.5×** render (0.095MP) at the same box does not.
+
+So a wider context crop does two jobs, not one:
+
+| crop width | anchoring | tonal match |
+|---|---|---|
+| too tight | fine | **worse** — the render drifts in tone, the paste shows a rectangle |
+| working window | fine | good |
+| too wide | **fails** — subject renders at the wrong scale | good |
+
+**Within the working window (~240–425px of scribble after normalise), choose the WIDEST crop
+that still anchors**, not the tightest that fits. The 3.5× rung (~243px) was the qualitative
+best of the set for exactly this reason.
+
+This also partly rehabilitates Law 2: the re-grade is real and it is *worse with less context*,
+even though the blown-out-patch failure the law describes never appeared.
