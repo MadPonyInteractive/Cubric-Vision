@@ -351,7 +351,11 @@ raw performed one without the denoiser sitting in the middle.
 
 ---
 
-### 2026-08-25 — 🔴 THE VC STAGE CORRUPTS PHONEMES. Isolated to `FL_ChatterboxVC`.
+### 2026-08-25 — ~~THE VC STAGE CORRUPTS PHONEMES~~ — **WRONG, see the 0e entry below**
+
+> **This entry's conclusion is retracted.** The R is present; it is the ACCENT. VC attenuates
+> consonant articulation slightly but corrupts nothing, and Flow A is not defective. The
+> isolation steps below are still accurate — only the diagnosis drawn from them was not.
 
 Fabio ran the three-file isolation: ***"Number three still has it, the twain. Number one and
 number two don't."*** And: ***"it was only F."***
@@ -529,3 +533,78 @@ happy-and-angry-at-once, but a performer doing manic produces it in a single tak
 clip carries it whole. The library does not need emotion mixing — it needs the right clip.
 Adding `Manic` later therefore costs one clip per register, exactly as `brief.md` § 2 already
 says, and needs nothing from the model.
+
+---
+
+### 2026-08-25 — ✅ RESOLVED: there is no defect. It is the accent — and that answers an open MPI-607 gate.
+
+Fabio on the three-file decider:
+
+> *"Number one does have an R in train. No, 2 doesn't eat up the R completely, but it eats it
+> up a little bit... It says it's a British woman. It's not a British woman... Sounds like a
+> woman from New York in 1930. It does have the R there. It is just because of the accent
+> that she's using. It feels like the R is almost gone, but when you repeat the train word
+> several times, you can identify an R in there. Same thing with number three: it's a man with
+> the same accent, an 1930s accent from New York... I'm getting that from the old Al Capone
+> gangster movies."*
+
+**Case closed. The R is there.** Heavily coarticulated by the accent, to the point of sounding
+absent on one pass, but present on repeat listening. **Nothing is corrupting phonemes, the
+character voice is not defective, and Flow A is not broken.** The previous entry's headline is
+retracted in place.
+
+**That is the second hypothesis of mine to die today** — first the pitch-direction one, then
+this. Both were built on a real observation and both over-read it. The pattern in both: a
+strong claim ("VC corrupts phonemes", "hits Flow A, which ships today") from a single listener
+remark, before the control that would have cheaply falsified it. The control here cost 27
+seconds of GPU.
+
+#### What IS real, and it is smaller
+
+**VC attenuates consonant articulation.** File 1 (direct TTS, no VC in the graph) has a
+clearer R than file 2 (the same voice through VC). Mild, and consistent with everything else
+on the card — VC softens, it does not break. Worth one line of guidance, not a card.
+
+#### 🟢 ANSWERS AN OPEN MPI-607 GATE: accent survives VC, and it comes from the SOURCE
+
+`MPI-607/checklist.md` carries an unticked item: *"Does the accent SURVIVE the VC stage?
+(pipeline ends in VC, so an accent stripped at stage 2 is unshippable)"* — listed as gating
+Flow B.
+
+**Answered here, for free.** Files 2 and 3 share one source but target two utterly different
+characters — a mid-age female at 218.8 Hz and a senior gravel male at 125.7 Hz. Fabio heard
+**the same 1930s New York accent in both**. So:
+
+- the accent **survives** VC (Flow B's gate opens), and
+- it comes from the **SOURCE**, and the target character does **not** override it.
+
+That sharpens MPI-607's "VC preserves accent, mannerism, rhythm" from a general statement into
+a demonstrated one, at phoneme level, across a cross-gender target pair.
+
+**Library consequence:** for a `character` voice, the accent the user hears is the
+**performance clip's**, not the character's. So `accent` in the voice record describes the
+voice as heard on the DIRECT route, and a `character`-route audition may not match it. The
+picker must not promise an accent the VC route will not deliver.
+
+#### 🔴 VoiceDesign's accent prior struck again — and it makes one manifest field untrustworthy
+
+The prompt asked for a *"refined British accent"*. It produced, in Fabio's words, an Al Capone
+gangster-movie New Yorker. That is MPI-607's already-recorded finding reappearing: *"Accent
+via VoiceDesign — CLOSED NEGATIVE after 22 generations; American prior, not controllable."*
+Confirmed again here, and this time it is visible on a voice that has been used as a reference
+throughout this card while being labelled British in every table.
+
+**Requirement for the import pipeline (Parallel Batch):** `accent` **cannot be taken from the
+generation prompt or the source corpus metadata.** It has to be labelled from the clip itself.
+Unlike `register` / `median_f0` / `f0_p10_p90`, there is no cheap measurement for it — so
+either it is a human labelling pass, or the field ships empty rather than wrong. **A wrong
+accent label is worse than a missing one**, because the picker's whole job is to let a user
+choose a voice without auditioning all sixty.
+
+#### Still worth one answer
+
+Does **file 1** — direct TTS from that same character clip, no VC — also sound 1930s New York?
+If yes, the voice simply is that and VC only passed it along. If file 1 sounds British and
+only the VC outputs sound New York, then the accent is coming from the VC SOURCE (Fabio's own
+denoised take, via the TTS stage) and is overriding the character's, which would be a stronger
+claim than the one recorded above.

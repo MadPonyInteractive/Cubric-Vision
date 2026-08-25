@@ -35,5 +35,5 @@
 - [x] VC passes NON-VERBAL sound through (cough, shush) - Flow A exclusive, Flow B structurally cannot
 - [x] Pitch: matching the target helps (confirmed); pitch DRIFT within a take drifts the output
 - [x] Accent IS a runtime parameter (multilingual `language` selector) - library needs no accent axis
-- [ ] Does the accent SURVIVE the VC stage? (pipeline ends in VC, so an accent stripped at stage 2 is unshippable)
+- [x] Accent SURVIVES VC - and comes from the SOURCE, not the target. One source into two cross-gender targets (218.8Hz female, 125.7Hz gravel male) gave the SAME accent. Flow B gate opens. Evidence: MPI-622/validation.md 2026-08-25 phase0e
 - [ ] Multilingual trailing noise - sweep repetition_penalty 1.2/1.5/2.0 (default 2.0, multilingual-only)

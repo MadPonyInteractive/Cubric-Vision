@@ -21,18 +21,27 @@
 
 ## Open, raised by the Phase 0c listen
 
-- [~] **Rhotic defect: "twain" for "train"**. Pitch-direction hypothesis DEAD (all 5 sweep
-      arms broke). Defect follows the TTS SOURCE - every broken clip descends from one TTS
-      output - and a post-hoc shift cannot repair it. The character clip is **synthetic**,
-      Qwen3-TTS VoiceDesign from Fabio's prompt "refined British accent", and he described
-      it cold as "a white woman from 1935" - the register where labiodental /r/ lives, so it
-      may be the voice being itself. Decider staged at `Desktop/MPI622_whose_R/`: direct TTS
-      with NO VC in the graph, vs the same source VC'd into a non-British male
+- [x] **Rhotic defect RESOLVED - THERE IS NO DEFECT.** Fabio on the no-VC control: "number
+      one does have an R in train". The R is present in all of them, just heavily
+      coarticulated by the accent - "when you repeat the train word several times, you can
+      identify an R in there". Character voice is fine, Flow A is fine. My "VC corrupts
+      phonemes" call was WRONG and is retracted in validation.md
+- [x] What IS real: **VC attenuates consonant articulation** slightly (no-VC has a clearer R
+      than through-VC). One line of guidance, not a card
 - [x] **Missing post-vocalic R's are NOT a defect** - that is non-rhoticity, correct for the
       prompted accent. Only the stop-cluster "twain" is in question
 - [ ] 🔴 **Library requirement: sample/audition text must be PHONETICALLY COMPREHENSIVE.**
-      The whole library set shares one text that never says a stop+/r/ onset, so this voice's
-      sample could never expose its own quirk. A pangram-style line, not a pretty one
+      The library set shares one text that never says a stop+/r/ onset, so a voice cannot
+      demonstrate its own articulation. A pangram-style line, not a pretty one
+- [x] 🟢 **ANSWERS AN OPEN MPI-607 GATE**: accent SURVIVES VC and comes from the SOURCE - one
+      source into two cross-gender targets gave the same 1930s New York accent. Flow B's
+      accent gate opens. MPI-607 checklist item "Does the accent SURVIVE the VC stage?"
+- [ ] 🔴 **`accent` cannot be taken from the generation prompt or corpus metadata.** Asked
+      for "refined British", got Al Capone - VoiceDesign's American prior again (MPI-607
+      CLOSED NEGATIVE). Needs a human labelling pass, or ship the field EMPTY. A wrong accent
+      label is worse than a missing one
+- [ ] For a `character` voice the accent the user hears is the PERFORMANCE CLIP's, not the
+      character's. The picker must not promise an accent the VC route will not deliver
 - [x] ~~Emotion set proposals (`Sarcastic`/`Dry`, `Menacing`/`Manic`)~~ **WITHDRAWN** - Fabio:
       they collapse into the low-affect cells the set already has, and there are too many
       emotions to cover. The six stand. Emotion MIXING (manic = happy+angry) is a real gap the
