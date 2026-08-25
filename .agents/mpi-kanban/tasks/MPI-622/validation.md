@@ -249,3 +249,102 @@ onto. The R4 performed arm did not do it (6.60 s, 69.4% voiced), so this is not 
 clips break TTS". **The candidate authoring rule is voiced DENSITY, not performed-vs-shifted**,
 and it would apply to both. n=1; the angry takes will test it further (008 is 32.3% voiced,
 009 only 21.4%).
+
+---
+
+### 2026-08-25 — ✅ QUESTION (a) PASSES, and register turns out not to be independent of emotion
+
+Fabio on D–H: ***"they all have a hint of anger."*** Including the shifted members of both
+chains. Nothing lost its emotion across a +12, a +19 or a −12 shift.
+
+His reservation is about **intensity, not survival**: *"it reads as upset, not extremely
+angry... I guess my performance was more of a villain... Or maybe my performance was just
+poor. I'm not an angry person."* So the ceiling on this test was the source performance, not
+the transform. **That is question (a) answered: an offline formant-preserving shift carries
+emotion through, and it carries through exactly as much as was in the clip.**
+
+Combined with (b), **Phase 0 option 1 is validated** and options 2 (licensed emotional
+corpora) and 3 (commissioned performers) are not needed. Neither is the escape hatch.
+
+#### 🔴 REGISTER AND EMOTION ARE NOT ORTHOGONAL. `brief.md` § 2 assumes they are.
+
+Fabio: ***"if I am angry, it's never gonna be my natural pitch. It's always gonna be
+elevated because I am angry. I am emotional, right?"***
+
+He is right, and his own takes measure it:
+
+| take | median f0 | vs his natural 101.5 Hz |
+|---|---|---|
+| `recording_003` natural | 101.5 | — |
+| `recording_008` angry | 136.3 | **+5.0 st** |
+| `recording_009` angry | 166.8 | **+8.6 st** |
+| `recording_010` angry | 274.1 | **+17.2 st** |
+
+**Emotion moves pitch, so the grid's rows and columns are not independent.** The design in
+`brief.md` § 2 is "registers × emotions", 6 emotions per register, as if a performer could
+supply "R1 angry" and "R1 cheerful" at the same pitch. For a real performer **"R1 angry" may
+not exist at all** — anger pushes you out of R1 by definition.
+
+This does not break the design, but it changes what a cell means. Two readings, and the
+choice is a product decision, not a measurement:
+
+1. **Register = where the clip sits.** Honest to the recording, but then the grid is sparse
+   and lopsided — the angry row lives higher than the flat row for every performer, and
+   "R1 × Angry" is simply empty.
+2. **Register = where the character sits, and the clip is shifted to meet it.** The grid
+   stays full, and this is exactly what the shifter is for — it is now validated for both
+   directions and out to at least ±19 semitones. Anger recorded wherever it naturally lands
+   gets moved to the register the character needs.
+
+**Reading 2 is the recommendation** and it makes the shifter load-bearing rather than a
+fallback: not a way to reach registers Fabio cannot perform, but the thing that makes a
+rectangular grid possible at all from performances that are inherently not rectangular.
+
+#### The emotion set should match what a performer can deliver
+
+Fabio: *"I'm not an angry person 😅 But I can do psychopathic characters and stuff like manic
+characters. I'm good at that anyway."*
+
+`brief.md` § 2 lists `Flat · Neutral · Angry · Sad · Cheerful · Whisper`. Those are generic
+TTS-vendor emotion labels. For a **character** library, `Menacing` / `Manic` may be both more
+useful to a user and more reliably authorable — a performer who can deliver them beats a
+label nobody can perform convincingly. Not changed unilaterally; `brief.md` is the approved
+design and this is a proposal.
+
+#### 🔴 A rhotic defect in the output — "twain" for "train"
+
+Fabio on F: *"F has a more sassy voice. But not a black woman, modern black woman sassy
+voice, more like a white woman from 1935 sassy voice. Funny thing is that most of her R's are
+missing. She doesn't say train, she says twain."*
+
+An /r/ → /w/ substitution, not non-rhoticity (non-rhotic English drops post-vocalic R as in
+"car", and leaves the /tr/ cluster alone). This is worth chasing because a shipped library
+voice that cannot say its R's is unusable, and the fix depends entirely on which stage
+introduces it.
+
+Isolation staged at `C:/Users/Fabio/Desktop/MPI622_the_R_thing/`, level-matched, no GPU spent:
+
+| file | what it decides if the defect is present |
+|---|---|
+| `1_the_character_itself.wav` | the raw `lib_f_midage_narration` clip — a **library curation** problem, drop the voice |
+| `2_F_before_VC.flac` | the TTS stage — a **TTS** problem, and it would affect Flow B generally |
+| `3_F_after_VC.flac` | clean until here means **VC** introduced it — the most serious of the three |
+
+Open question worth his ear: whether the defect is in **all five** of D–H or only F. All five
+share the character clip, so "only F" points at the performance clip and "all five" points at
+the character.
+
+#### My listening instruction was bad, and that is on me
+
+I asked "does it still read as angry" across D/F/H without naming what would count as a
+difference, so the question could not be failed or passed. Fabio: *"What did you expect me to
+compare on D, F, and H?"* Fair. The comparison that was wanted: **F is the unshifted control
+of that chain, H is the same clip shifted +12 and D the same clip shifted +19 — does the
+anger weaken as the shift grows?** Say the axis and name the control next time.
+
+#### My request for another take was also malformed
+
+I asked for "an angry line at your natural pitch". Pitch was never the variable — **the
+recording chain is**. What is needed is one angry take with the **noise-cancellation filter
+OFF**, at whatever pitch anger takes him to, so a raw shifted clip can be compared against a
+raw performed one without the denoiser sitting in the middle.
