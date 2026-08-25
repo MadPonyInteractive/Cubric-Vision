@@ -1,0 +1,73 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "e12e3142-1122-4153-889f-41ffe8c7d92f",
+  "generated_at": "2026-08-25T07:40:00Z",
+  "status": "open",
+  "session": {
+    "name": "Draw It In: MPI-618 shipped, then the whole architecture was disproven and re-carded as MPI-621 + MPI-620",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue MPI-618 - strengthen Draw It In's node #18 framing suffix so a plain prompt returns a full-body subject with feet.",
+    "status": "in_progress",
+    "summary": "MPI-618 shipped and closed. It then led to a bigger finding: Fabio's own live test showed a single Klein 9B edit doing in 15s, on one image and one sentence, what the 55-node two-model flow could not do at all (hand on the tiger's back, leg BEHIND it). The flow is being rebuilt Klein-only as MPI-621, and the deleted SDXL half becomes a new flow, MPI-620 (Scribble). MPI-621's open measurement is now DONE - the crop/stitch rules are measured and written into its brief. Next is building the graph."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "MPI-618: node #18 suffix strengthened in both workflow twins (fe525d8e), 729 node + 26 desktop tests green, card CLOSED as superseded before its live run",
+      "MPI-620 carded (Scribble flow) + open question 2 answered in code",
+      "MPI-621 carded (Klein-only rebuild) with the full evidence chain",
+      "MPI-621 DoD item 1 DONE: 7 Klein 9B runs measured the crop rule, plus a no-GPU stitch simulation that found a second variable"
+    ],
+    "pending": [
+      "MPI-621: build the graph - InpaintCropImproved with a DERIVED extend factor -> Klein 9B edit -> InpaintStitchImproved",
+      "MPI-621: write the prompt against its six recorded properties (the old blend prompt does NOT transplant)",
+      "MPI-621: verify on more plates - a style mismatch ('a cartoon man...') and a second scene. Everything measured so far is one beach.",
+      "MPI-620: answer open question 1 - can a gizmo step read a flow-level field at mount? That is the line between a FlowDef change and a frame change."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-621",
+    "title": "Draw It In, rebuilt Klein-only: crop, edit, stitch - no render phase, no paste, no mask",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-621/",
+    "links": {
+      "plan": null,
+      "checklist": null,
+      "validation": null
+    }
+  },
+  "next_action": {
+    "description": "Move MPI-621 todo -> doing (writing files.json), then build the Klein-only graph: InpaintCropImproved with a per-run DERIVED context extend -> Klein 9B edit -> InpaintStitchImproved. The two sizing rules are already measured and are in the card's brief - do not re-measure them.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Klein 9B ONLY, not 4B. Not a quality preference: under style load 4B LEFT THE USER'S INK in the output (kleinEdit_005 kept the leash and head as a grey object and turned the tiger into a cartoon dog). 9B degraded gracefully.",
+      "Crop-stitch is a CORRECTNESS requirement, not an optimisation. Klein's edit scales input to a ~1MP target, so a whole-image pass re-renders a 4000x3000 photo at 1MP. Pixels outside the box are never sent, which no prompt can guarantee.",
+      "NO style control and NO LoRA rack on this flow. Style rides in the user's own words ('a cartoon man wearing X'), which styles only the inserted subject; a style LoRA restyles the whole photo. This is also why dropping the SDXL arms costs anime/pony users nothing HERE.",
+      "NO light-direction field. Considered and rejected - it is the documented 'never an ORDER' shadow finding with an extra step, and worse here because the model is looking at the actual photo and knows its light better than the user does.",
+      "MPI-618 closed rather than run: its live run would have validated a phase MPI-621 deletes.",
+      "MPI-596 (Object Stamp) is marked SUPERSEDED inside MPI-621's brief - same cut/paste/repair architecture, and it has not been built yet. Re-read it against MPI-621 before building; the two may be one flow."
+    ],
+    "constraints": [
+      "TWO independent sizing variables, both derived from the drawn bbox, neither a constant. CROP (context): crop_MP <= (scribble_px/200)^2, and within the working window choose the WIDEST crop that still anchors, because seam visibility improves with context. RETURN BOX (stitch): >=1.6x the drawn bbox or the subject is SLICED - the model renders around and beyond the drawing - plus extra room for the shadow, which is scene-dependent.",
+      "Law 1 does NOT transfer to this route and must not be cited against a tight crop. No rung showed the glowing-blob signature, not even a 0.008MP crop. Law 1 was measured on a RELIGHT op; Klein GENERATES the subject and only needs to know what light to render under.",
+      "There is no absolute minimum drawn size - the crop manufactures resolution (a 75px scribble with 3px strokes works). The ~96px ControlNet ink floor does NOT carry over, so the paint step's size hint needs rewriting rather than porting.",
+      "/connector/generate CANNOT run this - any op with an image slot returns MEDIA_UNSUPPORTED. Use scratchpad/run.js against the LOCAL engine on 127.0.0.1:48188. /proxy/* is the REMOTE forwarder and is wrong for a local engine. Both 8188 (standalone bench) and 48188 (app engine) answer on this machine sharing one models root - pick deliberately; 48188 keeps 9B resident once rather than loading a second copy into a 16GB card.",
+      "An edge luma metric measures CONTENT as often as a seam - the -50/-72 right-edge readings in the sweep were the man's body at the box edge, not a re-grade. Compare same-material bands (bottom edge, sand to sand) or zoom and look.",
+      "MPI-621 is still in TODO, not doing: no implementation has started and none of its owned files have been touched. Move it and write files.json before the first code edit (guard-card).",
+      "Board validation currently FAILS on pre-existing MPI-607 event-schema errors (39 lines). Not caused by this session; leave for close-out.",
+      "docs/playbooks/add-flow/existing-flows/scribble-to-object.md is 351 lines, over the 200-line budget and not on docs/README.md's exemption list. Pre-existing overage, flagged not fixed."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-621/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-620/brief.md",
+      "docs/playbooks/add-flow/blending-into-a-photo.md",
+      "comfy_workflows/flow_draw_it_in.json",
+      "comfy_workflows/klein_9b_t2i.json"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/e12e3142-1122-4153-889f-41ffe8c7d92f.json and use mpi-continue to pick up MPI-621 - rebuilding the Cubric Vision 'Draw It In' flow on a single FLUX.2 Klein 9B edit (crop -> edit -> stitch), replacing its SDXL + ControlNet + rembg + flat-paste + LanPaint architecture. That architecture was disproven live on 2026-08-25: one Klein 9B edit, one image, one sentence, 15s, produced a man with his hand on the tiger's back and his leg BEHIND it, against 38s and no interaction at all from the shipped 55-node flow. The card's open measurement is already DONE and both sizing rules are written into .agents/mpi-kanban/tasks/MPI-621/brief.md - read them, do not re-derive them. The next action is to move MPI-621 todo -> doing with a files.json, then build the graph. Its sibling MPI-620 (Scribble) is where the deleted SDXL + ControlNet half goes to live, so nothing is lost."
+}
