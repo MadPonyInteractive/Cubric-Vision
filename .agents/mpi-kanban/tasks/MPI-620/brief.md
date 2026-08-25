@@ -85,3 +85,48 @@ was renamed to "Draw It In", because gallery cards carry the `FLOWSCRIBOBJ_` pre
 2. Both preprocessor arms produce visibly different, on-brief results from one drawing.
 3. `npm test` **and** `npm run test:desktop`.
 4. Live run in the app, not validation alone.
+
+---
+
+## Open question 2 ANSWERED 2026-08-25 — the output path needs no media at all
+
+Traced in code, no GPU needed.
+
+**`composePaintLayer(value)` is already media-independent.** `stepKinds.js:151` registers it as
+`paint: value => composePaintLayer(value)` with the comment stating it outright: *"The value
+already carries the layer and the source's natural size, so this needs no media — the argument
+is kept for the shared signature."* The body (`MpiStepPaint.js:146`) reads only `value.paint`
+and `value.size.{w,h}`. Nothing reaches for the photo.
+
+So does everything else downstream: the brush, `PaintManager`, undo, the reported value.
+
+**The media dependency is TWO lines, both on the display side:**
+
+| line | what it does | Scribble needs |
+|---|---|---|
+| `MpiStepPaint.js:609` | `props.media?.url` → `imgEl.src`; falls back to `''` and simply never loads | a white canvas at the chosen ratio |
+| `MpiStepPaint.js:588` | `_natural = { w: imgEl.naturalWidth \|\| 1, h: ... }`, set in the image's `load` handler | `_natural` seeded from the ratio instead |
+
+So this is a **value-source swap, not a new component.**
+
+**The trap — and it is silent.** With no media, no `load` fires, `_natural` keeps its `|| 1`
+fallback, and `size` reports `{w:1, h:1}`. That passes `composePaintLayer`'s `w > 0 && h > 0`
+guard, so the flow gets a **1×1 PNG** and runs. No error, no warning, a generation that
+produces nothing anyone asked for. Whatever seeds `_natural` for this flow must be proven to
+run before the first `_report()`, not assumed.
+
+## Open question 1 — still open, but narrowed
+
+The ratio's only job is to seed `_natural`. That is a single `{w, h}` handed to step 2 before
+it reports, so the question is purely **where that value comes from**, not how the canvas
+works.
+
+`FRAME_KINDS` already supports a media-less `fields` step (`stepKinds.js:64`), and its values
+live in the FLOW-level store rather than `stepValues` — which is the store a later step can
+actually read. That is the promising route: a `fields` step (or a plain flow-level field)
+holding the ratio, read by the paint step at mount.
+
+Still to confirm: whether a gizmo step can read a flow-level field at mount time. The frame
+collects `{ [role]: value }` per step and a kind *"never learns which flow hosts it"*
+(`stepKinds.js` header), so a cross-step read may not be expressible today. **Check that
+before designing** — it is the difference between a FlowDef change and a frame change.
