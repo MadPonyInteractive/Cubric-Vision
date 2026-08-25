@@ -1,0 +1,75 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "aedca31b-9938-47e2-970f-1046d0dda71c",
+  "generated_at": "2026-08-25T12:55:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-607 session 15 - the VC quality question answered by listening test, the cosine disqualified, and the voice library carded as MPI-622",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Resolve Qwen3-TTS viability, then wire Chatterbox + Qwen as Flows.",
+    "status": "in_progress",
+    "summary": "The quality doubt that gated everything is resolved: Chatterbox VC moves a voice roughly HALFWAY and stops, proven with a bias-free listening test, and the CAMPPlus cosine is disqualified as a perceptual gate. Flow A is NOT dropped - Fabio's call, the obligation is truthful guidance rather than a better model. The voice library is now its own card, MPI-622, with an approved design and a five-phase plan."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-607/plan.md",
+    "completed": [
+      "THE GATE IS ANSWERED. A stranger's clip converted into the gravel character, described COLD, came back '35, deep but not too deep' - midway between the 25-year-old source and the 50+ target. No self-recognition bias was available, so 'it sounds like me' was never the explanation.",
+      "Ruled out: bad pairing (three targets incl. cross-gender all still read as Fabio) and iteration (3 chained VC passes were perceptually IDENTICAL on the unbiased pair; on his own voice pass 3 only hallucinated rumble).",
+      "THE COSINE IS DISQUALIFIED as a perceptual gate - 0.92 on that clip. CAMPPlus x-vectors are pitch/prosody-invariant by construction, exactly the cue a listener uses. New gate: cosine AND median-f0 delta.",
+      "CLOSED, open since 2026-08-23: text CANNOT select emotion (soulless at exaggeration 0.5; the WRONG emotion at 1.0 - angry words read as disappointed). Performance clips stay load-bearing; the '60 voices, emotion free' collapse is dead.",
+      "CLOSED: character consistency across performers HOLDS. Two performers 0.47 apart drove one character to outputs 93 Hz apart and Fabio still heard one actor. The shared-performance-clip collapse survives.",
+      "MPI-622 'Voice library' created, todo/planned, with brief.md (approved design) and a 5-phase plan.md incl. one parallel batch.",
+      "Committed and pushed as 949d6f74. The old push blocker was already gone - both prior commits were on origin/master."
+    ],
+    "pending": [
+      "MPI-622 Phase 0 is the gate: where R3-R5 emotional performances come from. Try the offline formant-preserving pitch shift of one of Fabio's natural takes FIRST.",
+      "MPI-622 D1/D2 are recommendations awaiting Fabio: bundle in-repo (~5MB) vs a new archive dep type, and curate ~60 of the 228 CC0 voices vs ship all 228.",
+      "Flow A has NO UI yet - record button (MPI-573 recorder), voice selector off the library, custom-voice item. Stays on MPI-607.",
+      "Sharpen guidance rule 3 in docs/playbooks/add-flow/existing-flows/voice-changer.md - flagged 2026-08-24 and STILL NOT DONE. It says 'meet the target's pitch'; the truth is VC moves everything only part of the way.",
+      "The voice-changer FlowDef description promises Chatterbox 'swaps the voice itself'. Measured behaviour is a blend. Needs honest copy before it ships.",
+      "GATE 2 FLOW B - Text to Speech (TTS -> VC, 4.25GB), still waiting on authored performance clips. Accent routing: none -> base, <lang> -> multilingual (+3.0GB); whether requiredDeps can express an OPTIONAL set is UNRESOLVED.",
+      "No preview art for Flow A - /mpi-flow-graphics is a separate pass."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-607",
+    "title": "TTS in Vision: resolve Qwen3-TTS viability, then wire Chatterbox + Qwen as Flows",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-607/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-607/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-607/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-607/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Start MPI-622 Phase 0 - the only thing blocking the voice library. Fabio can perform emotion ONLY in his own voice (~100 Hz, register R1), and a live voice changer CANNOT carry emotion because it mangles pitch, which is what emotion rides on. Test the offline route first: take one of his natural angry takes, pitch-shift it +7 and +12 semitones formant-preserving, drive TTS -> VC into a matched-register character, and ask him two separate questions - does it still read as angry, and do chipmunk/formant artefacts ride through. If that fails, research permissively-licensed emotional speech corpora (a real gap: the existing voice-library research covers IDENTITY corpora only). If both fail, take the escape hatch already written into the plan and ship R1-only for v1. Also get Fabio's answer on MPI-622 D1 and D2.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "FLOW A IS NOT DROPPED - Fabio, 2026-08-25: 'It's not a dead product. It just needs to give the user truthful information about how it works.' The obligation is guidance, not a better model. Do not reopen this.",
+      "THE ROUTE DECIDES THE VOICE. Direct TTS lands on the character; TTS->VC lands on a consistent OTHER voice. So register is a property of the VOICE, never of the line - a per-line neutral-bypass would switch actor mid-scene. 'Flat' is a performance clip, not a bypass.",
+      "DIRECT TTS WITH NO VC IS EXCELLENT FOR DICTATION - Fabio's tutorial voice came back 'exactly the same thing'. The 2026-08-23 'direct sounds robotic' note is scoped to the EMOTION tests only and must not be generalised.",
+      "Offline Qwen3-TTS VoiceDesign authoring does NOT contradict 'Qwen3-TTS is never shipped' - it is an authoring tool that never becomes an app dependency. The vd_* / A3_REF clips all came from it.",
+      "Sourcing is ALREADY RESEARCHED - kyutai/tts-voices 228 CC0 ships now, VCTK + GLOBE upgrade. Do not re-research it."
+    ],
+    "constraints": [
+      "NEVER GATE ON THE COSINE ALONE. CAMPPlus is pitch/prosody-invariant by construction and scored 0.92 on a clip a listener placed 20 years off target. Two different library voices of different genders score 0.75 to each other, so anything under ~0.8 carries almost no information. Gate = cosine AND median-f0 delta (librosa.pyin).",
+      "A LISTENING TEST WHERE VC PRESERVES THE SCRIPT IS NOT BLIND. VC keeps the source's words, rhythm and duration exactly, so any A/B against the source is decided by content in one second. Use a cold DESCRIPTION of a clip whose source the listener does not know.",
+      "Deps are SINGLE FILES with a sha256 - there is no archive/extract dep type. A 228-file library cannot ship through the download manager without inventing one. comfy_workflows/display/ is the existing in-repo convention and copyAppTree ships the app tree wholesale.",
+      "TOOLING: any /prompt POST to 8188/48188 needs the GPU lease - python C:/Users/Fabio/.claude/plugins/cache/mad-pony-interactive/mpi-kanban/1.2.0/skills/mpi-lib/scripts/gpu_lease.py run -- <cmd>. Heredocs are BLOCKED by guard-shell; write a script to the scratchpad and run it by path. The bench writes to D:/WORK/Images/Outputs/<prefix>/, NOT <ComfyUI>/output and NOT .../audio/ unless the prefix says so. Similarity: research/speaker_similarity.py under G:/ComfyUi/python_embeded/python.exe over a DIRECTORY.",
+      "json.dump on board.json WITHOUT ensure_ascii=False re-escapes ~6 unrelated event lines and turns a 2-line diff into a 15-line one in a co-owned file. Always pass ensure_ascii=False. Also read board/state JSON as utf-8 (or utf-8-sig) - the default cp1252 open() dies on it.",
+      "PEER SESSIONS ARE LIVE IN THIS TREE (MPI-567, MPI-608). Uncommitted files NOT mine, deliberately left: comfy_workflows/raw/{krea2_t2i,ltx_i2v_t2v,sdxl_t2i}_template.json and dev_configs/smoke-run.txt. Commit by explicit pathspec only.",
+      "83 pre-existing board-validation errors (malformed old event lines) - none from this session or the last. Noticed, not actioned."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-622/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-622/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-607/validation.md"
+    ]
+  },
+  "resume_prompt": "You are picking up MPI-607 / MPI-622 in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/aedca31b-9938-47e2-970f-1046d0dda71c.json, then MPI-622's brief.md and plan.md, then MPI-607's validation.md from the 2026-08-25 entries. The quality question that gated this card is ANSWERED: Chatterbox VC moves a voice roughly halfway and stops - proven with a stranger's clip described cold, which removed the self-recognition bias entirely - and the CAMPPlus cosine is disqualified as a perceptual gate because x-vectors are pitch-invariant by construction. Iteration does not help. Flow A is NOT dropped: Fabio decided the obligation is truthful guidance, not a better model, and direct TTS with no VC is already excellent for dictation. The voice library is now MPI-622 (todo/planned) with an approved design. DO NOT re-run the listening tests, do not re-research voice sourcing, and do not gate anything on a cosine alone. Start at MPI-622 Phase 0: Fabio can perform emotion only in his own voice at ~100 Hz and a live voice changer cannot carry emotion because it mangles pitch, so test an offline formant-preserving pitch shift of one of his natural takes first, and get his answers on decisions D1 and D2 in the plan. Settled, do not relitigate: Qwen3-TTS is never SHIPPED though offline VoiceDesign authoring is fine, the chatterbox weights MUST stay targetPath deps, and ComfyUI-MpiNodes must never appear in a flow's requiredDeps."
+}
