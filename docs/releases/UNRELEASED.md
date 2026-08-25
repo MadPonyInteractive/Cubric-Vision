@@ -28,6 +28,9 @@
 
 ## Important changes
 
+- FLUX.2 Klein is now called FLUX.2 Klein 4B, since Klein 9B arrived beside it — the two are
+  told apart by name instead of by a small size letter.
+
 - Inpainting no longer erases on an empty prompt — you have to say what you want removed.
   Clearing the prompt and painting over something used to delete it, and that was the whole
   erase gesture. Klein now samples with the mask as a real constraint, and an empty prompt is a
@@ -93,8 +96,10 @@
 - Character Sheet uses two models, and you pick both. A **Render model** draws the sheet, and a
   **Blend model** removes the head from the front body — two dropdowns in the Flows panel when
   you select the flow, each with its own cogwheel opening that model's LoRA rack, so your own
-  LoRAs ride along on either stage. Someone who has already trained a character can load it on
-  the render side and describe only the wardrobe on top.
+  LoRAs ride along on either stage. The same pair of cogwheels also sits on the last step beside
+  the result, so you can try a different LoRA and run again without leaving the picture you are
+  judging. Someone who has already trained a character can load it on the render side and
+  describe only the wardrobe on top.
 
 - The Render model is Krea 2 or Krea 2 NSFW; the Blend model is FLUX.2 Klein 4B or 9B. Both
   dropdowns appear whether or not anything is installed, so you choose which one downloads

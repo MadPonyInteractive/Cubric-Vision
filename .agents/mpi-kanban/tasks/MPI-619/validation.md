@@ -51,7 +51,12 @@ Fabio approved a single line, 2026-08-25. Paste this into the next version's
 
 > Due to the introduction of Klein 9B, FLUX.2 Klein is now called FLUX.2 Klein 4B.
 
-**Not written into `releaseNotes.js` here on purpose.** That file is keyed by exact
+**FILED 2026-08-25 in `docs/releases/UNRELEASED.md`** (Important changes), which is the
+repo's scratchpad for exactly this and gets folded into the new version by `/mpi-version-bump`.
+An earlier revision of this file said no such convention existed - that was wrong, from an
+`ls | head -20` that truncated the directory listing before `UNRELEASED.md`.
+
+**Still not written into `releaseNotes.js` here on purpose.** That file is keyed by exact
 `APP_VERSION`, notes are authored at stamp time by `/mpi-release` (the `1.4.2` key landed in
 its own stamp commit `372c1895`), and the next version number is not decided — master is 280
 commits past `v1.4.2` and carries features, so 1.4.3 vs 1.5.0 is a release call. Inventing a
