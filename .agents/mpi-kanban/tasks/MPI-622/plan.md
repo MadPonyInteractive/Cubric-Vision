@@ -4,6 +4,15 @@
 
 **Project mode:** `scalable-foundation`.
 
+> **Session 16 note (2026-08-25).** Phase 0 RESOLVED on option 1, D1/D2 answered, Phase 1
+> SHIPPED (737/737, eslint clean), and the overdue voice-changer guidance rewrite is done.
+> Three of my own hypotheses died on the way and all three are recorded as wrong in
+> `validation.md` rather than dropped -- VC-corrupts-phonemes, the pitch-direction rule, and
+> voiced-density. **The one thing that now BLOCKS Phase 2 is an accent decision**: VC
+> overwrites the target's accent with the source's, so whoever records the performance clips
+> sets the accent of every `character` voice in the library. Next work is the Parallel Batch
+> (import pipeline + `MpiVoicePicker`), which Phase 1 already unblocks.
+
 The approved design is `brief.md` in this folder and it is the source of truth. Do not
 re-derive it, and do not re-run the listening tests — they are done and recorded in
 `../MPI-607/validation.md` (2026-08-25 entries).
