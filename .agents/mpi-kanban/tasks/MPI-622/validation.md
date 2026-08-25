@@ -432,3 +432,100 @@ This also demotes the shifter again — the grid does not need it to stay rectan
 returns to being what Phase 0 validated it as: a way to reach registers a given performer
 cannot cover. Both entries above overstated its role in opposite directions; this is the
 settled reading.
+
+---
+
+### 2026-08-25 — 🔴 THE PITCH-DIRECTION HYPOTHESIS IS DEAD, and the sample is synthetic
+
+Fabio on the sweep: ***"Every single one has a 'twain' word instead of 'train'."*** All five
+arms, at −4.0, −1.0, +1.8, +3.5 and +6.3 semitones from the target. **So it does not track the
+direction VC has to move pitch, and the previous entry's hypothesis is wrong.** Guidance rule
+3 gains no mechanism from this.
+
+He also noted file 2 is the mildest: *"still a little bit of twain, but the R is almost there,
+and it's only the twain word. The rest seems natural."* Only that one word. Not "most of her
+R's" after all — which matters, see below.
+
+#### What the pattern actually shows
+
+Every broken clip on this card descends from **one** TTS output (Phase 0c's F run). Phase 0d
+fed that same output to VC at five different pitch distances and all five broke; Phase 0c fed
+VC five *different* TTS outputs and only F broke. **The defect follows the TTS source, not the
+character and not the pitch relationship** — and shifting the TTS output afterwards cannot
+repair it, because by then the /r/ is already whatever it is.
+
+Which means it was in that TTS output the whole time, even though it sounded clean. A human
+listener repairs a weak /r/ from context. VC's decoder does not.
+
+#### 🟢 Where the sample comes from — Fabio asked, and the answer reframes it
+
+*"Where does this sample come from anyway? Its originality? If it comes from a child saying
+this, then it makes sense."*
+
+Not a child, and not a person. **`lib_f_midage_narration.wav` is synthetic** — generated
+offline by Qwen3-TTS VoiceDesign from Fabio's own prompt
+(`../MPI-607/research/design_voices.py`):
+
+> *"Adult female, forties, **refined British accent**, low-mid pitch, unhurried tempo, rich
+> timbre, calm narration."*
+
+And he described it cold, before knowing any of this, as *"a white woman from 1935 sassy
+voice"*. **That register is exactly where labiodental /r/ lives** — the [ʋ] of upper-class
+early-20th-century British speech, which sounds like /w/ to nearly everyone else. The model
+was asked for refined British and may have delivered the period-accurate article.
+
+Two things are braided together in what he heard, and only one is a defect:
+
+1. **Missing post-vocalic R's** (water, sailor, heart, clear) — **not a defect.** That is
+   non-rhoticity, and it is correct for the accent that was prompted.
+2. **"twain" for "train"** — /r/ → /w/ in a stop-onset cluster. Either the voice's own
+   labiodental /r/, or VC damage. Still open.
+
+#### 🔴 A voice's sample can hide the very quirk that defines it
+
+The whole library set shares one fixed text (`LIB_TEXT` in `design_voices.py`):
+
+> *"The old lighthouse had stood at the edge of the cliff for nearly two hundred years, and
+> every sailor who passed it knew the story by heart. On a clear night you could see its beam
+> sweeping across the water."*
+
+Every R in it is post-vocalic — dropped correctly by a British voice, so nothing sounds wrong
+— or buried mid-word. **There is no stop+/r/ onset cluster anywhere in it. It never says
+"train".** So this voice's sample could never have exposed the behaviour, and a picker would
+have sold it on a clip that hides it.
+
+**This is a library-design requirement, independent of how the R question resolves:** the
+sample and audition text must be **phonetically comprehensive** — stop+/r/ and stop+/l/
+onsets, fricatives, sibilants, final stops. `brief.md` § 3 already requires auditions be
+generated through the shipping route; this adds that the *text* must exercise the phonemes,
+or the audition is decorative. A pangram-style sentence, not a pretty one.
+
+`research/phase0e_whose_r.py` settles the remaining half with two arms: direct TTS from the
+character clip with **no VC in the graph at all** (if that says "twain", the voice owns it),
+and the same broken source VC'd into a non-British male character (if "twain" survives into
+a gravel senior male, VC is carrying or creating it).
+
+#### 🟢 The emotion-set proposals are WITHDRAWN — Fabio's argument is better
+
+*"Sarcastic and dry, there is no point in doing those. We already have natural, I guess, or
+deadbeat, or something like that. Robotic, like a monotone kind of thing. They all end up
+being the same kind of thing."*
+
+He is right: `Flat`, `Neutral`, robotic, monotone, dry and sarcastic all collapse into one
+low-affect delivery, and `brief.md` § 2 already has two cells for it. Adding more would be
+splitting one thing into five names. **Proposal withdrawn.**
+
+*"Manic would be happy and angry at the same time. It would be great if we could mix emotions,
+but that's not something the system we have offers... We can't realistically have a bunch of
+cover-all emotions. There are too many emotions to cover."*
+
+Also right, and it closes the taxonomy question for good: **do not chase an emotion
+taxonomy.** The six in `brief.md` § 2 stand as-is.
+
+But his own complaint has an answer already in the approved design, and it is worth stating
+because it is a genuine argument FOR that design rather than a consolation: **a performance
+clip is the one representation that CAN carry a mixed emotion.** No slider set expresses
+happy-and-angry-at-once, but a performer doing manic produces it in a single take, and the
+clip carries it whole. The library does not need emotion mixing — it needs the right clip.
+Adding `Manic` later therefore costs one clip per register, exactly as `brief.md` § 2 already
+says, and needs nothing from the model.

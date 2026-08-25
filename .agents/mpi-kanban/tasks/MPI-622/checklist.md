@@ -21,17 +21,27 @@
 
 ## Open, raised by the Phase 0c listen
 
-- [~] **Rhotic defect ISOLATED TO `FL_ChatterboxVC`** 2026-08-25. Character clip clean, TTS
-      stage clean, defect appears only after VC. Only F of the five. VC CORRUPTS a phoneme
-      that neither input has - not the known "lands halfway" behaviour. **Hits Flow A, which
-      ships today.** Sweep staged at `Desktop/MPI622_R_sweep/` to test whether it tracks
-      VC having to RAISE pitch to reach the target (F was the only arm sourced BELOW it)
-- [ ] **`brief.md` § 2 refinement** - emotion labels are DELIVERIES the user selects, not
-      the performer's state (Fabio's sarcasm point). So (a) `register` should name the
-      PERFORMER'S BASELINE, not the clip's measured f0, and (b) add `Sarcastic`/`Dry` - the
-      low-register expressive delivery the set has no slot for. Needs Fabio's call
-- [ ] **Emotion set proposal**: add `Menacing` / `Manic` for a character library - he can
-      deliver those ("I am not an angry person"). Needs Fabio's call
+- [~] **Rhotic defect: "twain" for "train"**. Pitch-direction hypothesis DEAD (all 5 sweep
+      arms broke). Defect follows the TTS SOURCE - every broken clip descends from one TTS
+      output - and a post-hoc shift cannot repair it. The character clip is **synthetic**,
+      Qwen3-TTS VoiceDesign from Fabio's prompt "refined British accent", and he described
+      it cold as "a white woman from 1935" - the register where labiodental /r/ lives, so it
+      may be the voice being itself. Decider staged at `Desktop/MPI622_whose_R/`: direct TTS
+      with NO VC in the graph, vs the same source VC'd into a non-British male
+- [x] **Missing post-vocalic R's are NOT a defect** - that is non-rhoticity, correct for the
+      prompted accent. Only the stop-cluster "twain" is in question
+- [ ] 🔴 **Library requirement: sample/audition text must be PHONETICALLY COMPREHENSIVE.**
+      The whole library set shares one text that never says a stop+/r/ onset, so this voice's
+      sample could never expose its own quirk. A pangram-style line, not a pretty one
+- [x] ~~Emotion set proposals (`Sarcastic`/`Dry`, `Menacing`/`Manic`)~~ **WITHDRAWN** - Fabio:
+      they collapse into the low-affect cells the set already has, and there are too many
+      emotions to cover. The six stand. Emotion MIXING (manic = happy+angry) is a real gap the
+      model cannot serve - but a performance CLIP carries a mixed emotion natively, which no
+      slider set can, so adding `Manic` later is one clip per register and needs nothing new
+- [ ] **`brief.md` § 2 refinement** - emotion labels are DELIVERIES the user selects, not the
+      performer's state (Fabio's sarcasm point), so `register` should name the PERFORMER'S
+      BASELINE rather than the clip's measured f0. The (b) half of this proposal is withdrawn
+      above. Needs Fabio's call
 - [ ] One angry take with the **noise filter OFF** - the only missing piece for a clean
       performed-vs-shifted verdict
 
