@@ -177,7 +177,27 @@ and one female character before R2/R4/R5 cost anything.
 
 ## Plan Drift
 
-- None yet.
+- **2026-08-25 -- the semitone figures in Phase 0 were wrong.** Phase 0 said "+7 and +12
+  semitones ... into R3/R4". From Fabio's natural take (`recording_003.wav`, median 101.5 Hz)
+  the arithmetic does not reach: +7 lands on **150.3 Hz (R2)** and +12 on **201.8 Hz (R3)**.
+  R4 needs **+19** (305.9 Hz). Measured, not estimated -- `research/pitch_tools.py measure`.
+  The test now runs +7 / +12 / +19 and pairs each with a character clip in the register it
+  actually lands in, since performer pitch leaks hard and a mismatched pair would measure
+  the mismatch instead of the shift.
+- **2026-08-25 -- there is no angry take of Fabio's on disk, so Phase 0 splits in two.**
+  The plan assumed "one of Fabio's natural angry takes" exists. The only natural recordings
+  are `recording_003/004/005.wav` (101.5 / 182.9 / 127.9 Hz) and none is recorded as
+  emotional; the two expressive ones (`high_pitch_exp_fabio` 230.5 Hz, `high_pittch_fabio`
+  316.7 Hz) are PUSHED takes, which score 0.38-0.42 against his own natural voice and are
+  ruled out by guidance rule 1. Question (b) -- do artefacts ride through VC -- needs no
+  emotion and runs now against a +0 control. Question (a) -- does anger survive the shift --
+  waits on one angry line recorded at his natural pitch.
+- **2026-08-25 -- the shifter is Praat, not librosa.** `librosa.effects.pitch_shift` and
+  `torchaudio.functional.pitch_shift` are resample-based: they drag the formants along and
+  manufacture the exact chipmunk artefact this phase exists to rule out, so either one would
+  have failed the test by construction rather than on the merits. `praat-parselmouth` was
+  installed on the bench (`G:/ComfyUi/python_embeded`, 0.4.7) and its "Change gender" with
+  `formant_shift_ratio 1.0` moves the pitch median while leaving the formants alone.
 
 ## Verification
 

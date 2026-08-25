@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-622/**",
+    "voices/**",
+    "scripts/voice-library/**",
+    "js/data/voiceLibrary.js",
+    "js/components/voicePicker.js",
+    "styles/components/voice-picker.css",
+    "docs/voice-library.md"
+  ]
+}
