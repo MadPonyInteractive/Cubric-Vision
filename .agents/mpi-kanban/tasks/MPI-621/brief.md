@@ -231,3 +231,59 @@ Note `/proxy/*` is the REMOTE forwarder and is wrong for a local engine; and bot
 48188 answer on this machine (8188 = standalone bench, 48188 = app engine) sharing one models
 root, so a probe must pick deliberately. 48188 was used so 9B stayed resident once rather than
 loading a second copy into a 16GB card.
+
+## The STITCH half, measured on the same runs — no GPU needed
+
+The crop sweep above only proves the render is right. Simulating the stitch (scale each ~1MP
+result back to its crop size, cut the box out, composite into the untouched photo) answers what
+the user actually gets, and it surfaced a second variable the brief never named.
+
+### The return box must be ~2× the drawn bbox, or the subject gets SLICED
+
+Stitching back the drawn bbox + margin (66×118 for a 51×75 scribble) cut a hard vertical line
+through the man's torso. **The model renders the subject around and beyond the drawing** — the
+scribble is where and how big, not an outline the render stays inside.
+
+Re-stitching the same render at increasing return-box sizes, luma step across the boundary,
+4px bands, hard paste with NO feather:
+
+| return box | vs drawn bbox | left edge | bottom edge | subject |
+|---|---|---|---|---|
+| 66×118 | 1.0× | **−21.3** | −0.8 | **sliced** — the step IS his clipped body, not a seam |
+| 106×189 | 1.6× | +1.4 | −6.2 | complete |
+| 145×260 | 2.2× | +1.8 | −5.7 | complete |
+| 198×354 | 3.0× | −2.6 | −5.2 | complete |
+
+**≥1.6× is enough; 2.2× has margin.** In the shipped flow the user draws this box themselves on
+step 3, and the hint already asks for *"the object plus room on the ground for its shadow"* —
+this measurement puts a number under that copy. Whatever derives the region must not collapse
+it onto the drawn bbox.
+
+### Law 2 is milder here than the doc's worst case
+
+With an adequate box, a **hard rectangular paste, zero feather, generated pixels meeting
+original pixels, on uniform sand** — the exact worst case Law 2 names — measures a consistent
+**≈5.5/255 (~2%) luma step** at the bottom edge and nothing at the sides. Visible in a
+difference measurement, not to the eye at normal viewing.
+
+So keep `mask_blend_pixels` as cheap insurance, but **it is not load-bearing on this evidence**
+and should not drive the design. One plate, one scene — do not generalise past that.
+
+### Careful with edge metrics
+
+A luma step across the box boundary measures **content as often as it measures a seam**: the
+large right-edge readings in the crop sweep (−50.7 at 3.5×, −72.0 at 4.25×) were the man's dark
+body sitting at the box edge, not a re-grade. Only compare bands that are the same material on
+both sides — the bottom edge, sand to sand — or zoom and look.
+
+### Two variables, not one
+
+| variable | what it controls | rule |
+|---|---|---|
+| **crop** (context) | whether the subject renders at the right scale and place | `crop_MP ≤ (scribble_px / 200)²`, target ~240–425px after normalise |
+| **return box** (stitch) | whether the rendered subject survives intact | ≥1.6× the drawn bbox, 2.2× with margin |
+
+They are independent and both derive from the drawn bbox. Neither is a fixed constant.
+
+Artefacts for all of it are in the session scratchpad (`law1/`, `law1out/`, `stitched/`); the
+end-to-end proof is `STITCHED_rung_3p5x` at a 2.2× box.
