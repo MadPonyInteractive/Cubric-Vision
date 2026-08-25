@@ -668,5 +668,56 @@ Three consequences, in order of how much they cost:
 Flow A's promise is "your laugh, your breath, your timing, in someone else's voice". The user
 IS the source there, so their accent surviving is the feature, not a bug. This measurement is
 the evidence for that copy — and simultaneously the evidence that the *character's* accent is
-not on offer. Both belong in the guidance rewrite already pending on
-`docs/playbooks/add-flow/existing-flows/voice-changer.md`.
+not on offer. Both are now written into
+`docs/playbooks/add-flow/existing-flows/voice-changer.md` (rule 3 plus a new channel table).
+
+---
+
+### 2026-08-25 — ✅ DECIDED: the performance clips are AUTHORED, not recorded. Phase 2 unblocks.
+
+The accent decision, answered by Fabio the moment it was put to him:
+
+> *"I've heard better performances than my own from the clips that we have or created with
+> Voice Design, especially for Angry. Not to mention, my accent is not great. I'm not English
+> native."*
+
+**The R1–R5 × emotion grid is authored offline with Qwen3-TTS VoiceDesign, not recorded by
+Fabio.** Two independent reasons, and either alone would decide it:
+
+1. **Quality.** The VoiceDesign clips out-perform his own takes, most clearly on Angry — the
+   emotion he had already said is not his strength (*"I'm not an angry person"*).
+2. **Accent.** He is not a native English speaker, and VC overwrites the target's accent with
+   the source's. So recording the grid himself would stamp a non-native accent onto **every
+   `character` voice in the library**, whatever each voice's own accent label said.
+
+This is the same authoring route the character clips already came from — offline, Apache-2.0,
+and never an app dependency, so it does not touch "Qwen3-TTS is never shipped".
+
+#### 🟢 The inversion: a CLOSED-NEGATIVE finding turns into the thing that makes this work
+
+MPI-607 closed accent-via-VoiceDesign as NEGATIVE after 22 generations: *"American prior, not
+controllable."* That was a defeat when the goal was to author voices with **chosen** accents.
+
+Here the goal is the opposite — one consistent house accent across the whole clip grid — and an
+uncontrollable prior delivers exactly that, for free. The direct-route control measured it
+plainly: neutral modern American, no accent to speak of. **That is the correct default for a
+character library**, and it is what the grid now inherits.
+
+So the finding does not need reversing, only re-reading. It stays NEGATIVE for accent
+*selection* and is an asset for accent *consistency*.
+
+#### What this changes, and what it does not
+
+- **Phase 2 is UNBLOCKED.** No recording sessions, no performer sourcing, no licensing
+  exposure. The grid is authorable entirely in-house today.
+- **Phase 0's shifter is not obsolete — it demotes to a repair step.** It is validated to
+  ±19 semitones with no artefacts and with emotion intact, so when a VoiceDesign take lands
+  off its target register it gets moved rather than re-rolled. It is no longer the *source* of
+  any register.
+- **Fabio's own recordings stay useful as controls**, which is what they were used for all
+  session. They are not library material.
+- **Emotion labels still need judging by ear, per clip.** MPI-607 already measured that
+  VoiceDesign's delivered emotion is approximate (*"B is not really sad, it's a sad-angry kind
+  of thing"*), and this session added a labelled-angry clip that read as "upset". Phase 2's
+  verify mode is already `user-ux` for exactly this reason — do not trust the prompt's label.
+- **The two-number QA gate still applies** to every authored clip: cosine AND median-f0 delta.

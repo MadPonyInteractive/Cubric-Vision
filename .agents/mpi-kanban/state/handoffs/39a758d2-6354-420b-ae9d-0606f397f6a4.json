@@ -1,7 +1,7 @@
 {
   "schema": "mpi-kanban/handoff/v1",
   "id": "39a758d2-6354-420b-ae9d-0606f397f6a4",
-  "generated_at": "2026-08-25T18:09:33Z",
+  "generated_at": "2026-08-25T18:18:47Z",
   "status": "open",
   "session": {
     "name": "MPI-622 session 16 - Phase 0 resolved, Phase 1 shipped, and VC found to overwrite the target's accent",
@@ -10,7 +10,7 @@
   "goal": {
     "original": "Start MPI-622 Phase 0 (offline formant-preserving pitch shift as the performance-clip source) and get Fabio's answers on D1 and D2.",
     "status": "in_progress",
-    "summary": "Phase 0 RESOLVED on option 1 - the offline shift passes both gates, so licensed emotional corpora, commissioned performers and the R1-only escape hatch are all unnecessary. D1 (in-repo voices/) and D2 (~60 curated) answered. Phase 1 shipped and is green. The card's next blocker is not technical: it is an accent decision that must be made before any performance clip is recorded."
+    "summary": "Phase 0 RESOLVED on option 1 - the offline shift passes both gates, so licensed emotional corpora, commissioned performers and the R1-only escape hatch are all unnecessary. D1 (in-repo voices/) and D2 (~60 curated) answered. Phase 1 shipped and is green. The accent decision that was gating Phase 2 also landed: the performance-clip grid is AUTHORED with Qwen3-TTS VoiceDesign offline, not recorded by Fabio. Nothing on this card is blocked."
   },
   "plan": {
     "file": ".agents/mpi-kanban/tasks/MPI-622/plan.md",
@@ -21,10 +21,11 @@
       "D1 = in-repo voices/. D2 = ~60 curated, explicitly a starting point and not a cap, so the import pipeline must stay re-runnable.",
       "The overdue voice-changer guidance rewrite is DONE (open since 2026-08-24) - rule 3 now carries its mechanism and measured numbers, plus a channel table for what comes from the user vs the target.",
       "Answered an open MPI-607 gate for free: accent SURVIVES VC. Its checklist item is ticked with a pointer.",
-      "Three of my own hypotheses were disproven and all three are recorded as WRONG in validation.md rather than dropped: 'VC corrupts phonemes' (retracted in place), the pitch-direction rule for the rhotic defect, and voiced-density for a TTS duration blowup."
+      "Three of my own hypotheses were disproven and all three are recorded as WRONG in validation.md rather than dropped: 'VC corrupts phonemes' (retracted in place), the pitch-direction rule for the rhotic defect, and voiced-density for a TTS duration blowup.",
+      "ACCENT DECIDED - the R1-R5 x emotion grid is AUTHORED offline with Qwen3-TTS VoiceDesign, NOT recorded by Fabio. His reasons, either sufficient alone: the VoiceDesign clips out-perform his own takes 'especially for Angry', and he is not a native English speaker, so recording it would stamp a non-native accent onto every character voice. Phase 2 unblocked - no recording sessions, no performer sourcing, no licensing exposure."
     ],
     "pending": [
-      "BLOCKS PHASE 2 - the accent decision. Whoever records the performance clips sets the accent of every character voice. Needs Fabio.",
+      "Phase 2 is now UNBLOCKED as well as the Parallel Batch. Author the 12 clips (R1 + R3 x six emotions) with VoiceDesign, judging every emotion BY EAR - the delivered emotion is approximate and the prompt's label is not trustworthy.",
       "Parallel Batch, and it is unblocked: the import + measurement pipeline (scripts/voice-library/**, voices/**) and MpiVoicePicker. Disjoint trees, run through mpi-execute-parallel.",
       "brief.md section 2 refinement, needs Fabio's call: `register` should name the PERFORMER'S BASELINE rather than the clip's measured f0, because emotion moves pitch. brief.md is the approved design and was deliberately not edited unilaterally.",
       "Library requirement not yet actioned: sample and audition text must be PHONETICALLY COMPREHENSIVE. The whole library set shares one text that never says a stop+/r/ onset, so a voice cannot demonstrate its own articulation.",
@@ -47,11 +48,14 @@
     }
   },
   "next_action": {
-    "description": "Run the MPI-622 Parallel Batch - the import + measurement pipeline over the 228 CC0 kyutai voices (scripts/voice-library/**, voices/**) and the MpiVoicePicker component - both depend only on the Phase 1 schema that shipped, and both touch disjoint trees. BEFORE Phase 2 (authoring clips) get Fabio's accent decision: VC overwrites the target's accent with the source's, so whoever records the performance clips sets the accent of every character voice in the library. Fabio recording R1-R5 means one house accent for all 60 voices, which may be fine for v1 but is a decision, and it is far cheaper now than after 12-30 clips exist.",
+    "description": "Run the MPI-622 Parallel Batch - the import + measurement pipeline over the 228 CC0 kyutai voices (scripts/voice-library/**, voices/**) and the MpiVoicePicker component. Both depend only on the Phase 1 schema that shipped, and both touch disjoint trees, so run them through mpi-execute-parallel. Phase 2 is unblocked too and can follow immediately: author the 12 performance clips (R1 + R3 x six emotions) offline with Qwen3-TTS VoiceDesign - NOT recorded by Fabio, that is decided - and judge every emotion by ear, because VoiceDesign's delivered emotion is approximate and its prompt label is not trustworthy. Nothing on this card is waiting on Fabio except the brief.md `register` wording.",
     "command": "mpi-continue"
   },
   "context": {
     "key_decisions": [
+      "THE PERFORMANCE CLIPS ARE AUTHORED, NOT RECORDED. Fabio, 2026-08-25: 'I've heard better performances than my own from the clips created with Voice Design, especially for Angry. Not to mention, my accent is not great, I'm not English native.' The grid is generated offline with Qwen3-TTS VoiceDesign - the same route the character clips came from, Apache-2.0 and never an app dependency, so it does not touch 'Qwen3-TTS is never shipped'. Do not reopen this and do not plan a recording session.",
+      "THE AMERICAN PRIOR INVERTS FROM A DEFEAT INTO THE ENABLER. MPI-607 closed accent-via-VoiceDesign as NEGATIVE - 'American prior, not controllable' - which lost the argument when the goal was CHOOSING an accent. Here the goal is one consistent house accent across the whole grid, which an uncontrollable prior gives for free; the direct-route control measured it as neutral modern American, the right default for a character library. The finding needs re-reading, not reversing: still NEGATIVE for accent selection, an asset for accent consistency.",
+      "THE PHASE 0 SHIFTER IS NOT OBSOLETE - it demotes to a REPAIR step. Validated to +/-19 semitones with no artefacts and emotion intact, so a VoiceDesign take that lands off its target register gets moved rather than re-rolled. It is no longer the SOURCE of any register.",
       "D1 IN-REPO voices/ and D2 ~60 CURATED, both from Fabio 2026-08-25. 60 is a starting point, not a cap.",
       "THE EMOTION TAXONOMY IS CLOSED. Fabio rejected adding Sarcastic/Dry and Menacing/Manic: they collapse into the low-affect cells the set already has, and 'we can't realistically have a bunch of cover-all emotions'. The six in brief.md stand. Do not reopen. Emotion MIXING (manic = happy+angry) is a real gap the model cannot serve - but a performance CLIP carries a mixed emotion natively where no slider set can, so adding one later is one clip per register and needs nothing new.",
       "VC REPLACES THE TARGET'S ACCENT. Proven against a target whose own accent was measured directly: the character is neutral modern American on a no-VC route, and 1930s New York through VC - as is a completely different character from the same source. Identity does not leak but accent does; timbre comes from the target, articulation and prosody from the source.",
@@ -74,5 +78,5 @@
       "js/data/voiceLibrary.js"
     ]
   },
-  "resume_prompt": "You are picking up MPI-622 (Voice library) in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/39a758d2-6354-420b-ae9d-0606f397f6a4.json, then MPI-622's validation.md and checklist.md, then js/data/voiceLibrary.js. Phase 0 is RESOLVED on option 1 - an offline formant-preserving pitch shift (Praat 'Change gender', research/pitch_tools.py) passes both gates, so do NOT research emotional speech corpora and do NOT take the R1-only escape hatch. Phase 1 SHIPPED and is green at 737/737. D1 (in-repo voices/) and D2 (~60 curated, a starting point not a cap) are answered, so Phase 1's decisions are closed. The emotion taxonomy is CLOSED - Fabio rejected adding Sarcastic/Dry and Menacing/Manic and the six in brief.md stand. The rhotic 'twain' is NOT a defect, it is the accent; do not reopen it. The one blocker is an accent DECISION before Phase 2: VC overwrites the target's accent with the source's, so whoever records the performance clips sets the accent of every character voice in the library. The Parallel Batch (import pipeline + MpiVoicePicker) is unblocked and is the next work. Level-match every listening test before playing it, never compare Fabio's denoised recordings 008/009 against the raw 010, and always name the control and the axis when asking him to listen."
+  "resume_prompt": "You are picking up MPI-622 (Voice library) in Cubric Vision (c:/AI/Mpi/Cubric-Vision, branch master). Read .agents/mpi-kanban/state/handoffs/39a758d2-6354-420b-ae9d-0606f397f6a4.json, then MPI-622's validation.md and checklist.md, then js/data/voiceLibrary.js. NOTHING ON THIS CARD IS BLOCKED. Phase 0 is RESOLVED on option 1 - an offline formant-preserving pitch shift (Praat 'Change gender', research/pitch_tools.py) passes both gates - so do NOT research emotional speech corpora and do NOT take the R1-only escape hatch. Phase 1 SHIPPED and is green at 737/737. D1 (in-repo voices/) and D2 (~60 curated, a starting point not a cap) are answered. THE PERFORMANCE CLIPS ARE AUTHORED WITH QWEN3-TTS VOICEDESIGN OFFLINE, NOT RECORDED BY FABIO - decided because the VoiceDesign clips out-perform his own on Angry and he is not a native English speaker, and because VC overwrites the target's accent with the source's, so recording the grid would stamp one non-native accent onto all sixty character voices. Do not plan a recording session. The emotion taxonomy is CLOSED: Fabio rejected Sarcastic/Dry and Menacing/Manic, and the six in brief.md stand. The rhotic 'twain' is NOT a defect, it is the accent. Next work is the Parallel Batch (import pipeline + MpiVoicePicker), then Phase 2. Level-match every listening test before playing it, never compare Fabio's denoised recordings 008/009 against the raw 010, always name the control and the axis when asking him to listen, and never trust a VoiceDesign clip's emotion label without hearing it."
 }

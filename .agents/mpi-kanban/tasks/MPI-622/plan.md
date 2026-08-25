@@ -11,7 +11,9 @@
 > voiced-density. **The one thing that now BLOCKS Phase 2 is an accent decision**: VC
 > overwrites the target's accent with the source's, so whoever records the performance clips
 > sets the accent of every `character` voice in the library. Next work is the Parallel Batch
-> (import pipeline + `MpiVoicePicker`), which Phase 1 already unblocks.
+> (import pipeline + `MpiVoicePicker`), which Phase 1 already unblocks. **The accent decision
+> landed before the handoff closed: the clip grid is AUTHORED with VoiceDesign, not recorded,
+> so Phase 2 is unblocked too.**
 
 The approved design is `brief.md` in this folder and it is the source of truth. Do not
 re-derive it, and do not re-run the listening tests — they are done and recorded in
@@ -166,8 +168,16 @@ Both depend only on the Phase 1 schema and touch disjoint trees. Run through
 Gated on Phase 0. R1 + R3 x six emotions = 12 clips, which proves the grid against one male
 and one female character before R2/R4/R5 cost anything.
 
+**SOURCE DECIDED 2026-08-25: authored offline with Qwen3-TTS VoiceDesign, NOT recorded by
+Fabio.** The VoiceDesign clips out-perform his own takes on Angry, and he is not a native
+English speaker — and since VC overwrites the target's accent with the source's, recording the
+grid himself would stamp a non-native accent onto every `character` voice in the library.
+VoiceDesign's uncontrollable American prior, a CLOSED-NEGATIVE finding on MPI-607, is what
+supplies the consistent neutral house accent this needs. The Phase 0 shifter stays as a REPAIR
+step for a take that lands off-register.
+
 - [ ] Author 12 performance clips (`Flat · Neutral · Angry · Sad · Cheerful · Whisper` at
-      R1 90–130 Hz and R3 190–260 Hz), source per Phase 0's verdict. Measure each and store
+      R1 90–130 Hz and R3 190–260 Hz) with VoiceDesign. Measure each and store
       it in the manifest.
       **Verify:** each clip's measured `median_f0` sits inside its declared register band,
       and driving one R1 character through all six produces six distinguishable emotions —

@@ -38,11 +38,26 @@
       directly: the character is neutral modern American on the no-VC route and 1930s New York
       through VC, as is a completely different character from the same source. Flow B gate
       opens. MPI-607 checklist item ticked
-- [ ] 🔴 **BLOCKS PHASE 2 - accent decision before any clip is authored.** Whoever records the
-      performance clips sets the accent of EVERY `character` voice, because a character voice
-      is only ever heard through VC. Sixty voices with sixty accent labels would all speak in
-      the clip grid's accent. Fabio recording R1-R5 = one consistent house accent, which may
-      be fine for v1 - but it is a decision, and it is far cheaper now than after 12-30 clips
+- [x] ✅ **ACCENT DECIDED 2026-08-25 - PHASE 2 IS UNBLOCKED.** The clip grid is AUTHORED with
+      Qwen3-TTS VoiceDesign offline, NOT recorded by Fabio. His reasons, both sufficient alone:
+      the VoiceDesign clips out-perform his own takes ("especially for Angry"), and he is not a
+      native English speaker, so recording the grid would stamp a non-native accent onto every
+      `character` voice in the library. No recording sessions, no performer sourcing, no
+      licensing exposure - and it is the same offline authoring route the character clips
+      already came from, so it does not touch "Qwen3-TTS is never shipped"
+- [x] 🟢 **The American prior INVERTS from a defeat into the enabler.** MPI-607 closed
+      accent-via-VoiceDesign as NEGATIVE - "American prior, not controllable" - which lost the
+      argument when the goal was CHOOSING an accent. The goal here is the opposite: one
+      consistent house accent across the whole grid, which an uncontrollable prior delivers
+      free. Measured on the direct route: neutral modern American. Still NEGATIVE for accent
+      selection, an asset for accent consistency
+- [x] **The shifter demotes to a REPAIR step, not obsolete** - validated to ±19 st with no
+      artefacts and emotion intact, so a VoiceDesign take that lands off-register gets moved
+      rather than re-rolled. It is no longer the SOURCE of any register
+- [ ] Emotion labels still need judging BY EAR per clip - VoiceDesign's delivered emotion is
+      approximate (MPI-607: "B is not really sad, it's a sad-angry kind of thing"; this
+      session: a labelled-angry clip read as "upset"). Phase 2 verify mode is already
+      `user-ux` for exactly this. Do not trust the prompt's label
 - [x] Identity does NOT leak but ACCENT does - different channels. Timbre comes from the
       target, articulation and prosody from the source. Not in tension with MPI-607's
       "character consistency holds across performers"
