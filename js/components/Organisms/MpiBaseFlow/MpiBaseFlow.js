@@ -3,6 +3,7 @@ import { MpiOverlay } from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiRadioGroup } from '../../Primitives/MpiRadioGroup/MpiRadioGroup.js';
 import { MpiMediaPicker } from '../../Compounds/MpiMediaPicker/MpiMediaPicker.js';
+import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSettings.js';
 import { MpiCompareView } from '../../Compounds/MpiCompareView/MpiCompareView.js';
 import { MpiVideoViewer } from '../MpiVideoViewer/MpiVideoViewer.js';
 import { MpiVideoControlBar } from '../../Compounds/MpiVideoControlBar/MpiVideoControlBar.js';
@@ -20,6 +21,8 @@ import { renderIcon } from '/js/utils/icons.js';
 import { getStepKind, stepValueToParam, stepValueToMedia, isFrameKind } from './stepKinds.js';
 import { enqueueGeneration } from '../../../services/generationService.js';
 import { getCommand } from '../../../data/commandRegistry.js';
+import { flowLoraPhases, flowModelSlots } from '../../../data/flowsRegistry.js';
+import { getModelById } from '../../../data/modelRegistry.js';
 import { buildField, mapDeclaredValue, isInjectionParam } from '../../../utils/declaredFields.js';
 
 /**
@@ -1041,12 +1044,78 @@ export const MpiBaseFlow = ComponentFactory.create({
             _writeDeclaredField(f.id, val);
         }
 
-        // The `settings` action and its `_openSettings()` lived here (MPI-504) and are GONE
-        // (MPI-608). They opened the rack for the flow's single `settingsModel`, which
-        // cannot express a flow choosing a model PER PHASE. The cogwheel beside each model
-        // selector in the Flow Library slide-over replaces it — the same `MpiModelSettings`
-        // panel and the same `ui:open-model-settings` emit, addressed per phase and sitting
-        // where the model it belongs to is actually chosen.
+        // The `settings` action and its `_openSettings()` lived here (MPI-504) and were
+        // removed by MPI-608, which moved the control to a per-phase cogwheel in the Flow
+        // Library's detail slide-over. MPI-613 brings it back to this frame — per phase,
+        // which is what MPI-504's single flow-level button could not express.
+        //
+        // Why the run slide and not the slide-over: LoRA choice is a COMPARE decision, not
+        // a set-up one. You run, you look at the result, you want the same prompt with a
+        // different LoRA. From the slide-over that costs close flow → reopen Library →
+        // slide-over → cogwheel → back → reopen flow → run, with the result and the control
+        // that changes it at opposite ends of the app.
+        let _loraSettings = null;
+        let _loraBtns = [];
+
+        function _destroyLoraBtns() {
+            _loraBtns.forEach(inst => inst?.el?.destroy?.());
+            _loraBtns = [];
+        }
+
+        /**
+         * One labelled cogwheel per rack-bearing model slot, for the run slide's control
+         * column. Driven off the flow's DECLARED racks, so this is generic — both current
+         * two-rack flows (character-sheet, scribble-object) and any future one get it with
+         * no FlowDef, graph or per-flow change.
+         *
+         * The `MpiModelSettings` overlay is mounted HERE rather than reached through
+         * `ui:open-model-settings`. That event is listened for by exactly two components,
+         * MpiGalleryBlock and MpiGroupHistoryBlock, and both are workspace Blocks — a flow
+         * opened from the landing page has neither on screen, so the emit would land
+         * nowhere at all: no panel, no error, no log. Owning the instance also stops a
+         * Block's listener opening a SECOND panel when a flow runs over one.
+         *
+         * @returns {HTMLElement|null} the row, or null when this flow has no racks
+         */
+        function _buildLoraRacks() {
+            _destroyLoraBtns();
+            // A rack edits settings that live on the PROJECT, and a flow cannot run
+            // without one either — generationService bails on a null currentProject — so
+            // there is nothing meaningful to offer until one is open.
+            if (!state.currentProject) return null;
+            const phases = flowLoraPhases(flow);
+            if (!phases.length) return null;
+            const slots = flowModelSlots(flow);
+
+            const row = ce('div', { className: 'mpi-base-flow__loras' });
+            phases.forEach(({ phase, modelId }) => {
+                // `flowLoraPhases` numbers phases 1-based over `flowModelSlots`, so this
+                // is the slot that produced the entry — and its label is the one the
+                // slide-over shows ("Render model" / "Blend model"). Two cogwheels reading
+                // "LoRAs" would be worse here than in the Library, because the models they
+                // address are no longer on screen beside them.
+                const slotLabel = slots[phase - 1]?.label || 'Model';
+                const modelName = getModelById(modelId)?.name || modelId;
+                const host = ce('div');
+                row.appendChild(host);
+                const cog = MpiButton.mount(host, {
+                    icon: 'settings',
+                    label: slotLabel,
+                    size: 'sm',
+                    info: `LoRAs for ${modelName} — the same rack this model uses everywhere`,
+                    extraClasses: 'mpi-base-flow__loras-btn',
+                });
+                cog.on('click', () => {
+                    // Mounted on first use: a flow with no racks never pays for it.
+                    if (!_loraSettings) {
+                        _loraSettings = MpiModelSettings.mount(document.createElement('div'));
+                    }
+                    _loraSettings.el.open({ modelId });
+                });
+                _loraBtns.push(cog);
+            });
+            return row;
+        }
 
         /**
          * Render flow-level declared fields as a stacked column. Both surfaces that
@@ -1286,6 +1355,10 @@ export const MpiBaseFlow = ComponentFactory.create({
                 _paintEnhance();
             }
 
+            // Beside the output, above Run (MPI-613).
+            const racks = _buildLoraRacks();
+            if (racks) contentSlot.appendChild(racks);
+
             const genWrap = ce('div', { className: 'mpi-base-flow__gen' });
             const runHost = ce('div');
             genWrap.appendChild(runHost);
@@ -1367,6 +1440,10 @@ export const MpiBaseFlow = ComponentFactory.create({
             // their modifier classes, and both the compare canvas and the video
             // viewer hold RAF loops that must stop.
             _teardownResultSurfaces();
+            // Run-slide only, and the slide is rebuilt on every navigation — without this
+            // each visit leaks another set of cogwheel instances. The overlay itself is
+            // NOT dropped here: it survives slide changes and dies with the flow.
+            _destroyLoraBtns();
             _runBtn = null; _resultMediaEl = null; _statusEl = null;
             _pendingNote = null; _gaugeEl = null;
             _resultFrameEl = null; _resultPaneEl = null;
@@ -2337,6 +2414,9 @@ export const MpiBaseFlow = ComponentFactory.create({
             _teardownSlide();
             _previewPlayer.stop();
             _unsubs.forEach(fn => fn?.());
+            // _teardownSlide already dropped the buttons; the overlay outlives them.
+            _loraSettings?.el?.destroy?.();
+            _loraSettings = null;
             overlay?.el?.destroy?.();
         };
 

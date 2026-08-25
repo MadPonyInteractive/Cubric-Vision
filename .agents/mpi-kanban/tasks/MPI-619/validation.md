@@ -43,10 +43,22 @@ and not just the data.
 - The one docs hit (`docs/releases/2026-08-10-v1.4.0.md`) is historical release prose about
   the model family and reads correctly unchanged.
 
+## Release note — APPROVED COPY, pending the next version stamp
+
+Fabio approved a single line, 2026-08-25. Paste this into the next version's
+`importantChanges` array in `js/data/releaseNotes.js` (and the matching archival
+`docs/releases/<date>-v<ver>.md`):
+
+> Due to the introduction of Klein 9B, FLUX.2 Klein is now called FLUX.2 Klein 4B.
+
+**Not written into `releaseNotes.js` here on purpose.** That file is keyed by exact
+`APP_VERSION`, notes are authored at stamp time by `/mpi-release` (the `1.4.2` key landed in
+its own stamp commit `372c1895`), and the next version number is not decided — master is 280
+commits past `v1.4.2` and carries features, so 1.4.3 vs 1.5.0 is a release call. Inventing a
+key would put a note under a version that may never exist.
+
 ## Not done, deliberately
 
 - **No version bump.** Models are not version-bumped (`docs/playbooks/add-model/`).
-- **No release-notes entry.** This is a user-visible label change and may deserve a line
-  whenever the next version is stamped; raised with Fabio rather than decided here.
 - **No live app run.** The change is a data rename proven at the registry and through both
   suites; there is no generation behaviour to exercise.

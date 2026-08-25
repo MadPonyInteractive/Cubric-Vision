@@ -1,5 +1,29 @@
 # MPI-614 Validation
 
+## CLOSED — REJECTED, 2026-08-25. Not built, and deliberately so.
+
+Fabio:
+
+> *"If the user uses a Wan LoRA on a text-to-image model, it's the user's fault, not ours.
+> We can drop 614."*
+
+The card had exactly one recorded occurrence, and **MPI-619 removed the condition that
+produced it**: both Klein cards were named "FLUX.2 Klein" and told apart only by an L/B size
+badge, so nothing on screen said which tier was loaded. They now read "FLUX.2 Klein 4B" and
+"FLUX.2 Klein 9B", and the LoRA folders are already `styles/4b/` and `styles/9b/`.
+
+What is left after that is a user loading a weight that plainly does not belong to the model
+they are running. That is user error, and the app does not owe a guard for it. Building
+detection would have meant either a sibling-repo node change plus a pin bump, or new
+dual-engine log plumbing — real cost against a failure the rename already prevents.
+
+**Do not re-open this without a NEW occurrence** that is not explained by a mislabelled
+model. The investigation below is kept because it is accurate and was expensive to get;
+the conclusion is that it does not justify the work.
+
+---
+
+
 ## Scope decision, 2026-08-24 - filtering is OUT, detection is the card
 
 Fabio, on being shown a filtering design:

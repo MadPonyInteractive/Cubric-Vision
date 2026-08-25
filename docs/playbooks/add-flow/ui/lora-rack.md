@@ -26,23 +26,48 @@ requiredModels: [
 graph nodes: slot 0 fills `Input_Lora_Phase1_1..6`, slot 1 fills `Input_Lora_Phase2_1..6`.
 Retitle the graph, do not renumber the slots.
 
-The opener is a **cogwheel beside each model dropdown** in the Flow Library's detail panel —
-so the rack is edited where the model it belongs to is chosen, and a third model in a future
-flow costs a third cogwheel and no new UI. It opens **`MpiModelSettings`**, the same panel
-the model picker opens, with the six-slot rack, per-slot strengths, bypass and the folder
-drop zones already in it. Fabio, MPI-504: *"the same panel as the models have, which is
-called the settings panel, which has everything already built in."*
+The opener is a **cogwheel per rack-bearing slot**, and it appears on **two surfaces** — both
+driven off `flowLoraPhases(flow)`, so a third model in a future flow costs a third cogwheel
+and no new UI on either:
 
-## Why it is an event, not a component
+| surface | where | for |
+|---|---|---|
+| **Run slide** (`MpiBaseFlow`) | the control column, above Generate | changing a LoRA *after seeing the result* |
+| Flow Library detail panel | beside each model dropdown | choosing before the flow opens |
+
+Both open **`MpiModelSettings`** — the same panel the model picker opens, with the six-slot
+rack, per-slot strengths, bypass and the folder drop zones already in it. Fabio, MPI-504:
+*"the same panel as the models have, which is called the settings panel, which has everything
+already built in."*
+
+**The run slide is the important one** (MPI-613). LoRA choice is a *compare* decision — you
+run, you look, you want the same prompt with a different LoRA. Reached only from the Library
+slide-over, that costs close flow → reopen Library → slide-over → cogwheel → back → reopen
+flow, with the result and the control that changes it at opposite ends of the app.
+
+Each cogwheel carries its **slot label** (`requiredModels[i].label`, e.g. "Render model" /
+"Blend model"), which matters more on the run slide than in the Library: there the model
+dropdowns sit beside the cogwheels, here they do not, so two buttons both reading "LoRAs"
+would be unresolvable.
+
+## How each surface reaches the panel — and why they differ
 
 `MpiModelSettings` is mounted by the **Blocks** (`MpiGalleryBlock`, `MpiGroupHistoryBlock`),
-one overlay each. Nothing reaches into another Block's component — the cogwheel emits
-`ui:open-model-settings { modelId }` and the owning Block opens its own overlay, exactly the
-ownership split `ui:open-model-picker` already uses.
+one overlay each. The **Library** cogwheel emits `ui:open-model-settings { modelId }` and the
+owning Block opens its own overlay — the same ownership split `ui:open-model-picker` uses.
 
-**Both Blocks must carry the listener.** Each mounts its *own* overlay, so wiring only one
-leaves the cogwheel dead in the other workspace — with no error, no log, nothing on screen.
-Pinned by `tests/flow-lora-rack.test.cjs`.
+**Both Blocks must carry that listener.** Each mounts its *own* overlay, so wiring only one
+leaves the cogwheel dead in the other workspace — no error, no log, nothing on screen.
+
+**`MpiBaseFlow` does NOT use the event — it mounts its own `MpiModelSettings`.** The event is
+listened for by exactly those two components, and both are workspace Blocks; a flow opened
+from the landing page (`projectUI.js` "Flows", or the radial menu) has neither on screen, so
+an emit would land nowhere. Owning the instance also stops a Block's listener opening a
+*second* panel when a flow is running over one. The cogwheels are gated on
+`state.currentProject`: a rack edits settings that live on the project, and a flow cannot run
+without one either — `generationService` bails on a null `currentProject`.
+
+Both surfaces are pinned by `tests/flow-lora-rack.test.cjs`.
 
 ## The half that is easy to forget
 

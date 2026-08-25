@@ -179,6 +179,46 @@ test('the slide-over gives every rack-bearing slot its OWN cogwheel', () => {
         'flowModelChoices must carry the ORIGINAL slot index through the filter');
 });
 
+test('the RUN slide carries the same per-slot cogwheels, beside the output (MPI-613)', () => {
+    // Fabio, after live-testing MPI-610: "It should be on the final stage, actually. It's
+    // where the output is, so if the user decides to test some different LoRAs, he has to
+    // go all the way back to the slide over, and that doesn't make much sense."
+    //
+    // LoRA choice is a COMPARE decision. From the slide-over, changing one costs six
+    // navigations with the result and the control at opposite ends of the app.
+    const src = read('js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js');
+
+    assert.match(src, /flowLoraPhases\(flow\)/,
+        'the frame must render the flow\'s DECLARED racks, not a per-flow hardcode');
+    assert.match(src, /slots\[phase - 1\]\?\.label/,
+        'each cogwheel keeps its slot label — two reading "LoRAs" cannot be told apart '
+        + 'here, where the models are no longer on screen beside them');
+
+    // The trap this placement must NOT inherit: `ui:open-model-settings` is listened for
+    // by exactly two components and both are workspace Blocks, so a flow opened from the
+    // landing page would emit into nothing at all — no panel, no error, no log. Owning
+    // the instance also stops a Block's listener opening a SECOND panel over a flow.
+    assert.ok(!/Events\.emit\('ui:open-model-settings'/.test(src),
+        'the flow frame must NOT reach the panel through the event — it mounts its own');
+    assert.match(src, /_loraSettings = MpiModelSettings\.mount\(/,
+        'the frame owns its MpiModelSettings instance');
+
+    // The run slide is rebuilt on every navigation, so without this each visit leaks
+    // another set of button instances. Sliced to the function BODY rather than matched
+    // within a character budget — a budget silently stops proving anything the moment
+    // someone adds a comment above the call.
+    const body = (needle) => {
+        const at = src.indexOf(needle);
+        assert.ok(at !== -1, `${needle} not found — this test is stale`);
+        const end = src.indexOf('\n        }', at);
+        return src.slice(at, end === -1 ? undefined : end);
+    };
+    assert.match(body('function _teardownSlide()'), /_destroyLoraBtns\(\)/,
+        'slide teardown must destroy the cogwheels');
+    assert.match(body('el.destroy = ()'), /_loraSettings\?\.el\?\.destroy\?\.\(\)/,
+        'the overlay outlives the slide and must die with the flow');
+});
+
 test('opening the LoRA panel does not close the slide-over underneath it', () => {
     // `Overlays.open` pulses `ui:close-all-popups { reason: 'overlay-open' }` on EVERY
     // open, so a panel opened FROM the detail drawer closed the drawer on its way up: the

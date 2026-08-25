@@ -1,4 +1,11 @@
 {
   "schema": "mpi-kanban/files/v1",
-  "files": []
+  "files": [
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js",
+    "docs/playbooks/add-flow/ui/lora-rack.md",
+    "tests/flow-lora-rack.test.cjs",
+    "tests/desktop/flow-lora-button.spec.js"
+  ]
 }

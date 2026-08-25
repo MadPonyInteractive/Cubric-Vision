@@ -624,6 +624,18 @@
     flex-direction: column;
     gap: var(--s-4);
 }
+/* Per-slot LoRA cogwheels on the run slide (MPI-613). Stacked, not a row: the
+   control column is 236px and a slot label ("Render model" / "Blend model") is the
+   whole point of the button, so side-by-side would truncate exactly the word that
+   tells the two racks apart. */
+.mpi-base-flow__loras {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+.mpi-base-flow__loras-btn {
+    width: 100%;
+}
 .mpi-base-flow__gen {
     display: flex;
     flex-direction: column;

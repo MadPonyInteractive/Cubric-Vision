@@ -3,11 +3,11 @@
   "id": "MPI-613",
   "title": "The LoRA cogwheel belongs on the flow RUN stage, not the Library slide-over",
   "description": "Fabio, 2026-08-23, after live-testing MPI-610: the per-slot LoRA cogwheel sits in the Flow Library's detail slide-over, which is BEFORE the flow opens. The output is on the final/run stage, so a user iterating on LoRAs has to leave the result, reopen the Library slide-over, change the rack, and walk back. Move the cogwheels onto the run slide, one per rack-bearing model slot, keeping the slide-over's per-slot labelling. Applies to BOTH two-rack flows - character-sheet and scribble-object - and to any future one, so it is a change to how MpiBaseFlow renders a flow's declared racks, not a per-flow edit.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-23T16:10:39Z",
-  "updated_at": "2026-08-23T16:10:39Z",
+  "updated_at": "2026-08-25T12:10:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -17,5 +17,6 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
-  }
+  },
+  "activeSessionTitle": "MPI-617 - cogwheel onto the flow run stage"
 }

@@ -8,9 +8,21 @@ that cannot legally start yet.
 
 ---
 
-## Phase 1 - MPI-614: a LoRA that binds nothing must not finish green
+## Phase 1 - MPI-614 - CLOSED 2026-08-25, REJECTED, not built
 
-**Most urgent.** A user selects a LoRA, the run finishes with two images, and the LoRA did
+**Superseded by MPI-619**, which is not in the original three: both Klein cards were named
+"FLUX.2 Klein" and separated only by an L/B size badge, so nothing on screen said which tier
+was loaded. Renaming them to "FLUX.2 Klein 4B" / "FLUX.2 Klein 9B" removed the condition
+behind the card's single recorded occurrence. Fabio: *"If the user uses a Wan LoRA on a
+text-to-image model, it's the user's fault, not ours."* Full reasoning:
+`tasks/MPI-614/validation.md`.
+
+The original framing is kept below because the investigation is accurate and the umbrella's
+brief refers to it - it is simply not work anyone should pick up.
+
+<details>
+
+**Was:** a user selects a LoRA, the run finishes with two images, and the LoRA did
 nothing. The failure mode is not "an error the user must decode" - it is *no signal at all*,
 which reads as "the rack is not wired". It already cost that misreading once.
 
@@ -51,11 +63,14 @@ must compare a representative LoRA tensor dim against the model's, not count key
 - A correctly-matched LoRA still loads with no new noise.
 - Holds on BOTH engines - a Pod run never proves the local branch, or vice versa.
 
+</details>
+
 ---
 
-## Phase 2 - MPI-613: move the cogwheel to the run slide
+## Phase 2 - MPI-613: move the cogwheel to the run slide  <- THE LIVE PHASE
 
-Independent of phase 1 and disjoint from it in files - see the Parallel Batch below.
+With phase 1 closed and phase 3 release-gated, this is the only phase anyone should be
+working. It is also the one Fabio actually reported friction on.
 
 - Render the cogwheels from `flowLoraPhases(flow)` on the flow's final/run slide, one per
   rack-bearing slot, keeping the slide-over's per-slot labelling so two are never ambiguous.
