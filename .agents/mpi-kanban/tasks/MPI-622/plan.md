@@ -59,7 +59,14 @@ App-side facts checked 2026-08-25, so no one re-discovers them:
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] **Phase 0 - RESOLVED ON OPTION 1** (2026-08-25). Offline formant-preserving shift passes
+      both gates: no artefacts ride through VC, and emotion survives (+12, +19 and -12).
+      Options 2 and 3 and the escape hatch are all unnecessary. Two hypotheses of mine died on
+      the way and both are recorded as wrong in `validation.md` rather than quietly dropped.
+- [x] **D1 and D2 answered** by Fabio - in-repo `voices/`, ~60 curated (a starting point, not
+      a cap).
+- [x] **Phase 1 - the voice record and its loader** (2026-08-25). `js/data/voiceLibrary.js` +
+      `tests/voice-library.test.cjs`. 8/8 green, full suite 737/737, eslint clean.
 
 ## Remaining Work
 

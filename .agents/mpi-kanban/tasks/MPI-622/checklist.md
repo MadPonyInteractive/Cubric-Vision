@@ -69,7 +69,17 @@
 
 ## Phase 1 - the voice record and its loader
 
-- [ ] `js/data/voiceLibrary.js` + manifest schema, unit-tested over a 3-voice fixture
+- [x] **DONE 2026-08-25.** `js/data/voiceLibrary.js` - `createVoiceLibrary(manifest)` (pure,
+      so a test needs no fetch stub) + `loadVoiceLibrary(url)`. Exports `REGISTERS`,
+      `EMOTIONS`, `VOICE_KINDS`; instance gives `listVoices(filter)` / `getVoice(id)` /
+      `listPerformanceClips(register, emotion)` / `pitchDistance(a, b)`. No imports at all,
+      so it crosses no absolute-browser-path boundary and loads headlessly
+- [x] `register` documented as the PERFORMER'S BASELINE, and a clip's own f0 is deliberately
+      NOT validated against the band - an (R1, Angry) clip sits above R1 and that is correct
+- [x] `accent` is nullable on purpose, with the reason in the module header. A test asserts
+      null is not coerced away
+- [x] **Verified: `node --test` 8/8 green, full suite 737/737, eslint clean.**
+      `tests/voice-library.test.cjs`
 
 ## Parallel batch
 
