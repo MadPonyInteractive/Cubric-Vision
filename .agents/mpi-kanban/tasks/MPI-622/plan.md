@@ -229,10 +229,9 @@ character still sounds like the same actor.
   decision here. At close-out, fold the durable ones into a subsystem doc — a
   `docs/voice-library.md` routed from `docs/README.md` — because they are codebase facts
   now, not session notes. **Do not create a gotchas dump file.**
-- `docs/playbooks/add-flow/existing-flows/voice-changer.md` guidance rule 3 still says
-  "meet the target's pitch". Rewrite it: VC moves everything part of the way, so a large
-  pitch gap yields the target's timbre at a pitch that voice never uses. Flagged since
-  2026-08-24 and still not done.
+- [x] **DONE 2026-08-25** - `docs/playbooks/add-flow/existing-flows/voice-changer.md` rule 3
+  rewritten with the mechanism and the measured numbers, plus a new "what comes from you, and
+  what comes from the target" table carrying the MPI-622 accent result. Open since 2026-08-24.
 - The flow's own `description` in `flowsRegistry.js` promises Chatterbox "swaps the voice
   itself". Measured behaviour is a blend. That copy needs honest wording before this ships.
 - Register the new component's CSS in `js/shell/preloadStyles.js` and its props in

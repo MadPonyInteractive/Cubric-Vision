@@ -111,11 +111,44 @@ guidance, not configuration. See below.
    while a strong performance bleeds the source through.
 2. **Pick a target that sounds nothing like you.** Similar voices make the conversion
    nearly inaudible. This is the likely shape of any "it did nothing" report.
-3. **Meet the target's pitch.**
+3. **Meet the target's pitch — because VC will not meet you.** This is the rule most
+   likely to be misread, so state the mechanism: **VC moves everything only PART of the
+   way.** It does not transplant you onto the target's pitch; it drags your pitch a little
+   toward it and stops (measured: 101.8 → 94.2 Hz against a 125.7 Hz target; 128.6 →
+   115.9 against the same one; 200 → 162 in the worst case). So a large pitch gap yields
+   **the target's timbre at a pitch that voice never uses**, which is the unnatural result
+   — and at the extreme it is why a pushed high take still sounds like the speaker.
+   Closing the gap is your job, not the model's.
 4. **Hold that pitch steady** — drift within a take drifts the output.
 
 Rules 2 and 3 only *look* contradictory: distance in **timbre** is what makes the
 conversion audible, distance in **pitch** is what you compensate for.
+
+## What comes from you, and what comes from the target (measured, MPI-622)
+
+The split is not "your words in their voice". It is sharper than that, and it decides both
+what to promise and what not to:
+
+| channel | comes from |
+|---|---|
+| timbre / speaker identity | the **target** |
+| pitch contour, rhythm, duration | **you** (moved partway toward the target) |
+| **accent and articulation** | **you** — and the target's is *overwritten*, not blended |
+| non-verbal sound (laugh, breath, cough, shush) | **you** |
+
+The accent row was proven against a target whose own accent had been measured directly: a
+character clip that is neutral modern American on the no-VC route came out with the VC
+source's accent, and so did a completely different character driven from that same source.
+
+**So the flow's copy is honest exactly as written** — "your laugh, your breath, your timing,
+in someone else's voice" — and it is honest *because* those channels stay yours. What must
+never be promised is the reverse: **a target voice's accent is not on offer.** Picking a
+British-sounding target does not make you sound British; it makes a British-sounding voice
+speak with your accent.
+
+One smaller measured note: **VC softens consonant articulation** slightly. The same voice is
+crisper on a direct-TTS route than through VC. Not a defect, and not worth a warning — but
+it is why a mumbled source gets no clearer on the way through.
 
 ## What this flow can do that the TTS flow structurally cannot
 
