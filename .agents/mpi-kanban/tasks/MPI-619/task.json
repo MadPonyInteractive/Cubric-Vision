@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-619",
+  "title": "Klein 4B and Klein 9B are two different models, not two tiers of one - name them what people call them",
+  "description": "Both Klein cards are literally named \"FLUX.2 Klein\", so every surface tells them apart with a sizeTier letter (L/B) invented for genuine tier variants. Klein is not a tier variant: 4B and 9B are distinct models the public knows by those names, with incompatible LoRAs. Fabio, 2026-08-25: \"People know these models by their name, which is extremely confusing for a user who already heard about Klein 4B and Klein 9B.\" Rename to \"FLUX.2 Klein 4B\" / \"FLUX.2 Klein 9B\". The clash-gated letters then vanish on their own. Boogu and LTX stay on the letter - they ARE tier variants.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
+  "created_at": "2026-08-25T10:05:00Z",
+  "updated_at": "2026-08-25T10:30:00Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl"
+  }
+}

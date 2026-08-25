@@ -954,7 +954,12 @@ export const MODELS = [
         // from the weights via tradeTable() (footprint.js), labelled an estimate.
         sizeTier: 'low',
         featured: true,
-        name: 'FLUX.2 Klein',
+        // The SIZE goes in the name (MPI-619). 4B and 9B are one architecture, but the
+        // public knows them as two named models and their LoRAs do not interchange, so a
+        // shared name plus an L/B letter read as one model in two speeds — which is how a
+        // 9B style LoRA got picked for a 4B run (MPI-614). Boogu and LTX keep the letter:
+        // those siblings really are one model at two qualities.
+        name: 'FLUX.2 Klein 4B',
         // Gained the family key with the 9B card (MPI-598) — the two ARE size tiers of one
         // model, which is what this field is for. UI-only, no resolver effect, and the L/B
         // letter only renders once both are installed, so a 4B-only user sees no change.
@@ -1094,7 +1099,7 @@ export const MODELS = [
         // user sees no change from 4B gaining the family key.
         sizeTier: 'balanced',
         featured: false,          // 4B carries the featured slot for the family
-        name: 'FLUX.2 Klein',
+        name: 'FLUX.2 Klein 9B',  // see 4B's note — the size is part of the name (MPI-619)
         modelFamily: 'FLUX.2-Klein',
         dropdownMeta: 'PHOTO',
         mediaType: 'image',

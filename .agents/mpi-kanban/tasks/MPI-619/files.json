@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/data/modelConstants/models.js",
+    "tests/flow-model-choice.test.cjs"
+  ]
+}

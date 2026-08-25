@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-617", "type": "task.created", "at": "2026-08-24T13:20:00Z", "actor": "claude", "summary": "Umbrella over MPI-612, MPI-613, MPI-614 - the Klein style-LoRA rack."}

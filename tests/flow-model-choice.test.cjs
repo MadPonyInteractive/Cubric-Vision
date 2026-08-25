@@ -544,27 +544,47 @@ test('the CLIP arm has to be DOTTED, and the box has to go through its injector 
 });
 
 test('two candidates sharing a NAME are told apart in the picker (MPI-567)', async () => {
-    // Both Klein cards are literally named "FLUX.2 Klein", so the slot rendered two
-    // identical rows and the user could not tell 4B from 9B — reported from the running
-    // app. The prompt box already solves this with a tier letter; the picker now appends
-    // the same one, but only when its own slot is ambiguous.
+    // The picker appends a sizeTier letter when, and only when, its own slot holds two
+    // candidates with the same name. Klein USED to be that fixture: both cards were named
+    // "FLUX.2 Klein" and the letter was the only thing telling 4B from 9B. It is not any
+    // more — MPI-619 put the size in the name, because 4B and 9B are two models the public
+    // knows by name and their LoRAs do not interchange (a 9B style LoRA on a 4B run binds
+    // nothing and finishes green: MPI-614).
+    //
+    // The mechanism still matters for siblings that really ARE one model at two qualities,
+    // so this test now runs on one of those instead of deleting the coverage.
     const { registry } = { registry: await import('../js/data/flowsRegistry.js') };
-    const { sizeTierLetter, tierLetterFor, getModelById } =
+    const { sizeTierLetter, tierLetterFor, getModelById, MODELS } =
         await import('../js/data/modelRegistry.js');
     const flow = registry.getFlowById('scribble-object');
     // `flowModelChoices`, not `flowModelSlots`: only the choices rows carry `recommended`,
     // and only a slot with a real choice in it gets a dropdown to disambiguate at all.
     const blend = registry.flowModelChoices(flow).find(s => s.models.includes('klein-9b'));
 
-    // The clash is real, so the disambiguating branch is actually exercised. If someone
-    // renames one card this flips and the letter becomes unnecessary — which is a
-    // deliberate signal, not a failure of the picker.
-    assert.equal(getModelById('klein-9b').name, getModelById('klein-4b').name,
-        'the two Klein cards no longer share a name — the picker letter can go');
+    // Klein must NOT be a clash any more. If this fails, someone reverted the rename and
+    // reintroduced the trap MPI-614 documents.
+    assert.notEqual(getModelById('klein-9b').name, getModelById('klein-4b').name,
+        'the Klein cards must carry their size in the name — see MPI-619');
+    assert.match(getModelById('klein-4b').name, /\b4B\b/, 'klein-4b must say 4B');
+    assert.match(getModelById('klein-9b').name, /\b9B\b/, 'klein-9b must say 9B');
+
+    // A real remaining clash keeps the letter honest. Found rather than hardcoded, so
+    // renaming Boogu or LTX later re-points this instead of silently testing nothing.
+    const groups = new Map();
+    for (const m of MODELS) {
+        if (!m.name) continue;
+        if (!groups.has(m.name)) groups.set(m.name, []);
+        groups.get(m.name).push(m);
+    }
+    const clashing = [...groups.values()].find(
+        g => g.length > 1 && new Set(g.map(m => m.sizeTier)).size > 1);
+    assert.ok(clashing,
+        'no name clash left anywhere — the picker letter is now dead code, delete it');
 
     // Every ambiguous candidate must yield a NON-EMPTY letter, or the rows stay identical.
-    for (const [id, letter] of [['klein-9b', 'B'], ['klein-4b', 'L']]) {
-        assert.equal(sizeTierLetter(id), letter, `${id} must carry a tier letter`);
+    for (const m of clashing) {
+        assert.ok(sizeTierLetter(m.id),
+            `${m.id} shares the name "${m.name}" and must carry a tier letter`);
     }
 
     // The install gate is the trap `sizeTierLetter` exists for: `tierLetterFor` blanks the
