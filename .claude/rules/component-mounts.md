@@ -249,6 +249,8 @@ MpiGalleryGrid is now a Compound that handles both justified layout and card dis
 - `MpiOverlay`   props: `{ closable: true, mountTarget: 'main-area' }`   slot: `document.createElement('div')`
 - `<per-Flow uiComponent>` (e.g. `MpiFlowHeadSwap`)   props: `{ initialInputs }`   slot: `.mpi-base-flow__content` (built with `ce()`, not an id) — the per-Flow controls; must expose `el.getInputs()`. BaseFlow merges its return with the uploaded source image at Run.
 - `MpiButton` (Run)   props: `{ text:'Run', variant:'primary', size:'md' }`   slot: `.mpi-base-flow__gen` (built with `ce()`, not an id)
+- `MpiButton` (LoRA cogwheel, MPI-613)   props: `{ icon:'settings', label:<slot label>, size:'sm' }`   slot: `.mpi-base-flow__loras` inside `.mpi-base-flow__content` — ONE per rack-bearing model slot, from `flowLoraPhases(flow)` + `flowModelSlots(flow)` (the label is `slots[phase - 1].label`, e.g. "Render model"). Gated on `state.currentProject`. Destroyed in `_teardownSlide()`, since the run slide is rebuilt on every navigation
+- `MpiModelSettings` (MPI-613)   props: none   slot: `document.createElement('div')` — mounted LAZILY on the first cogwheel click, and opened DIRECTLY (`.el.open({ modelId })`), **not** via `ui:open-model-settings`. That event is listened for only by the two workspace Blocks, so a flow opened from the landing page would emit into nothing; owning the instance also stops a Block's listener opening a SECOND panel over a live flow. Outlives the slide — destroyed in `el.destroy()`, not `_teardownSlide()`
 
 ---
 
