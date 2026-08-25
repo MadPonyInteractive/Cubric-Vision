@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "e12e3142-1122-4153-889f-41ffe8c7d92f",
   "generated_at": "2026-08-25T07:40:00Z",
-  "status": "open",
+  "status": "superseded",
   "session": {
     "name": "Draw It In: MPI-618 shipped, then the whole architecture was disproven and re-carded as MPI-621 + MPI-620",
     "branch": "master"

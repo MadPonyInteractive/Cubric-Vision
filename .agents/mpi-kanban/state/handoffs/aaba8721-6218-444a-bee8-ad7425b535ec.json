@@ -1,0 +1,68 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "aaba8721-6218-444a-bee8-ad7425b535ec",
+  "generated_at": "2026-08-25T18:09:40Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-621 built and confirmed: Draw It In is one Klein 9B edit, and a vintage plate found the seam that ColorMatch fixes",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Move MPI-621 todo -> doing and build the Klein-only graph: InpaintCropImproved with a per-run DERIVED context extend -> Klein 9B edit -> InpaintStitchImproved.",
+    "status": "in_progress",
+    "summary": "BUILT, TESTED AND CONFIRMED BY FABIO IN THE APP. All six DoD items are met. The card is in doing/validating only because the session was handed off at ~450k context rather than closed. The remaining work is close-out, not build."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-621/plan.md",
+    "completed": [
+      "Graph rebuilt 68 -> 35 nodes: SDXL render, ControlNet, rembg, flat paste, LanPaint, SetLatentNoiseMask and both LoRA racks deleted; drawing composites onto the photo; derived crop; Klein 9B plain edit; ColorMatch; stitch",
+      "Derived crop needs NO new node: MpiMath already ships. No node_lock.json bump, no MpiNodes work",
+      "App surface: one model slot (klein-9b), no LoRA rack, both ControlNet fields dropped, hints rewritten, op 1.0 -> 1.1 in both registries",
+      "Tests swept - two of them MOVED to the character sheet rather than deleted (it is the two-phase flow now). 737/737 node, 26/26 desktop, lint, release:check all green",
+      "Docs: flow doc rewritten, blending-into-a-photo Law 2 amended, paint-gizmo corrected, exemption entry added to docs/README.md",
+      "Live: 5 agent runs on 48188 across 4 cases + Fabio's 4 runs in the app. The vintage-plate seam was found by him, fixed with ColorMatch, and confirmed fixed by him (flowScribObj_020)"
+    ],
+    "pending": [
+      "Close out MPI-621: rules/docs sync, knowledge heal, memory pass, the validating sweep, close-out.md release steps, claim auditor, move the card to done/complete",
+      "Board validation FAILS on 85 pre-existing MPI-607 event-schema lines - not this card's, but close-out is where it gets dealt with",
+      "Decide MPI-596 (Object Stamp): still a ready todo card while MPI-621's brief marks it superseded and says the two may be one flow"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-621",
+    "title": "Draw It In, rebuilt Klein-only: crop, edit, stitch - no render phase, no paste, no mask",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-621/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-621/plan.md",
+      "checklist": ".agents/mpi-kanban/tasks/MPI-621/checklist.md",
+      "validation": ".agents/mpi-kanban/tasks/MPI-621/validation.md"
+    }
+  },
+  "next_action": {
+    "description": "Run /mpi-end-session to close MPI-621. There is NO build work left - Fabio verified the flow in the app himself and validation.md records it. Do not re-open the graph, do not re-measure anything.",
+    "command": "mpi-end-session"
+  },
+  "context": {
+    "key_decisions": [
+      "The crop is DERIVED per run, not a constant: MpiMaskSquareBbox measures the drawn bbox (S) and the user's box (B), MpiMath feeds context_from_mask_extend_factor. 4.267 = 1024/240 lands the scribble at ~240px after the crop node's own 1024x1024 normalise - the WIDEST crop still above the measured ~200px anchor threshold.",
+      "ColorMatch (KJNodes, mkl, strength 1, ref = the original crop) sits between the Klein decode and the stitch. It exists because Klein RESTORES a graded photo: on Fabio's vintage plate the returned patch came back de-faded (+9.5/+5.5/+2.6 RGB) with a 3.60 top-edge luma step against the photo's own 0.39. Fixed to -0.20 and confirmed by him.",
+      "9B ONLY, and it is correctness not preference: under style load 4B left the user's own drawn ink in the output. No LoRA rack and no style control - style rides in the user's own words.",
+      "Op version 1.0 -> 1.1 because two params were removed. Nothing in the app reads latestVersion; only the registry mirror check does.",
+      "The flow doc is now on the 200-line EXEMPTION list in docs/README.md (227 lines) rather than being cut - nearly every line is a measured number or a trap."
+    ],
+    "constraints": [
+      "safe_math (MpiMath) whitelists math.* ONLY. max() is refused, caught, and returned as 0.0 SILENTLY - which would collapse the crop onto the box with no error anywhere. The floor is a nested conditional expression on purpose. Do not 'tidy' it.",
+      "Every MpiLoadImageFromPath reports a preview into /history outputs, so imgs[0] is the INPUT PHOTO. Read node 146 by id or a verification will read 'the flow changed nothing' when the flow is fine.",
+      "Seam severity tracks the PLATE'S GRADE, not background uniformity. Every plate an agent reaches for is a modern-looking render where the model's default look already agrees with the photo, so the seam measures ~2/255 and reads as solved. Test a vintage/graded plate before believing it.",
+      "Context is NOT the lever for that seam - Fabio tried a bigger box and it changed nothing. The model is not missing reference, it is correcting the photo.",
+      "Board validation FAILS on 85 pre-existing MPI-607 event-schema lines. Not caused by MPI-621; verified none of the errors name 621."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-621/validation.md",
+      ".agents/mpi-kanban/tasks/MPI-621/plan.md",
+      "docs/playbooks/add-flow/existing-flows/scribble-to-object.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/aaba8721-6218-444a-bee8-ad7425b535ec.json and close out MPI-621 with /mpi-end-session. The card is BUILT AND VERIFIED - Draw It In was rebuilt as a single FLUX.2 Klein 9B edit (composite the drawing onto the photo -> a crop derived per run from the drawn bbox -> Klein 9B -> ColorMatch -> stitch back only the user's box), replacing the SDXL + ControlNet + rembg + flat-paste + LanPaint architecture. 68 nodes became 35. Fabio ran it in the app himself: his vintage plate exposed a seam (the model restores a faded photo), a ColorMatch before the stitch fixed it, and he confirmed the fix on flowScribObj_020 - 'it really does fix it'. 737 node tests, 26 desktop tests, lint and release:check are all green and everything is committed and pushed. There is NO build work left: do not re-open the graph and do not re-measure anything. The remaining work is close-out only - rules/docs sync, knowledge heal, memory, the validating sweep, the claim auditor, and moving the card to done. Two things to decide there: 85 pre-existing MPI-607 event-schema errors that fail board validation (not this card's), and MPI-596 (Object Stamp), which is still a ready todo card while MPI-621's brief marks it superseded and says the two may be one flow."
+}
