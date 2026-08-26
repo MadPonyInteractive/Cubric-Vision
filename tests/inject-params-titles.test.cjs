@@ -387,11 +387,18 @@ test('the Draw It In Flow carries its I/O, its model arm and its box (MPI-567)',
         `${file} takes a user prompt, so its prompt node MUST stay titled Input_Positive`);
 });
 
-test('the Scribble Flow carries its I/O, its model slot and its two control arms (MPI-620)', () => {
+test('the Scribble Flow carries its I/O, its Klein slot and its LoRA rack (MPI-620)', () => {
     // flowScribble runs flow_scribble.json on model:{id:null}. Same silent-failure class
     // as every other flow here: the injector skips a title with no node, so a missing one
     // is a control that moves in the UI, a run that succeeds, and a graph still sitting on
     // its baked value.
+    //
+    // THE GRAPH IS AN EDIT-MODEL GRAPH, not SDXL + ControlNet. The flow shipped on
+    // Klein after a live side-by-side: both ControlNet arms are monochrome LINE
+    // DETECTORS that discard colour, so a blue fill contributed an outline
+    // indistinguishable from a red terrain stroke and the sea landed on the wrong side.
+    // Klein reads actual RGB. That is why every ControlNet assertion this test used to
+    // hold is gone rather than relaxed.
     const file = 'flow_scribble.json';
     const have = titlesOf(file);
     for (const title of [
@@ -401,18 +408,15 @@ test('the Scribble Flow carries its I/O, its model slot and its two control arms
         // two separate inputs and this graph reads a single opaque picture.
         'input_image',
         'input_seed',
-        // The user's words ARE the subject. The drawing carries shape and placement only,
-        // so without this the model invents what the silhouette is.
+        // The user's words ARE the subject. The drawing carries shape, placement and
+        // colour; without this the model has no idea what the silhouette is meant to be.
         'input_positive',
-        // The two-arm control switch. ONE MpiInt drives BOTH MpiAnySwitch nodes — the
-        // preprocessor and the SetUnionControlNetType bank — so losing this title pins
-        // every run to `any_1` (scribble) with the radio still visibly moving.
-        'input_control_net',
-        'input_control_strength',
-        // The choosable model slot. Five SDXL-family cards run this one graph and
-        // `modelParams` swaps the checkpoint through this title; without it every arm
-        // silently renders on whichever checkpoint the graph bakes.
-        'input_base_model',
+        // The choosable model slot — BOTH tiers run this one graph and `modelParams`
+        // swaps them through these two titles. The clip half is not optional trim: 9B
+        // needs qwen_3_8b_int8_convrot and 4B needs qwen_3_4b, and crossing them dies
+        // with a shape error that reads as a sampler bug and is not one (MPI-600).
+        'input_edit_model',
+        'input_edit_clip',
     ]) {
         assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
     }
@@ -429,47 +433,49 @@ test('the Scribble Flow carries its I/O, its model slot and its two control arms
 
     const graph = JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8'));
 
-    // EXACTLY TWO CONTROL ARMS, and that is a correctness constraint rather than tidiness.
-    // `tests/flow-model-choice.test.cjs` holds the house ControlNet ceiling at 0-0.5
-    // because openpose and depth are what set that floor; a flow may only claim a higher
-    // ceiling by proving its graph cannot drive them. Re-adding either preprocessor here
-    // silently invalidates that argument, so it is pinned.
-    const preprocessors = Object.values(graph)
-        .filter(n => n?.class_type === 'AIO_Preprocessor')
-        .map(n => n.inputs?.preprocessor)
+    // THE FULL SIX-SLOT RACK, PHASE-TITLED. `_buildParams` emits `Lora_Phase<N>_<i>` per
+    // declared phase plus — phase 1 only — the flat compatibility key `Lora_<i>`, so a
+    // graph carrying BOTH forms takes the same rack twice. Pinning the phase form here is
+    // what stops a re-export reintroducing the flat one.
+    const rack = Object.values(graph)
+        .filter(n => /^Input_Lora_Phase1_\d$/.test(n?._meta?.title || ''))
+        .map(n => n._meta.title)
         .sort();
-    assert.deepEqual(preprocessors, ['CannyEdgePreprocessor', 'ScribblePreprocessor'],
-        `${file} must carry exactly the scribble and canny arms — openpose or depth here `
-        + 'would break the ControlNet-ceiling argument in flow-model-choice.test.cjs');
+    assert.deepEqual(rack, [1, 2, 3, 4, 5, 6].map(i => `Input_Lora_Phase1_${i}`),
+        `${file} declares loras:true on its slot, so it must carry all six phase-titled slots`);
+    assert.ok(!Object.values(graph).some(n => /^Input_Lora_\d$/.test(n?._meta?.title || '')),
+        `${file} must not ALSO carry the flat Input_Lora_N form — both means the rack applies twice`);
 
-    // BOTH SWITCHES MUST READ THE SAME SELECTOR, or the radio picks a preprocessor from
-    // one arm and a ControlNet bank from the other — a run that succeeds and steers on a
-    // hint the bank was not built for.
-    const [selectorId] = Object.entries(graph)
-        .find(([, n]) => n?._meta?.title === 'Input_Control_Net') || [];
-    const switches = Object.values(graph).filter(n => n?.class_type === 'MpiAnySwitch');
-    assert.equal(switches.length, 2, `${file} must carry exactly two MpiAnySwitch nodes`);
-    for (const sw of switches) {
-        assert.deepEqual(sw.inputs.select, [selectorId, 0],
-            'both switches must be driven by Input_Control_Net, or the arms desynchronise');
+    // THE RACK IS A CHAIN, AND A BREAK IN IT IS SILENT. Each MpiLoraModel takes the
+    // previous one's MODEL output; if one is wired straight off the loader instead, the
+    // LoRAs before it are simply dropped from the run with no error. Walk it: exactly one
+    // slot feeds off Input_Edit_Model and each of the others feeds off another slot.
+    const [unetId] = Object.entries(graph)
+        .find(([, n]) => n?._meta?.title === 'Input_Edit_Model') || [];
+    const rackIds = Object.entries(graph)
+        .filter(([, n]) => /^Input_Lora_Phase1_\d$/.test(n?._meta?.title || ''))
+        .map(([id]) => id);
+    const feeds = rackIds.map(id => graph[id].inputs.model[0]);
+    assert.equal(feeds.filter(f => f === unetId).length, 1,
+        'exactly one rack slot may read the loader directly — the rest chain off each other');
+    assert.equal(new Set(feeds).size, feeds.length,
+        'two rack slots read the same source — one branch of the rack is dropped silently');
+
+    // NO CONTROLNET APPARATUS SURVIVES. The flow moved to edit models, so a preprocessor
+    // or a strength remap reappearing here means a re-export pulled from the wrong source
+    // graph — and it would re-introduce the exact failure the pivot was made to escape.
+    for (const cls of ['AIO_Preprocessor', 'ControlNetApplyAdvanced', 'MpiNormalizeValue']) {
+        assert.ok(!Object.values(graph).some(n => n?.class_type === cls),
+            `${file} is an edit-model graph — a ${cls} here means it was rebuilt from the SDXL source`);
+    }
+    for (const gone of ['input_control_net', 'input_control_strength', 'input_base_model']) {
+        assert.ok(!have.has(gone),
+            `${file} dropped the ControlNet half — "${gone}" is a title from the retired SDXL graph`);
     }
 
-    // ARM ORDER IS THE COPY'S CONTRACT. The radio ships "1 = Line drawing" and
-    // "2 = Shaded sketch", so `any_1` must be the scribble side on BOTH switches. Swap
-    // them and a user picking "Line drawing" gets canny, which returns their own ink as
-    // an outline because canny sees a drawn stroke's TWO edges.
-    const [prepSwitch, bankSwitch] = switches[0].inputs.any_1?.[0]
-        && graph[switches[0].inputs.any_1[0]]?.class_type === 'AIO_Preprocessor'
-        ? [switches[0], switches[1]]
-        : [switches[1], switches[0]];
-    assert.equal(graph[prepSwitch.inputs.any_1[0]].inputs.preprocessor, 'ScribblePreprocessor',
-        'any_1 of the preprocessor switch must be Scribble — the radio says 1 = Line drawing');
-    assert.ok(String(graph[bankSwitch.inputs.any_1[0]].inputs.type).includes('scribble'),
-        'any_1 of the bank switch must be the scribble union type, matching the preprocessor arm');
-
     // SIZING IS DERIVED, NOT INJECTED. There is no Input_Width/Input_Height here on
-    // purpose: the drawing's own dimensions become the output's, so the latent reads
-    // GetImageSize off the scaled input. A re-export that hardcodes the latent instead
+    // purpose: the drawing's own dimensions become the output's, so the sampler reads
+    // GetImageSize off the scaled input. A re-export that hardcodes the size instead
     // would quietly pin every render to one shape while the canvas-size field kept working.
     for (const gone of ['input_width', 'input_height']) {
         assert.ok(!have.has(gone),
@@ -478,9 +484,9 @@ test('the Scribble Flow carries its I/O, its model slot and its two control arms
     const [sizeId] = Object.entries(graph)
         .find(([, n]) => n?.class_type === 'GetImageSize') || [];
     assert.ok(sizeId, `${file} must carry a GetImageSize to derive the render size`);
-    const latent = Object.values(graph).find(n => n?.class_type === 'EmptyLatentImage');
-    assert.deepEqual([latent.inputs.width[0], latent.inputs.height[0]], [sizeId, sizeId],
-        'the empty latent must be sized from GetImageSize, not baked');
+    const sched = Object.values(graph).find(n => n?.class_type === 'Flux2Scheduler');
+    assert.deepEqual([sched.inputs.width[0], sched.inputs.height[0]], [sizeId, sizeId],
+        'the scheduler must be sized from GetImageSize, not baked');
 });
 
 test('the Voice Changer Flow carries its two audio inputs and the audio capture (MPI-607)', () => {

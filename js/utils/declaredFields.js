@@ -180,11 +180,17 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
         const sel = find(cur) ? cur : (f.default ?? opts_[0]?.v);
         if (sel !== cur) onChange(sel);
         const host = ce('div', { className: cls('field-select') });
+        // ponytail: `disabled` is honoured on `select` only, because that is the one
+        // type that has ever needed it (MPI-620's canvas size, inert once the user
+        // uploads a drawing). Every Primitive this vocabulary mounts already takes a
+        // `disabled` prop, so widening it is a one-line-per-branch job the day a second
+        // type asks — not speculative work today.
         const inst = MpiDropdown.mount(host, {
             options: opts_.map(o => ({
                 label: o.label ?? String(o.v), value: String(o.v), info: o.info,
             })),
             value: String(sel ?? ''),
+            disabled: !!f.disabled,
         });
         inst.on('change', ({ value }) => {
             const o = find(value);

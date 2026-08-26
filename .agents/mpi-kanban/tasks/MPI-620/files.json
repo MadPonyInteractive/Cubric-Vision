@@ -2,17 +2,24 @@
   "schema": "mpi-kanban/files/v1",
   "files": [
     ".agents/mpi-kanban/tasks/MPI-620/**",
-    "comfy_workflows/raw/flow_blank_canvas.json",
-    "comfy_workflows/flow_blank_canvas.json",
+    "comfy_workflows/raw/flow_scribble.json",
+    "comfy_workflows/flow_scribble.json",
     "js/data/flowsRegistry.js",
     "js/core/operationRegistry.js",
     "operation_registry.json",
     "js/data/modelConstants/universal_workflows.js",
     "js/data/commandRegistry.js",
     "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
     "js/components/Organisms/MpiBaseFlow/stepKinds.js",
     "js/components/Organisms/MpiStepPaint/MpiStepPaint.js",
+    "js/components/Primitives/MpiDropdown/MpiDropdown.js",
+    "js/components/Primitives/MpiDropdown/MpiDropdown.css",
+    "tests/inject-params-titles.test.cjs",
+    "docs/playbooks/add-flow/README.md",
     "docs/playbooks/add-flow/existing-flows/scribble.md",
-    "docs/paint-gizmo.md"
+    "docs/paint-gizmo.md",
+    "tests/desktop/flow-clear-slot-advances.spec.js",
+    "js/utils/declaredFields.js"
   ]
 }

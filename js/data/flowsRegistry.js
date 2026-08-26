@@ -198,6 +198,14 @@
  *                               OPTIONAL on a `toggle`, which falls back to a tick; a `toggle`
  *                               shows its label on its own face either way, so neither type ever
  *                               gets a caption printed above it.
+ * @property {boolean} [blankOnly] - STEP FIELDS ONLY. The field is DISABLED whenever that step's
+ *                               media role is filled, because it only describes what to do when
+ *                               there is no source picture. Scribble's canvas size is the case: it
+ *                               sizes a BLANK canvas, and an uploaded drawing brings its own size,
+ *                               so once a slot is filled the control has nothing to act on. Chosen
+ *                               over a general `showWhen` expression (MPI-620) — one boolean with
+ *                               one meaning, against a predicate language the frame would then own
+ *                               forever. Honoured on `select` today; see `declaredFields.js`.
  * @property {number}  [rows]  - For `text`. `> 1` renders a textarea (the prompt case).
  * @property {string}  [placeholder] - For `text`.
  * @property {*}       [default]
@@ -663,15 +671,27 @@ export const FLOWS = [
         // available. Cost accepted: a 4B-only user now downloads 9B, offset by the SDXL
         // checkpoint this flow no longer needs at all.
         //
-        // NO LoRA RACK (no `loras: true`), and that is not trimming. Style rides in the
-        // user's own words — "a cartoon man wearing X" styles only the inserted subject,
-        // where a style LoRA restyles the whole photograph, which is exactly what a
-        // styled 9B run did. An SDXL, Pony or Flux1 character LoRA will not load on
-        // Klein at all, so the rack could not carry identity across even in principle;
-        // identity by REFERENCE IMAGE is the route (this graph's own ReferenceLatent
-        // chain already supports it) and it is a later card, not this one.
+        // LoRA RACK ADDED 2026-08-26 (MPI-620), reversing the decision recorded here
+        // before it. The rack is `Input_Lora_Phase1_1..6` (`MpiLoraModel`, model-only —
+        // `klein-9b` declares `loraStrengths: ['model']` and there is no CLIP side),
+        // spliced between `Input_Edit_Model` and the `CFGGuider`.
+        //
+        // WHAT THE OLD DECISION GOT RIGHT, AND IT IS STILL TRUE: a style LoRA restyles
+        // the WHOLE photograph, not just the inserted subject, and a styled 9B run did
+        // exactly that. That is a real hazard HERE in a way it is not on Scribble, which
+        // has no photograph to protect. The rack is opt-in — a user who picks no LoRA
+        // gets the previous behaviour byte for byte — so the hazard is now the user's to
+        // choose rather than one the flow forbids on their behalf (Fabio's call: both
+        // flows should benefit from the rack).
+        //
+        // Still true and NOT re-litigated by this: an SDXL, Pony or Flux1 character LoRA
+        // will not load on Klein at all, so the rack cannot carry identity across.
+        // Identity by REFERENCE IMAGE remains the route, and remains a later card.
+        //
+        // 9B ONLY, deliberately — see the paragraph above on 4B integrating worse. Adding
+        // 4B was raised on 2026-08-26 and applies to SCRIBBLE, not here.
         requiredModels: [
-            { label: 'Edit model', models: ['klein-9b'] },
+            { label: 'Edit model', models: ['klein-9b'], loras: true },
         ],
         // The graph bakes exactly this pair, and the arm restates it anyway: a re-export
         // that quietly moves a default is caught here rather than in a live run.
@@ -824,37 +844,67 @@ export const FLOWS = [
         // CI stayed RED for a day and eight pushes. Run `/mpi-flow-graphics` and add both
         // keys in the same commit as the files.
         description: 'Draw something and let the model render it. Start from a blank canvas at the shape you want, or bring in a drawing you made elsewhere, then say what it is — the drawing gives the shapes and the composition, the words give the subject and the style. It does not have to be a good drawing: rough placement and a readable silhouette are enough for the model to build a finished image around.',
-        // ONE choosable slot across five cards (MPI-590 shape). All five are SDXL-family
-        // checkpoints that this one graph drives identically, so the user runs whichever
-        // they already have rather than being asked for a second download. The anime arms
-        // matter specifically: Draw It In's Klein rebuild abandoned them, and this flow is
-        // where those users land.
+        // EDIT MODELS, NOT SDXL + ControlNet — Fabio's call on 2026-08-26 after a live
+        // side-by-side on one drawing, and it retires SDXL scribble-to-image from the
+        // product. A deliberate call, not drift: this card EXISTED to rehouse the SDXL
+        // half MPI-621 deleted from Draw It In, and the comparison beat it.
         //
-        // `loras: true` — the graph carries a user LoRA rack, and it rides on the SLOT
-        // rather than a flow-level `settingsModel` so the rack follows whichever card the
-        // user picked. All five are flat-slot models; a `loraStages` model reaching
-        // `commandExecutor` would be skipped with a warning rather than injected wrong.
+        // Same drawing, same prompt, only the model path differing: the SDXL arm rendered
+        // the drawn strokes as physical white road barriers and put the sea on the wrong
+        // side, because both ControlNet arms are monochrome LINE DETECTORS — Scribble and
+        // Canny discard colour, so a blue fill contributes an outline indistinguishable
+        // from a red terrain stroke and carries no "sea goes here" signal. Klein reads
+        // actual RGB and placed it correctly on the first run.
+        //
+        // KREA 2 AND BOOGU WERE BOTH TRIED AND BOTH DROPPED, so do not re-add either
+        // without a fresh sweep. Krea 2 rendered the drawn pink dashes as real pink road
+        // paint and survived three prompt reframings — its `Krea2EditModelPatch` ships
+        // `ref_boost 2`, which biases the whole reference against the instruction, i.e.
+        // "keep what is in the picture", the exact opposite of what this flow asks for.
+        // Boogu passed on the winning prefix but Klein beat it on both quality and speed
+        // (14-27s against 38-39s), and Boogu would have forced a second sampler chain into
+        // this graph behind a switch: a flow op resolves as a UNIVERSAL workflow — ONE
+        // file, resolved before any model lookup — and Boogu is `ModelSamplingAuraFlow` +
+        // `SamplerCustom` where Klein is `Flux2Scheduler` + `CFGGuider`.
+        //
+        // 9B FIRST because `models[0]` is the recommendation, matching Draw It In. Both
+        // tiers are one architecture, so ONE graph drives them and `modelParams` below is
+        // the only thing that differs.
+        //
+        // `loras: true` — CONFIRMED LIVE, not assumed. An Anime style LoRA at 1.00 drove
+        // the entire look with the prompt saying nothing about style, and naming the style
+        // in the prompt worked too. That measurement is also why this flow has no `style`
+        // select: a LoRA already does it better than a dropdown would. It rides on the SLOT
+        // rather than a flow-level `settingsModel` so the rack follows the card the user
+        // picked.
         requiredModels: [
             {
-                label: 'Render model',
-                models: ['sdxl-realistic', 'sdxl-nsfw', 'ill-anime-beauty', 'ill-anime', 'pony-mix'],
+                label: 'Edit model',
+                models: ['klein-9b', 'klein-4b'],
                 loras: true,
             },
         ],
-        // What differs between the arms, and it is the ONLY thing that does — one graph,
-        // five checkpoints. The realistic arm restates the value the graph already bakes
-        // so a re-export that quietly moves the default is caught here, not in a live run.
+        // What differs between the tiers, and it is the ONLY thing that does.
         //
-        // `Input_Base_Model` is the PLAIN form, not the dotted `Title.widget` form: the
-        // widget is `ckpt_name`, which IS on `comfyController._inject`'s spray list, so a
-        // plain key writes it. (Contrast `Input_Edit_Clip.clip_name` on the flows above —
-        // `clip_name` is NOT on that list and needs the dotted form.)
+        // THE CLIP ARM IS NOT OPTIONAL TRIM: 9B needs `qwen_3_8b_int8_convrot` and 4B
+        // needs `qwen_3_4b`, and pairing 9B with 4B's encoder dies with a shape error that
+        // reads as a model bug and is not one (MPI-600). The text encoder moves WITH the
+        // checkpoint or the arm is broken on arrival.
+        //
+        // `Input_Edit_Clip.clip_name` uses the dotted `Title.widget` form (MPI-359) while
+        // `Input_Edit_Model` is plain, and that asymmetry is load-bearing rather than
+        // untidy: `unet_name` is on `comfyController._inject`'s spray list and `clip_name`
+        // is NOT, so a plain `Input_Edit_Clip` would match the node and silently write
+        // nothing.
         modelParams: {
-            'sdxl-realistic':   { 'Input_Base_Model': 'SDXL_Realistic.safetensors' },
-            'sdxl-nsfw':        { 'Input_Base_Model': 'SDXL_NSFW.safetensors' },
-            'ill-anime-beauty': { 'Input_Base_Model': 'ILL_Anime_Beauty.safetensors' },
-            'ill-anime':        { 'Input_Base_Model': 'ILL_Anime.safetensors' },
-            'pony-mix':         { 'Input_Base_Model': 'PONY_Mix.safetensors' },
+            'klein-9b': {
+                'Input_Edit_Model': 'flux-2-klein-9b-int8-convrot.safetensors',
+                'Input_Edit_Clip.clip_name': 'qwen_3_8b_int8_convrot.safetensors',
+            },
+            'klein-4b': {
+                'Input_Edit_Model': 'flux-2-klein-4b-int8-convrot.safetensors',
+                'Input_Edit_Clip.clip_name': 'qwen_3_4b.safetensors',
+            },
         },
         operation: 'flowScribble',
         workflow: 'flow_scribble.json',
@@ -929,9 +979,17 @@ export const FLOWS = [
                         // the frame has no conditional-field support. That is answered with
                         // copy rather than a `showWhen` in the field vocabulary — a real
                         // feature with real blast radius for one control.
+                        //
+                        // `blankOnly` DISABLES it once the drawing slot is filled. It used
+                        // to render live-but-inert in that case — the frame has no
+                        // conditional-field support, and the cost was accepted with a note
+                        // instead. Fabio hit it in a live run and rejected it on the same
+                        // grounds he rejected the reshape guard: a control that moves and
+                        // does nothing is worse than either real behaviour. Disabled, the
+                        // note below reads as the REASON rather than as fine print.
                         id: 'canvasSize', type: 'select', label: 'Canvas size',
-                        default: '1024x1024',
-                        note: 'Only used for a blank canvas — a drawing you add keeps its own size.',
+                        default: '1024x1024', blankOnly: true,
+                        note: 'Sets the size of a blank canvas. A drawing you add keeps its own size.',
                         options: [
                             { v: '1024x1024', label: 'Square', info: '1024 x 1024' },
                             { v: '896x1152', label: 'Portrait', info: '896 x 1152' },
@@ -941,53 +999,28 @@ export const FLOWS = [
                         ],
                     },
                 ],
-                hint: 'Rough is fine — the drawing carries placement, scale and silhouette, and the words carry everything else. Pick the drawing type below to match what you made: flat outlines and a shaded sketch are read very differently.',
+                hint: 'Rough is fine — the drawing carries placement, scale and silhouette, and the words carry the rest. Colour matters: the model reads what you paint, so a blue patch reads as water and a green one as vegetation. Nothing you draw survives into the result, so scribble freely.',
             },
         ],
-        fields: [
-            {
-                // 1 = scribble, 2 = canny, matching the graph's MpiAnySwitch banks
-                // (`1629` selects the preprocessor, `1623` the SetUnionControlNetType
-                // bank, both off `Input_Control_Net`). This graph carries ONLY those two
-                // arms — the openpose and depth arms the SDXL t2i template has were pruned.
-                //
-                // The copy says TONAL, never "structured": a user with clean line art who
-                // reads "structured" as "neat" picks canny and gets their own ink back as
-                // an outline, because canny sees a drawn stroke's TWO edges.
-                id: 'Input_Control_Net', type: 'radio', label: 'Drawing type',
-                columns: 2, default: 1,
-                options: [
-                    { v: 1, label: 'Line drawing', note: 'flat lines',
-                      info: 'For flat line art. Thins each stroke to a centreline, so the model renders a form rather than tracing your ink.' },
-                    { v: 2, label: 'Shaded sketch', note: 'tonal',
-                      info: 'For a shaded pencil drawing with hatching. Carries interior structure — folds, a motif on a shirt — that the line arm flattens.' },
-                ],
-            },
-            {
-                // ON THE HOUSE MAPPING, and staying there. The chain is
-                // `MpiFloat(1)` -> `MpiNormalizeValue(0-1 -> 0-0.5)` ->
-                // `ControlNetApplyAdvanced(end_percent 0.569)`, which is what every other
-                // ControlNet workflow in the repo does, and `tests/flow-model-choice.test.cjs`
-                // sweeps for exactly that. `default: 1` is
-                // `PROMPT_CONTROL_DEFAULTS.controlStrength`, so the knob reads the same at
-                // the same number everywhere in the app.
-                //
-                // DRAW IT IN SHIPPED 0.6 AND THAT DOES NOT TRANSFER. Its ceiling was
-                // re-swept live on 2026-08-23 because 0.5 "did not follow the drawing" —
-                // but there ControlNet was steering a small inserted region while
-                // competing with an existing photograph's content. Here the drawing is the
-                // ONLY structural signal on an otherwise empty latent, so the strength
-                // that reads as weak in a composite may read as correct here. Do not
-                // copy 0.6 across on the strength of that measurement; if a live sweep
-                // shows this flow genuinely under-follows, the graph's `output_max` and a
-                // NAMED entry in that test's `CEILING` map move together, with the
-                // reasoning written down (the bar is proving the graph cannot drive
-                // openpose or depth, which this one cannot).
-                id: 'Input_Control_strength', type: 'slider', label: 'Follow the drawing',
-                min: 0, max: 1, step: 0.05, default: 1,
-                note: 'Turn it down if your strokes come through as real edges — a drawn line rendering as a seam means the drawing is being followed too literally.',
-            },
-        ],
+        // NO FLOW-LEVEL FIELDS. Both that lived here — the `Input_Control_Net` drawing-type
+        // radio and the `Input_Control_strength` "Follow the drawing" slider — died with the
+        // ControlNet when this flow moved to edit models. An edit model reads the drawing's
+        // actual RGB rather than a preprocessed monochrome hint, so there is no arm to pick
+        // and no strength to trade off; the only knob that ever mattered is the wording, and
+        // that is the `positive` field on the paint step.
+        //
+        // The prompt PREFIX is baked in an `MpiText` node in the graph, not declared here,
+        // so the user types only the subject. Settled live on 2026-08-26 after three
+        // reframings, and the two things it must not lose are why it reads the way it does:
+        // it says REPLACE rather than "change the drawing" (asking a model to *change* a
+        // drawing licenses it to keep part of one — that is what left strokes in the
+        // output), and it names NO output medium (an earlier version said "photorealistic
+        // photograph", which would have made anime unreachable from a baked prefix).
+        //
+        //   Replace this sketch with a fully rendered image of the same scene. The sketch
+        //   is a layout guide only: no drawn line, outline or patch of flat colour survives
+        //   into the final image. The finished image shows
+        //
     },
     {
         id: 'character-sheet',

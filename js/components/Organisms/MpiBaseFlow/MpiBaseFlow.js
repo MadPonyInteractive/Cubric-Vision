@@ -555,7 +555,19 @@ export const MpiBaseFlow = ComponentFactory.create({
          */
         function _mediaForRole(role) {
             for (const entry of _mediaGroups) {
-                const hit = entry.items.find(it => it.role === role);
+                // `it?.role`, NOT `it.role` — `items` is SPARSE BY CONTRACT (a cleared
+                // slot is `delete`d rather than spliced, so later images keep their
+                // role), and `Array.prototype.find` is one of the few iterators that
+                // does NOT skip holes: it calls back with `undefined`.
+                //
+                // Without the guard, clearing a filled slot and then stepping forward
+                // threw here, INSIDE `_renderSlide` and before `slidesEl.innerHTML = ''`
+                // — so the old slide stayed on screen while `_current` had already
+                // advanced. It read as "the step is skipped": the first press appeared
+                // to do nothing and the second jumped to Generate, which builds no gizmo
+                // and never reaches this function. Uncaught TypeError, so nothing
+                // reached `clientLogger` and `app.log` showed a clean run (MPI-620).
+                const hit = entry.items.find(it => it?.role === role);
                 if (hit) return hit;
             }
             return null;
@@ -660,8 +672,16 @@ export const MpiBaseFlow = ComponentFactory.create({
                     // shift up a slot and silently change role (and meaning).
                     delete entry.items[idx];
                     const freedRole = group.roles[idx];
-                    // A removed image invalidates the step bound to that role.
-                    if (freedRole) delete _stepValues[freedRole];
+                    // A removed image invalidates the DRAWING bound to that role — the
+                    // strokes were placed over the image that just left — but NOT the
+                    // step's declared FIELD values. Those are the user's own prompt and
+                    // canvas size, which have nothing to do with the upload, and dropping
+                    // the whole record silently threw away typed text (MPI-620).
+                    if (freedRole && _stepValues[freedRole]) {
+                        const { fields } = _stepValues[freedRole];
+                        if (fields) _stepValues[freedRole] = { fields };
+                        else delete _stepValues[freedRole];
+                    }
                     onDirty();
                 }));
                 slot.appendChild(clear);
@@ -1162,10 +1182,17 @@ export const MpiBaseFlow = ComponentFactory.create({
             const fields = Array.isArray(step.fields) ? step.fields : [];
             if (!fields.length) return null;
 
+            // A `blankOnly` field only means something while the step has NO source
+            // media, so it is disabled once a slot is filled rather than left live and
+            // inert. The gizmo already refuses the change internally; without this the
+            // refusal was invisible and the control moved while nothing happened, which
+            // is the failure mode Fabio has now rejected twice (MPI-620).
+            const hasMedia = !!_mediaForRole(step.role);
+
             const row = ce('div', { className: 'mpi-base-flow__fields' });
             fields.forEach((f) => {
                 const node = _buildField(
-                    f,
+                    f.blankOnly && hasMedia ? { ...f, disabled: true } : f,
                     value?.fields?.[f.id] ?? f.default,
                     (val) => onFieldChange(f.id, val),
                     unsubs,

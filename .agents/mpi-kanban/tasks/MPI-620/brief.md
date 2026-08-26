@@ -242,24 +242,22 @@ preprocessors in place of 1640's direct image link:
 - `InvertMask` (3) — off the loader's alpha
 - `ImageCompositeMasked` (6) — paint over white
 
-### The ceiling — 0.6, and pruning the arms is what earns it
+### The ceiling — DEAD SECTION, superseded 2026-08-26
 
-`tests/flow-model-choice.test.cjs` sweeps every workflow and asserts
-`output_max === CEILING[file] ?? 0.5`. At HEAD `CEILING` is `{}` — MPI-621 emptied it because the
-only exception's graph was deleted, explicitly *"NOT because the rule was relaxed."*
+**Everything this section argued is moot and its conclusion was WRONG. Do not act on it, and do
+not re-open the argument without a fresh live sweep.**
 
-- **0.5 is the house number** because it is the minimum safe ceiling across every control type an
-  SDXL card offers, and **openpose and depth are what set that floor**.
-- **Keeping all four arms forces 0.5** — no test change, but 0.5 is the exact value Fabio measured
-  on Draw It In as *"did not follow the drawing at all"* (runs `1c5dd5b6` / `bbe85266`). The flow
-  would ship weak by construction.
-- **Pruning to scribble + canny only** makes the graph provably unable to drive openpose or depth,
-  which is the stated bar for an exception, and earns the **0.6** he actually shipped. 0.65
-  overshot (the doodle came through as edges).
+It argued for raising `output_max` to **0.6** on the reasoning that 0.5 "did not follow the
+drawing". Fabio's three live `flowScribble` runs showed the OPPOSITE failure: the drawing was
+followed TOO literally — red terrain strokes came back as physical white road markings and
+barriers across the cliff face. That is the ink-as-edges failure Draw It In's own history records
+at high strength. Raising the ceiling would have made it worse.
 
-So dropping the openpose and depth arms is **not tidiness — it is what lets the flow use the
-strength that works.** Add `flow_blank_canvas.json: 0.6` to `CEILING` with that reasoning; never
-widen the assertion. `end_percent` stays 0.569 and the slider stays 0-1.
+Moot in any case: the flow moved to EDIT MODELS and the ControlNet is gone, so there is no
+`output_max`, no `MpiNormalizeValue` and no arm-pruning bar to clear.
+
+**`tests/flow-model-choice.test.cjs` keeps `CEILING` EMPTY.** MPI-621 emptied it explicitly "NOT
+because the rule was relaxed", and nothing here re-earns an entry.
 
 ### Open question 1 — ANSWERED: the ratio lives on the paint step itself
 
@@ -292,9 +290,179 @@ Zero-media flows already work end to end (`character-sheet` has no `inputSchema`
    with no url. Extract `_initSurface(w, h)` and call it from the ratio. **That extraction is
    exactly what kills the brief's silent 1x1 PNG trap.**
 
-### Naming — DECIDED
+### Naming — DECIDED, then REVERSED. The shipped names are the second set.
 
-Title stays Fabio's **"Scribble"**. Internal id **`blank-canvas`**, op **`flowBlankCanvas`**,
-gallery prefix `FLOWBLANKCANVAS_`. Rejected `scribble` / `flowScribble`: it shares the `flowScrib`
-prefix with Draw It In's `flowScribObj` and reads the same at a glance, which is the exact
-confusion the brief asked to avoid.
+Title stays Fabio's **"Scribble"**. Shipped: internal id **`scribble`**, op **`flowScribble`**,
+workflow **`flow_scribble.json`**, gallery prefix **`FLOWSCRIBBLE_`**.
+
+The `blank-canvas` / `flowBlankCanvas` / `FLOWBLANKCANVAS_` set recorded here first was reversed
+on 2026-08-26 — it named the CANVAS rather than the thing the user does, and "Scribble" is the
+title on the tile. The `flowScrib` prefix it shares with Draw It In's `flowScribObj` was the
+stated objection and was accepted as liveable; `flowScribObj` itself can never be freed, because
+shipped gallery cards carry `FLOWSCRIBOBJ_` in their filenames and their sidecars' `flowId`.
+
+Any file still saying `flow_blank_canvas.json` is stale — that name was never written to disk.
+
+---
+
+## THE PIVOT — 2026-08-26. Edit models only. Supersedes every ControlNet section above.
+
+Fabio's call after a live side-by-side on one drawing. It retires SDXL scribble-to-image from the
+product, which was this card's original stated purpose — a deliberate call, asked and answered,
+not drift.
+
+### Model list — SETTLED
+
+**`klein-9b` (recommended) + `klein-4b`. Nothing else.**
+
+| Tried | Verdict |
+|---|---|
+| Klein 9B / 4B | **PASS.** Placed the scene correctly first run, no leftover strokes, 14-27s |
+| Boogu Image Edit | Passed on the winning prefix, but **DROPPED** — Klein beat it on quality *and* speed (38-39s), and it would have forced a second sampler chain into this graph behind a switch |
+| Krea 2 | **DROPPED.** Rendered the drawn pink dashes as real pink road paint, and survived three prompt reframings |
+| SDXL + ControlNet | **DROPPED.** Strokes came back as physical white road barriers; sea on the wrong side |
+
+**Why SDXL lost, and it is the diagnosis not a preference:** both ControlNet arms are monochrome
+LINE DETECTORS. `ScribblePreprocessor` and `CannyEdgePreprocessor` discard colour, so a blue fill
+contributes an outline indistinguishable from a red terrain stroke and carries no "sea goes here"
+signal. An edit model reads actual RGB. Same drawing, same prompt, only the model path differing.
+
+**Why Krea 2 lost:** almost certainly its `Krea2EditModelPatch` shipping `ref_boost 2`, which per
+`docs/models/krea2/editing.md` biases the whole reference against the instruction and is tuned for
+identity preservation — i.e. "keep what is in the picture", the exact opposite of this flow. Klein
+has no such patch. Untested at `ref_boost 1.0`; if anyone re-opens Krea 2, that is the first move,
+then cfg, and only then the wording.
+
+**Why Boogu cannot simply be added later without graph work:** a flow op resolves as a UNIVERSAL
+workflow — `getUniversalWorkflow(op)` returns ONE file and short-circuits before any model lookup
+(`commandExecutor.js:1456`), so a flow cannot route per model. Klein is `Flux2Scheduler` +
+`CFGGuider` + `SamplerCustomAdvanced`; Boogu is `ModelSamplingAuraFlow` + `BasicScheduler` +
+`SamplerCustom` with a tier int. Both in one graph means both chains behind a switch.
+
+### The graph's title contract — what the app injects
+
+| Title | Node | Form |
+|---|---|---|
+| `Input_Edit_Model` | UNETLoader | **plain** — `unet_name` IS on `comfyController._inject`'s spray list |
+| `Input_Edit_Clip` | CLIPLoader | **dotted** `Input_Edit_Clip.clip_name` — `clip_name` is NOT on that list |
+| `Input_Positive` | subject text | prefix concatenates ahead of it |
+| `Input_Seed` | | emitted every run whether declared or not |
+| `Input_Image` | the composited drawing | |
+| `Input_Lora_Phase1_1..6` | LoRA rack | **phase-titled, never `Input_Lora_1..6`** — a graph carrying both forms takes the rack TWICE |
+| **NOT** `Input_Negative` | | retitle it away, or the unconditional emit wipes the bake every run |
+
+That last row is the live bug this card found on Draw It In: `_buildParams` emits
+`Input_Positive`, `Input_Negative`, `Input_Negative_Audio` and `Input_Seed` **unconditionally**,
+whatever the flow declares. Draw It In's node 19 held a baked negative under the title
+`Input_Negative`, so `Input_Negative: ''` was written over it on every render ever made. Nothing
+failed and nothing logged.
+
+The per-tier weights are in `flowsRegistry.js` `modelParams`. The CLIP arm is not optional trim:
+9B needs `qwen_3_8b_int8_convrot`, 4B needs `qwen_3_4b`, and crossing them dies with a shape error
+that reads as a model bug and is not one (MPI-600).
+
+### The baked prefix — settled live over three reframings
+
+Goes in an `MpiText` node concatenated ahead of `Input_Positive`, so the user types only the
+subject.
+
+```
+Replace this sketch with a fully rendered image of the same scene. The sketch is a layout guide only: no drawn line, outline or patch of flat colour survives into the final image. The finished image shows
+```
+
+Two properties are load-bearing and a reword must keep both:
+
+1. **It says REPLACE, not "change the drawing".** Asking a model to *change* a drawing licenses it
+   to keep part of one — that framing is what left strokes in the output on every failing run.
+2. **It names NO output medium.** An earlier version said "photorealistic photograph" and worked,
+   but Fabio caught that a BAKED prefix would then make anime unreachable. Neutral, so the user's
+   own words (or a style LoRA) decide.
+
+Verified both ways on Klein 9B: an Anime style LoRA at 1.00 drove the whole look with the prompt
+saying nothing about style, and "Anime Illustration of ..." typed into the subject worked too.
+
+**No `style` select field, and that is a decision.** The LoRA already does it better than a
+dropdown would.
+
+### App-side state — GRAPHS NOW EXIST, authored offline 2026-08-26
+
+DONE in `js/data/flowsRegistry.js`: the `Input_Control_Net` radio and `Input_Control_strength`
+slider are gone (the flow now declares NO flow-level fields), the step hint is rewritten, the slot
+is the two Klein tiers with `loras: true`, and `modelParams` carries both tiers' unet + clip.
+
+NOT DONE, and gated on the graph existing: the `flow_scribble` case in
+`tests/inject-params-titles.test.cjs` still pins both AIO_Preprocessor arms, the two-switch wiring
+and `input_control_*`. It reads the graph file directly, so it cannot be rewritten before the
+graph lands. `tests/flow-model-choice.test.cjs` fails until then too, on
+`"Input_Edit_Model" has no node titled "input_edit_model" in flow_scribble.json` — that is the
+FlowDef and the graph being required to land together, which is the test doing its job.
+
+**Both graphs are built and engine-verified.** `flow_draw_it_in.json` 41 nodes, `flow_scribble.json`
+30 nodes, both clean through `scripts/verify-workflow.mjs` against 48188 and
+`scripts/validate-injection-rules.mjs`. The `flow_scribble` case in
+`tests/inject-params-titles.test.cjs` is rewritten to the edit-model shape. `npm test` 737/738 and
+`npm run test:desktop` 26/26; the single failure is the unrelated orphan-sweep isolation leak.
+
+**Draw It In also gained the rack** (Fabio's call, so both flows benefit) and its FlowDef slot now
+carries `loras: true`. It stays 9B-only — 4B's exclusion rests on separate live evidence.
+
+**The one thing not done is a LIVE RUN.** Verification proves the engine would accept exactly the
+graph that was designed — class existence, link types, COMBO widget values, the injection contract
+— and it cannot prove the picture is good. Run Scribble once on each Klein tier, with and without a
+style LoRA, before this card leaves `doing`.
+
+**Then:** `/mpi-flow-graphics` for the tile + hero, and the `preview` / `video` keys go in the SAME
+commit as the art files — never ahead of them.
+
+---
+
+## OPEN FOLLOW-UPS — specified, NOT built (2026-08-26)
+
+Neither is a blocker for the flow, which is finished and green. Both came out of Fabio's live
+runs and both touch files MPI-620 does not own, so they are written down rather than done.
+
+### 1. Reuse must open the flow even when a model is missing
+
+`flowService.openFlowFromReuse` currently refuses: `flowAvailability()` fails, the user is told
+"needs its model installed — opening Flows" and is bounced to the Flow Library. The flow never
+opens, so the saved `flowInputs` are never restored — and for Scribble that is **the drawing**.
+
+Fabio: *"He should be able to reuse it anyway ... This way he doesn't lose his drawing."*
+
+Wanted:
+- Reuse **always** opens the flow and restores the inputs.
+- A missing tier is a SUBSTITUTION, not a failure — a card made on 9B reruns on 4B when only 4B
+  is installed. `flowModelIds` already resolves that correctly today; only the refusal is wrong.
+- Say it in a **toast**: a warning when a different candidate will run, and an ERROR toast
+  ("No models installed for this flow") when no candidate of a slot is installed — with the flow
+  still open and the drawing intact, so the user installs and presses Generate rather than
+  redrawing.
+
+### 2. Record `flowModelIds` at dispatch; badge the single-choice case
+
+A flow card carries `modelId: null` by design, so the gallery badge renders only `FLOW: SCRIBBLE`
+and nothing says whether 9B or 4B ran. The tier IS recoverable from
+`generationSettings.injectionParams.Input_Edit_Model` (that is how `flowScribble_006` was
+identified as the 4B run), but that means mapping weight filenames to model ids, which breaks on a
+re-export.
+
+Fix the storage, not the badge: `flowService` already calls `flowModelIds(flow)`, so record the
+resolved array on the sidecar — one entry per slot, any number of slots.
+
+**Display is a SEPARATE decision, and Fabio's objection is why:** a four-stage flow has four
+models and they cannot live in a two-row corner label. Drive the card off
+`flowModelChoices(flow)`, which already filters to slots with more than one candidate:
+
+| Choosable slots | Card row 1 |
+|---|---|
+| 0 | nothing — the flow always runs the same models |
+| exactly 1 | that pick (`FLUX.2 KLEIN 4B`) — the comparison case |
+| 2+ | nothing — the card is the wrong surface |
+
+So Scribble and Draw It In badge; Character Sheet does not, and should not. There is no
+user-facing surface for the full per-slot list today — `generationSettings` is read only by
+`projectModel`, migrations, `generationService` and `promptReuse`, never displayed — so for a
+multi-slot flow the answer stays "read the sidecar", exactly as it already is for the prompt. A
+real detail panel (prompt + seed + models + settings) is its own card, not this one.
+
+This pairs with follow-up 1: the substitution toast has to NAME the tier it is substituting.
