@@ -29,7 +29,7 @@
 
 /** Pitch registers. Bands are Hz; R5 is open-ended. Mirrored in research/pitch_tools.py. */
 export const REGISTERS = Object.freeze({
-    R1: Object.freeze({ label: 'Low male', min: 90, max: 130 }),
+    R1: Object.freeze({ label: 'Low male', min: 70, max: 130 }),
     R2: Object.freeze({ label: 'High male / low female', min: 130, max: 190 }),
     R3: Object.freeze({ label: 'High female', min: 190, max: 260 }),
     R4: Object.freeze({ label: 'Child', min: 260, max: 340 }),

@@ -23,7 +23,7 @@ import parselmouth
 from parselmouth.praat import call
 
 REGISTERS = [
-    ("R1", 90, 130),
+    ("R1", 70, 130),
     ("R2", 130, 190),
     ("R3", 190, 260),
     ("R4", 260, 340),
@@ -35,7 +35,7 @@ def register_of(f0):
     for name, lo, hi in REGISTERS:
         if lo <= f0 < hi:
             return name
-    return "below-R1" if f0 < 90 else "?"
+    return "below-R1" if f0 < REGISTERS[0][1] else "?"
 
 
 def measure(path):

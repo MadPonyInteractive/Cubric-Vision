@@ -1,8 +1,1509 @@
 {
   "version": 1,
-  "variant": "enhanced",
+  "variant": "voicedesign",
   "note": "The 228 CC0 kyutai/tts-voices donations were auditioned in full and REJECTED in full (MPI-622, 2026-08-26): unintelligible accents, poor mic quality, and R4/R5 held one voice each. The 60 curated opus were removed from this bundle so they cannot ship. voices[] stays empty until the Qwen3-TTS VoiceDesign library (12 categories x 5 = 60) is imported through scripts/voice-library/ingest.py. The performance grid below is Phase 2 work, accepted and unaffected. accent is null for all - it must be assigned by a human listener, never inferred.",
-  "voices": [],
+  "voices": [
+    {
+      "id": "cartoon_critter_1",
+      "display_name": "Cartoon Critter 1",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "cartoon_critter"
+      ],
+      "kind": "both",
+      "register": "R5",
+      "median_f0": 394.4,
+      "f0_p10_p90": [
+        309.1,
+        458.3
+      ],
+      "sample": "cartoon_critter_1.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "cartoon_critter_2",
+      "display_name": "Cartoon Critter 2",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "cartoon_critter"
+      ],
+      "kind": "both",
+      "register": "R5",
+      "median_f0": 361.7,
+      "f0_p10_p90": [
+        282.1,
+        494.1
+      ],
+      "sample": "cartoon_critter_2.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "cartoon_critter_3",
+      "display_name": "Cartoon Critter 3",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "cartoon_critter"
+      ],
+      "kind": "both",
+      "register": "R5",
+      "median_f0": 385.4,
+      "f0_p10_p90": [
+        302.4,
+        499.8
+      ],
+      "sample": "cartoon_critter_3.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "cartoon_critter_4",
+      "display_name": "Cartoon Critter 4",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "cartoon_critter"
+      ],
+      "kind": "both",
+      "register": "R5",
+      "median_f0": 415.5,
+      "f0_p10_p90": [
+        293.8,
+        499.8
+      ],
+      "sample": "cartoon_critter_4.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "cartoon_critter_5",
+      "display_name": "Cartoon Critter 5",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "cartoon_critter"
+      ],
+      "kind": "both",
+      "register": "R5",
+      "median_f0": 413.1,
+      "f0_p10_p90": [
+        293.8,
+        498.7
+      ],
+      "sample": "cartoon_critter_5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "child_1",
+      "display_name": "Child 1",
+      "gender": null,
+      "age": "child",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "child"
+      ],
+      "kind": "both",
+      "register": "R4",
+      "median_f0": 327.8,
+      "f0_p10_p90": [
+        282.1,
+        405.3
+      ],
+      "sample": "child_1.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "child_2",
+      "display_name": "Child 2",
+      "gender": null,
+      "age": "child",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "child"
+      ],
+      "kind": "both",
+      "register": "R5",
+      "median_f0": 381.0,
+      "f0_p10_p90": [
+        300.1,
+        461.0
+      ],
+      "sample": "child_2.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "child_3",
+      "display_name": "Child 3",
+      "gender": null,
+      "age": "child",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "child"
+      ],
+      "kind": "both",
+      "register": "R5",
+      "median_f0": 340.4,
+      "f0_p10_p90": [
+        258.7,
+        499.8
+      ],
+      "sample": "child_3.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "child_4",
+      "display_name": "Child 4",
+      "gender": null,
+      "age": "child",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "child"
+      ],
+      "kind": "both",
+      "register": "R5",
+      "median_f0": 355.5,
+      "f0_p10_p90": [
+        274.1,
+        494.1
+      ],
+      "sample": "child_4.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "child_5",
+      "display_name": "Child 5",
+      "gender": null,
+      "age": "child",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "child"
+      ],
+      "kind": "both",
+      "register": "R5",
+      "median_f0": 381.0,
+      "f0_p10_p90": [
+        318.5,
+        463.6
+      ],
+      "sample": "child_5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "deep_male_1",
+      "display_name": "Deep Male 1",
+      "gender": "male",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "deep_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 111.3,
+      "f0_p10_p90": [
+        82.0,
+        153.8
+      ],
+      "sample": "deep_male_1.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "deep_male_2",
+      "display_name": "Deep Male 2",
+      "gender": "male",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "deep_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 114.6,
+      "f0_p10_p90": [
+        98.6,
+        133.1
+      ],
+      "sample": "deep_male_2.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "deep_male_3",
+      "display_name": "Deep Male 3",
+      "gender": "male",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "deep_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 83.4,
+      "f0_p10_p90": [
+        68.5,
+        103.3
+      ],
+      "sample": "deep_male_3.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "deep_male_4",
+      "display_name": "Deep Male 4",
+      "gender": "male",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "deep_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 90.4,
+      "f0_p10_p90": [
+        74.3,
+        110.7
+      ],
+      "sample": "deep_male_4.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "deep_male_5",
+      "display_name": "Deep Male 5",
+      "gender": "male",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "deep_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 92.0,
+      "f0_p10_p90": [
+        77.2,
+        111.3
+      ],
+      "sample": "deep_male_5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "elderly_female_1",
+      "display_name": "Elderly Female 1",
+      "gender": "female",
+      "age": "elderly",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "elderly_female"
+      ],
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 187.2,
+      "f0_p10_p90": [
+        167.8,
+        211.4
+      ],
+      "sample": "elderly_female_1.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "elderly_female_2",
+      "display_name": "Elderly Female 2",
+      "gender": "female",
+      "age": "elderly",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "elderly_female"
+      ],
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 165.8,
+      "f0_p10_p90": [
+        140.3,
+        208.9
+      ],
+      "sample": "elderly_female_2.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "elderly_female_3",
+      "display_name": "Elderly Female 3",
+      "gender": "female",
+      "age": "elderly",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "elderly_female"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 211.4,
+      "f0_p10_p90": [
+        186.1,
+        238.6
+      ],
+      "sample": "elderly_female_3.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "elderly_female_4",
+      "display_name": "Elderly Female 4",
+      "gender": "female",
+      "age": "elderly",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "elderly_female"
+      ],
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 170.7,
+      "f0_p10_p90": [
+        134.7,
+        189.3
+      ],
+      "sample": "elderly_female_4.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "elderly_female_5",
+      "display_name": "Elderly Female 5",
+      "gender": "female",
+      "age": "elderly",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "elderly_female"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 193.8,
+      "f0_p10_p90": [
+        169.7,
+        235.9
+      ],
+      "sample": "elderly_female_5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "elderly_male_1",
+      "display_name": "Elderly Male 1",
+      "gender": "male",
+      "age": "elderly",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "elderly_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 105.7,
+      "f0_p10_p90": [
+        85.3,
+        331.7
+      ],
+      "sample": "elderly_male_1.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "elderly_male_2",
+      "display_name": "Elderly Male 2",
+      "gender": "male",
+      "age": "elderly",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "elderly_male"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 216.3,
+      "f0_p10_p90": [
+        160.2,
+        318.5
+      ],
+      "sample": "elderly_male_2.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "elderly_male_3",
+      "display_name": "Elderly Male 3",
+      "gender": "male",
+      "age": "elderly",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "elderly_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 117.9,
+      "f0_p10_p90": [
+        85.3,
+        154.7
+      ],
+      "sample": "elderly_male_3.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "elderly_male_4",
+      "display_name": "Elderly Male 4",
+      "gender": "male",
+      "age": "elderly",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "elderly_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 128.6,
+      "f0_p10_p90": [
+        100.3,
+        155.7
+      ],
+      "sample": "elderly_male_4.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "elderly_male_5",
+      "display_name": "Elderly Male 5",
+      "gender": "male",
+      "age": "elderly",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "elderly_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 124.2,
+      "f0_p10_p90": [
+        74.0,
+        152.9
+      ],
+      "sample": "elderly_male_5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "mature_female_1",
+      "display_name": "Mature Female 1",
+      "gender": "female",
+      "age": "mature",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "mature_female"
+      ],
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 169.7,
+      "f0_p10_p90": [
+        144.4,
+        199.0
+      ],
+      "sample": "mature_female_1.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "mature_female_2",
+      "display_name": "Mature Female 2",
+      "gender": "female",
+      "age": "mature",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "mature_female"
+      ],
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 182.9,
+      "f0_p10_p90": [
+        139.7,
+        234.5
+      ],
+      "sample": "mature_female_2.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "mature_female_3",
+      "display_name": "Mature Female 3",
+      "gender": "female",
+      "age": "mature",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "mature_female"
+      ],
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 144.4,
+      "f0_p10_p90": [
+        122.8,
+        175.6
+      ],
+      "sample": "mature_female_3.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "mature_female_4",
+      "display_name": "Mature Female 4",
+      "gender": "female",
+      "age": "mature",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "mature_female"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 123.5,
+      "f0_p10_p90": [
+        100.2,
+        181.0
+      ],
+      "sample": "mature_female_4.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "mature_female_5",
+      "display_name": "Mature Female 5",
+      "gender": "female",
+      "age": "mature",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "mature_female"
+      ],
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 181.9,
+      "f0_p10_p90": [
+        169.4,
+        236.3
+      ],
+      "sample": "mature_female_5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "narrator_trailer_1",
+      "display_name": "Narrator Trailer 1",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "narrator_trailer"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 79.2,
+      "f0_p10_p90": [
+        66.6,
+        100.3
+      ],
+      "sample": "narrator_trailer_1.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "narrator_trailer_2",
+      "display_name": "Narrator Trailer 2",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "narrator_trailer"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 89.4,
+      "f0_p10_p90": [
+        74.3,
+        113.3
+      ],
+      "sample": "narrator_trailer_2.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "narrator_trailer_3",
+      "display_name": "Narrator Trailer 3",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "narrator_trailer"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 92.5,
+      "f0_p10_p90": [
+        73.9,
+        115.9
+      ],
+      "sample": "narrator_trailer_3.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "narrator_trailer_4",
+      "display_name": "Narrator Trailer 4",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "narrator_trailer"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 82.4,
+      "f0_p10_p90": [
+        67.2,
+        91.8
+      ],
+      "sample": "narrator_trailer_4.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "narrator_trailer_5",
+      "display_name": "Narrator Trailer 5",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "narrator_trailer"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 84.4,
+      "f0_p10_p90": [
+        72.2,
+        96.4
+      ],
+      "sample": "narrator_trailer_5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "standard_female_1",
+      "display_name": "Standard Female 1",
+      "gender": "female",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "standard_female"
+      ],
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 173.7,
+      "f0_p10_p90": [
+        148.3,
+        206.9
+      ],
+      "sample": "standard_female_1.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "standard_female_2",
+      "display_name": "Standard Female 2",
+      "gender": "female",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "standard_female"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 221.4,
+      "f0_p10_p90": [
+        174.7,
+        290.4
+      ],
+      "sample": "standard_female_2.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "standard_female_3",
+      "display_name": "Standard Female 3",
+      "gender": "female",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "standard_female"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 191.6,
+      "f0_p10_p90": [
+        164.0,
+        240.0
+      ],
+      "sample": "standard_female_3.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "standard_female_4",
+      "display_name": "Standard Female 4",
+      "gender": "female",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "standard_female"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 193.3,
+      "f0_p10_p90": [
+        155.5,
+        276.2
+      ],
+      "sample": "standard_female_4.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "standard_female_5",
+      "display_name": "Standard Female 5",
+      "gender": "female",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "standard_female"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 211.4,
+      "f0_p10_p90": [
+        177.7,
+        287.1
+      ],
+      "sample": "standard_female_5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "standard_male_1",
+      "display_name": "Standard Male 1",
+      "gender": "male",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "standard_male"
+      ],
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 133.9,
+      "f0_p10_p90": [
+        84.9,
+        164.9
+      ],
+      "sample": "standard_male_1.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "standard_male_2",
+      "display_name": "Standard Male 2",
+      "gender": "male",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "standard_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 103.9,
+      "f0_p10_p90": [
+        87.8,
+        123.5
+      ],
+      "sample": "standard_male_2.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "standard_male_3",
+      "display_name": "Standard Male 3",
+      "gender": "male",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "standard_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 115.2,
+      "f0_p10_p90": [
+        85.8,
+        139.9
+      ],
+      "sample": "standard_male_3.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "standard_male_4",
+      "display_name": "Standard Male 4",
+      "gender": "male",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "standard_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 104.5,
+      "f0_p10_p90": [
+        81.3,
+        131.6
+      ],
+      "sample": "standard_male_4.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "standard_male_5",
+      "display_name": "Standard Male 5",
+      "gender": "male",
+      "age": "adult",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "standard_male"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 125.7,
+      "f0_p10_p90": [
+        91.9,
+        173.7
+      ],
+      "sample": "standard_male_5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "villain_menacing_1",
+      "display_name": "Villain Menacing 1",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "villain_menacing"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 93.1,
+      "f0_p10_p90": [
+        80.1,
+        102.1
+      ],
+      "sample": "villain_menacing_1.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "villain_menacing_2",
+      "display_name": "Villain Menacing 2",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "villain_menacing"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 82.9,
+      "f0_p10_p90": [
+        62.5,
+        106.9
+      ],
+      "sample": "villain_menacing_2.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "villain_menacing_3",
+      "display_name": "Villain Menacing 3",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "villain_menacing"
+      ],
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 105.7,
+      "f0_p10_p90": [
+        87.1,
+        123.2
+      ],
+      "sample": "villain_menacing_3.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "villain_menacing_4",
+      "display_name": "Villain Menacing 4",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "villain_menacing"
+      ],
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 167.8,
+      "f0_p10_p90": [
+        150.3,
+        210.6
+      ],
+      "sample": "villain_menacing_4.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "villain_menacing_5",
+      "display_name": "Villain Menacing 5",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "villain_menacing"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 226.5,
+      "f0_p10_p90": [
+        203.0,
+        311.1
+      ],
+      "sample": "villain_menacing_5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "young_female_1",
+      "display_name": "Young Female 1",
+      "gender": "female",
+      "age": "young",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "young_female"
+      ],
+      "kind": "both",
+      "register": "R4",
+      "median_f0": 326.0,
+      "f0_p10_p90": [
+        247.0,
+        420.3
+      ],
+      "sample": "young_female_1.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "young_female_2",
+      "display_name": "Young Female 2",
+      "gender": "female",
+      "age": "young",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "young_female"
+      ],
+      "kind": "both",
+      "register": "R4",
+      "median_f0": 337.5,
+      "f0_p10_p90": [
+        248.6,
+        453.1
+      ],
+      "sample": "young_female_2.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "young_female_3",
+      "display_name": "Young Female 3",
+      "gender": "female",
+      "age": "young",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "young_female"
+      ],
+      "kind": "both",
+      "register": "R5",
+      "median_f0": 343.4,
+      "f0_p10_p90": [
+        245.9,
+        453.1
+      ],
+      "sample": "young_female_3.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "young_female_4",
+      "display_name": "Young Female 4",
+      "gender": "female",
+      "age": "young",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "young_female"
+      ],
+      "kind": "both",
+      "register": "R4",
+      "median_f0": 297.2,
+      "f0_p10_p90": [
+        233.2,
+        427.6
+      ],
+      "sample": "young_female_4.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "young_female_5",
+      "display_name": "Young Female 5",
+      "gender": "female",
+      "age": "young",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "young_female"
+      ],
+      "kind": "both",
+      "register": "R4",
+      "median_f0": 326.9,
+      "f0_p10_p90": [
+        253.1,
+        447.9
+      ],
+      "sample": "young_female_5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "young_male_1",
+      "display_name": "Young Male 1",
+      "gender": "male",
+      "age": "young",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "young_male"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 201.2,
+      "f0_p10_p90": [
+        147.1,
+        235.9
+      ],
+      "sample": "young_male_1.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "young_male_2",
+      "display_name": "Young Male 2",
+      "gender": "male",
+      "age": "young",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "young_male"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 249.9,
+      "f0_p10_p90": [
+        175.5,
+        366.3
+      ],
+      "sample": "young_male_2.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "young_male_3",
+      "display_name": "Young Male 3",
+      "gender": "male",
+      "age": "young",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "young_male"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 225.2,
+      "f0_p10_p90": [
+        177.7,
+        294.5
+      ],
+      "sample": "young_male_3.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "young_male_4",
+      "display_name": "Young Male 4",
+      "gender": "male",
+      "age": "young",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "young_male"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 230.5,
+      "f0_p10_p90": [
+        190.7,
+        333.2
+      ],
+      "sample": "young_male_4.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "young_male_5",
+      "display_name": "Young Male 5",
+      "gender": "male",
+      "age": "young",
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": [
+        "young_male"
+      ],
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 211.4,
+      "f0_p10_p90": [
+        141.9,
+        300.6
+      ],
+      "sample": "young_male_5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": null,
+      "source_url": null,
+      "added_at": "2026-08-26"
+    }
+  ],
   "performanceClips": [
     {
       "id": "perf_R1_flat",

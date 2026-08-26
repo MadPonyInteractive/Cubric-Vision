@@ -89,17 +89,87 @@ DEFAULT_CACHE = Path(_APPDATA) / "cubric-vision" / "voice-cache"
 
 # Pitch register bands (Hz) — mirrored in js/data/voiceLibrary.js and
 # .agents/mpi-kanban/tasks/MPI-622/research/pitch_tools.py
+#
+# R1's floor was 90 until 2026-08-26. The kyutai corpus had nothing below it, but the
+# VoiceDesign library deliberately generates deeper voices and SIX of its 60 measured
+# 79.2–89.4 Hz — four of them the whole `narrator_trailer` category, which is supposed to
+# be that deep. At 90 they were unclassifiable and the import silently dropped them.
+# Lowered to 70 rather than adding an R0 band: R0 would have no performance grid, so those
+# six would ship unable to do emotions. Do not raise it back without regenerating the grid.
 REGISTERS = [
-    ("R1", 90,  130),
+    ("R1", 70,  130),
     ("R2", 130, 190),
     ("R3", 190, 260),
     ("R4", 260, 340),
     ("R5", 340, 10_000),
 ]
 
+# The VoiceDesign library that REPLACED the kyutai corpus. Generated locally, so it carries
+# no upstream licence and no source URL — see LICENCE/SOURCE_TPL above for the kyutai pair.
+VOICEDESIGN_LICENCE = None      # TODO(MPI-622): Fabio to confirm the Qwen3-TTS output licence.
+
+# Gender and age are DECLARED by the taxonomy, not inferred from the audio — the category name
+# is the statement. Categories that deliberately mix (villain ships 2 male + 2 female variants;
+# critter and trailer were never gendered) stay null rather than guessing. `accent` is null for
+# every voice without exception — brief rule 1, enforced by check_manifest.mjs check 3.
+CATEGORY_META = {
+    "child":            (None,     "child"),
+    "young_male":       ("male",   "young"),
+    "standard_male":    ("male",   "adult"),
+    "deep_male":        ("male",   "adult"),
+    "elderly_male":     ("male",   "elderly"),
+    "young_female":     ("female", "young"),
+    "standard_female":  ("female", "adult"),
+    "mature_female":    ("female", "mature"),
+    "elderly_female":   ("female", "elderly"),
+    "narrator_trailer": (None,     None),
+    "cartoon_critter":  (None,     None),
+    "villain_menacing": (None,     None),
+}
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def sustained_trim(y, sr, frame=2048, hop=512, rel_db=35.0, min_ms=120):
+    """Trim to the first and last SUSTAINED loud region, in preference to librosa's trim().
+
+    librosa.effects.trim(top_db=35) anchors on a single transient, so one click or lip-smack
+    holds the start open — on MPI-622 it left 4 s of audible dead air in a clip it declared
+    trimmed at 1.11 s. Requiring `min_ms` of CONTINUOUS above-threshold energy ignores the
+    transient and finds the speech. Proven across the whole audition set before shipping here.
+    """
+    rms = librosa.feature.rms(y=y, frame_length=frame, hop_length=hop)[0]
+    thr = rms.max() * (10 ** (-rel_db / 20))
+    loud = rms > thr
+    need = max(1, int(min_ms / 1000 * sr / hop))
+    run, first, last = 0, None, None
+    for i, v in enumerate(loud):
+        run = run + 1 if v else 0
+        if run >= need:
+            if first is None:
+                first = i - need + 1
+            last = i
+    if first is None:
+        return y
+    return y[first * hop:min(len(y), (last + 1) * hop)]
+
+
+def level_rms(y, target_dbfs=-20.0, floor_db=-40.0):
+    """Normalise to `target_dbfs` RMS over ACTIVE frames only, then guard the peak.
+
+    Plain full-signal RMS is dragged down by pauses, so a clip with long gaps comes back
+    louder than one without. Measuring only samples above `floor_db` of peak makes two clips
+    match by perceived loudness, which is what a picker audition needs.
+    """
+    a = np.abs(y)
+    active = y[a > 10 ** (floor_db / 20.0) * max(float(np.max(a)), 1e-9)]
+    cur = float(np.sqrt(np.mean(active ** 2))) if active.size else 0.0
+    if cur > 0:
+        y = y * (10 ** (target_dbfs / 20.0) / cur)
+    peak = float(np.max(np.abs(y)))
+    return y / (peak * 1.01) if peak >= 1.0 else y
+
 
 def register_of(f0_hz):
     for name, lo, hi in REGISTERS:
@@ -379,7 +449,7 @@ def curate(measurements, voices_dir):
     for vid, m in measurements.items():
         reg = m.get("register")
         if reg is None:
-            rejected.append((vid, f"{m['median_f0']} Hz is below the 90 Hz R1 floor — "
+            rejected.append((vid, f"{m['median_f0']} Hz is below the {REGISTERS[0][1]} Hz R1 floor — "
                                   f"no register band covers it"))
         elif m["voiced_frac"] < MIN_VOICED_FRAC:
             rejected.append((vid, f"voiced_frac {m['voiced_frac']} < {MIN_VOICED_FRAC}"))
@@ -549,6 +619,84 @@ def run(voices_dir, cache_dir, all_ids, force):
 # Entry point
 # ---------------------------------------------------------------------------
 
+def import_local(voices_dir, src_dir, cache_dir):
+    """Import a locally-GENERATED library (lib_v2) — no download, no curation gates.
+
+    The kyutai path above selects from a corpus it cannot control. This one imports a set that
+    was already approved by ear, so every clip ships and the only work is trim -> level ->
+    measure -> opus. Category comes from the `.txt` sidecar each generator writes beside its
+    wav; `register` is derived from the MEASURED f0, never from the category's prompt-time
+    target, which is why a category may legitimately span two registers.
+    """
+    work = cache_dir / "local"
+    work.mkdir(parents=True, exist_ok=True)
+    wavs = sorted(src_dir.glob("*.wav"))
+    if not wavs:
+        raise SystemExit(f"no wav files in {src_dir}")
+
+    added_at = date.today().isoformat()
+    entries, counts, skipped = [], {}, []
+
+    for wav in wavs:
+        voice_id = wav.stem
+        sidecar = wav.with_suffix(".txt")
+        category = None
+        if sidecar.exists():
+            for line in sidecar.read_text(encoding="utf-8").splitlines():
+                if line.startswith("CATEGORY:"):
+                    category = line.split(":", 1)[1].strip()
+                    break
+        if category not in CATEGORY_META:
+            skipped.append(f"{voice_id}: category {category!r} is not in CATEGORY_META")
+            continue
+
+        y, sr = librosa.load(str(wav), sr=None, mono=True)
+        y = level_rms(sustained_trim(y, sr))
+        staged = work / f"{voice_id}.wav"
+        sf.write(str(staged), y, sr)
+
+        m = measure(staged)
+        if not m:
+            skipped.append(f"{voice_id}: unvoiced, pyin found no f0")
+            continue
+        reg = register_of(m["median_f0"])
+        if not reg:
+            skipped.append(f"{voice_id}: {m['median_f0']:.1f} Hz is outside R1-R5")
+            continue
+
+        to_opus(staged, voices_dir / f"{voice_id}.opus")
+        gender, age = CATEGORY_META[category]
+        entry = build_voice_entry(voice_id, m["median_f0"], m["p10"], m["p90"], reg, added_at)
+        entry.update({
+            "display_name": voice_id.replace("_", " ").title(),
+            "gender":       gender,
+            "age":          age,
+            "tags":         [category],
+            "licence":      VOICEDESIGN_LICENCE,
+            "source_url":   None,       # generated locally — there is no upstream to point at
+        })
+        entries.append(entry)
+        counts[category] = counts.get(category, 0) + 1
+        print(f"  {voice_id:<22} {m['median_f0']:6.1f} Hz  {reg}  {category}")
+
+    manifest_path = voices_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["variant"] = "voicedesign"
+    manifest["voices"] = entries
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
+                            encoding="utf-8", newline="\n")
+
+    print(f"\n{len(entries)} voices imported from {src_dir}")
+    for cat in sorted(counts):
+        flag = "" if counts[cat] == 5 else f"   <-- expected 5, got {counts[cat]}"
+        print(f"  {cat:<20} {counts[cat]}{flag}")
+    if skipped:
+        print(f"\n{len(skipped)} SKIPPED:")
+        for s in skipped:
+            print(f"  - {s}")
+    print(f"\nperformance grid left intact: {len(manifest.get('performanceClips', []))} clips")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -567,6 +715,10 @@ def main():
     parser.add_argument("--ids-file", type=Path, default=None,
                         help="Import only the voice ids listed in this file (one per line, "
                              "'#' comments allowed). This is how the curated set is imported.")
+    parser.add_argument("--from-dir", type=Path, default=None,
+                        help="Import a locally-generated library from this directory (wav + "
+                             "matching .txt sidecar per voice). Skips the corpus download "
+                             "entirely — this is how the VoiceDesign library is imported.")
     args = parser.parse_args()
 
     # Paths are relative to repo root — script is run from that directory.
@@ -574,6 +726,11 @@ def main():
     voices_dir = repo_root / "voices"
     voices_dir.mkdir(exist_ok=True)
     args.cache.mkdir(parents=True, exist_ok=True)
+
+    # Before fetch_voice_ids() — the local path must not touch the network at all.
+    if args.from_dir:
+        import_local(voices_dir, args.from_dir, args.cache)
+        return
 
     all_ids = fetch_voice_ids()
 
