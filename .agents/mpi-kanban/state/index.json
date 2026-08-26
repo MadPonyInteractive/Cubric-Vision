@@ -80,7 +80,9 @@
       "heartbeat_at": "2026-08-26T01:06:18Z"
     }
   ],
-  "open_messages": [],
+  "open_messages": [
+    ".agents/mpi-kanban/state/messages/d3900d18-107a-4722-aba0-d2325349f6aa.json"
+  ],
   "active_handoffs": [
     {
       "id": "e12e3142-1122-4153-889f-41ffe8c7d92f",
@@ -279,6 +281,6 @@
     }
   ],
   "index": {
-    "updated_at": "2026-08-26T07:55:00Z"
+    "updated_at": "2026-08-26T08:35:00Z"
   }
 }

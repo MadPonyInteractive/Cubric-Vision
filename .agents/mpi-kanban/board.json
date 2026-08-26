@@ -76,8 +76,8 @@
       "MPI-367"
     ],
     "done": [
-      "MPI-620",
       "MPI-626",
+      "MPI-620",
       "MPI-625",
       "MPI-573",
       "MPI-615",
@@ -122,7 +122,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-26T08:20:00Z",
+  "updated_at": "2026-08-26T08:38:00Z",
   "events": [
     {
       "at": "2026-08-25T04:12:00Z",
@@ -3868,6 +3868,24 @@
       "from": "doing",
       "to": "done",
       "note": "Verified by Fabio: he asked for both seam moves, saw both tiles and confirmed. Agent evidence in validation.md - shipped bytes 47,706 and 94,918, seams measured at 50.0% and 25.7%, plates proved registered (mean abs diff 0.49/255, changed bbox on the head alone) before either composite. Heroes and flowsRegistry untouched."
+    },
+    {
+      "at": "2026-08-26T08:30:00Z",
+      "type": "task.moved",
+      "task": "MPI-626",
+      "actor": "claude",
+      "from": "done",
+      "to": "doing",
+      "note": "Reopened to land the two playbook heals Fabio approved after close-out: the scratchpad NODE_PATH remedy is wrong for ESM, and sharp's resize-before-composite trap (the one that does NOT throw) had no row. Both came out of building these tiles."
+    },
+    {
+      "at": "2026-08-26T08:38:00Z",
+      "type": "task.moved",
+      "task": "MPI-626",
+      "actor": "claude",
+      "from": "doing",
+      "to": "done",
+      "note": "Both approved playbook heals landed (NODE_PATH/ESM correction in prose + trap row; new resize-before-composite trap row). MPI-620 notified by coordination message d3900d18 - its files.json owns that doc. Card back to done."
     }
   ]
 }

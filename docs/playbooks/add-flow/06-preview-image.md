@@ -169,7 +169,19 @@ Read `~/.claude/memory/tools/sharp.md` before any mask or `joinChannel` work.
 **Run it from the repo, not the scratchpad** — `sharp` resolves against the
 script's own location, so a scratchpad script dies with `ERR_MODULE_NOT_FOUND`
 for a package that is installed. `node -e '…'` from the repo root is the shortest
-form that works.
+form that works. A scratchpad script long enough to want a file needs the
+absolute import, **not `NODE_PATH`** — that variable is a CommonJS resolver
+feature and ESM ignores it, so an `.mjs` still dies with the variable set:
+`import sharp from 'file:///C:/AI/Mpi/Cubric-Vision/node_modules/sharp/lib/index.js'`.
+
+**Compose at source scale, resize in a second pipeline.** The fixed-pipeline rule
+in the trap table has a second half that does not announce itself: `resize` also
+runs BEFORE `composite`, and unlike the `extract` case it throws nothing. A chain
+that composites two half-frames and then resizes to 896 × 1120 resizes the base
+first and pastes the overlays at their unscaled size and offset — so a seam marker
+meant for x=448 lands at x=210, a half-frame lands as a patch in the corner, and
+the file writes cleanly. Build the whole composite at crop resolution, end it
+`.png().toBuffer()`, then `sharp(buf).resize(…)`.
 
 Where the tile and hero share a subject, **derive one from the other** rather than
 composing twice: the Head Swap tile is its hero's wipe frozen where the seam
@@ -280,7 +292,8 @@ transparent PNG, useful for floating one over a plate whichever tool draws it.
 | A colon in an ffmpeg filter option value | `stats_file=C:/…` is parsed as an option separator and dies as `Invalid argument` on an unrelated option. Read `psnr` off stderr instead |
 | A translucent reveal cover | The un-played half shows straight through it. Opaque, in the band's own ground colour |
 | Judging a hero from a contact sheet | Everything reads at 620 px. Render at **446 px** — the real hero width — before believing it |
-| Running the `sharp` snippet from the scratchpad | `ERR_MODULE_NOT_FOUND` for an installed package; it resolves from the script's own location. Run from the repo root, or keep the script in the scratchpad and pass `NODE_PATH=<repo>/node_modules` |
+| Running the `sharp` snippet from the scratchpad | `ERR_MODULE_NOT_FOUND` for an installed package; it resolves from the script's own location. Run from the repo root, or import the absolute path: `import sharp from 'file:///C:/AI/Mpi/Cubric-Vision/node_modules/sharp/lib/index.js'`. **`NODE_PATH=<repo>/node_modules` does NOT fix an `.mjs`** — it is a CommonJS resolver feature and ESM ignores it, so the script fails identically with the variable set, which reads as the path being wrong |
+| `sharp` `.composite()` then `.resize()` in one chain | Same fixed pipeline as the row below, opposite symptom: `resize` runs FIRST, so the overlays paste at unscaled size and unscaled offset onto an already-resized base. **Nothing throws** — a 4/5 tile came out with its seam marker at x=210 instead of x=448 and one half-frame as a corner patch, written cleanly at the right dimensions. Only the `extract` case errors, so "it built and the file looks the right size" proves nothing. Composite at crop scale, `.png().toBuffer()`, resize in a fresh pipeline |
 | `sharp` `.composite()` then `.extract()` in one chain | Pipeline order is FIXED and `extract` runs FIRST, so the base shrinks out from under the overlay. It dies with `Image to composite must have same dimensions or smaller`, naming the OVERLAY while the base is at fault. Two pipelines, the first ending `.png().toBuffer()` |
 | Saving an already-encoded webp buffer through `sharp` again | It re-encodes at the DEFAULT quality instead of copying bytes: a `quality: 90` tile written at 49,674 B came back 26,682 B, no error, no warning. Encode ONCE straight to the destination; the only symptom is a suspiciously small file |
 | `sharp(f).extract({...}).stats()` | `.stats()` reads the INPUT file and ignores the chain, so six patches at six offsets return byte-identical means. Reads as "the region is flat"; it is "you measured the whole image six times". Use `.raw().toBuffer()` |
