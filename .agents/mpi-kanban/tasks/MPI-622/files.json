@@ -18,6 +18,8 @@
     "js/data/flowsRegistry.js",
     "js/services/comfyController.js",
     "tests/seed-uint32-range.test.cjs",
-    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css"
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+    "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js"
   ]
 }

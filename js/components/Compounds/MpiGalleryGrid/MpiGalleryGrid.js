@@ -1091,7 +1091,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 // A flow gen has `modelId: null` by design, so row 1 is empty and only the
                 // operation ("FLOW: SCRIBBLE") shows. Fill it with the tier that actually
                 // ran — but ONLY for a flow with exactly one choosable slot (MPI-620).
-                const modelLabel = original?.uploaded ? 'IMPORTED' : (modelName || _flowModelLabel(original));
+                // `uploaded` only says "the user brought this in", not HOW. A clip captured
+                // with the in-app recorder is not an import, and the recorder has always
+                // written `operation: 'recorded'` — the badge simply never read it, so a
+                // take you had just recorded came back labelled IMPORTED (MPI-622).
+                const modelLabel = original?.uploaded
+                    ? (original.operation === 'recorded' ? 'RECORDED' : 'IMPORTED')
+                    : (modelName || _flowModelLabel(original));
                 const operationLabel = selected?.uploaded
                     ? ''
                     : (command?.label || selected?.operation || '');

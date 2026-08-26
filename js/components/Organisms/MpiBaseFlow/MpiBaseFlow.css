@@ -344,6 +344,18 @@
 .mpi-base-flow__slot-audio {
     display: none;
 }
+/* …and because that element is hidden, the "image is the box" rule above has NOTHING
+   to size a filled audio slot by, so the box collapsed to the play icon and the row
+   jumped the moment a clip landed in it. Audio has no aspect to hug — keep the empty
+   slot's own box, so filling a slot changes what is in it and not its size. */
+.mpi-base-flow__slot--filled:has(.mpi-base-flow__slot-audio) {
+    width: 208px;
+    height: 148px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: oklch(0.26 0.018 350 / 0.5);
+}
 /* Lit rather than the empty slot's muted --ink-4: this one is a control, not a placeholder. */
 .mpi-base-flow__slot--filled .mpi-base-flow__slot-icon {
     color: var(--ink-2);
@@ -815,6 +827,17 @@
     max-height: none;
     width: auto;
     height: auto;
+}
+/* An AUDIO result is a control, not a picture: there is nothing to fit or zoom, so
+   the layer spans the frame and centres the player instead of being sized by it.
+   The transform is pinned to identity in `_paintPlainResults` to match. */
+.mpi-base-flow__result-media:has(.mpi-base-flow__result-audio) {
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+}
+.mpi-base-flow__result-audio {
+    width: min(360px, 80%);
 }
 
 /* Live latents: progressive de-blur + a 1px frost scanline — honest about a

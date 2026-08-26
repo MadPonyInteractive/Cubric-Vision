@@ -54,6 +54,29 @@ import {
     removeHistoryEntry,
 } from '../../../data/projectModel.js';
 
+/**
+ * Is this item's media file still on disk? Used to tell a genuinely deleted file
+ * apart from one that is present but will not decode — the card's media element
+ * reports both as the same `error`, and only the first may remove the entry.
+ *
+ * Fails CLOSED (returns true) when the check itself cannot run: a network blip is
+ * not evidence that a file is gone, and the cost of being wrong here is deletion.
+ *
+ * @param {Object} item
+ * @returns {Promise<boolean>}
+ */
+async function _mediaStillOnDisk(item) {
+    const absPath = extractAbsPath(item?.filePath || item?.url || '');
+    if (!absPath) return true;
+    try {
+        const res = await fetch(`/file-exists?path=${encodeURIComponent(absPath)}`);
+        const data = await res.json();
+        return data.exists !== false;
+    } catch {
+        return true;
+    }
+}
+
 export const MpiGalleryBlock = ComponentFactory.create({
     name: 'MpiGalleryBlock',
     css: ['js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.css'],
@@ -916,9 +939,25 @@ export const MpiGalleryBlock = ComponentFactory.create({
         _unsubs.push(Events.on('generation-queue:changed', () => _syncPreviewQueueState()));
 
         // ── Media missing (garbage collection) ───────────────────────────────────
-        grid.on('media-missing', ({ group: g, itemId }) => {
+        grid.on('media-missing', async ({ group: g, itemId }) => {
             const missingIdx = g.history.findIndex(item => item.id === itemId);
             if (missingIdx === -1) return;
+
+            // A FAILURE TO DECODE IS NOT A MISSING FILE, AND THIS HANDLER DELETES.
+            // The card's <img>/<audio> fires the same `error` event either way, so an
+            // output that is present but unplayable took its project entry with it —
+            // the card appeared for a second or two and was gone, no error anywhere.
+            // Found via a Voice Changer run whose graph failed and returned one sample
+            // of silence while reporting success (MPI-622). Deletion now needs the file
+            // to actually be gone; anything else stays, marked, so the failure is
+            // visible instead of tidied away.
+            if (await _mediaStillOnDisk(g.history[missingIdx])) {
+                clientLogger.warn('MpiGalleryBlock',
+                    'media failed to load but the file is on disk — keeping the card', {
+                        groupId: g.id, itemId,
+                    });
+                return;
+            }
 
             if (g.history.length <= 1) {
                 removeGroup(g.id);

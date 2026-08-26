@@ -4,6 +4,65 @@
 
 **Project mode:** `scalable-foundation`.
 
+> **Session 24 note (2026-08-26) — THE FIRST REAL RUN HAPPENED, AND IT PRODUCED SILENCE.**
+> Fabio ran the flow. No error, a gallery card, "Generation finished" — and the output was
+> **one sample, 62 microseconds**. The run did NOT work; "no error" was not evidence and I
+> called it a success on that basis before opening the file.
+>
+> **ROOT CAUSE, traced end to end and proven twice.** `setuptools 83` removed
+> `pkg_resources`; `resemble-perth` still imports it, so `perth.perth_net` fails and
+> `perth.PerthImplicitWatermarker` is `None` — but `import perth` SUCCEEDS, so Chatterbox's
+> `vc.py` sets `PERTH_AVAILABLE = True` and calls `None()`. `FL_ChatterboxVC` catches every
+> exception and returns `torch.zeros((1, 2, 1))` @ 16 kHz, which is EXACTLY the file on disk
+> (2 ch, 1 sample, 16 kHz), then reports success. Its `message` output carries the error and
+> our graph does not wire it, so nothing surfaced anywhere.
+> Proof 1: re-ran the graph with `message` wired to `PreviewAny` →
+> `An unexpected error occurred during VC: 'NoneType' object is not callable`.
+> Proof 2: ran the model offline with `PERTH_AVAILABLE = False` → **118080 samples, 4.92 s,
+> 24 kHz, peak 10555** — real speech, sent to Fabio.
+>
+> **The pack's own `requirements.txt` keeps `resemble-perth` COMMENTED OUT** ("Optional
+> watermarking (may have Python 3.12+ compatibility issues)"), so a fresh engine never
+> installs it and is not affected. This machine had it as a leftover from an older pinned
+> commit. How many existing users carry the same leftover is UNKNOWN and worth a thought
+> before release. Fix applied: `pip uninstall resemble-perth` in the engine python.
+> **The engine must be RESTARTED after it** — `PERTH_AVAILABLE` is a module global read at
+> import time, so the running process keeps the broken value (verified: fresh seed, node 4
+> uncached, same error after the uninstall).
+>
+> **Fabio's four UI items, all fixed this session:**
+> 1. A filled AUDIO slot collapsed to the play icon — the "filled slot IS the image" rule has
+>    nothing to size an audio slot by (the `<audio>` is `display:none`). Now keeps the empty
+>    slot's 208×148 box via `:has(.mpi-base-flow__slot-audio)`.
+> 2. The result pane showed a broken-image icon: `_paintPlainResults` was
+>    `video ? <video> : <img>` with no audio branch. Added `_isAudioResult` + an
+>    `<audio controls>` pinned at identity transform, centred by CSS.
+> 3. **The card that appeared and vanished was REAL DATA LOSS, not a render glitch.** The
+>    card's `<audio>` could not decode the 1-sample flac → `media-missing` →
+>    `removeGroup` → the entry was deleted from `project.json` (the media + sidecar are
+>    still on disk, orphaned). A decode failure and a deleted file fire the same `error`,
+>    so ANY bad output silently deleted its own card. Deletion now requires `/file-exists`
+>    to say the file is actually gone; anything else stays and logs a warning.
+> 4. `IMPORTED` on a recorded clip: the recorder has always written
+>    `operation: 'recorded'`, the badge only ever read `uploaded`. Now reads both.
+>
+> Verified: `npm test` 747/747, eslint clean on all three changed files. The UI half is
+> Fabio's `user-ux` gate and is NOT yet confirmed on screen.
+>
+> **GATE CLOSED.** Fabio restarted the engine, ran it, and confirmed all four on screen —
+> *"Voice sounds good. Good match."* First Voice Changer generation in this card's history
+> that produced audible speech. Phase 4 is done; evidence in `validation.md`.
+>
+> **Next action: close-out.** What is left is `mpi-end-session` work, not build work —
+> `docs/voice-library.md`, whether `flowsRegistry.js`'s "swaps the voice itself" wording is
+> still dishonest now that a real run exists to judge, a note to MPI-607 that the seed cap
+> landed in its file territory, and the release-time question of how many existing users
+> carry the same broken `resemble-perth` leftover. `MEMORY.md` is over the compaction target
+> and needs Fabio's confirmation before anything is merged or removed.
+>
+> Two orphans from the failed run are still in the TTS project with no card:
+> `Media/flowVoiceChanger_001.flac` and `Media/.meta/f5fd7633-44af-4bbf-a648-c8ec9e91542d.json`.
+
 > **Session 23 note (2026-08-26) — PHASE 4 IS BUILT AND VERIFIED EXCEPT FOR ONE RUN.**
 > The voice library is wired into `voice-changer`'s "Target voice" slot as a third source
 > inside the existing media-picker overlay, opted in per slot by

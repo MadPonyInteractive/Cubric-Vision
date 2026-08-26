@@ -1485,3 +1485,72 @@ classifier**, while `Bash(python:*)` sat in `permissions.allow` the entire time.
 an `autoMode.allow` block in `.claude/settings.local.json` carrying `"$defaults"` plus two
 scoped rules; it took effect **live, no restart**. An agent cannot write that file itself -
 editing your own permission file is refused, and that refusal is correct.
+
+
+## Phase 4 gate — CLOSED 2026-08-26 (session 24)
+
+Fabio ran Voice Changer end to end and confirmed on screen and on headphones:
+a gallery card that **stays**, an audio player in the result pane, slots that keep their
+size when filled, a RECORDED badge, and — his words — *"Voice sounds good. Good match."*
+That is the first Voice Changer generation in this card's history that produced audible
+speech, and it closes the `user-ux` gate the phase was blocked on.
+
+### The run that looked like a success and was not
+
+The first attempt returned no error, wrote a gallery card and said "Generation finished".
+The file was **one sample, 62 microseconds**. "No error" is not evidence a generation
+worked — open the output. This session called it a success before doing so.
+
+Chain, proven twice:
+
+    setuptools 83 removed pkg_resources
+      -> resemble-perth's perth.perth_net fails to import
+      -> perth.PerthImplicitWatermarker is None
+      -> BUT `import perth` still succeeds, so chatterbox/vc.py sets PERTH_AVAILABLE = True
+      -> ChatterboxVC.__init__ calls None()  ->  TypeError
+      -> FL_ChatterboxVC catches EVERY exception and returns
+         torch.zeros((1, 2, 1)) @ 16 kHz, then reports success
+
+`torch.zeros((1, 2, 1))` @ 16 kHz is bit-for-bit what landed on disk: 2 channels, 1 sample,
+16 kHz. The node's `message` output carries the real error and our graph does not wire it,
+so nothing surfaced in the app, the log, or the console.
+
+* **Proof 1** — same graph with `message` wired to `PreviewAny`:
+  `An unexpected error occurred during VC: 'NoneType' object is not callable`.
+* **Proof 2** — the model run offline with `PERTH_AVAILABLE = False`:
+  118080 samples, 4.92 s, 24 kHz, peak 10555 — real speech, matching the input's duration.
+
+**Fix:** `pip uninstall resemble-perth` in the engine python. **The engine must be RESTARTED
+after it** — `PERTH_AVAILABLE` is a module global read at import time, so the running process
+keeps the broken value. Verified the hard way: after the uninstall, a fresh seed with node 4
+uncached still failed until the restart.
+
+**Blast radius, deliberately left open.** The pack's own `requirements.txt` keeps
+`resemble-perth` commented out ("Optional watermarking (may have Python 3.12+ compatibility
+issues)"), so a fresh engine never installs it. This machine carried it as a leftover from an
+older pinned commit of `ComfyUI_Fill-ChatterBox`. **How many existing users carry the same
+leftover is UNKNOWN** and is a release-time question, not a build-time one.
+
+### The vanishing card was data loss, not a render glitch
+
+The card appeared for a second or two and disappeared. Cause: the card's `<audio>` could not
+decode the 1-sample flac, `media-missing` fired, and `removeGroup` deleted the entry from
+`project.json`. The media file and its sidecar are still on disk, orphaned.
+
+**A decode failure and a deleted file raise the same `error` event**, so ANY unplayable output
+silently deleted its own card — the failure tidied away the only evidence of itself. Deletion
+now requires `/file-exists` to confirm the file is actually gone; anything else keeps the card
+and logs a warning. The helper fails CLOSED (keeps the card) when the check cannot run: a
+network blip is not evidence, and the cost of being wrong is deletion.
+
+### The other three, each a real cause rather than a nudge
+
+* **Filled audio slot collapsed to the play icon.** The "a filled slot IS the image" rule sizes
+  the box from its `<img>`/`<video>`; an audio slot's `<audio>` is `display: none`, so there
+  was nothing to size it by. It keeps the empty slot's own 208x148 box now.
+* **Broken image in the result pane.** `_paintPlainResults` was `video ? <video> : <img>` with
+  no audio branch. Voice Changer is the first flow whose whole output is a sound file.
+* **IMPORTED on a recorded clip.** The recorder has written `operation: 'recorded'` all along;
+  the badge only ever read `uploaded`.
+
+Automated: `npm test` 747/747, eslint clean on all three changed files.

@@ -1837,6 +1837,17 @@ export const MpiBaseFlow = ComponentFactory.create({
         }
 
         /**
+         * Is this result AUDIO? Voice Changer is the first flow whose whole output is
+         * a sound file, and before MPI-622 there was no branch for it — audio fell to
+         * the `<img>` in `_paintPlainResults` and the pane showed a broken-image icon
+         * over a file that was perfectly fine.
+         * @param {Object} it
+         */
+        function _isAudioResult(it) {
+            return it?.type === 'audio' || it?.mediaType === 'audio';
+        }
+
+        /**
          * Which surface a single result opens on.
          *
          * A declared comparison wins — that is the point of declaring it, and the
@@ -1887,6 +1898,24 @@ export const MpiBaseFlow = ComponentFactory.create({
         function _paintPlainResults(withPath) {
             for (const { it, path } of withPath) {
                 const url = resolveMediaUrl(path);
+                if (_isAudioResult(it)) {
+                    _resultMediaEl.appendChild(ce('audio', {
+                        className: 'mpi-base-flow__result-audio',
+                        src: url,
+                        controls: true,
+                    }));
+                    // A player has no natural pixels for ViewManager to fit, so it is
+                    // pinned at identity and the media layer centres it in CSS. Skipping
+                    // this would leave the PREVIOUS result's zoom/pan on the transform.
+                    // ponytail: identity instead of its own frame surface (what compare
+                    // and the video player get). Wheel-zoom therefore still reaches the
+                    // control — harmless, but give audio a real surface if that bites.
+                    _resultView.scale = 1;
+                    _resultView.offsetX = 0;
+                    _resultView.offsetY = 0;
+                    _applyResultTransform();
+                    continue;
+                }
                 const isVideo = _isVideoResult(it);
                 // NOT muted: a Flow whose whole output is the audio (foley) played
                 // silent until the user found the speaker button. `muted` is normally
