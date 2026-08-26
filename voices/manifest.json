@@ -1,7 +1,7 @@
 {
   "version": 1,
   "variant": "voicedesign",
-  "note": "The 228 CC0 kyutai/tts-voices donations were auditioned in full and REJECTED in full (MPI-622, 2026-08-26): unintelligible accents, poor mic quality, and R4/R5 held one voice each. The 60 curated opus were removed from this bundle so they cannot ship. voices[] stays empty until the Qwen3-TTS VoiceDesign library (12 categories x 5 = 60) is imported through scripts/voice-library/ingest.py. The performance grid below is Phase 2 work, accepted and unaffected. accent is null for all - it must be assigned by a human listener, never inferred.",
+  "note": "voices[] is the Qwen3-TTS VoiceDesign library authored in-house for MPI-622 - 12 categories x 5 = 60, every clip approved by ear, imported through scripts/voice-library/ingest.py --from-dir. The 228 CC0 kyutai/tts-voices donations were auditioned in full and REJECTED in full (2026-08-26): unintelligible accents, poor mic quality, and R4/R5 held one voice each; their 60 curated opus were removed from this bundle so they cannot ship. performanceClips below is Phase 2 work, accepted and unaffected. accent is null for all - it must be assigned by a human listener, never inferred. register is derived from the MEASURED f0, so a category may legitimately span two registers.",
   "voices": [
     {
       "id": "cartoon_critter_1",
@@ -22,8 +22,8 @@
         458.3
       ],
       "sample": "cartoon_critter_1.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/cartoon_critter_1_narration.opus",
+      "audition_character": "audition/cartoon_critter_1_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -47,8 +47,8 @@
         494.1
       ],
       "sample": "cartoon_critter_2.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/cartoon_critter_2_narration.opus",
+      "audition_character": "audition/cartoon_critter_2_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -72,8 +72,8 @@
         499.8
       ],
       "sample": "cartoon_critter_3.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/cartoon_critter_3_narration.opus",
+      "audition_character": "audition/cartoon_critter_3_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -97,8 +97,8 @@
         499.8
       ],
       "sample": "cartoon_critter_4.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/cartoon_critter_4_narration.opus",
+      "audition_character": "audition/cartoon_critter_4_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -122,8 +122,8 @@
         498.7
       ],
       "sample": "cartoon_critter_5.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/cartoon_critter_5_narration.opus",
+      "audition_character": "audition/cartoon_critter_5_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -147,8 +147,8 @@
         405.3
       ],
       "sample": "child_1.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/child_1_narration.opus",
+      "audition_character": "audition/child_1_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -172,8 +172,8 @@
         461.0
       ],
       "sample": "child_2.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/child_2_narration.opus",
+      "audition_character": "audition/child_2_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -197,8 +197,8 @@
         499.8
       ],
       "sample": "child_3.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/child_3_narration.opus",
+      "audition_character": "audition/child_3_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -222,8 +222,8 @@
         494.1
       ],
       "sample": "child_4.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/child_4_narration.opus",
+      "audition_character": "audition/child_4_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -247,8 +247,8 @@
         463.6
       ],
       "sample": "child_5.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/child_5_narration.opus",
+      "audition_character": "audition/child_5_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -272,8 +272,8 @@
         153.8
       ],
       "sample": "deep_male_1.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/deep_male_1_narration.opus",
+      "audition_character": "audition/deep_male_1_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -297,8 +297,8 @@
         133.1
       ],
       "sample": "deep_male_2.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/deep_male_2_narration.opus",
+      "audition_character": "audition/deep_male_2_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -322,8 +322,8 @@
         103.3
       ],
       "sample": "deep_male_3.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/deep_male_3_narration.opus",
+      "audition_character": "audition/deep_male_3_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -347,8 +347,8 @@
         110.7
       ],
       "sample": "deep_male_4.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/deep_male_4_narration.opus",
+      "audition_character": "audition/deep_male_4_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -372,8 +372,8 @@
         111.3
       ],
       "sample": "deep_male_5.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/deep_male_5_narration.opus",
+      "audition_character": "audition/deep_male_5_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -397,8 +397,8 @@
         211.4
       ],
       "sample": "elderly_female_1.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/elderly_female_1_narration.opus",
+      "audition_character": "audition/elderly_female_1_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -422,8 +422,8 @@
         208.9
       ],
       "sample": "elderly_female_2.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/elderly_female_2_narration.opus",
+      "audition_character": "audition/elderly_female_2_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -447,8 +447,8 @@
         238.6
       ],
       "sample": "elderly_female_3.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/elderly_female_3_narration.opus",
+      "audition_character": "audition/elderly_female_3_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -472,8 +472,8 @@
         189.3
       ],
       "sample": "elderly_female_4.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/elderly_female_4_narration.opus",
+      "audition_character": "audition/elderly_female_4_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -497,8 +497,8 @@
         235.9
       ],
       "sample": "elderly_female_5.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/elderly_female_5_narration.opus",
+      "audition_character": "audition/elderly_female_5_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -522,8 +522,8 @@
         331.7
       ],
       "sample": "elderly_male_1.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/elderly_male_1_narration.opus",
+      "audition_character": "audition/elderly_male_1_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -547,8 +547,8 @@
         318.5
       ],
       "sample": "elderly_male_2.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/elderly_male_2_narration.opus",
+      "audition_character": "audition/elderly_male_2_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -572,8 +572,8 @@
         154.7
       ],
       "sample": "elderly_male_3.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/elderly_male_3_narration.opus",
+      "audition_character": "audition/elderly_male_3_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -597,8 +597,8 @@
         155.7
       ],
       "sample": "elderly_male_4.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/elderly_male_4_narration.opus",
+      "audition_character": "audition/elderly_male_4_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -622,8 +622,8 @@
         152.9
       ],
       "sample": "elderly_male_5.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/elderly_male_5_narration.opus",
+      "audition_character": "audition/elderly_male_5_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -647,8 +647,8 @@
         199.0
       ],
       "sample": "mature_female_1.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/mature_female_1_narration.opus",
+      "audition_character": "audition/mature_female_1_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -672,8 +672,8 @@
         234.5
       ],
       "sample": "mature_female_2.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/mature_female_2_narration.opus",
+      "audition_character": "audition/mature_female_2_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -697,8 +697,8 @@
         175.6
       ],
       "sample": "mature_female_3.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/mature_female_3_narration.opus",
+      "audition_character": "audition/mature_female_3_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -722,8 +722,8 @@
         181.0
       ],
       "sample": "mature_female_4.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/mature_female_4_narration.opus",
+      "audition_character": "audition/mature_female_4_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -747,8 +747,8 @@
         236.3
       ],
       "sample": "mature_female_5.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/mature_female_5_narration.opus",
+      "audition_character": "audition/mature_female_5_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -772,8 +772,8 @@
         100.3
       ],
       "sample": "narrator_trailer_1.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/narrator_trailer_1_narration.opus",
+      "audition_character": "audition/narrator_trailer_1_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -797,8 +797,8 @@
         113.3
       ],
       "sample": "narrator_trailer_2.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/narrator_trailer_2_narration.opus",
+      "audition_character": "audition/narrator_trailer_2_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -822,8 +822,8 @@
         115.9
       ],
       "sample": "narrator_trailer_3.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/narrator_trailer_3_narration.opus",
+      "audition_character": "audition/narrator_trailer_3_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -847,8 +847,8 @@
         91.8
       ],
       "sample": "narrator_trailer_4.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/narrator_trailer_4_narration.opus",
+      "audition_character": "audition/narrator_trailer_4_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -872,8 +872,8 @@
         96.4
       ],
       "sample": "narrator_trailer_5.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/narrator_trailer_5_narration.opus",
+      "audition_character": "audition/narrator_trailer_5_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -897,8 +897,8 @@
         206.9
       ],
       "sample": "standard_female_1.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/standard_female_1_narration.opus",
+      "audition_character": "audition/standard_female_1_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -922,8 +922,8 @@
         290.4
       ],
       "sample": "standard_female_2.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/standard_female_2_narration.opus",
+      "audition_character": "audition/standard_female_2_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -947,8 +947,8 @@
         240.0
       ],
       "sample": "standard_female_3.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/standard_female_3_narration.opus",
+      "audition_character": "audition/standard_female_3_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -972,8 +972,8 @@
         276.2
       ],
       "sample": "standard_female_4.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/standard_female_4_narration.opus",
+      "audition_character": "audition/standard_female_4_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -997,8 +997,8 @@
         287.1
       ],
       "sample": "standard_female_5.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/standard_female_5_narration.opus",
+      "audition_character": "audition/standard_female_5_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1022,8 +1022,8 @@
         164.9
       ],
       "sample": "standard_male_1.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/standard_male_1_narration.opus",
+      "audition_character": "audition/standard_male_1_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1047,8 +1047,8 @@
         123.5
       ],
       "sample": "standard_male_2.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/standard_male_2_narration.opus",
+      "audition_character": "audition/standard_male_2_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1072,8 +1072,8 @@
         139.9
       ],
       "sample": "standard_male_3.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/standard_male_3_narration.opus",
+      "audition_character": "audition/standard_male_3_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1097,8 +1097,8 @@
         131.6
       ],
       "sample": "standard_male_4.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/standard_male_4_narration.opus",
+      "audition_character": "audition/standard_male_4_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1122,8 +1122,8 @@
         173.7
       ],
       "sample": "standard_male_5.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/standard_male_5_narration.opus",
+      "audition_character": "audition/standard_male_5_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1147,8 +1147,8 @@
         102.1
       ],
       "sample": "villain_menacing_1.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/villain_menacing_1_narration.opus",
+      "audition_character": "audition/villain_menacing_1_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1172,8 +1172,8 @@
         106.9
       ],
       "sample": "villain_menacing_2.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/villain_menacing_2_narration.opus",
+      "audition_character": "audition/villain_menacing_2_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1197,8 +1197,8 @@
         123.2
       ],
       "sample": "villain_menacing_3.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/villain_menacing_3_narration.opus",
+      "audition_character": "audition/villain_menacing_3_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1222,8 +1222,8 @@
         210.6
       ],
       "sample": "villain_menacing_4.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/villain_menacing_4_narration.opus",
+      "audition_character": "audition/villain_menacing_4_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1247,8 +1247,8 @@
         311.1
       ],
       "sample": "villain_menacing_5.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/villain_menacing_5_narration.opus",
+      "audition_character": "audition/villain_menacing_5_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1272,8 +1272,8 @@
         420.3
       ],
       "sample": "young_female_1.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/young_female_1_narration.opus",
+      "audition_character": "audition/young_female_1_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1297,8 +1297,8 @@
         453.1
       ],
       "sample": "young_female_2.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/young_female_2_narration.opus",
+      "audition_character": "audition/young_female_2_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1322,8 +1322,8 @@
         453.1
       ],
       "sample": "young_female_3.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/young_female_3_narration.opus",
+      "audition_character": "audition/young_female_3_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1347,8 +1347,8 @@
         427.6
       ],
       "sample": "young_female_4.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/young_female_4_narration.opus",
+      "audition_character": "audition/young_female_4_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1372,8 +1372,8 @@
         447.9
       ],
       "sample": "young_female_5.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/young_female_5_narration.opus",
+      "audition_character": "audition/young_female_5_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1397,8 +1397,8 @@
         235.9
       ],
       "sample": "young_male_1.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/young_male_1_narration.opus",
+      "audition_character": "audition/young_male_1_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1422,8 +1422,8 @@
         366.3
       ],
       "sample": "young_male_2.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/young_male_2_narration.opus",
+      "audition_character": "audition/young_male_2_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1447,8 +1447,8 @@
         294.5
       ],
       "sample": "young_male_3.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/young_male_3_narration.opus",
+      "audition_character": "audition/young_male_3_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1472,8 +1472,8 @@
         333.2
       ],
       "sample": "young_male_4.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/young_male_4_narration.opus",
+      "audition_character": "audition/young_male_4_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1497,8 +1497,8 @@
         300.6
       ],
       "sample": "young_male_5.opus",
-      "audition_narration": null,
-      "audition_character": null,
+      "audition_narration": "audition/young_male_5_narration.opus",
+      "audition_character": "audition/young_male_5_character.opus",
       "licence": "Cubric-Vision-Voice-Licence-1.0",
       "source_url": null,
       "added_at": "2026-08-26"
@@ -1696,6 +1696,314 @@
       "source": "qwen3-tts-voicedesign",
       "seed": 2011,
       "added_at": "2026-08-26"
+    },
+    {
+      "id": "perf_R2_flat",
+      "register": "R2",
+      "emotion": "flat",
+      "clip": "performance/perf_R2_flat.opus",
+      "median_f0": 150.3,
+      "f0_p10_p90": [
+        141.1,
+        162.0
+      ],
+      "pitch_span_st": 2.4,
+      "measured_register": "R2",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2100,
+      "added_at": "2026-08-26",
+      "calibration_st": -3.59
+    },
+    {
+      "id": "perf_R2_neutral",
+      "register": "R2",
+      "emotion": "neutral",
+      "clip": "performance/perf_R2_neutral.opus",
+      "median_f0": 170.7,
+      "f0_p10_p90": [
+        144.8,
+        196.1
+      ],
+      "pitch_span_st": 5.3,
+      "measured_register": "R2",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2101,
+      "added_at": "2026-08-26",
+      "calibration_st": -3.59
+    },
+    {
+      "id": "perf_R2_angry",
+      "register": "R2",
+      "emotion": "angry",
+      "clip": "performance/perf_R2_angry.opus",
+      "median_f0": 128.6,
+      "f0_p10_p90": [
+        106.9,
+        157.4
+      ],
+      "pitch_span_st": 6.7,
+      "measured_register": "R1",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2102,
+      "added_at": "2026-08-26",
+      "calibration_st": -3.59
+    },
+    {
+      "id": "perf_R2_sad",
+      "register": "R2",
+      "emotion": "sad",
+      "clip": "performance/perf_R2_sad.opus",
+      "median_f0": 160.2,
+      "f0_p10_p90": [
+        153.8,
+        186.1
+      ],
+      "pitch_span_st": 3.3,
+      "measured_register": "R2",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2103,
+      "added_at": "2026-08-26",
+      "calibration_st": -3.59
+    },
+    {
+      "id": "perf_R2_cheerful",
+      "register": "R2",
+      "emotion": "cheerful",
+      "clip": "performance/perf_R2_cheerful.opus",
+      "median_f0": 210.1,
+      "f0_p10_p90": [
+        179.8,
+        275.7
+      ],
+      "pitch_span_st": 7.4,
+      "measured_register": "R3",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2104,
+      "added_at": "2026-08-26",
+      "calibration_st": -3.59
+    },
+    {
+      "id": "perf_R2_whisper",
+      "register": "R2",
+      "emotion": "whisper",
+      "clip": "performance/perf_R2_whisper.opus",
+      "median_f0": 130.9,
+      "f0_p10_p90": [
+        117.1,
+        146.0
+      ],
+      "pitch_span_st": 3.8,
+      "measured_register": "R2",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2105,
+      "added_at": "2026-08-26",
+      "calibration_st": -3.59
+    },
+    {
+      "id": "perf_R4_flat",
+      "register": "R4",
+      "emotion": "flat",
+      "clip": "performance/perf_R4_flat.opus",
+      "median_f0": 295.5,
+      "f0_p10_p90": [
+        255.7,
+        353.4
+      ],
+      "pitch_span_st": 5.6,
+      "measured_register": "R4",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2106,
+      "added_at": "2026-08-26",
+      "calibration_st": -2.86
+    },
+    {
+      "id": "perf_R4_neutral",
+      "register": "R4",
+      "emotion": "neutral",
+      "clip": "performance/perf_R4_neutral.opus",
+      "median_f0": 320.4,
+      "f0_p10_p90": [
+        280.5,
+        387.6
+      ],
+      "pitch_span_st": 5.6,
+      "measured_register": "R4",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2107,
+      "added_at": "2026-08-26",
+      "calibration_st": -2.86
+    },
+    {
+      "id": "perf_R4_angry",
+      "register": "R4",
+      "emotion": "angry",
+      "clip": "performance/perf_R4_angry.opus",
+      "median_f0": 295.5,
+      "f0_p10_p90": [
+        253.4,
+        372.3
+      ],
+      "pitch_span_st": 6.7,
+      "measured_register": "R4",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2108,
+      "added_at": "2026-08-26",
+      "calibration_st": -2.86
+    },
+    {
+      "id": "perf_R4_sad",
+      "register": "R4",
+      "emotion": "sad",
+      "clip": "performance/perf_R4_sad.opus",
+      "median_f0": 343.4,
+      "f0_p10_p90": [
+        287.1,
+        389.9
+      ],
+      "pitch_span_st": 5.3,
+      "measured_register": "R5",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2109,
+      "added_at": "2026-08-26",
+      "calibration_st": -2.86
+    },
+    {
+      "id": "perf_R4_cheerful",
+      "register": "R4",
+      "emotion": "cheerful",
+      "clip": "performance/perf_R4_cheerful.opus",
+      "median_f0": 357.5,
+      "f0_p10_p90": [
+        292.1,
+        410.7
+      ],
+      "pitch_span_st": 5.9,
+      "measured_register": "R5",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2110,
+      "added_at": "2026-08-26",
+      "calibration_st": -2.86
+    },
+    {
+      "id": "perf_R4_whisper",
+      "register": "R4",
+      "emotion": "whisper",
+      "clip": "performance/perf_R4_whisper.opus",
+      "median_f0": 267.8,
+      "f0_p10_p90": [
+        240.0,
+        314.1
+      ],
+      "pitch_span_st": 4.7,
+      "measured_register": "R4",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2111,
+      "added_at": "2026-08-26",
+      "calibration_st": -2.86
+    },
+    {
+      "id": "perf_R5_flat",
+      "register": "R5",
+      "emotion": "flat",
+      "clip": "performance/perf_R5_flat.opus",
+      "median_f0": 341.4,
+      "f0_p10_p90": [
+        263.4,
+        482.5
+      ],
+      "pitch_span_st": 10.5,
+      "measured_register": "R5",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2112,
+      "added_at": "2026-08-26",
+      "calibration_st": 0.6
+    },
+    {
+      "id": "perf_R5_neutral",
+      "register": "R5",
+      "emotion": "neutral",
+      "clip": "performance/perf_R5_neutral.opus",
+      "median_f0": 389.9,
+      "f0_p10_p90": [
+        290.4,
+        499.8
+      ],
+      "pitch_span_st": 9.4,
+      "measured_register": "R5",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2113,
+      "added_at": "2026-08-26",
+      "calibration_st": 0.6
+    },
+    {
+      "id": "perf_R5_angry",
+      "register": "R5",
+      "emotion": "angry",
+      "clip": "performance/perf_R5_angry.opus",
+      "median_f0": 469.0,
+      "f0_p10_p90": [
+        394.4,
+        499.8
+      ],
+      "pitch_span_st": 4.1,
+      "measured_register": "R5",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2114,
+      "added_at": "2026-08-26",
+      "calibration_st": 0.6
+    },
+    {
+      "id": "perf_R5_sad",
+      "register": "R5",
+      "emotion": "sad",
+      "clip": "performance/perf_R5_sad.opus",
+      "median_f0": 435.1,
+      "f0_p10_p90": [
+        333.6,
+        499.8
+      ],
+      "pitch_span_st": 7.0,
+      "measured_register": "R5",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2115,
+      "added_at": "2026-08-26",
+      "calibration_st": 0.6
+    },
+    {
+      "id": "perf_R5_cheerful",
+      "register": "R5",
+      "emotion": "cheerful",
+      "clip": "performance/perf_R5_cheerful.opus",
+      "median_f0": 359.6,
+      "f0_p10_p90": [
+        258.7,
+        455.7
+      ],
+      "pitch_span_st": 9.8,
+      "measured_register": "R5",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2116,
+      "added_at": "2026-08-26",
+      "calibration_st": 0.6
+    },
+    {
+      "id": "perf_R5_whisper",
+      "register": "R5",
+      "emotion": "whisper",
+      "clip": "performance/perf_R5_whisper.opus",
+      "median_f0": 370.1,
+      "f0_p10_p90": [
+        341.0,
+        428.1
+      ],
+      "pitch_span_st": 3.9,
+      "measured_register": "R5",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2117,
+      "added_at": "2026-08-26",
+      "calibration_st": 0.6
     }
-  ]
+  ],
+  "auditionText": "Just show me the whole chart, and I'll tell you which part to fix.",
+  "auditionUpdated": "2026-08-26"
 }

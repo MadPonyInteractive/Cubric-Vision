@@ -1410,3 +1410,78 @@ The 60 rejected kyutai voices are **still in `voices/`**, deliberately. Deleting
 leave the app with an empty library and no replacement, and removal is one command once the
 VoiceDesign library lands. **They must not ship.** `manifest.performanceClips` (the 12 accepted
 emotion clips) is untouched and still guarded by contract check 9.
+
+## Phase 3, session 21 (2026-08-26) — the re-import wipe, found and closed
+
+🔴 **`ingest.py --from-dir` would have deleted all 120 Phase 3 auditions on its next run.**
+`build_voice_entry` hardcodes `audition_narration` / `audition_character` to `None` and the
+writer replaced `manifest["voices"]` wholesale, so any re-import — a new voice, a re-measure, a
+category fix — would have left a well-formed 60-voice manifest with every audition reference
+silently gone. This is the **same defect, in the same file, as the `performanceClips: []`
+hardcode caught in session 18**, and again nothing reported it; it was found by reading the
+writer before trusting it. Fixed by reading the manifest before the loop and carrying prior
+auditions forward keyed by voice id.
+
+**Proven end to end, not by inspection.** `scratchpad/check_audition_carry.py` injects sentinel
+audition paths into two voices, runs the real `ingest.py` over the real `lib_v2`, and asserts
+they survived. Result: **2/2 sentinels kept, `cartoon_critter_1` still null, 12 perf clips
+intact, 60/60 opus reused (no churn), 60 voices out.** `check_manifest.mjs` 12/12 and
+`voice-library.test.cjs` 8/8 after. The check restores the manifest in a `finally` — a mutation
+test that crashes without one leaves a real file mutated on disk.
+
+**`ingest.py` runs under `G:\ComfyUi\python_embeded\python.exe`** — the default python on this
+box has no librosa. CPU-only; no GPU involved in any of the above.
+
+### A size gate that will fail when the auditions land
+
+Samples average **50.0 KB** (60 = 3.07 MB), not the 24 KB D1 estimated — the library text is a
+long read. 120 auditions at sample length add **6.0 MB** for a 9.5 MB bundle; at ~4 s they add
+~2.0 MB for **~5.5 MB**. `check_manifest.mjs` check 12 asserts `< 5 MB`, so **it fails either
+way** and its threshold must be re-derived and written down when the clips exist, not nudged
+until it passes.
+
+## Phase 3 RESULT (2026-08-26, session 21)
+
+**120 auditions generated through the shipping route, 60/60 voices carry both, zero failures.**
+Bench jobs: 5 VC-source TTS + 60 narration TTS + 60 VC = **125, not 185** - the character
+route's TTS half is identical for every voice in a register, so it runs once per register and
+its output is reused as the VC source. `voices/audition/` 2.05 MB, bundle **6.14 MB**,
+**13/13** contract checks and **8/8** unit tests.
+
+Mechanism confirmed on two registers before the full run committed the GPU:
+
+```
+deep_male_1.opus        111.3 Hz     <- sample
+nar_deep_male_1         108.2 Hz     narration tracks the sample
+cha_deep_male_1         130.9 Hz     character diverges (+2.8 st)
+cartoon_critter_1.opus  401.3 Hz
+nar_cartoon_critter_1   427.6 Hz
+cha_cartoon_critter_1   432.6 Hz
+```
+
+That is the designed behaviour and NOT the verdict - the character audition differing is the
+whole reason auditions exist, but whether it differs *well* is an ear question. Review page:
+`%LOCALAPPDATA%/cubric-vision/mpi622/phase3-review.html`.
+
+### The re-import guard, re-proven with real data
+
+The earlier proof used injected sentinels. Re-run against the ACTUAL 120 audition references:
+`rc 0 | voices 60 | lost auditions: 0`. That is the check that mattered, and it only became
+possible once the auditions existed.
+
+### A size gate that was about to start lying
+
+Check 11 (orphans) and the bundle-size gate both enumerated `voices/` and `performance/` by
+hand. Adding `audition/` as a subdirectory would have left **2.05 MB of shipped clips out of
+the measurement** - green on a bundle it was not measuring - and left a curated-away voice
+stranding three files instead of one. Both walk recursively now. The budget moved 5 -> 8 MB
+with the arithmetic recorded (D1 assumed ~24 KB/clip; real is ~50 KB samples, ~17 KB
+auditions), not nudged until it passed.
+
+### Permissions: the classifier and the allowlist are different layers
+
+Repeated refusals of detached/background process launches came from the **auto mode
+classifier**, while `Bash(python:*)` sat in `permissions.allow` the entire time. The fix was
+an `autoMode.allow` block in `.claude/settings.local.json` carrying `"$defaults"` plus two
+scoped rules; it took effect **live, no restart**. An agent cannot write that file itself -
+editing your own permission file is refused, and that refusal is correct.

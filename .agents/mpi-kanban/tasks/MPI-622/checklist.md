@@ -275,14 +275,88 @@
 - [x] 🔴 **7 of 12 v1 voices missed their target register**, and `mature_female` (172.1) vs
       `standard_female` (174.1) are **2 Hz apart** - two categories nothing but delivery
       separates
-- [ ] 🟡 **SEVEN CATEGORIES STILL UNJUDGED**: `deep_male`, `standard_male`, `young_male`,
-      `narrator_trailer`, `standard_female`, `young_female`, `cartoon_critter`. Cartoon is the
-      risk cell - Fabio rejected the corpus one as a bad actor impersonating a cartoon
-- [ ] 🟡 **Matrix unjudged** - does v2/v3 SOUND older than the v1 control?
-- [ ] 🔴 **The 60 rejected kyutai voices are still in `voices/` and MUST NOT SHIP.** Left
-      deliberately: deleting now leaves the app with an empty library and no replacement, and
-      removal is one command once the VoiceDesign library lands.
-      `manifest.performanceClips` (the 12 accepted emotion clips) is untouched, guarded by
-      contract check 9
-- [ ] Only APPROVED categories get their remaining four. Use `library_personas.py --only
-      <slugs> --start 1` so seeds cannot collide with the accepted take
+- [x] 🟡 **All twelve categories judged.** The seven open at session 17 (`deep_male`,
+      `standard_male`, `young_male`, `narrator_trailer`, `standard_female`, `young_female`,
+      `cartoon_critter`) were auditioned and approved; cartoon, the risk cell, passed
+- [x] 🟡 **Matrix judged** - pitch responds to wording, age does not. v2 wording kept for
+      child (509.8 -> 326.8 Hz); age reached instead via the VC-then-TTS-reference route
+- [x] 🔴 **The 60 rejected kyutai voices are OUT of `voices/`** (`12174bc1`, Fabio's own
+      `git rm`). `manifest.performanceClips` untouched, still 12, still guarded by contract
+      check 9. The opus remain in git objects by decision - do not propose a filter-repo
+- [x] **Every category has its five.** 12 x 5 = 60 shipped; `elderly_male` was the last to
+      close, via `elderly_high.py` seeds 9201/9202
+
+## Phase 3 - auditions
+
+- [x] 🔴 **`ingest.py` no longer wipes the auditions on re-import.** `build_voice_entry`
+      hardcodes both fields `None` and the writer replaced `manifest["voices"]` wholesale,
+      so the next `--from-dir` run of any kind would have silently deleted all 120 audition
+      references and left a well-formed manifest behind. Same defect class as the
+      `performanceClips: []` hardcode caught in session 18. Prior auditions are now read
+      before the loop and carried forward by voice id
+- [x] **R2 / R4 / R5 grids AUTHORED - 18 clips, so the grid is now 5 registers x 6 emotions
+      = 30.** Started as three neutral-only clips; `check_manifest.mjs` check 9 refused that,
+      and it was right - it asserts every register PRESENT carries all six emotions, so a
+      neutral-only R5 would have put a voice in the picker offering emotions it cannot
+      perform. 18 is the smallest set that does not break the invariant, and it closes the
+      handoff's pending "grids for R2/R4/R5" item. 12/12 + 8/8, bundle 3.45 -> 4.18 MB
+- [x] **The calibration target is the MEAN f0 OF THE VOICES A GRID DRIVES, not the band
+      midpoint.** Derived from the two shipped ear-approved grids, which already do exactly
+      that: R1's neutral sits 1.34 st off its 22 voices' mean, R3's 0.22 st off its 13.
+      Band-midpoint targeting would have put R2 nine semitones from the voices it drives.
+      Applied per REGISTER, not per clip, so every emotion's pitch delta survives intact:
+      R2 -3.59 st, R4 -2.86, R5 +0.60. Neutrals land 169.7 / 322.2 / 391.0 Hz, all in band
+- [x] 🔴 **A RE-ROLL WAS THE WRONG TOOL AND THE CARD ALREADY SAID SO.** Three seeds of the
+      child persona ALL measured R5 (363-408 Hz) against a 260-340 band - the persona simply
+      does not reach R4 with an emotion clause appended. `phase2_perf_clips.py` states the
+      rule outright: a clip off its baseline is REPAIRED with `pitch_tools.py shift`
+      (+/-19 st validated, emotion intact), not re-rolled. Cost ~2 min of GPU to relearn
+- [x] **Relabelling R4 <-> R5 by measured f0 was REJECTED.** It is what `register_of()` does
+      everywhere else and it looked free, but it would have left a cartoon read driving every
+      child audition and a child read driving every cartoon one. VC takes prosody from the
+      SOURCE, so that is a real perceptual risk traded for a pitch fix
+- [ ] 🟡 **EAR CHECK OWED on the 18 new clips**, same ask as the Phase 2 grid: do the six
+      reads in each register read as their labels? VoiceDesign's prompt label is not a
+      promise of the delivered emotion. One measured flag to listen for: `perf_R5_neutral`
+      is only **50.5% voiced**, the lowest in the set, and four R5 cells peg p90 at pyin's
+      499.8 Hz ceiling
+- [x] **120 AUDITIONS GENERATED AND INSTALLED - 60/60 voices have BOTH.** `audition_narration`
+      (direct TTS, exag 0.5 / cfg 0.3) and `audition_character` (TTS(neutral perf clip,
+      exag 1.2 / cfg 0.3) -> VC). **125 bench jobs, not 185**: the character route's TTS half
+      is identical for every voice in a register (fixed text, fixed neutral clip, fixed seed),
+      so TTS ran 5x and VC 60x. Zero failures. `voices/audition/` is 2.05 MB, bundle 6.14 MB,
+      13/13 + 8/8
+- [x] **Inputs are the SHIPPED OPUS, decoded to wav - not the pre-encode `lib_v2` wavs.** An
+      audition generated from an artifact the user never hears is an audition of the wrong
+      thing
+- [x] **The re-import guard re-proven with REAL data.** The earlier check used injected
+      sentinels; a full `ingest.py --from-dir` run against the actual 120 audition references
+      lost none. That is the check that matters, and it only became possible once the
+      auditions existed
+- [ ] 🟡 **EAR CHECK OWED on the auditions** - review page at
+      `%LOCALAPPDATA%/cubric-vision/mpi622/phase3-review.html` (8.5 MB, audio embedded).
+      Per voice: sample / narration / character side by side. The CHARACTER audition must NOT
+      sound like the raw sample and the NARRATION one must; if character ever sounds identical
+      to sample, the VC route is not doing its job. Same page carries the 18 new clips
+- [x] **Audition line locked:** *"Just show me the whole chart, and I'll tell you which part
+      to fix."* Short (~3.5 s) because a picker plays it inline and 120 long reads would add
+      6 MB; DIFFERENT from the sample text because the two clips sit side by side and the
+      point is to hear the ROUTE differ. Recorded in the manifest as `auditionText`
+- [x] **check_manifest.mjs: two blind spots closed, one check added.** Check 11 (orphans) and
+      the size gate both enumerated `voices/` and `performance/` BY HAND, so the new
+      `audition/` subdir would have shipped **uncounted** - a size gate reporting green on a
+      bundle it was not measuring, and a curated-away voice stranding three files instead of
+      one. Both now walk recursively. New check 12 is Phase 3's verify step: every voice has
+      BOTH auditions, on disk, non-empty. Budget raised 5 -> 8 MB with the arithmetic written
+      in (D1 assumed ~24 KB/clip; real is ~50 KB samples, ~17 KB auditions), high enough to
+      still catch a regression
+
+## Phase 4 - carried forward
+
+- [ ] 🟡 **The test fixture asserts a shape that never occurs.**
+      `tests/voice-library.test.cjs` uses camelCase (`medianF0`, `auditionNarration`,
+      `f0P10P90`, `sourceUrl`, `addedAt`); the shipped manifest is snake_case. Inert today -
+      `createVoiceLibrary` passes voices through untouched and only reads `register`, `kind`,
+      `gender`, `age`, `accent`, `language`, spelled the same in both. It becomes real the
+      moment the picker reads `voice.auditionNarration` and gets `undefined` on all 60.
+      Fabio's call, 2026-08-26: leave it for Phase 4, fix it there

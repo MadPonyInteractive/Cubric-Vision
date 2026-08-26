@@ -4,7 +4,92 @@
 
 **Project mode:** `scalable-foundation`.
 
-> **Session 20 note (2026-08-26) — THE LIBRARY IS COMPLETE AT 60. Supersedes everything below.**
+> **Session 21 note (2026-08-26) — PHASE 3 IS GENERATED AND INSTALLED. Only Fabio's ear is
+> outstanding.** Supersedes the session 20 note below.
+>
+> **120 AUDITIONS SHIPPED, 60/60 voices carry BOTH, zero failures.** 125 bench jobs, not
+> 185: the character route's TTS half is identical for every voice in a register (fixed
+> text, fixed neutral clip, fixed seed), so TTS ran **5×** and VC **60×**. Inputs are the
+> SHIPPED opus decoded to wav, not the pre-encode `lib_v2` wavs — an audition made from an
+> artifact the user never hears is an audition of the wrong thing. `voices/audition/` is
+> 2.05 MB; bundle **6.14 MB**. **13/13 + 8/8.**
+>
+> **Audition line, locked and recorded in the manifest as `auditionText`:** *"Just show me
+> the whole chart, and I'll tell you which part to fix."* Short (~3.5 s) because a picker
+> plays it inline and 120 sample-length reads would add 6 MB, and deliberately NOT the
+> sample text — the two clips sit side by side and the point is to hear the route differ.
+>
+> **THE PERFORMANCE GRID WENT 12 → 30 CLIPS (R2/R4/R5 authored).** It started as three
+> neutral-only clips; `check_manifest.mjs` check 9 refused that and was right — it asserts
+> every register PRESENT carries all six emotions, so a neutral-only R5 would have put a
+> voice in the picker offering emotions it cannot perform. 18 is the smallest set that does
+> not break the invariant, and it closes the previously-pending R2/R4/R5 grids item.
+>
+> **The calibration target is the MEAN f0 OF THE VOICES A GRID DRIVES, not the band
+> midpoint** — derived from the two shipped ear-approved grids, which already do exactly
+> that (R1 1.34 st off its 22 voices' mean, R3 0.22 st off its 13). Band-midpoint targeting
+> would have put R2 nine semitones from the voices it drives. Applied per REGISTER so every
+> emotion's pitch delta survives: R2 −3.59 st, R4 −2.86, R5 +0.60.
+>
+> **TWO WRONG TURNS, BOTH RECORDED RATHER THAN QUIETLY FIXED.** (1) A re-roll was the wrong
+> tool and this card already said so — all three seeds of the child persona measured R5
+> (363–408 Hz) against a 260–340 band, and `phase2_perf_clips.py` states outright that a
+> clip off baseline is REPAIRED with `pitch_tools.py shift`, not re-rolled. (2) Relabelling
+> R4↔R5 by measured f0 looked free — it is what `register_of()` does everywhere else — but
+> it would have left a cartoon read driving every child audition. Rejected.
+>
+> **check_manifest.mjs HAD TWO BLIND SPOTS and they were about to matter.** Check 11
+> (orphans) and the size gate both enumerated `voices/` and `performance/` BY HAND, so the
+> new `audition/` subdir would have shipped **uncounted** — a size gate reporting green on
+> a bundle it was not measuring. Both walk recursively now. New check 12 is Phase 3's own
+> verify step (every voice has both auditions, on disk, non-empty); the budget moved 5 → 8
+> MB with the arithmetic written in, not nudged until green.
+>
+> **THE CLASSIFIER, NOT THE SETTINGS.** Several launches were refused by the auto mode
+> classifier while `Bash(python:*)` sat in `permissions.allow` the whole time — those are
+> two different layers. Fabio added an `autoMode.allow` block to
+> `.claude/settings.local.json` (with `"$defaults"`, so it inherits rather than replaces)
+> and it took effect **live, no restart**. An agent cannot make that edit itself: editing
+> your own permission file is refused, correctly.
+>
+> **Bench killed by verified PID after the run** (`Get-Process -Id … Path -like G:\ComfyUi*`
+> before `Stop-Process` — never by name pattern), 8188 down, GPU lease free, and the user's
+> app on :3000 confirmed untouched.
+>
+> **`ingest.py` WOULD HAVE WIPED ALL 120 AUDITIONS and it is now fixed.** `build_voice_entry`
+> hardcodes `audition_narration` / `audition_character` to `None`, and the writer replaced
+> `manifest["voices"]` wholesale — so the next `--from-dir` run of any kind, for any reason,
+> would have silently deleted every audition reference and left a well-formed 60-voice
+> manifest behind. **Exactly the `performanceClips: []` defect from session 18, in the same
+> file, found by reading rather than by anything reporting it.** The manifest is now read
+> before the loop and prior auditions are carried forward by voice id. Proven end to end, not
+> by inspection: sentinels injected into two voices survived a real full re-import, an
+> untouched voice stayed null, the 12 perf clips stayed intact, and all 60 opus were reused
+> (`scratchpad/check_audition_carry.py`, restores in a `finally`). 12/12 + 8/8 after.
+>
+> **`ingest.py` needs `G:\ComfyUi\python_embeded\python.exe`** — the box's default python has
+> no librosa. CPU-only, no GPU involved.
+>
+> **THE AUDITION PLAN, COSTED. 128 bench jobs, not 183.** The character route's TTS half is
+> identical for every voice in a register (fixed text, fixed neutral clip, fixed seed), so
+> TTS runs **5×** (one per register) and VC **60×**; plus 60 narration TTS and 3 new neutral
+> perf clips. **R2 / R4 / R5 need those neutral clips** — 25 of the 60 voices live there and
+> the grid is R1+R3 only, and source pitch LEAKS through VC (measured: two performers drove
+> one character 93 Hz apart), so driving a 394 Hz critter off the 94.7 Hz R1 neutral would
+> make its audition misrepresent the voice. Three clips, **not** the full six-emotion grids.
+>
+> **THE AUDITION TEXT IS SHORT, AND THAT IS A SIZE DECISION AS WELL AS A UX ONE.** Samples
+> average **50 KB** (the long `LIB_TEXT` read), not the 24 KB D1 assumed. 120 auditions at
+> sample length = +6.0 MB → a **9.5 MB** bundle; at ~4 s they are ~17 KB → **~5.5 MB**.
+> Either way **`check_manifest.mjs` check 12 asserts `< 5 MB` and will fail** — its threshold
+> must move when the auditions land, with the new number written down rather than nudged.
+>
+> Manifest `note` healed (it still claimed `voices[]` was empty) and four stale session-17
+> checklist items closed.
+>
+> **Next: Fabio's GPU lease** — bench 8188 is down, restart is his call. Then generate.
+
+> **Session 20 note (2026-08-26) — THE LIBRARY IS COMPLETE AT 60.**
 > `elderly_high.py` ran; its three candidates measured 118.2 / 129.7 / 98.3 Hz. Fabio approved
 > the two in-band ones — **`elderly_male_3` (TTS seed 9201, via the `deep_male_4` throat) and
 > `elderly_male_4` (seed 9202, via `standard_male_2`)**. `3e` at 98.3 Hz was dropped as under

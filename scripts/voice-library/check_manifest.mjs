@@ -43,6 +43,10 @@ const check = (name, fn) => {
 };
 const assert = (cond, msg) => { if (!cond) throw new Error(msg); };
 
+/** Every file under dir, recursively — what the bundle actually ships. */
+const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]);
+
 // Brief.md § 3 field list. A missing field is a silent null in the picker.
 const VOICE_FIELDS = ['id', 'display_name', 'gender', 'age', 'accent', 'language', 'style',
     'tags', 'kind', 'register', 'median_f0', 'f0_p10_p90', 'sample',
@@ -148,20 +152,57 @@ check('10. every performance clip exists on disk and is non-empty', () => {
 });
 
 check('11. no orphan opus in voices/ (nothing ships unreferenced)', () => {
-    const referenced = new Set(manifest.voices.map(v => v.sample));
-    const orphans = readdirSync(VOICES).filter(f => f.endsWith('.opus') && !referenced.has(f));
+    // Every opus the bundle carries, at any depth, must be named by the manifest. Checking
+    // only the top level would have let the whole audition/ directory accumulate dead files
+    // — a curated-away voice leaves TWO auditions behind now, not just its sample.
+    const referenced = new Set();
+    for (const v of manifest.voices) {
+        for (const rel of [v.sample, v.audition_narration, v.audition_character]) {
+            if (rel) referenced.add(rel.split('/').pop());
+        }
+    }
+    for (const c of manifest.performanceClips) referenced.add(c.clip.split('/').pop());
+    const orphans = walk(VOICES)
+        .filter(p => p.endsWith('.opus'))
+        .map(p => p.split(/[\\/]/).pop())
+        .filter(f => !referenced.has(f));
     assert(orphans.length === 0,
         `${orphans.length} unreferenced opus: ${orphans.slice(0, 6).join(', ')}`);
     return 'clean';
 });
 
-check('12. the bundle is inside D1\'s 5 MB estimate', () => {
-    const bytes = [
-        ...readdirSync(VOICES).map(f => join(VOICES, f)),
-        ...readdirSync(join(VOICES, 'performance')).map(f => join(VOICES, 'performance', f)),
-    ].filter(p => statSync(p).isFile()).reduce((n, p) => n + statSync(p).size, 0);
+check('12. every shipped voice has BOTH auditions, generated and non-empty', () => {
+    // Phase 3's verify step. An audition is not decoration: the picker plays it INSTEAD of
+    // the raw sample, because a character voice never sounds exactly like its own clip.
+    // A null here means the picker silently falls back to promising the wrong voice.
+    const missing = [], empty = [];
+    for (const v of manifest.voices) {
+        for (const [field, rel] of [['narration', v.audition_narration],
+                                    ['character', v.audition_character]]) {
+            if (!rel) { missing.push(`${v.id}:${field}`); continue; }
+            const p = join(VOICES, rel);
+            if (!existsSync(p)) missing.push(`${v.id}:${field} (${rel} not on disk)`);
+            else if (statSync(p).size === 0) empty.push(`${v.id}:${field}`);
+        }
+    }
+    assert(missing.length === 0,
+        `${missing.length} missing: ${missing.slice(0, 5).join(', ')}`);
+    assert(empty.length === 0, `${empty.length} empty: ${empty.slice(0, 5).join(', ')}`);
+    return `${manifest.voices.length * 2} auditions`;
+});
+
+check('13. the bundle stays within its stated budget', () => {
+    // Walks EVERY subdirectory. The first version listed voices/ and performance/ by hand
+    // and would have reported a bundle 2 MB lighter than the one that actually ships the
+    // moment audition/ was added — a size gate that lies is worse than no size gate.
+    const bytes = walk(VOICES).reduce((n, p) => n + statSync(p).size, 0);
     const mb = bytes / 1024 / 1024;
-    assert(mb < 5, `voices/ is ${mb.toFixed(2)} MB, over D1's 5 MB estimate`);
+    // D1 estimated 5 MB for "~60 voices x (sample + up to 2 auditions) at ~24 KB each".
+    // The clips came in at ~50 KB (samples, a long read) and ~17 KB (auditions, a short
+    // one), so the real figure for the same content is ~7 MB. The budget is raised to 8
+    // rather than to whatever is on disk today: it must still catch a regression, and the
+    // gap is one more register grid's worth of headroom, not open-ended.
+    assert(mb < 8, `voices/ is ${mb.toFixed(2)} MB, over the 8 MB budget`);
     return `${mb.toFixed(2)} MB`;
 });
 
