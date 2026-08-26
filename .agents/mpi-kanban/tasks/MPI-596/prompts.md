@@ -80,6 +80,7 @@ exactly this reason.
 | `Redraw … seen from that scene's camera angle` | identical viewpoint |
 | `Redraw … choose whatever angle, orientation and size` | identical viewpoint |
 | a *specific pose described as content* | viewpoint moved immediately — **but the object changed** |
+| a clause telling the model to keep the whole object in frame (`Show the object whole, its entire outline inside the frame…`) | the object came back **cut in the same place**. It changed 2.2% of pixels and fixed nothing: the model *was* keeping the object whole inside its own frame (the crop), and the slicing happens downstream in `InpaintStitchImproved`, which writes back only the box. A prompt cannot reach a geometric mismatch — brief.md law 8 |
 
 The first three failed for one structural reason: **the stamp is itself a picture of the object
 at the wrong viewpoint, sitting in the conditioning, and no wording overrides a picture.** That

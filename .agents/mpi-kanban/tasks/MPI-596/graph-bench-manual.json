@@ -1,0 +1,727 @@
+{
+ "1": {
+  "inputs": {
+   "string": "C:\\Users\\Fabio\\AppData\\Local\\Temp\\claude\\C--AI-Mpi-Cubric-Vision\\fef2ed28-7835-4a20-aaaa-c319672b5b81\\scratchpad\\plates_240/scene.png",
+   "channel": "alpha",
+   "block_if_empty": true
+  },
+  "class_type": "MpiLoadImageFromPath",
+  "_meta": {
+   "title": "Input_Image"
+  }
+ },
+ "2": {
+  "inputs": {
+   "string": "C:\\Users\\Fabio\\AppData\\Local\\Temp\\claude\\C--AI-Mpi-Cubric-Vision\\fef2ed28-7835-4a20-aaaa-c319672b5b81\\scratchpad\\plates_240/empty.png",
+   "channel": "alpha",
+   "block_if_empty": true
+  },
+  "class_type": "MpiLoadImageFromPath",
+  "_meta": {
+   "title": "Input_Paint"
+  }
+ },
+ "3": {
+  "inputs": {
+   "mask": [
+    "2",
+    1
+   ]
+  },
+  "class_type": "InvertMask",
+  "_meta": {
+   "title": "Drawn Region"
+  }
+ },
+ "4": {
+  "inputs": {
+   "padding": 0,
+   "mask": [
+    "3",
+    0
+   ]
+  },
+  "class_type": "MpiMaskSquareBbox",
+  "_meta": {
+   "title": "Drawing Bbox"
+  }
+ },
+ "6": {
+  "inputs": {
+   "x": 0,
+   "y": 0,
+   "resize_source": false,
+   "destination": [
+    "1",
+    0
+   ],
+   "source": [
+    "2",
+    0
+   ],
+   "mask": [
+    "3",
+    0
+   ]
+  },
+  "class_type": "ImageCompositeMasked",
+  "_meta": {
+   "title": "Paint On Photo"
+  }
+ },
+ "17": {
+  "inputs": {
+   "value": ""
+  },
+  "class_type": "PrimitiveStringMultiline",
+  "_meta": {
+   "title": "Input_Positive"
+  }
+ },
+ "18": {
+  "inputs": {
+   "delimiter": " ",
+   "string_a": [
+    "103",
+    0
+   ],
+   "string_b": [
+    "17",
+    0
+   ]
+  },
+  "class_type": "StringConcatenate",
+  "_meta": {
+   "title": "Join Prompt"
+  }
+ },
+ "26": {
+  "inputs": {
+   "int": 573110285
+  },
+  "class_type": "MpiInt",
+  "_meta": {
+   "title": "Input_Seed"
+  }
+ },
+ "100": {
+  "inputs": {
+   "clip_name": "qwen_3_8b_int8_convrot.safetensors",
+   "type": "flux2",
+   "device": "default"
+  },
+  "class_type": "CLIPLoader",
+  "_meta": {
+   "title": "Input_Edit_Clip"
+  }
+ },
+ "101": {
+  "inputs": {
+   "vae_name": "flux2-vae.safetensors"
+  },
+  "class_type": "VAELoader",
+  "_meta": {
+   "title": "Load VAE"
+  }
+ },
+ "102": {
+  "inputs": {
+   "unet_name": "flux-2-klein-9b-int8-convrot.safetensors",
+   "weight_dtype": "default"
+  },
+  "class_type": "UNETLoader",
+  "_meta": {
+   "title": "Input_Edit_Model"
+  }
+ },
+ "103": {
+  "inputs": {
+   "string": "Place the object from image two into the scene of image one. Light it with the scene's own light, matching direction, colour temperature and contrast, with contact shading where it meets the surface and a shadow consistent with the shadows already in the scene."
+  },
+  "class_type": "MpiText",
+  "_meta": {
+   "title": "Edit Instruction"
+  }
+ },
+ "104": {
+  "inputs": {
+   "clip": [
+    "100",
+    0
+   ],
+   "text": [
+    "185",
+    0
+   ]
+  },
+  "class_type": "CLIPTextEncode",
+  "_meta": {
+   "title": "Encode Blend Instruction"
+  }
+ },
+ "105": {
+  "inputs": {
+   "conditioning": [
+    "104",
+    0
+   ]
+  },
+  "class_type": "ConditioningZeroOut",
+  "_meta": {
+   "title": "Conditioning Zero Out"
+  }
+ },
+ "106": {
+  "inputs": {
+   "upscale_method": "nearest-exact",
+   "megapixels": 1,
+   "resolution_steps": 16,
+   "image": [
+    "163",
+    1
+   ]
+  },
+  "class_type": "ImageScaleToTotalPixels",
+  "_meta": {
+   "title": "Scale Image to Total Pixels"
+  }
+ },
+ "107": {
+  "inputs": {
+   "pixels": [
+    "106",
+    0
+   ],
+   "vae": [
+    "101",
+    0
+   ]
+  },
+  "class_type": "VAEEncode",
+  "_meta": {
+   "title": "Encode ref 1"
+  }
+ },
+ "108": {
+  "inputs": {
+   "conditioning": [
+    "104",
+    0
+   ],
+   "latent": [
+    "107",
+    0
+   ]
+  },
+  "class_type": "ReferenceLatent",
+  "_meta": {
+   "title": "Set Reference Latent 1"
+  }
+ },
+ "146": {
+  "inputs": {
+   "filename_prefix": "mpi596_stamp",
+   "images": [
+    "169",
+    0
+   ]
+  },
+  "class_type": "SaveImage",
+  "_meta": {
+   "title": "Output_Image"
+  }
+ },
+ "160": {
+  "inputs": {
+   "width": 276,
+   "height": 276,
+   "x": 122,
+   "y": 655
+  },
+  "class_type": "MpiBox",
+  "_meta": {
+   "title": "Input_Box"
+  }
+ },
+ "161": {
+  "inputs": {
+   "image": [
+    "6",
+    0
+   ],
+   "mpi_box": [
+    "160",
+    0
+   ]
+  },
+  "class_type": "MpiBoxMask",
+  "_meta": {
+   "title": "Box Mask"
+  }
+ },
+ "162": {
+  "inputs": {
+   "padding": 0,
+   "mask": [
+    "161",
+    0
+   ]
+  },
+  "class_type": "MpiMaskSquareBbox",
+  "_meta": {
+   "title": "Box Bbox"
+  }
+ },
+ "163": {
+  "inputs": {
+   "downscale_algorithm": "bilinear",
+   "upscale_algorithm": "bicubic",
+   "preresize": false,
+   "preresize_mode": "ensure minimum resolution",
+   "preresize_min_width": 1024,
+   "preresize_min_height": 1024,
+   "preresize_max_width": 16384,
+   "preresize_max_height": 16384,
+   "mask_fill_holes": false,
+   "mask_expand_pixels": 83,
+   "mask_invert": false,
+   "mask_blend_pixels": 32,
+   "mask_hipass_filter": 0.1,
+   "extend_for_outpainting": false,
+   "extend_up_factor": 1,
+   "extend_down_factor": 1,
+   "extend_left_factor": 1,
+   "extend_right_factor": 1,
+   "output_resize_to_target_size": true,
+   "output_target_width": 1024,
+   "output_target_height": 1024,
+   "output_padding": "32",
+   "device_mode": "gpu (much faster)",
+   "image": [
+    "6",
+    0
+   ],
+   "mask": [
+    "161",
+    0
+   ],
+   "context_from_mask_extend_factor": [
+    "183",
+    0
+   ]
+  },
+  "class_type": "InpaintCropImproved",
+  "_meta": {
+   "title": "Crop To Box"
+  }
+ },
+ "168": {
+  "inputs": {
+   "samples": [
+    "191",
+    0
+   ],
+   "vae": [
+    "101",
+    0
+   ]
+  },
+  "class_type": "VAEDecode",
+  "_meta": {
+   "title": "VAE Decode"
+  }
+ },
+ "169": {
+  "inputs": {
+   "stitcher": [
+    "163",
+    0
+   ],
+   "inpainted_image": [
+    "192",
+    0
+   ]
+  },
+  "class_type": "InpaintStitchImproved",
+  "_meta": {
+   "title": "Stitch Back"
+  }
+ },
+ "183": {
+  "inputs": {
+   "math_expression": "1.0",
+   "a": [
+    "4",
+    3
+   ],
+   "b": [
+    "162",
+    3
+   ]
+  },
+  "class_type": "MpiMath",
+  "_meta": {
+   "title": "Context Factor"
+  }
+ },
+ "184": {
+  "inputs": {
+   "string": ""
+  },
+  "class_type": "MpiText",
+  "_meta": {
+   "title": "Edit Guardrails"
+  }
+ },
+ "185": {
+  "inputs": {
+   "delimiter": "",
+   "string_a": [
+    "18",
+    0
+   ],
+   "string_b": [
+    "184",
+    0
+   ]
+  },
+  "class_type": "StringConcatenate",
+  "_meta": {
+   "title": "Join Guardrails"
+  }
+ },
+ "186": {
+  "inputs": {
+   "image": [
+    "106",
+    0
+   ]
+  },
+  "class_type": "GetImageSize",
+  "_meta": {
+   "title": "Crop Size"
+  }
+ },
+ "187": {
+  "inputs": {
+   "steps": 4,
+   "width": [
+    "186",
+    0
+   ],
+   "height": [
+    "186",
+    1
+   ]
+  },
+  "class_type": "Flux2Scheduler",
+  "_meta": {
+   "title": "Flux2Scheduler"
+  }
+ },
+ "188": {
+  "inputs": {
+   "sampler_name": "euler"
+  },
+  "class_type": "KSamplerSelect",
+  "_meta": {
+   "title": "KSamplerSelect"
+  }
+ },
+ "189": {
+  "inputs": {
+   "noise_seed": [
+    "26",
+    0
+   ]
+  },
+  "class_type": "RandomNoise",
+  "_meta": {
+   "title": "RandomNoise"
+  }
+ },
+ "190": {
+  "inputs": {
+   "cfg": 1,
+   "model": [
+    "198",
+    0
+   ],
+   "positive": [
+    "203",
+    0
+   ],
+   "negative": [
+    "105",
+    0
+   ]
+  },
+  "class_type": "CFGGuider",
+  "_meta": {
+   "title": "CFGGuider"
+  }
+ },
+ "191": {
+  "inputs": {
+   "noise": [
+    "189",
+    0
+   ],
+   "guider": [
+    "190",
+    0
+   ],
+   "sampler": [
+    "188",
+    0
+   ],
+   "sigmas": [
+    "187",
+    0
+   ],
+   "latent_image": [
+    "107",
+    0
+   ]
+  },
+  "class_type": "SamplerCustomAdvanced",
+  "_meta": {
+   "title": "SamplerCustomAdvanced"
+  }
+ },
+ "192": {
+  "inputs": {
+   "method": "mkl",
+   "strength": 1,
+   "multithread": true,
+   "image_ref": [
+    "163",
+    1
+   ],
+   "image_target": [
+    "168",
+    0
+   ]
+  },
+  "class_type": "ColorMatch",
+  "_meta": {
+   "title": "Match The Photo Grade"
+  }
+ },
+ "193": {
+  "inputs": {
+   "lora_name": "None",
+   "strength_model": 1,
+   "model": [
+    "102",
+    0
+   ]
+  },
+  "class_type": "MpiLoraModel",
+  "_meta": {
+   "title": "Input_Lora_Phase1_1"
+  }
+ },
+ "194": {
+  "inputs": {
+   "lora_name": "None",
+   "strength_model": 1,
+   "model": [
+    "193",
+    0
+   ]
+  },
+  "class_type": "MpiLoraModel",
+  "_meta": {
+   "title": "Input_Lora_Phase1_2"
+  }
+ },
+ "195": {
+  "inputs": {
+   "lora_name": "None",
+   "strength_model": 1,
+   "model": [
+    "194",
+    0
+   ]
+  },
+  "class_type": "MpiLoraModel",
+  "_meta": {
+   "title": "Input_Lora_Phase1_3"
+  }
+ },
+ "196": {
+  "inputs": {
+   "lora_name": "None",
+   "strength_model": 1,
+   "model": [
+    "195",
+    0
+   ]
+  },
+  "class_type": "MpiLoraModel",
+  "_meta": {
+   "title": "Input_Lora_Phase1_4"
+  }
+ },
+ "197": {
+  "inputs": {
+   "lora_name": "None",
+   "strength_model": 1,
+   "model": [
+    "196",
+    0
+   ]
+  },
+  "class_type": "MpiLoraModel",
+  "_meta": {
+   "title": "Input_Lora_Phase1_5"
+  }
+ },
+ "198": {
+  "inputs": {
+   "lora_name": "None",
+   "strength_model": 1,
+   "model": [
+    "197",
+    0
+   ]
+  },
+  "class_type": "MpiLoraModel",
+  "_meta": {
+   "title": "Input_Lora_Phase1_6"
+  }
+ },
+ "200": {
+  "class_type": "MpiLoadImageFromPath",
+  "_meta": {
+   "title": "Input_Image_2"
+  },
+  "inputs": {
+   "string": "C:\\Users\\Fabio\\AppData\\Local\\Temp\\claude\\C--AI-Mpi-Cubric-Vision\\fef2ed28-7835-4a20-aaaa-c319672b5b81\\scratchpad\\plates_240/object.png",
+   "channel": "alpha",
+   "block_if_empty": true
+  }
+ },
+ "201": {
+  "class_type": "ImageScaleToTotalPixels",
+  "_meta": {
+   "title": "Scale Ref 2"
+  },
+  "inputs": {
+   "upscale_method": "nearest-exact",
+   "megapixels": 1,
+   "resolution_steps": 16,
+   "image": [
+    "200",
+    0
+   ]
+  }
+ },
+ "202": {
+  "class_type": "VAEEncode",
+  "_meta": {
+   "title": "Encode ref 2"
+  },
+  "inputs": {
+   "pixels": [
+    "201",
+    0
+   ],
+   "vae": [
+    "101",
+    0
+   ]
+  }
+ },
+ "210": {
+  "class_type": "InpaintCropImproved",
+  "_meta": {
+   "title": "Crop Clean Scene"
+  },
+  "inputs": {
+   "downscale_algorithm": "bilinear",
+   "upscale_algorithm": "bicubic",
+   "preresize": false,
+   "preresize_mode": "ensure minimum resolution",
+   "preresize_min_width": 1024,
+   "preresize_min_height": 1024,
+   "preresize_max_width": 16384,
+   "preresize_max_height": 16384,
+   "mask_fill_holes": false,
+   "mask_expand_pixels": 83,
+   "mask_invert": false,
+   "mask_blend_pixels": 32,
+   "mask_hipass_filter": 0.1,
+   "extend_for_outpainting": false,
+   "extend_up_factor": 1,
+   "extend_down_factor": 1,
+   "extend_left_factor": 1,
+   "extend_right_factor": 1,
+   "output_resize_to_target_size": true,
+   "output_target_width": 1024,
+   "output_target_height": 1024,
+   "output_padding": "32",
+   "device_mode": "gpu (much faster)",
+   "image": [
+    "1",
+    0
+   ],
+   "mask": [
+    "161",
+    0
+   ],
+   "context_from_mask_extend_factor": [
+    "183",
+    0
+   ]
+  }
+ },
+ "211": {
+  "class_type": "ImageScaleToTotalPixels",
+  "_meta": {
+   "title": "Scale Clean Crop"
+  },
+  "inputs": {
+   "upscale_method": "nearest-exact",
+   "megapixels": 1,
+   "resolution_steps": 16,
+   "image": [
+    "210",
+    1
+   ]
+  }
+ },
+ "212": {
+  "class_type": "VAEEncode",
+  "_meta": {
+   "title": "Encode clean crop"
+  },
+  "inputs": {
+   "pixels": [
+    "211",
+    0
+   ],
+   "vae": [
+    "101",
+    0
+   ]
+  }
+ },
+ "203": {
+  "class_type": "ReferenceLatent",
+  "_meta": {
+   "title": "Set Reference Latent 2"
+  },
+  "inputs": {
+   "conditioning": [
+    "108",
+    0
+   ],
+   "latent": [
+    "202",
+    0
+   ]
+  }
+ }
+}

@@ -4,15 +4,34 @@ Design settled in [brief.md](brief.md); the two baked prompts and the rules they
 [prompts.md](prompts.md). **Run `/mpi-add-flow`** — it enforces `docs/playbooks/add-flow/`, and
 this plan does not restate it. Graphics are a separate `/mpi-flow-graphics` pass.
 
-> **READ FIRST, in this order:** `brief.md` (the six measured laws — every one of them cost real
+> **READ FIRST, in this order:** `brief.md` (the seven measured laws — every one of them cost real
 > runs), `prompts.md`, then `docs/playbooks/add-flow/existing-flows/scribble-to-object.md`. This
 > flow is Draw It In's architecture with the scribble replaced by an object, so that file is the
 > closest worked example and most of its traps apply unchanged.
 
 ## Current State
 
-Project mode: `scalable-foundation`. Card is in `doing`. **Nothing has been written yet** — the
-2026-08-26 session was entirely design and live validation in the app.
+Project mode: `scalable-foundation`. Card is in `doing`.
+
+**The graph is authored and proven on the bench** (2026-08-26, 18 runs on 8188). It is
+`flow_draw_it_in.json` **patched**, not rebuilt — crop/stitch, the six `Input_Lora_Phase1_*`
+slots, the 9B checkpoint and `qwen_3_8b_int8_convrot` all carry over untouched. The one
+structural change is a second `ReferenceLatent` (node 203) chained after 108, plus a second
+`InpaintCropImproved` (node 210) that crops the **clean scene to the same region** — that
+second crop is law 7 and is what stops the doll's-house failure. Proven API graphs are saved
+here as `graph-bench-auto.json` / `graph-bench-manual.json`; both were run end to end.
+
+**Canonical crop config (law 8):** `context_from_mask_extend_factor` = **1.0**, write-back grown
+with `mask_expand_pixels` at **~30% of the box side**. Canvas == region written back, so an object
+larger than the box cannot be sliced and its shadow has room. App-side that 30% comes off
+`MpiMaskSquareBbox.size` through an `MpiMath` (it is an INT input).
+
+Next action: build the stage-2 step kind. Nothing app-side has been written yet. The bench was
+stopped at the end of the session - restart it (`G:/ComfyUi/run_nvidia_gpu.bat`, port 8188) only
+if more graph work is needed; the stage-2 step does not need it.
+
+**Two bench-only deviations must NOT reach the shipped graph:** `MpiClearVram` (node 170) was
+dropped to keep the checkpoint resident, and the seed is pinned. Both are in the saved graphs.
 
 ### What the live session already settled (so it is NOT open work)
 
@@ -40,7 +59,7 @@ one.
 
 ## Implementation
 
-- [ ] **Author and prove the graph on the bench FIRST** (port 8188; the app engine is 48188).
+- [x] **Author and prove the graph on the bench FIRST** (port 8188; the app engine is 48188).
       Draw It In's topology with the scribble swapped for the object:
       `composite → InpaintCropImproved (mask = the placed bbox) → Klein 9B edit → ColorMatch →
       InpaintStitchImproved`. Both modes are the SAME graph — only what lands in the two
@@ -48,11 +67,12 @@ one.
       **Verify:** a real bench run per mode; a vintage plate to confirm `ColorMatch` is earning
       its place. Mind that Klein's edit pass CHANGES DIMENSIONS (snaps to ÷32, axes scale
       unequally), so any composite-back must resize to the base.
-- [ ] **Settle crop sizing on the bench.** Draw It In's derivation does not transfer — there the
-      scribble sits *inside* the box, here the box *is* the region. Needs a context factor > 1.0
-      or Klein sees no scene to match lighting against; the return stays the box.
-      **Verify:** shadows do not clip at the return edge, and the ~200px anchor threshold is
-      cleared (this is what silently ate a Google logo whole-image).
+- [x] **Settle crop sizing on the bench.** Answered, and not as expected: with both references
+      cropped to the same region, crop size is a quality dial, not a guard — 155px through full
+      frame all produced correct placements. The shipped config is **factor 1.0 + a write-back
+      grown ~30%** (law 8), NOT Draw It In's `4.267` — that constant sizes the crop, which is now
+      pinned. The real requirements are law 7 (matched framing) and law 8 (canvas == write-back);
+      see `brief.md` and `events.jsonl` findings 13–19.
 - [ ] **Build the stage-2 step kind** (`MpiStepPlace` or similar): `ShapeManager` in `'place'`
       mode + the Remove Background branch + an add/subtract alpha brush + `UndoStack`. Mount the
       History engines whole, exactly as `MpiStepPaint` mounts `PaintManager` rather than growing
@@ -105,6 +125,29 @@ the flow's whole claim.
 - No app version bump for the Flow; a NEW op sets `appVersionIntroduced` in both op registries.
 
 ## Plan Drift
+
+### 2026-08-26 (bench) — the cut-off object, spotted by Fabio in the bench outputs
+
+A Manual run came back with the gun sliced clean through the grip. Cause: the stitch writes back
+only the **box** while the model paints the whole **crop** (law 8). Fabio proposed fixing it in
+the prompt; tested as one clause on measured evidence, and **rejected** — it changed 2.2% of
+pixels and the cut stayed, because the model is already keeping the object whole inside its own
+frame. The fix is geometric (factor 1.0 + a grown write-back), and it **supersedes the previous
+entry's advice to ship `4.267` as the default** — that constant sizes the crop, which is now
+pinned.
+
+### 2026-08-26 (bench) — the crop question was the wrong question
+
+The plan expected crop sizing to be the hard part and predicted a context factor derivation that
+"does not transfer". Both halves were wrong. Draw It In's `4.267` transfers fine, and crop size
+barely matters once the *framing* is right. What actually breaks the flow is passing any
+reference at a framing the output does not have — Auto's full-frame clean scene against a
+cropped output frame returns a miniature room inside the table. That is now law 7 in
+`brief.md`, and it cost four failed runs that all read as "the crop is too tight".
+
+Also settled here: `ColorMatch` is inert on a modern plate (mean delta 0.032/255) — keep it for
+the vintage case, but do not credit it. Still wandering: object colour fidelity across crop
+sizes; recorded, not blocking.
 
 ### 2026-08-26 — the aspect-fit fork closed, then became irrelevant
 

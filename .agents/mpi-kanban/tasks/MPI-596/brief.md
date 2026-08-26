@@ -9,7 +9,7 @@
 >
 > **The design in this file is the THIRD one and it is settled**, proven live across ~25 runs
 > in the app on 2026-08-26. The two earlier designs are recorded at the bottom so nobody
-> re-proposes them. Every claim below is from a real run — see `events.jsonl` findings 1–12
+> re-proposes them. Every claim below is from a real run — see `events.jsonl` findings 1–16
 > and `prompts.md`.
 
 ## What the user asked for
@@ -82,6 +82,25 @@ wording stop mattering — a surface does it for a logo, the crop does it for ev
 This is why the crop is a correctness requirement, not an optimisation. Full prompt rules and
 both baked instructions: **[prompts.md](prompts.md)** — read it before touching a prompt.
 
+**7. Every reference must be framed like the OUTPUT frame.** Measured on the bench 2026-08-26,
+and it is the law that breaks this flow when it is broken. The output frame is the *crop*, so a
+reference passed at full frame is an instruction the model obeys literally: it paints that whole
+wide scene into the narrow frame, and the patch stitches back as a **miniature room inside the
+table** — sofa, vase, second table, visible seam. Cropping the clean scene to the *same* region
+removes it completely (clean A/B on the mug plate). Draw It In never met this because it has
+**one** reference and that reference *is* the crop; the moment there are two, both must be
+cropped. Everything that looked like "the crop is too tight" was this.
+
+**8. The stitch mask is the contract, and no prompt can reach it.** `InpaintStitchImproved`
+writes back **only the mask** (the box + `mask_expand_pixels` + the blend band) while the model's
+canvas is the whole **crop**, which is larger. Everything Klein draws outside the box is
+discarded — a dead-vertical cut through the object *and* its shadow. Auto never shows it (the
+stamp pins the size, so the object is inside the box by construction); Manual has nothing
+pinning size, so Klein filled the crop and lost the grip. **A prompt cannot fix this** — tested
+and rejected (`prompts.md` § does NOT work): the model already keeps the object whole inside
+*its* frame, and the loss happens downstream in a node it knows nothing about. The fix is
+geometric: canvas == write-back region, per the config above.
+
 ## Known limitation — document it, do not engineer around it
 
 An object photographed at a viewpoint the scene cannot use (a hero product shot: side-on,
@@ -93,17 +112,28 @@ roughly the angle they want it seen from. Most products have several photos; it 
 fix for them and an impossible one for the model. Same shape as MPI-567's "upscale the source
 first" — a user-side move, documented.
 
-## Open, for the bench
+## Settled on the bench — 18 runs, 2026-08-26 (`events.jsonl` findings 13–16)
 
-- **Crop sizing** off the placed bbox, and whether shadows clip at the return-region edge.
-  Draw It In's derivation does **not** transfer (there the scribble sits *inside* the box; here
-  the box *is* the region).
-- **Does the box degrade results versus free placement?** If a boxed spot the object cannot sit
-  in produces worse output than letting the model choose, that is the one thing that would
-  justify an auto-placement path. Evidence so far says no — the model keeps angle freedom
-  inside the box.
-- Whether the richer prompt becomes safe once the crop bounds scale (it broke uncropped).
-- `ColorMatch` is expected to be needed on a vintage plate, as it was for Draw It In.
+- **The canonical crop config: `context_from_mask_extend_factor` pinned to `1.0`, and the
+  write-back grown with `mask_expand_pixels` ≈ 30% of the box side** (83px on a 276px box). This
+  makes the model's canvas *equal* the region written back — see law 8. Drive the 30% off
+  `MpiMaskSquareBbox.size` with an `MpiMath`; it is an INT input, not a float.
+- **Crop sizing is otherwise NOT a correctness knob.** With the references matched (law 7),
+  every crop tested worked: 155, 300, 384, 414, 480, 607px and full frame. More object pixels
+  visibly helps a *small* object: at 90px placed, full frame lost the grip to light grey; a
+  155px crop (object at ~731px) came back correct. Draw It In's `4.267` constant sizes the
+  *crop*, which is now pinned at 1.0, so it has no job left here.
+- **Shadows need the margin.** With the write-back at the bare box, the mug's cast shadow ended
+  exactly at the box edge and the gun's was cut with it; the 30% expansion lets it run past the
+  corner cleanly.
+- **`ColorMatch` is inert on a modern plate** — mean delta 0.032/255, 0.32% of pixels above 3.
+  Keep it for the vintage case, but it is not what makes this flow work.
+
+Still open: **object colour fidelity wanders run to run** (the same gun came back black at one
+crop size and tan at another). Not a blocker for wiring; worth a sweep once the app side runs.
+
+The box-versus-free-placement question stays answered as before — the model keeps angle freedom
+inside the box, so no auto-placement path is justified.
 
 ## Sibling — MPI-454, the Place tool
 
