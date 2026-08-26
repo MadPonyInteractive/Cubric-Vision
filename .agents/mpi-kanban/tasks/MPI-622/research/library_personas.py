@@ -106,9 +106,13 @@ PERSONAS = [
      "Adult male, deep trailer voice, low pitch, slow pace, dramatic pauses, heavy "
      "emphasis, cinematic gravitas"),
 
+    # REPLACED 2026-08-26 by the matrix `v2_correlates` wording. The original read "sounds
+    # 30" to Fabio when it asked for forties; both seeds of this one read as middle aged.
+    # "No youthful brightness at all" is doing the work - a negative constraint, which is
+    # what the age wordings that succeeded all have and the ones that failed all lack.
     ("mature_female", "R2",
-     "Adult female, forties, low-mid pitch, unhurried tempo, rich timbre, calm composed "
-     "narration, even emphasis"),
+     "Middle aged woman, low warm alto voice, full chest resonance, settled and unhurried, "
+     "calm authority, no youthful brightness at all"),
 
     ("standard_female", "R3",
      "Adult female, early thirties, natural and even, medium pitch, medium tempo, "
@@ -118,13 +122,25 @@ PERSONAS = [
      "Adult female, early twenties, bright and energetic, medium-high pitch, brisk tempo, "
      "lively delivery, crisp consonants"),
 
+    # REPLACED 2026-08-26 by the matrix `v2_correlates` wording. The original read "sounds
+    # about 50" when it asked for seventies. Naming the ACOUSTIC CORRELATES of age - tremor,
+    # breathiness, unsteady pitch - works where naming the DECADE does not.
     ("elderly_female", "R2",
-     "Adult female, seventies, gentle and kindly, medium pitch, slow tempo, soft "
-     "articulation, grandmotherly warmth"),
+     "Elderly woman, frail quavering voice, pronounced vocal tremor, breathy and soft, "
+     "unsteady pitch, slow gentle tempo with pauses, thin fragile timbre"),
 
+    # REPLACED 2026-08-26 by the matrix `v2_lower` wording. The original landed at 509.8 Hz
+    # and Fabio's verdict was "hurts my ears... almost like a critter". His ear localised the
+    # problem band exactly right; only the CAUSE needed correcting - it is the fundamental
+    # itself, not an EQ boost, and 0.0% of the energy sat below 300 Hz. This wording brings
+    # it to 326.8 Hz with 16.6% low-end body back. `v3_lower_still` also passed and is the
+    # fallback if these five read too old:
+    #   "Child of about ten, medium pitch close to an adult woman but lighter, warm soft
+    #    tone, unhurried conversational delivery, plain and natural, never cartoonish or
+    #    squeaky"
     ("child", "R4",
-     "Young child, around eight years old, high pitch, light airy timbre, quick eager "
-     "tempo, simple clear articulation, natural child voice and not cartoonish"),
+     "Young child around eight years old, moderate pitch, soft light voice, relaxed natural "
+     "tempo, gentle articulation, calm and not shrill, not squeaky"),
 
     # THE RISK CELL. Fabio rejected the corpus cartoon as "somebody trying to impersonate a
     # cartoon, a terrible voice actor", so a model doing the same impersonation fails the
@@ -205,9 +221,19 @@ def main():
     print(f"model loaded in {time.time() - t0:.1f}s\n")
 
     ok = fail = 0
-    for ci, (slug, reg, direction) in enumerate(personas):
+    slugs = [p[0] for p in PERSONAS]
+    for slug, reg, direction in personas:
+        # ci indexes PERSONAS, NOT the filtered list. Taking it from enumerate(personas)
+        # meant --only shifted every category's seed block onto a different category's, so
+        # a --only run could not reproduce - or could collide with - a full run's seeds.
+        ci = slugs.index(slug)
         for vi in range(args.start, args.start + args.n):
             name = f"{slug}_{vi + 1}"
+            # The villain category is the ONE that ships five distinct directions rather
+            # than five seeds of one, because menace reads differently across gender and
+            # delivery (Fabio: "the variants can have a male and female").
+            if slug == "villain_menacing" and vi < len(VILLAIN_VARIANTS):
+                direction = VILLAIN_VARIANTS[vi][1]
             # Seed is derived and RECORDED. Phase 2 proved identity across seeds is a
             # lottery for at least one cell, so the winning ticket number is provenance.
             seed = 5000 + ci * 100 + vi

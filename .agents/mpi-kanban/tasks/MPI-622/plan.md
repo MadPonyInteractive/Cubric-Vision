@@ -4,6 +4,50 @@
 
 **Project mode:** `scalable-foundation`.
 
+> **Session 19 note (2026-08-26) — PAUSED MID-GENERATION, supersedes everything below.**
+> **THE EAR GATE IS PASSED. 11 of 12 categories are approved.** Fabio's convention was
+> misread by session 18: *he only names what he dislikes, silence means fine.* So the "seven
+> unjudged" were never unjudged — they passed. **Approved 8** (library v1 takes stand):
+> `deep_male` `standard_male` `young_male` `narrator_trailer` `standard_female`
+> `young_female` `cartoon_critter` `villain_menacing`.
+>
+> **matrix-v2 fixed 3 of the 4 rejects** — `child` (v2 and v3 both fine, seed 7311 bad),
+> `elderly_female` and `mature_female` (both `v2_correlates`, both seeds). Those three
+> categories need their `v2_correlates` / `v2_lower` wording swapped into `PERSONAS` before
+> their five are generated. **`elderly_male` is the one category the model never solved** —
+> it starts old and slides young mid-clip.
+>
+> **JITTER IS RETIRED AS AN AGE METRIC.** It read 2.7–3.4% across Fabio's real 85-year-old,
+> his 75-year-old, and a model clip he called "sounds 25". It also predicted age wording
+> would not work, and his ear then fixed three categories with wording alone. Fourth time a
+> number lost to the ear on this card.
+>
+> **FABIO RECORDED `elderly_male` HIMSELF** — `recording_011.wav` (he calls it 70–80) and
+> `recording_015.wav` (80–90, "trouble speaking because he's so old"), trimmed and levelled
+> to −20 dBFS `rms_active` in `%LOCALAPPDATA%/cubric-vision/mpi622/takes_lvl/`.
+> **015 measures 215.6 Hz — that is R3, not R1**, and it is not a defect: male f0 *rises* in
+> old age as the folds atrophy. `elderly_male` therefore spans two registers; 011 → R1 grid,
+> 015 → R3 grid.
+>
+> **PAUSED 2026-08-26: Fabio needed the GPU for another session.** The 32-voice run for the
+> approved 8 stopped after 5. `deep_male_2..5` is COMPLETE; `standard_male_2` is partial.
+> Output dir `%LOCALAPPDATA%/cubric-vision/mpi622/lib_v2/`. **Resume by dropping `deep_male`
+> from `--only`** (seeds are deterministic, so re-running `standard_male_2` reproduces the
+> same file — harmless):
+> `library_personas.py <lib_v2> 4 --start 1 --only standard_male,young_male,narrator_trailer,standard_female,young_female,cartoon_critter,villain_menacing`
+>
+> **Two root fixes landed in `research/library_personas.py` first, both real:** `ci` took its
+> value from the *filtered* persona list, so `--only` shifted every category's seed block
+> onto another category's; and `VILLAIN_VARIANTS` was defined but never read, so the villain
+> category would have shipped one direction five times.
+>
+> **STILL OPEN: the VC variation test**, Fabio's own suggestion — his take as VC source onto
+> approved targets, to get five distinct old men rather than one man pitch-shifted five ways.
+> The question it has to answer first: Chatterbox VC takes prosody from the source and
+> **timbre from the target**, and rasp/thin-reedy throat are timbre — so does 85 survive the
+> transfer, or come back 40 with an old man's rhythm? If age dies, the answer is VoiceDesign
+> old-man attempts as targets first, then his take for delivery.
+
 > **Session 18 LATE note (2026-08-26) — THIS SUPERSEDES THE SESSION 18 NOTE BELOW.**
 > **THE KYUTAI CORPUS IS REJECTED IN FULL.** Fabio auditioned all 60: *"I think 99% of this
 > voice library is garbage... none of it is usable."* Accents unintelligible, mic quality poor,
