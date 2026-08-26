@@ -4,6 +4,33 @@
 
 **Project mode:** `scalable-foundation`.
 
+> **Session 20 note (2026-08-26) — THE LIBRARY IS COMPLETE AT 60. Supersedes everything below.**
+> `elderly_high.py` ran; its three candidates measured 118.2 / 129.7 / 98.3 Hz. Fabio approved
+> the two in-band ones — **`elderly_male_3` (TTS seed 9201, via the `deep_male_4` throat) and
+> `elderly_male_4` (seed 9202, via `standard_male_2`)**. `3e` at 98.3 Hz was dropped as under
+> the band, consistent with the earlier 110.3 Hz verdict of "too low, muffled". The four old
+> rejects (seed 9001, `_3a`, `_3b`, seed 9002) plus `3e` were moved — **not deleted** — to
+> `%LOCALAPPDATA%/cubric-vision/mpi622/rejected_v2/`. Verified: **12 categories × 5 = 60 wav,
+> every one with its sidecar.** Audition page `eld-final.html`; builder `prep_eld_final.py`.
+>
+> **THE BENCH'S IDLE 4 GB IS SOLVED, AND IT WAS OURS.** `ComfyUI_Fill-ChatterBox` keeps models
+> in `_MODEL_CACHE`, a plain **module-level dict** (`chatterbox_node.py:53`) that is never
+> registered with ComfyUI's `model_management` — so `POST /free` returns 200 having found
+> nothing to evict, which is exactly the symptom Fabio reported. Measured: boot is clean
+> (+160 MiB, all node imports ≤3.9 s), and the 4.06 GB appears only *after* a run with
+> `keep_model_loaded: true`. **The shipped Flow is SAFE** — `comfy_workflows/flow_voice_changer.json`
+> and its raw twin both set `keep_model_loaded: false`, and `false` is the node's own default.
+> Only our bench scripts passed `true`; `vc_test.py` and `elderly_tts.py` are now `False`.
+> Read `torch_vram_total` out of `/system_stats` to see the retention — `nvidia-smi` alone
+> cannot attribute it, because WDDM reports no per-process VRAM on this machine.
+>
+> **A SEVENTH METRIC LOST TO THE EAR.** Fabio heard "huge pitch oscillations" in the three VC
+> intermediates and called the three finals fine; a smoothed-f0 wobble measure ranked the
+> intermediates *no worse than* the finals, and flagged his own two recordings as the wobbliest
+> files in the set. It did settle the one question that mattered — the three library targets
+> are not outliers, so no shipped voice needs re-rolling — but it could not see what he heard.
+> The intermediates are throwaway anyway: trimmed to 2 s as a TTS reference, they never ship.
+
 > **Session 19 note (2026-08-26) — PAUSED MID-GENERATION, supersedes everything below.**
 > **THE EAR GATE IS PASSED. 11 of 12 categories are approved.** Fabio's convention was
 > misread by session 18: *he only names what he dislikes, silence means fine.* So the "seven
