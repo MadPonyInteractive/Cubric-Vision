@@ -289,7 +289,7 @@ def import_local(voices_dir, src_dir, cache_dir):
         raise SystemExit(f"no wav files in {src_dir}")
 
     added_at = date.today().isoformat()
-    entries, counts, skipped = [], {}, []
+    entries, counts, skipped, reused = [], {}, [], 0
 
     for wav in wavs:
         voice_id = wav.stem
@@ -318,7 +318,17 @@ def import_local(voices_dir, src_dir, cache_dir):
             skipped.append(f"{voice_id}: {m['median_f0']:.1f} Hz is outside R1-R5")
             continue
 
-        to_opus(staged, voices_dir / f"{voice_id}.opus")
+        # Only re-encode when the source is newer. The opus encoder is NOT byte-stable, so an
+        # unconditional transcode rewrites all 60 binaries on every run and each re-import
+        # adds ~3.5 MB of churn to git history for clips that did not change. Measurement
+        # above is deterministic, so the manifest stays correct either way. To force a
+        # re-encode, delete the opus.
+        opus = voices_dir / f"{voice_id}.opus"
+        if opus.exists() and opus.stat().st_mtime >= wav.stat().st_mtime:
+            reused += 1
+        else:
+            to_opus(staged, opus)
+
         gender, age = CATEGORY_META[category]
         entry = build_voice_entry(voice_id, m["median_f0"], m["p10"], m["p90"], reg, added_at)
         entry.update({
@@ -338,7 +348,8 @@ def import_local(voices_dir, src_dir, cache_dir):
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
                             encoding="utf-8", newline="\n")
 
-    print(f"\n{len(entries)} voices imported from {src_dir}")
+    print(f"\n{len(entries)} voices imported from {src_dir}"
+          + (f"  ({reused} opus reused, source unchanged)" if reused else ""))
     for cat in sorted(counts):
         flag = "" if counts[cat] == 5 else f"   <-- expected 5, got {counts[cat]}"
         print(f"  {cat:<20} {counts[cat]}{flag}")
