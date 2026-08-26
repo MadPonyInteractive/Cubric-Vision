@@ -53,6 +53,18 @@
 > model wants" fails. Its import graph (`downloadManager` → `dependencies` → `models`) contains
 > no file this card touched.
 >
+> **CLOSING DELTA (same session, after the import).** `voices/LICENCE.md` +
+> `Cubric-Vision-Voice-Licence-1.0` now carry Fabio's terms: **clips proprietary, user output
+> commercial-OK, no royalty, no territory limit** — he added "it doesn't have to be strict, if
+> it's revoked I don't care". The dead kyutai half of `ingest.py` is deleted (**766 → 367
+> lines**) along with `voices/curated.txt`. `brief.md` § Sourcing and the clip-grid gate are
+> rewritten to match what shipped. `--from-dir` now **only re-encodes when the source is newer**
+> — the opus encoder is not byte-stable, so every import used to rewrite all 60 binaries
+> (~3.5 MB of git churn); a second import now reports 60 reused and leaves `git status voices/`
+> empty. **HISTORY WAS DELIBERATELY NOT REWRITTEN**: the kyutai opus remain in git objects
+> (20 commits, master only, 2.81 MB) and Fabio's call was "if it's in history, it's in history"
+> — they cannot reach a user because builds package the working tree.
+>
 > **A SEVENTH METRIC LOST TO THE EAR.** Fabio heard "huge pitch oscillations" in the three VC
 > intermediates and called the three finals fine; a smoothed-f0 wobble measure ranked the
 > intermediates *no worse than* the finals, and flagged his own two recordings as the wobbliest

@@ -257,21 +257,28 @@
       "generated_at": "2026-08-26T03:13:26Z"
     },
     {
-      "id": "57202658-ce39-4196-b5a3-d3ec389bf7ac",
-      "path": ".agents/mpi-kanban/state/handoffs/57202658-ce39-4196-b5a3-d3ec389bf7ac.json",
-      "task_card": "MPI-622",
-      "status": "open",
-      "generated_at": "2026-08-26T05:25:14Z"
-    },
-    {
       "id": "b0944d1e-44f8-4b39-b980-091b22cd1071",
       "path": ".agents/mpi-kanban/state/handoffs/b0944d1e-44f8-4b39-b980-091b22cd1071.json",
       "task_card": "MPI-620",
       "status": "open",
       "generated_at": "2026-08-26T06:12:01Z"
+    },
+    {
+      "id": "57202658-ce39-4196-b5a3-d3ec389bf7ac",
+      "path": ".agents/mpi-kanban/state/handoffs/57202658-ce39-4196-b5a3-d3ec389bf7ac.json",
+      "task_card": "MPI-622",
+      "status": "superseded",
+      "generated_at": "2026-08-26T05:25:14Z"
+    },
+    {
+      "id": "cda6b3b2-81a7-422c-8536-1fd696990661",
+      "path": ".agents/mpi-kanban/state/handoffs/cda6b3b2-81a7-422c-8536-1fd696990661.json",
+      "task_card": "MPI-622",
+      "status": "open",
+      "generated_at": "2026-08-26T07:55:00Z"
     }
   ],
   "index": {
-    "updated_at": "2026-08-26T03:00:08Z"
+    "updated_at": "2026-08-26T07:55:00Z"
   }
 }
