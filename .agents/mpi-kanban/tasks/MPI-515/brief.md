@@ -1,6 +1,6 @@
-# MPI-515 - 1.5 BLOCKER: remove the nvidia-pid ModelDef
+# MPI-515 - 2.0 BLOCKER: remove the nvidia-pid ModelDef
 
-**Gate: 1.5 does not ship while `nvidia-pid` is still a ModelDef in the Model
+**Gate: 2.0 does not ship while `nvidia-pid` is still a ModelDef in the Model
 Library.** The deprecation notice users see in 1.4 is the badge from
 [MPI-514](../MPI-514/brief.md); this card is the removal it promises.
 
@@ -12,7 +12,7 @@ read [MPI-507](../MPI-507/brief.md) SS 7 before starting here, it is not repeate
 
 ## Why it is a blocker and not a nice-to-have
 
-Ship 1.5 with both the ModelDef and the plugins live and a user has two ways to
+Ship 2.0 with both the ModelDef and the plugins live and a user has two ways to
 install the same ~16.5GB of weights, with two different install-state machines
 pointing at one set of files. Avoiding exactly that is the point of the split.
 
@@ -41,11 +41,11 @@ pointing at one set of files. Avoiding exactly that is the point of the split.
    honest while the model is still there.
 6. **Release notes:** `docs/releases/UNRELEASED.md` (~line 250) currently promises
    *"The NVIDIA PiD upscaler now actually upscales"*. That is 1.4 copy for a model
-   being sunset in 1.5; reconcile the two so one release does not make both claims.
+   being sunset in 2.0; reconcile the two so one release does not make both claims.
 
 ## Verify
 
 - Model Library shows no PiD tile; the four plugins appear in the image upscale
   dropdown and only there (PiD is image-only).
-- A user who installed PiD BEFORE 1.5 can still reclaim the weights from disk.
+- A user who installed PiD BEFORE 2.0 can still reclaim the weights from disk.
 - `npm run release:check` passes.

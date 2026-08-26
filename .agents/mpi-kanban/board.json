@@ -8,7 +8,6 @@
       "MPI-612",
       "MPI-605",
       "MPI-602",
-      "MPI-596",
       "MPI-595",
       "MPI-593",
       "MPI-591",
@@ -73,7 +72,8 @@
       "MPI-622",
       "MPI-603",
       "MPI-607",
-      "MPI-367"
+      "MPI-367",
+      "MPI-596"
     ],
     "done": [
       "MPI-626",
@@ -122,7 +122,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-26T08:38:00Z",
+  "updated_at": "2026-08-26T15:24:38Z",
   "events": [
     {
       "at": "2026-08-25T04:12:00Z",
@@ -3886,6 +3886,27 @@
       "from": "doing",
       "to": "done",
       "note": "Both approved playbook heals landed (NODE_PATH/ESM correction in prose + trap row; new resize-before-composite trap row). MPI-620 notified by coordination message d3900d18 - its files.json owns that doc. Card back to done."
+    },
+    {
+      "at": "2026-08-26T14:57:12Z",
+      "type": "task.updated",
+      "task": "MPI-595",
+      "actor": "claude",
+      "note": "1.5 release readiness umbrella retargeted to 2.0. Kept, not deleted: every Gate A card is still open and untouched since 2026-08-21. The dated snapshot was removed rather than refreshed and replaced with an ON PICKUP re-measure list. New Gate C: the UNRELEASED 'eight flows' vs flowsRegistry.js's nine (voice-changer)."
+    },
+    {
+      "at": "2026-08-26T14:57:12Z",
+      "type": "task.updated",
+      "task": "MPI-515",
+      "actor": "claude",
+      "note": "Title/body label 1.5 BLOCKER -> 2.0 BLOCKER, following the MPI-595 retarget. Scope unchanged."
+    },
+    {
+      "at": "2026-08-26T15:24:38Z",
+      "type": "task.updated",
+      "task": "MPI-595",
+      "actor": "claude",
+      "note": "Two Gate C questions ANSWERED by Fabio 2026-08-26. (1) WHY MAJOR: Flows make it major, on AUDIENCE not code - no migration or compat note is owed. Flows open the app to a user who could not use it before, or for whom it was hard; they are extremely simple and straightforward and will draw a different kind of user. Plus a competitive half that belongs in the release body: some of these Flows exist NOWHERE ELSE, or only behind proprietary websites. (2) THE FLOW LIST IS STILL GROWING - more Flows land before 2.0 cuts, so no number can be pinned now. The gate was reframed from 'freeze the list' to a mechanical reconcile run ONCE, immediately before the notes freeze: diff flowsRegistry.js ids against the Flows named in UNRELEASED.md and fix the count sentence. The 8-vs-9 voice-changer drift is kept as the worked example, not as the answer. Fabio also confirmed the card stays - keep, do not delete."
     }
   ]
 }
