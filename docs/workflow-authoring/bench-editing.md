@@ -130,9 +130,19 @@ json.dump(w, f, indent=2, ensure_ascii=True)   # non-ASCII escaped
 # opened with newline="\r\n", and NO trailing newline
 ```
 
-**Prove it before writing anything**: load the untouched file, re-serialise it, and assert
-the bytes are identical. If the round-trip is not exact, fix the serialiser — do not write.
-Getting this wrong turns a six-node change into a 2400-line diff that no one can review.
+**That recipe is for a graph the BENCH wrote. The repo's `comfy_workflows/raw/*.json` are
+not those files, and measured they want the OPPOSITE of all three** (MPI-620): **LF**,
+**WITH** a trailing newline, and `ensure_ascii=False`. Applying the bench recipe to one of
+them is exactly the 2400-line diff this section exists to prevent. `ensure_ascii` is the
+half that hides: a graph whose strings are pure ASCII round-trips clean under EITHER
+setting, so the first file you test can pass while the next one explodes. Measured on
+`flow_scribble.json` — 35,491 bytes, zero CRLF, ends `0x0a`, and **six non-ASCII bytes**
+(em-dashes in the baked prompt), every one of which `ensure_ascii=True` would rewrite as a six-character
+`—` escape.
+
+**Prove it before writing anything, per file**: load the untouched file, re-serialise it, and
+assert the bytes are identical. If the round-trip is not exact, fix the serialiser — do not
+write. Getting this wrong turns a six-node change into a 2400-line diff that no one can review.
 
 > Line endings are **per file**, not a repo-wide constant, and the same is true of the kanban
 > JSON for its own reasons (`.claude/rules/kanban.md`). Measure, do not assume.
