@@ -2002,6 +2002,15 @@
  *                                            never fetches. At runtime callers pass the result
  *                                            of loadVoiceLibrary() (its raw parsed JSON, not the
  *                                            library instance).
+ * @property {'narration'|'character'} [route='narration']
+ *                                          - Which route this mount previews, and so what the
+ *                                            play button plays. 'narration' plays the generated
+ *                                            TTS audition. 'character' (VC) plays the RAW
+ *                                            SAMPLE: that is the file handed to `target_voice`,
+ *                                            and no generated clip can preview a conversion
+ *                                            whose source is the user's own recording. The
+ *                                            generated character auditions were deleted in
+ *                                            Phase 3.5 for exactly that reason.
  * @property {string} [selectedVoiceId]     - Pre-selected voice id.
  * @property {number|null} [userPitchHz]    - Median F0 of the user's own uploaded sample (Hz).
  *                                            When provided, pitch-distance warnings are shown
@@ -2020,9 +2029,16 @@
  *   narration — direct TTS, no emotion, sounds exactly like its voice clip.
  *   character — TTS(performance clip) → VC(character clip), full emotion set.
  *
- * Filtering: kind / register / gender / language. accent is hidden — it is nullable on
- * purpose (a wrong label is worse than a missing one) and meaningless for character voices.
+ * Filtering: kind / register / gender / language / section. accent is hidden — it is nullable
+ * on purpose (a wrong label is worse than a missing one) and meaningless for character voices.
  * Emotion picker is shown in the detail panel for character/both voices only.
  *
- * Audio: plays audition_narration.opus / audition_character.opus, never sample.opus.
+ * THE LIST IS SECTIONS OF VARIATIONS. The shipped library is 15 sections over 56 clips, and
+ * within a section they are one voice performed slightly differently, not distinct voices
+ * (Fabio's ear, 2026-08-26). A section of one renders as a plain voice and is never labelled
+ * "Variation 1".
+ *
+ * Audio: `route` decides — the narration audition, or the raw sample for VC. All paths go
+ * through `library.assetUrl()`; a manifest path handed straight to `new Audio()` resolves
+ * against the page and 404s.
  */

@@ -103,7 +103,15 @@ CATEGORY_META = {
     "elderly_female":   ("female", "elderly"),
     "narrator_trailer": (None,     None),
     "cartoon_critter":  (None,     None),
-    "villain_menacing": (None,     None),
+    # The villains were never five variations of one voice — five separate DIRECTION
+    # briefs, which is why gender surfaced in this section and nowhere else. Each
+    # survivor is its own section of one. Gender/age come from the generation-time
+    # DIRECTION sidecar; `villain_young`'s age is Fabio's ear over the sidecar's
+    # "Adult male villain" (2026-08-26), and his ear outranks the paperwork here.
+    "villain_monster":  (None,     None),
+    "villain_male":     ("male",   "adult"),
+    "villain_female":   ("female", "adult"),
+    "villain_young":    ("male",   "young"),
 }
 
 # ---------------------------------------------------------------------------
@@ -258,12 +266,21 @@ def build_voice_entry(voice_id, median_f0, p10, p90, reg, added_at):
         "style":        None,
         "tags":         None,
         "kind":         "both",     # sample works for both narration and VC
+        "section":      None,       # set from the category below — the grouping key
+        "variation":    None,       # 1-based index within the section
         "register":     reg,
         "median_f0":    median_f0,
         "f0_p10_p90":   [p10, p90],
         "sample":       f"{voice_id}.opus",
+        # NARRATION ONLY. There is deliberately no `audition_character`: a character
+        # audition cannot preview the character route, because VC takes its delivery
+        # from the SOURCE performance and in the real flow that source is the user's
+        # own recording, which does not exist at audition time. Every such clip
+        # previewed a stand-in performer rather than the voice, and all 60 were heard
+        # to merge into one voice per register (Fabio, 2026-08-26). The honest preview
+        # of a conversion target is the target itself — `sample` — and the picker
+        # plays that for the VC route.
         "audition_narration":  None,  # generated in Phase 3
-        "audition_character":  None,  # generated in Phase 3
         "licence":      VOICEDESIGN_LICENCE,
         "source_url":   None,       # generated in-house - there is no upstream to point at
         "added_at":     added_at,
@@ -299,7 +316,7 @@ def import_local(voices_dir, src_dir, cache_dir):
     # and a voice that is not present simply has none.
     manifest_path = voices_dir / "manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    prior_auditions = {v["id"]: (v.get("audition_narration"), v.get("audition_character"))
+    prior_auditions = {v["id"]: v.get("audition_narration")
                        for v in manifest.get("voices", [])}
 
     for wav in wavs:
@@ -342,18 +359,30 @@ def import_local(voices_dir, src_dir, cache_dir):
 
         gender, age = CATEGORY_META[category]
         entry = build_voice_entry(voice_id, m["median_f0"], m["p10"], m["p90"], reg, added_at)
-        aud_n, aud_c = prior_auditions.get(voice_id, (None, None))
+        # `counts` doubles as the per-section variation counter: wavs are walked in
+        # sorted order, so the nth voice of a section is its nth variation.
+        counts[category] = counts.get(category, 0) + 1
         entry.update({
             "display_name": voice_id.replace("_", " ").title(),
             "gender":       gender,
             "age":          age,
             "tags":         [category],
-            "audition_narration": aud_n,
-            "audition_character": aud_c,
+            "section":      category,
+            "variation":    counts[category],
+            "audition_narration": prior_auditions.get(voice_id),
         })
         entries.append(entry)
-        counts[category] = counts.get(category, 0) + 1
         print(f"  {voice_id:<22} {m['median_f0']:6.1f} Hz  {reg}  {category}")
+
+    # Display names compose from SECTION + VARIATION, and only here — the file stem is
+    # not a label. Retiring `cartoon_critter_2` left the survivors 1/3/4, so a stem-derived
+    # name would read "Cartoon Critter 3" on the second variation and invite the reader to
+    # hunt for a missing #2. Needs the full walk first: a section's size is what decides
+    # whether its members are variations of one voice or a voice on its own.
+    for e in entries:
+        label = e["section"].replace("_", " ").title()
+        e["display_name"] = (label if counts[e["section"]] == 1
+                             else f"{label} · Variation {e['variation']}")
 
     manifest["variant"] = "voicedesign"
     manifest["voices"] = entries
@@ -362,9 +391,13 @@ def import_local(voices_dir, src_dir, cache_dir):
 
     print(f"\n{len(entries)} voices imported from {src_dir}"
           + (f"  ({reused} opus reused, source unchanged)" if reused else ""))
+    # No "expected 5" flag any more. Sections are deliberately uneven after the
+    # 2026-08-26 ear pass retired four voices and split the villains into four
+    # sections of one; a uniform count would now be the anomaly.
+    print(f"\n{len(counts)} sections:")
     for cat in sorted(counts):
-        flag = "" if counts[cat] == 5 else f"   <-- expected 5, got {counts[cat]}"
-        print(f"  {cat:<20} {counts[cat]}{flag}")
+        n = counts[cat]
+        print(f"  {cat:<20} {n} {'voice' if n == 1 else 'variations'}")
     if skipped:
         print(f"\n{len(skipped)} SKIPPED:")
         for s in skipped:

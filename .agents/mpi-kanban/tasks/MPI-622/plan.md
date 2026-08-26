@@ -4,6 +4,49 @@
 
 **Project mode:** `scalable-foundation`.
 
+> **Session 22 note (2026-08-26) — PHASE 3 FAILED ITS EAR GATE. The library is not 60
+> distinct voices and will not be made into them.** Supersedes the session 21 note below on
+> every point about audition quality; the generation mechanics it records are still accurate.
+>
+> **Fabio's verdict, on headphones, raw samples AND auditions:** within every section the
+> voices are one person talking slightly differently — *"every single section of 5 samples is
+> like the same person just talking slightly differently"*, against ElevenLabs where
+> voice-to-voice difference is "ginormous". Named collapses: cartoon critters 2≈4 and 1≈5 in
+> raw; `child_1`≈`child_2`; `elderly_male_3`≈`elderly_male_4`; `mature_female_1`≈
+> `mature_female_2` in character audition. He named the elderly males as the ONE partial
+> exception — *"my two voices are a bit different from the other elderly males, but that's
+> about it."*
+>
+> **RETIRED on his call: `cartoon_critter_2`, `cartoon_critter_5`, `elderly_male_3`.** 60 → 57.
+> **Do NOT backfill to 60** — *"let's not try to keep it at 60 samples, otherwise we're never
+> gonna leave this place. Qwen has those limited voices, and the rest is history."* Chasing
+> within-section distinctness is CLOSED: the ceiling is Qwen's, not the pipeline's.
+>
+> **THE PRODUCT FRAMING CHANGES: a section is ONE VOICE with N VARIATIONS, not N voices.**
+> Fabio, verbatim: *"for users, we should say 'variation of the same voice' instead of
+> 'different voice' because it's not really a different voice."* The grouping key is the
+> **SECTION** — the twelve `tags[0]` categories exactly as the review page presented them
+> (cartoon_critter, child, deep_male, elderly_female, elderly_male, mature_female,
+> narrator_trailer, standard_female, standard_male, villain_menacing, young_female,
+> young_male). **NOT register.** He corrected an earlier misreading of "R section" explicitly:
+> *"Forget about the R sections... It's by type of voice, not by R section."* Registers still
+> drive clip selection; they are not a user-facing grouping.
+>
+> **THE CHARACTER AUDITIONS WERE FLATTENED BY THE GENERATOR, NOT ONLY BY THE VOICES — and
+> that defect is ours.** `research/phase3_auditions.py` line 177 runs the TTS half ONCE PER
+> REGISTER and reuses that single clip as the VC source for every voice in it ("one VC source
+> per register (5 runs, not 60)"). All five cartoon critters are R5, so their five character
+> auditions are the SAME performance — same timing, same breath — with only timbre nudged.
+> Same for deep_male and narrator_trailer (all R1) and young_male (all R3). Fabio heard it
+> exactly: *"auditions just make the variations merge into one voice."* Raw voices he CAN
+> tell apart still collapse in character audition, which is what proves the route is at
+> fault and not just the corpus. The 60-job saving bought this.
+>
+> **The residual, separate and still open:** narration auditions drift into a British accent
+> inconsistently ("probably seed lottery" — his read, and it matches: `accent` is null on all
+> 60 by design, so Chatterbox invents one per seed). Two children carry it. Not what broke
+> this phase; do not conflate.
+
 > **Session 21 note (2026-08-26) — PHASE 3 IS GENERATED AND INSTALLED. Only Fabio's ear is
 > outstanding.** Supersedes the session 20 note below.
 >
@@ -499,6 +542,49 @@ step for a take that lands off-register.
       not — that mismatch is the whole reason auditions are generated) while a `narration`
       audition does. **Phase verify mode: `user-ux`.**
 
+## Phase 3.5: The library says what it is — DONE 2026-08-26
+
+Added after Phase 3 failed its ear gate. Deletion only: no bench job, no GPU lease, no
+generated clip. Every item verified below.
+
+- [x] **Retire the four voices Fabio's ear rejected** — `cartoon_critter_2`,
+      `cartoon_critter_5`, `elderly_male_3` (indistinguishable from a sibling),
+      `villain_menacing_3` (does not read as a villain). 60 → 56, and **no backfill**: the
+      ceiling is Qwen's limited voice set, not the pipeline's.
+- [x] **Split the villains into four sections of one.** They were never variations — five
+      separate DIRECTION briefs, which is why gender surfaced here and nowhere else.
+      `villain_monster_1` (large monster creature, null/null), `villain_male_1` (male/adult),
+      `villain_female_1` (female/adult), `villain_young_1` (male/**young** — Fabio's ear over
+      the sidecar's "Adult"). Gender comes from the generation-time DIRECTION line, never from
+      f0: a pitch split would have put `villain_menacing_3` and `_5` on the wrong side.
+- [x] **Delete all 60 character auditions and the field that named them.** Bundle 6.14 →
+      **4.90 MB**. Rationale in `## Current State`; the short form is that VC's delivery comes
+      from the user's own recording, so no pre-generated clip can preview it.
+- [x] **The library is SECTIONS OF VARIATIONS.** `section` + `variation` on every voice,
+      `listSections()` on the loader, display names composed from section + variation
+      (never the file stem — retiring `cartoon_critter_2` renumbers the survivors).
+- [x] **`check_manifest.mjs`**: check 12 rewritten to narration-only plus a guard that no
+      voice still carries `audition_character`; new check 14 asserts sections partition the
+      library, variations are dense 1..N, and a lone voice is never labelled "Variation 1".
+- [x] **Test fixture re-cased to snake_case** — the deferred Phase 4 item, done here since the
+      fixture had to change anyway. Plus coverage for `listSections` and `assetUrl`.
+- [x] **Fixed a shipped bug the restructure exposed:** the picker passed manifest-relative
+      paths straight to `new Audio()`, so every audition resolved against the PAGE and 404'd.
+      Proven live — the bare path returns 404, `assetUrl` returns 200. It was invisible because
+      the gallery fixture leaves every audition null, so playback was never exercised.
+
+**Verified 2026-08-26:** 14/14 contract checks; `npm test` 741/741; eslint clean; and a live
+probe of the real component against the real manifest in a browser — 15 sections, 56 cards,
+correct labels, both routes building the right URL (`/voices/<id>.opus` for character,
+`/voices/audition/<id>_narration.opus` for narration). Two rendering bugs found by LOOKING at
+it, not by a test: a sticky section header covering its own first card, and a register badge
+reading "Cartoon / Critter" on a Child variation. Both fixed.
+
+**Left for Fabio, deliberately not changed:** the `kind` badge reads "both" on all 56 rows
+(every voice is `kind: 'both'`, so it carries no information), and the register filter
+dropdown still offers R1–R5 — which is the grouping he asked to drop as user-facing. Both are
+picker chrome that Phase 4 should settle with the route in hand.
+
 ## Phase 4: Wire the library into the flows
 
 - [ ] Add the picker to `voice-changer`'s "Target voice" slot beside the existing upload, and
@@ -508,8 +594,36 @@ step for a take that lands off-register.
       **Verify:** a full run in an isolated app instance (`npm run app:isolated`) — pick a
       library voice, run the flow, and a real gallery card lands. Then `npm test` green and
       the desktop suite green. **Phase verify mode: `user-ux`.**
+- [ ] Mount the picker with `route: 'character'` so the play button previews the raw sample.
+      The camelCase fixture item that was deferred here is DONE (Phase 3.5). Two open picker
+      questions come with it: the `kind` badge says "both" on every row, and the register
+      filter still exposes R1–R5 as a user-facing axis. Also unresolved from the Phase 4
+      brief: **what emotion means in voice-changer at all** — VC has no TTS stage, so the
+      user's own recording carries the delivery and the emotion set may be audition-only
+      here. Settle it before wiring the emotion control through.
+- [ ] Selecting a library voice routes through `_handleFiles` so it lands as an ordinary
+      content-addressed project asset — no new injection plumbing, and the graph sees exactly
+      what an upload produces.
 
 ## Plan Drift
+
+- **2026-08-26 (session 22) -- "60 distinct voices" was never true, and the ear gate is what
+  found it.** The whole plan is written around a library of 60 voices. It is 12 sections of
+  4-5 VARIATIONS, and Fabio's ear says so on raw samples, not just on auditions. Three voices
+  retired (`cartoon_critter_2`, `cartoon_critter_5`, `elderly_male_3`); 57 remain and there is
+  no backfill. Everything downstream that counts voices, labels a voice, or promises
+  distinctness is now wrong and is repaired in Phase 3.5 below. **This is the owner revising
+  his own earlier approval on new evidence -- it is NOT the settled "library contents" call
+  the session-21 handoff fenced off.** The reason he approved the sections earlier is
+  recorded too and is worth keeping: `child_1` and `child_2` differ in MANNER, which reads as
+  two voices until you listen for timbre.
+- **2026-08-26 (session 22) -- the per-register VC-source reuse is a defect, not an
+  optimisation.** Recorded in `## Current State` above. The rule it broke: an audition exists
+  to show what a voice sounds like, so anything shared across voices inside one belongs to
+  none of them. A shared TTS source hands every voice in a register one performer's delivery
+  and leaves timbre as the only difference -- which is precisely the difference that turned
+  out to be too small to hear. Any regeneration must give each SECTION its own source, and
+  seeds must differ across sections or five R1 sections merge the same way.
 
 - **2026-08-25 (session 17) -- the batch's picker ownership named paths this repo does not
   use.** The plan said `js/components/voicePicker.js` + `styles/components/voice-picker.css`.

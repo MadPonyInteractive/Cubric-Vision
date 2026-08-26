@@ -49,8 +49,8 @@ const walk = (dir) => readdirSync(dir, { withFileTypes: true }).flatMap(e =>
 
 // Brief.md § 3 field list. A missing field is a silent null in the picker.
 const VOICE_FIELDS = ['id', 'display_name', 'gender', 'age', 'accent', 'language', 'style',
-    'tags', 'kind', 'register', 'median_f0', 'f0_p10_p90', 'sample',
-    'audition_narration', 'audition_character', 'licence', 'source_url', 'added_at'];
+    'tags', 'kind', 'section', 'variation', 'register', 'median_f0', 'f0_p10_p90', 'sample',
+    'audition_narration', 'licence', 'source_url', 'added_at'];
 
 console.log(`\nvoices/manifest.json — ${manifest.voices.length} voices, ` +
     `${manifest.performanceClips.length} performance clips\n`);
@@ -157,7 +157,7 @@ check('11. no orphan opus in voices/ (nothing ships unreferenced)', () => {
     // — a curated-away voice leaves TWO auditions behind now, not just its sample.
     const referenced = new Set();
     for (const v of manifest.voices) {
-        for (const rel of [v.sample, v.audition_narration, v.audition_character]) {
+        for (const rel of [v.sample, v.audition_narration]) {
             if (rel) referenced.add(rel.split('/').pop());
         }
     }
@@ -171,24 +171,29 @@ check('11. no orphan opus in voices/ (nothing ships unreferenced)', () => {
     return 'clean';
 });
 
-check('12. every shipped voice has BOTH auditions, generated and non-empty', () => {
-    // Phase 3's verify step. An audition is not decoration: the picker plays it INSTEAD of
-    // the raw sample, because a character voice never sounds exactly like its own clip.
-    // A null here means the picker silently falls back to promising the wrong voice.
+check('12. every shipped voice has a narration audition, generated and non-empty', () => {
+    // THIS CHECK USED TO DEMAND BOTH AUDITIONS. It was rewritten on 2026-08-26 because the
+    // character audition was deleted outright, not because it became inconvenient: VC takes
+    // its delivery from the SOURCE performance, and in the shipping flow that source is the
+    // user's own recording, which does not exist at audition time. Every character clip
+    // therefore previewed a stand-in performer, and all 60 were heard to merge into one
+    // voice per register. The VC route's honest preview is the conversion target itself —
+    // `sample` — which check 6 already guards. Narration previews real TTS output and stays.
     const missing = [], empty = [];
     for (const v of manifest.voices) {
-        for (const [field, rel] of [['narration', v.audition_narration],
-                                    ['character', v.audition_character]]) {
-            if (!rel) { missing.push(`${v.id}:${field}`); continue; }
-            const p = join(VOICES, rel);
-            if (!existsSync(p)) missing.push(`${v.id}:${field} (${rel} not on disk)`);
-            else if (statSync(p).size === 0) empty.push(`${v.id}:${field}`);
-        }
+        const rel = v.audition_narration;
+        if (!rel) { missing.push(v.id); continue; }
+        const p = join(VOICES, rel);
+        if (!existsSync(p)) missing.push(`${v.id} (${rel} not on disk)`);
+        else if (statSync(p).size === 0) empty.push(v.id);
     }
     assert(missing.length === 0,
         `${missing.length} missing: ${missing.slice(0, 5).join(', ')}`);
     assert(empty.length === 0, `${empty.length} empty: ${empty.slice(0, 5).join(', ')}`);
-    return `${manifest.voices.length * 2} auditions`;
+    // No voice may carry the retired field: a stale reference would point at a deleted clip.
+    const stale = manifest.voices.filter(v => 'audition_character' in v).map(v => v.id);
+    assert(stale.length === 0, `${stale.length} still carry audition_character: ${stale.slice(0, 5).join(', ')}`);
+    return `${manifest.voices.length} auditions`;
 });
 
 check('13. the bundle stays within its stated budget', () => {
@@ -205,6 +210,38 @@ check('13. the bundle stays within its stated budget', () => {
     assert(mb < 8, `voices/ is ${mb.toFixed(2)} MB, over the 8 MB budget`);
     return `${mb.toFixed(2)} MB`;
 });
+
+check('14. sections partition the library, and variations number 1..N with no gaps', () => {
+    // The library is SECTIONS OF VARIATIONS, not N distinct voices — Fabio's ear, 2026-08-26:
+    // "every single section of 5 samples is like the same person just talking slightly
+    // differently". `variation` is a positional label within its section, so it must be
+    // dense: retiring cartoon_critter_2 renumbers 1/3/4 to variations 1/2/3, and a gap here
+    // means a display name promising a sibling that was deleted.
+    const bySection = new Map();
+    for (const v of manifest.voices) {
+        assert(v.section, `${v.id} has no section`);
+        assert(v.section === v.tags?.[0],
+            `${v.id}: section "${v.section}" disagrees with tags[0] "${v.tags?.[0]}"`);
+        if (!bySection.has(v.section)) bySection.set(v.section, []);
+        bySection.get(v.section).push(v);
+    }
+    for (const [name, members] of bySection) {
+        const nums = members.map(v => v.variation).sort((a, b) => a - b);
+        const want = members.map((_, i) => i + 1);
+        assert(JSON.stringify(nums) === JSON.stringify(want),
+            `section "${name}" variations are [${nums}], expected [${want}]`);
+        // A section of one is a voice, not a variation, and its label must not claim one.
+        const solo = members.length === 1;
+        for (const v of members) {
+            const claims = / · Variation \d+$/.test(v.display_name);
+            assert(claims !== solo,
+                `${v.id}: display_name "${v.display_name}" ${solo ? 'claims a variation but is alone in its section'
+                    : 'omits its variation number'}`);
+        }
+    }
+    return `${bySection.size} sections, ${manifest.voices.length} voices`;
+});
+
 
 console.log(`\n${pass}/${pass + failures.length} checks passed`);
 if (failures.length) {

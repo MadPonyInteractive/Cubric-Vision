@@ -45,6 +45,44 @@
     text-align: center;
 }
 
+/* ── Section ──────────────────────────────────────────────────────────────── */
+/* The list groups by section, so the cards inside one sit tighter than the gap
+   between sections — the grouping has to read as grouping without a box. */
+
+.mpi-voice-picker__section {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mpi-voice-picker__section + .mpi-voice-picker__section {
+    margin-top: var(--s-2);
+}
+
+.mpi-voice-picker__section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--s-2);
+    padding: var(--s-1) var(--s-1) 2px;
+    /* NOT sticky. It was, and it sat on top of its own first card — the heading is
+       opaque and the card scrolls under it, so "Variation 1" rendered nameless in
+       every section. A 15-row grouped list does not need a pinned header. */
+}
+
+.mpi-voice-picker__section-name {
+    color: var(--ink-1);
+    font-weight: 600;
+}
+
+/* Says outright that these are one voice, not several. That wording is the
+   product decision this restructure exists to deliver — do not soften it to
+   "3 voices". */
+.mpi-voice-picker__section-count {
+    color: var(--ink-3);
+    font-size: var(--t-2xs);
+}
+
 /* ── Voice card ───────────────────────────────────────────────────────────── */
 
 .mpi-voice-picker__card {

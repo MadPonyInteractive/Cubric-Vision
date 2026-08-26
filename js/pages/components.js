@@ -1192,34 +1192,40 @@ function mountAll() {
     });
 
     // ── MpiVoicePicker (Compound, MPI-622) ──────────────────────────────────────
-    // Fixture manifest — 4 voices spanning narration / character / both, two registers.
-    // Includes a deliberately far-pitch voice (R1 low male at 100 Hz) so the second
-    // gallery card (userPitchHz=250) shows the warning for that voice.
+    // Fixture manifest — two SECTIONS, one with variations and one alone, because the
+    // picker's list is sections-of-variations rather than a flat voice list (Phase 3.5).
+    // `rex` sits at 100 Hz so the second gallery card (userPitchHz=250) shows its warning.
+    // Auditions are null: the gallery serves no /voices/ assets, so play is a deliberate
+    // no-op here — audition PLAYBACK is covered by the unit test over assetUrl, not here.
     const _voiceFixtureManifest = {
         voices: [
             {
-                id: 'aria-r3', display_name: 'Aria', kind: 'narration',
+                id: 'aria-r3', display_name: 'Standard Female · Variation 1', kind: 'narration',
+                section: 'standard_female', variation: 1,
                 register: 'R3', median_f0: 220, gender: 'female', age: 'adult',
                 accent: 'US English', language: 'en',
-                audition_narration: null,
+                sample: 'aria-r3.opus', audition_narration: null,
             },
             {
-                id: 'rex-r1', display_name: 'Rex', kind: 'character',
-                register: 'R1', median_f0: 100, gender: 'male', age: 'adult',
-                accent: null, language: 'en',
-                audition_character: null,
-            },
-            {
-                id: 'blake-r2', display_name: 'Blake', kind: 'both',
-                register: 'R2', median_f0: 160, gender: 'male', age: 'adult',
-                accent: null, language: 'en',
-                audition_narration: null, audition_character: null,
-            },
-            {
-                id: 'yuki-r3', display_name: 'Yuki', kind: 'narration',
+                id: 'yuki-r3', display_name: 'Standard Female · Variation 2', kind: 'narration',
+                section: 'standard_female', variation: 2,
                 register: 'R3', median_f0: 240, gender: 'female', age: 'young adult',
                 accent: null, language: 'ja',
-                audition_narration: null,
+                sample: 'yuki-r3.opus', audition_narration: null,
+            },
+            {
+                id: 'blake-r2', display_name: 'Standard Male', kind: 'both',
+                section: 'standard_male', variation: 1,
+                register: 'R2', median_f0: 160, gender: 'male', age: 'adult',
+                accent: null, language: 'en',
+                sample: 'blake-r2.opus', audition_narration: null,
+            },
+            {
+                id: 'rex-r1', display_name: 'Villain Monster', kind: 'character',
+                section: 'villain_monster', variation: 1,
+                register: 'R1', median_f0: 100, gender: 'male', age: 'adult',
+                accent: null, language: 'en',
+                sample: 'rex-r1.opus', audition_narration: null,
             },
         ],
         performanceClips: [],
@@ -1234,12 +1240,12 @@ function mountAll() {
             console.log('[gallery] MpiVoicePicker select:', voice.id, emotion || '(no emotion)'));
         picker.on('audition-start', ({ voice }) =>
             console.log('[gallery] MpiVoicePicker audition-start:', voice.id));
-        console.log('[gallery] MpiVoicePicker mounted. Filter voices, play auditions (audition URLs are null in fixture so play will no-op). No pitch warning — userPitchHz not set.');
+        console.log('[gallery] MpiVoicePicker mounted. Filter voices, play auditions (audition URLs are null in fixture so play will no-op). Standard Female shows as 2 variations of one voice; the other two are lone voices. No pitch warning — userPitchHz not set.');
     });
 
     mount('preview-voice-picker-warn', () => {
         const slotEl = slot('preview-voice-picker-warn');
-        // userPitchHz=250 Hz (R3 high female). Rex (R1, 100 Hz) is ~15.8 st away → warning shown.
+        // userPitchHz=250 Hz (R3 high female). Villain Monster (R1, 100 Hz) is ~15.8 st away → warning shown.
         const picker = MpiVoicePicker.mount(slotEl, {
             manifest: _voiceFixtureManifest,
             userPitchHz: 250,
@@ -1247,7 +1253,7 @@ function mountAll() {
         });
         picker.on('select', ({ voice, emotion }) =>
             console.log('[gallery] MpiVoicePicker (warn) select:', voice.id, emotion || ''));
-        console.log('[gallery] MpiVoicePicker (pitch-warn) mounted. userPitchHz=250 Hz. Rex (R1, 100 Hz) is ~15.8 semitones away — warning badge shown next to Rex. Voice stays selectable.');
+        console.log('[gallery] MpiVoicePicker (pitch-warn) mounted. userPitchHz=250 Hz. Villain Monster (R1, 100 Hz) is ~15.8 semitones away — warning badge shown on that card. Voice stays selectable.');
     });
 
 }

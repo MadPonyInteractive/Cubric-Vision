@@ -59,7 +59,13 @@ const isRegister = r => Object.prototype.hasOwnProperty.call(REGISTERS, r);
  * looks correct, and the import pipeline that writes this file is re-runnable, so a loud
  * failure is cheap to fix.
  */
-export function createVoiceLibrary(manifest) {
+/** Human label for a section slug: 'villain_monster' → 'Villain Monster'. */
+export function sectionLabel(section) {
+    return String(section ?? '').split('_')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+export function createVoiceLibrary(manifest, { baseUrl = '/voices/' } = {}) {
     const voices = manifest?.voices ?? [];
     const clips = manifest?.performanceClips ?? [];
 
@@ -82,21 +88,63 @@ export function createVoiceLibrary(manifest) {
 
     const byId = new Map(voices.map(v => [v.id, v]));
 
-    /** `kind: 'both'` ships two auditions and must answer to BOTH filters. */
+    /** `kind: 'both'` serves both routes and must answer to BOTH filters. */
     const isKind = (v, kind) => !kind || v.kind === kind || v.kind === 'both';
 
+    const filterVoices = (filter = {}) => {
+        const { kind, register, gender, age, accent, language, section } = filter;
+        return voices.filter(v => isKind(v, kind)
+            && (!register || v.register === register)
+            && (!gender || v.gender === gender)
+            && (!age || v.age === age)
+            && (!accent || v.accent === accent)
+            && (!language || v.language === language)
+            && (!section || v.section === section));
+    };
+
     return {
-        listVoices(filter = {}) {
-            const { kind, register, gender, age, accent, language } = filter;
-            return voices.filter(v => isKind(v, kind)
-                && (!register || v.register === register)
-                && (!gender || v.gender === gender)
-                && (!age || v.age === age)
-                && (!accent || v.accent === accent)
-                && (!language || v.language === language));
+        listVoices: filterVoices,
+
+        /**
+         * The library grouped the way the user meets it: SECTIONS, each holding its
+         * variations in `variation` order.
+         *
+         * This is the primary list, not a convenience over `listVoices`. The library is not
+         * N distinct voices and never was — Fabio's ear, 2026-08-26, on headphones and on
+         * raw samples: "every single section of 5 samples is like the same person just
+         * talking slightly differently". Presenting 56 flat rows would promise 56 voices and
+         * deliver 15. A section of one is a voice; `isVariations` is what the UI branches on
+         * so a singleton is never labelled "Variation 1 of 1".
+         *
+         * Sections come back in manifest order, which is the import's sorted order, so the
+         * list is stable across runs.
+         */
+        listSections(filter = {}) {
+            const groups = new Map();
+            for (const v of filterVoices(filter)) {
+                if (!groups.has(v.section)) {
+                    groups.set(v.section, { section: v.section, label: sectionLabel(v.section), voices: [] });
+                }
+                groups.get(v.section).voices.push(v);
+            }
+            for (const g of groups.values()) {
+                g.voices.sort((a, b) => a.variation - b.variation);
+                g.isVariations = g.voices.length > 1;
+            }
+            return [...groups.values()];
         },
 
         getVoice: id => byId.get(id) ?? null,
+
+        /**
+         * Absolute URL for a manifest-relative asset path.
+         *
+         * Manifest paths are relative to `voices/` ("audition/x.opus", "x.opus"), so passing
+         * one straight to `new Audio()` resolves it against the PAGE and 404s. That bug
+         * shipped in the picker and went unseen because the component-gallery fixture leaves
+         * every audition path null, so playback was never exercised against a real manifest.
+         */
+        assetUrl: rel => (rel ? baseUrl + rel : null),
 
         /** The shared emotion grid for one register. Optionally narrowed to one emotion. */
         listPerformanceClips(register, emotion) {

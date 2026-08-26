@@ -11,13 +11,22 @@ import { clientLogger } from '../../../services/clientLogger.js';
  * MpiVoicePicker — voice selection compound for the TTS/VC flows (MPI-622).
  *
  * Composes MpiDropdown + MpiButton + MpiRadioGroup over a voiceLibrary instance.
- * Two voice kinds (narration / character / both), filtering by register / gender /
- * age / language, audition playback (from audition.opus, never raw sample), and a
- * pitch-distance warning when the user's sample sits far from the performance clips.
+ *
+ * THE LIST IS SECTIONS OF VARIATIONS, not a flat voice list. The shipped library is 15
+ * sections holding 56 clips, and within a section they are one voice performed slightly
+ * differently rather than distinct voices (Fabio's ear, 2026-08-26). A section of one
+ * renders as a plain voice. Filtering by register / gender / age / language narrows the
+ * sections; playback previews whichever route the mount declares.
  *
  * Props:
  * @param {object} manifest              - A plain voice manifest object (voices + performanceClips arrays).
  *                                          Pass your own fixture; the component never fetches.
+ * @param {'narration'|'character'} [route='narration']
+ *                                        - Which route this mount previews. 'narration' plays
+ *                                          the generated TTS audition; 'character' (VC) plays the
+ *                                          RAW SAMPLE, because that is the file handed to
+ *                                          `target_voice` and no generated clip can preview a
+ *                                          conversion whose source is the user's own recording.
  * @param {string} [selectedVoiceId]     - Pre-selected voice id.
  * @param {number|null} [userPitchHz]    - Median F0 of the user's own uploaded sample (Hz).
  *                                          When provided, pitch-distance warnings are shown.
@@ -75,6 +84,9 @@ export const MpiVoicePicker = ComponentFactory.create({
             language: '',
         };
 
+        // Which route this mount previews — decides what the play button plays.
+        const _route = props.route === 'character' ? 'character' : 'narration';
+
         let _selectedId   = props.selectedVoiceId || null;
         let _selectedEmo  = 'neutral';
         let _audio        = null;     // current HTMLAudioElement
@@ -95,12 +107,26 @@ export const MpiVoicePicker = ComponentFactory.create({
 
         function _playAudition(voice) {
             _stopAudio();
-            // Prefer audition clips over the raw sample. Never play sample.opus —
-            // a character voice never sounds exactly like its own sample, so playing
-            // it would promise a voice the product cannot deliver (brief.md § 3).
-            const url = voice.kind === 'character'
-                ? (voice.audition_character || voice.audition_narration)
-                : (voice.audition_narration || voice.audition_character);
+            // WHAT PLAYS DEPENDS ON THE ROUTE THE PICKER WAS MOUNTED FOR.
+            //
+            // 'narration' (TTS) plays the generated narration audition — real output of the
+            // route it previews.
+            //
+            // 'character' (VC) plays the RAW SAMPLE, and that reverses brief.md § 3's "never
+            // play sample.opus". The old rule assumed a generated character audition was the
+            // truer preview. It is not, and it cannot be: VC takes its delivery from the
+            // SOURCE performance, which in the real flow is the user's own recording and does
+            // not exist at audition time. Every character audition therefore previewed a
+            // stand-in performer — all 60 were heard to merge into one voice per register
+            // (Fabio, 2026-08-26) — and they were deleted. The sample IS the file handed to
+            // `target_voice`, so it is the honest preview of a conversion target.
+            const rel = _route === 'character'
+                ? voice.sample
+                : (voice.audition_narration || voice.sample);
+            // Manifest paths are relative to voices/ — `new Audio('audition/x.opus')` would
+            // resolve against the PAGE and 404. The gallery fixture leaves them null, so
+            // playback never exercised this against a real manifest until now.
+            const url = lib.assetUrl(rel);
             if (!url) {
                 clientLogger.info('voice-picker', `No audition for voice ${voice.id}`);
                 return;
@@ -136,12 +162,15 @@ export const MpiVoicePicker = ComponentFactory.create({
         }
 
         // ── Voice card rendering ──────────────────────────────────────────────
-        function _voiceCard(voice) {
+        function _voiceCard(voice, inVariations = false) {
             const isSelected = voice.id === _selectedId;
             const isPlaying  = voice.id === _playingId;
             const warnSemi   = _pitchWarning(voice);
 
-            const regInfo = REGISTERS[voice.register] || {};
+            // Inside a section the heading already carries the name, so the card shows only
+            // "Variation N". A lone voice keeps its full label.
+            const cardName = inVariations ? `Variation ${voice.variation}` : voice.display_name || voice.id;
+
             const kindBadgeMap = { narration: 'narration', character: 'character', both: 'both' };
             const kindBadge = kindBadgeMap[voice.kind] || voice.kind;
 
@@ -156,10 +185,16 @@ export const MpiVoicePicker = ComponentFactory.create({
                      data-voice-id="${voice.id}" role="button" tabindex="0"
                      aria-pressed="${isSelected}">
                     <div class="mpi-voice-picker__card-main">
-                        <div class="mpi-voice-picker__card-name">${_esc(voice.display_name || voice.id)}</div>
+                        <div class="mpi-voice-picker__card-name">${_esc(cardName)}</div>
                         <div class="mpi-voice-picker__card-meta">
                             <span class="mpi-voice-picker__badge mpi-voice-picker__badge--${kindBadge}">${kindBadge}</span>
-                            <span class="mpi-voice-picker__badge">${_esc(regInfo.label || voice.register)}</span>
+                            <!-- NO REGISTER BADGE. Registers are an internal pitch fact used to
+                                 pick performance clips, not a user-facing grouping - and inside a
+                                 section the label actively lied: child_2 measures R5, so it
+                                 rendered "Cartoon / Critter" under the "Child" heading. The pitch
+                                 warning below already says the one thing a user needs, in
+                                 semitones, and says it in plain language. -->
+                            ${voice.age ? `<span class="mpi-voice-picker__badge">${_esc(voice.age)}</span>` : ''}
                             ${voice.gender ? `<span class="mpi-voice-picker__badge">${_esc(voice.gender)}</span>` : ''}
                             ${voice.language ? `<span class="mpi-voice-picker__badge">${_esc(voice.language)}</span>` : ''}
                         </div>
@@ -242,14 +277,27 @@ export const MpiVoicePicker = ComponentFactory.create({
         // ── List rendering ────────────────────────────────────────────────────
         function _renderList() {
             const listEl = qs('#vp-list', el);
-            const voices = lib.listVoices(filter);
+            const sections = lib.listSections(filter);
 
-            if (!voices.length) {
+            if (!sections.length) {
                 listEl.innerHTML = `<div class="mpi-voice-picker__empty">No voices match these filters.</div>`;
                 return;
             }
 
-            listEl.innerHTML = voices.map(_voiceCard).join('');
+            // SECTIONS, not a flat list of voices. The library is 15 voices with variations,
+            // not 56 voices, and a flat list would promise 56. A section of one renders as a
+            // plain voice with no variation count — see `isVariations`.
+            listEl.innerHTML = sections.map(g => `
+                <div class="mpi-voice-picker__section">
+                    <div class="mpi-voice-picker__section-head">
+                        <span class="mpi-voice-picker__section-name">${_esc(g.label)}</span>
+                        ${g.isVariations
+                            ? `<span class="mpi-voice-picker__section-count">${g.voices.length} variations of one voice</span>`
+                            : ''}
+                    </div>
+                    ${g.voices.map(v => _voiceCard(v, g.isVariations)).join('')}
+                </div>
+            `).join('');
 
             // Click: select a card
             qsa('.mpi-voice-picker__card', listEl).forEach(card => {
