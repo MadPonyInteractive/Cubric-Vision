@@ -1335,9 +1335,18 @@ export const FLOWS = [
     {
         id: 'voice-changer',
         title: 'Voice Changer',
-        // `preview`/`video` deliberately absent until /mpi-flow-graphics runs — the
-        // tile guards on `flow.preview`, so a missing asset renders no thumb rather
-        // than a broken image, and a placeholder would have to be un-shipped later.
+        // Both drawn from ONE real run of this flow (MPI-622): the performance, the
+        // target sample and the result, all off disk. The flow changes nothing you
+        // can see and the hero is muted, so a before/after would be two identical
+        // panels — the device animates the channel that changed instead. The
+        // performance draws in frost, then a sweep re-colours it to the TARGET
+        // lane's heat while the silhouette holds, because it measurably does hold:
+        // envelope Pearson r = 0.867 between take and result, against -0.004 for
+        // the target voice. Timing survives, timbre does not — which is the flow.
+        // The tile is the same two takes stacked, YOU over THEM, since a 4/5 crop
+        // of the hero would throw a whole lane away.
+        preview: 'flow-voice-changer.webp',
+        video: 'flow-voice-changer.mp4',
         description: 'Say it in someone else’s voice. Record yourself performing a line, pick the voice you want it in, and Chatterbox keeps every bit of your delivery — timing, breath, even a laugh or a cough — while swapping the voice itself.',
         requiredModels: [],
         // `ComfyUI-MpiNodes` is deliberately NOT declared, even though the graph runs

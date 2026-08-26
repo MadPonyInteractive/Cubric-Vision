@@ -20,6 +20,8 @@
     "tests/seed-uint32-range.test.cjs",
     "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
     "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
-    "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js"
+    "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+    "comfy_workflows/display/flow-voice-changer.webp",
+    "comfy_workflows/display/flow-voice-changer.mp4"
   ]
 }
