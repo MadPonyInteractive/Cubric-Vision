@@ -135,11 +135,44 @@
       every voice click retained a dead instance and its detached DOM. The panel now owns a
       separate `_detailUnsubs`, flushed before the early returns and again in `destroy()`
 - [x] Verified by me, not on report: `lint:components` exit 0, full suite **737/737**
-- [ ] 🟡 Curation pass needed before the full run — the 10-voice sample is alphabetical and
-      shows it: 6xR1 / 3xR2 / 1xR3, no R4 or R5, every voice `kind: "both"` (so the kind
-      filter is inert), and `gender` / `age` / `language` / `style` / `tags` all null. D2
-      chose ~60 CURATED for register spread, so this is a selection pass, not `--max 60`
-- [ ] Full 228-voice import not run; only 10 imported
+- [x] **CURATION PASS DONE 2026-08-26.** All 227 usable voices measured first, gates set from
+      the observed tails (`voiced_frac >= 0.35`, `snr_proxy >= 6.0 dB`), 60 selected for
+      register spread. `voices/curated.txt` carries every selection AND every rejection with
+      its reason
+- [x] **FULL IMPORT RUN** — 60 voices shipped (R1 26 / R2 15 / R3 17 / R4 1 / R5 1), 3.05 MB,
+      byte-identical on a second run. The 8 opus orphaned by curation were pruned
+- [x] 🔴 **THE CORPUS CANNOT SPAN R1-R5.** Measured: R1 131 · R2 62 · R3 17 · **R4 1** ·
+      **R5 1** · below-90 Hz 15. R4 is `Aon` (263.2 Hz) and R5 is `Glenn` (365.9 Hz), full stop.
+      R3/R4/R5 taken WHOLE; R1/R2 quota'd down so the bundle corrects the bias instead of
+      reproducing it. A sourcing gap, not a selection one
+- [x] 🔴 **`peak_dbfs` and `duration_s` discriminate NOTHING in this corpus** — it is already
+      peak-normalised (max -1.0 dBFS, ZERO clipping) and only 4 clips fall under 10 s, shortest
+      7.08 s. Both measured, neither gated. `span_st` is a rank penalty only: gating on it would
+      have dropped two of the seventeen R3 voices, and this card already logged a 21.4 st span
+      on audio a listener passed
+- [x] 🔴 **A gate at snr >= 8 dB would have ZEROED R4** (`Aon` scores 7.7). Scarce registers set
+      the ceiling on how strict any quality gate can be
+- [x] 🔴 **Root-fixed: the import would have DELETED the 12 Phase 2 clips.** `run()` hardcoded
+      `performanceClips: []`, so the next import of any kind wiped the grid and left a
+      well-formed manifest behind — silent, no error. Contract check 9 now fails if it regresses
+- [x] 🔴 **Root-fixed my own bug: the f0 "quartile" was a stride.** `by_f0[i::4]` samples the
+      whole range — the opposite of spreading — and made `curated.txt` claim a rationale the code
+      never applied. First selection skewed high (22 of 26 R1 picks above 110 Hz). Now contiguous,
+      and the note carries each quartile's real Hz bounds
+- [x] **`kind: "both"` is CORRECT, not a defect.** A human clip genuinely serves both the direct
+      and the VC route, so the filter is inert because the corpus is uniform. Nothing invented
+      from measurements — same rule that keeps `accent` null
+- [x] `scripts/voice-library/check_manifest.mjs` — 12 checks against the REAL loader, calibrated
+      on the old 10-voice manifest before anything changed. NOT wired into `npm test`; run it
+      after any import
+- [ ] 🔴 **DECISION: 15 voices sit below R1's 90 Hz floor** (60.7-89.4 Hz, incl. `7020` at a
+      healthy 0.692 voiced / 13.6 dB). `brief.md` § 2 has no band for them so they were EXCLUDED
+      rather than silently filed under R1. Extend R1's floor, add an R0, or leave them out?
+- [ ] 🔴 **DECISION: R4 and R5 ship with one voice each.** Child/cartoon character voices do not
+      exist in this corpus. Nothing is blocked (the grid is R1+R3 only), but the picker will show
+      a register with a single entry
+- [ ] `boom` is the one voice of 228 that does not measure — downloads fine, `pyin` finds zero
+      voiced frames. Genuinely unusable, not a pipeline fault
 - [ ] Picker not wired into any Flow — MPI-607/MPI-621 territory, live peer holds those files
 
 ## Phase 2-4
@@ -201,3 +234,55 @@
       distinguishable emotions THROUGH VC. Needs the Chatterbox route. Verify mode `user-ux`
 - [ ] Generate auditions through the shipping route for every voice
 - [ ] Wire the picker into the voice-changer flow's "Target voice" slot
+
+## Source change — kyutai REJECTED, VoiceDesign adopted (2026-08-26, session 18)
+
+- [x] 🔴 **ALL 60 CURATED KYUTAI VOICES REJECTED BY EAR.** Fabio: *"none of it is usable."*
+      Unintelligible accents, poor mic quality, a cartoon that is a bad actor impersonating
+      one, and R4/R5 at one voice each. He had bounced off this corpus independently before
+- [x] 🔴 **WHY THE GATES COULD NOT CATCH IT** — `voiced_frac`/`snr_proxy` measure SIGNAL, not
+      SPEECH. The attribute that decided usability was `accent`, the ONE field the design
+      forbids inferring, so it could not enter the ranking even in principle. Same lesson this
+      card already recorded about the CAMPPlus cosine, repeated one layer up
+- [x] 🟢 **STANDING CORRECTION: perceptual product needs a perceptual gate BEFORE volume.**
+      One voice per category to the ear, then the other four. Fabio's suggestion, not mine
+- [x] **Source = Qwen3-TTS VoiceDesign**, a promotion of brief.md § Sourcing's own "long game".
+      The uncontrollable American prior (NEGATIVE for choosing an accent) is exactly the one
+      consistent intelligible house accent needed. ACCENT IS NEVER PROMPTED
+- [x] **TAXONOMY APPROVED: 12 categories x 5 = 60.** Category 12 renamed `villain_menacing`
+      from `creature_monster` on Fabio's ear; it is the only MIXED-GENDER category
+- [x] 🔴 **Robot AND creature/monster are POST-FX, not TTS** — neither needs a library slot,
+      both apply to any deep voice. brief.md already settles the robot half
+- [x] **Library v1 generated** — 12/12, one per category, level-matched to -20 dBFS
+- [x] **Age/pitch matrix generated** — 24/24, 4 categories x 3 wordings x 2 seeds, v1 kept as
+      the CONTROL so any improvement is attributable
+- [x] 🟢 **PITCH RESPONDS TO WORDING.** Child: between-wording spread 139.4 Hz vs largest
+      within-wording 44.3. 509.8 Hz -> `child__v2_lower__s0` at **326.8 Hz** (in R4), and
+      `<300 Hz` energy back from 0.0% to 16.6%
+- [x] 🔴 **AGE DOES NOT RESPOND TO WORDING.** Jitter 2.29-4.42% across every wording including
+      ones naming tremor, creak, breathiness and weak breath support. On elderly_male the
+      within-wording spread (65.0 Hz) equals the between-wording spread (74.0) = seed variance.
+      **Do NOT over-read this** - jitter is a proxy, and trusting a metric over the ear is the
+      exact mistake that produced the rejected corpus. Fabio's ear decides
+- [x] 🔴 **The child's harshness is f0, NOT an EQ boost.** Fabio's ear localised the band
+      correctly (67.5% of energy in 300 Hz-1.5 kHz) but the cause is a 509.8 Hz fundamental,
+      an octave above a real eight-year-old, leaving **0.0% of energy below 300 Hz** (vs 48.3%
+      for standard_female). It measured HIGHER than the cartoon critter
+- [x] 🔴 **My silence measurement was WRONG, Fabio's ear was right.** `trim(top_db=35)` reported
+      1.11s/0.29s on elderly_male_1 where the real dead air is ~4s head and ~3.5s tail - a
+      single transient anchored the trim. Fixed with a SUSTAINED-energy trim (5 consecutive
+      frames); **must move into the shipping pipeline**
+- [x] 🔴 **7 of 12 v1 voices missed their target register**, and `mature_female` (172.1) vs
+      `standard_female` (174.1) are **2 Hz apart** - two categories nothing but delivery
+      separates
+- [ ] 🟡 **SEVEN CATEGORIES STILL UNJUDGED**: `deep_male`, `standard_male`, `young_male`,
+      `narrator_trailer`, `standard_female`, `young_female`, `cartoon_critter`. Cartoon is the
+      risk cell - Fabio rejected the corpus one as a bad actor impersonating a cartoon
+- [ ] 🟡 **Matrix unjudged** - does v2/v3 SOUND older than the v1 control?
+- [ ] 🔴 **The 60 rejected kyutai voices are still in `voices/` and MUST NOT SHIP.** Left
+      deliberately: deleting now leaves the app with an empty library and no replacement, and
+      removal is one command once the VoiceDesign library lands.
+      `manifest.performanceClips` (the 12 accepted emotion clips) is untouched, guarded by
+      contract check 9
+- [ ] Only APPROVED categories get their remaining four. Use `library_personas.py --only
+      <slugs> --start 1` so seeds cannot collide with the accepted take

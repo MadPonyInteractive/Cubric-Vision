@@ -4,6 +4,63 @@
 
 **Project mode:** `scalable-foundation`.
 
+> **Session 18 LATE note (2026-08-26) — THIS SUPERSEDES THE SESSION 18 NOTE BELOW.**
+> **THE KYUTAI CORPUS IS REJECTED IN FULL.** Fabio auditioned all 60: *"I think 99% of this
+> voice library is garbage... none of it is usable."* Accents unintelligible, mic quality poor,
+> the cartoon a bad impersonation, and R4/R5 one voice each. The curation could not have caught
+> it — `voiced_frac`/`snr_proxy` measure SIGNAL, not SPEECH, and the deciding attribute
+> (accent) is the one field the design forbids inferring. Detail in `validation.md`.
+>
+> **SOURCE IS NOW Qwen3-TTS VoiceDesign** — a promotion of `brief.md` § Sourcing's own "long
+> game", not a pivot. **TAXONOMY APPROVED: 12 categories x 5 = 60**, category 12 renamed
+> **Villain / menacing** (the only mixed-gender one). Robot AND creature/monster are both
+> POST-FX, not TTS, and need no library slot.
+>
+> **THE NEXT ACTION IS FABIO'S EAR, on two pages already built** (paths in the handoff):
+> `library-v1.html` — 12 voices, one per category, **7 still unjudged**
+> (`deep_male`, `standard_male`, `young_male`, `narrator_trailer`, `standard_female`,
+> `young_female`, `cartoon_critter`); and `matrix-v2.html` — 4 failing categories x 3 wordings
+> x 2 seeds, v1 kept as the control.
+>
+> **Only APPROVED categories get their remaining four generated.** That ear-first gate is the
+> correction for the corpus failure and it is Fabio's own suggestion — do not generate 60
+> voices before it.
+>
+> Matrix result in one line: **pitch responds to wording (child fixed: 509.8 → 326.8 Hz, low-end
+> body back from 0.0% to 16.6%), age does NOT** (jitter 2.29–4.42% across every wording).
+
+> **Session 18 note (2026-08-26) — READ THIS FIRST, it supersedes the session 17 note below.**
+> **The curation pass is DONE and the real import has run: 60 voices ship**, selected from all
+> 227 usable of the 228 CC0 kyutai donations. 12/12 contract checks, 737/737, byte-identical on
+> re-run, 3.05 MB. The 12 emotion clips are untouched and still verified in the manifest.
+>
+> **THE HEADLINE FINDING IS A SOURCING GAP, NOT A SELECTION ONE.** Measured across all 227:
+> **R1 131 · R2 62 · R3 17 · R4 1 · R5 1 · below 90 Hz 15.** The corpus is overwhelmingly
+> low-male. R4 is ONE voice (`Aon` 263.2 Hz) and R5 is ONE (`Glenn` 365.9 Hz), so **"register
+> spread across R1–R5" is not achievable from this source at any selection strategy.** R3/R4/R5
+> were taken WHOLE; R1 and R2 were quota'd down so the bundle corrects the corpus bias rather
+> than reproducing it (R1 58% of corpus → 43% of bundle; R3 7% → 28%).
+>
+> **Two decisions are open and both are Fabio's** (neither blocks Phase 3):
+> (1) **15 voices sit below R1's 90 Hz floor** (60.7–89.4 Hz) and the `brief.md` § 2 band table
+> has no home for them — extend R1's floor, add an R0, or leave them out? They were EXCLUDED
+> rather than silently filed under R1, because that is what the old code did and it would now
+> fail contract check 4. (2) **R4/R5 have one voice each** — child and cartoon character voices
+> effectively do not exist here.
+>
+> **`kind: "both"` on all 60 is NOT the defect the session-17 handoff suspected.** A real human
+> clip genuinely serves both the direct-TTS and the VC-target route, so the filter is inert
+> because the corpus is *uniform*, not because the import is wrong. Nothing was invented from
+> measurements — same rule that keeps `accent` null.
+>
+> **Two defects were found and root-fixed, neither reported by anything.** The import hardcoded
+> `performanceClips: []`, so the NEXT import of any kind would have silently deleted all twelve
+> authored Phase 2 clips and left a well-formed manifest behind. And my own f0-quartile
+> spreading was a stride (`by_f0[i::4]`), not a quartile — the opposite of spreading, and it made
+> `curated.txt` claim a rationale the code never applied. Detail in `validation.md`.
+>
+> **Next: Phase 3 auditions.** Do NOT re-open the emotion grid; all 12 cells are accepted.
+
 > **Session 17 note (2026-08-25) — READ THIS FIRST, it supersedes the session 16 note below.**
 > The Parallel Batch is DONE (import pipeline + `MpiVoicePicker`, both verified independently
 > of their worker reports) and **Phase 2's 12 clips are AUTHORED**. Nothing on this card is
@@ -18,8 +75,8 @@
 > +4.8/+4.4 st from identical prompt grammar. If one R1 character ever sounds like two people
 > across the emotion set, that asymmetry is the cause and R1 is where it shows first.
 >
-> After that: a CURATION pass before the full 228 import (the 10-voice sample is 6xR1/3xR2/1xR3
-> with no R4/R5 and every voice `kind: "both"`, so the kind filter is inert), then Phase 3.
+> ~~After that: a CURATION pass before the full 228 import~~ — **DONE, see the session 18 note
+> above.** The kind filter being inert turned out not to be an import defect.
 >
 > **Do NOT "repair" the angry and cheerful clips** because they measure out of band. The pitch
 > lift IS the emotion; `register` names the performer's baseline. The proof the persona prompt
@@ -113,6 +170,21 @@ App-side facts checked 2026-08-25, so no one re-discovers them:
       under the GPU lease. Verify half (a) passes: all eight low-arousal cells land inside
       their declared register band. Half (b) - six distinguishable emotions through VC - is
       Fabio's ear and is NOT done.
+
+- [x] **CURATION PASS + FULL IMPORT** (2026-08-26, session 18). All 227 usable voices measured
+      (`ingest.py --measure-only`), gates set FROM the observed distribution rather than before
+      it, **60 selected** (R1 26 / R2 15 / R3 17 / R4 1 / R5 1) and imported. `voices/curated.txt`
+      is the audit trail: every selection with its reason, every rejection with the gate it
+      failed. New `scripts/voice-library/check_manifest.mjs` — 12 contract checks against the
+      REAL loader — 12/12, plus 737/737 and a byte-identical re-run. Bundle 3.05 MB.
+      **R4/R5 have one voice each in the entire corpus**; that is a sourcing gap, not a
+      selection one, and it is Fabio's call.
+
+- [x] **CORPUS REJECTED, SOURCE CHANGED, TAXONOMY APPROVED** (2026-08-26, session 18). All 60
+      curated kyutai voices rejected by ear. Source is now Qwen3-TTS VoiceDesign; 12-category
+      taxonomy approved; category 12 renamed Villain / menacing. Library v1 (12 voices, one per
+      category) and a 24-clip age/pitch matrix both generated and level-matched.
+      `research/library_personas.py` + `research/age_pitch_matrix.py`.
 
 ## Remaining Work
 

@@ -4,7 +4,7 @@
   "title": "MPI-622 - Parallel Batch: import pipeline + MpiVoicePicker",
   "task_card": "MPI-622",
   "plan": ".agents/mpi-kanban/tasks/MPI-622/plan.md",
-  "status": "needs_verification",
+  "status": "verified",
   "owner_session": ".agents/mpi-kanban/state/sessions/7d171cb3-4ead-4965-97ee-ce923f01f0ac.json",
   "allowed_actions": [
     "read",
@@ -15,7 +15,7 @@
     "integrate"
   ],
   "created_at": "2026-08-25T18:29:42Z",
-  "updated_at": "2026-08-25T18:56:59Z",
+  "updated_at": "2026-08-26T00:48:59Z",
   "recent_events": [
     {
       "at": "2026-08-25T18:29:42Z",
@@ -25,6 +25,11 @@
       "at": "2026-08-25T18:56:59Z",
       "event": "batch_completed",
       "note": "Parallel batch + Phase 2 clips done. Awaiting Fabio's ear on the two named listening asks (verify mode user-ux)."
+    },
+    {
+      "at": "2026-08-26T00:48:59Z",
+      "event": "task_verified",
+      "note": "The two listening asks were answered 2026-08-26: all 12 emotion cells accepted, identity holds across the grid. The user-ux gate this record was waiting on is closed."
     }
   ]
 }

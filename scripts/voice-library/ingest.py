@@ -12,9 +12,31 @@ Run under the embedded python:
   G:/ComfyUi/python_embeded/python.exe scripts/voice-library/ingest.py [options]
 
 Options:
-  --max N      Process at most N voices (default: all 228)
-  --force      Re-download and re-measure even if opus already exists
-  --cache DIR  Override cache directory (default: APPDATA temp scratchpad)
+  --max N          Process at most N voices (default: all 228)
+  --force          Re-download and re-measure even if opus already exists
+  --cache DIR      Override cache directory (default: APPDATA temp scratchpad)
+  --measure-only   Measure into <cache>/measurements.json, write nothing to the repo
+  --curate         Select ~60 from those measurements -> voices/curated.txt
+  --ids-file PATH  Import only the ids listed in PATH (one per line)
+
+Three passes, because ~60 of the 228 ship and the selection needs the measurements
+it is selecting on (D2: curated for register spread and clip quality):
+
+  1. ingest.py --measure-only                  -> <cache>/measurements.json, 227 voices
+  2. ingest.py --curate                        -> voices/curated.txt (the audit trail)
+  3. ingest.py --ids-file voices/curated.txt   -> the shipped bundle
+
+Then prune: a re-curation changes the set, so voices/*.opus dropped by the new
+selection stay on disk and ship as dead weight. `node scripts/voice-library/
+check_manifest.mjs` names them (check 11) — it is not wired into `npm test`, so
+run it after any import.
+
+`--max N` takes the alphabetical first N and is a SMOKE-TEST flag, not the way to
+pick 60: the corpus is ordered by hex/name, so the first 10 came back 6xR1/3xR2/1xR3
+with no R4 or R5 at all.
+
+One voice of the 228 does not measure: `boom` downloads fine but pyin finds zero
+voiced frames in it. It is genuinely unusable as a reference, not a pipeline fault.
 
 Idempotence guarantee:
   Re-running produces a byte-identical manifest.json for already-processed
@@ -52,9 +74,18 @@ HF_BASE = f"https://huggingface.co/{HF_REPO}/resolve/main/voice-donations"
 LICENCE    = "CC0-1.0"
 SOURCE_TPL = f"https://huggingface.co/{HF_REPO}/blob/main/voice-donations/{{stem}}_enhanced.wav"
 
-# Default cache: a stable location outside the repo, shared across sessions.
+# Default cache: outside the repo, shared across sessions, and NOT under %TEMP%.
+#
+# This used to sit in `%LOCALAPPDATA%/Temp/cubric-vision/`, described as "a stable location".
+# It is not. Windows temp cleanup DELETED the whole folder mid-session on 2026-08-26 — 145 MB
+# of cached wavs and the 227-voice measurements.json, gone with no warning, while the pipeline
+# that wrote them was still being used. Nothing shipped was lost (voices/ is in the repo) but
+# the measurement pass had to be re-run to rebuild it.
+#
+# The cache is expensive to rebuild (~139 MB of downloads) and is the input the curation
+# selects on, so it does not belong anywhere the OS is entitled to garbage-collect.
 _APPDATA = os.environ.get("LOCALAPPDATA", os.path.expanduser("~"))
-DEFAULT_CACHE = Path(_APPDATA) / "Temp" / "cubric-vision" / "voice-cache"
+DEFAULT_CACHE = Path(_APPDATA) / "cubric-vision" / "voice-cache"
 
 # Pitch register bands (Hz) — mirrored in js/data/voiceLibrary.js and
 # .agents/mpi-kanban/tasks/MPI-622/research/pitch_tools.py
@@ -77,20 +108,60 @@ def register_of(f0_hz):
     return None  # out of expected range — caller logs a warning
 
 
-def measure_f0(wav_path):
-    """Return (median_f0, p10, p90) in Hz using librosa.pyin.
+def measure(wav_path):
+    """Return a dict of pitch AND clip-quality figures, or None if unvoiced.
 
-    Returns None if no voiced frames are detected.
-    Matches the algorithm in pitch_tools.py § measure().
+    Pitch (median_f0 / p10 / p90) matches the algorithm in pitch_tools.py § measure()
+    and is what `register` is assigned from.
+
+    The rest exists for the curation pass. D2 chose ~60 of the 228 voices "for register
+    spread and clip quality", and the corpus ships NO metadata to judge quality from — no
+    gender, no age, no rating. These four figures are the only quality signal available
+    without a human listening to 228 clips, and they cost nothing once the wav is loaded:
+
+      voiced_frac   fraction of frames pyin called voiced. A low value means little usable
+                    voice in a 10 s clip — breath, silence or noise the denoiser left behind.
+      snr_proxy_db  voiced-frame RMS minus unvoiced-frame RMS. On a clean clip the unvoiced
+                    frames are near-silent, so the gap is wide; a noisy one narrows it.
+      peak_dbfs     catches clipping. A clip pinned at 0.0 dBFS is already damaged.
+      span_st       p10..p90 in semitones. An absurd span is the pyin OCTAVE-ERROR tell, and
+                    an octave error would put the voice in the wrong register — which is the
+                    one field the whole selection turns on.
+
+    None of these is a perceptual verdict. They reject clips that are measurably broken;
+    they cannot rank two good clips against each other.
     """
     y, sr = librosa.load(str(wav_path), sr=None, mono=True)
-    f0, _voiced, _ = librosa.pyin(y, fmin=60, fmax=500, sr=sr)
+    f0, voiced_flag, _ = librosa.pyin(y, fmin=60, fmax=500, sr=sr)
     voiced = f0[~np.isnan(f0)]
     if voiced.size == 0:
         return None
-    med  = float(np.median(voiced))
+
+    med = float(np.median(voiced))
     p10, p90 = (float(x) for x in np.percentile(voiced, [10, 90]))
-    return round(med, 1), round(p10, 1), round(p90, 1)
+
+    # Frame RMS on the same grid pyin used (frame_length 2048 / hop 512, both centred),
+    # so voiced_flag indexes it directly.
+    rms = librosa.feature.rms(y=y, frame_length=2048, hop_length=512)[0]
+    n = min(len(rms), len(voiced_flag))
+    rms, vflag = rms[:n], voiced_flag[:n]
+
+    def _db(x):
+        return round(float(20 * np.log10(max(float(x), 1e-10))), 1)
+
+    v_rms = _db(np.mean(rms[vflag])) if vflag.any() else -100.0
+    u_rms = _db(np.mean(rms[~vflag])) if (~vflag).any() else -100.0
+
+    return {
+        "median_f0":    round(med, 1),
+        "p10":          round(p10, 1),
+        "p90":          round(p90, 1),
+        "span_st":      round(float(12 * np.log2(p90 / p10)), 1) if p10 > 0 else 0.0,
+        "duration_s":   round(len(y) / sr, 2),
+        "voiced_frac":  round(float(np.mean(vflag)), 3),
+        "peak_dbfs":    _db(np.max(np.abs(y))),
+        "snr_proxy_db": round(v_rms - u_rms, 1),
+    }
 
 
 def download(url, dest, label=""):
@@ -190,7 +261,209 @@ def load_existing_manifest(manifest_path):
     return {v["id"]: v for v in data.get("voices", [])}
 
 
-def run(voices_dir, cache_dir, max_voices, force):
+def read_ids_file(path):
+    """Read a curated ID list: one voice id per line, '#' comments and blanks ignored."""
+    ids = []
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
+        line = line.split("#", 1)[0].strip()
+        if line:
+            ids.append(line)
+    return ids
+
+
+def fetch_wav(voice_id, cache_dir, force=False):
+    """Ensure <cache>/<id>_enhanced.wav exists. Returns the path, or None on failure."""
+    stem     = f"{voice_id}_enhanced"
+    wav_path = cache_dir / f"{stem}.wav"
+    if not force and wav_path.exists():
+        return wav_path
+    try:
+        download(f"{HF_BASE}/{stem}.wav", wav_path, label=voice_id)
+    except Exception as exc:
+        print(f"  ERROR downloading {voice_id}: {exc}  (skipping)")
+        return None
+    return wav_path
+
+
+def run_measure(cache_dir, ids, force):
+    """Measure every voice in `ids` and write <cache>/measurements.json. Writes NOTHING
+    into the repo — this is the curation input, not an import."""
+    out_path = cache_dir / "measurements.json"
+    existing = {}
+    if out_path.exists() and not force:
+        existing = json.loads(out_path.read_text(encoding="utf-8")).get("voices", {})
+        print(f"resuming: {len(existing)} voices already measured")
+
+    results = dict(existing)
+    for i, voice_id in enumerate(ids, 1):
+        if voice_id in results and not force:
+            continue
+        wav_path = fetch_wav(voice_id, cache_dir, force)
+        if wav_path is None:
+            continue
+        m = measure(wav_path)
+        if m is None:
+            print(f"  [{i}/{len(ids)}] {voice_id}: WARNING no voiced frames -- excluded")
+            continue
+        m["register"] = register_of(m["median_f0"])
+        results[voice_id] = m
+        print(f"  [{i}/{len(ids)}] {voice_id}  {m['median_f0']} Hz  {m['register']}  "
+              f"voiced {m['voiced_frac']}  snr~{m['snr_proxy_db']} dB  peak {m['peak_dbfs']}")
+        # Checkpoint every 20 so a network drop does not throw the whole pass away.
+        if i % 20 == 0:
+            out_path.write_text(json.dumps({"voices": results}, indent=1), encoding="utf-8")
+
+    out_path.write_text(json.dumps({"voices": results}, indent=1), encoding="utf-8")
+    print(f"\nWrote {out_path}  ({len(results)} voices measured)")
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Curation
+# ---------------------------------------------------------------------------
+#
+# D2 ships ~60 of the 228 "curated for register spread and clip quality". Both gates below
+# were set FROM the measured distribution of all 227 usable voices, not before it — an
+# absolute threshold picked in advance is how this card already produced one false verdict
+# (a 3.5 st span gate calibrated on R1's neutral wrongly failed R3).
+#
+# WHAT THE CORPUS ACTUALLY IS. Measured 2026-08-26, and it decides everything here:
+#
+#     R1  131      R2  62      R3  17      R4  1      R5  1      below 90 Hz  15
+#
+# It is overwhelmingly low-male. "Register spread across R1-R5" is not achievable from this
+# source — R4 is ONE voice (Aon, 263.2 Hz) and R5 is ONE (Glenn, 365.9 Hz). So the scarce
+# registers are taken WHOLE and the quotas deliberately under-represent R1: R1 is 58% of the
+# corpus and 43% of what ships, R3 is 7% of the corpus and 28% of what ships. Curating for
+# spread means correcting the corpus bias, not reproducing it.
+#
+# WHY THESE TWO GATES AND NOT THE OTHER THREE:
+#   voiced_frac >= 0.35   Cuts the genuinely broken tail (WhisperInEar 0.078, Selfie 0.067).
+#                         Under 35% of a 10 s clip is less than 3.5 s of actual voice.
+#   snr_proxy  >= 6.0 dB  Same tail from the other side (WhisperInEar -10.1 dB).
+#
+#   peak_dbfs   NOT a gate. The corpus is already peak-normalised: max -1.0 dBFS, min -6.3,
+#               and ZERO voices clip. It discriminates nothing here. Still measured, because
+#               it would catch a future corpus that is not normalised.
+#   duration_s  NOT a gate. Only 4 voices fall under 10 s and the shortest is 7.08 s, which
+#               is ample for a VC reference. It discriminates nothing.
+#   span_st     NOT a gate, a RANK PENALTY only. A wide p10-p90 does track worse clips (mean
+#               voiced 0.455 vs 0.549 above 16 st) but it is primarily a pyin octave-error /
+#               creak tell, and this card has already recorded a 21.4 st span on audio a
+#               listener passed. Gating on it would drop 3973 and spanish-limaperu — two of
+#               only seventeen R3 voices. It breaks ties where there is a choice; it never
+#               excludes a voice from a scarce register.
+#
+# These reject clips that are measurably broken. None of them is a perceptual verdict, and
+# no ranking here claims one good clip beats another good clip.
+
+MIN_VOICED_FRAC = 0.35
+MIN_SNR_PROXY_DB = 6.0
+WIDE_SPAN_ST = 16.0        # rank penalty threshold, never an exclusion
+
+# id -> how many ship. R3/R4/R5 are "take everything that passes the gates".
+QUOTAS = {"R1": 26, "R2": 15, "R3": 999, "R4": 999, "R5": 999}
+
+
+def _percentile_rank(values):
+    """{key: 0..1} — where each value sits within its own pool. Comparing raw voiced_frac
+    against raw dB would let whichever has the bigger numeric range dominate the sum."""
+    order = sorted(values, key=lambda k: values[k])
+    n = max(len(order) - 1, 1)
+    return {k: i / n for i, k in enumerate(order)}
+
+
+def curate(measurements, voices_dir):
+    """Select ~60 voices for register spread and clip quality; write voices/curated.txt."""
+    passed, rejected = {}, []
+    for vid, m in measurements.items():
+        reg = m.get("register")
+        if reg is None:
+            rejected.append((vid, f"{m['median_f0']} Hz is below the 90 Hz R1 floor — "
+                                  f"no register band covers it"))
+        elif m["voiced_frac"] < MIN_VOICED_FRAC:
+            rejected.append((vid, f"voiced_frac {m['voiced_frac']} < {MIN_VOICED_FRAC}"))
+        elif m["snr_proxy_db"] < MIN_SNR_PROXY_DB:
+            rejected.append((vid, f"snr_proxy {m['snr_proxy_db']} dB < {MIN_SNR_PROXY_DB}"))
+        else:
+            passed[vid] = m
+
+    selected, notes = [], {}
+    for reg in REGISTERS_ORDER:
+        pool = {k: v for k, v in passed.items() if v["register"] == reg}
+        quota = QUOTAS.get(reg, 0)
+        if not pool:
+            continue
+
+        vf   = _percentile_rank({k: v["voiced_frac"] for k, v in pool.items()})
+        snr  = _percentile_rank({k: v["snr_proxy_db"] for k, v in pool.items()})
+        score = {k: vf[k] + snr[k] - (0.5 if pool[k]["span_st"] > WIDE_SPAN_ST else 0.0)
+                 for k in pool}
+
+        if len(pool) <= quota:
+            chosen = sorted(pool)
+            for k in chosen:
+                notes[k] = f"{reg} is scarce ({len(pool)} available) — taken whole"
+        else:
+            # Spread across the band by f0 quartile, so 26 R1 voices are not 26 voices that
+            # all sit at 125 Hz. The picker filters by register, but a user browsing one
+            # register still hears the difference between its floor and its ceiling.
+            by_f0 = sorted(pool, key=lambda k: pool[k]["median_f0"])
+            n = len(by_f0)
+            # CONTIGUOUS quarters of the band, not a stride. `by_f0[i::4]` would hand every
+            # group a sample of the whole range, which is the opposite of spreading and
+            # would make the "f0-quartile" note in curated.txt a claim the code never made.
+            quartiles = [by_f0[(n * i) // 4:(n * (i + 1)) // 4] for i in range(4)]
+            chosen = []
+            for qi, q in enumerate(quartiles):
+                take = quota // 4 + (1 if qi < quota % 4 else 0)
+                ranked = sorted(q, key=lambda k: -score[k])
+                picked = ranked[:take]
+                lo_hz, hi_hz = pool[q[0]]["median_f0"], pool[q[-1]]["median_f0"]
+                for k in picked:
+                    notes[k] = (f"{reg} f0-quartile {qi + 1}/4 ({lo_hz}-{hi_hz} Hz), "
+                                f"quality rank {ranked.index(k) + 1}/{len(q)}")
+                chosen.extend(picked)
+        selected.extend(chosen)
+
+    selected.sort()
+    out = voices_dir / "curated.txt"
+    lines = [
+        "# voices/curated.txt - the ~60 voices that SHIP, of the 228 CC0 kyutai donations.",
+        "# Generated by: ingest.py --curate. Regenerate rather than hand-editing;",
+        "# then import with: ingest.py --ids-file voices/curated.txt",
+        "#",
+        f"# Selected {len(selected)} of {len(measurements)} measured "
+        f"({len(passed)} passed the gates, {len(rejected)} rejected).",
+        f"# Gates: voiced_frac >= {MIN_VOICED_FRAC}, snr_proxy >= {MIN_SNR_PROXY_DB} dB, "
+        f"register in R1-R5.",
+        "# See ingest.py section 'Curation' for why those two gates and not peak/duration/span.",
+        "#",
+        "# id  median_f0  register  why",
+    ]
+    for vid in selected:
+        m = measurements[vid]
+        lines.append(f"{vid:<32} # {m['median_f0']:>6} Hz  {m['register']}  {notes[vid]}")
+
+    lines += ["", "# --- REJECTED (not shipped) ---"]
+    for vid, why in sorted(rejected):
+        lines.append(f"# {vid:<30} {why}")
+
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+    print(f"\nSelected {len(selected)} voices -> {out}")
+    for reg in REGISTERS_ORDER:
+        n_sel = sum(1 for v in selected if measurements[v]["register"] == reg)
+        n_all = sum(1 for m in measurements.values() if m.get("register") == reg)
+        print(f"  {reg}: {n_sel:>3} of {n_all:>3} available")
+    print(f"  rejected: {len(rejected)}")
+    return selected
+
+
+REGISTERS_ORDER = [name for name, _lo, _hi in REGISTERS]
+
+
+def run(voices_dir, cache_dir, all_ids, force):
     manifest_path = voices_dir / "manifest.json"
     existing      = load_existing_manifest(manifest_path)
     today         = date.today().isoformat()
@@ -198,11 +471,6 @@ def run(voices_dir, cache_dir, max_voices, force):
     print(f"voices/ dir : {voices_dir}")
     print(f"cache dir   : {cache_dir}")
     print(f"existing    : {len(existing)} voices already in manifest")
-
-    all_ids = fetch_voice_ids()
-    if max_voices:
-        all_ids = all_ids[:max_voices]
-        print(f"(capped to {max_voices} voices via --max)")
 
     results = {}  # id → entry dict, in processing order
 
@@ -216,24 +484,17 @@ def run(voices_dir, cache_dir, max_voices, force):
             continue
 
         # 1. Download the _enhanced wav to cache if not already there.
-        stem     = f"{voice_id}_enhanced"
-        wav_path = cache_dir / f"{stem}.wav"
-        if force or not wav_path.exists():
-            url = f"{HF_BASE}/{stem}.wav"
-            print(f"  fetch {voice_id} ...")
-            try:
-                download(url, wav_path, label=voice_id)
-            except Exception as exc:
-                print(f"  ERROR downloading {voice_id}: {exc}  (skipping)")
-                continue
+        wav_path = fetch_wav(voice_id, cache_dir, force)
+        if wav_path is None:
+            continue
 
         # 2. Measure pitch.
         print(f"  measure {voice_id} ...")
-        measurement = measure_f0(wav_path)
-        if measurement is None:
+        m = measure(wav_path)
+        if m is None:
             print(f"  WARNING: no voiced frames in {voice_id}  (skipping)")
             continue
-        median_f0, p10, p90 = measurement
+        median_f0, p10, p90 = m["median_f0"], m["p10"], m["p90"]
 
         reg = register_of(median_f0)
         if reg is None:
@@ -256,6 +517,15 @@ def run(voices_dir, cache_dir, max_voices, force):
     # Sort by id for stable output.
     voices_list = [results[k] for k in sorted(results)]
 
+    # performanceClips are AUTHORED (Phase 2, research/phase2_perf_clips.py), not imported.
+    # This script does not own them, so it carries whatever is already on disk through
+    # untouched. Writing [] here would silently delete the twelve shipped clips on the
+    # next re-run, and the manifest would still look well-formed.
+    perf_clips = []
+    if manifest_path.exists():
+        with open(manifest_path, encoding="utf-8") as f:
+            perf_clips = json.load(f).get("performanceClips", [])
+
     manifest = {
         "version": 1,
         "variant": "enhanced",
@@ -266,7 +536,7 @@ def run(voices_dir, cache_dir, max_voices, force):
             "accent is null for all — must be assigned by a human listener, never inferred."
         ),
         "voices":          voices_list,
-        "performanceClips": [],
+        "performanceClips": perf_clips,
     }
 
     manifest_json = json.dumps(manifest, indent=2, ensure_ascii=False)
@@ -288,6 +558,15 @@ def main():
                         help="Re-download and re-measure even if already done")
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE,
                         help="Cache directory for downloaded wavs")
+    parser.add_argument("--measure-only", action="store_true",
+                        help="Measure every voice into <cache>/measurements.json and write "
+                             "NOTHING into the repo. This is the curation input.")
+    parser.add_argument("--curate", action="store_true",
+                        help="Select ~60 voices from <cache>/measurements.json for register "
+                             "spread and clip quality, and write voices/curated.txt.")
+    parser.add_argument("--ids-file", type=Path, default=None,
+                        help="Import only the voice ids listed in this file (one per line, "
+                             "'#' comments allowed). This is how the curated set is imported.")
     args = parser.parse_args()
 
     # Paths are relative to repo root — script is run from that directory.
@@ -296,7 +575,34 @@ def main():
     voices_dir.mkdir(exist_ok=True)
     args.cache.mkdir(parents=True, exist_ok=True)
 
-    run(voices_dir, args.cache, args.max or 0, args.force)
+    all_ids = fetch_voice_ids()
+
+    if args.ids_file:
+        wanted  = read_ids_file(args.ids_file)
+        known   = set(all_ids)
+        missing = [v for v in wanted if v not in known]
+        if missing:
+            print(f"  WARNING: {len(missing)} id(s) in {args.ids_file} are not in the "
+                  f"corpus listing and will be skipped: {missing[:5]}")
+        all_ids = [v for v in wanted if v in known]
+        print(f"(restricted to {len(all_ids)} voices via --ids-file {args.ids_file})")
+
+    if args.max:
+        all_ids = all_ids[:args.max]
+        print(f"(capped to {args.max} voices via --max)")
+
+    if args.measure_only:
+        run_measure(args.cache, all_ids, args.force)
+        return
+
+    if args.curate:
+        path = args.cache / "measurements.json"
+        if not path.exists():
+            parser.error(f"{path} not found — run `--measure-only` first")
+        curate(json.loads(path.read_text(encoding="utf-8"))["voices"], voices_dir)
+        return
+
+    run(voices_dir, args.cache, all_ids, args.force)
 
 
 if __name__ == "__main__":
