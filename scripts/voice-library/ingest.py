@@ -1,61 +1,32 @@
 """Voice library import pipeline — MPI-622.
 
-Fetches CC0 voices from kyutai/tts-voices voice-donations/ on HuggingFace,
-measures pitch with librosa.pyin, transcodes to Ogg Opus, and writes
-voices/manifest.json.
+Imports a locally-generated voice library into voices/: trims each clip to its
+sustained speech, levels it, measures pitch with librosa.pyin, transcodes to Ogg
+Opus, and writes voices/manifest.json.
 
-LICENCE SAFETY: Fetches from voice-donations/ ONLY. That subdirectory is the
-only CC0 content in the repo. expresso/, ears/, vctk/, cml-tts/, alba-mackenna/
-are NOT CC0 — they are hardcoded-absent from the download logic.
+  G:/ComfyUi/python_embeded/python.exe scripts/voice-library/ingest.py \\
+      --from-dir %LOCALAPPDATA%/cubric-vision/mpi622/lib_v2
 
-Run under the embedded python:
-  G:/ComfyUi/python_embeded/python.exe scripts/voice-library/ingest.py [options]
+Each voice is a `<id>.wav` with a matching `<id>.txt` sidecar carrying a
+`CATEGORY:` line; the category supplies gender/age from CATEGORY_META, while
+`register` comes from the MEASURED f0 and never from the prompt-time target — a
+category may legitimately span two registers.
 
-Options:
-  --max N          Process at most N voices (default: all 228)
-  --force          Re-download and re-measure even if opus already exists
-  --cache DIR      Override cache directory (default: APPDATA temp scratchpad)
-  --measure-only   Measure into <cache>/measurements.json, write nothing to the repo
-  --curate         Select ~60 from those measurements -> voices/curated.txt
-  --ids-file PATH  Import only the ids listed in PATH (one per line)
+This script USED to download and curate the 228 CC0 kyutai/tts-voices donations.
+That corpus was auditioned in full and rejected in full on 2026-08-26 (accents
+unintelligible, poor mic quality, R4/R5 one voice each), so the download half —
+fetch_voice_ids/download/run_measure/curate and the --max/--force/--measure-only/
+--curate/--ids-file flags — was deleted rather than left to rot. Recover it from
+git history if a corpus import is ever needed again.
 
-Three passes, because ~60 of the 228 ship and the selection needs the measurements
-it is selecting on (D2: curated for register spread and clip quality):
-
-  1. ingest.py --measure-only                  -> <cache>/measurements.json, 227 voices
-  2. ingest.py --curate                        -> voices/curated.txt (the audit trail)
-  3. ingest.py --ids-file voices/curated.txt   -> the shipped bundle
-
-Then prune: a re-curation changes the set, so voices/*.opus dropped by the new
-selection stay on disk and ship as dead weight. `node scripts/voice-library/
-check_manifest.mjs` names them (check 11) — it is not wired into `npm test`, so
-run it after any import.
-
-`--max N` takes the alphabetical first N and is a SMOKE-TEST flag, not the way to
-pick 60: the corpus is ordered by hex/name, so the first 10 came back 6xR1/3xR2/1xR3
-with no R4 or R5 at all.
-
-One voice of the 228 does not measure: `boom` downloads fine but pyin finds zero
-voiced frames in it. It is genuinely unusable as a reference, not a pipeline fault.
-
-Idempotence guarantee:
-  Re-running produces a byte-identical manifest.json for already-processed
-  voices (added_at is preserved from the first run). New voices are appended
-  with today's date. Existing opus files are NOT re-downloaded or re-transcoded
-  unless --force is passed.
-
-Variant choice: _enhanced.wav (denoised) used consistently across all 228 voices.
-  Rationale: cleaner signal → more reliable pyin pitch tracking; fewer noise
-  artefacts when used as a VC target_voice. Comparing raw vs enhanced for the
-  same voice would vary two things at once — we pick one and hold it constant.
+`check_manifest.mjs` is NOT wired into `npm test`. Run it after any import:
+  node scripts/voice-library/check_manifest.mjs
 """
 
-import sys
 import os
 import re
 import json
 import argparse
-import urllib.request
 from datetime import date
 from pathlib import Path
 
@@ -67,12 +38,6 @@ import soundfile as sf
 # Constants
 # ---------------------------------------------------------------------------
 
-HF_REPO = "kyutai/tts-voices"
-HF_API  = f"https://huggingface.co/api/models/{HF_REPO}/tree/main/voice-donations"
-HF_BASE = f"https://huggingface.co/{HF_REPO}/resolve/main/voice-donations"
-
-LICENCE    = "CC0-1.0"
-SOURCE_TPL = f"https://huggingface.co/{HF_REPO}/blob/main/voice-donations/{{stem}}_enhanced.wav"
 
 # Default cache: outside the repo, shared across sessions, and NOT under %TEMP%.
 #
@@ -82,8 +47,9 @@ SOURCE_TPL = f"https://huggingface.co/{HF_REPO}/blob/main/voice-donations/{{stem
 # that wrote them was still being used. Nothing shipped was lost (voices/ is in the repo) but
 # the measurement pass had to be re-run to rebuild it.
 #
-# The cache is expensive to rebuild (~139 MB of downloads) and is the input the curation
-# selects on, so it does not belong anywhere the OS is entitled to garbage-collect.
+# It now only holds the trimmed/levelled wavs on their way to opus, which are cheap to
+# rebuild — but the rule stands: nothing this pipeline needs goes anywhere the OS is
+# entitled to garbage-collect.
 _APPDATA = os.environ.get("LOCALAPPDATA", os.path.expanduser("~"))
 DEFAULT_CACHE = Path(_APPDATA) / "cubric-vision" / "voice-cache"
 
@@ -104,9 +70,17 @@ REGISTERS = [
     ("R5", 340, 10_000),
 ]
 
-# The VoiceDesign library that REPLACED the kyutai corpus. Generated locally, so it carries
-# no upstream licence and no source URL — see LICENCE/SOURCE_TPL above for the kyutai pair.
-VOICEDESIGN_LICENCE = None      # TODO(MPI-622): Fabio to confirm the Qwen3-TTS output licence.
+# Every voice is generated in-house, so there is no upstream licence and no source URL — the
+# kyutai entries this replaced carried "CC0-1.0" and a HuggingFace blob link.
+#
+# Checked on disk 2026-08-26, because a model licence CAN bind outputs (MiniMax H3 restricts
+# them by territory): the Qwen3-TTS-12Hz-1.7B-VoiceDesign model card declares
+# `license: apache-2.0`, which governs weights and code and makes no claim on what the model
+# produces. The wrapper licences (ComfyUI-QwenTTS is GPL-3.0, the _qwen_tts_rt pack Apache-2.0)
+# bind the CODE, not the audio. Two voices are Fabio's own recording, and two more are that
+# recording through Chatterbox (node MIT; the weights' own licence is not present on this
+# machine and was NOT verified). Nothing found claims the outputs.
+VOICEDESIGN_LICENCE = "proprietary"
 
 # Gender and age are DECLARED by the taxonomy, not inferred from the audio — the category name
 # is the statement. Categories that deliberately mix (villain ships 2 male + 2 female variants;
@@ -184,10 +158,10 @@ def measure(wav_path):
     Pitch (median_f0 / p10 / p90) matches the algorithm in pitch_tools.py § measure()
     and is what `register` is assigned from.
 
-    The rest exists for the curation pass. D2 chose ~60 of the 228 voices "for register
-    spread and clip quality", and the corpus ships NO metadata to judge quality from — no
-    gender, no age, no rating. These four figures are the only quality signal available
-    without a human listening to 228 clips, and they cost nothing once the wav is loaded:
+    The four clip-quality figures are VESTIGIAL — they were the gates the deleted kyutai
+    curation selected on. Kept because they cost nothing once the wav is loaded and would be
+    the first thing wanted if another unvetted corpus ever needs triage. Nothing reads them
+    today; the library they replaced was chosen by ear, not by threshold:
 
       voiced_frac   fraction of frames pyin called voiced. A low value means little usable
                     voice in a 10 s clip — breath, silence or noise the denoiser left behind.
@@ -232,17 +206,6 @@ def measure(wav_path):
         "peak_dbfs":    _db(np.max(np.abs(y))),
         "snr_proxy_db": round(v_rms - u_rms, 1),
     }
-
-
-def download(url, dest, label=""):
-    """Download url → dest, showing a progress dot every 100 KB."""
-    dest = Path(dest)
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    req = urllib.request.Request(url, headers={"User-Agent": "cubric-voice-ingest/1"})
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        data = resp.read()
-    dest.write_bytes(data)
-    print(f"  downloaded {label}: {len(data)//1024} KB")
 
 
 # Opus accepts only 8/12/16/24/48 kHz. The `_enhanced` source clips are 32 kHz, which is
@@ -296,327 +259,13 @@ def build_voice_entry(voice_id, median_f0, p10, p90, reg, added_at):
         "sample":       f"{voice_id}.opus",
         "audition_narration":  None,  # generated in Phase 3
         "audition_character":  None,  # generated in Phase 3
-        "licence":      LICENCE,
-        "source_url":   SOURCE_TPL.format(stem=voice_id),
+        "licence":      VOICEDESIGN_LICENCE,
+        "source_url":   None,       # generated in-house - there is no upstream to point at
         "added_at":     added_at,
     }
 
 # ---------------------------------------------------------------------------
-# Core pipeline
-# ---------------------------------------------------------------------------
-
-def fetch_voice_ids():
-    """Fetch the list of 228 CC0 voice IDs from the HF API."""
-    print(f"Fetching file listing from {HF_API} ...")
-    with urllib.request.urlopen(HF_API, timeout=30) as r:
-        data = json.load(r)
-    # Keep only the raw .wav files (not _enhanced, not .safetensors)
-    ids = []
-    for entry in data:
-        path = entry.get("path", "")
-        stem = Path(path).stem  # e.g. '0a67' or '0a67_enhanced'
-        if path.endswith(".wav") and not stem.endswith("_enhanced"):
-            ids.append(stem)
-    ids.sort()
-    print(f"  found {len(ids)} voices")
-    return ids
-
-
-def load_existing_manifest(manifest_path):
-    """Return {voice_id: entry_dict} for voices already in the manifest."""
-    if not manifest_path.exists():
-        return {}
-    with open(manifest_path, encoding="utf-8") as f:
-        data = json.load(f)
-    return {v["id"]: v for v in data.get("voices", [])}
-
-
-def read_ids_file(path):
-    """Read a curated ID list: one voice id per line, '#' comments and blanks ignored."""
-    ids = []
-    for line in Path(path).read_text(encoding="utf-8").splitlines():
-        line = line.split("#", 1)[0].strip()
-        if line:
-            ids.append(line)
-    return ids
-
-
-def fetch_wav(voice_id, cache_dir, force=False):
-    """Ensure <cache>/<id>_enhanced.wav exists. Returns the path, or None on failure."""
-    stem     = f"{voice_id}_enhanced"
-    wav_path = cache_dir / f"{stem}.wav"
-    if not force and wav_path.exists():
-        return wav_path
-    try:
-        download(f"{HF_BASE}/{stem}.wav", wav_path, label=voice_id)
-    except Exception as exc:
-        print(f"  ERROR downloading {voice_id}: {exc}  (skipping)")
-        return None
-    return wav_path
-
-
-def run_measure(cache_dir, ids, force):
-    """Measure every voice in `ids` and write <cache>/measurements.json. Writes NOTHING
-    into the repo — this is the curation input, not an import."""
-    out_path = cache_dir / "measurements.json"
-    existing = {}
-    if out_path.exists() and not force:
-        existing = json.loads(out_path.read_text(encoding="utf-8")).get("voices", {})
-        print(f"resuming: {len(existing)} voices already measured")
-
-    results = dict(existing)
-    for i, voice_id in enumerate(ids, 1):
-        if voice_id in results and not force:
-            continue
-        wav_path = fetch_wav(voice_id, cache_dir, force)
-        if wav_path is None:
-            continue
-        m = measure(wav_path)
-        if m is None:
-            print(f"  [{i}/{len(ids)}] {voice_id}: WARNING no voiced frames -- excluded")
-            continue
-        m["register"] = register_of(m["median_f0"])
-        results[voice_id] = m
-        print(f"  [{i}/{len(ids)}] {voice_id}  {m['median_f0']} Hz  {m['register']}  "
-              f"voiced {m['voiced_frac']}  snr~{m['snr_proxy_db']} dB  peak {m['peak_dbfs']}")
-        # Checkpoint every 20 so a network drop does not throw the whole pass away.
-        if i % 20 == 0:
-            out_path.write_text(json.dumps({"voices": results}, indent=1), encoding="utf-8")
-
-    out_path.write_text(json.dumps({"voices": results}, indent=1), encoding="utf-8")
-    print(f"\nWrote {out_path}  ({len(results)} voices measured)")
-    return results
-
-
-# ---------------------------------------------------------------------------
-# Curation
-# ---------------------------------------------------------------------------
-#
-# D2 ships ~60 of the 228 "curated for register spread and clip quality". Both gates below
-# were set FROM the measured distribution of all 227 usable voices, not before it — an
-# absolute threshold picked in advance is how this card already produced one false verdict
-# (a 3.5 st span gate calibrated on R1's neutral wrongly failed R3).
-#
-# WHAT THE CORPUS ACTUALLY IS. Measured 2026-08-26, and it decides everything here:
-#
-#     R1  131      R2  62      R3  17      R4  1      R5  1      below 90 Hz  15
-#
-# It is overwhelmingly low-male. "Register spread across R1-R5" is not achievable from this
-# source — R4 is ONE voice (Aon, 263.2 Hz) and R5 is ONE (Glenn, 365.9 Hz). So the scarce
-# registers are taken WHOLE and the quotas deliberately under-represent R1: R1 is 58% of the
-# corpus and 43% of what ships, R3 is 7% of the corpus and 28% of what ships. Curating for
-# spread means correcting the corpus bias, not reproducing it.
-#
-# WHY THESE TWO GATES AND NOT THE OTHER THREE:
-#   voiced_frac >= 0.35   Cuts the genuinely broken tail (WhisperInEar 0.078, Selfie 0.067).
-#                         Under 35% of a 10 s clip is less than 3.5 s of actual voice.
-#   snr_proxy  >= 6.0 dB  Same tail from the other side (WhisperInEar -10.1 dB).
-#
-#   peak_dbfs   NOT a gate. The corpus is already peak-normalised: max -1.0 dBFS, min -6.3,
-#               and ZERO voices clip. It discriminates nothing here. Still measured, because
-#               it would catch a future corpus that is not normalised.
-#   duration_s  NOT a gate. Only 4 voices fall under 10 s and the shortest is 7.08 s, which
-#               is ample for a VC reference. It discriminates nothing.
-#   span_st     NOT a gate, a RANK PENALTY only. A wide p10-p90 does track worse clips (mean
-#               voiced 0.455 vs 0.549 above 16 st) but it is primarily a pyin octave-error /
-#               creak tell, and this card has already recorded a 21.4 st span on audio a
-#               listener passed. Gating on it would drop 3973 and spanish-limaperu — two of
-#               only seventeen R3 voices. It breaks ties where there is a choice; it never
-#               excludes a voice from a scarce register.
-#
-# These reject clips that are measurably broken. None of them is a perceptual verdict, and
-# no ranking here claims one good clip beats another good clip.
-
-MIN_VOICED_FRAC = 0.35
-MIN_SNR_PROXY_DB = 6.0
-WIDE_SPAN_ST = 16.0        # rank penalty threshold, never an exclusion
-
-# id -> how many ship. R3/R4/R5 are "take everything that passes the gates".
-QUOTAS = {"R1": 26, "R2": 15, "R3": 999, "R4": 999, "R5": 999}
-
-
-def _percentile_rank(values):
-    """{key: 0..1} — where each value sits within its own pool. Comparing raw voiced_frac
-    against raw dB would let whichever has the bigger numeric range dominate the sum."""
-    order = sorted(values, key=lambda k: values[k])
-    n = max(len(order) - 1, 1)
-    return {k: i / n for i, k in enumerate(order)}
-
-
-def curate(measurements, voices_dir):
-    """Select ~60 voices for register spread and clip quality; write voices/curated.txt."""
-    passed, rejected = {}, []
-    for vid, m in measurements.items():
-        reg = m.get("register")
-        if reg is None:
-            rejected.append((vid, f"{m['median_f0']} Hz is below the {REGISTERS[0][1]} Hz R1 floor — "
-                                  f"no register band covers it"))
-        elif m["voiced_frac"] < MIN_VOICED_FRAC:
-            rejected.append((vid, f"voiced_frac {m['voiced_frac']} < {MIN_VOICED_FRAC}"))
-        elif m["snr_proxy_db"] < MIN_SNR_PROXY_DB:
-            rejected.append((vid, f"snr_proxy {m['snr_proxy_db']} dB < {MIN_SNR_PROXY_DB}"))
-        else:
-            passed[vid] = m
-
-    selected, notes = [], {}
-    for reg in REGISTERS_ORDER:
-        pool = {k: v for k, v in passed.items() if v["register"] == reg}
-        quota = QUOTAS.get(reg, 0)
-        if not pool:
-            continue
-
-        vf   = _percentile_rank({k: v["voiced_frac"] for k, v in pool.items()})
-        snr  = _percentile_rank({k: v["snr_proxy_db"] for k, v in pool.items()})
-        score = {k: vf[k] + snr[k] - (0.5 if pool[k]["span_st"] > WIDE_SPAN_ST else 0.0)
-                 for k in pool}
-
-        if len(pool) <= quota:
-            chosen = sorted(pool)
-            for k in chosen:
-                notes[k] = f"{reg} is scarce ({len(pool)} available) — taken whole"
-        else:
-            # Spread across the band by f0 quartile, so 26 R1 voices are not 26 voices that
-            # all sit at 125 Hz. The picker filters by register, but a user browsing one
-            # register still hears the difference between its floor and its ceiling.
-            by_f0 = sorted(pool, key=lambda k: pool[k]["median_f0"])
-            n = len(by_f0)
-            # CONTIGUOUS quarters of the band, not a stride. `by_f0[i::4]` would hand every
-            # group a sample of the whole range, which is the opposite of spreading and
-            # would make the "f0-quartile" note in curated.txt a claim the code never made.
-            quartiles = [by_f0[(n * i) // 4:(n * (i + 1)) // 4] for i in range(4)]
-            chosen = []
-            for qi, q in enumerate(quartiles):
-                take = quota // 4 + (1 if qi < quota % 4 else 0)
-                ranked = sorted(q, key=lambda k: -score[k])
-                picked = ranked[:take]
-                lo_hz, hi_hz = pool[q[0]]["median_f0"], pool[q[-1]]["median_f0"]
-                for k in picked:
-                    notes[k] = (f"{reg} f0-quartile {qi + 1}/4 ({lo_hz}-{hi_hz} Hz), "
-                                f"quality rank {ranked.index(k) + 1}/{len(q)}")
-                chosen.extend(picked)
-        selected.extend(chosen)
-
-    selected.sort()
-    out = voices_dir / "curated.txt"
-    lines = [
-        "# voices/curated.txt - the ~60 voices that SHIP, of the 228 CC0 kyutai donations.",
-        "# Generated by: ingest.py --curate. Regenerate rather than hand-editing;",
-        "# then import with: ingest.py --ids-file voices/curated.txt",
-        "#",
-        f"# Selected {len(selected)} of {len(measurements)} measured "
-        f"({len(passed)} passed the gates, {len(rejected)} rejected).",
-        f"# Gates: voiced_frac >= {MIN_VOICED_FRAC}, snr_proxy >= {MIN_SNR_PROXY_DB} dB, "
-        f"register in R1-R5.",
-        "# See ingest.py section 'Curation' for why those two gates and not peak/duration/span.",
-        "#",
-        "# id  median_f0  register  why",
-    ]
-    for vid in selected:
-        m = measurements[vid]
-        lines.append(f"{vid:<32} # {m['median_f0']:>6} Hz  {m['register']}  {notes[vid]}")
-
-    lines += ["", "# --- REJECTED (not shipped) ---"]
-    for vid, why in sorted(rejected):
-        lines.append(f"# {vid:<30} {why}")
-
-    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
-    print(f"\nSelected {len(selected)} voices -> {out}")
-    for reg in REGISTERS_ORDER:
-        n_sel = sum(1 for v in selected if measurements[v]["register"] == reg)
-        n_all = sum(1 for m in measurements.values() if m.get("register") == reg)
-        print(f"  {reg}: {n_sel:>3} of {n_all:>3} available")
-    print(f"  rejected: {len(rejected)}")
-    return selected
-
-
-REGISTERS_ORDER = [name for name, _lo, _hi in REGISTERS]
-
-
-def run(voices_dir, cache_dir, all_ids, force):
-    manifest_path = voices_dir / "manifest.json"
-    existing      = load_existing_manifest(manifest_path)
-    today         = date.today().isoformat()
-
-    print(f"voices/ dir : {voices_dir}")
-    print(f"cache dir   : {cache_dir}")
-    print(f"existing    : {len(existing)} voices already in manifest")
-
-    results = {}  # id → entry dict, in processing order
-
-    for voice_id in all_ids:
-        opus_path = voices_dir / f"{voice_id}.opus"
-
-        # Idempotence: if already processed and not forced, reuse existing entry.
-        if not force and opus_path.exists() and voice_id in existing:
-            print(f"  skip {voice_id} (already processed)")
-            results[voice_id] = existing[voice_id]
-            continue
-
-        # 1. Download the _enhanced wav to cache if not already there.
-        wav_path = fetch_wav(voice_id, cache_dir, force)
-        if wav_path is None:
-            continue
-
-        # 2. Measure pitch.
-        print(f"  measure {voice_id} ...")
-        m = measure(wav_path)
-        if m is None:
-            print(f"  WARNING: no voiced frames in {voice_id}  (skipping)")
-            continue
-        median_f0, p10, p90 = m["median_f0"], m["p10"], m["p90"]
-
-        reg = register_of(median_f0)
-        if reg is None:
-            print(f"  WARNING: {voice_id} median_f0={median_f0} Hz out of all register bands — assigning R1")
-            reg = "R1"
-
-        # 3. Transcode to Ogg Opus.
-        if force or not opus_path.exists():
-            print(f"  transcode {voice_id} -> {opus_path.name} ...")
-            to_opus(wav_path, opus_path)
-
-        # Preserve added_at from existing entry if present.
-        added_at = existing.get(voice_id, {}).get("added_at", today)
-
-        results[voice_id] = build_voice_entry(
-            voice_id, median_f0, p10, p90, reg, added_at
-        )
-        print(f"  {voice_id}  {median_f0} Hz  {reg}")
-
-    # Sort by id for stable output.
-    voices_list = [results[k] for k in sorted(results)]
-
-    # performanceClips are AUTHORED (Phase 2, research/phase2_perf_clips.py), not imported.
-    # This script does not own them, so it carries whatever is already on disk through
-    # untouched. Writing [] here would silently delete the twelve shipped clips on the
-    # next re-run, and the manifest would still look well-formed.
-    perf_clips = []
-    if manifest_path.exists():
-        with open(manifest_path, encoding="utf-8") as f:
-            perf_clips = json.load(f).get("performanceClips", [])
-
-    manifest = {
-        "version": 1,
-        "variant": "enhanced",
-        "note": (
-            "CC0 voices from kyutai/tts-voices voice-donations/ "
-            "(Unmute Voice Donation Project). "
-            "_enhanced.wav used consistently for pitch measurement and VC conditioning. "
-            "accent is null for all — must be assigned by a human listener, never inferred."
-        ),
-        "voices":          voices_list,
-        "performanceClips": perf_clips,
-    }
-
-    manifest_json = json.dumps(manifest, indent=2, ensure_ascii=False)
-    manifest_path.write_text(manifest_json + "\n", encoding="utf-8")
-    print(f"\nWrote {manifest_path}  ({len(voices_list)} voices)")
-    return manifest
-
-
-# ---------------------------------------------------------------------------
-# Entry point
+# Import
 # ---------------------------------------------------------------------------
 
 def import_local(voices_dir, src_dir, cache_dir):
@@ -672,8 +321,6 @@ def import_local(voices_dir, src_dir, cache_dir):
             "gender":       gender,
             "age":          age,
             "tags":         [category],
-            "licence":      VOICEDESIGN_LICENCE,
-            "source_url":   None,       # generated locally — there is no upstream to point at
         })
         entries.append(entry)
         counts[category] = counts.get(category, 0) + 1
@@ -700,25 +347,11 @@ def import_local(voices_dir, src_dir, cache_dir):
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--max",   type=int, default=0,
-                        help="Process at most N voices (0 = all)")
-    parser.add_argument("--force", action="store_true",
-                        help="Re-download and re-measure even if already done")
+    parser.add_argument("--from-dir", type=Path, required=True,
+                        help="Directory holding the generated library — one wav plus a "
+                             "matching .txt sidecar per voice.")
     parser.add_argument("--cache", type=Path, default=DEFAULT_CACHE,
-                        help="Cache directory for downloaded wavs")
-    parser.add_argument("--measure-only", action="store_true",
-                        help="Measure every voice into <cache>/measurements.json and write "
-                             "NOTHING into the repo. This is the curation input.")
-    parser.add_argument("--curate", action="store_true",
-                        help="Select ~60 voices from <cache>/measurements.json for register "
-                             "spread and clip quality, and write voices/curated.txt.")
-    parser.add_argument("--ids-file", type=Path, default=None,
-                        help="Import only the voice ids listed in this file (one per line, "
-                             "'#' comments allowed). This is how the curated set is imported.")
-    parser.add_argument("--from-dir", type=Path, default=None,
-                        help="Import a locally-generated library from this directory (wav + "
-                             "matching .txt sidecar per voice). Skips the corpus download "
-                             "entirely — this is how the VoiceDesign library is imported.")
+                        help="Scratch directory for the trimmed/levelled wavs.")
     args = parser.parse_args()
 
     # Paths are relative to repo root — script is run from that directory.
@@ -727,39 +360,7 @@ def main():
     voices_dir.mkdir(exist_ok=True)
     args.cache.mkdir(parents=True, exist_ok=True)
 
-    # Before fetch_voice_ids() — the local path must not touch the network at all.
-    if args.from_dir:
-        import_local(voices_dir, args.from_dir, args.cache)
-        return
-
-    all_ids = fetch_voice_ids()
-
-    if args.ids_file:
-        wanted  = read_ids_file(args.ids_file)
-        known   = set(all_ids)
-        missing = [v for v in wanted if v not in known]
-        if missing:
-            print(f"  WARNING: {len(missing)} id(s) in {args.ids_file} are not in the "
-                  f"corpus listing and will be skipped: {missing[:5]}")
-        all_ids = [v for v in wanted if v in known]
-        print(f"(restricted to {len(all_ids)} voices via --ids-file {args.ids_file})")
-
-    if args.max:
-        all_ids = all_ids[:args.max]
-        print(f"(capped to {args.max} voices via --max)")
-
-    if args.measure_only:
-        run_measure(args.cache, all_ids, args.force)
-        return
-
-    if args.curate:
-        path = args.cache / "measurements.json"
-        if not path.exists():
-            parser.error(f"{path} not found — run `--measure-only` first")
-        curate(json.loads(path.read_text(encoding="utf-8"))["voices"], voices_dir)
-        return
-
-    run(voices_dir, args.cache, all_ids, args.force)
+    import_local(voices_dir, args.from_dir, args.cache)
 
 
 if __name__ == "__main__":

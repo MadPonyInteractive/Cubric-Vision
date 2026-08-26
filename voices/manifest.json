@@ -24,7 +24,7 @@
       "sample": "cartoon_critter_1.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -49,7 +49,7 @@
       "sample": "cartoon_critter_2.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -74,7 +74,7 @@
       "sample": "cartoon_critter_3.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -99,7 +99,7 @@
       "sample": "cartoon_critter_4.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -124,7 +124,7 @@
       "sample": "cartoon_critter_5.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -149,7 +149,7 @@
       "sample": "child_1.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -174,7 +174,7 @@
       "sample": "child_2.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -199,7 +199,7 @@
       "sample": "child_3.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -224,7 +224,7 @@
       "sample": "child_4.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -249,7 +249,7 @@
       "sample": "child_5.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -274,7 +274,7 @@
       "sample": "deep_male_1.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -299,7 +299,7 @@
       "sample": "deep_male_2.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -324,7 +324,7 @@
       "sample": "deep_male_3.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -349,7 +349,7 @@
       "sample": "deep_male_4.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -374,7 +374,7 @@
       "sample": "deep_male_5.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -399,7 +399,7 @@
       "sample": "elderly_female_1.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -424,7 +424,7 @@
       "sample": "elderly_female_2.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -449,7 +449,7 @@
       "sample": "elderly_female_3.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -474,7 +474,7 @@
       "sample": "elderly_female_4.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -499,7 +499,7 @@
       "sample": "elderly_female_5.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -524,7 +524,7 @@
       "sample": "elderly_male_1.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -549,7 +549,7 @@
       "sample": "elderly_male_2.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -574,7 +574,7 @@
       "sample": "elderly_male_3.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -599,7 +599,7 @@
       "sample": "elderly_male_4.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -624,7 +624,7 @@
       "sample": "elderly_male_5.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -649,7 +649,7 @@
       "sample": "mature_female_1.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -674,7 +674,7 @@
       "sample": "mature_female_2.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -699,7 +699,7 @@
       "sample": "mature_female_3.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -724,7 +724,7 @@
       "sample": "mature_female_4.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -749,7 +749,7 @@
       "sample": "mature_female_5.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -774,7 +774,7 @@
       "sample": "narrator_trailer_1.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -799,7 +799,7 @@
       "sample": "narrator_trailer_2.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -824,7 +824,7 @@
       "sample": "narrator_trailer_3.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -849,7 +849,7 @@
       "sample": "narrator_trailer_4.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -874,7 +874,7 @@
       "sample": "narrator_trailer_5.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -899,7 +899,7 @@
       "sample": "standard_female_1.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -924,7 +924,7 @@
       "sample": "standard_female_2.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -949,7 +949,7 @@
       "sample": "standard_female_3.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -974,7 +974,7 @@
       "sample": "standard_female_4.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -999,7 +999,7 @@
       "sample": "standard_female_5.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1024,7 +1024,7 @@
       "sample": "standard_male_1.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1049,7 +1049,7 @@
       "sample": "standard_male_2.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1074,7 +1074,7 @@
       "sample": "standard_male_3.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1099,7 +1099,7 @@
       "sample": "standard_male_4.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1124,7 +1124,7 @@
       "sample": "standard_male_5.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1149,7 +1149,7 @@
       "sample": "villain_menacing_1.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1174,7 +1174,7 @@
       "sample": "villain_menacing_2.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1199,7 +1199,7 @@
       "sample": "villain_menacing_3.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1224,7 +1224,7 @@
       "sample": "villain_menacing_4.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1249,7 +1249,7 @@
       "sample": "villain_menacing_5.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1274,7 +1274,7 @@
       "sample": "young_female_1.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1299,7 +1299,7 @@
       "sample": "young_female_2.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1324,7 +1324,7 @@
       "sample": "young_female_3.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1349,7 +1349,7 @@
       "sample": "young_female_4.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1374,7 +1374,7 @@
       "sample": "young_female_5.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1399,7 +1399,7 @@
       "sample": "young_male_1.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1424,7 +1424,7 @@
       "sample": "young_male_2.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1449,7 +1449,7 @@
       "sample": "young_male_3.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1474,7 +1474,7 @@
       "sample": "young_male_4.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     },
@@ -1499,7 +1499,7 @@
       "sample": "young_male_5.opus",
       "audition_narration": null,
       "audition_character": null,
-      "licence": null,
+      "licence": "proprietary",
       "source_url": null,
       "added_at": "2026-08-26"
     }
