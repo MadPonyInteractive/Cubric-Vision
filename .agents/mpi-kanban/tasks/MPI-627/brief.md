@@ -46,7 +46,7 @@ so the cut-out composites onto the gallery surface as asked.
 ## Blast radius swept
 
 `extractImageThumb` has 5 call sites (add-media, save-generation, backfill,
-crop-media, composite) — all fixed in one pass. `videoConcat.js`,
+composite-media, apply-paint - NOT crop-media, which makes no thumb at all) — all fixed in one pass. `videoConcat.js`,
 `videoCrop.js`, `videoReverse.js` call `extractVideoThumb`, which is unchanged
 and still writes JPG. No client code keys off the thumb extension
 (`RECENT_THUMBNAIL_EXTENSIONS` already listed `webp`).

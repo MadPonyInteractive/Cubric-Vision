@@ -2004,9 +2004,9 @@ router.post('/project/save-generation', async (req, res) => {
                 catch (e) { logger.warn('project', 'replace: old media remove failed', e.message); }
             }
             if (_replacePrevThumbPath) {
-                // Both videos and images now write `<id>.thumb.jpg` (MPI-319).
-                // On a same-id replace the new thumb IS this path — never delete
-                // it as if it were the stale previous one.
+                // Videos write `<id>.thumb.jpg`, images `<id>.thumb.webp`
+                // (MPI-319, MPI-627). On a same-id replace the new thumb IS one
+                // of those — never delete it as if it were the stale previous one.
                 const newThumbAbs = path.join(metaDir, `${id}.thumb.jpg`);
                 const newThumbWebp = imageThumbPath(newThumbAbs);
                 const prevNorm = path.normalize(_replacePrevThumbPath);

@@ -15,7 +15,9 @@
  * merely paint a white backdrop — it restored the untouched source image,
  * backdrop and drop-shadow included. WebP keeps alpha, so the gallery card
  * composites over the app surface, and it is SMALLER than the JPG it replaces
- * at this size (measured 512px: 30 KB vs 44 KB photo, 16.8 KB vs 17.5 KB cut-out).
+ * at this size (512px, measured on real project media — a `gallery_*.png` room
+ * photo 30 KB vs 44 KB, a cut-out 16.8 KB vs 17.5 KB; the repo carries no photo
+ * fixture to re-measure against, so treat these as recorded, not reproducible).
  *
  * Returns the path ACTUALLY written on success — an image thumb always lands at
  * `.webp` whatever extension the caller asked for, so callers MUST use the
