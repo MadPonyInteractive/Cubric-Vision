@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "97cee2aa-b73f-4384-8bc3-c8f652170cf5",
   "generated_at": "2026-08-26T17:08:19Z",
-  "status": "open",
+  "status": "resolved",
   "session": {
     "name": "MPI-596 Object Stamp - design settled and validated live in the app",
     "branch": "master"
@@ -70,5 +70,6 @@
       "docs/playbooks/add-flow/blending-into-a-photo.md"
     ]
   },
-  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/97cee2aa-b73f-4384-8bc3-c8f652170cf5.json and use mpi-continue to pick up MPI-596 (Object Stamp Flow), which is in `doing` on master. The design is SETTLED and was validated over ~25 live Klein 9B runs on 2026-08-26 - do not redesign it, and do not re-propose the two dropped designs recorded in brief.md. Read .agents/mpi-kanban/tasks/MPI-596/brief.md (six measured laws) and prompts.md (both baked prompts plus the vendor rules) before anything else. Nothing is implemented yet. Run /mpi-add-flow and start on the bench (port 8188, NOT the app engine on 48188): author Draw It In's crop -> Klein 9B edit -> ColorMatch -> stitch topology with the object in place of the scribble, and settle crop sizing there before any app-side work. The flow display name is still open - `object-stamp` is the working id and nothing is public, so it can be renamed any time before release."
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/97cee2aa-b73f-4384-8bc3-c8f652170cf5.json and use mpi-continue to pick up MPI-596 (Object Stamp Flow), which is in `doing` on master. The design is SETTLED and was validated over ~25 live Klein 9B runs on 2026-08-26 - do not redesign it, and do not re-propose the two dropped designs recorded in brief.md. Read .agents/mpi-kanban/tasks/MPI-596/brief.md (six measured laws) and prompts.md (both baked prompts plus the vendor rules) before anything else. Nothing is implemented yet. Run /mpi-add-flow and start on the bench (port 8188, NOT the app engine on 48188): author Draw It In's crop -> Klein 9B edit -> ColorMatch -> stitch topology with the object in place of the scribble, and settle crop sizing there before any app-side work. The flow display name is still open - `object-stamp` is the working id and nothing is public, so it can be renamed any time before release.",
+  "resolved_at": "2026-08-26T18:40:00Z"
 }

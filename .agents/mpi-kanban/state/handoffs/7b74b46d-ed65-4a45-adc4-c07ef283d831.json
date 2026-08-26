@@ -1,0 +1,75 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "7b74b46d-ed65-4a45-adc4-c07ef283d831",
+  "generated_at": "2026-08-26T18:40:00Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-596 Object Stamp - the graph authored and proven on the bench",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue MPI-596: author the Object Stamp graph on the standalone bench and settle crop sizing before any app-side work.",
+    "status": "in_progress",
+    "summary": "Done. The graph is authored, run 23 times on the bench and proven in both modes; two structural laws were found (7 and 8), each after a failure that read as something else. Nothing app-side has been written. The next session builds the stage-2 step kind and does not need the bench."
+  },
+  "plan": {
+    "file": ".agents/mpi-kanban/tasks/MPI-596/plan.md",
+    "completed": [
+      "Authored the graph as a PATCH of flow_draw_it_in.json - crop/stitch, the six Input_Lora_Phase1_* slots, Klein 9B and qwen_3_8b_int8_convrot all carry over untouched",
+      "Added the second reference: ReferenceLatent 203 chained after 108, plus InpaintCropImproved 210 cropping the clean scene to the same region",
+      "Law 7 found and fixed: every reference must be framed like the output frame",
+      "Law 8 found and fixed: the stitch mask is the contract - canvas must equal the write-back region",
+      "Crop sizing settled: factor 1.0 + mask_expand_pixels ~30% of the box side, NOT Draw It In's 4.267",
+      "Both modes run end to end; proven graphs saved as graph-bench-auto.json / graph-bench-manual.json"
+    ],
+    "pending": [
+      "Build the stage-2 step kind: ShapeManager 'place' + Remove Background + erase/restore brush + UndoStack",
+      "Add `sourceRole` to the step contract so a step on image1 can see image2",
+      "Wire the FlowDef + the op in its 4 files; convert the bench graph to the raw editor format",
+      "Live-run BOTH modes in the app plus a reuse round trip; npm test AND npm run test:desktop",
+      "Announce in docs/releases/UNRELEASED.md; graphics via /mpi-flow-graphics"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-596",
+    "title": "Object Stamp Flow - extract an object from one image, place it into another",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-596/",
+    "links": {
+      "brief": ".agents/mpi-kanban/tasks/MPI-596/brief.md",
+      "plan": ".agents/mpi-kanban/tasks/MPI-596/plan.md",
+      "prompts": ".agents/mpi-kanban/tasks/MPI-596/prompts.md",
+      "events": ".agents/mpi-kanban/tasks/MPI-596/events.jsonl",
+      "graph_auto": ".agents/mpi-kanban/tasks/MPI-596/graph-bench-auto.json",
+      "graph_manual": ".agents/mpi-kanban/tasks/MPI-596/graph-bench-manual.json"
+    }
+  },
+  "next_action": {
+    "description": "Build the stage-2 step kind (MpiStepPlace or similar): ShapeManager in 'place' mode + the Remove Background branch + an add/subtract alpha brush + UndoStack, mounting the History engines whole exactly as MpiStepPaint mounts PaintManager. Keep bgMask and userMask as TWO layers composited only at dispatch, and make the brush work with the toggle off. The bench is stopped and is not needed for this step.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "The graph is flow_draw_it_in.json PATCHED, never rebuilt - that is where crop/stitch and the six LoRA slots come from, and Fabio confirmed this is the right base.",
+      "Law 7 (in brief.md): every reference must be framed like the OUTPUT frame. Auto passed the clean scene at FULL frame against a cropped output frame, and the model painted that wide scene into the narrow one - the patch stitched back as a miniature room inside the table. The fix is the second InpaintCropImproved (node 210) that crops the clean scene to the same region. Draw It In never met this because it has one reference and that reference IS the crop.",
+      "Law 8 (in brief.md): the stitch mask is the contract and NO PROMPT CAN REACH IT. InpaintStitchImproved writes back only the box while the model paints the whole crop, so a Manual gun came back sliced through the grip. Fabio proposed a prompt clause; it was tested as one clause on measured evidence and REJECTED - 2.2% of pixels moved and the cut stayed, because the model already keeps the object whole inside its own frame. Do not re-attempt; the row is in prompts.md's does-NOT-work table.",
+      "Canonical crop config: context_from_mask_extend_factor = 1.0, write-back grown with mask_expand_pixels at ~30% of the box side (83px on a 276px box). Canvas == write-back, so slicing is impossible and the cast shadow has room. This SUPERSEDES Draw It In's 4.267 constant, which sizes the crop and now has no job."
+    ],
+    "constraints": [
+      "Two bench-only deviations are baked into the saved graphs and must NOT reach the shipped one: MpiClearVram (node 170) was dropped and the seed is pinned.",
+      "mask_expand_pixels is an INT input, so the 30% must be driven off MpiMaskSquareBbox.size through an MpiMath rather than hard-coded.",
+      "MPI-607 (also in `doing`) holds a STALE claim - heartbeat 2026-08-23, far past the 120-minute timeout - on every app-side file this card needs: flowsRegistry.js, commandRegistry.js, operationRegistry.js, operation_registry.json, universal_workflows.js and tests/inject-params-titles.test.cjs. Resolve it before the wiring step rather than writing through it blind.",
+      "Object colour fidelity still wanders run to run (the same gun came back black at one crop size and tan at another). Recorded, not blocking, worth a sweep once the app side runs.",
+      "ColorMatch is INERT on a modern plate (mean delta 0.032/255, 0.32% of pixels above 3). Keep it for the vintage case but do not credit it for anything.",
+      "The gun plate is the documented Auto-failure case (brief law 1) - use the mug or the Google logo to judge Auto, and the gun only for Manual.",
+      "The bench was stopped at the end of this session. Restart with G:/ComfyUi/run_nvidia_gpu.bat (port 8188) ONLY if more graph work is needed. Never point anything at 48188, that is Fabio's live app engine."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-596/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-596/plan.md",
+      ".agents/mpi-kanban/tasks/MPI-596/prompts.md",
+      "docs/playbooks/add-flow/existing-flows/scribble-to-object.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/7b74b46d-ed65-4a45-adc4-c07ef283d831.json and use mpi-continue to pick up MPI-596 (Object Stamp Flow), which is in `doing` on master. The design was settled in an earlier session and the GRAPH IS NOW AUTHORED AND PROVEN on the standalone bench across 23 runs - do not redesign either, and do not re-propose the two dropped designs in brief.md or the rejected prompt clause in prompts.md. Read brief.md (eight measured laws, 7 and 8 are the new ones) and prompts.md before anything else. The proven API graphs are graph-bench-auto.json and graph-bench-manual.json in the card workspace; they carry two bench-only deviations (MpiClearVram dropped, seed pinned) that must not ship. Nothing app-side is written yet. The next action is the stage-2 step kind, which does not need the bench - the bench is stopped and should stay stopped unless more graph work comes up."
+}
