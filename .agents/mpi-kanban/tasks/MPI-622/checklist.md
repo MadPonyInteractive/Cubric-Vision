@@ -360,3 +360,16 @@
       `gender`, `age`, `accent`, `language`, spelled the same in both. It becomes real the
       moment the picker reads `voice.auditionNarration` and gets `undefined` on all 60.
       Fabio's call, 2026-08-26: leave it for Phase 4, fix it there
+
+## Phase 5 - flow graphics
+
+- [x] **Tile + hero made, verified and approved** (2026-08-26, `03c73e32`).
+      `flow-voice-changer.webp` 896x1120 webp q90, 26,584 B (cap 250 KB).
+      `flow-voice-changer.mp4` 1280x800 H.264, 6.00s, 99,436 B (cap 2 MB).
+      Both fields set in `flowsRegistry.js`, placeholder comment deleted.
+      Device chosen off a measurement, not a sketch: envelope Pearson r = 0.867
+      take-vs-result over 118080 sample-aligned frames, -0.004 for the target
+      voice as a control - so the hero holds the silhouette and sweeps the colour.
+      Fabio: "yeah, looks good."
+- [x] **UNRELEASED.md carries the flow** - list bullet, its own section, plus a
+      correction to a weights claim that was already false for Head Swap.

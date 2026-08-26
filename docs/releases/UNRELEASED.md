@@ -53,7 +53,7 @@
   finished result — no workspace to assemble, no settings to know. Open the Flow Library from
   the Flows button at the top of the gallery, from the landing page, or with Tab, which cycles
   the gallery, your last card and the flow you have open, so you can step out to check a
-  picture and land back where you left off. Eight to start with:
+  picture and land back where you left off. Nine to start with:
 
   - **Head Swap** — put one picture's head on another
   - **Extend Video** — carry on past the last frame
@@ -63,11 +63,14 @@
   - **Scribble** — draw on nothing and have it rendered
   - **Character Sheet** — turn a description into a reference sheet
   - **Outpaint** — extend a picture past its edges
+  - **Voice Changer** — say a line and have it come back in someone else's voice
 
-  Each flow tells you which models it needs and installs them for you, and none of them download
-  weights of their own — everything they run on is a model the Library already offers, so a flow
-  costs you nothing extra once you own it. The three video flows all run on LTX 2.3 Balanced, so
-  installing it for one gives you the other two.
+  Each flow tells you which models it needs and installs them for you, and most of them run on a
+  model the Library already offers — so once you own the model, the flow costs you nothing extra.
+  The three video flows all run on LTX 2.3 Balanced, so installing it for one gives you the other
+  two. Two flows are the exception and say so on their card: Head Swap adds a head-swap LoRA on
+  top of Qwen Image Edit, and Voice Changer brings its own voice weights and needs no model from
+  the Library at all.
 
 - **Head Swap** takes a head from one picture and puts it on another. Load the picture you want
   to keep, add the picture with the head you want, draw a square around each head, and run. It
@@ -140,6 +143,26 @@
   picture and it shows. To go a long way, run it again on the result rather than asking for it
   all at once. Like Character Sheet, it runs on either Krea 2 or Krea 2 NSFW, and downloads no
   weights of its own.
+
+- **Voice Changer** says your line in someone else's voice. Record yourself performing it — right
+  in the flow, or drop in a file you already have — pick the voice you want it in, and run.
+  What comes back is your delivery exactly as you gave it: the timing, the pauses, the breath, a
+  laugh or a cough if you put one there. Only the voice is different. It is the first flow with
+  no picture in it anywhere, so the result arrives as a card you play rather than one you look
+  at.
+
+  For the target voice you can bring your own clip or take one from a library of 56 that ships
+  with Vision, grouped by the kind of part they suit — standard and young and elderly voices,
+  narrator and trailer reads, villains, children, cartoon critters. Press play on any of them
+  to hear the voice itself before you choose.
+
+  Three things decide how well it lands, and they are worth knowing before your first take.
+  Pick a target that sounds nothing like you — the further apart the two voices are, the more
+  obviously the conversion works, and a target close to your own voice is what "it did nothing"
+  usually means. Pitch your read near the target's and hold it steady, because drifting inside a
+  take drifts the result. And perform it, but do not push: an over-pressed read converts worse
+  than a committed one. It runs on Chatterbox, which the flow brings itself — about a gigabyte,
+  and no model from the Library is needed.
 
 - FLUX.2 Klein now comes in two sizes. The 9B card sits beside the 4B one and does the same
   seven things — generate, reshape, follow a depth reference, edit with up to three reference

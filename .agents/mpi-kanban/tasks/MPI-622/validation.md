@@ -1554,3 +1554,37 @@ network blip is not evidence, and the cost of being wrong is deletion.
   the badge only ever read `uploaded`.
 
 Automated: `npm test` 747/747, eslint clean on all three changed files.
+
+## Phase 5 - flow graphics (2026-08-26, session 25)
+
+**Verify mode:** `user-ux`. Closed by Fabio: "yeah, looks good."
+
+Automated evidence, all run before he was asked:
+
+- Sizes/format against `docs/playbooks/add-flow/06-preview-image.md`: tile
+  896x1120 webp q90 = 26,584 B (cap 250 KB); hero 1280x800 H.264 6.00s /
+  144 frames = 99,436 B (cap 2 MB, 4-8s window).
+- **The reveals actually animate.** Nine frames pulled at 0.02/0.6/1.3/2.2/3.0/
+  3.8/4.6/5.4/5.93s show draw-in, sweep and wipe-out each progressing. This is
+  the check the playbook demands because `drawbox`/`crop` animated `w=` render
+  the full graphic from frame 1 and exit 0 - every reveal here is an animated
+  ALPHA via `geq` reading `alpha(X,Y)`, which also avoids `alphamerge` (it
+  REPLACES the alpha these waveforms already carry).
+- **Loop point invisible:** t=0.02 and t=5.93 are both an empty lane.
+- Judged at the real sizes, not a contact sheet: hero at 446 px, tile at 220 px
+  AND at 220 px under the grid's idle `saturate(.92) brightness(.92)`.
+- Distinct from every other flow still - Add Foley is the only other waveform
+  and it is a photo with a thin band; this is all-graphics two-lane.
+- Accents converted from the `oklch()` tokens by a converter validated against
+  the two hexes the playbook already records: it reproduced `FF7EB6` and
+  `48D7FE` exactly, including `--accent-heat` being out of sRGB gamut.
+- Both assets return **200 with byte-exact counts** from an isolated instance
+  (`npm run app:isolated`, port 65454, killed by verified PID afterwards).
+  Fabio's app on :3000 was never driven and still answered 200 after.
+- eslint clean on `js/data/flowsRegistry.js`.
+
+**Honesty check still OPEN and deliberately not decided here:** the flow's
+`description` says Chatterbox "swaps the voice itself", an earlier session
+measured a BLEND, and the new UNRELEASED entry repeats the strong claim ("Only
+the voice is different"). Fabio has now heard a real run and said "Good match".
+Both files change together or neither does - ask him at close-out.

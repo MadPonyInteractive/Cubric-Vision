@@ -4,6 +4,47 @@
 
 **Project mode:** `scalable-foundation`.
 
+> **Session 25 note (2026-08-26) — THE FLOW GRAPHICS ARE MADE AND APPROVED. NO BUILD WORK IS
+> LEFT ON THIS CARD; WHAT REMAINS IS CLOSE-OUT AND THE TTS FLOW (Flow B).**
+> `flow-voice-changer.webp` (896×1120, 26 KB) and `flow-voice-changer.mp4` (1280×800, 6.00 s,
+> 97 KB) shipped in `03c73e32`, both fields set in `flowsRegistry.js`, placeholder comment
+> deleted. Fabio: *"yeah, looks good."*
+>
+> **THE DEVICE WAS DECIDED BY A MEASUREMENT, NOT A SKETCH, and the number is reusable.**
+> Voice Changer changes nothing visible and a hero is muted, so the playbook forbids a
+> before/after. What survives a conversion is the TIMING, and it survives hard: envelope
+> Pearson **r = 0.867** between take and result over 118080 sample-aligned frames, against
+> **−0.004** for the target voice as a control. So the hero holds the silhouette and sweeps
+> the colour. Measure this before designing the TTS hero too — it is 30 seconds of numpy and
+> it replaces an argument about what the art should show.
+>
+> **Plates: one real run, already on disk.** Run 003 in Fabio's TTS project — sidecar
+> `Media/.meta/bba180b1-…json` names `recording_002.wav` (audio1), the
+> `.preview-assets/90598abf…wav` target (audio2) and `flowVoiceChanger_003.flac`. No
+> generation spent. Both takes are active 1.06→3.82 s, so one identical 3.0 s window keeps
+> them aligned, and both are peak-normalised for DISPLAY only (0.541 vs 0.654 — the loudness
+> gap is a red herring against the claim being drawn).
+>
+> **Two build notes worth keeping.** (1) The repo's JetBrains Mono is `.woff2`, which neither
+> ffmpeg `drawtext` nor `sharp`/librsvg can load, and the font is not installed on this box —
+> so the type layers are rendered by **headless Chrome** off an HTML file with a `file://`
+> `@font-face`, screenshotted at exact size, and composited by ffmpeg. Needs
+> `--disable-lcd-text --force-color-profile=srgb` or every label ships with subpixel colour
+> fringing. (2) An `oklch()` token can be converted to sRGB **in code** rather than through the
+> canvas trick, provided the converter is validated first against the two hexes 06-preview-image
+> already records (`FF7EB6`, `48D7FE`) — `scratchpad/oklch.py` reproduces both exactly, and
+> that same script gave the surface/ink hexes the art needed.
+>
+> **UNRELEASED.md carries Voice Changer now**, and fixing it turned up a pre-existing FALSE
+> claim in unreleased copy: "none of them download weights of their own" was already untrue
+> for Head Swap's 1.2 GB `qwen-lora-headswap` before this flow made it worse. Audited all nine
+> flows — exactly TWO carry weight deps (head-swap, voice-changer) and the sentence now says so.
+>
+> **STILL OPEN AND STILL FABIO'S CALL — do not decide it alone:** `flowsRegistry.js` says
+> Chatterbox "swaps the voice itself", an earlier session measured a BLEND, and the new
+> UNRELEASED entry repeats the strong claim ("Only the voice is different"). He has now heard
+> a real run and said "Good match". **Ask him; both files change together or neither does.**
+
 > **Session 24 note (2026-08-26) — THE FIRST REAL RUN HAPPENED, AND IT PRODUCED SILENCE.**
 > Fabio ran the flow. No error, a gallery card, "Generation finished" — and the output was
 > **one sample, 62 microseconds**. The run did NOT work; "no error" was not evidence and I
@@ -478,6 +519,15 @@ App-side facts checked 2026-08-25, so no one re-discovers them:
 
 ## Completed
 
+- [x] **FLOW GRAPHICS - made, verified and APPROVED** (2026-08-26, session 25). `03c73e32`.
+      Tile 896x1120 webp q90 26 KB; hero 1280x800 H.264 6.00s 97 KB. Both fields set in
+      `flowsRegistry.js`. Checked at the sizes that matter (220 px under the grid's idle
+      `saturate(.92) brightness(.92)`, 446 px for the hero), nine frames pulled to prove every
+      reveal actually animates, loop point invisible (t=0.02 == t=5.93), both assets 200 with
+      byte-exact counts off an isolated instance, eslint clean. Fabio: "yeah, looks good."
+- [x] **UNRELEASED.md carries Voice Changer** (2026-08-26, session 25) - list entry, its own
+      section, and a correction to a pre-existing false weights claim (see Plan Drift).
+
 - [x] **Phase 0 - RESOLVED ON OPTION 1** (2026-08-25). Offline formant-preserving shift passes
       both gates: no artefacts ride through VC, and emotion survives (+12, +19 and -12).
       Options 2 and 3 and the escape hatch are all unnecessary. Two hypotheses of mine died on
@@ -765,6 +815,18 @@ chance to test the open question from session 22: whether VC sometimes produces 
 accent and whether re-pressing Generate re-rolls it. His ear wins there.
 
 ## Plan Drift
+
+- **2026-08-26 (session 25) -- unreleased copy carried a claim that was already FALSE before
+  this card touched it.** "Each flow tells you which models it needs ... and none of them
+  download weights of their own -- everything they run on is a model the Library already
+  offers" is untrue for Head Swap, which pulls `qwen-lora-headswap` (1.2 GB) on top of Qwen
+  Image Edit, and Voice Changer would have made it a second lie. Adding a ninth bullet under a
+  false umbrella sentence is not an option, so the sentence was fixed rather than worked
+  around: all nine flows audited by their actual `requiredDeps`, exactly TWO carry weight deps
+  (head-swap, voice-changer), and the copy now names both. **Scope note for whoever folds this
+  into `releaseNotes.js`:** that correction is the file's own Gate 0 doing its job, not drift
+  introduced here -- and the same audit is worth re-running when the TTS flow lands, because it
+  will be the THIRD flow with weights of its own.
 
 - **2026-08-26 (session 23) -- `.opus` could not be handed to the Flow slot, and passing it
   through would have failed the way `.webm` already did once.** `opus` is present in exactly
