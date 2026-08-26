@@ -836,11 +836,12 @@ export const FLOWS = [
         // `FLOWSCRIBOBJ_` prefix and their sidecars' `flowId`, so it can never be freed.
         id: 'scribble',
         title: 'Scribble',
-        // Both assets are the SAME frozen instant of the same wipe: the tile is the hero's
-        // t=0 frame in 4/5, so the poster never cuts to a different picture when the clip
-        // starts. Plates are one real run — `imported_002.png`'s sha256 IS the
-        // `.preview-assets` input both `kleinEdit_011` (anime) and `kleinEdit_012` (real)
-        // ate, so the sketch on the left really did produce the render on the right.
+        // The hero dissolves the drawing away in place — its white ground lifts first, so
+        // the render appears behind the strokes, then the strokes lift too — and the TILE is
+        // that mid-dissolve instant, a real frame of the clip rather than a separate
+        // composition. So the poster never cuts to a different picture when the clip starts.
+        // Plates are one real run: `imported_002.png`'s sha256 IS the `.preview-assets`
+        // input both `kleinEdit_011` (anime) and `kleinEdit_012` (photoreal) ate.
         preview: 'flow-scribble.webp',
         video: 'flow-scribble.mp4',
         description: 'Draw something and let the model render it. Start from a blank canvas at the shape you want, or bring in a drawing you made elsewhere, then say what it is — the drawing gives the shapes and the composition, the words give the subject and the style. It does not have to be a good drawing: rough placement and a readable silhouette are enough for the model to build a finished image around.',

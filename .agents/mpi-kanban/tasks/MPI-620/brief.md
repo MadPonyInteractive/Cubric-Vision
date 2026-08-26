@@ -532,7 +532,7 @@ that way — but it means "row 1 vs row 2" in the code is positional, not semant
 
 ## GRAPHICS — SHIPPED 2026-08-26 (`/mpi-flow-graphics`)
 
-`flow-scribble.webp` 107 KB (896×1120) + `flow-scribble.mp4` 1.30 MB (1280×800, 6.0s, 24fps).
+`flow-scribble.webp` 129 KB (896×1120) + `flow-scribble.mp4` 1.11 MB (1280×800, 6.0s, 24fps).
 Both keys wired in `flowsRegistry.js` in the same commit as the files.
 
 **Plates are ONE real run, proven by hash rather than assumed.** `imported_002.png`'s sha256
@@ -542,29 +542,42 @@ differing. Fabio first named `imported_001.png`; the hash said otherwise and a p
 the two sketches **10.77% apart**, so it mattered. He confirmed 002. The two renders came from
 the `kleinEdit` op rather than `flowScribble`, which is the same graph and the same prefix.
 
-**Device — the layout holds while the LOOK changes**, which no shipped hero did before. The
-seam wipes the drawing away to the anime render, that crossfades to the photoreal one and back,
-and the composition never moves — so the only thing the eye reads is the style. Chosen over
-Draw It In's two-subjects device because Scribble's pitch is not "any subject" but "your shapes,
-your words decide the look". **The loop point IS the tile frame** (seam parked at 45%, base back
-on anime), which makes the loop invisible AND stops the `poster` cutting to a different picture.
+**Device — REBUILT as a two-stage dissolve** (Fabio, 2026-08-26: *"I do not like how the
+graphic is in the first stage"*). The first build wiped a seam across the frame, so frame 1 was
+half drawing and half render — two pictures glued together. The drawing now lies ON the render
+and lifts in two stages, because it IS two things: its **white ground fades first**, so the
+finished picture appears behind the strokes and the drawn lines are briefly readable on it; then
+the **strokes lift** too; then anime crossfades to photoreal and back. The composition never
+moves, so the only thing the eye reads is the look changing. That mid-dissolve instant is also
+the strongest tile, so the tile freezes THERE — the poster is now a real frame of the clip.
 
-**Two rebuilds, both silent, both now in the playbook's trap table:**
+**Four ffmpeg builds, and every dead end is now in the playbook's trap table** — none of them
+errored, and all were only visible at 446 px, which is that playbook's whole argument:
 
 1. **A sliding cover shows the WRONG COLUMNS.** Sliding the sketch off to the left leaves its
    RIGHT side sitting on the frame's LEFT — the drawn sea appeared on the wrong side of the
-   picture. Registered plates need `geq` + `alphamerge` with a moving SEAM, not a moving plate.
+   picture. Registered plates need a moving SEAM, never a moving plate.
 2. **`split` then `format=gray` on one branch turns BOTH branches gray.** Negotiation runs back
-   through the split, so the sketch lost its pink and green and read as a pencil study. The mask
-   needs its own `color=black` source.
+   through the split, so the sketch lost its pink and green and read as a pencil study.
+3. **A filter label can only be CONSUMED ONCE**, so the mask-plus-`alphamerge` route needed the
+   plate twice — and `split` to get it twice walks straight back into (2).
+4. **Animating opacity has exactly one working form here:** `geq` reading its own alpha plane,
+   `a='alpha(X,Y)*(RAMP)'`. `colorchannelmixer=aa` and `blend`'s opacity are static, and
+   chaining `fade=out` then `fade=in` on one stream makes the two fight over the same alpha.
 
-Neither errored, and both were only visible at 446 px — which is the playbook's whole point
-about judging at real size.
+**The sketch is NOT ink on transparency, and that measurement is what made the tile work.** A
+blank paint canvas is painted WHITE, so `imported_002.png` is RGBA but **100% opaque**, with
+45.5% of its pixels saturated strokes. So "keep its own alpha" is a no-op, and ghosting the flat
+sketch washed the whole render pale — hazy, not "a drawing on a picture". Keying the ground out
+by **chroma spread** (soft ramp 25→55) leaves the strokes and drops the white, which is what
+both the tile and the hero's second stage now use.
 
-**Measured:** loop seam = first vs last frame MAD **0.53** (codec noise); wipe motion = first vs
-t=0.7 MAD **21.0** (so it genuinely animates — the `drawbox`/`crop` traps read as 0); style beat
-= anime vs real MAD **59.2**. Live in an isolated instance with the project open on the gallery:
-hero selected BY SRC (not `querySelector('video')`), `paused:false`, `muted`, `loop:true`,
-`currentTime` 2.455 → 3.356, `1280x800`, **cssW 444** — a real visible hero, not the 0-width
-hidden-overlay trap — poster `flow-scribble.webp`. Both assets **200** at exactly 107,188 and
-1,296,998 bytes. `npm test` **739/739** (the orphan-sweep flake did not reproduce this run).
+**Measured on the shipped build:** loop = t=0.1 vs t=5.958 MAD **0.82** (near codec noise, so the
+loop is invisible); ground lift = **63.1**; stroke lift = **14.2**; style beat = **47.1** — every
+beat non-zero, which is the positive proof they animate (the `drawbox`/`crop` traps read 0).
+crf 26 chosen over crf 23 at **PSNR y 41.5 dB** between them — indistinguishable at 446 px, and
+it took the file from 1.58 MB to 1.11 MB. Live in an isolated instance with the project open on
+the gallery: hero selected BY SRC (not `querySelector('video')`), `paused:false`, `muted`,
+`loop:true`, `currentTime` advancing, `1280x800`, **cssW 444** — a real visible hero, not the
+0-width hidden-overlay trap — poster `flow-scribble.webp`. Both assets **200** at exactly
+132,468 and 1,159,205 bytes. `npm test` **739/739**.
